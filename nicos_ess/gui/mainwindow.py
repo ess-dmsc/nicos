@@ -179,12 +179,15 @@ class MainWindow(DefaultMainWindow):
         is_connected = status != 'disconnected'
         if is_connected:
             self.actionConnect.setText('Disconnect')
+            self.statusLabel.setStyleSheet("color: lightgreen")
+            self.statusLabel.setText("Connected |")
         else:
             self.actionConnect.setText('Connect to server...')
+            self.statusLabel.setStyleSheet("color: red")
+            self.statusLabel.setText("Disconnected |")
             self.setTitlebar(False)
         # new status icon
         pixmap = QPixmap(':/' + status + ('exc' if exception else ''))
-        self.statusLabel.setPixmap(pixmap)
         self.statusLabel.setToolTip('Script status: %s' % status)
         new_icon = QIcon()
         new_icon.addPixmap(pixmap, QIcon.Disabled)
