@@ -179,11 +179,11 @@ class MainWindow(DefaultMainWindow):
         is_connected = status != 'disconnected'
         if is_connected:
             self.actionConnect.setText('Disconnect')
-            self.statusLabel.setStyleSheet("color: lightgreen")
-            self.statusLabel.setText("Connected |")
+            self.statusLabel.setStyleSheet("color: white")
+            self.statusLabel.setText("\u2713 Connected |")
         else:
             self.actionConnect.setText('Connect to server...')
-            self.statusLabel.setStyleSheet("color: red")
+            self.statusLabel.setStyleSheet("color: white")
             self.statusLabel.setText("Disconnected |")
             self.setTitlebar(False)
         # new status icon
