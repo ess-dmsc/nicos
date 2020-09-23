@@ -44,7 +44,7 @@ class ExpPanel(DefaultExpPanel):
     """
 
     panelName = 'Experiment setup'
-    ui = '%s/panels/setup_exp.ui' % uipath
+    ui = '%s/panels/ui_files/setup_exp.ui' % uipath
 
     def __init__(self, parent, client, options):
         DefaultExpPanel.__init__(self, parent, client, options)
@@ -228,7 +228,7 @@ class FinishPanel(Panel):
     """
 
     panelName = 'Finish experiment'
-    ui = '%s/panels/finish_exp.ui' % uipath
+    ui = '%s/panels/ui_files/finish_exp.ui' % uipath
 
     def __init__(self, parent, client, options):
         Panel.__init__(self, parent, client, options)
