@@ -84,7 +84,7 @@ class MainWindow(DefaultMainWindow):
     def _init_toolbar(self):
         self.statusLabel = QLabel('', self, pixmap=QPixmap(':/disconnected'),
                                   margin=5, minimumSize=QSize(30, 10))
-
+        self.statusLabel.setStyleSheet("color: white")
         self.toolbar = self.toolBarRight
         self.toolbar.addWidget(self.statusLabel)
         self.setStatus('disconnected')
@@ -187,11 +187,9 @@ class MainWindow(DefaultMainWindow):
         is_connected = status != 'disconnected'
         if is_connected:
             self.actionConnect.setText('Disconnect')
-            self.statusLabel.setStyleSheet("color: white")
             self.statusLabel.setText("\u2713 Connected")
         else:
             self.actionConnect.setText('Connect to server...')
-            self.statusLabel.setStyleSheet("color: white")
             self.statusLabel.setText("Disconnected")
             self.setTitlebar(False)
         # new status icon
