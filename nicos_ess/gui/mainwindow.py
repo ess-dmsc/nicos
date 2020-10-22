@@ -25,8 +25,6 @@
 
 """NICOS GUI main window."""
 
-import os
-
 from time import time as current_time
 
 from nicos.clients.gui.mainwindow import MainWindow as DefaultMainWindow
@@ -71,6 +69,7 @@ class MainWindow(DefaultMainWindow):
         self.actionUser.setIconVisibleInMenu(True)
         self.dropdown = dropdown
 
+        self._init_instrument_name()
         self._init_experiment_name()
 
     def _init_toolbar(self):
@@ -87,6 +86,12 @@ class MainWindow(DefaultMainWindow):
         self.experiment_label.setSizePolicy(QSizePolicy.Expanding,
                                             QSizePolicy.Preferred)
         self.toolBarMain.addWidget(self.experiment_label)
+
+    def _init_instrument_name(self):
+        self.instrument_label = QLabel()
+        self.instrument_label.setSizePolicy(QSizePolicy.Expanding,
+                                            QSizePolicy.Preferred)
+        self.toolBarMain.addWidget(self.instrument_label)
 
     def set_icons(self):
         self.actionUser.setIcon(
@@ -113,24 +118,15 @@ class MainWindow(DefaultMainWindow):
                                       nicos_label)
 
     def add_instrument(self):
-        text_label = QLabel('Instrument:')
-        text_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
-        text_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
-        instrument_label = QLabel('Unknown')
-        instrument_label.setSizePolicy(QSizePolicy.Expanding,
-                                       QSizePolicy.Preferred)
-        self.toolBarMain.addWidget(text_label)
-        self.toolBarMain.addWidget(instrument_label)
-
-        instrument = os.getenv('INSTRUMENT')
+        instrument = self.client.eval('session.instrument', None)
         if instrument:
             instrument = instrument.split('.')[-1]
             logo = decolor_logo(QPixmap('resources/%s-logo.svg' % instrument),
                                 Qt.white)
             if logo.isNull():
-                instrument_label.setText(instrument.upper())
+                self.instrument_label.setText(instrument.upper())
                 return
-            instrument_label.setPixmap(logo.scaledToHeight(
+            self.instrument_label.setPixmap(logo.scaledToHeight(
                 self.toolBarMain.height(), Qt.SmoothTransformation))
 
     def add_experiment(self):
@@ -177,6 +173,7 @@ class MainWindow(DefaultMainWindow):
         if is_connected:
             self.actionConnect.setText('Disconnect')
             self.statusLabel.setText('\u2713 Connected')
+            self.add_instrument()
             self.add_experiment()
         else:
             self.actionConnect.setText('Connect to server...')
