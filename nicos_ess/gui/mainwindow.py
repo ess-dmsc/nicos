@@ -73,6 +73,8 @@ class MainWindow(DefaultMainWindow):
         self.actionUser.setIconVisibleInMenu(True)
         self.dropdown = dropdown
 
+        self.actionExpert.setEnabled(False)
+
     def _init_toolbar(self):
         self.statusLabel = QLabel('', self, pixmap=QPixmap(':/disconnected'),
                                   margin=5, minimumSize=QSize(30, 10))
@@ -204,11 +206,13 @@ class MainWindow(DefaultMainWindow):
 
     def on_client_connected(self):
         DefaultMainWindow.on_client_connected(self)
+        self.actionExpert.setEnabled(True)
         self.actionConnect.setIcon(
             QIcon("resources/material/icons/power_off-24px.svg"))
 
     def on_client_disconnected(self):
         DefaultMainWindow.on_client_disconnected(self)
+        self.actionExpert.setEnabled(False)
         self.actionConnect.setIcon(
             QIcon("resources/material/icons/power-24px.svg"))
 

@@ -691,6 +691,10 @@ class MainWindow(DlgUtils, QMainWindow):
     def on_actionConnect_triggered(self, on):
         # connection or disconnection request?
         if not on:
+            # Setting this after disconnection triggers unnecessary error
+            # message stating that client is not connected.
+            self.actionExpert.setChecked(False)
+            self.expertmode = False
             self.client.disconnect()
             if self.tunnelServer:
                 self.tunnelServer.stop()
