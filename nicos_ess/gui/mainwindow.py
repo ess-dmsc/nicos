@@ -56,8 +56,6 @@ class MainWindow(DefaultMainWindow):
     def __init__(self, log, gui_conf, viewonly=False, tunnel=''):
         DefaultMainWindow.__init__(self, log, gui_conf, viewonly, tunnel)
         self.add_logo()
-        self.add_instrument()
-        self.add_experiment()
         self.set_icons()
         self.style_file = gui_conf.stylefile
 
@@ -73,6 +71,8 @@ class MainWindow(DefaultMainWindow):
         self.actionUser.setIconVisibleInMenu(True)
         self.dropdown = dropdown
 
+        self._init_experiment_name()
+
     def _init_toolbar(self):
         self.statusLabel = QLabel('', self, pixmap=QPixmap(':/disconnected'),
                                   margin=5, minimumSize=QSize(30, 10))
@@ -81,6 +81,12 @@ class MainWindow(DefaultMainWindow):
         self.toolbar = self.toolBarRight
         self.toolbar.addWidget(self.statusLabel)
         self.setStatus('disconnected')
+
+    def _init_experiment_name(self):
+        self.experiment_label = QLabel()
+        self.experiment_label.setSizePolicy(QSizePolicy.Expanding,
+                                            QSizePolicy.Preferred)
+        self.toolBarMain.addWidget(self.experiment_label)
 
     def set_icons(self):
         self.actionUser.setIcon(
@@ -128,19 +134,9 @@ class MainWindow(DefaultMainWindow):
                 self.toolBarMain.height(), Qt.SmoothTransformation))
 
     def add_experiment(self):
-        text_label = QLabel('Experiment:')
-        text_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
-        text_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
-        experiment_label = QLabel('Unknown')
-        experiment_label.setSizePolicy(QSizePolicy.Expanding,
-                                       QSizePolicy.Preferred)
-        self.toolBarMain.addWidget(text_label)
-        self.toolBarMain.addWidget(experiment_label)
-
-        # if INSTRUMENT is defined add the logo/name of the instrument
-        experiment = os.getenv('EXPERIMENT')
+        experiment = self.client.eval('session.experiment.title', None)
         if experiment:
-            experiment_label.setText(experiment)
+            self.experiment_label.setText(f'Experiment: {experiment}')
 
     def reloadQSS(self):
         self.setQSS(self.stylefile)
@@ -181,6 +177,7 @@ class MainWindow(DefaultMainWindow):
         if is_connected:
             self.actionConnect.setText('Disconnect')
             self.statusLabel.setText('\u2713 Connected')
+            self.add_experiment()
         else:
             self.actionConnect.setText('Connect to server...')
             self.statusLabel.setText('Disconnected')
