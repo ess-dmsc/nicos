@@ -616,6 +616,14 @@ class MainWindow(DlgUtils, QMainWindow):
             self.activateWindow()
 
     def on_actionExpert_toggled(self, on):
+        if self.current_status == 'disconnected':
+            # If not connected, we make the button uncheckable. If we instead
+            # use setChecked(False), we end up with a tailing call of the
+            # function that we are in.
+            self.actionExpert.setCheckable(False)
+            self.showError('You are not connected to a server.')
+            self.on_actionConnect_triggered('')  # Call for connection.
+            return self.actionExpert.setCheckable(True)  # Reset the state.
         self.expertmode = on
         for panel in self.panels:
             panel.setExpertMode(on)
@@ -692,7 +700,8 @@ class MainWindow(DlgUtils, QMainWindow):
         # connection or disconnection request?
         if not on:
             # Setting this after disconnection triggers unnecessary error
-            # message stating that client is not connected.
+            # message stating that client is not connected. This is caused
+            # by tailing algorithm of setChecked.
             self.actionExpert.setChecked(False)
             self.expertmode = False
             self.client.disconnect()
