@@ -29,7 +29,7 @@ from time import time as current_time
 
 from nicos.clients.gui.mainwindow import MainWindow as DefaultMainWindow
 from nicos.guisupport.qt import QApplication, QFileDialog, QIcon, QLabel, \
-    QMenu, QPixmap, QPoint, QSize, QSizePolicy, Qt, QWidget, pyqtSlot
+    QMenu, QPixmap, QPoint, QSize, QSizePolicy, Qt, QWidget, pyqtSlot, QFont
 
 from nicos_ess.gui import uipath
 from nicos_ess.gui.panels import get_icon
@@ -85,6 +85,7 @@ class MainWindow(DefaultMainWindow):
         self.experiment_label = QLabel()
         self.experiment_label.setSizePolicy(QSizePolicy.Expanding,
                                             QSizePolicy.Preferred)
+        self.experiment_label.setStyleSheet("font: 17pt Comic Sans MS")
         self.toolBarMain.addWidget(self.experiment_label)
 
     def _init_instrument_name(self):
@@ -94,6 +95,7 @@ class MainWindow(DefaultMainWindow):
                                            QSizePolicy.Preferred)
         self.instrument_label.setSizePolicy(QSizePolicy.Expanding,
                                             QSizePolicy.Preferred)
+        self.instrument_text.setStyleSheet("font: 17pt Comic Sans MS")
         self.toolBarMain.addWidget(self.instrument_text)
         self.toolBarMain.addWidget(self.instrument_label)
 
@@ -125,8 +127,9 @@ class MainWindow(DefaultMainWindow):
         instrument = self.client.eval('session.instrument', None)
         if instrument is None:
             self.instrument_label.setText('Instrument: UNKNOWN')
+            self.instrument_label.setStyleSheet("font: 17pt Comic Sans MS")
         if instrument:
-            self.instrument_text.setText('Instrument: ')
+            self.instrument_text.setText('Instrument:')
             instrument = instrument.split('.')[-1]
             logo = decolor_logo(QPixmap(f'resources/{instrument}-logo.svg'),
                                 Qt.white)
