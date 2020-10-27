@@ -141,6 +141,11 @@ class MainWindow(DefaultMainWindow):
         if experiment:
             self.experiment_label.setText(f'Experiment: {experiment}')
 
+    def remove_experiment_and_instrument(self):
+        self.experiment_label.clear()
+        self.instrument_label.clear()
+        self.instrument_text.clear()
+
     def reloadQSS(self):
         self.setQSS(self.stylefile)
 
@@ -210,6 +215,7 @@ class MainWindow(DefaultMainWindow):
 
     def on_client_disconnected(self):
         DefaultMainWindow.on_client_disconnected(self)
+        self.remove_experiment_and_instrument()
         self.actionConnect.setIcon(
             QIcon("resources/material/icons/power-24px.svg"))
 
