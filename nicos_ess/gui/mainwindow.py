@@ -88,9 +88,13 @@ class MainWindow(DefaultMainWindow):
         self.toolBarMain.addWidget(self.experiment_label)
 
     def _init_instrument_name(self):
+        self.instrument_text = QLabel()
         self.instrument_label = QLabel()
+        self.instrument_text.setSizePolicy(QSizePolicy.Expanding,
+                                           QSizePolicy.Preferred)
         self.instrument_label.setSizePolicy(QSizePolicy.Expanding,
                                             QSizePolicy.Preferred)
+        self.toolBarMain.addWidget(self.instrument_text)
         self.toolBarMain.addWidget(self.instrument_label)
 
     def set_icons(self):
@@ -119,9 +123,12 @@ class MainWindow(DefaultMainWindow):
 
     def add_instrument(self):
         instrument = self.client.eval('session.instrument', None)
+        if instrument is None:
+            self.instrument_label.setText('Instrument: UNKNOWN')
         if instrument:
+            self.instrument_text.setText('Instrument: ')
             instrument = instrument.split('.')[-1]
-            logo = decolor_logo(QPixmap('resources/%s-logo.svg' % instrument),
+            logo = decolor_logo(QPixmap(f'resources/{instrument}-logo.svg'),
                                 Qt.white)
             if logo.isNull():
                 self.instrument_label.setText(instrument.upper())
