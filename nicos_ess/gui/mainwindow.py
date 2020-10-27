@@ -142,6 +142,10 @@ class MainWindow(DefaultMainWindow):
     def add_experiment(self):
         experiment = self.client.eval('session.experiment.title', None)
         if experiment:
+            if len(experiment) > 50:
+                _experiment = experiment[0:15]
+                self.experiment_label.setText(f'Experiment: {_experiment}')
+                return
             self.experiment_label.setText(f'Experiment: {experiment}')
 
     def remove_experiment_and_instrument(self):
