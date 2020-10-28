@@ -85,7 +85,7 @@ class MainWindow(DefaultMainWindow):
         self.experiment_label = QLabel()
         self.experiment_label.setSizePolicy(QSizePolicy.Expanding,
                                             QSizePolicy.Preferred)
-        self.experiment_label.setStyleSheet("font: 17pt Comic Sans MS")
+        self.experiment_label.setStyleSheet("font-size: 17pt")
         self.toolBarMain.addWidget(self.experiment_label)
 
     def _init_instrument_name(self):
@@ -95,7 +95,8 @@ class MainWindow(DefaultMainWindow):
                                            QSizePolicy.Preferred)
         self.instrument_label.setSizePolicy(QSizePolicy.Expanding,
                                             QSizePolicy.Preferred)
-        self.instrument_text.setStyleSheet("font: 17pt Comic Sans MS")
+        self.instrument_text.setStyleSheet("font-size: 17pt")
+        self.instrument_label.setStyleSheet("font-size: 17pt")
         self.toolBarMain.addWidget(self.instrument_text)
         self.toolBarMain.addWidget(self.instrument_label)
 
@@ -125,9 +126,6 @@ class MainWindow(DefaultMainWindow):
 
     def add_instrument(self):
         instrument = self.client.eval('session.instrument', None)
-        if instrument is None:
-            self.instrument_label.setText('Instrument: UNKNOWN')
-            self.instrument_label.setStyleSheet("font: 17pt Comic Sans MS")
         if instrument:
             self.instrument_text.setText('Instrument:')
             instrument = instrument.split('.')[-1]
@@ -142,8 +140,8 @@ class MainWindow(DefaultMainWindow):
     def add_experiment(self):
         experiment = self.client.eval('session.experiment.title', None)
         if experiment:
-            if len(experiment) > 50:
-                _experiment = experiment[0:15]
+            if len(experiment) > max_text_length:
+                _experiment = experiment[0:max_text_length]
                 self.experiment_label.setText(f'Experiment: {_experiment}')
                 return
             self.experiment_label.setText(f'Experiment: {experiment}')
