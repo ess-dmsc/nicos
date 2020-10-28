@@ -153,6 +153,7 @@ class MainWindow(DefaultMainWindow):
 
     def remove_experiment_and_instrument(self):
         self.experiment_label.clear()
+        self.experiment_text.clear()
         self.instrument_label.clear()
         self.instrument_text.clear()
 
