@@ -124,7 +124,7 @@ class MainWindow(DefaultMainWindow):
         self.toolBarMain.insertWidget(self.toolBarMain.actions()[1],
                                       nicos_label)
 
-    def add_instrument(self):
+    def update_instrument_text(self):
         instrument = self.client.eval('session.instrument', None)
         if instrument:
             self.instrument_text.setText('Instrument:')
@@ -136,8 +136,11 @@ class MainWindow(DefaultMainWindow):
                 return
             self.instrument_label.setPixmap(logo.scaledToHeight(
                 self.toolBarMain.height(), Qt.SmoothTransformation))
+        else:
+            self.instrument_label.setText('Instrument: UNKNOWN')
 
-    def add_experiment(self):
+    def update_experiment_text(self):
+        max_text_length = 50
         experiment = self.client.eval('session.experiment.title', None)
         if experiment:
             if len(experiment) > max_text_length:
@@ -190,8 +193,8 @@ class MainWindow(DefaultMainWindow):
         if is_connected:
             self.actionConnect.setText('Disconnect')
             self.statusLabel.setText('\u2713 Connected')
-            self.add_instrument()
-            self.add_experiment()
+            self.update_instrument_text()
+            self.update_experiment_text()
         else:
             self.actionConnect.setText('Connect to server...')
             self.statusLabel.setText('Disconnected')
