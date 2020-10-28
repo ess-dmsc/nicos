@@ -143,13 +143,13 @@ class MainWindow(DefaultMainWindow):
             self.instrument_label.setPixmap(logo.scaledToHeight(
                 self.toolBarMain.height(), Qt.SmoothTransformation))
         else:
-            self.instrument_label.setText('Instrument: UNKNOWN')
+            self.instrument_label.setText('UNKNOWN')
 
     def update_experiment_text(self):
         max_text_length = 50
         experiment = self.client.eval('session.experiment.title', None)
-        if experiment:
-            self.experiment_text.setText("Experiment: ")
+        if experiment is not None:
+            self.experiment_text.setText("     Experiment:")
             self.experiment_label.setText(experiment[0:max_text_length])
 
     def remove_experiment_and_instrument(self):
