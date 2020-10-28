@@ -82,10 +82,16 @@ class MainWindow(DefaultMainWindow):
         self.setStatus('disconnected')
 
     def _init_experiment_name(self):
+        self.experiment_text = QLabel()
         self.experiment_label = QLabel()
+        self.experiment_text.setSizePolicy(QSizePolicy.Expanding,
+                                            QSizePolicy.Preferred)
         self.experiment_label.setSizePolicy(QSizePolicy.Expanding,
                                             QSizePolicy.Preferred)
+        style_sheet = "font-size: 17pt; padding-left: 10px; font-weight: bold"
+        self.experiment_text.setStyleSheet(style_sheet)
         self.experiment_label.setStyleSheet("font-size: 17pt")
+        self.toolBarMain.addWidget(self.experiment_text)
         self.toolBarMain.addWidget(self.experiment_label)
 
     def _init_instrument_name(self):
@@ -95,7 +101,7 @@ class MainWindow(DefaultMainWindow):
                                            QSizePolicy.Preferred)
         self.instrument_label.setSizePolicy(QSizePolicy.Expanding,
                                             QSizePolicy.Preferred)
-        self.instrument_text.setStyleSheet("font-size: 17pt")
+        self.instrument_text.setStyleSheet("font-size: 17pt; font-weight: bold")
         self.instrument_label.setStyleSheet("font-size: 17pt")
         self.toolBarMain.addWidget(self.instrument_text)
         self.toolBarMain.addWidget(self.instrument_label)
@@ -143,11 +149,8 @@ class MainWindow(DefaultMainWindow):
         max_text_length = 50
         experiment = self.client.eval('session.experiment.title', None)
         if experiment:
-            if len(experiment) > max_text_length:
-                _experiment = experiment[0:max_text_length]
-                self.experiment_label.setText(f'Experiment: {_experiment}')
-                return
-            self.experiment_label.setText(f'Experiment: {experiment}')
+            self.experiment_text.setText("Experiment: ")
+            self.experiment_label.setText(experiment[0:max_text_length])
 
     def remove_experiment_and_instrument(self):
         self.experiment_label.clear()
