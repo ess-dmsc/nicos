@@ -88,8 +88,7 @@ class MainWindow(DefaultMainWindow):
                                             QSizePolicy.Preferred)
         self.experiment_label.setSizePolicy(QSizePolicy.Expanding,
                                             QSizePolicy.Preferred)
-        style_sheet = "font-size: 17pt; padding-left: 10px; font-weight: bold"
-        self.experiment_text.setStyleSheet(style_sheet)
+        self.experiment_text.setStyleSheet("font-size: 17pt; font-weight: bold")
         self.experiment_label.setStyleSheet("font-size: 17pt")
         self.toolBarMain.addWidget(self.experiment_text)
         self.toolBarMain.addWidget(self.experiment_label)
@@ -132,8 +131,8 @@ class MainWindow(DefaultMainWindow):
 
     def update_instrument_text(self):
         instrument = self.client.eval('session.instrument', None)
+        self.instrument_text.setText('Instrument:')
         if instrument:
-            self.instrument_text.setText('Instrument:')
             instrument = instrument.split('.')[-1]
             logo = decolor_logo(QPixmap(f'resources/{instrument}-logo.svg'),
                                 Qt.white)
