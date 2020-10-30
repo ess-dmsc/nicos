@@ -83,25 +83,29 @@ class MainWindow(DefaultMainWindow):
 
     def _init_experiment_name(self):
         self.experiment_text = QLabel()
-        self.experiment_label = QLabel()
         self.experiment_text.setSizePolicy(QSizePolicy.Expanding,
-                                            QSizePolicy.Preferred)
+                                           QSizePolicy.Preferred)
+        self.experiment_text.setStyleSheet('font-size: 17pt; font-weight: bold')
+
+        self.experiment_label = QLabel()
         self.experiment_label.setSizePolicy(QSizePolicy.Expanding,
                                             QSizePolicy.Preferred)
-        self.experiment_text.setStyleSheet("font-size: 17pt; font-weight: bold")
-        self.experiment_label.setStyleSheet("font-size: 17pt")
+        self.experiment_label.setStyleSheet('font-size: 17pt')
+
         self.toolBarMain.addWidget(self.experiment_text)
         self.toolBarMain.addWidget(self.experiment_label)
 
     def _init_instrument_name(self):
         self.instrument_text = QLabel()
-        self.instrument_label = QLabel()
         self.instrument_text.setSizePolicy(QSizePolicy.Expanding,
                                            QSizePolicy.Preferred)
+        self.instrument_text.setStyleSheet('font-size: 17pt; font-weight: bold')
+
+        self.instrument_label = QLabel()
         self.instrument_label.setSizePolicy(QSizePolicy.Expanding,
                                             QSizePolicy.Preferred)
-        self.instrument_text.setStyleSheet("font-size: 17pt; font-weight: bold")
-        self.instrument_label.setStyleSheet("font-size: 17pt")
+        self.instrument_label.setStyleSheet('font-size: 17pt')
+
         self.toolBarMain.addWidget(self.instrument_text)
         self.toolBarMain.addWidget(self.instrument_label)
 
@@ -130,7 +134,7 @@ class MainWindow(DefaultMainWindow):
                                       nicos_label)
 
     def update_instrument_text(self):
-        instrument = self.client.eval('session.instrument', None)
+        instrument = self.client.eval('session.instrument.instrument', None)
         self.instrument_text.setText('Instrument:')
         if instrument:
             instrument = instrument.split('.')[-1]
