@@ -138,7 +138,6 @@ class MainWindow(DefaultMainWindow):
         instrument = self.client.eval('session.instrument.instrument', None)
         self.instrument_text.setText('Instrument:')
         if instrument:
-            instrument = instrument.split('.')[-1]
             logo = decolor_logo(QPixmap(f'resources/{instrument}-logo.svg'),
                                 Qt.white)
             if logo.isNull():
