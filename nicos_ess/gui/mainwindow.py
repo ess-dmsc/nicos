@@ -135,7 +135,7 @@ class MainWindow(DefaultMainWindow):
                                       nicos_label)
 
     def update_instrument_text(self):
-        instrument = self.client.eval('session.instrument.instrument', None)
+        instrument = self.client.eval('session.instrument', None)
         self.instrument_text.setText('Instrument:')
         if instrument:
             logo = decolor_logo(QPixmap(f'resources/{instrument}-logo.svg'),
