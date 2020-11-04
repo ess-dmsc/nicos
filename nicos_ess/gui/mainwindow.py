@@ -68,6 +68,7 @@ class MainWindow(DefaultMainWindow):
         self.actionUser.setMenu(dropdown)
         self.actionUser.setIconVisibleInMenu(True)
         self.dropdown = dropdown
+        self.actionExpert.setEnabled(self.client.isconnected)
 
         self._init_instrument_name()
         self._init_experiment_name()
@@ -227,12 +228,15 @@ class MainWindow(DefaultMainWindow):
         DefaultMainWindow.on_client_connected(self)
         self.actionConnect.setIcon(
             QIcon("resources/material/icons/power_off-24px.svg"))
+        self.actionExpert.setEnabled(True)
 
     def on_client_disconnected(self):
         DefaultMainWindow.on_client_disconnected(self)
         self.remove_experiment_and_instrument()
         self.actionConnect.setIcon(
             QIcon("resources/material/icons/power-24px.svg"))
+        self.actionExpert.setEnabled(False)
+        self.actionExpert.setChecked(False)
 
     @pyqtSlot(bool)
     def on_actionConnect_triggered(self, _):
