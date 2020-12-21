@@ -160,7 +160,7 @@
     <bool>false</bool>
    </attribute>
    <addaction name="actionUser"/>
-   <addaction name="actionEmergencyStop"/>
+   <addaction name="actionSoftStopAll"/>
   </widget>
   <action name="actionConnect">
    <property name="checkable">
@@ -284,7 +284,7 @@
     <string>Settings</string>
    </property>
   </action>
-  <action name="actionEmergencyStop">
+  <action name="actionSoftStopAll">
    <property name="icon">
     <iconset>
      <normaloff>../../resources/icons/process-stop.png</normaloff>../../resources/icons/process-stop.png</iconset>

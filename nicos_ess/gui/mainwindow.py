@@ -69,7 +69,7 @@ class MainWindow(DefaultMainWindow):
         self.actionUser.setIconVisibleInMenu(True)
         self.dropdown = dropdown
         self.actionExpert.setEnabled(self.client.isconnected)
-        self.actionEmergencyStop.setEnabled(self.client.isconnected)
+        self.actionSoftStopAll.setEnabled(self.client.isconnected)
 
         self._init_instrument_name()
         self._init_experiment_name()
@@ -112,7 +112,7 @@ class MainWindow(DefaultMainWindow):
     def set_icons(self):
         self.actionUser.setIcon(
             get_icon('settings_applications-24px.svg'))
-        self.actionEmergencyStop.setIcon(get_icon('emergency_stop.svg'))
+        self.actionSoftStopAll.setIcon(get_icon('emergency_stop.svg'))
         self.actionConnect.setIcon(get_icon('power-24px.svg'))
         self.actionExit.setIcon(get_icon('exit_to_app-24px.svg'))
         self.actionViewOnly.setIcon(get_icon('lock-24px.svg'))
@@ -228,7 +228,7 @@ class MainWindow(DefaultMainWindow):
         self.actionConnect.setIcon(
             QIcon("resources/material/icons/power_off-24px.svg"))
         self.actionExpert.setEnabled(True)
-        self.actionEmergencyStop.setEnabled(not self.client.viewonly)
+        self.actionSoftStopAll.setEnabled(not self.client.viewonly)
 
     def on_client_disconnected(self):
         DefaultMainWindow.on_client_disconnected(self)
@@ -237,14 +237,14 @@ class MainWindow(DefaultMainWindow):
             QIcon("resources/material/icons/power-24px.svg"))
         self.actionExpert.setEnabled(False)
         self.actionExpert.setChecked(False)
-        self.actionEmergencyStop.setEnabled(False)
+        self.actionSoftStopAll.setEnabled(False)
 
     def on_actionViewOnly_toggled(self, on):
         DefaultMainWindow.on_actionViewOnly_toggled(self, on)
         if self.client.isconnected:
-            self.actionEmergencyStop.setEnabled(not self.client.viewonly)
+            self.actionSoftStopAll.setEnabled(not self.client.viewonly)
         else:
-            self.actionEmergencyStop.setEnabled(False)
+            self.actionSoftStopAll.setEnabled(False)
 
     @pyqtSlot(bool)
     def on_actionConnect_triggered(self, _):
@@ -258,5 +258,5 @@ class MainWindow(DefaultMainWindow):
         self.dropdown.popup(w.mapToGlobal(QPoint(0, w.height())))
 
     @pyqtSlot()
-    def on_actionEmergencyStop_triggered(self):
+    def on_actionSoftStopAll_triggered(self):
         self.client.tell_action('emergency')
