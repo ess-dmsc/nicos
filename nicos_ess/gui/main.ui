@@ -293,7 +293,7 @@
     <string> &amp;emergencyStop</string>
    </property>
    <property name="toolTip">
-    <string>Immediate stop</string>
+    <string>Soft stop all</string>
    </property>
   </action>
  </widget>
