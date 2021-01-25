@@ -26,6 +26,7 @@
 """NICOS livewidget with GR."""
 
 import math
+import os
 
 import gr
 import numpy
@@ -35,7 +36,7 @@ from gr.pygr import Coords2D, Plot as OrigPlot, PlotAxes, Point, \
 from gr.pygr.base import GRMeta, GRVisibility
 
 from nicos.guisupport.plots import GRCOLORS, MaskedPlotCurve
-from nicos.guisupport.qt import QHBoxLayout, QWidget, pyqtSignal
+from nicos.guisupport.qt import QHBoxLayout, QWidget, pyqtSignal, QFileDialog, QDialog
 from nicos.guisupport.qtgr import InteractiveGRWidget
 
 DATATYPES = frozenset(('<u4', '<i4', '>u4', '>i4', '<u2', '<i2', '>u2', '>i2',
@@ -228,6 +229,7 @@ class LiveWidgetBase(QWidget):
                          ydual=True)
         self.plot.addAxes(self.axes)
         self.gr.addPlot(self.plot)
+        self._saveName = None
 
     def closeEvent(self, event):
         self.closed.emit()
@@ -365,6 +367,41 @@ class LiveWidgetBase(QWidget):
     def setCenterMark(self, flag):
         self.axes.drawxylines = flag
         self.gr.update()
+
+    def savePlot(self):
+
+        dictPrintType = dict(gr.PRINT_TYPE)
+        for prtype in [gr.PRINT_JPEG, gr.PRINT_TIF]:
+            dictPrintType.pop(prtype)
+        saveTypes = (";;".join(dictPrintType.values()) + ";;" +
+                     ";;".join(gr.GRAPHIC_TYPE.values()))
+
+        dialog = QFileDialog(self, "Select file name", "", saveTypes)
+        dialog.selectNameFilter(gr.PRINT_TYPE[gr.PRINT_PDF])
+        dialog.setOption(dialog.HideNameFilterDetails, False)
+        dialog.setAcceptMode(QFileDialog.AcceptSave)
+        if dialog.exec_() == QDialog.Accepted:
+            path = dialog.selectedFiles()[0]
+            if path:
+                _p, suffix = os.path.splitext(path)
+                if suffix:
+                    suffix = suffix.lower()
+                else:
+                    # append selected name filter suffix (filename extension)
+                    nameFilter = dialog.selectedNameFilter()
+                    for k, v in gr.PRINT_TYPE.items():
+                        if v == nameFilter:
+                            suffix = '.' + k
+                            path += suffix
+                            break
+                if suffix and (suffix[1:] in gr.PRINT_TYPE or
+                               suffix[1:] in gr.GRAPHIC_TYPE):
+                    self.gr.save(path)
+                    self._saveName = os.path.basename(path)
+                else:
+                    self._saveName = None
+                    raise Exception("Unsupported file format")
+        return self._saveName
 
 
 class LiveWidget(LiveWidgetBase):
