@@ -12,4 +12,4 @@ PyQt5==5.14.2
 PyQt5-sip==12.8
 PyQtWebEngine==5.14.0
 h5py>=2.6
-file-writer-control==0.1.0
+file-writer-control==1.0.1
