@@ -6,7 +6,7 @@ sysconfig = dict(
     cache='localhost',
     instrument='LoKI',
     experiment='Exp',
-    datasinks=['conssink', 'filesink', 'daemonsink', 'liveview', ],
+    datasinks=['conssink', 'filesink', 'daemonsink', ],
 )
 
 modules = ['nicos.commands.standard']
@@ -36,8 +36,6 @@ devices = dict(
     conssink=device('nicos.devices.datasinks.ConsoleScanSink',),
 
     daemonsink=device('nicos.devices.datasinks.DaemonSink',),
-
-    liveview=device('nicos.devices.datasinks.LiveViewSink', ),
 
     Space=device('nicos.devices.generic.FreeSpace',
         description='The amount of free space for storing data',
