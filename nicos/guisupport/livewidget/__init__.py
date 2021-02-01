@@ -375,8 +375,10 @@ class LiveWidgetBase(QWidget):
         """
         save_types = ";;".join(sorted(set(gr.PRINT_TYPE.values())))
         file_path, _ = QFileDialog.getSaveFileName(self, 'Save as...', 'untitled', filter=save_types)
+        if len(file_path) == 0:
+            return False
+        
         file_ext = os.path.splitext(file_path)[1]
-
         if file_ext.lower()[1:] in gr.PRINT_TYPE:
             self.gr.save(file_path)
             return True
