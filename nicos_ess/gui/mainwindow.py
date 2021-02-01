@@ -24,7 +24,7 @@
 # *****************************************************************************
 
 """NICOS GUI main window."""
-
+from os import path
 from time import time as current_time
 
 from nicos.clients.gui.mainwindow import MainWindow as DefaultMainWindow
@@ -33,7 +33,6 @@ from nicos.guisupport.qt import QApplication, QFileDialog, QIcon, QLabel, \
 from nicos_ess.gui import uipath
 from nicos_ess.gui.panels import get_icon
 from nicostools.setupfiletool.utilities.utilities import getNicosDir
-from os import path
 
 root_path = getNicosDir()
 
