@@ -30,9 +30,12 @@ from time import time as current_time
 from nicos.clients.gui.mainwindow import MainWindow as DefaultMainWindow
 from nicos.guisupport.qt import QApplication, QFileDialog, QIcon, QLabel, \
     QMenu, QPixmap, QPoint, QSize, QSizePolicy, Qt, QWidget, pyqtSlot
-
 from nicos_ess.gui import uipath
-from nicos_ess.gui.panels import get_icon, get_qpix_map
+from nicos_ess.gui.panels import get_icon
+from nicostools.setupfiletool.utilities.utilities import getNicosDir
+from os import path
+
+root_path = getNicosDir()
 
 
 def decolor_logo(pixmap, color):
@@ -121,14 +124,14 @@ class MainWindow(DefaultMainWindow):
 
     def add_logo(self):
         logo_label = QLabel()
-        pxr = decolor_logo(get_qpix_map("resources/logo-icon.png"), Qt.white)
+        pxr = decolor_logo(QPixmap(path.join(root_path, "resources/logo-icon.png")), Qt.white)
         logo_label.setPixmap(pxr.scaledToHeight(self.toolBarMain.height(),
                                                 Qt.SmoothTransformation))
         logo_label.setMargin(5)
         self.toolBarMain.insertWidget(self.toolBarMain.actions()[0], logo_label)
 
         nicos_label = QLabel()
-        pxr = decolor_logo(get_qpix_map("resources/nicos-logo-high.svg"), Qt.white)
+        pxr = decolor_logo(QPixmap(path.join(root_path, "resources/nicos-logo-high.svg")), Qt.white)
         nicos_label.setPixmap(pxr.scaledToHeight(self.toolBarMain.height(),
                                                  Qt.SmoothTransformation))
         self.toolBarMain.insertWidget(self.toolBarMain.actions()[1],
@@ -138,7 +141,7 @@ class MainWindow(DefaultMainWindow):
         instrument = self.client.eval('session.instrument', None)
         self.instrument_text.setText('Instrument:')
         if instrument:
-            logo = decolor_logo(get_qpix_map(f'resources/{instrument}-logo.svg'),
+            logo = decolor_logo(QPixmap(path.join(root_path, f'resources/{instrument}-logo.svg')),
                                 Qt.white)
             if logo.isNull():
                 self.instrument_label.setText(instrument.upper())
