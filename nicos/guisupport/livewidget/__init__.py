@@ -229,7 +229,6 @@ class LiveWidgetBase(QWidget):
                          ydual=True)
         self.plot.addAxes(self.axes)
         self.gr.addPlot(self.plot)
-        self._saveName = None
 
     def closeEvent(self, event):
         self.closed.emit()
@@ -369,39 +368,21 @@ class LiveWidgetBase(QWidget):
         self.gr.update()
 
     def savePlot(self):
+        """This method will save a plot on a by the user chosen format that is supported by gr widget.
 
-        dictPrintType = dict(gr.PRINT_TYPE)
-        for prtype in [gr.PRINT_JPEG, gr.PRINT_TIF]:
-            dictPrintType.pop(prtype)
-        saveTypes = (";;".join(dictPrintType.values()) + ";;" +
-                     ";;".join(gr.GRAPHIC_TYPE.values()))
+        :return: returns True if file saving is successful, otherwise False.
+        :rtype: bool
+        """
+        save_types = ";;".join(sorted(set(gr.PRINT_TYPE.values())))
+        file_path, _ = QFileDialog.getSaveFileName(self, 'Save as...', 'untitled', filter=save_types)
+        file_ext = os.path.splitext(file_path)[1]
 
-        dialog = QFileDialog(self, "Select file name", "", saveTypes)
-        dialog.selectNameFilter(gr.PRINT_TYPE[gr.PRINT_PDF])
-        dialog.setOption(dialog.HideNameFilterDetails, False)
-        dialog.setAcceptMode(QFileDialog.AcceptSave)
-        if dialog.exec_() == QDialog.Accepted:
-            path = dialog.selectedFiles()[0]
-            if path:
-                _p, suffix = os.path.splitext(path)
-                if suffix:
-                    suffix = suffix.lower()
-                else:
-                    # append selected name filter suffix (filename extension)
-                    nameFilter = dialog.selectedNameFilter()
-                    for k, v in gr.PRINT_TYPE.items():
-                        if v == nameFilter:
-                            suffix = '.' + k
-                            path += suffix
-                            break
-                if suffix and (suffix[1:] in gr.PRINT_TYPE or
-                               suffix[1:] in gr.GRAPHIC_TYPE):
-                    self.gr.save(path)
-                    self._saveName = os.path.basename(path)
-                else:
-                    self._saveName = None
-                    raise Exception("Unsupported file format")
-        return self._saveName
+        if file_ext.lower()[1:] in gr.PRINT_TYPE:
+            self.gr.save(file_path)
+            return True
+        else:
+            raise TypeError("Unsupported file format {}".format(file_ext))
+            return False
 
 
 class LiveWidget(LiveWidgetBase):
