@@ -45,7 +45,7 @@ from nicos.guisupport.qt import QAction, QApplication, QCursor, QDialog, \
     QFileDialog, QFont, QListWidgetItem, QMenu, QPoint, Qt
 from nicos.guisupport.qtgr import InteractiveGRWidget, LegendEvent, \
     MouseEvent, ROIEvent
-from nicos.guisupport.utils import scaledFont
+from nicos.guisupport.utils import scaledFont, savePlot
 from nicos.utils import number_types, safeName
 from nicos.utils.fitting import CosineFit, ExponentialFit, Fit, FitError, \
     FitResult, GaussFit, LinearFit, LorentzFit, PearsonVIIFit, \
@@ -959,33 +959,8 @@ class NicosGrPlot(NicosPlot, InteractiveGRWidget):
             self.plotcurves.append(plotcurve)
 
     def savePlot(self):
-        saveName = None
-        dialog = QFileDialog(self, "Select file name", "", self._saveTypes)
-        dialog.selectNameFilter(gr.PRINT_TYPE[gr.PRINT_PDF])
-        dialog.setOption(dialog.HideNameFilterDetails, False)
-        dialog.setAcceptMode(QFileDialog.AcceptSave)
-        if dialog.exec_() == QDialog.Accepted:
-            path = dialog.selectedFiles()[0]
-            if path:
-                _p, suffix = os.path.splitext(path)
-                if suffix:
-                    suffix = suffix.lower()
-                else:
-                    # append selected name filter suffix (filename extension)
-                    nameFilter = dialog.selectedNameFilter()
-                    for k, v in gr.PRINT_TYPE.items():
-                        if v == nameFilter:
-                            suffix = '.' + k
-                            path += suffix
-                            break
-                if suffix and (suffix[1:] in gr.PRINT_TYPE or
-                               suffix[1:] in gr.GRAPHIC_TYPE):
-                    self.save(path)
-                    saveName = os.path.basename(path)
-                    self._saveName = saveName
-                else:
-                    raise Exception("Unsupported file format")
-        return saveName
+        """Use savePlot function from guisupport utilities."""
+        return savePlot(self)
 
     def printPlot(self):
         self.printDialog("Nicos-" + self._saveName if self._saveName

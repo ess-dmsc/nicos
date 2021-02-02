@@ -26,7 +26,6 @@
 """NICOS livewidget with GR."""
 
 import math
-import os
 
 import gr
 import numpy
@@ -38,6 +37,7 @@ from gr.pygr.base import GRMeta, GRVisibility
 from nicos.guisupport.plots import GRCOLORS, MaskedPlotCurve
 from nicos.guisupport.qt import QHBoxLayout, QWidget, pyqtSignal, QFileDialog, QDialog
 from nicos.guisupport.qtgr import InteractiveGRWidget
+from nicos.guisupport.utils import savePlot
 
 DATATYPES = frozenset(('<u4', '<i4', '>u4', '>i4', '<u2', '<i2', '>u2', '>i2',
                        '<u1', '<i1', '>u1', '>i1', '<f8', '<f4', '>f8', '>f4',
@@ -368,22 +368,8 @@ class LiveWidgetBase(QWidget):
         self.gr.update()
 
     def savePlot(self):
-        """This method will save a plot on a by the user chosen format that is supported by gr widget.
-
-        :return: returns True if file saving is successful, otherwise False.
-        :rtype: bool
-        """
-        save_types = ";;".join(sorted(set(gr.PRINT_TYPE.values())))
-        file_path, _ = QFileDialog.getSaveFileName(self, 'Save as...', 'untitled', filter=save_types)
-        if len(file_path) == 0:
-            return False
-        
-        file_ext = os.path.splitext(file_path)[1]
-        if file_ext.lower()[1:] in gr.PRINT_TYPE:
-            self.gr.save(file_path)
-            return True
-        else:
-            raise TypeError("Unsupported file format {}".format(file_ext))
+        """Use savePlot function from guisupport utilities."""
+        return savePlot(self.gr)
 
 
 class LiveWidget(LiveWidgetBase):
