@@ -31,10 +31,7 @@ from nicos.clients.gui.mainwindow import MainWindow as DefaultMainWindow
 from nicos.guisupport.qt import QApplication, QFileDialog, QIcon, QLabel, \
     QMenu, QPixmap, QPoint, QSize, QSizePolicy, Qt, QWidget, pyqtSlot
 from nicos_ess.gui import uipath
-from nicos_ess.gui.panels import get_icon
-from nicostools.setupfiletool.utilities.utilities import getNicosDir
-
-root_path = getNicosDir()
+from nicos_ess.gui.panels import get_icon, root_path
 
 
 def decolor_logo(pixmap, color):
