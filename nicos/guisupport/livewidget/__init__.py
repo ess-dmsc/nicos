@@ -35,7 +35,7 @@ from gr.pygr import Coords2D, Plot as OrigPlot, PlotAxes, Point, \
 from gr.pygr.base import GRMeta, GRVisibility
 
 from nicos.guisupport.plots import GRCOLORS, MaskedPlotCurve
-from nicos.guisupport.qt import QHBoxLayout, QWidget, pyqtSignal, QFileDialog, QDialog
+from nicos.guisupport.qt import QHBoxLayout, QWidget, pyqtSignal, QDialog
 from nicos.guisupport.qtgr import InteractiveGRWidget
 from nicos.guisupport.utils import savePlot
 
@@ -369,7 +369,7 @@ class LiveWidgetBase(QWidget):
 
     def savePlot(self):
         """Use savePlot function from guisupport utilities."""
-        return savePlot(self.gr)
+        return savePlot(self.gr, gr.PRINT_TYPE[gr.PRINT_PDF])
 
 
 class LiveWidget(LiveWidgetBase):

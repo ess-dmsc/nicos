@@ -42,7 +42,7 @@ from nicos.clients.gui.utils import DlgPresets, DlgUtils, dialogFromUi, loadUi
 from nicos.guisupport.plots import DATEFMT, TIMEFMT, MaskedPlotCurve, \
     NicosPlotAxes, NicosTimePlotAxes
 from nicos.guisupport.qt import QAction, QApplication, QCursor, QDialog, \
-    QFileDialog, QFont, QListWidgetItem, QMenu, QPoint, Qt
+    QFont, QListWidgetItem, QMenu, QPoint, Qt
 from nicos.guisupport.qtgr import InteractiveGRWidget, LegendEvent, \
     MouseEvent, ROIEvent
 from nicos.guisupport.utils import scaledFont, savePlot
@@ -960,7 +960,7 @@ class NicosGrPlot(NicosPlot, InteractiveGRWidget):
 
     def savePlot(self):
         """Use savePlot function from guisupport utilities."""
-        return savePlot(self)
+        return savePlot(self, gr.PRINT_TYPE[gr.PRINT_PDF])
 
     def printPlot(self):
         self.printDialog("Nicos-" + self._saveName if self._saveName

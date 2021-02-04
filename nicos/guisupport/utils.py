@@ -27,21 +27,26 @@
 from contextlib import contextmanager
 import gr
 from os import path
-from nicos.guisupport.qt import QApplication, QDoubleValidator, QFileDialog, QFont, \
-    QPalette, Qt, QValidator
+from nicos.guisupport.qt import QApplication, QDoubleValidator, QFileDialog, \
+     QFont, QPalette, Qt, QValidator
 
 
-def savePlot(widget):
-    """This method will save a plot on a by the user chosen format that is supported by gr widgets.
+def savePlot(widget, default_file_type):
+    """This method will save a plot on a by the
+       user chosen format that is supported by gr widgets.
 
-            :parameters: graphics widget
-            :return: returns file path, returns empty string if user cancels save
+            :parameters: graphics widget,
+                         default save file type
+            :return: returns file path,
+                     returns empty string if user cancels save
             :rtype: str
     """
     gr_file_types = {**gr.PRINT_TYPE, **gr.GRAPHIC_TYPE}
     save_types = ";;".join(sorted(set(gr_file_types.values())))
-    file_path, _ = QFileDialog.getSaveFileName(None, 'Save as...', 'untitled', filter=save_types)
-    if len(file_path) == 0:
+    file_path, _ = QFileDialog.getSaveFileName(None, 'Save as...',
+                                               'untitled', filter=save_types,
+                                               initialFilter=default_file_type)
+    if not file_path:
         return ""
 
     file_ext = path.splitext(file_path)[1]
