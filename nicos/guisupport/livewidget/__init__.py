@@ -218,6 +218,7 @@ class LiveWidgetBase(QWidget):
         self._axesratio = 1.0
         self._logscale = False
         self._rois = {}
+        self._saveName = None
 
         layout = QHBoxLayout()
         self.gr = GRWidget(self)
@@ -369,7 +370,9 @@ class LiveWidgetBase(QWidget):
 
     def savePlot(self):
         """Use savePlot function from guisupport utilities."""
-        return savePlot(self.gr, gr.PRINT_TYPE[gr.PRINT_PDF])
+        self._saveName = savePlot(self.gr, gr.PRINT_TYPE[gr.PRINT_PDF],
+                                  self._saveName)
+        return self._saveName
 
 
 class LiveWidget(LiveWidgetBase):

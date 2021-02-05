@@ -960,7 +960,9 @@ class NicosGrPlot(NicosPlot, InteractiveGRWidget):
 
     def savePlot(self):
         """Use savePlot function from guisupport utilities."""
-        return savePlot(self, gr.PRINT_TYPE[gr.PRINT_PDF])
+        self._saveName = savePlot(self, gr.PRINT_TYPE[gr.PRINT_PDF],
+                                  self._saveName)
+        return self._saveName
 
     def printPlot(self):
         self.printDialog("Nicos-" + self._saveName if self._saveName
