@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>631</width>
-    <height>152</height>
+    <height>183</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -18,6 +18,9 @@
   </property>
   <property name="windowTitle">
    <string>Form</string>
+  </property>
+  <property name="autoFillBackground">
+   <bool>true</bool>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <property name="leftMargin">
@@ -67,7 +70,7 @@
        </widget>
       </item>
       <item>
-       <widget class="CommandLineEdit" name="commandInput">
+       <widget class="CommandLineEditStyleSheet" name="commandInput">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Expanding" vsizetype="Ignored">
           <horstretch>0</horstretch>
@@ -91,7 +94,7 @@
          <string>New Cmd</string>
         </property>
         <property name="icon">
-         <iconset resource="../../../resources/nicos-gui-material.qrc">
+         <iconset>
           <normaloff>:/material/add</normaloff>
           <normalon>:/material/remove</normalon>:/material/add</iconset>
         </property>
@@ -112,7 +115,7 @@
          <string>Dry run</string>
         </property>
         <property name="icon">
-         <iconset resource="../../../resources/nicos-gui-material.qrc">
+         <iconset>
           <normaloff>:/material/play_outline</normaloff>:/material/play_outline</iconset>
         </property>
        </widget>
@@ -126,7 +129,7 @@
          <string>Run</string>
         </property>
         <property name="icon">
-         <iconset resource="../../../resources/nicos-gui-material.qrc">
+         <iconset>
           <normaloff>:/material/play</normaloff>:/material/play</iconset>
         </property>
        </widget>
@@ -260,9 +263,9 @@
  </widget>
  <customwidgets>
   <customwidget>
-   <class>CommandLineEdit</class>
+   <class>CommandLineEditStyleSheet</class>
    <extends>QLineEdit</extends>
-   <header>nicos.clients.gui.widgets.lineedit.h</header>
+   <header>nicos_ess.gui.panels.lineedit.h</header>
   </customwidget>
  </customwidgets>
  <resources>
