@@ -57,6 +57,42 @@ class CommandPanel(DefaultCommandPanel):
     def on_client_disconnected(self):
         self.setViewOnly(True)
 
+    # def __updateStatus(self, status, exception=False):
+    #     """Update with the daemon status."""
+    #     self.commandInput.current_status = status
+    #     background = "background: white;"
+    #     foreground = "color: black;"
+    #     if status != 'idle':
+    #         background = "background: #ffdddd;"
+    #         # self.commandInput.setStyleSheet("background: #ffdddd;")
+    #         if not self.commandInput.error_status:
+    #             color = "color: #c9c9c9;"
+    #             # self.commandInput.setStyleSheet("color: #c9c9c9;") #foreground
+    #     else:
+    #         background = "background: white;"
+    #         # setBackgroundColor(self, self.idle_color)
+    #         if not self.commandInput.error_status:
+    #             pass
+    #             # self.commandInput.setStyleSheet("color: #ff0000;")
+    #     self.commandInput.setStyleSheet(background + foreground)
+    #     self.commandInput.update()
+    #     self.commandInput.setEnabled(status != 'disconnected')
+
+    # def _updateStatus(self, status, exception=False):
+    #     DefaultCommandPanel.updateStatus(self, status, exception)
+    #     from nicos.clients.gui.widgets.lineedit import CommandLineEdit
+    #     # print("This is a CommandLineEdit widget:")
+    #     # print(isinstance(self.commandInput, CommandLineEdit))
+    #     self.commandInput.setStyleSheet("background: #ffdddd;") # This does the trick.
+    #     from nicos.guisupport.qt import QPalette, QColor
+    #     self.commandInput.setAutoFillBackground(True)
+    #     palette = self.commandInput.palette()
+    #     palette.setColor(QPalette.Window, QColor('#ffdddd'))
+    #     palette.setColor(QPalette.Base, QColor('#ffdddd'))
+    #     self.commandInput.setBackgroundRole(QPalette.Window)
+    #     self.commandInput.setPalette(palette)
+    #     self.commandInput.update()
+
     def setViewOnly(self, viewonly):
         self.inputFrame.setEnabled(not viewonly)
         self.frame.setEnabled(not viewonly)
