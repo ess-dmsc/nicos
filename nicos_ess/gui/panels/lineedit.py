@@ -1,5 +1,3 @@
-import total as total
-
 from nicos.clients.gui.widgets.lineedit import CommandLineEdit
 from nicos.guisupport.qt import pyqtProperty
 
