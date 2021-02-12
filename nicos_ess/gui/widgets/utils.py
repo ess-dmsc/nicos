@@ -14,12 +14,13 @@ class StyleSelector:
     def style_type(self, value):
         self._style_type = value
 
-    def refresh_gui(self):
-        try:
-            self.style().unpolish(self)
-            self.style().polish(self)
-            self.update()
-        except AttributeError as e:
-            print(e)
+
+def refresh_widget(widget):
+    try:
+        widget.style().unpolish(widget)
+        widget.style().polish(widget)
+        widget.update()
+    except AttributeError as e:
+        print(e)
 
 
