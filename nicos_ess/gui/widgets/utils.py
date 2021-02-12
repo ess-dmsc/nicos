@@ -16,11 +16,6 @@ class StyleSelector:
 
 
 def refresh_widget(widget):
-    try:
-        widget.style().unpolish(widget)
-        widget.style().polish(widget)
-        widget.update()
-    except AttributeError as e:
-        print(e)
-
-
+    widget.style().unpolish(widget)
+    widget.style().polish(widget)
+    widget.update()
