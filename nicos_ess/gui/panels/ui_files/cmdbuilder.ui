@@ -265,7 +265,7 @@
   <customwidget>
    <class>CommandLineEditStyleSheet</class>
    <extends>QLineEdit</extends>
-   <header>nicos_ess.gui.panels.lineedit.h</header>
+   <header>nicos_ess.gui.widgets.lineedit.h</header>
   </customwidget>
  </customwidgets>
  <resources>
