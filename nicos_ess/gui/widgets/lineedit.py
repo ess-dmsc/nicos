@@ -6,5 +6,5 @@ class CommandLineEditStyleSheet(CommandLineEdit, StyleSelector):
 
     def setStatus(self, status):
         CommandLineEdit.setStatus(self, status)
-        self.style_type = 1 if status != 'idle' else 0
+        self.style_type = "busy" if status != 'idle' else "default"
         refresh_widget(self)

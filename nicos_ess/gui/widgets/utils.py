@@ -4,9 +4,9 @@ from nicos.guisupport.qt import pyqtProperty
 class StyleSelector:
 
     def __init__(self):
-        self._style_type = 0
+        self._style_type = "default"
 
-    @pyqtProperty(int)
+    @pyqtProperty(str)
     def style_type(self):
         return self._style_type
 
