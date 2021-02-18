@@ -8,7 +8,8 @@ class State(Enum):
 
 class StyleSelector:
     """
-    Add docstring
+    A class that encapsulates the state used for stylesheet selection
+    in the relevant qss files.
     """
 
     def __init__(self):
@@ -25,7 +26,7 @@ class StyleSelector:
 
 def refresh_widget(widget):
     """
-    Add docstring
+    Function that correctly updates the widget with a new stylesheet.
     """
     widget.style().unpolish(widget)
     widget.style().polish(widget)
