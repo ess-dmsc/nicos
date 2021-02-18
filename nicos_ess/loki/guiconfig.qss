@@ -505,7 +505,7 @@ QMessageBox > QLabel {
 
 /* ----------------------------------------- */
 
-CommandLineEdit[style_type="DEFAULT"] {
+CommandLineEdit[state="DEFAULT"] {
     font-size: 20;
     min-height: 22px;
     border: 2px solid #0094ca;
@@ -513,7 +513,7 @@ CommandLineEdit[style_type="DEFAULT"] {
     background-color: white;
 }
 
-CommandLineEdit[style_type="BUSY"] {
+CommandLineEdit[state="BUSY"] {
     font-size: 20;
     min-height: 22px;
     border: 2px solid #0094ca;
