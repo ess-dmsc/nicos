@@ -1,10 +1,14 @@
-from nicos.clients.gui.widgets.lineedit import CommandLineEdit
-from .utils import StyleSelector, refresh_widget
+from nicos.clients.gui.widgets.lineedit import CommandLineEdit as \
+    CommandLineEditBase
+from .utils import State, StyleSelector, refresh_widget
 
 
-class CommandLineEditStyleSheet(CommandLineEdit, StyleSelector):
-
+class CommandLineEdit(CommandLineEditBase, StyleSelector):
+    """
+    Why do we have this class? Because Palettes can't be used
+    """
     def setStatus(self, status):
-        CommandLineEdit.setStatus(self, status)
-        self.style_type = "busy" if status != 'idle' else "default"
+        CommandLineEditBase.setStatus(self, status)
+        self.state = State.BUSY if status != 'idle' \
+            else State.DEFAULT
         refresh_widget(self)

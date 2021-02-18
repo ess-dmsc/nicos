@@ -70,7 +70,7 @@
        </widget>
       </item>
       <item>
-       <widget class="CommandLineEditStyleSheet" name="commandInput">
+       <widget class="CommandLineEdit" name="commandInput">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Expanding" vsizetype="Ignored">
           <horstretch>0</horstretch>
@@ -263,7 +263,7 @@
  </widget>
  <customwidgets>
   <customwidget>
-   <class>CommandLineEditStyleSheet</class>
+   <class>CommandLineEdit</class>
    <extends>QLineEdit</extends>
    <header>nicos_ess.gui.widgets.lineedit.h</header>
   </customwidget>
