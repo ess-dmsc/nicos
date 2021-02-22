@@ -50,21 +50,10 @@ class ExpPanel(DefaultExpPanel):
     def __init__(self, parent, client, options):
         DefaultExpPanel.__init__(self, parent, client, options)
         # Setting up warning label so user remembers to press apply button.
-        nbr_experiment_props_opts = len(self._getProposalInput()) + 1
-        self.is_exp_props_edited = [False] * nbr_experiment_props_opts
         self._defined_emails = self.notifEmails.toPlainText().strip()
         self._defined_data_emails = self.dataEmails.toPlainText().strip()
-        self.expTitle.textChanged.connect(self.on_expTitle_text_edit)
-        self.proposalNum.textChanged.connect(self.on_proposalNum_text_edit)
-        self.users.textChanged.connect(self.on_users_text_edit)
-        self.localContact.textChanged.connect(self.on_localContact_text_edit)
-        self.sampleName.textChanged.connect(self.on_sampleName_text_edit)
-        self.notifEmails.textChanged.connect(
-            lambda: self.on_notifEmails_text_edit(
-                self.notifEmails.toPlainText().strip()))
-        self.dataEmails.textChanged.connect(
-            lambda: self.on_dataEmails_text_edit(
-                self.dataEmails.toPlainText().strip()))
+        nbr_experiment_props_opts = len(self._getProposalInput()) + 1
+        self.is_exp_props_edited = [False] * nbr_experiment_props_opts
         self.applyWarningLabel.setStyleSheet('color: red')
         self.applyWarningLabel.setVisible(False)
 
@@ -224,19 +213,24 @@ class ExpPanel(DefaultExpPanel):
             self.showInfo('Reading proposaldb failed for an unknown reason. '
                           'Please check logfiles....\n' + repr(e))
 
-    def on_proposalNum_text_edit(self, value):
+    @pyqtSlot(str)
+    def on_proposalNum_textChanged(self, value):
         self._apply_warning_status(value, 0)
 
-    def on_expTitle_text_edit(self, value):
+    @pyqtSlot(str)
+    def on_expTitle_textChanged(self, value):
         self._apply_warning_status(value, 1)
 
-    def on_users_text_edit(self, value):
+    @pyqtSlot(str)
+    def on_users_textChanged(self, value):
         self._apply_warning_status(value, 2)
 
-    def on_localContact_text_edit(self, value):
+    @pyqtSlot(str)
+    def on_localContact_textChanged(self, value):
         self._apply_warning_status(value, 3)
 
-    def on_sampleName_text_edit(self, value):
+    @pyqtSlot(str)
+    def on_sampleName_textChanged(self, value):
         self._apply_warning_status(value, 4)
 
     @pyqtSlot()
@@ -244,11 +238,15 @@ class ExpPanel(DefaultExpPanel):
         value = 'abort' if self.errorAbortBox.isChecked() else 'report'
         self._apply_warning_status(value, 5)
 
-    def on_notifEmails_text_edit(self, value):
+    @pyqtSlot()
+    def on_notifEmails_textChanged(self):
+        value = self.notifEmails.toPlainText().strip()
         self.is_exp_props_edited[6] = value != self._defined_emails
         self._set_warning_visibility()
 
-    def on_dataEmails_text_edit(self, value):
+    @pyqtSlot()
+    def on_dataEmails_textChanged(self):
+        value = self.dataEmails.toPlainText().strip()
         self.is_exp_props_edited[7] = value != self._defined_data_emails
         self._set_warning_visibility()
 

@@ -55,6 +55,13 @@ class ExpPanel(Panel):
         self._new_exp_panel = None
         self._finish_exp_panel = None
 
+        # Setting up warning label so user remembers to press apply button.
+        self._defined_emails = self.notifEmails.toPlainText().strip()
+        nbr_experiment_props_opts = len(self._getProposalInput())
+        self.is_exp_props_edited = [False] * nbr_experiment_props_opts
+        self.applyWarningLabel.setStyleSheet('color: red')
+        self.applyWarningLabel.setVisible(False)
+
         # Additional dialog panels to pop up after NewExperiment() and before
         # FinishExperiment() respectively.
         self._new_exp_panel = options.get('new_exp_panel')
@@ -66,7 +73,6 @@ class ExpPanel(Panel):
         # Hide proposal retrieval until available
         self.propdbInfo.setVisible(False)
         self.queryDBButton.setVisible(False)
-        self.applyWarningLabel.setStyleSheet('color: red')
 
         if client.isconnected:
             self.on_client_connected()
@@ -77,20 +83,6 @@ class ExpPanel(Panel):
         client.disconnected.connect(self.on_client_disconnected)
         client.setup.connect(self.on_client_setup)
         client.experiment.connect(self.on_client_experiment)
-
-        # Setting up warning label so user remembers to press apply button.
-        nbr_experiment_props_opts = len(self._getProposalInput())
-        self.is_exp_props_edited = [False] * nbr_experiment_props_opts
-        self._defined_emails = self.notifEmails.toPlainText().strip()
-        self.expTitle.textChanged.connect(self.on_expTitle_text_edit)
-        self.proposalNum.textChanged.connect(self.on_proposalNum_text_edit)
-        self.users.textChanged.connect(self.on_users_text_edit)
-        self.localContact.textChanged.connect(self.on_localContact_text_edit)
-        self.notifEmails.textChanged.connect(
-            lambda: self.on_notifEmails_text_edit(
-                self.notifEmails.toPlainText().strip()))
-        self.applyWarningLabel.setStyleSheet('color: red')
-        self.applyWarningLabel.setVisible(False)
 
     def _update_proposal_info(self):
         values = self.client.eval('session.experiment.proposal, '
@@ -305,16 +297,20 @@ class ExpPanel(Panel):
         self._defined_emails = self.notifEmails.toPlainText().strip()
         self.applyWarningLabel.setVisible(False)
 
-    def on_proposalNum_text_edit(self, value):
+    @pyqtSlot(str)
+    def on_proposalNum_textChanged(self, value):
         self._apply_warning_status(value, 0)
 
-    def on_expTitle_text_edit(self, value):
+    @pyqtSlot(str)
+    def on_expTitle_textChanged(self, value):
         self._apply_warning_status(value, 1)
 
-    def on_users_text_edit(self, value):
+    @pyqtSlot(str)
+    def on_users_textChanged(self, value):
         self._apply_warning_status(value, 2)
 
-    def on_localContact_text_edit(self, value):
+    @pyqtSlot(str)
+    def on_localContact_textChanged(self, value):
         self._apply_warning_status(value, 3)
 
     @pyqtSlot()
@@ -322,7 +318,9 @@ class ExpPanel(Panel):
         value = 'abort' if self.errorAbortBox.isChecked() else 'report'
         self._apply_warning_status(value, 4)
 
-    def on_notifEmails_text_edit(self, value):
+    @pyqtSlot()
+    def on_notifEmails_textChanged(self):
+        value = self.notifEmails.toPlainText().strip()
         self.is_exp_props_edited[5] = value != self._defined_emails
         self._set_warning_visibility()
 
