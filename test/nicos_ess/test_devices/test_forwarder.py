@@ -55,7 +55,7 @@ session_setup = 'ess_forwarder'
 
 
 def create_stream(
-    pv, protocol='CA', topic='TEST_metadata', schema='f142'
+    pv, protocol='ca', topic='TEST_metadata', schema='f142'
 ):
     return {
         'channel_name': pv,
@@ -115,27 +115,6 @@ def create_pv_details_from_messages(messages):
             stream['schema'],
         )
     return pv_details
-
-
-def create_command_from_messages(messages):
-    streams = messages[sorted(list(messages.keys()))[-1]].get('streams', [])
-    command = {'cmd': 'add', 'streams': []}
-
-    def get_stream_entry(ch, conv):
-        return {
-            'converter': {
-                'topic': f'{conv["broker"]}/{conv["topic"]}',
-                'schema': conv['schema'],
-            },
-            'channel_provider_type': 'ca',
-            'channel': ch,
-        }
-
-    for stream in streams:
-        converter = stream['converters'][0]
-        channel = stream['channel_name']
-        command['streams'].append(get_stream_entry(channel, converter))
-    return command
 
 
 class TestEpicsKafkaForwarderStatus(TestCase):
