@@ -55,11 +55,13 @@ session_setup = 'ess_forwarder'
 
 
 def create_stream(
-    pv, broker='localhost:9092', topic='TEST_metadata', schema='f142'
+    pv, protocol='CA', topic='TEST_metadata', schema='f142'
 ):
     return {
         'channel_name': pv,
-        'converters': [{'broker': broker, 'topic': topic, 'schema': schema}],
+        "protocol": protocol,
+        "output_topic": topic,
+        "schema": schema,
     }
 
 
@@ -93,10 +95,9 @@ def create_issued_from_messages(messages):
     streams = messages[sorted(list(messages.keys()))[-1]].get('streams', [])
     issued = {}
     for stream in streams:
-        converter = stream['converters'][0]
         issued[stream['channel_name']] = (
-            converter['topic'],
-            converter['schema'],
+            stream['output_topic'],
+            stream['schema'],
         )
     return issued
 
@@ -109,10 +110,9 @@ def create_pv_details_from_messages(messages):
     streams = messages[sorted(list(messages.keys()))[-1]].get('streams', [])
     pv_details = {}
     for stream in streams:
-        converter = stream['converters'][0]
         pv_details[stream['channel_name']] = (
-            converter['topic'],
-            converter['schema'],
+            stream['output_topic'],
+            stream['schema'],
         )
     return pv_details
 
