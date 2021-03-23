@@ -26,10 +26,6 @@ main_window = docked(
             "Instrument interaction",
             hsplit(
                 vbox(
-                    panel(
-                        "nicos_ess.gui.panels.cmdbuilder.CommandPanel",
-                        modules=["nicos.clients.gui.cmdlets"],
-                    ),
                     tabbed(
                         (
                             "Output",
@@ -51,6 +47,10 @@ main_window = docked(
                             ),
                         ),
                     ),
+                    panel(
+                        "nicos_ess.gui.panels.cmdbuilder.CommandPanel",
+                        modules=["nicos.clients.gui.cmdlets"],
+                    ),
                 ),  # vsplit
                 panel(
                     "nicos_ess.gui.panels.devices.DevicesPanel",
@@ -70,6 +70,7 @@ main_window = docked(
                 panel("nicos_ess.gui.panels.editor.EditorPanel", tools=None),
             ),
         ),
+        ("Prototype", panel("nicos_ess.loki.gui.loki_scriptbuilder.LokiScriptBuilderPanel")),
         ("Detector Image", panel("nicos_ess.gui.panels.live.LiveDataPanel")),
         ("History", panel("nicos_ess.gui.panels.history.HistoryPanel"),),
         (

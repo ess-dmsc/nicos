@@ -100,6 +100,8 @@ class Session:
         self.sessionid = makeSessionId()
         # contains all created device objects
         self.devices = {}
+        # contains names of failed devices, mapped to error strings
+        self.device_failures = {}
         # maps lower-cased device names to actual-cased device names
         self.device_case_map = {}
         # contains the name of all explicitly created devices
@@ -813,6 +815,7 @@ class Session:
         self.deviceCallback('destroy', list(already_shutdown))
         self.setupCallback([], [])
         self.devices.clear()
+        self.device_failures.clear()
         self.device_case_map.clear()
         self.configured_devices.clear()
         self.dynamic_devices.clear()
@@ -1043,6 +1046,10 @@ class Session:
         """Mark the end of a multi-create."""
         self._multi_level -= 1
         if not self._multi_level:
+            if self._failed_devices:
+                failures = {name: str(err)
+                            for (name, err) in self._failed_devices.items()}
+                self.deviceCallback('failed', failures)
             self._failed_devices = None
             self.deviceCallback('create', self._success_devices)
             self._success_devices = None
@@ -1146,20 +1153,24 @@ class Session:
                 return self.devices[devname]
             self.destroyDevice(devname)
 
-        devcls, devconfig = self.importDevice(devname, replace_classes)
-        if 'description' in devconfig:
-            self.log.info("creating device '%s' (%s)... ",
-                          devname, devconfig['description'])
-        else:
-            self.log.info("creating device '%s'... ", devname)
-
         try:
+            devcls, devconfig = self.importDevice(devname, replace_classes)
+            if 'description' in devconfig:
+                self.log.info("creating device '%s' (%s)... ",
+                              devname, devconfig['description'])
+            else:
+                self.log.info("creating device '%s'... ", devname)
+
             dev = devcls(devname, **devconfig)
             self.log.debug("device '%s' created", devname)
         except Exception as err:
             if self._failed_devices is not None:
                 self._failed_devices[devname] = err
+            else:
+                self.deviceCallback('failed', {devname: str(err)})
+            self.device_failures[devname] = str(err)
             raise
+        self.device_failures.pop(devname, None)
         if self._success_devices is not None:
             self._success_devices.append(devname)
         else:
@@ -1171,6 +1182,7 @@ class Session:
 
     def destroyDevice(self, devname):
         """Shutdown a device and remove it from the list of created devices."""
+        self.device_failures.pop(devname, None)
         if devname not in self.devices:
             self.log.warning("device '%s' not created", devname)
             return
@@ -1453,33 +1465,30 @@ class Session:
 
     # -- Session-specific behavior --------------------------------------------
 
-    def updateLiveData(self, tag, uid, detector, filenames, dtype, nx, ny, nt,
-                       time, data):
+    def updateLiveData(self, parameters, databuffers, labelbuffers=None):
         """Send new live data to clients.
 
-        The parameters are:
+        parameters:
 
-        * tag - a string describing the type of data that is sent.  It is used
-          by clients to determine if they can display this data.
-        * uid - a unique id for the corresponding data point.
-        * detector - name of the detector device.
-        * filenames - list of filenames displayed for cached data.
-        * dtype - a string describing the data array in numpy style, if it is
-          in array format.
-        * nx, ny, nt - three lists of integers giving the dimensions of the data
-          arrays,
-          if it is in array format.
-        * time - the current measurement time, for determining count rate.
-        * data - the actual data as a list of byte strings.
+          * tag - a string describing the type of data that is sent.  It is
+            used by clients to determine if they can display this data.
+          * uid - a unique id for the corresponding data point.
+          * detector - name of the detector device.
+          * time - the current measurement time, for determining count rate.
+          * datadescs - list of data descriptions
+
+        databuffers:  list of the actual data as memoryviews
+
+        labelbuffers: list of label data, if custom labels are provided.
         """
 
-    def notifyDataFile(self, tag, uid, detector, filename_or_filenames):
+    def notifyDataFile(self, ftype, uid, detector, filename_or_filenames):
         """Notify clients that a new data file has been written, which might
         be viewed by live-data views.
 
         The parameters are:
 
-        * tag - a string describing the type of data saved.  It is used
+        * ftype - a string describing the type of data saved.  It is used
           by clients to determine if they can open/display this data.
         * uid - a unique id for the corresponding data point.
         * detector - name of the detector device.

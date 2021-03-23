@@ -34,7 +34,7 @@ from nicos.clients.gui.utils import dialogFromUi, loadUi
 from nicos.guisupport import typedvalue
 from nicos.guisupport.qt import QDialog, QDialogButtonBox, QFileDialog, \
     QFrame, QLineEdit, QListWidgetItem, QMenu, QMessageBox, QRadioButton, \
-    QTableWidgetItem, QVBoxLayout, pyqtSlot
+    QRegExp, QRegExpValidator, QTableWidgetItem, QVBoxLayout, pyqtSlot
 from nicos.guisupport.utils import DoubleValidator
 from nicos.utils import findResource
 
@@ -95,6 +95,8 @@ class ConfigEditDialog(QDialog):
         self.frm.delDevBtn.clicked.connect(self.on_delDevBtn_clicked)
         self.frm.readDevsBtn.clicked.connect(self.on_readDevsBtn_clicked)
         self.frm.readApBtn.clicked.connect(self.on_readApBtn_clicked)
+        self.frm.nameBox.setValidator(
+            QRegExpValidator(QRegExp(r'[A-Za-z0-9.,=+-]{1,20}'), self))
         box = QDialogButtonBox(self)
         box.setStandardButtons(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         box.accepted.connect(self.maybeAccept)
@@ -547,7 +549,7 @@ class KWSSamplePanel(Panel):
             del script[-1]  # remove last comma
             script.append(')\n')
         if filename is not None:
-            with open(filename, 'w') as fp:
+            with open(filename, 'w', encoding='utf-8') as fp:
                 fp.writelines(script)
         return ''.join(script)
 
@@ -577,8 +579,8 @@ def parse_sampleconf(filename):
     ns = {'__builtins__': builtin_ns,
           'ClearSamples': mocksample.reset,
           'SetSample': mocksample.define}
-    with open(filename, 'r') as fp:
-        exec(fp, ns)
+    with open(filename, 'r', encoding='utf-8') as fp:
+        exec(fp.read(), ns)
     # The script needs to call this, if it doesn't it is not a sample file.
     if not mocksample.reset_called:
         raise ValueError('the script never calls ClearSamples()')

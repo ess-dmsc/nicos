@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # This is copied to NICOS_TEST_ROOT/bin/nicos-simulate when the tests run.
 # It is adapted from bin/nicos-simulate to run correctly in the test
@@ -38,7 +38,7 @@ class TestSimulationSession(SimulationSession):
         if sync_cache_file is None:
             return
         db = {}
-        with open(sync_cache_file) as fp:
+        with open(sync_cache_file, encoding='utf-8') as fp:
             for line in fp:
                 if line.startswith('nicos/'):
                     line = line[6:]

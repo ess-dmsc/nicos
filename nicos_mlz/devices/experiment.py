@@ -19,7 +19,7 @@
 #
 # Module authors:
 #   Enrico Faulhaber <enrico.faulhaber@frm2.tum.de>
-#   Georg Brandl <georg.brandl@frm2.tum.de>
+#   Georg Brandl <g.brandl@fz-juelich.de>
 #   Jens Krüger <jens.krueger@frm2.tum.de>
 #   Alexander Lenz <alexander.lenz@frm2.tum.de>
 #
@@ -32,142 +32,171 @@ import time
 from os import path
 
 from nicos import session
-from nicos.core import Override, Param, oneof
+from nicos.core import NicosError, Override, Param, UsageError, oneof
 from nicos.devices.experiment import Experiment as BaseExperiment, \
     ImagingExperiment as BaseImagingExperiment
-from nicos.utils import safeName
+from nicos.utils import expandTemplate, safeName
 
-from nicos_mlz.devices.proposaldb import queryCycle, queryProposal
+PROPOSAL_RE = re.compile(r'P\d+-\d+$')
 
 
 class Experiment(BaseExperiment):
     """Typical experiment at the FRM II facility.
 
-    With access to the user office proposal database information the experiment
-    related information could be take over without any human interaction except
-    the knowledge of the proposal number.
+    Allows access to the GhOST user office database -- if the user has
+    logged into NICOS using its credentials -- to query proposal details.
+    Also controls access to proposals based on this.
     """
 
     parameters = {
-        'cycle':   Param('Current reactor cycle', type=str, settable=True),
-        'propdb':  Param('Filename with credentials string for proposal DB',
-                         type=str, default='', userparam=False),
+        'reporttemplate': Param('File name of experimental report template '
+                                '(in templates)',
+                                type=str, default='experimental_report.rtf'),
     }
 
     parameter_overrides = {
-        'mailserver':  Override(default='mailhost.frm2.tum.de'),
+        'propprefix': Override(default=''),
+        'mailserver': Override(default='mailhost.frm2.tum.de'),
+        'strictservice': Override(default=True),
     }
+
+    @property
+    def ghost(self):
+        """Return the GhOST API proxy if the current user was authenticated
+        against GhOST, else None.
+        """
+        return session.getExecutingUser().data.get('ghost')
+
+    def getProposalType(self, proposal):
+        if proposal in ('template', 'current'):
+            raise UsageError(self, 'The proposal names "template" and "current"'
+                             ' are reserved and cannot be used')
+        if PROPOSAL_RE.match(proposal):
+            return 'user'
+        if proposal == self.serviceexp:
+            return 'service'
+        return 'other' if self.strictservice else 'service'
+
+    def _newCheckHook(self, proptype, proposal):
+        # check if user may start this proposal
+        if self.ghost is None:
+            return  # no way to check
+        if proptype == 'user':
+            if not self.ghost.canStartProposal(proposal):
+                raise NicosError(self, 'Current user may not start this '
+                                 'proposal')
+        elif proptype == 'other':
+            if not self.ghost.isLocalContact():
+                raise NicosError(self, 'Current user may not start a '
+                                 'non-user proposal')
 
     def _newPropertiesHook(self, proposal, kwds):
         if 'cycle' not in kwds:
-            if self.propdb:
-                try:
-                    cycle, _started = queryCycle()
-                    kwds['cycle'] = cycle
-                except Exception:
-                    self.log.warning('cannot query reactor cycle', exc=1)
-                    kwds['cycle'] = 'unknown_cycle'
-            else:
-                self.log.warning('cannot query reactor cycle, please give a '
-                                 '"cycle" keyword to this function')
-                kwds['cycle'] = 'unknown_cycle'
-        self.cycle = kwds['cycle']
+            # for compatibility with templates expecting a cycle number
+            kwds['cycle'] = 'unknown_cycle'
         if self.proptype == 'user':
-            upd = self._fillProposal(int(proposal[len(self.propprefix):]), kwds)
-            if isinstance(upd, dict):
-                kwds.update(upd)
+            if self.ghost is not None:
+                self._fillProposal(proposal, kwds)
         return kwds
 
-    # pylint: disable=inconsistent-return-statements
+    def _newSetupHook(self):
+        # TODO: set up datacloud access here
+        pass
+
+    def _canQueryProposals(self):
+        return 'ghost' in session.getExecutingUser().data
+
+    def _queryProposals(self, proposal=None, kwds=None):
+        if self.ghost is None:
+            raise NicosError('cannot query proposals for logged-in user')
+        res = self.ghost.queryProposals(proposal)
+        if kwds:
+            for prop in res:
+                res[prop].update(kwds)
+        return res
+
     def _fillProposal(self, proposal, kwds):
-        """Fill proposal info from proposal database."""
-        if not self.propdb:
-            return
         try:
-            instrument, info = queryProposal(proposal,
-                                             session.instrument.instrument)
+            res = self.ghost.queryProposals(proposal)[0]
         except Exception:
-            self.log.warning('unable to query proposal info', exc=1)
+            self.log.warning('could not query proposal info to '
+                             'fill metadata', exc=1)
             return
+        for key in res:
+            if key not in kwds:
+                kwds[key] = res[key]
 
-        kwds['wrong_instrument'] = info.get('wrong_instrument')
+    def doFinish(self):
+        try:
+            self._generateExpReport()
+        except Exception:
+            self.log.warning('could not generate experimental report',
+                             exc=1)
 
-        # check permissions
-        if 'wrong_instrument' not in info:
-            if info.get('permission_security', 'no') != 'yes':
-                self.log.error('No permission for this experiment from '
-                               'security!  Please call 12699 (929-142).')
-            if info.get('permission_radiation_protection', 'no') != 'yes':
-                self.log.error('No permission for this experiment from '
-                               'radiation protection! Please call 14955 '
-                               '(14739/929-090).')
+    def _generateExpReport(self):
+        if not self.reporttemplate:
+            return
+        # read and translate ExpReport template
+        self.log.debug('looking for template in %r', self.templatepath)
+        try:
+            data = self.getTemplate(self.reporttemplate)
+        except IOError:
+            self.log.warning('reading experimental report template %s failed, '
+                             'please fetch a copy from the User Office',
+                             self.reporttemplate)
+            return  # nothing to do about it.
 
-        kwds['permission_security'] = info.get('permission_security', 'no')
-        kwds['permission_radiation_protection'] = \
-            info.get('permission_radiation_protection', 'no')
+        # prepare template....
+        # can not do this directly in rtf as {} have special meaning....
+        # KEEP IN SYNC WHEN CHANGING THE TEMPLATE!
+        # reminder: format is {{key:default#description}},
+        # always specify default here !
+        #
+        # first clean up template
+        data = data.replace('\\par Please replace the place holder in the upper'
+                            ' part (brackets <>) by the appropriate values.', '')
+        data = data.replace('\\par Description', '\\par\n\\par '
+                            'Please check all pre-filled values carefully! '
+                            'They were partially read from the proposal and '
+                            'might need correction.\n'
+                            '\\par\n'
+                            '\\par Description')
+        # replace placeholders with templating markup
+        # TODO: change placeholders
+        data = data.replace('<your title as mentioned in the submission form>',
+                            '"{{title:The title of your proposed experiment}}"')
+        data = data.replace('<proposal No.>', 'Proposal {{proposal:0815}}')
+        data = data.replace('<your name> ', '{{users:A. Guy, A. N. Otherone}}')
+        data = data.replace('<coauthor, same affilation> ', 'and coworkers')
+        data = data.replace('<other coauthor> ', 'S. T. Ranger')
+        data = data.replace('<your affiliation>, }',
+                            '{{affiliation:affiliation of main proposer and '
+                            'coworkers}}, }\n\\par ')
+        data = data.replace('<other affiliation>', 'affiliation of coproposers '
+                            'other than 1')
+        data = data.replace('<Instrument used>',
+                            '{{instrument:<The Instrument used>}}')
+        data = data.replace('<date of experiment>', '{{from_date:01.01.1970}} '
+                            '- {{to_date:12.03.2038}}')
+        data = data.replace('<local contact>', '{{localcontact:L. Contact '
+                            '<l.contact@frm2.tum.de>}}')
 
-        what = []
-        info['instrument'] = instrument
-        # Extract NEW information
-        if info.get('title') and not kwds.get('title'):
-            what.append('title')
-            kwds['title'] = info['title']
-        if info.get('substance') and not kwds.get('sample'):
-            what.append('sample name')
-            kwds['sample'] = info['substance']
-            formula = info.get('formula')
-            if formula:
-                kwds['sample'] += ' / ' + formula
-        if info.get('user') and not kwds.get('user'):
-            newuser = info['user']
-            email = info.get('user_email', '')
-            if email:
-                newuser += ' <%s>' % email
-            if info.get('affiliation'):
-                newuser += ' (%s)' % info['affiliation']
-            kwds['user'] = newuser
-            what.append('user')
-            if info.get('co_proposer'):
-                proplist = []
-                for coproposer in info['co_proposer'].splitlines():
-                    coproposer = coproposer.strip()
-                    if coproposer:
-                        proplist.append(coproposer)
-                if proplist:
-                    kwds['user'] += ', ' + ', '.join(proplist)
-                    what.append('co-proposers')
-        # requested/assigned local contact
-        # if info.get('local_contact', '-1') != '-1' \
-        #         and not kwds.get('localcontact'):
-        #     kwds['localcontact'] = info['local_contact'].replace('.', ' ')
-        #     what.append('local contact')
-        # requested sample environment
-        v = []
-        for k in 'cryo furnace magnet pressure'.split():
-            if info.get(k):
-                v.append("%s = %s" % (k, info.get(k)))
-        if v:
-            what.append('requested sample environment')
-            kwds['se'] = ', '.join(v)
-        # include supplementary stuff to make it easier to fill in exp.
-        # report templates
-        kwds['affiliation'] = info.get('affiliation', '')
-        kwds['user_email'] = info.get('user_email', '')
-        # display info about values we got.
-        if what:
-            self.log.info('Filled in %s from proposal database',
-                          ', '.join(what))
-        # make sure we can relay on certain fields to be set, even if they are
-        # not in the DB
-        kwds.setdefault('se', 'none specified')
-        kwds.setdefault('user', 'main proposer')
-        kwds.setdefault('title', 'title of experiment p%s' % proposal)
-        kwds.setdefault('sample', 'sample of experiment p%s' % proposal)
-        kwds.setdefault('localcontact', session.instrument.responsible)
-        kwds.setdefault('user_name', info.get('user'))
-        kwds.setdefault('affiliation', 'MLZ Garching; Lichtenbergstr. 1; '
-                        '85748 Garching; Germany')
-        return kwds
+        # collect info
+        stats = self._statistics()
+        # encode all text that may be Unicode into RTF \u escapes
+        for key in stats:
+            if isinstance(stats[key], str):
+                stats[key] = stats[key].encode('rtfunicode')
+
+        # template data
+        newcontent, _, _ = expandTemplate(data, stats)
+        newfn, _, _ = expandTemplate(self.reporttemplate, stats)
+
+        with open(path.join(self.proposalpath, newfn), 'w',
+                  encoding='utf-8') as fp:
+            fp.write(newcontent)
+        self.log.info('An experimental report template was created at %r for '
+                      'your convenience.', path.join(self.proposalpath, newfn))
 
 
 class ImagingExperiment(Experiment, BaseImagingExperiment):

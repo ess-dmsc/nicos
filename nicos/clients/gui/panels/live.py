@@ -35,9 +35,10 @@ from gr import COLORMAPS as GR_COLORMAPS
 
 from nicos.clients.gui.dialogs.filesystem import FileFilterDialog
 from nicos.clients.gui.panels import Panel
-from nicos.clients.gui.utils import enumerateWithProgress, loadUi
+from nicos.clients.gui.utils import enumerateWithProgress, loadUi, uipath
+from nicos.core.constants import FILE, LIVE
 from nicos.core.errors import NicosError
-from nicos.guisupport.livewidget import DATATYPES, IntegralLiveWidget, \
+from nicos.guisupport.livewidget import AXES, DATATYPES, IntegralLiveWidget, \
     LiveWidget, LiveWidget1D
 from nicos.guisupport.qt import QActionGroup, QByteArray, QListWidgetItem, \
     QMenu, QPoint, QSizePolicy, QStatusBar, Qt, QToolBar, pyqtSlot
@@ -52,6 +53,21 @@ FILEFORMAT = Qt.UserRole + 1
 FILETAG = Qt.UserRole + 2
 FILEUID = Qt.UserRole + 3
 
+DEFAULTS = dict(
+    marks='omark',
+    offset=0,
+    plotcount=1,
+    colors='blue',
+    markersize=1,
+)
+
+
+def readDataFromFile(filename, fileformat):
+    try:
+        return ReaderRegistry.getReaderCls(fileformat).fromfile(filename)
+    except KeyError:
+        raise NicosError('Unsupported fileformat %r' % fileformat) from None
+
 
 class LiveDataPanel(Panel):
     """Provides a generic "detector live view".
@@ -61,29 +77,70 @@ class LiveDataPanel(Panel):
 
     Options:
 
-    * ``instrument`` -- the instrument name that is passed on to the livewidget
-      module.
-    * ``filetypes`` default[] - List of filename extensions whose content should
-      be displayed.
-    * ``detectors`` (default [] - list of detector devices whose data should be
-      displayed.  If not set data from all configured detectors will be shown.
+    * ``filetypes`` (default []) - List of filename extensions whose content
+      should be displayed.
+    * ``detectors`` (default []) - List of detector devices whose data should
+      be displayed. If not set data from all configured detectors will be
+      shown.
     * ``cachesize`` (default 20) - Number of entries in the live data cache.
-      The live data cache allows to display of previous taken data.
+      The live data cache allows displaying of previously measured data.
+    * ``liveonlyindex`` (default None) - Enable live only view. This disables
+      interaction with the liveDataPanel and only displays the dataset of the
+      set index.
+
+    * ``defaults`` (default []) - List of strings representing options to be
+      set for every configured plot.
+      These options can not be set on a per plot basis since they are global.
+      Options are as follows:
+
+        * ``logscale`` - Switch the logarithic scale on.
+        * ``center`` - Display the center lines for the image.
+        * ``nolines`` - Display lines for the curve.
+        * ``markers`` - Display symbols for data points.
+        * ``unzoom`` - Unzoom the plot when new data is received.
+
+    * ``plotsettings`` (default []) - List of dictionaries which contain
+      settings for the individual datasets.
+
+      Each entry will be applied to one of the detector's datasets.
+
+      * ``plotcount`` (default 1) - Amount of plots in the dataset.
+      * ``marks`` (default 'omark') - Shape of the markers (if displayed).
+        Possible values are:
+
+          'dot', 'plus', 'asterrisk', 'circle', 'diagonalcross', 'solidcircle',
+          'triangleup', 'solidtriangleup', 'triangledown', 'solidtriangledown',
+          'square', 'solidsquare', 'bowtie', 'solidbowtie', 'hourglass',
+          'solidhourglass', 'diamond', 'soliddiamond', 'star', 'solidstar',
+          'triupdown', 'solidtriright', 'solidtrileft', 'hollowplus',
+          'solidplus', 'pentagon', 'hexagon', 'heptagon', 'octagon', 'star4',
+          'star5', 'star6', 'star7', 'star8', 'vline', 'hline', 'omark'
+
+      * ``markersize`` (default 1) - Size of the markers (if displayed).
+      * ``offset`` (default 0) - Offset for the X axis labels of
+        each curve in 1D plots.
+      * ``colors`` (default ['blue']) - Color of the marks and lines
+        (if displayed).
+        If colors are set as a list the colors will be applied to the
+        individual plots (and default back to blue when wrong/missing),
+        for example:
+
+        ['red', 'green']: The first plot will be red, the second green and
+        the others will be blue (default).
+
+        'red': all plots will be red.
     """
 
     panelName = 'Live data view'
 
+    ui = f'{uipath}/panels/live.ui'
+
     def __init__(self, parent, client, options):
         Panel.__init__(self, parent, client, options)
-        loadUi(self, 'panels/live.ui')
+        loadUi(self, self.ui)
 
         self._allowed_tags = set()
         self._allowed_detectors = set()
-        self._ignore_livedata = False  # ignore livedata, e.g. wrong detector
-        self._last_idx = 0
-        self._last_tag = None
-        self._last_fnames = None
-        self._last_format = None
         self._runtime = 0
         self._range_active = False
         self._cachesize = 20
@@ -91,6 +148,11 @@ class LiveDataPanel(Panel):
         self._fileopen_filter = None
         self.widget = None
         self.menu = None
+        self.unzoom = False
+        self.lastSettingsIndex = None
+        self._axis_labels = {}
+        self.params = {}
+        self._offset = 0
 
         self.statusBar = QStatusBar(self, sizeGripEnabled=False)
         policy = self.statusBar.sizePolicy()
@@ -102,6 +164,7 @@ class LiveDataPanel(Panel):
         self.toolbar = QToolBar('Live data')
         self.toolbar.addAction(self.actionOpen)
         self.toolbar.addAction(self.actionPrint)
+        self.toolbar.addAction(self.actionSavePlot)
         self.toolbar.addSeparator()
         self.toolbar.addAction(self.actionLogScale)
         self.toolbar.addSeparator()
@@ -115,8 +178,13 @@ class LiveDataPanel(Panel):
         self.setControlsEnabled(False)
         self.set2DControlsEnabled(False)
 
-        # self.widget.setControls(Logscale | MinimumMaximum | BrightnessContrast |
-        #                         Integrate | Histogram)
+        # hide fileselection in liveonly mode
+        self._liveOnlyIndex = options.get('liveonlyindex', None)
+        if self._liveOnlyIndex is not None:
+            self.pastFilesWidget.hide()
+            self.statusBar.hide()
+            # disable interactions with the plot
+            self.setAttribute(Qt.WA_TransparentForMouseEvents)
 
         self.liveitems = []
         self.setLiveItems(1)
@@ -133,16 +201,6 @@ class LiveDataPanel(Panel):
 
         self.rois = {}
         self.detectorskey = None
-        # configure instrument specific behavior
-        self._instrument = options.get('instrument', '')
-        # self.widget.setInstrumentOption(self._instrument)
-        # if self._instrument == 'toftof':
-        #     self.widget.setAxisLabels('time channels', 'detectors')
-        # elif self._instrument == 'imaging':
-        #     self.widget.setControls(ShowGrid | Logscale | Grayscale |
-        #                             Normalize | Darkfield | Despeckle |
-        #                             CreateProfile | Histogram | MinimumMaximum)
-        #     self.widget.setStandardColorMap(True, False)
         # configure allowed file types
         supported_filetypes = ReaderRegistry.filetypes()
         opt_filetypes = set(options.get('filetypes', supported_filetypes))
@@ -153,9 +211,24 @@ class LiveDataPanel(Panel):
         if detectors:
             self._allowed_detectors = set(detectors)
 
+        defaults = options.get('defaults', [])
+
+        if 'logscale' in defaults:
+            self.actionLogScale.setChecked(True)
+        if 'center' in defaults:
+            self.actionMarkCenter.setChecked(True)
+        if 'nolines' not in defaults:
+            self.actionLines.setChecked(True)
+        if 'markers' in defaults:
+            self.actionSymbols.setChecked(True)
+        if 'unzoom' in defaults:
+            self.unzoom = True
+
+        self.plotsettings = options.get('plotsettings', [DEFAULTS])
+
         # configure caching
         self._cachesize = options.get('cachesize', self._cachesize)
-        if self._cachesize < 1:
+        if self._cachesize < 1 or self._liveOnlyIndex is not None:
             self._cachesize = 1  # always cache the last live image
         self._datacache = BoundedOrderedDict(maxlen=self._cachesize)
 
@@ -173,9 +246,11 @@ class LiveDataPanel(Panel):
                 item = QListWidgetItem('<Live #%d>' % (i + 1))
                 item.setData(FILENAME, i)
                 item.setData(FILEFORMAT, '')
-                item.setData(FILETAG, 'live')
+                item.setData(FILETAG, LIVE)
                 self.fileList.insertItem(self.fileList.count(), item)
                 self.liveitems.append(item)
+            if self._liveOnlyIndex is not None:
+                self.fileList.setCurrentRow(self._liveOnlyIndex)
         if n == 1:
             self.liveitems[0].setText('<Live>')
         else:
@@ -196,22 +271,33 @@ class LiveDataPanel(Panel):
         if isinstance(self.widget, widgetcls):
             return
 
+        # delete the old widget
         if self.widget:
             self.widgetLayout.removeWidget(self.widget)
             self.widget.deleteLater()
+
+        # create a new one
         self.widget = widgetcls(self)
+
         # enable/disable controls and set defaults for new livewidget instances
         self.setControlsEnabled(True)
         if isinstance(self.widget, LiveWidget1D):
             self.set2DControlsEnabled(False)
         else:
             self.set2DControlsEnabled(True)
-        # apply current settings
+
+        # apply current global settings
         self.widget.setCenterMark(self.actionMarkCenter.isChecked())
         self.widget.logscale(self.actionLogScale.isChecked())
-        self.widget.gr.cbm.addHandler(MouseEvent.MOUSE_MOVE,
-                                      self.on_mousemove_gr)
+        if isinstance(self.widget, LiveWidget1D):
+            self.widget.setSymbols(self.actionSymbols.isChecked())
+            self.widget.setLines(self.actionLines.isChecked())
+        # liveonly mode does not display a status bar
+        if self._liveOnlyIndex is None:
+            self.widget.gr.cbm.addHandler(MouseEvent.MOUSE_MOVE,
+                                          self.on_mousemove_gr)
 
+        # handle menus
         self.menuColormap = QMenu(self)
         self.actionsColormap = QActionGroup(self)
         activeMap = self.widget.getColormap()
@@ -229,6 +315,8 @@ class LiveDataPanel(Panel):
             self.actionsColormap.addAction(action)
             action.triggered.connect(self.on_colormap_triggered)
         self.actionColormap.setMenu(self.menuColormap)
+
+        # finish initiation
         self.widgetLayout.addWidget(self.widget)
         if activeCaption:
             self.toolbar.widgetForAction(self.actionColormap).setText(
@@ -244,10 +332,14 @@ class LiveDataPanel(Panel):
         settings.setValue('geometry', self.saveGeometry())
 
     def getMenus(self):
+        if self._liveOnlyIndex is not None:
+            return []
+
         if not self.menu:
             menu = QMenu('&Live data', self)
             menu.addAction(self.actionOpen)
             menu.addAction(self.actionPrint)
+            menu.addAction(self.actionSavePlot)
             menu.addSeparator()
             menu.addAction(self.actionKeepRatio)
             menu.addAction(self.actionUnzoom)
@@ -255,6 +347,8 @@ class LiveDataPanel(Panel):
             menu.addAction(self.actionColormap)
             menu.addAction(self.actionMarkCenter)
             menu.addAction(self.actionROI)
+            menu.addAction(self.actionSymbols)
+            menu.addAction(self.actionLines)
             self.menu = menu
         return [self.menu]
 
@@ -263,6 +357,9 @@ class LiveDataPanel(Panel):
         yield from self._livewidgets.values()
 
     def getToolbars(self):
+        if self._liveOnlyIndex is not None:
+            return []
+
         return [self.toolbar]
 
     def on_mousemove_gr(self, event):
@@ -290,6 +387,16 @@ class LiveDataPanel(Panel):
             widget.setColormap(COLORMAPS[name.upper()])
         self.toolbar.widgetForAction(
             self.actionColormap).setText(name.title())
+
+    @pyqtSlot()
+    def on_actionLines_triggered(self):
+        if self.widget and isinstance(self.widget, LiveWidget1D):
+            self.widget.setLines(self.actionLines.isChecked())
+
+    @pyqtSlot()
+    def on_actionSymbols_triggered(self):
+        if self.widget and isinstance(self.widget, LiveWidget1D):
+            self.widget.setSymbols(self.actionSymbols.isChecked())
 
     def _getLiveWidget(self, roi):
         return self._livewidgets.get(roi + '/roi', None)
@@ -407,47 +514,159 @@ class LiveDataPanel(Panel):
 
     def on_client_connected(self):
         self.client.tell('eventunmask', ['livedata'])
-        datapath = self.client.eval('session.experiment.datapath', '')
-        if not datapath or not path.isdir(datapath):
-            return
-        if self._instrument == 'imaging':
-            for fn in sorted(os.listdir(datapath)):
-                if fn.endswith('.fits'):
-                    self.add_to_flist(path.join(datapath, fn), '', 'fits',
-                                      False)
         self.detectorskey = (self.client.eval('session.experiment.name')
                              + '/detlist').lower()
 
-    def on_client_livedata(self, params, blobs):
-        tag, uid, det, filenames, dtype, nx, ny, nz, runtime = params
-
-        if self._allowed_detectors and det not in self._allowed_detectors:
-            self._ignore_livedata = True
+    def normalizeType(self, dtype):
+        normalized_type = numpy.dtype(dtype).str
+        if normalized_type not in DATATYPES:
+            self.log.warning('Unsupported live data format: %s',
+                             normalized_type)
             return
-        self._ignore_livedata = False
-        self._runtime = runtime
-        self._last_uid = uid
-        if dtype:
-            self.setLiveItems(len(filenames))
-            self._last_fnames = None
-            normalized_type = numpy.dtype(dtype).str
-            if normalized_type not in DATATYPES:
-                self._last_format = None
-                self.log.warning('Unsupported live data format: %s', (params,))
+        return normalized_type
+
+    def getIndexedUID(self, idx):
+        return str(self.params['uid']) + '-' + str(idx)
+
+    def _process_axis_labels(self, blobs):
+        """Convert the raw axis label descriptions.
+        tuple: `from, to`: Distribute labels equidistantly between the two
+                           values.
+        numbertype: `index into labels`: Actual labels are provided.
+                                         Value is the starting index.
+                                         Extract from first available blob.
+                                         Remove said blob from list.
+        None: `default`: Start at 0 with stepwidth 1.
+
+        Save the axis labels to the datacache.
+
+        return the remaining blobs, aka the actual data.
+        """
+
+        CLASSIC = {'define': 'classic'}
+
+        for i, datadesc in enumerate(self.params['datadescs']):
+            labels = {}
+            titles = {}
+            for size, axis in zip(reversed(datadesc['shape']), AXES):
+                # if the 'labels' key does not exist or does not have the right
+                # axis key set default to 'classic'.
+                label = datadesc.get(
+                    'labels', {'x': CLASSIC, 'y': CLASSIC}).get(axis, CLASSIC)
+
+                if label['define'] == 'range':
+                    start = label.get('start', 0)
+                    size = label.get('length', 1)
+                    step = label.get('step', 1)
+                    end = start + step * size
+                    labels[axis] = numpy.arange(start, end, step)
+                elif label['define'] == 'array':
+                    index = label.get('index', 0)
+                    labels[axis] = numpy.frombuffer(blobs[index],
+                                                    label.get('dtype', '<i4'))
+                else:
+                    labels[axis] = self.getDefaultLabels(size)
+                labels[axis] += self._offset if axis == 'x' else 0
+                titles[axis] = label.get('title')
+
+            # save the labels in the datacache with uid as key
+            uid = self.getIndexedUID(i)
+            if uid not in self._datacache:
+                self._datacache[uid] = {}
+
+            self._datacache[uid]['labels'] = labels
+            self._datacache[uid]['titles'] = titles
+
+    def _process_livedata(self, data, idx):
+        # ignore irrelevant data in liveOnly mode
+        if self._liveOnlyIndex is not None and idx != self._liveOnlyIndex:
+            return
+
+        if self.params['tag'] in self._allowed_tags \
+                or self.params['tag'] == LIVE:
+            try:
+                descriptions = self.params['datadescs']
+            except KeyError:
+                self.log.warning('Livedata with tag "Live" without '
+                                 '"datadescs" provided.')
                 return
-            self._last_format = normalized_type
-        elif filenames:
-            self._last_fnames = filenames
-            self._last_format = None
-        self._last_tag = tag.lower()
-        self._nx = nx
-        self._ny = ny
-        self._nz = nz
-        self._last_idx = 0
-        for blob in blobs:
-            self._process_livedata(blob)
-        if not blobs:
-            self._process_livedata([])
+
+            # pylint: disable=len-as-condition
+            if len(data):
+                # we got live data with specified formats
+                arrays = self.processDataArrays(
+                    idx, numpy.frombuffer(data, descriptions[idx]['dtype']))
+
+                if arrays is None:
+                    return
+
+                # put everythin into the cache
+                uid = self.getIndexedUID(idx)
+                self._datacache[uid]['dataarrays'] = arrays
+
+                self.liveitems[idx].setData(FILEUID, uid)
+
+    def _process_filenames(self):
+        # TODO: allow multiple fileformats?
+        #       would need to modify input from DemonSession.notifyDataFile
+
+        number_of_items = self.fileList.count()
+        for i, filedesc in enumerate(self.params['filedescs']):
+            uid = self.getIndexedUID(number_of_items + i)
+            name = filedesc['filename']
+            tag = filedesc.get('fileformat')
+            if tag is None or tag not in ReaderRegistry.filetypes():
+                continue  # Ignore unregistered file types
+            self.add_to_flist(name, tag, FILE, uid)
+            try:
+                # update display for selected live channel,
+                # just cache otherwise
+                self.setDataFromFile(
+                    name, tag, uid, display=(i == self._livechannel))
+            except Exception as e:
+                if uid in self._datacache:
+                    # image is already cached
+                    # suppress error message for cached image
+                    self.log.debug(e)
+                else:
+                    # image is not cached and could not be loaded
+                    self.log.exception(e)
+
+    def on_client_livedata(self, params, blobs):
+        # blobs is a list of data blobs and labels blobs
+        if self._allowed_detectors \
+                and params['det'] not in self._allowed_detectors:
+            return
+
+        params['tag'] = params['tag'].lower()
+        self.params = params
+        self._runtime = params['time']
+        if params['tag'] == LIVE:
+            datacount = params.get('count', 1)
+            self.setLiveItems(len(params['datadescs']))
+
+            self._process_axis_labels(blobs[datacount:])
+
+            for i, blob in enumerate(blobs[:datacount]):
+                self._process_livedata(blob, i)
+            if not datacount:
+                self._process_livedata([], 0)
+        elif params['tag'] == FILE:
+            self._process_filenames()
+
+        self._show()
+
+    def getDefaultLabels(self, size):
+        return numpy.array(range(size))
+
+    def convertLabels(self, labelinput):
+        """Convert the input into a processable format"""
+
+        for i, entry in enumerate(labelinput):
+            if isinstance(entry, str):
+                labelinput[i] = self.normalizeType(entry)
+
+        return labelinput
 
     def _initLiveWidget(self, array):
         """Initialize livewidget based on array's shape"""
@@ -457,170 +676,258 @@ class LiveDataPanel(Panel):
             widgetcls = IntegralLiveWidget
         self.initLiveWidget(widgetcls)
 
-    def setData(self, array, uid=None, display=True):
-        """Dispatch data array to corresponding live widgets.
-        Cache array based on uid parameter. No caching if uid is ``None``.
-        """
-        if uid:
-            if uid not in self._datacache:
-                self.log.debug('add to cache: %s', uid)
-            self._datacache[uid] = array
-        if display:
-            self._initLiveWidget(array)
-            for widget in self._get_all_widgets():
-                widget.setData(array)
-
     def setDataFromFile(self, filename, tag, uid=None, display=True):
         """Load data array from file and dispatch to live widgets using
         ``setData``. Do not use caching if uid is ``None``.
         """
-        try:
-            array = ReaderRegistry.getReaderCls(tag).fromfile(filename)
-        except KeyError:
-            raise NicosError('Unsupported fileformat %r' % tag) from None
+        array = readDataFromFile(filename, tag)
         if array is not None:
-            self.setData(array, uid, display=display)
+            if uid:
+                if uid not in self._datacache:
+                    self.log.debug('add to cache: %s', uid)
+                self._datacache[uid] = {}
+                self._datacache[uid]['dataarrays'] = [array]
+            if display:
+                self._initLiveWidget(array)
+                for widget in self._get_all_widgets():
+                    widget.setData(array)
+#           self.setData([array], uid, display=display)
+            return array.shape
         else:
             raise NicosError('Cannot read file %r' % filename)
 
-    def _process_livedata(self, data):
-        # TODO: needs to be merged into on_client_livedata() above
+    def processDataArrays(self, index, entry):
+        """Check if the input 1D array has the expected amount of values.
+        If the array is too small an Error is raised.
+        If the size exceeds the expected amount it is truncated.
 
-        idx = self._last_idx  # 0 <= array number < n
-        self._last_idx += 1
-        # check for allowed tags but always allow live data
-        if self._last_tag in self._allowed_tags or self._last_tag == 'live':
-            # pylint: disable=len-as-condition
-            if len(data) and self._last_format:
-                # we got live data with a specified format
-                uid = str(self._last_uid) + '-' + str(idx)
-                array = numpy.frombuffer(data, self._last_format)
-                if self._nz[idx] > 1:
-                    array = array.reshape((self._nz[idx], self._ny[idx],
-                                           self._nx[idx]))
-                elif self._ny[idx] > 1:
-                    array = array.reshape((self._ny[idx], self._nx[idx]))
-                # update display for selected live channel, just cache
-                # otherwise
-                self.setData(array, uid, display=(idx == self._livechannel))
-                self.liveitems[idx].setData(FILEUID, uid)
+        Returns a list of arrays corresponding to the ``count`` of
+        ``index`` into ``datadescs`` of the current params"""
+
+        datadesc = self.params['datadescs'][index]
+        count = datadesc.get('count', DEFAULTS['plotcount'])
+        shape = datadesc['shape']
+
+        # ignore irrelevant data in liveOnly mode
+        if self._liveOnlyIndex is not None and index != self._liveOnlyIndex:
+            return
+
+        # determine 1D array size
+        arraysize = numpy.product(shape)
+
+        # check and split the input array
+        if len(entry) < count * arraysize:
+            self.log.warning('Expected dataarray with %d entries, got %d',
+                             count * arraysize, len(entry))
+            return
+        arrays = numpy.split(entry[:count * arraysize], count)
+
+        # reshape every array in the list
+        for i, array in enumerate(arrays):
+            arrays[i] = array.reshape(shape)
+        return arrays
+
+    def applyPlotSettings(self):
+        if not self.widget or not isinstance(self.widget, LiveWidget1D):
+            return
+
+        if self._liveOnlyIndex is not None:
+            index = self._liveOnlyIndex
+        else:
+            index = self.fileList.currentRow()
+
+        if isinstance(self.widget, LiveWidget1D):
+            def getElement(l, index, default):
+                try:
+                    return l[index]
+                except IndexError:
+                    return default
+
+            settings = getElement(self.plotsettings, index, DEFAULTS)
+
+            plotcount = settings.get('plotcount', DEFAULTS['plotcount'])
+            if self.params['tag'] == LIVE:
+                plotcount = self.params['datadescs'][index].get(
+                    'count', DEFAULTS['plotcount'])
             else:
-                # we got no live data, but a filename with the data
-                # filename corresponds to full qualififed path here
-                for i, filename in enumerate(self._last_fnames):
-                    uid = str(self._last_uid) + '-' + str(i)
-                    self.add_to_flist(filename, self._last_format,
-                                      self._last_tag, uid)
-                    try:
-                        # update display for selected live channel, just cache
-                        # otherwise
-                        self.setDataFromFile(filename,
-                                             self._last_tag,
-                                             uid,
-                                             display=(i == self._livechannel))
-                    except Exception as e:
-                        if uid in self._datacache:
-                            # image is already cached
-                            # suppress error message for cached image
-                            self.log.debug(e)
-                        else:
-                            # image is not cached and could not be loaded
-                            self.log.exception(e)
+                plotcount = DEFAULTS['plotcount']
+            marks = [settings.get('marks', DEFAULTS['marks'])]
+            markersize = settings.get('markersize', DEFAULTS['markersize'])
+            offset = settings.get('offset', DEFAULTS['offset'])
+            colors = settings.get('colors', DEFAULTS['colors'])
+
+            if isinstance(colors, list):
+                if len(colors) > plotcount:
+                    colors = colors[:plotcount]
+                while len(colors) < plotcount:
+                    colors.append(DEFAULTS['colors'])
+            else:
+                colors = [colors] * plotcount
+
+            self.setOffset(offset)
+            self.widget.setMarks(marks)
+            self.widget.setMarkerSize(markersize)
+            self.widget.setPlotCount(plotcount, colors)
+
+    def setOffset(self, offset):
+        self._offset = offset
+
+    def getDataFromItem(self, item):
+        """Extract and return the data associated with the item.
+        If the data is in the cache return it.
+        If the data is in a valid file extract it from there.
+        """
+
+        if item is None:
+            return
+
+        uid = item.data(FILEUID)
+        # data is cached
+        if uid and hasattr(self, '_datacache') and uid in self._datacache:
+            return self._datacache[uid]
+        # cache has cleared data or data has not been cached in the first place
+        elif uid is None and item.data(FILETAG) == FILE:
+            filename = item.data(FILENAME)
+            fileformat = item.data(FILEFORMAT)
+
+            if path.isfile(filename):
+                rawdata = readDataFromFile(filename, fileformat)
+                labels = {}
+                titles = {}
+                for axis, entry in zip(AXES, reversed(rawdata.shape)):
+                    labels[axis] = numpy.arange(entry)
+                    titles[axis] = axis
+                data = {
+                    'labels': labels,
+                    'titles': titles,
+                    'dataarrays': [rawdata]
+                }
+                return data
+            # else:
+            # TODO: mark for deletion on item changed?
+
+    def _show(self, data=None):
+        """Show the provided data. If no data has been provided extract it
+        from the datacache via the current item's uid.
+
+        :param data: dictionary containing 'dataarrays' and 'labels'
+        """
+
+        idx = self.fileList.currentRow()
+        if idx == -1:
+            self.fileList.setCurrentRow(0)
+            return
+
+        # no data has been provided, try to get it from the cache
+        if data is None:
+            data = self.getDataFromItem(self.fileList.currentItem())
+            # still no data
+            if data is None:
+                return
+
+        arrays = data.get('dataarrays', [])
+        labels = data.get('labels', {})
+        titles = data.get('titles', {})
+
+        # if multiple datasets have to be displayed in one widget, they have
+        # the same dimensions, so we only need the dimensions of one set
+        self._initLiveWidget(arrays[0])
+        self.applyPlotSettings()
+        for widget in self._get_all_widgets():
+            widget.setData(arrays, labels)
+            widget.setTitles(titles)
+
+        if self.unzoom and self.widget:
+            self.on_actionUnzoom_triggered()
 
     def remove_obsolete_cached_files(self):
-        """Removes outdated cached files from the file list or set cached flag
-        to False if the file is still available on the filesystem.
+        """Remove or flag items which are no longer cached.
+        The cache will delete items if it's size exceeds ´cachesize´.
+        This checks the items in the filelist and their caching status,
+        removing items with deleted associated files and flagging items
+        with valid files to be reloaded if selected by the user.
         """
-        cached_item_rows = []
-        for row in range(self.fileList.count()):
-            item = self.fileList.item(row)
-            if item.data(FILEUID):
-                cached_item_rows.append(row)
-        if len(cached_item_rows) > self._cachesize:
-            for row in cached_item_rows[0:-self._cachesize]:
-                item = self.fileList.item(row)
-                self.log.debug('remove from cache %s %s',
-                               item.data(FILEUID), item.data(FILENAME))
+
+        for index in reversed(range(self.fileList.count())):
+            item = self.fileList.item(index)
+            uid = item.data(FILEUID)
+            # is the uid still cached
+            if uid and uid not in self._datacache:
+                # does the file still exist on the filesystem
                 if path.isfile(item.data(FILENAME)):
                     item.setData(FILEUID, None)
                 else:
-                    self.fileList.takeItem(row)
+                    self.fileList.takeItem(index)
 
     def add_to_flist(self, filename, fformat, ftag, uid=None, scroll=True):
+        # liveonly mode doesn't display a filelist
+        if self._liveOnlyIndex is not None:
+            return
+
         shortname = path.basename(filename)
         item = QListWidgetItem(shortname)
         item.setData(FILENAME, filename)
         item.setData(FILEFORMAT, fformat)
         item.setData(FILETAG, ftag)
         item.setData(FILEUID, uid)
-        self.fileList.insertItem(self.fileList.count() - len(self.liveitems),
-                                 item)
+        self.fileList.insertItem(self.fileList.count(), item)
         if uid:
             self.remove_obsolete_cached_files()
         if scroll:
             self.fileList.scrollToBottom()
         return item
 
-    def on_fileList_itemClicked(self, item):
-        if item is None:
-            return
-
-        fname = item.data(FILENAME)
-        ftag = item.data(FILETAG)
-        if item in self.liveitems and ftag == 'live':  # show live image
-            self._livechannel = int(fname)
-            fname = None
-            self.log.debug("set livechannel: %d", self._livechannel)
-        else:
-            self._livechannel = None
-            self.log.debug("no direct display")
-
-        uid = item.data(FILEUID)
-        if uid:  # show image from cache
-            array = self._datacache.get(uid, None)
-            if array is not None and array.size:
-                self.setData(array)
-                return
-        if fname:
-            # show image from file
-            self.setDataFromFile(fname, ftag)
-
-    def on_fileList_currentItemChanged(self, item, previous):
-        self.on_fileList_itemClicked(item)
+    def on_fileList_currentItemChanged(self):
+        self._show()
 
     @pyqtSlot()
     def on_actionOpen_triggered(self):
         """Open image file using registered reader classes."""
         ftypes = {ffilter: ftype
-                  for ftype, ffilter in ReaderRegistry.filefilters()}
+                  for ftype, ffilter in ReaderRegistry.filefilters()
+                  if not self._allowed_tags or ftype in self._allowed_tags}
         fdialog = FileFilterDialog(self, "Open data files", "",
                                    ";;".join(ftypes.keys()))
         if self._fileopen_filter:
             fdialog.selectNameFilter(self._fileopen_filter)
-        if fdialog.exec_() == fdialog.Accepted:
-            self._fileopen_filter = fdialog.selectedNameFilter()
-            tag = ftypes[self._fileopen_filter]
-            files = fdialog.selectedFiles()
-            if files:
-                def _cacheFile(fn, tag):
-                    uid = uuid4()
-                    # setDataFromFile may raise an `NicosException`, e.g.
-                    # if the file cannot be opened.
-                    self.setDataFromFile(fn, tag, uid, display=False)
-                    return self.add_to_flist(fn, None, tag, uid)
+        if fdialog.exec_() != fdialog.Accepted:
+            return
+        files = fdialog.selectedFiles()
+        if not files:
+            return
+        self._fileopen_filter = fdialog.selectedNameFilter()
+        tag = ftypes[self._fileopen_filter]
+        errors = []
 
-                # load and display first item
-                f = files.pop(0)
-                self.fileList.setCurrentItem(_cacheFile(f, tag))
-                cachesize = self._cachesize - 1
-                # add first `cachesize` files to cache
-                for _, f in enumerateWithProgress(files[:cachesize],
-                                                  "Loading data files...",
-                                                  parent=fdialog):
-                    _cacheFile(f, tag)
-                # add further files to file list (open on request/itemClicked)
-                for f in files[cachesize:]:
-                    self.add_to_flist(f, None, tag)
+        def _cacheFile(fn, tag):
+            uid = uuid4()
+            # setDataFromFile may raise an `NicosException`, e.g.
+            # if the file cannot be opened.
+            try:
+                self.setDataFromFile(fn, tag, uid, display=False)
+            except Exception as err:
+                errors.append('%s: %s' % (fn, err))
+            else:
+                return self.add_to_flist(fn, tag, FILE, uid)
+
+        # load and display first item
+        f = files.pop(0)
+        item = _cacheFile(f, tag)
+        if item is not None:
+            self.fileList.setCurrentItem(item)
+        cachesize = self._cachesize - 1
+        # add first `cachesize` files to cache
+        for _, f in enumerateWithProgress(files[:cachesize],
+                                          "Loading data files...",
+                                          parent=fdialog):
+            _cacheFile(f, tag)
+        # add further files to file list (open on request/itemClicked)
+        for f in files[cachesize:]:
+            self.add_to_flist(f, tag, FILE)
+
+        if errors:
+            self.showError('Some files could not be opened:\n\n' +
+                           '\n'.join(errors))
 
     @pyqtSlot()
     def on_actionUnzoom_triggered(self):
@@ -629,6 +936,10 @@ class LiveDataPanel(Panel):
     @pyqtSlot()
     def on_actionPrint_triggered(self):
         self.widget.printDialog()
+
+    @pyqtSlot()
+    def on_actionSavePlot_triggered(self):
+        self.widget.savePlot()
 
     @pyqtSlot()
     def on_actionLogScale_triggered(self):
@@ -644,3 +955,15 @@ class LiveDataPanel(Panel):
     @pyqtSlot()
     def on_actionKeepRatio_triggered(self):
         self.widget.gr.setAdjustSelection(self.actionKeepRatio.isChecked())
+
+
+class ImagingLiveDataPanel(LiveDataPanel):
+
+    def on_client_connected(self):
+        LiveDataPanel.on_client_connected(self)
+        datapath = self.client.eval('session.experiment.datapath', '')
+        if not datapath or not path.isdir(datapath):
+            return
+        for fn in sorted(os.listdir(datapath)):
+            if fn.endswith('.fits'):
+                self.add_to_flist(path.join(datapath, fn), '', 'fits', False)
