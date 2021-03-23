@@ -52,8 +52,8 @@ class ExpPanel(DefaultExpPanel):
         # Setting up warning label so user remembers to press apply button.
         self._defined_emails = self.notifEmails.toPlainText().strip()
         self._defined_data_emails = self.dataEmails.toPlainText().strip()
-        nbr_experiment_props_opts = len(self._getProposalInput()) + 1
-        self.is_exp_props_edited = [False] * nbr_experiment_props_opts
+        num_experiment_props_opts = len(self._getProposalInput()) + 1
+        self.is_exp_props_edited = [False] * num_experiment_props_opts
         self.applyWarningLabel.setStyleSheet('color: red')
         self.applyWarningLabel.setVisible(False)
 
