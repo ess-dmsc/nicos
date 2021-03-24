@@ -31,7 +31,6 @@ from nicos.clients.gui.panels.setup_panel import combineUsers, splitUsers
 from nicos.clients.gui.utils import loadUi
 from nicos.core import ConfigurationError
 from nicos.guisupport.qt import QDialogButtonBox, QMessageBox, Qt, pyqtSlot
-from nicos.utils import decodeAny
 from nicos_ess.gui import uipath
 
 
