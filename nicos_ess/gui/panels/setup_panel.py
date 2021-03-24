@@ -52,8 +52,8 @@ class ExpPanel(DefaultExpPanel):
         # Setting up warning label so user remembers to press apply button.
         self._defined_emails = self.notifEmails.toPlainText().strip()
         self._defined_data_emails = self.dataEmails.toPlainText().strip()
-        num_experiment_props_opts = len(self._getProposalInput()) + 1
-        self.is_exp_props_edited = [False] * num_experiment_props_opts
+        self.num_experiment_props_opts = len(self._getProposalInput()) + 1
+        self.is_exp_props_edited = [False] * self.num_experiment_props_opts
         self.applyWarningLabel.setStyleSheet('color: red')
         self.applyWarningLabel.setVisible(False)
 
@@ -61,7 +61,6 @@ class ExpPanel(DefaultExpPanel):
         # fill proposal
         self._update_proposal_info()
         self.newBox.setVisible(True)
-        self.proposalNum.setText('')  # do not offer "service"
         # check for capability to ask proposal database
         if self.client.eval('session.experiment._canQueryProposals()', None):
             self.propdbInfo.setVisible(True)
@@ -69,6 +68,10 @@ class ExpPanel(DefaultExpPanel):
         else:
             self.queryDBButton.setVisible(False)
         self.setViewOnly(self.client.viewonly)
+
+    def on_client_disconnected(self):
+        ExpPanel.on_client_connected(self)
+        self.applyWarningLabel.setVisible(False)
 
     def setViewOnly(self, viewonly):
         self.buttonBox.setEnabled(not viewonly)
@@ -165,6 +168,7 @@ class ExpPanel(DefaultExpPanel):
         self._defined_emails = self.notifEmails.toPlainText().strip()
         self._defined_data_emails = self.dataEmails.toPlainText().strip()
         self.applyWarningLabel.setVisible(False)
+        self.is_exp_props_edited = [False] * self.num_experiment_props_opts
 
     @pyqtSlot()
     def on_queryDBButton_clicked(self):
@@ -210,28 +214,37 @@ class ExpPanel(DefaultExpPanel):
 
     @pyqtSlot(str)
     def on_proposalNum_textChanged(self, value):
-        self._apply_warning_status(value, 0)
+        curr_val = self._get_proposal_data('proposal')
+        self._apply_warning_status(value, 0, curr_val)
 
     @pyqtSlot(str)
     def on_expTitle_textChanged(self, value):
-        self._apply_warning_status(value, 1)
+        curr_val = self._get_proposal_data('title')
+        self._apply_warning_status(value, 1, curr_val)
 
     @pyqtSlot(str)
     def on_users_textChanged(self, value):
-        self._apply_warning_status(value, 2)
+        curr_val = self._get_proposal_data('users')
+        # Special handling for users is needed.
+        curr_val = curr_val[0]['name']
+        self._apply_warning_status(value, 2, curr_val)
 
     @pyqtSlot(str)
-    def on_localContact_textChanged(self, value):
-        self._apply_warning_status(value, 3)
+    def on_localContacts_textChanged(self, value):
+        curr_val = self._get_proposal_data('localcontacts')
+        # Special handling for local contacts is needed.
+        curr_val = curr_val[0]['name']
+        self._apply_warning_status(value, 3, curr_val)
 
     @pyqtSlot(str)
     def on_sampleName_textChanged(self, value):
-        self._apply_warning_status(value, 4)
+        self._apply_warning_status(value, 4, self._orig_samplename)
 
     @pyqtSlot()
     def on_errorAbortBox_clicked(self):
         value = 'abort' if self.errorAbortBox.isChecked() else 'report'
-        self._apply_warning_status(value, 5)
+        self.is_exp_props_edited[5] = value != self._orig_errorbehavior
+        self._set_warning_visibility()
 
     @pyqtSlot()
     def on_notifEmails_textChanged(self):
@@ -245,9 +258,15 @@ class ExpPanel(DefaultExpPanel):
         self.is_exp_props_edited[7] = value != self._defined_data_emails
         self._set_warning_visibility()
 
-    def _apply_warning_status(self, value, index):
+    def _get_proposal_data(self, props_key):
+        curr_value = self._orig_propinfo.get(props_key)
+        if curr_value is None:
+            curr_value = ""
+        return curr_value
+
+    def _apply_warning_status(self, value, index, props_curr_val):
         self.is_exp_props_edited[index] = \
-            value != decodeAny(self._orig_proposal_info[index])
+            value != props_curr_val
         self._set_warning_visibility()
 
     def _set_warning_visibility(self):
