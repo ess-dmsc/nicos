@@ -230,14 +230,15 @@ class ExpPanel(DefaultExpPanel):
 
     @pyqtSlot(str)
     def on_localContacts_textChanged(self, value):
-        curr_val = self._get_proposal_data('localcontacts')
-        # Special handling for local contacts is needed.
-        curr_val = curr_val[0]['name']
-        self._apply_warning_status(value, 3, curr_val)
+        self.is_exp_props_edited[3] = value != self._defined_data_emails
+        self._set_warning_visibility()
 
     @pyqtSlot(str)
     def on_sampleName_textChanged(self, value):
-        self._apply_warning_status(value, 4, self._orig_samplename)
+        curr_val = self._orig_samplename
+        if curr_val is None:
+            curr_val = ""
+        self._apply_warning_status(value, 4, curr_val)
 
     @pyqtSlot()
     def on_errorAbortBox_clicked(self):
