@@ -80,22 +80,18 @@ class LokiScriptBuilderPanel(Panel):
 
         self.tableScript.setRowCount(num_rows)
 
-        QShortcut(QKeySequence.Paste, self.tableScript).activated.connect(
-            self._handle_table_paste)
-
-        QShortcut(QKeySequence.Cut, self.tableScript).activated.connect(
-            self._handle_cut_cells)
-
-        QShortcut(QKeySequence.Delete, self.tableScript).activated.connect(
-            self._handle_delete_cells)
-
-        # TODO: this doesn't work on a Mac? How about Linux?
-        QShortcut(QKeySequence.Backspace, self.tableScript).activated.connect(
-            self._handle_delete_cells)
-
-        # TODO: Cannot do keyboard copy as it is ambiguous - investigate
-        QShortcut(QKeySequence.Copy, self.tableScript).activated.connect(
-            self._handle_copy_cells)
+        # Keyboard shortcuts to manipulate table cells.
+        shortcut_dict = {
+            "Ctrl+Alt+C": (self._handle_copy_cells, "Copy"),
+            "Ctrl+Alt+V": (self._handle_table_paste, "Paste"),
+            "Ctrl+Alt+X": (self._handle_cut_cells, "Cut"),
+            "Ctrl+Alt+Del": (self._handle_delete_cells, "Delete"),
+            "Ctrl+Alt+Backspace": (self._handle_delete_cells, "Delete")
+        }
+        for key in shortcut_dict:
+            short_cut = QShortcut(QKeySequence(
+                self.tr(key, shortcut_dict[key][1])), self.tableScript)
+            short_cut.activated.connect(shortcut_dict[key][0])
 
     @pyqtSlot()
     def on_cutButton_clicked(self):
@@ -138,7 +134,7 @@ class LokiScriptBuilderPanel(Panel):
                 self.tableScript, self.columns_in_order, filename)
 
             for optional in set(headers_from_file).intersection(
-                set(self.optional_columns.keys())):
+                    set(self.optional_columns.keys())):
                 self.optional_columns[optional][1].setChecked(True)
         except Exception as ex:
             self.showError(f"Cannot read table contents from {filename}:\n{ex}")
@@ -325,7 +321,7 @@ class LokiScriptBuilderPanel(Panel):
     def _on_duration_type_changed(self, column_name, value):
         column_number = self.columns_in_order.index(column_name)
         self._set_column_title(column_number,
-            f'{self.permanent_columns[column_name]}\n({value})')
+                               f'{self.permanent_columns[column_name]}\n({value})')
 
     def _set_column_title(self, index, title):
         self.tableScript.setHorizontalHeaderItem(index, QTableWidgetItem(title))
