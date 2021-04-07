@@ -320,8 +320,8 @@ class LokiScriptBuilderPanel(Panel):
 
     def _on_duration_type_changed(self, column_name, value):
         column_number = self.columns_in_order.index(column_name)
-        self._set_column_title(column_number,
-                               f'{self.permanent_columns[column_name]}\n({value})')
+        self._set_column_title(
+            column_number, f'{self.permanent_columns[column_name]}\n({value})')
 
     def _set_column_title(self, index, title):
         self.tableScript.setHorizontalHeaderItem(index, QTableWidgetItem(title))
