@@ -8,7 +8,6 @@ kafka-logging-handler<=0.2.4
 kafka-python>=1.4.6
 p4p
 pyepics
-h5py>=2.6
 PyQt5==5.15.4
 PyQtWebEngine==5.15.4
 QScintilla==2.12.1
