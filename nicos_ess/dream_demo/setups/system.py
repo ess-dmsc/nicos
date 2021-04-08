@@ -6,7 +6,7 @@ sysconfig = dict(
     cache='localhost',
     instrument='DREAM',
     experiment='Exp',
-    datasinks=['conssink', 'NexusDataSink', 'daemonsink', 'liveview'],
+    datasinks=['conssink', 'daemonsink', 'liveview'],
 )
 
 modules = ['nicos.commands.standard', 'nicos_ess.commands.epics', 'nicos_ess.v20.commands.filewriter']
