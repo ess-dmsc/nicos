@@ -14,11 +14,6 @@ pc_ctrl = '%sctrl' % instrument_name
 
 values = {
     'instrument_name': instrument_name,
-    'nethost': '%ssrv.%s.%s' % (
-        instrument_name,
-        instrument_name,
-        geographical_place,
-    ),
     'pc_hw': pc_hw,
     'pc_hw_real1': '%sctrl02' % instrument_name,
     'pc_hw_real2': '',
@@ -39,9 +34,18 @@ values = {
         tld,
         tango_port,
     ),
-    'url_base': 'http://%%s.%s.%s/' % (
+    'tango_url': 'tango://%%s.%s.%s.%s.%s:%d/' % (
         instrument_name,
         geographical_place,
+        master,
+        tld,
+        tango_port,
+    ),
+    'url_base': 'http://%%s.%s.%s.%s.%s/' % (
+        instrument_name,
+        geographical_place,
+        master,
+        tld,
     ),
     'code_base': '%s_%s.%s.devices.' % (
         software_system,

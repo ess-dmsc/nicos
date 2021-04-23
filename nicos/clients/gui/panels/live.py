@@ -25,6 +25,7 @@
 
 """NICOS livewidget with GR."""
 
+import copy
 import os
 from collections import OrderedDict
 from os import path
@@ -35,21 +36,24 @@ from gr import COLORMAPS as GR_COLORMAPS
 
 from nicos.clients.gui.dialogs.filesystem import FileFilterDialog
 from nicos.clients.gui.panels import Panel
-from nicos.clients.gui.utils import enumerateWithProgress, loadUi, uipath
+from nicos.clients.gui.utils import enumerateWithProgress, loadUi, uipath, \
+    waitCursor
 from nicos.core.constants import FILE, LIVE
 from nicos.core.errors import NicosError
 from nicos.guisupport.livewidget import AXES, DATATYPES, IntegralLiveWidget, \
     LiveWidget, LiveWidget1D
 from nicos.guisupport.qt import QActionGroup, QByteArray, QListWidgetItem, \
-    QMenu, QPoint, QSizePolicy, QStatusBar, Qt, QToolBar, pyqtSlot
+    QMenu, QPoint, QSizePolicy, QStatusBar, Qt, QToolBar, QWidget, \
+    pyqtSignal, pyqtSlot
 from nicos.guisupport.qtgr import MouseEvent
 from nicos.protocols.cache import cache_load
 from nicos.utils import BoundedOrderedDict, ReaderRegistry
+from nicos.utils.gammafilter import gam_rem_adp_log
 
 COLORMAPS = OrderedDict(GR_COLORMAPS)
 
 FILENAME = Qt.UserRole
-FILEFORMAT = Qt.UserRole + 1
+FILETYPE = Qt.UserRole + 1
 FILETAG = Qt.UserRole + 2
 FILEUID = Qt.UserRole + 3
 
@@ -62,11 +66,11 @@ DEFAULTS = dict(
 )
 
 
-def readDataFromFile(filename, fileformat):
+def readDataFromFile(filename, filetype):
     try:
-        return ReaderRegistry.getReaderCls(fileformat).fromfile(filename)
+        return ReaderRegistry.getReaderCls(filetype).fromfile(filename)
     except KeyError:
-        raise NicosError('Unsupported fileformat %r' % fileformat) from None
+        raise NicosError('Unsupported file format %r' % filetype) from None
 
 
 class LiveDataPanel(Panel):
@@ -139,7 +143,7 @@ class LiveDataPanel(Panel):
         Panel.__init__(self, parent, client, options)
         loadUi(self, self.ui)
 
-        self._allowed_tags = set()
+        self._allowed_filetypes = set()
         self._allowed_detectors = set()
         self._runtime = 0
         self._range_active = False
@@ -204,7 +208,7 @@ class LiveDataPanel(Panel):
         # configure allowed file types
         supported_filetypes = ReaderRegistry.filetypes()
         opt_filetypes = set(options.get('filetypes', supported_filetypes))
-        self._allowed_tags = opt_filetypes & set(supported_filetypes)
+        self._allowed_filetypes = opt_filetypes & set(supported_filetypes)
 
         # configure allowed detector device names
         detectors = options.get('detectors')
@@ -232,6 +236,11 @@ class LiveDataPanel(Panel):
             self._cachesize = 1  # always cache the last live image
         self._datacache = BoundedOrderedDict(maxlen=self._cachesize)
 
+        self._initControlsGUI()
+
+    def _initControlsGUI(self):
+        pass
+
     def setLiveItems(self, n):
         nitems = len(self.liveitems)
         if n < nitems:
@@ -245,7 +254,7 @@ class LiveDataPanel(Panel):
             for i in range(nitems, n):
                 item = QListWidgetItem('<Live #%d>' % (i + 1))
                 item.setData(FILENAME, i)
-                item.setData(FILEFORMAT, '')
+                item.setData(FILETYPE, '')
                 item.setData(FILETAG, LIVE)
                 self.fileList.insertItem(self.fileList.count(), item)
                 self.liveitems.append(item)
@@ -580,29 +589,27 @@ class LiveDataPanel(Panel):
         if self._liveOnlyIndex is not None and idx != self._liveOnlyIndex:
             return
 
-        if self.params['tag'] in self._allowed_tags \
-                or self.params['tag'] == LIVE:
-            try:
-                descriptions = self.params['datadescs']
-            except KeyError:
-                self.log.warning('Livedata with tag "Live" without '
-                                 '"datadescs" provided.')
+        try:
+            descriptions = self.params['datadescs']
+        except KeyError:
+            self.log.warning('Livedata with tag "Live" without '
+                             '"datadescs" provided.')
+            return
+
+        # pylint: disable=len-as-condition
+        if len(data):
+            # we got live data with specified formats
+            arrays = self.processDataArrays(
+                idx, numpy.frombuffer(data, descriptions[idx]['dtype']))
+
+            if arrays is None:
                 return
 
-            # pylint: disable=len-as-condition
-            if len(data):
-                # we got live data with specified formats
-                arrays = self.processDataArrays(
-                    idx, numpy.frombuffer(data, descriptions[idx]['dtype']))
+            # put everythin into the cache
+            uid = self.getIndexedUID(idx)
+            self._datacache[uid]['dataarrays'] = arrays
 
-                if arrays is None:
-                    return
-
-                # put everythin into the cache
-                uid = self.getIndexedUID(idx)
-                self._datacache[uid]['dataarrays'] = arrays
-
-                self.liveitems[idx].setData(FILEUID, uid)
+            self.liveitems[idx].setData(FILEUID, uid)
 
     def _process_filenames(self):
         # TODO: allow multiple fileformats?
@@ -612,15 +619,15 @@ class LiveDataPanel(Panel):
         for i, filedesc in enumerate(self.params['filedescs']):
             uid = self.getIndexedUID(number_of_items + i)
             name = filedesc['filename']
-            tag = filedesc.get('fileformat')
-            if tag is None or tag not in ReaderRegistry.filetypes():
+            filetype = filedesc.get('fileformat')
+            if filetype is None or filetype not in ReaderRegistry.filetypes():
                 continue  # Ignore unregistered file types
-            self.add_to_flist(name, tag, FILE, uid)
+            self.add_to_flist(name, filetype, FILE, uid)
             try:
                 # update display for selected live channel,
                 # just cache otherwise
                 self.setDataFromFile(
-                    name, tag, uid, display=(i == self._livechannel))
+                    name, filetype, uid, display=(i == self._livechannel))
             except Exception as e:
                 if uid in self._datacache:
                     # image is already cached
@@ -636,7 +643,6 @@ class LiveDataPanel(Panel):
                 and params['det'] not in self._allowed_detectors:
             return
 
-        params['tag'] = params['tag'].lower()
         self.params = params
         self._runtime = params['time']
         if params['tag'] == LIVE:
@@ -674,11 +680,11 @@ class LiveDataPanel(Panel):
             widgetcls = IntegralLiveWidget
         self.initLiveWidget(widgetcls)
 
-    def setDataFromFile(self, filename, tag, uid=None, display=True):
+    def setDataFromFile(self, filename, filetype, uid=None, display=True):
         """Load data array from file and dispatch to live widgets using
         ``setData``. Do not use caching if uid is ``None``.
         """
-        array = readDataFromFile(filename, tag)
+        array = readDataFromFile(filename, filetype)
         if array is not None:
             if uid:
                 if uid not in self._datacache:
@@ -785,10 +791,10 @@ class LiveDataPanel(Panel):
         # cache has cleared data or data has not been cached in the first place
         elif uid is None and item.data(FILETAG) == FILE:
             filename = item.data(FILENAME)
-            fileformat = item.data(FILEFORMAT)
+            filetype = item.data(FILETYPE)
 
             if path.isfile(filename):
-                rawdata = readDataFromFile(filename, fileformat)
+                rawdata = readDataFromFile(filename, filetype)
                 labels = {}
                 titles = {}
                 for axis, entry in zip(AXES, reversed(rawdata.shape)):
@@ -856,7 +862,7 @@ class LiveDataPanel(Panel):
                 else:
                     self.fileList.takeItem(index)
 
-    def add_to_flist(self, filename, fformat, ftag, uid=None, scroll=True):
+    def add_to_flist(self, filename, filetype, tag, uid=None, scroll=True):
         # liveonly mode doesn't display a filelist
         if self._liveOnlyIndex is not None:
             return
@@ -864,8 +870,8 @@ class LiveDataPanel(Panel):
         shortname = path.basename(filename)
         item = QListWidgetItem(shortname)
         item.setData(FILENAME, filename)
-        item.setData(FILEFORMAT, fformat)
-        item.setData(FILETAG, ftag)
+        item.setData(FILETYPE, filetype)
+        item.setData(FILETAG, tag)
         item.setData(FILEUID, uid)
         self.fileList.insertItem(self.fileList.count(), item)
         if uid:
@@ -882,7 +888,8 @@ class LiveDataPanel(Panel):
         """Open image file using registered reader classes."""
         ftypes = {ffilter: ftype
                   for ftype, ffilter in ReaderRegistry.filefilters()
-                  if not self._allowed_tags or ftype in self._allowed_tags}
+                  if not self._allowed_filetypes
+                  or ftype in self._allowed_filetypes}
         fdialog = FileFilterDialog(self, "Open data files", "",
                                    ";;".join(ftypes.keys()))
         if self._fileopen_filter:
@@ -893,23 +900,23 @@ class LiveDataPanel(Panel):
         if not files:
             return
         self._fileopen_filter = fdialog.selectedNameFilter()
-        tag = ftypes[self._fileopen_filter]
+        filetype = ftypes[self._fileopen_filter]
         errors = []
 
-        def _cacheFile(fn, tag):
+        def _cacheFile(fn, filetype):
             uid = uuid4()
             # setDataFromFile may raise an `NicosException`, e.g.
             # if the file cannot be opened.
             try:
-                self.setDataFromFile(fn, tag, uid, display=False)
+                self.setDataFromFile(fn, filetype, uid, display=False)
             except Exception as err:
                 errors.append('%s: %s' % (fn, err))
             else:
-                return self.add_to_flist(fn, tag, FILE, uid)
+                return self.add_to_flist(fn, filetype, FILE, uid)
 
         # load and display first item
         f = files.pop(0)
-        item = _cacheFile(f, tag)
+        item = _cacheFile(f, filetype)
         if item is not None:
             self.fileList.setCurrentItem(item)
         cachesize = self._cachesize - 1
@@ -917,10 +924,10 @@ class LiveDataPanel(Panel):
         for _, f in enumerateWithProgress(files[:cachesize],
                                           "Loading data files...",
                                           parent=fdialog):
-            _cacheFile(f, tag)
+            _cacheFile(f, filetype)
         # add further files to file list (open on request/itemClicked)
         for f in files[cachesize:]:
-            self.add_to_flist(f, tag, FILE)
+            self.add_to_flist(f, filetype, FILE)
 
         if errors:
             self.showError('Some files could not be opened:\n\n' +
@@ -954,16 +961,299 @@ class LiveDataPanel(Panel):
         self.widget.gr.setAdjustSelection(self.actionKeepRatio.isChecked())
 
 
+class AutoScaleLiveWidget1D(LiveWidget1D):
+
+    def __init__(self, parent=None):
+        LiveWidget1D.__init__(self, parent)
+        self.axes.xdual = False
+
+    def getYMax(self):
+        minupperedge = 1
+        if self._arrays is not None:
+            minupperedge = max([array.max() for array in self._arrays])
+            minupperedge *= 2.15 if self._logscale else 1.05
+        return minupperedge
+
+    def getYMin(self):
+        maxloweredge = 0.09 if self._logscale else 0
+        if self._arrays is not None:
+            maxloweredge = min([array.min() for array in self._arrays])
+            maxloweredge *= 0.5 if self._logscale else 0.95
+        return maxloweredge
+
+    def _getNewYRange(self):
+        ymax = self.getYMax()
+        ymin = self.getYMin()
+        return ymin, ymax, ymax
+
+
+class ImagingLiveWidget(LiveWidget):
+
+    amin = 0
+    amax = 65535
+
+    def setViewRange(self, zmin, zmax):
+        self.amin = zmin
+        self.amax = zmax
+
+    def updateZData(self):
+        arr = self._arrays[0].ravel()
+        if self._logscale:
+            arr = numpy.ma.log10(arr).filled(-1)
+        amin, amax = arr.min(), arr.max()
+        smin = min(amax, max(self.amin, amin))
+        smax = max(amin, min(amax, self.amax))
+
+        if smin != smax:
+            self.surf.z = 1000 + 255 / (smax - smin) * (
+                numpy.clip(arr, smin, smax) - smin)
+        elif smax > 0:
+            self.surf.z = 1000 + 255 / smax * arr
+        else:
+            self.surf.z = 1000 + arr
+
+
+class ImagingControls(QWidget):
+    """Controls the filtering for the imaging instruments."""
+
+    controlsui = f'{uipath}/panels/imagecontrols.ui'
+
+    changed = pyqtSignal()
+
+    def __init__(self, parent=None):
+        QWidget.__init__(self, parent)
+        loadUi(self, self.controlsui)
+        pos = self.layout().indexOf(self.histoPlot)
+        # delete the old widget
+        if self.histoPlot:
+            self.layout().removeWidget(self.histoPlot)
+            self.histoPlot.deleteLater()
+        self.histoPlot = AutoScaleLiveWidget1D(self)
+        self.histoPlot.setLines(True)
+        self.histoPlot.setColormap(COLORMAPS['GRAYSCALE'])
+        self.layout().insertWidget(pos, self.histoPlot)
+
+        for w in [self.brtSlider, self.brtSliderLabel, self.ctrSlider,
+                  self.ctrSliderLabel, self.xsumButton, self.ysumButton,
+                  self.operationSelector, self.filterSelector,
+                  self.profileButton, self.profileHideButton, self.cyclicBox,
+                  self.profileWidth, self.profileWidthLabel, self.profileBins,
+                  self.profileBinsLabel, self.logscaleBox, self.grayscaleBox,
+                  self.despeckleValue, self.gridBox]:
+            w.setHidden(True)
+
+        self.maxSlider.valueChanged[int].connect(self.maxSliderMoved)
+        self.minSlider.valueChanged[int].connect(self.minSliderMoved)
+        self.maxSlider.sliderReleased.connect(self.showData)
+        self.minSlider.sliderReleased.connect(self.showData)
+
+        self.despeckleBox.toggled.connect(self.showData)
+        self.darkfieldBox.toggled.connect(self.showData)
+        self.normalizeBox.toggled.connect(self.showData)
+
+        self.thr3Value.valueChanged.connect(self.showData)
+        self.thr5Value.valueChanged.connect(self.showData)
+        self.thr7Value.valueChanged.connect(self.showData)
+
+        self.autoScaling.stateChanged[int].connect(self.setAutoScale)
+
+    @pyqtSlot()
+    def showData(self):
+        self.changed.emit()
+
+    @pyqtSlot(int)
+    def setAutoScale(self, state):
+        if state:
+            self.showData()
+
+    def minValue(self):
+        return self.minSlider.value()
+
+    def maxValue(self):
+        return self.maxSlider.value()
+
+    def maxSliderMoved(self, value):
+        if self.minSlider.value() > value:
+            self.minSlider.setValue(value)
+
+    def minSliderMoved(self, value):
+        if self.maxSlider.value() < value:
+            self.maxSlider.setValue(value)
+
+    def setData(self, data, labels=None):
+        if labels is None:
+            labels = {}
+        binnings = labels.get('x')
+        if binnings is not None:
+            _min, _max = round(binnings[0]), round(binnings[-1])
+        else:
+            _min, _max = 0, 65535
+        self.minSlider.setMinimum(_min)
+        self.maxSlider.setMinimum(_min)
+        self.minSlider.setMaximum(_max)
+        self.maxSlider.setMaximum(_max)
+        self.histoPlot.setData(data, labels)
+
+    def autoScale(self):
+        return self.autoScaling.checkState()
+
+    def setRange(self, minValue, maxValue):
+        if self.maxValue() > minValue:
+            self.minSlider.setSliderPosition(minValue)
+            self.maxSlider.setSliderPosition(maxValue)
+        else:
+            self.maxSlider.setSliderPosition(maxValue)
+            self.minSlider.setSliderPosition(minValue)
+
+    def darkFieldData(self):
+        return readDataFromFile(self.darkfieldFile.text(), 'fits')
+
+    def normalizedData(self):
+        return readDataFromFile(self.normalizedFile.text(), 'fits')
+
+    def setDataRoot(self, dataroot):
+        self.darkfieldFile.setText(path.join(dataroot, 'current',
+                                             'currentdarkimage.fits'))
+        self.normalizedFile.setText(path.join(dataroot, 'current',
+                                              'currentopenbeamimage.fits'))
+
+    def handleData(self, image):
+        gammafilter = self.despeckleBox.checkState()
+        if gammafilter:
+            image = self._applyGammaFilter(image)
+        darkfield = self.darkfieldBox.checkState()
+        if darkfield:
+            try:
+                di = self.darkFieldData()
+                if gammafilter:
+                    di = self._applyGammaFilter(di)
+            except FileNotFoundError:
+                di = numpy.zeros(image.shape)
+            image = numpy.subtract(image, di)
+        if self.normalizeBox.checkState():
+            try:
+                ob = self.normalizedData()
+                if gammafilter:
+                    ob = self._applyGammaFilter(ob)
+            except FileNotFoundError:
+                ob = numpy.ones(image.shape)
+            if darkfield:
+                ob = numpy.subtract(ob, di)
+                # set 0's to 1's to avoid division by 0 errors
+                ob += (ob == 0).astype(ob.dtype)
+            ob = numpy.array(ob, dtype=float)
+            image = numpy.divide(image, ob)
+        return image
+
+    def _applyGammaFilter(self, image):
+        return gam_rem_adp_log(image, self.thr3Value.value(),
+                               self.thr5Value.value(),
+                               self.thr7Value.value(), 0.8)
+
+
 class ImagingLiveDataPanel(LiveDataPanel):
+    """
+    Options:
+
+    * ``spectra`` (default False) - Display summation in X and Y direction
+    """
+
+    def __init__(self, parent, client, options):
+        LiveDataPanel.__init__(self, parent, client, options)
+        self._spectra = options.get('spectra', False)
+        self._initLiveWidget(None)
+
+    def _initControlsGUI(self):
+        self.controls = ImagingControls(self)
+        self.splitter.addWidget(self.controls)
+        self.controls.changed.connect(self.showData)
+
+        self.histogram = None
+        self._livechannel = -1
+
+    def _showHistogram(self, data):
+        if data is None:
+            return
+        arrays = data.get('dataarrays', [])
+        if not arrays:
+            return data
+
+        arrs = [self.controls.handleData(img) for img in arrays]
+        histogram, binedges = numpy.histogram(arrs[0].flatten(), 1024)
+        self.controls.setData(histogram.reshape((1, histogram.size)),
+                              labels={'x': binedges[:-1]})
+
+        if self.controls.autoScale():
+            cdf = histogram.cumsum()
+            cdf_normalized = cdf.astype(float) / cdf.max()
+            maxValue = round(binedges[numpy.argmax(cdf_normalized > 0.99)])
+            minValue = round(binedges[numpy.argmax(cdf_normalized > 0.01)])
+            self.controls.setRange(minValue, maxValue)
+        else:
+            minValue = self.controls.minValue()
+            maxValue = self.controls.maxValue()
+        if self.widget:
+            self.widget.setViewRange(minValue, maxValue)
+        newdata = copy.deepcopy(data)
+        newdata['dataarrays'] = arrs
+        return newdata
+
+    @pyqtSlot()
+    def showData(self):
+        idx = self.fileList.currentRow()
+        if idx == -1:
+            return
+        with waitCursor():
+            data = self.getDataFromItem(self.fileList.item(idx))
+            data = self._showHistogram(data)
+        LiveDataPanel._show(self, data)
+
+    def _show(self, data=None):
+        self.showData()
+
+    def _initLiveWidget(self, array):
+        if self._spectra:
+            self.initLiveWidget(IntegralLiveWidget)
+        else:
+            self.initLiveWidget(ImagingLiveWidget)
+            # self.initLiveWidget(LiveWidget)
+        # No 2**n values
+        self.widget.axes.xdual = False
+        self.widget.axes.ydual = False
+        # Set the grayscale as default
+        for action in self.actionsColormap.actions():
+            if action.data().upper() == 'GRAYSCALE':
+                action.trigger()
+                break
 
     def on_client_connected(self):
         LiveDataPanel.on_client_connected(self)
         datapath = self.client.eval('session.experiment.datapath', '')
         if not datapath or not path.isdir(datapath):
             return
+        dataroot = self.client.eval('session.experiment.dataroot', '')
+        if dataroot:
+            self.controls.setDataRoot(dataroot)
+        last_item = None
         for fn in sorted(os.listdir(datapath)):
             if fn.endswith('.fits'):
-                self.add_to_flist(path.join(datapath, fn), 'fits', FILE)
+                last_item = self.add_to_flist(
+                    path.join(datapath, fn), 'fits', FILE, scroll=False)
+        if last_item:
+            self.fileList.currentItemChanged.emit(self.liveitems[0], last_item)
+
+    def _upgrade_last(self, item):
+        last_item = self.liveitems[0]
+        last_item.setData(FILENAME, item.data(FILENAME))
+        last_item.setData(FILETYPE, item.data(FILETYPE))
+        last_item.setData(FILETAG, item.data(FILETAG))
+
+    def add_to_flist(self, filename, filetype, tag, uid=None, scroll=True):
+        item = LiveDataPanel.add_to_flist(
+            self, filename, filetype, tag, uid, scroll)
+        self._upgrade_last(item)
+        return item
 
     def setLiveItems(self, n):
-        pass  # No live entries for the imaging instruments
+        LiveDataPanel.setLiveItems(self, 1)
+        self.liveitems[0].setText('<Last>')
