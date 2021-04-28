@@ -107,11 +107,17 @@ def _do_simultaneous(row_values, sans_duration_type):
 
 
 class TransOrderBase:
-    def generate_script(self, labeled_data, trans_duration_type,
-                        sans_duration_type, trans_times, sans_times):
+    def generate_script(
+        self,
+        labeled_data,
+        trans_duration_type,
+        sans_duration_type,
+        trans_times,
+        sans_times,
+    ):
         template = ''
         for num_time in range(max(trans_times, sans_times)):
-            for step in (Steps.FIRST, Steps.LAST):
+            for step in Steps:
                 for row_values in labeled_data:
                     row_template = self.generate_row_template(
                         row_values,
@@ -120,7 +126,8 @@ class TransOrderBase:
                         trans_duration_type,
                         sans_duration_type,
                         trans_times,
-                        sans_times)
+                        sans_times,
+                    )
 
                     if row_template:
                         template += _add_commands_to_template(
@@ -129,18 +136,30 @@ class TransOrderBase:
         return template
 
     def generate_row_template(
-        self, row_values, step, num_time,
-        trans_duration_type, sans_duration_type,
-        trans_times, sans_times):
+        self,
+        row_values,
+        step,
+        num_time,
+        trans_duration_type,
+        sans_duration_type,
+        trans_times,
+        sans_times,
+    ):
 
         pass
 
 
 class TransFirst(TransOrderBase):
     def generate_row_template(
-        self, row_values, step, num_time,
-        trans_duration_type, sans_duration_type,
-        trans_times, sans_times):
+        self,
+        row_values,
+        step,
+        num_time,
+        trans_duration_type,
+        sans_duration_type,
+        trans_times,
+        sans_times,
+    ):
 
         row_template = ''
         if step == Steps.FIRST:
@@ -154,9 +173,15 @@ class TransFirst(TransOrderBase):
 
 class SansFirst(TransOrderBase):
     def generate_row_template(
-        self, row_values, step, num_time,
-        trans_duration_type, sans_duration_type,
-        trans_times, sans_times):
+        self,
+        row_values,
+        step,
+        num_time,
+        trans_duration_type,
+        sans_duration_type,
+        trans_times,
+        sans_times,
+    ):
 
         row_template = ''
         if step == Steps.FIRST:
@@ -170,9 +195,15 @@ class SansFirst(TransOrderBase):
 
 class TransThenSans(TransOrderBase):
     def generate_row_template(
-        self, row_values, step, num_time,
-        trans_duration_type, sans_duration_type,
-        trans_times, sans_times):
+        self,
+        row_values,
+        step,
+        num_time,
+        trans_duration_type,
+        sans_duration_type,
+        trans_times,
+        sans_times,
+    ):
 
         row_template = ''
         if step == Steps.FIRST:
@@ -186,9 +217,15 @@ class TransThenSans(TransOrderBase):
 
 class SansThenTrans(TransOrderBase):
     def generate_row_template(
-        self, row_values, step, num_time,
-        trans_duration_type, sans_duration_type,
-        trans_times, sans_times):
+        self,
+        row_values,
+        step,
+        num_time,
+        trans_duration_type,
+        sans_duration_type,
+        trans_times,
+        sans_times,
+    ):
 
         row_template = ''
         if step == Steps.FIRST:
@@ -202,9 +239,15 @@ class SansThenTrans(TransOrderBase):
 
 class Simultaneous(TransOrderBase):
     def generate_row_template(
-        self, row_values, step, num_time,
-        trans_duration_type, sans_duration_type,
-        trans_times, sans_times):
+        self,
+        row_values,
+        step,
+        num_time,
+        trans_duration_type,
+        sans_duration_type,
+        trans_times,
+        sans_times,
+    ):
 
         row_template = ''
         if step == Steps.FIRST:
@@ -222,10 +265,9 @@ class ScriptGenerator:
             TransOrder.SANSFIRST: SansFirst,
             TransOrder.TRANSTHENSANS: TransThenSans,
             TransOrder.SANSTHENTRANS: SansThenTrans,
-            TransOrder.SIMULTANEOUS: Simultaneous
+            TransOrder.SIMULTANEOUS: Simultaneous,
         }
         if trans_order in classes_by_trans_order:
             return classes_by_trans_order[trans_order]()
         else:
-            raise NotImplementedError(
-                f'Unspecified trans order {trans_order.name}')
+            raise NotImplementedError(f'Unspecified trans order {trans_order.name}')
