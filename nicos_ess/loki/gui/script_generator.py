@@ -37,6 +37,11 @@ class TransOrder(Enum):
     SIMULTANEOUS = 4
 
 
+class Steps(Enum):
+    FIRST = 0
+    LAST = 1
+
+
 def _get_position(value):
     return f'set_position({value})'
 
@@ -101,91 +106,112 @@ def _do_simultaneous(row_values, sans_duration_type):
     return template
 
 
-class TransFirst:
+class TransOrderBase:
     def generate_script(self, labeled_data, trans_duration_type,
                         sans_duration_type, trans_times, sans_times):
         template = ''
-        for i in range(max(trans_times, sans_times)):
-            if i < trans_times:
+        for num_time in range(max(trans_times, sans_times)):
+            for step in (Steps.FIRST, Steps.LAST):
                 for row_values in labeled_data:
-                    template += _add_commands_to_template(
-                        _do_trans(row_values, trans_duration_type),
-                        row_values)
-                    template += '\n'
-            if i < sans_times:
-                for row_values in labeled_data:
-                    template += _add_commands_to_template(
-                        _do_sans(row_values, trans_duration_type),
-                        row_values)
-                    template += '\n'
+                    row_template = self.generate_row_template(
+                        row_values,
+                        step,
+                        num_time,
+                        trans_duration_type,
+                        sans_duration_type,
+                        trans_times,
+                        sans_times)
+
+                    if row_template:
+                        template += _add_commands_to_template(
+                            row_template, row_values)
+                        template += '\n'
         return template
 
+    def generate_row_template(
+        self, row_values, step, num_time,
+        trans_duration_type, sans_duration_type,
+        trans_times, sans_times):
 
-class SansFirst:
-    def generate_script(self, labeled_data, trans_duration_type,
-                        sans_duration_type, trans_times, sans_times):
-        template = ''
-        for i in range(max(trans_times, sans_times)):
-            if i < sans_times:
-                for row_values in labeled_data:
-                    template += _add_commands_to_template(
-                        _do_sans(row_values, trans_duration_type),
-                        row_values)
-                    template += '\n'
-            if i < trans_times:
-                for row_values in labeled_data:
-                    template += _add_commands_to_template(
-                        _do_trans(row_values, trans_duration_type),
-                        row_values)
-                    template += '\n'
-        return template
+        pass
 
 
-class TransThenSans:
-    def generate_script(self, labeled_data, trans_duration_type,
-                        sans_duration_type, trans_times, sans_times):
-        template = ''
-        for i in range(max(trans_times, sans_times)):
-            for row_values in labeled_data:
-                row_template = ''
-                if i < trans_times:
-                    row_template += _do_trans(row_values, trans_duration_type)
-                if i < sans_times:
-                    row_template += _do_sans(row_values, sans_duration_type)
+class TransFirst(TransOrderBase):
+    def generate_row_template(
+        self, row_values, step, num_time,
+        trans_duration_type, sans_duration_type,
+        trans_times, sans_times):
 
-                template += _add_commands_to_template(row_template, row_values)
-                template += '\n'
-        return template
-
-
-class SansThenTrans:
-    def generate_script(self, labeled_data, trans_duration_type,
-                        sans_duration_type, trans_times, sans_times):
-        template = ''
-        for i in range(max(trans_times, sans_times)):
-            for row_values in labeled_data:
-                row_template = ''
-                if i < sans_times:
-                    row_template += _do_sans(row_values, sans_duration_type)
-                if i < trans_times:
-                    row_template += _do_trans(row_values, trans_duration_type)
-
-                template += _add_commands_to_template(row_template, row_values)
-                template += '\n'
-        return template
+        row_template = ''
+        if step == Steps.FIRST:
+            if num_time < trans_times:
+                row_template = _do_trans(row_values, trans_duration_type)
+        else:
+            if num_time < sans_times:
+                row_template = _do_sans(row_values, sans_duration_type)
+        return row_template
 
 
-class Simultaneous:
-    def generate_script(self, labeled_data, trans_duration_type,
-                        sans_duration_type, trans_times, sans_times):
-        template = ''
-        for _ in range(sans_times):
-            for row_values in labeled_data:
-                template += _add_commands_to_template(
-                    _do_simultaneous(row_values, sans_duration_type),
-                    row_values)
-                template += '\n'
-        return template
+class SansFirst(TransOrderBase):
+    def generate_row_template(
+        self, row_values, step, num_time,
+        trans_duration_type, sans_duration_type,
+        trans_times, sans_times):
+
+        row_template = ''
+        if step == Steps.FIRST:
+            if num_time < sans_times:
+                row_template = _do_sans(row_values, sans_duration_type)
+        else:
+            if num_time < trans_times:
+                row_template = _do_trans(row_values, trans_duration_type)
+        return row_template
+
+
+class TransThenSans(TransOrderBase):
+    def generate_row_template(
+        self, row_values, step, num_time,
+        trans_duration_type, sans_duration_type,
+        trans_times, sans_times):
+
+        row_template = ''
+        if step == Steps.FIRST:
+            if num_time < trans_times:
+                row_template += _do_trans(row_values, trans_duration_type)
+            if num_time < sans_times:
+                row_template += _do_sans(row_values, sans_duration_type)
+
+        return row_template
+
+
+class SansThenTrans(TransOrderBase):
+    def generate_row_template(
+        self, row_values, step, num_time,
+        trans_duration_type, sans_duration_type,
+        trans_times, sans_times):
+
+        row_template = ''
+        if step == Steps.FIRST:
+            if num_time < sans_times:
+                row_template += _do_sans(row_values, sans_duration_type)
+            if num_time < trans_times:
+                row_template += _do_trans(row_values, trans_duration_type)
+
+        return row_template
+
+
+class Simultaneous(TransOrderBase):
+    def generate_row_template(
+        self, row_values, step, num_time,
+        trans_duration_type, sans_duration_type,
+        trans_times, sans_times):
+
+        row_template = ''
+        if step == Steps.FIRST:
+            if num_time < sans_times:
+                row_template += _do_simultaneous(row_values, sans_duration_type)
+
+        return row_template
 
 
 class ScriptGenerator:
