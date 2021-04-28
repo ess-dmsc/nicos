@@ -66,44 +66,49 @@ def _get_comment_line(name):
     return f'# Sample = {name}\n'
 
 
-def _add_commands_to_template(row_template, row_values):
+def _add_commands_to_template(template, row_values):
+    if not template:
+        return ''
+
     return (
         f"{_get_comment_line(row_values['sample'])}"
         f"{_get_command(row_values.get('pre-command'))}"
-        f"{row_template}"
+        f"{template}"
         f"{_get_command(row_values.get('post-command'))}"
     )
 
 
-def _do_trans(row_values, trans_duration_type):
-    template = (
+def _add_sample_position(template, row_values):
+    if not template:
+        return ''
+
+    return (
         f"{_get_sample(row_values['sample'], row_values['thickness'])}\n"
         f"{_get_position(row_values['position'])}\n"
+        f"{template}"
+    )
+
+
+def _do_trans(row_values, trans_duration_type):
+    return (
         f"{_get_temperature(row_values.get('temperature'))}"
         f"do_trans({row_values['trans_duration']}, '{trans_duration_type}')\n"
     )
-    return template
 
 
 def _do_sans(row_values, sans_duration_type):
-    template = (
-        f"{_get_sample(row_values['sample'], row_values['thickness'])}\n"
-        f"{_get_position(row_values['position'])}\n"
+    return (
         f"{_get_temperature(row_values.get('temperature'))}"
         f"do_sans({row_values['sans_duration']}, '{sans_duration_type}')\n"
     )
-    return template
 
 
 def _do_simultaneous(row_values, sans_duration_type):
-    template = (
-        f"{_get_sample(row_values['sample'], row_values['thickness'])}\n"
-        f"{_get_position(row_values['position'])}\n"
+    return (
         f"{_get_temperature(row_values.get('temperature'))}"
         f"do_sans_simultaneous({row_values['sans_duration']}, "
         f"'{sans_duration_type}')\n"
     )
-    return template
 
 
 class TransOrderBase:
@@ -164,10 +169,14 @@ class TransFirst(TransOrderBase):
         row_template = ''
         if step == Steps.FIRST:
             if num_time < trans_times:
-                row_template = _do_trans(row_values, trans_duration_type)
-        else:
+                row_template = _add_sample_position(
+                    _do_trans(row_values, trans_duration_type),
+                    row_values)
+        elif step == Steps.LAST:
             if num_time < sans_times:
-                row_template = _do_sans(row_values, sans_duration_type)
+                row_template = _add_sample_position(
+                    _do_sans(row_values, sans_duration_type),
+                    row_values)
         return row_template
 
 
@@ -186,10 +195,14 @@ class SansFirst(TransOrderBase):
         row_template = ''
         if step == Steps.FIRST:
             if num_time < sans_times:
-                row_template = _do_sans(row_values, sans_duration_type)
-        else:
+                row_template = _add_sample_position(
+                    _do_sans(row_values, sans_duration_type),
+                    row_values)
+        elif step == Steps.LAST:
             if num_time < trans_times:
-                row_template = _do_trans(row_values, trans_duration_type)
+                row_template = _add_sample_position(
+                    _do_trans(row_values, trans_duration_type),
+                    row_values)
         return row_template
 
 
@@ -211,8 +224,7 @@ class TransThenSans(TransOrderBase):
                 row_template += _do_trans(row_values, trans_duration_type)
             if num_time < sans_times:
                 row_template += _do_sans(row_values, sans_duration_type)
-
-        return row_template
+        return _add_sample_position(row_template, row_values)
 
 
 class SansThenTrans(TransOrderBase):
@@ -233,8 +245,7 @@ class SansThenTrans(TransOrderBase):
                 row_template += _do_sans(row_values, sans_duration_type)
             if num_time < trans_times:
                 row_template += _do_trans(row_values, trans_duration_type)
-
-        return row_template
+        return _add_sample_position(row_template, row_values)
 
 
 class Simultaneous(TransOrderBase):
@@ -253,8 +264,7 @@ class Simultaneous(TransOrderBase):
         if step == Steps.FIRST:
             if num_time < sans_times:
                 row_template += _do_simultaneous(row_values, sans_duration_type)
-
-        return row_template
+        return _add_sample_position(row_template, row_values)
 
 
 class ScriptGenerator:
