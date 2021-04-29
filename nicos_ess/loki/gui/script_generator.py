@@ -37,9 +37,9 @@ class TransOrder(Enum):
     SIMULTANEOUS = 4
 
 
-class Steps(Enum):
-    FIRST = 0
-    LAST = 1
+class Traverse(Enum):
+    ONCE = 1
+    TWICE = 2
 
 
 def _get_position(value):
@@ -122,7 +122,7 @@ class TransOrderBase:
     ):
         template = ''
         for num_time in range(max(trans_times, sans_times)):
-            for step in Steps:
+            for step in Traverse:
                 for row_values in labeled_data:
                     row_template = self.generate_row_template(
                         row_values,
@@ -167,12 +167,12 @@ class TransFirst(TransOrderBase):
     ):
 
         row_template = ''
-        if step == Steps.FIRST:
+        if step == Traverse.ONCE:
             if num_time < trans_times:
                 row_template = _add_sample_position(
                     _do_trans(row_values, trans_duration_type),
                     row_values)
-        elif step == Steps.LAST:
+        elif step == Traverse.TWICE:
             if num_time < sans_times:
                 row_template = _add_sample_position(
                     _do_sans(row_values, sans_duration_type),
@@ -193,12 +193,12 @@ class SansFirst(TransOrderBase):
     ):
 
         row_template = ''
-        if step == Steps.FIRST:
+        if step == Traverse.ONCE:
             if num_time < sans_times:
                 row_template = _add_sample_position(
                     _do_sans(row_values, sans_duration_type),
                     row_values)
-        elif step == Steps.LAST:
+        elif step == Traverse.TWICE:
             if num_time < trans_times:
                 row_template = _add_sample_position(
                     _do_trans(row_values, trans_duration_type),
@@ -219,7 +219,7 @@ class TransThenSans(TransOrderBase):
     ):
 
         row_template = ''
-        if step == Steps.FIRST:
+        if step == Traverse.ONCE:
             if num_time < trans_times:
                 row_template += _do_trans(row_values, trans_duration_type)
             if num_time < sans_times:
@@ -240,7 +240,7 @@ class SansThenTrans(TransOrderBase):
     ):
 
         row_template = ''
-        if step == Steps.FIRST:
+        if step == Traverse.ONCE:
             if num_time < sans_times:
                 row_template += _do_sans(row_values, sans_duration_type)
             if num_time < trans_times:
@@ -261,7 +261,7 @@ class Simultaneous(TransOrderBase):
     ):
 
         row_template = ''
-        if step == Steps.FIRST:
+        if step == Traverse.ONCE:
             if num_time < sans_times:
                 row_template += _do_simultaneous(row_values, sans_duration_type)
         return _add_sample_position(row_template, row_values)
