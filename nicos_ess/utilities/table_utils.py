@@ -41,3 +41,13 @@ def extract_table_from_clipboard_text(text):
     # str.splitlines will lose the empty cell but re.split won't
     return [[x for x in row.split('\t')]
             for row in re.split('\r?\n', text)]
+
+
+def convert_table_to_clipboard_text(table_data):
+    """
+    Converts 2-D tabular data to clipboard text.
+
+    :param table_data: 2D tabular data
+    :return: clipboard text
+    """
+    return '\n'.join(['\t'.join(row) for row in table_data])

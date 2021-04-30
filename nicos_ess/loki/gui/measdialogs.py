@@ -484,7 +484,7 @@ class DevicesWidget(QWidget):
 
 # Devices that should not appear in the list of additional devices to move,
 # because they are already covered by the detector/collimation/... dialog.
-DEV_BLACKLIST = {
+DEV_NOT_ALLOWED = {
     'ap_sam',
     'attenuator',
     'beamstop',
@@ -562,7 +562,7 @@ class DevicesDialog(QDialog):
 
         devlist = client.getDeviceList('nicos.core.device.Moveable')
         for dev in devlist:
-            if dev not in DEV_BLACKLIST:
+            if dev not in DEV_NOT_ALLOWED:
                 QListWidgetItem(dev, self.devList)
 
         self._widgets = []
