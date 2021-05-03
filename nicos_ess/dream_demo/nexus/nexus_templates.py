@@ -21,19 +21,3 @@ dream_default = {
         }
     }
 }
-
-
-# template = {
-#         "entry1:NXentry": {
-#             "INST:NXinstrument": {
-#                 "name": NXDataset("Instrument"),
-#                 "detector:NXdetector": {
-#                     "data": EventStream(topic="EventTopic", source="SrcName")
-#                 },
-#             },
-#             "sample:NXsample": {
-#                 "height": DeviceDataset('dev'),
-#                 "property": DeviceDataset('dev', 'param', unit='K'),
-#             },
-#         }
-#     }
