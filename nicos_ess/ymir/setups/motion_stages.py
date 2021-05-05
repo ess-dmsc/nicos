@@ -8,6 +8,6 @@ devices = dict(
               motorpv='LabS-ESSIIP:MC-MCU-01:m1',
               errormsgpv='LabS-ESSIIP:MC-MCU-01:m1-MsgTxt',
               errorbitpv='LabS-ESSIIP:MC-MCU-01:m1-Err',
-              reseterrorpv='LabS-ESSIIP:MC-MCU-01:m1-ErrRst'
+              reseterrorpv='LabS-ESSIIP:MC-MCU-01:m1-ErrRst',
               ),
 )
