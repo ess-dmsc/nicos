@@ -28,7 +28,7 @@ devices = dict(
         brokers=['localhost:9092'],
         unit='',
         command_topic='hist_commands',
-        response_topic='output_topic',
+        response_topic='response_topic',
         images=['det_image1', 'det_image2'],
     ),
 )

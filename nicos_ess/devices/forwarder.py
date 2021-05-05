@@ -129,9 +129,6 @@ class EpicsKafkaForwarderControl(ProducesKafkaMessages, Device):
     def pv_forwarding_info(self, pv):
         return self._issued.get(pv, None)
 
-    def pv_forwarding_info(self, pv):
-        return self._issued.get(pv, None)
-
     def reissue(self):
         self.add(self._issued)
 
