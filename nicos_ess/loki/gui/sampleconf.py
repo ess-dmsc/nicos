@@ -274,6 +274,7 @@ class LokiSamplePanel(LokiPanelBase):
         self._clear_samples()
         self.sample_frame.hide()
         self.sampleGroup.setEnabled(True)
+        self.on_newBtn_clicked()
 
     @pyqtSlot()
     def on_actionGenerate_triggered(self):

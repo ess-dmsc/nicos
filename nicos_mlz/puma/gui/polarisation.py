@@ -22,20 +22,17 @@
 #
 # *****************************************************************************
 
-from contextlib import contextmanager
 from math import asin, atan, cos, degrees, pi, radians, sin, sqrt, tan
 
 from numpy import arange, array, sign
 
 from nicos.clients.gui.panels import Panel
-from nicos.clients.gui.utils import loadUi
-from nicos.clients.gui.widgets.plotting import NicosPlotCurve
+from nicos.clients.gui.utils import loadUi, waitCursor
 from nicos.core.errors import NicosError
 from nicos.guisupport.livewidget import LiveWidget1D
-from nicos.guisupport.plots import GRCOLORS, GRMARKS
-from nicos.guisupport.qt import QApplication, QCursor, QDoubleValidator, \
-    QLabel, QMessageBox, QSize, QSizePolicy, Qt, QVBoxLayout, QWidget, \
-    pyqtSlot
+from nicos.guisupport.plots import GRCOLORS, GRMARKS, MaskedPlotCurve
+from nicos.guisupport.qt import QDoubleValidator, QLabel, QMessageBox, QSize, \
+    QSizePolicy, Qt, QVBoxLayout, QWidget, pyqtSlot
 from nicos.guisupport.widget import NicosWidget
 from nicos.utils import findResource
 
@@ -49,38 +46,28 @@ COLOR_BLUE = GRCOLORS['blue']
 SOLID_CIRCLE_MARKER = GRMARKS['solidcircle']
 
 
-@contextmanager
-def wait_cursor():
-    try:
-        QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
-        yield
-    finally:
-        QApplication.restoreOverrideCursor()
-
-
 class MiniPlot(LiveWidget1D):
 
     client = None
 
     def __init__(self, xlabel, ylabel, parent=None, **kwds):
         LiveWidget1D.__init__(self, parent)
-        self.plot.xlabel = xlabel
-        self.plot.ylabel = ylabel
 
-        self.curve.linecolor = kwds.get('color2', COLOR_RED)
-        self.curve.linewidth = 2
-        self.curve.GR_MARKERSIZE = 20
-        self.curve.markertype = SOLID_CIRCLE_MARKER
-        self.curve.markercolor = kwds.get('color2', COLOR_RED)
-
-        self.downcurve = NicosPlotCurve(
-            [0], [.1], linecolor=kwds.get('color1', COLOR_BLACK))
-        self.downcurve.linewidth = 2
-        self.downcurve.markertype = SOLID_CIRCLE_MARKER
-        self.downcurve.GR_MARKERSIZE = 20
-        self.downcurve.markertype = SOLID_CIRCLE_MARKER
-        self.downcurve.markercolor = kwds.get('color1', COLOR_BLACK)
-        self.axes.addCurves(self.downcurve)
+        self.axes.resetCurves()
+        self.setTitles({'x': xlabel, 'y': ylabel})
+        self._curves = [
+            MaskedPlotCurve([0], [1], linewidth=2, legend='',
+                            markertype=SOLID_CIRCLE_MARKER,
+                            markercolor=kwds.get('color2', COLOR_RED),
+                            linecolor=kwds.get('color2', COLOR_RED)),
+            MaskedPlotCurve([0], [.1], linewidth=2, legend='',
+                            markertype=SOLID_CIRCLE_MARKER,
+                            markercolor=kwds.get('color1', COLOR_BLACK),
+                            linecolor=kwds.get('color1', COLOR_BLACK)),
+        ]
+        for curve in self._curves:
+            curve.GR_MARKERSIZE = 20
+            self.axes.addCurves(curve)
 
         # Disable creating a mouse selection to zoom
         self.gr.setMouseSelectionEnabled(False)
@@ -111,10 +98,10 @@ class PlotWidget(QWidget):
         parent.layout().insertWidget(1, self.plot)
 
     def setData(self, x, y1, y2):
-        self.plot.curve.x = array(x)
-        self.plot.curve.y = array(y1)
-        self.plot.downcurve.x = array(x)
-        self.plot.downcurve.y = array(y2)
+        self.plot._curves[0].x = array(x)
+        self.plot._curves[0].y = array(y1)
+        self.plot._curves[1].x = array(x)
+        self.plot._curves[1].y = array(y2)
 
         self.plot.reset()
         self.plot.update()
@@ -127,8 +114,8 @@ class IntensityPlot(PlotWidget):
                             'neutrons' % direction,
                             'PSD channel position (cm)', 'intensity',
                             parent=parent)
-        self.plot.curve.legend = 'without analyzer'
-        self.plot.downcurve.legend = 'with analyzer'
+        self.plot._curves[0].legend = 'without analyzer'
+        self.plot._curves[1].legend = 'with analyzer'
 
 
 class TransmissionPlot(PlotWidget):
@@ -138,12 +125,12 @@ class TransmissionPlot(PlotWidget):
                             'for spin-%s neutrons' % direction,
                             'Deflector angle (deg)', 'Refl/trans coefficient',
                             parent=parent)
-        self.plot.curve.linecolor = COLOR_BLUE
-        self.plot.curve.legend = 'Reflectivity'
-        self.plot.curve.markercolor = COLOR_BLUE
-        self.plot.downcurve.linecolor = COLOR_GREEN
-        self.plot.downcurve.legend = 'Transmissivity'
-        self.plot.downcurve.markercolor = COLOR_GREEN
+        self.plot._curves[0].linecolor = COLOR_BLUE
+        self.plot._curves[0].legend = 'Reflectivity'
+        self.plot._curves[0].markercolor = COLOR_BLUE
+        self.plot._curves[1].linecolor = COLOR_GREEN
+        self.plot._curves[1].legend = 'Transmissivity'
+        self.plot._curves[1].markercolor = COLOR_GREEN
 
 
 class PolarisationPanel(NicosWidget, Panel):
@@ -159,7 +146,7 @@ class PolarisationPanel(NicosWidget, Panel):
         pass
 
     def initUi(self):
-        with wait_cursor():
+        with waitCursor():
             loadUi(self, findResource('nicos_mlz/puma/gui/polarisation.ui'))
 
         valid = QDoubleValidator()
@@ -208,7 +195,7 @@ class PolarisationPanel(NicosWidget, Panel):
             self.registerKey(k)
 
     def on_client_connected(self):
-        with wait_cursor():
+        with waitCursor():
             missed_devices = []
             for d in ('def1', 'polcol', 'man', 'med'):
                 self.client.eval('%s.pollParam()', None)

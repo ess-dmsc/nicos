@@ -37,6 +37,6 @@ devices = dict(
         readpv='{}FunctionShape-RBV'.format(pv_root),
         writepv='{}FunctionShape-S'.format(pv_root),
         lowlevel=False,
-        mapping={'DC': 0, 'AC': 1},
+        mapping={'DC': 0, 'AC (Sinusoid)': 1},
     ),
 )

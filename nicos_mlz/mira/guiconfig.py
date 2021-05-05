@@ -23,6 +23,7 @@ main_window = tabbed(
     ),
     ('Mieze display',
      panel('nicos_mlz.reseda.gui.mieze_display.MiezePanel',
+           foils=[0, 1, 2, 5, 6, 7],
            setups='mieze')
     ),
 )
@@ -34,8 +35,9 @@ windows = [
            panel('nicos.clients.gui.panels.editor.EditorPanel',
                  tools=[tool('Scan', 'nicos.clients.gui.tools.scan.ScanTool')]))),
     window('Live data', 'live',
-           panel('nicos.clients.gui.panels.live.LiveDataPanel',
-                 filetypes=['pad', 'tof'])),
+           panel('nicos_mlz.reseda.gui.live.CascadeLiveDataPanel',
+                 filetypes=['pad', 'tof'],
+                 defaults={'logscale': True},)),
     window('Camera', 'live',
            panel('nicos.clients.gui.panels.live.LiveDataPanel',
                  instrument='poli')),

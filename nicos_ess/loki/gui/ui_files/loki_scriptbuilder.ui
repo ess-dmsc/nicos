@@ -26,6 +26,9 @@
       <string>Settings</string>
      </property>
      <layout class="QGridLayout" name="gridLayout">
+      <property name="sizeConstraint">
+       <enum>QLayout::SetMinAndMaxSize</enum>
+      </property>
       <item row="0" column="1" colspan="2">
        <widget class="QComboBox" name="comboTransOrder">
         <property name="minimumSize">
@@ -37,7 +40,7 @@
        </widget>
       </item>
       <item row="2" column="1">
-       <widget class="QSpinBox" name="spinBox_3">
+       <widget class="QSpinBox" name="sbTransTimes">
         <property name="value">
          <number>1</number>
         </property>
@@ -123,7 +126,7 @@
        </widget>
       </item>
       <item row="1" column="1">
-       <widget class="QSpinBox" name="spinBox_2">
+       <widget class="QSpinBox" name="sbSansTimes">
         <property name="value">
          <number>1</number>
         </property>

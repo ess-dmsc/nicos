@@ -30,7 +30,8 @@ from nicos.clients.gui.panels.setup_panel import ExpPanel as DefaultExpPanel, \
 from nicos.clients.gui.panels.setup_panel import combineUsers, splitUsers
 from nicos.clients.gui.utils import loadUi
 from nicos.core import ConfigurationError
-from nicos.guisupport.qt import QDialogButtonBox, QMessageBox, Qt, pyqtSlot
+from nicos.guisupport.qt import QDialogButtonBox, QMessageBox, Qt, pyqtSignal, \
+    pyqtSlot
 from nicos_ess.gui import uipath
 
 
@@ -45,6 +46,7 @@ class ExpPanel(DefaultExpPanel):
 
     panelName = 'Experiment setup'
     ui = '%s/panels/ui_files/setup_exp.ui' % uipath
+    exp_proposal_activated = pyqtSignal()
 
     def __init__(self, parent, client, options):
         DefaultExpPanel.__init__(self, parent, client, options)
@@ -168,6 +170,7 @@ class ExpPanel(DefaultExpPanel):
         self._defined_data_emails = self.dataEmails.toPlainText().strip()
         self.applyWarningLabel.setVisible(False)
         self.is_exp_props_edited = [False] * self.num_experiment_props_opts
+        self.exp_proposal_activated.emit()
 
     @pyqtSlot()
     def on_queryDBButton_clicked(self):
@@ -259,10 +262,8 @@ class ExpPanel(DefaultExpPanel):
         self._set_warning_visibility()
 
     def _get_proposal_data(self, props_key):
-        curr_value = self._orig_propinfo.get(props_key)
-        if curr_value is None:
-            curr_value = ""
-        return curr_value
+        # returns empty string in case key not found or value of key is None
+        return self._orig_propinfo.get(props_key, '') or ''
 
     def _apply_warning_status(self, value, index, props_curr_val):
         self.is_exp_props_edited[index] = \
@@ -319,6 +320,10 @@ class FinishPanel(Panel):
     def setViewOnly(self, value):
         self.finishButton.setEnabled(self.client.isconnected and not value)
 
+    def on_new_experiment_proposal(self):
+        if not self.client.viewonly:
+            self.finishButton.setEnabled(True)
+
     @pyqtSlot()
     def on_finishButton_clicked(self):
         if self._finish_exp_panel:
@@ -328,3 +333,11 @@ class FinishPanel(Panel):
         if self.client.run('FinishExperiment()', noqueue=True) is None:
             self.showError('Could not finish experiment, a script '
                            'is still running.')
+        else:
+            self.finishButton.setEnabled(False)
+            self.show_finish_message()
+
+    def show_finish_message(self):
+        msg_box = QMessageBox()
+        msg_box.setText('Experiment successfully finished.')
+        return msg_box.exec_()

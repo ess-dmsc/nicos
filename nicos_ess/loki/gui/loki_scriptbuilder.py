@@ -1,18 +1,48 @@
+#  -*- coding: utf-8 -*-
+# *****************************************************************************
+# NICOS, the Networked Instrument Control System of the MLZ
+# Copyright (c) 2009-2021 by the NICOS contributors (see AUTHORS)
+#
+# This program is free software; you can redistribute it and/or modify it under
+# the terms of the GNU General Public License as published by the Free Software
+# Foundation; either version 2 of the License, or (at your option) any later
+# version.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+# FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+# details.
+#
+# You should have received a copy of the GNU General Public License along with
+# this program; if not, write to the Free Software Foundation, Inc.,
+# 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+#
+# Module authors:
+#
+#   Ebad Kamil <Ebad.Kamil@ess.eu>
+#   Matt Clarke <matt.clarke@ess.eu>
+#
+# *****************************************************************************
+
+"""LoKI Script Builder Panel."""
+
 import os.path as osp
 from collections import OrderedDict
 from functools import partial
-from itertools import groupby
 
 from nicos.clients.gui.utils import loadUi
-from nicos.guisupport.qt import QApplication, QFileDialog, QHeaderView, \
-    QKeySequence, QShortcut, Qt, pyqtSlot
+from nicos.guisupport.qt import QAction, QApplication, QCursor, QFileDialog, \
+    QHeaderView, QKeySequence, QMenu, QShortcut, Qt, QTableView, pyqtSlot
 from nicos.utils import findResource
 
+from nicos_ess.gui.panels import get_icon
 from nicos_ess.loki.gui.loki_panel import LokiPanelBase
 from nicos_ess.loki.gui.loki_scriptbuilder_model import LokiScriptModel
 from nicos_ess.loki.gui.script_generator import ScriptGenerator, TransOrder
 from nicos_ess.utilities.csv_utils import load_table_from_csv, \
     save_table_to_csv
+from nicos_ess.utilities.table_utils import convert_table_to_clipboard_text, \
+    extract_table_from_clipboard_text
 
 TABLE_QSS = 'alternate-background-color: aliceblue;'
 
@@ -21,7 +51,7 @@ class LokiScriptBuilderPanel(LokiPanelBase):
     _available_trans_options = OrderedDict({
         'All TRANS First': TransOrder.TRANSFIRST,
         'All SANS First': TransOrder.SANSFIRST,
-        'TRANS then SANS':TransOrder.TRANSTHENSANS,
+        'TRANS then SANS': TransOrder.TRANSTHENSANS,
         'SANS then TRANS': TransOrder.SANSTHENTRANS,
         'Simultaneous': TransOrder.SIMULTANEOUS
     })
@@ -33,7 +63,6 @@ class LokiScriptBuilderPanel(LokiPanelBase):
                )
 
         self.window = parent
-
         self.duration_options = ['Mevents', 'seconds', 'frames']
 
         self.permanent_columns = {
@@ -56,16 +85,19 @@ class LokiScriptBuilderPanel(LokiPanelBase):
         self.columns_in_order.extend(self.optional_columns.keys())
         self.last_save_location = None
         self._init_table_panel()
+        self._init_right_click_context_menu()
 
     def _init_table_panel(self):
         headers = [
             self.permanent_columns[name]
             if name in self.permanent_columns
             else self.optional_columns[name][0]
-            for name in self.columns_in_order]
+            for name in self.columns_in_order
+        ]
 
         self.model = LokiScriptModel(headers)
         self.tableView.setModel(self.model)
+        self.tableView.setSelectionMode(QTableView.ContiguousSelection)
 
         for name, details in self.optional_columns.items():
             _, checkbox = details
@@ -86,6 +118,36 @@ class LokiScriptBuilderPanel(LokiPanelBase):
         self.tableView.setStyleSheet(TABLE_QSS)
 
         self._create_keyboard_shortcuts()
+
+    def _init_right_click_context_menu(self):
+        self.tableView.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.tableView.customContextMenuRequested.connect(
+            self._show_context_menu)
+
+    def _show_context_menu(self):
+        menu = QMenu()
+
+        copy_action = QAction("Copy", self)
+        copy_action.triggered.connect(self._handle_copy_cells)
+        copy_action.setIcon(get_icon("file_copy-24px.svg"))
+        menu.addAction(copy_action)
+
+        cut_action = QAction("Cut", self)
+        cut_action.triggered.connect(self._handle_cut_cells)
+        cut_action.setIcon(get_icon("cut_24px.svg"))
+        menu.addAction(cut_action)
+
+        paste_action = QAction("Paste", self)
+        paste_action.triggered.connect(self._handle_table_paste)
+        paste_action.setIcon(get_icon("paste_24px.svg"))
+        menu.addAction(paste_action)
+
+        delete_action = QAction("Delete", self)
+        delete_action.triggered.connect(self._delete_rows)
+        delete_action.setIcon(get_icon("remove-24px.svg"))
+        menu.addAction(delete_action)
+
+        menu.exec_(QCursor.pos())
 
     def _create_keyboard_shortcuts(self):
         for key, to_call in [
@@ -127,37 +189,39 @@ class LokiScriptBuilderPanel(LokiPanelBase):
 
     @pyqtSlot()
     def on_loadTableButton_clicked(self):
-        filename = QFileDialog.getOpenFileName(
-            self,
-            'Open table',
-            osp.expanduser('~') if self.last_save_location is None \
-                else self.last_save_location,
-            'Table Files (*.txt *.csv)')[0]
+        try:
+            filename = QFileDialog.getOpenFileName(
+                self,
+                'Open table',
+                osp.expanduser('~') if self.last_save_location is None \
+                    else self.last_save_location,
+                'Table Files (*.txt *.csv)')[0]
 
-        if not filename:
-            return
+            if not filename:
+                return
 
-        data = load_table_from_csv(filename)
-        headers_from_file = data.pop(0)
+            data = load_table_from_csv(filename)
+            headers_from_file = data.pop(0)
 
-        if not set(headers_from_file).issubset(set(self.columns_in_order)):
-            self.showError(f'{filename} is not compatible with the table')
-            return
-        # Clear existing table before populating from file
-        self.on_clearTableButton_clicked()
-        self._fill_table(headers_from_file, data)
+            if not set(headers_from_file).issubset(set(self.columns_in_order)):
+                raise AttributeError('incorrect headers in file')
+            # Clear existing table before populating from file
+            self.on_clearTableButton_clicked()
+            self._fill_table(headers_from_file, data)
 
-        for optional in set(headers_from_file).intersection(
-            set(self.optional_columns.keys())):
-            self.optional_columns[optional][1].setChecked(True)
+            for optional in set(headers_from_file).intersection(
+                set(self.optional_columns.keys())):
+                self.optional_columns[optional][1].setChecked(True)
+        except Exception as error:
+            self.showError(f'Could not load {filename}:  {error}')
 
     def _fill_table(self, headers, data):
         # corresponding indices of elements in headers_from_file list to headers
-        indices = [i for i, e in enumerate(self.columns_in_order)
-                   if e in headers]
+        indices = [index for index, element in
+                   enumerate(self.columns_in_order) if element in headers]
 
         table_data = []
-        for idx, row in enumerate(data):
+        for row in data:
             # create appropriate length list to fill the table row
             row = self._fill_elements(row, indices, len(self.columns_in_order))
             table_data.append(row)
@@ -185,8 +249,8 @@ class LokiScriptBuilderPanel(LokiPanelBase):
         filename = QFileDialog.getSaveFileName(
             self,
             'Save table',
-            osp.expanduser('~') if self.last_save_location is None \
-                else self.last_save_location,
+            osp.expanduser('~') if self.last_save_location is None
+            else self.last_save_location,
             'Table files (*.txt *.csv)',
             initialFilter='*.txt;;*.csv')[0]
 
@@ -204,8 +268,9 @@ class LokiScriptBuilderPanel(LokiPanelBase):
             self.showError(f'Cannot write table contents to {filename}:\n{ex}')
 
     def is_data_in_hidden_columns(self):
-        optional_indices = [i for i, e in enumerate(self.columns_in_order)
-                            if e in self.optional_columns.keys()]
+        optional_indices = [index for index, element in
+                            enumerate(self.columns_in_order)
+                            if element in self.optional_columns.keys()]
         # Transform table_data to allow easy access to columns like data[0]
         data = list(zip(*self.model.table_data))
         return any(
@@ -245,14 +310,18 @@ class LokiScriptBuilderPanel(LokiPanelBase):
         self.tableView.model().removeRows(rows_to_remove)
 
     def _insert_row_above(self):
-        lowest, highest = self._get_selected_rows_limits()
+        lowest, _ = self._get_selected_rows_limits()
         if lowest is not None:
             self.tableView.model().insertRow(lowest)
+        elif self.model.num_rows == 0:
+            self.tableView.model().insertRow(0)
 
     def _insert_row_below(self):
         _, highest = self._get_selected_rows_limits()
         if highest is not None:
             self.tableView.model().insertRow(highest + 1)
+        elif self.model.num_rows == 0:
+            self.tableView.model().insertRow(0)
 
     def _get_selected_rows_limits(self):
         lowest = None
@@ -275,16 +344,9 @@ class LokiScriptBuilderPanel(LokiPanelBase):
             self.model.update_data_at_index(index.row(), index.column(), '')
 
     def _handle_copy_cells(self):
-        indices = [(index.row(), index.column())
-                   for index in self.tableView.selectedIndexes()]
-        if len(set(
-            [len(list(group))
-             for _, group in groupby(indices, lambda x: x[0])])) != 1:
-            # Can only select one continuous region to copy
-            return
-
         selected_data = self._extract_selected_data()
-        QApplication.instance().clipboard().setText('\n'.join(selected_data))
+        clipboard_text = convert_table_to_clipboard_text(selected_data)
+        QApplication.instance().clipboard().setText(clipboard_text)
 
     def _extract_selected_data(self):
         selected_indices = []
@@ -304,18 +366,17 @@ class LokiScriptBuilderPanel(LokiPanelBase):
 
         if not indices:
             return
-
         top_left = indices[0]
 
-        clipboard_text = QApplication.instance().clipboard().text()
         data_type = QApplication.instance().clipboard().mimeData()
 
         if not data_type.hasText():
             # Don't paste images etc.
             return
 
-        copied_table = [[x for x in row.split('\t')]
-                        for row in clipboard_text.splitlines()]
+        clipboard_text = QApplication.instance().clipboard().text()
+        copied_table = extract_table_from_clipboard_text(clipboard_text)
+
         if len(copied_table) == 1 and len(copied_table[0]) == 1:
             # Only one value, so put it in all selected cells
             self._do_bulk_update(copied_table[0][0])
@@ -324,6 +385,8 @@ class LokiScriptBuilderPanel(LokiPanelBase):
                           if self.tableView.isColumnHidden(idx)]
         self.model.update_data_from_clipboard(
             copied_table, top_left, hidden_columns)
+
+
 
     def _link_duration_combobox_to_column(self, column_name, combobox):
         combobox.addItems(self.duration_options)
@@ -358,20 +421,24 @@ class LokiScriptBuilderPanel(LokiPanelBase):
     def on_generateScriptButton_clicked(self):
         labeled_data = self._extract_labeled_data()
 
-        if self._available_trans_options[self.comboTransOrder.currentText()] ==\
-            TransOrder.SIMULTANEOUS:
-                if not all([data['sans_duration'] == data['trans_duration']
-                            for data in labeled_data]):
-                    self.showError(
+        if self._available_trans_options[self.comboTransOrder.currentText()]\
+                == TransOrder.SIMULTANEOUS:
+            if not all([data['sans_duration'] == data['trans_duration']
+                        for data in labeled_data]):
+                self.showError(
                         'Different SANS and TRANS duration specified in '
                         'SIMULTANEOUS mode. SANS duration will be used in '
-                        'the script.')
+                        'the script.'
+                )
 
-        template = ScriptGenerator().generate_script(
-            labeled_data,
-            self._available_trans_options[self.comboTransOrder.currentText()],
-            self.comboTransDurationType.currentText(),
-            self.comboSansDurationType.currentText())
+        _trans_order = self._available_trans_options[
+            self.comboTransOrder.currentText()]
+        template = ScriptGenerator.from_trans_order(_trans_order).\
+            generate_script(labeled_data,
+                            self.comboTransDurationType.currentText(),
+                            self.comboSansDurationType.currentText(),
+                            self.sbTransTimes.value(),
+                            self.sbSansTimes.value())
 
         self.mainwindow.codeGenerated.emit(template)
 
@@ -392,7 +459,8 @@ class LokiScriptBuilderPanel(LokiPanelBase):
     def _on_duration_type_changed(self, column_name, value):
         column_number = self.columns_in_order.index(column_name)
         self._set_column_title(column_number,
-            f'{self.permanent_columns[column_name]}\n({value})')
+                               f'{self.permanent_columns[column_name]}'
+                               f'\n({value})')
 
     def _set_column_title(self, index, title):
         self.model.setHeaderData(index, Qt.Horizontal, title)
