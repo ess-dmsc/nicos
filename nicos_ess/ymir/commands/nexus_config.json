@@ -1,95 +1,229 @@
 {
   "children": [
     {
+      "name": "entry",
       "type": "group",
-      "name": "entry-01",
-      "attributes": {
-        "NX_class": "NXentry"
-      },
+      "attributes": [
+        {
+          "name": "NX_class",
+          "dtype": "string",
+          "values": "NXentry"
+        }
+      ],
       "children": [
         {
+          "name": "instrument",
           "type": "group",
-          "name": "m1_RBV",
+          "attributes": [
+            {
+              "name": "NX_class",
+              "dtype": "string",
+              "values": "NXinstrument"
+            }
+          ],
           "children": [
             {
-              "type": "stream",
-              "stream": {
-                "topic": "Ymir_motion",
-                "source": "SES-SCAN:MC-MCU-001:m1.RBV",
-                "writer_module": "f142"
-              }
+              "name": "ymir_motion",
+              "type": "group",
+              "attributes": [
+                {
+                  "name": "NX_class",
+                  "dtype": "string",
+                  "values": "NXpositioner"
+                }
+              ],
+              "children": [
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "description",
+                    "dtype": "string",
+                    "values": "Ymir linear motion system."
+                  }
+                },
+                {
+                  "name": "X-axis",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "units",
+                      "dtype": "string",
+                      "values": "mm"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f142",
+                      "config": {
+                        "source": "SES-SCAN:MC-MCU-001:m1-RBV-UTC",
+                        "topic": "Ymir_motion",
+                        "dtype": "double",
+                        "value_units": "mm"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "Y-axis",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "units",
+                      "dtype": "string",
+                      "values": "mm"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f142",
+                      "config": {
+                        "source": "SES-SCAN:MC-MCU-001:m2-RBV-UTC",
+                        "topic": "Ymir_motion",
+                        "dtype": "double",
+                        "value_units": "mm"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "Z-axis",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "units",
+                      "dtype": "string",
+                      "values": "mm"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f142",
+                      "config": {
+                        "source": "SES-SCAN:MC-MCU-001:m3-RBV-UTC",
+                        "topic": "Ymir_motion",
+                        "dtype": "double",
+                        "value_units": "mm"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "X-axis_set_value",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "units",
+                      "dtype": "string",
+                      "values": "mm"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f142",
+                      "config": {
+                        "source": "SES-SCAN:MC-MCU-001:m1",
+                        "topic": "Ymir_motion",
+                        "dtype": "double",
+                        "value_units": "mm"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "Y-axis_set_value",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "units",
+                      "dtype": "string",
+                      "values": "mm"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f142",
+                      "config": {
+                        "source": "SES-SCAN:MC-MCU-001:m2",
+                        "topic": "Ymir_motion",
+                        "dtype": "double",
+                        "value_units": "mm"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "Z-axis_set_value",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "units",
+                      "dtype": "string",
+                      "values": "mm"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f142",
+                      "config": {
+                        "source": "SES-SCAN:MC-MCU-001:m3",
+                        "topic": "Ymir_motion",
+                        "dtype": "double",
+                        "value_units": "mm"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "laser_beam_sensor",
+              "type": "group",
+              "attributes": [
+                {
+                  "name": "NX_class",
+                  "dtype": "string",
+                  "values": "NXsensor"
+                }
+              ],
+              "children": [
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "description",
+                    "dtype": "string",
+                    "values": "Relative intensity of laser beam."
+                  }
+                },
+                {
+                  "name": "laser_intensity",
+                  "type": "group",
+                  "children": [
+                    {
+                      "module": "f142",
+                      "config": {
+                        "source": "SES-SCAN:LSR-001:AnalogInput-UTC",
+                        "topic": "Ymir_se",
+                        "dtype": "double",
+                        "value_units": ""
+                      }
+                    }
+                  ]
+                }
+              ]
             }
           ]
         },
         {
+          "name": "sample",
           "type": "group",
-          "name": "m2_RBV",
-          "children": [
+          "attributes": [
             {
-              "type": "stream",
-              "stream": {
-                "topic": "Ymir_motion",
-                "source": "SES-SCAN:MC-MCU-001:m2.RBV",
-                "writer_module": "f142"
-              }
+              "name": "NX_class",
+              "dtype": "string",
+              "values": "NXsample"
             }
-          ]
-        },
-        {
-          "type": "group",
-          "name": "m3_RBV",
-          "children": [
-            {
-              "type": "stream",
-              "stream": {
-                "topic": "Ymir_motion",
-                "source": "SES-SCAN:MC-MCU-001:m3.RBV",
-                "writer_module": "f142"
-              }
-            }
-          ]
-        },
-        {
-          "type": "group",
-          "name": "m3_RBV",
-          "children": [
-            {
-              "type": "stream",
-              "stream": {
-                "topic": "ymir_nicos_devices",
-                "source": "m1",
-                "writer_module": "f142"
-              }
-            }
-          ]
-        },
-        {
-          "type": "group",
-          "name": "freia_events",
-          "children": [
-            {
-              "type": "stream",
-              "stream": {
-                "topic": "FREIA_detector",
-                "source": "multiblade",
-                "writer_module": "ev42"
-              }
-            }
-          ]
-        },
-        {
-          "type": "group",
-          "name": "PLC_senv_data",
-          "children": [
-            {
-              "type": "stream",
-              "stream": {
-                "topic": "Ymir_se",
-                "source": "PLC:stream:value",
-                "writer_module": "senv"
-              }
-            }
-          ]
+          ],
+          "children": []
         }
       ]
     }
