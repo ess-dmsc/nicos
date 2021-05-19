@@ -121,6 +121,14 @@
     <string>&amp;Save as Image...</string>
    </property>
   </action>
+  <action name="actionSaveData">
+   <property name="checkable">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Save as Data...</string>
+   </property>
+  </action>
   <action name="actionLogScale">
    <property name="checkable">
     <bool>true</bool>

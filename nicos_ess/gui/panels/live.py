@@ -28,7 +28,7 @@ from nicos.clients.gui.panels.live import LiveDataPanel as DefaultLiveDataPanel
 from nicos.guisupport.livewidget import LiveWidget as DefaultLiveWidget, \
     LiveWidget1D as DefaultLiveWidget1D, AXES
 from nicos.guisupport.qt import QComboBox, QGroupBox, QListWidget, QSize, Qt, \
-    QToolBar, QVBoxLayout, pyqtSignal
+    QToolBar, QVBoxLayout, pyqtSignal, pyqtSlot
 
 from nicos_ess.gui import uipath
 from nicos_ess.gui.panels import get_icon
@@ -40,12 +40,14 @@ class LiveDataPanel(DefaultLiveDataPanel):
         self.toolbar = self.createPanelToolbar()
         self.layout().setMenuBar(self.toolbar)
         self.set_icons()
+        # self.setControlsEnabled(False)
 
     def createPanelToolbar(self):
         toolbar = QToolBar('Live data')
         toolbar.addAction(self.actionOpen)
         toolbar.addAction(self.actionPrint)
         toolbar.addAction(self.actionSavePlot)
+        toolbar.addAction(self.actionSaveData)
         toolbar.addSeparator()
         toolbar.addAction(self.actionLogScale)
         toolbar.addSeparator()
@@ -59,11 +61,33 @@ class LiveDataPanel(DefaultLiveDataPanel):
     def set_icons(self):
         self.actionPrint.setIcon(get_icon('print-24px.svg'))
         self.actionSavePlot.setIcon(get_icon('save-24px.svg'))
+        self.actionSaveData.setIcon(get_icon('archive-24px.svg'))
         self.actionUnzoom.setIcon(get_icon('zoom_out-24px.svg'))
         self.actionOpen.setIcon(get_icon('folder_open-24px.svg'))
 
     def getToolbars(self):
         return []
+
+    @pyqtSlot()
+    def on_actionSaveData_triggered(self):
+        self._export_data_to_file()
+
+    def _export_data_to_file(self):
+
+        idx = self.fileList.currentRow()
+        if idx == -1:
+            self.fileList.setCurrentRow(0)
+            return
+
+        # try to get data from the cache
+        data = self.getDataFromItem(self.fileList.currentItem())
+        # no data
+        if data is None:
+            return
+
+        arrays = data.get('dataarrays', [])
+        labels = data.get('labels', {})
+        titles = data.get('titles', {})
 
 
 class LiveWidget(DefaultLiveWidget):
