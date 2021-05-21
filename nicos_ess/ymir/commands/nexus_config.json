@@ -23,13 +23,13 @@
           ],
           "children": [
             {
-              "name": "ymir_motion",
+              "name": "laser_sensor",
               "type": "group",
               "attributes": [
                 {
                   "name": "NX_class",
                   "dtype": "string",
-                  "values": "NXpositioner"
+                  "values": "NXmonitor"
                 }
               ],
               "children": [
@@ -38,160 +38,7 @@
                   "config": {
                     "name": "description",
                     "dtype": "string",
-                    "values": "Ymir linear motion system."
-                  }
-                },
-                {
-                  "name": "X-axis",
-                  "type": "group",
-                  "attributes": [
-                    {
-                      "name": "units",
-                      "dtype": "string",
-                      "values": "mm"
-                    }
-                  ],
-                  "children": [
-                    {
-                      "module": "f142",
-                      "config": {
-                        "source": "SES-SCAN:MC-MCU-001:m1-RBV-UTC",
-                        "topic": "Ymir_motion",
-                        "dtype": "double",
-                        "value_units": "mm"
-                      }
-                    }
-                  ]
-                },
-                {
-                  "name": "Y-axis",
-                  "type": "group",
-                  "attributes": [
-                    {
-                      "name": "units",
-                      "dtype": "string",
-                      "values": "mm"
-                    }
-                  ],
-                  "children": [
-                    {
-                      "module": "f142",
-                      "config": {
-                        "source": "SES-SCAN:MC-MCU-001:m2-RBV-UTC",
-                        "topic": "Ymir_motion",
-                        "dtype": "double",
-                        "value_units": "mm"
-                      }
-                    }
-                  ]
-                },
-                {
-                  "name": "Z-axis",
-                  "type": "group",
-                  "attributes": [
-                    {
-                      "name": "units",
-                      "dtype": "string",
-                      "values": "mm"
-                    }
-                  ],
-                  "children": [
-                    {
-                      "module": "f142",
-                      "config": {
-                        "source": "SES-SCAN:MC-MCU-001:m3-RBV-UTC",
-                        "topic": "Ymir_motion",
-                        "dtype": "double",
-                        "value_units": "mm"
-                      }
-                    }
-                  ]
-                },
-                {
-                  "name": "X-axis_set_value",
-                  "type": "group",
-                  "attributes": [
-                    {
-                      "name": "units",
-                      "dtype": "string",
-                      "values": "mm"
-                    }
-                  ],
-                  "children": [
-                    {
-                      "module": "f142",
-                      "config": {
-                        "source": "SES-SCAN:MC-MCU-001:m1",
-                        "topic": "Ymir_motion",
-                        "dtype": "double",
-                        "value_units": "mm"
-                      }
-                    }
-                  ]
-                },
-                {
-                  "name": "Y-axis_set_value",
-                  "type": "group",
-                  "attributes": [
-                    {
-                      "name": "units",
-                      "dtype": "string",
-                      "values": "mm"
-                    }
-                  ],
-                  "children": [
-                    {
-                      "module": "f142",
-                      "config": {
-                        "source": "SES-SCAN:MC-MCU-001:m2",
-                        "topic": "Ymir_motion",
-                        "dtype": "double",
-                        "value_units": "mm"
-                      }
-                    }
-                  ]
-                },
-                {
-                  "name": "Z-axis_set_value",
-                  "type": "group",
-                  "attributes": [
-                    {
-                      "name": "units",
-                      "dtype": "string",
-                      "values": "mm"
-                    }
-                  ],
-                  "children": [
-                    {
-                      "module": "f142",
-                      "config": {
-                        "source": "SES-SCAN:MC-MCU-001:m3",
-                        "topic": "Ymir_motion",
-                        "dtype": "double",
-                        "value_units": "mm"
-                      }
-                    }
-                  ]
-                }
-              ]
-            },
-            {
-              "name": "laser_beam_sensor",
-              "type": "group",
-              "attributes": [
-                {
-                  "name": "NX_class",
-                  "dtype": "string",
-                  "values": "NXsensor"
-                }
-              ],
-              "children": [
-                {
-                  "module": "dataset",
-                  "config": {
-                    "name": "description",
-                    "dtype": "string",
-                    "values": "Relative intensity of laser beam."
+                    "values": ""
                   }
                 },
                 {
@@ -205,6 +52,45 @@
                         "topic": "Ymir_se",
                         "dtype": "double",
                         "value_units": ""
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "laser_intensity_fast_se",
+                  "type": "group",
+                  "children": [
+                    {
+                      "module": "senv",
+                      "config": {
+                        "source": "PLC:stream:value",
+                        "topic": "Ymir_se"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "laser_rising",
+                  "type": "group",
+                  "children": [
+                    {
+                      "module": "tdct",
+                      "config": {
+                        "source": "Utg-Ymir:TS-EVR-01-02:TS-I",
+                        "topic": "Ymir_se"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "laser_falling",
+                  "type": "group",
+                  "children": [
+                    {
+                      "module": "tdct",
+                      "config": {
+                        "source": "Utg-Ymir:TS-EVR-01-03:TS-I",
+                        "topic": "Ymir_se"
                       }
                     }
                   ]
@@ -223,7 +109,193 @@
               "values": "NXsample"
             }
           ],
-          "children": []
+          "children": [
+            {
+              "module": "dataset",
+              "config": {
+                "name": "description",
+                "dtype": "string",
+                "values": ""
+              }
+            },
+            {
+              "name": "X-axis",
+              "type": "group",
+              "attributes": [
+                {
+                  "name": "units",
+                  "dtype": "string",
+                  "values": "mm"
+                }
+              ],
+              "children": [
+                {
+                  "module": "f142",
+                  "config": {
+                    "source": "SES-SCAN:MC-MCU-001:m1-RBV-UTC",
+                    "topic": "Ymir_motion",
+                    "dtype": "double",
+                    "value_units": "mm"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Y-axis",
+              "type": "group",
+              "attributes": [
+                {
+                  "name": "units",
+                  "dtype": "string",
+                  "values": "mm"
+                }
+              ],
+              "children": [
+                {
+                  "module": "f142",
+                  "config": {
+                    "source": "SES-SCAN:MC-MCU-001:m2-RBV-UTC",
+                    "topic": "Ymir_motion",
+                    "dtype": "double",
+                    "value_units": "mm"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Z-axis",
+              "type": "group",
+              "attributes": [
+                {
+                  "name": "units",
+                  "dtype": "string",
+                  "values": "mm"
+                }
+              ],
+              "children": [
+                {
+                  "module": "f142",
+                  "config": {
+                    "source": "SES-SCAN:MC-MCU-001:m3-RBV-UTC",
+                    "topic": "Ymir_motion",
+                    "dtype": "double",
+                    "value_units": "mm"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "X-axis_set_value",
+              "type": "group",
+              "attributes": [
+                {
+                  "name": "units",
+                  "dtype": "string",
+                  "values": "mm"
+                }
+              ],
+              "children": [
+                {
+                  "module": "f142",
+                  "config": {
+                    "source": "SES-SCAN:MC-MCU-001:m1",
+                    "topic": "Ymir_motion",
+                    "dtype": "double",
+                    "value_units": "mm"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Y-axis_set_value",
+              "type": "group",
+              "attributes": [
+                {
+                  "name": "units",
+                  "dtype": "string",
+                  "values": "mm"
+                }
+              ],
+              "children": [
+                {
+                  "module": "f142",
+                  "config": {
+                    "source": "SES-SCAN:MC-MCU-001:m2",
+                    "topic": "Ymir_motion",
+                    "dtype": "double",
+                    "value_units": "mm"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Z-axis_set_value",
+              "type": "group",
+              "attributes": [
+                {
+                  "name": "units",
+                  "dtype": "string",
+                  "values": "mm"
+                }
+              ],
+              "children": [
+                {
+                  "module": "f142",
+                  "config": {
+                    "source": "SES-SCAN:MC-MCU-001:m3",
+                    "topic": "Ymir_motion",
+                    "dtype": "double",
+                    "value_units": "mm"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "X-axis_speed",
+              "type": "group",
+              "children": [
+                {
+                  "module": "f142",
+                  "config": {
+                    "source": "SES-SCAN:MC-MCU-001:m1.S",
+                    "topic": "Ymir_motion",
+                    "dtype": "double",
+                    "value_units": ""
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Y-axis_speed",
+              "type": "group",
+              "children": [
+                {
+                  "module": "f142",
+                  "config": {
+                    "source": "SES-SCAN:MC-MCU-001:m2.S",
+                    "topic": "Ymir_motion",
+                    "dtype": "double",
+                    "value_units": ""
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Z-axis_speed",
+              "type": "group",
+              "children": [
+                {
+                  "module": "f142",
+                  "config": {
+                    "source": "SES-SCAN:MC-MCU-001:m3.S",
+                    "topic": "Ymir_motion",
+                    "dtype": "double",
+                    "value_units": ""
+                  }
+                }
+              ]
+            }
+          ]
         }
       ]
     }
