@@ -50,7 +50,7 @@ class FileWriterStatus(KafkaStatusHandler):
 
 class FileWriterParameters(Device):
     parameters = {
-        'broker': Param('List of kafka hosts to be connected to',
+        'brokers': Param('List of kafka hosts to be connected to',
                         type=listof(host(defaultport=9092)),
                         default=['localhost'], preinit=True, userparam=False),
         'command_topic': Param(

@@ -34,7 +34,7 @@ from nicos_ess.utilities.managers import wait_until_true, wait_after
 class WriterBase:
     def __init__(self):
         self.device = session.getDevice('FileWriterParameters')
-        self.host = self.device.broker[0]
+        self.host = self.device.brokers[0]
         self.config = self.device.nexus_config_path
         self.topic = self.device.command_topic
         self.command_channel = WorkerCommandChannel(f'{self.host}/{self.topic}')
