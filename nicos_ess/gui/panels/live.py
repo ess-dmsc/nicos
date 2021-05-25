@@ -29,7 +29,7 @@ from nicos.clients.gui.panels.live import LiveDataPanel as DefaultLiveDataPanel
 from nicos.guisupport.livewidget import LiveWidget as DefaultLiveWidget, \
     LiveWidget1D as DefaultLiveWidget1D, AXES
 from nicos.guisupport.qt import QComboBox, QGroupBox, QListWidget, QSize, Qt, \
-    QToolBar, QVBoxLayout, pyqtSignal, pyqtSlot, QFileDialog
+    QToolBar, QVBoxLayout, pyqtSignal
 
 from nicos_ess.gui import uipath
 from nicos_ess.gui.panels import get_icon
@@ -41,8 +41,6 @@ class LiveDataPanel(DefaultLiveDataPanel):
         self.toolbar = self.createPanelToolbar()
         self.layout().setMenuBar(self.toolbar)
         self.set_icons()
-        self.last_save_location = None
-        # self.setControlsEnabled(False)
 
     def createPanelToolbar(self):
         toolbar = QToolBar('Live data')
@@ -69,48 +67,6 @@ class LiveDataPanel(DefaultLiveDataPanel):
 
     def getToolbars(self):
         return []
-
-    @pyqtSlot()
-    def on_actionSaveData_triggered(self):
-        self.export_data_to_file()
-
-    def export_data_to_file(self):
-        filename = QFileDialog.getSaveFileName(
-            self,
-            'Save table',
-            osp.expanduser('~') if self.last_save_location is None
-            else self.last_save_location,
-            'Data files (*.npy)',
-            initialFilter='*.npy')[0]
-
-        if not filename:
-            return
-        if not filename.endswith(('.npy')):
-            filename = filename + '.npy'
-
-        self.last_save_location = osp.dirname(filename)
-
-        data_arrays = self._extract_data()
-        if data_arrays:
-            with open(filename, "w") as f:
-                numpy.save(osp.abspath(f.name), numpy.array(data_arrays))
-        else:
-            self.showError(f'No data available for writing to {filename}')
-
-    def _extract_data(self):
-        idx = self.fileList.currentRow()
-        if idx == -1:
-            self.fileList.setCurrentRow(0)
-            return
-
-        # try to get data from the cache
-        data = self.getDataFromItem(self.fileList.currentItem())
-        # no data
-        if data is None:
-            return
-
-        arrays = data.get('dataarrays', [])
-        return arrays
 
 
 class LiveWidget(DefaultLiveWidget):
