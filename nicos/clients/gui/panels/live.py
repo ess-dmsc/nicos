@@ -260,7 +260,7 @@ class LiveDataPanel(Panel):
                 item.setData(FILENAME, i)
                 item.setData(FILETYPE, '')
                 item.setData(FILETAG, LIVE)
-                self.fileList.insertItem(self.fileList.count(), item)
+                self.fileList.insertItem(-self.fileList.count(), item)
                 self.liveitems.append(item)
             if self._liveOnlyIndex is not None:
                 self.fileList.setCurrentRow(self._liveOnlyIndex)
