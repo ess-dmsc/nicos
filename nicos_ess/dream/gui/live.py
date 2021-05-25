@@ -1,10 +1,10 @@
 from nicos_ess.gui.panels.live import LiveDataPanel as DefaultLiveDataPanel
-from nicos.guisupport.qt import QListWidget, QToolBar, pyqtSlot, QFileDialog
+from nicos.guisupport.qt import QToolBar, pyqtSlot, QFileDialog, Qt
 from nicos_ess.gui.panels import get_icon
 
 import numpy as np
 import os.path as osp
-
+FILEUID = Qt.UserRole + 3
 
 class LiveDataPanel(DefaultLiveDataPanel):
     ui = f'{osp.dirname(__file__)}/ui_files/live.ui'
@@ -23,7 +23,6 @@ class LiveDataPanel(DefaultLiveDataPanel):
         toolbar.addAction(self.actionSavePlot)
         toolbar.addSeparator()
         toolbar.addAction(self.actionSaveData)
-        toolbar.addAction(self.actionLoadData)
         toolbar.addAction(self.actionSubtractBackground)
         toolbar.addSeparator()
         toolbar.addAction(self.actionLogScale)
@@ -39,17 +38,12 @@ class LiveDataPanel(DefaultLiveDataPanel):
         self.actionPrint.setIcon(get_icon('print-24px.svg'))
         self.actionSavePlot.setIcon(get_icon('save-24px.svg'))
         self.actionSaveData.setIcon(get_icon('archive-24px.svg'))
-        self.actionLoadData.setIcon(get_icon('add-24px.svg'))
         self.actionUnzoom.setIcon(get_icon('zoom_out-24px.svg'))
         self.actionOpen.setIcon(get_icon('folder_open-24px.svg'))
 
     @pyqtSlot()
     def on_actionSaveData_triggered(self):
         self.export_data_to_file()
-
-    @pyqtSlot()
-    def on_actionLoadData_triggered(self):
-        self.import_data_from_file()
 
     def export_data_to_file(self):
         filename = QFileDialog.getSaveFileName(
@@ -67,17 +61,16 @@ class LiveDataPanel(DefaultLiveDataPanel):
 
         self.last_save_location = osp.dirname(filename)
 
-        data_arrays = self._extract_data()
+        data_arrays = self._extract_data().get('dataarrays', [])
+
         if data_arrays:
             with open(filename, "w") as f:
-                np.save(osp.abspath(f.name), np.array(data_arrays))
+                np.save(osp.abspath(f.name), np.array(data_arrays[0]))
         else:
             self.showError(f'No data available for writing to {filename}')
 
     def _extract_data(self):
-        idx = self.fileList.currentRow()
-        if idx == -1:
-            self.fileList.setCurrentRow(0)
+        if self.fileList.currentRow() == -1:
             return
 
         # try to get data from the cache
@@ -86,21 +79,4 @@ class LiveDataPanel(DefaultLiveDataPanel):
         if data is None:
             return
 
-        arrays = data.get('dataarrays', [])
-        return arrays
-
-    def import_data_from_file(self):
-        try:
-            filename = QFileDialog.getOpenFileName(
-                self,
-                'Open Data',
-                osp.expanduser('~') if self.last_save_location is None \
-                    else self.last_save_location,
-                'Data Files (*.npy)')[0]
-
-            if not filename:
-                return
-
-            self.background_data = np.load(filename)
-        except Exception as error:
-            self.log.warn(f"Cannot import data from file: {filename}")
+        return data

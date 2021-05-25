@@ -82,4 +82,5 @@ tools = [
 
 options = {
     'ess_gui' : True,
+    'reader_classes': ['nicos_ess.dream.devices.datasinks.numpy_reader.NumpyFileReader']
 }
