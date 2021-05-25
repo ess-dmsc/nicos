@@ -22,7 +22,6 @@
 #
 # *****************************************************************************
 
-import os.path as osp
 import numpy
 
 from nicos.clients.gui.panels.live import LiveDataPanel as DefaultLiveDataPanel
