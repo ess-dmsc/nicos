@@ -184,8 +184,7 @@ class PvaWrapper:
         try:
             severity = SEVERITY_TO_STATUS[value['alarm']['severity']]
             return severity, value['alarm']['message']
-        except KeyError as err:
-            # Information not available
+        except KeyError:
             return status.UNKNOWN, 'alarm information unavailable'
 
 

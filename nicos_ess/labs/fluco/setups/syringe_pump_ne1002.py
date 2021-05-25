@@ -1,10 +1,10 @@
-description = 'NE1600 syringe pump'
+description = 'NE1002 syringe pump'
 
-pv_root = 'UTG-SEE-FLUCO:NE1600-001:'
+pv_root = 'E04-SEE-FLUCO:NE1002x-001:'
 
 devices = dict(
     inside_diameter=device(
-        'nicos.devices.epics.EpicsAnalogMoveable',
+        'nicos_ess.devices.epics.pva.EpicsAnalogMoveable',
         description='The Inside diameter of the syringe',
         readpv='{}DIAMETER'.format(pv_root),
         writepv='{}SET_DIAMETER'.format(pv_root),
@@ -12,7 +12,7 @@ devices = dict(
         abslimits=(0.1, 50),
     ),
     pump_volume=device(
-        'nicos.devices.epics.EpicsAnalogMoveable',
+        'nicos_ess.devices.epics.pva.EpicsAnalogMoveable',
         description='The volume to be pumped',
         readpv='{}VOLUME'.format(pv_root),
         writepv='{}SET_VOLUME'.format(pv_root),
@@ -20,14 +20,14 @@ devices = dict(
         abslimits=(0.1, 50),
     ),
     pump_volume_units=device(
-        'nicos_ess.devices.epics.extensions.EpicsMappedMoveable',
+        'nicos_ess.devices.epics.pva.EpicsMappedMoveable',
         description='The volume units',
         readpv='{}VOLUME_UNITS'.format(pv_root),
         writepv='{}SET_VOLUME_UNITS'.format(pv_root),
         mapping={'μL': 0, 'mL': 1},
     ),
     pump_rate=device(
-        'nicos.devices.epics.EpicsAnalogMoveable',
+        'nicos_ess.devices.epics.pva.EpicsAnalogMoveable',
         description='The pump rate',
         readpv='{}RATE'.format(pv_root),
         writepv='{}SET_RATE'.format(pv_root),
@@ -35,27 +35,26 @@ devices = dict(
         abslimits=(0.1, 50),
     ),
     pump_rate_units=device(
-        'nicos_ess.devices.epics.extensions.EpicsMappedMoveable',
+        'nicos_ess.devices.epics.pva.EpicsMappedMoveable',
         description='The rate units',
         readpv='{}RATE_UNITS'.format(pv_root),
         writepv='{}SET_RATE_UNITS'.format(pv_root),
         mapping={'μL / min': 0, 'mL / min': 1, 'μL / hr': 2, 'mL / hr': 3},
     ),
     pump_direction=device(
-        'nicos_ess.devices.epics.extensions.EpicsMappedMoveable',
+        'nicos_ess.devices.epics.pva.EpicsMappedMoveable',
         description='The pump direction',
         readpv='{}DIRECTION'.format(pv_root),
         writepv='{}SET_DIRECTION'.format(pv_root),
-        mapping={'INF': 0, 'WDR': 1, 'REV': 2, 'STK': 3},
     ),
     volume_withdrawn=device(
-        'nicos.devices.epics.EpicsReadable',
+        'nicos_ess.devices.epics.pva.EpicsReadable',
         description='The volume withdrawn',
         readpv='{}VOLUME_WITHDRAWN'.format(pv_root),
         epicstimeout=3.0,
     ),
     volume_infused=device(
-        'nicos.devices.epics.EpicsReadable',
+        'nicos_ess.devices.epics.pva.EpicsReadable',
         description='The volume infused',
         readpv='{}VOLUME_INFUSED'.format(pv_root),
         epicstimeout=3.0,
@@ -68,7 +67,7 @@ devices = dict(
         epicstimeout=3.0,
     ),
     pump_message=device(
-        'nicos.devices.epics.EpicsStringReadable',
+        'nicos_ess.devices.epics.pva.EpicsStringReadable',
         description='The pump message',
         readpv='{}MESSAGE'.format(pv_root),
         lowlevel=True,
@@ -104,7 +103,7 @@ devices = dict(
     ),
     seconds_to_pause=device(
         'nicos.devices.epics.EpicsAnalogMoveable',
-        description='How long to pause for',
+        description='How long to pause for (seconds)',
         readpv='{}SET_PAUSE'.format(pv_root),
         writepv='{}SET_PAUSE'.format(pv_root),
         epicstimeout=3.0,

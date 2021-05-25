@@ -25,7 +25,7 @@ main_window = docked(
                      ('Scan Plot',
                       panel('nicos_ess.gui.panels.scans.ScansPanel')),
                      ('Detector Image',
-                      panel('nicos_ess.gui.panels.live.MultiLiveDataPanel')),
+                      panel('nicos_ess.gui.panels.live.LiveDataPanel')),
                      ('Script Status',
                       panel('nicos_ess.gui.panels.status.ScriptStatusPanel',
                             eta=True)),
@@ -43,17 +43,15 @@ main_window = docked(
              ),
          ),  # hsplit
          ),
-        (
-            'Batch file generation',
+        ('Batch file generation',
             vsplit(
                 panel('nicos.clients.gui.panels.scriptbuilder.CommandsPanel'),
                 panel('nicos_ess.gui.panels.editor.EditorPanel',
                       tools=None),
             ), # vsplit
         ),
-        ('Detector Image', panel('nicos_ess.gui.panels.live.MultiLiveDataPanel')),
-        (
-            'History',
+        ('Detector Image', panel('nicos_ess.gui.panels.live.LiveDataPanel')),
+        ('History',
             panel('nicos_ess.gui.panels.history.HistoryPanel'),
         ),
         ('Logs',
