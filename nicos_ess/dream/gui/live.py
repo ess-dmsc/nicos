@@ -79,8 +79,4 @@ class LiveDataPanel(DefaultLiveDataPanel):
 
         # try to get data from the cache
         data = self.getDataFromItem(self.fileList.currentItem())
-        # no data
-        if data is None:
-            return
-
         return data
