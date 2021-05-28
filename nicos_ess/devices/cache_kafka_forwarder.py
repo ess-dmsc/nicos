@@ -23,6 +23,7 @@
 # *****************************************************************************
 import queue
 import time
+from threading import Lock
 
 from kafka import KafkaProducer
 from streaming_data_types.fbschemas.logdata_f142.AlarmSeverity import \
@@ -81,6 +82,8 @@ class CacheKafkaForwarder(ForwarderBase, Device):
                             'accepted', default=[],
                             type=listof(str),
                             ),
+        'update_interval': Param('Time interval (in secs.) to send regular updates',
+                                 default=1.0, type=float)
 
     }
     parameter_overrides = {
@@ -92,11 +95,14 @@ class CacheKafkaForwarder(ForwarderBase, Device):
         self._dev_to_value_cache = {}
         self._dev_to_status_cache = {}
         self._producer = None
+        self._lock = Lock()
 
         self._initFilters()
         self._queue = queue.Queue(1000)
         self._worker = createThread('cache_to_kafka', self._processQueue,
                                     start=False)
+        self._regular_update_worker = createThread(
+            'send_regular_updates', self._send_regular_updates, start=False)
         while not self._producer:
             try:
                 self._producer = \
@@ -110,6 +116,17 @@ class CacheKafkaForwarder(ForwarderBase, Device):
 
     def _startWorker(self):
         self._worker.start()
+        self._regular_update_worker.start()
+
+    def _send_regular_updates(self):
+        while True:
+            with self._lock:
+                devices = set(
+                    self._dev_to_value_cache.keys()).union(
+                        self._dev_to_status_cache.keys())
+                for dev_name in devices:
+                    self._push_to_queue(time.time(), dev_name)
+            time.sleep(self.update_interval)
 
     def _checkKey(self, key):
         if key.endswith('/value') or key.endswith('/status'):
@@ -129,11 +146,15 @@ class CacheKafkaForwarder(ForwarderBase, Device):
             return
         self.log.debug('_putChange %s %s %s', key, value, time)
 
-        if key.endswith('value'):
-            self._dev_to_value_cache[dev_name] = value
-        else:
-            self._dev_to_status_cache[dev_name] = convert_status(value)
+        with self._lock:
+            if key.endswith('value'):
+                self._dev_to_value_cache[dev_name] = value
+            else:
+                self._dev_to_status_cache[dev_name] = convert_status(value)
 
+            self._push_to_queue(time, dev_name)
+
+    def _push_to_queue(self, time, dev_name):
         # Don't send until have at least one reading for both value and status
         if dev_name in self._dev_to_value_cache and \
                 dev_name in self._dev_to_status_cache:
