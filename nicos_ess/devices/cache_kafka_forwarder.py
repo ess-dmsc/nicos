@@ -103,7 +103,7 @@ class CacheKafkaForwarder(ForwarderBase, Device):
         self._worker = createThread('cache_to_kafka', self._processQueue,
                                     start=False)
         self._regular_update_worker = createThread(
-            'send_regular_updates', self._send_regular_updates, start=False)
+            'send_regular_updates', self._poll_updates, start=False)
         while not self._producer:
             try:
                 self._producer = \
@@ -119,13 +119,12 @@ class CacheKafkaForwarder(ForwarderBase, Device):
         self._worker.start()
         self._regular_update_worker.start()
 
-    def _send_regular_updates(self):
+    def _poll_updates(self):
         while True:
             with self._lock:
-                devices = set(
+                for dev_name in set(
                     self._dev_to_value_cache.keys()).union(
-                        self._dev_to_status_cache.keys())
-                for dev_name in devices:
+                        self._dev_to_status_cache.keys()):
                     if self._value_and_status_available(dev_name):
                         timestamp = self._dev_to_timestamp_cache[dev_name]
                         value = self._dev_to_value_cache[dev_name]
