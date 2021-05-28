@@ -122,14 +122,16 @@ class CacheKafkaForwarder(ForwarderBase, Device):
     def _poll_updates(self):
         while True:
             with self._lock:
-                for dev_name in set(
-                    self._dev_to_value_cache.keys()).union(
+                for dev_name in set(self._dev_to_value_cache.keys()).union(
                         self._dev_to_status_cache.keys()):
                     if self._value_and_status_available(dev_name):
-                        timestamp = self._dev_to_timestamp_cache[dev_name]
-                        value = self._dev_to_value_cache[dev_name]
-                        status = self._dev_to_status_cache[dev_name]
-                        self._push_to_queue(timestamp, dev_name, value, status)
+                        try:
+                            timestamp = self._dev_to_timestamp_cache[dev_name]
+                            value = self._dev_to_value_cache[dev_name]
+                            status = self._dev_to_status_cache[dev_name]
+                            self._push_to_queue(timestamp, dev_name, value, status)
+                        except KeyError:
+                            pass
 
             time.sleep(self.update_interval)
 
