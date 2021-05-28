@@ -94,6 +94,7 @@ class CacheKafkaForwarder(ForwarderBase, Device):
     def doInit(self, mode):
         self._dev_to_value_cache = {}
         self._dev_to_status_cache = {}
+        self._dev_to_timestamp_cache = {}
         self._producer = None
         self._lock = Lock()
 
@@ -126,9 +127,10 @@ class CacheKafkaForwarder(ForwarderBase, Device):
                         self._dev_to_status_cache.keys())
                 for dev_name in devices:
                     if self._value_and_status_available(dev_name):
+                        timestamp = self._dev_to_timestamp_cache[dev_name]
                         value = self._dev_to_value_cache[dev_name]
                         status = self._dev_to_status_cache[dev_name]
-                        self._push_to_queue(time.time(), dev_name, value, status)
+                        self._push_to_queue(timestamp, dev_name, value, status)
 
             time.sleep(self.update_interval)
 
@@ -142,7 +144,7 @@ class CacheKafkaForwarder(ForwarderBase, Device):
             return True
         return False
 
-    def _putChange(self, time, ttl, key, value):
+    def _putChange(self, timestamp, ttl, key, value):
         if value is None:
             return
         dev_name = key[0:key.index('/')]
@@ -155,11 +157,12 @@ class CacheKafkaForwarder(ForwarderBase, Device):
                 self._dev_to_value_cache[dev_name] = value
             else:
                 self._dev_to_status_cache[dev_name] = convert_status(value)
+            self._dev_to_timestamp_cache[dev_name] = timestamp
             # Don't send until have at least one reading for both value and status
             if self._value_and_status_available(dev_name):
                 value = self._dev_to_value_cache[dev_name]
                 status = self._dev_to_status_cache[dev_name]
-                self._push_to_queue(time, dev_name, value, status)
+                self._push_to_queue(timestamp, dev_name, value, status)
 
     def _value_and_status_available(self, dev_name):
         if dev_name in self._dev_to_value_cache \
@@ -167,10 +170,10 @@ class CacheKafkaForwarder(ForwarderBase, Device):
             return True
         return False
 
-    def _push_to_queue(self, time, dev_name, value, status):
+    def _push_to_queue(self, timestamp, dev_name, value, status):
         try:
             self._queue.put(
-                (dev_name, value, status, int(float(time) * 10 ** 9)))
+                (dev_name, value, status, int(float(timestamp) * 10 ** 9)))
         except queue.Full:
             self.log.error('Queue full, so discarding older value(s)')
             self._queue.get()
