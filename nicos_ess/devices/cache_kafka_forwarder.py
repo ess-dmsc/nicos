@@ -125,7 +125,11 @@ class CacheKafkaForwarder(ForwarderBase, Device):
                     self._dev_to_value_cache.keys()).union(
                         self._dev_to_status_cache.keys())
                 for dev_name in devices:
-                    self._push_to_queue(time.time(), dev_name)
+                    if self._value_and_status_available(dev_name):
+                        value = self._dev_to_value_cache[dev_name]
+                        status = self._dev_to_status_cache[dev_name]
+                        self._push_to_queue(time.time(), dev_name, value, status)
+
             time.sleep(self.update_interval)
 
     def _checkKey(self, key):
@@ -151,21 +155,26 @@ class CacheKafkaForwarder(ForwarderBase, Device):
                 self._dev_to_value_cache[dev_name] = value
             else:
                 self._dev_to_status_cache[dev_name] = convert_status(value)
+            # Don't send until have at least one reading for both value and status
+            if self._value_and_status_available(dev_name):
+                value = self._dev_to_value_cache[dev_name]
+                status = self._dev_to_status_cache[dev_name]
+                self._push_to_queue(time, dev_name, value, status)
 
-            self._push_to_queue(time, dev_name)
+    def _value_and_status_available(self, dev_name):
+        if dev_name in self._dev_to_value_cache \
+            and dev_name in self._dev_to_status_cache:
+            return True
+        return False
 
-    def _push_to_queue(self, time, dev_name):
-        # Don't send until have at least one reading for both value and status
-        if dev_name in self._dev_to_value_cache and \
-                dev_name in self._dev_to_status_cache:
-            try:
-                self._queue.put((dev_name, self._dev_to_value_cache[dev_name],
-                                 self._dev_to_status_cache[dev_name],
-                                 int(float(time) * 10 ** 9)))
-            except queue.Full:
-                self.log.error('Queue full, so discarding older value(s)')
-                self._queue.get()
-                self._queue.task_done()
+    def _push_to_queue(self, time, dev_name, value, status):
+        try:
+            self._queue.put(
+                (dev_name, value, status, int(float(time) * 10 ** 9)))
+        except queue.Full:
+            self.log.error('Queue full, so discarding older value(s)')
+            self._queue.get()
+            self._queue.task_done()
 
     def _processQueue(self):
         while True:
