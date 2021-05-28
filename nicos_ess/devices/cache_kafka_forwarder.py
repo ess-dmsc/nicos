@@ -83,7 +83,7 @@ class CacheKafkaForwarder(ForwarderBase, Device):
                             type=listof(str),
                             ),
         'update_interval': Param('Time interval (in secs.) to send regular updates',
-                                 default=1.0, type=float)
+                                 default=10.0, type=float)
 
     }
     parameter_overrides = {
@@ -124,14 +124,12 @@ class CacheKafkaForwarder(ForwarderBase, Device):
             with self._lock:
                 for dev_name in set(self._dev_to_value_cache.keys()).union(
                         self._dev_to_status_cache.keys()):
-                    if self._value_and_status_available(dev_name):
-                        try:
-                            timestamp = self._dev_to_timestamp_cache[dev_name]
-                            value = self._dev_to_value_cache[dev_name]
-                            status = self._dev_to_status_cache[dev_name]
-                            self._push_to_queue(timestamp, dev_name, value, status)
-                        except KeyError:
-                            pass
+                    if self._timestamp_and_value_and_status_available(dev_name):
+                        self._push_to_queue(
+                            self._dev_to_timestamp_cache[dev_name],
+                            dev_name,
+                            self._dev_to_value_cache[dev_name],
+                            self._dev_to_status_cache[dev_name])
 
             time.sleep(self.update_interval)
 
@@ -158,23 +156,26 @@ class CacheKafkaForwarder(ForwarderBase, Device):
                 self._dev_to_value_cache[dev_name] = value
             else:
                 self._dev_to_status_cache[dev_name] = convert_status(value)
-            self._dev_to_timestamp_cache[dev_name] = timestamp
-            # Don't send until have at least one reading for both value and status
-            if self._value_and_status_available(dev_name):
-                value = self._dev_to_value_cache[dev_name]
-                status = self._dev_to_status_cache[dev_name]
-                self._push_to_queue(timestamp, dev_name, value, status)
 
-    def _value_and_status_available(self, dev_name):
-        if dev_name in self._dev_to_value_cache \
-            and dev_name in self._dev_to_status_cache:
-            return True
-        return False
+            timestamp_ns = int(float(timestamp) * 10 ** 9)
+            self._dev_to_timestamp_cache[dev_name] = timestamp_ns
+            # Don't send until have at least one reading for both value and status
+            if self._timestamp_and_value_and_status_available(dev_name):
+                self._push_to_queue(
+                    timestamp_ns,
+                    dev_name,
+                    self._dev_to_value_cache[dev_name],
+                    self._dev_to_status_cache[dev_name])
+
+    def _timestamp_and_value_and_status_available(self, dev_name):
+        return dev_name in self._dev_to_value_cache \
+            and dev_name in self._dev_to_status_cache \
+            and dev_name in self._dev_to_timestamp_cache
 
     def _push_to_queue(self, timestamp, dev_name, value, status):
         try:
             self._queue.put(
-                (dev_name, value, status, int(float(timestamp) * 10 ** 9)))
+                (dev_name, value, status, timestamp))
         except queue.Full:
             self.log.error('Queue full, so discarding older value(s)')
             self._queue.get()
