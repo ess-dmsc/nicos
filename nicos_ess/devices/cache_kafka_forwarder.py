@@ -83,7 +83,7 @@ class CacheKafkaForwarder(ForwarderBase, Device):
                             type=listof(str),
                             ),
         'update_interval': Param('Time interval (in secs.) to send regular updates',
-                                 default=10.0, type=float)
+                                 default=10.0, type=float, settable=False)
 
     }
     parameter_overrides = {
