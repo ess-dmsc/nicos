@@ -74,29 +74,40 @@ class EpicsMonitorMixin(DeviceMixinBase):
 
     def value_change_callback(self, name, param, value, severity, message,
                               **kwargs):
-        self.log.debug(
-            f'{name} [{param}]: value cb with {value} {severity} {message}!')
-        # TODO: if no cache key then what should we do with it?
+        self._value_change_callback(name, param, value, severity, message,
+                                    **kwargs)
+
+    def _value_change_callback(self, name, param, value, severity, message,
+                               **kwargs):
+        """
+        Override this for custom behaviour in sub-classes.
+        """
         cache_key = self._get_cache_relation(param) or name
         self._cache.put(self._name, cache_key, value, time.time())
         self._set_status(name, param, severity, message)
 
     def status_change_callback(self, name, param, value, severity, message,
                                **kwargs):
-        self.log.debug(
-            f'{name} [{param}]: status cb with {value} {severity} {message}')
+        self._status_change_callback(name, param, value, severity, message,
+                                     **kwargs)
+
+    def _status_change_callback(self, name, param, value, severity, message,
+                               **kwargs):
+        """
+        Override this for custom behaviour in sub-classes.
+        """
         self._set_status(name, param, severity, message)
         current_status = self.doStatus()
         self._cache.put(self._name, 'status', current_status, time.time())
 
     def connection_change_callback(self, name, pvparam, is_connected, **kwargs):
         if is_connected:
-            self.log.debug(f'{name} connected!')
+            self.log.debug('%s connected!', name)
             # Clear any readpv status.
             if pvparam == 'readpv':
                 self._set_status(name, 'readpv', status.OK, '')
         else:
-            self.log.warn(f'{name} disconnected!')
+            self.log.warn('%s disconnected!', name)
             # Put readpv into error state.
             if pvparam == 'readpv':
                 self._set_status(name, 'readpv', status.ERROR, 'disconnected')
@@ -121,7 +132,7 @@ class EpicsMonitorMixin(DeviceMixinBase):
             severity, message = self._epics_wrapper.get_alarm_status(pvname,
                                     self.epicstimeout)
         if severity != status.OK:
-            return severity, f'issue with {pvname}: {message}'
+            return severity, f'Read PV: {message}'
         return severity, ''
 
     def doShutdown(self):

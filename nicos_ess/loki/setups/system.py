@@ -9,7 +9,7 @@ sysconfig = dict(
     datasinks=['conssink', 'filesink', 'daemonsink'],
 )
 
-modules = ['nicos.commands.standard']
+modules = ['nicos.commands.standard', 'nicos_ess.loki.commands.scripting']
 
 devices = dict(
     LoKI=device('nicos.devices.instrument.Instrument',
@@ -31,16 +31,26 @@ devices = dict(
         sample='Sample',
     ),
 
-    filesink=device('nicos.devices.datasinks.AsciiScanfileSink',),
+    InstrumentSettings=device('nicos_ess.loki.devices.'
+                    'experiment_configuration.InstrumentSettings',
+                    description='aperture and offset settings',
+                    lowlevel=True,
+    ),
 
-    conssink=device('nicos.devices.datasinks.ConsoleScanSink',),
+    filesink=device('nicos.devices.datasinks.AsciiScanfileSink', ),
 
-    daemonsink=device('nicos.devices.datasinks.DaemonSink',),
+    conssink=device('nicos.devices.datasinks.ConsoleScanSink', ),
+
+    daemonsink=device('nicos.devices.datasinks.DaemonSink', ),
 
     Space=device('nicos.devices.generic.FreeSpace',
         description='The amount of free space for storing data',
         path=None,
         minfree=5,
+    ),
+
+    positioner=device('nicos.devices.generic.DeviceAlias',
+        devclass='nicos.core.device.Moveable',
     ),
 )
 

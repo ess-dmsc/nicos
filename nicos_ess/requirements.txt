@@ -2,7 +2,7 @@
 -r ../requirements-gui.txt
 
 ess-streaming-data-types>=0.9.0
-flatbuffers>=1.12
+flatbuffers==1.12
 graypy
 kafka-logging-handler<=0.2.4
 kafka-python>=1.4.6
@@ -11,4 +11,4 @@ pyepics
 PyQt5==5.15.4
 PyQtWebEngine==5.15.4
 QScintilla==2.12.1
-https://github.com/ess-dmsc/yuos_query/archive/v0.1.9.tar.gz
+https://github.com/ess-dmsc/yuos_query/archive/v0.1.11.tar.gz

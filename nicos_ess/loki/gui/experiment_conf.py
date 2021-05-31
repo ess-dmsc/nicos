@@ -23,12 +23,17 @@
 # *****************************************************************************
 
 """LoKI Experiment Configuration dialog."""
-from nicos.guisupport.qt import QMessageBox, Qt
+import itertools
 
 from nicos.clients.gui.utils import loadUi
+from nicos.guisupport.qt import QLineEdit, QMessageBox, Qt, pyqtSlot
 from nicos.utils import findResource
 
 from nicos_ess.loki.gui.loki_panel import LokiPanelBase
+from nicos_ess.utilities.validators import DoubleValidator
+
+DEVICES = ('InstrumentSettings',)
+INST_SET_KEYS = ('x', 'y', 'width', 'height', 'offset')
 
 
 class LokiExperimentPanel(LokiPanelBase):
@@ -62,37 +67,102 @@ class LokiExperimentPanel(LokiPanelBase):
         self.envComboBox.activated.connect(self._activate_environment_settings)
 
         # Listen to changes in Aperture and Detector Offset values
-        self.apXBox.textChanged.connect(self.set_apt_pos_x)
-        self.apYBox.textChanged.connect(self.set_apt_pos_y)
-        self.apWBox.textChanged.connect(self.set_apt_width)
-        self.apHBox.textChanged.connect(self.set_apt_height)
-        self.offsetBox.textChanged.connect(self.set_det_offset)
+        self.listen_instrument_settings()
 
         # Listen to changes in environments
-        self.refPosXBox.textChanged.connect(self.set_ref_pos_x)
-        self.refPosYBox.textChanged.connect(self.set_ref_pos_y)
+        self.refPosXBox.textChanged.connect(self._set_ref_pos_x)
+        self.refPosYBox.textChanged.connect(self._set_ref_pos_y)
 
         # Disable apply buttons in both settings until an action taken by the
         # user.
         self.sampleSetApply.setEnabled(False)
         self.instSetApply.setEnabled(False)
 
-        # Required for the dynamic validation
-        self.invalid_sample_settings = []
-        self.invalid_instrument_settings = []
+    def on_client_connected(self):
+        LokiPanelBase.on_client_connected(self)
+        self._set_cached_values_to_ui()
+        self.initialise_validators()
 
-    def initialise_markups(self):
-        setting_boxes = [
-            self.apXBox, self.apYBox, self.apWBox, self.apHBox,
-            self.offsetBox, self.refPosXBox, self.refPosYBox
-        ]
-        for box in setting_boxes:
-            box.setAlignment(Qt.AlignRight)
-            box.setPlaceholderText('0.0')
+    def on_client_disconnected(self):
+        LokiPanelBase.on_client_disconnected(self)
+        self.initialise_markups()
 
     def setViewOnly(self, viewonly):
         self.sampleSetGroupBox.setEnabled(not viewonly)
         self.instSetGroupBox.setEnabled(not viewonly)
+
+    def initialise_markups(self):
+        for box in self._get_editable_settings():
+            box.clear()
+            box.setAlignment(Qt.AlignRight)
+            # The validator should be reset upon disconnection from the server.
+            # This is due to false behaviour of QT when reconnected, ie, the
+            # validator fails (does not initialise) until a valid value entered.
+            box.setValidator(None)
+            box.setPlaceholderText('1.0')
+
+    def initialise_validators(self):
+        _validator_values = {  # in units of mm
+            'bottom': 0.0,
+            'top': 1000.0,
+            'decimal': 5,
+        }
+        validator = DoubleValidator(**_validator_values)
+        for box in self._get_editable_settings():
+            box.setValidator(validator)
+
+    def listen_instrument_settings(self):
+        for box in self._get_editable_settings():
+            box.textChanged.connect(lambda: self.instSetApply.setEnabled(True))
+
+    def _set_cached_values_to_ui(self):
+        _cached_values = self._get_cached_values_of_instrument_settings()
+        for index, box in enumerate(self._get_editable_settings()):
+            box.setText(f'{_cached_values[index]}')
+
+        if not self._verify_instrument_settings():
+            QMessageBox.warning('Error',
+                                'Current values of the instrument settings are '
+                                'different than the values in the cache. Try '
+                                'to reconnect to the server.')
+        # Setting cached values will trigger `textChanged`. However, we do not
+        # want to re-apply already cached values.
+        self.instSetApply.setEnabled(False)
+
+    def _set_ui_values_to_cache(self):
+        _key_values = self._get_current_values_of_instrument_settings()
+        _commands = [
+            f'session.getDevice("{DEVICES[0]}")'
+            f'._set_parameter("{param}", "{val}")'
+            for param, val in zip(INST_SET_KEYS, _key_values)
+        ]
+        for cmd in _commands:
+            self.client.eval(cmd)
+
+        if not self._verify_instrument_settings():
+            QMessageBox.warning(self, 'Error', 'Applied changes in instrument '
+                                               'settings have not been cached.')
+
+    def _get_cached_values_of_instrument_settings(self):
+        _cached_param_values = [
+            self.client.getDeviceParam(DEVICES[0], param)
+            for param in INST_SET_KEYS
+        ]
+        return _cached_param_values
+
+    def _get_current_values_of_instrument_settings(self):
+        _box_values = [
+            box.text() for box in self._get_editable_settings()
+        ]
+        return _box_values
+
+    def _get_editable_settings(self):
+        _editable_settings = itertools.chain(
+                # QT returns the boxes in reverse order for some reason.
+                reversed(self.aptGroupBox.findChildren(QLineEdit)),
+                self.detGroupBox.findChildren(QLineEdit)
+            )
+        return _editable_settings
 
     def _activate_environment_settings(self):
         # Enable sample environments
@@ -102,6 +172,24 @@ class LokiExperimentPanel(LokiPanelBase):
         self.refPosGroupBox.setVisible(True)
         self.refPosGroupBox.setEnabled(True)
         self.refCellSpinBox.setFocus()
+
+    def _is_empty(self):
+        for box in self._get_editable_settings():
+            if not box.text():
+                QMessageBox.warning(self, 'Error',
+                                    'A property cannot be empty.')
+                box.setFocus()
+                return True
+        return False
+
+    def _verify_instrument_settings(self):
+        _settings_at_ui = set(
+            float(x) for x in self._get_current_values_of_instrument_settings()
+        )
+        _settings_at_cache = set(
+            self._get_cached_values_of_instrument_settings()
+        )
+        return _settings_at_ui == _settings_at_cache
 
     def _set_cell_indices(self):
         # Setting minimum and maximum values for the number of cells not only
@@ -113,79 +201,15 @@ class LokiExperimentPanel(LokiPanelBase):
     def _set_sample_changer_ref_cell(self):
         pass
 
-    def set_det_offset(self, value):
-        self._set_instrument_settings(value, value_type='det_offset')
+    def _set_ref_pos_x(self, value):
+        pass
 
-    def set_apt_pos_x(self, value):
-        self._set_instrument_settings(value, value_type='apt_pos_x')
+    def _set_ref_pos_y(self, value):
+        pass
 
-    def set_apt_pos_y(self, value):
-        self._set_instrument_settings(value, value_type='apt_pos_y')
-
-    def set_apt_width(self, value):
-        self._set_instrument_settings(value, value_type='apt_width')
-
-    def set_apt_height(self, value):
-        self._set_instrument_settings(value, value_type='apt_height')
-
-    def set_ref_pos_x(self, value):
-        self._set_instrument_settings(value, value_type='ref_pos_x')
-
-    def set_ref_pos_y(self, value):
-        self._set_instrument_settings(value, value_type='ref_pos_y')
-
-    def _set_instrument_settings(self, value, value_type):
-        if not value:
+    @pyqtSlot()
+    def on_instSetApply_clicked(self):
+        if self._is_empty():
             return
-        map_value_type_to_settings = {
-            'sample': ['ref_pos_x', 'ref_pos_y'],
-            'instrument': ['apt_pos_x', 'apt_pos_y',
-                           'apt_width', 'apt_height', 'det_offset']
-        }
-        # Get settings type from value type
-        for key, values in map_value_type_to_settings.items():
-            if value_type in values:
-                settings_type = key
-                # Validate wrt settings type
-                self._validate_instrument_settings(value, value_type,
-                                                   settings_type)
-
-    def _validate_instrument_settings(self, value, value_type, settings_type):
-        # The entered value to any of the settings should be float-able.
-        # If not, this is caught by the Python runtime during casting
-        # and raises an error. We would like to warn to user without raising.
-        map_settings = {
-            'sample': (self.sampleSetApply.setEnabled,
-                       self.invalid_sample_settings),
-            'instrument': (self.instSetApply.setEnabled,
-                           self.invalid_instrument_settings)
-        }
-        map_value_type_to_setting = {
-            'apt_pos_x': self.apXBox,
-            'apt_pos_y': self.apYBox,
-            'apt_width': self.apWBox,
-            'apt_height': self.apHBox,
-            'det_offset': self.offsetBox,
-            'ref_pos_x': self.refPosXBox,
-            'ref_pos_y': self.refPosYBox
-        }
-        try:
-            float(value)
-            if value_type in map_settings[settings_type][1]:
-                map_settings[settings_type][1].remove(value_type)
-                map_value_type_to_setting[value_type]. \
-                    setClearButtonEnabled(False)
-            # Enable apply button upon validation here to prevent repetition
-            # of the code and/or misbehaviour due to multiple edits.
-            if len(map_settings[settings_type][1]) == 0:
-                map_settings[settings_type][0](True)
-            return
-        except ValueError:
-            if value_type not in map_settings[settings_type][1]:
-                QMessageBox.warning(self, 'Error',
-                                    'A value should be a number.')
-                map_settings[settings_type][1].append(value_type)
-                map_value_type_to_setting[value_type].\
-                    setClearButtonEnabled(True)
-            map_settings[settings_type][0](False)
-
+        self._set_ui_values_to_cache()
+        self.instSetApply.setEnabled(False)

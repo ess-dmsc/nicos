@@ -26,8 +26,8 @@
 import csv
 
 
-def save_table_to_csv(data, filename, headers=None):
-    """Save 2D data list to a text file.
+def export_table_to_csv(data, filename, headers=None):
+    """Export 2D data list to a text file.
 
     :param data: 2D data list
     :param filename: file to save as
@@ -40,16 +40,17 @@ def save_table_to_csv(data, filename, headers=None):
         writer.writerows(data)
 
 
-def load_table_from_csv(filename):
-    """Load data for from a csv file.
-
-    Note: May contain headers
+def import_table_from_csv(filename):
+    """Import tabular data from a csv file.
 
     :param filename: path to csv file
-    :return: 2D data list
+    :return: tuple of headers (empty if no headers) and rows
     """
     with open(filename, "r") as file:
-        reader = csv.reader(file)
-        data = [row for row in reader]
-
-    return data
+        sniffer = csv.Sniffer()
+        has_header = sniffer.has_header(file.read(2048))
+        file.seek(0)
+        rows = list(csv.reader(file))
+        if has_header:
+            return rows[0], rows[1:]
+        return [], rows

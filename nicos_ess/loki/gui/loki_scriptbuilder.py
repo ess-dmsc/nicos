@@ -37,10 +37,11 @@ from nicos.utils import findResource
 
 from nicos_ess.gui.panels import get_icon
 from nicos_ess.loki.gui.loki_panel import LokiPanelBase
+from nicos_ess.loki.gui.loki_script_generator import ScriptGenerator, \
+    TransOrder
 from nicos_ess.loki.gui.loki_scriptbuilder_model import LokiScriptModel
-from nicos_ess.loki.gui.script_generator import ScriptGenerator, TransOrder
-from nicos_ess.utilities.csv_utils import load_table_from_csv, \
-    save_table_to_csv
+from nicos_ess.utilities.csv_utils import export_table_to_csv, \
+    import_table_from_csv
 from nicos_ess.utilities.table_utils import convert_table_to_clipboard_text, \
     extract_table_from_clipboard_text
 
@@ -81,7 +82,7 @@ class LokiScriptBuilderPanel(LokiPanelBase):
         # Set up trans order combo-box
         self.comboTransOrder.addItems(self._available_trans_options.keys())
 
-        self.columns_in_order = [name for name in self.permanent_columns.keys()]
+        self.columns_in_order = list(self.permanent_columns.keys())
         self.columns_in_order.extend(self.optional_columns.keys())
         self.last_save_location = None
         self._init_table_panel()
@@ -200,8 +201,7 @@ class LokiScriptBuilderPanel(LokiPanelBase):
             if not filename:
                 return
 
-            data = load_table_from_csv(filename)
-            headers_from_file = data.pop(0)
+            headers_from_file, data = import_table_from_csv(filename)
 
             if not set(headers_from_file).issubset(set(self.columns_in_order)):
                 raise AttributeError('incorrect headers in file')
@@ -263,7 +263,7 @@ class LokiScriptBuilderPanel(LokiPanelBase):
         try:
             headers = self._extract_headers_from_table()
             data = self._extract_data_from_table()
-            save_table_to_csv(data, filename, headers)
+            export_table_to_csv(data, filename, headers)
         except Exception as ex:
             self.showError(f'Cannot write table contents to {filename}:\n{ex}')
 
@@ -274,9 +274,9 @@ class LokiScriptBuilderPanel(LokiPanelBase):
         # Transform table_data to allow easy access to columns like data[0]
         data = list(zip(*self.model.table_data))
         return any(
-            [any(data[column])
+            (any(data[column])
              for column in optional_indices
-             if self.tableView.isColumnHidden(column)])
+             if self.tableView.isColumnHidden(column)))
 
     def _extract_headers_from_table(self):
         headers = [column
@@ -359,6 +359,14 @@ class LokiScriptBuilderPanel(LokiPanelBase):
         selected_data = self.model.select_data(selected_indices)
         return selected_data
 
+    def _get_hidden_column_indices(self):
+        return [idx for idx, _ in enumerate(self.columns_in_order)
+                if self.tableView.isColumnHidden(idx)]
+
+    def _get_hidden_column_names(self):
+        return [name for idx, name in enumerate(self.columns_in_order)
+                if self.tableView.isColumnHidden(idx)]
+
     def _handle_table_paste(self):
         indices = []
         for index in self.tableView.selectedIndexes():
@@ -381,12 +389,9 @@ class LokiScriptBuilderPanel(LokiPanelBase):
             # Only one value, so put it in all selected cells
             self._do_bulk_update(copied_table[0][0])
             return
-        hidden_columns = [idx for idx in range(len(self.columns_in_order))
-                          if self.tableView.isColumnHidden(idx)]
-        self.model.update_data_from_clipboard(
-            copied_table, top_left, hidden_columns)
 
-
+        self.model.update_data_from_clipboard(copied_table, top_left,
+                                              self._get_hidden_column_indices())
 
     def _link_duration_combobox_to_column(self, column_name, combobox):
         combobox.addItems(self.duration_options)
@@ -408,9 +413,12 @@ class LokiScriptBuilderPanel(LokiPanelBase):
         self.model.clear()
 
     def _extract_labeled_data(self):
+        hidden_column_names = self._get_hidden_column_names()
         labeled_data = []
         for row_data in self.model.table_data:
             labeled_row_data = dict(zip(self.columns_in_order, row_data))
+            for key in hidden_column_names:
+                del labeled_row_data[key]
             # Row will contribute to script only if all permanent columns
             # values are present
             if all(map(labeled_row_data.get, self.permanent_columns.keys())):
@@ -419,12 +427,16 @@ class LokiScriptBuilderPanel(LokiPanelBase):
 
     @pyqtSlot()
     def on_generateScriptButton_clicked(self):
+        if self.is_data_in_hidden_columns():
+            self.showError('There is data in optional column(s) which will '
+                           'not appear in the script')
+
         labeled_data = self._extract_labeled_data()
 
         if self._available_trans_options[self.comboTransOrder.currentText()]\
                 == TransOrder.SIMULTANEOUS:
-            if not all([data['sans_duration'] == data['trans_duration']
-                        for data in labeled_data]):
+            if not all((data['sans_duration'] == data['trans_duration']
+                        for data in labeled_data)):
                 self.showError(
                         'Different SANS and TRANS duration specified in '
                         'SIMULTANEOUS mode. SANS duration will be used in '

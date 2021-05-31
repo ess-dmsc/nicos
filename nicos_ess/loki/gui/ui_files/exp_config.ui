@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1159</width>
-    <height>739</height>
+    <height>747</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -290,6 +290,9 @@
               <property name="layoutDirection">
                <enum>Qt::RightToLeft</enum>
               </property>
+              <property name="readOnly">
+               <bool>true</bool>
+              </property>
              </widget>
             </item>
             <item row="1" column="2">
@@ -310,6 +313,9 @@
              <widget class="QLineEdit" name="refPosYBox">
               <property name="layoutDirection">
                <enum>Qt::RightToLeft</enum>
+              </property>
+              <property name="readOnly">
+               <bool>true</bool>
               </property>
              </widget>
             </item>

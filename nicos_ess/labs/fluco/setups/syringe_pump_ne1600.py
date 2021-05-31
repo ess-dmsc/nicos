@@ -68,7 +68,7 @@ devices = dict(
         epicstimeout=3.0,
     ),
     pump_message=device(
-        'nicos.devices.epics.EpicsReadable',
+        'nicos.devices.epics.EpicsStringReadable',
         description='The pump message',
         readpv='{}MESSAGE'.format(pv_root),
         lowlevel=True,
