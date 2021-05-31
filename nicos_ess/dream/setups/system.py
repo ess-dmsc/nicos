@@ -29,12 +29,13 @@ devices = dict(
     Exp=device(
         'nicos_ess.devices.experiment.EssExperiment',
         description='experiment object',
-        dataroot='/opt/nicos-data',
+        dataroot='/opt/nicos-data/dream',
         sendmail=False,
         serviceexp='p0',
         sample='Sample',
         server_url='https://useroffice-test.esss.lu.se/graphql',
-        instrument='DREAM'
+        instrument='DREAM',
+        cache_filepath='/opt/nicos-data/dream/cached_proposals.json'
     ),
 
     filesink=device('nicos.devices.datasinks.AsciiScanfileSink',),
@@ -73,7 +74,7 @@ devices = dict(
         brokers=['localhost:9092'],
         cmdtopic='FileWriter_writerCommand',
         status_provider='NexusFileWriter',
-        templatesmodule='nicos_ess.dream_demo.nexus.nexus_templates',
+        templatesmodule='nicos_ess.dream.nexus.nexus_templates',
         templatename='dream_default',
     ),
 

@@ -81,6 +81,7 @@ class ExpPanel(Panel):
 
         self.applyWarningLabel.setStyleSheet('color: red')
         self.applyWarningLabel.setVisible(False)
+        self.discardButton.setVisible(False)
 
         self._text_controls = (self.expTitle, self.users, self.localContacts,
                                self.sampleName, self.proposalNum,
@@ -141,22 +142,22 @@ class ExpPanel(Panel):
                 '\n'.join(self.old_proposal_settings.notifications))
 
     def on_client_connected(self):
-        # fill proposal
         self._update_proposal_info()
-        # check for capability to ask proposal database
+        self._is_proposal_system_available()
+        self.setViewOnly(self.client.viewonly)
+
+    def _is_proposal_system_available(self):
         if self.client.eval('session.experiment._canQueryProposals()', None):
             self.findProposalBox.setVisible(True)
             self.proposalNum.setReadOnly(True)
         else:
             self.findProposalBox.setVisible(False)
             self.proposalNum.setReadOnly(False)
-        self.setViewOnly(self.client.viewonly)
 
     def on_client_disconnected(self):
         for control in self._text_controls:
             control.setText("")
         self.notifEmails.setPlainText('')
-        self.applyWarningLabel.setVisible(False)
         self.setViewOnly(True)
 
     def setViewOnly(self, is_view_only):
@@ -168,6 +169,7 @@ class ExpPanel(Panel):
         if is_view_only:
             self.applyButton.setEnabled(False)
             self.applyWarningLabel.setVisible(False)
+            self.discardButton.setVisible(False)
         else:
             self._check_for_changes()
 
@@ -240,8 +242,6 @@ class ExpPanel(Panel):
         if changes:
             self.showInfo('\n'.join(changes))
         self._update_proposal_info()
-
-        self.applyWarningLabel.setVisible(False)
         self.exp_proposal_activated.emit()
 
     def _update_title(self, changes):
@@ -355,12 +355,15 @@ class ExpPanel(Panel):
         self._check_for_changes()
 
     def _check_for_changes(self):
-        if self.new_proposal_settings != self.old_proposal_settings:
-            self.applyWarningLabel.setVisible(True)
-            self.applyButton.setEnabled(True)
-        else:
-            self.applyWarningLabel.setVisible(False)
-            self.applyButton.setEnabled(False)
+        has_changed = self.new_proposal_settings != self.old_proposal_settings
+        self.applyWarningLabel.setVisible(has_changed)
+        self.applyButton.setEnabled(has_changed)
+        self.discardButton.setVisible(has_changed)
+
+    @pyqtSlot()
+    def on_discardButton_clicked(self):
+        self._update_proposal_info()
+        self._check_for_changes()
 
 
 class SetupsPanel(DefaultSetupsPanel):

@@ -31,11 +31,17 @@ devices = dict(
         sample='Sample',
     ),
 
-    filesink=device('nicos.devices.datasinks.AsciiScanfileSink',),
+    InstrumentSettings=device('nicos_ess.loki.devices.'
+                    'experiment_configuration.InstrumentSettings',
+                    description='aperture and offset settings',
+                    lowlevel=True,
+    ),
 
-    conssink=device('nicos.devices.datasinks.ConsoleScanSink',),
+    filesink=device('nicos.devices.datasinks.AsciiScanfileSink', ),
 
-    daemonsink=device('nicos.devices.datasinks.DaemonSink',),
+    conssink=device('nicos.devices.datasinks.ConsoleScanSink', ),
+
+    daemonsink=device('nicos.devices.datasinks.DaemonSink', ),
 
     Space=device('nicos.devices.generic.FreeSpace',
         description='The amount of free space for storing data',
