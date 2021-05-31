@@ -51,14 +51,14 @@
          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Query the Proposal Database for Information about this proposal number.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
         </property>
         <property name="text">
-         <string>Query DB</string>
+         <string>Search</string>
         </property>
        </widget>
       </item>
       <item row="2" column="1" colspan="2">
        <widget class="QLabel" name="propdbInfo">
         <property name="text">
-         <string>(The values below are filled from the proposal database automatically where possible.)</string>
+         <string>(The values below are filled from the proposal system automatically where possible.)</string>
         </property>
        </widget>
       </item>
@@ -77,77 +77,10 @@
      <layout class="QVBoxLayout" name="verticalLayout_2">
       <item>
        <layout class="QGridLayout" name="gridLayout">
-        <item row="3" column="1">
-         <widget class="QLineEdit" name="expTitle"/>
-        </item>
-        <item row="8" column="0" colspan="2">
-         <widget class="Line" name="line_3">
-          <property name="orientation">
-           <enum>Qt::Horizontal</enum>
-          </property>
-         </widget>
-        </item>
-        <item row="7" column="1">
-         <widget class="QLineEdit" name="sampleName"/>
-        </item>
-        <item row="10" column="1">
-         <widget class="QCheckBox" name="errorAbortBox">
+        <item row="3" column="0">
+         <widget class="QLabel" name="label_6">
           <property name="text">
-           <string>Do not continue scripts after fatal errors</string>
-          </property>
-         </widget>
-        </item>
-        <item row="7" column="0">
-         <widget class="QLabel" name="sampleLabel">
-          <property name="text">
-           <string>Sample name:</string>
-          </property>
-         </widget>
-        </item>
-        <item row="5" column="0">
-         <widget class="QLabel" name="label_8">
-          <property name="text">
-           <string>Local contact:</string>
-          </property>
-         </widget>
-        </item>
-        <item row="9" column="0">
-         <widget class="QLabel" name="label_10">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="text">
-           <string>Notifications&lt;br/&gt;(one email address &lt;br/&gt;per line):</string>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
-          </property>
-          <property name="wordWrap">
-           <bool>true</bool>
-          </property>
-         </widget>
-        </item>
-        <item row="5" column="1">
-         <widget class="QLineEdit" name="localContacts"/>
-        </item>
-        <item row="1" column="0" colspan="2">
-         <widget class="QLabel" name="label_9">
-          <property name="font">
-           <font>
-            <pointsize>20</pointsize>
-            <weight>50</weight>
-            <italic>false</italic>
-            <bold>false</bold>
-           </font>
-          </property>
-          <property name="styleSheet">
-           <string notr="true">font: 20pt;</string>
-          </property>
-          <property name="text">
-           <string>Proposal information</string>
+           <string>Experiment title:</string>
           </property>
          </widget>
         </item>
@@ -158,14 +91,7 @@
           </property>
          </widget>
         </item>
-        <item row="3" column="0">
-         <widget class="QLabel" name="label_6">
-          <property name="text">
-           <string>Experiment title:</string>
-          </property>
-         </widget>
-        </item>
-        <item row="9" column="1">
+        <item row="12" column="1">
          <widget class="QPlainTextEdit" name="notifEmails">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Expanding" vsizetype="Minimum">
@@ -187,13 +113,31 @@
           </property>
          </widget>
         </item>
-        <item row="4" column="1">
-         <widget class="QLineEdit" name="users"/>
+        <item row="2" column="1">
+         <widget class="QLineEdit" name="proposalNum">
+          <property name="enabled">
+           <bool>true</bool>
+          </property>
+          <property name="readOnly">
+           <bool>true</bool>
+          </property>
+         </widget>
         </item>
-        <item row="4" column="0">
-         <widget class="QLabel" name="label_7">
+        <item row="1" column="0" colspan="2">
+         <widget class="QLabel" name="label_9">
+          <property name="font">
+           <font>
+            <pointsize>20</pointsize>
+            <weight>50</weight>
+            <italic>false</italic>
+            <bold>false</bold>
+           </font>
+          </property>
+          <property name="styleSheet">
+           <string notr="true">font: 20pt;</string>
+          </property>
           <property name="text">
-           <string>Users:</string>
+           <string>Proposal information</string>
           </property>
          </widget>
         </item>
@@ -204,13 +148,79 @@
           </property>
          </widget>
         </item>
-        <item row="2" column="1">
-         <widget class="QLineEdit" name="proposalNum">
-          <property name="enabled">
+        <item row="13" column="1">
+         <widget class="QCheckBox" name="errorAbortBox">
+          <property name="text">
+           <string>Do not continue scripts after fatal errors</string>
+          </property>
+         </widget>
+        </item>
+        <item row="4" column="0">
+         <widget class="QLabel" name="label_7">
+          <property name="text">
+           <string>Users:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="10" column="0" colspan="2">
+         <widget class="Line" name="line_3">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+         </widget>
+        </item>
+        <item row="4" column="1">
+         <widget class="QLineEdit" name="users"/>
+        </item>
+        <item row="5" column="1">
+         <widget class="QLineEdit" name="localContacts"/>
+        </item>
+        <item row="5" column="0">
+         <widget class="QLabel" name="label_8">
+          <property name="text">
+           <string>Local contact:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="1">
+         <widget class="QLineEdit" name="expTitle"/>
+        </item>
+        <item row="12" column="0">
+         <widget class="QLabel" name="label_10">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="text">
+           <string>Notifications&lt;br/&gt;(one email address &lt;br/&gt;per line):</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+          </property>
+          <property name="wordWrap">
            <bool>true</bool>
           </property>
-          <property name="readOnly">
+         </widget>
+        </item>
+        <item row="8" column="1">
+         <widget class="QTableView" name="sampleTable">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <attribute name="horizontalHeaderStretchLastSection">
            <bool>true</bool>
+          </attribute>
+         </widget>
+        </item>
+        <item row="7" column="0">
+         <widget class="QLabel" name="sampleLabel">
+          <property name="text">
+           <string>Sample information:</string>
           </property>
          </widget>
         </item>
@@ -297,7 +307,6 @@
   <tabstop>expTitle</tabstop>
   <tabstop>users</tabstop>
   <tabstop>localContacts</tabstop>
-  <tabstop>sampleName</tabstop>
   <tabstop>notifEmails</tabstop>
   <tabstop>errorAbortBox</tabstop>
   <tabstop>applyButton</tabstop>
