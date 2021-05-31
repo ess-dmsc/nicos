@@ -124,7 +124,7 @@ class CacheKafkaForwarder(ForwarderBase, Device):
             with self._lock:
                 for dev_name in set(self._dev_to_value_cache.keys()).union(
                         self._dev_to_status_cache.keys()):
-                    if self._timestamp_and_value_and_status_available(dev_name):
+                    if self._relevant_properties_available(dev_name):
                         self._push_to_queue(
                             dev_name,
                             self._dev_to_value_cache[dev_name],
@@ -160,14 +160,14 @@ class CacheKafkaForwarder(ForwarderBase, Device):
             timestamp_ns = int(float(timestamp) * 10 ** 9)
             self._dev_to_timestamp_cache[dev_name] = timestamp_ns
             # Don't send until have at least one reading for both value and status
-            if self._timestamp_and_value_and_status_available(dev_name):
+            if self._relevant_properties_available(dev_name):
                 self._push_to_queue(
                     dev_name,
                     self._dev_to_value_cache[dev_name],
                     self._dev_to_status_cache[dev_name],
                     timestamp_ns,)
 
-    def _timestamp_and_value_and_status_available(self, dev_name):
+    def _relevant_properties_available(self, dev_name):
         return dev_name in self._dev_to_value_cache \
             and dev_name in self._dev_to_status_cache \
             and dev_name in self._dev_to_timestamp_cache
