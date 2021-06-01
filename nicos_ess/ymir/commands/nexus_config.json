@@ -96,6 +96,57 @@
                   ]
                 }
               ]
+            },
+            {
+              "name": "nicos_device",
+              "type": "group",
+              "attributes": [
+                {
+                  "name": "NX_class",
+                  "dtype": "string",
+                  "values": "NXaperture"
+                }
+              ],
+              "children": [
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "description",
+                    "dtype": "string",
+                    "values": "Holds data from NICOS."
+                  }
+                },
+                {
+                  "name": "det_image1",
+                  "type": "group",
+                  "children": [
+                    {
+                      "module": "f142",
+                      "config": {
+                        "source": "det_image1",
+                        "topic": "ymir_nicos_devices",
+                        "dtype": "long",
+                        "value_units": ""
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "det_image2",
+                  "type": "group",
+                  "children": [
+                    {
+                      "module": "f142",
+                      "config": {
+                        "source": "det_image2",
+                        "topic": "ymir_nicos_devices",
+                        "dtype": "long",
+                        "value_units": ""
+                      }
+                    }
+                  ]
+                }
+              ]
             }
           ]
         },
