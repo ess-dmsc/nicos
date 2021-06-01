@@ -174,11 +174,11 @@ class CacheKafkaForwarder(ForwarderBase, Device):
 
     def _push_to_queue(self, dev_name, value, status, timestamp):
         try:
-            self._queue.put(
-                (dev_name, value, status, timestamp))
+            self._queue._put_nowait((dev_name, value, status, timestamp))
         except queue.Full:
             self.log.error('Queue full, so discarding older value(s)')
             self._queue.get()
+            self._queue.put((dev_name, value, status, timestamp))
             self._queue.task_done()
 
     def _processQueue(self):
