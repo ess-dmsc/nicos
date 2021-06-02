@@ -21,7 +21,7 @@
 #   Kenan Muric <kenan.muric@ess.eu>
 #
 # *****************************************************************************
-from nicos.core import Param
+from nicos.core import Param, pvname
 from nicos_ess.devices.epics.pva.epics_devices import EpicsStringReadable
 
 
@@ -29,13 +29,22 @@ class ChopperStatus(EpicsStringReadable):
     """
     This device handles chopper alarms as strings.
     """
-
-    def __init__(self):
-        EpicsStringReadable.__init__(self)
-        self.parameters['pv_root'] = Param('PV root for device',
-                                           type=str, mandatory=True,
-                                           userparam=False),
-        self.alarm_status_pvs = []
+    parameters = {
+        'readpv': Param('PV for reading device value',
+                        type=pvname, mandatory=True, userparam=False),
+        'pv_root': Param('PV root for device', type=str, mandatory=True,
+                         userparam=False),
+    }
+    _alarm_status_pvs = ['Comm_alrm',
+                         'CpuTmp_Stat',
+                         'HW_Alrm',
+                         'SW_Alrm',
+                         'nTmp_Alrm',
+                         'ILck_Alrm',
+                         'Pos_Alrm',
+                         'Ref_Alrm',
+                         'V_Alrm',
+                         'SIM_Alrm']
 
     def doStatus(self, maxage=0):
         pass
