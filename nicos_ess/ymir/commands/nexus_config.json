@@ -308,7 +308,7 @@
                 {
                   "module": "f142",
                   "config": {
-                    "source": "SES-SCAN:MC-MCU-001:m1.S",
+                    "source": "SES-SCAN:MC-MCU-001:m1.VELO",
                     "topic": "Ymir_motion",
                     "dtype": "double",
                     "value_units": ""
@@ -323,7 +323,7 @@
                 {
                   "module": "f142",
                   "config": {
-                    "source": "SES-SCAN:MC-MCU-001:m2.S",
+                    "source": "SES-SCAN:MC-MCU-001:m2.VELO",
                     "topic": "Ymir_motion",
                     "dtype": "double",
                     "value_units": ""
@@ -338,7 +338,7 @@
                 {
                   "module": "f142",
                   "config": {
-                    "source": "SES-SCAN:MC-MCU-001:m3.S",
+                    "source": "SES-SCAN:MC-MCU-001:m3.VELO",
                     "topic": "Ymir_motion",
                     "dtype": "double",
                     "value_units": ""
