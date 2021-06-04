@@ -50,17 +50,17 @@ class LiveDataPanel(DefaultLiveDataPanel):
     def export_data_to_file(self):
         filename = QFileDialog.getSaveFileName(
             self,
-            "Save Data",
+            "Save image",
             osp.expanduser("~")
             if self.last_save_location is None
             else self.last_save_location,
-            "Data files (*.npy)",
+            "Numpy binary files (*.npy)",
             initialFilter="*.npy",
         )[0]
 
         if not filename:
             return
-        if not filename.endswith((".npy")):
+        if not filename.endswith(".npy"):
             filename = filename + ".npy"
 
         self.last_save_location = osp.dirname(filename)
