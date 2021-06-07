@@ -19,29 +19,15 @@ class LiveDataPanel(DefaultLiveDataPanel):
         self.setControlsEnabled(False)
 
     def createPanelToolbar(self):
-        toolbar = QToolBar("Live data")
-        toolbar.addAction(self.actionOpen)
-        toolbar.addAction(self.actionPrint)
-        toolbar.addAction(self.actionSavePlot)
+        toolbar = DefaultLiveDataPanel.createPanelToolbar(self)
         toolbar.addSeparator()
         toolbar.addAction(self.actionSaveData)
         toolbar.addAction(self.actionSubtractBackground)
-        toolbar.addSeparator()
-        toolbar.addAction(self.actionLogScale)
-        toolbar.addSeparator()
-        toolbar.addAction(self.actionKeepRatio)
-        toolbar.addAction(self.actionUnzoom)
-        toolbar.addAction(self.actionColormap)
-        toolbar.addAction(self.actionMarkCenter)
-        toolbar.addAction(self.actionROI)
         return toolbar
 
     def set_icons(self):
-        self.actionPrint.setIcon(get_icon("print-24px.svg"))
-        self.actionSavePlot.setIcon(get_icon("save-24px.svg"))
+        DefaultLiveDataPanel.set_icons(self)
         self.actionSaveData.setIcon(get_icon("archive-24px.svg"))
-        self.actionUnzoom.setIcon(get_icon("zoom_out-24px.svg"))
-        self.actionOpen.setIcon(get_icon("folder_open-24px.svg"))
 
     @pyqtSlot()
     def on_actionSaveData_triggered(self):
