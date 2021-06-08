@@ -21,13 +21,14 @@
 #   Kenan Muric <kenan.muric@ess.eu>
 #
 # *****************************************************************************
-from nicos.core import Param, pvname
+from nicos import session
+from nicos.core import Param, pvname, status
 from nicos_ess.devices.epics.pva.epics_devices import EpicsStringReadable
 
 
-class ChopperStatus(EpicsStringReadable):
+class ChopperAlarms(EpicsStringReadable):
     """
-    This device handles chopper alarms as strings.
+    This device handles chopper alarms.
     """
     parameters = {
         'readpv': Param('PV for reading device value',
@@ -35,16 +36,58 @@ class ChopperStatus(EpicsStringReadable):
         'pv_root': Param('PV root for device', type=str, mandatory=True,
                          userparam=False),
     }
-    _alarm_status_pvs = ['Comm_alrm',
-                         'CpuTmp_Stat',
-                         'HW_Alrm',
-                         'SW_Alrm',
-                         'nTmp_Alrm',
-                         'ILck_Alrm',
-                         'Pos_Alrm',
-                         'Ref_Alrm',
-                         'V_Alrm',
-                         'SIM_Alrm']
+    _chopper_alarm_pvs = {'Comm_alrm', 'CpuTmp_Stat', 'HW_Alrm',
+                          'SW_Alrm', 'nTmp_Alrm', 'ILck_Alrm',
+                          'Pos_Alrm', 'Ref_Alrm', 'V_Alrm', 'SIM_Alrm'}
+    _alarm_severity_field = 'SEVR'
+    _alarm_status_field = 'STAT'
 
     def doStatus(self, maxage=0):
-        pass
+        alarm_msg = ''
+        nicos_status = status.OK
+        for alarm in self._chopper_alarm_pvs:
+            alarm_pv = ':'.join([self.parameters['pv_root'], alarm])
+            alarm_value = self._read_process_variable(alarm_pv)
+            if alarm_value:
+                alarm_severity = self._read_process_variable(
+                    '.'.join(alarm_pv, self._alarm_severity_field))
+                alarm_status = self._read_process_variable(
+                    '.'.join(alarm_pv, self._alarm_status_field))
+                alarm_msg = self._create_alarm_message(alarm_value,
+                                                       alarm_severity,
+                                                       alarm_status)
+                nicos_status = self._convert_to_nicos_status(alarm_severity)
+                self._write_alarm_to_log(alarm_msg, nicos_status)
+
+        return nicos_status, alarm_msg
+
+    def _create_alarm_message(self, alarm_value, alarm_severity, alarm_status):
+        return f'Value of alarm: {alarm_value}, ' \
+               f'alarm severity: {alarm_severity}, ' \
+               f'alarm status: {alarm_status}'
+
+    def _convert_to_nicos_status(self, alarm_severity):
+        """
+        Converts EPICS errors to corresponding NICOS status.
+        """
+        if alarm_severity == 'MAJOR':
+            return status.ERROR
+        elif alarm_severity == 'MINOR':
+            return status.WARN
+        elif alarm_severity == 'INVALID':
+            return status.UNKNOWN
+        return status.OK
+
+    @staticmethod
+    def _write_alarm_to_log(msg, alarm_severity):
+        if alarm_severity is status.ERROR:
+            session.log.error(msg)
+        elif alarm_severity is status.WARN:
+            session.log.warning(msg)
+        else:
+            session.log.info(msg)
+
+    def _read_process_variable(self, pv, as_string=False):
+        return self._epics_wrapper.get_pv_value(pv, timeout=self.epicstimeout,
+                                                as_string=as_string)
+
