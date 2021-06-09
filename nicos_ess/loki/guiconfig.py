@@ -12,7 +12,7 @@ main_window = docked(
         (
             "Setup",
             vsplit(
-                (panel("nicos_ess.gui.panels.setup_panel.SetupsPanel"))
+                (panel("nicos.clients.flowui.panels.setup_panel.SetupsPanel"))
             ),  # vsplit
         ),
         (
@@ -29,7 +29,7 @@ main_window = docked(
                 (panel("nicos_ess.loki.gui.experiment_conf.LokiExperimentPanel"))
             ),  # vsplit
         ),
-        ("  ", panel("nicos_ess.gui.panels.empty.EmptyPanel")),
+        ("  ", panel("nicos.clients.flowui.panels.empty.EmptyPanel")),
         (
             "Instrument interaction",
             hsplit(
@@ -38,30 +38,30 @@ main_window = docked(
                         (
                             "Output",
                             panel(
-                                "nicos_ess.gui.panels.console.ConsolePanel",
+                                "nicos.clients.flowui.panels.console.ConsolePanel",
                                 hasinput=False,
                             ),
                         ),
-                        ("Scan Plot", panel("nicos_ess.gui.panels.scans.ScansPanel")),
+                        ("Scan Plot", panel("nicos.clients.flowui.panels.scans.ScansPanel")),
                         (
                             "Detector Image",
-                            panel("nicos_ess.gui.panels.live.LiveDataPanel"),
+                            panel("nicos.clients.flowui.panels.live.LiveDataPanel"),
                         ),
                         (
                             "Script Status",
                             panel(
-                                "nicos_ess.gui.panels.status.ScriptStatusPanel",
+                                "nicos.clients.flowui.panels.status.ScriptStatusPanel",
                                 eta=True,
                             ),
                         ),
                     ),
                     panel(
-                        "nicos_ess.gui.panels.cmdbuilder.CommandPanel",
+                        "nicos.clients.flowui.panels.cmdbuilder.CommandPanel",
                         modules=["nicos.clients.gui.cmdlets"],
                     ),
                 ),  # vsplit
                 panel(
-                    "nicos_ess.gui.panels.devices.DevicesPanel",
+                    "nicos.clients.flowui.panels.devices.DevicesPanel",
                     dockpos="right",
                     param_display={"tas": "scanmode", "Exp": ["lastpoint", "lastscan"]},
                     filters=[("Detector", "det"), ("Temperatures", "^T"),],
@@ -75,12 +75,12 @@ main_window = docked(
                     "nicos_ess.loki.gui.scriptbuilder.CommandsPanel",
                     modules=["nicos_ess.loki.gui.cmdlets"],
                 ),
-                panel("nicos_ess.gui.panels.editor.EditorPanel", tools=None),
+                panel("nicos.clients.flowui.panels.editor.EditorPanel", tools=None),
             ),
         ),
         ("Prototype", panel("nicos_ess.loki.gui.loki_scriptbuilder.LokiScriptBuilderPanel")),
-        ("Detector Image", panel("nicos_ess.gui.panels.live.LiveDataPanel")),
-        ("History", panel("nicos_ess.gui.panels.history.HistoryPanel"),),
+        ("Detector Image", panel("nicos.clients.flowui.panels.live.LiveDataPanel")),
+        ("History", panel("nicos.clients.flowui.panels.history.HistoryPanel"),),
         (
             "Logs",
             tabbed(
@@ -91,7 +91,7 @@ main_window = docked(
                 ),
             ),
         ),
-        ("  ", panel("nicos_ess.gui.panels.empty.EmptyPanel")),
+        ("  ", panel("nicos.clients.flowui.panels.empty.EmptyPanel")),
         ("Finish Experiment", panel("nicos_ess.gui.panels.setup_panel.FinishPanel")),
         position="left",
     ),  # tabbed

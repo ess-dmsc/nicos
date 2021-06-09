@@ -30,9 +30,11 @@ from nicos.guisupport.qt import QLineEdit, QMessageBox, Qt, pyqtSlot
 from nicos.utils import findResource
 
 from nicos_ess.loki.gui.loki_panel import LokiPanelBase
+from nicos_ess.loki.gui.loki_sample_changers import ThermoCellHolderSettings
 from nicos_ess.utilities.validators import DoubleValidator
 
 DEVICES = ('InstrumentSettings',)
+SAMPLE_CHANGERS = ('Thermostated Cell Holder',)
 INST_SET_KEYS = ('x', 'y', 'width', 'height', 'offset')
 
 
@@ -41,6 +43,8 @@ class LokiExperimentPanel(LokiPanelBase):
 
     def __init__(self, parent, client, options):
         LokiPanelBase.__init__(self, parent, client, options)
+        self.parent = parent
+        self.options = options
         loadUi(self, findResource('nicos_ess/loki/gui/ui_files/exp_config.ui'))
 
         self.holder_info = options.get('holder_info', [])
@@ -48,30 +52,17 @@ class LokiExperimentPanel(LokiPanelBase):
         self.initialise_connection_status_listeners()
         self.initialise_markups()
 
-        self.envComboBox.addItems(['Sample Changer A', 'Sample Changer B'])
+        self.envComboBox.addItems([_changer for _changer in SAMPLE_CHANGERS])
         # Start with a "no item", ie, empty selection.
         self.envComboBox.setCurrentIndex(-1)
 
-        # Hide read-only properties and hide and disable reference cell
-        # positions until a sample environment is chosen by the user.
-        self.propertiesGroupBox.setVisible(False)
-
-        # Hide and disable cell position properties which shall be only
-        # available for sample environments that holds them.
-        self.refPosGroupBox.setVisible(False)
-
-        self.refCellSpinBox.valueChanged.connect(
-            self._set_sample_changer_ref_cell
-        )
+        self.descriptionGroupBox.setVisible(False)
+        self.settingsGroupBox.setVisible(False)
 
         self.envComboBox.activated.connect(self._activate_environment_settings)
 
         # Listen to changes in Aperture and Detector Offset values
         self.listen_instrument_settings()
-
-        # Listen to changes in environments
-        self.refPosXBox.textChanged.connect(self._set_ref_pos_x)
-        self.refPosYBox.textChanged.connect(self._set_ref_pos_y)
 
         # Disable apply buttons in both settings until an action taken by the
         # user.
@@ -164,15 +155,6 @@ class LokiExperimentPanel(LokiPanelBase):
             )
         return _editable_settings
 
-    def _activate_environment_settings(self):
-        # Enable sample environments
-        self.propertiesGroupBox.setVisible(True)
-
-        self._set_cell_indices()
-        self.refPosGroupBox.setVisible(True)
-        self.refPosGroupBox.setEnabled(True)
-        self.refCellSpinBox.setFocus()
-
     def _is_empty(self):
         for box in self._get_editable_settings():
             if not box.text():
@@ -191,21 +173,20 @@ class LokiExperimentPanel(LokiPanelBase):
         )
         return _settings_at_ui == _settings_at_cache
 
-    def _set_cell_indices(self):
-        # Setting minimum and maximum values for the number of cells not only
-        # ensures we have the correct numbers to choose from in the UI but also
-        # prevents user errors as any integer that is not in [min, max] is not
-        # allowed (or non-integer types).
-        self.refCellSpinBox.setMinimum(1)
+    def _activate_environment_settings(self):
+        # Enable sample environments
+        self.settings = self._map_settings_to_ui()
+        self.descriptionGroupBox.setVisible(True)
+        self.settingsGroupBox.setVisible(True)
 
-    def _set_sample_changer_ref_cell(self):
-        pass
-
-    def _set_ref_pos_x(self, value):
-        pass
-
-    def _set_ref_pos_y(self, value):
-        pass
+    def _map_settings_to_ui(self):
+        _mappings = {
+            'Thermostated Cell Holder': ThermoCellHolderSettings,
+        }
+        _ui = _mappings[self.envComboBox.currentText()](
+            self.parent, self.client, self.options, self.settingsFrame
+        )
+        return _ui
 
     @pyqtSlot()
     def on_instSetApply_clicked(self):

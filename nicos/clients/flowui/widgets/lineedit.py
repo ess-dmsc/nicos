@@ -22,8 +22,9 @@
 #
 # *****************************************************************************
 
-from nicos.clients.gui.widgets.lineedit import CommandLineEdit as \
-    CommandLineEditBase
+from nicos.clients.gui.widgets.lineedit import \
+    CommandLineEdit as CommandLineEditBase
+
 from .utils import State, StyleSelector, refresh_widget
 
 
