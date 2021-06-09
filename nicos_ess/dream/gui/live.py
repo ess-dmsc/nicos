@@ -3,13 +3,11 @@ from weakref import WeakKeyDictionary
 
 import numpy as np
 
-from nicos.guisupport.qt import (
-    QFileDialog, pyqtSlot, pyqtSignal, QMainWindow, QWidget, QVBoxLayout,
-    QPushButton, QHBoxLayout)
+from nicos.guisupport.qt import (QFileDialog, pyqtSlot, pyqtSignal)
 
 from nicos.clients.flowui.panels import get_icon
 from nicos.clients.flowui.panels.live import LiveDataPanel as DefaultLiveDataPanel
-from nicos_mlz.toftof.gui.resolutionpanel import PlotWidget
+from nicos_ess.dream.gui.snap_shot_window import SnapShotWindow
 
 
 class LiveDataPanel(DefaultLiveDataPanel):
@@ -119,71 +117,3 @@ class LiveDataPanel(DefaultLiveDataPanel):
                 window.activateWindow()
                 return True
         return False
-
-
-class ComparisonPlot(PlotWidget):
-
-    def __init__(self, parent):
-        PlotWidget.__init__(self, 'Test', 'x', 'y', 2, parent=parent)
-        self.plot._curves[0].legend = 'Live'
-        self.plot._curves[1].legend = 'Background'
-
-
-class SnapShotWindow(QMainWindow):
-    """AboutWindow class"""
-    def __init__(self, parent=None):
-        super().__init__(parent=parent)
-        self.setWindowTitle("Snapshot")
-
-        if parent is not None:
-            parent.registerWindow(self)
-
-        self._central_widget = QWidget()
-        self._test = QWidget()
-        self.background_data = None
-
-        self._plot =  ComparisonPlot(parent=self._test)
-
-        self.updateBackgroundButton = QPushButton("Update Background")
-        self.updateBackgroundButton.clicked.connect(
-            self.on_updateBackgroundButton_clicked)
-
-        self.resetBackgroundButton = QPushButton("Reset Background")
-        self.resetBackgroundButton.clicked.connect(
-            self.on_resetBackgroundButton_clicked)
-
-
-        self.setupUi()
-        self.setCentralWidget(self._central_widget)
-        self.setFixedSize(660, 500)
-        self.show()
-
-    def setupUi(self):
-        layout = QVBoxLayout()
-
-        layout.addWidget(self._test)
-        buttons_layout = QHBoxLayout()
-        buttons_layout.addWidget(self.updateBackgroundButton)
-        buttons_layout.addWidget(self.resetBackgroundButton)
-
-        layout.addLayout(buttons_layout)
-        self._central_widget.setLayout(layout)
-
-    @pyqtSlot()
-    def on_updateBackgroundButton_clicked(self):
-        self.parent().update_background_data.emit()
-
-    @pyqtSlot()
-    def on_resetBackgroundButton_clicked(self):
-        self.background_data = None
-
-    def closeEvent(self, QCloseEvent):
-        if self.parent() is not None:
-            self.parent().unregisterWindow(self)
-        super().closeEvent(QCloseEvent)
-
-    def setData(self, labels, data):
-        background_data = self.background_data
-        if background_data is None and data is not None:
-            background_data = np.zeros_like(data)
-        self._plot.setData(labels['x'], data, background_data)
