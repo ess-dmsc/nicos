@@ -4,7 +4,7 @@ from nicos.core import NicosError
 from nicos.devices.datasinks.image import ImageFileReader
 
 
-class NumpyFileReader(ImageFileReader):
+class NumpyBinaryFileReader(ImageFileReader):
     filetypes = [
         ("numpy", "Numpy File (*.npy)"),
     ]
