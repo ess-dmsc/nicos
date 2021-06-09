@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>805</width>
-    <height>554</height>
+    <width>1033</width>
+    <height>686</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -71,6 +71,13 @@
            <horstretch>0</horstretch>
            <verstretch>0</verstretch>
           </sizepolicy>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="snapShotButton">
+         <property name="text">
+          <string>Snapshot</string>
          </property>
         </widget>
        </item>
