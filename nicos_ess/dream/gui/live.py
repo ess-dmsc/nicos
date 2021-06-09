@@ -4,7 +4,8 @@ from weakref import WeakKeyDictionary
 import numpy as np
 
 from nicos.guisupport.qt import (
-    QFileDialog, pyqtSlot, pyqtSignal, QMainWindow, QWidget, QVBoxLayout, QPushButton)
+    QFileDialog, pyqtSlot, pyqtSignal, QMainWindow, QWidget, QVBoxLayout,
+    QPushButton, QHBoxLayout)
 
 from nicos.clients.flowui.panels import get_icon
 from nicos.clients.flowui.panels.live import LiveDataPanel as DefaultLiveDataPanel
@@ -13,16 +14,18 @@ from nicos_mlz.toftof.gui.resolutionpanel import PlotWidget
 
 class LiveDataPanel(DefaultLiveDataPanel):
     ui = f"{osp.dirname(__file__)}/ui_files/live.ui"
-    refresh_snap_shot_data = pyqtSignal()
+    update_background_data = pyqtSignal()
 
     def __init__(self, parent, client, options):
         DefaultLiveDataPanel.__init__(self, parent, client, options)
         self.last_save_location = None
-        self.background_data = None
-
-        self.refresh_snap_shot_data.connect(self._refresh_snap_shot_window)
-        self._registered_windows = WeakKeyDictionary()
         self.setControlsEnabled(False)
+
+        self.update_background_data.connect(self._set_background_data)
+        self._registered_windows = WeakKeyDictionary()
+        self._snapshot_window = None
+
+        client.livedata.connect(self.on_live_data_update)
 
     def createPanelToolbar(self):
         toolbar = DefaultLiveDataPanel.createPanelToolbar(self)
@@ -38,18 +41,25 @@ class LiveDataPanel(DefaultLiveDataPanel):
     @pyqtSlot()
     def on_snapShotButton_clicked(self):
         if self.checkWindowOpen(SnapShotWindow, self._registered_windows):
-            # self._refresh_snap_shot_window()
+            # self._set_background_data()
             return
         self._snapshot_window = SnapShotWindow(self)
-        self._refresh_snap_shot_window()
+        self._set_background_data()
         return self._snapshot_window
 
-    def _refresh_snap_shot_window(self):
-        current_blob = self._extract_data()
-        if current_blob:
-            data = current_blob.get("dataarrays", [])[0]
-            labels = current_blob.get("labels", {})
-            self._snapshot_window.setData(labels, data)
+    def _set_background_data(self):
+        data, labels = self._extract_data()
+        # Deal with 1D data only for the timebeing
+        if data and len(data[0].shape) == 1:
+            self._snapshot_window.background_data = data[0]
+            self._snapshot_window.setData(labels, None)
+
+    def on_live_data_update(self):
+        data, labels = self._extract_data()
+        # Deal with 1D data only for the timebeing
+        if data and len(data[0].shape) == 1:
+            if self._snapshot_window:
+                self._snapshot_window.setData(labels, data[0])
 
     @pyqtSlot()
     def on_actionSaveData_triggered(self):
@@ -73,20 +83,25 @@ class LiveDataPanel(DefaultLiveDataPanel):
 
         self.last_save_location = osp.dirname(filename)
 
-        data_arrays = self._extract_data().get("dataarrays", [])
+        data, _ = self._extract_data()
 
-        if data_arrays:
+        if data:
             with open(filename, "w") as f:
-                np.save(osp.abspath(f.name), np.array(data_arrays[0]))
+                np.save(osp.abspath(f.name), np.array(data[0]))
         else:
             self.showError(f"No data available for writing to {filename}")
 
     def _extract_data(self):
         if self.fileList.currentRow() == -1:
-            return
+            self.fileList.setCurrentRow(0)
         # try to get data from the cache
-        data = self.getDataFromItem(self.fileList.currentItem())
-        return data
+        current_blob = self.getDataFromItem(self.fileList.currentItem())
+        if not current_blob:
+            return None, None
+
+        data = current_blob.get("dataarrays", [])
+        labels = current_blob.get("labels", {})
+        return data, labels
 
     def registerWindow(self, instance):
         """Register an instance of a QMainWindow"""
@@ -106,6 +121,14 @@ class LiveDataPanel(DefaultLiveDataPanel):
         return False
 
 
+class ComparisonPlot(PlotWidget):
+
+    def __init__(self, parent):
+        PlotWidget.__init__(self, 'Test', 'x', 'y', 2, parent=parent)
+        self.plot._curves[0].legend = 'Live'
+        self.plot._curves[1].legend = 'Background'
+
+
 class SnapShotWindow(QMainWindow):
     """AboutWindow class"""
     def __init__(self, parent=None):
@@ -117,13 +140,18 @@ class SnapShotWindow(QMainWindow):
 
         self._central_widget = QWidget()
         self._test = QWidget()
-        self._data = None
+        self.background_data = None
 
-        self._plot =  PlotWidget(
-            "Test", "xlabel", "ylabel", ncurves=2, parent=self._test)
+        self._plot =  ComparisonPlot(parent=self._test)
 
-        self.updateDataButton = QPushButton("Update")
-        self.updateDataButton.clicked.connect(self.on_updateDataButton_clicked)
+        self.updateBackgroundButton = QPushButton("Update Background")
+        self.updateBackgroundButton.clicked.connect(
+            self.on_updateBackgroundButton_clicked)
+
+        self.resetBackgroundButton = QPushButton("Reset Background")
+        self.resetBackgroundButton.clicked.connect(
+            self.on_resetBackgroundButton_clicked)
+
 
         self.setupUi()
         self.setCentralWidget(self._central_widget)
@@ -134,12 +162,20 @@ class SnapShotWindow(QMainWindow):
         layout = QVBoxLayout()
 
         layout.addWidget(self._test)
-        layout.addWidget(self.updateDataButton)
+        buttons_layout = QHBoxLayout()
+        buttons_layout.addWidget(self.updateBackgroundButton)
+        buttons_layout.addWidget(self.resetBackgroundButton)
+
+        layout.addLayout(buttons_layout)
         self._central_widget.setLayout(layout)
 
     @pyqtSlot()
-    def on_updateDataButton_clicked(self):
-        self.parent().refresh_snap_shot_data.emit()
+    def on_updateBackgroundButton_clicked(self):
+        self.parent().update_background_data.emit()
+
+    @pyqtSlot()
+    def on_resetBackgroundButton_clicked(self):
+        self.background_data = None
 
     def closeEvent(self, QCloseEvent):
         if self.parent() is not None:
@@ -147,5 +183,7 @@ class SnapShotWindow(QMainWindow):
         super().closeEvent(QCloseEvent)
 
     def setData(self, labels, data):
-        if len(data.shape) == 1:
-            self._plot.setData(labels['x'], data)
+        background_data = self.background_data
+        if background_data is None and data is not None:
+            background_data = np.zeros_like(data)
+        self._plot.setData(labels['x'], data, background_data)
