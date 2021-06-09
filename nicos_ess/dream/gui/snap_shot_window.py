@@ -1,35 +1,32 @@
 import numpy as np
-from numpy import array
 
-from nicos.guisupport.qt import (
-    pyqtSlot, QMainWindow, QWidget, QVBoxLayout,
-    QPushButton, QHBoxLayout)
+from nicos.guisupport.qt import QHBoxLayout, QMainWindow, QPushButton, \
+    QVBoxLayout, QWidget, pyqtSlot
+
 from nicos_mlz.toftof.gui.resolutionpanel import PlotWidget as BasePlotWidget
 
 
-
 class PlotWidget(BasePlotWidget):
-
     def setData(self, x1, y1, x2=None, y2=None):
         for curve, (x, y) in zip(self.plot._curves, ((x1, y1), (x2, y2))):
             if y is not None:
-                curve.x = array(x)
-                curve.y = array(y)
+                curve.x = np.array(x)
+                curve.y = np.array(y)
 
         self.plot.reset()
         self.plot.update()
 
 
 class ComparisonPlot(PlotWidget):
-
     def __init__(self, parent):
-        PlotWidget.__init__(self, 'Comparison Plot', 'x', 'y', 2, parent=parent)
-        self.plot._curves[0].legend = 'Live'
-        self.plot._curves[1].legend = 'Background'
+        PlotWidget.__init__(self, "Comparison Plot", "x", "y", 2, parent=parent)
+        self.plot._curves[0].legend = "Live"
+        self.plot._curves[1].legend = "Background"
 
 
 class SnapShotWindow(QMainWindow):
     """SnapShotWindow class"""
+
     def __init__(self, parent=None):
         super().__init__(parent=parent)
         self.setWindowTitle("Snapshot")
@@ -41,16 +38,17 @@ class SnapShotWindow(QMainWindow):
         self._test = QWidget()
         self.background_data = None
 
-        self._plot =  ComparisonPlot(parent=self._test)
+        self._plot = ComparisonPlot(parent=self._test)
 
         self.updateBackgroundButton = QPushButton("Update Background")
         self.updateBackgroundButton.clicked.connect(
-            self.on_updateBackgroundButton_clicked)
+            self.on_updateBackgroundButton_clicked
+        )
 
         self.resetBackgroundButton = QPushButton("Reset Background")
         self.resetBackgroundButton.clicked.connect(
-            self.on_resetBackgroundButton_clicked)
-
+            self.on_resetBackgroundButton_clicked
+        )
 
         self.setupUi()
         self.setCentralWidget(self._central_widget)
@@ -77,7 +75,7 @@ class SnapShotWindow(QMainWindow):
 
         labels_data = None
         if labels:
-            labels_data = labels['x']
+            labels_data = labels["x"]
         elif data is not None:
             labels_data = np.arange(data.shape[0])
 
@@ -88,8 +86,8 @@ class SnapShotWindow(QMainWindow):
         self._plot.setData(
             labels_data,
             data,
-            x2 = labels_background, # Treat labels properly
-            y2 = self.background_data
+            x2=labels_background,  # Treat labels properly
+            y2=self.background_data,
         )
 
     @pyqtSlot()

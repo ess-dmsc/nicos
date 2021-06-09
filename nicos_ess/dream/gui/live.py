@@ -3,10 +3,11 @@ from weakref import WeakKeyDictionary
 
 import numpy as np
 
-from nicos.guisupport.qt import (QFileDialog, pyqtSlot, pyqtSignal)
-
 from nicos.clients.flowui.panels import get_icon
-from nicos.clients.flowui.panels.live import LiveDataPanel as DefaultLiveDataPanel
+from nicos.clients.flowui.panels.live import \
+    LiveDataPanel as DefaultLiveDataPanel
+from nicos.guisupport.qt import QFileDialog, pyqtSignal, pyqtSlot
+
 from nicos_ess.dream.gui.snap_shot_window import SnapShotWindow
 
 
