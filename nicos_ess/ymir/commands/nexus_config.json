@@ -98,6 +98,128 @@
               ]
             },
             {
+              "name": "mini_chopper",
+              "type": "group",
+              "attributes": [
+                {
+                  "name": "NX_class",
+                  "dtype": "string",
+                  "values": "NXdisk_chopper"
+                }
+              ],
+              "children": [
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "description",
+                    "dtype": "string",
+                    "values": ""
+                  }
+                },
+                {
+                  "name": "set_frequency",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "units",
+                      "dtype": "string",
+                      "values": "Hz"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f142",
+                      "config": {
+                        "source": "Utg-Ymir:Chop-Drv-0101:Spd_SP",
+                        "topic": "Ymir_chopper",
+                        "dtype": "double",
+                        "value_units": "Hz"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "state",
+                  "type": "group",
+                  "children": [
+                    {
+                      "module": "f142",
+                      "config": {
+                        "source": "Utg-Ymir:Chop-Drv-0101:Chop_Stat",
+                        "topic": "Ymir_chopper",
+                        "dtype": "int",
+                        "value_units": ""
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "offset",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "units",
+                      "dtype": "string",
+                      "values": "ns"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f142",
+                      "config": {
+                        "source": "Utg-Ymir:Chop-Drv-0101:Chopper-Delay-SP",
+                        "topic": "Ymir_chopper",
+                        "dtype": "double",
+                        "value_units": "ns"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "get_frequency",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "units",
+                      "dtype": "string",
+                      "values": "Hz"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f142",
+                      "config": {
+                        "source": "Utg-Ymir:Chop-Drv-0101:Spd_Stat",
+                        "topic": "Ymir_chopper",
+                        "dtype": "double",
+                        "value_units": "Hz"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "tdc_time",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "units",
+                      "dtype": "string",
+                      "values": "ns"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "tdct",
+                      "config": {
+                        "source": "Utg-Ymir:TS-EVR-01-00:TS-I",
+                        "topic": "Ymir_chopper"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
               "name": "nicos_device",
               "type": "group",
               "attributes": [
@@ -113,7 +235,7 @@
                   "config": {
                     "name": "description",
                     "dtype": "string",
-                    "values": "Holds data from NICOS."
+                    "values": ""
                   }
                 },
                 {
@@ -304,6 +426,13 @@
             {
               "name": "X-axis_speed",
               "type": "group",
+              "attributes": [
+                {
+                  "name": "units",
+                  "dtype": "string",
+                  "values": "mm/s"
+                }
+              ],
               "children": [
                 {
                   "module": "f142",
@@ -319,6 +448,13 @@
             {
               "name": "Y-axis_speed",
               "type": "group",
+              "attributes": [
+                {
+                  "name": "units",
+                  "dtype": "string",
+                  "values": "mm/s"
+                }
+              ],
               "children": [
                 {
                   "module": "f142",
@@ -334,6 +470,13 @@
             {
               "name": "Z-axis_speed",
               "type": "group",
+              "attributes": [
+                {
+                  "name": "units",
+                  "dtype": "string",
+                  "values": "mm/s"
+                }
+              ],
               "children": [
                 {
                   "module": "f142",
@@ -342,6 +485,28 @@
                     "topic": "Ymir_motion",
                     "dtype": "double",
                     "value_units": ""
+                  }
+                }
+              ]
+            },
+            {
+              "name": "X-axis_non_PTP",
+              "type": "group",
+              "attributes": [
+                {
+                  "name": "units",
+                  "dtype": "string",
+                  "values": "mm"
+                }
+              ],
+              "children": [
+                {
+                  "module": "f142",
+                  "config": {
+                    "source": "SES-SCAN:MC-MCU-001:m1",
+                    "topic": "Ymir_motion",
+                    "dtype": "double",
+                    "value_units": "mm"
                   }
                 }
               ]
