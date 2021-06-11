@@ -24,7 +24,7 @@ class ComparisonPlot(PlotWidget):
         self.plot._curves[1].legend = "Background"
 
 
-class SnapShotWindow(QMainWindow):
+class ComparisonWindow(QMainWindow):
     """SnapShotWindow class"""
 
     def __init__(self, parent=None):

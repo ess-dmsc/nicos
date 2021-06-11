@@ -1,4 +1,6 @@
+from datetime import datetime
 import os.path as osp
+from uuid import uuid4
 from weakref import WeakKeyDictionary
 
 import numpy as np
@@ -8,7 +10,7 @@ from nicos.clients.flowui.panels.live import \
     LiveDataPanel as DefaultLiveDataPanel
 from nicos.guisupport.qt import QFileDialog, pyqtSignal, pyqtSlot
 
-from nicos_ess.dream.gui.snap_shot_window import SnapShotWindow
+from nicos_ess.dream.gui.comparison_window import ComparisonWindow
 
 
 class LiveDataPanel(DefaultLiveDataPanel):
@@ -22,7 +24,7 @@ class LiveDataPanel(DefaultLiveDataPanel):
 
         self.update_background_data.connect(self._set_background_data)
         self._registered_windows = WeakKeyDictionary()
-        self._snapshot_window = None
+        self._compare_window = None
 
         client.livedata.connect(self.on_live_data_update)
 
@@ -30,7 +32,6 @@ class LiveDataPanel(DefaultLiveDataPanel):
         toolbar = DefaultLiveDataPanel.createPanelToolbar(self)
         toolbar.addSeparator()
         toolbar.addAction(self.actionSaveData)
-        toolbar.addAction(self.actionSubtractBackground)
         return toolbar
 
     def set_icons(self):
@@ -38,25 +39,24 @@ class LiveDataPanel(DefaultLiveDataPanel):
         self.actionSaveData.setIcon(get_icon("archive-24px.svg"))
 
     @pyqtSlot()
-    def on_snapShotButton_clicked(self):
-        if self.checkWindowOpen(SnapShotWindow, self._registered_windows):
-            # self._set_background_data()
+    def on_compareButton_clicked(self):
+        if self.checkWindowOpen(ComparisonWindow, self._registered_windows):
             return
-        self._snapshot_window = SnapShotWindow(self)
+        self._compare_window = ComparisonWindow(self)
         self._set_background_data()
-        return self._snapshot_window
+        return self._compare_window
 
     def _set_background_data(self):
         # Deal with 1D data only for the timebeing
         data = self._get_1d_data()
         if data:
-            self._snapshot_window.setData(None, background_data_blob=data)
+            self._compare_window.setData(None, background_data_blob=data)
 
     def on_live_data_update(self):
         # Deal with 1D data only for the timebeing
         data = self._get_1d_data()
-        if data and self._snapshot_window:
-            self._snapshot_window.setData(data)
+        if data and self._compare_window:
+            self._compare_window.setData(data)
 
     def _get_1d_data(self):
         data, labels = self._extract_data()
@@ -122,3 +122,15 @@ class LiveDataPanel(DefaultLiveDataPanel):
                 window.activateWindow()
                 return True
         return False
+
+    @pyqtSlot()
+    def on_snapShotButton_clicked(self):
+        data, labels = self._extract_data()
+        if not data:
+            return
+        uid = uuid4()
+        self._datacache[uid] = {}
+        self._datacache[uid]['dataarrays'] = data
+        self._datacache[uid]['labels'] = labels
+        self.add_to_flist(
+            f"snapshot_{datetime.now()}", "snapshots", "SNAP", uid)

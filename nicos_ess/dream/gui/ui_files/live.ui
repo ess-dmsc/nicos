@@ -75,11 +75,28 @@
         </widget>
        </item>
        <item>
-        <widget class="QPushButton" name="snapShotButton">
-         <property name="text">
-          <string>Snapshot</string>
+        <layout class="QHBoxLayout" name="horizontalLayout">
+         <property name="leftMargin">
+          <number>0</number>
          </property>
-        </widget>
+         <property name="topMargin">
+          <number>0</number>
+         </property>
+         <item>
+          <widget class="QPushButton" name="snapShotButton">
+           <property name="text">
+            <string>Snapshot</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="compareButton">
+           <property name="text">
+            <string>Compare</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
        </item>
       </layout>
      </widget>
