@@ -36,7 +36,6 @@ class SnapShotWindow(QMainWindow):
 
         self._central_widget = QWidget()
         self._test = QWidget()
-        self.background_data = None
 
         self._plot = ComparisonPlot(parent=self._test)
 
@@ -66,29 +65,21 @@ class SnapShotWindow(QMainWindow):
         layout.addLayout(buttons_layout)
         self._central_widget.setLayout(layout)
 
-    def setData(self, labels, data):
-        if self.background_data is None and not labels and data is None:
+    def setData(self, live_data_blob, background_data_blob=None):
+        if not live_data_blob and not background_data_blob:
             return
 
-        if self.background_data is None and data is not None:
-            self.background_data = np.zeros_like(data)
+        x1, y1, x2, y2 = None, None, None, None
+        if live_data_blob:
+            x1, y1 = self._extract_data(live_data_blob)
+        if background_data_blob:
+            x2, y2 = self._extract_data(background_data_blob)
 
-        labels_data = None
-        if labels:
-            labels_data = labels["x"]
-        elif data is not None:
-            labels_data = np.arange(data.shape[0])
+        self._plot.setData(x1, y1, x2, y2)
 
-        labels_background = None
-        if self.background_data is not None:
-            labels_background = np.arange(self.background_data.shape[0])
-
-        self._plot.setData(
-            labels_data,
-            data,
-            x2=labels_background,  # Treat labels properly
-            y2=self.background_data,
-        )
+    def _extract_data(self, blob):
+        labels, data = blob
+        return labels["x"] if labels else np.arange(data.shape[0]), data
 
     @pyqtSlot()
     def on_updateBackgroundButton_clicked(self):
@@ -96,7 +87,7 @@ class SnapShotWindow(QMainWindow):
 
     @pyqtSlot()
     def on_resetBackgroundButton_clicked(self):
-        self.background_data = None
+        pass
 
     def closeEvent(self, QCloseEvent):
         if self.parent() is not None:

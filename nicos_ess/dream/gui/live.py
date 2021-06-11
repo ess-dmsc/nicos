@@ -47,18 +47,22 @@ class LiveDataPanel(DefaultLiveDataPanel):
         return self._snapshot_window
 
     def _set_background_data(self):
-        data, labels = self._extract_data()
         # Deal with 1D data only for the timebeing
-        if data and len(data[0].shape) == 1:
-            self._snapshot_window.background_data = data[0]
-            self._snapshot_window.setData(labels, None)
+        data = self._get_1d_data()
+        if data:
+            self._snapshot_window.setData(None, background_data_blob=data)
 
     def on_live_data_update(self):
-        data, labels = self._extract_data()
         # Deal with 1D data only for the timebeing
+        data = self._get_1d_data()
+        if data and self._snapshot_window:
+            self._snapshot_window.setData(data)
+
+    def _get_1d_data(self):
+        data, labels = self._extract_data()
         if data and len(data[0].shape) == 1:
-            if self._snapshot_window:
-                self._snapshot_window.setData(labels, data[0])
+            return labels, data[0]
+        return
 
     @pyqtSlot()
     def on_actionSaveData_triggered(self):
