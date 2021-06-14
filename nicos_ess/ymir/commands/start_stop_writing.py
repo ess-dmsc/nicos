@@ -29,6 +29,7 @@ from file_writer_control.JobHandler import JobHandler
 from datetime import datetime
 
 from nicos_ess.utilities.managers import wait_until_true, wait_after
+from nicos_ess.ymir.nexus.nexus_config import NexusTemplate
 
 
 class WriterBase:
@@ -38,6 +39,8 @@ class WriterBase:
         self.config = self.device.nexus_config_path
         self.topic = self.device.command_topic
         self.command_channel = WorkerCommandChannel(f'{self.host}/{self.topic}')
+        self._nexus_template = NexusTemplate(self.config)
+        self._nexus_template.add_proposal_information()
 
 
 class StartFileWriter(WriterBase):
@@ -52,12 +55,9 @@ class StartFileWriter(WriterBase):
         self.job_id = ""
 
     def start_job(self):
-        with open(self.config, "r") as f:
-            # Get the nexus structure from config.
-            nexus_structure = f.read()
         # Initialise the write job.
         write_job = WriteJob(
-            nexus_structure,
+            self._nexus_template,
             "{0:%Y}-{0:%m}-{0:%d}_{0:%H}{0:%M}.nxs".format(datetime.now()),
             self.host,
             datetime.now(),
