@@ -16,6 +16,12 @@ class PlotWidget(BasePlotWidget):
         self.plot.reset()
         self.plot.update()
 
+    def resetBackground(self):
+        self.plot._curves[1].x = np.array([0])
+        self.plot._curves[1].y = np.array([0])
+        self.plot.reset()
+        self.plot.update()
+
 
 class ComparisonPlot(PlotWidget):
     def __init__(self, parent):
@@ -87,7 +93,7 @@ class ComparisonWindow(QMainWindow):
 
     @pyqtSlot()
     def on_resetBackgroundButton_clicked(self):
-        pass
+        self._plot.resetBackground()
 
     def closeEvent(self, QCloseEvent):
         if self.parent() is not None:
