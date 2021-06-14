@@ -523,12 +523,13 @@ class FinishPanel(Panel):
         self._enable_finishing()
 
     def _enable_finishing(self):
-        if not self.client.viewonly and \
-                self.client.eval('session.experiment.proptype', 'user') \
-                == 'user':
+        if not self.client.viewonly and self._is_user_experiment():
             self.finishButton.setEnabled(True)
         else:
             self.finishButton.setEnabled(False)
+
+    def _is_user_experiment(self):
+        return self.client.eval('session.experiment.proptype', 'user') == 'user'
 
     def on_client_connected(self):
         self._enable_finishing()
