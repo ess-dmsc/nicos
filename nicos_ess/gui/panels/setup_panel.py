@@ -549,7 +549,6 @@ class FinishPanel(Panel):
             self.showError('Could not finish experiment, a script '
                            'is still running.')
         else:
-            self._enable_finishing()
             self.show_finish_message()
 
     def show_finish_message(self):
