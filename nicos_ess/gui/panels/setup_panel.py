@@ -41,6 +41,8 @@ from nicos.guisupport.qt import QAbstractTableModel, QDialogButtonBox, \
     QMessageBox, Qt, pyqtSignal, pyqtSlot
 from nicos.utils import decodeAny, findResource
 
+DEVICES = ('ProposalInformation',)
+
 
 class SamplesModel(QAbstractTableModel):
     data_updated = pyqtSignal()
@@ -128,6 +130,15 @@ class ProposalSettings:
             return False
         return True
 
+    def get_proposal_summary(self):
+        return {
+            'proposal_id': self.proposal_id,
+            'experiment_title': self.title,
+            'users': self.users,
+            'local_contacts': self.local_contacts,
+            'samples': self.samples if self.samples else '',
+        }
+
 
 class ExpPanel(Panel):
     """Provides a panel with several input fields for the experiment settings.
@@ -199,7 +210,18 @@ class ExpPanel(Panel):
                                  notif_emails, values[4] == 'abort',
                                  self._extract_samples(samples_dict))
             self.new_proposal_settings = deepcopy(self.old_proposal_settings)
+            self._set_proposal_info_to_device()
             self._update_panel()
+
+    def _set_proposal_info_to_device(self):
+        proposal_summary = self.new_proposal_settings.get_proposal_summary()
+        commands = []
+        for param in proposal_summary:
+            commands.append(f'session.getDevice("{DEVICES[0]}")'
+                            f'._set_parameter("{param}", '
+                            f'"{proposal_summary[param]}")')
+            for cmd in commands:
+                self.client.eval(cmd)
 
     def _update_panel(self):
         self.proposalNum.setText(self.old_proposal_settings.proposal_id)
