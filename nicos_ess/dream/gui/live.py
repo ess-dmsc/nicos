@@ -70,6 +70,10 @@ class LiveDataPanel(DefaultLiveDataPanel):
             return labels, data[0]
         return
 
+    def on_fileList_currentItemChanged(self):
+        DefaultLiveDataPanel.on_fileList_currentItemChanged(self)
+        self.on_live_data_update()
+
     @pyqtSlot()
     def on_actionSaveData_triggered(self):
         self.export_data_to_file()
