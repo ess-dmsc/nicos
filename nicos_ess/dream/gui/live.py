@@ -1,5 +1,6 @@
-from datetime import datetime
 import os.path as osp
+from datetime import datetime
+from os import path
 from uuid import uuid4
 from weakref import WeakKeyDictionary
 
@@ -8,9 +9,13 @@ import numpy as np
 from nicos.clients.flowui.panels import get_icon
 from nicos.clients.flowui.panels.live import \
     LiveDataPanel as DefaultLiveDataPanel
+from nicos.clients.gui.panels.live import FILENAME, FILEUID
 from nicos.guisupport.qt import QFileDialog, pyqtSignal, pyqtSlot
+from nicos.utils import BoundedOrderedDict
 
 from nicos_ess.dream.gui.comparison_window import ComparisonWindow
+
+SNAP = 'snap'
 
 
 class LiveDataPanel(DefaultLiveDataPanel):
@@ -26,6 +31,7 @@ class LiveDataPanel(DefaultLiveDataPanel):
         self._registered_windows = WeakKeyDictionary()
         self._compare_window = None
 
+        self._snap_cache = BoundedOrderedDict(maxlen=10)
         client.livedata.connect(self.on_live_data_update)
 
     def createPanelToolbar(self):
@@ -129,8 +135,31 @@ class LiveDataPanel(DefaultLiveDataPanel):
         if not data:
             return
         uid = uuid4()
-        self._datacache[uid] = {}
-        self._datacache[uid]['dataarrays'] = data
-        self._datacache[uid]['labels'] = labels
+        self._snap_cache[uid] = {}
+        self._snap_cache[uid]['dataarrays'] = data
+        self._snap_cache[uid]['labels'] = labels
         self.add_to_flist(
-            f"snapshot_{datetime.now()}", "snapshots", "SNAP", uid)
+            f'snapshot_{datetime.now()}', '', SNAP, uid)
+
+    def getDataFromItem(self, item):
+        if item is None:
+            return
+
+        uid = item.data(FILEUID)
+        if uid and hasattr(self, '_snap_cache') and uid in self._snap_cache:
+            return self._snap_cache[uid]
+        else:
+            return DefaultLiveDataPanel.getDataFromItem(self, item)
+
+    def remove_obsolete_cached_files(self):
+        """Override"""
+        for index in reversed(range(self.fileList.count())):
+            item = self.fileList.item(index)
+            uid = item.data(FILEUID)
+            # is the uid still cached
+            if uid and uid not in self._datacache and uid not in self._snap_cache:
+                # does the file still exist on the filesystem
+                if path.isfile(item.data(FILENAME)):
+                    item.setData(FILEUID, None)
+                else:
+                    self.fileList.takeItem(index)
