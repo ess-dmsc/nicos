@@ -130,3 +130,8 @@ class EssExperiment(Experiment):
                 }
             )
         return users
+
+    def new(self, *args, **kwargs):  # pylint: disable=signature-differs
+        Experiment.new(self, *args, **kwargs)
+        if self.proptype == 'service':
+            self.sample.clear()
