@@ -32,16 +32,10 @@ devices = dict(
     ),
 
     InstrumentSettings=device('nicos_ess.loki.devices.'
-                              'experiment_configuration.InstrumentSettings',
-                              description='aperture and offset settings',
-                              lowlevel=True,
-                              ),
-    ProposalInformation=device('nicos_ess.devices.experiment.'
-                               'ProposalInformation',
-                               description='The proposal information',
-                               lowlevel=True
-                               ),
-
+                    'experiment_configuration.InstrumentSettings',
+                    description='aperture and offset settings',
+                    lowlevel=True,
+    ),
     filesink=device('nicos.devices.datasinks.AsciiScanfileSink', ),
 
     conssink=device('nicos.devices.datasinks.ConsoleScanSink', ),

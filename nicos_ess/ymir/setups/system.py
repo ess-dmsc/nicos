@@ -64,9 +64,4 @@ devices = dict(
         nexus_config_path='nicos_ess/ymir/commands/nexus_config.json',
         lowlevel=True,
     ),
-    ProposalInformation=device('nicos_ess.devices.experiment.'
-                               'ProposalInformation',
-                               description='The proposal information',
-                               lowlevel=True
-                               ),
 )
