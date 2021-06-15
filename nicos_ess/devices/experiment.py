@@ -70,7 +70,7 @@ class EssExperiment(Experiment):
             'proposal_id': self.proposal,
             'experiment_title': self.title,
             'users': self.users,
-            'local_contacts': self.localcontacts,
+            'local_contact': self.localcontact,
             'samples': self.sample,
         }
 
