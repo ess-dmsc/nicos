@@ -47,10 +47,10 @@ class NexusTemplate:
         """
         proposal_info = session.getDevice(proposal_info_device). \
             get_proposal_info_dict()
+        props_info_nexus = {'type': 'group',
+                            'name': 'proposal_information',
+                            CHILDREN: []}
         for field in proposal_info:
-            props_info_nexus = {'type': 'group',
-                                'name': 'proposal_information',
-                                CHILDREN: []}
             props_info_nexus[CHILDREN].append(
                 {
                     'module': 'dataset',
@@ -60,7 +60,7 @@ class NexusTemplate:
                         'values': proposal_info[field]}
                 }
             )
-            self._nxs_template[CHILDREN][0][CHILDREN].append(props_info_nexus)
+        self._nxs_template[CHILDREN][0][CHILDREN].append(props_info_nexus)
 
     def __str__(self):
         return json.dumps(self._nxs_template)
