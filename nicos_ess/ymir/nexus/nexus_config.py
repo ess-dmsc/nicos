@@ -26,13 +26,13 @@ import json
 from nicos import session
 
 CHILDREN = 'children'
-proposal_info_device = 'ProposalInformation'
+experiment_device = 'Exp'
 
 
 class NexusTemplate:
     """
     Class that can be used to generate a nexus template from a json
-    configuration file and additional stuff from
+    configuration file and additional information from an experiment device.
     """
 
     def __init__(self, config_path):
@@ -45,8 +45,8 @@ class NexusTemplate:
         Appends proposal information to the nexus template extracted from the
         json configuration file.
         """
-        proposal_info = session.getDevice(proposal_info_device). \
-            get_proposal_info_dict()
+        proposal_info = session.getDevice(experiment_device). \
+            get_proposal_info_as_dict()
         props_info_nexus = {'type': 'group',
                             'name': 'proposal_information',
                             CHILDREN: []}

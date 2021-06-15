@@ -29,44 +29,8 @@ import os
 from yuos_query.exceptions import BaseYuosException
 from yuos_query.yuos_client import YuosClient
 
-from nicos.core import Device, Override, Param
+from nicos.core import Override, Param
 from nicos.devices.experiment import Experiment
-
-
-class ProposalInformation(Device):
-    parameters = {
-        'proposal_id': Param('Proposal number',
-                             type=str,
-                             settable=False,
-                             ),
-        'experiment_title': Param('Experiment title',
-                                  type=str,
-                                  settable=False,
-                                  ),
-        'users': Param('Users',
-                       type=str,
-                       settable=False,
-                       ),
-        'local_contacts': Param('Local contacts',
-                                type=str,
-                                settable=False,
-                                ),
-        'samples': Param('Samples',
-                         type=list,
-                         settable=False)
-    }
-
-    def get_proposal_info_dict(self):
-        return {
-            'proposal_id': self.proposal_id,
-            'experiment_title': self.experiment_title,
-            'users': self.users,
-            'local_contacts': self.local_contacts,
-            'samples': self.samples,
-        }
-
-    def _set_parameter(self, param, value):
-        self._setROParam(f'{param}', value)
 
 
 class EssExperiment(Experiment):
@@ -100,6 +64,15 @@ class EssExperiment(Experiment):
                     self.server_url, token, self.instrument, self.cache_filepath)
             except BaseYuosException as error:
                 self.log.warn(f'QueryDB not available: {error}')
+
+    def get_proposal_info_as_dict(self):
+        return {
+            'proposal_id': self.proposal,
+            'experiment_title': self.title,
+            'users': self.users,
+            'local_contacts': self.localcontacts,
+            'samples': self.sample,
+        }
 
     def _canQueryProposals(self):
         if self._client:

@@ -42,7 +42,6 @@ class WriterBase:
         self.topic = self.device.command_topic
         self.command_channel = WorkerCommandChannel(f'{self.host}/{self.topic}')
         self._nexus_template = NexusTemplate(self.config)
-        self._nexus_template.add_proposal_information()
 
 
 class StartFileWriter(WriterBase):
@@ -58,6 +57,7 @@ class StartFileWriter(WriterBase):
 
     def start_job(self):
         # Initialise the write job.
+        self._nexus_template.add_proposal_information()
         write_job = WriteJob(
             str(self._nexus_template),
             "{0:%Y}-{0:%m}-{0:%d}_{0:%H}{0:%M}.nxs".format(datetime.now()),
