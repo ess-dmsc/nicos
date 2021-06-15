@@ -37,24 +37,33 @@ class ProposalInformation(Device):
     parameters = {
         'proposal_id': Param('Proposal number',
                              type=str,
-                             settable=True,
+                             settable=False,
                              ),
         'experiment_title': Param('Experiment title',
                                   type=str,
-                                  settable=True,
+                                  settable=False,
                                   ),
         'users': Param('Users',
                        type=str,
-                       settable=True,
+                       settable=False,
                        ),
         'local_contacts': Param('Local contacts',
                                 type=str,
-                                settable=True,
+                                settable=False,
                                 ),
         'samples': Param('Samples',
                          type=list,
-                         settable=True)
+                         settable=False)
     }
+
+    def get_proposal_info_dict(self):
+        return {
+            'proposal_id': self.proposal_id,
+            'experiment_title': self.experiment_title,
+            'users': self.users,
+            'local_contacts': self.local_contacts,
+            'samples': self.samples,
+        }
 
     def _set_parameter(self, param, value):
         self._setROParam(f'{param}', value)

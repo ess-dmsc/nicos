@@ -21,10 +21,11 @@
 #   Kenan Muric <kenan.muric@ess.eu>
 #
 # *****************************************************************************
-from nicos_ess.nexus import DeviceDataset
+import json
+
+from nicos import session
 
 CHILDREN = 'children'
-ENTRY = 'entry'
 proposal_info_device = 'ProposalInformation'
 
 
@@ -37,26 +38,20 @@ class NexusTemplate:
     def __init__(self, config_path):
         self._config_path = config_path
         with open(self._config_path, 'r') as file:
-            self._nxs_template = file.read()
+            self._nxs_template = json.load(file)
 
     def add_proposal_information(self):
         """
         Appends proposal information to the nexus template extracted from the
         json configuration file.
         """
-        self._nxs_template[CHILDREN][ENTRY][CHILDREN]['proposal_id'] = \
-            DeviceDataset(proposal_info_device, 'proposal_id')
-        self._nxs_template[CHILDREN][ENTRY][CHILDREN]['experiment_title'] = \
-            DeviceDataset(proposal_info_device, 'experiment_title')
-        self._nxs_template[CHILDREN][ENTRY][CHILDREN]['users'] = \
-            DeviceDataset(proposal_info_device, 'users')
-        self._nxs_template[CHILDREN][ENTRY][CHILDREN]['local_contacts'] = \
-            DeviceDataset(proposal_info_device, 'local_contacts')
-        self._nxs_template[CHILDREN][ENTRY][CHILDREN]['samples'] = \
-            DeviceDataset(proposal_info_device, 'samples')
+        proposal_info = session.getDevice(proposal_info_device).\
+            get_proposal_info_dict()
+        for field in proposal_info:
+            self._nxs_template[CHILDREN][0][CHILDREN].append(
+                {"name": field,
+                 "dtype": "string",
+                 "values": proposal_info[field]})
 
-
-
-
-
-
+    def __str__(self):
+        return json.dumps(self._nxs_template)
