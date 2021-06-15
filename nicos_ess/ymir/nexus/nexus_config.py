@@ -45,13 +45,18 @@ class NexusTemplate:
         Appends proposal information to the nexus template extracted from the
         json configuration file.
         """
-        proposal_info = session.getDevice(proposal_info_device).\
+        proposal_info = session.getDevice(proposal_info_device). \
             get_proposal_info_dict()
         for field in proposal_info:
             self._nxs_template[CHILDREN][0][CHILDREN].append(
-                {"name": field,
-                 "dtype": "string",
-                 "values": proposal_info[field]})
+                {
+                 "module": "dataset",
+                 "config": {
+                     "name": field,
+                     "dtype": "string",
+                     "values": proposal_info[field]}
+                 }
+            )
 
     def __str__(self):
         return json.dumps(self._nxs_template)
