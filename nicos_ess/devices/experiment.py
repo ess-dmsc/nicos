@@ -29,7 +29,7 @@ import os
 from yuos_query.exceptions import BaseYuosException
 from yuos_query.yuos_client import YuosClient
 
-from nicos.core import Override, Param, Device
+from nicos.core import Device, Override, Param
 from nicos.devices.experiment import Experiment
 
 
@@ -72,14 +72,14 @@ class ProposalInformation(Device):
 class EssExperiment(Experiment):
     parameters = {
         'server_url': Param('URL of the proposal system',
-                            type=str, category='experiment', mandatory=True,
-                            ),
+            type=str, category='experiment', mandatory=True,
+        ),
         'instrument': Param('The instrument name in the proposal system',
-                            type=str, category='experiment', mandatory=True,
-                            ),
+            type=str, category='experiment', mandatory=True,
+        ),
         'cache_filepath': Param('Path to the proposal cache',
-                                type=str, category='experiment', mandatory=True,
-                                ),
+            type=str, category='experiment', mandatory=True,
+        ),
     }
 
     parameter_overrides = {
@@ -97,8 +97,7 @@ class EssExperiment(Experiment):
         if token:
             try:
                 self._client = YuosClient(
-                    self.server_url, token, self.instrument,
-                    self.cache_filepath)
+                    self.server_url, token, self.instrument, self.cache_filepath)
             except BaseYuosException as error:
                 self.log.warn(f'QueryDB not available: {error}')
 
@@ -142,8 +141,7 @@ class EssExperiment(Experiment):
                 'formula': sample.formula,
                 'number of': sample.number,
                 'mass/volume':
-                f'{sample.mass_or_volume[0]} '
-                f'{sample.mass_or_volume[1]}'.strip(),
+                    f'{sample.mass_or_volume[0]} {sample.mass_or_volume[1]}'.strip(),
                 'density': f'{sample.density[0]} {sample.density[1]}'.strip(),
             })
         return samples
