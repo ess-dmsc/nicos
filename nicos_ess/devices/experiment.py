@@ -71,7 +71,7 @@ class EssExperiment(Experiment):
             'experiment_title': self.title,
             'users': self.users,
             'local_contact': self.localcontact,
-            'samples': self.sample,
+            'samples': self.sample.samples,
         }
 
     def _canQueryProposals(self):
