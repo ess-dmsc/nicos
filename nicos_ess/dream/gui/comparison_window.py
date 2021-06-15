@@ -1,13 +1,14 @@
+from nicos.guisupport.livewidget import IntegralLiveWidget, LiveWidget
 import numpy as np
 
 from nicos.guisupport.plots import MaskedPlotCurve
 from nicos.guisupport.qt import QHBoxLayout, QMainWindow, QPushButton, \
-    QVBoxLayout, QWidget, pyqtSlot
+    QVBoxLayout, QWidget, pyqtSlot, QLabel, Qt, QSizePolicy
 
-from nicos_mlz.toftof.gui.resolutionpanel import COLOR_GREEN, PlotWidget as BasePlotWidget
+from nicos_mlz.toftof.gui.resolutionpanel import COLOR_GREEN, PlotWidget
 
 
-class PlotWidget(BasePlotWidget):
+class PlotWidget1D(PlotWidget):
 
     def setData(self, x1, y1, x2=None, y2=None, difference=False):
         for curve, (x, y) in zip(self.plot._curves[:-1], ((x1, y1), (x2, y2))):
@@ -27,15 +28,32 @@ class PlotWidget(BasePlotWidget):
             curve.y = np.array([0])
 
 
-class ComparisonPlot(PlotWidget):
-    def __init__(self, parent):
-        PlotWidget.__init__(self, "Comparison Plot", "x", "y", 2, parent=parent)
+class ComparisonPlot1D(PlotWidget1D):
+    def __init__(self, title, x_label, y_label, n_curves, parent=None):
+        PlotWidget.__init__(self, title, x_label, y_label, n_curves, parent=parent)
         curve = MaskedPlotCurve(
             [0], [1], linewidth=2, legend='Difference', linecolor=COLOR_GREEN)
         self.plot.axes.addCurves(curve)
         self.plot._curves.append(curve)
         self.plot._curves[0].legend = "Live"
         self.plot._curves[1].legend = "Background"
+
+
+class ComparisonPlot2D(QWidget):
+    def __init__(self, title, parent=None):
+        QWidget.__init__(self, parent)
+        parent.setLayout(QVBoxLayout())
+        self.plot = IntegralLiveWidget(self)
+        titleLabel = QLabel(title)
+        titleLabel.setAlignment(Qt.AlignCenter)
+        titleLabel.setStyleSheet('QLabel {font-weight: 600}')
+        parent.layout().insertWidget(0, titleLabel)
+        self.plot.setSizePolicy(QSizePolicy.MinimumExpanding,
+                                QSizePolicy.MinimumExpanding)
+        parent.layout().insertWidget(1, self.plot)
+
+    def setData(self, array):
+        self.plot.setData([array])
 
 
 class ComparisonWindow(QMainWindow):
@@ -50,9 +68,13 @@ class ComparisonWindow(QMainWindow):
 
         self.background_data = None
         self._central_widget = QWidget()
-        self._test = QWidget()
 
-        self._plot = ComparisonPlot(parent=self._test)
+        self._test1 = QWidget()
+        self._plot_1d = ComparisonPlot1D(
+            "1D comparison plot", "x", "y", 2, parent=self._test1)
+        self._test2 = QWidget()
+        self._plot_2d = ComparisonPlot2D(
+            "2D comparison plot ", parent=self._test2)
 
         self.updateBackgroundButton = QPushButton("Update Background")
         self.updateBackgroundButton.clicked.connect(
@@ -66,17 +88,19 @@ class ComparisonWindow(QMainWindow):
 
         self.setupUi()
         self.setCentralWidget(self._central_widget)
-        self.setFixedSize(660, 500)
         self.show()
 
     def setupUi(self):
-        layout = QVBoxLayout()
+        plot_layout = QHBoxLayout()
+        plot_layout.addWidget(self._test1)
+        plot_layout.addWidget(self._test2)
 
-        layout.addWidget(self._test)
         buttons_layout = QHBoxLayout()
         buttons_layout.addWidget(self.updateBackgroundButton)
         buttons_layout.addWidget(self.resetBackgroundButton)
 
+        layout = QVBoxLayout()
+        layout.addLayout(plot_layout)
         layout.addLayout(buttons_layout)
         self._central_widget.setLayout(layout)
 
@@ -93,7 +117,8 @@ class ComparisonWindow(QMainWindow):
         if self.background_data:
             x2, y2 = self._extract_data(self.background_data)
 
-        self._plot.setData(x1, y1, x2, y2, difference=np.array_equal(x1, x2))
+        self._plot_1d.setData(x1, y1, x2, y2, difference=np.array_equal(x1, x2))
+        self._plot_2d.setData(np.random.rand(512, 512))
 
     def _extract_data(self, blob):
         labels, data = blob
