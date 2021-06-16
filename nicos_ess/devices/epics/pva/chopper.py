@@ -56,7 +56,6 @@ class ChopperAlarms(EpicsStringReadable):
     def doStatus(self, maxage=0):
         alarm_msg = ''
         for alarm_pv in self._chopper_alarm_pvs:
-            session.log.error(alarm_pv)
             alarm_value = self._read_process_variable(alarm_pv)
             if alarm_value:
                 alarm_severity = self._read_process_variable(
