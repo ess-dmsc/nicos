@@ -63,7 +63,7 @@
                     {
                       "module": "senv",
                       "config": {
-                        "source": "PLC:stream:value",
+                        "source": "plc-ts:PLC:value",
                         "topic": "Ymir_se"
                       }
                     }
