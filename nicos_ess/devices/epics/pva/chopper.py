@@ -44,8 +44,8 @@ class ChopperAlarms(EpicsStringReadable):
     _alarm_severity_field = 'SEVR'
     _alarm_status_field = 'STAT'
 
-    def doPreinit(self, mode):
-        super().doPreinit(mode)
+    def doInit(self, mode):
+        EpicsStringReadable.doInit(self, mode)
         self._chopper_alarm_pvs = [':'.join([getattr(self, 'pv_stem'), name])
                                    for name in self._chopper_alarm_names]
         self._alarm_state = dict(zip(self._chopper_alarm_pvs,
@@ -54,29 +54,44 @@ class ChopperAlarms(EpicsStringReadable):
                                      * len(self._chopper_alarm_pvs)))
 
     def doStatus(self, maxage=0):
-        alarm_msg = ''
+        """
+        Goes through all alarms in the chopper and returns the alarm encountered
+        with the highest severity. All alarms are printed in the session log.
+        """
+        displayed_alarm_msg = ''
+        displayed_alarm_severity = status.OK
         for alarm_pv in self._chopper_alarm_pvs:
             alarm_value = self._read_process_variable(alarm_pv)
+            alarm_status = self._read_process_variable(
+                '.'.join([alarm_pv, self._alarm_status_field]))
             if alarm_value:
                 alarm_severity = self._read_process_variable(
                     '.'.join([alarm_pv, self._alarm_severity_field]))
-                alarm_status = self._read_process_variable(
-                    '.'.join([alarm_pv, self._alarm_status_field]))
                 alarm_msg = self._create_alarm_message(alarm_value,
-                                                       alarm_severity,
-                                                       alarm_status)
+                                                       alarm_pv)
                 self._alarm_state[alarm_pv]['severity'] = \
                     self._convert_to_nicos_status(alarm_severity)
                 self._alarm_state[alarm_pv]['status'] = alarm_status
                 self._write_alarm_to_log(alarm_msg,
-                                         self._alarm_state[alarm_pv]['severity'])
+                                         self._alarm_state[alarm_pv]['severity'],
+                                         alarm_status)
+                # If severity of current alarm is higher, make that the return
+                # values of the function.
+                if self._alarm_state[alarm_pv]['severity'] > \
+                        displayed_alarm_severity:
+                    displayed_alarm_severity = \
+                        self._alarm_state[alarm_pv]['severity']
+                    displayed_alarm_msg = alarm_msg
+            else:
+                self._alarm_state[alarm_pv]['severity'] = status.OK
+                self._alarm_state[alarm_pv]['status'] = alarm_status
 
-        return self._alarm_state[alarm_pv]['severity'], alarm_msg
+        return displayed_alarm_severity, displayed_alarm_msg
 
-    def _create_alarm_message(self, alarm_value, alarm_severity, alarm_status):
-        return f'Value of alarm: {alarm_value}, ' \
-               f'alarm severity: {alarm_severity}, ' \
-               f'alarm status: {alarm_status}'
+    @staticmethod
+    def _create_alarm_message(alarm_value, alarm_pv):
+        return f'Alarm PV: "{alarm_pv}", ' \
+               f'Value of alarm: {alarm_value} '
 
     @staticmethod
     def _convert_to_nicos_status(alarm_severity):
@@ -92,15 +107,16 @@ class ChopperAlarms(EpicsStringReadable):
         return status.OK
 
     @staticmethod
-    def _write_alarm_to_log(msg, alarm_severity):
-        if alarm_severity is status.ERROR:
-            session.log.error(msg)
-        elif alarm_severity is status.WARN:
-            session.log.warning(msg)
+    def _write_alarm_to_log(alarm_msg, alarm_severity, alarm_status):
+        alarm_msg += f', Alarm severity = {alarm_severity}, '
+        alarm_msg += f'Alarm status = {alarm_status}'
+        if alarm_severity == status.ERROR:
+            session.log.error(alarm_msg)
+        elif alarm_severity == status.WARN:
+            session.log.warning(alarm_msg)
         else:
-            session.log.info(msg)
+            session.log.info(alarm_msg)
 
     def _read_process_variable(self, pv, as_string=False):
-        session.log.error(pv)
         return self._epics_wrapper.get_pv_value(pv, timeout=self.epicstimeout,
                                                 as_string=as_string)
