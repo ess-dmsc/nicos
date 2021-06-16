@@ -38,10 +38,10 @@ class WriterBase:
     def __init__(self):
         self.device = session.getDevice('FileWriterParameters')
         self.host = self.device.brokers[0]
-        self.config = path.join(getNicosDir(), self.device.nexus_config_path)
         self.topic = self.device.command_topic
         self.command_channel = WorkerCommandChannel(f'{self.host}/{self.topic}')
-        self._nexus_template = NexusTemplate(self.config)
+        config = path.join(getNicosDir(), self.device.nexus_config_path)
+        self._nexus_template = NexusTemplate(config)
 
 
 class StartFileWriter(WriterBase):
@@ -57,6 +57,7 @@ class StartFileWriter(WriterBase):
 
     def start_job(self):
         # Initialise the write job.
+        self._nexus_template.load_config_file()
         self._nexus_template.add_proposal_information()
         write_job = WriteJob(
             str(self._nexus_template),

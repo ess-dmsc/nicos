@@ -37,21 +37,18 @@ class NexusTemplate:
 
     def __init__(self, config_path):
         self._config_path = config_path
-        with open(self._config_path, 'r') as file:
-            self._nxs_template = json.load(file)
-            props_info_nexus = {'type': 'group',
-                                'name': 'proposal_information',
-                                CHILDREN: []}
-            self._nxs_template[CHILDREN][0][CHILDREN].append(props_info_nexus)
+        self._nxs_template = {}
 
     def add_proposal_information(self):
         """
         Appends proposal information to the nexus template extracted from the
         json configuration file.
-        Function ensures that it replaces old proposal information with new one.
+        The proposal information is added as a group in the entry group and
+        contains the proposal information as static datasets.
+        The entry group is top level and should be present in all valid
+        NeXus files.
         """
-        proposal_info = session.getDevice(experiment_device). \
-            get_proposal_info_as_dict()
+        proposal_info = session.experiment.get_proposal_info_as_dict()
         self._nxs_template[CHILDREN][0][CHILDREN][-1][CHILDREN] = []
         for field in proposal_info:
             self._nxs_template[CHILDREN][0][CHILDREN][-1][CHILDREN].append(
@@ -63,6 +60,14 @@ class NexusTemplate:
                         'values': proposal_info[field]}
                 }
             )
+
+    def load_config_file(self):
+        with open(self._config_path, 'r') as file:
+            self._nxs_template = json.load(file)
+            props_info_nexus = {'type': 'group',
+                                'name': 'proposal_information',
+                                CHILDREN: []}
+            self._nxs_template[CHILDREN][0][CHILDREN].append(props_info_nexus)
 
     def __str__(self):
         return json.dumps(self._nxs_template)
