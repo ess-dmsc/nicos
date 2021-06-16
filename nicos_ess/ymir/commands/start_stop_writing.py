@@ -30,7 +30,7 @@ from file_writer_control.JobHandler import JobHandler
 from datetime import datetime
 
 from nicos_ess.utilities.managers import wait_until_true, wait_after
-from nicos_ess.ymir.nexus.nexus_config import NexusTemplate
+from nicos_ess.nexus.nexus_config import NexusTemplate
 from nicostools.setupfiletool.utilities.utilities import getNicosDir
 
 
