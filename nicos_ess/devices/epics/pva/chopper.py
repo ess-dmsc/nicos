@@ -33,40 +33,54 @@ class ChopperAlarms(EpicsStringReadable):
     parameters = {
         'readpv': Param('PV for reading device value',
                         type=pvname, mandatory=True, userparam=False),
-        'pv_root': Param('PV root for device', type=str, mandatory=True,
+        'pv_stem': Param('PV stem for device', type=str, mandatory=True,
                          userparam=False),
     }
-    _chopper_alarm_pvs = {'Comm_alrm', 'CpuTmp_Stat', 'HW_Alrm',
-                          'SW_Alrm', 'nTmp_Alrm', 'ILck_Alrm',
-                          'Pos_Alrm', 'Ref_Alrm', 'V_Alrm', 'SIM_Alrm'}
+    _chopper_alarm_names = {'Comm_alrm', 'CpuTmp_Stat', 'HW_Alrm',
+                            'SW_Alrm', 'nTmp_Alrm', 'ILck_Alrm',
+                            'Pos_Alrm', 'Ref_Alrm', 'V_Alrm', 'SIM_Alrm'}
+    _chopper_alarm_pvs = []
+    _alarm_state = {}
     _alarm_severity_field = 'SEVR'
     _alarm_status_field = 'STAT'
 
+    def doPreinit(self, mode):
+        super().doPreinit(mode)
+        self._chopper_alarm_pvs = [':'.join([getattr(self, 'pv_stem'), name])
+                                   for name in self._chopper_alarm_names]
+        self._alarm_state = dict(zip(self._chopper_alarm_pvs,
+                                     [{'severity': status.OK,
+                                       'status': 'NO_ALARM'}]
+                                     * len(self._chopper_alarm_pvs)))
+
     def doStatus(self, maxage=0):
         alarm_msg = ''
-        nicos_status = status.OK
-        for alarm in self._chopper_alarm_pvs:
-            alarm_pv = ':'.join([self.parameters['pv_root'], alarm])
+        for alarm_pv in self._chopper_alarm_pvs:
+            session.log.error(alarm_pv)
             alarm_value = self._read_process_variable(alarm_pv)
             if alarm_value:
                 alarm_severity = self._read_process_variable(
-                    '.'.join(alarm_pv, self._alarm_severity_field))
+                    '.'.join([alarm_pv, self._alarm_severity_field]))
                 alarm_status = self._read_process_variable(
-                    '.'.join(alarm_pv, self._alarm_status_field))
+                    '.'.join([alarm_pv, self._alarm_status_field]))
                 alarm_msg = self._create_alarm_message(alarm_value,
                                                        alarm_severity,
                                                        alarm_status)
-                nicos_status = self._convert_to_nicos_status(alarm_severity)
-                self._write_alarm_to_log(alarm_msg, nicos_status)
+                self._alarm_state[alarm_pv]['severity'] = \
+                    self._convert_to_nicos_status(alarm_severity)
+                self._alarm_state[alarm_pv]['status'] = alarm_status
+                self._write_alarm_to_log(alarm_msg,
+                                         self._alarm_state[alarm_pv]['severity'])
 
-        return nicos_status, alarm_msg
+        return self._alarm_state[alarm_pv]['severity'], alarm_msg
 
     def _create_alarm_message(self, alarm_value, alarm_severity, alarm_status):
         return f'Value of alarm: {alarm_value}, ' \
                f'alarm severity: {alarm_severity}, ' \
                f'alarm status: {alarm_status}'
 
-    def _convert_to_nicos_status(self, alarm_severity):
+    @staticmethod
+    def _convert_to_nicos_status(alarm_severity):
         """
         Converts EPICS errors to corresponding NICOS status.
         """
@@ -88,6 +102,6 @@ class ChopperAlarms(EpicsStringReadable):
             session.log.info(msg)
 
     def _read_process_variable(self, pv, as_string=False):
+        session.log.error(pv)
         return self._epics_wrapper.get_pv_value(pv, timeout=self.epicstimeout,
                                                 as_string=as_string)
-
