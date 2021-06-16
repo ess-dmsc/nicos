@@ -133,15 +133,13 @@ class ComparisonWindow(QMainWindow):
         layout.addLayout(buttons_layout)
         self._central_widget.setLayout(layout)
 
-    def setData(self, live_data_blob, background_data_blob=None):
-        if not live_data_blob and not background_data_blob:
+    def setData(self, data_blob=None):
+        if not data_blob and not self.background_data:
             return
-        if background_data_blob:
-            self.background_data = background_data_blob
 
         x1, y1, x2, y2 = None, None, None, None
-        if live_data_blob:
-            x1, y1 = self._extract_data(live_data_blob)
+        if data_blob:
+            x1, y1 = self._extract_data(data_blob)
 
         if self.background_data:
             x2, y2 = self._extract_data(self.background_data)
@@ -156,6 +154,7 @@ class ComparisonWindow(QMainWindow):
     @pyqtSlot()
     def on_updateBackgroundButton_clicked(self):
         self.parent().update_background_data.emit()
+        self.setData()
 
     @pyqtSlot()
     def on_resetBackgroundButton_clicked(self):

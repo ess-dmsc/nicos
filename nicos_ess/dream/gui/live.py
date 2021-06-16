@@ -91,8 +91,7 @@ class LiveDataPanel(DefaultLiveDataPanel):
     def _set_background_data(self):
         # Deal with 1D data only for the timebeing
         data = self._get_1d_data()
-        if data:
-            self._compare_window.setData(None, background_data_blob=data)
+        self._compare_window.background_data = data
 
     def on_live_data_update(self):
         # Deal with 1D data only for the timebeing
