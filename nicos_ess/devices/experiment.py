@@ -65,6 +65,15 @@ class EssExperiment(Experiment):
             except BaseYuosException as error:
                 self.log.warn(f'QueryDB not available: {error}')
 
+    def get_proposal_info_as_dict(self):
+        return {
+            'proposal_id': self.proposal,
+            'experiment_title': self.title,
+            'users': self.users,
+            'local_contact': self.localcontact,
+            'samples': self.sample.samples,
+        }
+
     def _canQueryProposals(self):
         if self._client:
             return True
