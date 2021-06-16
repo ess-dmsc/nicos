@@ -64,5 +64,4 @@ devices = dict(
         nexus_config_path='nicos_ess/ymir/commands/nexus_config.json',
         lowlevel=True,
     ),
-
 )

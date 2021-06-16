@@ -513,6 +513,7 @@ class FinishPanel(Panel):
 
     panelName = 'Finish experiment'
     ui = '%s/panels/ui_files/finish_exp.ui' % uipath
+
     def __init__(self, parent, client, options):
         Panel.__init__(self, parent, client, options)
         loadUi(self, self.ui)

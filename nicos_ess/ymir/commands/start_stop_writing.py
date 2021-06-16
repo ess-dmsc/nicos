@@ -21,6 +21,7 @@
 #   AÜC Hardal <umit.hardal@ess.eu>
 #
 # *****************************************************************************
+from os import path
 
 from nicos import session
 from file_writer_control.WorkerCommandChannel import WorkerCommandChannel
@@ -29,15 +30,18 @@ from file_writer_control.JobHandler import JobHandler
 from datetime import datetime
 
 from nicos_ess.utilities.managers import wait_until_true, wait_after
+from nicos_ess.nexus.nexus_config import NexusTemplate
+from nicostools.setupfiletool.utilities.utilities import getNicosDir
 
 
 class WriterBase:
     def __init__(self):
         self.device = session.getDevice('FileWriterParameters')
         self.host = self.device.brokers[0]
-        self.config = self.device.nexus_config_path
         self.topic = self.device.command_topic
         self.command_channel = WorkerCommandChannel(f'{self.host}/{self.topic}')
+        config = path.join(getNicosDir(), self.device.nexus_config_path)
+        self._nexus_template = NexusTemplate(config)
 
 
 class StartFileWriter(WriterBase):
@@ -52,12 +56,11 @@ class StartFileWriter(WriterBase):
         self.job_id = ""
 
     def start_job(self):
-        with open(self.config, "r") as f:
-            # Get the nexus structure from config.
-            nexus_structure = f.read()
         # Initialise the write job.
+        self._nexus_template.load_config_file()
+        self._nexus_template.add_proposal_information()
         write_job = WriteJob(
-            nexus_structure,
+            str(self._nexus_template),
             "{0:%Y}-{0:%m}-{0:%d}_{0:%H}{0:%M}.nxs".format(datetime.now()),
             self.host,
             datetime.now(),
