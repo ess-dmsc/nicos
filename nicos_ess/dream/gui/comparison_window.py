@@ -26,8 +26,18 @@ import numpy as np
 
 from nicos.guisupport.livewidget import IntegralLiveWidget
 from nicos.guisupport.plots import MaskedPlotCurve
-from nicos.guisupport.qt import QHBoxLayout, QLabel, QMainWindow, \
-    QPushButton, QSizePolicy, Qt, QVBoxLayout, QWidget, pyqtSlot
+from nicos.guisupport.qt import (
+    QCheckBox,
+    QHBoxLayout,
+    QLabel,
+    QMainWindow,
+    QPushButton,
+    QSizePolicy,
+    Qt,
+    QVBoxLayout,
+    QWidget,
+    pyqtSlot,
+)
 
 from nicos_mlz.toftof.gui.resolutionpanel import COLOR_GREEN, PlotWidget
 
@@ -92,7 +102,6 @@ class ComparisonWindow(QMainWindow):
 
     def __init__(self, parent=None):
         super().__init__(parent=parent)
-        self.setWindowTitle("Comparison")
 
         if parent is not None:
             parent.registerWindow(self)
@@ -100,6 +109,11 @@ class ComparisonWindow(QMainWindow):
         self.background_data_1d = None
         self.background_data_2d = None
 
+        self.setupUi()
+        self.init_connections()
+
+    def setupUi(self):
+        self.setWindowTitle("Comparison")
         self._central_widget = QWidget()
 
         self._test1 = QWidget()
@@ -110,23 +124,15 @@ class ComparisonWindow(QMainWindow):
         self._plot_2d = ComparisonPlot2D("2D comparison plot ", parent=self._test2)
 
         self.updateBackgroundButton = QPushButton("Update Background")
-        self.updateBackgroundButton.clicked.connect(
-            self.on_updateBackgroundButton_clicked
-        )
-
         self.resetBackgroundButton = QPushButton("Reset Background")
-        self.resetBackgroundButton.clicked.connect(
-            self.on_resetBackgroundButton_clicked
-        )
+        self._showDifference_cb = QCheckBox("Difference")
+        self._showDifference_cb.setChecked(True)
 
-        self.setupUi()
-        self.setCentralWidget(self._central_widget)
-        self.show()
-
-    def setupUi(self):
+        # SetLayout
         plot_layout = QHBoxLayout()
         plot_layout.addWidget(self._test1)
         plot_layout.addWidget(self._test2)
+        plot_layout.addWidget(self._showDifference_cb)
 
         buttons_layout = QHBoxLayout()
         buttons_layout.addWidget(self.updateBackgroundButton)
@@ -136,6 +142,20 @@ class ComparisonWindow(QMainWindow):
         layout.addLayout(plot_layout)
         layout.addLayout(buttons_layout)
         self._central_widget.setLayout(layout)
+
+        self.setCentralWidget(self._central_widget)
+        self.show()
+
+    def init_connections(self):
+        self.updateBackgroundButton.clicked.connect(
+            self.on_updateBackgroundButton_clicked
+        )
+        self.resetBackgroundButton.clicked.connect(
+            self.on_resetBackgroundButton_clicked
+        )
+
+    def _on_show_difference(self):
+        pass
 
     def _update_1d_plot(self, data_blob=None):
         if not data_blob and not self.background_data_1d:
@@ -164,15 +184,17 @@ class ComparisonWindow(QMainWindow):
             )
 
         if data_blob:
+            labels, data = data_blob
             if (
                 self.background_data_2d
-                and data_blob[1].shape == self.background_data_2d[1].shape
+                and data.shape == self.background_data_2d[1].shape
             ):
-                self._plot_2d.setData(
-                    data_blob[1] - self.background_data_2d[1], labels=data_blob[0]
+                data = (
+                    data - self.background_data_2d[1]
+                    if self._showDifference_cb.isChecked()
+                    else data + self.background_data_2d[1]
                 )
-            else:
-                self._plot_2d.setData(data_blob[1], labels=data_blob[0])
+            self._plot_2d.setData(data, labels=labels)
 
     def setData(self, blob):
         _, data = blob
