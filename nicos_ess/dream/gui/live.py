@@ -39,7 +39,7 @@ from nicos.utils import BoundedOrderedDict
 
 from nicos_ess.dream.gui.comparison_window import ComparisonWindow
 
-SNAP = 'snap'
+SNAP = "snap"
 
 
 class LiveDataPanel(DefaultLiveDataPanel):
@@ -73,7 +73,6 @@ class LiveDataPanel(DefaultLiveDataPanel):
         if self.checkWindowOpen(ComparisonWindow, self._registered_windows):
             return
         self._compare_window = ComparisonWindow(self)
-        self._set_background_data()
         return self._compare_window
 
     @pyqtSlot()
@@ -83,25 +82,23 @@ class LiveDataPanel(DefaultLiveDataPanel):
             return
         uid = uuid4()
         self._snap_cache[uid] = {}
-        self._snap_cache[uid]['dataarrays'] = data
-        self._snap_cache[uid]['labels'] = labels
-        self.add_to_flist(
-            f'snapshot_{datetime.now()}', '', SNAP, uid)
+        self._snap_cache[uid]["dataarrays"] = data
+        self._snap_cache[uid]["labels"] = labels
+        self.add_to_flist(f"snapshot_{datetime.now()}", "", SNAP, uid)
 
     def _set_background_data(self):
-        # Deal with 1D data only for the timebeing
-        data = self._get_1d_data()
-        self._compare_window.background_data = data
+        data = self._get_data()
+        if data:
+            self._compare_window.set_background_data(data)
 
     def on_live_data_update(self):
-        # Deal with 1D data only for the timebeing
-        data = self._get_1d_data()
+        data = self._get_data()
         if data and self._compare_window:
             self._compare_window.setData(data)
 
-    def _get_1d_data(self):
+    def _get_data(self):
         data, labels = self._extract_data()
-        if data and len(data[0].shape) == 1:
+        if data:
             return labels, data[0]
         return
 
@@ -152,7 +149,7 @@ class LiveDataPanel(DefaultLiveDataPanel):
             return
 
         uid = item.data(FILEUID)
-        if uid and hasattr(self, '_snap_cache') and uid in self._snap_cache:
+        if uid and hasattr(self, "_snap_cache") and uid in self._snap_cache:
             return self._snap_cache[uid]
         else:
             return DefaultLiveDataPanel.getDataFromItem(self, item)

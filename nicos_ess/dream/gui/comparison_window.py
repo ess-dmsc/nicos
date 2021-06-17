@@ -44,14 +44,17 @@ class PlotWidget1D(PlotWidget):
         else:
             self.plot._curves[-1].x = np.array([0])
             self.plot._curves[-1].y = np.array([0])
-
-        self.plot.reset()
-        self.plot.update()
+        self._plot_reset()
 
     def reset_background(self):
         for curve in self.plot._curves[1:]:
             curve.x = np.array([0])
             curve.y = np.array([0])
+        self._plot_reset()
+
+    def _plot_reset(self):
+        self.plot.reset()
+        self.plot.update()
 
 
 class ComparisonPlot1D(PlotWidget1D):
@@ -78,15 +81,14 @@ class ComparisonPlot2D(QWidget):
         self.plot.setSizePolicy(
             QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding
         )
-        self.setData(np.random.rand(512, 512))
         parent.layout().insertWidget(1, self.plot)
 
-    def setData(self, array):
-        self.plot.setData([array])
+    def setData(self, array, labels=None):
+        self.plot.setData([array], labels=labels)
 
 
 class ComparisonWindow(QMainWindow):
-    """SnapShotWindow class"""
+    """ComparisonWindow class"""
 
     def __init__(self, parent=None):
         super().__init__(parent=parent)
@@ -95,7 +97,9 @@ class ComparisonWindow(QMainWindow):
         if parent is not None:
             parent.registerWindow(self)
 
-        self.background_data = None
+        self.background_data_1d = None
+        self.background_data_2d = None
+
         self._central_widget = QWidget()
 
         self._test1 = QWidget()
@@ -133,33 +137,68 @@ class ComparisonWindow(QMainWindow):
         layout.addLayout(buttons_layout)
         self._central_widget.setLayout(layout)
 
-    def setData(self, data_blob=None):
-        if not data_blob and not self.background_data:
+    def _update_1d_plot(self, data_blob=None):
+        if not data_blob and not self.background_data_1d:
             return
+
+        def _extract_data(blob):
+            labels, data = blob
+            return labels["x"] if labels else np.arange(data.shape[0]), data
 
         x1, y1, x2, y2 = None, None, None, None
         if data_blob:
-            x1, y1 = self._extract_data(data_blob)
+            x1, y1 = _extract_data(data_blob)
 
-        if self.background_data:
-            x2, y2 = self._extract_data(self.background_data)
+        if self.background_data_1d:
+            x2, y2 = _extract_data(self.background_data_1d)
 
         self._plot_1d.setData(x1, y1, x2, y2, difference=np.array_equal(x1, x2))
-        self._plot_2d.setData(np.random.rand(512, 512))
 
-    def _extract_data(self, blob):
-        labels, data = blob
-        return labels["x"] if labels else np.arange(data.shape[0]), data
+    def _update_2d_plot(self, data_blob=None):
+        if not data_blob and not self.background_data_2d:
+            return
+
+        if not data_blob and self.background_data_2d:
+            self._plot_2d.setData(
+                self.background_data_2d[1], labels=self.background_data_2d[0]
+            )
+
+        if data_blob:
+            if (
+                self.background_data_2d
+                and data_blob[1].shape == self.background_data_2d[1].shape
+            ):
+                self._plot_2d.setData(
+                    data_blob[1] - self.background_data_2d[1], labels=data_blob[0]
+                )
+            else:
+                self._plot_2d.setData(data_blob[1], labels=data_blob[0])
+
+    def setData(self, blob):
+        _, data = blob
+        if data.ndim == 1:
+            self._update_1d_plot(blob)
+        elif data.ndim == 2:
+            self._update_2d_plot(blob)
+
+    def set_background_data(self, blob):
+        _, data = blob
+        if data.ndim == 1:
+            self.background_data_1d = blob
+        elif data.ndim == 2:
+            self.background_data_2d = blob
 
     @pyqtSlot()
     def on_updateBackgroundButton_clicked(self):
         self.parent().update_background_data.emit()
-        self.setData()
+        self._update_1d_plot()
+        self._update_2d_plot()
 
     @pyqtSlot()
     def on_resetBackgroundButton_clicked(self):
-        self.background_data = ({}, np.array([0]))
-        self._plot.reset_background()
+        self.background_data_1d = None
+        self.background_data_2d = None
+        self._plot_1d.reset_background()
 
     def closeEvent(self, QCloseEvent):
         if self.parent() is not None:
