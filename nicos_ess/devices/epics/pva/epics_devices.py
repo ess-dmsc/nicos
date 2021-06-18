@@ -221,9 +221,7 @@ class EpicsDevice(DeviceMixinBase):
     def _get_pv(self, pvparam, as_string=False):
         cache_key = self._get_cache_relation(pvparam) or pvparam
         if cache_key in self._values:
-            self.log.warning(f'cache hit {cache_key}')
             return self._values[cache_key]
-        self.log.error(f'cache miss {cache_key}')
         return self._epics_wrapper.get_pv_value(self._pvs[pvparam],
                                                 timeout=self.epicstimeout,
                                                 as_string=as_string)
