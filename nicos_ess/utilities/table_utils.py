@@ -39,8 +39,7 @@ def extract_table_from_clipboard_text(text):
     # Uses re.split because "A\n" represents two vertical cells one
     # containing "A" and one being empty.
     # str.splitlines will lose the empty cell but re.split won't
-    return [[x for x in row.split('\t')]
-            for row in re.split('\r?\n', text)]
+    return [row.split('\t') for row in re.split('\r?\n', text)]
 
 
 def convert_table_to_clipboard_text(table_data):

@@ -1,7 +1,7 @@
 #  -*- coding: utf-8 -*-
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2020 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-2021 by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -31,8 +31,6 @@ class EssSample(Sample):
     """
 
     parameters = {
-        'sample_name': Param('name', type=str, settable=True,
-                             category='sample'),
         'sample_formula': Param('formula', type=str, settable=True,
                                 category='sample'),
         'number_of': Param('number_of', type=int, settable=True,

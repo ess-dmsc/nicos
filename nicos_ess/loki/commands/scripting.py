@@ -24,28 +24,24 @@
 #
 # *****************************************************************************
 
-from nicos.commands import helparglist, usercommand
+from nicos.commands import usercommand
 
 
 @usercommand
-@helparglist('trans_duration, trans_duration_type')
 def do_trans(trans_duration, trans_duration_type):
     pass
 
 
 @usercommand
-@helparglist('sans_duration, sans_duration_type')
 def do_sans(sans_duration, sans_duration_type):
     pass
 
 
 @usercommand
-@helparglist('sans_duration, sans_duration_type')
-def do_sans_simultaneous(sans_duration, sans_duration_type):
+def do_simultaneous(sans_duration, sans_duration_type):
     pass
 
 
 @usercommand
-@helparglist('name, thickness')
 def set_sample(name, thickness):
     pass
