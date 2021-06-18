@@ -48,17 +48,18 @@ class EpicsMonitorMixin(DeviceMixinBase):
     _epics_subscriptions = set()
     _cache_relations = {'readpv': 'value'}
     _statuses = {}
+    _values = {}
 
     def _register_pv_callbacks(self):
         self._epics_subscriptions = set()
         self._statuses = {}
 
         value_pvs = self._get_pv_parameters()
-        status_pvs = self._get_status_parameters()
+        value_pvs |= self._get_status_parameters()
         if session.sessiontype == POLLER:
             self._subscribe_params(value_pvs, self.value_change_callback)
         else:
-            self._subscribe_params(status_pvs or value_pvs,
+            self._subscribe_params(value_pvs,
                                    self.status_change_callback)
 
     def _subscribe_params(self, pvparams, change_callback):
@@ -82,7 +83,8 @@ class EpicsMonitorMixin(DeviceMixinBase):
         """
         Override this for custom behaviour in sub-classes.
         """
-        cache_key = self._get_cache_relation(param) or name
+        cache_key = self._get_cache_relation(param) or param
+        self._values[cache_key] = value
         self._cache.put(self._name, cache_key, value, time.time())
         self._set_status(name, param, severity, message)
 
@@ -96,6 +98,8 @@ class EpicsMonitorMixin(DeviceMixinBase):
         """
         Override this for custom behaviour in sub-classes.
         """
+        cache_key = self._get_cache_relation(param) or param
+        self._values[cache_key] = value
         self._set_status(name, param, severity, message)
         current_status = self.doStatus()
         self._cache.put(self._name, 'status', current_status, time.time())
@@ -215,6 +219,11 @@ class EpicsDevice(DeviceMixinBase):
                                               timeout=self.epicstimeout)
 
     def _get_pv(self, pvparam, as_string=False):
+        cache_key = self._get_cache_relation(pvparam) or pvparam
+        if cache_key in self._values:
+            self.log.warning(f'cache hit {cache_key}')
+            return self._values[cache_key]
+        self.log.error(f'cache miss {cache_key}')
         return self._epics_wrapper.get_pv_value(self._pvs[pvparam],
                                                 timeout=self.epicstimeout,
                                                 as_string=as_string)
