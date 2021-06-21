@@ -41,8 +41,6 @@ class ChopperAlarms(EpicsStringReadable):
                             'Pos_Alrm', 'Ref_Alrm', 'V_Alrm', 'SIM_Alrm'}
     _chopper_alarm_pvs = []
     _alarm_state = {}
-    _alarm_severity_field = 'SEVR'
-    _alarm_status_field = 'STAT'
 
     def doInit(self, mode):
         EpicsStringReadable.doInit(self, mode)
@@ -63,10 +61,10 @@ class ChopperAlarms(EpicsStringReadable):
         for alarm_pv in self._chopper_alarm_pvs:
             alarm_value = self._read_process_variable(alarm_pv)
             alarm_status = self._read_process_variable(
-                '.'.join([alarm_pv, self._alarm_status_field]))
+                '.'.join([alarm_pv, 'STAT']))
             if alarm_value:
                 alarm_severity = self._read_process_variable(
-                    '.'.join([alarm_pv, self._alarm_severity_field]))
+                    '.'.join([alarm_pv, 'SEVR']))
                 alarm_msg = self._create_alarm_message(alarm_value,
                                                        alarm_pv)
                 self._alarm_state[alarm_pv]['severity'] = \
@@ -116,7 +114,3 @@ class ChopperAlarms(EpicsStringReadable):
             session.log.warning(alarm_msg)
         else:
             session.log.info(alarm_msg)
-
-    def _read_process_variable(self, pv, as_string=False):
-        return self._epics_wrapper.get_pv_value(pv, timeout=self.epicstimeout,
-                                                as_string=as_string)
