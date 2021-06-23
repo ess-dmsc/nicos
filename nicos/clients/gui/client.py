@@ -41,6 +41,7 @@ class NicosGuiClient(NicosClient, QObject):
     failed = pyqtSignal(object, object)
     error = pyqtSignal(object)
     initstatus = pyqtSignal(object)
+    proposal_changed = pyqtSignal(object)
 
     for evt in DAEMON_EVENTS:
         if DAEMON_EVENTS[evt][1]:
