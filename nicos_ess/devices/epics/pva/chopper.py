@@ -21,7 +21,6 @@
 #   Kenan Muric <kenan.muric@ess.eu>
 #
 # *****************************************************************************
-from nicos import session
 from nicos.core import Param, pvname, status
 from nicos_ess.devices.epics.pva.epics_devices import EpicsStringReadable
 
@@ -65,7 +64,9 @@ class ChopperAlarms(EpicsStringReadable):
             if alarm_value:
                 alarm_severity = self._read_process_variable(
                     '.'.join([alarm_pv, 'SEVR']))
-                alarm_msg = self._create_alarm_message(alarm_value,
+                pv_msg_txt = self._read_process_variable(
+                    '-'.join([alarm_pv, 'MsgTxt']))
+                alarm_msg = self._create_alarm_message(pv_msg_txt,
                                                        alarm_pv)
                 self._alarm_state[alarm_pv]['severity'] = \
                     self._convert_to_nicos_status(alarm_severity)
@@ -87,9 +88,9 @@ class ChopperAlarms(EpicsStringReadable):
         return displayed_alarm_severity, displayed_alarm_msg
 
     @staticmethod
-    def _create_alarm_message(alarm_value, alarm_pv):
+    def _create_alarm_message(pv_msg_txt, alarm_pv):
         return f'Alarm PV: "{alarm_pv}", ' \
-               f'Value of alarm: {alarm_value} '
+               f'Message: {pv_msg_txt} '
 
     @staticmethod
     def _convert_to_nicos_status(alarm_severity):
@@ -104,13 +105,12 @@ class ChopperAlarms(EpicsStringReadable):
             return status.UNKNOWN
         return status.OK
 
-    @staticmethod
-    def _write_alarm_to_log(alarm_msg, alarm_severity, alarm_status):
+    def _write_alarm_to_log(self, alarm_msg, alarm_severity, alarm_status):
         alarm_msg += f', Alarm severity = {alarm_severity}, '
         alarm_msg += f'Alarm status = {alarm_status}'
         if alarm_severity == status.ERROR:
-            session.log.error(alarm_msg)
+            self.log.error(alarm_msg)
         elif alarm_severity == status.WARN:
-            session.log.warning(alarm_msg)
+            self.log.warning(alarm_msg)
         else:
-            session.log.info(alarm_msg)
+            self.log.info(alarm_msg)
