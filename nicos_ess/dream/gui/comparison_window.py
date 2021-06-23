@@ -22,22 +22,14 @@
 #
 # *****************************************************************************
 
+from datetime import datetime
+
 import numpy as np
 
 from nicos.guisupport.livewidget import IntegralLiveWidget
 from nicos.guisupport.plots import MaskedPlotCurve
-from nicos.guisupport.qt import (
-    QCheckBox,
-    QHBoxLayout,
-    QLabel,
-    QMainWindow,
-    QPushButton,
-    QSizePolicy,
-    Qt,
-    QVBoxLayout,
-    QWidget,
-    pyqtSlot,
-)
+from nicos.guisupport.qt import QCheckBox, QHBoxLayout, QLabel, QMainWindow, \
+    QPushButton, QSizePolicy, Qt, QVBoxLayout, QWidget, pyqtSlot
 
 from nicos_mlz.toftof.gui.resolutionpanel import COLOR_GREEN, PlotWidget
 
@@ -120,8 +112,11 @@ class ComparisonWindow(QMainWindow):
         self._plot_1d = ComparisonPlot1D(
             "1D comparison plot", "x", "y", 2, parent=self._test1
         )
+        self._1d_status_lb = QLabel("")
+
         self._test2 = QWidget()
         self._plot_2d = ComparisonPlot2D("2D comparison plot ", parent=self._test2)
+        self._2d_status_lb = QLabel("")
 
         self.updateBackgroundButton = QPushButton("Update Background")
         self.resetBackgroundButton = QPushButton("Reset Background")
@@ -130,8 +125,14 @@ class ComparisonWindow(QMainWindow):
 
         # SetLayout
         plot_layout = QHBoxLayout()
-        plot_layout.addWidget(self._test1)
-        plot_layout.addWidget(self._test2)
+        layout = QVBoxLayout()
+        layout.addWidget(self._test1)
+        layout.addWidget(self._1d_status_lb)
+        plot_layout.addLayout(layout)
+        layout = QVBoxLayout()
+        layout.addWidget(self._test2)
+        layout.addWidget(self._2d_status_lb)
+        plot_layout.addLayout(layout)
         plot_layout.addWidget(self._showDifference_cb)
 
         buttons_layout = QHBoxLayout()
@@ -205,22 +206,30 @@ class ComparisonWindow(QMainWindow):
 
     def set_background_data(self, blob):
         _, data = blob
+        msg = "Background set at: "
+
         if data.ndim == 1:
             self.background_data_1d = blob
+            self._update_1d_plot()
+            self._1d_status_lb.setText(f"{msg} {datetime.now()}")
+
         elif data.ndim == 2:
             self.background_data_2d = blob
+            self._update_2d_plot()
+            self._2d_status_lb.setText(f"{msg} {datetime.now()}")
 
     @pyqtSlot()
     def on_updateBackgroundButton_clicked(self):
         self.parent().update_background_data.emit()
-        self._update_1d_plot()
-        self._update_2d_plot()
 
     @pyqtSlot()
     def on_resetBackgroundButton_clicked(self):
         self.background_data_1d = None
         self.background_data_2d = None
         self._plot_1d.reset_background()
+        msg = "No background available"
+        self._1d_status_lb.setText(msg)
+        self._2d_status_lb.setText(msg)
 
     def closeEvent(self, QCloseEvent):
         if self.parent() is not None:
