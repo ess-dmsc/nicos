@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>633</width>
-    <height>286</height>
+    <height>354</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -91,17 +91,7 @@
         </row>
         <row>
          <property name="text">
-          <string>B1</string>
-         </property>
-        </row>
-        <row>
-         <property name="text">
           <string>T2</string>
-         </property>
-        </row>
-        <row>
-         <property name="text">
-          <string>B2</string>
          </property>
         </row>
         <row>
@@ -111,12 +101,22 @@
         </row>
         <row>
          <property name="text">
-          <string>B3</string>
+          <string>T4</string>
          </property>
         </row>
         <row>
          <property name="text">
-          <string>T4</string>
+          <string>B1</string>
+         </property>
+        </row>
+        <row>
+         <property name="text">
+          <string>B2</string>
+         </property>
+        </row>
+        <row>
+         <property name="text">
+          <string>B3</string>
          </property>
         </row>
         <row>

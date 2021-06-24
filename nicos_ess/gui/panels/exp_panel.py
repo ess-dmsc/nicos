@@ -29,16 +29,13 @@
 """NICOS GUI experiment setup window."""
 from copy import deepcopy
 
-from PyQt5.QtWidgets import QHeaderView, QListWidgetItem
-
-from nicos.clients.flowui import uipath
-from nicos.clients.gui.panels import Panel, PanelDialog
+from nicos.clients.gui.panels import Panel
 from nicos.clients.gui.panels.setup_panel import ProposalDelegate, \
-    SetupsPanel as DefaultSetupsPanel, combineUsers, splitUsers
+    combineUsers, splitUsers
 from nicos.clients.gui.utils import dialogFromUi, loadUi
 from nicos.core import ConfigurationError
-from nicos.guisupport.qt import QAbstractTableModel, QDialogButtonBox, \
-    QMessageBox, Qt, pyqtSignal, pyqtSlot
+from nicos.guisupport.qt import QAbstractTableModel, QHeaderView, \
+    QListWidgetItem, QMessageBox, Qt, pyqtSignal, pyqtSlot
 from nicos.utils import decodeAny, findResource
 
 
@@ -47,11 +44,11 @@ class SamplesModel(QAbstractTableModel):
 
     def __init__(self):
         super().__init__()
-        self.sample_properties = ['name', 'formula', 'number of', 'mass/volume',
-                                  'density']
+        self.sample_fields = ['name', 'formula', 'number of', 'mass/volume',
+                              'density']
         self._samples = []
-        self._table_data = self._empty_table(len(self.sample_properties),
-                                            len(self._samples))
+        self._table_data = self._empty_table(len(self.sample_fields),
+                                             len(self._samples))
 
     @property
     def samples(self):
@@ -61,14 +58,15 @@ class SamplesModel(QAbstractTableModel):
     def samples(self, samples):
         self._samples = samples
 
-        new_table = self._empty_table(len(self.sample_properties),
-                                     len(self._samples))
+        new_table = self._empty_table(len(self.sample_fields),
+                                      len(self._samples))
         for i, sample in enumerate(self._samples):
             for j, key in enumerate(sample.keys()):
                 new_table[j][i] = sample[key]
 
         self._table_data = new_table
         self.layoutChanged.emit()
+        self.data_updated.emit()
 
     def data(self, index, role):
         if role == Qt.DisplayRole or role == Qt.EditRole:
@@ -77,7 +75,8 @@ class SamplesModel(QAbstractTableModel):
     def setData(self, index, value, role):
         if role == Qt.EditRole:
             self._table_data[index.row()][index.column()] = value
-            self._samples[index.column()][self.sample_properties[index.row()]] = value
+            self._samples[index.column()][self.sample_fields[index.row()]] = \
+                value
             self.data_updated.emit()
             return True
 
@@ -94,7 +93,7 @@ class SamplesModel(QAbstractTableModel):
         if role == Qt.DisplayRole and orientation == Qt.Horizontal:
             return section + 1
         if role == Qt.DisplayRole and orientation == Qt.Vertical:
-            return self.sample_properties[section]
+            return self.sample_fields[section]
 
     def setHeaderData(self, section, orientation, value, role=Qt.DisplayRole):
         if role == Qt.DisplayRole and orientation == Qt.Horizontal:
@@ -108,13 +107,13 @@ class SamplesModel(QAbstractTableModel):
 
 class ProposalSettings:
     def __init__(self, proposal_id='', title='', users='', local_contacts='',
-                 notifications='', abort_on_error='', samples=None):
+                 abort_on_error='', notifications=None, samples=None):
         self.proposal_id = proposal_id
         self.title = title
         self.users = users.replace(',', ';')
         self.local_contacts = local_contacts
         self.samples = samples if samples else []
-        self.notifications = notifications
+        self.notifications = notifications if notifications else []
         self.abort_on_error = abort_on_error
 
     def __eq__(self, other):
@@ -131,11 +130,6 @@ class ProposalSettings:
 
 class ExpPanel(Panel):
     """Provides a panel with several input fields for the experiment settings.
-
-    Options:
-
-    * ``new_exp_panel`` -- class name of the panel which should be opened after
-      a new experiment has been started.
     """
 
     panelName = 'Experiment setup'
@@ -143,7 +137,7 @@ class ExpPanel(Panel):
 
     def __init__(self, parent, client, options):
         Panel.__init__(self, parent, client, options)
-        loadUi(self, findResource('nicos_ess/gui/panels/ui_files/setup_exp.ui'))
+        loadUi(self, findResource('nicos_ess/gui/panels/ui_files/exp_panel.ui'))
 
         self.old_proposal_settings = ProposalSettings()
         self.new_proposal_settings = deepcopy(self.old_proposal_settings)
@@ -151,7 +145,8 @@ class ExpPanel(Panel):
         self.samples_model = SamplesModel()
         self.samples_model.data_updated.connect(self.on_samples_changed)
         self.sampleTable.setModel(self.samples_model)
-        self.sampleTable.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
+        self.sampleTable.horizontalHeader().setSectionResizeMode(
+            QHeaderView.Interactive)
 
         self.applyWarningLabel.setStyleSheet('color: red')
         self.applyWarningLabel.setVisible(False)
@@ -190,13 +185,13 @@ class ExpPanel(Panel):
             'session.experiment.propinfo["notif_emails"]', [])
 
         samples_dict = {} if self.hide_samples \
-            else self.client.eval('Exp.sample.samples', {})
+            else self.client.eval('session.experiment.sample.samples', {})
 
         if values:
             self.old_proposal_settings = \
                 ProposalSettings(decodeAny(values[0]), decodeAny(values[1]),
                                  decodeAny(values[2]), decodeAny(values[3]),
-                                 notif_emails, values[4] == 'abort',
+                                 values[4] == 'abort', notif_emails,
                                  self._extract_samples(samples_dict))
             self.new_proposal_settings = deepcopy(self.old_proposal_settings)
             self._update_panel()
@@ -225,7 +220,7 @@ class ExpPanel(Panel):
         samples = []
         for sample in samples_dict.values():
             samples.append({
-                'name': sample.get('sample_name', ''),
+                'name': sample.get('name', ''),
                 'formula': sample.get('formula', ''),
                 'number of': sample.get('number_of', 1),
                 'mass/volume': sample.get('mass_volume', ''),
@@ -287,15 +282,17 @@ class ExpPanel(Panel):
                 raise ConfigurationError from None
         return []
 
-    def _experiment_in_progress(self, proposal_id):
-        if self.client.eval('session.experiment.serviceexp', True) and \
-           self.client.eval('session.experiment.proptype', 'user') == 'user' and \
-           self.client.eval('session.experiment.proposal', '') != proposal_id:
-            return True
-        return False
+    def _experiment_in_progress(self, prop_id):
+        return self.client.eval('session.experiment.serviceexp', True) and \
+            self.client.eval('session.experiment.proptype', 'user') == 'user' \
+            and self.client.eval('session.experiment.proposal', '') != prop_id
 
     @pyqtSlot()
     def on_applyButton_clicked(self):
+        if self.mainwindow.current_status != 'idle':
+            self.showInfo('Cannot change settings while a script is running!')
+            return
+
         changes = []
 
         proposal_id = self.new_proposal_settings.proposal_id
@@ -340,14 +337,18 @@ class ExpPanel(Panel):
 
         if self.samples_model.samples != self.old_proposal_settings.samples:
             for index, sample in enumerate(self.samples_model.samples):
-                set_sample_cmd = f'SetSample({index}, {index}, ' \
-                                 f'sample_name=\'{sample["name"]}\', ' \
-                                 f'formula=\'{sample["formula"]}\', ' \
-                                 f'number_of={sample["number of"]}, ' \
-                                 f'mass_volume=\'{sample["mass/volume"]}\', ' \
-                                 f'density=\'{sample["density"]}\')'
+                set_sample_cmd = self._create_set_sample_command(index, sample)
                 self.client.run(set_sample_cmd)
             changes.append('Samples updated.')
+
+    def _create_set_sample_command(self, index, sample):
+        name = sample.get('name', '')
+        name = name if name else f'sample {index + 1}'
+        return f'SetSample({index}, \'{name}\', ' \
+               f'formula=\'{sample["formula"]}\', ' \
+               f'number_of={sample["number of"]}, ' \
+               f'mass_volume=\'{sample["mass/volume"]}\', ' \
+               f'density=\'{sample["density"]}\')'
 
     def _set_title(self, changes):
         if self.new_proposal_settings.title != self.old_proposal_settings.title:
@@ -471,7 +472,8 @@ class ExpPanel(Panel):
 
     def _check_for_changes(self):
         has_changed = self.new_proposal_settings != self.old_proposal_settings
-        has_changed |= self.samples_model.samples != self.old_proposal_settings.samples
+        has_changed |= \
+            self.samples_model.samples != self.old_proposal_settings.samples
         self.applyWarningLabel.setVisible(has_changed)
         self.applyButton.setEnabled(has_changed)
         self.discardButton.setVisible(has_changed)
@@ -489,73 +491,3 @@ class ExpPanel(Panel):
     @pyqtSlot()
     def on_proposalQuery_returnPressed(self):
         self.on_queryDBButton_clicked()
-
-
-class SetupsPanel(DefaultSetupsPanel):
-    def finishUi(self):
-        self.buttonBox.setLayoutDirection(Qt.RightToLeft)
-        self.buttonBox.setStandardButtons(QDialogButtonBox.Apply)
-        self.buttonBox.addButton(self._reload_btn, QDialogButtonBox.ResetRole)
-
-    def setViewOnly(self, value):
-        for button in self.buttonBox.buttons():
-            button.setEnabled(not value)
-
-
-class FinishPanel(Panel):
-    """Provides a panel to finish the experiment.
-
-    Options:
-
-    * ``finish_exp_panel`` -- class name of the panel which should be opened
-      before an experiment is finished.
-    """
-
-    panelName = 'Finish experiment'
-    ui = '%s/panels/ui_files/finish_exp.ui' % uipath
-    def __init__(self, parent, client, options):
-        Panel.__init__(self, parent, client, options)
-        loadUi(self, self.ui)
-        self._finish_exp_panel = None
-
-        # Additional dialog panels to pop up after FinishExperiment().
-        self._finish_exp_panel = options.get('finish_exp_panel')
-        self.finishButton.setEnabled(False)
-        client.connected.connect(self.on_client_connected)
-        client.disconnected.connect(self.on_client_disconnected)
-        client.setup.connect(self.on_client_connected)
-
-        self._experiment_finished = False
-
-    def on_client_connected(self):
-        self.finishButton.setEnabled(not self._experiment_finished)
-
-    def on_client_disconnected(self):
-        self.finishButton.setEnabled(False)
-
-    def setViewOnly(self, value):
-        self.finishButton.setEnabled(self.client.isconnected and not value)
-
-    def on_new_experiment_proposal(self):
-        if not self.client.viewonly:
-            self.finishButton.setEnabled(True)
-        self._experiment_finished = False
-
-    @pyqtSlot()
-    def on_finishButton_clicked(self):
-        if self._finish_exp_panel:
-            dlg = PanelDialog(self, self.client, self._finish_exp_panel,
-                              'Finish experiment')
-            dlg.exec_()
-        if self.client.run('FinishExperiment()', noqueue=True) is None:
-            self.showError('Could not finish experiment, a script '
-                           'is still running.')
-        else:
-            self.finishButton.setEnabled(False)
-            self._experiment_finished = True
-            self.show_finish_message()
-
-    def show_finish_message(self):
-        msg_box = QMessageBox()
-        msg_box.setText('Experiment successfully finished.')
-        return msg_box.exec_()

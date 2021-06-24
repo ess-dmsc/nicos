@@ -70,8 +70,14 @@ class VirtualMotor(HasOffset, CanDisable, Motor):
     def doInit(self, mode):
         # set current value to be at target on init, helps with devices
         # that switch between being virtual and real
-        if self.target is not None and mode == MASTER:
-            self._setROParam('curvalue', self.target + self.offset)
+        # If the target is not set, take the configured curvalue and configured
+        # offset. This is helpful for the demo, where normally no targets
+        # set at clean setup.
+        if mode == MASTER:
+            if self.target is not None:
+                self._setROParam('curvalue', self.target + self.offset)
+            else:
+                self._setROParam('target', self.curvalue - self.offset)
 
     def doStart(self, pos):
         if self.curstatus[0] == status.DISABLED:
@@ -785,7 +791,7 @@ class VirtualImage(ImageChannelMixin, PassiveChannel):
     _timer = None
 
     def doInit(self, mode):
-        self.arraydesc = ArrayDesc(self.name, self.sizes, '<u4')
+        self.arraydesc = ArrayDesc(self.name, self.sizes[::-1], '<u4')
 
     def doPrepare(self):
         self.readresult = [0]

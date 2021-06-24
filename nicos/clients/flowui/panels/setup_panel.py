@@ -225,10 +225,10 @@ class ExpPanel(DefaultExpPanel):
 
     @pyqtSlot(str)
     def on_users_textChanged(self, value):
-        curr_val = self._get_proposal_data('users')
-        # Special handling for users is needed.
-        curr_val = curr_val[0]['name']
-        self._apply_warning_status(value, 2, curr_val)
+        users = self._get_proposal_data('users', [])
+        if users:
+            curr_val = combineUsers(users)
+            self._apply_warning_status(value, 2, curr_val)
 
     @pyqtSlot(str)
     def on_localContacts_textChanged(self, value):
@@ -260,9 +260,8 @@ class ExpPanel(DefaultExpPanel):
         self.is_exp_props_edited[7] = value != self._defined_data_emails
         self._set_warning_visibility()
 
-    def _get_proposal_data(self, props_key):
-        # returns empty string in case key not found or value of key is None
-        return self._orig_propinfo.get(props_key, '') or ''
+    def _get_proposal_data(self, props_key, default=''):
+        return self._orig_propinfo.get(props_key, default) or default
 
     def _apply_warning_status(self, value, index, props_curr_val):
         self.is_exp_props_edited[index] = \
@@ -295,33 +294,39 @@ class FinishPanel(Panel):
 
     panelName = 'Finish experiment'
     ui = '%s/panels/ui_files/finish_exp.ui' % uipath
-
     def __init__(self, parent, client, options):
         Panel.__init__(self, parent, client, options)
         loadUi(self, self.ui)
         self._finish_exp_panel = None
 
-        # Additional dialog panels to pop up after FinishExperiment().
+        # Additional dialog panel to pop up after FinishExperiment().
         self._finish_exp_panel = options.get('finish_exp_panel')
-        self.finishButton.setEnabled(False)
 
+        self.finishButton.setEnabled(False)
         client.connected.connect(self.on_client_connected)
         client.disconnected.connect(self.on_client_disconnected)
-        client.setup.connect(self.on_client_connected)
+        client.experiment.connect(self.on_experiment_changed)
+
+    def on_experiment_changed(self, a):
+        self._enable_finishing()
+
+    def _enable_finishing(self):
+        if not self.client.viewonly and self._is_user_experiment():
+            self.finishButton.setEnabled(True)
+        else:
+            self.finishButton.setEnabled(False)
+
+    def _is_user_experiment(self):
+        return self.client.eval('session.experiment.proptype', '') == 'user'
 
     def on_client_connected(self):
-        if not self.client.viewonly:
-            self.finishButton.setEnabled(True)
+        self._enable_finishing()
 
     def on_client_disconnected(self):
         self.finishButton.setEnabled(False)
 
     def setViewOnly(self, value):
-        self.finishButton.setEnabled(self.client.isconnected and not value)
-
-    def on_new_experiment_proposal(self):
-        if not self.client.viewonly:
-            self.finishButton.setEnabled(True)
+        self._enable_finishing()
 
     @pyqtSlot()
     def on_finishButton_clicked(self):
@@ -333,7 +338,6 @@ class FinishPanel(Panel):
             self.showError('Could not finish experiment, a script '
                            'is still running.')
         else:
-            self.finishButton.setEnabled(False)
             self.show_finish_message()
 
     def show_finish_message(self):

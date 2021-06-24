@@ -27,7 +27,7 @@ import itertools
 
 from nicos.clients.gui.utils import loadUi
 from nicos.guisupport.qt import QDialog, QItemDelegate, QLineEdit, Qt, \
-    QTableWidget, QTableWidgetItem
+    QTableWidget, QTableWidgetItem, QComboBox
 from nicos.utils import findResource
 
 from nicos_ess.loki.gui.loki_panel import LokiPanelBase
@@ -55,6 +55,12 @@ class TableDelegate(QItemDelegate):
 
 class ThermoCellHolderPositions(QDialog):
 
+    cartridge_types = {
+        'Narrow Cell': 10,  # Number of positions
+        'Wide Cell': 4,
+        'Rotating Cell': 3,
+    }
+
     def __init__(self, parent, client):
         QDialog.__init__(self, parent)
         self.client = client
@@ -70,18 +76,39 @@ class ThermoCellHolderPositions(QDialog):
         self.dialogButtonBox.rejected.connect(self.reject)
         self.dialogButtonBox.accepted.connect(self.accept)
 
+        self.initialise_dialog_tables()
+
+    def initialise_dialog_tables(self):
+        for box in self._get_all_combo_boxes():
+            box.addItems(list(self.cartridge_types.keys()))
+            box.activated.connect(
+                self._activate_cartridge_settings
+            )
+
     def initialise_markups(self):
         self.setWindowTitle('Cartridge Settings')
-        self.setStyleSheet("background-color: whitesmoke;")
+        self.setStyleSheet('background-color: whitesmoke;')
         for table in self._get_all_tables():
-            table.setStyleSheet("background-color: white;")
+            table.setStyleSheet('background-color: white;')
+        for box in self._get_all_combo_boxes():
+            box.setStyleSheet('QComboBox:Item'
+                              '{'
+                              'color: black;'
+                              '}')
 
     def _get_all_tables(self):
         _tables = itertools.chain(
-                self.topRowGroup.findChildren(QTableWidget),
-                self.bottomRowGroup.findChildren(QTableWidget)
-            )
+            self.topRowGroup.findChildren(QTableWidget),
+            self.bottomRowGroup.findChildren(QTableWidget)
+        )
         return _tables
+
+    def _get_all_combo_boxes(self):
+        _boxes = itertools.chain(
+            self.topRowGroup.findChildren(QComboBox),
+            self.bottomRowGroup.findChildren(QComboBox)
+        )
+        return _boxes
 
     def _disable_all_positions_but_first(self):
         for table in self._get_all_tables():
@@ -91,9 +118,27 @@ class ThermoCellHolderPositions(QDialog):
         # Whenever an item is set to a `QTableWidget`, that widget takes the
         # ownership and the item cannot be set to another widget. Thus, we
         # create an instance of an item for each cell.
-        for i in range(1, self.firstRowFirstTable.rowCount()):
-            for j in range(self.firstRowFirstTable.columnCount()):
+        for i in range(1, table.rowCount()):
+            for j in range(table.columnCount()):
                 table.setItem(i, j, self._configure_item())
+
+    def _activate_cartridge_settings(self):
+        """
+        We need to map the number of positions that each cell type has to the
+        corresponding tables. To that end, we create a pointer dictionary
+        with object names set in the UI.
+        """
+        combo_to_table = {
+            self.combo_11: self.table_11, self.combo_12: self.table_12,
+            self.combo_13: self.table_13, self.combo_14: self.table_14,
+            self.combo_21: self.table_21, self.combo_22: self.table_22,
+            self.combo_23: self.table_23, self.combo_24: self.table_24
+        }
+        for box in self._get_all_combo_boxes():
+            combo_to_table[box].setRowCount(
+                self.cartridge_types[box.currentText()]
+            )
+            self._disable(combo_to_table[box])
 
     @staticmethod
     def _configure_item():
@@ -141,14 +186,14 @@ class ThermoCellHolderSettings(LokiPanelBase):
         # We need the values in a specific order. Besides, QT's algorithm of
         # returning children is not clear.
         ordered_tables = (
-            dialog.firstRowFirstTable,
-            dialog.secondRowFirstTable,
-            dialog.firstRowSecondTable,
-            dialog.secondRowSecondTable,
-            dialog.firstRowThirdTable,
-            dialog.secondRowThirdTable,
-            dialog.firstRowFourthTable,
-            dialog.secondRowFourthTable,
+            dialog.table_11,
+            dialog.table_12,
+            dialog.table_13,
+            dialog.table_14,
+            dialog.table_21,
+            dialog.table_22,
+            dialog.table_23,
+            dialog.table_24,
         )
         first_position_values = []
         for table in ordered_tables:

@@ -81,7 +81,7 @@ tools = [
 ]
 
 options = {
-    'ess_gui' : True,
     'reader_classes': ['nicos.devices.datasinks.text',
-                       'nicos_ess.dream.devices.datasinks.numpy_reader']
+                       'nicos_ess.dream.devices.datasinks.numpy_reader'],
+    'facility': 'ess',
 }

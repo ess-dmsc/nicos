@@ -37,8 +37,7 @@ from nicos.guisupport.qt import QAction, QApplication, QCursor, QFileDialog, \
 from nicos.utils import findResource
 
 from nicos_ess.loki.gui.loki_panel import LokiPanelBase
-from nicos_ess.loki.gui.loki_script_generator import ScriptGenerator, \
-    TransOrder
+from nicos_ess.loki.gui.loki_script_generator import ScriptFactory, TransOrder
 from nicos_ess.loki.gui.loki_scriptbuilder_model import LokiScriptModel
 from nicos_ess.utilities.csv_utils import export_table_to_csv, \
     import_table_from_csv
@@ -445,7 +444,7 @@ class LokiScriptBuilderPanel(LokiPanelBase):
 
         _trans_order = self._available_trans_options[
             self.comboTransOrder.currentText()]
-        template = ScriptGenerator.from_trans_order(_trans_order).\
+        template = ScriptFactory.from_trans_order(_trans_order).\
             generate_script(labeled_data,
                             self.comboTransDurationType.currentText(),
                             self.comboSansDurationType.currentText(),

@@ -18,30 +18,19 @@
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 # Module authors:
-#
-#   Ebad Kamil <Ebad.Kamil@ess.eu>
-#   Matt Clarke <matt.clarke@ess.eu>
+#   Michele Brambilla <michele.brambilla@psi.ch>
 #
 # *****************************************************************************
 
-from nicos.commands import usercommand
+from nicos.clients.flowui.mainwindow import MainWindow as MainWindowESS, \
+    get_icon
 
 
-@usercommand
-def do_trans(trans_duration, trans_duration_type):
-    pass
+class MainWindowSINQ(MainWindowESS):
 
-
-@usercommand
-def do_sans(sans_duration, sans_duration_type):
-    pass
-
-
-@usercommand
-def do_simultaneous(sans_duration, sans_duration_type):
-    pass
-
-
-@usercommand
-def set_sample(name, thickness):
-    pass
+    def set_icons(self):
+        print(f"uifile: {self.ui}")
+        MainWindowESS.set_icons(self)
+        self.actionEmergencyStop.setIcon(
+            get_icon('emergency_stop_cross_red-24px.svg')
+        )

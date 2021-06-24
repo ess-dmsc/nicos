@@ -4,96 +4,96 @@
 main_window = docked(
     tabbed(
         (
-            "Experiment",
-            vsplit(panel("nicos_ess.gui.panels.setup_panel.ExpPanel",
+            'Experiment',
+            vsplit(panel('nicos_ess.gui.panels.exp_panel.ExpPanel',
                          hide_sample=True),
                    ),  # vsplit
         ),
         (
-            "Setup",
+            'Setup',
             vsplit(
-                (panel("nicos.clients.flowui.panels.setup_panel.SetupsPanel"))
+                (panel('nicos.clients.flowui.panels.setup_panel.SetupsPanel'))
             ),  # vsplit
         ),
         (
-            "Samples",
-            vsplit(panel("nicos_ess.loki.gui.sampleconf.LokiSamplePanel",
+            'Samples',
+            vsplit(panel('nicos_ess.loki.gui.sampleconf.LokiSamplePanel',
             holder_info = [
                 ('Al 2-level',   (9,  2, 'sam_trans_x', 26.6,   'sam_trans_y', 105.05)),
                 ('Al 3-level',   (9,  3, 'sam_trans_x', 27,     'sam_trans_y', 75)),
             ])),  # vsplit
         ),
         (
-            "Experiment Configuration",
+            'Experiment Configuration',
             vsplit(
-                (panel("nicos_ess.loki.gui.experiment_conf.LokiExperimentPanel"))
+                (panel('nicos_ess.loki.gui.experiment_conf.LokiExperimentPanel'))
             ),  # vsplit
         ),
-        ("  ", panel("nicos.clients.flowui.panels.empty.EmptyPanel")),
+        ('  ', panel('nicos.clients.flowui.panels.empty.EmptyPanel')),
         (
-            "Instrument interaction",
+            'Instrument interaction',
             hsplit(
                 vbox(
                     tabbed(
                         (
-                            "Output",
+                            'Output',
                             panel(
-                                "nicos.clients.flowui.panels.console.ConsolePanel",
+                                'nicos.clients.flowui.panels.console.ConsolePanel',
                                 hasinput=False,
                             ),
                         ),
-                        ("Scan Plot", panel("nicos.clients.flowui.panels.scans.ScansPanel")),
+                        ('Scan Plot', panel('nicos.clients.flowui.panels.scans.ScansPanel')),
                         (
-                            "Detector Image",
-                            panel("nicos.clients.flowui.panels.live.LiveDataPanel"),
+                            'Detector Image',
+                            panel('nicos.clients.flowui.panels.live.LiveDataPanel'),
                         ),
                         (
-                            "Script Status",
+                            'Script Status',
                             panel(
-                                "nicos.clients.flowui.panels.status.ScriptStatusPanel",
+                                'nicos.clients.flowui.panels.status.ScriptStatusPanel',
                                 eta=True,
                             ),
                         ),
                     ),
                     panel(
-                        "nicos.clients.flowui.panels.cmdbuilder.CommandPanel",
-                        modules=["nicos.clients.gui.cmdlets"],
+                        'nicos.clients.flowui.panels.cmdbuilder.CommandPanel',
+                        modules=['nicos.clients.gui.cmdlets'],
                     ),
                 ),  # vsplit
                 panel(
-                    "nicos.clients.flowui.panels.devices.DevicesPanel",
-                    dockpos="right",
-                    param_display={"tas": "scanmode", "Exp": ["lastpoint", "lastscan"]},
-                    filters=[("Detector", "det"), ("Temperatures", "^T"),],
+                    'nicos.clients.flowui.panels.devices.DevicesPanel',
+                    dockpos='right',
+                    param_display={'tas': 'scanmode', 'Exp': ['lastpoint', 'lastscan']},
+                    filters=[('Detector', 'det'), ('Temperatures', '^T'),],
                 ),
             ),  # hsplit
         ),
         (
-            "Script Editor",
+            'Script Editor',
             vsplit(
                 panel(
-                    "nicos_ess.loki.gui.scriptbuilder.CommandsPanel",
-                    modules=["nicos_ess.loki.gui.cmdlets"],
+                    'nicos_ess.loki.gui.scriptbuilder.CommandsPanel',
+                    modules=['nicos_ess.loki.gui.cmdlets'],
                 ),
-                panel("nicos.clients.flowui.panels.editor.EditorPanel", tools=None),
+                panel('nicos.clients.flowui.panels.editor.EditorPanel', tools=None),
             ),
         ),
-        ("Prototype", panel("nicos_ess.loki.gui.loki_scriptbuilder.LokiScriptBuilderPanel")),
-        ("Detector Image", panel("nicos.clients.flowui.panels.live.LiveDataPanel")),
-        ("History", panel("nicos.clients.flowui.panels.history.HistoryPanel"),),
+        ('Prototype', panel('nicos_ess.loki.gui.loki_scriptbuilder.LokiScriptBuilderPanel')),
+        ('Detector Image', panel('nicos.clients.flowui.panels.live.LiveDataPanel')),
+        ('History', panel('nicos.clients.flowui.panels.history.HistoryPanel'),),
         (
-            "Logs",
+            'Logs',
             tabbed(
-                ("Errors", panel("nicos.clients.gui.panels.errors.ErrorPanel")),
+                ('Errors', panel('nicos.clients.gui.panels.errors.ErrorPanel')),
                 (
-                    "Log files",
-                    panel("nicos.clients.gui.panels.logviewer.LogViewerPanel"),
+                    'Log files',
+                    panel('nicos.clients.gui.panels.logviewer.LogViewerPanel'),
                 ),
             ),
         ),
-        ("  ", panel("nicos.clients.flowui.panels.empty.EmptyPanel")),
-        ("Finish Experiment", panel("nicos_ess.gui.panels.setup_panel.FinishPanel")),
-        position="left",
+        ('  ', panel('nicos.clients.flowui.panels.empty.EmptyPanel')),
+        ('Finish Experiment', panel('nicos.clients.flowui.panels.setup_panel.FinishPanel')),
+        position='left',
     ),  # tabbed
 )  # docked
 
@@ -101,11 +101,11 @@ windows = []
 
 tools = [
     tool(
-        "Report NICOS bug or request enhancement",
-        "nicos.clients.gui.tools.bugreport.BugreportTool",
+        'Report NICOS bug or request enhancement',
+        'nicos.clients.gui.tools.bugreport.BugreportTool',
     ),
 ]
 
 options = {
-    "ess_gui": True,
+    'ess_gui': True,
 }
