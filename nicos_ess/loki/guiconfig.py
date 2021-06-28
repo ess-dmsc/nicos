@@ -107,5 +107,5 @@ tools = [
 ]
 
 options = {
-    'ess_gui': True,
+    'facility': 'ess',
 }

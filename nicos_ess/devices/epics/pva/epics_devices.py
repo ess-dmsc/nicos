@@ -420,6 +420,11 @@ class EpicsDigitalMoveable(EpicsAnalogMoveable):
 class EpicsMappedMoveable(MappedMoveable, EpicsMoveable):
     valuetype = str
 
+    parameters = {
+        'ignore_stop': Param('Whether to do anything when stop is called',
+                             type=bool, default=True, userparam=False),
+    }
+
     parameter_overrides = {
         # Units are set by EPICS, so cannot be changed
         'unit': Override(mandatory=False, settable=False),
@@ -456,3 +461,9 @@ class EpicsMappedMoveable(MappedMoveable, EpicsMoveable):
 
     def doStart(self, target):
         self._put_pv('writepv', target)
+
+    def doStop(self):
+        # Some devices will react on being resent the current position which
+        # may not be appropriate
+        if not self.ignore_stop:
+            EpicsMoveable.doStop(self)
