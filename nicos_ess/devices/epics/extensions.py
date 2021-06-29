@@ -69,6 +69,8 @@ class EpicsMappedMoveable(MappedMoveable, EpicsDigitalMoveableEss):
     def doStart(self, value):
         if value in self.mapping.keys():
             self._put_pv('writepv', self.mapping[value])
+        elif value in self.mapping.values():
+            self._put_pv('writepv', value)
         else:
             self.log.error(f'{value} is not a valid value '
                            f'in the device mapping.')
