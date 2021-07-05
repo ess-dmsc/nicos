@@ -67,7 +67,7 @@ class EpicsMappedMoveable(MappedMoveable, EpicsDigitalMoveableEss):
         EpicsDigitalMoveableEss.doStart(self, target)
 
     def doStart(self, value):
-        if value in self.mapping.keys():
+        if value in self.mapping:
             self._put_pv('writepv', self.mapping[value])
         elif value in self.mapping.values():
             self._put_pv('writepv', value)
