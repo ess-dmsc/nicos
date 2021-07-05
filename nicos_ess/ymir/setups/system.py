@@ -9,7 +9,7 @@ sysconfig = dict(
     datasinks=['conssink', 'filesink', 'daemonsink', 'liveview', ],
 )
 
-modules = ['nicos.commands.standard', 'nicos_ess.commands.epics']
+modules = ['nicos.commands.standard', 'nicos_ess.commands.epics', 'nicos_ess.ymir.commands.file_writer']
 
 devices = dict(
     Skeleton=device('nicos.devices.instrument.Instrument',
@@ -48,21 +48,20 @@ devices = dict(
 
     liveview=device('nicos.devices.datasinks.LiveViewSink', ),
 
-    NexusDataSink=device(
-        'nicos_ess.devices.datasinks.nexussink.NexusFileWriterSink',
-        description='Sink for NeXus file writer (kafka-to-nexus)',
+    FileWriter=device(
+        'nicos_ess.devices.datasinks.file_writer.FileWriterStatus',
+        description='Status for file-writer',
         brokers=['172.30.242.20:9092'],
-        cmdtopic='UTGARD_writerCommand',
-        status_provider='NexusFileWriter',
-        templatesmodule='nicos_ess.ymir.nexus.nexus_templates',
-        templatename='ymir_default'
+        statustopic='UTGARD_writerCommand',
+        unit='',
     ),
 
-    NexusFileWriter=device(
-        'nicos_ess.devices.datasinks.nexussink.NexusFileWriterStatus',
-        description='Status for nexus file writing',
+    FileWriterParameters=device(
+        'nicos_ess.devices.datasinks.file_writer.FileWriterParameters',
+        description='File-writer parameters',
         brokers=['172.30.242.20:9092'],
-        statustopic='UTGARD_writerStatus',
+        command_topic='UTGARD_writerCommand',
+        nexus_config_path='nicos_ess/ymir/commands/nexus_config.json',
+        lowlevel=True,
     ),
-
 )
