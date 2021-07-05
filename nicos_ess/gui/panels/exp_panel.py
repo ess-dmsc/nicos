@@ -34,8 +34,8 @@ from nicos.clients.gui.panels.setup_panel import ProposalDelegate, \
     combineUsers, splitUsers
 from nicos.clients.gui.utils import dialogFromUi, loadUi
 from nicos.core import ConfigurationError
-from nicos.guisupport.qt import QAbstractTableModel, QHeaderView, \
-    QListWidgetItem, QMessageBox, Qt, pyqtSignal, pyqtSlot
+from nicos.guisupport.qt import QAbstractTableModel, QDialogButtonBox, \
+    QHeaderView, QListWidgetItem, QMessageBox, Qt, pyqtSignal, pyqtSlot
 from nicos.utils import decodeAny, findResource
 
 
@@ -150,7 +150,6 @@ class ExpPanel(Panel):
 
         self.applyWarningLabel.setStyleSheet('color: red')
         self.applyWarningLabel.setVisible(False)
-        self.discardButton.setVisible(False)
 
         self._text_controls = (self.expTitle, self.users, self.localContacts,
                                self.proposalNum, self.proposalQuery)
@@ -158,8 +157,26 @@ class ExpPanel(Panel):
         self.hide_samples = options.get('hide_sample', False)
         if self.hide_samples:
             self._hide_sample_info()
-
+        self._set_up_button_box()
         self.initialise_connection_status_listeners()
+
+    def _set_up_button_box(self):
+        self.buttonBox.setLayoutDirection(Qt.RightToLeft)
+        self.buttonBox.addButton("Discard Changes", QDialogButtonBox.ResetRole)
+
+    def on_buttonBox_clicked(self, button):
+        role = self.buttonBox.buttonRole(button)
+        if role == QDialogButtonBox.ApplyRole:
+            self.applyChanges()
+        elif role == QDialogButtonBox.ResetRole:
+            self.discardChanges()
+
+    def _set_buttons_behaviour(self, value):
+        for button in self.buttonBox.buttons():
+            role = self.buttonBox.buttonRole(button)
+            button.setEnabled(value)
+            if role == QDialogButtonBox.ResetRole:
+                button.setVisible(value)
 
     def _hide_sample_info(self):
         self.sampleTable.hide()
@@ -256,9 +273,8 @@ class ExpPanel(Panel):
         self.queryDBButton.setEnabled(not is_view_only)
         self.sampleTable.setEnabled(not is_view_only)
         if is_view_only:
-            self.applyButton.setEnabled(False)
+            self._set_buttons_behaviour(False)
             self.applyWarningLabel.setVisible(False)
-            self.discardButton.setVisible(False)
         else:
             self._check_for_changes()
 
@@ -287,8 +303,7 @@ class ExpPanel(Panel):
             self.client.eval('session.experiment.proptype', 'user') == 'user' \
             and self.client.eval('session.experiment.proposal', '') != prop_id
 
-    @pyqtSlot()
-    def on_applyButton_clicked(self):
+    def applyChanges(self):
         if self.mainwindow.current_status != 'idle':
             self.showInfo('Cannot change settings while a script is running!')
             return
@@ -475,11 +490,9 @@ class ExpPanel(Panel):
         has_changed |= \
             self.samples_model.samples != self.old_proposal_settings.samples
         self.applyWarningLabel.setVisible(has_changed)
-        self.applyButton.setEnabled(has_changed)
-        self.discardButton.setVisible(has_changed)
+        self._set_buttons_behaviour(has_changed)
 
-    @pyqtSlot()
-    def on_discardButton_clicked(self):
+    def discardChanges(self):
         self._update_proposal_info()
         self._check_for_changes()
 
