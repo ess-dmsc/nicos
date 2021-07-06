@@ -224,7 +224,8 @@ class LokiSamplePanel(LokiPanelBase):
 
     def __init__(self, parent, client, options):
         LokiPanelBase.__init__(self, parent, client, options)
-        loadUi(self, findResource('nicos_ess/loki/gui/ui_files/sampleconf.ui'))
+        loadUi(self,
+               findResource('nicos_ess/loki/gui/ui_files/sampleconf.ui'))
         self.sampleGroup.setEnabled(False)
         self.frame.setLayout(QVBoxLayout())
         

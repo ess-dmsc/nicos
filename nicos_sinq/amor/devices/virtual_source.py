@@ -1,7 +1,7 @@
-#  -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2021 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-2020 by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -21,15 +21,11 @@
 #   Michele Brambilla <michele.brambilla@psi.ch>
 #
 # *****************************************************************************
+from nicos.core import Override, anytype, dictof
+from nicos.devices.generic import Switcher
 
-from nicos.clients.flowui.mainwindow import MainWindow as MainWindowESS, \
-    get_icon
 
-
-class MainWindowSINQ(MainWindowESS):
-
-    def set_icons(self):
-        MainWindowESS.set_icons(self)
-        self.actionEmergencyStop.setIcon(
-            get_icon('emergency_stop_cross_red-24px.svg')
-        )
+class NumberSwitcher(Switcher):
+    parameter_overrides = {
+        "mapping": Override(type=dictof(int, anytype)),
+    }

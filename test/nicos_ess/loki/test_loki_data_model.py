@@ -24,13 +24,13 @@
 #
 # *****************************************************************************
 
-from nicos_ess.loki.gui.loki_scriptbuilder_model import LokiScriptModel
+from nicos_ess.loki.gui.loki_data_model import LokiDataModel
 
 HEADERS = ['COLUMN_1', 'COLUMN_2', 'COLUMN_3']
 
 
-def create_loki_script_model(num_rows=4, data=None):
-    model = LokiScriptModel(HEADERS, num_rows)
+def create_loki_data_model(num_rows=4, data=None):
+    model = LokiDataModel(HEADERS, num_rows)
     if data is not None:
         model.table_data = data
     return model
@@ -39,7 +39,7 @@ def create_loki_script_model(num_rows=4, data=None):
 class TestScriptBuilderModel:
     def test_initialization_done_correctly(self):
         num_rows = 4
-        model = create_loki_script_model(num_rows)
+        model = create_loki_data_model(num_rows)
         # check if initialized with empty data
         assert not any(data for data in sum(model.table_data, []))
         # check dimensions of the table_data
@@ -54,7 +54,7 @@ class TestScriptBuilderModel:
             ['30', '31', '32'],
         ]
         # Create model with data
-        model = create_loki_script_model(len(data), data)
+        model = create_loki_data_model(len(data), data)
 
         position = 2
         model.insertRow(position)
@@ -72,7 +72,7 @@ class TestScriptBuilderModel:
             ['30', '31', '32'],
         ]
         # Create model with data
-        model = create_loki_script_model(len(data), data)
+        model = create_loki_data_model(len(data), data)
 
         positions = [0, 1]
         model.removeRows(positions)
@@ -87,7 +87,7 @@ class TestScriptBuilderModel:
             ['20', '21', '22'],
             ['30', '31', '32'],
         ]
-        model = create_loki_script_model(len(data), data)
+        model = create_loki_data_model(len(data), data)
 
         selected_indices = [(0, 0), (0, 1), (1, 0), (1, 1)]
         selected_data = model.select_data(selected_indices)
@@ -95,7 +95,7 @@ class TestScriptBuilderModel:
         assert selected_data == [['00', '01'], ['10', '11']]
 
     def test_clipboard_data_gets_pasted_in_empty_table_at_top_left(self):
-        model = create_loki_script_model()
+        model = create_loki_data_model()
         clipboard_data = [['A', 'B'], ['C', 'D']]
 
         top_left = (0, 0)
@@ -109,7 +109,7 @@ class TestScriptBuilderModel:
         ]
 
     def test_clipboard_data_pasting_outside_the_columns_gets_ignored(self):
-        model = create_loki_script_model()
+        model = create_loki_data_model()
         clipboard_data = [['A', 'B'], ['C', 'D']]
 
         top_right = (0, len(HEADERS) - 1)
@@ -124,7 +124,7 @@ class TestScriptBuilderModel:
 
     def test_clipboard_data_pasting_in_bottom_row_expands_the_table(self):
         num_rows = 4
-        model = create_loki_script_model(num_rows)
+        model = create_loki_data_model(num_rows)
 
         clipboard_data = [['A', 'B'], ['C', 'D']]
         bottom_left = (num_rows - 1, 0)
@@ -148,7 +148,7 @@ class TestScriptBuilderModel:
             ['30', '31', '32'],
         ]
         # Create model with data
-        model = create_loki_script_model(len(data), data)
+        model = create_loki_data_model(len(data), data)
         clipboard_data = [['A', 'B'], ['C', 'D']]
         index = (1, 0)
 
@@ -162,7 +162,7 @@ class TestScriptBuilderModel:
         ]
 
     def test_hidden_column_skipped_when_pasting_clipboard_data(self):
-        model = create_loki_script_model()
+        model = create_loki_data_model()
         hidden_column = 1
         top_left = (0, 0)
         clipboard_data = [['A', 'B'], ['C', 'D']]

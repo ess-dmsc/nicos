@@ -38,7 +38,7 @@ from nicos.utils import findResource
 
 from nicos_ess.loki.gui.loki_panel import LokiPanelBase
 from nicos_ess.loki.gui.loki_script_generator import ScriptFactory, TransOrder
-from nicos_ess.loki.gui.loki_scriptbuilder_model import LokiScriptModel
+from nicos_ess.loki.gui.loki_data_model import LokiDataModel
 from nicos_ess.utilities.csv_utils import export_table_to_csv, \
     import_table_from_csv
 from nicos_ess.utilities.table_utils import convert_table_to_clipboard_text, \
@@ -95,7 +95,7 @@ class LokiScriptBuilderPanel(LokiPanelBase):
             for name in self.columns_in_order
         ]
 
-        self.model = LokiScriptModel(headers)
+        self.model = LokiDataModel(headers)
         self.tableView.setModel(self.model)
         self.tableView.setSelectionMode(QTableView.ContiguousSelection)
 

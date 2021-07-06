@@ -31,7 +31,7 @@ import copy
 from nicos.guisupport.qt import QAbstractTableModel, QModelIndex, Qt
 
 
-class LokiScriptModel(QAbstractTableModel):
+class LokiDataModel(QAbstractTableModel):
     def __init__(self, header_data, num_rows=25):
         QAbstractTableModel.__init__(self)
 
