@@ -51,7 +51,7 @@ devices = dict(
     FileWriter=device(
         'nicos_ess.devices.datasinks.file_writer.FileWriterStatus',
         description='Status for file-writer',
-        brokers=['127.0.0.1:9092'],
+        brokers=['172.30.242.20:9092'],
         statustopic='UTGARD_writerCommand',
         unit='',
     ),
@@ -59,7 +59,7 @@ devices = dict(
     FileWriterControl=device(
         'nicos_ess.devices.datasinks.file_writer.FileWriterControl',
         description='Control for file-writer',
-        brokers=['127.0.0.1:9092'],
+        brokers=['172.30.242.20:9092'],
         command_topic='UTGARD_writerCommand',
         nexus_config_path='nicos_ess/ymir/commands/nexus_config.json',
     ),
