@@ -21,19 +21,16 @@
 #   Matt Clarke <matt.clarke@ess.eu>
 #
 # *****************************************************************************
+from nicos.core.params import Attach
 from nicos import session
 from nicos.core import Param, Value, status, tupleof
 from nicos.core.constants import LIVE
-from nicos.core.device import Measurable
+from nicos.core.device import Measurable, Readable
 from nicos.devices.epics import pvget
 
 
 class LaserDetector(Measurable):
     parameters = {
-        'pv_name': Param('Store the current identifier',
-                         internal=False, type=str,
-                         default="SES-SCAN:LSR-001:AnalogInput",
-                         settable=True),
         'curstatus': Param('Store the current device status',
                            internal=True, type=tupleof(int, str),
                            default=(status.OK, ""),
@@ -42,6 +39,9 @@ class LaserDetector(Measurable):
                         internal=True, type=float,
                         default=0,
                         settable=True),
+    }
+    attached_devices = {
+        'laser': Attach('the underlying laser device', Readable),
     }
 
     def doPrepare(self):
@@ -53,7 +53,7 @@ class LaserDetector(Measurable):
         results = []
         for _ in range(5):
             session.delay(0.1)
-            val = pvget(self.pv_name)
+            val = self._attached_laser.doRead()
             max_pow = max(val, max_pow)
             results.append(val)
         self.answer = sum(results) / len(results)
@@ -75,7 +75,7 @@ class LaserDetector(Measurable):
         self._stop_processing()
 
     def doStatus(self, maxage=0):
-        return self.curstatus
+        return self._attached_laser.doStatus(maxage)
 
     def duringMeasureHook(self, elapsed):
         return LIVE
