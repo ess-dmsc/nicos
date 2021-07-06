@@ -35,6 +35,7 @@ from nicos import session
 from nicos.core import ADMIN, Device, Param, host, listof, requires, status
 
 from nicos_ess.devices.kafka.status_handler import KafkaStatusHandler
+from nicos_ess.nexus.nexus_config import NexusTemplate
 
 # TODO: sometimes the GUI says writing even when it is idle
 # And NICOS itself thinks the FW is idle (via doStatus)
@@ -157,47 +158,3 @@ class FileWriterControl(Device):
 
     def _set_job_id(self, value):
         self._setROParam('job_id', value)
-
-
-class NexusTemplate:
-    """
-    Class that can be used to generate a nexus template from a json
-    configuration file and additional information from an experiment device.
-    """
-
-    def __init__(self, config_path):
-        self._config_path = config_path
-        self._nxs_template = {}
-
-    def add_proposal_information(self):
-        """
-        Appends proposal information to the nexus template extracted from the
-        json configuration file.
-        The proposal information is added as a group in the entry group and
-        contains the proposal information as static datasets.
-        The entry group is top level and should be present in all valid
-        NeXus files.
-        """
-        proposal_info = session.experiment.get_proposal_info_as_dict()
-        self._nxs_template['children'][0]['children'][-1]['children'] = []
-        for field in proposal_info:
-            self._nxs_template['children'][0]['children'][-1]['children'].append(
-                {
-                    'module': 'dataset',
-                    'config': {
-                        'name': field,
-                        'dtype': 'string',
-                        'values': proposal_info[field]}
-                }
-            )
-
-    def load_config_file(self):
-        with open(self._config_path, 'r') as file:
-            self._nxs_template = json.load(file)
-            props_info_nexus = {'type': 'group',
-                                'name': 'proposal_information',
-                                'children': []}
-            self._nxs_template['children'][0]['children'].append(props_info_nexus)
-
-    def __str__(self):
-        return json.dumps(self._nxs_template)
