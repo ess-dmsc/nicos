@@ -21,12 +21,12 @@
 #   Michael Wedel <michael.wedel@esss.se>
 #   Nikhil Biyani <nikhil.biyani@psi.ch>
 #   Michael Hart <michael.hart@stfc.ac.uk>
+#   Matt Clarke <matt.clarke@ess.eu>
 #
 # *****************************************************************************
 
-from nicos.core import Attach, Moveable, Override, status, \
-    tupleof, usermethod, Readable
-from nicos.devices.epics import EpicsMoveable, EpicsReadable
+from nicos.core import Attach, Moveable, Override, Readable, status, tupleof, \
+    usermethod
 
 
 class EssChopper(Moveable):
@@ -34,12 +34,16 @@ class EssChopper(Moveable):
         'speed': Attach('Speed of the chopper disc.', Moveable),
         'phase': Attach('Phase of the chopper disc', Moveable),
         'state': Attach('Current state of the chopper', Readable),
-        # 'command': Attach('Command PV of the chopper', EpicsMoveable)
+        'command': Attach('Command PV of the chopper', Moveable)
     }
 
     parameter_overrides = {
         'fmtstr': Override(default='Speed=%.2f Delay=%.2f'),
         'unit': Override(mandatory=False),
+    }
+
+    _commands = {
+        'start', 'stop', 'reset',
     }
 
     hardware_access = False
@@ -49,27 +53,22 @@ class EssChopper(Moveable):
         return [self._attached_speed.read(maxage),
                 self._attached_phase.read(maxage)]
 
-    def doStart(self, pos):
-        if hasattr(self, '_attached_state') and \
-           self._attached_state.read() == 'init':
-            self.initialize()
-
-        self._attached_speed.move(pos[0])
-        self._attached_phase.move(pos[1])
-        # self._attached_command.move('start')
+    def doStart(self, value):
+        self._attached_speed.move(value[0])
+        self._attached_phase.move(value[1])
 
     def doStop(self):
         self._attached_command.move('stop')
 
     def doStatus(self, maxage=0):
         # TODO: For error states set the status to not OK
+        # TODO: handle alarms as well
         return status.OK, self._attached_state.read()
-    #
-    # @usermethod
-    # def initialize(self):
-    #     self._attached_command.move('init')
-    #
-    # @usermethod
-    # def deinitialize(self):
-    #     self._attached_command.move('deinit')
 
+    @usermethod
+    def command(self, command):
+        if command in self._commands:
+            self._attached_command.move(command)
+            return
+        self.log.error('Invalid command, should be one of: '
+                       f'{", ".join(self._commands)}')
