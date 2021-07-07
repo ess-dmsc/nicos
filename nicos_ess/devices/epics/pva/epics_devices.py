@@ -57,9 +57,7 @@ class EpicsMonitorMixin(DeviceMixinBase):
         status_pvs = self._get_status_parameters()
         if session.sessiontype == POLLER:
             self._subscribe_params(value_pvs, self.value_change_callback)
-        else:
-            self._subscribe_params(status_pvs or value_pvs,
-                                   self.status_change_callback)
+            self._subscribe_params(status_pvs, self.status_change_callback)
 
     def _subscribe_params(self, pvparams, change_callback):
         for pvparam in pvparams:
