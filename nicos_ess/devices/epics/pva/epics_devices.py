@@ -53,6 +53,7 @@ class EpicsMonitorMixin(DeviceMixinBase):
     def _register_pv_callbacks(self):
         self._epics_subscriptions = set()
         self._statuses = {}
+        self._values = {}
 
         value_pvs = self._get_pv_parameters()
         value_pvs |= self._get_status_parameters()
