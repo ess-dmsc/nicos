@@ -63,7 +63,7 @@ class PvaWrapper:
         return []
 
     def get_pv_value(self, pv, timeout, as_string=False):
-        result = _CONTEXT.get(pv, timeout=timeout)
+        result = Context('pva', nt=False).get(pv, timeout=timeout)
         return self._convert_value(result['value'], as_string)
 
     def _convert_value(self, value, as_string=False):
