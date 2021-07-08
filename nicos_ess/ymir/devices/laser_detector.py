@@ -55,7 +55,7 @@ class LaserDetector(Measurable):
             session.delay(0.1)
             val = float(self._attached_laser.doRead())
             max_pow = max(val, max_pow)
-            results.append(val)
+            results.append(max_pow)
         self.answer = sum(results) / len(results)
 
     def doRead(self, maxage=0):
