@@ -26,6 +26,7 @@ from file_writer_control.JobStatus import JobState
 
 from nicos import session
 from nicos.commands import usercommand
+from nicos.core import SIMULATION
 from nicos_ess.utilities.managers import wait_before
 from nicos_ess.ymir.commands.start_stop_writing import StartFileWriter,\
     StopFileWriter
@@ -131,9 +132,13 @@ ss_writing = StartStopWriting()
 
 @usercommand
 def start_writing():
+    if session.mode == SIMULATION:
+        return
     ss_writing.start()
 
 
 @usercommand
 def stop_writing():
+    if session.mode == SIMULATION:
+        return
     ss_writing.stop()
