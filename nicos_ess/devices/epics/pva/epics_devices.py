@@ -227,6 +227,13 @@ class EpicsDevice(DeviceMixinBase):
         self._epics_wrapper.put_pv_value_blocking(self._pvs[pvparam], value,
                                                   update_rate, timeout)
 
+    def _read_process_variable(self, pvname, as_string=False):
+        # Reads a process variable pvname directly without accessing it from
+        # self._pvs.
+        return self._epics_wrapper.get_pv_value(pvname,
+                                                timeout=self.epicstimeout,
+                                                as_string=as_string)
+
 
 class EpicsReadable(EpicsMonitorMixin, EpicsDevice, Readable):
     """
