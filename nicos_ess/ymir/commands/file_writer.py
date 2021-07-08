@@ -23,17 +23,22 @@
 # *****************************************************************************
 from nicos import session
 from nicos.commands import usercommand
+from nicos.core import SIMULATION
 from nicos_ess.devices.datasinks.file_writer import FileWriterControl
 
 
 @usercommand
 def start_writing():
+    if session.mode == SIMULATION:
+        return
     dev = _get_filewriter_control_device()
     dev.doStart()
 
 
 @usercommand
 def stop_writing():
+    if session.mode == SIMULATION:
+        return
     dev = _get_filewriter_control_device()
     dev.doStop()
 
