@@ -1,12 +1,14 @@
 description = 'The mini-chopper for YMIR'
 
 pv_root = 'Utg-Ymir:Chop-Drv-0101:'
+pv_stem = 'Utg-Ymir:Chop-Drv-0101'
 
 devices = dict(
     Chopper_status=device(
-        'nicos.devices.epics.EpicsStringReadable',
-        description='The chopper status.',
-        readpv='{}Chop_Stat'.format(pv_root),
+        'nicos_ess.devices.epics.pva.ChopperAlarms',
+        description='The chopper alarms.',
+        readpv='{}ChopStat'.format(pv_root),
+        pv_stem=pv_stem,
     ),
     Chopper_control=device(
         'nicos_ess.devices.epics.extensions.EpicsMappedMoveable',
