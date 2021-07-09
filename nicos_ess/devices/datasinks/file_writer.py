@@ -85,7 +85,10 @@ class FileWriterControl(Device):
 
     def doPreinit(self, mode):
         # TODO: Can we not just get the current job_id from FileWriterStatus
-        self._set_job_id(self._cache.get(self.name, 'job_id', default=''))
+        try:
+            self._set_job_id(self._cache.get(self.name, 'job_id', default=''))
+        except:
+            self._set_job_id('')
         self._command_channel = \
             WorkerCommandChannel(f'{self.brokers[0]}/{self.command_topic}')
         # If there is a job_id then this means the file-writer is currently
