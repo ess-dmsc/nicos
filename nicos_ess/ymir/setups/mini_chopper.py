@@ -7,7 +7,7 @@ devices = dict(
     Chopper_status=device(
         'nicos_ess.devices.epics.pva.ChopperAlarms',
         description='The chopper alarms.',
-        readpv='{}ChopStat'.format(pv_root),
+        readpv='{}Chop_Stat'.format(pv_root),
         pv_stem=pv_stem,
     ),
     Chopper_control=device(
