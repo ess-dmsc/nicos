@@ -2,7 +2,7 @@ description = 'The laser detector in the YMIR cave'
 
 devices = dict(
     laser_pv=device(
-        'nicos.devices.epics.EpicsReadable',
+        'nicos_ess.devices.epics.pva.EpicsStringReadable',
         description='The laser PV',
         readpv='plc-ts:PLC:slowdata',
         lowlevel=True,

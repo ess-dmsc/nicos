@@ -56,12 +56,11 @@ devices = dict(
         unit='',
     ),
 
-    FileWriterParameters=device(
-        'nicos_ess.devices.datasinks.file_writer.FileWriterParameters',
-        description='File-writer parameters',
+    FileWriterControl=device(
+        'nicos_ess.devices.datasinks.file_writer.FileWriterControl',
+        description='Control for file-writer',
         brokers=['172.30.242.20:9092'],
         command_topic='UTGARD_writerCommand',
         nexus_config_path='nicos_ess/ymir/commands/nexus_config.json',
-        lowlevel=True,
     ),
 )
