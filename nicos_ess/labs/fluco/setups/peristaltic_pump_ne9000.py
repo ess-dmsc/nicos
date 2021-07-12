@@ -4,12 +4,10 @@ pv_root = 'E04-SEE-FLUCO:NE9000-001:'
 
 devices = dict(
     inside_diameter_9000=device(
-        'nicos.devices.epics.EpicsAnalogMoveable',
+        'nicos.devices.epics.EpicsStringReadable',
         description='The Inside diameter of the syringe',
         readpv='{}DIAMETER'.format(pv_root),
-        writepv='{}SET_DIAMETER'.format(pv_root),
         epicstimeout=3.0,
-        abslimits=(0.1, 50),
     ),
     pump_volume_9000=device(
         'nicos.devices.epics.EpicsAnalogMoveable',
@@ -73,13 +71,6 @@ devices = dict(
         readpv='{}MESSAGE'.format(pv_root),
         lowlevel=True,
         epicstimeout=3.0,
-    ),
-    start_purge_9000=device(
-        'nicos_ess.devices.epics.extensions.EpicsMappedMoveable',
-        description='Start purging',
-        readpv='{}PURGE'.format(pv_root),
-        writepv='{}PURGE'.format(pv_root),
-        mapping={'OFF': 0, 'ON': 1},
     ),
     start_pumping_9000=device(
         'nicos_ess.devices.epics.extensions.EpicsMappedMoveable',
