@@ -104,10 +104,23 @@
            </property>
           </widget>
          </item>
-         <item row="1" column="2" alignment="Qt::AlignTop">
+         <item row="1" column="3" alignment="Qt::AlignTop">
           <widget class="QLabel" name="lbl5">
            <property name="text">
             <string>mm</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="2" alignment="Qt::AlignTop">
+          <widget class="QLabel" name="offsetCurrent">
+           <property name="frameShape">
+            <enum>QFrame::Panel</enum>
+           </property>
+           <property name="frameShadow">
+            <enum>QFrame::Sunken</enum>
+           </property>
+           <property name="text">
+            <string>TextLabel</string>
            </property>
           </widget>
          </item>
@@ -123,6 +136,29 @@
          <bool>true</bool>
         </property>
         <layout class="QGridLayout" name="gridLayout_3">
+         <item row="2" column="0">
+          <widget class="QLabel" name="apWLabel">
+           <property name="text">
+            <string>Width = </string>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="1">
+          <widget class="QLineEdit" name="apWBox"/>
+         </item>
+         <item row="0" column="1">
+          <widget class="QLineEdit" name="apXBox">
+           <property name="layoutDirection">
+            <enum>Qt::RightToLeft</enum>
+           </property>
+           <property name="placeholderText">
+            <string/>
+           </property>
+           <property name="clearButtonEnabled">
+            <bool>false</bool>
+           </property>
+          </widget>
+         </item>
          <item row="1" column="0">
           <widget class="QLabel" name="apYLabel">
            <property name="text">
@@ -130,10 +166,37 @@
            </property>
           </widget>
          </item>
-         <item row="2" column="0">
-          <widget class="QLabel" name="apWLabel">
+         <item row="1" column="1">
+          <widget class="QLineEdit" name="apYBox"/>
+         </item>
+         <item row="3" column="3">
+          <widget class="QLabel" name="lbl4">
            <property name="text">
-            <string>Width = </string>
+            <string>mm</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="3">
+          <widget class="QLabel" name="lbl1">
+           <property name="text">
+            <string>mm</string>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="3">
+          <widget class="QLabel" name="lbl3">
+           <property name="text">
+            <string>mm</string>
+           </property>
+          </widget>
+         </item>
+         <item row="3" column="1">
+          <widget class="QLineEdit" name="apHBox"/>
+         </item>
+         <item row="1" column="3">
+          <widget class="QLabel" name="lbl2">
+           <property name="text">
+            <string>mm</string>
            </property>
           </widget>
          </item>
@@ -144,40 +207,6 @@
            </property>
           </widget>
          </item>
-         <item row="1" column="1" alignment="Qt::AlignHCenter">
-          <widget class="QLineEdit" name="apYBox"/>
-         </item>
-         <item row="2" column="1" alignment="Qt::AlignHCenter">
-          <widget class="QLineEdit" name="apWBox"/>
-         </item>
-         <item row="0" column="2">
-          <widget class="QLabel" name="lbl1">
-           <property name="text">
-            <string>mm</string>
-           </property>
-          </widget>
-         </item>
-         <item row="2" column="2">
-          <widget class="QLabel" name="lbl3">
-           <property name="text">
-            <string>mm</string>
-           </property>
-          </widget>
-         </item>
-         <item row="3" column="2">
-          <widget class="QLabel" name="lbl4">
-           <property name="text">
-            <string>mm</string>
-           </property>
-          </widget>
-         </item>
-         <item row="1" column="2" alignment="Qt::AlignTop">
-          <widget class="QLabel" name="lbl2">
-           <property name="text">
-            <string>mm</string>
-           </property>
-          </widget>
-         </item>
          <item row="3" column="0">
           <widget class="QLabel" name="apHLabel">
            <property name="text">
@@ -185,19 +214,55 @@
            </property>
           </widget>
          </item>
-         <item row="3" column="1" alignment="Qt::AlignHCenter">
-          <widget class="QLineEdit" name="apHBox"/>
+         <item row="0" column="2">
+          <widget class="QLabel" name="posXCurrent">
+           <property name="frameShape">
+            <enum>QFrame::Panel</enum>
+           </property>
+           <property name="frameShadow">
+            <enum>QFrame::Sunken</enum>
+           </property>
+           <property name="text">
+            <string>TextLabel</string>
+           </property>
+          </widget>
          </item>
-         <item row="0" column="1" alignment="Qt::AlignHCenter">
-          <widget class="QLineEdit" name="apXBox">
-           <property name="layoutDirection">
-            <enum>Qt::RightToLeft</enum>
+         <item row="1" column="2">
+          <widget class="QLabel" name="posYCurrent">
+           <property name="frameShape">
+            <enum>QFrame::Panel</enum>
            </property>
-           <property name="placeholderText">
-            <string/>
+           <property name="frameShadow">
+            <enum>QFrame::Sunken</enum>
            </property>
-           <property name="clearButtonEnabled">
-            <bool>false</bool>
+           <property name="text">
+            <string>TextLabel</string>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="2">
+          <widget class="QLabel" name="widthCurrent">
+           <property name="frameShape">
+            <enum>QFrame::Panel</enum>
+           </property>
+           <property name="frameShadow">
+            <enum>QFrame::Sunken</enum>
+           </property>
+           <property name="text">
+            <string>TextLabel</string>
+           </property>
+          </widget>
+         </item>
+         <item row="3" column="2">
+          <widget class="QLabel" name="heightCurrent">
+           <property name="frameShape">
+            <enum>QFrame::Panel</enum>
+           </property>
+           <property name="frameShadow">
+            <enum>QFrame::Sunken</enum>
+           </property>
+           <property name="text">
+            <string>TextLabel</string>
            </property>
           </widget>
          </item>

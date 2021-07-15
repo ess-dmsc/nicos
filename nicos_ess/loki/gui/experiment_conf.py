@@ -23,10 +23,9 @@
 # *****************************************************************************
 
 """LoKI Experiment Configuration dialog."""
-import itertools
 
 from nicos.clients.gui.utils import loadUi
-from nicos.guisupport.qt import QLineEdit, QMessageBox, Qt, pyqtSlot
+from nicos.guisupport.qt import QMessageBox, Qt, pyqtSlot
 from nicos.utils import findResource
 
 from nicos_ess.loki.gui.loki_panel import LokiPanelBase
@@ -49,6 +48,12 @@ class LokiExperimentPanel(LokiPanelBase):
 
         self.holder_info = options.get('holder_info', [])
         self.instrument = options.get('instrument', 'loki')
+
+        self.editable_settings = [
+            self.apXBox, self.apYBox, self.apWBox,
+            self.apHBox, self.offsetBox
+        ]
+
         self.initialise_connection_status_listeners()
         self.initialise_markups()
 
@@ -69,6 +74,14 @@ class LokiExperimentPanel(LokiPanelBase):
         self.sampleSetApply.setEnabled(False)
         self.instSetApply.setEnabled(False)
 
+        # Labels that will show up when a value change to show currently cached.
+        self.currentValueLabels = [
+            self.posXCurrent, self.posYCurrent, self.widthCurrent,
+            self.heightCurrent, self.offsetCurrent
+        ]
+
+        self._disable_current_value_labels()
+
     def on_client_connected(self):
         LokiPanelBase.on_client_connected(self)
         self._set_cached_values_to_ui()
@@ -83,7 +96,7 @@ class LokiExperimentPanel(LokiPanelBase):
         self.instSetGroupBox.setEnabled(not viewonly)
 
     def initialise_markups(self):
-        for box in self._get_editable_settings():
+        for box in self.editable_settings:
             box.clear()
             box.setAlignment(Qt.AlignRight)
             # The validator should be reset upon disconnection from the server.
@@ -99,16 +112,38 @@ class LokiExperimentPanel(LokiPanelBase):
             'decimal': 5,
         }
         validator = DoubleValidator(**_validator_values)
-        for box in self._get_editable_settings():
+        for box in self.editable_settings:
             box.setValidator(validator)
 
     def listen_instrument_settings(self):
-        for box in self._get_editable_settings():
-            box.textChanged.connect(lambda: self.instSetApply.setEnabled(True))
+        for box in self.editable_settings:
+            box.textChanged.connect(self._instrument_settings_changed)
+
+        for box in self.editable_settings:
+            box.textEdited.connect(self._inform_current_instrument_values)
+
+    def _instrument_settings_changed(self):
+        self.instSetApply.setEnabled(True)
+
+    def _inform_current_instrument_values(self):
+        cached_values = self._get_cached_values_of_instrument_settings()
+        ui_values = self._get_current_values_of_instrument_settings()
+        for index, value in enumerate(ui_values):
+            if value == '' or float(value) not in cached_values:
+                self.currentValueLabels[index].setText(
+                    "Current value = " + str(cached_values[index])
+                )
+                self.currentValueLabels[index].setVisible(True)
+            else:
+                self.currentValueLabels[index].setVisible(False)
+
+    def _disable_current_value_labels(self):
+        for label in self.currentValueLabels:
+            label.setVisible(False)
 
     def _set_cached_values_to_ui(self):
         _cached_values = self._get_cached_values_of_instrument_settings()
-        for index, box in enumerate(self._get_editable_settings()):
+        for index, box in enumerate(self.editable_settings):
             box.setText(f'{_cached_values[index]}')
 
         if not self._verify_instrument_settings():
@@ -143,20 +178,12 @@ class LokiExperimentPanel(LokiPanelBase):
 
     def _get_current_values_of_instrument_settings(self):
         _box_values = [
-            box.text() for box in self._get_editable_settings()
+            box.text() for box in self.editable_settings
         ]
         return _box_values
 
-    def _get_editable_settings(self):
-        _editable_settings = itertools.chain(
-                # QT returns the boxes in reverse order for some reason.
-                reversed(self.aptGroupBox.findChildren(QLineEdit)),
-                self.detGroupBox.findChildren(QLineEdit)
-            )
-        return _editable_settings
-
     def _is_empty(self):
-        for box in self._get_editable_settings():
+        for box in self.editable_settings:
             if not box.text():
                 QMessageBox.warning(self, 'Error',
                                     'A property cannot be empty.')
@@ -194,3 +221,4 @@ class LokiExperimentPanel(LokiPanelBase):
             return
         self._set_ui_values_to_cache()
         self.instSetApply.setEnabled(False)
+        self._disable_current_value_labels()

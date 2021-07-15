@@ -133,7 +133,6 @@ class ExpPanel(Panel):
     """
 
     panelName = 'Experiment setup'
-    exp_proposal_activated = pyqtSignal()
 
     def __init__(self, parent, client, options):
         Panel.__init__(self, parent, client, options)
@@ -148,21 +147,21 @@ class ExpPanel(Panel):
         self.sampleTable.horizontalHeader().setSectionResizeMode(
             QHeaderView.Interactive)
 
-        self.applyWarningLabel.setStyleSheet('color: red')
-        self.applyWarningLabel.setVisible(False)
-
         self._text_controls = (self.expTitle, self.users, self.localContacts,
                                self.proposalNum, self.proposalQuery)
 
         self.hide_samples = options.get('hide_sample', False)
         if self.hide_samples:
             self._hide_sample_info()
-        self._set_up_button_box()
+        self._setup_button_box_and_warn_label()
         self.initialise_connection_status_listeners()
 
-    def _set_up_button_box(self):
+    def _setup_button_box_and_warn_label(self):
         self.buttonBox.setLayoutDirection(Qt.RightToLeft)
         self.buttonBox.addButton("Discard Changes", QDialogButtonBox.ResetRole)
+
+        self.applyWarningLabel.setStyleSheet('color: red')
+        self.applyWarningLabel.setVisible(False)
 
     def on_buttonBox_clicked(self, button):
         role = self.buttonBox.buttonRole(button)
@@ -171,12 +170,13 @@ class ExpPanel(Panel):
         elif role == QDialogButtonBox.ResetRole:
             self.discardChanges()
 
-    def _set_buttons_behaviour(self, value):
+    def _set_buttons_and_warning_behaviour(self, value):
         for button in self.buttonBox.buttons():
             role = self.buttonBox.buttonRole(button)
             button.setEnabled(value)
             if role == QDialogButtonBox.ResetRole:
                 button.setVisible(value)
+        self.applyWarningLabel.setVisible(value)
 
     def _hide_sample_info(self):
         self.sampleTable.hide()
@@ -273,8 +273,7 @@ class ExpPanel(Panel):
         self.queryDBButton.setEnabled(not is_view_only)
         self.sampleTable.setEnabled(not is_view_only)
         if is_view_only:
-            self._set_buttons_behaviour(False)
-            self.applyWarningLabel.setVisible(False)
+            self._set_buttons_and_warning_behaviour(False)
         else:
             self._check_for_changes()
 
@@ -344,7 +343,6 @@ class ExpPanel(Panel):
         if changes:
             self.showInfo('\n'.join(changes))
         self._update_proposal_info()
-        self.exp_proposal_activated.emit()
 
     def _set_samples(self, changes):
         if self.hide_samples:
@@ -489,8 +487,7 @@ class ExpPanel(Panel):
         has_changed = self.new_proposal_settings != self.old_proposal_settings
         has_changed |= \
             self.samples_model.samples != self.old_proposal_settings.samples
-        self.applyWarningLabel.setVisible(has_changed)
-        self._set_buttons_behaviour(has_changed)
+        self._set_buttons_and_warning_behaviour(has_changed)
 
     def discardChanges(self):
         self._update_proposal_info()

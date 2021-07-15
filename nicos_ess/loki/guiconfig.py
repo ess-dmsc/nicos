@@ -15,16 +15,16 @@ main_window = docked(
                 (panel('nicos.clients.flowui.panels.setup_panel.SetupsPanel'))
             ),  # vsplit
         ),
-(
-            'Samples',
-            vsplit(
-                (panel('nicos_ess.loki.gui.loki_samples.LokiSamplePanel'))
-            ),  # vsplit
-        ),
         (
             'Experiment Configuration',
             vsplit(
                 (panel('nicos_ess.loki.gui.experiment_conf.LokiExperimentPanel'))
+            ),  # vsplit
+        ),
+        (
+            'Samples',
+            vsplit(
+                (panel('nicos_ess.loki.gui.loki_samples.LokiSamplePanel'))
             ),  # vsplit
         ),
         ('  ', panel('nicos.clients.flowui.panels.empty.EmptyPanel')),

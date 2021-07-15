@@ -14,5 +14,6 @@ devices = dict(
     NTP_DIFF=device(
         'nicos_ess.devices.epics.pva.EpicsReadable',
         readpv='FS:timeDiffnsNTPEVR:01'.format(pv_root),
+        unit='ns',
         description='The difference between the Utgård EVR and the NTP client'),
 )
