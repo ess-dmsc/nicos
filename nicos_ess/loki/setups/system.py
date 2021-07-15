@@ -36,6 +36,7 @@ devices = dict(
                     description='aperture and offset settings',
                     lowlevel=True,
     ),
+
     filesink=device('nicos.devices.datasinks.AsciiScanfileSink', ),
 
     conssink=device('nicos.devices.datasinks.ConsoleScanSink', ),
