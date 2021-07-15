@@ -66,15 +66,6 @@ class EpicsMappedMoveable(MappedMoveable, EpicsDigitalMoveableEss):
     def _startRaw(self, target):
         EpicsDigitalMoveableEss.doStart(self, target)
 
-    def doStart(self, value):
-        if value in self.mapping:
-            self._put_pv('writepv', self.mapping[value])
-        elif value in self.mapping.values():
-            self._put_pv('writepv', value)
-        else:
-            self.log.error(f'{value} is not a valid value '
-                           f'in the device mapping.')
-
     def doStop(self):
         if not self.ignore_stop:
             EpicsDigitalMoveableEss.doStop(self)

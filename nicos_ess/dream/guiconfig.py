@@ -25,7 +25,7 @@ main_window = docked(
                      ('Scan Plot',
                       panel('nicos.clients.flowui.panels.scans.ScansPanel')),
                      ('Detector Image',
-                      panel('nicos_ess.dream.gui.live.LiveDataPanel')),
+                      panel('nicos.clients.flowui.panels.live.MultiLiveDataPanel')),
                      ('Script Status',
                       panel('nicos.clients.flowui.panels.status.ScriptStatusPanel',
                             eta=True)),
@@ -50,7 +50,7 @@ main_window = docked(
                       tools=None),
             ), # vsplit
         ),
-        ('Detector Image', panel('nicos_ess.dream.gui.live.LiveDataPanel')),
+        ('Detector Image', panel('nicos.clients.flowui.panels.live.MultiLiveDataPanel')),
         ('History',
             panel('nicos.clients.flowui.panels.history.HistoryPanel'),
         ),
@@ -81,7 +81,5 @@ tools = [
 ]
 
 options = {
-    'reader_classes': ['nicos.devices.datasinks.text',
-                       'nicos_ess.dream.devices.datasinks.numpy_reader'],
     'facility': 'ess',
 }
