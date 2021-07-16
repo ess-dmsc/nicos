@@ -191,6 +191,7 @@ class ExpPanel(Panel):
         self.client.connected.connect(self.on_client_connected)
         self.client.disconnected.connect(self.on_client_disconnected)
         self.client.experiment.connect(self.on_experiment_finished)
+        self.client.experiment.connect(self._update_panel)
 
     def _update_proposal_info(self):
         values = self.client.eval('session.experiment.proposal, '
