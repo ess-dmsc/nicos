@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-present by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -28,8 +28,6 @@ from os import path
 from nicos.clients.gui.panels import Panel, PanelDialog
 from nicos.clients.gui.utils import dialogFromUi, loadUi
 from nicos.core import ConfigurationError
-from nicos.core.params import vec3
-from nicos.devices.sxtal.xtal.sxtalcell import SXTalCell
 from nicos.guisupport import typedvalue
 from nicos.guisupport.qt import (
     QComboBox,
@@ -46,6 +44,8 @@ from nicos.guisupport.qt import (
     QStyledItemDelegate,
     Qt,
     QTextDocument,
+    QWidget,
+    pyqtSignal,
     pyqtSlot,
 )
 from nicos.guisupport.widget import NicosWidget
@@ -184,15 +184,16 @@ class ExpPanel(Panel):
         else:
             self.queryDBButton.setVisible(False)
             self.propLabel.setText("Enter a proposal number or name:")
-        if self.client.viewonly:
-            self.finishButton.setVisible(False)
-            self.buttonBox.setStandardButtons(QDialogButtonBox.StandardButton.Close)
+        self.setViewOnly(self.client.viewonly)
+
+    def setViewOnly(self, viewonly):
+        self.finishButton.setVisible(not viewonly)
+        btns = self.buttonBox.standardButtons()
+        if viewonly:
+            btns &= ~QDialogButtonBox.StandardButton.Apply
         else:
-            self.finishButton.setVisible(True)
-            self.buttonBox.setStandardButtons(
-                QDialogButtonBox.StandardButton.Apply
-                | QDialogButtonBox.StandardButton.Close
-            )
+            btns |= QDialogButtonBox.StandardButton.Apply
+        self.buttonBox.setStandardButtons(btns)
 
     def on_client_disconnected(self):
         self.setViewOnly(True)
@@ -211,7 +212,8 @@ class ExpPanel(Panel):
                 self,
                 "Error",
                 "Invalid users list, please specify as\n\n"
-                "First Name <first@email.com>; Second Name <second@email.com>",
+                "First Name <first@email.com> (affiliation 1); "
+                "Second Name <second@email.org> (affiliation 2)",
             )
             raise ConfigurationError from None
         try:
@@ -305,7 +307,7 @@ class ExpPanel(Panel):
             )
 
     def chooseProposal(self, proposals):
-        dlg = dialogFromUi(self, "panels/setup_exp_proposal.ui")
+        dlg = dialogFromUi(self, path.join("panels", "setup_exp_proposal.ui"))
         dlg.list.setItemDelegate(ProposalDelegate(dlg))
         for prop in proposals:
             item = QListWidgetItem("", dlg.list)
@@ -354,6 +356,12 @@ class ExpPanel(Panel):
             )
             return
 
+        try:
+            self.client.eval("session.experiment._newCheckHook(None, %r)" % prop)
+        except Exception as e:
+            self.showError("Experiment cannot be started:\n" + str(e))
+            return
+
         script_running = self.mainwindow.current_status != "idle"
 
         # do some work
@@ -362,9 +370,9 @@ class ExpPanel(Panel):
             if title:
                 args["title"] = title
             if local:
-                args["localcontact"] = local
+                args["localcontact"] = combineUsers(local)
             if users:
-                args["user"] = users
+                args["user"] = combineUsers(users)
             code = "NewExperiment(%s)" % ", ".join("%s=%r" % i for i in args.items())
             if self.client.run(code, noqueue=True) is None:
                 self.showError(
@@ -390,10 +398,10 @@ class ExpPanel(Panel):
         if sample != self._orig_samplename:
             self.client.run("NewSample(%r)" % sample)
             done.append("New sample name set.")
-        if notifEmails != self._orig_propinfo.get("notif_emails"):
+        if notifEmails != self._orig_propinfo.get("notif_emails", []):
             self.client.run("SetMailReceivers(%s)" % ", ".join(map(repr, notifEmails)))
             done.append("New mail receivers set.")
-        if dataEmails != self._orig_propinfo.get("data_emails"):
+        if dataEmails != self._orig_propinfo.get("data_emails", []):
             self.client.run("SetDataReceivers(%s)" % ", ".join(map(repr, dataEmails)))
             done.append("New data mail receivers set.")
         if errorbehavior != self._orig_errorbehavior:
@@ -449,7 +457,7 @@ class SetupsPanel(Panel):
 
     def __init__(self, parent, client, options):
         Panel.__init__(self, parent, client, options)
-        loadUi(self, "panels/setup_setups.ui")
+        loadUi(self, path.join("panels", "setup_setups.ui"))
         self.errorLabel.hide()
         self.aliasGroup.hide()
         self._reload_btn = QPushButton("Reload current setup")
@@ -535,20 +543,20 @@ class SetupsPanel(Panel):
     def on_client_disconnected(self):
         self.basicSetup.clear()
         self.optSetups.clear()
+        self.aliasGroup.hide()
         self.setViewOnly(True)
 
     def setViewOnly(self, viewonly):
+        btns = self.buttonBox.standardButtons()
         if viewonly:
-            self.buttonBox.setStandardButtons(QDialogButtonBox.StandardButton.Close)
             self.buttonBox.removeButton(self._reload_btn)
+            btns &= ~QDialogButtonBox.StandardButton.Apply
         else:
-            self.buttonBox.setStandardButtons(
-                QDialogButtonBox.StandardButton.Apply
-                | QDialogButtonBox.StandardButton.Close
-            )
+            btns |= QDialogButtonBox.StandardButton.Apply
             self.buttonBox.addButton(
                 self._reload_btn, QDialogButtonBox.ButtonRole.ResetRole
             )
+        self.buttonBox.setStandardButtons(btns)
 
     def on_basicSetup_currentItemChanged(self, item, old):
         if item and item.text() != "<keep current>":
@@ -725,11 +733,14 @@ class DetEnvPanel(Panel):
 
     def __init__(self, parent, client, options):
         Panel.__init__(self, parent, client, options)
-        loadUi(self, "panels/setup_detenv.ui")
+        loadUi(self, path.join("panels", "setup_detenv.ui"))
 
         if client.isconnected:
             self.on_client_connected()
+        else:
+            self.on_client_disconnected()
         client.connected.connect(self.on_client_connected)
+        client.disconnected.connect(self.on_client_disconnected)
         client.setup.connect(self.on_client_connected)
 
     def on_client_connected(self):
@@ -770,13 +781,20 @@ class DetEnvPanel(Panel):
                 if devname in self._orig_envlist
                 else Qt.CheckState.Unchecked
             )
-        if self.client.viewonly:
-            self.buttonBox.setStandardButtons(QDialogButtonBox.StandardButton.Close)
+        self.setViewOnly(self.client.viewonly)
+
+    def on_client_disconnected(self):
+        self.detectors.clear()
+        self.sampleenv.clear()
+        self.setViewOnly(True)
+
+    def setViewOnly(self, viewonly):
+        btns = self.buttonBox.standardButtons()
+        if viewonly:
+            btns &= ~QDialogButtonBox.StandardButton.Apply
         else:
-            self.buttonBox.setStandardButtons(
-                QDialogButtonBox.StandardButton.Apply
-                | QDialogButtonBox.StandardButton.Close
-            )
+            btns |= QDialogButtonBox.StandardButton.Apply
+        self.buttonBox.setStandardButtons(btns)
 
     @pyqtSlot()
     def on_envHelpBtn_clicked(self):
@@ -817,24 +835,177 @@ sample environment is placed.""")
             self.showInfo("\n".join(done))
 
 
+class GenericSampleWidget(QWidget):
+    uiName = path.join("panels", "sample.ui")
+
+    sampleChanged = pyqtSignal()
+
+    def __init__(self, parent=None):
+        QWidget.__init__(self, parent)
+        self.editBoxes = []
+        loadUi(self, self.uiName)
+        self.samplenumber = None
+
+    def setParameters(self, paramInfo, params):
+
+        def addEntry(pinfo, key, layout, index, userparam=False):
+            if not pinfo or (ptype := pinfo.get("type")) is None:
+                return
+            if userparam and (
+                not pinfo.get("userparam") or pinfo.get("category") != "sample"
+            ):
+                return
+            punit = pinfo.get("unit")
+            pvalue = params.get(key)
+            lbl = QLabel(pinfo.get("description", ""))
+            if key == "samplename":
+                lbl.setStyleSheet("font-weight: bold;")
+            lbl.setToolTip(f"Parameter: {key} {pinfo.get('ext_desc', '')}")
+            try:
+                pedit = typedvalue.create(self, ptype, pvalue, unit=punit)
+                pedit.setProperty("param", key)
+                layout.addWidget(lbl, index, 0)
+                layout.addWidget(pedit, index, 1)
+                self.editBoxes.append(pedit)
+                return pedit
+            except Exception:
+                return None
+
+        def clearLayout(layout):
+            while layout.count():
+                item = layout.takeAt(0)
+                if widget := item.widget():
+                    widget.deleteLater()
+                elif sublayout := item.layout():
+                    clearLayout(sublayout)
+
+        keys = [
+            key
+            for key in list(paramInfo)
+            if key
+            not in [
+                # General device parameters
+                "fmtstr",
+                "description",
+                "loglevel",
+                "unit",
+                "fixed",
+                "lowlevel",
+                "maxage",
+                "name",
+                "target",
+                "classes",
+                "requires",
+                "fixedby",
+                "pollinterval",
+                "warnlimits",
+                "visibility",
+                "ignore_general_stop",
+            ]
+            + [
+                # Sample specific parameters
+                "samples",
+                "samplename",
+                "sampledescription",
+                "samplenumber",
+            ]
+            + [
+                # SXTalSample
+                "cell",
+                "rmat",
+                "ubmatrix",
+            ]
+        ]
+
+        clearLayout(self.nameLayout)
+        clearLayout(self.parameterLayout)
+        self.editBoxes = []
+
+        # Sample name and number should be the first entries
+        for i, key in enumerate(["samplename", "sampledescription", "samplenumber"]):
+            # The sample number is by default type of 'none_or' but we want a
+            # number
+            w = addEntry(paramInfo.get(key), key, self.nameLayout, i)
+            if key == "samplenumber" and w:
+                self.samplenumber = w
+                self.samplenumber.valueModified.connect(self.sampleChanged)
+
+        for i, key in enumerate(keys):
+            addEntry(paramInfo.get(key), key, self.parameterLayout, i, True)
+
+    @property
+    def sample_number(self):
+        if self.samplenumber:
+            return self.samplenumber.getValue()
+        return ""
+
+    def getParams(self):
+        params = {}
+        for edit in self.editBoxes:
+            param = edit.property("param")
+            params[param] = edit.getValue()
+        return params
+
+    def generateCode(self):
+        params = []
+        sample_number = -1
+        for edit in self.editBoxes:
+            param = edit.property("param")
+            value = edit.getValue()
+            if param == "samplename":
+                params.insert(0, f"{value!r}")
+            elif param == "samplenumber":
+                if value is not None:
+                    sample_number = value
+            else:
+                params.append(f"{param}={value!r}")
+        if sample_number > 0:
+            params.insert(0, str(sample_number))
+            return "\n".join(
+                ["SetSample(%s)" % ", ".join(params), f"SelectSample({sample_number})"]
+            )
+        return "NewSample(%s)" % ", ".join(params)
+
+
 class GenericSamplePanel(Panel):
     """Provides a panel to input the name of the currently used sample."""
 
     panelName = "Sample setup"
-    uiName = "panels/setup_sample.ui"
+    uiName = path.join("panels", "setup_sample.ui")
 
     def __init__(self, parent, client, options):
         Panel.__init__(self, parent, client, options)
         loadUi(self, self.uiName)
+        self._initUI()
         for ch in self.findChildren(NicosWidget):
             ch.setClient(self.client)
-        if self.client.viewonly:
-            self.buttonBox.setStandardButtons(QDialogButtonBox.StandardButton.Close)
+        self.setViewOnly(self.client.viewonly)
+
+    def setViewOnly(self, viewonly):
+        btns = self.buttonBox.standardButtons()
+        if viewonly:
+            btns &= ~QDialogButtonBox.StandardButton.Apply
         else:
-            self.buttonBox.setStandardButtons(
-                QDialogButtonBox.StandardButton.Apply
-                | QDialogButtonBox.StandardButton.Close
-            )
+            btns |= QDialogButtonBox.StandardButton.Apply
+        self.buttonBox.setStandardButtons(btns)
+
+    def _initUI(self):
+        self.sample.sampleChanged.connect(self.sampleChanged)
+        self._setSample(0)
+
+    @pyqtSlot()
+    def sampleChanged(self):
+        self._setSample(self.sample.sample_number)
+
+    def _setSample(self, samplenr):
+        sample = self.client.eval("session.experiment.sample", "Sample")
+        paramInfo = self.client.getDeviceParamInfo(sample)
+        params = self.client.getDeviceParams(sample)
+        if samplenr in params.get("samples", {}):
+            params = params["samples"][samplenr]
+        params = params.copy()
+        params["samplenumber"] = samplenr or 0
+        self.sample.setParameters(paramInfo, params)
 
     def on_buttonBox_clicked(self, button):
         role = self.buttonBox.buttonRole(button)
@@ -844,110 +1015,12 @@ class GenericSamplePanel(Panel):
             self.closeWindow()
 
     def getEditBoxes(self):
-        return [self.samplenameEdit]
+        return self.sample.editBoxes
 
     def applyChanges(self):
-        params = []
-        for edit in self.getEditBoxes():
-            if edit.param == "samplename":
-                params.insert(0, "%r" % edit.getValue())
-            else:
-                params.append("%s=%r" % (edit.param, edit.getValue()))
-        code = "NewSample(%s)\n" % ", ".join(params)
-        self.client.run(code.rstrip())
-        self.showInfo("Sample parameters changed.")
-
-
-class TasSamplePanel(GenericSamplePanel):
-    """Provides a set of input parameters for a sample used in a TAS setup."""
-
-    panelName = "TAS sample setup"
-    uiName = "panels/setup_tassample.ui"
-
-    def getEditBoxes(self):
-        return [
-            self.samplenameEdit,
-            self.latticeEdit,
-            self.anglesEdit,
-            self.orient1Edit,
-            self.orient2Edit,
-            self.psi0Edit,
-            self.spacegroupEdit,
-            self.mosaicEdit,
-        ]
-
-
-class SXTalSamplePanel(GenericSamplePanel):
-    """Provides a set of input parameters for a single crystal sample."""
-
-    panelName = "Single-crystal sample setup"
-    uiName = "panels/setup_sxtalsample.ui"
-
-    def __init__(self, parent, client, options):
-        GenericSamplePanel.__init__(self, parent, client, options)
-        params = client.eval("session.experiment.sample.cell.cellparams()", None)
-        if params:
-            lattice = params[:3]
-            angles = params[3:6]
+        code = self.sample.generateCode()
+        self.client.run(code)
+        if code.startswith("New"):
+            self.showInfo("Sample parameters changed.")
         else:
-            lattice = [5] * 3
-            angles = [90] * 3
-        self.latticeEdit = typedvalue.create(self, vec3, lattice)
-        self.angleEdit = typedvalue.create(self, vec3, angles)
-        self.gridLayout.addWidget(self.latticeEdit, 2, 1)
-        self.gridLayout.addWidget(self.angleEdit, 3, 1)
-
-    def applyChanges(self):
-        code = "NewSample(%r, " % self.samplenameEdit.getValue()
-        code += "cell=(%r, " % self.cellEdit.getValue().tolist()
-        code += "%r, " % self.bravaisEdit.getValue()
-        code += "%r))" % self.laueEdit.getValue()
-
-        self.client.run(code.rstrip())
-        self.showInfo("Sample parameters changed.")
-
-    @pyqtSlot()
-    def on_setLattice_clicked(self):
-        lattice = self.latticeEdit.getValue()
-        angles = self.angleEdit.getValue()
-        newcell = SXTalCell.fromabc(*(lattice + angles))
-        self.cellEdit._reinit(newcell)
-
-    @pyqtSlot()
-    def on_swapHK_clicked(self):
-        self._swap(0, 1)
-
-    @pyqtSlot()
-    def on_swapHL_clicked(self):
-        self._swap(0, 2)
-
-    @pyqtSlot()
-    def on_swapKL_clicked(self):
-        self._swap(1, 2)
-
-    @pyqtSlot()
-    def on_invertH_clicked(self):
-        self._invert(0)
-
-    @pyqtSlot()
-    def on_invertK_clicked(self):
-        self._invert(1)
-
-    @pyqtSlot()
-    def on_invertL_clicked(self):
-        self._invert(2)
-
-    def _swap(self, j1, j2):
-        tbl = self.cellEdit._inner
-        for i in range(tbl.rowCount()):
-            item1 = tbl.item(i, j1)
-            item2 = tbl.item(i, j2)
-            tmp = item1.text()
-            item1.setText(item2.text())
-            item2.setText(tmp)
-
-    def _invert(self, j):
-        tbl = self.cellEdit._inner
-        for i in range(tbl.rowCount()):
-            item = tbl.item(i, j)
-            item.setText("%.4g" % -float(item.text()))
+            self.showInfo(f"Sample {self.sample.sample_number} defined and selected.")
