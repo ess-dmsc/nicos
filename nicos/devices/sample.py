@@ -33,6 +33,7 @@ from nicos.core import (
     Param,
     anytype,
     dictof,
+    intrange,
     none_or,
     oneof,
     status,
@@ -55,15 +56,15 @@ class Sample(Moveable):
 
     parameters = {
         "sampledescription": Param(
-            "Extended sample description", type=str, settable=True, category="sample"
+            "Sample description", type=str, settable=True, category="sample"
         ),
         "samplename": Param(
             "Current sample name", type=str, settable=True, category="sample"
         ),
+        # The maximum number of the QSpinBox seems to be 2**31 - 1 ?!
         "samplenumber": Param(
-            "Current sample number: e.g. the position in a sample changer or "
-            "the index of the sample among all defined samples",
-            type=none_or(int),
+            "Current sample number",
+            type=none_or(intrange(0, 2**31 - 1)),
             settable=True,
         ),
         "samples": Param(
@@ -74,6 +75,10 @@ class Sample(Moveable):
             preinit=True,
         ),
     }
+    parameters["samplenumber"].ext_desc = """
+        The position in a sample changer or the index of the sample among all
+        defined samples
+    """
 
     parameter_overrides = {
         "unit": Override(mandatory=False, default=""),
