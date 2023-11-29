@@ -39,5 +39,6 @@ devices = dict(
         'nicos_ess.devices.epics.ap_rheometer.RheometerControl',
         description='The controller for the rheometer.',
         pv_root=pv_root,
+        pva=True,
     ),
 )
