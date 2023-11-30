@@ -22,7 +22,7 @@
 #   Jonas Petersson <jonas.petersson@ess.eu>
 #
 # *****************************************************************************
-from nicos.core import SIMULATION, Override, Param, oneof, pvname, status
+from nicos.core import SIMULATION, Override, Param, pvname, status
 from nicos.devices.abstract import MappedMoveable
 
 from nicos.devices.epics.pva import EpicsDevice
@@ -64,6 +64,8 @@ class RheometerControl(EpicsDevice, MappedMoveable):
         self._record_fields['set_config'] = 'LoadMeasConfig-S.VAL$'
         self._record_fields['update_config'] = 'LoadMeasConfig.PROC'
         self._record_fields['read_config'] = 'LoadMeasConfig'
+        self._record_fields['start'] = 'StartMeasurement'
+        self._record_fields['proc_start'] = 'MeasHeader-R.PROC'
 
     def _get_pv_parameters(self):
         return set(self._record_fields)
@@ -90,3 +92,5 @@ class RheometerControl(EpicsDevice, MappedMoveable):
         conf_list_ascii = [ord(c) for c in conf_list_with_q]
         self._put_pv('set_config', conf_list_ascii)
         self._put_pv('update_config', 1)
+        self._put_pv('proc_start', 1)
+        self._put_pv('start', 1)
