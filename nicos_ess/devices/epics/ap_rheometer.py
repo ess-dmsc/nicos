@@ -24,11 +24,14 @@
 # *****************************************************************************
 import time
 
-from nicos.core import SIMULATION, Override, Param, pvname, status
+from nicos.core import SIMULATION, Override, Param, pvname, status, usermethod
 from nicos.devices.abstract import MappedMoveable
 
 from nicos.devices.epics.pva import EpicsDevice
 
+
+#  This device is whatever at the moment. It's more for just having something in order to test
+#  the Rheometer panel and command builder.
 
 class RheometerControl(EpicsDevice, MappedMoveable):
     parameters = {
@@ -52,6 +55,7 @@ class RheometerControl(EpicsDevice, MappedMoveable):
     }
 
     _record_fields = {}
+    _command_string = ''
 
     def doPreinit(self, mode):
         self._set_custom_record_fields()
@@ -86,9 +90,18 @@ class RheometerControl(EpicsDevice, MappedMoveable):
     def doStop(self):
         pass
 
+    def set_command_string(self, command_string):
+        self._command_string = command_string
+
+    def get_command_string(self):
+        return self._command_string
+
     def doStart(self, target=None):
-        CONFIG = ':PROG["Test",TEST[(PART[(NUMB[5,LAST],DTIM[1,1,REL]),(),(),(),(SRAT[1,FUNC[LOG,(1,10)]]),(),(),,(DAPT[TEMP[2,??T]],DAPT[TORQ[1,??T]],DAPT[SPEE[1,??T]],DAPT[EXCU[1,??T]],DAPT[FORC[1,??T]],DAPT[VOLT[1,??T]],DAPT[DIST[1,??T]],GSTR[STAT[1,??T]],DAPT[VELO[1,??T]],DAPT[DGAP[1,??T]],DAPT[TIMA[1,??T]],DAPT[TIMP[1,??T]],DAPT[EXCE[1,??T]],DAPT[ETRQ[1,??T]]),(GENP[0,(IFDT[EX])],SETV[0,(IFST[IN,(16)])]),(EXCU[1,!?])],PART[(NUMB[10,LAST],DTIM[FUNC[LIN,(1,1.888888889)],2,REL]),(),(),(),(STRA[1,OSCI[FUNC[LIN,(0.03,0.07)],FUNC[LOG,(0.3183098862,1.432394488)],SIN]]),(),(),VALF[STRA[1,?&]],(VALF[STRA[1,?&]],DAPT[TEMP[2,??T]],COMP[MODU[1,??F],1,PHAS],COMP[TORQ[1,??F],0,CABS],COMP[TORQ[1,??F],1,CABS],DAPT[KFAC[1,??T]],COMP[SPEE[1,??F],0,CABS],COMP[EXCU[1,??F],0,CABS],COMP[EXCU[1,??F],1,CABS],COMP[FORC[1,??F],0,REAL],DAPT[VOLT[1,??T]],DAPT[DIST[1,??T]],GSTR[STAT[1,??T]],DAPT[VELO[1,??T]],DAPT[DGAP[1,??T]],DAPT[TIMA[1,??T]],DAPT[TIMP[1,??T]],COMP[EXCE[1,??F],0,CABS],COMP[EXCE[1,??F],1,CABS],COMP[ETRQ[1,??F],0,CABS],COMP[ETRQ[1,??F],1,CABS]),(GENP[0,(IFDT[EX])],SETV[0,(IFST[IN,(16)])]),()],PART[(NUMB[12,LAST]),(),(),(),(SRAT[1,FUNC[LIN,(1,5)]]),(),(),,(DAPT[TEMP[2,??T]],DAPT[TORQ[1,??T]],DAPT[SPEE[1,??T]],DAPT[EXCU[1,??T]],DAPT[FORC[1,??T]],DAPT[VOLT[1,??T]],DAPT[DIST[1,??T]],GSTR[STAT[1,??T]],DAPT[VELO[1,??T]],DAPT[DGAP[1,??T]],DAPT[TIMA[1,??T]],DAPT[TIMP[1,??T]],DAPT[EXCE[1,??T]],DAPT[ETRQ[1,??T]]),(GENP[0,(IFST[IN,(17)])],SETV[0,(IFST[IN,(16)])]),()])],EXIT[()],CANC[()]]'
-        conf_list_with_q = [*CONFIG]
+        # CONFIG = ':PROG["Test",TEST[(PART[(NUMB[5,LAST],DTIM[1,1,REL]),(),(),(),(SRAT[1,FUNC[LOG,(1,10)]]),(),(),,(DAPT[TEMP[2,??T]],DAPT[TORQ[1,??T]],DAPT[SPEE[1,??T]],DAPT[EXCU[1,??T]],DAPT[FORC[1,??T]],DAPT[VOLT[1,??T]],DAPT[DIST[1,??T]],GSTR[STAT[1,??T]],DAPT[VELO[1,??T]],DAPT[DGAP[1,??T]],DAPT[TIMA[1,??T]],DAPT[TIMP[1,??T]],DAPT[EXCE[1,??T]],DAPT[ETRQ[1,??T]]),(GENP[0,(IFDT[EX])],SETV[0,(IFST[IN,(16)])]),(EXCU[1,!?])],PART[(NUMB[10,LAST],DTIM[FUNC[LIN,(1,1.888888889)],2,REL]),(),(),(),(STRA[1,OSCI[FUNC[LIN,(0.03,0.07)],FUNC[LOG,(0.3183098862,1.432394488)],SIN]]),(),(),VALF[STRA[1,?&]],(VALF[STRA[1,?&]],DAPT[TEMP[2,??T]],COMP[MODU[1,??F],1,PHAS],COMP[TORQ[1,??F],0,CABS],COMP[TORQ[1,??F],1,CABS],DAPT[KFAC[1,??T]],COMP[SPEE[1,??F],0,CABS],COMP[EXCU[1,??F],0,CABS],COMP[EXCU[1,??F],1,CABS],COMP[FORC[1,??F],0,REAL],DAPT[VOLT[1,??T]],DAPT[DIST[1,??T]],GSTR[STAT[1,??T]],DAPT[VELO[1,??T]],DAPT[DGAP[1,??T]],DAPT[TIMA[1,??T]],DAPT[TIMP[1,??T]],COMP[EXCE[1,??F],0,CABS],COMP[EXCE[1,??F],1,CABS],COMP[ETRQ[1,??F],0,CABS],COMP[ETRQ[1,??F],1,CABS]),(GENP[0,(IFDT[EX])],SETV[0,(IFST[IN,(16)])]),()],PART[(NUMB[12,LAST]),(),(),(),(SRAT[1,FUNC[LIN,(1,5)]]),(),(),,(DAPT[TEMP[2,??T]],DAPT[TORQ[1,??T]],DAPT[SPEE[1,??T]],DAPT[EXCU[1,??T]],DAPT[FORC[1,??T]],DAPT[VOLT[1,??T]],DAPT[DIST[1,??T]],GSTR[STAT[1,??T]],DAPT[VELO[1,??T]],DAPT[DGAP[1,??T]],DAPT[TIMA[1,??T]],DAPT[TIMP[1,??T]],DAPT[EXCE[1,??T]],DAPT[ETRQ[1,??T]]),(GENP[0,(IFST[IN,(17)])],SETV[0,(IFST[IN,(16)])]),()])],EXIT[()],CANC[()]]'
+        if not self._command_string:
+            self.log.warning("No intervals provided for the measurement.")
+            return
+        conf_list_with_q = [*self._command_string]
         conf_list_ascii = [ord(c) for c in conf_list_with_q]
         self._put_pv('set_config', conf_list_ascii)
         time.sleep(2)

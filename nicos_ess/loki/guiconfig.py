@@ -53,6 +53,10 @@ main_window = docked(
                          panel(
                              'nicos.clients.flowui.panels.live.MultiLiveDataPanel'
                          )),
+                        ('Rheometer Setup',
+                         panel(
+                             'nicos_ess.gui.panels.rheometer.RheometerPanel'
+                         )),
                         ('Script Status',
                          panel(
                              'nicos.clients.flowui.panels.status.ScriptStatusPanel',
