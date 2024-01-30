@@ -22,6 +22,7 @@
 # *****************************************************************************
 
 """NICOS Rheometer setup panel."""
+import numpy as np
 
 from nicos.clients.gui.panels import Panel
 from nicos.guisupport.qt import QFrame, QGroupBox, QHBoxLayout, QLabel, \
@@ -31,19 +32,31 @@ from nicos.guisupport.qt import QFrame, QGroupBox, QHBoxLayout, QLabel, \
     QStandardItem, QTimer
 
 
-VISCOSITY_BASE_STRING = 'PART[($NUMB$$DTIM$),(),(),(),($MEAS_MODE$[1,$SPEED_FUNC$]),(),(),,(DAPT[TEMP[2,??T]],DAPT[TORQ[1,??T]],DAPT[SPEE[1,??T]],DAPT[EXCU[1,??T]],DAPT[FORC[1,??T]],DAPT[VOLT[1,??T]],DAPT[DIST[1,??T]],GSTR[STAT[1,??T]],DAPT[VELO[1,??T]],DAPT[DGAP[1,??T]],DAPT[TIMA[1,??T]],DAPT[TIMP[1,??T]],DAPT[EXCE[1,??T]],DAPT[ETRQ[1,??T]]),(GENP[0,($END_SEQ$)],SETV[0,(IFST[IN,(16)])]),($EXCU$)]'
-OSCILLATION_BASE_STRING = 'PART[($NUMB$$DTIM$),(),(),(),($MEAS_MODE$[1,OSCI[$AMP_FUNC$$FREQ_FUNC$$TORQ_FUNC$,SIN]]),(),(),VALF[$MEAS_MODE$[1,?&]],(VALF[$MEAS_MODE$[1,?&]],DAPT[TEMP[2,??T]],COMP[MODU[1,??F],1,PHAS],COMP[TORQ[1,??F],0,CABS],COMP[TORQ[1,??F],1,CABS],DAPT[KFAC[1,??T]],COMP[SPEE[1,??F],0,CABS],COMP[EXCU[1,??F],0,CABS],COMP[EXCU[1,??F],1,CABS],COMP[FORC[1,??F],0,REAL],DAPT[VOLT[1,??T]],DAPT[DIST[1,??T]],GSTR[STAT[1,??T]],DAPT[VELO[1,??T]],DAPT[DGAP[1,??T]],DAPT[TIMA[1,??T]],DAPT[TIMP[1,??T]],COMP[EXCE[1,??F],0,CABS],COMP[EXCE[1,??F],1,CABS],COMP[ETRQ[1,??F],0,CABS],COMP[ETRQ[1,??F],1,CABS]),(GENP[0,(IFDT[EX])],SETV[0,(IFST[IN,(16)])]),($EXCU$)]'
 
-VISC_MODES = ['SHEAR', 'STRAIN']
-OSCI_MODES = ['SHEAR', 'STRAIN', 'TORQUE']
+
+# FIXA STRESS MODE SOM INTE LÄGGER KORREKT
+#
+# ,(STRE[1,OSCI[,FUNC[LIN,(1,1)]FUNC[LOG,(1,10)],
+# (STRE[1,OSCI[,1FUNC[LOG,(1,10)],SIN]]),()
+#
+
+
+VISCOSITY_BASE_STRING = 'PART[($NUMB$$DTIM$),(),(),(),($MEAS_MODE$[1,$SRAT_FUNC$$STRE_FUNC$]),(),(),,(DAPT[TEMP[2,??T]],DAPT[TORQ[1,??T]],DAPT[SPEE[1,??T]],DAPT[EXCU[1,??T]],DAPT[FORC[1,??T]],DAPT[VOLT[1,??T]],DAPT[DIST[1,??T]],GSTR[STAT[1,??T]],DAPT[VELO[1,??T]],DAPT[DGAP[1,??T]],DAPT[TIMA[1,??T]],DAPT[TIMP[1,??T]],DAPT[EXCE[1,??T]],DAPT[ETRQ[1,??T]]),(GENP[0,($END_SEQ$)],SETV[0,(IFST[IN,(16)])]),($EXCU$)]'
+OSCILLATION_BASE_STRING = 'PART[($NUMB$$DTIM$),(),(),(),($MEAS_MODE$[1,OSCI[$STRE_FUNC$$STRA_FUNC$$FREQ_FUNC$,SIN]]),(),(),VALF[$MEAS_MODE$[1,?&]],(VALF[$MEAS_MODE$[1,?&]],DAPT[TEMP[2,??T]],COMP[MODU[1,??F],1,PHAS],COMP[TORQ[1,??F],0,CABS],COMP[TORQ[1,??F],1,CABS],DAPT[KFAC[1,??T]],COMP[SPEE[1,??F],0,CABS],COMP[EXCU[1,??F],0,CABS],COMP[EXCU[1,??F],1,CABS],COMP[FORC[1,??F],0,REAL],DAPT[VOLT[1,??T]],DAPT[DIST[1,??T]],GSTR[STAT[1,??T]],DAPT[VELO[1,??T]],DAPT[DGAP[1,??T]],DAPT[TIMA[1,??T]],DAPT[TIMP[1,??T]],COMP[EXCE[1,??F],0,CABS],COMP[EXCE[1,??F],1,CABS],COMP[ETRQ[1,??F],0,CABS],COMP[ETRQ[1,??F],1,CABS]),(GENP[0,(IFDT[EX])],SETV[0,(IFST[IN,(16)])]),($EXCU$)]'
+
+VISC_MODES = ['STRESS', 'RATE']
+OSCI_MODES = ['STRESS', 'STRAIN']
 
 TRANSLATE_DICT = {
-    'SHEAR': 'SRAT',
+    'RATE': 'SRAT',
     'STRAIN': 'STRA',
-    'TORQUE': 'TORQ',
+    'STRESS': 'STRE',
+    # 'TORQUE': 'TORQ',
     'CONSTANT': 'CONST',
     'LINEAR': 'LIN',
-    'LOGARITHMIC': 'LOG'
+    'LOGARITHMIC': 'LOG',
+    'OSCILLATION': 'OSCI',
+    'VISCOMETRY': 'VISC',
 }
 
 
@@ -82,13 +95,13 @@ class RheometerPanel(Panel):
 
         # Mode selection
         self.mode_combo = QComboBox()
-        self.mode_combo.addItems(['VISC', 'OSCI'])
+        self.mode_combo.addItems(['VISCOMETRY', 'OSCILLATION'])
         layout.addWidget(QLabel('Mode:'))
         layout.addWidget(self.mode_combo)
 
         # Measure Mode selection
         self.measure_mode_combo = QComboBox()
-        self.measure_mode_combo.addItems(['SHEAR', 'STRAIN', 'TORQUE'])
+        self.measure_mode_combo.addItems(['STRESS', 'RATE', 'STRAIN'])
         layout.addWidget(QLabel('Measure Mode:'))
         layout.addWidget(self.measure_mode_combo)
 
@@ -99,83 +112,80 @@ class RheometerPanel(Panel):
         num_points_layout.addWidget(self.num_points_le)
         layout.addLayout(num_points_layout)
 
-        # Delay function
-        delay_layout = QGridLayout()
-        self.delay_label = QLabel('Delay function:')
-        self.delay_combo = QComboBox()
-        self.delay_combo.addItems(['CONSTANT', 'LINEAR', 'LOGARITHMIC'])
-        self.delay_initial_le = QLineEdit()
-        self.delay_final_le = QLineEdit()
-        self.delay_wait_le = QLineEdit()
-        delay_layout.addWidget(self.delay_label, 0, 0)
-        delay_layout.addWidget(self.delay_combo, 1, 0)
-        delay_layout.addWidget(QLabel('initial:'), 0, 1)
-        delay_layout.addWidget(self.delay_initial_le, 1, 1)
-        delay_layout.addWidget(QLabel('final:'), 0, 2)
-        delay_layout.addWidget(self.delay_final_le, 1, 2)
-        delay_layout.addWidget(QLabel('Wait:'), 0, 3)
-        delay_layout.addWidget(self.delay_wait_le, 1, 3)
-        layout.addLayout(delay_layout)
+        # duration function
+        duration_layout = QGridLayout()
+        self.duration_label = QLabel('Duration function [s]')
+        self.duration_combo = QComboBox()
+        self.duration_combo.addItems(['CONSTANT', 'LINEAR', 'LOGARITHMIC'])
+        self.duration_initial_le = QLineEdit()
+        self.duration_final_le = QLineEdit()
+        duration_layout.addWidget(self.duration_label, 0, 0)
+        duration_layout.addWidget(self.duration_combo, 1, 0)
+        duration_layout.addWidget(QLabel('Initial'), 0, 1)
+        duration_layout.addWidget(self.duration_initial_le, 1, 1)
+        duration_layout.addWidget(QLabel('Final'), 0, 2)
+        duration_layout.addWidget(self.duration_final_le, 1, 2)
+        layout.addLayout(duration_layout)
 
-        # Speed function
-        speed_layout = QGridLayout()
-        self.speed_label = QLabel('Speed function:')
-        self.speed_combo = QComboBox()
-        self.speed_combo.addItems(['CONSTANT', 'LINEAR', 'LOGARITHMIC'])
-        self.speed_initial_le = QLineEdit()
-        self.speed_final_le = QLineEdit()
-        speed_layout.addWidget(self.speed_label, 0, 0)
-        speed_layout.addWidget(self.speed_combo, 1, 0)
-        speed_layout.addWidget(QLabel('initial:'), 0, 1)
-        speed_layout.addWidget(self.speed_initial_le, 1, 1)
-        speed_layout.addWidget(QLabel('final:'), 0, 2)
-        speed_layout.addWidget(self.speed_final_le, 1, 2)
-        layout.addLayout(speed_layout)
+        # stress function
+        stress_layout = QGridLayout()
+        self.stress_label = QLabel('Stress function [Pa]')
+        self.stress_combo = QComboBox()
+        self.stress_combo.addItems(['CONSTANT', 'LINEAR', 'LOGARITHMIC'])
+        self.stress_initial_le = QLineEdit()
+        self.stress_final_le = QLineEdit()
+        stress_layout.addWidget(self.stress_label, 0, 0)
+        stress_layout.addWidget(self.stress_combo, 1, 0)
+        stress_layout.addWidget(QLabel('Initial'), 0, 1)
+        stress_layout.addWidget(self.stress_initial_le, 1, 1)
+        stress_layout.addWidget(QLabel('Final'), 0, 2)
+        stress_layout.addWidget(self.stress_final_le, 1, 2)
+        layout.addLayout(stress_layout)
 
-        # Amplitude function
-        amplitude_layout = QGridLayout()
-        self.amplitude_label = QLabel('Amplitude function:')
-        self.amplitude_combo = QComboBox()
-        self.amplitude_combo.addItems(['CONSTANT', 'LINEAR', 'LOGARITHMIC'])
-        self.amplitude_initial_le = QLineEdit()
-        self.amplitude_final_le = QLineEdit()
-        amplitude_layout.addWidget(self.amplitude_label, 0, 0)
-        amplitude_layout.addWidget(self.amplitude_combo, 1, 0)
-        amplitude_layout.addWidget(QLabel('initial:'), 0, 1)
-        amplitude_layout.addWidget(self.amplitude_initial_le, 1, 1)
-        amplitude_layout.addWidget(QLabel('final:'), 0, 2)
-        amplitude_layout.addWidget(self.amplitude_final_le, 1, 2)
-        layout.addLayout(amplitude_layout)
+        # rate function
+        rate_layout = QGridLayout()
+        self.rate_label = QLabel('Rate function [1/s]')
+        self.rate_combo = QComboBox()
+        self.rate_combo.addItems(['CONSTANT', 'LINEAR', 'LOGARITHMIC'])
+        self.rate_initial_le = QLineEdit()
+        self.rate_final_le = QLineEdit()
+        rate_layout.addWidget(self.rate_label, 0, 0)
+        rate_layout.addWidget(self.rate_combo, 1, 0)
+        rate_layout.addWidget(QLabel('Initial'), 0, 1)
+        rate_layout.addWidget(self.rate_initial_le, 1, 1)
+        rate_layout.addWidget(QLabel('Final'), 0, 2)
+        rate_layout.addWidget(self.rate_final_le, 1, 2)
+        layout.addLayout(rate_layout)
+
+        # Strain function
+        strain_layout = QGridLayout()
+        self.strain_label = QLabel('Strain function [%]')
+        self.strain_combo = QComboBox()
+        self.strain_combo.addItems(['CONSTANT', 'LINEAR', 'LOGARITHMIC'])
+        self.strain_initial_le = QLineEdit()
+        self.strain_final_le = QLineEdit()
+        strain_layout.addWidget(self.strain_label, 0, 0)
+        strain_layout.addWidget(self.strain_combo, 1, 0)
+        strain_layout.addWidget(QLabel('Initial'), 0, 1)
+        strain_layout.addWidget(self.strain_initial_le, 1, 1)
+        strain_layout.addWidget(QLabel('Final'), 0, 2)
+        strain_layout.addWidget(self.strain_final_le, 1, 2)
+        layout.addLayout(strain_layout)
 
         # Frequency function
         frequency_layout = QGridLayout()
-        self.frequency_label = QLabel('Frequency function:')
+        self.frequency_label = QLabel('Frequency function [rad/s]')
         self.frequency_combo = QComboBox()
         self.frequency_combo.addItems(['CONSTANT', 'LINEAR', 'LOGARITHMIC'])
         self.frequency_initial_le = QLineEdit()
         self.frequency_final_le = QLineEdit()
         frequency_layout.addWidget(self.frequency_label, 0, 0)
         frequency_layout.addWidget(self.frequency_combo, 1, 0)
-        frequency_layout.addWidget(QLabel('initial:'), 0, 1)
+        frequency_layout.addWidget(QLabel('Initial'), 0, 1)
         frequency_layout.addWidget(self.frequency_initial_le, 1, 1)
-        frequency_layout.addWidget(QLabel('final:'), 0, 2)
+        frequency_layout.addWidget(QLabel('Final'), 0, 2)
         frequency_layout.addWidget(self.frequency_final_le, 1, 2)
         layout.addLayout(frequency_layout)
-
-        # Torque function
-        torque_layout = QGridLayout()
-        self.torque_label = QLabel('Torque function:')
-        self.torque_combo = QComboBox()
-        self.torque_combo.addItems(['CONSTANT', 'LINEAR', 'LOGARITHMIC'])
-        self.torque_initial_le = QLineEdit()
-        self.torque_final_le = QLineEdit()
-        torque_layout.addWidget(self.torque_label, 0, 0)
-        torque_layout.addWidget(self.torque_combo, 1, 0)
-        torque_layout.addWidget(QLabel('initial:'), 0, 1)
-        torque_layout.addWidget(self.torque_initial_le, 1, 1)
-        torque_layout.addWidget(QLabel('final:'), 0, 2)
-        torque_layout.addWidget(self.torque_final_le, 1, 2)
-        layout.addLayout(torque_layout)
 
         layout.addStretch()
 
@@ -206,7 +216,7 @@ class RheometerPanel(Panel):
         self.tableView.setWordWrap(True)
         self.tableView.setTextElideMode(Qt.ElideNone)
 
-        self.tableModel.setHorizontalHeaderLabels(['Interval', 'Mode', 'Measure Mode', 'Number of Points', 'Delay', 'Speed', 'Amplitude', 'Frequency', 'Torque'])
+        self.tableModel.setHorizontalHeaderLabels(['Interval', 'Mode', 'Measure Mode', 'Number of Points', 'Duration', 'Stress', 'Rate', 'Strain', 'Frequency'])
 
         layout.addWidget(self.tableView)
 
@@ -220,48 +230,66 @@ class RheometerPanel(Panel):
         interval['measure_mode'] = self.measure_mode_combo.currentText()
         interval['num_points'] = self.num_points_le.text()
 
-        delay_function = self.delay_combo.currentText()
-        if delay_function == 'CONSTANT':
-            interval['delay'] = (
-                TRANSLATE_DICT[delay_function],
-                self.delay_initial_le.text(),
-                self.delay_wait_le.text()
+        duration_function = self.duration_combo.currentText()
+        if duration_function == 'CONSTANT':
+            interval['duration'] = (
+                TRANSLATE_DICT[duration_function],
+                self.duration_initial_le.text(),
+                self.duration_initial_le.text()
             )
         else:
-            interval['delay'] = (
-                TRANSLATE_DICT[delay_function],
-                (self.delay_initial_le.text(), self.delay_final_le.text()),
-                self.delay_wait_le.text()
+            # The rheometer expects the format as ((initial, second_last), final)
+            if duration_function == 'LINEAR':
+                points = np.linspace(
+                    float(self.duration_initial_le.text()),
+                    float(self.duration_final_le.text()),
+                    int(self.num_points_le.text())
+                )
+                second_last_point = points[-2]
+            elif duration_function == 'LOGARITHMIC':
+                points = np.logspace(
+                    np.log10(float(self.duration_initial_le.text())),
+                    np.log10(float(self.duration_final_le.text())),
+                    int(self.num_points_le.text())
+                )
+                second_last_point = points[-2]
+            else:
+                raise ValueError(f"Invalid duration function: {duration_function}")
+
+            interval['duration'] = (
+                TRANSLATE_DICT[duration_function],
+                (self.duration_initial_le.text(), str(second_last_point)),
+                self.duration_final_le.text()
             )
 
         interval['funcs'] = {}
 
-        if self.speed_combo.isEnabled():
-            interval['funcs']['speed'] = (
-                TRANSLATE_DICT[self.speed_combo.currentText()],
-                self.speed_initial_le.text(),
-                self.speed_final_le.text()
+        if self.rate_combo.isEnabled():
+            interval['funcs']['srat'] = (
+                TRANSLATE_DICT[self.rate_combo.currentText()],
+                self.rate_initial_le.text(),
+                self.rate_final_le.text()
             )
 
-        if self.amplitude_combo.isEnabled():
-            interval['funcs']['amp'] = (
-                TRANSLATE_DICT[self.amplitude_combo.currentText()],
-                self.amplitude_initial_le.text(),
-                self.amplitude_final_le.text()
+        if self.strain_combo.isEnabled():
+            interval['funcs']['stra'] = (
+                TRANSLATE_DICT[self.strain_combo.currentText()],
+                self._convert_to_percent(self.strain_initial_le.text()),
+                self._convert_to_percent(self.strain_final_le.text())
+            )
+
+        if self.stress_combo.isEnabled():
+            interval['funcs']['stre'] = (
+                TRANSLATE_DICT[self.stress_combo.currentText()],
+                self.stress_initial_le.text(),
+                self.stress_final_le.text()
             )
 
         if self.frequency_combo.isEnabled():
             interval['funcs']['freq'] = (
                 TRANSLATE_DICT[self.frequency_combo.currentText()],
-                self.frequency_initial_le.text(),
-                self.frequency_final_le.text()
-            )
-
-        if self.torque_combo.isEnabled():
-            interval['funcs']['torq'] = (
-                TRANSLATE_DICT[self.torque_combo.currentText()],
-                self.torque_initial_le.text(),
-                self.torque_final_le.text()
+                self._convert_to_rad_per_sec(self.frequency_initial_le.text()),
+                self._convert_to_rad_per_sec(self.frequency_final_le.text())
             )
 
         if not self.valid_function(interval['funcs']):
@@ -269,9 +297,19 @@ class RheometerPanel(Panel):
 
         return interval
 
+    def _convert_to_rad_per_sec(self, value):
+        return str(float(value) / (2 * np.pi))
+
+    def _convert_to_percent(self, value):
+        return str(float(value) / 100.)
+
     def valid_function(self, function):
         for key, value in function.items():
-            for val in value:
+            function_type = value[0]
+            ignore_final = True if function_type == 'CONST' else False
+            for i, val in enumerate(value):
+                if ignore_final and i == 2:
+                    continue
                 if val == '':
                     return False
         return True
@@ -294,11 +332,11 @@ class RheometerPanel(Panel):
             item = QStandardItem(content)
             items.append(item)
 
-        content = self._display_format_delay(interval['delay'])
+        content = self._display_format_duration(interval['duration'])
         item = QStandardItem(content)
         items.append(item)
 
-        for func in ['speed', 'amp', 'freq', 'torq']:
+        for func in ['srat', 'stra', 'freq', 'stre']:
             if func not in interval['funcs']:
                 items.append(QStandardItem(''))
                 continue
@@ -315,12 +353,14 @@ class RheometerPanel(Panel):
         self._prepared_intervals.append(interval)
 
     def _display_format_function(self, function):
+        if function[0] == 'CONST':
+            return f'Function: {function[0]}({function[1]})'
         return f'Function: {function[0]}({function[1]}, {function[2]}))'
 
-    def _display_format_delay(self, delay):
-        if delay[0] == 'CONST':
-            return f'Function: {delay[0]}({delay[1]}), wait: {delay[2]})'
-        return f'Function: {delay[0]}({delay[1][0]}, {delay[1][1]}), wait: {delay[2]})'
+    def _display_format_duration(self, duration):
+        if duration[0] == 'CONST':
+            return f'Function: {duration[0]}({duration[1]})'
+        return f'Function: {duration[0]}({duration[1][0]}, {duration[2]}))'
 
     def send_intervals(self):
         if not self._prepared_intervals:
@@ -347,11 +387,17 @@ class RheometerPanel(Panel):
 
     def clear_table(self):
         self.tableModel.clear()
-        self.tableModel.setHorizontalHeaderLabels(['Interval', 'Mode', 'Measure Mode', 'Number of Points', 'Delay', 'Speed', 'Amplitude', 'Frequency', 'Torque'])
+        self._prepared_intervals = []
+        self.tableModel.setHorizontalHeaderLabels(['Interval', 'Mode', 'Measure Mode', 'Number of Points', 'Duration', 'Stress', 'Rate', 'Strain', 'Frequency'])
 
     def setup_connections(self):
         self.mode_combo.currentIndexChanged.connect(self.update_ui_state)
         self.measure_mode_combo.currentIndexChanged.connect(self.update_ui_state)
+        self.duration_combo.currentIndexChanged.connect(self.update_ui_state)
+        self.stress_combo.currentIndexChanged.connect(self.update_ui_state)
+        self.rate_combo.currentIndexChanged.connect(self.update_ui_state)
+        self.strain_combo.currentIndexChanged.connect(self.update_ui_state)
+        self.frequency_combo.currentIndexChanged.connect(self.update_ui_state)
         self.add_interval_button.clicked.connect(self.add_interval_to_table)
         self.clear_intervals_button.clicked.connect(self.clear_table)
         self.send_intervals_button.clicked.connect(self.send_intervals)
@@ -364,11 +410,13 @@ class RheometerPanel(Panel):
         self.disable_all()
 
         # Logic for VISC mode
-        if mode == 'VISC':
-            # if measure_mode == 'TORQUE':
+        if mode == 'VISCOMETRY':
+            # if measure_mode == 'stress':
             #     self.measure_mode_combo.setCurrentIndex(0)
-
-            self.set_enabled_state(True, [self.speed_combo, self.speed_initial_le, self.speed_final_le])
+            if measure_mode == 'RATE':
+                self.set_enabled_state(True, [self.rate_combo, self.rate_initial_le, self.rate_final_le])
+            elif measure_mode == 'STRESS':
+                self.set_enabled_state(True, [self.stress_combo, self.stress_initial_le, self.stress_final_le])
 
             self.measure_mode_combo.blockSignals(True)
             self.measure_mode_combo.clear()
@@ -380,19 +428,32 @@ class RheometerPanel(Panel):
             self.measure_mode_combo.blockSignals(False)
 
         # Logic for OSCI mode
-        elif mode == 'OSCI':
-            if measure_mode == 'TORQUE':
-                self.set_enabled_state(True, [self.torque_combo, self.torque_initial_le, self.torque_final_le])
-                # return
+        elif mode == 'OSCILLATION':
+            if measure_mode == 'STRESS':
+                self.set_enabled_state(True, [self.stress_combo, self.stress_initial_le, self.stress_final_le,
+                                              self.frequency_combo, self.frequency_initial_le, self.frequency_final_le])
             else:
-                self.set_enabled_state(True, [self.amplitude_combo, self.amplitude_initial_le, self.amplitude_final_le,
+                self.set_enabled_state(True, [self.strain_combo, self.strain_initial_le, self.strain_final_le,
                                               self.frequency_combo, self.frequency_initial_le, self.frequency_final_le])
 
             self.measure_mode_combo.blockSignals(True)
             self.measure_mode_combo.clear()
             self.measure_mode_combo.addItems(OSCI_MODES)
+            if measure_mode not in OSCI_MODES:
+                self.measure_mode_combo.setCurrentIndex(0)
+                measure_mode = self.measure_mode_combo.currentText()
             self.measure_mode_combo.setCurrentIndex(OSCI_MODES.index(measure_mode))
             self.measure_mode_combo.blockSignals(False)
+
+        for (func, final_le) in [('duration', self.duration_final_le),
+                                  ('stress', self.stress_final_le),
+                                  ('rate', self.rate_final_le),
+                                  ('strain', self.strain_final_le),
+                                  ('frequency', self.frequency_final_le)]:
+            if getattr(self, f'{func}_combo').currentText() == 'CONSTANT':
+                self.set_enabled_state(False, [final_le])
+            else:
+                self.set_enabled_state(True, [final_le])
 
     def set_enabled_state(self, enabled, widgets):
         for widget in widgets:
@@ -403,10 +464,10 @@ class RheometerPanel(Panel):
                 widget.setStyleSheet("")
 
     def disable_all(self):
-        self.set_enabled_state(False, [self.speed_combo, self.speed_initial_le, self.speed_final_le,
-                                       self.amplitude_combo, self.amplitude_initial_le, self.amplitude_final_le,
+        self.set_enabled_state(False, [self.rate_combo, self.rate_initial_le, self.rate_final_le,
+                                       self.strain_combo, self.strain_initial_le, self.strain_final_le,
                                        self.frequency_combo, self.frequency_initial_le, self.frequency_final_le,
-                                       self.torque_combo, self.torque_initial_le, self.torque_final_le])
+                                       self.stress_combo, self.stress_initial_le, self.stress_final_le])
 
     def _build_command(self, intervals):
         if not intervals:
@@ -419,9 +480,9 @@ class RheometerPanel(Panel):
 
     def _construct_interval_command(self, interval, is_first_interval):
         mode = interval.get('mode', None)
-        if mode == 'VISC':
+        if mode == 'VISCOMETRY':
             return self._construct_viscosity_interval(interval, is_first_interval)
-        elif mode == 'OSCI':
+        elif mode == 'OSCILLATION':
             return self._construct_oscillation_interval(interval, is_first_interval)
         else:
             raise ValueError(f"Invalid mode: {mode}")
@@ -431,10 +492,11 @@ class RheometerPanel(Panel):
         if meas_mode is None:
             raise ValueError("No measure mode provided for the interval.")
 
-        required_params = ['num_points', 'measure_mode', 'delay', 'funcs', 'end_seq']
+        required_params = ['num_points', 'measure_mode', 'duration', 'funcs', 'end_seq']
 
-        num_points, measure_mode, delay, funcs, end_seq = self._get_required_params(interval, required_params)
-        delay_str = self._format_delay(delay)
+        num_points, measure_mode, duration, funcs, end_seq = self._get_required_params(interval, required_params)
+        measure_mode = TRANSLATE_DICT[measure_mode]
+        duration_str = self._format_duration(duration)
         func_strings = {}
         for func in funcs:
             func_strings[func] = self._format_func(funcs[func])
@@ -442,34 +504,37 @@ class RheometerPanel(Panel):
         excu_str = 'EXCU[1,!?]' if is_first_interval else ''
 
         temp_string = VISCOSITY_BASE_STRING.replace('$NUMB$', f'NUMB[{num_points},LAST]')\
-                                    .replace('$DTIM$', delay_str)\
-                                    .replace('$MEAS_MODE$', meas_mode)\
+                                    .replace('$DTIM$', duration_str)\
+                                    .replace('$MEAS_MODE$', measure_mode)\
                                     .replace('$END_SEQ$', end_seq)\
                                     .replace('$EXCU$', excu_str)
 
-        for func_type, func_string in func_strings.items():
+        for i, (func_type, func_string) in enumerate(func_strings.items()):
+            print(f"iteration {i} with func type {func_type} and func string {func_string}")
+            if i != 0:
+                func_string = ',' + func_string
             temp_string = temp_string.replace(f'${func_type.upper()}_FUNC$', func_string)
 
-        return temp_string
+        return self._remove_all_remaining_placeholders(temp_string)
 
     def _construct_oscillation_interval(self, interval, is_first_interval):
         meas_mode = interval.get('measure_mode', None)
         if meas_mode is None:
             raise ValueError("No measure mode provided for the interval.")
 
-        required_params = ['num_points', 'measure_mode', 'delay', 'funcs', 'end_seq']
+        required_params = ['num_points', 'measure_mode', 'duration', 'funcs', 'end_seq']
 
-        num_points, measure_mode, delay, funcs, end_seq = self._get_required_params(interval, required_params)
-        delay_str = self._format_delay(delay)
-        wait_time = delay[2] if delay is not None and measure_mode == 'TORQ' else None
+        num_points, measure_mode, duration, funcs, end_seq = self._get_required_params(interval, required_params)
+        measure_mode = TRANSLATE_DICT[measure_mode]
+        duration_str = self._format_duration(duration)
         func_strings = {}
         for func in funcs:
-            func_strings[func] = self._format_func(funcs[func], wait_time)
+            func_strings[func] = self._format_func(funcs[func])
 
         excu_str = 'EXCU[1,!?]' if is_first_interval else ''
 
         temp_string = OSCILLATION_BASE_STRING.replace('$NUMB$', f'NUMB[{num_points},LAST]')\
-                                      .replace('$DTIM$', delay_str)\
+                                      .replace('$DTIM$', duration_str)\
                                       .replace('$MEAS_MODE$', measure_mode)\
                                       .replace('$END_SEQ$', end_seq)\
                                       .replace('$EXCU$', excu_str)
@@ -486,15 +551,16 @@ class RheometerPanel(Panel):
                      .replace('$DTIM$', '')\
                      .replace('$MEAS_MODE$', '')\
                      .replace('$END_SEQ$', '')\
-                     .replace('$EXCU$', '')\
-                     .replace('$AMP_FUNC$', '')\
+                     .replace('$EXCU$', '') \
+                     .replace('$SRAT_FUNC$', '') \
+                     .replace('$STRA_FUNC$', '')\
                      .replace('$FREQ_FUNC$', '')\
-                     .replace('$TORQ_FUNC$', '')
+                     .replace('$STRE_FUNC$', '')
 
     def _get_required_params(self, interval, keys):
         missing_params = [key for key in keys if key not in interval]
         for param in missing_params:
-            if param == 'delay':
+            if param == 'duration':
                 interval[param] = (None, None, None)
             elif param == 'end_seq':
                 interval[param] = 'IFDT[EX]'
@@ -502,30 +568,34 @@ class RheometerPanel(Panel):
                 raise ValueError(f"Missing parameter: {param}")
         return [interval[key] for key in keys]
 
-    def _format_delay(self, delay):
-        if delay is None or all(v is None for v in delay):
+    def _format_duration(self, duration):
+        if duration is None or all(v is None for v in duration[0:2]):
             return ''
-        delay_type, time_info, wait_time = delay
-        if isinstance(time_info, tuple):
-            delay_initial, delay_final = time_info
+        duration_type, point_info, duration_final = duration
+        duration_second_last = None
+        if isinstance(point_info, tuple):
+            duration_initial, duration_second_last = point_info
         else:
-            delay_initial = delay_final = time_info
-        if delay_type == 'CONST':
-            return f',DTIM[{delay_initial},{wait_time},REL]'
-        elif delay_type in ['LIN', 'LOG']:
-            return f',DTIM[FUNC[{delay_type},({delay_initial},{delay_final})],{wait_time},REL]'
+            duration_initial = point_info
+        if duration_type == 'CONST':
+            return f',DTIM[{duration_initial},{duration_initial},REL]'
+        elif duration_type in ['LIN', 'LOG']:
+            if duration_second_last is None or duration_final is None:
+                return ''
+            return f',DTIM[FUNC[{duration_type},({duration_initial},{duration_second_last})],{duration_final},REL]'
         else:
-            raise ValueError(f"Invalid delay type: {delay_type}")
+            raise ValueError(f"Invalid duration type: {duration_type}")
 
-    def _format_func(self, func, wait_time=None):
-        if func is None or all(v is None for v in func):
+    def _format_func(self, func):
+        if func is None or all(v is None for v in func[0:2]):
             return ''
         func_type, func_initial, func_final = func
         if func_type == 'CONST':
             return f'{func_initial}'
 
+        if func_final is None:
+            return ''
+
         temp_string = f'FUNC[{func_type},({func_initial},{func_final})]'
-        if wait_time is not None:
-            temp_string += f',{wait_time}'
 
         return temp_string
