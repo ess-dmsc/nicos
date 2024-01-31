@@ -25,21 +25,14 @@
 import numpy as np
 
 from nicos.clients.gui.panels import Panel
-from nicos.guisupport.qt import QFrame, QGroupBox, QHBoxLayout, QLabel, \
-    QLineEdit, QPushButton, QScrollArea, QSize, QSizePolicy, QSplitter, Qt, \
-    QTabWidget, QVBoxLayout, QWidget, pyqtProperty, pyqtSignal, pyqtSlot, \
-    QCheckBox, QComboBox, QGridLayout, QTableView, QStandardItemModel, \
-    QStandardItem, QTimer
+from nicos.guisupport.qt import QFrame, QHBoxLayout, QLabel, QLineEdit, \
+    QPushButton, QSplitter, Qt, QVBoxLayout, QComboBox, QGridLayout, QTableView, \
+    QStandardItemModel, QStandardItem, QTimer
 
 
-
-
-# FIXA STRESS MODE SOM INTE LÄGGER KORREKT
-#
-# ,(STRE[1,OSCI[,FUNC[LIN,(1,1)]FUNC[LOG,(1,10)],
-# (STRE[1,OSCI[,1FUNC[LOG,(1,10)],SIN]]),()
-#
-
+#########################################################
+#  Some refactoring to be done, but this works for now  #
+#########################################################
 
 VISCOSITY_BASE_STRING = 'PART[($NUMB$$DTIM$),(),(),(),($MEAS_MODE$[1,$SRAT_FUNC$$STRE_FUNC$]),(),(),,(DAPT[TEMP[2,??T]],DAPT[TORQ[1,??T]],DAPT[SPEE[1,??T]],DAPT[EXCU[1,??T]],DAPT[FORC[1,??T]],DAPT[VOLT[1,??T]],DAPT[DIST[1,??T]],GSTR[STAT[1,??T]],DAPT[VELO[1,??T]],DAPT[DGAP[1,??T]],DAPT[TIMA[1,??T]],DAPT[TIMP[1,??T]],DAPT[EXCE[1,??T]],DAPT[ETRQ[1,??T]]),(GENP[0,($END_SEQ$)],SETV[0,(IFST[IN,(16)])]),($EXCU$)]'
 OSCILLATION_BASE_STRING = 'PART[($NUMB$$DTIM$),(),(),(),($MEAS_MODE$[1,OSCI[$STRE_FUNC$$STRA_FUNC$$FREQ_FUNC$,SIN]]),(),(),VALF[$MEAS_MODE$[1,?&]],(VALF[$MEAS_MODE$[1,?&]],DAPT[TEMP[2,??T]],COMP[MODU[1,??F],1,PHAS],COMP[TORQ[1,??F],0,CABS],COMP[TORQ[1,??F],1,CABS],DAPT[KFAC[1,??T]],COMP[SPEE[1,??F],0,CABS],COMP[EXCU[1,??F],0,CABS],COMP[EXCU[1,??F],1,CABS],COMP[FORC[1,??F],0,REAL],DAPT[VOLT[1,??T]],DAPT[DIST[1,??T]],GSTR[STAT[1,??T]],DAPT[VELO[1,??T]],DAPT[DGAP[1,??T]],DAPT[TIMA[1,??T]],DAPT[TIMP[1,??T]],COMP[EXCE[1,??F],0,CABS],COMP[EXCE[1,??F],1,CABS],COMP[ETRQ[1,??F],0,CABS],COMP[ETRQ[1,??F],1,CABS]),(GENP[0,(IFDT[EX])],SETV[0,(IFST[IN,(16)])]),($EXCU$)]'
@@ -451,6 +444,8 @@ class RheometerPanel(Panel):
                                   ('strain', self.strain_final_le),
                                   ('frequency', self.frequency_final_le)]:
             if getattr(self, f'{func}_combo').currentText() == 'CONSTANT':
+                self.set_enabled_state(False, [final_le])
+            elif not getattr(self, f'{func}_combo').isEnabled():
                 self.set_enabled_state(False, [final_le])
             else:
                 self.set_enabled_state(True, [final_le])
