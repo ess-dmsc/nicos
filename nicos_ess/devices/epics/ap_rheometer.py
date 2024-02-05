@@ -24,7 +24,7 @@
 # *****************************************************************************
 import time
 
-from nicos.core import SIMULATION, Override, Param, pvname, status, usermethod
+from nicos.core import SIMULATION, Override, Param, pvname, status
 from nicos.devices.abstract import MappedMoveable
 
 from nicos.devices.epics.pva import EpicsDevice

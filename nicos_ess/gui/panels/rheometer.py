@@ -291,9 +291,13 @@ class RheometerPanel(Panel):
         return interval
 
     def _convert_to_rad_per_sec(self, value):
+        if value == '':
+            return ''
         return str(float(value) / (2 * np.pi))
 
     def _convert_to_percent(self, value):
+        if value == '':
+            return ''
         return str(float(value) / 100.)
 
     def valid_function(self, function):
@@ -329,7 +333,7 @@ class RheometerPanel(Panel):
         item = QStandardItem(content)
         items.append(item)
 
-        for func in ['srat', 'stra', 'freq', 'stre']:
+        for func in ['stre', 'srat', 'stra', 'freq']:
             if func not in interval['funcs']:
                 items.append(QStandardItem(''))
                 continue
@@ -400,6 +404,8 @@ class RheometerPanel(Panel):
         mode = self.mode_combo.currentText()
         measure_mode = self.measure_mode_combo.currentText()
 
+        illegal_state = False
+
         self.disable_all()
 
         # Logic for VISC mode
@@ -415,6 +421,7 @@ class RheometerPanel(Panel):
             self.measure_mode_combo.clear()
             self.measure_mode_combo.addItems(VISC_MODES)
             if measure_mode not in VISC_MODES:
+                illegal_state = True
                 self.measure_mode_combo.setCurrentIndex(0)
                 measure_mode = self.measure_mode_combo.currentText()
             self.measure_mode_combo.setCurrentIndex(VISC_MODES.index(measure_mode))
@@ -433,7 +440,8 @@ class RheometerPanel(Panel):
             self.measure_mode_combo.clear()
             self.measure_mode_combo.addItems(OSCI_MODES)
             if measure_mode not in OSCI_MODES:
-                self.measure_mode_combo.setCurrentIndex(0)
+                illegal_state = True
+                self.measure_mode_combo.setCurrentIndex(1)
                 measure_mode = self.measure_mode_combo.currentText()
             self.measure_mode_combo.setCurrentIndex(OSCI_MODES.index(measure_mode))
             self.measure_mode_combo.blockSignals(False)
@@ -449,6 +457,11 @@ class RheometerPanel(Panel):
                 self.set_enabled_state(False, [final_le])
             else:
                 self.set_enabled_state(True, [final_le])
+
+        #  If we swapped state to an illegal state, we need to update the UI again to reflect the new state
+        #  Because we block some signals during the update. This is a bit of a hack, but it works for now.
+        if illegal_state:
+            self.update_ui_state()
 
     def set_enabled_state(self, enabled, widgets):
         for widget in widgets:
