@@ -1,12 +1,92 @@
 description = 'The Anton-Paar MCR702e Rheometer'
 
-pv_root = 'TEST:RHEO:'
+pv_root = 'SE-SEE:SE-RHEO-001:'
 
 devices = dict(
+    speed=device(
+        'nicos.devices.epics.pva.EpicsReadable',
+        description='The rotation speed.',
+        readpv='{}RotSpeed-R'.format(pv_root),
+        monitor=True,
+        pva=True,
+        pollinterval=None,
+    ),
+    strain_amplitude=device(
+        'nicos.devices.epics.pva.EpicsReadable',
+        description='The strain amplitude.',
+        readpv='{}Strain1-R'.format(pv_root),
+        monitor=True,
+        pva=True,
+        pollinterval=None,
+    ),
+    shear_strain=device(
+        'nicos.devices.epics.pva.EpicsReadable',
+        description='The shear strain.',
+        readpv='{}ShearStrain'.format(pv_root),
+        monitor=True,
+        pva=True,
+        pollinterval=None,
+    ),
+    shear_stress=device(
+        'nicos.devices.epics.pva.EpicsReadable',
+        description='The shear stress.',
+        readpv='{}ShearStress'.format(pv_root),
+        monitor=True,
+        pva=True,
+        pollinterval=None,
+    ),
+    shear_rate=device(
+        'nicos.devices.epics.pva.EpicsReadable',
+        description='The shear rate.',
+        readpv='{}ShearRate'.format(pv_root),
+        monitor=True,
+        pva=True,
+        pollinterval=None,
+    ),
+    torque=device(
+        'nicos.devices.epics.pva.EpicsReadable',
+        description='The torque.',
+        readpv='{}Torque-R'.format(pv_root),
+        monitor=True,
+        pva=True,
+        pollinterval=None,
+    ),
+    phase_angle=device(
+        'nicos.devices.epics.pva.EpicsReadable',
+        description='The phase angle.',
+        readpv='{}PhaseAng-R'.format(pv_root),
+        monitor=True,
+        pva=True,
+        pollinterval=None,
+    ),
+    strain_constant=device(
+        'nicos.devices.epics.pva.EpicsReadable',
+        description='The constant strain.',
+        readpv='{}CSRfactor'.format(pv_root),
+        monitor=True,
+        pva=True,
+        pollinterval=None,
+    ),
+    stress_constant=device(
+        'nicos.devices.epics.pva.EpicsReadable',
+        description='The constant stress.',
+        readpv='{}CSSfactor'.format(pv_root),
+        monitor=True,
+        pva=True,
+        pollinterval=None,
+    ),
+    temperature=device(
+        'nicos.devices.epics.pva.EpicsReadable',
+        description='The temperature.',
+        readpv='{}Temp-R'.format(pv_root),
+        monitor=True,
+        pva=True,
+        pollinterval=None,
+    ),
     viscocity=device(
         'nicos.devices.epics.pva.EpicsReadable',
         description='The calculated viscosity.',
-        readpv='{}Viscosity-RB'.format(pv_root),
+        readpv='{}Viscosity'.format(pv_root),
         monitor=True,
         pva=True,
         pollinterval=None,
@@ -14,7 +94,7 @@ devices = dict(
     tot_modulus=device(
         'nicos.devices.epics.pva.EpicsReadable',
         description='The calculated tot modulus.',
-        readpv='{}TotModulus-RB'.format(pv_root),
+        readpv='{}TotModulus'.format(pv_root),
         monitor=True,
         pva=True,
         pollinterval=None,
