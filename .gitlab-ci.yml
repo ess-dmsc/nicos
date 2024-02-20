@@ -20,10 +20,7 @@ stages:
 test:
   stage: test
   script:
-    - scl enable rh-python38 -- pyenv global 3.10
-    - pyenv versions
-    - export PATH="/home/jenkins/.pyenv/shims:$PATH"
-    - python -m pytest --junitxml=test-output.xml --ignore=nicos_sinq
+    - scl enable rh-python38 -- python -m pytest --junitxml=test-output.xml --ignore=nicos_sinq
   artifacts:
     paths:
       - test-output.xml
