@@ -19,6 +19,8 @@ stages:
 
 test:
   stage: test
+  before_script:
+    - cd test
   script:
     - scl enable rh-python38 -- python -m pytest --junitxml=test-output.xml --ignore=nicos_sinq
   artifacts:
