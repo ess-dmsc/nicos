@@ -24,6 +24,6 @@ test:
     - scl enable rh-python38 -- python -m pytest --junitxml=test-output.xml --ignore=nicos_sinq
   artifacts:
     paths:
-      - test-output.xml
+      - test/test-output.xml
     reports:
-      junit: test-output.xml
+      junit: test/test-output.xml
