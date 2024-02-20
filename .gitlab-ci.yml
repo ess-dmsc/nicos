@@ -1,0 +1,30 @@
+default:
+  tags:
+    - docker
+  image: registry.esss.lu.se/ecdc/ess-dmsc/docker-centos7-build-node:latest
+  before_script:
+    - scl enable rh-python38 -- python --version
+    - scl enable rh-python38 -- pip install --user -r nicos_ess/requirements.txt
+    - scl enable rh-python38 -- pip install --user pytest pytest-timeout mock lxml Pillow 
+    - scl enable rh-python38 -- pip install --user 'requests<2.30.0'
+
+workflow:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "push"'
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+
+stages:
+  - test
+
+test:
+  stage: test
+  script:
+    - scl enable rh-python38 -- pyenv global 3.10
+    - pyenv versions
+    - export PATH="/home/jenkins/.pyenv/shims:$PATH"
+    - python -m pytest --junitxml=test-output.xml --ignore=nicos_sinq
+  artifacts:
+    paths:
+      - test-output.xml
+    reports:
+      junit: test-output.xml
