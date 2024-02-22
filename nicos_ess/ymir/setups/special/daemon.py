@@ -12,7 +12,7 @@ devices = dict(
         ],
     ),
     LDAPAuth=device(
-        'nicos_ess.devices.ldap.Authenticator',
+        'nicos_ess.devices.auth.ldap.Authenticator',
         uri=[
             'esss.lu.se',
         ],
