@@ -52,7 +52,6 @@ class SettingsDialog(DlgUtils, QDialog):
         self.showTrayIcon.setChecked(main.showtrayicon)
         self.autoReconnect.setChecked(main.autoreconnect)
         self.autoSaveLayout.setChecked(main.autosavelayout)
-        self.manualSaveLayout.setChecked(not main.autosavelayout)
         self.allowOutputLineWrap.setChecked(main.allowoutputlinewrap)
 
         # connection data page
@@ -91,16 +90,6 @@ class SettingsDialog(DlgUtils, QDialog):
         for win in self.main.windows.values():
             win.saveWindowLayout()
         self.showInfo('The window layout was saved.')
-
-    @pyqtSlot()
-    def on_selectConfigBtn_clicked(self):
-        InstrSelectDialog.select(force=True)
-
-    @pyqtSlot()
-    def on_clearConfigBtn_clicked(self):
-        with SettingGroup('Instrument') as settings:
-            settings.remove('guiconfig')
-        self.showInfo('Default instrument GUI configuration has been cleared.')
 
     @pyqtSlot()
     def on_settingAdd_clicked(self):
