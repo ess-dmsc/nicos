@@ -38,7 +38,7 @@ from nicos.clients.flowui.panels import get_icon, root_path
 from nicos.clients.gui.client import NicosGuiClient
 from nicos.clients.gui.config import tabbed
 from nicos.clients.gui.data import DataHandler
-from nicos.clients.gui.dialogs.auth import ConnectionDialog
+from nicos_ess.gui.dialogs.auth import ConnectionDialog
 from nicos.clients.gui.dialogs.debug import DebugConsole
 from nicos.clients.gui.dialogs.error import ErrorDialog
 from nicos.clients.gui.dialogs.pnp import PnPSetupQuestion
@@ -92,7 +92,7 @@ class MainWindow(DlgUtils, QMainWindow):
     ui = path.join(uipath, 'main.ui')
     default_facility_logo = ':/ess-logo-auth'
 
-    def __init__(self, log, gui_conf, viewonly=False, tunnel=''):
+    def __init__(self, log, gui_conf, viewonly=False, default_server=None):
         QMainWindow.__init__(self)
         DlgUtils.__init__(self, 'NICOS')
         colors.init_palette(self.palette())
@@ -129,7 +129,10 @@ class MainWindow(DlgUtils, QMainWindow):
         # no wrapping at startup
         self.allowoutputlinewrap = False
 
-        # set-up the initial connection data
+        # default server to connect to
+        self.default_server = default_server
+
+        # set up the initial connection data
         self.setConnData(ConnectionData('localhost', 1301, 'guest', None,
                                         viewonly=viewonly))
 
@@ -323,16 +326,6 @@ class MainWindow(DlgUtils, QMainWindow):
         if experiment is not None:
             self.experiment_label.setText('     Experiment:')
             self.experiment_text.setText(experiment[0:max_text_length])
-
-    def reloadQSS(self):
-        self.setQSS(self.stylefile)
-
-    def selectQSS(self):
-        style_file = QFileDialog.getOpenFileName(
-            self, filter='Qt Stylesheet Files (*.qss)')[0]
-        if style_file:
-            self.style_file = style_file
-            self.setQSS(self.style_file)
 
     @staticmethod
     def setQSS(style_file):
@@ -879,8 +872,7 @@ class MainWindow(DlgUtils, QMainWindow):
 
         self.actionConnect.setChecked(False)  # gets set by connection event
         ret = ConnectionDialog.getConnectionData(self, self.connpresets,
-                                                 self.lastpreset,
-                                                 self.conndata)
+                                                 self.default_server)
         new_name, new_data, save, _ = ret
 
         if new_data is None:
