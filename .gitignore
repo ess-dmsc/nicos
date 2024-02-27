@@ -58,3 +58,7 @@ mprofile_*.dat
 
 #MacOS
 .DS_Store
+
+#Common venv names
+.venv
+venv
