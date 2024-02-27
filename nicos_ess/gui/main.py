@@ -62,7 +62,8 @@ def parseargs():
                         help='''A connection string with the following form:
 
                         [user_name[:password[@host[:port]]]]''')
-    parser.add_argument('-s', '--server', dest='server', default=None,
+    parser.add_argument('-s', '--server', dest='server',
+                        default='localhost:1301',
                         help='NICOS server to connect to')
     return parser.parse_args()
 
