@@ -42,7 +42,7 @@ main_window = docked(
         ),
         (
             'Scripting',
-            panel('nicos.clients.flowui.panels.editor.EditorPanel',
+            panel('nicos_ess.gui.panels.editor.EditorPanel',
                   tools=None),
         ),
         (
