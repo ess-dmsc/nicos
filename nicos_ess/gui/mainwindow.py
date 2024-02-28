@@ -33,16 +33,13 @@ import gr
 
 from nicos import nicos_version
 from nicos.clients.base import ConnectionData
-from nicos.clients.flowui import uipath
 from nicos.clients.flowui.panels import get_icon, root_path
 from nicos.clients.gui.client import NicosGuiClient
 from nicos.clients.gui.config import tabbed
 from nicos.clients.gui.data import DataHandler
-from nicos_ess.gui.dialogs.auth import ConnectionDialog
 from nicos.clients.gui.dialogs.debug import DebugConsole
 from nicos.clients.gui.dialogs.error import ErrorDialog
 from nicos.clients.gui.dialogs.pnp import PnPSetupQuestion
-from nicos_ess.gui.dialogs.settings import SettingsDialog
 from nicos.clients.gui.dialogs.watchdog import WatchdogDialog
 from nicos.clients.gui.panels import AuxiliaryWindow, createWindowItem
 from nicos.clients.gui.panels.console import ConsolePanel
@@ -51,15 +48,18 @@ from nicos.clients.gui.utils import DlgUtils, SettingGroup, dialogFromUi, \
     loadBasicWindowSettings, loadUi, loadUserStyle
 from nicos.core.utils import ADMIN
 from nicos.guisupport.colors import colors
-from nicos.guisupport.qt import PYQT_VERSION_STR, QT_VERSION_STR, \
-    QApplication, QColorDialog, QDialog, QFileDialog, QFontDialog, QIcon, \
-    QLabel, QMainWindow, QMenu, QMessageBox, QPixmap, QPoint, \
-    QSizePolicy, QSystemTrayIcon, Qt, QTimer, QWebView, QWidget, pyqtSignal, \
-    pyqtSlot
+from nicos.guisupport.qt import PYQT_VERSION_STR, QT_VERSION_STR, QAction, \
+    QApplication, QColorDialog, QDialog, QFontDialog, QIcon, QLabel, \
+    QMainWindow, QMenu, QMessageBox, QPixmap, QPoint, QSizePolicy, \
+    QSystemTrayIcon, Qt, QTimer, QWebView, QWidget, pyqtSignal, pyqtSlot
 from nicos.protocols.daemon import BREAK_NOW, STATUS_IDLE, STATUS_IDLEEXC, \
     STATUS_INBREAK
 from nicos.protocols.daemon.classic import DEFAULT_PORT
-from nicos.utils import  importString, parseConnectionString
+from nicos.utils import findResource, importString, parseConnectionString, \
+    checkSetupSpec
+
+from nicos_ess.gui.dialogs.auth import ConnectionDialog
+from nicos_ess.gui.dialogs.settings import SettingsDialog
 
 try:
     from nicos.clients.gui.dialogs.help import HelpWindow
@@ -81,6 +81,28 @@ class Spacer(QWidget):
                            QSizePolicy.Policy.Preferred)
 
 
+class ToolAction(QAction):
+    """Extended QAction which is setup depending visible.
+
+    The action is visible if no special setup is configured or the loaded setup
+    matches the ``setups`` rule.
+    """
+
+    def __init__(self, client, icon, text, options, parent=None):
+        QAction.__init__(self, icon, text, parent)
+        # the default menu rule is TextHeuristicRole, which moves 'setup' to
+        # the 'Preferences' Menu on a Mac -> this is not what we want
+        self.setMenuRole(self.MenuRole.NoRole)
+        setups = options.get('setups', '')
+        self.setupSpec = setups
+        if self.setupSpec:
+            client.register(self, 'session/mastersetup')
+
+    def on_keyChange(self, key, value, time, expired):
+        if key == 'session/mastersetup' and self.setupSpec:
+            self.setVisible(checkSetupSpec(self.setupSpec, value))
+
+
 class MainWindow(DlgUtils, QMainWindow):
     name = 'MainWindow'
     # Emitted when a panel generates code that an editor panel should add.
@@ -89,14 +111,13 @@ class MainWindow(DlgUtils, QMainWindow):
     # Interval (in ms) to make "keepalive" queries to the daemon.
     keepaliveInterval = 12 * 3600 * 1000
 
-    ui = path.join(uipath, 'main.ui')
     default_facility_logo = ':/ess-logo-auth'
 
     def __init__(self, log, gui_conf, viewonly=False, default_server=None):
         QMainWindow.__init__(self)
         DlgUtils.__init__(self, 'NICOS')
         colors.init_palette(self.palette())
-        loadUi(self, self.ui)
+        loadUi(self, findResource('nicos_ess/gui/main.ui'))
 
         # set app icon in multiple sizes
         icon = QIcon()
@@ -170,7 +191,7 @@ class MainWindow(DlgUtils, QMainWindow):
         # have a way to open files from a console panel later
         self.editor_wintype = self.gui_conf.find_panel(
             ('editor.EditorPanel',
-             'nicos.clients.flowui.panels.editor.EditorPanel'))
+             'nicos_ess.gui.panels.editor.EditorPanel'))
         self.history_wintype = self.gui_conf.find_panel(
             ('history.HistoryPanel',
              'nicos.clients.flowui.panels.history.HistoryPanel'))
