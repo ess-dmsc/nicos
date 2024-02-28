@@ -44,7 +44,7 @@ main_window = docked(
                     tabbed(
                         ('Output',
                          panel(
-                             'nicos.clients.flowui.panels.console.ConsolePanel',
+                             'nicos_ess.gui.panels.console.ConsolePanel',
                              hasinput=False)),
                         ('Scan Plot',
                          panel('nicos.clients.flowui.panels.scans.ScansPanel')
