@@ -58,11 +58,10 @@ class ConsolePanel(Panel):
     """
 
     panelName = 'Console'
-    ui = path.join('panels', 'console.ui')
 
     def __init__(self, parent, client, options):
         Panel.__init__(self, parent, client, options)
-        loadUi(self, self.ui)
+        loadUi(self, findResource('nicos_ess/gui/panels/ui_files/console.ui'))
 
         self.commandInput.scrollWidget = self.outView
         self.grepPanel.hide()

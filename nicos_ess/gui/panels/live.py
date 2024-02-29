@@ -54,6 +54,7 @@ VERT_SPLITTER_SIZES_1 = [100, 500, 100]
 VERT_SPLITTER_SIZES_2 = [100, 500, 100]
 VERT_SPLITTER_SIZES_3 = [50, 1000]
 
+
 class HistogramItem(HistogramLUTItem):
     def __init__(
         self,

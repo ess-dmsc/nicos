@@ -35,7 +35,7 @@ from nicos.guisupport.qt import QActionGroup, QBrush, QColor, QFontMetrics, \
 from nicos.guisupport.utils import setBackgroundColor
 from nicos.protocols.daemon import BREAK_AFTER_LINE, BREAK_AFTER_STEP, \
     BREAK_NOW, SIM_STATES, STATUS_IDLEEXC
-from nicos.utils import formatEndtime
+from nicos.utils import findResource, formatEndtime
 
 
 class ScriptQueue:
@@ -143,7 +143,7 @@ class ScriptStatusPanel(Panel):
 
     def __init__(self, parent, client, options):
         Panel.__init__(self, parent, client, options)
-        loadUi(self, 'panels/status.ui')
+        loadUi(self, findResource('nicos_ess/gui/panels/ui_files/status.ui'))
 
         self.stopcounting = False
         self.menus = None
