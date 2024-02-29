@@ -113,7 +113,8 @@ class MainWindow(DlgUtils, QMainWindow):
 
     default_facility_logo = ':/ess-logo-auth'
 
-    def __init__(self, log, gui_conf, viewonly=False, default_server=None):
+    def __init__(self, log, gui_conf, viewonly=False, default_server=None,
+                 default_user=None):
         QMainWindow.__init__(self)
         DlgUtils.__init__(self, 'NICOS')
         colors.init_palette(self.palette())
@@ -152,6 +153,9 @@ class MainWindow(DlgUtils, QMainWindow):
 
         # default server to connect to
         self.default_server = default_server
+
+        # default user to suggest
+        self.default_user = default_user
 
         # set up the initial connection data
         self.setConnData(ConnectionData('localhost', 1301, 'guest', None,
@@ -892,7 +896,8 @@ class MainWindow(DlgUtils, QMainWindow):
 
         self.actionConnect.setChecked(False)  # gets set by connection event
         ret = ConnectionDialog.getConnectionData(self, self.connpresets,
-                                                 self.default_server)
+                                                 self.default_server,
+                                                 self.default_user)
         new_name, new_data, save, _ = ret
 
         if new_data is None:

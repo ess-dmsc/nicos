@@ -36,8 +36,9 @@ from nicos.utils import findResource
 class ConnectionDialog(QDialog):
     """A dialog to request connection parameters."""
     @classmethod
-    def getConnectionData(cls, parent, connpresets, default_server=None):
-        self = cls(parent, connpresets, default_server)
+    def getConnectionData(cls, parent, connpresets, default_server=None,
+                          default_user=None):
+        self = cls(parent, connpresets, default_server, default_user)
         ret = self.exec()
         if ret != QDialog.DialogCode.Accepted:
             return None, None, None, ''
@@ -54,21 +55,21 @@ class ConnectionDialog(QDialog):
         new_data.expertmode = self.expertmode.isChecked()
         return None, new_data, None, ''
 
-    def __init__(self, parent, connpresets, default_server):
+    def __init__(self, parent, connpresets, default_server, default_user):
         QDialog.__init__(self, parent)
         loadUi(self, findResource('nicos_ess/gui/dialogs/auth.ui'))
         if hasattr(parent, 'facility_logo') and parent.facility_logo:
             self.logoLabel.setPixmap(QPixmap(parent.facility_logo))
         self.connpresets = OrderedDict(sorted(connpresets.items()))
-        self.default_server = default_server
 
-        self._populate_where_possible()
+        self._populate_where_possible(default_server, default_user)
 
         self.resize(QSize(self.width(), self.minimumSize().height()))
 
-    def _populate_where_possible(self):
-        self.userName.setText(self._get_local_user())
-        self.txtServer.setText(self.default_server)
+    def _populate_where_possible(self, server, user):
+        user = user if user else self._get_local_user()
+        self.userName.setText(user)
+        self.txtServer.setText(server)
 
     def _get_local_user(self):
         return getpass.getuser()

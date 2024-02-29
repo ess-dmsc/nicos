@@ -63,8 +63,11 @@ def parseargs():
 
                         [user_name[:password[@host[:port]]]]''')
     parser.add_argument('-s', '--server', dest='server',
-                        default='localhost:1301',
-                        help='NICOS server to connect to')
+                        default='localhost',
+                        help='the default NICOS server to connect to')
+    parser.add_argument('-u', '--user', dest='user',
+                        default=None,
+                        help='the suggested user to log on as')
     return parser.parse_args()
 
 
@@ -142,7 +145,8 @@ def main(argv):
     mainwindow_cls = importString(
         gui_conf.options.get('mainwindow_class',
                              'nicos.clients.gui.mainwindow.MainWindow'))
-    mainwindow = mainwindow_cls(log, gui_conf, opts.viewonly, opts.server)
+    mainwindow = mainwindow_cls(log, gui_conf, opts.viewonly, opts.server,
+                                opts.user)
     log.addHandler(DebugHandler(mainwindow))
 
     if opts.connect:
