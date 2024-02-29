@@ -55,8 +55,8 @@ from nicos.guisupport.qt import PYQT_VERSION_STR, QT_VERSION_STR, QAction, \
 from nicos.protocols.daemon import BREAK_NOW, STATUS_IDLE, STATUS_IDLEEXC, \
     STATUS_INBREAK
 from nicos.protocols.daemon.classic import DEFAULT_PORT
-from nicos.utils import findResource, importString, parseConnectionString, \
-    checkSetupSpec
+from nicos.utils import checkSetupSpec, findResource, importString, \
+    parseConnectionString
 
 from nicos_ess.gui.dialogs.auth import ConnectionDialog
 from nicos_ess.gui.dialogs.settings import SettingsDialog

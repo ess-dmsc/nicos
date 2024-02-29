@@ -28,22 +28,20 @@ import time
 from logging import WARNING
 from uuid import uuid1
 
-from PyQt6.Qsci import QsciLexerPython
-
 from nicos.clients.flowui.panels import get_icon
 from nicos.clients.gui.dialogs.editordialogs import OverwriteQuestion, \
     SearchDialog
 from nicos.clients.gui.dialogs.traceback import TracebackDialog
 from nicos.clients.gui.panels import Panel
-from nicos.clients.gui.tools import createToolMenu
 from nicos.clients.gui.utils import loadUi, showToolText
 from nicos.clients.gui.widgets.qscintillacompat import QScintillaCompatible
 from nicos.guisupport.colors import colors
 from nicos.guisupport.qt import QAction, QActionGroup, QByteArray, QColor, \
     QDialog, QFileDialog, QFileSystemModel, QFileSystemWatcher, QFont, \
     QFontMetrics, QHBoxLayout, QHeaderView, QInputDialog, QMenu, QMessageBox, \
-    QPen, QPrintDialog, QPrinter, QsciPrinter, QsciScintilla, Qt, QTabWidget, \
-    QToolBar, QToolButton, QTreeWidgetItem, QWidget, pyqtSlot
+    QPen, QPrintDialog, QPrinter, QsciLexerPython, QsciPrinter, \
+    QsciScintilla, Qt, QTabWidget, QToolBar, QToolButton, QTreeWidgetItem, \
+    QWidget, pyqtSlot
 from nicos.guisupport.utils import setBackgroundColor
 from nicos.utils import LOCALE_ENCODING, findResource, formatDuration, \
     formatEndtime
