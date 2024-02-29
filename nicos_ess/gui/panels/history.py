@@ -25,7 +25,6 @@
 """NICOS GUI history log window."""
 
 import json
-import os
 import pickle
 import sys
 from collections import OrderedDict
@@ -35,17 +34,14 @@ from nicos.clients.flowui.panels import get_icon
 from nicos.clients.gui.panels.plot import PlotPanel
 from nicos.clients.gui.utils import DlgUtils, enumerateWithProgress, loadUi, \
     split_query
-from nicos.clients.gui.widgets.plotting import ArbitraryFitter, CosineFitter, \
-    ExponentialFitter, GaussFitter, LinearFitter, LorentzFitter, \
-    PearsonVIIFitter, PseudoVoigtFitter, SigmoidFitter, TcFitter, ViewPlot
+from nicos.clients.gui.widgets.plotting import LinearFitter, ViewPlot
 from nicos.core import Param, listof
 from nicos.devices.cacheclient import CacheClient
-from nicos.guisupport.qt import QAction, QActionGroup, QApplication, QBrush, \
-    QByteArray, QCheckBox, QColor, QComboBox, QCompleter, QCursor, QDateTime, \
-    QDialog, QFont, QFrame, QHBoxLayout, QListWidgetItem, QMainWindow, QMenu, \
-    QMessageBox, QObject, QSettings, QSizePolicy, QStatusBar, \
-    QStyledItemDelegate, Qt, QTimer, QToolBar, QWidgetAction, pyqtSignal, \
-    pyqtSlot
+from nicos.guisupport.qt import QAction, QApplication, QBrush, QByteArray, \
+    QColor, QCompleter, QCursor, QDateTime, QDialog, QFont, QListWidgetItem, \
+    QMainWindow, QMenu, QMessageBox, QObject, QSettings, QSizePolicy, \
+    QStatusBar, QStyledItemDelegate, Qt, QTimer, QToolBar, QToolButton, \
+    pyqtSignal, pyqtSlot
 from nicos.guisupport.timeseries import TimeSeries
 from nicos.guisupport.trees import BaseDeviceParamTree
 from nicos.guisupport.utils import scaledFont
@@ -79,6 +75,12 @@ def get_time_and_interval(intv):
     else:
         interval = 1
     return itime, interval
+
+
+def showToolText(toolbar, action):
+    widget = toolbar.widgetForAction(action)
+    if isinstance(widget, QToolButton):
+        widget.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
 
 
 class View(QObject):
@@ -441,12 +443,11 @@ class NewViewDialog(DlgUtils, QDialog):
 
 
 class BaseHistoryWindow:
-    ui = os.path.join('panels', 'history.ui')
     client = None
     presetdict = None
 
     def __init__(self):
-        loadUi(self, self.ui)
+        loadUi(self, findResource('nicos_ess/gui/panels/ui_files/history.ui'))
 
         self.user_color = Qt.GlobalColor.white
         self.user_font = QFont('Monospace')
@@ -487,30 +488,16 @@ class BaseHistoryWindow:
         self.actionNew.triggered.connect(self.on__actionNew_triggered)
         self.actionEditView.triggered.connect(self.on__actionEditView_triggered)
         self.actionCloseView.triggered.connect(self.on__actionCloseView_triggered)
-        self.actionResetView.triggered.connect(self.on__actionResetView_triggered)
         self.actionDeleteView.triggered.connect(self.on__actionDeleteView_triggered)
         self.actionSavePlot.triggered.connect(self.on__actionSavePlot_triggered)
         self.actionPrint.triggered.connect(self.on__actionPrint_triggered)
         self.actionUnzoom.triggered.connect(self.on__actionUnzoom_triggered)
-        self.actionLogScale.toggled.connect(self.on__actionLogScale_toggled)
-        self.actionAutoScale.toggled.connect(self.on__actionAutoScale_toggled)
         self.actionScaleX.toggled.connect(self.on__actionScaleX_toggled)
         self.actionScaleY.toggled.connect(self.on__actionScaleY_toggled)
         self.actionLegend.toggled.connect(self.on__actionLegend_toggled)
         self.actionSymbols.toggled.connect(self.on__actionSymbols_toggled)
         self.actionLines.toggled.connect(self.on__actionLines_toggled)
         self.actionSaveData.triggered.connect(self.on__actionSaveData_triggered)
-        self.actionFitPeak.triggered.connect(self.on__actionFitPeak_triggered)
-        self.actionFitArby.triggered.connect(self.on__actionFitArby_triggered)
-        self.actionFitPeakGaussian.triggered.connect(self.on__actionFitPeakGaussian_triggered)
-        self.actionFitPeakLorentzian.triggered.connect(self.on__actionFitPeakLorentzian_triggered)
-        self.actionFitPeakPV.triggered.connect(self.on__actionFitPeakPV_triggered)
-        self.actionFitPeakPVII.triggered.connect(self.on__actionFitPeakPVII_triggered)
-        self.actionFitTc.triggered.connect(self.on__actionFitTc_triggered)
-        self.actionFitCosine.triggered.connect(self.on__actionFitCosine_triggered)
-        self.actionFitSigmoid.triggered.connect(self.on__actionFitSigmoid_triggered)
-        self.actionFitLinear.triggered.connect(self.on__actionFitLinear_triggered)
-        self.actionFitExponential.triggered.connect(self.on__actionFitExponential_triggered)
 
     def getMenus(self):
         menu = QMenu('&History viewer', self)
@@ -524,41 +511,13 @@ class BaseHistoryWindow:
         menu.addAction(self.actionEditView)
         menu.addAction(self.actionCloseView)
         menu.addAction(self.actionDeleteView)
-        menu.addAction(self.actionResetView)
         menu.addSeparator()
-        menu.addAction(self.actionLogScale)
-        menu.addAction(self.actionAutoScale)
         menu.addAction(self.actionScaleX)
         menu.addAction(self.actionScaleY)
         menu.addAction(self.actionUnzoom)
         menu.addAction(self.actionLegend)
         menu.addAction(self.actionSymbols)
         menu.addAction(self.actionLines)
-        ag = QActionGroup(menu)
-        ag.addAction(self.actionFitPeakGaussian)
-        ag.addAction(self.actionFitPeakLorentzian)
-        ag.addAction(self.actionFitPeakPV)
-        ag.addAction(self.actionFitPeakPVII)
-        ag.addAction(self.actionFitTc)
-        ag.addAction(self.actionFitCosine)
-        ag.addAction(self.actionFitSigmoid)
-        ag.addAction(self.actionFitLinear)
-        ag.addAction(self.actionFitExponential)
-        menu.addAction(self.actionFitPeak)
-        menu.addAction(self.actionPickInitial)
-        menu.addAction(self.actionFitPeakGaussian)
-        menu.addAction(self.actionFitPeakLorentzian)
-        menu.addAction(self.actionFitPeakPV)
-        menu.addAction(self.actionFitPeakPVII)
-        menu.addAction(self.actionFitTc)
-        menu.addAction(self.actionFitCosine)
-        menu.addAction(self.actionFitSigmoid)
-        menu.addAction(self.actionFitLinear)
-        menu.addAction(self.actionFitExponential)
-        menu.addSeparator()
-        menu.addAction(self.actionFitArby)
-        menu.addSeparator()
-        menu.addAction(self.actionClose)
         self._refresh_presets()
         return [menu, self.presetmenu]
 
@@ -676,7 +635,6 @@ class BaseHistoryWindow:
         yflag = y if y is not None else self.actionScaleY.isChecked()
         if self.currentPlot:
             self.currentPlot.setAutoScaleFlags(xflag, yflag)
-            self.actionAutoScale.setChecked(xflag or yflag)
             self.actionScaleX.setChecked(xflag)
             self.actionScaleY.setChecked(yflag)
             self.currentPlot.update()
@@ -684,11 +642,11 @@ class BaseHistoryWindow:
     def enablePlotActions(self, on):
         for action in [
             self.actionSavePlot, self.actionPrint, self.actionAttachElog,
-            self.actionSaveData, self.actionAutoScale, self.actionScaleX,
+            self.actionSaveData, self.actionScaleX,
             self.actionScaleY, self.actionEditView, self.actionCloseView,
-            self.actionDeleteView, self.actionResetView, self.actionUnzoom,
-            self.actionLogScale, self.actionLegend, self.actionSymbols,
-            self.actionLines, self.actionFitPeak, self.actionFitArby,
+            self.actionDeleteView, self.actionUnzoom,
+            self.actionLegend, self.actionSymbols,
+            self.actionLines,
         ]:
             action.setEnabled(on)
 
@@ -699,8 +657,7 @@ class BaseHistoryWindow:
         popMenu.exec(QCursor.pos())
 
     def enableAutoScaleActions(self, on):
-        for action in [self.actionAutoScale, self.actionScaleX,
-                       self.actionScaleY]:
+        for action in [self.actionScaleX, self.actionScaleY]:
             action.setEnabled(on)
 
     def on__fitComboBox_currentIndexChanged(self, index):
@@ -728,8 +685,7 @@ class BaseHistoryWindow:
                 self._createViewFromDialog(info, row)
 
     def on_logYinDomain(self, flag):
-        if not flag:
-            self.actionLogScale.setChecked(flag)
+        pass
 
     def newvalue_callback(self, data):
         (vtime, key, op, value) = data
@@ -874,7 +830,6 @@ class BaseHistoryWindow:
             self.enablePlotActions(True)
             self.enableAutoScaleActions(view.plot.HAS_AUTOSCALE)
             self.viewList.setCurrentItem(view.listitem)
-            self.actionLogScale.setChecked(view.plot.isLogScaling())
             self.actionLegend.setChecked(view.plot.isLegendEnabled())
             self.actionSymbols.setChecked(view.plot.hasSymbols)
             self.actionLines.setChecked(view.plot.hasLines)
@@ -921,14 +876,6 @@ class BaseHistoryWindow:
             self.setCurrentView(None)
         view.plot = None
 
-    def on__actionResetView_triggered(self):
-        view = self.viewStack.pop()
-        hassym = view.plot.hasSymbols
-        view.plot = None
-        self.openView(view)
-        self.actionSymbols.setChecked(hassym)
-        view.plot.setSymbols(hassym)
-
     def on__actionDeleteView_triggered(self):
         view = self.viewStack.pop()
         self.clearView(view)
@@ -960,12 +907,6 @@ class BaseHistoryWindow:
     def on__actionUnzoom_triggered(self):
         self.currentPlot.unzoom()
 
-    def on__actionLogScale_toggled(self, on):
-        self.currentPlot.setLogScale(on)
-
-    def on__actionAutoScale_toggled(self, on):
-        self._autoscale(on, on)
-
     def on__actionScaleX_toggled(self, on):
         self._autoscale(x=on)
 
@@ -983,60 +924,6 @@ class BaseHistoryWindow:
 
     def on__actionSaveData_triggered(self):
         self.currentPlot.saveData()
-
-    def on__actionFitPeak_triggered(self):
-        self.currentPlot.beginFit(self.fitclass, self.actionFitPeak,
-                                  self.fitPickCheckbox.isChecked())
-
-    def on__actionFitLinear_triggered(self):
-        cbi = self.fitComboBox.findText(self.actionFitLinear.text().replace('&', ''))
-        self.fitComboBox.setCurrentIndex(cbi)
-        self.fitclass = LinearFitter
-
-    def on__actionFitExponential_triggered(self):
-        cbi = self.fitComboBox.findText(self.actionFitExponential.text().replace('&', ''))
-        self.fitComboBox.setCurrentIndex(cbi)
-        self.fitclass = ExponentialFitter
-
-    def on__actionFitPeakGaussian_triggered(self):
-        cbi = self.fitComboBox.findText(self.actionFitPeakGaussian.text().replace('&', ''))
-        self.fitComboBox.setCurrentIndex(cbi)
-        self.fitclass = GaussFitter
-
-    def on__actionFitPeakLorentzian_triggered(self):
-        cbi = self.fitComboBox.findText(self.actionFitPeakLorentzian.text().replace('&', ''))
-        self.fitComboBox.setCurrentIndex(cbi)
-        self.fitclass = LorentzFitter
-
-    def on__actionFitPeakPV_triggered(self):
-        cbi = self.fitComboBox.findText(self.actionFitPeakPV.text().replace('&', ''))
-        self.fitComboBox.setCurrentIndex(cbi)
-        self.fitclass = PseudoVoigtFitter
-
-    def on__actionFitPeakPVII_triggered(self):
-        cbi = self.fitComboBox.findText(self.actionFitPeakPVII.text().replace('&', ''))
-        self.fitComboBox.setCurrentIndex(cbi)
-        self.fitclass = PearsonVIIFitter
-
-    def on__actionFitTc_triggered(self):
-        cbi = self.fitComboBox.findText(self.actionFitTc.text().replace('&', ''))
-        self.fitComboBox.setCurrentIndex(cbi)
-        self.fitclass = TcFitter
-
-    def on__actionFitCosine_triggered(self):
-        cbi = self.fitComboBox.findText(self.actionFitCosine.text().replace('&', ''))
-        self.fitComboBox.setCurrentIndex(cbi)
-        self.fitclass = CosineFitter
-
-    def on__actionFitSigmoid_triggered(self):
-        cbi = self.fitComboBox.findText(self.actionFitSigmoid.text().replace('&', ''))
-        self.fitComboBox.setCurrentIndex(cbi)
-        self.fitclass = SigmoidFitter
-
-    def on__actionFitArby_triggered(self):
-        # no second argument: the "arbitrary" action is not checkable
-        self.currentPlot.beginFit(ArbitraryFitter, None,
-                                  self.fitPickCheckbox.isChecked())
 
 
 class HistoryPanel(BaseHistoryWindow, PlotPanel):
@@ -1071,61 +958,26 @@ class HistoryPanel(BaseHistoryWindow, PlotPanel):
     def setPanelToolbar(self):
         bar = QToolBar('History viewer')
         bar.addAction(self.actionNew)
+        showToolText(bar, self.actionNew)
         bar.addAction(self.actionEditView)
+        showToolText(bar, self.actionEditView)
         bar.addSeparator()
         bar.addAction(self.actionSavePlot)
+        showToolText(bar, self.actionSavePlot)
         bar.addAction(self.actionPrint)
+        showToolText(bar, self.actionPrint)
         bar.addAction(self.actionSaveData)
+        showToolText(bar, self.actionSaveData)
         bar.addSeparator()
         bar.addAction(self.actionUnzoom)
-        bar.addAction(self.actionLogScale)
+        showToolText(bar, self.actionUnzoom)
         bar.addSeparator()
-        bar.addAction(self.actionAutoScale)
+        bar.addAction(self.actionDeleteView)
+        showToolText(bar, self.actionDeleteView)
+        bar.addSeparator()
         bar.addAction(self.actionScaleX)
         bar.addAction(self.actionScaleY)
-        bar.addSeparator()
-        bar.addAction(self.actionResetView)
-        bar.addAction(self.actionDeleteView)
-        bar.addSeparator()
-        bar.addAction(self.actionFitPeak)
-        wa = QWidgetAction(bar)
-        self.fitPickCheckbox = QCheckBox(bar)
-        self.fitPickCheckbox.setText('Pick')
-        self.fitPickCheckbox.setChecked(True)
-        self.actionPickInitial.setChecked(True)
-        self.fitPickCheckbox.toggled.connect(self.actionPickInitial.setChecked)
-        self.actionPickInitial.toggled.connect(self.fitPickCheckbox.setChecked)
-        layout = QHBoxLayout()
-        layout.setContentsMargins(10, 0, 10, 0)
-        layout.addWidget(self.fitPickCheckbox)
-        frame = QFrame(bar)
-        frame.setLayout(layout)
-        wa.setDefaultWidget(frame)
-        bar.addAction(wa)
-        ag = QActionGroup(bar)
-        ag.addAction(self.actionFitPeakGaussian)
-        ag.addAction(self.actionFitPeakLorentzian)
-        ag.addAction(self.actionFitPeakPV)
-        ag.addAction(self.actionFitPeakPVII)
-        ag.addAction(self.actionFitTc)
-        ag.addAction(self.actionFitCosine)
-        ag.addAction(self.actionFitSigmoid)
-        ag.addAction(self.actionFitLinear)
-        ag.addAction(self.actionFitExponential)
-        wa = QWidgetAction(bar)
-        self.fitComboBox = QComboBox(bar)
-        for a in ag.actions():
-            itemtext = a.text().replace('&', '')
-            self.fitComboBox.addItem(itemtext)
-            self.fitfuncmap[itemtext] = a
-        self.fitComboBox.currentIndexChanged.connect(
-            self.on__fitComboBox_currentIndexChanged)
-        wa.setDefaultWidget(self.fitComboBox)
-        bar.addAction(wa)
-        bar.addSeparator()
-        bar.addAction(self.actionFitArby)
         self.bar = bar
-        self.actionFitLinear.trigger()
         return bar
 
     def set_icons(self):
@@ -1133,9 +985,9 @@ class HistoryPanel(BaseHistoryWindow, PlotPanel):
         self.actionEditView.setIcon(get_icon('edit-24px.svg'))
         self.actionSavePlot.setIcon(get_icon('save-24px.svg'))
         self.actionPrint.setIcon(get_icon('print-24px.svg'))
-        self.actionUnzoom.setIcon(get_icon('zoom_out-24px.svg'))
+        self.actionUnzoom.setIcon(get_icon('reset_zoom-24px.svg'))
         self.actionSaveData.setIcon(get_icon('archive-24px.svg'))
-
+        self.actionDeleteView.setIcon(get_icon('delete-24px.svg'))
 
     def setCustomStyle(self, font, back):
         self.user_font = font
@@ -1288,7 +1140,8 @@ class StandaloneHistoryApp(CacheClient):
 class SettingsDialog(QDialog):
     def __init__(self, parent):
         QDialog.__init__(self, parent)
-        loadUi(self, findResource('nicos_ess/gui/panels/ui_files/history_settings.ui'))
+        loadUi(self,
+               findResource('nicos_ess/gui/panels/ui_files/history_settings.ui'))
         settings = QSettings()
         self._caches = settings.value('cachehosts') or []
         prefix = settings.value('keyprefix', 'nicos/')
