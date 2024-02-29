@@ -38,7 +38,7 @@ main_window = docked(
                          )),
                         ('Script Status',
                          panel(
-                             'nicos.clients.flowui.panels.status.ScriptStatusPanel',
+                             'nicos_ess.gui.panels.status.ScriptStatusPanel',
                              eta=True)),
                     ),
                 ),  # vsplit
