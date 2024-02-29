@@ -429,7 +429,6 @@ class MainWindow(DlgUtils, QMainWindow):
         else:
             self.toolBarWindows.show()
 
-        createToolMenu(self, self.gui_conf.tools, self.menuTools)
         if isinstance(self.gui_conf.main_window, tabbed) and widget:
             widget.tabChangedTab(0)
 
