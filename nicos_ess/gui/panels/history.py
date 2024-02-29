@@ -500,26 +500,7 @@ class BaseHistoryWindow:
         self.actionSaveData.triggered.connect(self.on__actionSaveData_triggered)
 
     def getMenus(self):
-        menu = QMenu('&History viewer', self)
-        menu.addAction(self.actionNew)
-        menu.addSeparator()
-        menu.addAction(self.actionSavePlot)
-        menu.addAction(self.actionPrint)
-        menu.addAction(self.actionAttachElog)
-        menu.addAction(self.actionSaveData)
-        menu.addSeparator()
-        menu.addAction(self.actionEditView)
-        menu.addAction(self.actionCloseView)
-        menu.addAction(self.actionDeleteView)
-        menu.addSeparator()
-        menu.addAction(self.actionScaleX)
-        menu.addAction(self.actionScaleY)
-        menu.addAction(self.actionUnzoom)
-        menu.addAction(self.actionLegend)
-        menu.addAction(self.actionSymbols)
-        menu.addAction(self.actionLines)
-        self._refresh_presets()
-        return [menu, self.presetmenu]
+        return []
 
     def getToolbars(self):
         return []

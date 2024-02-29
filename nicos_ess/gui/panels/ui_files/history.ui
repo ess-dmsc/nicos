@@ -123,7 +123,7 @@
      <normaloff>:/viewfull</normaloff>:/viewfull</iconset>
    </property>
    <property name="text">
-    <string>&amp;Unzoom</string>
+    <string>&amp;Reset view</string>
    </property>
    <property name="toolTip">
     <string>Reset the zoom level</string>
@@ -142,20 +142,6 @@
    </property>
    <property name="toolTip">
     <string>Save plot in portable format</string>
-   </property>
-  </action>
-  <action name="actionLogScale">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>&amp;Logarithmic Y scale</string>
-   </property>
-   <property name="iconText">
-    <string>Log Scale</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+L</string>
    </property>
   </action>
   <action name="actionCloseView">
@@ -237,17 +223,6 @@
    </property>
    <property name="text">
     <string>Edit view</string>
-   </property>
-  </action>
-  <action name="actionFitLinear">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>Line</string>
-   </property>
-   <property name="toolTip">
-    <string>Linear fit: y = m*x + t</string>
    </property>
   </action>
   <action name="actionSaveData">
