@@ -86,7 +86,7 @@ main_window = docked(
                 ('Errors',
                  panel('nicos_ess.gui.panels.errors.ErrorPanel')),
                 ('Log files',
-                 panel('nicos.clients.gui.panels.logviewer.LogViewerPanel')),
+                 panel('nicos_ess.gui.panels.logviewer.LogViewerPanel')),
             ),
         ),
         position='left',
