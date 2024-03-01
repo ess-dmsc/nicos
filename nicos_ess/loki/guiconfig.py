@@ -97,11 +97,6 @@ main_window = docked(
 
 windows = []
 
-tools = [
-    tool('Report NICOS bug or request enhancement',
-         'nicos.clients.gui.tools.bugreport.BugreportTool'),
-]
-
 options = {
     'facility': 'ess',
     'mainwindow_class': 'nicos_ess.gui.mainwindow.MainWindow',
