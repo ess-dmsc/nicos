@@ -11,7 +11,7 @@ main_window = docked(
             hsplit(
                 vbox(
                     panel(
-                        'nicos.clients.flowui.panels.cmdbuilder.CommandPanel',
+                        'nicos_ess.gui.panels.cmdbuilder.CommandPanel',
                         modules=['nicos.clients.gui.cmdlets'],
                     ),
                     tabbed(
