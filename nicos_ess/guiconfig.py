@@ -12,7 +12,6 @@ main_window = docked(
                 vbox(
                     panel(
                         'nicos_ess.gui.panels.cmdbuilder.CommandPanel',
-                        modules=['nicos.clients.gui.cmdlets'],
                     ),
                     tabbed(
                         ('Output',
