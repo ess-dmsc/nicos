@@ -52,7 +52,7 @@ main_window = docked(
             'Logs',
             tabbed(
                 ('Errors',
-                 panel('nicos.clients.flowui.panels.errors.ErrorPanel')),
+                 panel('nicos_ess.gui.panels.errors.ErrorPanel')),
                 ('Log files',
                  panel('nicos.clients.flowui.panels.logviewer.LogViewerPanel')
                  ),

@@ -84,7 +84,7 @@ main_window = docked(
             'Logs',
             tabbed(
                 ('Errors',
-                 panel('nicos.clients.gui.panels.errors.ErrorPanel')),
+                 panel('nicos_ess.gui.panels.errors.ErrorPanel')),
                 ('Log files',
                  panel('nicos.clients.gui.panels.logviewer.LogViewerPanel')),
             ),
