@@ -29,7 +29,7 @@ main_window = docked(
                          ),
                         ('Detector Image',
                          panel(
-                             'nicos.clients.flowui.panels.live.MultiLiveDataPanel'
+                             'nicos_ess.gui.panels.live_gr.MultiLiveDataPanel'
                          )),
                         ('Comparison Panel',
                          panel(
@@ -53,7 +53,7 @@ main_window = docked(
                   tools=None),
         ),
         ('Detector Image',
-         panel('nicos.clients.flowui.panels.live.MultiLiveDataPanel')),
+         panel('nicos_ess.gui.panels.live_gr.MultiLiveDataPanel')),
         (
             'History',
             panel('nicos.clients.flowui.panels.history.HistoryPanel'),
