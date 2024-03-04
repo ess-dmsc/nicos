@@ -33,7 +33,6 @@ import gr
 
 from nicos import nicos_version
 from nicos.clients.base import ConnectionData
-from nicos.clients.flowui.panels import get_icon, root_path
 from nicos.clients.gui.client import NicosGuiClient
 from nicos.clients.gui.config import tabbed
 from nicos.clients.gui.data import DataHandler
@@ -43,7 +42,7 @@ from nicos.clients.gui.dialogs.pnp import PnPSetupQuestion
 from nicos.clients.gui.dialogs.watchdog import WatchdogDialog
 from nicos.clients.gui.panels import AuxiliaryWindow, createWindowItem
 from nicos.clients.gui.panels.console import ConsolePanel
-from nicos.clients.gui.tools import createToolMenu, startStartupTools
+from nicos.clients.gui.tools import startStartupTools
 from nicos.clients.gui.utils import DlgUtils, SettingGroup, dialogFromUi, \
     loadBasicWindowSettings, loadUi, loadUserStyle
 from nicos.core.utils import ADMIN
@@ -57,9 +56,9 @@ from nicos.protocols.daemon import BREAK_NOW, STATUS_IDLE, STATUS_IDLEEXC, \
 from nicos.protocols.daemon.classic import DEFAULT_PORT
 from nicos.utils import checkSetupSpec, findResource, importString, \
     parseConnectionString
-
 from nicos_ess.gui.dialogs.auth import ConnectionDialog
 from nicos_ess.gui.dialogs.settings import SettingsDialog
+from nicos_ess.gui.utils import get_icon, root_path
 
 try:
     from nicos.clients.gui.dialogs.help import HelpWindow

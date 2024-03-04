@@ -26,7 +26,7 @@
 from logging import WARNING
 from os import path
 
-from nicos.clients.flowui.panels import get_icon
+from nicos_ess.gui.utils import get_icon
 from nicos.clients.gui.dialogs.error import ErrorDialog
 from nicos.clients.gui.panels import Panel, showPanel
 from nicos.clients.gui.utils import ScriptExecQuestion, dialogFromUi, loadUi

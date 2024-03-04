@@ -28,7 +28,7 @@ import os.path as osp
 from collections import OrderedDict, namedtuple
 from functools import partial
 
-from nicos.clients.flowui.panels import get_icon
+from nicos_ess.gui.utils import get_icon
 from nicos.clients.gui.utils import loadUi
 from nicos.core import InvalidValueError
 from nicos.guisupport.qt import QAction, QCursor, QFileDialog, QHeaderView, \

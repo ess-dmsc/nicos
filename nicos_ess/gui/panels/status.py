@@ -25,7 +25,7 @@
 
 from time import time
 
-from nicos.clients.flowui.panels import get_icon
+from nicos_ess.gui.utils import get_icon
 from nicos.clients.gui.panels import Panel
 from nicos.clients.gui.utils import loadUi
 from nicos.guisupport.colors import colors

@@ -26,7 +26,7 @@
 
 from math import sqrt
 
-from nicos.clients.flowui.panels import get_icon
+from nicos_ess.gui.utils import get_icon
 from nicos.clients.gui.data import DataProxy
 from nicos.clients.gui.dialogs.filesystem import FileFilterDialog
 from nicos.clients.gui.panels.plot import PlotPanel

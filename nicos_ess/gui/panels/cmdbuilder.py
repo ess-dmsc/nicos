@@ -24,7 +24,7 @@
 
 """NICOS GUI command input."""
 
-from nicos.clients.flowui.panels import get_icon
+from nicos_ess.gui.utils import get_icon
 from nicos.clients.gui.panels import Panel
 from nicos.clients.gui.utils import loadUi, modePrompt
 from nicos.guisupport.qt import QApplication, QKeyEvent, Qt, pyqtSlot

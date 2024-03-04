@@ -30,7 +30,7 @@ import sys
 from collections import OrderedDict
 from time import localtime, mktime, time as currenttime
 
-from nicos.clients.flowui.panels import get_icon
+from nicos_ess.gui.utils import get_icon
 from nicos.clients.gui.panels.plot import PlotPanel
 from nicos.clients.gui.utils import DlgUtils, enumerateWithProgress, loadUi, \
     split_query

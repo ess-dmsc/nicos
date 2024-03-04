@@ -28,7 +28,7 @@ import time
 from logging import WARNING
 from uuid import uuid1
 
-from nicos.clients.flowui.panels import get_icon
+from nicos_ess.gui.utils import get_icon
 from nicos.clients.gui.dialogs.editordialogs import OverwriteQuestion, \
     SearchDialog
 from nicos.clients.gui.dialogs.traceback import TracebackDialog

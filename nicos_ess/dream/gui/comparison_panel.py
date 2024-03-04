@@ -28,7 +28,7 @@ from uuid import uuid4
 
 import numpy as np
 
-from nicos.clients.flowui.panels import get_icon
+from nicos_ess.gui.utils import get_icon
 from nicos.clients.gui.panels.live import FILENAME, FILETAG, FILEUID, \
     LiveDataPanel
 from nicos.core.constants import LIVE

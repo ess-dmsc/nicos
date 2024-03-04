@@ -24,7 +24,7 @@
 """LoKI Experiment Configuration dialog."""
 from functools import partial
 
-from nicos.clients.flowui.panels import get_icon
+from nicos_ess.gui.utils import get_icon
 from nicos.clients.gui.utils import loadUi
 from nicos.core import ConfigurationError
 from nicos.guisupport.qt import QAction, QCursor, QHeaderView, QItemDelegate, \
