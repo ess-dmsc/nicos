@@ -41,9 +41,9 @@ from nicos.guisupport.plots import GRMARKS
 from nicos.guisupport.qt import QActionGroup, QByteArray, QCheckBox, \
     QComboBox, QDialog, QFont, QFrame, QHBoxLayout, QKeySequence, \
     QListWidgetItem, QMenu, QPalette, QShortcut, QSizePolicy, QStatusBar, Qt, \
-    QTableWidgetItem, QToolBar, QWidgetAction, pyqtSlot, QToolButton
+    QTableWidgetItem, QToolBar, QToolButton, QWidgetAction, pyqtSlot
 from nicos.guisupport.utils import scaledFont
-from nicos.utils import safeName, findResource
+from nicos.utils import findResource, safeName
 
 TIMEFMT = '%Y-%m-%d %H:%M:%S'
 TOGETHER, COMBINE, ADD, SUBTRACT, DIVIDE = range(5)

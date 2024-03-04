@@ -8,7 +8,7 @@ main_window = docked(
                 ('Experiment',
                  panel('nicos_ess.gui.panels.exp_panel.ExpPanel')),
                 ('Instrument',
-                 panel('nicos.clients.flowui.panels.setup_panel.SetupsPanel')),
+                 panel('nicos_ess.gui.panels.setups.SetupsPanel')),
             ),
         ),
         ('  ', panel('nicos_ess.gui.panels.empty.EmptyPanel')),
