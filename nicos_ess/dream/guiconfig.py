@@ -25,7 +25,7 @@ main_window = docked(
                              'nicos_ess.gui.panels.console.ConsolePanel',
                              hasinput=False)),
                         ('Scan Plot',
-                         panel('nicos.clients.flowui.panels.scans.ScansPanel')
+                         panel('nicos_ess.gui.panels.scans.ScansPanel')
                          ),
                         ('Detector Image',
                          panel(
