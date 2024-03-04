@@ -23,7 +23,7 @@ main_window = docked(
                          ),
                         ('Detector Image',
                          panel(
-                             'nicos_ess.gui.panels.live.MultiLiveDataPanel'
+                             'nicos_ess.gui.panels.live_pyqt.MultiLiveDataPanel'
                          )),
                         ('Script Status',
                          panel(
