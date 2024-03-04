@@ -32,10 +32,8 @@ main_window = docked(
                     ),
                 ),  # vsplit
                 panel(
-                    'nicos.clients.flowui.panels.devices.DevicesPanel',
+                    'nicos_ess.gui.panels.devices.DevicesPanel',
                     dockpos='right',
-                    param_display={'Exp': ['lastpoint', 'lastscan']},
-                    filters=[],
                 ),
             ),  # hsplit
         ),
