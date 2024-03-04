@@ -56,6 +56,7 @@ from nicos.protocols.daemon import BREAK_NOW, STATUS_IDLE, STATUS_IDLEEXC, \
 from nicos.protocols.daemon.classic import DEFAULT_PORT
 from nicos.utils import checkSetupSpec, findResource, importString, \
     parseConnectionString
+
 from nicos_ess.gui.dialogs.auth import ConnectionDialog
 from nicos_ess.gui.dialogs.settings import SettingsDialog
 from nicos_ess.gui.utils import get_icon, root_path
@@ -197,7 +198,7 @@ class MainWindow(DlgUtils, QMainWindow):
              'nicos_ess.gui.panels.editor.EditorPanel'))
         self.history_wintype = self.gui_conf.find_panel(
             ('history.HistoryPanel',
-             'nicos.clients.flowui.panels.history.HistoryPanel'))
+             'nicos_ess.gui.panels.history.HistoryPanel'))
 
         # additional panels
         self.panels = []

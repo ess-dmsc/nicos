@@ -28,7 +28,6 @@ import time
 from logging import WARNING
 from uuid import uuid1
 
-from nicos_ess.gui.utils import get_icon
 from nicos.clients.gui.dialogs.editordialogs import OverwriteQuestion, \
     SearchDialog
 from nicos.clients.gui.dialogs.traceback import TracebackDialog
@@ -45,6 +44,8 @@ from nicos.guisupport.qt import QAction, QActionGroup, QByteArray, QColor, \
 from nicos.guisupport.utils import setBackgroundColor
 from nicos.utils import LOCALE_ENCODING, findResource, formatDuration, \
     formatEndtime
+
+from nicos_ess.gui.utils import get_icon
 
 has_scintilla = QsciScintilla is not None
 

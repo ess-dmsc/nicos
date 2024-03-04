@@ -104,7 +104,7 @@
   <customwidget>
    <class>CommandLineEdit</class>
    <extends>QLineEdit</extends>
-   <header>nicos.clients.flowui.widgets.lineedit.h</header>
+   <header>nicos_ess.gui.widgets.commandline.h</header>
   </customwidget>
  </customwidgets>
  <resources>

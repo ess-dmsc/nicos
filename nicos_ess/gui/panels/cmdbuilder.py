@@ -24,12 +24,13 @@
 
 """NICOS GUI command input."""
 
-from nicos_ess.gui.utils import get_icon
 from nicos.clients.gui.panels import Panel
 from nicos.clients.gui.utils import loadUi, modePrompt
 from nicos.guisupport.qt import QApplication, QKeyEvent, Qt, pyqtSlot
 from nicos.guisupport.utils import setBackgroundColor
 from nicos.utils import findResource
+
+from nicos_ess.gui.utils import get_icon
 
 
 class CommandPanel(Panel):

@@ -26,7 +26,6 @@
 
 from math import sqrt
 
-from nicos_ess.gui.utils import get_icon
 from nicos.clients.gui.data import DataProxy
 from nicos.clients.gui.dialogs.filesystem import FileFilterDialog
 from nicos.clients.gui.panels.plot import PlotPanel
@@ -44,6 +43,8 @@ from nicos.guisupport.qt import QActionGroup, QByteArray, QCheckBox, \
     QTableWidgetItem, QToolBar, QToolButton, QWidgetAction, pyqtSlot
 from nicos.guisupport.utils import scaledFont
 from nicos.utils import findResource, safeName
+
+from nicos_ess.gui.utils import get_icon
 
 TIMEFMT = '%Y-%m-%d %H:%M:%S'
 TOGETHER, COMBINE, ADD, SUBTRACT, DIVIDE = range(5)

@@ -26,7 +26,6 @@
 from logging import WARNING
 from os import path
 
-from nicos_ess.gui.utils import get_icon
 from nicos.clients.gui.dialogs.error import ErrorDialog
 from nicos.clients.gui.panels import Panel, showPanel
 from nicos.clients.gui.utils import ScriptExecQuestion, dialogFromUi, loadUi
@@ -40,6 +39,8 @@ from nicos.guisupport.qt import QBrush, QByteArray, QComboBox, QCursor, \
 from nicos.guisupport.typedvalue import DeviceParamEdit, DeviceValueEdit
 from nicos.protocols.cache import OP_TELL, cache_dump, cache_load
 from nicos.utils import AttrDict, findResource
+
+from nicos_ess.gui.utils import get_icon
 
 # QTreeWidgetItem types
 SETUP_TYPE = QTreeWidgetItem.ItemType.UserType

@@ -30,7 +30,6 @@ import sys
 from collections import OrderedDict
 from time import localtime, mktime, time as currenttime
 
-from nicos_ess.gui.utils import get_icon
 from nicos.clients.gui.panels.plot import PlotPanel
 from nicos.clients.gui.utils import DlgUtils, enumerateWithProgress, loadUi, \
     split_query
@@ -48,6 +47,8 @@ from nicos.guisupport.utils import scaledFont
 from nicos.protocols.cache import cache_load
 from nicos.utils import findResource, number_types, parseDuration, \
     parseKeyExpression, safeName
+
+from nicos_ess.gui.utils import get_icon
 
 
 class NoEditDelegate(QStyledItemDelegate):

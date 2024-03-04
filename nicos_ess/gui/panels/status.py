@@ -25,7 +25,6 @@
 
 from time import time
 
-from nicos_ess.gui.utils import get_icon
 from nicos.clients.gui.panels import Panel
 from nicos.clients.gui.utils import loadUi
 from nicos.guisupport.colors import colors
@@ -36,6 +35,8 @@ from nicos.guisupport.utils import setBackgroundColor
 from nicos.protocols.daemon import BREAK_AFTER_LINE, BREAK_AFTER_STEP, \
     BREAK_NOW, SIM_STATES, STATUS_IDLEEXC
 from nicos.utils import findResource, formatEndtime
+
+from nicos_ess.gui.utils import get_icon
 
 
 class ScriptQueue:
