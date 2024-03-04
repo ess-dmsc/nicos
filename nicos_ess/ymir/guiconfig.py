@@ -5,7 +5,7 @@ main_window = docked(
         ('Experiment', panel('nicos_ess.gui.panels.exp_panel.ExpPanel')),
         ('Setup',
          panel('nicos.clients.flowui.panels.setup_panel.SetupsPanel')),
-        ('  ', panel('nicos.clients.flowui.panels.empty.EmptyPanel')),
+        ('  ', panel('nicos_ess.gui.panels.empty.EmptyPanel')),
         (
             'Instrument interaction',
             hsplit(

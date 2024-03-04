@@ -11,7 +11,7 @@ main_window = docked(
                  panel('nicos.clients.flowui.panels.setup_panel.SetupsPanel')),
             ),
         ),
-        ('  ', panel('nicos.clients.flowui.panels.empty.EmptyPanel')),
+        ('  ', panel('nicos_ess.gui.panels.empty.EmptyPanel')),
         (
             'Instrument interaction',
             hsplit(

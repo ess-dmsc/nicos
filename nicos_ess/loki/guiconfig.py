@@ -32,7 +32,7 @@ main_window = docked(
         ('Sample Configuration',
          panel('nicos_ess.loki.gui.sample_holder_config.LokiSampleHolderPanel')
          ),
-        ('  ', panel('nicos.clients.flowui.panels.empty.EmptyPanel')),
+        ('  ', panel('nicos_ess.gui.panels.empty.EmptyPanel')),
         (
             'Instrument Interaction',
             hsplit(
