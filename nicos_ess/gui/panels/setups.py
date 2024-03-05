@@ -132,6 +132,9 @@ class SetupsPanel(Panel):
     def setViewOnly(self, viewonly):
         for button in self.buttonBox.buttons():
             button.setEnabled(not viewonly)
+        self.basicSetup.setEnabled(not viewonly)
+        self.optSetups.setEnabled(not viewonly)
+        self.showPnpBox.setEnabled(not viewonly)
 
     def on_basicSetup_currentItemChanged(self, item, old):
         if item and item.text() != '<keep current>':
