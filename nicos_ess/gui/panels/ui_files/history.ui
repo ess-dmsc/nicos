@@ -123,7 +123,7 @@
      <normaloff>:/viewfull</normaloff>:/viewfull</iconset>
    </property>
    <property name="text">
-    <string>&amp;Reset view</string>
+    <string>&amp;Reset View</string>
    </property>
    <property name="toolTip">
     <string>Reset the zoom level</string>
@@ -138,7 +138,7 @@
      <normaloff>:/save</normaloff>:/save</iconset>
    </property>
    <property name="text">
-    <string>&amp;Save plot</string>
+    <string>&amp;Save Plot</string>
    </property>
    <property name="toolTip">
     <string>Save plot in portable format</string>
@@ -183,7 +183,7 @@
      <normaloff>:/new</normaloff>:/new</iconset>
    </property>
    <property name="text">
-    <string>New view</string>
+    <string>New View</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+N</string>
@@ -222,7 +222,7 @@
      <normaloff>:/editor</normaloff>:/editor</iconset>
    </property>
    <property name="text">
-    <string>Edit view</string>
+    <string>Edit View</string>
    </property>
   </action>
   <action name="actionSaveData">
@@ -231,7 +231,7 @@
      <normaloff>:/table</normaloff>:/table</iconset>
    </property>
    <property name="text">
-    <string>Save data</string>
+    <string>Save Data</string>
    </property>
    <property name="toolTip">
     <string>Save the data in plain text file</string>

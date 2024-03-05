@@ -56,7 +56,7 @@ main_window = docked(
          panel('nicos_ess.gui.panels.live_gr.MultiLiveDataPanel')),
         (
             'History',
-            panel('nicos.clients.flowui.panels.history.HistoryPanel'),
+            panel('nicos_ess.gui.panels.history.HistoryPanel'),
         ),
         (
             'Logs',

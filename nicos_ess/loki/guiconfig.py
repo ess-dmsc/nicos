@@ -76,7 +76,7 @@ main_window = docked(
         ),
         (
             'History',
-            panel('nicos.clients.flowui.panels.history.HistoryPanel'),
+            panel('nicos_ess.gui.panels.history.HistoryPanel'),
         ),
         (
             'Logs',
