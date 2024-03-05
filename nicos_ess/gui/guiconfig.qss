@@ -1,46 +1,4 @@
-/*
-Dark Blue    #14148c -> #1f5366 -- (ESS) ->   #1f5366
-Blue         #03cffc -> #3498db -- (ESS) ->   #0094ca
-#bfc5ca  --(ESS)->   #a9a9a9
-
-
-Primary dark:     #1f5366
-Primary:          #0094ca
-Text light gray:  #e6e6e6
-Gray off grid:    #a9a9a9
-*/
-
-/* Shades (darker)
-#1f5366
-#273748
-#233140
-#1e2b38
-#1a2530
-#161f28
-#111820
-#0d1218
-#080c10
-#040608
-#000000
-*/
-
-/* Tints (lighter)
-#1f5366
-#415161
-#566472
-#6b7784
-#808b96
-#959ea7
-#aab1b9
-#bfc5ca
-#d4d8dc
-#e9ebed
-#ffffff
-*/
-
-/* see https://www.color-hex.com/color/2c3e50 */
-
-QWidget {
+Widget {
     font-size: 14px;
 }
 
