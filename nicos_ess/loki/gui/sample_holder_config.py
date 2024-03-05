@@ -24,7 +24,6 @@
 """LoKI Experiment Configuration dialog."""
 from functools import partial
 
-from nicos_ess.gui.utils import get_icon
 from nicos.clients.gui.utils import loadUi
 from nicos.core import ConfigurationError
 from nicos.guisupport.qt import QAction, QCursor, QHeaderView, QItemDelegate, \
@@ -33,6 +32,7 @@ from nicos.guisupport.qt import QAction, QCursor, QHeaderView, QItemDelegate, \
 from nicos.utils import findResource
 
 from nicos_ess.gui.panels.panel import PanelBase
+from nicos_ess.gui.utils import get_icon
 from nicos_ess.loki.gui.samples_model import SamplesTableModel
 from nicos_ess.loki.gui.table_delegates import LimitsDelegate, ReadOnlyDelegate
 from nicos_ess.loki.gui.table_helper import Clipboard, TableHelper

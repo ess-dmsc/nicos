@@ -37,18 +37,18 @@ from nicos.clients.gui.panels.plot import PlotPanel
 from nicos.clients.gui.utils import enumerateWithProgress, loadUi, uipath
 from nicos.core.constants import FILE, LIVE
 from nicos.core.errors import NicosError
-from nicos.guisupport.livewidget import AXES, \
-    LiveWidget as DefaultLiveWidget, LiveWidget1D as DefaultLiveWidget1D
-from nicos.guisupport.livewidget import DATATYPES, IntegralLiveWidget, \
-    LiveWidget, LiveWidget1D
-from nicos.guisupport.qt import QActionGroup, QByteArray, QDialog, \
-    QFileDialog, QListWidgetItem, QMenu, QPoint, QSizePolicy, QStatusBar, Qt, \
-    QToolBar, pyqtSignal, pyqtSlot, QGroupBox, QVBoxLayout, QSize, pyqtProperty, \
-    QListWidget, QComboBox
+from nicos.guisupport.livewidget import AXES, DATATYPES, IntegralLiveWidget, \
+    LiveWidget, LiveWidget as DefaultLiveWidget, LiveWidget1D, \
+    LiveWidget1D as DefaultLiveWidget1D
+from nicos.guisupport.qt import QActionGroup, QByteArray, QComboBox, QDialog, \
+    QFileDialog, QGroupBox, QListWidget, QListWidgetItem, QMenu, QPoint, \
+    QSize, QSizePolicy, QStatusBar, Qt, QToolBar, QToolButton, QVBoxLayout, \
+    pyqtProperty, pyqtSignal, pyqtSlot
 from nicos.guisupport.qtgr import MouseEvent
 from nicos.protocols.cache import cache_load
-from nicos.utils import BoundedOrderedDict, ReaderRegistry, safeName, \
-    findResource
+from nicos.utils import BoundedOrderedDict, ReaderRegistry, findResource, \
+    safeName
+
 from nicos_ess.gui.utils import get_icon
 
 try:
@@ -225,19 +225,7 @@ class LiveDataPanel(PlotPanel):
         self.actionColormap.setToolTip('Select colormap')
         self.actionColormap.triggered.connect(self.on_actionColormap_triggered)
 
-        self.toolbar = QToolBar('Live data')
-        self.toolbar.addAction(self.actionOpen)
-        self.toolbar.addAction(self.actionPrint)
-        self.toolbar.addAction(self.actionSavePlot)
-        self.toolbar.addAction(self.actionAttachElog)
-        self.toolbar.addSeparator()
-        self.toolbar.addAction(self.actionLogScale)
-        self.toolbar.addSeparator()
-        self.toolbar.addAction(self.actionKeepRatio)
-        self.toolbar.addAction(self.actionUnzoom)
-        self.toolbar.addAction(self.actionColormap)
-        self.toolbar.addAction(self.actionMarkCenter)
-        self.toolbar.addAction(self.actionROI)
+        self.toolbar = self.createPanelToolbar()
 
         self._actions2D = [self.actionROI, self.actionColormap]
         self.setControlsEnabled(False)
@@ -303,29 +291,35 @@ class LiveDataPanel(PlotPanel):
             COLORMAPS.update(OrderedDict(
                 {v: k for k, v in cet_mapping_flipped.items()}))
 
-        self.toolbar = self.createPanelToolbar()
         self.layout().setMenuBar(self.toolbar)
         self.set_icons()
 
     def createPanelToolbar(self):
         toolbar = QToolBar('Live data')
-        toolbar.addAction(self.actionOpen)
-        toolbar.addAction(self.actionPrint)
-        toolbar.addAction(self.actionSavePlot)
+        self._add_action(toolbar, self.actionOpen)
+        self._add_action(toolbar, self.actionPrint)
+        self._add_action(toolbar, self.actionSavePlot)
         toolbar.addSeparator()
-        toolbar.addAction(self.actionLogScale)
+        self._add_action(toolbar, self.actionLogScale)
         toolbar.addSeparator()
-        toolbar.addAction(self.actionKeepRatio)
-        toolbar.addAction(self.actionUnzoom)
-        toolbar.addAction(self.actionColormap)
-        toolbar.addAction(self.actionMarkCenter)
-        toolbar.addAction(self.actionROI)
+        self._add_action(toolbar, self.actionKeepRatio)
+        self._add_action(toolbar, self.actionUnzoom)
+        self._add_action(toolbar, self.actionColormap)
+        self._add_action(toolbar, self.actionMarkCenter)
+        self._add_action(toolbar, self.actionROI)
         return toolbar
+
+    def _add_action(self, toolbar, action):
+        toolbar.addAction(action)
+        widget = toolbar.widgetForAction(action)
+        if isinstance(widget, QToolButton):
+            widget.setToolButtonStyle(
+                Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
 
     def set_icons(self):
         self.actionPrint.setIcon(get_icon('print-24px.svg'))
         self.actionSavePlot.setIcon(get_icon('save-24px.svg'))
-        self.actionUnzoom.setIcon(get_icon('zoom_out-24px.svg'))
+        self.actionUnzoom.setIcon(get_icon('reset_zoom-24px.svg'))
         self.actionOpen.setIcon(get_icon('folder_open-24px.svg'))
 
     def _initControlsGUI(self):
@@ -445,26 +439,7 @@ class LiveDataPanel(PlotPanel):
         settings.setValue('geometry', self.saveGeometry())
 
     def getMenus(self):
-        if self._liveOnlyIndex is not None:
-            return []
-
-        if not self.menu:
-            menu = QMenu('&Live data', self)
-            menu.addAction(self.actionOpen)
-            menu.addAction(self.actionPrint)
-            menu.addAction(self.actionSavePlot)
-            menu.addAction(self.actionAttachElog)
-            menu.addSeparator()
-            menu.addAction(self.actionKeepRatio)
-            menu.addAction(self.actionUnzoom)
-            menu.addAction(self.actionLogScale)
-            menu.addAction(self.actionColormap)
-            menu.addAction(self.actionMarkCenter)
-            menu.addAction(self.actionROI)
-            menu.addAction(self.actionSymbols)
-            menu.addAction(self.actionLines)
-            self.menu = menu
-        return [self.menu]
+        return []
 
     def _get_all_widgets(self):
         yield self.widget

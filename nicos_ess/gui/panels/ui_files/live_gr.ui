@@ -82,7 +82,7 @@
      <normaloff>:/viewfull</normaloff>:/viewfull</iconset>
    </property>
    <property name="text">
-    <string>&amp;Unzoom</string>
+    <string>Reset View</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+U</string>
@@ -126,7 +126,7 @@
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Keep ratio</string>
+    <string>Keep Ratio</string>
    </property>
    <property name="toolTip">
     <string>Keep aspect ratio of selection rectangle</string>
@@ -149,10 +149,10 @@
   </action>
   <action name="actionSavePlot">
    <property name="text">
-    <string>&amp;Save plot</string>
+    <string>&amp;Save Plot1</string>
    </property>
    <property name="iconText">
-    <string>Log Scale</string>
+    <string>Save Plot</string>
    </property>
    <property name="toolTip">
     <string>Save plot</string>

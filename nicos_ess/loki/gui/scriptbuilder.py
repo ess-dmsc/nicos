@@ -28,14 +28,15 @@ import os.path as osp
 from collections import OrderedDict, namedtuple
 from functools import partial
 
-from nicos_ess.gui.utils import get_icon
 from nicos.clients.gui.utils import loadUi
 from nicos.core import InvalidValueError
 from nicos.guisupport.qt import QAction, QCursor, QFileDialog, QHeaderView, \
-    QKeySequence, QMenu, QShortcut, Qt, QTableView, QToolBar, pyqtSlot, QToolButton
+    QKeySequence, QMenu, QShortcut, Qt, QTableView, QToolBar, QToolButton, \
+    pyqtSlot
 from nicos.utils import findResource
 
 from nicos_ess.gui.panels.panel import PanelBase
+from nicos_ess.gui.utils import get_icon
 from nicos_ess.loki.gui.sample_holder_config import ReadOnlyDelegate
 from nicos_ess.loki.gui.script_generator import ScriptFactory, TransOrder
 from nicos_ess.loki.gui.scriptbuilder_model import LokiScriptModel
