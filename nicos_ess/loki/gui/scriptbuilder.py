@@ -32,7 +32,7 @@ from nicos_ess.gui.utils import get_icon
 from nicos.clients.gui.utils import loadUi
 from nicos.core import InvalidValueError
 from nicos.guisupport.qt import QAction, QCursor, QFileDialog, QHeaderView, \
-    QKeySequence, QMenu, QShortcut, Qt, QTableView, QToolBar, pyqtSlot
+    QKeySequence, QMenu, QShortcut, Qt, QTableView, QToolBar, pyqtSlot, QToolButton
 from nicos.utils import findResource
 
 from nicos_ess.gui.panels.panel import PanelBase
@@ -158,42 +158,49 @@ class LokiScriptBuilderPanel(PanelBase):
             self.table_helper.paste_from_clipboard)
         self.paste_action.setIcon(get_icon('paste_24px.svg'))
 
-        self.quick_fill_action = QAction('Quick Fill', self)
+        self.quick_fill_action = QAction('Quick\nFill', self)
         self.quick_fill_action.triggered.connect(self._quick_fill)
         self.quick_fill_action.setIcon(get_icon('get-24px.svg'))
 
-        self.add_row_above_action = QAction('Add Row Above', self)
+        self.add_row_above_action = QAction('Add Row\nAbove', self)
         self.add_row_above_action.triggered.connect(self._insert_row_above)
         self.add_row_above_action.setIcon(get_icon('add_row_above-24px.svg'))
 
-        self.add_row_below_action = QAction('Add Row Below', self)
+        self.add_row_below_action = QAction('Add Row\nBelow', self)
         self.add_row_below_action.triggered.connect(self._insert_row_below)
         self.add_row_below_action.setIcon(get_icon('add_row_below-24px.svg'))
 
-        self.delete_row_action = QAction('Delete Row(s)', self)
+        self.delete_row_action = QAction('Delete\nRow(s)', self)
         self.delete_row_action.triggered.connect(self._delete_rows)
         self.delete_row_action.setIcon(get_icon('delete_row-24px.svg'))
 
-        self.clear_action = QAction('Clear Table', self)
+        self.clear_action = QAction('Clear\nTable', self)
         self.clear_action.triggered.connect(self.model.clear)
         self.clear_action.setIcon(get_icon('delete-24px.svg'))
 
     def _create_toolbar(self):
         self.toolbar = QToolBar('Builder')
-        self.toolbar.addAction(self.open_action)
-        self.toolbar.addAction(self.save_action)
+        self._add_action(self.toolbar, self.open_action)
+        self._add_action(self.toolbar, self.save_action)
         self.toolbar.addSeparator()
-        self.toolbar.addAction(self.copy_action)
-        self.toolbar.addAction(self.cut_action)
-        self.toolbar.addAction(self.paste_action)
+        self._add_action(self.toolbar, self.copy_action)
+        self._add_action(self.toolbar, self.cut_action)
+        self._add_action(self.toolbar, self.paste_action)
         self.toolbar.addSeparator()
-        self.toolbar.addAction(self.quick_fill_action)
+        self._add_action(self.toolbar, self.quick_fill_action)
         self.toolbar.addSeparator()
-        self.toolbar.addAction(self.add_row_above_action)
-        self.toolbar.addAction(self.add_row_below_action)
-        self.toolbar.addAction(self.delete_row_action)
-        self.toolbar.addAction(self.clear_action)
+        self._add_action(self.toolbar, self.add_row_above_action)
+        self._add_action(self.toolbar, self.add_row_below_action)
+        self._add_action(self.toolbar, self.delete_row_action)
+        self._add_action(self.toolbar, self.clear_action)
         self.verticalLayout.insertWidget(0, self.toolbar)
+
+    def _add_action(self, toolbar, action):
+        toolbar.addAction(action)
+        widget = toolbar.widgetForAction(action)
+        if isinstance(widget, QToolButton):
+            widget.setToolButtonStyle(
+                Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
 
     def _init_table_panel(self):
         headers = [column.header for column in self.columns.values()]
