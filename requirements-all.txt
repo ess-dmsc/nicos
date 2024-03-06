@@ -1,4 +1,0 @@
--r requirements.txt
--r requirements-gui.txt
--r requirements-opt.txt
--r requirements-dev.txt

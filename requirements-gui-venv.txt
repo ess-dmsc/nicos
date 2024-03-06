@@ -1,4 +1,0 @@
-# special requirements if using a venv without system-site-packages
-PyQt5
-PyQt5-sip
-PyQt5-tools

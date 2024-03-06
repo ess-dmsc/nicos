@@ -16,3 +16,15 @@ QScintilla>=2.12;sys_platform=='win32'
 PyQt6>=6.3.1;sys_platform=='darwin'
 PyQt6-WebEngine>=6.3.1;sys_platform=='darwin'
 PyQt6-QScintilla>=2.13;sys_platform=='darwin'
+
+toml
+rsa
+scipy
+html2text
+ess-streaming-data-types
+lttb
+confluent-kafka
+keyring
+keyrings.alt
+pycryptodomex>=3.4.7
+pyqtgraph>=0.12.4
