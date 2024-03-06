@@ -9,3 +9,16 @@ psutil>=2.0
 html2text>=3.200.3
 lttb>=0.2.2
 toml>=0.10
+caproto
+confluent-kafka>=2.1.0
+ess-streaming-data-types>=0.21.0
+file-writer-control>=1.1.5
+graypy
+h5py>=2.6
+kafka-logging-handler<=0.2.4
+keyring>=10.6
+keyrings.alt>=4.0
+p4p==4.0.0
+pycryptodomex>=3.4.7
+pyqtgraph>=0.12.4
+https://github.com/ess-dmsc/yuos_query/releases/download/v0.1.21/yuos_query-0.1.21-py3-none-any.whl
