@@ -200,15 +200,12 @@ import re
 from ast import (
     Add,
     BinOp,
-    Bytes,
     Call,
+    Constant,
     Dict,
     List,
     Name,
-    NameConstant,
-    Num,
     Set,
-    Str,
     Sub,
     Tuple,
     UnaryOp,
@@ -341,10 +338,8 @@ _safe_names = {
 def ast_eval(node):
     # copied from Python 2.7 ast.py, but added support for float inf/-inf/nan
     def _convert(node):
-        if isinstance(node, (Str, Bytes)):
-            return node.s
-        elif isinstance(node, Num):
-            return node.n
+        if isinstance(node, Constant):
+            return node.value
         elif isinstance(node, Tuple):
             return tuple(map(_convert, node.elts))
         elif isinstance(node, List):
@@ -370,19 +365,19 @@ def ast_eval(node):
         elif (
             isinstance(node, UnaryOp)
             and isinstance(node.op, USub)
-            and isinstance(node.operand, Num)
+            and isinstance(node.operand, Constant)
         ):
-            return -node.operand.n
+            return -node.operand.value
         elif (
             isinstance(node, BinOp)
             and isinstance(node.op, (Add, Sub))
-            and isinstance(node.right, Num)
-            and isinstance(node.right.n, complex)
-            and isinstance(node.left, Num)
-            and isinstance(node.left.n, number_types)
+            and isinstance(node.right, Constant)
+            and isinstance(node.right.value, complex)
+            and isinstance(node.left, Constant)
+            and isinstance(node.left.value, number_types)
         ):
-            left = node.left.n
-            right = node.right.n
+            left = node.left.value
+            right = node.right.value
             if isinstance(node.op, Add):
                 return left + right
             else:
