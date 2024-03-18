@@ -5,7 +5,7 @@ default:
   before_script:
     - scl enable rh-python38 -- python --version
     - scl enable rh-python38 -- pip install --user --upgrade pip 
-    - scl enable rh-python38 -- pip install --user -r nicos_ess/requirements.txt
+    - scl enable rh-python38 -- pip install --user -r requirements.txt
     - scl enable rh-python38 -- pip install --user pytest pytest-timeout mock lxml Pillow 
     - scl enable rh-python38 -- pip install --user 'requests<2.30.0'
 
