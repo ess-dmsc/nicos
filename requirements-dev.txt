@@ -1,4 +1,4 @@
--r ../requirements.txt
+-r requirements.txt
 
 isort
 pylint>=2.1.0
