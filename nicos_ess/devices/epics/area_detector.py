@@ -31,7 +31,7 @@ from streaming_data_types.utils import get_schema
 
 from nicos import session
 from nicos.core import LIVE, SIMULATION, ArrayDesc, Attach, CacheError, \
-    Measurable, Override, Param, Value, floatrange, host, listof, \
+    Device, Measurable, Override, Param, Value, floatrange, host, listof, \
     multiStatus, oneof, pvname, status, usermethod
 from nicos.devices.epics.pva import EpicsDevice
 from nicos.devices.epics.status import SEVERITY_TO_STATUS, STAT_TO_STATUS
@@ -39,8 +39,6 @@ from nicos.devices.generic import Detector, ImageChannelMixin, ManualSwitch
 from nicos.utils import byteBuffer
 
 from nicos_ess.devices.kafka.consumer import KafkaSubscriber
-from nicos_sinq.devices.epics.area_detector import \
-    ADKafkaPlugin as ADKafkaPluginBase
 
 deserialiser_by_schema = {
     'ADAr': deserialise_ADAr,
@@ -72,6 +70,13 @@ class ImageMode(Enum):
     SINGLE = 0
     MULTIPLE = 1
     CONTINUOUS = 2
+
+
+class ADKafkaStatus:
+    CONNECTED = 0
+    CONNECTING = 1
+    DISCONNECTED = 2
+    ERROR = 3
 
 
 class ImageType(ManualSwitch):
@@ -136,22 +141,96 @@ class ImageType(ManualSwitch):
         self.move(INVALID)
 
 
-class ADKafkaPlugin(ADKafkaPluginBase):
+class ADKafkaPlugin(EpicsDevice, Device):
     """
-    Class that contains the configuration of the area detector Kafka plugin.
+    Device that allows to configure the EPICS ADPluginKafka
     """
     parameters = {
-        'sourcepv':
-            Param('PV with the Kafka source', type=pvname, mandatory=True),
+        'kafkapv': Param('EPICS prefix', type=pvname, mandatory=True),
+        'brokerpv': Param('PV with the Kafka broker address', type=pvname,
+                          mandatory=True),
+        'topicpv': Param('PV with the Kafka topic', type=pvname,
+                         mandatory=True),
+        'statuspv': Param('PV with the status of the Kafka connection',
+                          type=pvname or None, mandatory=False, default=None),
+        'msgpv': Param('PV with further message from Kafka',
+                       type=pvname or None, mandatory=False, default=None),
+        'sourcepv': Param('PV with the Kafka source',
+                          type=pvname, mandatory=True),
     }
 
     def _get_pv_parameters(self):
-        pvs = ADKafkaPluginBase._get_pv_parameters(self)
+        """
+        Implementation of inherited method to automatically account for fields
+        present in area detector record.
+
+        :return: List of PV aliases.
+        """
+        pvs = ['brokerpv', 'topicpv']
+        if self.statuspv:
+            pvs.append('statuspv')
+        if self.msgpv:
+            pvs.append('msgpv')
         pvs.append('sourcepv')
         return pvs
 
     def _get_pv_name(self, pvparam):
+        """
+        Implementation of inherited method that translates between PV aliases
+        and actual PV names. Automatically adds a prefix to the PV name
+        according to the kafkapv parameter.
+
+        :param pvparam: PV alias.
+        :return: Actual PV name.
+        """
         return self.kafkapv + (getattr(self, pvparam) or '')
+
+    @property
+    def broker(self):
+        try:
+            result = self._get_pv('brokerpv')
+        except Exception as e:
+            result = e
+        return result
+
+    @property
+    def topic(self):
+        try:
+            result = self._get_pv('topicpv')
+        except Exception as e:
+            result = e
+        return result
+
+    def doStatus(self, maxage=0):
+        message = self._get_status_message()
+
+        if not self.broker:
+            return status.ERROR, 'Empty broker'
+        if not self.topic:
+            return status.ERROR, 'Empty topic'
+
+        if self.msgpv:
+            message = self._get_pv('msgpv') or message
+
+        if self.statuspv:
+            st = self._get_pv('statuspv')
+            if st == ADKafkaStatus.CONNECTING:
+                return status.WARN, 'Connecting'
+            if st != ADKafkaStatus.CONNECTED:
+                return status.ERROR, message
+
+        return status.OK, message
+
+    def _get_status_message(self):
+        """
+        Get the status message from the PluginKafka if the PV exists.
+
+        :return: The status message if it exists, otherwise an empty string.
+        """
+        if not self.msgpv:
+            return ''
+
+        return self._get_pv('msgpv', as_string=True)
 
     def _get_source(self):
         try:
