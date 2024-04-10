@@ -383,7 +383,7 @@ class AreaDetector(KafkaSubscriber, EpicsDevice, ImageChannelMixin, Measurable):
         return self.arraydesc
 
     def update_arraydesc(self):
-        shape = self._get_pv('size_x'), self._get_pv('size_y')
+        shape = self._get_pv('size_y'), self._get_pv('size_x')
         data_type = data_type_t[self._get_pv('data_type', as_string=True)]
         self.arraydesc = ArrayDesc(self.name, shape=shape, dtype=data_type)
 

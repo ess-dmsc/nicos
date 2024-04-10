@@ -20,16 +20,16 @@
 #   Jonas Petersson <jonas.petersson@ess.eu>
 #
 # *****************************************************************************
-import h5py
 import numpy as np
 
-from nicos.guisupport.qt import QGroupBox, QHBoxLayout, QLabel, QLineEdit, \
-    QPushButton, QVBoxLayout, QWidget, QCheckBox, QComboBox, QGridLayout, \
-    QSizePolicy, QFileDialog
-from nicos_ess.gui.panels.live import \
-    MultiLiveDataPanel as DefaultMultiLiveDataPanel, \
-    layout_iterator, Preview, DEFAULT_TAB_WIDGET_MAX_WIDTH, \
-    DEFAULT_TAB_WIDGET_MIN_WIDTH
+from nicos.guisupport.qt import QCheckBox, QComboBox, QGridLayout, QGroupBox, \
+    QHBoxLayout, QLabel, QLineEdit, QPushButton, QSizePolicy, QTabWidget, \
+    QVBoxLayout, QWidget
+
+from nicos_ess.gui.panels.live_pyqt import DEFAULT_TAB_WIDGET_MAX_WIDTH, \
+    DEFAULT_TAB_WIDGET_MIN_WIDTH, \
+    MultiLiveDataPanel as DefaultMultiLiveDataPanel, Preview, \
+    layout_iterator
 
 
 class ADControl(QWidget):
@@ -38,9 +38,11 @@ class ADControl(QWidget):
 
         self.parent = parent
         self.selected_device = None
+        self.last_acquisition_time = 0.0
         self.fields = []
 
         self.init_ui()
+        self.setup_connections()
 
     def init_ui(self):
         layout = QVBoxLayout()
@@ -48,13 +50,15 @@ class ADControl(QWidget):
         settings_group = self.create_settings_group()
         layout.addWidget(settings_group)
 
-        normal_group = self.create_normalisation_group()
-        layout.addWidget(normal_group)
+        self.normal_group = self.create_normalisation_group()
 
         acq_layout = self.create_acquisition_control()
         layout.addLayout(acq_layout)
 
         self.setLayout(layout)
+
+    def setup_connections(self):
+        self.parent.plotwidget.image_item.sigImageChanged.connect(self._on_correction)
 
     def create_settings_group(self):
         settings_group = QGroupBox('Settings')
@@ -102,7 +106,7 @@ class ADControl(QWidget):
         return settings_group
 
     def create_normalisation_group(self):
-        normal_group = QGroupBox('Normalisation')
+        normal_group = QGroupBox()
         normal_group.setSizePolicy(
             QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Minimum
         )
@@ -111,61 +115,39 @@ class ADControl(QWidget):
         normal_layout.setHorizontalSpacing(5)
         normal_layout.setVerticalSpacing(10)
 
-        self.import_open_beam_button = QPushButton('Import Open Beam')
-        self.import_open_beam_button.clicked.connect(
-            self._load_image_as_openbeam
-        )
-        normal_layout.addWidget(self.import_open_beam_button, 0, 0)
+        self.store_flat_field_button = QPushButton('Store Flat Field')
+        self.store_flat_field_button.clicked.connect(self._store_flat_field)
+        normal_layout.addWidget(self.store_flat_field_button, 0, 0)
 
-        self.loaded_openbeam_label = QLabel('Loaded file:')
-        self.loaded_openbeam_label.readback = QLabel('None')
-        normal_layout.addWidget(self.loaded_openbeam_label, 1, 0)
-        normal_layout.addWidget(self.loaded_openbeam_label.readback, 1, 1)
+        self.flat_field_acquisition_time_label = QLabel('Acquisition Time')
+        self.flat_field_acquisition_time_label.readback = QLabel('None')
+        normal_layout.addWidget(self.flat_field_acquisition_time_label, 1, 0)
+        normal_layout.addWidget(self.flat_field_acquisition_time_label.readback, 1, 1)
 
-        self.open_beam_acquisition_time_label = QLabel('Acquisition Time')
-        self.open_beam_acquisition_time_label.readback = QLabel('None')
-        normal_layout.addWidget(self.open_beam_acquisition_time_label, 2, 0)
-        normal_layout.addWidget(
-            self.open_beam_acquisition_time_label.readback, 2, 1
-        )
+        self.flat_field_correction_cb = QCheckBox('Flat Field Correction')
+        self.flat_field_correction_cb.clicked.connect(self._on_correction)
+        self.display_flat_field_cb = QCheckBox('Display Flat Field')
+        self.display_flat_field_cb.clicked.connect(self._on_preview_flat_field)
+        normal_layout.addWidget(self.flat_field_correction_cb, 2, 0)
+        normal_layout.addWidget(self.display_flat_field_cb, 2, 1)
 
-        self.open_beam_correction_cb = QCheckBox('Open Beam Correction')
-        self.open_beam_correction_cb.clicked.connect(self._on_correction)
-        self.display_open_beam_cb = QCheckBox('Display Open Beam')
-        self.display_open_beam_cb.clicked.connect(
-            self._on_preview_open_beam_image
-        )
-        normal_layout.addWidget(self.open_beam_correction_cb, 3, 0)
-        normal_layout.addWidget(self.display_open_beam_cb, 3, 1)
+        self.store_background_button = QPushButton('Store Background')
+        self.store_background_button.clicked.connect(self._store_background)
+        normal_layout.addWidget(self.store_background_button, 3, 0)
 
-        self.import_dark_button = QPushButton('Import Dark')
-        self.import_dark_button.clicked.connect(self._load_image_as_dark)
-        normal_layout.addWidget(self.import_dark_button, 4, 0)
+        self.background_acquisition_time_label = QLabel('Acquisition Time')
+        self.background_acquisition_time_label.readback = QLabel('None')
+        normal_layout.addWidget(self.background_acquisition_time_label, 4, 0)
+        normal_layout.addWidget(self.background_acquisition_time_label.readback, 4, 1)
 
-        self.loaded_dark_label = QLabel('Loaded file:')
-        self.loaded_dark_label.readback = QLabel('None')
-        normal_layout.addWidget(self.loaded_dark_label, 5, 0)
-        normal_layout.addWidget(self.loaded_dark_label.readback, 5, 1)
+        self.background_subtraction_cb = QCheckBox('Background Subtraction')
+        self.background_subtraction_cb.clicked.connect(self._on_correction)
+        self.display_background_cb = QCheckBox('Display Background')
+        self.display_background_cb.clicked.connect(self._on_preview_background)
+        normal_layout.addWidget(self.background_subtraction_cb, 5, 0)
+        normal_layout.addWidget(self.display_background_cb, 5, 1)
 
-        self.dark_acquisition_time_label = QLabel('Acquisition Time')
-        self.dark_acquisition_time_label.readback = QLabel('None')
-        normal_layout.addWidget(self.dark_acquisition_time_label, 6, 0)
-        normal_layout.addWidget(
-            self.dark_acquisition_time_label.readback, 6, 1
-        )
-
-        self.dark_subtraction_cb = QCheckBox('Dark Subtraction')
-        self.dark_subtraction_cb.clicked.connect(self._on_correction)
-        self.display_dark_cb = QCheckBox('Display Dark')
-        self.display_dark_cb.clicked.connect(self._on_preview_dark_image)
-        normal_layout.addWidget(self.dark_subtraction_cb, 7, 0)
-        normal_layout.addWidget(self.display_dark_cb, 7, 1)
-
-        self.export_button = QPushButton('Export Image')
-        self.export_button.clicked.connect(self._export_image)
-        normal_layout.addWidget(self.export_button, 8, 1)
-
-        normal_layout.setRowStretch(9, 1)
+        normal_layout.setRowStretch(6, 1)
 
         normal_group.setLayout(normal_layout)
         return normal_group
@@ -192,9 +174,7 @@ class ADControl(QWidget):
             )
         )
         layout.addWidget(
-            create_button(
-                'stop_acq_button', 'Stop Acquisition', self.on_acq_stop
-            )
+            create_button('stop_acq_button', 'Stop Acquisition', self.on_acq_stop)
         )
         return layout
 
@@ -220,9 +200,7 @@ class ADControl(QWidget):
 
     def create_num_images_field(self):
         self.num_images_label = QLabel('Number of Images:')
-        self.num_images = self.create_line_edit(
-            'Set Value', self.on_num_images_changes
-        )
+        self.num_images = self.create_line_edit('Set Value', self.on_num_images_changes)
         return self.num_images
 
     def create_acquisition_time_field(self):
@@ -238,35 +216,25 @@ class ADControl(QWidget):
         return self.acquisition_period
 
     def create_start_x_field(self):
-        self.start_x = self.create_line_edit(
-            'Set Value', self.on_start_x_changed
-        )
+        self.start_x = self.create_line_edit('Set Value', self.on_start_x_changed)
         return self.start_x
 
     def create_start_y_field(self):
-        self.start_y = self.create_line_edit(
-            'Set Value', self.on_start_y_changed
-        )
+        self.start_y = self.create_line_edit('Set Value', self.on_start_y_changed)
         return self.start_y
 
     def create_size_x_field(self):
-        self.size_x = self.create_line_edit(
-            'Set Value', self.on_size_x_changed
-        )
+        self.size_x = self.create_line_edit('Set Value', self.on_size_x_changed)
         return self.size_x
 
     def create_size_y_field(self):
-        self.size_y = self.create_line_edit(
-            'Set Value', self.on_size_y_changed
-        )
+        self.size_y = self.create_line_edit('Set Value', self.on_size_y_changed)
         return self.size_y
 
     def create_combo_box(self, items, callback):
         combo_box = QComboBox()
         combo_box.setMinimumContentsLength(1)
-        combo_box.setSizeAdjustPolicy(
-            QComboBox.SizeAdjustPolicy.AdjustToContents
-        )
+        combo_box.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
         combo_box.setSizePolicy(
             QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Preferred
         )
@@ -284,161 +252,119 @@ class ADControl(QWidget):
         line_edit.readback = QLabel('Readback Value')
         return line_edit
 
-    def _get_file_path(self, dialog_type, title):
-        options = QFileDialog.Options()
-        options |= QFileDialog.ReadOnly
-
-        if dialog_type == 'save':
-            file_path, _ = QFileDialog.getSaveFileName(
-                self,
-                title,
-                '',
-                'HDF5 Files (*.h5 *.hdf *.hdf5);;All Files (*)',
-                options=options,
-            )
-        elif dialog_type == 'open':
-            file_path, _ = QFileDialog.getOpenFileName(
-                self,
-                title,
-                '',
-                'HDF5 Files (*.h5 *.hdf *.hdf5);;All Files (*)',
-                options=options,
-            )
-        else:
-            raise ValueError('Invalid dialog_type')
-
-        return file_path
-
-    def _export_image(self):
+    def _get_image(self):
         image = self.parent.plotwidget.raw_image
+        acq_time = self.last_acquisition_time
         if image is None:
-            print('No image data to export.')
-            return
+            print('No image data to store.')
+            return None, None
+        return image, acq_time
 
-        file_path = self._get_file_path('save', 'Save Image Data')
-        if not file_path:
-            print('No file path provided. Image data export canceled.')
-            return
-
-        with h5py.File(file_path, 'w') as hdf5_file:
-            dataset = hdf5_file.create_dataset('image_data', data=image)
-            dataset.attrs.create(
-                name='acquisition_time',
-                data=float(self.acquisition_time.readback.text()),
-            )
-
-        print(f'Image data exported to {file_path}')
-
-    def _load_image(
-        self,
-        dialog_title,
-        image_attribute,
-        acquisition_time_attribute,
-        label_attribute,
-    ):
-        file_path = self._get_file_path('open', dialog_title)
-        if not file_path:
-            print('No file path provided. Image data loading canceled.')
-            return
-
-        with h5py.File(file_path, 'r') as hdf5_file:
-            dataset = hdf5_file['image_data']
-            setattr(self, image_attribute, dataset[:])
-            setattr(
-                self,
-                acquisition_time_attribute,
-                dataset.attrs.get('acquisition_time', 'None'),
-            )
-
-        print(f'Image data loaded from {file_path}')
-        getattr(self, label_attribute).readback.setText(file_path)
-        getattr(self, acquisition_time_attribute + '_label').readback.setText(
-            str(getattr(self, acquisition_time_attribute))
+    def _store_background(self):
+        self.background_image, self.background_acq_time = self._get_image()
+        self.background_acquisition_time_label.readback.setText(
+            str(self.background_acq_time)
         )
 
-    def _load_image_as_openbeam(self):
-        self._load_image(
-            'Load Image Data',
-            'open_beam_image',
-            'open_beam_acquisition_time',
-            'loaded_openbeam_label',
-        )
-
-    def _load_image_as_dark(self):
-        self._load_image(
-            'Load Image Data',
-            'dark_image',
-            'dark_acquisition_time',
-            'loaded_dark_label',
+    def _store_flat_field(self):
+        self.flat_field_image, self.flat_field_acq_time = self._get_image()
+        self.flat_field_acquisition_time_label.readback.setText(
+            str(self.flat_field_acq_time)
         )
 
     def _on_preview_image(self, state, display_other_cb, image, other_image):
+        self.parent.plotwidget.image_item.blockSignals(True)
         if state:
             display_other_cb.setChecked(False)
             self.parent.plotwidget.image_view_controller.disp_image = image
-            self.parent.plotwidget.set_image(
-                image, autoLevels=False, raw_update=False
-            )
+            self.parent.plotwidget.set_image(image, autoLevels=False, raw_update=False)
         else:
             if not display_other_cb.isChecked():
                 self.parent.plotwidget.image_view_controller.disp_image = None
                 self.parent.plotwidget.set_image(
                     other_image, autoLevels=False, raw_update=False
                 )
+        self.parent.plotwidget.image_item.blockSignals(False)
+        self.update_blocked_signals()
 
-    def _on_preview_dark_image(self, state):
+    def _turn_off_correction(self):
+        self.background_subtraction_cb.setChecked(False)
+        self.flat_field_correction_cb.setChecked(False)
+
+    def _turn_off_preview(self):
+        self.display_background_cb.setChecked(False)
+        self.display_flat_field_cb.setChecked(False)
+
+    def _on_preview_background(self, state):
+        self._turn_off_correction()
         self._on_preview_image(
             state,
-            self.display_open_beam_cb,
-            self.dark_image,
+            self.display_flat_field_cb,
+            self.background_image,
             self.parent.plotwidget.raw_image,
         )
 
-    def _on_preview_open_beam_image(self, state):
+    def _on_preview_flat_field(self, state):
+        self._turn_off_correction()
         self._on_preview_image(
             state,
-            self.display_dark_cb,
-            self.open_beam_image,
+            self.display_background_cb,
+            self.flat_field_image,
             self.parent.plotwidget.raw_image,
         )
 
     def _apply_corrections(self, image):
         corrected_image = np.copy(image)
 
-        if self.dark_subtraction_cb.isChecked():
-            corrected_image -= self.dark_image
+        if self.background_subtraction_cb.isChecked():
+            corrected_image -= self.background_image
 
-        if self.open_beam_correction_cb.isChecked():
-            diff = self.open_beam_image - (
-                self.dark_image if self.dark_subtraction_cb.isChecked() else 0
+        if self.flat_field_correction_cb.isChecked():
+            diff = self.flat_field_image - (
+                self.background_image
+                if self.background_subtraction_cb.isChecked()
+                else 0
             )
             non_zero_diff = np.where(diff != 0, diff, 1)
-            corrected_image *= np.mean(diff) / non_zero_diff
+            # corrected_image *= np.mean(diff) / non_zero_diff
+            corrected_image /= non_zero_diff
 
         return corrected_image
 
     def _on_correction(self):
+        self.parent.plotwidget.image_item.blockSignals(True)
+        self._turn_off_preview()
         if not (
-            self.open_beam_correction_cb.isChecked()
-            or self.dark_subtraction_cb.isChecked()
+            self.flat_field_correction_cb.isChecked()
+            or self.background_subtraction_cb.isChecked()
         ):
             self.parent.plotwidget.image_view_controller.disp_image = None
             self.parent.plotwidget.update_image()
+            self.parent.plotwidget.image_item.blockSignals(False)
+            self.update_blocked_signals()
             return
 
         raw_image = self.parent.plotwidget.raw_image
         if raw_image is None:
             print('No image data to apply correction.')
             self.parent.plotwidget.image_view_controller.disp_image = None
+            self.parent.plotwidget.image_item.blockSignals(False)
             return
 
         corrected_image = self._apply_corrections(raw_image)
-        self.parent.plotwidget.image_view_controller.disp_image = (
-            corrected_image
-        )
+        self.parent.plotwidget.image_view_controller.disp_image = corrected_image
         self.parent.plotwidget.set_image(
             corrected_image, autoLevels=False, raw_update=False
         )
+        self.parent.plotwidget.image_item.blockSignals(False)
+        self.update_blocked_signals()
+
+    def update_blocked_signals(self):
+        self.parent.plotwidget.roi_changed()
+        self.parent.plotwidget.line_roi_changed()
+        self.parent.plotwidget.crosshair_roi_changed()
+        self.parent.plotwidget.update_trace()
+        self.parent.plotwidget.settings_histogram.item.imageChanged()
 
     def on_detector_changed(self, index):
         self.selected_device = self.detector_combo.currentText()
@@ -458,18 +384,12 @@ class ADControl(QWidget):
             return
 
         self._update_text_fields(param_info)
-        self._update_start_acq_button_style(
-            param_info.get('status', (None, None))[1]
-        )
+        self._update_start_acq_button_style(param_info.get('status', (None, None))[1])
         self._highlight_differing_readback_values()
 
     def _update_text_fields(self, param_info):
-        self.acquisition_time.readback.setText(
-            str(param_info.get('acquiretime'))
-        )
-        self.acquisition_period.readback.setText(
-            str(param_info.get('acquireperiod'))
-        )
+        self.acquisition_time.readback.setText(str(param_info.get('acquiretime')))
+        self.acquisition_period.readback.setText(str(param_info.get('acquireperiod')))
         self.start_x.readback.setText(str(param_info.get('startx')))
         self.start_y.readback.setText(str(param_info.get('starty')))
         self.size_x.readback.setText(str(param_info.get('sizex')))
@@ -500,9 +420,7 @@ class ADControl(QWidget):
                 continue
 
             if float(input_field.text()) != float(readback_field.text()):
-                readback_field.setStyleSheet(
-                    'background-color: rgba(255, 0, 0, 75%)'
-                )
+                readback_field.setStyleSheet('background-color: rgba(255, 0, 0, 75%)')
             else:
                 readback_field.setStyleSheet(
                     'background-color: rgba(255, 255, 255, 0%)'
@@ -515,7 +433,10 @@ class ADControl(QWidget):
         self.parent.exec_command(command)
 
     def on_acq_start(self):
-        # Needed?
+        # self._turn_off_correction()
+        self._turn_off_preview()
+        self.parent.plotwidget.image_view_controller.disp_image = None
+        self.last_acquisition_time = float(self.acquisition_time.readback.text())
         self._exec_command_if_device_selected('%s.prepare()')
         # Don't set presets, run with config from here
         self._exec_command_if_device_selected('%s.doAcquire()')
@@ -533,9 +454,7 @@ class ADControl(QWidget):
 
     def on_acquisition_time_changed(self):
         acquisition_time = float(self.acquisition_time.text())
-        self._exec_command_if_device_selected(
-            '%s.acquiretime = %f', acquisition_time
-        )
+        self._exec_command_if_device_selected('%s.acquiretime = %f', acquisition_time)
 
     def on_acquisition_period_changed(self):
         acquisition_period = float(self.acquisition_period.text())
@@ -570,6 +489,10 @@ class MultiLiveDataPanel(DefaultMultiLiveDataPanel):
 
         self.ad_controller = ADControl(self)
         self.tab_widget.addTab(self.ad_controller, 'Detector Control')
+        self.tab_widget.addTab(self.plotwidget.image_view_controller, 'View Settings')
+        self.tab_widget.addTab(self.ad_controller.normal_group, 'Normalisation')
+        self.tab_widget.addTab(self.scroll, 'Previews')
+
         self.connect_camera_controller_signals()
 
     def connect_camera_controller_signals(self):
