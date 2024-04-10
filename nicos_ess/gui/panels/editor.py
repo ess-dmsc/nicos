@@ -23,13 +23,13 @@
 
 """NICOS GUI user editor window."""
 import os
+import subprocess
 import sys
 import time
 from logging import WARNING
 from uuid import uuid1
 
-from nicos.clients.gui.dialogs.editordialogs import OverwriteQuestion, \
-    SearchDialog
+from nicos.clients.gui.dialogs.editordialogs import OverwriteQuestion
 from nicos.clients.gui.dialogs.traceback import TracebackDialog
 from nicos.clients.gui.panels import Panel
 from nicos.clients.gui.utils import loadUi, showToolText
@@ -37,10 +37,10 @@ from nicos.clients.gui.widgets.qscintillacompat import QScintillaCompatible
 from nicos.guisupport.colors import colors
 from nicos.guisupport.qt import QAction, QActionGroup, QByteArray, QColor, \
     QDialog, QFileDialog, QFileSystemModel, QFileSystemWatcher, QFont, \
-    QFontMetrics, QHBoxLayout, QHeaderView, QInputDialog, QMenu, QMessageBox, \
-    QPen, QPrintDialog, QPrinter, QsciLexerPython, QsciPrinter, \
-    QsciScintilla, Qt, QTabWidget, QToolBar, QToolButton, QTreeWidgetItem, \
-    QWidget, pyqtSlot
+    QFontMetrics, QHBoxLayout, QHeaderView, QInputDialog, QLineEdit, QMenu, \
+    QMessageBox, QPen, QPrintDialog, QPrinter, QPushButton, QsciLexerPython, \
+    QsciPrinter, QsciScintilla, Qt, QTabWidget, QTimer, QToolBar, \
+    QToolButton, QToolTip, QTreeWidgetItem, QVBoxLayout, QWidget, pyqtSlot
 from nicos.guisupport.utils import setBackgroundColor
 from nicos.utils import LOCALE_ENCODING, findResource, formatDuration, \
     formatEndtime
@@ -51,6 +51,57 @@ has_scintilla = QsciScintilla is not None
 
 COMMENT_STR = '# '
 
+INDICATOR_RED = (255, 0, 0)
+INDICATOR_GREEN = (0, 165, 0)
+
+
+class FlakeCodes:
+    SYNTAX_ERROR = 'E999'
+    UNDEFINED_NAME = 'F821'
+
+
+def find_all_nicos_commands():
+    """
+    Find all NICOS commands in the NICOS source code.
+    """
+    nicos_path = os.path.join(os.path.dirname(__file__), '..', '..', '..')
+    nicos_commands = []
+    for root, _, files in os.walk(nicos_path):
+        if 'git' in root:
+            continue
+        last_dir = os.path.basename(root)
+        if last_dir != 'commands':
+            continue
+        for file in files:
+            if file == '__init__.py':
+                continue
+            with open(os.path.join(root, file), 'r', encoding=LOCALE_ENCODING) as f:
+                lines = f.readlines()
+                found_usercommand = False
+                for line in lines:
+                    if '@usercommand' in line:
+                        found_usercommand = True
+                    if found_usercommand and 'def ' in line:
+                        nicos_commands.append(line.split('def ')[1].split('(')[0])
+                        found_usercommand = False
+
+    return nicos_commands
+
+
+def run_flake8(code):
+    cmd = ['flake8', '--jobs=1', '-']
+    process = subprocess.Popen(
+        cmd,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True
+    )
+    stdout, stderr = process.communicate(input=code)
+    return stdout, stderr
+
+
+IGNORED_FUNCTIONS = find_all_nicos_commands()
 
 if has_scintilla:
     class Printer(QsciPrinter):
@@ -81,6 +132,81 @@ if has_scintilla:
     class QsciScintillaCustom(QsciScintilla):
         def moveToEnd(self):
             self.SendScintilla(self.SCI_DOCUMENTEND)
+
+
+class FindReplaceWidget(QWidget):
+    def __init__(self, editor):
+        super().__init__(editor)  # Parent set to editor for overlay
+        self.editor = editor
+        self.last_search_text = ""
+        self.last_selected_position = (0, 0)
+        self.init_ui()
+
+    def init_ui(self):
+        self.layout = QVBoxLayout(self)
+        self.layout.setContentsMargins(5, 5, 5, 5)
+
+        self.find_box = QHBoxLayout()
+        self.find_button = QPushButton("Find", self)
+        self.find_button.clicked.connect(self.find_first_enter)
+        self.find_box.addWidget(self.find_button)
+        self.find_field = QLineEdit(self)
+        self.find_field.returnPressed.connect(self.find_first_enter)
+        self.find_field.textChanged.connect(self.find_first_text_change)
+        self.find_box.addWidget(self.find_field)
+
+        self.replace_box = QHBoxLayout()
+        self.replace_button = QPushButton("Replace", self)
+        self.replace_button.clicked.connect(self.replace_first)
+        self.replace_box.addWidget(self.replace_button)
+        self.replace_field = QLineEdit(self)
+        self.replace_field.returnPressed.connect(self.replace_first)
+        self.replace_box.addWidget(self.replace_field)
+
+        self.layout.addLayout(self.find_box)
+        self.layout.addLayout(self.replace_box)
+
+        self.hide()
+
+    def set_editor(self, editor):
+        self.editor = editor
+
+    def find_first_enter(self):
+        text = self.find_field.text()
+        if text:
+            self.editor.findFirst(text, False, True, False, True)
+            self.last_search_text = text
+            line, column = self.editor.getCursorPosition()
+            start_pos = column - len(text) - 1
+            start_pos = max(0, start_pos)
+            self.last_selected_position = (line, start_pos)
+
+    def find_first_text_change(self):
+        text = self.find_field.text()
+        if text:
+            self.editor.setCursorPosition(*self.last_selected_position)
+            self.editor.findFirst(text, False, True, False, True)
+
+    def replace_first(self):
+        find_text = self.find_field.text()
+        replace_text = self.replace_field.text()
+        if find_text:
+            self.editor.replace_first(replace_text)
+            self.editor.findFirst(find_text, False, True, False, True)
+
+    def showEvent(self, event):
+        self.find_field.setFocus()
+
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key.Key_Escape:
+            self.hide()
+
+    def toggle_visibility(self):
+        if self.isVisible():
+            self.hide()
+        else:
+            self.show()
+            self.find_field.setFocus()
 
 
 class SimResultFrame(QWidget):
@@ -201,7 +327,6 @@ class EditorPanel(Panel):
         self.bar = None
         self.current_status = None
         self.recentf_actions = []
-        self.searchdlg = None
         self.menuRecent = QMenu('Recent files')
 
         self.menuToolsActions = []
@@ -224,9 +349,11 @@ class EditorPanel(Panel):
                              self.sim_window)
             self.sim_window = 'inline'
 
-        hlayout = QHBoxLayout()
+        hlayout = QVBoxLayout()
         hlayout.setContentsMargins(0, 0, 0, 0)
         hlayout.addWidget(self.tabber)
+        self.find_replace_widget = FindReplaceWidget(None)
+        hlayout.addWidget(self.find_replace_widget)
         self.mainFrame.setLayout(hlayout)
 
         self.editors = []    # tab index -> editor
@@ -263,6 +390,13 @@ class EditorPanel(Panel):
         self.activeGroup.addAction(self.actionSimulate)
         self.activeGroup.addAction(self.actionUpdate)
 
+        self.actionShowFind = QAction("Find", self)
+        self.actionShowFind.setShortcut("Ctrl+F")
+        self.actionShowFind.setToolTip('Toggle find and replace')
+        self.actionShowFind.triggered.connect(
+            self.find_replace_widget.toggle_visibility
+        )
+
         client.simresult.connect(self.on_client_simresult)
         if self.client.connected:
             self.on_client_connected()
@@ -282,6 +416,10 @@ class EditorPanel(Panel):
 
         self.layout().setMenuBar(self.createPanelToolbar())
         self.get_icons()
+
+        self.error_messages = {}
+        self.loaded_devices = []
+        self.setup_error_highlighting()
 
     def createPanelToolbar(self):
         bar = QToolBar('Editor')
@@ -317,6 +455,9 @@ class EditorPanel(Panel):
         showToolText(bar, self.actionGet)
         bar.addAction(self.actionUpdate)
         showToolText(bar, self.actionUpdate)
+        bar.addSeparator()
+        bar.addAction(self.actionShowFind)
+        showToolText(bar, self.actionShowFind)
         return bar
 
     def get_icons(self):
@@ -334,6 +475,7 @@ class EditorPanel(Panel):
         self.actionSimulate.setIcon(get_icon('play_arrow_outline-24px.svg'))
         self.actionGet.setIcon(get_icon('eject-24px.svg'))
         self.actionUpdate.setIcon(get_icon('refresh-24px.svg'))
+        self.actionShowFind.setIcon(get_icon('find-24px.svg'))
 
     def getToolbars(self):
         return []
@@ -368,7 +510,7 @@ class EditorPanel(Panel):
         if has_scintilla:
             lexer = editor.lexer()
             lexer.setDefaultFont(self.custom_font)
-            for i in range(16):
+            for i in range(20):
                 lexer.setFont(self.custom_font, i)
             # make keywords bold
             lexer.setFont(bold, 5)
@@ -383,7 +525,7 @@ class EditorPanel(Panel):
         for action in [
             self.actionSave, self.actionSaveAs, self.actionReload,
             self.actionPrint, self.actionUndo, self.actionRedo, self.actionCut,
-            self.actionCopy, self.actionPaste, self.actionFind,
+            self.actionCopy, self.actionPaste,
         ]:
             action.setEnabled(on)
         self.enableExecuteActions(self.client.isconnected)
@@ -433,8 +575,13 @@ class EditorPanel(Panel):
         self.actionSave.setEnabled(editor.isModified())
         self.actionUndo.setEnabled(editor.isModified())
         self.currentEditor = editor
-        if self.searchdlg:
-            self.searchdlg.setEditor(editor)
+
+        self.find_replace_widget.set_editor(self.currentEditor)
+        self.setup_error_highlighting()
+        self.check_python_code()
+        self.currentEditor.hoverLineNumber = None
+        self.currentEditor.setMouseTracking(True)
+        self.currentEditor.mouseMoveEvent = self.handle_mouse_move_event
 
     def on_tabber_tabCloseRequested(self, index):
         editor = self.editors[index]
@@ -447,6 +594,7 @@ class EditorPanel(Panel):
         del self.editors[index]
         del self.filenames[editor]
         del self.watchers[editor]
+        del self.error_messages[editor]
         self.tabber.removeTab(index)
 
     def setDirty(self, editor, dirty):
@@ -516,7 +664,111 @@ class EditorPanel(Panel):
         self._updateStyle(editor)
         return editor
 
+    def handle_mouse_move_event(self, event):
+        if self.currentEditor not in self.error_messages:
+            self.setup_error_highlighting()
+            self.check_python_code()
+
+        pos = event.pos()
+        line = self.currentEditor.lineAt(pos)
+
+        if line != self.currentEditor.hoverLineNumber:
+            self.currentEditor.hoverLineNumber = line
+            if line in self.error_messages[self.currentEditor]:
+                QToolTip.showText(
+                    event.globalPos(),
+                    self.error_messages[self.currentEditor][line],
+                    self.currentEditor
+                )
+            else:
+                QToolTip.hideText()
+        super(QsciScintilla, self.currentEditor).mouseMoveEvent(event)
+
+    def setup_error_highlighting(self):
+        self.check_timer = QTimer()
+        self.check_timer.setSingleShot(True)
+        self.check_timer.timeout.connect(self.check_python_code)
+        self.currentEditor.textChanged.connect(lambda: self.check_timer.start(1000))
+
+    def check_python_code(self):
+        if not self._is_editor_and_error_checks_valid():
+            return
+
+        self.error_messages[self.currentEditor] = {}
+        code = str(self.currentEditor.text())
+
+        stdout, stderr = run_flake8(code)
+        self._clear_indicators(code)
+        self._set_indicator_styles()
+
+        for line in stdout.split('\n'):
+            if not line.strip():
+                continue
+
+            parts = line.split(':')
+            if len(parts) < 4:
+                continue
+
+            line_number, error_code, message = self._parse_error_line(parts)
+            if self._is_ignored_error(error_code, message):
+                continue
+
+            self.error_messages[self.currentEditor][line_number] = message
+            self._highlight_error(line_number, error_code)
+
+    def _is_editor_and_error_checks_valid(self):
+        return self.currentEditor and hasattr(self, 'error_messages')
+
+    def _clear_indicators(self, code):
+        for indicator_number in (0, 1):
+            self._set_current_indicator(indicator_number)
+            self._clear_indicator_range(len(code))
+
+    def _set_indicator_styles(self):
+        for indicator_number, color in enumerate([INDICATOR_RED, INDICATOR_GREEN]):
+            self._set_indicator_style(indicator_number, self.currentEditor.INDIC_SQUIGGLE)
+            self._set_indicator_color(indicator_number, QColor(*color))
+
+    def _parse_error_line(self, parts):
+        line_number = int(parts[1]) - 1
+        error_code = parts[3].strip()[0:4]
+        message = ':'.join(parts[3:]).strip()
+        return line_number, error_code, message
+
+    def _is_ignored_error(self, error_code, message):
+        if error_code != FlakeCodes.UNDEFINED_NAME:
+            return False
+        undefined_code = message.split(' ')[-1].replace("'", "")
+        return undefined_code in IGNORED_FUNCTIONS + self.loaded_devices
+
+    def _highlight_error(self, line_number, error_code):
+        indicator_number = 0 if error_code == FlakeCodes.SYNTAX_ERROR else 1
+        self._set_current_indicator(indicator_number)
+        start_pos, line_length = self._get_line_position_and_length(line_number)
+        self._fill_indicator_range(start_pos, line_length)
+
+    def _set_current_indicator(self, indicator_number):
+        self.currentEditor.SendScintilla(self.currentEditor.SCI_SETINDICATORCURRENT, indicator_number)
+
+    def _clear_indicator_range(self, length):
+        self.currentEditor.SendScintilla(self.currentEditor.SCI_INDICATORCLEARRANGE, 0, length)
+
+    def _set_indicator_style(self, indicator_number, style):
+        self.currentEditor.SendScintilla(self.currentEditor.SCI_INDICSETSTYLE, indicator_number, style)
+
+    def _set_indicator_color(self, indicator_number, color):
+        self.currentEditor.SendScintilla(self.currentEditor.SCI_INDICSETFORE, indicator_number, color)
+
+    def _get_line_position_and_length(self, line_number):
+        start_pos = self.currentEditor.positionFromLineIndex(line_number, 0)
+        line_length = len(self.currentEditor.text(line_number))
+        return start_pos, line_length
+
+    def _fill_indicator_range(self, start_pos, line_length):
+        self.currentEditor.SendScintilla(self.currentEditor.SCI_INDICATORFILLRANGE, start_pos, line_length)
+
     def on_client_connected(self):
+        self.loaded_devices = list(self.client.eval('session.devices', {}).keys())
         self.enableExecuteActions(True)
         self._set_scriptdir()
 
@@ -860,14 +1112,6 @@ class EditorPanel(Panel):
         self.filenames[editor] = fn
         self.tabber.setTabText(self.editors.index(editor), os.path.basename(fn))
         return self.saveFile(editor)
-
-    @pyqtSlot()
-    def on_actionFind_triggered(self):
-        if not self.searchdlg:
-            self.searchdlg = SearchDialog(self, self.currentEditor,
-                                          has_scintilla)
-        self.searchdlg.setEditor(self.currentEditor)
-        self.searchdlg.show()
 
     @pyqtSlot()
     def on_actionUndo_triggered(self):

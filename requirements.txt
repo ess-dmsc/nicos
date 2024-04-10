@@ -21,4 +21,5 @@ keyrings.alt>=4.0
 p4p==4.0.0
 pycryptodomex>=3.4.7
 pyqtgraph>=0.12.4
+flake8>=5.0.0
 https://github.com/ess-dmsc/yuos_query/releases/download/v0.1.21/yuos_query-0.1.21-py3-none-any.whl
