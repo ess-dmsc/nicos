@@ -16,8 +16,8 @@ file-writer-control>=1.1.5
 graypy
 h5py>=2.6
 kafka-logging-handler<=0.2.4
-keyring>=10.6
-keyrings.alt>=4.0
+keyring==24.3.0
+keyrings.alt==5.0.0
 p4p==4.0.0
 pycryptodomex>=3.4.7
 pyqtgraph>=0.12.4

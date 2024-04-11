@@ -24,7 +24,7 @@ html2text
 ess-streaming-data-types
 lttb
 confluent-kafka
-keyring
-keyrings.alt
+keyring==24.3.0
+keyrings.alt==5.0.0
 pycryptodomex>=3.4.7
 pyqtgraph>=0.12.4
