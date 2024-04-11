@@ -22,6 +22,7 @@ rsa
 scipy
 html2text
 ess-streaming-data-types
+flake8
 lttb
 confluent-kafka
 keyring==24.3.0
