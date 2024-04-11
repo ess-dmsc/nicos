@@ -26,5 +26,6 @@ lttb
 confluent-kafka
 keyring==24.3.0
 keyrings.alt==5.0.0
+matplotlib
 pycryptodomex>=3.4.7
 pyqtgraph>=0.12.4
