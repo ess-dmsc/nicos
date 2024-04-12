@@ -11,6 +11,18 @@
         }
       ],
       "children": [
+      {
+          "module": "mdat",
+          "config": {
+            "name": "start_time"
+          }
+        },
+        {
+           "module": "mdat",
+           "config": {
+             "name": "end_time"
+           }
+        },
         {
           "module": "dataset",
           "config": {
@@ -108,7 +120,7 @@
               ]
             },
             {
-              "name": "pulse_shaping_chopper",
+              "name": "pulse_shaping_chopper_1",
               "type": "group",
               "attributes": [
                 {
@@ -130,10 +142,10 @@
                   ],
                   "children": [
                     {
-                      "module": "f142",
+                      "module": "f144",
                       "config": {
                         "source": "source",
-                        "topic": "topic",
+                        "topic": "bifrost_choppers",
                         "dtype": "double",
                         "value_units": "Hz"
                       },
@@ -142,6 +154,33 @@
                           "name": "units",
                           "dtype": "string",
                           "values": "Hz"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "top_dead_center",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXlog"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "tdct",
+                      "config": {
+                        "source": "source",
+                        "topic": "bifrost_choppers"
+                      },
+                      "attributes": [
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "ns"
                         }
                       ]
                     }
@@ -159,10 +198,10 @@
                   ],
                   "children": [
                     {
-                      "module": "f142",
+                      "module": "f144",
                       "config": {
                         "source": "source",
-                        "topic": "topic",
+                        "topic": "bifrost_choppers",
                         "dtype": "double",
                         "value_units": "ns"
                       },
@@ -233,17 +272,10 @@
                   ]
                 },
                 {
-                  "module": "tdct",
-                  "config": {
-                    "source": "source",
-                    "topic": "topic"
-                  }
-                },
-                {
                   "module": "dataset",
                   "config": {
                     "name": "depends_on",
-                    "values": "/entry/instrument/pulse_shaping_chopper/transformations/translation"
+                    "values": "/entry/instrument/pulse_shaping_chopper_1/transformations/translation"
                   }
                 },
                 {
@@ -362,13 +394,6 @@
                   ]
                 },
                 {
-                  "module": "tdct",
-                  "config": {
-                    "source": "source",
-                    "topic": "topic"
-                  }
-                },
-                {
                   "name": "rotation_speed",
                   "type": "group",
                   "attributes": [
@@ -380,10 +405,10 @@
                   ],
                   "children": [
                     {
-                      "module": "f142",
+                      "module": "f144",
                       "config": {
                         "source": "source",
-                        "topic": "topic",
+                        "topic": "bifrost_choppers",
                         "dtype": "double",
                         "value_units": "Hz"
                       },
@@ -409,10 +434,10 @@
                   ],
                   "children": [
                     {
-                      "module": "f142",
+                      "module": "f144",
                       "config": {
                         "source": "source",
-                        "topic": "topic",
+                        "topic": "bifrost_choppers",
                         "dtype": "double",
                         "value_units": "ns"
                       },
@@ -504,10 +529,10 @@
                   ],
                   "children": [
                     {
-                      "module": "f142",
+                      "module": "f144",
                       "config": {
                         "source": "source",
-                        "topic": "topic",
+                        "topic": "bifrost_choppers",
                         "dtype": "double",
                         "value_units": "ns"
                       },
@@ -533,10 +558,10 @@
                   ],
                   "children": [
                     {
-                      "module": "f142",
+                      "module": "f144",
                       "config": {
                         "source": "source",
-                        "topic": "topic",
+                        "topic": "bifrost_choppers",
                         "dtype": "double",
                         "value_units": "Hz"
                       },
@@ -607,13 +632,6 @@
                   ]
                 },
                 {
-                  "module": "tdct",
-                  "config": {
-                    "source": "source",
-                    "topic": "topic"
-                  }
-                },
-                {
                   "module": "dataset",
                   "config": {
                     "name": "depends_on",
@@ -669,7 +687,7 @@
               ]
             },
             {
-              "name": "bandwidth_chopper",
+              "name": "bandwidth_chopper_1",
               "type": "group",
               "attributes": [
                 {
@@ -679,6 +697,33 @@
                 }
               ],
               "children": [
+                {
+                  "name": "top_dead_center",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXlog"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "tdct",
+                      "config": {
+                        "source": "BIFRO-ChpSy2:Ctrl-EVR-001:00-TS-I",
+                        "topic": "bifrost_choppers"
+                      },
+                      "attributes": [
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "ns"
+                        }
+                      ]
+                    }
+                  ]
+                },
                 {
                   "name": "delay",
                   "type": "group",
@@ -691,10 +736,10 @@
                   ],
                   "children": [
                     {
-                      "module": "f142",
+                      "module": "f144",
                       "config": {
                         "source": "source",
-                        "topic": "topic",
+                        "topic": "bifrost_choppers",
                         "dtype": "double",
                         "value_units": "ns"
                       },
@@ -720,10 +765,10 @@
                   ],
                   "children": [
                     {
-                      "module": "f142",
+                      "module": "f144",
                       "config": {
                         "source": "source",
-                        "topic": "topic",
+                        "topic": "bifrost_choppers",
                         "dtype": "double",
                         "value_units": "Hz"
                       },
@@ -794,17 +839,10 @@
                   ]
                 },
                 {
-                  "module": "tdct",
-                  "config": {
-                    "source": "source",
-                    "topic": "topic"
-                  }
-                },
-                {
                   "module": "dataset",
                   "config": {
                     "name": "depends_on",
-                    "values": "/entry/instrument/bandwidth_chopper/transformations/translation"
+                    "values": "/entry/instrument/bandwidth_chopper_1/transformations/translation"
                   }
                 },
                 {
@@ -878,10 +916,10 @@
                   ],
                   "children": [
                     {
-                      "module": "f142",
+                      "module": "f144",
                       "config": {
                         "source": "source",
-                        "topic": "topic",
+                        "topic": "bifrost_choppers",
                         "dtype": "double",
                         "value_units": "Hz"
                       },
@@ -890,6 +928,33 @@
                           "name": "units",
                           "dtype": "string",
                           "values": "Hz"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "top_dead_center",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXlog"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "tdct",
+                      "config": {
+                        "source": "source",
+                        "topic": "bifrost_choppers"
+                      },
+                      "attributes": [
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "ns"
                         }
                       ]
                     }
@@ -907,10 +972,10 @@
                   ],
                   "children": [
                     {
-                      "module": "f142",
+                      "module": "f144",
                       "config": {
                         "source": "source",
-                        "topic": "topic",
+                        "topic": "bifrost_choppers",
                         "dtype": "double",
                         "value_units": "ns"
                       },
@@ -981,13 +1046,6 @@
                   ]
                 },
                 {
-                  "module": "tdct",
-                  "config": {
-                    "source": "source",
-                    "topic": "topic"
-                  }
-                },
-                {
                   "module": "dataset",
                   "config": {
                     "name": "depends_on",
@@ -1027,7 +1085,7 @@
                         },
                         {
                           "name": "depends_on",
-                          "values": "/entry/instrument/pulse_shaping_chopper/transformations/translation",
+                          "values": "/entry/instrument/pulse_shaping_chopper_1/transformations/translation",
                           "dtype": "string"
                         }
                       ]
@@ -1110,13 +1168,6 @@
                   ]
                 },
                 {
-                  "module": "tdct",
-                  "config": {
-                    "source": "source",
-                    "topic": "topic"
-                  }
-                },
-                {
                   "name": "rotation_speed",
                   "type": "group",
                   "attributes": [
@@ -1128,10 +1179,10 @@
                   ],
                   "children": [
                     {
-                      "module": "f142",
+                      "module": "f144",
                       "config": {
                         "source": "source",
-                        "topic": "topic",
+                        "topic": "bifrost_choppers",
                         "dtype": "double",
                         "value_units": "Hz"
                       },
@@ -1140,6 +1191,33 @@
                           "name": "units",
                           "dtype": "string",
                           "values": "Hz"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "top_dead_center",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXlog"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "tdct",
+                      "config": {
+                        "source": "BIFRO-ChpSy2:Ctrl-EVR-001:01-TS-I",
+                        "topic": "bifrost_choppers"
+                      },
+                      "attributes": [
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "ns"
                         }
                       ]
                     }
@@ -1157,10 +1235,10 @@
                   ],
                   "children": [
                     {
-                      "module": "f142",
+                      "module": "f144",
                       "config": {
                         "source": "source",
-                        "topic": "topic",
+                        "topic": "bifrost_choppers",
                         "dtype": "double",
                         "value_units": "ns"
                       },
@@ -1214,7 +1292,7 @@
                         },
                         {
                           "name": "depends_on",
-                          "values": "/entry/instrument/bandwidth_chopper/transformations/translation",
+                          "values": "/entry/instrument/bandwidth_chopper_1/transformations/translation",
                           "dtype": "string"
                         }
                       ]
@@ -55370,7 +55448,7 @@
                       "module": "ev44",
                       "config": {
                         "source": "source",
-                        "topic": "topic"
+                        "topic": "bifrost_detector"
                       }
                     }
                   ]
@@ -55427,10 +55505,10 @@
                       ],
                       "children": [
                         {
-                          "module": "f142",
+                          "module": "f144",
                           "config": {
                             "source": "source",
-                            "topic": "topic",
+                            "topic": "bifrost_choppers",
                             "dtype": "double",
                             "value_units": "degrees"
                           },
