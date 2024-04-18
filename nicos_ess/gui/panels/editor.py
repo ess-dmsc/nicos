@@ -676,13 +676,20 @@ class EditorPanel(Panel):
             self.currentEditor.hoverLineNumber = line
             if line in self.error_messages[self.currentEditor]:
                 QToolTip.showText(
-                    event.globalPos(),
+                    self._get_global_position(event),
                     self.error_messages[self.currentEditor][line],
                     self.currentEditor
                 )
             else:
                 QToolTip.hideText()
         super(QsciScintilla, self.currentEditor).mouseMoveEvent(event)
+
+    def _get_global_position(self, event):
+        try:
+            global_pos = event.globalPosition().toPoint()
+        except AttributeError:
+            global_pos = event.globalPos()
+        return global_pos
 
     def setup_error_highlighting(self):
         self.check_timer = QTimer()
