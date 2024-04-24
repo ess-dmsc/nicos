@@ -111,11 +111,13 @@ class KafkaConsumer:
         """Close the consumer."""
         self._consumer.close()
 
-    def topics(self):
+    def topics(self, timeout_s=5):
+        """Get a list of topics names.
+
+        :param timeout_s: The timeout in seconds.
+        :return: A list of topic names.
         """
-        :return: A list of topics.
-        """
-        return self._consumer.list_topics()
+        return list(self._consumer.list_topics(timeout=timeout_s).topics)
 
     def seek(self, topic_name, partition, offset, timeout_s=5):
         """Seek to a particular offset on a partition.
