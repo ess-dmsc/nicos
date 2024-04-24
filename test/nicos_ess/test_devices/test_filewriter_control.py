@@ -30,8 +30,6 @@ from test.utils import ErrorLogged
 pytest.importorskip('streaming_data_types')
 pytest.importorskip('confluent_kafka')
 
-from nicos.commands.measure import count
-from nicos.commands.scan import scan
 from nicos.core import SIMULATION
 
 from nicos_ess.devices.datasinks.file_writer import FileWriterController, \
@@ -189,57 +187,6 @@ class TestFileWriterControl(TestCase):
         self.mock_controller.request_stop.assert_called_once()
         assert job_id_1 in self.filewriter_status.marked_for_stop
         assert job_id_2 in self.filewriter_status.jobs_in_progress
-
-    def test_one_file_for_all_scan_points(self):
-        self.mock_controller.request_start.return_value = ('job id 1', '')
-        m = self.session.getDevice('motor')
-        det = self.session.getDevice('det')
-        scan(m, 0, 1, 5, 0., det, 'test scan')
-
-        self.mock_controller.request_start.assert_called_once()
-        self.mock_controller.request_stop.assert_called_once()
-
-    def test_one_file_for_each_scan_point(self):
-        self.mock_controller.request_start.return_value = ('job id 1', '')
-        self.filewriter_control.one_file_per_scan = False
-
-        m = self.session.getDevice('motor')
-        det = self.session.getDevice('det')
-        num_points = 5
-        scan(m, 0, 1, num_points, 0., det, 'test scan')
-
-        assert self.mock_controller.request_start.call_count == 5
-        assert self.mock_controller.request_stop.call_count == 5
-
-    def test_if_manually_started_scan_does_not_send_start_stop_commands(self):
-        self.mock_controller.request_start.return_value = ('job id 1', '')
-        self.filewriter_control.one_file_per_scan = False
-        m = self.session.getDevice('motor')
-        det = self.session.getDevice('det')
-        self.filewriter_control.start_job()
-
-        scan(m, 0, 1, 5, 0., det, 'test scan')
-
-        self.mock_controller.request_start.assert_called_once()
-        self.mock_controller.request_stop.assert_not_called()
-
-    def test_count_starts_and_stops_file(self):
-        self.mock_controller.request_start.return_value = ('job id 1', '')
-        det = self.session.getDevice('det')
-        count(det, t=0.)
-
-        self.mock_controller.request_start.assert_called_once()
-        self.mock_controller.request_stop.assert_called_once()
-
-    def test_if_manually_started_count_does_not_send_start_command(self):
-        self.mock_controller.request_start.return_value = ('job id 1', '')
-        det = self.session.getDevice('det')
-        self.filewriter_control.start_job()
-
-        count(det, t=0.)
-
-        self.mock_controller.request_start.assert_called_once()
-        self.mock_controller.request_stop.assert_not_called()
 
     def test_lost_job_still_considered_in_progress(self):
         # Simulate a file-writer crash by forcing the job to time out.

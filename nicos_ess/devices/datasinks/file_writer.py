@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-2023 by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -42,18 +42,20 @@ from streaming_data_types.fbschemas.action_response_answ.ActionType import \
     ActionType
 
 from nicos import session
-from nicos.core import ADMIN, MASTER, Attach, Param, ScanDataset, host, \
-    listof, status
-from nicos.core.constants import INTERRUPTED, POINT, SIMULATION
-from nicos.core.data.sink import DataSinkHandler
+from nicos.core import ADMIN, MASTER, Attach, Param, host, listof, status
+from nicos.core.constants import SIMULATION
+from nicos.core.device import Device
 from nicos.core.params import Override, anytype
-from nicos.devices.datasinks.file import FileSink
-from nicos.utils import printTable
+from nicos.utils import printTable, readFileCounter, updateFileCounter
 
 from nicos_ess.devices.datasinks.nexus_structure import NexusStructureProvider
 from nicos_ess.devices.kafka.consumer import KafkaConsumer
 from nicos_ess.devices.kafka.producer import KafkaProducer
 from nicos_ess.devices.kafka.status_handler import KafkaStatusHandler
+
+
+class AlreadyWritingException(Exception):
+    pass
 
 
 class JobState(Enum):
@@ -327,90 +329,27 @@ class FileWriterStatus(KafkaStatusHandler):
         return copy.deepcopy(self._jobs)
 
 
-class FileWriterSinkHandler(DataSinkHandler):
-    """Sink handler for the NeXus file-writer"""
-    _scan_set = None
-    _current_file = None
+def incrementFileCounter():
+    exp = session.experiment
+    if not path.isfile(path.join(exp.dataroot, exp.counterfile)):
+        session.log.warning('creating new empty file counter file at %s',
+                            path.join(exp.dataroot, exp.counterfile))
+    counterpath = path.normpath(path.join(exp.dataroot, exp.counterfile))
+    nextnum = readFileCounter(counterpath, 'file') + 1
+    updateFileCounter(counterpath, 'file', nextnum)
+    return nextnum
 
-    def prepare(self):
-        if self.sink._manual_start or self._scan_set:
-            return
 
-        self.sink.check_okay_to_start()
-
-        # Assign the counter
-        self.manager.assignCounter(self.dataset)
-
-        # Update meta information of devices, only if not present
-        if not self.dataset.metainfo:
-            self.manager.updateMetainfo()
-        self._scan_set = self._get_scan_set()
-
-    def begin(self):
-        if self.sink._manual_start:
-            return
-
-        if self._scan_set and self.dataset.number > 1:
-            self.dataset.filenames = [self._current_file]
-            return
-
-        filename, _ = self.manager.getFilenames(self.dataset,
-                                                self.sink.filenametemplate,
-                                                self.sink.subdir)
-        if self.sink.use_instrument_directory:
-            proposal_path = session.experiment.proposalpath_of(
-                session.experiment.propinfo.get('proposal'))
-            file_path = path.join(proposal_path, filename)
-        else:
-            file_path = path.join(self.sink.subdir, filename)
-
-        if hasattr(self.dataset, 'replay_info'):
-            # Replaying previous job
-            self.sink._start_job(file_path, self.dataset.counter,
-                                 self.dataset.replay_info['structure'],
-                                 self.dataset.replay_info['start_time'],
-                                 self.dataset.replay_info['stop_time'],
-                                 self.dataset.replay_info['replay_of'])
-            return
-
-        datetime_now = datetime.now()
-        job_id = str(uuid.uuid1())
-        self.dataset.metainfo[('Exp', 'job_id')] = (job_id, job_id, '',
-                                                    'experiment')
-        structure = self.sink._attached_nexus.get_structure(self.dataset)
-        self.sink._start_job(file_path,
-                             self.dataset.counter,
-                             structure,
-                             datetime_now,
-                             job_id=job_id)
-        self._current_file = filename
-
-    def end(self):
-        if self.sink._manual_start:
-            return
-
-        if self._scan_set and self.dataset.number < self._scan_set.npoints:
-            return
-
-        self.sink._stop_job()
-        self.sink.end()
-        self._current_file = None
-
-    def _get_scan_set(self):
-        if not self.sink.one_file_per_scan:
-            # User has requested one file per scan point
-            return None
-
-        parents = list(self.manager.iterParents(self.dataset))
-
-        if parents and isinstance(parents[~0], ScanDataset):
-            return parents[~0]
-        return None
-
-    def putResults(self, quality, results):
-        if quality == INTERRUPTED:
-            # On e-stop let the current file-writing job be stopped
-            self._scan_set = None
+def generateMetainfo():
+    devices = [dev for (_, dev) in sorted(session.devices.items(),
+               key=lambda name_dev: name_dev[0].lower())]
+    metainfo = {}
+    for device in devices:
+        if 'metadata' not in device.visibility:
+            continue
+        for key, value, strvalue, unit, category in device.info():
+            metainfo[device.name, key] = (value, strvalue, unit, category)
+    return metainfo
 
 
 class FileWriterController:
@@ -423,13 +362,7 @@ class FileWriterController:
         self.timeout_interval = timeout_interval * 2
         self.command_channel = None
 
-    def request_start(self,
-                      filename,
-                      structure,
-                      start_time,
-                      stop_time=None,
-                      job_id=None):
-
+    def request_start(self, filename, structure, start_time, stop_time=None, job_id=None):
         if not job_id:
             job_id = str(uuid.uuid1())
 
@@ -457,8 +390,7 @@ class FileWriterController:
             delivery_info = (message.partition(), message.offset())
 
         producer = KafkaProducer.create(self.brokers)
-        producer.produce(self.pool_topic,
-                         message,
+        producer.produce(self.pool_topic, message,
                          on_delivery_callback=on_delivery)
 
         while not delivered:
@@ -479,7 +411,7 @@ class FileWriterController:
         producer.produce(self.instrument_topic, message)
 
 
-class FileWriterControlSink(FileSink):
+class FileWriterControlSink(Device):
     """Sink for the NeXus file-writer"""
 
     parameters = {
@@ -506,30 +438,6 @@ class FileWriterControlSink(FileSink):
                 settable=True,
                 userparam=False,
             ),
-        'one_file_per_scan':
-            Param(
-                'Whether to write all scan points to one file or a file per '
-                'point',
-                type=bool,
-                default=True,
-                settable=True,
-                userparam=False,
-            ),
-        'use_instrument_directory':
-            Param(
-                'Use the ESS instrument directory',
-                type=bool,
-                default=False,
-                settable=True,
-                userparam=False,
-            ),
-    }
-
-    parameter_overrides = {
-        'settypes':
-            Override(default=[POINT]),
-        'filenametemplate':
-            Override(default=['%(proposal)s_%(pointcounter)08d.hdf']),
     }
 
     attached_devices = {
@@ -540,11 +448,7 @@ class FileWriterControlSink(FileSink):
                    NexusStructureProvider),
     }
 
-    handlerclass = FileWriterSinkHandler
-
     def doInit(self, mode):
-        self._manual_start = False
-        self._handler = None
         self._active_sim_job = False
         self._consumer = None
         self._controller = FileWriterController(
@@ -557,17 +461,31 @@ class FileWriterControlSink(FileSink):
     def start_job(self):
         """Start a new file-writing job."""
         self.check_okay_to_start()
-        self._manual_start = False
         if self._mode == SIMULATION:
             self._active_sim_job = True
         else:
-            # Begin a point but remove it from the stack immediately to avoid
-            # an orphaned point.
-            # File-writing won't stop though.
-            session.experiment.data.beginPoint()
-            self._manual_start = True
-            session.experiment.data.finishPoint()
+            file_num = incrementFileCounter()
+            file_path = self._generate_filepath(file_num)
+            job_id = str(uuid.uuid1())
+            metainfo = generateMetainfo()
+            metainfo[('Exp', 'job_id')] = job_id
+            start_time = datetime.now()
+            start_time_str = time.strftime('%Y-%m-%d %H:%M:%S',
+                                           time.localtime(
+                                               start_time.timestamp()))
+            metainfo[('dataset', 'starttime')] = (start_time_str,
+                                                  start_time_str,
+                                                  '', 'general')
+            structure = self._attached_nexus.get_structure(metainfo, file_num)
+            self._start_job(file_path, file_num, structure,
+                            start_time=start_time, job_id=job_id)
         self.log.info('Filewriting started')
+
+    def _generate_filepath(self, file_num):
+        proposal = session.experiment.propinfo.get('proposal')
+        proposal_path = session.experiment.proposalpath_of(proposal)
+        filename = f'{proposal}_{file_num:0>8}.hdf'
+        return path.join(proposal_path, filename)
 
     def _start_job(
         self,
@@ -579,7 +497,6 @@ class FileWriterControlSink(FileSink):
         replay_of=None,
         job_id=None,
     ):
-        self.check_okay_to_start()
         start_time = start_time if start_time else datetime.now()
         job_id, commit_info = self._controller.request_start(
             filename, structure, start_time, stop_time, job_id)
@@ -594,12 +511,10 @@ class FileWriterControlSink(FileSink):
         :param job_number: the particular job to stop. Only required if there
             is more than one job running.
         """
-        if session.mode == SIMULATION:
+        if self._mode == SIMULATION:
             self._active_sim_job = False
         else:
             self._stop_job(job_number)
-            self._handler = None
-            self._manual_start = False
         self.log.info('Filewriting stopped')
 
     def _stop_job(self, job_number=None):
@@ -642,12 +557,12 @@ class FileWriterControlSink(FileSink):
                                  'When performing the real run a proposal '
                                  'number is required to start writing.')
             else:
-                raise RuntimeError('cannot start writing as proposal number '
-                                   'not set')
+                raise RuntimeError('cannot start writing as proposal number not '
+                                   'set')
         active_jobs = self.get_active_jobs()
         if active_jobs:
-            raise RuntimeError('cannot start writing as writing already in '
-                               'progress')
+            raise AlreadyWritingException('cannot start writing as writing '
+                                          'already in progress')
 
     def get_active_jobs(self):
         if self._mode == SIMULATION:
@@ -658,16 +573,6 @@ class FileWriterControlSink(FileSink):
         active_jobs = \
             self._attached_status.marked_for_stop.symmetric_difference(jobs)
         return active_jobs
-
-    def createHandlers(self, dataset):
-        if self._handler is None:
-            self._handler = self.handlerclass(self, dataset, None)
-        else:
-            self._handler.dataset = dataset
-        return [self._handler]
-
-    def end(self):
-        self._handler = None
 
     def list_jobs(self):
         dt_format = '%Y-%m-%d %H:%M:%S'
@@ -695,7 +600,6 @@ class FileWriterControlSink(FileSink):
         if self._mode == SIMULATION:
             return
         self.check_okay_to_start()
-        self._manual_start = False
 
         job_to_replay = None
         for job in self._attached_status._jobs_in_order.values():
@@ -725,15 +629,11 @@ class FileWriterControlSink(FileSink):
 
         message = deserialise_pl72(data.value())
 
-        replay_info = {
-            'structure': message.nexus_structure,
-            'start_time': job_to_replay.start_time,
-            'stop_time': job_to_replay.stop_time,
-            'replay_of': job_number
-        }
-        session.experiment.data.beginPoint(replay_info=replay_info)
-        self._manual_start = True
-        session.experiment.data.finishPoint()
+        file_num = incrementFileCounter()
+        file_path = self._generate_filepath(file_num)
+        self._start_job(file_path, file_num, message.nexus_structure,
+                        job_to_replay.start_time, job_to_replay.stop_time,
+                        job_number)
 
     def doShutdown(self):
         if self._consumer:

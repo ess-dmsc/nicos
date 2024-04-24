@@ -34,7 +34,7 @@ from nicos_ess.devices.datasinks.file_writer import FileWriterControlSink
 
 
 def _find_filewriter_dev():
-    for dev in session.datasinks:
+    for dev in session.devices.values():
         # Should only be one at most
         if isinstance(dev, FileWriterControlSink):
             return dev
