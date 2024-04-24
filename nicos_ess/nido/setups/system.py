@@ -6,7 +6,7 @@ sysconfig = dict(
     cache='localhost',
     instrument='NIDO',
     experiment='Exp',
-    datasinks=['conssink', 'daemonsink', 'liveview', 'FileWriterControl'],
+    datasinks=['conssink', 'daemonsink', 'liveview'],
 )
 
 modules = [

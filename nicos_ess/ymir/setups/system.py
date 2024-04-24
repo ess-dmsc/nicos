@@ -6,7 +6,7 @@ sysconfig = dict(
     cache='localhost',
     instrument='YMIR',
     experiment='Exp',
-    datasinks=['conssink', 'daemonsink', 'liveview', 'FileWriterControl'],
+    datasinks=['conssink', 'daemonsink', 'liveview'],
 )
 
 alias_config = {

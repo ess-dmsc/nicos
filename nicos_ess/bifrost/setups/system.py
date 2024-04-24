@@ -6,7 +6,7 @@ sysconfig = dict(
     cache='localhost',
     instrument='BIFROST',
     experiment='Exp',
-    datasinks=['conssink', 'daemonsink', 'liveview', 'FileWriterControl'],
+    datasinks=['conssink', 'daemonsink', 'liveview'],
 )
 
 modules = ['nicos.commands.standard', 'nicos_ess.commands']

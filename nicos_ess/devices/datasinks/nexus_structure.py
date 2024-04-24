@@ -38,7 +38,7 @@ class NexusStructureProvider(Device):
             Override(default=()),
     }
 
-    def get_structure(self, dataset):
+    def get_structure(self, metainfo, counter):
         raise NotImplementedError('must implement get_structure method')
 
 
@@ -52,13 +52,11 @@ class NexusStructureJsonFile(NexusStructureProvider):
                   settable=True),
     }
 
-    def get_structure(self, dataset):
+    def get_structure(self, metainfo, counter):
         structure = self._load_structure()
         structure = self._filter_structure(structure)
         structure = self._insert_metadata(
-            structure,
-            dataset.metainfo,
-            dataset.counter,
+            structure, metainfo, counter
         )
         return structure
 
@@ -257,17 +255,8 @@ class NexusStructureTemplate(NexusStructureProvider):
         if self.templatename != val:
             self._setROParam('templatename', val)
 
-    def _add_start_time(self, dataset):
-        if ('dataset', 'starttime') not in dataset.metainfo:
-            start_time = time.strftime('%Y-%m-%d %H:%M:%S',
-                                       time.localtime(dataset.started))
-            dataset.metainfo[('dataset',
-                              'starttime')] = (start_time, start_time, '',
-                                               'general')
-
-    def get_structure(self, dataset):
+    def get_structure(self, metainfo, counter):
         template = copy.deepcopy(self._template)
-        self._add_start_time(dataset)
         converter = NexusTemplateConverter()
-        structure = converter.convert(template, dataset.metainfo)
+        structure = converter.convert(template, metainfo)
         return json.dumps(structure)
