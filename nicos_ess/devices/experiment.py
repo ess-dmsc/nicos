@@ -30,7 +30,7 @@ from yuos_query.yuos_client import YuosCacheClient
 
 from nicos import session
 from nicos.core import SIMULATION, Override, Param, UsageError, listof, \
-    mailaddress
+    mailaddress, none_or
 from nicos.devices.experiment import Experiment
 from nicos.utils import createThread
 
@@ -49,7 +49,12 @@ class EssExperiment(Experiment):
             Param('Time interval (in hrs.) for proposal cache updates',
                   default=1.0,
                   type=float,
-                  userparam=False)
+                  userparam=False),
+        'fixed_proposal_path':
+            Param('Override the generated proposal file path',
+                  default=None,
+                  type=none_or(str),
+                  userparam=False),
     }
 
     parameter_overrides = {
@@ -131,6 +136,8 @@ class EssExperiment(Experiment):
         Experiment.update(self, title, users, localcontacts)
 
     def proposalpath_of(self, proposal):
+        if self.fixed_proposal_path is not None:
+            return self.fixed_proposal_path
         return path.join(session.instrument.name.lower(), time.strftime('%Y'),
                          proposal, 'raw')
 
