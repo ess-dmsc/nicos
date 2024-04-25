@@ -46,7 +46,7 @@ class EssExperiment(Experiment):
                   mandatory=True,
                   userparam=False),
         'update_interval':
-            Param('Time interval (in hrs.) for cache updates',
+            Param('Time interval (in hrs.) for proposal cache updates',
                   default=1.0,
                   type=float,
                   userparam=False)
@@ -68,13 +68,13 @@ class EssExperiment(Experiment):
 
     def doInit(self, mode):
         Experiment.doInit(self, mode)
-        self._client = None
-        self._update_cache_worker = createThread('update_cache',
-                                                 self._update_cache,
-                                                 start=False)
+        self._yuos_client = None
+        self._update_proposal_cache_worker = createThread('update_cache',
+                                                          self._update_proposal_cache,
+                                                          start=False)
         try:
-            self._client = YuosCacheClient.create(self.cache_filepath)
-            self._update_cache_worker.start()
+            self._yuos_client = YuosCacheClient.create(self.cache_filepath)
+            self._update_proposal_cache_worker.start()
         except Exception as error:
             self.log.warning('proposal look-up not available: %s', error)
 
@@ -160,13 +160,13 @@ class EssExperiment(Experiment):
         self.sample.set_samples({})
 
     def _canQueryProposals(self):
-        if self._client:
+        if self._yuos_client:
             return True
         return False
 
-    def _update_cache(self):
+    def _update_proposal_cache(self):
         while True:
-            self._client.update_cache()
+            self._yuos_client.update_cache()
             time.sleep(self.update_interval * 3600)
 
     def _queryProposals(self, proposal=None, kwds=None):
@@ -191,14 +191,14 @@ class EssExperiment(Experiment):
 
     def _query_by_fed_id(self, name):
         try:
-            return self._client.proposals_for_user(name)
+            return self._yuos_client.proposals_for_user(name)
         except BaseYuosException as error:
             self.log.error('%s', error)
             raise
 
     def _get_all_proposals(self):
         try:
-            return self._client.all_proposals()
+            return self._yuos_client.all_proposals()
         except BaseYuosException as error:
             self.log.error('%s', error)
             raise
