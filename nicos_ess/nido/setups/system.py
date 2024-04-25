@@ -30,6 +30,7 @@ devices = dict(
         'nicos_ess.devices.experiment.EssExperiment',
         description='experiment object',
         dataroot='/opt/nicos-data',
+        fixed_proposal_path='',
         sample='Sample',
         cache_filepath='/opt/nicos-data/cached_proposals.json'),
     conssink=device(
