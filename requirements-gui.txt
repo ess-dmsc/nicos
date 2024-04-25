@@ -1,6 +1,4 @@
 --extra-index-url https://forge.frm2.tum.de/simple
-gr>=1.23.2
-python-redmine>=2.0.0
 
 # Linux: minimum versions of PyQt5
 PyQt5>=5.13.0;sys_platform=='linux'
@@ -17,16 +15,18 @@ PyQt6>=6.3.1;sys_platform=='darwin'
 PyQt6-WebEngine>=6.3.1;sys_platform=='darwin'
 PyQt6-QScintilla>=2.13;sys_platform=='darwin'
 
-toml
-rsa
-scipy
-html2text
+confluent-kafka
 ess-streaming-data-types
 flake8
+gr>=1.23.2
+html2text
 lttb
-confluent-kafka
 keyring==24.3.0
 keyrings.alt==5.0.0
 matplotlib
 pycryptodomex>=3.4.7
+python-redmine>=2.0.0
 pyqtgraph>=0.12.4
+rsa
+scipy
+toml
