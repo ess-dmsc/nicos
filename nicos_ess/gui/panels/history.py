@@ -127,15 +127,10 @@ class View(QObject):
                     history = query_func(key, self.fromtime, hist_totime,
                                          interval)
                     if not history:
-                        from nicos.clients.gui.main import log
-                        if log is None:
-                            from __main__ import \
-                                log  # pylint: disable=no-name-in-module
-                        log.error('Error getting history for %s.', key)
                         QMessageBox.warning(widget, 'Error',
                                             'Could not get history for %s, '
-                                            'there are no values to show.\n'
-                                            'Is it spelled correctly?' % key)
+                                            'there are no values to show.'
+                                            % key)
                         history = []
                     hist_cache[key] = history
                 else:
