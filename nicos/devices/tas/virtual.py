@@ -36,6 +36,7 @@ from nicos.core import (
     Value,
     status,
 )
+from nicos.core.device import DeviceMetaInfo, DeviceParInfo
 
 
 class VirtualTasDetector(Measurable):
@@ -80,7 +81,12 @@ class VirtualTasDetector(Measurable):
         ret = []
         if self._user_comment:
             ret.append(
-                ("usercomment", self._user_comment, self._user_comment, "", "general")
+                DeviceMetaInfo(
+                    "usercomment",
+                    DeviceParInfo(
+                        self._user_comment, self._user_comment, "", "general"
+                    ),
+                )
             )
         return ret
 

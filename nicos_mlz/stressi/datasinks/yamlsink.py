@@ -374,55 +374,30 @@ class YamlDatafileSinkHandler(AsciiScanfileSinkHandler):
 
     def _fill_header(self):
         bycategory = {}
-        for (dev, key), (_v, v, _, cat) in self.dataset.metainfo.items():
-            if cat:
-                if key == "operators":  # don't use the formatted list
-                    bycategory.setdefault(cat, []).append((dev, key, _v))
+        for (dev, key), info in self.dataset.metainfo.items():
+            if info.category:
+                if key == 'operators':  # don't use the formatted list
+                    bycategory.setdefault(info.category, []).append(
+                        (dev, key, info.value))
                 else:
-                    bycategory.setdefault(cat, []).append(
-                        (
-                            dev,
-                            key,
-                            v,
-                        )
-                    )
-        if "experiment" in bycategory:
-            self._write_experiment(bycategory["experiment"])
-        if "sample" in bycategory:
-            self._write_sample(bycategory["sample"])
-        if "instrument" in bycategory:
-            self._write_instrument(bycategory["instrument"])
-        if "offsets" in bycategory:
-            self._write_offsets(bycategory["offsets"])
-        if "limits" in bycategory:
-            self._write_limits(bycategory["limits"])
-        if "precisions" in bycategory:
-            self._write_tolerances(bycategory["precisions"])
-        if "status" in bycategory:
-            self._write_status(bycategory["status"])
-        if "general" in bycategory:
-            self._write_general(bycategory["general"])
-
-    def putMetainfo(self, metainfo):
-        self.log.debug("ADD META INFO %r", metainfo)
-
-    def putResults(self, quality, results):
-        """Called when the point dataset main results are updated.
-
-        The *quality* is one of the constants defined in the module:
-
-        * LIVE is for intermediate data that should not be written to files.
-        * INTERMEDIATE is for intermediate data that should be written.
-        * FINAL is for final data.
-        * INTERRUPTED is for data that has been read after the counting was
-          interrupted by an exception.
-
-        Argument *results* contains the new results.  ``dataset.results``
-        contains all results so far.
-        """
-        self.log.debug("%s", quality)
-        if quality != FINAL and self.dataset.settype != POINT:
-            return
+                    bycategory.setdefault(info.category, []).append(
+                        (dev, key, info.strvalue))
+        if 'experiment' in bycategory:
+            self._write_experiment(bycategory['experiment'])
+        if 'sample' in bycategory:
+            self._write_sample(bycategory['sample'])
+        if 'instrument' in bycategory:
+            self._write_instrument(bycategory['instrument'])
+        if 'offsets' in bycategory:
+            self._write_offsets(bycategory['offsets'])
+        if 'limits' in bycategory:
+            self._write_limits(bycategory['limits'])
+        if 'precisions' in bycategory:
+            self._write_tolerances(bycategory['precisions'])
+        if 'status' in bycategory:
+            self._write_status(bycategory['status'])
+        if 'general' in bycategory:
+            self._write_general(bycategory['general'])
 
     def addSubset(self, subset):
         if not self._wrote_header:

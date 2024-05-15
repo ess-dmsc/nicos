@@ -281,8 +281,8 @@ class DataManager:
         for device in devices:
             if "metadata" not in device.visibility:
                 continue
-            for key, value, strvalue, unit, category in device.info():
-                newinfo[device.name, key] = (value, strvalue, unit, category)
+            for key, info in device.info():
+                newinfo[device.name, key] = info
         self.putMetainfo(newinfo)
 
     def cacheCallback(self, key, value, time):
@@ -317,7 +317,7 @@ class DataManager:
             return
         if session.mode == SIMULATION:
             raise ProgrammingError(
-                "assignCounter should not be called in " "simulation mode"
+                "assignCounter should not be called in simulation mode"
             )
 
         new_counters = self.incrementCounters(dataset.countertype)
@@ -449,7 +449,7 @@ class DataManager:
         """
         if dataset.counter == 0:
             raise ProgrammingError(
-                "a counter number must be assigned to the " "dataset first"
+                "a counter number must be assigned to the dataset first"
             )
         addinfo = kwargs.pop("additionalinfo", {})
         filenames = self.expandNameTemplates(nametemplates, additionalinfo=addinfo)
@@ -511,7 +511,7 @@ class DataManager:
         fileclass = kwargs.get("fileclass", DataFile)
         if session.mode == SIMULATION:
             raise ProgrammingError(
-                "createDataFile should not be called in " "simulation mode"
+                "createDataFile should not be called in simulation mode"
             )
         filename, filepaths = self.getFilenames(
             dataset, nametemplates, *subdirs, **kwargs
