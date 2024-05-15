@@ -497,28 +497,23 @@ class CaressScanfileSinkHandler(DataSinkHandler):
     def _write_header(self, point):
         self.log.debug("_write_header: %r", point.settype)
         bycategory = {}
-        for (dev, key), (v, _, _, cat) in point.metainfo.items():
-            if dev == "adet":
+        for (dev, key), info in point.metainfo.items():
+            if dev == 'adet':
                 pass
-            if cat:
-                bycategory.setdefault(cat, []).append(
-                    (
-                        dev,
-                        key,
-                        v,
-                    )
-                )
-        if "experiment" in bycategory:
-            self._write_user_proposal(bycategory["experiment"])
-        if "limits" in bycategory:
-            self._write_limits(bycategory["limits"])
-        if "offsets" in bycategory:
-            self._write_offsets(bycategory["offsets"])
-        if "precisions" in bycategory:
-            self._write_tolerances(bycategory["precisions"])
-        if "general" in bycategory:
-            self._write_wavelength(bycategory["general"])
-            self._write_timeouts(bycategory["general"])
+            if info.category:
+                bycategory.setdefault(info.category, []).append(
+                    (dev, key, info.value,))
+        if 'experiment' in bycategory:
+            self._write_user_proposal(bycategory['experiment'])
+        if 'limits' in bycategory:
+            self._write_limits(bycategory['limits'])
+        if 'offsets' in bycategory:
+            self._write_offsets(bycategory['offsets'])
+        if 'precisions' in bycategory:
+            self._write_tolerances(bycategory['precisions'])
+        if 'general' in bycategory:
+            self._write_wavelength(bycategory['general'])
+            self._write_timeouts(bycategory['general'])
 
         d = OrderedDict()
         master = None

@@ -174,10 +174,13 @@ class AsciiScanfileSinkHandler(DataSinkHandler):
         ]:
             self._write_comment("%25s : %s" % (name, value))
         bycategory = {}
-        for (devname, key), (_, val, unit, category) in ds.metainfo.items():
-            if category:
-                bycategory.setdefault(category, []).append(
-                    ("%s_%s" % (devname, key), (val + " " + unit).strip())
+        for (devname, key), info in ds.metainfo.items():
+            if info.category:
+                bycategory.setdefault(info.category, []).append(
+                    (
+                        "%s_%s" % (devname, key),
+                        (info.strvalue + " " + info.unit).strip(),
+                    )
                 )
         for category, catname in INFO_CATEGORIES:
             if category not in bycategory:
@@ -295,7 +298,7 @@ class AsciiScanfileReader:
                 return "counter"
             return "other"
 
-        with open(filename, "r", encoding=LOCALE_ENCODING) as f:
+        with open(filename, encoding=LOCALE_ENCODING) as f:
             for line in f:
                 lin = line.strip()
                 if lin.startswith("###"):
@@ -398,6 +401,4 @@ class AsciiScanfileSink(FileSink):
 
     def doUpdateCommentchar(self, value):
         if len(value) > 1:
-            raise ConfigurationError(
-                "comment character should only be " "one character"
-            )
+            raise ConfigurationError("comment character should only be one character")

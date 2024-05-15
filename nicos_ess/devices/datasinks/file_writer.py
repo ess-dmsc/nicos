@@ -36,7 +36,7 @@ from nicos.core import (
     status,
 )
 from nicos.core.constants import SIMULATION
-from nicos.core.device import Device
+from nicos.core.device import Device, DeviceMetaInfo, DeviceParInfo
 from nicos.core.params import anytype
 from nicos.utils import printTable, readFileCounter, updateFileCounter
 from nicos_ess.devices.datasinks.nexus_structure import NexusStructureProvider
@@ -283,9 +283,13 @@ class FileWriterStatus(KafkaStatusHandler):
             self._update_cached_jobs()
 
     def doInfo(self):
-        result = [(f"{self.name}", "", "", "", "general")]
+        result = [DeviceMetaInfo(f"{self.name}", DeviceParInfo("", "", "", "general"))]
         for i, job in enumerate(self._jobs):
-            result.append((f"job {i + 1}", f"{job}", f"{job}", "", "general"))
+            result.append(
+                DeviceMetaInfo(
+                    f"job {i + 1}", DeviceParInfo(f"{job}", f"{job}", "", "general")
+                )
+            )
         return result
 
     def _update_status(self):
@@ -363,8 +367,13 @@ def generateMetainfo():
         except Exception as err:
             device.log.warning("could not collect metadata, skipping", exc=err)
             continue
-        for key, value, strvalue, unit, category in info:
-            metainfo[device.name, key] = (value, strvalue, unit, category)
+        for key, info in device.info():
+            metainfo[device.name, key] = (
+                info.value,
+                info.strvalue,
+                info.unit,
+                info.category,
+            )
     return metainfo
 
 

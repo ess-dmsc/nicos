@@ -20,6 +20,7 @@ from nicos.core import (
     tupleof,
 )
 from nicos.core.constants import MASTER, POLLER, SIMULATION
+from nicos.core.device import DeviceMetaInfo, DeviceParInfo
 from nicos.devices.generic import Detector, ImageChannelMixin, PassiveChannel
 from nicos.utils import createThread
 from nicos_ess.devices.kafka.consumer import KafkaConsumer, KafkaSubscriber
@@ -47,7 +48,11 @@ class Hist1dTof:
 
     @classmethod
     def get_info(cls, name, num_bins, **ignored):
-        return [(f"{name} bins", num_bins, str(num_bins), "", "general")]
+        return [
+            DeviceMetaInfo(
+                f"{name} bins", DeviceParInfo(num_bins, str(num_bins), "", "general")
+            )
+        ]
 
 
 class Hist2dTof:
@@ -73,12 +78,11 @@ class Hist2dTof:
     @classmethod
     def get_info(cls, name, num_bins, **ignored):
         return [
-            (
+            DeviceMetaInfo(
                 f"{name} bins",
-                (num_bins, num_bins),
-                str((num_bins, num_bins)),
-                "",
-                "general",
+                DeviceParInfo(
+                    (num_bins, num_bins), str((num_bins, num_bins)), "", "general"
+                ),
             )
         ]
 
@@ -106,8 +110,13 @@ class Hist2dDet:
     @classmethod
     def get_info(cls, name, det_width, det_height, **ignored):
         return [
-            (f"{name} width", det_width, str(det_width), "", "general"),
-            (f"{name} height", det_height, str(det_height), "", "general"),
+            DeviceMetaInfo(
+                f"{name} width", DeviceParInfo(det_width, str(det_width), "", "general")
+            ),
+            DeviceMetaInfo(
+                f"{name} height",
+                DeviceParInfo(det_height, str(det_height), "", "general"),
+            ),
         ]
 
 
@@ -135,8 +144,12 @@ class Hist2dRoi:
     def get_info(cls, name, det_width, left_edges, **ignored):
         height = len(left_edges)
         return [
-            (f"{name} width", det_width, str(det_width), "", "general"),
-            (f"{name} height", height, str(height), "", "general"),
+            DeviceMetaInfo(
+                f"{name} width", DeviceParInfo(det_width, str(det_width), "", "general")
+            ),
+            DeviceMetaInfo(
+                f"{name} height", DeviceParInfo(height, str(height), "", "general")
+            ),
         ]
 
 
@@ -392,12 +405,9 @@ class JustBinItImage(ImageChannelMixin, PassiveChannel):
 
     def doInfo(self):
         result = [
-            (
+            DeviceMetaInfo(
                 f"{self.name} histogram type",
-                self.hist_type,
-                self.hist_type,
-                "",
-                "general",
+                DeviceParInfo(self.hist_type, self.hist_type, "", "general"),
             )
         ]
         result.extend(hist_type_by_name[self.hist_type].get_info(**self._params))
