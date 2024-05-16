@@ -1,0 +1,1072 @@
+{
+  "children": [
+    {
+      "name": "entry",
+      "type": "group",
+      "attributes": [
+        {
+          "name": "NX_class",
+          "dtype": "string",
+          "values": "NXentry"
+        }
+      ],
+      "children": [
+        {
+          "module": "dataset",
+          "config": {
+            "name": "definition",
+            "values": "NXtomo",
+            "type": "string"
+          }
+        },
+        {
+          "module": "dataset",
+          "config": {
+            "name": "experiment_identifier",
+            "values": "$EXP_ID$",
+            "type": "string"
+          }
+        },
+        {
+          "module": "dataset",
+          "config": {
+            "name": "title",
+            "values": "$TITLE$",
+            "type": "string"
+          }
+        },
+        {
+          "name": "instrument",
+          "type": "group",
+          "attributes": [
+            {
+              "name": "NX_class",
+              "dtype": "string",
+              "values": "NXinstrument"
+            }
+          ],
+          "children": [
+            {
+              "name": "Component_1",
+              "type": "group",
+              "required_tracking": "Component_1",
+              "attributes": [
+                {
+                  "name": "NX_class",
+                  "dtype": "string",
+                  "values": "NXdisk_chopper"
+                }
+              ],
+              "children": [
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "depends_on",
+                    "values": "/entry/instrument/Component_1/transformations/translation_x"
+                  }
+                },
+                {
+                  "type": "group",
+                  "name": "transformations",
+                  "children": [
+                    {
+                      "name": "translation_x",
+                      "type": "group",
+                      "attributes": [
+                        {
+                          "name": "NX_class",
+                          "dtype": "string",
+                          "values": "NXlog"
+                        },
+                        {
+                          "name": "transformation_type",
+                          "dtype": "string",
+                          "values": "translation"
+                        },
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "m"
+                        },
+                        {
+                          "name": "vector",
+                          "dtype": "string",
+                          "values": [
+                            1.0,
+                            0.0,
+                            0.0
+                          ]
+                        },
+                        {
+                          "name": "depends_on",
+                          "values": "/entry/instrument/Component_1/transformations/translation_y",
+                          "dtype": "string"
+                        }
+                      ],
+                      "children": [
+                        {
+                          "module": "f144",
+                          "config": {
+                            "source": "Component_1:x",
+                            "topic": "ymir_metrology",
+                            "dtype": "double",
+                            "value_units": "m"
+                          },
+                          "attributes": [
+                            {
+                              "name": "units",
+                              "dtype": "string",
+                              "values": "m"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "name": "translation_y",
+                      "type": "group",
+                      "attributes": [
+                        {
+                          "name": "NX_class",
+                          "dtype": "string",
+                          "values": "NXlog"
+                        },
+                        {
+                          "name": "transformation_type",
+                          "dtype": "string",
+                          "values": "translation"
+                        },
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "m"
+                        },
+                        {
+                          "name": "vector",
+                          "dtype": "string",
+                          "values": [
+                            0.0,
+                            1.0,
+                            0.0
+                          ]
+                        },
+                        {
+                          "name": "depends_on",
+                          "values": "/entry/instrument/Component_1/transformations/translation_z",
+                          "dtype": "string"
+                        }
+                      ],
+                      "children": [
+                        {
+                          "module": "f144",
+                          "config": {
+                            "source": "Component_1:y",
+                            "topic": "ymir_metrology",
+                            "dtype": "double",
+                            "value_units": "m"
+                          },
+                          "attributes": [
+                            {
+                              "name": "units",
+                              "dtype": "string",
+                              "values": "m"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "name": "translation_z",
+                      "type": "group",
+                      "attributes": [
+                        {
+                          "name": "NX_class",
+                          "dtype": "string",
+                          "values": "NXlog"
+                        },
+                        {
+                          "name": "transformation_type",
+                          "dtype": "string",
+                          "values": "translation"
+                        },
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "m"
+                        },
+                        {
+                          "name": "vector",
+                          "dtype": "string",
+                          "values": [
+                            0.0,
+                            0.0,
+                            1.0
+                          ]
+                        },
+                        {
+                          "name": "depends_on",
+                          "values": "/entry/instrument/Component_1/transformations/rotation_alpha",
+                          "dtype": "string"
+                        }
+                      ],
+                      "children": [
+                        {
+                          "module": "f144",
+                          "config": {
+                            "source": "Component_1:z",
+                            "topic": "ymir_metrology",
+                            "dtype": "double",
+                            "value_units": "m"
+                          },
+                          "attributes": [
+                            {
+                              "name": "units",
+                              "dtype": "string",
+                              "values": "m"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "name": "rotation_alpha",
+                      "type": "group",
+                      "attributes": [
+                        {
+                          "name": "NX_class",
+                          "dtype": "string",
+                          "values": "NXlog"
+                        },
+                        {
+                          "name": "transformation_type",
+                          "dtype": "string",
+                          "values": "rotation"
+                        },
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "degrees"
+                        },
+                        {
+                          "name": "vector",
+                          "dtype": "string",
+                          "values": [
+                            1.0,
+                            0.0,
+                            0.0
+                          ]
+                        },
+                        {
+                          "name": "depends_on",
+                          "values": "/entry/instrument/Component_1/transformations/rotation_beta",
+                          "dtype": "string"
+                        }
+                      ],
+                      "children": [
+                        {
+                          "module": "f144",
+                          "config": {
+                            "source": "Component_1:alpha",
+                            "topic": "ymir_metrology",
+                            "dtype": "double",
+                            "value_units": "degrees"
+                          },
+                          "attributes": [
+                            {
+                              "name": "units",
+                              "dtype": "string",
+                              "values": "degrees"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "name": "rotation_beta",
+                      "type": "group",
+                      "attributes": [
+                        {
+                          "name": "NX_class",
+                          "dtype": "string",
+                          "values": "NXlog"
+                        },
+                        {
+                          "name": "transformation_type",
+                          "dtype": "string",
+                          "values": "rotation"
+                        },
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "degrees"
+                        },
+                        {
+                          "name": "vector",
+                          "dtype": "string",
+                          "values": [
+                            0.0,
+                            1.0,
+                            0.0
+                          ]
+                        },
+                        {
+                          "name": "depends_on",
+                          "values": "/entry/instrument/Component_1/transformations/rotation_gamma",
+                          "dtype": "string"
+                        }
+                      ],
+                      "children": [
+                        {
+                          "module": "f144",
+                          "config": {
+                            "source": "Component_1:beta",
+                            "topic": "ymir_metrology",
+                            "dtype": "double",
+                            "value_units": "degrees"
+                          },
+                          "attributes": [
+                            {
+                              "name": "units",
+                              "dtype": "string",
+                              "values": "degrees"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "name": "rotation_gamma",
+                      "type": "group",
+                      "attributes": [
+                        {
+                          "name": "NX_class",
+                          "dtype": "string",
+                          "values": "NXlog"
+                        },
+                        {
+                          "name": "transformation_type",
+                          "dtype": "string",
+                          "values": "rotation"
+                        },
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "degrees"
+                        },
+                        {
+                          "name": "vector",
+                          "dtype": "string",
+                          "values": [
+                            0.0,
+                            0.0,
+                            1.0
+                          ]
+                        }
+                      ],
+                      "children": [
+                        {
+                          "module": "f144",
+                          "config": {
+                            "source": "Component_1:gamma",
+                            "topic": "ymir_metrology",
+                            "dtype": "double",
+                            "value_units": "degrees"
+                          },
+                          "attributes": [
+                            {
+                              "name": "units",
+                              "dtype": "string",
+                              "values": "degrees"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ],
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "values": "NXtransformations"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "Component_2",
+              "type": "group",
+              "required_tracking": "Component_2",
+              "attributes": [
+                {
+                  "name": "NX_class",
+                  "dtype": "string",
+                  "values": "NXdisk_chopper"
+                }
+              ],
+              "children": [
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "depends_on",
+                    "values": "/entry/instrument/Component_2/transformations/translation_x"
+                  }
+                },
+                {
+                  "type": "group",
+                  "name": "transformations",
+                  "children": [
+                    {
+                      "name": "translation_x",
+                      "type": "group",
+                      "attributes": [
+                        {
+                          "name": "NX_class",
+                          "dtype": "string",
+                          "values": "NXlog"
+                        },
+                        {
+                          "name": "transformation_type",
+                          "dtype": "string",
+                          "values": "translation"
+                        },
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "m"
+                        },
+                        {
+                          "name": "vector",
+                          "dtype": "string",
+                          "values": [
+                            1.0,
+                            0.0,
+                            0.0
+                          ]
+                        },
+                        {
+                          "name": "depends_on",
+                          "values": "/entry/instrument/Component_2/transformations/translation_y",
+                          "dtype": "string"
+                        }
+                      ],
+                      "children": [
+                        {
+                          "module": "f144",
+                          "config": {
+                            "source": "Component_2:x",
+                            "topic": "ymir_metrology",
+                            "dtype": "double",
+                            "value_units": "m"
+                          },
+                          "attributes": [
+                            {
+                              "name": "units",
+                              "dtype": "string",
+                              "values": "m"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "name": "translation_y",
+                      "type": "group",
+                      "attributes": [
+                        {
+                          "name": "NX_class",
+                          "dtype": "string",
+                          "values": "NXlog"
+                        },
+                        {
+                          "name": "transformation_type",
+                          "dtype": "string",
+                          "values": "translation"
+                        },
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "m"
+                        },
+                        {
+                          "name": "vector",
+                          "dtype": "string",
+                          "values": [
+                            0.0,
+                            1.0,
+                            0.0
+                          ]
+                        },
+                        {
+                          "name": "depends_on",
+                          "values": "/entry/instrument/Component_2/transformations/translation_z",
+                          "dtype": "string"
+                        }
+                      ],
+                      "children": [
+                        {
+                          "module": "f144",
+                          "config": {
+                            "source": "Component_2:y",
+                            "topic": "ymir_metrology",
+                            "dtype": "double",
+                            "value_units": "m"
+                          },
+                          "attributes": [
+                            {
+                              "name": "units",
+                              "dtype": "string",
+                              "values": "m"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "name": "translation_z",
+                      "type": "group",
+                      "attributes": [
+                        {
+                          "name": "NX_class",
+                          "dtype": "string",
+                          "values": "NXlog"
+                        },
+                        {
+                          "name": "transformation_type",
+                          "dtype": "string",
+                          "values": "translation"
+                        },
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "m"
+                        },
+                        {
+                          "name": "vector",
+                          "dtype": "string",
+                          "values": [
+                            0.0,
+                            0.0,
+                            1.0
+                          ]
+                        },
+                        {
+                          "name": "depends_on",
+                          "values": "/entry/instrument/Component_2/transformations/rotation_alpha",
+                          "dtype": "string"
+                        }
+                      ],
+                      "children": [
+                        {
+                          "module": "f144",
+                          "config": {
+                            "source": "Component_2:z",
+                            "topic": "ymir_metrology",
+                            "dtype": "double",
+                            "value_units": "m"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "name": "rotation_alpha",
+                      "type": "group",
+                      "attributes": [
+                        {
+                          "name": "NX_class",
+                          "dtype": "string",
+                          "values": "NXlog"
+                        },
+                        {
+                          "name": "transformation_type",
+                          "dtype": "string",
+                          "values": "rotation"
+                        },
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "degrees"
+                        },
+                        {
+                          "name": "vector",
+                          "dtype": "string",
+                          "values": [
+                            1.0,
+                            0.0,
+                            0.0
+                          ]
+                        },
+                        {
+                          "name": "depends_on",
+                          "values": "/entry/instrument/Component_2/transformations/rotation_beta",
+                          "dtype": "string"
+                        }
+                      ],
+                      "children": [
+                        {
+                          "module": "f144",
+                          "config": {
+                            "source": "Component_2:alpha",
+                            "topic": "ymir_metrology",
+                            "dtype": "double",
+                            "value_units": "degrees"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "name": "rotation_beta",
+                      "type": "group",
+                      "attributes": [
+                        {
+                          "name": "NX_class",
+                          "dtype": "string",
+                          "values": "NXlog"
+                        },
+                        {
+                          "name": "transformation_type",
+                          "dtype": "string",
+                          "values": "rotation"
+                        },
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "degrees"
+                        },
+                        {
+                          "name": "vector",
+                          "dtype": "string",
+                          "values": [
+                            0.0,
+                            1.0,
+                            0.0
+                          ]
+                        },
+                        {
+                          "name": "depends_on",
+                          "values": "/entry/instrument/Component_2/transformations/rotation_gamma",
+                          "dtype": "string"
+                        }
+                      ],
+                      "children": [
+                        {
+                          "module": "f144",
+                          "config": {
+                            "source": "Component_2:beta",
+                            "topic": "ymir_metrology",
+                            "dtype": "double",
+                            "value_units": "degrees"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "name": "rotation_gamma",
+                      "type": "group",
+                      "attributes": [
+                        {
+                          "name": "NX_class",
+                          "dtype": "string",
+                          "values": "NXlog"
+                        },
+                        {
+                          "name": "transformation_type",
+                          "dtype": "string",
+                          "values": "rotation"
+                        },
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "degrees"
+                        },
+                        {
+                          "name": "vector",
+                          "dtype": "string",
+                          "values": [
+                            0.0,
+                            0.0,
+                            1.0
+                          ]
+                        }
+                      ],
+                      "children": [
+                        {
+                          "module": "f144",
+                          "config": {
+                            "source": "Component_2:gamma",
+                            "topic": "ymir_metrology",
+                            "dtype": "double",
+                            "value_units": "degrees"
+                          },
+                          "attributes": [
+                            {
+                              "name": "units",
+                              "dtype": "string",
+                              "values": "degrees"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ],
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "values": "NXtransformations"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "Component_3",
+              "type": "group",
+              "required_tracking": "Component_3",
+              "attributes": [
+                {
+                  "name": "NX_class",
+                  "dtype": "string",
+                  "values": "NXdisk_chopper"
+                }
+              ],
+              "children": [
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "depends_on",
+                    "values": "/entry/instrument/Component_3/transformations/translation_x"
+                  }
+                },
+                {
+                  "type": "group",
+                  "name": "transformations",
+                  "children": [
+                    {
+                      "name": "translation_x",
+                      "type": "group",
+                      "attributes": [
+                        {
+                          "name": "NX_class",
+                          "dtype": "string",
+                          "values": "NXlog"
+                        },
+                        {
+                          "name": "transformation_type",
+                          "dtype": "string",
+                          "values": "translation"
+                        },
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "m"
+                        },
+                        {
+                          "name": "vector",
+                          "dtype": "string",
+                          "values": [
+                            1.0,
+                            0.0,
+                            0.0
+                          ]
+                        },
+                        {
+                          "name": "depends_on",
+                          "values": "/entry/instrument/Component_3/transformations/translation_y",
+                          "dtype": "string"
+                        }
+                      ],
+                      "children": [
+                        {
+                          "module": "f144",
+                          "config": {
+                            "source": "Component_3:x",
+                            "topic": "ymir_metrology",
+                            "dtype": "double",
+                            "value_units": "m"
+                          },
+                          "attributes": [
+                            {
+                              "name": "units",
+                              "dtype": "string",
+                              "values": "m"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "name": "translation_y",
+                      "type": "group",
+                      "attributes": [
+                        {
+                          "name": "NX_class",
+                          "dtype": "string",
+                          "values": "NXlog"
+                        },
+                        {
+                          "name": "transformation_type",
+                          "dtype": "string",
+                          "values": "translation"
+                        },
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "m"
+                        },
+                        {
+                          "name": "vector",
+                          "dtype": "string",
+                          "values": [
+                            0.0,
+                            1.0,
+                            0.0
+                          ]
+                        },
+                        {
+                          "name": "depends_on",
+                          "values": "/entry/instrument/Component_3/transformations/translation_z",
+                          "dtype": "string"
+                        }
+                      ],
+                      "children": [
+                        {
+                          "module": "f144",
+                          "config": {
+                            "source": "Component_3:y",
+                            "topic": "ymir_metrology",
+                            "dtype": "double",
+                            "value_units": "m"
+                          },
+                          "attributes": [
+                            {
+                              "name": "units",
+                              "dtype": "string",
+                              "values": "m"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "name": "translation_z",
+                      "type": "group",
+                      "attributes": [
+                        {
+                          "name": "NX_class",
+                          "dtype": "string",
+                          "values": "NXlog"
+                        },
+                        {
+                          "name": "transformation_type",
+                          "dtype": "string",
+                          "values": "translation"
+                        },
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "m"
+                        },
+                        {
+                          "name": "vector",
+                          "dtype": "string",
+                          "values": [
+                            0.0,
+                            0.0,
+                            1.0
+                          ]
+                        },
+                        {
+                          "name": "depends_on",
+                          "values": "/entry/instrument/Component_3/transformations/rotation_alpha",
+                          "dtype": "string"
+                        }
+                      ],
+                      "children": [
+                        {
+                          "module": "f144",
+                          "config": {
+                            "source": "Component_3:z",
+                            "topic": "ymir_metrology",
+                            "dtype": "double",
+                            "value_units": "m"
+                          },
+                          "attributes": [
+                            {
+                              "name": "units",
+                              "dtype": "string",
+                              "values": "m"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "name": "rotation_alpha",
+                      "type": "group",
+                      "attributes": [
+                        {
+                          "name": "NX_class",
+                          "dtype": "string",
+                          "values": "NXlog"
+                        },
+                        {
+                          "name": "transformation_type",
+                          "dtype": "string",
+                          "values": "rotation"
+                        },
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "degrees"
+                        },
+                        {
+                          "name": "vector",
+                          "dtype": "string",
+                          "values": [
+                            1.0,
+                            0.0,
+                            0.0
+                          ]
+                        },
+                        {
+                          "name": "depends_on",
+                          "values": "/entry/instrument/Component_3/transformations/rotation_beta",
+                          "dtype": "string"
+                        }
+                      ],
+                      "children": [
+                        {
+                          "module": "f144",
+                          "config": {
+                            "source": "Component_3:alpha",
+                            "topic": "ymir_metrology",
+                            "dtype": "double",
+                            "value_units": "degrees"
+                          },
+                          "attributes": [
+                            {
+                              "name": "units",
+                              "dtype": "string",
+                              "values": "degrees"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "name": "rotation_beta",
+                      "type": "group",
+                      "attributes": [
+                        {
+                          "name": "NX_class",
+                          "dtype": "string",
+                          "values": "NXlog"
+                        },
+                        {
+                          "name": "transformation_type",
+                          "dtype": "string",
+                          "values": "rotation"
+                        },
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "degrees"
+                        },
+                        {
+                          "name": "vector",
+                          "dtype": "string",
+                          "values": [
+                            0.0,
+                            1.0,
+                            0.0
+                          ]
+                        },
+                        {
+                          "name": "depends_on",
+                          "values": "/entry/instrument/Component_3/transformations/rotation_gamma",
+                          "dtype": "string"
+                        }
+                      ],
+                      "children": [
+                        {
+                          "module": "f144",
+                          "config": {
+                            "source": "Component_3:beta",
+                            "topic": "ymir_metrology",
+                            "dtype": "double",
+                            "value_units": "degrees"
+                          },
+                          "attributes": [
+                            {
+                              "name": "units",
+                              "dtype": "string",
+                              "values": "degrees"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "name": "rotation_gamma",
+                      "type": "group",
+                      "attributes": [
+                        {
+                          "name": "NX_class",
+                          "dtype": "string",
+                          "values": "NXlog"
+                        },
+                        {
+                          "name": "transformation_type",
+                          "dtype": "string",
+                          "values": "rotation"
+                        },
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "degrees"
+                        },
+                        {
+                          "name": "vector",
+                          "dtype": "string",
+                          "values": [
+                            0.0,
+                            0.0,
+                            1.0
+                          ]
+                        }
+                      ],
+                      "children": [
+                        {
+                          "module": "f144",
+                          "config": {
+                            "source": "Component_3:gamma",
+                            "topic": "ymir_metrology",
+                            "dtype": "double",
+                            "value_units": "degrees"
+                          },
+                          "attributes": [
+                            {
+                              "name": "units",
+                              "dtype": "string",
+                              "values": "degrees"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ],
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "values": "NXtransformations"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "$USERS$"
+      ]
+    }
+  ]
+}

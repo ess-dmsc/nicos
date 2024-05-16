@@ -26,7 +26,8 @@ import json
 import time
 
 from nicos import session
-from nicos.core import Device, NicosError, Override, Param, relative_path
+from nicos.core import Device, NicosError, Override, Param, relative_path, \
+    ConfigurationError
 
 from nicos_ess.nexus.converter import NexusTemplateConverter
 
@@ -65,6 +66,12 @@ class NexusStructureJsonFile(NexusStructureProvider):
             structure = file.read()
         return structure
 
+    def _check_for_device(self, name):
+        try:
+            return session.getDevice(name)
+        except ConfigurationError:
+            return None
+
     def _filter_structure(self, structure):
         loaded_devices = [str(dev) for dev in session.devices]
         nexus_alias = session.getDevice('NexusStructure').alias
@@ -74,6 +81,9 @@ class NexusStructureJsonFile(NexusStructureProvider):
                            loaded_devices)
         self._filter_items(structure, self._is_nexus_alias_correct,
                            nexus_alias)
+        if device := self._check_for_device('component_tracking_ODIN'):
+            self._filter_items(structure, self._is_tracking_valid,
+                               device.valid_components)
         return json.dumps(structure)
 
     def _filter_items(self, data, condition_func, condition_arg):
@@ -100,6 +110,11 @@ class NexusStructureJsonFile(NexusStructureProvider):
             return True
 
         return item['required_nexus'] == nexus_alias
+
+    def _is_tracking_valid(self, item, valid_tracking):
+        if not isinstance(item, dict) or not item.get('required_tracking'):
+            return True
+        return item['required_tracking'] in valid_tracking
 
     def _insert_metadata(self, structure, metainfo, counter):
         structure = structure.replace('$TITLE$', metainfo[('Exp', 'title')][0])
