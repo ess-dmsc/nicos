@@ -1,40 +1,29 @@
-This is the NICOS instrument control system
-===========================================
+# NICOS
 
-The project homepage is at:
-
-https://nicos-controls.org
-
-Documentation:
-
-https://forge.frm2.tum.de/nicos/doc/nicos-master/documentation/
-
-
-The primary repository is at:
-
-https://forge.frm2.tum.de/review/q/project:frm2%252Fnicos%252Fnicos
-
-We also provide a (read-only) github mirror:
-
-https://github.com/mlz-ictrl/nicos
-
-
-The bugtracker is here:
-
-https://forge.frm2.tum.de/redmine/projects/nicos
-
-
-Requirements
-------------
-
-See the `INSTALL` file.
-
-
-Demo
-----
-
-Install the requirements, then run this to start a basic system and experiment:
-
+## Server
+Install the requirements:
 ```
-$ bin/nicos-demo
+pip install -r requirements.txt
+```
+Start the cache:
+```
+./bin/nicos-cache
+```
+In a different terminal, start the poller:
+```
+./bin/nicos-poller
+```
+In a different terminal, start the daemon:
+```
+./bin/nicos-daemon
+```
+
+## Client
+Install the requirements:
+```
+pip install -r requirements-gui.txt
+```
+Start the client:
+```
+./bin/nicos-gui -c nico_ess/guiconfig.py
 ```
