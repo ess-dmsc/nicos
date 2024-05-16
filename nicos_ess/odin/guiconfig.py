@@ -25,6 +25,8 @@ main_window = docked(
                          panel(
                              'nicos_ess.odin.gui.panels.live.MultiLiveDataPanel'
                          )),
+                        ('Component Tracking',
+                         panel('nicos_ess.odin.gui.metrology_system.MetrologySystemPanel')),
                         ('Script Status',
                          panel(
                              'nicos_ess.gui.panels.status.ScriptStatusPanel',

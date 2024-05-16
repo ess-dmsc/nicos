@@ -6,7 +6,7 @@ sysconfig = dict(
     cache='localhost',
     instrument='ODIN',
     experiment='Exp',
-    datasinks=['conssink', 'daemonsink', 'liveview'],
+    datasinks=['conssink', 'daemonsink', 'liveview', 'FileWriterControl'],
 )
 
 modules = ['nicos.commands.standard', 'nicos_ess.commands']
@@ -48,5 +48,39 @@ devices = dict(
         'nicos_ess.devices.scichat.ScichatBot',
         description='Sends messages to SciChat',
         brokers=KAFKA_BROKERS,
+    ),
+    NexusStructure_Basic=device(
+        'nicos_ess.devices.datasinks.nexus_structure.NexusStructureJsonFile',
+        description='Provides the NeXus structure',
+        nexus_config_path='nicos_ess/odin/nexus/odin_nexus.json',
+        visibility=(),
+    ),
+    NexusStructure_AreaDetector=device(
+        'nicos_ess.devices.datasinks.nexus_structure.NexusStructureAreaDetector',
+        description='Provides the NeXus structure',
+        nexus_config_path='nicos_ess/odin/nexus/odin_nexus.json',
+        area_det_collector_device='area_detector_collector',
+        visibility=(),
+    ),
+    NexusStructure=device(
+        'nicos.devices.generic.DeviceAlias',
+        devclass=
+        'nicos_ess.devices.datasinks.nexus_structure.NexusStructureJsonFile',
+    ),
+    FileWriterStatus=device(
+        'nicos_ess.devices.datasinks.file_writer.FileWriterStatus',
+        description='Status of the file-writer',
+        brokers=['10.100.1.19:8093'],
+        statustopic='odin_filewriter',
+        unit='',
+    ),
+    FileWriterControl=device(
+        'nicos_ess.devices.datasinks.file_writer.FileWriterControlSink',
+        description='Control for the file-writer',
+        brokers=['10.100.1.19:8093'],
+        pool_topic='ess_filewriter_pool',
+        status='FileWriterStatus',
+        nexus='NexusStructure',
+        use_instrument_directory=True,
     ),
 )
