@@ -1,3 +1,0 @@
-To build the exe file, invoke:
-
-pyinstaller nicos-gui.spec
