@@ -591,8 +591,7 @@ class MainWindow(DlgUtils, QMainWindow):
     def initDataReaders(self):
         try:
             # just import to register all default readers
-            # pylint: disable=unused-import
-            import nicos.devices.datasinks
+            import nicos.devices.datasinks  # noqa: F401 unused-import
         except ImportError:
             pass
         classes = self.gui_conf.options.get("reader_classes", [])
@@ -840,6 +839,7 @@ class MainWindow(DlgUtils, QMainWindow):
         self.actionViewOnly.setEnabled(True)
         self.actionEmergencyStop.setEnabled(not self.client.viewonly)
         self.actionConnect.setText("Disconnect")
+        self.actionViewOnly.setChecked(self.client.viewonly)
 
         # set focus to command input, if present
         for panel in self.panels:
