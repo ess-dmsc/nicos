@@ -131,6 +131,11 @@ QToolBar > QComboBox::indicator{
     width: 0px;
 }
 
+QToolBar QWidget {
+    color: white; /* Ensuring text color is white for all widgets in toolbars and panels */
+    background: transparent; /* Maintain transparency for background */
+}
+
 /* -------------------- QTabWidget -------------------- */
 
 QTabWidget {
