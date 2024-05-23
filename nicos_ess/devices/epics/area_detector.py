@@ -26,7 +26,7 @@ import time
 from enum import Enum
 
 import numpy
-from streaming_data_types import deserialise_ADAr
+from streaming_data_types import deserialise_ADAr, deserialise_ad00
 from streaming_data_types.utils import get_schema
 
 from nicos import session
@@ -42,6 +42,7 @@ from nicos_ess.devices.kafka.consumer import KafkaSubscriber
 
 deserialiser_by_schema = {
     'ADAr': deserialise_ADAr,
+    'ad00': deserialise_ad00,
 }
 
 data_type_t = {

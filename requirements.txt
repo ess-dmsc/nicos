@@ -1,7 +1,7 @@
 --extra-index-url https://forge.frm2.tum.de/simple
 caproto
 confluent-kafka>=2.1.0
-ess-streaming-data-types>=0.21.0
+ess-streaming-data-types>=0.25.0
 file-writer-control>=1.1.5
 flake8>=5.0.0
 graypy
