@@ -24,11 +24,8 @@
 import time
 import uuid
 
-from confluent_kafka import OFFSET_END, Consumer, KafkaException, \
-    TopicPartition
+from confluent_kafka import OFFSET_END, Consumer, KafkaException, TopicPartition
 
-from nicos.core import DeviceMixinBase, Param, host, listof
-from nicos.core.constants import SIMULATION
 from nicos.core.errors import ConfigurationError
 from nicos.utils import createThread
 
@@ -39,7 +36,7 @@ class KafkaConsumer:
     """Class for wrapping the Confluent Kafka consumer."""
 
     @staticmethod
-    def create(brokers, starting_offset='latest', **options):
+    def create(brokers, starting_offset="latest", **options):
         """Factory method for creating a consumer.
 
         Will automatically apply SSL settings if they are defined in the
@@ -53,7 +50,7 @@ class KafkaConsumer:
         options = {**options, **create_sasl_config()}
         return KafkaConsumer(brokers, starting_offset, **options)
 
-    def __init__(self, brokers, starting_offset='latest', **options):
+    def __init__(self, brokers, starting_offset="latest", **options):
         """
         :param brokers: The broker addresses to connect to.
         :param starting_offset: Either 'latest' (default) or 'earliest'.
@@ -61,9 +58,9 @@ class KafkaConsumer:
             documents for the full list of options.
         """
         config = {
-            'bootstrap.servers': ','.join(brokers),
-            'group.id': uuid.uuid4(),
-            'auto.offset.reset': starting_offset,
+            "bootstrap.servers": ",".join(brokers),
+            "group.id": uuid.uuid4(),
+            "auto.offset.reset": starting_offset,
         }
         self._consumer = Consumer({**config, **options})
 
@@ -77,18 +74,17 @@ class KafkaConsumer:
         try:
             metadata = self._consumer.list_topics(topic_name, timeout=5)
         except KafkaException as exc:
-            raise ConfigurationError('could not obtain metadata for topic '
-                                     f'{topic_name}') from exc
+            raise ConfigurationError(
+                "could not obtain metadata for topic " f"{topic_name}"
+            ) from exc
 
         if topic_name not in metadata.topics:
-            raise ConfigurationError(f'provided topic {topic_name} does '
-                                     'not exist')
+            raise ConfigurationError(f"provided topic {topic_name} does " "not exist")
 
-        partitions = partitions if partitions \
-            else metadata.topics[topic_name].partitions
-        topic_partitions = [
-            TopicPartition(topic_name, p) for p in partitions
-        ]
+        partitions = (
+            partitions if partitions else metadata.topics[topic_name].partitions
+        )
+        topic_partitions = [TopicPartition(topic_name, p) for p in partitions]
 
         self._consumer.assign(topic_partitions)
 
@@ -142,7 +138,7 @@ class KafkaConsumer:
                 except KafkaException:
                     time.sleep(0.1)
             return
-        raise RuntimeError('failed to seek offset')
+        raise RuntimeError("failed to seek offset")
 
     def assignment(self):
         """
@@ -161,80 +157,52 @@ class KafkaConsumer:
         self._seek(partitions, timeout_s)
 
 
-class KafkaSubscriber(DeviceMixinBase):
-    """ Receives messages from Kafka, can subscribe to a topic and get all
-    new messages from the topic if required via a callback method
-    *new_message_callback*.
-    """
+class KafkaSubscriber:
+    """Continuously listens for messages on the specified topics"""
 
-    parameters = {
-        'brokers':
-            Param('List of kafka brokers to connect to',
-                  type=listof(host(defaultport=9092)),
-                  mandatory=True,
-                  preinit=True,
-                  userparam=False)
-    }
-    _updater_thread = None
+    def __init__(self, brokers):
+        self._consumer = KafkaConsumer.create(brokers)
+        self._polling_thread = None
+        self._stop_requested = False
+        self._messages_callback = None
+        self._no_messages_callback = None
 
-    def doPreinit(self, mode):
-        if mode != SIMULATION:
-            self._consumer = KafkaConsumer.create(self.brokers)
-        else:
-            self._consumer = None
+    def subscribe(self, topics, messages_callback, no_messages_callback=None):
+        self.stop_consuming(True)
 
-        # Settings for thread to fetch new message
-        self._stoprequest = True
+        self._consumer.unsubscribe()
+        for t in topics:
+            self._consumer.subscribe(t)
 
-    def doShutdown(self):
-        if self._updater_thread is not None:
-            self._stoprequest = True
-            if self._updater_thread.is_alive():
-                self._updater_thread.join()
-            if self._consumer:
-                self._consumer.close()
+        self._messages_callback = messages_callback
+        self._no_messages_callback = no_messages_callback
+        self._stop_requested = False
+        self._polling_thread = createThread(
+            f"polling_thread_{int(time.monotonic())}", self._monitor_topics
+        )
+
+    def stop_consuming(self, wait_for_join=False):
+        self._stop_requested = True
+        if wait_for_join and self._polling_thread:
+            self._polling_thread.join()
+
+    def close(self):
+        self.stop_consuming(True)
+        self._consumer.close()
 
     @property
     def consumer(self):
         return self._consumer
 
-    def subscribe(self, topic):
-        """ Create the thread that provides call backs on new messages
-        """
-        # Remove all the assigned topics
-        self._consumer.unsubscribe()
-
-        self._consumer.subscribe(topic)
-
-        self._stoprequest = False
-        self._updater_thread = createThread('updater_' + topic,
-                                            self._get_new_messages)
-        self.log.debug('subscribed to updates from topic: %s' % topic)
-
-    def _get_new_messages(self):
-        while not self._stoprequest:
-            time.sleep(self._long_loop_delay)
-
-            messages = []
+    def _monitor_topics(self):
+        while not self._stop_requested:
             data = self._consumer.poll(timeout_ms=5)
+            messages = []
             if data:
                 messages.append((data.timestamp(), data.value()))
 
-            if messages:
-                self.new_messages_callback(messages)
-            else:
-                self.no_messages_callback()
-        self.log.debug("KafkaSubscriber thread finished")
-
-    def new_messages_callback(self, messages):
-        """This method is called whenever a new messages appear on
-        the topic. The subclasses should define this method if
-        a callback is required when new messages appear.
-        :param messages: list of tuples of timestamp and raw message
-        """
-
-    def no_messages_callback(self):
-        """This method is called if no messages are on the topic.
-        Subclasses should define this method if they are interested
-        in this.
-        """
+            if messages and self._messages_callback:
+                self._messages_callback(messages)
+            elif self._no_messages_callback:
+                self._no_messages_callback()
+            time.sleep(0.5)
