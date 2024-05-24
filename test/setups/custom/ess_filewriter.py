@@ -27,11 +27,6 @@ sysconfig = dict(
 )
 
 devices = dict(
-    KafkaFileWriter=device('nicos_ess.devices.datasinks.nexussink.NexusFileWriterStatus',
-        description='Status for nexus file writing',
-        brokers=['someserver:9092'],
-        statustopic='TEST_writerStatus',
-    ),
     Exp=device('nicos.devices.experiment.Experiment',
         description='experiment object',
         dataroot='data',
