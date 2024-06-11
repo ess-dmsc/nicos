@@ -1,3 +1,5 @@
+import logging
+
 import pytest
 from mock.mock import MagicMock
 import fnmatch
@@ -70,7 +72,21 @@ class TestableRedisCacheDatabase(RedisCacheDatabase):
     """
 
     def __init__(self, *args, **kwargs):
+        name = "TestableRedisCacheDatabase"
+        self._name = name
+        self._config = {}
+        self._params = {"name": name}
+        self._infoparams = []
+        self._adevs = {}
+        self._sdevs = set()
+        self._controllers = set()
+        self._cache = None
+        self.log = logging.getLogger(name)
+        self.log.setLevel(logging.DEBUG)
         self.doInit("test", injected_client=RedisClientStub())
+
+    def __setattr__(self, name, value):
+        object.__setattr__(self, name, value)
 
 
 @pytest.fixture

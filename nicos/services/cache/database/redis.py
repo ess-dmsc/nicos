@@ -1,4 +1,3 @@
-import logging
 import threading
 
 from nicos.core import Param
@@ -15,8 +14,6 @@ class RedisCacheDatabase(CacheDatabase):
     }
 
     def doInit(self, mode, injected_client=None):
-        self._db = {}
-        self._db_lock = threading.Lock()
         self._client = (
             injected_client
             if injected_client
@@ -71,15 +68,15 @@ class RedisCacheDatabase(CacheDatabase):
 
     def _check_get_key_format(self, key):
         if "###" in key:
-            logging.debug(f"Key contains '###': {key}")
+            self.log.debug(f"Key contains '###': {key}")
             return False
 
         if key.endswith("_ts"):
-            logging.debug(f"Skipping time series key: {key}")
+            self.log.debug(f"Skipping time series key: {key}")
             return False
 
         if not self._redis_key_exists(key):
-            logging.debug(f"Key does not exist: {key}")
+            self.log.debug(f"Key does not exist: {key}")
             return False
         return True
 
@@ -87,7 +84,7 @@ class RedisCacheDatabase(CacheDatabase):
         required_keys = ["time", "ttl", "value"]
 
         if not all(key in data for key in required_keys):
-            logging.warning(f"Missing keys in data: {data}")
+            self.log.warning(f"Missing keys in data: {data}")
             return None
 
         if data["ttl"] == "None":
@@ -113,11 +110,11 @@ class RedisCacheDatabase(CacheDatabase):
         key, ts_key = self._format_key(category, subkey)
 
         if "*" in key:
-            logging.warning(f"Wildcard in key: {key}")
+            self.log.warning(f"Wildcard in key: {key}")
             return
 
         if type(entry.value) not in [int, float, str, list, dict, type(None)]:
-            logging.warning(f"Unsupported value type: {type(entry.value)}")
+            self.log.warning(f"Unsupported value type: {type(entry.value)}")
             return
 
         try:
@@ -125,7 +122,7 @@ class RedisCacheDatabase(CacheDatabase):
             if entry.ttl:
                 float(entry.ttl)
         except ValueError:
-            logging.warning(f"Invalid time: {entry.time} or ttl: {entry.ttl}")
+            self.log.warning(f"Invalid time: {entry.time} or ttl: {entry.ttl}")
             return
 
         time = entry.time if entry.time else str(entry.time)
@@ -145,7 +142,7 @@ class RedisCacheDatabase(CacheDatabase):
                 self._create_timeseries(ts_key)
                 self._add_to_timeseries(ts_key, timestamp, numeric_value)
         except (ValueError, TypeError):
-            logging.debug("Don't add timeseries because value is not numeric")
+            self.log.debug("Don't add timeseries because value is not numeric")
 
     def getEntry(self, dbkey):
         key, _ = self._format_key(dbkey[0], dbkey[1])
@@ -178,7 +175,7 @@ class RedisCacheDatabase(CacheDatabase):
         _, ts_key = self._format_key(dbkey[0], dbkey[1])
 
         if not self._redis_key_exists(ts_key):
-            logging.debug(f"Time series key does not exist: {ts_key}")
+            self.log.debug(f"Time series key does not exist: {ts_key}")
             return []
 
         try:
@@ -195,10 +192,10 @@ class RedisCacheDatabase(CacheDatabase):
             return entries
 
         except Exception as e:
-            logging.exception(f"Failed to query history from Redis: {e}")
+            self.log.exception(f"Failed to query history from Redis: {e}")
             return []
 
     def doShutdown(self):
-        logging.info("Shutting down RedisCacheDatabase")
-        self._client.shutdown()
+        self.log.info("Shutting down RedisCacheDatabase")
+        self.log.info("Closing Redis connection")
         self._client.close()
