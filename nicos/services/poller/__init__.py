@@ -440,6 +440,17 @@ class Poller(Device):
         # * self.neverpoll: never poll, even if loaded
         #
         mastersetups = set(self._cache.get(session, 'mastersetup') or [])
+
+        print("----")
+        print("----")
+        print("----")
+        print("----")
+        print(mastersetups)
+        print("----")
+        print("----")
+        print("----")
+        print("----")
+
         if self.autosetup:
             self._setups = mastersetups
         else:
