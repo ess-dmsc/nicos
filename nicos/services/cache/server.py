@@ -48,7 +48,7 @@ from nicos.protocols.cache import BUFSIZE, CYCLETIME, DEFAULT_CACHE_PORT, \
 # pylint: disable=unused-import
 from nicos.services.cache.database import CacheDatabase, \
     FlatfileCacheDatabase, MemoryCacheDatabase, \
-    MemoryCacheDatabaseWithHistory
+    MemoryCacheDatabaseWithHistory, RedisCacheDatabase
 from nicos.utils import closeSocket, createThread, getSysInfo, loggers, \
     parseHostPort
 
