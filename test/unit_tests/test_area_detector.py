@@ -1,7 +1,7 @@
 import pytest
 from nicos_ess.devices.epics.area_detector import AreaDetector
 from test.unit_tests.class_factory.class_factory import (
-    test_factory,
+    class_factory,
     _initParam,
     base_init,
     base_setattr,
@@ -18,7 +18,7 @@ def area_detector():
         "_initParam": _initParam,
     }
 
-    TestAreaDetector = test_factory(AreaDetector, method_overrides)
+    TestAreaDetector = class_factory(AreaDetector, method_overrides)
 
     test_ad = TestAreaDetector(
         name="orca_camera",

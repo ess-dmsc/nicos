@@ -82,7 +82,7 @@ def init(self):
     self._epics_wrapper = HardwareStub(self)
 
 
-def test_factory(original_class, method_overrides):
+def class_factory(original_class, method_overrides):
     class_name = "Testable" + original_class.__name__
     class_dict = dict(original_class.__dict__)
     for method_name, new_method in method_overrides.items():
@@ -101,7 +101,7 @@ if __name__ == "__main__":
         "_initParam": _initParam,
     }
 
-    TestAreaDetector = test_factory(AreaDetector, method_overrides)
+    TestAreaDetector = class_factory(AreaDetector, method_overrides)
 
     test_ad = TestAreaDetector(
         name="orca_camera",
