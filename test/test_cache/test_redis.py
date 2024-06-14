@@ -196,6 +196,24 @@ def test_get_data_handle_non_numeric_values(db):
     assert db._get_data("test/key/value").value == "not_a_number"
 
 
+def test_int_preserved_as_int(db):
+    original_cache_entry = CacheEntry("123", "456", 42)
+    db._set_data("test/key", "value", original_cache_entry)
+    assert db._get_data("test/key/value").time == 123.0
+    assert db._get_data("test/key/value").ttl == 456.0
+    assert db._get_data("test/key/value").value == 42
+    assert isinstance(db._get_data("test/key/value").value, int)
+
+
+def test_float_preserved_as_float(db):
+    original_cache_entry = CacheEntry("123", "456", 3.14)
+    db._set_data("test/key", "value", original_cache_entry)
+    assert db._get_data("test/key/value").time == 123.0
+    assert db._get_data("test/key/value").ttl == 456.0
+    assert db._get_data("test/key/value").value == 3.14
+    assert isinstance(db._get_data("test/key/value").value, float)
+
+
 def test_query_history(db):
     db._set_data("test/key", "value", CacheEntry(123, 456, 3.14))
     db._set_data("test/key", "value", CacheEntry(124, 456, 3.15))

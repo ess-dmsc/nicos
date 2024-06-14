@@ -54,8 +54,11 @@ class RedisCacheDatabase(CacheDatabase):
     def _redis_pubsub(self):
         return self._client.pubsub()
 
-    def _convert_to_number_if_possible(self, value):
+    def _convert_to_number_if_possible(self, value, try_int=False):
         try:
+            is_string_float = "." in value or "e" in value or "E" in value
+            if try_int and not is_string_float:
+                return int(value)
             return float(value)
         except ValueError:
             return value
@@ -93,7 +96,7 @@ class RedisCacheDatabase(CacheDatabase):
         return CacheEntry(
             self._convert_to_number_if_possible(data.get("time", None)),
             self._convert_to_number_if_possible(data.get("ttl", None)),
-            self._convert_to_number_if_possible(data.get("value", None)),
+            self._convert_to_number_if_possible(data.get("value", None), True),
         )
 
     def _get_data(self, key):
