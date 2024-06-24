@@ -1,3 +1,4 @@
+# ruff: noqa: F821
 description = "system setup"
 
 group = "lowlevel"
@@ -10,8 +11,6 @@ sysconfig = dict(
 )
 
 modules = ["nicos.commands.standard", "nicos_ess.commands"]
-
-KAFKA_BROKERS = ["10.100.1.19:8093"]
 
 devices = dict(
     ODIN=device(
@@ -39,12 +38,12 @@ devices = dict(
         "nicos_ess.devices.forwarder.EpicsKafkaForwarder",
         description="Monitors the status of the Forwarder",
         statustopic="odin_forwarder_status",
-        brokers=KAFKA_BROKERS,
+        brokers=configdata("config.KAFKA_BROKERS"),
     ),
     SciChat=device(
         "nicos_ess.devices.scichat.ScichatBot",
         description="Sends messages to SciChat",
-        brokers=KAFKA_BROKERS,
+        brokers=configdata("config.KAFKA_BROKERS"),
     ),
     NexusStructure_Basic=device(
         "nicos_ess.devices.datasinks.nexus_structure.NexusStructureJsonFile",
