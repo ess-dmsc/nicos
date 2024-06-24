@@ -1,12 +1,13 @@
-description = 'ODIN Component Tracking System'
+# ruff: noqa: F821
+description = "ODIN Component Tracking System"
 
-group = 'optional'
+group = "optional"
 
 devices = dict(
     component_tracking=device(
-        'nicos_ess.odin.devices.component_tracking.ComponentTrackingDevice',
-        description='The component tracking system of ODIN',
-        brokers=["10.100.1.19:8093"],
-        response_topic="ymir_metrology"
+        "nicos_ess.odin.devices.component_tracking.ComponentTrackingDevice",
+        description="The component tracking system of ODIN",
+        brokers=configdata("config.KAFKA_BROKERS"),
+        response_topic="ymir_metrology",
     ),
 )
