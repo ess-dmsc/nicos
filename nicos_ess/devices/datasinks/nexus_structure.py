@@ -23,46 +23,49 @@
 # *****************************************************************************
 import copy
 import json
-import time
 
 from nicos import session
-from nicos.core import Device, NicosError, Override, Param, relative_path, \
-    ConfigurationError
+from nicos.core import (
+    Device,
+    NicosError,
+    Override,
+    Param,
+    relative_path,
+    ConfigurationError,
+)
 
 from nicos_ess.nexus.converter import NexusTemplateConverter
 
 
 class NexusStructureProvider(Device):
-
     parameter_overrides = {
-        'visibility':
-            Override(default=()),
+        "visibility": Override(default=()),
     }
 
     def get_structure(self, metainfo, counter):
-        raise NotImplementedError('must implement get_structure method')
+        raise NotImplementedError("must implement get_structure method")
 
 
 class NexusStructureJsonFile(NexusStructureProvider):
     parameters = {
-        'nexus_config_path':
-            Param('NeXus configuration filepath',
-                  type=relative_path,
-                  mandatory=True,
-                  userparam=True,
-                  settable=True),
+        "nexus_config_path": Param(
+            "NeXus configuration filepath",
+            type=relative_path,
+            mandatory=True,
+            userparam=True,
+            settable=True,
+        ),
     }
 
     def get_structure(self, metainfo, counter):
         structure = self._load_structure()
+        structure = self._insert_extra_devices(structure)
         structure = self._filter_structure(structure)
-        structure = self._insert_metadata(
-            structure, metainfo, counter
-        )
+        structure = self._insert_metadata(structure, metainfo, counter)
         return structure
 
     def _load_structure(self):
-        with open(self.nexus_config_path, 'r', encoding='utf-8') as file:
+        with open(self.nexus_config_path, "r", encoding="utf-8") as file:
             structure = file.read()
         return structure
 
@@ -74,100 +77,99 @@ class NexusStructureJsonFile(NexusStructureProvider):
 
     def _filter_structure(self, structure):
         loaded_devices = [str(dev) for dev in session.devices]
-        nexus_alias = session.getDevice('NexusStructure').alias
+        nexus_alias = session.getDevice("NexusStructure").alias
 
         structure = json.loads(structure)
-        self._filter_items(structure, self._are_required_devices_loaded,
-                           loaded_devices)
-        self._filter_items(structure, self._is_nexus_alias_correct,
-                           nexus_alias)
-        if device := self._check_for_device('component_tracking_ODIN'):
-            self._filter_items(structure, self._is_tracking_valid,
-                               device.valid_components)
+        self._filter_items(structure, self._are_required_devices_loaded, loaded_devices)
+        self._filter_items(structure, self._is_nexus_alias_correct, nexus_alias)
+        if device := self._check_for_device("component_tracking_ODIN"):
+            self._filter_items(
+                structure, self._is_tracking_valid, device.valid_components
+            )
         return json.dumps(structure)
 
     def _filter_items(self, data, condition_func, condition_arg):
-        data['children'] = [
-            item for item in data['children']
-            if condition_func(item, condition_arg)
-            ]
+        data["children"] = [
+            item for item in data["children"] if condition_func(item, condition_arg)
+        ]
 
-        for item in data['children']:
-            if 'children' in item:
+        for item in data["children"]:
+            if "children" in item:
                 self._filter_items(item, condition_func, condition_arg)
 
     def _are_required_devices_loaded(self, item, loaded_devices):
-        if not isinstance(item, dict) or 'required_devices' not in item:
+        if not isinstance(item, dict) or "required_devices" not in item:
             return True
 
-        return all(
-            dev in loaded_devices
-            for dev in item['required_devices']
-        )
+        return all(dev in loaded_devices for dev in item["required_devices"])
 
     def _is_nexus_alias_correct(self, item, nexus_alias):
-        if not isinstance(item, dict) or not item.get('required_nexus'):
+        if not isinstance(item, dict) or not item.get("required_nexus"):
             return True
 
-        return item['required_nexus'] == nexus_alias
+        return item["required_nexus"] == nexus_alias
 
     def _is_tracking_valid(self, item, valid_tracking):
-        if not isinstance(item, dict) or not item.get('required_tracking'):
+        if not isinstance(item, dict) or not item.get("required_tracking"):
             return True
-        return item['required_tracking'] in valid_tracking
+        return item["required_tracking"] in valid_tracking
 
     def _insert_metadata(self, structure, metainfo, counter):
-        structure = structure.replace('$TITLE$', metainfo[('Exp', 'title')][0])
-        structure = structure.replace('$EXP_ID$',
-                                      metainfo[('Exp', 'proposal')][0])
-        structure = structure.replace('$ENTRY_ID$', str(counter))
-        structure = structure.replace('$JOB_ID$',
-                                      metainfo[('Exp', 'job_id')][0])
+        structure = structure.replace("$TITLE$", metainfo[("Exp", "title")][0])
+        structure = structure.replace("$EXP_ID$", metainfo[("Exp", "proposal")][0])
+        structure = structure.replace("$ENTRY_ID$", str(counter))
+        structure = structure.replace("$JOB_ID$", metainfo[("Exp", "job_id")][0])
         structure = self._insert_users(structure, metainfo)
         structure = self._insert_samples(structure, metainfo)
         return structure
 
-    def _generate_nxclass_template(self,
-                                   nx_class,
-                                   prefix,
-                                   entities,
-                                   skip_keys=None):
+    def _insert_extra_devices(self, structure):
+        extra_devices = session.getDevice("KafkaForwarder").get_nexus_json()
+        if not extra_devices:
+            return structure
+        structure_json = json.loads(structure)
+
+        for item in structure_json["children"][0]["children"]:  # Entry children
+            if item.get("name", "") == "instrument":
+                item["children"].extend(extra_devices)
+                return json.dumps(structure_json)
+
+        self.log.warning("Could not find the instrument group in the NeXus")
+        return structure
+
+    def _generate_nxclass_template(self, nx_class, prefix, entities, skip_keys=None):
         temp = []
         for entity in entities:
-            entity_name = entity.get('name', '').replace(' ', '')
+            entity_name = entity.get("name", "").replace(" ", "")
             if not entity_name:
                 continue
 
             result = {
-                'type': 'group',
-                'name': f'{prefix}_{entity_name}',
-                'attributes': {
-                    'NX_class': nx_class
-                },
-                'children': [],
+                "type": "group",
+                "name": f"{prefix}_{entity_name}",
+                "attributes": {"NX_class": nx_class},
+                "children": [],
             }
             for n, v in entity.items():
                 if skip_keys and n in skip_keys:
                     continue
-                result['children'].append({
-                    'module': 'dataset',
-                    'config': {
-                        'name': n,
-                        'values': v,
-                        'dtype': 'string'
+                result["children"].append(
+                    {
+                        "module": "dataset",
+                        "config": {"name": n, "values": v, "dtype": "string"},
                     }
-                })
+                )
             temp.append(json.dumps(result))
-        return ','.join(temp) if temp else ''
+        return ",".join(temp) if temp else ""
 
     def _insert_samples(self, structure, metainfo):
-        samples_info = metainfo.get(('Sample', 'samples'))
+        samples_info = metainfo.get(("Sample", "samples"))
         if not samples_info:
             return structure
 
         samples_str = self._generate_nxclass_template(
-            'NXsample', 'sample', samples_info[0].values(),
-            skip_keys=['number_of'])
+            "NXsample", "sample", samples_info[0].values(), skip_keys=["number_of"]
+        )
 
         if samples_str:
             structure = structure.replace('"$SAMPLES$"', samples_str)
@@ -175,9 +177,9 @@ class NexusStructureJsonFile(NexusStructureProvider):
 
     def _insert_users(self, structure, metainfo):
         users_str = self._generate_nxclass_template(
-            'NXuser',
-            'user',
-            metainfo[('Exp', 'users')][0],
+            "NXuser",
+            "user",
+            metainfo[("Exp", "users")][0],
         )
         if users_str:
             structure = structure.replace('"$USERS$"', users_str)
@@ -189,13 +191,15 @@ class NexusStructureAreaDetector(NexusStructureJsonFile):
     This class adds some extra consideration to instrument setups with
     area detectors with changing image size (e.g. neutron or light tomography).
     """
+
     parameters = {
-        'area_det_collector_device':
-            Param('Area collector device name',
-                  type=str,
-                  mandatory=True,
-                  userparam=True,
-                  settable=True),
+        "area_det_collector_device": Param(
+            "Area collector device name",
+            type=str,
+            mandatory=True,
+            userparam=True,
+            settable=True,
+        ),
     }
 
     def get_structure(self, dataset):
@@ -215,33 +219,30 @@ class NexusStructureAreaDetector(NexusStructureJsonFile):
         return json.dumps(structure)
 
     def _replace_area_detector_placeholder(self, data):
-        for item in data['children']:
-            if 'config' in item and 'array_size' in item['config']:
-                if item['config']['array_size'] == '$AREADET$':
-                    item['config']['array_size'] = []
-                    for val in self._get_detector_device_array_size(
-                            item['config']):
-                        item['config']['array_size'].append(val)
-            if 'children' in item:
+        for item in data["children"]:
+            if "config" in item and "array_size" in item["config"]:
+                if item["config"]["array_size"] == "$AREADET$":
+                    item["config"]["array_size"] = []
+                    for val in self._get_detector_device_array_size(item["config"]):
+                        item["config"]["array_size"].append(val)
+            if "children" in item:
                 self._replace_area_detector_placeholder(item)
 
     def _get_detector_device_array_size(self, json_config):
-        area_detector_collector = session.getDevice(
-            self.area_det_collector_device)
-        return area_detector_collector.get_array_size(json_config['topic'],
-                                                      json_config['source'])
+        area_detector_collector = session.getDevice(self.area_det_collector_device)
+        return area_detector_collector.get_array_size(
+            json_config["topic"], json_config["source"]
+        )
 
 
 class NexusStructureTemplate(NexusStructureProvider):
     parameters = {
-        'templatesmodule':
-            Param('Python module containing NeXus nexus_templates',
-                  type=str,
-                  mandatory=True),
-        'templatename':
-            Param('Template name from the nexus_templates module',
-                  type=str,
-                  mandatory=True),
+        "templatesmodule": Param(
+            "Python module containing NeXus nexus_templates", type=str, mandatory=True
+        ),
+        "templatename": Param(
+            "Template name from the nexus_templates module", type=str, mandatory=True
+        ),
     }
 
     _templates = []
@@ -249,9 +250,8 @@ class NexusStructureTemplate(NexusStructureProvider):
 
     def doInit(self, mode):
         self.log.info(self.templatesmodule)
-        self._templates = __import__(self.templatesmodule,
-                                     fromlist=[self.templatename])
-        self.log.info('Finished importing nexus_templates')
+        self._templates = __import__(self.templatesmodule, fromlist=[self.templatename])
+        self.log.info("Finished importing nexus_templates")
         self.set_template(self.templatename)
 
     def set_template(self, val):
@@ -262,13 +262,14 @@ class NexusStructureTemplate(NexusStructureProvider):
         :param val: template name
         """
         if not hasattr(self._templates, val):
-            raise NicosError('Template %s not found in module %s' %
-                             (val, self.templatesmodule))
+            raise NicosError(
+                "Template %s not found in module %s" % (val, self.templatesmodule)
+            )
 
         self._template = getattr(self._templates, val)
 
         if self.templatename != val:
-            self._setROParam('templatename', val)
+            self._setROParam("templatename", val)
 
     def get_structure(self, metainfo, counter):
         template = copy.deepcopy(self._template)

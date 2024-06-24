@@ -88,6 +88,12 @@ class EpicsDevice(DeviceMixinBase):
             default=[],
             userparam=False,
         ),
+        "nexus_config": Param(
+            "Nexus structure group definition",
+            type=listof(dictof(str, anytype)),
+            default=[],
+            userparam=False,
+        ),
     }
 
     hardware_access = True
