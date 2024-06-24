@@ -79,15 +79,38 @@ class EpicsKafkaForwarder(KafkaStatusHandler):
 
     @property
     def forwarded(self):
+        """
+        Get the set of currently forwarded PVs.
+
+        :return: A set of forwarded PVs.
+        """
         return set(self._forwarded)
 
+    def get_nexus_json(self):
+        """
+        Get the Nexus JSON configuration.
+
+        :return: A list of JSON configurations to be treated as a "children" list.
+        """
+        return self._generate_json_configs()
+
+    def _get_forwarder_config(self, dev):
+        for nexus_config_dict in dev.nexus_config:
+            yield (
+                nexus_config_dict.get("source_name", ""),
+                nexus_config_dict.get("schema", ""),
+                nexus_config_dict.get("topic", ""),
+                nexus_config_dict.get("protocol", ""),
+                nexus_config_dict.get("periodic", 0),
+            )
+
     def _get_pvs_to_forward(self):
-        to_forward = {}
-        for dev in session.devices.values():
-            if hasattr(dev, "to_forward"):
-                for pv, *settings in dev.to_forward:
-                    to_forward[pv] = settings
-        return to_forward
+        return {
+            pv: (schema, topic, protocol, periodic)
+            for dev in session.devices.values()
+            if hasattr(dev, "nexus_config")
+            for pv, schema, topic, protocol, periodic in self._get_forwarder_config(dev)
+        }
 
     def _generate_forwarder_config(self, pvs):
         streams = []
@@ -133,3 +156,84 @@ class EpicsKafkaForwarder(KafkaStatusHandler):
 
         status_msg = "Forwarding.." if self._forwarded else "idle"
         self._setROParam("curstatus", (status.OK, status_msg))
+
+    def _get_json_config(self, dev):
+        for nexus_config_dict in dev.nexus_config:
+            group_name = nexus_config_dict.get("group_name", "")
+            nx_class = nexus_config_dict.get("nx_class", "")
+            if group_name and nx_class:
+                dev_name = dev.name
+                suffix = nexus_config_dict.get("suffix", "")
+                if suffix:
+                    dev_name = f"{dev_name}_{suffix}"
+                yield (
+                    dev_name,
+                    {
+                        "group_name": group_name,
+                        "nx_class": nx_class,
+                        "units": nexus_config_dict.get("units", ""),
+                        "pv": nexus_config_dict.get("source_name", ""),
+                        "schema": nexus_config_dict.get("schema", ""),
+                        "topic": nexus_config_dict.get("topic", ""),
+                    },
+                )
+
+    def _get_configs_for_json(self):
+        return {
+            dev_name: config
+            for dev in session.devices.values()
+            if hasattr(dev, "nexus_config")
+            for dev_name, config in self._get_json_config(dev)
+        }
+
+    def _generate_json_configs(self):
+        dev_configs = self._get_configs_for_json()
+        groups = {}
+
+        for dev_name, config in dev_configs.items():
+            group_name = config["group_name"]
+            if group_name not in groups:
+                groups[group_name] = {"nx_class": config["nx_class"], "children": []}
+
+            nxlog_json = self._generate_nxlog_json(
+                dev_name,
+                config["schema"],
+                config["pv"],
+                config["topic"],
+                config["units"],
+            )
+            groups[group_name]["children"].append(nxlog_json)
+
+        return self._build_json(groups)
+
+    def _build_json(self, groups):
+        return [
+            self._generate_group_json(name, group["nx_class"], group["children"])
+            for name, group in groups.items()
+        ]
+
+    def _generate_nxlog_json(self, name, schema, source, topic, units):
+        return {
+            "name": name,
+            "type": "group",
+            "attributes": [{"name": "NX_class", "dtype": "string", "values": "NXlog"}],
+            "children": [
+                {
+                    "module": schema,
+                    "config": {
+                        "source": source,
+                        "topic": topic,
+                        "dtype": "double",
+                        "value_units": units,
+                    },
+                }
+            ],
+        }
+
+    def _generate_group_json(self, name, nx_class, children):
+        return {
+            "name": name,
+            "type": "group",
+            "attributes": [{"name": "NX_class", "dtype": "string", "values": nx_class}],
+            "children": children,
+        }

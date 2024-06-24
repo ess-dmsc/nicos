@@ -158,7 +158,7 @@
                       "module": "f144",
                       "config": {
                         "source": "delay_source_chopper",
-                        "topic": "local_motion",
+                        "topic": "ymir_motion",
                         "dtype": "double"
                       }
                     }
@@ -226,7 +226,7 @@
                   "module": "tdct",
                   "config": {
                     "source": "chopper_source",
-                    "topic": "local_motion"
+                    "topic": "ymir_motion"
                   }
                 },
                 {
@@ -244,7 +244,7 @@
                       "module": "f144",
                       "config": {
                         "source": "YMIR-ChpSy1:Chop-MIC-101:Spd_SP",
-                        "topic": "local_motion",
+                        "topic": "ymir_motion",
                         "dtype": "double",
                         "value_units": "1/s"
                       },
@@ -403,7 +403,7 @@
                       "module": "tdct",
                       "config": {
                         "source": "YMIR-TS:Ctrl-EVR-01:01-TS-I",
-                        "topic": "local_motion"
+                        "topic": "ymir_motion"
                       }
                     }
                   ]
@@ -423,7 +423,7 @@
                       "module": "se00",
                       "config": {
                         "source": "YMIR-SETS:SE-BADC-001:VALUE",
-                        "topic": "local_motion",
+                        "topic": "ymir_motion",
                         "dtype": "double"
                       }
                     }
@@ -452,7 +452,7 @@
                       "module": "f144",
                       "config": {
                         "source": "YMIR-SETS:SE-BADC-001:SLOWDATA",
-                        "topic": "local_motion",
+                        "topic": "ymir_motion",
                         "dtype": "double"
                       }
                     }
@@ -473,7 +473,7 @@
                       "module": "f144",
                       "config": {
                         "source": "YMIR-SETS:SE-BPTP-001:PTP_STATUS",
-                        "topic": "local_motion",
+                        "topic": "ymir_motion",
                         "dtype": "double"
                       }
                     }
@@ -835,7 +835,7 @@
                       "module": "f144",
                       "config": {
                         "source": "YMIR-SpScn:MC-X-01:Mtr.RBV",
-                        "topic": "local_motion",
+                        "topic": "ymir_motion",
                         "dtype": "double",
                         "value_units": "mm"
                       },
@@ -864,7 +864,7 @@
                       "module": "f144",
                       "config": {
                         "source": "YMIR-SpScn:MC-Y-01:Mtr.RBV",
-                        "topic": "local_motion",
+                        "topic": "ymir_motion",
                         "dtype": "double",
                         "value_units": "mm"
                       },
@@ -893,7 +893,7 @@
                       "module": "f144",
                       "config": {
                         "source": "YMIR-SpScn:MC-Z-01:Mtr.RBV",
-                        "topic": "local_motion",
+                        "topic": "ymir_motion",
                         "dtype": "double",
                         "value_units": "mm"
                       },
@@ -922,7 +922,7 @@
                       "module": "f144",
                       "config": {
                         "source": "YMIR-SpScn:MC-Y-01:Mtr.VELO",
-                        "topic": "local_motion",
+                        "topic": "ymir_motion",
                         "dtype": "double"
                       }
                     }
@@ -943,7 +943,7 @@
                       "module": "f144",
                       "config": {
                         "source": "YMIR-SpScn:MC-Z-01:Mtr.VELO",
-                        "topic": "local_motion",
+                        "topic": "ymir_motion",
                         "dtype": "double"
                       }
                     }
@@ -964,7 +964,7 @@
                       "module": "f144",
                       "config": {
                         "source": "YMIR-SpScn:MC-X-01:Mtr.VELO",
-                        "topic": "local_motion",
+                        "topic": "ymir_motion",
                         "dtype": "double"
                       }
                     }
@@ -1021,7 +1021,7 @@
                           "module": "f144",
                           "config": {
                             "source": "YMIR-SpScn:MC-Y-01:Mtr-RBV-TSE",
-                            "topic": "local_motion",
+                            "topic": "ymir_motion",
                             "dtype": "double"
                           }
                         }
@@ -1066,7 +1066,7 @@
                           "module": "f144",
                           "config": {
                             "source": "YMIR-SpScn:MC-Z-01:Mtr-RBV-TSE",
-                            "topic": "local_motion",
+                            "topic": "ymir_motion",
                             "dtype": "double"
                           }
                         }
@@ -1111,7 +1111,7 @@
                           "module": "f144",
                           "config": {
                             "source": "YMIR-SpScn:MC-X-01:Mtr-RBV-TSE",
-                            "topic": "local_motion",
+                            "topic": "ymir_motion",
                             "dtype": "double"
                           }
                         }
@@ -1224,7 +1224,7 @@
                       "module": "f144",
                       "config": {
                         "source": "YMIR-SEE:SE-LS336-004:KRDG0",
-                        "topic": "local_motion",
+                        "topic": "ymir_motion",
                         "dtype": "double",
                         "value_units": "K"
                       },
@@ -1253,7 +1253,7 @@
                       "module": "f144",
                       "config": {
                         "source": "YMIR-SEE:SE-LS336-004:KRDG1",
-                        "topic": "local_motion",
+                        "topic": "ymir_motion",
                         "dtype": "double",
                         "value_units": "K"
                       },
@@ -1282,7 +1282,7 @@
                       "module": "f144",
                       "config": {
                         "source": "YMIR-SEE:SE-LS336-004:SETP_S1",
-                        "topic": "local_motion",
+                        "topic": "ymir_motion",
                         "dtype": "double",
                         "value_units": "K"
                       },
@@ -1311,7 +1311,7 @@
                       "module": "f144",
                       "config": {
                         "source": "YMIR-SEE:SE-LS336-004:SETP_S2",
-                        "topic": "local_motion",
+                        "topic": "ymir_motion",
                         "dtype": "double",
                         "value_units": "K"
                       },
