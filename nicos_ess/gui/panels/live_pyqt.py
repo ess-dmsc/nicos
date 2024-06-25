@@ -22,6 +22,7 @@
 # *****************************************************************************
 
 """NICOS livewidget with pyqtgraph."""
+
 from enum import Enum
 
 import numpy as np
@@ -29,8 +30,17 @@ import numpy as np
 from nicos.clients.gui.panels import Panel
 from nicos.core.constants import LIVE
 from nicos.guisupport.livewidget import AXES, DATATYPES
-from nicos.guisupport.qt import QGroupBox, QScrollArea, QSize, QSplitter, Qt, \
-    QTabWidget, QVBoxLayout, QWidget, pyqtProperty
+from nicos.guisupport.qt import (
+    QGroupBox,
+    QScrollArea,
+    QSize,
+    QSplitter,
+    Qt,
+    QTabWidget,
+    QVBoxLayout,
+    QWidget,
+    pyqtProperty,
+)
 
 from nicos_ess.gui.widgets.pyqtgraph.line_view import LineView
 from nicos_ess.gui.widgets.pyqtgraph.image_view import ImageView
@@ -43,7 +53,7 @@ VIEW_SPLITTER_SIZES = [600, 600, 100]
 
 
 class LiveDataPanel(Panel):
-    panelName = 'Live data view'
+    panelName = "Live data view"
     detectorskey = None
     _allowed_detectors = set()
     _liveOnlyIndex = None
@@ -82,9 +92,7 @@ class LiveDataPanel(Panel):
     def normalize_type(self, dtype):
         normalized_type = np.dtype(dtype).str
         if normalized_type not in DATATYPES:
-            self.log.warning(
-                'Unsupported live data format: %s', normalized_type
-            )
+            self.log.warning("Unsupported live data format: %s", normalized_type)
             return
         return normalized_type
 
@@ -97,9 +105,9 @@ class LiveDataPanel(Panel):
         `index` into `datadescs` of the current params.
         """
 
-        datadesc = params['datadescs'][index]
-        count = datadesc.get('plotcount', 1)
-        shape = datadesc['shape']
+        datadesc = params["datadescs"][index]
+        count = datadesc.get("plotcount", 1)
+        shape = datadesc["shape"]
 
         if self._liveOnlyIndex is not None and index != self._liveOnlyIndex:
             return
@@ -108,7 +116,7 @@ class LiveDataPanel(Panel):
 
         if len(entry) != count * arraysize:
             self.log.warning(
-                'Expected data array with %d entries, got %d',
+                "Expected data array with %d entries, got %d",
                 count * arraysize,
                 len(entry),
             )
@@ -126,7 +134,7 @@ class LiveDataPanel(Panel):
         if self._liveOnlyIndex is not None and idx != self._liveOnlyIndex:
             return
         try:
-            descriptions = params['datadescs']
+            descriptions = params["datadescs"]
         except KeyError:
             self.log.warning(
                 'Livedata with tag "Live" without ' '"datadescs" provided.'
@@ -139,7 +147,7 @@ class LiveDataPanel(Panel):
             arrays = self.process_data_arrays(
                 params,
                 idx,
-                np.frombuffer(data, descriptions[idx]['dtype']),
+                np.frombuffer(data, descriptions[idx]["dtype"]),
             )
 
             if arrays is None:
@@ -172,20 +180,17 @@ class LiveDataPanel(Panel):
                 self.plotwidget_1d.show()
 
     def exec_command(self, command):
-        self.client.tell('exec', command)
+        self.client.tell("exec", command)
 
     def on_client_livedata(self, params, blobs):
-        self.log.debug('on_client_livedata: %r', params)
+        self.log.debug("on_client_livedata: %r", params)
         # blobs is a list of data blobs and labels blobs
-        if (
-            self._allowed_detectors
-            and params['det'] not in self._allowed_detectors
-        ):
+        if self._allowed_detectors and params["det"] not in self._allowed_detectors:
             return
 
-        if params['tag'] == LIVE:
-            datacount = len(params['datadescs'])
-            for index, datadesc in enumerate(params['datadescs']):
+        if params["tag"] == LIVE:
+            datacount = len(params["datadescs"])
+            for index, datadesc in enumerate(params["datadescs"]):
                 labels, _ = process_axis_labels(datadesc, blobs[datacount:])
                 for i, blob in enumerate(blobs[:datacount]):
                     self._process_livedata(params, blob, index, labels)
@@ -194,7 +199,7 @@ class LiveDataPanel(Panel):
                     self._process_livedata(params, [], 0, {})
 
     def on_client_connected(self):
-        self.client.tell('eventunmask', ['livedata'])
+        self.client.tell("eventunmask", ["livedata"])
         self.detectorskey = self._query_detectorskey()
 
     def _detectorskey(self):
@@ -204,9 +209,7 @@ class LiveDataPanel(Panel):
 
     def _query_detectorskey(self):
         try:
-            return (
-                '%s/detlist' % self.client.eval('session.experiment.name')
-            ).lower()
+            return ("%s/detlist" % self.client.eval("session.experiment.name")).lower()
         except AttributeError:
             pass
 
@@ -220,6 +223,7 @@ class LiveWidgetWrapper(QGroupBox):
     def __init__(self, title, widget, parent=None):
         QGroupBox.__init__(self, title=title, parent=parent)
         self.state = State.UNSELECTED
+        self.parent = parent
 
         self.setContentsMargins(0, 0, 0, 0)
         vbox = QVBoxLayout()
@@ -232,11 +236,10 @@ class LiveWidgetWrapper(QGroupBox):
 
     def resizeEvent(self, event):
         # Maintain aspect ratio when resizing
-        # new_size = QSize(event.size().width(), event.size().width()) # Causes segmentation faults
-        new_size = QSize(TAB_WIDGET_MIN_WIDTH, TAB_WIDGET_MIN_WIDTH)
+        width = int(self.parent.tab_widget.sizeHint().width() * 0.9)
+        new_size = QSize(width, width)
         self.resize(new_size)
-        # self.setMinimumHeight(event.size().width()) # Causes segmentation faults
-        self.setMinimumHeight(TAB_WIDGET_MIN_WIDTH)
+        self.setMinimumHeight(width)
 
     @pyqtProperty(str)
     def state(self):
@@ -268,30 +271,26 @@ def process_axis_labels(datadesc, blobs, offset=0):
     """Convert the raw axis label descriptions.
     Similar to LiveDataPanel._process_axis_labels, but is flexible in datadesc.
     """
-    CLASSIC = {'define': 'classic'}
+    CLASSIC = {"define": "classic"}
     labels = {}
     titles = {}
-    for size, axis in zip(reversed(datadesc['shape']), AXES):
+    for size, axis in zip(reversed(datadesc["shape"]), AXES):
         # if the 'labels' key does not exist or does not have the right
         # axis key set default to 'classic'.
-        label = datadesc.get('labels', {'x': CLASSIC, 'y': CLASSIC}).get(
-            axis, CLASSIC
-        )
-        if label['define'] == 'range':
-            start = label.get('start', 0)
-            size = label.get('length', 1)
-            step = label.get('step', 1)
+        label = datadesc.get("labels", {"x": CLASSIC, "y": CLASSIC}).get(axis, CLASSIC)
+        if label["define"] == "range":
+            start = label.get("start", 0)
+            size = label.get("length", 1)
+            step = label.get("step", 1)
             end = start + step * size
             labels[axis] = np.arange(start, end, step)
-        elif label['define'] == 'array':
-            index = label.get('index', 0)
-            labels[axis] = np.frombuffer(
-                blobs[index], label.get('dtype', '<i4')
-            )
+        elif label["define"] == "array":
+            index = label.get("index", 0)
+            labels[axis] = np.frombuffer(blobs[index], label.get("dtype", "<i4"))
         else:
             labels[axis] = np.array(range(size))
-        labels[axis] += offset if axis == 'x' else 0
-        titles[axis] = label.get('title')
+        labels[axis] += offset if axis == "x" else 0
+        titles[axis] = label.get("title")
 
     return labels, titles
 
@@ -299,9 +298,9 @@ def process_axis_labels(datadesc, blobs, offset=0):
 def process_data_arrays(index, params, data):
     """Returns a list of arrays corresponding to the ``count`` of
     ``index`` into ``datadescs`` of the current params"""
-    datadesc = params['datadescs'][index]
-    count = datadesc.get('count', 1)
-    shape = datadesc['shape']
+    datadesc = params["datadescs"][index]
+    count = datadesc.get("count", 1)
+    shape = datadesc["shape"]
 
     # determine 1D array size
     arraysize = np.product(shape)
@@ -314,14 +313,14 @@ def process_data_arrays(index, params, data):
 
 
 def process_livedata(widget, data, params, labels, idx):
-    descriptions = params['datadescs']
+    descriptions = params["datadescs"]
 
     # pylint: disable=len-as-condition
     if len(data):
         arrays = process_data_arrays(
             idx,
             params,
-            np.frombuffer(data, descriptions[idx]['dtype']),
+            np.frombuffer(data, descriptions[idx]["dtype"]),
         )
         if arrays is None:
             return
@@ -354,10 +353,10 @@ class DetContainer:
             return
 
         self._blobs_to_index[name] = [self._previews_to_index[name]]
-        for idx, datadesc in enumerate(self._params_cache['datadescs']):
+        for idx, datadesc in enumerate(self._params_cache["datadescs"]):
             transferred_label_count = self._previews_to_index[name]
-            for axis in datadesc['labels'].values():
-                if axis['define'] != 'classic':
+            for axis in datadesc["labels"].values():
+                if axis["define"] != "classic":
                     transferred_label_count += 1
                     self._blobs_to_index[name].append(transferred_label_count)
 
@@ -369,7 +368,7 @@ class DetContainer:
         ch = self._previews_to_index[name]
         if self._params_cache and self._blobs_cache:
             params = dict(self._params_cache)
-            params['datadescs'] = [params['datadescs'][ch]]
+            params["datadescs"] = [params["datadescs"][ch]]
             idx = self._blobs_to_index[name]
             return params, [*self._blobs_cache[idx[0] : idx[-1] + 1]]
         return None, None
@@ -416,10 +415,10 @@ class MultiLiveDataPanel(LiveDataPanel):
     widget
     """
 
-    panelName = 'MultidetectorLiveDataView'
+    panelName = "MultidetectorLiveDataView"
 
     def __init__(self, parent, client, options):
-        self._detector_selected = options.get('default_detector', '')
+        self._detector_selected = options.get("default_detector", "")
         self._detectors = {}
         self._previews = {}
         self._plotwidget_settings = {}
@@ -432,19 +431,17 @@ class MultiLiveDataPanel(LiveDataPanel):
         self.tab_widget = QTabWidget()
 
         self.tab_widget.setTabBarAutoHide(True)
-        self.set_tab_widget_width()
 
         self.scroll_content = QWidget()
         self.scroll_content.setLayout(QVBoxLayout())
 
         self.scroll = QScrollArea()
-        self.set_scroll_area_width()
         self.scroll.setWidget(self.scroll_content)
+        self.tab_widget.addTab(self.scroll, "Previews")
+        self.tab_widget.addTab(self.plotwidget.image_view_controller, "View Settings")
+        self.set_tab_widget_width()
+        self.set_scroll_area_width()
         self.scroll.setWidgetResizable(True)
-        self.tab_widget.addTab(self.scroll, 'Previews')
-        self.tab_widget.addTab(
-            self.plotwidget.image_view_controller, 'View Settings'
-        )
 
         self.view_splitter.addWidget(self.tab_widget)
         self.view_splitter.setSizes(VIEW_SPLITTER_SIZES)
@@ -453,12 +450,12 @@ class MultiLiveDataPanel(LiveDataPanel):
         self.view_splitter.setStretchFactor(2, 0)
 
     def set_tab_widget_width(self):
-        self.tab_widget.setMaximumWidth(TAB_WIDGET_MAX_WIDTH)
-        self.tab_widget.setMinimumWidth(TAB_WIDGET_MIN_WIDTH)
+        width = self.tab_widget.sizeHint().width()
+        self.tab_widget.setMinimumWidth(width)
 
     def set_scroll_area_width(self):
-        self.scroll.setMaximumWidth(TAB_WIDGET_MAX_WIDTH)
-        self.scroll.setMinimumWidth(TAB_WIDGET_MIN_WIDTH)
+        width = self.tab_widget.sizeHint().width()
+        self.scroll.setMinimumWidth(width)
 
     def connect_signals(self):
         self.connect_disconnected_signal()
@@ -521,12 +518,8 @@ class MultiLiveDataPanel(LiveDataPanel):
 
     def connect_plotwidget_1d_signals(self):
         self.plotwidget_1d.clear_button.clicked.connect(self.plot_clear_data)
-        self.plotwidget_1d.mode_checkbox.stateChanged.connect(
-            self.plot_mode_changed
-        )
-        self.plotwidget_1d.log_checkbox.stateChanged.connect(
-            self.plot_log_mode_changed
-        )
+        self.plotwidget_1d.mode_checkbox.stateChanged.connect(self.plot_mode_changed)
+        self.plotwidget_1d.log_checkbox.stateChanged.connect(self.plot_log_mode_changed)
         self.plotwidget_1d.vertical_line.sigPositionChangeFinished.connect(
             self.plot_vertical_line_changed
         )
@@ -538,44 +531,47 @@ class MultiLiveDataPanel(LiveDataPanel):
 
     def plot_mode_changed(self):
         current_plot_mode = self.plotwidget_1d.mode_checkbox.isChecked()
-        action = lambda preview: preview.widget.mode_checkbox.setChecked(
-            current_plot_mode
+        self.update_previews(
+            lambda preview: preview.widget.mode_checkbox.setChecked(current_plot_mode),
+            self.plotwidget_1d.name,
         )
-        self.update_previews(action, self.plotwidget_1d.name)
 
     def plot_clear_data(self):
-        action = lambda preview: preview.widget.clear_data()
-        self.update_previews(action, self.plotwidget_1d.name)
+        self.update_previews(
+            lambda preview: preview.widget.clear_data(), self.plotwidget_1d.name
+        )
 
     def plot_log_mode_changed(self):
         current_log_mode = self.plotwidget_1d.log_checkbox.isChecked()
-        action = lambda preview: preview.widget.log_checkbox.setChecked(
-            current_log_mode
+        self.update_previews(
+            lambda preview: preview.widget.log_checkbox.setChecked(current_log_mode),
+            self.plotwidget_1d.name,
         )
-        self.update_previews(action, self.plotwidget_1d.name)
 
     def plot_vertical_line_changed(self):
         current_value = self.plotwidget_1d.vertical_line.value()
-        action = lambda preview: preview.widget.vertical_line.setValue(
-            current_value
+        self.update_previews(
+            lambda preview: preview.widget.vertical_line.setValue(current_value),
+            self.plotwidget_1d.name,
         )
-        self.update_previews(action, self.plotwidget_1d.name)
 
     def lut_changed(self):
         current_gradient_state = (
             self.plotwidget.settings_histogram.item.gradient.saveState()
         )
-        action = lambda preview: preview.widget.settings_histogram.item.gradient.restoreState(
-            current_gradient_state
+        self.update_previews(
+            lambda preview: preview.widget.settings_histogram.item.gradient.restoreState(
+                current_gradient_state
+            ),
+            self.plotwidget.name,
         )
-        self.update_previews(action, self.plotwidget.name)
 
     def levels_changed(self):
         current_image_levels = self.plotwidget.image_item.getLevels()
-        action = lambda preview: preview.widget.image_item.setLevels(
-            current_image_levels
+        self.update_previews(
+            lambda preview: preview.widget.image_item.setLevels(current_image_levels),
+            self.plotwidget.name,
         )
-        self.update_previews(action, self.plotwidget.name)
 
     def on_1d_data_changed(self, state):
         self.plotwidget_1d.clear_data()
@@ -647,11 +643,11 @@ class MultiLiveDataPanel(LiveDataPanel):
 
     def on_client_cache(self, data):
         _, key, _, _ = data
-        if key == 'exp/detlist':
+        if key == "exp/detlist":
             self._cleanup_existing_previews()
 
     def on_client_livedata(self, params, blobs):
-        det_name = params['det']
+        det_name = params["det"]
 
         if not self._previews:
             self._populate_previews()
@@ -660,10 +656,7 @@ class MultiLiveDataPanel(LiveDataPanel):
         self.update_selected_main_widget(det_name)
 
     def update_selected_main_widget(self, det_name):
-        if (
-            not self._detector_selected
-            or self._detector_selected not in self._previews
-        ):
+        if not self._detector_selected or self._detector_selected not in self._previews:
             return
 
         if self._previews[self._detector_selected].detector == det_name:
@@ -676,20 +669,16 @@ class MultiLiveDataPanel(LiveDataPanel):
         return self._get_configured_detectors()
 
     def _get_configured_detectors(self):
-        state = self.client.ask('getstatus')
+        state = self.client.ask("getstatus")
         if not state:
             return []
-        detlist = self.client.getCacheKey('exp/detlist')
+        detlist = self.client.getCacheKey("exp/detlist")
         if not detlist:
             return []
-        return [
-            det
-            for det in detlist[1]
-            if self.client.eval(f'{det}.arrayInfo()', [])
-        ]
+        return [det for det in detlist[1] if self.client.eval(f"{det}.arrayInfo()", [])]
 
     def create_preview_widgets(self, det_name):
-        array_info = self.client.eval(f'{det_name}.arrayInfo()', ())
+        array_info = self.client.eval(f"{det_name}.arrayInfo()", ())
         previews = [self._create_preview_widget(info) for info in array_info]
         return previews
 
@@ -702,11 +691,11 @@ class MultiLiveDataPanel(LiveDataPanel):
     def _create_line_view_preview_widget(self, info):
         widget = LineView(name=info.name, parent=self, preview_mode=True)
         widget.view.setMouseEnabled(False, False)
-        widget.plot_widget.getPlotItem().hideAxis('bottom')
-        widget.plot_widget.getPlotItem().hideAxis('left')
+        widget.plot_widget.getPlotItem().hideAxis("bottom")
+        widget.plot_widget.getPlotItem().hideAxis("left")
         widget.plot_widget_sliced.hide()
         widget.data_changed.connect(self.on_1d_data_changed)
-        return LiveWidgetWrapper(title=info.name, widget=widget)
+        return LiveWidgetWrapper(title=info.name, widget=widget, parent=self)
 
     def _create_image_view_preview_widget(self, info):
         widget = ImageView(name=info.name, parent=self)
@@ -718,18 +707,18 @@ class MultiLiveDataPanel(LiveDataPanel):
         widget.hide_roi(ignore_connections=True)
         widget.hide_crosshair_roi(ignore_connections=True)
         widget.hide_roi_plotwidgets()
-        return LiveWidgetWrapper(title=info.name, widget=widget)
+        return LiveWidgetWrapper(title=info.name, widget=widget, parent=self)
 
     def set_preview_data(self, params, blobs):
         self._update_and_process_preview_data(params, blobs)
 
     def _update_and_process_preview_data(self, params, blobs):
-        parent = params['det']
+        parent = params["det"]
         self._detectors[parent].update_cache(params, blobs)
-        datacount = len(params['datadescs'])
+        datacount = len(params["datadescs"])
 
-        for index, datadesc in enumerate(params['datadescs']):
-            normalized_type = self.normalize_type(datadesc['dtype'])
+        for index, datadesc in enumerate(params["datadescs"]):
+            normalized_type = self.normalize_type(datadesc["dtype"])
             name = self._detectors[parent].get_preview_name(index)
             widget = self._previews[name].widget
             labels, _ = process_axis_labels(datadesc, blobs[datacount:])
@@ -745,8 +734,8 @@ class MultiLiveDataPanel(LiveDataPanel):
             )
 
     def _has_plot_changed_dimensionality(self, widget, labels):
-        return (isinstance(widget, LineView) and 'y' in labels) or (
-            not isinstance(widget, LineView) and 'y' not in labels
+        return (isinstance(widget, LineView) and "y" in labels) or (
+            not isinstance(widget, LineView) and "y" not in labels
         )
 
     def on_preview_clicked(self, det_name):
@@ -755,9 +744,7 @@ class MultiLiveDataPanel(LiveDataPanel):
     def _change_detector_to_display(self, det_name):
         self._detector_selected = det_name
         parent = self._previews[det_name].detector
-        pars, blob = self._detectors[parent].get_preview_data(
-            self._detector_selected
-        )
+        pars, blob = self._detectors[parent].get_preview_data(self._detector_selected)
         is_2d = isinstance(self._previews[det_name].widget, ImageView)
         switched_plot = self._check_switched_plot(det_name, is_2d)
 
