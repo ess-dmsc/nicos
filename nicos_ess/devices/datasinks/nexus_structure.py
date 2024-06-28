@@ -62,12 +62,12 @@ class NexusStructureJsonFile(NexusStructureProvider):
         structure = self._insert_extra_devices(structure)
         structure = self._filter_structure(structure)
         structure = self._insert_metadata(structure, metainfo, counter)
-        return structure
+        return json.dumps(structure)
 
     def _load_structure(self):
         with open(self.nexus_config_path, "r", encoding="utf-8") as file:
             structure = file.read()
-        return structure
+        return json.loads(structure)
 
     def _check_for_device(self, name):
         try:
@@ -79,14 +79,13 @@ class NexusStructureJsonFile(NexusStructureProvider):
         loaded_devices = [str(dev) for dev in session.devices]
         nexus_alias = session.getDevice("NexusStructure").alias
 
-        structure = json.loads(structure)
         self._filter_items(structure, self._are_required_devices_loaded, loaded_devices)
         self._filter_items(structure, self._is_nexus_alias_correct, nexus_alias)
         if device := self._check_for_device("component_tracking_ODIN"):
             self._filter_items(
                 structure, self._is_tracking_valid, device.valid_components
             )
-        return json.dumps(structure)
+        return structure
 
     def _filter_items(self, data, condition_func, condition_arg):
         data["children"] = [
@@ -115,30 +114,36 @@ class NexusStructureJsonFile(NexusStructureProvider):
         return item["required_tracking"] in valid_tracking
 
     def _insert_metadata(self, structure, metainfo, counter):
-        structure = structure.replace("$TITLE$", metainfo[("Exp", "title")][0])
-        structure = structure.replace("$EXP_ID$", metainfo[("Exp", "proposal")][0])
-        structure = structure.replace("$ENTRY_ID$", str(counter))
-        structure = structure.replace("$JOB_ID$", metainfo[("Exp", "job_id")][0])
+        datasets = [
+            self._create_dataset("title", metainfo[("Exp", "title")][0]),
+            self._create_dataset(
+                "experiment_identifier", metainfo[("Exp", "proposal")][0]
+            ),
+            self._create_dataset("entry_identifier", str(counter)),
+            self._create_dataset(
+                "entry_identifier_uuid", metainfo[("Exp", "job_id")][0]
+            ),
+        ]
+        structure["children"][0]["children"].extend(datasets)
         structure = self._insert_users(structure, metainfo)
         structure = self._insert_samples(structure, metainfo)
         return structure
 
     def _insert_extra_devices(self, structure):
-        extra_devices = session.getDevice("KafkaForwarder").get_nexus_json()
-        if not extra_devices:
+        if not self._check_for_device("KafkaForwarder"):
             return structure
-        structure_json = json.loads(structure)
 
-        for item in structure_json["children"][0]["children"]:  # Entry children
+        extra_devices = session.getDevice("KafkaForwarder").get_nexus_json()
+        for item in structure["children"][0]["children"]:  # Entry children
             if item.get("name", "") == "instrument":
                 item["children"].extend(extra_devices)
-                return json.dumps(structure_json)
+                return structure
 
         self.log.warning("Could not find the instrument group in the NeXus")
         return structure
 
     def _generate_nxclass_template(self, nx_class, prefix, entities, skip_keys=None):
-        temp = []
+        temp = {}
         for entity in entities:
             entity_name = entity.get("name", "").replace(" ", "")
             if not entity_name:
@@ -159,10 +164,11 @@ class NexusStructureJsonFile(NexusStructureProvider):
                         "config": {"name": n, "values": v, "dtype": "string"},
                     }
                 )
-            temp.append(json.dumps(result))
-        return ",".join(temp) if temp else ""
+            temp.update(result)
+        return temp
 
     def _insert_samples(self, structure, metainfo):
+        structure_str = json.dumps(structure)
         samples_info = metainfo.get(("Sample", "samples"))
         if not samples_info:
             return structure
@@ -170,10 +176,12 @@ class NexusStructureJsonFile(NexusStructureProvider):
         samples_str = self._generate_nxclass_template(
             "NXsample", "sample", samples_info[0].values(), skip_keys=["number_of"]
         )
+        samples_str = json.dumps(samples_str)
 
         if samples_str:
-            structure = structure.replace('"$SAMPLES$"', samples_str)
-        return structure
+            structure_str = structure_str.replace('"$SAMPLES$"', samples_str)
+
+        return json.loads(structure_str)
 
     def _insert_users(self, structure, metainfo):
         users_str = self._generate_nxclass_template(
@@ -182,8 +190,14 @@ class NexusStructureJsonFile(NexusStructureProvider):
             metainfo[("Exp", "users")][0],
         )
         if users_str:
-            structure = structure.replace('"$USERS$"', users_str)
+            structure["children"][0]["children"].append(users_str)
         return structure
+
+    def _create_dataset(self, name, values):
+        return {
+            "module": "dataset",
+            "config": {"name": name, "values": values, "type": "string"},
+        }
 
 
 class NexusStructureAreaDetector(NexusStructureJsonFile):
@@ -202,31 +216,28 @@ class NexusStructureAreaDetector(NexusStructureJsonFile):
         ),
     }
 
-    def get_structure(self, dataset):
-        structure = NexusStructureJsonFile._load_structure(self)
-        structure = NexusStructureJsonFile._insert_metadata(
-            self,
-            structure,
-            dataset.metainfo,
-            dataset.counter,
-        )
+    def get_structure(self, metainfo, counter):
+        structure = self._load_structure()
+        structure = self._insert_extra_devices(structure)
+        structure = self._filter_structure(structure)
+        structure = self._insert_metadata(structure, metainfo, counter)
         structure = self._add_area_detector_array_size(structure)
-        return structure
+        return json.dumps(structure)
 
     def _add_area_detector_array_size(self, structure):
-        structure = json.loads(structure)
         self._replace_area_detector_placeholder(structure)
-        return json.dumps(structure)
+        return structure
 
     def _replace_area_detector_placeholder(self, data):
         for item in data["children"]:
-            if "config" in item and "array_size" in item["config"]:
-                if item["config"]["array_size"] == "$AREADET$":
-                    item["config"]["array_size"] = []
-                    for val in self._get_detector_device_array_size(item["config"]):
-                        item["config"]["array_size"].append(val)
-            if "children" in item:
-                self._replace_area_detector_placeholder(item)
+            if isinstance(item, dict):
+                if "config" in item and "array_size" in item["config"]:
+                    if item["config"]["array_size"] == "$AREADET$":
+                        item["config"]["array_size"] = []
+                        for val in self._get_detector_device_array_size(item["config"]):
+                            item["config"]["array_size"].append(val)
+                if "children" in item:
+                    self._replace_area_detector_placeholder(item)
 
     def _get_detector_device_array_size(self, json_config):
         area_detector_collector = session.getDevice(self.area_det_collector_device)
