@@ -429,8 +429,11 @@ class MultiLiveDataPanel(LiveDataPanel):
 
     def init_ui(self):
         self.tab_widget = QTabWidget()
+        self.widget_container = QWidget()
+        self.tab_layout = QVBoxLayout()
 
         self.tab_widget.setTabBarAutoHide(True)
+        self.widget_container.setLayout(self.tab_layout)
 
         self.scroll_content = QWidget()
         self.scroll_content.setLayout(QVBoxLayout())
@@ -443,7 +446,12 @@ class MultiLiveDataPanel(LiveDataPanel):
         self.set_scroll_area_width()
         self.scroll.setWidgetResizable(True)
 
-        self.view_splitter.addWidget(self.tab_widget)
+        self.tab_layout.addWidget(
+            self.plotwidget.image_view_controller.hist_autoscale_btn
+        )
+        self.tab_layout.addWidget(self.tab_widget)
+
+        self.view_splitter.addWidget(self.widget_container)
         self.view_splitter.setSizes(VIEW_SPLITTER_SIZES)
         self.view_splitter.setStretchFactor(0, 1)
         self.view_splitter.setStretchFactor(1, 1)

@@ -21,8 +21,21 @@
 #
 # *****************************************************************************
 
-from nicos.guisupport.qt import QCheckBox, QFrame, QHBoxLayout, QIcon, QLabel, \
-    QLineEdit, QPushButton, QSize, Qt, QToolButton, QVBoxLayout, QWidget, QGridLayout
+from nicos.guisupport.qt import (
+    QCheckBox,
+    QFrame,
+    QHBoxLayout,
+    QIcon,
+    QLabel,
+    QLineEdit,
+    QPushButton,
+    QSize,
+    Qt,
+    QToolButton,
+    QVBoxLayout,
+    QWidget,
+    QGridLayout,
+)
 
 
 class ImageViewController(QWidget):
@@ -37,23 +50,21 @@ class ImageViewController(QWidget):
         self.ui = QVBoxLayout()
         self.setLayout(self.ui)
 
+    def create_hist_autoscale_btn(self):
+        self.hist_autoscale_btn = QPushButton("Autoscale")
+        self.hist_autoscale_btn.clicked.connect(self.single_shot_autoscale)
+
     def build_hist_settings(self):
         hist_settings_vbox = QVBoxLayout()
         level_settings_hbox = QHBoxLayout()
 
-        hist_autoscale_btn = QPushButton('Autoscale')
-        hist_autoscale_btn.clicked.connect(self.single_shot_autoscale)
-        hist_settings_vbox.addWidget(
-            hist_autoscale_btn, alignment=Qt.AlignmentFlag.AlignLeft
-        )
-
         level_low_hbox = QHBoxLayout()
         self.hist_min_level_le = QLineEdit()
-        self.hist_min_level_le.setText('0')
+        self.hist_min_level_le.setText("0")
         self.hist_min_level_le.setMinimumWidth(100)
         self.hist_min_level_le.setMaximumWidth(100)
         self.hist_min_level_le.returnPressed.connect(self.update_hist_min_level)
-        hist_min_level_label = QLabel('Level low')
+        hist_min_level_label = QLabel("Level low")
         level_low_hbox.addWidget(
             hist_min_level_label, alignment=Qt.AlignmentFlag.AlignRight
         )
@@ -64,11 +75,11 @@ class ImageViewController(QWidget):
 
         level_high_hbox = QHBoxLayout()
         self.hist_max_level_le = QLineEdit()
-        self.hist_max_level_le.setText('1')
+        self.hist_max_level_le.setText("1")
         self.hist_max_level_le.setMinimumWidth(100)
         self.hist_max_level_le.setMaximumWidth(100)
         self.hist_max_level_le.returnPressed.connect(self.update_hist_max_level)
-        hist_max_level_label = QLabel('Level high')
+        hist_max_level_label = QLabel("Level high")
         level_high_hbox.addWidget(
             hist_max_level_label, alignment=Qt.AlignmentFlag.AlignRight
         )
@@ -77,7 +88,7 @@ class ImageViewController(QWidget):
         )
         level_settings_hbox.addLayout(level_high_hbox)
 
-        self.log_cb = QCheckBox('Logarithmic mode')
+        self.log_cb = QCheckBox("Logarithmic mode")
         self.log_cb.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         self.log_cb.stateChanged.connect(self.toggle_log_mode)
         hist_settings_vbox.addLayout(level_settings_hbox)
@@ -91,15 +102,21 @@ class ImageViewController(QWidget):
         self.roi_info_vbox_layout = QVBoxLayout()
 
         self.roi_info_layout_frame = QFrame()
-        self.roi_info_layout_frame.setFrameStyle(QFrame.Shape.WinPanel | QFrame.Shadow.Raised)
+        self.roi_info_layout_frame.setFrameStyle(
+            QFrame.Shape.WinPanel | QFrame.Shadow.Raised
+        )
         self.roi_info_layout = QGridLayout()
 
         self.line_roi_info_layout_frame = QFrame()
-        self.line_roi_info_layout_frame.setFrameStyle(QFrame.Shape.WinPanel | QFrame.Shadow.Raised)
+        self.line_roi_info_layout_frame.setFrameStyle(
+            QFrame.Shape.WinPanel | QFrame.Shadow.Raised
+        )
         self.line_roi_info_layout = QGridLayout()
 
         self.crosshair_roi_info_layout_frame = QFrame()
-        self.crosshair_roi_info_layout_frame.setFrameStyle(QFrame.Shape.WinPanel | QFrame.Shadow.Raised)
+        self.crosshair_roi_info_layout_frame.setFrameStyle(
+            QFrame.Shape.WinPanel | QFrame.Shadow.Raised
+        )
         self.crosshair_roi_info_layout = QGridLayout()
 
         self.build_roi_start_settings()
@@ -107,43 +124,47 @@ class ImageViewController(QWidget):
         self.build_line_roi_settings()
         self.build_crosshair_roi_settings()
 
-
         self.define_box_roi_btn = QToolButton()
-        self.define_box_roi_btn.setIcon(QIcon('nicos_ess/gui/box.png'))
+        self.define_box_roi_btn.setIcon(QIcon("nicos_ess/gui/box.png"))
         self.define_box_roi_btn.setIconSize(QSize(30, 30))
-        self.define_box_roi_btn.setToolTip('Drag to define a box ROI')
-        self.define_box_roi_btn.clicked.connect(
-            self.plotwidget.enter_roi_drag_mode
-        )
-        self.roi_cb = QCheckBox('Show')
+        self.define_box_roi_btn.setToolTip("Drag to define a box ROI")
+        self.define_box_roi_btn.clicked.connect(self.plotwidget.enter_roi_drag_mode)
+        self.roi_cb = QCheckBox("Show")
         self.roi_cb.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         self.roi_cb.clicked.connect(self.roi_clicked)
 
         self.roi_info_layout.addWidget(self.define_box_roi_btn, 0, 0)
         self.roi_info_layout.addWidget(self.roi_cb, 0, 4)
 
-
         self.roi_info_layout.addWidget(self.roi_start_label, 1, 0)
-        self.roi_info_layout.addWidget(self.roi_start_x_label, 1, 1, Qt.AlignmentFlag.AlignRight)
+        self.roi_info_layout.addWidget(
+            self.roi_start_x_label, 1, 1, Qt.AlignmentFlag.AlignRight
+        )
         self.roi_info_layout.addWidget(self.roi_start_x_le, 1, 2)
-        self.roi_info_layout.addWidget(self.roi_start_y_label, 1, 3, Qt.AlignmentFlag.AlignRight)
+        self.roi_info_layout.addWidget(
+            self.roi_start_y_label, 1, 3, Qt.AlignmentFlag.AlignRight
+        )
         self.roi_info_layout.addWidget(self.roi_start_y_le, 1, 4)
 
         self.roi_info_layout.addWidget(self.roi_size_label, 2, 0)
-        self.roi_info_layout.addWidget(self.roi_size_x_label, 2, 1, Qt.AlignmentFlag.AlignRight)
+        self.roi_info_layout.addWidget(
+            self.roi_size_x_label, 2, 1, Qt.AlignmentFlag.AlignRight
+        )
         self.roi_info_layout.addWidget(self.roi_size_x_le, 2, 2)
-        self.roi_info_layout.addWidget(self.roi_size_y_label, 2, 3, Qt.AlignmentFlag.AlignRight)
+        self.roi_info_layout.addWidget(
+            self.roi_size_y_label, 2, 3, Qt.AlignmentFlag.AlignRight
+        )
         self.roi_info_layout.addWidget(self.roi_size_y_le, 2, 4)
 
         self.define_line_roi_btn = QToolButton()
-        self.define_line_roi_btn.setIcon(QIcon('nicos_ess/gui/line.png'))
+        self.define_line_roi_btn.setIcon(QIcon("nicos_ess/gui/line.png"))
         self.define_line_roi_btn.setIconSize(QSize(30, 30))
-        self.define_line_roi_btn.setToolTip('Drag to define a line ROI')
+        self.define_line_roi_btn.setToolTip("Drag to define a line ROI")
         self.define_line_roi_btn.clicked.connect(
             self.plotwidget.enter_line_roi_drag_mode
         )
 
-        self.line_roi_cb = QCheckBox('Show')
+        self.line_roi_cb = QCheckBox("Show")
         self.line_roi_cb.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         self.line_roi_cb.clicked.connect(self.line_roi_clicked)
 
@@ -151,30 +172,42 @@ class ImageViewController(QWidget):
         self.line_roi_info_layout.addWidget(self.line_roi_cb, 0, 4)
 
         self.line_roi_info_layout.addWidget(self.line_roi_start_label, 1, 0)
-        self.line_roi_info_layout.addWidget(self.line_roi_start_x_label, 1, 1, Qt.AlignmentFlag.AlignRight)
+        self.line_roi_info_layout.addWidget(
+            self.line_roi_start_x_label, 1, 1, Qt.AlignmentFlag.AlignRight
+        )
         self.line_roi_info_layout.addWidget(self.line_roi_start_x_le, 1, 2)
-        self.line_roi_info_layout.addWidget(self.line_roi_start_y_label, 1, 3, Qt.AlignmentFlag.AlignRight)
+        self.line_roi_info_layout.addWidget(
+            self.line_roi_start_y_label, 1, 3, Qt.AlignmentFlag.AlignRight
+        )
         self.line_roi_info_layout.addWidget(self.line_roi_start_y_le, 1, 4)
 
         self.line_roi_info_layout.addWidget(self.line_roi_end_label, 2, 0)
-        self.line_roi_info_layout.addWidget(self.line_roi_end_x_label, 2, 1, Qt.AlignmentFlag.AlignRight)
+        self.line_roi_info_layout.addWidget(
+            self.line_roi_end_x_label, 2, 1, Qt.AlignmentFlag.AlignRight
+        )
         self.line_roi_info_layout.addWidget(self.line_roi_end_x_le, 2, 2)
-        self.line_roi_info_layout.addWidget(self.line_roi_end_y_label, 2, 3, Qt.AlignmentFlag.AlignRight)
+        self.line_roi_info_layout.addWidget(
+            self.line_roi_end_y_label, 2, 3, Qt.AlignmentFlag.AlignRight
+        )
         self.line_roi_info_layout.addWidget(self.line_roi_end_y_le, 2, 4)
 
         self.line_roi_info_layout.addWidget(self.line_roi_width_label, 3, 0)
         self.line_roi_info_layout.addWidget(self.line_roi_width_le, 3, 4)
 
-        self.roi_crosshair_cb = QCheckBox('Show')
+        self.roi_crosshair_cb = QCheckBox("Show")
         self.roi_crosshair_cb.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         self.roi_crosshair_cb.clicked.connect(self.roi_crosshair_clicked)
 
         self.crosshair_roi_info_layout.addWidget(self.roi_crosshair_cb, 0, 4)
 
         self.crosshair_roi_info_layout.addWidget(self.crosshair_roi_pos_label, 1, 0)
-        self.crosshair_roi_info_layout.addWidget(self.crosshair_roi_pos_x_label, 1, 1, Qt.AlignmentFlag.AlignRight)
+        self.crosshair_roi_info_layout.addWidget(
+            self.crosshair_roi_pos_x_label, 1, 1, Qt.AlignmentFlag.AlignRight
+        )
         self.crosshair_roi_info_layout.addWidget(self.crosshair_roi_pos_x_le, 1, 2)
-        self.crosshair_roi_info_layout.addWidget(self.crosshair_roi_pos_y_label, 1, 3, Qt.AlignmentFlag.AlignRight)
+        self.crosshair_roi_info_layout.addWidget(
+            self.crosshair_roi_pos_y_label, 1, 3, Qt.AlignmentFlag.AlignRight
+        )
         self.crosshair_roi_info_layout.addWidget(self.crosshair_roi_pos_y_le, 1, 4)
 
         self.roi_info_layout_frame.setLayout(self.roi_info_layout)
@@ -194,10 +227,11 @@ class ImageViewController(QWidget):
         vbox = QVBoxLayout()
 
         hist_settings = self.build_hist_settings()
+        self.create_hist_autoscale_btn()
 
         vbox.addLayout(hist_settings)
 
-        self.profile_cb = QCheckBox('Show Full Profiles')
+        self.profile_cb = QCheckBox("Show Full Profiles")
         self.profile_cb.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         self.profile_cb.clicked.connect(self.show_profile_clicked)
         vbox.addWidget(self.profile_cb)
@@ -211,52 +245,52 @@ class ImageViewController(QWidget):
 
     def build_roi_start_settings(self):
         self.roi_start_x_le = QLineEdit()
-        self.roi_start_x_le.setText('0')
+        self.roi_start_x_le.setText("0")
         self.roi_start_x_le.setMinimumWidth(100)
         self.roi_start_x_le.setMaximumWidth(100)
         self.roi_start_x_le.returnPressed.connect(self.update_roi_start_x)
 
         self.roi_start_y_le = QLineEdit()
-        self.roi_start_y_le.setText('0')
+        self.roi_start_y_le.setText("0")
         self.roi_start_y_le.setMinimumWidth(100)
         self.roi_start_y_le.setMaximumWidth(100)
         self.roi_start_y_le.returnPressed.connect(self.update_roi_start_y)
 
-        self.roi_start_label = QLabel('ROI Start: ')
-        self.roi_start_x_label = QLabel('X')
-        self.roi_start_y_label = QLabel('Y')
+        self.roi_start_label = QLabel("ROI Start: ")
+        self.roi_start_x_label = QLabel("X")
+        self.roi_start_y_label = QLabel("Y")
 
     def build_roi_size_settings(self):
         self.roi_size_x_le = QLineEdit()
-        self.roi_size_x_le.setText('0')
+        self.roi_size_x_le.setText("0")
         self.roi_size_x_le.setMinimumWidth(100)
         self.roi_size_x_le.setMaximumWidth(100)
         self.roi_size_x_le.returnPressed.connect(self.update_roi_size_x)
 
         self.roi_size_y_le = QLineEdit()
-        self.roi_size_y_le.setText('0')
+        self.roi_size_y_le.setText("0")
         self.roi_size_y_le.setMinimumWidth(100)
         self.roi_size_y_le.setMaximumWidth(100)
         self.roi_size_y_le.returnPressed.connect(self.update_roi_size_y)
 
-        self.roi_size_label = QLabel('ROI Size: ')
-        self.roi_size_x_label = QLabel('X')
-        self.roi_size_y_label = QLabel('Y')
+        self.roi_size_label = QLabel("ROI Size: ")
+        self.roi_size_x_label = QLabel("X")
+        self.roi_size_y_label = QLabel("Y")
 
     def build_scale_settings(self):
         scale_settings_vbox = QVBoxLayout()
         scale_settings_vbox.addStretch(1)
 
         line_length_hbox = QHBoxLayout()
-        self.current_line_length_label = QLabel('Current line length: ')
-        self.current_line_length_rb = QLabel('0')
+        self.current_line_length_label = QLabel("Current line length: ")
+        self.current_line_length_rb = QLabel("0")
         line_length_hbox.addWidget(self.current_line_length_label)
         line_length_hbox.addWidget(self.current_line_length_rb)
 
         defined_length_hbox = QHBoxLayout()
-        self.defined_length_label = QLabel('Define length (mm): ')
+        self.defined_length_label = QLabel("Define length (mm): ")
         self.defined_length_le = QLineEdit()
-        self.defined_length_le.setText('1')
+        self.defined_length_le.setText("1")
         self.defined_length_le.setMinimumWidth(100)
         self.defined_length_le.setMaximumWidth(100)
         self.defined_length_le.returnPressed.connect(self.update_pix_mm_ratio)
@@ -265,18 +299,14 @@ class ImageViewController(QWidget):
             self.defined_length_le, alignment=Qt.AlignmentFlag.AlignLeft
         )
 
-        self.use_defined_length_cb = QCheckBox('Use defined length')
-        self.use_defined_length_cb.setLayoutDirection(
-            Qt.LayoutDirection.RightToLeft
-        )
-        self.use_defined_length_cb.stateChanged.connect(
-            self.toggle_use_defined_length
-        )
+        self.use_defined_length_cb = QCheckBox("Use defined length")
+        self.use_defined_length_cb.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+        self.use_defined_length_cb.stateChanged.connect(self.toggle_use_defined_length)
         self.use_defined_length_cb.setEnabled(False)
 
         pix_ratio_hbox = QHBoxLayout()
-        self.pix_mm_ratio_label = QLabel('Pix/mm ratio: ')
-        self.pix_mm_ratio_rb = QLabel('0')
+        self.pix_mm_ratio_label = QLabel("Pix/mm ratio: ")
+        self.pix_mm_ratio_rb = QLabel("0")
         pix_ratio_hbox.addWidget(self.pix_mm_ratio_label)
         pix_ratio_hbox.addWidget(self.pix_mm_ratio_rb)
 
@@ -289,68 +319,60 @@ class ImageViewController(QWidget):
 
     def build_line_roi_settings(self):
         self.line_roi_start_x_le = QLineEdit()
-        self.line_roi_start_x_le.setText('0')
+        self.line_roi_start_x_le.setText("0")
         self.line_roi_start_x_le.setMinimumWidth(100)
         self.line_roi_start_x_le.setMaximumWidth(100)
-        self.line_roi_start_x_le.returnPressed.connect(
-            self.update_line_roi_start_x
-        )
+        self.line_roi_start_x_le.returnPressed.connect(self.update_line_roi_start_x)
 
         self.line_roi_start_y_le = QLineEdit()
-        self.line_roi_start_y_le.setText('0')
+        self.line_roi_start_y_le.setText("0")
         self.line_roi_start_y_le.setMinimumWidth(100)
         self.line_roi_start_y_le.setMaximumWidth(100)
-        self.line_roi_start_y_le.returnPressed.connect(
-            self.update_line_roi_start_y
-        )
+        self.line_roi_start_y_le.returnPressed.connect(self.update_line_roi_start_y)
 
         self.line_roi_end_x_le = QLineEdit()
-        self.line_roi_end_x_le.setText('0')
+        self.line_roi_end_x_le.setText("0")
         self.line_roi_end_x_le.setMinimumWidth(100)
         self.line_roi_end_x_le.setMaximumWidth(100)
         self.line_roi_end_x_le.returnPressed.connect(self.update_line_roi_end_x)
 
         self.line_roi_end_y_le = QLineEdit()
-        self.line_roi_end_y_le.setText('0')
+        self.line_roi_end_y_le.setText("0")
         self.line_roi_end_y_le.setMinimumWidth(100)
         self.line_roi_end_y_le.setMaximumWidth(100)
         self.line_roi_end_y_le.returnPressed.connect(self.update_line_roi_end_y)
 
         self.line_roi_width_le = QLineEdit()
-        self.line_roi_width_le.setText('0')
+        self.line_roi_width_le.setText("0")
         self.line_roi_width_le.setMinimumWidth(100)
         self.line_roi_width_le.setMaximumWidth(100)
         self.line_roi_width_le.returnPressed.connect(self.update_line_roi_width)
 
-        self.line_roi_start_label = QLabel('Line ROI Start: ')
-        self.line_roi_start_x_label = QLabel('X')
-        self.line_roi_start_y_label = QLabel('Y')
+        self.line_roi_start_label = QLabel("Line ROI Start: ")
+        self.line_roi_start_x_label = QLabel("X")
+        self.line_roi_start_y_label = QLabel("Y")
 
-        self.line_roi_end_label = QLabel('Line ROI End: ')
-        self.line_roi_end_x_label = QLabel('X')
-        self.line_roi_end_y_label = QLabel('Y')
-        self.line_roi_width_label = QLabel('Line Width: ')
+        self.line_roi_end_label = QLabel("Line ROI End: ")
+        self.line_roi_end_x_label = QLabel("X")
+        self.line_roi_end_y_label = QLabel("Y")
+        self.line_roi_width_label = QLabel("Line Width: ")
 
     def build_crosshair_roi_settings(self):
         self.crosshair_roi_pos_x_le = QLineEdit()
-        self.crosshair_roi_pos_x_le.setText('0')
+        self.crosshair_roi_pos_x_le.setText("0")
         self.crosshair_roi_pos_x_le.setMinimumWidth(100)
         self.crosshair_roi_pos_x_le.setMaximumWidth(100)
-        self.crosshair_roi_pos_x_le.returnPressed.connect(
-            self.update_crosshair_roi_x
-        )
+        self.crosshair_roi_pos_x_le.returnPressed.connect(self.update_crosshair_roi_x)
 
         self.crosshair_roi_pos_y_le = QLineEdit()
-        self.crosshair_roi_pos_y_le.setText('0')
+        self.crosshair_roi_pos_y_le.setText("0")
         self.crosshair_roi_pos_y_le.setMinimumWidth(100)
         self.crosshair_roi_pos_y_le.setMaximumWidth(100)
-        self.crosshair_roi_pos_y_le.returnPressed.connect(
-            self.update_crosshair_roi_y
-        )
+        self.crosshair_roi_pos_y_le.returnPressed.connect(self.update_crosshair_roi_y)
 
-        self.crosshair_roi_pos_label = QLabel('Cross Pos: ')
-        self.crosshair_roi_pos_x_label = QLabel('X')
-        self.crosshair_roi_pos_y_label = QLabel('Y')
+        self.crosshair_roi_pos_label = QLabel("Cross Pos: ")
+        self.crosshair_roi_pos_x_label = QLabel("X")
+        self.crosshair_roi_pos_y_label = QLabel("Y")
 
     def toggle_use_defined_length(self, state):
         use_defined_length = state == Qt.Checked
