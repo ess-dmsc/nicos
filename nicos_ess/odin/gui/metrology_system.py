@@ -24,6 +24,7 @@
 #
 # *****************************************************************************
 """ODIN Metrology System Panel."""
+
 from collections import OrderedDict, namedtuple
 
 from nicos.clients.gui.utils import loadUi
@@ -36,50 +37,61 @@ from nicos_ess.loki.gui.table_delegates import ComboBoxDelegate
 from nicos_ess.loki.gui.table_helper import Clipboard, TableHelper
 from nicos_ess.odin.gui.metrology_system_model import OdinMetrologySystemModel
 
-COMPONENT_COLUMN_NAME = 'Component'
+COMPONENT_COLUMN_NAME = "Component"
 
-COMPONENT_KEY = 'component'
+COMPONENT_KEY = "component"
 
-CONFIRMED_DISTASNCE_COLUMN_NAME = 'Confirmed distance from Sample - Z-axis [m]'
+CONFIRMED_DISTANCE_COLUMN_NAME = "Confirmed distance from Sample - Beam axis [m]"
 
-CONFIRMED_DISTANCE = 'confirmed_distance_from_sample'
+CONFIRMED_DISTANCE = "confirmed_distance_from_sample"
 
-SCANNED_DISTANCE_COLUMN_NAME = 'Scanned distance from Sample - Z-axis [m]'
+SCANNED_DISTANCE_COLUMN_NAME = "Scanned distance from Sample - Beam axis [m]"
 
-DISTANCE_FROM_SAMPLE = 'distance_from_sample'
+DISTANCE_FROM_SAMPLE = "distance_from_sample"
 
-TABLE_QSS = 'alternate-background-color: aliceblue;'
+TABLE_QSS = "alternate-background-color: aliceblue;"
 
 Column = namedtuple(
-    'Column', ['header', 'optional', 'style', 'can_bulk_update', 'delegate'])
+    "Column", ["header", "optional", "style", "can_bulk_update", "delegate"]
+)
 
 
 class MetrologySystemPanel(PanelBase):
     def __init__(self, parent, client, options):
         PanelBase.__init__(self, parent, client, options)
-        loadUi(self,
-               findResource('nicos_ess/odin/gui/ui_files/metrology_system.ui'))
+        loadUi(self, findResource("nicos_ess/odin/gui/ui_files/metrology_system.ui"))
         self._dev_name = None
         self._dev_name_old = None
         self.parent_window = parent
         self.combo_delegate = ComboBoxDelegate()
 
-        self.columns = OrderedDict({
-            COMPONENT_KEY:
-                Column(COMPONENT_COLUMN_NAME, False,
-                       QHeaderView.ResizeMode.ResizeToContents, True,
-                       ReadOnlyDelegate()),
-            DISTANCE_FROM_SAMPLE:
-                Column(SCANNED_DISTANCE_COLUMN_NAME, False,
-                       QHeaderView.ResizeMode.Stretch, True,
-                       ReadOnlyDelegate()),
-            CONFIRMED_DISTANCE:
-                Column(CONFIRMED_DISTASNCE_COLUMN_NAME, False,
-                       QHeaderView.ResizeMode.Stretch, True,
-                       ReadOnlyDelegate()),
-        })
+        self.columns = OrderedDict(
+            {
+                COMPONENT_KEY: Column(
+                    COMPONENT_COLUMN_NAME,
+                    False,
+                    QHeaderView.ResizeMode.ResizeToContents,
+                    True,
+                    ReadOnlyDelegate(),
+                ),
+                DISTANCE_FROM_SAMPLE: Column(
+                    SCANNED_DISTANCE_COLUMN_NAME,
+                    False,
+                    QHeaderView.ResizeMode.Stretch,
+                    True,
+                    ReadOnlyDelegate(),
+                ),
+                CONFIRMED_DISTANCE: Column(
+                    CONFIRMED_DISTANCE_COLUMN_NAME,
+                    False,
+                    QHeaderView.ResizeMode.Stretch,
+                    True,
+                    ReadOnlyDelegate(),
+                ),
+            }
+        )
         self.columns_headers = list(self.columns.keys())
-        self.lblScanWarn.setStyleSheet('color: red')
+        self.lblScanWarn.setStyleSheet("color: red")
         self.lblScanWarn.setVisible(False)
         self.btnConfirm.setEnabled(False)
         self._init_table_panel()
@@ -88,51 +100,52 @@ class MetrologySystemPanel(PanelBase):
 
     def _init_table_panel(self):
         headers = [column.header for column in self.columns.values()]
-        mappings = {COMPONENT_COLUMN_NAME: 'component_name',
-                    SCANNED_DISTANCE_COLUMN_NAME: DISTANCE_FROM_SAMPLE,
-                    CONFIRMED_DISTASNCE_COLUMN_NAME: CONFIRMED_DISTANCE
-                    }
+        mappings = {
+            COMPONENT_COLUMN_NAME: "component_name",
+            SCANNED_DISTANCE_COLUMN_NAME: DISTANCE_FROM_SAMPLE,
+            CONFIRMED_DISTANCE_COLUMN_NAME: CONFIRMED_DISTANCE,
+        }
 
         self.model = OdinMetrologySystemModel(headers, self.columns, mappings)
         self.tableView.setModel(self.model)
         self.tableView.setSelectionMode(QTableView.SelectionMode.ContiguousSelection)
-        self.table_helper = TableHelper(self.tableView, self.model,
-                                        Clipboard())
+        self.table_helper = TableHelper(self.tableView, self.model, Clipboard())
 
         for i, column in enumerate(self.columns.values()):
             if column.delegate:
                 self.tableView.setItemDelegateForColumn(i, column.delegate)
 
-        self.tableView.verticalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Fixed)
+        self.tableView.verticalHeader().setSectionResizeMode(
+            QHeaderView.ResizeMode.Fixed
+        )
         for i, column in enumerate(self.columns.values()):
-            self.tableView.horizontalHeader().setSectionResizeMode(
-                i, column.style)
+            self.tableView.horizontalHeader().setSectionResizeMode(i, column.style)
         self.tableView.setAlternatingRowColors(True)
         self.tableView.setStyleSheet(TABLE_QSS)
 
     def sort_by_distance(self, components):
-        sorted_components = sorted(components,
-                                   key=lambda x: self.get_distance_value(x))
+        sorted_components = sorted(components, key=lambda x: self.get_distance_value(x))
         return sorted_components
 
     def get_distance_value(self, component):
         distance = component.get(DISTANCE_FROM_SAMPLE)
-        if distance != 'Not detected':
+        if distance != "Not detected":
             return abs(float(distance))
         else:
-            return float('inf')
+            return float("inf")
 
     def request_scan(self):
         extracted_data = self.exec_command(
-            'component_tracking.read_metrology_system_messages()')
+            "component_tracking.read_metrology_system_messages()"
+        )
         if not extracted_data:
             self.btnConfirm.setEnabled(False)
-            self.lblScanWarn.setText('Could not retrieve positions!')
+            self.lblScanWarn.setText("Could not retrieve positions!")
             self.lblScanWarn.setVisible(True)
             return
         sorted_data = self.sort_by_distance(extracted_data)
         self.model.raw_data = sorted_data
-        self.lblScanWarn.setText('Scanned values are not confirmed!')
+        self.lblScanWarn.setText("Scanned values are not confirmed!")
         self.lblScanWarn.setVisible(True)
         self.btnConfirm.setEnabled(True)
 
@@ -145,7 +158,7 @@ class MetrologySystemPanel(PanelBase):
 
     @pyqtSlot()
     def on_btnConfirm_clicked(self):
-        self.exec_command('component_tracking.confirm_components()')
+        self.exec_command("component_tracking.confirm_components()")
         self._reset_controls()
 
     def on_client_connected(self):
@@ -179,7 +192,8 @@ class MetrologySystemPanel(PanelBase):
 
     def _find_device(self):
         devices = self.client.getDeviceList(
-            'nicos_ess.odin.devices.component_tracking.ComponentTrackingDevice')
+            "nicos_ess.odin.devices.component_tracking.ComponentTrackingDevice"
+        )
         # Should only be one
         self._dev_name = devices[0] if devices else None
         self._register_listeners()
@@ -188,11 +202,11 @@ class MetrologySystemPanel(PanelBase):
         # Only register once unless the device name changes.
         if self._dev_name and self._dev_name != self._dev_name_old:
             self._dev_name_old = self._dev_name
-            self.client.register(self, f'{self._dev_name}/confirmed_components')
+            self.client.register(self, f"{self._dev_name}/confirmed_components")
             self.client.on_connected_event()
 
     def on_keyChange(self, key, value, time, expired):
         if self._dev_name and key.startswith(self._dev_name):
-            if key.endswith('/confirmed_components'):
+            if key.endswith("/confirmed_components"):
                 sorted_data = self.sort_by_distance(value)
                 self.model.raw_data = sorted_data
