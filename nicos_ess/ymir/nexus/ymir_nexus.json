@@ -12,38 +12,6 @@
       ],
       "children": [
         {
-          "module": "dataset",
-          "config": {
-            "name": "title",
-            "values": "$TITLE$",
-            "type": "string"
-          }
-        },
-        {
-          "module": "dataset",
-          "config": {
-            "name": "experiment_identifier",
-            "values": "$EXP_ID$",
-            "type": "string"
-          }
-        },
-        {
-          "module": "dataset",
-          "config": {
-            "name": "entry_identifier",
-            "values": "$ENTRY_ID$",
-            "type": "string"
-          }
-        },
-        {
-          "module": "dataset",
-          "config": {
-            "name": "entry_identifier_uuid",
-            "values": "$JOB_ID$",
-            "type": "string"
-          }
-        },
-        {
           "name": "instrument",
           "type": "group",
           "attributes": [
@@ -1369,8 +1337,7 @@
               }
             }
           ]
-        },
-        "$USERS$"
+        }
       ]
     }
   ]

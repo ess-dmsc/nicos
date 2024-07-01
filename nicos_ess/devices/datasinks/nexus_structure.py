@@ -165,21 +165,47 @@ class NexusStructureJsonFile(NexusStructureProvider):
             temp.append(result)
         return temp
 
+    def _generate_samples_group_list(self, entities, skip_keys=None):
+        children = []
+        for entity in entities:
+            for n, v in entity.items():
+                if skip_keys and n in skip_keys:
+                    continue
+                children.append(
+                    {
+                        "module": "dataset",
+                        "config": {"name": n, "values": v, "dtype": "string"},
+                    }
+                )
+        return children
+
     def _insert_samples(self, structure, metainfo):
-        structure_str = json.dumps(structure)
         samples_info = metainfo.get(("Sample", "samples"))
         if not samples_info:
             return structure
 
-        samples_str = self._generate_nxclass_template(
-            "NXsample", "sample", samples_info[0].values(), skip_keys=["number_of"]
+        samples_list = self._generate_samples_group_list(
+            samples_info[0].values(), skip_keys=["number_of"]
         )
-        samples_str = json.dumps(samples_str)
 
-        if samples_str:
-            structure_str = structure_str.replace('"$SAMPLES$"', samples_str)
+        if not samples_list:
+            return structure
 
-        return json.loads(structure_str)
+        for child in structure["children"][0]["children"]:
+            if not isinstance(child, dict) or "attributes" not in child:
+                continue
+
+            if any(
+                attr.get("name") == "NX_class" and attr.get("values") == "NXsample"
+                for attr in child["attributes"]
+            ):
+                child.setdefault("children", []).extend(samples_list)
+                return structure
+
+        self.log.warning(
+            "Could not find the NXsample group in the NeXus JSON structure"
+        )
+        return structure
 
     def _insert_users(self, structure, metainfo):
         users = self._generate_nxclass_template(
