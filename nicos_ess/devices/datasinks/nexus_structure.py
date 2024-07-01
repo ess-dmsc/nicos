@@ -120,9 +120,7 @@ class NexusStructureJsonFile(NexusStructureProvider):
                 "experiment_identifier", metainfo[("Exp", "proposal")][0]
             ),
             self._create_dataset("entry_identifier", str(counter)),
-            self._create_dataset(
-                "entry_identifier_uuid", metainfo[("Exp", "job_id")][0]
-            ),
+            self._create_dataset("entry_identifier_uuid", metainfo[("Exp", "job_id")]),
         ]
         structure["children"][0]["children"].extend(datasets)
         structure = self._insert_users(structure, metainfo)
@@ -143,7 +141,7 @@ class NexusStructureJsonFile(NexusStructureProvider):
         return structure
 
     def _generate_nxclass_template(self, nx_class, prefix, entities, skip_keys=None):
-        temp = {}
+        temp = []
         for entity in entities:
             entity_name = entity.get("name", "").replace(" ", "")
             if not entity_name:
@@ -164,7 +162,7 @@ class NexusStructureJsonFile(NexusStructureProvider):
                         "config": {"name": n, "values": v, "dtype": "string"},
                     }
                 )
-            temp.update(result)
+            temp.append(result)
         return temp
 
     def _insert_samples(self, structure, metainfo):
@@ -184,13 +182,13 @@ class NexusStructureJsonFile(NexusStructureProvider):
         return json.loads(structure_str)
 
     def _insert_users(self, structure, metainfo):
-        users_str = self._generate_nxclass_template(
+        users = self._generate_nxclass_template(
             "NXuser",
             "user",
             metainfo[("Exp", "users")][0],
         )
-        if users_str:
-            structure["children"][0]["children"].append(users_str)
+        if users:
+            structure["children"][0]["children"].extend(users)
         return structure
 
     def _create_dataset(self, name, values):
