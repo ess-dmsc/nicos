@@ -24,6 +24,7 @@
 #
 # *****************************************************************************
 """Component Tracking Device."""
+
 from datetime import datetime, timedelta
 
 from streaming_data_types import deserialise_f144
@@ -35,39 +36,46 @@ from nicos_ess.devices.kafka.consumer import KafkaConsumer
 
 class ComponentTrackingDevice(Readable):
     """Device for reading the Metrology System data."""
+
     parameters = {
-        'brokers':
-            Param('The kafka address brokers',
-                  type=listof(host(defaultport=9092)),
-                  userparam=False,
-                  settable=False,
-                  mandatory=True),
-        'response_topic':
-            Param('The topic where the metrology system data appear',
-                  type=str,
-                  userparam=False,
-                  settable=False,
-                  mandatory=True),
-        'confirmed_components':
-            Param('List of confirmed components',
-                  type=listof(dict),
-                  userparam=False,
-                  settable=True,
-                  mandatory=False),
-        'valid_components':
-            Param('List of valid component names',
-                  type=listof(str),
-                  userparam=False,
-                  settable=True,
-                  mandatory=False)
+        "brokers": Param(
+            "The kafka address brokers",
+            type=listof(host(defaultport=9092)),
+            userparam=False,
+            settable=False,
+            mandatory=True,
+        ),
+        "response_topic": Param(
+            "The topic where the metrology system data appear",
+            type=str,
+            userparam=False,
+            settable=False,
+            mandatory=True,
+        ),
+        "confirmed_components": Param(
+            "List of confirmed components",
+            type=listof(dict),
+            userparam=False,
+            settable=True,
+            mandatory=False,
+        ),
+        "valid_components": Param(
+            "List of valid component names",
+            type=listof(str),
+            userparam=False,
+            settable=True,
+            mandatory=False,
+        ),
     }
 
     parameter_overrides = {
-        'unit': Override(mandatory=False, settable=False),
+        "unit": Override(mandatory=False, settable=False),
     }
 
     _consumer = None
     _unconfirmed_components = []
+    _last_confirm_timestamp = None
+    _last_scan_timestamp = None
 
     def doPreinit(self, mode):
         if mode != SIMULATION:
@@ -98,18 +106,18 @@ class ComponentTrackingDevice(Readable):
                 if not name:
                     continue
                 messages[name] = values
-                if name.endswith(':valid'):
-                    validity[name.split(':')[0]] = values['value'] == 1
+                if name.endswith(":valid"):
+                    validity[name.split(":")[0]] = values["value"] == 1
         if not messages:
             return {}
 
         components_data = self._extract_components(list(messages.values()))
 
         for component in components_data:
-            if component['valid'] == 1:
-                component['distance_from_sample'] = round(component['z'], 3)
+            if component["valid"] == 1:
+                component["distance_from_sample"] = round(component["z"], 3)
             else:
-                component['distance_from_sample'] = 'Not detected'
+                component["distance_from_sample"] = "Not detected"
         self._update_unconfirmed_components(components_data)
 
         return self._unconfirmed_components
@@ -118,39 +126,59 @@ class ComponentTrackingDevice(Readable):
         temp = []
         for new_component in new_components:
             for component in self._unconfirmed_components:
-                if component['component_name'] == new_component['component_name']:
-                    new_component['confirmed_distance_from_sample'] = component.get('confirmed_distance_from_sample')
+                if component["component_name"] == new_component["component_name"]:
+                    new_component["confirmed_distance_from_sample"] = component.get(
+                        "confirmed_distance_from_sample"
+                    )
             temp.append(new_component)
         self._unconfirmed_components = temp
+        self._last_scan_timestamp = datetime.now()
 
     def _extract_components(self, data):
         components = {}
         for entry in data:
-            component_name, component_value = entry['name'].split(':')
+            component_name, component_value = entry["name"].split(":")
             current_component = components.get(component_name, {})
-            current_component[component_value] = entry['value']
+            current_component[component_value] = entry["value"]
             components[component_name] = current_component
 
         full_component_data = []
         for name, details in components.items():
-            details['component_name'] = name
+            details["component_name"] = name
             full_component_data.append(details)
         return full_component_data
 
     def _process_kafka_message(self, msg):
-        if msg[4:8] != b'f144':
+        if msg[4:8] != b"f144":
             return None, None
         log_data = deserialise_f144(msg)
         source_name = log_data.source_name
         value = log_data.value
         timestamp = log_data.timestamp_unix_ns
-        return source_name, {'name': source_name, 'value': value, 'timestamp': timestamp}
+        return source_name, {
+            "name": source_name,
+            "value": value,
+            "timestamp": timestamp,
+        }
 
     def confirm_components(self):
-        self.valid_components = [value['component_name'] for value in self._unconfirmed_components if value['valid']]
+        self.valid_components = [
+            value["component_name"]
+            for value in self._unconfirmed_components
+            if value["valid"]
+        ]
         to_be_confirmed = list(self._unconfirmed_components)
         for component in to_be_confirmed:
-            component['confirmed_distance_from_sample'] = component['distance_from_sample']
+            component["confirmed_distance_from_sample"] = component[
+                "distance_from_sample"
+            ]
         self._unconfirmed_components = to_be_confirmed
         self.confirmed_components = to_be_confirmed
+        self._last_confirm_timestamp = datetime.now()
         return self.confirmed_components
+
+    def get_confirmed_timestamp(self):
+        return self._last_confirm_timestamp
+
+    def get_scan_timestamp(self):
+        return self._last_scan_timestamp
