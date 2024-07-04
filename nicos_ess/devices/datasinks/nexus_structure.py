@@ -123,6 +123,7 @@ class NexusStructureJsonFile(NexusStructureProvider):
             self._create_dataset("entry_identifier_uuid", metainfo[("Exp", "job_id")]),
         ]
         structure["children"][0]["children"].extend(datasets)
+        structure["children"][0]["children"].append(self._create_mdat())
         structure = self._insert_users(structure, metainfo)
         structure = self._insert_samples(structure, metainfo)
         return structure
@@ -221,6 +222,12 @@ class NexusStructureJsonFile(NexusStructureProvider):
         return {
             "module": "dataset",
             "config": {"name": name, "values": values, "type": "string"},
+        }
+
+    def _create_mdat(self):
+        return {
+            "module": "mdat",
+            "config": {"items": ["start_time", "end_time"]},
         }
 
 
