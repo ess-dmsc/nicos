@@ -158,7 +158,6 @@ class MetrologySystemPanel(PanelBase):
             self.lblScanWarn.setText("Could not retrieve positions!")
             self.lblScanWarn.setVisible(True)
             return
-        print(extracted_data)
         sorted_data = self.sort_by_distance(extracted_data)
         self.model.raw_data = sorted_data
         self.lblScanWarn.setText("Scanned values are not confirmed!")

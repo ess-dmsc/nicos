@@ -144,7 +144,7 @@ class ComponentTrackingDevice(Readable):
 
         full_component_data = []
         for name, details in components.items():
-            print(name, details)
+            print(name)
             details["component_name"] = name
             full_component_data.append(details)
         return full_component_data
