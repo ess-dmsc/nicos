@@ -35,7 +35,7 @@ from nicos.utils import findResource
 
 from nicos_ess.gui.panels.panel import PanelBase
 from nicos_ess.loki.gui.sample_holder_config import ReadOnlyDelegate
-from nicos_ess.loki.gui.table_delegates import ComboBoxDelegate
+from nicos_ess.loki.gui.table_delegates import ComboBoxDelegate, CheckboxDelegate
 from nicos_ess.loki.gui.table_helper import Clipboard, TableHelper
 from nicos_ess.odin.gui.metrology_system_model import OdinMetrologySystemModel
 
@@ -43,7 +43,7 @@ COMPONENT_COLUMN_NAME = "Component"
 
 COMPONENT_KEY = "component_name"
 
-CONFIRMED_DISTANCE_COLUMN_NAME = "Confirmed distance from Sample - Beam axis [m]"
+CHECKBOXES_COLUMN_NAME = "Checkboxes [temporary]"
 
 CONFIRMED_DISTANCE = "confirmed_distance_from_sample"
 
@@ -73,6 +73,7 @@ class MetrologySystemPanel(PanelBase):
         self._dev_name_old = None
         self.parent_window = parent
         self.combo_delegate = ComboBoxDelegate()
+        self.checkbox_delegate = CheckboxDelegate()
 
         self.columns = OrderedDict(
             {
@@ -90,12 +91,12 @@ class MetrologySystemPanel(PanelBase):
                     True,
                     ReadOnlyDelegate(),
                 ),
-                CONFIRMED_DISTANCE: Column(
-                    CONFIRMED_DISTANCE_COLUMN_NAME,
+                CHECKBOXES_COLUMN_NAME: Column(
+                    CHECKBOXES_COLUMN_NAME,
                     False,
-                    QHeaderView.ResizeMode.Stretch,
+                    QHeaderView.ResizeMode.ResizeToContents,
                     True,
-                    ReadOnlyDelegate(),
+                    self.checkbox_delegate,
                 ),
             }
         )
@@ -117,7 +118,7 @@ class MetrologySystemPanel(PanelBase):
         mappings = {
             COMPONENT_COLUMN_NAME: COMPONENT_KEY,
             SCANNED_DISTANCE_COLUMN_NAME: DISTANCE_FROM_SAMPLE,
-            CONFIRMED_DISTANCE_COLUMN_NAME: CONFIRMED_DISTANCE,
+            CHECKBOXES_COLUMN_NAME: CHECKBOXES_COLUMN_NAME,
         }
 
         self.model = OdinMetrologySystemModel(headers, self.columns, mappings)
@@ -157,11 +158,16 @@ class MetrologySystemPanel(PanelBase):
             self.lblScanWarn.setText("Could not retrieve positions!")
             self.lblScanWarn.setVisible(True)
             return
+        print(extracted_data)
         sorted_data = self.sort_by_distance(extracted_data)
         self.model.raw_data = sorted_data
         self.lblScanWarn.setText("Scanned values are not confirmed!")
         self.lblScanWarn.setVisible(True)
+        self.check_checkbox_status()
         self.btnConfirm.setEnabled(True)
+
+    def check_checkbox_status(self):
+        print(self.model.raw_data)
 
     def exec_command(self, command):
         return self.client.eval(command)
@@ -269,9 +275,19 @@ class MetrologySystemPanel(PanelBase):
                     writer.writerow([data[key] for key in data_keys])
 
     def view_data(self):
-        new_columns = [X_AXIS, Y_AXIS, Z_AXIS, ALPHA_ANGLE, BETA_ANGLE, GAMMA_ANGLE]
+        new_columns = [
+            CONFIRMED_DISTANCE,
+            X_AXIS,
+            Y_AXIS,
+            Z_AXIS,
+            ALPHA_ANGLE,
+            BETA_ANGLE,
+            GAMMA_ANGLE,
+        ]
+        filtered_self_columns = self.columns.copy()
+        filtered_self_columns.pop(CHECKBOXES_COLUMN_NAME, None)
         columns = {
-            **self.columns,
+            **filtered_self_columns,
             **{
                 name: Column(
                     name,

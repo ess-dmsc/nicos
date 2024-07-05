@@ -119,6 +119,7 @@ class ComponentTrackingDevice(Readable):
             else:
                 component["distance_from_sample"] = "Not detected"
         self._update_unconfirmed_components(components_data)
+        print(components_data)
 
         return self._unconfirmed_components
 

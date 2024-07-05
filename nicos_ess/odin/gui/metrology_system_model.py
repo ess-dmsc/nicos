@@ -24,6 +24,7 @@
 #
 # *****************************************************************************
 """ODIN Metrology System Model."""
+
 import re
 
 from nicos.core import ConfigurationError
@@ -45,13 +46,24 @@ class OdinMetrologySystemModel(TableModel):
         self._columns = columns
 
     def headerData(self, section, orientation, role):
-        if role == Qt.ItemDataRole.DisplayRole and orientation == Qt.Orientation.Horizontal:
+        if (
+            role == Qt.ItemDataRole.DisplayRole
+            and orientation == Qt.Orientation.Horizontal
+        ):
             return self._headings[section]
-        if role == Qt.ItemDataRole.DisplayRole and orientation == Qt.Orientation.Vertical:
+        if (
+            role == Qt.ItemDataRole.DisplayRole
+            and orientation == Qt.Orientation.Vertical
+        ):
             return section + 1
 
-    def setHeaderData(self, section, orientation, value, role=Qt.ItemDataRole.DisplayRole):
-        if role == Qt.ItemDataRole.DisplayRole and orientation == Qt.Orientation.Horizontal:
+    def setHeaderData(
+        self, section, orientation, value, role=Qt.ItemDataRole.DisplayRole
+    ):
+        if (
+            role == Qt.ItemDataRole.DisplayRole
+            and orientation == Qt.Orientation.Horizontal
+        ):
             self._headings[section] = value
             self.headerDataChanged.emit(orientation, section, section)
         return True
@@ -59,23 +71,21 @@ class OdinMetrologySystemModel(TableModel):
     def clear(self):
         """Clears the data but keeps the rows."""
         self._raw_data = [{} for _ in self._raw_data]
-        self._table_data = self._empty_table(len(self._headings),
-                                             len(self._raw_data))
+        self._table_data = self._empty_table(len(self._headings), len(self._raw_data))
         self._emit_update()
 
     def setData(self, index, value, role):
-        if role != Qt.EditRole:
+        if role != Qt.ItemDataRole.EditRole:
             return False
-
         row, column = self._get_row_and_column(index)
-        mapping = self._mappings.get(self._headings[column],
-                                     self._headings[column])
+        mapping = self._mappings.get(self._headings[column], self._headings[column])
         delegate = self._columns[mapping].delegate
         if isinstance(delegate, ReadOnlyDelegate):
             return False
-        value = self._parse_value(delegate, str(value).strip())
+        if isinstance(type(value), bool):
+            value = self._parse_value(delegate, str(value).strip())
         self._table_data[row][column] = value
-        self._raw_data[row][mapping] = value
+        # self._raw_data[row][mapping] = value
         self._update_sample_info(column, row, value)
         self._emit_update()
         return True
@@ -85,24 +95,25 @@ class OdinMetrologySystemModel(TableModel):
             try:
                 value = float(value)
                 if value < delegate.limits[0] or value > delegate.limits[1]:
-                    return ''
+                    return ""
             except ValueError:
                 # If cast fails then return blank value
-                return ''
+                return ""
         return value
 
     def _update_sample_info(self, column, row, value):
         if column == 0 and value in self.samples:
-            mapping = self._mappings.get(self._headings[SAMPLE_INFO_INDEX],
-                                         self._headings[SAMPLE_INFO_INDEX])
-            as_str = re.sub(r'[{}]', '', str(self.samples[value]))
+            mapping = self._mappings.get(
+                self._headings[SAMPLE_INFO_INDEX], self._headings[SAMPLE_INFO_INDEX]
+            )
+            as_str = re.sub(r"[{}]", "", str(self.samples[value]))
             self._table_data[row][SAMPLE_INFO_INDEX] = as_str
             self._raw_data[row][mapping] = self.samples[value]
 
     def update_all_samples(self, raise_error=True):
         invalid_positions = []
         for i, row in enumerate(self._raw_data):
-            position = row.get('position', '')
+            position = row.get("position", "")
             if not position:
                 continue
             if position not in self.samples:
@@ -110,5 +121,6 @@ class OdinMetrologySystemModel(TableModel):
                 continue
             self._update_sample_info(0, i, position)
         if raise_error and invalid_positions:
-            raise ConfigurationError('invalid position(s) defined '
-                                     f'[{", ".join(invalid_positions)}]')
+            raise ConfigurationError(
+                'invalid position(s) defined ' f'[{", ".join(invalid_positions)}]'
+            )
