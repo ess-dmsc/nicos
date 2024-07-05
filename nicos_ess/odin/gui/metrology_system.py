@@ -167,7 +167,7 @@ class MetrologySystemPanel(PanelBase):
         self.btnConfirm.setEnabled(True)
 
     def check_checkbox_status(self):
-        print(self.model.raw_data)
+        print("test")
 
     def exec_command(self, command):
         return self.client.eval(command)
