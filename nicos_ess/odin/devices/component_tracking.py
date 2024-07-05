@@ -116,7 +116,6 @@ class ComponentTrackingDevice(Readable):
         for component in components_data:
             if component["valid"] == 1:
                 component["distance_from_sample"] = round(component["z"], 3)
-                print(component)
             else:
                 component["distance_from_sample"] = "Not detected"
         self._update_unconfirmed_components(components_data)
@@ -145,6 +144,7 @@ class ComponentTrackingDevice(Readable):
 
         full_component_data = []
         for name, details in components.items():
+            print(name, details)
             details["component_name"] = name
             full_component_data.append(details)
         return full_component_data
