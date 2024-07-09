@@ -22,24 +22,35 @@
 #
 # *****************************************************************************
 """LoKI Experiment Configuration dialog."""
+
 from functools import partial
 
 from nicos.clients.gui.utils import loadUi
 from nicos.core import ConfigurationError
-from nicos.guisupport.qt import QAction, QCursor, QHeaderView, QItemDelegate, \
-    QKeySequence, QMenu, QShortcut, Qt, QTableView, QTableWidgetItem, \
-    pyqtSlot
+from nicos.guisupport.qt import (
+    QAction,
+    QCursor,
+    QHeaderView,
+    QItemDelegate,
+    QKeySequence,
+    QMenu,
+    QShortcut,
+    Qt,
+    QTableView,
+    QTableWidgetItem,
+    pyqtSlot,
+)
 from nicos.utils import findResource
 
 from nicos_ess.gui.panels.panel import PanelBase
 from nicos_ess.gui.utils import get_icon
 from nicos_ess.loki.gui.samples_model import SamplesTableModel
-from nicos_ess.loki.gui.table_delegates import LimitsDelegate, ReadOnlyDelegate
-from nicos_ess.loki.gui.table_helper import Clipboard, TableHelper
+from nicos_ess.gui.tables.table_delegates import LimitsDelegate, ReadOnlyDelegate
+from nicos_ess.gui.tables.table_helper import Clipboard, TableHelper
 
 
 class LokiSampleHolderPanel(PanelBase):
-    panelName = 'LoKI sample holder setup'
+    panelName = "LoKI sample holder setup"
 
     def __init__(self, parent, client, options):
         PanelBase.__init__(self, parent, client, options)
@@ -49,47 +60,56 @@ class LokiSampleHolderPanel(PanelBase):
         self._dev_name = None
         self._dev_name_old = None
         loadUi(
-            self,
-            findResource(
-                'nicos_ess/loki/gui/ui_files/sample_holder_config.ui'))
+            self, findResource("nicos_ess/loki/gui/ui_files/sample_holder_config.ui")
+        )
         self.cartridge_tables = [
-            self.tableTopFirst, self.tableTopSecond, self.tableTopThird,
-            self.tableBottomFirst, self.tableBottomSecond,
-            self.tableBottomThird
+            self.tableTopFirst,
+            self.tableTopSecond,
+            self.tableTopThird,
+            self.tableBottomFirst,
+            self.tableBottomSecond,
+            self.tableBottomThird,
         ]
         self.cartridge_combos = [
-            self.comboTopFirst, self.comboTopSecond, self.comboTopThird,
-            self.comboBottomFirst, self.comboBottomSecond,
-            self.comboBottomThird
+            self.comboTopFirst,
+            self.comboTopSecond,
+            self.comboTopThird,
+            self.comboBottomFirst,
+            self.comboBottomSecond,
+            self.comboBottomThird,
         ]
         self.calculate_buttons = [
-            self.calculateTopFirstButton, self.calculateTopSecondButton,
-            self.calculateTopThirdButton, self.calculateBottomFirstButton,
-            self.calculateBottomSecondButton, self.calculateBottomThirdButton
+            self.calculateTopFirstButton,
+            self.calculateTopSecondButton,
+            self.calculateTopThirdButton,
+            self.calculateBottomFirstButton,
+            self.calculateBottomSecondButton,
+            self.calculateBottomThirdButton,
         ]
         self.cell_spacings = {}
         self.number_cells = {}
         self.cartridges = {}
         self.x_delegates = [LimitsDelegate() for _ in self.cartridge_tables]
         self.y_delegates = [LimitsDelegate() for _ in self.cartridge_tables]
-        self.labelWarning.setStyleSheet('color: red')
+        self.labelWarning.setStyleSheet("color: red")
         self.labelWarning.setVisible(False)
         self._configure_combos()
         self._configure_tables()
         self._configure_sample_table()
         self._connect_up_widgets()
         self.initialise_connection_status_listeners()
-        self.tabWidget.setStyleSheet('QTabWidget::tab-bar {left: 0px;} '
-                                     'QTabWidget::pane {'
-                                     'border: 1px solid darkgray; '
-                                     'border-radius: 5px}')
+        self.tabWidget.setStyleSheet(
+            "QTabWidget::tab-bar {left: 0px;} "
+            "QTabWidget::pane {"
+            "border: 1px solid darkgray; "
+            "border-radius: 5px}"
+        )
         self._style_scroll_area_contents(self.scrollAreaWidgetContents)
 
     def _style_scroll_area_contents(self, widget):
         # A workaround to get the formatting correct for the main widget
         # without breaking other widgets in the scroll area.
-        widget.setStyleSheet(f'QWidget#{widget.objectName()}'
-                             '{background: white}')
+        widget.setStyleSheet(f"QWidget#{widget.objectName()}" "{background: white}")
 
     def initialise_connection_status_listeners(self):
         PanelBase.initialise_connection_status_listeners(self)
@@ -110,8 +130,8 @@ class LokiSampleHolderPanel(PanelBase):
 
     def _find_device(self):
         devices = self.client.getDeviceList(
-            'nicos_ess.loki.devices.thermostated_cellholder.'
-            'ThermoStatedCellHolder')
+            "nicos_ess.loki.devices.thermostated_cellholder." "ThermoStatedCellHolder"
+        )
         # Should only be one
         self._dev_name = devices[0] if devices else None
         self.editButton.setEnabled(self._dev_name is not None)
@@ -127,35 +147,35 @@ class LokiSampleHolderPanel(PanelBase):
         # Only register once unless the device name changes.
         if self._dev_name and self._dev_name != self._dev_name_old:
             self._dev_name_old = self._dev_name
-            self.client.register(self, f'{self._dev_name}/cartridges')
-            self.client.register(self, f'{self._dev_name}/number_cells')
-            self.client.register(self, f'{self._dev_name}/cell_spacings')
-            self.client.register(self, f'{self._dev_name}/mapping')
-            self.client.register(self, 'sample/samples')
+            self.client.register(self, f"{self._dev_name}/cartridges")
+            self.client.register(self, f"{self._dev_name}/number_cells")
+            self.client.register(self, f"{self._dev_name}/cell_spacings")
+            self.client.register(self, f"{self._dev_name}/mapping")
+            self.client.register(self, "sample/samples")
             self.client.on_connected_event()
 
     def on_keyChange(self, key, value, time, expired):
         if self._dev_name and key.startswith(self._dev_name):
-            if key.endswith('/number_cells'):
+            if key.endswith("/number_cells"):
                 self.number_cells = value
                 self._update_cartridges()
-            if key.endswith('/cartridges'):
+            if key.endswith("/cartridges"):
                 self.cartridges = value
                 self._update_cartridges()
-            if key.endswith('/cell_spacings'):
+            if key.endswith("/cell_spacings"):
                 self.cell_spacings = value
-            if key.endswith('/mapping'):
+            if key.endswith("/mapping"):
                 self._update_samples()
-        elif key == 'sample/samples':
+        elif key == "sample/samples":
             self._update_samples()
 
     def _update_samples(self):
         if self._in_edit_mode or not self._dev_name:
             return
-        mapping = self.client.eval(f'{self._dev_name}.mapping', {})
+        mapping = self.client.eval(f"{self._dev_name}.mapping", {})
         self.positions = list(mapping.keys())
         self.samples_model.set_positions(self.positions)
-        samples = self.client.eval('session.experiment.get_samples()', {})
+        samples = self.client.eval("session.experiment.get_samples()", {})
         self.samples_model.set_samples(samples)
 
     def setViewOnly(self, viewonly):
@@ -183,11 +203,10 @@ class LokiSampleHolderPanel(PanelBase):
     def set_samples_viewonly(self, viewonly):
         if viewonly:
             self.sampleTable.setItemDelegate(ReadOnlyDelegate())
-            self.sampleTable.setStyleSheet(
-                'QTableView {background: gainsboro;}')
+            self.sampleTable.setStyleSheet("QTableView {background: gainsboro;}")
         else:
             self.sampleTable.setItemDelegate(QItemDelegate())
-            self.sampleTable.setStyleSheet('QTableView {background: white;}')
+            self.sampleTable.setStyleSheet("QTableView {background: white;}")
 
     def _read_mode(self):
         for combo in self.cartridge_combos:
@@ -202,8 +221,8 @@ class LokiSampleHolderPanel(PanelBase):
         self.saveButton.setVisible(False)
 
     def _edit_mode(self):
-        xlimits = self.client.eval(f'{self._dev_name}.xlimits', (0, 0))
-        ylimits = self.client.eval(f'{self._dev_name}.ylimits', (0, 0))
+        xlimits = self.client.eval(f"{self._dev_name}.xlimits", (0, 0))
+        ylimits = self.client.eval(f"{self._dev_name}.ylimits", (0, 0))
         for x_delegate, y_delegate in zip(self.x_delegates, self.y_delegates):
             x_delegate.limits = xlimits
             y_delegate.limits = ylimits
@@ -222,30 +241,31 @@ class LokiSampleHolderPanel(PanelBase):
 
     def _configure_combos(self):
         for combo in self.cartridge_combos:
-            combo.addItems(['blank', 'narrow', 'wide'])
+            combo.addItems(["blank", "narrow", "wide"])
             combo.setCurrentIndex(-1)
-        self.comboTopFirst.addItems(['rotation'])
-        self.comboBottomFirst.addItems(['rotation'])
+        self.comboTopFirst.addItems(["rotation"])
+        self.comboBottomFirst.addItems(["rotation"])
 
     def _configure_sample_table(self):
         columns = {
-            'Name': 'name',
-            'Formula': 'formula',
-            'Concentration': 'concentration',
-            'Thickness': 'thickness',
-            'Notes': 'notes'
+            "Name": "name",
+            "Formula": "formula",
+            "Concentration": "concentration",
+            "Thickness": "thickness",
+            "Notes": "notes",
         }
         self.samples_model = SamplesTableModel(columns)
         self.sampleTable.setModel(self.samples_model)
-        self.table_helper = TableHelper(self.sampleTable, self.samples_model,
-                                        Clipboard())
+        self.table_helper = TableHelper(
+            self.sampleTable, self.samples_model, Clipboard()
+        )
         self.positions = []
 
-        self.sampleTable.setSelectionMode(
-            QTableView.SelectionMode.ContiguousSelection)
+        self.sampleTable.setSelectionMode(QTableView.SelectionMode.ContiguousSelection)
         self.sampleTable.horizontalHeader().setStretchLastSection(True)
         self.sampleTable.verticalHeader().setSectionResizeMode(
-            QHeaderView.ResizeMode.Fixed)
+            QHeaderView.ResizeMode.Fixed
+        )
         self._create_keyboard_shortcuts()
         self._init_right_click_context_menu()
 
@@ -255,9 +275,9 @@ class LokiSampleHolderPanel(PanelBase):
 
     def _set_table_height(self, num_rows):
         row_height = self.tableTopFirst.verticalHeader().defaultSectionSize()
-        for x_delegate, y_delegate, table in zip(self.x_delegates,
-                                                 self.y_delegates,
-                                                 self.cartridge_tables):
+        for x_delegate, y_delegate, table in zip(
+            self.x_delegates, self.y_delegates, self.cartridge_tables
+        ):
             table.setItemDelegateForColumn(0, x_delegate)
             table.setItemDelegateForColumn(1, y_delegate)
             # +1 for header
@@ -265,32 +285,34 @@ class LokiSampleHolderPanel(PanelBase):
 
     def _connect_up_widgets(self):
         for combo, table, button, x_delegate, y_delegate in zip(
-                self.cartridge_combos,
-                self.cartridge_tables,
-                self.calculate_buttons,
-                self.x_delegates,
-                self.y_delegates):
+            self.cartridge_combos,
+            self.cartridge_tables,
+            self.calculate_buttons,
+            self.x_delegates,
+            self.y_delegates,
+        ):
             combo.currentTextChanged.connect(
-                partial(self.on_cartridge_changed, table, button))
+                partial(self.on_cartridge_changed, table, button)
+            )
             button.clicked.connect(
-                partial(self.on_calculate_clicked, combo, table, x_delegate,
-                        y_delegate))
+                partial(self.on_calculate_clicked, combo, table, x_delegate, y_delegate)
+            )
 
     def _update_cartridges(self):
         if self._in_edit_mode or not self._dev_name:
             return
         if self.cartridges and self.number_cells:
-            for settings, table, combo in zip(self.cartridges,
-                                              self.cartridge_tables,
-                                              self.cartridge_combos):
-                combo.setCurrentText(settings.get('type', 'blank'))
-                for i, (x, y) in enumerate(settings.get('positions', [])):
-                    table.setItem(i, 0, QTableWidgetItem(f'{x}'))
-                    table.setItem(i, 1, QTableWidgetItem(f'{y}'))
+            for settings, table, combo in zip(
+                self.cartridges, self.cartridge_tables, self.cartridge_combos
+            ):
+                combo.setCurrentText(settings.get("type", "blank"))
+                for i, (x, y) in enumerate(settings.get("positions", [])):
+                    table.setItem(i, 0, QTableWidgetItem(f"{x}"))
+                    table.setItem(i, 1, QTableWidgetItem(f"{y}"))
 
     def _clear_data(self):
         for combo in self.cartridge_combos:
-            combo.setCurrentText('blank')
+            combo.setCurrentText("blank")
         for table in self.cartridge_tables:
             table.clearContents()
         self.samples_model.clear()
@@ -302,12 +324,12 @@ class LokiSampleHolderPanel(PanelBase):
         self._update_position_headers()
         if self._in_edit_mode:
             self.set_enabled_controls()
-        button.setEnabled(value != 'blank')
+        button.setEnabled(value != "blank")
 
     def on_calculate_clicked(self, combo, table, x_delegate, y_delegate):
         table.clearFocus()
         if not table.item(0, 0) or not table.item(0, 1):
-            self.showError('Please enter x and y values for the first cell.')
+            self.showError("Please enter x and y values for the first cell.")
             return
         x = float(table.item(0, 0).text())
         y = float(table.item(0, 1).text())
@@ -316,48 +338,48 @@ class LokiSampleHolderPanel(PanelBase):
             self._check_x_valid(x * num_cells, x_delegate)
             self._check_y_range(y, y_delegate)
         except ConfigurationError as error:
-            self.showError(f'{error}')
+            self.showError(f"{error}")
             return
 
         for i in range(1, num_cells):
             x += self.cell_spacings[combo.currentText()]
-            table.setItem(i, 0, QTableWidgetItem(f'{x}'))
-            table.setItem(i, 1, QTableWidgetItem(f'{y}'))
+            table.setItem(i, 0, QTableWidgetItem(f"{x}"))
+            table.setItem(i, 1, QTableWidgetItem(f"{y}"))
 
     def _check_y_range(self, y, delegate):
-        self._check_in_range(y, delegate.limits, 'y')
+        self._check_in_range(y, delegate.limits, "y")
 
     def _check_x_valid(self, x, delegate):
-        self._check_in_range(x, delegate.limits, 'x')
+        self._check_in_range(x, delegate.limits, "x")
 
     def set_enabled_controls(self):
         is_rotation = False
         for i, (combo, table, button) in enumerate(
-                zip(self.cartridge_combos, self.cartridge_tables,
-                    self.calculate_buttons)):
+            zip(self.cartridge_combos, self.cartridge_tables, self.calculate_buttons)
+        ):
             if i % 3 == 0:
                 current_text = combo.currentText()
-                is_rotation = current_text == 'rotation'
+                is_rotation = current_text == "rotation"
             else:
-                current_text = 'blank' if is_rotation else combo.currentText()
+                current_text = "blank" if is_rotation else combo.currentText()
                 combo.setCurrentText(current_text)
                 combo.setEnabled(not is_rotation)
-            table.setEnabled(current_text != 'blank')
-            button.setEnabled(current_text != 'blank')
-            if current_text == 'blank':
+            table.setEnabled(current_text != "blank")
+            button.setEnabled(current_text != "blank")
+            if current_text == "blank":
                 table.clearContents()
 
     def _update_position_headers(self):
         self.positions.clear()
         count = 0
         for i, table in enumerate(self.cartridge_tables):
-            prefix = 'T' if i < 3 else 'B'
+            prefix = "T" if i < 3 else "B"
             if i == 3:
                 count = 0
             positions = []
             for _ in range(table.rowCount()):
                 count += 1
-                positions.append(f'{prefix}{count}')
+                positions.append(f"{prefix}{count}")
             table.setVerticalHeaderLabels(positions)
             self.positions.extend(positions)
         self.samples_model.set_positions(self.positions)
@@ -367,9 +389,10 @@ class LokiSampleHolderPanel(PanelBase):
         self.saveButton.setFocus()
         if not self._dev_name:
             return
-        if self.mainwindow.current_status != 'idle':
-            self.showError('Could not set values as a command/script is in '
-                           'progress.')
+        if self.mainwindow.current_status != "idle":
+            self.showError(
+                "Could not set values as a command/script is in " "progress."
+            )
             return
         try:
             # Extract all data before sending to avoid samples and holders
@@ -379,52 +402,60 @@ class LokiSampleHolderPanel(PanelBase):
             self._write_cartridges(cartridges)
             self._write_samples(samples)
         except ConfigurationError as error:
-            self.showError(f'{error}')
+            self.showError(f"{error}")
             return
 
         self._in_edit_mode = False
         self._read_mode()
 
     def _write_samples(self, samples):
-        self.client.run(f'Exp.sample.set_samples({dict(samples)})')
+        self.client.run(f"Exp.sample.set_samples({dict(samples)})")
 
     def _extract_cartridges(self):
         all_positions = set()
         cartridges = []
         i = 0
-        for combo, table, x_delegate, y_delegate in zip(self.cartridge_combos,
-                                                        self.cartridge_tables,
-                                                        self.x_delegates,
-                                                        self.y_delegates):
-            data = {'type': combo.currentText(), 'positions': [], 'labels': []}
+        for combo, table, x_delegate, y_delegate in zip(
+            self.cartridge_combos,
+            self.cartridge_tables,
+            self.x_delegates,
+            self.y_delegates,
+        ):
+            data = {"type": combo.currentText(), "positions": [], "labels": []}
             for r in range(table.rowCount()):
-                if not table.item(r, 0) or not table.item(r, 0).text() \
-                        or not table.item(r, 1) or not table.item(r, 1).text():
+                if (
+                    not table.item(r, 0)
+                    or not table.item(r, 0).text()
+                    or not table.item(r, 1)
+                    or not table.item(r, 1).text()
+                ):
                     raise ConfigurationError(
-                        'All cell-holder positions must be specified. '
-                        f'{self.positions[i]} is not specified.')
+                        "All cell-holder positions must be specified. "
+                        f"{self.positions[i]} is not specified."
+                    )
                 x = float(table.item(r, 0).text())
                 y = float(table.item(r, 1).text())
                 self._check_x_valid(x, x_delegate)
                 self._check_y_range(y, y_delegate)
                 if (x, y) in all_positions:
-                    raise ConfigurationError('Duplicate cell-holder positions '
-                                             'are not allowed. Position '
-                                             f'{(x, y)} found multiple times.')
+                    raise ConfigurationError(
+                        "Duplicate cell-holder positions "
+                        "are not allowed. Position "
+                        f"{(x, y)} found multiple times."
+                    )
                 all_positions.add((x, y))
-                data['positions'].append((x, y))
-                data['labels'].append(self.positions[i])
+                data["positions"].append((x, y))
+                data["labels"].append(self.positions[i])
                 i += 1
             cartridges.append(data)
         return cartridges
 
     def _write_cartridges(self, cartridges):
-        self.client.run(f'{self._dev_name}.cartridges = {cartridges}')
+        self.client.run(f"{self._dev_name}.cartridges = {cartridges}")
 
     def _check_in_range(self, value, limits, axis):
         if value < limits[0] or value > limits[1]:
-            raise ConfigurationError(
-                f'All {axis} values must be in range {limits}')
+            raise ConfigurationError(f"All {axis} values must be in range {limits}")
 
     @pyqtSlot()
     def on_editButton_clicked(self):
@@ -440,17 +471,14 @@ class LokiSampleHolderPanel(PanelBase):
         self._read_mode()
 
     def _init_right_click_context_menu(self):
-        self.sampleTable.setContextMenuPolicy(
-            Qt.ContextMenuPolicy.CustomContextMenu)
-        self.sampleTable.customContextMenuRequested.connect(
-            self._show_context_menu)
+        self.sampleTable.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.sampleTable.customContextMenuRequested.connect(self._show_context_menu)
 
     def _show_context_menu(self):
         menu = QMenu()
 
         copy_action = QAction("Copy", self)
-        copy_action.triggered.connect(
-            self.table_helper.copy_selected_to_clipboard)
+        copy_action.triggered.connect(self.table_helper.copy_selected_to_clipboard)
         copy_action.setIcon(get_icon("file_copy-24px.svg"))
         menu.addAction(copy_action)
 
@@ -477,7 +505,7 @@ class LokiSampleHolderPanel(PanelBase):
             (QKeySequence.StandardKey.Cut, self._on_cut),
             (
                 QKeySequence.StandardKey.Copy,
-                self.table_helper.copy_selected_to_clipboard
+                self.table_helper.copy_selected_to_clipboard,
             ),
             ("Ctrl+Backspace", self._on_clear),
         ]:
