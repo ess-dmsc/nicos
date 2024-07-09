@@ -44,7 +44,8 @@ from nicos.guisupport.qt import (
     QWidget,
 )
 
-from nicos_ess.gui.panels.live import LineView, process_axis_labels, process_data_arrays
+from nicos_ess.gui.panels.live_pyqt import process_axis_labels, process_data_arrays
+from nicos_ess.gui.widgets.pyqtgraph.line_view import LineView
 
 
 class Mode(Enum):
