@@ -74,6 +74,7 @@ class MetrologySystemPanel(PanelBase):
         self.parent_window = parent
         self.combo_delegate = ComboBoxDelegate()
         self.checkbox_delegate = CheckboxDelegate()
+        self.scan_complete = False
 
         self.columns = OrderedDict(
             {
@@ -109,6 +110,8 @@ class MetrologySystemPanel(PanelBase):
 
         self._init_table_panel()
         self.view = None
+        self.model.data_updated.connect(self.check_checkbox_status)
+        self.btnScan.clicked.connect(self.check_checkbox_status)
 
         self.initialise_connection_status_listeners()
         self.client.setup.connect(self.on_client_setup)
@@ -118,7 +121,6 @@ class MetrologySystemPanel(PanelBase):
         mappings = {
             COMPONENT_COLUMN_NAME: COMPONENT_KEY,
             SCANNED_DISTANCE_COLUMN_NAME: DISTANCE_FROM_SAMPLE,
-            CHECKBOXES_COLUMN_NAME: CHECKBOXES_COLUMN_NAME,
         }
 
         self.model = OdinMetrologySystemModel(headers, self.columns, mappings)
@@ -139,6 +141,7 @@ class MetrologySystemPanel(PanelBase):
         self.tableView.setStyleSheet(TABLE_QSS)
 
     def sort_by_distance(self, components):
+        components = [dict(d) for d in components]
         sorted_components = sorted(components, key=lambda x: self.get_distance_value(x))
         return sorted_components
 
@@ -153,20 +156,34 @@ class MetrologySystemPanel(PanelBase):
         extracted_data = self.exec_command(
             "component_tracking.read_metrology_system_messages()"
         )
+        existing_data = {
+            raw_data[COMPONENT_KEY]: raw_data.get(CHECKBOXES_COLUMN_NAME, False)
+            for raw_data in self.model.raw_data
+        }
+        for data in extracted_data:
+            if data[COMPONENT_KEY] in existing_data:
+                data[CHECKBOXES_COLUMN_NAME] = existing_data[data[COMPONENT_KEY]]
         if not extracted_data:
             self.btnConfirm.setEnabled(False)
             self.lblScanWarn.setText("Could not retrieve positions!")
             self.lblScanWarn.setVisible(True)
+            self.scan_complete = False
             return
         sorted_data = self.sort_by_distance(extracted_data)
         self.model.raw_data = sorted_data
         self.lblScanWarn.setText("Scanned values are not confirmed!")
         self.lblScanWarn.setVisible(True)
-        self.check_checkbox_status()
-        self.btnConfirm.setEnabled(True)
+        self.scan_complete = True
 
     def check_checkbox_status(self):
-        print("test")
+        if self.scan_complete:
+            if any(
+                component.get(CHECKBOXES_COLUMN_NAME)
+                for component in self.model.raw_data
+            ):
+                self.btnConfirm.setEnabled(True)
+                return
+        self.btnConfirm.setEnabled(False)
 
     def exec_command(self, command):
         return self.client.eval(command)
@@ -214,6 +231,7 @@ class MetrologySystemPanel(PanelBase):
         self.lblScanWarn.setVisible(False)
         self.btnCSV.setEnabled(True)
         self.btnViewData.setEnabled(True)
+        self.scan_complete = False
 
     def setViewOnly(self, viewonly):
         if viewonly:
@@ -242,7 +260,7 @@ class MetrologySystemPanel(PanelBase):
     def on_keyChange(self, key, value, time, expired):
         if self._dev_name and key.startswith(self._dev_name):
             if key.endswith("/confirmed_components"):
-                sorted_data = self.sort_by_distance(value)
+                sorted_data = self.sort_by_distance(list(value))
                 self.model.raw_data = sorted_data
                 self.update_confirm_timestamp()
                 self.get_scan_timestamp()
@@ -283,10 +301,10 @@ class MetrologySystemPanel(PanelBase):
             BETA_ANGLE,
             GAMMA_ANGLE,
         ]
-        filtered_self_columns = self.columns.copy()
-        filtered_self_columns.pop(CHECKBOXES_COLUMN_NAME, None)
+        filtered_columns = self.columns.copy()
+        filtered_columns.pop(CHECKBOXES_COLUMN_NAME, None)
         columns = {
-            **filtered_self_columns,
+            **filtered_columns,
             **{
                 name: Column(
                     name,

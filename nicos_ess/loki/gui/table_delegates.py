@@ -82,7 +82,7 @@ class CheckboxDelegate(QStyledItemDelegate):
         if self.model is None:
             self.model = index.model()
 
-        checked = self.model.data(index, Qt.ItemDataRole.DisplayRole)
+        checked = self.model.data(index, Qt.ItemDataRole.EditRole)
         opts = QStyleOptionButton()
 
         if index.flags() & Qt.ItemFlag.ItemIsEditable:
@@ -90,7 +90,7 @@ class CheckboxDelegate(QStyledItemDelegate):
         else:
             opts.state |= QStyle.StateFlag.State_ReadOnly
 
-        if checked:
+        if checked is True or checked == "True":
             opts.state |= QStyle.StateFlag.State_On
         else:
             opts.state |= QStyle.StateFlag.State_Off
@@ -117,8 +117,8 @@ class CheckboxDelegate(QStyledItemDelegate):
 
         if event.type() == event.Type.MouseButtonRelease:
             if self.getCheckBoxRect(option).contains(event.pos()):
-                checked = self.model.data(index, Qt.ItemDataRole.DisplayRole)
-                checked = not checked
+                checked = self.model.data(index, Qt.ItemDataRole.EditRole)
+                checked = checked == "False" or checked is False or checked == ""
                 self.model.setData(index, checked, Qt.ItemDataRole.EditRole)
                 return True
         return False

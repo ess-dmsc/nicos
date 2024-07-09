@@ -82,10 +82,10 @@ class OdinMetrologySystemModel(TableModel):
         delegate = self._columns[mapping].delegate
         if isinstance(delegate, ReadOnlyDelegate):
             return False
-        if isinstance(type(value), bool):
+        if not isinstance(value, bool):
             value = self._parse_value(delegate, str(value).strip())
         self._table_data[row][column] = value
-        # self._raw_data[row][mapping] = value
+        self._raw_data[row][mapping] = value
         self._update_sample_info(column, row, value)
         self._emit_update()
         return True
