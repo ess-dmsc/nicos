@@ -379,7 +379,7 @@ class AreaDetector(EpicsDevice, ImageChannelMixin, Measurable):
 
     def doPrepare(self):
         self._update_status(status.BUSY, "Preparing")
-        self._stoprequest = False
+        self._kafka_subscriber._stoprequest = False
         try:
             self._kafka_subscriber.subscribe(
                 [self.image_topic], self.new_messages_callback
@@ -535,8 +535,7 @@ class AreaDetector(EpicsDevice, ImageChannelMixin, Measurable):
         self.doStop()
 
     def doStop(self):
-        self._consumer.unsubscribe()
-        self._stoprequest = True
+        self._kafka_subscriber.stop_consuming()
         self._put_pv("acquire", 0)
 
     def doRead(self, maxage=0):
