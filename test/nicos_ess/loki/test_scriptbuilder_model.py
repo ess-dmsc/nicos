@@ -29,16 +29,30 @@ from nicos.guisupport.qt import QHeaderView, Qt
 
 from nicos_ess.loki.gui.scriptbuilder import Column
 from nicos_ess.loki.gui.scriptbuilder_model import LokiScriptModel
-from nicos_ess.loki.gui.table_delegates import LimitsDelegate, ReadOnlyDelegate
+from nicos_ess.gui.tables.table_delegates import LimitsDelegate, ReadOnlyDelegate
 
-HEADERS = ['position', 'sample', 'duration']
-COLUMNS = OrderedDict({
-    'position': Column('position', False, QHeaderView.ResizeMode.ResizeToContents, False,
-                       None),
-    'sample': Column('sample', False, QHeaderView.ResizeMode.ResizeToContents, False,
-                     ReadOnlyDelegate()),
-    'duration': Column('duration', False, QHeaderView.ResizeMode.ResizeToContents, False,
-                       LimitsDelegate((0, 10), 1))})
+HEADERS = ["position", "sample", "duration"]
+COLUMNS = OrderedDict(
+    {
+        "position": Column(
+            "position", False, QHeaderView.ResizeMode.ResizeToContents, False, None
+        ),
+        "sample": Column(
+            "sample",
+            False,
+            QHeaderView.ResizeMode.ResizeToContents,
+            False,
+            ReadOnlyDelegate(),
+        ),
+        "duration": Column(
+            "duration",
+            False,
+            QHeaderView.ResizeMode.ResizeToContents,
+            False,
+            LimitsDelegate((0, 10), 1),
+        ),
+    }
+)
 
 
 def create_loki_script_model(num_rows=4, data=None):
@@ -60,9 +74,9 @@ class TestScriptBuilderModel:
 
     def test_inserting_empty_row(self):
         data = [
-            {'position': 'T1', 'sample': 2, 'duration': 3},
-            {'position': 'T11', 'sample': 12, 'duration': 13},
-            {'position': 'T21', 'sample': 22, 'duration': 23},
+            {"position": "T1", "sample": 2, "duration": 3},
+            {"position": "T11", "sample": 12, "duration": 13},
+            {"position": "T21", "sample": 22, "duration": 23},
         ]
         model = create_loki_script_model(len(data), data)
 
@@ -70,14 +84,14 @@ class TestScriptBuilderModel:
         model.insert_row(position)
 
         assert model.num_entries == 4
-        assert model.table_data[position] == [''] * len(HEADERS)
+        assert model.table_data[position] == [""] * len(HEADERS)
         assert model.raw_data[position] == {}
 
     def test_removing_rows(self):
         data = [
-            {'position': 'T1', 'sample': 2, 'duration': 3},
-            {'position': 'T11', 'sample': 12, 'duration': 13},
-            {'position': 'T21', 'sample': 22, 'duration': 23},
+            {"position": "T1", "sample": 2, "duration": 3},
+            {"position": "T11", "sample": 12, "duration": 13},
+            {"position": "T21", "sample": 22, "duration": 23},
         ]
         model = create_loki_script_model(len(data), data)
 
@@ -85,15 +99,14 @@ class TestScriptBuilderModel:
         model.remove_rows(positions)
 
         assert model.num_entries == 1
-        assert model.raw_data == [{'position': 'T21', 'sample': 22,
-                                   'duration': 23}]
-        assert model.table_data == [['T21', '22', '23']]
+        assert model.raw_data == [{"position": "T21", "sample": 22, "duration": 23}]
+        assert model.table_data == [["T21", "22", "23"]]
 
     def test_clearing(self):
         data = [
-            {'position': 'T1', 'sample': 2, 'duration': 3},
-            {'position': 'T11', 'sample': 12, 'duration': 13},
-            {'position': 'T21', 'sample': 22, 'duration': 23},
+            {"position": "T1", "sample": 2, "duration": 3},
+            {"position": "T11", "sample": 12, "duration": 13},
+            {"position": "T21", "sample": 22, "duration": 23},
         ]
         model = create_loki_script_model(len(data), data)
 
@@ -101,69 +114,69 @@ class TestScriptBuilderModel:
 
         assert model.num_entries == 3
         assert model.raw_data == [{}, {}, {}]
-        assert model.table_data == [['', '', ''], ['', '', ''], ['', '', '']]
+        assert model.table_data == [["", "", ""], ["", "", ""], ["", "", ""]]
 
     def test_cannot_set_readonly_column(self):
         data = [
-            {'position': 'T1', 'sample': 2, 'duration': 3},
+            {"position": "T1", "sample": 2, "duration": 3},
         ]
         model = create_loki_script_model(len(data), deepcopy(data))
 
-        model.setData(model.index(0, 1), '999', Qt.ItemDataRole.EditRole)
+        model.setData(model.index(0, 1), "999", Qt.ItemDataRole.EditRole)
 
-        assert model.raw_data[0]['sample'] == 2
+        assert model.raw_data[0]["sample"] == 2
 
     def test_setting_numeric_column_to_non_numeric_str_gives_blank(self):
         data = [
-            {'position': 'T1', 'sample': 2, 'duration': 3},
+            {"position": "T1", "sample": 2, "duration": 3},
         ]
         model = create_loki_script_model(len(data), deepcopy(data))
 
-        model.setData(model.index(0, 2), 'hello', Qt.ItemDataRole.EditRole)
+        model.setData(model.index(0, 2), "hello", Qt.ItemDataRole.EditRole)
 
-        assert model.raw_data[0]['duration'] == ''  # pylint: disable=compare-to-empty-string
+        assert model.raw_data[0]["duration"] == ""  # pylint: disable=compare-to-empty-string
 
     def test_setting_numeric_column_to_numeric_str(self):
         data = [
-            {'position': 'T1', 'sample': 2, 'duration': 3},
+            {"position": "T1", "sample": 2, "duration": 3},
         ]
         model = create_loki_script_model(len(data), deepcopy(data))
 
-        model.setData(model.index(0, 2), '5', Qt.ItemDataRole.EditRole)
+        model.setData(model.index(0, 2), "5", Qt.ItemDataRole.EditRole)
 
-        assert model.raw_data[0]['duration'] == 5
+        assert model.raw_data[0]["duration"] == 5
 
     def test_setting_numeric_column_to_too_low_numeric_str_gives_blank(self):
         data = [
-            {'position': 'T1', 'sample': 2, 'duration': 3},
+            {"position": "T1", "sample": 2, "duration": 3},
         ]
         model = create_loki_script_model(len(data), deepcopy(data))
 
-        model.setData(model.index(0, 2), '-1', Qt.ItemDataRole.EditRole)
+        model.setData(model.index(0, 2), "-1", Qt.ItemDataRole.EditRole)
 
-        assert model.raw_data[0]['duration'] == ''  # pylint: disable=compare-to-empty-string
+        assert model.raw_data[0]["duration"] == ""  # pylint: disable=compare-to-empty-string
 
     def test_setting_numeric_column_to_too_high_numeric_str_gives_blank(self):
         data = [
-            {'position': 'T1', 'sample': 2, 'duration': 3},
+            {"position": "T1", "sample": 2, "duration": 3},
         ]
         model = create_loki_script_model(len(data), deepcopy(data))
 
-        model.setData(model.index(0, 2), '12345', Qt.ItemDataRole.EditRole)
+        model.setData(model.index(0, 2), "12345", Qt.ItemDataRole.EditRole)
 
-        assert model.raw_data[0]['duration'] == ''  # pylint: disable=compare-to-empty-string
+        assert model.raw_data[0]["duration"] == ""  # pylint: disable=compare-to-empty-string
 
     def test_setting_position_updates_sample_info(self):
         data = [
-            {'position': 'T1', 'sample': 2, 'duration': 3},
+            {"position": "T1", "sample": 2, "duration": 3},
         ]
         model = create_loki_script_model(len(data), deepcopy(data))
         model.samples = {
-            'T1': {'name': 'sample 1'},
-            'T11': {'name': 'sample 2'},
-            'T21': {'name': 'sample 3'},
+            "T1": {"name": "sample 1"},
+            "T11": {"name": "sample 2"},
+            "T21": {"name": "sample 3"},
         }
 
-        model.setData(model.index(0, 0), 'T21', Qt.ItemDataRole.EditRole)
+        model.setData(model.index(0, 0), "T21", Qt.ItemDataRole.EditRole)
 
-        assert model.raw_data[0]['sample'] == {'name': 'sample 3'}
+        assert model.raw_data[0]["sample"] == {"name": "sample 3"}
