@@ -31,7 +31,7 @@ from nicos.core import ConfigurationError
 from nicos.guisupport.qt import Qt
 from nicos.guisupport.tablemodel import TableModel
 
-from nicos_ess.loki.gui.table_delegates import LimitsDelegate, ReadOnlyDelegate
+from nicos_ess.gui.tables.table_delegates import LimitsDelegate, ReadOnlyDelegate
 
 SAMPLE_INFO_INDEX = 1
 

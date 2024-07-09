@@ -133,6 +133,7 @@ class CheckboxDelegate(QStyledItemDelegate):
         w = option.rect.width()
         h = option.rect.height()
         checkBoxTopLeftCorner = QPoint(
-            x + w / 2 - checkBoxRect.width() / 2, y + h / 2 - checkBoxRect.height() / 2
+            int(x + w / 2 - checkBoxRect.width() / 2),
+            int(y + h / 2 - checkBoxRect.height() / 2),
         )
         return QRect(checkBoxTopLeftCorner, checkBoxRect.size())

@@ -35,8 +35,8 @@ from nicos.utils import findResource
 
 from nicos_ess.gui.panels.panel import PanelBase
 from nicos_ess.loki.gui.sample_holder_config import ReadOnlyDelegate
-from nicos_ess.loki.gui.table_delegates import ComboBoxDelegate, CheckboxDelegate
-from nicos_ess.loki.gui.table_helper import Clipboard, TableHelper
+from nicos_ess.gui.tables.table_delegates import ComboBoxDelegate, CheckboxDelegate
+from nicos_ess.gui.tables.table_helper import Clipboard, TableHelper
 from nicos_ess.odin.gui.metrology_system_model import OdinMetrologySystemModel
 
 COMPONENT_COLUMN_NAME = "Component"

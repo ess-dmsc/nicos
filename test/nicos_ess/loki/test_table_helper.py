@@ -29,19 +29,19 @@ import pytest
 from nicos.guisupport.qt import QTableView
 from nicos.guisupport.tablemodel import TableModel
 
-from nicos_ess.loki.gui.table_helper import Clipboard, TableHelper
+from nicos_ess.gui.tables.table_helper import Clipboard, TableHelper
 from nicos_ess.utilities.table_utils import convert_table_to_clipboard_text
 
-HEADERS = ['COLUMN_1', 'COLUMN_2', 'COLUMN_3']
+HEADERS = ["COLUMN_1", "COLUMN_2", "COLUMN_3"]
 
 
 class TestTableHelper:
     @pytest.fixture(autouse=True)
     def prepare(self):
         data = [
-            {'COLUMN_1': '', 'COLUMN_2': '', 'COLUMN_3': ''},
-            {'COLUMN_1': '', 'COLUMN_2': '', 'COLUMN_3': ''},
-            {'COLUMN_1': '', 'COLUMN_2': '', 'COLUMN_3': ''},
+            {"COLUMN_1": "", "COLUMN_2": "", "COLUMN_3": ""},
+            {"COLUMN_1": "", "COLUMN_2": "", "COLUMN_3": ""},
+            {"COLUMN_1": "", "COLUMN_2": "", "COLUMN_3": ""},
         ]
         self.model = TableModel(HEADERS)
         self.model.raw_data = data
@@ -51,9 +51,9 @@ class TestTableHelper:
 
     def test_selected_items_copied_to_clipboard(self):
         data = [
-            {'COLUMN_1': '11', 'COLUMN_2': '12', 'COLUMN_3': '13'},
-            {'COLUMN_1': '21', 'COLUMN_2': '22', 'COLUMN_3': '23'},
-            {'COLUMN_1': '31', 'COLUMN_2': '32', 'COLUMN_3': '33'},
+            {"COLUMN_1": "11", "COLUMN_2": "12", "COLUMN_3": "13"},
+            {"COLUMN_1": "21", "COLUMN_2": "22", "COLUMN_3": "23"},
+            {"COLUMN_1": "31", "COLUMN_2": "32", "COLUMN_3": "33"},
         ]
         self.model.raw_data = data
         self.table_helper = TableHelper(self.table, self.model, self.clipboard)
@@ -65,13 +65,13 @@ class TestTableHelper:
 
         self.table_helper.copy_selected_to_clipboard()
 
-        self.clipboard.set_text.assert_called_once_with('11\t12\n21\t22')
+        self.clipboard.set_text.assert_called_once_with("11\t12\n21\t22")
 
     def test_selected_items_cut_to_clipboard(self):
         data = [
-            {'COLUMN_1': '11', 'COLUMN_2': '12', 'COLUMN_3': '13'},
-            {'COLUMN_1': '21', 'COLUMN_2': '22', 'COLUMN_3': '23'},
-            {'COLUMN_1': '31', 'COLUMN_2': '32', 'COLUMN_3': '33'},
+            {"COLUMN_1": "11", "COLUMN_2": "12", "COLUMN_3": "13"},
+            {"COLUMN_1": "21", "COLUMN_2": "22", "COLUMN_3": "23"},
+            {"COLUMN_1": "31", "COLUMN_2": "32", "COLUMN_3": "33"},
         ]
         self.model.raw_data = data
         self.table_helper = TableHelper(self.table, self.model, self.clipboard)
@@ -83,18 +83,18 @@ class TestTableHelper:
 
         self.table_helper.cut_selected_to_clipboard()
 
-        self.clipboard.set_text.assert_called_once_with('11\t12\n21\t22')
+        self.clipboard.set_text.assert_called_once_with("11\t12\n21\t22")
         assert self.model.table_data == [
-            ['', '', '13'],
-            ['', '', '23'],
-            ['31', '32', '33'],
+            ["", "", "13"],
+            ["", "", "23"],
+            ["31", "32", "33"],
         ]
 
     def test_selected_items_cleared(self):
         data = [
-            {'COLUMN_1': '11', 'COLUMN_2': '12', 'COLUMN_3': '13'},
-            {'COLUMN_1': '21', 'COLUMN_2': '22', 'COLUMN_3': '23'},
-            {'COLUMN_1': '31', 'COLUMN_2': '32', 'COLUMN_3': '33'},
+            {"COLUMN_1": "11", "COLUMN_2": "12", "COLUMN_3": "13"},
+            {"COLUMN_1": "21", "COLUMN_2": "22", "COLUMN_3": "23"},
+            {"COLUMN_1": "31", "COLUMN_2": "32", "COLUMN_3": "33"},
         ]
         self.model.raw_data = data
         self.table_helper = TableHelper(self.table, self.model, self.clipboard)
@@ -107,79 +107,85 @@ class TestTableHelper:
         self.table_helper.clear_selected()
 
         assert self.model.table_data == [
-            ['', '', '13'],
-            ['', '', '23'],
-            ['31', '32', '33'],
+            ["", "", "13"],
+            ["", "", "23"],
+            ["31", "32", "33"],
         ]
 
     def test_clipboard_data_gets_pasted_at_index(self):
         self.table.selectedIndexes.return_value = [self.model.index(0, 0)]
         self.table.isColumnHidden.return_value = False
-        self.clipboard.text.return_value = \
-            convert_table_to_clipboard_text([['A', 'B'], ['C', 'D']])
+        self.clipboard.text.return_value = convert_table_to_clipboard_text(
+            [["A", "B"], ["C", "D"]]
+        )
 
         self.table_helper.paste_from_clipboard()
 
         assert self.model.table_data == [
-            ['A', 'B', ''],
-            ['C', 'D', ''],
-            ['', '', ''],
+            ["A", "B", ""],
+            ["C", "D", ""],
+            ["", "", ""],
         ]
 
     def test_clipboard_data_pasted_outside_the_columns_gets_ignored(self):
-        self.table.selectedIndexes.return_value = \
-            [self.model.index(0, len(HEADERS) - 1)]
+        self.table.selectedIndexes.return_value = [
+            self.model.index(0, len(HEADERS) - 1)
+        ]
         self.table.isColumnHidden.return_value = False
-        self.clipboard.text.return_value = \
-            convert_table_to_clipboard_text([['A', 'B'], ['C', 'D']])
+        self.clipboard.text.return_value = convert_table_to_clipboard_text(
+            [["A", "B"], ["C", "D"]]
+        )
 
         self.table_helper.paste_from_clipboard()
 
         assert self.model.table_data == [
-            ['', '', 'A'],
-            ['', '', 'C'],
-            ['', '', ''],
+            ["", "", "A"],
+            ["", "", "C"],
+            ["", "", ""],
         ]
 
     def test_clipboard_data_pasted_in_bottom_row_expands_the_table(self):
         self.table.selectedIndexes.return_value = [self.model.index(2, 0)]
         self.table.isColumnHidden.return_value = False
-        self.clipboard.text.return_value = \
-            convert_table_to_clipboard_text([['A', 'B'], ['C', 'D']])
+        self.clipboard.text.return_value = convert_table_to_clipboard_text(
+            [["A", "B"], ["C", "D"]]
+        )
 
         self.table_helper.paste_from_clipboard()
 
         assert self.model.table_data == [
-            ['', '', ''],
-            ['', '', ''],
-            ['A', 'B', ''],
-            ['C', 'D', ''],
+            ["", "", ""],
+            ["", "", ""],
+            ["A", "B", ""],
+            ["C", "D", ""],
         ]
 
     def test_clipboard_data_pasted_in_bottom_row_does_not_expand_the_table(self):
         self.table.selectedIndexes.return_value = [self.model.index(2, 0)]
         self.table.isColumnHidden.return_value = False
-        self.clipboard.text.return_value = \
-            convert_table_to_clipboard_text([['A', 'B'], ['C', 'D']])
+        self.clipboard.text.return_value = convert_table_to_clipboard_text(
+            [["A", "B"], ["C", "D"]]
+        )
 
         self.table_helper.paste_from_clipboard(expand=False)
 
         assert self.model.table_data == [
-            ['', '', ''],
-            ['', '', ''],
-            ['A', 'B', ''],
+            ["", "", ""],
+            ["", "", ""],
+            ["A", "B", ""],
         ]
 
     def test_hidden_column_skipped_when_pasting_clipboard_data(self):
         self.table.selectedIndexes.return_value = [self.model.index(0, 0)]
         self.table.isColumnHidden.side_effect = [False, True, False]
-        self.clipboard.text.return_value = \
-            convert_table_to_clipboard_text([['A', 'B'], ['C', 'D']])
+        self.clipboard.text.return_value = convert_table_to_clipboard_text(
+            [["A", "B"], ["C", "D"]]
+        )
 
         self.table_helper.paste_from_clipboard()
 
         assert self.model.table_data == [
-            ['A', '', 'B'],
-            ['C', '', 'D'],
-            ['', '', ''],
+            ["A", "", "B"],
+            ["C", "", "D"],
+            ["", "", ""],
         ]
