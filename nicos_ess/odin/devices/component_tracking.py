@@ -172,6 +172,7 @@ class ComponentTrackingDevice(Readable):
             component["confirmed_distance_from_sample"] = component[
                 "distance_from_sample"
             ]
+            print(component)
         self._unconfirmed_components = to_be_confirmed
         self.confirmed_components = to_be_confirmed
         self._last_confirm_timestamp = datetime.now()
