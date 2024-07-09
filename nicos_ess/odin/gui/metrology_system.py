@@ -195,6 +195,7 @@ class MetrologySystemPanel(PanelBase):
     @pyqtSlot()
     def on_btnConfirm_clicked(self):
         self.exec_command("component_tracking.confirm_components()")
+        print("confirming")
         self.update_confirm_timestamp()
         self._reset_controls()
 
