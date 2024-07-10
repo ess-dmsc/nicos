@@ -330,6 +330,7 @@ class SpectrometerControl(QWidget):
     def update_readback_values(self):
         if not self.selected_device:
             return
+        self.parent.client.eval(f"{self.selected_device}.pollParams()")
 
         param_info = self.parent.client.getDeviceParams(self.selected_device)
         if not param_info:
@@ -473,25 +474,53 @@ class SpectrometerPanel(Panel):
 
     def select_spectrometer(self, name):
         self.current_spectrometer = name
-        spectrum = self.client.eval(f"{self.current_spectrometer}._spectrum_array")
+
+        raw_x_axis = self._eval(
+            f"{self.current_spectrometer}._wavelengths",
+            f"No wavelengths found for {self.current_spectrometer}",
+        )
+        if raw_x_axis is None:
+            return
+        self.x_axis = {"x": np.array(raw_x_axis)}
+
+        spectrum = self._eval(
+            f"{self.current_spectrometer}._spectrum_array",
+            f"No spectrum found for {self.current_spectrometer}",
+        )
         self.spectrum = np.array(spectrum) if spectrum is not None else np.array([])
 
-        background = self.client.eval(f"{self.current_spectrometer}._light_array")
+        background = self._eval(
+            f"{self.current_spectrometer}._light_array",
+            f"No light spectrum found for {self.current_spectrometer}",
+        )
         self.light_background = (
             np.array(background) if background is not None else np.array([])
         )
 
-        dark = self.client.eval(f"{self.current_spectrometer}._dark_array")
+        dark = self._eval(
+            f"{self.current_spectrometer}._dark_array",
+            f"No dark spectrum found for {self.current_spectrometer}",
+        )
         self.dark_background = np.array(dark) if dark is not None else np.array([])
 
-        self.x_axis = {
-            "x": self.client.eval(f"{self.current_spectrometer}._wavelengths")
-        }
-
-        units = self.client.eval(f"{self.current_spectrometer}.acquireunits")
-        self.spectrometer_controller.set_integration_time_units(units)
+        units = self._eval(
+            f"{self.current_spectrometer}.acquireunits",
+            f"No units found for {self.current_spectrometer}",
+        )
+        if units:
+            self.spectrometer_controller.set_integration_time_units(units)
         self.spectrometer_controller.clear_normalisation_checkboxes()
         self.show_raw_spectrum()
+
+    def _eval(self, command_str, message=None):
+        try:
+            return self.client.eval(command_str)
+        except AttributeError:
+            self.log.warning(message)
+            return None
+        except Exception as e:
+            self.log.warning(e)
+            return None
 
     def clear_spectrums(self):
         self.spectrum = np.array([])

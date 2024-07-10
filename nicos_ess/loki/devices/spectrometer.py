@@ -305,7 +305,7 @@ class OceanInsightSpectrometer(EpicsDevice, PassiveChannel):
             self._write_alarm_to_log(status_msg, severity, alarm_status)
             return severity, "Alarm message"
 
-        return state, status_msg if status_msg != "Idle" else ""
+        return state, status_msg
 
     def _write_alarm_to_log(self, message, severity, stat):
         msg_format = "%s (%s)"

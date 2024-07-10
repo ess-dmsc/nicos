@@ -722,6 +722,9 @@ class MultiLiveDataPanel(LiveDataPanel):
 
     def _update_and_process_preview_data(self, params, blobs):
         parent = params["det"]
+        if parent not in self._detectors:
+            self.log.warning(f"Detector {parent} not found in detectors")
+            return
         self._detectors[parent].update_cache(params, blobs)
         datacount = len(params["datadescs"])
 
@@ -752,6 +755,9 @@ class MultiLiveDataPanel(LiveDataPanel):
     def _change_detector_to_display(self, det_name):
         self._detector_selected = det_name
         parent = self._previews[det_name].detector
+        if parent not in self._detectors:
+            self.log.warning(f"Detector {parent} not found in detectors")
+            return
         pars, blob = self._detectors[parent].get_preview_data(self._detector_selected)
         is_2d = isinstance(self._previews[det_name].widget, ImageView)
         switched_plot = self._check_switched_plot(det_name, is_2d)
