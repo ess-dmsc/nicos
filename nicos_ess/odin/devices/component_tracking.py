@@ -25,7 +25,7 @@
 # *****************************************************************************
 """Component Tracking Device."""
 
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from streaming_data_types import deserialise_f144
 
@@ -89,27 +89,23 @@ class ComponentTrackingDevice(Readable):
         self._updater_thread = None
 
     def read_metrology_system_messages(self):
-        current_time = datetime.now()
         messages = {}
         validity = {}
 
         self._consumer.set_all_to_offset(offset_from_end=1)
 
-        while True:
-            if datetime.now() > current_time + timedelta(seconds=1):
-                break
-            msg = self._consumer.poll()
-            if msg is None:
-                continue
-            elif msg.value():
-                name, values = self._process_kafka_message(msg.value())
-                if not name:
-                    continue
-                messages[name] = values
-                if name.endswith(":valid"):
-                    validity[name.split(":")[0]] = values["value"] == 1
-        if not messages:
+        msg = self._consumer.poll(1000)
+        if msg is None:
+            self.log.warning("No messages received from Kafka")
             return {}
+        elif msg.value():
+            name, values = self._process_kafka_message(msg.value())
+            if not name:
+                self.log.warning("Invalid message received from Kafka")
+                return {}
+            messages[name] = values
+            if name.endswith(":valid"):
+                validity[name.split(":")[0]] = values["value"] == 1
 
         components_data = self._extract_components(list(messages.values()))
 
