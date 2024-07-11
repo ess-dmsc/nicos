@@ -156,6 +156,42 @@ class KafkaConsumer:
             tp.offset = OFFSET_END
         self._seek(partitions, timeout_s)
 
+    def get_assigned_topics(self):
+        """
+        Get the list of topics the consumer is currently assigned to.
+
+        Returns:
+            list: List of topic names.
+        """
+        return [tp.topic for tp in self._consumer.assignment()]
+
+    def set_consumer_to_offset(self, topics: list, offset_from_end: int):
+        """
+        Set the Kafka consumer to start consuming from a specific offset from the end.
+
+        Args:
+            topics (list): List of topic names to set the offset for.
+            offset_from_end (int): The offset from the end of the log to start consuming.
+        """
+        topic_partitions = []
+        for topic in topics:
+            topic_metadata = self._consumer.list_topics(topic).topics[topic]
+            for partition in topic_metadata.partitions:
+                tp = TopicPartition(topic, partition)
+                _, high_watermark = self._consumer.get_watermark_offsets(tp)
+                tp.offset = max(0, high_watermark - offset_from_end)
+                topic_partitions.append(tp)
+        self._consumer.assign(topic_partitions)
+
+    def set_all_to_offset(self, offset_from_end: int):
+        """
+        Set all topics the consumer is subscribed to, to start consuming from a specific offset from the end.
+
+        Args:
+            offset_from_end (int): The offset from the end of the log to start consuming.
+        """
+        self.set_consumer_to_offset(self.get_assigned_topics(), offset_from_end)
+
 
 class KafkaSubscriber:
     """Continuously listens for messages on the specified topics"""

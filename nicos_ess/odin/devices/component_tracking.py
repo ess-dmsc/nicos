@@ -93,7 +93,7 @@ class ComponentTrackingDevice(Readable):
         messages = {}
         validity = {}
 
-        self._consumer.seek_to_end()
+        self._consumer.set_all_to_offset(offset_from_end=1)
 
         while True:
             if datetime.now() > current_time + timedelta(seconds=1):
