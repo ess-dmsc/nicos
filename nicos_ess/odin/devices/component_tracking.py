@@ -90,7 +90,7 @@ class ComponentTrackingDevice(Readable):
 
     def read_metrology_system_messages(self):
         current_time = datetime.now()
-        messages = {}
+        self.messages = {}
         validity = {}
 
         self._consumer.seek_to_end()
@@ -105,14 +105,13 @@ class ComponentTrackingDevice(Readable):
                 name, values = self._process_kafka_message(msg.value())
                 if not name:
                     continue
-                messages[name] = values
+                self.messages[name] = values
                 if name.endswith(":valid"):
                     validity[name.split(":")[0]] = values["value"] == 1
-        if not messages:
+        if not self.messages:
             return {}
 
-        components_data = self._extract_components(list(messages.values()))
-        print(messages)
+        components_data = self._extract_components(list(self.messages.values()))
 
         for component in components_data:
             if component["valid"] == 1:
@@ -196,7 +195,7 @@ class ComponentTrackingDevice(Readable):
         )
         groups[group_name]["children"].append(nxlog_json)
 
-        return self._build_json(groups)
+        return self._build_json(groups), self.messages
 
     def _build_json(self, groups):
         return [
