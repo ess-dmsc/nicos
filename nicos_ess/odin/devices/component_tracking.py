@@ -193,9 +193,8 @@ class ComponentTrackingDevice(Readable):
 
     def _generate_json_configs(self):
         groups = {}
-
         for entry in self.gollum_data:
-            group_name = entry[0]
+            group_name = entry
             if group_name not in groups:
                 groups[group_name] = {"nx_class": "nx_class", "children": []}
                 nxlog_json = self._generate_nxlog_json(
