@@ -66,13 +66,6 @@ class ComponentTrackingDevice(Readable):
             settable=True,
             mandatory=False,
         ),
-        "source_names": Param(
-            "List of source names",
-            type=listof(str),
-            userparam=False,
-            settable=True,
-            mandatory=False,
-        ),
     }
 
     parameter_overrides = {
@@ -127,7 +120,7 @@ class ComponentTrackingDevice(Readable):
                 component["distance_from_sample"] = "Not detected"
         self._update_unconfirmed_components(components_data)
 
-        return self._unconfirmed_components
+        return self._unconfirmed_components, messages
 
     def _update_unconfirmed_components(self, new_components):
         temp = []
@@ -160,8 +153,6 @@ class ComponentTrackingDevice(Readable):
             return None, None
         log_data = deserialise_f144(msg)
         source_name = log_data.source_name
-        """if source_name not in self.source_names:
-            self.source_names.append(source_name)"""
         value = log_data.value
         timestamp = log_data.timestamp_unix_ns
         return source_name, {
@@ -204,8 +195,7 @@ class ComponentTrackingDevice(Readable):
         )
         groups[group_name]["children"].append(nxlog_json)
 
-        # return self._build_json(groups)
-        return self.source_names
+        return self._build_json(groups)
 
     def _build_json(self, groups):
         return [
