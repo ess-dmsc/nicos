@@ -112,6 +112,7 @@ class ComponentTrackingDevice(Readable):
             return {}
 
         components_data = self._extract_components(list(messages.values()))
+        print(messages)
 
         for component in components_data:
             if component["valid"] == 1:
@@ -190,7 +191,9 @@ class ComponentTrackingDevice(Readable):
         if group_name not in groups:
             groups[group_name] = {"nx_class": "nx_class", "children": []}
 
-        nxlog_json = self._generate_nxlog_json("x", "f144", "source", "topic", "mm")
+        nxlog_json = self._generate_nxlog_json(
+            "x", "f144", "source", self.response_topic, "mm"
+        )
         groups[group_name]["children"].append(nxlog_json)
 
         return self._build_json(groups)
@@ -223,6 +226,8 @@ class ComponentTrackingDevice(Readable):
         return {
             "name": name,
             "type": "group",
-            "attributes": [{"name": "NX_class", "dtype": "string", "values": nx_class}],
+            "attributes": [
+                {"name": "NXcollection", "dtype": "string", "values": nx_class}
+            ],
             "children": children,
         }
