@@ -66,6 +66,13 @@ class ComponentTrackingDevice(Readable):
             settable=True,
             mandatory=False,
         ),
+        "messages": Param(
+            "Dict of messages",
+            type=dict,
+            userparam=True,
+            settable=True,
+            mandatory=False,
+        ),
     }
 
     parameter_overrides = {
