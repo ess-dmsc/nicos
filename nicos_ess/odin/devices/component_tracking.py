@@ -66,6 +66,13 @@ class ComponentTrackingDevice(Readable):
             settable=True,
             mandatory=False,
         ),
+        "msg_names": Param(
+            "List of names",
+            type=listof(str),
+            userparam=False,
+            settable=False,
+            mandatory=False,
+        ),
     }
 
     parameter_overrides = {
@@ -90,7 +97,7 @@ class ComponentTrackingDevice(Readable):
 
     def read_metrology_system_messages(self):
         current_time = datetime.now()
-        self.messages = {}
+        messages = {}
         validity = {}
 
         self._consumer.seek_to_end()
@@ -105,10 +112,12 @@ class ComponentTrackingDevice(Readable):
                 name, values = self._process_kafka_message(msg.value())
                 if not name:
                     continue
-                self.messages[name] = values
+                if name not in self.msg_names:
+                    self.msg_names.append(name)
+                messages[name] = values
                 if name.endswith(":valid"):
                     validity[name.split(":")[0]] = values["value"] == 1
-        if not self.messages:
+        if not messages:
             return {}
 
         components_data = self._extract_components(list(self.messages.values()))
@@ -195,7 +204,7 @@ class ComponentTrackingDevice(Readable):
         )
         groups[group_name]["children"].append(nxlog_json)
 
-        return self._build_json(groups), self.messages
+        return self._build_json(groups), self.msg_names
 
     def _build_json(self, groups):
         return [
