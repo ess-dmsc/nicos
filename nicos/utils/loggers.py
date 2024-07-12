@@ -27,23 +27,40 @@ import os
 import sys
 import time
 import traceback
-from logging import DEBUG, ERROR, INFO, WARNING, Formatter, Handler, Logger, \
-    LogRecord, addLevelName
+from logging import (
+    DEBUG,
+    ERROR,
+    INFO,
+    WARNING,
+    Formatter,
+    Handler,
+    Logger,
+    LogRecord,
+    addLevelName,
+    CRITICAL,
+)
+from logging.handlers import SysLogHandler
 from os import path
 
 from nicos import session
 from nicos.utils import colorize, formatExtendedTraceback
 
-LOGFMT = '%(asctime)s : %(levelname)-7s : %(name)s: %(message)s'
-DATEFMT = '%H:%M:%S'
-DATESTAMP_FMT = '%Y-%m-%d'
+LOGFMT = "%(asctime)s : %(levelname)-7s : %(name)s: %(message)s"
+DATEFMT = "%H:%M:%S"
+DATESTAMP_FMT = "%Y-%m-%d"
 SECONDS_PER_DAY = 60 * 60 * 24
 
 ACTION = INFO + 1
-INPUT  = INFO + 6
+INPUT = INFO + 6
 
-loglevels = {'debug': DEBUG, 'info': INFO, 'action': ACTION, 'warning': WARNING,
-             'error': ERROR, 'input': INPUT}
+loglevels = {
+    "debug": DEBUG,
+    "info": INFO,
+    "action": ACTION,
+    "warning": WARNING,
+    "error": ERROR,
+    "input": INPUT,
+}
 
 
 class NicosLogger(Logger):
@@ -52,19 +69,19 @@ class NicosLogger(Logger):
     """
 
     def exception(self, *msgs, **kwds):
-        kwds['exc'] = True
+        kwds["exc"] = True
         self.error(*msgs, **kwds)
 
     def setLevel(self, level):
-        if hasattr(self, '_cache'):
+        if hasattr(self, "_cache"):
             self._cache.clear()
         Logger.setLevel(self, level)
 
     def _process(self, msgs, kwds):
         # standard logging keyword arg
-        exc_info = kwds.pop('exc_info', None)
+        exc_info = kwds.pop("exc_info", None)
         # nicos easy keyword arg
-        exc = kwds.pop('exc', None)
+        exc = kwds.pop("exc", None)
         if not exc_info:
             if isinstance(exc, Exception):
                 exc_info = (type(exc), exc, None)
@@ -76,23 +93,24 @@ class NicosLogger(Logger):
         extramsgs = []
         if exc_info:
             if msgs:
-                extramsgs += ['-']
+                extramsgs += ["-"]
             from nicos.core.errors import NicosError
+
             if issubclass(exc_info[0], NicosError):
-                extramsgs += [exc_info[0].category + ' -', exc_info[1]]
+                extramsgs += [exc_info[0].category + " -", exc_info[1]]
             else:
-                extramsgs += [exc_info[0].__name__ + ' -', exc_info[1]]
+                extramsgs += [exc_info[0].__name__ + " -", exc_info[1]]
 
         if not msgs:
-            msg = ''
+            msg = ""
             args = ()
         else:
             msg = str(msgs[0])
             args = msgs[1:]
         if extramsgs:
             if msg:
-                msg += ' '
-            msg += ' '.join(map(str, extramsgs))
+                msg += " "
+            msg += " ".join(map(str, extramsgs))
         return msg, args, exc_info
 
     def error(self, *msgs, **kwds):
@@ -115,7 +133,7 @@ class NicosLogger(Logger):
         Logger.log(self, ACTION, msg)
 
     def _log(self, level, msg, args, exc_info=None, extra=None):
-        record = LogRecord(self.name, level, '', 0, msg, args, exc_info, '')
+        record = LogRecord(self.name, level, "", 0, msg, args, exc_info, "")
 
         try:
             record.message = (msg % args) if args else msg
@@ -125,6 +143,69 @@ class NicosLogger(Logger):
             for key in extra:
                 record.__dict__[key] = extra[key]
         self.handle(record)
+
+
+class CustomJournalFormatter(Formatter):
+    """
+    A formatter for journal logs that includes the log level.
+    """
+
+    def __init__(self, fmt=None, datefmt=None):
+        super().__init__(fmt, datefmt)
+
+    def formatTime(self, record, datefmt=None):
+        return time.strftime(datefmt or "%H:%M:%S", self.converter(record.created))
+
+    def format(self, record):
+        record.asctime = self.formatTime(record, self.datefmt)
+        record.levelname = record.levelname.ljust(
+            7
+        )  # Ensure consistent width for level names
+        return (
+            f"{record.asctime} : {record.levelname} : {record.name}: {record.message}"
+        )
+
+
+class NicosSyslogFormatter(Formatter):
+    """
+    A formatter for syslog that can be understood by rsyslog for filtering by log level.
+    """
+
+    def __init__(self, fmt=None, datefmt=None):
+        super().__init__(fmt, datefmt)
+
+    def formatTime(self, record, datefmt=None):
+        return time.strftime(
+            datefmt or "%b %d %H:%M:%S", self.converter(record.created)
+        )
+
+    def format(self, record):
+        # Define the log level string
+        loglevel = record.levelname
+
+        # Define the syslog priority
+        priority = self._get_syslog_priority(record.levelno)
+        message = record.getMessage()
+
+        # Construct the syslog message
+        syslog_message = f"<{priority}>{record.name}: {loglevel} {message}"
+
+        return syslog_message
+
+    def _get_syslog_priority(self, levelno):
+        # Mapping of log level numbers to syslog priorities
+        if levelno >= CRITICAL:
+            return SysLogHandler.LOG_CRIT
+        elif levelno >= ERROR:
+            return SysLogHandler.LOG_ERR
+        elif levelno >= WARNING:
+            return SysLogHandler.LOG_WARNING
+        elif levelno >= INFO:
+            return SysLogHandler.LOG_INFO
+        elif levelno >= DEBUG:
+            return SysLogHandler.LOG_DEBUG
+        else:
+            return SysLogHandler.LOG_NOTICE
 
 
 class NicosConsoleFormatter(Formatter):
@@ -144,38 +225,39 @@ class NicosConsoleFormatter(Formatter):
         return traceback.format_exception_only(*ei[0:2])[-1]
 
     def formatTime(self, record, datefmt=None):
-        return time.strftime(datefmt or DATEFMT,
-                             self.converter(record.created))
+        return time.strftime(datefmt or DATEFMT, self.converter(record.created))
 
     def format(self, record):
         levelno = record.levelno
-        datefmt = self.colorize('lightgray', '[%(asctime)s] ')
-        if record.name == 'nicos':
-            namefmt = ''
+        datefmt = self.colorize("lightgray", "[%(asctime)s] ")
+        if record.name == "nicos":
+            namefmt = ""
         else:
-            namefmt = '%(name)-10s: '
+            namefmt = "%(name)-10s: "
         if levelno == ACTION:
-            if os.name == 'nt':
-                return ''
+            if os.name == "nt":
+                return ""
             # special behavior for ACTION messages: use them as terminal title
-            fmtstr = '\x1b]0;%s%%(message)s\x07' % namefmt
+            fmtstr = "\x1b]0;%s%%(message)s\x07" % namefmt
         else:
             if levelno <= DEBUG:
-                fmtstr = self.colorize('darkgray', '%s%%(message)s' % namefmt)
+                fmtstr = self.colorize("darkgray", "%s%%(message)s" % namefmt)
             elif levelno <= INFO:
-                fmtstr = '%s%%(message)s' % namefmt
+                fmtstr = "%s%%(message)s" % namefmt
             elif levelno == INPUT:
                 # do not display input again
-                return ''
+                return ""
             elif levelno <= WARNING:
                 fmtstr = self.colorize(
-                    'fuchsia', '%s%%(levelname)s: %%(message)s' % namefmt)
+                    "fuchsia", "%s%%(levelname)s: %%(message)s" % namefmt
+                )
             else:
                 fmtstr = self.colorize(
-                    'red', '%s%%(levelname)s: %%(message)s' % namefmt)
-            fmtstr = '%(filename)s' + datefmt + fmtstr
-            if not getattr(record, 'nonl', False):
-                fmtstr += '\n'
+                    "red", "%s%%(levelname)s: %%(message)s" % namefmt
+                )
+            fmtstr = "%(filename)s" + datefmt + fmtstr
+            if not getattr(record, "nonl", False):
+                fmtstr += "\n"
         record.asctime = self.formatTime(record, self.datefmt)
         s = fmtstr % record.__dict__
         # never output more exception info -- the exception message is already
@@ -199,15 +281,14 @@ class NicosLogfileFormatter(Formatter):
         if self.extended_traceback:
             s = formatExtendedTraceback(ei[1])
         else:
-            s = ''.join(traceback.format_exception(ei[0], ei[1], ei[2],
-                                                   sys.maxsize))
-            if s.endswith('\n'):
+            s = "".join(traceback.format_exception(ei[0], ei[1], ei[2], sys.maxsize))
+            if s.endswith("\n"):
                 s = s[:-1]
         return s
 
     def formatTime(self, record, datefmt=None):
         res = time.strftime(DATEFMT, self.converter(record.created))
-        res += ',%03d' % record.msecs
+        res += ",%03d" % record.msecs
         return res
 
 
@@ -223,12 +304,12 @@ class StreamHandler(Handler):
     def flush(self):
         self.acquire()
         try:
-            if self.stream and hasattr(self.stream, 'flush'):
+            if self.stream and hasattr(self.stream, "flush"):
                 self.stream.flush()
         finally:
             self.release()
 
-    def emit(self, record, fs='%s\n'):
+    def emit(self, record, fs="%s\n"):
         try:
             msg = self.format(record)
             self.stream.write(fs % msg)
@@ -242,30 +323,41 @@ class NicosLogfileHandler(StreamHandler):
     Logs to log files with a date stamp appended, and rollover on midnight.
     """
 
-    def __init__(self, directory, filenameprefix='nicos', filenamesuffix=None,
-                 dayfmt=DATESTAMP_FMT, use_subdir=True):
+    def __init__(
+        self,
+        directory,
+        filenameprefix="nicos",
+        filenamesuffix=None,
+        dayfmt=DATESTAMP_FMT,
+        use_subdir=True,
+    ):
         if use_subdir:
             directory = path.join(directory, filenameprefix)
         if not path.isdir(directory):
             os.makedirs(directory)
-        self._currentsymlink = path.join(directory, 'current')
+        self._currentsymlink = path.join(directory, "current")
         self._filenameprefix = filenameprefix
         self._filenamesuffix = filenamesuffix
         self._pathnameprefix = path.join(directory, filenameprefix)
         self._dayfmt = dayfmt
         # today's logfile name
         if filenamesuffix:
-            basefn = self._pathnameprefix + '-' + time.strftime(dayfmt) + \
-                '-' + filenamesuffix + '.log'
+            basefn = (
+                self._pathnameprefix
+                + "-"
+                + time.strftime(dayfmt)
+                + "-"
+                + filenamesuffix
+                + ".log"
+            )
         else:
-            basefn = self._pathnameprefix + '-' + time.strftime(dayfmt) + '.log'
+            basefn = self._pathnameprefix + "-" + time.strftime(dayfmt) + ".log"
         self.baseFilename = path.abspath(basefn)
-        self.mode = 'a'
+        self.mode = "a"
         StreamHandler.__init__(self, self._open())
         # determine time of first midnight from now on
         t = time.localtime()
-        self.rollover_at = time.mktime((t[0], t[1], t[2] + 1,
-                                        0, 0, 0, 0, 0, -1))
+        self.rollover_at = time.mktime((t[0], t[1], t[2] + 1, 0, 0, 0, 0, 0, -1))
         self.setFormatter(NicosLogfileFormatter(LOGFMT, DATEFMT))
         self.disabled = False
 
@@ -277,15 +369,14 @@ class NicosLogfileHandler(StreamHandler):
             # if the symlink does not (yet) exist, OSError is raised.
             # should happen at most once per installation....
             pass
-        if hasattr(os, 'symlink'):
+        if hasattr(os, "symlink"):
             try:
-                os.symlink(path.basename(self.baseFilename),
-                           self._currentsymlink)
+                os.symlink(path.basename(self.baseFilename), self._currentsymlink)
             except Exception:
-                if os.name != 'nt':
+                if os.name != "nt":
                     raise
         # finally open the new logfile....
-        return open(self.baseFilename, self.mode, encoding='utf-8')
+        return open(self.baseFilename, self.mode, encoding="utf-8")
 
     def filter(self, record):
         return not self.disabled
@@ -317,7 +408,7 @@ class NicosLogfileHandler(StreamHandler):
         try:
             if self.stream:
                 self.flush()
-                if hasattr(self.stream, 'close'):
+                if hasattr(self.stream, "close"):
                     self.stream.close()
                 StreamHandler.close(self)
                 self.stream = None
@@ -327,16 +418,18 @@ class NicosLogfileHandler(StreamHandler):
     def doRollover(self):
         self.stream.close()
         if self._filenamesuffix:
-            self.baseFilename = '%s-%s-%s.log' % (
-                self._pathnameprefix, time.strftime(self._dayfmt),
-                self._filenamesuffix)
+            self.baseFilename = "%s-%s-%s.log" % (
+                self._pathnameprefix,
+                time.strftime(self._dayfmt),
+                self._filenamesuffix,
+            )
         else:
-            self.baseFilename = self._pathnameprefix + '-' + \
-                time.strftime(self._dayfmt) + '.log'
+            self.baseFilename = (
+                self._pathnameprefix + "-" + time.strftime(self._dayfmt) + ".log"
+            )
         self.stream = self._open()
         t = time.localtime()
-        self.rollover_at = time.mktime((t[0], t[1], t[2] + 1,
-                                        0, 0, 0, 0, 0, -1))
+        self.rollover_at = time.mktime((t[0], t[1], t[2] + 1, 0, 0, 0, 0, 0, -1))
 
 
 class ColoredConsoleHandler(StreamHandler):
@@ -346,13 +439,22 @@ class ColoredConsoleHandler(StreamHandler):
 
     def __init__(self):
         StreamHandler.__init__(self, sys.stdout)
-        self.setFormatter(NicosConsoleFormatter(
-            datefmt=DATEFMT, colorize=colorize))
+        self.setFormatter(NicosConsoleFormatter(datefmt=DATEFMT, colorize=colorize))
 
     def emit(self, record):
         msg = self.format(record)
         self.stream.write(msg)
         self.stream.flush()
+
+
+class NicosSysLogHandler(StreamHandler):
+    """
+    A handler class that writes records to standard output in journal format.
+    """
+
+    def __init__(self):
+        StreamHandler.__init__(self, sys.stdout)
+        self.setFormatter(NicosSyslogFormatter())
 
 
 class SimDebugHandler(StreamHandler):
@@ -363,7 +465,7 @@ class SimDebugHandler(StreamHandler):
 
     def __init__(self, stream=None):
         StreamHandler.__init__(self, sys.stderr)
-        self.setFormatter(NicosLogfileFormatter('(sim) ' + LOGFMT, DATEFMT))
+        self.setFormatter(NicosLogfileFormatter("(sim) " + LOGFMT, DATEFMT))
 
     def emit(self, record):
         if record.levelno == ACTION:
@@ -372,7 +474,6 @@ class SimDebugHandler(StreamHandler):
 
 
 class ELogHandler(Handler):
-
     def __init__(self):
         Handler.__init__(self)
         self.disabled = False
@@ -385,8 +486,8 @@ class ELogHandler(Handler):
             # do not write ACTIONs to logfiles, they're only informative
             # also do not write messages from simulation mode
             return
-        msg = recordToMessage(record, '')
-        session.elogEvent('message', msg)
+        msg = recordToMessage(record, "")
+        session.elogEvent("message", msg)
 
 
 def recordToMessage(record, reqid):
@@ -395,16 +496,18 @@ def recordToMessage(record, reqid):
     daemon-client protocol.
     """
 
-    msg = [getattr(record, e) for e in ('name', 'created', 'levelno',
-                                        'message', 'exc_text')] + [reqid]
-    if not hasattr(record, 'nonl'):
-        msg[3] += '\n'
+    msg = [
+        getattr(record, e)
+        for e in ("name", "created", "levelno", "message", "exc_text")
+    ] + [reqid]
+    if not hasattr(record, "nonl"):
+        msg[3] += "\n"
     return msg
 
 
 def initLoggers():
-    addLevelName(ACTION, 'ACTION')
-    addLevelName(INPUT, 'INPUT')
+    addLevelName(ACTION, "ACTION")
+    addLevelName(INPUT, "INPUT")
 
 
 def get_facility_log_handlers(config):
@@ -417,9 +520,10 @@ def get_facility_log_handlers(config):
         setup_package_mod = __import__(config.setup_package)
     except ImportError as err:
         raise RuntimeError(
-            'Setup package %r does not exist.' % config.setup_package) from err
+            "Setup package %r does not exist." % config.setup_package
+        ) from err
 
-    if not hasattr(setup_package_mod, 'get_log_handlers'):
+    if not hasattr(setup_package_mod, "get_log_handlers"):
         return []
 
     return setup_package_mod.get_log_handlers(config)
