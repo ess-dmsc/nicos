@@ -66,8 +66,8 @@ class ComponentTrackingDevice(Readable):
             settable=True,
             mandatory=False,
         ),
-        "msg_names": Param(
-            "List of names",
+        "source_names": Param(
+            "List of source names",
             type=listof(str),
             userparam=False,
             settable=True,
@@ -112,15 +112,13 @@ class ComponentTrackingDevice(Readable):
                 name, values = self._process_kafka_message(msg.value())
                 if not name:
                     continue
-                if name not in self.msg_names:
-                    self.msg_names.append(name)
                 messages[name] = values
                 if name.endswith(":valid"):
                     validity[name.split(":")[0]] = values["value"] == 1
         if not messages:
             return {}
 
-        components_data = self._extract_components(list(self.messages.values()))
+        components_data = self._extract_components(list(messages.values()))
 
         for component in components_data:
             if component["valid"] == 1:
@@ -162,6 +160,8 @@ class ComponentTrackingDevice(Readable):
             return None, None
         log_data = deserialise_f144(msg)
         source_name = log_data.source_name
+        if source_name not in self.source_names:
+            self.source_names.append(source_name)
         value = log_data.value
         timestamp = log_data.timestamp_unix_ns
         return source_name, {
@@ -204,7 +204,8 @@ class ComponentTrackingDevice(Readable):
         )
         groups[group_name]["children"].append(nxlog_json)
 
-        return self._build_json(groups), self.msg_names
+        # return self._build_json(groups)
+        return self.source_names
 
     def _build_json(self, groups):
         return [
