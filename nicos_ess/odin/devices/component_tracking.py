@@ -70,7 +70,7 @@ class ComponentTrackingDevice(Readable):
             "List of names",
             type=listof(str),
             userparam=False,
-            settable=False,
+            settable=True,
             mandatory=False,
         ),
     }
