@@ -185,8 +185,13 @@ class ComponentTrackingDevice(Readable):
 
     def _generate_json_configs(self):
         groups = {}
+        group_name = "FLIR"
+
+        if group_name not in groups:
+            groups[group_name] = {"nx_class": "nx_class", "children": []}
+
         nxlog_json = self._generate_nxlog_json("x", "f144", "source", "topic", "mm")
-        groups["FLIR"]["children"].append(nxlog_json)
+        groups[group_name]["children"].append(nxlog_json)
 
         return self._build_json(groups)
 
