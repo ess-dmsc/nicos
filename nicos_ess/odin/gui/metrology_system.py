@@ -153,7 +153,7 @@ class MetrologySystemPanel(PanelBase):
             return float("inf")
 
     def request_scan(self):
-        extracted_data, messages = self.exec_command(
+        extracted_data = self.exec_command(
             "component_tracking.read_metrology_system_messages()"
         )
         existing_data = {
@@ -174,7 +174,6 @@ class MetrologySystemPanel(PanelBase):
         self.lblScanWarn.setText("Scanned values are not confirmed!")
         self.lblScanWarn.setVisible(True)
         self.scan_complete = True
-        print(messages)
 
     def check_checkbox_status(self):
         if self.scan_complete:
@@ -341,7 +340,7 @@ class MetrologySystemPanel(PanelBase):
         )
         self.pop_up_table.resize(width, height)
         self.pop_up_table.show()
-        # print(self.exec_command("component_tracking._generate_json_configs()"))
+        print(self.exec_command("component_tracking._generate_json_configs()"))
 
     def update_confirm_timestamp(self):
         confirm_timestamp = self.exec_command(

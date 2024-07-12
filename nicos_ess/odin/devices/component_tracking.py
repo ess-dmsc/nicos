@@ -66,8 +66,8 @@ class ComponentTrackingDevice(Readable):
             settable=True,
             mandatory=False,
         ),
-        "messages": Param(
-            "Dict of messages",
+        "gollum_data": Param(
+            "Dictionary of Gollum data",
             type=dict,
             userparam=True,
             settable=True,
@@ -97,7 +97,7 @@ class ComponentTrackingDevice(Readable):
 
     def read_metrology_system_messages(self):
         current_time = datetime.now()
-        self.messages = {}
+        messages = {}
         validity = {}
 
         self._consumer.seek_to_end()
@@ -112,13 +112,14 @@ class ComponentTrackingDevice(Readable):
                 name, values = self._process_kafka_message(msg.value())
                 if not name:
                     continue
-                self.messages[name] = values
+                messages[name] = values
                 if name.endswith(":valid"):
                     validity[name.split(":")[0]] = values["value"] == 1
-        if not self.messages:
+        if not messages:
             return {}
 
-        components_data = self._extract_components(list(self.messages.values()))
+        self.gollum_data = values
+        components_data = self._extract_components(list(messages.values()))
 
         for component in components_data:
             if component["valid"] == 1:
@@ -127,7 +128,7 @@ class ComponentTrackingDevice(Readable):
                 component["distance_from_sample"] = "Not detected"
         self._update_unconfirmed_components(components_data)
 
-        return self._unconfirmed_components, self.messages
+        return self._unconfirmed_components
 
     def _update_unconfirmed_components(self, new_components):
         temp = []
@@ -192,15 +193,15 @@ class ComponentTrackingDevice(Readable):
 
     def _generate_json_configs(self):
         groups = {}
-        group_name = "FLIR"
 
-        if group_name not in groups:
-            groups[group_name] = {"nx_class": "nx_class", "children": []}
-
-        nxlog_json = self._generate_nxlog_json(
-            "x", "f144", "source", self.response_topic, "mm"
-        )
-        groups[group_name]["children"].append(nxlog_json)
+        for entry in self.gollum_data:
+            group_name = entry["name"]
+            if group_name not in groups:
+                groups[group_name] = {"nx_class": "nx_class", "children": []}
+                nxlog_json = self._generate_nxlog_json(
+                    "x", "f144", group_name, self.response_topic, "mm"
+                )
+                groups[group_name]["children"].append(nxlog_json)
 
         return self._build_json(groups)
 
