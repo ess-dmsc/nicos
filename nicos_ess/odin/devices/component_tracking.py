@@ -160,8 +160,8 @@ class ComponentTrackingDevice(Readable):
             return None, None
         log_data = deserialise_f144(msg)
         source_name = log_data.source_name
-        if source_name not in self.source_names:
-            self.source_names.append(source_name)
+        """if source_name not in self.source_names:
+            self.source_names.append(source_name)"""
         value = log_data.value
         timestamp = log_data.timestamp_unix_ns
         return source_name, {
