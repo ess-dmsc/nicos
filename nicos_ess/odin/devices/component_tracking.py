@@ -110,6 +110,7 @@ class ComponentTrackingDevice(Readable):
                 continue
             elif msg.value():
                 name, values = self._process_kafka_message(msg.value())
+                self.gollum_data[name] = values
                 if not name:
                     continue
                 messages[name] = values
@@ -117,8 +118,6 @@ class ComponentTrackingDevice(Readable):
                     validity[name.split(":")[0]] = values["value"] == 1
         if not messages:
             return {}
-
-        self.gollum_data = values
         components_data = self._extract_components(list(messages.values()))
 
         for component in components_data:
