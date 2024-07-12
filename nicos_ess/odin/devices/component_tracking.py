@@ -195,7 +195,7 @@ class ComponentTrackingDevice(Readable):
         groups = {}
 
         for entry in self.gollum_data:
-            group_name = entry["name"]
+            group_name = entry[0]
             if group_name not in groups:
                 groups[group_name] = {"nx_class": "nx_class", "children": []}
                 nxlog_json = self._generate_nxlog_json(
