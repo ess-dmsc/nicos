@@ -90,7 +90,7 @@ class ComponentTrackingDevice(Readable):
 
     def read_metrology_system_messages(self):
         current_time = datetime.now()
-        messages = {}
+        self.messages = {}
         validity = {}
 
         self._consumer.seek_to_end()
@@ -105,13 +105,13 @@ class ComponentTrackingDevice(Readable):
                 name, values = self._process_kafka_message(msg.value())
                 if not name:
                     continue
-                messages[name] = values
+                self.messages[name] = values
                 if name.endswith(":valid"):
                     validity[name.split(":")[0]] = values["value"] == 1
-        if not messages:
+        if not self.messages:
             return {}
 
-        components_data = self._extract_components(list(messages.values()))
+        components_data = self._extract_components(list(self.messages.values()))
 
         for component in components_data:
             if component["valid"] == 1:
@@ -120,7 +120,7 @@ class ComponentTrackingDevice(Readable):
                 component["distance_from_sample"] = "Not detected"
         self._update_unconfirmed_components(components_data)
 
-        return self._unconfirmed_components, messages
+        return self._unconfirmed_components, self.messages
 
     def _update_unconfirmed_components(self, new_components):
         temp = []
