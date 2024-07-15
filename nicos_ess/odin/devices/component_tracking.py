@@ -207,7 +207,7 @@ class ComponentTrackingDevice(Readable):
             elif log_name in ("alpha", "beta", "gamma"):
                 unit = "deg"
             elif log_name in ("qx", "qy", "qz", "qw"):
-                unit = "quat"
+                unit = ""
 
             nxlog_json = self._generate_nxlog_json(
                 log_name, "f144", source_name, self.response_topic, unit
@@ -234,5 +234,5 @@ class ComponentTrackingDevice(Readable):
             ],
         }
 
-    def doRead(self, maxage=0):
-        return ""
+    '''def doRead(self, maxage=0):
+        return ""'''
