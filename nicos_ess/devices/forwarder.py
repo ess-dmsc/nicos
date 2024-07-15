@@ -68,7 +68,7 @@ class EpicsKafkaForwarder(KafkaStatusHandler):
     def doInit(self, mode):
         self._long_loop_delay = self.pollinterval
         self._stop_requested = False
-        self.comp_track_dev = ComponentTrackingDevice("KafkaForwarder")
+        self.comp_track_dev = ComponentTrackingDevice("ComponentTracker")
         if session.sessiontype != POLLER and mode != SIMULATION:
             self._producer = KafkaProducer.create(self.brokers)
             self._updater_thread = createThread(
