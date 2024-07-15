@@ -136,8 +136,9 @@ class EpicsMotor(CanDisable, CanReference, HasOffset, EpicsMoveable, Motor):
         "speed": Override(volatile=True),
         "offset": Override(volatile=True, chatty=False),
         "abslimits": Override(volatile=True, mandatory=False),
-        # Units are set by EPICS, so cannot be changed
+        # Units and precision are set by EPICS, so cannot be changed
         "unit": Override(mandatory=False, settable=False, volatile=True),
+        "precision": Override(mandatory=False, settable=False, volatile=True),
     }
 
     _motor_status = (status.OK, "")
@@ -447,3 +448,6 @@ class EpicsMotor(CanDisable, CanReference, HasOffset, EpicsMoveable, Motor):
         if deadband < 0:
             deadband = 0
         self._put_pv("monitor_deadband", deadband)
+
+    def doReadPrecision(self):
+        return self._get_pv("position_deadband")
