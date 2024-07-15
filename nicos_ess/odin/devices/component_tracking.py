@@ -191,7 +191,7 @@ class ComponentTrackingDevice(Readable):
     def get_scan_timestamp(self):
         return self._last_scan_timestamp
 
-    def _generate_json_configs(self):
+    def _generate_json_configs_groups(self):
         groups = {}
         for source_name in self.gollum_data:
             group_name, log_name = source_name.split(":")
@@ -214,38 +214,4 @@ class ComponentTrackingDevice(Readable):
             )
             groups[group_name]["children"].append(nxlog_json)
 
-        return self._build_json(groups)
-
-    def _build_json(self, groups):
-        return [
-            self._generate_group_json(name, "nx_class", group["children"])
-            for name, group in groups.items()
-        ]
-
-    def _generate_nxlog_json(self, name, schema, source, topic, units):
-        return {
-            "name": name,
-            "type": "group",
-            "attributes": [{"name": "NX_class", "dtype": "string", "values": "NXlog"}],
-            "children": [
-                {
-                    "module": schema,
-                    "config": {
-                        "source": source,
-                        "topic": topic,
-                        "dtype": "double",
-                        "value_units": units,
-                    },
-                }
-            ],
-        }
-
-    def _generate_group_json(self, name, nx_class, children):
-        return {
-            "name": name,
-            "type": "group",
-            "attributes": [
-                {"name": "NXcollection", "dtype": "string", "values": nx_class}
-            ],
-            "children": children,
-        }
+        return groups

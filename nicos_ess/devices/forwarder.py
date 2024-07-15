@@ -43,6 +43,7 @@ from nicos.core import (
 from nicos.utils import createThread
 from nicos_ess.devices.kafka.producer import KafkaProducer
 from nicos_ess.devices.kafka.status_handler import KafkaStatusHandler
+from nicos_ess.odin.devices.component_tracking import ComponentTrackingDevice
 
 
 class EpicsKafkaForwarder(KafkaStatusHandler):
@@ -93,6 +94,9 @@ class EpicsKafkaForwarder(KafkaStatusHandler):
         :return: A list of JSON configurations to be treated as a "children" list.
         """
         return self._generate_json_configs()
+
+    def get_component_nexus_json(self):
+        return self._build_json(ComponentTrackingDevice._generate_json_configs_groups())
 
     def _get_forwarder_config(self, dev):
         for nexus_config_dict in dev.nexus_config:

@@ -141,6 +141,19 @@ class NexusStructureJsonFile(NexusStructureProvider):
         self.log.warning("Could not find the instrument group in the NeXus")
         return structure
 
+    def _insert_component_tracking_devices(self, structure):
+        if not self._check_for_device(""):
+            return structure
+
+        extra_devices = session.getDevice("KafkaForwarder").get_component_nexus_json()
+        for item in structure["children"][0]["children"]:  # Entry children
+            if item.get("name", "") == "instrument":
+                item["children"].extend(extra_devices)
+                return structure
+
+        self.log.warning("Could not find the instrument group in the NeXus")
+        return structure
+
     def _generate_nxclass_template(self, nx_class, prefix, entities, skip_keys=None):
         temp = []
         for entity in entities:
