@@ -68,6 +68,7 @@ class EpicsKafkaForwarder(KafkaStatusHandler):
     def doInit(self, mode):
         self._long_loop_delay = self.pollinterval
         self._stop_requested = False
+        self.comp_track_dev = ComponentTrackingDevice("KafkaForwarder")
         if session.sessiontype != POLLER and mode != SIMULATION:
             self._producer = KafkaProducer.create(self.brokers)
             self._updater_thread = createThread(
@@ -96,8 +97,7 @@ class EpicsKafkaForwarder(KafkaStatusHandler):
         return self._generate_json_configs()
 
     def get_component_nexus_json(self):
-        comp_track_dev = ComponentTrackingDevice("KafkaForwarder")
-        return self._build_json(comp_track_dev._generate_json_configs_groups())
+        return self._build_json(self.comp_track_dev._generate_json_configs_groups())
 
     def _get_forwarder_config(self, dev):
         for nexus_config_dict in dev.nexus_config:
