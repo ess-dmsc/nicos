@@ -200,18 +200,18 @@ class ComponentTrackingDevice(Readable):
             if group_name not in groups:
                 groups[group_name] = {"nx_class": "nx_class", "children": []}
 
-        unit = ""
-        if log_name in ("x", "y", "z"):
-            unit = "mm"
-        elif log_name in ("alpha", "beta", "gamma"):
-            unit = "deg"
-        elif log_name in ("qx", "qy", "qz", "qw"):
-            unit = "quat"
+            unit = ""
+            if log_name in ("x", "y", "z"):
+                unit = "mm"
+            elif log_name in ("alpha", "beta", "gamma"):
+                unit = "deg"
+            elif log_name in ("qx", "qy", "qz", "qw"):
+                unit = "quat"
 
-        nxlog_json = self._generate_nxlog_json(
-            log_name, "f144", entry, self.response_topic, unit
-        )
-        groups[group_name]["children"].append(nxlog_json)
+            nxlog_json = self._generate_nxlog_json(
+                log_name, "f144", entry, self.response_topic, unit
+            )
+            groups[group_name]["children"].append(nxlog_json)
 
         return self._build_json(groups)
 
