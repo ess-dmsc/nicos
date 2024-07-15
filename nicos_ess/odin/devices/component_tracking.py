@@ -234,5 +234,5 @@ class ComponentTrackingDevice(Readable):
             ],
         }
 
-    '''def doRead(self, maxage=0):
-        return ""'''
+    def doRead(self, maxage=0):
+        return ""
