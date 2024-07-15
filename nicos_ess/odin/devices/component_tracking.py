@@ -193,8 +193,8 @@ class ComponentTrackingDevice(Readable):
 
     def _generate_json_configs(self):
         groups = {}
-        for entry in self.gollum_data:
-            group_name, log_name = entry.split(":")
+        for source_name in self.gollum_data:
+            group_name, log_name = source_name.split(":")
             if log_name == "valid":
                 continue
 
@@ -210,7 +210,7 @@ class ComponentTrackingDevice(Readable):
                 unit = "quat"
 
             nxlog_json = self._generate_nxlog_json(
-                log_name, "f144", entry, self.response_topic, unit
+                log_name, "f144", source_name, self.response_topic, unit
             )
             groups[group_name]["children"].append(nxlog_json)
 
