@@ -207,8 +207,6 @@ class ComponentTrackingDevice(Readable):
                 unit = "mm"
             elif log_name in ("alpha", "beta", "gamma"):
                 unit = "deg"
-            elif log_name in ("qx", "qy", "qz", "qw"):
-                unit = ""
 
             nxlog_json = generate_nxlog_json(
                 log_name, "f144", source_name, self.response_topic, unit
