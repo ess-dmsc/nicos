@@ -196,6 +196,8 @@ class ComponentTrackingDevice(Readable):
         for entry in self.gollum_data:
             group_name = entry
             group_name, log_name = group_name.split(":")
+            if log_name == "valid":
+                continue
 
             if group_name not in groups:
                 groups[group_name] = {"nx_class": "nx_class", "children": []}
