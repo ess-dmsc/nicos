@@ -60,6 +60,7 @@ class NexusStructureJsonFile(NexusStructureProvider):
     def get_structure(self, metainfo, counter):
         structure = self._load_structure()
         structure = self._insert_extra_devices(structure)
+        structure = self._insert_component_tracking_devices(structure)
         structure = self._filter_structure(structure)
         structure = self._insert_metadata(structure, metainfo, counter)
         return json.dumps(structure)
@@ -263,6 +264,7 @@ class NexusStructureAreaDetector(NexusStructureJsonFile):
     def get_structure(self, metainfo, counter):
         structure = self._load_structure()
         structure = self._insert_extra_devices(structure)
+        structure = self._insert_component_tracking_devices(structure)
         structure = self._filter_structure(structure)
         structure = self._insert_metadata(structure, metainfo, counter)
         structure = self._add_area_detector_array_size(structure)
