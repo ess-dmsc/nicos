@@ -194,8 +194,7 @@ class ComponentTrackingDevice(Readable):
     def _generate_json_configs(self):
         groups = {}
         for entry in self.gollum_data:
-            group_name = entry
-            group_name, log_name = group_name.split(":")
+            group_name, log_name = entry.split(":")
             if log_name == "valid":
                 continue
 
