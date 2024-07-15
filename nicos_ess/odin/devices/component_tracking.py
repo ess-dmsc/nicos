@@ -195,10 +195,12 @@ class ComponentTrackingDevice(Readable):
         groups = {}
         for entry in self.gollum_data:
             group_name = entry
+            log_name = group_name.split(":")[1]
+
             if group_name not in groups:
                 groups[group_name] = {"nx_class": "nx_class", "children": []}
                 nxlog_json = self._generate_nxlog_json(
-                    "x", "f144", group_name, self.response_topic, "mm"
+                    log_name, "f144", group_name, self.response_topic, "mm"
                 )
                 groups[group_name]["children"].append(nxlog_json)
 
