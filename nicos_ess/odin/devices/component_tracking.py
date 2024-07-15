@@ -215,3 +215,21 @@ class ComponentTrackingDevice(Readable):
             groups[group_name]["children"].append(nxlog_json)
 
         return groups
+
+    def _generate_nxlog_json(self, name, schema, source, topic, units):
+        return {
+            "name": name,
+            "type": "group",
+            "attributes": [{"name": "NX_class", "dtype": "string", "values": "NXlog"}],
+            "children": [
+                {
+                    "module": schema,
+                    "config": {
+                        "source": source,
+                        "topic": topic,
+                        "dtype": "double",
+                        "value_units": units,
+                    },
+                }
+            ],
+        }
