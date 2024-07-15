@@ -340,7 +340,6 @@ class MetrologySystemPanel(PanelBase):
         )
         self.pop_up_table.resize(width, height)
         self.pop_up_table.show()
-        print(self.exec_command("component_tracking._generate_json_configs()"))
 
     def update_confirm_timestamp(self):
         confirm_timestamp = self.exec_command(
