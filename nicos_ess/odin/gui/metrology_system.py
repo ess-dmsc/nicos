@@ -171,7 +171,6 @@ class MetrologySystemPanel(PanelBase):
             return
         sorted_data = self.sort_by_distance(extracted_data)
         self.model.raw_data = sorted_data
-        print(self.model.raw_data)
         self.lblScanWarn.setText("Scanned values are not confirmed!")
         self.lblScanWarn.setVisible(True)
         self.scan_complete = True
@@ -341,7 +340,7 @@ class MetrologySystemPanel(PanelBase):
         )
         self.pop_up_table.resize(width, height)
         self.pop_up_table.show()
-        # print(self.exec_command("component_tracking._generate_json_configs()"))
+        print(self.exec_command("component_tracking._generate_json_configs()"))
 
     def update_confirm_timestamp(self):
         confirm_timestamp = self.exec_command(
