@@ -40,6 +40,8 @@ from nicos.core import (
     SIMULATION,
     Param,
 )
+
+from nicos_ess.utilities.json_utils import generate_group_json, generate_nxlog_json
 from nicos.utils import createThread
 from nicos_ess.devices.kafka.producer import KafkaProducer
 from nicos_ess.devices.kafka.status_handler import KafkaStatusHandler
@@ -200,7 +202,7 @@ class EpicsKafkaForwarder(KafkaStatusHandler):
             if group_name not in groups:
                 groups[group_name] = {"nx_class": config["nx_class"], "children": []}
 
-            nxlog_json = self._generate_nxlog_json(
+            nxlog_json = generate_nxlog_json(
                 dev_name,
                 config["schema"],
                 config["pv"],
@@ -213,11 +215,11 @@ class EpicsKafkaForwarder(KafkaStatusHandler):
 
     def _build_json(self, groups):
         return [
-            self._generate_group_json(name, group["nx_class"], group["children"])
+            generate_group_json(name, group["nx_class"], group["children"])
             for name, group in groups.items()
         ]
 
-    def _generate_nxlog_json(self, name, schema, source, topic, units):
+    """def _generate_nxlog_json(self, name, schema, source, topic, units):
         return {
             "name": name,
             "type": "group",
@@ -241,4 +243,4 @@ class EpicsKafkaForwarder(KafkaStatusHandler):
             "type": "group",
             "attributes": [{"name": "NX_class", "dtype": "string", "values": nx_class}],
             "children": children,
-        }
+        }"""

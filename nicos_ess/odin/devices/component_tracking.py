@@ -32,6 +32,7 @@ from streaming_data_types import deserialise_f144
 from nicos.core import SIMULATION, Override, Param, Readable, host, listof
 
 from nicos_ess.devices.kafka.consumer import KafkaConsumer
+from nicos_ess.utilities.json_utils import generate_nxlog_json
 
 
 class ComponentTrackingDevice(Readable):
@@ -209,14 +210,14 @@ class ComponentTrackingDevice(Readable):
             elif log_name in ("qx", "qy", "qz", "qw"):
                 unit = ""
 
-            nxlog_json = self._generate_nxlog_json(
+            nxlog_json = generate_nxlog_json(
                 log_name, "f144", source_name, self.response_topic, unit
             )
             groups[group_name]["children"].append(nxlog_json)
 
         return groups
 
-    def _generate_nxlog_json(self, name, schema, source, topic, units):
+    """def _generate_nxlog_json(self, name, schema, source, topic, units):
         return {
             "name": name,
             "type": "group",
@@ -232,7 +233,7 @@ class ComponentTrackingDevice(Readable):
                     },
                 }
             ],
-        }
+        }"""
 
     def doRead(self, maxage=0):
         return ""
