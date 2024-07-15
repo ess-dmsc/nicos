@@ -143,7 +143,7 @@ class NexusStructureJsonFile(NexusStructureProvider):
         return structure
 
     def _insert_component_tracking_devices(self, structure):
-        if not self._check_for_device(""):
+        if not self._check_for_device("KafkaForwarder"):
             return structure
 
         extra_devices = session.getDevice("KafkaForwarder").get_component_nexus_json()
