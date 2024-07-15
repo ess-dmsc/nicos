@@ -209,7 +209,7 @@ class ComponentTrackingDevice(Readable):
                     unit = "quaternion"'''
 
                 nxlog_json = self._generate_nxlog_json(
-                    log_name, "f144", source_name, self.response_topic, ""
+                    log_name, "f144", group_name, self.response_topic, ""
                 )
                 groups[group_name]["children"].append(nxlog_json)
 
