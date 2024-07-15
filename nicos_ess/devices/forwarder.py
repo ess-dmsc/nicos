@@ -99,6 +99,7 @@ class EpicsKafkaForwarder(KafkaStatusHandler):
             return self._build_json(
                 session.devices["component_tracking"]._generate_json_configs_groups()
             )
+        return None
 
     def _get_forwarder_config(self, dev):
         for nexus_config_dict in dev.nexus_config:

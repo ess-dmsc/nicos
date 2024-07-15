@@ -199,7 +199,7 @@ class ComponentTrackingDevice(Readable):
                 continue
 
             if group_name not in groups:
-                groups[group_name] = {"nx_class": "NX_Collection", "children": []}
+                groups[group_name] = {"nx_class": "NX_collection", "children": []}
 
             unit = ""
             if log_name in ("x", "y", "z"):

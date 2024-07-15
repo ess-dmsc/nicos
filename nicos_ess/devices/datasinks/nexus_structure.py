@@ -60,6 +60,7 @@ class NexusStructureJsonFile(NexusStructureProvider):
     def get_structure(self, metainfo, counter):
         structure = self._load_structure()
         structure = self._insert_extra_devices(structure)
+        structure = self._insert_comp_track_devices(structure)
         structure = self._filter_structure(structure)
         structure = self._insert_metadata(structure, metainfo, counter)
         return json.dumps(structure)
@@ -131,14 +132,25 @@ class NexusStructureJsonFile(NexusStructureProvider):
     def _insert_extra_devices(self, structure):
         if not self._check_for_device("KafkaForwarder"):
             return structure
-
         extra_devices = session.getDevice("KafkaForwarder").get_nexus_json()
-        extra_comp_track_devices = session.getDevice(
-            "KafkaForwarder"
-        ).get_component_nexus_json()
         for item in structure["children"][0]["children"]:  # Entry children
             if item.get("name", "") == "instrument":
-                item["children"].extend(extra_devices + extra_comp_track_devices)
+                item["children"].extend(extra_devices)
+                return structure
+
+        self.log.warning("Could not find the instrument group in the NeXus")
+        return structure
+
+    def _insert_comp_track_devices(self, structure):
+        if not self._check_for_device("component_tracking"):
+            return structure
+        comp_track_devices = session.getDevice(
+            "KafkaForwarder"
+        ).get_component_nexus_json()
+
+        for item in structure["children"][0]["children"]:  # Entry children
+            if item.get("name", "") == "instrument":
+                item["children"].extend(comp_track_devices)
                 return structure
 
         self.log.warning("Could not find the instrument group in the NeXus")
