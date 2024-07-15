@@ -233,3 +233,6 @@ class ComponentTrackingDevice(Readable):
                 }
             ],
         }
+
+    def doRead(self, maxage=0):
+        return ""
