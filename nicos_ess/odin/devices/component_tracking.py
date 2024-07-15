@@ -217,23 +217,5 @@ class ComponentTrackingDevice(Readable):
 
         return groups
 
-    """def _generate_nxlog_json(self, name, schema, source, topic, units):
-        return {
-            "name": name,
-            "type": "group",
-            "attributes": [{"name": "NX_class", "dtype": "string", "values": "NXlog"}],
-            "children": [
-                {
-                    "module": schema,
-                    "config": {
-                        "source": source,
-                        "topic": topic,
-                        "dtype": "double",
-                        "value_units": units,
-                    },
-                }
-            ],
-        }"""
-
     def doRead(self, maxage=0):
         return ""
