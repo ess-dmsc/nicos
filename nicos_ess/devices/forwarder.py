@@ -43,7 +43,6 @@ from nicos.core import (
 from nicos.utils import createThread
 from nicos_ess.devices.kafka.producer import KafkaProducer
 from nicos_ess.devices.kafka.status_handler import KafkaStatusHandler
-from nicos_ess.odin.devices.component_tracking import ComponentTrackingDevice
 
 
 class EpicsKafkaForwarder(KafkaStatusHandler):
@@ -96,9 +95,9 @@ class EpicsKafkaForwarder(KafkaStatusHandler):
         return self._generate_json_configs()
 
     def get_component_nexus_json(self):
-        self.log.info(session.devices.values())
-        comp_track_dev = ComponentTrackingDevice("component_tracking")
-        return self._build_json(comp_track_dev._generate_json_configs_groups())
+        if "component_tracking" in session.devices:
+            comp_track_dev = session.devices["component_tracking"]
+            return self._build_json(comp_track_dev._generate_json_configs_groups())
 
     def _get_forwarder_config(self, dev):
         for nexus_config_dict in dev.nexus_config:
