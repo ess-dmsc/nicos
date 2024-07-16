@@ -210,9 +210,9 @@ class FileWriterStatus(KafkaStatusHandler):
         if job_id not in self._jobs:
             session.log.warning("Received status message for unknown job %s", job_id)
             return
-        session.log.debug("Received status message for job %s", job_id)
+        session.log.info("Received status message for job %s", job_id)
         self._jobs[job_id].on_writing(result.update_interval)
-        session.log.debug("Job %s status updated to STARTED")
+        session.log.info("Job %s status updated to STARTED", job_id)
         self._update_status()
 
     def _job_stopped(self, job_id):
