@@ -199,13 +199,13 @@ class FileWriterStatus(KafkaStatusHandler):
 
     def new_messages_callback(self, messages):
         for _, msg in sorted(messages, key=lambda x: x[0]):
-            msg_type = msg[4:8]
-            session.log.info("Procesdsing message of typ %s", msg_type)
+            # msg_type = msg[4:8]
+            # session.log.info("Processing message of type %s", msg_type)
             if msg[4:8] in self._type_to_handler:
                 with self._lock:
                     self._type_to_handler[msg[4:8]](msg)
-            else:
-                session.log.info("Received message with unknown type %s", msg_type)
+            """else:
+                session.log.info("Received message with unknown type %s", msg_type)"""
 
     def _on_status_message(self, message):
         result = deserialise_x5f2(message)
@@ -213,13 +213,13 @@ class FileWriterStatus(KafkaStatusHandler):
         job_id = status_info["job_id"]
         with self._lock:
             if job_id not in self._jobs:
-                session.log.warning(
+                """session.log.warning(
                     "Received status message for unknown job %s", job_id
-                )
+                )"""
                 return
-            session.log.info("Received status message for job %s", job_id)
+            # session.log.info("Received status message for job %s", job_id)
             self._jobs[job_id].on_writing(result.update_interval)
-            session.log.info("Job %s status updated to STARTED", job_id)
+            # session.log.info("Job %s status updated to STARTED", job_id)
             self._update_status()
 
     def _job_stopped(self, job_id):
@@ -250,10 +250,10 @@ class FileWriterStatus(KafkaStatusHandler):
 
     def _on_response_message(self, message):
         result = deserialise_answ(message)
-        job_id = result.job_id
-        session.log.info("Received respoonse message from job %s", job_id)
+        # job_id = result.job_id
+        # session.log.info("Received response message from job %s", job_id)
         if result.job_id not in self._jobs:
-            session.log.info("Response message from unknown job %s", job_id)
+            # session.log.info("Response message from unknown job %s", job_id)
             return
         if result.action == ActionType.StartJob:
             self._on_start_response(result)
@@ -261,20 +261,20 @@ class FileWriterStatus(KafkaStatusHandler):
             self._on_stop_response(result)
 
     def _on_start_response(self, result):
-        job_id = result.job_id
-        session.log.info("Processing start respons of job %s", job_id)
+        # job_id = result.job_id
+        # session.log.info("Processing start response for job %s", job_id)
         if result.outcome == ActionOutcome.Success:
             self.log.debug(
                 "request to start writing succeeded for job %s", result.job_id
             )
-            session.log.info("Request to start writing succeeded for job %s", job_id)
+            # session.log.info("Request to start writing succeeded for job %s", job_id)
             self._jobs[result.job_id].on_writing(self.statusinterval)
             self._jobs[result.job_id].service_id = result.service_id
         else:
             self.log.debug("request to start writing failed for job %s", result.job_id)
-            session.log.info(
-                "request to start writing failed for job %s", result.job_id
-            )
+            # session.log.info(
+            #    "Request to start writing failed for job %s", result.job_id
+            # )
             self._jobs[result.job_id].no_start_ack(result.message)
 
     def _on_stop_response(self, result):
