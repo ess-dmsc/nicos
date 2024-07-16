@@ -168,6 +168,7 @@ class FileWriterStatus(KafkaStatusHandler):
 
     def doPreinit(self, mode):
         KafkaStatusHandler.doPreinit(self, mode)
+        session.log.info("Status preinit")
         self._lock = threading.RLock()
         self._jobs = {}
         self._jobs_in_order = OrderedDict()
