@@ -22,16 +22,16 @@
 # *****************************************************************************
 from nicos.core import Param, pvname, status
 
-from nicos.devices.epics.pyepics import EpicsReadable
+from nicos.devices.epics.pva import EpicsReadable
 
 error_bits = {
-    'underrange': 0x1,
-    'overrange': 0x2,
-    'limit1 overshot': 0x4,
-    'limit1 undershot': 0x8,
-    'limit2 overshot': 0x10,
-    'limit2 undershot': 0x20,
-    'error': 0x40,
+    "underrange": 0x1,
+    "overrange": 0x2,
+    "limit1 overshot": 0x4,
+    "limit1 undershot": 0x8,
+    "limit2 overshot": 0x10,
+    "limit2 undershot": 0x20,
+    "error": 0x40,
 }
 
 
@@ -49,13 +49,13 @@ def get_pt100_status_message(value):
 
     if value < 0:
         value = (value + 0x100000000) | 0xFF
-    if value & error_bits['error']:
-        value ^= error_bits['error']
+    if value & error_bits["error"]:
+        value ^= error_bits["error"]
         for text, error in error_bits.items():
             if value == error:
                 return status.ERROR, text
-        return status.ERROR, 'error'
-    return status.OK, ''
+        return status.ERROR, "error"
+    return status.OK, ""
 
 
 class EpicsPT100Temperature(EpicsReadable):
@@ -64,13 +64,12 @@ class EpicsPT100Temperature(EpicsReadable):
     """
 
     parameters = {
-        'statuspv':
-            Param('PV name for status code', type=pvname, mandatory=False),
+        "statuspv": Param("PV name for status code", type=pvname, mandatory=False),
     }
 
     def _get_pv_parameters(self):
         if self.statuspv:
-            return EpicsReadable._get_pv_parameters(self) | {'statuspv'}
+            return EpicsReadable._get_pv_parameters(self) | {"statuspv"}
         return EpicsReadable._get_pv_parameters(self)
 
     def doStatus(self, maxage=0):
@@ -79,7 +78,7 @@ class EpicsPT100Temperature(EpicsReadable):
             return mapped_status, status_message
 
         if self.statuspv:
-            st = int(self._get_pv('statuspv'))
+            st = int(self._get_pv("statuspv"))
             return get_pt100_status_message(st)
 
-        return status.UNKNOWN, ''
+        return status.UNKNOWN, ""

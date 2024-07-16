@@ -25,7 +25,7 @@ from nicos import session
 from nicos.core import Attach, Readable
 from nicos.devices.epics.pyepics import EpicsDevice
 
-from nicos.devices.epics.pyepics.mixins import HasDisablePv
+from nicos.devices.epics.mixins import HasDisablePv
 
 
 class PfeifferReadable(HasDisablePv, EpicsDevice, Readable):
@@ -36,17 +36,13 @@ class PfeifferReadable(HasDisablePv, EpicsDevice, Readable):
     sensors.
     """
 
-    attached_devices = {
-        'sensors': Attach('Sensors to read',
-                          Readable,
-                          multiple=True)
-    }
+    attached_devices = {"sensors": Attach("Sensors to read", Readable, multiple=True)}
 
     def valueInfo(self):
         return tuple(sen.valueInfo() for sen in self._attached_sensors)
 
     def doRead(self, maxage=0):
         if not self.isEnabled:
-            session.log.warning('Pfeiffer must be switched on before use')
+            session.log.warning("Pfeiffer must be switched on before use")
             return [0, 0, 0, 0]
         return [sen.read(maxage) for sen in self._attached_sensors]
