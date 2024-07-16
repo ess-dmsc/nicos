@@ -92,7 +92,7 @@ class KafkaConsumer:
         """Remove any existing subscriptions."""
         self._consumer.unsubscribe()
 
-    def poll(self, timeout_ms=5):
+    def poll(self, timeout_ms=100):
         """Poll for messages.
 
         Note: returns at most one message.
