@@ -25,8 +25,8 @@
 """
 This module contains EPICS related mixins.
 """
-from nicos.core import CanDisable, ConfigurationError, Param, anytype, \
-    dictwith, pvname
+
+from nicos.core import CanDisable, ConfigurationError, Param, anytype, dictwith, pvname
 from nicos.core.constants import SIMULATION
 
 
@@ -53,27 +53,29 @@ class HasDisablePv(CanDisable):
     """
 
     parameters = {
-        'switchstates':
-            Param('Map of boolean states to underlying type',
-                  type=dictwith(enable=anytype, disable=anytype),
-                  userparam=False),
-        'switchpvs':
-            Param('Read and write pv for enabling and disabling the device',
-                  type=dictwith(read=pvname, write=pvname),
-                  userparam=False)
+        "switchstates": Param(
+            "Map of boolean states to underlying type",
+            type=dictwith(enable=anytype, disable=anytype),
+            userparam=False,
+        ),
+        "switchpvs": Param(
+            "Read and write pv for enabling and disabling the device",
+            type=dictwith(read=pvname, write=pvname),
+            userparam=False,
+        ),
     }
 
     def _get_pv_parameters(self):
         # Use colon prefix to prevent name clashes with
         # PVs specified in EpicsDevice.param
-        switch_pvs = {'switchpv:' + pv for pv in self.switchpvs}
+        switch_pvs = {"switchpv:" + pv for pv in self.switchpvs}
 
         return super()._get_pv_parameters() | switch_pvs
 
     def _get_pv_name(self, pvparam):
-        components = pvparam.split(':', 1)
+        components = pvparam.split(":", 1)
 
-        if len(components) == 2 and components[0] == 'switchpv':
+        if len(components) == 2 and components[0] == "switchpv":
             return self.switchpvs[components[1]]
 
         return super()._get_pv_name(pvparam)
@@ -85,13 +87,14 @@ class HasDisablePv(CanDisable):
         """
         if self._mode == SIMULATION:
             return True
-        raw_value = self._get_pv('switchpv:read')
+        raw_value = self._get_pv("switchpv:read")
 
         if raw_value not in self.switchstates.values():
             raise ConfigurationError(
-                self, 'State by attached switch device not recognized.')
+                self, "State by attached switch device not recognized."
+            )
 
-        return raw_value == self.switchstates['enable']
+        return raw_value == self.switchstates["enable"]
 
     def doEnable(self, on):
         """Enable/disable the device depending on 'on'.
@@ -101,11 +104,11 @@ class HasDisablePv(CanDisable):
         """
         if on:
             if not self.isEnabled:
-                self._put_pv('switchpv:write', self.switchstates['enable'])
+                self._put_pv("switchpv:write", self.switchstates["enable"])
             else:
-                self.log.info('Device is already enabled')
+                self.log.info("Device is already enabled")
         else:
             if self.isEnabled:
-                self._put_pv('switchpv:write', self.switchstates['disable'])
+                self._put_pv("switchpv:write", self.switchstates["disable"])
             else:
-                self.log.info('Device is already disabled')
+                self.log.info("Device is already disabled")

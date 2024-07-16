@@ -25,15 +25,15 @@ import pytest
 from nicos.core.device import Device
 from nicos.devices.epics.pyepics import EpicsDevice
 
-from nicos.devices.epics.pyepics.mixins import HasDisablePv
+from nicos.devices.epics.mixins import HasDisablePv
 
-session_setup = 'ess_extensions'
+session_setup = "ess_extensions"
 
 
 class EpicsDeviceThatHasDisablePv(HasDisablePv, EpicsDevice, Device):
     values = {
-        'switchpv:write': 0,
-        'switchpv:read': 0,
+        "switchpv:write": 0,
+        "switchpv:read": 0,
     }
 
     def doPreinit(self, mode):
@@ -49,9 +49,9 @@ class EpicsDeviceThatHasDisablePv(HasDisablePv, EpicsDevice, Device):
         pass
 
     def _put_pv(self, pvparam, value, wait=False):
-        if 'write' in pvparam:
+        if "write" in pvparam:
             self.values[pvparam] = value
-            self.values['switchpv:read'] = value
+            self.values["switchpv:read"] = value
 
     def _put_pv_blocking(self, pvparam, value, update_rate=0.1, timeout=60):
         self._put_pv(pvparam, value)
@@ -61,56 +61,48 @@ class EpicsDeviceThatHasDisablePv(HasDisablePv, EpicsDevice, Device):
 
 
 class TestHasDisablePv:
-
     @pytest.fixture(autouse=True)
     def initialize_devices(self, session):
-        self.device = session.getDevice('DeviceCanDisable')
-        self.device.values['switchpv:write'] = self.device.switchstates[
-            'disable']
-        self.device.values['switchpv:read'] = self.device.switchstates[
-            'disable']
+        self.device = session.getDevice("DeviceCanDisable")
+        self.device.values["switchpv:write"] = self.device.switchstates["disable"]
+        self.device.values["switchpv:read"] = self.device.switchstates["disable"]
         self.device._sim_intercept = False
 
     def test_that_switch_pv_value_equals_switch_state_value_when_enabled(self):
-        self.device.values['switchpv:read'] = self.device.switchstates[
-            'enable']
+        self.device.values["switchpv:read"] = self.device.switchstates["enable"]
 
-        assert self.device._get_pv('switchpv:read') == \
-            self.device.switchstates['enable']
+        assert (
+            self.device._get_pv("switchpv:read") == self.device.switchstates["enable"]
+        )
         assert self.device.isEnabled
 
-    def test_that_switch_pv_value_equals_switch_state_value_when_disabled(
-            self):
-        self.device.values['switchpv:read'] = self.device.switchstates[
-            'disable']
+    def test_that_switch_pv_value_equals_switch_state_value_when_disabled(self):
+        self.device.values["switchpv:read"] = self.device.switchstates["disable"]
 
-        assert self.device._get_pv('switchpv:read') == \
-            self.device.switchstates['disable']
+        assert (
+            self.device._get_pv("switchpv:read") == self.device.switchstates["disable"]
+        )
         assert not self.device.isEnabled
 
     def test_enable_does_nothing_if_already_enabled(self):
-        self.device.values['switchpv:read'] = self.device.switchstates[
-            'enable']
+        self.device.values["switchpv:read"] = self.device.switchstates["enable"]
         self.device.enable()
         assert self.device.isEnabled
 
     def test_enable_sets_switchpv_write_if_not_enabled(self):
-        self.device.values['switchpv:read'] = self.device.switchstates[
-            'disable']
+        self.device.values["switchpv:read"] = self.device.switchstates["disable"]
 
         assert not self.device.isEnabled
         self.device.enable()
         assert self.device.isEnabled
 
     def test_disable_does_nothing_if_already_disabled(self):
-        self.device.values['switchpv:read'] = self.device.switchstates[
-            'disable']
+        self.device.values["switchpv:read"] = self.device.switchstates["disable"]
         self.device.disable()
         assert not self.device.isEnabled
 
     def test_enable_sets_switchpv_write_if_not_disabled(self):
-        self.device.values['switchpv:read'] = self.device.switchstates[
-            'enable']
+        self.device.values["switchpv:read"] = self.device.switchstates["enable"]
 
         assert self.device.isEnabled
         self.device.disable()
