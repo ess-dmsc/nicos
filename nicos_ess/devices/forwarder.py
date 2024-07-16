@@ -40,6 +40,8 @@ from nicos.core import (
     SIMULATION,
     Param,
 )
+
+from nicos_ess.utilities.json_utils import generate_nxlog_json, build_json
 from nicos.utils import createThread
 from nicos_ess.devices.kafka.producer import KafkaProducer
 from nicos_ess.devices.kafka.status_handler import KafkaStatusHandler
@@ -93,6 +95,11 @@ class EpicsKafkaForwarder(KafkaStatusHandler):
         :return: A list of JSON configurations to be treated as a "children" list.
         """
         return self._generate_json_configs()
+
+    def get_component_nexus_json(self):
+        return build_json(
+            session.devices["component_tracking"]._generate_json_configs_groups()
+        )
 
     def _get_forwarder_config(self, dev):
         for nexus_config_dict in dev.nexus_config:
@@ -195,7 +202,7 @@ class EpicsKafkaForwarder(KafkaStatusHandler):
             if group_name not in groups:
                 groups[group_name] = {"nx_class": config["nx_class"], "children": []}
 
-            nxlog_json = self._generate_nxlog_json(
+            nxlog_json = generate_nxlog_json(
                 dev_name,
                 config["schema"],
                 config["pv"],
@@ -204,36 +211,4 @@ class EpicsKafkaForwarder(KafkaStatusHandler):
             )
             groups[group_name]["children"].append(nxlog_json)
 
-        return self._build_json(groups)
-
-    def _build_json(self, groups):
-        return [
-            self._generate_group_json(name, group["nx_class"], group["children"])
-            for name, group in groups.items()
-        ]
-
-    def _generate_nxlog_json(self, name, schema, source, topic, units):
-        return {
-            "name": name,
-            "type": "group",
-            "attributes": [{"name": "NX_class", "dtype": "string", "values": "NXlog"}],
-            "children": [
-                {
-                    "module": schema,
-                    "config": {
-                        "source": source,
-                        "topic": topic,
-                        "dtype": "double",
-                        "value_units": units,
-                    },
-                }
-            ],
-        }
-
-    def _generate_group_json(self, name, nx_class, children):
-        return {
-            "name": name,
-            "type": "group",
-            "attributes": [{"name": "NX_class", "dtype": "string", "values": nx_class}],
-            "children": children,
-        }
+        return build_json(groups)

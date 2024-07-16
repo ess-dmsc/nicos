@@ -32,6 +32,7 @@ from streaming_data_types import deserialise_f144
 from nicos.core import SIMULATION, Override, Param, Readable, host, listof
 
 from nicos_ess.devices.kafka.consumer import KafkaConsumer
+from nicos_ess.utilities.json_utils import generate_nxlog_json
 
 
 class ComponentTrackingDevice(Readable):
@@ -63,6 +64,13 @@ class ComponentTrackingDevice(Readable):
             "List of valid component names",
             type=listof(str),
             userparam=False,
+            settable=True,
+            mandatory=False,
+        ),
+        "gollum_data": Param(
+            "Dictionary of Gollum data",
+            type=dict,
+            userparam=True,
             settable=True,
             mandatory=False,
         ),
@@ -111,6 +119,7 @@ class ComponentTrackingDevice(Readable):
         if not messages:
             return {}
 
+        self.gollum_data = messages
         components_data = self._extract_components(list(messages.values()))
 
         for component in components_data:
@@ -182,3 +191,29 @@ class ComponentTrackingDevice(Readable):
 
     def get_scan_timestamp(self):
         return self._last_scan_timestamp
+
+    def _generate_json_configs_groups(self):
+        groups = {}
+        for source_name in self.gollum_data:
+            group_name, log_name = source_name.split(":")
+            if log_name == "valid":
+                continue
+
+            if group_name not in groups:
+                groups[group_name] = {"nx_class": "NX_collection", "children": []}
+
+            unit = ""
+            if log_name in ("x", "y", "z"):
+                unit = "mm"
+            elif log_name in ("alpha", "beta", "gamma"):
+                unit = "deg"
+
+            nxlog_json = generate_nxlog_json(
+                log_name, "f144", source_name, self.response_topic, unit
+            )
+            groups[group_name]["children"].append(nxlog_json)
+
+        return groups
+
+    def doRead(self, maxage=0):
+        return ""
