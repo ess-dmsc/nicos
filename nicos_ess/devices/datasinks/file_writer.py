@@ -294,6 +294,7 @@ class FileWriterStatus(KafkaStatusHandler):
         return result
 
     def _update_status(self):
+        session.log.info("Updating status")
         new_status = (status.OK, "")
         if len(self._jobs) > 0:
             new_status = (status.BUSY, "recording data")
@@ -313,7 +314,6 @@ class FileWriterStatus(KafkaStatusHandler):
 
     @property
     def marked_for_stop(self):
-        session.log.info("Marked for stop")
         with self._lock:
             return {k for k, v in self._jobs.items() if v.stop_requested}
 
