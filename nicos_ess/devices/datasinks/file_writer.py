@@ -199,12 +199,9 @@ class FileWriterStatus(KafkaStatusHandler):
 
     def new_messages_callback(self, messages):
         for _, msg in sorted(messages, key=lambda x: x[0]):
-            msg_type = msg[4:8]
             if msg[4:8] in self._type_to_handler:
                 with self._lock:
                     self._type_to_handler[msg[4:8]](msg)
-            else:
-                session.log.info("Received message with unknown type %s", msg_type)
 
     def _on_status_message(self, message):
         result = deserialise_x5f2(message)
