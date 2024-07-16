@@ -234,6 +234,7 @@ class FileWriterStatus(KafkaStatusHandler):
                 self._job_stopped(result.job_id)
         else:
             self._jobs[result.job_id].on_stop()
+            session.log.info("Written")
             self._job_stopped(result.job_id)
         self._update_cached_jobs()
         self._update_status()
@@ -294,7 +295,6 @@ class FileWriterStatus(KafkaStatusHandler):
         return result
 
     def _update_status(self):
-        session.log.info("Updating status")
         new_status = (status.OK, "")
         if len(self._jobs) > 0:
             new_status = (status.BUSY, "recording data")
