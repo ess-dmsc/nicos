@@ -131,8 +131,13 @@ class NexusStructureJsonFile(NexusStructureProvider):
     def _insert_extra_devices(self, structure):
         if not self._check_for_device("KafkaForwarder"):
             return structure
-
         extra_devices = session.getDevice("KafkaForwarder").get_nexus_json()
+
+        if self._check_for_device("component_tracking"):
+            extra_devices.extend(
+                session.getDevice("KafkaForwarder").get_component_nexus_json()
+            )
+
         for item in structure["children"][0]["children"]:  # Entry children
             if item.get("name", "") == "instrument":
                 item["children"].extend(extra_devices)
