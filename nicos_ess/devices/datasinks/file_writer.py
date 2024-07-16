@@ -168,7 +168,6 @@ class FileWriterStatus(KafkaStatusHandler):
 
     def doPreinit(self, mode):
         KafkaStatusHandler.doPreinit(self, mode)
-        session.log.info("Status preinit")
         self._lock = threading.RLock()
         self._jobs = {}
         self._jobs_in_order = OrderedDict()
@@ -209,8 +208,11 @@ class FileWriterStatus(KafkaStatusHandler):
         status_info = json.loads(result.status_json)
         job_id = status_info["job_id"]
         if job_id not in self._jobs:
+            self.log.warning("Received status message for unknown job %s", job_id)
             return
+        self.log.debug("Received status message for job %s", job_id)
         self._jobs[job_id].on_writing(result.update_interval)
+        self.log.debug("Job %s status updated to STARTED")
         self._update_status()
 
     def _job_stopped(self, job_id):
@@ -235,7 +237,6 @@ class FileWriterStatus(KafkaStatusHandler):
                 self._job_stopped(result.job_id)
         else:
             self._jobs[result.job_id].on_stop()
-            session.log.info("Written")
             self._job_stopped(result.job_id)
         self._update_cached_jobs()
         self._update_status()
