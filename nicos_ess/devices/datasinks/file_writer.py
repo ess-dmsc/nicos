@@ -275,6 +275,21 @@ class FileWriterStatus(KafkaStatusHandler):
         with self._lock:
             self._check_for_lost_jobs()
             self._update_status()
+            self._retry_message_reception()
+
+    def _retry_message_reception(self):
+        session.log.info("Retrying message reception")
+        max_retries = 3
+        retry_count = 0
+        while retry_count < max_retries:
+            session.log.info(f"Retry no: {retry_count}")
+            data = self._consumer.poll(timeout_ms=500)
+            if data:
+                session.log.info("New data found")
+                self.new_messages_callback(data)
+                return
+            retry_count += 1
+            time.sleep(0.5)
 
     def _check_for_lost_jobs(self):
         overdue_jobs = [
