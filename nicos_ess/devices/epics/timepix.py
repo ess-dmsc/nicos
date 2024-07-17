@@ -231,13 +231,9 @@ class AreaDetector(EpicsDevice, ImageChannelMixin, Measurable):
             if time.monotonic() >= self._last_update + self._plot_update_delay:
                 dataarray = self._get_pv("image_pv")
                 self.log.info("got data array")
-                self.log.info(
-                    f"Trying to reshape data array with shape {self.arraydesc.shape} with data array shape {dataarray.shape}"
-                )
                 shape = self.arrayInfo().shape
                 dataarray = dataarray.reshape(shape)
                 self.log.info("reshaped data array")
-                self.log.info(f"Putting result with data array shape {dataarray.shape}")
                 self.putResult(LIVE, dataarray, time.time())
                 self.log.info("put result")
                 self._last_update = time.monotonic()
