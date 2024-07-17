@@ -641,10 +641,10 @@ class FileWriterControlSink(Device):
         partition, offset = job_to_replay.kafka_offset
         self._consumer.seek(self.pool_topic, partition=partition, offset=offset)
         poll_start = time.monotonic()
-        data = self._consumer.poll(timeout_ms=100)
+        data = self._consumer.poll(timeout_ms=5)
         time_out_s = 5
         while not data:
-            data = self._consumer.poll(timeout_ms=100)
+            data = self._consumer.poll(timeout_ms=5)
             if not data and time.monotonic() > poll_start + time_out_s:
                 raise RuntimeError(
                     "Could not replay job as could not retrieve job "
