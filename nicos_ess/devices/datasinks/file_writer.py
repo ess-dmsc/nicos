@@ -274,8 +274,8 @@ class FileWriterStatus(KafkaStatusHandler):
     def no_messages_callback(self):
         with self._lock:
             self._check_for_lost_jobs()
-            self._update_status()
             self._retry_message_reception()
+            self._update_status()
 
     def _retry_message_reception(self):
         session.log.info("Retrying message reception")
