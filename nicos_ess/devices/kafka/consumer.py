@@ -196,7 +196,7 @@ class KafkaSubscriber:
 
     def _monitor_topics(self):
         while not self._stop_requested:
-            data = self._consumer.poll(timeout_ms=5)
+            data = self._consumer.poll(timeout_ms=50)
             messages = []
             if data:
                 messages.append((data.timestamp(), data.value()))
