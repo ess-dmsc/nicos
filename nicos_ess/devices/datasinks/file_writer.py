@@ -209,9 +209,6 @@ class FileWriterStatus(KafkaStatusHandler):
         job_id = status_info["job_id"]
         with self._lock:
             if job_id not in self._jobs:
-                session.log.warning(
-                    "Received status message for unknown job %s", job_id
-                )
                 return
             self._jobs[job_id].on_writing(result.update_interval)
             self._update_status()
@@ -244,10 +241,7 @@ class FileWriterStatus(KafkaStatusHandler):
 
     def _on_response_message(self, message):
         result = deserialise_answ(message)
-        job_id = result.job_id
-        session.log.info("Received response message from job %s", job_id)
         if result.job_id not in self._jobs:
-            session.log.info("Response message from unknown job %s", job_id)
             return
         if result.action == ActionType.StartJob:
             self._on_start_response(result)
