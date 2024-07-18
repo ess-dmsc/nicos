@@ -4,7 +4,6 @@ confluent-kafka==2.4.0
 ess-streaming-data-types>=0.26.1
 file-writer-control>=1.1.5
 flake8>=5.0.0
-graypy
 html2text>=3.200.3
 h5py>=2.6
 kafka-logging-handler<=0.2.4
