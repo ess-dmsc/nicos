@@ -13,7 +13,7 @@ Note: may require sudo rights and additional configuring of directory ownership.
 
 Select an instrument:
 ```
-ln -s nico_ess/<instrument>/nicos.conf .
+ln -s nicos_ess/<instrument>/nicos.conf .
 ```
 Start the cache:
 ```
@@ -35,11 +35,11 @@ pip install -r requirements-gui.txt
 ```
 Start the client:
 ```
-./bin/nicos-gui -c nico_ess/<instrument>/guiconfig.py
+./bin/nicos-gui -c nicos_ess/<instrument>/guiconfig.py
 ```
 To run with QT6 (generally preferred but necessary for Mac silicon):
 ```
-NICOS_QT=6 ./bin/nicos-gui -c nico_ess/<instrument>/guiconfig.py
+NICOS_QT=6 ./bin/nicos-gui -c nicos_ess/<instrument>/guiconfig.py
 ```
 ## Developer
 Install the development requirements:
