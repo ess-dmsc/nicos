@@ -173,26 +173,61 @@ class NexusStructureJsonFile(NexusStructureProvider):
 
     def _generate_samples_group_list(self, entities, skip_keys=None):
         children = []
-        for entity in entities:
-            for n, v in entity.items():
-                if skip_keys and n in skip_keys:
-                    continue
-                children.append(
-                    {
-                        "module": "dataset",
-                        "config": {"name": n, "values": v, "dtype": "string"},
-                    }
-                )
+        for n, v in entities.items():
+            if skip_keys and n in skip_keys:
+                continue
+            children.append(
+                {
+                    "module": "dataset",
+                    "config": {"name": n, "values": v, "dtype": "string"},
+                }
+            )
+        return children
+
+    def _generate_samples_link_list(self, entities):
+        children = []
+        for n, p in entities.items():
+            children.append(
+                {
+                    "module": "link",
+                    "config": {"name": n, "type": "NXlink", "source": p},
+                }
+            )
         return children
 
     def _insert_samples(self, structure, metainfo):
         samples_info = metainfo.get(("Sample", "samples"))
+        link_info = {
+            "temperature": metainfo.get(("Sample", "temperature")),
+            "electric_field": metainfo.get(("Sample", "electric_field")),
+            "magnetic_field": metainfo.get(("Sample", "magnetic_field")),
+        }
         if not samples_info:
             return structure
 
+        samples_dict = samples_info[0][0]
         samples_list = self._generate_samples_group_list(
-            samples_info[0].values(), skip_keys=["number_of"]
+            samples_dict, skip_keys=["number_of"]
         )
+
+        for field_name, field_metainfo in link_info.items():
+            value = field_metainfo[0]
+            dev_path = self._find_device_path(
+                structure["children"][0]["children"][0], value
+            )
+
+            field_dict = (
+                {field_name: f"/entry/{'/'.join(dev_path)}"}
+                if dev_path
+                else {field_name: value}
+            )
+
+            if not dev_path:
+                session.log.warn(
+                    f"Sample field '{field_name}' cannot be linked to device '{value}' since device is not in structure."
+                )
+
+            samples_list.extend(self._generate_samples_link_list(field_dict))
 
         if not samples_list:
             return structure
@@ -212,6 +247,20 @@ class NexusStructureJsonFile(NexusStructureProvider):
             "Could not find the NXsample group in the NeXus JSON structure"
         )
         return structure
+
+    def _find_device_path(self, structure, dev_name):
+        def search_node(node, path):
+            if isinstance(node, dict):
+                if node.get("name") == dev_name:
+                    return path + [node["name"]]
+                if "children" in node:
+                    for i, child in enumerate(node["children"]):
+                        found_path = search_node(child, path + [node["name"]])
+                        if found_path:
+                            return found_path
+            return None
+
+        return search_node(structure, [])
 
     def _insert_users(self, structure, metainfo):
         users = self._generate_nxclass_template(

@@ -234,6 +234,9 @@ class EssExperiment(Experiment):
                     "number_of": sample.number,
                     "mass_volume": mass,
                     "density": density,
+                    "temperature": "0",
+                    "electric_field": "0",
+                    "magnetic_field": "0",
                 }
             )
         return samples
