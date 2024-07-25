@@ -1,6 +1,6 @@
 # NICOS
 
-## Install Server
+## Installing the Server locally
 Install the requirements (virtual environment recommended):
 ```
 pip install -r requirements.txt
@@ -22,6 +22,10 @@ Start the cache:
 In a different terminal, start the poller:
 ```
 ./bin/nicos-poller
+```
+In a different terminal, start the collector (optional):
+```
+./bin/nicos-collector
 ```
 In a different terminal, start the daemon:
 ```
