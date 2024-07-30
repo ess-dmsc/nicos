@@ -13,7 +13,7 @@ sysconfig = dict(
 modules = ["nicos.commands.standard", "nicos_ess.commands"]
 
 devices = dict(
-    LoKI=device(
+    NMX=device(
         "nicos.devices.instrument.Instrument",
         description="instrument object",
         instrument="NMX",
