@@ -49,11 +49,11 @@ class NicosGuiClient(NicosClient, QObject):
 
     def __init__(self, parent, parent_logger):
         QObject.__init__(self, parent)
-        logger = NicosLogger('client')
+        logger = NicosLogger("client")
         logger.parent = parent_logger
         NicosClient.__init__(self, logger.warning)
         self._reg_keys = {}
-        self._event_mask = ['livedata']
+        self._event_mask = ["livedata"]
         self.cache.connect(self.on_cache_event)
         self.connected.connect(self.on_connected_event)
 
@@ -81,15 +81,17 @@ class NicosGuiClient(NicosClient, QObject):
                 cvalue = None
             for widget in self._reg_keys[key]:
                 if widget():
-                    widget().on_keyChange(key, cvalue, time,
-                                          not value or op == OP_TELLOLD)
+                    widget().on_keyChange(
+                        key, cvalue, time, not value or op == OP_TELLOLD
+                    )
 
     def on_connected_event(self):
         # request initial value for all keys we have registered
         if not self._reg_keys:
             return
-        values = self.ask('getcachekeys', ','.join(self._reg_keys), quiet=True,
-                          default=[])
+        values = self.ask(
+            "getcachekeys", ",".join(self._reg_keys), quiet=True, default=[]
+        )
         for key, value in values:
             # Not all keys are registered!
             for widget in self._reg_keys.get(key, ()):
