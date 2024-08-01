@@ -801,8 +801,7 @@ class MainWindow(DlgUtils, QMainWindow):
         else:
             self.errorWindow.addMessage(problem)
 
-    def on_client_broken(self, problem):
-        self.on_client_error(problem)
+    def on_client_broken(self):
         if self.autoreconnect:
             self._reconnect_count = self.client.RECONNECT_TRIES
             self._reconnect_time = self.client.RECONNECT_INTERVAL_SHORT
