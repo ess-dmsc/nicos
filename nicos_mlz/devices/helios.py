@@ -23,7 +23,6 @@
 
 """Class for FRM II Helios 3He polarizer operation."""
 
-
 from nicos.core import Override, Param, UsageError, usermethod
 from nicos.devices.entangle import NamedDigitalOutput
 
@@ -32,18 +31,24 @@ class HePolarizer(NamedDigitalOutput):
     """
     Class for controlling the polarizing direction of the Helios system.
     """
+
     parameters = {
-        'flippings': Param('Number of Flippings since powerup', volatile=True,
-                           unit='flips', type=int, category='general'),
+        "flippings": Param(
+            "Number of Flippings since powerup",
+            volatile=True,
+            unit="flips",
+            type=int,
+            category="general",
+        ),
     }
     parameter_overrides = {
-        'mapping': Override(mandatory=False, default=dict(up=1,down=-1)),
+        "mapping": Override(mandatory=False, default=dict(up=1, down=-1)),
     }
 
     @usermethod
     def define(self, value):
         """Define the current polarizing direction as 'up' or 'down'."""
-        if value not in ['up', 'down']:
+        if value not in ["up", "down"]:
             raise UsageError(self, "value must be 'up' or 'down'")
         if self.read(0) != value:
             self._dev.Reverse()
@@ -53,7 +58,7 @@ class HePolarizer(NamedDigitalOutput):
     def doStart(self, target):
         NamedDigitalOutput.doStart(self, target)
         # Also re-read flippings' value
-        self._pollParam('flippings')
+        self._pollParam("flippings")
 
     def doReadFlippings(self):
         return self._dev.flippings

@@ -7,21 +7,23 @@ excludes = ["det2"]
 tango_base = "tango://phys.maria.frm2:10000/maria/"
 
 devices = dict(
-    detimg = device("nicos.devices.entangle.ImageChannel",
-        description = "Denex detector image",
-        tangodevice = tango_base + "fastcomtec/detector",
-        fmtstr = "%d cts",
-        unit = "",
-        visibility = (),
+    detimg=device(
+        "nicos.devices.entangle.ImageChannel",
+        description="Denex detector image",
+        tangodevice=tango_base + "fastcomtec/detector",
+        fmtstr="%d cts",
+        unit="",
+        visibility=(),
     ),
-    det = device("nicos_mlz.maria.devices.detector.MariaDetector",
-        description = "Denex detector",
-        shutter = "shutter",
-        timers = ["timer"],
-        monitors = ["mon0", "mon1"],
-        images = ["detimg"],
-        counters = ["roi1", "roi2", "roi3", "roi4", "roi5", "roi6", "full"],
-        postprocess = [
+    det=device(
+        "nicos_mlz.maria.devices.detector.MariaDetector",
+        description="Denex detector",
+        shutter="shutter",
+        timers=["timer"],
+        monitors=["mon0", "mon1"],
+        images=["detimg"],
+        counters=["roi1", "roi2", "roi3", "roi4", "roi5", "roi6", "full"],
+        postprocess=[
             ("roi1", "detimg", "timer"),
             ("roi2", "detimg", "timer"),
             ("roi3", "detimg", "timer"),
@@ -30,7 +32,7 @@ devices = dict(
             ("roi6", "detimg", "timer"),
             ("full", "detimg", "timer"),
         ],
-        liveinterval = 1.,
+        liveinterval=1.0,
     ),
 )
 

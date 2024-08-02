@@ -25,51 +25,57 @@ from os import path
 
 from test.utils import cache_addr, module_root, runtime_root
 
-name = 'test system setup'
+name = "test system setup"
 # This setup is called "stdsystem" so that it is not loaded automatically
 # on every loadSetup.
 
 sysconfig = dict(
-    cache = cache_addr,
-    experiment = 'Exp',
-    instrument = 'Instr',
-    datasinks = [],
-    notifiers = ['testnotifier'],
+    cache=cache_addr,
+    experiment="Exp",
+    instrument="Instr",
+    datasinks=[],
+    notifiers=["testnotifier"],
 )
 
-modules = ['nicos.commands.standard']
+modules = ["nicos.commands.standard"]
 
 devices = dict(
-    Sample = device('nicos.devices.sample.Sample'),
+    Sample=device("nicos.devices.sample.Sample"),
     # test that both nicos.(...) and (...) work
-    Exp = device('nicos.devices.experiment.Experiment',
-        sample = 'Sample',
-        elog = True,
-        dataroot = path.join(runtime_root, 'data'),
-        propprefix = 'p',
-        templates = path.join(module_root, 'test', 'script_templates'),
-        zipdata = True,
+    Exp=device(
+        "nicos.devices.experiment.Experiment",
+        sample="Sample",
+        elog=True,
+        dataroot=path.join(runtime_root, "data"),
+        propprefix="p",
+        templates=path.join(module_root, "test", "script_templates"),
+        zipdata=True,
     ),
-    Instr = device('nicos.devices.instrument.Instrument',
-        instrument = 'INSTR',
-        responsible = 'R. Esponsible <r.esponsible@frm2.tum.de>',
-        operators = ['NICOS developer team'],
+    Instr=device(
+        "nicos.devices.instrument.Instrument",
+        instrument="INSTR",
+        responsible="R. Esponsible <r.esponsible@frm2.tum.de>",
+        operators=["NICOS developer team"],
     ),
-    testnotifier = device('test.utils.TestNotifier',
-        sender = 'sender@example.com',
-        copies = [('copy@example.com', 'all')],
+    testnotifier=device(
+        "test.utils.TestNotifier",
+        sender="sender@example.com",
+        copies=[("copy@example.com", "all")],
     ),
 )
 
 monitor_blocks = dict(
-    instrument = Block('Instrument', [
-        BlockRow('t_mth', 't_mtt'),
-        BlockRow('t_ath', 't_att'),
-        BlockRow(Field(dev='t_phi', width=4),
-                 Field(dev='t_psi', width=4)),
-        BlockRow(Field(dev='t_mono', width=4),
-                 Field(dev='t_ana', name='Mono slit 2 (ms2)', width=20, istext=True)),
+    instrument=Block(
+        "Instrument",
+        [
+            BlockRow("t_mth", "t_mtt"),
+            BlockRow("t_ath", "t_att"),
+            BlockRow(Field(dev="t_phi", width=4), Field(dev="t_psi", width=4)),
+            BlockRow(
+                Field(dev="t_mono", width=4),
+                Field(dev="t_ana", name="Mono slit 2 (ms2)", width=20, istext=True),
+            ),
         ],
-        setups='stdsystem',
+        setups="stdsystem",
     )
 )

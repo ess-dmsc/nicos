@@ -41,15 +41,26 @@ class ComponentTable(Device):
     stored in the standard_devices parameter.
 
     """
+
     parameters = {
-        'standard_devices': Param('Standard Devices', type=listof(nicosdev),
-                                  userparam=False),
-        'setups': Param('setups on this table', type=listof(str),
-                        userparam=False, settable=True, default=[]),
-        'additional_devices': Param('additional devices attached '
-                                    'to the table', type=listof(nicosdev),
-                                    default=[], settable=True,
-                                    userparam=False), }
+        "standard_devices": Param(
+            "Standard Devices", type=listof(nicosdev), userparam=False
+        ),
+        "setups": Param(
+            "setups on this table",
+            type=listof(str),
+            userparam=False,
+            settable=True,
+            default=[],
+        ),
+        "additional_devices": Param(
+            "additional devices attached " "to the table",
+            type=listof(nicosdev),
+            default=[],
+            settable=True,
+            userparam=False,
+        ),
+    }
 
     hardware_access = False
 
@@ -62,15 +73,14 @@ class ComponentTable(Device):
         """
         if isinstance(name, str):
             if name not in session.loaded_setups:
-                raise ValueError('%s not a loaded setup' % name)
+                raise ValueError("%s not a loaded setup" % name)
             if name not in self.setups:
                 tmp = list(self.setups)
                 tmp.append(name)
                 self.setups = tmp
                 return
-        if not isinstance(name, Device) and\
-           name.name not in session.configured_devices:
-            raise ValueError('device %s is not available' % name)
+        if not isinstance(name, Device) and name.name not in session.configured_devices:
+            raise ValueError("device %s is not available" % name)
         if name not in self.additional_devices:
             tmp = list(self.additional_devices)
             tmp.append(name)
@@ -96,22 +106,21 @@ class ComponentTable(Device):
     @usermethod
     def show(self):
         """Show the current configuration of the table"""
-        txt = 'Table %s Configuration:\n' % self.name
-        txt += 'Standard Devices:\n'
-        txt += '\t %s\n' % ', '.join(self.standard_devices)
-        txt += 'Setups:\n'
-        txt += '\t%s\n' % ', '.join(self.setups)
-        txt += 'Additional Devices\n'
-        txt += '\t%s\n' % ', '.join(self.additional_devices)
-        txt += 'Total Devices\n'
-        txt += '\t%s\n' % ', '.join(self.getTableDevices())
+        txt = "Table %s Configuration:\n" % self.name
+        txt += "Standard Devices:\n"
+        txt += "\t %s\n" % ", ".join(self.standard_devices)
+        txt += "Setups:\n"
+        txt += "\t%s\n" % ", ".join(self.setups)
+        txt += "Additional Devices\n"
+        txt += "\t%s\n" % ", ".join(self.additional_devices)
+        txt += "Total Devices\n"
+        txt += "\t%s\n" % ", ".join(self.getTableDevices())
         session.log.info(txt)
 
     def getTableDevices(self):
-        result = list(
-            itertools.chain(self.standard_devices, self.additional_devices))
+        result = list(itertools.chain(self.standard_devices, self.additional_devices))
         setupInfo = session.getSetupInfo()
         for setup in self.setups:
             info = setupInfo[setup]
-            result = list(itertools.chain(result, info['devices'].keys()))
+            result = list(itertools.chain(result, info["devices"].keys()))
         return result

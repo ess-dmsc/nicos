@@ -41,20 +41,30 @@ class NODirector(IsController, SequencerMixin, Readable):
     out stepwise in steps which make sure that the flexor limits
     are not exceeded.
     """
+
     attached_devices = {
-        'm1': Attach('First coupled motor', Moveable),
-        'm2': Attach('Second coupled motor', Moveable),
+        "m1": Attach("First coupled motor", Moveable),
+        "m2": Attach("Second coupled motor", Moveable),
     }
 
     parameters = {
-        'maxdiv': Param('Maximum allowed difference between m1, m2',
-                        type=float),
-        'm1_length': Param('Distance to first motor', type=float),
-        'm2_length': Param('Distance to the second motor', type=float),
-        'position': Param('Position of the NO device', type=float,
-                          settable=True, userparam=True, volatile=True),
-        'tilt': Param('Tilt of the NO device', type=float,
-                      settable=True, userparam=True, volatile=True),
+        "maxdiv": Param("Maximum allowed difference between m1, m2", type=float),
+        "m1_length": Param("Distance to first motor", type=float),
+        "m2_length": Param("Distance to the second motor", type=float),
+        "position": Param(
+            "Position of the NO device",
+            type=float,
+            settable=True,
+            userparam=True,
+            volatile=True,
+        ),
+        "tilt": Param(
+            "Tilt of the NO device",
+            type=float,
+            settable=True,
+            userparam=True,
+            volatile=True,
+        ),
     }
 
     def doInit(self, mode):
@@ -72,13 +82,13 @@ class NODirector(IsController, SequencerMixin, Readable):
 
         cur_m1 = self._attached_m1.read(0)
         cur_m2 = self._attached_m2.read(0)
-        step_size = self.maxdiv/2.
-        m1_step = abs(cur_m1 - self._target[0])/step_size
-        m2_step = abs(cur_m2 - self._target[1])/step_size
+        step_size = self.maxdiv / 2.0
+        m1_step = abs(cur_m1 - self._target[0]) / step_size
+        m2_step = abs(cur_m2 - self._target[1]) / step_size
         nsteps = int(math.floor(max(m1_step, m2_step)))
 
         sign = 1 if self._target[0] > cur_m1 else -1
-        step_size = abs(cur_m1 - self._target[0])/max(nsteps, 1)
+        step_size = abs(cur_m1 - self._target[0]) / max(nsteps, 1)
         m1_steps = [(cur_m1 + s * sign * step_size) for s in range(nsteps)]
         m1_steps.append(self._target[0])
 
@@ -88,20 +98,20 @@ class NODirector(IsController, SequencerMixin, Readable):
         m2_steps.append(self._target[1])
 
         for t1, t2 in zip(m1_steps, m2_steps):
-            seq.append((SeqDev(self._attached_m1, t1),
-                        SeqDev(self._attached_m2, t2)))
-            seq.append(SeqMethod(self, '_testArrival', t1, t2))
+            seq.append((SeqDev(self._attached_m1, t1), SeqDev(self._attached_m2, t2)))
+            seq.append(SeqMethod(self, "_testArrival", t1, t2))
 
         return seq
 
     def _testArrival(self, xpos, ypos):
-        if not (self._attached_m1.isAtTarget(xpos) and
-                self._attached_m2.isAtTarget(ypos)):
-            raise PositionError('Motors did not reach %f, %f' % (xpos, ypos))
+        if not (
+            self._attached_m1.isAtTarget(xpos) and self._attached_m2.isAtTarget(ypos)
+        ):
+            raise PositionError("Motors did not reach %f, %f" % (xpos, ypos))
 
     def _startMotors(self, m1, m2):
         if abs(m1 - m2) > self.maxdiv:
-            raise LimitError('Difference between m1, m2 to large')
+            raise LimitError("Difference between m1, m2 to large")
         self._ignore_maxdiv = True
         self._target = (m1, m2)
         SequencerMixin.doReset(self)
@@ -123,14 +133,14 @@ class NODirector(IsController, SequencerMixin, Readable):
 
     def isAdevTargetAllowed(self, adev, adevtarget):
         if self._ignore_maxdiv:
-            return True, ''
+            return True, ""
         if adev == self._attached_m1:
             othertarget = self._attached_m2.target
         else:
             othertarget = self._attached_m1.target
         if abs(othertarget - adevtarget) > self.maxdiv:
-            return False, 'Motor target difference for %s to large' % adev.name
-        return True, ''
+            return False, "Motor target difference for %s to large" % adev.name
+        return True, ""
 
     def doReadTilt(self):
         m1 = self._attached_m1.read(0)

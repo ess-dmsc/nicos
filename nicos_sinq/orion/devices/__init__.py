@@ -30,7 +30,8 @@ class MonoSwitcher(Switcher):
 
     The main application is the use to switch the monochromator wavelength.
     """
+
     parameter_overrides = {
-        'mapping': Override(type=dictof(float, float)),
-        'fallback': Override(userparam=False, type=none_or(float)),
+        "mapping": Override(type=dictof(float, float)),
+        "fallback": Override(userparam=False, type=none_or(float)),
     }

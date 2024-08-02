@@ -27,5 +27,4 @@ from .detbox import DetectorBox
 from .dettable import DetectorGuide, DetectorTable
 from .reflex import Reflex
 
-__all__ = ('Reflex', 'CrystalTable', 'DetectorTable', 'DetectorBox',
-           'DetectorGuide')
+__all__ = ("Reflex", "CrystalTable", "DetectorTable", "DetectorBox", "DetectorGuide")

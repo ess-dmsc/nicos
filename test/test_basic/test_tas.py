@@ -40,27 +40,40 @@ def test_Q_object():
         Q(Q(1, 4, 3, 0), k=2, e=4),
         Q(1, 2, 3, e=4),
         Q(h=1, k=2, l=3, e=4),
-        Q(H=1, K=2, L=3, E=4)
+        Q(H=1, K=2, L=3, E=4),
     ]:
         assert all(q2 == q1)
     assert raises(UsageError, Q, 1, 2, 3, 4, 5)
-    assert repr(Q()) == '[ 0.  0.  0.  0.]'
+    assert repr(Q()) == "[ 0.  0.  0.  0.]"
 
 
 def test_getspacegroup():
     # Good cases
-    assert spacegroups.get_spacegroup(1) == \
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-    assert spacegroups.get_spacegroup('Pbca') == \
-        [3, 2, 2, 1, 3, 1, 0, 0, 0, 0, 0, 0, 0, 0]
+    assert spacegroups.get_spacegroup(1) == [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    assert spacegroups.get_spacegroup("Pbca") == [
+        3,
+        2,
+        2,
+        1,
+        3,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+    ]
     # Error cases
-    assert raises(NicosError, spacegroups.get_spacegroup, 'Pbbb')
+    assert raises(NicosError, spacegroups.get_spacegroup, "Pbbb")
     assert raises(NicosError, spacegroups.get_spacegroup, 300)
 
 
 def test_canreflect():
     # P1 all reflection types are allowed
-    sg = spacegroups.get_spacegroup('P1')
+    sg = spacegroups.get_spacegroup("P1")
     assert spacegroups.can_reflect(sg, 0, 0, 0)
     assert spacegroups.can_reflect(sg, 1, 0, 0)
     assert spacegroups.can_reflect(sg, 0, 1, 0)

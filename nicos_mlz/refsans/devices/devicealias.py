@@ -33,8 +33,8 @@ class HighlevelDeviceAlias(DeviceAlias):
     """
 
     parameter_overrides = {
-        'visibility': Override(volatile=True),
+        "visibility": Override(volatile=True),
     }
 
     def doReadVisibility(self):
-        return {'namespace', 'metadata', 'devlist'}
+        return {"namespace", "metadata", "devlist"}

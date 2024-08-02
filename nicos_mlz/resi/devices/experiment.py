@@ -34,55 +34,53 @@ from nicos.utils import disableDirectory
 
 
 class ResiExperiment(Experiment):
-
     parameters = {
-        'cycle': Param(
-            'Current reactor cycle', type=str, settable=True),
+        "cycle": Param("Current reactor cycle", type=str, settable=True),
     }
 
     def __init__(self, *args, **kw):
-        os.environ['DISPLAY'] = ':0'
+        os.environ["DISPLAY"] = ":0"
         Experiment.__init__(self, *args, **kw)
         os.chdir(self.dataroot)
 
     def proposalpath_of(self, proposal):
         """deviate from default of <dataroot>/<year>/<proposal>"""
-        return path.join(self.dataroot, 'zyklus' + str(self.cycle), proposal)
+        return path.join(self.dataroot, "zyklus" + str(self.cycle), proposal)
 
     def new(self, proposal, title=None, localcontact=None, user=None, **kwds):
         # Resi-specific handling of proposal number
         if isinstance(proposal, int):
-            proposal = 'p%s' % proposal
-        if proposal in ('template', 'current'):
-            raise UsageError(self,
-                             'The proposal names "template" and "current"'
-                             ' are reserved and cannot be used')
+            proposal = "p%s" % proposal
+        if proposal in ("template", "current"):
+            raise UsageError(
+                self,
+                'The proposal names "template" and "current"'
+                " are reserved and cannot be used",
+            )
 
         try:
             old_proposal = path.basename(os.readlink(self.proposalsymlink))
         except Exception:
             if path.exists(self.proposalsymlink):
                 self.log.error(
-                    '"current" link to old experiment dir exists '
-                    'but cannot be read',
-                    exc=1)
+                    '"current" link to old experiment dir exists ' "but cannot be read",
+                    exc=1,
+                )
             else:
-                self.log.warning(
-                    'no old experiment dir is currently set', exc=1)
+                self.log.warning("no old experiment dir is currently set", exc=1)
         else:
-            if old_proposal.startswith('p'):
-                disableDirectory(
-                    self.proposalpath_of(old_proposal), logger=self.log)
+            if old_proposal.startswith("p"):
+                disableDirectory(self.proposalpath_of(old_proposal), logger=self.log)
             os.unlink(self.proposalsymlink)
 
         # query new cycle
-        self.cycle = kwds.get('cycle', 'unknown')
+        self.cycle = kwds.get("cycle", "unknown")
 
         # checks are done, set the new experiment
         Experiment.new(self, proposal, title)
 
         # fill proposal info from database
-        if proposal.startswith('p'):
+        if proposal.startswith("p"):
             try:
                 propnumber = int(proposal[1:])
             except ValueError:

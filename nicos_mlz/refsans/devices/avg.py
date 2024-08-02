@@ -26,21 +26,25 @@ from nicos.core.params import Attach, Param
 
 
 class BaseAvg(Readable):
-
     valuetype = float
 
     attached_devices = {
-        'dev': Attach('device', Readable),
+        "dev": Attach("device", Readable),
     }
 
     parameters = {
-        'nums': Param('number of data to average',
-                      type=int, settable=True, userparam=True, default=100),
+        "nums": Param(
+            "number of data to average",
+            type=int,
+            settable=True,
+            userparam=True,
+            default=100,
+        ),
     }
 
     def doStatus(self, maxage=0):
         return self._attached_dev.status(maxage=maxage)
 
     def doRead(self, maxage=0):
-        hist = [v for t, v in self._attached_dev.history()[-self.nums:]]
+        hist = [v for t, v in self._attached_dev.history()[-self.nums :]]
         return sum(hist) / len(hist)

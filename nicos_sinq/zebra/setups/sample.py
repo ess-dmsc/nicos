@@ -1,47 +1,53 @@
-description = 'Devices for the sample table'
+description = "Devices for the sample table"
 
-pvpref = 'SQ:ZEBRA:mcu'
+pvpref = "SQ:ZEBRA:mcu"
 
 devices = dict(
-    om_raw = device('nicos_sinq.devices.epics.motor.EpicsMotor',
-        description = 'Sample rotation',
-        motorpv = pvpref + '1:SOM',
-        errormsgpv = pvpref + '1:SOM-MsgTxt',
-        precision = 0.5,
-        can_disable = True,
+    om_raw=device(
+        "nicos_sinq.devices.epics.motor.EpicsMotor",
+        description="Sample rotation",
+        motorpv=pvpref + "1:SOM",
+        errormsgpv=pvpref + "1:SOM-MsgTxt",
+        precision=0.5,
+        can_disable=True,
     ),
-    om = device('nicos.core.device.DeviceAlias',
-        description = 'Alias for om',
-        alias = 'om_raw',
-        devclass = 'nicos.core.device.Moveable'
+    om=device(
+        "nicos.core.device.DeviceAlias",
+        description="Alias for om",
+        alias="om_raw",
+        devclass="nicos.core.device.Moveable",
     ),
-    sx = device('nicos_sinq.devices.epics.motor.EpicsMotor',
-        description = 'Sample X translation',
-        motorpv = pvpref + '1:SX',
-        errormsgpv = pvpref + '1:SX-MsgTxt',
-        precision = 0.5,
-        can_disable = True,
+    sx=device(
+        "nicos_sinq.devices.epics.motor.EpicsMotor",
+        description="Sample X translation",
+        motorpv=pvpref + "1:SX",
+        errormsgpv=pvpref + "1:SX-MsgTxt",
+        precision=0.5,
+        can_disable=True,
     ),
-    sy = device('nicos_sinq.devices.epics.motor.EpicsMotor',
-        description = 'Sample Y translation',
-        motorpv = pvpref + '1:SY',
-        errormsgpv = pvpref + '1:SY-MsgTxt',
-        precision = 0.5,
-        can_disable = True,
+    sy=device(
+        "nicos_sinq.devices.epics.motor.EpicsMotor",
+        description="Sample Y translation",
+        motorpv=pvpref + "1:SY",
+        errormsgpv=pvpref + "1:SY-MsgTxt",
+        precision=0.5,
+        can_disable=True,
     ),
-    sz = device('nicos_sinq.devices.epics.motor.EpicsMotor',
-        description = 'Sample lift',
-        motorpv = pvpref + '1:SZ',
-        errormsgpv = pvpref + '1:SZ-MsgTxt',
-        precision = 0.5,
-        can_disable = True,
+    sz=device(
+        "nicos_sinq.devices.epics.motor.EpicsMotor",
+        description="Sample lift",
+        motorpv=pvpref + "1:SZ",
+        errormsgpv=pvpref + "1:SZ-MsgTxt",
+        precision=0.5,
+        can_disable=True,
     ),
-    stt = device('nicos_sinq.devices.epics.motor.EpicsMotor',
-        description = 'Two Theta detector',
-        motorpv = pvpref + '1:STT',
-        errormsgpv = pvpref + '1:STT-MsgTxt',
-        precision = 0.5,
-        can_disable = True,
+    stt=device(
+        "nicos_sinq.devices.epics.motor.EpicsMotor",
+        description="Two Theta detector",
+        motorpv=pvpref + "1:STT",
+        errormsgpv=pvpref + "1:STT-MsgTxt",
+        precision=0.5,
+        can_disable=True,
     ),
 )
 """
@@ -61,4 +67,4 @@ devices = dict(
         can_disable = True,
     ),
 """
-alias_config = {'om': {'om_raw': 10}}
+alias_config = {"om": {"om_raw": 10}}

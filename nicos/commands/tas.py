@@ -26,8 +26,7 @@
 from numpy import ndarray
 
 from nicos import session
-from nicos.commands import helparglist, hiddenusercommand, parallel_safe, \
-    usercommand
+from nicos.commands import helparglist, hiddenusercommand, parallel_safe, usercommand
 from nicos.commands.analyze import gauss
 from nicos.commands.device import maw, read
 from nicos.commands.scan import ADDSCANHELP2, _infostr, cscan
@@ -35,18 +34,33 @@ from nicos.core import Measurable, Moveable, NicosError, Readable, UsageError
 from nicos.core.scan import QScan
 from nicos.core.spm import Bare, spmsyntax
 from nicos.devices.tas.mono import to_k
-from nicos.devices.tas.plotting import plot_hklmap, plot_resatpoint, \
-    plot_resscan
+from nicos.devices.tas.plotting import plot_hklmap, plot_resatpoint, plot_resscan
 from nicos.devices.tas.rescalc import resmat
 from nicos.devices.tas.spectro import TAS, THZ2MEV
-from nicos.devices.tas.spurions import alu_hkl, check_acc_bragg, \
-    check_ho_spurions, check_powderrays, copper_hkl
+from nicos.devices.tas.spurions import (
+    alu_hkl,
+    check_acc_bragg,
+    check_ho_spurions,
+    check_powderrays,
+    copper_hkl,
+)
 from nicos.utils import number_types
 
 __all__ = [
-    'qscan', 'qcscan', 'Q', 'calpos', 'pos', 'rp',
-    'acc_bragg', 'ho_spurions', 'alu', 'copper',
-    'rescal', 'resplot', 'hklplot', 'checkalign',
+    "qscan",
+    "qcscan",
+    "Q",
+    "calpos",
+    "pos",
+    "rp",
+    "acc_bragg",
+    "ho_spurions",
+    "alu",
+    "copper",
+    "rescal",
+    "resplot",
+    "hklplot",
+    "checkalign",
 ]
 
 
@@ -59,17 +73,18 @@ def _getQ(v, name):
         else:
             raise TypeError
     except TypeError:
-        raise UsageError('%s must be a sequence of (h, k, l) or (h, k, l, E)'
-                         % name) from None
+        raise UsageError(
+            "%s must be a sequence of (h, k, l) or (h, k, l, E)" % name
+        ) from None
 
 
 def _handleQScanArgs(args, kwargs, Q, dQ, scaninfo):
     preset, detlist, envlist, move, multistep = {}, None, None, [], []
     for arg in args:
         if isinstance(arg, str):
-            scaninfo = arg + ' - ' + scaninfo
+            scaninfo = arg + " - " + scaninfo
         elif isinstance(arg, number_types):
-            preset['t'] = arg
+            preset["t"] = arg
         elif isinstance(arg, Measurable):
             if detlist is None:
                 detlist = []
@@ -79,30 +94,30 @@ def _handleQScanArgs(args, kwargs, Q, dQ, scaninfo):
                 envlist = []
             envlist.append(arg)
         else:
-            raise UsageError('unsupported qscan argument: %r' % arg)
+            raise UsageError("unsupported qscan argument: %r" % arg)
     for key, value in kwargs.items():
-        if key in ['h', 'H']:
+        if key in ["h", "H"]:
             Q[0] = value
-        elif key in ['k', 'K']:
+        elif key in ["k", "K"]:
             Q[1] = value
-        elif key in ['l', 'L']:
+        elif key in ["l", "L"]:
             Q[2] = value
-        elif key in ['e', 'E']:
+        elif key in ["e", "E"]:
             Q[3] = value
-        elif key in ['dh', 'dH']:
+        elif key in ["dh", "dH"]:
             dQ[0] = value
-        elif key in ['dk', 'dK']:
+        elif key in ["dk", "dK"]:
             dQ[1] = value
-        elif key in ['dl', 'dL']:
+        elif key in ["dl", "dL"]:
             dQ[2] = value
-        elif key in ['de', 'dE']:
+        elif key in ["de", "dE"]:
             dQ[3] = value
-        elif key in session.devices and \
-                isinstance(session.devices[key], Moveable):
+        elif key in session.devices and isinstance(session.devices[key], Moveable):
             if isinstance(value, list):
                 if multistep and len(value) != len(multistep[-1][1]):
-                    raise UsageError('all multi-step arguments must have the '
-                                     'same length')
+                    raise UsageError(
+                        "all multi-step arguments must have the " "same length"
+                    )
                 multistep.append((session.devices[key], value))
             else:
                 move.append((session.devices[key], value))
@@ -112,7 +127,7 @@ def _handleQScanArgs(args, kwargs, Q, dQ, scaninfo):
 
 
 @usercommand
-@helparglist('Q, dQ, numpoints, ...')
+@helparglist("Q, dQ, numpoints, ...")
 @spmsyntax(Bare, Bare, Bare)
 def qscan(Q, dQ, numpoints, *args, **kwargs):
     """Perform a single-sided Q scan.
@@ -134,29 +149,29 @@ def qscan(Q, dQ, numpoints, *args, **kwargs):
     * plot='res'  -- plot resolution ellipsoid along scan
     * plot='hkl'  -- plot position of scan points in scattering plane
     """
-    Q, dQ = _getQ(Q, 'Q'), _getQ(dQ, 'dQ')
-    scanstr = _infostr('qscan', (Q, dQ, numpoints) + args, kwargs)
-    plotval = kwargs.pop('plot', None)
-    preset, scaninfo, detlist, envlist, move, multistep, Q, dQ = \
-        _handleQScanArgs(args, kwargs, Q, dQ, scanstr)
+    Q, dQ = _getQ(Q, "Q"), _getQ(dQ, "dQ")
+    scanstr = _infostr("qscan", (Q, dQ, numpoints) + args, kwargs)
+    plotval = kwargs.pop("plot", None)
+    preset, scaninfo, detlist, envlist, move, multistep, Q, dQ = _handleQScanArgs(
+        args, kwargs, Q, dQ, scanstr
+    )
     if all(v == 0 for v in dQ) and numpoints > 1:
-        raise UsageError('scanning with zero step width')
-    values = [[(Q[0]+i*dQ[0], Q[1]+i*dQ[1], Q[2]+i*dQ[2], Q[3]+i*dQ[3])]
-              for i in range(numpoints)]
-    if plotval == 'res':
-        resscan(*(p[0] for p in values), kf=kwargs.get('kf'),
-                ki=kwargs.get('ki'))
-    elif plotval == 'hkl':
-        hklplot(scan=[p[0] for p in values], kf=kwargs.get('kf'),
-                ki=kwargs.get('ki'))
+        raise UsageError("scanning with zero step width")
+    values = [
+        [(Q[0] + i * dQ[0], Q[1] + i * dQ[1], Q[2] + i * dQ[2], Q[3] + i * dQ[3])]
+        for i in range(numpoints)
+    ]
+    if plotval == "res":
+        resscan(*(p[0] for p in values), kf=kwargs.get("kf"), ki=kwargs.get("ki"))
+    elif plotval == "hkl":
+        hklplot(scan=[p[0] for p in values], kf=kwargs.get("kf"), ki=kwargs.get("ki"))
     else:
-        scan = QScan(values, move, multistep, detlist, envlist, preset,
-                     scaninfo)
+        scan = QScan(values, move, multistep, detlist, envlist, preset, scaninfo)
         scan.run()
 
 
 @usercommand
-@helparglist('Q, dQ, numperside, ...')
+@helparglist("Q, dQ, numperside, ...")
 @spmsyntax(Bare, Bare, Bare)
 def qcscan(Q, dQ, numperside, *args, **kwargs):
     """Perform a centered Q scan.
@@ -177,28 +192,29 @@ def qcscan(Q, dQ, numperside, *args, **kwargs):
     * plot='res'  -- plot resolution ellipsoid along scan
     * plot='hkl'  -- plot position of scan points in scattering plane
     """
-    Q, dQ = _getQ(Q, 'Q'), _getQ(dQ, 'dQ')
-    scanstr = _infostr('qcscan', (Q, dQ, numperside) + args, kwargs)
-    plotval = kwargs.pop('plot', None)
-    preset, scaninfo, detlist, envlist, move, multistep, Q, dQ = \
-        _handleQScanArgs(args, kwargs, Q, dQ, scanstr)
+    Q, dQ = _getQ(Q, "Q"), _getQ(dQ, "dQ")
+    scanstr = _infostr("qcscan", (Q, dQ, numperside) + args, kwargs)
+    plotval = kwargs.pop("plot", None)
+    preset, scaninfo, detlist, envlist, move, multistep, Q, dQ = _handleQScanArgs(
+        args, kwargs, Q, dQ, scanstr
+    )
     if all(v == 0 for v in dQ) and numperside > 0:
-        raise UsageError('scanning with zero step width')
-    values = [[(Q[0]+i*dQ[0], Q[1]+i*dQ[1], Q[2]+i*dQ[2], Q[3]+i*dQ[3])]
-              for i in range(-numperside, numperside+1)]
-    if plotval == 'res':
-        resscan(*(p[0] for p in values), kf=kwargs.get('kf'),
-                ki=kwargs.get('ki'))
-    elif plotval == 'hkl':
-        hklplot(scan=[p[0] for p in values], kf=kwargs.get('kf'),
-                ki=kwargs.get('ki'))
+        raise UsageError("scanning with zero step width")
+    values = [
+        [(Q[0] + i * dQ[0], Q[1] + i * dQ[1], Q[2] + i * dQ[2], Q[3] + i * dQ[3])]
+        for i in range(-numperside, numperside + 1)
+    ]
+    if plotval == "res":
+        resscan(*(p[0] for p in values), kf=kwargs.get("kf"), ki=kwargs.get("ki"))
+    elif plotval == "hkl":
+        hklplot(scan=[p[0] for p in values], kf=kwargs.get("kf"), ki=kwargs.get("ki"))
     else:
-        scan = QScan(values, move, multistep, detlist, envlist, preset,
-                     scaninfo)
+        scan = QScan(values, move, multistep, detlist, envlist, preset, scaninfo)
         scan.run()
 
-qscan.__doc__ += ADDSCANHELP2.replace('scan(dev, ', 'qscan(Q, dQ, ')
-qcscan.__doc__ += ADDSCANHELP2.replace('scan(dev, ', 'qcscan(Q, dQ, ')
+
+qscan.__doc__ += ADDSCANHELP2.replace("scan(dev, ", "qscan(Q, dQ, ")
+qcscan.__doc__ += ADDSCANHELP2.replace("scan(dev, ", "qcscan(Q, dQ, ")
 
 
 class _Q(ndarray):
@@ -207,7 +223,7 @@ class _Q(ndarray):
 
 
 @usercommand
-@helparglist('[h, k, l, E]')
+@helparglist("[h, k, l, E]")
 @parallel_safe
 def Q(*args, **kwds):
     """A Q-E vector object that can be used for calculations.
@@ -231,7 +247,7 @@ def Q(*args, **kwds):
     >>> qscan(q, q2, 5, t=10)
     """
     q = _Q(4)
-    q[:] = 0.
+    q[:] = 0.0
     if not args and not kwds:
         return q
     if len(args) == 1:
@@ -243,26 +259,26 @@ def Q(*args, **kwds):
             for i in range(nlen):
                 q[i] = args[0][i]
     elif len(args) > 4:
-        raise UsageError('1 to 4 Q/E components are allowed')
+        raise UsageError("1 to 4 Q/E components are allowed")
     else:
         for i in range(len(args)):
             q[i] = args[i]
-    if 'h' in kwds:
-        q[0] = kwds['h']
-    elif 'H' in kwds:
-        q[0] = kwds['H']
-    if 'k' in kwds:
-        q[1] = kwds['k']
-    elif 'K' in kwds:
-        q[1] = kwds['K']
-    if 'l' in kwds:
-        q[2] = kwds['l']
-    if 'L' in kwds:
-        q[2] = kwds['L']
-    if 'E' in kwds:
-        q[3] = kwds['E']
-    elif 'e' in kwds:
-        q[3] = kwds['e']
+    if "h" in kwds:
+        q[0] = kwds["h"]
+    elif "H" in kwds:
+        q[0] = kwds["H"]
+    if "k" in kwds:
+        q[1] = kwds["k"]
+    elif "K" in kwds:
+        q[1] = kwds["K"]
+    if "l" in kwds:
+        q[2] = kwds["l"]
+    if "L" in kwds:
+        q[2] = kwds["L"]
+    if "E" in kwds:
+        q[3] = kwds["E"]
+    elif "e" in kwds:
+        q[3] = kwds["e"]
     return q
 
 
@@ -297,17 +313,18 @@ def _convert_qe_args(args, kwds, funcname):
                 elif nargs == 2:
                     return tuple(args[0]) + (args[1],)
         # fallthrough for any invalid combination
-        raise UsageError('invalid arguments for %s()' % funcname)
+        raise UsageError("invalid arguments for %s()" % funcname)
+
     pos = convert_args() + (None,)
-    if 'ki' in kwds:
-        pos = pos[:4] + (kwds['ki'], 'CKI')
-    if 'kf' in kwds:
-        pos = pos[:4] + (kwds['kf'], 'CKF')
+    if "ki" in kwds:
+        pos = pos[:4] + (kwds["ki"], "CKI")
+    if "kf" in kwds:
+        pos = pos[:4] + (kwds["kf"], "CKF")
     return pos
 
 
 @usercommand
-@helparglist('h, k, l, E[, SC]')
+@helparglist("h, k, l, E[, SC]")
 @parallel_safe
 def calpos(*args, **kwds):
     """Calculate instrument position for a given (Q, E) position.
@@ -329,15 +346,15 @@ def calpos(*args, **kwds):
     """
     instr = session.instrument
     if not isinstance(instr, TAS):
-        raise NicosError('your instrument device is not a triple axis device')
+        raise NicosError("your instrument device is not a triple axis device")
     if not args:
-        raise UsageError('calpos() takes at least one argument')
-    pos = _convert_qe_args(args, kwds, 'calpos')
+        raise UsageError("calpos() takes at least one argument")
+    pos = _convert_qe_args(args, kwds, "calpos")
     instr._calpos(pos)
 
 
 @usercommand
-@helparglist('[phi, psi[, ki, kf][, E]]')
+@helparglist("[phi, psi[, ki, kf][, E]]")
 @parallel_safe
 def pos2hkl(phi=None, psi=None, **kwds):
     """Calculate (Q, E) for a given instrument position.
@@ -363,17 +380,18 @@ def pos2hkl(phi=None, psi=None, **kwds):
     """
     instr = session.instrument
     if not isinstance(instr, TAS):
-        raise NicosError('your instrument device is not a triple axis device')
+        raise NicosError("your instrument device is not a triple axis device")
     if not phi:
         read(instr)
     else:
         instr._reverse_calpos(phi, psi, **kwds)
 
+
 rp = pos2hkl
 
 
 @usercommand
-@helparglist('[h, k, l, E[, SC]]')
+@helparglist("[h, k, l, E[, SC]]")
 def pos(*args, **kwds):
     """Move the instrument to a given (Q, E), or the last `calpos()` position.
 
@@ -389,15 +407,17 @@ def pos(*args, **kwds):
     """
     instr = session.instrument
     if not isinstance(instr, TAS):
-        raise NicosError('your instrument device is not a triple axis device')
+        raise NicosError("your instrument device is not a triple axis device")
     if not args:
         pos = instr._last_calpos
         if pos is None:
-            raise NicosError('pos() with no arguments moves to the last '
-                             'position calculated by calpos(), but no such '
-                             'position has been stored')
+            raise NicosError(
+                "pos() with no arguments moves to the last "
+                "position calculated by calpos(), but no such "
+                "position has been stored"
+            )
     else:
-        pos = _convert_qe_args(args, kwds, 'pos')
+        pos = _convert_qe_args(args, kwds, "pos")
         instr._calpos(pos, checkonly=False)
     if pos[5] and pos[5] != instr.scanmode:
         instr.scanmode = pos[5]
@@ -407,7 +427,7 @@ def pos(*args, **kwds):
 
 
 @usercommand
-@helparglist('h, k, l, E[, SC]')
+@helparglist("h, k, l, E[, SC]")
 @parallel_safe
 def acc_bragg(h, k, l, ny, sc=None):
     """Check accidental Bragg scattering conditions for type A or type M.
@@ -420,7 +440,7 @@ def acc_bragg(h, k, l, ny, sc=None):
 
 
 @usercommand
-@helparglist('[kf[, dEmin, dEmax]]')
+@helparglist("[kf[, dEmin, dEmax]]")
 @parallel_safe
 def ho_spurions(kf=None, dEmin=0, dEmax=20):
     """Calculation of elastic spurions due to higher order neutrons.
@@ -432,15 +452,17 @@ def ho_spurions(kf=None, dEmin=0, dEmax=20):
     if kf is None:
         ana = instr._attached_ana
         kf = to_k(ana.read(), ana.unit)
-    session.log.info('calculation of potential weak spurions due to higher '
-                     'harmonic ki / kf combinations')
-    session.log.info('calculated for kf = %6.3f A-1', kf)
+    session.log.info(
+        "calculation of potential weak spurions due to higher "
+        "harmonic ki / kf combinations"
+    )
+    session.log.info("calculated for kf = %6.3f A-1", kf)
     for line in check_ho_spurions(kf, dEmin, dEmax):
         session.log.info(line)
 
 
 @usercommand
-@helparglist('[ki, phi]')
+@helparglist("[ki, phi]")
 @parallel_safe
 def alu(ki=None, phi=None):
     """Print powder ray positions of Al."""
@@ -448,7 +470,7 @@ def alu(ki=None, phi=None):
 
 
 @usercommand
-@helparglist('[ki, phi]')
+@helparglist("[ki, phi]")
 @parallel_safe
 def copper(ki=None, phi=None):
     """Print powder ray positions of Cu."""
@@ -476,84 +498,84 @@ def _resmat_args(args, kwds):
     elif len(args) == 4:
         pos = args
     elif len(args) == 3:
-        pos = args + (0.,)
+        pos = args + (0.0,)
     elif len(args) == 1 and isinstance(args[0], _Q):
         pos = args[0]
     else:
-        raise UsageError('unsupported arguments')
+        raise UsageError("unsupported arguments")
 
-    if 'kf' in kwds and kwds['kf'] is not None:
-        const = kwds['kf']
-        mode = 'CKF'
-    elif 'ki' in kwds and kwds['ki'] is not None:
-        const = kwds['ki']
-        mode = 'CKI'
+    if "kf" in kwds and kwds["kf"] is not None:
+        const = kwds["kf"]
+        mode = "CKF"
+    elif "ki" in kwds and kwds["ki"] is not None:
+        const = kwds["ki"]
+        mode = "CKI"
     else:
         const = instr.scanconstant
         mode = instr.scanmode
 
     cfg = instr._getResolutionParameters()
 
-    ny = pos[3] if instr.energytransferunit == 'THz' else pos[3] / THZ2MEV
+    ny = pos[3] if instr.energytransferunit == "THz" else pos[3] / THZ2MEV
 
-    if mode == 'CKI':
+    if mode == "CKI":
         ki = const
         kf = cell.cal_kf(ny, ki)
     else:
         kf = const
         ki = cell.cal_ki1(ny, kf)
-    if cfg[23] == 0 and mono.focmode in ('horizontal', 'double'):
+    if cfg[23] == 0 and mono.focmode in ("horizontal", "double"):
         cfg[23] = mono._calcurvature(cfg[19], cfg[20], ki)
-    if cfg[24] == 0 and mono.focmode in ('vertical', 'double'):
+    if cfg[24] == 0 and mono.focmode in ("vertical", "double"):
         cfg[24] = mono._calcurvature(cfg[19], cfg[20], ki, vertical=True)
-    if cfg[25] == 0 and ana.focmode in ('horizontal', 'double'):
+    if cfg[25] == 0 and ana.focmode in ("horizontal", "double"):
         cfg[25] = ana._calcurvature(cfg[21], cfg[22], ki)
-    if cfg[26] == 0 and ana.focmode in ('vertical', 'double'):
+    if cfg[26] == 0 and ana.focmode in ("vertical", "double"):
         cfg[26] = ana._calcurvature(cfg[21], cfg[22], ki, vertical=True)
 
     collimation = instr._getCollimation()
     par = {
-        'dm': instr._attached_mono.dvalue,
-        'da': instr._attached_ana.dvalue,
-        'sm': instr.scatteringsense[0],
-        'ss': instr.scatteringsense[1],
-        'sa': instr.scatteringsense[2],
-        'etam': instr._attached_mono.mosaic * 60,
-        'etas': cell.mosaic * 60,
-        'etaa': instr._attached_ana.mosaic * 60,
-        'alpha1': collimation[0],  # in minutes
-        'alpha2': collimation[1],
-        'alpha3': collimation[2],
-        'alpha4': collimation[3],
-        'beta1': collimation[4],
-        'beta2': collimation[5],
-        'beta3': collimation[6],
-        'beta4': collimation[7],
-        'k': const,
-        'kfix': 1 if mode == 'CKI' else 2,
-        'as': cell.lattice[0],
-        'bs': cell.lattice[1],
-        'cs': cell.lattice[2],
-        'aa': cell.angles[0],
-        'bb': cell.angles[1],
-        'cc': cell.angles[2],
-        'ax': cell.orient1[0],
-        'ay': cell.orient1[1],
-        'az': cell.orient1[2],
-        'bx': cell.orient2[0],
-        'by': cell.orient2[1],
-        'bz': cell.orient2[2],
-        'qx': pos[0],
-        'qy': pos[1],
-        'qz': pos[2],
-        'en': ny * THZ2MEV,
+        "dm": instr._attached_mono.dvalue,
+        "da": instr._attached_ana.dvalue,
+        "sm": instr.scatteringsense[0],
+        "ss": instr.scatteringsense[1],
+        "sa": instr.scatteringsense[2],
+        "etam": instr._attached_mono.mosaic * 60,
+        "etas": cell.mosaic * 60,
+        "etaa": instr._attached_ana.mosaic * 60,
+        "alpha1": collimation[0],  # in minutes
+        "alpha2": collimation[1],
+        "alpha3": collimation[2],
+        "alpha4": collimation[3],
+        "beta1": collimation[4],
+        "beta2": collimation[5],
+        "beta3": collimation[6],
+        "beta4": collimation[7],
+        "k": const,
+        "kfix": 1 if mode == "CKI" else 2,
+        "as": cell.lattice[0],
+        "bs": cell.lattice[1],
+        "cs": cell.lattice[2],
+        "aa": cell.angles[0],
+        "bb": cell.angles[1],
+        "cc": cell.angles[2],
+        "ax": cell.orient1[0],
+        "ay": cell.orient1[1],
+        "az": cell.orient1[2],
+        "bx": cell.orient2[0],
+        "by": cell.orient2[1],
+        "bz": cell.orient2[2],
+        "qx": pos[0],
+        "qy": pos[1],
+        "qz": pos[2],
+        "en": ny * THZ2MEV,
     }
 
     return cfg, par
 
 
 @usercommand
-@helparglist('[h, k, l[, E]] [, ki|kf=const]')
+@helparglist("[h, k, l[, E]] [, ki|kf=const]")
 @parallel_safe
 def rescal(*args, **kwds):
     """Calculate and print resolution at the current or the given Q/E point.
@@ -572,7 +594,7 @@ def rescal(*args, **kwds):
 
 
 @usercommand
-@helparglist('[h, k, l[, E]] [, ki|kf=const]')
+@helparglist("[h, k, l[, E]] [, ki|kf=const]")
 @parallel_safe
 def resplot(*args, **kwds):
     """Calculate and plot resolution at the current or the given Q/E point.
@@ -587,12 +609,12 @@ def resplot(*args, **kwds):
     for the resolution calculation to work.
     """
     cfg, par = _resmat_args(args, kwds)
-    session.log.info('plotting resolution in separate window, please wait...')
+    session.log.info("plotting resolution in separate window, please wait...")
     session.clientExec(plot_resatpoint, (cfg, par))
 
 
 @hiddenusercommand
-@helparglist('hkle1, hkle2, ...')
+@helparglist("hkle1, hkle2, ...")
 @parallel_safe
 def resscan(*hkles, **kwds):
     """Calculate and plot resolution at every given point.
@@ -603,12 +625,12 @@ def resscan(*hkles, **kwds):
     if not hkles:
         raise UsageError('use qscan(..., plot="res") to plot scan resolution')
     cfg, par = _resmat_args(hkles[0], kwds)
-    session.log.info('plotting scan resolution in separate window, please wait...')
+    session.log.info("plotting scan resolution in separate window, please wait...")
     session.clientExec(plot_resscan, (cfg, par, hkles))
 
 
 @usercommand
-@helparglist('...')
+@helparglist("...")
 @parallel_safe
 def hklplot(**kwds):
     """Plot a representation of the scattering plane with accessible Q space.
@@ -637,27 +659,32 @@ def hklplot(**kwds):
     cfg, par = _resmat_args((), kwds)
     tas = session.instrument
     tasinfo = {
-        'actpos': tas.read(),
-        'calpos': tas._last_calpos,
-        'philim': tas._attached_phi.userlimits,
-        'psilim': tas._attached_psi.userlimits,
-        'monolim': tas._attached_mono.userlimits,
-        'analim': tas._attached_ana.userlimits,
-        'alphalim': tas._attached_alpha and tas._attached_alpha.userlimits,
-        'phiname': tas._attached_phi.name,
-        'psiname': tas._attached_psi.name,
+        "actpos": tas.read(),
+        "calpos": tas._last_calpos,
+        "philim": tas._attached_phi.userlimits,
+        "psilim": tas._attached_psi.userlimits,
+        "monolim": tas._attached_mono.userlimits,
+        "analim": tas._attached_ana.userlimits,
+        "alphalim": tas._attached_alpha and tas._attached_alpha.userlimits,
+        "phiname": tas._attached_phi.name,
+        "psiname": tas._attached_psi.name,
     }
-    for p in ['scanmode', 'scanconstant', 'energytransferunit',
-              'scatteringsense', 'axiscoupling', 'psi360']:
+    for p in [
+        "scanmode",
+        "scanconstant",
+        "energytransferunit",
+        "scatteringsense",
+        "axiscoupling",
+        "psi360",
+    ]:
         tasinfo[p] = getattr(tas, p)
-    for p in ['lattice', 'angles', 'orient1', 'orient2',
-              'psi0', 'spacegroup']:
+    for p in ["lattice", "angles", "orient1", "orient2", "psi0", "spacegroup"]:
         tasinfo[p] = getattr(tas._attached_cell, p)
     session.clientExec(plot_hklmap, (cfg, par, tasinfo, kwds))
 
 
 @usercommand
-@helparglist('(h, k, l), [psival]')
+@helparglist("(h, k, l), [psival]")
 def setalign(hkl, psival=None):
     """Readjust sample in-plane rotation offset (psi0).
 
@@ -677,16 +704,19 @@ def setalign(hkl, psival=None):
         psival = psi.read(0)
     diff = psicalc - psival
     sample = tas._attached_cell
-    session.log.info('adjusting %s.psi0 by %s to %s',
-                     sample, psi.format(diff, True),
-                     psi.format(sample.psi0 + diff, True))
+    session.log.info(
+        "adjusting %s.psi0 by %s to %s",
+        sample,
+        psi.format(diff, True),
+        psi.format(sample.psi0 + diff, True),
+    )
     sample.psi0 += diff
     newpsi = tas._calpos(target + (None, None), printout=False)[3]
-    session.log.info('%s is now at %s', tuple(hkl), psi.format(newpsi, True))
+    session.log.info("%s is now at %s", tuple(hkl), psi.format(newpsi, True))
 
 
 @usercommand
-@helparglist('(h, k, l), step, numpoints, ...')
+@helparglist("(h, k, l), step, numpoints, ...")
 def checkalign(hkl, step, numpoints, *args, **kwargs):
     """Readjust sample psi0 by scanning a peak.
 
@@ -707,34 +737,37 @@ def checkalign(hkl, step, numpoints, *args, **kwargs):
     defaults to 1/10 of the fitted FWHM.
     """
     tas = session.instrument
-    ycol = kwargs.pop('ycol', -1)
-    accuracy = kwargs.pop('accuracy', None)
+    ycol = kwargs.pop("ycol", -1)
+    accuracy = kwargs.pop("accuracy", None)
     target = tuple(hkl) + (0,)
     tas.maw(target)
     psi = tas._attached_psi
     center = tas._calpos(target + (None, None), printout=False)[3]
-    cscan(psi, center, step, numpoints, 'align check', *args, **kwargs)
+    cscan(psi, center, step, numpoints, "align check", *args, **kwargs)
     params, _ = gauss(ycol)
     # do not allow moving outside of the scanned region
-    minvalue = center - step*numpoints
-    maxvalue = center + step*numpoints
+    minvalue = center - step * numpoints
+    maxvalue = center + step * numpoints
     if params is None:
-        session.log.warning('Gaussian fit failed, psi0 unchanged')
+        session.log.warning("Gaussian fit failed, psi0 unchanged")
     elif not minvalue <= params[0] <= maxvalue:
-        session.log.warning('Gaussian fit resulted in center outside scanning '
-                            'area, offset unchanged')
+        session.log.warning(
+            "Gaussian fit resulted in center outside scanning " "area, offset unchanged"
+        )
     else:
         # NOTE: this is the other way around compared to checkoffset
         diff = center - params[0]
-        session.log.info('center of Gaussian fit at %s', psi.format(params[0], True))
+        session.log.info("center of Gaussian fit at %s", psi.format(params[0], True))
         if accuracy is None:
             accuracy = min(params[2] * 0.05, 0.1)
         if abs(diff) < accuracy:
-            session.log.info('alignment ok within %.3f degrees, not '
-                             'changing psi0', accuracy)
+            session.log.info(
+                "alignment ok within %.3f degrees, not " "changing psi0", accuracy
+            )
         else:
             sample = tas._attached_cell
-            session.log.warning('adjusting %s.psi0 by %s',
-                                sample, psi.format(diff, True))
+            session.log.warning(
+                "adjusting %s.psi0 by %s", sample, psi.format(diff, True)
+            )
             sample.psi0 += diff
     tas.maw(target)

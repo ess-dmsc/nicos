@@ -33,20 +33,19 @@ class TasWidget(NicosWidget, TasView):
 
     designer_description = __doc__
 
-    mthdev = PropDef('mthdev', str, '', 'Monochromator rocking angle device')
-    mttdev = PropDef('mttdev', str, '', 'Monochromator scattering angle device')
-    sthdev = PropDef('sthdev', str, '', 'Sample rotation device')
-    sttdev = PropDef('sttdev', str, '', 'Sample scattering angle device')
-    athdev = PropDef('athdev', str, '', 'Analyzer rocking angle device')
-    attdev = PropDef('attdev', str, '', 'Analyzer scattering angle device')
-    Lmsdev = PropDef('Lmsdev', str, '', 'Distance monochromator->sample device')
-    Lsadev = PropDef('Lsadev', str, '', 'Distance sample->analyzer device')
-    Laddev = PropDef('Laddev', str, '', 'Distance analyzer->detector device')
-    height = PropDef('height', int, 30, 'Widget height in characters')
-    width = PropDef('width', int, 40, 'Widget width in characters')
+    mthdev = PropDef("mthdev", str, "", "Monochromator rocking angle device")
+    mttdev = PropDef("mttdev", str, "", "Monochromator scattering angle device")
+    sthdev = PropDef("sthdev", str, "", "Sample rotation device")
+    sttdev = PropDef("sttdev", str, "", "Sample scattering angle device")
+    athdev = PropDef("athdev", str, "", "Analyzer rocking angle device")
+    attdev = PropDef("attdev", str, "", "Analyzer scattering angle device")
+    Lmsdev = PropDef("Lmsdev", str, "", "Distance monochromator->sample device")
+    Lsadev = PropDef("Lsadev", str, "", "Distance sample->analyzer device")
+    Laddev = PropDef("Laddev", str, "", "Distance analyzer->detector device")
+    height = PropDef("height", int, 30, "Widget height in characters")
+    width = PropDef("width", int, 40, "Widget width in characters")
 
     def __init__(self, parent, designMode=False):
-
         self._keymap = {}
         self._statuskeymap = {}
         self._targetkeymap = {}
@@ -59,20 +58,21 @@ class TasWidget(NicosWidget, TasView):
 
     def registerKeys(self):
         for dev in self.values:
-            devname = str(self.props[dev + 'dev'])
+            devname = str(self.props[dev + "dev"])
             if devname:
-                self._keymap[
-                    self._source.register(self, devname + '/value')] = dev
-                self._statuskeymap[
-                    self._source.register(self, devname + '/status')] = dev
-                self._targetkeymap[
-                    self._source.register(self, devname + '/target')] = dev
+                self._keymap[self._source.register(self, devname + "/value")] = dev
+                self._statuskeymap[self._source.register(self, devname + "/status")] = (
+                    dev
+                )
+                self._targetkeymap[self._source.register(self, devname + "/target")] = (
+                    dev
+                )
 
     def on_keyChange(self, key, value, time, expired):
         if not expired:
             if key in self._keymap:
                 # Scale the distances
-                if self._keymap[key] in ('Lms', 'Lsa', 'Lad'):
+                if self._keymap[key] in ("Lms", "Lsa", "Lad"):
                     value /= 10
                 self.values[self._keymap[key]] = value
             elif key in self._statuskeymap:
@@ -84,5 +84,7 @@ class TasWidget(NicosWidget, TasView):
             self.update()
 
     def sizeHint(self):
-        return QSize(round(self.props['width'] * self._scale) + 2,
-                     round(self.props['height'] * self._scale) + 2)
+        return QSize(
+            round(self.props["width"] * self._scale) + 2,
+            round(self.props["height"] * self._scale) + 2,
+        )

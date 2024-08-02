@@ -30,31 +30,31 @@ from nicos.core.errors import ConfigurationError
 
 
 @usercommand
-@helparglist('start,step,count')
+@helparglist("start,step,count")
 def UpdateTimeBinning(start, step, count):
     """
     Updates all available HM's with a new time binning
     """
     # FOCUS uses one shared array for TOF configuration
-    hms = ['middle', 'upper', 'lower', 'f2d']
+    hms = ["middle", "upper", "lower", "f2d"]
     # Keep a copy of delay for writing to data file
-    dl = session.getDevice('delay')
+    dl = session.getDevice("delay")
     maw(dl, start)
     # First set the delay time to all MDIF's
     dt = start % 200000
     for hm in hms:
         try:
-            mdif = session.getDevice('mdif_' + hm)
-            mdif.execute('DT %d\r' % dt)
+            mdif = session.getDevice("mdif_" + hm)
+            mdif.execute("DT %d\r" % dt)
         except ConfigurationError:
             pass
-    tof = session.getDevice('hm_tof_array')
+    tof = session.getDevice("hm_tof_array")
     # For configuration we start at 0
     tof.updateTimeBins(0, step, count)
     # Now configure all, possibly four HM
     for hm in hms:
         try:
-            cfg = session.getDevice(hm + '_configurator')
+            cfg = session.getDevice(hm + "_configurator")
             cfg.updateConfig()
         except ConfigurationError:
             # Missing HM's are normal
@@ -70,12 +70,11 @@ def ShowTimeBinning():
     Shows the currently configured time binning
     """
     # Get the configurator device
-    arr = session.getDevice('hm_tof_array')
+    arr = session.getDevice("hm_tof_array")
     count = len(arr.data)
     step = arr.data[1] - arr.data[0]
     start = arr.data[0]
-    session.log.info('Time Binning: start: %d, step %d, count = %d',
-                     start, step, count)
+    session.log.info("Time Binning: start: %d, step %d, count = %d", start, step, count)
 
 
 @usercommand
@@ -84,40 +83,40 @@ def LoadThetaArrays():
     Loads the theta values from focusmerge.dat into the arrays for use in
     NeXus file writing.
     """
-    with open('nicos_sinq/focus/focusmerge.dat', encoding='utf-8') as fin:
+    with open("nicos_sinq/focus/focusmerge.dat", encoding="utf-8") as fin:
         fin.readline()  # skip first
         # First: the merged data theta
         length = int(fin.readline())
-        data = np.zeros((length,), dtype='float32')
+        data = np.zeros((length,), dtype="float32")
         for i in range(length):
             line = fin.readline()
             ld = line.split()
             data[i] = float(ld[1])
-        conf = session.getDevice('merged_theta')
+        conf = session.getDevice("merged_theta")
         conf.setData([length], data)
         fin.readline()  # Skip another line
         # Second: upper bank theta
         length = int(fin.readline())
-        data = np.zeros((length,), dtype='float32')
+        data = np.zeros((length,), dtype="float32")
         for i in range(length):
             data[i] = float(fin.readline())
-        conf = session.getDevice('upper_theta')
+        conf = session.getDevice("upper_theta")
         conf.setData([length], data)
         fin.readline()  # Skip another line
         # Third: middle bank theta
         length = int(fin.readline())
-        data = np.zeros((length,), dtype='float32')
+        data = np.zeros((length,), dtype="float32")
         for i in range(length):
             data[i] = float(fin.readline())
-        conf = session.getDevice('middle_theta')
+        conf = session.getDevice("middle_theta")
         conf.setData([length], data)
         fin.readline()  # Skip another line
         # Last: lower bank theta
         length = int(fin.readline())
-        data = np.zeros((length,), dtype='float32')
+        data = np.zeros((length,), dtype="float32")
         for i in range(length):
             data[i] = float(fin.readline())
-        conf = session.getDevice('lower_theta')
+        conf = session.getDevice("lower_theta")
         conf.setData([length], data)
 
 
@@ -137,12 +136,11 @@ def LoadCoordinates():
     az = []
     tth = []
     try:
-        coord = session.getDevice('f2d_coords')
+        coord = session.getDevice("f2d_coords")
     except ConfigurationError:
-        session.log.error('2D detector not loaded, cannot load coordinates')
+        session.log.error("2D detector not loaded, cannot load coordinates")
         return
-    with open('nicos_sinq/focus/set2D_coords.dat', 'r', encoding='utf-8') \
-            as fin:
+    with open("nicos_sinq/focus/set2D_coords.dat", "r", encoding="utf-8") as fin:
         line = fin.readline()
         data = line.split()
         coord.xdim = int(data[0])
@@ -163,7 +161,7 @@ def LoadCoordinates():
     coord.eqval = eq
     coord.azval = az
     coord.tthval = tth
-    session.log.info('2D detector coordinates successfully loaded')
+    session.log.info("2D detector coordinates successfully loaded")
 
 
 @usercommand
@@ -173,14 +171,19 @@ def chosta():
     Reports chopper status.
     """
     # Get the configurator device
-    FCs = session.getDevice('ch1_speed')
-    DCs = session.getDevice('ch2_speed')
-    phase = session.getDevice('ch_phase')
-    ratio = session.getDevice('ch_ratio')
-    session.log.info('FC speed: %d, DC speed %d, phase = %.2f, ratio = %d',
-                     FCs.read(), DCs.read(), phase.read(), ratio.read())
+    FCs = session.getDevice("ch1_speed")
+    DCs = session.getDevice("ch2_speed")
+    phase = session.getDevice("ch_phase")
+    ratio = session.getDevice("ch_ratio")
+    session.log.info(
+        "FC speed: %d, DC speed %d, phase = %.2f, ratio = %d",
+        FCs.read(),
+        DCs.read(),
+        phase.read(),
+        ratio.read(),
+    )
     if not FCs.isAtTarget():
-        session.log.info('FC speed target: %d', FCs.target)
+        session.log.info("FC speed target: %d", FCs.target)
 
 
 @usercommand
@@ -189,26 +192,29 @@ def instpar():
     """
     Reports instrument setup.
     """
-    devs = ['mex', 'mtt', 'mth']
-    mex = session.getDevice('mex')
+    devs = ["mex", "mtt", "mth"]
+    mex = session.getDevice("mex")
     if mex.read(0) < 90:
-        devs += ['m1cv', 'm1ch']
+        devs += ["m1cv", "m1ch"]
     else:
-        devs += ['m2cv', 'm2ch']
+        devs += ["m2cv", "m2ch"]
 
-    devs += ['wavelength', 'em_td', 'em_aw']
-    msg = '\n'
+    devs += ["wavelength", "em_td", "em_aw"]
+    msg = "\n"
     for d in devs:
-        msg += '%s = %f\n' % (d, session.getDevice(d).read(0))
-    FCs = session.getDevice('ch1_speed')
-    DCs = session.getDevice('ch2_speed')
-    phase = session.getDevice('ch_phase')
-    msg += 'fermispeed = %d set = %d\n' % (FCs.read(0), FCs.target)
-    msg += 'diskpeed = %d set = %d\n' % (DCs.read(0), DCs.target)
-    msg += 'phase = %f set = %f\n' % (phase.read(0), phase.target)
-    tof = session.getDevice('hm_tof_array')
-    msg += 'hm delay: %d musec, ch width: %d musec, number of channels: %d\n'\
-           % (tof.data[0], tof.data[1] - tof.data[0], len(tof.data))
+        msg += "%s = %f\n" % (d, session.getDevice(d).read(0))
+    FCs = session.getDevice("ch1_speed")
+    DCs = session.getDevice("ch2_speed")
+    phase = session.getDevice("ch_phase")
+    msg += "fermispeed = %d set = %d\n" % (FCs.read(0), FCs.target)
+    msg += "diskpeed = %d set = %d\n" % (DCs.read(0), DCs.target)
+    msg += "phase = %f set = %f\n" % (phase.read(0), phase.target)
+    tof = session.getDevice("hm_tof_array")
+    msg += "hm delay: %d musec, ch width: %d musec, number of channels: %d\n" % (
+        tof.data[0],
+        tof.data[1] - tof.data[0],
+        len(tof.data),
+    )
     session.log.info(msg)
 
 
@@ -221,12 +227,10 @@ def sampar():
     """
     Reports user parameters
     """
-    msg = '\n'
-    msg += '%s:%s\n' % (session.experiment.users,
-                        session.experiment.sample.samplename)
-    msg += 'Runnumber: %d\n' % session.experiment.lastscan
-    det = session.getDevice('focusdet')
+    msg = "\n"
+    msg += "%s:%s\n" % (session.experiment.users, session.experiment.sample.samplename)
+    msg += "Runnumber: %d\n" % session.experiment.lastscan
+    det = session.getDevice("focusdet")
     vals = det.read(0)
-    msg += 'Monitor: %d; Set: %d; Time: %f h\n' % \
-           (vals[1], vals[6], vals[0]/3600.)
+    msg += "Monitor: %d; Set: %d; Time: %f h\n" % (vals[1], vals[6], vals[0] / 3600.0)
     session.log.info(msg)

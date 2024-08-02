@@ -32,13 +32,16 @@ from nicos.commands.scan import contscan
 from nicos.core.errors import PositionError
 
 __all__ = (
-    'gauge_to_base', 'base_to_gauge', 'set_sample', 'pole_figure',
-    'change_sample',
+    "gauge_to_base",
+    "base_to_gauge",
+    "set_sample",
+    "pole_figure",
+    "change_sample",
 )
 
 
 def move_dev(dev, pos, sleeptime=0, maxtries=3):
-    session.log.info('Moving %s to %f', dev, pos)
+    session.log.info("Moving %s to %f", dev, pos)
     d = session.getDevice(dev)
     for _ in range(maxtries):
         d.maw(pos)
@@ -46,11 +49,11 @@ def move_dev(dev, pos, sleeptime=0, maxtries=3):
             sleep(sleeptime)
         if abs(d.read() - pos) < d.precision:
             return
-    raise PositionError(dev, 'Could not move %d to %f' % (dev, pos))
+    raise PositionError(dev, "Could not move %d to %f" % (dev, pos))
 
 
 @hiddenusercommand
-@helparglist('')
+@helparglist("")
 def gauge_to_base():
     """Move robot from the current tool position to base position.
 
@@ -59,25 +62,32 @@ def gauge_to_base():
        >>> gauge_to_base()
 
     """
-    session.getDevice('phis').speed = 2 * 50
-    session.getDevice('xt').speed = 2 * 40
-    dev_pos = [('robt', 13),
-
-               ('zt', -400), ('robj3', -1), ('robj1', -1),
-               ('robj2', -2), ('robj3', -110),
-
-               ('zt', 140), ('chis', 190), ('robb', -2), ('phis', 10),
-               ('yt', 610), ('xt', -515)]
+    session.getDevice("phis").speed = 2 * 50
+    session.getDevice("xt").speed = 2 * 40
+    dev_pos = [
+        ("robt", 13),
+        ("zt", -400),
+        ("robj3", -1),
+        ("robj1", -1),
+        ("robj2", -2),
+        ("robj3", -110),
+        ("zt", 140),
+        ("chis", 190),
+        ("robb", -2),
+        ("phis", 10),
+        ("yt", 610),
+        ("xt", -515),
+    ]
 
     for dev, pos in dev_pos:
         move_dev(dev, pos)  # or sleeptime=5
-    session.getDevice('phis').speed = 50
-    session.getDevice('xt').speed = 40
-    session.log.info('Base reached')
+    session.getDevice("phis").speed = 50
+    session.getDevice("xt").speed = 40
+    session.log.info("Base reached")
 
 
 @hiddenusercommand
-@helparglist('toolnumber')
+@helparglist("toolnumber")
 def base_to_gauge(tool):
     """Move robot from base position to measurement position 'toolnumber'.
 
@@ -87,30 +97,34 @@ def base_to_gauge(tool):
         >>> base_to_gauge(1)
 
     """
-    session.getDevice('phis').speed = 2 * 50
-    session.getDevice('xt').speed = 2 * 40
+    session.getDevice("phis").speed = 2 * 50
+    session.getDevice("xt").speed = 2 * 40
     # omgr in robot software offset must be <= -10
-    dev_pos = [('zt', -200), ('robj3', -1),
-               ('robj1', -70), ('robj3', -100), ('xt', 0),
-               ]
+    dev_pos = [
+        ("zt", -200),
+        ("robj3", -1),
+        ("robj1", -70),
+        ("robj3", -100),
+        ("xt", 0),
+    ]
     for dev, pos in dev_pos:
         move_dev(dev, pos)  # or sleeptime=7
 
     # select tool (gauge volume)
-    move_dev('robt', tool, maxtries=1)
+    move_dev("robt", tool, maxtries=1)
 
     # move to gauge center
-    move_dev('chis', 180.)
+    move_dev("chis", 180.0)
 
-    session.getDevice('xt').speed = 40
-    for dev in ['robb', 'phis', 'zt', 'xt', 'yt']:
+    session.getDevice("xt").speed = 40
+    for dev in ["robb", "phis", "zt", "xt", "yt"]:
         move_dev(dev, 0)  # or sleeptime=5
-    session.getDevice('phis').speed = 50
-    session.log.info('Tool %d reached', tool)
+    session.getDevice("phis").speed = 50
+    session.log.info("Tool %d reached", tool)
 
 
 @hiddenusercommand
-@helparglist('samplenumber')
+@helparglist("samplenumber")
 def set_sample(sample):
     """Instruct the robot to take a new sample from the sample magazine.
 
@@ -124,14 +138,14 @@ def set_sample(sample):
     """
     # the CARESS device give pos 0 during movement, which confuses the axis
     # code if the position is moving up
-    d = session.getDevice('robs')
+    d = session.getDevice("robs")
     if d.read() != sample:
-        move_dev('robs', int(sample), maxtries=1)
-    session.log.info('Got sample %d', int(sample))
+        move_dev("robs", int(sample), maxtries=1)
+    session.log.info("Got sample %d", int(sample))
 
 
 @usercommand
-@helparglist('numrows, speed, timedelta, sampleinfo')
+@helparglist("numrows, speed, timedelta, sampleinfo")
 def pole_figure(numrows, speed, timedelta, sampleinfo):
     """Run a typical pole figure measurement.
 
@@ -150,8 +164,8 @@ def pole_figure(numrows, speed, timedelta, sampleinfo):
         >>> pole_figure(6, 0.25, 10, 'Alpha_Ti')
 
     """
-    chis = session.getDevice('chis')
-    phis = session.getDevice('phis')
+    chis = session.getDevice("chis")
+    phis = session.getDevice("phis")
     dchi = round(90.0 / numrows, 2) / 2.0
     # creating a list beginnig from 180 + dchi downsteps to 90 + dchi
     positions = numpy.arange(90 + dchi, 180, 2 * dchi)[::-1]
@@ -159,9 +173,15 @@ def pole_figure(numrows, speed, timedelta, sampleinfo):
     for i, chipos in enumerate(positions):
         move_dev(chis, round(chipos, 2), maxtries=2)
         sleep(5)
-        start, end = (360., 0.) if i % 2 else (0., 360.)
-        contscan(phis, start, end, speed, timedelta,
-                 '%s_Chis_%s' % (sampleinfo, str(chis.read())))
+        start, end = (360.0, 0.0) if i % 2 else (0.0, 360.0)
+        contscan(
+            phis,
+            start,
+            end,
+            speed,
+            timedelta,
+            "%s_Chis_%s" % (sampleinfo, str(chis.read())),
+        )
     sleep(5)
     maw(phis, 0)
     sleep(5)
@@ -170,7 +190,7 @@ def pole_figure(numrows, speed, timedelta, sampleinfo):
 
 
 @usercommand
-@helparglist('samplenumber, [toolnumber]')
+@helparglist("samplenumber, [toolnumber]")
 def change_sample(samplenr, toolnr=None):
     """Change the sample with the help of the robot.
 

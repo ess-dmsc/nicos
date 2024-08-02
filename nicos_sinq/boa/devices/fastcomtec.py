@@ -35,16 +35,22 @@ class FastComtecChannel(ImageChannelMixin, EpicsDevice, PassiveChannel):
     mobile chopper unit. It is characterized by taking a long time
     to actually transfer data.
     """
+
     parameters = {
-        'pvprefix': Param('Prefix of the record PV.', type=pvname,
-                          mandatory=True, settable=False, userparam=False),
+        "pvprefix": Param(
+            "Prefix of the record PV.",
+            type=pvname,
+            mandatory=True,
+            settable=False,
+            userparam=False,
+        ),
     }
 
     _fields = {
-        'status': 'Status_RBV',
-        'count':  'CNT',
-        'nelm': 'NELM_RBV',
-        'data': 'Data'
+        "status": "Status_RBV",
+        "count": "CNT",
+        "nelm": "NELM_RBV",
+        "data": "Data",
     }
 
     def _get_pv_parameters(self):
@@ -66,42 +72,42 @@ class FastComtecChannel(ImageChannelMixin, EpicsDevice, PassiveChannel):
         :param pvparam: PV alias.
         :return: Actual PV name.
         """
-        prefix = getattr(self, 'pvprefix')
+        prefix = getattr(self, "pvprefix")
         field = self._fields.get(pvparam)
 
         if field is not None:
-            return ':'.join((prefix, field))
+            return ":".join((prefix, field))
 
         return getattr(self, pvparam)
 
     def doStart(self):
-        self._put_pv('count', 1)
+        self._put_pv("count", 1)
 
     def doStop(self):
-        self._put_pv('count', 0)
+        self._put_pv("count", 0)
 
     def doStatus(self, maxage=0):
-        raw_status = self._get_pv('status')
+        raw_status = self._get_pv("status")
         if raw_status == 0:
-            return OK, 'Idle'
+            return OK, "Idle"
         elif raw_status == 1:
-            return BUSY, 'Counting'
+            return BUSY, "Counting"
         elif raw_status == 2:
-            return BUSY, 'Reading data'
+            return BUSY, "Reading data"
         else:
-            raise NotImplementedError('Status %s unknown' % (raw_status))
+            raise NotImplementedError("Status %s unknown" % (raw_status))
 
     def doReadArray(self, quality):
         if quality == FINAL:
             # This thing does not do intermediate data
-            nelm = self._get_pv('nelm')
-            data = self._pvs['data'].get(count=nelm, timeout=self.epicstimeout)
+            nelm = self._get_pv("nelm")
+            data = self._pvs["data"].get(count=nelm, timeout=self.epicstimeout)
             return np.array(data)
 
     def valueInfo(self):
-        return Value(self.name, unit=''),
+        return (Value(self.name, unit=""),)
 
     @property
     def arraydesc(self):
-        nelm = self._get_pv('nelm')
-        return ArrayDesc(self.name, (nelm,), 'uint32')
+        nelm = self._get_pv("nelm")
+        return ArrayDesc(self.name, (nelm,), "uint32")

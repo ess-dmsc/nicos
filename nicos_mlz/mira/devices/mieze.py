@@ -27,52 +27,68 @@ import copy
 from itertools import chain
 
 from nicos import session
-from nicos.core import Moveable, NicosError, Override, Param, Value, anytype, \
-    dictof, listof, usermethod
+from nicos.core import (
+    Moveable,
+    NicosError,
+    Override,
+    Param,
+    Value,
+    anytype,
+    dictof,
+    listof,
+    usermethod,
+)
 from nicos.utils import printTable
 
 
 class MiezeMaster(Moveable):
-
     parameters = {
-        'setting':    Param('Current setting', type=int, settable=True),
-        'tuning':     Param('Current tuning', type=str, settable=True,
-                            category='instrument', default=''),
-        'curtable':   Param('Current tuning table', settable=True,
-                            type=listof(dictof(str, anytype))),
-        'tunetables': Param('Tuning tables for MIEZE settings',
-                            type=dictof(str, listof(dictof(str, anytype))),
-                            settable=True),
+        "setting": Param("Current setting", type=int, settable=True),
+        "tuning": Param(
+            "Current tuning", type=str, settable=True, category="instrument", default=""
+        ),
+        "curtable": Param(
+            "Current tuning table", settable=True, type=listof(dictof(str, anytype))
+        ),
+        "tunetables": Param(
+            "Tuning tables for MIEZE settings",
+            type=dictof(str, listof(dictof(str, anytype))),
+            settable=True,
+        ),
     }
 
     parameter_overrides = {
-        'unit':   Override(mandatory=False, default=''),
-        'fmtstr': Override(default='%s'),
+        "unit": Override(mandatory=False, default=""),
+        "fmtstr": Override(default="%s"),
     }
 
     def doRead(self, maxage=0):
         if not self.tuning:
-            return ['<no tuning selected>', 0.0]
-        return [self.curtable[self.setting]['_name_'],
-                self.curtable[self.setting]['_tau_']]
+            return ["<no tuning selected>", 0.0]
+        return [
+            self.curtable[self.setting]["_name_"],
+            self.curtable[self.setting]["_tau_"],
+        ]
 
     def valueInfo(self):
-        return Value('mieze', fmtstr='%s'), \
-            Value('tau', fmtstr='%.2f', unit='ps')
+        return Value("mieze", fmtstr="%s"), Value("tau", fmtstr="%.2f", unit="ps")
 
     def _findsetting(self, target):
         if not self.tuning:
-            raise NicosError(self, 'no tuning selected, use %s.usetuning(name)'
-                             ' to select a tuning table' % self)
+            raise NicosError(
+                self,
+                "no tuning selected, use %s.usetuning(name)"
+                " to select a tuning table" % self,
+            )
         if not isinstance(target, int):
             for idx, setting in enumerate(self.curtable):
-                if setting['_name_'] == target:
+                if setting["_name_"] == target:
                     target = idx
                     break
             else:
-                raise NicosError(self, 'no such MIEZE setting: %r' % (target,))
+                raise NicosError(self, "no such MIEZE setting: %r" % (target,))
         if not 0 <= target < len(self.curtable):
-            raise NicosError(self, 'no such MIEZE setting: %r' % target)
+            raise NicosError(self, "no such MIEZE setting: %r" % target)
         return target
 
     def doStart(self, target):
@@ -80,27 +96,27 @@ class MiezeMaster(Moveable):
         setting = self.curtable[index]
         devs = sorted(setting.items())
         for devname, devvalue in devs:
-            if devname.startswith('amp'):
-                self.log.debug('moving %r to %r', devname, 0)
+            if devname.startswith("amp"):
+                self.log.debug("moving %r to %r", devname, 0)
                 dev = session.getDevice(devname)
                 dev.move(0)
         for devname, devvalue in devs:
-            if devname.startswith('_') or devname.startswith('amp'):
+            if devname.startswith("_") or devname.startswith("amp"):
                 continue
-            self.log.debug('moving %r to %r', devname, devvalue)
+            self.log.debug("moving %r to %r", devname, devvalue)
             dev = session.getDevice(devname)
             dev.move(devvalue)
         for devname, devvalue in devs:
-            if not devname.startswith('amp'):
+            if not devname.startswith("amp"):
                 continue
-            self.log.debug('moving %r to %r', devname, devvalue)
+            self.log.debug("moving %r to %r", devname, devvalue)
             dev = session.getDevice(devname)
             dev.move(devvalue)
         self.setting = index
 
     def doWriteTuning(self, value):
         if value not in self.tunetables:
-            raise NicosError(self, 'no such tuning: %r' % value)
+            raise NicosError(self, "no such tuning: %r" % value)
         self.curtable = self.tunetables[value]
 
     @usermethod
@@ -113,10 +129,9 @@ class MiezeMaster(Moveable):
         """List all existing tuning tables."""
         data = []
         for name, table in self.tunetables.items():
-            data.append((name,
-                         ', '.join(setting['_name_'] for setting in table)))
-        self.log.info('all tuning tables:')
-        printTable(('name', 'settings'), data, session.log.info)
+            data.append((name, ", ".join(setting["_name_"] for setting in table)))
+        self.log.info("all tuning tables:")
+        printTable(("name", "settings"), data, session.log.info)
 
     @usermethod
     def printtuning(self):
@@ -125,40 +140,45 @@ class MiezeMaster(Moveable):
         valueidx = {}
         all_values = set()
         for setting in self.curtable:
-            all_values.update(key for key in setting if not key.startswith('_'))
+            all_values.update(key for key in setting if not key.startswith("_"))
         all_values = sorted(all_values)
         valueidx = {val: idx for idx, val in enumerate(all_values)}
         for idx, setting in enumerate(self.curtable):
-            values = ['---'] * len(all_values)
+            values = ["---"] * len(all_values)
             for devname, devvalue in setting.items():
-                if not devname.startswith('_'):
+                if not devname.startswith("_"):
                     values[valueidx[devname]] = str(devvalue)[:15]
-            data.append((str(idx), setting['_name_'], '%.3f' %
-                         setting['_tau_']) + tuple(values))
-        self.log.info('current MIEZE settings (%s):', self.tuning)
-        printTable(('#', 'name', 'tau (ps)') + tuple(all_values), data,
-                   session.log.info)
+            data.append(
+                (str(idx), setting["_name_"], "%.3f" % setting["_tau_"]) + tuple(values)
+            )
+        self.log.info("current MIEZE settings (%s):", self.tuning)
+        printTable(
+            ("#", "name", "tau (ps)") + tuple(all_values), data, session.log.info
+        )
 
     @usermethod
     def savetuning(self, name):
         """Save the current tuning table."""
         if name in self.tunetables:
-            raise NicosError(self, 'tuning with this name exists already, '
-                             'please use removetuning() first')
+            raise NicosError(
+                self,
+                "tuning with this name exists already, "
+                "please use removetuning() first",
+            )
         tables = self.tunetables.copy()
         tables[name] = copy.deepcopy(self.curtable)
         self.tunetables = tables
-        self.log.info('current tuning saved as %r', name)
+        self.log.info("current tuning saved as %r", name)
 
     @usermethod
     def removetuning(self, name):
         """Delete a tuning table."""
         if name not in self.tunetables:
-            raise NicosError(self, 'tuning %r not found in tables' % name)
+            raise NicosError(self, "tuning %r not found in tables" % name)
         tables = self.tunetables.copy()
         del tables[name]
         self.tunetables = tables
-        self.log.info('tuning %r removed', name)
+        self.log.info("tuning %r removed", name)
 
     @usermethod
     def newsetting(self, name, **values):
@@ -171,14 +191,13 @@ class MiezeMaster(Moveable):
             if not self.tuning:
                 raise
             index = len(table)
-            table.append({'_name_': name, '_tau_': 0})
+            table.append({"_name_": name, "_tau_": 0})
             setting = table[index]
         for devname, devvalue in values.items():
             setting[devname] = devvalue
         table[index] = setting
         self.curtable = table
-        self.log.info('created new MIEZE setting %r with index %s',
-                      name, index)
+        self.log.info("created new MIEZE setting %r with index %s", name, index)
 
     @usermethod
     def updatesetting(self, name, **values):
@@ -190,8 +209,7 @@ class MiezeMaster(Moveable):
             setting[devname] = devvalue
         table[index] = setting
         self.curtable = table
-        self.log.info('tuning for MIEZE setting %r updated',
-                      table[index]['_name_'])
+        self.log.info("tuning for MIEZE setting %r updated", table[index]["_name_"])
 
     @usermethod
     def removesetting(self, name):
@@ -200,7 +218,7 @@ class MiezeMaster(Moveable):
         table = self.curtable[:]
         setting = table.pop(index)
         self.curtable = table
-        self.log.info('removed MIEZE setting %r', setting['_name_'])
+        self.log.info("removed MIEZE setting %r", setting["_name_"])
 
     @usermethod
     def ordersettings(self, *names):

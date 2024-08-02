@@ -40,13 +40,16 @@ class WindowMoveable(HasLimits, HasPrecision, EpicsMoveable):
         # I have to use my private parameter _drive_target to store the target
         # since the marked as volatile in EpicsMoveable and is not holding the
         # real target.
-        '_drive_target': Param('Saves a copy of the target',
-                               type=none_or(float), internal=True,
-                               settable=True)
+        "_drive_target": Param(
+            "Saves a copy of the target",
+            type=none_or(float),
+            internal=True,
+            settable=True,
+        )
     }
 
     parameter_overrides = {
-        'target': Override(settable=True),
+        "target": Override(settable=True),
     }
 
     valuetype = float
@@ -58,35 +61,33 @@ class WindowMoveable(HasLimits, HasPrecision, EpicsMoveable):
     def doStatus(self, maxage=0):
         if self._drive_target is not None:
             if not self.isAtTarget(target=self._drive_target):
-                return status.BUSY, 'Moving'
+                return status.BUSY, "Moving"
             self._drive_target = None
-        return status.OK, 'Done'
+        return status.OK, "Done"
 
 
 class EpicsArrayReadable(EpicsReadable):
     parameters = {
-        'count': Param('How many array values to read',
-                       type=int, mandatory=True),
+        "count": Param("How many array values to read", type=int, mandatory=True),
     }
 
     def doRead(self, maxage=0):
         if epics.ca.current_context() is None:
             epics.ca.use_initial_context()
-        result = self._pvs['readpv'].get(timeout=self.epicstimeout,
-                                         count=self.count)
+        result = self._pvs["readpv"].get(timeout=self.epicstimeout, count=self.count)
         if result is None:  # timeout
-            raise CommunicationError(self, 'timed out getting PV %r from EPICS'
-                                     % self._get_pv_name('readpv'))
+            raise CommunicationError(
+                self, "timed out getting PV %r from EPICS" % self._get_pv_name("readpv")
+            )
         return result
 
 
 class EpicsAnalogMoveable(HasPrecision, EpicsAnalogMoveableSinq):
-
     def doStatus(self, maxage=0):
         pos = self.doRead(0)
         target = self.doReadTarget()
 
         if not self.isAtTarget(pos, target):
-            return status.BUSY, 'Moving'
+            return status.BUSY, "Moving"
 
-        return status.OK, 'Done'
+        return status.OK, "Done"

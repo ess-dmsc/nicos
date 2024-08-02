@@ -54,22 +54,30 @@ class VectorCoil(PowerSupply):
     """
 
     parameters = {
-        'orientation': Param('Field vector which is created by this coil in '
-                             'mT (measured value!)',
-                             settable=True, default=(1., 1., 1.),
-                             type=tupleof(float, float, float), unit='mT',
-                             category='general'),
-        'calibrationcurrent': Param('Current in A which created the field '
-                                    'given as Parameter orientation',
-                                    settable=True, default=1., type=float,
-                                    unit='A', category='general'),
+        "orientation": Param(
+            "Field vector which is created by this coil in " "mT (measured value!)",
+            settable=True,
+            default=(1.0, 1.0, 1.0),
+            type=tupleof(float, float, float),
+            unit="mT",
+            category="general",
+        ),
+        "calibrationcurrent": Param(
+            "Current in A which created the field " "given as Parameter orientation",
+            settable=True,
+            default=1.0,
+            type=float,
+            unit="A",
+            category="general",
+        ),
     }
 
 
 class AlphaStorage(VirtualMotor):
     r"""Storage for the spectrometer's \\alpha value."""
+
     parameter_overrides = {
-        'speed': Override(default=0.),
+        "speed": Override(default=0.0),
     }
 
     _callback = None
@@ -80,7 +88,7 @@ class AlphaStorage(VirtualMotor):
             try:
                 self._callback()  # pylint: disable=not-callable
             except Exception as e:
-                self.log.error('Calling callback failed, %r', e, exc=1)
+                self.log.error("Calling callback failed, %r", e, exc=1)
 
 
 class GuideField(MappedMoveable):
@@ -92,40 +100,55 @@ class GuideField(MappedMoveable):
 
     Needs the alpha virtual motor for calculations.
     """
+
     attached_devices = {
-        'alpha': Attach('Device which provides the current \\alpha',
-                        AlphaStorage),
-        'coils': Attach('List of 3 devices used for the vector field',
-                        VectorCoil, multiple=3),
+        "alpha": Attach("Device which provides the current \\alpha", AlphaStorage),
+        "coils": Attach(
+            "List of 3 devices used for the vector field", VectorCoil, multiple=3
+        ),
     }
     parameter_overrides = {
-        'mapping':      Override(mandatory=False, type=dict,
-                                 default={'off':   None,
-                                          'perp':  (1., 0., 0.),
-                                          '-perp': (-1., 0., 0.),
-                                          'par':   (0., 1., 0.),
-                                          '-par':  (0., -1., 0.),
-                                          'z':     (0., 0., 1.),
-                                          '-z':    (0., 0., -1.),
-                                          'up':    (0., 0., 1.),
-                                          'down':  (0., 0., -1.),
-                                          '0':     (0., 0., 0.),
-                                          }),
-        'precision':    Override(mandatory=False),
+        "mapping": Override(
+            mandatory=False,
+            type=dict,
+            default={
+                "off": None,
+                "perp": (1.0, 0.0, 0.0),
+                "-perp": (-1.0, 0.0, 0.0),
+                "par": (0.0, 1.0, 0.0),
+                "-par": (0.0, -1.0, 0.0),
+                "z": (0.0, 0.0, 1.0),
+                "-z": (0.0, 0.0, -1.0),
+                "up": (0.0, 0.0, 1.0),
+                "down": (0.0, 0.0, -1.0),
+                "0": (0.0, 0.0, 0.0),
+            },
+        ),
+        "precision": Override(mandatory=False),
     }
     parameters = {
-        'alphaoffset': Param('Offset for the alpha angle',
-                             type=float, settable=False, default=90,),
-        'background': Param('Static magnetic field which is always present and'
-                            ' should be corrected',
-                            type=tupleof(float, float, float), unit='mT',
-                            settable=True, default=(0., 0., 0.),
-                            category='general'),
-        'field':      Param('Absolute value of the desired field at the '
-                            'sample position',
-                            type=floatrange(0.1, 100), unit='mT',
-                            settable=True, default=25.,
-                            category='general'),
+        "alphaoffset": Param(
+            "Offset for the alpha angle",
+            type=float,
+            settable=False,
+            default=90,
+        ),
+        "background": Param(
+            "Static magnetic field which is always present and" " should be corrected",
+            type=tupleof(float, float, float),
+            unit="mT",
+            settable=True,
+            default=(0.0, 0.0, 0.0),
+            category="general",
+        ),
+        "field": Param(
+            "Absolute value of the desired field at the " "sample position",
+            type=floatrange(0.1, 100),
+            unit="mT",
+            settable=True,
+            default=25.0,
+            category="general",
+        ),
     }
 
     _currentmatrix = None
@@ -144,8 +167,9 @@ class GuideField(MappedMoveable):
         M = np.zeros([3, 3])
         for i in range(3):
             for j in range(3):
-                M[i, j] = (self.coils[j].orientation[i] /
-                           self.coils[j].calibrationcurrent)
+                M[i, j] = (
+                    self.coils[j].orientation[i] / self.coils[j].calibrationcurrent
+                )
         self._currentmatrix = M
         self._currentmatrix_inv = np.linalg.inv(M)
         self.alpha._callback = self._alphaCallBack
@@ -180,10 +204,13 @@ class GuideField(MappedMoveable):
         # read alpha, calculate beta
         alpha = self.alpha.read(0)
         beta = np.radians(self.alphaoffset - alpha)
-        R = np.array([
-            [np.cos(beta), -np.sin(beta), 0.0],
-            [np.sin(beta),  np.cos(beta), 0.0],
-            [0.0, 0.0, 1.0]])
+        R = np.array(
+            [
+                [np.cos(beta), -np.sin(beta), 0.0],
+                [np.sin(beta), np.cos(beta), 0.0],
+                [0.0, 0.0, 1.0],
+            ]
+        )
         temp = np.dot(self._currentmatrix_inv, np.dot(R, B))
         return temp
 
@@ -194,10 +221,13 @@ class GuideField(MappedMoveable):
         # read alpha, calculate beta
         alpha = self.alpha.read(0)
         beta = np.radians(self.alphaoffset - alpha)
-        RR = np.array([
-            [np.cos(beta), -np.sin(beta), 0.0],
-            [np.sin(beta), np.cos(beta), 0.0],
-            [0.0, 0.0, 1.0]])
+        RR = np.array(
+            [
+                [np.cos(beta), -np.sin(beta), 0.0],
+                [np.sin(beta), np.cos(beta), 0.0],
+                [0.0, 0.0, 1.0],
+            ]
+        )
         return np.dot(RR, np.dot(self._currentmatrix, I))
 
     def _setfield(self, B=np.array([0, 0, 0])):
@@ -222,8 +252,9 @@ class GuideField(MappedMoveable):
         for i, d in enumerate(self.coils):
             check = d.isAllowed(F[i])
             if not check[0]:
-                self.log.error('Can\'t set %s to %s: %s',
-                               d, d.format(F[i], unit=True), check[1])
+                self.log.error(
+                    "Can't set %s to %s: %s", d, d.format(F[i], unit=True), check[1]
+                )
                 valueOk = False
 
         if not valueOk:

@@ -1,15 +1,16 @@
-description = 'Setup for the pressure cell'
+description = "Setup for the pressure cell"
 
-group = 'optional'
+group = "optional"
 
-excludes = ['pressure']
+excludes = ["pressure"]
 
-tango_base = 'tango://tofhw.toftof.frm2.tum.de:10000/toftof/'
+tango_base = "tango://tofhw.toftof.frm2.tum.de:10000/toftof/"
 
 devices = dict(
-    P = device('nicos.devices.entangle.Sensor',
-        description = 'Sample cell pressure',
-        tangodevice = tango_base + 'samplecell/pressure',
-        fmtstr = '%.0f',
+    P=device(
+        "nicos.devices.entangle.Sensor",
+        description="Sample cell pressure",
+        tangodevice=tango_base + "samplecell/pressure",
+        fmtstr="%.0f",
     ),
 )

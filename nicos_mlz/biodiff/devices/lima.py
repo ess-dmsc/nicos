@@ -51,8 +51,11 @@ class Andor2LimaCCD(BaseAndor2LimaCCD):
         return narray
 
     def valueInfo(self):
-        return Value(name=self.name, type='counter', fmtstr='%d',
-                     errors='sqrt', unit='cts'),
+        return (
+            Value(
+                name=self.name, type="counter", fmtstr="%d", errors="sqrt", unit="cts"
+            ),
+        )
 
     def _com_raise(self, err, info):
         reason = self._tango_exc_reason(err)

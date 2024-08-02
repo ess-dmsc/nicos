@@ -23,23 +23,42 @@
 
 import numpy as np
 import pyqtgraph as pg
-from pyqtgraph import ColorMap, GraphicsView, ImageItem, PlotWidget, ViewBox, \
-                      mkPen
+from pyqtgraph import ColorMap, GraphicsView, ImageItem, PlotWidget, ViewBox, mkPen
 
-from nicos.guisupport.qt import QAction, QApplication, QCursor, QLabel, QSplitter, \
-    Qt, QVBoxLayout, QWidget, pyqtSignal, pyqtSlot
+from nicos.guisupport.qt import (
+    QAction,
+    QApplication,
+    QCursor,
+    QLabel,
+    QSplitter,
+    Qt,
+    QVBoxLayout,
+    QWidget,
+    pyqtSignal,
+    pyqtSlot,
+)
 from nicos.utils.loggers import NicosLogger
-from nicos_ess.gui.widgets.pyqtgraph.roi import CROSS_COLOR, CROSS_HOOVER_COLOR, \
-    LINE_ROI_HANDLE_HOOVER_COLOR_LEFT, LINE_ROI_HANDLE_HOOVER_COLOR_RIGHT, \
-    LINE_ROI_HOOVER_COLOR, ROI_COLOR, ROI_HANDLE_COLOR, ROI_HANDLE_HOOVER_COLOR, \
-    ROI_HOOVER_COLOR, PlotROI, LineROI, CrossROI
+from nicos_ess.gui.widgets.pyqtgraph.roi import (
+    CROSS_COLOR,
+    CROSS_HOOVER_COLOR,
+    LINE_ROI_HANDLE_HOOVER_COLOR_LEFT,
+    LINE_ROI_HANDLE_HOOVER_COLOR_RIGHT,
+    LINE_ROI_HOOVER_COLOR,
+    ROI_COLOR,
+    ROI_HANDLE_COLOR,
+    ROI_HANDLE_HOOVER_COLOR,
+    ROI_HOOVER_COLOR,
+    PlotROI,
+    LineROI,
+    CrossROI,
+)
 from nicos_ess.gui.widgets.pyqtgraph.histogram import HistogramWidget
 from nicos_ess.gui.widgets.pyqtgraph.image_item import CustomImageItem
 from nicos_ess.gui.widgets.pyqtgraph.image_view_controller import ImageViewController
 from nicos_ess.gui.widgets.pyqtgraph.stats_dialog import StatisticsDialog
 
-pg.setConfigOption('background', 'w')
-pg.setConfigOption('foreground', 'k')
+pg.setConfigOption("background", "w")
+pg.setConfigOption("foreground", "k")
 pg.setConfigOptions(antialias=True)
 
 HORI_SPLITTER_SIZES_1 = [100, 500]
@@ -53,18 +72,18 @@ class ImageView(QWidget):
     sigProcessingChanged = pyqtSignal(object)
     clicked = pyqtSignal(str)
 
-    def __init__(self, parent=None, name='', *args):
+    def __init__(self, parent=None, name="", *args):
         QWidget.__init__(self, parent, *args)
         self.parent = parent
         self.name = name
 
-        self.log = NicosLogger('ImageView')
+        self.log = NicosLogger("ImageView")
         self.log.parent = parent.log.parent
 
-        stats = ('mean', 'std', 'max', 'min')
-        for attr in ('roi', 'v', 'h'):
+        stats = ("mean", "std", "max", "min")
+        for attr in ("roi", "v", "h"):
             for stat in stats:
-                setattr(self, f'{attr}_{stat}', 0)
+                setattr(self, f"{attr}_{stat}", 0)
 
         self.saved_roi_state = None
         self.saved_line_roi_state = None
@@ -75,7 +94,7 @@ class ImageView(QWidget):
         self._use_metric_length = False
         self._line_roi_drag_active = False
         self._roi_drag_active = False
-        self.axes = {'t': None, 'x': 0, 'y': 1, 'c': None}
+        self.axes = {"t": None, "x": 0, "y": 1, "c": None}
 
         self.initialize_ui()
         self.build_image_controller_tab()
@@ -87,12 +106,12 @@ class ImageView(QWidget):
 
         self.setup_connections()
 
-        self.statisticsAction = QAction('Calculate Statistics', self)
+        self.statisticsAction = QAction("Calculate Statistics", self)
         self.statisticsAction.triggered.connect(self.calculate_statistics)
         self.view.menu.addAction(self.statisticsAction)
 
         for child in self.view.menu.actions():
-            if child.text() == 'View All':
+            if child.text() == "View All":
                 child.triggered.connect(self.set_auto_scale_axis)
 
     def set_auto_scale_axis(self):
@@ -101,13 +120,13 @@ class ImageView(QWidget):
     def calculate_statistics(self):
         image_stats = {
             stat: getattr(self.image_item.image, stat)()
-            for stat in ('mean', 'std', 'min', 'max')
+            for stat in ("mean", "std", "min", "max")
         }
 
         roi_stats = (
             {
-                f'ROI {stat}': getattr(self, f'roi_{stat}')
-                for stat in ('mean', 'std', 'min', 'max')
+                f"ROI {stat}": getattr(self, f"roi_{stat}")
+                for stat in ("mean", "std", "min", "max")
             }
             if self.roi.isVisible()
             else {}
@@ -115,8 +134,8 @@ class ImageView(QWidget):
 
         vert_stats = (
             {
-                f'Vertical {stat}': getattr(self, f'v_{stat}')
-                for stat in ('mean', 'std', 'min', 'max')
+                f"Vertical {stat}": getattr(self, f"v_{stat}")
+                for stat in ("mean", "std", "min", "max")
             }
             if self.crosshair_roi.vertical_line.isVisible()
             else {}
@@ -124,8 +143,8 @@ class ImageView(QWidget):
 
         hori_stats = (
             {
-                f'Horizontal {stat}': getattr(self, f'h_{stat}')
-                for stat in ('mean', 'std', 'min', 'max')
+                f"Horizontal {stat}": getattr(self, f"h_{stat}")
+                for stat in ("mean", "std", "min", "max")
             }
             if self.crosshair_roi.horizontal_line.isVisible()
             else {}
@@ -168,9 +187,9 @@ class ImageView(QWidget):
         )
         self.roi.hide()
         for handle in self.roi.handles:
-            handle['item'].pen = mkPen(ROI_HANDLE_COLOR, width=2)
-            handle['item'].hoverPen = mkPen(ROI_HANDLE_HOOVER_COLOR, width=2)
-            handle['item'].currentPen = mkPen(ROI_HANDLE_COLOR, width=2)
+            handle["item"].pen = mkPen(ROI_HANDLE_COLOR, width=2)
+            handle["item"].hoverPen = mkPen(ROI_HANDLE_HOOVER_COLOR, width=2)
+            handle["item"].currentPen = mkPen(ROI_HANDLE_COLOR, width=2)
         self.roi.setZValue(20)
         self.view.addItem(self.roi)
         self.saved_roi_state = self.roi.saveState()
@@ -187,8 +206,8 @@ class ImageView(QWidget):
         self.view.addItem(self.line_roi)
 
     def build_histograms(self):
-        self.settings_histogram = HistogramWidget(orientation='horizontal')
-        self.settings_histogram.gradient.loadPreset('viridis')
+        self.settings_histogram = HistogramWidget(orientation="horizontal")
+        self.settings_histogram.gradient.loadPreset("viridis")
         self.settings_histogram.item.log = self.log
         self.settings_histogram.item.setImageItem(self.image_item)
 
@@ -197,7 +216,7 @@ class ImageView(QWidget):
 
         self.histogram_image_item = ImageItem()
         self.roi_histogram = HistogramWidget(
-            orientation='horizontal',
+            orientation="horizontal",
             remove_regions=True,
             color=ROI_COLOR,
         )
@@ -211,7 +230,7 @@ class ImageView(QWidget):
         self.left_plot.setYLink(self.view)
         self.bottom_plot.setXLink(self.view)
 
-        self.full_vert_trace = self.left_plot.plot(pen=mkPen('k', width=0.5))
+        self.full_vert_trace = self.left_plot.plot(pen=mkPen("k", width=0.5))
         self.left_crosshair_roi_hline = pg.InfiniteLine(
             pos=10,
             angle=0,
@@ -222,16 +241,14 @@ class ImageView(QWidget):
         self.left_crosshair_roi = self.left_plot.plot(
             pen=mkPen(CROSS_HOOVER_COLOR, width=1)
         )
-        self.left_roi_trace = self.left_plot.plot(
-            pen=mkPen(ROI_HOOVER_COLOR, width=1)
-        )
+        self.left_roi_trace = self.left_plot.plot(pen=mkPen(ROI_HOOVER_COLOR, width=1))
         self.left_crosshair_roi_hline.setVisible(False)
         self.left_plot.addItem(self.left_crosshair_roi_hline)
         self.left_plot.plotItem.invertY()
         self.left_plot.showGrid(x=True, y=True, alpha=0.2)
-        self.left_plot.setLabel('left', 'Pixels')
+        self.left_plot.setLabel("left", "Pixels")
 
-        self.full_hori_trace = self.bottom_plot.plot(pen=mkPen('k', width=0.5))
+        self.full_hori_trace = self.bottom_plot.plot(pen=mkPen("k", width=0.5))
         self.bottom_crosshair_roi_vline = pg.InfiniteLine(
             pos=10,
             angle=90,
@@ -248,7 +265,7 @@ class ImageView(QWidget):
         self.bottom_crosshair_roi_vline.setVisible(False)
         self.bottom_plot.addItem(self.bottom_crosshair_roi_vline)
         self.bottom_plot.showGrid(x=True, y=True, alpha=0.2)
-        self.bottom_plot.setLabel('bottom', 'Pixels')
+        self.bottom_plot.setLabel("bottom", "Pixels")
 
         self.line_roi_trace = self.line_plot.plot(
             pen=mkPen(LINE_ROI_HOOVER_COLOR, width=1)
@@ -262,7 +279,7 @@ class ImageView(QWidget):
         self.line_plot.addItem(self.line_roi_trace_left)
         self.line_plot.addItem(self.line_roi_trace_right)
         self.line_plot.showGrid(x=True, y=True, alpha=0.2)
-        self.line_plot.setLabel('bottom', 'Pixels')
+        self.line_plot.setLabel("bottom", "Pixels")
 
     def build_ui(self):
         self.splitter_vert_1 = QSplitter(Qt.Orientation.Vertical)
@@ -297,9 +314,7 @@ class ImageView(QWidget):
     def setup_connections(self):
         self.image_item.sigImageChanged.connect(self.update_trace)
         self.image_item.hoverData.connect(self.set_hover_title)
-        self.settings_histogram.sigLevelsChanged.connect(
-            self.update_hist_levels_text
-        )
+        self.settings_histogram.sigLevelsChanged.connect(self.update_hist_levels_text)
 
         self.splitter_vert_1.splitterMoved.connect(
             lambda x: self.splitter_moved(self.splitter_vert_1)
@@ -345,9 +360,7 @@ class ImageView(QWidget):
                 self.crosshair_roi_changed
             )
         else:
-            self.image_item.sigImageChanged.disconnect(
-                self.crosshair_roi_changed
-            )
+            self.image_item.sigImageChanged.disconnect(self.crosshair_roi_changed)
             self.crosshair_roi.vertical_line.sigPositionChanged.disconnect(
                 self.crosshair_roi_changed
             )
@@ -490,9 +503,7 @@ class ImageView(QWidget):
             self.exit_roi_drag_mode()
         if not self.image_view_controller.roi_cb.isChecked():
             self.image_view_controller.roi_cb.click()
-        QApplication.setOverrideCursor(
-            QCursor(Qt.CursorShape.PointingHandCursor)
-        )
+        QApplication.setOverrideCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self.view.setMouseEnabled(False, False)
         self.image_item.set_define_roi_mode(True)
         self.image_item.dragData.connect(self.define_roi)
@@ -512,9 +523,7 @@ class ImageView(QWidget):
             self.exit_roi_drag_mode()
         if not self.image_view_controller.line_roi_cb.isChecked():
             self.image_view_controller.line_roi_cb.click()
-        QApplication.setOverrideCursor(
-            QCursor(Qt.CursorShape.PointingHandCursor)
-        )
+        QApplication.setOverrideCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self.view.setMouseEnabled(False, False)
         self.image_item.set_define_roi_mode(True)
         self.image_item.dragData.connect(self.define_line_roi)
@@ -582,13 +591,13 @@ class ImageView(QWidget):
 
     def _update_labels(self):
         if self._use_metric_length:
-            self.left_plot.setLabel('left', 'mm')
-            self.bottom_plot.setLabel('bottom', 'mm')
-            self.line_plot.setLabel('bottom', 'mm')
+            self.left_plot.setLabel("left", "mm")
+            self.bottom_plot.setLabel("bottom", "mm")
+            self.line_plot.setLabel("bottom", "mm")
         else:
-            self.left_plot.setLabel('left', 'Pixels')
-            self.bottom_plot.setLabel('bottom', 'Pixels')
-            self.line_plot.setLabel('bottom', 'Pixels')
+            self.left_plot.setLabel("left", "Pixels")
+            self.bottom_plot.setLabel("bottom", "Pixels")
+            self.line_plot.setLabel("bottom", "Pixels")
 
     def _pix_to_mm(self, pix):
         return pix * self._pix_to_mm_ratio
@@ -601,12 +610,8 @@ class ImageView(QWidget):
             return
         if self._use_metric_length:
             # Define the display dimensions in millimeters (or scene units)
-            display_width_mm = (
-                self.image_item.image.shape[0] * self._pix_to_mm_ratio
-            )
-            display_height_mm = (
-                self.image_item.image.shape[1] * self._pix_to_mm_ratio
-            )
+            display_width_mm = self.image_item.image.shape[0] * self._pix_to_mm_ratio
+            display_height_mm = self.image_item.image.shape[1] * self._pix_to_mm_ratio
 
             # Set the display rectangle for the ImageItem
             self.image_item.setRect(0, 0, display_width_mm, display_height_mm)
@@ -626,16 +631,12 @@ class ImageView(QWidget):
             pos = self.roi.pos()
             size = self.roi.size()
             self.roi.setPos(self._pix_to_mm(pos.x()), self._pix_to_mm(pos.y()))
-            self.roi.setSize(
-                (self._pix_to_mm(size.x()), self._pix_to_mm(size.y()))
-            )
+            self.roi.setSize((self._pix_to_mm(size.x()), self._pix_to_mm(size.y())))
         else:
             pos = self.roi.pos()
             size = self.roi.size()
             self.roi.setPos(self._mm_to_pix(pos.x()), self._mm_to_pix(pos.y()))
-            self.roi.setSize(
-                (self._mm_to_pix(size.x()), self._mm_to_pix(size.y()))
-            )
+            self.roi.setSize((self._mm_to_pix(size.x()), self._mm_to_pix(size.y())))
         if should_disconnect:
             self.roi.sigRegionChangeFinished.connect(self.roi_changed)
 
@@ -704,7 +705,7 @@ class ImageView(QWidget):
             self._restore_original_colormap()
 
     def _create_log_colormap(self, current_cm):
-        colors = current_cm.getColors(mode='byte')
+        colors = current_cm.getColors(mode="byte")
         pos = current_cm.pos
         new_pos = np.exp(np.linspace(-5, 0, 10))
         new_pos[0], new_pos[-1] = 0.0, 1.0
@@ -727,25 +728,23 @@ class ImageView(QWidget):
 
     def save_state(self):
         return {
-            'saved_roi_state': self.roi.saveState(),
-            'saved_line_roi_state': self.line_roi.saveState(),
-            'saved_lut_state': self.settings_histogram.item.gradient.saveState(),
-            'saved_levels': self.image_item.getLevels(),
-            'saved_cross_roi': (
+            "saved_roi_state": self.roi.saveState(),
+            "saved_line_roi_state": self.line_roi.saveState(),
+            "saved_lut_state": self.settings_histogram.item.gradient.saveState(),
+            "saved_levels": self.image_item.getLevels(),
+            "saved_cross_roi": (
                 self.crosshair_roi.vertical_line.value(),
                 self.crosshair_roi.horizontal_line.value(),
             ),
         }
 
     def restore_state(self, state):
-        self.roi.setState(state['saved_roi_state'])
-        self.line_roi.setState(state['saved_line_roi_state'])
-        self.settings_histogram.item.gradient.restoreState(
-            state['saved_lut_state']
-        )
-        self.image_item.setLevels(state['saved_levels'])
-        self.crosshair_roi.vertical_line.setValue(state['saved_cross_roi'][0])
-        self.crosshair_roi.horizontal_line.setValue(state['saved_cross_roi'][1])
+        self.roi.setState(state["saved_roi_state"])
+        self.line_roi.setState(state["saved_line_roi_state"])
+        self.settings_histogram.item.gradient.restoreState(state["saved_lut_state"])
+        self.image_item.setLevels(state["saved_levels"])
+        self.crosshair_roi.vertical_line.setValue(state["saved_cross_roi"][0])
+        self.crosshair_roi.horizontal_line.setValue(state["saved_cross_roi"][1])
 
     @pyqtSlot(str)
     def set_hover_title(self, title):
@@ -777,12 +776,8 @@ class ImageView(QWidget):
     @pyqtSlot()
     def update_hist_levels_text(self):
         hist_min, hist_max = self.image_item.getLevels()
-        self.image_view_controller.hist_max_level_le.setText(
-            str(round(hist_max, 5))
-        )
-        self.image_view_controller.hist_min_level_le.setText(
-            str(round(hist_min, 5))
-        )
+        self.image_view_controller.hist_max_level_le.setText(str(round(hist_max, 5)))
+        self.image_view_controller.hist_min_level_le.setText(str(round(hist_min, 5)))
 
     def _format_float(self, value, precision=3):
         if value == int(value):
@@ -799,14 +794,10 @@ class ImageView(QWidget):
         max_x, max_y = self.image_item.image.shape
         if self._use_metric_length:
             h_val = int(
-                np.floor(
-                    self._mm_to_pix(self.crosshair_roi.horizontal_line.value())
-                )
+                np.floor(self._mm_to_pix(self.crosshair_roi.horizontal_line.value()))
             )
             v_val = int(
-                np.floor(
-                    self._mm_to_pix(self.crosshair_roi.vertical_line.value())
-                )
+                np.floor(self._mm_to_pix(self.crosshair_roi.vertical_line.value()))
             )
         else:
             h_val = int(np.floor(self.crosshair_roi.horizontal_line.value()))
@@ -842,12 +833,8 @@ class ImageView(QWidget):
         self.image_view_controller.crosshair_roi_pos_y_le.setText(
             self._format_float(h_val)
         )
-        self.left_crosshair_roi_hline.setPos(
-            self.crosshair_roi.horizontal_line.value()
-        )
-        self.bottom_crosshair_roi_vline.setPos(
-            self.crosshair_roi.vertical_line.value()
-        )
+        self.left_crosshair_roi_hline.setPos(self.crosshair_roi.horizontal_line.value())
+        self.bottom_crosshair_roi_vline.setPos(self.crosshair_roi.vertical_line.value())
 
     @pyqtSlot()
     def roi_changed(self):
@@ -858,10 +845,10 @@ class ImageView(QWidget):
         if self.roi.size()[0] == 0 or self.roi.size()[1] == 0:
             return
 
-        if self.image_item.axisOrder == 'col-major':
-            axes = (self.axes['x'], self.axes['y'])
+        if self.image_item.axisOrder == "col-major":
+            axes = (self.axes["x"], self.axes["y"])
         else:
-            axes = (self.axes['y'], self.axes['x'])
+            axes = (self.axes["y"], self.axes["x"])
 
         data, coords = self.roi.getArrayRegion(
             self.image_item.image.view(np.ndarray),
@@ -876,8 +863,8 @@ class ImageView(QWidget):
         self.histogram_image_item.setImage(data, autoLevels=False)
         self.roi_histogram.item.imageChanged(bins=100)
 
-        data_x = data.mean(axis=self.axes['y'])
-        data_y = data.mean(axis=self.axes['x'])
+        data_x = data.mean(axis=self.axes["y"])
+        data_y = data.mean(axis=self.axes["x"])
         self.roi_mean = data.mean()
         self.roi_std = data.std()
         self.roi_max = data.max()
@@ -909,10 +896,10 @@ class ImageView(QWidget):
         if self.line_roi.size()[0] == 0 or self.line_roi.size()[1] == 0:
             return
 
-        if self.image_item.axisOrder == 'col-major':
-            axes = (self.axes['x'], self.axes['y'])
+        if self.image_item.axisOrder == "col-major":
+            axes = (self.axes["x"], self.axes["y"])
         else:
-            axes = (self.axes['y'], self.axes['x'])
+            axes = (self.axes["y"], self.axes["x"])
 
         data, coords = self.line_roi.getArrayRegion(
             self.image_item.image.view(np.ndarray),
@@ -924,8 +911,8 @@ class ImageView(QWidget):
         if data is None:
             return
 
-        data_x = data.mean(axis=self.axes['y'])
-        data_y = data.mean(axis=self.axes['x'])
+        data_x = data.mean(axis=self.axes["y"])
+        data_y = data.mean(axis=self.axes["x"])
         self.line_roi_mean = data.mean()
         self.line_roi_std = data.std()
         self.line_roi_max = data.max()
@@ -956,13 +943,9 @@ class ImageView(QWidget):
         self.image_view_controller.line_roi_end_y_le.setText(
             self._format_float(pos2.y())
         )
-        self.image_view_controller.line_roi_width_le.setText(
-            self._format_float(width)
-        )
+        self.image_view_controller.line_roi_width_le.setText(self._format_float(width))
 
-        length = np.sqrt(
-            (pos1.x() - pos2.x()) ** 2 + (pos1.y() - pos2.y()) ** 2
-        )
+        length = np.sqrt((pos1.x() - pos2.x()) ** 2 + (pos1.y() - pos2.y()) ** 2)
 
         self.image_view_controller.current_line_length_rb.setText(
             self._format_float(length)

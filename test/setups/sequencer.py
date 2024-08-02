@@ -21,35 +21,40 @@
 #
 # *****************************************************************************
 
-name = 'test_sequencer setup'
+name = "test_sequencer setup"
 
-includes = ['stdsystem', 'multiswitch']
+includes = ["stdsystem", "multiswitch"]
 
 devices = dict(
-    sm1 = device('nicos.devices.generic.VirtualMotor',
-        abslimits = (0, 10),
-        unit = 'V',
+    sm1=device(
+        "nicos.devices.generic.VirtualMotor",
+        abslimits=(0, 10),
+        unit="V",
     ),
-    sm2 = device('nicos.devices.generic.VirtualMotor',
-        abslimits = (0, 10),
-        unit = '',
+    sm2=device(
+        "nicos.devices.generic.VirtualMotor",
+        abslimits=(0, 10),
+        unit="",
     ),
-    sm3 = device('nicos.devices.generic.VirtualMotor',
-        abslimits = (0, 10),
-        unit = '',
+    sm3=device(
+        "nicos.devices.generic.VirtualMotor",
+        abslimits=(0, 10),
+        unit="",
     ),
-    ld = device('nicos.devices.generic.LockedDevice',
-        device = 'sm1',
-        lock = 'sm2',
-        lockvalue = 10,
-        unlockvalue = 0,
-        keepfixed = True,
+    ld=device(
+        "nicos.devices.generic.LockedDevice",
+        device="sm1",
+        lock="sm2",
+        lockvalue=10,
+        unlockvalue=0,
+        keepfixed=True,
     ),
-    ld2 = device('nicos.devices.generic.LockedDevice',
-        device = 'sc1',
-        lock = 'sm2',
-        lockvalue = 10,
-        unlockvalue = 0,
-        keepfixed = True,
+    ld2=device(
+        "nicos.devices.generic.LockedDevice",
+        device="sc1",
+        lock="sm2",
+        lockvalue=10,
+        unlockvalue=0,
+        keepfixed=True,
     ),
 )

@@ -37,18 +37,32 @@ except ImportError:
 
 
 class Network(Readable):
-
     parameters = {
-        'interval':  Param('Interval for load detection',
-                           type=floatrange(0.1, 60), default=0.1,
-                           settable=True,),
-        'interface': Param('Network interface device (None=all)',
-                           type=oneof(None, *net_io_counters(True).keys()),
-                           default=None, settable=True,),
-        'direction': Param('Transport direction', type=oneof('tx', 'rx'),
-                           default='tx', settable=True,),
-        'lastvalue': Param('Last obtained value', type=float,
-                           internal=True, mandatory=False, default=0.0),
+        "interval": Param(
+            "Interval for load detection",
+            type=floatrange(0.1, 60),
+            default=0.1,
+            settable=True,
+        ),
+        "interface": Param(
+            "Network interface device (None=all)",
+            type=oneof(None, *net_io_counters(True).keys()),
+            default=None,
+            settable=True,
+        ),
+        "direction": Param(
+            "Transport direction",
+            type=oneof("tx", "rx"),
+            default="tx",
+            settable=True,
+        ),
+        "lastvalue": Param(
+            "Last obtained value",
+            type=float,
+            internal=True,
+            mandatory=False,
+            default=0.0,
+        ),
     }
 
     def doInit(self, mode):
@@ -58,7 +72,7 @@ class Network(Readable):
         # it may look stupid, as the poller already has a thread polling read()
         # now imagine several such devices in a setup.... not so stupid anymore
         if session.sessiontype == POLLER:
-            self._thread = createThread('measure networkload', self._run)
+            self._thread = createThread("measure networkload", self._run)
 
     def doWriteInterval(self, value):
         self.pollinterval = max(1, 2 * value)
@@ -68,14 +82,14 @@ class Network(Readable):
         return self.lastvalue
 
     def doStatus(self, maxage=0):
-        return status.OK, ''
+        return status.OK, ""
 
     def _getData(self):
         if not self.interface:
             data = net_io_counters()
         else:
             data = net_io_counters(True)[self.interface]
-        return data.bytes_sent if self.direction == 'tx' else data.bytes_recv
+        return data.bytes_sent if self.direction == "tx" else data.bytes_recv
 
     def _run(self):
         old = self._getData()
@@ -87,5 +101,5 @@ class Network(Readable):
                 time.sleep(sleeptime)
                 timeslept += sleeptime
             new = self._getData()
-            self._setROParam('lastvalue', (new - old) / timeslept)
+            self._setROParam("lastvalue", (new - old) / timeslept)
             old = new

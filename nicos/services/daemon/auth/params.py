@@ -28,26 +28,28 @@ from nicos.core import ACCESS_LEVELS
 
 
 def _access_level_list():
-    return ', '.join(repr(l) for l in ACCESS_LEVELS.values())
+    return ", ".join(repr(l) for l in ACCESS_LEVELS.values())
 
 
 def UserPassLevelAuthEntry(val=None):
     """Provide a 3-tuple of user, password, and level
 
-        * user: string
-        * password: string
-        * level: oneof(ACCESS_LEVELS)
-           currently: GUEST, USER, ADMIN
+    * user: string
+    * password: string
+    * level: oneof(ACCESS_LEVELS)
+       currently: GUEST, USER, ADMIN
     """
     val = list(val)
     if len(val) != 3:
-        raise ValueError('UserPassLevelAuthEntry entry needs to be '
-                         'a 3-tuple (name, password, accesslevel)')
+        raise ValueError(
+            "UserPassLevelAuthEntry entry needs to be "
+            "a 3-tuple (name, password, accesslevel)"
+        )
     if not isinstance(val[0], str):
-        raise ValueError('user name must be a string')
+        raise ValueError("user name must be a string")
     val[0] = val[0].strip()
     if not isinstance(val[1], str):
-        raise ValueError('user password must be a string')
+        raise ValueError("user password must be a string")
     val[1] = val[1].strip()
     if isinstance(val[2], str):
         for i, name in ACCESS_LEVELS.items():
@@ -55,26 +57,27 @@ def UserPassLevelAuthEntry(val=None):
                 val[2] = i
                 break
         else:
-            raise ValueError('access level must be one of %s' % _access_level_list())
+            raise ValueError("access level must be one of %s" % _access_level_list())
     elif not isinstance(val[2], int):
         # for backwards compatibility: allow integer values as well
-        raise ValueError('access level must be one of %s' % _access_level_list())
+        raise ValueError("access level must be one of %s" % _access_level_list())
     else:
         if val[2] not in ACCESS_LEVELS:
-            raise ValueError('access level must be one of %s' % _access_level_list())
+            raise ValueError("access level must be one of %s" % _access_level_list())
     return tuple(val)
 
 
 def UserLevelAuthEntry(val=None):
     """Provide a 2-tuple of user and level
 
-        * user: string
-        * level: oneof(ACCESS_LEVELS)
-           currently: GUEST, USER, ADMIN
+    * user: string
+    * level: oneof(ACCESS_LEVELS)
+       currently: GUEST, USER, ADMIN
     """
     if len(val) != 2:
-        raise ValueError('UserLevelAuthEntry entry needs to be a 2-tuple '
-                         '(name, accesslevel)')
+        raise ValueError(
+            "UserLevelAuthEntry entry needs to be a 2-tuple " "(name, accesslevel)"
+        )
     # pylint: disable=unbalanced-tuple-unpacking
-    user, _p, level = UserPassLevelAuthEntry((val[0], '', val[1]))
+    user, _p, level = UserPassLevelAuthEntry((val[0], "", val[1]))
     return tuple((user, level))

@@ -31,25 +31,26 @@ class DaemonSetup:
     def __init__(self, filename):
         self._filename = filename
 
-        with open(filename, encoding='utf-8') as f:
+        with open(filename, encoding="utf-8") as f:
             self.setup = redbaron.RedBaron(f.read())
 
         # search for the list authenticator entries
         # pylint: disable=not-callable
-        auth = self.setup('string', value="'nicos.services.daemon.auth."
-                                          "list.Authenticator'")
+        auth = self.setup(
+            "string", value="'nicos.services.daemon.auth." "list.Authenticator'"
+        )
         # and take the first one
         # from the found string value we have to find the device entry
         self.passwd = None
-        self.hashing = 'sha1'
+        self.hashing = "sha1"
         if auth:
             auth = auth[0].parent.parent.parent.parent
             # find the password entry inside the device entry
             # self.passwd = auth.value.value[1]('callargument',
-            self.passwd = auth('callargument',
-                               target=lambda x: str(x) == 'passwd')[0].value
-            self.hashing = auth('callargument',
-                                target=lambda x: str(x) == 'hashing')[0]
+            self.passwd = auth("callargument", target=lambda x: str(x) == "passwd")[
+                0
+            ].value
+            self.hashing = auth("callargument", target=lambda x: str(x) == "hashing")[0]
 
     def getPasswordEntries(self):
         """Return the password entry list.
@@ -61,7 +62,7 @@ class DaemonSetup:
         if not self.passwd:
             return []
         passwd = []
-        pwtuple = self.passwd.value('tuple')
+        pwtuple = self.passwd.value("tuple")
         for pw in pwtuple:
             v1, v2, v3 = str(pw.value[0]), str(pw.value[1]), str(pw.value[2])
             try:
@@ -81,8 +82,8 @@ class DaemonSetup:
 
     def setHashing(self, hashing):
         """Set the new hashing algorithm type."""
-        if hashing in ['md5', 'sha1']:
-            self.hashing.value = '%r' % hashing
+        if hashing in ["md5", "sha1"]:
+            self.hashing.value = "%r" % hashing
 
     def updatePasswordEntries(self, passwd):
         """Update the password entry in setup file.
@@ -94,14 +95,15 @@ class DaemonSetup:
         if not isinstance(passwd, list) or self.passwd is None:
             return
         del self.passwd.value[:]
-        passwd.sort(key=lambda x: (1 if x[2] == 'guest' else 2
-                    if x[2] == 'user' else 3, x[1]))
+        passwd.sort(
+            key=lambda x: (1 if x[2] == "guest" else 2 if x[2] == "user" else 3, x[1])
+        )
         for user, pwhash, role in passwd:
-            fmtstr = '(%r, %r, %r)'
+            fmtstr = "(%r, %r, %r)"
             try:
                 # check if is it a hashlib call
                 if redbaron.RedBaron(pwhash):
-                    fmtstr = '(%r, %s, %r)'
+                    fmtstr = "(%r, %s, %r)"
             except Exception:
                 pass
             pwentry = fmtstr % (user, pwhash, role)
@@ -109,5 +111,5 @@ class DaemonSetup:
 
     def save(self):
         """Write the setup content to file."""
-        with open(self._filename, 'w', encoding='utf-8') as f:
+        with open(self._filename, "w", encoding="utf-8") as f:
             f.write(self.setup.dumps())

@@ -1,5 +1,5 @@
-description = 'setup for the NICOS watchdog'
-group = 'special'
+description = "setup for the NICOS watchdog"
+group = "special"
 
 # watch_conditions:
 # The entries in this list are dictionaries. Possible keys:
@@ -18,17 +18,19 @@ group = 'special'
 #     (default '')
 # 'action' -- code to execute if condition is true (default no code is executed)
 watch_conditions = [
-    dict(condition = 'LogSpace_status[0] == WARN',
-         message = 'Disk space for log files becomes too low.',
-         type = 'critical',
-         gracetime = 30,
-        ),
-    dict(condition = 'reactorpower_value < 19',
-         message = 'Possible Reactor Shutdown! Reactor power < 19MW',
-         type = 'critical',
-         setup = 'reactor',
-         gracetime = 300,
-        ),
+    dict(
+        condition="LogSpace_status[0] == WARN",
+        message="Disk space for log files becomes too low.",
+        type="critical",
+        gracetime=30,
+    ),
+    dict(
+        condition="reactorpower_value < 19",
+        message="Possible Reactor Shutdown! Reactor power < 19MW",
+        type="critical",
+        setup="reactor",
+        gracetime=300,
+    ),
     # dict(condition = 'He_pressure_value < 30',
     #      message = 'Pressure in He bottle less than 30bar. Please change soon!',
     #      type = 'default',
@@ -41,22 +43,24 @@ watch_conditions = [
     #      setup = 'selector',
     #      gracetime = 30,
     #     ),
-    dict(condition = 'DataSpace_value < 100',
-         message = 'data is running out of space. Only 100GB left!',
-         type = 'default',
-         setup = 'system',
-         gracetime = 300,
-        ),
+    dict(
+        condition="DataSpace_value < 100",
+        message="data is running out of space. Only 100GB left!",
+        type="default",
+        setup="system",
+        gracetime=300,
+    ),
 ]
 
 devices = dict(
-    Watchdog = device('nicos.services.watchdog.Watchdog',
+    Watchdog=device(
+        "nicos.services.watchdog.Watchdog",
         # use only 'localhost' if the cache is really running on
         # the same machine, otherwise use the official computer
         # name
-        cache = 'localhost',
+        cache="localhost",
         # notifiers = notifiers,
-        mailreceiverkey = 'email/receivers',
-        watch = watch_conditions,
+        mailreceiverkey="email/receivers",
+        watch=watch_conditions,
     ),
 )

@@ -26,8 +26,16 @@ Base monochromator class
 
 from math import pi, sqrt
 
-from nicos.core import MASTER, SIMULATION, ComputationError, Moveable, \
-    Override, ProgrammingError, oneof, status
+from nicos.core import (
+    MASTER,
+    SIMULATION,
+    ComputationError,
+    Moveable,
+    Override,
+    ProgrammingError,
+    oneof,
+    status,
+)
 
 THZ2MEV = 4.1356675
 ANG2MEV = 81.804165
@@ -35,36 +43,38 @@ ANG2MEV = 81.804165
 
 def from_k(value, unit):
     try:
-        if unit == 'A-1':
+        if unit == "A-1":
             return value
-        elif unit == 'A':
+        elif unit == "A":
             return 2.0 * pi / value
-        elif unit == 'meV':
-            return ANG2MEV * value ** 2 / (2 * pi) ** 2
-        elif unit == 'THz':
-            return ANG2MEV / THZ2MEV * value ** 2 / (2 * pi) ** 2
+        elif unit == "meV":
+            return ANG2MEV * value**2 / (2 * pi) ** 2
+        elif unit == "THz":
+            return ANG2MEV / THZ2MEV * value**2 / (2 * pi) ** 2
         else:
-            raise ProgrammingError('unknown energy unit %r' % unit)
+            raise ProgrammingError("unknown energy unit %r" % unit)
     except (ArithmeticError, ValueError) as err:
         raise ComputationError(
-            'cannot convert %s A-1 to %s: %s' % (value, unit, err)) from None
+            "cannot convert %s A-1 to %s: %s" % (value, unit, err)
+        ) from None
 
 
 def to_k(value, unit):
     try:
-        if unit == 'A-1':
+        if unit == "A-1":
             return value
-        elif unit == 'A':
+        elif unit == "A":
             return 2.0 * pi / value
-        elif unit == 'meV':
+        elif unit == "meV":
             return 2.0 * pi * sqrt(value / ANG2MEV)
-        elif unit == 'THz':
+        elif unit == "THz":
             return 2.0 * pi * sqrt(value * THZ2MEV / ANG2MEV)
         else:
-            raise ProgrammingError('unknown energy unit %r' % unit)
+            raise ProgrammingError("unknown energy unit %r" % unit)
     except (ArithmeticError, ValueError) as err:
         raise ComputationError(
-            'cannot convert %s A-1 to %s: %s' % (value, unit, err)) from None
+            "cannot convert %s A-1 to %s: %s" % (value, unit, err)
+        ) from None
 
 
 class Monochromator(Moveable):
@@ -82,21 +92,21 @@ class Monochromator(Moveable):
     hardware_access = False
 
     parameter_overrides = {
-        'unit': Override(default='A-1', type=oneof('A-1', 'A', 'meV', 'THz'),
-                         chatty=True),
-        'fmtstr': Override(default='%.3f'),
+        "unit": Override(
+            default="A-1", type=oneof("A-1", "A", "meV", "THz"), chatty=True
+        ),
+        "fmtstr": Override(default="%.3f"),
     }
 
     def doInit(self, mode):
-        if ('target' not in self._params or not self.target or
-            self.target == 'unknown'):
-            self._setROParam('target', from_k(to_k(0.73, 'A'), self.unit))
+        if "target" not in self._params or not self.target or self.target == "unknown":
+            self._setROParam("target", from_k(to_k(0.73, "A"), self.unit))
 
     def doStart(self, target):
         self._sim_setValue(target)
 
     def doIsAllowed(self, pos):
-        return True, ''
+        return True, ""
 
     def doRead(self, maxage=0):
         return self.target
@@ -109,17 +119,16 @@ class Monochromator(Moveable):
 
     def doWriteUnit(self, value):
         if self._cache:
-            self._cache.invalidate(self, 'value')
+            self._cache.invalidate(self, "value")
 
     def doUpdateUnit(self, value):
-        if 'unit' not in self._params:
+        if "unit" not in self._params:
             # this is the initial update
             return
         if self._mode not in (MASTER, SIMULATION):
             # change limits only from the master copy, or in simulation mode
             return
-        if 'target' in self._params and self.target and self.target != 'unknown':
+        if "target" in self._params and self.target and self.target != "unknown":
             # this should be still within the limits
-            self._setROParam(
-                'target', from_k(to_k(self.target, self.unit), value))
+            self._setROParam("target", from_k(to_k(self.target, self.unit), value))
         self.read(0)

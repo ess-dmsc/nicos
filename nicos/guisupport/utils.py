@@ -28,8 +28,16 @@ from os import path
 
 import gr
 
-from nicos.guisupport.qt import QApplication, QDoubleValidator, QFileDialog, \
-    QFont, QPalette, Qt, QValidator, QLocale
+from nicos.guisupport.qt import (
+    QApplication,
+    QDoubleValidator,
+    QFileDialog,
+    QFont,
+    QPalette,
+    Qt,
+    QValidator,
+    QLocale,
+)
 
 
 def savePlot(widget, default_file_type, old_file_path=None):
@@ -44,12 +52,16 @@ def savePlot(widget, default_file_type, old_file_path=None):
     """
     gr_file_types = {**gr.PRINT_TYPE, **gr.GRAPHIC_TYPE}
     save_types = ";;".join(sorted(set(gr_file_types.values())))
-    default_file = 'untitled'
+    default_file = "untitled"
     if old_file_path:
         default_file = path.splitext(old_file_path)[0]
-    file_path, _ = QFileDialog.getSaveFileName(None, 'Save as...',
-                                               default_file, filter=save_types,
-                                               initialFilter=default_file_type)
+    file_path, _ = QFileDialog.getSaveFileName(
+        None,
+        "Save as...",
+        default_file,
+        filter=save_types,
+        initialFilter=default_file_type,
+    )
     if not file_path:
         return "" if not old_file_path else old_file_path
 
@@ -95,19 +107,19 @@ def scaledFont(font, scale):
 
 
 class DoubleValidator(QDoubleValidator):
-
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setLocale(QLocale('C'))
+        self.setLocale(QLocale("C"))
 
     def validate(self, string, pos):
-        if ',' in string:
+        if "," in string:
             return QValidator.State.Invalid, string, pos
-        elif string.startswith('.'):
-            return QDoubleValidator.validate(self, '0' + string, pos + 1)
-        elif string.startswith('-.') or string.startswith('+.'):
+        elif string.startswith("."):
+            return QDoubleValidator.validate(self, "0" + string, pos + 1)
+        elif string.startswith("-.") or string.startswith("+."):
             return QDoubleValidator.validate(
-                self, '%s0%s' % (string[0], string[1:]), pos + 1)
+                self, "%s0%s" % (string[0], string[1:]), pos + 1
+            )
         return QDoubleValidator.validate(self, string, pos)
 
 

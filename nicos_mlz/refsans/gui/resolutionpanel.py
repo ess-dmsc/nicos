@@ -24,8 +24,12 @@
 from nicos.clients.gui.panels import Panel
 from nicos.clients.gui.utils import loadUi
 from nicos.core.errors import NicosError
-from nicos.guisupport.qt import QDialogButtonBox, QDoubleValidator, \
-    QMessageBox, pyqtSlot
+from nicos.guisupport.qt import (
+    QDialogButtonBox,
+    QDoubleValidator,
+    QMessageBox,
+    pyqtSlot,
+)
 from nicos.guisupport.widget import NicosWidget
 from nicos.utils import findResource
 
@@ -34,7 +38,6 @@ from nicos_mlz.refsans.lib.calculations import chopper_config
 
 
 class ResolutionPanel(NicosWidget, Panel):
-
     def __init__(self, parent, client, options):
         Panel.__init__(self, parent, client, options)
         self.setClient(client)
@@ -46,13 +49,13 @@ class ResolutionPanel(NicosWidget, Panel):
         else:
             self.buttonBox.rejected.connect(self.close)
 
-        self.wLmin.valueChanged['double'].connect(self.recalculate)
-        self.wLmax.valueChanged['double'].connect(self.recalculate)
-        self.gap.valueChanged['double'].connect(self.recalculate)
-        self.D.valueChanged['double'].connect(self.recalculate)
-        self.disc2_pos.valueChanged['int'].connect(self.recalculate)
+        self.wLmin.valueChanged["double"].connect(self.recalculate)
+        self.wLmax.valueChanged["double"].connect(self.recalculate)
+        self.gap.valueChanged["double"].connect(self.recalculate)
+        self.D.valueChanged["double"].connect(self.recalculate)
+        self.disc2_pos.valueChanged["int"].connect(self.recalculate)
         self.SC2_mode.currentIndexChanged.connect(self.recalculate)
-        self.periods.valueChanged['int'].connect(self.recalculate)
+        self.periods.valueChanged["int"].connect(self.recalculate)
         self.buttonBox.clicked.connect(self.createScript)
 
         self.ttd = TimeDistanceWidget()
@@ -62,12 +65,18 @@ class ResolutionPanel(NicosWidget, Panel):
         pass
 
     def initUi(self):
-        loadUi(self, findResource('nicos_mlz/refsans/gui/resolutionpanel.ui'))
+        loadUi(self, findResource("nicos_mlz/refsans/gui/resolutionpanel.ui"))
 
         valid = QDoubleValidator()
 
-        for f in (self.chSpeed, self.phase2, self.phase3, self.phase4,
-                  self.phase5, self.phase6):
+        for f in (
+            self.chSpeed,
+            self.phase2,
+            self.phase3,
+            self.phase4,
+            self.phase5,
+            self.phase6,
+        ):
             f.setValidator(valid)
             f.setReadOnly(True)
 
@@ -76,22 +85,26 @@ class ResolutionPanel(NicosWidget, Panel):
 
     def on_client_connected(self):
         missed_devices = []
-        for d in ('chSpeed', 'chRatio', 'chWL', 'chST'):
+        for d in ("chSpeed", "chRatio", "chWL", "chST"):
             try:
-                self.client.eval('%s.pollParam()', None)
+                self.client.eval("%s.pollParam()", None)
                 params = self.client.getDeviceParams(d)
                 for p, v in params.items():
-                    self._update_key('%s/%s' % (d, p), v)
+                    self._update_key("%s/%s" % (d, p), v)
             except (NicosError, NameError):
                 missed_devices += [d]
         if not missed_devices:
             self.recalculate()
         else:
-            QMessageBox.warning(self.parent().parent(), 'Error',
-                                'The following devices are not available:<br>'
-                                "'%s'" % ', '.join(missed_devices))
+            QMessageBox.warning(
+                self.parent().parent(),
+                "Error",
+                "The following devices are not available:<br>"
+                "'%s'" % ", ".join(missed_devices),
+            )
             self.buttonBox.removeButton(
-                self.buttonBox.button(QDialogButtonBox.StandardButton.Apply))
+                self.buttonBox.button(QDialogButtonBox.StandardButton.Apply)
+            )
 
     def _update_key(self, key, value):
         pass
@@ -102,23 +115,28 @@ class ResolutionPanel(NicosWidget, Panel):
         wlmax = self.wLmax.value()
         D = self.D.value()
         disk2 = self.disc2_pos.value()
-        gap = self.gap.value() / 100.
+        gap = self.gap.value() / 100.0
         speed, angles = chopper_config(wlmin, wlmax, D, disk2, gap=gap)
 
-        self.chSpeed.setText('%d rpm' % speed)
-        self.phase2.setText('%.2f deg' % angles[1])
-        self.phase3.setText('%.2f deg' % angles[2])
-        self.phase4.setText('%.2f deg' % angles[3])
-        self.phase5.setText('%.2f deg' % angles[4])
-        self.phase6.setText('%.2f deg' % angles[5])
+        self.chSpeed.setText("%d rpm" % speed)
+        self.phase2.setText("%.2f deg" % angles[1])
+        self.phase3.setText("%.2f deg" % angles[2])
+        self.phase4.setText("%.2f deg" % angles[3])
+        self.phase5.setText("%.2f deg" % angles[4])
+        self.phase6.setText("%.2f deg" % angles[5])
 
         nperiods = self.periods.value()
-        sc2_mode = 'normal_mode' if self.SC2_mode.currentIndex() == 0 else \
-            'virtual_disc2_pos_6'
+        sc2_mode = (
+            "normal_mode"
+            if self.SC2_mode.currentIndex() == 0
+            else "virtual_disc2_pos_6"
+        )
         self.ttd.plot(speed, angles, nperiods, disk2, D, sc2_mode)
 
-    @pyqtSlot('QAbstractButton *')
+    @pyqtSlot("QAbstractButton *")
     def createScript(self, button):
-        if self.buttonBox.standardButton(button) \
-                == QDialogButtonBox.StandardButton.Apply:
+        if (
+            self.buttonBox.standardButton(button)
+            == QDialogButtonBox.StandardButton.Apply
+        ):
             pass

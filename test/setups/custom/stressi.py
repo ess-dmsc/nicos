@@ -21,155 +21,187 @@
 #
 # *****************************************************************************
 
-name = 'test_stressi setup'
+name = "test_stressi setup"
 
-includes = ['stdsystem']
+includes = ["stdsystem"]
 
-stressi_sinklist = ['csink']
+stressi_sinklist = ["csink"]
 
 try:
     import quickyaml  # pylint: disable=unused-import
-    stressi_sinklist.append('ysink')
+
+    stressi_sinklist.append("ysink")
 except Exception:
     try:
         import yaml  # pylint: disable=unused-import
-        stressi_sinklist.append('ysink')
+
+        stressi_sinklist.append("ysink")
     except Exception:
         pass
 
 sysconfig = dict(
-    datasinks = stressi_sinklist,
+    datasinks=stressi_sinklist,
 )
 
 devices = dict(
-    tths = device('nicos.devices.generic.VirtualMotor',
-        abslimits = (-180, 180),
-        unit = 'deg',
+    tths=device(
+        "nicos.devices.generic.VirtualMotor",
+        abslimits=(-180, 180),
+        unit="deg",
     ),
-    phis = device('nicos.devices.generic.VirtualMotor',
-        unit = 'deg',
-        abslimits = (-720, 720),
+    phis=device(
+        "nicos.devices.generic.VirtualMotor",
+        unit="deg",
+        abslimits=(-720, 720),
     ),
-    chis = device('nicos.devices.generic.VirtualMotor',
-        unit = 'deg',
-        abslimits = (-180, 180),
+    chis=device(
+        "nicos.devices.generic.VirtualMotor",
+        unit="deg",
+        abslimits=(-180, 180),
     ),
-    xt = device('nicos.devices.generic.VirtualMotor',
-        unit = 'mm',
-        abslimits = (-120, 120),
+    xt=device(
+        "nicos.devices.generic.VirtualMotor",
+        unit="mm",
+        abslimits=(-120, 120),
     ),
-    yt = device('nicos.devices.generic.VirtualMotor',
-        unit = 'mm',
-        abslimits = (-120, 120),
+    yt=device(
+        "nicos.devices.generic.VirtualMotor",
+        unit="mm",
+        abslimits=(-120, 120),
     ),
-    zt = device('nicos.devices.generic.VirtualMotor',
-        unit = 'mm',
-        abslimits = (-0, 300),
+    zt=device(
+        "nicos.devices.generic.VirtualMotor",
+        unit="mm",
+        abslimits=(-0, 300),
     ),
-    omgm = device('nicos.devices.generic.VirtualMotor',
-        unit = 'deg',
-        abslimits = (-200, 200),
+    omgm=device(
+        "nicos.devices.generic.VirtualMotor",
+        unit="deg",
+        abslimits=(-200, 200),
     ),
-    tthm = device('nicos.devices.generic.VirtualMotor',
-        unit = 'deg',
-        abslimits = (50, 100),
+    tthm=device(
+        "nicos.devices.generic.VirtualMotor",
+        unit="deg",
+        abslimits=(50, 100),
     ),
-    slits = device('nicos.devices.generic.Slit',
-        left = device('nicos.devices.generic.VirtualMotor',
-            unit = 'mm',
-            abslimits = (-26, 10),
+    slits=device(
+        "nicos.devices.generic.Slit",
+        left=device(
+            "nicos.devices.generic.VirtualMotor",
+            unit="mm",
+            abslimits=(-26, 10),
         ),
-        right = device('nicos.devices.generic.VirtualMotor',
-            unit = 'mm',
-            abslimits = (-10, 26),
+        right=device(
+            "nicos.devices.generic.VirtualMotor",
+            unit="mm",
+            abslimits=(-10, 26),
         ),
-        bottom = device('nicos.devices.generic.VirtualMotor',
-            unit = 'mm',
-            abslimits = (-43, 10),
+        bottom=device(
+            "nicos.devices.generic.VirtualMotor",
+            unit="mm",
+            abslimits=(-43, 10),
         ),
-        top = device('nicos.devices.generic.VirtualMotor',
-            unit = 'mm',
-            abslimits = (-10, 43),
+        top=device(
+            "nicos.devices.generic.VirtualMotor",
+            unit="mm",
+            abslimits=(-10, 43),
         ),
-        opmode = 'centered',
+        opmode="centered",
     ),
-    slitm = device('nicos.devices.generic.TwoAxisSlit',
-        horizontal = device('nicos.devices.generic.VirtualMotor',
-            unit = 'mm',
-            abslimits = (0, 100),
+    slitm=device(
+        "nicos.devices.generic.TwoAxisSlit",
+        horizontal=device(
+            "nicos.devices.generic.VirtualMotor",
+            unit="mm",
+            abslimits=(0, 100),
         ),
-        vertical = device('nicos.devices.generic.VirtualMotor',
-            unit = 'mm',
-            abslimits = (0, 155),
-        ),
-    ),
-    slitp = device('nicos.devices.generic.TwoAxisSlit',
-        horizontal = device('nicos.devices.generic.VirtualMotor',
-            unit = 'mm',
-            abslimits = (0, 100),
-        ),
-        vertical = device('nicos.devices.generic.VirtualMotor',
-            unit = 'mm',
-            abslimits = (0, 155),
+        vertical=device(
+            "nicos.devices.generic.VirtualMotor",
+            unit="mm",
+            abslimits=(0, 155),
         ),
     ),
-    slite = device('nicos.devices.generic.VirtualMotor',
-        unit = 'mm',
-        abslimits = (0, 70),
-    ),
-    transm = device('nicos.devices.generic.Switcher',
-        moveable = device('nicos.devices.generic.VirtualMotor',
-            unit = 'mm',
-            abslimits = (-200, 200),
+    slitp=device(
+        "nicos.devices.generic.TwoAxisSlit",
+        horizontal=device(
+            "nicos.devices.generic.VirtualMotor",
+            unit="mm",
+            abslimits=(0, 100),
         ),
-        mapping = {
-            'Si': 0.292,
-            'PG': 30.292,
-            'Ge': 60.292,
+        vertical=device(
+            "nicos.devices.generic.VirtualMotor",
+            unit="mm",
+            abslimits=(0, 155),
+        ),
+    ),
+    slite=device(
+        "nicos.devices.generic.VirtualMotor",
+        unit="mm",
+        abslimits=(0, 70),
+    ),
+    transm=device(
+        "nicos.devices.generic.Switcher",
+        moveable=device(
+            "nicos.devices.generic.VirtualMotor",
+            unit="mm",
+            abslimits=(-200, 200),
+        ),
+        mapping={
+            "Si": 0.292,
+            "PG": 30.292,
+            "Ge": 60.292,
         },
-        precision = 0.01,
-        unit = '',
+        precision=0.01,
+        unit="",
     ),
-    wav = device('nicos_mlz.stressi.devices.wavelength.Wavelength',
-        omgm = 'omgm',
-        crystal = 'transm',
-        plane = '',
-        base = 'tthm',
-        unit = 'AA',
-        abslimits = (0.9, 2.5),
+    wav=device(
+        "nicos_mlz.stressi.devices.wavelength.Wavelength",
+        omgm="omgm",
+        crystal="transm",
+        plane="",
+        base="tthm",
+        unit="AA",
+        abslimits=(0.9, 2.5),
     ),
-    mon1 = device('nicos.devices.generic.VirtualCounter',
-        fmtstr = '%d',
-        type = 'monitor',
-        countrate = 1000.,
+    mon1=device(
+        "nicos.devices.generic.VirtualCounter",
+        fmtstr="%d",
+        type="monitor",
+        countrate=1000.0,
     ),
-    tim1 = device('nicos.devices.generic.VirtualTimer',
-        unit = 's',
+    tim1=device(
+        "nicos.devices.generic.VirtualTimer",
+        unit="s",
     ),
-    strimage = device('nicos.devices.generic.VirtualImage',
-        fmtstr = '%d',
-        size = (64, 64),
-        background = 0,
+    strimage=device(
+        "nicos.devices.generic.VirtualImage",
+        fmtstr="%d",
+        size=(64, 64),
+        background=0,
     ),
-    adet = device('nicos.devices.generic.Detector',
-        timers = ['tim1'],
-        monitors = ['mon1'],
-        images = ['strimage'],
-        maxage = 3,
-        pollinterval = 0.5,
+    adet=device(
+        "nicos.devices.generic.Detector",
+        timers=["tim1"],
+        monitors=["mon1"],
+        images=["strimage"],
+        maxage=3,
+        pollinterval=0.5,
     ),
-    ysink = device('nicos_mlz.stressi.datasinks.YamlDatafileSink',
-        filenametemplate = ['m2%(scancounter)08d.yaml'],
-        detectors = ['adet'],
+    ysink=device(
+        "nicos_mlz.stressi.datasinks.YamlDatafileSink",
+        filenametemplate=["m2%(scancounter)08d.yaml"],
+        detectors=["adet"],
     ),
-    csink = device('nicos_mlz.stressi.datasinks.CaressScanfileSink',
-        filenametemplate = ['m2%(scancounter)08d.dat'],
-        detectors = ['adet'],
+    csink=device(
+        "nicos_mlz.stressi.datasinks.CaressScanfileSink",
+        filenametemplate=["m2%(scancounter)08d.dat"],
+        detectors=["adet"],
     ),
-    tthm_r = device('nicos_mlz.stressi.devices.wavelength.TransformedMoveable',
-        dev = 'tthm',
-        informula = '1./0.5 * x - 11.5 / 0.5',
-        outformula = '0.5 * x + 11.5',
-        precision = 0.001,
+    tthm_r=device(
+        "nicos_mlz.stressi.devices.wavelength.TransformedMoveable",
+        dev="tthm",
+        informula="1./0.5 * x - 11.5 / 0.5",
+        outformula="0.5 * x + 11.5",
+        precision=0.001,
     ),
 )

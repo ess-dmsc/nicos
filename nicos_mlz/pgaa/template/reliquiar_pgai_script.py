@@ -6,20 +6,20 @@ detector_type = [_60p]
 time_value = 10800
 
 # beam preferences
-shutter_action = 'open'  # 'closed'
+shutter_action = "open"  # 'closed'
 atten_value = 100
-collimator = 'Col'  # 'Ell'
+collimator = "Col"  # 'Ell'
 
 # savefile infos
-sample_name = 'EK_Reliq'
+sample_name = "EK_Reliq"
 
-w_value = [225]    # 45deg for D1
+w_value = [225]  # 45deg for D1
 
 # x and y coordinates
-col_4 = (88.47, 73.77)    # col_1 = (88.47, 73.77) for D1 45deg
-col_3 = (96.97, 82.27)    # col_2 = (96.97, 82.27) for D1 45deg
-col_2 = (105.47, 90.77)   # col_3 = (105.47, 90.77) for D1 45deg
-col_1 = (113.97, 99.27)   # col_4 = (113.97, 99.27) for D1 45deg
+col_4 = (88.47, 73.77)  # col_1 = (88.47, 73.77) for D1 45deg
+col_3 = (96.97, 82.27)  # col_2 = (96.97, 82.27) for D1 45deg
+col_2 = (105.47, 90.77)  # col_3 = (105.47, 90.77) for D1 45deg
+col_1 = (113.97, 99.27)  # col_4 = (113.97, 99.27) for D1 45deg
 columns = [col_1, col_2, col_3, col_4]
 
 # z coordinates
@@ -27,17 +27,18 @@ rows = (45.31, 53.60, 61.89, 70.18, 78.47, 86.76)
 
 
 def take_pgaa(xt, yt, zt, w, shutter_action, col, row, t=2):
-    print('recording %.2f and %.2f and %.2f' % (xt, yt, zt))
-    info_string = 'D%dC%dR%d' % (t, col, row)
-    file_string = '_x_%.2f_y_%.2f_z_%.2f_w_%.0f' % (xt, yt, zt, w)
+    print("recording %.2f and %.2f and %.2f" % (xt, yt, zt))
+    info_string = "D%dC%dR%d" % (t, col, row)
+    file_string = "_x_%.2f_y_%.2f_z_%.2f_w_%.0f" % (xt, yt, zt, w)
     x.move(xt)
     y.move(yt)
     z.move(zt)
     wait(x, y, z)
     shutter.maw(shutter_action)
     count(info_string, LiveTime=time_value, Filename=file_string)
-    shutter.maw('closed')
-    print('spectra recorded and written to %s' % file_string)
+    shutter.maw("closed")
+    print("spectra recorded and written to %s" % file_string)
+
 
 SetDetectors(*detector_type)
 NewSample(sample_name)

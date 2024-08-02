@@ -1,6 +1,6 @@
-description = 'REFSANS setup for off state just observe pressure and temperature'
+description = "REFSANS setup for off state just observe pressure and temperature"
 
-group = 'basic'
+group = "basic"
 
 includes = [
     # 'autocollimator',
@@ -9,33 +9,33 @@ includes = [
     # 'b3h3',
     # 'backguard',
     # 'beamstop',
-    'chamber',
+    "chamber",
     #'chopper',
     #'chopperphasentiming',
     # 'detector',
-    'fak40',
+    "fak40",
     #'expertvibro8',
     # 'gonio',
     # 'gonio_top',
-    'guidehall',
+    "guidehall",
     # 'h2',
-    'humidity',
+    "humidity",
     # 'height',
-    'memograph',
-    'nl2b',
+    "memograph",
+    "nl2b",
     # 'optic_elements',
     # 'poti_ref',
     # 'prim_monitor',
-    'psutil',
-    'pumpstand',
+    "psutil",
+    "pumpstand",
     # 'qmesydaq',
-    'reactor',
+    "reactor",
     # 'resolution',
     # 'safedetectorsystem',
-    'safetysystem',
+    "safetysystem",
     # 'd_last_slit_sample',
     # 'samplechanger',
     # 'shutter',
     # 'shutter_gamma',
-    'vsd',
+    "vsd",
 ]

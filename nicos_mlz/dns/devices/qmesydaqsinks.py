@@ -32,23 +32,23 @@ from nicos.devices.entangle import CounterChannel
 class HistogramSinkHandler(DataSinkHandler):
     def prepare(self):
         self.manager.assignCounter(self.dataset)
-        filepaths = self.manager.getFilenames(self.dataset,
-                                              self.sink.filenametemplate,
-                                              self.sink.subdir)[1]
+        filepaths = self.manager.getFilenames(
+            self.dataset, self.sink.filenametemplate, self.sink.subdir
+        )[1]
         qmname = filepaths[0]
-        self.sink._attached_image._dev.SetProperties(['writehistogram', 'true'])
-        self.sink._attached_image._dev.SetProperties(['lasthistfile', qmname])
+        self.sink._attached_image._dev.SetProperties(["writehistogram", "true"])
+        self.sink._attached_image._dev.SetProperties(["lasthistfile", qmname])
 
 
 class ListmodeSinkHandler(DataSinkHandler):
     def prepare(self):
         self.manager.assignCounter(self.dataset)
-        filepaths = self.manager.getFilenames(self.dataset,
-                                              self.sink.filenametemplate,
-                                              self.sink.subdir)[1]
+        filepaths = self.manager.getFilenames(
+            self.dataset, self.sink.filenametemplate, self.sink.subdir
+        )[1]
         qmname = filepaths[0]
-        self.sink._attached_image._dev.SetProperties(['writelistmode', 'true'])
-        self.sink._attached_image._dev.SetProperties(['lastlistfile', qmname])
+        self.sink._attached_image._dev.SetProperties(["writelistmode", "true"])
+        self.sink._attached_image._dev.SetProperties(["lastlistfile", qmname])
         limage = self.sink._attached_liveimage
         if limage:
             limage._dev.filename = filepaths[0]
@@ -59,12 +59,10 @@ class ListmodeSinkHandler(DataSinkHandler):
 
 class QMesyDAQSink(FileSink):
     attached_devices = {
-        'image': Attach('Device to set the file name', Device),
+        "image": Attach("Device to set the file name", Device),
     }
 
-    parameter_overrides = {
-        'settypes': Override(default=[POINT])
-    }
+    parameter_overrides = {"settypes": Override(default=[POINT])}
 
 
 class HistogramSink(QMesyDAQSink):
@@ -75,8 +73,8 @@ class ListmodeSink(QMesyDAQSink):
     handlerclass = ListmodeSinkHandler
 
     attached_devices = {
-        'liveimage': Attach('device to set filename', Device, optional=True),
-        'tofchannel': Attach('device to get TOF settings', Device),
+        "liveimage": Attach("device to set filename", Device, optional=True),
+        "tofchannel": Attach("device to get TOF settings", Device),
     }
 
 

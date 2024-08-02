@@ -57,13 +57,14 @@ class KafkaProducer:
             documents for the full list of options.
         """
         config = {
-            'bootstrap.servers': ','.join(brokers),
-            'message.max.bytes': MAX_MESSAGE_SIZE,
+            "bootstrap.servers": ",".join(brokers),
+            "message.max.bytes": MAX_MESSAGE_SIZE,
         }
         self._producer = Producer({**config, **options})
 
-    def produce(self, topic_name, message, partition=-1, key=None,
-                on_delivery_callback=None):
+    def produce(
+        self, topic_name, message, partition=-1, key=None, on_delivery_callback=None
+    ):
         """Send a message to Kafka.
 
         :param topic_name: The topic to send to.
@@ -72,36 +73,44 @@ class KafkaProducer:
         :param key: The key to assign. Optional
         :param on_delivery_callback: The delivery callback. Optional.
         """
-        self._producer.produce(topic_name, message, partition=partition,
-                               key=key, on_delivery=on_delivery_callback)
+        self._producer.produce(
+            topic_name,
+            message,
+            partition=partition,
+            key=key,
+            on_delivery=on_delivery_callback,
+        )
         self._producer.flush()
 
 
 class ProducesKafkaMessages(DeviceMixinBase):
-    """ Device to produce messages to kafka. The method *send* can be used
+    """Device to produce messages to kafka. The method *send* can be used
     to produce a timestamped message onto the topic. Kafka brokers
     can be specified using the parameter *brokers*.
     """
 
     parameters = {
-        'brokers':
-            Param('List of kafka brokers to connect to',
-                  type=listof(host(defaultport=9092)),
-                  mandatory=True,
-                  preinit=True,
-                  userparam=False),
-        'max_request_size':
-            Param('Maximum size of kafka message',
-                  type=int,
-                  default=16000000,
-                  preinit=True,
-                  userparam=False),
+        "brokers": Param(
+            "List of kafka brokers to connect to",
+            type=listof(host(defaultport=9092)),
+            mandatory=True,
+            preinit=True,
+            userparam=False,
+        ),
+        "max_request_size": Param(
+            "Maximum size of kafka message",
+            type=int,
+            default=16000000,
+            preinit=True,
+            userparam=False,
+        ),
     }
 
     def doPreinit(self, mode):
         if mode != SIMULATION:
             self._producer = self._create_producer(
-                max_request_size=self.max_request_size)
+                max_request_size=self.max_request_size
+            )
         else:
             self._producer = None
 

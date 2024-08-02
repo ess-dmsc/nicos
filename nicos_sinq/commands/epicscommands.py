@@ -24,6 +24,7 @@
 This defines some commands for interfacing directly with EPICS from NICOS
 This is for us, for debugging
 """
+
 import epics
 
 from nicos import session
@@ -34,19 +35,19 @@ from nicos_sinq.devices.epics.motor import EpicsMotor as SinqEpicsMotor
 
 
 @hiddenusercommand
-@helparglist('PV-name,optionaL as_string')
+@helparglist("PV-name,optionaL as_string")
 def caget(PV, as_string=True):
     return epics.caget(PV, as_string)
 
 
 @hiddenusercommand
-@helparglist('PV-name,value')
+@helparglist("PV-name,value")
 def caput(PV, value):
     return epics.caput(PV, value)
 
 
 @hiddenusercommand
-@helparglist('PV-name')
+@helparglist("PV-name")
 def cainfo(PV):
     return epics.cainfo(PV)
 
@@ -54,17 +55,16 @@ def cainfo(PV):
 def _enableSetupMotors(function, *setupnames):
     for setupname in setupnames:
         if setupname not in session.loaded_setups:
-            session.log.warning('%r is not a loaded setup, ignoring',
-                                setupname)
+            session.log.warning("%r is not a loaded setup, ignoring", setupname)
             continue
-        for devname in session.getSetupInfo()[setupname]['devices']:
+        for devname in session.getSetupInfo()[setupname]["devices"]:
             device = session.getDevice(devname)
             if isinstance(device, SinqEpicsMotor):
                 function(device)
 
 
 @usercommand
-@helparglist('setup, ...')
+@helparglist("setup, ...")
 def DisableSetupMotors(*setupnames):
     """Disable all the motors (that are capable of that) in the setups.
 
@@ -76,7 +76,7 @@ def DisableSetupMotors(*setupnames):
 
 
 @usercommand
-@helparglist('setup, ...')
+@helparglist("setup, ...")
 def EnableSetupMotors(*setupnames):
     """Enable all the motors (that are capable of that) in the setups.
 

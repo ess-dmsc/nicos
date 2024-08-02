@@ -24,22 +24,21 @@
 """POLI monochromator switcher."""
 
 from nicos.core import NicosError, Param
-from nicos.devices.generic.switcher import \
-    MultiSwitcher as GenericMultiSwitcher
+from nicos.devices.generic.switcher import MultiSwitcher as GenericMultiSwitcher
 
 
 class MultiSwitcher(GenericMultiSwitcher):
     """MultiSwitcher for the POLI mono."""
 
     parameters = {
-        'changepos': Param('Change position of x_m', mandatory=True),
+        "changepos": Param("Change position of x_m", mandatory=True),
     }
 
     def doInit(self, mode):
         GenericMultiSwitcher.doInit(self, mode)
         self._xdev = self._attached_moveables[0]
-        if self._xdev.name != 'x_m':
-            raise NicosError(self, 'first attached device must be x_m')
+        if self._xdev.name != "x_m":
+            raise NicosError(self, "first attached device must be x_m")
 
     def _startRaw(self, target):
         # always first drive x_m to zero position

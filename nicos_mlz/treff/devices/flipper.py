@@ -34,8 +34,10 @@ class Flipper(MezeiFlipper):
     valuetype = oneof(UP, DOWN)
 
     def doRead(self, maxage=0):
-        if (abs(self._attached_corr.read(maxage)) > 0.05 or
-                    abs(self._attached_flip.read(maxage)) > 0.05):
+        if (
+            abs(self._attached_corr.read(maxage)) > 0.05
+            or abs(self._attached_flip.read(maxage)) > 0.05
+        ):
             return DOWN
         return UP
 

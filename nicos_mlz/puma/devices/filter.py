@@ -24,8 +24,17 @@
 
 """Class for PUMA PG filter."""
 
-from nicos.core import Attach, HasTimeout, Moveable, Override, Param, \
-    PositionError, Readable, oneof, status
+from nicos.core import (
+    Attach,
+    HasTimeout,
+    Moveable,
+    Override,
+    Param,
+    PositionError,
+    Readable,
+    oneof,
+    status,
+)
 
 
 class Filter(HasTimeout, Moveable):
@@ -40,26 +49,26 @@ class Filter(HasTimeout, Moveable):
     """
 
     attached_devices = {
-        'motor': Attach('rotation axis of filter device', Moveable),
-        'io_status': Attach('status of the limit switches', Readable),
-        'io_set': Attach('query bit to set filter in/out of beam', Moveable),
-        'io_press': Attach('air pressure status readout', Readable),
+        "motor": Attach("rotation axis of filter device", Moveable),
+        "io_status": Attach("status of the limit switches", Readable),
+        "io_set": Attach("query bit to set filter in/out of beam", Moveable),
+        "io_press": Attach("air pressure status readout", Readable),
     }
 
     parameters = {
-        'material': Param('Material of filter', type=str, mandatory=True),
-        'width': Param('Width of filter', unit='cm', mandatory=True),
-        'height': Param('Height of filter', unit='cm', mandatory=True),
-        'thickness': Param('Thickness of filter', unit='cm', mandatory=True),
-        'justpos': Param('...', mandatory=True),
+        "material": Param("Material of filter", type=str, mandatory=True),
+        "width": Param("Width of filter", unit="cm", mandatory=True),
+        "height": Param("Height of filter", unit="cm", mandatory=True),
+        "thickness": Param("Thickness of filter", unit="cm", mandatory=True),
+        "justpos": Param("...", mandatory=True),
     }
 
     parameter_overrides = {
-        'unit': Override(mandatory=False, default=''),
-        'timeout': Override(mandatory=False, default=5),
+        "unit": Override(mandatory=False, default=""),
+        "timeout": Override(mandatory=False, default=5),
     }
 
-    valuetype = oneof('in', 'out')
+    valuetype = oneof("in", "out")
 
     def doStart(self, target):
         motor = self._attached_motor
@@ -72,33 +81,35 @@ class Filter(HasTimeout, Moveable):
         if abs(motorpos - self.justpos) > 0.5:
             motorpos = motor.maw(0)
 
-        self._attached_io_set.start(1 if target == 'in' else 0)
+        self._attached_io_set.start(1 if target == "in" else 0)
         if self.wait() != target:
-            raise PositionError(self, 'device returned wrong position')
+            raise PositionError(self, "device returned wrong position")
 
         if (self.doStatus()[0] == status.OK) and (motorpos != self.justpos):
             motorpos = motor.maw(self.justpos)
-            self.log.info('rotation angle of filter: %s',
-                          motor.format(motorpos, unit=True))
+            self.log.info(
+                "rotation angle of filter: %s", motor.format(motorpos, unit=True)
+            )
 
     def doRead(self, maxage=0):
         res = self._attached_io_status.read(maxage)
         if res == 1:
-            return 'in'
+            return "in"
         elif res == 2:
-            return 'out'
+            return "out"
         elif res in [0, 3]:
-            raise PositionError(self, 'filter unit in error state, somewhere '
-                                'in between in/out')
+            raise PositionError(
+                self, "filter unit in error state, somewhere " "in between in/out"
+            )
         else:
-            raise PositionError(self, 'invalid value of I/O: %s' % res)
+            raise PositionError(self, "invalid value of I/O: %s" % res)
 
     def doStatus(self, maxage=0):
         s1 = self._attached_io_status.read(maxage)
         s2 = self._attached_motor.status(maxage)
         if s1 in [0, 3] or s2[0] == status.BUSY:
-            return status.BUSY, 'moving'
+            return status.BUSY, "moving"
         elif s1 in [1, 2] and s2[0] == status.IDLE:
-            return status.OK, 'idle'
+            return status.OK, "idle"
         else:
-            return status.ERROR, 'undefined state'
+            return status.ERROR, "undefined state"

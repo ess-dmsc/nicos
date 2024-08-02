@@ -28,8 +28,16 @@ from time import time as currenttime
 import numpy
 
 from nicos import session
-from nicos.core import Attach, Moveable, NicosError, Override, Param, \
-    intrange, listof, status
+from nicos.core import (
+    Attach,
+    Moveable,
+    NicosError,
+    Override,
+    Param,
+    intrange,
+    listof,
+    status,
+)
 from nicos.core.constants import INTERMEDIATE, SIMULATION
 from nicos.devices.entangle import TOFChannel
 from nicos.devices.generic.detector import Detector as GenericDetector
@@ -41,18 +49,26 @@ from nicos_mlz.toftof.devices.chopper import BaseChopperController
 class TOFTOFChannel(TOFChannel):
     # This class is, unfortunately, not agnostic to hw specifics
     parameters = {
-        'frametime': Param('Total width of all time bins in s',
-                           type=float, mandatory=False, volatile=True,
-                           default=0.1, category='general', settable=True,),
-        'monitorchannel': Param('Channel number of the monitor counter',
-                                type=intrange(1, 1024), settable=False,
-                                default=956,
-                                ),
+        "frametime": Param(
+            "Total width of all time bins in s",
+            type=float,
+            mandatory=False,
+            volatile=True,
+            default=0.1,
+            category="general",
+            settable=True,
+        ),
+        "monitorchannel": Param(
+            "Channel number of the monitor counter",
+            type=intrange(1, 1024),
+            settable=False,
+            default=956,
+        ),
     }
     parameter_overrides = {
-        'timechannels': Override(default=1024),
-        'timeinterval': Override(type=float, unit='s', volatile=True),
-        'delay':        Override(type=float, unit='s', volatile=True),
+        "timechannels": Override(default=1024),
+        "timeinterval": Override(type=float, unit="s", volatile=True),
+        "delay": Override(type=float, unit="s", volatile=True),
     }
 
     def doReadFrametime(self):
@@ -63,8 +79,9 @@ class TOFTOFChannel(TOFChannel):
 
         # as the HW can only realize selected values for timeinterval, probe
         # until success
-        wanted_timeinterval = int(
-            (value / self.doReadTimechannels()) / calc.ttr) * calc.ttr
+        wanted_timeinterval = (
+            int((value / self.doReadTimechannels()) / calc.ttr) * calc.ttr
+        )
         self.doWriteTimeinterval(wanted_timeinterval)
         # note: if a doReadTimeinterval differs in value from a previous
         #       doWriteTimeinterval,
@@ -101,78 +118,112 @@ class TOFTOFChannel(TOFChannel):
     def doWriteDelay(self, value):
         # our delay is in s, entangle is in ns, in multiple of calc.ttr
         self.doStop()
-        self.log.debug('set counter delay: %f s', value)
+        self.log.debug("set counter delay: %f s", value)
         value = int(value / calc.ttr) * int(calc.ttr * 1e9)
-        self.log.debug('set counter delay: %d ns', value)
+        self.log.debug("set counter delay: %d ns", value)
         self._dev.delay = value
 
     def doReadArray(self, quality):
         ndata = TOFChannel.doReadArray(self, quality)
-        self.readresult = [ndata[2:self.monitorchannel].sum() +
-                           ndata[self.monitorchannel + 1:].sum()]
+        self.readresult = [
+            ndata[2 : self.monitorchannel].sum()
+            + ndata[self.monitorchannel + 1 :].sum()
+        ]
         return ndata
 
 
 class Detector(GenericDetector):
-
     attached_devices = {
-        'rc': Attach('The Radial collimator', Moveable),
-        'chopper': Attach('The chopper controller', BaseChopperController),
-        'chdelay': Attach('Setting chopper delay', Moveable),
+        "rc": Attach("The Radial collimator", Moveable),
+        "chopper": Attach("The chopper controller", BaseChopperController),
+        "chdelay": Attach("Setting chopper delay", Moveable),
     }
 
     parameters = {
-        'monitorchannel': Param('Channel number of the monitor counter',
-                                settable=False, type=intrange(1, 1024),
-                                default=956, category='general',
-                                ),
-        'timechannels': Param('Number of time channels per detector channel',
-                              type=intrange(1, 4096), settable=True,
-                              default=1024, volatile=True,
-                              category='general',
-                              ),
-        'frametime': Param('Time interval between pulses',
-                           type=float, settable=True,
-                           default=0.0128571, volatile=True,
-                           category='general', unit='s',
-                           ),
-        'delay': Param('TOF frame delay',
-                       type=float, settable=True, volatile=True,
-                       default=162093*5e-8, fmtstr='%g',
-                       category='general', unit='s',
-                       ),
+        "monitorchannel": Param(
+            "Channel number of the monitor counter",
+            settable=False,
+            type=intrange(1, 1024),
+            default=956,
+            category="general",
+        ),
+        "timechannels": Param(
+            "Number of time channels per detector channel",
+            type=intrange(1, 4096),
+            settable=True,
+            default=1024,
+            volatile=True,
+            category="general",
+        ),
+        "frametime": Param(
+            "Time interval between pulses",
+            type=float,
+            settable=True,
+            default=0.0128571,
+            volatile=True,
+            category="general",
+            unit="s",
+        ),
+        "delay": Param(
+            "TOF frame delay",
+            type=float,
+            settable=True,
+            volatile=True,
+            default=162093 * 5e-8,
+            fmtstr="%g",
+            category="general",
+            unit="s",
+        ),
         # note: check if channelwidth is REALLY needed as it duplicates
         #       timeinterval
-        'channelwidth': Param('Duration of single time slot in units of 50ns',
-                              volatile=True, mandatory=False, settable=False,
-                              category='general', unit='ticks',
-                              ),
-        'timeinterval': Param('Duration of a single time slot',
-                              volatile=True, default=252*5e-8,
-                              category='general', unit='s',
-                              ),
-        'numinputs': Param('Number of detector channels',
-                           type=int, default=1006, category='general',
-                           ),
-        'rates': Param('The rates detected by the detector',
-                       settable=False, type=listof(listof(float)),
-                       userparam=True,
-                       category='status',
-                       ),
-        'userdelay': Param('Additional chopper delay', type=float,
-                           settable=True, default=0, unit='s',
-                           ),
-        'detinfofile': Param('Path to the detector-info file',
-                             type=str, settable=False,
-                             default='nicos_mlz/toftof/detinfo.dat',
-                             # mandatory=True,
-                             ),
+        "channelwidth": Param(
+            "Duration of single time slot in units of 50ns",
+            volatile=True,
+            mandatory=False,
+            settable=False,
+            category="general",
+            unit="ticks",
+        ),
+        "timeinterval": Param(
+            "Duration of a single time slot",
+            volatile=True,
+            default=252 * 5e-8,
+            category="general",
+            unit="s",
+        ),
+        "numinputs": Param(
+            "Number of detector channels",
+            type=int,
+            default=1006,
+            category="general",
+        ),
+        "rates": Param(
+            "The rates detected by the detector",
+            settable=False,
+            type=listof(listof(float)),
+            userparam=True,
+            category="status",
+        ),
+        "userdelay": Param(
+            "Additional chopper delay",
+            type=float,
+            settable=True,
+            default=0,
+            unit="s",
+        ),
+        "detinfofile": Param(
+            "Path to the detector-info file",
+            type=str,
+            settable=False,
+            default="nicos_mlz/toftof/detinfo.dat",
+            # mandatory=True,
+        ),
     }
 
     _last_time = 0
     _last_counts = 0
     _last_moncounts = 0
-    _user_comment = 'No comment'
+    _user_comment = "No comment"
 
     def doPreinit(self, mode):
         GenericDetector.doPreinit(self, mode)
@@ -184,7 +235,7 @@ class Detector(GenericDetector):
         self._import_detinfo()
 
     def doInfo(self):
-        for p in ('timechannels', 'timeinterval', 'delay', 'channelwidth'):
+        for p in ("timechannels", "timeinterval", "delay", "channelwidth"):
             self._pollParam(p)
         ret = GenericDetector.doInfo(self)
         return ret
@@ -192,40 +243,41 @@ class Detector(GenericDetector):
     def doSetPreset(self, **preset):
         GenericDetector.doSetPreset(self, **preset)
         if not self._user_comment:  # Comment must be fulfilled for data sink
-            self._user_comment = 'No comment'
+            self._user_comment = "No comment"
 
     def _update(self):
-        self.log.debug('reading chopper parameters')
+        self.log.debug("reading chopper parameters")
         chwl, chspeed, chratio, _, chst = self._attached_chopper._getparams()
 
         self.frametime = calc.calculateFrameTime(chspeed, chratio)
-        self.log.debug('setting frame time interval: %f', self.frametime)
+        self.log.debug("setting frame time interval: %f", self.frametime)
 
         if chspeed > 150:
             # calculate chopper delay from chopper parameters
-            self.log.debug('calculating chopper delay')
+            self.log.debug("calculating chopper delay")
             ch5_90deg_offset = self._attached_chopper.ch5_90deg_offset
-            _chdelay = calc.calculateChopperDelay(chwl, chspeed, chratio, chst,
-                                                  ch5_90deg_offset)
+            _chdelay = calc.calculateChopperDelay(
+                chwl, chspeed, chratio, chst, ch5_90deg_offset
+            )
 
             # select counter delay from chopper parameters
-            self.log.debug('calculating counter delay')
-            _ctrdelay = calc.calculateCounterDelay(chwl, chspeed, chratio,
-                                                   self.userdelay,
-                                                   ch5_90deg_offset)
+            self.log.debug("calculating counter delay")
+            _ctrdelay = calc.calculateCounterDelay(
+                chwl, chspeed, chratio, self.userdelay, ch5_90deg_offset
+            )
         else:
             _chdelay = 0
             _ctrdelay = 0
-        self.log.debug('setting chopper delay to: %g', _chdelay)
+        self.log.debug("setting chopper delay to: %g", _chdelay)
         self._attached_chdelay.move(_chdelay)
         self.doWriteDelay(_ctrdelay)
 
     def doStart(self):
         try:
-            if self._attached_rc.read(0) != 'on':
-                self.log.warning('radial collimator is not moving!')
+            if self._attached_rc.read(0) != "on":
+                self.log.warning("radial collimator is not moving!")
         except NicosError:
-            self.log.warning('could not check radial collimator', exc=1)
+            self.log.warning("could not check radial collimator", exc=1)
 
         self._update()
 
@@ -233,9 +285,9 @@ class Detector(GenericDetector):
         self._last_counts = 0
         self._last_moncounts = 0
         self._starttime = currenttime()
-        self._setROParam('rates', [[0., 0.], [0., 0.]])
+        self._setROParam("rates", [[0.0, 0.0], [0.0, 0.0]])
 
-        session.action('Run# %06d' % session.experiment.lastpoint)
+        session.action("Run# %06d" % session.experiment.lastpoint)
 
         GenericDetector.doStart(self)
 
@@ -257,16 +309,13 @@ class Detector(GenericDetector):
         monrate = monitor / meastime if meastime else 0
         if monitor == 0 and self._last_moncounts > 0:
             self._last_moncounts = 0
-        monrate_inst = (monitor - self._last_moncounts) / difftim if difftim \
-            else 0
+        monrate_inst = (monitor - self._last_moncounts) / difftim if difftim else 0
 
         detrate = counts / meastime if meastime else 0
         if counts == 0 and self._last_counts > 0:
             self._last_counts = 0
-        detrate_inst = (counts - self._last_counts) / difftim if difftim \
-            else 0
-        self._setROParam('rates', [[detrate, monrate],
-                                   [detrate_inst, monrate_inst]])
+        detrate_inst = (counts - self._last_counts) / difftim if difftim else 0
+        self._setROParam("rates", [[detrate, monrate], [detrate_inst, monrate_inst]])
         self._last_time = meastime
         self._last_counts = counts
         self._last_moncounts = monitor
@@ -276,10 +325,16 @@ class Detector(GenericDetector):
         ret = GenericDetector.duringMeasureHook(self, elapsed)
         if ret == INTERMEDIATE:
             [detrate, monrate], [detrate_inst, monrate_inst] = self.rates
-            self.log.info('Monitor: rate: %8.3f counts/s, instantaneous '
-                          'rate: %8.3f counts/s', monrate, monrate_inst)
-            self.log.info('Signal: rate: %8.3f counts/s, instantaneous '
-                          'rate: %8.3f counts/s', detrate, detrate_inst)
+            self.log.info(
+                "Monitor: rate: %8.3f counts/s, instantaneous " "rate: %8.3f counts/s",
+                monrate,
+                monrate_inst,
+            )
+            self.log.info(
+                "Signal: rate: %8.3f counts/s, instantaneous " "rate: %8.3f counts/s",
+                detrate,
+                detrate_inst,
+            )
         return ret
 
     def doReadDelay(self):
@@ -287,7 +342,7 @@ class Detector(GenericDetector):
         return self._attached_images[0].delay
 
     def doWriteDelay(self, value):
-        self.log.debug('setting counter delay to: %g', value)
+        self.log.debug("setting counter delay to: %g", value)
         self._attached_images[0].delay = value
 
     def doReadTimechannels(self):
@@ -311,7 +366,7 @@ class Detector(GenericDetector):
         return int(self.timeinterval / calc.ttr)
 
     def _import_detinfo(self):
-        with open(self.detinfofile, newline=None, encoding='utf-8') as fp:
+        with open(self.detinfofile, newline=None, encoding="utf-8") as fp:
             self._detinfo = list(fp)
 
         amap = {}  # maps "Total" (ElNr) to 2theta without 'None' detectors
@@ -319,24 +374,25 @@ class Detector(GenericDetector):
         dinfo = []  # dinfo[EntryNr]
         theta = []
         for line in self._detinfo:
-            if not line.startswith('#'):
+            if not line.startswith("#"):
                 ls = line.split()
-                if 'None' not in ls[13]:
+                if "None" not in ls[13]:
                     amap[int(ls[12])] = float(ls[5])
                 theta.append(float(ls[5]))
                 dmap.append(int(ls[12]))
                 dinfo.append(
-                    list(map(int, ls[:5])) + [float(ls[5])] +
-                    list(map(int, ls[6:8])) + [float(ls[8])] +
-                    list(map(int, ls[9:13])) +
-                    [' '.join(ls[13:-2]).strip("'")] +
-                    list(map(int, ls[-2:]))
+                    list(map(int, ls[:5]))
+                    + [float(ls[5])]
+                    + list(map(int, ls[6:8]))
+                    + [float(ls[8])]
+                    + list(map(int, ls[9:13]))
+                    + [" ".join(ls[13:-2]).strip("'")]
+                    + list(map(int, ls[-2:]))
                 )
 
         inds = numpy.array(theta).argsort()
         self._detectormap = numpy.array(dmap)[inds].tolist()
         self._detinfolength = len(dinfo)
         self._detinfo_parsed = dinfo
-        self.log.debug('%s', self._detinfo_parsed)
-        self._anglemap = tuple((i - 1) for i in sorted(amap,
-                                                       key=amap.__getitem__))
+        self.log.debug("%s", self._detinfo_parsed)
+        self._anglemap = tuple((i - 1) for i in sorted(amap, key=amap.__getitem__))

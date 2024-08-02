@@ -21,42 +21,48 @@
 #
 # *****************************************************************************
 
-name = 'test detector setup'
+name = "test detector setup"
 
-includes = ['stdsystem']
+includes = ["stdsystem"]
 
 devices = dict(
-    timer = device('nicos.devices.generic.VirtualTimer',
-        visibility = (),
+    timer=device(
+        "nicos.devices.generic.VirtualTimer",
+        visibility=(),
     ),
-    mon1 = device('nicos.devices.generic.VirtualCounter',
-        visibility = (),
-        type = 'monitor',
-        countrate = 1000.,
-        fmtstr = '%d',
+    mon1=device(
+        "nicos.devices.generic.VirtualCounter",
+        visibility=(),
+        type="monitor",
+        countrate=1000.0,
+        fmtstr="%d",
     ),
-    ctr1 = device('nicos.devices.generic.VirtualCounter',
-        visibility = (),
-        type = 'counter',
-        countrate = 2000.,
-        fmtstr = '%d',
+    ctr1=device(
+        "nicos.devices.generic.VirtualCounter",
+        visibility=(),
+        type="counter",
+        countrate=2000.0,
+        fmtstr="%d",
     ),
-    ctr2 = device('nicos.devices.generic.VirtualCounter',
-        visibility = (),
-        type = 'counter',
-        countrate = 120.,
-        fmtstr = '%d',
+    ctr2=device(
+        "nicos.devices.generic.VirtualCounter",
+        visibility=(),
+        type="counter",
+        countrate=120.0,
+        fmtstr="%d",
     ),
-    img = device('nicos.devices.generic.VirtualImage',
-        visibility = (),
-        background = 0,
+    img=device(
+        "nicos.devices.generic.VirtualImage",
+        visibility=(),
+        background=0,
     ),
-    det = device('nicos.devices.generic.Detector',
-        timers = ['timer'],
-        monitors = ['mon1'],
-        counters = ['ctr1', 'ctr2'],
-        images = ['img'],
-        maxage = 3,
-        pollinterval = 0.5,
+    det=device(
+        "nicos.devices.generic.Detector",
+        timers=["timer"],
+        monitors=["mon1"],
+        counters=["ctr1", "ctr2"],
+        images=["img"],
+        maxage=3,
+        pollinterval=0.5,
     ),
 )

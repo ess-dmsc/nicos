@@ -9,7 +9,7 @@
 read()
 status()
 
-SetDetectors('area_detector_collector')
+SetDetectors("area_detector_collector")
 
 hama_image_type.move(3)
 hama_image_type.move(0)

@@ -30,80 +30,85 @@ from time import time as currenttime
 from nicos.core import Attach, CacheLockError, Override
 from nicos.core.sessions.utils import sessionInfo
 from nicos.devices.cacheclient import BaseCacheClient
-from nicos.protocols.cache import BUFSIZE, END_MARKER, OP_ASK, OP_SUBSCRIBE, \
-    OP_TELL, OP_TELLOLD, cache_load
+from nicos.protocols.cache import (
+    BUFSIZE,
+    END_MARKER,
+    OP_ASK,
+    OP_SUBSCRIBE,
+    OP_TELL,
+    OP_TELLOLD,
+    cache_load,
+)
 from nicos.services.elog.handler import Handler
 from nicos.utils import timedRetryOnExcept
 
 
 class Logbook(BaseCacheClient):
-
     attached_devices = {
-        'handlers': Attach('The handlers for incoming data', Handler,
-                           multiple=True),
+        "handlers": Attach("The handlers for incoming data", Handler, multiple=True),
     }
 
     parameter_overrides = {
-        'prefix': Override(default='logbook/', mandatory=False),
+        "prefix": Override(default="logbook/", mandatory=False),
     }
 
     def doInit(self, mode):
         BaseCacheClient.doInit(self, mode)
         # the execution master lock needs to be refreshed every now and then
         self._islocked = False
-        self._lock_expires = 0.
-        self._locktimeout = 5.
+        self._lock_expires = 0.0
+        self._locktimeout = 5.0
 
     def _connect_action(self):
-
-        @timedRetryOnExcept(max_retries=1, timeout=self._locktimeout,
-                            ex=CacheLockError)
+        @timedRetryOnExcept(max_retries=1, timeout=self._locktimeout, ex=CacheLockError)
         def trylock():
-            return self.lock('elog')
+            return self.lock("elog")
 
         try:
             trylock()
         except CacheLockError as err:
-            self.log.info('another elog is already active: %s',
-                          sessionInfo(err.locked_by))
+            self.log.info(
+                "another elog is already active: %s", sessionInfo(err.locked_by)
+            )
             sys.exit(-1)
         else:
             self._islocked = True
 
         # request current directory for the handler to start up correctly
-        msg = f'@{self._prefix}directory{OP_ASK}\n{END_MARKER}{OP_ASK}\n'
+        msg = f"@{self._prefix}directory{OP_ASK}\n{END_MARKER}{OP_ASK}\n"
         self._socket.sendall(msg.encode())
 
         # read response
-        data, n = b'', 0
-        sentinel = (END_MARKER + OP_TELLOLD + '\n').encode()
+        data, n = b"", 0
+        sentinel = (END_MARKER + OP_TELLOLD + "\n").encode()
         while not data.endswith(sentinel) and n < 1000:
             data += self._socket.recv(BUFSIZE)
             n += 1
 
-        self.storeSysInfo('elog')
+        self.storeSysInfo("elog")
 
         # send request for all relevant updates
-        msg = f'@{self._prefix}{OP_SUBSCRIBE}\n'
+        msg = f"@{self._prefix}{OP_SUBSCRIBE}\n"
         self._socket.sendall(msg.encode())
 
         self._process_data(data)
 
     def _handle_msg(self, time, ttlop, ttl, tsop, key, op, value):
-        self.log.debug('got %s, op: %s', key, op)
-        if op not in (OP_TELL, ) or not key.startswith(self._prefix):
+        self.log.debug("got %s, op: %s", key, op)
+        if op not in (OP_TELL,) or not key.startswith(self._prefix):
             return
-        key = key[len(self._prefix):]
+        key = key[len(self._prefix) :]
         time = time and float(time)
-        self.log.debug('got %s=%r', key, value)
+        self.log.debug("got %s=%r", key, value)
         value = cache_load(value)
         for handler in self._attached_handlers:
             try:
                 handler.handle(key, time, value)
             except Exception:
-                self.log.exception('Error in %s for: %s=%r',
-                                   handler.__class__.__name__, key, value)
-        if key in ('attachment', 'image'):
+                self.log.exception(
+                    "Error in %s for: %s=%r", handler.__class__.__name__, key, value
+                )
+        if key in ("attachment", "image"):
             for fn in value[1]:
                 unlink(fn)
 
@@ -112,10 +117,10 @@ class Logbook(BaseCacheClient):
             time = currenttime()
             if time > self._lock_expires:
                 self._lock_expires = time + self._locktimeout - 1
-                self.lock('elog', self._locktimeout)
+                self.lock("elog", self._locktimeout)
 
     def _disconnect(self, why=None):
         if self._islocked and self._stoprequest and self._connected:
             self._islocked = False
-            self.unlock('elog')
+            self.unlock("elog")
         BaseCacheClient._disconnect(self, why)

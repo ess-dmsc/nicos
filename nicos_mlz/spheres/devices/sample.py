@@ -35,39 +35,44 @@ from nicos.utils import HardwareStub
 
 class TemperatureController(entangle.TemperatureController):
     parameter_overrides = {
-        'heateroutput': Override(type=anytype),
+        "heateroutput": Override(type=anytype),
     }
 
     attached_devices = {
-        'heater': Attach('Heater of the device',
-                         entangle.NamedDigitalOutput)
+        "heater": Attach("Heater of the device", entangle.NamedDigitalOutput)
     }
 
     def doReadHeateroutput(self):
-        if self._attached_heater.read() == 'off':
-            return 'OFF'
+        if self._attached_heater.read() == "off":
+            return "OFF"
         return entangle.TemperatureController.doReadHeateroutput(self)
 
 
 class SEController(entangle.TemperatureController):
-    """Controller to set Temperature
-    """
+    """Controller to set Temperature"""
 
     attached_devices = {
-        'samplecontroller': Attach('Controller of the sampletemperature',
-                                   TemperatureController),
-        'tubecontroller':   Attach('Controller of the tubetemperature',
-                                   TemperatureController)
+        "samplecontroller": Attach(
+            "Controller of the sampletemperature", TemperatureController
+        ),
+        "tubecontroller": Attach(
+            "Controller of the tubetemperature", TemperatureController
+        ),
     }
 
     parameters = {
-        'tubeoffset':  Param('Keep tube this many degrees below the setpoint.',
-                             volatile=True, settable=True),
-        'samplestick': Param('Sample stick currently in use',
-                             type=oneof('lt', 'ht'),
-                             volatile=True, settable=True),
-        'devtarget':   Param('Target of the underlying entangle device',
-                             volatile=True)
+        "tubeoffset": Param(
+            "Keep tube this many degrees below the setpoint.",
+            volatile=True,
+            settable=True,
+        ),
+        "samplestick": Param(
+            "Sample stick currently in use",
+            type=oneof("lt", "ht"),
+            volatile=True,
+            settable=True,
+        ),
+        "devtarget": Param("Target of the underlying entangle device", volatile=True),
     }
 
     def rushTemperature(self, temperature):
@@ -122,11 +127,14 @@ class PressureController(entangle.TemperatureController):
     """
 
     parameters = {
-        'controller':        Param('SEController device name', type=tangodev,
-                                   mandatory=True, preinit=True),
-        'pressuretolerance': Param('Tolerance for the adjustment of the '
-                                   'pressure',
-                                   settable=True, volatile=True)
+        "controller": Param(
+            "SEController device name", type=tangodev, mandatory=True, preinit=True
+        ),
+        "pressuretolerance": Param(
+            "Tolerance for the adjustment of the " "pressure",
+            settable=True,
+            volatile=True,
+        ),
     }
 
     def doPreinit(self, mode):
@@ -141,8 +149,11 @@ class PressureController(entangle.TemperatureController):
         cval = self._dev.value
 
         if cval - self.pressuretolerance < target < cval + self.pressuretolerance:
-            self.log.warning('Pressure already within tolerance of %.2f mbar ',
-                             self.pressuretolerance, target)
+            self.log.warning(
+                "Pressure already within tolerance of %.2f mbar ",
+                self.pressuretolerance,
+                target,
+            )
         else:
             self._controller.setPressure(target)
 

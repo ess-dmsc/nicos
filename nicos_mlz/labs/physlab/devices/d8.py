@@ -31,35 +31,35 @@ class D8(Readable):
 
     register_mapping = {
         # (register index, bit number, bit_value): msg_txt
-        (0, 0, True): 'X-Ray Generator alarm pending',
-        (0, 1, True): 'Goniometer not mounted',
-        (0, 2, True): 'Rear panel not mounted',
+        (0, 0, True): "X-Ray Generator alarm pending",
+        (0, 1, True): "Goniometer not mounted",
+        (0, 2, True): "Rear panel not mounted",
         # ignore this error, as it will always be present when the generator is
         # off
         # (0, 4, False): 'X-Ray display faulty',
-        (0, 7, False): 'Right door switches faulty',
-        (1, 0, False): 'Left door switches faulty',
-        (1, 1, False): 'Tube window switches faulty',
-        (1, 2, False): 'Tube window open dispaly faulty',
-        (1, 3, False): 'X-Ray on display faulty',
-        (2, 0, True): 'Primary optics not mounted',
-        (2, 1, True): 'Tube mount not mounted',
+        (0, 7, False): "Right door switches faulty",
+        (1, 0, False): "Left door switches faulty",
+        (1, 1, False): "Tube window switches faulty",
+        (1, 2, False): "Tube window open dispaly faulty",
+        (1, 3, False): "X-Ray on display faulty",
+        (2, 0, True): "Primary optics not mounted",
+        (2, 1, True): "Tube mount not mounted",
     }
 
     attached_devices = {
-        'registers': Attach('Voltage channel of the xray generator', Readable),
+        "registers": Attach("Voltage channel of the xray generator", Readable),
     }
 
     parameters = {
-        'ldoor': Param('Status of the left door', type=str, volatile=True),
-        'rdoor': Param('Status of the right door', type=str, volatile=True),
+        "ldoor": Param("Status of the left door", type=str, volatile=True),
+        "rdoor": Param("Status of the right door", type=str, volatile=True),
     }
 
     def _reg(self):
         return list(map(int, self._attached_registers.read()))
 
     def doRead(self, maxage=0):
-        return ','.join(self._errors())
+        return ",".join(self._errors())
 
     def _errors(self):
         reg = self._reg()
@@ -73,25 +73,25 @@ class D8(Readable):
     def doReadLdoor(self):
         reg = self._reg()
         if reg[2] & (1 << 3) > 0:
-            return 'locked'
+            return "locked"
         elif reg[1] & (1 << 5) == 0:
-            return 'closed'
-        return 'open'
+            return "closed"
+        return "open"
 
     def doReadRdoor(self):
         reg = self._reg()
         if reg[2] & (1 << 2) > 0:
-            return 'locked'
+            return "locked"
         elif reg[1] & (1 << 4) == 0:
-            return 'closed'
-        return 'open'
+            return "closed"
+        return "open"
 
     def doStatus(self, maxage=0):
         er = self._errors()
         if len(er) > 0:
-            return status.ERROR, 'components faulty: %s' %  er
-        return status.OK, 'idle'
+            return status.ERROR, "components faulty: %s" % er
+        return status.OK, "idle"
 
     def doPoll(self, n, maxage):
-        self._pollParam('ldoor', 1)
-        self._pollParam('rdoor', 1)
+        self._pollParam("ldoor", 1)
+        self._pollParam("rdoor", 1)

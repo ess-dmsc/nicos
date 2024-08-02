@@ -24,14 +24,26 @@
 # *****************************************************************************
 
 """NICOS GUI main window."""
+
 from os import path
 from time import time as current_time
 
 from nicos.clients.flowui import uipath
 from nicos.clients.flowui.panels import get_icon, root_path
 from nicos.clients.gui.mainwindow import MainWindow as DefaultMainWindow
-from nicos.guisupport.qt import QApplication, QFileDialog, QIcon, QLabel, \
-    QMenu, QPixmap, QPoint, QSizePolicy, Qt, QWidget, pyqtSlot
+from nicos.guisupport.qt import (
+    QApplication,
+    QFileDialog,
+    QIcon,
+    QLabel,
+    QMenu,
+    QPixmap,
+    QPoint,
+    QSizePolicy,
+    Qt,
+    QWidget,
+    pyqtSlot,
+)
 
 
 def decolor_logo(pixmap, color):
@@ -44,15 +56,14 @@ def decolor_logo(pixmap, color):
 class Spacer(QWidget):
     def __init__(self, parent=None):
         QWidget.__init__(self, parent)
-        self.setSizePolicy(QSizePolicy.Policy.Expanding,
-                           QSizePolicy.Policy.Preferred)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
 
 
 class MainWindow(DefaultMainWindow):
-    ui = path.join(uipath, 'main.ui')
-    default_facility_logo = ':/ess-logo-auth'
+    ui = path.join(uipath, "main.ui")
+    default_facility_logo = ":/ess-logo-auth"
 
-    def __init__(self, log, gui_conf, viewonly=False, tunnel=''):
+    def __init__(self, log, gui_conf, viewonly=False, tunnel=""):
         DefaultMainWindow.__init__(self, log, gui_conf, viewonly, tunnel)
         self.client.experiment.connect(self._update_toolbar_info)
         self.add_logo()
@@ -60,14 +71,14 @@ class MainWindow(DefaultMainWindow):
         self.style_file = gui_conf.stylefile
 
         self.editor_wintype = self.gui_conf.find_panel(
-            ('editor.EditorPanel',
-             'nicos.clients.flowui.panels.editor.EditorPanel'))
+            ("editor.EditorPanel", "nicos.clients.flowui.panels.editor.EditorPanel")
+        )
         self.history_wintype = self.gui_conf.find_panel(
-            ('history.HistoryPanel',
-             'nicos.clients.flowui.panels.history.HistoryPanel'))
+            ("history.HistoryPanel", "nicos.clients.flowui.panels.history.HistoryPanel")
+        )
 
         # Cheeseburger menu
-        dropdown = QMenu('')
+        dropdown = QMenu("")
         dropdown.addAction(self.actionConnect)
         dropdown.addAction(self.actionViewOnly)
         dropdown.addAction(self.actionPreferences)
@@ -85,9 +96,9 @@ class MainWindow(DefaultMainWindow):
 
     def _init_toolbar(self):
         self.status_label = QLabel()
-        self.status_label.setStyleSheet('font-size: 17pt; font-weight: bold')
+        self.status_label.setStyleSheet("font-size: 17pt; font-weight: bold")
         self.status_text = QLabel()
-        self.status_text.setStyleSheet('font-size: 17pt')
+        self.status_text.setStyleSheet("font-size: 17pt")
 
         self.toolbar = self.toolBarRight
         self.toolbar.addWidget(self.status_text)
@@ -95,81 +106,86 @@ class MainWindow(DefaultMainWindow):
 
     def _init_experiment_name(self):
         self.experiment_label = QLabel()
-        self.experiment_label.setSizePolicy(QSizePolicy.Policy.Expanding,
-                                            QSizePolicy.Policy.Preferred)
-        self.experiment_label.setStyleSheet('font-size: 17pt; '
-                                            'font-weight: bold')
+        self.experiment_label.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred
+        )
+        self.experiment_label.setStyleSheet("font-size: 17pt; " "font-weight: bold")
         self.toolBarMain.addWidget(self.experiment_label)
 
         self.experiment_text = QLabel()
-        self.experiment_text.setSizePolicy(QSizePolicy.Policy.Expanding,
-                                           QSizePolicy.Policy.Preferred)
-        self.experiment_text.setStyleSheet('font-size: 17pt')
+        self.experiment_text.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred
+        )
+        self.experiment_text.setStyleSheet("font-size: 17pt")
         self.toolBarMain.addWidget(self.experiment_text)
 
     def _init_instrument_name(self):
         self.instrument_label = QLabel()
-        self.instrument_label.setSizePolicy(QSizePolicy.Policy.Expanding,
-                                            QSizePolicy.Policy.Preferred)
-        self.instrument_label.setStyleSheet('font-size: 17pt; '
-                                            'font-weight: bold')
+        self.instrument_label.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred
+        )
+        self.instrument_label.setStyleSheet("font-size: 17pt; " "font-weight: bold")
         self.toolBarMain.addWidget(self.instrument_label)
 
         self.instrument_text = QLabel()
-        self.instrument_text.setSizePolicy(QSizePolicy.Policy.Expanding,
-                                           QSizePolicy.Policy.Preferred)
-        self.instrument_text.setStyleSheet('font-size: 17pt')
+        self.instrument_text.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred
+        )
+        self.instrument_text.setStyleSheet("font-size: 17pt")
         self.toolBarMain.addWidget(self.instrument_text)
 
     def set_icons(self):
-        self.actionUser.setIcon(get_icon('settings_applications-24px.svg'))
-        self.actionEmergencyStop.setIcon(
-            get_icon('emergency_stop_cross_red-24px.svg')
-        )
-        self.actionConnect.setIcon(get_icon('power-24px.svg'))
-        self.actionExit.setIcon(get_icon('exit_to_app-24px.svg'))
-        self.actionViewOnly.setIcon(get_icon('lock-24px.svg'))
-        self.actionPreferences.setIcon(get_icon('tune-24px.svg'))
-        self.actionExpert.setIcon(get_icon('fingerprint-24px.svg'))
+        self.actionUser.setIcon(get_icon("settings_applications-24px.svg"))
+        self.actionEmergencyStop.setIcon(get_icon("emergency_stop_cross_red-24px.svg"))
+        self.actionConnect.setIcon(get_icon("power-24px.svg"))
+        self.actionExit.setIcon(get_icon("exit_to_app-24px.svg"))
+        self.actionViewOnly.setIcon(get_icon("lock-24px.svg"))
+        self.actionPreferences.setIcon(get_icon("tune-24px.svg"))
+        self.actionExpert.setIcon(get_icon("fingerprint-24px.svg"))
 
     def add_logo(self):
         spacer = QWidget()
         spacer.setMinimumWidth(20)
-        spacer.setSizePolicy(QSizePolicy.Policy.Expanding,
-                             QSizePolicy.Policy.Expanding)
+        spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.toolBarMain.insertWidget(self.toolBarMain.actions()[0], spacer)
 
         nicos_label = QLabel()
-        pxr = decolor_logo(QPixmap(path.join(root_path, 'resources',
-                                             'nicos-logo-high.svg')),
-                           Qt.GlobalColor.white)
-        nicos_label.setPixmap(pxr.scaledToHeight(
-            self.toolBarMain.height(),
-            Qt.TransformationMode.SmoothTransformation))
-        self.toolBarMain.insertWidget(self.toolBarMain.actions()[1],
-                                      nicos_label)
+        pxr = decolor_logo(
+            QPixmap(path.join(root_path, "resources", "nicos-logo-high.svg")),
+            Qt.GlobalColor.white,
+        )
+        nicos_label.setPixmap(
+            pxr.scaledToHeight(
+                self.toolBarMain.height(), Qt.TransformationMode.SmoothTransformation
+            )
+        )
+        self.toolBarMain.insertWidget(self.toolBarMain.actions()[1], nicos_label)
 
     def update_instrument_text(self):
-        instrument = self.client.eval('session.instrument', None)
-        self.instrument_label.setText('Instrument:')
+        instrument = self.client.eval("session.instrument", None)
+        self.instrument_label.setText("Instrument:")
         if instrument:
-            logo = decolor_logo(QPixmap(path.join(root_path,
-                                'resources', f'{instrument}-logo.svg')),
-                                Qt.GlobalColor.white)
+            logo = decolor_logo(
+                QPixmap(path.join(root_path, "resources", f"{instrument}-logo.svg")),
+                Qt.GlobalColor.white,
+            )
             if logo.isNull():
                 self.instrument_text.setText(instrument.upper())
                 return
-            self.instrument_text.setPixmap(logo.scaledToHeight(
-                self.toolBarMain.height(),
-                Qt.TransformationMode.SmoothTransformation))
+            self.instrument_text.setPixmap(
+                logo.scaledToHeight(
+                    self.toolBarMain.height(),
+                    Qt.TransformationMode.SmoothTransformation,
+                )
+            )
         else:
-            self.instrument_text.setText('UNKNOWN')
+            self.instrument_text.setText("UNKNOWN")
 
     def update_experiment_text(self):
         max_text_length = 50
-        experiment = self.client.eval('session.experiment.title', None)
+        experiment = self.client.eval("session.experiment.title", None)
         if experiment is not None:
-            self.experiment_label.setText('     Experiment:')
+            self.experiment_label.setText("     Experiment:")
             self.experiment_text.setText(experiment[0:max_text_length])
 
     def reloadQSS(self):
@@ -177,14 +193,15 @@ class MainWindow(DefaultMainWindow):
 
     def selectQSS(self):
         style_file = QFileDialog.getOpenFileName(
-            self, filter='Qt Stylesheet Files (*.qss)')[0]
+            self, filter="Qt Stylesheet Files (*.qss)"
+        )[0]
         if style_file:
             self.style_file = style_file
             self.setQSS(self.style_file)
 
     @staticmethod
     def setQSS(style_file):
-        with open(style_file, 'r', encoding='utf-8') as fd:
+        with open(style_file, "r", encoding="utf-8") as fd:
             try:
                 QApplication.instance().setStyleSheet(fd.read())
             except Exception as e:
@@ -193,31 +210,33 @@ class MainWindow(DefaultMainWindow):
     def setStatus(self, status, exception=False):
         if status == self.current_status:
             return
-        if self.client.last_action_at and \
-           self.current_status == 'running' and \
-           status in ('idle', 'paused') and \
-           current_time() - self.client.last_action_at > 20:
+        if (
+            self.client.last_action_at
+            and self.current_status == "running"
+            and status in ("idle", "paused")
+            and current_time() - self.client.last_action_at > 20
+        ):
             # show a visual indication of what happened
-            if status == 'paused':
-                msg = 'Script is now paused.'
+            if status == "paused":
+                msg = "Script is now paused."
             elif exception:
-                msg = 'Script has exited with an error.'
+                msg = "Script has exited with an error."
             else:
-                msg = 'Script has finished.'
+                msg = "Script has finished."
             self.trayIcon.showMessage(self.instrument, msg)
             self.client.last_action_at = 0
         self.current_status = status
         self._update_toolbar_info()
         self._update_status_text()
         # new status icon
-        pixmap = QPixmap(':/' + status + ('exc' if exception else ''))
+        pixmap = QPixmap(":/" + status + ("exc" if exception else ""))
         new_icon = QIcon()
         new_icon.addPixmap(pixmap, QIcon.Mode.Disabled)
         self.trayIcon.setIcon(new_icon)
-        self.trayIcon.setToolTip('%s status: %s' % (self.instrument, status))
+        self.trayIcon.setToolTip("%s status: %s" % (self.instrument, status))
         if self.showtrayicon:
             self.trayIcon.show()
-        if self.promptWindow and status != 'paused':
+        if self.promptWindow and status != "paused":
             self.promptWindow.close()
         # propagate to panels
         for panel in self.panels:
@@ -227,7 +246,7 @@ class MainWindow(DefaultMainWindow):
                 panel.updateStatus(status, exception)
 
     def _update_toolbar_info(self):
-        if self.current_status != 'disconnected':
+        if self.current_status != "disconnected":
             self.update_instrument_text()
             self.update_experiment_text()
         else:
@@ -235,11 +254,11 @@ class MainWindow(DefaultMainWindow):
             self.clear_instrument_text()
 
     def _update_status_text(self):
-        if self.current_status == 'disconnected':
+        if self.current_status == "disconnected":
             self.status_label.setText(self.current_status.upper())
-            self.status_text.setText('')
+            self.status_text.setText("")
         else:
-            self.status_label.setText('     Status: ')
+            self.status_label.setText("     Status: ")
             self.status_text.setText(self.current_status.upper())
 
     def clear_instrument_text(self):
@@ -252,16 +271,16 @@ class MainWindow(DefaultMainWindow):
 
     def on_client_connected(self):
         DefaultMainWindow.on_client_connected(self)
-        self.actionConnect.setIcon(get_icon('power_off-24px.svg'))
+        self.actionConnect.setIcon(get_icon("power_off-24px.svg"))
         self.actionExpert.setEnabled(True)
         self.actionViewOnly.setEnabled(True)
         self.actionEmergencyStop.setEnabled(not self.client.viewonly)
-        self.actionConnect.setText('Disconnect')
+        self.actionConnect.setText("Disconnect")
 
     def on_client_disconnected(self):
         DefaultMainWindow.on_client_disconnected(self)
-        self.actionConnect.setIcon(get_icon('power-24px.svg'))
-        self.actionConnect.setText('Connect to server...')
+        self.actionConnect.setIcon(get_icon("power-24px.svg"))
+        self.actionConnect.setText("Connect to server...")
         self.actionExpert.setEnabled(False)
         self.actionViewOnly.setEnabled(False)
         self.actionEmergencyStop.setEnabled(False)
@@ -277,7 +296,7 @@ class MainWindow(DefaultMainWindow):
     @pyqtSlot(bool)
     def on_actionConnect_triggered(self, _):
         # connection or disconnection request?
-        connection_req = self.current_status == 'disconnected'
+        connection_req = self.current_status == "disconnected"
         super().on_actionConnect_triggered(connection_req)
 
     @pyqtSlot()
@@ -287,4 +306,4 @@ class MainWindow(DefaultMainWindow):
 
     @pyqtSlot()
     def on_actionEmergencyStop_triggered(self):
-        self.client.tell_action('emergency')
+        self.client.tell_action("emergency")

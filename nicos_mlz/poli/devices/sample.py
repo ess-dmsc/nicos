@@ -31,7 +31,11 @@ class Sample(BaseSample):
     """A sample with additional parameters for POLI."""
 
     parameters = {
-        'ubmatrix': Param('UB matrix', type=listof(listof(float)),
-                          settable=True, category='sample',
-                          default=[[0, 0, 0], [0, 0, 0], [0, 0, 0]]),
+        "ubmatrix": Param(
+            "UB matrix",
+            type=listof(listof(float)),
+            settable=True,
+            category="sample",
+            default=[[0, 0, 0], [0, 0, 0], [0, 0, 0]],
+        ),
     }

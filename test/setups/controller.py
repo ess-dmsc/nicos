@@ -21,22 +21,25 @@
 #
 # *****************************************************************************
 
-description = 'test_controller setup'
+description = "test_controller setup"
 
 devices = dict(
-    dev1 = device('nicos.devices.generic.VirtualMotor',
-        fmtstr = '%.2f',
-        abslimits = (0, 600),
-        unit = 'mm',
+    dev1=device(
+        "nicos.devices.generic.VirtualMotor",
+        fmtstr="%.2f",
+        abslimits=(0, 600),
+        unit="mm",
     ),
-    dev2 = device('nicos.devices.generic.VirtualMotor',
-        fmtstr = '%.2f',
-        abslimits = (0, 600),
-        unit = 'mm',
+    dev2=device(
+        "nicos.devices.generic.VirtualMotor",
+        fmtstr="%.2f",
+        abslimits=(0, 600),
+        unit="mm",
     ),
-    controller = device('test.utils.TestController',
-        unit = '',
-        dev1 = 'dev1',
-        dev2 = 'dev2',
+    controller=device(
+        "test.utils.TestController",
+        unit="",
+        dev1="dev1",
+        dev2="dev2",
     ),
 )

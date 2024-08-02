@@ -52,7 +52,7 @@ class PollerCacheClient(CacheClient):
 
 class PollerCacheReader(CacheReader):
     parameter_overrides = {
-        'unit': Override(mandatory=False),
+        "unit": Override(mandatory=False),
     }
 
     def _initParam(self, param, paraminfo=None):
@@ -72,19 +72,23 @@ class PollerCacheReader(CacheReader):
 
 
 class PollerSession(NoninteractiveSession):
-
     cache_class = PollerCacheClient
     sessiontype = POLLER
 
     @classmethod
     def _notify_systemd(cls, appname, status, ready=False):
         # can only notify systemd from the main poller process
-        if appname == 'poller':
+        if appname == "poller":
             NoninteractiveSession._notify_systemd(appname, status, ready)
 
     # pylint: disable=dangerous-default-value
-    def getDevice(self, dev, cls=None, source=None,
-                  replace_classes=[(DeviceAlias, PollerCacheReader, {})]):
+    def getDevice(
+        self,
+        dev,
+        cls=None,
+        source=None,
+        replace_classes=[(DeviceAlias, PollerCacheReader, {})],
+    ):
         """Override device creation for the poller.
 
         With the "alias device" mechanism, aliases can point to any device in
@@ -97,16 +101,17 @@ class PollerSession(NoninteractiveSession):
         polled by another process, and we can get current values for the device
         via the CacheReader.
         """
-        return NoninteractiveSession.getDevice(self, dev, Device, source,
-                                               replace_classes=replace_classes)
+        return NoninteractiveSession.getDevice(
+            self, dev, Device, source, replace_classes=replace_classes
+        )
 
     def _deviceNotFound(self, devname, source=None):
         """Override "device not found" to be able to create PollerCacheReaders
         for devices noted as such in extended['poller_cache_reader'].
         """
         for setupname in self.loaded_setups:
-            ext = self._setup_info[setupname]['extended']
-            if devname in ext.get('poller_cache_reader', ()):
+            ext = self._setup_info[setupname]["extended"]
+            if devname in ext.get("poller_cache_reader", ()):
                 return PollerCacheReader(devname)
         NoninteractiveSession._deviceNotFound(self, devname, source)
 

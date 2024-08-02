@@ -20,14 +20,15 @@
 #   Mark Koennecke <mark.koennecke@psi.ch>
 #
 # *****************************************************************************
-name = 'test stored positions'
+name = "test stored positions"
 
-description = 'Setup for testing stored positions'
+description = "Setup for testing stored positions"
 
-includes = ['generic']
+includes = ["generic"]
 
 devices = dict(
-    stopo = device('nicos_sinq.devices.storedpositions.StoredPositions',
-        description = 'General Purpose Stored Positions'
+    stopo=device(
+        "nicos_sinq.devices.storedpositions.StoredPositions",
+        description="General Purpose Stored Positions",
     ),
 )

@@ -36,9 +36,9 @@ class Base(PyTangoDevice, Readable):
     hardware_access = True
 
     parameters = {
-        'firmware': Param('Firmware version',
-                          type=float, settable=False, volatile=True,
-                          fmtstr='%.1f'),
+        "firmware": Param(
+            "Firmware version", type=float, settable=False, volatile=True, fmtstr="%.1f"
+        ),
     }
 
     def _readBuffer(self):
@@ -51,22 +51,20 @@ class Base(PyTangoDevice, Readable):
         return 0
 
     def doStatus(self, maxage=0):
-        return status.OK, ''
+        return status.OK, ""
 
 
 class AnalogValue(Base):
-
     parameters = {
-        'channel': Param('Channel for readout',
-                         type=intrange(0, 16), settable=True),
+        "channel": Param("Channel for readout", type=intrange(0, 16), settable=True),
     }
 
     parameter_overrides = {
-        'unit': Override(mandatory=False, volatile=True, settable=False),
+        "unit": Override(mandatory=False, volatile=True, settable=False),
     }
 
     def doReadUnit(self):
-        return 'foo'
+        return "foo"
 
     def doRead(self, maxage=0):
         return self._readBuffer()[self.channel]

@@ -24,8 +24,16 @@
 """Class for controlling the KWS shutter."""
 
 from nicos import session
-from nicos.core import Attach, HasTimeout, Moveable, Override, Param, \
-    Readable, oneof, status
+from nicos.core import (
+    Attach,
+    HasTimeout,
+    Moveable,
+    Override,
+    Param,
+    Readable,
+    oneof,
+    status,
+)
 
 READ_CLOSED = 1
 READ_OPEN = 2
@@ -36,50 +44,51 @@ WRITE_OPEN = 7
 class Shutter(HasTimeout, Moveable):
     """Controlling the shutter."""
 
-    valuetype = oneof('closed', 'open')
+    valuetype = oneof("closed", "open")
 
     parameters = {
-        'waittime':  Param('Additional time to wait before open',
-                           settable=True, unit='s', default=0),
+        "waittime": Param(
+            "Additional time to wait before open", settable=True, unit="s", default=0
+        ),
     }
 
     attached_devices = {
-        'output':    Attach('output bits', Moveable),
-        'input':     Attach('input bits', Readable),
+        "output": Attach("output bits", Moveable),
+        "input": Attach("input bits", Readable),
     }
 
     parameter_overrides = {
-        'fmtstr':     Override(default='%s'),
-        'timeout':    Override(default=10),
-        'unit':       Override(mandatory=False, default=''),
+        "fmtstr": Override(default="%s"),
+        "timeout": Override(default=10),
+        "unit": Override(mandatory=False, default=""),
     }
 
     def doStatus(self, maxage=0):
         inputstatus = self._attached_input.read(maxage)
         if inputstatus == READ_OPEN:
-            if self.target == 'open':
-                return status.OK, 'idle'
+            if self.target == "open":
+                return status.OK, "idle"
             else:
-                return status.WARN, 'open, but target=closed'
+                return status.WARN, "open, but target=closed"
         elif inputstatus == READ_CLOSED:
-            if self.target == 'closed':
-                return status.OK, 'idle'
+            if self.target == "closed":
+                return status.OK, "idle"
             else:
-                return status.WARN, 'closed, but target=open'
+                return status.WARN, "closed, but target=open"
         # HasTimeout will check for target reached
-        return status.OK, 'idle'
+        return status.OK, "idle"
 
     def doRead(self, maxage=0):
         inputstatus = self._attached_input.read(maxage)
         if inputstatus == READ_OPEN:
-            return 'open'
+            return "open"
         elif inputstatus == READ_CLOSED:
-            return 'closed'
-        return 'unknown'
+            return "closed"
+        return "unknown"
 
     def doStart(self, target):
         session.delay(self.waittime)
-        if target == 'open':
+        if target == "open":
             self._attached_output.start(WRITE_OPEN)
         else:
             self._attached_output.start(WRITE_CLOSED)

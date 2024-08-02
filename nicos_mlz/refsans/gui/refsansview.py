@@ -23,15 +23,22 @@
 """Classes to display the REFSANS instrument."""
 
 from nicos.core import status
-from nicos.guisupport.qt import QBrush, QColor, QGraphicsLineItem, \
-    QGraphicsRectItem, QGraphicsScene, QGraphicsTextItem, QGraphicsView, \
-    QPainter, QTransform
+from nicos.guisupport.qt import (
+    QBrush,
+    QColor,
+    QGraphicsLineItem,
+    QGraphicsRectItem,
+    QGraphicsScene,
+    QGraphicsTextItem,
+    QGraphicsView,
+    QPainter,
+    QTransform,
+)
 
 from nicos_mlz.refsans.guisupport import Detector, Tube, Yoke
 
 
 class RefsansView(QGraphicsView):
-
     pivotdist = 20
 
     def __init__(self, parent=None):
@@ -51,10 +58,10 @@ class RefsansView(QGraphicsView):
         t2 = QTransform()
         t2.translate(-3, -10)
         self._pivot.setTransform(t2)
-        self._pivot.setBrush(QBrush(QColor('#1F1F1F')))
+        self._pivot.setBrush(QBrush(QColor("#1F1F1F")))
         scene.addItem(self._pivot)
         for i in range(13):
-            txt = '%d' % (i + 1)
+            txt = "%d" % (i + 1)
             self.t = QGraphicsTextItem(txt)
             bw = self.t.boundingRect().size().width()
             chrwidth = bw / (len(txt) + 1)
@@ -64,24 +71,30 @@ class RefsansView(QGraphicsView):
         self._det = Detector(parent=self._tube, scene=scene)
 
         self.values = {
-            'tubeangle': -1.0,
-            'pivot': 1,
-            'detpos': 620,
+            "tubeangle": -1.0,
+            "pivot": 1,
+            "detpos": 620,
         }
         self.targets = self.values.copy()
         self.status = {
-            'tubeangle': status.OK,
-            'pivot': status.OK,
-            'detpos': status.OK,
+            "tubeangle": status.OK,
+            "pivot": status.OK,
+            "detpos": status.OK,
         }
 
     def resizeEvent(self, rsevent):
         s = rsevent.size()
         w, h = s.width(), s.height()
-        scale = min(w / self._pivotline.boundingRect().width(),
-                    h / (self._yoke.boundingRect().height() + 10 +
-                         self.t.boundingRect().y() +
-                         self.t.boundingRect().height()))
+        scale = min(
+            w / self._pivotline.boundingRect().width(),
+            h
+            / (
+                self._yoke.boundingRect().height()
+                + 10
+                + self.t.boundingRect().y()
+                + self.t.boundingRect().height()
+            ),
+        )
         transform = self.transform()
         transform.reset()
         transform.scale(scale, scale)
@@ -89,13 +102,13 @@ class RefsansView(QGraphicsView):
         QGraphicsView.resizeEvent(self, rsevent)
 
     def update(self):
-        self._tube.setState(self.status['tubeangle'])
-        self._tube.setRotation(-self.values['tubeangle'])
-        p = (self.values['pivot'] - 9) * self.pivotdist
+        self._tube.setState(self.status["tubeangle"])
+        self._tube.setRotation(-self.values["tubeangle"])
+        p = (self.values["pivot"] - 9) * self.pivotdist
         self._pivot.setX(p)
         self._tube.setX(p)
         self._yoke.setX(p)
-        self._det.setState(self.status['detpos'])
+        self._det.setState(self.status["detpos"])
         # 1 / 20 is the scaling of the tube length
-        self._det.setX(self.values['detpos'] / 20)
+        self._det.setX(self.values["detpos"] / 20)
         QGraphicsView.update(self)

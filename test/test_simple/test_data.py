@@ -27,7 +27,7 @@ from contextlib import contextmanager
 
 from nicos.commands.measure import count
 
-session_setup = 'data'
+session_setup = "data"
 
 
 def test_cleanup(session):
@@ -42,39 +42,43 @@ def test_cleanup(session):
 @contextmanager
 def dataset_scope(session, settype, **kwds):
     dataman = session.experiment.data
-    getattr(dataman, 'begin' + settype.capitalize())(**kwds)
+    getattr(dataman, "begin" + settype.capitalize())(**kwds)
     yield dataman._current
-    getattr(dataman, 'finish' + settype.capitalize())()
+    getattr(dataman, "finish" + settype.capitalize())()
 
 
 def test_dataset_stack(session, log):
     dataman = session.experiment.data
-    session.experiment.new(0, user='user')
+    session.experiment.new(0, user="user")
     # create some datasets on the stack, check nesting
-    with dataset_scope(session, 'block') as blockset:
-        with log.assert_warns('no scan to finish'):
+    with dataset_scope(session, "block") as blockset:
+        with log.assert_warns("no scan to finish"):
             dataman.finishScan()
-        with log.assert_warns('no data point to finish'):
+        with log.assert_warns("no data point to finish"):
             dataman.finishPoint()
 
-        with dataset_scope(session, 'scan') as scanset:
-            with log.assert_warns('no block to finish'):
+        with dataset_scope(session, "scan") as scanset:
+            with log.assert_warns("no block to finish"):
                 dataman.finishBlock()
             assert dataman._current.number == 1
 
-            with dataset_scope(session, 'point') as pointset:
-                assert list(dataman.iterParents(pointset)) == \
-                    [scanset, blockset]
+            with dataset_scope(session, "point") as pointset:
+                assert list(dataman.iterParents(pointset)) == [scanset, blockset]
 
-                with dataset_scope(session, 'scan', subscan=True):
-                    with dataset_scope(session, 'point'):
+                with dataset_scope(session, "scan", subscan=True):
+                    with dataset_scope(session, "point"):
                         assert len(dataman._stack) == 5
-                        assert [s.settype for s in dataman._stack] == \
-                            ['block', 'scan', 'point', 'subscan', 'point']
+                        assert [s.settype for s in dataman._stack] == [
+                            "block",
+                            "scan",
+                            "point",
+                            "subscan",
+                            "point",
+                        ]
 
                         assert dataman._current.number == 1
 
-                    with dataset_scope(session, 'point'):
+                    with dataset_scope(session, "point"):
                         assert dataman._current.number == 2
 
 
@@ -98,7 +102,7 @@ def test_temp_point(session):
 def test_point_dataset(session):
     dataman = session.experiment.data
     assert len(dataman._stack) == 0
-    with dataset_scope(session, 'point'):
+    with dataset_scope(session, "point"):
         ds = dataman._current
 
         # only assigned if a parent dataset is open
@@ -111,26 +115,26 @@ def test_point_dataset(session):
         assert not ds.metainfo
 
         # now fill it with some device values
-        for (ts, value) in [(0, 5.), (2, 7.), (3, 5.), (4, 4.)]:
-            dataman.putValues({'dev': (ts, value)})
-        dataman.putValues({'dev2': (2, 5.)})
+        for ts, value in [(0, 5.0), (2, 7.0), (3, 5.0), (4, 4.0)]:
+            dataman.putValues({"dev": (ts, value)})
+        dataman.putValues({"dev2": (2, 5.0)})
 
         # check value stats for devices with multiple values
-        mean, stdev, mini, maxi = ds.valuestats['dev']
-        assert mini == 4.
-        assert maxi == 7.
+        mean, stdev, mini, maxi = ds.valuestats["dev"]
+        assert mini == 4.0
+        assert maxi == 7.0
         assert mean == 5.5
         assert 0.866 < stdev < 0.867  # sqrt(3)/2
 
         # check value stats for devices with only one value
-        mean, stdev, mini, maxi = ds.valuestats['dev2']
-        assert mini == maxi == mean == 5.
-        assert stdev == float('inf')
+        mean, stdev, mini, maxi = ds.valuestats["dev2"]
+        assert mini == maxi == mean == 5.0
+        assert stdev == float("inf")
 
 
 def test_force_scandata(session):
     dataman = session.experiment.data
-    session.experiment._setROParam('forcescandata', True)
+    session.experiment._setROParam("forcescandata", True)
     try:
         count(0.01)
         # ensure that a scan dataset was produced
@@ -138,4 +142,4 @@ def test_force_scandata(session):
         assert ds.npoints == 1
         assert session.experiment.lastscan == ds.counter
     finally:
-        session.experiment._setROParam('forcescandata', False)
+        session.experiment._setROParam("forcescandata", False)

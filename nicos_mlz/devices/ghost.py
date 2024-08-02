@@ -32,11 +32,13 @@ import ghostapi.rest
 
 from nicos import session
 from nicos.core import USER, Param, User, dictof, nonemptystring
-from nicos.services.daemon.auth import AuthenticationError, \
-    Authenticator as BaseAuthenticator
+from nicos.services.daemon.auth import (
+    AuthenticationError,
+    Authenticator as BaseAuthenticator,
+)
 from nicos.services.daemon.auth.params import UserLevelAuthEntry
 
-DTFORMAT = '%Y-%m-%d %H:%M:%S'
+DTFORMAT = "%Y-%m-%d %H:%M:%S"
 
 
 class GhostWrapper(ghostapi.rest.GhostRestAPI):
@@ -60,23 +62,23 @@ class GhostWrapper(ghostapi.rest.GhostRestAPI):
             # this avoids leaking authentication details via tracebacks
             error = str(err)
         if error:
-            raise AuthenticationError('login failed: %s' % error)
+            raise AuthenticationError("login failed: %s" % error)
 
         # check local contact status
         try:
             instrs = self.getLCInstruments(email)
-            self.is_local_contact = any(i['name'] == instr for i in instrs)
+            self.is_local_contact = any(i["name"] == instr for i in instrs)
         except ghostapi.errors.GhostApiException:
             # no access means: we are not local contact
             pass
-        self.log.debug('user is local contact? %s', self.is_local_contact)
+        self.log.debug("user is local contact? %s", self.is_local_contact)
         # we are a normal user => if configured, check that a proposal
         # is scheduled for us today
         if not self.is_local_contact and strict:
             self.strictUserCheck(email)
         # get user's real name for display in daemon
         userdata = self.getUserData(email)
-        return userdata['firstname'] + ' ' + userdata['lastname']
+        return userdata["firstname"] + " " + userdata["lastname"]
 
     def strictUserCheck(self, email):
         """Check if user may log in considering the current proposal:
@@ -88,14 +90,18 @@ class GhostWrapper(ghostapi.rest.GhostRestAPI):
         Raises AuthenticationError if access denied.
         """
         sessions = self.getTodaysSessions()
-        if session.experiment.proptype == 'user':
-            if not any(ses['proposal_number'] == session.experiment.proposal
-                       for ses in sessions):
-                raise AuthenticationError('user is neither local contact '
-                                          'nor member of current proposal')
+        if session.experiment.proptype == "user":
+            if not any(
+                ses["proposal_number"] == session.experiment.proposal
+                for ses in sessions
+            ):
+                raise AuthenticationError(
+                    "user is neither local contact " "nor member of current proposal"
+                )
         elif not sessions:
-            raise AuthenticationError('user is neither local contact '
-                                      'nor has a proposal scheduled today')
+            raise AuthenticationError(
+                "user is neither local contact " "nor has a proposal scheduled today"
+            )
 
     def keepalive(self):
         """Called every now and then to refresh our session timeout."""
@@ -108,19 +114,21 @@ class GhostWrapper(ghostapi.rest.GhostRestAPI):
     def getTodaysSessions(self):
         today = datetime.combine(date.today(), time.min)
         delta = timedelta(days=1)
-        sessions = self.getExpSessionsForInstrument(self.ghost_instrument,
-                                                    today, today + delta)
-        return [ses for ses in sessions if ses['number']]
+        sessions = self.getExpSessionsForInstrument(
+            self.ghost_instrument, today, today + delta
+        )
+        return [ses for ses in sessions if ses["number"]]
 
     def canStartProposal(self, proposal):
         """Check if current user may start this proposal."""
         if self.is_local_contact:
             return True
         try:
-            return any(ses['proposal_number'] == proposal
-                       for ses in self.getTodaysSessions())
+            return any(
+                ses["proposal_number"] == proposal for ses in self.getTodaysSessions()
+            )
         except Exception:
-            session.log.warning('error querying proposals', exc=1)
+            session.log.warning("error querying proposals", exc=1)
             return False
 
     def queryProposals(self, proposal=None):
@@ -138,30 +146,28 @@ class GhostWrapper(ghostapi.rest.GhostRestAPI):
             sessions = self.getTodaysSessions()
         except Exception:
             if not self.is_local_contact:
-                session.log.warning("error querying today's sessions from GhOST",
-                                exc=1)
+                session.log.warning("error querying today's sessions from GhOST", exc=1)
                 return []
         if proposal is not None:
-            sessions = [ses for ses in sessions
-                        if ses['proposal_number'] == proposal]
+            sessions = [ses for ses in sessions if ses["proposal_number"] == proposal]
         if not sessions and proposal and self.is_local_contact:
-            session.log.debug('querying all exps for proposal %r', proposal)
+            session.log.debug("querying all exps for proposal %r", proposal)
             try:
                 sessions = self.getExperimentsForProposal(proposal)
             except Exception:
-                session.log.warning('error querying sessions for proposal '
-                                    'from GhOST', exc=1)
+                session.log.warning(
+                    "error querying sessions for proposal " "from GhOST", exc=1
+                )
                 return []
         for ses in sessions:
-            session.log.debug('candidate session: %r', ses)
-            if ses['number'] is None:
+            session.log.debug("candidate session: %r", ses)
+            if ses["number"] is None:
                 # experiment is not scheduled/permitted
                 continue
             try:
-                res = self.queryExperiment(ses['number'])
+                res = self.queryExperiment(ses["number"])
             except Exception:
-                session.log.warning("error querying session %s", ses['number'],
-                                    exc=1)
+                session.log.warning("error querying session %s", ses["number"], exc=1)
             else:
                 result.append(res)
 
@@ -173,34 +179,39 @@ class GhostWrapper(ghostapi.rest.GhostRestAPI):
         """
         sessinfo = self.getExperiment(sessid, details=True)
         samples = self.getSessionSamples(sessid)
-        session.log.debug('session data: %r', sessinfo)
-        session.log.debug('sample data: %r', samples)
+        session.log.debug("session data: %r", sessinfo)
+        session.log.debug("sample data: %r", samples)
 
         info = {}
-        info['proposal'] = sessinfo['proposal']
-        info['session'] = sessinfo['number']
-        info['title'] = sessinfo['title']
-        info['cycle'] = sessinfo['reactorcycle']
-        info['instrument'] = sessinfo['instrument']
-        info['startdate'] = datetime.strptime(sessinfo['start'], DTFORMAT)
-        info['enddate'] = datetime.strptime(sessinfo['end'], DTFORMAT)
-        if samples['basesamples']:
-            info['default_sample'] = samples['basesamples'][0]['substance']
-        info['users'] = []
-        for user in sessinfo['userdetails']['sessionteam']:
-            info['users'].append({
-                'name': user['name'],
-                'email': user['email'],
-                'affiliation': user['affilation'],
-            })
-        info['localcontacts'] = [{
-            'name': sessinfo['localcontact'],
-            'email': sessinfo['localcontact_email'],
-        }]
-        info['samples'] = samples['registeredsamples']
-        info['data_emails'] = [user['email'] for user in info['users']]
-        info['notif_emails'] = [user['email'] for user in info['users']] + \
-            [c['email'] for c in info['localcontacts']]
+        info["proposal"] = sessinfo["proposal"]
+        info["session"] = sessinfo["number"]
+        info["title"] = sessinfo["title"]
+        info["cycle"] = sessinfo["reactorcycle"]
+        info["instrument"] = sessinfo["instrument"]
+        info["startdate"] = datetime.strptime(sessinfo["start"], DTFORMAT)
+        info["enddate"] = datetime.strptime(sessinfo["end"], DTFORMAT)
+        if samples["basesamples"]:
+            info["default_sample"] = samples["basesamples"][0]["substance"]
+        info["users"] = []
+        for user in sessinfo["userdetails"]["sessionteam"]:
+            info["users"].append(
+                {
+                    "name": user["name"],
+                    "email": user["email"],
+                    "affiliation": user["affilation"],
+                }
+            )
+        info["localcontacts"] = [
+            {
+                "name": sessinfo["localcontact"],
+                "email": sessinfo["localcontact_email"],
+            }
+        ]
+        info["samples"] = samples["registeredsamples"]
+        info["data_emails"] = [user["email"] for user in info["users"]]
+        info["notif_emails"] = [user["email"] for user in info["users"]] + [
+            c["email"] for c in info["localcontacts"]
+        ]
         return info
 
 
@@ -213,16 +224,24 @@ class Authenticator(BaseAuthenticator):
     """
 
     parameters = {
-        'ghosthost':  Param('Host of the GhOST system to authenticate against',
-                            type=nonemptystring, mandatory=True),
-        'instrument': Param('Name of the instrument in GhOST', type=str),
-        'checkexp':   Param('If true, check that users are either affiliated '
-                            'with the current experiment, or registered '
-                            'local contacts for the instrument', type=bool,
-                            default=True),
-        'aliases':    Param('Map of short user names to GhOST email addresses '
-                            'and their desired user level',
-                            type=dictof(nonemptystring, UserLevelAuthEntry)),
+        "ghosthost": Param(
+            "Host of the GhOST system to authenticate against",
+            type=nonemptystring,
+            mandatory=True,
+        ),
+        "instrument": Param("Name of the instrument in GhOST", type=str),
+        "checkexp": Param(
+            "If true, check that users are either affiliated "
+            "with the current experiment, or registered "
+            "local contacts for the instrument",
+            type=bool,
+            default=True,
+        ),
+        "aliases": Param(
+            "Map of short user names to GhOST email addresses "
+            "and their desired user level",
+            type=dictof(nonemptystring, UserLevelAuthEntry),
+        ),
     }
 
     def authenticate(self, username, password):
@@ -230,23 +249,23 @@ class Authenticator(BaseAuthenticator):
             email, level = self.aliases[username]
         else:
             email, level = username, USER
-        ghost = GhostWrapper('https://' + self.ghosthost, self.log)
+        ghost = GhostWrapper("https://" + self.ghosthost, self.log)
         try:
-            realname = ghost.login(self.instrument, email, password,
-                                   strict=self.checkexp)
+            realname = ghost.login(
+                self.instrument, email, password, strict=self.checkexp
+            )
         except ghostapi.errors.GhostAccessError:
-            self.log.exception('during authentication')
-            raise AuthenticationError('unknown user or wrong password') \
-                from None
+            self.log.exception("during authentication")
+            raise AuthenticationError("unknown user or wrong password") from None
         except AuthenticationError:
-            self.log.exception('during authentication')
+            self.log.exception("during authentication")
             raise
         except Exception as err:
-            self.log.exception('during authentication')
-            raise AuthenticationError('exception during authenticate(): %s'
-                                      % err) from None
+            self.log.exception("during authentication")
+            raise AuthenticationError(
+                "exception during authenticate(): %s" % err
+            ) from None
         if email == username:
             # try to extract the user's real name from the user data
             username = realname
-        return User(username, level, {'ghost': ghost,
-                                      'keepalive': ghost.keepalive})
+        return User(username, level, {"ghost": ghost, "keepalive": ghost.keepalive})

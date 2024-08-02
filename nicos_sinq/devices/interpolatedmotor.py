@@ -36,20 +36,20 @@ class InterpolatedMotor(TransformedMoveable):
     hardware_access = False
 
     parameters = {
-        'target_positions': Param('List of positions for this motor',
-                                  type=listof(float)),
-        'raw_positions': Param('List of matching positions for the attached '
-                               'motor',
-                               type=listof(float)),
+        "target_positions": Param(
+            "List of positions for this motor", type=listof(float)
+        ),
+        "raw_positions": Param(
+            "List of matching positions for the attached " "motor", type=listof(float)
+        ),
     }
 
     attached_devices = {
-        'raw_motor': Attach('Motor to drive when moving this logical motor',
-                            Moveable),
+        "raw_motor": Attach("Motor to drive when moving this logical motor", Moveable),
     }
 
     parameter_overrides = {
-        'mapping': Override(mandatory=False),
+        "mapping": Override(mandatory=False),
     }
 
     valuetype = float
@@ -57,8 +57,7 @@ class InterpolatedMotor(TransformedMoveable):
 
     def doInit(self, mode):
         if len(self.target_positions) != len(self.raw_positions):
-            raise ConfigurationError('Length of target and raw '
-                                     'positions must match')
+            raise ConfigurationError("Length of target and raw " "positions must match")
 
     def _readRaw(self, maxage=0):
         return self._attached_raw_motor.read(maxage)
@@ -70,9 +69,8 @@ class InterpolatedMotor(TransformedMoveable):
         low = self.target_positions[0]
         high = self.target_positions[-1]
         if not (low <= target <= high):
-            return False, 'Out of limits (%f, %f)' % (low, high)
-        return self._attached_raw_motor.isAllowed(
-            self._mapTargetValue(target))
+            return False, "Out of limits (%f, %f)" % (low, high)
+        return self._attached_raw_motor.isAllowed(self._mapTargetValue(target))
 
     def _startRaw(self, target):
         self._attached_raw_motor.start(target)

@@ -21,8 +21,8 @@
 #
 # *****************************************************************************
 
-""" Moving Detector: Measures a 2Theta range and then moves to the next range
-    to yield a complete 2Theta diffractogram.
+"""Moving Detector: Measures a 2Theta range and then moves to the next range
+to yield a complete 2Theta diffractogram.
 """
 
 import math
@@ -31,36 +31,44 @@ import numpy as np
 from numpy import arctan, rad2deg as deg
 
 from nicos import session
-from nicos.core import Attach, Moveable, Override, Param, none_or, oneof, \
-    status
+from nicos.core import Attach, Moveable, Override, Param, none_or, oneof, status
 from nicos.core.constants import FINAL, LIVE, SIMULATION
 from nicos.core.utils import waitForCompletion
 from nicos.devices.generic.detector import Detector as GenericDetector
-from nicos.devices.generic.sequence import MeasureSequencer, SeqCall, SeqDev, \
-    SeqWait
+from nicos.devices.generic.sequence import MeasureSequencer, SeqCall, SeqDev, SeqWait
 
 
 class MovingDetector(MeasureSequencer):
-
-    MODE_SCANNING = 'scanning'
-    MODE_STEPPING = 'stepping'
+    MODE_SCANNING = "scanning"
+    MODE_STEPPING = "stepping"
 
     attached_devices = {
-        'motor': Attach('Axis to move the detector', Moveable),
-        'detector': Attach('Standard detector device', GenericDetector),
+        "motor": Attach("Axis to move the detector", Moveable),
+        "detector": Attach("Standard detector device", GenericDetector),
     }
 
     parameters = {
-        'liveinterval': Param('Interval to read out live images (None to '
-                              'disable live readout)',
-                              type=none_or(float), unit='s', settable=True,
-                              default=0.5,
-                              ),
-        'mode': Param('Scanning mode',
-                      type=oneof(MODE_STEPPING, MODE_SCANNING),
-                      unit='', settable=True, default=MODE_STEPPING),
-        'cps': Param('Return counts as counts per second',
-                     type=bool, unit='', settable=True, default=False),
+        "liveinterval": Param(
+            "Interval to read out live images (None to " "disable live readout)",
+            type=none_or(float),
+            unit="s",
+            settable=True,
+            default=0.5,
+        ),
+        "mode": Param(
+            "Scanning mode",
+            type=oneof(MODE_STEPPING, MODE_SCANNING),
+            unit="",
+            settable=True,
+            default=MODE_STEPPING,
+        ),
+        "cps": Param(
+            "Return counts as counts per second",
+            type=bool,
+            unit="",
+            settable=True,
+            default=False,
+        ),
         # 'overlapp': Param('Pixel overlapp of two consecutive measurements',
         #                   type=int, settable=True,
         #                   default=5, category='instrument',
@@ -68,7 +76,7 @@ class MovingDetector(MeasureSequencer):
     }
 
     parameter_overrides = {
-        'fmtstr': Override(volatile=True),
+        "fmtstr": Override(volatile=True),
     }
 
     _ttheta_start = None
@@ -84,13 +92,11 @@ class MovingDetector(MeasureSequencer):
 
     def doInit(self, mode):
         self._data = [0] * len(self._attached_detector.valueInfo())
-        self._array_data = np.zeros((2, self._pixel_count()), dtype='<u4',
-                                    order='F')
+        self._array_data = np.zeros((2, self._pixel_count()), dtype="<u4", order="F")
 
     def _detector_mapping(self):
         px_count = self._pixel_count()
-        return (np.arange(-px_count / 2, px_count / 2, 1)
-                ) * self._detector_resolution()
+        return (np.arange(-px_count / 2, px_count / 2, 1)) * self._detector_resolution()
 
     def _detector_resolution(self):
         px_size = self._pixel_size()
@@ -124,38 +130,38 @@ class MovingDetector(MeasureSequencer):
         det_range = 2 * deg(arctan(px_count * px_size / 2 / radius))
 
         if self.mode == self.MODE_STEPPING:
-
             if self._ttheta_start is None or self._ttheta_end is None:
                 self._tthetas = [self._attached_motor.read()]
             else:
                 if self._ttheta_start >= self._ttheta_end:
-                    self._ttheta_start, self._ttheta_end = self._ttheta_end, \
-                        self._ttheta_start
+                    self._ttheta_start, self._ttheta_end = (
+                        self._ttheta_end,
+                        self._ttheta_start,
+                    )
 
-                steps = math.ceil(
-                    (self._ttheta_end - self._ttheta_start) / det_range)
+                steps = math.ceil((self._ttheta_end - self._ttheta_start) / det_range)
                 measurement_range = steps * det_range
                 center = 0.5 * (self._ttheta_start + self._ttheta_end)
                 start = 0.5 * (2 * center - measurement_range)
 
-                self._tthetas = [
-                    start + det_range * (n + 0.5) for n in range(0, steps)]
+                self._tthetas = [start + det_range * (n + 0.5) for n in range(0, steps)]
 
             self._array_data = np.zeros((2, px_count * len(self._tthetas)))
             self._array_data.fill(0)
             self._array_data[0] = np.hstack(
-                [ttheta + self._detector_mapping() for ttheta in self._tthetas])
+                [ttheta + self._detector_mapping() for ttheta in self._tthetas]
+            )
 
         elif self.mode == self.MODE_SCANNING:
-
             # making finer 2Theta step increments
             resol = self._ttheta_resol
             # skipping some 2Theta points to accelerate the measurement
             incr = self._ttheta_skip
 
             # the ttheta values we want to measure
-            self._ttheta = np.arange(self._ttheta_start, self._ttheta_end,
-                                     d2Theta / resol)
+            self._ttheta = np.arange(
+                self._ttheta_start, self._ttheta_end, d2Theta / resol
+            )
 
             # the binning of the ttheta data, to be used with np.digitize, the
             # bin is constructed such that the bins are equally spaced around
@@ -165,8 +171,9 @@ class MovingDetector(MeasureSequencer):
             # ttheta value is surrounded by an element from self._bins from the
             # left and right, i.e.
             # self._bins[i] <= self._ttheta[i] < self._bins[i+1]
-            self._bins = np.append(self._bins,
-                                   [self._ttheta[-1] + (d2Theta / 2 / resol)])
+            self._bins = np.append(
+                self._bins, [self._ttheta[-1] + (d2Theta / 2 / resol)]
+            )
 
             # Every pixel of the detector needs to measure every ttheta, thus
             # the right most pixel in the detector
@@ -177,12 +184,15 @@ class MovingDetector(MeasureSequencer):
             # very first ttheta value
             # as it will be discarded anyway (lies outside the ttheta range
             # we have to measure)
-            append_start = np.arange(-px_count * resol / 2 + 1, 0, 1
-                                     ) * d2Theta / resol + self._ttheta[0]
+            append_start = (
+                np.arange(-px_count * resol / 2 + 1, 0, 1) * d2Theta / resol
+                + self._ttheta[0]
+            )
             # Same argument, but with the left most pixel and the highest
             # ttheta value
-            append_end = (np.arange(0, px_count * resol / 2, 1) + 1
-                          ) * d2Theta / resol + self._ttheta[-1]
+            append_end = (
+                np.arange(0, px_count * resol / 2, 1) + 1
+            ) * d2Theta / resol + self._ttheta[-1]
 
             self._tthetas = np.hstack((append_start, self._ttheta, append_end))
 
@@ -194,8 +204,9 @@ class MovingDetector(MeasureSequencer):
                 # get n elements, then skip etc..
                 # where n is the fineness, and i the increment
                 # e.g. tthetas = tthetas[::X] wont work here
-                inds = [i for i in range(len(self._tthetas))
-                        if (i // resol) % incr == 0]
+                inds = [
+                    i for i in range(len(self._tthetas)) if (i // resol) % incr == 0
+                ]
                 self._tthetas = self._tthetas[inds]
             else:
                 # just take every n-th element
@@ -204,10 +215,10 @@ class MovingDetector(MeasureSequencer):
             # counts contains one more item (and two more than ttheta), as
             # the first and last bin contain the unused measurement data
             # i.e. (ttheta < bin[0] and ttheta > bin[-1], resp.)
-            self._counts = np.zeros(len(self._bins) + 1, dtype='<u4', order='F')
+            self._counts = np.zeros(len(self._bins) + 1, dtype="<u4", order="F")
             # contains the measurement time for each bin. the central element
             # should have all the same measurement time
-            self._cps = np.zeros(len(self._bins) + 1, dtype='<u4', order='F')
+            self._cps = np.zeros(len(self._bins) + 1, dtype="<u4", order="F")
 
         session.experiment.data.updateMetainfo()
 
@@ -222,14 +233,14 @@ class MovingDetector(MeasureSequencer):
         self._ttheta_skip = 1
         self._ttheta_resol = 1
         if preset:
-            if 'ttheta_start' in preset:
-                self._ttheta_start = float(preset.pop('ttheta_start'))
-            if 'ttheta_end' in preset:
-                self._ttheta_end = float(preset.pop('ttheta_end'))
-            if 'ttheta_skip' in preset:
-                self._ttheta_skip = int(preset.pop('ttheta_skip'))
-            if 'ttheta_resolution' in preset:
-                self._ttheta_resol = int(preset.pop('ttheta_resolution'))
+            if "ttheta_start" in preset:
+                self._ttheta_start = float(preset.pop("ttheta_start"))
+            if "ttheta_end" in preset:
+                self._ttheta_end = float(preset.pop("ttheta_end"))
+            if "ttheta_skip" in preset:
+                self._ttheta_skip = int(preset.pop("ttheta_skip"))
+            if "ttheta_resolution" in preset:
+                self._ttheta_resol = int(preset.pop("ttheta_resolution"))
         self._attached_detector.setPreset(**preset)
 
     def _read_value(self):
@@ -242,19 +253,18 @@ class MovingDetector(MeasureSequencer):
 
         if self.mode == self.MODE_STEPPING:
             px_count = self._pixel_count()
-            counts = self._attached_detector.readArrays(
-                FINAL)[0].astype('f8')[1]
+            counts = self._attached_detector.readArrays(FINAL)[0].astype("f8")[1]
 
-            self._array_data[
-                1, px_count * self._step: px_count * (self._step + 1)] = counts
+            self._array_data[1, px_count * self._step : px_count * (self._step + 1)] = (
+                counts
+            )
 
         elif self.mode == self.MODE_SCANNING:
-            counts = self._attached_detector.readArrays(
-                FINAL)[0].astype('<u4')[1]
+            counts = self._attached_detector.readArrays(FINAL)[0].astype("<u4")[1]
 
             inds = np.digitize(
-                self._detector_mapping() + self._tthetas[self._step],
-                self._bins)
+                self._detector_mapping() + self._tthetas[self._step], self._bins
+            )
 
             # Attention here: This just works because there is no mixing up of
             # multiple indices:
@@ -294,8 +304,9 @@ class MovingDetector(MeasureSequencer):
             counts = self._counts[1:-1]
             if self.cps:
                 output = np.zeros(counts.shape, dtype=float)
-                np.divide(counts, self._cps[1:-1], out=output,
-                          where=self._cps[1:-1] > 0)
+                np.divide(
+                    counts, self._cps[1:-1], out=output, where=self._cps[1:-1] > 0
+                )
                 counts = output
             return [np.array([self._ttheta, counts])]
 
@@ -309,8 +320,7 @@ class MovingDetector(MeasureSequencer):
             seq.append(SeqCall(self._read_value))
             seq.append(SeqCall(self._incStep))
 
-        seq.append(SeqDev(self._attached_motor, self._tthetas[0],
-                   stoppable=True))
+        seq.append(SeqDev(self._attached_motor, self._tthetas[0], stoppable=True))
         return seq
 
     def doRead(self, maxage=0):
@@ -339,7 +349,7 @@ class MovingDetector(MeasureSequencer):
         return self._attached_detector.doSimulate(preset)
 
     def _fmtstr(self, value):
-        return 'step = %d' % value
+        return "step = %d" % value
 
     def doReadFmtstr(self):
         return self._fmtstr(self._step)
@@ -354,8 +364,12 @@ class MovingDetector(MeasureSequencer):
         return self._attached_detector.arrayInfo()
 
     def presetInfo(self):
-        return {'ttheta_start', 'ttheta_end', 'ttheta_skip',
-                'ttheta_resolution'} | self._attached_detector.presetInfo()
+        return {
+            "ttheta_start",
+            "ttheta_end",
+            "ttheta_skip",
+            "ttheta_resolution",
+        } | self._attached_detector.presetInfo()
 
     def duringMeasureHook(self, elapsed):
         if self.liveinterval is not None:
@@ -365,10 +379,10 @@ class MovingDetector(MeasureSequencer):
         return None
 
     def _stopAction(self, nr):
-        self.log.debug('_stopAction at step: %d', nr)
+        self.log.debug("_stopAction at step: %d", nr)
         self._attached_detector.stop()
 
     def _cleanUp(self):
         if self._seq_was_stopped:
             self._seq_was_stopped = False
-            self._set_seq_status(status.OK, 'idle')
+            self._set_seq_status(status.OK, "idle")

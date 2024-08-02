@@ -40,7 +40,7 @@ class CacheEntrySerializer(Device):
     """
 
     def encode(self, key, entry, **params):
-        raise ProgrammingError('Encoder not implemented')
+        raise ProgrammingError("Encoder not implemented")
 
     def decode(self, encoded):
-        raise ProgrammingError('Decoder not implemented')
+        raise ProgrammingError("Decoder not implemented")

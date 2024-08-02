@@ -23,6 +23,8 @@
 
 from nicos.services.cache.database.base import CacheDatabase
 from nicos.services.cache.database.flatfile import FlatfileCacheDatabase
-from nicos.services.cache.database.memory import MemoryCacheDatabase, \
-    MemoryCacheDatabaseWithHistory
+from nicos.services.cache.database.memory import (
+    MemoryCacheDatabase,
+    MemoryCacheDatabaseWithHistory,
+)
 from nicos.services.cache.database.redis import RedisCacheDatabase

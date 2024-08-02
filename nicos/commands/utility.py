@@ -36,7 +36,7 @@ import numpy
 from nicos.commands import helparglist, parallel_safe, usercommand
 from nicos.core import UsageError
 
-__all__ = ['floatrange', 'RangeListLog', 'RangeListGeneral']
+__all__ = ["floatrange", "RangeListLog", "RangeListGeneral"]
 
 
 def RangeListByStep(start, end=None, inc=None):
@@ -56,13 +56,13 @@ def RangeListByStep(start, end=None, inc=None):
     delta = end - start
 
     if inc is None:
-        inc = math.copysign(1., delta)
+        inc = math.copysign(1.0, delta)
 
     if inc == 0.0:
-        raise UsageError('Increment needs to differ from zero')
+        raise UsageError("Increment needs to differ from zero")
 
     if math.copysign(1.0, inc) != math.copysign(1.0, delta):
-        raise UsageError('Start/end points and increment are inconsistent')
+        raise UsageError("Start/end points and increment are inconsistent")
 
     res = numpy.arange(start, end + inc, inc)
     if abs(end - res[-1]) > (0.001 * abs(inc)):
@@ -87,7 +87,7 @@ def RangeListByCount(start, end=None, num=2):
 
 
 @usercommand
-@helparglist('start, end, [step | num=n]')
+@helparglist("start, end, [step | num=n]")
 @parallel_safe
 def floatrange(start, end, step=None, **kw):
     """Generate a linear range of values.
@@ -112,20 +112,19 @@ def floatrange(start, end, step=None, **kw):
     end = float(end)
     # case 1: stepwidth given
     if step is not None:
-        if kw.get('num') is not None:
-            raise UsageError('Both step and num given, only one is allowed.')
+        if kw.get("num") is not None:
+            raise UsageError("Both step and num given, only one is allowed.")
         if step <= 0.0:
-            raise UsageError('Increment has to be positive and greater than '
-                             'zero.')
+            raise UsageError("Increment has to be positive and greater than " "zero.")
         step = math.copysign(float(step), (end - start))
         return RangeListByStep(start, end, step)
     else:
         try:
-            num = int(kw.get('num'))
+            num = int(kw.get("num"))
         except TypeError:
-            raise UsageError('Please give either step or num.') from None
+            raise UsageError("Please give either step or num.") from None
         if num < 2:
-            raise UsageError('The number of steps should be greater than 1.')
+            raise UsageError("The number of steps should be greater than 1.")
         return RangeListByCount(start, end, num)
 
 
@@ -140,7 +139,7 @@ def RangeListLog(start, end, num=10):
     [1.0, 1.4142135623730949, 2.0]
     """
     if start <= 0 or end <= 0:
-        raise UsageError('Log spacing is only defined for positive values')
+        raise UsageError("Log spacing is only defined for positive values")
 
     return numpy.logspace(math.log10(start), math.log10(end), num).tolist()
 

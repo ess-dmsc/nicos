@@ -1,10 +1,11 @@
-description = 'Graphite filter devices'
+description = "Graphite filter devices"
 
-group = 'lowlevel'
+group = "lowlevel"
 
 devices = dict(
-    filter = device('nicos.devices.generic.ManualSwitch',
-        description = 'Graphite filter device',
-        states = ['out', 'in'],
+    filter=device(
+        "nicos.devices.generic.ManualSwitch",
+        description="Graphite filter device",
+        states=["out", "in"],
     ),
 )

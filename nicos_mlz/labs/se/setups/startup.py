@@ -1,2 +1,2 @@
-description = 'minimal NICOS startup setup'
-group = 'lowlevel'
+description = "minimal NICOS startup setup"
+group = "lowlevel"

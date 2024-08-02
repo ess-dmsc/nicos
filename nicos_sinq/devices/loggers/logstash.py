@@ -39,10 +39,12 @@ def create_logstash_handler(config):
     """
     from nicos.core import ConfigurationError
 
-    if hasattr(config, 'logstash') and AsynchronousLogstashHandler:
+    if hasattr(config, "logstash") and AsynchronousLogstashHandler:
         url = urllib.parse.urlparse(config.logstash)
         if not (url.hostname and url.port):
-            raise ConfigurationError(f'logstash: invalid url {url}')
-        logstash_handler = AsynchronousLogstashHandler(url.hostname, url.port, database_path=None)
+            raise ConfigurationError(f"logstash: invalid url {url}")
+        logstash_handler = AsynchronousLogstashHandler(
+            url.hostname, url.port, database_path=None
+        )
         logstash_handler.setLevel(logging.WARNING)
         return logstash_handler

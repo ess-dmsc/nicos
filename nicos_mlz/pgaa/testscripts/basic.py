@@ -19,7 +19,7 @@ LEGe.status(0)
 
 read(Sample)
 
-maw(shutter, 'open')
-maw(shutter, 'closed')
+maw(shutter, "open")
+maw(shutter, "closed")
 count(TrueTime=1)
 count(LiveTime=1)

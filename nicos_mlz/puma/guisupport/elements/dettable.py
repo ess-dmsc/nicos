@@ -24,8 +24,14 @@
 
 from nicos.guisupport.elements import Detector
 from nicos.guisupport.elements.halo import Halo
-from nicos.guisupport.qt import QColor, QGraphicsPathItem, QPainterPath, \
-    QPen, QPointF, QPolygonF
+from nicos.guisupport.qt import (
+    QColor,
+    QGraphicsPathItem,
+    QPainterPath,
+    QPen,
+    QPointF,
+    QPolygonF,
+)
 
 
 class DetectorTable(Detector):
@@ -39,18 +45,20 @@ class DetectorTable(Detector):
 
 
 class DetectorGuide(QGraphicsPathItem):
-
     def __init__(self, parent=None, scene=None):
         QGraphicsPathItem.__init__(self, parent)
         self.setPath(self.shape())
         if not parent and scene:
             scene.addItem(self)
-        self.setPen(QPen(QColor('darkblue')))
+        self.setPen(QPen(QColor("darkblue")))
 
     def shape(self):
         path = QPainterPath()
         y0, y1, _l = 12, 2, 250
-        path.addPolygon(QPolygonF([QPointF(0, -y0), QPointF(0, y0),
-                                   QPointF(_l, y0), QPointF(_l, -y1)]))
+        path.addPolygon(
+            QPolygonF(
+                [QPointF(0, -y0), QPointF(0, y0), QPointF(_l, y0), QPointF(_l, -y1)]
+            )
+        )
         path.closeSubpath()
         return path

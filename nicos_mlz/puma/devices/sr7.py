@@ -24,70 +24,81 @@
 
 """Class for PUMA SR7 shutter control."""
 
-from nicos.core import Attach, HasTimeout, Moveable, Override, PositionError, \
-    Readable, oneof, status
+from nicos.core import (
+    Attach,
+    HasTimeout,
+    Moveable,
+    Override,
+    PositionError,
+    Readable,
+    oneof,
+    status,
+)
 
 
 class SR7Shutter(HasTimeout, Moveable):
     """Class for the PUMA secondary shutter."""
 
     attached_devices = {
-        'sr7cl': Attach('status of SR7 shutter closed/open', Readable),
-        'sr7p1': Attach('status of SR7 position 1', Readable),
-        'sr7p2': Attach('status of SR7 position 2', Readable),
-        'sr7p3': Attach('status of SR7 position 3', Readable),
+        "sr7cl": Attach("status of SR7 shutter closed/open", Readable),
+        "sr7p1": Attach("status of SR7 position 1", Readable),
+        "sr7p2": Attach("status of SR7 position 2", Readable),
+        "sr7p3": Attach("status of SR7 position 3", Readable),
         # 'hdiacl': Attach('status of virtual source closed/open',
         #                   Readable),
         # 'stopinh': Attach('status of emergency button active/inactive',
         #                   Readable),
         # 'sr7save': Attach('SR7 security circle ok for open the beam',
         #                   Readable),
-        'sr7set': Attach('emergency close of all shutters', Moveable),
+        "sr7set": Attach("emergency close of all shutters", Moveable),
     }
 
     parameter_overrides = {
-        'unit': Override(mandatory=False, default=''),
-        'timeout': Override(mandatory=False, default=5),
+        "unit": Override(mandatory=False, default=""),
+        "timeout": Override(mandatory=False, default=5),
     }
 
-    positions = ['close', 'S1', 'S2', 'S3']
+    positions = ["close", "S1", "S2", "S3"]
     valuetype = oneof(*positions)
 
     def doIsAllowed(self, pos):
         # only shutter close is allowed
-        if pos != 'close':
-            return False, 'can only close shutter from remote'
-        return True, ''
+        if pos != "close":
+            return False, "can only close shutter from remote"
+        return True, ""
 
     def doStart(self, target):
         if target == self.read(0):
             return
         self._attached_sr7set.start(self.positions.index(target))
         if self.wait() != target:
-            raise PositionError(self, 'device returned wrong position')
-        self.log.info('SR7: %s', target)
+            raise PositionError(self, "device returned wrong position")
+        self.log.info("SR7: %s", target)
 
     def doRead(self, maxage=0):
         res = self.doStatus()[0]
         if res == status.OK:
             if self._attached_sr7cl.read(maxage) == 1:
-                return 'close'
+                return "close"
             elif self._attached_sr7p1.read(maxage) == 1:
-                return 'S1'
+                return "S1"
             elif self._attached_sr7p2.read(maxage) == 1:
-                return 'S2'
+                return "S2"
             elif self._attached_sr7p3.read(maxage) == 1:
-                return 'S3'
+                return "S3"
         else:
-            raise PositionError(self, 'SR7 shutter moving or undefined')
+            raise PositionError(self, "SR7 shutter moving or undefined")
 
     def doStatus(self, maxage=0):
-        cl, p1, p2, p3 = self._attached_sr7cl.read(maxage), \
-            self._attached_sr7p1.read(maxage), self._attached_sr7p2.read(maxage), \
-            self._attached_sr7p3.read(maxage)
+        cl, p1, p2, p3 = (
+            self._attached_sr7cl.read(maxage),
+            self._attached_sr7p1.read(maxage),
+            self._attached_sr7p2.read(maxage),
+            self._attached_sr7p3.read(maxage),
+        )
         if p1 == 1 and p2 == 1 and p3 == 1:
-            return status.BUSY, 'moving'
+            return status.BUSY, "moving"
         elif cl == 1 or p1 == 1 or p2 == 1 or p3 == 1:
-            return status.OK, 'idle'
+            return status.OK, "idle"
         else:
-            return status.ERROR, 'undefined position'
+            return status.ERROR, "undefined position"

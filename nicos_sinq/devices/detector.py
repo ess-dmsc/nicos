@@ -21,17 +21,16 @@
 #
 # *****************************************************************************
 
-"""Module to implement generic sinq detector and ControlDetector
-"""
+"""Module to implement generic sinq detector and ControlDetector"""
 
 from nicos.core import Attach, Measurable, Param, Value, pvname, status
 from nicos.devices.generic import Detector
-from nicos.devices.generic.detector import CounterChannelMixin, \
-    TimerChannelMixin
+from nicos.devices.generic.detector import CounterChannelMixin, TimerChannelMixin
 from nicos.utils import uniq
 
-from nicos_sinq.devices.epics.detector import \
-    EpicsActiveChannel as ESSEpicsActiveChannel
+from nicos_sinq.devices.epics.detector import (
+    EpicsActiveChannel as ESSEpicsActiveChannel,
+)
 from nicos_sinq.devices.epics.scaler_record import EpicsScalerRecord
 
 
@@ -42,18 +41,20 @@ class EpicsActiveChannel(ESSEpicsActiveChannel):
     together with SinqDetector.doStatus() tries to detect the problem
     and stop the counter in such a case.
     """
+
     parameters = {
-        'controlpv':
-            Param('PV to check for overrun',
-                  type=pvname,
-                  mandatory=True,
-                  settable=False,
-                  userparam=False),
+        "controlpv": Param(
+            "PV to check for overrun",
+            type=pvname,
+            mandatory=True,
+            settable=False,
+            userparam=False,
+        ),
     }
 
     def _get_pv_parameters(self):
         readable_params = ESSEpicsActiveChannel._get_pv_parameters(self)
-        return readable_params | {'controlpv'}
+        return readable_params | {"controlpv"}
 
     def presetReached(self, name, value, maxage):
         """Return true if the preset for *name* has overrun the given
@@ -62,7 +63,7 @@ class EpicsActiveChannel(ESSEpicsActiveChannel):
         if name in self._presetmap and value > 0:
             # Give it 10% grace in order to allow for normal counter box
             # operation
-            return self._get_pv('controlpv') >= 1.1 * value
+            return self._get_pv("controlpv") >= 1.1 * value
         return False
 
 
@@ -70,20 +71,22 @@ class EpicsTimerActiveChannel(TimerChannelMixin, EpicsActiveChannel):
     """
     Manages time presets
     """
-    _presetmap = {'t', 'timer'}
+
+    _presetmap = {"t", "timer"}
 
     def valueInfo(self):
-        return (Value('timepreset', unit='sec', fmtstr='%s'), )
+        return (Value("timepreset", unit="sec", fmtstr="%s"),)
 
 
 class EpicsCounterActiveChannel(CounterChannelMixin, EpicsActiveChannel):
     """
     Manages monitor presets
     """
-    _presetmap = {'m', 'monitor'}
+
+    _presetmap = {"m", "monitor"}
 
     def valueInfo(self):
-        return (Value('monitorpreset', unit='counts', fmtstr='%d'), )
+        return (Value("monitorpreset", unit="counts", fmtstr="%d"),)
 
 
 class SinqDetector(EpicsScalerRecord):
@@ -93,30 +96,35 @@ class SinqDetector(EpicsScalerRecord):
     """
 
     attached_devices = {
-        'timepreset': Attach('Device to set the preset time',
-                             TimerChannelMixin),
-        'monitorpreset': Attach('Device to set the monitor preset',
-                                CounterChannelMixin)
+        "timepreset": Attach("Device to set the preset time", TimerChannelMixin),
+        "monitorpreset": Attach(
+            "Device to set the monitor preset", CounterChannelMixin
+        ),
     }
 
     parameters = {
-        'check_overrun': Param('Flag to enable overrun checking',
-                               type=bool, default=False, settable=False,
-                               userparam=False),
+        "check_overrun": Param(
+            "Flag to enable overrun checking",
+            type=bool,
+            default=False,
+            settable=False,
+            userparam=False,
+        ),
     }
 
-    monitor_preset_names = ['m', 'monitor']
-    time_preset_names = ['t', 'time']
+    monitor_preset_names = ["m", "monitor"]
+    time_preset_names = ["t", "time"]
 
     def _presetiter(self):
         for name in self.monitor_preset_names:
-            yield name, self._attached_monitorpreset, 'monitor'
+            yield name, self._attached_monitorpreset, "monitor"
         for name in self.time_preset_names:
-            yield name, self._attached_timepreset, 'time'
+            yield name, self._attached_timepreset, "time"
 
     def _collectControllers(self):
-        self._channels = uniq(self._channels + [self._attached_monitorpreset,
-                                                self._attached_timepreset])
+        self._channels = uniq(
+            self._channels + [self._attached_monitorpreset, self._attached_timepreset]
+        )
         EpicsScalerRecord._collectControllers(self)
 
     def doSetPreset(self, **preset):
@@ -130,9 +138,10 @@ class SinqDetector(EpicsScalerRecord):
 
         # Check if user set both time and count preset
         if countpreset and timepreset:
-            self.log.debug('Both count and time preset cannot be set at '
-                           'the same time.')
-            self.log.debug('Using the best preset')
+            self.log.debug(
+                "Both count and time preset cannot be set at " "the same time."
+            )
+            self.log.debug("Using the best preset")
             # The best preset is the one which is not 0,
             # The monitor preset is preferred
             monname = list(countpreset)[0]
@@ -150,16 +159,14 @@ class SinqDetector(EpicsScalerRecord):
                 countpreset = set()
 
         if timepreset:
-            preset['m'] = 0
-            self.log.debug('Setting time preset of %f',
-                           preset[timepreset.pop()])
-            self.log.debug('Also updating the count preset to 0')
+            preset["m"] = 0
+            self.log.debug("Setting time preset of %f", preset[timepreset.pop()])
+            self.log.debug("Also updating the count preset to 0")
 
         if countpreset:
-            preset['t'] = 0
-            self.log.debug('Setting count preset of %d',
-                           preset[countpreset.pop()])
-            self.log.debug('Also updating the time preset to 0')
+            preset["t"] = 0
+            self.log.debug("Setting count preset of %d", preset[countpreset.pop()])
+            self.log.debug("Also updating the time preset to 0")
 
         self._lastpreset = preset.copy()
 
@@ -178,18 +185,18 @@ class SinqDetector(EpicsScalerRecord):
             # This reflects SINQ usage
             # When we have a time preset, other logic ensures
             # that the monitor preset is 0
-            result['m'] = monpreset[0]
+            result["m"] = monpreset[0]
             return result
-        result['t'] = max(1, timepreset[0])
+        result["t"] = max(1, timepreset[0])
         return result
 
     def doInfo(self):
         ret = EpicsScalerRecord.doInfo(self)
 
         # Check for the mode and preset
-        mode = ''
+        mode = ""
         value = 0
-        unit = ''
+        unit = ""
         for d in self._controlchannels:
             for pkey in self._presetkeys.items():
                 if pkey and pkey[1][0].name == d.name:
@@ -197,15 +204,14 @@ class SinqDetector(EpicsScalerRecord):
                     if preselection != 0:
                         value = preselection
                         unit = d.unit
-                        mode = 'timer' if pkey[0].startswith('t') \
-                            else 'monitor'
+                        mode = "timer" if pkey[0].startswith("t") else "monitor"
                         break
-        ret.append(('mode', mode, mode, '', 'presets'))
-        ret.append(('preset', value, '%s' % value, unit, 'presets'))
+        ret.append(("mode", mode, mode, "", "presets"))
+        ret.append(("preset", value, "%s" % value, unit, "presets"))
 
         # Add the array description
         for desc in self.arrayInfo():
-            ret.append(('desc_' + desc.name, desc.__dict__, '', '', 'general'))
+            ret.append(("desc_" + desc.name, desc.__dict__, "", "", "general"))
 
         return ret
 
@@ -213,9 +219,9 @@ class SinqDetector(EpicsScalerRecord):
         st, txt = EpicsScalerRecord.doStatus(self, maxage)
         if self.check_overrun and st == status.BUSY:
             for controller in self._controlchannels:
-                for (name, value) in self._channel_presets.get(controller, ()):
+                for name, value in self._channel_presets.get(controller, ()):
                     if controller.presetReached(name, value, maxage):
-                        self.log.warning('Stopping overrun counter!')
+                        self.log.warning("Stopping overrun counter!")
                         self.stop()
         return st, txt
 
@@ -234,10 +240,10 @@ class ControlDetector(Detector):
     """
 
     attached_devices = {
-        'trigger': Attach('Detector which triggers data acquisition',
-                          Detector),
-        'followers': Attach('Follower detectors', Measurable,
-                            multiple=True, optional=True),
+        "trigger": Attach("Detector which triggers data acquisition", Detector),
+        "followers": Attach(
+            "Follower detectors", Measurable, multiple=True, optional=True
+        ),
     }
     _slaves_stopped = False
     _followers_stopped = False
@@ -323,7 +329,7 @@ class ControlDetector(Detector):
 
     def valueInfo(self):
         if not self._attached_trigger:
-            self.doInit('')
+            self.doInit("")
         res = self._attached_trigger.valueInfo()
         for det in self._attached_followers:
             res = res + det.valueInfo()

@@ -1,14 +1,15 @@
-description = 'sample changer 2 devices'
+description = "sample changer 2 devices"
 
-group = 'optional'
+group = "optional"
 
-includes = ['sample_changer', 'sample_table']
+includes = ["sample_changer", "sample_table"]
 
 devices = dict(
-    sc2 = device('nicos.devices.generic.MultiSwitcher',
-        description = 'Sample Changer 2 Huber device',
-        moveables = ['sc_y', 'st_z'],
-        mapping = {
+    sc2=device(
+        "nicos.devices.generic.MultiSwitcher",
+        description="Sample Changer 2 Huber device",
+        moveables=["sc_y", "st_z"],
+        mapping={
             1: [592.5, -32],
             2: [533.5, -32],
             3: [474.5, -32],
@@ -39,14 +40,14 @@ devices = dict(
         #           18: [358.2,  27.2], 17: [299.2,  27.2],
         #           16: [240.2,  27.1], 15: [181.1,  27.0],
         #           },
-        fallback = 0,
-        fmtstr = '%d',
-        precision = [0.05, 0.05],
+        fallback=0,
+        fmtstr="%d",
+        precision=[0.05, 0.05],
         # precision = [0.05, 0.05, 100], # for use without nicos
-        blockingmove = False,
+        blockingmove=False,
     ),
 )
 
 alias_config = {
-    'SampleChanger': {'sc2': 100},
+    "SampleChanger": {"sc2": 100},
 }

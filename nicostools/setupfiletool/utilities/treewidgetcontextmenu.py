@@ -27,7 +27,6 @@ from nicos.guisupport.qt import QTreeWidget
 
 
 class TreeWidgetContextMenu(QTreeWidget):
-
     def __init__(self, parent=None):
         QTreeWidget.__init__(self, parent)
 
@@ -52,8 +51,7 @@ class TreeWidgetContextMenu(QTreeWidget):
                 itemrect = self.visualItemRect(item)
                 portrect = self.viewport().rect()
                 if not portrect.contains(itemrect.topLeft()):
-                    self.scrollToItem(
-                        item, QTreeWidget.PositionAtCenter)
+                    self.scrollToItem(item, QTreeWidget.PositionAtCenter)
                     itemrect = self.visualItemRect(item)
                 itemrect.setLeft(portrect.left())
                 itemrect.setWidth(portrect.width())

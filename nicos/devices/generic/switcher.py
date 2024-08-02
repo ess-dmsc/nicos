@@ -24,9 +24,25 @@
 
 """NICOS "switcher" devices."""
 
-from nicos.core import ConfigurationError, InvalidValueError, Moveable, \
-    Override, Param, PositionError, Readable, anytype, dictof, floatrange, \
-    listof, multiReset, multiStatus, multiStop, multiWait, none_or, status
+from nicos.core import (
+    ConfigurationError,
+    InvalidValueError,
+    Moveable,
+    Override,
+    Param,
+    PositionError,
+    Readable,
+    anytype,
+    dictof,
+    floatrange,
+    listof,
+    multiReset,
+    multiStatus,
+    multiStop,
+    multiWait,
+    none_or,
+    status,
+)
 from nicos.core.constants import SIMULATION
 from nicos.core.params import Attach
 from nicos.devices.abstract import MappedMoveable, MappedReadable
@@ -54,19 +70,21 @@ class Switcher(MappedMoveable):
     """
 
     attached_devices = {
-        'moveable': Attach('The continuous device which is controlled',
-                           Moveable),
+        "moveable": Attach("The continuous device which is controlled", Moveable),
     }
 
     parameters = {
-        'precision':    Param('Precision for comparison', mandatory=True),
-        'blockingmove': Param('Should we wait for the move to finish?',
-                              type=bool, default=True, settable=True),
+        "precision": Param("Precision for comparison", mandatory=True),
+        "blockingmove": Param(
+            "Should we wait for the move to finish?",
+            type=bool,
+            default=True,
+            settable=True,
+        ),
     }
 
     parameter_overrides = {
-        'fallback': Override(userparam=False, type=none_or(str),
-                             mandatory=False),
+        "fallback": Override(userparam=False, type=none_or(str), mandatory=False),
     }
 
     hardware_access = False
@@ -96,10 +114,11 @@ class Switcher(MappedMoveable):
             return self.fallback
         if self.relax_mapping:
             return self._attached_moveable.format(value, True)
-        raise PositionError(self, 'unknown position of %s: %s' %
-                            (self._attached_moveable,
-                             self._attached_moveable.format(value, True))
-                            )
+        raise PositionError(
+            self,
+            "unknown position of %s: %s"
+            % (self._attached_moveable, self._attached_moveable.format(value, True)),
+        )
 
     def doStatus(self, maxage=0):
         # if the underlying device is moving or in error state,
@@ -113,13 +132,19 @@ class Switcher(MappedMoveable):
             r = self.read(maxage)
             if r not in self.mapping:
                 if self.fallback:
-                    return (status.UNKNOWN, 'unconfigured position of %s, '
-                            'using fallback' % self._attached_moveable)
-                return (status.NOTREACHED, 'unconfigured position of %s or '
-                        'still moving' % self._attached_moveable)
+                    return (
+                        status.UNKNOWN,
+                        "unconfigured position of %s, "
+                        "using fallback" % self._attached_moveable,
+                    )
+                return (
+                    status.NOTREACHED,
+                    "unconfigured position of %s or "
+                    "still moving" % self._attached_moveable,
+                )
         except PositionError as e:
             return status.NOTREACHED, str(e)
-        return status.OK, ''
+        return status.OK, ""
 
     def doReset(self):
         self._attached_moveable.reset()
@@ -132,17 +157,15 @@ class ReadonlySwitcher(MappedReadable):
     """Same as the `Switcher`, but for read-only underlying devices."""
 
     attached_devices = {
-        'readable': Attach('The continuous device which is read', Readable),
+        "readable": Attach("The continuous device which is read", Readable),
     }
 
     parameters = {
-        'precision': Param('Precision for comparison', type=floatrange(0),
-                           default=0),
+        "precision": Param("Precision for comparison", type=floatrange(0), default=0),
     }
 
     parameter_overrides = {
-        'fallback': Override(userparam=False, type=none_or(str),
-                             mandatory=False),
+        "fallback": Override(userparam=False, type=none_or(str), mandatory=False),
     }
 
     hardware_access = False
@@ -160,8 +183,7 @@ class ReadonlySwitcher(MappedReadable):
                 return name
         if self.fallback is not None:
             return self.fallback
-        raise PositionError(self, 'unknown position of %s' %
-                            self._attached_readable)
+        raise PositionError(self, "unknown position of %s" % self._attached_readable)
 
     def doStatus(self, maxage=0):
         # if the underlying device is moving or in error state,
@@ -173,11 +195,14 @@ class ReadonlySwitcher(MappedReadable):
         # and otherwise return an error status
         try:
             if self.read(maxage) == self.fallback:
-                return status.NOTREACHED, 'unconfigured position of %s or '\
-                    'still moving' % self._attached_readable
+                return (
+                    status.NOTREACHED,
+                    "unconfigured position of %s or "
+                    "still moving" % self._attached_readable,
+                )
         except PositionError as e:
             return status.NOTREACHED, str(e)
-        return status.OK, ''
+        return status.OK, ""
 
     def doReset(self):
         self._attached_readable.reset()
@@ -203,29 +228,44 @@ class MultiSwitcher(MappedMoveable):
     debugging purposes.
 
     """
+
     attached_devices = {
-        'moveables': Attach('The N (continuous) devices which are'
-                            ' controlled', Moveable, multiple=True),
-        'readables': Attach('0 to N (continuous) devices which are'
-                            ' used for read back only', Readable,
-                            optional=True, multiple=True),
+        "moveables": Attach(
+            "The N (continuous) devices which are" " controlled",
+            Moveable,
+            multiple=True,
+        ),
+        "readables": Attach(
+            "0 to N (continuous) devices which are" " used for read back only",
+            Readable,
+            optional=True,
+            multiple=True,
+        ),
     }
 
     parameters = {
-        'precision': Param('List of allowed deviations (1 or N) from target '
-                           'position, or None to disable', mandatory=True,
-                           type=none_or(listof(none_or(floatrange(0))))),
-        'blockingmove': Param('Should we wait for the move to finish?',
-                              mandatory=False, default=True, settable=True,
-                              type=bool),
+        "precision": Param(
+            "List of allowed deviations (1 or N) from target "
+            "position, or None to disable",
+            mandatory=True,
+            type=none_or(listof(none_or(floatrange(0)))),
+        ),
+        "blockingmove": Param(
+            "Should we wait for the move to finish?",
+            mandatory=False,
+            default=True,
+            settable=True,
+            type=bool,
+        ),
     }
 
     parameter_overrides = {
-        'mapping': Override(description='Mapping of state names to N values '
-                            'to move the moveables to',
-                            type=dictof(anytype, listof(anytype))),
-        'fallback': Override(userparam=False, type=none_or(anytype),
-                             mandatory=False),
+        "mapping": Override(
+            description="Mapping of state names to N values "
+            "to move the moveables to",
+            type=dictof(anytype, listof(anytype)),
+        ),
+        "fallback": Override(userparam=False, type=none_or(anytype), mandatory=False),
     }
 
     hardware_access = False
@@ -238,31 +278,39 @@ class MultiSwitcher(MappedMoveable):
         MappedMoveable.doInit(self, mode)
         for k, t in self.mapping.items():
             if len(t) != len(self.devices):
-                raise ConfigurationError(self, 'Switcher state entry for key '
-                                         '%r has different length than '
-                                         'moveables list' % k)
+                raise ConfigurationError(
+                    self,
+                    "Switcher state entry for key "
+                    "%r has different length than "
+                    "moveables list" % k,
+                )
         if self.precision:
             if len(self.precision) not in [1, len(self.devices)]:
-                raise ConfigurationError(self, 'The precision list must either'
-                                         ' contain only one element or have '
-                                         'the same amount of elements as the '
-                                         'moveables list')
+                raise ConfigurationError(
+                    self,
+                    "The precision list must either"
+                    " contain only one element or have "
+                    "the same amount of elements as the "
+                    "moveables list",
+                )
 
     def _startRaw(self, target):
         """target is the raw value, i.e. a list of positions"""
         moveables = self._attached_moveables
-        if not isinstance(target, (tuple, list)) or \
-                len(target) < len(moveables):
-            raise InvalidValueError(self, 'doStart needs a tuple of %d '
-                                    'positions for this device!' %
-                                    len(moveables))
+        if not isinstance(target, (tuple, list)) or len(target) < len(moveables):
+            raise InvalidValueError(
+                self,
+                "doStart needs a tuple of %d "
+                "positions for this device!" % len(moveables),
+            )
         # only check and move the moveables, which are first in self.devices
         for d, t in zip(moveables, target):
             if not d.isAllowed(t):
-                raise InvalidValueError(self, 'target value %r not accepted '
-                                        'by device %s' % (t, d.name))
+                raise InvalidValueError(
+                    self, "target value %r not accepted " "by device %s" % (t, d.name)
+                )
         for d, t in zip(moveables, target):
-            self.log.debug('moving %r to %r', d, t)
+            self.log.debug("moving %r to %r", d, t)
             d.start(t)
         if self.blockingmove:
             multiWait(moveables)
@@ -271,8 +319,9 @@ class MultiSwitcher(MappedMoveable):
         if self._mode == SIMULATION and self.target is not None:
             # In simulation mode the values of the readables are assumed to be
             # given in the mapping table for the current target
-            return tuple(d.read(maxage) for d in self._attached_moveables) + \
-                   tuple(self.mapping[self.target][len(self._attached_moveables):])
+            return tuple(d.read(maxage) for d in self._attached_moveables) + tuple(
+                self.mapping[self.target][len(self._attached_moveables) :]
+            )
         return tuple(d.read(maxage) for d in self.devices)
 
     def _mapReadValue(self, value):
@@ -297,9 +346,14 @@ class MultiSwitcher(MappedMoveable):
                     return name
         if self.fallback is not None:
             return self.fallback
-        raise PositionError(self, 'unknown position of %s: %s' % (
-            ', '.join(str(d) for d in self.devices),
-            ', '.join(d.format(p) for (p, d) in zip(value, self.devices))))
+        raise PositionError(
+            self,
+            "unknown position of %s: %s"
+            % (
+                ", ".join(str(d) for d in self.devices),
+                ", ".join(d.format(p) for (p, d) in zip(value, self.devices)),
+            ),
+        )
 
     def doStatus(self, maxage=0):
         # if the underlying devices are moving or in error state,

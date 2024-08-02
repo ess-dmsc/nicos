@@ -31,14 +31,17 @@ class EulerPresent(Readable):
     This is a highly specific little class which reads the
     connection status of the eulerian cradle from the ZEBRA MCU
     """
+
     attached_devices = {
-        'mcu': Attach('The direct connection to the MCU from which to read '
-                      'the presence of the eulerian cradle',
-                      EpicsCommandReply)
+        "mcu": Attach(
+            "The direct connection to the MCU from which to read "
+            "the presence of the eulerian cradle",
+            EpicsCommandReply,
+        )
     }
 
     def doRead(self, maxage=0):
         try:
-            return int(self._attached_mcu.execute('M298'))
+            return int(self._attached_mcu.execute("M298"))
         except Exception:
             return 0

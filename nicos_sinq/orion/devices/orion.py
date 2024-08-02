@@ -36,40 +36,39 @@ class OrionSXTal(EulerSXTal):
     it on ZEBRA. Problem is at ORION and MORPHEUS the crystal is sticking
     up but on ZEBRA it is hanging down. This class corrects for this.
     """
+
     def _orionChiPhi(self, chi, phi):
-        chi = -1. * (chi + np.pi) + 2. * np.pi
+        chi = -1.0 * (chi + np.pi) + 2.0 * np.pi
         phi = phi + np.pi
-        if phi > 1.99*np.pi:
-            phi -= 2.*np.pi
+        if phi > 1.99 * np.pi:
+            phi -= 2.0 * np.pi
         if phi < 0:
-            phi += 2.*np.pi
+            phi += 2.0 * np.pi
         return chi, phi
 
     def _extractPos(self, pos):
         # The conversion to float is required because the monochromator
         # is a switcher which returns a string
-        om, chi, phi = z1ToBisecting(float(self._attached_mono.read(0)),
-                                     pos)
+        om, chi, phi = z1ToBisecting(float(self._attached_mono.read(0)), pos)
         chi, phi = self._orionChiPhi(chi, phi)
 
-        tth = 2. * om
+        tth = 2.0 * om
         poslist = [
-            ('ttheta', np.rad2deg(tth)),
-            ('omega', np.rad2deg(om)),
-            ('chi', np.rad2deg(chi)),
-            ('phi', np.rad2deg(phi)),
+            ("ttheta", np.rad2deg(tth)),
+            ("omega", np.rad2deg(om)),
+            ("chi", np.rad2deg(chi)),
+            ("phi", np.rad2deg(phi)),
         ]
         ok, _ = self._checkPosList(poslist)
         if not ok and self._attached_ttheta.isAllowed(np.rad2deg(tth)):
             for psi in range(0, 360, 10):
-                ompsi, chipsi, phipsi = rotatePsi(om, chi, phi,
-                                                  np.deg2rad(psi))
+                ompsi, chipsi, phipsi = rotatePsi(om, chi, phi, np.deg2rad(psi))
                 chipsi, phipsi = self._orionChiPhi(chipsi, phipsi)
                 psilist = [
-                  ('ttheta', np.rad2deg(tth)),
-                  ('omega', np.rad2deg(ompsi)),
-                  ('chi', np.rad2deg(chipsi)),
-                  ('phi', np.rad2deg(phipsi)),
+                    ("ttheta", np.rad2deg(tth)),
+                    ("omega", np.rad2deg(ompsi)),
+                    ("chi", np.rad2deg(chipsi)),
+                    ("phi", np.rad2deg(phipsi)),
                 ]
                 psiok, _ = self._checkPosList(psilist)
                 if psiok:

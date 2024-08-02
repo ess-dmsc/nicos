@@ -1,74 +1,79 @@
-description = 'NICOS system setup'
+description = "NICOS system setup"
 
-group = 'lowlevel'
+group = "lowlevel"
 
 sysconfig = dict(
-    cache = 'tofhw.toftof.frm2.tum.de',
-    instrument = 'TOFTOF',
-    experiment = 'Exp',
-    datasinks = [
-        'conssink', 'filesink', 'dmnsink', 'livesink', 'tofsink', 'nxsink'
-    ],
-    notifiers = ['emailer', 'smser'],
+    cache="tofhw.toftof.frm2.tum.de",
+    instrument="TOFTOF",
+    experiment="Exp",
+    datasinks=["conssink", "filesink", "dmnsink", "livesink", "tofsink", "nxsink"],
+    notifiers=["emailer", "smser"],
 )
 
-modules = ['nicos.commands.standard']
+modules = ["nicos.commands.standard"]
 
-includes = ['notifiers']
+includes = ["notifiers"]
 
 devices = dict(
-    TOFTOF = device('nicos.devices.instrument.Instrument',
-        description = 'The famous TOFTOF instrument',
-        responsible = 'M. Wolf <marcell.wolf@frm2.tum.de>',
-        instrument = 'TOFTOF',
-        doi = 'http://dx.doi.org/10.17815/jlsrf-1-40',
-        website = 'http://www.mlz-garching.de/toftof',
-        operators = ['Technische Universität München (TUM)'],
+    TOFTOF=device(
+        "nicos.devices.instrument.Instrument",
+        description="The famous TOFTOF instrument",
+        responsible="M. Wolf <marcell.wolf@frm2.tum.de>",
+        instrument="TOFTOF",
+        doi="http://dx.doi.org/10.17815/jlsrf-1-40",
+        website="http://www.mlz-garching.de/toftof",
+        operators=["Technische Universität München (TUM)"],
     ),
-    Sample = device('nicos_mlz.devices.sample.Sample',
-        description = 'The currently used sample',
+    Sample=device(
+        "nicos_mlz.devices.sample.Sample",
+        description="The currently used sample",
     ),
-    Exp = device('nicos_mlz.toftof.devices.Experiment',
-        description = 'The currently running experiment',
-        dataroot = '/data',
-        sample = 'Sample',
-        serviceexp = '0',
-        sendmail = True,
-        mailsender = 'toftof@frm2.tum.de',
-        managerights = dict(
-            enableDirMode = 0o775,
-            enableFileMode = 0o664,
-            disableDirMode = 0o550,
-            disableFileMode = 0o440,
-            owner = 'toftof',
-            group = 'toftof',
+    Exp=device(
+        "nicos_mlz.toftof.devices.Experiment",
+        description="The currently running experiment",
+        dataroot="/data",
+        sample="Sample",
+        serviceexp="0",
+        sendmail=True,
+        mailsender="toftof@frm2.tum.de",
+        managerights=dict(
+            enableDirMode=0o775,
+            enableFileMode=0o664,
+            disableDirMode=0o550,
+            disableFileMode=0o440,
+            owner="toftof",
+            group="toftof",
         ),
-        errorbehavior = 'abort',
-        elog = True,
-        counterfile = 'counter',
-        forcescandata = True,
+        errorbehavior="abort",
+        elog=True,
+        counterfile="counter",
+        forcescandata=True,
     ),
-    filesink = device('nicos.devices.datasinks.AsciiScanfileSink'),
-    conssink = device('nicos.devices.datasinks.ConsoleScanSink'),
-    dmnsink = device('nicos.devices.datasinks.DaemonSink'),
-    livesink = device('nicos_mlz.toftof.datasinks.LiveViewSink'),
-    tofsink = device('nicos_mlz.toftof.datasinks.TofImageSink',
-        filenametemplate = ['%(pointcounter)08d_0000.raw'],
+    filesink=device("nicos.devices.datasinks.AsciiScanfileSink"),
+    conssink=device("nicos.devices.datasinks.ConsoleScanSink"),
+    dmnsink=device("nicos.devices.datasinks.DaemonSink"),
+    livesink=device("nicos_mlz.toftof.datasinks.LiveViewSink"),
+    tofsink=device(
+        "nicos_mlz.toftof.datasinks.TofImageSink",
+        filenametemplate=["%(pointcounter)08d_0000.raw"],
     ),
-    nxsink = device('nicos_mlz.toftof.datasinks.NexusSink',
+    nxsink=device(
+        "nicos_mlz.toftof.datasinks.NexusSink",
         # templateclass = 'nicos_mlz.toftof.datasinks.nexustemplate.TofTofNexusTemplate',
-        templateclass = 'nicos_mlz.toftof.datasinks.nexustemplate.LegacyTemplate',
-        filenametemplate = ['TOFTOF%(pointcounter)08d.nxs'],
+        templateclass="nicos_mlz.toftof.datasinks.nexustemplate.LegacyTemplate",
+        filenametemplate=["TOFTOF%(pointcounter)08d.nxs"],
     ),
-    Space = device('nicos.devices.generic.FreeSpace',
-        description = 'The amount of free space for storing data',
-        path = '/data',
-        minfree = 5,
+    Space=device(
+        "nicos.devices.generic.FreeSpace",
+        description="The amount of free space for storing data",
+        path="/data",
+        minfree=5,
     ),
-    LogSpace = device('nicos.devices.generic.FreeSpace',
-        description = 'Free space on the log drive',
-        path = '/control/log',
-        visibility = (),
-        warnlimits = (0.5, None),
+    LogSpace=device(
+        "nicos.devices.generic.FreeSpace",
+        description="Free space on the log drive",
+        path="/control/log",
+        visibility=(),
+        warnlimits=(0.5, None),
     ),
 )

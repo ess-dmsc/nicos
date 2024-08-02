@@ -35,13 +35,14 @@ class ListmodeSink(FileSink):
     """Writer for the list mode files via QMesyDAQ itself."""
 
     attached_devices = {
-        'image': Attach('Image device to set the file name', Image),
+        "image": Attach("Image device to set the file name", Image),
     }
 
     parameter_overrides = {
-        'settypes': Override(default=[POINT]),
-        'filenametemplate': Override(mandatory=False, userparam=False,
-                                     default=['D%(pointcounter)07d.mdat']),
+        "settypes": Override(default=[POINT]),
+        "filenametemplate": Override(
+            mandatory=False, userparam=False, default=["D%(pointcounter)07d.mdat"]
+        ),
     }
 
     handlerclass = ListmodeSinkHandler

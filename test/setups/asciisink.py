@@ -21,15 +21,15 @@
 #
 # *****************************************************************************
 
-name = 'test system setup that writes data files'
+name = "test system setup that writes data files"
 
 sysconfig = dict(
-    datasinks = ['asciisink'],
+    datasinks=["asciisink"],
 )
 
-includes = ['axis']
+includes = ["axis"]
 
 
 devices = dict(
-    asciisink = device('nicos.devices.datasinks.AsciiScanfileSink'),
+    asciisink=device("nicos.devices.datasinks.AsciiScanfileSink"),
 )

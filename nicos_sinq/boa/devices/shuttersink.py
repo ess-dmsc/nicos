@@ -25,23 +25,22 @@ from nicos.core import Attach, DataSink, DataSinkHandler, Moveable, Readable
 
 
 class BoaShutterHandler(DataSinkHandler):
-
     _startDataset = None
 
     def _moveShutter(self, target):
-        if self.sink._attached_auto.read(0) == 'auto':
+        if self.sink._attached_auto.read(0) == "auto":
             maw(self.sink._attached_shutter1, target)
 
     def prepare(self):
         DataSinkHandler.prepare(self)
         if not self._startDataset:
             self._startDataset = self.dataset
-            self._moveShutter('open')
+            self._moveShutter("open")
 
     def end(self):
         DataSinkHandler.end(self)
         if self.dataset == self._startDataset:
-            self._moveShutter('close')
+            self._moveShutter("close")
             self._startDataset = None
 
 
@@ -52,12 +51,12 @@ class BoaShutterSink(DataSink):
     on a ManualMove which decides if automatic shutter management is enabled
     or not.
     """
-    attached_devices = {
-        'shutter1': Attach('First shutter to open', Moveable),
-        'auto': Attach('Devices which knows if we are in automatic '
-                       'or manual mode',
-                       Readable),
 
+    attached_devices = {
+        "shutter1": Attach("First shutter to open", Moveable),
+        "auto": Attach(
+            "Devices which knows if we are in automatic " "or manual mode", Readable
+        ),
     }
     handlerclass = BoaShutterHandler
 
@@ -72,4 +71,5 @@ class DummySink(DataSink):
     """
     Just a dummy sink doing nothing
     """
+
     handlerclass = DummyHandler

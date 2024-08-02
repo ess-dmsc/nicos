@@ -1,6 +1,9 @@
-description = 'Tomography setup'
+description = "Tomography setup"
 
-group = 'basic'
+group = "basic"
 
-includes = ['shutters', 'camera', 'sampletable', ]
-
+includes = [
+    "shutters",
+    "camera",
+    "sampletable",
+]

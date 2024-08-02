@@ -1,12 +1,12 @@
-description = 'Basic (lowlevel) setup for all permanent instrument components'
-group = 'lowlevel'
+description = "Basic (lowlevel) setup for all permanent instrument components"
+group = "lowlevel"
 includes = [
-    'reactor',
+    "reactor",
     #'fak40',
     # 'memograph02',
     # 'memograph04',
-    'selector',
-    'sampletable',
-    'guidehall',
-    'pressure'
+    "selector",
+    "sampletable",
+    "guidehall",
+    "pressure",
 ]

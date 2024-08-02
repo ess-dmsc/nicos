@@ -1,12 +1,12 @@
-description = 'Setups always used'
+description = "Setups always used"
 
-group = 'lowlevel'
+group = "lowlevel"
 
 includes = [
-    'system',
-    'reactor',
-    'monochromator',
-    'slits',
-    'primaryslit',
-    'detector',
+    "system",
+    "reactor",
+    "monochromator",
+    "slits",
+    "primaryslit",
+    "detector",
 ]

@@ -28,6 +28,6 @@ from nicos.core.errors import CacheLockError
 
 def test_exceptions():
     try:
-        raise CacheLockError('user')
+        raise CacheLockError("user")
     except CacheLockError as e:
-        assert e.args == ('locked by user',)
+        assert e.args == ("locked by user",)

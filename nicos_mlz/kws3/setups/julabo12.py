@@ -1,31 +1,33 @@
-description = 'Julabo temperature controller'
+description = "Julabo temperature controller"
 
-group = 'optional'
+group = "optional"
 
-includes = ['alias_T']
+includes = ["alias_T"]
 
-tango_base = 'tango://phys.kws3.frm2:10000/kws3/'
+tango_base = "tango://phys.kws3.frm2:10000/kws3/"
 
 devices = dict(
-    T_julabo_10m_intern = device('nicos_mlz.kws1.devices.julabo.TemperatureController',
-        description = 'Temperature regulation using internal bath',
-        tangodevice = tango_base + 'julabo12/control_int',
-        unit = 'degC',
-        fmtstr = '%.2f',
-        precision = 0.1,
-        timeout = 45 * 60.,
+    T_julabo_10m_intern=device(
+        "nicos_mlz.kws1.devices.julabo.TemperatureController",
+        description="Temperature regulation using internal bath",
+        tangodevice=tango_base + "julabo12/control_int",
+        unit="degC",
+        fmtstr="%.2f",
+        precision=0.1,
+        timeout=45 * 60.0,
     ),
-    T_julabo_10m_extern = device('nicos_mlz.kws1.devices.julabo.TemperatureController',
-        description = 'Temperature regulation using external sensor',
-        tangodevice = tango_base + 'julabo12/control_ext',
-        unit = 'degC',
-        fmtstr = '%.2f',
-        precision = 0.1,
-        timeout = 45 * 60.,
+    T_julabo_10m_extern=device(
+        "nicos_mlz.kws1.devices.julabo.TemperatureController",
+        description="Temperature regulation using external sensor",
+        tangodevice=tango_base + "julabo12/control_ext",
+        unit="degC",
+        fmtstr="%.2f",
+        precision=0.1,
+        timeout=45 * 60.0,
     ),
 )
 
 alias_config = {
-    'T':  {'T_julabo_10m_intern': 90, 'T_julabo_10m_extern': 100},
-    'Ts': {'T_julabo_10m_intern': 90, 'T_julabo_10m_extern': 100},
+    "T": {"T_julabo_10m_intern": 90, "T_julabo_10m_extern": 100},
+    "Ts": {"T_julabo_10m_intern": 90, "T_julabo_10m_extern": 100},
 }

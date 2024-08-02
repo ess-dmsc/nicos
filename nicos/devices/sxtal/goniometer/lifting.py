@@ -20,12 +20,12 @@
 #   Björn Pedersen <bjoern.pedersen@frm2.tum.de>
 #
 # *****************************************************************************
-'''
+"""
 Lifting
 
 class for storing position using omega and lifting counter
 
-'''
+"""
 
 import numpy as np
 
@@ -35,15 +35,15 @@ from nicos.devices.sxtal.goniometer.base import PositionBase, PositionFactory
 
 
 class Lifting(PositionBase):
-    ptype = 'l'
+    ptype = "l"
     theta_clockwise = 1
     phi_clockwise = 1
     omega_clockwise = 1
 
-    def __init__(self, p=None, gamma=None, omega=None, nu=None, signtheta=1,
-                  psi=None, _rad=False):
-        """ Constructor. Part of Position subclass protocol.
-        """
+    def __init__(
+        self, p=None, gamma=None, omega=None, nu=None, signtheta=1, psi=None, _rad=False
+    ):
+        """Constructor. Part of Position subclass protocol."""
         PositionBase.__init__(self)
         if p:
             self.gamma = p.gamma
@@ -59,80 +59,75 @@ class Lifting(PositionBase):
             self.psi = self._r2d(psi, _rad)
 
     def asB(self, _wavelength=None):
-        """ Conversion. Part of Position subclass protocol.
-        """
+        """Conversion. Part of Position subclass protocol."""
         return self.asC().asB()
 
     def asC(self, wavelength=None):
-        """ Conversion. Part of Position subclass protocol.
-        """
+        """Conversion. Part of Position subclass protocol."""
         if wavelength is None:
             wavelength = session.instrument.wavelength or None
         if not wavelength:
             raise NicosError("Cannot perform conversion without knowing wavelength")
         cz = np.sin(self.nu) / wavelength
         theta = 0.5 * np.arccos(np.cos(self.gamma) * np.cos(self.nu))
-        cabs2 = (2.0 / wavelength * np.sin(theta))**2
+        cabs2 = (2.0 / wavelength * np.sin(theta)) ** 2
         cxy = np.sqrt(cabs2 - cz**2)
         delta = self.signtheta * np.arcsin(cabs2 / cxy * wavelength / 2.0)
-        phi = -np.pi/2 + delta - self.omega
+        phi = -np.pi / 2 + delta - self.omega
         cx = np.cos(phi) * cxy
         cy = np.sin(phi) * cxy
-        return PositionFactory(ptype='cr', c=(cx, cy, cz),
-                               signtheta=self.signtheta, psi=self.psi)
+        return PositionFactory(
+            ptype="cr", c=(cx, cy, cz), signtheta=self.signtheta, psi=self.psi
+        )
 
     def asK(self, _wavelength=None):
-        """ Conversion. Part of Position subclass protocol.
-        """
+        """Conversion. Part of Position subclass protocol."""
         return self.asC().asK()
 
     def asE(self, _wavelength=None):
-        """ Conversion. Part of Position subclass protocol.
-        """
+        """Conversion. Part of Position subclass protocol."""
         return self.asC().asE()
 
     def asG(self, _wavelength=None):
-        """ Conversion. Part of Position subclass protocol.
-        """
+        """Conversion. Part of Position subclass protocol."""
         return self.asC().asG()
 
     def asN(self, _wavelength=None):
-        """ Conversion. Part of Position subclass protocol.
-        """
+        """Conversion. Part of Position subclass protocol."""
         return self.asC().asN()
 
     def asL(self, wavelength=None):
-        """ Conversion. Part of Position subclass protocol.
-        """
+        """Conversion. Part of Position subclass protocol."""
         return self.With()
 
     def With(self, **kw):
-        """ Make clone of this position with some angle(s) changed.
-        """
-        if not kw.get('_rad', False):
-            for var in ('gamma', 'omega', 'nu', 'psi'):
+        """Make clone of this position with some angle(s) changed."""
+        if not kw.get("_rad", False):
+            for var in ("gamma", "omega", "nu", "psi"):
                 if kw.get(var, None) is not None:
                     kw[var] = np.deg2rad(kw[var])
-        return PositionFactory(ptype='lr',
-                               gamma=kw.get('gamma', self.gamma),
-                               omega=kw.get('omega', self.omega),
-                               nu=kw.get('nu', self.nu),
-                               signtheta=kw.get('signtheta', self.signtheta),
-                               psi=kw.get('psi', self.psi)
-                               )
+        return PositionFactory(
+            ptype="lr",
+            gamma=kw.get("gamma", self.gamma),
+            omega=kw.get("omega", self.omega),
+            nu=kw.get("nu", self.nu),
+            signtheta=kw.get("signtheta", self.signtheta),
+            psi=kw.get("psi", self.psi),
+        )
 
     def towards(self, other, fraction):
         if not other.ptype == self.ptype:
-            raise NicosError('cannot interpolate between different typed positions')
+            raise NicosError("cannot interpolate between different typed positions")
         f0 = 1.0 - fraction
         f1 = fraction
-        return self.With(gamma=self.gamma * f0 + other.gamma * f1,
-                         omega=self.omega * f0 + other.omega * f1,
-                         nu=self.nu * f0 + other.nu * f1)
+        return self.With(
+            gamma=self.gamma * f0 + other.gamma * f1,
+            omega=self.omega * f0 + other.omega * f1,
+            nu=self.nu * f0 + other.nu * f1,
+        )
 
     def __repr__(self):
-        """ Representation. Part of Position subclass protocol.
-        """
+        """Representation. Part of Position subclass protocol."""
         s = "[Lifting:"
         if self.gamma is not None:
             s = s + " gamma=%8.3f" % (np.rad2deg(self.gamma))

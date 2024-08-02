@@ -23,8 +23,17 @@
 
 """Cryopad related polarization devices."""
 
-from nicos.core import Attach, Moveable, Override, Param, listof, \
-    multiStatus, oneof, status, tupleof
+from nicos.core import (
+    Attach,
+    Moveable,
+    Override,
+    Param,
+    listof,
+    multiStatus,
+    oneof,
+    status,
+    tupleof,
+)
 from nicos.devices.generic.switcher import Switcher
 from nicos.devices.sxtal.instrument import SXTalBase
 
@@ -39,30 +48,38 @@ class BaseCryopad(Moveable):
     """
 
     attached_devices = {
-        'nut_in':   Attach('Incoming nutator axis', Moveable),
-        'prec_in':  Attach('Incoming precession current', Moveable),
-        'nut_out':  Attach('Outgoing nutator axis', Moveable),
-        'prec_out': Attach('Outgoing precession current', Moveable),
+        "nut_in": Attach("Incoming nutator axis", Moveable),
+        "prec_in": Attach("Incoming precession current", Moveable),
+        "nut_out": Attach("Outgoing nutator axis", Moveable),
+        "prec_out": Attach("Outgoing precession current", Moveable),
     }
 
     parameters = {
         # 01/2017: [108.27, 0, 0, 80.73, 0, 0]
-        'coefficients':       Param('Coefficients for calculating currents',
-                                    type=listof(float), settable=True,
-                                    default=[108.46, 0, 0, 80.77, 0, 0]),
-        'meissnercorrection': Param('Correct for curved Meissner shield?',
-                                    type=bool, default=True),
+        "coefficients": Param(
+            "Coefficients for calculating currents",
+            type=listof(float),
+            settable=True,
+            default=[108.46, 0, 0, 80.77, 0, 0],
+        ),
+        "meissnercorrection": Param(
+            "Correct for curved Meissner shield?", type=bool, default=True
+        ),
     }
 
     parameter_overrides = {
-        'fmtstr':  Override(default='%.1f %.1f / %.1f %.1f'),
+        "fmtstr": Override(default="%.1f %.1f / %.1f %.1f"),
     }
 
     valuetype = tupleof(float, float, float, float)
 
     def _getWaiters(self):
-        return [self._attached_nut_in, self._attached_nut_out,
-                self._attached_prec_in, self._attached_prec_out]
+        return [
+            self._attached_nut_in,
+            self._attached_nut_out,
+            self._attached_prec_in,
+            self._attached_prec_out,
+        ]
 
     def _getInstrPosition(self, maxage=None):
         """Return (lambda_in, lambda_out, gamma, sense) of the instrument.
@@ -88,33 +105,41 @@ class BaseCryopad(Moveable):
             theta_out -= calc.curved_meissner_correction(theta_out)
 
         chi_in, chi_out = calc.currents_to_angles(
-            self.coefficients, prec_in, prec_out, lam_in, lam_out, gamma)
-        self.log.debug('chi_in=%s, chi_out=%s', chi_in, chi_out)
-        xyz_in = calc.pol_in_from_angles(sense, theta_in, chi_in, lam_in, lam_out, gamma)
-        xyz_out = calc.pol_out_from_angles(sense, theta_out, chi_out, lam_in, lam_out, gamma)
-        self.log.debug('xyz_in=%s, xyz_out=%s', xyz_in, xyz_out)
+            self.coefficients, prec_in, prec_out, lam_in, lam_out, gamma
+        )
+        self.log.debug("chi_in=%s, chi_out=%s", chi_in, chi_out)
+        xyz_in = calc.pol_in_from_angles(
+            sense, theta_in, chi_in, lam_in, lam_out, gamma
+        )
+        xyz_out = calc.pol_out_from_angles(
+            sense, theta_out, chi_out, lam_in, lam_out, gamma
+        )
+        self.log.debug("xyz_in=%s, xyz_out=%s", xyz_in, xyz_out)
 
         polar_in = calc.polar_angles_from_xyz(*xyz_in)
         polar_out = calc.polar_angles_from_xyz(*xyz_out)
-        return polar_in + polar_out   # a 4-tuple
+        return polar_in + polar_out  # a 4-tuple
 
     def doStart(self, target):
         lam_in, lam_out, gamma, sense = self._getInstrTarget()
         polar_th_in, polar_phi_in, polar_th_out, polar_phi_out = target
 
-        theta_in, chi_in = calc.cryopad_in(sense, lam_in, lam_out, gamma,
-                                           polar_th_in, polar_phi_in)
+        theta_in, chi_in = calc.cryopad_in(
+            sense, lam_in, lam_out, gamma, polar_th_in, polar_phi_in
+        )
         theta_in, chi_in = calc.optimize_angles(theta_in, chi_in)
 
-        theta_out, chi_out = calc.cryopad_out(sense, lam_in, lam_out, gamma,
-                                              polar_th_out, polar_phi_out)
+        theta_out, chi_out = calc.cryopad_out(
+            sense, lam_in, lam_out, gamma, polar_th_out, polar_phi_out
+        )
         theta_out, chi_out = calc.optimize_angles(theta_out, chi_out)
 
         if self.meissnercorrection:
             theta_out += calc.curved_meissner_correction(theta_out)
 
         prec_in, prec_out = calc.angles_to_currents(
-            self.coefficients, chi_in, chi_out, lam_in, lam_out, gamma)
+            self.coefficients, chi_in, chi_out, lam_in, lam_out, gamma
+        )
 
         self._attached_nut_in.start(theta_in)
         self._attached_nut_out.start(theta_out)
@@ -123,10 +148,9 @@ class BaseCryopad(Moveable):
 
 
 class SXTalCryopad(BaseCryopad):
-
     attached_devices = {
-        'sxtal':  Attach('Single-crystal instrument', SXTalBase),
-        'ttheta': Attach('Two-theta motor', Moveable),
+        "sxtal": Attach("Single-crystal instrument", SXTalBase),
+        "ttheta": Attach("Two-theta motor", Moveable),
     }
 
     def _getInstrPosition(self, maxage=None):
@@ -143,20 +167,21 @@ class SXTalCryopad(BaseCryopad):
 class CryopadPol(Moveable):
     """Controls the incoming or outgoing polarization direction."""
 
-    attached_devices = {
-        'cryopad': Attach('Underlying Cryopad device', BaseCryopad)
-    }
+    attached_devices = {"cryopad": Attach("Underlying Cryopad device", BaseCryopad)}
 
     parameters = {
-        'side':    Param('Which side of the instrument is this device?',
-                         type=oneof('in', 'out'), mandatory=True),
+        "side": Param(
+            "Which side of the instrument is this device?",
+            type=oneof("in", "out"),
+            mandatory=True,
+        ),
     }
 
     parameter_overrides = {
-        'unit':    Override(mandatory=False, default=''),
+        "unit": Override(mandatory=False, default=""),
     }
 
-    valuetype = oneof('+x', '-x', '+y', '-y', '+z', '-z')
+    valuetype = oneof("+x", "-x", "+y", "-y", "+z", "-z")
 
     def doRead(self, maxage=0):
         # NOTE: for now, we just return the latest target because it became
@@ -179,14 +204,14 @@ class CryopadPol(Moveable):
         st, text = multiStatus(self._adevs)
         if st == status.BUSY:
             return st, text
-        if self.read(maxage) == 'unknown':
-            return status.NOTREACHED, 'unknown polarization setting'
-        return status.OK, 'idle'
+        if self.read(maxage) == "unknown":
+            return status.NOTREACHED, "unknown polarization setting"
+        return status.OK, "idle"
 
     def doStart(self, target):
         theta_chi = calc.DIRECTIONS[target]
         cppos = self._attached_cryopad.target or (0, 0, 0, 0)
-        if self.side == 'in':
+        if self.side == "in":
             target = tuple(theta_chi) + cppos[2:4]
         else:
             target = cppos[0:2] + tuple(theta_chi)
@@ -199,32 +224,32 @@ class CryopadFlip(Switcher):
     def doInit(self, mode):
         Switcher.doInit(self, mode)
         self._onoff = list(self.mapping)
-        self.valuetype = oneof('same', 'switch', *self._onoff)
+        self.valuetype = oneof("same", "switch", *self._onoff)
 
     def doStatus(self, maxage=0):
         st, text = Switcher.doStatus(self, maxage)
         if st == status.UNKNOWN:
-            st, text = status.NOTREACHED, 'invalid flipper current'
+            st, text = status.NOTREACHED, "invalid flipper current"
         return st, text
 
     def doIsAllowed(self, target):
-        if target in ('same', 'switch'):
-            return True, ''
+        if target in ("same", "switch"):
+            return True, ""
         return Switcher.doIsAllowed(self, target)
 
     def doStart(self, target):
-        if target == 'same':
+        if target == "same":
             real_tgt = self.read(0)
-            if real_tgt == 'unknown':
+            if real_tgt == "unknown":
                 real_tgt = self._onoff[0]
-            self._setROParam('target', real_tgt)
+            self._setROParam("target", real_tgt)
             return
-        if target == 'switch':
+        if target == "switch":
             if self.read(0) == self._onoff[0]:
-                self._setROParam('target', self._onoff[1])
+                self._setROParam("target", self._onoff[1])
                 Switcher.doStart(self, self._onoff[1])
             else:
-                self._setROParam('target', self._onoff[0])
+                self._setROParam("target", self._onoff[0])
                 Switcher.doStart(self, self._onoff[0])
         else:
             Switcher.doStart(self, target)

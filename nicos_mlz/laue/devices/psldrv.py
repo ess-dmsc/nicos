@@ -20,30 +20,30 @@
 #   Björn Pedersen <bjoern.pedersen@frm2.tum.de>
 #
 # *****************************************************************************
-'''Detector driver for the laue PSL detector via the windows server
+"""Detector driver for the laue PSL detector via the windows server
 
-  To ease offline testing (without nicos) this is a standalone module without
-  NICOS dependencies.
-'''
+To ease offline testing (without nicos) this is a standalone module without
+NICOS dependencies.
+"""
 
 import socket
 import zlib
 
 
 class PSLdrv:
-    def __init__(self, address='lauedet.laue.frm2.tum.de', port=50000):
+    def __init__(self, address="lauedet.laue.frm2.tum.de", port=50000):
         self.address = address
         self.port = port
 
     def communicate(self, cmd):
-        s = socket.create_connection((self.address, self.port), timeout=30.)
-        s.send(cmd + '\n')
+        s = socket.create_connection((self.address, self.port), timeout=30.0)
+        s.send(cmd + "\n")
         if cmd == "GetImage":
             # Get Image data in chunks
             # the detector first sends a line with size info
-            nx, ny, data_len = s.recv(1024).split(';')
+            nx, ny, data_len = s.recv(1024).split(";")
             nx, ny, data_len = int(nx), int(ny), int(data_len)
-            data = b''
+            data = b""
             while 1:
                 data += s.recv(data_len)
                 if len(data) >= data_len:
@@ -54,7 +54,7 @@ class PSLdrv:
         elif cmd == "Snap":
             # don't wait for a reply, it would block until the end
             # of the exposure before returning 'TRUE'
-            data = b''
+            data = b""
         else:
             data = s.recv(1024)
         return data

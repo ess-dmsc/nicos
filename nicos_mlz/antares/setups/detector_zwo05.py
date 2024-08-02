@@ -1,24 +1,27 @@
-description = 'ZWO CCD camera 5 devices'
+description = "ZWO CCD camera 5 devices"
 
-group = 'lowlevel'
+group = "lowlevel"
 
-tango_base = 'tango://zwo05.antares.frm2.tum.de:10000/lima/zwo/'
+tango_base = "tango://zwo05.antares.frm2.tum.de:10000/lima/zwo/"
 
 devices = dict(
-    zwo05 = device('nicos.devices.vendor.lima.GenericLimaCCD',
-        description = 'ZWO ASI camera 5',
-        tangodevice = tango_base + 'camera0',
-        visibility = (),
-        flip = (True, False),
+    zwo05=device(
+        "nicos.devices.vendor.lima.GenericLimaCCD",
+        description="ZWO ASI camera 5",
+        tangodevice=tango_base + "camera0",
+        visibility=(),
+        flip=(True, False),
     ),
-    timer_zwo05 = device('nicos.devices.vendor.lima.LimaCCDTimer',
-        tangodevice = tango_base + 'camera0',
-        visibility = (),
+    timer_zwo05=device(
+        "nicos.devices.vendor.lima.LimaCCDTimer",
+        tangodevice=tango_base + "camera0",
+        visibility=(),
     ),
-    det_zwo05 = device('nicos.devices.generic.Detector',
-        description = 'Camera 5 base detector',
-        images = ['zwo05'],
-        timers = ['timer_zwo05'],
+    det_zwo05=device(
+        "nicos.devices.generic.Detector",
+        description="Camera 5 base detector",
+        images=["zwo05"],
+        timers=["timer_zwo05"],
     ),
     # temp_zwo05 = device('nicos.devices.vendor.lima.ZwoTC',
     #     description = 'Temperature of CCD sensor chip cam 1',

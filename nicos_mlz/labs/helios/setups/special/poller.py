@@ -1,16 +1,17 @@
-description = 'setup for the poller'
-group = 'special'
+description = "setup for the poller"
+group = "special"
 
 sysconfig = dict(
-    cache = 'localhost',
+    cache="localhost",
 )
 
 devices = dict(
-    Poller = device('nicos.services.poller.Poller',
-        autosetup = True,
-        alwayspoll = [],
-        neverpoll = [],
-        loglevel = 'info',
-        blacklist = [],
+    Poller=device(
+        "nicos.services.poller.Poller",
+        autosetup=True,
+        alwayspoll=[],
+        neverpoll=[],
+        loglevel="info",
+        blacklist=[],
     ),
 )

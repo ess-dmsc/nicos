@@ -30,9 +30,19 @@ from struct import pack, unpack
 # pylint: disable=import-error
 from pymodbus.client.sync import ModbusTcpClient
 
-from nicos.guisupport.qt import QApplication, QFormLayout, QFrame, \
-    QHBoxLayout, QLabel, QLineEdit, QMainWindow, QPushButton, QScrollArea, \
-    QVBoxLayout, QWidget
+from nicos.guisupport.qt import (
+    QApplication,
+    QFormLayout,
+    QFrame,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QMainWindow,
+    QPushButton,
+    QScrollArea,
+    QVBoxLayout,
+    QWidget,
+)
 
 # This is supposed to be a custom instrument specific stand-alone tool!
 
@@ -41,15 +51,15 @@ def Stati(status):
     l = []
     s = status >> 12
     if s & 8:
-        l.append('-> ERROR%x <-' % s)
+        l.append("-> ERROR%x <-" % s)
     elif s & 4:
-        l.append('WARNING%x' % s)
+        l.append("WARNING%x" % s)
     elif s & 2:
-        l.append('BUSY')
+        l.append("BUSY")
     elif s & 1:
-        l.append('IDLE')
+        l.append("IDLE")
     else:
-        l.append('!!! INVALID STATUS !!!')
+        l.append("!!! INVALID STATUS !!!")
     return l
 
 
@@ -84,20 +94,20 @@ class BaseDev(QWidget):
         self._inner_vbox.addLayout(self._inner_hbox1)
 
         # fill upper hbox
-        self.valueWidget = QLineEdit('0b123456789abcdef0')
+        self.valueWidget = QLineEdit("0b123456789abcdef0")
         self.valueWidget.setMaximumWidth(120)
         self._inner_hbox1.addWidget(self.valueWidget)
 
         if self.has_target:
             self.targetWidget = QLineEdit()
-            self.targetWidget.setPlaceholderText('')
+            self.targetWidget.setPlaceholderText("")
             self.targetWidget.setMaximumWidth(120)
             self.targetWidget.returnPressed.connect(self._go_clicked)
             self._inner_hbox1.addWidget(self.targetWidget)
-            self.goButton = QPushButton('Go')
+            self.goButton = QPushButton("Go")
             self.goButton.clicked.connect(self._go_clicked)
             self._inner_hbox1.addWidget(self.goButton)
-            self.stopButton = QPushButton('Stop')
+            self.stopButton = QPushButton("Stop")
             self.stopButton.clicked.connect(self._stop_clicked)
             self._inner_hbox1.addWidget(self.stopButton)
 
@@ -106,13 +116,13 @@ class BaseDev(QWidget):
             self._inner_hbox2 = QHBoxLayout()
             self._inner_vbox.addLayout(self._inner_hbox2)
 
-            self.statvalueWidget = QLineEdit('statval')
+            self.statvalueWidget = QLineEdit("statval")
             self.statvalueWidget.setMaximumWidth(120)
             self._inner_hbox2.addWidget(self.statvalueWidget)
-            self.statusWidget = QLineEdit('Statusstring if available')
+            self.statusWidget = QLineEdit("Statusstring if available")
             self.statusWidget.setMaximumWidth(10000)
             self._inner_hbox2.addWidget(self.statusWidget)
-            self.resetButton = QPushButton('Reset')
+            self.resetButton = QPushButton("Reset")
             self.resetButton.clicked.connect(self._reset_clicked)
             self._inner_hbox1.addWidget(self.resetButton)
             # self._inner_hbox2.addStretch(0.1)
@@ -129,7 +139,7 @@ class BaseDev(QWidget):
 
     def _go_clicked(self):
         self.model.targeter(self.index, self.targetWidget.text())
-        self.targetWidget.setText('')
+        self.targetWidget.setText("")
 
     def _stop_clicked(self):
         self.model.stopper(self.index)
@@ -183,7 +193,7 @@ class DiscreteInput(ReadWord):
     def _update(self):
         self.valueWidget.setText(self._bin2str(self.model.ReadWord(self.addr)))
         statval = self.model.ReadWord(self.addr + 1)
-        self.statvalueWidget.setText('0x%04x' % statval)
+        self.statvalueWidget.setText("0x%04x" % statval)
         self.statusWidget.setText(self._status(statval))
 
 
@@ -195,7 +205,7 @@ class DiscreteOutput(DiscreteInput):
         value = self.targetWidget.text()
         if value:
             self.model.WriteWord(self.addr + 1, self._str2bin(value))
-            self.targetWidget.setText('')
+            self.targetWidget.setText("")
             self.model.WriteWord(self.addr + 2, 0x2000)
 
     def _stop_clicked(self):
@@ -206,33 +216,33 @@ class DiscreteOutput(DiscreteInput):
 
     def _str2bin(self, value):
         v = str(value).strip()
-        if v.startswith(('x', 'X', '$')):
-            v = int('0' + v[1:], 16)
-        elif v.startswith(('0x', '0X')):
-            v = int('0' + v[2:], 16)
-        elif v.startswith('16#'):
-            v = int('0' + v[3:], 16)
-        elif v.startswith(('0b', '0B', '2#')):
-            v = int('0' + v[2:], 2)
-        elif v.startswith(('0', 'o', 'O')):
-            v = int('0' + v[1:], 8)
-        elif v.startswith('8#'):
-            v = int('0' + v[2:], 8)
-        elif v.startswith('10#'):
-            v = int('0' + v[3:], 8)
+        if v.startswith(("x", "X", "$")):
+            v = int("0" + v[1:], 16)
+        elif v.startswith(("0x", "0X")):
+            v = int("0" + v[2:], 16)
+        elif v.startswith("16#"):
+            v = int("0" + v[3:], 16)
+        elif v.startswith(("0b", "0B", "2#")):
+            v = int("0" + v[2:], 2)
+        elif v.startswith(("0", "o", "O")):
+            v = int("0" + v[1:], 8)
+        elif v.startswith("8#"):
+            v = int("0" + v[2:], 8)
+        elif v.startswith("10#"):
+            v = int("0" + v[3:], 8)
         else:
             v = int(v)
         return v
 
     def _bin2str(self, value):
         if value < 16:
-            return '%d' % value
-        return '0x%04x' % value
+            return "%d" % value
+        return "0x%04x" % value
 
     def _update(self):
         self.valueWidget.setText(self._bin2str(self.model.ReadWord(self.addr)))
         statval = self.model.ReadWord(self.addr + 2)
-        self.statvalueWidget.setText('0x%04x' % statval)
+        self.statvalueWidget.setText("0x%04x" % statval)
         self.statusWidget.setText(self._status(statval))
 
 
@@ -242,13 +252,13 @@ class WriteWord(ReadWord):
 
     def __init__(self, model, name, addr):
         ReadWord.__init__(self, model, name, addr)
-        self.goButton.setText('Set')
+        self.goButton.setText("Set")
 
     def _go_clicked(self):
         value = self.targetWidget.text()
         if value:
             self.model.WriteWord(self.addr, self._str2bin(value))
-            self.targetWidget.setText('')
+            self.targetWidget.setText("")
 
     def _stop_clicked(self):
         self.model.WriteWord(self.addr, 0)
@@ -258,20 +268,20 @@ class WriteWord(ReadWord):
 
     def _str2bin(self, value):
         v = str(value).strip()
-        if v.startswith('0x') or v.startswith('0X'):
+        if v.startswith("0x") or v.startswith("0X"):
             v = int(v[2:], 16)
-        elif v.startswith('0b') or v.startswith('0B'):
+        elif v.startswith("0b") or v.startswith("0B"):
             v = int(v[2:], 2)
-        elif v.startswith('0') or v.startswith('o'):
+        elif v.startswith("0") or v.startswith("o"):
             v = int(v[2:], 8)
-        elif v.startswith(('x', 'X', '$')):
+        elif v.startswith(("x", "X", "$")):
             v = int(v[1:], 16)
         else:
             v = int(v)
         return v
 
     def _bin2str(self, value):
-        return '0x%04x' % value
+        return "0x%04x" % value
 
 
 class AnalogInput(BaseDev):
@@ -294,61 +304,61 @@ class AnalogInput(BaseDev):
         return float(value)
 
     def _bin2str(self, value):
-        return '%g' % value
+        return "%g" % value
 
 
 class LIFT(DiscreteOutput):
     def _status(self, value):
-        stati = ['Idle']
+        stati = ["Idle"]
         if (value & 0x9000) == 0x9000:
-            stati = ['ERR:Movement timed out']
+            stati = ["ERR:Movement timed out"]
         if value & 0x0800:
-            stati.append('ERR:liftclamp switches in Error')
+            stati.append("ERR:liftclamp switches in Error")
         if value & 0x0004:
-            stati.append('No Air pressure')
+            stati.append("No Air pressure")
         if value & 0x0002:
-            stati.append('ERR:Actuator Wire shorted!')
+            stati.append("ERR:Actuator Wire shorted!")
         if value & 0x0001:
-            stati.append('ERR:Actuator Wire open!')
-        return ', '.join(stati)
+            stati.append("ERR:Actuator Wire open!")
+        return ", ".join(stati)
 
 
 class MAGAZIN(DiscreteOutput):
     def _status(self, value):
-        stati = ['Idle']
+        stati = ["Idle"]
         if (value & 0x9000) == 0x9000:
-            stati = ['ERR:Movement timed out']
+            stati = ["ERR:Movement timed out"]
         if value & 0x0800:
-            stati.append('ERR:liftclamp switches in Error')
+            stati.append("ERR:liftclamp switches in Error")
         if value & 0x0004:
-            stati.append('No Air pressure')
+            stati.append("No Air pressure")
         if value & 0x0002:
-            stati.append('ERR:Actuator Wire shorted!')
+            stati.append("ERR:Actuator Wire shorted!")
         if value & 0x0001:
-            stati.append('ERR:Actuator Wire open!')
-        return ', '.join(stati)
+            stati.append("ERR:Actuator Wire open!")
+        return ", ".join(stati)
 
 
 class CLAMP(DiscreteOutput):
     def _status(self, value):
-        stati = ['Idle']
+        stati = ["Idle"]
         if (value & 0x9000) == 0x9000:
-            stati = ['ERR:Movement timed out']
+            stati = ["ERR:Movement timed out"]
         if value & 0x0800:
-            stati.append('ERR:liftclamp switches in Error')
+            stati.append("ERR:liftclamp switches in Error")
         if value & 0x0004:
-            stati.append('No Air pressure')
+            stati.append("No Air pressure")
         if value & 0x0002:
-            stati.append('ERR:Actuator Wire shorted!')
+            stati.append("ERR:Actuator Wire shorted!")
         if value & 0x0001:
-            stati.append('ERR:Actuator Wire open!')
-        return ', '.join(stati)
+            stati.append("ERR:Actuator Wire open!")
+        return ", ".join(stati)
 
 
 class MainWindow(QMainWindow):
     i = 0
 
-    def __init__(self, parent = None):
+    def __init__(self, parent=None):
         QMainWindow.__init__(self, parent)
 
         # scroll area Widget contents - layout
@@ -379,7 +389,7 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(self.centralWidget)
 
         try:
-            self._bus = ModbusTcpClient('wechsler.panda.frm2')
+            self._bus = ModbusTcpClient("wechsler.panda.frm2")
             self._bus.connect()
             self._sync()
             print("PLC conforms to spec %.4f" % self.ReadFloat(0))
@@ -390,36 +400,36 @@ class MainWindow(QMainWindow):
         self._sync()
 
         widgets = []
-        widgets.append(WriteWord(self, 'last_liftpos', addr=58/2))
-        widgets.append(ReadWord(self, 'analog1', addr=92/2))
-        widgets.append(ReadWord(self, 'analog2', addr=96/2))
-        widgets.append(AnalogInput(self, 'liftpos_analog', addr=146/2))
-        widgets.append(DiscreteInput(self, 'lift_sw', addr=68/2))
-        widgets.append(LIFT(self, 'lift', 104/2))
+        widgets.append(WriteWord(self, "last_liftpos", addr=58 / 2))
+        widgets.append(ReadWord(self, "analog1", addr=92 / 2))
+        widgets.append(ReadWord(self, "analog2", addr=96 / 2))
+        widgets.append(AnalogInput(self, "liftpos_analog", addr=146 / 2))
+        widgets.append(DiscreteInput(self, "lift_sw", addr=68 / 2))
+        widgets.append(LIFT(self, "lift", 104 / 2))
 
-        widgets.append(WriteWord(self, 'last_magpos', addr=60/2))
-        widgets.append(DiscreteInput(self, 'magazin_sw', addr=72/2))
-        widgets.append(MAGAZIN(self, 'magazin', addr=110/2))
+        widgets.append(WriteWord(self, "last_magpos", addr=60 / 2))
+        widgets.append(DiscreteInput(self, "magazin_sw", addr=72 / 2))
+        widgets.append(MAGAZIN(self, "magazin", addr=110 / 2))
 
-        widgets.append(DiscreteInput(self, 'magazin_occ_sw', addr=84/2))
-        widgets.append(DiscreteInput(self, 'magazin_occ', addr=88/2))
+        widgets.append(DiscreteInput(self, "magazin_occ_sw", addr=84 / 2))
+        widgets.append(DiscreteInput(self, "magazin_occ", addr=88 / 2))
 
-        widgets.append(DiscreteInput(self, 'liftclamp_sw', addr=76/2))
-        widgets.append(CLAMP(self, 'liftclamp', addr=116/2))
+        widgets.append(DiscreteInput(self, "liftclamp_sw", addr=76 / 2))
+        widgets.append(CLAMP(self, "liftclamp", addr=116 / 2))
 
-        widgets.append(DiscreteInput(self, 'magazinclamp_sw', addr=80/2))
-        widgets.append(CLAMP(self, 'magazinclamp', addr=122/2))
+        widgets.append(DiscreteInput(self, "magazinclamp_sw", addr=80 / 2))
+        widgets.append(CLAMP(self, "magazinclamp", addr=122 / 2))
 
-        widgets.append(CLAMP(self, 'tableclamp', addr=128/2))
+        widgets.append(CLAMP(self, "tableclamp", addr=128 / 2))
 
-        widgets.append(CLAMP(self, 'inhibit_relay', addr=134/2))
+        widgets.append(CLAMP(self, "inhibit_relay", addr=134 / 2))
 
-        widgets.append(WriteWord(self, 'enable_word', addr=150/2))
+        widgets.append(WriteWord(self, "enable_word", addr=150 / 2))
 
-        widgets.append(DiscreteInput(self, 'spare inputs', addr=100/2))
-        widgets.append(DiscreteOutput(self, 'spare outputs', addr=140/2))
+        widgets.append(DiscreteInput(self, "spare inputs", addr=100 / 2))
+        widgets.append(DiscreteOutput(self, "spare outputs", addr=140 / 2))
 
-        widgets.append(ReadWord(self, 'cycle_counter', addr=152/2))
+        widgets.append(ReadWord(self, "cycle_counter", addr=152 / 2))
 
         for w in widgets:
             self.addWidget(w)
@@ -437,29 +447,32 @@ class MainWindow(QMainWindow):
             self._sync()
 
     def ReadDWord(self, addr):
-        return unpack('<I', pack('<HH', self._registers[int(addr)],
-                                 self._registers[int(addr) + 1]))
+        return unpack(
+            "<I",
+            pack("<HH", self._registers[int(addr)], self._registers[int(addr) + 1]),
+        )
 
     def WriteDWord(self, addr, value):
         if self._bus:
-            low, high = unpack('<HH', pack('<I', int(value)))
+            low, high = unpack("<HH", pack("<I", int(value)))
             self._bus.write_registers(int(addr | 0x4000), [low, high])
             self._sync()
 
     def ReadFloat(self, addr):
-        return unpack('<f', pack('<HH', self._registers[int(addr) + 1],
-                                 self._registers[int(addr)]))
+        return unpack(
+            "<f",
+            pack("<HH", self._registers[int(addr) + 1], self._registers[int(addr)]),
+        )
 
     def WriteFloat(self, addr, value):
         if self._bus:
-            low, high = unpack('<HH', pack('<f', float(value)))
+            low, high = unpack("<HH", pack("<f", float(value)))
             self._bus.write_registers(int(addr | 0x4000), [high, low])
             self._sync()
 
     def _sync(self):
         if self._bus:
-            self._registers = self._bus.read_holding_registers(0x4000,
-                                                               77).registers[:]
+            self._registers = self._bus.read_holding_registers(0x4000, 77).registers[:]
         else:
             self._registers = [self.i + i for i in range(77)]
             self.i += 1

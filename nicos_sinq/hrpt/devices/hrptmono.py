@@ -31,6 +31,9 @@ class HrptMono(ManualMove):
     settable parameter,
     the monochromator type
     """
+
     parameters = {
-        'monotype': Param('Monochromator Type', type=str, settable=True,
-                          category='instrument')}
+        "monotype": Param(
+            "Monochromator Type", type=str, settable=True, category="instrument"
+        )
+    }

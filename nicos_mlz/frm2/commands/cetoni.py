@@ -24,25 +24,24 @@
 
 """User commands for high pressure stopped flow experiment."""
 
-
 from nicos import session
 from nicos.commands import helparglist, usercommand
 from nicos.commands.measure import count
 
 
 @usercommand
-@helparglist('')
+@helparglist("")
 def cetoni_calibrate_sensors():
     """Calculates and stores offsets to atmospheric pressure for pressure
     sensors installed on cetoni pumps.
     """
-    pump1 = session.getDevice('pump1')
-    pump2 = session.getDevice('pump2')
-    pump3 = session.getDevice('pump3')
+    pump1 = session.getDevice("pump1")
+    pump2 = session.getDevice("pump2")
+    pump3 = session.getDevice("pump3")
 
-    pump1.set_valve_state('pass_through')
-    pump2.set_valve_state('pass_through')
-    pump3.set_valve_state('pass_through')
+    pump1.set_valve_state("pass_through")
+    pump2.set_valve_state("pass_through")
+    pump3.set_valve_state("pass_through")
 
     value1 = pump1._pressure.read_weighted()[0]
     value2 = pump2._pressure.read_weighted()[0]
@@ -54,7 +53,7 @@ def cetoni_calibrate_sensors():
 
 
 @usercommand
-@helparglist('pressure, volume1, volume2, time, [detectors], [presets]')
+@helparglist("pressure, volume1, volume2, time, [detectors], [presets]")
 def cetoni_count(pressure, volume1, volume2, time, *detlist, **preset):
     """Performs mixing of liquids of *volume1* and *volume2* that are stored in
     pump 1 and pump 2. Mixing happens in the pressure cell under specified
@@ -78,13 +77,13 @@ def cetoni_count(pressure, volume1, volume2, time, *detlist, **preset):
     pressure in the cell during the experiment.
 
     """
-    pump1 = session.getDevice('pump1')
-    pump2 = session.getDevice('pump2')
-    pump3 = session.getDevice('pump3')
+    pump1 = session.getDevice("pump1")
+    pump2 = session.getDevice("pump2")
+    pump3 = session.getDevice("pump3")
 
-    pump1.set_valve_state('inlet')
-    pump2.set_valve_state('inlet')
-    pump3.set_valve_state('inlet')
+    pump1.set_valve_state("inlet")
+    pump2.set_valve_state("inlet")
+    pump3.set_valve_state("inlet")
 
     pump1.speed = pump1._max_speed
     pump1.doStart(0)
@@ -104,12 +103,11 @@ def cetoni_count(pressure, volume1, volume2, time, *detlist, **preset):
     pump1._hw_wait()
     pump2._hw_wait()
     pump3._hw_wait()
-    session.log.info('Liquids have been refreshed.\n'
-                     'Setting the pressure values.')
+    session.log.info("Liquids have been refreshed.\n" "Setting the pressure values.")
 
-    pump1.set_valve_state('closed')
-    pump2.set_valve_state('closed')
-    pump3.set_valve_state('outlet')
+    pump1.set_valve_state("closed")
+    pump2.set_valve_state("closed")
+    pump3.set_valve_state("outlet")
 
     pump1.keep_pressure(pressure)
     pump2.keep_pressure(pressure)
@@ -123,16 +121,16 @@ def cetoni_count(pressure, volume1, volume2, time, *detlist, **preset):
             pump3.stop_pid()
             break
         if pump1.pid_ready and pump2.pid_ready and pump3.pid_ready:
-            session.log.info('Pressure values have been reached.')
+            session.log.info("Pressure values have been reached.")
             pump1.stop_pid()
             pump2.stop_pid()
             pump3.stop_pid()
             break
         session.delay(1)
 
-    pump1.set_valve_state('outlet')
-    pump2.set_valve_state('outlet')
-    pump3.set_valve_state('outlet')
+    pump1.set_valve_state("outlet")
+    pump2.set_valve_state("outlet")
+    pump3.set_valve_state("outlet")
 
     pump3.suck_from_cell(volume1 + volume2, time)
     pump1.dispense_to_cell(volume1, time)
@@ -140,11 +138,12 @@ def cetoni_count(pressure, volume1, volume2, time, *detlist, **preset):
     pump1._hw_wait()
     pump2._hw_wait()
     pump3._hw_wait()
-    pump1.set_valve_state('closed')
-    pump2.set_valve_state('closed')
+    pump1.set_valve_state("closed")
+    pump2.set_valve_state("closed")
 
-    session.log.info('Mixing is finished. Starting the detector.\n'
-                     'Keeping pressure in pump3.')
+    session.log.info(
+        "Mixing is finished. Starting the detector.\n" "Keeping pressure in pump3."
+    )
     pump3._x = [i + volume1 + volume2 for i in pump3._x]
     pump3.keep_pressure(pressure, rewrite_xy=False)
     try:

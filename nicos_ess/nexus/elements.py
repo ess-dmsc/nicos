@@ -29,12 +29,12 @@ from nicos_ess.nexus.placeholder import DeviceValuePlaceholder, PlaceholderBase
 
 
 class NexusElementBase:
-    """ Interface class to define nexus elements. All NeXus elements define
+    """Interface class to define nexus elements. All NeXus elements define
     a method which represents the dict of this element.
     """
 
     def structure(self, name, metainfo):
-        """ Provides the JSON for current element in NeXus structure
+        """Provides the JSON for current element in NeXus structure
         :param name: Name of the element
         :param metainfo: metainfo from *dataset*
         :return: list of dict of the NeXus structure
@@ -43,8 +43,7 @@ class NexusElementBase:
 
 
 class NXAttribute(NexusElementBase):
-    """ Class to represent NeXus Attribute
-    """
+    """Class to represent NeXus Attribute"""
 
     def __init__(self, value, dtype=None):
         self.value = value
@@ -59,8 +58,8 @@ class NXAttribute(NexusElementBase):
             info = self.value.fetch_info(metainfo)
             if not info:
                 session.log.warning(
-                    'Unable to fetch info for placeholder'
-                    ' %s', self.value)
+                    "Unable to fetch info for placeholder" " %s", self.value
+                )
                 return {}
             self.value = info[0]
 
@@ -72,7 +71,7 @@ class NXAttribute(NexusElementBase):
 
 
 class NXDataset(NexusElementBase):
-    """ Class to represent NeXus Datasets. Each dataset can have
+    """Class to represent NeXus Datasets. Each dataset can have
     a data type and additional attributes.
     """
 
@@ -92,8 +91,8 @@ class NXDataset(NexusElementBase):
             info = self.value.fetch_info(metainfo)
             if not info:
                 session.log.warning(
-                    'Unable to fetch info for placeholder'
-                    ' %s', self.value)
+                    "Unable to fetch info for placeholder" " %s", self.value
+                )
                 return {}
 
             # Set the value and the unit from the info string
@@ -111,7 +110,7 @@ class NXDataset(NexusElementBase):
             "config": {
                 "name": name,
                 "values": self.value,
-            }
+            },
         }
 
         # For lists and strings type is required
@@ -127,11 +126,11 @@ class NXDataset(NexusElementBase):
                     self.dtype = "string"
 
             if isinstance(self.value, str):
-                self.dtype = 'string'
+                self.dtype = "string"
 
         # Add the 'dtype' if specified
         if self.dtype:
-            root_dict['config']['dtype'] = self.dtype
+            root_dict["config"]["dtype"] = self.dtype
 
         # Add the attributes if present
         if self.attrs:
@@ -143,13 +142,13 @@ class NXDataset(NexusElementBase):
                     for attr_structure in attr.structure(attr_name, metainfo):
                         if attr_structure:
                             attr_dict.update(attr_structure)
-            root_dict['attributes'] = attr_dict
+            root_dict["attributes"] = attr_dict
 
         return [root_dict]
 
 
 class NXGroup(NexusElementBase):
-    """ Class to represent NeXus Group. Each group has a class type and
+    """Class to represent NeXus Group. Each group has a class type and
     can additionally have children in the form of datasets and groups or
     can also have attributes associated.
     """
@@ -163,10 +162,8 @@ class NXGroup(NexusElementBase):
         val = {
             "type": "group",
             "name": name,
-            "attributes": {
-                "NX_class": self.nxclass
-            },
-            "children": []
+            "attributes": {"NX_class": self.nxclass},
+            "children": [],
         }
 
         # Add the children
@@ -196,7 +193,7 @@ class NXGroup(NexusElementBase):
 
 
 class NXLink(NexusElementBase):
-    """ Class to represent NeXus Group. Each group has a class type and
+    """Class to represent NeXus Group. Each group has a class type and
     can additionally have children in the form of datasets and groups or
     can also have attributes associated.
     """
@@ -205,12 +202,11 @@ class NXLink(NexusElementBase):
         self.target = target
 
     def structure(self, name, metainfo):
-        return [{'module': 'link', 'config': {'name': name,
-                                              'source': self.target}}]
+        return [{"module": "link", "config": {"name": name, "source": self.target}}]
 
 
 class KafkaStream(NexusElementBase):
-    """ Class to represent Kafka streams.
+    """Class to represent Kafka streams.
     The defined properties of the stream can be set. The FileWriter
     using these properties fills up the data in the files using messages
     from Kafka.
@@ -226,8 +222,14 @@ class KafkaStream(NexusElementBase):
     """
 
     stream_keys = [
-        'broker', 'topic', 'source', 'writer_module', 'type', 'array_size',
-        'store_latest_into', 'chunk_size'
+        "broker",
+        "topic",
+        "source",
+        "writer_module",
+        "type",
+        "array_size",
+        "store_latest_into",
+        "chunk_size",
     ]
 
     def __init__(self, **attr):
@@ -245,19 +247,18 @@ class KafkaStream(NexusElementBase):
         """Stores the final/latest value of the stream into the
         dataset with name dataset_name
         """
-        self.set('store_latest_into', dataset_name)
+        self.set("store_latest_into", dataset_name)
 
     def set(self, key, value):
         if key not in self.stream:
-            session.log.error('Unidentified key %s set for kafka stream', key)
+            session.log.error("Unidentified key %s set for kafka stream", key)
             return
         self.stream[key] = value
 
     def structure(self, name, metainfo):
         stream_dict = {
             "type": "stream",
-            "stream": {k: v
-                       for k, v in self.stream.items() if v}
+            "stream": {k: v for k, v in self.stream.items() if v},
         }
 
         self._add_attributes(metainfo, stream_dict)
@@ -278,30 +279,25 @@ class KafkaStream(NexusElementBase):
 class CacheStream(DeviceValuePlaceholder, KafkaStream):
     """Streams NICOS cache data"""
 
-    def __init__(self,
-                 device,
-                 dtype,
-                 separate_log=False,
-                 parameter='value',
-                 **attr):
+    def __init__(self, device, dtype, separate_log=False, parameter="value", **attr):
         KafkaStream.__init__(self, **attr)
         DeviceValuePlaceholder.__init__(self, device, parameter)
-        self.set('type', dtype)
-        self.set('writer_module', 'ns10')
+        self.set("type", dtype)
+        self.set("writer_module", "ns10")
         self.separate_log = separate_log
 
     def structure(self, name, metainfo):
         try:
-            nx = session.getDevice('NexusDataSink')
+            nx = session.getDevice("NexusDataSink")
         except ConfigurationError:
             session.log.warning(
-                "NexusDataSink not found!! Can't track device "
-                "%s..", self.device)
+                "NexusDataSink not found!! Can't track device " "%s..", self.device
+            )
             return
-        self.set('broker', nx.brokers[0])
-        self.set('topic', nx.cachetopic)
-        key = 'nicos/' + self.device + '/' + self.parameter
-        self.set('source', key)
+        self.set("broker", nx.brokers[0])
+        self.set("topic", nx.cachetopic)
+        key = "nicos/" + self.device + "/" + self.parameter
+        self.set("source", key)
 
         # Add the attributes
         self.stream_attrs["nicos_name"] = NXAttribute(self.device)
@@ -314,83 +310,73 @@ class CacheStream(DeviceValuePlaceholder, KafkaStream):
 
         if self.separate_log:
             self.store_latest_into(name)
-            gname = name + '_log'
+            gname = name + "_log"
         else:
             gname = name
 
-        group_dict = NXGroup('NXlog').structure(gname, metainfo)[0]
+        group_dict = NXGroup("NXlog").structure(gname, metainfo)[0]
         stream_dicts = KafkaStream.structure(self, name, metainfo)
         group_dict["children"] += stream_dicts
 
         struct = [group_dict]
 
         if self.separate_log:
-            link = NXLink(gname + '/' + name).structure(name, metainfo)
+            link = NXLink(gname + "/" + name).structure(name, metainfo)
             struct += link
 
         return struct
 
 
 class EventStream(KafkaStream):
-    """ Stream that provides event data from Kafka
-    """
+    """Stream that provides event data from Kafka"""
 
-    def __init__(self,
-                 topic,
-                 source,
-                 mod='ev42',
-                 dtype='uint64',
-                 chunk_size=None,
-                 **attr):
+    def __init__(
+        self, topic, source, mod="ev42", dtype="uint64", chunk_size=None, **attr
+    ):
         KafkaStream.__init__(self, **attr)
-        self.set('topic', topic)
-        self.set('source', source)
-        self.set('writer_module', mod)
-        self.set('type', dtype)
+        self.set("topic", topic)
+        self.set("source", source)
+        self.set("writer_module", mod)
+        self.set("type", dtype)
         if chunk_size:
-            self.set('chunk_size', chunk_size)
+            self.set("chunk_size", chunk_size)
 
     def structure(self, name, metainfo):
         stream_dict = {
-            'module': self.stream['writer_module'],
-            'config': {
-                'source': self.stream['source'],
-                'topic': self.stream['topic'],
-                'dtype': self.stream['type']
-            }
+            "module": self.stream["writer_module"],
+            "config": {
+                "source": self.stream["source"],
+                "topic": self.stream["topic"],
+                "dtype": self.stream["type"],
+            },
         }
-        if self.stream['chunk_size']:
-            stream_dict['config']['chunk_size'] = self.stream['chunk_size']
+        if self.stream["chunk_size"]:
+            stream_dict["config"]["chunk_size"] = self.stream["chunk_size"]
 
         self._add_attributes(metainfo, stream_dict)
         return [stream_dict]
 
 
 class DeviceAttribute(NXAttribute):
-    """ NeXus Attribute, the value of which comes from a *device*.
+    """NeXus Attribute, the value of which comes from a *device*.
     The *parameter* to be fetched can be set, otherwise will fetch
     the value of the device. Optionally a data type can also be
     provided.
     """
 
-    def __init__(self, device, parameter='value', dtype=None, defaultval=None):
+    def __init__(self, device, parameter="value", dtype=None, defaultval=None):
         val = DeviceValuePlaceholder(device, parameter, defaultval)
         NXAttribute.__init__(self, val, dtype)
 
 
 class DeviceDataset(NXDataset):
-    """ NeXus Attribute, the value of which comes from a *device*.
+    """NeXus Attribute, the value of which comes from a *device*.
     The *parameter* to be fetched can be set, otherwise will fetch
     the value of the device. Optionally a data type and attributes
     associated to this dataset can also be added.
     """
 
-    def __init__(self,
-                 device,
-                 parameter='value',
-                 dtype=None,
-                 defaultval=None,
-                 **attr):
+    def __init__(self, device, parameter="value", dtype=None, defaultval=None, **attr):
         val = DeviceValuePlaceholder(device, parameter, defaultval)
         NXDataset.__init__(self, val, dtype, **attr)
 

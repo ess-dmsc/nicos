@@ -27,16 +27,24 @@ from nicos.devices.generic import ManualSwitch
 
 
 class PivotPoint(ManualSwitch):
-
     parameters = {
-        'grid': Param('Distance between the possible points',
-                      type=floatrange(0), settable=False, userparam=False,
-                      default=125., unit='mm'),
-        'height': Param('Height above ground level',
-                        type=floatrange(0), settable=False, default=373,
-                        unit='mm'),
+        "grid": Param(
+            "Distance between the possible points",
+            type=floatrange(0),
+            settable=False,
+            userparam=False,
+            default=125.0,
+            unit="mm",
+        ),
+        "height": Param(
+            "Height above ground level",
+            type=floatrange(0),
+            settable=False,
+            default=373,
+            unit="mm",
+        ),
     }
 
     parameter_overrides = {
-        'requires': Override(default={'level': ADMIN}, settable=False),
+        "requires": Override(default={"level": ADMIN}, settable=False),
     }

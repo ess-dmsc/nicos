@@ -37,7 +37,6 @@ except ImportError:
     mpy = None
 
 
-
 class MantidDeviceWatcher(NicosWidget, QWidget):
     """
     Updates the instrument view when device values change.
@@ -54,8 +53,7 @@ class MantidDeviceWatcher(NicosWidget, QWidget):
     def registerKeys(self):
         # All currently loaded devices that inherit from MantidDevice
         mantid_devs = self.parent().client.getDeviceList(
-            'nicos_demo.mantid.devices.devices.MantidDevice',
-            only_explicit=False
+            "nicos_demo.mantid.devices.devices.MantidDevice", only_explicit=False
         )
 
         # Clear map when setup changes
@@ -63,7 +61,8 @@ class MantidDeviceWatcher(NicosWidget, QWidget):
         for dev in mantid_devs:
             # Algorithm names won't change, so we can cache them
             self._algorithm_map[dev] = self.parent().client.getDeviceParam(
-                dev, 'algorithm')
+                dev, "algorithm"
+            )
             self.registerDevice(dev)
 
     def on_devValueChange(self, dev, value, strvalue, unitvalue, expired):
@@ -79,15 +78,17 @@ class InstrumentViewPanel(Panel):
     based on Instrument Definition File and MantidDevices configured in setup.
     """
 
-    panelName = 'Instrument View'
+    panelName = "Instrument View"
 
     def __init__(self, parent, client, options):
         Panel.__init__(self, parent, client, options)
 
         if not simpleapi or not mpy:
-            raise RuntimeError('Mantid modules could not be imported. '
-                               'Ensure Mantid is installed and PYTHONPATH is '
-                               'set to contain the Mantid /bin directory.')
+            raise RuntimeError(
+                "Mantid modules could not be imported. "
+                "Ensure Mantid is installed and PYTHONPATH is "
+                "set to contain the Mantid /bin directory."
+            )
 
         hbox = QHBoxLayout(self)
         hbox.setContentsMargins(0, 0, 0, 0)
@@ -116,7 +117,7 @@ class InstrumentViewPanel(Panel):
 
         :return: Full path and file name of IDF
         """
-        idf_name = self.client.eval('session.instrument.idf', None)
+        idf_name = self.client.eval("session.instrument.idf", None)
 
         # TODO: Support for IDFs outside of Mantid Instrument Directory?
         if idf_name is not None:
@@ -126,7 +127,7 @@ class InstrumentViewPanel(Panel):
         return None
 
     def updateStatus(self, status, exception=False):
-        if status == 'idle':
+        if status == "idle":
             new_idf = self._get_setup_idf()
             if new_idf != self._current_idf:
                 self._load_idf(new_idf)
@@ -147,9 +148,9 @@ class InstrumentViewPanel(Panel):
 
         if new_idf is not None:
             self._workspace = simpleapi.LoadEmptyInstrument(
-                new_idf, OutputWorkspace="ws")
-            self._widget = mpy.MantidQt.MantidWidgets.InstrumentWidget(
-                "ws", self)
+                new_idf, OutputWorkspace="ws"
+            )
+            self._widget = mpy.MantidQt.MantidWidgets.InstrumentWidget("ws", self)
             self.layout().addWidget(self._widget)
             self._watcher.setClient(self.client)
 

@@ -27,33 +27,32 @@ from nicos.clients.gui.utils import DlgUtils, loadUi
 from nicos.guisupport.qt import QButtonGroup, QLabel, QMainWindow, QRadioButton
 from nicos.utils import findResource
 
-TEMPLATE = '''\
+TEMPLATE = """\
 description = %(description)r
 group = 'basic'
 
 modules = %(modules)s
 
 includes = %(includes)s
-'''
+"""
 
 
 class InstrumentConfigTool(DlgUtils, QMainWindow):
-
     def __init__(self, parent, client, **settings):
         QMainWindow.__init__(self, parent)
-        DlgUtils.__init__(self, 'Instrument config')
-        loadUi(self, findResource('nicos_mlz/kws1/gui/instrconfig.ui'))
-        self.setWindowTitle('Reconfigure Instrument')
+        DlgUtils.__init__(self, "Instrument config")
+        loadUi(self, findResource("nicos_mlz/kws1/gui/instrconfig.ui"))
+        self.setWindowTitle("Reconfigure Instrument")
         self.client = client
         self.client.connected.connect(self.on_client_connected)
         self.client.disconnected.connect(self.on_client_disconnected)
-        self._parts = settings['parts']
+        self._parts = settings["parts"]
         self._widgets = []
-        for (i, part) in enumerate(self._parts):
-            label = QLabel(part + ':', self)
+        for i, part in enumerate(self._parts):
+            label = QLabel(part + ":", self)
             bgrp = QButtonGroup(self)
-            rbtn = QRadioButton('real', self)
-            vbtn = QRadioButton('virtual', self)
+            rbtn = QRadioButton("real", self)
+            vbtn = QRadioButton("virtual", self)
             bgrp.addButton(rbtn)
             bgrp.addButton(vbtn)
             self.grid.addWidget(label, i, 0)
@@ -84,42 +83,47 @@ class InstrumentConfigTool(DlgUtils, QMainWindow):
     def _update(self):
         try:
             configcode = self.client.eval(
-                '__import__("nicos_mlz").kws1._get_instr_config()')
-            config = {'__builtins__': None}
+                '__import__("nicos_mlz").kws1._get_instr_config()'
+            )
+            config = {"__builtins__": None}
             exec(configcode, config)
         except Exception:
-            self.showError('Could not determine current config.')
+            self.showError("Could not determine current config.")
             self.frame.setDisabled(True)
             return
-        includes = set(config['includes'])
-        for (part, widgets) in zip(self._parts, self._widgets):
-            if 'virtual_' + part in includes:
+        includes = set(config["includes"])
+        for part, widgets in zip(self._parts, self._widgets):
+            if "virtual_" + part in includes:
                 widgets[3].setChecked(True)
-                includes.discard('virtual_' + part)
+                includes.discard("virtual_" + part)
             else:
                 widgets[2].setChecked(True)
                 includes.discard(part)
-        self.additionalBox.setPlainText('\n'.join(includes))
-        self._modules = config.get('modules', [])
-        self._description = config.get('description', 'instrument setup')
+        self.additionalBox.setPlainText("\n".join(includes))
+        self._modules = config.get("modules", [])
+        self._description = config.get("description", "instrument setup")
 
     def _apply(self):
-        info = {'description': self._description, 'modules': self._modules,
-                'includes': []}
-        for (part, widgets) in zip(self._parts, self._widgets):
+        info = {
+            "description": self._description,
+            "modules": self._modules,
+            "includes": [],
+        }
+        for part, widgets in zip(self._parts, self._widgets):
             if widgets[3].isChecked():
-                info['includes'].append('virtual_' + part)
+                info["includes"].append("virtual_" + part)
             else:
-                info['includes'].append(part)
+                info["includes"].append(part)
         for add in self.additionalBox.toPlainText().splitlines():
             if add:
-                info['includes'].append(add)
+                info["includes"].append(add)
         code = TEMPLATE % info
         try:
             self.client.eval(
-                '__import__("nicos_mlz").kws1._apply_instr_config(%r)' % code)
+                '__import__("nicos_mlz").kws1._apply_instr_config(%r)' % code
+            )
         except Exception:
-            self.showError('Could not apply new config.')
+            self.showError("Could not apply new config.")
             return
-        self.client.run('NewSetup()')
-        self.showInfo('Instrument was successfully reconfigured.')
+        self.client.run("NewSetup()")
+        self.showInfo("Instrument was successfully reconfigured.")

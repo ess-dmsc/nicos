@@ -1,2 +1,2 @@
-description = 'NICOS vpuma startup setup'
-group = 'lowlevel'
+description = "NICOS vpuma startup setup"
+group = "lowlevel"

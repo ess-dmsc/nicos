@@ -101,92 +101,93 @@ Selector Monitor_1 Monitor_2 Monitor_3
 
 
 class KWSFileSinkHandler(SingleFileSinkHandler):
-
-    filetype = 'kws'
+    filetype = "kws"
     accept_final_images_only = True
 
     def getDetectorPos(self):
         """Return (x, y, z) for detector position."""
-        return (session.getDevice('beamstop_x').read(),
-                session.getDevice('beamstop_y').read(),
-                session.getDevice('det_z').read())
+        return (
+            session.getDevice("beamstop_x").read(),
+            session.getDevice("beamstop_y").read(),
+            session.getDevice("det_z").read(),
+        )
 
     def getMon3(self):
         """Return counter value for "mon3" (transmission)."""
-        if 'det_roi' in session.configured_devices:
-            return int(session.getDevice('det_roi').read()[0])
-        return ''
+        if "det_roi" in session.configured_devices:
+            return int(session.getDevice("det_roi").read()[0])
+        return ""
 
     def writeData(self, fp, image):
-        _collslit = 'aperture_%02d' % session.getDevice('coll_guides').read()
-        _exposuretime = session.getDevice('timer').read(0)[0]
+        _collslit = "aperture_%02d" % session.getDevice("coll_guides").read()
+        _exposuretime = session.getDevice("timer").read(0)[0]
 
-        textfp = TextIOWrapper(fp, encoding='utf-8')
+        textfp = TextIOWrapper(fp, encoding="utf-8")
         w = textfp.write
 
         # sample envs
-        sample_env = ['Temperature dummy line'] * 4
-        for (i, (info, val)) in enumerate(zip(self.dataset.envvalueinfo,
-                                              self.dataset.envvaluelist)):
+        sample_env = ["Temperature dummy line"] * 4
+        for i, (info, val) in enumerate(
+            zip(self.dataset.envvalueinfo, self.dataset.envvaluelist)
+        ):
             if i >= 4:  # only four lines allowed
                 break
             try:
                 val = info.fmtstr % val
             except Exception:
                 val = str(val)
-            sample_env[i] = '%s is Active %s %s' % (info.name, val, info.unit)
+            sample_env[i] = "%s is Active %s %s" % (info.name, val, info.unit)
 
-        if 'hexapod' in session.loaded_setups:
-            hexapod_0 = '(* Hexapod position (tx, ty, tz, rx, ry, rz, dt) *)'
-            hexapod_1 = ''
-            for axis in ('tx', 'ty', 'tz', 'rx', 'ry', 'rz', 'dt'):
+        if "hexapod" in session.loaded_setups:
+            hexapod_0 = "(* Hexapod position (tx, ty, tz, rx, ry, rz, dt) *)"
+            hexapod_1 = ""
+            for axis in ("tx", "ty", "tz", "rx", "ry", "rz", "dt"):
                 try:
-                    hexapod_1 += ' %9.3f' % session.getDevice('hexapod_' + axis).read()
+                    hexapod_1 += " %9.3f" % session.getDevice("hexapod_" + axis).read()
                 except Exception:
-                    hexapod_1 += ' unknown'
+                    hexapod_1 += " unknown"
         else:
-            hexapod_0 = '(* Measurement stop state *)'
-            hexapod_1 = 'measurement STOPPED by USER command'
+            hexapod_0 = "(* Measurement stop state *)"
+            hexapod_1 = "measurement STOPPED by USER command"
 
         detpos = self.getDetectorPos()
 
         # write header
         data = DeviceValueDict()
         data.update(
-            instr = self.sink.instrname,
-            startdate = strftime('%d-%b-%Y %H:%M:%S.00',
-                                 localtime(self.dataset.started)),
-            counter = self.dataset.counter,
-            filename = path.basename(fp.filepath),
-            coll_x = '%d' % round(session.getDevice(_collslit).width.read()),
-            coll_y = '%d' % round(session.getDevice(_collslit).height.read()),
-            exptime = '%d min' % (_exposuretime / 60.),
-            realtime = '%d sec' % _exposuretime,
-            detoffset_m = session.experiment.sample.detoffset / 1000.,
-            sample_env_0 = sample_env[0],
-            sample_env_1 = sample_env[1],
-            sample_env_2 = sample_env[2],
-            sample_env_3 = sample_env[3],
-            hexapod_0 = hexapod_0,
-            hexapod_1 = hexapod_1,
-            det_x_entry = detpos[0],
-            det_y_entry = detpos[1],
-            det_z_entry = detpos[2],
-            mon3_entry = self.getMon3(),
+            instr=self.sink.instrname,
+            startdate=strftime("%d-%b-%Y %H:%M:%S.00", localtime(self.dataset.started)),
+            counter=self.dataset.counter,
+            filename=path.basename(fp.filepath),
+            coll_x="%d" % round(session.getDevice(_collslit).width.read()),
+            coll_y="%d" % round(session.getDevice(_collslit).height.read()),
+            exptime="%d min" % (_exposuretime / 60.0),
+            realtime="%d sec" % _exposuretime,
+            detoffset_m=session.experiment.sample.detoffset / 1000.0,
+            sample_env_0=sample_env[0],
+            sample_env_1=sample_env[1],
+            sample_env_2=sample_env[2],
+            sample_env_3=sample_env[3],
+            hexapod_0=hexapod_0,
+            hexapod_1=hexapod_1,
+            det_x_entry=detpos[0],
+            det_y_entry=detpos[1],
+            det_z_entry=detpos[2],
+            mon3_entry=self.getMon3(),
         )
         w(KWSHEADER % data)
 
         # write "data sum"
-        w('(* Detector Data Sum (Sum_Data_Field = 32 values = 6 * 5 and 2) *)\n')
-        w('@\n')
+        w("(* Detector Data Sum (Sum_Data_Field = 32 values = 6 * 5 and 2) *)\n")
+        w("@\n")
         sums = [image.sum()] + [0.0] * 31
-        for (i, val) in enumerate(sums):
-            w('%E' % val)
+        for i, val in enumerate(sums):
+            w("%E" % val)
             if (i + 1) % 6:
-                w(' ')
+                w(" ")
             else:
-                w('\n')
-        w('\n\n')
+                w("\n")
+        w("\n\n")
 
         # write detector data
         if len(image.shape) == 2:
@@ -196,51 +197,50 @@ class KWSFileSinkHandler(SingleFileSinkHandler):
         textfp.detach()
 
     def _writedet_standard(self, w, image):
-        w('(* Detector Data *)\n')
-        w('$\n')
+        w("(* Detector Data *)\n")
+        w("$\n")
 
         if 128 < image.shape[1] < 256:
             # fill X axis up to 256
             n = (256 - image.shape[1]) // 2
-            image = np.pad(image, ((0, 0), (n, n)), mode='constant')
+            image = np.pad(image, ((0, 0), (n, n)), mode="constant")
 
         # TODO: remove this once formats are cleared up
         if self.sink.transpose:
             image = image.T
-        for (i, val) in enumerate(image.ravel()):
-            w('%8d ' % val)
+        for i, val in enumerate(image.ravel()):
+            w("%8d " % val)
             if (i + 1) % 8:
-                w(' ')
+                w(" ")
             else:
-                w('\n')
+                w("\n")
 
     def _writedet_tof(self, w, image, fp):
-        detimg = session.getDevice('det')._attached_images[0]
-        cp = session.getDevice('chopper_params')
+        detimg = session.getDevice("det")._attached_images[0]
+        cp = session.getDevice("chopper_params")
         chop_params = cp.read()
         if chop_params[0] != 0:  # no chopper in realtime mode
-            w('(* Chopper freq=%f Hz, phase=%f deg *)\n' % tuple(chop_params))
-            w('\n')
+            w("(* Chopper freq=%f Hz, phase=%f deg *)\n" % tuple(chop_params))
+            w("\n")
         nslots = image.shape[0]
-        w('(* Detector Time Slices: %d slices, unit=us *)\n' % nslots)
-        w(' '.join('%8d' % s for s in detimg.slices))
-        w('\n\n')
+        w("(* Detector Time Slices: %d slices, unit=us *)\n" % nslots)
+        w(" ".join("%8d" % s for s in detimg.slices))
+        w("\n\n")
 
-        w('(* Detector Data for %s mode %d timeslots *)\n' %
-          (detimg.mode, nslots))
+        w("(* Detector Data for %s mode %d timeslots *)\n" % (detimg.mode, nslots))
         for i in range(nslots):
             slot = image[i]
             if 128 < slot.shape[1] < 256:
                 # fill X axis up to 256
                 n = (256 - slot.shape[1]) // 2
-                slot = np.pad(slot, ((0, 0), (n, n)), mode='constant')
+                slot = np.pad(slot, ((0, 0), (n, n)), mode="constant")
 
-            w('(* timeslot %d *)\n' % i)
+            w("(* timeslot %d *)\n" % i)
             # TODO: remove this (see above)
             if self.sink.transpose:
                 slot = slot.T
-            np.savetxt(fp, slot, fmt='%8d')
-            w('\n')
+            np.savetxt(fp, slot, fmt="%8d")
+            w("\n")
 
 
 class KWSFileSink(ImageSink):
@@ -249,22 +249,24 @@ class KWSFileSink(ImageSink):
     handlerclass = KWSFileSinkHandler
 
     parameters = {
-        'instrname': Param('Instrument name for data file', type=str,
-                           default='KWS1'),
-        'transpose': Param('Whether to transpose images', type=bool,
-                           mandatory=True),
+        "instrname": Param("Instrument name for data file", type=str, default="KWS1"),
+        "transpose": Param("Whether to transpose images", type=bool, mandatory=True),
     }
 
     parameter_overrides = {
-        'filenametemplate': Override(mandatory=False, settable=False,
-                                     userparam=False,
-                                     default=['%(proposal)s_'
-                                              '%(pointcounter)d_'
-                                              'Stan_'
-                                              'C%(coll_guides)s_'
-                                              'S%(Sample.samplenumber)s_'
-                                              'D0.DAT'],
-                                     ),
+        "filenametemplate": Override(
+            mandatory=False,
+            settable=False,
+            userparam=False,
+            default=[
+                "%(proposal)s_"
+                "%(pointcounter)d_"
+                "Stan_"
+                "C%(coll_guides)s_"
+                "S%(Sample.samplenumber)s_"
+                "D0.DAT"
+            ],
+        ),
     }
 
     def isActiveForArray(self, arraydesc):

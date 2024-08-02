@@ -25,19 +25,23 @@ import hashlib
 
 from test.utils import daemon_addr
 
-description = 'setup for the execution daemon'
-group = 'special'
+description = "setup for the execution daemon"
+group = "special"
 
 devices = dict(
-    Auth = device('nicos.services.daemon.auth.list.Authenticator',
-        passwd = [('guest', '', 'guest'),
-                  ('user', hashlib.sha1(b'user').hexdigest(), 'user'),
-                  ('admin', hashlib.sha1(b'admin').hexdigest(), 'admin')]
+    Auth=device(
+        "nicos.services.daemon.auth.list.Authenticator",
+        passwd=[
+            ("guest", "", "guest"),
+            ("user", hashlib.sha1(b"user").hexdigest(), "user"),
+            ("admin", hashlib.sha1(b"admin").hexdigest(), "admin"),
+        ],
     ),
-    Daemon = device('nicos.services.daemon.NicosDaemon',
-        server = daemon_addr,
-        loglevel = 'debug',
-        authenticators = ['Auth'],
-        serializercls = 'nicos.protocols.daemon.classic.JsonSerializer',
+    Daemon=device(
+        "nicos.services.daemon.NicosDaemon",
+        server=daemon_addr,
+        loglevel="debug",
+        authenticators=["Auth"],
+        serializercls="nicos.protocols.daemon.classic.JsonSerializer",
     ),
 )

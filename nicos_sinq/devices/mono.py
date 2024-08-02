@@ -39,13 +39,11 @@ class SinqMonochromator(Monochromator):
         focusv = self._attached_focusv
         th, _ = self._calc_angles(to_k(self.target, self.unit))
         if focusv:
-            vcurve = vfocuspars[0] + \
-                     vfocuspars[1] / math.sin(math.radians(abs(th)))
+            vcurve = vfocuspars[0] + vfocuspars[1] / math.sin(math.radians(abs(th)))
             focusv.move(vcurve)
         focush = self._attached_focush
         if focush:
-            hcurve = hfocuspars[0] + \
-                     hfocuspars[1]*math.sin(math.radians(abs(th)))
+            hcurve = hfocuspars[0] + hfocuspars[1] * math.sin(math.radians(abs(th)))
             focush.move(hcurve)
 
 
@@ -53,6 +51,7 @@ class TasAnalyser(SinqMonochromator):
     """
     This adds the offset magic for a5(theta) required at SINQ TAS analysers
     """
+
     def doWriteScatteringsense(self, value):
         off = self._attached_theta.offset
         if self.scatteringsense == -1 and value == 1:

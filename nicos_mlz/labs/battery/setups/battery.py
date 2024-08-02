@@ -1,3 +1,3 @@
-description = 'Battery temperature sensors'
+description = "Battery temperature sensors"
 
-includes = ['battery01', 'battery02', 'battery03']
+includes = ["battery01", "battery02", "battery03"]

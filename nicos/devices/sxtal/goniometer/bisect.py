@@ -32,16 +32,14 @@ import numpy as np
 from nicos import session
 from nicos.core import NicosError
 from nicos.devices.sxtal.goniometer.base import PositionBase, PositionFactory
-from nicos.devices.sxtal.goniometer.posutils import Xrot, Yrot, Zrot, \
-    normalangle, sign
+from nicos.devices.sxtal.goniometer.posutils import Xrot, Yrot, Zrot, normalangle, sign
 
 
 class Bisecting(PositionBase):
-    ptype = 'b'
+    ptype = "b"
 
     def __init__(self, p=None, theta=None, phi=None, chi=None, psi=0, _rad=False):
-        """ Constructor. Part of Position subclass protocol.
-        """
+        """Constructor. Part of Position subclass protocol."""
         PositionBase.__init__(self)
         if p:
             self.theta = p.theta
@@ -53,11 +51,10 @@ class Bisecting(PositionBase):
             self.omega = self._r2d(psi, _rad)
             self.chi = self._r2d(chi, _rad)
             self.phi = self._r2d(phi, _rad)
-            self.psi = self._r2d( psi, _rad)
+            self.psi = self._r2d(psi, _rad)
 
     def asC(self, wavelength=None):
-        """ Conversion. Part of Position subclass protocol.
-        """
+        """Conversion. Part of Position subclass protocol."""
         if wavelength is None:
             wavelength = session.instrument.wavelength or None
         if not wavelength:
@@ -67,21 +64,22 @@ class Bisecting(PositionBase):
         else:
             signtheta = -1
         d = 2 * np.sin(self.theta) / wavelength
-        c = [-np.sin(self.phi) * np.cos(self.chi) * d,
-             np.cos(self.phi) * np.cos(self.chi) * d,
-             np.sin(self.chi) * d]
-        return PositionFactory(ptype='cr', c=c, psi=self.psi, signtheta=signtheta)
+        c = [
+            -np.sin(self.phi) * np.cos(self.chi) * d,
+            np.cos(self.phi) * np.cos(self.chi) * d,
+            np.sin(self.chi) * d,
+        ]
+        return PositionFactory(ptype="cr", c=c, psi=self.psi, signtheta=signtheta)
 
     def asE(self, _wavelength=None):
-        """ Conversion. Part of Position subclass protocol.
-        """
+        """Conversion. Part of Position subclass protocol."""
         sinpsi = np.sin(self.psi)
         cospsi = np.cos(self.psi)
         signth = sign(np.sin(self.theta))
         sinchb = np.sin(self.chi)
         coschb = np.cos(self.chi)
         signcb = sign(coschb)
-        sinche = signcb * sign(sinchb) * np.sqrt((cospsi * sinchb) ** 2 + sinpsi ** 2)
+        sinche = signcb * sign(sinchb) * np.sqrt((cospsi * sinchb) ** 2 + sinpsi**2)
         cosche = signth * signcb * cospsi * coschb
         try:
             chi = np.arctan2(sinche, cosche)
@@ -108,15 +106,16 @@ class Bisecting(PositionBase):
         except ValueError:
             self.log.warning("B-E Phi problem: %r", self)
             phi = 0.0
-        return PositionFactory(ptype='er',
-                               theta=self.theta,
-                               omega=normalangle(omega),
-                               chi=normalangle(chi),
-                               phi=normalangle(phi))
+        return PositionFactory(
+            ptype="er",
+            theta=self.theta,
+            omega=normalangle(omega),
+            chi=normalangle(chi),
+            phi=normalangle(phi),
+        )
 
     def asG(self, _wavelength=None):
-        """ Conversion. Part of Position subclass protocol.
-        """
+        """Conversion. Part of Position subclass protocol."""
         if self.theta > 0:
             S = 0
         else:
@@ -126,50 +125,54 @@ class Bisecting(PositionBase):
         else:
             C = np.pi
         return PositionFactory(
-            ptype='gr',
+            ptype="gr",
             theta=self.theta,
-            matrix=np.dot(Zrot(self.theta),
-                          np.dot(Xrot(S),
-                                 np.dot(Yrot(-self.psi),
-                                        np.dot(Zrot(S + C),
-                                               np.dot(Xrot(C),
-                                                      np.dot(Xrot(self.chi),
-                                                             Zrot(self.phi))))))))
+            matrix=np.dot(
+                Zrot(self.theta),
+                np.dot(
+                    Xrot(S),
+                    np.dot(
+                        Yrot(-self.psi),
+                        np.dot(
+                            Zrot(S + C),
+                            np.dot(Xrot(C), np.dot(Xrot(self.chi), Zrot(self.phi))),
+                        ),
+                    ),
+                ),
+            ),
+        )
 
     def asK(self, _wavelength=None):
-        """ Conversion. Part of Position subclass protocol.
-        """
+        """Conversion. Part of Position subclass protocol."""
         return self.asE().asK()
 
     def asB(self, _wavelength=None):
-        """ Conversion. Part of Position subclass protocol.
-        """
+        """Conversion. Part of Position subclass protocol."""
         return self.With()
 
     def asN(self, _wavelength=None):
-        """ Conversion. Part of Position subclass protocol.
-        """
+        """Conversion. Part of Position subclass protocol."""
         return self.asE().asN()
 
     def asL(self, wavelength=None):
         return self.asC().asL(wavelength)
 
     def With(self, **kw):
-        """ Make clone of this position with some angle(s) changed.
-        """
-        if not kw.get('_rad', False):
-            for var in ('theta', 'phi', 'chi', 'psi'):
+        """Make clone of this position with some angle(s) changed."""
+        if not kw.get("_rad", False):
+            for var in ("theta", "phi", "chi", "psi"):
                 if kw.get(var, None) is not None:
                     kw[var] = np.deg2rad(kw[var])
-        return PositionFactory(ptype='br',
-                               theta=kw.get('theta', self.theta),
-                               phi=kw.get('phi', self.phi),
-                               chi=kw.get('chi', self.chi),
-                               psi=kw.get('psi', self.psi))
+        return PositionFactory(
+            ptype="br",
+            theta=kw.get("theta", self.theta),
+            phi=kw.get("phi", self.phi),
+            chi=kw.get("chi", self.chi),
+            psi=kw.get("psi", self.psi),
+        )
 
     def __repr__(self):
-        """ Representation. Part of Position subclass protocol.
-        """
+        """Representation. Part of Position subclass protocol."""
         s = "[Bisecting angles:"
         if self.theta is not None:
             s = s + " theta=%8.3f" % (np.rad2deg(self.theta))

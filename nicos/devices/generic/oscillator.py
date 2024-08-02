@@ -24,8 +24,20 @@
 """Classes to let devices oscillate."""
 
 from nicos import session
-from nicos.core import POLLER, SIMULATION, Attach, ConfigurationError, \
-    HasLimits, Moveable, Override, Param, limits, oneof, status, tupleof
+from nicos.core import (
+    POLLER,
+    SIMULATION,
+    Attach,
+    ConfigurationError,
+    HasLimits,
+    Moveable,
+    Override,
+    Param,
+    limits,
+    oneof,
+    status,
+    tupleof,
+)
 from nicos.utils import createThread
 
 
@@ -44,30 +56,47 @@ class Oscillator(Moveable):
     >>> osc.range = (10, 20)
     """
 
-    _targets = ('off', 'on')
+    _targets = ("off", "on")
 
     attached_devices = {
-        'moveable': Attach('Device to oscillate', Moveable),
+        "moveable": Attach("Device to oscillate", Moveable),
     }
 
     parameters = {
-        'range': Param('User defined limits of device value',
-                       unit='main', type=limits, settable=True, chatty=True,
-                       category='limits', mandatory=False, fmtstr='main'),
-        'curvalue': Param('Store the current device value',
-                          internal=True, type=oneof(*_targets),
-                          settable=True),
-        'curstatus': Param('Store the current device status',
-                           internal=True, type=tupleof(int, str),
-                           settable=True),
-        'stoppable': Param("Stop the oscillation via 'stop' command",
-                           userparam=True, type=bool, settable=False,
-                           default=False),
+        "range": Param(
+            "User defined limits of device value",
+            unit="main",
+            type=limits,
+            settable=True,
+            chatty=True,
+            category="limits",
+            mandatory=False,
+            fmtstr="main",
+        ),
+        "curvalue": Param(
+            "Store the current device value",
+            internal=True,
+            type=oneof(*_targets),
+            settable=True,
+        ),
+        "curstatus": Param(
+            "Store the current device status",
+            internal=True,
+            type=tupleof(int, str),
+            settable=True,
+        ),
+        "stoppable": Param(
+            "Stop the oscillation via 'stop' command",
+            userparam=True,
+            type=bool,
+            settable=False,
+            default=False,
+        ),
     }
 
     parameter_overrides = {
-        'unit': Override(default='', settable=False, mandatory=False),
-        'fmtstr': Override(default='%s'),
+        "unit": Override(default="", settable=False, mandatory=False),
+        "fmtstr": Override(default="%s"),
     }
 
     valuetype = oneof(*_targets)
@@ -85,7 +114,7 @@ class Oscillator(Moveable):
 
     def doStart(self, target):
         if self.range[0] == self.range[1]:
-            raise ConfigurationError(self, 'No valid range set. Please check!')
+            raise ConfigurationError(self, "No valid range set. Please check!")
         if self._mode == SIMULATION:
             for p in self.range:
                 self._attached_moveable._sim_setValue(p)
@@ -94,8 +123,9 @@ class Oscillator(Moveable):
         if target == self._targets[1]:
             if not self._osc_thread:
                 self.curvalue = self._targets[1]
-                self._osc_thread = createThread('oscillation thread %s' % self,
-                                                self.__oscillation)
+                self._osc_thread = createThread(
+                    "oscillation thread %s" % self, self.__oscillation
+                )
         self.poll()
 
     def _stop(self):
@@ -109,8 +139,11 @@ class Oscillator(Moveable):
     def doStop(self):
         if not self.stoppable:
             if self._osc_thread:
-                self.log.error("Please use: 'move(%s, %r)' to stop the moving "
-                               "device", self, self._targets[0])
+                self.log.error(
+                    "Please use: 'move(%s, %r)' to stop the moving " "device",
+                    self,
+                    self._targets[0],
+                )
                 return
         self._stop()
 
@@ -127,14 +160,14 @@ class Oscillator(Moveable):
         """Return the status of the moveable."""
         if session.sessiontype != POLLER:
             if self._osc_thread and not self._osc_thread.is_alive():
-                self.curstatus = (status.BUSY, 'moving')
+                self.curstatus = (status.BUSY, "moving")
             else:
-                self.curstatus = (status.OK, 'idle')
+                self.curstatus = (status.OK, "idle")
         return self.curstatus
 
     def doPoll(self, n=0, maxage=0):
-        self._pollParam('curvalue')
-        self._pollParam('curstatus')
+        self._pollParam("curvalue")
+        self._pollParam("curstatus")
         return self.doRead(maxage), self.doStatus(maxage)
 
     def doReset(self):
@@ -143,18 +176,18 @@ class Oscillator(Moveable):
 
     def doReadRange(self):
         # check range against moveable user limits
-        if 'range' in self._config:
-            amin, amax = self._config['range']
+        if "range" in self._config:
+            amin, amax = self._config["range"]
             if isinstance(self._attached_moveable, HasLimits):
                 mmin, mmax = self._attached_moveable.userlimits
                 if amin < mmin:
-                    raise ConfigurationError(self, 'min (%s) below the '
-                                             'moveable min (%s)' % (amin, mmin)
-                                             )
+                    raise ConfigurationError(
+                        self, "min (%s) below the " "moveable min (%s)" % (amin, mmin)
+                    )
                 if amax > mmax:
-                    raise ConfigurationError(self, 'max (%s) above the '
-                                             'moveable max (%s)' % (amax, mmax)
-                                             )
+                    raise ConfigurationError(
+                        self, "max (%s) above the " "moveable max (%s)" % (amax, mmax)
+                    )
         elif isinstance(self._attached_moveable, HasLimits):
             amin, amax = self._attached_moveable.userlimits
         else:
@@ -166,17 +199,19 @@ class Oscillator(Moveable):
         if isinstance(self._attached_moveable, HasLimits):
             umin, umax = self._attached_moveable.userlimits
             if rmin < umin:
-                raise ConfigurationError(self, 'minimum (%s) below the '
-                                         'moveable minimum (%s)' % (rmin, umin)
-                                         )
+                raise ConfigurationError(
+                    self,
+                    "minimum (%s) below the " "moveable minimum (%s)" % (rmin, umin),
+                )
             if rmax > umax:
-                raise ConfigurationError(self, 'maximum (%s) above the '
-                                         'moveable maximum (%s)' % (rmax, umax)
-                                         )
+                raise ConfigurationError(
+                    self,
+                    "maximum (%s) above the " "moveable maximum (%s)" % (rmax, umax),
+                )
         return rmin, rmax
 
     def __oscillation(self):
-        self.log.info('Oscillation of %r started' % self._attached_moveable)
+        self.log.info("Oscillation of %r started" % self._attached_moveable)
         _range = self.range
         while not self._stop_request:
             for pos in _range:
@@ -184,4 +219,4 @@ class Oscillator(Moveable):
                 if self._stop_request:
                     break
         self.curvalue = self._targets[0]
-        self.log.info('Oscillation of %r stopped' % self._attached_moveable)
+        self.log.info("Oscillation of %r stopped" % self._attached_moveable)

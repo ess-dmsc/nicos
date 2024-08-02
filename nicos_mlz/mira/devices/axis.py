@@ -33,27 +33,30 @@ class HoveringAxis(Axis):
     """An axis that also controls air for airpads."""
 
     attached_devices = {
-        'switch': Attach('The device used for switching air on and off',
-                         Moveable),
+        "switch": Attach("The device used for switching air on and off", Moveable),
     }
 
     parameters = {
-        'startdelay':   Param('Delay after switching on air', type=float,
-                              mandatory=True, unit='s'),
-        'stopdelay':    Param('Delay before switching off air', type=float,
-                              mandatory=True, unit='s'),
-        'switchvalues': Param('(off, on) values to write to switch device',
-                              type=tupleof(anytype, anytype), default=(0, 1)),
+        "startdelay": Param(
+            "Delay after switching on air", type=float, mandatory=True, unit="s"
+        ),
+        "stopdelay": Param(
+            "Delay before switching off air", type=float, mandatory=True, unit="s"
+        ),
+        "switchvalues": Param(
+            "(off, on) values to write to switch device",
+            type=tupleof(anytype, anytype),
+            default=(0, 1),
+        ),
     }
 
     def doTime(self, old_value, target):
-        return Axis.doTime(
-            self, old_value, target) + self.startdelay + self.stopdelay
+        return Axis.doTime(self, old_value, target) + self.startdelay + self.stopdelay
 
     def _preMoveAction(self):
-        self._adevs['switch'].maw(self.switchvalues[1])
+        self._adevs["switch"].maw(self.switchvalues[1])
         session.delay(self.startdelay)
 
     def _postMoveAction(self):
         session.delay(self.stopdelay)
-        self._adevs['switch'].maw(self.switchvalues[0])
+        self._adevs["switch"].maw(self.switchvalues[0])

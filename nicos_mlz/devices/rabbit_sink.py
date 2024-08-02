@@ -30,8 +30,13 @@ import pika
 from nicos import session
 from nicos.core import Override, Param
 from nicos.core.constants import BLOCK, MASTER, POINT, SCAN, SUBSCAN
-from nicos.core.data import BaseDataset, BlockDataset, DataSink, \
-    DataSinkHandler, ScanDataset
+from nicos.core.data import (
+    BaseDataset,
+    BlockDataset,
+    DataSink,
+    DataSinkHandler,
+    ScanDataset,
+)
 
 
 def metainfo_to_json(metainfo):
@@ -48,16 +53,16 @@ class Message:
     metadata: dict
 
     def __init__(
-            self,
-            id: uuid.UUID,  # pylint: disable=redefined-builtin
-            scanid: uuid.UUID,
-            blockid: uuid.UUID,
-            type: str,  # pylint: disable=redefined-builtin
-            started: str,
-            filepaths: list,
-            mapping: dict,
-            metainfo: dict,
-            statistics: dict,
+        self,
+        id: uuid.UUID,  # pylint: disable=redefined-builtin
+        scanid: uuid.UUID,
+        blockid: uuid.UUID,
+        type: str,  # pylint: disable=redefined-builtin
+        started: str,
+        filepaths: list,
+        mapping: dict,
+        metainfo: dict,
+        statistics: dict,
     ):
         self.id = str(id)
         self.blockid = str(blockid) or None
@@ -74,23 +79,26 @@ class Message:
 
 
 class RabbitSinkHandler(DataSinkHandler):
-
     ordering = 80
 
-    def _sendMessage(self, type: str, dataset: BaseDataset,  # pylint: disable=redefined-builtin
-                     scands: ScanDataset = None, blockds: BlockDataset = None):
+    def _sendMessage(
+        self,
+        type: str,
+        dataset: BaseDataset,  # pylint: disable=redefined-builtin
+        scands: ScanDataset = None,
+        blockds: BlockDataset = None,
+    ):
         """Sends the metainfo, if available, and other information to the
         Queue"""
-        started = (datetime.fromtimestamp(dataset.started, tz=timezone.utc)
-                   .isoformat())
+        started = datetime.fromtimestamp(dataset.started, tz=timezone.utc).isoformat()
 
         def publish(message: Message):
             self.sink._channel.basic_publish(
                 exchange=self.sink._exchange,
                 routing_key=session.instrument.instrument,
                 body=str(message),
-                properties=pika.BasicProperties(
-                    content_type='application/json'))
+                properties=pika.BasicProperties(content_type="application/json"),
+            )
 
         metadata = {}
         statistics = {}
@@ -107,9 +115,9 @@ class RabbitSinkHandler(DataSinkHandler):
             dataset.filepaths,
             # DEVICE_INFO_MAPPING,
             {
-                'experiment': session.experiment.name,
-                'sample': session.experiment.sample.name,
-                'instrument': session.instrument.name,
+                "experiment": session.experiment.name,
+                "sample": session.experiment.sample.name,
+                "instrument": session.instrument.name,
             },
             metainfo=metadata,
             statistics=statistics,
@@ -120,9 +128,11 @@ class RabbitSinkHandler(DataSinkHandler):
                     self.sink._connect()
                 publish(msg)
                 break
-            except (pika.exceptions.AMQPChannelError,
-                    pika.exceptions.AMQPConnectionError) as e:
-                self.log.debug('reconnect #%d due to %r', retry + 1, e)
+            except (
+                pika.exceptions.AMQPChannelError,
+                pika.exceptions.AMQPConnectionError,
+            ) as e:
+                self.log.debug("reconnect #%d due to %r", retry + 1, e)
                 exc = e
         else:
             raise exc
@@ -148,8 +158,7 @@ class RabbitSinkHandler(DataSinkHandler):
             return
         blockds, scands = self._getScanDatasetParents(self.dataset)
         if subset.number == 1:  # begin of ScanDataset including metainfo
-            self._sendMessage(self.dataset.settype, self.dataset, scands,
-                              blockds)
+            self._sendMessage(self.dataset.settype, self.dataset, scands, blockds)
         self._sendMessage(subset.settype, subset, self.dataset, blockds)
 
     def begin(self):
@@ -168,21 +177,17 @@ class RabbitSinkHandler(DataSinkHandler):
             # dispatching `finish`. Parents are left on the stack, using
             # `iter(self.manager._stack)` though.
             blockds, scands = self._getScanDatasetParents(None)
-        self._sendMessage(f'{self.dataset.settype}.end', self.dataset,
-                          scands, blockds)
+        self._sendMessage(f"{self.dataset.settype}.end", self.dataset, scands, blockds)
 
 
 class RabbitSink(DataSink):
     """Creates a RabbitMQ exchange and queue on the parameterized instance
     and writes all metainfo synchronously into it for further processing.
     """
-    parameters = {
-        'rabbit_url': Param('RabitMQ server url', type=str, mandatory=True)
-    }
 
-    parameter_overrides = {
-        'settypes': Override(default=[SCAN, SUBSCAN, BLOCK])
-    }
+    parameters = {"rabbit_url": Param("RabitMQ server url", type=str, mandatory=True)}
+
+    parameter_overrides = {"settypes": Override(default=[SCAN, SUBSCAN, BLOCK])}
 
     handlerclass = RabbitSinkHandler
     _connection = None
@@ -206,22 +211,25 @@ class RabbitSink(DataSink):
 
     def _prepareExchange(self):
         """Declares the Exchange on the RabbitMQ instance"""
-        self._exchange = f'{session.instrument.instrument}'
+        self._exchange = f"{session.instrument.instrument}"
         self._channel.exchange_declare(
             self._exchange,
             # exchange_type=ExchangeType.direct,
             durable=True,
-            auto_delete=False)
+            auto_delete=False,
+        )
 
     def _prepareQueue(self):
         """Declares the Queue and its bindings on the RabbitMQ instance"""
         self._queue = self._channel.queue_declare(
-            f'{session.instrument.instrument}',
+            f"{session.instrument.instrument}",
             exclusive=False,
             durable=True,
-            auto_delete=False).method.queue
+            auto_delete=False,
+        ).method.queue
 
         self._channel.queue_bind(
             exchange=self._exchange,
             queue=self._queue,
-            routing_key=session.instrument.instrument)
+            routing_key=session.instrument.instrument,
+        )

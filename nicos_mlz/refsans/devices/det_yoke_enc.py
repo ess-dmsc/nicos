@@ -27,21 +27,20 @@ from nicos.devices.entangle import StringIO
 
 
 class BasePos(Readable):
-
     valuetype = int
 
     attached_devices = {
-        'comm': Attach('Communication device', StringIO),
+        "comm": Attach("Communication device", StringIO),
     }
 
     parameters = {
-        'index': Param('index to get one side',
-                       type=intrange(1, 2), settable=False, userparam=True),
+        "index": Param(
+            "index to get one side", type=intrange(1, 2), settable=False, userparam=True
+        ),
     }
 
     def doStatus(self, maxage=0):
-        return status.OK, ''
+        return status.OK, ""
 
     def doRead(self, maxage=0):
-        return int(self._attached_comm.communicate(
-                   '$0%d?*' % self.index)[1:-1])
+        return int(self._attached_comm.communicate("$0%d?*" % self.index)[1:-1])

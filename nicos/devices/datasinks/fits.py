@@ -28,8 +28,11 @@ import numpy
 
 from nicos.core import NicosError
 from nicos.core.params import Override
-from nicos.devices.datasinks.image import ImageFileReader, ImageSink, \
-    SingleFileSinkHandler
+from nicos.devices.datasinks.image import (
+    ImageFileReader,
+    ImageSink,
+    SingleFileSinkHandler,
+)
 from nicos.utils import toAscii
 
 try:
@@ -42,8 +45,7 @@ except ImportError:
 
 
 class FITSImageSinkHandler(SingleFileSinkHandler):
-
-    filetype = 'fits'
+    filetype = "fits"
     defer_file_creation = True
     accept_final_images_only = True
 
@@ -61,31 +63,31 @@ class FITSImageSinkHandler(SingleFileSinkHandler):
         hdu.writeto(fp)
 
     def _collectHeaderItems(self, info):
-
         finished = currenttime()
         header = {}
 
         for (dev, param), (_, strvalue, unit, _) in info.items():
-            header['%s/%s' % (dev, param)] = ('%s %s' % (strvalue,
-                                                         unit)).strip()
+            header["%s/%s" % (dev, param)] = ("%s %s" % (strvalue, unit)).strip()
 
         header = OrderedDict(
-            [('begintime',
-              strftime('%Y-%m-%d %H:%M:%S', localtime(self.dataset.started))),
-             ('endtime',
-              strftime('%Y-%m-%d %H:%M:%S', localtime(finished)))
-             ] + sorted(header.items())
+            [
+                (
+                    "begintime",
+                    strftime("%Y-%m-%d %H:%M:%S", localtime(self.dataset.started)),
+                ),
+                ("endtime", strftime("%Y-%m-%d %H:%M:%S", localtime(finished))),
+            ]
+            + sorted(header.items())
         )
         return header
 
     def _buildHeader(self, info, hdu):
-
         for key, value in self._collectHeaderItems(info).items():
             # The FITS standard defines max 8 characters for a header key.
             # To make longer keys possible, we use the HIERARCH keyword
             # here (67 chars max).
             # To get a consistent looking header, add it to every key
-            key = 'HIERARCH %s' % key
+            key = "HIERARCH %s" % key
 
             # use only ascii characters and escapes if necessary.
             value = toAscii(str(value))
@@ -95,8 +97,9 @@ class FITSImageSinkHandler(SingleFileSinkHandler):
 
             # Split the dataset into several header entries if necessary
             # (due to the limited length)
-            splittedHeaderItems = [value[i:i + maxValLen]
-                                   for i in range(0, len(value), maxValLen)]
+            splittedHeaderItems = [
+                value[i : i + maxValLen] for i in range(0, len(value), maxValLen)
+            ]
 
             for item in splittedHeaderItems:
                 hdu.header.append((key, item))
@@ -112,7 +115,7 @@ class FITSImageSink(ImageSink):
     """
 
     parameter_overrides = {
-        'filenametemplate': Override(default=['%(pointcounter)08d.fits']),
+        "filenametemplate": Override(default=["%(pointcounter)08d.fits"]),
     }
 
     handlerclass = FITSImageSinkHandler
@@ -121,15 +124,18 @@ class FITSImageSink(ImageSink):
         # Stop creation of the FITSImageSink as it would make no sense
         # without pyfits.
         if pyfits is None:
-            raise NicosError(self, 'pyfits module is not available. Check'
-                             ' if it is installed and in your PYTHONPATH')
+            raise NicosError(
+                self,
+                "pyfits module is not available. Check"
+                " if it is installed and in your PYTHONPATH",
+            )
 
     def isActiveForArray(self, arraydesc):
         return len(arraydesc.shape) == 2
 
 
 class FITSFileReader(ImageFileReader):
-    filetypes = [('fits', 'FITS File (*.fits)')]
+    filetypes = [("fits", "FITS File (*.fits)")]
 
     @classmethod
     def fromfile(cls, filename):

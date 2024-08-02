@@ -20,8 +20,17 @@
 #   Matt Clarke <matt.clarke@ess.eu>
 #
 # *****************************************************************************
-from nicos.core import SIMULATION, Attach, InvalidValueError, Override, \
-    Param, oneof, pvname, status, usermethod
+from nicos.core import (
+    SIMULATION,
+    Attach,
+    InvalidValueError,
+    Override,
+    Param,
+    oneof,
+    pvname,
+    status,
+    usermethod,
+)
 from nicos.devices.abstract import MappedMoveable
 from nicos.devices.epics.pva import EpicsDevice, EpicsStringReadable
 
@@ -30,63 +39,57 @@ class SyringePumpController(EpicsDevice, MappedMoveable):
     """
     A device for controlling the NE1002 and NE1600 syringe pumps.
     """
+
     parameters = {
-        'start_pv':
-            Param('PV for starting the device',
-                  type=pvname,
-                  mandatory=True,
-                  userparam=False),
-        'stop_pv':
-            Param('PV for stopping the device',
-                  type=pvname,
-                  mandatory=True,
-                  userparam=False),
-        'purge_pv':
-            Param('PV for purging the device',
-                  type=pvname,
-                  mandatory=True,
-                  userparam=False),
-        'pause_pv':
-            Param('PV for pausing and resuming the device',
-                  type=pvname,
-                  mandatory=True,
-                  userparam=False),
-        'message_pv':
-            Param('PV for reading error messages from the device',
-                  type=pvname,
-                  mandatory=True,
-                  userparam=False),
+        "start_pv": Param(
+            "PV for starting the device", type=pvname, mandatory=True, userparam=False
+        ),
+        "stop_pv": Param(
+            "PV for stopping the device", type=pvname, mandatory=True, userparam=False
+        ),
+        "purge_pv": Param(
+            "PV for purging the device", type=pvname, mandatory=True, userparam=False
+        ),
+        "pause_pv": Param(
+            "PV for pausing and resuming the device",
+            type=pvname,
+            mandatory=True,
+            userparam=False,
+        ),
+        "message_pv": Param(
+            "PV for reading error messages from the device",
+            type=pvname,
+            mandatory=True,
+            userparam=False,
+        ),
     }
 
     parameter_overrides = {
-        'unit':
-            Override(mandatory=False, settable=False, userparam=False),
-        'mapping':
-            Override(mandatory=False,
-                     settable=False,
-                     userparam=False,
-                     volatile=True),
+        "unit": Override(mandatory=False, settable=False, userparam=False),
+        "mapping": Override(
+            mandatory=False, settable=False, userparam=False, volatile=True
+        ),
     }
 
     attached_devices = {
-        'status': Attach('Status of device', EpicsStringReadable),
+        "status": Attach("Status of device", EpicsStringReadable),
     }
 
     _commands = {}
 
     def doInit(self, mode):
         self._commands = {
-            'start': self.start_pump,
-            'stop': self.stop_pump,
-            'purge': self.purge,
-            'pause': self.pause_pump,
-            'resume': self.resume_pump
+            "start": self.start_pump,
+            "stop": self.stop_pump,
+            "purge": self.purge,
+            "pause": self.pause_pump,
+            "resume": self.resume_pump,
         }
         MappedMoveable.doInit(self, mode)
         self.valuetype = oneof(*self._commands)
 
     def _get_pv_parameters(self):
-        return {'start_pv', 'stop_pv', 'purge_pv', 'pause_pv', 'message_pv'}
+        return {"start_pv", "stop_pv", "purge_pv", "pause_pv", "message_pv"}
 
     def doStart(self, target):
         if target in self._commands:
@@ -103,8 +106,8 @@ class SyringePumpController(EpicsDevice, MappedMoveable):
 
     def doStatus(self, maxage=0):
         if self._mode == SIMULATION:
-            return status.OK, ''
-        device_msg = self._get_pv('message_pv', as_string=True)
+            return status.OK, ""
+        device_msg = self._get_pv("message_pv", as_string=True)
         if device_msg:
             return status.ERROR, device_msg
 
@@ -116,10 +119,11 @@ class SyringePumpController(EpicsDevice, MappedMoveable):
         if self._mode == SIMULATION:
             return
         curr_state = self._attached_status.read(0)
-        if curr_state != 'Stopped':
-            raise InvalidValueError('Cannot start from the current state, '
-                                    'please stop the pump first')
-        self._put_pv('start_pv', 1)
+        if curr_state != "Stopped":
+            raise InvalidValueError(
+                "Cannot start from the current state, " "please stop the pump first"
+            )
+        self._put_pv("start_pv", 1)
 
     @usermethod
     def stop_pump(self):
@@ -127,10 +131,10 @@ class SyringePumpController(EpicsDevice, MappedMoveable):
         if self._mode == SIMULATION:
             return
         curr_state = self._attached_status.read(0)
-        if curr_state == 'Stopped':
+        if curr_state == "Stopped":
             self.log.warning("Stop request ignored as pump already stopped")
             return
-        self._put_pv('stop_pv', 2)
+        self._put_pv("stop_pv", 2)
 
     @usermethod
     def purge(self):
@@ -138,10 +142,11 @@ class SyringePumpController(EpicsDevice, MappedMoveable):
         if self._mode == SIMULATION:
             return
         curr_state = self._attached_status.read(0)
-        if curr_state != 'Stopped':
-            raise InvalidValueError('Cannot purge from the current state, '
-                                    'please stop the pump first')
-        self._put_pv('purge_pv', 3)
+        if curr_state != "Stopped":
+            raise InvalidValueError(
+                "Cannot purge from the current state, " "please stop the pump first"
+            )
+        self._put_pv("purge_pv", 3)
 
     @usermethod
     def pause_pump(self):
@@ -149,10 +154,11 @@ class SyringePumpController(EpicsDevice, MappedMoveable):
         if self._mode == SIMULATION:
             return
         curr_state = self._attached_status.read(0)
-        if curr_state not in ['Infusing', 'Withdrawing']:
-            raise InvalidValueError('Cannot pause from the current state '
-                                    f'({curr_state})')
-        self._put_pv('pause_pv', 4)
+        if curr_state not in ["Infusing", "Withdrawing"]:
+            raise InvalidValueError(
+                "Cannot pause from the current state " f"({curr_state})"
+            )
+        self._put_pv("pause_pv", 4)
 
     @usermethod
     def resume_pump(self):
@@ -160,7 +166,7 @@ class SyringePumpController(EpicsDevice, MappedMoveable):
         if self._mode == SIMULATION:
             return
         curr_state = self._attached_status.read(0)
-        if curr_state != 'Paused':
+        if curr_state != "Paused":
             self.log.warning("Resume request ignored as pump is not paused")
             return
-        self._put_pv('pause_pv', 5)
+        self._put_pv("pause_pv", 5)

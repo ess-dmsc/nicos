@@ -144,13 +144,13 @@ class gui_config:
         elif isinstance(config, panel):
             return config.clsname in panel_classes
         elif isinstance(config, tabbed):
-            return any(self._has_panel(child[1], panel_classes)
-                       for child in config.children)
+            return any(
+                self._has_panel(child[1], panel_classes) for child in config.children
+            )
         elif isinstance(config, docked):
             if self._has_panel(config[0], panel_classes):
                 return True
-            return any(self._has_panel(child[1], panel_classes)
-                       for child in config[1])
+            return any(self._has_panel(child[1], panel_classes) for child in config[1])
 
     def find_panel(self, panel_classes):
         if self._has_panel(self.main_window, panel_classes):
@@ -163,27 +163,31 @@ class gui_config:
 
 def prepareGuiNamespace():
     ns = {}
-    ns['vsplit'] = vsplit
-    ns['hsplit'] = hsplit
-    ns['window'] = window
-    ns['panel'] = panel
-    ns['tool'] = tool
-    ns['cmdtool'] = cmdtool
-    ns['menu'] = menu
-    ns['docked'] = docked
-    ns['tabbed'] = tabbed
-    ns['options'] = {}
-    ns['hbox'] = hbox
-    ns['vbox'] = vbox
+    ns["vsplit"] = vsplit
+    ns["hsplit"] = hsplit
+    ns["window"] = window
+    ns["panel"] = panel
+    ns["tool"] = tool
+    ns["cmdtool"] = cmdtool
+    ns["menu"] = menu
+    ns["docked"] = docked
+    ns["tabbed"] = tabbed
+    ns["options"] = {}
+    ns["hbox"] = hbox
+    ns["vbox"] = vbox
     return ns
 
 
 def processGuiConfig(configcode):
     ns = prepareGuiNamespace()
     exec(configcode, ns)
-    gui_conf = gui_config(ns['main_window'], ns.get('windows', []),
-                          ns.get('tools', []), ns.get('name', 'NICOS'),
-                          ns.get('options', {}))
-    if gui_conf.name != 'NICOS':
+    gui_conf = gui_config(
+        ns["main_window"],
+        ns.get("windows", []),
+        ns.get("tools", []),
+        ns.get("name", "NICOS"),
+        ns.get("options", {}),
+    )
+    if gui_conf.name != "NICOS":
         SettingGroup.global_group = gui_conf.name
     return gui_conf

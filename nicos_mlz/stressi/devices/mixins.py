@@ -40,26 +40,26 @@ class Formula:
     """
 
     # take the whole math module function bunch into the namespace
-    _globals = {k: v for k, v in vars(math).items() if not k.startswith('__')}
+    _globals = {k: v for k, v in vars(math).items() if not k.startswith("__")}
     # This should avoid to take others modules into the namespace (see python
     # doc of eval function
-    _globals['__builtins__'] = globals()['__builtins__']
+    _globals["__builtins__"] = globals()["__builtins__"]
 
     def __init__(self, formula):
         self._formula = formula
 
     def eval(self, x):
-        return eval(self._formula, self._globals, {'x': x})
+        return eval(self._formula, self._globals, {"x": x})
 
     def __str__(self):
         return self._formula
 
 
-ext_formula_desc = '''
+ext_formula_desc = """
     The formula must be given in the form that all parameters are numbers, but
     the value to be transformed is called 'x'. The 'x' value may occur more
     than once.
-'''
+"""
 
 
 class TransformRead(DeviceMixinBase):
@@ -74,18 +74,21 @@ class TransformRead(DeviceMixinBase):
     _informula = None
 
     parameters = {
-        'informula': Param('Input conversion formula',
-                           type=str, settable=False, default='x',
-                           ext_desc=ext_formula_desc,
-                           ),
+        "informula": Param(
+            "Input conversion formula",
+            type=str,
+            settable=False,
+            default="x",
+            ext_desc=ext_formula_desc,
+        ),
     }
 
     parameter_overrides = {
-        'unit': Override(volatile=True, mandatory=False),
+        "unit": Override(volatile=True, mandatory=False),
     }
 
     attached_devices = {
-        'dev': Attach('Base device', Readable),
+        "dev": Attach("Base device", Readable),
     }
 
     def _mapReadValue(self, value):
@@ -93,14 +96,14 @@ class TransformRead(DeviceMixinBase):
 
     def _readRaw(self, maxage=0):
         raw = self._attached_dev.read(maxage)
-        self.log.debug('Raw value: %r', raw)
+        self.log.debug("Raw value: %r", raw)
         return raw
 
     def doReadUnit(self):
         return self._attached_dev.unit
 
     def doUpdateInformula(self, formula):
-        self.log.debug('Informula: %r' % formula)
+        self.log.debug("Informula: %r" % formula)
         self._informula = Formula(formula)
         return formula
 
@@ -117,14 +120,17 @@ class TransformMove(TransformRead):
     _outformula = None
 
     attached_devices = {
-        'dev': Attach('Base device', Moveable),
+        "dev": Attach("Base device", Moveable),
     }
 
     parameters = {
-        'outformula': Param('Output conversion formula',
-                            type=str, settable=False, default='x',
-                            ext_desc=ext_formula_desc,
-                            ),
+        "outformula": Param(
+            "Output conversion formula",
+            type=str,
+            settable=False,
+            default="x",
+            ext_desc=ext_formula_desc,
+        ),
     }
 
     def _mapTargetValue(self, target):
@@ -134,6 +140,6 @@ class TransformMove(TransformRead):
         self._attached_dev.start(target)
 
     def doUpdateOutformula(self, formula):
-        self.log.debug('Outformula: %r', formula)
+        self.log.debug("Outformula: %r", formula)
         self._outformula = Formula(formula)
         return formula

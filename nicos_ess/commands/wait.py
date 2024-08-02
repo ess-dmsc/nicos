@@ -28,7 +28,7 @@ from nicos.core import SIMULATION
 
 
 @usercommand
-@helparglist('device, target, accuracy, time_stable, [timeout]')
+@helparglist("device, target, accuracy, time_stable, [timeout]")
 def waitfor_stable(device, target, accuracy, time_stable, timeout=3600):
     """Wait for the device to be within a certain range of the target value
     for a defined continuous number of seconds.
@@ -61,8 +61,8 @@ def waitfor_stable(device, target, accuracy, time_stable, timeout=3600):
 
         if curr_time > start_time + timeout:
             session.log.warning(
-                'stablilisation timed out - %s might not be '
-                'stable', device)
+                "stablilisation timed out - %s might not be " "stable", device
+            )
             break
 
         if abs(target - curr_pos) <= accuracy:
@@ -70,15 +70,17 @@ def waitfor_stable(device, target, accuracy, time_stable, timeout=3600):
                 in_range = True
                 start_in_range = curr_time
                 session.log.warning(
-                    '%s is within range, waiting %s seconds '
-                    'for it to stabilise', device, time_stable)
+                    "%s is within range, waiting %s seconds " "for it to stabilise",
+                    device,
+                    time_stable,
+                )
         else:
             if in_range:
-                session.log.warning('%s is no longer in range', device)
+                session.log.warning("%s is no longer in range", device)
             in_range = False
 
         if in_range and curr_time > start_in_range + time_stable:
-            session.log.warning('%s is considered stable', device)
+            session.log.warning("%s is considered stable", device)
             break
 
         session.delay(dev._long_loop_delay)

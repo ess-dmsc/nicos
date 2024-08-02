@@ -45,7 +45,7 @@ class StyleSelector:
 
     @state.setter
     def state(self, value):
-        self._state = str(value).rsplit('.', maxsplit=1)[-1]
+        self._state = str(value).rsplit(".", maxsplit=1)[-1]
 
 
 def refresh_widget(widget):

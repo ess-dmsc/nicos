@@ -23,8 +23,7 @@
 
 import re
 
-from nicos.core import HasLimits, HasPrecision, Moveable, Override, Param, \
-    oneof, status
+from nicos.core import HasLimits, HasPrecision, Moveable, Override, Param, oneof, status
 from nicos.devices.tango import PyTangoDevice
 
 from .generic import GenericLimaCCD
@@ -41,28 +40,45 @@ class Andor2LimaCCD(GenericLimaCCD):
     VSSPEEDS = [16, 38.55, 76.95]  # Values from sdk manual
     PGAINS = [1, 2, 4]  # Values from sdk manual
 
-    HSSPEED_RE = re.compile(r'ADC0_(\d+\.\d+|\d+)MHZ')
-    VSSPEED_RE = re.compile(r'(\d+(?:\.\d+)?)USEC')
-    PGAIN_RE = re.compile(r'X(\d)')
+    HSSPEED_RE = re.compile(r"ADC0_(\d+\.\d+|\d+)MHZ")
+    VSSPEED_RE = re.compile(r"(\d+(?:\.\d+)?)USEC")
+    PGAIN_RE = re.compile(r"X(\d)")
 
     parameters = {
-        'hsspeed': Param('Horizontal shift speed',
-                         type=oneof(*HSSPEEDS), settable=True, default=5,
-                         unit='MHz', volatile=True, category='general'),
-        'vsspeed': Param('Vertical shift speed',
-                         type=oneof(*VSSPEEDS), settable=True, default=76.95,
-                         unit='ms/shift', volatile=True, category='general'),
-        'pgain':   Param('Preamplifier gain',
-                         type=oneof(*PGAINS), settable=True, default=4,
-                         volatile=True, category='general'),
+        "hsspeed": Param(
+            "Horizontal shift speed",
+            type=oneof(*HSSPEEDS),
+            settable=True,
+            default=5,
+            unit="MHz",
+            volatile=True,
+            category="general",
+        ),
+        "vsspeed": Param(
+            "Vertical shift speed",
+            type=oneof(*VSSPEEDS),
+            settable=True,
+            default=76.95,
+            unit="ms/shift",
+            volatile=True,
+            category="general",
+        ),
+        "pgain": Param(
+            "Preamplifier gain",
+            type=oneof(*PGAINS),
+            settable=True,
+            default=4,
+            volatile=True,
+            category="general",
+        ),
     }
 
     parameter_overrides = {
-        'hwdevice': Override(mandatory=True),
+        "hwdevice": Override(mandatory=True),
     }
 
     def doInfo(self):
-        for p in ('hsspeed', 'vsspeed', 'pgain'):
+        for p in ("hsspeed", "vsspeed", "pgain"):
             self._pollParam(p)
         return []
 
@@ -71,34 +87,35 @@ class Andor2LimaCCD(GenericLimaCCD):
         return val
 
     def doWriteHsspeed(self, value):
-        self._hwDev._dev.adc_speed = 'ADC0_%sMHZ' % value
+        self._hwDev._dev.adc_speed = "ADC0_%sMHZ" % value
 
     def doReadVsspeed(self):
         val = float(self.VSSPEED_RE.match(self._hwDev._dev.vs_speed).group(1))
         return val
 
     def doWriteVsspeed(self, value):
-        self._hwDev._dev.vs_speed = '%gUSEC' % value
+        self._hwDev._dev.vs_speed = "%gUSEC" % value
 
     def doReadPgain(self):
         val = float(self.PGAIN_RE.match(self._hwDev._dev.p_gain).group(1))
         return val
 
     def doWritePgain(self, value):
-        self._hwDev._dev.p_gain = 'X%s' % value
+        self._hwDev._dev.p_gain = "X%s" % value
 
     def _specialInit(self):
         # set some dummy roi to avoid strange lima rotation behaviour
         # (not at 0, 0 to avoid possible problems with strides)
         self._dev.image_roi = (8, 8, 8, 8)
         # ensure NO rotation
-        self._dev.image_rotation = 'NONE'
+        self._dev.image_rotation = "NONE"
         # set full detector size as roi
         self._dev.image_roi = (0, 0, 0, 0)
 
 
-class Andor2TemperatureController(PyTangoDevice, HasLimits, HasPrecision,
-                                  LimaCooler, Moveable):
+class Andor2TemperatureController(
+    PyTangoDevice, HasLimits, HasPrecision, LimaCooler, Moveable
+):
     """
     This devices provides access to the cooling feature of Andor2 cameras.
     """

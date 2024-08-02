@@ -33,7 +33,7 @@ from .utilities.excluded_devices import excluded_device_classes
 from .utilities.utilities import getClass, getNicosDir
 
 modules = {}
-session = Session('SetupFileTool')
+session = Session("SetupFileTool")
 
 
 def init(log):
@@ -45,31 +45,33 @@ def init(log):
     # <nicos directory>/nicos/services/cache/server.py
     # returns the dictionary.
 
-    paths = [
-        Path().joinpath(getNicosDir(), 'nicos', 'devices'),
-        Path().joinpath(getNicosDir(), 'nicos', 'services')] + list(
-        Path(getNicosDir()).glob(
-            '%s' % Path().joinpath('nicos_*', 'devices'))) + list(
-        Path(getNicosDir()).glob(
-            '%s' % Path().joinpath('nicos_*', '*', 'devices')))
+    paths = (
+        [
+            Path().joinpath(getNicosDir(), "nicos", "devices"),
+            Path().joinpath(getNicosDir(), "nicos", "services"),
+        ]
+        + list(Path(getNicosDir()).glob("%s" % Path().joinpath("nicos_*", "devices")))
+        + list(
+            Path(getNicosDir()).glob("%s" % Path().joinpath("nicos_*", "*", "devices"))
+        )
+    )
 
     pys = []
     for pth in paths:
         for root, _, files in os.walk(pth):
-            pys += [Path().joinpath(root, f)
-                    for f in files if f.endswith('.py')]
+            pys += [Path().joinpath(root, f) for f in files if f.endswith(".py")]
 
     for py in pys:
         moduleFile = py.relative_to(getNicosDir())
-        if moduleFile.name == '__init__.py':
-            moduleName = '.'.join(moduleFile.parent.parts)
+        if moduleFile.name == "__init__.py":
+            moduleName = ".".join(moduleFile.parent.parts)
         else:
-            moduleName = '.'.join(moduleFile.with_suffix('').parts)
+            moduleName = ".".join(moduleFile.with_suffix("").parts)
         try:
             mod = session._nicos_import(moduleName)
             modules[moduleName] = mod
         except (ImportError, KeyError, NameError) as e:
-            log.warning('Error importing ' + moduleName + ': ' + str(e))
+            log.warning("Error importing " + moduleName + ": " + str(e))
 
 
 def getDeviceClasses(instrumentPrefix):
@@ -78,9 +80,9 @@ def getDeviceClasses(instrumentPrefix):
         for mod in modules:
             if mod.startswith(instrumentPrefix):
                 modkeys.append(mod)
-            elif mod.startswith('devices'):
+            elif mod.startswith("devices"):
                 modkeys.append(mod)
-            elif mod.startswith('services'):
+            elif mod.startswith("services"):
                 modkeys.append(mod)
     else:
         modkeys = list(modules.keys())
@@ -89,17 +91,17 @@ def getDeviceClasses(instrumentPrefix):
     for key in modkeys:
         classesOfModule = inspect.getmembers(modules[key], inspect.isclass)
         for _class in classesOfModule:
-            if issubclass(_class[1], _Class_device) and \
-                    _class[1] not in classes:
+            if issubclass(_class[1], _Class_device) and _class[1] not in classes:
                 classes.append(_class[1])
 
-    classes = [_class for _class in classes
-               if getClass(_class) not in excluded_device_classes]
+    classes = [
+        _class for _class in classes if getClass(_class) not in excluded_device_classes
+    ]
     # classes (the list) may contain classes that were imported in some module.
     # parse out those classes and remove them from the returned list.
     return_classes = []
     for _class in classes:
-        mod = '.'.join(getClass(_class).split('.')[:-1])
+        mod = ".".join(getClass(_class).split(".")[:-1])
         if mod in modules:
             return_classes.append(_class)
     return return_classes

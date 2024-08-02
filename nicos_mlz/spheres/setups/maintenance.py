@@ -1,6 +1,5 @@
 description = "Maintenance setup for SPHERES. Includes all basic devices."
 
-group = 'basic'
+group = "basic"
 
-includes = ['spheres',
-            'qmesydaq']
+includes = ["spheres", "qmesydaq"]

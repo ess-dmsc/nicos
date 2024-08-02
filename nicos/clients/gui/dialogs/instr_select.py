@@ -28,8 +28,7 @@ from pathlib import Path
 
 from nicos import config
 from nicos.clients.gui.utils import SettingGroup, loadUi
-from nicos.guisupport.qt import QDialog, QDialogButtonBox, QIcon, \
-    QTreeWidgetItem
+from nicos.guisupport.qt import QDialog, QDialogButtonBox, QIcon, QTreeWidgetItem
 
 
 class InstrSelectDialog(QDialog):
@@ -37,8 +36,8 @@ class InstrSelectDialog(QDialog):
 
     def __init__(self, reason, parent=None):
         QDialog.__init__(self, parent)
-        loadUi(self, 'dialogs/instr_select.ui')
-        icon = QIcon(':/appicon-16')
+        loadUi(self, "dialogs/instr_select.ui")
+        icon = QIcon(":/appicon-16")
         if reason:
             self.reasonLbl.setText(reason)
         else:
@@ -47,49 +46,46 @@ class InstrSelectDialog(QDialog):
 
         self.confTree.itemDoubleClicked.connect(self.handleDoubleClick)
         self.confTree.currentItemChanged.connect(self.handleSelection)
-        self.buttonBox.button(
-            QDialogButtonBox.StandardButton.Ok).setDisabled(True)
+        self.buttonBox.button(QDialogButtonBox.StandardButton.Ok).setDisabled(True)
         tree = {}
 
-        for entry in sorted(Path(config.nicos_root).rglob('guiconfig.py')):
+        for entry in sorted(Path(config.nicos_root).rglob("guiconfig.py")):
             parent = entry.relative_to(config.nicos_root).parent
-            if not parent.parts[0].startswith('nicos_'):
+            if not parent.parts[0].startswith("nicos_"):
                 continue
             ptree = tree
             for part in parent.parts:
                 ptree = ptree.setdefault(part, {})
-            ptree['config'] = entry
+            ptree["config"] = entry
 
         def add_subitems(pitem, tree):
             for k, v in tree.items():
                 item = QTreeWidgetItem(pitem, [k])
-                if 'config' in v:
-                    item.setData(0, QTreeWidgetItem.ItemType.UserType,
-                                 v['config'])
+                if "config" in v:
+                    item.setData(0, QTreeWidgetItem.ItemType.UserType, v["config"])
                 else:
                     add_subitems(item, v)
 
         for k, v in tree.items():
             pkgitem = QTreeWidgetItem(self.confTree, [k])
             pkgitem.setIcon(0, icon)
-            if 'config' in v:
-                pkgitem.setData(0, QTreeWidgetItem.ItemType.UserType,
-                                v.pop('config'))
+            if "config" in v:
+                pkgitem.setData(0, QTreeWidgetItem.ItemType.UserType, v.pop("config"))
             add_subitems(pkgitem, v)
 
     def handleSelection(self, cur, _prev):
         self.buttonBox.button(QDialogButtonBox.StandardButton.Ok).setEnabled(
-            cur.data(0, QTreeWidgetItem.ItemType.UserType) is not None)
+            cur.data(0, QTreeWidgetItem.ItemType.UserType) is not None
+        )
 
     def handleDoubleClick(self, item, _col):
         if item.data(0, QTreeWidgetItem.ItemType.UserType):
             self.accept()
 
     @classmethod
-    def select(cls, reason='', force=False):
-        with SettingGroup('Instrument') as settings:
-            configfile = None if force else \
-                (settings.value('guiconfig') or None)
+    def select(cls, reason="", force=False):
+        with SettingGroup("Instrument") as settings:
+            configfile = None if force else (settings.value("guiconfig") or None)
             while not (configfile and path.isfile(configfile)):
                 dlg = cls(reason)
                 result = dlg.exec()
@@ -97,8 +93,7 @@ class InstrSelectDialog(QDialog):
                     return None
                 items = dlg.confTree.selectedItems()
                 if items:
-                    configfile = items[0].data(
-                        0, QTreeWidgetItem.ItemType.UserType)
+                    configfile = items[0].data(0, QTreeWidgetItem.ItemType.UserType)
                     if force or dlg.saveBox.isChecked():
-                        settings.setValue('guiconfig', configfile)
+                        settings.setValue("guiconfig", configfile)
             return configfile

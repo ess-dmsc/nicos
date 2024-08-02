@@ -34,12 +34,11 @@ class RobotMotor(Motor):
     """
 
     attached_devices = {
-        'speedmotor': Attach('Device to control the axis speed',
-                             Motor, multiple=False),
+        "speedmotor": Attach("Device to control the axis speed", Motor, multiple=False),
     }
 
     parameter_overrides = {
-        'speed': Override(volatile=True),
+        "speed": Override(volatile=True),
     }
 
     def doReadSpeed(self):

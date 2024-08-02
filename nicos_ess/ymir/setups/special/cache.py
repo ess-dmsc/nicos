@@ -1,16 +1,16 @@
-description = 'setup for the cache server'
-group = 'special'
+description = "setup for the cache server"
+group = "special"
 
 devices = dict(
     DB=device(
-        'nicos.services.cache.server.RedisCacheDatabase',
+        "nicos.services.cache.server.RedisCacheDatabase",
         # 'nicos.services.cache.server.MemoryCacheDatabase',
         # storepath='/opt/nicos-data/cache',
-        loglevel='info',
+        loglevel="info",
     ),
     Server=device(
-        'nicos.services.cache.server.CacheServer',
-        db='DB',
+        "nicos.services.cache.server.CacheServer",
+        db="DB",
         # 'localhost' will normally bind the cache service to the
         # loopback device
         # '' will bind the daemon to all network interfaces in the
@@ -21,7 +21,7 @@ devices = dict(
         # Binding the cache to the 'localhost' leads to trouble if
         # some other NICOS services are running on different
         # machines
-        server='',
-        loglevel='debug',
+        server="",
+        loglevel="debug",
     ),
 )

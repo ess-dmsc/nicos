@@ -21,43 +21,73 @@
 #
 # *****************************************************************************
 
-""" Module to implement monitor counters from a Kafka stream """
+"""Module to implement monitor counters from a Kafka stream"""
 
 import uuid
 
 from confluent_kafka import Consumer
-from streaming_data_types import deserialise_ev42, deserialise_ev43, \
-    deserialise_ev44, deserialise_f142
+from streaming_data_types import (
+    deserialise_ev42,
+    deserialise_ev43,
+    deserialise_ev44,
+    deserialise_f142,
+)
 from streaming_data_types.utils import get_schema
 
-from nicos.core import MASTER, Override, Param, Value, host, listof, oneof, \
-    status, tupleof
+from nicos.core import (
+    MASTER,
+    Override,
+    Param,
+    Value,
+    host,
+    listof,
+    oneof,
+    status,
+    tupleof,
+)
 from nicos.devices.generic import ActiveChannel
 from nicos.utils import createThread
 
 deserialiser_by_schema = {
-    'f142': deserialise_f142,
-    'ev42': deserialise_ev42,
-    'ev43': deserialise_ev43,
-    'ev44': deserialise_ev44
+    "f142": deserialise_f142,
+    "ev42": deserialise_ev42,
+    "ev43": deserialise_ev43,
+    "ev44": deserialise_ev44,
 }
 
 
 class KafkaChannel(ActiveChannel):
     parameters = {
-        'brokers': Param('List of kafka hosts to be connected',
-                         type=listof(host(defaultport=9092)),
-                         mandatory=True, preinit=True, userparam=False),
-        'topic': Param('The topic to listen for monitor events',
-                       type=str, userparam=False, settable=False,
-                       mandatory=True,),
-        'source': Param('Source name for the topic', type=str,
-                        settable=False, default='', userparam=False),
-        'curvalue':  Param('Current value', settable=True, unit='main',
-                           internal=True),
-        'curstatus': Param('Current status', type=tupleof(int, str),
-                           settable=True, default=(status.OK, 'idle'),
-                           no_sim_restore=True, internal=True),
+        "brokers": Param(
+            "List of kafka hosts to be connected",
+            type=listof(host(defaultport=9092)),
+            mandatory=True,
+            preinit=True,
+            userparam=False,
+        ),
+        "topic": Param(
+            "The topic to listen for monitor events",
+            type=str,
+            userparam=False,
+            settable=False,
+            mandatory=True,
+        ),
+        "source": Param(
+            "Source name for the topic",
+            type=str,
+            settable=False,
+            default="",
+            userparam=False,
+        ),
+        "curvalue": Param("Current value", settable=True, unit="main", internal=True),
+        "curstatus": Param(
+            "Current status",
+            type=tupleof(int, str),
+            settable=True,
+            default=(status.OK, "idle"),
+            no_sim_restore=True,
+            internal=True,
+        ),
     }
 
     def doPreinit(self, mode):
@@ -70,8 +100,9 @@ class KafkaChannel(ActiveChannel):
             }
         )
         self._consumer.subscribe(topics=[self.topic])
-        self._thread = createThread('%s %s' % (self.__class__.__name__, self),
-                                    self._get_new_messages)
+        self._thread = createThread(
+            "%s %s" % (self.__class__.__name__, self), self._get_new_messages
+        )
 
     def doInit(self, mode):
         self._count = False
@@ -88,11 +119,11 @@ class KafkaChannel(ActiveChannel):
 
     def doResume(self):
         self._count = True
-        self.curstatus = (status.BUSY, 'counting')
+        self.curstatus = (status.BUSY, "counting")
 
     def doFinish(self):
         self._count = False
-        self.curstatus = (status.OK, 'idle')
+        self.curstatus = (status.OK, "idle")
 
     def doStop(self):
         self.doFinish()
@@ -122,9 +153,9 @@ class KafkaChannel(ActiveChannel):
                 continue
             msg = deserialiser(message.value())
             if msg.source_name == self.source:
-                if schema == 'f142':
+                if schema == "f142":
                     self.curvalue += msg.value
-                elif schema == 'ev44':
+                elif schema == "ev44":
                     self.curvalue += len(msg.pixel_id)
                 else:
                     self.curvalue += len(msg.detector_id)
@@ -134,17 +165,20 @@ class KafkaChannel(ActiveChannel):
 
 
 class KafkaCounter(KafkaChannel):
-
     parameters = {
-        'type': Param('Type of channel: monitor or counter',
-                      type=oneof('monitor', 'counter'), mandatory=True),
+        "type": Param(
+            "Type of channel: monitor or counter",
+            type=oneof("monitor", "counter"),
+            mandatory=True,
+        ),
     }
 
     parameter_overrides = {
-        'unit': Override(default='cts'),
-        'fmtstr': Override(default='%d'),
+        "unit": Override(default="cts"),
+        "fmtstr": Override(default="%d"),
     }
 
     def valueInfo(self):
-        return Value(self.name, unit='cts', errors='sqrt', type=self.type,
-                     fmtstr='%d'),
+        return (
+            Value(self.name, unit="cts", errors="sqrt", type=self.type, fmtstr="%d"),
+        )

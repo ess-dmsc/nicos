@@ -31,22 +31,48 @@ from collections import OrderedDict
 from time import localtime, mktime, time as currenttime
 
 from nicos.clients.gui.panels.plot import PlotPanel
-from nicos.clients.gui.utils import DlgUtils, enumerateWithProgress, loadUi, \
-    split_query
+from nicos.clients.gui.utils import DlgUtils, enumerateWithProgress, loadUi, split_query
 from nicos.clients.gui.widgets.plotting import LinearFitter, ViewPlot
 from nicos.core import Param, listof
 from nicos.devices.cacheclient import CacheClient
-from nicos.guisupport.qt import QAction, QApplication, QBrush, QByteArray, \
-    QColor, QCompleter, QCursor, QDateTime, QDialog, QFont, QListWidgetItem, \
-    QMainWindow, QMenu, QMessageBox, QObject, QSettings, QSizePolicy, \
-    QStatusBar, QStyledItemDelegate, Qt, QTimer, QToolBar, QToolButton, \
-    pyqtSignal, pyqtSlot
+from nicos.guisupport.qt import (
+    QAction,
+    QApplication,
+    QBrush,
+    QByteArray,
+    QColor,
+    QCompleter,
+    QCursor,
+    QDateTime,
+    QDialog,
+    QFont,
+    QListWidgetItem,
+    QMainWindow,
+    QMenu,
+    QMessageBox,
+    QObject,
+    QSettings,
+    QSizePolicy,
+    QStatusBar,
+    QStyledItemDelegate,
+    Qt,
+    QTimer,
+    QToolBar,
+    QToolButton,
+    pyqtSignal,
+    pyqtSlot,
+)
 from nicos.guisupport.timeseries import TimeSeries
 from nicos.guisupport.trees import BaseDeviceParamTree
 from nicos.guisupport.utils import scaledFont
 from nicos.protocols.cache import cache_load
-from nicos.utils import findResource, number_types, parseDuration, \
-    parseKeyExpression, safeName
+from nicos.utils import (
+    findResource,
+    number_types,
+    parseDuration,
+    parseKeyExpression,
+    safeName,
+)
 
 from nicos_ess.gui.utils import get_icon
 
@@ -87,8 +113,23 @@ def showToolText(toolbar, action):
 class View(QObject):
     timeSeriesUpdate = pyqtSignal(object)
 
-    def __init__(self, widget, name, keys, exprs, descs, interval, fromtime,
-                 totime, yfrom, yto, window, meta, dlginfo, query_func):
+    def __init__(
+        self,
+        widget,
+        name,
+        keys,
+        exprs,
+        descs,
+        interval,
+        fromtime,
+        totime,
+        yfrom,
+        yto,
+        window,
+        meta,
+        dlginfo,
+        query_func,
+    ):
         QObject.__init__(self)
         self.name = name
         self.dlginfo = dlginfo
@@ -109,10 +150,12 @@ class View(QObject):
         hist_cache = {}
 
         if fromtime is not None:
-            iterator = enumerateWithProgress(zip(keys, exprs, descs),
-                                             'Querying history...',
-                                             force_display=True,
-                                             total=len(keys))
+            iterator = enumerateWithProgress(
+                zip(keys, exprs, descs),
+                "Querying history...",
+                force_display=True,
+                total=len(keys),
+            )
         else:
             iterator = enumerate(zip(keys, exprs, descs))
 
@@ -124,13 +167,14 @@ class View(QObject):
 
             if fromtime is not None:
                 if key not in hist_cache:
-                    history = query_func(key, self.fromtime, hist_totime,
-                                         interval)
+                    history = query_func(key, self.fromtime, hist_totime, interval)
                     if not history:
-                        QMessageBox.warning(widget, 'Error',
-                                            'Could not get history for %s, '
-                                            'there are no values to show.'
-                                            % key)
+                        QMessageBox.warning(
+                            widget,
+                            "Error",
+                            "Could not get history for %s, "
+                            "there are no values to show." % key,
+                        )
                         history = []
                     hist_cache[key] = history
                 else:
@@ -141,17 +185,24 @@ class View(QObject):
                     first_value = history[0][1]
                     if not expr and isinstance(first_value, (list, tuple)):
                         _, real_exprs, _ = parseKeyExpression(
-                            ', '.join('x[%d]' % i for i in range(len(first_value))),
-                            multiple=True)
+                            ", ".join("x[%d]" % i for i in range(len(first_value))),
+                            multiple=True,
+                        )
                         added_index = True
-            for (i, expr) in enumerate(real_exprs):
-                name = f'{desc}[{i}]' if added_index else desc
-                series = TimeSeries(name, interval, expr, window,
-                                    self, meta[0].get(key), meta[1].get(key))
+            for i, expr in enumerate(real_exprs):
+                name = f"{desc}[{i}]" if added_index else desc
+                series = TimeSeries(
+                    name,
+                    interval,
+                    expr,
+                    window,
+                    self,
+                    meta[0].get(key),
+                    meta[1].get(key),
+                )
                 self.series[key, expr] = series
                 if history:
-                    series.initFromHistory(history, fromtime,
-                                           totime or currenttime())
+                    series.initFromHistory(history, fromtime, totime or currenttime())
                 else:
                     series.initEmpty()
             self._key_exprs.setdefault(key, []).extend(real_exprs)
@@ -184,7 +235,7 @@ class View(QObject):
             self.plot.pointsAdded(series)
 
     def newValue(self, vtime, key, op, value):
-        if op != '=':
+        if op != "=":
             return
         for expr in self._key_exprs[key]:
             series = self.series[key, expr]
@@ -192,11 +243,10 @@ class View(QObject):
 
 
 class NewViewDialog(DlgUtils, QDialog):
-
     def __init__(self, parent, info=None, client=None):
         QDialog.__init__(self, parent)
-        DlgUtils.__init__(self, 'History viewer')
-        loadUi(self, findResource('nicos_ess/gui/panels/ui_files/history_new.ui'))
+        DlgUtils.__init__(self, "History viewer")
+        loadUi(self, findResource("nicos_ess/gui/panels/ui_files/history_new.ui"))
 
         self.client = client
 
@@ -225,27 +275,24 @@ class NewViewDialog(DlgUtils, QDialog):
         else:
             devices = client.getDeviceList()
             devcompleter = QCompleter(devices, self)
-            devcompleter.setCompletionMode(
-                QCompleter.CompletionMode.InlineCompletion)
+            devcompleter.setCompletionMode(QCompleter.CompletionMode.InlineCompletion)
             self.devices.setCompleter(devcompleter)
 
         if info is not None:
-            self.devices.setText(info['devices'])
-            self.namebox.setText(info['name'])
-            self.simpleTime.setChecked(info['simpleTime'])
-            self.simpleTimeSpec.setText(info['simpleTimeSpec'])
-            self.slidingWindow.setChecked(info['slidingWindow'])
-            self.extTime.setChecked(not info['simpleTime'])
-            self.frombox.setChecked(info['frombox'])
-            self.tobox.setChecked(info['tobox'])
-            self.fromdate.setDateTime(QDateTime
-                                      .fromSecsSinceEpoch(info['fromdate']))
-            self.todate.setDateTime(QDateTime
-                                    .fromSecsSinceEpoch(info['todate']))
-            self.interval.setText(info['interval'])
-            self.customY.setChecked(info['customY'])
-            self.customYFrom.setText(info['customYFrom'])
-            self.customYTo.setText(info['customYTo'])
+            self.devices.setText(info["devices"])
+            self.namebox.setText(info["name"])
+            self.simpleTime.setChecked(info["simpleTime"])
+            self.simpleTimeSpec.setText(info["simpleTimeSpec"])
+            self.slidingWindow.setChecked(info["slidingWindow"])
+            self.extTime.setChecked(not info["simpleTime"])
+            self.frombox.setChecked(info["frombox"])
+            self.tobox.setChecked(info["tobox"])
+            self.fromdate.setDateTime(QDateTime.fromSecsSinceEpoch(info["fromdate"]))
+            self.todate.setDateTime(QDateTime.fromSecsSinceEpoch(info["todate"]))
+            self.interval.setText(info["interval"])
+            self.customY.setChecked(info["customY"])
+            self.customYFrom.setText(info["customYFrom"])
+            self.customYTo.setText(info["customYTo"])
 
     def on_devicesAllBox_toggled(self, on):
         self.deviceTree.only_explicit = not on
@@ -257,18 +304,20 @@ class NewViewDialog(DlgUtils, QDialog):
         self.devicesExpandBtn.hide()
         self._createDeviceTree()
 
-    blacklist = {'maxage', 'pollinterval', 'visibility', 'classes', 'value'}
+    blacklist = {"maxage", "pollinterval", "visibility", "classes", "value"}
 
     def _createDeviceTree(self):
         def param_predicate(name, value, info):
-            return name not in self.blacklist and \
-                (not info or info.get('userparam', True)) and \
-                isinstance(value, (number_types, list, tuple))
+            return (
+                name not in self.blacklist
+                and (not info or info.get("userparam", True))
+                and isinstance(value, (number_types, list, tuple))
+            )
 
         def item_callback(item, parent=None):
             item.setFlags(item.flags() | Qt.ItemFlag.ItemIsEditable)
-            if parent and item.text(0) == 'status':
-                item.setText(1, '0')
+            if parent and item.text(0) == "status":
+                item.setText(1, "0")
             item.setCheckState(0, Qt.CheckState.Unchecked)
             return True
 
@@ -277,7 +326,7 @@ class NewViewDialog(DlgUtils, QDialog):
         tree.param_predicate = param_predicate
         tree.item_callback = item_callback
         tree.setColumnCount(3)
-        tree.setHeaderLabels(['Device/Param', 'Index', 'Scale', 'Offset'])
+        tree.setHeaderLabels(["Device/Param", "Index", "Scale", "Offset"])
         tree.setClient(self.client)
 
         tree.setColumnWidth(1, tree.columnWidth(1) // 2)
@@ -303,14 +352,14 @@ class NewViewDialog(DlgUtils, QDialog):
         tree.itemChanged.disconnect(self.on_deviceTree_itemChanged)
         keys = parseKeyExpression(self.devices.text(), multiple=True)[0]
         for key in keys:
-            dev, _, param = key.partition('/')
+            dev, _, param = key.partition("/")
             for i in range(tree.topLevelItemCount()):
                 if tree.topLevelItem(i).text(0).lower() == dev:
                     devitem = tree.topLevelItem(i)
                     break
             else:
                 continue
-            if param == 'value':
+            if param == "value":
                 item = devitem
                 newkey = devitem.text(0)
             else:
@@ -323,59 +372,61 @@ class NewViewDialog(DlgUtils, QDialog):
                         break
                 else:
                     continue
-                newkey = devitem.text(0) + '.' + item.text(0)
+                newkey = devitem.text(0) + "." + item.text(0)
             item.setCheckState(0, Qt.CheckState.Checked)
-            item.setText(1, '')
-            item.setText(2, '')
-            item.setText(3, '')
-            self.deviceTreeSel[newkey] = ''
+            item.setText(1, "")
+            item.setText(2, "")
+            item.setText(3, "")
+            self.deviceTreeSel[newkey] = ""
         tree.itemChanged.connect(self.on_deviceTree_itemChanged)
 
     def on_deviceTree_itemChanged(self, item, col):
         key = item.text(0)
         if item.parent():  # a device parameter
-            key = item.parent().text(0) + '.' + key
+            key = item.parent().text(0) + "." + key
         if item.checkState(0) == Qt.CheckState.Checked:
             index = item.text(1)
             if not item.text(2):
-                item.setText(2, '1')
+                item.setText(2, "1")
             if not item.text(3):
-                item.setText(3, '0')
-            suffix = ''.join('[%s]' % i for i in index.split(',')) \
-                if index else ''
+                item.setText(3, "0")
+            suffix = "".join("[%s]" % i for i in index.split(",")) if index else ""
             scale = float_with_default(item.text(2), 1)
             offset = float_with_default(item.text(3), 0)
             if scale != 1:
-                suffix += '*' + item.text(2)
+                suffix += "*" + item.text(2)
             if offset != 0:
-                suffix += ('+' if offset > 0 else '-') + \
-                    item.text(3).strip('+-')
+                suffix += ("+" if offset > 0 else "-") + item.text(3).strip("+-")
             self.deviceTreeSel[key] = suffix
         else:
             self.deviceTreeSel.pop(key, None)
-        self.devices.setText(', '.join((k + v) for (k, v)
-                                       in self.deviceTreeSel.items()))
+        self.devices.setText(
+            ", ".join((k + v) for (k, v) in self.deviceTreeSel.items())
+        )
 
     def showSimpleHelp(self):
-        self.showInfo('Please enter a time interval with units like this:\n\n'
-                      '30m   (30 minutes)\n'
-                      '12h   (12 hours)\n'
-                      '1d 6h (30 hours)\n'
-                      '3d    (3 days)\n')
+        self.showInfo(
+            "Please enter a time interval with units like this:\n\n"
+            "30m   (30 minutes)\n"
+            "12h   (12 hours)\n"
+            "1d 6h (30 hours)\n"
+            "3d    (3 days)\n"
+        )
 
     def showDeviceHelp(self):
         self.showInfo(
-            'Enter a comma-separated list of device names or '
+            "Enter a comma-separated list of device names or "
             'parameters (as "device.parameter").  Example:\n\n'
-            'T, T.setpoint\n\nshows the value of device T, and the '
-            'value of the T.setpoint parameter.\n\n'
-            'More complex expressions using these are supported:\n'
-            '- use [i] to select subitems by index, e.g. motor.status[0]\n'
-            '- use *x or /x to scale the values by a constant, e.g. '
-            'T*100, T.heaterpower\n'
-            '- use +x or -x to add an offset to the values, e.g. '
-            'T+5 or combined (T+5)*100\n'
-            '- you can also use functions like sqrt()')
+            "T, T.setpoint\n\nshows the value of device T, and the "
+            "value of the T.setpoint parameter.\n\n"
+            "More complex expressions using these are supported:\n"
+            "- use [i] to select subitems by index, e.g. motor.status[0]\n"
+            "- use *x or /x to scale the values by a constant, e.g. "
+            "T*100, T.heaterpower\n"
+            "- use +x or -x to add an offset to the values, e.g. "
+            "T+5 or combined (T+5)*100\n"
+            "- you can also use functions like sqrt()"
+        )
 
     def toggleCustomY(self, on):
         self.customYFrom.setEnabled(on)
@@ -411,30 +462,30 @@ class NewViewDialog(DlgUtils, QDialog):
             try:
                 float(self.customYFrom.text())
             except ValueError:
-                self.showError('You have to input valid y axis limits.')
+                self.showError("You have to input valid y axis limits.")
                 return
             try:
                 float(self.customYTo.text())
             except ValueError:
-                self.showError('You have to input valid y axis limits.')
+                self.showError("You have to input valid y axis limits.")
                 return
         return QDialog.accept(self)
 
     def infoDict(self):
         return dict(
-            devices = self.devices.text(),
-            name = self.namebox.text(),
-            simpleTime = self.simpleTime.isChecked(),
-            simpleTimeSpec = self.simpleTimeSpec.text(),
-            slidingWindow = self.slidingWindow.isChecked(),
-            frombox = self.frombox.isChecked(),
-            tobox = self.tobox.isChecked(),
-            fromdate = self.fromdate.dateTime().toSecsSinceEpoch(),
-            todate = self.todate.dateTime().toSecsSinceEpoch(),
-            interval = self.interval.text(),
-            customY = self.customY.isChecked(),
-            customYFrom = self.customYFrom.text(),
-            customYTo = self.customYTo.text(),
+            devices=self.devices.text(),
+            name=self.namebox.text(),
+            simpleTime=self.simpleTime.isChecked(),
+            simpleTimeSpec=self.simpleTimeSpec.text(),
+            slidingWindow=self.slidingWindow.isChecked(),
+            frombox=self.frombox.isChecked(),
+            tobox=self.tobox.isChecked(),
+            fromdate=self.fromdate.dateTime().toSecsSinceEpoch(),
+            todate=self.todate.dateTime().toSecsSinceEpoch(),
+            interval=self.interval.text(),
+            customY=self.customY.isChecked(),
+            customYFrom=self.customYFrom.text(),
+            customYTo=self.customYTo.text(),
         )
 
 
@@ -443,10 +494,10 @@ class BaseHistoryWindow:
     presetdict = None
 
     def __init__(self):
-        loadUi(self, findResource('nicos_ess/gui/panels/ui_files/history.ui'))
+        loadUi(self, findResource("nicos_ess/gui/panels/ui_files/history.ui"))
 
         self.user_color = Qt.GlobalColor.white
-        self.user_font = QFont('Monospace')
+        self.user_font = QFont("Monospace")
 
         self.views = []
         # stack of views to display
@@ -460,16 +511,15 @@ class BaseHistoryWindow:
 
         self.enablePlotActions(False)
 
-        self.presetmenu = QMenu('&Presets', self)
+        self.presetmenu = QMenu("&Presets", self)
 
-        for (name, view) in self.last_views:
+        for name, view in self.last_views:
             item = QListWidgetItem(name, self.viewList)
-            item.setForeground(QBrush(QColor('#aaaaaa')))
+            item.setForeground(QBrush(QColor("#aaaaaa")))
             item.setData(Qt.ItemDataRole.UserRole, view)
 
         self.viewList.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        self.viewList.customContextMenuRequested['QPoint']\
-            .connect(self.showContextMenu)
+        self.viewList.customContextMenuRequested["QPoint"].connect(self.showContextMenu)
 
         self.menus = None
         self.bar = None
@@ -502,26 +552,26 @@ class BaseHistoryWindow:
         return []
 
     def loadSettings(self, settings):
-        self.splitterstate = settings.value('splitter', '', QByteArray)
+        self.splitterstate = settings.value("splitter", "", QByteArray)
         self.presetdict = {}
         # read new format if present
-        settings.beginGroup('presets_new')
+        settings.beginGroup("presets_new")
         for key in settings.childKeys():
             self.presetdict[key] = json.loads(settings.value(key))
         settings.endGroup()
         # convert old format
         try:
-            presetval = settings.value('presets')
+            presetval = settings.value("presets")
             if presetval:
-                for (name, value) in presetval.items():
+                for name, value in presetval.items():
                     if not isinstance(value, bytes):
-                        value = value.encode('latin1')
+                        value = value.encode("latin1")
                     self.presetdict[name] = pickle.loads(value)
         except Exception:
             pass
-        settings.remove('presets')
+        settings.remove("presets")
         self.last_views = []
-        settings.beginGroup('views_new')
+        settings.beginGroup("views_new")
         for key in settings.childKeys():
             try:
                 info = json.loads(settings.value(key))
@@ -531,13 +581,13 @@ class BaseHistoryWindow:
         settings.endGroup()
 
     def saveSettings(self, settings):
-        settings.setValue('splitter', self.splitter.saveState())
-        settings.beginGroup('presets_new')
-        for (key, info) in self.presetdict.items():
+        settings.setValue("splitter", self.splitter.saveState())
+        settings.beginGroup("presets_new")
+        for key, info in self.presetdict.items():
             settings.setValue(key, json.dumps(info))
         settings.endGroup()
-        settings.beginGroup('views_new')
-        settings.remove('')  # empty the existing entries before add new
+        settings.beginGroup("views_new")
+        settings.remove("")  # empty the existing entries before add new
         for view in self.views:
             settings.setValue(view.name, json.dumps(view.dlginfo))
         settings.endGroup()
@@ -551,30 +601,30 @@ class BaseHistoryWindow:
         If a view spec matches the name of a preset, it is used instead.
         """
         for viewspec in views:
-            timespec = '1h'
-            if ':' in viewspec:
-                viewspec, timespec = viewspec.rsplit(':', 1)
+            timespec = "1h"
+            if ":" in viewspec:
+                viewspec, timespec = viewspec.rsplit(":", 1)
             info = dict(
-                name = viewspec,
-                devices = viewspec,
-                simpleTime = True,
-                simpleTimeSpec = timespec,
-                slidingWindow = True,
-                frombox = False,
-                tobox = False,
-                fromdate = 0,
-                todate = 0,
-                interval = '',
-                customY = False,
-                customYFrom = '',
-                customYTo = '',
+                name=viewspec,
+                devices=viewspec,
+                simpleTime=True,
+                simpleTimeSpec=timespec,
+                slidingWindow=True,
+                frombox=False,
+                tobox=False,
+                fromdate=0,
+                todate=0,
+                interval="",
+                customY=False,
+                customYFrom="",
+                customYTo="",
             )
             self._createViewFromDialog(info)
 
     def _refresh_presets(self):
         pmenu = self.presetmenu
         pmenu.clear()
-        delmenu = QMenu('Delete', self)
+        delmenu = QMenu("Delete", self)
         try:
             for preset, info in self.presetdict.items():
                 paction = QAction(preset, self)
@@ -600,7 +650,7 @@ class BaseHistoryWindow:
             pmenu.addSeparator()
             pmenu.addMenu(delmenu)
         else:
-            pmenu.addAction('(no presets created)')
+            pmenu.addAction("(no presets created)")
 
     def _add_preset(self, name, info):
         if name:
@@ -618,11 +668,18 @@ class BaseHistoryWindow:
 
     def enablePlotActions(self, on):
         for action in [
-            self.actionSavePlot, self.actionPrint, self.actionAttachElog,
-            self.actionSaveData, self.actionScaleX,
-            self.actionScaleY, self.actionEditView, self.actionCloseView,
-            self.actionDeleteView, self.actionUnzoom,
-            self.actionLegend, self.actionSymbols,
+            self.actionSavePlot,
+            self.actionPrint,
+            self.actionAttachElog,
+            self.actionSaveData,
+            self.actionScaleX,
+            self.actionScaleY,
+            self.actionEditView,
+            self.actionCloseView,
+            self.actionDeleteView,
+            self.actionUnzoom,
+            self.actionLegend,
+            self.actionSymbols,
             self.actionLines,
         ]:
             action.setEnabled(on)
@@ -656,7 +713,7 @@ class BaseHistoryWindow:
         if info is not None:
             row = self.viewList.row(item)
 
-            do_restore = self.askQuestion('Restore this view from last time?')
+            do_restore = self.askQuestion("Restore this view from last time?")
             self.viewList.takeItem(row)
             if do_restore:
                 self._createViewFromDialog(info, row)
@@ -675,54 +732,68 @@ class BaseHistoryWindow:
             view.newValue(vtime, key, op, value)
 
     def _createViewFromDialog(self, info, row=None):
-        if not info['devices'].strip():
+        if not info["devices"].strip():
             return
-        keys, exprs, descs = parseKeyExpression(info['devices'], multiple=True)
+        keys, exprs, descs = parseKeyExpression(info["devices"], multiple=True)
         if self.client is not None:
             meta = self._getMetainfo(keys)
         else:
             meta = ({}, {})
-        name = info['name']
+        name = info["name"]
         if not name:
-            name = info['devices']
-        if info['simpleTime']:
-            name += ' (%s)' % info['simpleTimeSpec']
+            name = info["devices"]
+        if info["simpleTime"]:
+            name += " (%s)" % info["simpleTimeSpec"]
         window = None
-        if info['simpleTime']:
+        if info["simpleTime"]:
             try:
-                itime, _ = get_time_and_interval(info['simpleTimeSpec'])
+                itime, _ = get_time_and_interval(info["simpleTimeSpec"])
             except ValueError:
                 return
             fromtime = currenttime() - itime
             totime = None
-            if info['slidingWindow']:
+            if info["slidingWindow"]:
                 window = itime
         else:
-            if info['frombox']:
-                fromtime = mktime(localtime(info['fromdate']))
+            if info["frombox"]:
+                fromtime = mktime(localtime(info["fromdate"]))
             else:
                 fromtime = None
-            if info['tobox']:
-                totime = mktime(localtime(info['todate']))
+            if info["tobox"]:
+                totime = mktime(localtime(info["todate"]))
             else:
                 totime = None
         try:
-            interval = float(info['interval'])
+            interval = float(info["interval"])
         except ValueError:
             interval = 5.0
-        if info['customY']:
+        if info["customY"]:
             try:
-                yfrom = float(info['customYFrom'])
+                yfrom = float(info["customYFrom"])
             except ValueError:
                 return
             try:
-                yto = float(info['customYTo'])
+                yto = float(info["customYTo"])
             except ValueError:
                 return
         else:
             yfrom = yto = None
-        view = View(self, name, keys, exprs, descs, interval, fromtime, totime,
-                    yfrom, yto, window, meta, info, self.gethistory_callback)
+        view = View(
+            self,
+            name,
+            keys,
+            exprs,
+            descs,
+            interval,
+            fromtime,
+            totime,
+            yfrom,
+            yto,
+            window,
+            meta,
+            info,
+            self.gethistory_callback,
+        )
         self.views.append(view)
         view.listitem = QListWidgetItem(view.name)
         if row is not None:
@@ -743,14 +814,14 @@ class BaseHistoryWindow:
         mappings = {}
         seen = set()
         for key in keys:
-            if key in seen or not key.endswith('/value'):
+            if key in seen or not key.endswith("/value"):
                 continue
             seen.add(key)
             devname = key[:-6]
-            devunit = self.client.getDeviceParam(devname, 'unit')
+            devunit = self.client.getDeviceParam(devname, "unit")
             if devunit:
                 units[key] = devunit
-            devmapping = self.client.getDeviceParam(devname, 'mapping')
+            devmapping = self.client.getDeviceParam(devname, "mapping")
             if devmapping:
                 mappings[key] = m = {}
                 i = 0
@@ -765,7 +836,7 @@ class BaseHistoryWindow:
     def on__actionNew_triggered(self):
         self.showNewDialog()
 
-    def showNewDialog(self, devices=''):
+    def showNewDialog(self, devices=""):
         newdlg = NewViewDialog(self, client=self.client)
         newdlg.devices.setText(devices)
         ret = newdlg.exec()
@@ -774,7 +845,7 @@ class BaseHistoryWindow:
         info = newdlg.infoDict()
         self._createViewFromDialog(info)
         if newdlg.savePreset.isChecked():
-            self._add_preset(info['name'], info)
+            self._add_preset(info["name"], info)
 
     def newView(self, devices):
         newdlg = NewViewDialog(self)
@@ -813,14 +884,14 @@ class BaseHistoryWindow:
             self.plotLayout.addWidget(view.plot)
             if view.plot.HAS_AUTOSCALE:
                 from gr.pygr import PlotAxes
+
                 if newView:
                     mask = PlotAxes.SCALE_X | PlotAxes.SCALE_Y
                 else:
                     mask = view.plot.plot.autoscale
                 if view.yfrom and view.yto:
                     mask &= ~PlotAxes.SCALE_Y
-                self._autoscale(x=mask & PlotAxes.SCALE_X,
-                                y=mask & PlotAxes.SCALE_Y)
+                self._autoscale(x=mask & PlotAxes.SCALE_X, y=mask & PlotAxes.SCALE_Y)
                 view.plot.logYinDomain.connect(self.on_logYinDomain)
             view.plot.setSlidingWindow(view.window)
             view.plot.show()
@@ -832,13 +903,13 @@ class BaseHistoryWindow:
     def on__actionEditView_triggered(self):
         view = self.viewStack[-1]
         newdlg = NewViewDialog(self, view.dlginfo, client=self.client)
-        newdlg.setWindowTitle('Edit history view')
+        newdlg.setWindowTitle("Edit history view")
         ret = newdlg.exec()
         if ret != QDialog.DialogCode.Accepted:
             return
         info = newdlg.infoDict()
         if newdlg.savePreset.isChecked():
-            self._add_preset(info['name'], info)
+            self._add_preset(info["name"], info)
         self.viewStack.pop()
         row = self.clearView(view)
         new_view = self._createViewFromDialog(info, row)
@@ -874,12 +945,11 @@ class BaseHistoryWindow:
     def on__actionSavePlot_triggered(self):
         filename = self.currentPlot.savePlot()
         if filename:
-            self.statusBar.showMessage('View successfully saved to %s.' %
-                                       filename)
+            self.statusBar.showMessage("View successfully saved to %s." % filename)
 
     def on__actionPrint_triggered(self):
         if self.currentPlot.printPlot():
-            self.statusBar.showMessage('View successfully printed.')
+            self.statusBar.showMessage("View successfully printed.")
 
     def on__actionUnzoom_triggered(self):
         self.currentPlot.unzoom()
@@ -906,7 +976,7 @@ class BaseHistoryWindow:
 class HistoryPanel(BaseHistoryWindow, PlotPanel):
     """Provides a panel to show time series plots of any cache values."""
 
-    panelName = 'History viewer'
+    panelName = "History viewer"
 
     def __init__(self, parent, client, options):
         PlotPanel.__init__(self, parent, client, options)
@@ -933,7 +1003,7 @@ class HistoryPanel(BaseHistoryWindow, PlotPanel):
         self.set_icons()
 
     def setPanelToolbar(self):
-        bar = QToolBar('History viewer')
+        bar = QToolBar("History viewer")
         bar.addAction(self.actionNew)
         showToolText(bar, self.actionNew)
         bar.addAction(self.actionEditView)
@@ -958,13 +1028,13 @@ class HistoryPanel(BaseHistoryWindow, PlotPanel):
         return bar
 
     def set_icons(self):
-        self.actionNew.setIcon(get_icon('add_circle_outline-24px.svg'))
-        self.actionEditView.setIcon(get_icon('edit-24px.svg'))
-        self.actionSavePlot.setIcon(get_icon('save-24px.svg'))
-        self.actionPrint.setIcon(get_icon('print-24px.svg'))
-        self.actionUnzoom.setIcon(get_icon('reset_zoom-24px.svg'))
-        self.actionSaveData.setIcon(get_icon('archive-24px.svg'))
-        self.actionDeleteView.setIcon(get_icon('delete-24px.svg'))
+        self.actionNew.setIcon(get_icon("add_circle_outline-24px.svg"))
+        self.actionEditView.setIcon(get_icon("edit-24px.svg"))
+        self.actionSavePlot.setIcon(get_icon("save-24px.svg"))
+        self.actionPrint.setIcon(get_icon("print-24px.svg"))
+        self.actionUnzoom.setIcon(get_icon("reset_zoom-24px.svg"))
+        self.actionSaveData.setIcon(get_icon("archive-24px.svg"))
+        self.actionDeleteView.setIcon(get_icon("delete-24px.svg"))
 
     def setCustomStyle(self, font, back):
         self.user_font = font
@@ -991,9 +1061,14 @@ class HistoryPanel(BaseHistoryWindow, PlotPanel):
         return True
 
     def gethistory_callback(self, key, fromtime, totime, interval):
-        return split_query(fromtime, totime, interval, lambda fr, to, interval:
-                           self.client.ask('gethistory', key, str(fr), str(to),
-                                           interval, default=[]))
+        return split_query(
+            fromtime,
+            totime,
+            interval,
+            lambda fr, to, interval: self.client.ask(
+                "gethistory", key, str(fr), str(to), interval, default=[]
+            ),
+        )
 
     def on_client_disconnected(self):
         self._disconnected_since = currenttime()
@@ -1013,13 +1088,10 @@ class HistoryPanel(BaseHistoryWindow, PlotPanel):
 
     @pyqtSlot()
     def on_actionAttachElog_triggered(self):
-        self.attachElogDialogExec(
-            safeName('history_%s' % self.currentPlot.view.name)
-        )
+        self.attachElogDialogExec(safeName("history_%s" % self.currentPlot.view.name))
 
 
 class StandaloneHistoryWindow(DlgUtils, BaseHistoryWindow, QMainWindow):
-
     newValue = pyqtSignal(object)
 
     def __init__(self, app):
@@ -1034,7 +1106,7 @@ class StandaloneHistoryWindow(DlgUtils, BaseHistoryWindow, QMainWindow):
         BaseHistoryWindow.__init__(self)
         self.splitter.setSizes([20, 80])
 
-        DlgUtils.__init__(self, 'History viewer')
+        DlgUtils.__init__(self, "History viewer")
 
         self.actionAttachElog.setVisible(False)
 
@@ -1052,8 +1124,12 @@ class StandaloneHistoryWindow(DlgUtils, BaseHistoryWindow, QMainWindow):
         self.setStatusBar(self.statusBar)
 
     def gethistory_callback(self, key, fromtime, totime, interval):
-        return split_query(fromtime, totime, interval, lambda fr, to, interval:
-                           self.app.history(None, key, fr, to, interval))
+        return split_query(
+            fromtime,
+            totime,
+            interval,
+            lambda fr, to, interval: self.app.history(None, key, fr, to, interval),
+        )
 
     def closeEvent(self, event):
         self.saveSettings(self.settings)
@@ -1061,31 +1137,29 @@ class StandaloneHistoryWindow(DlgUtils, BaseHistoryWindow, QMainWindow):
 
 
 class StandaloneHistoryApp(CacheClient):
-
     parameters = {
-        'views': Param('Strings specifying views (from command line)',
-                       type=listof(str)),
+        "views": Param(
+            "Strings specifying views (from command line)", type=listof(str)
+        ),
     }
 
     def doInit(self, mode):
         self._qtapp = QApplication(sys.argv)
-        self._qtapp.setOrganizationName('nicos')
-        self._qtapp.setApplicationName('history')
+        self._qtapp.setOrganizationName("nicos")
+        self._qtapp.setApplicationName("history")
         self._window = StandaloneHistoryWindow(self)
         # if no cache was given on the command line...
-        if not self._config['cache']:
+        if not self._config["cache"]:
             dlg = SettingsDialog(self._window)
             dlg.exec()
-            self._setROParam('cache', dlg.cacheBox.currentText())
-            self._setROParam('prefix', dlg.prefixEdit.text())
+            self._setROParam("cache", dlg.cacheBox.currentText())
+            self._setROParam("prefix", dlg.prefixEdit.text())
         CacheClient.doInit(self, mode)
 
     def getDeviceList(self, only_explicit=True, special_clause=None):
-        devlist = [key[:-6] for (key, _) in self.query_db('')
-                   if key.endswith('/value')]
+        devlist = [key[:-6] for (key, _) in self.query_db("") if key.endswith("/value")]
         if special_clause:
-            devlist = [dn for dn in devlist
-                       if eval(special_clause, {'dn': dn})]
+            devlist = [dn for dn in devlist if eval(special_clause, {"dn": dn})]
         return sorted(devlist)
 
     def getDeviceParam(self, devname, parname):
@@ -1094,8 +1168,11 @@ class StandaloneHistoryApp(CacheClient):
     def getDeviceParams(self, devname):
         ldevname = devname.lower()
         index = len(ldevname) + 1
-        return {key[index:]: value for (key, value) in self.query_db('')
-                if key.startswith(ldevname + '/')}
+        return {
+            key[index:]: value
+            for (key, value) in self.query_db("")
+            if key.startswith(ldevname + "/")
+        }
 
     def getDeviceParamInfo(self, _):
         return {}  # we can't deliver this info from the cache alone
@@ -1117,11 +1194,10 @@ class StandaloneHistoryApp(CacheClient):
 class SettingsDialog(QDialog):
     def __init__(self, parent):
         QDialog.__init__(self, parent)
-        loadUi(self,
-               findResource('nicos_ess/gui/panels/ui_files/history_settings.ui'))
+        loadUi(self, findResource("nicos_ess/gui/panels/ui_files/history_settings.ui"))
         settings = QSettings()
-        self._caches = settings.value('cachehosts') or []
-        prefix = settings.value('keyprefix', 'nicos/')
+        self._caches = settings.value("cachehosts") or []
+        prefix = settings.value("keyprefix", "nicos/")
         self.cacheBox.addItems(self._caches)
         self.prefixEdit.setText(prefix)
 
@@ -1131,6 +1207,6 @@ class SettingsDialog(QDialog):
         if cache in self._caches:
             self._caches.remove(cache)
         self._caches.insert(0, cache)
-        settings.setValue('cachehosts', self._caches)
-        settings.setValue('keyprefix', self.prefixEdit.text())
+        settings.setValue("cachehosts", self._caches)
+        settings.setValue("keyprefix", self.prefixEdit.text())
         QDialog.accept(self)

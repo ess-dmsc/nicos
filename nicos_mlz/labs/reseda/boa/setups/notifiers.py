@@ -1,6 +1,6 @@
-description = 'Email and SMS notifiers'
+description = "Email and SMS notifiers"
 
-group = 'lowlevel'
+group = "lowlevel"
 display_order = 90
 
 devices = dict(

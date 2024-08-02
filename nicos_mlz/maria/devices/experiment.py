@@ -45,11 +45,11 @@ class Experiment(_Experiment):
         _Experiment.newSample(self, parameters)
         self.log.debug("changed samplepath to: %s" % self.samplepath)
         # expand/copy templates
-        if self.getProposalType(self.proposal) != 'service' and self.templates:
+        if self.getProposalType(self.proposal) != "service" and self.templates:
             params = dict(parameters) if parameters else {}
             params.update(self.propinfo)
             self.handleTemplates(self.proposal, params)
 
     @property
     def elogpath(self):
-        return path.join(self.proposalpath, 'logbook')
+        return path.join(self.proposalpath, "logbook")

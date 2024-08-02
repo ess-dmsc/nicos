@@ -28,41 +28,51 @@ from nicos.devices.generic.sequence import SeqDev, SeqSleep
 
 
 class MorpheusSpin(BaseSequencer):
-
     attached_devices = {
-        'magnet_c': Attach('Magnet-C', Moveable),
-        'magnet_f': Attach('Magnet-F', Moveable),
+        "magnet_c": Attach("Magnet-C", Moveable),
+        "magnet_f": Attach("Magnet-F", Moveable),
     }
 
     parameters = {
-        'su_c': Param('Spin-up value for Magnet-C', type=float,
-                      mandatory=True, settable=True, userparam=True),
-        'su_f': Param('Spin-up value for Magnet-F',
-                      type=float, mandatory=True, settable=True,
-                      userparam=True),
+        "su_c": Param(
+            "Spin-up value for Magnet-C",
+            type=float,
+            mandatory=True,
+            settable=True,
+            userparam=True,
+        ),
+        "su_f": Param(
+            "Spin-up value for Magnet-F",
+            type=float,
+            mandatory=True,
+            settable=True,
+            userparam=True,
+        ),
     }
 
-    valuetype = oneof(0, 1, '+', '-', 'up', 'down')
+    valuetype = oneof(0, 1, "+", "-", "up", "down")
 
     def _generateSequence(self, target):
         seq = []
 
-        if target in [0, '+', 'up']:
+        if target in [0, "+", "up"]:
             seq.append((SeqDev(self._attached_magnet_c, self.su_c)))
-            seq.append(SeqSleep(1.))
+            seq.append(SeqSleep(1.0))
             seq.append(SeqDev(self._attached_magnet_f, self.su_f))
-        elif target in [1, '-', 'down']:
-            seq.append((SeqDev(self._attached_magnet_c, 0.)))
-            seq.append(SeqSleep(1.))
-            seq.append(SeqDev(self._attached_magnet_f, 0.))
+        elif target in [1, "-", "down"]:
+            seq.append((SeqDev(self._attached_magnet_c, 0.0)))
+            seq.append(SeqSleep(1.0))
+            seq.append(SeqDev(self._attached_magnet_f, 0.0))
 
         return seq
 
     def doRead(self, maxage=0):
-        if self._attached_magnet_c.isAtTarget(target=self.su_c) and \
-           self._attached_magnet_f.isAtTarget(target=self.su_f):
+        if self._attached_magnet_c.isAtTarget(
+            target=self.su_c
+        ) and self._attached_magnet_f.isAtTarget(target=self.su_f):
             return 0
-        if self._attached_magnet_c.isAtTarget(target=0.) and \
-           self._attached_magnet_f.isAtTarget(target=0.):
+        if self._attached_magnet_c.isAtTarget(
+            target=0.0
+        ) and self._attached_magnet_f.isAtTarget(target=0.0):
             return 1
         return -1

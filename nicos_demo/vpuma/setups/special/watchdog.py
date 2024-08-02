@@ -1,5 +1,5 @@
-description = 'setup for the NICOS watchdog'
-group = 'special'
+description = "setup for the NICOS watchdog"
+group = "special"
 
 # The entries in this list are dictionaries. Possible keys:
 #
@@ -13,16 +13,17 @@ group = 'special'
 # 'action' -- code to execute if condition is true (default no code is executed)
 
 watch_conditions = [
-    dict(condition = 'LogSpace_status[0] == WARN',
-         message = 'Disk space for log files becomes too low.',
-         type = 'critical',
-         gracetime = 30,
+    dict(
+        condition="LogSpace_status[0] == WARN",
+        message="Disk space for log files becomes too low.",
+        type="critical",
+        gracetime=30,
     ),
     dict(
-        condition = 'mono_status[0] == BUSY',
-        message = 'mtt is not moving. Maybe hardware blocked? Mobile block?',
-        gracetime = 600,
-        type = 'critical',
+        condition="mono_status[0] == BUSY",
+        message="mtt is not moving. Maybe hardware blocked? Mobile block?",
+        gracetime=600,
+        type="critical",
     ),
 ]
 
@@ -30,10 +31,10 @@ watch_conditions = [
 # one for priority 2.
 
 devices = dict(
-    Watchdog = device('nicos.services.watchdog.Watchdog',
-        cache = 'localhost',
-        notifiers = {'default': [],
-                     'critical': []},
-        watch = watch_conditions,
+    Watchdog=device(
+        "nicos.services.watchdog.Watchdog",
+        cache="localhost",
+        notifiers={"default": [], "critical": []},
+        watch=watch_conditions,
     ),
 )

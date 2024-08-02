@@ -34,14 +34,13 @@ class EIS2TController(IsController, Device):
     """
 
     attached_devices = {
-        'ei': Attach('Incident energy device', Moveable),
-        's2t': Attach('Detector two theta', Moveable),
+        "ei": Attach("Incident energy device", Moveable),
+        "s2t": Attach("Detector two theta", Moveable),
     }
 
     parameters = {
-        'ei_values': Param('List of EI values', type=listof(float)),
-        's2t_values': Param('S2T limit for each ei in ei_Values',
-                            type=listof(float)),
+        "ei_values": Param("List of EI values", type=listof(float)),
+        "s2t_values": Param("S2T limit for each ei in ei_Values", type=listof(float)),
     }
 
     def doInit(self, mode):
@@ -51,9 +50,9 @@ class EIS2TController(IsController, Device):
         if adev == self._attached_ei:
             s2t_limit = self._interpolate_s2t(adevtarget)
             if self._attached_s2t.read(0) <= s2t_limit:
-                return False, 'You are running the detector into the wall'
+                return False, "You are running the detector into the wall"
         else:
             s2t_limit = self._interpolate_s2t(self._attached_ei.read(0))
             if adevtarget <= s2t_limit:
-                return False, 'You are running the detector into the wall'
-        return True, ''
+                return False, "You are running the detector into the wall"
+        return True, ""

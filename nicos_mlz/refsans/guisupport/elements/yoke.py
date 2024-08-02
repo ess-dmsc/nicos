@@ -22,23 +22,31 @@
 # *****************************************************************************
 """Classes to display the REFSANS instrument."""
 
-from nicos.guisupport.qt import QColor, QGraphicsPathItem, QPainterPath, \
-    QPen, QPointF, QPolygonF
+from nicos.guisupport.qt import (
+    QColor,
+    QGraphicsPathItem,
+    QPainterPath,
+    QPen,
+    QPointF,
+    QPolygonF,
+)
 
 
 class Yoke(QGraphicsPathItem):
-
     def __init__(self, parent=None, scene=None):
         QGraphicsPathItem.__init__(self, parent)
         self.setPath(self.shape())
         if not parent and scene:
             scene.addItem(self)
-        self.setPen(QPen(QColor('red')))
+        self.setPen(QPen(QColor("red")))
 
     def shape(self):
         path = QPainterPath()
         x0, x1, h = 20, 15, 150
-        path.addPolygon(QPolygonF([QPointF(-x0, 0), QPointF(x0, 0),
-                                   QPointF(x1, -h), QPointF(-x1, -h)]))
+        path.addPolygon(
+            QPolygonF(
+                [QPointF(-x0, 0), QPointF(x0, 0), QPointF(x1, -h), QPointF(-x1, -h)]
+            )
+        )
         path.closeSubpath()
         return path

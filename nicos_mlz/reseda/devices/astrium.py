@@ -25,9 +25,10 @@
 
 from math import asin, pi, radians
 
-from nicos.devices.vendor.astrium import \
-    SelectorLambda as NicosSelectorLambda, \
-    SelectorLambdaSpread as NicosSelectorLambdaSpread
+from nicos.devices.vendor.astrium import (
+    SelectorLambda as NicosSelectorLambda,
+    SelectorLambdaSpread as NicosSelectorLambdaSpread,
+)
 
 
 class SelectorLambda(NicosSelectorLambda):
@@ -46,9 +47,14 @@ class SelectorLambda(NicosSelectorLambda):
         """
         spd = self._attached_seldev.read(maxage)
         if spd:
-            return self.speed_scale * (
-                self.twistangle + self.length / self.beamcenter *
-                self._get_tilt(maxage)) / (spd * self.length)
+            return (
+                self.speed_scale
+                * (
+                    self.twistangle
+                    + self.length / self.beamcenter * self._get_tilt(maxage)
+                )
+                / (spd * self.length)
+            )
         return -1
 
     def sel_inv(self, lam, maxage=0):
@@ -57,25 +63,25 @@ class SelectorLambda(NicosSelectorLambda):
         The rotation speed is given in 'rpm', the tilting angle in 'deg', and
         the wavelength in 'AA'.
         """
-        return self.speed_scale * (
-            self.twistangle + self.length / self.beamcenter *
-            self._get_tilt(maxage)) / (lam * self.length)
+        return (
+            self.speed_scale
+            * (self.twistangle + self.length / self.beamcenter * self._get_tilt(maxage))
+            / (lam * self.length)
+        )
 
     def doRead(self, maxage=0):
         return self.sel(maxage)
 
     def doStart(self, target):
         speed = int(self.sel_inv(target))
-        self.log.debug('moving selector to %d rpm', speed)
+        self.log.debug("moving selector to %d rpm", speed)
         self._attached_seldev.start(speed)
 
 
 class SelectorLambdaSpread(NicosSelectorLambdaSpread):
-
     def doRead(self, maxage=0):
         lamdev = self._attached_lamdev
         tilt = lamdev._get_tilt(maxage)
-        eff_twistangle = lamdev.twistangle + \
-            tilt * lamdev.length / lamdev.beamcenter
+        eff_twistangle = lamdev.twistangle + tilt * lamdev.length / lamdev.beamcenter
         spread = 2 * asin(pi / self.n_lamellae) / radians(eff_twistangle)
         return 100 * spread

@@ -24,8 +24,7 @@
 
 from os import path
 
-from nicos.guisupport.qt import QMessageBox, QSpacerItem, QWidget, \
-    pyqtSignal, uic
+from nicos.guisupport.qt import QMessageBox, QSpacerItem, QWidget, pyqtSignal, uic
 from nicos.guisupport.typedvalue import create
 
 from . import classparser
@@ -38,8 +37,10 @@ class DeviceWidget(QWidget):
 
     def __init__(self, parent=None):
         QWidget.__init__(self, parent)
-        uic.loadUi(path.join(path.dirname(path.abspath(__file__)),
-                             'ui', 'devicewidget.ui'), self)
+        uic.loadUi(
+            path.join(path.dirname(path.abspath(__file__)), "ui", "devicewidget.ui"),
+            self,
+        )
         self.parameters = {}
         self.pushButtonAdd.clicked.connect(self.addParameter)
 
@@ -49,13 +50,12 @@ class DeviceWidget(QWidget):
         if dlg.exec():
             param = dlg.getValue()
             if not param:
-                QMessageBox.warning(self, 'Error',
-                                    'No name parameter name entered.')
+                QMessageBox.warning(self, "Error", "No name parameter name entered.")
             if param in self.parameters:
-                QMessageBox.warning(self, 'Error', 'Parameter already exists.')
+                QMessageBox.warning(self, "Error", "Parameter already exists.")
                 return
             self.parametersLayout.takeAt(self.parametersLayout.count() - 1)
-            newParam = self.createParameterWidget(param, '')
+            newParam = self.createParameterWidget(param, "")
             self.parametersLayout.addWidget(newParam)
             self.parameters[param] = newParam
             self.parametersLayout.addStretch()
@@ -65,15 +65,14 @@ class DeviceWidget(QWidget):
     def clear(self):
         self.parameters.clear()
         for index in reversed(range(self.parametersLayout.count())):
-            if not isinstance(
-                    self.parametersLayout.itemAt(index), QSpacerItem):
+            if not isinstance(self.parametersLayout.itemAt(index), QSpacerItem):
                 self.parametersLayout.itemAt(index).widget().setParent(None)
             else:
                 self.parametersLayout.takeAt(index)
 
     def getClassOfDevice(self, device):
-        myClass = device.classString.split('.')[-1]
-        mod = '.'.join(device.classString.split('.')[:-1])
+        myClass = device.classString.split(".")[-1]
+        mod = ".".join(device.classString.split(".")[:-1])
         return getattr(classparser.modules[mod], myClass)
 
     def loadDevice(self, device):
@@ -82,19 +81,18 @@ class DeviceWidget(QWidget):
         try:
             self.myClass = self.getClassOfDevice(device)
         except KeyError as e:
-            errors.append('Failed to load class ' + str(e))
+            errors.append("Failed to load class " + str(e))
         if errors:
-            QMessageBox.warning(self, 'Errors', '\n'.join(errors))
+            QMessageBox.warning(self, "Errors", "\n".join(errors))
             self.pushButtonAdd.setEnabled(False)
             return
 
-        classParam = DeviceParam('Class', create(
-            self, str, device.classString))
+        classParam = DeviceParam("Class", create(self, str, device.classString))
         classParam.pushButtonRemove.setVisible(False)
         classParam.placeholder.setVisible(True)
         classParam.valueWidget.setEnabled(False)
         self.parametersLayout.addWidget(classParam)
-        self.parameters['Class'] = classParam
+        self.parameters["Class"] = classParam
 
         mandatoryParams = []
         optionalParams = []
@@ -133,14 +131,13 @@ class DeviceWidget(QWidget):
         try:
             myUnit = self.myClass.parameters[param].unit
         except (AttributeError, KeyError):
-            myUnit = ''
+            myUnit = ""
         newParam = DeviceParam(param, create(self, typ, value, unit=myUnit))
         newParam.isUnknownValue = isUnkownValue
         try:
-            newParam.labelParam.setToolTip(
-                self.myClass.parameters[param].description)
+            newParam.labelParam.setToolTip(self.myClass.parameters[param].description)
         except Exception:
-            newParam.labelParam.setToolTip('No info found.')
+            newParam.labelParam.setToolTip("No info found.")
         try:
             mandatory = self.myClass.parameters[param].mandatory
         except (AttributeError, KeyError):

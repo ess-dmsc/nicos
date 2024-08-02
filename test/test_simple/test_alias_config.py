@@ -23,28 +23,28 @@
 
 """Tests for alias_config and alias preferences."""
 
-session_setup = 'alias_config1'
-session_load_kw = {'autocreate_devices': True}
+session_setup = "alias_config1"
+session_load_kw = {"autocreate_devices": True}
 
 
 def test_alias_priorities(session):
     # normal session, only one choice
-    T = session.getDevice('T')
-    assert T.alias == 'T_ccr1'
+    T = session.getDevice("T")
+    assert T.alias == "T_ccr1"
 
     # load second setup, priority takes over
-    session.loadSetup('alias_config2', autocreate_devices=True)
-    T = session.getDevice('T')
-    assert T.alias == 'T_cryo4'
+    session.loadSetup("alias_config2", autocreate_devices=True)
+    T = session.getDevice("T")
+    assert T.alias == "T_cryo4"
 
     # now unload the setup that provides T_cryo4
     session.unloadSetup()
-    session.loadSetup('alias_config1', autocreate_devices=True)
-    T = session.getDevice('T')
-    assert T.alias == 'T_ccr1'
+    session.loadSetup("alias_config1", autocreate_devices=True)
+    T = session.getDevice("T")
+    assert T.alias == "T_ccr1"
 
     # load both at the same time, make sure higher priority wins
     session.unloadSetup()
-    session.loadSetup(['alias_config2', 'alias_config1'], autocreate_devices=True)
-    T = session.getDevice('T')
-    assert T.alias == 'T_cryo4'
+    session.loadSetup(["alias_config2", "alias_config1"], autocreate_devices=True)
+    T = session.getDevice("T")
+    assert T.alias == "T_cryo4"

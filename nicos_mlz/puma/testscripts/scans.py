@@ -6,8 +6,8 @@
 
 # Mono lift scan:
 for i in range(5):
-    mchanger._step('lift', 'top2')
-    mchanger._step('lift', 'ref')
+    mchanger._step("lift", "top2")
+    mchanger._step("lift", "ref")
 
 # inelastic scan:
 for i in range(5):

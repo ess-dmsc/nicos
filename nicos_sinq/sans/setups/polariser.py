@@ -1,10 +1,11 @@
-description = 'Devices for the polariser'
+description = "Devices for the polariser"
 
-excludes = ['collimator_s7']
+excludes = ["collimator_s7"]
 
 devices = dict(
-    pol = device('nicos.devices.generic.manual.ManualSwitch',
-        description = 'Polariser choice',
-        states = ['in', 'out'],
+    pol=device(
+        "nicos.devices.generic.manual.ManualSwitch",
+        description="Polariser choice",
+        states=["in", "out"],
     ),
 )

@@ -38,7 +38,8 @@ class NicosError(Exception):
            if not self._ready:
                raise NicosError(self, 'device is not ready')
     """
-    category = 'Error'
+
+    category = "Error"
     device = None
     tacoerr = None
 
@@ -51,14 +52,14 @@ class NicosError(Exception):
                 del args[0]
             elif not isinstance(args[0], str):
                 self.device = args[0]
-                prefix = '[%s] ' % args[0].name
+                prefix = "[%s] " % args[0].name
                 if nargs > 1 and args[1].startswith(prefix):
                     # do not add a prefix if it already exists
                     del args[0]
                 else:
                     args[0] = prefix
         self.__dict__.update(kwds)
-        Exception.__init__(self, ''.join(args))
+        Exception.__init__(self, "".join(args))
 
 
 class ProgrammingError(NicosError):
@@ -66,14 +67,16 @@ class ProgrammingError(NicosError):
 
     This should not occur during normal operation.
     """
-    category = 'Programming error'
+
+    category = "Programming error"
 
 
 class ConfigurationError(NicosError):
     """Exception to be raised when an error in the :term:`setup` is detected,
     or a device is supplied with invalid configuration data.
     """
-    category = 'Configuration error'
+
+    category = "Configuration error"
 
 
 class UsageError(NicosError):
@@ -82,21 +85,24 @@ class UsageError(NicosError):
     When this exception is caught by the :term:`user command` handler, the help
     for the command that was executed is shown.
     """
-    category = 'Usage error'
+
+    category = "Usage error"
 
 
 class InvalidValueError(NicosError):
     """Exception to be raised when the user gives an invalid value to a device
     (as a move target or parameter value).
     """
-    category = 'Invalid value'
+
+    category = "Invalid value"
 
 
 class ModeError(NicosError):
     """Exception to be raised when an action is not allowed in the current
     :term:`execution mode`.
     """
-    category = 'Mode error'
+
+    category = "Mode error"
 
 
 class AccessError(NicosError):
@@ -104,7 +110,8 @@ class AccessError(NicosError):
 
     Used by the `nicos.core.device.requires` decorator.
     """
-    category = 'Access denied'
+
+    category = "Access denied"
 
 
 class PositionError(NicosError):
@@ -112,27 +119,32 @@ class PositionError(NicosError):
 
     For example, this should be raised when several coders do not agree.
     """
-    category = 'Undefined position'
+
+    category = "Undefined position"
 
 
 class MoveError(NicosError):
     """Exception to be raised when errors occur while moving a device."""
-    category = 'Positioning error'
+
+    category = "Positioning error"
 
 
 class LimitError(NicosError):
     """Exception to be raised when a requested move target is out of limits."""
-    category = 'Out of bounds'
+
+    category = "Out of bounds"
 
 
 class CommunicationError(NicosError):
     """Exception to be raised when some hardware communication fails."""
-    category = 'Communication error'
+
+    category = "Communication error"
 
 
 class HardwareError(NicosError):
     """Exception to be raised on fatal hardware errors."""
-    category = 'Hardware failure'
+
+    category = "Hardware failure"
 
 
 class NicosTimeoutError(NicosError):
@@ -141,7 +153,8 @@ class NicosTimeoutError(NicosError):
     This is *not* a communication timeout; for that purpose
     `CommunicationError` should be used.
     """
-    category = 'Timeout'
+
+    category = "Timeout"
 
 
 class ComputationError(NicosError):
@@ -149,23 +162,27 @@ class ComputationError(NicosError):
 
     Examples are the conversion of physical values to logical values.
     """
-    category = 'Computation error'
+
+    category = "Computation error"
 
 
 class CacheLockError(NicosError):
     """Exception to be raised when a :term:`cache lock` cannot be acquired."""
-    category = 'Cannot lock device in cache'
+
+    category = "Cannot lock device in cache"
 
     def __init__(self, locked_by):
         self.locked_by = locked_by
-        NicosError.__init__(self, 'locked by ' + locked_by)
+        NicosError.__init__(self, "locked by " + locked_by)
 
 
 class CacheError(NicosError):
     """Exception raised on cache connection errors."""
-    category = 'Cannot connect to cache server'
+
+    category = "Cannot connect to cache server"
 
 
 class SPMError(NicosError):
     """Exception raised when invalid SPM syntax is entered."""
-    category = 'Cannot process input'
+
+    category = "Cannot process input"

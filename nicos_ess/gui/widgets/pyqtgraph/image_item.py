@@ -34,13 +34,11 @@ class CustomImageItem(ImageItem):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.setAcceptHoverEvents(True)
-        self.hoverData.emit('')
+        self.hoverData.emit("")
         self.start_coord = None
         self.end_coord = None
         self.timer = QTimer()
-        self.timer.setInterval(
-            50
-        )  # Update interval in milliseconds (e.g., 50ms)
+        self.timer.setInterval(50)  # Update interval in milliseconds (e.g., 50ms)
         self.timer.timeout.connect(self.emitDragData)
         self.dragging = False
         self._defining_roi = False
@@ -108,21 +106,17 @@ class CustomImageItem(ImageItem):
 
     def emitDragData(self):
         if self.start_coord is not None and self.end_coord is not None:
-            self.dragData.emit(
-                (self.dragging, self.start_coord, self.end_coord)
-            )
+            self.dragData.emit((self.dragging, self.start_coord, self.end_coord))
 
     def hoverEvent(self, event):
         if event.isExit():
-            self.hoverData.emit('')  # Clear any previous title
+            self.hoverData.emit("")  # Clear any previous title
         else:
             i, j = self.get_pos(event)
             value = self.image[i, j]
             if self._use_metric_length:
                 self.hoverData.emit(
-                    f'Coordinates: ({self._pix_to_mm(i):.2f} mm, {self._pix_to_mm(j):.2f} mm), Value: {value:.2f}'
+                    f"Coordinates: ({self._pix_to_mm(i):.2f} mm, {self._pix_to_mm(j):.2f} mm), Value: {value:.2f}"
                 )
             else:
-                self.hoverData.emit(
-                    f'Coordinates: ({i}, {j}), Value: {value:.2f}'
-                )
+                self.hoverData.emit(f"Coordinates: ({i}, {j}), Value: {value:.2f}")

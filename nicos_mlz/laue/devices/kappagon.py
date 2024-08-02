@@ -36,55 +36,60 @@ from nicos.devices.sxtal.goniometer.base import PositionBase, PositionFactory
 
 
 class KappaGon(IsController, Moveable):
-    ''' Kappa goniometer base class'''
+    """Kappa goniometer base class"""
 
     attached_devices = {
-        'ttheta': Attach('Two-theta device', Moveable),
-        'omega': Attach('omega device', Moveable),
-        'kappa': Attach('kappa device', Moveable),
-        'phi': Attach('phi device', Moveable),
-        'dx': Attach('detector movement device', Moveable),
+        "ttheta": Attach("Two-theta device", Moveable),
+        "omega": Attach("omega device", Moveable),
+        "kappa": Attach("kappa device", Moveable),
+        "phi": Attach("phi device", Moveable),
+        "dx": Attach("detector movement device", Moveable),
     }
 
     def doRead(self, maxage=0):
-        return PositionFactory('k',
-                               ttheta=self._adevs['ttheta'].read(maxage),
-                               omega=self._adevs['omega'].read(maxage),
-                               kappa=self._adevs['kappa'].read(maxage),
-                               phi=self._adevs['phi'].read(maxage),
-                               )
+        return PositionFactory(
+            "k",
+            ttheta=self._adevs["ttheta"].read(maxage),
+            omega=self._adevs["omega"].read(maxage),
+            kappa=self._adevs["kappa"].read(maxage),
+            phi=self._adevs["phi"].read(maxage),
+        )
 
     def doStart(self, target):
         if isinstance(target, PositionBase):
             pos = target.asK()
-            self._adevs['ttheta'].start(pos.theta * 2.)
-            self._adevs['omega'].start(pos.omega)
-            self._adevs['kappa'].start(pos.kappa)
-            self._adevs['phi'].start(pos.phi)
+            self._adevs["ttheta"].start(pos.theta * 2.0)
+            self._adevs["omega"].start(pos.omega)
+            self._adevs["kappa"].start(pos.kappa)
+            self._adevs["phi"].start(pos.phi)
         else:
-            raise ValueError('incorrect arguments for start, needs to be a PositionBase object')
+            raise ValueError(
+                "incorrect arguments for start, needs to be a PositionBase object"
+            )
 
     def isAdevTargetAllowed(self, adev, adevtarget):
-        if adev == self._adevs['phi']:
-            return True, 'Position allowed'  # phi can move freely
+        if adev == self._adevs["phi"]:
+            return True, "Position allowed"  # phi can move freely
         # for better visual indent
         # pylint: disable=bad-indentation
-        if adev == self._adevs['kappa']:
-            if (-45 < self._adevs['omega'].target < 135 or
-                135 < self._adevs['omega'].target < 255):
-                    if -10 < adevtarget < 10:
-                        return True, 'Position allowed'
-                    else:
-                        return False, ' -10 < kappa < 10 for this omega position'
+        if adev == self._adevs["kappa"]:
+            if (
+                -45 < self._adevs["omega"].target < 135
+                or 135 < self._adevs["omega"].target < 255
+            ):
+                if -10 < adevtarget < 10:
+                    return True, "Position allowed"
+                else:
+                    return False, " -10 < kappa < 10 for this omega position"
 
-        if adev == self._adevs['omega']:
-            if self._adevs['ttheta'].target - adevtarget < 45:
-                    return False, 'Omega too close to two-theta'
+        if adev == self._adevs["omega"]:
+            if self._adevs["ttheta"].target - adevtarget < 45:
+                return False, "Omega too close to two-theta"
             else:
-                    return True, 'Position OK'
-        if adev == self._adevs['ttheta']:
-            if adevtarget - self._adevs['omega'].target < 45:
-                    return False, 'Omega too close to two-theta'
+                return True, "Position OK"
+        if adev == self._adevs["ttheta"]:
+            if adevtarget - self._adevs["omega"].target < 45:
+                return False, "Omega too close to two-theta"
             else:
-                    return True, 'Position OK'
-        return True, 'Position OK'
+                return True, "Position OK"
+        return True, "Position OK"

@@ -30,8 +30,10 @@ def motoraddress(address=0x3020):
     block is 20 bytes = 10 words). There are only 200 allowed addresses for one
     address offset.
     """
-    if (address & 0xF000) not in (0x3000, 0x4000) or \
-       not (0x20 <= (address & 0xFFF) <= 0x7f0) or \
-       ((address & 0xFFF) - 0x20) % 10 != 0:
-        raise ValueError('Invalid motor address: %0x04x!' % address)
+    if (
+        (address & 0xF000) not in (0x3000, 0x4000)
+        or not (0x20 <= (address & 0xFFF) <= 0x7F0)
+        or ((address & 0xFFF) - 0x20) % 10 != 0
+    ):
+        raise ValueError("Invalid motor address: %0x04x!" % address)
     return address

@@ -29,7 +29,6 @@ from nicos.devices.datasinks.image import ImageSink
 
 
 class TofSinkHandler(DataSinkHandler):
-
     def __init__(self, sink, dataset, detector):
         DataSinkHandler.__init__(self, sink, dataset, detector)
         self._datafile = None
@@ -37,16 +36,19 @@ class TofSinkHandler(DataSinkHandler):
         self._template = sink.filenametemplate
         arrayinfo = self.detector.arrayInfo()
         if len(arrayinfo) > 1:
-            self.log.warning('image sink only supports one array per detector')
+            self.log.warning("image sink only supports one array per detector")
         self._arrayinfo = arrayinfo[0]
 
 
 class TofSink(ImageSink):
-
     parameter_overrides = {
-        'filenametemplate': Override(mandatory=False, settable=False,
-                                     userparam=False,
-                                     default=['%(pointcounter)s_0000.raw',
-                                              '%(proposal)s_%(scancounter)s'
-                                              '_%(pointnumber)s.raw']),
+        "filenametemplate": Override(
+            mandatory=False,
+            settable=False,
+            userparam=False,
+            default=[
+                "%(pointcounter)s_0000.raw",
+                "%(proposal)s_%(scancounter)s" "_%(pointnumber)s.raw",
+            ],
+        ),
     }

@@ -32,29 +32,28 @@ from nicos.core.utils import multiWait
 
 from test.utils import raises
 
-session_setup = 'multiwait'
+session_setup = "multiwait"
 
 
 class TestMultiWait:
-
     @pytest.fixture()
     def devices(self, session):
-        dev1 = session.getDevice('dev1')
+        dev1 = session.getDevice("dev1")
         dev1._value = 1
         dev1._status_exception = None
         dev1._iscompleted_exception = None
 
-        dev2 = session.getDevice('dev2')
+        dev2 = session.getDevice("dev2")
         dev2._value = 2
         dev2._status_exception = None
         dev2._iscompleted_exception = None
 
-        dev3 = session.getDevice('dev3')
+        dev3 = session.getDevice("dev3")
         dev3._value = 3
         dev3._status_exception = None
         dev3._iscompleted_exception = None
 
-        dev4 = session.getDevice('dev4')
+        dev4 = session.getDevice("dev4")
         return [dev1, dev2, dev3, dev4]
 
     def test_multiwait_retval(self, devices):
@@ -65,22 +64,22 @@ class TestMultiWait:
 
     def test_multiwait_raising_single_status(self, log, devices):
         dev1, dev2, dev3, dev4 = devices
-        dev1._status_exception = NicosTimeoutError('Test message')
+        dev1._status_exception = NicosTimeoutError("Test message")
 
         with log.allow_errors():
             assert raises(MoveError, multiWait, [dev1, dev2, dev3, dev4])
 
     def test_multiwait_raising_single_isCompleted(self, log, devices):
         dev1, dev2, dev3, dev4 = devices
-        dev2._iscompleted_exception = NicosTimeoutError('Test 2')
+        dev2._iscompleted_exception = NicosTimeoutError("Test 2")
 
         with log.allow_errors():
             assert raises(NicosTimeoutError, multiWait, [dev1, dev2, dev3, dev4])
 
     def test_multiwait_raising_multi(self, log, devices):
         dev1, dev2, dev3, dev4 = devices
-        dev1._iscompleted_exception = NicosTimeoutError('multi_dev1')
-        dev3._iscompleted_exception = ComputationError('multi_dev3')
+        dev1._iscompleted_exception = NicosTimeoutError("multi_dev1")
+        dev3._iscompleted_exception = ComputationError("multi_dev3")
 
         with log.assert_errors(regex=".*multi_dev1.*", count=1):
             assert raises(ComputationError, multiWait, [dev1, dev2, dev3, dev4])

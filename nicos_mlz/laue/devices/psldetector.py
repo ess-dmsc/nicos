@@ -33,17 +33,13 @@ from nicos_mlz.laue.devices.psldrv import PSLdrv
 
 
 class PSLDetector(ImageChannelMixin, ActiveChannel):
-
     parameters = {
-        'address': Param('Inet address', type=str,
-                         default=''),
-        'port': Param('Port', type=int,
-                      default='50000'),
-        'imagewidth': Param('Image width',
-                            type=int, default=2000, category='general'),
-        'imageheight': Param('Image height',
-                             type=int, default=1598, category='general'),
-
+        "address": Param("Inet address", type=str, default=""),
+        "port": Param("Port", type=int, default="50000"),
+        "imagewidth": Param("Image width", type=int, default=2000, category="general"),
+        "imageheight": Param(
+            "Image height", type=int, default=1598, category="general"
+        ),
     }
 
     def valueInfo(self):
@@ -58,68 +54,70 @@ class PSLDetector(ImageChannelMixin, ActiveChannel):
     def doInit(self, mode):
         # Determine image type
         if mode == SIMULATION:
-            iwstr, ihstr = '2000', '1598'
+            iwstr, ihstr = "2000", "1598"
         else:
             try:
-                data = self._communicate('GetSize')
-                iwstr, ihstr = data.split(';')
+                data = self._communicate("GetSize")
+                iwstr, ihstr = data.split(";")
             except OSError:
-                self.log.warning('Error during init', exc=1)
-                iwstr, ihstr = '2000', '1598'
-        self._setROParam('imagewidth', int(iwstr))
-        self._setROParam('imageheight', int(ihstr))
+                self.log.warning("Error during init", exc=1)
+                iwstr, ihstr = "2000", "1598"
+        self._setROParam("imagewidth", int(iwstr))
+        self._setROParam("imageheight", int(ihstr))
         shape = (self.imagewidth, self.imageheight)
         self.arraydesc = ArrayDesc(self.name, shape, np.uint16)
 
     def doStart(self):
-        self._communicate('Snap')
+        self._communicate("Snap")
 
-    _modemap = {'I;16': '<u2',
-                'I': '<u4',
-                'F': '<f4', }
+    _modemap = {
+        "I;16": "<u2",
+        "I": "<u4",
+        "F": "<f4",
+    }
 
     # XXX this needs a virtual timer to read the current elapsed time
     # def doRead(self, maxage=0): ...
 
     def doReadArray(self, quality):
         if not self._sim_intercept:
-            (shape, data) = self._communicate('GetImage')
-            mode = self._communicate('GetMode')
+            (shape, data) = self._communicate("GetImage")
+            mode = self._communicate("GetMode")
         else:
             shape = (self.imagewidth, self.imageheight)
-            data = b'0' * self.imagewidth * self.imageheight
-        self._setROParam('imagewidth', shape[0])
-        self._setROParam('imageheight', shape[1])
+            data = b"0" * self.imagewidth * self.imageheight
+        self._setROParam("imagewidth", shape[0])
+        self._setROParam("imageheight", shape[1])
         # default for detector 'I:16' mode
         self.arraydesc = ArrayDesc(self.name, shape, self._modemap[mode])
         na = np.frombuffer(bytearray(data), self._modemap[mode])
 
         na = np.flipud(na.reshape(shape))
         # as flipud creates a view, we need to copy first
-        return np.require(na, None, ['C', 'O'])
+        return np.require(na, None, ["C", "O"])
 
     def doFinish(self):
         pass
 
     def doStop(self):
-        self._communicate('AbortSnap')
+        self._communicate("AbortSnap")
         return False
 
     def doStatus(self, maxage=0):
-        if self._communicate('GetCamState') == 'ON':
-          #  if self._attached_timer:
-          #      remain = self._preset - self._attached_timer.read(0)[0]
-          #      return status.BUSY, '%.1f s remaining' % remain
-            return status.BUSY, 'Exposure ongoing'
-        return status.OK, 'OK'
+        if self._communicate("GetCamState") == "ON":
+            #  if self._attached_timer:
+            #      remain = self._preset - self._attached_timer.read(0)[0]
+            #      return status.BUSY, '%.1f s remaining' % remain
+            return status.BUSY, "Exposure ongoing"
+        return status.OK, "OK"
 
     def doReadPreselection(self):
         if self.doStatus()[0] == status.OK:
             # the following call blocks during exposure
-            self._preset = float(self._communicate('GetExposure')) / 1000.
+            self._preset = float(self._communicate("GetExposure")) / 1000.0
         return self._preset
 
     def doWritePreselection(self, exptime):
         """exposure in seconds, hardware wants ms"""
         self._preset = exptime
-        self._communicate('SetExposure;%f' % (exptime * 1000.))
+        self._communicate("SetExposure;%f" % (exptime * 1000.0))

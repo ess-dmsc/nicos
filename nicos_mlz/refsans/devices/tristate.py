@@ -28,15 +28,15 @@ from nicos.core.params import Attach
 
 class TriState(CanDisable, HasOffset, Readable):
     attached_devices = {
-        'port': Attach('port to read the real number', Readable),
+        "port": Attach("port to read the real number", Readable),
     }
 
     _enabled = True
 
     def doRead(self, maxage=0):
-        self.log.debug('enabled=%s', self._enabled)
+        self.log.debug("enabled=%s", self._enabled)
         if self._enabled:
-            self.log.debug('offset=%.3f', self.offset)
+            self.log.debug("offset=%.3f", self.offset)
             return self._attached_port.read(maxage) - self.offset
         return 0
 
@@ -44,9 +44,9 @@ class TriState(CanDisable, HasOffset, Readable):
         if self._enabled:
             stat = self._attached_port.status(maxage)
             if stat[0] == status.OK:
-                return status.OK, 'enable'
+                return status.OK, "enable"
             return stat
-        return status.OK, 'disable'
+        return status.OK, "disable"
 
     def doEnable(self, on):
         self._enabled = on

@@ -1,21 +1,21 @@
-description = 'polarity reversing relays'
-group = 'optional'
+description = "polarity reversing relays"
+group = "optional"
 
-tango_base = 'tango://miractrl.mira.frm2.tum.de:10000/mira/'
+tango_base = "tango://miractrl.mira.frm2.tum.de:10000/mira/"
 
 devices = dict(
-    relay1 = device('nicos_mlz.mira.devices.beckhoff.NamedDigitalOutput',
-        description = 'polarity switchover relay 1',
-        tangodevice = tango_base + 'beckhoff/beckhoff1',
-        startoffset = 0,
-        mapping = {'off': 0,
-                   'on': 1},
+    relay1=device(
+        "nicos_mlz.mira.devices.beckhoff.NamedDigitalOutput",
+        description="polarity switchover relay 1",
+        tangodevice=tango_base + "beckhoff/beckhoff1",
+        startoffset=0,
+        mapping={"off": 0, "on": 1},
     ),
-    relay2 = device('nicos_mlz.mira.devices.beckhoff.NamedDigitalOutput',
-        description = 'polarity switchover relay 2',
-        startoffset = 1,
-        tangodevice = tango_base + 'beckhoff/beckhoff1',
-        mapping = {'off': 0,
-                   'on': 1},
+    relay2=device(
+        "nicos_mlz.mira.devices.beckhoff.NamedDigitalOutput",
+        description="polarity switchover relay 2",
+        startoffset=1,
+        tangodevice=tango_base + "beckhoff/beckhoff1",
+        mapping={"off": 0, "on": 1},
     ),
 )

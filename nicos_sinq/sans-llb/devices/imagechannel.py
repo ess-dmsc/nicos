@@ -26,8 +26,7 @@ import numpy as np
 from nicos.core import Attach, Param, Value
 from nicos.devices.generic.detector import ImageChannelMixin, PassiveChannel
 
-from nicos_sinq.devices.imagesink.histogramdesc import \
-                HistogramDesc, HistogramDimDesc
+from nicos_sinq.devices.imagesink.histogramdesc import HistogramDesc, HistogramDimDesc
 
 
 class XSummedImageChannel(ImageChannelMixin, PassiveChannel):
@@ -35,25 +34,25 @@ class XSummedImageChannel(ImageChannelMixin, PassiveChannel):
     For SANS-LLB we need to sum detector channels together along the
     first axis in order to get similar resolutions in x and y.
     """
+
     parameters = {
-        'sumstep': Param('numbers of detectors to sum in x',
-                         type=int),
+        "sumstep": Param("numbers of detectors to sum in x", type=int),
     }
 
     attached_devices = {
-        'rawimage': Attach('Raw data where to get data from',
-                           ImageChannelMixin),
+        "rawimage": Attach("Raw data where to get data from", ImageChannelMixin),
     }
 
     def doReadArray(self, quality):
         raw = self._attached_rawimage.readArray(quality)
-        result = np.empty((int(raw.shape[0]/self.sumstep), raw.shape[1]),
-                          dtype='int32')
+        result = np.empty(
+            (int(raw.shape[0] / self.sumstep), raw.shape[1]), dtype="int32"
+        )
         k = 0
         for x in range(0, raw.shape[0], self.sumstep):
-            data = np.zeros(raw.shape[1], dtype='int32')
+            data = np.zeros(raw.shape[1], dtype="int32")
             for i in range(0, self.sumstep):
-                data += raw[x+i]
+                data += raw[x + i]
             result[k] = data
             k += 1
         return result
@@ -61,17 +60,21 @@ class XSummedImageChannel(ImageChannelMixin, PassiveChannel):
     @property
     def arraydesc(self):
         rawshape = self._attached_rawimage.readArray(0).shape
-        return HistogramDesc(self.name, 'uint32', [
-            HistogramDimDesc(rawshape[0]/self.sumstep, 'x', ''),
-            HistogramDimDesc(rawshape[1], 'y', '')
-        ])
+        return HistogramDesc(
+            self.name,
+            "uint32",
+            [
+                HistogramDimDesc(rawshape[0] / self.sumstep, "x", ""),
+                HistogramDimDesc(rawshape[1], "y", ""),
+            ],
+        )
 
     def shape(self):
         rawshape = self._attached_rawimage.readArray(0).shape
-        return rawshape[0]/self.sumstep, rawshape[1]
+        return rawshape[0] / self.sumstep, rawshape[1]
 
     def valueInfo(self):
-        return [Value(self.name, type='counter', unit=self.unit)]
+        return [Value(self.name, type="counter", unit=self.unit)]
 
 
 class LLBCalibratedImage(ImageChannelMixin, PassiveChannel):
@@ -81,32 +84,31 @@ class LLBCalibratedImage(ImageChannelMixin, PassiveChannel):
     """
 
     attached_devices = {
-        'rawimage': Attach('Raw data where to get data from',
-                           ImageChannelMixin),
+        "rawimage": Attach("Raw data where to get data from", ImageChannelMixin),
     }
 
     parameters = {
-        'calibration_file': Param('caclibration file to use',
-                                  type=str, mandatory=True),
+        "calibration_file": Param("caclibration file to use", type=str, mandatory=True),
     }
 
     _calib = None
 
     def doInit(self, mode):
-        self._calib = np.loadtxt('nicos_sinq/sans-llb/' + self.calibration_file)
+        self._calib = np.loadtxt("nicos_sinq/sans-llb/" + self.calibration_file)
 
     @property
     def arraydesc(self):
-        return HistogramDesc(self.name, 'uint32', [
-                HistogramDimDesc(128, 'x', ''),
-                HistogramDimDesc(128, 'y', '')
-        ])
+        return HistogramDesc(
+            self.name,
+            "uint32",
+            [HistogramDimDesc(128, "x", ""), HistogramDimDesc(128, "y", "")],
+        )
 
     def shape(self):
         return 128, 128
 
     def valueInfo(self):
-        return [Value(self.name, type='counter', unit=self.unit)]
+        return [Value(self.name, type="counter", unit=self.unit)]
 
     def doReadArray(self, quality):
         raw = self._attached_rawimage.readArray(quality)
@@ -114,8 +116,7 @@ class LLBCalibratedImage(ImageChannelMixin, PassiveChannel):
 
         # Apply calibration
         x = np.arange(256)
-        xp = (x - self._calib[:, 1, np.newaxis]) /\
-             (self._calib[:, 2, np.newaxis])
+        xp = (x - self._calib[:, 1, np.newaxis]) / (self._calib[:, 2, np.newaxis])
         calibMat = np.zeros((128, 256))
         for i in range(128):
             for j in range(256):
@@ -129,8 +130,7 @@ class LLBCalibratedImage(ImageChannelMixin, PassiveChannel):
                     pass
 
         # Perform the summing in y
-        result = np.empty((128, 128),
-                          dtype='int32')
+        result = np.empty((128, 128), dtype="int32")
         for x in range(0, 128):
             k = 0
             for y in range(0, 256, 2):

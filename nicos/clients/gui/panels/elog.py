@@ -29,28 +29,45 @@ from os import path
 
 from nicos.clients.gui.panels import Panel
 from nicos.clients.gui.utils import dialogFromUi, loadUi
-from nicos.guisupport.qt import QActionGroup, QDesktopServices, QDialog, \
-    QFontDatabase, QInputDialog, QLineEdit, QMainWindow, QMenu, QPrintDialog, \
-    QPrinter, QPushButton, Qt, QTextDocument, QTextEdit, QTimer, QToolBar, \
-    QUrl, QWebPage, QWebView, pyqtSlot
+from nicos.guisupport.qt import (
+    QActionGroup,
+    QDesktopServices,
+    QDialog,
+    QFontDatabase,
+    QInputDialog,
+    QLineEdit,
+    QMainWindow,
+    QMenu,
+    QPrintDialog,
+    QPrinter,
+    QPushButton,
+    Qt,
+    QTextDocument,
+    QTextEdit,
+    QTimer,
+    QToolBar,
+    QUrl,
+    QWebPage,
+    QWebView,
+    pyqtSlot,
+)
 
 if QWebView is None:
-    raise ImportError('Qt webview component is not available')
+    raise ImportError("Qt webview component is not available")
 
 
 class ELogPanel(Panel):
     """Provides a HTML widget for the electronic logbook."""
 
-    panelName = 'Electronic logbook'
+    panelName = "Electronic logbook"
 
     def __init__(self, parent, client, options):
         Panel.__init__(self, parent, client, options)
-        loadUi(self, 'panels/elog.ui')
+        loadUi(self, "panels/elog.ui")
         self.preview = QWebView(self)
         self.frame.layout().addWidget(self.preview)
 
-        self.timer = QTimer(self, singleShot=True,
-                            timeout=self.on_timer_timeout)
+        self.timer = QTimer(self, singleShot=True, timeout=self.on_timer_timeout)
         self.propdir = None
 
         self.menus = None
@@ -69,19 +86,19 @@ class ELogPanel(Panel):
         self.activeGroup.addAction(self.actionNewSample)
 
         page = self.preview.page()
-        if hasattr(page, 'setForwardUnsupportedContent'):  # QWebKit only
+        if hasattr(page, "setForwardUnsupportedContent"):  # QWebKit only
             page.setForwardUnsupportedContent(True)
             page.unsupportedContent.connect(self.on_page_unsupportedContent)
 
     def getMenus(self):
         if not self.menus:
-            menu1 = QMenu('&Browser', self)
+            menu1 = QMenu("&Browser", self)
             menu1.addAction(self.actionBack)
             menu1.addAction(self.actionForward)
             menu1.addSeparator()
             menu1.addAction(self.actionRefresh)
             menu1.addAction(self.actionPrint)
-            menu2 = QMenu('&Logbook', self)
+            menu2 = QMenu("&Logbook", self)
             menu2.addAction(self.actionAddComment)
             menu2.addAction(self.actionAddRemark)
             menu2.addSeparator()
@@ -94,7 +111,7 @@ class ELogPanel(Panel):
 
     def getToolbars(self):
         if not self.bar:
-            bar = QToolBar('Logbook')
+            bar = QToolBar("Logbook")
             bar.addAction(self.actionBack)
             bar.addAction(self.actionForward)
             bar.addSeparator()
@@ -108,17 +125,17 @@ class ELogPanel(Panel):
             bar.addAction(self.actionAttachFile)
             bar.addSeparator()
             box = QLineEdit(self)
-            btn = QPushButton('Search', self)
+            btn = QPushButton("Search", self)
             bar.addWidget(box)
             bar.addWidget(btn)
 
             def callback():
-                if hasattr(QWebPage, 'FindWrapsAroundDocument'):  # WebKit
-                    self.preview.findText(box.text(),
-                                          QWebPage.FindWrapsAroundDocument)
+                if hasattr(QWebPage, "FindWrapsAroundDocument"):  # WebKit
+                    self.preview.findText(box.text(), QWebPage.FindWrapsAroundDocument)
                 else:
                     # WebEngine wraps automatically
                     self.preview.findText(box.text())
+
             box.returnPressed.connect(callback)
             btn.clicked.connect(callback)
             self.bar = bar
@@ -129,16 +146,15 @@ class ELogPanel(Panel):
         self.activeGroup.setEnabled(not viewonly)
 
     def on_timer_timeout(self):
-        if hasattr(self.preview.page(), 'mainFrame'):  # QWebKit only
+        if hasattr(self.preview.page(), "mainFrame"):  # QWebKit only
             try:
                 frame = self.preview.page().mainFrame().childFrames()[1]
             except IndexError:
-                self.log.error('No logbook seems to be loaded.')
+                self.log.error("No logbook seems to be loaded.")
                 self.on_client_connected()
                 return
             scrollval = frame.scrollBarValue(Qt.Orientation.Vertical)
-            was_at_bottom = \
-                scrollval == frame.scrollBarMaximum(Qt.Orientation.Vertical)
+            was_at_bottom = scrollval == frame.scrollBarMaximum(Qt.Orientation.Vertical)
 
             # restore current scrolling position in document on reload
             def callback(new_size):
@@ -146,10 +162,12 @@ class ELogPanel(Panel):
                 if was_at_bottom:
                     nframe.setScrollBarValue(
                         Qt.Orientation.Vertical,
-                        nframe.scrollBarMaximum(Qt.Orientation.Vertical))
+                        nframe.scrollBarMaximum(Qt.Orientation.Vertical),
+                    )
                 else:
                     nframe.setScrollBarValue(Qt.Orientation.Vertical, scrollval)
                 self.preview.loadFinished.disconnect(callback)
+
             self.preview.loadFinished.connect(callback)
         self.preview.reload()
 
@@ -160,33 +178,33 @@ class ELogPanel(Panel):
         self._update_content()
 
     def _update_content(self):
-        self.propdir = self.client.eval('session.experiment.proposalpath', '')
+        self.propdir = self.client.eval("session.experiment.proposalpath", "")
         if not self.propdir:
             return
-        logfile = path.abspath(path.join(
-            self.propdir, 'logbook', 'logbook.html'))
+        logfile = path.abspath(path.join(self.propdir, "logbook", "logbook.html"))
         if path.isfile(logfile):
-            self.preview.load(QUrl('file://' + logfile))
+            self.preview.load(QUrl("file://" + logfile))
         else:
             self.preview.setHtml(
-                '<style>body { font-family: sans-serif; }</style>'
-                '<p><b>The logbook HTML file does not seem to exist.</b></p>'
-                '<p>Please check that the file is created and accessible on '
-                '<b>your local computer</b> at %s.  Then click '
-                '"refresh" above.' % html.escape(path.normpath(logfile)))
+                "<style>body { font-family: sans-serif; }</style>"
+                "<p><b>The logbook HTML file does not seem to exist.</b></p>"
+                "<p>Please check that the file is created and accessible on "
+                "<b>your local computer</b> at %s.  Then click "
+                '"refresh" above.' % html.escape(path.normpath(logfile))
+            )
 
     def on_page_unsupportedContent(self, reply):
-        if reply.url().scheme() != 'file':
+        if reply.url().scheme() != "file":
             return
         filename = reply.url().path()
-        if filename.endswith('.dat'):
-            with open(filename, encoding='utf-8', errors='replace') as fp:
+        if filename.endswith(".dat"):
+            with open(filename, encoding="utf-8", errors="replace") as fp:
                 content = fp.read()
             window = QMainWindow(self)
             window.resize(600, 800)
             window.setWindowTitle(filename)
             widget = QTextEdit(window)
-            widget.setFontFamily('monospace')
+            widget.setFontFamily("monospace")
             window.setCentralWidget(widget)
             widget.setText(content)
             window.show()
@@ -198,17 +216,17 @@ class ELogPanel(Panel):
                 pass
 
     def on_refreshLabel_linkActivated(self, link):
-        if link == 'refresh':
+        if link == "refresh":
             self.on_timer_timeout()
-        elif link == 'back':
+        elif link == "back":
             self.preview.back()
-        elif link == 'forward':
+        elif link == "forward":
             self.preview.forward()
 
     @pyqtSlot()
     def on_actionRefresh_triggered(self):
         # if for some reason, we have the wrong proposal path, update here
-        propdir = self.client.eval('session.experiment.proposalpath', '')
+        propdir = self.client.eval("session.experiment.proposalpath", "")
         if propdir and propdir != self.propdir:
             self._update_content()
         else:
@@ -224,35 +242,38 @@ class ELogPanel(Panel):
 
     @pyqtSlot()
     def on_actionNewSample_triggered(self):
-        name, ok = QInputDialog.getText(self, 'New sample',
-                                        'Please enter the new sample name:')
+        name, ok = QInputDialog.getText(
+            self, "New sample", "Please enter the new sample name:"
+        )
         if not ok or not name:
             return
-        self.client.eval('NewSample(%r)' % name)
+        self.client.eval("NewSample(%r)" % name)
         self.timer.start(750)
 
     @pyqtSlot()
     def on_actionAddRemark_triggered(self):
         remark, ok = QInputDialog.getText(
-            self, 'New remark',
-            'Please enter the remark.  The remark will be added to the logbook '
-            'as a heading and will also appear in the data files.')
+            self,
+            "New remark",
+            "Please enter the remark.  The remark will be added to the logbook "
+            "as a heading and will also appear in the data files.",
+        )
         if not ok or not remark:
             return
-        self.client.eval('Remark(%r)' % remark)
+        self.client.eval("Remark(%r)" % remark)
         self.timer.start(750)
 
     @pyqtSlot()
     def on_actionAddComment_triggered(self):
-        dlg = dialogFromUi(self, 'panels/elog_comment.ui')
+        dlg = dialogFromUi(self, "panels/elog_comment.ui")
         dlg.helpFrame.setVisible(False)
-        if hasattr(dlg.viewer, 'setMarkdown'):
+        if hasattr(dlg.viewer, "setMarkdown"):
             dlg.editor.textChanged.connect(
-                lambda : dlg.viewer.setMarkdown(dlg.editor.toPlainText()))
+                lambda: dlg.viewer.setMarkdown(dlg.editor.toPlainText())
+            )
         else:
             dlg.viewer.hide()
-        dlg.mdLabel.linkActivated.connect(
-            lambda link: dlg.helpFrame.setVisible(True))
+        dlg.mdLabel.linkActivated.connect(lambda link: dlg.helpFrame.setVisible(True))
         f = QFontDatabase.systemFont(QFontDatabase.FixedFont)
         f.setFixedPitch(True)
         dlg.editor.setFont(f)
@@ -261,32 +282,32 @@ class ELogPanel(Panel):
         text = dlg.editor.toPlainText()
         if not text:
             return
-        self.client.eval('LogEntry(%r)' % text)
+        self.client.eval("LogEntry(%r)" % text)
         self.timer.start(750)
 
     @pyqtSlot()
     def on_actionAttachFile_triggered(self):
-        dlg = dialogFromUi(self, 'panels/elog_attach.ui')
+        dlg = dialogFromUi(self, "panels/elog_attach.ui")
 
         def on_fileSelect_clicked():
-            self.selectInputFile(dlg.fileName, 'Choose a file to attach')
+            self.selectInputFile(dlg.fileName, "Choose a file to attach")
             dlg.fileRename.setFocus()
+
         dlg.fileSelect.clicked.connect(on_fileSelect_clicked)
         if dlg.exec() != QDialog.DialogCode.Accepted:
             return
         fname = dlg.fileName.text()
         if not path.isfile(fname):
-            return self.showError('The given file name is not a valid file.')
+            return self.showError("The given file name is not a valid file.")
         newname = dlg.fileRename.text()
         if not newname:
             newname = path.basename(fname)
         desc = dlg.fileDesc.text()
-        with open(fname, 'rb') as fp:
+        with open(fname, "rb") as fp:
             filecontent = fp.read()
-        remotefn = self.client.ask('transfer', filecontent)
+        remotefn = self.client.ask("transfer", filecontent)
         if remotefn is not None:
-            self.client.eval('_LogAttach(%r, [%r], [%r])' %
-                             (desc, remotefn, newname))
+            self.client.eval("_LogAttach(%r, [%r], [%r])" % (desc, remotefn, newname))
         self.timer.start(750)
 
     @pyqtSlot()
@@ -303,7 +324,7 @@ class ELogPanel(Panel):
 
         # Workaround for Qt versions < 4.8.0
         printWholeSite = True
-        if hasattr(QWebView, 'selectedHtml'):
+        if hasattr(QWebView, "selectedHtml"):
             if self.preview.hasSelection():
                 printWholeSite = False
 
@@ -323,21 +344,21 @@ class ELogPanel(Panel):
             html = self.preview.selectedHtml()
 
             # construct head
-            head = '<head>'
+            head = "<head>"
 
             # extract head from child frames
             for frame in childFrames:
-                headEl = frame.findFirstElement('head')
+                headEl = frame.findFirstElement("head")
                 head += headEl.toInnerXml()
 
-            head += '</head>'
+            head += "</head>"
 
             # concat new head and selection
             # the result may be invalid html; needs improvements!
             html = head + html
 
         # prepend a header to the log book
-        html.replace('</head>', '</head><h1>NICOS Log book</h1>')
+        html.replace("</head>", "</head><h1>NICOS Log book</h1>")
 
         # let qt layout the content
         doc = QTextDocument()

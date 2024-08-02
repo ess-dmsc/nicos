@@ -28,11 +28,11 @@ from nicos.core.errors import UsageError
 
 from nicos_mlz.antares.commands import darkimage, openbeamimage
 
-__all__ = ['alignsample']
+__all__ = ["alignsample"]
 
 
 @usercommand
-@helparglist('xpos, ypos, exposuretime=1, number_ob=15, number_di=15')
+@helparglist("xpos, ypos, exposuretime=1, number_ob=15, number_di=15")
 def alignsample(xpos, ypos, exposuretime=1, number_ob=15, number_di=15):
     """Perform a 'sample alignment'.
 
@@ -41,13 +41,13 @@ def alignsample(xpos, ypos, exposuretime=1, number_ob=15, number_di=15):
     *exposuretime*.  Thereafter moves the sample to *xpos*, *ypos*.
     """
     if not (0 < number_ob < 100):
-        raise UsageError('Number of open beam images must be in [1..99]')
+        raise UsageError("Number of open beam images must be in [1..99]")
     if not (0 < number_di < 100):
-        raise UsageError('Number of dark images must be in [1..99]')
-    stx = session.getDevice('stx')
-    sty = session.getDevice('sty')
+        raise UsageError("Number of dark images must be in [1..99]")
+    stx = session.getDevice("stx")
+    sty = session.getDevice("sty")
 
-    session.log.info('Acquire openbeam and dark images')
+    session.log.info("Acquire openbeam and dark images")
     sty.maw(1.0)
     stx.maw(1.0)
 
@@ -58,4 +58,4 @@ def alignsample(xpos, ypos, exposuretime=1, number_ob=15, number_di=15):
 
     stx.maw(xpos)
     sty.maw(ypos)
-    session.log.info('Sample is aligned')
+    session.log.info("Sample is aligned")

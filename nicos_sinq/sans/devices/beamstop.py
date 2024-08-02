@@ -52,15 +52,17 @@ class BeamstopSequencer(BaseSequencer):
     """
 
     attached_devices = {
-        'x': Attach('Motor for X movement', Motor),
-        'y': Attach('Motor for Y movement', Motor),
+        "x": Attach("Motor for X movement", Motor),
+        "y": Attach("Motor for Y movement", Motor),
     }
 
     parameters = {
-        '_in_x': Param('IN x position', type=float, default=0.0,
-                       settable=True, internal=True),
-        '_in_y': Param('IN y position', type=float, default=0.0,
-                       settable=True, internal=True),
+        "_in_x": Param(
+            "IN x position", type=float, default=0.0, settable=True, internal=True
+        ),
+        "_in_y": Param(
+            "IN y position", type=float, default=0.0, settable=True, internal=True
+        ),
     }
 
     def _fix(self):
@@ -81,9 +83,10 @@ class Beamstop(BeamstopSequencer):
     This is a SANS special device for moving the beamstop in or out. This
     requires a sequence of operations. Order of driving is important.
     """
-    _out_x = 28.
-    _out_y = -543.
-    valuetype = oneof('in', 'out')
+
+    _out_x = 28.0
+    _out_y = -543.0
+    valuetype = oneof("in", "out")
 
     def doRead(self, maxage):
         x = self._attached_x.read(maxage)
@@ -91,25 +94,25 @@ class Beamstop(BeamstopSequencer):
         summ = abs(x - self._out_x)
         summ += abs(y - self._out_y)
         if summ < 1:
-            return 'out'
-        return 'in'
+            return "out"
+        return "in"
 
     def _generateSequence(self, target):
         seq = []
 
-        s = SeqMethod(self, '_release')
+        s = SeqMethod(self, "_release")
         seq.append(s)
 
-        if target == 'out':
-            seq.append(SeqMethod(self, '_save_pos'))
+        if target == "out":
+            seq.append(SeqMethod(self, "_save_pos"))
 
             seq.append(SeqDev(self._attached_x, self._out_x))
 
             seq.append(SeqLimDev(self._attached_y, self._out_y, self._out_y))
 
-            seq.append(SeqMethod(self, '_fix'))
+            seq.append(SeqMethod(self, "_fix"))
         else:
-            seq.append(SeqMethod(self, '_release'))
+            seq.append(SeqMethod(self, "_release"))
 
             seq.append(SeqDev(self._attached_x, self._in_x))
 
@@ -123,8 +126,9 @@ class BeamstopChanger(BeamstopSequencer):
     A class for changing the beamstop. At SANS this is realised through
     a sequence of motor movements.
     """
+
     attached_devices = {
-        'io': Attach('SPS I/O for reading slot', Readable),
+        "io": Attach("SPS I/O for reading slot", Readable),
     }
 
     valuetype = oneof(1, 2, 3, 4)
@@ -141,8 +145,7 @@ class BeamstopChanger(BeamstopSequencer):
         self._honor_stop = False
 
     def _emergencyFix(self, reason):
-        session.log.error('%s, Fixing motors, Get a manager to fix this',
-                          reason)
+        session.log.error("%s, Fixing motors, Get a manager to fix this", reason)
         self._fix()
 
     def doRead(self, maxage):
@@ -155,18 +158,19 @@ class BeamstopChanger(BeamstopSequencer):
                 val = i + 2
                 count += 1
         if count > 1:
-            self._emergencyFix('Beamstop lost!!!')
+            self._emergencyFix("Beamstop lost!!!")
         return val
 
     def doIsAllowed(self, pos):
         if self._attached_y.isAtTarget(-543):
-            return False, 'Cannot change beamstop in OUT position'
-        return True, ''
+            return False, "Cannot change beamstop in OUT position"
+        return True, ""
 
     def _testArrival(self, xpos, ypos):
-        if not (self._attached_x.isAtTarget(xpos) and
-                self._attached_y.isAtTarget(ypos)):
-            self._emergencyFix('Beamstop driving failed!!!')
+        if not (
+            self._attached_x.isAtTarget(xpos) and self._attached_y.isAtTarget(ypos)
+        ):
+            self._emergencyFix("Beamstop driving failed!!!")
 
     def _generateSequence(self, target):
         seq = []
@@ -175,28 +179,27 @@ class BeamstopChanger(BeamstopSequencer):
         self._save_pos()
 
         xpos = self._beamstop_pos[pos]
-        seq.append((SeqDev(self._attached_y, -450),
-                    SeqDev(self._attached_x, xpos)))
-        seq.append(SeqMethod(self, '_testArrival', xpos, -450.))
+        seq.append((SeqDev(self._attached_y, -450), SeqDev(self._attached_x, xpos)))
+        seq.append(SeqMethod(self, "_testArrival", xpos, -450.0))
 
         seq.append(SeqLimDev(self._attached_y, -549, -549))
-        seq.append(SeqMethod(self, '_testArrival', xpos, -549.))
+        seq.append(SeqMethod(self, "_testArrival", xpos, -549.0))
 
         xpos = self._beamstop_pos[int(target)]
         seq.append(SeqDev(self._attached_x, xpos))
-        seq.append(SeqMethod(self, '_testArrival', xpos,
-                             -549.))
+        seq.append(SeqMethod(self, "_testArrival", xpos, -549.0))
 
         seq.append(SeqLimDev(self._attached_y, -450, -450))
-        seq.append(SeqMethod(self, '_testArrival', xpos, -450))
+        seq.append(SeqMethod(self, "_testArrival", xpos, -450))
 
-        seq.append((SeqDev(self._attached_y, self._in_y),
-                    SeqDev(self._attached_x, self._in_x)))
+        seq.append(
+            (SeqDev(self._attached_y, self._in_y), SeqDev(self._attached_x, self._in_x))
+        )
 
         return seq
 
     def _runFailed(self, step, action, exc_info):
-        self._emergencyFix('Beamstop motor failed to run!!!')
+        self._emergencyFix("Beamstop motor failed to run!!!")
         BeamstopSequencer._runFailed(self, step, action, exc_info)
 
     def doStatus(self, maxage=0):

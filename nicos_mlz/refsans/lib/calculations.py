@@ -33,7 +33,7 @@ from scipy import constants
 # Geometrical Parameters
 #
 #
-chopper_pos = [None, .0576, 0.1553, 0.2948, 0.6384, 1.2885, 2.3163]
+chopper_pos = [None, 0.0576, 0.1553, 0.2948, 0.6384, 1.2885, 2.3163]
 # in meters from 10.05.2021.
 # Old values were:
 # chopper_pos = [None, .0715, 0.168, 0.305, 0.651, 1.296, 2.33]
@@ -90,13 +90,14 @@ def period(wl_min=0.0, wl_max=18.0, D=22.0, d_MCo=chopper_pos[5]):
     return ((D - d_MCo) * wl_max - D * wl_min) / h_m
 
 
-def angles_SC1(wl_min=0.0,
-               wl_max=18.0,
-               d_MCo=chopper_pos[5],
-               d_SCo=chopper_pos[6],
-               d_SCc=chopper_pos[6],
-               freq=10.0,
-               ):
+def angles_SC1(
+    wl_min=0.0,
+    wl_max=18.0,
+    d_MCo=chopper_pos[5],
+    d_SCo=chopper_pos[6],
+    d_SCc=chopper_pos[6],
+    freq=10.0,
+):
     # New sub added on 21.02.2022, already existing in chopper.py of
     # refsans_tools
     """
@@ -132,11 +133,12 @@ def angles_SC1(wl_min=0.0,
     return [angle_3, angle_4]
 
 
-def angles_SC2(wl_min=0,
-               wl_max=18,
-               d_MCo=chopper_pos[5],
-               freq=10,
-               ):
+def angles_SC2(
+    wl_min=0,
+    wl_max=18,
+    d_MCo=chopper_pos[5],
+    freq=10,
+):
     # New sub added on 21.02.2022, already existing in chopper.py of
     # refsans_tools
     """
@@ -164,18 +166,19 @@ def angles_SC2(wl_min=0,
     return (t_close * deg_per_sec, t_open * deg_per_sec)
 
 
-def chopper_config(wl_min=0.0,
-                   wl_max=20.0,
-                   D=22.8,
-                   disk2_pos=3,
-                   delay=0,
-                   SC2_mode='default',
-                   SC2_full_open=240,
-                   suppress_parasitic=True,
-                   wl_stop=95.0,
-                   gap=.1,
-                   interface=True,
-                   ):
+def chopper_config(
+    wl_min=0.0,
+    wl_max=20.0,
+    D=22.8,
+    disk2_pos=3,
+    delay=0,
+    SC2_mode="default",
+    SC2_full_open=240,
+    suppress_parasitic=True,
+    wl_stop=95.0,
+    gap=0.1,
+    interface=True,
+):
     """
     Calculate the full chopper configuration
 
@@ -256,43 +259,41 @@ def chopper_config(wl_min=0.0,
     d_SCc = chopper_pos[SC1_Pos]
 
     if SC2_mode is not None:
-        SC2 = practical_SC2(wl_min=wl_min,
-                            wl_max=wl_max,
-                            D=D,
-                            disk2_pos=disk2_pos,
-                            SC2_full_open=SC2_full_open,
-                            gap=gap
-                            )[SC2_mode]
-        D = SC2['D']
-        freq = SC2['freq']
-        angle_d56 = SC2['ang_SC2']
+        SC2 = practical_SC2(
+            wl_min=wl_min,
+            wl_max=wl_max,
+            D=D,
+            disk2_pos=disk2_pos,
+            SC2_full_open=SC2_full_open,
+            gap=gap,
+        )[SC2_mode]
+        D = SC2["D"]
+        freq = SC2["freq"]
+        angle_d56 = SC2["ang_SC2"]
 
-        wl_min_realised = SC2['wl_min_realised']
-        rpm = SC2['rpm']
+        wl_min_realised = SC2["wl_min_realised"]
+        rpm = SC2["rpm"]
         deg_per_sec = 360 * freq
 
         # Slave closing, must be calculated not for wl_max but for:
-        angle_SCc = d_SCc / d_SC2 * SC2['ang_SC2'][0]
+        angle_SCc = d_SCc / d_SC2 * SC2["ang_SC2"][0]
 
         # idem for the opening
-        angle_SCo = (d_SCo - d_MCo) / (d_SC2 - d_MCo) * SC2['ang_SC2'][1]
+        angle_SCo = (d_SCo - d_MCo) / (d_SC2 - d_MCo) * SC2["ang_SC2"][1]
 
     else:
         SC2 = {
-            'angles': None,
-            'rpm': None,
-            'freq': None,
-            'wl_min_realised': None,
+            "angles": None,
+            "rpm": None,
+            "freq": None,
+            "wl_min_realised": None,
         }
 
         angle_d56 = (None, None)
 
         # NOTE: In the old version the following freq expression was commented
         # but it is nevertheless necessary in case we work without SC2
-        freq = 1 / period(wl_min=wl_min,
-                          wl_max=wl_max,
-                          D=D * (1 + gap),
-                          d_MCo=d_MCo)
+        freq = 1 / period(wl_min=wl_min, wl_max=wl_max, D=D * (1 + gap), d_MCo=d_MCo)
         rpm = 60 * freq
         deg_per_sec = 360 * freq
 
@@ -308,32 +309,39 @@ def chopper_config(wl_min=0.0,
     # The proper dictionary (cut if interface is True) is managed at the end of
     # this routine
     res = {
-        'freq': freq,
-        'rpm': rpm,
-        'angles': angles,
-        'delay_time': delay,
-        'delay_angle': delay * freq * 360,
-        'disk2_Pos': disk2_pos,
-        'SC1_open_angle': angles[2] - angles[3],
-        'SC1_phase': angles[3],
-        'SC2_phase': angles[5],
-        'wl_min': wl_min_realised,
-        'wl_max': wl_max,
-        'D': D,
-        'gap': gap,
-        'SC2_mode': SC2_mode
+        "freq": freq,
+        "rpm": rpm,
+        "angles": angles,
+        "delay_time": delay,
+        "delay_angle": delay * freq * 360,
+        "disk2_Pos": disk2_pos,
+        "SC1_open_angle": angles[2] - angles[3],
+        "SC1_phase": angles[3],
+        "SC2_phase": angles[5],
+        "wl_min": wl_min_realised,
+        "wl_max": wl_max,
+        "D": D,
+        "gap": gap,
+        "SC2_mode": SC2_mode,
     }
     if SC2_mode is not None:
-        res['SC2_open_angle'] = angles[4] - angles[5]
+        res["SC2_open_angle"] = angles[4] - angles[5]
 
     # The routine checks if the configuration found produces frame overlap.
     # This is in particular critical if 'default_full_open'
     # is chosen, since this SC2_mode does not modify the beam line extension
-    if SC2_mode == 'default_full_open':
-        if res['D'] > practical_SC2(wl_min=wl_min, wl_max=wl_max, D=D,
-                                    disk2_pos=disk2_pos,
-                                    SC2_full_open=SC2_full_open,
-                                    gap=gap)['full_open']['D']:
+    if SC2_mode == "default_full_open":
+        if (
+            res["D"]
+            > practical_SC2(
+                wl_min=wl_min,
+                wl_max=wl_max,
+                D=D,
+                disk2_pos=disk2_pos,
+                SC2_full_open=SC2_full_open,
+                gap=gap,
+            )["full_open"]["D"]
+        ):
             return None, 6 * [None], None, None, None, None
 
     # The routine now optimizes the configuration to suppress eventual
@@ -346,25 +354,24 @@ def chopper_config(wl_min=0.0,
     # and 4 are adjusted to suppress all parasitic bands found, where possible.
     #
     if suppress_parasitic:
-
         if disk2_pos == 6:
-            res['angles'][1] = 300
+            res["angles"][1] = 300
             # Sets the phase of disk2 to the Matthias standard value
-            res['disk2_Pos'] = 5
+            res["disk2_Pos"] = 5
             # Moves the disc in the position which has the minimum capability
             # to suppress parasitic neutrons
 
         # Check for parasitic bands, starting from 3 times wl_step "above"
         # wl_max (heuristic approach)
         parasitic_wl = chopper_parasitic(
-            res, wl_start=wl_max + 3 *
-            inspect.signature(chopper_parasitic).parameters['wl_step'].default,
-            wl_stop=wl_stop)
+            res,
+            wl_start=wl_max
+            + 3 * inspect.signature(chopper_parasitic).parameters["wl_step"].default,
+            wl_stop=wl_stop,
+        )
 
         if len(parasitic_wl) > 0:
-
             if disk2_pos == 6:  # Optimization for disk2_pos = 6
-
                 # Gets the minimum wavelength of the first parasitic wavelength
                 # band
                 if isinstance(parasitic_wl[0], list):
@@ -386,13 +393,12 @@ def chopper_config(wl_min=0.0,
                 # disc 3 when
                 # it has a distance of d_SC1 from master disc.
 
-                res['disk2_Pos'] = 1
-                res['angles'][1] =\
-                    360 * freq / parasitic_vl *\
-                    (chopper_pos[res['disk2_Pos']] - d_SCc) +\
-                    min(120.0, np.mod(res['angles'][2], 360))
+                res["disk2_Pos"] = 1
+                res["angles"][1] = 360 * freq / parasitic_vl * (
+                    chopper_pos[res["disk2_Pos"]] - d_SCc
+                ) + min(120.0, np.mod(res["angles"][2], 360))
 
-                res['angles'][1] = np.mod(res['angles'][1], 360)
+                res["angles"][1] = np.mod(res["angles"][1], 360)
 
                 # Since the phase of disk2 has been moved, we have to check
                 # that the wl_max is really trasmitted from the new
@@ -405,20 +411,23 @@ def chopper_config(wl_min=0.0,
                 # where, this time, we have to impose that the phase of the
                 # neutron is null when it crosses SC1
                 phase_at_disk2pos = np.mod(
-                    360 * freq * wl_max / h_m *
-                    (chopper_pos[res['disk2_Pos']] - d_SCc), 360)
+                    360 * freq * wl_max / h_m * (chopper_pos[res["disk2_Pos"]] - d_SCc),
+                    360,
+                )
 
-                if phase_at_disk2pos < res['angles'][1]:
+                if phase_at_disk2pos < res["angles"][1]:
                     # The wl_max may not be provided. Evaluates the new value
                     # for wl_max
-                    new_vl_max = (d_SC2 - chopper_pos[res['disk2_Pos']]) /\
-                        (res['angles'][4] - res['angles'][1] + 360) * 360 *\
-                        freq
+                    new_vl_max = (
+                        (d_SC2 - chopper_pos[res["disk2_Pos"]])
+                        / (res["angles"][4] - res["angles"][1] + 360)
+                        * 360
+                        * freq
+                    )
                     wl_max_real = h_m / new_vl_max
-                    res['wl_max'] = wl_max_real
+                    res["wl_max"] = wl_max_real
 
             elif SC2_mode is not None:  # Optimization for disk2_pos < 6
-
                 # In this case, since SC1 does not determine the wavelength
                 # band, an analytic approach for solving the problem does not
                 # work, since we should get a complete list of phases (at
@@ -436,21 +445,32 @@ def chopper_config(wl_min=0.0,
 
                 # The phases of discs 3 and 4 must lock the slowest and
                 # fastest wavelengths
-                new_ph = angles_SC1(wl_min=res['wl_min'],
-                                    wl_max=res['wl_max'],
-                                    d_MCo=chopper_pos[res['disk2_Pos']],
-                                    freq=res['freq'],
-                                    )
+                new_ph = angles_SC1(
+                    wl_min=res["wl_min"],
+                    wl_max=res["wl_max"],
+                    d_MCo=chopper_pos[res["disk2_Pos"]],
+                    freq=res["freq"],
+                )
 
-                res_bis['angles'][2] = new_ph[0]  # new phase disc3
-                res_bis['angles'][3] = new_ph[1]  # new phase disc4
+                res_bis["angles"][2] = new_ph[0]  # new phase disc3
+                res_bis["angles"][3] = new_ph[1]  # new phase disc4
 
                 # If this configuration is affected by parasitic neutrons,
                 # the subroutine is stopped
-                if len(chopper_parasitic(
-                   res_bis, wl_start=wl_max + 3 * inspect.signature(
-                       chopper_parasitic).parameters['wl_step'].default,
-                   wl_stop=wl_stop)) != 0:
+                if (
+                    len(
+                        chopper_parasitic(
+                            res_bis,
+                            wl_start=wl_max
+                            + 3
+                            * inspect.signature(chopper_parasitic)
+                            .parameters["wl_step"]
+                            .default,
+                            wl_stop=wl_stop,
+                        )
+                    )
+                    != 0
+                ):
                     return None, 6 * [None], None, None, None, None
 
                 else:
@@ -462,29 +482,33 @@ def chopper_config(wl_min=0.0,
                     # (it is actually 0.01 deg)
 
                     for i in range(3, 1, -1):
-                        toll = abs(new_ph[i - 2] - res['angles'][i])
+                        toll = abs(new_ph[i - 2] - res["angles"][i])
 
-                        old_val = res['angles'][i]
+                        old_val = res["angles"][i]
 
-                        while (toll >= prec_phase):
-
-                            res_bis['angles'][i] = (new_ph[i - 2] + old_val) / 2
+                        while toll >= prec_phase:
+                            res_bis["angles"][i] = (new_ph[i - 2] + old_val) / 2
                             par_wl_bis = chopper_parasitic(
-                                res_bis, wl_start=wl_max + 3 * inspect.signature(
-                                    chopper_parasitic).parameters['wl_step'].default,
-                                wl_stop=wl_stop)
+                                res_bis,
+                                wl_start=wl_max
+                                + 3
+                                * inspect.signature(chopper_parasitic)
+                                .parameters["wl_step"]
+                                .default,
+                                wl_stop=wl_stop,
+                            )
 
                             if len(par_wl_bis) == 0:
                                 # The new phase is acceptable
-                                new_ph[i - 2] = res_bis['angles'][i]
+                                new_ph[i - 2] = res_bis["angles"][i]
                             else:
                                 # We have to move in the direction of a
                                 # restricted apertures
-                                old_val = res_bis['angles'][i]
+                                old_val = res_bis["angles"][i]
 
                             toll /= 2
 
-                        res['angles'][i] = new_ph[i - 2]
+                        res["angles"][i] = new_ph[i - 2]
 
             else:
                 # SC2 does not exist and there are parasitic bands.
@@ -494,9 +518,12 @@ def chopper_config(wl_min=0.0,
             # Now we check that the current configuration does not produce
             # other parasitic bands. If the check fails, the routine is stopped
             parasitic_wl_new = chopper_parasitic(
-                res, wl_start=res['wl_max'] + 3 * inspect.signature(
-                    chopper_parasitic).parameters['wl_step'].default,
-                wl_stop=wl_stop)
+                res,
+                wl_start=res["wl_max"]
+                + 3
+                * inspect.signature(chopper_parasitic).parameters["wl_step"].default,
+                wl_stop=wl_stop,
+            )
             if len(parasitic_wl_new) > 0:
                 return None, 6 * [None], None, None, None, None
 
@@ -506,44 +533,50 @@ def chopper_config(wl_min=0.0,
             # every disk2_pos value
             if disk2_pos == 6:
                 # Sets back the old values for disk2_pos and its phase
-                res['disk2_Pos'] = 6
+                res["disk2_Pos"] = 6
                 # Sets the disc2 in the generic position 6
-                res['angles'][1] = 0.0
+                res["angles"][1] = 0.0
 
     if interface:  # Removes the keys originarily not expected from Jens
-        res.pop('freq', None)
-        res.pop('delay_time', None)
-        res.pop('delay_angle', None)
-        res.pop('SC1_open_angle', None)
-        res.pop('SC1_phase', None)
-        res.pop('SC2_phase', None)
-        res.pop('SC2_mode', None)
+        res.pop("freq", None)
+        res.pop("delay_time", None)
+        res.pop("delay_angle", None)
+        res.pop("SC1_open_angle", None)
+        res.pop("SC1_phase", None)
+        res.pop("SC2_phase", None)
+        res.pop("SC2_mode", None)
 
     if SC2_mode is not None:
-        res['SC2_open_angle']: angles[4] - angles[5]
+        res["SC2_open_angle"]: angles[4] - angles[5]
 
-# OUTPUT
-# 10.05.2021. In the previous version there was int(rpm) but it is better to
-#             round the value before to make it integer. Here there is an
-#             important change!!! As output a third paramater is provided:
-#             disk2_Pos. This is not trivial because NICOS could need to move
-#             the slave disc to a different position with respect to the
-#             actual position.
-# 22.02.2022. Three additional outputs (beam-line length, wl_min and wl_max)
-#             have been added: these might be used by NICOS to check for
-#             eventual frame overlap, as well as to display correctly the
-#             minimum and maximum real wavelengths
-    return int(round(rpm)), res['angles'], res['disk2_Pos'], res['D'],\
-        res['wl_min'], res['wl_max']
+    # OUTPUT
+    # 10.05.2021. In the previous version there was int(rpm) but it is better to
+    #             round the value before to make it integer. Here there is an
+    #             important change!!! As output a third paramater is provided:
+    #             disk2_Pos. This is not trivial because NICOS could need to move
+    #             the slave disc to a different position with respect to the
+    #             actual position.
+    # 22.02.2022. Three additional outputs (beam-line length, wl_min and wl_max)
+    #             have been added: these might be used by NICOS to check for
+    #             eventual frame overlap, as well as to display correctly the
+    #             minimum and maximum real wavelengths
+    return (
+        int(round(rpm)),
+        res["angles"],
+        res["disk2_Pos"],
+        res["D"],
+        res["wl_min"],
+        res["wl_max"],
+    )
 
 
-def chopper_parasitic(res,
-                      wl_start=25,
-                      wl_stop=95,
-                      wl_step=0.1,
-                      deg_step=1.0,
-                      ):
-
+def chopper_parasitic(
+    res,
+    wl_start=25,
+    wl_stop=95,
+    wl_step=0.1,
+    deg_step=1.0,
+):
     """
     chopper_parasitic (res,
                      wl_start = 25,
@@ -621,17 +654,19 @@ def chopper_parasitic(res,
 
     # Checks that the position of disc2 is not virtual, raising eventually an
     # error
-    disk2_pos = res['disk2_Pos']
+    disk2_pos = res["disk2_Pos"]
 
     if disk2_pos == 6:
-        raise Exception('Error! A value indicating the REAL position of slave\
-                         chopper has to be provided')
+        raise Exception(
+            "Error! A value indicating the REAL position of slave\
+                         chopper has to be provided"
+        )
 
     if wl_stop < wl_start:
-        raise Exception('Error! wl_stop might not be smaller than wl_start')
+        raise Exception("Error! wl_stop might not be smaller than wl_start")
 
     # Array containing the phases from disc2 to disc6, in deg
-    phase_arr = res['angles'][1:6]
+    phase_arr = res["angles"][1:6]
 
     # Width of disc opaque regions (from 2 to 6)
     if (phase_arr[3] is None) and (phase_arr[4] is None):
@@ -683,7 +718,7 @@ def chopper_parasitic(res,
     # Contains the list of the smallest possible phases of the transmitted
     # neutrons: this is useful for plotting
 
-    per = 60000 / res['rpm']  # Duration of a period in milliseconds
+    per = 60000 / res["rpm"]  # Duration of a period in milliseconds
 
     fact_ang = h_m * per / 360.0
     # factor to convert the wavelengths into phase velocity, in Å mm / deg
@@ -704,7 +739,6 @@ def chopper_parasitic(res,
     phase_min = -np.inf  # Minimum phase to be included in the ph_thorugh list
 
     for k in range(n_checks):
-
         wl += wl_step
 
         # It transforms the wavelength into phase velocity (i.e. how much angle
@@ -718,7 +752,6 @@ def chopper_parasitic(res,
         deg0 = ch_deg[0] - deg_step
 
         for j in range(nmax_grad):
-
             deg0 += deg_step
 
             # This trajectory has as equation: d = vl_ang * (phase - deg0).
@@ -729,8 +762,9 @@ def chopper_parasitic(res,
                 phase_act = d_check[i] / vl_ang + deg0
                 phase_red = np.mod(phase_act, 360)
 
-                if ((phase_opaques[i][0] <= phase_red <= phase_opaques[i][1]) or
-                   (phase_opaques[i][2] <= phase_red <= phase_opaques[i][3])):
+                if (phase_opaques[i][0] <= phase_red <= phase_opaques[i][1]) or (
+                    phase_opaques[i][2] <= phase_red <= phase_opaques[i][3]
+                ):
                     ierr = 1  # Blocked neutron
                     break  # It is not necessary to verify the other discs
 
@@ -763,14 +797,9 @@ def chopper_parasitic(res,
     return wl_through
 
 
-def practical_SC2(wl_min=0,
-                  wl_max=6,
-                  D=22.8,
-                  disk2_pos=3,
-                  freq_max=100,
-                  SC2_full_open=240.,
-                  gap=.1
-                  ):
+def practical_SC2(
+    wl_min=0, wl_max=6, D=22.8, disk2_pos=3, freq_max=100, SC2_full_open=240.0, gap=0.1
+):
     """
     Calculates the chopper frequency and SC2 angles to use, taking the maximum
     possible opening angle of SC2 into account. The calculations are performed
@@ -803,7 +832,6 @@ def practical_SC2(wl_min=0,
     d_MCo = chopper_pos[disk2_pos]
 
     def angles(t_SCo, t_SCc, freq):
-
         """
         Returns a list with the angles (in degrees) of SC2 [angle(disc5),
         angle(disk6)] starting from the knowledge of the opening- and
@@ -821,7 +849,7 @@ def practical_SC2(wl_min=0,
 
     # flight path (in meters) and wavelength resolution
     # never used flightpath = D - d_MCo * .5
-    resol = chopper_pos[disk2_pos] * .5 / (D - chopper_pos[disk2_pos] * .5)
+    resol = chopper_pos[disk2_pos] * 0.5 / (D - chopper_pos[disk2_pos] * 0.5)
 
     dD = D - d_SC2
 
@@ -841,26 +869,26 @@ def practical_SC2(wl_min=0,
     ang_SC2, SC2_opening = angles(t_SC2o, t_SC2c, freq)
     overlap = 0
     res = {
-        't_SC2o': t_SC2o,
-        't_SC2c': t_SC2c,
-        'default': {
-            'per': per,
-            'freq': freq,
-            'rpm': rpm,
-            'ang_SC2': ang_SC2,
-            'SC2_opening': SC2_opening,
-            'D': D,
-            'overlap': overlap,
-            'resolution': resol,
-            'disk2_pos': disk2_pos,
-            'wl_min_realised': wl_min,
-        }
+        "t_SC2o": t_SC2o,
+        "t_SC2c": t_SC2c,
+        "default": {
+            "per": per,
+            "freq": freq,
+            "rpm": rpm,
+            "ang_SC2": ang_SC2,
+            "SC2_opening": SC2_opening,
+            "D": D,
+            "overlap": overlap,
+            "resolution": resol,
+            "disk2_pos": disk2_pos,
+            "wl_min_realised": wl_min,
+        },
     }
     # 'default_full_open' configuration uses the given detector position using
     # the full apertures of SC2. In this case the maximal opening is fixed
     # (as if we used a single disc) and we must adapt the frequency to the
     # opening
-    per_default_full_open = (360. / SC2_full_open) * (t_SC2c - t_SC2o)
+    per_default_full_open = (360.0 / SC2_full_open) * (t_SC2c - t_SC2o)
     freq_default_full_open = 1 / per_default_full_open
     rpm_default_full_open = freq_default_full_open * 60
     ang_SC2c = t_SC2c * 360 * freq_default_full_open
@@ -869,23 +897,23 @@ def practical_SC2(wl_min=0,
     ang_SC2_default_full_open = np.mod(np.array([ang_SC2c, ang_SC2o]), 360)
 
     overlap_default_full_open = (tof_max - tof_min) / per_default_full_open - 1
-    res['default_full_open'] = {
-        'per': per_default_full_open,
-        'freq': freq_default_full_open,
-        'rpm': rpm_default_full_open,
-        'ang_SC2': ang_SC2_default_full_open,
-        'SC2_opening': SC2_full_open,
-        'D': D,
-        'overlap': overlap_default_full_open,
-        'resolution': resol,
-        'disk2_pos': disk2_pos,
-        'wl_min_realised': wl_min,
+    res["default_full_open"] = {
+        "per": per_default_full_open,
+        "freq": freq_default_full_open,
+        "rpm": rpm_default_full_open,
+        "ang_SC2": ang_SC2_default_full_open,
+        "SC2_opening": SC2_full_open,
+        "D": D,
+        "overlap": overlap_default_full_open,
+        "resolution": resol,
+        "disk2_pos": disk2_pos,
+        "wl_min_realised": wl_min,
     }
 
     # now we check if the 'default' configuration calculated has a valid SC2
     # aperture, and correct if needed
-    if res['default']['SC2_opening'] > SC2_full_open:
-        res['default'].update(res['default_full_open'])
+    if res["default"]["SC2_opening"] > SC2_full_open:
+        res["default"].update(res["default_full_open"])
 
     # 'full_open' configuration uses, as 'default_full_open', the full aperture
     # of SC2 and, at the same time, adjust D to maximize the intensity
@@ -896,29 +924,32 @@ def practical_SC2(wl_min=0,
     freq_chopper_full_open = 1 / per_chopper_full_open
     rpm_chopper_full_open = freq_chopper_full_open * 60
     # from period and times calculate angles
-    ang_SC2_chopper_full_open, SC2_opening = angles(t_SC2o,
-                                                    t_SC2c,
-                                                    freq_chopper_full_open)
+    ang_SC2_chopper_full_open, SC2_opening = angles(
+        t_SC2o, t_SC2c, freq_chopper_full_open
+    )
     # and the corresponding distance disc1-detector to avoid overlap is
-    D_chopper_full_open = (wl_max * d_MCo + h_m * per_chopper_full_open) /\
-        (wl_max - wl_min)
+    D_chopper_full_open = (wl_max * d_MCo + h_m * per_chopper_full_open) / (
+        wl_max - wl_min
+    )
 
-    resol_adj_D =\
-        chopper_pos[disk2_pos] * .5 /\
-        (D_chopper_full_open - chopper_pos[disk2_pos] * .5)
+    resol_adj_D = (
+        chopper_pos[disk2_pos]
+        * 0.5
+        / (D_chopper_full_open - chopper_pos[disk2_pos] * 0.5)
+    )
     overlap_full_open = 0
 
-    res['full_open'] = {
-        'per': per_chopper_full_open,
-        'freq': freq_chopper_full_open,
-        'rpm': rpm_chopper_full_open,
-        'ang_SC2': ang_SC2_chopper_full_open,
-        'SC2_opening': SC2_opening,
-        'D': D_chopper_full_open,
-        'overlap': overlap_full_open,
-        'resolution': resol_adj_D,
-        'disk2_pos': disk2_pos,
-        'wl_min_realised': wl_min,
+    res["full_open"] = {
+        "per": per_chopper_full_open,
+        "freq": freq_chopper_full_open,
+        "rpm": rpm_chopper_full_open,
+        "ang_SC2": ang_SC2_chopper_full_open,
+        "SC2_opening": SC2_opening,
+        "D": D_chopper_full_open,
+        "overlap": overlap_full_open,
+        "resolution": resol_adj_D,
+        "disk2_pos": disk2_pos,
+        "wl_min_realised": wl_min,
     }
 
     # There is no overlap of different wl but the spectrum
@@ -943,9 +974,9 @@ def practical_SC2(wl_min=0,
     t_SC2c = tof_max - dD / vel_min
     t_SC2o = tof_min - dD * wl_min / h_m
 
-    ang_SC2_single_frame, SC2_opening_single_frame = angles(t_SC2o,
-                                                            t_SC2c,
-                                                            freq_single_frame)
+    ang_SC2_single_frame, SC2_opening_single_frame = angles(
+        t_SC2o, t_SC2c, freq_single_frame
+    )
     # here overlap is actually underuse of the frames Setting the period of the
     # pulse equal to the time of flight of the slowest neutrons could result in
     # an opening of disks 5 and 6 such to exceed the maximum possible phase
@@ -956,8 +987,9 @@ def practical_SC2(wl_min=0,
 
     if SC2_opening_single_frame > SC2_full_open:
         t_SC2o = t_SC2c - per_single_frame / (360 / SC2_full_open)
-        ang_SC2_single_frame, SC2_opening_single_frame = \
-            angles(t_SC2o, t_SC2c, freq_single_frame)
+        ang_SC2_single_frame, SC2_opening_single_frame = angles(
+            t_SC2o, t_SC2c, freq_single_frame
+        )
 
         wl_min_real = h_m * t_SC2o / d_SC2
         tof_min_single_frame = D * t_SC2o / d_SC2
@@ -965,18 +997,17 @@ def practical_SC2(wl_min=0,
         wl_min_real = wl_min
         tof_min_single_frame = tof_min
 
-    overlap_single_frame = (tof_max - tof_min_single_frame) /\
-        per_single_frame - 1
-    res['single_frame'] = {
-        'ang_SC2': ang_SC2_single_frame,
-        'SC2_opening': SC2_opening_single_frame,
-        'freq': freq_single_frame,
-        'rpm': rpm_single_frame,
-        'D': D,
-        'overlap': overlap_single_frame,
-        'resolution': resol,
-        'disk2_pos': disk2_pos,
-        'wl_min_realised': wl_min_real
+    overlap_single_frame = (tof_max - tof_min_single_frame) / per_single_frame - 1
+    res["single_frame"] = {
+        "ang_SC2": ang_SC2_single_frame,
+        "SC2_opening": SC2_opening_single_frame,
+        "freq": freq_single_frame,
+        "rpm": rpm_single_frame,
+        "D": D,
+        "overlap": overlap_single_frame,
+        "resolution": resol,
+        "disk2_pos": disk2_pos,
+        "wl_min_realised": wl_min_real,
     }
 
     # if freq > freq_max:

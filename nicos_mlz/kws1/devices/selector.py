@@ -50,16 +50,20 @@ class SelectorLambda(Moveable):
     """
 
     parameters = {
-        'constant': Param('Conversion constant: '
-                          'lam[Ang] = constant/speed[Hz] + offset',
-                          mandatory=True, unit='Ang Hz'),
-        'offset':   Param('Conversion offset: '
-                          'lam[Ang] = constant/speed[Hz] + offset',
-                          default=0, unit='Ang'),
+        "constant": Param(
+            "Conversion constant: " "lam[Ang] = constant/speed[Hz] + offset",
+            mandatory=True,
+            unit="Ang Hz",
+        ),
+        "offset": Param(
+            "Conversion offset: " "lam[Ang] = constant/speed[Hz] + offset",
+            default=0,
+            unit="Ang",
+        ),
     }
 
     attached_devices = {
-        'seldev': Attach('The selector speed device', Moveable),
+        "seldev": Attach("The selector speed device", Moveable),
     }
 
     hardware_access = False
@@ -70,13 +74,13 @@ class SelectorLambda(Moveable):
 
     def doIsAllowed(self, value):
         if value == 0:
-            return False, 'zero wavelength not allowed'
+            return False, "zero wavelength not allowed"
         speed = int(round(60 * self.constant / (value - self.offset)))
         return self._attached_seldev.isAllowed(speed)
 
     def doStart(self, target):
         speed = int(round(60 * self.constant / (target - self.offset)))
-        self.log.debug('moving selector to %f rpm', speed)
+        self.log.debug("moving selector to %f rpm", speed)
         self._attached_seldev.start(speed)
 
 
@@ -84,14 +88,15 @@ class SelectorSwitcher(MultiSwitcher):
     """Switcher whose mapping is determined by a list of presets."""
 
     parameters = {
-        'presets':  Param('Presets that determine the mapping',
-                          type=dictof(str, dictwith(lam=float, speed=float,
-                                                    spread=float)),
-                          mandatory=True),
+        "presets": Param(
+            "Presets that determine the mapping",
+            type=dictof(str, dictwith(lam=float, speed=float, spread=float)),
+            mandatory=True,
+        ),
     }
 
     attached_devices = {
-        'det_pos':  Attach('Detector preset device', DetectorPosSwitcherMixin),
+        "det_pos": Attach("Detector preset device", DetectorPosSwitcherMixin),
     }
 
     def doUpdateValue(self, position):

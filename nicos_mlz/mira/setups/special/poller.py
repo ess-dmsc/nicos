@@ -1,20 +1,21 @@
-description = 'setup for the poller'
-group = 'special'
+description = "setup for the poller"
+group = "special"
 
 sysconfig = dict(
-    experiment = None,
-    instrument = None,
-    datasinks = [],
-    notifiers = [],
-    cache = 'miractrl.mira.frm2.tum.de',
+    experiment=None,
+    instrument=None,
+    datasinks=[],
+    notifiers=[],
+    cache="miractrl.mira.frm2.tum.de",
 )
 
 devices = dict(
-    Poller = device('nicos.services.poller.Poller',
-        autosetup = True,
-        alwayspoll = ['ubahn', 'meteo', 'memograph', 'radmon'],
-        neverpoll = ['gaussmeter'],
-        loglevel = 'info',
-        blacklist = ['psd_channel']
+    Poller=device(
+        "nicos.services.poller.Poller",
+        autosetup=True,
+        alwayspoll=["ubahn", "meteo", "memograph", "radmon"],
+        neverpoll=["gaussmeter"],
+        loglevel="info",
+        blacklist=["psd_channel"],
     ),
 )

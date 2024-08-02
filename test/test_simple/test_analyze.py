@@ -25,8 +25,7 @@
 
 import pytest
 
-from nicos.commands.analyze import center_of_mass, fwhm, gauss, poly, \
-    root_mean_square
+from nicos.commands.analyze import center_of_mass, fwhm, gauss, poly, root_mean_square
 from nicos.core import FINAL
 
 try:
@@ -35,31 +34,30 @@ except ImportError:
     leastsq = None
 
 
+session_setup = "scanning"
 
-session_setup = 'scanning'
 
-
-@pytest.fixture(scope='class', autouse=True)
+@pytest.fixture(scope="class", autouse=True)
 def generate_dataset(session):
     """Generate a dataset as if a scan has been run."""
     import numpy
+
     data = numpy.array((1, 2, 1, 2, 2, 2, 5, 20, 30, 20, 10, 2, 3, 1, 2, 1, 1, 1))
     xpoints = numpy.arange(-9, 9)
     assert len(data) == len(xpoints)
-    tdev = session.getDevice('tdev')
-    det = session.getDevice('det')
+    tdev = session.getDevice("tdev")
+    det = session.getDevice("det")
     dataman = session.experiment.data
     dataman.beginScan(devices=[tdev], detectors=[det])
-    for (x, y) in zip(xpoints, data):
+    for x, y in zip(xpoints, data):
         dataman.beginPoint()
-        dataman.putValues({'tdev': (None, x)})
-        dataman.putResults(FINAL, {'det': ([0, 0, y, y*2], [])})
+        dataman.putValues({"tdev": (None, x)})
+        dataman.putResults(FINAL, {"det": ([0, 0, y, y * 2], [])})
         dataman.finishPoint()
     dataman.finishScan()
 
 
 class TestAnalyzers:
-
     def test_fwhm(self, session):
         result = fwhm(1, 3)
         assert result == (2.75, -1, 30, 1)
@@ -74,7 +72,7 @@ class TestAnalyzers:
         result = root_mean_square()
         assert 10.176 < result < 10.177
 
-    @pytest.mark.skipif(not leastsq, reason='scipy leastsq not available')
+    @pytest.mark.skipif(not leastsq, reason="scipy leastsq not available")
     def test_poly(self, session):
         result1 = poly(1, 1, 3)
         assert len(result1) == 2 and len(result1[0]) == 2
@@ -86,7 +84,7 @@ class TestAnalyzers:
         result4 = poly(2, 1, 4)
         assert result4 == result3
 
-    @pytest.mark.skipif(not leastsq, reason='scipy leastsq not available')
+    @pytest.mark.skipif(not leastsq, reason="scipy leastsq not available")
     def test_gauss(self, session):
         result = gauss()
         assert len(result) == 2 and len(result[0]) == 4

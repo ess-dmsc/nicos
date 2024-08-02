@@ -28,16 +28,20 @@ from nicos.utils import tcpSocketContext
 
 
 class MoxaCommunicator(HasCommunication):
-    """Implements communication to Moxa terminal server.
-    """
+    """Implements communication to Moxa terminal server."""
 
     parameters = {
-        'hostport': Param('Host and port of Moxa device',
-                          type=host(defaultport=4001)),
-        'timeout': Param('The timeout for the communication', type=float,
-                         settable=True, default=1.0),
-        'terminator': Param('Command terminator', type=str, default='\r\n',
-                            userparam=False, settable=False)
+        "hostport": Param("Host and port of Moxa device", type=host(defaultport=4001)),
+        "timeout": Param(
+            "The timeout for the communication", type=float, settable=True, default=1.0
+        ),
+        "terminator": Param(
+            "Command terminator",
+            type=str,
+            default="\r\n",
+            userparam=False,
+            settable=False,
+        ),
     }
 
     def _command_pre_send(self, sock):
@@ -54,24 +58,24 @@ class MoxaCommunicator(HasCommunication):
 
     def _command_tty(self, cmd, has_output=True):
         # open TCP connection to Moxa terminal server and close after execution
-        dp = self.hostport.split(':')[-1]
+        dp = self.hostport.split(":")[-1]
         with tcpSocketContext(self.hostport, dp, timeout=self.timeout) as sock:
             self._command_pre_send(sock)
-            sock.send('%s%s' % (cmd, self.terminator))
+            sock.send("%s%s" % (cmd, self.terminator))
             self._command_post_send(sock)
             if has_output:
                 return self._com_readline(sock)
 
     def _com_readline(self, sock):
         out = sock.recv(1)
-        while out[-1] != '\n':
+        while out[-1] != "\n":
             out += sock.recv(1)
         return out
 
     def _flush_tty(self, sock=None):
         if sock is None:
             # open TCP connection to Moxa terminal server and close after
-            dp = self.hostport.split(':')[-1]
+            dp = self.hostport.split(":")[-1]
             with tcpSocketContext(self.hostport, dp, timeout=0.25) as lsock:
                 return lsock.recv(1024)
         else:

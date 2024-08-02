@@ -25,55 +25,60 @@ This module contains ESS specific Base classes for EPICS.
 """
 
 from nicos.core import Override
-from nicos.devices.epics.pyepics import EpicsAnalogMoveable, \
-    EpicsDigitalMoveable, EpicsMoveable, EpicsReadable, EpicsStringReadable,\
-    EpicsWindowTimeoutDevice
+from nicos.devices.epics.pyepics import (
+    EpicsAnalogMoveable,
+    EpicsDigitalMoveable,
+    EpicsMoveable,
+    EpicsReadable,
+    EpicsStringReadable,
+    EpicsWindowTimeoutDevice,
+)
 
 
 class EpicsReadableSinq(EpicsReadable):
     parameter_overrides = {
-        'fmtstr': Override(userparam=False),
-        'maxage': Override(userparam=False),
-        'pollinterval': Override(userparam=False),
-        'warnlimits': Override(userparam=False)
+        "fmtstr": Override(userparam=False),
+        "maxage": Override(userparam=False),
+        "pollinterval": Override(userparam=False),
+        "warnlimits": Override(userparam=False),
     }
 
 
 class EpicsStringReadableSinq(EpicsStringReadable):
-    parameter_overrides = {'readpv': Override(userparam=False)}
+    parameter_overrides = {"readpv": Override(userparam=False)}
 
 
 class EpicsMoveableSinq(EpicsMoveable):
     parameter_overrides = {
-        'fmtstr': Override(userparam=False),
-        'maxage': Override(userparam=False),
-        'pollinterval': Override(userparam=False),
-        'warnlimits': Override(userparam=False)
+        "fmtstr": Override(userparam=False),
+        "maxage": Override(userparam=False),
+        "pollinterval": Override(userparam=False),
+        "warnlimits": Override(userparam=False),
     }
 
 
 class EpicsAnalogMoveableSinq(EpicsAnalogMoveable):
     parameter_overrides = {
-        'fmtstr': Override(userparam=False),
-        'maxage': Override(userparam=False),
-        'pollinterval': Override(userparam=False),
-        'warnlimits': Override(userparam=False)
+        "fmtstr": Override(userparam=False),
+        "maxage": Override(userparam=False),
+        "pollinterval": Override(userparam=False),
+        "warnlimits": Override(userparam=False),
     }
 
 
 class EpicsDigitalMoveableSinq(EpicsDigitalMoveable):
     parameter_overrides = {
-        'fmtstr': Override(userparam=False),
-        'maxage': Override(userparam=False),
-        'pollinterval': Override(userparam=False),
-        'warnlimits': Override(userparam=False)
+        "fmtstr": Override(userparam=False),
+        "maxage": Override(userparam=False),
+        "pollinterval": Override(userparam=False),
+        "warnlimits": Override(userparam=False),
     }
 
 
 class EpicsWindowTimeoutDeviceSinq(EpicsWindowTimeoutDevice):
     parameter_overrides = {
-        'fmtstr': Override(userparam=False),
-        'maxage': Override(userparam=False),
-        'pollinterval': Override(userparam=False),
-        'warnlimits': Override(userparam=False)
+        "fmtstr": Override(userparam=False),
+        "maxage": Override(userparam=False),
+        "pollinterval": Override(userparam=False),
+        "warnlimits": Override(userparam=False),
     }

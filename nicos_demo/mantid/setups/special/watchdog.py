@@ -1,5 +1,5 @@
-description = 'setup for the NICOS watchdog'
-group = 'special'
+description = "setup for the NICOS watchdog"
+group = "special"
 
 # watch_conditions:
 # The entries in this list are dictionaries. Possible keys:
@@ -25,17 +25,18 @@ group = 'special'
 watch_conditions = []
 
 notifiers = {
-    'default':  [],
-    'critical': [],
+    "default": [],
+    "critical": [],
 }
 
 devices = dict(
-    Watchdog = device('nicos.services.watchdog.Watchdog',
-                      # use only 'localhost' if the cache is really running on
-                      # the same machine, otherwise use the official computer
-                      # name
-                      cache = 'localhost',
-                      notifiers = notifiers,
-                      watch = watch_conditions,
-                     ),
+    Watchdog=device(
+        "nicos.services.watchdog.Watchdog",
+        # use only 'localhost' if the cache is really running on
+        # the same machine, otherwise use the official computer
+        # name
+        cache="localhost",
+        notifiers=notifiers,
+        watch=watch_conditions,
+    ),
 )

@@ -1,11 +1,12 @@
-description = 'Analyzer alias device(s)'
+description = "Analyzer alias device(s)"
 
-group = 'lowlevel'
+group = "lowlevel"
 
 devices = dict(
-    ana = device('nicos.devices.generic.DeviceAlias',
-        description = 'analyser alias device',
-        alias = 'ana_pg002',
-        devclass = 'nicos.devices.tas.Monochromator',
+    ana=device(
+        "nicos.devices.generic.DeviceAlias",
+        description="analyser alias device",
+        alias="ana_pg002",
+        devclass="nicos.devices.tas.Monochromator",
     ),
 )

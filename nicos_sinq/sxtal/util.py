@@ -40,7 +40,7 @@ def find_half(profile, start, incr):
     """Find the half height point. This speeds limit
     finding and protects against very broad peaks which
     might be misinterpreted as background at their tops"""
-    half = profile[start]/2.
+    half = profile[start] / 2.0
     idx = start
     while True:
         idx += incr
@@ -78,7 +78,7 @@ def find_limit(profile, start, incr, window, prob):
     count = count_window_hits(profile, start, window, incr)
     if count < 0:
         return count
-    probability = float(window - count)/float(window)
+    probability = float(window - count) / float(window)
     idx = start
 
     while probability > prob:
@@ -86,7 +86,7 @@ def find_limit(profile, start, incr, window, prob):
         count = count_window_hits(profile, idx, window, incr)
         if count < 0:
             return count
-        probability *= float(count - window)/float(window)
+        probability *= float(count - window) / float(window)
     return idx
 
 
@@ -98,14 +98,14 @@ def do_integrate(profile, left, right):
     for idx in range(right, len(profile)):
         rightBck += profile[idx]
     peakSum = 0
-    for idx in range(left, right+1):
+    for idx in range(left, right + 1):
         peakSum += profile[idx]
     nPeak = right - left + 1
     nBck = left + (len(profile) - right)
-    intensity = peakSum - (float(nPeak)/float(nBck)) *\
-        (float(leftBck + rightBck))
-    stddev = math.sqrt(peakSum + (float(nPeak)/float(nBck))**2 *
-                       float(leftBck+rightBck))
+    intensity = peakSum - (float(nPeak) / float(nBck)) * (float(leftBck + rightBck))
+    stddev = math.sqrt(
+        peakSum + (float(nPeak) / float(nBck)) ** 2 * float(leftBck + rightBck)
+    )
     return intensity, stddev
 
 
@@ -114,21 +114,21 @@ def window_integrate(profile):
     as described by Grant & Gabe in J. Appl. Cryst (1978),
     11, 114-120"""
     peak = find_max(profile)
-    left = find_half(profile, peak,  -1)
+    left = find_half(profile, peak, -1)
     window = 6
-    prob = .01
+    prob = 0.01
     if left < 0:
-        return False, 'No left side', 0., 0.
+        return False, "No left side", 0.0, 0.0
     left = find_limit(profile, left, -1, window, prob)
     if left < 0:
-        return False, 'No left side', 0., 0.
+        return False, "No left side", 0.0, 0.0
 
     right = find_half(profile, peak, 1)
     if right > len(profile):
-        return False, 'No right side', .0, .0
+        return False, "No right side", 0.0, 0.0
     right = find_limit(profile, right, 1, window, prob)
     if right < 0:
-        return False, 'No right side', .0, .0
+        return False, "No right side", 0.0, 0.0
 
     intensity, stddev = do_integrate(profile, left, right)
-    return True, '', intensity, stddev
+    return True, "", intensity, stddev

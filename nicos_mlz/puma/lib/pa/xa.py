@@ -38,5 +38,8 @@ def xA(alpha, gamma, lsa, lsd, y, xp, nv):
     """
     if nv == 0:
         return xp + (lsa - y) * tan(radians(alpha))
-    return xp + lsd * tan(radians(alpha)) + \
-        (lsa - lsd - y) * tan(radians(2 * gamma - alpha))
+    return (
+        xp
+        + lsd * tan(radians(alpha))
+        + (lsa - lsd - y) * tan(radians(2 * gamma - alpha))
+    )

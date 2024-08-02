@@ -6,7 +6,7 @@ import flatbuffers
 
 
 class ArrayFloat(object):
-    __slots__ = ['_tab']
+    __slots__ = ["_tab"]
 
     @classmethod
     def GetRootAsArrayFloat(cls, buf, offset):
@@ -26,15 +26,15 @@ class ArrayFloat(object):
             a = self._tab.Vector(o)
             return self._tab.Get(
                 flatbuffers.number_types.Float32Flags,
-                a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 4))
+                a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 4),
+            )
         return 0
 
     # ArrayFloat
     def ValueAsNumpy(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         if o != 0:
-            return self._tab.GetVectorAsNumpy(
-                flatbuffers.number_types.Float32Flags, o)
+            return self._tab.GetVectorAsNumpy(flatbuffers.number_types.Float32Flags, o)
         return 0
 
     # ArrayFloat
@@ -51,7 +51,8 @@ def ArrayFloatStart(builder):
 
 def ArrayFloatAddValue(builder, value):
     builder.PrependUOffsetTRelativeSlot(
-        0, flatbuffers.number_types.UOffsetTFlags.py_type(value), 0)
+        0, flatbuffers.number_types.UOffsetTFlags.py_type(value), 0
+    )
 
 
 def ArrayFloatStartValueVector(builder, numElems):

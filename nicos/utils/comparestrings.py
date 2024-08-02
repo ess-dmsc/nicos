@@ -41,16 +41,16 @@ def _makekeyboardmap():
             comparematrix[i, j] = 0.0
         comparematrix[i, i] = 1.0
     # Capital and small letters are CAPITALIZESCORE alike
-    capdist = ord('A') - ord('a')
-    for i in range(ord('a'), ord('z') + 1):
+    capdist = ord("A") - ord("a")
+    for i in range(ord("a"), ord("z") + 1):
         comparematrix[i, i + capdist] = CAPITALIZESCORE
         comparematrix[i + capdist, i] = CAPITALIZESCORE
 
     # Keyboard layout, add some score for letters that are close together
-    line1 = '`1234567890-= '
-    line2 = ' qwertyuiop[] '
-    line3 = ' asdfghjkl;   '
-    line4 = ' zxcvbnm,./   '
+    line1 = "`1234567890-= "
+    line2 = " qwertyuiop[] "
+    line3 = " asdfghjkl;   "
+    line4 = " zxcvbnm,./   "
     for i in range(len(line1) - 1):
         _keyboardneighbour(line1[i], line1[i + 1])
         _keyboardneighbour(line2[i], line2[i + 1])
@@ -70,6 +70,7 @@ def _keyboardneighbour(c1, c2):
     if 33 <= i1 <= 126 and 33 <= i2 <= 126:
         comparematrix[i1, i2] = NEXTKEYSCORE
         comparematrix[i2, i1] = NEXTKEYSCORE
+
 
 _makekeyboardmap()
 

@@ -35,22 +35,30 @@ def check_acc_bragg(instr, h, k, l, ny, sc=None, verbose=False):
         return []
     hkl = tuple(instr._calhkl([res[1], res[1], res[2], res[3]]))
     if verbose:
-        ret.append('calculated lattice vector for type M spurion condition: '
-                   '[%.3f, %.3f, %.3f]' % hkl)
+        ret.append(
+            "calculated lattice vector for type M spurion condition: "
+            "[%.3f, %.3f, %.3f]" % hkl
+        )
     elif (abs(hkl[0]) % 1) + (abs(hkl[1]) % 1) + (abs(hkl[2]) % 1) < 0.01:
-        ret.append('possible type M spurion with scattering vector '
-                   '[%.3f, %.3f, %.3f]' % hkl)
+        ret.append(
+            "possible type M spurion with scattering vector " "[%.3f, %.3f, %.3f]" % hkl
+        )
     # type A spurion given if falls on lattice vector
     hkl = tuple(instr._calhkl([res[0], res[0], res[2], res[3]]))
     if verbose:
-        ret.append('calculated lattice vector for type A spurion condition: '
-                   '[%.3f, %.3f, %.3f]' % hkl)
+        ret.append(
+            "calculated lattice vector for type A spurion condition: "
+            "[%.3f, %.3f, %.3f]" % hkl
+        )
     elif (abs(hkl[0]) % 1) + (abs(hkl[1]) % 1) + (abs(hkl[2]) % 1) < 0.01:
-        ret.append('possible type A spurion with scattering vector '
-                   '[%.3f, %.3f, %.3f]' % hkl)
+        ret.append(
+            "possible type A spurion with scattering vector " "[%.3f, %.3f, %.3f]" % hkl
+        )
     if verbose:
-        ret.append('if one of the two above lattice vectors correspond to a '
-                   'Bragg peak, accidental Bragg scattering may occur')
+        ret.append(
+            "if one of the two above lattice vectors correspond to a "
+            "Bragg peak, accidental Bragg scattering may occur"
+        )
     return ret
 
 
@@ -60,32 +68,34 @@ def check_ho_spurions(kf, dEmin=0, dEmax=20):
     for nA in range(1, 6):
         for nM in range(1, 6):
             if nA != nM:
-                dE = (nA**2/float(nM)**2 - 1) * 2.0725 * kf**2
-                spurlist.append((dE, nM, nA, nA**2-nM**2, nM**2))
+                dE = (nA**2 / float(nM) ** 2 - 1) * 2.0725 * kf**2
+                spurlist.append((dE, nM, nA, nA**2 - nM**2, nM**2))
     spurlist.sort()
     for item in spurlist:
         if dEmin <= item[0] <= dEmax:
-            ret.append('potential spurion at energy transfer %6.3f meV for '
-                       '%d ki = %d kf (E = %d/%d Ef)' % item)
+            ret.append(
+                "potential spurion at energy transfer %6.3f meV for "
+                "%d ki = %d kf (E = %d/%d Ef)" % item
+            )
     return ret
 
 
 alu_hkl = {
-    'Al 1,1,1': 2.3375,
-    'Al 2,0,0': 2.0242,
-    'Al 2,2,0': 1.4316,
-    'Al 3,1,1': 1.2207,
-    'Al 2,2,2': 1.1687,
-    'Al 4,0,0': 1.0123,
+    "Al 1,1,1": 2.3375,
+    "Al 2,0,0": 2.0242,
+    "Al 2,2,0": 1.4316,
+    "Al 3,1,1": 1.2207,
+    "Al 2,2,2": 1.1687,
+    "Al 4,0,0": 1.0123,
 }
 
 copper_hkl = {
-    'Cu 1,1,1': 2.0874,
-    'Cu 2,0,0': 1.8076,
-    'Cu 2,2,0': 1.2781,
-    'Cu 3,1,1': 1.0899,
-    'Cu 2,2,2': 1.0435,
-    'Cu 4,0,0': 0.9038,
+    "Cu 1,1,1": 2.0874,
+    "Cu 2,0,0": 1.8076,
+    "Cu 2,2,0": 1.2781,
+    "Cu 3,1,1": 1.0899,
+    "Cu 2,2,2": 1.0435,
+    "Cu 4,0,0": 0.9038,
 }
 
 
@@ -112,17 +122,15 @@ def check_powderrays(ki, dlist, phi=None):
     if phi is not None:
         for my_line, angle in lines1_list.items():
             if abs(angle - phi) < 2:
-                ret.append('powder line: %s at %6.3f deg' %
-                           (my_line, angle))
+                ret.append("powder line: %s at %6.3f deg" % (my_line, angle))
         for my_line, angle in lines2_list.items():
             if abs(angle - phi) < 2:
-                ret.append('powder line from 2ki: %s at %6.3f deg' %
-                           (my_line, angle))
+                ret.append("powder line from 2ki: %s at %6.3f deg" % (my_line, angle))
     else:
-        ret.append('found powder lines for ki = %5.3f A-1:' % ki)
+        ret.append("found powder lines for ki = %5.3f A-1:" % ki)
         for my_line, angle in lines1_list.items():
-            ret.append(' %s at %7.3f deg' % (my_line, angle))
-        ret.append('found powder lines for 2ki = %5.3f A-1:' % (2 * ki))
+            ret.append(" %s at %7.3f deg" % (my_line, angle))
+        ret.append("found powder lines for 2ki = %5.3f A-1:" % (2 * ki))
         for my_line, angle in lines2_list.items():
-            ret.append(' %s at %7.3f deg' % (my_line, angle))
+            ret.append(" %s at %7.3f deg" % (my_line, angle))
     return ret

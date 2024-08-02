@@ -29,18 +29,18 @@ from nicos.core import ConfigurationError, status
 
 from test.utils import raises
 
-session_setup = 'oscillator'
+session_setup = "oscillator"
 
 
-@pytest.fixture(scope='function', autouse=True)
+@pytest.fixture(scope="function", autouse=True)
 def osci(session):
-    osci = session.getDevice('osci')
+    osci = session.getDevice("osci")
     yield osci
     session.destroyDevice(osci)
 
 
 def test_params(session, osci):
-    axis = session.getDevice('axis')
+    axis = session.getDevice("axis")
     limits = axis.userlimits
     # min/max parameters got from moveable device
     assert osci.range == limits
@@ -50,45 +50,45 @@ def test_params(session, osci):
     osci.range = (0, 10)
     assert osci.range == (0, 10)
 
-    assert raises(ConfigurationError, setattr, osci, 'range', (10, 0))
-    assert raises(ConfigurationError, setattr, osci, 'range', (-110, 0))
-    assert raises(ConfigurationError, setattr, osci, 'range', (0, 110))
+    assert raises(ConfigurationError, setattr, osci, "range", (10, 0))
+    assert raises(ConfigurationError, setattr, osci, "range", (-110, 0))
+    assert raises(ConfigurationError, setattr, osci, "range", (0, 110))
 
-    osci2 = session.getDevice('osci2')
+    osci2 = session.getDevice("osci2")
     osci2.range = (0, 50)
     assert osci2.stoppable is True
 
     # The following test forces the use of the doReadRange method which is not
     # called with osci.range
-    osci3 = session.getDevice('osci3')
+    osci3 = session.getDevice("osci3")
     # forces an error since the configured lower range limit is below userlimt
     assert raises(ConfigurationError, osci3.doReadRange)
 
-    osci4 = session.getDevice('osci4')
+    osci4 = session.getDevice("osci4")
     # forces an error since the configured upper range limit is above userlimt
     assert raises(ConfigurationError, osci4.doReadRange)
 
 
 def test_movement(session, osci, log):
-    osci.maw('on')
-    assert osci.read() == 'on'
+    osci.maw("on")
+    assert osci.read() == "on"
     assert osci.status(0)[0] == status.OK
 
     with log.assert_errors(r"^ERROR   : \w+ : Please use: 'move\(\w+,"):
         osci.stop()
 
-    osci.maw('off')
-    assert osci.read() == 'off'
+    osci.maw("off")
+    assert osci.read() == "off"
     assert osci.status(0)[0] == status.OK
     assert osci.stop() is None
 
-    osci2 = session.getDevice('osci2')
-    osci2.maw('on')
-    assert osci2.read() == 'on'
+    osci2 = session.getDevice("osci2")
+    osci2.maw("on")
+    assert osci2.read() == "on"
     assert osci2.status(0)[0] == status.OK
 
     osci2.stop()
-    assert osci2.read() == 'off'
+    assert osci2.read() == "off"
     assert osci2.status(0)[0] == status.OK
 
 
@@ -97,11 +97,10 @@ def test_reset(osci):
 
 
 def test_range_setting(osci):
-
     # set range to (0, 0) and moving is not allowed
     osci.range = (0, 0)
-    assert raises(ConfigurationError, osci.start, 'on')
+    assert raises(ConfigurationError, osci.start, "on")
 
     # empty range is not allowed
     osci.range = (1, 1)
-    assert raises(ConfigurationError, osci.start, 'on')
+    assert raises(ConfigurationError, osci.start, "on")

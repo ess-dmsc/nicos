@@ -21,11 +21,14 @@
 #
 # *****************************************************************************
 
-name = 'Dummy Setup for SECoP test'
+name = "Dummy Setup for SECoP test"
 
-description = 'Test setup for secop'
+description = "Test setup for secop"
 
-devices = {'secnode': device(
-    'nicos.devices.secop.devices.SecNodeDevice',
-    description='main SEC node', unit='')
+devices = {
+    "secnode": device(
+        "nicos.devices.secop.devices.SecNodeDevice",
+        description="main SEC node",
+        unit="",
+    )
 }

@@ -1,18 +1,20 @@
-description = 'Setup for the picoscope flipper'
+description = "Setup for the picoscope flipper"
 
 devices = dict(
-    pico_amp = device('nicos_sinq.devices.epics.generic.WindowMoveable',
-        description = 'Spin Flipper Amplitude',
-        writepv = 'SQ:BOA:pico:AMP',
-        readpv = 'SQ:BOA:pico:AMP_RBV',
-        precision = .1,
-        abslimits = (-10, 10)
+    pico_amp=device(
+        "nicos_sinq.devices.epics.generic.WindowMoveable",
+        description="Spin Flipper Amplitude",
+        writepv="SQ:BOA:pico:AMP",
+        readpv="SQ:BOA:pico:AMP_RBV",
+        precision=0.1,
+        abslimits=(-10, 10),
     ),
-    pico_freq = device('nicos_sinq.devices.epics.generic.WindowMoveable',
-        description = 'Spin Flipper Frequency',
-        writepv = 'SQ:BOA:pico:FREQ',
-        readpv = 'SQ:BOA:pico:FREQ_RBV',
-        abslimits = (0, 300000),
-        precision = 1
+    pico_freq=device(
+        "nicos_sinq.devices.epics.generic.WindowMoveable",
+        description="Spin Flipper Frequency",
+        writepv="SQ:BOA:pico:FREQ",
+        readpv="SQ:BOA:pico:FREQ_RBV",
+        abslimits=(0, 300000),
+        precision=1,
     ),
 )

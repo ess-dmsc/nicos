@@ -34,35 +34,39 @@ class ChopperAlarms(EpicsDevice, Readable):
     """
     This device handles chopper alarms.
     """
+
     parameters = {
-        'pv_root':
-            Param('PV root for device',
-                  type=str,
-                  mandatory=True,
-                  userparam=False),
+        "pv_root": Param(
+            "PV root for device", type=str, mandatory=True, userparam=False
+        ),
     }
     parameter_overrides = {
-        'unit': Override(mandatory=False, settable=False, volatile=False),
+        "unit": Override(mandatory=False, settable=False, volatile=False),
     }
 
     _alarm_state = {}
     _chopper_alarm_names = {
-        'Comm_Alrm', 'HW_Alrm', 'IntLock_Alrm', 'Lvl_Alrm', 'Pos_Alrm',
-        'Pwr_Alrm', 'Ref_Alrm', 'SW_Alrm', 'Volt_Alrm'
+        "Comm_Alrm",
+        "HW_Alrm",
+        "IntLock_Alrm",
+        "Lvl_Alrm",
+        "Pos_Alrm",
+        "Pwr_Alrm",
+        "Ref_Alrm",
+        "SW_Alrm",
+        "Volt_Alrm",
     }
     _record_fields = {}
     _cache_relations = {}
 
     def doPreinit(self, mode):
         self._alarm_state = {
-            name: (status.OK, '')
-            for name in self._chopper_alarm_names
+            name: (status.OK, "") for name in self._chopper_alarm_names
         }
 
         for pv in self._chopper_alarm_names:
-            for pv_field in ['', '.STAT', '.SEVR']:
-                self._record_fields[pv +
-                                    pv_field] = self.pv_root + pv + pv_field
+            for pv_field in ["", ".STAT", ".SEVR"]:
+                self._record_fields[pv + pv_field] = self.pv_root + pv + pv_field
         EpicsDevice.doPreinit(self, mode)
 
     def _get_pv_parameters(self):
@@ -75,14 +79,14 @@ class ChopperAlarms(EpicsDevice, Readable):
         return self._record_fields[pvparam]
 
     def doRead(self, maxage=0):
-        return ''
+        return ""
 
     def doStatus(self, maxage=0):
         """
         Goes through all alarms in the chopper and returns the alarm encountered
         with the highest severity. All alarms are printed in the session log.
         """
-        message = ''
+        message = ""
         highest_severity = status.OK
         for name in self._chopper_alarm_names:
             pv_value = self._get_pv(name, as_string=True)
@@ -98,15 +102,15 @@ class ChopperAlarms(EpicsDevice, Readable):
         return highest_severity, message
 
     def _get_alarm_status(self, name):
-        status_raw = self._get_pv(name + '.STAT')
+        status_raw = self._get_pv(name + ".STAT")
         return STAT_TO_STATUS.get(status_raw, status.UNKNOWN)
 
     def _get_alarm_sevr(self, name):
-        severity_raw = self._get_pv(name + '.SEVR')
+        severity_raw = self._get_pv(name + ".SEVR")
         return SEVERITY_TO_STATUS.get(severity_raw, status.UNKNOWN)
 
     def _write_alarm_to_log(self, pv_value, severity, stat):
-        msg_format = '%s (%s)'
+        msg_format = "%s (%s)"
         if severity in [status.ERROR, status.UNKNOWN]:
             self.log.error(msg_format, pv_value, stat)
         elif severity == status.WARN:
@@ -117,23 +121,19 @@ class EssChopperController(MappedMoveable):
     """Handles the status and hardware control for an ESS chopper system"""
 
     attached_devices = {
-        'state': Attach('Current state of the chopper', Readable),
-        'command': Attach('Command PV of the chopper', MappedMoveable),
-        'alarms': Attach('Alarms of the chopper', ChopperAlarms, optional=True),
-        'speed': Attach('Speed PV of the chopper', Moveable),
-        'chic_conn': Attach('Status of the CHIC connection', Readable)
+        "state": Attach("Current state of the chopper", Readable),
+        "command": Attach("Command PV of the chopper", MappedMoveable),
+        "alarms": Attach("Alarms of the chopper", ChopperAlarms, optional=True),
+        "speed": Attach("Speed PV of the chopper", Moveable),
+        "chic_conn": Attach("Status of the CHIC connection", Readable),
     }
 
     parameter_overrides = {
-        'fmtstr':
-            Override(default='%s'),
-        'unit':
-            Override(mandatory=False),
-        'mapping':
-            Override(mandatory=False,
-                     settable=False,
-                     userparam=False,
-                     volatile=True)
+        "fmtstr": Override(default="%s"),
+        "unit": Override(mandatory=False),
+        "mapping": Override(
+            mandatory=False, settable=False, userparam=False, volatile=True
+        ),
     }
 
     hardware_access = False
@@ -143,7 +143,7 @@ class EssChopperController(MappedMoveable):
         return self._attached_state.read()
 
     def doStart(self, target):
-        if target.lower() == 'stop':
+        if target.lower() == "stop":
             # Set the speed to zero to keep EPICS behaviour consistent.
             self._attached_speed.move(0)
         self._attached_command.move(target)
@@ -161,12 +161,12 @@ class EssChopperController(MappedMoveable):
             stat, msg = self._attached_alarms.status(maxage)
             if stat != status.OK:
                 return stat, msg
-        if self._attached_chic_conn.read() != 'Connected':
-            return status.ERROR, 'no connection to the CHIC'
+        if self._attached_chic_conn.read() != "Connected":
+            return status.ERROR, "no connection to the CHIC"
         stat, msg = Waitable.doStatus(self, maxage)
         if stat != status.OK:
             return stat, msg
-        return status.OK, ''
+        return status.OK, ""
 
     def doReadMapping(self):
         return self._attached_command.mapping

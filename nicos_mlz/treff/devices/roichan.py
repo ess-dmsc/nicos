@@ -30,37 +30,41 @@ class LinearROIChannel(PostprocessPassiveChannel):
     """Calculates counts for a region of interest in a 1D spectrum."""
 
     parameters = {
-        'roi': Param('Region of interest (start, end) including end',
-                     tupleof(int, int),
-                     settable=True, category='general'),
+        "roi": Param(
+            "Region of interest (start, end) including end",
+            tupleof(int, int),
+            settable=True,
+            category="general",
+        ),
     }
 
     parameter_overrides = {
-        'unit':   Override(default='cts'),
-        'fmtstr': Override(default='%d'),
+        "unit": Override(default="cts"),
+        "fmtstr": Override(default="%d"),
     }
 
     def getReadResult(self, arrays, _results, _quality):
         if any(self.roi):
-            return [arr[self.roi[0]:self.roi[1]+1].sum() for arr in arrays]
+            return [arr[self.roi[0] : self.roi[1] + 1].sum() for arr in arrays]
         return [arr.sum() for arr in arrays]
 
     def valueInfo(self):
         if len(self.readresult) > 1:
-            return tuple(Value(name=self.name + '[%d]' % i, type='counter',
-                               fmtstr='%d')
-                         for i in range(1, len(self.readresult) + 1))
-        return Value(name=self.name, type='counter', fmtstr='%d'),
+            return tuple(
+                Value(name=self.name + "[%d]" % i, type="counter", fmtstr="%d")
+                for i in range(1, len(self.readresult) + 1)
+            )
+        return (Value(name=self.name, type="counter", fmtstr="%d"),)
 
 
 class SumImageChannel(ImageChannel):
     parameter_overrides = {
-        'unit':   Override(default='cts'),
-        'fmtstr': Override(default='%d'),
+        "unit": Override(default="cts"),
+        "fmtstr": Override(default="%d"),
     }
 
     def doRead(self, maxage=0):
         return [self._dev.value.sum()]
 
     def valueInfo(self):
-        return Value(name=self.name, type='counter', fmtstr='%d'),
+        return (Value(name=self.name, type="counter", fmtstr="%d"),)

@@ -1,6 +1,6 @@
-description = 'wut readout'
+description = "wut readout"
 
-group = 'optional'
+group = "optional"
 
 devices = dict(
     # s1_wut1 = device('nicos_mlz.sans1.devices.wut.WutValue',

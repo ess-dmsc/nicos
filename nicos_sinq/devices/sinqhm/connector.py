@@ -30,42 +30,50 @@ from nicos.core.mixins import HasCommunication
 
 
 class HttpConnector(HasCommunication, Readable):
-    """ Device to connect to the HTTP Server using HTTP Basic Authentication.
+    """Device to connect to the HTTP Server using HTTP Basic Authentication.
     *baseurl* provided in the parameters is prepended while connecting to the
     server using GET or POST. Parameter *base64auth* provides a way to
     authenticate the connection.
     """
+
     parameters = {
-        'baseurl': Param('Base request URL to be used',
-                         type=str, mandatory=True),
-        'base64auth': Param('HTTP authentication encoded in base64',
-                            type=str, mandatory=True, userparam=False),
-        'byteorder': Param('Endianness of the raw data on server(big/little)',
-                           type=oneof('big', 'little'),
-                           default='little'),
-        'curstatus': Param('Current status of the connection (readonly)',
-                           type=tupleof(int, str), settable=True,
-                           internal=True)
+        "baseurl": Param("Base request URL to be used", type=str, mandatory=True),
+        "base64auth": Param(
+            "HTTP authentication encoded in base64",
+            type=str,
+            mandatory=True,
+            userparam=False,
+        ),
+        "byteorder": Param(
+            "Endianness of the raw data on server(big/little)",
+            type=oneof("big", "little"),
+            default="little",
+        ),
+        "curstatus": Param(
+            "Current status of the connection (readonly)",
+            type=tupleof(int, str),
+            settable=True,
+            internal=True,
+        ),
     }
 
     parameter_overrides = {
-        'unit': Override(mandatory=False, userparam=False, settable=False)
+        "unit": Override(mandatory=False, userparam=False, settable=False)
     }
 
     status_code_msg = {
-        400: 'Bad request',
-        403: 'Authentication did not work..',
-        404: 'Somehow, address was not found!',
-        500: 'Internal server error',
-        501: 'Internal server error',
+        400: "Bad request",
+        403: "Authentication did not work..",
+        404: "Somehow, address was not found!",
+        500: "Internal server error",
+        501: "Internal server error",
     }
 
     def doInit(self, mode):
         # Check if the base url is available
         if mode == SIMULATION:
             return
-        self._com_retry(None, requests.get, self.baseurl,
-                        headers=self._get_auth())
+        self._com_retry(None, requests.get, self.baseurl, headers=self._get_auth())
 
     def _get_auth(self):
         return {"Authorization": "Basic %s" % self.base64auth}
@@ -74,41 +82,53 @@ class HttpConnector(HasCommunication, Readable):
         # Check if the communication was successful
         response = result.status_code
         if response in self.status_code_msg:
-            raise CommunicationError(self.status_code_msg.get(response)
-                                     + result.content.decode('utf-8'))
+            raise CommunicationError(
+                self.status_code_msg.get(response) + result.content.decode("utf-8")
+            )
         elif response != 200:
-            raise CommunicationError('Error while connecting to server! %s'
-                                     % result.content.decode('utf-8'))
-        self._setROParam('curstatus', (status.OK, ''))
+            raise CommunicationError(
+                "Error while connecting to server! %s" % result.content.decode("utf-8")
+            )
+        self._setROParam("curstatus", (status.OK, ""))
         return result
 
     def _com_raise(self, err, info):
-        self._setROParam('curstatus', (status.ERROR, 'Communication Error!'))
+        self._setROParam("curstatus", (status.ERROR, "Communication Error!"))
         HasCommunication._com_raise(self, err, info)
 
     def _com_warn(self, retries, name, err, info):
         self._com_raise(err, info)
 
     def doRead(self, maxage=0):
-        return ''
+        return ""
 
     def doStatus(self, maxage=0):
         return self.curstatus
 
-    def get(self, name='', params=()):
+    def get(self, name="", params=()):
         """Connect to *baseurl/name* using the GET protocol
         :param name: String to be appended to the *baseurl*
         :param params: GET parameters to be passed
         :return: (requests.Response) response
         """
-        return self._com_retry(None, requests.get, self.baseurl + '/' + name,
-                               headers=self._get_auth(), params=params)
+        return self._com_retry(
+            None,
+            requests.get,
+            self.baseurl + "/" + name,
+            headers=self._get_auth(),
+            params=params,
+        )
 
-    def post(self, name='', data=()):
+    def post(self, name="", data=()):
         """Connect to *baseurl/name* using the POST protocol
         :param name: String to be appended to the *baseurl*
         :param data: POST parameters to be passed
         :return: (requests.Response) response
         """
-        return self._com_retry(None, requests.post, self.baseurl + '/' + name,
-                               headers=self._get_auth(), data=data)
+        return self._com_retry(
+            None,
+            requests.post,
+            self.baseurl + "/" + name,
+            headers=self._get_auth(),
+            data=data,
+        )

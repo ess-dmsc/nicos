@@ -27,7 +27,6 @@ from nicos.devices.generic.axis import Axis
 
 
 class ThermalCollimatorAxis(Axis):
-
     def _preMoveAction(self):
         if self._target < self.read(0):
             self.motor.reference()

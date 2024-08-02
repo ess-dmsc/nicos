@@ -32,9 +32,9 @@ class Beam(QGraphicsLineItem):
         self._start = fromObj
         self._end = toObj
         QGraphicsLineItem.__init__(self, parent)
-        self.setPen(QPen(QColor('white'), 4))
+        self.setPen(QPen(QColor("white"), 4))
         self._beam = QGraphicsLineItem(parent)
-        self._beam.setPen(QPen(QColor('blue'), 1))
+        self._beam.setPen(QPen(QColor("blue"), 1))
         if not parent and scene:
             scene.addItem(self)
             scene.addItem(self._beam)

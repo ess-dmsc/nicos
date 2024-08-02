@@ -23,12 +23,10 @@
 
 import zmq
 
-from nicos.protocols.daemon import ClientTransport as BaseClientTransport, \
-    ProtocolError
+from nicos.protocols.daemon import ClientTransport as BaseClientTransport, ProtocolError
 
 
 class ClientTransport(BaseClientTransport):
-
     def __init__(self, serializer=None):
         self.serializer = serializer
 
@@ -38,14 +36,13 @@ class ClientTransport(BaseClientTransport):
     def connect(self, conndata):
         self.context = zmq.Context()
         self.sock = self.context.socket(zmq.REQ)
-        self.sock.connect('tcp://%s:%s' % (conndata.host, conndata.port))
-        self.sock.send_multipart([b'getbanner', b'', b''])
+        self.sock.connect("tcp://%s:%s" % (conndata.host, conndata.port))
+        self.sock.send_multipart([b"getbanner", b"", b""])
 
     def connect_events(self, conndata):
         self.event_sock = self.context.socket(zmq.SUB)
-        self.event_sock.connect('tcp://%s:%s' % (conndata.host,
-                                                 conndata.port + 1))
-        self.event_sock.setsockopt(zmq.SUBSCRIBE, b'ALL')
+        self.event_sock.connect("tcp://%s:%s" % (conndata.host, conndata.port + 1))
+        self.event_sock.setsockopt(zmq.SUBSCRIBE, b"ALL")
 
     def disconnect(self):
         if self.sock:
@@ -57,22 +54,21 @@ class ClientTransport(BaseClientTransport):
 
     def send_command(self, cmdname, args):
         data = self.serializer.serialize_cmd(cmdname, args)
-        self.sock.send_multipart([cmdname.encode(), b'', data])
+        self.sock.send_multipart([cmdname.encode(), b"", data])
 
     def recv_reply(self):
         item = self.sock.recv_multipart()
         if len(item) < 3:
-            raise ProtocolError('invalid frames received')
+            raise ProtocolError("invalid frames received")
 
         if not self.serializer:
-            self.serializer = self.determine_serializer(item[2],
-                                                        item[0] == b'ok')
+            self.serializer = self.determine_serializer(item[2], item[0] == b"ok")
 
-        return self.serializer.deserialize_reply(item[2], item[0] == b'ok')
+        return self.serializer.deserialize_reply(item[2], item[0] == b"ok")
 
     def recv_event(self):
         item = self.event_sock.recv_multipart()
         if len(item) < 3:
-            raise ProtocolError('invalid frames received')
+            raise ProtocolError("invalid frames received")
         event = item[1].decode()
         return self.serializer.deserialize_event(item[2], event) + (item[3:],)

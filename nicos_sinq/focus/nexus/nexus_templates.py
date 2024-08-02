@@ -23,106 +23,122 @@
 from copy import deepcopy
 
 from nicos import session
-from nicos.nexus.elements import ConstDataset, DetectorDataset, \
-    DeviceAttribute, DeviceDataset, NamedImageDataset, \
-    NXAttribute, NXLink, NXTime
+from nicos.nexus.elements import (
+    ConstDataset,
+    DetectorDataset,
+    DeviceAttribute,
+    DeviceDataset,
+    NamedImageDataset,
+    NXAttribute,
+    NXLink,
+    NXTime,
+)
 from nicos.nexus.nexussink import NexusTemplateProvider
 
-from nicos_sinq.focus.nexus.focus import FocusCoordinates, ScaledImage, \
-    SliceTofImage, SumImage
-from nicos_sinq.nexus.specialelements import ConfArray, FixedArray, \
-    TwoThetaArray, SaveSampleEnv
+from nicos_sinq.focus.nexus.focus import (
+    FocusCoordinates,
+    ScaledImage,
+    SliceTofImage,
+    SumImage,
+)
+from nicos_sinq.nexus.specialelements import (
+    ConfArray,
+    FixedArray,
+    TwoThetaArray,
+    SaveSampleEnv,
+)
 
-focus_default = {"NeXus_Version": "4.4.0",
-                 "instrument": "FOCUS at SINQ",
-                 "owner": DeviceAttribute("FOCUS", "responsible"),
-                 "entry1:NXentry": {
-                    "title": DeviceDataset("Exp", "title"),
-                    "proposal_title": DeviceDataset("Exp", "title"),
-                    "proposal_id": DeviceDataset("Exp", "proposal"),
-                    "comment": DeviceDataset("Exp", "remark"),
-                    "start_time": NXTime(),
-                    "end_time": NXTime(),
-                    "definition": ConstDataset("NXdirecttof", "string"),
-                    "duration": DetectorDataset("elapsedtime",
-                                                dtype="float32"),
-                    "pre_sample_flightpath":
-                    NXLink("/entry1/FOCUS/fermi_chopper/distance"),
-                    "user:NXuser": {
-                        "name": DeviceDataset("Exp", "users"),
-                        "email": DeviceDataset("Exp", "localcontact")
-                    },
-                    "sample:NXsample": {
-                        "name": DeviceDataset("Sample", "samplename"),
-                        "hugo": SaveSampleEnv(),
-                        "distance": ConstDataset(499.7, "float32",
-                                                 units=NXAttribute("mm",
-                                                                   "string")),
-                        "angle": ConstDataset(0., "float32",
-                                              units=NXAttribute("degree",
-                                                                "string")),
-                    },
-                    "FOCUS:NXinstrument": {
-                        "name": ConstDataset("FOCUS", "string"),
-                        "SINQ:NXsource": {
-                            "name": ConstDataset(
-                                "SINQ, Paul Scherrer Institute", "string"),
-                            "type": ConstDataset(
-                                "continuous flux spallation source", "string"),
-                            "probe": ConstDataset("neutron", "string"),
-                        },
-                     },  # instrument
-                    }  # entry
-                 }
+focus_default = {
+    "NeXus_Version": "4.4.0",
+    "instrument": "FOCUS at SINQ",
+    "owner": DeviceAttribute("FOCUS", "responsible"),
+    "entry1:NXentry": {
+        "title": DeviceDataset("Exp", "title"),
+        "proposal_title": DeviceDataset("Exp", "title"),
+        "proposal_id": DeviceDataset("Exp", "proposal"),
+        "comment": DeviceDataset("Exp", "remark"),
+        "start_time": NXTime(),
+        "end_time": NXTime(),
+        "definition": ConstDataset("NXdirecttof", "string"),
+        "duration": DetectorDataset("elapsedtime", dtype="float32"),
+        "pre_sample_flightpath": NXLink("/entry1/FOCUS/fermi_chopper/distance"),
+        "user:NXuser": {
+            "name": DeviceDataset("Exp", "users"),
+            "email": DeviceDataset("Exp", "localcontact"),
+        },
+        "sample:NXsample": {
+            "name": DeviceDataset("Sample", "samplename"),
+            "hugo": SaveSampleEnv(),
+            "distance": ConstDataset(
+                499.7, "float32", units=NXAttribute("mm", "string")
+            ),
+            "angle": ConstDataset(
+                0.0, "float32", units=NXAttribute("degree", "string")
+            ),
+        },
+        "FOCUS:NXinstrument": {
+            "name": ConstDataset("FOCUS", "string"),
+            "SINQ:NXsource": {
+                "name": ConstDataset("SINQ, Paul Scherrer Institute", "string"),
+                "type": ConstDataset("continuous flux spallation source", "string"),
+                "probe": ConstDataset("neutron", "string"),
+            },
+        },  # instrument
+    },  # entry
+}
 
 focus_counter = {
     "preset": DetectorDataset("preset", "float32"),
     "count_mode": DetectorDataset("mode", "string"),
-    "monitor": DetectorDataset("monitor1", "int32",
-                               units=NXAttribute("counts", "string")),
-    "monitor_check": DetectorDataset("tof_sum", "int32",
-                                     units=NXAttribute("counts", "string")),
-    "time": DetectorDataset("elapsedtime", "float32",
-                            units=NXAttribute("seconds", "string")),
-    "proton_beam_monitor": DetectorDataset("protoncount", "int32",
-                                           units=NXAttribute("counts",
-                                                             "string")),
-    "monitor_distance": ConstDataset(2784., "float32",
-                                     units=NXAttribute("mm", "string")),
-    "beam_monitor": DetectorDataset("beam_monitor", "int32",
-                                    units=NXAttribute("counts", "string")),
-
+    "monitor": DetectorDataset(
+        "monitor1", "int32", units=NXAttribute("counts", "string")
+    ),
+    "monitor_check": DetectorDataset(
+        "tof_sum", "int32", units=NXAttribute("counts", "string")
+    ),
+    "time": DetectorDataset(
+        "elapsedtime", "float32", units=NXAttribute("seconds", "string")
+    ),
+    "proton_beam_monitor": DetectorDataset(
+        "protoncount", "int32", units=NXAttribute("counts", "string")
+    ),
+    "monitor_distance": ConstDataset(
+        2784.0, "float32", units=NXAttribute("mm", "string")
+    ),
+    "beam_monitor": DetectorDataset(
+        "beam_monitor", "int32", units=NXAttribute("counts", "string")
+    ),
 }
 
 tof_monitor = {
     "preset": DetectorDataset("preset", "float32"),
     "mode": NXLink("/entry1/FOCUS/counter/count_mode"),
-    "integral_counts": DetectorDataset("tof_sum", "int32",
-                                       units=NXAttribute("counts", "string")),
-    "distance": ConstDataset(2784., "float32",
-                             units=NXAttribute("mm", "string")),
+    "integral_counts": DetectorDataset(
+        "tof_sum", "int32", units=NXAttribute("counts", "string")
+    ),
+    "distance": ConstDataset(2784.0, "float32", units=NXAttribute("mm", "string")),
     "time_of_flight": NXLink("/entry1/FOCUS/bank1/time_binning"),
-
 }
 disk_chopper = {
     "name": ConstDataset("Dornier disk chopper", "string"),
     "rotation_speed": DeviceDataset("ch2_speed"),
     "ratio": DeviceDataset("ch_ratio"),
-    "energy": DeviceDataset("ei"), }
+    "energy": DeviceDataset("ei"),
+}
 
 fermi_chopper = {
     "name": ConstDataset("Dornier Fermi chopper", "string"),
     "rotation_speed": DeviceDataset("ch1_speed"),
     "phase": DeviceDataset("ch_phase"),
-    "distance": DeviceDataset("fermidist", "float32",
-                              units=NXAttribute("mm", "string")),
+    "distance": DeviceDataset(
+        "fermidist", "float32", units=NXAttribute("mm", "string")
+    ),
     "energy": DeviceDataset("ei"),
 }
 
 flight_path = {
     "selection": ConstDataset("Standard", "string"),
-    "length": DeviceDataset("fermidist", "float32",
-                            units=NXAttribute("mm", "string")),
+    "length": DeviceDataset("fermidist", "float32", units=NXAttribute("mm", "string")),
 }
 
 monochromator = {
@@ -144,27 +160,32 @@ monochromator = {
 
 det_common = {
     "delay": DeviceDataset("delay"),
-    "time_binning": ConfArray("hm_tof_array",
-                              units=NXAttribute("us", "string"),
-                              axis=NXAttribute(2, "int32"),
-                              scale=.1),
+    "time_binning": ConfArray(
+        "hm_tof_array",
+        units=NXAttribute("us", "string"),
+        axis=NXAttribute(2, "int32"),
+        scale=0.1,
+    ),
 }
 
 middlebank = {
-    "counts": NamedImageDataset('middle_image',
-                                signal=NXAttribute(1, 'int32')),
-    "theta": ConfArray("middle_theta",
-                       units=NXAttribute("degree", "string"),
-                       axis=NXAttribute(1, "int32")),
+    "counts": NamedImageDataset("middle_image", signal=NXAttribute(1, "int32")),
+    "theta": ConfArray(
+        "middle_theta",
+        units=NXAttribute("degree", "string"),
+        axis=NXAttribute(1, "int32"),
+    ),
     "data": NXLink("/entry1/FOCUS/bank1/counts"),
     "time_of_flight": NXLink("/entry1/FOCUS/bank1/time_binning"),
     "polar_angle": NXLink("/entry1/FOCUS/bank1/theta"),
-    "azimuthal_angle": ConstDataset(.0, dtype="float32",
-                                    units=NXAttribute("degree", "string")),
-    "detector_number": FixedArray(0, 1, 150, dtype='int32'),
-    "distance": TwoThetaArray("sampledist", 0, 150, dytpe="float32",
-                              units=NXAttribute("mm", "string")),
-    "summed_counts": SumImage('middle_image', 150, dtype='int32')
+    "azimuthal_angle": ConstDataset(
+        0.0, dtype="float32", units=NXAttribute("degree", "string")
+    ),
+    "detector_number": FixedArray(0, 1, 150, dtype="int32"),
+    "distance": TwoThetaArray(
+        "sampledist", 0, 150, dytpe="float32", units=NXAttribute("mm", "string")
+    ),
+    "summed_counts": SumImage("middle_image", 150, dtype="int32"),
 }
 
 middle_data = {
@@ -177,22 +198,25 @@ middle_data = {
 }
 
 upperbank = {
-    "counts": NamedImageDataset('upper_image',
-                                signal=NXAttribute(1, 'int32')),
-    "theta": ConfArray("upper_theta",
-                       units=NXAttribute("degree", "string"),
-                       axis=NXAttribute(1, "int32")),
+    "counts": NamedImageDataset("upper_image", signal=NXAttribute(1, "int32")),
+    "theta": ConfArray(
+        "upper_theta",
+        units=NXAttribute("degree", "string"),
+        axis=NXAttribute(1, "int32"),
+    ),
     "time_binning": NXLink("/entry1/FOCUS/bank1/time_binning"),
     "delay": NXLink("/entry1/FOCUS/bank1/delay"),
     "data": NXLink("/entry1/FOCUS/upperbank/counts"),
     "time_of_flight": NXLink("/entry1/FOCUS/bank1/time_binning"),
     "polar_angle": NXLink("/entry1/FOCUS/upperbank/theta"),
-    "detector_number": FixedArray(0, 1, 110, dtype='int32'),
-    "distance": TwoThetaArray("sampledist", 0, 110, dytpe="float32",
-                              units=NXAttribute("mm", "string")),
-    "azimuthal_angle": ConstDataset(13., dtype="float32",
-                                    units=NXAttribute("degree", "string")),
-    "summed_counts": SumImage('upper_image', 110, dtype='int32'),
+    "detector_number": FixedArray(0, 1, 110, dtype="int32"),
+    "distance": TwoThetaArray(
+        "sampledist", 0, 110, dytpe="float32", units=NXAttribute("mm", "string")
+    ),
+    "azimuthal_angle": ConstDataset(
+        13.0, dtype="float32", units=NXAttribute("degree", "string")
+    ),
+    "summed_counts": SumImage("upper_image", 110, dtype="int32"),
 }
 
 upper_data = {
@@ -205,23 +229,27 @@ upper_data = {
 }
 
 lowerbank = {
-    "counts": SliceTofImage('lower_image', 'hm_tof_array',
-                            0, 115,
-                            signal=NXAttribute(1, 'int32')),
-    "theta": ConfArray("lower_theta",
-                       units=NXAttribute("degree", "string"),
-                       axis=NXAttribute(1, "int32")),
+    "counts": SliceTofImage(
+        "lower_image", "hm_tof_array", 0, 115, signal=NXAttribute(1, "int32")
+    ),
+    "theta": ConfArray(
+        "lower_theta",
+        units=NXAttribute("degree", "string"),
+        axis=NXAttribute(1, "int32"),
+    ),
     "time_binning": NXLink("/entry1/FOCUS/bank1/time_binning"),
     "delay": NXLink("/entry1/FOCUS/bank1/delay"),
     "data": NXLink("/entry1/FOCUS/lowerbank/counts"),
     "time_of_flight": NXLink("/entry1/FOCUS/bank1/time_binning"),
     "polar_angle": NXLink("/entry1/FOCUS/lowerbank/theta"),
-    "detector_number": FixedArray(0, 1, 115, dtype='int32'),
-    "distance": TwoThetaArray("sampledist", 0, 115, dytpe="float32",
-                              units=NXAttribute("mm", "string")),
-    "azimuthal_angle": ConstDataset(-13., dtype="float32",
-                                    units=NXAttribute("degree", "string")),
-    "summed_counts": SumImage('lower_image', 116, dtype='int32'),
+    "detector_number": FixedArray(0, 1, 115, dtype="int32"),
+    "distance": TwoThetaArray(
+        "sampledist", 0, 115, dytpe="float32", units=NXAttribute("mm", "string")
+    ),
+    "azimuthal_angle": ConstDataset(
+        -13.0, dtype="float32", units=NXAttribute("degree", "string")
+    ),
+    "summed_counts": SumImage("lower_image", 116, dtype="int32"),
 }
 
 
@@ -235,22 +263,25 @@ lower_data = {
 }
 
 mergedbank = {
-    "counts": NamedImageDataset('merged_image',
-                                signal=NXAttribute(1, 'int32')),
-    "theta": ConfArray("merged_theta",
-                       units=NXAttribute("degree", "string"),
-                       axis=NXAttribute(1, "int32")),
+    "counts": NamedImageDataset("merged_image", signal=NXAttribute(1, "int32")),
+    "theta": ConfArray(
+        "merged_theta",
+        units=NXAttribute("degree", "string"),
+        axis=NXAttribute(1, "int32"),
+    ),
     "time_binning": NXLink("/entry1/FOCUS/bank1/time_binning"),
     "delay": NXLink("/entry1/FOCUS/bank1/delay"),
     "data": NXLink("/entry1/FOCUS/merged/counts"),
     "time_of_flight": NXLink("/entry1/FOCUS/bank1/time_binning"),
     "polar_angle": NXLink("/entry1/FOCUS/merged/theta"),
-    "azimuthal_angle": ConstDataset(.0, dtype="float32",
-                                    units=NXAttribute("degree", "string")),
-    "detector_number": FixedArray(0, 1, 375, dtype='int32'),
-    "distance": FixedArray(2000, 0, 375, dtype="float32",
-                           units=NXAttribute("mm", "string")),
-    "summed_counts": SumImage('merged_image', 375, dtype='int32')
+    "azimuthal_angle": ConstDataset(
+        0.0, dtype="float32", units=NXAttribute("degree", "string")
+    ),
+    "detector_number": FixedArray(0, 1, 375, dtype="int32"),
+    "distance": FixedArray(
+        2000, 0, 375, dtype="float32", units=NXAttribute("mm", "string")
+    ),
+    "summed_counts": SumImage("merged_image", 375, dtype="int32"),
 }
 
 merged_data = {
@@ -264,8 +295,7 @@ merged_data = {
 
 f2d_bank = {
     "coord_dummy": FocusCoordinates(),
-    "counts": ScaledImage('f2d_image',
-                          signal=NXAttribute(1, 'int32')),
+    "counts": ScaledImage("f2d_image", signal=NXAttribute(1, "int32")),
     "data": NXLink("/entry1/FOCUS/focus2d/counts"),
     "time_binning": NXLink("/entry1/FOCUS/bank1/time_binning"),
 }
@@ -283,8 +313,8 @@ be_filter = {
 }
 
 sample_slit = {
-     "width": DeviceDataset("slit_width"),
-     "height": DeviceDataset("slit_height"),
+    "width": DeviceDataset("slit_width"),
+    "height": DeviceDataset("slit_height"),
 }
 
 
@@ -321,15 +351,15 @@ class FOCUSTemplateProvider(NexusTemplateProvider):
         if "lowerbank" in session.loaded_setups:
             focus["lowerbank:NXdetector"] = deepcopy(lowerbank)
             entry["lowerbank:NXdata"] = deepcopy(lower_data)
-            focus["tof_monitor"] = SliceTofImage('lower_image',
-                                                 'hm_tof_array',
-                                                 115, 116,
-                                                 signal=NXAttribute(1,
-                                                                    'int32'),
-                                                 units=NXAttribute("counts",
-                                                                   "string"))
-            entry["monitor:NXmonitor"]["data"] = \
-                NXLink("/entry1/FOCUS/tof_monitor")
+            focus["tof_monitor"] = SliceTofImage(
+                "lower_image",
+                "hm_tof_array",
+                115,
+                116,
+                signal=NXAttribute(1, "int32"),
+                units=NXAttribute("counts", "string"),
+            )
+            entry["monitor:NXmonitor"]["data"] = NXLink("/entry1/FOCUS/tof_monitor")
             bankcount += 1
         if bankcount == 3:  # Enough banks: store merged data
             focus["merged:NXdetector"] = deepcopy(mergedbank)

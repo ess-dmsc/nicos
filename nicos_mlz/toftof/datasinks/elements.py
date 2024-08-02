@@ -35,32 +35,29 @@ from nicos_mlz.toftof.lib import calculations as calc
 
 
 class ExperimentTitle(NexusElementBase):
-
     def create(self, name, h5parent, sinkhandler):
         metainfo = sinkhandler.dataset.metainfo
-        usercomment = metainfo.get(('det', 'usercomment'),
-                                   metainfo.get(('det', 'info'),
-                                                ('', '', '', '')))[0]
-        dtype = 'S%d' % (len(usercomment.encode('utf-8')) + 1)
+        usercomment = metainfo.get(
+            ("det", "usercomment"), metainfo.get(("det", "info"), ("", "", "", ""))
+        )[0]
+        dtype = "S%d" % (len(usercomment.encode("utf-8")) + 1)
         dset = h5parent.create_dataset(name, (1,), dtype)
-        dset[0] = np.array(usercomment.encode('utf-8'), dtype=dtype)
+        dset[0] = np.array(usercomment.encode("utf-8"), dtype=dtype)
 
 
 class EntryIdentifier(NexusElementBase):
-
     def create(self, name, h5parent, sinkhandler):
-        counter = '%d' % sinkhandler.dataset.counter
-        dtype = 'S%d' % (len(counter) + 1)
+        counter = "%d" % sinkhandler.dataset.counter
+        dtype = "S%d" % (len(counter) + 1)
         dset = h5parent.create_dataset(name, (1,), dtype)
         dset[0] = np.string_(counter)
 
 
 class Status(NexusElementBase):
-
     def create(self, name, h5parent, sinkhandler):
-        dtype = 'S%d' % (20 + 1)
+        dtype = "S%d" % (20 + 1)
         dset = h5parent.create_dataset(name, (1,), dtype=dtype)
-        dset[0] = np.string_('0.0 %% completed')
+        dset[0] = np.string_("0.0 %% completed")
 
     def results(self, name, h5parent, sinkhandler, results):
         if sinkhandler.detector is None:
@@ -72,29 +69,29 @@ class Status(NexusElementBase):
             info = results[sinkhandler.detector.name][0]
 
         metainfo = sinkhandler.dataset.metainfo
-        preset = metainfo['det', 'preset'][0]
-        if metainfo.get(('det', 'mode'),
-                        ('time', 'time', '', ''))[1] != 'time':
+        preset = metainfo["det", "preset"][0]
+        if metainfo.get(("det", "mode"), ("time", "time", "", ""))[1] != "time":
             val = int(info[1])
         else:
-            val = min(time.time() - sinkhandler.dataset.started,
-                      float(info[0]))
-        status = 100. * val / preset if val < preset else 100
-        h5parent[name][0] = np.string_('%.1f %% completed' % status)
+            val = min(time.time() - sinkhandler.dataset.started, float(info[0]))
+        status = 100.0 * val / preset if val < preset else 100
+        h5parent[name][0] = np.string_("%.1f %% completed" % status)
 
 
 class ToGo(NexusElementBase):
-
     def create(self, name, h5parent, sinkhandler):
         metainfo = sinkhandler.dataset.metainfo
-        preset = metainfo['det', 'preset'][0]
-        if metainfo.get(('det', 'mode'),
-                        ('time', 'time', '', ''))[1] != 'time':
-            dset = h5parent.create_dataset(name, (1,), dtype='int32')
-            dset.attrs['units'] = np.string_('counts')
+        preset = metainfo["det", "preset"][0]
+        if metainfo.get(("det", "mode"), ("time", "time", "", ""))[1] != "time":
+            dset = h5parent.create_dataset(name, (1,), dtype="int32")
+            dset.attrs["units"] = np.string_("counts")
         else:
-            dset = h5parent.create_dataset(name, (1,), dtype='float32',)
-            dset.attrs['units'] = np.string_('s')
+            dset = h5parent.create_dataset(
+                name,
+                (1,),
+                dtype="float32",
+            )
+            dset.attrs["units"] = np.string_("s")
         dset[0] = preset
 
     def results(self, name, h5parent, sinkhandler, results):
@@ -106,34 +103,29 @@ class ToGo(NexusElementBase):
         else:
             info = results[sinkhandler.detector.name][0]
         metainfo = sinkhandler.dataset.metainfo
-        preset = metainfo['det', 'preset'][0]
-        if metainfo.get(('det', 'mode'),
-                        ('time', 'time', '', ''))[1] != 'time':
+        preset = metainfo["det", "preset"][0]
+        if metainfo.get(("det", "mode"), ("time", "time", "", ""))[1] != "time":
             val = int(info[1])
             togo = int(preset) - val if val < preset else 0
         else:
-            tim = min(time.time() - sinkhandler.dataset.started,
-                      float(info[0]))
+            tim = min(time.time() - sinkhandler.dataset.started, float(info[0]))
             togo = preset - tim if tim < preset else 0
         h5parent[name][0] = togo
 
 
 class Mode(NexusElementBase):
-
     def create(self, name, h5parent, sinkhandler):
         metainfo = sinkhandler.dataset.metainfo
-        if metainfo.get(('det', 'mode'),
-                        ('time', 'time', '', ''))[1] == 'time':
-            mode = 'Total_Time'
+        if metainfo.get(("det", "mode"), ("time", "time", "", ""))[1] == "time":
+            mode = "Total_Time"
         else:
-            mode = 'Monitor_Counts'
-        dtype = 'S%d' % (len(mode) + 1)
+            mode = "Monitor_Counts"
+        dtype = "S%d" % (len(mode) + 1)
         dset = h5parent.create_dataset(name, (1,), dtype)
         dset[0] = np.string_(mode)
 
 
 class Duration(NexusElementBase):
-
     def _calc(self, dataset):
         duration = 0
         if dataset.started:
@@ -145,8 +137,8 @@ class Duration(NexusElementBase):
         return int(round(duration))
 
     def create(self, name, h5parent, sinkhandler):
-        dset = h5parent.create_dataset(name, (1,), dtype='int32')
-        dset.attrs['units'] = np.string_('s')
+        dset = h5parent.create_dataset(name, (1,), dtype="int32")
+        dset.attrs["units"] = np.string_("s")
         dset[0] = self._calc(sinkhandler.dataset)
 
     def update(self, name, h5parent, sinkhandler, values):
@@ -155,88 +147,85 @@ class Duration(NexusElementBase):
 
 
 class GonioDataset(NexusElementBase):
-
     def create(self, name, h5parent, sinkhandler):
         metainfo = sinkhandler.dataset.metainfo
-        phicxcy = '%s %s %s %s %s %s' % (
-            metainfo['gphi', 'value'][1:3] + metainfo['gcx', 'value'][1:3] +
-            metainfo['gcy', 'value'][1:3])
-        dtype = 'S%d' % (len(phicxcy) + 1)
+        phicxcy = "%s %s %s %s %s %s" % (
+            metainfo["gphi", "value"][1:3]
+            + metainfo["gcx", "value"][1:3]
+            + metainfo["gcy", "value"][1:3]
+        )
+        dtype = "S%d" % (len(phicxcy) + 1)
         dset = h5parent.create_dataset(name, (1,), dtype)
         dset[0] = np.string_(phicxcy)
 
 
 class TableDataset(NexusElementBase):
-
     def create(self, name, h5parent, sinkhandler):
         metainfo = sinkhandler.dataset.metainfo
-        xyz = '%s %s %s %s %s %s' % (
-            metainfo['gx', 'value'][1:3] + metainfo['gy', 'value'][1:3] +
-            metainfo['gz', 'value'][1:3])
-        dtype = 'S%d' % (len(xyz) + 1)
+        xyz = "%s %s %s %s %s %s" % (
+            metainfo["gx", "value"][1:3]
+            + metainfo["gy", "value"][1:3]
+            + metainfo["gz", "value"][1:3]
+        )
+        dtype = "S%d" % (len(xyz) + 1)
         dset = h5parent.create_dataset(name, (1,), dtype)
         dset[0] = np.string_(xyz)
 
 
 class HVDataset(NexusElementBase):
-
     def create(self, name, h5parent, sinkhandler):
         metainfo = sinkhandler.dataset.metainfo
-        hv = 'hv0-2: %s V, %s V, %s V' % tuple(
-            metainfo.get(('hv%d' % i, 'value'), (0, 'unknown'))[1]
-            for i in range(3))
-        dtype = 'S%d' % (len(hv) + 1)
+        hv = "hv0-2: %s V, %s V, %s V" % tuple(
+            metainfo.get(("hv%d" % i, "value"), (0, "unknown"))[1] for i in range(3)
+        )
+        dtype = "S%d" % (len(hv) + 1)
         dset = h5parent.create_dataset(name, (1,), dtype)
         dset[0] = np.string_(hv)
 
 
 class LVDataset(NexusElementBase):
-
     def create(self, name, h5parent, sinkhandler):
         metainfo = sinkhandler.dataset.metainfo
-        lv = 'lv0-7: %s' % ', '.join(
-            [metainfo.get(('lv%d' % i, 'value'), (0, 'unknown'))[1]
-             for i in range(8)])
-        dtype = 'S%d' % (len(lv) + 1)
+        lv = "lv0-7: %s" % ", ".join(
+            [metainfo.get(("lv%d" % i, "value"), (0, "unknown"))[1] for i in range(8)]
+        )
+        dtype = "S%d" % (len(lv) + 1)
         dset = h5parent.create_dataset(name, (1,), dtype)
         dset[0] = np.string_(lv)
 
 
 class FileName(NexusElementBase):
-
     def create(self, name, h5parent, sinkhandler):
         filename = sinkhandler._filename
-        dtype = 'S%d' % (len(filename.encode('utf-8')) + 1)
+        dtype = "S%d" % (len(filename.encode("utf-8")) + 1)
         dset = h5parent.create_dataset(name, (1,), dtype)
-        dset[0] = np.array(filename.encode('utf-8'), dtype=dtype)
+        dset[0] = np.array(filename.encode("utf-8"), dtype=dtype)
 
 
 class ElasticPeakGuess(NexusElementBase):
-
     def create(self, name, h5parent, sinkhandler):
         metainfo = sinkhandler.dataset.metainfo
-        chwl = metainfo['chWL', 'value'][0]
-        guess = round(4.e-6 * chwl * calc.alpha /
-                      (calc.ttr * metainfo['det', 'channelwidth'][0]))
-        dset = h5parent.create_dataset(name, (1,), dtype='int32')
+        chwl = metainfo["chWL", "value"][0]
+        guess = round(
+            4.0e-6 * chwl * calc.alpha / (calc.ttr * metainfo["det", "channelwidth"][0])
+        )
+        dset = h5parent.create_dataset(name, (1,), dtype="int32")
         dset[0] = int(guess)
 
 
 class MonitorTof(NexusElementBase):
-
     def create(self, name, h5parent, sinkhandler):
         metainfo = sinkhandler.dataset.metainfo
-        dset = h5parent.create_dataset(name, (3,), dtype='float32')
-        dset[0] = metainfo['det', 'channelwidth'][0]
-        dset[1] = metainfo['det', 'timechannels'][0]
-        dset[2] = metainfo['det', 'delay'][0]
+        dset = h5parent.create_dataset(name, (3,), dtype="float32")
+        dset[0] = metainfo["det", "channelwidth"][0]
+        dset[1] = metainfo["det", "timechannels"][0]
+        dset[2] = metainfo["det", "delay"][0]
 
 
 class MonitorValue(NexusElementBase):
-
     def create(self, name, h5parent, sinkhandler):
-        dset = h5parent.create_dataset(name, (1,), dtype='int32')
-        dset.attrs['units'] = np.string_('counts')
+        dset = h5parent.create_dataset(name, (1,), dtype="int32")
+        dset.attrs["units"] = np.string_("counts")
         dset[0] = 0
 
     def results(self, name, h5parent, sinkhandler, results):
@@ -251,10 +240,9 @@ class MonitorValue(NexusElementBase):
 
 
 class MonitorRate(NexusElementBase):
-
     def create(self, name, h5parent, sinkhandler):
-        dset = h5parent.create_dataset(name, (1,), dtype='float32')
-        dset.attrs['units'] = np.string_('1/s')
+        dset = h5parent.create_dataset(name, (1,), dtype="float32")
+        dset.attrs["units"] = np.string_("1/s")
         dset[0] = 0
 
     def results(self, name, h5parent, sinkhandler, results):
@@ -265,14 +253,13 @@ class MonitorRate(NexusElementBase):
                 info = [0] * 3
         else:
             info = results[sinkhandler.detector.name][0]
-        h5parent[name][0] = info[1] / info[0] if info[0] else 0.
+        h5parent[name][0] = info[1] / info[0] if info[0] else 0.0
 
 
 class SampleCounts(NexusElementBase):
-
     def create(self, name, h5parent, sinkhandler):
-        dset = h5parent.create_dataset(name, (1,), dtype='int32')
-        dset.attrs['units'] = np.string_('counts')
+        dset = h5parent.create_dataset(name, (1,), dtype="int32")
+        dset.attrs["units"] = np.string_("counts")
         dset[0] = 0
 
     def results(self, name, h5parent, sinkhandler, results):
@@ -287,10 +274,9 @@ class SampleCounts(NexusElementBase):
 
 
 class SampleCountRate(NexusElementBase):
-
     def create(self, name, h5parent, sinkhandler):
-        dset = h5parent.create_dataset(name, (1,), dtype='float32')
-        dset.attrs['units'] = np.string_('1/s')
+        dset = h5parent.create_dataset(name, (1,), dtype="float32")
+        dset.attrs["units"] = np.string_("1/s")
         dset[0] = 0
 
     def results(self, name, h5parent, sinkhandler, results):
@@ -301,38 +287,33 @@ class SampleCountRate(NexusElementBase):
                 info = [0] * 3
         else:
             info = results[sinkhandler.detector.name][0]
-        h5parent[name][0] = info[2] / info[0] if info[0] else 0.
+        h5parent[name][0] = info[2] / info[0] if info[0] else 0.0
 
 
 class SampleEnvironment(NexusElementBase):
-
     def __init__(self, device, unit):
         NexusElementBase.__init__(self)
         self.device = device
         self.unit = unit
-        self._names = ['', 'standard_deviation_of_', 'minimum_', 'maximum_']
+        self._names = ["", "standard_deviation_of_", "minimum_", "maximum_"]
 
     def create(self, name, h5parent, sinkhandler):
         for s in self._names:
-            dset = h5parent.create_dataset('%s%s' % (s, name), (1,),
-                                           dtype='float32')
-            dset.attrs['units'] = np.string_(self.unit)
+            dset = h5parent.create_dataset("%s%s" % (s, name), (1,), dtype="float32")
+            dset.attrs["units"] = np.string_(self.unit)
             dset[0] = 0
 
     def results(self, name, h5parent, sinkhandler, results):
-        for s, v in zip(self._names,
-                        sinkhandler.dataset.valuestats[self.device]):
-            h5parent['%s%s' % (s, name)][0] = v
+        for s, v in zip(self._names, sinkhandler.dataset.valuestats[self.device]):
+            h5parent["%s%s" % (s, name)][0] = v
 
 
 class MonitorData(NexusElementBase):
-
     def create(self, name, h5parent, sinkhandler):
         det = sinkhandler.dataset.detectors[0]
-        dset = h5parent.create_dataset(name, (det.timechannels,),
-                                       dtype='int64')
-        dset.attrs['units'] = np.string_('counts')
-        dset.attrs['signal'] = 1
+        dset = h5parent.create_dataset(name, (det.timechannels,), dtype="int64")
+        dset.attrs["units"] = np.string_("counts")
+        dset.attrs["signal"] = 1
 
     def results(self, name, h5parent, sinkhandler, results):
         if sinkhandler.detector is None:
@@ -346,13 +327,12 @@ class MonitorData(NexusElementBase):
         if data is not None:
             dset = h5parent[name]
             for i, v in enumerate(
-                data[:, sinkhandler.dataset.metainfo['det',
-                                                     'monitorchannel'][0]]):
+                data[:, sinkhandler.dataset.metainfo["det", "monitorchannel"][0]]
+            ):
                 dset[i] = v
 
 
 class DetInfo(NexusElementBase):
-
     def __init__(self, column):
         NexusElementBase.__init__(self)
         self.column = column
@@ -363,9 +343,9 @@ class DetInfo(NexusElementBase):
         pattern = re.compile(r"((?:[^'\s+]|'[^']*')+)")
         block = sinkhandler.detector._detinfo[2:]
         nDet = len(block)
-        detNr = np.zeros(nDet, dtype='int32')
-        theta = np.zeros(nDet, dtype='float32')
-        values = np.zeros(nDet, dtype='int32')
+        detNr = np.zeros(nDet, dtype="int32")
+        theta = np.zeros(nDet, dtype="float32")
+        values = np.zeros(nDet, dtype="int32")
         haveBoxInfo = True
         list_of_none_detectors = []
         for i in range(nDet):
@@ -373,7 +353,7 @@ class DetInfo(NexusElementBase):
             entry = pattern.split(line)[1::2]
             _detNr = int(entry[0])
             if not _detNr == i + 1:
-                raise Exception('Unexpected detector number')
+                raise Exception("Unexpected detector number")
             detNr[i] = _detNr
             theta[i] = float(entry[5])
             if self.column == 5:
@@ -387,8 +367,7 @@ class DetInfo(NexusElementBase):
                 values[i] = int(entry[self.column])
                 haveBoxInfo = False
             else:
-                raise Exception('Unexpected number of entries in detector info'
-                                ' line')
+                raise Exception("Unexpected number of entries in detector info" " line")
         inds = theta.argsort()
         theta = theta[inds]
         values = values[inds]
@@ -397,21 +376,22 @@ class DetInfo(NexusElementBase):
             list_of_none_detectors_angles = []
             for none_det in list_of_none_detectors:
                 list_of_none_detectors_angles.append(
-                    int(np.where(detNr == none_det)[0]))
+                    int(np.where(detNr == none_det)[0])
+                )
             list_of_none_detectors_angles.sort()
 
-            masked_detectors = np.zeros(len(list_of_none_detectors),
-                                        dtype='int32')
+            masked_detectors = np.zeros(len(list_of_none_detectors), dtype="int32")
             for i in range(len(list_of_none_detectors)):
                 masked_detectors[i] = list_of_none_detectors_angles[i]
 
         if self.column == 5:  # theta
-            dset = h5parent.create_dataset(name, (nDet,), dtype='float32')
+            dset = h5parent.create_dataset(name, (nDet,), dtype="float32")
         elif self.column == 13:
-            dset = h5parent.create_dataset(name, (len(masked_detectors),),
-                                           dtype='int32')
+            dset = h5parent.create_dataset(
+                name, (len(masked_detectors),), dtype="int32"
+            )
         else:
-            dset = h5parent.create_dataset(name, (nDet,), dtype='int32')
+            dset = h5parent.create_dataset(name, (nDet,), dtype="int32")
 
         if self.column == 13:
             for i, v in enumerate(masked_detectors):
@@ -427,22 +407,23 @@ class DetInfo(NexusElementBase):
 
 
 class TOFTOFImageDataset(ImageDataset):
-
     def create(self, name, h5parent, sinkhandler):
         self.testAppend(sinkhandler)
         if len(sinkhandler.dataset.detectors) <= self.detectorIDX:
-            session.log.warning('Cannot find detector with ID %d',
-                                self.detectorIDX)
+            session.log.warning("Cannot find detector with ID %d", self.detectorIDX)
             self.valid = False
             return
         det = sinkhandler.dataset.detectors[self.detectorIDX]
         arrinfo = det.arrayInfo()
         myDesc = arrinfo[self.imageIDX]
         rawshape = det.numinputs, 1, det.timechannels
-        dset = h5parent.create_dataset(name, rawshape,
-                                       chunks=tuple(rawshape),
-                                       dtype=myDesc.dtype,
-                                       compression='gzip')
+        dset = h5parent.create_dataset(
+            name,
+            rawshape,
+            chunks=tuple(rawshape),
+            dtype=myDesc.dtype,
+            compression="gzip",
+        )
         self.createAttributes(dset, sinkhandler)
 
     def update(self, name, h5parent, sinkhandler, values):
@@ -465,8 +446,7 @@ class TOFTOFImageDataset(ImageDataset):
             else:
                 tchannels = det.timechannels
                 reddata = np.transpose(array[0:tchannels, det._detectormap])
-                h5parent[name][...] = reddata.reshape(det.numinputs, 1,
-                                                      tchannels)
+                h5parent[name][...] = reddata.reshape(det.numinputs, 1, tchannels)
 
     def resize_dataset(self, dset, sinkhandler):
         det = sinkhandler.dataset.detectors[self.detectorIDX]
@@ -476,15 +456,13 @@ class TOFTOFImageDataset(ImageDataset):
         idx = self.np + 1
         shape = list(rawshape)
         shape.insert(0, idx)
-        session.log.info('New shape: %r', shape)
+        session.log.info("New shape: %r", shape)
         dset.resize(shape)
 
 
 class ChannelList(NexusElementBase):
-
     def create(self, name, h5parent, sinkhandler):
         det = sinkhandler.dataset.detectors[0]
-        dset = h5parent.create_dataset(name, (det.timechannels,),
-                                       dtype='float32')
+        dset = h5parent.create_dataset(name, (det.timechannels,), dtype="float32")
         for i in range(det.timechannels):
             dset[i] = float(i + 1)

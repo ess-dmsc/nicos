@@ -1,5 +1,5 @@
-description = 'setup for the NICOS watchdog'
-group = 'special'
+description = "setup for the NICOS watchdog"
+group = "special"
 
 # watch_conditions:
 # The entries in this list are dictionaries. Possible keys:
@@ -23,35 +23,37 @@ group = 'special'
 #     (default '')
 # 'action' -- code to execute if condition is true (default no code is executed)
 watch_conditions = [
-    dict(condition = 'LogSpace_status[0] == WARN',
-         message = 'Disk space for log files becomes too low.',
-         type = 'critical',
-         gracetime = 30,
+    dict(
+        condition="LogSpace_status[0] == WARN",
+        message="Disk space for log files becomes too low.",
+        type="critical",
+        gracetime=30,
     ),
     dict(
-        condition = 'o2_nguide_status[0] == WARN',
-        message = 'O2 percentage in neutron guide exceeds warn limit!',
-        type = 'neutronguide',
-        gracetime = 600,
+        condition="o2_nguide_status[0] == WARN",
+        message="O2 percentage in neutron guide exceeds warn limit!",
+        type="neutronguide",
+        gracetime=600,
     ),
 ]
 
-includes = ['notifiers']
+includes = ["notifiers"]
 
 notifiers = {
-    'default': ['email'],
-    'critical': ['email', 'smser'],
-    'neutronguide': ['ngmail'],
+    "default": ["email"],
+    "critical": ["email", "smser"],
+    "neutronguide": ["ngmail"],
 }
 
 devices = dict(
-    Watchdog = device('nicos.services.watchdog.Watchdog',
+    Watchdog=device(
+        "nicos.services.watchdog.Watchdog",
         # use only 'localhost' if the cache is really running on
         # the same machine, otherwise use the official computer
         # name
-        cache = 'spodictrl.spodi.frm2.tum.de',
-        notifiers = notifiers,
-        mailreceiverkey = 'email/receivers',
-        watch = watch_conditions,
+        cache="spodictrl.spodi.frm2.tum.de",
+        notifiers=notifiers,
+        mailreceiverkey="email/receivers",
+        watch=watch_conditions,
     ),
 )

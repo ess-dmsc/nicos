@@ -29,9 +29,9 @@ def test_shell(console):
     stdout, _ = console.communicate()
     stdout = stdout.decode().splitlines()
 
-    assert 'nicos: setups loaded: startup' in stdout
-    assert 'nicos: setups loaded: axis' in stdout
-    assert any(line.endswith('nicos: >>> 1/0') for line in stdout)
-    assert 'nicos: ZeroDivisionError - division by zero' in stdout
-    assert any(line.endswith('nicos: >>> read()') for line in stdout)
-    assert 'nicos: shutting down...' in stdout
+    assert "nicos: setups loaded: startup" in stdout
+    assert "nicos: setups loaded: axis" in stdout
+    assert any(line.endswith("nicos: >>> 1/0") for line in stdout)
+    assert "nicos: ZeroDivisionError - division by zero" in stdout
+    assert any(line.endswith("nicos: >>> read()") for line in stdout)
+    assert "nicos: shutting down..." in stdout

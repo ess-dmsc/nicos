@@ -33,12 +33,12 @@ class DiObHandler(DataSinkHandler):
         except IndexError:
             return
 
-        if exp.curimgtype == 'openbeam':
-            self.log.info('last open beam image is %r', last_img)
-            exp._setROParam('lastopenbeamimage', last_img)
-        elif exp.curimgtype == 'dark':
-            self.log.info('last dark image is %r', last_img)
-            exp._setROParam('lastdarkimage', last_img)
+        if exp.curimgtype == "openbeam":
+            self.log.info("last open beam image is %r", last_img)
+            exp._setROParam("lastopenbeamimage", last_img)
+        elif exp.curimgtype == "dark":
+            self.log.info("last dark image is %r", last_img)
+            exp._setROParam("lastdarkimage", last_img)
 
 
 class DiObSink(DataSink):

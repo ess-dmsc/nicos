@@ -1,10 +1,10 @@
-description = 'CCR with LakeShore LS336 controller'
+description = "CCR with LakeShore LS336 controller"
 
-group = 'optional'
+group = "optional"
 
-includes = ['alias_T']
+includes = ["alias_T"]
 
-tango_base = 'tango://kompasshw.kompass.frm2.tum.de:10000/kompass/ls336'
+tango_base = "tango://kompasshw.kompass.frm2.tum.de:10000/kompass/ls336"
 
 devices = dict(
     # T_ccr = device('nicos_mlz.frm2.devices.ccr.CCRControl',
@@ -14,19 +14,21 @@ devices = dict(
     #     unit = 'K',
     #     fmtstr = '%.3f',
     # ),
-    T_ccr_stick = device('nicos.devices.entangle.TemperatureController',
-        description = 'The control device of the sample (stick)',
-        tangodevice = '%s/control' % tango_base,
-        abslimits = (0, 600),
-        unit = 'K',
-        fmtstr = '%.3f',
+    T_ccr_stick=device(
+        "nicos.devices.entangle.TemperatureController",
+        description="The control device of the sample (stick)",
+        tangodevice="%s/control" % tango_base,
+        abslimits=(0, 600),
+        unit="K",
+        fmtstr="%.3f",
     ),
-    T_ccr_stick_range = device('nicos.devices.entangle.NamedDigitalOutput',
-        description = 'Heater range for the stick',
-        tangodevice = '%s/range1' % tango_base,
-        warnlimits = ('high', 'medium'),
-        mapping = {'off': 0, 'low': 1, 'medium': 2, 'high': 3},
-        unit = '',
+    T_ccr_stick_range=device(
+        "nicos.devices.entangle.NamedDigitalOutput",
+        description="Heater range for the stick",
+        tangodevice="%s/range1" % tango_base,
+        warnlimits=("high", "medium"),
+        mapping={"off": 0, "low": 1, "medium": 2, "high": 3},
+        unit="",
     ),
     # T_ccr_tube = device('nicos.devices.entangle.TemperatureController',
     #     description = 'The control device of the tube',
@@ -43,11 +45,12 @@ devices = dict(
     #     mapping = {'off': 0, 'low': 1, 'medium': 2, 'high': 3},
     #     unit = '',
     # ),
-    T_ccr_ssample = device('nicos.devices.entangle.Sensor',
-        description = '(optional) Sample temperature',
-        tangodevice = '%s/sensb' % tango_base,
-        unit = 'K',
-        fmtstr = '%.3f',
+    T_ccr_ssample=device(
+        "nicos.devices.entangle.Sensor",
+        description="(optional) Sample temperature",
+        tangodevice="%s/sensb" % tango_base,
+        unit="K",
+        fmtstr="%.3f",
     ),
     # T_ccr_sstick = device('nicos.devices.entangle.Sensor',
     #     description = '(regulation) Temperature at the stick',
@@ -55,12 +58,13 @@ devices = dict(
     #     unit = 'K',
     #     fmtstr = '%.3f',
     # ),
-    T_ccr_scoldhead = device('nicos.devices.entangle.Sensor',
-        description = 'Temperature of the coldhead',
-        tangodevice = '%s/sensa' % tango_base,
-        warnlimits = (0, 300),
-        unit = 'K',
-        fmtstr = '%.3f',
+    T_ccr_scoldhead=device(
+        "nicos.devices.entangle.Sensor",
+        description="Temperature of the coldhead",
+        tangodevice="%s/sensa" % tango_base,
+        warnlimits=(0, 300),
+        unit="K",
+        fmtstr="%.3f",
     ),
     # T_ccr_stube = device('nicos.devices.entangle.Sensor',
     #     description = '(regulation) Temperature at thermal coupling to the tube',
@@ -72,16 +76,16 @@ devices = dict(
 )
 
 alias_config = {
-    'T': {
+    "T": {
         # 'T_ccr': 200,
-        'T_ccr_stick': 150,
+        "T_ccr_stick": 150,
         # 'T_ccr_tube': 100
     },
-    'Ts': {
+    "Ts": {
         # 'T_ccr_sstick': 100,
-        'T_ccr_ssample': 90,
+        "T_ccr_ssample": 90,
         # 'T_ccr_stube': 20,
-        'T_ccr_scoldhead': 10
+        "T_ccr_scoldhead": 10,
     },
 }
 

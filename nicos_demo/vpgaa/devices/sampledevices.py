@@ -36,22 +36,21 @@ class PushReader(Readable):
     hardware_access = False
 
     attached_devices = {
-        'moveable': Attach('Active device', Readable),
+        "moveable": Attach("Active device", Readable),
     }
 
     parameters = {
-        'inverse': Param('Invert read value',
-                         type=bool, default=False),
+        "inverse": Param("Invert read value", type=bool, default=False),
     }
 
     parameter_overrides = {
-        'unit': Override(default='', mandatory=False),
-        'fmtstr': Override(default='%d'),
+        "unit": Override(default="", mandatory=False),
+        "fmtstr": Override(default="%d"),
     }
 
     mapping = {
-        'up': 0,
-        'down': 1,
+        "up": 0,
+        "down": 1,
     }
 
     fallback = -1

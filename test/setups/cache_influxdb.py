@@ -24,19 +24,21 @@
 import os
 from test.utils import alt_cache_addr
 
-name = 'setup for cache stresstest with memory db'
+name = "setup for cache stresstest with memory db"
 
 devices = dict(
-    Server = device('nicos.services.cache.server.CacheServer',
-        server = alt_cache_addr,
-        db = 'DB2',
-        loglevel = 'debug',
+    Server=device(
+        "nicos.services.cache.server.CacheServer",
+        server=alt_cache_addr,
+        db="DB2",
+        loglevel="debug",
     ),
-    DB2 = device('nicos.services.cache.database.influxdb.InfluxDBCacheDatabase',
-        url = os.environ.get('INFLUXDB_URI', 'http://localhost:8086'),
-        keystoretoken = 'influxdb',
-        org = 'mlz',
-        bucket = 'nicos-test',
-        loglevel = 'info',
+    DB2=device(
+        "nicos.services.cache.database.influxdb.InfluxDBCacheDatabase",
+        url=os.environ.get("INFLUXDB_URI", "http://localhost:8086"),
+        keystoretoken="influxdb",
+        org="mlz",
+        bucket="nicos-test",
+        loglevel="info",
     ),
 )

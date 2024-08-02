@@ -1,7 +1,7 @@
-description = 'sry environment alias for tomo rotation device'
+description = "sry environment alias for tomo rotation device"
 
-group = 'lowlevel'
+group = "lowlevel"
 
 devices = dict(
-    sry = device('nicos.devices.generic.DeviceAlias'),
+    sry=device("nicos.devices.generic.DeviceAlias"),
 )

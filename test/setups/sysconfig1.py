@@ -21,9 +21,9 @@
 #
 # *****************************************************************************
 
-name = 'sysconfig entry merge test 1'
+name = "sysconfig entry merge test 1"
 
 sysconfig = dict(
-    datasinks = ['sink1', 'sink2'],
-    notifiers = [],
+    datasinks=["sink1", "sink2"],
+    notifiers=[],
 )

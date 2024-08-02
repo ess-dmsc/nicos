@@ -25,8 +25,10 @@
 # *****************************************************************************
 
 from nicos.core import USER, Param, User, listof
-from nicos.services.daemon.auth import AuthenticationError, \
-    Authenticator as BaseAuthenticator
+from nicos.services.daemon.auth import (
+    AuthenticationError,
+    Authenticator as BaseAuthenticator,
+)
 from nicos.services.daemon.auth.params import UserLevelAuthEntry
 from nicos.utils.credentials.keystore import nicoskeystore
 
@@ -54,30 +56,34 @@ class Authenticator(BaseAuthenticator):
     """
 
     parameters = {
-        'access': Param('List of (username, userlevel) tuples',
-                        type=listof(UserLevelAuthEntry)),
-        'userdomain': Param('Keystore domain for user/pw authentication',
-                            type=str, mandatory=False, settable=False,
-                            default='nicos_user'),
+        "access": Param(
+            "List of (username, userlevel) tuples", type=listof(UserLevelAuthEntry)
+        ),
+        "userdomain": Param(
+            "Keystore domain for user/pw authentication",
+            type=str,
+            mandatory=False,
+            settable=False,
+            default="nicos_user",
+        ),
     }
 
     def authenticate(self, username, password):
         username = username.strip()
         if not username:
-            raise AuthenticationError('No username, please identify yourself!')
+            raise AuthenticationError("No username, please identify yourself!")
         # check for exact match (also matches empty password if username
         # matches)
-        password_ks = nicoskeystore.getCredential(username,
-                                                  domain=self.userdomain)
+        password_ks = nicoskeystore.getCredential(username, domain=self.userdomain)
         if password_ks is None:
-            raise AuthenticationError('Invalid username or password!')
-        for (user, level) in self.access:
+            raise AuthenticationError("Invalid username or password!")
+        for user, level in self.access:
             if user == username:
                 if password_ks == password:
-                    if password == '' and level > USER:  # pylint: disable=compare-to-empty-string
+                    if password == "" and level > USER:  # pylint: disable=compare-to-empty-string
                         level = USER  # limit passwordless entries to USER
                     return User(username, level)
                 else:
-                    raise AuthenticationError('Invalid username or password!')
+                    raise AuthenticationError("Invalid username or password!")
         # do not give a hint whether username or password is wrong...
-        raise AuthenticationError('Invalid username or password!')
+        raise AuthenticationError("Invalid username or password!")

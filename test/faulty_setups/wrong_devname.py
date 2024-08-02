@@ -21,5 +21,5 @@
 #
 # *****************************************************************************
 devices = {
-    'my-dev': device('nicos.core.Device'),
+    "my-dev": device("nicos.core.Device"),
 }

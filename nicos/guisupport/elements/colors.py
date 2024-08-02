@@ -25,12 +25,12 @@ from nicos.core import status
 from nicos.guisupport.qt import QColor, Qt
 
 statuscolor = {
-    status.BUSY: QColor('yellow'),
-    status.ERROR: QColor('#FF3333'),
-    status.WARN: QColor('#FF9900'),
-    status.NOTREACHED: QColor('#FF3333'),
-    status.DISABLED: QColor('white'),
+    status.BUSY: QColor("yellow"),
+    status.ERROR: QColor("#FF3333"),
+    status.WARN: QColor("#FF9900"),
+    status.NOTREACHED: QColor("#FF3333"),
+    status.DISABLED: QColor("white"),
     status.OK: Qt.GlobalColor.transparent,  # make it completely transparent
 }
 
-__all__ = ['statuscolor']
+__all__ = ["statuscolor"]

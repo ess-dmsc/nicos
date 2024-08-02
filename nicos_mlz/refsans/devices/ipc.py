@@ -34,30 +34,36 @@ class NOKMotorIPC(CanReference, IPCMotor):
     """Basically a IPCMotor with referencing."""
 
     parameters = {
-        'refpos': Param('Reference position in phys. units',
-                        unit='main', type=none_or(float), mandatory=True),
+        "refpos": Param(
+            "Reference position in phys. units",
+            unit="main",
+            type=none_or(float),
+            mandatory=True,
+        ),
     }
 
     parameter_overrides = {
-        'zerosteps': Override(default=500000, mandatory=False),
-        'unit': Override(default='mm', mandatory=False),
-        'backlash': Override(type=floatrange(0.0, 0.0)),  # only 0 is allowed!
-        'speed': Override(default=10),
-        'accel': Override(default=10),
-        'slope': Override(default=2000),
-        'confbyte': Override(default=48),
-        'divider': Override(type=intrange(-1, 7)),
+        "zerosteps": Override(default=500000, mandatory=False),
+        "unit": Override(default="mm", mandatory=False),
+        "backlash": Override(type=floatrange(0.0, 0.0)),  # only 0 is allowed!
+        "speed": Override(default=10),
+        "accel": Override(default=10),
+        "slope": Override(default=2000),
+        "confbyte": Override(default=48),
+        "divider": Override(type=intrange(-1, 7)),
     }
 
     def doInit(self, mode):
         if mode != SIMULATION:
             self._attached_bus.ping(self.addr)
-            if self._hwtype == 'single':
+            if self._hwtype == "single":
                 if self.confbyte != self.doReadConfbyte():
                     self.doWriteConfbyte(self.confbyte)
-                    self.log.warning('Confbyte mismatch between setup and card'
-                                     ', overriding card value to 0x%02x',
-                                     self.confbyte)
+                    self.log.warning(
+                        "Confbyte mismatch between setup and card"
+                        ", overriding card value to 0x%02x",
+                        self.confbyte,
+                    )
             # make sure that the card has the right "last steps"
             # This should not applied at REFSANS, since it disturbs the running
             # TACO server settings
@@ -65,9 +71,9 @@ class NOKMotorIPC(CanReference, IPCMotor):
             #     self.doWriteSteps(self.steps)
             #     self.log.warning('Resetting stepper position to last known '
             #                      'good value %d', self.steps)
-            self._type = 'stepper motor, ' + self._hwtype
+            self._type = "stepper motor, " + self._hwtype
         else:
-            self._type = 'simulated stepper'
+            self._type = "simulated stepper"
 
     def doReference(self):
         bus = self._attached_bus

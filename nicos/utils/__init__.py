@@ -44,10 +44,8 @@ from functools import wraps
 from io import BufferedWriter, FileIO
 from itertools import chain, islice
 from os import path
-from stat import S_IRGRP, S_IROTH, S_IRUSR, S_IRWXU, S_IWUSR, S_IXGRP, \
-    S_IXOTH, S_IXUSR
-from time import localtime, mktime, sleep, strftime, strptime, \
-    time as currenttime
+from stat import S_IRGRP, S_IROTH, S_IRUSR, S_IRWXU, S_IWUSR, S_IXGRP, S_IXOTH, S_IXUSR
+from time import localtime, mktime, sleep, strftime, strptime, time as currenttime
 
 import numpy
 
@@ -64,7 +62,7 @@ except ImportError:
 try:
     LOCALE_ENCODING = locale.getpreferredencoding(False)
 except Exception:
-    LOCALE_ENCODING = 'utf-8'
+    LOCALE_ENCODING = "utf-8"
 
 
 # all builtin number types (useful for isinstance checks)
@@ -73,6 +71,7 @@ number_types = (int, float)
 
 class AttrDict(dict):
     """Dictionary whose items can be set with attribute access."""
+
     def __getattr__(self, key):
         try:
             return self[key]
@@ -91,6 +90,7 @@ class AttrDict(dict):
 
 class LCDict(dict):
     """Dictionary with automatic lower-casing of keys."""
+
     def __getitem__(self, key):
         return dict.__getitem__(self, key.lower())
 
@@ -103,6 +103,7 @@ class LCDict(dict):
 
 class lazy_property:
     """A property that calculates its value only once."""
+
     def __init__(self, func):
         self._func = func
         self.__name__ = func.__name__
@@ -117,9 +118,11 @@ class lazy_property:
 
 class readonlylist(list):
     def _no(self, *args, **kwds):
-        raise TypeError('individual list values can not be changed')
-    __delitem__ = __setitem__ = append = extend = insert = pop = remove = \
-        reverse = sort = _no
+        raise TypeError("individual list values can not be changed")
+
+    __delitem__ = __setitem__ = append = extend = insert = pop = remove = reverse = (
+        sort
+    ) = _no
     # NOTE: __iadd__ and __imul__ are good because their invocation is always
     # connected to a re-assignment
 
@@ -135,9 +138,9 @@ class readonlylist(list):
 
 class readonlydict(dict):
     def _no(self, *args, **kwds):
-        raise TypeError('individual dict values can not be changed')
-    __setitem__ = __delitem__ = clear = pop = popitem = setdefault = \
-        update = _no
+        raise TypeError("individual dict values can not be changed")
+
+    __setitem__ = __delitem__ = clear = pop = popitem = setdefault = update = _no
 
     def __getnewargs__(self):
         return (dict(self.items()),)
@@ -173,6 +176,7 @@ class AutoDefaultODict(OrderedDict):
 
     Useful for creating hierarchical dicts.
     """
+
     def __missing__(self, key):
         val = self[key] = self.__class__()
         return val
@@ -211,8 +215,10 @@ class HardwareStub:
 
     def __getattr__(self, name):
         from nicos.core import ProgrammingError
-        raise ProgrammingError(self.dev, 'accessing hardware method %s in '
-                               'simulation mode' % name)
+
+        raise ProgrammingError(
+            self.dev, "accessing hardware method %s in " "simulation mode" % name
+        )
 
 
 class Device(tuple):
@@ -225,44 +231,44 @@ class Device(tuple):
 
 
 def _s(n):
-    return int(n), (int(n) != 1 and 's' or '')
+    return int(n), (int(n) != 1 and "s" or "")
 
 
 def formatDuration(secs, precise=True):
     if secs < 1:
-        est = '< 1 second'
+        est = "< 1 second"
     elif 1 <= secs < 60:
-        est = '%s second%s' % _s(secs + 0.5)
+        est = "%s second%s" % _s(secs + 0.5)
     elif secs < 3600:
         if precise:
-            est = '%s min, %s sec' % (int(secs / 60.), int(secs % 60))
+            est = "%s min, %s sec" % (int(secs / 60.0), int(secs % 60))
         else:
-            est = '%s min' % int(secs / 60. + 0.5)
+            est = "%s min" % int(secs / 60.0 + 0.5)
     elif secs < 86400:
-        hrs = int(secs / 3600.)
-        mins = int((secs % 3600) / 60. + 0.5)
+        hrs = int(secs / 3600.0)
+        mins = int((secs % 3600) / 60.0 + 0.5)
         if mins == 60:
             hrs += 1
             mins = 0
-        est = '%s h, %s min' % (hrs, mins)
+        est = "%s h, %s min" % (hrs, mins)
     else:
-        days = int(secs / 86400.)
-        hrs = int((secs % 86400) / 3600. + 0.5)
+        days = int(secs / 86400.0)
+        hrs = int((secs % 86400) / 3600.0 + 0.5)
         if hrs == 24:
             days += 1
             hrs = 0
-        est = '%s day%s, %s h' % (_s(days) + (hrs,))
+        est = "%s day%s, %s h" % (_s(days) + (hrs,))
     return est
 
 
 def formatEndtime(secs):
     if secs > 60 * 60 * 24 * 7:
-        return strftime('%A, %d %b %H:%M', localtime(currenttime() + secs))
+        return strftime("%A, %d %b %H:%M", localtime(currenttime() + secs))
     else:
-        return strftime('%A, %H:%M', localtime(currenttime() + secs))
+        return strftime("%A, %H:%M", localtime(currenttime() + secs))
 
 
-def formatDocstring(s, indentation=''):
+def formatDocstring(s, indentation=""):
     """Format a docstring into lines for display on the console."""
     lines = s.expandtabs().splitlines()
     # Find minimum indentation of any non-blank lines after first line.
@@ -297,11 +303,11 @@ def printTable(headers, items, printfunc, minlen=0, rjust=False):
     for row in [headers or []] + items:
         for i, item in enumerate(row):
             rowlens[i] = max(rowlens[i], len(item))
-    rfmtstr = ('%%%ds  ' * ncolumns) % tuple(rowlens)
-    lfmtstr = ('%%-%ds  ' * ncolumns) % tuple(rowlens)
+    rfmtstr = ("%%%ds  " * ncolumns) % tuple(rowlens)
+    lfmtstr = ("%%-%ds  " * ncolumns) % tuple(rowlens)
     if headers:
         printfunc(lfmtstr % tuple(headers))
-        printfunc(lfmtstr % tuple('=' * l for l in rowlens))
+        printfunc(lfmtstr % tuple("=" * l for l in rowlens))
     for row in items:
         printfunc((rfmtstr if rjust else lfmtstr) % tuple(row))
 
@@ -317,13 +323,14 @@ def getVersions(obj):
         try:
             if cls.__module__ not in modules:
                 ver = sys.modules[cls.__module__].__version__
-                ver = ver.strip('$ ').replace('Revision: ', 'Rev. ')
+                ver = ver.strip("$ ").replace("Revision: ", "Rev. ")
                 versions.append((cls.__module__, ver))
             modules.add(cls.__module__)
         except Exception:
             pass
         for base in cls.__bases__:
             _add(base)
+
     _add(obj.__class__)
     return versions
 
@@ -344,8 +351,8 @@ def getSysInfo(service):
         custom_path=config.setup_package_path,
         custom_version=get_custom_version(),
     )
-    nicosroot_key = config.nicos_root.replace('/', '_')
-    key = 'sysinfo/%s/%s/%s' % (service, host, nicosroot_key)
+    nicosroot_key = config.nicos_root.replace("/", "_")
+    key = "sysinfo/%s/%s/%s" % (service, host, nicosroot_key)
     return key, res
 
 
@@ -359,20 +366,20 @@ def parseHostPort(host, defaultport, missingportok=False):
     """
     if isinstance(host, (tuple, list)):
         host, port = host
-    elif ':' in host:
-        host, port = host.rsplit(':', 1)
+    elif ":" in host:
+        host, port = host.rsplit(":", 1)
     else:
         port = defaultport
     if not missingportok and port is None:
-        raise ValueError('a valid port is required')
+        raise ValueError("a valid port is required")
     if port is not None:
         try:
             port = int(port)
         except ValueError:
-            raise ValueError('invalid port number: ' + port) from None
+            raise ValueError("invalid port number: " + port) from None
         if not 0 < port < 65536:
-            raise ValueError('port number out of range')
-    if ':' in host:
+            raise ValueError("port number out of range")
+    if ":" in host:
         raise ValueError('host name must not contain ":"')
     return host, port
 
@@ -395,18 +402,18 @@ def tcpSocket(host, defaultport, timeout=None, keepalive=None):
     try:
         if timeout:
             s.settimeout(timeout)
-    # connect
+        # connect
         s.connect((host, int(port)))
     except OSError:
         closeSocket(s)
         raise
     if keepalive:
         s.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
-        if hasattr(socket, 'TCP_KEEPCNT'):
+        if hasattr(socket, "TCP_KEEPCNT"):
             s.setsockopt(socket.SOL_TCP, socket.TCP_KEEPCNT, 3)
-        if hasattr(socket, 'TCP_KEEPINTVL'):
+        if hasattr(socket, "TCP_KEEPINTVL"):
             s.setsockopt(socket.SOL_TCP, socket.TCP_KEEPINTVL, keepalive)
-        if hasattr(socket, 'TCP_KEEPIDLE'):
+        if hasattr(socket, "TCP_KEEPIDLE"):
             s.setsockopt(socket.SOL_TCP, socket.TCP_KEEPIDLE, keepalive)
     return s
 
@@ -445,7 +452,7 @@ def tcpSocketContext(host, defaultport, timeout=None):
 def getfqdn():
     """Get fully qualified hostname."""
     hostname = socket.gethostname()
-    if '.' in hostname:
+    if "." in hostname:
         return hostname
     return socket.getfqdn(hostname)
 
@@ -464,7 +471,7 @@ def bitDescription(bits, *descriptions):
         else:
             if no:
                 ret.append(no)
-    return ', '.join(ret)
+    return ", ".join(ret)
 
 
 def createThread(name, target, args=(), kwargs=None, daemon=True, start=True):
@@ -478,17 +485,17 @@ def createThread(name, target, args=(), kwargs=None, daemon=True, start=True):
 
 def createSubprocess(cmdline, **kwds):
     """Create a subprocess.Popen with the proper setting of close_fds."""
-    if 'close_fds' not in kwds:
+    if "close_fds" not in kwds:
         # only supported on Posix and (Windows if not redirected)
-        if os.name == 'posix' or not (kwds.get('stdin') or
-                                      kwds.get('stdout') or
-                                      kwds.get('stderr')):
-            kwds['close_fds'] = True
+        if os.name == "posix" or not (
+            kwds.get("stdin") or kwds.get("stdout") or kwds.get("stderr")
+        ):
+            kwds["close_fds"] = True
     return subprocess.Popen(cmdline, **kwds)  # pylint: disable=consider-using-with
 
 
 try:
-    MAXFD = os.sysconf('SC_OPEN_MAX')
+    MAXFD = os.sysconf("SC_OPEN_MAX")
 except Exception:
     MAXFD = 256
 
@@ -502,14 +509,18 @@ def reexecProcess():
 def parseDateString(s, enddate=False):
     """Parse a date/time string that can be formatted in different ways."""
     # first, formats with explicit date and time
-    for fmt in ('%Y-%m-%d %H:%M:%S', '%y-%m-%d %H:%M:%S',
-                '%Y-%m-%d %H:%M', '%y-%m-%d %H:%M'):
+    for fmt in (
+        "%Y-%m-%d %H:%M:%S",
+        "%y-%m-%d %H:%M:%S",
+        "%Y-%m-%d %H:%M",
+        "%y-%m-%d %H:%M",
+    ):
         try:
             return mktime(strptime(s, fmt))
         except ValueError:
             pass
     # formats with only date
-    for fmt in ('%Y-%m-%d', '%y-%m-%d'):
+    for fmt in ("%Y-%m-%d", "%y-%m-%d"):
         try:
             ts = mktime(strptime(s, fmt))
         except ValueError:
@@ -519,7 +530,7 @@ def parseDateString(s, enddate=False):
             # to end at the next midnight
             return enddate and ts + 86400 or ts
     # formats with only time
-    for fmt in ('%H:%M:%S', '%H:%M'):
+    for fmt in ("%H:%M:%S", "%H:%M"):
         try:
             parsed = strptime(s, fmt)
         except ValueError:
@@ -528,20 +539,20 @@ def parseDateString(s, enddate=False):
             ltime = localtime()
             return mktime(ltime[:3] + parsed[3:6] + ltime[6:])
     # formats like "1 day" etc.
-    rex = re.compile(r'^\s*(\d+(?:.\d+)?)\s*(\w+)\s*$')
+    rex = re.compile(r"^\s*(\d+(?:.\d+)?)\s*(\w+)\s*$")
     units = [
-        (1, 'seconds', 'second', 'sec', 's'),
-        (60, 'minutes', 'minute', 'min', 'm'),
-        (3600, 'hours', 'hour', 'h'),
-        (3600 * 24, 'days', 'day', 'd'),
-        (3600 * 24 * 7, 'weeks', 'week', 'w'),
+        (1, "seconds", "second", "sec", "s"),
+        (60, "minutes", "minute", "min", "m"),
+        (3600, "hours", "hour", "h"),
+        (3600 * 24, "days", "day", "d"),
+        (3600 * 24 * 7, "weeks", "week", "w"),
     ]
     m = rex.match(s)
     if m is not None:
         for u in units:
             if m.group(2) in u[1:]:
                 return currenttime() - float(m.group(1)) * u[0]
-    raise ValueError('the given string is not a date/time string')
+    raise ValueError("the given string is not a date/time string")
 
 
 def terminalSize():
@@ -549,10 +560,11 @@ def terminalSize():
     import fcntl
     import struct
     import termios
+
     try:
         h, w, _hp, _wp = struct.unpack(
-            'HHHH', fcntl.ioctl(0, termios.TIOCGWINSZ,
-                                struct.pack('HHHH', 0, 0, 0, 0)))
+            "HHHH", fcntl.ioctl(0, termios.TIOCGWINSZ, struct.pack("HHHH", 0, 0, 0, 0))
+        )
     except OSError:
         return 80, 25
     return w, h
@@ -564,10 +576,10 @@ def parseConnectionString(s, defport):
     if res is None:
         return None
     return {
-        'user': res.group(1) or 'guest',
-        'password': res.group(2),   # None if no password given
-        'host': res.group(3),
-        'port': int(res.group(4) or defport),
+        "user": res.group(1) or "guest",
+        "password": res.group(2),  # None if no password given
+        "host": res.group(3),
+        "port": int(res.group(4) or defport),
     }
 
 
@@ -588,18 +600,17 @@ def importString(import_name):
     The string can be either a module name and an object name, separated
     by a colon, or a (potentially dotted) module name.
     """
-    if ':' in import_name:
-        modname, obj = import_name.split(':', 1)
-    elif '.' in import_name:
-        modname, obj = import_name.rsplit('.', 1)
+    if ":" in import_name:
+        modname, obj = import_name.split(":", 1)
+    elif "." in import_name:
+        modname, obj = import_name.rsplit(".", 1)
     else:
         modname, obj = import_name, None
     fromlist = [obj] if obj else []
     try:
         mod = __import__(modname, {}, {}, fromlist)
     except ImportError as err:
-        raise ImportError(
-            'Could not import %r: %s' % (import_name, err)) from err
+        raise ImportError("Could not import %r: %s" % (import_name, err)) from err
     if not obj:
         return mod
     else:
@@ -617,8 +628,7 @@ def resolveClasses(classes):
     """
     if not isinstance(classes, (list, tuple)):
         classes = [classes]
-    return tuple(importString(cls) if isinstance(cls, str) else cls
-                 for cls in classes)
+    return tuple(importString(cls) if isinstance(cls, str) else cls for cls in classes)
 
 
 # simple file operations
@@ -630,12 +640,12 @@ DEFAULT_FILE_MODE = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH
 
 
 def readFile(filename):
-    with open(filename, 'r', encoding='utf-8') as fp:
+    with open(filename, "r", encoding="utf-8") as fp:
         return [line.strip() for line in fp]
 
 
 def writeFile(filename, lines):
-    with open(filename, 'w', encoding='utf-8') as fp:
+    with open(filename, "w", encoding="utf-8") as fp:
         fp.writelines(lines)
 
 
@@ -657,29 +667,31 @@ def moveOutOfWay(filepath, maxbackups=10):
         return None
     if maxbackups is not None:
         for i in range(maxbackups, 1, -1):
-            old_bkup = filepath + '.~%d~' % (i - 1)
-            new_bkup = filepath + '.~%d~' % (i)
+            old_bkup = filepath + ".~%d~" % (i - 1)
+            new_bkup = filepath + ".~%d~" % (i)
             if path.exists(old_bkup):
                 os.rename(old_bkup, new_bkup)
-        os.rename(filepath, filepath + '.~%d~' % 1)
+        os.rename(filepath, filepath + ".~%d~" % 1)
         return old_bkup
     else:
-        bu_re = re.compile(filepath + r'\.~([0-9]+)~')
+        bu_re = re.compile(filepath + r"\.~([0-9]+)~")
         basedir = path.dirname(filepath) or os.curdir
         existing = os.listdir(basedir)
-        exist_matching = [int(bu_re.match(e).group(1)) for e in existing
-                          if bu_re.match(e)]
+        exist_matching = [
+            int(bu_re.match(e).group(1)) for e in existing if bu_re.match(e)
+        ]
         nxt = max(exist_matching) + 1 if exist_matching else 1
         while True:
-            renamename = filepath + '.~%d~' % nxt
+            renamename = filepath + ".~%d~" % nxt
             if not path.exists(renamename):
                 try:
                     os.rename(filepath, renamename)
                     return renamename
                 except os.error as ex:
-                    raise RuntimeError('Could not rename %s to backup '
-                                       'name %s: %s' %
-                                       (filepath, renamename, ex)) from ex
+                    raise RuntimeError(
+                        "Could not rename %s to backup "
+                        "name %s: %s" % (filepath, renamename, ex)
+                    ) from ex
             # retry if backup name was already used
             nxt = nxt + 1
 
@@ -693,11 +705,11 @@ def safeWriteFile(filepath, content, maxbackups=10):
     It can take both a plain content blob or a list of lines.
     """
 
-    tmpfile = filepath + '.tmp'
+    tmpfile = filepath + ".tmp"
     if isinstance(content, list):
         writeFile(tmpfile, content)
     else:
-        with open(tmpfile, 'w', encoding='utf-8') as fp:
+        with open(tmpfile, "w", encoding="utf-8") as fp:
             fp.write(content)
     try:
         if maxbackups:
@@ -707,7 +719,7 @@ def safeWriteFile(filepath, content, maxbackups=10):
 
 
 def getPidfileName(appname):
-    return os.path.join(config.nicos_root, config.pid_path, appname + '.pid')
+    return os.path.join(config.nicos_root, config.pid_path, appname + ".pid")
 
 
 def writePidfile(appname):
@@ -736,7 +748,7 @@ def ensureDirectory(dirname, enableDirMode=DEFAULT_DIR_MODE, **kwargs):
 
 def enableDisableFileItem(filepath, mode, owner=None, group=None, logger=None):
     """Set mode and maybe change uid/gid of a filesystem item."""
-    if (owner or group) and pwd and hasattr(os, 'chown') and hasattr(os, 'stat'):
+    if (owner or group) and pwd and hasattr(os, "chown") and hasattr(os, "stat"):
         try:
             stats = os.stat(filepath)  # only change the requested parts
             owner = owner or stats.st_uid
@@ -748,20 +760,19 @@ def enableDisableFileItem(filepath, mode, owner=None, group=None, logger=None):
             os.chown(filepath, owner, group)
         except (OSError, KeyError) as e:
             if logger:
-                logger.debug('chown(%r, %d, %d) failed: %s',
-                             filepath, owner, group, e)
+                logger.debug("chown(%r, %d, %d) failed: %s", filepath, owner, group, e)
     try:
         os.chmod(filepath, mode)
     except OSError as e:
         if logger:
-            logger.debug('chmod(%r, %o) failed: %s', filepath, mode, e)
+            logger.debug("chmod(%r, %o) failed: %s", filepath, mode, e)
         return True
     return False
 
 
-def enableDisableDirectory(startdir, dirMode, fileMode,
-                           owner=None, group=None, enable=False,
-                           logger=None):
+def enableDisableDirectory(
+    startdir, dirMode, fileMode, owner=None, group=None, enable=False, logger=None
+):
     """Traverse a directory tree and change access rights.
 
     Returns True if there were some errors and False if everything went OK.
@@ -772,30 +783,32 @@ def enableDisableDirectory(startdir, dirMode, fileMode,
 
     # to enable, we have to handle 'our' directory first
     if enable:
-        failflag |= enableDisableFileItem(startdir, dirMode, owner, group,
-                                          logger)
+        failflag |= enableDisableFileItem(startdir, dirMode, owner, group, logger)
 
     for root, dirs, files in os.walk(startdir, topdown=enable):
         for d in dirs:
             full = path.join(root, d)
-            failflag |= enableDisableFileItem(full, dirMode, owner, group,
-                                              logger)
+            failflag |= enableDisableFileItem(full, dirMode, owner, group, logger)
         for f in files:
             full = path.join(root, f)
-            failflag |= enableDisableFileItem(full, fileMode, owner, group,
-                                              logger)
+            failflag |= enableDisableFileItem(full, fileMode, owner, group, logger)
 
     # for disable, we have to close 'our' directory last
     if not enable:
-        failflag |= enableDisableFileItem(startdir, dirMode, owner, group,
-                                          logger)
+        failflag |= enableDisableFileItem(startdir, dirMode, owner, group, logger)
 
     return failflag
 
 
-def disableDirectory(startdir, disableDirMode=S_IRUSR | S_IXUSR,
-                     disableFileMode=S_IRUSR, owner=None, group=None,
-                     logger=None, **kwargs):  # kwargs eats unused args
+def disableDirectory(
+    startdir,
+    disableDirMode=S_IRUSR | S_IXUSR,
+    disableFileMode=S_IRUSR,
+    owner=None,
+    group=None,
+    logger=None,
+    **kwargs,
+):  # kwargs eats unused args
     """Traverse a directory tree and remove access rights.
 
     Returns True if there were some errors and False if everything went OK.
@@ -805,20 +818,34 @@ def disableDirectory(startdir, disableDirMode=S_IRUSR | S_IXUSR,
     """
     owner = kwargs.get("disableOwner", owner)
     group = kwargs.get("disableGroup", group)
-    failflag = enableDisableDirectory(startdir,
-                                      disableDirMode, disableFileMode,
-                                      owner, group, enable=False, logger=logger)
+    failflag = enableDisableDirectory(
+        startdir,
+        disableDirMode,
+        disableFileMode,
+        owner,
+        group,
+        enable=False,
+        logger=logger,
+    )
     if failflag:
         if logger:
-            logger.warning('Disabling failed for some files, please check '
-                           'access rights manually')
+            logger.warning(
+                "Disabling failed for some files, please check "
+                "access rights manually"
+            )
     return failflag
     # maybe logging is better done in the caller of disableDirectory
 
 
-def enableDirectory(startdir, enableDirMode=DEFAULT_DIR_MODE,
-                    enableFileMode=DEFAULT_FILE_MODE, owner=None, group=None,
-                    logger=None, **kwargs):  # kwargs eats unused args
+def enableDirectory(
+    startdir,
+    enableDirMode=DEFAULT_DIR_MODE,
+    enableFileMode=DEFAULT_FILE_MODE,
+    owner=None,
+    group=None,
+    logger=None,
+    **kwargs,
+):  # kwargs eats unused args
     """Traverse a directory tree and grant access rights.
 
     Returns True if there were some errors and False if everything went OK.
@@ -828,23 +855,32 @@ def enableDirectory(startdir, enableDirMode=DEFAULT_DIR_MODE,
     """
     owner = kwargs.get("enableOwner", owner)
     group = kwargs.get("enableGroup", group)
-    failflag = enableDisableDirectory(startdir,
-                                      enableDirMode, enableFileMode,
-                                      owner, group, enable=True, logger=logger)
+    failflag = enableDisableDirectory(
+        startdir,
+        enableDirMode,
+        enableFileMode,
+        owner,
+        group,
+        enable=True,
+        logger=logger,
+    )
     if failflag:
         if logger:
-            logger.warning('Enabling failed for some files, please check '
-                           'access rights manually')
+            logger.warning(
+                "Enabling failed for some files, please check " "access rights manually"
+            )
     return failflag
     # maybe logging is better done in the caller of enableDirectory
 
 
 # template handling
-T_BEGIN = '{{'
-T_END = '}}'
-T_SPLITTER = f'({T_BEGIN}|{T_END})'
-T_expr_re = re.compile('(?P<key>[^!:#]+)(?:!(?P<replace>[^:#]*))?(?::(?P<default>[^#]*))?'
-                      '(?:#(?P<description>.*))?')
+T_BEGIN = "{{"
+T_END = "}}"
+T_SPLITTER = f"({T_BEGIN}|{T_END})"
+T_expr_re = re.compile(
+    "(?P<key>[^!:#]+)(?:!(?P<replace>[^:#]*))?(?::(?P<default>[^#]*))?"
+    "(?:#(?P<description>.*))?"
+)
 
 
 def _evaluate_template_expression(expr, keywords, expr_re=T_expr_re):
@@ -862,14 +898,14 @@ def _evaluate_template_expression(expr, keywords, expr_re=T_expr_re):
     and groupdict contains the matched fields of the expression.
     """
     g = expr_re.match(expr).groupdict()
-    key = g['key'].strip()
+    key = g["key"].strip()
     if key in keywords:
-        if g['replace'] is not None:
-            return g['replace'], 'replaced', g
-        return str(keywords[key]), 'resolved', g
-    if g['default'] is not None:
-        return g['default'], 'defaulted', g
-    return '', 'missing', g
+        if g["replace"] is not None:
+            return g["replace"], "replaced", g
+        return str(keywords[key]), "resolved", g
+    if g["default"] is not None:
+        return g["default"], "defaulted", g
+    return "", "missing", g
 
 
 def expandTemplate(template, keywords):
@@ -891,36 +927,39 @@ def expandTemplate(template, keywords):
     (key, replace, default and description).
     """
     stats = dict(
-        missing = [],   # key not in keywords, no default given -> resolved to ''
-        defaulted = [], # key not in keywords, literal default value used
-        replaced = [],  # key in keywords, literal replacement value used
-        resolved = [],  # key in keywords, value from keywords used
+        missing=[],  # key not in keywords, no default given -> resolved to ''
+        defaulted=[],  # key not in keywords, literal default value used
+        replaced=[],  # key in keywords, literal replacement value used
+        resolved=[],  # key in keywords, value from keywords used
     )
 
     tokens = re.split(T_SPLITTER, template)
     found = True
     while found:
         found = False
-        for i in range(0, len(tokens)-4, 2):
+        for i in range(0, len(tokens) - 4, 2):
             # collate a literal/T_BEGIN/literal/T_END/literal quintuple into a single literal
-            if tokens[i+1] == T_BEGIN and tokens[i+3] == T_END:
-                res, how, gd = _evaluate_template_expression(tokens[i+2], keywords)
+            if tokens[i + 1] == T_BEGIN and tokens[i + 3] == T_END:
+                res, how, gd = _evaluate_template_expression(tokens[i + 2], keywords)
                 stats[how].append(gd)
 
-                replacement = ''.join([tokens[i], res, tokens[i+4]])
-                del tokens[i+1:i+5]
+                replacement = "".join([tokens[i], res, tokens[i + 4]])
+                del tokens[i + 1 : i + 5]
                 tokens[i] = replacement
                 found = True
                 break
     if len(tokens) > 1:
         # malformed template (number of T_BEGIN != T_END)
         # XXX: improve error msg!
-        raise ValueError('malformed template! resolving of %r stopped at position %d'%
-                         (''.join(tokens), len(tokens[0])))
-    return tokens[0], stats['defaulted'], stats['missing']
+        raise ValueError(
+            "malformed template! resolving of %r stopped at position %d"
+            % ("".join(tokens), len(tokens[0]))
+        )
+    return tokens[0], stats["defaulted"], stats["missing"]
 
 
 # daemonizing processes
+
 
 def daemonize():
     """Daemonize the current process."""
@@ -935,11 +974,11 @@ def daemonize():
             sys.stdout.close()
             sys.exit(0)
     except OSError as err:
-        print('fork #1 failed:', err, file=sys.stderr)
+        print("fork #1 failed:", err, file=sys.stderr)
         sys.exit(1)
 
     # decouple from parent environment
-    os.chdir('/')
+    os.chdir("/")
     os.umask(0o002)
     os.setsid()
 
@@ -950,7 +989,7 @@ def daemonize():
             sys.stdout.close()
             sys.exit(0)
     except OSError as err:
-        print('fork #2 failed:', err, file=sys.stderr)
+        print("fork #2 failed:", err, file=sys.stderr)
 
     # now I am a daemon!
 
@@ -965,8 +1004,8 @@ def daemonize():
 
     # redirect standard file descriptors
     # pylint: disable=consider-using-with,unspecified-encoding
-    sys.stdin = open('/dev/null', 'r', encoding=None)
-    sys.stdout = sys.stderr = open('/dev/null', 'w', encoding=None)
+    sys.stdin = open("/dev/null", "r", encoding=None)
+    sys.stdout = sys.stderr = open("/dev/null", "w", encoding=None)
 
 
 def setuser(recover=True):
@@ -977,18 +1016,20 @@ def setuser(recover=True):
     If no group is supplied, the primary group of the user is used.
 
     """
-    if os.name != 'posix' or os.geteuid() != 0:
+    if os.name != "posix" or os.geteuid() != 0:
         return
     # running as root is not good...
     if not config.user:
-        raise RuntimeError('please provide valid entries for user and '
-                           'group in nicos.conf if running as root')
+        raise RuntimeError(
+            "please provide valid entries for user and "
+            "group in nicos.conf if running as root"
+        )
 
     # switch user
     group = config.group
     user = config.user
     if pwd is None:
-        raise RuntimeError('pwd and/or grp modules not available')
+        raise RuntimeError("pwd and/or grp modules not available")
 
     userentry = pwd.getpwuid(int(user)) if user.isdigit() else pwd.getpwnam(user)
     if group:
@@ -1008,9 +1049,9 @@ def setuser(recover=True):
         os.seteuid(uid)
     else:
         os.setuid(uid)
-    if 'HOME' in os.environ:
-        os.environ['HOME'] = pwd.getpwuid(uid).pw_dir
-    if config.umask is not None and hasattr(os, 'umask'):
+    if "HOME" in os.environ:
+        os.environ["HOME"] = pwd.getpwuid(uid).pw_dir
+    if config.umask is not None and hasattr(os, "umask"):
         os.umask(int(config.umask, 8))
 
 
@@ -1019,47 +1060,47 @@ def setuser(recover=True):
 _codes = {}
 
 _attrs = {
-    'reset':     '39;49;00m',
-    'bold':      '01m',
-    'faint':     '02m',
-    'standout':  '03m',
-    'underline': '04m',
-    'blink':     '05m',
+    "reset": "39;49;00m",
+    "bold": "01m",
+    "faint": "02m",
+    "standout": "03m",
+    "underline": "04m",
+    "blink": "05m",
 }
 
 for _name, _value in _attrs.items():
-    _codes[_name] = '\x1b[' + _value
+    _codes[_name] = "\x1b[" + _value
 
 _colors = [
-    ('black', 'darkgray'),
-    ('darkred', 'red'),
-    ('darkgreen', 'green'),
-    ('brown', 'yellow'),
-    ('darkblue', 'blue'),
-    ('purple', 'fuchsia'),
-    ('turquoise', 'teal'),
-    ('lightgray', 'white'),
+    ("black", "darkgray"),
+    ("darkred", "red"),
+    ("darkgreen", "green"),
+    ("brown", "yellow"),
+    ("darkblue", "blue"),
+    ("purple", "fuchsia"),
+    ("turquoise", "teal"),
+    ("lightgray", "white"),
 ]
 
 for _i, (_dark, _light) in enumerate(_colors):
-    _codes[_dark] = '\x1b[%im' % (_i + 30)
-    _codes[_light] = '\x1b[%i;01m' % (_i + 30)
+    _codes[_dark] = "\x1b[%im" % (_i + 30)
+    _codes[_light] = "\x1b[%i;01m" % (_i + 30)
 
 
 def colorize(name, text):
-    return _codes.get(name, '') + text + _codes.get('reset', '')
+    return _codes.get(name, "") + text + _codes.get("reset", "")
 
 
 def colorcode(name):
-    return _codes.get(name, '')
+    return _codes.get(name, "")
 
 
 def nocolor():
     for key in list(_codes):
-        _codes[key] = ''
+        _codes[key] = ""
 
 
-if os.name == 'nt':
+if os.name == "nt":
     try:
         # colorama provides ANSI-colored console output support under Windows
         import colorama
@@ -1071,42 +1112,46 @@ if os.name == 'nt':
 
 # nice formatting for an exit status
 
+
 def whyExited(status):
     if os.WIFSIGNALED(status):
         signum = os.WTERMSIG(status)
         try:
-            signame = [name for name in dir(signal)
-                       if name.startswith('SIG') and
-                       getattr(signal, name) == signum][0]
+            signame = [
+                name
+                for name in dir(signal)
+                if name.startswith("SIG") and getattr(signal, name) == signum
+            ][0]
         except IndexError:
-            signame = 'signal %d' % signum
+            signame = "signal %d" % signum
         return signame
     else:
-        return 'exit code %d' % os.WEXITSTATUS(status)
+        return "exit code %d" % os.WEXITSTATUS(status)
 
 
 # traceback utilities
 
+
 def formatExtendedFrame(frame):
     ret = []
     for key, value in frame.f_locals.items():
-        if key.startswith(('credentials', 'password', 'secret')):
+        if key.startswith(("credentials", "password", "secret")):
             continue
         try:
             valstr = repr(value)[:256]
         except Exception:
-            valstr = '<cannot be displayed>'
-        ret.append('        %-20s = %s\n' % (key, valstr))
-    ret.append('\n')
+            valstr = "<cannot be displayed>"
+        ret.append("        %-20s = %s\n" % (key, valstr))
+    ret.append("\n")
     return ret
 
 
-ST_HEADER = 'Stack trace (most recent call last):'
-TB_HEADER = 'Traceback (most recent call last):'
-TB_CAUSE_MSG = ('The above exception was the direct cause of the '
-                'following exception:')
-TB_CONTEXT_MSG = ('During handling of the above exception, another '
-                  'exception occurred:')
+ST_HEADER = "Stack trace (most recent call last):"
+TB_HEADER = "Traceback (most recent call last):"
+TB_CAUSE_MSG = "The above exception was the direct cause of the " "following exception:"
+TB_CONTEXT_MSG = (
+    "During handling of the above exception, another " "exception occurred:"
+)
 
 
 def listExtendedTraceback(exc, seen=None):
@@ -1118,25 +1163,28 @@ def listExtendedTraceback(exc, seen=None):
     ret = []
     if exc.__cause__ is not None:
         ret += listExtendedTraceback(exc.__cause__, seen)
-        ret.extend(['\n', TB_CAUSE_MSG, '\n\n'])
+        ret.extend(["\n", TB_CAUSE_MSG, "\n\n"])
     elif exc.__context__ is not None:
         ret += listExtendedTraceback(exc.__context__, seen)
-        ret.extend(['\n', TB_CONTEXT_MSG, '\n\n'])
+        ret.extend(["\n", TB_CONTEXT_MSG, "\n\n"])
 
-    ret.extend([TB_HEADER, '\n'])
+    ret.extend([TB_HEADER, "\n"])
     tb = exc.__traceback__
     while tb is not None:
         frame = tb.tb_frame
         filename = frame.f_code.co_filename
-        item = '  File "%s", line %d, in %s\n' % (filename, tb.tb_lineno,
-                                                  frame.f_code.co_name)
+        item = '  File "%s", line %d, in %s\n' % (
+            filename,
+            tb.tb_lineno,
+            frame.f_code.co_name,
+        )
         linecache.checkcache(filename)
         line = linecache.getline(filename, tb.tb_lineno, frame.f_globals)
         if line:
-            item = item + '    %s\n' % line.strip()
+            item = item + "    %s\n" % line.strip()
         ret.append(item)
-        if filename not in ('<script>', '<string>'):
-            if tb.tb_frame.f_globals.get('__name__', '').startswith('nicos'):
+        if filename not in ("<script>", "<string>"):
+            if tb.tb_frame.f_globals.get("__name__", "").startswith("nicos"):
                 ret += formatExtendedFrame(tb.tb_frame)
         tb = tb.tb_next
     ret += traceback.format_exception_only(type(exc), exc)
@@ -1149,7 +1197,7 @@ def formatExtendedTraceback(exc):
     The traceback will include the source line of each frame, as usual, but
     also the values of local variables in the frames.
     """
-    return ''.join(listExtendedTraceback(exc)).rstrip('\n')
+    return "".join(listExtendedTraceback(exc)).rstrip("\n")
 
 
 def formatExtendedStack(frame=None, level=1):
@@ -1158,7 +1206,7 @@ def formatExtendedStack(frame=None, level=1):
     """
     if frame is None:
         frame = sys._getframe(level)
-    ret = [ST_HEADER, '\n\n']
+    ret = [ST_HEADER, "\n\n"]
     while frame is not None:
         lineno = frame.f_lineno
         co = frame.f_code
@@ -1168,12 +1216,12 @@ def formatExtendedStack(frame=None, level=1):
         linecache.checkcache(filename)
         line = linecache.getline(filename, lineno, frame.f_globals)
         if line:
-            item = item + '    %s\n' % line.strip()
+            item = item + "    %s\n" % line.strip()
         ret.insert(1, item)
-        if filename != '<script>':
+        if filename != "<script>":
             ret[2:2] = formatExtendedFrame(frame)
         frame = frame.f_back
-    return ''.join(ret).rstrip('\n')
+    return "".join(ret).rstrip("\n")
 
 
 def formatException(cut=0, exc_info=None):
@@ -1184,11 +1232,11 @@ def formatException(cut=0, exc_info=None):
         typ, val, tb = sys.exc_info()
     else:
         typ, val, tb = exc_info
-    res = [TB_HEADER, '\n']
+    res = [TB_HEADER, "\n"]
     tbres = traceback.format_tb(tb, sys.maxsize)
     res += tbres[cut:]
     res += traceback.format_exception_only(typ, val)
-    return ''.join(res)
+    return "".join(res)
 
 
 def formatScriptError(exc_info, script_name, script_text):
@@ -1198,28 +1246,28 @@ def formatScriptError(exc_info, script_name, script_text):
     tb = exc_info[2]
     lineno = None
     while tb is not None:
-        if tb.tb_frame.f_code.co_filename in ('<script>', '<string>'):
+        if tb.tb_frame.f_code.co_filename in ("<script>", "<string>"):
             lineno = tb.tb_lineno
         tb = tb.tb_next
     # try to format the line
     if lineno is not None:
-        msg = 'The error was in line %d:\n\n' % lineno
-        minline = max(lineno-5, 0)
-        lines = script_text.splitlines(True)[minline:lineno+4]
-        for i, line in enumerate(lines, start=minline+1):
-            msg += '%4d %s | %s' % (i, '*' if i == lineno else ' ', line)
+        msg = "The error was in line %d:\n\n" % lineno
+        minline = max(lineno - 5, 0)
+        lines = script_text.splitlines(True)[minline : lineno + 4]
+        for i, line in enumerate(lines, start=minline + 1):
+            msg += "%4d %s | %s" % (i, "*" if i == lineno else " ", line)
     elif len(script_text) < 10000:
-        msg = 'The script was:\n\n' + script_text
+        msg = "The script was:\n\n" + script_text
     else:
-        msg = ''
+        msg = ""
     if script_name:
-        msg = 'Script name: %s\n\n' % script_name + msg
-    body = 'An error occurred in the executed script:\n\n' + \
-           exception + '\n\n' + msg
+        msg = "Script name: %s\n\n" % script_name + msg
+    body = "An error occurred in the executed script:\n\n" + exception + "\n\n" + msg
     return body, exception
 
 
 # file counter utilities
+
 
 def readFileCounter(counterpath, key):
     """Read a counter from a "counter" file.
@@ -1243,7 +1291,7 @@ def readFileCounter(counterpath, key):
 def updateFileCounter(counterpath, key, value):
     """Update a counter file.
 
-       If the file does not exist, it will get created.
+    If the file does not exist, it will get created.
     """
     if not path.isdir(path.dirname(counterpath)):
         os.makedirs(path.dirname(counterpath))
@@ -1255,8 +1303,8 @@ def updateFileCounter(counterpath, key, value):
     for line in lines:
         linekey, _ = line.split()
         if linekey != key:
-            new_lines.append(line + '\n')
-    new_lines.append('%s %d\n' % (key, value))
+            new_lines.append(line + "\n")
+    new_lines.append("%s %d\n" % (key, value))
     writeFile(counterpath, new_lines)
 
 
@@ -1265,7 +1313,7 @@ def allDays(fromtime, totime):
     current = date.fromtimestamp(fromtime)
     final = date.fromtimestamp(totime)
     while current <= final:
-        yield f'{current.year}', f'{current.month:02}-{current.day:02}'
+        yield f"{current.year}", f"{current.month:02}-{current.day:02}"
         current += timedelta(days=1)
 
 
@@ -1274,6 +1322,7 @@ def allDays(fromtime, totime):
 # globals that are set to None by Python on shutdown.
 def watchFileTime(filename, log, interval=1.0, sleep=sleep):
     """Watch a file until its mtime changes; then return."""
+
     def get_mtime(getmtime=path.getmtime):
         # os.path.getmtime() can raise "stale NFS file handle", so we
         # guard against it
@@ -1281,11 +1330,11 @@ def watchFileTime(filename, log, interval=1.0, sleep=sleep):
             try:
                 return getmtime(filename)
             except OSError as err:
-                log.error('got exception checking for mtime of %r: %s',
-                          filename, err)
+                log.error("got exception checking for mtime of %r: %s", filename, err)
                 sleep(interval / 2)
                 # it's not a big problem if we never get out of the loop
                 continue
+
     mtime = get_mtime()
     sleep(interval)
     while True:
@@ -1296,6 +1345,7 @@ def watchFileTime(filename, log, interval=1.0, sleep=sleep):
 
 def watchFileContent(filenames, log, interval=1.0, sleep=sleep):
     """Watch files until content changes; then return."""
+
     def get_content():
         # File could be unavailable temporary on nfs mounts,
         # so let's retry it
@@ -1304,16 +1354,18 @@ def watchFileContent(filenames, log, interval=1.0, sleep=sleep):
             localinterval = interval
             while True:
                 try:
-                    with open(filename, 'rb') as f:
+                    with open(filename, "rb") as f:
                         result.append(f.read())
                     break
                 except OSError as err:
-                    log.error('got exception checking for content of %r: %s',
-                              filename, err)
+                    log.error(
+                        "got exception checking for content of %r: %s", filename, err
+                    )
                     sleep(localinterval)
                     localinterval = min(2 * localinterval, 300)
                     continue
         return result
+
     content = get_content()
     sleep(interval)
     while True:
@@ -1332,18 +1384,21 @@ def decodeAny(string):
     if isinstance(string, str):
         return string
     try:
-        return string.decode('utf-8')
+        return string.decode("utf-8")
     except UnicodeError:
         # decoding latin9 never fails, since any byte is a valid
         # character there
-        return string.decode('latin9')
+        return string.decode("latin9")
 
 
-_SAFE_FILE_CHARS = frozenset('-=+_.,()[]{}0123456789abcdefghijklmnopqrstuvwxyz'
-                             'ABCDEFGHIJKLMNOPQRSTUVWXYZ')
-_BAD_NAMES = frozenset(('.', '..', 'con', 'prn', 'aux', 'nul') +
-                       tuple(f'com{d}' for d in range(1, 10)) +
-                       tuple(f'lpt{d}' for d in range(1, 10)))
+_SAFE_FILE_CHARS = frozenset(
+    "-=+_.,()[]{}0123456789abcdefghijklmnopqrstuvwxyz" "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+)
+_BAD_NAMES = frozenset(
+    (".", "..", "con", "prn", "aux", "nul")
+    + tuple(f"com{d}" for d in range(1, 10))
+    + tuple(f"lpt{d}" for d in range(1, 10))
+)
 
 
 def safeName(what, _SAFE_FILE_CHARS=_SAFE_FILE_CHARS):
@@ -1351,19 +1406,20 @@ def safeName(what, _SAFE_FILE_CHARS=_SAFE_FILE_CHARS):
     used for filenames.
     """
     # normalize: é -> e, Â->A, etc.
-    s = unicodedata.normalize('NFKD', decodeAny(what))
+    s = unicodedata.normalize("NFKD", decodeAny(what))
     # map unwanted characters (including space) to '_'
-    s = ''.join(c if c in _SAFE_FILE_CHARS else '_' for c in s)
+    s = "".join(c if c in _SAFE_FILE_CHARS else "_" for c in s)
     # collate multiple '_'
-    while '__' in s:
-        s = s.replace('__', '_')
+    while "__" in s:
+        s = s.replace("__", "_")
     # avoid special bad names
     if s.lower() in _BAD_NAMES:
-        s = f'_{s}_'
-    return s if s else '_empty_'
+        s = f"_{s}_"
+    return s if s else "_empty_"
 
 
 # helper to access a certain nicos file which is non-python
+
 
 def findResource(filepath):
     """Helper to find a certain nicos specific, but non-python file."""
@@ -1371,7 +1427,7 @@ def findResource(filepath):
         return filepath
     # strategy for relative paths: try to find first path component as a Python
     # package, then descend from there
-    components = filepath.split('/')
+    components = filepath.split("/")
     try:
         mod = __import__(components[0])
         if mod.__file__ is None:
@@ -1431,7 +1487,9 @@ def timedRetryOnExcept(max_retries=1, timeout=1, ex=None, actionOnFail=None):
 
                     sleep(timeout)
                     raise
+
         return wrapper
+
     return outer
 
 
@@ -1447,19 +1505,19 @@ def tabulated(widths, iterable, maxwidth=20):
             width = widths[i]
             if len(item) > width:
                 width = widths[i] = min(len(item), maxwidth)
-            result.append(' ' * (width - len(item) + 1))
+            result.append(" " * (width - len(item) + 1))
         else:
-            result.append(' ')
-    return ''.join(result).rstrip()
+            result.append(" ")
+    return "".join(result).rstrip()
 
 
-def num_sort(x, inf=float('inf')):
+def num_sort(x, inf=float("inf")):
     """A sort key function to sort strings by a numeric prefix, then
     lexically.
     """
     if not isinstance(x, str):
         return (0, x)
-    m = re.match(r'[\d.-]+', x)
+    m = re.match(r"[\d.-]+", x)
     try:
         return (float(m.group()), x) if m else (inf, x)
     except ValueError:
@@ -1472,10 +1530,13 @@ def natural_sort(values):
     :param values: list of values to sort.
     :return: the sorted list.
     """
+
     def _natural_key(key):
-        parts = re.split(r'(\d*\.\d+|\d+)', str(key))
-        return tuple((e.swapcase() if i % 2 == 0 else float(e))
-                     for i, e in enumerate(parts))
+        parts = re.split(r"(\d*\.\d+|\d+)", str(key))
+        return tuple(
+            (e.swapcase() if i % 2 == 0 else float(e)) for i, e in enumerate(parts)
+        )
+
     return sorted(values, key=_natural_key)
 
 
@@ -1497,8 +1558,7 @@ class ReaderRegistry:
 
     @classmethod
     def filefilters(cls):
-        return [(ftype, ffilter) for ftype, (_cls, ffilter) in
-                cls.readers.items()]
+        return [(ftype, ffilter) for ftype, (_cls, ffilter) in cls.readers.items()]
 
 
 class FitterRegistry:
@@ -1514,34 +1574,49 @@ class FitterRegistry:
         try:
             return cls.fitters[key.lower()]
         except KeyError:
-            raise KeyError('Unknown fitter name %r, known fitters: %s' %
-                           (key, ', '.join(cls.fitters))) from None
+            raise KeyError(
+                "Unknown fitter name %r, known fitters: %s"
+                % (key, ", ".join(cls.fitters))
+            ) from None
 
 
 class KeyExprTransform(ast.NodeTransformer):
     def visit_BinOp(self, node):
         self.generic_visit(node)
-        if isinstance(node.op, ast.Div) and \
-           isinstance(node.left, ast.Name) and \
-           isinstance(node.right, ast.Name):
-            return ast.Name(id=node.left.id + '/' + node.right.id,
-                            ctx=ast.Load())
+        if (
+            isinstance(node.op, ast.Div)
+            and isinstance(node.left, ast.Name)
+            and isinstance(node.right, ast.Name)
+        ):
+            return ast.Name(id=node.left.id + "/" + node.right.id, ctx=ast.Load())
         return node
 
     def visit_Attribute(self, node):
         self.generic_visit(node)
         if isinstance(node.value, ast.Name):
-            return ast.Name(id=node.value.id + '.' + node.attr,
-                            ctx=ast.Load())
+            return ast.Name(id=node.value.id + "." + node.attr, ctx=ast.Load())
         return node
 
 
 KEYEXPR_NS = {}
 for name in [
-        'pi', 'sqrt', 'sin', 'cos', 'tan', 'arcsin', 'arccos',
-        'arctan', 'exp', 'log', 'radians', 'degrees', 'ceil', 'floor']:
+    "pi",
+    "sqrt",
+    "sin",
+    "cos",
+    "tan",
+    "arcsin",
+    "arccos",
+    "arctan",
+    "exp",
+    "log",
+    "radians",
+    "degrees",
+    "ceil",
+    "floor",
+]:
     KEYEXPR_NS[name] = getattr(numpy, name)
-KEYEXPR_NS['numpy'] = numpy
+KEYEXPR_NS["numpy"] = numpy
 
 
 def _split_spec(spec, exprs):
@@ -1550,15 +1625,18 @@ def _split_spec(spec, exprs):
     snippets = []
     for expr in exprs[1:]:
         new_offset = expr.col_offset
-        snippets.append(spec[offset:new_offset].strip().rstrip(','))
+        snippets.append(spec[offset:new_offset].strip().rstrip(","))
         offset = new_offset
     snippets.append(spec[offset:].strip())
     return snippets
 
 
-def parseKeyExpression(spec, append_value=True,
-                       normalize=lambda s: s.lower().replace('.', '/'),
-                       multiple=False):
+def parseKeyExpression(
+    spec,
+    append_value=True,
+    normalize=lambda s: s.lower().replace(".", "/"),
+    multiple=False,
+):
     """Extract expression(s) depending on cache keys from a string.
 
     An expression must contain a single cache key (given as "a.b" or "a/b"),
@@ -1581,9 +1659,9 @@ def parseKeyExpression(spec, append_value=True,
     Raises `ValueError` if the expression can't be parsed or is invalid.
     """
     try:
-        expr = ast.parse(spec, mode='eval').body
+        expr = ast.parse(spec, mode="eval").body
     except SyntaxError:
-        raise ValueError('invalid key spec: %r' % spec) from None
+        raise ValueError("invalid key spec: %r" % spec) from None
     if isinstance(expr, ast.Tuple) and multiple:
         exprs = expr.elts
         descs = _split_spec(spec, exprs)
@@ -1601,18 +1679,18 @@ def parseKeyExpression(spec, append_value=True,
         for node in ast.walk(expr):
             if isinstance(node, ast.Name) and node.id not in KEYEXPR_NS:
                 key = normalize(node.id)
-                if '/' not in key and append_value:
-                    key += '/value'
-                node.id = 'x'
+                if "/" not in key and append_value:
+                    key += "/value"
+                node.id = "x"
                 break
         if key is None:
-            raise ValueError('no variable in key spec %r' % descs[-1])
+            raise ValueError("no variable in key spec %r" % descs[-1])
         keys.append(key)
         # expression can be None to mean "identity"
-        if isinstance(expr, ast.Name) and expr.id == 'x':
+        if isinstance(expr, ast.Name) and expr.id == "x":
             funs.append(None)
         else:
-            funs.append(compile(ast.Expression(body=expr), '<expr>', 'eval'))
+            funs.append(compile(ast.Expression(body=expr), "<expr>", "eval"))
 
     if multiple:
         return keys, funs, descs
@@ -1620,12 +1698,12 @@ def parseKeyExpression(spec, append_value=True,
 
 
 def checkSetupSpec(setupspec, setups, log=None):
-    """Check if the given setupspec should be displayed given the loaded setups.
-    """
+    """Check if the given setupspec should be displayed given the loaded setups."""
+
     def subst_setupexpr(match):
-        if match.group() in ('has_setup', 'and', 'or', 'not'):
+        if match.group() in ("has_setup", "and", "or", "not"):
             return match.group()
-        return 'has_setup(%r)' % match.group()
+        return "has_setup(%r)" % match.group()
 
     def has_setup(spec):
         return bool(fnmatch.filter(setups, spec))
@@ -1635,23 +1713,23 @@ def checkSetupSpec(setupspec, setups, log=None):
     if not setups:
         return False  # no setups -> not visible (safety)
     try:
-        expr = re.sub(r'[-\w\[\]*?]+', subst_setupexpr, setupspec)
-        ns = {'has_setup': has_setup}
+        expr = re.sub(r"[-\w\[\]*?]+", subst_setupexpr, setupspec)
+        ns = {"has_setup": has_setup}
         return eval(expr, ns)
     except Exception:  # wrong spec -> visible
         if log:
-            log.warning('invalid setup spec: %r', setupspec)
+            log.warning("invalid setup spec: %r", setupspec)
         return True
 
 
-_bare_except = re.compile(r'^([ \t]*)except[ \t]*:', re.MULTILINE)
+_bare_except = re.compile(r"^([ \t]*)except[ \t]*:", re.MULTILINE)
 
 
 def fixupScript(script):
     """Perform some fixup operations on the script."""
     # Replace bare except clauses by "except Exception" to prevent
     # catching the ControlStop exception if running under the daemon
-    return _bare_except.sub(r'\1except Exception:', script)
+    return _bare_except.sub(r"\1except Exception:", script)
 
 
 def squeeze(shape, n=0):
@@ -1666,7 +1744,8 @@ def squeeze(shape, n=0):
     return type(shape)(dims)
 
 
-DURATION_RE = re.compile(r'''
+DURATION_RE = re.compile(
+    r"""
     ((?P<days>[0-9]+(\.[0-9]*)?)d(ays?)?   # days as 'xd[ays]'
     \ *:?\ *)?                             # split with '', ' ' and/or ':'
     ((?P<hours>[0-9]+(\.[0-9]*)?)hr?       # hours as 'xh[r]'
@@ -1675,9 +1754,11 @@ DURATION_RE = re.compile(r'''
     \ *:?\ *)?                             # split with '', ' ' and/or ':'
     ((?P<seconds>[0-9]+(\.[0-9]*)?)s(ec)?  # seconds as 'xs[ec]'
     )?$                                    # ensure whole string matches
-    ''', re.X)
+    """,
+    re.X,
+)
 
-DURATION_HINT = 'Provide value as %s or %s.' % (
+DURATION_HINT = "Provide value as %s or %s." % (
     "<number>",
     "[-+][<number>d[ays]][:][<number>h[r]][:][<number>m[in]][:][<number>s[ec]]",
 )
@@ -1707,23 +1788,23 @@ def parseDuration(inputvalue, allownegative=False):
     # time has already been provided as seconds
     if isinstance(inputvalue, (int, float)):
         if not allownegative and inputvalue < 0:
-            raise ValueError('Negative numbers are not allowed here.')
+            raise ValueError("Negative numbers are not allowed here.")
         return inputvalue
     if isinstance(inputvalue, timedelta):
         return inputvalue.total_seconds()
     elif not isinstance(inputvalue, str):
-        raise TypeError('Wrong input data type')
+        raise TypeError("Wrong input data type")
 
     invalue = inputvalue.strip()
 
     negative = False
-    if invalue.startswith('-'):
+    if invalue.startswith("-"):
         if not allownegative:
-            raise ValueError('Negative numbers are not allowed here.')
+            raise ValueError("Negative numbers are not allowed here.")
         negative = True
-        invalue = invalue.lstrip('-')
-    elif invalue.startswith('+'):
-        invalue = invalue.lstrip('+')
+        invalue = invalue.lstrip("-")
+    elif invalue.startswith("+"):
+        invalue = invalue.lstrip("+")
 
     try:
         val = float(invalue)
@@ -1731,13 +1812,14 @@ def parseDuration(inputvalue, allownegative=False):
         m = DURATION_RE.match(invalue)
 
         if not m:
-            raise ValueError('"%s" can not be parsed. ' % inputvalue
-                             + DURATION_HINT) from None
+            raise ValueError(
+                '"%s" can not be parsed. ' % inputvalue + DURATION_HINT
+            ) from None
 
         groupdict = m.groupdict()
         timedict = {}
         for key, value in groupdict.items():
-            if key not in ['days', 'hours', 'minutes', 'seconds']:
+            if key not in ["days", "hours", "minutes", "seconds"]:
                 continue
             if value is not None:
                 timedict[key] = float(value)
@@ -1758,18 +1840,22 @@ def formatArgs(obj, strip_self=False):
     If *strip_self* is true, strip the "self" argument if present.
     """
     sig = inspect.signature(obj)
-    if strip_self and 'self' in sig.parameters:
-        sig = sig.replace(parameters=[p for p in sig.parameters.values()
-                                      if p.name != 'self'])
+    if strip_self and "self" in sig.parameters:
+        sig = sig.replace(
+            parameters=[p for p in sig.parameters.values() if p.name != "self"]
+        )
     return str(sig)
 
 
 def getNumArgs(obj):
     """Return the number of "normal" arguments a callable object takes."""
     sig = inspect.signature(obj)
-    return sum(1 for p in sig.parameters.values()
-               if p.kind == inspect.Parameter.POSITIONAL_ONLY or
-               p.kind == inspect.Parameter.POSITIONAL_OR_KEYWORD)
+    return sum(
+        1
+        for p in sig.parameters.values()
+        if p.kind == inspect.Parameter.POSITIONAL_ONLY
+        or p.kind == inspect.Parameter.POSITIONAL_OR_KEYWORD
+    )
 
 
 def tupelize(iterable, n=2):
@@ -1788,7 +1874,7 @@ def byteBuffer(obj):
     # For numpy arrays, memoryview() keeps info about the element size and
     # shape, so that len() gives unexpected results compared to buffer().
     # Casting to a pure byte view gets rid of that.
-    return memoryview(obj).cast('B')
+    return memoryview(obj).cast("B")
 
 
 class File(BufferedWriter):
@@ -1800,4 +1886,4 @@ class File(BufferedWriter):
 
 
 def toAscii(s):
-    return s.encode('unicode-escape').decode('ascii')
+    return s.encode("unicode-escape").decode("ascii")

@@ -25,8 +25,13 @@
 
 import numpy
 
-from nicos.commands.utility import RangeListByCount, RangeListByStep, \
-    RangeListGeneral, RangeListLog, floatrange
+from nicos.commands.utility import (
+    RangeListByCount,
+    RangeListByStep,
+    RangeListGeneral,
+    RangeListLog,
+    floatrange,
+)
 from nicos.core import UsageError
 
 from test.utils import approx, raises
@@ -36,40 +41,40 @@ def test_rangelistbystep():
     # start/stop/step
     l1 = RangeListByStep(1, 2, 0.5)
     assert len(l1) == 3
-    assert l1[0] == 1.
-    assert l1[-1] == 2.
-    assert l1 == [1., 1.5, 2.]
+    assert l1[0] == 1.0
+    assert l1[-1] == 2.0
+    assert l1 == [1.0, 1.5, 2.0]
 
     l1 = RangeListByStep(1, 2, 0.7)
     assert len(l1) == 3
-    assert l1[0] == 1.
-    assert l1[-1] == 2.
-    assert l1 == [1., 1.7, 2.]
+    assert l1[0] == 1.0
+    assert l1[-1] == 2.0
+    assert l1 == [1.0, 1.7, 2.0]
 
     # start/stop/step
     l1 = RangeListByStep(-1, -2, -0.5)
     assert len(l1) == 3
-    assert l1[0] == -1.
-    assert l1[-1] == -2.
-    assert l1 == [-1., -1.5, -2.]
+    assert l1[0] == -1.0
+    assert l1[-1] == -2.0
+    assert l1 == [-1.0, -1.5, -2.0]
 
     # start/stop
     l2 = RangeListByStep(1, 3)
     assert len(l2) == 3
-    assert l2[0] == 1.
-    assert l2[-1] == 3.
+    assert l2[0] == 1.0
+    assert l2[-1] == 3.0
 
     # start/stop
     l2 = RangeListByStep(3, 1)
     assert len(l2) == 3
-    assert l2[0] == 3.
-    assert l2[-1] == 1.
+    assert l2[0] == 3.0
+    assert l2[-1] == 1.0
 
     # stop
     l2 = RangeListByStep(3)
     assert len(l2) == 4
-    assert l2[0] == 0.
-    assert l2[-1] == 3.
+    assert l2[0] == 0.0
+    assert l2[-1] == 3.0
 
     assert raises(UsageError, RangeListByStep, 1, 2, -0.5)
     assert raises(UsageError, RangeListByStep, 1, 2, 0)
@@ -79,20 +84,20 @@ def test_rangelistbycounts():
     # start/stop/num
     l2 = RangeListByCount(1, 2, 3)
     assert len(l2) == 3
-    assert l2[0] == 1.
-    assert l2[-1] == 2.
+    assert l2[0] == 1.0
+    assert l2[-1] == 2.0
 
     # start/stop
     l2a = RangeListByCount(3, 7)
     assert len(l2a) == 2
-    assert l2a[0] == 3.
-    assert l2a[-1] == 7.
+    assert l2a[0] == 3.0
+    assert l2a[-1] == 7.0
 
     # stop
     l2a = RangeListByCount(3)
     assert len(l2a) == 2
-    assert l2a[0] == 0.
-    assert l2a[-1] == 3.
+    assert l2a[0] == 0.0
+    assert l2a[-1] == 3.0
 
 
 def test_floatrange():
@@ -100,15 +105,15 @@ def test_floatrange():
 
     l4 = floatrange(1, 2, step=0.5)
     assert len(l4) == 3
-    assert l4[0] == 1.
-    assert l4[-1] == 2.
+    assert l4[0] == 1.0
+    assert l4[-1] == 2.0
     assert type(l4[0]) == float
     assert type(l4[-1]) == float
 
     l4 = floatrange(1, 2, num=5)
     assert len(l4) == 5
-    assert l4[0] == 1.
-    assert l4[-1] == 2.
+    assert l4[0] == 1.0
+    assert l4[-1] == 2.0
     assert type(l4[0]) == float
     assert type(l4[-1]) == float
 
@@ -119,23 +124,23 @@ def test_floatrange():
 
 
 def test_rangelistlog():
-    l3 = RangeListLog(1., 2., 3)
+    l3 = RangeListLog(1.0, 2.0, 3)
     print(l3)
     assert len(l3) == 3
-    assert l3[0] == 1.
-    assert l3[-1] == 2.
+    assert l3[0] == 1.0
+    assert l3[-1] == 2.0
     assert numpy.allclose(l3, [1.0, 1.4142135623730949, 2.0])
 
-    l3a = RangeListLog(0.1, 200., 3)
+    l3a = RangeListLog(0.1, 200.0, 3)
     assert len(l3a) == 3
     assert l3a[0] == approx(0.1, abs=1e-5)
-    assert l3a[-1] == approx(200., abs=1e-5)
+    assert l3a[-1] == approx(200.0, abs=1e-5)
     assert numpy.allclose(l3a, [0.10000000000000001, 4.4721359549995787, 200.0])
 
-    l3b = RangeListLog(200, 2., 5)
+    l3b = RangeListLog(200, 2.0, 5)
     assert len(l3b) == 5
-    assert l3b[0] == approx(200., abs=1e-5)
-    assert l3b[-1] == approx(2., abs=1e-5)
+    assert l3b[0] == approx(200.0, abs=1e-5)
+    assert l3b[-1] == approx(2.0, abs=1e-5)
 
     assert raises(UsageError, RangeListLog, -1, 2, 10)
 
@@ -143,9 +148,21 @@ def test_rangelistlog():
 def test_rangelistgeneral():
     l1 = RangeListGeneral(1, 2, 5)
     assert len(l1) == 5
-    l2 = RangeListGeneral(1, 2, 10, lambda x: 1/x)
+    l2 = RangeListGeneral(1, 2, 10, lambda x: 1 / x)
     assert len(l2) == 10
-    assert numpy.allclose(l2, [1.0, 1.05882352941, 1.125, 1.2,
-                               1.28571428571, 1.38461538462, 1.5,
-                               1.63636363636, 1.8, 2.0])
-    assert raises(RuntimeError, RangeListGeneral, 0, 2, 10, lambda x: 1/x)
+    assert numpy.allclose(
+        l2,
+        [
+            1.0,
+            1.05882352941,
+            1.125,
+            1.2,
+            1.28571428571,
+            1.38461538462,
+            1.5,
+            1.63636363636,
+            1.8,
+            2.0,
+        ],
+    )
+    assert raises(RuntimeError, RangeListGeneral, 0, 2, 10, lambda x: 1 / x)

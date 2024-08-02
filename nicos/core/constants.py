@@ -25,30 +25,30 @@
 """NICOS core constants."""
 
 # session modes
-MASTER = 'master'
-SLAVE = 'slave'
-SIMULATION = 'simulation'
-MAINTENANCE = 'maintenance'
+MASTER = "master"
+SLAVE = "slave"
+SIMULATION = "simulation"
+MAINTENANCE = "maintenance"
 
 # session types
-MAIN = 'main'
-POLLER = 'poller'
+MAIN = "main"
+POLLER = "poller"
 
 # data qualities
-LIVE = 'live'
-INTERMEDIATE = 'intermediate'
-FINAL = 'final'
-INTERRUPTED = 'interrupted'
+LIVE = "live"
+INTERMEDIATE = "intermediate"
+FINAL = "final"
+INTERRUPTED = "interrupted"
 
 # data sink types
-UNKNOWN = 'unknown'
-SCAN = 'scan'
-SUBSCAN = 'subscan'
-POINT = 'point'
-BLOCK = 'block'
+UNKNOWN = "unknown"
+SCAN = "scan"
+SUBSCAN = "subscan"
+POINT = "point"
+BLOCK = "block"
 
 # data display
-NOT_AVAILABLE = 'n/a'
+NOT_AVAILABLE = "n/a"
 
 # live data
-FILE = 'file'
+FILE = "file"

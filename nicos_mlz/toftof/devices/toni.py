@@ -24,8 +24,18 @@
 
 """Toni-protocol device classes."""
 
-from nicos.core import ADMIN, Attach, CommunicationError, Moveable, Override, \
-    Param, intrange, oneofdict, requires, status
+from nicos.core import (
+    ADMIN,
+    Attach,
+    CommunicationError,
+    Moveable,
+    Override,
+    Param,
+    intrange,
+    oneofdict,
+    requires,
+    status,
+)
 from nicos.devices.entangle import StringIO
 
 
@@ -37,39 +47,45 @@ class ToniBus(StringIO):
     """
 
     parameters = {
-        'source': Param('Source address of host', type=int, default=0),
+        "source": Param("Source address of host", type=int, default=0),
     }
 
     parameter_overrides = {
-        'comtries': Override(default=5),
+        "comtries": Override(default=5),
     }
 
     def _crc(self, value):
         crc = ord(value[0])
         for i in value[1:]:
             crc ^= ord(i)
-        return '%02X' % crc
+        return "%02X" % crc
 
     def communicate(self, msg, dest, expect_ok=False, expect_hex=0):
-        msg = '%02X%02X%s' % (dest, self.source, msg)
+        msg = "%02X%02X%s" % (dest, self.source, msg)
         msg += self._crc(msg)
         ret = self._dev.communicate(msg)
         # check reply for validity
         crc = self._crc(ret[:-2])
-        if (len(ret) < 7 or ret[4] != '>' or ret[-2:] != crc or
-           ret[:2] != '%02X' % self.source or ret[2:4] != '%02X' % dest):
-            raise CommunicationError(self, 'garbled reply: %r' % ret)
+        if (
+            len(ret) < 7
+            or ret[4] != ">"
+            or ret[-2:] != crc
+            or ret[:2] != "%02X" % self.source
+            or ret[2:4] != "%02X" % dest
+        ):
+            raise CommunicationError(self, "garbled reply: %r" % ret)
         resp = ret[5:-2]
-        if expect_ok and resp != 'OK':
-            raise CommunicationError(self, 'unexpected reply: %r' % resp)
+        if expect_ok and resp != "OK":
+            raise CommunicationError(self, "unexpected reply: %r" % resp)
         if expect_hex:
             if len(resp) != expect_hex:
-                raise CommunicationError(self, 'response invalid: %r' % resp)
+                raise CommunicationError(self, "response invalid: %r" % resp)
             try:
                 value = int(resp, 16)
             except ValueError:
                 raise CommunicationError(
-                    self, 'invalid hex number: %r' % resp) from None
+                    self, "invalid hex number: %r" % resp
+                ) from None
             return value
         return resp
 
@@ -78,86 +94,100 @@ class DelayBox(Moveable):
     """Toni TOFTOF-type programmable delay box."""
 
     attached_devices = {
-        'bus': Attach('Toni communication bus', ToniBus),
+        "bus": Attach("Toni communication bus", ToniBus),
     }
 
     parameters = {
-        'addr': Param('Bus address of the supply controller',
-                      type=intrange(0xF0, 0xFF), mandatory=True),
+        "addr": Param(
+            "Bus address of the supply controller",
+            type=intrange(0xF0, 0xFF),
+            mandatory=True,
+        ),
     }
 
     parameter_overrides = {
-        'fmtstr': Override(default='%d'),
+        "fmtstr": Override(default="%d"),
     }
 
     valuetype = int
 
     def doRead(self, maxage=0):
-        return self._attached_bus.communicate('D?', self.addr, expect_hex=4)
+        return self._attached_bus.communicate("D?", self.addr, expect_hex=4)
 
     def doStart(self, target):
-        self._attached_bus.communicate('D=%04X' % target, self.addr,
-                                       expect_ok=True)
+        self._attached_bus.communicate("D=%04X" % target, self.addr, expect_ok=True)
 
     def doIsAllowed(self, target):
         if 0 <= target <= 65535:
-            return True, ''
+            return True, ""
         else:
-            return False, '%r is not in the allowed range [0, 65535], please '\
-                          'check your delay calculation' % (target,)
+            return (
+                False,
+                "%r is not in the allowed range [0, 65535], please "
+                "check your delay calculation" % (target,),
+            )
 
     def doStatus(self, maxage=0):
-        return status.OK, ''
+        return status.OK, ""
 
 
 class LVPower(Moveable):
     """Toni TOFTOF-type low-voltage power supplies."""
 
     attached_devices = {
-        'bus': Attach('Toni communication bus', ToniBus),
+        "bus": Attach("Toni communication bus", ToniBus),
     }
 
     parameters = {
-        'addr': Param('Bus address of the supply controller',
-                      type=intrange(0xF0, 0xFF), mandatory=True),
-        'temperature': Param('Temperature of the module',
-                             type=int, settable=False, volatile=True,
-                             unit='degC', fmtstr='%d'),
+        "addr": Param(
+            "Bus address of the supply controller",
+            type=intrange(0xF0, 0xFF),
+            mandatory=True,
+        ),
+        "temperature": Param(
+            "Temperature of the module",
+            type=int,
+            settable=False,
+            volatile=True,
+            unit="degC",
+            fmtstr="%d",
+        ),
     }
 
     parameter_overrides = {
-        'unit': Override(mandatory=False, default=''),
+        "unit": Override(mandatory=False, default=""),
     }
 
-    valuetype = oneofdict({1: 'on', 0: 'off'})
+    valuetype = oneofdict({1: "on", 0: "off"})
 
     def doRead(self, maxage=0):
-        sval = self._attached_bus.communicate('S?', self.addr, expect_hex=2)
-        return 'on' if sval >> 7 else 'off'
+        sval = self._attached_bus.communicate("S?", self.addr, expect_hex=2)
+        return "on" if sval >> 7 else "off"
 
     def doReadTemperature(self):
-        return self._attached_bus.communicate('T?', self.addr, expect_hex=2)
+        return self._attached_bus.communicate("T?", self.addr, expect_hex=2)
 
     def doStatus(self, maxage=0):
-        sval = self._attached_bus.communicate('S?', self.addr, expect_hex=2)
+        sval = self._attached_bus.communicate("S?", self.addr, expect_hex=2)
         if sval in (0x0, 0x80):
-            return status.OK, ''
+            return status.OK, ""
         msg = []
         if sval & 0x1:
-            msg.append('undervoltage +5V')
+            msg.append("undervoltage +5V")
         if sval & 0x2:
-            msg.append('overvoltage +5V')
+            msg.append("overvoltage +5V")
         if sval & 0x4:
-            msg.append('undervoltage -5V')
+            msg.append("undervoltage -5V")
         if sval & 0x8:
-            msg.append('overvoltage -5V')
+            msg.append("overvoltage -5V")
         if sval & 0x10:
-            msg.append('undervoltage +12V')
+            msg.append("undervoltage +12V")
         if sval & 0x20:
-            msg.append('overvoltage +12V')
-        return status.ERROR, ', '.join(msg)
+            msg.append("overvoltage +12V")
+        return status.ERROR, ", ".join(msg)
 
     @requires(level=ADMIN)
     def doStart(self, target):
-        self._attached_bus.communicate('P%d' % (target == 'on'),
-                                       self.addr, expect_ok=True)
+        self._attached_bus.communicate(
+            "P%d" % (target == "on"), self.addr, expect_ok=True
+        )

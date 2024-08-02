@@ -24,23 +24,35 @@
 """Commandlets for KWS(-1)."""
 
 from nicos.clients.gui.cmdlets import Cmdlet, register
-from nicos.guisupport.qt import QDialog, QIcon, QMessageBox, QSize, \
-    QTableWidgetItem, QToolButton, pyqtSlot
+from nicos.guisupport.qt import (
+    QDialog,
+    QIcon,
+    QMessageBox,
+    QSize,
+    QTableWidgetItem,
+    QToolButton,
+    pyqtSlot,
+)
 from nicos.utils import findResource, formatDuration
 
-from nicos_mlz.kws1.gui.measdialogs import LOOPS, DetsetDialog, \
-    DevicesDialog, MeasDef, RtConfigDialog, SampleDialog
+from nicos_mlz.kws1.gui.measdialogs import (
+    LOOPS,
+    DetsetDialog,
+    DevicesDialog,
+    MeasDef,
+    RtConfigDialog,
+    SampleDialog,
+)
 
 
 class MeasureTable(Cmdlet):
-
-    name = 'Measurement'
-    category = 'Measure'
+    name = "Measurement"
+    category = "Measure"
 
     meas_def_class = MeasDef
 
     def __init__(self, parent, client, options):
-        uipath = findResource('nicos_mlz/kws1/gui/table.ui')
+        uipath = findResource("nicos_mlz/kws1/gui/table.ui")
         Cmdlet.__init__(self, parent, client, options, uipath)
         self.measdef = self.meas_def_class(rtmode=False)
         self.rt_settings = RtConfigDialog.DEFAULT_SETTINGS.copy()
@@ -51,7 +63,7 @@ class MeasureTable(Cmdlet):
         self.outerLoop.setCurrentIndex(0)
         client.experiment.connect(self.on_client_experiment)
         self.expandBtn = QToolButton()
-        self.expandBtn.setIcon(QIcon(':/down'))
+        self.expandBtn.setIcon(QIcon(":/down"))
         self.expandBtn.setAutoRaise(True)
         self.expandBtn.clicked.connect(self.on_expandBtn_clicked)
         self.table.setCornerWidget(self.expandBtn)
@@ -63,8 +75,11 @@ class MeasureTable(Cmdlet):
     @pyqtSlot()
     def on_selSamples_clicked(self):
         if not self.client.isconnected:
-            QMessageBox.warning(self, 'Error', 'You must be connected to '
-                                'a daemon to be able to select samples.')
+            QMessageBox.warning(
+                self,
+                "Error",
+                "You must be connected to " "a daemon to be able to select samples.",
+            )
             return
         dlg = SampleDialog(self, self.measdef, self.client)
         if dlg.exec() != QDialog.DialogCode.Accepted:
@@ -76,8 +91,11 @@ class MeasureTable(Cmdlet):
     @pyqtSlot()
     def on_selDetsets_clicked(self):
         if not self.client.isconnected:
-            QMessageBox.warning(self, 'Error', 'You must be connected to '
-                                'a daemon to be able to select settings.')
+            QMessageBox.warning(
+                self,
+                "Error",
+                "You must be connected to " "a daemon to be able to select settings.",
+            )
             return
         dlg = DetsetDialog(self, self.measdef, self.client)
         if dlg.exec() != QDialog.DialogCode.Accepted:
@@ -88,8 +106,11 @@ class MeasureTable(Cmdlet):
     @pyqtSlot()
     def on_selDevices_clicked(self):
         if not self.client.isconnected:
-            QMessageBox.warning(self, 'Error', 'You must be connected to '
-                                'a daemon to be able to select devices.')
+            QMessageBox.warning(
+                self,
+                "Error",
+                "You must be connected to " "a daemon to be able to select devices.",
+            )
             return
         dlg = DevicesDialog(self, self.measdef, self.client)
         if dlg.exec() != QDialog.DialogCode.Accepted:
@@ -159,29 +180,32 @@ class MeasureTable(Cmdlet):
             for j, element in enumerate(entry.values()):
                 item = QTableWidgetItem(element.getDispValue())
                 self.table.setItem(i, j, item)
-                if element.eltype == 'time':
+                if element.eltype == "time":
                     total_time += element.getValue()
         self.table.resizeRowsToContents()
         if self.rtBox.isChecked():
-            total_time = self.rt_settings['totaltime'] * len(table)
+            total_time = self.rt_settings["totaltime"] * len(table)
         self.totalTime.setText(formatDuration(total_time))
         self.changed()
 
     def generate(self, mode):
         out = []
         if self.measdef.samplefile is not None:
-            out.append('run(%r)' % self.measdef.samplefile)
-            out.append('')
+            out.append("run(%r)" % self.measdef.samplefile)
+            out.append("")
         if self.rtBox.isChecked():
-            out.append('SetupRealtime(%d, %d, %f, %r)' % (
-                self.rt_settings['channels'],
-                self.rt_settings['interval'] * (10 **
-                {0: 0, 1: 3, 2: 6}[self.rt_settings['intervalunit']]),
-                self.rt_settings['progq'],
-                self.rt_settings['trigger'],
-            ))
+            out.append(
+                "SetupRealtime(%d, %d, %f, %r)"
+                % (
+                    self.rt_settings["channels"],
+                    self.rt_settings["interval"]
+                    * (10 ** {0: 0, 1: 3, 2: 6}[self.rt_settings["intervalunit"]]),
+                    self.rt_settings["progq"],
+                    self.rt_settings["trigger"],
+                )
+            )
         else:
-            out.append('SetupNormal()')
+            out.append("SetupNormal()")
         table = self.measdef.getTable()
         # detect if we use a non-default value for these, and generate the
         # keywords only for these cases
@@ -190,27 +214,27 @@ class MeasureTable(Cmdlet):
         has_polarizer = False
         maxlen = {}
         for entry in table:
-            for (k, v) in entry.items():
+            for k, v in entry.items():
                 vrepr = repr(v.getValue())
                 maxlen[k] = max(maxlen.get(k, 0), len(vrepr))
-                if k == 'chopper' and v.getValue() != 'off':
+                if k == "chopper" and v.getValue() != "off":
                     has_chopper = True
-                elif k == 'polarizer' and v.getValue() != 'out':
+                elif k == "polarizer" and v.getValue() != "out":
                     has_polarizer = True
-                elif k == 'lenses' and v.getValue() != 'out-out-out':
+                elif k == "lenses" and v.getValue() != "out-out-out":
                     has_lenses = True
         for entry in table:
             items = []
-            for (k, v) in entry.items():
-                if k == 'chopper' and not has_chopper:
+            for k, v in entry.items():
+                if k == "chopper" and not has_chopper:
                     continue
-                if k == 'polarizer' and not has_polarizer:
+                if k == "polarizer" and not has_polarizer:
                     continue
-                if k == 'lenses' and not has_lenses:
+                if k == "lenses" and not has_lenses:
                     continue
-                items.append('%s=%-*r' % (k, maxlen[k], v.getValue()))
-            out.append('kwscount(' + ', '.join(items) + ')')
-        return '\n'.join(out)
+                items.append("%s=%-*r" % (k, maxlen[k], v.getValue()))
+            out.append("kwscount(" + ", ".join(items) + ")")
+        return "\n".join(out)
 
 
 register(MeasureTable)

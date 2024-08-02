@@ -36,23 +36,26 @@ class SANSWL(TransformedMoveable):
     hardware_access = False
 
     parameters = {
-        'a': Param('Additive constant for the wavelength calculation',
-                   type=float, settable=False),
-        'b': Param('Constant numerator for the wavelength equation',
-                   type=float, settable=False),
-        'fwhm': Param('FWHM of the wavelength', type=float, default=11.6),
+        "a": Param(
+            "Additive constant for the wavelength calculation",
+            type=float,
+            settable=False,
+        ),
+        "b": Param(
+            "Constant numerator for the wavelength equation", type=float, settable=False
+        ),
+        "fwhm": Param("FWHM of the wavelength", type=float, default=11.6),
     }
 
     attached_devices = {
-        'speed': Attach('Device which controls the VS speed',
-                        Moveable),
+        "speed": Attach("Device which controls the VS speed", Moveable),
     }
 
     def _startRaw(self, target):
         self._attached_speed.start(target)
 
     def _mapTargetValue(self, target):
-        return 1./((target - self.a)/self.b)
+        return 1.0 / ((target - self.a) / self.b)
 
     def doStatus(self, maxage=0):
         return self._attached_speed.status(maxage)
@@ -61,4 +64,4 @@ class SANSWL(TransformedMoveable):
         return self._attached_speed.read(maxage)
 
     def _mapReadValue(self, value):
-        return self.a + self.b/value
+        return self.a + self.b / value

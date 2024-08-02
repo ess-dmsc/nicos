@@ -27,14 +27,14 @@ from unittest import TestCase, mock
 
 import pytest
 
-pytest.importorskip('streaming_data_types')
-pytest.importorskip('confluent_kafka')
+pytest.importorskip("streaming_data_types")
+pytest.importorskip("confluent_kafka")
 
 from streaming_data_types import serialise_answ, serialise_wrdn, serialise_x5f2
-from streaming_data_types.fbschemas.action_response_answ.ActionOutcome import \
-    ActionOutcome
-from streaming_data_types.fbschemas.action_response_answ.ActionType import \
-    ActionType
+from streaming_data_types.fbschemas.action_response_answ.ActionOutcome import (
+    ActionOutcome,
+)
+from streaming_data_types.fbschemas.action_response_answ.ActionType import ActionType
 
 from nicos.core import MASTER
 
@@ -48,40 +48,65 @@ def no_op(*args, **kwargs):
     pass
 
 
-def create_status_message(job_id, start_time=1, stop_time=9999,
-                          update_interval=1000):
-    status = {'file_being_written': 'filename', 'job_id': job_id,
-              'start_time': start_time, 'state': 'writing',
-              'stop_time': stop_time}
-    return serialise_x5f2('nicos_tests', 'version', 'service_id', 'hostname',
-                          12345, update_interval, json.dumps(status))
+def create_status_message(job_id, start_time=1, stop_time=9999, update_interval=1000):
+    status = {
+        "file_being_written": "filename",
+        "job_id": job_id,
+        "start_time": start_time,
+        "state": "writing",
+        "stop_time": stop_time,
+    }
+    return serialise_x5f2(
+        "nicos_tests",
+        "version",
+        "service_id",
+        "hostname",
+        12345,
+        update_interval,
+        json.dumps(status),
+    )
 
 
 def create_stop_request_message(job_id, stop_time=None, success=True):
     stop = stop_time if stop_time else datetime.now()
     outcome = ActionOutcome.Success if success else ActionOutcome.Failure
-    return serialise_answ('service_id', job_id, 'command_id',
-                          ActionType.SetStopTime, outcome,
-                          "message", 0, stop)
+    return serialise_answ(
+        "service_id",
+        job_id,
+        "command_id",
+        ActionType.SetStopTime,
+        outcome,
+        "message",
+        0,
+        stop,
+    )
 
 
 def create_stop_confirmed_message(job_id):
     metadata = json.dumps({"stop_time": 123456})
-    return serialise_wrdn('service_id', job_id, False, 'filename', metadata)
+    return serialise_wrdn("service_id", job_id, False, "filename", metadata)
 
 
 def create_stop_message_with_error(job_id):
     metadata = json.dumps({"stop_time": 123456})
-    return serialise_wrdn('service_id', job_id, True, 'filename', metadata,
-                          "some error")
+    return serialise_wrdn(
+        "service_id", job_id, True, "filename", metadata, "some error"
+    )
 
 
 def create_start_request_message(job_id, start_time=None, success=True):
     start = start_time if start_time else datetime.now()
     outcome = ActionOutcome.Success if success else ActionOutcome.Failure
-    return serialise_answ('service_id', job_id, 'command_id',
-                          ActionType.StartJob, outcome,
-                          "message", 0, start)
+    return serialise_answ(
+        "service_id",
+        job_id,
+        "command_id",
+        ActionType.StartJob,
+        outcome,
+        "message",
+        0,
+        start,
+    )
 
 
 def prepare_filewriter_status(filewriter_status):
@@ -101,12 +126,16 @@ class TestFileWriterStatus(TestCase):
         return thing
 
     def mock_dependencies(self):
-        self.consumer = self.create_patch('nicos_ess.devices.kafka.consumer.KafkaConsumer')
-        self.consumer.return_value.topics.return_value = ['TEST_controlTopic',
-                                                          'TEST_jobPool']
+        self.consumer = self.create_patch(
+            "nicos_ess.devices.kafka.consumer.KafkaConsumer"
+        )
+        self.consumer.return_value.topics.return_value = [
+            "TEST_controlTopic",
+            "TEST_jobPool",
+        ]
 
     def get_status_device(self):
-        filewriter_status = self.session.getDevice('FileWriterStatus')
+        filewriter_status = self.session.getDevice("FileWriterStatus")
         prepare_filewriter_status(filewriter_status)
         return filewriter_status
 
@@ -120,14 +149,14 @@ class TestFileWriterStatus(TestCase):
         self.log = log
         self.mock_dependencies()
         self.session.unloadSetup()
-        self.session.loadSetup('ess_filewriter', {})
+        self.session.loadSetup("ess_filewriter", {})
         self.filewriter_status = self.get_status_device()
 
     def test_after_startup_no_jobs_in_progress(self):
         assert not self.filewriter_status.jobs_in_progress
 
     def test_adding_new_job_puts_it_in_progress(self):
-        job_id_1 = 'job id 1'
+        job_id_1 = "job id 1"
 
         self._add_job(job_id_1, 42)
 
@@ -135,7 +164,7 @@ class TestFileWriterStatus(TestCase):
         assert self.filewriter_status._jobs[job_id_1].state == JobState.NOT_STARTED
 
     def test_status_message_received_changes_next_update_time(self):
-        job_id_1 = 'job id 1'
+        job_id_1 = "job id 1"
         messages = [(123, create_status_message(job_id_1))]
         self._add_job(job_id_1, 42)
         old_time = self.filewriter_status._jobs[job_id_1].next_update
@@ -145,18 +174,17 @@ class TestFileWriterStatus(TestCase):
         assert self.filewriter_status._jobs[job_id_1].next_update != old_time
 
     def test_on_start_job_success(self):
-        job_id_1 = 'job id 1'
+        job_id_1 = "job id 1"
         self._add_job(job_id_1, 42)
 
-        start_request = [(456, create_start_request_message(job_id_1,
-                                                            success=True))]
+        start_request = [(456, create_start_request_message(job_id_1, success=True))]
         self.filewriter_status.new_messages_callback(start_request)
 
         assert job_id_1 in self.filewriter_status.jobs_in_progress
         assert self.filewriter_status._jobs[job_id_1].state == JobState.STARTED
 
     def test_job_stopped_before_filewriting_picks_it_up_successfully_completes(self):
-        job_id_1 = 'job id 1'
+        job_id_1 = "job id 1"
         self._add_job(job_id_1, 42)
 
         self.filewriter_status.mark_for_stop(job_id_1, stop_time=12345678)
@@ -165,8 +193,7 @@ class TestFileWriterStatus(TestCase):
         assert job_id_1 in self.filewriter_status.jobs_in_progress
         assert self.filewriter_status._jobs[job_id_1].state == JobState.NOT_STARTED
 
-        start_request = [(456, create_start_request_message(job_id_1,
-                                                            success=True))]
+        start_request = [(456, create_start_request_message(job_id_1, success=True))]
         self.filewriter_status.new_messages_callback(start_request)
 
         assert job_id_1 in self.filewriter_status.jobs_in_progress
@@ -178,7 +205,7 @@ class TestFileWriterStatus(TestCase):
         assert job_id_1 not in self.filewriter_status.jobs_in_progress
 
     def test_queued_job_starts_after_a_delay(self):
-        job_id_1 = 'job id 1'
+        job_id_1 = "job id 1"
         self._add_job(job_id_1, 42)
 
         # Force timeouts in the status reporting
@@ -189,8 +216,7 @@ class TestFileWriterStatus(TestCase):
         assert job_id_1 in self.filewriter_status.jobs_in_progress
         assert self.filewriter_status._jobs[job_id_1].state == JobState.NOT_STARTED
 
-        start_request = [(456, create_start_request_message(job_id_1,
-                                                            success=True))]
+        start_request = [(456, create_start_request_message(job_id_1, success=True))]
         self.filewriter_status.new_messages_callback(start_request)
 
         assert job_id_1 in self.filewriter_status.jobs_in_progress
@@ -200,18 +226,17 @@ class TestFileWriterStatus(TestCase):
         self.filewriter_status.timeoutinterval = old_timeout
 
     def test_on_failed_start_job_kept_but_state_marked_as_rejected(self):
-        job_id_1 = 'job id 1'
+        job_id_1 = "job id 1"
         self._add_job(job_id_1, 42)
 
-        start_request = [(456, create_start_request_message(job_id_1,
-                                                            success=False))]
+        start_request = [(456, create_start_request_message(job_id_1, success=False))]
         self.filewriter_status.new_messages_callback(start_request)
 
         assert job_id_1 in self.filewriter_status.jobs_in_progress
         assert self.filewriter_status._jobs[job_id_1].state == JobState.REJECTED
 
     def test_if_not_yet_started_then_can_mark_for_stop_but_still_in_progress(self):
-        job_id_1 = 'job id 1'
+        job_id_1 = "job id 1"
         self._add_job(job_id_1, 42)
 
         self.filewriter_status.mark_for_stop(job_id_1, stop_time=12345678)
@@ -220,10 +245,9 @@ class TestFileWriterStatus(TestCase):
         assert job_id_1 in self.filewriter_status.jobs_in_progress
 
     def test_if_started_then_can_mark_for_stop_but_still_in_progress(self):
-        job_id_1 = 'job id 1'
+        job_id_1 = "job id 1"
         self._add_job(job_id_1, 42)
-        start_request = [(456, create_start_request_message(job_id_1,
-                                                            success=True))]
+        start_request = [(456, create_start_request_message(job_id_1, success=True))]
         self.filewriter_status.new_messages_callback(start_request)
 
         self.filewriter_status.mark_for_stop(job_id_1, stop_time=12345678)
@@ -232,10 +256,9 @@ class TestFileWriterStatus(TestCase):
         assert job_id_1 in self.filewriter_status.jobs_in_progress
 
     def test_if_start_failed_then_is_removed_immediately_when_marked_for_stop(self):
-        job_id_1 = 'job id 1'
+        job_id_1 = "job id 1"
         self._add_job(job_id_1, 42)
-        start_request = [(456, create_start_request_message(job_id_1,
-                                                            success=False))]
+        start_request = [(456, create_start_request_message(job_id_1, success=False))]
         self.filewriter_status.new_messages_callback(start_request)
 
         with self.log.allow_errors():
@@ -245,18 +268,20 @@ class TestFileWriterStatus(TestCase):
         assert job_id_1 not in self.filewriter_status.jobs_in_progress
 
     def test_answer_to_stop_message_does_not_modify_job_state(self):
-        job_id_1 = 'job id 1'
+        job_id_1 = "job id 1"
         self._add_job(job_id_1, 42)
         self.filewriter_status.mark_for_stop(job_id_1, stop_time=12345678)
-        messages = [(123, create_status_message(job_id_1)),
-                    (125, create_stop_request_message(job_id_1))]
+        messages = [
+            (123, create_status_message(job_id_1)),
+            (125, create_stop_request_message(job_id_1)),
+        ]
         self.filewriter_status.new_messages_callback(messages)
 
         assert job_id_1 in self.filewriter_status.jobs_in_progress
         assert self.filewriter_status._jobs[job_id_1].state == JobState.STARTED
 
     def test_on_stop_confirmed_job_is_not_in_progress(self):
-        job_id_1 = 'job id 1'
+        job_id_1 = "job id 1"
         self._add_job(job_id_1, 42)
         self.filewriter_status.mark_for_stop(job_id_1, stop_time=12345678)
 
@@ -267,11 +292,13 @@ class TestFileWriterStatus(TestCase):
 
     def test_status_message_after_job_stopped_is_ignored(self):
         # There is no guarantee that messages from Kafka are in the order sent
-        job_id_1 = 'job id 1'
+        job_id_1 = "job id 1"
         self._add_job(job_id_1, 42)
-        messages = [(123, create_status_message(job_id_1)),
-                    (125, create_stop_request_message(job_id_1)),
-                    (126, create_stop_confirmed_message(job_id_1))]
+        messages = [
+            (123, create_status_message(job_id_1)),
+            (125, create_stop_request_message(job_id_1)),
+            (126, create_stop_confirmed_message(job_id_1)),
+        ]
         self.filewriter_status.new_messages_callback(messages)
 
         delayed_status = [(124, create_status_message(job_id_1))]
@@ -282,11 +309,12 @@ class TestFileWriterStatus(TestCase):
 
     def test_stopping_message_after_job_stopped_is_ignored(self):
         # There is no guarantee that messages from Kafka are in the order sent
-        job_id_1 = 'job id 1'
+        job_id_1 = "job id 1"
         self._add_job(job_id_1, 42)
-        messages = [(123, create_status_message(job_id_1)),
-                    (126, create_stop_confirmed_message(job_id_1))
-                   ]
+        messages = [
+            (123, create_status_message(job_id_1)),
+            (126, create_stop_confirmed_message(job_id_1)),
+        ]
         self.filewriter_status.new_messages_callback(messages)
 
         delayed_stop_response = [(124, create_stop_request_message(job_id_1))]
@@ -296,7 +324,7 @@ class TestFileWriterStatus(TestCase):
         assert job_id_1 not in self.filewriter_status.marked_for_stop
 
     def test_job_marked_as_failed_when_no_status_messages_for_a_while(self):
-        job_id_1 = 'job id 1'
+        job_id_1 = "job id 1"
         self._add_job(job_id_1, 42)
         messages = [(123, create_status_message(job_id_1))]
         self.filewriter_status.new_messages_callback(messages)

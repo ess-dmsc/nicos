@@ -25,24 +25,32 @@
 
 import time
 
-from nicos.core import Attach, HasTimeout, Moveable, MoveError, Override, \
-    Readable, oneof, status
+from nicos.core import (
+    Attach,
+    HasTimeout,
+    Moveable,
+    MoveError,
+    Override,
+    Readable,
+    oneof,
+    status,
+)
 
 
 class Shutter(HasTimeout, Moveable):
     """Controlling the shutter."""
 
-    valuetype = oneof('closed', 'open')
+    valuetype = oneof("closed", "open")
 
     attached_devices = {
-        'data_out': Attach('shutter output', Moveable),
-        'data_in':  Attach('shutter input', Readable),
+        "data_out": Attach("shutter output", Moveable),
+        "data_in": Attach("shutter input", Readable),
     }
 
     parameter_overrides = {
-        'fmtstr':     Override(default='%s'),
-        'timeout':    Override(default=10),
-        'unit':       Override(mandatory=False, default=''),
+        "fmtstr": Override(default="%s"),
+        "timeout": Override(default=10),
+        "unit": Override(mandatory=False, default=""),
     }
 
     def doStatus(self, maxage=0):
@@ -50,30 +58,30 @@ class Shutter(HasTimeout, Moveable):
         text = []
         code = status.OK
         if bits & 0b100:
-            text.append('remote')
+            text.append("remote")
         else:
-            text.append('local')
+            text.append("local")
             code = status.WARN
         # bit 3: room free
         # bit 4: keyswitch
         if bits & 0b100000:
-            text.append('error')
+            text.append("error")
             code = status.ERROR
         # HasTimeout will check for target reached
-        return code, ', '.join(text)
+        return code, ", ".join(text)
 
     def doRead(self, maxage=0):
         value = self._attached_data_in.read(maxage)
         if value & 1:
-            return 'open'
+            return "open"
         elif value & 2:
-            return 'closed'
-        return 'unknown'
+            return "closed"
+        return "unknown"
 
     def doStart(self, target):
-        if target == 'open' and not self._attached_data_in.read(0) & 0b100:
-            raise MoveError(self, 'cannot open shutter: set to local mode')
+        if target == "open" and not self._attached_data_in.read(0) & 0b100:
+            raise MoveError(self, "cannot open shutter: set to local mode")
         # bit 0: data valid, bit 1: open, bit 2: close (inverted)
         self._attached_data_out.start(0)
         time.sleep(0.1)
-        self._attached_data_out.start(0b111 if target == 'open' else 0b001)
+        self._attached_data_out.start(0b111 if target == "open" else 0b001)

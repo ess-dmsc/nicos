@@ -29,45 +29,45 @@ from nicos.devices.generic.sequence import SeqDev, SeqSleep
 
 
 class NarzissSpin(BaseSequencer):
-
     attached_devices = {
-        'pom': Attach('Polariser rotation', Moveable),
-        'pmag': Attach('Polariser magnet', Moveable),
+        "pom": Attach("Polariser rotation", Moveable),
+        "pmag": Attach("Polariser magnet", Moveable),
     }
 
-    valuetype = oneof('+', '-', '0', 'undefined')
+    valuetype = oneof("+", "-", "0", "undefined")
 
     def _generateSequence(self, target):
         seq = []
 
-        if target == '+':
-            seq.append((SeqDev(self._attached_pom, 0.8),
-                       SeqDev(self._attached_pmag, -2.5)))
-            seq.append(SeqSleep(4.))
-            seq.append(SeqDev(self._attached_pmag, .4))
-            seq.append(SeqSleep(4.))
-            seq.append(SeqDev(self._attached_pmag, .4))
-        elif target == '-':
-            seq.append((SeqDev(self._attached_pom, 0.8),
-                       SeqDev(self._attached_pmag, 2.5)))
-            seq.append(SeqSleep(4.))
-            seq.append(SeqDev(self._attached_pmag, 1.))
-            seq.append(SeqSleep(4.))
-            seq.append(SeqDev(self._attached_pmag, 1.))
-        elif target == '0':
-            seq.append((SeqDev(self._attached_pom, 3),
-                       SeqDev(self._attached_pmag, 0)))
+        if target == "+":
+            seq.append(
+                (SeqDev(self._attached_pom, 0.8), SeqDev(self._attached_pmag, -2.5))
+            )
+            seq.append(SeqSleep(4.0))
+            seq.append(SeqDev(self._attached_pmag, 0.4))
+            seq.append(SeqSleep(4.0))
+            seq.append(SeqDev(self._attached_pmag, 0.4))
+        elif target == "-":
+            seq.append(
+                (SeqDev(self._attached_pom, 0.8), SeqDev(self._attached_pmag, 2.5))
+            )
+            seq.append(SeqSleep(4.0))
+            seq.append(SeqDev(self._attached_pmag, 1.0))
+            seq.append(SeqSleep(4.0))
+            seq.append(SeqDev(self._attached_pmag, 1.0))
+        elif target == "0":
+            seq.append((SeqDev(self._attached_pom, 3), SeqDev(self._attached_pmag, 0)))
         else:
-            raise ProgrammingError('Invalid value requested')
+            raise ProgrammingError("Invalid value requested")
 
         return seq
 
     def doRead(self, maxage=0):
         val = self._attached_pmag.read(maxage)
-        if abs(val - .4) < .02:
-            return '+'
-        if abs(val - 1.) < .05:
-            return '-'
-        if abs(val) < .05:
-            return '0'
-        return 'undefined'
+        if abs(val - 0.4) < 0.02:
+            return "+"
+        if abs(val - 1.0) < 0.05:
+            return "-"
+        if abs(val) < 0.05:
+            return "0"
+        return "undefined"

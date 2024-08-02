@@ -30,14 +30,13 @@ class DetectorController(IsController, Device):
     """
 
     attached_devices = {
-        'com': Attach('detector tilt', Moveable),
-        'coz': Attach('detector offset', Moveable),
-        'park': Attach('detector park motor', Moveable),
+        "com": Attach("detector tilt", Moveable),
+        "coz": Attach("detector offset", Moveable),
+        "park": Attach("detector park motor", Moveable),
     }
 
     def isAdevTargetAllowed(self, adev, adevtarget):
         if adev in [self._attached_com, self._attached_coz]:
             if self._attached_park.read(0) < -90:
-                return False, "Cannot move %s when in park position"\
-                    % (adev.name)
-        return True, ''
+                return False, "Cannot move %s when in park position" % (adev.name)
+        return True, ""

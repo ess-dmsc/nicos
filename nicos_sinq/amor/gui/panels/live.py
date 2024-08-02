@@ -23,31 +23,32 @@
 # *****************************************************************************
 
 from nicos.clients.gui.panels.live import LiveDataPanel as BaseLiveDataPanel
-from nicos.guisupport.livewidget import \
-    IntegralLiveWidget as BaseIntegralLiveWidget, \
-    LiveWidget1D as BaseLiveWidget1D, Plot
+from nicos.guisupport.livewidget import (
+    IntegralLiveWidget as BaseIntegralLiveWidget,
+    LiveWidget1D as BaseLiveWidget1D,
+    Plot,
+)
 
 
 class ProvidesTitleSetter:
-    """Provides function to set the the title of the plot
-    """
+    """Provides function to set the the title of the plot"""
 
     def setPlotTitle(self, title):
-        if hasattr(self, 'plot') and isinstance(self.plot, Plot):
+        if hasattr(self, "plot") and isinstance(self.plot, Plot):
             self.plot.title = title
 
 
 class SingleDetectorLiveWidget(ProvidesTitleSetter, BaseLiveWidget1D):
     def __init__(self, parent, **kwargs):
         BaseLiveWidget1D.__init__(self, parent, **kwargs)
-        self.plot.viewport = [0.1, .95, 0.1, .85]
+        self.plot.viewport = [0.1, 0.95, 0.1, 0.85]
 
 
 class IntegralLiveWidget(ProvidesTitleSetter, BaseIntegralLiveWidget):
     def __init__(self, parent, **kwargs):
         BaseIntegralLiveWidget.__init__(self, parent, **kwargs)
-        self.plot.viewport = [.1, .75, .1, .70]
-        self.plotxint.viewport = [.8, .95, .1, .70]
+        self.plot.viewport = [0.1, 0.75, 0.1, 0.70]
+        self.plotxint.viewport = [0.8, 0.95, 0.1, 0.70]
 
 
 class LiveDataPanel(BaseLiveDataPanel):

@@ -1,9 +1,9 @@
-description = 'Generic configuration settings for TASP'
+description = "Generic configuration settings for TASP"
 
 import os
 
-group = 'configdata'
+group = "configdata"
 
-DATA_PATH = os.environ.get('NICOSDUMP', '.') + '/tasp/'
+DATA_PATH = os.environ.get("NICOSDUMP", ".") + "/tasp/"
 
-KAFKA_BROKERS = ['localhost:9092']
+KAFKA_BROKERS = ["localhost:9092"]

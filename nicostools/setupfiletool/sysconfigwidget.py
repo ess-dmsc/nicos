@@ -35,7 +35,7 @@ class SysconfigWidget(TreeWidgetContextMenu):
         # a list of items of a sysconfig that allow only one value.
         # the others, 'datasinks' and 'notifiers', allow mulitple values.
         # this information was taken from nicos_demo/skeleton/setups/system.py
-        self.nonListItems = ['cache', 'instrument', 'experiment']
+        self.nonListItems = ["cache", "instrument", "experiment"]
 
     def contextMenuOnItem(self, item, pos):
         if item is None:
@@ -51,7 +51,7 @@ class SysconfigWidget(TreeWidgetContextMenu):
                 if self.currentItem().childCount() > 0:
                     return  # value is already set, can't add multiple values
             menu = QMenu(self)
-            addValueAction = menu.addAction('Add value...')
+            addValueAction = menu.addAction("Add value...")
             addValueAction.triggered.connect(self.addValue)
             menu.popup(pos)
 
@@ -60,7 +60,7 @@ class SysconfigWidget(TreeWidgetContextMenu):
         if dlg.exec():
             value = dlg.getValue()
             if not value:
-                QMessageBox.warning(self, 'Error', 'No value entered.')
+                QMessageBox.warning(self, "Error", "No value entered.")
                 return
             self.currentItem().addChild(QTreeWidgetItem([value]))
             self.editedSetup.emit()

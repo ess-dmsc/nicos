@@ -1,9 +1,9 @@
-description = 'Generic configuration settings for NARZISS'
+description = "Generic configuration settings for NARZISS"
 
 import os
 
-group = 'configdata'
+group = "configdata"
 
-DATA_PATH = os.environ.get('NICOSDUMP', '.') + '/narziss/'
+DATA_PATH = os.environ.get("NICOSDUMP", ".") + "/narziss/"
 
-KAFKA_BROKERS = ['localhost:9092']
+KAFKA_BROKERS = ["localhost:9092"]

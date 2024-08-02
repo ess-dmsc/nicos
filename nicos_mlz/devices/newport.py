@@ -38,14 +38,20 @@ class HexapodMaster(PyTangoDevice, CanReference, Readable):
     """
 
     parameters = {
-        'speed': Param('Master speed',
-                       type=float, settable=True, userparam=True,
-                       volatile=True,
-                       ),
-        'accel': Param('Master acceleration',
-                       type=float, settable=True, userparam=True,
-                       volatile=True,
-                       ),
+        "speed": Param(
+            "Master speed",
+            type=float,
+            settable=True,
+            userparam=True,
+            volatile=True,
+        ),
+        "accel": Param(
+            "Master acceleration",
+            type=float,
+            settable=True,
+            userparam=True,
+            volatile=True,
+        ),
     }
 
     def doReadSpeed(self):
@@ -68,7 +74,7 @@ class HexapodMaster(PyTangoDevice, CanReference, Readable):
         self._dev.Reset()
 
     def doRead(self, maxage=0):
-        return ''
+        return ""
 
 
 class HexapodAxis(MotorAxis):
@@ -78,10 +84,13 @@ class HexapodAxis(MotorAxis):
     """
 
     parameters = {
-        'coordsystem': Param('Hexapod coordinate offset',
-                             type=float, settable=True, userparam=True,
-                             volatile=True,
-                             ),
+        "coordsystem": Param(
+            "Hexapod coordinate offset",
+            type=float,
+            settable=True,
+            userparam=True,
+            volatile=True,
+        ),
     }
 
     def doReadCoordsystem(self):

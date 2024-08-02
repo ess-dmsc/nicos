@@ -31,41 +31,50 @@ from nicos.devices.generic.paramdev import ParamDevice
 entry = tupleof(tangodev, none_or(tupleof(tangodev, float, float, float, float, float)))
 
 
-
 class FlexRegulator(TemperatureController):
     """Temperature controller with varying setup for software and hardware
     regulation."""
 
     parameters = {
-        'dummy':   Param('Dummy input device', type=tangodev, mandatory=True),
-        'configs': Param('Possible setups', type=dictof(str, entry), mandatory=True),
-        'config':  Param('Current configuration', type=str, volatile=True,
-                         settable=True),
+        "dummy": Param("Dummy input device", type=tangodev, mandatory=True),
+        "configs": Param("Possible setups", type=dictof(str, entry), mandatory=True),
+        "config": Param(
+            "Current configuration", type=str, volatile=True, settable=True
+        ),
     }
 
     def doReadConfig(self):
         props = self._dev.GetProperties()
-        indev = props[props.index('indev') + 1]
-        outdev = props[props.index('outdev') + 1]
-        for (cfgname, config) in self.configs.items():
+        indev = props[props.index("indev") + 1]
+        outdev = props[props.index("outdev") + 1]
+        for cfgname, config in self.configs.items():
             if config[0] == outdev:
                 if config[1] is None:
                     if indev == self.dummy:
                         return cfgname
                 elif indev == config[1][0]:
                     return cfgname
-        return '<unknown>'
+        return "<unknown>"
 
     def doWriteConfig(self, value):
         cfg = self.configs[value]
-        props = ['outdev', cfg[0]]
+        props = ["outdev", cfg[0]]
         if cfg[1]:
             indev, outmin, outmax, initp, initi, initd = cfg[1]
-            props += ['indev', indev, 'software', 'True',
-                      'outmin', str(outmin), 'outmax', str(outmax),
-                      'initpid', '[%s, %s, %s]' % (initp, initi, initd)]
+            props += [
+                "indev",
+                indev,
+                "software",
+                "True",
+                "outmin",
+                str(outmin),
+                "outmax",
+                str(outmax),
+                "initpid",
+                "[%s, %s, %s]" % (initp, initi, initd),
+            ]
         else:
-            props += ['indev', self.dummy, 'software', 'False']
+            props += ["indev", self.dummy, "software", "False"]
         self._dev.SetProperties(props)
 
 

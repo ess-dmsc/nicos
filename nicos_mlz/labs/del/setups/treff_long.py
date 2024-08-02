@@ -1,8 +1,8 @@
-description = 'DEL setup at beam TREFF'
+description = "DEL setup at beam TREFF"
 
 includes = [
-    'voltage',
-    'long_table_treff',
+    "voltage",
+    "long_table_treff",
 ]
 
-group = 'basic'
+group = "basic"

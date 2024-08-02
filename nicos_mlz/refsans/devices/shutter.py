@@ -22,7 +22,6 @@
 # *****************************************************************************
 """Shutter related devices."""
 
-
 from nicos.core import status
 from nicos.core.errors import PositionError
 from nicos.devices.generic.switcher import Switcher
@@ -35,6 +34,7 @@ class Shutter(Switcher):
     and this state should be transferred to the 'outer' world via the shutter
     devices itself.
     """
+
     def doStatus(self, maxage=0):
         # if the underlying device is moving or in error state,
         # reflect its status
@@ -47,10 +47,16 @@ class Shutter(Switcher):
             r = self.read(maxage)
             if r not in self.mapping:
                 if self.fallback:
-                    return (status.UNKNOWN, 'unconfigured position of %s, '
-                            'using fallback' % self._attached_moveable)
-                return (status.NOTREACHED, 'unconfigured position of %s or '
-                        'still moving' % self._attached_moveable)
+                    return (
+                        status.UNKNOWN,
+                        "unconfigured position of %s, "
+                        "using fallback" % self._attached_moveable,
+                    )
+                return (
+                    status.NOTREACHED,
+                    "unconfigured position of %s or "
+                    "still moving" % self._attached_moveable,
+                )
         except PositionError as e:
             return status.NOTREACHED, str(e)
         if move_status[0] == status.WARN:

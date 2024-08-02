@@ -39,19 +39,18 @@ class Switcher(GenericSwitcher):
     """
 
     parameter_overrides = {
-        'precision': Override(default=0.1, mandatory=False),
-        'fallback': Override(default='Unknown', mandatory=False),
-        'blockingmove': Override(default=True, mandatory=False),
+        "precision": Override(default=0.1, mandatory=False),
+        "fallback": Override(default="Unknown", mandatory=False),
+        "blockingmove": Override(default=True, mandatory=False),
     }
 
     def _startRaw(self, target):
         """Initiate movement of the moveable to the translated raw value."""
         if isinstance(self._attached_moveable, CanReference):
-            self.log.info('referencing %s...', self._attached_moveable)
+            self.log.info("referencing %s...", self._attached_moveable)
             self._attached_moveable.reference()
         else:
-            self.log.warning('%s cannot be referenced!',
-                             self._attached_moveable)
+            self.log.warning("%s cannot be referenced!", self._attached_moveable)
         self._attached_moveable.start(target)
         if self.blockingmove:
             self._attached_moveable.wait()

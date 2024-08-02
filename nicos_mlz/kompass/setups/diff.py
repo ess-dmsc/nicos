@@ -1,13 +1,18 @@
-description = 'KOMPASS diffraction mode setup'
-group = 'basic'
+description = "KOMPASS diffraction mode setup"
+group = "basic"
 
-includes = ['mono', 'guidefocus', 'selector', 'astrium', 'sample', 'alias_sth',
-            'reactor',
-            'detector',
-            'vanalyzer',
-           ]
+includes = [
+    "mono",
+    "guidefocus",
+    "selector",
+    "astrium",
+    "sample",
+    "alias_sth",
+    "reactor",
+    "detector",
+    "vanalyzer",
+]
 
-modules = ['nicos.commands.tas']
+modules = ["nicos.commands.tas"]
 
-devices = dict(
-)
+devices = dict()

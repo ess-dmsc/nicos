@@ -33,7 +33,7 @@ from os import path
 
 from nicos.configmod import readToml
 
-SETUPNAME_RE = re.compile(r'[-\w]+$')
+SETUPNAME_RE = re.compile(r"[-\w]+$")
 
 
 def iterSetups(paths):
@@ -41,7 +41,7 @@ def iterSetups(paths):
     for rootpath in paths:
         for root, _, files in os.walk(rootpath, topdown=False):
             for filename in files:
-                if not filename.endswith('.py'):
+                if not filename.endswith(".py"):
                     continue
                 filepath = path.join(root, filename)
                 setupname = path.splitext(path.basename(filepath))[0]
@@ -51,7 +51,7 @@ def iterSetups(paths):
 
 def findSetup(paths, setupname):
     """Return, if found, the full filename for a given setup name."""
-    for (fpsetupname, filepath) in iterSetups(paths):
+    for fpsetupname, filepath in iterSetups(paths):
         if fpsetupname == setupname:
             return filepath
 
@@ -59,14 +59,14 @@ def findSetup(paths, setupname):
 def findNicosFacilityDirs(where):
     for facility in sorted(os.listdir(where)):
         full = path.join(where, facility)
-        if facility.startswith('nicos_') and path.isdir(full):
+        if facility.startswith("nicos_") and path.isdir(full):
             yield facility, full
 
 
-def findNicosInstrumentSubDirs(parent, facility=''):
+def findNicosInstrumentSubDirs(parent, facility=""):
     for instr in sorted(os.listdir(parent)):
         fullinstr = path.join(parent, instr)
-        if path.isfile(path.join(fullinstr, 'nicos.conf')):
+        if path.isfile(path.join(fullinstr, "nicos.conf")):
             yield instr, facility, fullinstr
 
 
@@ -77,24 +77,25 @@ def findAllNicosInstrumentDirs(root):
 
 def findInstrGuiConfigs(where):
     for guiconf in sorted(os.listdir(where)):
-        if 'guiconf' in guiconf and guiconf.endswith('.py'):
+        if "guiconf" in guiconf and guiconf.endswith(".py"):
             yield guiconf, path.join(where, guiconf)
 
 
 def findSetupRoots(filename):
     """Find nicos.conf and resolve setup root directories."""
     dirname = path.dirname(filename)
-    while not path.isfile(path.join(dirname, 'nicos.conf')):
+    while not path.isfile(path.join(dirname, "nicos.conf")):
         new_dirname = path.dirname(dirname)
         if new_dirname == dirname:
             # we arrived at the root directory (/ or X:\) without finding
             # nicos.conf, let's just search in the setup's directory
             return (path.dirname(filename),)
         dirname = new_dirname
-    cfg = readToml(path.join(dirname, 'nicos.conf'))
-    subdirs = cfg.get('nicos', {}).get('setup_subdirs', None)
+    cfg = readToml(path.join(dirname, "nicos.conf"))
+    subdirs = cfg.get("nicos", {}).get("setup_subdirs", None)
     if subdirs is not None:
-        return tuple(path.join(path.dirname(dirname), subdir, 'setups')
-                     for subdir in subdirs)
+        return tuple(
+            path.join(path.dirname(dirname), subdir, "setups") for subdir in subdirs
+        )
     else:
         return (dirname,)

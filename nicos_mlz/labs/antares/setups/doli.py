@@ -1,22 +1,24 @@
-description = 'Tensile machine'
+description = "Tensile machine"
 
-group = 'optional'
+group = "optional"
 
-excludes = ['tensile']
+excludes = ["tensile"]
 
-tango_base = 'tango://doli.antareslab:10000/test/doli/'
+tango_base = "tango://doli.antareslab:10000/test/doli/"
 
 devices = dict(
-    load = device('nicos.devices.entangle.Actuator',
-        description = 'load value of the tensile machine',
-        tangodevice = tango_base + 'load',
-        precision = 2,
-        fmtstr = '%.1f',
+    load=device(
+        "nicos.devices.entangle.Actuator",
+        description="load value of the tensile machine",
+        tangodevice=tango_base + "load",
+        precision=2,
+        fmtstr="%.1f",
     ),
-    position = device('nicos.devices.entangle.Actuator',
-        description = 'position value of the tensile machine',
-        tangodevice = tango_base + 'position',
-        fmtstr = '%.4f',
+    position=device(
+        "nicos.devices.entangle.Actuator",
+        description="position value of the tensile machine",
+        tangodevice=tango_base + "position",
+        fmtstr="%.4f",
     ),
 )
 

@@ -1,78 +1,82 @@
-description = 'PANDA Si-monochromator'
+description = "PANDA Si-monochromator"
 
-group = 'lowlevel'
+group = "lowlevel"
 display_order = 21
 
-includes = ['monofoci', 'monoturm', 'panda_mtt']
+includes = ["monofoci", "monoturm", "panda_mtt"]
 
-excludes = ['mono_pg', 'mono_cu', 'mono_heusler']
+excludes = ["mono_pg", "mono_cu", "mono_heusler"]
 
-extended = dict(dynamic_loaded = True)
+extended = dict(dynamic_loaded=True)
 
 devices = dict(
-    mono_si = device('nicos.devices.tas.Monochromator',
-        description = 'PANDA Si monochromator',
-        unit = 'A-1',
-        theta = 'mth',
-        twotheta = 'mtt',
-        reltheta = True,
-        focush = 'mfh_si',
-        focusv =  None,
-        hfocuspars = [0],
-        vfocuspars = [0],
-        abslimits = (1, 10),
-        userlimits = (1, 10),
-        dvalue = 3.455,
-        scatteringsense = -1,
-        crystalside = -1,
+    mono_si=device(
+        "nicos.devices.tas.Monochromator",
+        description="PANDA Si monochromator",
+        unit="A-1",
+        theta="mth",
+        twotheta="mtt",
+        reltheta=True,
+        focush="mfh_si",
+        focusv=None,
+        hfocuspars=[0],
+        vfocuspars=[0],
+        abslimits=(1, 10),
+        userlimits=(1, 10),
+        dvalue=3.455,
+        scatteringsense=-1,
+        crystalside=-1,
     ),
-    mfh_si_step = device('nicos_mlz.panda.devices.mcc2.MCC2Motor',
-        description = 'horizontal focusing MOTOR of Si monochromator',
-        bus = 'focimotorbus',
-        mccmovement = 'linear',
-        precision = 0.01,
-        fmtstr = '%.3f',
-        channel = 'X',
-        addr = 0,
-        slope = 27000.0 / 5 * 200 / 512,
-        abslimits = (1, 5),
-        userlimits = (1, 5),
-        unit = 'mm',
-        idlecurrent = 0.6,
-        movecurrent = 1.3,
-        rampcurrent = 1.3,
-        microstep = 8,
-        speed = 5.0 / 54.0,
-        accel = 5.0 / 54.0,
-        visibility = (),
+    mfh_si_step=device(
+        "nicos_mlz.panda.devices.mcc2.MCC2Motor",
+        description="horizontal focusing MOTOR of Si monochromator",
+        bus="focimotorbus",
+        mccmovement="linear",
+        precision=0.01,
+        fmtstr="%.3f",
+        channel="X",
+        addr=0,
+        slope=27000.0 / 5 * 200 / 512,
+        abslimits=(1, 5),
+        userlimits=(1, 5),
+        unit="mm",
+        idlecurrent=0.6,
+        movecurrent=1.3,
+        rampcurrent=1.3,
+        microstep=8,
+        speed=5.0 / 54.0,
+        accel=5.0 / 54.0,
+        visibility=(),
     ),
-    mfh_si_enc = device('nicos_mlz.panda.devices.mcc2.MCC2Coder',
-        description = 'horizontal focusing CODER of Si monochromator',
-        bus = 'focimotorbus',
-        fmtstr = '%.3f',
-        channel = 'X',
-        addr = 0,
-        slope = 4 * 27000.0 / 5,  # ???
-        unit = 'mm',
-        zerosteps = 0,
-        codertype = 'incremental',
-        coderbits = 25,
-        visibility = (),
+    mfh_si_enc=device(
+        "nicos_mlz.panda.devices.mcc2.MCC2Coder",
+        description="horizontal focusing CODER of Si monochromator",
+        bus="focimotorbus",
+        fmtstr="%.3f",
+        channel="X",
+        addr=0,
+        slope=4 * 27000.0 / 5,  # ???
+        unit="mm",
+        zerosteps=0,
+        codertype="incremental",
+        coderbits=25,
+        visibility=(),
     ),
     # mfh_si = device('nicos.devices.generic.Axis',
-    mfh_si = device('nicos_mlz.panda.devices.rot_axis.RefAxis',
-        description = 'horizontal focus of Si monochromator',
-        motor = 'mfh_si_step',
-        coder = 'mfh_si_enc',
-        precision = 0.01,
-        backlash = -0.2,
-        refpos = 1.4,
-        refspeed = 0.01,
-        autoref = None,
+    mfh_si=device(
+        "nicos_mlz.panda.devices.rot_axis.RefAxis",
+        description="horizontal focus of Si monochromator",
+        motor="mfh_si_step",
+        coder="mfh_si_enc",
+        precision=0.01,
+        backlash=-0.2,
+        refpos=1.4,
+        refspeed=0.01,
+        autoref=None,
     ),
 )
 
-startupcode = '''
+startupcode = """
 try:
     _ = (ana, mono, mfv, mfh, focibox)
 except NameError as e:
@@ -94,4 +98,4 @@ if focibox.read(0) == 'Si':
     del session
 else:
     printerror('WRONG MONO ON TABLE FOR SETUP mono_si !!!')
-'''
+"""

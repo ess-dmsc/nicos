@@ -27,10 +27,28 @@ from pprint import pformat
 from nicos.clients.gui.panels import Panel
 from nicos.clients.gui.utils import loadUi
 from nicos.core.errors import ConfigurationError
-from nicos.guisupport.qt import QBrush, QColor, QDateTime, QDialog, QEvent, \
-    QFont, QFrame, QGraphicsEllipseItem, QGraphicsLineItem, QGraphicsScene, \
-    QGraphicsTextItem, QGraphicsView, QMenu, QPainter, QPen, Qt, \
-    QTableWidgetItem, QTextEdit, pyqtSignal, pyqtSlot
+from nicos.guisupport.qt import (
+    QBrush,
+    QColor,
+    QDateTime,
+    QDialog,
+    QEvent,
+    QFont,
+    QFrame,
+    QGraphicsEllipseItem,
+    QGraphicsLineItem,
+    QGraphicsScene,
+    QGraphicsTextItem,
+    QGraphicsView,
+    QMenu,
+    QPainter,
+    QPen,
+    Qt,
+    QTableWidgetItem,
+    QTextEdit,
+    pyqtSignal,
+    pyqtSlot,
+)
 from nicos.guisupport.typedvalue import DeviceValueEdit
 from nicos.utils import findResource
 
@@ -39,6 +57,7 @@ class TimelineWidget(QGraphicsView):
     """General widget to display timeline with a list of ordered timepoints.
     A timepoint is selectable via click and the timepointSelected signal
     can be used to react to it."""
+
     timepointSelected = pyqtSignal(object)  # datetime.datetime object
 
     # general layout and design parameters
@@ -48,14 +67,14 @@ class TimelineWidget(QGraphicsView):
     TIMELINE_WIDTH = 5
     LABEL_SPACING = 20
     MARGIN_HORIZONTAL = 5
-    STRFTIME_FMT = '%H:%M:%S\n%Y-%m-%d'
+    STRFTIME_FMT = "%H:%M:%S\n%Y-%m-%d"
 
     def __init__(self, parent=None):
         QGraphicsView.__init__(self, QGraphicsScene(), parent)
-        self.setAlignment(Qt.AlignmentFlag.AlignLeft |
-                          Qt.AlignmentFlag.AlignVCenter)
-        self.setRenderHints(QPainter.RenderHint.Antialiasing |
-                            QPainter.RenderHint.SmoothPixmapTransform)
+        self.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+        self.setRenderHints(
+            QPainter.RenderHint.Antialiasing | QPainter.RenderHint.SmoothPixmapTransform
+        )
 
         # margins set to 0 to simplify calculations
         self.setContentsMargins(0, 0, 0, 0)
@@ -144,12 +163,12 @@ class TimelineWidget(QGraphicsView):
         # The selection_item used to signal the selection of a timepoint
         # is always the same and is only moved.
         if self._selection_item is None:
-            self._selection_item = QGraphicsEllipseItem(0, 0,
-                                                        self.SELECTION_DIAMETER,
-                                                        self.SELECTION_DIAMETER)
+            self._selection_item = QGraphicsEllipseItem(
+                0, 0, self.SELECTION_DIAMETER, self.SELECTION_DIAMETER
+            )
 
             # The used color is a cubical to the time point color
-            self._selection_item.setBrush(QBrush(QColor(0x70, 0xbb, 0x00)))
+            self._selection_item.setBrush(QBrush(QColor(0x70, 0xBB, 0x00)))
             self._selection_item.setPen(QPen(0))
             self.scene().addItem(self._selection_item)
 
@@ -158,13 +177,14 @@ class TimelineWidget(QGraphicsView):
         center_y = item.pos().y() + self.TIMEPOINT_DIAMETER / 2
 
         # move selection item
-        self._selection_item.setPos(center_x - self.SELECTION_DIAMETER / 2,
-                                    center_y - self.SELECTION_DIAMETER / 2)
+        self._selection_item.setPos(
+            center_x - self.SELECTION_DIAMETER / 2,
+            center_y - self.SELECTION_DIAMETER / 2,
+        )
 
         # store the selection_item like a timepoint item (using the timepoint
         # of the selected item)
-        self._time_point_items[self._selection_item] = \
-            self._time_point_items[item]
+        self._time_point_items[self._selection_item] = self._time_point_items[item]
 
         # emit signal at the end to ensure a valid internal state before
         # anything can react to it
@@ -189,7 +209,7 @@ class TimelineWidget(QGraphicsView):
 
         # The used color for the timeline is the lightest one of the FRM II
         # colors
-        item.setPen(QPen(QBrush(QColor(0xa3, 0xc1, 0xe7)), self.TIMELINE_WIDTH))
+        item.setPen(QPen(QBrush(QColor(0xA3, 0xC1, 0xE7)), self.TIMELINE_WIDTH))
 
         self.scene().addItem(item)
 
@@ -223,11 +243,12 @@ class TimelineWidget(QGraphicsView):
         y = center_y - (self.TIMEPOINT_DIAMETER / 2)
 
         # Create the acutal time point item
-        time_point_item = QGraphicsEllipseItem(0, 0, self.TIMEPOINT_DIAMETER,
-                                               self.TIMEPOINT_DIAMETER)
+        time_point_item = QGraphicsEllipseItem(
+            0, 0, self.TIMEPOINT_DIAMETER, self.TIMEPOINT_DIAMETER
+        )
 
         # The used color is the strongest one of the FRM II colors.
-        time_point_item.setBrush(QBrush(QColor(0x00, 0x71, 0xbb)))
+        time_point_item.setBrush(QBrush(QColor(0x00, 0x71, 0xBB)))
         time_point_item.setPen(QPen(0))
 
         self.scene().addItem(time_point_item)
@@ -239,7 +260,7 @@ class TimelineWidget(QGraphicsView):
         # Create the label of the time point showing the time in the
         # defined strftime format on the right side of the time point item.
         label = QGraphicsTextItem(time_point.strftime(self.STRFTIME_FMT))
-        label.setFont(QFont('Monospace'))
+        label.setFont(QFont("Monospace"))
         label_height = label.boundingRect().height()
 
         # minor height adjustment
@@ -256,11 +277,12 @@ class TimelineWidget(QGraphicsView):
 
 class PreviewDialog(QDialog):
     """Dialog to preview the history of a specific tunewave table."""
-    def __init__(self, measmode, wavelength, header_labels, current_table,
-                 client, parent):
+
+    def __init__(
+        self, measmode, wavelength, header_labels, current_table, client, parent
+    ):
         QDialog.__init__(self, parent)
-        loadUi(self,
-               findResource('nicos_mlz/gui/tunewavetablepreviewdlg.ui'))
+        loadUi(self, findResource("nicos_mlz/gui/tunewavetablepreviewdlg.ui"))
 
         self._client = client
         self._measmode = measmode
@@ -279,8 +301,7 @@ class PreviewDialog(QDialog):
         self.tableWidget.setColumnCount(len(self._header_labels))
         self.tableWidget.setHorizontalHeaderLabels(self._header_labels)
 
-        self.fromDateTimeEdit.setDateTime(
-                QDateTime.currentDateTime().addMonths(-1))
+        self.fromDateTimeEdit.setDateTime(QDateTime.currentDateTime().addMonths(-1))
         self.toDateTimeEdit.setDateTime(QDateTime.currentDateTime())
 
         self.fromDateTimeEdit.dateTimeChanged.connect(self.update_timeline)
@@ -319,8 +340,9 @@ class PreviewDialog(QDialog):
         fromtime = self.fromDateTimeEdit.dateTime().toSecsSinceEpoch()
         totime = self.toDateTimeEdit.dateTime().toSecsSinceEpoch()
 
-        result = self._client.ask('gethistory', 'echotime/tables',
-                                  str(fromtime), str(totime), None)
+        result = self._client.ask(
+            "gethistory", "echotime/tables", str(fromtime), str(totime), None
+        )
 
         # Store the history result in the format {datetime: table}
         self._history = {}  # timestamp : table
@@ -328,8 +350,9 @@ class PreviewDialog(QDialog):
             # store time point only if there was a change in the specific table
             if self._measmode in tables:
                 if self._wavelength in tables[self._measmode]:
-                    self._history[datetime.fromtimestamp(timestamp)] = \
-                        tables[self._measmode][self._wavelength]
+                    self._history[datetime.fromtimestamp(timestamp)] = tables[
+                        self._measmode
+                    ][self._wavelength]
 
         # Update the timeline with the discovered time points
         self.timeline.setTimePoints(list(self._history))
@@ -356,7 +379,7 @@ class PreviewDialog(QDialog):
             row_data = dict(self._shown_table[echotime])
 
             # add the separate echotime as row entry
-            row_data['echotime'] = echotime
+            row_data["echotime"] = echotime
 
             self._add_row(i, row_data, diff_table)
 
@@ -364,11 +387,11 @@ class PreviewDialog(QDialog):
         """Add the diff value to the cell content and highlight the cell."""
         diff = ' <span style="color:gray;">%s</span>' % diff_value
         cell_widget.setHtml(cell_widget.toPlainText() + diff)
-        cell_widget.setStyleSheet('QTextEdit{border:1px solid orange}')
+        cell_widget.setStyleSheet("QTextEdit{border:1px solid orange}")
 
     def _add_row(self, row, row_data, diff_table):
         """Add a row to the table and add/highlight differences."""
-        echotime = row_data['echotime']
+        echotime = row_data["echotime"]
 
         for header, value in row_data.items():
             # Use a QTextEdit to be able to use HTML/CSS inside the content
@@ -376,14 +399,14 @@ class PreviewDialog(QDialog):
             widget = QTextEdit(str(value))
 
             if diff_table is not None:
-                diff_value = ''
+                diff_value = ""
                 show_diff = False
 
                 if echotime in diff_table:
                     # If the echotime exists on both tables, only show the
                     # differences
-                    diff_value = diff_table[echotime].get(header, '')
-                    if header != 'echotime' and diff_value != value:
+                    diff_value = diff_table[echotime].get(header, "")
+                    if header != "echotime" and diff_value != value:
                         show_diff = True
                 else:
                     # If the echotime is completely new, highlight the whole
@@ -397,15 +420,16 @@ class PreviewDialog(QDialog):
 
             # Don't show any frame as there is the more fancy table grid
             widget.setFrameStyle(QFrame.Shape.NoFrame)
-            self.tableWidget.setCellWidget(row,
-                                           self._header_labels.index(header),
-                                           widget)
+            self.tableWidget.setCellWidget(
+                row, self._header_labels.index(header), widget
+            )
 
 
 class TunewaveTableItem(QTableWidgetItem):
     """Custom table widget item that store its content in the actual type
     (instead of string only) and supports comparisons based on that actual
     value."""
+
     def __init__(self, value):
         QTableWidgetItem.__init__(self, str(value))
         self.value = value
@@ -430,54 +454,55 @@ class TunewaveTablePanel(Panel):
       measurement mode, either 'nrse' or 'mieze'.
     """
 
-    panelName = 'Tunewave table'
+    panelName = "Tunewave table"
 
     def __init__(self, parent, client, options):
         Panel.__init__(self, parent, client, options)
-        loadUi(self, findResource('nicos_mlz/gui/tunewavetable.ui'))
+        loadUi(self, findResource("nicos_mlz/gui/tunewavetable.ui"))
 
-        self._dev = options.get('tabledev')
-        measuremode = options.get('measuremode', 'nrse')
-        if measuremode not in ['nrse', 'mieze']:
-            measuremode = 'nrse'
+        self._dev = options.get("tabledev")
+        measuremode = options.get("measuremode", "nrse")
+        if measuremode not in ["nrse", "mieze"]:
+            measuremode = "nrse"
         for i in range(self.measModeComboBox.count()):
             if measuremode == self.measModeComboBox.itemText(i):
                 self.measModeComboBox.setCurrentIndex(i)
                 break
         # access to the echotime device
         if not self._dev:
-            raise ConfigurationError('TuneWaveTable panel: At least `tabledev`'
-                                     ' is required.')
+            raise ConfigurationError(
+                "TuneWaveTable panel: At least `tabledev`" " is required."
+            )
 
         self._header_labels = []
         self._available_tables = {}
         self._edit = None
-        self._blocked_while_edit = [self.measModeComboBox,
-                                    self.wavelengthComboBox,
-                                    self.restorePushButton,
-                                    self.savePushButton,
-                                    self.refreshPushButton,
-                                    self.deletePushButton]
+        self._blocked_while_edit = [
+            self.measModeComboBox,
+            self.wavelengthComboBox,
+            self.restorePushButton,
+            self.savePushButton,
+            self.refreshPushButton,
+            self.deletePushButton,
+        ]
 
         self.tableWidget.installEventFilter(self)
 
         self.tableWidget.verticalHeader().setContextMenuPolicy(
-            Qt.ContextMenuPolicy.CustomContextMenu)
+            Qt.ContextMenuPolicy.CustomContextMenu
+        )
 
         self.measModeComboBox.currentIndexChanged.connect(self._fill_table)
-        self.measModeComboBox.currentIndexChanged.connect(
-            self._update_combo_boxes)
+        self.measModeComboBox.currentIndexChanged.connect(self._update_combo_boxes)
         self.wavelengthComboBox.currentIndexChanged.connect(self._fill_table)
         self.savePushButton.clicked.connect(self._save_current_table)
         self.refreshPushButton.clicked.connect(self._update_available_tables)
-        self.tableWidget.verticalHeader()\
-            .customContextMenuRequested.connect(
-            self.on_tableWidget_customContextMenuRequested)
+        self.tableWidget.verticalHeader().customContextMenuRequested.connect(
+            self.on_tableWidget_customContextMenuRequested
+        )
         self.tableWidget.cellActivated.connect(self._edit_cell)
-        self.tableWidget.verticalHeader().sectionClicked.connect(
-            self._stop_edit)
-        self.tableWidget.horizontalHeader().sectionPressed.connect(
-            self._stop_edit)
+        self.tableWidget.verticalHeader().sectionClicked.connect(self._stop_edit)
+        self.tableWidget.horizontalHeader().sectionPressed.connect(self._stop_edit)
         self.tableWidget.setAlternatingRowColors(True)
 
         client.connected.connect(self.on_client_connected)
@@ -495,9 +520,12 @@ class TunewaveTablePanel(Panel):
     def eventFilter(self, receiver, event):
         """Event filter for the table widget to stop cell editing on enter
         and return keys."""
-        if receiver is self.tableWidget and self._edit is not None \
-            and event.type() in [QEvent.Type.KeyPress] \
-                and event.key() in [Qt.Key.Key_Enter, Qt.Key.Key_Return]:
+        if (
+            receiver is self.tableWidget
+            and self._edit is not None
+            and event.type() in [QEvent.Type.KeyPress]
+            and event.key() in [Qt.Key.Key_Enter, Qt.Key.Key_Return]
+        ):
             self._stop_edit()
             return True
         return Panel.eventFilter(self, receiver, event)
@@ -510,9 +538,9 @@ class TunewaveTablePanel(Panel):
         """Check for configured 'tabledev' device."""
         (action, devlist) = data
         if self._dev in devlist:
-            if action == 'create':
+            if action == "create":
                 self._update_available_tables()
-            elif action == 'destroy':
+            elif action == "destroy":
                 self.tableWidget.clear()
                 self._dev_available = False
 
@@ -520,18 +548,25 @@ class TunewaveTablePanel(Panel):
     def on_restorePushButton_clicked(self):
         """Restore an old version of the current table via a advances preview
         dialog."""
-        dlg = PreviewDialog(self.measurement_mode, self.wavelength,
-                            self._header_labels,
-                            self._get_current_table_data(), self.client, self)
+        dlg = PreviewDialog(
+            self.measurement_mode,
+            self.wavelength,
+            self._header_labels,
+            self._get_current_table_data(),
+            self.client,
+            self,
+        )
         if dlg.exec():
             self._save_current_table(dlg.table)
 
     @pyqtSlot()
     def on_deletePushButton_clicked(self):
         """Delete current table after an additional confirmation."""
-        if self.askQuestion('Really delete tunewave table %s/%s?'
-                            % (self.measurement_mode, self.wavelength),
-                            True):
+        if self.askQuestion(
+            "Really delete tunewave table %s/%s?"
+            % (self.measurement_mode, self.wavelength),
+            True,
+        ):
             self._delete_current_table()
 
     def on_tableWidget_customContextMenuRequested(self, point):
@@ -539,8 +574,8 @@ class TunewaveTablePanel(Panel):
         self._stop_edit()
 
         menu = QMenu(self)
-        add = menu.addAction('Add echo time')
-        delete = menu.addAction('Delete echo time')
+        add = menu.addAction("Add echo time")
+        delete = menu.addAction("Delete echo time")
 
         row = self.tableWidget.rowAt(point.y())
 
@@ -552,7 +587,7 @@ class TunewaveTablePanel(Panel):
         # The Signal can be sent from the table widget itself or from the
         # vertical header. In case of the table widget, its viewport hast to be
         # used for correct placement of the context mneu
-        if hasattr(sender, 'viewport'):
+        if hasattr(sender, "viewport"):
             sender = sender.viewport()
 
         action = menu.exec(sender.mapToGlobal(point))
@@ -581,8 +616,7 @@ class TunewaveTablePanel(Panel):
         # Fill the row with the given data (if any)
         for param, value in row_data.items():
             item = TunewaveTableItem(value)
-            self.tableWidget.setItem(row, self._header_labels.index(param),
-                                     item)
+            self.tableWidget.setItem(row, self._header_labels.index(param), item)
 
     def _delete_row(self, index):
         """Remove the whole row from the table widget."""
@@ -599,9 +633,9 @@ class TunewaveTablePanel(Panel):
 
         # Create the DeviceValueEdit, using the column header as device name
         item = self.tableWidget.item(row, column)
-        widget = DeviceValueEdit(self.tableWidget,
-                                 dev=self._header_labels[column],
-                                 showUnit=False)
+        widget = DeviceValueEdit(
+            self.tableWidget, dev=self._header_labels[column], showUnit=False
+        )
         widget.setAutoFillBackground(True)
 
         # Forward the NicosClient to the DeviceValueEdit
@@ -616,7 +650,7 @@ class TunewaveTablePanel(Panel):
         # Focus the edit widget and select the contents if possible to provide
         # an 'instant typing' look and feel
         widget.setFocus()
-        if hasattr(widget._inner, 'selectAll'):
+        if hasattr(widget._inner, "selectAll"):
             widget._inner.selectAll()
 
         for entry in self._blocked_while_edit:
@@ -635,7 +669,7 @@ class TunewaveTablePanel(Panel):
         try:
             value = widget.getValue()
         except ValueError as e:
-            self.showError('Invalid input: %s' % e)
+            self.showError("Invalid input: %s" % e)
             widget.setFocus()
             return
 
@@ -644,14 +678,18 @@ class TunewaveTablePanel(Panel):
 
             # forbid multiple echotimes with the same value
             same_value_items = self.tableWidget.findItems(
-                str(value), Qt.MatchFlag.MatchExactly)
+                str(value), Qt.MatchFlag.MatchExactly
+            )
 
             for entry in same_value_items:
-                if self.tableWidget.column(entry) == 0 \
-                        and entry != self.tableWidget.item(row, column):
-                    self.showError('Echotime already existant, please edit the'
-                                   ' particular row or choose another echotime'
-                                   ' (typo?).')
+                if self.tableWidget.column(
+                    entry
+                ) == 0 and entry != self.tableWidget.item(row, column):
+                    self.showError(
+                        "Echotime already existant, please edit the"
+                        " particular row or choose another echotime"
+                        " (typo?)."
+                    )
                     widget.setFocus()
                     return
 
@@ -659,8 +697,7 @@ class TunewaveTablePanel(Panel):
         self.tableWidget.removeCellWidget(row, column)
 
         # Store the new value from the edit widget in the particular cell item
-        self.tableWidget.setItem(row, column,
-                                 TunewaveTableItem(value))
+        self.tableWidget.setItem(row, column, TunewaveTableItem(value))
 
         self._adjust_table_sizes()
 
@@ -674,9 +711,10 @@ class TunewaveTablePanel(Panel):
         storage."""
         self._stop_edit()
 
-        self.client.eval('%s.deleteTable("%s", %s)' % (self._dev,
-                                                       self.measurement_mode,
-                                                       self.wavelength))
+        self.client.eval(
+            '%s.deleteTable("%s", %s)'
+            % (self._dev, self.measurement_mode, self.wavelength)
+        )
         # Update the internal table cache after the change to the server side
         # storage
         self._update_available_tables()
@@ -692,8 +730,10 @@ class TunewaveTablePanel(Panel):
         if table is None:
             table = self._get_current_table_data()
 
-        self.client.eval('%s.setTable("%s", %s,\n %s)' % (
-            self._dev, self.measurement_mode, self.wavelength, pformat(table)))
+        self.client.eval(
+            '%s.setTable("%s", %s,\n %s)'
+            % (self._dev, self.measurement_mode, self.wavelength, pformat(table))
+        )
 
         # Update the internal table cache after the change to the server side
         # storage
@@ -704,17 +744,18 @@ class TunewaveTablePanel(Panel):
 
         # Add echotime as first table header
         try:
-            self._header_labels = ['echotime'] + self.client.eval(
-                    '%s.tunedevs' % self._dev)
+            self._header_labels = ["echotime"] + self.client.eval(
+                "%s.tunedevs" % self._dev
+            )
         except (NameError, TypeError):  # 'tabledev' is not available
             return
 
         # Add particular device unit to the device name in the column header
         labels = []
         for entry in self._header_labels:
-            unit = self.client.getDeviceParam(entry, 'unit')
+            unit = self.client.getDeviceParam(entry, "unit")
             if unit:
-                entry = '%s (%s)' % (entry, unit)
+                entry = "%s (%s)" % (entry, unit)
             labels.append(entry)
 
         self.tableWidget.setColumnCount(len(labels))
@@ -725,8 +766,9 @@ class TunewaveTablePanel(Panel):
         """Request the currently selected table from the server side table
         storage and display it in the table widget."""
         table = self.client.eval(
-            '%s.getTable("%s", %s)' % (self._dev, self.measurement_mode,
-                                       self.wavelength))
+            '%s.getTable("%s", %s)'
+            % (self._dev, self.measurement_mode, self.wavelength)
+        )
 
         # Disable table sorting while filling to avoid jumping rows
         self.tableWidget.setSortingEnabled(False)
@@ -740,14 +782,15 @@ class TunewaveTablePanel(Panel):
             cols = dict(devices)
 
             # Add echotime to row data
-            cols['echotime'] = echotime
+            cols["echotime"] = echotime
 
             self._add_row(row, cols)
             row += 1
 
         # Reenable table sorting
-        self.tableWidget.horizontalHeader()\
-            .setSortIndicator(0, Qt.SortOrder.AscendingOrder)
+        self.tableWidget.horizontalHeader().setSortIndicator(
+            0, Qt.SortOrder.AscendingOrder
+        )
         self.tableWidget.setSortingEnabled(True)
 
         self._adjust_table_sizes()
@@ -772,8 +815,8 @@ class TunewaveTablePanel(Panel):
         result = {}
         for i in range(self.tableWidget.rowCount()):
             row = self._get_row_data(i)
-            echotime = row['echotime']
-            del row['echotime']
+            echotime = row["echotime"]
+            del row["echotime"]
             result[echotime] = row
         return result
 
@@ -787,8 +830,9 @@ class TunewaveTablePanel(Panel):
         self.wavelengthComboBox.clear()
 
         # Stringify the contents (and add a default wavelength)
-        values = map(str, sorted(self._available_tables.get(
-            self.measurement_mode, [0.0])))
+        values = map(
+            str, sorted(self._available_tables.get(self.measurement_mode, [0.0]))
+        )
         self.wavelengthComboBox.addItems(values)
 
         # Reenable signals for table selection
@@ -805,8 +849,7 @@ class TunewaveTablePanel(Panel):
         if not self._dev_available:
             self._prepare_table()
         if self._dev_available:
-            self._available_tables = self.client.eval(
-                '%s.availtables' % self._dev)
+            self._available_tables = self.client.eval("%s.availtables" % self._dev)
             self._update_combo_boxes()
 
     def _adjust_table_sizes(self):

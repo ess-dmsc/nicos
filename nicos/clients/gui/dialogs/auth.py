@@ -23,30 +23,38 @@
 # *****************************************************************************
 
 """Dialog for entering authentication data."""
+
 from collections import OrderedDict
 from os import path
 
 from nicos.clients.base import ConnectionData
 from nicos.clients.gui.utils import loadUi, splitTunnelString
-from nicos.guisupport.qt import QDialog, QFontMetrics, QIcon, \
-    QListWidgetItem, QPalette, QPixmap, QSize, pyqtSlot
+from nicos.guisupport.qt import (
+    QDialog,
+    QFontMetrics,
+    QIcon,
+    QListWidgetItem,
+    QPalette,
+    QPixmap,
+    QSize,
+    pyqtSlot,
+)
 from nicos.protocols.daemon.classic import DEFAULT_PORT
 
 
 class ConnectionDialog(QDialog):
     """A dialog to request connection parameters."""
 
-    ui = path.join('dialogs', 'auth.ui')
+    ui = path.join("dialogs", "auth.ui")
 
     @classmethod
-    def getConnectionData(cls, parent, connpresets, lastpreset, lastdata,
-                          tunnel=''):
+    def getConnectionData(cls, parent, connpresets, lastpreset, lastdata, tunnel=""):
         self = cls(parent, connpresets, lastpreset, lastdata, tunnel)
         ret = self.exec()
         if ret != QDialog.DialogCode.Accepted:
             return None, None, None, tunnel
         new_addr = self.presetOrAddr.currentText()
-        new_name = preset_name = ''
+        new_name = preset_name = ""
         if new_addr in connpresets:
             new_data = connpresets[new_addr].copy()
             new_name = new_addr
@@ -55,44 +63,46 @@ class ConnectionDialog(QDialog):
             new_data.password = self.password.text()
         else:
             try:
-                host, port = new_addr.split(':')
+                host, port = new_addr.split(":")
                 port = int(port)
             except ValueError:
                 host = new_addr
                 port = DEFAULT_PORT
-            new_data = ConnectionData(host, port, self.userName.text(),
-                                      self.password.text())
+            new_data = ConnectionData(
+                host, port, self.userName.text(), self.password.text()
+            )
         new_data.viewonly = self.viewonly.isChecked()
         new_data.expertmode = self.expertmode.isChecked()
         if tunnel:
-            tunnel = '%s:%s@%s' % (self.remoteUserName.text(),
-                                   self.remotePassword.text(),
-                                   self.remoteHost.text())
+            tunnel = "%s:%s@%s" % (
+                self.remoteUserName.text(),
+                self.remotePassword.text(),
+                self.remoteHost.text(),
+            )
         else:
-            tunnel = ''
+            tunnel = ""
         if not new_name:
             preset_name = self.newPresetName.text()
         return new_name, new_data, preset_name, tunnel
 
-    def __init__(self, parent, connpresets, lastpreset, lastdata, tunnel=''):
+    def __init__(self, parent, connpresets, lastpreset, lastdata, tunnel=""):
         QDialog.__init__(self, parent)
         loadUi(self, self.ui)
-        if hasattr(parent, 'facility_logo') and parent.facility_logo:
+        if hasattr(parent, "facility_logo") and parent.facility_logo:
             self.logoLabel.setPixmap(QPixmap(parent.facility_logo))
         self.connpresets = OrderedDict(sorted(connpresets.items()))
 
         pal = self.quickList.palette()
-        pal.setColor(QPalette.ColorRole.Window,
-                     pal.color(QPalette.ColorRole.Base))
+        pal.setColor(QPalette.ColorRole.Window, pal.color(QPalette.ColorRole.Base))
         self.quickList.setPalette(pal)
 
         if len(self.connpresets) < 3:
             self.quickList.hide()
         else:
-            self.quickList.setStyleSheet('padding: 10px 5px;')
+            self.quickList.setStyleSheet("padding: 10px 5px;")
             self.quickList.clear()
             maxw = 64
-            icon = QIcon(':/appicon')
+            icon = QIcon(":/appicon")
             metric = QFontMetrics(self.quickList.font())
             for preset in self.connpresets:
                 item = QListWidgetItem(preset, self.quickList)
@@ -108,8 +118,7 @@ class ConnectionDialog(QDialog):
 
         self.presetOrAddr.addItems(self.connpresets)
         if lastdata:
-            self.presetOrAddr.setEditText(
-                '%s:%s' % (lastdata.host, lastdata.port))
+            self.presetOrAddr.setEditText("%s:%s" % (lastdata.host, lastdata.port))
             self.viewonly.setChecked(lastdata.viewonly)
             self.expertmode.setChecked(lastdata.expertmode)
             self.userName.setText(lastdata.user)
@@ -155,12 +164,11 @@ class ConnectionDialog(QDialog):
             self.presetFrame.show()
 
     def on_quickList_itemClicked(self, item):
-        self.presetOrAddr.setCurrentIndex(
-            self.presetOrAddr.findText(item.text()))
+        self.presetOrAddr.setCurrentIndex(self.presetOrAddr.findText(item.text()))
         self.password.setFocus()
 
     def on_quickList_itemDoubleClicked(self, item):
         conn = self.connpresets[item.text()]
-        if conn.user == 'guest':
-            self.password.setText('')
+        if conn.user == "guest":
+            self.password.setText("")
             self.accept()

@@ -31,29 +31,27 @@ from nicos.devices.datasinks.image import ImageFileReader
 
 
 def get_dataset_from_data(data):
-
-    nx_class = data.attrs.get('NX_class')
+    nx_class = data.attrs.get("NX_class")
     if nx_class and not isinstance(nx_class, str):
         nx_class = nx_class.decode()
-    if nx_class != 'NXdata':
+    if nx_class != "NXdata":
         return
-    signal = data.attrs.get('signal')
+    signal = data.attrs.get("signal")
 
     if signal:
         return data[signal][()]
     for dataset in data.values():
-        if dataset.attrs.get('signal') in ['1', 1]:
+        if dataset.attrs.get("signal") in ["1", 1]:
             return dataset[()]
 
 
 def get_dataset_from_entry(entry):
-
-    nx_class = entry.attrs.get('NX_class')
+    nx_class = entry.attrs.get("NX_class")
     if nx_class and not isinstance(nx_class, str):
         nx_class = nx_class.decode()
-    if nx_class != 'NXentry':
+    if nx_class != "NXentry":
         return
-    default = entry.attrs.get('default')
+    default = entry.attrs.get("default")
     if default:
         ds = get_dataset_from_data(entry[default])
         return ds
@@ -65,7 +63,7 @@ def get_dataset_from_entry(entry):
 
 
 def scan(root):
-    default = root.attrs.get('default')
+    default = root.attrs.get("default")
 
     if default:
         return get_dataset_from_entry(root[default])
@@ -78,17 +76,19 @@ def scan(root):
 
 class NexusFileReader(ImageFileReader):
     filetypes = [
-        ('nxs', 'NeXus File (*.nxs, *.hdf)'),
+        ("nxs", "NeXus File (*.nxs, *.hdf)"),
     ]
 
     @classmethod
     def fromfile(cls, filename):
         if h5py is None:
-            raise NicosError(None,
-                             'h5py module is not available. Check if it is '
-                             'installed and in your PYTHONPATH')
-        with h5py.File(filename, 'r') as f:
+            raise NicosError(
+                None,
+                "h5py module is not available. Check if it is "
+                "installed and in your PYTHONPATH",
+            )
+        with h5py.File(filename, "r") as f:
             dataset = scan(f)
             if dataset is None:
-                raise RuntimeError('No signal attribute is present in file')
+                raise RuntimeError("No signal attribute is present in file")
             return dataset

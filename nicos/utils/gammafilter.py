@@ -44,13 +44,15 @@ def LaplacianOfGaussian(n, sigma):
     sigma = float(sigma)
     for i in np.arange(-n2, n2 + 1):
         for j in np.arange(-n2, n2 + 1):
-            g[i + n2, j + n2] = exp(
-                -(i * i + j * j) / (2. * sigma * sigma))
+            g[i + n2, j + n2] = exp(-(i * i + j * j) / (2.0 * sigma * sigma))
     sumg = np.sum(g)
     for i in np.arange(-n2, n2 + 1):
         for j in np.arange(-n2, n2 + 1):
-            log[i + n2, j + n2] = (i * i + j * j - 2 * sigma * sigma) * \
-                g[i + n2, j + n2] / (2. * pi * pow(sigma, 6) * sumg)
+            log[i + n2, j + n2] = (
+                (i * i + j * j - 2 * sigma * sigma)
+                * g[i + n2, j + n2]
+                / (2.0 * pi * pow(sigma, 6) * sumg)
+            )
     return log
 
 
@@ -66,10 +68,14 @@ def scharr_filter(img):
     """
     if img.min() == img.max():
         return 0
-    scharr = np.array([[-3 - 3j, 0 - 10j, 3 - 3j],
-                       [-10 + 0j, 0 + 0j, 10 + 0j],
-                       [-3 + 3j, 0 + 10j, 3 + 3j]])
-    grad = signal.convolve2d(img, scharr, boundary='symm', mode='same')
+    scharr = np.array(
+        [
+            [-3 - 3j, 0 - 10j, 3 - 3j],
+            [-10 + 0j, 0 + 0j, 10 + 0j],
+            [-3 + 3j, 0 + 10j, 3 + 3j],
+        ]
+    )
+    grad = signal.convolve2d(img, scharr, boundary="symm", mode="same")
     sharpness = np.mean(np.absolute(grad))
     return sharpness
 
@@ -77,8 +83,7 @@ def scharr_filter(img):
 def gam_rem_adp_log(img, thr3=25, thr5=100, thr7=400, sig_log=0.8):
     f_log = -LaplacianOfGaussian(9, sig_log)  # create kernel of LOG filter
 
-    img_log = cv2.filter2D(
-        img, -1, cv2.flip(f_log, -1), borderType=cv2.BORDER_CONSTANT)
+    img_log = cv2.filter2D(img, -1, cv2.flip(f_log, -1), borderType=cv2.BORDER_CONSTANT)
     # median the LOG edge enhanced image, 3 by 3 is good enough
     img_logm3 = cv2.medianBlur(img_log, 3)
     # substitute only those pixels whose values are greater than adaptive

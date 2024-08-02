@@ -42,18 +42,21 @@ class MultiDigitalOutput(Moveable):
     """Writes the same value to multiple digital outputs at once."""
 
     attached_devices = {
-        'outputs': Attach('A list of digital outputs to switch simultaneously',
-                          DigitalOutput, multiple=True),
+        "outputs": Attach(
+            "A list of digital outputs to switch simultaneously",
+            DigitalOutput,
+            multiple=True,
+        ),
     }
 
     valuetype = int
 
     def doStart(self, target):
-        for dev in self._adevs['outputs']:
+        for dev in self._adevs["outputs"]:
             dev.start(target)
 
     def doRead(self, maxage=0):
-        values = [dev.read(maxage) for dev in self._adevs['outputs']]
+        values = [dev.read(maxage) for dev in self._adevs["outputs"]]
         # if len(set(values)) != 1:
         #     devnames = [dev.name for dev in self._adevs['outputs']]
         #     raise NicosError(self,

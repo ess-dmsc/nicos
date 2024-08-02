@@ -27,9 +27,7 @@ from nicos_sinq.devices.epics.base import EpicsReadableSinq
 
 
 class EpicsDimetix(HasOffset, EpicsReadableSinq):
-    """ AMOR's laser distance measurement device called dimetix.
-    """
+    """AMOR's laser distance measurement device called dimetix."""
 
     def doRead(self, maxage=0):
-        return int(round(EpicsReadableSinq.doRead(self, maxage)*0.1)) - \
-               self.offset
+        return int(round(EpicsReadableSinq.doRead(self, maxage) * 0.1)) - self.offset

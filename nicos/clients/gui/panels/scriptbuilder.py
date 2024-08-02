@@ -23,8 +23,10 @@
 
 """NICOS GUI multiple cmdlet script-builder input."""
 
-from nicos.clients.gui.cmdlets import get_priority_sorted_categories, \
-    get_priority_sorted_cmdlets
+from nicos.clients.gui.cmdlets import (
+    get_priority_sorted_categories,
+    get_priority_sorted_cmdlets,
+)
 from nicos.clients.gui.panels import Panel
 from nicos.clients.gui.utils import loadUi
 from nicos.guisupport.qt import QAction, QMenu, QToolButton, pyqtSlot
@@ -45,11 +47,12 @@ class CommandsPanel(Panel):
     * ``add_presets`` (default ``[]``) -- list of tuples consisting of
       additional preset keys and names (e.g. ``[('m', 'monitor counts')]``).
     """
-    panelName = 'Commands'
+
+    panelName = "Commands"
 
     def __init__(self, parent, client, options):
         Panel.__init__(self, parent, client, options)
-        loadUi(self, 'panels/scriptbuilder.ui')
+        loadUi(self, "panels/scriptbuilder.ui")
 
         self.parent_window = parent
         self.options = options
@@ -57,19 +60,20 @@ class CommandsPanel(Panel):
         self.mapping = {}
         self.expertmode = self.mainwindow.expertmode
 
-        modules = options.get('modules', [])
+        modules = options.get("modules", [])
         for module in modules:
             importString(module)  # should register cmdlets
 
         for cmdlet in get_priority_sorted_cmdlets():
+
             def callback(on, cmdlet=cmdlet):
                 inst = cmdlet(self, self.client, self.options)
                 inst.cmdletUp.connect(self.on_cmdletUp)
                 inst.cmdletDown.connect(self.on_cmdletDown)
                 inst.cmdletRemove.connect(self.on_cmdletRemove)
                 self.runBtn.setVisible(True)
-                self.frame.layout().insertWidget(
-                    self.frame.layout().count() - 2, inst)
+                self.frame.layout().insertWidget(self.frame.layout().count() - 2, inst)
+
             action = QAction(cmdlet.name, self)
             action.triggered.connect(callback)
             self.mapping.setdefault(cmdlet.category, []).append(action)
@@ -124,17 +128,17 @@ class CommandsPanel(Panel):
 
     @pyqtSlot()
     def on_runBtn_clicked(self):
-        code = ''
+        code = ""
         valid = True
-        mode = 'python'
-        if self.client.eval('session.spMode', False):
-            mode = 'simple'
+        mode = "python"
+        if self.client.eval("session.spMode", False):
+            mode = "simple"
         for i in range(self.frame.layout().count() - 2):
             cmdlet = self.frame.layout().itemAt(i).widget()
             valid = valid and cmdlet.isValid()
             generated = cmdlet.generate(mode)
-            if not generated.endswith('\n'):
-                generated += '\n'
+            if not generated.endswith("\n"):
+                generated += "\n"
             code += generated
         if not valid:
             return

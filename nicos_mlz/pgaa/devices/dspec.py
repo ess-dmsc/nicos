@@ -26,8 +26,17 @@ from time import time as currenttime
 
 import numpy as np
 
-from nicos.core import ArrayDesc, Attach, Measurable, Moveable, Param, Value, \
-    anytype, listof, status
+from nicos.core import (
+    ArrayDesc,
+    Attach,
+    Measurable,
+    Moveable,
+    Param,
+    Value,
+    anytype,
+    listof,
+    status,
+)
 from nicos.core.constants import LIVE
 from nicos.core.errors import NicosError
 from nicos.core.utils import multiWait
@@ -35,48 +44,74 @@ from nicos.devices.tango import PyTangoDevice
 
 
 class DSPec(PyTangoDevice, Measurable):
-
     attached_devices = {
-        'gates':   Attach('Gating devices', Moveable,
-                          multiple=True, optional=True),
+        "gates": Attach("Gating devices", Moveable, multiple=True, optional=True),
     }
 
     parameters = {
-        'prefix': Param('prefix for filesaving',
-                        type=str, settable=False, mandatory=True,
-                        category='general'),
-        'ecalslope': Param('Energy calibration slope',
-                           type=float, mandatory=False, settable=True,
-                           volatile=True, default=0),
-        'ecalintercept': Param('Energy calibration interception',
-                               type=float, mandatory=False, settable=True,
-                               volatile=True, default=0),
-        'poll': Param('Polling time of the TANGO device driver',
-                      type=float, settable=False, volatile=True),
-        'cacheinterval': Param('Interval to cache intermediate spectra',
-                               type=float, unit='s', settable=True,
-                               default=1800),
-        'enablevalues':  Param('List of values to enable the gates',
-                               type=listof(anytype), default=[],
-                               settable=True, category='general'),
-        'disablevalues': Param('List of values to disable the gates',
-                               type=listof(anytype), default=[]),
+        "prefix": Param(
+            "prefix for filesaving",
+            type=str,
+            settable=False,
+            mandatory=True,
+            category="general",
+        ),
+        "ecalslope": Param(
+            "Energy calibration slope",
+            type=float,
+            mandatory=False,
+            settable=True,
+            volatile=True,
+            default=0,
+        ),
+        "ecalintercept": Param(
+            "Energy calibration interception",
+            type=float,
+            mandatory=False,
+            settable=True,
+            volatile=True,
+            default=0,
+        ),
+        "poll": Param(
+            "Polling time of the TANGO device driver",
+            type=float,
+            settable=False,
+            volatile=True,
+        ),
+        "cacheinterval": Param(
+            "Interval to cache intermediate spectra",
+            type=float,
+            unit="s",
+            settable=True,
+            default=1800,
+        ),
+        "enablevalues": Param(
+            "List of values to enable the gates",
+            type=listof(anytype),
+            default=[],
+            settable=True,
+            category="general",
+        ),
+        "disablevalues": Param(
+            "List of values to disable the gates", type=listof(anytype), default=[]
+        ),
     }
 
     def _enable_gates(self):
-        self.log.debug('enabling gates')
+        self.log.debug("enabling gates")
         for dev, val in zip(self._attached_gates, self.enablevalues):
             dev.move(val)
         multiWait(self._attached_gates)
-        self.log.debug('gates enabled')
+        self.log.debug("gates enabled")
 
     def _disable_gates(self):
-        self.log.debug('disabling gates')
-        for dev, val in zip(reversed(self._attached_gates),
-                            reversed(self.disablevalues)):
+        self.log.debug("disabling gates")
+        for dev, val in zip(
+            reversed(self._attached_gates), reversed(self.disablevalues)
+        ):
             dev.move(val)
         multiWait(self._attached_gates)
-        self.log.debug('gates disabled')
+        self.log.debug("gates disabled")
 
     # XXX: issues with ortec API -> workarounds and only truetime and livetime
     # working.
@@ -96,15 +131,18 @@ class DSPec(PyTangoDevice, Measurable):
         except NicosError:
             # self._comment += 'CACHED'
             if self._read_cache is not None:
-                self.log.warning('using cached spectrum')
+                self.log.warning("using cached spectrum")
                 spectrum = self._read_cache
             else:
-                self.log.warning('no spectrum cached')
+                self.log.warning("no spectrum cached")
         return [spectrum]
 
     def doRead(self, maxage=0):
-        ret = [self._dev.TrueTime[0], self._dev.LiveTime[0],
-               sum(self._dev.Value.tolist())]
+        ret = [
+            self._dev.TrueTime[0],
+            self._dev.LiveTime[0],
+            sum(self._dev.Value.tolist()),
+        ]
         return ret
 
     def doReadPoll(self):
@@ -113,8 +151,8 @@ class DSPec(PyTangoDevice, Measurable):
     def _clear(self):
         self._started = None
         self._lastread = 0
-        self._comment = ''
-        self._name_ = ''
+        self._comment = ""
+        self._name_ = ""
         self._stop = None
         self._lastpreset = {}
         self._dont_stop_flag = False
@@ -137,62 +175,61 @@ class DSPec(PyTangoDevice, Measurable):
         return False
 
     def presetInfo(self):
-        return {'info', 'Filename',
-                'TrueTime', 'LiveTime', 'ClockTime', 'counts'}
+        return {"info", "Filename", "TrueTime", "LiveTime", "ClockTime", "counts"}
 
     def doSetPreset(self, **preset):
         self._clear()
 
-        if 'TrueTime' in preset:
+        if "TrueTime" in preset:
             try:
-                self._dev.SyncMode = 'RealTime'
-                self._dev.SyncValue = preset['TrueTime'] * 1000
+                self._dev.SyncMode = "RealTime"
+                self._dev.SyncValue = preset["TrueTime"] * 1000
             except NicosError:
                 try:
                     self.doStop()
                     self._dev.Init()
                 except NicosError:
                     return
-                self._dev.SyncMode = 'RealTime'
-                self._dev.SyncValue = preset['TrueTime'] * 1000
-        elif 'LiveTime' in preset:
+                self._dev.SyncMode = "RealTime"
+                self._dev.SyncValue = preset["TrueTime"] * 1000
+        elif "LiveTime" in preset:
             try:
-                self._dev.SyncMode = 'LiveTime'
-                self._dev.SyncValue = preset['LiveTime'] * 1000
+                self._dev.SyncMode = "LiveTime"
+                self._dev.SyncValue = preset["LiveTime"] * 1000
             except NicosError:
                 try:
                     self.doStop()
                     self._dev.Init()
                 except NicosError:
                     return
-                self._dev.SyncMode = 'LiveTime'
-                self._dev.SyncValue = preset['LiveTime'] * 1000
-        elif 'ClockTime' in preset:
-            self._stop = preset['ClockTime']
-        elif 'counts' in preset:
+                self._dev.SyncMode = "LiveTime"
+                self._dev.SyncValue = preset["LiveTime"] * 1000
+        elif "ClockTime" in preset:
+            self._stop = preset["ClockTime"]
+        elif "counts" in preset:
             pass
 
         self._lastpreset = preset
 
     def doTime(self, preset):
-        if 'TrueTime' in preset:
-            return preset['TrueTime']
-        elif 'LiveTime' in preset:
-            return preset['LiveTime']
-        elif 'ClockTime' in preset:
-            return abs(float(preset['ClockTime']) - currenttime())
-        elif 'counts' in preset:
+        if "TrueTime" in preset:
+            return preset["TrueTime"]
+        elif "LiveTime" in preset:
+            return preset["LiveTime"]
+        elif "ClockTime" in preset:
+            return abs(float(preset["ClockTime"]) - currenttime())
+        elif "counts" in preset:
             return 1
         return None
 
     def doEstimateTime(self, elapsed):
         if self.doStatus()[0] == status.BUSY:
-            if 'TrueTime' in self._lastpreset:
-                return self._lastpreset['TrueTime'] - elapsed
-            elif 'LiveTime' in self._lastpreset:
-                return self._lastpreset['LiveTime'] - elapsed
-            elif 'ClockTime' in self._lastpreset:
-                return abs(float(self._lastpreset['ClockTime']) - currenttime())
+            if "TrueTime" in self._lastpreset:
+                return self._lastpreset["TrueTime"] - elapsed
+            elif "LiveTime" in self._lastpreset:
+                return self._lastpreset["LiveTime"] - elapsed
+            elif "ClockTime" in self._lastpreset:
+                return abs(float(self._lastpreset["ClockTime"]) - currenttime())
         return None
 
     def doStart(self):
@@ -243,38 +280,38 @@ class DSPec(PyTangoDevice, Measurable):
         if (elapsed - self._lastread) > self.cacheinterval:
             try:
                 self._read_cache = self._dev.Value
-                self.log.debug('spectrum cached')
+                self.log.debug("spectrum cached")
             except NicosError:
-                self.log.warning('caching spectrum failed')
+                self.log.warning("caching spectrum failed")
             finally:
                 self._lastread = elapsed
             return LIVE
         return None
 
     def doSimulate(self, preset):
-        for t in 'TrueTime', 'LiveTime', 'ClockTime':
+        for t in "TrueTime", "LiveTime", "ClockTime":
             if t in preset:
                 return [preset[t], preset[t], 0]
-        if 'counts' in preset:
-            return [1, 1, preset['counts']]
+        if "counts" in preset:
+            return [1, 1, preset["counts"]]
         return [0, 0, 0]
 
     def doIsCompleted(self):
         if self._started is None:
             return True
         if self._dont_stop_flag is True:
-            return (currenttime() - self._started) >= self._lastpreset['value']
+            return (currenttime() - self._started) >= self._lastpreset["value"]
 
         if self._stop is not None:
             if currenttime() >= self._stop:
                 return True
 
-        if 'TrueTime' in self._lastpreset:
-            return self._dev.TrueTime >= self._lastpreset['TrueTime']
-        elif 'LiveTime' in self._lastpreset:
-            return self._dev.LiveTime >= self._lastpreset['LiveTime']
-        elif 'counts' in self._lastpreset:
-            return self.doRead(0)[2] >= self._lastpreset['counts']
+        if "TrueTime" in self._lastpreset:
+            return self._dev.TrueTime >= self._lastpreset["TrueTime"]
+        elif "LiveTime" in self._lastpreset:
+            return self._dev.LiveTime >= self._lastpreset["LiveTime"]
+        elif "counts" in self._lastpreset:
+            return self.doRead(0)[2] >= self._lastpreset["counts"]
         try:
             # self.log.warning('poll')
             stop = self.poll[0]
@@ -287,10 +324,11 @@ class DSPec(PyTangoDevice, Measurable):
         return False
 
     def valueInfo(self):
-        return (Value(name='truetim', type='time', fmtstr='%.3f', unit='s'),
-                Value(name='livetim', type='time', fmtstr='%.3f', unit='s'),
-                Value('DSpec', type='counter', fmtstr='%d', unit='cts'),
-                )
+        return (
+            Value(name="truetim", type="time", fmtstr="%.3f", unit="s"),
+            Value(name="livetim", type="time", fmtstr="%.3f", unit="s"),
+            Value("DSpec", type="counter", fmtstr="%d", unit="cts"),
+        )
 
     def arrayInfo(self):
         return (self.arraydesc,)

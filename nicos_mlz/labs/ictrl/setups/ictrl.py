@@ -1,4 +1,4 @@
-description = 'Basic ictrl setup'
-group = 'basic'
+description = "Basic ictrl setup"
+group = "basic"
 
-includes = ['ubahn', 'fak40', 'guidehall', 'reactor']
+includes = ["ubahn", "fak40", "guidehall", "reactor"]

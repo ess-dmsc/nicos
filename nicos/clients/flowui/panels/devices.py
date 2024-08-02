@@ -24,45 +24,41 @@
 """NICOS GUI panel with a list of all devices."""
 
 from nicos.clients.flowui.panels import get_icon
-from nicos.clients.gui.panels.devices import \
-    DevicesPanel as DefaultDevicesPanel
-from nicos.core.status import BUSY, DISABLED, ERROR, NOTREACHED, OK, UNKNOWN, \
-    WARN
+from nicos.clients.gui.panels.devices import DevicesPanel as DefaultDevicesPanel
+from nicos.core.status import BUSY, DISABLED, ERROR, NOTREACHED, OK, UNKNOWN, WARN
 from nicos.guisupport.qt import QCheckBox, Qt
 
 
 class DevicesPanel(DefaultDevicesPanel):
-    panelName = 'ESS Devices'
+    panelName = "ESS Devices"
 
     @property
     def groupIcon(self):
-        return get_icon('group_work-24px.svg')
+        return get_icon("group_work-24px.svg")
 
     @classmethod
     def _createIcons(cls):
         # hack to make non-Qt usage as in checksetups work
-        if not hasattr(cls, 'statusIcon'):
+        if not hasattr(cls, "statusIcon"):
             cls.statusIcon = {
-                OK: get_icon('check_circle_green-24px.svg'),
-                WARN: get_icon('warning_orange-24px.svg'),
-                BUSY: get_icon('sync_orange-24px.svg'),
-                NOTREACHED: get_icon('error-24px.svg'),
-                DISABLED: get_icon('not_interested-24px.svg'),
-                ERROR: get_icon('error-24px.svg'),
-                UNKNOWN: get_icon('device_unknown-24px.svg'),
+                OK: get_icon("check_circle_green-24px.svg"),
+                WARN: get_icon("warning_orange-24px.svg"),
+                BUSY: get_icon("sync_orange-24px.svg"),
+                NOTREACHED: get_icon("error-24px.svg"),
+                DISABLED: get_icon("not_interested-24px.svg"),
+                ERROR: get_icon("error-24px.svg"),
+                UNKNOWN: get_icon("device_unknown-24px.svg"),
             }
 
     def __init__(self, parent, client, options):
         self._createIcons()
         DefaultDevicesPanel.__init__(self, parent, client, options)
-        self.titleLbl.setText('Devices')
+        self.titleLbl.setText("Devices")
 
-        self.errorOnly = QCheckBox('show only the errors', self)
-        self.errorOnly.setStyleSheet('QCheckBox { '
-                                     'background: #f5e042;'
-                                     'border-radius: 5px'
-                                     '}'
-                                     )
+        self.errorOnly = QCheckBox("show only the errors", self)
+        self.errorOnly.setStyleSheet(
+            "QCheckBox { " "background: #f5e042;" "border-radius: 5px" "}"
+        )
 
         self.errorOnly.setAutoFillBackground(True)
         self.outViewLayout.insertWidget(2, self.errorOnly)
@@ -73,8 +69,12 @@ class DevicesPanel(DefaultDevicesPanel):
     def _hide_top_level(self):
         for itemid in range(self.tree.topLevelItemCount()):
             topitem = self.tree.topLevelItem(itemid)
-            hide = all((topitem.child(devid).isHidden() for devid in range(
-                topitem.childCount())))
+            hide = all(
+                (
+                    topitem.child(devid).isHidden()
+                    for devid in range(topitem.childCount())
+                )
+            )
             if hide:
                 topitem.setHidden(True)
 

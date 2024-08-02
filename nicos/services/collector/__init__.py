@@ -46,7 +46,7 @@ except ImportError:
     import json
 
 
-PREFIX_RE = re.compile(r'[a-zA-Z0-9_/]+\.\*$')
+PREFIX_RE = re.compile(r"[a-zA-Z0-9_/]+\.\*$")
 
 
 class CacheKeyFilter(DeviceMixinBase):
@@ -57,8 +57,10 @@ class CacheKeyFilter(DeviceMixinBase):
     """
 
     parameters = {
-        'keyfilters': Param('Filter keys to send (regexps); if empty, all '
-                            'keys are accepted', type=listof(str)),
+        "keyfilters": Param(
+            "Filter keys to send (regexps); if empty, all " "keys are accepted",
+            type=listof(str),
+        ),
     }
 
     def _initFilters(self):
@@ -116,9 +118,9 @@ class CacheForwarder(ForwarderBase, BaseCacheClient):
         if not self._checkKey(key):
             return
         if value is None:
-            msg = '%s@%s%s%s\n' % (timestamp, self._prefix, key, OP_TELL)
+            msg = "%s@%s%s%s\n" % (timestamp, self._prefix, key, OP_TELL)
         else:
-            msg = '%s@%s%s%s%s\n' % (timestamp, self._prefix, key, op, value)
+            msg = "%s@%s%s%s%s\n" % (timestamp, self._prefix, key, op, value)
         self._queue.put(msg)
 
     def _handle_msg(self, _time, _ttlop, _ttl, _tsop, _key, _op, _value):
@@ -131,21 +133,24 @@ class MappingCacheForwarder(CacheForwarder):
     """
 
     parameters = {
-        'map': Param('Mapping for devices', type=dictof(str, str),
-                     mandatory=True),
+        "map": Param("Mapping for devices", type=dictof(str, str), mandatory=True),
     }
 
     def _putChange(self, timestamp, ttl, key, op, value):
         if not self._checkKey(key):
             return
-        dev, slash, sub = key.partition('/')
+        dev, slash, sub = key.partition("/")
         dev = self.map.get(dev, dev)
         if value is None:
-            msg = '%s@%s%s%s\n' % (timestamp, self._prefix, dev + slash + sub,
-                                   OP_TELL)
+            msg = "%s@%s%s%s\n" % (timestamp, self._prefix, dev + slash + sub, OP_TELL)
         else:
-            msg = '%s@%s%s%s%s\n' % (timestamp, self._prefix,
-                                     dev + slash + sub, op, value)
+            msg = "%s@%s%s%s%s\n" % (
+                timestamp,
+                self._prefix,
+                dev + slash + sub,
+                op,
+                value,
+            )
         self._queue.put(msg)
 
 
@@ -153,31 +158,35 @@ class WebhookForwarder(ForwarderBase, Device):
     """Forwards cache updates to a web service."""
 
     parameters = {
-        'hook_url':      Param('Hook URL endpoint', type=str, mandatory=True),
-        'prefix':        Param('Cache key prefix', type=str, mandatory=True),
-        'http_mode':     Param('HTTP request mode', type=oneof('GET', 'POST'),
-                               mandatory=True),
-        'paramencoding': Param('Parameter encoding',
-                               type=oneof('plain', 'json'), mandatory=True),
-        'jsonname':      Param('JSON parameter name (used for GET requests)',
-                               type=str, default='json'),
+        "hook_url": Param("Hook URL endpoint", type=str, mandatory=True),
+        "prefix": Param("Cache key prefix", type=str, mandatory=True),
+        "http_mode": Param(
+            "HTTP request mode", type=oneof("GET", "POST"), mandatory=True
+        ),
+        "paramencoding": Param(
+            "Parameter encoding", type=oneof("plain", "json"), mandatory=True
+        ),
+        "jsonname": Param(
+            "JSON parameter name (used for GET requests)", type=str, default="json"
+        ),
     }
 
     def doInit(self, mode):
         if requests is None:
-            raise ConfigurationError(self, 'requests package is missing')
-        self._prefix = self.prefix.strip('/')
+            raise ConfigurationError(self, "requests package is missing")
+        self._prefix = self.prefix.strip("/")
         if self._prefix:
-            self._prefix += '/'
+            self._prefix += "/"
         self._initFilters()
         self._queue = queue.Queue(1000)
-        self._processor = createThread('webhookprocessor', self._processQueue)
+        self._processor = createThread("webhookprocessor", self._processQueue)
 
     def _putChange(self, timestamp, ttl, key, op, value):
         if not self._checkKey(key):
             return
-        pdict = dict(time=timestamp, ttl=ttl, key=self._prefix + key,
-                     op=op, value=value)
+        pdict = dict(
+            time=timestamp, ttl=ttl, key=self._prefix + key, op=op, value=value
+        )
         retry = 2
         while retry:
             try:
@@ -190,19 +199,19 @@ class WebhookForwarder(ForwarderBase, Device):
 
     def _webHookTask(self, pdict):
         try:
-            if self.paramencoding == 'json':
-                if self.http_mode == 'GET':
+            if self.paramencoding == "json":
+                if self.http_mode == "GET":
                     pdict = {self.jsonname: json.dumps(pdict)}
                     requests.get(self.hook_url, params=pdict, timeout=0.5)
-                elif self.http_mode == 'POST':
+                elif self.http_mode == "POST":
                     requests.post(self.hook_url, json=pdict, timeout=0.5)
             else:
-                if self.http_mode == 'GET':
+                if self.http_mode == "GET":
                     requests.get(self.hook_url, params=pdict, timeout=0.5)
-                elif self.http_mode == 'POST':
+                elif self.http_mode == "POST":
                     requests.post(self.hook_url, data=pdict, timeout=0.5)
         except Exception:
-            self.log.warning('Execption during webhook call', exc=True)
+            self.log.warning("Execption during webhook call", exc=True)
 
     def _processQueue(self):
         while not self._stoprequest:
@@ -215,12 +224,13 @@ class Collector(CacheKeyFilter, BaseCacheClient):
     """The main service that enables cache update forwarding."""
 
     attached_devices = {
-        'forwarders': Attach('The services to submit keys to',
-                             ForwarderBase, multiple=True),
+        "forwarders": Attach(
+            "The services to submit keys to", ForwarderBase, multiple=True
+        ),
     }
 
     parameter_overrides = {
-        'prefix': Override(mandatory=False, default='nicos/'),
+        "prefix": Override(mandatory=False, default="nicos/"),
     }
 
     def doInit(self, mode):
@@ -232,9 +242,9 @@ class Collector(CacheKeyFilter, BaseCacheClient):
     def _handle_msg(self, time, ttlop, ttl, tsop, key, op, value):
         if not key.startswith(self._prefix):
             return False
-        key = key[len(self._prefix):]
+        key = key[len(self._prefix) :]
         if not self._checkKey(key):
             return
-        ttl = '+' + ttl if ttlop == '+' else ''
+        ttl = "+" + ttl if ttlop == "+" else ""
         for service in self._attached_forwarders:
             service._putChange(time, ttl, key, op, value)

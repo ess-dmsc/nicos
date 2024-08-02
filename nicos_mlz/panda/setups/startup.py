@@ -1,7 +1,5 @@
-description = 'minimal NICOS startup setup'
+description = "minimal NICOS startup setup"
 
-group = 'lowlevel'
+group = "lowlevel"
 
-sysconfig = dict(
-    cache = 'phys.panda.frm2'
-)
+sysconfig = dict(cache="phys.panda.frm2")

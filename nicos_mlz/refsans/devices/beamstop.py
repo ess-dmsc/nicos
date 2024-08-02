@@ -29,7 +29,7 @@ from nicos.core.params import Attach
 
 class BeamStopDevice(Readable):
     attached_devices = {
-        'att': Attach('VSD device', Readable),
+        "att": Attach("VSD device", Readable),
     }
 
     def doRead(self, maxage=0):
@@ -37,24 +37,24 @@ class BeamStopDevice(Readable):
 
     def doStatus(self, maxage=0):
         if self._attached_att.read(maxage) < 0.01:
-            return status.ERROR, 'VSD disconected'
-        return status.OK, ''
+            return status.ERROR, "VSD disconected"
+        return status.OK, ""
 
 
 class BeamStopCenter(Readable):
     attached_devices = {
-        'att': Attach('VSD device', Readable),
+        "att": Attach("VSD device", Readable),
     }
 
     def doRead(self, maxage=0):
         val = self._attached_att.read(maxage)
         if val < 4:
-            return 'None'
+            return "None"
         elif val > 7:
-            return 'On'
-        return 'Off'
+            return "On"
+        return "Off"
 
     def doStatus(self, maxage=0):
-        if self.doRead(maxage) == 'None':
-            return status.ERROR, 'VSD disconected'
-        return status.OK, ''
+        if self.doRead(maxage) == "None":
+            return status.ERROR, "VSD disconected"
+        return status.OK, ""

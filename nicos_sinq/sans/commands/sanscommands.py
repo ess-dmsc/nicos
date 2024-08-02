@@ -33,47 +33,51 @@ from nicos.services.daemon.script import parseScript
 
 
 @usercommand
-@helparglist('scan dev in the range between start and end with stepwidth step'
-             ' and execute command at each step')
+@helparglist(
+    "scan dev in the range between start and end with stepwidth step"
+    " and execute command at each step"
+)
 def scanmotor(dev, start, end, step, command):
-    if abs(step) > .0001:
+    if abs(step) > 0.0001:
         np = ceil(((end - start) / float(step))) + 1
     else:
-        raise UsageError('step must be bigger then 0')
-    nxsink = session.getDevice('nxsink')
-    nxsink.settypes = ['point', ]
+        raise UsageError("step must be bigger then 0")
+    nxsink = session.getDevice("nxsink")
+    nxsink.settypes = [
+        "point",
+    ]
     with manualscan(dev):
         for i in range(np):
             maw(dev, start + i * step)
             code, _ = parseScript(command)
             for i, c in enumerate(code):
                 exec(c, session.namespace)
-    nxsink.settypes = ['point', 'scan']
+    nxsink.settypes = ["point", "scan"]
 
 
 @usercommand
-@helparglist('Switch into TOF mode')
+@helparglist("Switch into TOF mode")
 def tofel():
-    RemoveSetup('detector')
-    AddSetup('detector_strobo')
-    dev = session.getDevice('port14')
-    dev.execute('EL1D')
+    RemoveSetup("detector")
+    AddSetup("detector_strobo")
+    dev = session.getDevice("port14")
+    dev.execute("EL1D")
     sleep(3)
-    dev.execute('TIWI 8')
+    dev.execute("TIWI 8")
     sleep(3)
-    dev.execute('COIN 7')
+    dev.execute("COIN 7")
     sleep(3)
 
 
 @usercommand
-@helparglist('Switch into 2D mode')
+@helparglist("Switch into 2D mode")
 def antitofel():
-    RemoveSetup('detector_strobo')
-    AddSetup('detector')
-    dev = session.getDevice('port14')
-    dev.execute('EL2D')
+    RemoveSetup("detector_strobo")
+    AddSetup("detector")
+    dev = session.getDevice("port14")
+    dev.execute("EL2D")
     sleep(3)
-    dev.execute('TIWI 8')
+    dev.execute("TIWI 8")
     sleep(3)
-    dev.execute('COIN 7')
+    dev.execute("COIN 7")
     sleep(3)

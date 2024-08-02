@@ -32,53 +32,58 @@ class IEEEDevice(Readable):
     """
 
     parameters = {
-        'valuename': Param('Device ("dev") or parameter ("dev.param") '
-                           'to return on read', type=str, settable=True,
-                           unit='', category='general'),
+        "valuename": Param(
+            'Device ("dev") or parameter ("dev.param") ' "to return on read",
+            type=str,
+            settable=True,
+            unit="",
+            category="general",
+        ),
     }
     parameter_overrides = {
-        'unit': Override(mandatory=False, default='', settable=False,
-                         category='general'),
+        "unit": Override(
+            mandatory=False, default="", settable=False, category="general"
+        ),
     }
 
     hardware_access = False
 
     def doWriteValuename(self, valuename):
-        if valuename and '.' not in valuename:
+        if valuename and "." not in valuename:
             if self._cache:
-                unit = self._cache.get(valuename, 'unit', '')
+                unit = self._cache.get(valuename, "unit", "")
             else:
-                unit = getattr(session.getDevice(valuename), 'unit', '')
+                unit = getattr(session.getDevice(valuename), "unit", "")
         else:
             try:
-                devname, parname = valuename.rsplit('.', 1)
+                devname, parname = valuename.rsplit(".", 1)
                 dev = session.getDevice(devname)
-                devunit = getattr(dev, 'unit', '')
-                unit = dev._getParamConfig(parname).unit or ''
+                devunit = getattr(dev, "unit", "")
+                unit = dev._getParamConfig(parname).unit or ""
                 if devunit:
-                    unit = unit.replace('main', devunit)
+                    unit = unit.replace("main", devunit)
             except ConfigurationError:
-                unit = ''
-        self._setROParam('unit', unit)
+                unit = ""
+        self._setROParam("unit", unit)
 
     def doStatus(self, maxage=0):
         if not self.valuename:
-            return status.OK, ''
+            return status.OK, ""
 
-        devname = self.valuename.rsplit('.', 1)[0]
+        devname = self.valuename.rsplit(".", 1)[0]
         if self._cache:
-            return self._cache.get(devname, 'status')
+            return self._cache.get(devname, "status")
         return session.getDevice(devname).status(maxage)
 
     def doRead(self, maxage=0):
         if not self.valuename:
-            return ''
+            return ""
 
-        if '.' in self.valuename:
-            devname, parname = self.valuename.rsplit('.', 1)
+        if "." in self.valuename:
+            devname, parname = self.valuename.rsplit(".", 1)
             if self._cache:
                 return self._cache.get(devname, parname)
             return getattr(session.getDevice(devname), parname)
         if self._cache:
-            return self._cache.get(self.valuename, 'value')
+            return self._cache.get(self.valuename, "value")
         return session.getDevice(self.valuename).read(maxage)

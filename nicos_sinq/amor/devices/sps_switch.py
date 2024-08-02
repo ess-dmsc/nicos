@@ -41,37 +41,69 @@ class SpsSwitch(EpicsDevice, MappedMoveable):
     """
 
     parameters = {
-        'byte': Param('Byte number representing the state of this unit',
-                      type=int, mandatory=True, userparam=False,
-                      settable=False),
-        'bit': Param('Bit number from the byte representing the state',
-                     type=int, mandatory=True, userparam=False,
-                     settable=False),
-        'readpv': Param('PV to read the digital input waveform', type=pvname,
-                        mandatory=True, settable=False, userparam=False),
-        'commandpv': Param('PV to send the command to toggle state',
-                           type=pvname, mandatory=True, settable=False,
-                           userparam=False),
-        'commandstr': Param('Command string to issue on commandpv', type=str,
-                            mandatory=True, settable=False, userparam=False),
-        'lasttoggle': Param('Store the time when last toggled', type=int,
-                            settable=True, internal=True, default=0),
-        'lasttarget': Param('Store the last raw target of move', type=bool,
-                            settable=True, internal=True, default=None)
+        "byte": Param(
+            "Byte number representing the state of this unit",
+            type=int,
+            mandatory=True,
+            userparam=False,
+            settable=False,
+        ),
+        "bit": Param(
+            "Bit number from the byte representing the state",
+            type=int,
+            mandatory=True,
+            userparam=False,
+            settable=False,
+        ),
+        "readpv": Param(
+            "PV to read the digital input waveform",
+            type=pvname,
+            mandatory=True,
+            settable=False,
+            userparam=False,
+        ),
+        "commandpv": Param(
+            "PV to send the command to toggle state",
+            type=pvname,
+            mandatory=True,
+            settable=False,
+            userparam=False,
+        ),
+        "commandstr": Param(
+            "Command string to issue on commandpv",
+            type=str,
+            mandatory=True,
+            settable=False,
+            userparam=False,
+        ),
+        "lasttoggle": Param(
+            "Store the time when last toggled",
+            type=int,
+            settable=True,
+            internal=True,
+            default=0,
+        ),
+        "lasttarget": Param(
+            "Store the last raw target of move",
+            type=bool,
+            settable=True,
+            internal=True,
+            default=None,
+        ),
     }
 
     parameter_overrides = {
-        'mapping': Override(userparam=False, settable=False),
-        'fallback': Override(userparam=False),
-        'unit': Override(mandatory=False, userparam=False, settable=False),
-        'fmtstr': Override(userparam=False),
-        'maxage': Override(userparam=False),
-        'pollinterval': Override(userparam=False),
-        'warnlimits': Override(userparam=False)
+        "mapping": Override(userparam=False, settable=False),
+        "fallback": Override(userparam=False),
+        "unit": Override(mandatory=False, userparam=False, settable=False),
+        "fmtstr": Override(userparam=False),
+        "maxage": Override(userparam=False),
+        "pollinterval": Override(userparam=False),
+        "warnlimits": Override(userparam=False),
     }
 
     def _get_pv_parameters(self):
-        return {'readpv', 'commandpv'}
+        return {"readpv", "commandpv"}
 
     def doStatus(self, maxage=0):
         epics_status = EpicsDevice.doStatus(self, maxage)
@@ -79,23 +111,23 @@ class SpsSwitch(EpicsDevice, MappedMoveable):
             return epics_status
 
         now = monotonic()
-        if self.lasttarget is not None and \
-                self.lasttarget != self._readRaw(maxage):
-            if now > self.lasttoggle+10:
-                return (status.WARN, '%s not reached!'
-                        % self._inverse_mapping[self.lasttarget])
-            return status.BUSY, ''
-        return status.OK, ''
+        if self.lasttarget is not None and self.lasttarget != self._readRaw(maxage):
+            if now > self.lasttoggle + 10:
+                return (
+                    status.WARN,
+                    "%s not reached!" % self._inverse_mapping[self.lasttarget],
+                )
+            return status.BUSY, ""
+        return status.OK, ""
 
     def doIsAtTarget(self, pos, target):
         # Don't check if it reached the target
         return True
 
     def _readBit(self, byte, bit):
-        raw = self._pvs['readpv'].get(timeout=self.epicstimeout,
-                                      count=self.byte+1)
+        raw = self._pvs["readpv"].get(timeout=self.epicstimeout, count=self.byte + 1)
         if byte > len(raw):
-            raise PositionError('Byte specified is out of bounds')
+            raise PositionError("Byte specified is out of bounds")
 
         powered = 1 << bit
         return raw[byte] & powered == powered
@@ -107,7 +139,7 @@ class SpsSwitch(EpicsDevice, MappedMoveable):
         if self._readRaw() != target:
             self.lasttoggle = monotonic()
             self.lasttarget = target
-            self._put_pv('commandpv', self.commandstr)
+            self._put_pv("commandpv", self.commandstr)
 
 
 class AmorShutter(SpsSwitch):
@@ -130,30 +162,41 @@ class AmorShutter(SpsSwitch):
     """
 
     parameters = {
-        'brokenbyte': Param('Byte representing the broken state', type=int,
-                            mandatory=True, userparam=False, settable=False),
-        'brokenbit': Param('Bit representing the broken state', type=int,
-                           mandatory=True, userparam=False, settable=False),
+        "brokenbyte": Param(
+            "Byte representing the broken state",
+            type=int,
+            mandatory=True,
+            userparam=False,
+            settable=False,
+        ),
+        "brokenbit": Param(
+            "Bit representing the broken state",
+            type=int,
+            mandatory=True,
+            userparam=False,
+            settable=False,
+        ),
     }
 
     def _isBroken(self):
-        return not self._readRaw() and not self._readBit(self.brokenbyte,
-                                                         self.brokenbit)
+        return not self._readRaw() and not self._readBit(
+            self.brokenbyte, self.brokenbit
+        )
 
     def doIsAllowed(self, target):
         if self._isBroken():
-            return False, 'Enclosure is broken! Cannot change state!'
-        return True, ''
+            return False, "Enclosure is broken! Cannot change state!"
+        return True, ""
 
     def doStatus(self, maxage=0):
         if self._isBroken():
-            return status.WARN, 'BROKEN'
+            return status.WARN, "BROKEN"
 
         super_status = SpsSwitch.doStatus(self, maxage)
         if super_status[0] != status.OK:
             return super_status
 
-        return status.OK, 'Enabled'
+        return status.OK, "Enabled"
 
 
 class SpsBit(EpicsReadable):
@@ -162,20 +205,27 @@ class SpsBit(EpicsReadable):
     """
 
     parameters = {
-        'byte': Param('Byte number representing the state of this unit',
-                      type=int, mandatory=True, userparam=False,
-                      settable=False),
-        'bit': Param('Bit number from the byte representing the state',
-                     type=int, mandatory=True, userparam=False,
-                     settable=False),
+        "byte": Param(
+            "Byte number representing the state of this unit",
+            type=int,
+            mandatory=True,
+            userparam=False,
+            settable=False,
+        ),
+        "bit": Param(
+            "Bit number from the byte representing the state",
+            type=int,
+            mandatory=True,
+            userparam=False,
+            settable=False,
+        ),
     }
 
     def doRead(self, maxage=0):
-        raw = self._pvs['readpv'].get(timeout=self.epicstimeout,
-                                      count=self.byte+1)
+        raw = self._pvs["readpv"].get(timeout=self.epicstimeout, count=self.byte + 1)
 
         if self.byte > len(raw):
-            raise PositionError('Byte specified is out of bounds')
+            raise PositionError("Byte specified is out of bounds")
 
         powered = 1 << self.bit
         return raw[self.byte] & powered == powered

@@ -36,58 +36,62 @@ class BeamOracle(EpicsDevice, Detector):
     number is only used as a qualitative measure in order to
     decide if the image has seen enough neutrons or not.
     """
+
     parameters = {
-        'pvprefix': Param('Prefix for the summing DB',
-                          type=str),
+        "pvprefix": Param("Prefix for the summing DB", type=str),
     }
 
     _running = False
     _channels = []
 
     def _get_pv_parameters(self):
-        return set(['readpv', 'writepv', 'clearpv_int', 'clearpv_time'])
+        return set(["readpv", "writepv", "clearpv_int", "clearpv_time"])
 
     def _get_pv_name(self, pvparam):
-        if pvparam == 'readpv':
-            return self.pvprefix + 'BEAMAVG'
-        elif pvparam == 'writepv':
-            return self.pvprefix + 'SWITCH'
-        elif pvparam == 'clearpv_int':
-            return self.pvprefix + 'ACCINT'
-        elif pvparam == 'clearpv_time':
-            return self.pvprefix + 'ACCTIME'
+        if pvparam == "readpv":
+            return self.pvprefix + "BEAMAVG"
+        elif pvparam == "writepv":
+            return self.pvprefix + "SWITCH"
+        elif pvparam == "clearpv_int":
+            return self.pvprefix + "ACCINT"
+        elif pvparam == "clearpv_time":
+            return self.pvprefix + "ACCTIME"
         else:
             return None
 
     def presetInfo(self):
-        return {'t', 'timer', 'm', 'monitor'}
+        return {"t", "timer", "m", "monitor"}
 
     def doSetPreset(self, **preset):
         pass
 
     def doStart(self):
         self._running = True
-        self._put_pv('clearpv_time', 0, True)
-        self._put_pv('clearpv_int', 0, True)
-        self._put_pv('writepv', 1, True)
+        self._put_pv("clearpv_time", 0, True)
+        self._put_pv("clearpv_int", 0, True)
+        self._put_pv("writepv", 1, True)
 
     def doStatus(self, maxage=0):
         if self._running:
-            return BUSY, ''
-        return OK, ''
+            return BUSY, ""
+        return OK, ""
 
     def doStop(self):
-        self._put_pv('writepv', 0, True)
+        self._put_pv("writepv", 0, True)
         self._running = False
 
     def doSimulate(self, preset):
-        return [preset, ]
+        return [
+            preset,
+        ]
 
     def doRead(self, maxage=0):
-        return [self._get_pv('readpv'), ]
+        return [
+            self._get_pv("readpv"),
+        ]
 
     def valueInfo(self):
-        return (Value('Average Intensity', unit='uA', fmtstr='%d'),)
+        return (Value("Average Intensity", unit="uA", fmtstr="%d"),)
 
     def arrayInfo(self):
         return ()

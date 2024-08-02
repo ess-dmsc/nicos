@@ -29,8 +29,8 @@ class Shutter(HasTimeout, MultiSwitcher):
     """Combine the MultiSwitcher with HasTimeout."""
 
     parameter_overrides = {
-        'timeout': Override(default=13),
-        'fallback': Override(default='?'),
+        "timeout": Override(default=13),
+        "fallback": Override(default="?"),
     }
     hardware_access = False
     relax_mapping = True
@@ -38,5 +38,5 @@ class Shutter(HasTimeout, MultiSwitcher):
     def doStatus(self, maxage=0):
         r = self.read(maxage)
         if r == self.fallback:
-            return status.BUSY, ''
-        return status.OK, ''
+            return status.BUSY, ""
+        return status.OK, ""

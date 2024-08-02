@@ -27,8 +27,7 @@ from nicos.devices.epics.pyepics import EpicsReadable
 from nicos.devices.epics.pyepics.monitor import PyEpicsMonitor
 from nicos.devices.generic.detector import CounterChannelMixin
 
-from nicos_sinq.devices.epics.detector import EpicsActiveChannel, \
-    EpicsPassiveChannel
+from nicos_sinq.devices.epics.detector import EpicsActiveChannel, EpicsPassiveChannel
 
 
 class SINQProtonCurrent(PyEpicsMonitor, EpicsReadable):
@@ -39,7 +38,7 @@ class SINQProtonCurrent(PyEpicsMonitor, EpicsReadable):
     """
 
     def doStatus(self, maxage=0):
-        return status.OK, ''
+        return status.OK, ""
 
 
 class SINQProtonCharge(CounterChannelMixin, EpicsPassiveChannel):
@@ -50,45 +49,44 @@ class SINQProtonCharge(CounterChannelMixin, EpicsPassiveChannel):
     """
 
     parameters = {
-        'pvprefix': Param('Prefix for the summing DB', type=str),
+        "pvprefix": Param("Prefix for the summing DB", type=str),
     }
 
     def _get_pv_parameters(self):
-        return EpicsPassiveChannel._get_pv_parameters(self) | {'startpv'}
+        return EpicsPassiveChannel._get_pv_parameters(self) | {"startpv"}
 
     def _get_pv_name(self, pvparam):
-
-        if pvparam == 'startpv':
-            return self.pvprefix + 'SWITCH'
+        if pvparam == "startpv":
+            return self.pvprefix + "SWITCH"
 
         return getattr(self, pvparam)
 
     def doStatus(self, maxage=0):
         general_epics_status, affected_pvs = EpicsPassiveChannel.doStatus(self)
         if general_epics_status == status.ERROR:
-            return status.ERROR, affected_pvs or 'Unknown problem in record'
+            return status.ERROR, affected_pvs or "Unknown problem in record"
 
-        if self._get_pv('startpv'):
-            return status.BUSY, 'counting'
-        return status.OK, ''
+        if self._get_pv("startpv"):
+            return status.BUSY, "counting"
+        return status.OK, ""
 
     def doPrepare(self):
-        self._put_pv('readpv', 0)
+        self._put_pv("readpv", 0)
 
     def doStart(self):
-        self._put_pv('startpv', 1)
+        self._put_pv("startpv", 1)
 
     def doStop(self):
-        self._put_pv('startpv', 0)
+        self._put_pv("startpv", 0)
 
     def doFinish(self):
-        self._put_pv('startpv', 0)
+        self._put_pv("startpv", 0)
 
     def doIsCompleted(self):
-        return not self._get_pv('startpv')
+        return not self._get_pv("startpv")
 
     def valueInfo(self):
-        return Value(self.name, unit=self.unit, fmtstr=self.fmtstr),
+        return (Value(self.name, unit=self.unit, fmtstr=self.fmtstr),)
 
 
 class SINQProtonMonitor(CounterChannelMixin, EpicsActiveChannel):
@@ -99,18 +97,18 @@ class SINQProtonMonitor(CounterChannelMixin, EpicsActiveChannel):
     """
 
     parameters = {
-        'pvprefix': Param('Prefix for the summing DB', type=str),
+        "pvprefix": Param("Prefix for the summing DB", type=str),
     }
 
     parameter_overrides = {
-        'readpv': Override(mandatory=False),
-        'presetpv': Override(mandatory=False),
-        'startpv': Override(mandatory=False),
+        "readpv": Override(mandatory=False),
+        "presetpv": Override(mandatory=False),
+        "startpv": Override(mandatory=False),
     }
 
-    _presetmap = {'p', 'counter'}
+    _presetmap = {"p", "counter"}
 
-    _pv_map = {'startpv': 'SWITCH', 'readpv': 'ACCINT', 'presetpv': 'PRESET'}
+    _pv_map = {"startpv": "SWITCH", "readpv": "ACCINT", "presetpv": "PRESET"}
 
     def _get_pv_parameters(self):
         return self._pv_map.keys()
@@ -121,27 +119,27 @@ class SINQProtonMonitor(CounterChannelMixin, EpicsActiveChannel):
     def doStatus(self, maxage=0):
         general_epics_status, affected_pvs = EpicsActiveChannel.doStatus(self)
         if general_epics_status == status.ERROR:
-            return status.ERROR, affected_pvs or 'Unknown problem in record'
+            return status.ERROR, affected_pvs or "Unknown problem in record"
 
-        if self._get_pv('startpv'):
-            return status.BUSY, 'counting'
-        return status.OK, ''
+        if self._get_pv("startpv"):
+            return status.BUSY, "counting"
+        return status.OK, ""
 
     def doPrepare(self):
-        self._put_pv('presetpv', self.preselection)
+        self._put_pv("presetpv", self.preselection)
 
     def doStart(self):
         self.doPrepare()
-        self._put_pv('startpv', 1)
+        self._put_pv("startpv", 1)
 
     def doStop(self):
-        self._put_pv('startpv', 0)
+        self._put_pv("startpv", 0)
 
     def doFinish(self):
-        self._put_pv('startpv', 0)
+        self._put_pv("startpv", 0)
 
     def doIsCompleted(self):
-        return not self._get_pv('startpv')
+        return not self._get_pv("startpv")
 
     def valueInfo(self):
-        return Value(self.name, unit=self.unit, fmtstr=self.fmtstr),
+        return (Value(self.name, unit=self.unit, fmtstr=self.fmtstr),)

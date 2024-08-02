@@ -45,33 +45,37 @@ class NicosListener:
 
     def _newDevinfo(self, expr, unit, fmtstr, isdevice):
         return AttrDict(
-            {'value': '-',
-             'expr': expr,
-             'strvalue': '-',
-             'fullvalue': '-',
-             'status': (OK, ''),
-             'fmtstr': fmtstr or '%s',
-             'unit': unit,
-             'fixed': '',
-             'changetime': 0,
-             'expired': True,
-             'isdevice': isdevice})
+            {
+                "value": "-",
+                "expr": expr,
+                "strvalue": "-",
+                "fullvalue": "-",
+                "status": (OK, ""),
+                "fmtstr": fmtstr or "%s",
+                "unit": unit,
+                "fixed": "",
+                "changetime": 0,
+                "expired": True,
+                "isdevice": isdevice,
+            }
+        )
 
-    def registerDevice(self, dev, unit='', fmtstr=''):
+    def registerDevice(self, dev, unit="", fmtstr=""):
         if not dev:
             return
         key, expr, _ = parseKeyExpression(
-            dev, append_value=False, normalize=lambda s: s.lower())
+            dev, append_value=False, normalize=lambda s: s.lower()
+        )
         self.devinfo[key] = self._newDevinfo(expr, unit, fmtstr, True)
-        self._devmap[self._source.register(self, key + '/value')] = key
-        self._devmap[self._source.register(self, key + '/status')] = key
-        self._devmap[self._source.register(self, key + '/fixed')] = key
+        self._devmap[self._source.register(self, key + "/value")] = key
+        self._devmap[self._source.register(self, key + "/status")] = key
+        self._devmap[self._source.register(self, key + "/fixed")] = key
         if not unit:
-            self._devmap[self._source.register(self, key + '/unit')] = key
+            self._devmap[self._source.register(self, key + "/unit")] = key
         if not fmtstr:
-            self._devmap[self._source.register(self, key + '/fmtstr')] = key
+            self._devmap[self._source.register(self, key + "/fmtstr")] = key
 
-    def registerKey(self, valuekey, statuskey='', unit='', fmtstr=''):
+    def registerKey(self, valuekey, statuskey="", unit="", fmtstr=""):
         if not valuekey:
             return
         key, expr, _ = parseKeyExpression(valuekey, append_value=False)
@@ -82,8 +86,7 @@ class NicosListener:
 
     def registerKeys(self):
         """Register any keys that should be watched."""
-        raise NotImplementedError('Implement registerKeys() in %s' %
-                                  self.__class__)
+        raise NotImplementedError("Implement registerKeys() in %s" % self.__class__)
 
     def on_keyChange(self, key, value, time, expired):
         """Default handler for changing keys.
@@ -94,44 +97,45 @@ class NicosListener:
             return
         devinfo = self.devinfo[self._devmap[key]]
         if devinfo.isdevice:
-            if key.endswith('/status'):
+            if key.endswith("/status"):
                 if value is None:
                     value = devinfo.status
                     expired = True
                 devinfo.status = value
                 devinfo.changetime = time
-                self.on_devStatusChange(self._devmap[key],
-                                        value[0], value[1], expired)
+                self.on_devStatusChange(self._devmap[key], value[0], value[1], expired)
                 return
-            elif key.endswith('/fixed'):
+            elif key.endswith("/fixed"):
                 if value is None:
                     return
                 devinfo.fixed = value
-                self.on_devMetaChange(self._devmap[key], devinfo.fmtstr,
-                                      devinfo.unit, devinfo.fixed)
+                self.on_devMetaChange(
+                    self._devmap[key], devinfo.fmtstr, devinfo.unit, devinfo.fixed
+                )
                 return
-            elif key.endswith('/fmtstr'):
+            elif key.endswith("/fmtstr"):
                 if value is None:
                     return
                 devinfo.fmtstr = value
-                self._update_value(key, devinfo, devinfo.value,
-                                   devinfo.expired)
-                self.on_devMetaChange(self._devmap[key], devinfo.fmtstr,
-                                      devinfo.unit, devinfo.fixed)
+                self._update_value(key, devinfo, devinfo.value, devinfo.expired)
+                self.on_devMetaChange(
+                    self._devmap[key], devinfo.fmtstr, devinfo.unit, devinfo.fixed
+                )
                 return
-            elif key.endswith('/unit'):
+            elif key.endswith("/unit"):
                 if value is None:
                     return
                 devinfo.unit = value
-                self.on_devMetaChange(self._devmap[key], devinfo.fmtstr,
-                                      devinfo.unit, devinfo.fixed)
+                self.on_devMetaChange(
+                    self._devmap[key], devinfo.fmtstr, devinfo.unit, devinfo.fixed
+                )
                 return
         # it's either /value, or any key registered as value
         # first, apply item selection
         if value is not None:
             if devinfo.expr:
                 try:
-                    fvalue = eval(devinfo.expr, KEYEXPR_NS, {'x': value})
+                    fvalue = eval(devinfo.expr, KEYEXPR_NS, {"x": value})
                 except Exception:
                     fvalue = NOT_AVAILABLE
             else:
@@ -144,7 +148,7 @@ class NicosListener:
 
     def _update_value(self, key, devinfo, fvalue, expired):
         if fvalue is None:
-            strvalue = '----'
+            strvalue = "----"
         else:
             if isinstance(fvalue, list):
                 fvalue = tuple(fvalue)
@@ -152,12 +156,13 @@ class NicosListener:
                 strvalue = devinfo.fmtstr % fvalue
             except Exception:
                 strvalue = str(fvalue)
-        devinfo.fullvalue = (strvalue + ' ' + (devinfo.unit or '')).strip()
+        devinfo.fullvalue = (strvalue + " " + (devinfo.unit or "")).strip()
         if devinfo.strvalue != strvalue or devinfo.expired != expired:
             devinfo.strvalue = strvalue
             devinfo.expired = expired
-            self.on_devValueChange(self._devmap[key], fvalue, strvalue,
-                                   devinfo.fullvalue, expired)
+            self.on_devValueChange(
+                self._devmap[key], fvalue, strvalue, devinfo.fullvalue, expired
+            )
 
     def on_devValueChange(self, dev, value, strvalue, unitvalue, expired):
         pass
@@ -171,16 +176,18 @@ class NicosListener:
 
 class PropDef(pyqtProperty):
     all_types = [
-        str, float, int,
-        'bool',  # only works as C++ type name
+        str,
+        float,
+        int,
+        "bool",  # only works as C++ type name
     ]
 
-    def __init__(self, prop, ptype, default, doc=''):
+    def __init__(self, prop, ptype, default, doc=""):
         if ptype is bool:
-            ptype = 'bool'
+            ptype = "bool"
         if ptype not in self.all_types:
-            if not (isinstance(ptype, str) and ptype.startswith('Q')):
-                raise Exception('invalid property type: %r' % ptype)
+            if not (isinstance(ptype, str) and ptype.startswith("Q")):
+                raise Exception("invalid property type: %r" % ptype)
         self.ptype = ptype
         self.default = default
         self.doc = doc
@@ -223,13 +230,14 @@ class NicosWidget(NicosListener):
     _client = None
 
     # set this to a description of the widget for the Qt designer
-    designer_description = ''
+    designer_description = ""
     # set this to an icon name for the Qt designer
     designer_icon = None
 
     # define properties
-    valueFont = PropDef('valueFont', 'QFont', QFont('Monospace'),
-                        'Font used for displaying values')
+    valueFont = PropDef(
+        "valueFont", "QFont", QFont("Monospace"), "Font used for displaying values"
+    )
 
     # collects all properties of self's class
     @lazy_property
@@ -253,7 +261,7 @@ class NicosWidget(NicosListener):
                     self.props[prop] = PropDef.convert(pdef.default(self))
                 else:
                     self.props[prop] = PropDef.convert(pdef.default)
-        self._scale = QFontMetrics(self.valueFont).horizontalAdvance('0')
+        self._scale = QFontMetrics(self.valueFont).horizontalAdvance("0")
         self.initUi()
 
     def initUi(self):
@@ -261,8 +269,8 @@ class NicosWidget(NicosListener):
 
     def propertyUpdated(self, pname, value):
         """Called when a property in self.properties has been updated."""
-        if pname == 'valueFont':
-            self._scale = QFontMetrics(value).horizontalAdvance('0')
+        if pname == "valueFont":
+            self._scale = QFontMetrics(value).horizontalAdvance("0")
         self.update()
 
     def setClient(self, client):
@@ -275,6 +283,6 @@ class NicosWidget(NicosListener):
                 self.on_keyChange(ret[0], ret[1], 0, False)
         # auto-connect client signal handlers
         for signal in DAEMON_EVENTS:
-            handler = getattr(self, 'on_client_' + signal, None)
+            handler = getattr(self, "on_client_" + signal, None)
             if handler:
                 getattr(self._client, signal).connect(handler)

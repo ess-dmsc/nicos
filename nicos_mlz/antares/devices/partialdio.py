@@ -31,8 +31,8 @@ class PartialDigitalInput(DigitalInput):
     """
 
     parameters = {
-        'startbit': Param('Number of the first bit', type=int, default=0),
-        'bitwidth': Param('Number of bits', type=int, default=1),
+        "startbit": Param("Number of the first bit", type=int, default=0),
+        "bitwidth": Param("Number of bits", type=int, default=1),
     }
 
     def doInit(self, mode):
@@ -49,8 +49,8 @@ class PartialDigitalOutput(DigitalOutput):
     """
 
     parameters = {
-        'startbit': Param('Number of the first bit', type=int, default=0),
-        'bitwidth': Param('Number of bits', type=int, default=1),
+        "startbit": Param("Number of the first bit", type=int, default=0),
+        "bitwidth": Param("Number of bits", type=int, default=1),
     }
 
     def doInit(self, mode):
@@ -63,6 +63,5 @@ class PartialDigitalOutput(DigitalOutput):
 
     def doStart(self, target):
         curVal = DigitalOutput.doRead(self)
-        newVal = (curVal & ~(self._mask << self.startbit)) | \
-                 (target << self.startbit)
+        newVal = (curVal & ~(self._mask << self.startbit)) | (target << self.startbit)
         DigitalOutput.doStart(self, newVal)

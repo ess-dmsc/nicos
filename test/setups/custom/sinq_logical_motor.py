@@ -20,49 +20,55 @@
 #   Mark.Koennecke@psi.ch
 #
 # *****************************************************************************
-name = 'SINQ logical motors'
+name = "SINQ logical motors"
 
-includes = ['stdsystem']
+includes = ["stdsystem"]
 
-description = 'Test setup for SINQ logical motors using the EIGER A2 example'
+description = "Test setup for SINQ logical motors using the EIGER A2 example"
 
 devices = dict(
-    d2l = device('nicos.devices.generic.VirtualMotor',
-        unit = 'degree',
-        description = 'Left slit block',
-        abslimits = (-100, 0),
-        precision = 0.01,
-        curvalue = -52.5,
+    d2l=device(
+        "nicos.devices.generic.VirtualMotor",
+        unit="degree",
+        description="Left slit block",
+        abslimits=(-100, 0),
+        precision=0.01,
+        curvalue=-52.5,
     ),
-    d2r = device('nicos.devices.generic.VirtualMotor',
-        unit = 'degree',
-        description = 'Right slit block',
-        abslimits = (-100, 0),
-        precision = 0.01,
-        curvlaue = -42.5,
+    d2r=device(
+        "nicos.devices.generic.VirtualMotor",
+        unit="degree",
+        description="Right slit block",
+        abslimits=(-100, 0),
+        precision=0.01,
+        curvlaue=-42.5,
     ),
-    a2rot = device('nicos.devices.generic.VirtualMotor',
-        unit = 'degree',
-        description = 'Left slit block',
-        abslimits = (16, 90),
-        precision = 0.01,
-        curvalue = 44.,
+    a2rot=device(
+        "nicos.devices.generic.VirtualMotor",
+        unit="degree",
+        description="Left slit block",
+        abslimits=(16, 90),
+        precision=0.01,
+        curvalue=44.0,
     ),
-    a2controller = device('nicos_sinq.eiger.devices.eigermono.EigerA2Controller',
-        description = 'Controller for aligning A2 and A2 slits',
-        reala2 = 'a2rot',
-        left = 'd2l',
-        right = 'd2r',
-        visibility = (),
+    a2controller=device(
+        "nicos_sinq.eiger.devices.eigermono.EigerA2Controller",
+        description="Controller for aligning A2 and A2 slits",
+        reala2="a2rot",
+        left="d2l",
+        right="d2r",
+        visibility=(),
     ),
-    a2 = device('nicos_sinq.devices.logical_motor.LogicalMotor',
-        description = 'Logical A2 motor',
-        controller = 'a2controller',
-        abslimits = (16, 90.14)
+    a2=device(
+        "nicos_sinq.devices.logical_motor.LogicalMotor",
+        description="Logical A2 motor",
+        controller="a2controller",
+        abslimits=(16, 90.14),
     ),
-    a2w = device('nicos_sinq.devices.logical_motor.LogicalMotor',
-        description = 'Logical out slit width',
-        controller = 'a2controller',
-        abslimits = (0, 20.)
+    a2w=device(
+        "nicos_sinq.devices.logical_motor.LogicalMotor",
+        description="Logical out slit width",
+        controller="a2controller",
+        abslimits=(0, 20.0),
     ),
 )

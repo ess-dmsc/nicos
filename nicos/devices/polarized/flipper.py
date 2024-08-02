@@ -24,11 +24,19 @@
 
 """Spin flipper classes."""
 
-from nicos.core import Attach, Moveable, Override, Param, multiStop, \
-    nonemptylistof, oneof, tupleof
+from nicos.core import (
+    Attach,
+    Moveable,
+    Override,
+    Param,
+    multiStop,
+    nonemptylistof,
+    oneof,
+    tupleof,
+)
 
-ON = 'on'
-OFF = 'off'
+ON = "on"
+OFF = "off"
 
 
 class BaseFlipper(Moveable):
@@ -39,12 +47,12 @@ class BaseFlipper(Moveable):
     hardware_access = False
 
     attached_devices = {
-        'flip': Attach('flipping current', Moveable),
-        'corr': Attach('correction current, compensating the ext. field', Moveable),
+        "flip": Attach("flipping current", Moveable),
+        "corr": Attach("correction current, compensating the ext. field", Moveable),
     }
 
     parameter_overrides = {
-        'unit': Override(mandatory=False, default=''),
+        "unit": Override(mandatory=False, default=""),
     }
 
     valuetype = oneof(ON, OFF)
@@ -64,8 +72,9 @@ class MezeiFlipper(BaseFlipper):
     """
 
     parameters = {
-        'currents': Param('Flipper and correction current', settable=True,
-                          type=tupleof(float, float)),
+        "currents": Param(
+            "Flipper and correction current", settable=True, type=tupleof(float, float)
+        ),
     }
 
     def doStart(self, target):
@@ -89,25 +98,35 @@ class KFlipper(BaseFlipper):
     should be attached to the relevant monochromator/analyser,
     depending on the location of the spinflipper.
     """
+
     attached_devices = {
-        'kvalue': Attach('Device reading current k value, needed for '
-                         'calculation of flipping current.', Moveable),
+        "kvalue": Attach(
+            "Device reading current k value, needed for "
+            "calculation of flipping current.",
+            Moveable,
+        ),
     }
 
     parameters = {
-        'compcurrent': Param('Current in A for the compensation coils, if active',
-                             settable=True, type=float, unit='A'),
-        'flipcurrent': Param('Polynomial in wavevector to calculate the '
-                             'correct flipping current',
-                             settable=True, type=nonemptylistof(float),
-                             unit='A'),  # actually A * Angstroms ** index
+        "compcurrent": Param(
+            "Current in A for the compensation coils, if active",
+            settable=True,
+            type=float,
+            unit="A",
+        ),
+        "flipcurrent": Param(
+            "Polynomial in wavevector to calculate the " "correct flipping current",
+            settable=True,
+            type=nonemptylistof(float),
+            unit="A",
+        ),  # actually A * Angstroms ** index
     }
 
     def doStart(self, target):
         if target == ON:
             # query current momentum and calculate polinomial
             k = self._attached_kvalue.read(0)
-            flip_current = sum(v * (k ** i) for i, v in enumerate(self.flipcurrent))
+            flip_current = sum(v * (k**i) for i, v in enumerate(self.flipcurrent))
             self._attached_flip.start(flip_current)
             self._attached_corr.start(self.compcurrent)
         else:

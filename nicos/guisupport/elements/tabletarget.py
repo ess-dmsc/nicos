@@ -33,6 +33,6 @@ class TableTarget(TableBase):
     def __init__(self, x, y, size=50, parent=None, scene=None):
         TableBase.__init__(self, x, y, size, parent, scene)
         self.setBrush(QBrush())
-        pen = QPen(QColor('black'))
+        pen = QPen(QColor("black"))
         pen.setStyle(Qt.PenStyle.DashLine)
         self.setPen(pen)

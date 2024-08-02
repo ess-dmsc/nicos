@@ -26,13 +26,23 @@
 import numpy as np
 
 from nicos import session
-from nicos.core import ArrayDesc, Attach, Moveable, Override, Param, Value, \
-    intrange, listof, none_or, oneof, status
+from nicos.core import (
+    ArrayDesc,
+    Attach,
+    Moveable,
+    Override,
+    Param,
+    Value,
+    intrange,
+    listof,
+    none_or,
+    oneof,
+    status,
+)
 from nicos.core.constants import FINAL, LIVE, SIMULATION
 from nicos.core.utils import waitForCompletion
 from nicos.devices.generic.detector import Detector as GenericDetector
-from nicos.devices.generic.sequence import MeasureSequencer, SeqCall, SeqDev, \
-    SeqWait
+from nicos.devices.generic.sequence import MeasureSequencer, SeqCall, SeqDev, SeqWait
 
 
 class Detector(MeasureSequencer):
@@ -51,46 +61,64 @@ class Detector(MeasureSequencer):
     """
 
     attached_devices = {
-        'motor': Attach('Axis to perform the reso(lution) steps', Moveable),
-        'detector': Attach('Standard detector device', GenericDetector),
+        "motor": Attach("Axis to perform the reso(lution) steps", Moveable),
+        "detector": Attach("Standard detector device", GenericDetector),
     }
 
     parameters = {
-        'resosteps': Param('Number of steps performed by the motor to '
-                           'accumulate a single spectrum',
-                           type=oneof(1, 2, 4, 5, 8, 10, 20, 25, 40, 50, 80,
-                                      100),
-                           default=40, settable=True, userparam=True,
-                           category='general',
-                           ),
-        'range': Param('Fullrange for the resosteps',
-                       type=float, settable=False,
-                       default=2.0, category='instrument',
-                       ),
-        'numinputs': Param('Number of detector channels',
-                           type=int, default=80, settable=False,
-                           category='general',
-                           ),
-        'liveinterval': Param('Interval to read out live images (None to '
-                              'disable live readout)',
-                              type=none_or(float), unit='s', settable=True,
-                              default=0.5,
-                              ),
-        'rates': Param('The rates detected by the detector',
-                       settable=False, type=listof(float), internal=True,
-                       category='status',
-                       ),
-        '_startpos': Param('Store the starting position',
-                           type=float, settable=True, internal=True,
-                           category='instrument',
-                           ),
-        '_step': Param('Store the current step',
-                       type=intrange(0, 100), settable=True, internal=True,
-                       ),
+        "resosteps": Param(
+            "Number of steps performed by the motor to " "accumulate a single spectrum",
+            type=oneof(1, 2, 4, 5, 8, 10, 20, 25, 40, 50, 80, 100),
+            default=40,
+            settable=True,
+            userparam=True,
+            category="general",
+        ),
+        "range": Param(
+            "Fullrange for the resosteps",
+            type=float,
+            settable=False,
+            default=2.0,
+            category="instrument",
+        ),
+        "numinputs": Param(
+            "Number of detector channels",
+            type=int,
+            default=80,
+            settable=False,
+            category="general",
+        ),
+        "liveinterval": Param(
+            "Interval to read out live images (None to " "disable live readout)",
+            type=none_or(float),
+            unit="s",
+            settable=True,
+            default=0.5,
+        ),
+        "rates": Param(
+            "The rates detected by the detector",
+            settable=False,
+            type=listof(float),
+            internal=True,
+            category="status",
+        ),
+        "_startpos": Param(
+            "Store the starting position",
+            type=float,
+            settable=True,
+            internal=True,
+            category="instrument",
+        ),
+        "_step": Param(
+            "Store the current step",
+            type=intrange(0, 100),
+            settable=True,
+            internal=True,
+        ),
     }
 
     parameter_overrides = {
-        'fmtstr': Override(volatile=True),
+        "fmtstr": Override(volatile=True),
     }
 
     _last_live = 0
@@ -113,10 +141,11 @@ class Detector(MeasureSequencer):
         self._attached_detector.prepare()
 
     def doStart(self):
-        self._startpos = self._attached_motor.read() + \
-            (self.resosteps - 1) * self._step_size
-        self.log.debug('det._startpos: %r', self._startpos)
-        self._setROParam('rates', [0., 0., 0.])
+        self._startpos = (
+            self._attached_motor.read() + (self.resosteps - 1) * self._step_size
+        )
+        self.log.debug("det._startpos: %r", self._startpos)
+        self._setROParam("rates", [0.0, 0.0, 0.0])
         session.experiment.data.updateMetainfo()
 
         self._last_live = 0
@@ -128,12 +157,12 @@ class Detector(MeasureSequencer):
     def doSetPreset(self, **preset):
         self._tths = None
         if preset:
-            self._time_preset = preset.get('t', 0)
-            self._mon_preset = preset.get('mon1', preset.get('mon2', 0))
-            if 'resosteps' in preset:
-                self.resosteps = int(preset.pop('resosteps'))
-            if 'tths' in preset:
-                self._tths = float(preset.pop('tths'))
+            self._time_preset = preset.get("t", 0)
+            self._mon_preset = preset.get("mon1", preset.get("mon2", 0))
+            if "resosteps" in preset:
+                self.resosteps = int(preset.pop("resosteps"))
+            if "tths" in preset:
+                self._tths = float(preset.pop("tths"))
         self._attached_detector.setPreset(**preset)
         self._lastpreset = self._attached_detector.preset()
 
@@ -143,15 +172,13 @@ class Detector(MeasureSequencer):
         # Detector is not busy anymore, but to early to consider it as
         # 'not busy'
         self._det_run = False
-        imgret = self._attached_detector.readArrays(FINAL)[0].astype('<u4',
-                                                                     order='F')
+        imgret = self._attached_detector.readArrays(FINAL)[0].astype("<u4", order="F")
         # self.log.info('%r', imgret)
         if self._mode != SIMULATION:
             if imgret.shape[0] == self._array_data.shape[1]:
-                self._array_data[self._step::self.resosteps] = np.transpose(
-                    imgret)
+                self._array_data[self._step :: self.resosteps] = np.transpose(imgret)
             else:
-                self._array_data[self._step::self.resosteps] = imgret
+                self._array_data[self._step :: self.resosteps] = imgret
 
     def _incStep(self):
         if self._step < self.resosteps - 1:
@@ -169,26 +196,29 @@ class Detector(MeasureSequencer):
         self._det_run = True
 
     def doReadArrays(self, quality):
-        self.log.debug('doReadArrays: %d/%d: %d, %r',
-                       self._step, self.resosteps, self._array_data.sum(),
-                       self._array_data.shape)
+        self.log.debug(
+            "doReadArrays: %d/%d: %d, %r",
+            self._step,
+            self.resosteps,
+            self._array_data.sum(),
+            self._array_data.shape,
+        )
         if quality == LIVE:
             imgret = self._attached_detector.readArrays(FINAL)[0].astype(
-                '<u4', order='F')
-            self.log.debug('Shapes:%r %r', imgret.shape, self._array_data.shape)
+                "<u4", order="F"
+            )
+            self.log.debug("Shapes:%r %r", imgret.shape, self._array_data.shape)
             if imgret.shape[0] == self._array_data.shape[1]:
-                self._array_data[self._step::self.resosteps] = np.transpose(
-                    imgret)
+                self._array_data[self._step :: self.resosteps] = np.transpose(imgret)
             else:
-                self._array_data[self._step::self.resosteps] = imgret
+                self._array_data[self._step :: self.resosteps] = imgret
         return [self._array_data]
 
     def _generateSequence(self):
         seq = []
         if self._tths:
             self._startpos = self._tths
-            seq.append(SeqDev(self._attached_motor, self._startpos,
-                              stoppable=True))
+            seq.append(SeqDev(self._attached_motor, self._startpos, stoppable=True))
         for step in range(self.resosteps):
             pos = self._startpos - step * self._step_size
             seq.append(SeqDev(self._attached_motor, pos, stoppable=True))
@@ -200,14 +230,16 @@ class Detector(MeasureSequencer):
 
     def doRead(self, maxage=0):
         if self._step < self.resosteps:
-            if self._attached_detector.status(0)[0] == status.BUSY \
-               or self._det_run:
-                ret = [self._step + 1] + \
-                    [sum(x) for x in
-                     zip(self._data, self._attached_detector.read(maxage))]
+            if self._attached_detector.status(0)[0] == status.BUSY or self._det_run:
+                ret = [self._step + 1] + [
+                    sum(x)
+                    for x in zip(self._data, self._attached_detector.read(maxage))
+                ]
             else:
-                if self._step == 1 and \
-                   MeasureSequencer.status(self, 0)[0] != status.BUSY:
+                if (
+                    self._step == 1
+                    and MeasureSequencer.status(self, 0)[0] != status.BUSY
+                ):
                     ret = [self._step] + self._data
                 else:
                     ret = [self._step + 1] + self._data
@@ -215,13 +247,13 @@ class Detector(MeasureSequencer):
             ret = [self._step] + self._data
         # ret = [step, meastime, mon1, mon2, counts]
         meastime = ret[1]
-        if meastime > 0.:
+        if meastime > 0.0:
             ctrrate = ret[-1] / meastime
             mon1rate = ret[2] / meastime
             mon2rate = 0
             if len(self._attached_detector._attached_monitors) > 1:
                 mon2rate = ret[-2] / meastime
-            self._setROParam('rates', [mon1rate, mon2rate, ctrrate])
+            self._setROParam("rates", [mon1rate, mon2rate, ctrrate])
         return ret
 
     def doReset(self):
@@ -249,7 +281,7 @@ class Detector(MeasureSequencer):
     def _set_resosteps(self, value):
         # TODO: shape should be (y, x) not (x, y)
         image = self._attached_detector._attached_images[0]
-        if hasattr(image, 'size') and len(image.size) > 1:
+        if hasattr(image, "size") and len(image.size) > 1:
             height = image.size[1]
         else:
             height = 256
@@ -257,24 +289,24 @@ class Detector(MeasureSequencer):
 
         self._step_size = self.range / value
         if not self._arraydesc:
-            self._arraydesc = ArrayDesc(self.name, shape=shape, dtype='<u4')
-            self._array_data = np.zeros(shape, dtype='<u4', order='F')
+            self._arraydesc = ArrayDesc(self.name, shape=shape, dtype="<u4")
+            self._array_data = np.zeros(shape, dtype="<u4", order="F")
         else:
             self._arraydesc.shape = shape
-            self._array_data = np.resize(self._array_data,
-                                         shape).astype('<u4', order='F')
+            self._array_data = np.resize(self._array_data, shape).astype(
+                "<u4", order="F"
+            )
             self._array_data.fill(0)
         if self._mode != SIMULATION:
-            self._cache.put(self, 'fmtstr', self._fmtstr(value))
-        self.log.debug('%r', self._arraydesc)
-        self.log.debug('stepsize: %f', self._step_size)
+            self._cache.put(self, "fmtstr", self._fmtstr(value))
+        self.log.debug("%r", self._arraydesc)
+        self.log.debug("stepsize: %f", self._step_size)
 
     def doWriteResosteps(self, value):
         self._set_resosteps(value)
 
     def _fmtstr(self, value):
-        return 'step = %d' + '/%d, ' % value + \
-            self._attached_detector.fmtstr
+        return "step = %d" + "/%d, " % value + self._attached_detector.fmtstr
 
     def doReadFmtstr(self):
         return self._fmtstr(self.resosteps)
@@ -285,25 +317,27 @@ class Detector(MeasureSequencer):
         mspeed = self._attached_motor.speed or 1.0
         steptime = (self.range / mspeed) / self.resosteps
         if MeasureSequencer.status(self, 0)[0] == status.BUSY:
-            step = int(abs(self._attached_motor.read() - self._startpos) /
-                       self._step_size)
+            step = int(
+                abs(self._attached_motor.read() - self._startpos) / self._step_size
+            )
             ret = (steptime + self._time_preset) * (self.resosteps - step)
         else:
             ret = (steptime + self._time_preset) * self.resosteps
         detTime = self._attached_detector.estimateTime(elapsed)
-        ret += detTime if detTime is not None else 0.
+        ret += detTime if detTime is not None else 0.0
         return ret
 
     def valueInfo(self):
-        _val_info = Value('step', unit='', type='other', fmtstr='%d' + '/%d' %
-                          self.resosteps),
+        _val_info = (
+            Value("step", unit="", type="other", fmtstr="%d" + "/%d" % self.resosteps),
+        )
         return _val_info + self._attached_detector.valueInfo()
 
     def arrayInfo(self):
-        return self._arraydesc,
+        return (self._arraydesc,)
 
     def presetInfo(self):
-        return {'resosteps', 'tths'} | self._attached_detector.presetInfo()
+        return {"resosteps", "tths"} | self._attached_detector.presetInfo()
 
     def duringMeasureHook(self, elapsed):
         if self.liveinterval is not None:
@@ -313,10 +347,10 @@ class Detector(MeasureSequencer):
         return None
 
     def _stopAction(self, nr):
-        self.log.debug('_stopAction at step: %d', nr)
+        self.log.debug("_stopAction at step: %d", nr)
         self._attached_detector.stop()
 
     def _cleanUp(self):
         if self._seq_was_stopped:
             self._seq_was_stopped = False
-            self._set_seq_status(status.OK, 'idle')
+            self._set_seq_status(status.OK, "idle")

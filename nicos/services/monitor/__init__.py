@@ -31,8 +31,13 @@ from nicos import session
 from nicos.core import ConfigurationError, Override, Param, none_or, oneof
 from nicos.core.sessions.setups import SetupBlock
 from nicos.devices.cacheclient import BaseCacheClient
-from nicos.protocols.cache import OP_SUBSCRIBE, OP_TELL, OP_TELLOLD, \
-    OP_WILDCARD, cache_load
+from nicos.protocols.cache import (
+    OP_SUBSCRIBE,
+    OP_TELL,
+    OP_TELLOLD,
+    OP_WILDCARD,
+    cache_load,
+)
 from nicos.utils import createThread, reexecProcess, watchFileContent
 
 
@@ -46,78 +51,85 @@ class Monitor(BaseCacheClient):
 
     # server and prefix parameters come from BaseCacheClient
     parameters = {
-        'title':     Param('Title of status window', type=str,
-                           default='Status'),
-        'layout':    Param('Status monitor layout', type=list,
-                           mandatory=True),
-        'font':      Param('Font name for the window', type=str,
-                           default='Luxi Sans'),
-        'valuefont': Param('Font name for the value displays', type=str),
-        'fontsize':  Param('Basic font size', type=int, default=12,
-                           settable=True),
-        'timefontsize': Param('Time headline font size', type=none_or(int),
-                              default=None, settable=True),
-        'padding':   Param('Padding for the display fields', type=int,
-                           default=2, settable=True),
-        'geometry':  Param('Geometry for status window',
-                           type=str, settable=True,
-                           ext_desc='For the  allowed settings see '
-                           ':option:`--geometry`.'),
-        'resizable': Param('Whether the window is resizable', type=bool,
-                           default=True),
-        'colors':    Param('Color scheme for value displays (dark or light '
-                           'background)', type=oneof('dark', 'light')),
-        'showwatchdog':  Param('Whether to show watchdog warnings', type=bool,
-                               default=True),
-        'expectmaster':  Param('Whether a message should indicate that no '
-                               'NICOS master is active', type=bool,
-                               default=True),
+        "title": Param("Title of status window", type=str, default="Status"),
+        "layout": Param("Status monitor layout", type=list, mandatory=True),
+        "font": Param("Font name for the window", type=str, default="Luxi Sans"),
+        "valuefont": Param("Font name for the value displays", type=str),
+        "fontsize": Param("Basic font size", type=int, default=12, settable=True),
+        "timefontsize": Param(
+            "Time headline font size", type=none_or(int), default=None, settable=True
+        ),
+        "padding": Param(
+            "Padding for the display fields", type=int, default=2, settable=True
+        ),
+        "geometry": Param(
+            "Geometry for status window",
+            type=str,
+            settable=True,
+            ext_desc="For the  allowed settings see " ":option:`--geometry`.",
+        ),
+        "resizable": Param("Whether the window is resizable", type=bool, default=True),
+        "colors": Param(
+            "Color scheme for value displays (dark or light " "background)",
+            type=oneof("dark", "light"),
+        ),
+        "showwatchdog": Param(
+            "Whether to show watchdog warnings", type=bool, default=True
+        ),
+        "expectmaster": Param(
+            "Whether a message should indicate that no " "NICOS master is active",
+            type=bool,
+            default=True,
+        ),
     }
 
     parameter_overrides = {
-        'prefix':    Override(mandatory=False, default='nicos/'),
+        "prefix": Override(mandatory=False, default="nicos/"),
     }
 
     # methods to be implemented in concrete implementations
 
     def initGui(self):
-        raise NotImplementedError('Implement initGui() in subclasses')
+        raise NotImplementedError("Implement initGui() in subclasses")
 
     def mainLoop(self):
-        raise NotImplementedError('Implement mainLoop() in subclasses')
+        raise NotImplementedError("Implement mainLoop() in subclasses")
 
     def closeGui(self):
-        raise NotImplementedError('Implement closeGui() in subclasses')
+        raise NotImplementedError("Implement closeGui() in subclasses")
 
     def signalKeyChange(self, field, *args):
-        raise NotImplementedError('Implement signalKeyChange() in subclasses')
+        raise NotImplementedError("Implement signalKeyChange() in subclasses")
 
     def switchWarnPanel(self, on):
-        raise NotImplementedError('Implement switchWarnPanel() in subclasses')
+        raise NotImplementedError("Implement switchWarnPanel() in subclasses")
 
     def reconfigureBoxes(self):
-        raise NotImplementedError('Implement reconfigureBoxes() in subclasses')
+        raise NotImplementedError("Implement reconfigureBoxes() in subclasses")
 
     def updateTitle(self, text):
-        raise NotImplementedError('Implement updateTitle() in subclasses')
+        raise NotImplementedError("Implement updateTitle() in subclasses")
 
     # methods implemented here
 
     _keys_expired = False  # whether on disconnect all keys have been expired
 
     def start(self, options):
-        self.log.info('monitor starting up, creating main window')
+        self.log.info("monitor starting up, creating main window")
 
         self._fontsize = options.fontsize or self.fontsize
         self._fontsizebig = int(self._fontsize * 1.2)
-        self._timefontsize = (options.timefontsize or self.timefontsize or
-                              (self._fontsizebig + self._fontsize))
+        self._timefontsize = (
+            options.timefontsize
+            or self.timefontsize
+            or (self._fontsizebig + self._fontsize)
+        )
         self._padding = options.padding or self.padding
         self._geometry = options.geometry or self.geometry
 
-        if self._geometry and self._geometry != 'fullscreen':
+        if self._geometry and self._geometry != "fullscreen":
             try:
-                m = re.match(r'(?:(\d+)x(\d+))?\+(\d+)\+(\d+)', self._geometry)
+                m = re.match(r"(?:(\d+)x(\d+))?\+(\d+)\+(\d+)", self._geometry)
                 w, h, x, y = m.groups()
                 if w is None:
                     w = h = 0
@@ -126,7 +138,7 @@ class Monitor(BaseCacheClient):
                 x, y = int(x), int(y)
                 self._geometry = (w, h, x, y)
             except Exception:
-                self.log.warning('invalid geometry %s', self._geometry)
+                self.log.warning("invalid geometry %s", self._geometry)
                 self._geometry = None
 
         # timeout for select() call
@@ -142,10 +154,10 @@ class Monitor(BaseCacheClient):
         # master active?
         self._masteractive = False
         # currently shown warnings
-        self._currwarnings = ''
+        self._currwarnings = ""
 
         # start a thread checking for modification of the setup file
-        createThread('refresh checker', self._checker)
+        createThread("refresh checker", self._checker)
 
         self.initGui()
 
@@ -153,7 +165,7 @@ class Monitor(BaseCacheClient):
         self._worker.start()
 
     def run_main_loop(self):
-        self.log.info('starting main loop')
+        self.log.info("starting main loop")
         try:
             self.mainLoop()
         except KeyboardInterrupt:
@@ -162,15 +174,15 @@ class Monitor(BaseCacheClient):
 
     def _checker(self):
         setupname = session.explicit_setups[0]
-        fn = session._setup_info[setupname]['_filenames_']
+        fn = session._setup_info[setupname]["_filenames_"]
         watchFileContent(fn, self.log)
-        self.log.info('setup file changed; restarting monitor process')
+        self.log.info("setup file changed; restarting monitor process")
         reexecProcess()
 
     def wait(self):
-        self.log.info('monitor quitting')
+        self.log.info("monitor quitting")
         self._worker.join()
-        self.log.info('done')
+        self.log.info("done")
 
     def quit(self, *ignored, **kwds):  # pylint: disable=signature-differs
         self.closeGui()
@@ -181,8 +193,8 @@ class Monitor(BaseCacheClient):
         BaseCacheClient._connect_action(self)
         if self.showwatchdog:
             # also ask for and subscribe to all watchdog events
-            self._socket.sendall(('@watchdog/%s\n' % OP_WILDCARD).encode())
-            self._socket.sendall(('@watchdog/%s\n' % OP_SUBSCRIBE).encode())
+            self._socket.sendall(("@watchdog/%s\n" % OP_WILDCARD).encode())
+            self._socket.sendall(("@watchdog/%s\n" % OP_SUBSCRIBE).encode())
 
         # use appname to distinguish between different instances
         self.storeSysInfo(session.appname)
@@ -195,16 +207,22 @@ class Monitor(BaseCacheClient):
                 for obj in objs:
                     self.signalKeyChange(obj, key, None, time, True)
             self._keys_expired = True
-        self.updateTitle('Disconnected (%s)' % strftime('%d.%m.%Y %H:%M:%S'))
+        self.updateTitle("Disconnected (%s)" % strftime("%d.%m.%Y %H:%M:%S"))
         sleep(1)
 
     # called while waiting for data
     def _wait_data(self):
         # update current time
-        self.updateTitle('%s (%s)%s' %
-                         (self.title, strftime('%d.%m.%Y %H:%M:%S'),
-                          '' if self._masteractive or (not self.expectmaster)
-                          else ', no master active'))
+        self.updateTitle(
+            "%s (%s)%s"
+            % (
+                self.title,
+                strftime("%d.%m.%Y %H:%M:%S"),
+                ""
+                if self._masteractive or (not self.expectmaster)
+                else ", no master active",
+            )
+        )
 
     def register(self, widget, key):
         """API used by NicosListener widgets to register keys for callback."""
@@ -225,21 +243,20 @@ class Monitor(BaseCacheClient):
         except ValueError:
             value = None
 
-        if key == 'watchdog/warnings' and self.showwatchdog:
+        if key == "watchdog/warnings" and self.showwatchdog:
             self._process_warnings(value)
             return
 
         # self.log.debug('processing %s', [time, ttl, key, op, value])
 
-        if key == self._prefix + 'session/master':
+        if key == self._prefix + "session/master":
             self._masteractive = value and op != OP_TELLOLD
 
-        if key == self._prefix + 'session/mastersetup':
+        if key == self._prefix + "session/mastersetup":
             self._setups = set(value)
             # reconfigure displayed blocks
             self.reconfigureBoxes()
-            self.log.info('reconfigured display for setups %s',
-                          ', '.join(self._setups))
+            self.log.info("reconfigured display for setups %s", ", ".join(self._setups))
 
         expired = value is None or op == OP_TELLOLD
 
@@ -261,11 +278,14 @@ class Monitor(BaseCacheClient):
         setup, bname = block._setupname, block._blockname
         setupinfo = session.getSetupInfo()
         if setup not in setupinfo:
-            raise ConfigurationError(self, 'Setup "%s" required by '
-                                     'SetupBlock() does not exist' % setup)
-        blocks = setupinfo[setup]['monitor_blocks']
+            raise ConfigurationError(
+                self, 'Setup "%s" required by ' "SetupBlock() does not exist" % setup
+            )
+        blocks = setupinfo[setup]["monitor_blocks"]
         if bname not in blocks:
-            raise ConfigurationError(self, 'Setup "%s" does not define a  '
-                                     'monitor block called "%s"' %
-                                     (setup, bname))
+            raise ConfigurationError(
+                self,
+                'Setup "%s" does not define a  '
+                'monitor block called "%s"' % (setup, bname),
+            )
         return blocks[bname]

@@ -32,20 +32,39 @@ class PseudoNOK(DeviceMixinBase):
     """Placeholder device, doing nothing, but storing some locational data."""
 
     parameters = {
-        'nok_start': Param('Start of the  NOK (beginning from NLE2b)',
-                           type=floatrange(-1), settable=False,
-                           mandatory=False, unit='mm', default=-1),
-        'nok_end':   Param('End of the NOK (beginning from NLE2b)',
-                           type=floatrange(-1), default=-1, settable=False,
-                           mandatory=False, unit='mm'),
-        'nok_gap':   Param('Gap after the NOK (beginning from NLE2b)',
-                           type=floatrange(0), default=0, settable=False,
-                           mandatory=False, unit='mm'),
-        'masks':     Param('Masks for this NOK',
-                           type=dict, settable=False, default={}),
-        'length':    Param('NOK length',
-                           type=floatrange(0), settable=False,
-                           mandatory=False, volatile=True, unit='mm'),
+        "nok_start": Param(
+            "Start of the  NOK (beginning from NLE2b)",
+            type=floatrange(-1),
+            settable=False,
+            mandatory=False,
+            unit="mm",
+            default=-1,
+        ),
+        "nok_end": Param(
+            "End of the NOK (beginning from NLE2b)",
+            type=floatrange(-1),
+            default=-1,
+            settable=False,
+            mandatory=False,
+            unit="mm",
+        ),
+        "nok_gap": Param(
+            "Gap after the NOK (beginning from NLE2b)",
+            type=floatrange(0),
+            default=0,
+            settable=False,
+            mandatory=False,
+            unit="mm",
+        ),
+        "masks": Param("Masks for this NOK", type=dict, settable=False, default={}),
+        "length": Param(
+            "NOK length",
+            type=floatrange(0),
+            settable=False,
+            mandatory=False,
+            volatile=True,
+            unit="mm",
+        ),
     }
 
     def doReadLength(self):
@@ -56,19 +75,23 @@ class PolynomFit(DeviceMixinBase):
     """Fit values to a polynom."""
 
     parameters = {
-        'poly': Param('Polynomial coefficients in ascending order for '
-                      'potentiometer calibration',
-                      type=nonemptylistof(float), settable=False,
-                      mandatory=False, default=[0., 1.]),
+        "poly": Param(
+            "Polynomial coefficients in ascending order for "
+            "potentiometer calibration",
+            type=nonemptylistof(float),
+            settable=False,
+            mandatory=False,
+            default=[0.0, 1.0],
+        ),
     }
 
-    _fitter = np.polynomial.Polynomial([0., 1.])  # identity conversion
+    _fitter = np.polynomial.Polynomial([0.0, 1.0])  # identity conversion
 
     def doUpdatePoly(self, poly):
         self._fitter = np.polynomial.Polynomial(poly)
 
     def _fit(self, value):
-        self.log.debug('uncorrected value: %f', value)
+        self.log.debug("uncorrected value: %f", value)
         result = self._fitter(value)
-        self.log.debug('fitted result: %f', result)
+        self.log.debug("fitted result: %f", result)
         return result

@@ -25,8 +25,14 @@
 from copy import deepcopy
 from os import path
 
-from nicos.guisupport.qt import QIcon, QMenu, QMessageBox, Qt, \
-    QTreeWidgetItem, pyqtSignal
+from nicos.guisupport.qt import (
+    QIcon,
+    QMenu,
+    QMessageBox,
+    Qt,
+    QTreeWidgetItem,
+    pyqtSignal,
+)
 from nicos.guisupport.utils import waitCursor
 from nicos.utils import writeFile
 
@@ -61,29 +67,27 @@ class TreeWidget(TreeWidgetContextMenu):
         # nicos_*: for example instruments, ...
         self.topLevelItems = []
         for directory in setupcontroller.setup_directories:
-            self.topLevelItems.append(
-                QTreeWidgetItem([directory], ItemTypes.Directory))
+            self.topLevelItems.append(QTreeWidgetItem([directory], ItemTypes.Directory))
         self.addTopLevelItems(self.topLevelItems)
 
         # ask the controller to return the setups for current directory
         # add the setups as childitems
         for setup_directory in self.topLevelItems:
             # directories can neither be dragged nor have something dropped on
-            setup_directory.setFlags(setup_directory.flags() &
-                                     ~Qt.ItemFlag.ItemIsDragEnabled &
-                                     ~Qt.ItemFlag.ItemIsDropEnabled)
-            setup_directory.setIcon(0, QIcon(path.join(getResDir(),
-                                    'folder.png')))
-            for setup in setupcontroller.setup_directories[
-                    setup_directory.text(0)]:
-                treeWidgetItem = QTreeWidgetItem([setup.name],
-                                                 ItemTypes.Setup)
+            setup_directory.setFlags(
+                setup_directory.flags()
+                & ~Qt.ItemFlag.ItemIsDragEnabled
+                & ~Qt.ItemFlag.ItemIsDropEnabled
+            )
+            setup_directory.setIcon(0, QIcon(path.join(getResDir(), "folder.png")))
+            for setup in setupcontroller.setup_directories[setup_directory.text(0)]:
+                treeWidgetItem = QTreeWidgetItem([setup.name], ItemTypes.Setup)
                 # scripts cannot be dragged, but they can have
                 # something dropped on them (a device).
-                treeWidgetItem.setFlags(treeWidgetItem.flags() &
-                                        ~Qt.ItemFlag.ItemIsDragEnabled)
-                treeWidgetItem.setIcon(0, QIcon(
-                    path.join(getResDir(), 'setup.png')))
+                treeWidgetItem.setFlags(
+                    treeWidgetItem.flags() & ~Qt.ItemFlag.ItemIsDragEnabled
+                )
+                treeWidgetItem.setIcon(0, QIcon(path.join(getResDir(), "setup.png")))
                 treeWidgetItem.setup = setup
                 setup_directory.addChild(treeWidgetItem)
 
@@ -95,12 +99,12 @@ class TreeWidget(TreeWidgetContextMenu):
                 devices = setup.devices.keys()
                 for device in devices:
                     # read setup and add all the devices as child tree items
-                    deviceItem = QTreeWidgetItem([device],
-                                                 ItemTypes.Device)
+                    deviceItem = QTreeWidgetItem([device], ItemTypes.Device)
                     # devices can be dragged, but they can't have something
                     # dropped on them.
-                    deviceItem.setFlags(deviceItem.flags() &
-                                        ~Qt.ItemFlag.ItemIsDropEnabled)
+                    deviceItem.setFlags(
+                        deviceItem.flags() & ~Qt.ItemFlag.ItemIsDropEnabled
+                    )
                     deviceItem.device = setup.devices[device]
                     currentItem.addChild(deviceItem)
 
@@ -108,7 +112,8 @@ class TreeWidget(TreeWidgetContextMenu):
                 deviceIndex = 0
                 while deviceIndex < currentItem.childCount():
                     currentItem.child(deviceIndex).setIcon(
-                        0, QIcon(path.join(getResDir(), 'device.png')))
+                        0, QIcon(path.join(getResDir(), "device.png"))
+                    )
                     deviceIndex += 1
                 currentIndex += 1
 
@@ -137,8 +142,11 @@ class TreeWidget(TreeWidgetContextMenu):
         """
         target = self.getSetupOfDropPos(event.pos())
         if self.dragItem.device.name in target.setup.devices.keys():
-            QMessageBox.warning(self, 'Error', 'The target setup already '
-                                'contains a device with that name!')
+            QMessageBox.warning(
+                self,
+                "Error",
+                "The target setup already " "contains a device with that name!",
+            )
             self.dragItem = None
             event.ignore()
             return
@@ -164,7 +172,7 @@ class TreeWidget(TreeWidgetContextMenu):
         deviceItem = QTreeWidgetItem([deviceName], ItemTypes.Device)
         deviceItem.setFlags(deviceItem.flags() & ~Qt.ItemFlag.ItemIsDropEnabled)
         deviceItem.device = target.setup.devices[deviceName]
-        deviceItem.setIcon(0, QIcon(path.join(getResDir(), 'device.png')))
+        deviceItem.setIcon(0, QIcon(path.join(getResDir(), "device.png")))
         target.insertChild(index, deviceItem)
         self.deviceAdded.emit(target, deviceName)
         self.itemActivated.emit(deviceItem, 0)
@@ -199,19 +207,19 @@ class TreeWidget(TreeWidgetContextMenu):
 
         if item.type() == ItemTypes.Setup:
             menu = QMenu(self)
-            addDeviceAction = menu.addAction('Add device...')
+            addDeviceAction = menu.addAction("Add device...")
             addDeviceAction.triggered.connect(self.addDevice)
             menu.popup(pos)
 
         elif item.type() == ItemTypes.Directory:
             menu = QMenu(self)
-            addSetupAction = menu.addAction('Add setup...')
+            addSetupAction = menu.addAction("Add setup...")
             addSetupAction.triggered.connect(self.addSetup)
             menu.popup(pos)
 
         elif item.type() == ItemTypes.Device:
             menu = QMenu(self)
-            removeDeviceAction = menu.addAction('Remove')
+            removeDeviceAction = menu.addAction("Remove")
             removeDeviceAction.triggered.connect(self.removeDevice)
             menu.popup(pos)
 
@@ -225,8 +233,7 @@ class TreeWidget(TreeWidgetContextMenu):
         indexOfDevice = setupItem.indexOfChild(deviceItem)
 
         setupItem.takeChild(indexOfDevice)
-        self.deviceRemoved.emit(setupItem,
-                                deviceItem.device.name)
+        self.deviceRemoved.emit(setupItem, deviceItem.device.name)
 
     def getCurrentInstrument(self):
         if self.currentItem().type() == ItemTypes.Directory:
@@ -255,55 +262,62 @@ class TreeWidget(TreeWidgetContextMenu):
         self.itemActivated.emit(treeWidgetItem, 0)
 
     def _newSetup(self, instrument=None):
-        dlg = NewSetupDialog([item.text(0) for item in self.topLevelItems
-                              if item.type() == ItemTypes.Directory],
-                             instrument)
+        dlg = NewSetupDialog(
+            [
+                item.text(0)
+                for item in self.topLevelItems
+                if item.type() == ItemTypes.Directory
+            ],
+            instrument,
+        )
         if dlg.exec():
             fileName = dlg.getValue()
             if not fileName:
-                QMessageBox.warning(self, 'Error', 'No setup name entered.')
+                QMessageBox.warning(self, "Error", "No setup name entered.")
                 return None, None
 
-            if not fileName.endswith('.py'):
-                fileName += '.py'
+            if not fileName.endswith(".py"):
+                fileName += ".py"
             facility = self.headerItem().text(0)
             if dlg.isSpecialSetup():
-                abspath = path.join(getNicosDir(),
-                                    'nicos_%s' % facility,
-                                    dlg.currentInstrument(),
-                                    'setups',
-                                    'special',
-                                    fileName)
+                abspath = path.join(
+                    getNicosDir(),
+                    "nicos_%s" % facility,
+                    dlg.currentInstrument(),
+                    "setups",
+                    "special",
+                    fileName,
+                )
             else:
-                abspath = path.join(getNicosDir(),
-                                    'nicos_%s' % facility,
-                                    dlg.currentInstrument(),
-                                    'setups',
-                                    fileName)
-            if abspath in [i.abspath for i in
-                           setupcontroller.setup_directories[
-                               dlg.currentInstrument()]]:
-                QMessageBox.warning(self, 'Error', 'Setup already exists!')
+                abspath = path.join(
+                    getNicosDir(),
+                    "nicos_%s" % facility,
+                    dlg.currentInstrument(),
+                    "setups",
+                    fileName,
+                )
+            if abspath in [
+                i.abspath
+                for i in setupcontroller.setup_directories[dlg.currentInstrument()]
+            ]:
+                QMessageBox.warning(self, "Error", "Setup already exists!")
                 return None, None
             try:
                 writeFile(abspath, [])
             except OSError:
-                QMessageBox.warning(self, 'Error', 'Could not create new '
-                                    'setup!')
+                QMessageBox.warning(self, "Error", "Could not create new " "setup!")
                 return None, None
 
             setupcontroller.addSetup(dlg.currentInstrument(), abspath)
             newSetup = None
-            for setup in setupcontroller.setup_directories[
-                dlg.currentInstrument()]:
+            for setup in setupcontroller.setup_directories[dlg.currentInstrument()]:
                 if setup.abspath == abspath:
                     newSetup = setup
-            treeWidgetItem = QTreeWidgetItem(['*' + newSetup.name],
-                                             ItemTypes.Setup)
-            treeWidgetItem.setFlags(treeWidgetItem.flags() &
-                                    ~Qt.ItemFlag.ItemIsDragEnabled)
-            treeWidgetItem.setIcon(0, QIcon(
-                path.join(getResDir(), 'setup.png')))
+            treeWidgetItem = QTreeWidgetItem(["*" + newSetup.name], ItemTypes.Setup)
+            treeWidgetItem.setFlags(
+                treeWidgetItem.flags() & ~Qt.ItemFlag.ItemIsDragEnabled
+            )
+            treeWidgetItem.setIcon(0, QIcon(path.join(getResDir(), "setup.png")))
             treeWidgetItem.setup = newSetup
             treeWidgetItem.setup.edited = True
             return treeWidgetItem, dlg.currentInstrument()
@@ -313,19 +327,21 @@ class TreeWidget(TreeWidgetContextMenu):
         with waitCursor():
             instrument = self.getCurrentInstrument().text(0)
             dlg = NewDeviceDialog(
-                classparser.getDeviceClasses('nicos_%s' % instrument), self)
+                classparser.getDeviceClasses("nicos_%s" % instrument), self
+            )
 
         if dlg.exec():
             if not dlg.labelSelectedClass.text():
-                QMessageBox.warning(self, 'Error', 'No class selected.')
+                QMessageBox.warning(self, "Error", "No class selected.")
                 return
             if not dlg.lineEditDeviceName.text():
-                QMessageBox.warning(self, 'Error', 'No name entered.')
+                QMessageBox.warning(self, "Error", "No name entered.")
                 return
-            if dlg.lineEditDeviceName.text() in \
-                    self.currentItem().setup.devices.keys():
-                QMessageBox.warning(self, 'Error', 'Setup already contains a '
-                                    'device with that name!')
+            if dlg.lineEditDeviceName.text() in self.currentItem().setup.devices.keys():
+                QMessageBox.warning(
+                    self, "Error", "Setup already contains a " "device with that name!"
+                )
                 return
-            self.newDeviceAdded.emit(dlg.lineEditDeviceName.text(),
-                                     dlg.labelSelectedClass.text())
+            self.newDeviceAdded.emit(
+                dlg.lineEditDeviceName.text(), dlg.labelSelectedClass.text()
+            )

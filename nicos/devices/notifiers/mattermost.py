@@ -57,43 +57,51 @@ class Mattermost(Notifier):
     """
 
     parameters = {
-        'baseurl':  Param('URL of the Mattermost instance',
-                          type=str, mandatory=True),
-        'username': Param('User name to show for notifications',
-                          type=str, mandatory=True),
-        'iconurl':  Param('URL of an image to show next to notifications',
-                          type=str, default=''),
-        'credid':   Param('Credential ID in the NICOS keystore '
-                          'for the hook ID', type=str, default='mattermost'),
+        "baseurl": Param("URL of the Mattermost instance", type=str, mandatory=True),
+        "username": Param(
+            "User name to show for notifications", type=str, mandatory=True
+        ),
+        "iconurl": Param(
+            "URL of an image to show next to notifications", type=str, default=""
+        ),
+        "credid": Param(
+            "Credential ID in the NICOS keystore " "for the hook ID",
+            type=str,
+            default="mattermost",
+        ),
     }
 
     _headers = {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
+        "Content-Type": "application/json",
+        "Accept": "application/json",
     }
 
     def doInit(self, mode):
         secret_hookid = nicoskeystore.getCredential(self.credid)
         if not secret_hookid:
-            raise ConfigurationError('Mattermost hook ID missing in keystore')
-        self._hookurl = self.baseurl + '/hooks/' + secret_hookid
+            raise ConfigurationError("Mattermost hook ID missing in keystore")
+        self._hookurl = self.baseurl + "/hooks/" + secret_hookid
 
     def send(self, subject, body, what=None, short=None, important=True):
-        message = '**%s**\n\n```\n%s\n```' % (subject, body)
+        message = "**%s**\n\n```\n%s\n```" % (subject, body)
         if important:
-            message = '@all ' + message
+            message = "@all " + message
 
         for entry in self._getAllRecipients(important):
-            self.log.debug('sending Mattermost message to %s', entry)
-            data = {'text': message, 'username': self.username,
-                    'channel': entry}
+            self.log.debug("sending Mattermost message to %s", entry)
+            data = {"text": message, "username": self.username, "channel": entry}
             if self.iconurl:
-                data['icon_url'] = self.iconurl
+                data["icon_url"] = self.iconurl
             try:
-                response = requests.post(self._hookurl, headers=self._headers,
-                                         data=json.dumps(data), timeout=2)
+                response = requests.post(
+                    self._hookurl,
+                    headers=self._headers,
+                    data=json.dumps(data),
+                    timeout=2,
+                )
                 if not response.ok:
-                    raise ValueError(response.json()['message'])
+                    raise ValueError(response.json()["message"])
             except Exception as err:
-                self.log.warning('Could not send Mattermost '
-                                 'message to %s: %s', entry, err, exc=1)
+                self.log.warning(
+                    "Could not send Mattermost " "message to %s: %s", entry, err, exc=1
+                )

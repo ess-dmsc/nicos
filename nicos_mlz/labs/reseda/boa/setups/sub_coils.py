@@ -1,19 +1,20 @@
-description = 'Substraction coils'
-group = 'lowlevel'
+description = "Substraction coils"
+group = "lowlevel"
 display_order = 26
 
-tango_base = 'tango://%s:10000/reseda/' % configdata('gconfigs.tango_host')
+tango_base = "tango://%s:10000/reseda/" % configdata("gconfigs.tango_host")
 
 devices = dict(
-    nse0 = device('nicos.devices.entangle.PowerSupply',
-        description = 'Subtraction coil 0',
-        tangodevice = tango_base + 'nse/current',
-        fmtstr = '%.5f',
-        tangotimeout = 5.0,
-        pollinterval = 60,
-        maxage = 119,
-        unit = 'A',
-        precision = 0.0005,
+    nse0=device(
+        "nicos.devices.entangle.PowerSupply",
+        description="Subtraction coil 0",
+        tangodevice=tango_base + "nse/current",
+        fmtstr="%.5f",
+        tangotimeout=5.0,
+        pollinterval=60,
+        maxage=119,
+        unit="A",
+        precision=0.0005,
     ),
     # nse1 = device('nicos.devices.entangle.PowerSupply',
     #     description = 'Subtraction coil 1',

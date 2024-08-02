@@ -31,7 +31,6 @@ from nicos.guisupport.qt import QFileDialog, QLineEdit, QSortFilterProxyModel
 
 
 class FileFilterProxyModel(QSortFilterProxyModel):
-
     _wildcard = None
 
     def setFilterWildcard(self, wildcard):

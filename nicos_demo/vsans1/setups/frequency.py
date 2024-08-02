@@ -1,6 +1,6 @@
-description = 'frequency counter, fg1 and fg2'
+description = "frequency counter, fg1 and fg2"
 
-excludes = ['tisane_multifg']
+excludes = ["tisane_multifg"]
 
 # group = 'lowlevel'
 

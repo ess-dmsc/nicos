@@ -35,15 +35,15 @@ class SkewRead(Readable):
     """
 
     attached_devices = {
-        'one': Attach('readable device 1', Readable),
-        'two': Attach('readable device 2', Readable),
+        "one": Attach("readable device 1", Readable),
+        "two": Attach("readable device 2", Readable),
     }
 
     def _read_devices(self, maxage=0):
         return self._attached_one.read(maxage), self._attached_two.read(maxage)
 
     def doRead(self, maxage=0):
-        return sum(self._read_devices(maxage)) / 2.
+        return sum(self._read_devices(maxage)) / 2.0
 
 
 class SkewMotor(HasOffset, SkewRead, Motor):
@@ -58,22 +58,32 @@ class SkewMotor(HasOffset, SkewRead, Motor):
     """
 
     parameters = {
-        'skew': Param('Skewness of hardware, difference between "one" and '
-                      '"two"',
-                      type=float, default=0., settable=True, unit='main'),
+        "skew": Param(
+            'Skewness of hardware, difference between "one" and ' '"two"',
+            type=float,
+            default=0.0,
+            settable=True,
+            unit="main",
+        ),
     }
 
     def doIsAtTarget(self, pos, target):
         if target is None:
             return True
         m1, m2 = self._read_devices()
-        self.log.debug('%.3f, %.3f, %.3f, %.3f', m1, m2, (m1 + self.skew / 2.),
-                       (m2 - self.skew / 2.))
-        if (not self._attached_one.isAtTarget(m1, pos - self.skew / 2.)
-           or not self._attached_two.isAtTarget(m2, pos + self.skew / 2.)):
+        self.log.debug(
+            "%.3f, %.3f, %.3f, %.3f",
+            m1,
+            m2,
+            (m1 + self.skew / 2.0),
+            (m2 - self.skew / 2.0),
+        )
+        if not self._attached_one.isAtTarget(
+            m1, pos - self.skew / 2.0
+        ) or not self._attached_two.isAtTarget(m2, pos + self.skew / 2.0):
             return False
         return abs(m1 - m2 + self.skew) <= self.precision
 
     def doStart(self, target):
-        self._attached_one.move(target - self.skew / 2.)
-        self._attached_two.move(target + self.skew / 2.)
+        self._attached_one.move(target - self.skew / 2.0)
+        self._attached_two.move(target + self.skew / 2.0)

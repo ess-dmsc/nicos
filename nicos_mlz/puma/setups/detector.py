@@ -1,20 +1,22 @@
-description = 'common detector devices provided by QMesyDAQ'
-group = 'lowlevel'
+description = "common detector devices provided by QMesyDAQ"
+group = "lowlevel"
 
-tango_base = 'tango://mesydaq.puma.frm2.tum.de:10000/qm/qmesydaq/'
+tango_base = "tango://mesydaq.puma.frm2.tum.de:10000/qm/qmesydaq/"
 
 devices = dict(
-    timer = device('nicos.devices.entangle.TimerChannel',
-        description = 'QMesyDAQ timer',
-        tangodevice = tango_base + 'timer',
-        visibility = (),
+    timer=device(
+        "nicos.devices.entangle.TimerChannel",
+        description="QMesyDAQ timer",
+        tangodevice=tango_base + "timer",
+        visibility=(),
     ),
-    mon1 = device('nicos.devices.entangle.CounterChannel',
-        description = 'QMesyDAQ monitor 1',
-        tangodevice = tango_base + 'counter0',
-        type = 'monitor',
-        visibility = (),
-        fmtstr = '%d',
+    mon1=device(
+        "nicos.devices.entangle.CounterChannel",
+        description="QMesyDAQ monitor 1",
+        tangodevice=tango_base + "counter0",
+        type="monitor",
+        visibility=(),
+        fmtstr="%d",
     ),
     # mon2 = device('nicos.devices.entangle.CounterChannel',
     #     tangodevice = tango_base + 'a2',
@@ -22,23 +24,26 @@ devices = dict(
     #     visibility = (),
     #     fmtstr = '%d',
     # ),
-    det1 = device('nicos.devices.entangle.CounterChannel',
-        tangodevice = tango_base + 'counter1',
-        type = 'counter',
-        visibility = (),
-        fmtstr = '%d',
+    det1=device(
+        "nicos.devices.entangle.CounterChannel",
+        tangodevice=tango_base + "counter1",
+        type="counter",
+        visibility=(),
+        fmtstr="%d",
     ),
-    det2 = device('nicos.devices.entangle.CounterChannel',
-        tangodevice = tango_base + 'counter2',
-        type = 'counter',
-        visibility = (),
-        fmtstr = '%d',
+    det2=device(
+        "nicos.devices.entangle.CounterChannel",
+        tangodevice=tango_base + "counter2",
+        type="counter",
+        visibility=(),
+        fmtstr="%d",
     ),
-    det3 = device('nicos.devices.entangle.CounterChannel',
-        tangodevice = tango_base + 'counter3',
-        type = 'counter',
-        visibility = (),
-        fmtstr = '%d',
+    det3=device(
+        "nicos.devices.entangle.CounterChannel",
+        tangodevice=tango_base + "counter3",
+        type="counter",
+        visibility=(),
+        fmtstr="%d",
     ),
     # det4 = device('nicos.devices.entangle.CounterChannel',
     #     tangodevice = tango_base + 'b2',
@@ -52,20 +57,22 @@ devices = dict(
     #     visibility = (),
     #     fmtstr = '%d',
     # ),
-    events = device('nicos.devices.entangle.CounterChannel',
-        description = 'QMesyDAQ Events channel',
-        tangodevice = tango_base + 'events',
-        type = 'counter',
-        visibility = (),
-        fmtstr = '%d',
+    events=device(
+        "nicos.devices.entangle.CounterChannel",
+        description="QMesyDAQ Events channel",
+        tangodevice=tango_base + "events",
+        type="counter",
+        visibility=(),
+        fmtstr="%d",
     ),
-    image = device('nicos.devices.vendor.qmesydaq.tango.ImageChannel',
-        description = 'QMesyDAQ Image',
-        tangodevice = tango_base + 'image',
-        visibility = (),
+    image=device(
+        "nicos.devices.vendor.qmesydaq.tango.ImageChannel",
+        description="QMesyDAQ Image",
+        tangodevice=tango_base + "image",
+        visibility=(),
     ),
 )
 
-startupcode = '''
+startupcode = """
 SetDetectors(det)
-'''
+"""

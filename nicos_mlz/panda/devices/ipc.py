@@ -23,7 +23,6 @@
 
 """IPC class to work around reset bug of triple cards from göttingen"""
 
-
 from nicos.core import Param, status, usermethod
 from nicos.devices.vendor.ipc import Coder as _Coder, Motor as _Motor
 
@@ -34,14 +33,14 @@ class Coder(_Coder):
 
     Attention: Can now return negative step values!
     """
+
     parameters = {
-        'wrapbits': Param('Resolution to mitigate wraparound', type=int,
-                          default=25),
+        "wrapbits": Param("Resolution to mitigate wraparound", type=int, default=25),
     }
 
     def doReadSteps(self):
         steps = _Coder.doReadSteps(self)
-        if steps > 2**(self.wrapbits-1):
+        if steps > 2 ** (self.wrapbits - 1):
             return steps - 2**self.wrapbits
         return steps
 
@@ -49,12 +48,14 @@ class Coder(_Coder):
 # create a workaround class, not resetting
 class Motor(_Motor):
     def doReset(self):
-        if self._hwtype == 'single':
+        if self._hwtype == "single":
             _Motor.doReset(self)
         else:
-            self.log.warning('Resetting triple cards disabled. If you REALLY '
-                             'want to reset, use %s.reallyReset() method',
-                             self.name)
+            self.log.warning(
+                "Resetting triple cards disabled. If you REALLY "
+                "want to reset, use %s.reallyReset() method",
+                self.name,
+            )
 
     @usermethod
     def reallyReset(self):
@@ -126,16 +127,18 @@ available and we dont have access to the sourcecode....
 # if using this, please rename the class!
 class MotorUntested(_Motor):
     """UNTESTED!"""
+
     def doReset(self):
-        if self._hwtype == 'triple':
-            self.log.warning('Resetting a triple Motor cards, please check '
-                             'the result carefully!')
+        if self._hwtype == "triple":
+            self.log.warning(
+                "Resetting a triple Motor cards, please check " "the result carefully!"
+            )
             bus = self._attached_bus
             # make sure we are stopped.
             if self.status(0)[0] != status.OK:  # busy or error
                 bus.send(self.addr, 33)  # stop
                 try:
-                    self.wait()      # this might take a while, ignore errors
+                    self.wait()  # this might take a while, ignore errors
                 except Exception:
                     pass
             self._store()

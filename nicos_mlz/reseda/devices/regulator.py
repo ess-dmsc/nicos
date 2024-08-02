@@ -24,8 +24,18 @@
 import time
 
 from nicos import session
-from nicos.core import POLLER, Attach, Moveable, NicosError, Override, Param, \
-    Readable, none_or, status, tupleof
+from nicos.core import (
+    POLLER,
+    Attach,
+    Moveable,
+    NicosError,
+    Override,
+    Param,
+    Readable,
+    none_or,
+    status,
+    tupleof,
+)
 from nicos.utils import createThread
 
 
@@ -38,29 +48,52 @@ class Regulator(Moveable):
     directly proportional to the sensor."""
 
     attached_devices = {
-        'moveable': Attach('Device to regulate', Moveable),
-        'sensor': Attach('Device to evaluate', Readable),
+        "moveable": Attach("Device to regulate", Moveable),
+        "sensor": Attach("Device to evaluate", Readable),
     }
 
     parameters = {
-        'stepfactor': Param('Factor of regulation steps', type=float,
-                            settable=True, mandatory=False, default=0.5),
-        'minstep': Param('Minimum stepsize if adjusting', type=float,
-                         settable=True, mandatory=False, default=0.001),
-        'deadbandwidth': Param('Width of the dead band', type=float,
-                               settable=True, mandatory=False, default=0.05),
-        'loopdelay': Param('Sleep time when waiting', type=float, unit='s',
-                           default=1.0, settable=True),
-        'maxstep': Param('Maximum step size', type=none_or(float),
-                         settable=True,
-                         mandatory=False, default=None),
-        'curstatus': Param('Store the current device status',
-                           internal=True, type=tupleof(int, str),
-                           settable=True),
+        "stepfactor": Param(
+            "Factor of regulation steps",
+            type=float,
+            settable=True,
+            mandatory=False,
+            default=0.5,
+        ),
+        "minstep": Param(
+            "Minimum stepsize if adjusting",
+            type=float,
+            settable=True,
+            mandatory=False,
+            default=0.001,
+        ),
+        "deadbandwidth": Param(
+            "Width of the dead band",
+            type=float,
+            settable=True,
+            mandatory=False,
+            default=0.05,
+        ),
+        "loopdelay": Param(
+            "Sleep time when waiting", type=float, unit="s", default=1.0, settable=True
+        ),
+        "maxstep": Param(
+            "Maximum step size",
+            type=none_or(float),
+            settable=True,
+            mandatory=False,
+            default=None,
+        ),
+        "curstatus": Param(
+            "Store the current device status",
+            internal=True,
+            type=tupleof(int, str),
+            settable=True,
+        ),
     }
 
     parameter_overrides = {
-        'unit': Override(default='', settable=False, mandatory=False),
+        "unit": Override(default="", settable=False, mandatory=False),
     }
 
     hardware_access = False
@@ -77,9 +110,10 @@ class Regulator(Moveable):
         self._stop_request = False
         if self._regulation_thread is None and session.sessiontype != POLLER:
             # no regulation thread (yet), but running in daemon -> start one
-            self._regulation_thread = createThread('regulation thread %s' % self,
-                                                   self._regulate)
-        self.curstatus = status.BUSY, 'regulating'
+            self._regulation_thread = createThread(
+                "regulation thread %s" % self, self._regulate
+            )
+        self.curstatus = status.BUSY, "regulating"
         self.poll()
 
     def doStop(self):
@@ -97,22 +131,22 @@ class Regulator(Moveable):
                 # self.curstatus = status.BUSY, 'regulating'
                 pass
             else:
-                self.curstatus = status.OK, 'idle'
+                self.curstatus = status.OK, "idle"
         return self.curstatus
 
     def _regulate(self):
         while not self._stop_request:
             try:
                 read_val = self._attached_sensor.read(0)
-                self.log.debug('Readable value: %s', read_val)
+                self.log.debug("Readable value: %s", read_val)
 
                 diff = abs(self.target - read_val)
-                self.log.debug('Difference to the target: %s', diff)
+                self.log.debug("Difference to the target: %s", diff)
                 if diff > self.deadbandwidth:
-                    self.curstatus = status.BUSY, 'regulating'
+                    self.curstatus = status.BUSY, "regulating"
                 if diff > self.deadbandwidth / 2:
                     cur_write_val = self._attached_moveable.read(0)
-                    step = self.stepfactor * (diff - self.deadbandwidth/2)
+                    step = self.stepfactor * (diff - self.deadbandwidth / 2)
                     if step < self.minstep:
                         step = self.minstep
                     maxstep = self.maxstep or step
@@ -121,23 +155,26 @@ class Regulator(Moveable):
                     step = min(step, maxstep) * sign
                     new_target = cur_write_val + step
 
-                    self.log.debug('Regulation necessary, move attached movable:'
-                                   '%s -> %s', cur_write_val, new_target)
+                    self.log.debug(
+                        "Regulation necessary, move attached movable:" "%s -> %s",
+                        cur_write_val,
+                        new_target,
+                    )
 
-                    if hasattr(self._attached_moveable, 'absmax'):
+                    if hasattr(self._attached_moveable, "absmax"):
                         if new_target > self._attached_moveable.absmax:
                             new_target = self._attached_moveable.absmax
-                    if hasattr(self._attached_moveable, 'usermax'):
+                    if hasattr(self._attached_moveable, "usermax"):
                         if new_target > self._attached_moveable.usermax:
                             new_target = self._attached_moveable.usermax
 
                     self._attached_moveable.start(new_target)
                     # TODO: wait?
                 else:
-                    self.curstatus = status.OK, 'stable'
+                    self.curstatus = status.OK, "stable"
 
             except NicosError as e:
-                self.log.warning('Skip regulation: %s', e)
+                self.log.warning("Skip regulation: %s", e)
 
             time.sleep(self.loopdelay)
         self._regulation_thread = None

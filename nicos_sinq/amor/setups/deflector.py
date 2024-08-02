@@ -1,11 +1,11 @@
-description = 'AMOR unpolarized deflected beam mode'
+description = "AMOR unpolarized deflected beam mode"
 
-group = 'basic'
+group = "basic"
 
-includes = ['director_devices']
+includes = ["director_devices"]
 
-excludes = ['simple', 'universal']
+excludes = ["simple", "universal"]
 
-startupcode = '''
+startupcode = """
 amor_director.mode = 'deflector'
-'''
+"""

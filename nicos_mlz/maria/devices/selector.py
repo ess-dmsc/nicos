@@ -26,10 +26,10 @@ from nicos.devices.vendor.astrium import SelectorLambda as _SelectorLambda
 
 
 class SelectorLambda(_SelectorLambda):
-
     parameters = {
-        'delta': Param('Maximum deviation between requested rpm and limits',
-                       unit='rpm', default=10)
+        "delta": Param(
+            "Maximum deviation between requested rpm and limits", unit="rpm", default=10
+        )
     }
 
     def _adjustValue(self, value):

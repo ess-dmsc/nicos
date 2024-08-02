@@ -37,6 +37,6 @@ class Crystal(TableBase):
         sz = size / 2
         self._crystal = QGraphicsLineItem(-sz, 0, sz, 0, self)
         if not self._pencolor:
-            self._pencolor = QColor('black')
+            self._pencolor = QColor("black")
         self._crystal.setPen(QPen(self._pencolor, 3))
         self._crystal.setZValue(100)

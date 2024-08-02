@@ -47,34 +47,51 @@ from html2text import HTML2Text
 from nicos.clients.base import ConnectionData, NicosClient
 from nicos.clients.cli.txtplot import txtplot
 from nicos.core import MAINTENANCE, MASTER, SIMULATION, SLAVE
-from nicos.protocols.daemon import BREAK_AFTER_LINE, BREAK_AFTER_STEP, \
-    BREAK_NOW, SIM_STATES, STATUS_IDLE, STATUS_IDLEEXC, STATUS_INBREAK
+from nicos.protocols.daemon import (
+    BREAK_AFTER_LINE,
+    BREAK_AFTER_STEP,
+    BREAK_NOW,
+    SIM_STATES,
+    STATUS_IDLE,
+    STATUS_IDLEEXC,
+    STATUS_INBREAK,
+)
 from nicos.protocols.daemon.classic import DEFAULT_PORT
-from nicos.utils import LOCALE_ENCODING, colorize, formatDuration, \
-    formatEndtime, parseConnectionString, terminalSize
+from nicos.utils import (
+    LOCALE_ENCODING,
+    colorize,
+    formatDuration,
+    formatEndtime,
+    parseConnectionString,
+    terminalSize,
+)
 from nicos.utils.loggers import ACTION, INPUT
 
-levels = {DEBUG: 'DEBUG', INFO: 'INFO', WARNING: 'WARNING',
-          ERROR: 'ERROR', FATAL: 'FATAL'}
+levels = {
+    DEBUG: "DEBUG",
+    INFO: "INFO",
+    WARNING: "WARNING",
+    ERROR: "ERROR",
+    FATAL: "FATAL",
+}
 
 # disable sending events with potentially large data we don't handle
-EVENTMASK = ('livedata', 'watch', 'dataset', 'datacurve',
-             'datapoint', 'clientexec')
+EVENTMASK = ("livedata", "watch", "dataset", "datacurve", "datapoint", "clientexec")
 
 # introduce the readline C library to our program (we will use Python's
 # binding module where possible, but otherwise call the readline functions
 # directly via ctypes)
-librl = ctypes.cdll[ctypes.util.find_library('readline')]
+librl = ctypes.cdll[ctypes.util.find_library("readline")]
 rl_vcpfunc_t = ctypes.CFUNCTYPE(None, ctypes.c_char_p)
 
 # some useful default readline keybindings
-DEFAULT_BINDINGS = '''\
+DEFAULT_BINDINGS = """\
 tab: complete
 "\\e[5~": history-search-backward
 "\\e[6~": history-search-forward
 "\\e[1;3D": backward-word
 "\\e[1;3C": forward-word
-'''
+"""
 
 # yay, global state!
 readline_result = Ellipsis
@@ -100,7 +117,6 @@ class StateChange(Exception):
 
 
 class NicosCmdClient(NicosClient):
-
     def __init__(self, conndata):
         NicosClient.__init__(self, self.put_error)
         # connection data as an object
@@ -115,17 +131,17 @@ class NicosCmdClient(NicosClient):
         self.reconnect_count = 0
         self.reconnect_time = 0
         # current script, line within it and filename of script
-        self.current_script = ['']
+        self.current_script = [""]
         self.current_line = -1
-        self.current_filename = ''
+        self.current_filename = ""
         # pending requests (i.e. scripts) in the daemon
         self.pending_requests = OrderedDict()
         # filename of last edited/simulated script
-        self.last_filename = ''
+        self.last_filename = ""
         # instrument name from NICOS, pre-filled with server name
-        self.instrument = conndata.host.split('.')[0]
+        self.instrument = conndata.host.split(".")[0]
         # script directory from NICOS
-        self.scriptpath = '.'
+        self.scriptpath = "."
         # execution mode of the NICOS session
         self.current_mode = MASTER
         # messages queueing up while the editor is running
@@ -143,19 +159,20 @@ class NicosCmdClient(NicosClient):
         # output stream to print to
         self.out = sys.stdout
         # uuid of the last simulation
-        self.simuuid = ''
+        self.simuuid = ""
         # whether we display timestamps with subsecond precision
         self.subsec_ts = False
         # current ETA information
-        self.cur_eta = ''
+        self.cur_eta = ""
 
         # set up readline
         for line in DEFAULT_BINDINGS.splitlines():
             readline.parse_and_bind(line)
         readline.set_completer(self.completer)
         readline.set_history_length(10000)
-        self.histfile = os.environ.get('NICOS_HISTORY_FILE',
-                                       path.expanduser('~/.nicoshistory'))
+        self.histfile = os.environ.get(
+            "NICOS_HISTORY_FILE", path.expanduser("~/.nicoshistory")
+        )
         if path.isfile(self.histfile):
             readline.read_history_file(self.histfile)
         self.completions = []
@@ -164,7 +181,7 @@ class NicosCmdClient(NicosClient):
         self.wakeup_pipe_r, self.wakeup_pipe_w = os.pipe()
 
         # pre-set prompt to sane default
-        self.set_status('disconnected')
+        self.set_status("disconnected")
 
     # -- low-level terminal input/output routines
 
@@ -179,9 +196,10 @@ class NicosCmdClient(NicosClient):
         """
         # pylint: disable=global-statement
         global readline_result
-        term_encoding = sys.stdout.encoding or 'utf-8'
-        librl.rl_callback_handler_install(prompt.encode(term_encoding),
-                                          c_readline_finish_callback)
+        term_encoding = sys.stdout.encoding or "utf-8"
+        librl.rl_callback_handler_install(
+            prompt.encode(term_encoding), c_readline_finish_callback
+        )
         readline_result = Ellipsis
         while readline_result is Ellipsis:
             try:
@@ -205,47 +223,53 @@ class NicosCmdClient(NicosClient):
         if readline_result:
             # add to history, but only if requested and not the same as the
             # previous history entry
-            if add_history and readline.get_history_item(
-                    readline.get_current_history_length()) != readline_result:
+            if (
+                add_history
+                and readline.get_history_item(readline.get_current_history_length())
+                != readline_result
+            ):
                 librl.add_history(readline_result)
         elif readline_result is None:
             raise EOFError
         elif readline_result is False:
             raise StateChange
-        return readline_result.decode(term_encoding, 'ignore')
+        return readline_result.decode(term_encoding, "ignore")
 
     def put(self, string):
         """Put a line of output, preserving the prompt afterwards."""
-        self.out.write('\r\x1b[K%s\n' % string)
+        self.out.write("\r\x1b[K%s\n" % string)
         self.out.flush()
-        os.write(self.wakeup_pipe_w, b' ')
+        os.write(self.wakeup_pipe_w, b" ")
 
     def put_error(self, string):
         """Put a client error message."""
-        self.put(colorize('red', '# ERROR: ' + string))
+        self.put(colorize("red", "# ERROR: " + string))
 
     def put_client(self, string):
         """Put a client info message."""
-        self.put(colorize('bold', '# ' + string))
+        self.put(colorize("bold", "# " + string))
 
     def ask_passwd(self, question):
         """Prompt user for a password."""
-        return getpass.getpass(colorize('bold', '# %s ' % question))
+        return getpass.getpass(colorize("bold", "# %s " % question))
 
-    def ask_question(self, question, chars='', default='', on_intr=''):
+    def ask_question(self, question, chars="", default="", on_intr=""):
         """Prompt user for input to a question."""
         # add hints of what can be entered
         if chars:
-            question += ' (%s)' % ('/'.join(chars.upper()))
+            question += " (%s)" % ("/".join(chars.upper()))
         if default:
-            question += ' [%s]' % default
+            question += " [%s]" % default
         self.in_question = True
         try:
             try:
                 # see set_status() for an explanation of the special chars here
-                ans = self.readline('\x01\r\x1b[K' + colorize('bold',
-                                    '\x02# ' + question + ' \x01') + '\x02',
-                                    add_history=False)
+                ans = self.readline(
+                    "\x01\r\x1b[K"
+                    + colorize("bold", "\x02# " + question + " \x01")
+                    + "\x02",
+                    add_history=False,
+                )
             except (KeyboardInterrupt, EOFError):
                 return on_intr
             if chars:
@@ -268,11 +292,14 @@ class NicosCmdClient(NicosClient):
         try:
             try:
                 # see set_status() for an explanation of the special chars here
-                ans = self.readline('\x01\r\x1b[K' + colorize('bold',
-                                    '\x02# ' + question + ' \x01') + '\x02',
-                                    add_history=False)
+                ans = self.readline(
+                    "\x01\r\x1b[K"
+                    + colorize("bold", "\x02# " + question + " \x01")
+                    + "\x02",
+                    add_history=False,
+                )
             except (KeyboardInterrupt, EOFError):
-                return ''
+                return ""
             return ans
         finally:
             self.in_question = False
@@ -282,65 +309,85 @@ class NicosCmdClient(NicosClient):
     def initial_update(self):
         """Called after connection is established."""
         # request current full status
-        state = self.ask('getstatus')
+        state = self.ask("getstatus")
         if state is None:
             return
         if not self.quiet_connect:
             self.put_client(
-                'Connected to %s:%s as %s. '
-                'Replaying output (enter "/log" to see more)...' %
-                (self.host, self.port, self.conndata.user))
-            output = self.ask('getmessages', str(self.tsize[1] - 3), default=[])
+                "Connected to %s:%s as %s. "
+                'Replaying output (enter "/log" to see more)...'
+                % (self.host, self.port, self.conndata.user)
+            )
+            output = self.ask("getmessages", str(self.tsize[1] - 3), default=[])
             for msg in output:
                 self.put_message(msg)
             if not self.tip_shown:
-                self.put_client('Loaded setups: %s. Enter "/help" for help '
-                                'with the client commands.' %
-                                (', '.join(state['setups'][1]) or '(none)'))
+                self.put_client(
+                    'Loaded setups: %s. Enter "/help" for help '
+                    "with the client commands."
+                    % (", ".join(state["setups"][1]) or "(none)")
+                )
                 self.tip_shown = True
             else:
-                self.put_client('Loaded setups: %s.' %
-                                (', '.join(state['setups'][1]) or '(none)'))
+                self.put_client(
+                    "Loaded setups: %s." % (", ".join(state["setups"][1]) or "(none)")
+                )
         else:
-            self.put_client('Connected to %s:%s as %s. ' %
-                            (self.host, self.port, self.conndata.user))
-        self.signal('processing', {'script': state['script'], 'reqid': '0'})
-        self.signal('status', state['status'])
-        self.signal('eta', state['eta'])
-        self.current_mode = state['mode']
-        self.scriptpath = self.eval('session.experiment.scriptpath', '.')
-        self.instrument = self.eval('session.instrument.instrument',
-                                    self.instrument)
-        for req in state['requests']:
-            self.pending_requests[req['reqid']] = req
+            self.put_client(
+                "Connected to %s:%s as %s. "
+                % (self.host, self.port, self.conndata.user)
+            )
+        self.signal("processing", {"script": state["script"], "reqid": "0"})
+        self.signal("status", state["status"])
+        self.signal("eta", state["eta"])
+        self.current_mode = state["mode"]
+        self.scriptpath = self.eval("session.experiment.scriptpath", ".")
+        self.instrument = self.eval("session.instrument.instrument", self.instrument)
+        for req in state["requests"]:
+            self.pending_requests[req["reqid"]] = req
         self.set_status(self.status)
 
-    stcolmap  = {'idle': 'blue',
-                 'running': 'fuchsia',
-                 'paused': 'red',
-                 'disconnected': 'darkgray'}
-    modemap   = {MASTER: '',
-                 SLAVE:  'slave,',
-                 SIMULATION: 'simmode,',
-                 MAINTENANCE: 'maintenance,'}
+    stcolmap = {
+        "idle": "blue",
+        "running": "fuchsia",
+        "paused": "red",
+        "disconnected": "darkgray",
+    }
+    modemap = {
+        MASTER: "",
+        SLAVE: "slave,",
+        SIMULATION: "simmode,",
+        MAINTENANCE: "maintenance,",
+    }
 
     def set_status(self, status):
         """Update the current execution status, and set a new prompt."""
         self.status = status
         if self.stop_pending:
-            pending = ' (stop pending)'
+            pending = " (stop pending)"
         elif self.pending_requests:
-            pending = ' (%d pending)' % len(self.pending_requests)
+            pending = " (%d pending)" % len(self.pending_requests)
         else:
-            pending = ''
+            pending = ""
         # \x01/\x02 are markers recognized by readline as "here come"
         # zero-width control characters; ESC[K means "clear whole line"
-        self.prompt = '\x01' + colorize(
-            self.stcolmap[status],
-            '\r\x1b[K\x02# ' + (self.instrument or '') + '[%s%s]%s %s \x01' %
-            (self.modemap[self.current_mode], status, pending,
-             self.spy_mode and 'spy>' or '>>')) + '\x02'
-        os.write(self.wakeup_pipe_w, b' ')
+        self.prompt = (
+            "\x01"
+            + colorize(
+                self.stcolmap[status],
+                "\r\x1b[K\x02# "
+                + (self.instrument or "")
+                + "[%s%s]%s %s \x01"
+                % (
+                    self.modemap[self.current_mode],
+                    status,
+                    pending,
+                    self.spy_mode and "spy>" or ">>",
+                ),
+            )
+            + "\x02"
+        )
+        os.write(self.wakeup_pipe_w, b" ")
 
     def showhelp(self, html):
         """Handles the "showhelp" signal.
@@ -355,177 +402,207 @@ class NicosCmdClient(NicosClient):
         """Handles the "eta" signal."""
         state, eta = data
 
-        if state in (SIM_STATES['pending'], SIM_STATES['running']):
-            self.cur_eta = '<calculation in progress>'
-        elif state == SIM_STATES['failed']:
-            self.cur_eta = '<calculation failed>'
-        elif state == SIM_STATES['success'] and eta > currenttime():
+        if state in (SIM_STATES["pending"], SIM_STATES["running"]):
+            self.cur_eta = "<calculation in progress>"
+        elif state == SIM_STATES["failed"]:
+            self.cur_eta = "<calculation failed>"
+        elif state == SIM_STATES["success"] and eta > currenttime():
             self.cur_eta = formatEndtime(eta - currenttime())
 
     def put_message(self, msg, sim=False):
         """Handles the "message" signal."""
-        if msg[0] == 'nicos':
-            namefmt = ''
+        if msg[0] == "nicos":
+            namefmt = ""
         else:
-            namefmt = '%-10s: ' % msg[0]
+            namefmt = "%-10s: " % msg[0]
         levelno = msg[2]
         if levelno == ACTION:
             action = namefmt + msg[3].rstrip()
-            self.out.write('\x1b]0;NICOS%s\x07' %
-                           (action and ' (%s)' % action or ''))
+            self.out.write("\x1b]0;NICOS%s\x07" % (action and " (%s)" % action or ""))
             return
         else:
             if self.subsec_ts:
-                timesuf = '.%.06d] ' % ((msg[1] % 1) * 1000000)
+                timesuf = ".%.06d] " % ((msg[1] % 1) * 1000000)
             else:
-                timesuf = '] '
+                timesuf = "] "
             if levelno <= DEBUG:
-                timefmt = strftime('[%H:%M:%S', localtime(msg[1]))
-                newtext = colorize('lightgray', timefmt + timesuf) + \
-                    colorize('darkgray', namefmt + msg[3].rstrip())
+                timefmt = strftime("[%H:%M:%S", localtime(msg[1]))
+                newtext = colorize("lightgray", timefmt + timesuf) + colorize(
+                    "darkgray", namefmt + msg[3].rstrip()
+                )
             elif levelno <= INFO:
-                timefmt = strftime('[%H:%M:%S', localtime(msg[1]))
-                newtext = colorize('lightgray', timefmt + timesuf) + \
-                    namefmt + msg[3].rstrip()
+                timefmt = strftime("[%H:%M:%S", localtime(msg[1]))
+                newtext = (
+                    colorize("lightgray", timefmt + timesuf) + namefmt + msg[3].rstrip()
+                )
             elif levelno == INPUT:
-                newtext = colorize('darkgreen', msg[3].rstrip())
+                newtext = colorize("darkgreen", msg[3].rstrip())
             elif levelno <= WARNING:
-                timefmt = strftime('[%Y-%m-%d %H:%M:%S', localtime(msg[1]))
-                newtext = colorize('purple', timefmt + timesuf + namefmt +
-                                   levels[levelno] + ': ' + msg[3].rstrip())
+                timefmt = strftime("[%Y-%m-%d %H:%M:%S", localtime(msg[1]))
+                newtext = colorize(
+                    "purple",
+                    timefmt
+                    + timesuf
+                    + namefmt
+                    + levels[levelno]
+                    + ": "
+                    + msg[3].rstrip(),
+                )
             else:
-                timefmt = strftime('[%Y-%m-%d %H:%M:%S', localtime(msg[1]))
-                newtext = colorize('red', timefmt + timesuf + namefmt +
-                                   levels[levelno] + ': ' + msg[3].rstrip())
+                timefmt = strftime("[%Y-%m-%d %H:%M:%S", localtime(msg[1]))
+                newtext = colorize(
+                    "red",
+                    timefmt
+                    + timesuf
+                    + namefmt
+                    + levels[levelno]
+                    + ": "
+                    + msg[3].rstrip(),
+                )
         if sim:
-            newtext = '(sim) ' + newtext
+            newtext = "(sim) " + newtext
         self.put(newtext)
 
     def signal(self, name, data=None, exc=None):
         """Handles any kind of signal/event sent by the daemon."""
         try:
             # try to order the elifs by frequency
-            if name == 'message':
+            if name == "message":
                 if self.in_editing:
                     self.message_queue.append(data)
                 else:
                     self.put_message(data)
-            elif name == 'status':
+            elif name == "status":
                 status, line = data
                 if status in (STATUS_IDLE, STATUS_IDLEEXC):
-                    new_status = 'idle'
+                    new_status = "idle"
                     self.stop_pending = False
                 elif status != STATUS_INBREAK:
-                    new_status = 'running'
+                    new_status = "running"
                 else:
-                    new_status = 'paused'
+                    new_status = "paused"
                 if status != self.status:
                     self.set_status(new_status)
                 if line != self.current_line:
                     self.current_line = line
-            elif name == 'cache':
-                if data[1].endswith('/scriptpath'):
-                    self.scriptpath = self.eval(
-                        'session.experiment.scriptpath', '.')
-            elif name == 'processing':
-                script = data.get('script')
+            elif name == "cache":
+                if data[1].endswith("/scriptpath"):
+                    self.scriptpath = self.eval("session.experiment.scriptpath", ".")
+            elif name == "processing":
+                script = data.get("script")
                 if script is None:
                     return
-                self.current_filename = data.get('name') or ''
-                script = script.splitlines() or ['']
+                self.current_filename = data.get("name") or ""
+                script = script.splitlines() or [""]
                 if script != self.current_script:
                     self.current_script = script
-                self.pending_requests.pop(data['reqid'], None)
+                self.pending_requests.pop(data["reqid"], None)
                 self.set_status(self.status)
-            elif name == 'request':
-                if 'script' in data:
-                    self.pending_requests[data['reqid']] = data
+            elif name == "request":
+                if "script" in data:
+                    self.pending_requests[data["reqid"]] = data
                 self.set_status(self.status)
-            elif name == 'blocked':
-                removed = [_f for _f in (self.pending_requests.pop(reqid, None)
-                                         for reqid in data) if _f]
+            elif name == "blocked":
+                removed = [
+                    _f
+                    for _f in (self.pending_requests.pop(reqid, None) for reqid in data)
+                    if _f
+                ]
                 if removed:
-                    self.put_client('%d script(s) or command(s) removed from '
-                                    'queue.' % len(removed))
+                    self.put_client(
+                        "%d script(s) or command(s) removed from "
+                        "queue." % len(removed)
+                    )
                     self.show_pending()
                 self.set_status(self.status)
-            elif name == 'updated':
-                if 'script' in data:
-                    self.pending_requests[data['reqid']] = data
-            elif name == 'rearranged':
+            elif name == "updated":
+                if "script" in data:
+                    self.pending_requests[data["reqid"]] = data
+            elif name == "rearranged":
                 old_reqs = self.pending_requests.copy()
                 self.pending_requests.clear()
                 for reqid in data:
                     self.pending_requests[reqid] = old_reqs[reqid]
-            elif name == 'connected':
+            elif name == "connected":
                 self.reconnect_count = 0
                 self.initial_update()
-            elif name == 'disconnected':
-                self.put_client('Disconnected from server, use /reconnect to '
-                                'try reconnecting.')
+            elif name == "disconnected":
+                self.put_client(
+                    "Disconnected from server, use /reconnect to " "try reconnecting."
+                )
                 self.current_mode = MASTER
                 self.debug_mode = False
                 self.pending_requests.clear()
-                self.set_status('disconnected')
-            elif name == 'showhelp':
+                self.set_status("disconnected")
+            elif name == "showhelp":
                 self.showhelp(data[1])
-            elif name == 'simmessage':
-                if data[5] in [self.simuuid, '0']:
+            elif name == "simmessage":
+                if data[5] in [self.simuuid, "0"]:
                     if not self.in_editing:
                         self.put_message(data, sim=True)
-            elif name == 'simresult':
-                if data and data[2] in [self.simuuid, '0']:
+            elif name == "simresult":
+                if data and data[2] in [self.simuuid, "0"]:
                     timing, devinfo, _ = data
                     if timing < 0:
-                        self.put_client('Dry run resulted in an error.')
+                        self.put_client("Dry run resulted in an error.")
                         return
-                    self.put_client('Simulated minimum runtime: %s '
-                                    '(finishes approximately %s). Device ranges:' %
-                                    (formatDuration(timing, precise=False),
-                                     formatEndtime(timing)))
+                    self.put_client(
+                        "Simulated minimum runtime: %s "
+                        "(finishes approximately %s). Device ranges:"
+                        % (formatDuration(timing, precise=False), formatEndtime(timing))
+                    )
                     if devinfo:
                         dnwidth = max(map(len, devinfo))
-                        sorteditems = sorted(devinfo.items(),
-                                             key=lambda x: x[0].lower())
+                        sorteditems = sorted(
+                            devinfo.items(), key=lambda x: x[0].lower()
+                        )
                         for devname, (_, dmin, dmax, aliases) in sorteditems:
-                            aliascol = 'aliases: ' + ', '.join(aliases) if aliases else ''
-                            self.put('#   %-*s: %10s  <->  %-10s %s' %
-                                     (dnwidth, devname, dmin, dmax, aliascol))
-            elif name == 'mode':
+                            aliascol = (
+                                "aliases: " + ", ".join(aliases) if aliases else ""
+                            )
+                            self.put(
+                                "#   %-*s: %10s  <->  %-10s %s"
+                                % (dnwidth, devname, dmin, dmax, aliascol)
+                            )
+            elif name == "mode":
                 self.current_mode = data
                 self.set_status(self.status)
-            elif name == 'setup':
-                self.scriptpath = self.eval('session.experiment.scriptpath',
-                                            '.')
-                self.instrument = self.eval('session.instrument.instrument',
-                                            self.instrument)
-            elif name == 'debugging':
+            elif name == "setup":
+                self.scriptpath = self.eval("session.experiment.scriptpath", ".")
+                self.instrument = self.eval(
+                    "session.instrument.instrument", self.instrument
+                )
+            elif name == "debugging":
                 self.debug_mode = data
                 readline_finish_callback(False)
-            elif name == 'plugplay':
-                if data[0] == 'added':
-                    self.put_client('new sample environment detected: load '
-                                    'setup %r to activate' % data[1])
-                elif data[0] == 'removed':
-                    self.put_client('sample environment removed: unload '
-                                    'setup %r to clear devices' % data[1])
-            elif name == 'eta':
+            elif name == "plugplay":
+                if data[0] == "added":
+                    self.put_client(
+                        "new sample environment detected: load "
+                        "setup %r to activate" % data[1]
+                    )
+                elif data[0] == "removed":
+                    self.put_client(
+                        "sample environment removed: unload "
+                        "setup %r to clear devices" % data[1]
+                    )
+            elif name == "eta":
                 self.handle_eta(data)
-            elif name == 'broken':
+            elif name == "broken":
                 self.put_error(data)
                 self.reconnect_count = self.RECONNECT_TRIES
                 self.reconnect_time = self.RECONNECT_INTERVAL_SHORT
                 self.schedule_reconnect()
-            elif name == 'failed':
+            elif name == "failed":
                 if self.reconnect_count:
                     self.schedule_reconnect()
                 else:
                     self.put_error(data)
-            elif name == 'error':
+            elif name == "error":
                 self.put_error(data)
             # and we ignore all other signals
         except Exception as e:
-            self.put_error('In %s event handler: %s.' % (name, e))
+            self.put_error("In %s event handler: %s." % (name, e))
 
     # -- reconnect handling
 
@@ -533,23 +610,24 @@ class NicosCmdClient(NicosClient):
         def reconnect():
             if self.reconnect_count:
                 self.connect(self.conndata, eventmask=EVENTMASK)
+
         self.reconnect_count -= 1
         if self.reconnect_count <= self.RECONNECT_TRIES_LONG:
             self.reconnect_time = self.RECONNECT_INTERVAL_LONG
-        threading.Timer(self.reconnect_time / 1000., reconnect).start()
+        threading.Timer(self.reconnect_time / 1000.0, reconnect).start()
 
     # -- command handlers
 
     def ask_connect(self, ask_all=True):
-        hostport = '%s:%s' % (self.conndata.host, self.conndata.port)
-        if hostport in (':', ':1301') or ask_all:
-            default = '' if hostport in (':', ':1301') else hostport
-            default = default or 'localhost'
-            server = self.ask_question('Server host:port?', default=default)
+        hostport = "%s:%s" % (self.conndata.host, self.conndata.port)
+        if hostport in (":", ":1301") or ask_all:
+            default = "" if hostport in (":", ":1301") else hostport
+            default = default or "localhost"
+            server = self.ask_question("Server host:port?", default=default)
             if not server:
                 return
             try:
-                host, port = server.split(':', 1)
+                host, port = server.split(":", 1)
                 port = int(port)
             except ValueError:
                 host = server
@@ -557,27 +635,28 @@ class NicosCmdClient(NicosClient):
             self.conndata.host = host
             self.conndata.port = port
         if not self.conndata.user or ask_all:
-            user = self.ask_question('User name?',
-                                     default=self.conndata.user or 'guest')
+            user = self.ask_question(
+                "User name?", default=self.conndata.user or "guest"
+            )
             self.conndata.user = user
         if self.conndata.password is None or ask_all:
-            password = self.ask_passwd('Password?')
+            password = self.ask_passwd("Password?")
             self.conndata.password = password
-        self.instrument = self.conndata.host.split('.')[0]
+        self.instrument = self.conndata.host.split(".")[0]
         try:
             self.connect(self.conndata, eventmask=EVENTMASK)
         except RuntimeError as err:
-            self.put_error('Cannot connect: %s.' % err)
+            self.put_error("Cannot connect: %s." % err)
 
     def help(self, arg):
         """Implements the "/help" command."""
         if not arg:
-            arg = 'main'
+            arg = "main"
         if arg not in HELP:
-            arg = 'main'
+            arg = "main"
         helptext = HELP[arg]
         for line in helptext.splitlines():
-            self.put('# ' + line)
+            self.put("# " + line)
 
     def edit_file(self, arg):
         """Implements the "/edit" command."""
@@ -585,11 +664,11 @@ class NicosCmdClient(NicosClient):
             if path.isfile(self.current_filename):
                 arg = self.current_filename
         if not arg:
-            self.put_error('Need a file name as argument.')
+            self.put_error("Need a file name as argument.")
             return
         fpath = path.join(self.scriptpath, path.expanduser(arg))
-        if not os.environ.get('EDITOR'):
-            os.environ['EDITOR'] = 'vi'
+        if not os.environ.get("EDITOR"):
+            os.environ["EDITOR"] = "vi"
         self.in_editing = True
         cwd = os.getcwd()
         if path.isdir(self.scriptpath):
@@ -608,90 +687,93 @@ class NicosCmdClient(NicosClient):
         # smart about offering the user a choice of running, simulating or
         # updating the current script
         self.last_filename = fpath
-        if self.status == 'running':
+        if self.status == "running":
             if fpath == self.current_filename:
                 # current script edited: most likely we want to update it
-                if self.ask_question('Update running script?', chars='yn',
-                                     default='n') == 'y':
-                    return self.command('update', fpath)
+                if (
+                    self.ask_question("Update running script?", chars="yn", default="n")
+                    == "y"
+                ):
+                    return self.command("update", fpath)
             else:
                 # another script edited: updating will likely fail
-                reply = self.ask_question('Queue or dry-run file?',
-                                          chars='qdn')
-                if reply == 'q':
+                reply = self.ask_question("Queue or dry-run file?", chars="qdn")
+                if reply == "q":
                     # this will automatically queue
-                    return self.command('run!', fpath)
-                elif reply == 'd':
-                    return self.command('sim', fpath)
+                    return self.command("run!", fpath)
+                elif reply == "d":
+                    return self.command("sim", fpath)
         else:
             # no script is running at the moment: offer to run it
-            reply = self.ask_question('Run or dry-run file?', chars='rdn')
-            if reply == 'r':
-                return self.command('run', fpath)
-            elif reply == 'd':
-                return self.command('sim', fpath)
+            reply = self.ask_question("Run or dry-run file?", chars="rdn")
+            if reply == "r":
+                return self.command("run", fpath)
+            elif reply == "d":
+                return self.command("sim", fpath)
 
     def print_where(self):
         """Implements the "/where" command."""
-        if self.status in ('running', 'paused'):
-            self.put_client('Printing current script.')
+        if self.status in ("running", "paused"):
+            self.put_client("Printing current script.")
             for i, line in enumerate(self.current_script):
-                if i+1 == self.current_line:
-                    self.put(colorize('darkgreen', '---> ' + line))
+                if i + 1 == self.current_line:
+                    self.put(colorize("darkgreen", "---> " + line))
                 else:
-                    self.put('     ' + line)
-            self.put_client('End of script.')
+                    self.put("     " + line)
+            self.put_client("End of script.")
             if self.cur_eta:
-                self.put_client('Estimated finishing time: ' + self.cur_eta)
+                self.put_client("Estimated finishing time: " + self.cur_eta)
         else:
-            self.put_client('No script is running.')
+            self.put_client("No script is running.")
 
     def _iter_pending(self):
         for reqid, script in self.pending_requests.items():
-            if 'name' in script and script['name']:
-                short = script['name']
-            elif 'script' in script:
-                lines = script['script'].splitlines()
+            if "name" in script and script["name"]:
+                short = script["name"]
+            elif "script" in script:
+                lines = script["script"].splitlines()
                 if len(lines) == 1:
                     short = lines[0]
                 else:
-                    short = lines[0] + ' ...'
+                    short = lines[0] + " ..."
             else:
-                short = '(stop)'
+                short = "(stop)"
             yield reqid, short
 
     def show_pending(self):
         if not self.pending_requests:
-            self.put_client('No scripts or commands are pending.')
+            self.put_client("No scripts or commands are pending.")
             return
-        self.put_client('Showing pending scripts or commands. '
-                        'Use "/cancel" to remove one or more.')
+        self.put_client(
+            "Showing pending scripts or commands. "
+            'Use "/cancel" to remove one or more.'
+        )
         for _reqid, short in self._iter_pending():
-            self.put('#   %s' % short)
-        self.put_client('End of pending list.')
+            self.put("#   %s" % short)
+        self.put_client("End of pending list.")
 
     def cancel_menu(self, arg):
         if not self.pending_requests:
-            self.put_client('No scripts or commands are pending.')
+            self.put_client("No scripts or commands are pending.")
             return
-        if arg == '*':
-            self.tell('unqueue', '*')
+        if arg == "*":
+            self.tell("unqueue", "*")
             return
-        self.put_client('Showing pending scripts or commands.')
+        self.put_client("Showing pending scripts or commands.")
         indices = {}
         for index, (reqid, short) in enumerate(self._iter_pending(), start=1):
             indices[index] = reqid
-            self.put('#   %s  %s' % (colorize('blue', '%2d' % index), short))
+            self.put("#   %s  %s" % (colorize("blue", "%2d" % index), short))
         res = self.ask_question('Which script to cancel ("*" for all)?')
-        if res == '*':
-            self.tell('unqueue', '*')
+        if res == "*":
+            self.tell("unqueue", "*")
             return
         try:
             reqid = indices[int(res)]
         except (ValueError, KeyError):
-            self.put_error('Invalid selection.')
+            self.put_error("Invalid selection.")
             return
-        self.tell('unqueue', reqid)
+        self.tell("unqueue", reqid)
 
     def debug_repl(self):
         """Called to handle remote debugging via Rpdb."""
@@ -699,234 +781,254 @@ class NicosCmdClient(NicosClient):
         try:
             while self.debug_mode:
                 try:
-                    cmd = self.readline('\x01\r\x1b[K' + colorize('darkred',
-                                        '\x02# (Rpdb) \x01') + '\x02') + '\n'
+                    cmd = (
+                        self.readline(
+                            "\x01\r\x1b[K"
+                            + colorize("darkred", "\x02# (Rpdb) \x01")
+                            + "\x02"
+                        )
+                        + "\n"
+                    )
                 except (EOFError, KeyboardInterrupt):
-                    cmd = ''
+                    cmd = ""
                 except StateChange:
                     if not self.debug_mode:
                         return
-                self.tell('debuginput', cmd)
+                self.tell("debuginput", cmd)
         finally:
             self.in_question = False
 
     def plot_data(self, xterm_mode):
         try:
             xs, ys, _, names = self.eval(
-                '__import__("nicos").commands.analyze._getData()[:4]')
+                '__import__("nicos").commands.analyze._getData()[:4]'
+            )
             plotlines = txtplot(xs, ys, names[0], names[1], xterm_mode)
         except Exception as err:
-            self.put_error('Could not plot: %s.' % str(err))
+            self.put_error("Could not plot: %s." % str(err))
         else:
             for line in plotlines:
                 self.put(line)
 
     def stop_query(self, how):
         """Called on Ctrl-C (if running) or when "/stop" is entered."""
-        self.put_client('== %s ==' % how)
-        self.put('# Please enter how to proceed:')
-        self.put('# <I> ignore this interrupt')
-        self.put('# <H> stop after current scan point')
-        self.put('# <L> stop after current command')
-        self.put('# <S> immediate stop')
-        res = self.ask_question('Your choice?', chars='ihls').upper()
-        if res == 'I':
+        self.put_client("== %s ==" % how)
+        self.put("# Please enter how to proceed:")
+        self.put("# <I> ignore this interrupt")
+        self.put("# <H> stop after current scan point")
+        self.put("# <L> stop after current command")
+        self.put("# <S> immediate stop")
+        res = self.ask_question("Your choice?", chars="ihls").upper()
+        if res == "I":
             return
-        elif res == 'H':
+        elif res == "H":
             # this is basically "stop at any well-defined breakpoint"
-            self.tell('stop', BREAK_AFTER_STEP)
+            self.tell("stop", BREAK_AFTER_STEP)
             self.stop_pending = True
             self.set_status(self.status)
-        elif res == 'L':
+        elif res == "L":
             # this is "everywhere after a command in the script"
-            self.tell('stop', BREAK_AFTER_LINE)
+            self.tell("stop", BREAK_AFTER_LINE)
             self.stop_pending = True
             self.set_status(self.status)
         else:
-            self.tell('emergency')
+            self.tell("emergency")
 
     def command(self, cmd, arg):
         """Called when a "/foo" command is entered at the prompt."""
         # try to order elif cases by frequency
-        if cmd in ('cmd', 'exec'):
-            if cmd == 'cmd' and self.spy_mode:
-                return self.command('eval', arg)
+        if cmd in ("cmd", "exec"):
+            if cmd == "cmd" and self.spy_mode:
+                return self.command("eval", arg)
             # this is not usually entered as "/cmd foo", but only "foo"
-            if self.status in ('running', 'paused'):
-                reply = self.ask_question('A script is already running, '
-                                          'queue or execute anyway?', chars='qxn')
-                if reply == 'x':
-                    if self.status != 'idle':
-                        self.tell('exec', arg)
+            if self.status in ("running", "paused"):
+                reply = self.ask_question(
+                    "A script is already running, " "queue or execute anyway?",
+                    chars="qxn",
+                )
+                if reply == "x":
+                    if self.status != "idle":
+                        self.tell("exec", arg)
                     else:
                         self.run(arg)
-                elif reply == 'q':
+                elif reply == "q":
                     self.run(arg)
-                    self.put_client('Command queued.')
+                    self.put_client("Command queued.")
             else:
                 self.run(arg)
-        elif cmd in ('r', 'run', 'run!'):
+        elif cmd in ("r", "run", "run!"):
             if not arg:
                 # since we remember the last edited file, we can offer
                 # running it here
                 if self.last_filename:
-                    reply = self.ask_question('Run last used file %r?' %
-                                              path.basename(self.last_filename),
-                                              chars='yn', default='y')
-                    if reply == 'y':
-                        self.command('run', self.last_filename)
+                    reply = self.ask_question(
+                        "Run last used file %r?" % path.basename(self.last_filename),
+                        chars="yn",
+                        default="y",
+                    )
+                    if reply == "y":
+                        self.command("run", self.last_filename)
                         return
-                self.put_error('Need a file name as argument.')
+                self.put_error("Need a file name as argument.")
                 return
             fpath = path.join(self.scriptpath, path.expanduser(arg))
             try:
                 with open(fpath, encoding=LOCALE_ENCODING) as f:
                     code = f.read()
             except Exception as e:
-                self.put_error('Unable to open file: %s.' % e)
+                self.put_error("Unable to open file: %s." % e)
                 return
-            if self.status in ('running', 'paused') and cmd != 'run!':
-                if self.ask_question('A script is already running, '
-                                     'queue script?', chars='yn',
-                                     default='y') == 'y':
+            if self.status in ("running", "paused") and cmd != "run!":
+                if (
+                    self.ask_question(
+                        "A script is already running, " "queue script?",
+                        chars="yn",
+                        default="y",
+                    )
+                    == "y"
+                ):
                     self.run(code, fpath)
             else:
                 self.run(code, fpath)
-        elif cmd == 'update':
+        elif cmd == "update":
             if not arg:
                 # always take the current filename, if it still exists
                 if path.isfile(self.current_filename):
                     arg = self.current_filename
             if not arg:
-                self.put_error('Need a file name as argument.')
+                self.put_error("Need a file name as argument.")
                 return
             fpath = path.join(self.scriptpath, path.expanduser(arg))
             try:
                 with open(fpath, encoding=LOCALE_ENCODING) as f:
                     code = f.read()
             except Exception as e:
-                self.put_error('Unable to open file: %s.' % e)
+                self.put_error("Unable to open file: %s." % e)
                 return
-            reason = self.ask_input('Reason for updating:')
-            self.tell('update', code, reason)
-        elif cmd in ('sim', 'simulate'):
+            reason = self.ask_input("Reason for updating:")
+            self.tell("update", code, reason)
+        elif cmd in ("sim", "simulate"):
             if not arg:
-                self.put_error('Need a file name or code as argument.')
+                self.put_error("Need a file name or code as argument.")
                 return
             fpath = path.join(self.scriptpath, path.expanduser(arg))
             self.last_filename = fpath
             # detect whether we have a filename or potential Python code
-            if path.isfile(fpath) or fpath.endswith(('.py', '.txt')):
+            if path.isfile(fpath) or fpath.endswith((".py", ".txt")):
                 try:
                     with open(fpath, encoding=LOCALE_ENCODING) as f:
                         code = f.read()
                 except Exception as e:
-                    self.put_error('Unable to open file: %s.' % e)
+                    self.put_error("Unable to open file: %s." % e)
                     return
                 self.simulate(fpath, code)
             else:
-                self.simulate('', arg)
-        elif cmd in ('e', 'edit'):
+                self.simulate("", arg)
+        elif cmd in ("e", "edit"):
             self.edit_file(arg)
-        elif cmd == 'break':
-            self.tell('break', BREAK_AFTER_STEP)
-        elif cmd in ('cont', 'continue'):
-            self.tell('continue')
-        elif cmd in ('pause',):
-            self.tell('break', BREAK_NOW)
-        elif cmd in ('s', 'stop'):
-            if self.status == 'running':
-                self.stop_query('Stop request')
+        elif cmd == "break":
+            self.tell("break", BREAK_AFTER_STEP)
+        elif cmd in ("cont", "continue"):
+            self.tell("continue")
+        elif cmd in ("pause",):
+            self.tell("break", BREAK_NOW)
+        elif cmd in ("s", "stop"):
+            if self.status == "running":
+                self.stop_query("Stop request")
             else:
-                self.tell('emergency')
-        elif cmd in ('fin', 'finish'):
-            self.tell('finish')
-        elif cmd == 'pending':
+                self.tell("emergency")
+        elif cmd in ("fin", "finish"):
+            self.tell("finish")
+        elif cmd == "pending":
             self.show_pending()
-        elif cmd == 'cancel':
+        elif cmd == "cancel":
             self.cancel_menu(arg)
-        elif cmd == 'disconnect':
+        elif cmd == "disconnect":
             if self.isconnected:
                 self.disconnect()
-        elif cmd == 'connect':
+        elif cmd == "connect":
             self.reconnect_count = 0
             if self.isconnected:
-                self.put_error('Already connected. Use /disconnect first.')
+                self.put_error("Already connected. Use /disconnect first.")
             else:
                 self.ask_connect()
-        elif cmd in ('re', 'reconnect'):
-            self.reconnect_count = 0   # no automatic reconnect
+        elif cmd in ("re", "reconnect"):
+            self.reconnect_count = 0  # no automatic reconnect
             if self.isconnected:
                 self.disconnect()
             self.ask_connect(ask_all=False)
-        elif cmd in ('q', 'quit'):
+        elif cmd in ("q", "quit"):
             if self.isconnected:
                 self.disconnect()
-            return 0   # i.e. exit with success
-        elif cmd in ('h', 'help', '?'):
+            return 0  # i.e. exit with success
+        elif cmd in ("h", "help", "?"):
             self.help(arg)
-        elif cmd == 'log':
+        elif cmd == "log":
             if arg:
                 n = str(int(arg))  # make sure it's an integer
             else:
-                n = '*'  # as a slice index, this means "unlimited"
+                n = "*"  # as a slice index, this means "unlimited"
             # this can take a while to transfer, but we don't want to cache
             # messages in this client just for this command
-            messages = self.ask('getmessages', n)
+            messages = self.ask("getmessages", n)
             if messages is None:
                 return
-            self.put_client('Printing %s previous messages.' %
-                            (n if n != '*' else 'all'))
+            self.put_client(
+                "Printing %s previous messages." % (n if n != "*" else "all")
+            )
             for msg in messages:
                 self.put_message(msg)
-            self.put_client('End of messages.')
-        elif cmd in ('w', 'where'):
+            self.put_client("End of messages.")
+        elif cmd in ("w", "where"):
             self.print_where()
-        elif cmd == 'wait':
+        elif cmd == "wait":
             if arg:
                 time.sleep(float(arg))
             else:
                 # this command is mainly meant for testing and scripting purposes
                 time.sleep(0.1)
-                while self.status != 'idle':
+                while self.status != "idle":
                     time.sleep(0.1)
-        elif cmd == 'trace':
-            trace = self.ask('gettrace')
+        elif cmd == "trace":
+            trace = self.ask("gettrace")
             if trace is None:
                 return
-            self.put_client('Current stacktrace of script execution:')
+            self.put_client("Current stacktrace of script execution:")
             for line in trace.splitlines():
                 if line:
-                    self.put('# ' + line)
-            self.put_client('End of stacktrace.')
-        elif cmd == 'debugclient':
+                    self.put("# " + line)
+            self.put_client("End of stacktrace.")
+        elif cmd == "debugclient":
             import pdb
+
             pdb.set_trace()  # pylint: disable=forgotten-debug-statement
-        elif cmd == 'debug':
-            self.tell('debug', arg)
-        elif cmd == 'eval':
-            timefmt = colorize('lightgray', strftime('[%H:%M:%S]'))
-            self.put('%s -> %s' % (timefmt, self.eval(arg, None, stringify=True)))
-        elif cmd == 'spy':
+        elif cmd == "debug":
+            self.tell("debug", arg)
+        elif cmd == "eval":
+            timefmt = colorize("lightgray", strftime("[%H:%M:%S]"))
+            self.put("%s -> %s" % (timefmt, self.eval(arg, None, stringify=True)))
+        elif cmd == "spy":
             if not self.spy_mode:
-                self.put_client('Spy mode on: normal input is evaluated as '
-                                'an expression, use /exec to execute as script.')
+                self.put_client(
+                    "Spy mode on: normal input is evaluated as "
+                    "an expression, use /exec to execute as script."
+                )
             else:
-                self.put_client('Spy mode off.')
+                self.put_client("Spy mode off.")
             self.spy_mode = not self.spy_mode
             self.set_status(self.status)
-        elif cmd == 'plot':
-            self.plot_data(xterm_mode=(arg == 'x'))
-        elif cmd == 'subsec':
+        elif cmd == "plot":
+            self.plot_data(xterm_mode=(arg == "x"))
+        elif cmd == "subsec":
             self.subsec_ts = not self.subsec_ts
         else:
-            self.put_error('Unknown command %r.' % cmd)
+            self.put_error("Unknown command %r." % cmd)
 
     # -- command-line completion support
 
     def simulate(self, fpath, code):
         self.simuuid = str(uuid1())
-        self.tell('simulate', fpath, code, self.simuuid)
+        self.tell("simulate", fpath, code, self.simuuid)
 
     def complete_filename(self, fn, word):
         """Try to complete a script filename."""
@@ -938,17 +1040,37 @@ class NicosCmdClient(NicosClient):
         # current "word"
         omit = len(initpath) - len(word)
         # complete directories and .py/.txt script files
-        for f in glob.glob(initpath + '*'):
+        for f in glob.glob(initpath + "*"):
             if path.isdir(f):
-                candidates.append(f[omit:] + '/')
-            elif path.isfile(f) and f.endswith(('.py', '.txt')):
+                candidates.append(f[omit:] + "/")
+            elif path.isfile(f) and f.endswith((".py", ".txt")):
                 candidates.append(f[omit:])
         return candidates
 
-    commands = ['run', 'simulate', 'edit', 'update', 'break', 'continue',
-                'stop', 'where', 'disconnect', 'connect', 'reconnect',
-                'quit', 'help', 'log', 'pending', 'cancel', 'eval', 'spy',
-                'debug', 'trace', 'subsec', 'plot']
+    commands = [
+        "run",
+        "simulate",
+        "edit",
+        "update",
+        "break",
+        "continue",
+        "stop",
+        "where",
+        "disconnect",
+        "connect",
+        "reconnect",
+        "quit",
+        "help",
+        "log",
+        "pending",
+        "cancel",
+        "eval",
+        "spy",
+        "debug",
+        "trace",
+        "subsec",
+        "plot",
+    ]
 
     def completer(self, text, state):
         """Try to complete the command line.  Called by readline."""
@@ -956,27 +1078,26 @@ class NicosCmdClient(NicosClient):
             # we got a a new bit of text to complete...
             line = readline.get_line_buffer()
             # handle line without command
-            if not line.startswith('/'):
-                line = '/exec ' + line
+            if not line.startswith("/"):
+                line = "/exec " + line
             # split into command and arguments
             parts = line[1:].split(None, 1)
-            if len(parts) < 2 and not line.endswith(' '):
+            if len(parts) < 2 and not line.endswith(" "):
                 # complete client command names
-                self.completions = [cmd for cmd in self.commands
-                                    if cmd.startswith(text)]
-            elif parts[0] in ('r', 'run', 'e', 'edit',
-                              'update', 'sim', 'simulate'):
+                self.completions = [
+                    cmd for cmd in self.commands if cmd.startswith(text)
+                ]
+            elif parts[0] in ("r", "run", "e", "edit", "update", "sim", "simulate"):
                 # complete filenames
                 try:
                     fn = parts[1]
                 except IndexError:
-                    fn = ''
+                    fn = ""
                 self.completions = self.complete_filename(fn, text)
-            elif parts[0] in ('eval', 'exec'):
+            elif parts[0] in ("eval", "exec"):
                 # complete code -- ask the server to complete for us
                 try:
-                    self.completions = self.ask('complete', text,
-                                                parts[1], default=[])
+                    self.completions = self.ask("complete", text, parts[1], default=[])
                 except Exception:
                     self.completions = []
             else:
@@ -992,18 +1113,18 @@ class NicosCmdClient(NicosClient):
     def handle(self, cmd):
         """Handle a command line."""
         # dispatch either as a client command...
-        if cmd.startswith('/'):
-            args = cmd[1:].split(None, 1) + ['', '']
+        if cmd.startswith("/"):
+            args = cmd[1:].split(None, 1) + ["", ""]
             return self.command(args[0], args[1])
         elif cmd:
             # or as "normal" Python code to execute
-            return self.command('cmd', cmd)
+            return self.command("cmd", cmd)
         # an empty line is ignored
 
     def main(self):
         """Connect and then run the main read-send-print loop."""
         try:
-            self.command('reconnect', '')
+            self.command("reconnect", "")
             while 1:
                 if self.debug_mode:
                     self.debug_repl()
@@ -1011,11 +1132,11 @@ class NicosCmdClient(NicosClient):
                     cmd = self.readline(self.prompt)
                 except KeyboardInterrupt:
                     # offer the user a choice of ways of stopping
-                    if self.status == 'running' and not self.spy_mode:
-                        self.stop_query('Keyboard interrupt')
+                    if self.status == "running" and not self.spy_mode:
+                        self.stop_query("Keyboard interrupt")
                     continue
                 except EOFError:
-                    self.command('quit', '')
+                    self.command("quit", "")
                     return 0
                 except StateChange:
                     continue
@@ -1030,19 +1151,19 @@ class NicosCmdClient(NicosClient):
 
     def main_with_command(self, command):
         self.quiet_connect = True
-        self.command('reconnect', '')
+        self.command("reconnect", "")
         self.handle(command)
         time.sleep(0.1)
-        while self.status != 'idle':
+        while self.status != "idle":
             time.sleep(0.1)
-        self.command('quit', '')
+        self.command("quit", "")
         return 0
 
 
 # help texts
 
 HELP = {
-    'main': '''\
+    "main": """\
 This is the NICOS command-line client.  You can enter all NICOS commands
 at the command line; enter "help()" for an overview of NICOS commands
 and devices.
@@ -1080,8 +1201,8 @@ All output prefixed with "#" comes from the client.
 
 To learn how to pre-set your connection parameters, enter "/help connect".
 To learn about debugging commands, enter "/help debug".
-''',
-    'connect': '''\
+""",
+    "connect": """\
 Connection defaults can be given on the command-line, e.g.
 
   nicos-client user@server:port
@@ -1106,8 +1227,8 @@ command line
   nicos-client tas
 
 or by a symlink to "nicos-client" called "tas".
-''',
-    'debug': '''\
+""",
+    "debug": """\
 There are several debugging commands built into the client:
 
 While a script is running:
@@ -1129,12 +1250,12 @@ At any time:
   /debugclient        -- drop into a pdb shell to debug the client:
                          exit using the "c" command
   /subsec             -- toggle subsecond display for message timestamps
-'''
+""",
 }
 
 
 def main(argv):
-    server = user = via = command = ''
+    server = user = via = command = ""
     password = None
 
     # to automatically close an SSH tunnel, we execute something on the remote
@@ -1143,23 +1264,23 @@ def main(argv):
     # client has disconnected -- normally, "sleep" should be available as a
     # dummy remote command, but e.g. on erebos.frm2.tum.de it isn't, so we
     # allow configuring this (but only in the config file, not on the cmdline)
-    viacommand = 'sleep 10'
+    viacommand = "sleep 10"
 
     # a connection "profile" can be given by invoking this executable
     # under a different name (via symlink) ...
-    configsection = 'connect'
-    if not argv[0].endswith('nicos-client'):
+    configsection = "connect"
+    if not argv[0].endswith("nicos-client"):
         configsection = path.basename(argv[0])
 
     config = configparser.RawConfigParser()
-    config.read([path.expanduser('~/.nicos-client')])
+    config.read([path.expanduser("~/.nicos-client")])
 
     # check for "command to run" switch
-    if '-c' in argv:
-        n = argv.index('-c')
+    if "-c" in argv:
+        n = argv.index("-c")
         if len(argv) >= n:
-            command = argv[n+1]
-        del argv[n:n+2]
+            command = argv[n + 1]
+        del argv[n : n + 2]
 
     # ... or by "profile" on the command line (other arguments are
     # interpreted as a connection data string)
@@ -1168,33 +1289,33 @@ def main(argv):
             configsection = argv[1]
         else:
             cd = parseConnectionString(argv[1], DEFAULT_PORT)
-            server = '%s:%s' % (cd['host'], cd['port'])
-            user = cd['user']
-            password = cd['password']
-        if argv[3:] and argv[2] == 'via':
+            server = "%s:%s" % (cd["host"], cd["port"])
+            user = cd["user"]
+            password = cd["password"]
+        if argv[3:] and argv[2] == "via":
             via = argv[3]
 
     # check for profile name as a config section (given by argv0 or on the
     # command line); if not present, fall back to default
     if not config.has_section(configsection):
-        configsection = 'connect'
+        configsection = "connect"
 
     # take all connection parameters from the config file if not defined
     # on the command line
-    if not server and config.has_option(configsection, 'server'):
-        server = config.get(configsection, 'server')
-    if not user and config.has_option(configsection, 'user'):
-        user = config.get(configsection, 'user')
-    if not password and config.has_option(configsection, 'passwd'):
-        password = config.get(configsection, 'passwd')
-    if not via and config.has_option(configsection, 'via'):
-        via = config.get(configsection, 'via')
-    if config.has_option(configsection, 'viacommand'):
-        viacommand = config.get(configsection, 'viacommand')
+    if not server and config.has_option(configsection, "server"):
+        server = config.get(configsection, "server")
+    if not user and config.has_option(configsection, "user"):
+        user = config.get(configsection, "user")
+    if not password and config.has_option(configsection, "passwd"):
+        password = config.get(configsection, "passwd")
+    if not via and config.has_option(configsection, "via"):
+        via = config.get(configsection, "via")
+    if config.has_option(configsection, "viacommand"):
+        viacommand = config.get(configsection, "viacommand")
 
     # split server in host:port components
     try:
-        host, port = server.split(':', 1)
+        host, port = server.split(":", 1)
         port = int(port)
     except ValueError:
         host = server
@@ -1205,11 +1326,25 @@ def main(argv):
     if via:
         # use a random (hopefully free) high numbered port on our side
         nport = random.randint(10000, 20000)
-        os.execvp('sh', ['sh', '-c',
-                         'ssh -f -L "%s:%s:%s" "%s" %s && %s "%s%s@localhost:%s"' %
-                         (nport, host, port, via, viacommand, argv[0], user,
-                          (':%s' % password if password is not None else ''),
-                          nport)])
+        os.execvp(
+            "sh",
+            [
+                "sh",
+                "-c",
+                'ssh -f -L "%s:%s:%s" "%s" %s && %s "%s%s@localhost:%s"'
+                % (
+                    nport,
+                    host,
+                    port,
+                    via,
+                    viacommand,
+                    argv[0],
+                    user,
+                    (":%s" % password if password is not None else ""),
+                    nport,
+                ),
+            ],
+        )
 
     # don't interrupt event thread's system calls
     signal.siginterrupt(signal.SIGINT, False)

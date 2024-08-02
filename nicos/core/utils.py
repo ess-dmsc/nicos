@@ -32,25 +32,31 @@ from time import localtime, time as currenttime
 from nicos import nicos_version, session
 from nicos.core import status
 from nicos.core.constants import SIMULATION
-from nicos.core.errors import CommunicationError, ComputationError, \
-    InvalidValueError, LimitError, MoveError, NicosError, NicosTimeoutError, \
-    PositionError
+from nicos.core.errors import (
+    CommunicationError,
+    ComputationError,
+    InvalidValueError,
+    LimitError,
+    MoveError,
+    NicosError,
+    NicosTimeoutError,
+    PositionError,
+)
 from nicos.utils import createThread, formatDuration, toAscii
 
 # Exceptions at which a scan point is measured anyway.
 CONTINUE_EXCEPTIONS = (PositionError, MoveError, NicosTimeoutError)
 # Exceptions at which a scan point is skipped.
-SKIP_EXCEPTIONS = (InvalidValueError, LimitError, CommunicationError,
-                   ComputationError)
+SKIP_EXCEPTIONS = (InvalidValueError, LimitError, CommunicationError, ComputationError)
 
 
 # user access levels
 GUEST = 0
 USER = 10
 ADMIN = 20
-ACCESS_LEVELS = {GUEST: 'guest', USER: 'user', ADMIN: 'admin'}
+ACCESS_LEVELS = {GUEST: "guest", USER: "user", ADMIN: "admin"}
 
-_User = namedtuple('User', ('name', 'level', 'data'))
+_User = namedtuple("User", ("name", "level", "data"))
 
 
 class User(_User):
@@ -62,8 +68,8 @@ class User(_User):
         return _User.__new__(cls, name, level, {} if data is None else data)
 
 
-system_user = User('system', ADMIN)
-watchdog_user = User('watchdog', ADMIN)
+system_user = User("system", ADMIN)
+watchdog_user = User("watchdog", ADMIN)
 
 
 def usermethod(func):
@@ -75,7 +81,7 @@ def usermethod(func):
     return func
 
 
-def deprecated(since=nicos_version, comment=''):
+def deprecated(since=nicos_version, comment=""):
     """This is a decorator which can be used to mark functions as deprecated.
 
     It will result in a warning being emitted when the function is used.
@@ -86,16 +92,19 @@ def deprecated(since=nicos_version, comment=''):
     The ``comment`` should contain a hint to the user, what should be used
     instead.
     """
+
     def deco(f):
-        msg = '%r is deprecated since version %r.' % (f.__name__, since)
+        msg = "%r is deprecated since version %r." % (f.__name__, since)
 
         @wraps(f)
         def new_func(*args, **options):
             for l in [msg, comment]:
                 session.log.warning(l)
             return f(*args, **options)
-        new_func.__doc__ += ' %s %s' % (msg, comment)
+
+        new_func.__doc__ += " %s %s" % (msg, comment)
         return new_func
+
     return deco
 
 
@@ -116,6 +125,7 @@ def devIter(devices, baseclass=None, onlydevs=True, allwaiters=False):
     if baseclass is None:
         # avoid import loop and still default to Device
         from nicos.core.device import Device
+
         baseclass = Device
     # convert dict to list of name:dev tuples
     if isinstance(devices, dict):
@@ -134,14 +144,16 @@ def devIter(devices, baseclass=None, onlydevs=True, allwaiters=False):
             for subdev in dev:
                 if isinstance(subdev, baseclass):
                     if allwaiters:
-                        yield from devIter(subdev._getWaiters(), baseclass,
-                                           onlydevs, allwaiters)
+                        yield from devIter(
+                            subdev._getWaiters(), baseclass, onlydevs, allwaiters
+                        )
                     yield subdev if onlydevs else (subdev.name, subdev)
         else:
             if isinstance(dev, baseclass):
                 if allwaiters:
-                    yield from devIter(dev._getWaiters(), baseclass,
-                                       onlydevs, allwaiters)
+                    yield from devIter(
+                        dev._getWaiters(), baseclass, onlydevs, allwaiters
+                    )
                 yield dev if onlydevs else (devname, dev)
 
 
@@ -165,17 +177,19 @@ def multiStatus(devices, maxage=None):
     retstate = 0
     for devname, dev in devIter(devices, Readable, onlydevs=False):
         state, text = dev.status(maxage)
-        if '=' in text:
-            rettext.append('%s=(%s)' % (devname, text))
+        if "=" in text:
+            rettext.append("%s=(%s)" % (devname, text))
         elif text:
-            rettext.append('%s=%s' % (devname, text))
+            rettext.append("%s=%s" % (devname, text))
         if state > retstate:
             retstate = state
     if retstate > 0:
-        return retstate, ', '.join(rettext)
+        return retstate, ", ".join(rettext)
     else:
-        return status.UNKNOWN, 'no status could be determined (no doStatus ' \
-                               'implemented?)'
+        return (
+            status.UNKNOWN,
+            "no status could be determined (no doStatus " "implemented?)",
+        )
 
 
 def multiWait(devices):
@@ -196,27 +210,30 @@ def multiWait(devices):
     from nicos.core.device import Waitable
 
     def get_target_str():
-        return ', '.join('%s -> %s' % (dev, dev.format(dev.target))
-                         if hasattr(dev, 'target') else str(dev)
-                         for dev in reversed(devlist))
+        return ", ".join(
+            "%s -> %s" % (dev, dev.format(dev.target))
+            if hasattr(dev, "target")
+            else str(dev)
+            for dev in reversed(devlist)
+        )
 
     delay = 0.3
     final_exc = None
     devlist = list(devIter(devices, baseclass=Waitable, allwaiters=True))
-    session.log.debug('multiWait: initial devices %s, all waiters %s',
-                      devices, devlist)
+    session.log.debug("multiWait: initial devices %s, all waiters %s", devices, devlist)
     values = {}
     loops = -2  # wait 2 iterations for full loop
     eta_update = 1 if session.mode != SIMULATION else 0
     first_ts = currenttime()
-    session.beginActionScope('Waiting')
-    eta_str = ''
+    session.beginActionScope("Waiting")
+    eta_str = ""
     target_str = get_target_str()
     session.action(target_str)
     try:
         while devlist:
-            session.log.debug('multiWait: iteration %d, devices left %s',
-                              loops, devlist)
+            session.log.debug(
+                "multiWait: iteration %d, devices left %s", loops, devlist
+            )
             loops += 1
             for dev in devlist[:]:
                 try:
@@ -231,7 +248,7 @@ def multiWait(devices):
                     devlist.remove(dev)
                     if devlist:
                         # at least one more device left, show the exception now
-                        dev.log.exception('while waiting')
+                        dev.log.exception("while waiting")
                     continue
                 if not done:
                     # we found one busy dev, normally go to next iteration
@@ -257,8 +274,9 @@ def multiWait(devices):
                     eta = {dev.estimateTime(now - first_ts) for dev in devlist}
                     eta.discard(None)
                     # use max here as we wait for ALL movements to finish
-                    eta_str = ('Estimated %s left / ' % formatDuration(max(eta))
-                               if eta else '')
+                    eta_str = (
+                        "Estimated %s left / " % formatDuration(max(eta)) if eta else ""
+                    )
                     session.action(eta_str + target_str)
                 session.delay(delay)
                 eta_update += delay
@@ -266,18 +284,20 @@ def multiWait(devices):
             raise final_exc
     finally:
         session.endActionScope()
-        session.log.debug('multiWait: finished')
+        session.log.debug("multiWait: finished")
     return values
 
 
 def filterExceptions(curr, prev):
     if not prev:
         return curr
-    if (isinstance(prev, CONTINUE_EXCEPTIONS) and
-       not isinstance(curr, CONTINUE_EXCEPTIONS)):
+    if isinstance(prev, CONTINUE_EXCEPTIONS) and not isinstance(
+        curr, CONTINUE_EXCEPTIONS
+    ):
         return curr
-    if (isinstance(prev, SKIP_EXCEPTIONS) and
-       not isinstance(curr, SKIP_EXCEPTIONS + CONTINUE_EXCEPTIONS)):
+    if isinstance(prev, SKIP_EXCEPTIONS) and not isinstance(
+        curr, SKIP_EXCEPTIONS + CONTINUE_EXCEPTIONS
+    ):
         return curr
     return prev
 
@@ -323,47 +343,50 @@ def multiReference(dev, subdevs, parallel=False):
     if not parallel:
         for subdev in subdevs:
             if isinstance(subdev, CanReference):
-                dev.log.info('referencing %s...', subdev)
+                dev.log.info("referencing %s...", subdev)
                 subdev.reference()
             else:
-                dev.log.warning('%s cannot be referenced', subdev)
+                dev.log.warning("%s cannot be referenced", subdev)
         return
 
     def threaded_ref(i, d):
         try:
             d.reference()
         except Exception:
-            d.log.error('while referencing', exc=1)
+            d.log.error("while referencing", exc=1)
             errored[i] = True
 
     threads = []
     errored = [False] * len(subdevs)
 
-    for (i, subdev) in enumerate(subdevs):
+    for i, subdev in enumerate(subdevs):
         if isinstance(subdev, CanReference):
-            dev.log.info('referencing %s...', subdev)
-            threads.append(createThread('reference %s' % subdev,
-                                        threaded_ref, (i, subdev)))
+            dev.log.info("referencing %s...", subdev)
+            threads.append(
+                createThread("reference %s" % subdev, threaded_ref, (i, subdev))
+            )
         else:
-            dev.log.warning('%s cannot be referenced', subdev)
+            dev.log.warning("%s cannot be referenced", subdev)
 
     for thread in threads:
         thread.join()
     if any(errored):
-        raise MoveError(dev, 'referencing failed for ' +
-                        ', '.join(str(subdev) for (subdev, err)
-                                  in zip(subdevs, errored) if err))
+        raise MoveError(
+            dev,
+            "referencing failed for "
+            + ", ".join(str(subdev) for (subdev, err) in zip(subdevs, errored) if err),
+        )
 
 
 def formatStatus(st):
     const, message = st
     const = status.statuses.get(const, str(const))
-    return const + (message and ': ' + message or '')
+    return const + (message and ": " + message or "")
 
 
 def statusString(*strs):
     """Combine multiple status strings, using commas as needed."""
-    return ', '.join(s for s in strs if s)
+    return ", ".join(s for s in strs if s)
 
 
 def _multiMethod(baseclass, method, devices):
@@ -383,7 +406,7 @@ def _multiMethod(baseclass, method, devices):
             # method has to be provided by baseclass!
             getattr(dev, method)()
         except Exception as exc:
-            dev.log.exception('during %s()', method)
+            dev.log.exception("during %s()", method)
             final_exc = filterExceptions(exc, final_exc)
     if final_exc:
         raise final_exc
@@ -396,7 +419,8 @@ def multiStop(devices):
     finished, all other exceptions are logged and not re-raised.
     """
     from nicos.core.device import Moveable
-    _multiMethod(Moveable, 'stop', devices)
+
+    _multiMethod(Moveable, "stop", devices)
 
 
 def multiReset(devices):
@@ -406,18 +430,19 @@ def multiReset(devices):
     finished, all other exceptions are logged and not re-raised.
     """
     from nicos.core.device import Readable
-    _multiMethod(Readable, 'reset', devices)
+
+    _multiMethod(Readable, "reset", devices)
 
 
-class DeviceValue(namedtuple('DeviceValue',
-                             ('raw', 'formatted', 'unit', 'category'))):
+class DeviceValue(namedtuple("DeviceValue", ("raw", "formatted", "unit", "category"))):
     """Wrapper for metainfo values
 
-        Provides different ways to access the meta info:
-        - as a tuple with numeric indexing
-        - as an object with named access
-        - string representation compatible with legacy DeviceValueDict usage
+    Provides different ways to access the meta info:
+    - as a tuple with numeric indexing
+    - as an object with named access
+    - string representation compatible with legacy DeviceValueDict usage
     """
+
     __slots__ = ()
 
     def __str__(self):
@@ -458,16 +483,17 @@ class DeviceValueDict:
     >>> '%(stuff)03d_%(Sample.samplename)s' % d # intended use case
     '001_Samplename of currently used sample.'
     """
+
     def __init__(self, *args, **kwargs):
         self._constvals = dict(*args, **kwargs)
         # convenience stuff
         l = localtime()
-        self._constvals.setdefault('year', l.tm_year)
-        self._constvals.setdefault('month', l.tm_mon)
-        self._constvals.setdefault('day', l.tm_mday)
-        self._constvals.setdefault('hour', l.tm_hour)
-        self._constvals.setdefault('minute', l.tm_min)
-        self._constvals.setdefault('second', l.tm_sec)
+        self._constvals.setdefault("year", l.tm_year)
+        self._constvals.setdefault("month", l.tm_mon)
+        self._constvals.setdefault("day", l.tm_mday)
+        self._constvals.setdefault("hour", l.tm_hour)
+        self._constvals.setdefault("minute", l.tm_min)
+        self._constvals.setdefault("second", l.tm_sec)
 
     def __setitem__(self, key, value):
         self._constvals[key] = value
@@ -479,7 +505,7 @@ class DeviceValueDict:
         del self._constvals[key]
 
     def __getitem__(self, key):
-        res = ''
+        res = ""
         raw = None
         unit = None
         # we dont want to raise anything!
@@ -494,10 +520,10 @@ class DeviceValueDict:
                 res = dev.format(raw)
                 unit = dev.unit
             # attrib path? (must start with a device!)
-            elif '.' in key:
-                keys = key.split('.')
+            elif "." in key:
+                keys = key.split(".")
                 # handle session specially
-                if keys[0] == 'session':
+                if keys[0] == "session":
                     dev = session
                 else:
                     dev = session.getDevice(keys[0])
@@ -507,20 +533,21 @@ class DeviceValueDict:
                     for key in keys:
                         extra = []
                         while key:
-                            if key.endswith(']') and '[' in key:
-                                splitpos = key.rfind('[')
+                            if key.endswith("]") and "[" in key:
+                                splitpos = key.rfind("[")
                                 extra.insert(0, key[splitpos:])
                                 key = key[:splitpos]
-                            elif key.endswith(')') and '(' in key:
-                                splitpos = key.rfind('(')
+                            elif key.endswith(")") and "(" in key:
+                                splitpos = key.rfind("(")
                                 extra.insert(0, key[splitpos:])
                                 key = key[:splitpos]
                             else:
                                 break
                         yield key
                         yield from extra
+
                 for sub in _keyiter(keys[1:]):
-                    if sub.endswith(']'):
+                    if sub.endswith("]"):
                         val = sub[1:-1]
                         try:
                             val = float(val)
@@ -528,8 +555,8 @@ class DeviceValueDict:
                         except Exception:
                             pass
                         dev = dev[val]
-                    elif sub.endswith(')'):
-                        args = sub[1:-1].split(',')
+                    elif sub.endswith(")"):
+                        args = sub[1:-1].split(",")
                         args = [a for a in args if a]  # strip empty args
                         for i, a in enumerate(args):
                             try:
@@ -539,33 +566,31 @@ class DeviceValueDict:
                                 pass
                         # TODO: handle kwargs
                         args = tuple(args)
-                        session.log.debug('calling %s%r', dev, args)
+                        session.log.debug("calling %s%r", dev, args)
                         dev = dev(*args)
                     elif hasattr(dev, sub):
                         dev = getattr(dev, sub)
-                    elif hasattr(dev, '_adevs') and sub in dev._adevs:
+                    elif hasattr(dev, "_adevs") and sub in dev._adevs:
                         dev = dev._adevs[sub]
-                    elif hasattr(dev, '__contains__') and sub in dev:
+                    elif hasattr(dev, "__contains__") and sub in dev:
                         dev = dev[sub]
                     else:
-                        session.log.warning("invalid key %r requested, "
-                                            "returning %r", key, res,
-                                            exc=1)
+                        session.log.warning(
+                            "invalid key %r requested, " "returning %r", key, res, exc=1
+                        )
                         break
                 else:
                     # stringify result
                     res = str(dev)
         except Exception:
-            session.log.warning("invalid key %r requested, returning %r",
-                                key, res, exc=1)
+            session.log.warning(
+                "invalid key %r requested, returning %r", key, res, exc=1
+            )
         if isinstance(res, bytes):
-            res = toAscii(res.decode('latin1', 'ignore'))
+            res = toAscii(res.decode("latin1", "ignore"))
         if isinstance(res, DeviceValue):
             return res
         if raw is None:
             raw = res
-        final = DeviceValue(raw=raw,
-                            formatted=res,
-                            unit=unit or '',
-                            category='meta')
+        final = DeviceValue(raw=raw, formatted=res, unit=unit or "", category="meta")
         return final

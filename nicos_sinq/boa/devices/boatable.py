@@ -36,14 +36,24 @@ from nicos.core import Device, Param, listof, nicosdev, usermethod
 
 class BoaTable(Device):
     parameters = {
-        'standard_devices': Param('Standard Devices', type=listof(nicosdev),
-                                  userparam=False),
-        'setups': Param('setups on this table', type=listof(str),
-                        userparam=False, settable=True, default=[]),
-        'additional_devices': Param('additional devices attached '
-                                    'to the table', type=listof(nicosdev),
-                                    default=[], settable=True,
-                                    userparam=False), }
+        "standard_devices": Param(
+            "Standard Devices", type=listof(nicosdev), userparam=False
+        ),
+        "setups": Param(
+            "setups on this table",
+            type=listof(str),
+            userparam=False,
+            settable=True,
+            default=[],
+        ),
+        "additional_devices": Param(
+            "additional devices attached " "to the table",
+            type=listof(nicosdev),
+            default=[],
+            settable=True,
+            userparam=False,
+        ),
+    }
 
     hardware_access = False
 
@@ -51,7 +61,7 @@ class BoaTable(Device):
     def addSetup(self, name):
         """add the named setup to the table"""
         if name not in session.loaded_setups:
-            raise ValueError('%s not a loaded setup' % name)
+            raise ValueError("%s not a loaded setup" % name)
         if name not in self.setups:
             tmp = list(self.setups)
             tmp.append(name)
@@ -59,7 +69,7 @@ class BoaTable(Device):
 
     @usermethod
     def removeSetup(self, name):
-        """"remove the named setup from the table"""
+        """ "remove the named setup from the table"""
         if name in self.setups:
             tmp = list(self.setups)
             tmp.remove(name)
@@ -69,7 +79,7 @@ class BoaTable(Device):
     def addDevice(self, name):
         """add the named device to the table"""
         if name not in session.configured_devices:
-            raise ValueError('device %s is not available' % name)
+            raise ValueError("device %s is not available" % name)
         if name not in self.additional_devices:
             tmp = list(self.additional_devices)
             tmp.append(name)
@@ -77,7 +87,7 @@ class BoaTable(Device):
 
     @usermethod
     def removeDevice(self, name):
-        """"remove the named device from the table"""
+        """ "remove the named device from the table"""
         if name in self.additional_devices:
             tmp = list(self.additional_devices)
             tmp.remove(name)
@@ -86,22 +96,21 @@ class BoaTable(Device):
     @usermethod
     def show(self):
         """list the current configuration of the table"""
-        txt = 'Table %s Configuration:\n' % self.doReadName()
-        txt += 'Standard Devices:\n'
-        txt += '\t %s\n' % ', '.join(self.standard_devices)
-        txt += 'Setups:\n'
-        txt += '\t%s\n' % ', '.join(self.setups)
-        txt += 'Additional Devices\n'
-        txt += '\t%s\n' % ', '.join(self.additional_devices)
-        txt += 'Total Devices\n'
-        txt += '\t%s\n' % ', '.join(self.getTableDevices())
+        txt = "Table %s Configuration:\n" % self.doReadName()
+        txt += "Standard Devices:\n"
+        txt += "\t %s\n" % ", ".join(self.standard_devices)
+        txt += "Setups:\n"
+        txt += "\t%s\n" % ", ".join(self.setups)
+        txt += "Additional Devices\n"
+        txt += "\t%s\n" % ", ".join(self.additional_devices)
+        txt += "Total Devices\n"
+        txt += "\t%s\n" % ", ".join(self.getTableDevices())
         session.log.info(txt)
 
     def getTableDevices(self):
-        result = list(
-            itertools.chain(self.standard_devices, self.additional_devices))
+        result = list(itertools.chain(self.standard_devices, self.additional_devices))
         setupInfo = session.getSetupInfo()
         for setup in self.setups:
             info = setupInfo[setup]
-            result = list(itertools.chain(result, info['devices'].keys()))
+            result = list(itertools.chain(result, info["devices"].keys()))
         return result

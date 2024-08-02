@@ -28,12 +28,31 @@ from time import time
 from nicos.clients.gui.panels import Panel
 from nicos.clients.gui.utils import loadUi
 from nicos.guisupport.colors import colors
-from nicos.guisupport.qt import QActionGroup, QBrush, QColor, QFontMetrics, \
-    QIcon, QListWidgetItem, QMenu, QPen, QPixmap, QSize, QStyledItemDelegate, \
-    Qt, QTimer, QToolBar, pyqtSlot
+from nicos.guisupport.qt import (
+    QActionGroup,
+    QBrush,
+    QColor,
+    QFontMetrics,
+    QIcon,
+    QListWidgetItem,
+    QMenu,
+    QPen,
+    QPixmap,
+    QSize,
+    QStyledItemDelegate,
+    Qt,
+    QTimer,
+    QToolBar,
+    pyqtSlot,
+)
 from nicos.guisupport.utils import setBackgroundColor
-from nicos.protocols.daemon import BREAK_AFTER_LINE, BREAK_AFTER_STEP, \
-    BREAK_NOW, SIM_STATES, STATUS_IDLEEXC
+from nicos.protocols.daemon import (
+    BREAK_AFTER_LINE,
+    BREAK_AFTER_STEP,
+    BREAK_NOW,
+    SIM_STATES,
+    STATUS_IDLEEXC,
+)
 from nicos.utils import formatEndtime
 
 
@@ -45,9 +64,9 @@ class ScriptQueue:
         self._timer = QTimer(singleShot=True, timeout=self._timeout)
 
     def _format_item(self, request):
-        script = request['script']
+        script = request["script"]
         if len(script) > 100:
-            return script[:100] + '...'
+            return script[:100] + "..."
         return script
 
     def _timeout(self):
@@ -55,15 +74,15 @@ class ScriptQueue:
 
     def append(self, request):
         item = QListWidgetItem(self._format_item(request))
-        item.setData(Qt.ItemDataRole.UserRole, request['reqid'])
-        self._id2item[request['reqid']] = item
+        item.setData(Qt.ItemDataRole.UserRole, request["reqid"])
+        self._id2item[request["reqid"]] = item
         self._view.addItem(item)
         # delay showing the frame for 20 msecs, so that it doesn't flicker in
         # and out if the script is immediately taken out of the queue again
         self._timer.start(20)
 
     def update(self, request):
-        item = self._id2item.get(request['reqid'])
+        item = self._id2item.get(request["reqid"])
         if item:
             text = self._format_item(request)
             item.setText(text)
@@ -80,7 +99,7 @@ class ScriptQueue:
 
     def rearrange(self, reqids):
         selected = self._view.currentItem()
-        for i in range(self._view.count()-1, -1, -1):
+        for i in range(self._view.count() - 1, -1, -1):
             self._view.takeItem(i)
         for reqid in reqids:
             self._view.addItem(self._id2item[reqid])
@@ -101,7 +120,7 @@ class LineDelegate(QStyledItemDelegate):
         QStyledItemDelegate.__init__(self, view)
         self._icon_offset = offset
         self._margin_offset = 0
-        self._pen = QPen(QBrush(QColor('grey')), 1)
+        self._pen = QPen(QBrush(QColor("grey")), 1)
 
     def paint(self, painter, option, index):
         QStyledItemDelegate.paint(self, painter, option, index)
@@ -133,16 +152,13 @@ class ScriptStatusPanel(Panel):
       with automatic simulation of the current command.
     """
 
-    panelName = 'Script status'
+    panelName = "Script status"
 
-    SHOW_ETA_STATES =[
-        'running',
-        'paused'
-    ]
+    SHOW_ETA_STATES = ["running", "paused"]
 
     def __init__(self, parent, client, options):
         Panel.__init__(self, parent, client, options)
-        loadUi(self, 'panels/status.ui')
+        loadUi(self, "panels/status.ui")
 
         self.stopcounting = False
         self.menus = None
@@ -155,20 +171,20 @@ class ScriptStatusPanel(Panel):
         self.script_queue = ScriptQueue(self.queueFrame, self.queueView)
         self.current_line = -1
         self.current_request = {}
-        self.curlineicon = QIcon(':/currentline')
-        self.errlineicon = QIcon(':/errorline')
+        self.curlineicon = QIcon(":/currentline")
+        self.errlineicon = QIcon(":/errorline")
         empty = QPixmap(16, 16)
         empty.fill(Qt.GlobalColor.transparent)
         self.otherlineicon = QIcon(empty)
         self.traceView.setItemDelegate(LineDelegate(24, self.traceView))
 
-        self.stopcounting = bool(options.get('stopcounting', False))
+        self.stopcounting = bool(options.get("stopcounting", False))
         if self.stopcounting:
-            tooltip = 'Aborts the current executed script'
+            tooltip = "Aborts the current executed script"
             self.actionStop.setToolTip(tooltip)
-            self.actionStop.setText('Abort current script')
+            self.actionStop.setText("Abort current script")
 
-        self.showETA = bool(options.get('eta', False))
+        self.showETA = bool(options.get("eta", False))
         self.etaWidget.hide()
 
         client.request.connect(self.on_client_request)
@@ -181,27 +197,27 @@ class ScriptStatusPanel(Panel):
         client.updated.connect(self.on_client_updated)
         client.eta.connect(self.on_client_eta)
 
-        bar = QToolBar('Script control')
+        bar = QToolBar("Script control")
         bar.setObjectName(bar.windowTitle())
         # unfortunately it is not wise to put a menu in its own dropdown menu,
         # so we have to duplicate the actionBreak and actionStop...
-        dropdown1 = QMenu('', self)
+        dropdown1 = QMenu("", self)
         dropdown1.addAction(self.actionBreak)
         dropdown1.addAction(self.actionBreakCount)
         dropdown1.addAction(self.actionFinishEarly)
         self.actionBreak2 = dropdown1.menuAction()
-        self.actionBreak2.setText('&amp;Pause after current scan point')
-        self.actionBreak2.setIcon(QIcon(':/break'))
+        self.actionBreak2.setText("&amp;Pause after current scan point")
+        self.actionBreak2.setIcon(QIcon(":/break"))
         self.actionBreak2.triggered.connect(self.on_actionBreak2_triggered)
 
-        dropdown2 = QMenu('', self)
+        dropdown2 = QMenu("", self)
         dropdown2.addAction(self.actionStop)
         dropdown2.addAction(self.actionFinish)
         dropdown2.addAction(self.actionFinishEarlyAndStop)
         self.actionStop2 = dropdown2.menuAction()
-        self.actionStop2.setText('&amp;Stop after current scan point')
+        self.actionStop2.setText("&amp;Stop after current scan point")
         self.actionStop2.setToolTip(self.actionStop.toolTip())
-        self.actionStop2.setIcon(QIcon(':/stop'))
+        self.actionStop2.setIcon(QIcon(":/stop"))
         self.actionStop2.triggered.connect(self.on_actionStop2_triggered)
 
         bar.addAction(self.actionBreak2)
@@ -211,7 +227,7 @@ class ScriptStatusPanel(Panel):
         self.bar = bar
         # self.mainwindow.addToolBar(bar)
 
-        menu = QMenu('&Script control', self)
+        menu = QMenu("&Script control", self)
         menu.addAction(self.actionBreak)
         menu.addAction(self.actionBreakCount)
         menu.addAction(self.actionContinue)
@@ -223,7 +239,8 @@ class ScriptStatusPanel(Panel):
         menu.addSeparator()
         menu.addAction(self.actionEmergencyStop)
         self.mainwindow.menuBar().insertMenu(
-            self.mainwindow.menuWindows.menuAction(), menu)
+            self.mainwindow.menuWindows.menuAction(), menu
+        )
 
         self.activeGroup = QActionGroup(self)
         self.activeGroup.addAction(self.actionBreak)
@@ -236,7 +253,7 @@ class ScriptStatusPanel(Panel):
         self.activeGroup.addAction(self.actionFinishEarly)
         self.activeGroup.addAction(self.actionFinishEarlyAndStop)
 
-        self._status = 'idle'
+        self._status = "idle"
 
     def setViewOnly(self, viewonly):
         self.activeGroup.setEnabled(not viewonly)
@@ -256,20 +273,20 @@ class ScriptStatusPanel(Panel):
     def updateStatus(self, status, exception=False):
         self._status = status
 
-        isconnected = status != 'disconnected'
-        self.actionBreak.setEnabled(isconnected and status != 'idle')
-        self.actionBreak2.setEnabled(isconnected and status != 'idle')
-        self.actionBreak2.setVisible(status != 'paused')
-        self.actionBreakCount.setEnabled(isconnected and status != 'idle')
-        self.actionContinue.setVisible(status == 'paused')
-        self.actionStop.setEnabled(isconnected and status != 'idle')
-        self.actionStop2.setEnabled(isconnected and status != 'idle')
-        self.actionFinish.setEnabled(isconnected and status != 'idle')
-        self.actionFinishEarly.setEnabled(isconnected and status != 'idle')
-        self.actionFinishEarlyAndStop.setEnabled(isconnected and status != 'idle')
+        isconnected = status != "disconnected"
+        self.actionBreak.setEnabled(isconnected and status != "idle")
+        self.actionBreak2.setEnabled(isconnected and status != "idle")
+        self.actionBreak2.setVisible(status != "paused")
+        self.actionBreakCount.setEnabled(isconnected and status != "idle")
+        self.actionContinue.setVisible(status == "paused")
+        self.actionStop.setEnabled(isconnected and status != "idle")
+        self.actionStop2.setEnabled(isconnected and status != "idle")
+        self.actionFinish.setEnabled(isconnected and status != "idle")
+        self.actionFinishEarly.setEnabled(isconnected and status != "idle")
+        self.actionFinishEarlyAndStop.setEnabled(isconnected and status != "idle")
         self.actionEmergencyStop.setEnabled(isconnected)
-        if status == 'paused':
-            self.statusLabel.setText('Script is paused.')
+        if status == "paused":
+            self.statusLabel.setText("Script is paused.")
             self.statusLabel.show()
             setBackgroundColor(self.traceView, self.pause_color)
         else:
@@ -277,23 +294,22 @@ class ScriptStatusPanel(Panel):
             setBackgroundColor(self.traceView, self.idle_color)
         self.traceView.update()
 
-        if status == 'idle':
+        if status == "idle":
             self.etaWidget.hide()
 
     def setScript(self, script):
         self.traceView.clear()
         lines = script.splitlines()
         longest = len(str(len(lines)))
-        padding = ' ' * (longest + 3)
+        padding = " " * (longest + 3)
         metrics = QFontMetrics(self.traceView.font())
         height = metrics.height()
-        lineno_width = metrics.size(0, ' ' * (longest + 2)).width()
+        lineno_width = metrics.size(0, " " * (longest + 2)).width()
         self.traceView.itemDelegate()._margin_offset = lineno_width
-        for (i, line) in enumerate(lines):
-            item = QListWidgetItem(self.otherlineicon, padding + line,
-                                   self.traceView)
+        for i, line in enumerate(lines):
+            item = QListWidgetItem(self.otherlineicon, padding + line, self.traceView)
             item.setSizeHint(QSize(-1, height))
-            item.setData(Qt.ItemDataRole.UserRole, '%*d' % (longest, i+1))
+            item.setData(Qt.ItemDataRole.UserRole, "%*d" % (longest, i + 1))
             self.traceView.addItem(item)
         self.current_line = -1
 
@@ -315,21 +331,21 @@ class ScriptStatusPanel(Panel):
             self.current_line = line
 
     def on_client_request(self, request):
-        if 'script' not in request:
+        if "script" not in request:
             return
         self.script_queue.append(request)
 
     def on_client_processing(self, request):
-        if 'script' not in request:
+        if "script" not in request:
             return
         new_current_line = -1
-        if self.current_request['reqid'] == request['reqid']:
+        if self.current_request["reqid"] == request["reqid"]:
             # on update, set the current line to the same as before
             # (this may be WRONG, but should not in most cases, and it's
             # better than no line indicator at all)
             new_current_line = self.current_line
-        self.script_queue.remove(request['reqid'])
-        self.setScript(request['script'])
+        self.script_queue.remove(request["reqid"])
+        self.setScript(request["script"])
         self.current_request = request
         self.setCurrentLine(new_current_line)
 
@@ -343,27 +359,27 @@ class ScriptStatusPanel(Panel):
 
         state, eta = data
 
-        if state == SIM_STATES['pending']:
+        if state == SIM_STATES["pending"]:
             self.etaWidget.hide()
-        elif state == SIM_STATES['running']:
-            self.etaLabel.setText('Calculating...')
+        elif state == SIM_STATES["running"]:
+            self.etaLabel.setText("Calculating...")
             self.etaWidget.show()
-        elif state == SIM_STATES['success'] and eta > time():
+        elif state == SIM_STATES["success"] and eta > time():
             self.etaLabel.setText(formatEndtime(eta - time()))
             self.etaWidget.show()
-        elif state == SIM_STATES['failed']:
-            self.etaLabel.setText('Could not calculate ETA')
+        elif state == SIM_STATES["failed"]:
+            self.etaLabel.setText("Could not calculate ETA")
             self.etaWidget.show()
 
     def on_client_initstatus(self, state):
-        self.setScript(state['script'])
-        self.current_request['script'] = state['script']
-        self.current_request['reqid'] = None
-        self.on_client_status(state['status'])
-        for req in state['requests']:
+        self.setScript(state["script"])
+        self.current_request["script"] = state["script"]
+        self.current_request["reqid"] = None
+        self.on_client_status(state["status"])
+        for req in state["requests"]:
             self.on_client_request(req)
         if self.showETA:
-            self.on_client_eta(state['eta'])
+            self.on_client_eta(state["eta"])
 
     def on_client_status(self, data):
         status, line = data
@@ -377,13 +393,13 @@ class ScriptStatusPanel(Panel):
         self.script_queue.rearrange(items)
 
     def on_client_updated(self, request):
-        if 'script' not in request:
+        if "script" not in request:
             return
         self.script_queue.update(request)
 
     @pyqtSlot()
     def on_actionBreak_triggered(self):
-        self.client.tell_action('break', BREAK_AFTER_STEP)
+        self.client.tell_action("break", BREAK_AFTER_STEP)
 
     @pyqtSlot()
     def on_actionBreak2_triggered(self):
@@ -391,18 +407,18 @@ class ScriptStatusPanel(Panel):
 
     @pyqtSlot()
     def on_actionBreakCount_triggered(self):
-        self.client.tell_action('break', BREAK_NOW)
+        self.client.tell_action("break", BREAK_NOW)
 
     @pyqtSlot()
     def on_actionContinue_triggered(self):
-        self.client.tell_action('continue')
+        self.client.tell_action("continue")
 
     @pyqtSlot()
     def on_actionStop_triggered(self):
         if self.stopcounting:
-            self.client.tell_action('stop', BREAK_NOW)
+            self.client.tell_action("stop", BREAK_NOW)
         else:
-            self.client.tell_action('stop', BREAK_AFTER_STEP)
+            self.client.tell_action("stop", BREAK_AFTER_STEP)
 
     @pyqtSlot()
     def on_actionStop2_triggered(self):
@@ -410,24 +426,24 @@ class ScriptStatusPanel(Panel):
 
     @pyqtSlot()
     def on_actionFinish_triggered(self):
-        self.client.tell_action('stop', BREAK_AFTER_LINE)
+        self.client.tell_action("stop", BREAK_AFTER_LINE)
 
     @pyqtSlot()
     def on_actionFinishEarly_triggered(self):
-        self.client.tell_action('finish')
+        self.client.tell_action("finish")
 
     @pyqtSlot()
     def on_actionFinishEarlyAndStop_triggered(self):
-        self.client.tell_action('stop', BREAK_AFTER_STEP)
-        self.client.tell_action('finish')
+        self.client.tell_action("stop", BREAK_AFTER_STEP)
+        self.client.tell_action("finish")
 
     @pyqtSlot()
     def on_actionEmergencyStop_triggered(self):
-        self.client.tell_action('emergency')
+        self.client.tell_action("emergency")
 
     @pyqtSlot()
     def on_clearQueue_clicked(self):
-        if self.client.tell('unqueue', '*'):
+        if self.client.tell("unqueue", "*"):
             self.script_queue.clear()
 
     @pyqtSlot()
@@ -436,7 +452,7 @@ class ScriptStatusPanel(Panel):
         if not item:
             return
         reqid = item.data(Qt.ItemDataRole.UserRole)
-        if self.client.tell('unqueue', str(reqid)):
+        if self.client.tell("unqueue", str(reqid)):
             self.script_queue.remove(reqid)
 
     def moveItem(self, delta):
@@ -447,7 +463,7 @@ class ScriptStatusPanel(Panel):
         curID = self.queueView.currentItem().data(Qt.ItemDataRole.UserRole)
         i = IDs.index(curID)
         IDs.insert(i + delta, IDs.pop(i))
-        self.client.ask('rearrange', IDs)
+        self.client.ask("rearrange", IDs)
 
     @pyqtSlot()
     def on_upButton_clicked(self):

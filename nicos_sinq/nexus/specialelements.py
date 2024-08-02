@@ -33,8 +33,12 @@ import numpy as np
 from nicos import session
 from nicos.core.device import Readable
 from nicos.core.errors import ConfigurationError
-from nicos.nexus.elements import DeviceDataset, NexusElementBase, \
-    NexusSampleEnv, NXAttribute
+from nicos.nexus.elements import (
+    DeviceDataset,
+    NexusElementBase,
+    NexusSampleEnv,
+    NXAttribute,
+)
 
 from nicos_sinq.devices.sinqhm.configurator import HistogramConfArray
 from nicos_sinq.devices.sample import CrystalSample
@@ -49,19 +53,20 @@ class TwoThetaArray(NexusElementBase):
         self.attrs = {}
         for key, val in attrs.items():
             if not isinstance(val, NXAttribute):
-                val = NXAttribute(val, 'string')
+                val = NXAttribute(val, "string")
                 self.attrs[key] = val
 
     def create(self, name, h5parent, sinkhandler):
-        if (self.startdevice, 'value') in sinkhandler.dataset.metainfo:
-            start = sinkhandler.dataset.metainfo[(self.startdevice, 'value')][
-                0]
+        if (self.startdevice, "value") in sinkhandler.dataset.metainfo:
+            start = sinkhandler.dataset.metainfo[(self.startdevice, "value")][0]
         else:
-            session.log.warning('Warning: failed to read startdevice %s for '
-                                'TwoThetaArray, continuing with 0',
-                                self.startdevice)
+            session.log.warning(
+                "Warning: failed to read startdevice %s for "
+                "TwoThetaArray, continuing with 0",
+                self.startdevice,
+            )
             start = 0
-        dset = h5parent.create_dataset(name, (self.length,), 'float32')
+        dset = h5parent.create_dataset(name, (self.length,), "float32")
         for i in range(self.length):
             dset[i] = start + i * self.step
         self.createAttributes(dset, sinkhandler)
@@ -76,11 +81,11 @@ class FixedArray(NexusElementBase):
         self.attrs = {}
         for key, val in attrs.items():
             if not isinstance(val, NXAttribute):
-                val = NXAttribute(val, 'string')
+                val = NXAttribute(val, "string")
                 self.attrs[key] = val
 
     def create(self, name, h5parent, sinkhandler):
-        dset = h5parent.create_dataset(name, (self._len,), 'float32')
+        dset = h5parent.create_dataset(name, (self._len,), "float32")
         for i in range(self._len):
             dset[i] = self._start + i * self._step
         self.createAttributes(dset, sinkhandler)
@@ -93,28 +98,28 @@ class ConfArray(NexusElementBase):
 
     def __init__(self, array_name, **attrs):
         NexusElementBase.__init__(self)
-        self._scale = 1.
+        self._scale = 1.0
         self._array_name = array_name
         self.attrs = {}
         for key, val in attrs.items():
-            if key == 'scale':
+            if key == "scale":
                 self._scale = float(val)
             if not isinstance(val, NXAttribute):
-                val = NXAttribute(val, 'string')
+                val = NXAttribute(val, "string")
                 self.attrs[key] = val
 
     def create(self, name, h5parent, sinkhandler):
         try:
             array = session.getDevice(self._array_name)
             if not isinstance(array, HistogramConfArray):
-                raise ConfigurationError('{self._array_name} is no '
-                                         'HistogramConfArray')
+                raise ConfigurationError(
+                    "{self._array_name} is no " "HistogramConfArray"
+                )
         except ConfigurationError:
-            session.log.warning('Array %s not found, NOT stored',
-                                self._array_name)
+            session.log.warning("Array %s not found, NOT stored", self._array_name)
             return
-        dset = h5parent.create_dataset(name, tuple(array.dim), 'float32')
-        dset[...] = np.array(array.data, dtype='float32') * self._scale
+        dset = h5parent.create_dataset(name, tuple(array.dim), "float32")
+        dset[...] = np.array(array.data, dtype="float32") * self._scale
         self.createAttributes(dset, sinkhandler)
 
 
@@ -124,21 +129,22 @@ class TimeBinConfArray(ConfArray):
     in the NeXus file. Such that the dimensions of the data and
     the time binning match
     """
+
     def create(self, name, h5parent, sinkhandler):
         try:
             array = session.getDevice(self._array_name)
             if not isinstance(array, HistogramConfArray):
-                raise ConfigurationError('%s is no HistogramConfArray' %
-                                         self._array_name)
+                raise ConfigurationError(
+                    "%s is no HistogramConfArray" % self._array_name
+                )
         except ConfigurationError:
-            session.log.warning('Array %s not found, NOT stored',
-                                self._array_name)
+            session.log.warning("Array %s not found, NOT stored", self._array_name)
             return
-        timeDim = array.dim[0]-1
-        dset = h5parent.create_dataset(name, (timeDim,), 'float32')
-        data = np.array(array.data, dtype='float32')
+        timeDim = array.dim[0] - 1
+        dset = h5parent.create_dataset(name, (timeDim,), "float32")
+        data = np.array(array.data, dtype="float32")
         data = data[0:timeDim]
-        if self._scale != 1.:
+        if self._scale != 1.0:
             dset[...] = data * self._scale
         else:
             dset[...] = data
@@ -149,6 +155,7 @@ class ArrayParam(NexusElementBase):
     """
     For writing an array parameter to a NeXus file
     """
+
     def __init__(self, dev, parameter, dtype, reshape=None, **attrs):
         NexusElementBase.__init__(self)
         self.dev = dev
@@ -158,13 +165,12 @@ class ArrayParam(NexusElementBase):
         self.attrs = {}
         for key, val in attrs.items():
             if not isinstance(val, NXAttribute):
-                val = NXAttribute(val, 'string')
+                val = NXAttribute(val, "string")
                 self.attrs[key] = val
 
     def create(self, name, h5parent, sinkhandler):
         if (self.dev, self.parameter) in sinkhandler.dataset.metainfo:
-            rawvalue = sinkhandler.dataset.metainfo[
-                (self.dev, self.parameter)][0]
+            rawvalue = sinkhandler.dataset.metainfo[(self.dev, self.parameter)][0]
             value = np.array(rawvalue, self.dtype)
             if self.reshape:
                 value = value.reshape(self.reshape)
@@ -172,14 +178,16 @@ class ArrayParam(NexusElementBase):
             dset[...] = value
             self.createAttributes(dset, sinkhandler)
         else:
-            session.log.warning('Failed to write %s, device %s not found',
-                                name, self.dev)
+            session.log.warning(
+                "Failed to write %s, device %s not found", name, self.dev
+            )
 
 
 class Reflection(NexusElementBase):
     """
     Writes reflection data to the NeXus file
     """
+
     def __init__(self, idx, reflist, **attrs):
         NexusElementBase.__init__(self)
         self.idx = idx
@@ -187,7 +195,7 @@ class Reflection(NexusElementBase):
         self.attrs = {}
         for key, val in attrs.items():
             if not isinstance(val, NXAttribute):
-                val = NXAttribute(val, 'string')
+                val = NXAttribute(val, "string")
                 self.attrs[key] = val
 
     def create(self, name, h5parent, sinkhandler):
@@ -196,16 +204,21 @@ class Reflection(NexusElementBase):
             try:
                 rfl = rlist.get_reflection(self.idx)
             except IndexError:
-                session.log.warning('Failed to write %s, cannot find '
-                                    'reflection %d', name, self.idx)
+                session.log.warning(
+                    "Failed to write %s, cannot find " "reflection %d", name, self.idx
+                )
                 return
         except ConfigurationError:
-            session.log.warning('Failed to write %s, reflist %s not '
-                                'found or reflection %d not found',
-                                name, self.dev, self.idx)
+            session.log.warning(
+                "Failed to write %s, reflist %s not "
+                "found or reflection %d not found",
+                name,
+                self.dev,
+                self.idx,
+            )
             return
-        value = np.array([el for tup in rfl for el in tup], 'float32')
-        dset = h5parent.create_dataset(name, value.shape, 'float32')
+        value = np.array([el for tup in rfl for el in tup], "float32")
+        dset = h5parent.create_dataset(name, value.shape, "float32")
         dset[...] = value
         self.createAttributes(dset, sinkhandler)
 
@@ -214,12 +227,13 @@ class ScanVars(NexusElementBase):
     """
     This class writes a list of scanned variables
     """
+
     def create(self, name, h5parent, sinkhandler):
-        scanvars = ''
+        scanvars = ""
         if sinkhandler.startdataset.devices:
             for dev in sinkhandler.startdataset.devices:
-                scanvars += dev.name + ','
-        dtype = f'S{len(scanvars) + 1}'
+                scanvars += dev.name + ","
+        dtype = f"S{len(scanvars) + 1}"
         dset = h5parent.create_dataset(name, (1,), dtype)
         dset[0] = scanvars
 
@@ -228,9 +242,10 @@ class ScanCommand(NexusElementBase):
     """
     This class writes the last scan command
     """
+
     def create(self, name, h5parent, sinkhandler):
         com = session._script_text
-        dtype = f'S{len(com) + 1}'
+        dtype = f"S{len(com) + 1}"
         dset = h5parent.create_dataset(name, (1,), dtype)
         dset[0] = com
 
@@ -242,8 +257,7 @@ class AbsoluteTime(NexusElementBase):
     """
 
     def create(self, name, h5parent, sinkhandler):
-        h5parent.create_dataset(name, (1,), maxshape=(None,),
-                                dtype='float64')
+        h5parent.create_dataset(name, (1,), maxshape=(None,), dtype="float64")
         self.doAppend = True
 
     def results(self, name, h5parent, sinkhandler, results):
@@ -267,8 +281,10 @@ class EnvDeviceDataset(DeviceDataset):
             return
         dset = h5parent[name]
         dataset = sinkhandler.dataset
-        for dev, value in zip(dataset.devices + dataset.environment,
-                              dataset.devvaluelist + dataset.envvaluelist):
+        for dev, value in zip(
+            dataset.devices + dataset.environment,
+            dataset.devvaluelist + dataset.envvaluelist,
+        ):
             if dev.name == self.device:
                 if self.doAppend:
                     self.resize_dataset(dset)
@@ -281,6 +297,7 @@ class OutSampleEnv(NexusSampleEnv):
     functionality. It prevents NXlogs to be created for
     standard instrument components.
     """
+
     def __init__(self, blocklist=None, update_interval=10, postfix=None):
         self._blocklist = blocklist
         NexusSampleEnv.__init__(self, update_interval, postfix)
@@ -307,7 +324,7 @@ class OutSampleEnv(NexusSampleEnv):
             if self._postfix:
                 logname += self._postfix
             loggroup = h5parent[logname]
-            dset = loggroup['value']
+            dset = loggroup["value"]
             if val is None:
                 return
             idx = len(dset)
@@ -315,12 +332,13 @@ class OutSampleEnv(NexusSampleEnv):
             # gets called frequently. This tests:
             # - The value has changed at all
             # - Against a maximum update interval
-            if val != dset[idx - 1] and \
-               current_time > self._last_update[dev.name] +\
-                    self._update_interval:
+            if (
+                val != dset[idx - 1]
+                and current_time > self._last_update[dev.name] + self._update_interval
+            ):
                 dset.resize((idx + 1,))
                 dset[idx] = val
-                dset = loggroup['time']
+                dset = loggroup["time"]
                 dset.resize((idx + 1,))
                 dset[idx] = current_time - self.starttime
                 self._last_update[dev.name] = current_time
@@ -330,11 +348,12 @@ class OptionalDeviceDataset(DeviceDataset):
     """
     A device dataset which is only written when it is actually configured
     """
-    def __init__(self, device, parameter='value', dtype=None, defaultval=None,
-                 **attr):
+
+    def __init__(self, device, parameter="value", dtype=None, defaultval=None, **attr):
         self.valid = False
-        DeviceDataset.__init__(self, device, parameter='value', dtype=None,
-                               defaultval=None, **attr)
+        DeviceDataset.__init__(
+            self, device, parameter="value", dtype=None, defaultval=None, **attr
+        )
 
     def create(self, name, h5parent, sinkhandler):
         try:
@@ -358,15 +377,14 @@ class CellArray(NexusElementBase):
     This little class stores the cell constants from
     nicos_sinq.devices.CrystalSample, nicos_sinq.sxtal.SXTalsample as an array
     """
+
     def create(self, name, h5parent, sinkhandler):
         sample = session.experiment.sample
         if not isinstance(sample, CrystalSample):
-            session.log.error('Your sample is no CrystalSample or SXTalSample')
+            session.log.error("Your sample is no CrystalSample or SXTalSample")
             return
-        data = [sample.a, sample.b, sample.c,
-                sample.alpha, sample.beta, sample.gamma]
-        ds = h5parent.create_dataset(name, (6,), maxshape=(None,),
-                                     dtype='float64')
+        data = [sample.a, sample.b, sample.c, sample.alpha, sample.beta, sample.gamma]
+        ds = h5parent.create_dataset(name, (6,), maxshape=(None,), dtype="float64")
         ds[...] = np.array(data)
 
 
@@ -376,13 +394,14 @@ class DevStat(NexusElementBase):
     contribution. This is allways optional and will only be
     written when it exists.
     """
+
     def __init__(self, statname, **attr):
         NexusElementBase.__init__(self)
         self._statname = statname
         self.attrs = {}
         for key, val in attr.items():
             if not isinstance(val, NXAttribute):
-                val = NXAttribute(val, 'string')
+                val = NXAttribute(val, "string")
             self.attrs[key] = val
 
     def _find_devstatistics(self, sinkhandler):
@@ -393,8 +412,7 @@ class DevStat(NexusElementBase):
 
     def create(self, name, h5parent, sinkhandler):
         if self._find_devstatistics(sinkhandler):
-            h5parent.create_dataset(name, (1,), maxshape=(None,),
-                                    dtype='float64')
+            h5parent.create_dataset(name, (1,), maxshape=(None,), dtype="float64")
             self.createAttributes(sinkhandler.dataset, sinkhandler)
             self.testAppend(sinkhandler)
 
@@ -422,18 +440,21 @@ class ScanSampleEnv(NexusElementBase):
         self._managed_devices = []
 
     def create(self, name, h5parent, sinkhandler):
-        for dev, inf in zip(sinkhandler.dataset.environment,
-                            sinkhandler.dataset.envvalueinfo):
+        for dev, inf in zip(
+            sinkhandler.dataset.environment, sinkhandler.dataset.envvalueinfo
+        ):
             # Prevent duplicate creations
             if dev.name not in h5parent:
-                dset = h5parent.create_dataset(dev.name, (1,),
-                                               maxshape=(None,), dtype=float)
-                dset.attrs['units'] = np.string_(inf.unit)
+                dset = h5parent.create_dataset(
+                    dev.name, (1,), maxshape=(None,), dtype=float
+                )
+                dset.attrs["units"] = np.string_(inf.unit)
                 self._managed_devices.append(dev.name)
 
     def results(self, name, h5parent, sinkhandler, results):
-        for dev, value in zip(sinkhandler.dataset.environment,
-                              sinkhandler.dataset.envvaluelist):
+        for dev, value in zip(
+            sinkhandler.dataset.environment, sinkhandler.dataset.envvaluelist
+        ):
             if dev.name in self._managed_devices:
                 dset = h5parent[dev.name]
                 self.resize_dataset(dset)
@@ -461,8 +482,9 @@ class SaveSampleEnv(NexusElementBase):
     to identify such cases there is a blocklist.
     """
 
-    def __init__(self, update_interval=10, postfix='_log',
-                 blocklist=None, nexus_map=None):
+    def __init__(
+        self, update_interval=10, postfix="_log", blocklist=None, nexus_map=None
+    ):
         NexusElementBase.__init__(self)
         self._update_interval = update_interval
         self._last_update = {}
@@ -474,7 +496,7 @@ class SaveSampleEnv(NexusElementBase):
         if nexus_map:
             self.nexus_map = nexus_map
         else:
-            self.nexus_map = {'Ts': 'temperature', 'B': 'magnetic_field'}
+            self.nexus_map = {"Ts": "temperature", "B": "magnetic_field"}
         self.doAppend = True
         self._managed_devices = []
 
@@ -491,14 +513,13 @@ class SaveSampleEnv(NexusElementBase):
         if self._postfix:
             logname += self._postfix
         loggroup = h5parent.create_group(logname)
-        loggroup.attrs['NX_class'] = np.string_('NXlog')
-        dset = loggroup.create_dataset('time', (1,), maxshape=(None,),
-                                       dtype='float32')
-        dset[0] = .0
-        dset.attrs['start'] = time.strftime('%Y-%m-%d %H:%M:%S',
-                                            time.localtime(self.starttime))
-        dset = loggroup.create_dataset('value', (1,), maxshape=(None,),
-                                       dtype='float32')
+        loggroup.attrs["NX_class"] = np.string_("NXlog")
+        dset = loggroup.create_dataset("time", (1,), maxshape=(None,), dtype="float32")
+        dset[0] = 0.0
+        dset.attrs["start"] = time.strftime(
+            "%Y-%m-%d %H:%M:%S", time.localtime(self.starttime)
+        )
+        dset = loggroup.create_dataset("value", (1,), maxshape=(None,), dtype="float32")
         dset[0] = dev.read()
         self._last_update[dev.name] = time.time()
 
@@ -520,7 +541,7 @@ class SaveSampleEnv(NexusElementBase):
             if self._postfix:
                 logname += self._postfix
             loggroup = h5parent[logname]
-            dset = loggroup['value']
+            dset = loggroup["value"]
             if val is None:
                 continue
             idx = len(dset)
@@ -528,30 +549,34 @@ class SaveSampleEnv(NexusElementBase):
             # gets called frequently. This tests:
             # - The value has changed at all
             # - Against a maximum update interval
-            if val != dset[idx - 1] and \
-               current_time > self._last_update[dev.name] +\
-                    self._update_interval:
+            if (
+                val != dset[idx - 1]
+                and current_time > self._last_update[dev.name] + self._update_interval
+            ):
                 dset.resize((idx + 1,))
                 dset[idx] = val
-                dset = loggroup['time']
+                dset = loggroup["time"]
                 dset.resize((idx + 1,))
                 dset[idx] = current_time - self.starttime
                 self._last_update[dev.name] = current_time
 
     def createArrays(self, name, h5parent, sinkhandler):
-        for dev, inf in zip(sinkhandler.dataset.environment,
-                            sinkhandler.dataset.envvalueinfo):
+        for dev, inf in zip(
+            sinkhandler.dataset.environment, sinkhandler.dataset.envvalueinfo
+        ):
             # Prevent duplicate creations
             arrayname = self._get_logname(dev.name)
             if arrayname not in h5parent:
-                dset = h5parent.create_dataset(arrayname, (1,),
-                                               maxshape=(None,), dtype=float)
-                dset.attrs['units'] = np.string_(inf.unit)
+                dset = h5parent.create_dataset(
+                    arrayname, (1,), maxshape=(None,), dtype=float
+                )
+                dset.attrs["units"] = np.string_(inf.unit)
                 self._managed_devices.append(arrayname)
 
     def resultsArray(self, name, h5parent, sinkhandler, results):
-        for dev, value in zip(sinkhandler.dataset.environment,
-                              sinkhandler.dataset.envvaluelist):
+        for dev, value in zip(
+            sinkhandler.dataset.environment, sinkhandler.dataset.envvaluelist
+        ):
             arrayname = self._get_logname(dev.name)
             if arrayname in self._managed_devices:
                 dset = h5parent[arrayname]

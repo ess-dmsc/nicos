@@ -31,15 +31,19 @@ from nicos_sinq.gui import uipath
 
 
 class LineEdit(QLineEdit, NicosWidget):
-    key = PropDef('key', str, '', 'Cache key to display (without "nicos/"'
-                                  'prefix), set either "dev" or this')
+    key = PropDef(
+        "key",
+        str,
+        "",
+        'Cache key to display (without "nicos/"' 'prefix), set either "dev" or this',
+    )
 
     def __init__(self, parent, designMode=False):
         QLineEdit.__init__(self, parent)
         NicosWidget.__init__(self)
 
     def registerKeys(self):
-        self.registerKey(self.props['key'])
+        self.registerKey(self.props["key"])
 
     def on_keyChange(self, key, value, time, expired):
         self.setText(value)
@@ -50,28 +54,27 @@ class ExpPanel(MlzExpPanel):
     Extends the MlzExpPanel and let the user select the experiment scriptpath
     """
 
-    ui = '%s/panels/setup_exp.ui' % uipath
+    ui = "%s/panels/setup_exp.ui" % uipath
 
     def __init__(self, parent, client, options):
         MlzExpPanel.__init__(self, parent, client, options)
-        self.expTitle.key = 'exp/title'
+        self.expTitle.key = "exp/title"
         self.expTitle.setClient(client)
         self.scriptPathLine.returnPressed.connect(self.on_script_path_changed)
-        self.scriptPathButton.clicked.connect(
-            self.on_script_path_button_clicked)
+        self.scriptPathButton.clicked.connect(self.on_script_path_button_clicked)
 
     def on_client_connected(self):
         # fill proposal
         self._update_proposal_info()
         self.newBox.setVisible(True)
         # check for capability to ask proposal database
-        if self.client.eval('session.experiment._canQueryProposals()', False):
+        if self.client.eval("session.experiment._canQueryProposals()", False):
             self.propdbInfo.setVisible(True)
             self.queryDBButton.setVisible(True)
         else:
             self.queryDBButton.setVisible(False)
         self.setViewOnly(self.client.viewonly)
-        scriptpath = self.client.eval('session.experiment.scriptpath', '.')
+        scriptpath = self.client.eval("session.experiment.scriptpath", ".")
         self.scriptPathLine.setText(scriptpath)
 
     def on_script_path_changed(self):

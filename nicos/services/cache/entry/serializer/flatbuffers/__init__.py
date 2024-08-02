@@ -21,8 +21,7 @@
 #
 # *****************************************************************************
 
-from streaming_data_types.nicos_cache_ns10 import deserialise_ns10, \
-    serialise_ns10
+from streaming_data_types.nicos_cache_ns10 import deserialise_ns10, serialise_ns10
 
 from nicos.services.cache.entry import CacheEntry
 from nicos.services.cache.entry.serializer import CacheEntrySerializer
@@ -37,13 +36,13 @@ class FlatbuffersCacheEntrySerializer(CacheEntrySerializer):
     and return the entry instance.
     """
 
-    def encode(self, key, entry, schema='ns10', **params):
+    def encode(self, key, entry, schema="ns10", **params):
         try:
             ttl = entry.ttl if entry.ttl else 0
-            value = entry.value if entry.value else ''
+            value = entry.value if entry.value else ""
             return serialise_ns10(key, value, entry.time, ttl, entry.expired)
         except Exception as error:
-            self.log.error('Cannot encode ns10 cache entry: %s', error)
+            self.log.error("Cannot encode ns10 cache entry: %s", error)
 
     def decode(self, encoded):
         try:
@@ -56,5 +55,5 @@ class FlatbuffersCacheEntrySerializer(CacheEntrySerializer):
             entry.expired = ns_entry.expired
             return key, entry
         except Exception as error:
-            self.log.error('Could not decode ns10 cache entry: %s', error)
+            self.log.error("Could not decode ns10 cache entry: %s", error)
             return None, None

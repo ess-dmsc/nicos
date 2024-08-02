@@ -31,15 +31,13 @@ from nicos.core.data import DataSinkHandler
 from nicos.core.errors import NicosError
 from nicos.core.params import Override, Param, setof
 from nicos.devices.datasinks import FileSink
-from nicos.nexus.elements import NexusElementBase, NXAttribute, NXScanLink, \
-    NXTime
+from nicos.nexus.elements import NexusElementBase, NXAttribute, NXScanLink, NXTime
 from nicos.nexus.nexussink import copy_nexus_template
 
 from nicos_mlz.toftof.datasinks.elements import SampleEnvironment
 
 
 class NexusSinkHandler(DataSinkHandler):
-
     _inited = False
     h5file = None
 
@@ -56,63 +54,63 @@ class NexusSinkHandler(DataSinkHandler):
 
             # Generate the filenames, only if not set
             _, filenames = self.manager.getFilenames(
-                self.dataset, self.sink.filenametemplate, self.sink.subdir)
+                self.dataset, self.sink.filenametemplate, self.sink.subdir
+            )
             self._filename = filenames[0]
 
     def begin(self):
         if self.h5file is None:
             self.template = copy_nexus_template(self.sink.loadTemplate())
             if not isinstance(self.template, dict):
-                raise NicosError('The template should be of type dict')
+                raise NicosError("The template should be of type dict")
 
-            self.h5file = h5py.File(self._filename, 'w')
-            self.h5file.attrs['file_name'] = numpy.string_(self._filename)
+            self.h5file = h5py.File(self._filename, "w")
+            self.h5file.attrs["file_name"] = numpy.string_(self._filename)
             tf = NXTime()
-            self.h5file.attrs['file_time'] = numpy.string_(tf.formatTime())
+            self.h5file.attrs["file_time"] = numpy.string_(tf.formatTime())
 
     def putMetainfo(self, metainfo):
         if not self._inited:
-            sample = self.template['Scan:NXentry']['sample:NXsample']
-            for dev in metainfo.get(('Exp', 'envlist'), [[]])[0]:
-                unit = metainfo.get((dev, 'value'))[2]
-                if dev.startswith('T') and 'temperature' not in sample:
-                    sample['temperature'] = SampleEnvironment(dev, unit)
-                elif dev == 'B':
-                    sample['magneticfield'] = SampleEnvironment(dev, unit)
-                elif dev == 'P':
-                    sample['pressure'] = SampleEnvironment(dev, unit)
+            sample = self.template["Scan:NXentry"]["sample:NXsample"]
+            for dev in metainfo.get(("Exp", "envlist"), [[]])[0]:
+                unit = metainfo.get((dev, "value"))[2]
+                if dev.startswith("T") and "temperature" not in sample:
+                    sample["temperature"] = SampleEnvironment(dev, unit)
+                elif dev == "B":
+                    sample["magneticfield"] = SampleEnvironment(dev, unit)
+                elif dev == "P":
+                    sample["pressure"] = SampleEnvironment(dev, unit)
             self.createStructure()
             self._inited = True
 
     def createStructure(self):
-        h5obj = self.h5file['/']
+        h5obj = self.h5file["/"]
         self.create(self.template, h5obj)
         self.h5file.flush()
 
     def create(self, dictdata, h5obj):
         for key, val in dictdata.items():
             if isinstance(val, str):
-                val = NXAttribute(val, 'string')
+                val = NXAttribute(val, "string")
                 val.create(key, h5obj, self)
             elif isinstance(val, dict):
-                if ':' not in key:
-                    self.log.warning(
-                        'Cannot write group %s, no nxclass defined', key)
+                if ":" not in key:
+                    self.log.warning("Cannot write group %s, no nxclass defined", key)
                     continue
-                [nxname, nxclass] = key.rsplit(':', 1)
+                [nxname, nxclass] = key.rsplit(":", 1)
                 nxgroup = h5obj.create_group(nxname)
-                nxgroup.attrs['NX_class'] = numpy.string_(nxclass)
+                nxgroup.attrs["NX_class"] = numpy.string_(nxclass)
                 self.create(val, nxgroup)
             elif isinstance(val, NexusElementBase):
                 val.create(key, h5obj, self)
             else:
-                self.log.warning('Cannot write %s of type %s', key, type(val))
+                self.log.warning("Cannot write %s of type %s", key, type(val))
 
     def updateValues(self, dictdata, h5obj, values):
         if self.dataset.settype == POINT:
             for key, val in dictdata.items():
                 if isinstance(val, dict):
-                    nxname = key.split(':')[0]
+                    nxname = key.split(":")[0]
                     childh5obj = h5obj[nxname]
                     self.updateValues(val, childh5obj, values)
                 elif isinstance(val, str):
@@ -122,15 +120,16 @@ class NexusSinkHandler(DataSinkHandler):
                     try:
                         val.update(key, h5obj, self, values)
                     except Exception as err:
-                        self.log.warning('updateValues: Exception %s on key %r',
-                                         err, key)
+                        self.log.warning(
+                            "updateValues: Exception %s on key %r", err, key
+                        )
                 else:
-                    self.log.warning('Cannot identify and  update %s', key)
+                    self.log.warning("Cannot identify and  update %s", key)
 
     def append(self, dictdata, h5obj, subset):
         for key, val in dictdata.items():
             if isinstance(val, dict):
-                nxname = key.split(':', 1)[0]
+                nxname = key.split(":", 1)[0]
                 childh5obj = h5obj[nxname]
                 self.append(val, childh5obj, subset)
             elif isinstance(val, str):
@@ -140,21 +139,21 @@ class NexusSinkHandler(DataSinkHandler):
                 try:
                     val.append(key, h5obj, self, subset)
                 except Exception as err:
-                    self.log.warning('append: Exception %s on key %r', err, key)
+                    self.log.warning("append: Exception %s on key %r", err, key)
             else:
-                self.log.warning('Cannot identify and append %s', key)
+                self.log.warning("Cannot identify and append %s", key)
 
     def putValues(self, values):
         if self._inited and values:
-            h5obj = self.h5file['/']
+            h5obj = self.h5file["/"]
             self.updateValues(self.template, h5obj, values)
             self.h5file.flush()
 
     def resultValues(self, dictdata, h5obj, results):
         for key, val in dictdata.items():
             if isinstance(val, dict):
-                self.log.debug('resultValues: %s: %s', key, val)
-                nxname = key.split(':')[0]
+                self.log.debug("resultValues: %s: %s", key, val)
+                nxname = key.split(":")[0]
                 childh5obj = h5obj[nxname]
                 self.resultValues(val, childh5obj, results)
             elif isinstance(val, str):
@@ -164,28 +163,27 @@ class NexusSinkHandler(DataSinkHandler):
                 try:
                     val.results(key, h5obj, self, results)
                 except Exception as err:
-                    self.log.warning('resultValues: Exception %s on key %r',
-                                     err, key)
+                    self.log.warning("resultValues: Exception %s on key %r", err, key)
             else:
-                self.log.warning('Cannot add results to %s', key)
+                self.log.warning("Cannot add results to %s", key)
 
     def putResults(self, quality, results):
         if self._inited and results:
             if quality != LIVE:
-                h5obj = self.h5file['/']
+                h5obj = self.h5file["/"]
                 self.resultValues(self.template, h5obj, results)
                 self.h5file.flush()
 
     def addSubset(self, subset):
         if self.startdataset.settype == SCAN:
-            h5obj = self.h5file['/']
+            h5obj = self.h5file["/"]
             self.append(self.template, h5obj, subset)
             self.h5file.flush()
 
     def find_scan_link(self, h5obj, template):
         for key, val in template.items():
             if isinstance(val, dict):
-                nxname = key.split(':', 1)[0]
+                nxname = key.split(":", 1)[0]
                 childobj = h5obj[nxname]
                 link = self.find_scan_link(childobj, val)
                 if link is not None:
@@ -197,7 +195,7 @@ class NexusSinkHandler(DataSinkHandler):
     def make_scan_links(self, h5obj, template, linkpath):
         for key, val in template.items():
             if isinstance(val, dict):
-                nxname = key.split(':')[0]
+                nxname = key.split(":")[0]
                 childobj = h5obj[nxname]
                 self.make_scan_links(childobj, val, linkpath)
             else:
@@ -206,18 +204,18 @@ class NexusSinkHandler(DataSinkHandler):
 
     def end(self):
         """
-            There is a trick here: The NexusSink sets the dataset only on
-            initialisation. And NICOS tries to make a new SinkHandler for the
-            ScanDataset and then for each PointDaset. The result is that I get
-            the NexusSinkHandler.end() doubly called with  last PointDataset.
-            However, I keep the startdatset.  And the NICOS engine sets the
-            startdaset.finished from None to a timestamp when it is done. I use
-            this to detect the end. If the NICOS engine in some stage changes
-            on this one, this code will break.
+        There is a trick here: The NexusSink sets the dataset only on
+        initialisation. And NICOS tries to make a new SinkHandler for the
+        ScanDataset and then for each PointDaset. The result is that I get
+        the NexusSinkHandler.end() doubly called with  last PointDataset.
+        However, I keep the startdatset.  And the NICOS engine sets the
+        startdaset.finished from None to a timestamp when it is done. I use
+        this to detect the end. If the NICOS engine in some stage changes
+        on this one, this code will break.
         """
         if self.startdataset.finished is not None:
             if self.startdataset.settype == SCAN:
-                h5obj = self.h5file['/']
+                h5obj = self.h5file["/"]
                 linkpath = self.find_scan_link(h5obj, self.template)
                 if linkpath is not None:
                     self.make_scan_links(h5obj, self.template, linkpath)
@@ -240,14 +238,17 @@ class NexusSink(FileSink):
     NeXus elements. The actual writing work is done in the NexusSinkHandler.
     This class just initializes the handler properly.
     """
+
     parameters = {
-        'templateclass': Param('Python class implementing '
-                               'NexusTemplateProvider',
-                               type=str, mandatory=True),
+        "templateclass": Param(
+            "Python class implementing " "NexusTemplateProvider",
+            type=str,
+            mandatory=True,
+        ),
     }
 
     parameter_overrides = {
-        'settypes': Override(type=setof(*(POINT,)), default={POINT}),
+        "settypes": Override(type=setof(*(POINT,)), default={POINT}),
     }
 
     handlerclass = NexusSinkHandler
@@ -264,8 +265,9 @@ class NexusSink(FileSink):
     def createHandlers(self, dataset):
         if self._handlerObj is None:
             if len(dataset.detectors) == 1:
-                self._handlerObj = self.handlerclass(self, dataset,
-                                                     dataset.detectors[0])
+                self._handlerObj = self.handlerclass(
+                    self, dataset, dataset.detectors[0]
+                )
             else:
                 self._handlerObj = self.handlerclass(self, dataset, None)
         else:
@@ -276,7 +278,7 @@ class NexusSink(FileSink):
         self._handlerObj = None
 
     def loadTemplate(self):
-        mod, cls = self.templateclass.rsplit('.', 1)
+        mod, cls = self.templateclass.rsplit(".", 1)
         mod = importlib.import_module(mod)
         class_ = getattr(mod, cls)
         return class_().getTemplate()

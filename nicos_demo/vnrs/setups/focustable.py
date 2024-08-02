@@ -1,21 +1,23 @@
-description = 'Focus manipulation stage'
+description = "Focus manipulation stage"
 
-group = 'lowlevel'
+group = "lowlevel"
 
-tango_base = 'tango://localhost:10000/st/'
+tango_base = "tango://localhost:10000/st/"
 
 devices = dict(
-    focusm = device('nicos.devices.generic.VirtualMotor',
-        description = 'Camera focus motor (translation)',
-        speed = 1,
-        unit = 'mm',
-        fmtstr = '%.2f',
-        visibility = (),
-        abslimits = (0, 300),
+    focusm=device(
+        "nicos.devices.generic.VirtualMotor",
+        description="Camera focus motor (translation)",
+        speed=1,
+        unit="mm",
+        fmtstr="%.2f",
+        visibility=(),
+        abslimits=(0, 300),
     ),
-    focus = device('nicos.devices.generic.Axis',
-        description = 'Camera focus (translation)',
-        motor = 'focusm',
-        precision = 0.01,
+    focus=device(
+        "nicos.devices.generic.Axis",
+        description="Camera focus (translation)",
+        motor="focusm",
+        precision=0.01,
     ),
 )

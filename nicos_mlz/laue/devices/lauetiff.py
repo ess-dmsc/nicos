@@ -38,53 +38,54 @@ except ImportError:
     Image = None
 
 
-
 # tag values for esmeralda /Image_Modules_Src/Laue_tiff_read.f90
 # format: nicos key: ( tiff tag nr, descr, tiff valuetype (2=str, 11, float)
-TAGMAP = {'T/svalue': (1000, 'ICd%temp_begin', 11),
-          'T/evalue': (1001, 'ICd%temp_end', 11),
-          'Sample/name': (1002, 'ICd%sample', 2),
-          'det1/preset': (1003, 'ICd%expose_time', 11),
-          'phi/value': (1004, 'ICd%expose_phi', 11),
-          'startx': (1005, 'ICd%startx', 11),
-          'starty': (1006, 'ICd%starty', 11),
-          '???3': (1007, 'ICd%speed', 11),
-          'T/min': (1008, 'ICd%temp_min', 11),
-          'T/max': (1009, 'ICd%temp_max', 11),
-          }
+TAGMAP = {
+    "T/svalue": (1000, "ICd%temp_begin", 11),
+    "T/evalue": (1001, "ICd%temp_end", 11),
+    "Sample/name": (1002, "ICd%sample", 2),
+    "det1/preset": (1003, "ICd%expose_time", 11),
+    "phi/value": (1004, "ICd%expose_phi", 11),
+    "startx": (1005, "ICd%startx", 11),
+    "starty": (1006, "ICd%starty", 11),
+    "???3": (1007, "ICd%speed", 11),
+    "T/min": (1008, "ICd%temp_min", 11),
+    "T/max": (1009, "ICd%temp_max", 11),
+}
 
 
 class TiffLaueImageSinkHandler(SingleFileSinkHandler):
-
-    filetype = 'tiff'
+    filetype = "tiff"
     defer_file_creation = True
 
     def doPreinit(self, _mode):
         # Stop creation of the TIFFLaueFileFormat as it would make no sense
         # without correct PIL version.
         if Image is None:
-            raise NicosError(self, 'PIL/Pillow module is not available. Check'
-                             ' if it\'s installed and in your PYTHONPATH')
+            raise NicosError(
+                self,
+                "PIL/Pillow module is not available. Check"
+                " if it's installed and in your PYTHONPATH",
+            )
 
     def writeHeader(self, fp, metainfo, image):
         self.metainfo = metainfo
 
     def writeData(self, fp, image):
         # ensure numpy type, with float values for PIL
-        npData = numpy.asarray(image, dtype='<u2')
+        npData = numpy.asarray(image, dtype="<u2")
         buf = numpy.getbuffer(npData)
         # TODO: check if this still works.
-        ifile = Image.frombuffer('I;16', npData.shape[::-1], buf, 'raw',
-                                 'I;16', 0, -1)
+        ifile = Image.frombuffer("I;16", npData.shape[::-1], buf, "raw", "I;16", 0, -1)
 
-        ifile.save(fp, 'TIFF', tiffinfo=self._buildHeader(self.metainfo))
+        ifile.save(fp, "TIFF", tiffinfo=self._buildHeader(self.metainfo))
 
     def _buildHeader(self, imageinfo):
         ifd = ImageFileDirectory_v2()
-        ifd[TAGMAP['startx'][0]] = 1
-        ifd[TAGMAP['starty'][0]] = 1
+        ifd[TAGMAP["startx"][0]] = 1
+        ifd[TAGMAP["starty"][0]] = 1
         for (dev, attr), attrVal in imageinfo.items():
-            key = '%s/%s' % (dev, attr)
+            key = "%s/%s" % (dev, attr)
             if key in TAGMAP:
                 tag = TAGMAP[key][0]
                 typ = TAGMAP[key][2]
@@ -101,9 +102,12 @@ class TiffLaueImageSinkHandler(SingleFileSinkHandler):
 
 class TIFFLaueSink(ImageSink):
     parameter_overrides = {
-        'filenametemplate': Override(mandatory=False, settable=False,
-                                     userparam=False,
-                                     default=['%(proposal)s_%(pointcounter)07d.tif']),
+        "filenametemplate": Override(
+            mandatory=False,
+            settable=False,
+            userparam=False,
+            default=["%(proposal)s_%(pointcounter)07d.tif"],
+        ),
     }
 
     handlerclass = TiffLaueImageSinkHandler

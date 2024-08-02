@@ -32,8 +32,14 @@ from functools import lru_cache
 import gr
 import numpy
 import numpy.ma
-from gr.pygr import Coords2D, Coords2DList, Plot as OrigPlot, PlotAxes, \
-    Point, RegionOfInterest
+from gr.pygr import (
+    Coords2D,
+    Coords2DList,
+    Plot as OrigPlot,
+    PlotAxes,
+    Point,
+    RegionOfInterest,
+)
 from gr.pygr.base import GRMeta, GRVisibility
 
 from nicos.clients.gui.main import log
@@ -48,15 +54,37 @@ try:
 except ImportError:
     colorcet = None
 
-DATATYPES = frozenset(('<u4', '<i4', '>u4', '>i4', '<u2', '<i2', '>u2', '>i2',
-                       '<u1', '<i1', '>u1', '>i1', '<f8', '<f4', '>f8', '>f4',
-                       '<u8', '<i8', '>u8', '>i8'))
+DATATYPES = frozenset(
+    (
+        "<u4",
+        "<i4",
+        ">u4",
+        ">i4",
+        "<u2",
+        "<i2",
+        ">u2",
+        ">i2",
+        "<u1",
+        "<i1",
+        ">u1",
+        ">i1",
+        "<f8",
+        "<f4",
+        ">f8",
+        ">f4",
+        "<u8",
+        "<i8",
+        ">u8",
+        ">i8",
+    )
+)
 
 COLOR_MAXINTENSITY = 1255
 
-AXES = ['x', 'y']
+AXES = ["x", "y"]
 
 COLORMAP_MAGIC_ID = 103
+
 
 def sgn(x):
     if x >= 0:
@@ -67,24 +95,30 @@ def sgn(x):
 @lru_cache()
 def colormap_from_file(filename):
     try:
-        with open(filename, 'r', encoding="ascii") as f:
+        with open(filename, "r", encoding="ascii") as f:
             data = numpy.loadtxt(f)
         if numpy.amax(data) > 1:
             return data / 256
     except Exception as e:
-        log.error('%s: can\'t use %s', e, filename)
+        log.error("%s: can't use %s", e, filename)
         return None
     return data
 
 
 class Cellarray(gr.pygr.PlotSurface):
-
     def drawGR(self):
-
         if self.visible:
+
             def set_value():
-                gr.cellarray(self.x[0], self.x[-1], self.y[-1], self.y[0],
-                             len(self.x), len(self.y), self.z)
+                gr.cellarray(
+                    self.x[0],
+                    self.x[-1],
+                    self.y[-1],
+                    self.y[0],
+                    len(self.x),
+                    len(self.y),
+                    self.z,
+                )
 
             if isinstance(self.colormap, int):
                 gr.setcolormap(self.colormap)
@@ -101,8 +135,7 @@ class Cellarray(gr.pygr.PlotSurface):
 
 
 class GRWidget(InteractiveGRWidget):
-
-    SAVE_EXT = ['.svg', '.png']
+    SAVE_EXT = [".svg", ".png"]
 
     def __init__(self, widget, **kwargs):
         InteractiveGRWidget.__init__(self, widget, **kwargs)
@@ -171,7 +204,7 @@ class Axes(PlotAxes):
         self.drawxylines = False
         self.xlines = []  # draw vertical lines at x-coordinates
         self.ylines = []  # draw horizontal lines at y-coordinates
-        self.xylinecolor = GRCOLORS['magenta']
+        self.xylinecolor = GRCOLORS["magenta"]
 
     def setWindow(self, xmin, xmax, ymin, ymax):
         res = PlotAxes.setWindow(self, xmin, xmax, ymin, ymax)
@@ -189,6 +222,7 @@ class Axes(PlotAxes):
             # 2 ** (  "         "       ):  next lower power of two (2**n)
             # 2 ** (   int( ... ) - 4)  ):  - 4 => divided by 2 ** 4
             return 2 ** (int(math.log(max(amax - amin, 0.1), 2)) - 4)
+
         if self.xdual:
             self.xtick = tick(xmin, xmax)
             self.majorx = 4
@@ -218,7 +252,6 @@ class Axes(PlotAxes):
 
 
 class AutoScaleAxes(Axes):
-
     def scaleWindow(self, xmin, xmax, xtick, ymin, ymax, ytick):
         dx, dy = 0, 0
         if self.autoscale & Axes.SCALE_X:
@@ -238,13 +271,13 @@ class AutoScaleAxes(Axes):
                 return original_win
             elif cxmin < xmin:
                 return original_win
-            self.setWindow(min(cxmin, xmin), max(cxmax, xmax),
-                           min(cymin, ymin), max(cymax, ymax))
+            self.setWindow(
+                min(cxmin, xmin), max(cxmax, xmax), min(cymin, ymin), max(cymax, ymax)
+            )
         return Axes.doAutoScale(self, curvechanged)
 
 
 class ROI(Coords2D, RegionOfInterest, GRVisibility, GRMeta):
-
     def __init__(self, *args, **kwargs):
         GRVisibility.__init__(self)
         RegionOfInterest.__init__(self, *args, **kwargs)
@@ -254,7 +287,7 @@ class ROI(Coords2D, RegionOfInterest, GRVisibility, GRMeta):
         if self.visible:
             color = gr.inqlinecolorind()
             lwidth = gr.inqlinewidth()
-            gr.setlinecolorind(GRCOLORS['white'])
+            gr.setlinecolorind(GRCOLORS["white"])
             gr.setlinewidth(1)
             gr.polyline(self.x, self.y)
             gr.setlinecolorind(color)
@@ -262,7 +295,6 @@ class ROI(Coords2D, RegionOfInterest, GRVisibility, GRMeta):
 
 
 class LiveWidgetBase(QWidget):
-
     closed = pyqtSignal()
 
     def __init__(self, parent, **kwargs):
@@ -271,10 +303,7 @@ class LiveWidgetBase(QWidget):
         self._arrays = None
         self._plotcount = 1
         # self._axesrange = (1, 1)  # y, x (rows, cols)
-        self._axesrange = {
-            'x': (0, 1, 2),
-            'y': (0, 1, 2)
-        }
+        self._axesrange = {"x": (0, 1, 2), "y": (0, 1, 2)}
         self._fixedsize = False
         self._axesratio = 1.0
         self._logscale = False
@@ -287,9 +316,12 @@ class LiveWidgetBase(QWidget):
         self.setLayout(layout)
 
         self.plot = Plot(self, viewport=(0.1, 0.95, 0.1, 0.95))
-        self.axes = Axes(self, viewport=self.plot.viewport,
-                         xdual=kwargs.get('xscale', 'binary') == 'binary',
-                         ydual=kwargs.get('yscale', 'binary') == 'binary')
+        self.axes = Axes(
+            self,
+            viewport=self.plot.viewport,
+            xdual=kwargs.get("xscale", "binary") == "binary",
+            ydual=kwargs.get("yscale", "binary") == "binary",
+        )
         self.plot.addAxes(self.axes)
         self.gr.addPlot(self.plot)
 
@@ -327,13 +359,18 @@ class LiveWidgetBase(QWidget):
         if plots and len(plots) == 1:
             plot = plots[0]
             pWC = event.getWC(plot.viewport)
-            if (self._arrays is not None and plot == self.plot and
-               len(self._arrays[0].shape) == 2):
+            if (
+                self._arrays is not None
+                and plot == self.plot
+                and len(self._arrays[0].shape) == 2
+            ):
                 # TODO: adapt this for ``shape > 2`` once available.
                 x, y = int(pWC.x), int(pWC.y)
-                if self._labels['x'][0] <= x < self._labels['x'][-1] and \
-                        self._labels['y'][0] <= y < self._labels['y'][-1]:
-                    return x, y, self._arrays[0][y+1, x+1]
+                if (
+                    self._labels["x"][0] <= x < self._labels["x"][-1]
+                    and self._labels["y"][0] <= y < self._labels["y"][-1]
+                ):
+                    return x, y, self._arrays[0][y + 1, x + 1]
             return pWC.x, pWC.y
 
     def setWindow(self, xmin, xmax, ymin, ymax):
@@ -358,10 +395,12 @@ class LiveWidgetBase(QWidget):
     def updateAxesRange(self):
         """This method will be called whenever the shape of the incoming data
         has been changed. Overwrite this method e.g. to rescale the axes."""
-        self.axes.setWindow(self._axesrange['x'][0],
-                            self._axesrange['x'][1],
-                            self._axesrange['y'][0],
-                            self._axesrange['y'][1])
+        self.axes.setWindow(
+            self._axesrange["x"][0],
+            self._axesrange["x"][1],
+            self._axesrange["y"][0],
+            self._axesrange["y"][1],
+        )
 
     def setData(self, arrays, labels=None):
         self._arrays = arrays
@@ -377,12 +416,12 @@ class LiveWidgetBase(QWidget):
         newrange = False
 
         if not self._fixedsize:
-            xlen = self._labels['x'][-1] - self._labels['x'][0]
-            self.axes.xlines = [self._labels['x'][0] + xlen / 2]
+            xlen = self._labels["x"][-1] - self._labels["x"][0]
+            self.axes.xlines = [self._labels["x"][0] + xlen / 2]
 
-            if 'y' in self._labels:
-                ylen = self._labels['y'][-1] - self._labels['y'][0]
-                self.axes.ylines = [self._labels['y'][0] + ylen / 2]
+            if "y" in self._labels:
+                ylen = self._labels["y"][-1] - self._labels["y"][0]
+                self.axes.ylines = [self._labels["y"][0] + ylen / 2]
             else:
                 ylen = 1
                 self.axes.ylines = [0.5]
@@ -392,8 +431,8 @@ class LiveWidgetBase(QWidget):
             except ZeroDivisionError:
                 return
 
-            newx = self.setAxisRange(self._getNewXRange(), 'x')
-            newy = self.setAxisRange(self._getNewYRange(), 'y')
+            newx = self.setAxisRange(self._getNewXRange(), "x")
+            newy = self.setAxisRange(self._getNewYRange(), "y")
 
             if newx or newy:
                 self.updateAxesRange()
@@ -418,7 +457,7 @@ class LiveWidgetBase(QWidget):
         """Hook at the end of setData"""
 
     def _adjustView(self):
-        """Hook for adjustments of the """
+        """Hook for adjustments of the"""
 
     def setAxisRange(self, newrange, axis):
         try:
@@ -428,16 +467,14 @@ class LiveWidgetBase(QWidget):
                 self._axesrange[axis] = newrange
                 return True
         except KeyError:
-            raise UsageError('No %s axis to set') from None
+            raise UsageError("No %s axis to set") from None
 
     def _getNewXRange(self):
-        return (self._labels['x'][0], self._labels['x'][-1],
-                len(self._labels['x']))
+        return (self._labels["x"][0], self._labels["x"][-1], len(self._labels["x"]))
 
     def _getNewYRange(self):
-        if 'y' in self._labels:
-            return (self._labels['y'][0], self._labels['y'][-1],
-                    len(self._labels['y']))
+        if "y" in self._labels:
+            return (self._labels["y"][0], self._labels["y"][-1], len(self._labels["y"]))
         return (0, 1, 2)
 
     def getColormap(self):
@@ -453,14 +490,14 @@ class LiveWidgetBase(QWidget):
         if roi:
             curves = self.axes.getCurves()
             curves.remove(roi)
-        self._rois[key] = ROI(Point(x, y), Point(x, yt), Point(xr, yt),
-                              Point(xr, y), Point(x, y))
+        self._rois[key] = ROI(
+            Point(x, y), Point(x, yt), Point(xr, yt), Point(xr, y), Point(x, y)
+        )
         self.axes.addCurves(self._rois[key])
         self.gr.update()
 
     def unzoom(self):
-        self.axes.setWindow(*(self._axesrange['x'][:2] +
-                              self._axesrange['y'][:2]))
+        self.axes.setWindow(*(self._axesrange["x"][:2] + self._axesrange["y"][:2]))
         self.rescale()
 
     def printDialog(self):
@@ -477,8 +514,7 @@ class LiveWidgetBase(QWidget):
         self.gr.update()
 
     def savePlot(self):
-        self._saveName = savePlot(self.gr, gr.PRINT_TYPE[gr.PRINT_PDF],
-                                  self._saveName)
+        self._saveName = savePlot(self.gr, gr.PRINT_TYPE[gr.PRINT_PDF], self._saveName)
         return self._saveName
 
     def setTitles(self, titles):
@@ -486,14 +522,13 @@ class LiveWidgetBase(QWidget):
             return
         for axis, title in titles.items():
             if axis in AXES:
-                if axis == 'x':
+                if axis == "x":
                     self.plot.xlabel = title
-                elif axis == 'y':
+                elif axis == "y":
                     self.plot.ylabel = title
 
 
 class LiveWidget(LiveWidgetBase):
-
     def __init__(self, parent, **kwargs):
         LiveWidgetBase.__init__(self, parent, **kwargs)
 
@@ -517,8 +552,8 @@ class LiveWidget(LiveWidgetBase):
             self.surf.z = 1000 + arr
 
     def _finishSetData(self, newrange):
-        self.surf.x = numpy.linspace(*self._axesrange['x'])
-        self.surf.y = numpy.linspace(*self._axesrange['y'])
+        self.surf.x = numpy.linspace(*self._axesrange["x"])
+        self.surf.y = numpy.linspace(*self._axesrange["y"])
 
     def getColormap(self):
         return self.surf.colormap
@@ -529,20 +564,27 @@ class LiveWidget(LiveWidgetBase):
 
 
 class IntegralLiveWidget(LiveWidget):
-
     def __init__(self, parent, **kwargs):
         LiveWidget.__init__(self, parent, **kwargs)
 
         self.plot.viewport = (0.1, 0.75, 0.1, 0.75)
         self.axes.viewport = self.plot.viewport
         self.plotyint = Plot(self, viewport=(0.1, 0.75, 0.8, 0.95))
-        self.axesyint = Axes(self, viewport=self.plotyint.viewport,
-                             drawX=False, drawY=True,
-                             xdual=kwargs.get('xscale', 'binary') == 'binary')
+        self.axesyint = Axes(
+            self,
+            viewport=self.plotyint.viewport,
+            drawX=False,
+            drawY=True,
+            xdual=kwargs.get("xscale", "binary") == "binary",
+        )
         self.plotxint = Plot(self, viewport=(0.8, 0.95, 0.1, 0.75))
-        self.axesxint = Axes(self, viewport=self.plotxint.viewport,
-                             drawX=True, drawY=False,
-                             ydual=kwargs.get('yscale', 'binary') == 'binary')
+        self.axesxint = Axes(
+            self,
+            viewport=self.plotxint.viewport,
+            drawX=True,
+            drawY=False,
+            ydual=kwargs.get("yscale", "binary") == "binary",
+        )
 
         vp = self.axesxint.viewport
         self._charheight = 0.024 * (vp[3] - vp[2])
@@ -553,10 +595,8 @@ class IntegralLiveWidget(LiveWidget):
 
         self.plotyint.addAxes(self.axesyint)
         self.plotxint.addAxes(self.axesxint)
-        self.curvey = MaskedPlotCurve([0], [0], filly=0.1,
-                                      linecolor=GRCOLORS['blue'])
-        self.curvex = MaskedPlotCurve([0], [0], fillx=0.1,
-                                      linecolor=GRCOLORS['blue'])
+        self.curvey = MaskedPlotCurve([0], [0], filly=0.1, linecolor=GRCOLORS["blue"])
+        self.curvex = MaskedPlotCurve([0], [0], fillx=0.1, linecolor=GRCOLORS["blue"])
 
         self.axesyint.addCurves(self.curvey)
         self.axesxint.addCurves(self.curvex)
@@ -564,16 +604,16 @@ class IntegralLiveWidget(LiveWidget):
         self.gr.addPlot(self.plotxint)
 
     def xtick(self, x, y, svalue, _value):
-        gr.setcharup(-1., 1.)
+        gr.setcharup(-1.0, 1.0)
         gr.settextalign(gr.TEXT_HALIGN_RIGHT, gr.TEXT_VALIGN_TOP)
         # We want to pass through the string value, but we are passed a bytes
         # object by the C layer and gr.text() needs a string.  Since it is
         # encoded using latin1 again, this is the right encoding to use here.
-        gr.text(x, y, svalue.decode('latin1'))
+        gr.text(x, y, svalue.decode("latin1"))
 
     def yinttick(self, x, y, svalue, _value):
         gr.setcharheight(self._charheight)
-        gr.text(x, y, svalue.decode('latin1'))
+        gr.text(x, y, svalue.decode("latin1"))
 
     def _applymask(self):
         """Mask or unmask values in plotcurves if necessary and rescale
@@ -595,16 +635,14 @@ class IntegralLiveWidget(LiveWidget):
             if numpy.ma.is_masked(self.curvey._y):
                 self.curvey.y = self.curvey._y.filled(0)
         # rescale axes
-        self.axesyint.setWindow(xmin - 0.5, xmax - 0.5,
-                                y0, self.curvey.y.max())
-        self.axesxint.setWindow(x0, self.curvex.x.max(),
-                                ymin - 0.5, ymax - 0.5)
+        self.axesyint.setWindow(xmin - 0.5, xmax - 0.5, y0, self.curvey.y.max())
+        self.axesxint.setWindow(x0, self.curvex.x.max(), ymin - 0.5, ymax - 0.5)
 
     def getLabelIndices(self, axis, minimum, maximum):
         try:
             labels = self._labels[axis]
         except KeyError:
-            raise UsageError('No labels for %d' % axis) from None
+            raise UsageError("No labels for %d" % axis) from None
 
         if minimum < labels[0]:
             imin = 0
@@ -641,33 +679,31 @@ class IntegralLiveWidget(LiveWidget):
         # get indices for current window
         xmin, xmax, ymin, ymax = self.axes.getWindow()
 
-        ixmin, ixmax = self.getLabelIndices('x', xmin, xmax)
-        iymin, iymax = self.getLabelIndices('y', ymin, ymax)
+        ixmin, ixmax = self.getLabelIndices("x", xmin, xmax)
+        iymin, iymax = self.getLabelIndices("y", ymin, ymax)
 
         reference = self._arrays[0]
         ny, nx = reference.shape
 
         # find the indices of the relevant values
-        x0 = self._labels['x'][min(max(0, ixmin), ixmax)]  # 0 <= x0 <= ixmax
-        x1 = self._labels['x'][max(0, min(nx, ixmax))]     # 0 <= x1 <= ixmax
-        y0 = self._labels['y'][min(max(0, iymin), iymax)]  # 0 <= y0 <= iymax
-        y1 = self._labels['y'][max(0, min(ny, iymax))]     # 0 <= y1 <= iymax
+        x0 = self._labels["x"][min(max(0, ixmin), ixmax)]  # 0 <= x0 <= ixmax
+        x1 = self._labels["x"][max(0, min(nx, ixmax))]  # 0 <= x1 <= ixmax
+        y0 = self._labels["y"][min(max(0, iymin), iymax)]  # 0 <= y0 <= iymax
+        y1 = self._labels["y"][max(0, min(ny, iymax))]  # 0 <= y1 <= iymax
 
         if x0 > x1 or y0 > y1:
             return
 
         # use float type in order to mask zeros with 0.1 for logscale
-        self.curvex.x = reference[:, int(x0):int(x1)].sum(
-            axis=1, dtype=numpy.float64)
-        self.curvey.y = reference[int(y0):int(y1), :].sum(
-            axis=0, dtype=numpy.float64)
+        self.curvex.x = reference[:, int(x0) : int(x1)].sum(axis=1, dtype=numpy.float64)
+        self.curvey.y = reference[int(y0) : int(y1), :].sum(axis=0, dtype=numpy.float64)
         self._applymask()
 
     def _finishSetData(self, newrange):
         LiveWidget._finishSetData(self, newrange)
 
-        nx = self._axesrange['x']
-        ny = self._axesrange['y']
+        nx = self._axesrange["x"]
+        ny = self._axesrange["y"]
 
         if newrange:
             self.axesyint.setWindow(nx[0], nx[1], ny[0], ny[1])
@@ -700,15 +736,16 @@ class IntegralLiveWidget(LiveWidget):
 
 
 class LiveWidget1D(LiveWidgetBase):
-
     def __init__(self, parent, **kwargs):
         LiveWidgetBase.__init__(self, parent, **kwargs)
 
         self.plot.resetPlot()
-        self._curves = [MaskedPlotCurve([0], [1], linecolor=GRCOLORS['blue'])]
+        self._curves = [MaskedPlotCurve([0], [1], linecolor=GRCOLORS["blue"])]
         self.axes = AutoScaleAxes(
-            self, viewport=self.plot.viewport,
-            xdual=kwargs.get('xscale', 'binary') == 'binary')
+            self,
+            viewport=self.plot.viewport,
+            xdual=kwargs.get("xscale", "binary") == "binary",
+        )
         self.axes.setGrid(True)
         self.axes.addCurves(self._curves[0])
         self.axes.autoscale = PlotAxes.SCALE_Y
@@ -716,7 +753,7 @@ class LiveWidget1D(LiveWidgetBase):
         # self._axesrange = dict(x=(1, 1), y=(1, 1), z=(1, 1))
         self.setSymbols(False)
         self.setLines(False)
-        self.setMarks(['circle'])
+        self.setMarks(["circle"])
         self._labels = None
         self._markersize = 1.0
 
@@ -741,8 +778,8 @@ class LiveWidget1D(LiveWidgetBase):
         self._curves = []
 
         for i in range(count):
-            color = GRCOLORS.get(colors[i], GRCOLORS['blue'])
-            curve = MaskedPlotCurve([0], [.1], linecolor=color)
+            color = GRCOLORS.get(colors[i], GRCOLORS["blue"])
+            curve = MaskedPlotCurve([0], [0.1], linecolor=color)
             curve.markercolor = color
             curve.markersize = self._markersize
             self._curves.append(curve)
@@ -771,7 +808,7 @@ class LiveWidget1D(LiveWidgetBase):
         self.update()
 
     def setSymbols(self, on):
-        markertype = self._marktype if on else GRMARKS['dot']
+        markertype = self._marktype if on else GRMARKS["dot"]
         for axis in self.plot.getAxes():
             for curve in axis.getCurves():
                 curve.markertype = markertype
@@ -790,10 +827,11 @@ class LiveWidget1D(LiveWidgetBase):
 
     def setMarks(self, marktype):
         if isinstance(marktype, list):
-            self._marktype = GRMARKS.get(marktype[0] if marktype else 'circle',
-                                         GRMARKS['circle'])
+            self._marktype = GRMARKS.get(
+                marktype[0] if marktype else "circle", GRMARKS["circle"]
+            )
         else:
-            self._marktype = GRMARKS.get(marktype, GRMARKS['circle'])
+            self._marktype = GRMARKS.get(marktype, GRMARKS["circle"])
 
     def setMarkerSize(self, size):
         self._markersize = size
@@ -811,23 +849,29 @@ class LiveWidget1D(LiveWidgetBase):
 
     def unzoom(self):
         # set the window we want to see
-        self.axes.setWindow(self._axesrange['x'][0], self._axesrange['x'][1],
-                            self._axesrange['y'][0], self._axesrange['y'][1])
+        self.axes.setWindow(
+            self._axesrange["x"][0],
+            self._axesrange["x"][1],
+            self._axesrange["y"][0],
+            self._axesrange["y"][1],
+        )
 
         # add some padding in x range.
         # 2nd call to avoid copy paste of the xtick function in pygr.
         window = self.axes.getWindow()
-        self.axes.setWindow(self._axesrange['x'][0] - self.axes.xtick,
-                            self._axesrange['x'][1] + self.axes.xtick,
-                            window[2], window[3])
+        self.axes.setWindow(
+            self._axesrange["x"][0] - self.axes.xtick,
+            self._axesrange["x"][1] + self.axes.xtick,
+            window[2],
+            window[3],
+        )
         self.gr.update()
 
     def _prepareSetData(self):
         for curve, arr in zip(self._curves, self._arrays):
-            curve.y = numpy.ma.masked_equal(arr.ravel(), 0).astype(
-                numpy.float64)
+            curve.y = numpy.ma.masked_equal(arr.ravel(), 0).astype(numpy.float64)
             curve.filly = 0.1 if self._logscale else 0
-            curve.x = self._labels['x']
+            curve.x = self._labels["x"]
 
     def _getNewYRange(self):
         ymax = self.getYMax()

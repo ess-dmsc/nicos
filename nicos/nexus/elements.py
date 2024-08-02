@@ -69,10 +69,13 @@ class NexusElementBase:
             dset.resize((idx,))
 
     def testAppend(self, sinkhandler):
-        self.doAppend = bool((hasattr(sinkhandler.startdataset,
-                                      'npoints') and
-                              sinkhandler.startdataset.npoints > 1) or
-                             hasattr(session, '_manualscan'))
+        self.doAppend = bool(
+            (
+                hasattr(sinkhandler.startdataset, "npoints")
+                and sinkhandler.startdataset.npoints > 1
+            )
+            or hasattr(session, "_manualscan")
+        )
         self.np = 0
 
     def determineType(self):
@@ -89,14 +92,14 @@ class NexusElementBase:
                     self.dtype = "string"
 
             if isinstance(self.value, str):
-                self.dtype = 'string'
+                self.dtype = "string"
 
     def createAttributes(self, h5obj, sinkhandler):
-        if not hasattr(self, 'attrs'):
+        if not hasattr(self, "attrs"):
             return
         for key, val in self.attrs.items():
             if isinstance(val, str):
-                val = NXAttribute(val, 'string')
+                val = NXAttribute(val, "string")
             val.create(key, h5obj, sinkhandler)
 
     def scanlink(self, name, sinkhandler, h5parent, linkroot):
@@ -112,7 +115,7 @@ class NXAttribute(NexusElementBase):
         self.value = value
 
     def create(self, name, h5parent, sinkhandler):
-        if self.dtype == 'string':
+        if self.dtype == "string":
             h5parent.attrs[name] = np.string_(self.value)
         else:
             h5parent.attrs.create(name, self.value, dtype=self.dtype)
@@ -128,17 +131,16 @@ class ConstDataset(NexusElementBase):
         self.attrs = {}
         for key, val in attrs.items():
             if not isinstance(val, NXAttribute):
-                val = NXAttribute(val, 'string')
+                val = NXAttribute(val, "string")
             self.attrs[key] = val
 
     def create(self, name, h5parent, sinkhandler):
-        if self.dtype == 'string':
-            dtype = 'S%d' % (len(self.value.encode('utf-8')) + 1)
+        if self.dtype == "string":
+            dtype = "S%d" % (len(self.value.encode("utf-8")) + 1)
             dset = h5parent.create_dataset(name, (1,), dtype)
-            dset[0] = np.array(self.value.encode('utf-8'), dtype=dtype)
+            dset[0] = np.array(self.value.encode("utf-8"), dtype=dtype)
         elif isinstance(self.value, (tuple, list)):
-            dset = h5parent.create_dataset(name, (len(self.value),),
-                                           dtype=self.dtype)
+            dset = h5parent.create_dataset(name, (len(self.value),), dtype=self.dtype)
             for i, v in enumerate(self.value):
                 dset[i] = v
         else:
@@ -154,7 +156,7 @@ class DeviceAttribute(NXAttribute):
     parameter of the device.
     """
 
-    def __init__(self, device, parameter='value', dtype=None, defaultval=None):
+    def __init__(self, device, parameter="value", dtype=None, defaultval=None):
         NXAttribute.__init__(self, defaultval, dtype)
         self.device = device
         self.parameter = parameter
@@ -165,8 +167,7 @@ class DeviceAttribute(NXAttribute):
 
     def create(self, name, h5parent, sinkhandler):
         if (self.device, self.parameter) in sinkhandler.dataset.metainfo:
-            self.value = \
-                sinkhandler.dataset.metainfo[(self.device, self.parameter)][0]
+            self.value = sinkhandler.dataset.metainfo[(self.device, self.parameter)][0]
         else:
             self.value = self.defaultval
         if self.value is not None:
@@ -180,8 +181,7 @@ class DeviceDataset(NexusElementBase):
     This creates a NeXus dataset from the value or a parameter of a device.
     """
 
-    def __init__(self, device, parameter='value', dtype=None, defaultval=None,
-                 **attr):
+    def __init__(self, device, parameter="value", dtype=None, defaultval=None, **attr):
         NexusElementBase.__init__(self)
         self.device = device
         self.parameter = parameter
@@ -191,20 +191,23 @@ class DeviceDataset(NexusElementBase):
         self.doAppend = False
         for key, val in attr.items():
             if not isinstance(val, NXAttribute):
-                val = NXAttribute(val, 'string')
+                val = NXAttribute(val, "string")
             self.attrs[key] = val
 
     def testAppend(self, sinkhandler):
         NexusElementBase.testAppend(self, sinkhandler)
-        if self.device not in (v.name for v in (
-                sinkhandler.startdataset.devvalueinfo +
-                sinkhandler.startdataset.envvalueinfo)):
+        if self.device not in (
+            v.name
+            for v in (
+                sinkhandler.startdataset.devvalueinfo
+                + sinkhandler.startdataset.envvalueinfo
+            )
+        ):
             self.doAppend = False
 
     def create(self, name, h5parent, sinkhandler):
         if (self.device, self.parameter) in sinkhandler.dataset.metainfo:
-            self.value = sinkhandler.dataset.metainfo[
-                (self.device, self.parameter)]
+            self.value = sinkhandler.dataset.metainfo[(self.device, self.parameter)]
         else:
             self.value = (self.defaultval,)
         if self.value[0] is not None:
@@ -216,39 +219,42 @@ class DeviceDataset(NexusElementBase):
                 self.determineType()
             except Exception as e:
                 session.log.warning(
-                    'Warning: failed to locate data for %s %s in NICOS (%s)',
-                    self.device, self.parameter, e)
+                    "Warning: failed to locate data for %s %s in NICOS (%s)",
+                    self.device,
+                    self.parameter,
+                    e,
+                )
                 return
-        if self.parameter == 'value':
+        if self.parameter == "value":
             self.testAppend(sinkhandler)
-        if self.dtype == 'string':
-            dtype = 'S%d' % (len(self.value[0].encode('utf-8')) + 1)
+        if self.dtype == "string":
+            dtype = "S%d" % (len(self.value[0].encode("utf-8")) + 1)
             dset = h5parent.create_dataset(name, (1,), dtype=dtype)
-            dset[0] = np.array(self.value[0].encode('utf-8'), dtype=dtype)
+            dset[0] = np.array(self.value[0].encode("utf-8"), dtype=dtype)
         else:
             if self.doAppend:
-                dset = h5parent.create_dataset(name, (1,), maxshape=(None,),
-                                               dtype=self.dtype)
+                dset = h5parent.create_dataset(
+                    name, (1,), maxshape=(None,), dtype=self.dtype
+                )
             else:
                 dset = h5parent.create_dataset(name, (1,), dtype=self.dtype)
             dset[0] = self.value[0]
-            if 'units' not in self.attrs:
-                if self.parameter in ['target']:
+            if "units" not in self.attrs:
+                if self.parameter in ["target"]:
                     try:
                         inf = session.getDevice(self.device).info()
-                        self.attrs['units'] = NXAttribute(inf[0][3], 'string')
+                        self.attrs["units"] = NXAttribute(inf[0][3], "string")
                     except NicosError:
                         pass
                 elif len(self.value) > 2:
-                    dset.attrs['units'] = np.string_(self.value[2])
+                    dset.attrs["units"] = np.string_(self.value[2])
         self.createAttributes(dset, sinkhandler)
 
     def update(self, name, h5parent, sinkhandler, values):
         if (self.device, self.parameter) in sinkhandler.dataset.metainfo:
-            self.value = sinkhandler.dataset.metainfo[
-                (self.device, self.parameter)]
+            self.value = sinkhandler.dataset.metainfo[(self.device, self.parameter)]
             dset = h5parent[name]
-            if self.dtype != 'string':
+            if self.dtype != "string":
                 self.resize_dataset(dset)
                 dset[self.np] = self.value[0]
         else:
@@ -263,10 +269,8 @@ class DeviceDataset(NexusElementBase):
             return
 
         dset = h5parent[name]
-        devinfo = (sinkhandler.dataset.devvalueinfo +
-                   sinkhandler.dataset.envvalueinfo)
-        values = (sinkhandler.dataset.devvaluelist +
-                  sinkhandler.dataset.envvaluelist)
+        devinfo = sinkhandler.dataset.devvalueinfo + sinkhandler.dataset.envvalueinfo
+        values = sinkhandler.dataset.devvaluelist + sinkhandler.dataset.envvaluelist
         for dev, val in zip(devinfo, values):
             if dev.name == self.device:
                 self.resize_dataset(dset)
@@ -279,10 +283,9 @@ class DeviceDataset(NexusElementBase):
                 parent = h5parent[linkroot]
                 if name not in parent:
                     parent[name] = dset
-                    dset.attrs['target'] = np.string_(dset.name)
+                    dset.attrs["target"] = np.string_(dset.name)
                 else:
-                    session.log.warning('Trying to create %s a second time',
-                                        name)
+                    session.log.warning("Trying to create %s a second time", name)
 
 
 class DetectorDataset(NexusElementBase):
@@ -293,12 +296,12 @@ class DetectorDataset(NexusElementBase):
         self.nicosname = nicosname
         self.dtype = dtype
         # Hack for countmode which is a short text
-        if self.dtype == 'string':
-            self.dtype = 'S30'
+        if self.dtype == "string":
+            self.dtype = "S30"
         self.attrs = {}
         for key, val in attr.items():
             if not isinstance(val, NXAttribute):
-                val = NXAttribute(val, 'string')
+                val = NXAttribute(val, "string")
             self.attrs[key] = val
 
     # At creation time, I do not yet have a value for detector data. This is
@@ -307,22 +310,23 @@ class DetectorDataset(NexusElementBase):
     def create(self, name, h5parent, sinkhandler):
         self.testAppend(sinkhandler)
         if self.doAppend:
-            dset = h5parent.create_dataset(name, (1,), maxshape=(None,),
-                                           dtype=self.dtype)
+            dset = h5parent.create_dataset(
+                name, (1,), maxshape=(None,), dtype=self.dtype
+            )
         else:
             dset = h5parent.create_dataset(name, (1,), dtype=self.dtype)
         self.createAttributes(dset, sinkhandler)
 
     def update(self, name, h5parent, sinkhandler, values):
         dset = h5parent[name]
-        if self.nicosname == 'mode':
+        if self.nicosname == "mode":
             m = list(sinkhandler.startdataset.preset.keys())[0]
-            if m == 't':
-                mode = 'timer'
+            if m == "t":
+                mode = "timer"
             else:
-                mode = 'monitor'
+                mode = "monitor"
             dset[0] = np.string_(mode)
-        elif self.nicosname == 'preset':
+        elif self.nicosname == "preset":
             mp = sinkhandler.startdataset.preset.values()
             self.resize_dataset(dset)
             dset[0] = list(mp)[0]
@@ -339,14 +343,14 @@ class DetectorDataset(NexusElementBase):
 
     def results(self, name, h5parent, sinkhandler, results):
         dset = h5parent[name]
-        if self.nicosname == 'mode':
+        if self.nicosname == "mode":
             m = list(sinkhandler.startdataset.preset.keys())[0]
-            if m == 't':
-                mode = 'timer'
+            if m == "t":
+                mode = "timer"
             else:
-                mode = 'monitor'
+                mode = "monitor"
                 dset[0] = np.string_(mode)
-        elif self.nicosname == 'preset':
+        elif self.nicosname == "preset":
             mp = sinkhandler.startdataset.preset.values()
             dset[0] = list(mp)[0]
         else:
@@ -356,8 +360,7 @@ class DetectorDataset(NexusElementBase):
                     self.resize_dataset(dset)
                 dset[self.np] = val
             except Exception:
-                session.log.warning('failed to find result for %s',
-                                    self.nicosname)
+                session.log.warning("failed to find result for %s", self.nicosname)
 
 
 class ImageDataset(NexusElementBase):
@@ -373,14 +376,13 @@ class ImageDataset(NexusElementBase):
         self.valid = True
         for key, val in attrs.items():
             if not isinstance(val, NXAttribute):
-                val = NXAttribute(val, 'string')
+                val = NXAttribute(val, "string")
             self.attrs[key] = val
 
     def create(self, name, h5parent, sinkhandler):
         self.testAppend(sinkhandler)
         if len(sinkhandler.dataset.detectors) <= self.detectorIDX:
-            session.log.warning('Cannot find detector with ID %d',
-                                self.detectorIDX)
+            session.log.warning("Cannot find detector with ID %d", self.detectorIDX)
             self.valid = False
             return
         det = sinkhandler.dataset.detectors[self.detectorIDX]
@@ -394,15 +396,22 @@ class ImageDataset(NexusElementBase):
             maxshape.insert(0, None)
             chonk = list(rawshape)
             chonk.insert(0, 1)
-            dset = h5parent.create_dataset(name, shape, maxshape=maxshape,
-                                           chunks=tuple(chonk),
-                                           dtype=myDesc.dtype,
-                                           compression='gzip')
+            dset = h5parent.create_dataset(
+                name,
+                shape,
+                maxshape=maxshape,
+                chunks=tuple(chonk),
+                dtype=myDesc.dtype,
+                compression="gzip",
+            )
         else:
-            dset = h5parent.create_dataset(name, rawshape,
-                                           chunks=tuple(rawshape),
-                                           dtype=myDesc.dtype,
-                                           compression='gzip')
+            dset = h5parent.create_dataset(
+                name,
+                rawshape,
+                chunks=tuple(rawshape),
+                dtype=myDesc.dtype,
+                compression="gzip",
+            )
         self.createAttributes(dset, sinkhandler)
 
     def resize_dataset(self, dset, sinkhandler):
@@ -434,6 +443,7 @@ class ImageDataset(NexusElementBase):
 
 class NamedImageDataset(ImageDataset):
     """Placeholder for a detector image identified by name."""
+
     def __init__(self, image_name, **attrs):
         self._image_name = image_name
         ImageDataset.__init__(self, -1, -1, **attrs)
@@ -451,7 +461,7 @@ class NamedImageDataset(ImageDataset):
                 imageID += 1
             detID += 1
         if self.detectorIDX == -1 or self.imageIDX == -1:
-            self.log.warning('Cannot find named image %s', self._image_name)
+            self.log.warning("Cannot find named image %s", self._image_name)
             self.valid = False
             return
         ImageDataset.create(self, name, h5parent, sinkhandler)
@@ -481,11 +491,11 @@ class NXLink(NexusElementBase):
                 other = h5parent[self.target]
             except KeyError:
                 session.log.warning(
-                    'Cannot link %s to %s, target does not exist',
-                    name, self.target)
+                    "Cannot link %s to %s, target does not exist", name, self.target
+                )
                 return
             h5parent[name] = other
-            other.attrs['target'] = np.string_(self.target)
+            other.attrs["target"] = np.string_(self.target)
             self.linkCreated = True
 
 
@@ -503,16 +513,16 @@ class NXTime(NexusElementBase):
     """Placeholder for a NeXus compatible time entry."""
 
     def formatTime(self):
-        return datetime.now().isoformat(sep=' ', timespec='seconds')
+        return datetime.now().isoformat(sep=" ", timespec="seconds")
 
     def create(self, name, h5parent, sinkhandler):
         time_str = self.formatTime()
-        dtype = 'S%d' % (len(time_str) + 5)
+        dtype = "S%d" % (len(time_str) + 5)
         dset = h5parent.create_dataset(name, (1,), dtype=dtype)
         dset[0] = np.string_(time_str)
 
     def update(self, name, h5parent, sinkhandler, values):
-        if name.find('end') >= 0:
+        if name.find("end") >= 0:
             dset = h5parent[name]
             dset[0] = np.string_(self.formatTime())
 
@@ -525,7 +535,7 @@ class StartTime(NXTime):
         self.time = 0
 
     def formatTime(self):
-        return datetime.fromtimestamp(self.time).isoformat(timespec='seconds')
+        return datetime.fromtimestamp(self.time).isoformat(timespec="seconds")
 
     def create(self, name, h5parent, sinkhandler):
         self.time = sinkhandler.dataset.started
@@ -564,14 +574,13 @@ class NexusSampleEnv(NexusElementBase):
         if self._postfix:
             logname += self._postfix
         loggroup = h5parent.create_group(logname)
-        loggroup.attrs['NX_class'] = np.string_('NXlog')
-        dset = loggroup.create_dataset('time', (1,), maxshape=(None,),
-                                       dtype='float32')
-        dset[0] = .0
-        dset.attrs['start'] = time.strftime('%Y-%m-%d %H:%M:%S',
-                                            time.localtime(self.starttime))
-        dset = loggroup.create_dataset('value', (1,), maxshape=(None,),
-                                       dtype='float32')
+        loggroup.attrs["NX_class"] = np.string_("NXlog")
+        dset = loggroup.create_dataset("time", (1,), maxshape=(None,), dtype="float32")
+        dset[0] = 0.0
+        dset.attrs["start"] = time.strftime(
+            "%Y-%m-%d %H:%M:%S", time.localtime(self.starttime)
+        )
+        dset = loggroup.create_dataset("value", (1,), maxshape=(None,), dtype="float32")
         dset[0] = dev.read()
         self._last_update[dev.name] = time.time()
 
@@ -592,7 +601,7 @@ class NexusSampleEnv(NexusElementBase):
             if self._postfix:
                 logname += self._postfix
             loggroup = h5parent[logname]
-            dset = loggroup['value']
+            dset = loggroup["value"]
             val = dataset.envvaluelist[devidx]
             if val is None:
                 return
@@ -601,12 +610,13 @@ class NexusSampleEnv(NexusElementBase):
             # gets called frequently. This tests:
             # - The value has changed at all
             # - Against a maximum update interval
-            if val != dset[idx - 1] and \
-               current_time > self._last_update[dev.name] +\
-                    self._update_interval:
+            if (
+                val != dset[idx - 1]
+                and current_time > self._last_update[dev.name] + self._update_interval
+            ):
                 dset.resize((idx + 1,))
                 dset[idx] = val
-                dset = loggroup['time']
+                dset = loggroup["time"]
                 dset.resize((idx + 1,))
                 dset[idx] = current_time - self.starttime
                 self._last_update[dev.name] = current_time
@@ -619,7 +629,7 @@ class NexusSampleEnv(NexusElementBase):
 
 
 class CalcData(NexusElementBase):
-    """ Place holder base class for all classes which calculate data for the
+    """Place holder base class for all classes which calculate data for the
     NeXus file. Derived classes have to implement two methods:
 
     - _shape(dataset) which returns the shape of the calculate data as a tuple
@@ -629,6 +639,7 @@ class CalcData(NexusElementBase):
     Derived classes also must make sure that self.dtype points to a sensible
     value. The default is float32.
     """
+
     def __init__(self, **attrs):
         NexusElementBase.__init__(self)
         self.attrs = {}
@@ -637,7 +648,7 @@ class CalcData(NexusElementBase):
         self.valid = True
         for key, val in attrs.items():
             if not isinstance(val, NXAttribute):
-                val = NXAttribute(val, 'string')
+                val = NXAttribute(val, "string")
             self.attrs[key] = val
         self.dtype = "float32"
 
@@ -653,15 +664,22 @@ class CalcData(NexusElementBase):
             maxshape.insert(0, None)
             chonk = list(rawshape)
             chonk.insert(0, 1)
-            dset = h5parent.create_dataset(name, shape, maxshape=maxshape,
-                                           chunks=tuple(chonk),
-                                           dtype=self.dtype,
-                                           compression='gzip')
+            dset = h5parent.create_dataset(
+                name,
+                shape,
+                maxshape=maxshape,
+                chunks=tuple(chonk),
+                dtype=self.dtype,
+                compression="gzip",
+            )
         else:
-            dset = h5parent.create_dataset(name, rawshape,
-                                           chunks=tuple(rawshape),
-                                           dtype=self.dtype,
-                                           compression='gzip')
+            dset = h5parent.create_dataset(
+                name,
+                rawshape,
+                chunks=tuple(rawshape),
+                dtype=self.dtype,
+                compression="gzip",
+            )
         self.createAttributes(dset, sinkhandler)
 
     def results(self, name, h5parent, sinkhandler, _results):
@@ -688,5 +706,4 @@ class CalcData(NexusElementBase):
         raise NotImplementedError("Derived class must implement _shape(dset)")
 
     def _calcData(self, dataset):
-        raise NotImplementedError("Derived class must implement "
-                                  "_calcData(dset)")
+        raise NotImplementedError("Derived class must implement " "_calcData(dset)")

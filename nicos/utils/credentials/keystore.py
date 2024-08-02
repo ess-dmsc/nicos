@@ -54,8 +54,7 @@ from . import NicosKeyStore
 
 
 class NicosKeyRing(EncryptedKeyring):
-    '''Keyring that allows easy setting of storage location
-    '''
+    """Keyring that allows easy setting of storage location"""
 
     def __init__(self, storepath=""):
         EncryptedKeyring.__init__(self)
@@ -70,32 +69,32 @@ class NicosKeyRing(EncryptedKeyring):
 
 
 class EncryptedNicosKeyStore(NicosKeyStore):
-    '''Multi-keyring keystore
+    """Multi-keyring keystore
 
     This keystore uses multiple keyrings, but allows write access only to
     the last one in the list.
-    '''
+    """
 
     storepathes = config.keystorepaths
     keyrings = []
 
-    def __init__(self, storekey='nicos'):
+    def __init__(self, storekey="nicos"):
         for sp in self.storepathes:
             ring = NicosKeyRing(sp)
             ring.keyring_key = storekey
             self.keyrings.append(ring)
 
-    def getCredential(self, credid, domain='nicos'):
+    def getCredential(self, credid, domain="nicos"):
         for ring in self.keyrings:
             pw = ring.get_password(domain, credid)
             if pw is not None:
                 return pw
         return None
 
-    def setCredential(self, credid, passwd, domain='nicos'):
+    def setCredential(self, credid, passwd, domain="nicos"):
         return self.keyrings[-1].set_password(domain, credid, passwd)
 
-    def delCredential(self, credid, domain='nicos'):
+    def delCredential(self, credid, domain="nicos"):
         return self.keyrings[-1].delete_password(domain, credid)
 
 

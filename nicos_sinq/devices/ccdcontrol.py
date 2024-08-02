@@ -29,20 +29,18 @@ from nicos_sinq.devices.detector import ControlDetector
 
 
 class NIAGControl(ControlDetector):
-    """"
+    """ "
     A detector control class which implements the NIAG CCD counting
     features:
     - restart counting when the countrate was to low
     """
 
     attached_devices = {
-        'rate_monitor': Attach('Monitor to check rate against',
-                               Readable),
-        'rate_threshold': Attach('Threshold defining the minimum acceptable '
-                                 'rate',
-                                 Moveable),
-        'exp_ok': Attach('Indication of sufficient exposure',
-                         Readable),
+        "rate_monitor": Attach("Monitor to check rate against", Readable),
+        "rate_threshold": Attach(
+            "Threshold defining the minimum acceptable " "rate", Moveable
+        ),
+        "exp_ok": Attach("Indication of sufficient exposure", Readable),
     }
     _triggerFinished = None
     _start_time = None
@@ -64,9 +62,12 @@ class NIAGControl(ControlDetector):
         if isinstance(mon, list):
             mon = mon[0]
         if exp_ok != 1:
-            session.log.info('%s, should be > %d uA, is %f uA',
-                             'Restarting because of insuffient count rate',
-                             thres, mon)
+            session.log.info(
+                "%s, should be > %d uA, is %f uA",
+                "Restarting because of insuffient count rate",
+                thres,
+                mon,
+            )
             self.start()
             return False
         self._start_time = None

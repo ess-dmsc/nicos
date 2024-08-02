@@ -22,16 +22,11 @@
 # *****************************************************************************
 
 devices = dict(
-    DeviceCanDisable = device('test.nicos_ess.test_devices.test_epics_extensions'
-        '.EpicsDeviceThatHasDisablePv',
-        description = "A device that HasDisablePv mixin",
-        switchpvs = {
-            'read': 'EPICS:Enable.RBV',
-            'write': 'EPICS:Enable'
-        },
-        switchstates = {
-            'enable': 1,
-            'disable': 0
-        },
+    DeviceCanDisable=device(
+        "test.nicos_ess.test_devices.test_epics_extensions"
+        ".EpicsDeviceThatHasDisablePv",
+        description="A device that HasDisablePv mixin",
+        switchpvs={"read": "EPICS:Enable.RBV", "write": "EPICS:Enable"},
+        switchstates={"enable": 1, "disable": 0},
     ),
 )

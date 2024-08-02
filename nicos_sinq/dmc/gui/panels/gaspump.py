@@ -29,19 +29,23 @@ from nicos.utils import findResource
 
 
 def is_about_gaspump(message):
-    return any(ch in message[0] for ch in ['ch1_', 'ch2', 'gaspump_command'])
+    return any(ch in message[0] for ch in ["ch1_", "ch2", "gaspump_command"])
 
 
 class ValueLabel(QLabel, NicosWidget):
-    key = PropDef('key', str, '', 'Cache key to display (without "nicos/"'
-                                  'prefix), set either "dev" or this')
+    key = PropDef(
+        "key",
+        str,
+        "",
+        'Cache key to display (without "nicos/"' 'prefix), set either "dev" or this',
+    )
 
     def __init__(self, parent, designMode=False):
         QLabel.__init__(self, parent)
         NicosWidget.__init__(self)
 
     def registerKeys(self):
-        self.registerKey(self.props['key'])
+        self.registerKey(self.props["key"])
 
     def on_keyChange(self, key, value, time, expired):
         if isinstance(value, str):
@@ -50,41 +54,43 @@ class ValueLabel(QLabel, NicosWidget):
         if isinstance(value, bool):
             value = int(value)
         if isinstance(value, int):
-            self.setText(f'{value}')
+            self.setText(f"{value}")
             return
         if isinstance(value, float):
-            self.setText(f'{value:.3f}')
+            self.setText(f"{value:.3f}")
             return
 
 
 class DmcGaspumpPanel(Panel):
-    """Provides a panel with several input fields for the experiment settings.
-    """
+    """Provides a panel with several input fields for the experiment settings."""
 
-    panelName = 'Gaspump panel'
+    panelName = "Gaspump panel"
 
     def __init__(self, parent, client, options):
         Panel.__init__(self, parent, client, options)
-        loadUi(self, findResource('nicos_sinq/dmc/gui/panels/ui_files/gaspump.ui'))
-        self.load_button.setToolTip('Load parameters from EEPROM')
-        self.store_button.setToolTip('Store parameters into EEPROM')
-        self.reset_button.setToolTip('Reset the device')
+        loadUi(self, findResource("nicos_sinq/dmc/gui/panels/ui_files/gaspump.ui"))
+        self.load_button.setToolTip("Load parameters from EEPROM")
+        self.store_button.setToolTip("Store parameters into EEPROM")
+        self.reset_button.setToolTip("Reset the device")
 
         for channel in [1, 2]:
-            for param in ['amplitude', 'frequency', 'phase', 'mode', 'error',
-                          'feedback']:
-                getattr(self,
-                        f'{param}{channel}').key = f'ch{channel}_{param}/value'
-                getattr(self, f'{param}{channel}').setClient(client)
+            for param in [
+                "amplitude",
+                "frequency",
+                "phase",
+                "mode",
+                "error",
+                "feedback",
+            ]:
+                getattr(self, f"{param}{channel}").key = f"ch{channel}_{param}/value"
+                getattr(self, f"{param}{channel}").setClient(client)
 
-        for param in ['amplitude', 'frequency', 'phase']:
-            getattr(self, f'set_{param}').setValidator(QIntValidator())
+        for param in ["amplitude", "frequency", "phase"]:
+            getattr(self, f"set_{param}").setValidator(QIntValidator())
 
-        self.set_amplitude.returnPressed.connect(
-            lambda: self.on_set('amplitude'))
-        self.set_frequency.returnPressed.connect(
-            lambda: self.on_set('frequency'))
-        self.set_phase.returnPressed.connect(lambda: self.on_set('phase'))
+        self.set_amplitude.returnPressed.connect(lambda: self.on_set("amplitude"))
+        self.set_frequency.returnPressed.connect(lambda: self.on_set("frequency"))
+        self.set_phase.returnPressed.connect(lambda: self.on_set("phase"))
 
         self.load_button.clicked.connect(self.on_load)
         self.store_button.clicked.connect(self.on_store)
@@ -99,9 +105,9 @@ class DmcGaspumpPanel(Panel):
         if not button:
             return
         channel = int(button.text()[-1])
-        target = getattr(self, f'set_{parameter}').text()
-        self.client.run(f'maw(ch{channel}_{parameter}, {target})')
-        getattr(self, f'set_{parameter}').clear()
+        target = getattr(self, f"set_{parameter}").text()
+        self.client.run(f"maw(ch{channel}_{parameter}, {target})")
+        getattr(self, f"set_{parameter}").clear()
 
     def on_load(self):
         button = self.channel_group.checkedButton()
@@ -118,7 +124,7 @@ class DmcGaspumpPanel(Panel):
         self.client.run(f'maw(gaspump_command, "store ch{channel}")')
 
     def on_reset(self):
-        self.client.run('maw(gaspump_command, reset)')
+        self.client.run("maw(gaspump_command, reset)")
 
     def on_client_initstatus(self, state):
         self.outView.clear()
@@ -129,5 +135,5 @@ class DmcGaspumpPanel(Panel):
             self.outView.addMessage(message)
 
     def on_client_simmessage(self, simmessage):
-        if simmessage[-1] == '0' and is_about_gaspump(simmessage):
+        if simmessage[-1] == "0" and is_about_gaspump(simmessage):
             self.outView.addMessage(simmessage)

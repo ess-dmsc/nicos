@@ -29,22 +29,22 @@ from nicos.core import LimitError
 
 from test.utils import raises
 
-session_setup = 'controller'
+session_setup = "controller"
 
 
 def test_controller(session):
-    controller = session.getDevice('controller')
-    dev1 = session.getDevice('dev1')
-    dev2 = session.getDevice('dev2')
+    controller = session.getDevice("controller")
+    dev1 = session.getDevice("dev1")
+    dev2 = session.getDevice("dev2")
     assert dev1.read() == 0
     assert dev2.read() == 0
 
-    dev2.move(100.)
-    assert dev2.read() == 100.
-    assert raises(LimitError, dev1.move, 200.)
+    dev2.move(100.0)
+    assert dev2.read() == 100.0
+    assert raises(LimitError, dev1.move, 200.0)
 
-    controller.move((10., 20.))
+    controller.move((10.0, 20.0))
     assert dev1.read() == 10.0
     assert dev2.read() == 20.0
 
-    assert raises(LimitError, controller.move, (300., 0))
+    assert raises(LimitError, controller.move, (300.0, 0))

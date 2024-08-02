@@ -2,10 +2,14 @@
 
 # test: setups = hexapod
 
-pause("Please manually move detector arm in to the direction of the guide (Reibrad switch 1, Air Switch 1). Once finished change Reibrad switch 0.")
+pause(
+    "Please manually move detector arm in to the direction of the guide (Reibrad switch 1, Air Switch 1). Once finished change Reibrad switch 0."
+)
 pause("Ready to reference detector arm. Continue?")
 reference(detarm)
-pause("Please manually move omega (table) clock wise in order to reference (Platform switch).")
+pause(
+    "Please manually move omega (table) clock wise in order to reference (Platform switch)."
+)
 pause("Ready to reference omega (table)?")
 reference(omega)
 pause("Move to initial position?")

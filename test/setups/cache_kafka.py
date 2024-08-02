@@ -25,20 +25,24 @@ import os
 
 from test.utils import alt_cache_addr
 
-name = 'setup for cache stresstest with kafka db'
+name = "setup for cache stresstest with kafka db"
 
 devices = dict(
-    Server = device('nicos.services.cache.server.CacheServer',
-        server = alt_cache_addr,
-        db = 'DB4',
-        loglevel = 'debug',
+    Server=device(
+        "nicos.services.cache.server.CacheServer",
+        server=alt_cache_addr,
+        db="DB4",
+        loglevel="debug",
     ),
-    DB4 = device('nicos.services.cache.database.kafka.KafkaCacheDatabaseWithHistory',
-        currenttopic = 'test-flatbuffers',
-        historytopic = 'test-flatbuffers-history',
-        brokers = [os.environ.get('KAFKA_URI', 'localhost:9092')],
-        loglevel = 'debug',
-        serializer = 'serializer'
+    DB4=device(
+        "nicos.services.cache.database.kafka.KafkaCacheDatabaseWithHistory",
+        currenttopic="test-flatbuffers",
+        historytopic="test-flatbuffers-history",
+        brokers=[os.environ.get("KAFKA_URI", "localhost:9092")],
+        loglevel="debug",
+        serializer="serializer",
     ),
-    serializer = device('nicos.services.cache.entry.serializer.flatbuffers.FlatbuffersCacheEntrySerializer'),
+    serializer=device(
+        "nicos.services.cache.entry.serializer.flatbuffers.FlatbuffersCacheEntrySerializer"
+    ),
 )

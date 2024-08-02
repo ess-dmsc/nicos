@@ -37,30 +37,33 @@ def import_and_check(modname):
         __import__(modname)
     except ImportError as e:
         # we lack a precondition module, don't worry about that
-        pytest.skip('import error for %s: %s' % (modname, e))
+        pytest.skip("import error for %s: %s" % (modname, e))
     except ValueError as err:
-        if 'has already been set to' in str(err):
+        if "has already been set to" in str(err):
             # import order error with GUI widget modules
-            pytest.skip('GUI widget module')
+            pytest.skip("GUI widget module")
         raise
 
 
-facility_dirs = [d for d in glob.glob(path.join(module_root, 'nicos_*'))
-                 if path.isdir(d)]
+facility_dirs = [
+    d for d in glob.glob(path.join(module_root, "nicos_*")) if path.isdir(d)
+]
 
-all_instrs = [(path.basename(facility_dir), instr_dir)
-              for facility_dir in facility_dirs
-              for instr_dir in os.listdir(facility_dir)
-              if path.isdir(path.join(facility_dir, instr_dir))
-              and not instr_dir.startswith(('__', '.'))]
+all_instrs = [
+    (path.basename(facility_dir), instr_dir)
+    for facility_dir in facility_dirs
+    for instr_dir in os.listdir(facility_dir)
+    if path.isdir(path.join(facility_dir, instr_dir))
+    and not instr_dir.startswith(("__", "."))
+]
 
 
-@pytest.mark.parametrize('fac_instr', all_instrs, ids=str)
+@pytest.mark.parametrize("fac_instr", all_instrs, ids=str)
 def test_import_all(fac_instr):
     facility, instr = fac_instr
-    instrlib = path.join(module_root, facility, instr, 'devices')
+    instrlib = path.join(module_root, facility, instr, "devices")
     if not path.isdir(instrlib):
         return
     for mod in os.listdir(instrlib):
-        if mod.endswith('.py'):
-            import_and_check('%s.%s.devices.%s' % (facility, instr, mod[:-3]))
+        if mod.endswith(".py"):
+            import_and_check("%s.%s.devices.%s" % (facility, instr, mod[:-3]))

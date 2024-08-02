@@ -34,25 +34,25 @@ class CameaAzimuthalAngle(NexusElementBase):
     Store the azimuthal_angle which gets calculated from the
     sample scattering sense
     """
+
     def __init__(self, name):
         self.name = name
         NexusElementBase.__init__(self)
 
     def create(self, name, h5parent, sinkhandler):
-        if (self.name, 'scattering_sense') in sinkhandler.dataset.metainfo:
-            ss = sinkhandler.dataset.metainfo[
-                (self.name, 'scattering_sense')]
+        if (self.name, "scattering_sense") in sinkhandler.dataset.metainfo:
+            ss = sinkhandler.dataset.metainfo[(self.name, "scattering_sense")]
             if ss == 1:
-                value = 0.
+                value = 0.0
             else:
-                value = 180.
-            dset = h5parent.create_dataset(name, (1,), dtype='float32')
+                value = 180.0
+            dset = h5parent.create_dataset(name, (1,), dtype="float32")
             dset[0] = value
             self.createAttributes(dset, sinkhandler)
         else:
-            session.log.warning('Failed to write azimuthal_angle, '
-                                'device %s not found',
-                                self.name)
+            session.log.warning(
+                "Failed to write azimuthal_angle, " "device %s not found", self.name
+            )
 
 
 class BoundaryArrayParam(ArrayParam):
@@ -60,16 +60,17 @@ class BoundaryArrayParam(ArrayParam):
     This little class handles the reshaping of the boundary array and
     gets rid of accessing the device directly in NexusSink
     """
+
     def create(self, name, h5parent, sinkhandler):
         if (self.dev, self.parameter) in sinkhandler.dataset.metainfo:
-            rawvalue = sinkhandler.dataset.metainfo[
-                (self.dev, self.parameter)]
+            rawvalue = sinkhandler.dataset.metainfo[(self.dev, self.parameter)]
             value = np.array(rawvalue[0], self.dtype)
             length = value.size
-            value = value.reshape((int(length/2), 2))
+            value = value.reshape((int(length / 2), 2))
             dset = h5parent.create_dataset(name, value.shape, self.dtype)
             dset[...] = value
             self.createAttributes(dset, sinkhandler)
         else:
-            session.log.warning('Failed to write %s, device %s not found',
-                                name, self.dev)
+            session.log.warning(
+                "Failed to write %s, device %s not found", name, self.dev
+            )

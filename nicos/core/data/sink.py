@@ -42,8 +42,10 @@ class DataFileBase:
 
     def __init__(self, shortpath, filepath):
         if path.isfile(filepath):
-            raise ProgrammingError('Data file named %r already exists! '
-                                   'Check filename templates!' % filepath)
+            raise ProgrammingError(
+                "Data file named %r already exists! "
+                "Check filename templates!" % filepath
+            )
         self.shortpath = shortpath
         self.filepath = filepath
 
@@ -53,22 +55,20 @@ class DataFile(DataFileBase, File):
 
     def __init__(self, shortpath, filepath, filemode=None, logger=None):
         DataFileBase.__init__(self, shortpath, filepath)
-        File.__init__(self, filepath, 'wb')
+        File.__init__(self, filepath, "wb")
         self._log = logger
         self._filemode = filemode
 
     def close(self):
         File.close(self)
         if self._filemode is not None:
-            enableDisableFileItem(self.filepath, self._filemode,
-                                  logger=self._log)
+            enableDisableFileItem(self.filepath, self._filemode, logger=self._log)
 
 
 class GzipFile(DataFileBase, StdGzipFile):
-
     def __init__(self, shortpath, filepath):
         DataFileBase.__init__(self, shortpath, filepath)
-        StdGzipFile.__init__(self, filepath, 'wb')
+        StdGzipFile.__init__(self, filepath, "wb")
 
 
 class DataSinkHandler:
@@ -180,7 +180,6 @@ class DataSinkHandler:
 
 
 class NicosMetaWriterMixin:
-
     update_headerinfo = False
 
     def _collectMetaInformation(self, update_headerinfo=None):
@@ -189,63 +188,68 @@ class NicosMetaWriterMixin:
         for (device, key), (_, val, unit, category) in metainfo.items():
             if category:
                 bycategory.setdefault(category, []).append(
-                    ('%s_%s' % (device, key), (val + ' ' + unit).strip()))
+                    ("%s_%s" % (device, key), (val + " " + unit).strip())
+                )
         if update_headerinfo is None:
-            update_headerinfo = getattr(self.sink, 'update_headerinfo',
-                                        self.update_headerinfo)
+            update_headerinfo = getattr(
+                self.sink, "update_headerinfo", self.update_headerinfo
+            )
         if update_headerinfo:
             # put count result in its own category: 'result'
             # note: status may need to be update manually as it is not
             #       collected in the values :(
             # note2: as we may be called during counting, some devices
             #        may be busy: this may irritate users :(
-            bycategory['result'] = results = []
+            bycategory["result"] = results = []
             for devname, val in list(self.dataset.values.items()):
                 device = session.getDevice(devname)
-                if (devname, 'value') in metainfo:
+                if (devname, "value") in metainfo:
                     # re-use the category
-                    _, _, unit, category = metainfo[(devname, 'value')]
+                    _, _, unit, category = metainfo[(devname, "value")]
                 else:
                     unit = device.unit
-                    category = 'result'
+                    category = "result"
                 bycategory.setdefault(category, []).append(
-                    ('%s_value' % devname, device.format(val, True).strip()))
+                    ("%s_value" % devname, device.format(val, True).strip())
+                )
                 # refresh status as well
                 stat = device.status()
                 # also map stat[0] to a string
                 if stat[1]:
-                    stat = ('%s_status' % devname, ('%s: %s' % (
-                        statuses[stat[0]].lower(), stat[1].strip())))
+                    stat = (
+                        "%s_status" % devname,
+                        ("%s: %s" % (statuses[stat[0]].lower(), stat[1].strip())),
+                    )
                 else:
-                    stat = ('%s_status' % devname, statuses[stat[0]].lower())
+                    stat = ("%s_status" % devname, statuses[stat[0]].lower())
                 bycategory[category].append(stat)
         # collect countresults (if already existing)
         if self.dataset.results:
-            bycategory['result'] = results = []
-            for detname, detvalue in zip(self.dataset.detvalueinfo,
-                                         self.dataset.detvaluelist):
+            bycategory["result"] = results = []
+            for detname, detvalue in zip(
+                self.dataset.detvalueinfo, self.dataset.detvaluelist
+            ):
                 results.append((detname.name, str(detvalue)))
         return bycategory
 
-    def writeMetaInformation(self, fp, title="Device snapshot",
-                             update_headerinfo=None):
+    def writeMetaInformation(self, fp, title="Device snapshot", update_headerinfo=None):
         """utility method for writing a standard nicos header
 
         to be used by derived sinks"""
         bycategory = self._collectMetaInformation(update_headerinfo)
-        wrapper = TextIOWrapper(fp, encoding='utf-8')
-        wrapper.write('### NICOS %s V2.0\n' % title)
+        wrapper = TextIOWrapper(fp, encoding="utf-8")
+        wrapper.write("### NICOS %s V2.0\n" % title)
         for category, catname in INFO_CATEGORIES:
             if category not in bycategory:
                 continue
-            wrapper.write('### %s\n' % catname)
+            wrapper.write("### %s\n" % catname)
             for key, value in sorted(bycategory[category]):
-                wrapper.write('%25s : %s\n' % (key, value))
+                wrapper.write("%25s : %s\n" % (key, value))
         # to ease interpreting the data...
         # note: arraydesc exists only for ImageSinks
-        if hasattr(self, '_arraydesc'):
-            wrapper.write('\n%r' % self._arraydesc)
-        wrapper.write('\n')
+        if hasattr(self, "_arraydesc"):
+            wrapper.write("\n%r" % self._arraydesc)
+        wrapper.write("\n")
         wrapper.detach()
 
 
@@ -279,15 +283,20 @@ class DataSink(Device):
     """
 
     parameters = {
-        'detectors': Param('List of detector names to activate this sink '
-                           '(default is always activated)', type=listof(str)),
-        'settypes':  Param('List of dataset types to activate this sink '
-                           '(default is for all settypes the sink supports)',
-                           type=setof(*SETTYPES)),
+        "detectors": Param(
+            "List of detector names to activate this sink "
+            "(default is always activated)",
+            type=listof(str),
+        ),
+        "settypes": Param(
+            "List of dataset types to activate this sink "
+            "(default is for all settypes the sink supports)",
+            type=setof(*SETTYPES),
+        ),
     }
 
     parameter_overrides = {
-        'visibility': Override(default=()),
+        "visibility": Override(default=()),
     }
 
     # Set to true in subclasses that are safe for simulation.
@@ -310,8 +319,9 @@ class DataSink(Device):
             return False
         if self.settypes and dataset.settype not in self.settypes:
             return False
-        if self.detectors and \
-           not ({d.name for d in dataset.detectors} & set(self.detectors)):
+        if self.detectors and not (
+            {d.name for d in dataset.detectors} & set(self.detectors)
+        ):
             return False
         return True
 
@@ -322,14 +332,16 @@ class DataSink(Device):
         dataset determined via `handlerclass` and returns them.
         """
         if self.handlerclass is None:
-            raise NotImplementedError('Must set an "handlerclass" attribute '
-                                      'on %s' % self.__class__)
+            raise NotImplementedError(
+                'Must set an "handlerclass" attribute ' "on %s" % self.__class__
+            )
         # pylint: disable=not-callable
         if dataset.settype == POINT:
             dets = {d.name for d in dataset.detectors}
             if self.detectors:
                 dets &= set(self.detectors)
-            return [self.handlerclass(self, dataset, session.getDevice(det))
-                    for det in dets]
+            return [
+                self.handlerclass(self, dataset, session.getDevice(det)) for det in dets
+            ]
         else:
             return [self.handlerclass(self, dataset, None)]

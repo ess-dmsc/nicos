@@ -33,8 +33,7 @@ from nicos.core.utils import system_user
 from nicos.protocols.daemon.classic import DEFAULT_PORT
 from nicos.services.daemon.auth import Authenticator
 from nicos.services.daemon.script import ExecutionController
-from nicos.utils import createThread, formatExtendedStack, importString, \
-    parseHostPort
+from nicos.utils import createThread, formatExtendedStack, importString, parseHostPort
 
 
 class NicosDaemon(Device):
@@ -43,40 +42,52 @@ class NicosDaemon(Device):
     """
 
     attached_devices = {
-        'authenticators': Attach('The authenticator devices to use for '
-                                 'validating users and passwords',
-                                 Authenticator, multiple=True),
+        "authenticators": Attach(
+            "The authenticator devices to use for " "validating users and passwords",
+            Authenticator,
+            multiple=True,
+        ),
     }
 
     parameters = {
-        'server':         Param('Address to bind to (host or host[:port])',
-                                type=host(defaultport=DEFAULT_PORT),
-                                mandatory=True,
-                                ext_desc='The default port is ``1301``.'),
-        'servercls':      Param('Server class used for creating transports '
-                                'to each client',
-                                type=str, mandatory=False,
-                                default='nicos.services.daemon.proto.classic.'
-                                'Server'),
-        'serializercls':  Param('Serializer class used for serializing '
-                                'messages transported from/to the server',
-                                type=str, mandatory=False,
-                                default='nicos.protocols.daemon.classic.'
-                                'ClassicSerializer'),
-        'maxlogins':      Param('Maximum number of simultaneous clients '
-                                'served', type=int,
-                                default=10),
-        'updateinterval': Param('Interval for watch expressions checking and'
-                                ' sending updates to the clients',
-                                type=float, unit='s', default=0.2),
-        'trustedhosts':   Param('A list of trusted hosts allowed to log in',
-                                type=listof(str),
-                                ext_desc='An empty list means all hosts are '
-                                'allowed.'),
-        'simmode':        Param('Whether to always start in dry run mode',
-                                type=bool),
-        'autosimulate':   Param('Whether to simulate scripts when running them',
-                                type=bool, default=False)
+        "server": Param(
+            "Address to bind to (host or host[:port])",
+            type=host(defaultport=DEFAULT_PORT),
+            mandatory=True,
+            ext_desc="The default port is ``1301``.",
+        ),
+        "servercls": Param(
+            "Server class used for creating transports " "to each client",
+            type=str,
+            mandatory=False,
+            default="nicos.services.daemon.proto.classic." "Server",
+        ),
+        "serializercls": Param(
+            "Serializer class used for serializing "
+            "messages transported from/to the server",
+            type=str,
+            mandatory=False,
+            default="nicos.protocols.daemon.classic." "ClassicSerializer",
+        ),
+        "maxlogins": Param(
+            "Maximum number of simultaneous clients " "served", type=int, default=10
+        ),
+        "updateinterval": Param(
+            "Interval for watch expressions checking and"
+            " sending updates to the clients",
+            type=float,
+            unit="s",
+            default=0.2,
+        ),
+        "trustedhosts": Param(
+            "A list of trusted hosts allowed to log in",
+            type=listof(str),
+            ext_desc="An empty list means all hosts are " "allowed.",
+        ),
+        "simmode": Param("Whether to always start in dry run mode", type=bool),
+        "autosimulate": Param(
+            "Whether to simulate scripts when running them", type=bool, default=False
+        ),
     }
 
     def doInit(self, mode):
@@ -87,12 +98,13 @@ class NicosDaemon(Device):
         self._stoprequest = False
         # the controller represents the internal script execution machinery
         if self.autosimulate and not config.sandbox_simulation:
-            raise ConfigurationError('autosimulation configured but sandbox'
-                                     ' deactivated')
+            raise ConfigurationError(
+                "autosimulation configured but sandbox" " deactivated"
+            )
 
-        self._controller = ExecutionController(self.log, self.emit_event,
-                                               'startup', self.simmode,
-                                               self.autosimulate)
+        self._controller = ExecutionController(
+            self.log, self.emit_event, "startup", self.simmode, self.autosimulate
+        )
 
         # cache log messages emitted so far
         self._messages = []
@@ -102,8 +114,7 @@ class NicosDaemon(Device):
         # create server (transport + serializer)
         self._server = servercls(self, (host, port), serialcls())
 
-        self._watch_worker = createThread('daemon watch monitor',
-                                          self._watch_entry)
+        self._watch_worker = createThread("daemon watch monitor", self._watch_entry)
 
     def _watch_entry(self):
         """
@@ -111,15 +122,19 @@ class NicosDaemon(Device):
         events on changes.
         """
         # pre-fetch attributes for speed
-        ctlr, intv, emit, sleep = self._controller, self.updateinterval, \
-            self.emit_event, time.sleep
+        ctlr, intv, emit, sleep = (
+            self._controller,
+            self.updateinterval,
+            self.emit_event,
+            time.sleep,
+        )
         lastwatch = {}
         while not self._stoprequest:
             sleep(intv)
             # new watch values?
             watch = ctlr.eval_watch_expressions()
             if watch != lastwatch:
-                emit('watch', watch)
+                emit("watch", watch)
                 lastwatch = watch
 
     def emit_event(self, event, data, blobs=None):
@@ -133,23 +148,27 @@ class NicosDaemon(Device):
             self._server.emit(event, data, blobs or [], handler=handler)
 
     def statusinfo(self):
-        self.log.info('got SIGUSR2 - current stacktraces for each thread:')
+        self.log.info("got SIGUSR2 - current stacktraces for each thread:")
         active = threading._active
         for tid, frame in list(sys._current_frames().items()):
             if tid in active:
                 name = active[tid].getName()
             else:
                 name = str(tid)
-            self.log.info('%s: %s', name, formatExtendedStack(frame))
+            self.log.info("%s: %s", name, formatExtendedStack(frame))
 
     def start(self):
         """Start the daemon's server."""
-        self.log.info('NICOS daemon v%s started, starting server on %s',
-                      nicos_version, self.server)
+        self.log.info(
+            "NICOS daemon v%s started, starting server on %s",
+            nicos_version,
+            self.server,
+        )
         # startup the script thread
         self._controller.start_script_thread()
-        self._worker = createThread('daemon server', self._server.start,
-                                    args=(self._long_loop_delay,))
+        self._worker = createThread(
+            "daemon server", self._server.start, args=(self._long_loop_delay,)
+        )
 
     def wait(self):
         while not self._stoprequest:
@@ -157,7 +176,7 @@ class NicosDaemon(Device):
         self._worker.join()
 
     def quit(self, signum=None):
-        self.log.info('quitting on signal %s...', signum)
+        self.log.info("quitting on signal %s...", signum)
         self._stoprequest = True
         self._server.stop()
         self._worker.join()
@@ -167,7 +186,7 @@ class NicosDaemon(Device):
         return self._controller.current_script
 
     def current_user(self):
-        return getattr(self._controller.thread_data, 'user', system_user)
+        return getattr(self._controller.thread_data, "user", system_user)
 
     def get_authenticators(self):
         return self._attached_authenticators

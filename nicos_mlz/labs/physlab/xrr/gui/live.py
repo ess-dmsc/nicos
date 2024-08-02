@@ -27,22 +27,20 @@ from nicos.clients.gui.panels.live import LiveDataPanel
 
 
 class TThetaLiveDataPanel(LiveDataPanel):
-
     def setData(self, arrays, labels=None, titles=None, uid=None, display=True):
-
         # This will cache the original data, but does not display it
         if uid:
-            LiveDataPanel.setData(self, arrays, labels, titles, uid=uid,
-                                  display=False)
+            LiveDataPanel.setData(self, arrays, labels, titles, uid=uid, display=False)
 
         ttheta = arrays[0][0]
         counts = arrays[0][1]
 
-        labels = {'x': np.array(ttheta)}
-        titles = {'x': '2θ [deg]', 'y': 'counts'}
+        labels = {"x": np.array(ttheta)}
+        titles = {"x": "2θ [deg]", "y": "counts"}
         # This will display the modified data, but does not cache it..
-        LiveDataPanel.setData(self, np.array([counts]), labels, titles,
-                              uid=None, display=display)
+        LiveDataPanel.setData(
+            self, np.array([counts]), labels, titles, uid=None, display=display
+        )
 
     # def _initLiveWidget(self, array):
     #    self.initLiveWidget(LiveWidget1D)

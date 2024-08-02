@@ -1,5 +1,5 @@
-description = 'Resi instrument setup'
+description = "Resi instrument setup"
 
-group = 'basic'
+group = "basic"
 
-includes = ['base']
+includes = ["base"]

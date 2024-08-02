@@ -32,33 +32,33 @@ from test.utils import raises
 
 def test_deviceinfo():
     val = 10.0
-    unit = 'mm'
-    formatted = '%f %s' % (val, unit)
-    a = DeviceValue(val, formatted, unit, 'meta')
+    unit = "mm"
+    formatted = "%f %s" % (val, unit)
+    a = DeviceValue(val, formatted, unit, "meta")
     assert str(a) == formatted
     assert float(a) == val
     assert int(a) == int(val)
 
-    b = DeviceValue('str', 'str', '', 'meta')
+    b = DeviceValue("str", "str", "", "meta")
     assert raises(ValueError, float, b)
     assert raises(ValueError, int, b)
 
-    c = DeviceValue(0, str(0), '', 'meta')
+    c = DeviceValue(0, str(0), "", "meta")
     assert int(c) == 0
 
 
 def test_devicevaluedict():
     dvd = DeviceValueDict()
 
-    val = '0 mm'
-    dvd['a.b.c'] = val
+    val = "0 mm"
+    dvd["a.b.c"] = val
 
-    assert dvd['a.b.c'].raw == val
-    assert dvd['a.b.c'].formatted == val
+    assert dvd["a.b.c"].raw == val
+    assert dvd["a.b.c"].formatted == val
 
-    val2 = DeviceValue(12, '12 cm', 'cm', 'meta')
-    dvd['x.y'] = val2
+    val2 = DeviceValue(12, "12 cm", "cm", "meta")
+    dvd["x.y"] = val2
 
-    assert dvd['x.y'].raw == 12
-    assert dvd['x.y'].formatted == '12 cm'
-    assert dvd['x.y'].unit == 'cm'
+    assert dvd["x.y"].raw == 12
+    assert dvd["x.y"].formatted == "12 cm"
+    assert dvd["x.y"].unit == "cm"

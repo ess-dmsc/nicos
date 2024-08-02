@@ -29,11 +29,14 @@ from nicos.devices.vendor.caress.core import CARESSDevice
 
 
 class MUX(CARESSDevice, Device):
-
     parameters = {
-        'initsleep': Param('sleep time after initialize',
-                           type=floatrange(0), default=10, settable=False,
-                           userparam=False),
+        "initsleep": Param(
+            "sleep time after initialize",
+            type=floatrange(0),
+            default=10,
+            settable=False,
+            userparam=False,
+        ),
     }
 
     def doInit(self, mode):

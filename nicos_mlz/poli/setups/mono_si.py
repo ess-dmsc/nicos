@@ -1,21 +1,23 @@
-description = 'POLI silicon monochromator devices'
+description = "POLI silicon monochromator devices"
 
-group = 'optional'
+group = "optional"
 
-excludes = ['mono_cu']
+excludes = ["mono_cu"]
 
-tango_base = 'tango://phys.poli.frm2:10000/poli/'
-s7_motor = tango_base + 's7_motor/'
+tango_base = "tango://phys.poli.frm2:10000/poli/"
+s7_motor = tango_base + "s7_motor/"
 
 devices = dict(
-    sih = device('nicos.devices.entangle.Motor',
-        description = 'Silicon monochromator horizontal focus',
-        tangodevice = s7_motor + 'sih',
-        fmtstr = '%.2f',
+    sih=device(
+        "nicos.devices.entangle.Motor",
+        description="Silicon monochromator horizontal focus",
+        tangodevice=s7_motor + "sih",
+        fmtstr="%.2f",
     ),
-    siv = device('nicos.devices.entangle.Motor',
-        description = 'Silicon monochromator vertical focus',
-        tangodevice = s7_motor + 'siv',
-        fmtstr = '%.2f',
+    siv=device(
+        "nicos.devices.entangle.Motor",
+        description="Silicon monochromator vertical focus",
+        tangodevice=s7_motor + "siv",
+        fmtstr="%.2f",
     ),
 )

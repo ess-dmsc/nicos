@@ -1,21 +1,22 @@
-description = 'Antrax plug switching box'
+description = "Antrax plug switching box"
 
-group = 'plugplay'
+group = "plugplay"
 
-instrument_values = configdata('instrument.values')
+instrument_values = configdata("instrument.values")
 lowlevel = ()
 
-tango_url = instrument_values['tango_url'] % setupname
+tango_url = instrument_values["tango_url"] % setupname
 
 devices = {
-    '%s' % setupname : device('nicos.devices.entangle.NamedDigitalOutput',
-        description = 'Plug switching device',
-        tangodevice = tango_url + 'box/switchbox/switch',
-        unit = '',
-        mapping = {
-            'off': 0,
-            'on': 1,
+    "%s" % setupname: device(
+        "nicos.devices.entangle.NamedDigitalOutput",
+        description="Plug switching device",
+        tangodevice=tango_url + "box/switchbox/switch",
+        unit="",
+        mapping={
+            "off": 0,
+            "on": 1,
         },
-        visibility = lowlevel,
+        visibility=lowlevel,
     ),
 }

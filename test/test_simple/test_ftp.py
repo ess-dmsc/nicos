@@ -89,12 +89,11 @@ class FTPTestHandler(FTPHandler):
 
 
 class MyTestFS(AbstractedFS):
-
     def open(self, filename, mode):
         "Overwritten to use in memory files"
         self.cmd_channel.ds.ofilename = filename
         self.cmd_channel.ds.omode = mode
-        if 'b' in mode:
+        if "b" in mode:
             self.cmd_channel.ds.iofile = NamedBytesIO(filename)
         else:
             self.cmd_channel.ds.iofile = NamedStringIO(filename)
@@ -102,55 +101,56 @@ class MyTestFS(AbstractedFS):
 
     def chdir(self, path):
         "Path changes are virtual"
-        if path == self.cmd_channel.ds.mkdirpath or path == '/':
+        if path == self.cmd_channel.ds.mkdirpath or path == "/":
             self.cmd_channel.ds.chdirpath = path
-        return '/'
+        return "/"
 
     def mkdir(self, path):
         "Do not create dirs"
         self.cmd_channel.ds.mkdirpath = path
 
 
-@pytest.fixture(scope='function')
+@pytest.fixture(scope="function")
 def ftpserver():
     """Provide a ftp server with virtual files"""
     handler = FTPTestHandler
     handler.abstracted_fs = MyTestFS
     authorizer = DummyAuthorizer()
     home = os.curdir
-    authorizer.add_user('user', '12345', home, perm='elrmwM')
+    authorizer.add_user("user", "12345", home, perm="elrmwM")
     handler.authorizer = authorizer
-    server = ThreadedFTPServer(('localhost', 12345), handler)
+    server = ThreadedFTPServer(("localhost", 12345), handler)
 
-    createThread('FTP', server.serve_forever)
+    createThread("FTP", server.serve_forever)
     yield handler
     server.close_all()
 
 
-TEST_CONTENT = 'A test\n'
+TEST_CONTENT = "A test\n"
 
 
-@pytest.fixture(scope='function')
+@pytest.fixture(scope="function")
 def upload(session):
     """Provide a file to use as upload"""
-    fd, t = tempfile.mkstemp(suffix='.txt')
+    fd, t = tempfile.mkstemp(suffix=".txt")
     os.write(fd, TEST_CONTENT.encode())
     yield t
     os.unlink(t)
 
 
-@pytest.mark.skipif(ThreadedFTPServer is object,
-                    reason='pyftpdlib package not installed')
+@pytest.mark.skipif(
+    ThreadedFTPServer is object, reason="pyftpdlib package not installed"
+)
 def test_ftp(session, ftpserver, upload):
-    ftp.FTP_SERVER = 'localhost'
+    ftp.FTP_SERVER = "localhost"
     ftp.FTP_PORT = 12345
-    ftp.FTP_USER = 'user'
-    ftp.FTP_P = '12345'
+    ftp.FTP_USER = "user"
+    ftp.FTP_P = "12345"
 
     ftp.ftpUpload(upload)
-    assert ds.used_username == 'user'
+    assert ds.used_username == "user"
     assert ds.ofilename
-    assert ds.omode == 'wb'
+    assert ds.omode == "wb"
     assert ds.iofile
     assert ds.iofile.finalcontent.decode() == TEST_CONTENT
     assert ds.mkdirpath

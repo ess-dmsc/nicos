@@ -29,9 +29,11 @@ from nicos_sinq.sxtal.cell import Cell
 
 class PowderSample(Sample):
     """Powder sample with the mur parameter used at SINQ."""
+
     parameters = {
-        'mur': Param('Sample muR', type=floatrange(.0, 1.), settable=True,
-                     category='sample'),
+        "mur": Param(
+            "Sample muR", type=floatrange(0.0, 1.0), settable=True, category="sample"
+        ),
     }
 
 
@@ -40,15 +42,18 @@ class CrystalSample(Sample):
     NeXus NXCrystal definition"""
 
     parameters = {
-        'a':         Param('a', type=float, category='sample', settable=True),
-        'b':         Param('b', type=float, category='sample', settable=True),
-        'c':         Param('c', type=float, category='sample', settable=True),
-        'alpha':     Param('alpha', type=floatrange(1., 179.), settable=True,
-                           category='sample'),
-        'beta':      Param('beta', type=floatrange(1., 179.), settable=True,
-                           category='sample'),
-        'gamma':     Param('gamma', type=floatrange(1., 179.), settable=True,
-                           category='sample'),
+        "a": Param("a", type=float, category="sample", settable=True),
+        "b": Param("b", type=float, category="sample", settable=True),
+        "c": Param("c", type=float, category="sample", settable=True),
+        "alpha": Param(
+            "alpha", type=floatrange(1.0, 179.0), settable=True, category="sample"
+        ),
+        "beta": Param(
+            "beta", type=floatrange(1.0, 179.0), settable=True, category="sample"
+        ),
+        "gamma": Param(
+            "gamma", type=floatrange(1.0, 179.0), settable=True, category="sample"
+        ),
     }
 
     def new(self, parameters):
@@ -58,33 +63,31 @@ class CrystalSample(Sample):
 
     def _prepare_new(self, parameters):
         """Accepts several ways to spell new cell params."""
-        lattice = parameters.pop('lattice', None)
+        lattice = parameters.pop("lattice", None)
         if lattice is not None:
             try:
-                parameters['a'], parameters['b'], parameters['c'] = lattice
+                parameters["a"], parameters["b"], parameters["c"] = lattice
             except Exception:
-                self.log.warning('invalid lattice spec ignored, should be '
-                                 '[a, b, c]')
-        angles = parameters.pop('angles', None)
+                self.log.warning("invalid lattice spec ignored, should be " "[a, b, c]")
+        angles = parameters.pop("angles", None)
         if angles is not None:
             try:
-                parameters['alpha'], parameters['beta'], \
-                    parameters['gamma'] = angles
+                parameters["alpha"], parameters["beta"], parameters["gamma"] = angles
             except Exception:
-                self.log.warning('invalid angles spec ignored, should be '
-                                 '[alpha, beta, gamma]')
-        aa = parameters.pop('a', None)
+                self.log.warning(
+                    "invalid angles spec ignored, should be " "[alpha, beta, gamma]"
+                )
+        aa = parameters.pop("a", None)
         if aa is None:
-            if 'cell' not in parameters:
-                self.log.warning('using dummy lattice constant of 6.28 A')
+            if "cell" not in parameters:
+                self.log.warning("using dummy lattice constant of 6.28 A")
             aa = 6.28
         self.a = aa
-        self.b = parameters.pop('b', self.a)
-        self.c = parameters.pop('c', self.a)
-        self.alpha = parameters.pop('alpha', 90.0)
-        self.beta = parameters.pop('beta', 90.0)
-        self.gamma = parameters.pop('gamma', 90.0)
+        self.b = parameters.pop("b", self.a)
+        self.c = parameters.pop("c", self.a)
+        self.alpha = parameters.pop("alpha", 90.0)
+        self.beta = parameters.pop("beta", 90.0)
+        self.gamma = parameters.pop("gamma", 90.0)
 
     def getCell(self):
-        return Cell(self.a, self.b, self.c,
-                    self.alpha, self.beta, self.gamma)
+        return Cell(self.a, self.b, self.c, self.alpha, self.beta, self.gamma)

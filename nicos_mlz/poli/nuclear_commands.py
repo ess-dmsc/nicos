@@ -28,10 +28,11 @@ from nicos.commands.analyze import fit
 from nicos.utils.fitting import CosineFit
 
 __all__ = [
-    'sinfit',
+    "sinfit",
 ]
+
 
 # pylint: disable=keyword-arg-before-vararg
 @usercommand
-def sinfit(xcol='ctr1', *args):
+def sinfit(xcol="ctr1", *args):
     return fit(CosineFit, xcol, *args)

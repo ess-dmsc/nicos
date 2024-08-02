@@ -25,8 +25,19 @@
 
 import IO  # pylint: disable=import-error
 
-from nicos.core import Attach, HasLimits, Moveable, NicosError, Override, \
-    Param, Readable, dictof, oneof, oneofdict, tupleof
+from nicos.core import (
+    Attach,
+    HasLimits,
+    Moveable,
+    NicosError,
+    Override,
+    Param,
+    Readable,
+    dictof,
+    oneof,
+    oneofdict,
+    tupleof,
+)
 from nicos.devices.taco.core import TacoDevice
 
 
@@ -61,7 +72,7 @@ class DigitalInput(TacoDevice, Readable):
     """
 
     parameter_overrides = {
-        'fmtstr': Override(default='%d'),
+        "fmtstr": Override(default="%d"),
     }
 
     taco_class = IO.DigitalInput
@@ -71,8 +82,9 @@ class NamedDigitalInput(DigitalInput):
     """A DigitalInput with numeric values mapped to names."""
 
     parameters = {
-        'mapping': Param('A dictionary mapping state names to integers',
-                         type=dictof(str, int)),
+        "mapping": Param(
+            "A dictionary mapping state names to integers", type=dictof(str, int)
+        ),
     }
 
     def doInit(self, mode):
@@ -89,8 +101,8 @@ class PartialDigitalInput(NamedDigitalInput):
     """
 
     parameters = {
-        'startbit': Param('Number of the first bit', type=int, default=0),
-        'bitwidth': Param('Number of bits', type=int, default=1),
+        "startbit": Param("Number of the first bit", type=int, default=0),
+        "bitwidth": Param("Number of bits", type=int, default=1),
     }
 
     def doInit(self, mode):
@@ -111,7 +123,7 @@ class DigitalOutput(TacoDevice, Moveable):
     """
 
     parameter_overrides = {
-        'fmtstr': Override(default='%d'),
+        "fmtstr": Override(default="%d"),
     }
 
     valuetype = int
@@ -126,8 +138,11 @@ class NamedDigitalOutput(DigitalOutput):
     """A DigitalOutput with numeric values mapped to names."""
 
     parameters = {
-        'mapping': Param('A dictionary mapping state names to integer values',
-                         type=dictof(str, int), mandatory=True),
+        "mapping": Param(
+            "A dictionary mapping state names to integer values",
+            type=dictof(str, int),
+            mandatory=True,
+        ),
     }
 
     def doInit(self, mode):
@@ -151,8 +166,8 @@ class PartialDigitalOutput(NamedDigitalOutput):
     """
 
     parameters = {
-        'startbit': Param('Number of the first bit', type=int, default=0),
-        'bitwidth': Param('Number of bits', type=int, default=1),
+        "startbit": Param("Number of the first bit", type=int, default=0),
+        "bitwidth": Param("Number of bits", type=int, default=1),
     }
 
     def doInit(self, mode):
@@ -167,15 +182,16 @@ class PartialDigitalOutput(NamedDigitalOutput):
     def doStart(self, target):
         value = self.mapping.get(target, target)
         curvalue = self._taco_guard(self._dev.read)
-        newvalue = (curvalue & ~(self._mask << self.startbit)) | \
-                   (value << self.startbit)
+        newvalue = (curvalue & ~(self._mask << self.startbit)) | (
+            value << self.startbit
+        )
         self._taco_guard(self._dev.write, newvalue)
 
     def doIsAllowed(self, target):
         value = self.mapping.get(target, target)
         if value < 0 or value > self._mask:
-            return False, '%d outside range [0, %d]' % (value, self._mask)
-        return True, ''
+            return False, "%d outside range [0, %d]" % (value, self._mask)
+        return True, ""
 
 
 class BitsDigitalOutput(DigitalOutput):
@@ -184,17 +200,16 @@ class BitsDigitalOutput(DigitalOutput):
     """
 
     parameters = {
-        'startbit': Param('Number of the first bit', type=int, default=0),
-        'bitwidth': Param('Number of bits', type=int, default=1),
+        "startbit": Param("Number of the first bit", type=int, default=0),
+        "bitwidth": Param("Number of bits", type=int, default=1),
     }
-
 
     def doInit(self, mode):
         self._mask = (1 << self.bitwidth) - 1
         self.valuetype = tupleof(*(oneof(0, 1) for i in range(self.bitwidth)))
 
     def doReadFmtstr(self):
-        return '[ ' + ', '.join(['%s'] * self.bitwidth) + ' ]'
+        return "[ " + ", ".join(["%s"] * self.bitwidth) + " ]"
 
     def doRead(self, maxage=0):
         # extract the relevant bit range from the device value
@@ -218,19 +233,24 @@ class BitsDigitalOutput(DigitalOutput):
     def doIsAllowed(self, target):
         try:
             if len(target) != self.bitwidth:
-                return False, ('value needs to be a sequence of length %d, '
-                               'not %r' % (self.bitwidth, target))
+                return False, (
+                    "value needs to be a sequence of length %d, "
+                    "not %r" % (self.bitwidth, target)
+                )
         except TypeError:
-            return False, 'invalid value for device: %r' % target
-        return True, ''
+            return False, "invalid value for device: %r" % target
+        return True, ""
 
 
 class MultiDigitalOutput(Moveable):
     """Writes the same value to multiple digital outputs at once."""
 
     attached_devices = {
-        'outputs': Attach('A list of digital outputs to switch '
-                          'simultaneously', DigitalOutput, multiple=True),
+        "outputs": Attach(
+            "A list of digital outputs to switch " "simultaneously",
+            DigitalOutput,
+            multiple=True,
+        ),
     }
 
     valuetype = int
@@ -245,7 +265,9 @@ class MultiDigitalOutput(Moveable):
             values.append(dev.read(maxage))
         if len(set(values)) != 1:
             devnames = [dev.name for dev in self._attached_outputs]
-            raise NicosError(self,
-                'outputs have different read values: '
-                + ', '.join('%s=%s' % x for x in zip(devnames, values)))
+            raise NicosError(
+                self,
+                "outputs have different read values: "
+                + ", ".join("%s=%s" % x for x in zip(devnames, values)),
+            )
         return values[0]

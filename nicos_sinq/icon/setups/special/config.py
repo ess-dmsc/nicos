@@ -1,9 +1,9 @@
-description = 'Generic configuration settings for ICON'
+description = "Generic configuration settings for ICON"
 
 import os
 
-group = 'configdata'
+group = "configdata"
 
-DATA_PATH = os.environ.get('NICOSDUMP', '.') + '/icon/'
+DATA_PATH = os.environ.get("NICOSDUMP", ".") + "/icon/"
 
-KAFKA_BROKERS = ['localhost:9092']
+KAFKA_BROKERS = ["localhost:9092"]

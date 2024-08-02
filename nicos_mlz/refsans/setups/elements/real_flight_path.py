@@ -1,14 +1,15 @@
-description = 'real flight path'
+description = "real flight path"
 
-group = 'lowlevel'
+group = "lowlevel"
 
-includes = ['detector']
+includes = ["detector"]
 
 devices = dict(
-    real_flight_path = device('nicos_mlz.refsans.devices.resolution.RealFlightPath',
-        description = description,
+    real_flight_path=device(
+        "nicos_mlz.refsans.devices.resolution.RealFlightPath",
+        description=description,
         # visibility = (),
-        table = 'det_table',
-        pivot = 'det_pivot',
+        table="det_table",
+        pivot="det_pivot",
     ),
 )

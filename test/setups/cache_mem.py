@@ -23,15 +23,17 @@
 
 from test.utils import alt_cache_addr
 
-name = 'setup for cache stresstest with memory db'
+name = "setup for cache stresstest with memory db"
 
 devices = dict(
-    Server = device('nicos.services.cache.server.CacheServer',
-        server = alt_cache_addr,
-        db = 'DB2',
-        loglevel = 'debug',
+    Server=device(
+        "nicos.services.cache.server.CacheServer",
+        server=alt_cache_addr,
+        db="DB2",
+        loglevel="debug",
     ),
-    DB2 = device('nicos.services.cache.server.MemoryCacheDatabase',
-        loglevel = 'debug',
+    DB2=device(
+        "nicos.services.cache.server.MemoryCacheDatabase",
+        loglevel="debug",
     ),
 )

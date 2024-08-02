@@ -35,24 +35,36 @@ class Andor3LimaCCD(GenericLimaCCD):
     """
 
     READOUTRATES = [280, 200, 100]  # Values from sdk manual
-    ELSHUTTERMODES = ['rolling', 'global']  # Values from sdk manual
+    ELSHUTTERMODES = ["rolling", "global"]  # Values from sdk manual
 
     parameters = {
-        'readoutrate':   Param('Rate of pixel readout from sensor',
-                               type=oneof(*READOUTRATES),
-                               unit='MHz', settable=True, volatile=True,
-                               category='general'),
-        'elshuttermode': Param('On-sensor electronic shuttering mode',
-                               type=oneof(*ELSHUTTERMODES),
-                               settable=True, volatile=True,
-                               category='general'),
-        'framerate':     Param('Frame rate',
-                               type=float, unit='Hz', settable=False,
-                               volatile=True, category='general'),
+        "readoutrate": Param(
+            "Rate of pixel readout from sensor",
+            type=oneof(*READOUTRATES),
+            unit="MHz",
+            settable=True,
+            volatile=True,
+            category="general",
+        ),
+        "elshuttermode": Param(
+            "On-sensor electronic shuttering mode",
+            type=oneof(*ELSHUTTERMODES),
+            settable=True,
+            volatile=True,
+            category="general",
+        ),
+        "framerate": Param(
+            "Frame rate",
+            type=float,
+            unit="Hz",
+            settable=False,
+            volatile=True,
+            category="general",
+        ),
     }
 
     def doInfo(self):
-        for p in ('readoutrate', 'elshuttermode', 'framerate'):
+        for p in ("readoutrate", "elshuttermode", "framerate"):
             self._pollParam(p)
         return []
 
@@ -60,7 +72,7 @@ class Andor3LimaCCD(GenericLimaCCD):
         return int(self._hwDev._dev.adc_rate[3:])
 
     def doWriteReadoutrate(self, value):
-        self._hwDev._dev.adc_rate = 'MHZ%i' % value
+        self._hwDev._dev.adc_rate = "MHZ%i" % value
 
     def doReadElshuttermode(self):
         return self._hwDev._dev.electronic_shutter_mode.lower()
@@ -76,24 +88,25 @@ class Andor3LimaCCD(GenericLimaCCD):
         # (not at 0, 0 to avoid possible problems with strides)
         self._dev.image_roi = (8, 8, 8, 8)
         # ensure NO rotation
-        self._dev.image_rotation = 'NONE'
+        self._dev.image_rotation = "NONE"
         # set full detector size as roi
         self._dev.image_roi = (0, 0, 0, 0)
 
 
-class Andor3TemperatureController(PyTangoDevice, HasLimits, HasPrecision,
-                                  LimaCooler, Moveable):
+class Andor3TemperatureController(
+    PyTangoDevice, HasLimits, HasPrecision, LimaCooler, Moveable
+):
     """
     This devices provides access to the cooling feature of Andor3 cameras.
     """
 
     COOLER_STATUS_MAP = {
-        'Fault': status.ERROR,
-        'Drift': status.ERROR,
-        'Cooler Off': status.OK,
-        'Stabilised': status.OK,
-        'Cooling': status.BUSY,
-        'Not Stabilised': status.BUSY,
+        "Fault": status.ERROR,
+        "Drift": status.ERROR,
+        "Cooler Off": status.OK,
+        "Stabilised": status.OK,
+        "Cooling": status.BUSY,
+        "Not Stabilised": status.BUSY,
     }
 
     def doRead(self, maxage=0):

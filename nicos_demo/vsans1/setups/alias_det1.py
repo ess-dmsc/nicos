@@ -1,9 +1,10 @@
-description = 'alias for detector'
+description = "alias for detector"
 
-group = 'lowlevel'
+group = "lowlevel"
 
 devices = dict(
-    det1 = device('nicos.devices.generic.DeviceAlias',
-        devclass='nicos_mlz.sans1.devices.detector.Detector',
+    det1=device(
+        "nicos.devices.generic.DeviceAlias",
+        devclass="nicos_mlz.sans1.devices.detector.Detector",
     ),
 )

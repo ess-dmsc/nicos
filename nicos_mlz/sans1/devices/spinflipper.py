@@ -43,21 +43,33 @@ class SpinflipperPower(HasTimeout, AnalogOutput):
     """
 
     parameters = {
-        'forwardtangodevice': Param('Forward tango device address',
-                                    type=tangodev, mandatory=True, preinit=True,
-                                    settable=False),
-        'reversetangodevice': Param('Reverse tango device address',
-                                    type=tangodev, mandatory=True, preinit=True,
-                                    settable=False),
-        'forward':            Param('Forward power', unit='W',
-                                    settable=False, category='general',
-                                    volatile=True),
-        'reverse':            Param('Reverse power', unit='W',
-                                    settable=False, category='general',
-                                    volatile=True),
-        'busytime':           Param('Time to stabilize output readings',
-                                    type=float, unit='s', default=5,
-                                    settable=True),
+        "forwardtangodevice": Param(
+            "Forward tango device address",
+            type=tangodev,
+            mandatory=True,
+            preinit=True,
+            settable=False,
+        ),
+        "reversetangodevice": Param(
+            "Reverse tango device address",
+            type=tangodev,
+            mandatory=True,
+            preinit=True,
+            settable=False,
+        ),
+        "forward": Param(
+            "Forward power", unit="W", settable=False, category="general", volatile=True
+        ),
+        "reverse": Param(
+            "Reverse power", unit="W", settable=False, category="general", volatile=True
+        ),
+        "busytime": Param(
+            "Time to stabilize output readings",
+            type=float,
+            unit="s",
+            default=5,
+            settable=True,
+        ),
     }
 
     valuetype = float
@@ -66,26 +78,30 @@ class SpinflipperPower(HasTimeout, AnalogOutput):
     def doPreinit(self, mode):
         AnalogOutput.doPreinit(self, mode)
         if mode != SIMULATION:
-            self._forwardDev = AnalogInput('%s._forwardDev' % self.name,
-                                           tangodevice=self.forwardtangodevice,
-                                           visibility=())
+            self._forwardDev = AnalogInput(
+                "%s._forwardDev" % self.name,
+                tangodevice=self.forwardtangodevice,
+                visibility=(),
+            )
 
-            self._reverseDev = AnalogInput('%s._reverseDev' % self.name,
-                                           tangodevice=self.reversetangodevice,
-                                           visibility=())
+            self._reverseDev = AnalogInput(
+                "%s._reverseDev" % self.name,
+                tangodevice=self.reversetangodevice,
+                visibility=(),
+            )
 
     def doTime(self, old_value, target):
         return self.busytime
 
     def doInfo(self):
-        self._pollParam('forward')
-        self._pollParam('reverse')
+        self._pollParam("forward")
+        self._pollParam("reverse")
         return []
 
     def doStatus(self, maxage=0):
         if self._timesout:
             if time.time() < self._timesout[-1][1]:
-                return status.BUSY, 'waiting %.1gs for stabilisation' % self.busytime
+                return status.BUSY, "waiting %.1gs for stabilisation" % self.busytime
         return AnalogOutput.doStatus(self, maxage)
 
     def doReadForward(self):
@@ -97,5 +113,5 @@ class SpinflipperPower(HasTimeout, AnalogOutput):
         return self._reverseDev.read(0)
 
     def doPoll(self, nr, maxage):
-        self._pollParam('forward', 1)
-        self._pollParam('reverse', 1)
+        self._pollParam("forward", 1)
+        self._pollParam("reverse", 1)

@@ -29,10 +29,26 @@ from datetime import timedelta
 from time import monotonic, time as currenttime
 
 from nicos import session
-from nicos.core import SIMULATION, Attach, Device, DeviceMixinBase, \
-    LimitError, Measurable, Moveable, MoveError, NicosError, Override, Param, \
-    ProgrammingError, Readable, anytype, formatStatus, none_or, status, \
-    tupleof
+from nicos.core import (
+    SIMULATION,
+    Attach,
+    Device,
+    DeviceMixinBase,
+    LimitError,
+    Measurable,
+    Moveable,
+    MoveError,
+    NicosError,
+    Override,
+    Param,
+    ProgrammingError,
+    Readable,
+    anytype,
+    formatStatus,
+    none_or,
+    status,
+    tupleof,
+)
 from nicos.core.utils import devIter
 from nicos.utils import createThread
 
@@ -111,7 +127,7 @@ class SeqDev(SequenceItem):
 
     def isCompleted(self):
         # dont wait on fixed devices
-        if hasattr(self.dev, 'fixed') and self.dev.fixed:
+        if hasattr(self.dev, "fixed") and self.dev.fixed:
             return True
         done = self.dev.isCompleted()
         if done:
@@ -119,7 +135,7 @@ class SeqDev(SequenceItem):
         return done
 
     def __repr__(self):
-        return '%s -> %s' % (self.dev.name, self.dev.format(self.target))
+        return "%s -> %s" % (self.dev.name, self.dev.format(self.target))
 
     def stop(self):
         if self.stoppable:
@@ -135,11 +151,13 @@ class SeqParam(SequenceItem):
     def run(self):
         setattr(self.dev, self.paramname, self.value)
         if not getattr(self.dev, self.paramname) == self.value:
-            raise NicosError('Setting Parameter %s of dev %s to %r failed!' % (
-                self.paramname, self.dev, self.value))
+            raise NicosError(
+                "Setting Parameter %s of dev %s to %r failed!"
+                % (self.paramname, self.dev, self.value)
+            )
 
     def __repr__(self):
-        return '%s.%s -> %r' % (self.dev.name, self.paramname, self.value)
+        return "%s.%s -> %r" % (self.dev.name, self.paramname, self.value)
 
 
 class SeqMethod(SequenceItem):
@@ -149,13 +167,13 @@ class SeqMethod(SequenceItem):
     """
 
     def __init__(self, obj, method, *args, **kwargs):
-        SequenceItem.__init__(self, obj=obj, method=method, args=args,
-                              kwargs=kwargs)
+        SequenceItem.__init__(self, obj=obj, method=method, args=args, kwargs=kwargs)
 
     def check(self):
         if not hasattr(self.obj, self.method):
-            raise AttributeError('method %r.%s does not exist!' %
-                                 (self.obj, self.method))
+            raise AttributeError(
+                "method %r.%s does not exist!" % (self.obj, self.method)
+            )
 
     def run(self):
         getattr(self.obj, self.method)(*self.args)
@@ -165,7 +183,7 @@ class SeqMethod(SequenceItem):
             name = self.obj.name
         else:
             name = repr(self.obj)
-        return '%s %s' % (name, self.method)
+        return "%s %s" % (name, self.method)
 
 
 class SeqCall(SequenceItem):
@@ -178,7 +196,7 @@ class SeqCall(SequenceItem):
         self.func(*self.args, **self.kwargs)
 
     def __repr__(self):
-        return '%s' % self.func.__name__
+        return "%s" % self.func.__name__
 
 
 class SeqSleep(SequenceItem):
@@ -194,8 +212,9 @@ class SeqSleep(SequenceItem):
             session.clock.tick(self.duration)
             return
         if self.duration > 3:
-            session.beginActionScope(self.reason or 'Sleeping %s (H:M:S)' %
-                                     timedelta(seconds=self.duration))
+            session.beginActionScope(
+                self.reason or "Sleeping %s (H:M:S)" % timedelta(seconds=self.duration)
+            )
         self.endtime = monotonic() + self.duration
 
     def isCompleted(self):
@@ -215,10 +234,9 @@ class SeqSleep(SequenceItem):
     def __repr__(self):
         if self.endtime:
             # already started, __repr__ is used for updating status strings.
-            return str(timedelta(
-                seconds=round(self.endtime - monotonic())))
+            return str(timedelta(seconds=round(self.endtime - monotonic())))
         else:
-            return '%g s' % self.duration
+            return "%g s" % self.duration
 
 
 class SeqWait(SequenceItem):
@@ -232,7 +250,7 @@ class SeqWait(SequenceItem):
 
     def isCompleted(self):
         # dont wait on fixed devices
-        if hasattr(self.dev, 'fixed') and self.dev.fixed:
+        if hasattr(self.dev, "fixed") and self.dev.fixed:
             return True
         done = self.dev.isCompleted()
         if done:
@@ -240,7 +258,7 @@ class SeqWait(SequenceItem):
         return done
 
     def __repr__(self):
-        return 'wait %s' % self.dev.name
+        return "wait %s" % self.dev.name
 
     def stop(self):
         self.dev.stop()
@@ -257,7 +275,7 @@ class SeqNOP(SequenceItem):
         SequenceItem.__init__(self)
 
     def __repr__(self):
-        return '---'  # any other NICOS-NOP ?
+        return "---"  # any other NICOS-NOP ?
 
 
 class SequencerMixin(DeviceMixinBase):
@@ -277,32 +295,37 @@ class SequencerMixin(DeviceMixinBase):
     """
 
     parameters = {
-        '_seq_status': Param('Status of the currently executed sequence, '
-                             'or (status.OK, idle)', settable=True,
-                             mandatory=False, internal=True,
-                             default=(status.OK, 'idle'), no_sim_restore=True,
-                             type=tupleof(int, str)),
+        "_seq_status": Param(
+            "Status of the currently executed sequence, " "or (status.OK, idle)",
+            settable=True,
+            mandatory=False,
+            internal=True,
+            default=(status.OK, "idle"),
+            no_sim_restore=True,
+            type=tupleof(int, str),
+        ),
     }
 
     parameter_overrides = {
-        'unit': Override(mandatory=False, default=''),
+        "unit": Override(mandatory=False, default=""),
     }
 
     _seq_thread = None
     _seq_stopflag = False
     _seq_was_stopped = False
-    _honor_stop = True      # may be needed to be false in special cases....
+    _honor_stop = True  # may be needed to be false in special cases....
 
     hardware_access = False
 
-    def _set_seq_status(self, newstatus=status.OK, newstatusstring='unknown'):
+    def _set_seq_status(self, newstatus=status.OK, newstatusstring="unknown"):
         """Set the current sequence status."""
         oldstatus = self.status()
         self._seq_status = (newstatus, newstatusstring.strip())
         self.log.debug(self._seq_status[1])
         if self._cache and oldstatus != self._seq_status:
-            self._cache.put(self, 'status', self._seq_status,
-                            currenttime(), self.maxage)
+            self._cache.put(
+                self, "status", self._seq_status, currenttime(), self.maxage
+            )
 
     def _seq_is_running(self):
         return self._seq_thread and self._seq_thread.is_alive()
@@ -311,32 +334,32 @@ class SequencerMixin(DeviceMixinBase):
         """Check and start the sequence."""
         # check sequence
         for i, step in enumerate(sequence):
-            if not hasattr(step, '__iter__'):
-                step = (step, )
+            if not hasattr(step, "__iter__"):
+                step = (step,)
                 sequence[i] = step
             for action in step:
                 try:
                     action.check()
                 except Exception as e:
-                    self.log.error('action.check for %r failed with %r',
-                                   action, e)
-                    self.log.debug('_checkFailed returned %r',
-                                   self._checkFailed(i, action,
-                                                     sys.exc_info()))
+                    self.log.error("action.check for %r failed with %r", action, e)
+                    self.log.debug(
+                        "_checkFailed returned %r",
+                        self._checkFailed(i, action, sys.exc_info()),
+                    )
                     # if the above does not raise, consider this as OK
 
         if self._seq_is_running():
-            raise ProgrammingError(self, 'sequence is still running!')
+            raise ProgrammingError(self, "sequence is still running!")
 
         # debug hint:
-        if self.loglevel == 'debug':
-            self.log.debug('generated sequence has %d steps:', len(sequence))
+        if self.loglevel == "debug":
+            self.log.debug("generated sequence has %d steps:", len(sequence))
             for i, step in enumerate(sequence):
-                self.log.debug(' - step %d:', i + 1)
+                self.log.debug(" - step %d:", i + 1)
                 for action in step:
-                    self.log.debug('   - action: %r', action)
+                    self.log.debug("   - action: %r", action)
 
-        self._set_seq_status(status.BUSY, '')
+        self._set_seq_status(status.BUSY, "")
 
         self._asyncSequence(sequence)
 
@@ -344,7 +367,7 @@ class SequencerMixin(DeviceMixinBase):
         """Start a thread to execute the sequence."""
         self._seq_stopflag = False
         self._seq_was_stopped = False
-        self._seq_thread = createThread('sequence', self._run, (sequence,))
+        self._seq_thread = createThread("sequence", self._run, (sequence,))
 
     def _run(self, sequence):
         """The thread performing the sequence.
@@ -361,69 +384,70 @@ class SequencerMixin(DeviceMixinBase):
     def _sequence(self, sequence):
         """The Sequence 'interpreter', stepping through the sequence."""
         try:
-            self.log.debug('performing sequence of %d steps', len(sequence))
+            self.log.debug("performing sequence of %d steps", len(sequence))
             for i, step in enumerate(sequence):
-                self._set_seq_status(status.BUSY, 'action %d: ' %
-                                     (i + 1) + '; '.join(map(repr, step)))
+                self._set_seq_status(
+                    status.BUSY, "action %d: " % (i + 1) + "; ".join(map(repr, step))
+                )
                 # start all actions by calling run and if that fails, retry
                 for action in step:
-                    self.log.debug(' - action: %r', action)
+                    self.log.debug(" - action: %r", action)
                     try:
                         action.run()
                     except Exception:
                         # if this raises, abort the sequence...
-                        self.log.warning('action %d (%r) failed',
-                                         i + 1, action, exc=1)
+                        self.log.warning("action %d (%r) failed", i + 1, action, exc=1)
                         nretries = self._runFailed(i, action, sys.exc_info())
-                        self.log.debug('_runFailed returned %r', nretries)
+                        self.log.debug("_runFailed returned %r", nretries)
                         if nretries:
                             try:
                                 action.retry(nretries)
                             except Exception as e:
-                                self.log.debug('action.retry failed with '
-                                               '%r', e)
-                                ret = self._retryFailed(i, action, nretries,
-                                                        sys.exc_info())
-                                self.log.debug('_retryFailed returned %r', ret)
+                                self.log.debug("action.retry failed with " "%r", e)
+                                ret = self._retryFailed(
+                                    i, action, nretries, sys.exc_info()
+                                )
+                                self.log.debug("_retryFailed returned %r", ret)
 
                 # wait until all actions are finished
                 waiters = set(step)
                 while waiters:
                     t = monotonic()
-                    self._set_seq_status(status.BUSY, 'waiting: ' +
-                                         '; '.join(map(repr, waiters)))
+                    self._set_seq_status(
+                        status.BUSY, "waiting: " + "; ".join(map(repr, waiters))
+                    )
                     for action in list(waiters):
                         try:
                             if action.isCompleted():
                                 # wait finished
                                 waiters.remove(action)
                         except Exception as e:
-                            self.log.debug('action.isCompleted failed with '
-                                           '%r', e)
+                            self.log.debug("action.isCompleted failed with " "%r", e)
                             # if this raises, abort the sequence...
                             code = self._waitFailed(i, action, sys.exc_info())
-                            self.log.debug('_waitFailed returned %r', code)
+                            self.log.debug("_waitFailed returned %r", code)
                             if code:
                                 if action.isCompleted():
                                     waiters.remove(action)
                     if self._seq_stopflag:
-                        self.log.debug('stopflag caught!')
+                        self.log.debug("stopflag caught!")
                         self._seq_was_stopped = True
                         for dev in waiters:
                             dev.stop()
                         break
                     # 0.1s - code execution time
-                    t = .1 - (monotonic() - t)
+                    t = 0.1 - (monotonic() - t)
                     if waiters and t > 0:
                         session.delay(t)
 
                 # stop if requested
                 if self._seq_stopflag:
                     self._seq_was_stopped = True
-                    self.log.debug('stopping actions: %s',
-                                   '; '.join(map(repr, step)))
-                    self._set_seq_status(status.BUSY, 'stopping at step %d: ' %
-                                         (i + 1) + '; '.join(map(repr, step)))
+                    self.log.debug("stopping actions: %s", "; ".join(map(repr, step)))
+                    self._set_seq_status(
+                        status.BUSY,
+                        "stopping at step %d: " % (i + 1) + "; ".join(map(repr, step)),
+                    )
                     try:
                         for action in step:
                             failed = []
@@ -431,32 +455,33 @@ class SequencerMixin(DeviceMixinBase):
                             try:
                                 action.stop()
                             except Exception as e:
-                                self.log.debug('action.stop failed with '
-                                               '%r', e)
+                                self.log.debug("action.stop failed with " "%r", e)
                                 failed.append((action, e))
                             # signal those errors, captured earlier
                             for ac, e in failed:
                                 ret = self._stopFailed(i, ac, sys.exc_info())
-                                self.log.debug('_stopFailed returned %r', ret)
+                                self.log.debug("_stopFailed returned %r", ret)
                     finally:
                         self._stopAction(i)
-                        self._set_seq_status(status.NOTREACHED,
-                                             'operation interrupted at step '
-                                             '%d: ' % (i + 1) +
-                                             '; '.join(map(repr, step)))
-                        self.log.debug('stopping finished')
+                        self._set_seq_status(
+                            status.NOTREACHED,
+                            "operation interrupted at step "
+                            "%d: " % (i + 1) + "; ".join(map(repr, step)),
+                        )
+                        self.log.debug("stopping finished")
                     break
 
             if not self._seq_stopflag:
-                self.log.debug('sequence finished')
-                self._set_seq_status(status.OK, 'idle')
+                self.log.debug("sequence finished")
+                self._set_seq_status(status.OK, "idle")
 
         except NicosError as err:
-            self._set_seq_status(status.ERROR, 'error %s upon ' % err +
-                                 self._seq_status[1])
+            self._set_seq_status(
+                status.ERROR, "error %s upon " % err + self._seq_status[1]
+            )
             self.log.debug(self._seq_status[1], exc=1)
         except Exception as err:
-            self.log.error('%s', err, exc=1)
+            self.log.error("%s", err, exc=1)
 
     def doFinish(self):
         if self._seq_was_stopped:
@@ -464,9 +489,9 @@ class SequencerMixin(DeviceMixinBase):
 
     def doStatus(self, maxage=0):
         """Return highest statusvalue."""
-        stati = [dev.status(maxage)
-                 for dev in devIter(self._getWaiters(), Readable)] + \
-                [self._seq_status]
+        stati = [
+            dev.status(maxage) for dev in devIter(self._getWaiters(), Readable)
+        ] + [self._seq_status]
         # sort inplace by first element, i.e. status code
         stati.sort(key=lambda st: st[0])
         # select highest (worst) status
@@ -482,11 +507,12 @@ class SequencerMixin(DeviceMixinBase):
 
     def doReset(self):
         if self._seq_is_running():
-            self.log.error('cannot reset the device because it is busy, '
-                           'please stop it first.')
+            self.log.error(
+                "cannot reset the device because it is busy, " "please stop it first."
+            )
             return
         self._seq_was_stopped = False
-        self._set_seq_status(status.OK, 'idle')
+        self._set_seq_status(status.OK, "idle")
 
     #
     # Hooks
@@ -582,8 +608,11 @@ class BaseSequencer(SequencerMixin, Moveable):
                 self._seq_thread.join()
                 self._seq_thread = None
             else:
-                raise MoveError(self, 'Cannot start device, sequence is still '
-                                      'running (at %s)!' % self._seq_status[1])
+                raise MoveError(
+                    self,
+                    "Cannot start device, sequence is still "
+                    "running (at %s)!" % self._seq_status[1],
+                )
         self._startSequence(self._generateSequence(target))
 
     def _generateSequence(self, target):
@@ -599,8 +628,9 @@ class BaseSequencer(SequencerMixin, Moveable):
 
         Default is to raise an `NotImplementedError`
         """
-        raise NotImplementedError('put a proper _generateSequence '
-                                  'implementation here!')
+        raise NotImplementedError(
+            "put a proper _generateSequence " "implementation here!"
+        )
 
 
 class LockedDevice(BaseSequencer):
@@ -619,23 +649,28 @@ class LockedDevice(BaseSequencer):
     """
 
     attached_devices = {
-        'device': Attach('Moveable device which is protected by the lock',
-                         Moveable),
-        'lock': Attach('The lock, protecting the device', Moveable),
+        "device": Attach("Moveable device which is protected by the lock", Moveable),
+        "lock": Attach("The lock, protecting the device", Moveable),
     }
 
     parameters = {
-        'unlockvalue': Param('The value for the lock to unlock the moveable',
-                             mandatory=True, type=anytype),
-        'keepfixed': Param('Whether to fix lock device if not moving',
-                           default=False, type=bool),
-        'lockvalue': Param('Value for the lock after movement, default None'
-                           ' goes to previous value',
-                           default=None, type=none_or(anytype)),
+        "unlockvalue": Param(
+            "The value for the lock to unlock the moveable",
+            mandatory=True,
+            type=anytype,
+        ),
+        "keepfixed": Param(
+            "Whether to fix lock device if not moving", default=False, type=bool
+        ),
+        "lockvalue": Param(
+            "Value for the lock after movement, default None" " goes to previous value",
+            default=None,
+            type=none_or(anytype),
+        ),
     }
 
     parameter_overrides = {
-        'unit': Override(volatile=True),
+        "unit": Override(volatile=True),
     }
 
     def _generateSequence(self, target):
@@ -645,28 +680,27 @@ class LockedDevice(BaseSequencer):
 
         if self.keepfixed:
             # release lock first
-            seq.append(SeqMethod(lock, 'release'))
+            seq.append(SeqMethod(lock, "release"))
 
         # now move lock to unlockvalue
         seq.append(SeqDev(lock, self.unlockvalue))
 
         if self.keepfixed:
             # fix lock again
-            seq.append(SeqMethod(lock, 'fix', 'fixed unless %s moves' % self))
+            seq.append(SeqMethod(lock, "fix", "fixed unless %s moves" % self))
 
         seq.append(SeqDev(device, target))
 
         if self.keepfixed:
             # release lock again
-            seq.append(SeqMethod(lock, 'release'))
+            seq.append(SeqMethod(lock, "release"))
 
         # now move lock to lockvalue
-        seq.append(SeqDev(lock,
-                          self.lockvalue or lock.target or lock.doRead(0)))
+        seq.append(SeqDev(lock, self.lockvalue or lock.target or lock.doRead(0)))
 
         if self.keepfixed:
             # fix lock again
-            seq.append(SeqMethod(lock, 'fix', 'fixed unless %s moves' % self))
+            seq.append(SeqMethod(lock, "fix", "fixed unless %s moves" % self))
 
         return seq
 
@@ -711,13 +745,13 @@ class MeasureSequencer(SequencerMixin, Measurable):
                 self._seq_thread.join()
                 self._seq_thread = None
             else:
-                raise NicosError(self, 'Cannot prepare device, it is still '
-                                 'busy')
+                raise NicosError(self, "Cannot prepare device, it is still " "busy")
 
         if self._seq_status[0] > status.OK and not self._seq_was_stopped:
-            self.log.warning('resetting internal state %s',
-                             formatStatus(self._seq_status))
-        self._set_seq_status(status.OK, 'preparing measurement')
+            self.log.warning(
+                "resetting internal state %s", formatStatus(self._seq_status)
+            )
+        self._set_seq_status(status.OK, "preparing measurement")
 
     def doStart(self):
         """Generate and start a sequence if non is running.
@@ -730,8 +764,11 @@ class MeasureSequencer(SequencerMixin, Measurable):
                 self._seq_thread.join()
                 self._seq_thread = None
             else:
-                raise NicosError(self, 'Cannot start device, sequence is still '
-                                 'running (at %s)!' % self._seq_status[1])
+                raise NicosError(
+                    self,
+                    "Cannot start device, sequence is still "
+                    "running (at %s)!" % self._seq_status[1],
+                )
         self._startSequence(self._generateSequence())
 
     def _generateSequence(self):
@@ -747,5 +784,6 @@ class MeasureSequencer(SequencerMixin, Measurable):
 
         Default is to raise an `NotImplementedError`
         """
-        raise NotImplementedError('put a proper _generateSequence '
-                                  'implementation here!')
+        raise NotImplementedError(
+            "put a proper _generateSequence " "implementation here!"
+        )

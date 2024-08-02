@@ -34,13 +34,14 @@ class BRSlit(IsController, Device):
     slit do not crash. The motor controller goes into an undesirable
     state when this happens.
     """
+
     _targets = [0, 0, 0, 0]
 
     attached_devices = {
-        'left': Attach('Left blade', HasPrecision),
-        'right': Attach('Right blade', HasPrecision),
-        'bottom': Attach('Bottom blade', HasPrecision),
-        'top': Attach('Top blade', HasPrecision),
+        "left": Attach("Left blade", HasPrecision),
+        "right": Attach("Right blade", HasPrecision),
+        "bottom": Attach("Bottom blade", HasPrecision),
+        "top": Attach("Top blade", HasPrecision),
     }
 
     def doInit(self, mode):
@@ -62,7 +63,7 @@ class BRSlit(IsController, Device):
         elif adev == self._attached_bottom:
             self._targets[2] = adevtarget
         else:
-            raise ProgrammingError('Cannot recognise %s ' % adev.name)
+            raise ProgrammingError("Cannot recognise %s " % adev.name)
         status, reason = self._doIsAllowedPositions(self._targets)
         if not status:
             self._stop()
@@ -75,7 +76,7 @@ class BRSlit(IsController, Device):
 
     def _doIsAllowedPositions(self, positions):
         if fabs(positions[0]) + fabs(positions[1]) >= 21.71:
-            return False, 'Horizontal blades would crash'
+            return False, "Horizontal blades would crash"
         if fabs(positions[2]) + fabs(positions[3]) >= 57:
-            return False, 'Vertical blades would crash'
-        return True, ''
+            return False, "Vertical blades would crash"
+        return True, ""

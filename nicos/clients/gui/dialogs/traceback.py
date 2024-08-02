@@ -24,16 +24,23 @@
 """NICOS GUI traceback display window."""
 
 from nicos.clients.gui.utils import loadUi
-from nicos.guisupport.qt import QApplication, QClipboard, QDialog, \
-    QDialogButtonBox, QFont, QPushButton, QTreeWidgetItem, pyqtSlot
+from nicos.guisupport.qt import (
+    QApplication,
+    QClipboard,
+    QDialog,
+    QDialogButtonBox,
+    QFont,
+    QPushButton,
+    QTreeWidgetItem,
+    pyqtSlot,
+)
 from nicos.utils import TB_CAUSE_MSG, TB_CONTEXT_MSG, TB_HEADER
 
 
 class TracebackDialog(QDialog):
-
     def __init__(self, parent, view, tb):
         QDialog.__init__(self, parent)
-        loadUi(self, 'dialogs/traceback.ui')
+        loadUi(self, "dialogs/traceback.ui")
         self.tb = tb
         self.view = view
         self.client = parent.client
@@ -41,38 +48,39 @@ class TracebackDialog(QDialog):
         assert tb.startswith(TB_HEADER)
         # split into frames and message
         frames = []
-        message = ''
+        message = ""
         curframe = []
         for line in tb.splitlines():
-            if line.startswith('        '):  # frame local variable
+            if line.startswith("        "):  # frame local variable
                 try:
-                    name, v = line.split('=', 1)
+                    name, v = line.split("=", 1)
                 except ValueError:
                     pass  # most probably the "^" line of a SyntaxError
                 else:
                     if curframe:
                         curframe[2][name.strip()] = v.strip()
-            elif line.startswith('    '):    # frame source code
+            elif line.startswith("    "):  # frame source code
                 if curframe:
                     curframe[1] = line
-            elif line.startswith('  '):      # frame file/line
-                curframe = [line.strip(), '', {}, None, None]
+            elif line.startswith("  "):  # frame file/line
+                curframe = [line.strip(), "", {}, None, None]
                 frames.append(curframe)
             elif line.startswith(TB_CAUSE_MSG):
                 curframe[-2] = message
             elif line.startswith(TB_CONTEXT_MSG):
                 curframe[-1] = message
             elif line.startswith(TB_HEADER):
-                message = ''  # only collect the message of the final exc
+                message = ""  # only collect the message of the final exc
             else:
                 message += line
 
-        button = QPushButton('To clipboard', self)
+        button = QPushButton("To clipboard", self)
         self.buttonBox.addButton(button, QDialogButtonBox.ButtonRole.ActionRole)
 
         def copy():
-            QApplication.clipboard().setText(tb+'\n', QClipboard.Mode.Selection)
-            QApplication.clipboard().setText(tb+'\n', QClipboard.Mode.Clipboard)
+            QApplication.clipboard().setText(tb + "\n", QClipboard.Mode.Selection)
+            QApplication.clipboard().setText(tb + "\n", QClipboard.Mode.Clipboard)
+
         button.clicked.connect(copy)
 
         def line_item(msg):
@@ -89,25 +97,28 @@ class TracebackDialog(QDialog):
             code_item = line_item(line)
             code_item.setFont(0, boldfont)
             for var, value in bindings.items():
-                QTreeWidgetItem(code_item, ['', var, value])
+                QTreeWidgetItem(code_item, ["", var, value])
             if cause:
                 line_item(cause)
-                line_item('')
+                line_item("")
                 line_item(TB_CAUSE_MSG).setFont(0, boldfont)
-                line_item('')
+                line_item("")
             elif context:
                 line_item(context)
-                line_item('')
+                line_item("")
                 line_item(TB_CONTEXT_MSG).setFont(0, boldfont)
-                line_item('')
+                line_item("")
         line_item(message)
 
     @pyqtSlot()
     def on_ticketButton_clicked(self):
         from nicos.clients.gui.tools.bugreport import BugreportTool
-        formatted_log = ''.join(self.view.formatMessage(msg)[0]
-                                for msg in self.view.getLatest())
-        dlg = BugreportTool(self, self.client, traceback=self.tb,
-                            log_excerpt=formatted_log)
+
+        formatted_log = "".join(
+            self.view.formatMessage(msg)[0] for msg in self.view.getLatest()
+        )
+        dlg = BugreportTool(
+            self, self.client, traceback=self.tb, log_excerpt=formatted_log
+        )
         dlg.exec()
         self.reject()

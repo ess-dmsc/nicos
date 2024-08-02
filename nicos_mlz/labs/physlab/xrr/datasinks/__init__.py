@@ -23,5 +23,4 @@
 
 """Live sink for XRR instrument."""
 
-
 from nicos.devices.datasinks.special import LiveViewSink

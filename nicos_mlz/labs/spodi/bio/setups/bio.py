@@ -1,5 +1,5 @@
-description = 'Basic setup'
+description = "Basic setup"
 
-group = 'basic'
+group = "basic"
 
-includes = ['sampletable', 'detector']
+includes = ["sampletable", "detector"]

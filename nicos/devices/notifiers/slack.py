@@ -43,32 +43,33 @@ class Slacker(Notifier):
     """
 
     parameters = {
-        'keystoretoken': Param('Id used in the keystore for the OAuth token',
-                               type=str, default='slack'),
+        "keystoretoken": Param(
+            "Id used in the keystore for the OAuth token", type=str, default="slack"
+        ),
     }
 
     parameter_overrides = {
-        'receivers': Override(description='Slack receiver channels '
-                              '(format: #channel)'),
+        "receivers": Override(
+            description="Slack receiver channels " "(format: #channel)"
+        ),
     }
 
     def doInit(self, mode):
         secret_token = nicoskeystore.getCredential(self.keystoretoken)
         if not secret_token:
-            raise ConfigurationError('Slack API token missing in keyring')
+            raise ConfigurationError("Slack API token missing in keyring")
         self._slack = slackwebclient(secret_token)
 
     def send(self, subject, body, what=None, short=None, important=True):
-        message = html.escape('*%s*\n\n```%s```' % (subject, body), False)
+        message = html.escape("*%s*\n\n```%s```" % (subject, body), False)
 
         for entry in self._getAllRecipients(important):
-            self.log.debug('sending slack message to %s', entry)
+            self.log.debug("sending slack message to %s", entry)
             try:
-                response = self._slack.chat_postMessage(channel=entry,
-                                                        text=message)
-                if response['ok']:
+                response = self._slack.chat_postMessage(channel=entry, text=message)
+                if response["ok"]:
                     continue
             except SlackApiError as e:
-                error = e.response['error']
+                error = e.response["error"]
 
-            self.log.warning('Could not send slack message to %s: %s', entry, error)
+            self.log.warning("Could not send slack message to %s: %s", entry, error)

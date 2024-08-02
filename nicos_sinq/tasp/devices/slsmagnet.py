@@ -29,24 +29,21 @@ from nicos_sinq.devices.epics.generic import WindowMoveable
 
 
 class SLSMagnet(CanDisable, WindowMoveable):
-
     parameters = {
-        'wenable': Param('PV to enable the magnet',
-                         type=pvname),
-        'renable': Param('PV to read if the magnet is on',
-                         type=pvname),
+        "wenable": Param("PV to enable the magnet", type=pvname),
+        "renable": Param("PV to read if the magnet is on", type=pvname),
     }
 
     def _get_pv_parameters(self):
         pvs = EpicsMoveable._get_pv_parameters(self)
-        pvs.add('wenable')
-        pvs.add('renable')
+        pvs.add("wenable")
+        pvs.add("renable")
         return pvs
 
     def doEnable(self, on):
-        self._pvs['wenable'].put(int(on))
+        self._pvs["wenable"].put(int(on))
 
     def isAllowed(self, pos):
-        if not self._pvs['renable'].get():
-            return False, 'Magnet disabled'
+        if not self._pvs["renable"].get():
+            return False, "Magnet disabled"
         return Moveable.isAllowed(self, pos)

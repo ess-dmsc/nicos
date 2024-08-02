@@ -1,11 +1,12 @@
-description = 'setup for the daemon'
-group = 'special'
+description = "setup for the daemon"
+group = "special"
 
 devices = dict(
-    Auth = device('nicos.services.daemon.auth.Authenticator'),
-    Daemon = device('nicos.services.daemon.NicosDaemon',
-        server = 'resictrl.resi.frm2.tum.de',
-        loglevel = 'debug',
-        authenticators = ['Auth'],
+    Auth=device("nicos.services.daemon.auth.Authenticator"),
+    Daemon=device(
+        "nicos.services.daemon.NicosDaemon",
+        server="resictrl.resi.frm2.tum.de",
+        loglevel="debug",
+        authenticators=["Auth"],
     ),
 )

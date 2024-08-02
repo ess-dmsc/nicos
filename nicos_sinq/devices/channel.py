@@ -24,10 +24,18 @@
 
 from time import time as currenttime
 
-from nicos.core import ArrayDesc, Attach, HasPrecision, Moveable, Override, \
-    Param, Readable, Value, status
-from nicos.devices.generic import ActiveChannel, ImageChannelMixin, \
-    PassiveChannel
+from nicos.core import (
+    ArrayDesc,
+    Attach,
+    HasPrecision,
+    Moveable,
+    Override,
+    Param,
+    Readable,
+    Value,
+    status,
+)
+from nicos.devices.generic import ActiveChannel, ImageChannelMixin, PassiveChannel
 from nicos.utils import lazy_property
 
 
@@ -37,21 +45,23 @@ class SelectSliceImageChannel(ImageChannelMixin, PassiveChannel):
     hardware_access = False
 
     parameters = {
-        'slice_no': Param('Index of the slice to select',
-                          type=int, settable=True, default=0),
+        "slice_no": Param(
+            "Index of the slice to select", type=int, settable=True, default=0
+        ),
     }
 
     attached_devices = {
-        'data_channel': Attach('Image data from which to extract the slice',
-                               ImageChannelMixin)
+        "data_channel": Attach(
+            "Image data from which to extract the slice", ImageChannelMixin
+        )
     }
 
     @property
     def arraydesc(self):
         datadesc = self._attached_data_channel.arraydesc
-        return ArrayDesc(self.name,
-                         [datadesc.shape[0], datadesc.shape[1]],
-                         'uint32', ['x', 'y'])
+        return ArrayDesc(
+            self.name, [datadesc.shape[0], datadesc.shape[1]], "uint32", ["x", "y"]
+        )
 
     def doReadArray(self, quality):
         data = self._attached_data_channel.readArray(quality)
@@ -59,13 +69,15 @@ class SelectSliceImageChannel(ImageChannelMixin, PassiveChannel):
             return data
         zdim = data.shape[2]
         self.slice_no = max(self.slice_no, 0)
-        self.slice_no = min(self.slice_no, zdim-1)
+        self.slice_no = min(self.slice_no, zdim - 1)
         sl = data[self.slice_no]
-        self.readresult = [sl.sum(), ]
+        self.readresult = [
+            sl.sum(),
+        ]
         return sl
 
     def valueInfo(self):
-        return [Value(self.name, type='counter', unit=self.unit)]
+        return [Value(self.name, type="counter", unit=self.unit)]
 
 
 class ReadableToChannel(HasPrecision, ActiveChannel):
@@ -76,14 +88,19 @@ class ReadableToChannel(HasPrecision, ActiveChannel):
 
     hardware_access = False
 
-    attached_devices = {'dev': Attach('Device to use as a counter', Readable)}
+    attached_devices = {"dev": Attach("Device to use as a counter", Readable)}
 
     parameters = {
-        'window': Param('Time window for which the value has to be within '
-                        'precision', type=int, mandatory=False, settable=True)}
+        "window": Param(
+            "Time window for which the value has to be within " "precision",
+            type=int,
+            mandatory=False,
+            settable=True,
+        )
+    }
 
     parameter_overrides = {
-        'visibility': Override(default=()),
+        "visibility": Override(default=()),
     }
 
     def doPreinit(self, mode):
@@ -93,8 +110,7 @@ class ReadableToChannel(HasPrecision, ActiveChannel):
         return self._attached_dev.read(maxage)
 
     def doStart(self):
-        if not self._preselection_reached and isinstance(self._attached_dev,
-                                                         Moveable):
+        if not self._preselection_reached and isinstance(self._attached_dev, Moveable):
             self._attached_dev.start(self.preselection)
 
     def doFinish(self):
@@ -107,10 +123,10 @@ class ReadableToChannel(HasPrecision, ActiveChannel):
     @lazy_property
     def _history(self):
         if self._cache:
-            self._cache.addCallback(self, 'value', self._cacheCB)
-            self._subscriptions.append(('value', self._cacheCB))
+            self._cache.addCallback(self, "value", self._cacheCB)
+            self._subscriptions.append(("value", self._cacheCB))
             t = currenttime()
-            return self._cache.history(self, 'value', t - self.window, t)
+            return self._cache.history(self, "value", t - self.window, t)
         return []
 
     # use values determined by poller or waitForCompletion loop
@@ -128,20 +144,26 @@ class ReadableToChannel(HasPrecision, ActiveChannel):
             return
         # remove oldest entries, but keep one stale
         if stale > 1:
-            del self._history[:stale - 1]
+            del self._history[: stale - 1]
 
     def doStatus(self, maxage=0):
         vals = [v for t, v in self._history[:]]
-        stable = all(
-            abs(v - self.preselection) <= self.precision for v in vals)
+        stable = all(abs(v - self.preselection) <= self.precision for v in vals)
         if stable or self._preselection_reached:
-            return status.OK, 'Done'
-        return status.BUSY, 'target not reached'
+            return status.OK, "Done"
+        return status.BUSY, "target not reached"
 
     def setChannelPreset(self, name, value):
         self._preselection_reached = False
         ActiveChannel.setChannelPreset(self, name, value)
 
     def valueInfo(self):
-        return Value('%s' % self, type='other', unit=self._attached_dev.unit,
-                     fmtstr=self._attached_dev.fmtstr, errors='none'),
+        return (
+            Value(
+                "%s" % self,
+                type="other",
+                unit=self._attached_dev.unit,
+                fmtstr=self._attached_dev.fmtstr,
+                errors="none",
+            ),
+        )

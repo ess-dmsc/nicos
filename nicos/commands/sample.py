@@ -39,15 +39,20 @@ from nicos.utils import printTable
 from nicos.utils.fitting import Fit, GaussFit
 
 __all__ = [
-    'NewSample', 'SetSample', 'SelectSample', 'ClearSamples', 'ListSamples',
-    'activation', 'powderfit',
+    "NewSample",
+    "SetSample",
+    "SelectSample",
+    "ClearSamples",
+    "ListSamples",
+    "activation",
+    "powderfit",
 ]
 
-ACTIVATIONURL = 'https://webapps.frm2.tum.de/intranet/activation/'
+ACTIVATIONURL = "https://webapps.frm2.tum.de/intranet/activation/"
 
 
 @usercommand
-@helparglist('name, ...')
+@helparglist("name, ...")
 def NewSample(name, **parameters):
     """Define and select a new sample with the given sample name.
 
@@ -63,12 +68,12 @@ def NewSample(name, **parameters):
 
     see also: `SetSample`, `SelectSample`, `ClearSamples`, `ListSamples`
     """
-    parameters['name'] = name
+    parameters["name"] = name
     session.experiment.sample.new(parameters)
 
 
 @usercommand
-@helparglist('number, name, ...')
+@helparglist("number, name, ...")
 def SetSample(number, name, **parameters):
     """Update sample name and parameters for given sample number.
 
@@ -81,7 +86,7 @@ def SetSample(number, name, **parameters):
 
     see also: `NewSample`, `SelectSample`, `ClearSamples`, `ListSamples`
     """
-    parameters['name'] = name
+    parameters["name"] = name
     session.experiment.sample.set(number, parameters)
 
 
@@ -130,22 +135,28 @@ def ListSamples():
     index = {}
     for info in session.experiment.sample.samples.values():
         all_cols.update(info)
-    all_cols.discard('name')
+    all_cols.discard("name")
     index = {key: i for (i, key) in enumerate(sorted(all_cols), start=2)}
-    index['name'] = 1
+    index["name"] = 1
     for number, info in session.experiment.sample.samples.items():
-        rows.append([str(number), info['name']] + [''] * len(all_cols))
+        rows.append([str(number), info["name"]] + [""] * len(all_cols))
         for key in info:
             rows[-1][index[key]] = str(info[key])
-    printTable(['number', 'sample name'] + sorted(all_cols),
-               rows, session.log.info)
+    printTable(["number", "sample name"] + sorted(all_cols), rows, session.log.info)
 
 
 @usercommand
 @parallel_safe
-def activation(formula=None, instrument=None,
-               flux=None, cdratio=0, fastratio=0,
-               mass=None, exposure=24, getdata=False):
+def activation(
+    formula=None,
+    instrument=None,
+    flux=None,
+    cdratio=0,
+    fastratio=0,
+    mass=None,
+    exposure=24,
+    getdata=False,
+):
     """Calculate sample activation using the FRM II activation web services.
 
         ``formula``:
@@ -217,143 +228,157 @@ def activation(formula=None, instrument=None,
             # ConfigurationError is raised if no experiment is in session
             pass
     if formula is None:
-        raise UsageError('Please give a formula')
+        raise UsageError("Please give a formula")
     if flux:
-        instrument = 'Manual'
+        instrument = "Manual"
     if instrument is None:
         try:
             instrument = session.instrument.instrument or None
         except ConfigurationError:
             pass
     if instrument is None:
-        raise UsageError('Please specifiy an instrument or flux')
+        raise UsageError("Please specifiy an instrument or flux")
     if mass is None:
         try:
             formula = session.experiment.sample.mass
         except (ConfigurationError, AttributeError):
             pass
     if mass is None:
-        raise UsageError('Please specify the sample mass')
+        raise UsageError("Please specify the sample mass")
 
-    qs = '?json=1&formula=%(formula)s&instrument=%(instrument)s&mass=%(mass)g' \
-        % locals()
+    qs = (
+        "?json=1&formula=%(formula)s&instrument=%(instrument)s&mass=%(mass)g" % locals()
+    )
     if flux:
-        qs += '&fluence=%(flux)f&cdratio=%(cdratio)f&fastratio=%(fastratio)f' \
-            % locals()
+        qs += "&fluence=%(flux)f&cdratio=%(cdratio)f&fastratio=%(fastratio)f" % locals()
     qs = ACTIVATIONURL + qs
     try:
         with urllib.request.urlopen(qs) as response:
             data = json.load(response)
     except urllib.error.HTTPError as e:
-        session.log.warning('Error opening: %s', qs)
+        session.log.warning("Error opening: %s", qs)
         session.log.warning(e)
         return None
-    if data['ecode'] == 'unknown instrument' and flux is None:
-        session.log.warning('Instrument %s unknown to calculator, '
-                            'specify flux manually', instrument)
-        session.log.info('Known instruments')
-        printTable(['instrument'], [(d, ) for d in data['instruments']],
-                   session.log.info)
+    if data["ecode"] == "unknown instrument" and flux is None:
+        session.log.warning(
+            "Instrument %s unknown to calculator, " "specify flux manually", instrument
+        )
+        session.log.info("Known instruments")
+        printTable(
+            ["instrument"], [(d,) for d in data["instruments"]], session.log.info
+        )
 
-    if data['result']['activation']:
-        h = data['result']['activation']['headers']
-        th = [h['isotope'], h['daughter'], h['reaction'], h['Thalf_str']]
-        for ha in h['activities']:
+    if data["result"]["activation"]:
+        h = data["result"]["activation"]["headers"]
+        th = [h["isotope"], h["daughter"], h["reaction"], h["Thalf_str"]]
+        for ha in h["activities"]:
             th.append(ha)
         rows = []
-        for r in data['result']['activation']['rows']:
-            rd = [r['isotope'], r['daughter'], r['reaction'], r['Thalf_str']]
-            for a in r['activities']:
-                rd.append('%.3g' % a if a > 1e-6 else '<1e-6')
+        for r in data["result"]["activation"]["rows"]:
+            rd = [r["isotope"], r["daughter"], r["reaction"], r["Thalf_str"]]
+            for a in r["activities"]:
+                rd.append("%.3g" % a if a > 1e-6 else "<1e-6")
             rows.append(rd)
-        dr = ['', '', '', 'Dose (uSv/h)']
-        for d in data['result']['activation']['doses']:
-            dr.append('%.3g' % d)
+        dr = ["", "", "", "Dose (uSv/h)"]
+        for d in data["result"]["activation"]["doses"]:
+            dr.append("%.3g" % d)
         rows.append(dr)
 
         printTable(th, rows, session.log.info)
     else:
-        session.log.info('No activation')
+        session.log.info("No activation")
     if getdata:
         return data
     return
 
 
 def _extract_powder_data(num, dataset):
-    values = {'%s_%s' % dev_key: val
-              for (dev_key, (val, _, _, _)) in dataset.metainfo.items()}
+    values = {
+        "%s_%s" % dev_key: val for (dev_key, (val, _, _, _)) in dataset.metainfo.items()
+    }
     try:
         ki_name = session.instrument._attached_mono.name
         tt_name = session.instrument._attached_phi.name
     except Exception:
         ki_name = tt_name = None
-    for name in [ki_name, 'ki', 'mono']:
-        if name and name + '_value' in values:
-            ki = values[name + '_value']
+    for name in [ki_name, "ki", "mono"]:
+        if name and name + "_value" in values:
+            ki = values[name + "_value"]
             break
     else:
-        session.log.warning('dataset %d has no ki or mono value', num)
+        session.log.warning("dataset %d has no ki or mono value", num)
         return
 
     # x column
-    possible_xnames = (tt_name, 'stt', 'phi')
-    for (i, info) in enumerate(dataset.devvalueinfo):
+    possible_xnames = (tt_name, "stt", "phi")
+    for i, info in enumerate(dataset.devvalueinfo):
         if info.name in possible_xnames:
             xs = [subset.devvaluelist[i] for subset in dataset.subsets]
             break
     else:
-        session.log.warning('dataset %d has no 2-theta X values', num)
+        session.log.warning("dataset %d has no 2-theta X values", num)
         return
 
     # normalization column (monitor > timer)
     mcol = None
     try:
-        mcol = sorted([(dataset.subsets[0].detvaluelist[j], j)
-                       for j in range(len(dataset.detvalueinfo))
-                       if dataset.detvalueinfo[j].type == 'monitor'],
-                      key=lambda x: x[0])[-1][1]
+        mcol = sorted(
+            [
+                (dataset.subsets[0].detvaluelist[j], j)
+                for j in range(len(dataset.detvalueinfo))
+                if dataset.detvalueinfo[j].type == "monitor"
+            ],
+            key=lambda x: x[0],
+        )[-1][1]
     except IndexError:
         mcol = None
     # if highest monitor count is zero, prefer time
     if mcol is None or (dataset.subsets[0].detvaluelist[mcol] == 0):
         try:
-            mcol = [j for j in range(len(dataset.detvalueinfo))
-                    if dataset.detvalueinfo[j].type == 'time'][0]
+            mcol = [
+                j
+                for j in range(len(dataset.detvalueinfo))
+                if dataset.detvalueinfo[j].type == "time"
+            ][0]
         except IndexError:
-            session.log.warning('dataset %d has no column of type "monitor" '
-                                'or "time"', num)
+            session.log.warning(
+                'dataset %d has no column of type "monitor" ' 'or "time"', num
+            )
             return
     ms = [float(subset.detvaluelist[mcol]) for subset in dataset.subsets]
 
     # y column
     try:
-        ycol = [j for j in range(len(dataset.detvalueinfo))
-                if dataset.detvalueinfo[j].type == 'counter'][0]
+        ycol = [
+            j
+            for j in range(len(dataset.detvalueinfo))
+            if dataset.detvalueinfo[j].type == "counter"
+        ][0]
     except IndexError:
         session.log.warning('dataset %d has no Y column of type "counter"', num)
     else:
         ys = [subset.detvaluelist[ycol] for subset in dataset.subsets]
 
-        if dataset.detvalueinfo[ycol].errors == 'sqrt':
+        if dataset.detvalueinfo[ycol].errors == "sqrt":
             dys = [sqrt(y) for y in ys]
-        elif dataset.detvalueinfo[ycol].errors == 'next':
-            dys = [subset.detvaluelist[ycol+1] for subset in dataset.subsets]
+        elif dataset.detvalueinfo[ycol].errors == "next":
+            dys = [subset.detvaluelist[ycol + 1] for subset in dataset.subsets]
         else:
             dys = [1] * len(ys)
 
-    ys = [y/m for (y, m) in zip(ys, ms)]
-    dys = [dy/m for (dy, m) in zip(dys, ms)]
+    ys = [y / m for (y, m) in zip(ys, ms)]
+    dys = [dy / m for (dy, m) in zip(dys, ms)]
 
     numfitpoints = 5
     if len(xs) < numfitpoints:
-        session.log.warning('not enough datapoints in scan %d', num)
+        session.log.warning("not enough datapoints in scan %d", num)
         return
     # now try to fit the peaks
     peaks = []  # collects infos for all peaks we will find...
 
     res = GaussFit().run(xs, ys, dys)
     if res._failed:
-        session.log.warning('no Gauss fit found in dataset %d', num)
+        session.log.warning("no Gauss fit found in dataset %d", num)
         return
     peaks.append([res.x0, res.dx0])
     return ki, peaks
@@ -361,8 +386,7 @@ def _extract_powder_data(num, dataset):
 
 @usercommand
 @parallel_safe
-def powderfit(powder, scans=None, peaks=None, ki=None, dmono=3.355,
-              spacegroup=1):
+def powderfit(powder, scans=None, peaks=None, ki=None, dmono=3.355, spacegroup=1):
     """Fit powder peaks of a powder sample to calibrate instrument wavelength.
 
     First argument is either a string that names a known material (currently
@@ -378,20 +402,21 @@ def powderfit(powder, scans=None, peaks=None, ki=None, dmono=3.355,
     (only used to calculate monochromator 2-theta offsets), it defaults to PG
     (3.355 A).
     """
-    maxhkl = 10    # max H/K/L to consider when looking for d-values
-    maxdd = 0.2    # max distance in d-value when looking for peak indices
-    ksteps = 50    # steps with different ki
-    dki = 0.002    # relative ki stepsize
+    maxhkl = 10  # max H/K/L to consider when looking for d-values
+    maxdd = 0.2  # max distance in d-value when looking for peak indices
+    ksteps = 50  # steps with different ki
+    dki = 0.002  # relative ki stepsize
 
-    if powder == 'YIG':
+    if powder == "YIG":
         a = 12.377932
         spacegroup = 230
-        session.log.info('YIG: using cubic lattice constant of %.6f A', a)
-        session.log.info('')
+        session.log.info("YIG: using cubic lattice constant of %.6f A", a)
+        session.log.info("")
     else:
         if not isinstance(powder, float):
-            raise UsageError('first argument must be either "YIG" or a '
-                             'lattice constant')
+            raise UsageError(
+                'first argument must be either "YIG" or a ' "lattice constant"
+            )
         a = powder
 
     sg = get_spacegroup(spacegroup)
@@ -404,19 +429,19 @@ def powderfit(powder, scans=None, peaks=None, ki=None, dmono=3.355,
                 if h + k + l > 0:  # assume all reflections are possible
                     if not can_reflect(sg, h, k, l):
                         continue
-                    G = sqrt(h*h + k*k + l*l)
-                    dhkls[a/G] = '(%d %d %d)' % (h, k, l)
-                    dhkls[a/(2*G)] = '(%d %d %d)/2' % (h, k, l)
-                    dhkls[a/(3*G)] = '(%d %d %d)/3' % (h, k, l)
-                    dhkls[a/(4*G)] = '(%d %d %d)/4' % (h, k, l)
-                    dhkls[a/(5*G)] = '(%d %d %d)/5' % (h, k, l)
+                    G = sqrt(h * h + k * k + l * l)
+                    dhkls[a / G] = "(%d %d %d)" % (h, k, l)
+                    dhkls[a / (2 * G)] = "(%d %d %d)/2" % (h, k, l)
+                    dhkls[a / (3 * G)] = "(%d %d %d)/3" % (h, k, l)
+                    dhkls[a / (4 * G)] = "(%d %d %d)/4" % (h, k, l)
+                    dhkls[a / (5 * G)] = "(%d %d %d)/5" % (h, k, l)
     # generate list from dict
     dvals = sorted(dhkls)
 
     # fit and helper functions
 
     def dk2tt(d, k):
-        return 2.0 * degrees(arcsin(pi/(d * k)))
+        return 2.0 * degrees(arcsin(pi / (d * k)))
 
     def model(x, k, stt0):
         return stt0 + dk2tt(x, k)
@@ -424,27 +449,28 @@ def powderfit(powder, scans=None, peaks=None, ki=None, dmono=3.355,
     data = {}
     if not peaks:
         if not scans:
-            raise UsageError('please give either scans or peaks argument')
+            raise UsageError("please give either scans or peaks argument")
 
         for dataset in session.experiment.data.getLastScans():
             num = dataset.counter
             if num not in scans:
                 continue
             res = _extract_powder_data(num, dataset)
-            session.log.debug('powder_data from %d: %s', num, res)
+            session.log.debug("powder_data from %d: %s", num, res)
             if res:
                 ki, peaks = res
-                data.setdefault(ki, []).extend([None, p, dp, '#%d ' % num]
-                                               for (p, dp) in peaks)
+                data.setdefault(ki, []).extend(
+                    [None, p, dp, "#%d " % num] for (p, dp) in peaks
+                )
         if not data:
-            session.log.warning('no data found, check the scan numbers!')
+            session.log.warning("no data found, check the scan numbers!")
             return
     else:
         if scans:
-            raise UsageError('please give either scans or peaks argument')
+            raise UsageError("please give either scans or peaks argument")
         if not ki:
-            raise UsageError('please give ki argument together with peaks')
-        data[float(ki)] = [[None, p, 0.1, ''] for p in peaks]
+            raise UsageError("please give ki argument together with peaks")
+        data[float(ki)] = [[None, p, 0.1, ""] for p in peaks]
 
     beststt0s = []
     bestmtt0s = []
@@ -459,66 +485,93 @@ def powderfit(powder, scans=None, peaks=None, ki=None, dmono=3.355,
         # now iterate through data (for all ki and for all peaks) and try to
         # assign a d-value assuming the ki not to be completely off!
         for ki1 in sorted(data):
-            new_ki = ki1 + j*dki*ki1
+            new_ki = ki1 + j * dki * ki1
             # iterate over ki specific list, start at last element
             for el in reversed(data[ki1]):
-                tdval = pi/new_ki/sin(abs(radians(el[1]/2.)))  # dvalue from scan
-                distances = [(abs(d-tdval), i) for (i, d) in enumerate(dvals)]
+                tdval = pi / new_ki / sin(abs(radians(el[1] / 2.0)))  # dvalue from scan
+                distances = [(abs(d - tdval), i) for (i, d) in enumerate(dvals)]
                 mindist = min(distances)
                 if mindist[0] > maxdd:
-                    p('%speak at %7.3f -> no hkl found' % (el[3], el[1]))
+                    p("%speak at %7.3f -> no hkl found" % (el[3], el[1]))
                     data[ki1].remove(el)
                 else:
                     el[0] = dvals[mindist[1]]
                     if el[1] < 0:
                         el[0] *= -1
-                    p('%speak at %7.3f could be %s at d = %-7.4f' %
-                      (el[3], el[1], dhkls[abs(el[0])], el[0]))
-        p('')
+                    p(
+                        "%speak at %7.3f could be %s at d = %-7.4f"
+                        % (el[3], el[1], dhkls[abs(el[0])], el[0])
+                    )
+        p("")
 
         restxt = []
-        restxt.append('___final_results___')
-        restxt.append('ki_exp  #peaks | ki_fit   dki_fit  mtt_0    lambda   | '
-                      'stt_0    dstt_0   | chisqr')
+        restxt.append("___final_results___")
+        restxt.append(
+            "ki_exp  #peaks | ki_fit   dki_fit  mtt_0    lambda   | "
+            "stt_0    dstt_0   | chisqr"
+        )
         stt0s = []
         mtt0s = []
         rms = 0
         for ki1 in sorted(data):
-            new_ki = ki1 + j*dki*ki1
+            new_ki = ki1 + j * dki * ki1
             peaks = data[ki1]
             failed = True
             if len(peaks) > 2:
-                fit = Fit('ki', model, ['ki', 'stt0'], [new_ki, 0])
-                res = fit.run([el[0] for el in peaks], [el[1] for el in peaks],
-                              [el[2] for el in peaks])
+                fit = Fit("ki", model, ["ki", "stt0"], [new_ki, 0])
+                res = fit.run(
+                    [el[0] for el in peaks],
+                    [el[1] for el in peaks],
+                    [el[2] for el in peaks],
+                )
                 failed = res._failed
             if failed:
-                restxt.append('%4.3f   %-6d | No fit!' % (ki1, len(peaks)))
+                restxt.append("%4.3f   %-6d | No fit!" % (ki1, len(peaks)))
                 rms += 1e6
                 continue
             mtt0 = dk2tt(dmono, res.ki) - dk2tt(dmono, ki1)
-            restxt.append('%5.3f   %-6d | %-7.4f  %-7.4f  %-7.4f  %-7.4f  | '
-                          '%-7.4f  %-7.4f  | %.2f' %
-                          (ki1, len(peaks), res.ki, res.dki, mtt0, 2*pi/res.ki,
-                           res.stt0, res.dstt0, res.chi2))
+            restxt.append(
+                "%5.3f   %-6d | %-7.4f  %-7.4f  %-7.4f  %-7.4f  | "
+                "%-7.4f  %-7.4f  | %.2f"
+                % (
+                    ki1,
+                    len(peaks),
+                    res.ki,
+                    res.dki,
+                    mtt0,
+                    2 * pi / res.ki,
+                    res.stt0,
+                    res.dstt0,
+                    res.chi2,
+                )
+            )
             stt0s.append(res.stt0)
             mtt0s.append(mtt0)
             peaks_fit = [model(el[0], res.ki, res.stt0) for el in peaks]
-            p('___fitted_peaks_for_ki=%.3f___' % ki1)
-            p('peak          dval measured   fitpos    delta')
+            p("___fitted_peaks_for_ki=%.3f___" % ki1)
+            p("peak          dval measured   fitpos    delta")
             for i, el in enumerate(peaks):
-                p('%-10s %7.3f  %7.3f  %7.3f  %7.3f%s' % (
-                    dhkls[abs(el[0])], el[0], el[1], peaks_fit[i],
-                    peaks_fit[i] - el[1],
-                    '' if abs(peaks_fit[i] - el[1]) < 0.10 else " **"))
-            p('')
-            rms += sum((pobs - pfit)**2 for (pobs, pfit) in
-                       zip([el[1] for el in peaks], peaks_fit)) / len(peaks)
+                p(
+                    "%-10s %7.3f  %7.3f  %7.3f  %7.3f%s"
+                    % (
+                        dhkls[abs(el[0])],
+                        el[0],
+                        el[1],
+                        peaks_fit[i],
+                        peaks_fit[i] - el[1],
+                        "" if abs(peaks_fit[i] - el[1]) < 0.10 else " **",
+                    )
+                )
+            p("")
+            rms += sum(
+                (pobs - pfit) ** 2
+                for (pobs, pfit) in zip([el[1] for el in peaks], peaks_fit)
+            ) / len(peaks)
 
         out.extend(restxt)
-        session.log.debug('')
-        session.log.debug('-' * 80)
-        session.log.debug('result from run with j=%d (RMS = %g):', j, rms)
+        session.log.debug("")
+        session.log.debug("-" * 80)
+        session.log.debug("result from run with j=%d (RMS = %g):", j, rms)
         for line in out:
             session.log.debug(line)
 
@@ -527,27 +580,27 @@ def powderfit(powder, scans=None, peaks=None, ki=None, dmono=3.355,
             bestmtt0s = mtt0s
             bestrms = rms
             bestlines = out
-            session.log.debug('')
-            session.log.debug('*** new best result: RMS = %g', rms)
+            session.log.debug("")
+            session.log.debug("*** new best result: RMS = %g", rms)
 
     if not beststt0s:
-        session.log.warning('No successful fit results!')
+        session.log.warning("No successful fit results!")
         if ki is not None:
-            session.log.warning('Is the initial guess for ki too far off?')
+            session.log.warning("Is the initial guess for ki too far off?")
         return
 
     for line in bestlines:
         session.log.info(line)
 
-    meanstt0 = sum(beststt0s)/len(beststt0s)
-    meanmtt0 = sum(bestmtt0s)/len(bestmtt0s)
+    meanstt0 = sum(beststt0s) / len(beststt0s)
+    meanmtt0 = sum(bestmtt0s) / len(bestmtt0s)
 
-    session.log.info('Check errors (dki, dstt0)!  RMS = %.3g', bestrms)
-    session.log.info('')
-    session.log.info('Adjust using:')
+    session.log.info("Check errors (dki, dstt0)!  RMS = %.3g", bestrms)
+    session.log.info("")
+    session.log.info("Adjust using:")
     # TODO: fix suggestions using adjust()
-    session.log.info('mtt.offset += %.4f', meanmtt0)
-    session.log.info('mth.offset += %.4f', meanmtt0 / 2)
-    session.log.info('stt.offset += %.4f', meanstt0)
+    session.log.info("mtt.offset += %.4f", meanmtt0)
+    session.log.info("mth.offset += %.4f", meanmtt0 / 2)
+    session.log.info("stt.offset += %.4f", meanstt0)
 
     return CommandLineFitResult((meanmtt0, meanstt0))

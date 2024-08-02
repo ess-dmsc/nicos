@@ -29,22 +29,23 @@ class AndorAreaDetector(EpicsAreaDetector):
     to the base EpicsAreaDetector. Only the subset actually used at SINQ is
     added.
     """
+
     _device_rw = {
-        'acquire_time': 'AcquireTime',
-        'acquire_period': 'AcquirePeriod',
-        'shutter_close_delay': 'ShutterCloseDelay',
-        'shutter_open_delay': 'ShutterOpenDelay',
-        'temperature': 'Temperature',
+        "acquire_time": "AcquireTime",
+        "acquire_period": "AcquirePeriod",
+        "shutter_close_delay": "ShutterCloseDelay",
+        "shutter_open_delay": "ShutterOpenDelay",
+        "temperature": "Temperature",
     }
     _device_ro = {
-        'temperature_actual': 'TemperatureActual',
+        "temperature_actual": "TemperatureActual",
     }
 
     _device_srw = {
-        'trigger_mode': 'TriggerMode',
-        'cooler': 'AndorCooler',
-        'shutter_mode': 'ShutterMode',
-        'adc_speed': 'AndorADCSpeed',
-        'readout_mode': 'AndorReadOutMode',
-        'vs_period': 'AndorVSPeriod'
+        "trigger_mode": "TriggerMode",
+        "cooler": "AndorCooler",
+        "shutter_mode": "ShutterMode",
+        "adc_speed": "AndorADCSpeed",
+        "readout_mode": "AndorReadOutMode",
+        "vs_period": "AndorVSPeriod",
     }

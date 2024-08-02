@@ -34,14 +34,13 @@ from nicos_ess.gui.utils import get_icon
 
 
 class CommandPanel(Panel):
-    """Provides a panel where the user can run Python commands.
-    """
+    """Provides a panel where the user can run Python commands."""
 
-    panelName = 'Command'
+    panelName = "Command"
 
     def __init__(self, parent, client, options):
         Panel.__init__(self, parent, client, options)
-        loadUi(self, findResource('nicos_ess/gui/panels/ui_files/cmdbuilder.ui'))
+        loadUi(self, findResource("nicos_ess/gui/panels/ui_files/cmdbuilder.ui"))
 
         self.parent_window = parent
         self.options = options
@@ -64,10 +63,11 @@ class CommandPanel(Panel):
         client.disconnected.connect(self.on_client_disconnected)
 
     def postInit(self):
-        self.console = self.parent_window.getPanel('Console')
+        self.console = self.parent_window.getPanel("Console")
         if self.console:
             self.console.outView.anchorClicked.connect(
-                self.on_consoleView_anchorClicked)
+                self.on_consoleView_anchorClicked
+            )
 
     def on_client_connected(self):
         self.setViewOnly(self.client.viewonly)
@@ -76,18 +76,18 @@ class CommandPanel(Panel):
         self.setViewOnly(True)
 
     def set_icons(self):
-        self.runBtn.setIcon(get_icon('play_arrow-24px.svg'))
+        self.runBtn.setIcon(get_icon("play_arrow-24px.svg"))
 
     def setViewOnly(self, viewonly):
         self.inputFrame.setEnabled(not viewonly)
 
     def loadSettings(self, settings):
-        self.cmdhistory = settings.value('cmdhistory') or []
+        self.cmdhistory = settings.value("cmdhistory") or []
 
     def saveSettings(self, settings):
         # only save 100 entries of the history
         cmdhistory = self.commandInput.history[-100:]
-        settings.setValue('cmdhistory', cmdhistory)
+        settings.setValue("cmdhistory", cmdhistory)
 
     def updateStatus(self, status, exception=False):
         self.commandInput.setStatus(status)
@@ -105,13 +105,12 @@ class CommandPanel(Panel):
 
     def completeInput(self, fullstring, lastword):
         try:
-            return self.client.ask('complete', fullstring, lastword,
-                                   default=[])
+            return self.client.ask("complete", fullstring, lastword, default=[])
         except Exception:
             return []
 
     def on_client_initstatus(self, state):
-        self.on_client_mode(state['mode'])
+        self.on_client_mode(state["mode"])
 
     def on_client_mode(self, mode):
         self.label.setText(modePrompt(mode))
@@ -119,22 +118,23 @@ class CommandPanel(Panel):
     def on_consoleView_anchorClicked(self, url):
         """Called when the user clicks a link in the out view."""
         scheme = url.scheme()
-        if scheme == 'exec':
+        if scheme == "exec":
             self.commandInput.setText(url.path())
             self.commandInput.setFocus()
 
     @pyqtSlot()
     def on_runBtn_clicked(self):
         # Make sure we add the command to the history.
-        event = QKeyEvent(QKeyEvent.Type.KeyPress, Qt.Key.Key_Enter,
-                          Qt.KeyboardModifier.NoModifier)
+        event = QKeyEvent(
+            QKeyEvent.Type.KeyPress, Qt.Key.Key_Enter, Qt.KeyboardModifier.NoModifier
+        )
         QApplication.postEvent(self.commandInput, event)
 
     def on_commandInput_execRequested(self, script, action):
-        if action == 'queue':
+        if action == "queue":
             self.client.run(script)
         else:
-            self.client.tell('exec', script)
+            self.client.tell("exec", script)
         self.commandInput.selectAll()
         self.commandInput.setFocus()
         self.commandInput.clear()

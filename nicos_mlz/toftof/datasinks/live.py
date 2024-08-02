@@ -25,24 +25,26 @@
 
 import numpy
 
-from nicos.devices.datasinks.special import LiveViewSink as BaseLiveViewSink, \
-    LiveViewSinkHandler as BaseLiveViewSinkHandler
+from nicos.devices.datasinks.special import (
+    LiveViewSink as BaseLiveViewSink,
+    LiveViewSinkHandler as BaseLiveViewSinkHandler,
+)
 
 
 class LiveViewSinkHandler(BaseLiveViewSinkHandler):
-
     def processArrays(self, result):
         data = result[1][0]
         if data is not None:
             if len(data.shape) == 2:
-                treated = numpy.transpose(data)[
-                    self.detector._anglemap, :].astype('<u4')
+                treated = numpy.transpose(data)[self.detector._anglemap, :].astype(
+                    "<u4"
+                )
                 return [treated]
 
     def getLabelDescs(self, result):
         return {
-            'x': {'define': 'classic', 'title': 'time channels'},
-            'y': {'define': 'classic', 'title': 'detectors'},
+            "x": {"define": "classic", "title": "time channels"},
+            "y": {"define": "classic", "title": "detectors"},
         }
 
 

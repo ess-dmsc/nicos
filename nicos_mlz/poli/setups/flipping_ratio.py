@@ -1,5 +1,5 @@
-description = 'Flipping ratio'
+description = "Flipping ratio"
 
-group = 'basic'
+group = "basic"
 
-includes = ['table_lifting', 'flipping']
+includes = ["table_lifting", "flipping"]

@@ -21,49 +21,75 @@
 #
 # *****************************************************************************
 
-from nicos.core.params import Attach, Param, Value, floatrange, intrange, \
-    oneof, tupleof
+from nicos.core.params import Attach, Param, Value, floatrange, intrange, oneof, tupleof
 from nicos.devices.entangle import ImageChannel
 from nicos.devices.tango import PyTangoDevice
 
 anode_mapping = {
-    'Cr': (5.41, 4.80),
-    'Cu': (8.05, 6.40),
-    'Mo': (17.48, 8.74),
-    'Ag': (22.16, 11.08),
+    "Cr": (5.41, 4.80),
+    "Cu": (8.05, 6.40),
+    "Mo": (17.48, 8.74),
+    "Ag": (22.16, 11.08),
 }
 
 
 class Detector(ImageChannel):
-
     attached_devices = {
-        'config': Attach('Dectris configuration device', PyTangoDevice),
+        "config": Attach("Dectris configuration device", PyTangoDevice),
     }
 
     parameters = {
-        'pixel_size': Param('Size of a single pixel (in mm)',
-                            type=tupleof(floatrange(0), floatrange(0)),
-                            volatile=False, settable=False, default=(0.05, 10),
-                            unit='mm', category='instrument'),
-        'pixel_count': Param('Number of detector pixels',
-                             type=intrange(1, 100000), volatile=True,
-                             settable=False, category='instrument'),
-        'precision': Param('Precision for comparison of the energy values to '
-                           'find out the used anode material',
-                           type=floatrange(0), default=0.01, unit='keV'),
-        'anode': Param('X-ray Anode material',
-                       type=oneof(*anode_mapping),
-                       settable=True, userparam=True, category='instrument',
-                       volatile=True),
-        'flip': Param('Flipping spectrum',
-                      type=bool, settable=False,
-                      volatile=False, default=False,
-                      category='general'),
+        "pixel_size": Param(
+            "Size of a single pixel (in mm)",
+            type=tupleof(floatrange(0), floatrange(0)),
+            volatile=False,
+            settable=False,
+            default=(0.05, 10),
+            unit="mm",
+            category="instrument",
+        ),
+        "pixel_count": Param(
+            "Number of detector pixels",
+            type=intrange(1, 100000),
+            volatile=True,
+            settable=False,
+            category="instrument",
+        ),
+        "precision": Param(
+            "Precision for comparison of the energy values to "
+            "find out the used anode material",
+            type=floatrange(0),
+            default=0.01,
+            unit="keV",
+        ),
+        "anode": Param(
+            "X-ray Anode material",
+            type=oneof(*anode_mapping),
+            settable=True,
+            userparam=True,
+            category="instrument",
+            volatile=True,
+        ),
+        "flip": Param(
+            "Flipping spectrum",
+            type=bool,
+            settable=False,
+            volatile=False,
+            default=False,
+            category="general",
+        ),
     }
 
     def valueInfo(self):
-        return Value(self.name + '.sum', unit='cts', type='counter',
-                     errors='sqrt', fmtstr='%d'),
+        return (
+            Value(
+                self.name + ".sum",
+                unit="cts",
+                type="counter",
+                errors="sqrt",
+                fmtstr="%d",
+            ),
+        )
 
     def doReadArray(self, quality):
         narray = ImageChannel.doReadArray(self, quality)
@@ -79,12 +105,16 @@ class Detector(ImageChannel):
     def doReadAnode(self):
         photon, threshold = self._attached_config._dev.energy
         for name, vals in anode_mapping.items():
-            if (abs(photon - vals[0]) <= self.precision and
-               abs(threshold - vals[1]) <= self.precision):
+            if (
+                abs(photon - vals[0]) <= self.precision
+                and abs(threshold - vals[1]) <= self.precision
+            ):
                 return name
         raise ValueError(
-            self, f'unknown anode material: Photon energy: {photon} keV, '
-            f' threshold: {threshold} keV')
+            self,
+            f"unknown anode material: Photon energy: {photon} keV, "
+            f" threshold: {threshold} keV",
+        )
 
     def doWriteAnode(self, value):
         self._attached_config._dev.energy = anode_mapping[value]

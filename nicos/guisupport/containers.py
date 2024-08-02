@@ -25,8 +25,16 @@
 Custom container widgets.
 """
 
-from nicos.guisupport.qt import QHBoxLayout, QSizePolicy, QSpacerItem, \
-    QToolButton, QVBoxLayout, QWidget, pyqtSignal, uic
+from nicos.guisupport.qt import (
+    QHBoxLayout,
+    QSizePolicy,
+    QSpacerItem,
+    QToolButton,
+    QVBoxLayout,
+    QWidget,
+    pyqtSignal,
+    uic,
+)
 from nicos.guisupport.widget import NicosWidget, PropDef
 
 
@@ -40,7 +48,7 @@ class MultiEntry(QWidget):
         if uifile:
             uic.loadUi(uifile, self.subwidget)
         self.button = QToolButton(self)
-        self.setButton('+')
+        self.setButton("+")
         self.button.clicked.connect(self.on_button_click)
         new_layout.addWidget(self.subwidget)
         new_layout.addSpacerItem(QSpacerItem(15, 1, QSizePolicy.Policy.Fixed))
@@ -52,10 +60,10 @@ class MultiEntry(QWidget):
 
     def setButton(self, plusminus):
         self.button.setText(plusminus)
-        if plusminus == '+':
-            self.button.setToolTip('Add another')
+        if plusminus == "+":
+            self.button.setToolTip("Add another")
         else:
-            self.button.setToolTip('Remove this')
+            self.button.setToolTip("Remove this")
 
     def on_button_click(self):
         self.addOrRemove.emit()
@@ -64,9 +72,9 @@ class MultiEntry(QWidget):
 class MultiList(NicosWidget, QWidget):
     """A list of entries, where each entry is a frame loaded from a UI file."""
 
-    designer_description = 'A list (with add/remove controls) of .ui entries'
+    designer_description = "A list (with add/remove controls) of .ui entries"
 
-    uifile = PropDef('uifile', str, '', 'UI file to use for the entries')
+    uifile = PropDef("uifile", str, "", "UI file to use for the entries")
 
     entryAdded = pyqtSignal(object)
     entryRemoved = pyqtSignal(object)
@@ -85,7 +93,7 @@ class MultiList(NicosWidget, QWidget):
         pass
 
     def propertyUpdated(self, pname, value):
-        if pname == 'uifile':
+        if pname == "uifile":
             self.clear()
         NicosWidget.propertyUpdated(self, pname, value)
 
@@ -109,13 +117,13 @@ class MultiList(NicosWidget, QWidget):
         self.entryRemoved.emit(entry.subwidget)
         entry.deleteLater()
         if self._entries:
-            self._entries[-1].setButton('+')
+            self._entries[-1].setButton("+")
 
     def _add(self):
-        new_frame = MultiEntry(self, self._client, self.props['uifile'])
+        new_frame = MultiEntry(self, self._client, self.props["uifile"])
         new_frame.addOrRemove.connect(self._addRemove)
         if self._entries:
-            self._entries[-1].setButton('-')
+            self._entries[-1].setButton("-")
         self._entries.append(new_frame)
         self._vlayout.addWidget(new_frame)
         self.entryAdded.emit(self._entries[-1].subwidget)

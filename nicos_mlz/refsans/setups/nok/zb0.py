@@ -1,14 +1,14 @@
-description = 'Slit ZB0 using Beckhoff controllers'
+description = "Slit ZB0 using Beckhoff controllers"
 
-group = 'lowlevel'
+group = "lowlevel"
 
-includes = ['zz_absoluts']
+includes = ["zz_absoluts"]
 
-instrument_values = configdata('instrument.values')
-showcase_values = configdata('cf_showcase.showcase_values')
-optic_values = configdata('cf_optic.optic_values')
-tango_base = instrument_values['tango_base']
-code_base = instrument_values['code_base']
+instrument_values = configdata("instrument.values")
+showcase_values = configdata("cf_showcase.showcase_values")
+optic_values = configdata("cf_optic.optic_values")
+tango_base = instrument_values["tango_base"]
+code_base = instrument_values["code_base"]
 
 index = 4
 
@@ -20,19 +20,20 @@ devices = dict(
     #     maxtries = 3,
     #     visibility = (),
     # ),
-    zb0 = device(code_base + 'slits.SingleSlit',
+    zb0=device(
+        code_base + "slits.SingleSlit",
         # length: 13 mm
-        description = 'zb0, singleslit',
-        motor = 'zb0_motor',
-        nok_start = 4121.5,
-        nok_end = 4134.5,
-        nok_gap = 1,
-        masks = {
-            'slit': 0,
-            'point': 0,
-            'gisans': -110 * optic_values['gisans_scale'],
+        description="zb0, singleslit",
+        motor="zb0_motor",
+        nok_start=4121.5,
+        nok_end=4134.5,
+        nok_gap=1,
+        masks={
+            "slit": 0,
+            "point": 0,
+            "gisans": -110 * optic_values["gisans_scale"],
         },
-        unit = 'mm',
+        unit="mm",
     ),
     # zb0_temp = device(code_base + 'beckhoff.nok.BeckhoffTemp',
     #     description = 'Temperatur for ZB0 Motor',

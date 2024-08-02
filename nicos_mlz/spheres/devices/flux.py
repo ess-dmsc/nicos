@@ -26,12 +26,10 @@ from nicos.devices.entangle import VectorInput
 
 
 class Flux(VectorInput):
-    """Device which stores the flux averages over the relevant detectors.
-    """
+    """Device which stores the flux averages over the relevant detectors."""
 
     parameters = {
-        'fluxvalues': Param('Raw flux values', internal=True,
-                            type=listof(listof(int)))
+        "fluxvalues": Param("Raw flux values", internal=True, type=listof(listof(int)))
     }
 
     def init(self):
@@ -40,21 +38,22 @@ class Flux(VectorInput):
 
     def doPoll(self, i, maxage):
         val = self.doRead()
-        self._pollParam('fluxvalues')
+        self._pollParam("fluxvalues")
 
         return self.status(), val
 
     def doReadFluxvalues(self):
-        if not hasattr(self, '_fluxvalues'):
+        if not hasattr(self, "_fluxvalues"):
             self.doRead()
         return self._fluxvalues
 
     def doRead(self, maxage=0):
         flux = self._dev.GetFlux()
 
-        if len(flux) != 16*6:
-            self.log.warning('SIS returned %d flux values, expected %d',
-                             len(flux), 16*6)
+        if len(flux) != 16 * 6:
+            self.log.warning(
+                "SIS returned %d flux values, expected %d", len(flux), 16 * 6
+            )
             return [0, 0, 0]
 
         # pylint: disable=unbalanced-tuple-unpacking
@@ -63,26 +62,32 @@ class Flux(VectorInput):
 
         self._fluxvalues = [cElast, cInelast, cDir]
 
-        elast = [sum(x for i, x in enumerate(cElast) if i in rDets),
-                 sum(x for i, x in enumerate(tElast) if i in rDets)]
-        inelast = [sum(x for i, x in enumerate(cInelast) if i in rDets),
-                   sum(x for i, x in enumerate(tInelast) if i in rDets)]
-        direct = [sum(x for i, x in enumerate(cDir) if i in rDets),
-                  sum(x for i, x in enumerate(tDir) if i in rDets)]
+        elast = [
+            sum(x for i, x in enumerate(cElast) if i in rDets),
+            sum(x for i, x in enumerate(tElast) if i in rDets),
+        ]
+        inelast = [
+            sum(x for i, x in enumerate(cInelast) if i in rDets),
+            sum(x for i, x in enumerate(tInelast) if i in rDets),
+        ]
+        direct = [
+            sum(x for i, x in enumerate(cDir) if i in rDets),
+            sum(x for i, x in enumerate(tDir) if i in rDets),
+        ]
 
         if not elast[1]:
             elastic = 0
         else:
-            elastic = int(elast[0]/2e-5/elast[1])
+            elastic = int(elast[0] / 2e-5 / elast[1])
 
         if not inelast[1]:
             inelastic = 0
         else:
-            inelastic = int(inelast[0]/2e-5/inelast[1])
+            inelastic = int(inelast[0] / 2e-5 / inelast[1])
         if not direct[1]:
             direct = 0
         else:
-            direct = int(direct[0]/2e-5/direct[1])
+            direct = int(direct[0] / 2e-5 / direct[1])
 
         return [elastic, inelastic, direct]
 
@@ -92,7 +97,7 @@ class Flux(VectorInput):
         listsize = len(inp)
 
         while index < listsize:
-            output.append([int(x) for x in inp[index:index + chunksize]])
+            output.append([int(x) for x in inp[index : index + chunksize]])
             index += chunksize
 
         return output

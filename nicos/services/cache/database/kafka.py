@@ -34,7 +34,7 @@ from nicos.utils import createThread
 
 
 class KafkaCacheDatabase(MemoryCacheDatabase):
-    """ Cache database that stores cache in Kafka topics without History.
+    """Cache database that stores cache in Kafka topics without History.
 
     Current key and value pairs are stored in Kafka using log compaction.
     The `CacheEntry` values can be serialized using the attached device. This
@@ -69,18 +69,26 @@ class KafkaCacheDatabase(MemoryCacheDatabase):
 
     History is NOT supported with this database.
     """
+
     parameters = {
-        'currenttopic': Param(
-            'Kafka topic where the current values of cache are streamed',
-            type=str, mandatory=True),
-        'brokers': Param('List of Kafka bootstrap servers.',
-                         type=listof(host(defaultport=9092)),
-                         default=['localhost']),
+        "currenttopic": Param(
+            "Kafka topic where the current values of cache are streamed",
+            type=str,
+            mandatory=True,
+        ),
+        "brokers": Param(
+            "List of Kafka bootstrap servers.",
+            type=listof(host(defaultport=9092)),
+            default=["localhost"],
+        ),
     }
 
     attached_devices = {
-        'serializer': Attach('Device to serialize the cache entry values',
-                             CacheEntrySerializer, optional=False)
+        "serializer": Attach(
+            "Device to serialize the cache entry values",
+            CacheEntrySerializer,
+            optional=False,
+        )
     }
 
     def doInit(self, mode):
@@ -92,23 +100,25 @@ class KafkaCacheDatabase(MemoryCacheDatabase):
         # Create the consumer
         self._consumer = KafkaConsumer(
             bootstrap_servers=self.brokers,
-            auto_offset_reset='earliest'  # start at earliest topic
+            auto_offset_reset="earliest",  # start at earliest topic
         )
 
         # Give up if the topic does not exist
         if self.currenttopic not in self._consumer.topics():
             raise ConfigurationError(
                 'Topic "%s" does not exist. Create this topic and restart.'
-                % self.currenttopic)
+                % self.currenttopic
+            )
 
         # Assign the partitions
         partitions = self._consumer.partitions_for_topic(self.currenttopic)
         self._consumer.assign(
-            [TopicPartition(self.currenttopic, p) for p in partitions])
+            [TopicPartition(self.currenttopic, p) for p in partitions]
+        )
 
         # Cleanup thread configuration
         self._stoprequest = False
-        self._cleaner = createThread('cleaner', self._clean, start=False)
+        self._cleaner = createThread("cleaner", self._clean, start=False)
 
     def doShutdown(self):
         self._consumer.close()
@@ -119,8 +129,7 @@ class KafkaCacheDatabase(MemoryCacheDatabase):
         self._cleaner.join()
 
     def initDatabase(self):
-        self.log.info('Reading messages from kafka topic - %s',
-                      self.currenttopic)
+        self.log.info("Reading messages from kafka topic - %s", self.currenttopic)
         now = currenttime()
         message_count = 0
         end = self._consumer.end_offsets(list(self._consumer.assignment()))
@@ -136,7 +145,7 @@ class KafkaCacheDatabase(MemoryCacheDatabase):
 
                         self._db[msgkey] = [entry]
         self._cleaner.start()
-        self.log.info('Processed %i messages.', message_count)
+        self.log.info("Processed %i messages.", message_count)
 
     def _clean(self):
         def cleanonce():
@@ -149,8 +158,7 @@ class KafkaCacheDatabase(MemoryCacheDatabase):
                     if entry.ttl and (entry.time + entry.ttl < time):
                         entry.expired = True
                         for client in self._server._connected.values():
-                            client.update(key, OP_TELLOLD, entry.value, time,
-                                          None)
+                            client.update(key, OP_TELLOLD, entry.value, time, None)
 
         while not self._stoprequest:
             sleep(self._long_loop_delay)
@@ -160,7 +168,7 @@ class KafkaCacheDatabase(MemoryCacheDatabase):
         # This method is responsible to communicate and update all the
         # topics that should be updated. Subclasses can (re)implement it
         # if there are messages to be produced to other topics
-        self.log.debug('writing: %s -> %s', key, entry.value)
+        self.log.debug("writing: %s -> %s", key, entry.value)
 
         # For the log-compacted topic key deletion happens when None is
         # passed as the value for the key
@@ -173,7 +181,8 @@ class KafkaCacheDatabase(MemoryCacheDatabase):
             topic=self.currenttopic,
             value=value,
             key=key.encode(),
-            timestamp_ms=int(entry.time * 1000))
+            timestamp_ms=int(entry.time * 1000),
+        )
 
         # clear all local buffers and produce pending messages
         self._producer.flush()
@@ -190,12 +199,12 @@ class KafkaCacheDatabase(MemoryCacheDatabase):
                         real_update = False
                 entries[:] = [entry]
                 if real_update:
-                    self._update_topic(f'{cat}/{subkey}', entry)
+                    self._update_topic(f"{cat}/{subkey}", entry)
         return real_update
 
 
 class KafkaCacheDatabaseWithHistory(KafkaCacheDatabase):
-    """ Cache database that stores cache in Kafka topics with History.
+    """Cache database that stores cache in Kafka topics with History.
 
     The current values from cache are stored in a log compacted kafka topic
     with key -> value (CacheEntry) pairs. The history is saved in different
@@ -206,9 +215,9 @@ class KafkaCacheDatabaseWithHistory(KafkaCacheDatabase):
     """
 
     parameters = {
-        'historytopic': Param(
-            'Kafka topic where the history values are stored',
-            type=str, mandatory=True),
+        "historytopic": Param(
+            "Kafka topic where the history values are stored", type=str, mandatory=True
+        ),
     }
 
     def doInit(self, mode):
@@ -217,7 +226,8 @@ class KafkaCacheDatabaseWithHistory(KafkaCacheDatabase):
         if self.historytopic not in self._consumer.topics():
             raise ConfigurationError(
                 'Topic "%s" does not exist. Create this topic and restart.'
-                % self.historytopic)
+                % self.historytopic
+            )
 
         # Create the history consumer
         self._history_consumer = KafkaConsumer(bootstrap_servers=self.brokers)
@@ -226,13 +236,14 @@ class KafkaCacheDatabaseWithHistory(KafkaCacheDatabase):
         if self.historytopic not in self._history_consumer.topics():
             raise ConfigurationError(
                 'Topic "%s" does not exist. Create this topic and restart.'
-                % self.historytopic)
+                % self.historytopic
+            )
 
         # Assign the partitions
-        partitions = self._history_consumer.partitions_for_topic(
-            self.historytopic)
+        partitions = self._history_consumer.partitions_for_topic(self.historytopic)
         self._history_consumer.assign(
-            [TopicPartition(self.historytopic, p) for p in partitions])
+            [TopicPartition(self.historytopic, p) for p in partitions]
+        )
 
     def doShutdown(self):
         self._history_consumer.close()
@@ -241,8 +252,8 @@ class KafkaCacheDatabaseWithHistory(KafkaCacheDatabase):
     def queryHistory(self, dbkey, fromtime, totime, interval):
         # TODO: implement cache queries with interval here if possible
         _ = interval
-        key = f'{dbkey[0]}/{dbkey[1]}'
-        self.log.debug('hist for %s in (%s, %s)', dbkey, fromtime, totime)
+        key = f"{dbkey[0]}/{dbkey[1]}"
+        self.log.debug("hist for %s in (%s, %s)", dbkey, fromtime, totime)
         buffer_time = 10
 
         # Get the assignment
@@ -250,7 +261,8 @@ class KafkaCacheDatabaseWithHistory(KafkaCacheDatabase):
 
         # Reset the offset to match fromtime
         offsets = self._history_consumer.offsets_for_times(
-            {p: fromtime * 1000 for p in assignment})
+            {p: fromtime * 1000 for p in assignment}
+        )
 
         # The partitions should be in correct location before starting to
         # consume
@@ -274,9 +286,12 @@ class KafkaCacheDatabaseWithHistory(KafkaCacheDatabase):
 
                 if msg.value is not None:
                     msgkey, entry = self._attached_serializer.decode(msg.value)
-                    if (msgkey == key and not entry.expired and
-                            fromtime <= entry.time <= totime and
-                            entry.value is not None):
+                    if (
+                        msgkey == key
+                        and not entry.expired
+                        and fromtime <= entry.time <= totime
+                        and entry.value is not None
+                    ):
                         self.log.info("%s -> %s" % (msgkey, entry))
                         found_some = True
                         yield entry
@@ -284,7 +299,7 @@ class KafkaCacheDatabaseWithHistory(KafkaCacheDatabase):
         # Return at least the last value, if none match the range
         if not found_some and dbkey in self._db:
             entry = self._db[dbkey][-1]
-            self.log.debug('not found in provided range, fetching current')
+            self.log.debug("not found in provided range, fetching current")
             yield entry
 
     def _update_topic(self, key, entry):
@@ -293,5 +308,6 @@ class KafkaCacheDatabaseWithHistory(KafkaCacheDatabase):
         self._producer.send(
             topic=self.historytopic,
             value=self._attached_serializer.encode(key, entry),
-            timestamp_ms=int(entry.time * 1000))
+            timestamp_ms=int(entry.time * 1000),
+        )
         self._producer.flush()

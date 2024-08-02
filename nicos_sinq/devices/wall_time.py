@@ -38,7 +38,7 @@ class WallTime(HasPrecision, Readable):
     """
 
     parameter_overrides = {
-        'precision': Override(default=.001, settable=False),
+        "precision": Override(default=0.001, settable=False),
     }
 
     def doRead(self, maxage=0):

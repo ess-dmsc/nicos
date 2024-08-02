@@ -1,5 +1,5 @@
-description = 'Newport sample stick rotator'
+description = "Newport sample stick rotator"
 
-group = 'optional'
+group = "optional"
 
-includes = ['rsc01']
+includes = ["rsc01"]

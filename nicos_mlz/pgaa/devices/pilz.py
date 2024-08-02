@@ -41,13 +41,24 @@ class Switch(HasTimeout, NamedDigitalOutput):
     """
 
     parameters = {
-        'remote': Param('Device to enable the remote control',
-                        type=tangodev, mandatory=True, preinit=True),
-        'readback': Param('Device to read back the reached value',
-                          type=tangodev, mandatory=True, preinit=True),
-        'error': Param('Device to indicate an error during the move of the '
-                       'switch',
-                       type=tangodev, mandatory=True, preinit=True),
+        "remote": Param(
+            "Device to enable the remote control",
+            type=tangodev,
+            mandatory=True,
+            preinit=True,
+        ),
+        "readback": Param(
+            "Device to read back the reached value",
+            type=tangodev,
+            mandatory=True,
+            preinit=True,
+        ),
+        "error": Param(
+            "Device to indicate an error during the move of the " "switch",
+            type=tangodev,
+            mandatory=True,
+            preinit=True,
+        ),
     }
 
     def doInit(self, mode):
@@ -97,8 +108,8 @@ class Switch(HasTimeout, NamedDigitalOutput):
 
     def doStatus(self, maxage=0):
         if self._error.value == 0:
-            return status.OK, 'idle'
-        return status.ERROR, 'target not reached'
+            return status.OK, "idle"
+        return status.ERROR, "target not reached"
 
 
 class AttenuatorSwitch(Switch):

@@ -32,7 +32,7 @@ from .table import TableBase
 class SampleTable(TableBase):
     """Class to display the sample table including sample and help lines."""
 
-    _color = QColor('#66ff66')
+    _color = QColor("#66ff66")
 
     def __init__(self, x, y, size=20, parent=None, scene=None):
         TableBase.__init__(self, x, y, size, parent, scene)

@@ -78,18 +78,22 @@ class BarcodeInterpreterMixin:
     """
 
     parameters = {
-        'commandmap': Param('Mapping of short commands to Python code',
-                            type=dictof(str, str), mandatory=True),
+        "commandmap": Param(
+            "Mapping of short commands to Python code",
+            type=dictof(str, str),
+            mandatory=True,
+        ),
     }
 
     def doInit(self, mode):
-        if hasattr(super(), 'doInit'):
+        if hasattr(super(), "doInit"):
             super().doInit(mode)
         if mode != SIMULATION:
-            self._daemon = getattr(session, 'daemon_device', None)
+            self._daemon = getattr(session, "daemon_device", None)
             self.register_callback(
                 # move 'decoded' to be a configurable parameter, if needed
-                'decoded', lambda mod, param, item: self.on_update(item)
+                "decoded",
+                lambda mod, param, item: self.on_update(item),
             )
 
     def on_update(self, item):
@@ -100,17 +104,15 @@ class BarcodeInterpreterMixin:
         if not self._daemon:
             return  # probably raise error
         controller = self._daemon._controller
-        script = self._convert_code(*barcode.split(',', 1))
+        script = self._convert_code(*barcode.split(",", 1))
         if not script:
             # Let the user know that the code was not recognized.
             self.beep(12)
             return
         try:
-            controller.new_request(ScriptRequest(
-                script, '<barcode request>', user))
+            controller.new_request(ScriptRequest(script, "<barcode request>", user))
         except RequestError:
-            self.log.warning('could not initiate request from barcode',
-                             exc=1)
+            self.log.warning("could not initiate request from barcode", exc=1)
             self.beep(12)
         else:
             # Acknowledge receipt and execution.
@@ -120,23 +122,24 @@ class BarcodeInterpreterMixin:
         """Convert a barcode of given type and content to Python code to
         execute.
         """
-        if codetype == 'QR':
+        if codetype == "QR":
             try:
                 res = urllib.parse.urlparse(content)
-                if not res.scheme.startswith('nicos+'):
+                if not res.scheme.startswith("nicos+"):
                     return
             except ValueError:
                 return
-            if res.scheme == 'nicos+cmd':
+            if res.scheme == "nicos+cmd":
                 cmd = res.netloc
-                args = res.path.split('/')
+                args = res.path.split("/")
                 if cmd in self.commandmap:
-                    code = re.sub(r'\$(\d)', lambda m: args[int(m.group(1))],
-                                  self.commandmap[cmd])
+                    code = re.sub(
+                        r"\$(\d)", lambda m: args[int(m.group(1))], self.commandmap[cmd]
+                    )
                 else:
-                    code = '%s(%s)' % (cmd, ', '.join(args[1:]))
+                    code = "%s(%s)" % (cmd, ", ".join(args[1:]))
                 return code
-        elif codetype == 'Code 128' and content.isdigit():
+        elif codetype == "Code 128" and content.isdigit():
             # shortcut for samples from sample database
             # XXX: proposals use the same barcode type without distinction
             # return 'NewSampleFromDatabase(%s)' % content
@@ -165,7 +168,7 @@ class TangoAvailableLinesCb(TangoAttrCb):
         if event_data.attr_value and event_data.attr_value.value:
             try:
                 barcode = self._tango_device.readLine()
-                self._device.on_update(namedtuple('Item', ['value'])(value=barcode))
+                self._device.on_update(namedtuple("Item", ["value"])(value=barcode))
             except Exception:
                 pass
 
@@ -205,12 +208,19 @@ class BarcodeInterpreter(BarcodeInterpreterMixin, StringIO):
     """
 
     parameters = {
-        'commandmap': Param('Mapping of short commands to Python code',
-                            type=dictof(str, str), mandatory=True),
-        'pollinterval': Param('Polling interval for attributes',
-                              unit='ms', fmtstr='%d',
-                              default=100, settable=False,
-                              type=intrange(1, 24 * 3600 * 1000)),
+        "commandmap": Param(
+            "Mapping of short commands to Python code",
+            type=dictof(str, str),
+            mandatory=True,
+        ),
+        "pollinterval": Param(
+            "Polling interval for attributes",
+            unit="ms",
+            fmtstr="%d",
+            default=100,
+            settable=False,
+            type=intrange(1, 24 * 3600 * 1000),
+        ),
     }
 
     _availablelines_id = None
@@ -223,14 +233,16 @@ class BarcodeInterpreter(BarcodeInterpreterMixin, StringIO):
 
     def _registerAvailableLines(self):
         """Register 'availableLines' events"""
-        attr_name = 'availableLines'
+        attr_name = "availableLines"
         self._dev.poll_attribute(attr_name, self.pollinterval)
         al = self._dev.get_attribute_config(attr_name)
-        al.events.ch_event.abs_change = '1'
+        al.events.ch_event.abs_change = "1"
         self._dev.set_attribute_config(al)
         self._availablelines_id = self._dev.subscribe_event(
-            attr_name, tango.EventType.CHANGE_EVENT,
-            TangoAvailableLinesCb(self, self._daemon))
+            attr_name,
+            tango.EventType.CHANGE_EVENT,
+            TangoAvailableLinesCb(self, self._daemon),
+        )
 
     def _unregisterAvailableLines(self):
         """Unregister 'availableLines' events"""

@@ -26,8 +26,17 @@
 """NICOS Sample device."""
 
 from nicos import session
-from nicos.core import InvalidValueError, Moveable, Override, Param, anytype, \
-    dictof, none_or, oneof, status
+from nicos.core import (
+    InvalidValueError,
+    Moveable,
+    Override,
+    Param,
+    anytype,
+    dictof,
+    none_or,
+    oneof,
+    status,
+)
 from nicos.utils import safeName
 
 
@@ -45,19 +54,27 @@ class Sample(Moveable):
     """
 
     parameters = {
-        'samplename':   Param('Current sample name', type=str, settable=True,
-                              category='sample'),
-        'samplenumber': Param('Current sample number: e.g. the position in '
-                              'a sample changer or the index of the sample '
-                              'among all defined samples', type=none_or(int),
-                              settable=True),
-        'samples':      Param('Information about all defined samples',
-                              type=dictof(int, dictof(str, anytype)),
-                              settable=True, internal=True, preinit=True),
+        "samplename": Param(
+            "Current sample name", type=str, settable=True, category="sample"
+        ),
+        "samplenumber": Param(
+            "Current sample number: e.g. the position in "
+            "a sample changer or the index of the sample "
+            "among all defined samples",
+            type=none_or(int),
+            settable=True,
+        ),
+        "samples": Param(
+            "Information about all defined samples",
+            type=dictof(int, dictof(str, anytype)),
+            settable=True,
+            internal=True,
+            preinit=True,
+        ),
     }
 
     parameter_overrides = {
-        'unit': Override(mandatory=False, default=''),
+        "unit": Override(mandatory=False, default=""),
     }
 
     valuetype = str
@@ -66,7 +83,7 @@ class Sample(Moveable):
         return self.samplename
 
     def doStatus(self, maxage=0):
-        return status.OK, ''
+        return status.OK, ""
 
     def doStart(self, target):
         self.select(target)
@@ -81,11 +98,11 @@ class Sample(Moveable):
 
     def doWriteSamplename(self, name):
         if name:
-            session.elogEvent('sample', name)
+            session.elogEvent("sample", name)
 
     def clear(self):
         """Clear experiment-specific information."""
-        self.samplename = ''
+        self.samplename = ""
         self.samplenumber = None
         self.samples = {}
 
@@ -100,11 +117,14 @@ class Sample(Moveable):
     def set(self, number, parameters):
         """Set sample information for sample no. *number*."""
         if number is None:
-            raise InvalidValueError(self, 'cannot use None as sample number')
+            raise InvalidValueError(self, "cannot use None as sample number")
         info = self.samples.copy()
         if number in info:
-            self.log.warning('overwriting parameters for sample %s (%s)',
-                             number, info[number]['name'])
+            self.log.warning(
+                "overwriting parameters for sample %s (%s)",
+                number,
+                info[number]["name"],
+            )
         info[number] = parameters
         self.samples = info
 
@@ -115,8 +135,8 @@ class Sample(Moveable):
             parameters = self.samples[number]
         except KeyError:
             raise InvalidValueError(
-                self, 'cannot find sample with number or name %r' %
-                number_or_name) from None
+                self, "cannot find sample with number or name %r" % number_or_name
+            ) from None
         self._applyParams(number, parameters)
         session.experiment.newSample(parameters)
         self.poll()
@@ -128,14 +148,16 @@ class Sample(Moveable):
             return number_or_name
         # look by name
         found = None
-        for (number, parameters) in self.samples.items():
-            if parameters['name'] == number_or_name:
+        for number, parameters in self.samples.items():
+            if parameters["name"] == number_or_name:
                 if found is not None:
                     # two samples with same name found...
-                    raise InvalidValueError(self, 'two samples with name %r '
-                                            'were found, please use the '
-                                            'sample number (%s or %s)' %
-                                            (number_or_name, found, number))
+                    raise InvalidValueError(
+                        self,
+                        "two samples with name %r "
+                        "were found, please use the "
+                        "sample number (%s or %s)" % (number_or_name, found, number),
+                    )
                 found = number
         return found
 
@@ -147,8 +169,8 @@ class Sample(Moveable):
         created by NewExperiment.
         """
         self.samplenumber = number
-        self.samplename = parameters['name']
-        self._setROParam('target', parameters['name'])
+        self.samplename = parameters["name"]
+        self._setROParam("target", parameters["name"])
 
     def doUpdateSamples(self, info):
-        self.valuetype = oneof(*(info[n]['name'] for n in sorted(info)))
+        self.valuetype = oneof(*(info[n]["name"] for n in sorted(info)))

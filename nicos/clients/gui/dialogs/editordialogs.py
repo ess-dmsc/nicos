@@ -31,7 +31,7 @@ from nicos.guisupport.utils import waitCursor
 class SearchDialog(QDialog):
     def __init__(self, parent, editor, has_scintilla):
         QDialog.__init__(self, parent)
-        loadUi(self, 'panels/search.ui')
+        loadUi(self, "panels/search.ui")
 
         self.editor = editor
         self.found = False
@@ -43,8 +43,12 @@ class SearchDialog(QDialog):
             self.wrapCheckBox.setEnabled(False)
             self.wrapCheckBox.setChecked(False)
 
-        for box in [self.regexpCheckBox, self.caseCheckBox, self.wordCheckBox,
-                    self.wrapCheckBox]:
+        for box in [
+            self.regexpCheckBox,
+            self.caseCheckBox,
+            self.wordCheckBox,
+            self.wrapCheckBox,
+        ]:
             box.toggled.connect(self.reset_found)
 
     @pyqtSlot()
@@ -59,7 +63,8 @@ class SearchDialog(QDialog):
             self.regexpCheckBox.isChecked(),
             self.caseCheckBox.isChecked(),
             self.wordCheckBox.isChecked(),
-            self.wrapCheckBox.isChecked())
+            self.wrapCheckBox.isChecked(),
+        )
         self.found = ret
         self.forward = True
         return ret
@@ -77,7 +82,8 @@ class SearchDialog(QDialog):
             self.caseCheckBox.isChecked(),
             self.wordCheckBox.isChecked(),
             self.wrapCheckBox.isChecked(),
-            False)
+            False,
+        )
         self.found = ret
         self.forward = False
         return ret
@@ -96,15 +102,16 @@ class SearchDialog(QDialog):
     @pyqtSlot()
     def on_replaceAllButton_clicked(self):
         found = self.editor.findFirst(
-                self.findText.currentText(),
-                self.regexpCheckBox.isChecked(),
-                self.caseCheckBox.isChecked(),
-                self.wordCheckBox.isChecked(),
-                False,
-                forward=True,
-                line=0,
-                index=0,
-                show=False)
+            self.findText.currentText(),
+            self.regexpCheckBox.isChecked(),
+            self.caseCheckBox.isChecked(),
+            self.wordCheckBox.isChecked(),
+            False,
+            forward=True,
+            line=0,
+            index=0,
+            show=False,
+        )
         if not found:
             return
         with waitCursor():
@@ -123,20 +130,24 @@ class OverwriteQuestion(QMessageBox):
 
     def __init__(self):
         QMessageBox.__init__(
-            self, QMessageBox.Icon.Question, 'Code generation',
-            'Do you want to append to or overwrite the current code?',
-            QMessageBox.StandardButton.NoButton)
-        self.b0 = self.addButton('Append', QMessageBox.ButtonRole.YesRole)
-        self.b1 = self.addButton('Overwrite', QMessageBox.ButtonRole.ApplyRole)
-        self.b2 = self.addButton('Cancel', QMessageBox.ButtonRole.RejectRole)
-        self.b2.setIcon(self.style().standardIcon(
-            QStyle.StandardPixmap.SP_DialogCancelButton))
+            self,
+            QMessageBox.Icon.Question,
+            "Code generation",
+            "Do you want to append to or overwrite the current code?",
+            QMessageBox.StandardButton.NoButton,
+        )
+        self.b0 = self.addButton("Append", QMessageBox.ButtonRole.YesRole)
+        self.b1 = self.addButton("Overwrite", QMessageBox.ButtonRole.ApplyRole)
+        self.b2 = self.addButton("Cancel", QMessageBox.ButtonRole.RejectRole)
+        self.b2.setIcon(
+            self.style().standardIcon(QStyle.StandardPixmap.SP_DialogCancelButton)
+        )
 
     def exec(self):
         QMessageBox.exec(self)
         btn = self.clickedButton()
         if btn == self.b0:
-            return QMessageBox.StandardButton.Yes    # Append
+            return QMessageBox.StandardButton.Yes  # Append
         if btn == self.b1:
             return QMessageBox.StandardButton.Apply  # Overwrite
-        return QMessageBox.StandardButton.Cancel     # Cancel
+        return QMessageBox.StandardButton.Cancel  # Cancel

@@ -32,8 +32,13 @@ from nicos.core.errors import ConfigurationError
 from nicos_sinq.sxtal.cell import scatteringVectorLength
 from nicos_sinq.sxtal.instrument import SXTalBase
 from nicos_sinq.sxtal.sample import SXTalSample
-from nicos_sinq.sxtal.singlexlib import angleBetweenReflections, \
-    calculateBMatrix, chimat, phimat, z1FromAngles
+from nicos_sinq.sxtal.singlexlib import (
+    angleBetweenReflections,
+    calculateBMatrix,
+    chimat,
+    phimat,
+    z1FromAngles,
+)
 
 
 class Cone(Moveable):
@@ -49,18 +54,27 @@ class Cone(Moveable):
     """
 
     parameters = {
-        'center_reflection': Param('The reflection at the center of the cone',
-                                   type=tupleof(tupleof(float, float, float),
-                                                tupleof(float, float,
-                                                        float, float)),
-                                   settable=True, userparam=True),
-        'target_reflection': Param('The reflection being searched for',
-                                   type=tupleof(float, float, float),
-                                   settable=True,
-                                   userparam=True),
-        'qscale': Param('Scaling factor to apply to Q calculated from'
-                        'target_reflection', type=float, default=1.0,
-                        userparam=True, settable=True),
+        "center_reflection": Param(
+            "The reflection at the center of the cone",
+            type=tupleof(
+                tupleof(float, float, float), tupleof(float, float, float, float)
+            ),
+            settable=True,
+            userparam=True,
+        ),
+        "target_reflection": Param(
+            "The reflection being searched for",
+            type=tupleof(float, float, float),
+            settable=True,
+            userparam=True,
+        ),
+        "qscale": Param(
+            "Scaling factor to apply to Q calculated from" "target_reflection",
+            type=float,
+            default=1.0,
+            userparam=True,
+            settable=True,
+        ),
     }
 
     valuetype = float
@@ -68,12 +82,13 @@ class Cone(Moveable):
     def doInit(self, mode):
         self._instrument = session.instrument
         self._sample = session.experiment.sample
-        if not isinstance(self._instrument, SXTalBase) or not \
-                isinstance(self._sample, SXTalSample):
-            raise ConfigurationError('Instrument or sample not single crystal')
+        if not isinstance(self._instrument, SXTalBase) or not isinstance(
+            self._sample, SXTalSample
+        ):
+            raise ConfigurationError("Instrument or sample not single crystal")
 
     @usermethod
-    def use_center(self, idx, reflist='ublist'):
+    def use_center(self, idx, reflist="ublist"):
         """Use the reflection with index idx in reflist as center"""
         reflist = session.getDevice(reflist)
         ref = reflist.get_reflection(idx)
@@ -81,9 +96,13 @@ class Cone(Moveable):
             self.center_reflection = (ref[0], ref[1])
 
     def _calcConeMatrix(self, center):
-        z1 = z1FromAngles(self._instrument.wavelength,
-                          radians(center['stt']), radians(center['om']),
-                          radians(center['chi']), radians(center['phi']))
+        z1 = z1FromAngles(
+            self._instrument.wavelength,
+            radians(center["stt"]),
+            radians(center["om"]),
+            radians(center["chi"]),
+            radians(center["phi"]),
+        )
         alpha = atan2(z1[1], z1[0])
         beta = -atan2(z1[0], z1[2])
         mat_alpha = phimat(alpha)
@@ -92,14 +111,14 @@ class Cone(Moveable):
 
     def _calcConeVector(self, openingAngle, coneVal, length, mat_cone):
         # This differs by the sign of 0,1 from phimat
-        cone_rot = np.zeros((3, 3), dtype='float64')
+        cone_rot = np.zeros((3, 3), dtype="float64")
         cone_rot[0][0] = cos(coneVal)
         cone_rot[0][1] = -sin(coneVal)
         cone_rot[1][0] = sin(coneVal)
         cone_rot[1][1] = cos(coneVal)
         cone_rot[2][2] = 1.0
 
-        null_vec = np.zeros((3,), dtype='float64')
+        null_vec = np.zeros((3,), dtype="float64")
         null_vec[0] = sin(openingAngle)
         null_vec[2] = cos(openingAngle)
         norm = np.linalg.norm(null_vec)
@@ -111,20 +130,22 @@ class Cone(Moveable):
     def doStart(self, target):
         B = calculateBMatrix(self._sample.getCell())
         center = self._instrument._refl_to_dict(self.center_reflection)
-        opening_angle = angleBetweenReflections(B, center,
-                                                {'h':
-                                                 self.target_reflection[0],
-                                                 'k':
-                                                 self.target_reflection[1],
-                                                 'l':
-                                                 self.target_reflection[2]})
+        opening_angle = angleBetweenReflections(
+            B,
+            center,
+            {
+                "h": self.target_reflection[0],
+                "k": self.target_reflection[1],
+                "l": self.target_reflection[2],
+            },
+        )
         cone_mat = self._calcConeMatrix(center)
-        length = scatteringVectorLength(B, self.target_reflection)\
-            * self.qscale
-        scat_vec = self._calcConeVector(opening_angle, np.deg2rad(target),
-                                        length, cone_mat)
+        length = scatteringVectorLength(B, self.target_reflection) * self.qscale
+        scat_vec = self._calcConeVector(
+            opening_angle, np.deg2rad(target), length, cone_mat
+        )
         poslist = self._instrument._extractPos(scat_vec)
-        for (devname, devvalue) in poslist:
+        for devname, devvalue in poslist:
             dev = self._instrument._adevs[devname]
             dev.start(devvalue)
 

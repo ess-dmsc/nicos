@@ -36,16 +36,16 @@ class Experiment(BaseExperiment):
     """
 
     parameter_overrides = {
-        'envlist': Override(category='general'),
+        "envlist": Override(category="general"),
     }
 
     def _newPropertiesHook(self, proposal, kwds):
-        if self.proptype == 'service':
+        if self.proptype == "service":
             upd = {
-                'title': 'Maintenance',
-                'users': [{'name': session.instrument.responsible}],
-                'localcontacts': [{'name': session.instrument.responsible}],
-                'default_sample': 'Unknown',
+                "title": "Maintenance",
+                "users": [{"name": session.instrument.responsible}],
+                "localcontacts": [{"name": session.instrument.responsible}],
+                "default_sample": "Unknown",
             }
             kwds.update(upd)
             return kwds

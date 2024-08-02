@@ -41,15 +41,16 @@ def decolor_logo(pixmap, color):
 class RunningScriptPanel(Panel):
     """Provides a panel that shows the command that is currently executed."""
 
-    panelName = 'Script status'
-    ui = path.join(uipath, 'panels', 'ui_files', 'runningscript.ui')
+    panelName = "Script status"
+    ui = path.join(uipath, "panels", "ui_files", "runningscript.ui")
 
     def __init__(self, parent, client, options):
         Panel.__init__(self, parent, client, options)
         loadUi(self, self.ui)
 
-        pxr = decolor_logo(QPixmap("resources/nicos-logo-high.svg"),
-                           Qt.GlobalColor.white)
+        pxr = decolor_logo(
+            QPixmap("resources/nicos-logo-high.svg"), Qt.GlobalColor.white
+        )
         self.nicosLabel.setPixmap(pxr)
 
         self.runningCmdLabel.setIndent(10)
@@ -58,19 +59,23 @@ class RunningScriptPanel(Panel):
         self.runningCmdLabel.setStyleSheet(self.idle_style)
 
         # if INSTRUMENT is defined add the logo/name of the instrument
-        instrument = os.getenv('INSTRUMENT')
+        instrument = os.getenv("INSTRUMENT")
         if instrument:
-            instrument = instrument.split('.')[-1]
-            logo = decolor_logo(QPixmap('resources/%s-logo.svg' % instrument),
-                                Qt.GlobalColor.white)
+            instrument = instrument.split(".")[-1]
+            logo = decolor_logo(
+                QPixmap("resources/%s-logo.svg" % instrument), Qt.GlobalColor.white
+            )
             if logo.isNull():
                 self.instrumentLabel.setText(instrument.upper())
             else:
-                self.instrumentLabel.setPixmap(logo.scaledToHeight(
-                    self.instrumentLabel.height(),
-                    Qt.TransformationMode.SmoothTransformation))
+                self.instrumentLabel.setPixmap(
+                    logo.scaledToHeight(
+                        self.instrumentLabel.height(),
+                        Qt.TransformationMode.SmoothTransformation,
+                    )
+                )
         else:
-            self.instrumentLabel.setText('')
+            self.instrumentLabel.setText("")
 
         self.current_script = []
         client.processing.connect(self.on_client_processing)
@@ -78,17 +83,18 @@ class RunningScriptPanel(Panel):
 
     def on_client_processing(self, request):
         self.current_script = []
-        if 'script' not in request:
+        if "script" not in request:
             return
-        self.current_script = [line.lstrip().rstrip() for line in request[
-            'script'].splitlines()]
+        self.current_script = [
+            line.lstrip().rstrip() for line in request["script"].splitlines()
+        ]
 
     def on_client_status(self, status):
         st, line = status
         if st != STATUS_RUNNING:
-            self.runningCmdLabel.setText('')
+            self.runningCmdLabel.setText("")
             return
         if line == -1 or line >= len(self.current_script):
-            self.runningCmdLabel.setText('')
+            self.runningCmdLabel.setText("")
             return
         self.runningCmdLabel.setText(self.current_script[line - 1])

@@ -1,45 +1,49 @@
-description = 'Andor Neo sCMOS camera'
-group = 'lowlevel'
+description = "Andor Neo sCMOS camera"
+group = "lowlevel"
 
-tango_base = 'tango://localhost:10000/pgaa/'
+tango_base = "tango://localhost:10000/pgaa/"
 
 devices = dict(
-    timer_neo = device('nicos.devices.vendor.lima.LimaCCDTimer',
-        description = 'The camera\'s internal timer',
-        tangodevice = tango_base + 'detector/limaccd',
-        visibility = (),
+    timer_neo=device(
+        "nicos.devices.vendor.lima.LimaCCDTimer",
+        description="The camera's internal timer",
+        tangodevice=tango_base + "detector/limaccd",
+        visibility=(),
     ),
-    neo = device('nicos.devices.vendor.lima.Andor3LimaCCD',
-        description = 'Andor Neo sCMOS camera detector image',
-        tangodevice = tango_base + 'detector/limaccd',
-        hwdevice = tango_base + 'detector/neo',
-        pollinterval = 3,
-        maxage = 9,
-        flip = (False, True),
-        rotation = 90,
-        readoutrate = 280,
-        visibility = (),
+    neo=device(
+        "nicos.devices.vendor.lima.Andor3LimaCCD",
+        description="Andor Neo sCMOS camera detector image",
+        tangodevice=tango_base + "detector/limaccd",
+        hwdevice=tango_base + "detector/neo",
+        pollinterval=3,
+        maxage=9,
+        flip=(False, True),
+        rotation=90,
+        readoutrate=280,
+        visibility=(),
     ),
-    temp_neo = device('nicos.devices.vendor.lima.Andor3TemperatureController',
-        description = 'The CMOS chip temperature',
-        tangodevice = tango_base + 'detector/neo',
-        maxage = 5,
-        abslimits = (-100, 0),
-        userlimits = (-100, 0),
-        unit = 'degC',
-        precision = 3,
-        fmtstr = '%.0f',
+    temp_neo=device(
+        "nicos.devices.vendor.lima.Andor3TemperatureController",
+        description="The CMOS chip temperature",
+        tangodevice=tango_base + "detector/neo",
+        maxage=5,
+        abslimits=(-100, 0),
+        userlimits=(-100, 0),
+        unit="degC",
+        precision=3,
+        fmtstr="%.0f",
     ),
-    det_neo = device('nicos.devices.generic.Detector',
-        description = 'The Andor Neo sCMOS camera detector',
-        images = ['neo'],
-        timers = ['timer_neo'],
+    det_neo=device(
+        "nicos.devices.generic.Detector",
+        description="The Andor Neo sCMOS camera detector",
+        images=["neo"],
+        timers=["timer_neo"],
     ),
 )
 
-startupcode = '''
+startupcode = """
 SetDetectors(det_neo)
 
 ## override hw setting to known good values.
 set('neo', 'rotation', 90)
-'''
+"""

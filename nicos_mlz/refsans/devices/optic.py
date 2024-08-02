@@ -34,140 +34,150 @@ class Optic(Moveable):
     hardware_access = False
 
     parameters = {
-        'mode': Param('mode of the beam',
-                      type=oneof('debug',
-                                 '12mrad234',
-                                 '12mrad789',
-                                 '48mrad',
-                                 '54mrad',
-                                 'fc:nok5a',
-                                 'fc:nok5b',
-                                 'fc:nok6',
-                                 'fc:nok7',
-                                 'fc:nok8',
-                                 'fc:nok9',
-                                 'gisans',
-                                 'gisans789',
-                                 'neutronguide',
-                                 'point',
-                                 'vc:nok5a',
-                                 'vc:nok5a_fc:nok5b',
-                                 'vc:nok5a_fc:nok6',
-                                 'vc:nok5a_fc:nok7',
-                                 'vc:nok5a_fc:nok8',
-                                 'vc:nok5a_fc:nok9',
-                                 ),
-                      settable=True, userparam=True, category='experiment'),
+        "mode": Param(
+            "mode of the beam",
+            type=oneof(
+                "debug",
+                "12mrad234",
+                "12mrad789",
+                "48mrad",
+                "54mrad",
+                "fc:nok5a",
+                "fc:nok5b",
+                "fc:nok6",
+                "fc:nok7",
+                "fc:nok8",
+                "fc:nok9",
+                "gisans",
+                "gisans789",
+                "neutronguide",
+                "point",
+                "vc:nok5a",
+                "vc:nok5a_fc:nok5b",
+                "vc:nok5a_fc:nok6",
+                "vc:nok5a_fc:nok7",
+                "vc:nok5a_fc:nok8",
+                "vc:nok5a_fc:nok9",
+            ),
+            settable=True,
+            userparam=True,
+            category="experiment",
+        ),
         # 'polarisation': Param('Polarisation',
         #                       type=oneof('up', 'down', 'standby', 'off'),
         #                       settable=True,
         #                       userparam=True,
         #                       default='off'),
-        'setting': Param('Maps position to attached devices positions for '
-                         'bending beam',
-                         type=dict, mandatory=True),
-        'masks': Param('Maps mask to attached devices positions',
-                       type=dict, mandatory=True),
+        "setting": Param(
+            "Maps position to attached devices positions for " "bending beam",
+            type=dict,
+            mandatory=True,
+        ),
+        "masks": Param(
+            "Maps mask to attached devices positions", type=dict, mandatory=True
+        ),
     }
 
     parameter_overrides = {
-        'unit': Override(default='mrad', mandatory=False, volatile=True),
+        "unit": Override(default="mrad", mandatory=False, volatile=True),
     }
 
     attached_devices = {
-        'b1': Attach('b1', Moveable),
-        'b2': Attach('b2', Moveable),
-        'b3': Attach('b3', Moveable),
-        'bs1': Attach('bs1', Moveable),
-        'nok2': Attach('nok2', Moveable),
-        'nok3': Attach('nok3', Moveable),
-        'nok4': Attach('nok4', Moveable),
-        'nok5a': Attach('nok5a', Moveable),
-        'nok5b': Attach('nok5b', Moveable),
-        'nok6': Attach('nok6', Moveable),
-        'nok7': Attach('nok7', Moveable),
-        'nok8': Attach('nok8', Moveable),
-        'nok9': Attach('nok9', Moveable),
-        'sc2': Attach('sc2', Moveable),
-        'zb0': Attach('zb0', Moveable),
-        'zb1': Attach('zb1', Moveable),
-        'zb2': Attach('zb2', Moveable),
-        'zb3': Attach('zb3', Moveable),
+        "b1": Attach("b1", Moveable),
+        "b2": Attach("b2", Moveable),
+        "b3": Attach("b3", Moveable),
+        "bs1": Attach("bs1", Moveable),
+        "nok2": Attach("nok2", Moveable),
+        "nok3": Attach("nok3", Moveable),
+        "nok4": Attach("nok4", Moveable),
+        "nok5a": Attach("nok5a", Moveable),
+        "nok5b": Attach("nok5b", Moveable),
+        "nok6": Attach("nok6", Moveable),
+        "nok7": Attach("nok7", Moveable),
+        "nok8": Attach("nok8", Moveable),
+        "nok9": Attach("nok9", Moveable),
+        "sc2": Attach("sc2", Moveable),
+        "zb0": Attach("zb0", Moveable),
+        "zb1": Attach("zb1", Moveable),
+        "zb2": Attach("zb2", Moveable),
+        "zb3": Attach("zb3", Moveable),
     }
 
     def doRead(self, maxage=0):
-        self.log.debug('doRead')
+        self.log.debug("doRead")
         return self.target
 
     def doIsAllowed(self, target):
-        self.log.debug('doIsAllowed')
+        self.log.debug("doIsAllowed")
         if isinstance(target, str):
             try:
-                oneof('horizontal',
-                      '12mrad_b3_12.000',
-                      '12mrad_b2_12.254_eng',
-                      '12mrad_b2_12.88_big',
-                      '12mrad_b3_13.268',
-                      '12mrad_b3_789',
-                      '48mrad')(target)
-                return True, ''
+                oneof(
+                    "horizontal",
+                    "12mrad_b3_12.000",
+                    "12mrad_b2_12.254_eng",
+                    "12mrad_b2_12.88_big",
+                    "12mrad_b3_13.268",
+                    "12mrad_b3_789",
+                    "48mrad",
+                )(target)
+                return True, ""
             except ValueError as e:
                 return False, str(e)
         elif isinstance(target, number_types):
             try:
                 floatrange(0, 48)(target)
-                return True, ''
+                return True, ""
             except ValueError as e:
                 return False, str(e)
-        return False, 'Wrong value type'
+        return False, "Wrong value type"
 
     def doStart(self, target):
         # Calculate positions and move devices
-        self.log.debug('Start to: %s', target)
+        self.log.debug("Start to: %s", target)
         for ele in self.setting[target].keys():
-            line = 'move ' + ele
-            if hasattr(self, '_attached_' + ele):
-                f = getattr(self, '_attached_' + ele)
-                if self.setting[target][ele] == 'debug':
-                    line += ' debug'
+            line = "move " + ele
+            if hasattr(self, "_attached_" + ele):
+                f = getattr(self, "_attached_" + ele)
+                if self.setting[target][ele] == "debug":
+                    line += " debug"
                 else:
                     post = []
-                    if ele in ['nok5a', 'nok5b', 'zb0', 'zb1']:
+                    if ele in ["nok5a", "nok5b", "zb0", "zb1"]:
                         post.append(ele)
                     else:
                         f.move(self.setting[target][ele])
                     for ele in post:
                         f.maw(self.setting[target][ele])
-                    line += ' %s' % self.setting[target][ele]
+                    line += " %s" % self.setting[target][ele]
                 self.log.debug(line)
             else:
-                line += ' not attached'
+                line += " not attached"
                 self.log.warning(line)
 
     def doWriteMode(self, target):
         # Calculate positions and move devices
-        self.log.debug('WriteMode to: %s', target)
+        self.log.debug("WriteMode to: %s", target)
         for ele in self.masks[target].keys():
-            line = 'mode ' + ele
-            if hasattr(self, '_attached_' + ele):
-                f = getattr(self, '_attached_' + ele)
-                if self.masks[target][ele] == 'debug':
-                    line += ' debug'
+            line = "mode " + ele
+            if hasattr(self, "_attached_" + ele):
+                f = getattr(self, "_attached_" + ele)
+                if self.masks[target][ele] == "debug":
+                    line += " debug"
                 else:
                     post = []
-                    if ele in ['nok5a', 'nok5b', 'zb0', 'zb1']:
+                    if ele in ["nok5a", "nok5b", "zb0", "zb1"]:
                         post.append(ele)
                     else:
                         f.mode = self.masks[target][ele]
                     for ele in post:
                         f.mode = self.masks[target][ele]
-                        f = getattr(self, '_attached_' + ele)
+                        f = getattr(self, "_attached_" + ele)
                         f.wait()
-                    line += ' %s' % self.masks[target][ele]
+                    line += " %s" % self.masks[target][ele]
                 self.log.debug(line)
             else:
-                line += ' not attached'
+                line += " not attached"
                 self.log.warning(line)
 
     def doReadUnit(self):
-        return '' if isinstance(self.target, str) else 'mrad'
+        return "" if isinstance(self.target, str) else "mrad"

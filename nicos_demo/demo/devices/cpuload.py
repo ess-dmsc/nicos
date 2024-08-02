@@ -32,13 +32,20 @@ from nicos.utils import createThread
 
 
 class CPULoad(Readable):
-
     parameters = {
-        'interval':  Param('Interval for load detection',
-                           type=floatrange(0.1, 60),
-                           default=0.1, settable=False,),
-        'lastvalue': Param('Last obtained value', type=float,
-                           internal=True, mandatory=False, default=0.0),
+        "interval": Param(
+            "Interval for load detection",
+            type=floatrange(0.1, 60),
+            default=0.1,
+            settable=False,
+        ),
+        "lastvalue": Param(
+            "Last obtained value",
+            type=float,
+            internal=True,
+            mandatory=False,
+            default=0.0,
+        ),
     }
 
     def doInit(self, mode):
@@ -48,7 +55,7 @@ class CPULoad(Readable):
         # it may look stupid, as the poller already has a thread polling read()
         # now imagine several such devices in a setup.... not so stupid anymore
         if session.sessiontype == POLLER:
-            self._thread = createThread('measure cpuload', self._run)
+            self._thread = createThread("measure cpuload", self._run)
 
     def doWriteInterval(self, value):
         self.pollinterval = max(1, 2 * value)
@@ -58,8 +65,8 @@ class CPULoad(Readable):
         return self.lastvalue
 
     def doStatus(self, maxage=0):
-        return status.OK, ''
+        return status.OK, ""
 
     def _run(self):
         while True:
-            self._setROParam('lastvalue', psutil.cpu_percent(self.interval))
+            self._setROParam("lastvalue", psutil.cpu_percent(self.interval))

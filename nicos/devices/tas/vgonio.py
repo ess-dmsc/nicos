@@ -56,20 +56,22 @@ class VirtualGonio(Moveable):
     """
 
     attached_devices = {
-        'gx': Attach('Real x axis gonio', Moveable),
-        'gy': Attach('Real y axis gonio', Moveable),
-        'cell': Attach('TAS sample cell object', Cell),
+        "gx": Attach("Real x axis gonio", Moveable),
+        "gy": Attach("Real y axis gonio", Moveable),
+        "cell": Attach("TAS sample cell object", Cell),
     }
 
     parameters = {
-        'axis': Param('Virtual axis for this gonio (along orient1 '
-                      'or orient2)', type=oneof(1, 2)),
+        "axis": Param(
+            "Virtual axis for this gonio (along orient1 " "or orient2)",
+            type=oneof(1, 2),
+        ),
     }
 
     def _transform(self, x1, y1, psi):
         """Transform angles (in radians) ax and ay by a Z rotation by psi."""
-        x2 = arcsin(cos(x1)*sin(y1)*sin(psi) + cos(psi)*sin(x1))
-        tmp = cos(x1)*sin(y1)*cos(psi) - sin(psi)*sin(x1)
+        x2 = arcsin(cos(x1) * sin(y1) * sin(psi) + cos(psi) * sin(x1))
+        tmp = cos(x1) * sin(y1) * cos(psi) - sin(psi) * sin(x1)
         return x2, arcsin(tmp / cos(x2))
 
     def _calcVirtual(self, maxage=0):
@@ -104,12 +106,12 @@ class VirtualGonio(Moveable):
         ok, msg = self._attached_gx.isAllowed(gx)
         # pylint: disable=bad-string-format-type
         if not ok:
-            return False, 'real X gonio cannot move to %.3f: %s' % (gx, msg)
+            return False, "real X gonio cannot move to %.3f: %s" % (gx, msg)
         ok, msg = self._attached_gy.isAllowed(gy)
         if not ok:
-            return False, 'real Y gonio cannot move to %.3f: %s' % (gy, msg)
+            return False, "real Y gonio cannot move to %.3f: %s" % (gy, msg)
         # pylint: enable=bad-string-format-type
-        return True, ''
+        return True, ""
 
     def doStart(self, target):
         gx, gy = self._calcReal(target)

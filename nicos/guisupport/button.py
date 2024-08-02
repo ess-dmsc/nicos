@@ -29,9 +29,8 @@ from nicos.guisupport.widget import PropDef
 
 
 class PushButton(ClickableOutputLed):
-
-    designer_description = 'Simulation of a push button with a light'
-    designer_icon = ':/leds/blue_on'
+    designer_description = "Simulation of a push button with a light"
+    designer_icon = ":/leds/blue_on"
 
     def __init__(self, parent=None, designMode=False):
         ClickableOutputLed.__init__(self, parent, designMode)
@@ -46,7 +45,6 @@ class PushButton(ClickableOutputLed):
         self.current = value
 
     def mousePressEvent(self, event):
-
         ledColor = self.ledColor
 
         ClickableOutputLed.mousePressEvent(self, event)
@@ -55,12 +53,13 @@ class PushButton(ClickableOutputLed):
 
 
 class SinglePushButton(PushButton):
+    designer_description = (
+        "Simulation of a push button with a light and only"
+        " one state to swith On or Off"
+    )
+    designer_icon = ":/leds/yellow_on"
 
-    designer_description = 'Simulation of a push button with a light and only'\
-                           ' one state to swith On or Off'
-    designer_icon = ':/leds/yellow_on'
-
-    toState = PropDef('toState', str, '1', 'Target for action')
+    toState = PropDef("toState", str, "1", "Target for action")
 
     def __init__(self, parent=None, designMode=False):
         self._stateTo = 1
@@ -69,14 +68,13 @@ class SinglePushButton(PushButton):
     def propertyUpdated(self, pname, value):
         PushButton.propertyUpdated(self, pname, value)
 
-        if pname == 'toState':
+        if pname == "toState":
             if isinstance(value, str):
                 self._stateTo = value
             else:
                 self._stateTo = ast.literal_eval(value) if value else 1
 
     def mousePressEvent(self, event):
-
         if event.button() == Qt.MouseButton.LeftButton:
-            self._client.run('move(%s, %r)' % (self.dev, self._stateTo))
+            self._client.run("move(%s, %r)" % (self.dev, self._stateTo))
         event.accept()

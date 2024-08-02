@@ -33,30 +33,36 @@ class SelectorTilt(HasLimits, BaseSequencer):
     """
 
     attached_devices = {
-        'selector': Attach('The selector speed', Moveable),
-        'motor': Attach('The tilt motor', Moveable),
+        "selector": Attach("The selector speed", Moveable),
+        "motor": Attach("The tilt motor", Moveable),
     }
 
     parameters = {
-        'maxtiltspeed': Param('Maximum safe speed for tilting the selector',
-                              mandatory=True, type=int, unit='rpm'),
+        "maxtiltspeed": Param(
+            "Maximum safe speed for tilting the selector",
+            mandatory=True,
+            type=int,
+            unit="rpm",
+        ),
     }
 
     def _generateSequence(self, target):
         seq = []
         if self._attached_selector.read(0) > self.maxtiltspeed:
-            seq.append(SeqDev(self._attached_selector, self.maxtiltspeed,
-                              stoppable=True))
-        seq.append(SeqMethod(self, '_check_speed'))
-        seq.append(SeqMethod(self._attached_motor, 'release'))
+            seq.append(
+                SeqDev(self._attached_selector, self.maxtiltspeed, stoppable=True)
+            )
+        seq.append(SeqMethod(self, "_check_speed"))
+        seq.append(SeqMethod(self._attached_motor, "release"))
         seq.append(SeqDev(self._attached_motor, target, stoppable=True))
-        seq.append(SeqMethod(self._attached_motor, 'fix',
-                             'only move this using %s' % self))
+        seq.append(
+            SeqMethod(self._attached_motor, "fix", "only move this using %s" % self)
+        )
         return seq
 
     def _check_speed(self):
         if self._attached_selector.read(0) > self.maxtiltspeed + 50:
-            raise MoveError(self, 'selector not in safe speed range')
+            raise MoveError(self, "selector not in safe speed range")
 
     def doRead(self, maxage=0):
         return self._attached_motor.read(maxage)

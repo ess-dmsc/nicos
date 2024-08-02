@@ -28,8 +28,7 @@ from nicos import session
 from nicos.core import Param
 from nicos.core.data.sink import DataSink
 
-from nicos_sinq.devices.sinqasciisink import SINQAsciiSink, \
-    SINQAsciiSinkHandler
+from nicos_sinq.devices.sinqasciisink import SINQAsciiSink, SINQAsciiSinkHandler
 from nicos_sinq.sxtal.instrument import SXTalBase
 from nicos_sinq.sxtal.util import window_integrate
 
@@ -62,27 +61,26 @@ class CCLSinkHandler(SINQAsciiSinkHandler):
     _lastsubscan = None
 
     def prepare(self):
-        if self.dataset.settype == 'scan':
+        if self.dataset.settype == "scan":
             # Assign the counter
             self.manager.assignCounter(self.dataset)
 
             # Generate the filenames, only if not set
             if not self.dataset.filepaths:
-                self.manager.getFilenames(self.dataset,
-                                          self.sink.filenametemplate,
-                                          self.sink.subdir)
+                self.manager.getFilenames(
+                    self.dataset, self.sink.filenametemplate, self.sink.subdir
+                )
             self._scandataset = self.dataset
 
     def begin(self):
         if not self._ccl_file:
             # pylint: disable=consider-using-with
-            self._ccl_file = open(self.dataset.filepaths[0], 'w',
-                                  encoding='utf-8')
+            self._ccl_file = open(self.dataset.filepaths[0], "w", encoding="utf-8")
             base = os.path.splitext(self.dataset.filepaths[0])[0]
-            rflfile = base + '.rfl'
+            rflfile = base + ".rfl"
             # pylint: disable=consider-using-with
-            self._rfl_file = open(rflfile, 'w', encoding='utf-8')
-            self._rfl_file.write('%s\n' % rflfile)
+            self._rfl_file = open(rflfile, "w", encoding="utf-8")
+            self._rfl_file.write("%s\n" % rflfile)
 
     def addSubset(self, subset):
         # Prevent unwelcome things from happening in the base class
@@ -91,8 +89,9 @@ class CCLSinkHandler(SINQAsciiSinkHandler):
     def _write_profile(self):
         # Write first profile header line
         hkl = session.instrument.target
-        ang = session.instrument._extractPos(session.instrument._calcPos(
-            session.instrument.target))
+        ang = session.instrument._extractPos(
+            session.instrument._calcPos(session.instrument.target)
+        )
         # Collect profile
         detinfo = self.dataset.detvalueinfo
         detID = 0
@@ -106,83 +105,127 @@ class CCLSinkHandler(SINQAsciiSinkHandler):
             counts.append(sub[detID])
         ok, reason, intensity, sigma = window_integrate(counts)
         if not ok:
-            session.log.warning(' Failed integration of %f %f %f with %s',
-                                hkl[0], hkl[1], hkl[2], reason)
+            session.log.warning(
+                " Failed integration of %f %f %f with %s",
+                hkl[0],
+                hkl[1],
+                hkl[2],
+                reason,
+            )
         if len(ang) == 3:
             self._ccl_file.write(
-                '%4d %7.3f %7.3f %7.3f %7.2f '
-                '%7.2f %7.2f %7.0f %7.2f\n' %
-                (self._count, hkl[0], hkl[1], hkl[2],
-                 ang[0][1], ang[1][1], ang[2][1], intensity, sigma))
+                "%4d %7.3f %7.3f %7.3f %7.2f "
+                "%7.2f %7.2f %7.0f %7.2f\n"
+                % (
+                    self._count,
+                    hkl[0],
+                    hkl[1],
+                    hkl[2],
+                    ang[0][1],
+                    ang[1][1],
+                    ang[2][1],
+                    intensity,
+                    sigma,
+                )
+            )
         else:
             self._ccl_file.write(
-                '%4d %7.3f %7.3f %7.3f %7.2f '
-                '%7.2f %7.2f %7.2f %7.0f %7.2f\n' %
-                (self._count, hkl[0], hkl[1], hkl[2],
-                 ang[0][1], ang[1][1], ang[2][1], ang[3][1], intensity, sigma))
+                "%4d %7.3f %7.3f %7.3f %7.2f "
+                "%7.2f %7.2f %7.2f %7.0f %7.2f\n"
+                % (
+                    self._count,
+                    hkl[0],
+                    hkl[1],
+                    hkl[2],
+                    ang[0][1],
+                    ang[1][1],
+                    ang[2][1],
+                    ang[3][1],
+                    intensity,
+                    sigma,
+                )
+            )
         # Second profile header line
         np = len(self.dataset.subsets)
         keys = list(self.dataset.preset.keys())
         preset = self.dataset.preset[keys[0]]
         devvals = self.dataset.devvaluelists
         step = devvals[1][0] - devvals[0][0]
-        time_str = time.strftime('%Y-%m-%d %H:%M:%S',
-                                 time.localtime(time.time()))
+        time_str = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))
         # Find environment information
         evlist = self.dataset.envvalueinfo
         evvallist = self.dataset.envvaluelists[-1]
         temp = 0
         mf = 0
         for idx, ev in enumerate(evlist):
-            if ev.name in ('Ts', 'temperature'):
+            if ev.name in ("Ts", "temperature"):
                 temp = evvallist[idx]
-            if ev.name in ('magfield', 'B'):
+            if ev.name in ("magfield", "B"):
                 mf = evvallist[idx]
 
-        modemap = {'omega': 'om', 't2t': 'o2t'}
-        self._ccl_file.write('%3d %7.4f %9.0f %7.3f %12f %s %s %7.4f\n' %
-                             (np, step, preset, temp, mf, time_str,
-                              modemap[session.instrument.scanmode], step))
+        modemap = {"omega": "om", "t2t": "o2t"}
+        self._ccl_file.write(
+            "%3d %7.4f %9.0f %7.3f %12f %s %s %7.4f\n"
+            % (
+                np,
+                step,
+                preset,
+                temp,
+                mf,
+                time_str,
+                modemap[session.instrument.scanmode],
+                step,
+            )
+        )
         # Print profile
         printed = 0
         for c in counts:
-            self._ccl_file.write(' %7d' % c)
+            self._ccl_file.write(" %7d" % c)
             printed += 1
             if printed >= 10:
-                self._ccl_file.write('\n')
+                self._ccl_file.write("\n")
                 printed = 0
         if printed < 10:
-            self._ccl_file.write('\n')
+            self._ccl_file.write("\n")
         # Write RFL line
         if len(ang) < 4:
             # Hack for NB where there are only 3 angles
             ll = list(ang)
-            ll.append((0, .0))
+            ll.append((0, 0.0))
             ang = tuple(ll)
-        self._rfl_file.write('%5d %6.2f %6.2f %6.2f %7.2f %7.2f '
-                             '%7.2f %7.2f %7.0f %7.2f\n'
-                             % (self._count, hkl[0], hkl[1], hkl[2],
-                                ang[0][1], ang[1][1], ang[2][1], ang[3][1],
-                                intensity, sigma))
+        self._rfl_file.write(
+            "%5d %6.2f %6.2f %6.2f %7.2f %7.2f "
+            "%7.2f %7.2f %7.0f %7.2f\n"
+            % (
+                self._count,
+                hkl[0],
+                hkl[1],
+                hkl[2],
+                ang[0][1],
+                ang[1][1],
+                ang[2][1],
+                ang[3][1],
+                intensity,
+                sigma,
+            )
+        )
         self._rfl_file.flush()
         self._ccl_file.flush()
         self._count += 1
 
     def _write_rfl_header(self):
-        time_str = time.strftime('%Y-%m-%d %H:%M:%S',
-                                 time.localtime(time.time()))
-        self._rfl_file.write('filetime = %s\n' % time_str)
-        self._rfl_file.write('lambda = %f Angstroem\n' %
-                             session.instrument.wavelength)
-        sample = session.getDevice('Sample')
-        self._rfl_file.write('UB = %s\n' % (' '.join(format(x, '8.4f')
-                                                     for x
-                                                     in sample.ubmatrix)))
-        self._rfl_file.write('sample = %s\n' % sample.name)
-        self._rfl_file.write('user = %s\n' % session.experiment.users)
+        time_str = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))
+        self._rfl_file.write("filetime = %s\n" % time_str)
+        self._rfl_file.write("lambda = %f Angstroem\n" % session.instrument.wavelength)
+        sample = session.getDevice("Sample")
+        self._rfl_file.write(
+            "UB = %s\n" % (" ".join(format(x, "8.4f") for x in sample.ubmatrix))
+        )
+        self._rfl_file.write("sample = %s\n" % sample.name)
+        self._rfl_file.write("user = %s\n" % session.experiment.users)
 
     def end(self):
-        if self.dataset.settype == 'subscan' and self.dataset.finished:
+        if self.dataset.settype == "subscan" and self.dataset.finished:
             # The observation is that end() is called two times
             # with a settype of subscan. This code is a hack to
             # ensure that we close the file on the second one.
@@ -192,14 +235,14 @@ class CCLSinkHandler(SINQAsciiSinkHandler):
             # afterwards it is subscan. May be, the NICOS team has an
             # opinion on why this happens. Anyway, this now works.
             if self._lastsubscan == self.dataset:
-                session.log.info('Closing CCL file....')
+                session.log.info("Closing CCL file....")
                 self._ccl_file.close()
                 self._rfl_file.close()
                 self._ccl_file = None
                 self.sink.end()
                 return
             self._lastsubscan = self.dataset
-            session.log.info('Writing subscan....')
+            session.log.info("Writing subscan....")
             if not self.headerWritten:
                 self.dataset.filepaths = self._scandataset.filepaths
                 self._initHeader()
@@ -209,7 +252,7 @@ class CCLSinkHandler(SINQAsciiSinkHandler):
             self._write_profile()
             return
 
-        if self.dataset.settype == 'scan':
+        if self.dataset.settype == "scan":
             # This is not executed but should...
             self._ccl_file.close()
             self._rfl_file.close()
@@ -224,9 +267,9 @@ class CCLSink(SINQAsciiSink):
     reflection files. It reuses the template of SINQASCIISink,
     this is why it derives from it.
     """
+
     parameters = {
-        'detector': Param('The detector to write as profile counts',
-                          type=str),
+        "detector": Param("The detector to write as profile counts", type=str),
     }
 
     handlerclass = CCLSinkHandler

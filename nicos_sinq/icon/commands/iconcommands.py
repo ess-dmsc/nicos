@@ -24,7 +24,7 @@ from nicos import session
 from nicos.commands import helparglist, usercommand
 from nicos.commands.scan import scan
 
-__all__ = ['tomo_setup', 'tomo_run', 'tomo_resume', 'tomo_abort']
+__all__ = ["tomo_setup", "tomo_run", "tomo_resume", "tomo_abort"]
 
 # pylint: disable=W0603
 # pylint: disable=global-variable-not-assigned
@@ -34,14 +34,14 @@ def tomo_scanpos(nproj, nimg, ifirst=1):
     rlist = [(i // nimg) * 360.0 / nproj for i in range(nimg * (nproj + 1))]
     ilist = list(range(1, nimg * (nproj + 1) + 1))
 
-    rlist = rlist[ifirst - 1:]
-    ilist = ilist[ifirst - 1:]
+    rlist = rlist[ifirst - 1 :]
+    ilist = ilist[ifirst - 1 :]
 
     return ilist, rlist
 
 
 @usercommand
-@helparglist('device, nproj, nimg=1')
+@helparglist("device, nproj, nimg=1")
 def tomo_setup(device, nproj, nimg=1):
     """Setup a new tomography run.
 
@@ -67,26 +67,25 @@ def tomo_setup(device, nproj, nimg=1):
     >>> tomo_setup(sp3_ry, 375, 3)
 
     """
-    if session.experiment.tomo_params['status'] == 'running':
+    if session.experiment.tomo_params["status"] == "running":
         session.log.error(
-            'The previously started tomography did not finish. Use '
-            '"tomo_resume()" to continue it or "tomo_abort()" to abort it.')
+            "The previously started tomography did not finish. Use "
+            '"tomo_resume()" to continue it or "tomo_abort()" to abort it.'
+        )
 
     if device:
         session.experiment.tomo_params = {
-            'device': device,
-            'nproj': nproj,
-            'nimg': nimg,
-            'status': 'ready'
+            "device": device,
+            "nproj": nproj,
+            "nimg": nimg,
+            "status": "ready",
         }
     else:
-        session.experiment.tomo_params = {
-            'status': 'reset'
-        }
+        session.experiment.tomo_params = {"status": "reset"}
 
 
 @usercommand
-@helparglist('')
+@helparglist("")
 def tomo_run():
     """Start a previously defined tomography.
 
@@ -96,35 +95,38 @@ def tomo_run():
     or finished with "tomo_resume()" before another tomography can be started.
 
     """
-    status = session.experiment.tomo_params['status']
+    status = session.experiment.tomo_params["status"]
 
-    if status == 'running':
+    if status == "running":
         session.log.error(
-            'The previously started tomography did not finish. '
+            "The previously started tomography did not finish. "
             'Use "tomo_resume()" to continue it or '
-            '"tomo_abort()" to abort it.')
+            '"tomo_abort()" to abort it.'
+        )
 
-    elif status == 'reset':
-        session.log.error('Tomography not configured, use '
-                          '"tomo_setup()" to choose the parameters.')
+    elif status == "reset":
+        session.log.error(
+            "Tomography not configured, use " '"tomo_setup()" to choose the parameters.'
+        )
 
     else:
+        rdev = session.getDevice(session.experiment.tomo_params["device"])
+        idev = session.getDevice("img_index")
 
-        rdev = session.getDevice(session.experiment.tomo_params['device'])
-        idev = session.getDevice('img_index')
+        ilist, rlist = tomo_scanpos(
+            session.experiment.tomo_params["nproj"],
+            session.experiment.tomo_params["nimg"],
+        )
 
-        ilist, rlist = tomo_scanpos(session.experiment.tomo_params['nproj'],
-                                    session.experiment.tomo_params['nimg'])
-
-        session.experiment.tomo_params['status'] = 'running'
+        session.experiment.tomo_params["status"] = "running"
 
         scan([idev, rdev], [ilist, rlist])
 
-        session.experiment.tomo_params['status'] = 'ready'
+        session.experiment.tomo_params["status"] = "ready"
 
 
 @usercommand
-@helparglist('')
+@helparglist("")
 def tomo_resume():
     """Resume a tomography.
 
@@ -135,43 +137,44 @@ def tomo_resume():
     may lead to duplicate images of some projections.
 
     """
-    status = session.experiment.tomo_params['status']
+    status = session.experiment.tomo_params["status"]
 
-    if status != 'running':
-        session.log.error('There is no started tomography to resume.')
+    if status != "running":
+        session.log.error("There is no started tomography to resume.")
 
     else:
-
-        rdev = session.getDevice(session.experiment.tomo_params['device'])
-        idev = session.getDevice('img_index')
+        rdev = session.getDevice(session.experiment.tomo_params["device"])
+        idev = session.getDevice("img_index")
 
         ifirst = int(idev.read(0))
         if ifirst > 1:
             ifirst -= 1
 
-        ilist, rlist = tomo_scanpos(session.experiment.tomo_params['nproj'],
-                                    session.experiment.tomo_params['nimg'],
-                                    ifirst)
+        ilist, rlist = tomo_scanpos(
+            session.experiment.tomo_params["nproj"],
+            session.experiment.tomo_params["nimg"],
+            ifirst,
+        )
 
-        session.experiment.tomo_params['status'] = 'running'
+        session.experiment.tomo_params["status"] = "running"
 
         scan([idev, rdev], [ilist, rlist])
 
-        session.experiment.tomo_params['status'] = 'ready'
+        session.experiment.tomo_params["status"] = "ready"
 
 
 @usercommand
-@helparglist('')
+@helparglist("")
 def tomo_abort():
     """Abort a tomography.
 
     This command can only be used when a previously started tomography
     did not finish properly.
     """
-    status = session.experiment.tomo_params['status']
+    status = session.experiment.tomo_params["status"]
 
-    if status != 'running':
-        session.log.error('There is no started tomography to abort.')
+    if status != "running":
+        session.log.error("There is no started tomography to abort.")
 
     else:
-        session.experiment.tomo_params['status'] = 'ready'
+        session.experiment.tomo_params["status"] = "ready"

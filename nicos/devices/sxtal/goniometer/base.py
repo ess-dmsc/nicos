@@ -34,48 +34,48 @@ from nicos import session
 
 
 def PositionFactory(ptype, **kwds):
-    """ Position factory function.
+    """Position factory function.
 
-        parameters:
+    parameters:
 
-            **ptype** -- 'k' for kappa type,
-                        'e' for Euler,
-                        'n' for euler with counter-clock-wise motors except phi,
-                        'g' for goniometermatrix,
-                        'b' for bisecting,
-                        'c' for C-vector,
-                        'l' for lifting counter,
+        **ptype** -- 'k' for kappa type,
+                    'e' for Euler,
+                    'n' for euler with counter-clock-wise motors except phi,
+                    'g' for goniometermatrix,
+                    'b' for bisecting,
+                    'c' for C-vector,
+                    'l' for lifting counter,
 
-                        a suffix 'r' may be used to signal angles in radians
+                    a suffix 'r' may be used to signal angles in radians
 
-        ptype specific parameters::
+    ptype specific parameters::
 
-            if ptype='k': omega, kappa, phi, theta
-            if ptype='e': omega, chi, phi, theta
-            if ptype='n': omega, chi, phi, theta
-            if ptype='b': theta, phi, chi, psi
-            if ptype='c': c, psi, signtheta
-            if ptype='g': theta, matrix
-            if ptype='l': gamma, omega, nu, signtheta
+        if ptype='k': omega, kappa, phi, theta
+        if ptype='e': omega, chi, phi, theta
+        if ptype='n': omega, chi, phi, theta
+        if ptype='b': theta, phi, chi, psi
+        if ptype='c': c, psi, signtheta
+        if ptype='g': theta, matrix
+        if ptype='l': gamma, omega, nu, signtheta
 
 
-        matrix= 3x3-matrix, c= 3-vector, angles in radians.
+    matrix= 3x3-matrix, c= 3-vector, angles in radians.
 
-        Alternatively, a position object 'p' can be passed, and a copy
-        will be returned.
+    Alternatively, a position object 'p' can be passed, and a copy
+    will be returned.
 
-        a
+    a
     """
-    p = kwds.get('p', None)
+    p = kwds.get("p", None)
     radians = False
-    if len(ptype) > 1 and ptype[1] == 'r':
+    if len(ptype) > 1 and ptype[1] == "r":
         ptype = ptype[0]
         radians = True
     if p:
         return p.__class__(p)
     elif ptype in typelist:
         return typelist[ptype](_rad=radians, **kwds)
-    raise TypeError('unknown ptype specified in PositionFactory()')
+    raise TypeError("unknown ptype specified in PositionFactory()")
 
 
 class PositionBase:
@@ -84,7 +84,7 @@ class PositionBase:
 
     def __getstate__(self):
         state = self.__dict__.copy()
-        state.pop('log')
+        state.pop("log")
         return state
 
     def __setstate__(self, state):
@@ -100,8 +100,8 @@ class PositionBase:
 
     def asType(self, newtype, wavelength=None):
         if newtype.lower() in typelist:
-            return getattr(self, 'as%s' % newtype.upper())(wavelength)
-        raise TypeError('unknown position type')
+            return getattr(self, "as%s" % newtype.upper())(wavelength)
+        raise TypeError("unknown position type")
 
 
 from nicos.devices.sxtal.goniometer.bisect import Bisecting  # isort:skip
@@ -112,11 +112,12 @@ from nicos.devices.sxtal.goniometer.kappa import Kappa  # isort:skip
 from nicos.devices.sxtal.goniometer.lifting import Lifting  # isort:skip
 from nicos.devices.sxtal.goniometer.neuler import NEuler  # isort:skip
 
-typelist = {'k': Kappa,
-            'e': Euler,
-            'b': Bisecting,
-            'c': CVector,
-            'g': GMatrix,
-            'n': NEuler,
-            'l': Lifting,
-            }
+typelist = {
+    "k": Kappa,
+    "e": Euler,
+    "b": Bisecting,
+    "c": CVector,
+    "g": GMatrix,
+    "n": NEuler,
+    "l": Lifting,
+}

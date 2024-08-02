@@ -23,17 +23,24 @@
 
 from time import time as currenttime
 
-from nicos.core import FINAL, INTERMEDIATE, DataSink, DataSinkHandler, \
-    Override, Param, dictof, tupleof
+from nicos.core import (
+    FINAL,
+    INTERMEDIATE,
+    DataSink,
+    DataSinkHandler,
+    Override,
+    Param,
+    dictof,
+    tupleof,
+)
 from nicos.core.constants import POINT, SIMULATION
 
-from nicos_sinq.devices.imagesink.serializer import \
-    HistogramFlatbuffersSerializer
+from nicos_sinq.devices.imagesink.serializer import HistogramFlatbuffersSerializer
 from nicos_ess.devices.kafka.producer import ProducesKafkaMessages
 
 
 class ImageKafkaDataSinkHandler(DataSinkHandler):
-    """ Data sink handler for sending the image data to Kafka.
+    """Data sink handler for sending the image data to Kafka.
     This class handles the periodic sending of arrays to Kafka.
     The frequency can be set in the detector where this sink
     is used from.
@@ -53,11 +60,12 @@ class ImageKafkaDataSinkHandler(DataSinkHandler):
         topic, source = self.sink.channeltostream[desc.name]
 
         # Serialize the message
-        msg = self.sink.serializer.encode(timestamp, desc, array, source,
-                                          self._lastmetadata)
+        msg = self.sink.serializer.encode(
+            timestamp, desc, array, source, self._lastmetadata
+        )
 
         # Send the message to Kafka
-        self.log.debug('%d bytes sent to %s', len(msg), topic)
+        self.log.debug("%d bytes sent to %s", len(msg), topic)
         self.sink.send(topic, msg)
 
     def putResults(self, quality, results):
@@ -69,7 +77,7 @@ class ImageKafkaDataSinkHandler(DataSinkHandler):
         if quality not in [INTERMEDIATE, FINAL]:
             return
 
-        timestamp = currenttime() * 1E9
+        timestamp = currenttime() * 1e9
         _, arrays = results[self.detector.name]
         for desc, array in zip(self.detector.arrayInfo(), arrays):
             self._sendArray(timestamp, desc, array)
@@ -85,26 +93,25 @@ class ImageKafkaDataSinkHandler(DataSinkHandler):
 
 
 class ImageKafkaDataSink(ProducesKafkaMessages, DataSink):
-    """ Data sink which writes images to Kafka after serializing
+    """Data sink which writes images to Kafka after serializing
     them. The parameter *channeltostream* provides a dict of all
     the image channels from which the data is to be be forwarded
     mapped to a tuple of (kafka topic, message source name)
     """
 
     parameters = {
-        'maximagesize':
-            Param('Expected max array size of the image',
-                  type=int,
-                  default=5e7),
-        'channeltostream':
-            Param(
-                'Dict of image channel name(to be forwarded) -> (topic, source)',
-                type=dictof(str, tupleof(str, str)),
-                mandatory=True),
+        "maximagesize": Param(
+            "Expected max array size of the image", type=int, default=5e7
+        ),
+        "channeltostream": Param(
+            "Dict of image channel name(to be forwarded) -> (topic, source)",
+            type=dictof(str, tupleof(str, str)),
+            mandatory=True,
+        ),
     }
 
     parameter_overrides = {
-        'settypes': Override(default=[POINT]),
+        "settypes": Override(default=[POINT]),
     }
 
     handlerclass = ImageKafkaDataSinkHandler

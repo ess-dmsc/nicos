@@ -30,8 +30,15 @@ from nicos.core import Moveable, UsageError, multiWait
 
 from nicos_mlz.kws1.commands import _fixupSampleenv
 
-DEFAULT = ['selector', 'resolution', 'sample_pos', 'beamstop', 'detector',
-           'polarizer', 'chopper']
+DEFAULT = [
+    "selector",
+    "resolution",
+    "sample_pos",
+    "beamstop",
+    "detector",
+    "polarizer",
+    "chopper",
+]
 
 
 @usercommand
@@ -63,6 +70,7 @@ def kwscount(**arguments):
 
     Any other keywords are interpreted as devices names and the target values.
     """
+
     def sort_key(kv):
         try:
             # main components move first, in selected order
@@ -73,26 +81,26 @@ def kwscount(**arguments):
 
     # check that all required components are present, and put defaults for
     # optional components
-    if 'selector' not in arguments:
-        raise UsageError('kwscount must have a value for the selector')
-    if 'detector' not in arguments:
-        raise UsageError('kwscount must have a value for the detector')
-    if 'sample_pos' not in arguments:
-        raise UsageError('kwscount must have a value for the sample_pos')
-    if 'detector' not in arguments:
-        raise UsageError('kwscount must have a value for the detector')
-    if 'beamstop' not in arguments:
-        arguments['beamstop'] = 'out'
-    if 'polarizer' not in arguments:
-        arguments['polarizer'] = 'out'
-    if 'chopper' not in arguments:
-        arguments['chopper'] = 'off'
+    if "selector" not in arguments:
+        raise UsageError("kwscount must have a value for the selector")
+    if "detector" not in arguments:
+        raise UsageError("kwscount must have a value for the detector")
+    if "sample_pos" not in arguments:
+        raise UsageError("kwscount must have a value for the sample_pos")
+    if "detector" not in arguments:
+        raise UsageError("kwscount must have a value for the detector")
+    if "beamstop" not in arguments:
+        arguments["beamstop"] = "out"
+    if "polarizer" not in arguments:
+        arguments["polarizer"] = "out"
+    if "chopper" not in arguments:
+        arguments["chopper"] = "off"
     # leave space between kwscounts
-    session.log.info('')
+    session.log.info("")
     # measurement time
-    meastime = arguments.pop('time', 0)
+    meastime = arguments.pop("time", 0)
     # select sample
-    sample = arguments.pop('sample', None)
+    sample = arguments.pop("sample", None)
     # move devices
     waiters = []
     # the order is important!
@@ -102,19 +110,21 @@ def kwscount(**arguments):
     _fixupSampleenv(devs)
     # start devices
     for devname, value in devs:
-        if devname == 'chopper':
+        if devname == "chopper":
             # currently a no-op
             continue
         dev = session.getDevice(devname, Moveable)
         dev.start(value)
-        if devname == 'selector':
-            dev2 = session.getDevice('sel_speed')
-            session.log.info('%-12s --> %s (%s)',
-                             devname, dev.format(value),
-                             dev2.format(dev2.target, unit=True))
+        if devname == "selector":
+            dev2 = session.getDevice("sel_speed")
+            session.log.info(
+                "%-12s --> %s (%s)",
+                devname,
+                dev.format(value),
+                dev2.format(dev2.target, unit=True),
+            )
         else:
-            session.log.info('%-12s --> %s',
-                             devname, dev.format(value, unit=True))
+            session.log.info("%-12s --> %s", devname, dev.format(value, unit=True))
         waiters.append(dev)
     # select and wait for sample here
     if sample is not None:
@@ -122,5 +132,5 @@ def kwscount(**arguments):
     # now wait for everyone else
     multiWait(waiters)
     # count
-    session.log.info('Now counting for %d seconds...', meastime)
+    session.log.info("Now counting for %d seconds...", meastime)
     count(t=meastime)

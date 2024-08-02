@@ -27,8 +27,13 @@ from nicos.devices.sample import Sample
 
 class AmorSample(Sample):
     """AMOR sample with an additional parameter"""
+
     parameters = {
-        'orsomodel': Param('Sample description following ORSO standard',
-                           type=str, settable=True, userparam=True,
-                           category='sample'),
+        "orsomodel": Param(
+            "Sample description following ORSO standard",
+            type=str,
+            settable=True,
+            userparam=True,
+            category="sample",
+        ),
     }

@@ -34,36 +34,37 @@ from nicos.devices.epics.status import SEVERITY_TO_STATUS
 # Same context can be shared across all devices.
 # nt=False tells p4p not to try to map types itself
 # we want to do this manually to avoid information loss
-_CONTEXT = Context('pva', nt=False)
+_CONTEXT = Context("pva", nt=False)
+
 
 @hiddenusercommand
-@helparglist('name[, timeout]')
+@helparglist("name[, timeout]")
 def pvget(name, timeout=3.0):
-    """ Returns the PV's current value in its raw form via PVA.
+    """Returns the PV's current value in its raw form via PVA.
 
     :param name: the PV name
     :param timeout: the EPICS timeout
     :return: the PV's raw value
     """
     response = _CONTEXT.get(name, timeout=timeout)
-    return response['value']
+    return response["value"]
 
 
 @hiddenusercommand
-@helparglist('name, value[, wait, timeout]')
+@helparglist("name, value[, wait, timeout]")
 def pvput(name, value, wait=False, timeout=3.0):
-    """ Sets a PV's value via PVA.
+    """Sets a PV's value via PVA.
 
     :param name: the PV name
     :param value: the value to set
     :param wait: whether to wait for completion
     :param timeout: the EPICS timeout
     """
-    _CONTEXT.put(name, value, timeout=timeout, wait=wait, process='true')
+    _CONTEXT.put(name, value, timeout=timeout, wait=wait, process="true")
 
 
 class P4pWrapper:
-    """ Class that wraps the p4p module that provides EPICS PVA Access (PVA)
+    """Class that wraps the p4p module that provides EPICS PVA Access (PVA)
     support.
     """
 
@@ -81,18 +82,17 @@ class P4pWrapper:
         try:
             _CONTEXT.get(pvname, timeout=self._timeout)
         except TimeoutError:
-            raise CommunicationError(
-                f'could not connect to PV {pvname}') from None
+            raise CommunicationError(f"could not connect to PV {pvname}") from None
 
     def get_pv_value(self, pvname, as_string=False):
         result = _CONTEXT.get(pvname, timeout=self._timeout)
-        return self._convert_value(pvname, result['value'], as_string)
+        return self._convert_value(pvname, result["value"], as_string)
 
     def _convert_value(self, pvname, value, as_string=False):
         try:
             # Enums are complicated
-            if value.getID() == 'enum_t':
-                index = value['index']
+            if value.getID() == "enum_t":
+                index = value["index"]
                 if as_string:
                     if pvname not in self._choices:
                         self.get_value_choices(pvname)
@@ -120,7 +120,7 @@ class P4pWrapper:
     def get_pv_type(self, pvname):
         result = _CONTEXT.get(pvname, timeout=self._timeout)
         try:
-            if result['value'].getID() == 'enum_t':
+            if result["value"].getID() == "enum_t":
                 # Treat enums as ints
                 return int
         except AttributeError:
@@ -134,44 +134,50 @@ class P4pWrapper:
         result = _CONTEXT.get(pvname, timeout=self._timeout)
         return self._extract_alarm_info(result)
 
-    def get_units(self, pvname, default=''):
+    def get_units(self, pvname, default=""):
         result = _CONTEXT.get(pvname, timeout=self._timeout)
         return self._get_units(result, default)
 
     def _get_units(self, result, default):
         try:
-            return result['display']['units']
+            return result["display"]["units"]
         except KeyError:
             return default
 
     def get_limits(self, pvname, default_low=-1e308, default_high=1e308):
         result = _CONTEXT.get(pvname, timeout=self._timeout)
         try:
-            default_low = result['display']['limitLow']
-            default_high = result['display']['limitHigh']
+            default_low = result["display"]["limitLow"]
+            default_high = result["display"]["limitHigh"]
         except KeyError:
             pass
         return default_low, default_high
 
     def get_control_values(self, pvname):
         raw_result = _CONTEXT.get(pvname, timeout=self._timeout)
-        if 'display' in raw_result:
-            return raw_result['display']
-        return raw_result['control'] if 'control' in raw_result else {}
+        if "display" in raw_result:
+            return raw_result["display"]
+        return raw_result["control"] if "control" in raw_result else {}
 
     def get_value_choices(self, pvname):
-        value = _CONTEXT.get(pvname, timeout=self._timeout)['value']
+        value = _CONTEXT.get(pvname, timeout=self._timeout)["value"]
         if isinstance(value, bool):
             return [False, True]
         if not isinstance(value, Iterable):
             return []
-        if 'choices' in value:
-            self._choices[pvname] = value['choices']
+        if "choices" in value:
+            self._choices[pvname] = value["choices"]
             return self._choices[pvname]
         return []
 
-    def subscribe(self, pvname, pvparam, change_callback,
-                  connection_callback=None, as_string=False):
+    def subscribe(
+        self,
+        pvname,
+        pvparam,
+        change_callback,
+        connection_callback=None,
+        as_string=False,
+    ):
         """
         Create a monitor subscription to the specified PV.
 
@@ -187,17 +193,24 @@ class P4pWrapper:
         with self.lock:
             self.disconnected.add(pvname)
 
-        request = _CONTEXT.makeRequest(
-            "field(value,timeStamp,alarm,control,display)")
+        request = _CONTEXT.makeRequest("field(value,timeStamp,alarm,control,display)")
 
-        callback = partial(self._callback, pvname, pvparam, change_callback,
-                           connection_callback, as_string)
-        subscription = _CONTEXT.monitor(pvname, callback, request=request,
-                                        notify_disconnect=True)
+        callback = partial(
+            self._callback,
+            pvname,
+            pvparam,
+            change_callback,
+            connection_callback,
+            as_string,
+        )
+        subscription = _CONTEXT.monitor(
+            pvname, callback, request=request, notify_disconnect=True
+        )
         return subscription
 
-    def _callback(self, pvname, pvparam, change_callback, connection_callback,
-                  as_string, result):
+    def _callback(
+        self, pvname, pvparam, change_callback, connection_callback, as_string, result
+    ):
         if isinstance(result, Exception):
             # Only callback on disconnection if was previously connected
             if connection_callback and pvname not in self.disconnected:
@@ -222,34 +235,40 @@ class P4pWrapper:
             # PVA only sends a delta of what has changed
             change_set = result.changedSet()
 
-            if 'value' in change_set or 'value.index' in change_set:
-                self._values[pvname] = self._convert_value(pvname,
-                                                           result['value'],
-                                                           as_string)
-            if 'value.index' in change_set:
+            if "value" in change_set or "value.index" in change_set:
+                self._values[pvname] = self._convert_value(
+                    pvname, result["value"], as_string
+                )
+            if "value.index" in change_set:
                 # Extract the enum's possible values
-                choices = result['value'].get('choices', [])
+                choices = result["value"].get("choices", [])
                 if choices:
                     self._choices[pvname] = choices
-            if 'display.units' in change_set:
-                self._units[pvname] = self._get_units(result, '')
-            if 'alarm.status' in change_set or 'alarm.severity' in change_set:
+            if "display.units" in change_set:
+                self._units[pvname] = self._get_units(result, "")
+            if "alarm.status" in change_set or "alarm.severity" in change_set:
                 self._alarms[pvname] = self._extract_alarm_info(result)
 
             if pvname in self._values:
-                severity, msg = self._alarms.get(pvname, (status.UNKNOWN, ''))
-                change_callback(pvname, pvparam, self._values[pvname],
-                                self._units.get(pvname, ''), severity, msg)
+                severity, msg = self._alarms.get(pvname, (status.UNKNOWN, ""))
+                change_callback(
+                    pvname,
+                    pvparam,
+                    self._values[pvname],
+                    self._units.get(pvname, ""),
+                    severity,
+                    msg,
+                )
 
     def _extract_alarm_info(self, value):
         # The EPICS 'severity' matches to the NICOS `status` and the message has
         # a short description of the alarm details.
         try:
-            severity = SEVERITY_TO_STATUS[value['alarm']['severity']]
-            message = value['alarm']['message']
-            return severity, '' if message == 'NO_ALARM' else message
+            severity = SEVERITY_TO_STATUS[value["alarm"]["severity"]]
+            message = value["alarm"]["message"]
+            return severity, "" if message == "NO_ALARM" else message
         except KeyError:
-            return status.UNKNOWN, 'alarm information unavailable'
+            return status.UNKNOWN, "alarm information unavailable"
 
     def close_subscription(self, subscription):
         subscription.close()

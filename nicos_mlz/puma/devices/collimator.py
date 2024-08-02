@@ -31,11 +31,16 @@ class Collimator(Axis):
     """Polarization collimator device."""
 
     parameters = {
-        'divergency': Param('Divergency of the collimator',
-                            type=floatrange(0, None), settable=False,
-                            userparam=False, default=0.5, unit='deg'),
+        "divergency": Param(
+            "Divergency of the collimator",
+            type=floatrange(0, None),
+            settable=False,
+            userparam=False,
+            default=0.5,
+            unit="deg",
+        ),
     }
 
     parameter_overrides = {
-        'unit': Override(mandatory=False, default='deg'),
+        "unit": Override(mandatory=False, default="deg"),
     }

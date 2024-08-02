@@ -29,21 +29,20 @@ from nicos.core.params import Attach, Param
 
 
 class Accuracy(Readable):
-
     attached_devices = {
-        'motor': Attach('moving motor', Readable),
-        'analog': Attach('analog encoder maybe poti', Readable),
+        "motor": Attach("moving motor", Readable),
+        "analog": Attach("analog encoder maybe poti", Readable),
     }
 
     parameters = {
-        'absolute': Param('Value is absolute or signed.', type=bool,
-                          settable=True, default=True),
+        "absolute": Param(
+            "Value is absolute or signed.", type=bool, settable=True, default=True
+        ),
     }
 
     def doRead(self, maxage=0):
-        dif = self._attached_analog.read(maxage) - \
-            self._attached_motor.read(maxage)
+        dif = self._attached_analog.read(maxage) - self._attached_motor.read(maxage)
         return abs(dif) if self.absolute else dif
 
     def doStatus(self, maxage=0):
-        return status.OK, ''
+        return status.OK, ""

@@ -22,20 +22,27 @@
 # *****************************************************************************
 
 from nicos.core.params import Param, tupleof
-from nicos.devices.vendor.qmesydaq.tango import \
-    ImageChannel as BaseImageChannel
+from nicos.devices.vendor.qmesydaq.tango import ImageChannel as BaseImageChannel
 
 
 class ImageChannel(BaseImageChannel):
-
     parameters = {
-        'pixel_size': Param('Size of a single pixel (in mm)',
-                            type=tupleof(float, float), volatile=False,
-                            settable=False, default=(0.85, 0.85), unit='mm',
-                            category='instrument'),
-        'pixel_count': Param('Number of detector pixels',
-                             type=int, volatile=True, settable=False,
-                             category='instrument'),
+        "pixel_size": Param(
+            "Size of a single pixel (in mm)",
+            type=tupleof(float, float),
+            volatile=False,
+            settable=False,
+            default=(0.85, 0.85),
+            unit="mm",
+            category="instrument",
+        ),
+        "pixel_count": Param(
+            "Number of detector pixels",
+            type=int,
+            volatile=True,
+            settable=False,
+            category="instrument",
+        ),
     }
 
     def doReadPixel_Count(self):

@@ -25,15 +25,24 @@ import time
 from os import path
 
 from nicos.guisupport.colors import colors
-from nicos.guisupport.qt import QCheckBox, QDialog, QLineEdit, QMessageBox, \
-    QSizePolicy, QSpacerItem, QTimer, pyqtProperty, pyqtSlot, uic
+from nicos.guisupport.qt import (
+    QCheckBox,
+    QDialog,
+    QLineEdit,
+    QMessageBox,
+    QSizePolicy,
+    QSpacerItem,
+    QTimer,
+    pyqtProperty,
+    pyqtSlot,
+    uic,
+)
 from nicos.guisupport.utils import setBackgroundColor
 
 from nicostools.cacheinspector.editdlg import EntryEditDialog
 
 
 class ReadOnlyCheckBox(QCheckBox):
-
     def __init__(self, *args):
         QCheckBox.__init__(self, *args)
         self._readOnly = True
@@ -61,12 +70,14 @@ class ReadOnlyCheckBox(QCheckBox):
 
 
 ui_class, base_class = uic.loadUiType(
-    path.join(path.dirname(path.abspath(__file__)), 'ui', 'entry.ui'))
+    path.join(path.dirname(path.abspath(__file__)), "ui", "entry.ui")
+)
 
 
 class EntryWidget(base_class, ui_class):
-    def __init__(self, client, watcher, entry,
-                 shortKey, showTimeStamp, showTTL, parent=None):
+    def __init__(
+        self, client, watcher, entry, shortKey, showTimeStamp, showTTL, parent=None
+    ):
         base_class.__init__(self, parent)
         self.setupUi(self)
         self.updateTimer = QTimer(self)
@@ -95,24 +106,28 @@ class EntryWidget(base_class, ui_class):
 
         fm = self.labelTime.fontMetrics()
         margins = self.labelTime.contentsMargins()
-        self.labelTime.setMinimumWidth(fm.horizontalAdvance(entry.convertTime(1.0)) +
-                                       margins.left() + margins.right() +
-                                       self.labelTime.sizeHint().width())
+        self.labelTime.setMinimumWidth(
+            fm.horizontalAdvance(entry.convertTime(1.0))
+            + margins.left()
+            + margins.right()
+            + self.labelTime.sizeHint().width()
+        )
 
         if self.watcher is None:  # widget is already in watcher
             self.buttonWatch.hide()
 
         if shortKey:
-            self.labelKey.setText(entry.key.rpartition('/')[2])
+            self.labelKey.setText(entry.key.rpartition("/")[2])
             self.labelKey.setToolTip(entry.key)
         else:
             self.labelKey.setText(entry.key)
 
-        if entry.value in ('True', 'False'):
+        if entry.value in ("True", "False"):
             self.widgetValue = ReadOnlyCheckBox()
             self.layoutWidget.insertWidget(4, self.widgetValue)
             self.layoutWidget.insertSpacerItem(
-                5, QSpacerItem(56, 20, QSizePolicy.Policy.Expanding))
+                5, QSpacerItem(56, 20, QSizePolicy.Policy.Expanding)
+            )
         else:
             self.widgetValue = QLineEdit()
             self.layoutWidget.insertWidget(4, self.widgetValue)
@@ -135,11 +150,11 @@ class EntryWidget(base_class, ui_class):
             setBackgroundColor(self, colors.ttl_color)
 
         if isinstance(self.widgetValue, ReadOnlyCheckBox):
-            self.widgetValue.setChecked(entry.value == 'True')
+            self.widgetValue.setChecked(entry.value == "True")
         else:
             self.widgetValue.setText(entry.value)
 
-        self.labelTTL.setText(str(entry.ttl or ''))
+        self.labelTTL.setText(str(entry.ttl or ""))
         self.labelTime.setText(entry.convertTime())
 
         if entry.ttl:
@@ -152,7 +167,7 @@ class EntryWidget(base_class, ui_class):
         """Sets the key locally and on the server."""
         dlg = EntryEditDialog(self)
         dlg.fillEntry(self.entry)
-        dlg.valueTime.setText('')  # we want current timestamp by default
+        dlg.valueTime.setText("")  # we want current timestamp by default
         dlg.valueKey.setReadOnly(True)
         if dlg.exec() != QDialog.DialogCode.Accepted:
             return
@@ -160,8 +175,10 @@ class EntryWidget(base_class, ui_class):
         self.client.put(entry.key, entry)
 
     def delKey(self):
-        if QMessageBox.question(self, 'Delete', 'Really delete?') == \
-           QMessageBox.StandardButton.No:
+        if (
+            QMessageBox.question(self, "Delete", "Really delete?")
+            == QMessageBox.StandardButton.No
+        ):
             return
         self.client.delete(self.entry.key)
 
@@ -169,8 +186,9 @@ class EntryWidget(base_class, ui_class):
         """Adds our key to the watcher window."""
         if not self.watcher:
             return
-        widget = EntryWidget(self.client, None, self.entry,
-                             False, True, True, self.watcher)
+        widget = EntryWidget(
+            self.client, None, self.entry, False, True, True, self.watcher
+        )
         self.watcher.addWidgetKey(widget)
         self.watcher.show()
 

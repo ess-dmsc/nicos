@@ -1225,6 +1225,8 @@ class ControlDialog(QDialog):
                 for d in devinfo
                 if devinfo[d]["name"] not in system_devs
             ]
+            if curr_value not in non_system_devs:
+                curr_value = ""
             dlg.target = ComboWidget(self, non_system_devs, curr_value)
         else:
             dlg.target = DeviceParamEdit(self, dev=self.devname, param=pname)

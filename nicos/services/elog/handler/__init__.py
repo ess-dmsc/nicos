@@ -33,22 +33,22 @@ class Handler(Device):
         self._dir = self._logdir = None
 
     def handle(self, key, timestamp, data):
-        fun = getattr(self, f'handle_{key}', None)
+        fun = getattr(self, f"handle_{key}", None)
         if fun:
             fun(timestamp, data)
 
     def handle_directory(self, time, data):
         """Handle the 'directory' event.
 
-           data = [directory, instrument, proposal]
+        data = [directory, instrument, proposal]
         """
         self._dir, self._instr, self._proposal = data
-        self._logdir = path.join(self._dir, 'logbook')
+        self._logdir = path.join(self._dir, "logbook")
 
     def handle_newexperiment(self, time, data):
         """Handle the 'newexperiment' event.
 
-            data = [proposal, title]
+        data = [proposal, title]
         """
 
     def handle_setup(self, time, setupnames):
@@ -78,19 +78,19 @@ class Handler(Device):
     def handle_offset(self, time, data):
         """Handle the 'offset' event.
 
-           data = [devices, oldoffset, newoffset]
+        data = [devices, oldoffset, newoffset]
         """
 
     def handle_attachment(self, time, data):
         """Handle the 'attachment' event.
 
-           data = [description, fpaths, names]
+        data = [description, fpaths, names]
         """
 
     def handle_image(self, time, data):
         """Handle the 'image' event.
 
-           data = [description, fpaths, extensions, names]
+        data = [description, fpaths, extensions, names]
         """
 
     def handle_message(self, time, message):

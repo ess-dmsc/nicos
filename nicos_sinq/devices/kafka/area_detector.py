@@ -32,8 +32,7 @@ from nicos_ess.devices.kafka.consumer import KafkaSubscriber
 from nicos_sinq.devices.epics.area_detector import ADKafkaPlugin
 
 try:
-    from nicos_sinq.devices.fbschemas.hs00 import Array, ArrayUInt, \
-        EventHistogram
+    from nicos_sinq.devices.fbschemas.hs00 import Array, ArrayUInt, EventHistogram
 
 except ImportError:
     EventHistogram = None
@@ -45,18 +44,20 @@ class ADKafkaImageDetector(KafkaSubscriber, ImageChannelMixin, PassiveChannel):
     """
     Class for reading images from the stream associated with the ADPluginKafka
     """
+
     attached_devices = {
-        'kafka_plugin': Attach('NICOS device for the ADPluginKafka',
-                               ADKafkaPlugin, optional=False)
+        "kafka_plugin": Attach(
+            "NICOS device for the ADPluginKafka", ADKafkaPlugin, optional=False
+        )
     }
 
     def doPreinit(self, mode):
-        broker = getattr(self._attached_kafka_plugin, 'broker')
+        broker = getattr(self._attached_kafka_plugin, "broker")
         if not broker:
-            raise Exception('Can\'t find broker address in ADPluginKafka')
+            raise Exception("Can't find broker address in ADPluginKafka")
         self._consumer = kafka.KafkaConsumer(
             bootstrap_servers=[broker],
-            auto_offset_reset='latest'  # start at latest offset
+            auto_offset_reset="latest",  # start at latest offset
         )
 
         # Settings for thread to fetch new message
@@ -65,9 +66,9 @@ class ADKafkaImageDetector(KafkaSubscriber, ImageChannelMixin, PassiveChannel):
         self._lastmessage = None
 
     def doInit(self, mode):
-        topic = getattr(self._attached_kafka_plugin, 'topic')
+        topic = getattr(self._attached_kafka_plugin, "topic")
         if not topic:
-            raise Exception('Can\'t find topic in ADPluginKafka')
+            raise Exception("Can't find topic in ADPluginKafka")
         self._consumer.subscribe([topic])
 
     def doReadArray(self, quality=LIVE):
@@ -90,10 +91,10 @@ class ADKafkaImageDetector(KafkaSubscriber, ImageChannelMixin, PassiveChannel):
         if st[0] != status.OK:
             return st
         if not self._consumer:
-            return status.ERROR, 'Broker failure'
+            return status.ERROR, "Broker failure"
         if not self._consumer.subscription():
-            return status.WARN, 'No topic subscribed'
-        return status.OK, ''
+            return status.WARN, "No topic subscribed"
+        return status.OK, ""
 
     def valueInfo(self):
         return ()
@@ -103,6 +104,7 @@ class HistogramFlatbuffersDeserializer:
     """
     Decode the histogram using the flatbuffers schema hs00
     """
+
     file_identifier = "hs00"
 
     @staticmethod
@@ -114,27 +116,25 @@ class HistogramFlatbuffersDeserializer:
     @staticmethod
     def _read_current_shape(histogram):
         result = ArrayUInt.ArrayUInt()
-        result.Init(histogram.CurrentShape().Bytes,
-                    histogram.CurrentShape().Pos)
+        result.Init(histogram.CurrentShape().Bytes, histogram.CurrentShape().Pos)
         return result.ValueAsNumpy()
 
     def decode(self, buff):
-        histogram = EventHistogram.EventHistogram().GetRootAsEventHistogram(
-            buff, 0)
+        histogram = EventHistogram.EventHistogram().GetRootAsEventHistogram(buff, 0)
         data_type = histogram.DataType()
         value = []
         if data_type == Array.Array.ArrayUInt:
             value = self._read_as_numpy(histogram=histogram)
         if data_type == Array.Array.ArrayULong:
-            raise NotImplementedError('This data type is not yet implemented.')
+            raise NotImplementedError("This data type is not yet implemented.")
             # value = self._read_as_numpy(histogram=histogram,
             # dtype=ArrayULong.ArrayULong)
         if data_type == Array.Array.ArrayFloat:
-            raise NotImplementedError('This data type is not yet implemented.')
+            raise NotImplementedError("This data type is not yet implemented.")
             # value = self._read_as_numpy(histogram=histogram,
             # dtype=ArrayFloat.ArrayFloat)
         if data_type == Array.Array.ArrayDouble:
-            raise NotImplementedError('This data type is not yet implemented.')
+            raise NotImplementedError("This data type is not yet implemented.")
             # value = self._read_as_numpy(histogram=histogram,
             # dtype=ArrayDouble.ArrayDouble)
 

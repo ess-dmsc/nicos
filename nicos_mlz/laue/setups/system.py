@@ -1,47 +1,57 @@
-description = 'system setup'
-group = 'lowlevel'
+description = "system setup"
+group = "lowlevel"
 
 sysconfig = dict(
-    cache = 'lauectrl.laue.frm2.tum.de',
-    instrument = 'Laue',
-    experiment = 'Exp',
-    datasinks = ['conssink', 'filesink', 'dmnsink'],
-    notifiers = ['email', 'smser'],
+    cache="lauectrl.laue.frm2.tum.de",
+    instrument="Laue",
+    experiment="Exp",
+    datasinks=["conssink", "filesink", "dmnsink"],
+    notifiers=["email", "smser"],
 )
 
-modules = ['nicos.commands.standard',]
+modules = [
+    "nicos.commands.standard",
+]
 
 devices = dict(
-    Laue = device('nicos.devices.instrument.Instrument',
-        description = 'Laue camera',
-        instrument = 'Laue',
-        responsible = 'Dr. B. Pedersen <bjoern.pedersen@frm2.tum.de>',
+    Laue=device(
+        "nicos.devices.instrument.Instrument",
+        description="Laue camera",
+        instrument="Laue",
+        responsible="Dr. B. Pedersen <bjoern.pedersen@frm2.tum.de>",
         #  we do not have a dedicated responsible
-        operators = ['Technische Universität München (TUM)'],
+        operators=["Technische Universität München (TUM)"],
     ),
-    Sample = device('nicos_mlz.devices.sample.Sample',
-        description = 'The currently used sample',
+    Sample=device(
+        "nicos_mlz.devices.sample.Sample",
+        description="The currently used sample",
     ),
-
-    Exp = device('nicos.devices.experiment.Experiment',
-        description = 'experiment object',
-        dataroot = '/data',
-        zipdata = False,
-        strictservice = True,
+    Exp=device(
+        "nicos.devices.experiment.Experiment",
+        description="experiment object",
+        dataroot="/data",
+        zipdata=False,
+        strictservice=True,
         # We do not have a dedicated responsible
-        sample = 'Sample',
+        sample="Sample",
     ),
-    filesink = device('nicos.devices.datasinks.AsciiScanfileSink',
+    filesink=device(
+        "nicos.devices.datasinks.AsciiScanfileSink",
     ),
-    conssink = device('nicos.devices.datasinks.ConsoleScanSink',
+    conssink=device(
+        "nicos.devices.datasinks.ConsoleScanSink",
     ),
-    dmnsink = device('nicos.devices.datasinks.DaemonSink',
+    dmnsink=device(
+        "nicos.devices.datasinks.DaemonSink",
     ),
-    Space = device('nicos.devices.generic.FreeSpace',
-        description = 'The amount of free space for storing data',
-        path = None,
-        minfree = 5,
+    Space=device(
+        "nicos.devices.generic.FreeSpace",
+        description="The amount of free space for storing data",
+        path=None,
+        minfree=5,
     ),
 )
 
-includes = ['notifiers',]
+includes = [
+    "notifiers",
+]

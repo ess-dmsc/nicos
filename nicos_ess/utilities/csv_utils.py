@@ -32,7 +32,7 @@ def export_table_to_csv_file(filename, data, headers=None):
     :param data: 2D data list
     :param headers: list of column names
     """
-    with open(filename, 'w', encoding='utf-8') as file:
+    with open(filename, "w", encoding="utf-8") as file:
         export_table_to_csv_stream(file, data, headers)
 
 
@@ -58,7 +58,7 @@ def import_table_from_csv_file(filename):
     :param filename: path to csv file
     :return: tuple of headers (empty if no headers) and rows
     """
-    with open(filename, 'r', encoding='utf-8') as file:
+    with open(filename, "r", encoding="utf-8") as file:
         return import_table_from_csv_stream(file)
 
 

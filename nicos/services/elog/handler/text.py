@@ -45,9 +45,9 @@ class Handler(BaseHandler):
     def handle_directory(self, time, data):
         BaseHandler.handle_directory(self, time, data)
         self._close()
-        logfile = path.join(self._logdir, 'nicos_log.txt')
+        logfile = path.join(self._logdir, "nicos_log.txt")
         self._fd = create_or_open(logfile)
-        self.log.info('Opened new output in %s', logfile)
+        self.log.info("Opened new output in %s", logfile)
 
     def handle_message(self, time, message):
         formatted = formatMessagePlain(message)

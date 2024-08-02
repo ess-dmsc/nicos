@@ -31,30 +31,29 @@ from nicos_mlz.sans1.lib import qrange
 
 
 class Resolution(Readable):
-
     valuetype = (float, float)
 
     attached_devices = {
-        'detector': Attach('Detector device with size information',
-                           Detector),
-        'beamstop': Attach('Beam stop device with size information',
-                           BeamStop),
-        'detpos': Attach('Detector position device', Readable),
-        'wavelength': Attach('Wavelength device', Readable),
+        "detector": Attach("Detector device with size information", Detector),
+        "beamstop": Attach("Beam stop device with size information", BeamStop),
+        "detpos": Attach("Detector position device", Readable),
+        "wavelength": Attach("Wavelength device", Readable),
     }
 
     parameter_overrides = {
-        'unit': Override(mandatory=False, volatile=True),
-        'fmtstr': Override(default='%3.f - %3.f'),
+        "unit": Override(mandatory=False, volatile=True),
+        "fmtstr": Override(default="%3.f - %3.f"),
     }
 
     def doRead(self, maxage=0):
         bs = self._attached_beamstop
-        return qrange(self._attached_wavelength.read(maxage),
-                      self._attached_detpos.read(0),
-                      bs.slots[bs.shape][1][0] / 2.,
-                      self._attached_detector.size[0] / 2.)
+        return qrange(
+            self._attached_wavelength.read(maxage),
+            self._attached_detpos.read(0),
+            bs.slots[bs.shape][1][0] / 2.0,
+            self._attached_detector.size[0] / 2.0,
+        )
 
     def doReadUnit(self):
         unit = self._attached_wavelength.unit
-        return '%s-1' % unit
+        return "%s-1" % unit

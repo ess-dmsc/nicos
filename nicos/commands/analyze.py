@@ -37,8 +37,16 @@ from nicos.utils.analyze import estimateFWHM
 from nicos.utils.fitting import Fit, GaussFit, PolyFit, SigmoidFit
 
 __all__ = [
-    'center_of_mass', 'fwhm', 'root_mean_square', 'poly', 'gauss', 'sigmoid',
-    'center', 'checkoffset', 'findpeaks', 'ListFitters',
+    "center_of_mass",
+    "fwhm",
+    "root_mean_square",
+    "poly",
+    "gauss",
+    "sigmoid",
+    "center",
+    "checkoffset",
+    "findpeaks",
+    "ListFitters",
 ]
 
 
@@ -46,7 +54,7 @@ def _getData(columns=None, dataset=None):
     dslist = session.experiment.data.getLastScans()
     if dataset is None:
         if not dslist:
-            raise NicosError('no latest dataset has been stored')
+            raise NicosError("no latest dataset has been stored")
         dataset = dslist[-1]
 
     # append data from previous scans if this is a continuation
@@ -74,24 +82,26 @@ def _getData(columns=None, dataset=None):
     elif len(columns) == 2:
         xcol, ycol = columns[0], columns[1]
     else:
-        raise UsageError('you can give none, one or two columns names or '
-                         'numbers')
+        raise UsageError("you can give none, one or two columns names or " "numbers")
 
     if isinstance(xcol, str):
         try:
             xcol = [v.name for v in dataset.devvalueinfo].index(xcol) + 1
         except ValueError:
-            raise NicosError('no such X column name: %r' % xcol) from None
+            raise NicosError("no such X column name: %r" % xcol) from None
 
     if isinstance(ycol, str):
         try:
             ycol = [v.name for v in dataset.detvalueinfo].index(ycol) + 1
         except ValueError:
-            raise NicosError('no such Y column name: %r' % ycol) from None
+            raise NicosError("no such Y column name: %r" % ycol) from None
     elif ycol < 0:
         try:
-            ycol = [j for (j, info) in enumerate(dataset.detvalueinfo)
-                    if info.type == 'counter'][0] + 1
+            ycol = [
+                j
+                for (j, info) in enumerate(dataset.detvalueinfo)
+                if info.type == "counter"
+            ][0] + 1
         except IndexError:
             raise NicosError('no Y column of type "counter"') from None
 
@@ -101,26 +111,24 @@ def _getData(columns=None, dataset=None):
 
     # Another fix to account for manualscan
     if dataset.devvalueinfo:
-        names = [dataset.devvalueinfo[xcol].name,
-                 dataset.detvalueinfo[ycol].name]
+        names = [dataset.devvalueinfo[xcol].name, dataset.detvalueinfo[ycol].name]
     else:
-        names = [dataset.envvalueinfo[xcol].name,
-                 dataset.detvalueinfo[ycol].name]
+        names = [dataset.envvalueinfo[xcol].name, dataset.detvalueinfo[ycol].name]
 
     try:
         xs = np.array([p[xcol] for p in xresults])
     except IndexError:
-        raise NicosError('no such X column: %r' % xcol) from None
+        raise NicosError("no such X column: %r" % xcol) from None
     try:
         ys = np.array([p[ycol] for p in yresults])
     except IndexError:
-        raise NicosError('no such Y column: %r' % ycol) from None
+        raise NicosError("no such Y column: %r" % ycol) from None
 
-    if dataset.detvalueinfo[ycol].errors == 'sqrt':
+    if dataset.detvalueinfo[ycol].errors == "sqrt":
         dys = np.sqrt(ys)
-    elif dataset.detvalueinfo[ycol].errors == 'next':
+    elif dataset.detvalueinfo[ycol].errors == "next":
         try:
-            dys = np.array([p[ycol+1] for p in yresults])
+            dys = np.array([p[ycol + 1] for p in yresults])
         except IndexError:
             dys = np.array([1] * len(ys))
     else:
@@ -146,7 +154,7 @@ COLHELP = """
 
 
 @usercommand
-@helparglist('[[xcol, ]ycol]')
+@helparglist("[[xcol, ]ycol]")
 def center_of_mass(*columns):
     """Calculate the center of mass x-coordinate of the last scan."""
     xs, ys = _getData(columns)[:2]
@@ -154,11 +162,11 @@ def center_of_mass(*columns):
     return float(cm)
 
 
-center_of_mass.__doc__ += COLHELP.replace('func(', 'center_of_mass(')
+center_of_mass.__doc__ += COLHELP.replace("func(", "center_of_mass(")
 
 
 @usercommand
-@helparglist('[[xcol, ]ycol]')
+@helparglist("[[xcol, ]ycol]")
 def fwhm(*columns):
     """Calculate an estimate of full width at half maximum.
 
@@ -175,11 +183,11 @@ def fwhm(*columns):
     return estimateFWHM(xs, ys)
 
 
-fwhm.__doc__ += COLHELP.replace('func(', 'fwhm(')
+fwhm.__doc__ += COLHELP.replace("func(", "fwhm(")
 
 
 @usercommand
-@helparglist('[ycol]')
+@helparglist("[ycol]")
 def root_mean_square(col=None):
     """Calculate the root-mean-square of the last scan.
 
@@ -195,25 +203,30 @@ class CommandLineFitResult(tuple):
 
 
 def fit(fitclass, *columns, **kwargs):
-    xs, ys, dys, _, ds = _getData(columns, dataset=kwargs.pop('dataset', None))
+    xs, ys, dys, _, ds = _getData(columns, dataset=kwargs.pop("dataset", None))
     fit = fitclass(**kwargs)
     res = fit.run(xs, ys, dys)
     if res._failed:
-        session.log.info('Fit failed.')
+        session.log.info("Fit failed.")
         return CommandLineFitResult((None, None))
     session.notifyFitCurve(ds, fit.fit_title, res.curve_x, res.curve_y)
     descrs = fit.fit_p_descr
     vals = []
     for par, err, descr in zip(res._pars[1], res._pars[2], descrs):
-        vals.append((descr, '%.5g' % par, '+/- %.5g' % err,
-                     '+/- {:.1%}'.format(err / par) if par else '-'))
-    printTable(('parameter', 'value', 'error', 'rel. error'),
-               vals, session.log.info)
+        vals.append(
+            (
+                descr,
+                "%.5g" % par,
+                "+/- %.5g" % err,
+                "+/- {:.1%}".format(err / par) if par else "-",
+            )
+        )
+    printTable(("parameter", "value", "error", "rel. error"), vals, session.log.info)
     return CommandLineFitResult((tuple(res._pars[1]), tuple(res._pars[2])))
 
 
 @usercommand
-@helparglist('n, [[xcol, ]ycol]')
+@helparglist("n, [[xcol, ]ycol]")
 def poly(n, *columns):
     """Fit a polynomial of degree *n* through the last scan.
 
@@ -226,11 +239,11 @@ def poly(n, *columns):
     return fit(PolyFit, *columns, n=n)
 
 
-poly.__doc__ += COLHELP.replace('func(', 'poly(2, ')
+poly.__doc__ += COLHELP.replace("func(", "poly(2, ")
 
 
 @usercommand
-@helparglist('[[xcol, ]ycol]')
+@helparglist("[[xcol, ]ycol]")
 def gauss(*columns):
     """Fit a Gaussian through the data of the last scan.
 
@@ -259,11 +272,11 @@ def gauss(*columns):
     return fit(GaussFit, *columns)
 
 
-gauss.__doc__ += COLHELP.replace('func(', 'gauss(')
+gauss.__doc__ += COLHELP.replace("func(", "gauss(")
 
 
 @usercommand
-@helparglist('[[xcol], ]ycol]')
+@helparglist("[[xcol], ]ycol]")
 def sigmoid(*columns):
     """Fit a Sigmoid through the data of the last scan.
 
@@ -291,16 +304,16 @@ def sigmoid(*columns):
     res = fit.run(xs, ys, dys)
     if res._failed:
         return None, None
-    session.notifyFitCurve(ds, 'sigmoid', res.curve_x, res.curve_y)
-    descrs = ['amplitude', 'steepness', 'center', 'background']
+    session.notifyFitCurve(ds, "sigmoid", res.curve_x, res.curve_y)
+    descrs = ["amplitude", "steepness", "center", "background"]
     vals = []
     for par, err, descr in zip(res._pars[1], res._pars[2], descrs):
-        vals.append((descr, '%.4f' % par, '%.4f' % err))
-    printTable(('parameter', 'value', 'error'), vals, session.log.info)
+        vals.append((descr, "%.4f" % par, "%.4f" % err))
+    printTable(("parameter", "value", "error"), vals, session.log.info)
     return CommandLineFitResult((tuple(res._pars[1]), tuple(res._pars[2])))
 
 
-sigmoid.__doc__ += COLHELP.replace('func(', 'sigmoid(')
+sigmoid.__doc__ += COLHELP.replace("func(", "sigmoid(")
 
 
 @usercommand
@@ -312,9 +325,9 @@ def ListFitters():
     """
     items = []
     for k, v in FitterRegistry.fitters.items():
-        items.append((k, 'yes' if v.center_index is not None else 'no'))
+        items.append((k, "yes" if v.center_index is not None else "no"))
     items.sort()
-    printTable(('name', 'can center'), items, session.log.info)
+    printTable(("name", "can center"), items, session.log.info)
 
 
 def _scanFC(dev, center, step, numpoints, sname, *args, **kwargs):
@@ -332,11 +345,11 @@ def _scanFC(dev, center, step, numpoints, sname, *args, **kwargs):
     * a keyword "ycol" that gives the Y column of the dataset to use for the
       fit.
     """
-    ycol = kwargs.pop('ycol', -1)
-    fitname = kwargs.pop('fit', 'gauss')
+    ycol = kwargs.pop("ycol", -1)
+    fitname = kwargs.pop("fit", "gauss")
     fitclass = FitterRegistry.getFitterCls(fitname)
     if fitclass.center_index is None:
-        raise UsageError('Fit class is not suitable for centering.')
+        raise UsageError("Fit class is not suitable for centering.")
     cscan(dev, center, step, numpoints, sname, *args, **kwargs)
     params, _ = fit(fitclass, ycol)
     newcenter = params[fitclass.center_index] if params is not None else None
@@ -346,7 +359,7 @@ def _scanFC(dev, center, step, numpoints, sname, *args, **kwargs):
 
 
 @usercommand
-@helparglist('dev, center, step, numpoints, ...')
+@helparglist("dev, center, step, numpoints, ...")
 def center(dev, center, step, numpoints, *args, **kwargs):
     """Move the given device to the maximum of a fit through a scan.
 
@@ -355,17 +368,18 @@ def center(dev, center, step, numpoints, *args, **kwargs):
     >>> center(omega, 5, 0.1, 10)  # scan and use a Gauss fit, move to center
     >>> center(omega, 5, 0.1, 10, fit='sigmoid')  # use different fit function
     """
-    minvalue, newcenter, maxvalue = _scanFC(dev, center, step, numpoints,
-                                            'centering',
-                                            *args, **kwargs)
+    minvalue, newcenter, maxvalue = _scanFC(
+        dev, center, step, numpoints, "centering", *args, **kwargs
+    )
     if newcenter is None:
-        session.log.warning('Fit failed, no centering done')
+        session.log.warning("Fit failed, no centering done")
     elif not minvalue <= newcenter <= maxvalue:
         # do not allow moving outside of the scanned region
-        session.log.warning('Fit resulted in center outside scanning '
-                            'area, no centering done')
+        session.log.warning(
+            "Fit resulted in center outside scanning " "area, no centering done"
+        )
     else:
-        session.log.info('centered peak for %s', dev)
+        session.log.info("centered peak for %s", dev)
         maw(dev, newcenter)
 
 
@@ -373,7 +387,7 @@ center.__doc__ += _scanFC.__doc__
 
 
 @usercommand
-@helparglist('dev, center, step, numpoints, ...')
+@helparglist("dev, center, step, numpoints, ...")
 def checkoffset(dev, center, step, numpoints, *args, **kwargs):
     """Readjust offset of the given device to the center of a scan.
 
@@ -386,22 +400,23 @@ def checkoffset(dev, center, step, numpoints, *args, **kwargs):
     >>> checkoffset(omega, 5, 0.1, 10)  # scan and use a Gauss fit
     # scan and use different fit function
      >>> checkoffset(omega, 5, 0.1, 10, fit='sigmoid')
-   """
-    minvalue, newcenter, maxvalue = _scanFC(dev, center, step, numpoints,
-                                            'offset check',
-                                            *args, **kwargs)
+    """
+    minvalue, newcenter, maxvalue = _scanFC(
+        dev, center, step, numpoints, "offset check", *args, **kwargs
+    )
     if newcenter is None:
-        session.log.warning('Fit failed, offset unchanged')
+        session.log.warning("Fit failed, offset unchanged")
     elif not minvalue <= newcenter <= maxvalue:
         # do not allow moving outside of the scanned region
-        session.log.warning('Fit resulted in center outside scanning '
-                            'area, offset unchanged')
+        session.log.warning(
+            "Fit resulted in center outside scanning " "area, offset unchanged"
+        )
     else:
         diff = newcenter - center
-        session.log.info('center of fit at %s',
-                         dev.format(newcenter, True))
-        session.log.info('adjusting offset of %s by %s',
-                         dev, dev.format(abs(diff), True))
+        session.log.info("center of fit at %s", dev.format(newcenter, True))
+        session.log.info(
+            "adjusting offset of %s by %s", dev, dev.format(abs(diff), True)
+        )
         # what was formerly newcenter is now the real center
         dev.doAdjust(newcenter, center)
 
@@ -410,7 +425,7 @@ checkoffset.__doc__ += _scanFC.__doc__
 
 
 @usercommand
-@helparglist('[[xcol, ]ycol][, npoints=n]')
+@helparglist("[[xcol, ]ycol][, npoints=n]")
 def findpeaks(*columns, **kwds):
     """Find peaks the data of the last scan.
 
@@ -425,36 +440,37 @@ def findpeaks(*columns, **kwds):
     * *npoints* -- number of neighbors (default 2) per side of peak to be
       considered: if the scan is very fine, this must be increased
     """
+
     # parabola model
     def model(x, b, s, c):
-        return b + s*(x-c)**2
+        return b + s * (x - c) ** 2
+
     xs, ys, dys = _getData(columns)[:3]
-    np = kwds.get('npoints', 2)
+    np = kwds.get("npoints", 2)
     peaks = []
     # peak has to be different from background
     minpeakheight = (ys.max() - ys.min()) * 0.1 + ys.min()
-    for i in range(len(xs) - 2*np):
-        subys = ys[i:i+2*np+1]
-        subdys = dys[i:i+2*np+1]
+    for i in range(len(xs) - 2 * np):
+        subys = ys[i : i + 2 * np + 1]
+        subdys = dys[i : i + 2 * np + 1]
         # need a peak of at least minpeakheight
         if subys.max() < minpeakheight:
             continue
         # peak must be bigger than sides - including errors!
         miny = subys[np] - subdys[np]
-        if (subys[0] + subdys[0] > miny) or \
-           (subys[2*np] + subdys[2*np] > miny):
+        if (subys[0] + subdys[0] > miny) or (subys[2 * np] + subdys[2 * np] > miny):
             continue
         # values must rise to peak and fall down
         for v in range(np):
-            if subys[v] > subys[v+1] or subys[v+np] < subys[v+np+1]:
+            if subys[v] > subys[v + 1] or subys[v + np] < subys[v + np + 1]:
                 break
         else:
             # we (probably) have a peak
-            subxs = xs[i:i+2*np+1]
+            subxs = xs[i : i + 2 * np + 1]
             b = subys[np]
-            s = (subys[0] - subys[np])/(subxs[0] - subxs[np])**2
+            s = (subys[0] - subys[np]) / (subxs[0] - subxs[np]) ** 2
             c = subxs[np]
-            fit = Fit('parabola', model, ['b', 's', 'c'], [b, s, c])
+            fit = Fit("parabola", model, ["b", "s", "c"], [b, s, c])
             res = fit.run(subxs, subys, subdys)
             if not res._failed:
                 peaks.append(res._pars[1][2])
@@ -462,4 +478,4 @@ def findpeaks(*columns, **kwds):
     return peaks
 
 
-findpeaks.__doc__ += COLHELP.replace('func(', 'findpeaks(')
+findpeaks.__doc__ += COLHELP.replace("func(", "findpeaks(")

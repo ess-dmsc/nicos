@@ -35,43 +35,46 @@ from nicos.utils import createThread
 
 class TimingStatusDevice(EpicsReadable):
     def doRead(self, maxage=0):
-        return ''
+        return ""
 
     def doStatus(self, maxage=0):
         try:
-            severity, msg = self.get_alarm_status('readpv')
+            severity, msg = self.get_alarm_status("readpv")
             # Check if there are issues with the device
             if severity in [status.ERROR, status.WARN]:
-                return severity, f'PV alarm: {msg}'
+                return severity, f"PV alarm: {msg}"
             # If the device is running, look for timestamp synch issues
-            if self._get_pv('readpv') == 0:
-                return status.WARN, ('Timing warning: the timestamps appear '
-                                     'to have lost synchronisation.')
-            return status.OK, 'the timestamps are synchronised.'
+            if self._get_pv("readpv") == 0:
+                return status.WARN, (
+                    "Timing warning: the timestamps appear "
+                    "to have lost synchronisation."
+                )
+            return status.OK, "the timestamps are synchronised."
         except TimeoutError:
-            return status.ERROR, 'timeout reading status'
+            return status.ERROR, "timeout reading status"
 
 
 class LaserDetector(Measurable):
     parameters = {
-        'answer':
-            Param('Store the iterative average of the attached device value',
-                  internal=True,
-                  type=float,
-                  default=0,
-                  settable=True),
-        'curstatus':
-            Param('Store the current device status',
-                  internal=True,
-                  type=tupleof(int, str),
-                  default=(status.OK, "idle"),
-                  settable=True)
+        "answer": Param(
+            "Store the iterative average of the attached device value",
+            internal=True,
+            type=float,
+            default=0,
+            settable=True,
+        ),
+        "curstatus": Param(
+            "Store the current device status",
+            internal=True,
+            type=tupleof(int, str),
+            default=(status.OK, "idle"),
+            settable=True,
+        ),
     }
 
     attached_devices = {
-        'laser': Attach('the underlying laser device', Readable),
-        'timingstatus': Attach('timestamp synchronisation status device',
-                               Readable),
+        "laser": Attach("the underlying laser device", Readable),
+        "timingstatus": Attach("timestamp synchronisation status device", Readable),
     }
 
     _stoprequest = False
@@ -84,8 +87,10 @@ class LaserDetector(Measurable):
         self._stoprequest = False
         self.curstatus = status.BUSY, "Counting"
         self._counting_worker = createThread(
-            'start_counting', self._start_counting,
-            args=(self._lastpreset.get('t', None), ))
+            "start_counting",
+            self._start_counting,
+            args=(self._lastpreset.get("t", None),),
+        )
 
     def _start_counting(self, duration=None):
         max_pow = 0
@@ -138,4 +143,4 @@ class LaserDetector(Measurable):
         return LIVE
 
     def valueInfo(self):
-        return Value(self.name, unit=self.unit),
+        return (Value(self.name, unit=self.unit),)

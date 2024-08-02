@@ -33,20 +33,19 @@ from nicos.devices.generic import Slit
 
 
 class SampleIllumination(Readable):
-
-
     parameters = {
-        's1pos': Param('Slit 1 position relative to sample',
-                       mandatory=True, type=float),
-        's2pos': Param('Slit 2 position relative to sample',
-                       mandatory=True, type=float),
-        'f0':    Param('Footprint for n * pi, 0 <= n <= N',
-                       type=float, default=nan)
+        "s1pos": Param(
+            "Slit 1 position relative to sample", mandatory=True, type=float
+        ),
+        "s2pos": Param(
+            "Slit 2 position relative to sample", mandatory=True, type=float
+        ),
+        "f0": Param("Footprint for n * pi, 0 <= n <= N", type=float, default=nan),
     }
     attached_devices = {
-        's1':    Attach('First slit', Slit),
-        's2':    Attach('Second slit', Slit),
-        'theta': Attach('Incidence angle', Readable)
+        "s1": Attach("First slit", Slit),
+        "s2": Attach("Second slit", Slit),
+        "theta": Attach("Incidence angle", Readable),
     }
 
     def doRead(self, maxage=0):

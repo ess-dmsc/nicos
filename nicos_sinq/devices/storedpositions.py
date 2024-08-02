@@ -22,8 +22,16 @@
 # *****************************************************************************
 
 from nicos import session
-from nicos.core.device import Moveable, Override, Param, anytype, dictof, \
-    listof, tupleof, usermethod
+from nicos.core.device import (
+    Moveable,
+    Override,
+    Param,
+    anytype,
+    dictof,
+    listof,
+    tupleof,
+    usermethod,
+)
 from nicos.core.errors import ConfigurationError
 from nicos.core.utils import multiStatus
 from nicos.utils import printTable
@@ -37,15 +45,16 @@ class StoredPositions(Moveable):
     """
 
     parameters = {
-        'positions': Param('dictionary with mappings of keys to '
-                           'device positions',
-                           type=dictof(str, listof(tupleof(str, anytype))),
-                           settable=True,
-                           category='general'),
+        "positions": Param(
+            "dictionary with mappings of keys to " "device positions",
+            type=dictof(str, listof(tupleof(str, anytype))),
+            settable=True,
+            category="general",
+        ),
     }
 
     parameter_overrides = {
-        'unit': Override(mandatory=False, default='name'),
+        "unit": Override(mandatory=False, default="name"),
     }
 
     valuetype = str
@@ -55,15 +64,14 @@ class StoredPositions(Moveable):
         try:
             dev = session.getDevice(name, Moveable)
         except ConfigurationError:
-            session.log.error('%s is no known device', name)
+            session.log.error("%s is no known device", name)
             return None
         if rval == Ellipsis:
             rval = dev.read(0)
         else:
             ok, _ = dev.isAllowed(rval)
             if not ok:
-                session.log.error('%s is no valid target for %s',
-                                  str(rval), name)
+                session.log.error("%s is no valid target for %s", str(rval), name)
                 return None
         return name, rval
 
@@ -99,7 +107,7 @@ class StoredPositions(Moveable):
     @usermethod
     def clear(self):
         """
-         Delete all stored positions
+        Delete all stored positions
         """
         self.positions = {}
 
@@ -118,27 +126,29 @@ class StoredPositions(Moveable):
         """
         Shows the list of stored positions
         """
-        session.log.info('Stored positions on %s\n', self.name)
+        session.log.info("Stored positions on %s\n", self.name)
         items = []
         for key, val in self.positions.items():
             items.append((key, str(val)))
-        printTable(('Name', 'Device positions'), items, session.log.info)
+        printTable(("Name", "Device positions"), items, session.log.info)
 
     def doStart(self, target):
         if not self.isCompleted():
-            self.log.error('Another stored position is already running')
+            self.log.error("Another stored position is already running")
             return
         self._wait_list = []
         for entry in self.positions[target]:
             try:
                 dev = session.getDevice(entry[0])
             except ConfigurationError:
-                session.log.error('Stored position %s no longer valid, '
-                                  'device %s not found', target, entry[0])
+                session.log.error(
+                    "Stored position %s no longer valid, " "device %s not found",
+                    target,
+                    entry[0],
+                )
                 return
             if not dev.isAllowed(entry[1]):
-                session.log.error('Cannot drive %s to %s anymore',
-                                  entry[0], entry[1])
+                session.log.error("Cannot drive %s to %s anymore", entry[0], entry[1])
                 return
         for entry in self.positions[target]:
             dev = session.getDevice(entry[0])
@@ -147,7 +157,7 @@ class StoredPositions(Moveable):
 
     def doIsAllowed(self, target):
         if target not in self.positions:
-            return False, 'Unknown stored position %s' % target
+            return False, "Unknown stored position %s" % target
         ok = True
         whysum = []
         for entry in self.positions[target]:
@@ -156,13 +166,13 @@ class StoredPositions(Moveable):
             except ConfigurationError:
                 if ok:
                     ok = False
-                whysum.append('%s no longer in configuration' % entry[0])
+                whysum.append("%s no longer in configuration" % entry[0])
             allowed, why = dev.isAllowed(entry[1])
             if not allowed:
                 if ok:
                     ok = False
                 whysum.append(why)
-        return ok, ','.join(whysum)
+        return ok, ",".join(whysum)
 
     def doStatus(self, maxage=0):
         return multiStatus(self._wait_list, maxage)
@@ -181,7 +191,7 @@ class StoredPositions(Moveable):
         for key, entry in self.positions.items():
             if self._is_at_position(entry):
                 return key
-        return 'Undefined'
+        return "Undefined"
 
     def doStop(self):
         for dev in self._wait_list:

@@ -30,10 +30,9 @@ from nicos.guisupport.qt import QDialogButtonBox, QMessageBox, pyqtSlot
 
 
 class AmorNewExpPanel(GenericPanel):
-    """Provides a panel with several input fields for the experiment settings.
-    """
+    """Provides a panel with several input fields for the experiment settings."""
 
-    panelName = 'Experiment Edit'
+    panelName = "Experiment Edit"
 
     def __init__(self, parent, client, options):
         GenericPanel.__init__(self, parent, client, options)
@@ -44,17 +43,19 @@ class AmorNewExpPanel(GenericPanel):
         client.experiment.connect(self.on_client_experiment)
 
     def _update_proposal_info(self):
-        values = self.client.eval('session.experiment.proposal, '
-                                  'session.experiment.title, '
-                                  'session.experiment.users, '
-                                  'session.experiment.proposalpath, '
-                                  'session.experiment.remark', None)
+        values = self.client.eval(
+            "session.experiment.proposal, "
+            "session.experiment.title, "
+            "session.experiment.users, "
+            "session.experiment.proposalpath, "
+            "session.experiment.remark",
+            None,
+        )
         if values:
-            usersplit = values[2].split('<')
+            usersplit = values[2].split("<")
             username = usersplit[0].strip()
-            useremail = usersplit[1][:-1] if len(usersplit) > 1 else ''
-            values = (values[0], values[1], username, useremail, values[3],
-                      values[4])
+            useremail = usersplit[1][:-1] if len(usersplit) > 1 else ""
+            values = (values[0], values[1], username, useremail, values[3], values[4])
             self._orig_proposal_info = values
             self.proposalNum.setText(values[0])
             self.expTitle.setText(values[1])
@@ -67,7 +68,7 @@ class AmorNewExpPanel(GenericPanel):
         # fill proposal
         self._update_proposal_info()
         # check for new or finish
-        if self.client.eval('session.experiment.mustFinish', False):
+        if self.client.eval("session.experiment.mustFinish", False):
             self.finishBox.setVisible(True)
             self.proposalNum.setEnabled(False)
             self.proposalDir.setEnabled(False)
@@ -75,16 +76,18 @@ class AmorNewExpPanel(GenericPanel):
             self.finishBox.setVisible(False)
             self.proposalNum.setEnabled(True)
             self.proposalDir.setEnabled(True)
-            self.proposalNum.setText('')  # do not offer "service"
-            self.proposalDir.setText('')
+            self.proposalNum.setText("")  # do not offer "service"
+            self.proposalDir.setText("")
 
         if self.client.viewonly:
             self.finishButton.setVisible(False)
             self.buttonBox.setStandardButtons(QDialogButtonBox.StandardButton.Close)
         else:
             self.finishButton.setVisible(True)
-            self.buttonBox.setStandardButtons(QDialogButtonBox.StandardButton.Apply |
-                                              QDialogButtonBox.StandardButton.Close)
+            self.buttonBox.setStandardButtons(
+                QDialogButtonBox.StandardButton.Apply
+                | QDialogButtonBox.StandardButton.Close
+            )
 
     def on_client_experiment(self, data):
         # just reinitialize
@@ -97,30 +100,35 @@ class AmorNewExpPanel(GenericPanel):
         remark = self.remark.text()
         proposaldir = self.proposalDir.text()
         if proposaldir and not os.path.isdir(proposaldir):
-            QMessageBox.critical(self, 'Error', 'The provided proposal path '
-                                 'does not exist!')
-            raise ConfigurationError('')
+            QMessageBox.critical(
+                self, "Error", "The provided proposal path " "does not exist!"
+            )
+            raise ConfigurationError("")
         if not os.access(proposaldir, os.W_OK):
-            QMessageBox.critical(self, 'Error', 'Don\'t have permission to '
-                                 'write in the proposal path! Please choose '
-                                 'a different one!')
-            raise ConfigurationError('')
+            QMessageBox.critical(
+                self,
+                "Error",
+                "Don't have permission to "
+                "write in the proposal path! Please choose "
+                "a different one!",
+            )
+            raise ConfigurationError("")
         try:
             useremail = mailaddress(self.userEmail.text())
         except ValueError:
-            QMessageBox.critical(self, 'Error', 'The user email entry is '
-                                 'not  a valid email address')
-            raise ConfigurationError('') from None
+            QMessageBox.critical(
+                self, "Error", "The user email entry is " "not  a valid email address"
+            )
+            raise ConfigurationError("") from None
         return prop, title, username, useremail, proposaldir, remark
 
     @pyqtSlot()
     def on_finishButton_clicked(self):
         code = 'Exp.proposalpath = "/home/amor/nicos/service"'
-        code += '\n'
-        code = 'FinishExperiment()'
+        code += "\n"
+        code = "FinishExperiment()"
         if self.client.run(code, noqueue=True) is None:
-            self.showError('Could not finish experiment, a script '
-                           'is still running.')
+            self.showError("Could not finish experiment, a script " "is still running.")
 
     def on_buttonBox_clicked(self, button):
         role = self.buttonBox.buttonRole(button)
@@ -134,67 +142,74 @@ class AmorNewExpPanel(GenericPanel):
 
         # proposal settings
         try:
-            prop, title, username, useremail, proposaldir, remark = \
+            prop, title, username, useremail, proposaldir, remark = (
                 self._getProposalInput()
+            )
         except ConfigurationError:
             return
 
         # check conditions
-        if self.client.eval('session.experiment.serviceexp', True) and \
-           self.client.eval('session.experiment.proptype', 'user') == 'user' and \
-           self.client.eval('session.experiment.proposal', '') != prop:
-            self.showError('Can not directly switch experiments, please use '
-                           'FinishExperiment first!')
+        if (
+            self.client.eval("session.experiment.serviceexp", True)
+            and self.client.eval("session.experiment.proptype", "user") == "user"
+            and self.client.eval("session.experiment.proposal", "") != prop
+        ):
+            self.showError(
+                "Can not directly switch experiments, please use "
+                "FinishExperiment first!"
+            )
             return
 
         # do some work
         if prop and prop != self._orig_proposal_info[0]:
-            args = {'proposal': prop}
+            args = {"proposal": prop}
             if title:
-                args['title'] = title
-            args['user'] = ''
+                args["title"] = title
+            args["user"] = ""
             if username:
-                args['user'] = username
+                args["user"] = username
             if useremail:
-                args['user'] += ' <' + useremail + '>'
-            code = ''
+                args["user"] += " <" + useremail + ">"
+            code = ""
             if proposaldir:
-                code += 'Exp.proposalpath = %r' % proposaldir
-                code += '\n'
+                code += "Exp.proposalpath = %r" % proposaldir
+                code += "\n"
 
-            code += 'NewExperiment(%s)' % ', '.join('%s=%r' % i
-                                                    for i in args.items())
+            code += "NewExperiment(%s)" % ", ".join("%s=%r" % i for i in args.items())
 
             if remark:
-                code += '\n'
-                code += 'Exp.remark = %r' % remark
+                code += "\n"
+                code += "Exp.remark = %r" % remark
 
             if self.client.run(code, noqueue=False) is None:
-                self.showError('Could not start new experiment, a script is '
-                               'still running.')
+                self.showError(
+                    "Could not start new experiment, a script is " "still running."
+                )
                 return
-            done.append('New experiment started.')
+            done.append("New experiment started.")
         else:
             if title != self._orig_proposal_info[1]:
-                self.client.run('Exp.title = %r' % title)
-                done.append('New experiment title set.')
-            if username != self._orig_proposal_info[2] or \
-               useremail != self._orig_proposal_info[3]:
+                self.client.run("Exp.title = %r" % title)
+                done.append("New experiment title set.")
+            if (
+                username != self._orig_proposal_info[2]
+                or useremail != self._orig_proposal_info[3]
+            ):
                 users = username
                 if useremail:
-                    users += ' <' + useremail + '>'
-                self.client.run('Exp.users = %r' % users)
-                done.append('New user set.')
+                    users += " <" + useremail + ">"
+                self.client.run("Exp.users = %r" % users)
+                done.append("New user set.")
 
             if proposaldir and proposaldir != self._orig_proposal_info[4]:
-                self.client.run('Exp.proposalpath = %r' % proposaldir)
-                done.append('Proposal directory updated')
+                self.client.run("Exp.proposalpath = %r" % proposaldir)
+                done.append("Proposal directory updated")
 
             if remark and remark != self._orig_proposal_info[5]:
-                self.client.run('Exp.remark = %r' % remark)
-                done.append('Remark updated.')
+                self.client.run("Exp.remark = %r" % remark)
+                done.append("Remark updated.")
 
         # tell user about everything we did
         if done:
-            self.showInfo('\n'.join(done))
+            self.showInfo("\n".join(done))
         self._update_proposal_info()

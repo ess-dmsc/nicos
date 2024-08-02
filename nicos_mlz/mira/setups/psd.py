@@ -1,4 +1,4 @@
-description = 'SANS mode with PSD detector'
-group = 'basic'
+description = "SANS mode with PSD detector"
+group = "basic"
 
-includes = ['mono2', 'cascade']
+includes = ["mono2", "cascade"]

@@ -25,8 +25,7 @@
 
 from math import asin, degrees, radians, sin
 
-from nicos.core import SIMULATION, Attach, HasLimits, Moveable, Override, \
-    Param, status
+from nicos.core import SIMULATION, Attach, HasLimits, Moveable, Override, Param, status
 from nicos.core.errors import ConfigurationError, PositionError
 from nicos.core.utils import multiStatus
 
@@ -35,22 +34,32 @@ class Wavelength(HasLimits, Moveable):
     """Device for adjusting initial/final wavelength."""
 
     parameters = {
-        'crystal': Param('Used crystal',
-                         type=str, unit='', settable=False, volatile=True,
-                         category='instrument'),
-        'plane': Param('Used scattering plane of the crystal', type=str,
-                       unit='', mandatory=True, settable=True,
-                       category='instrument'),
+        "crystal": Param(
+            "Used crystal",
+            type=str,
+            unit="",
+            settable=False,
+            volatile=True,
+            category="instrument",
+        ),
+        "plane": Param(
+            "Used scattering plane of the crystal",
+            type=str,
+            unit="",
+            mandatory=True,
+            settable=True,
+            category="instrument",
+        ),
     }
 
     parameter_overrides = {
-        'unit': Override(volatile=True),
+        "unit": Override(volatile=True),
     }
 
     attached_devices = {
-        'tthm': Attach('Monochromator 2 theta', Moveable),
-        'omgm': Attach('Monochromator table', Moveable),
-        'crystal': Attach('The crystal switcher', Moveable),
+        "tthm": Attach("Monochromator 2 theta", Moveable),
+        "omgm": Attach("Monochromator table", Moveable),
+        "crystal": Attach("The crystal switcher", Moveable),
     }
 
     valuetype = float
@@ -58,10 +67,10 @@ class Wavelength(HasLimits, Moveable):
     hardware_access = False
 
     _lut = {
-        'Ge': {
-            '331': [1.299194, 9.45, 0.65],
-            '551': [0.792778, 0.0, 0.65],
-            '771': [0.568937, -4.37, 0.65]
+        "Ge": {
+            "331": [1.299194, 9.45, 0.65],
+            "551": [0.792778, 0.0, 0.65],
+            "771": [0.568937, -4.37, 0.65],
         },
     }
 
@@ -72,15 +81,15 @@ class Wavelength(HasLimits, Moveable):
         p = self._crystal(maxage).get(self.plane, [])
         if p:
             return p[0]
-        raise PositionError('No valid setup of the monochromator')
+        raise PositionError("No valid setup of the monochromator")
 
     def doInit(self, mode):
         crystal = self._crystal(0)
         if crystal:
-            if 'plane' not in self._params:
-                self._params['plane'] = p = crystal.values()[1]
+            if "plane" not in self._params:
+                self._params["plane"] = p = crystal.values()[1]
                 if self._mode != SIMULATION:
-                    self._cache.put(self, 'plane', p)
+                    self._cache.put(self, "plane", p)
 
     def doStatus(self, maxage=0):
         state = multiStatus(self._adevs, maxage)
@@ -88,7 +97,7 @@ class Wavelength(HasLimits, Moveable):
             return state
         try:
             self._d(maxage)
-            return status.OK, 'idle'
+            return status.OK, "idle"
         except PositionError as e:
             return status.ERROR, str(e)
 
@@ -100,18 +109,17 @@ class Wavelength(HasLimits, Moveable):
         crystal = self._crystal(0)
         plane = crystal.get(self.plane, None)
         if not plane:
-            raise ConfigurationError(self, 'No valid mono configuration')
+            raise ConfigurationError(self, "No valid mono configuration")
         tthm = degrees(asin(target / (2 * self._d(0))))
         omgm = tthm / 2.0 + plane[1] + plane[2]
-        self.log.debug('%s will be moved to %.3f', self._attached_tthm, tthm)
-        self.log.debug('%s will be moved to %.3f', self._attached_omgm, omgm)
-        if self._attached_tthm.isAllowed(tthm) and \
-           self._attached_omgm.isAllowed(omgm):
+        self.log.debug("%s will be moved to %.3f", self._attached_tthm, tthm)
+        self.log.debug("%s will be moved to %.3f", self._attached_omgm, omgm)
+        if self._attached_tthm.isAllowed(tthm) and self._attached_omgm.isAllowed(omgm):
             self._attached_tthm.start(tthm)
             self._attached_omgm.start(omgm)
 
     def doReadUnit(self):
-        return 'AA'
+        return "AA"
 
     def doReadCrystal(self):
         crystal = self._attached_crystal.read(0)
@@ -123,6 +131,7 @@ class Wavelength(HasLimits, Moveable):
         crystal = self._crystal(0)
         if not crystal.get(target):
             raise ValueError(
-                'The "%s" plane is not allowed for "%s" crystal' % (
-                    target, self.crystal))
+                'The "%s" plane is not allowed for "%s" crystal'
+                % (target, self.crystal)
+            )
         return target

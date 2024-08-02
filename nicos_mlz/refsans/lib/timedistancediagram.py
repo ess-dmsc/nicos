@@ -29,12 +29,17 @@ import numpy as np
 from nicos_mlz.refsans.lib.calculations import SC1_Pos, chopper_pos, d_SC2
 
 
-def timedistancediagram(speed, angles, disk2_pos, D,
-                        SC2_full_open=240, n_per=2,
-                        disk2_mode='normal_mode',
-                        plot=None,
-                        Actual_D=None):
-
+def timedistancediagram(
+    speed,
+    angles,
+    disk2_pos,
+    D,
+    SC2_full_open=240,
+    n_per=2,
+    disk2_mode="normal_mode",
+    plot=None,
+    Actual_D=None,
+):
     """Draw a time-distance diagram for the chopper for Monitor 01
 
     input:
@@ -55,8 +60,8 @@ def timedistancediagram(speed, angles, disk2_pos, D,
     plot.clear()
 
     # Background color as from NICOS Monitor
-    plot.set_facecolor('#F0F0F0')
-    plot.figure.patch.set_color('#F0F0F0')
+    plot.set_facecolor("#F0F0F0")
+    plot.figure.patch.set_color("#F0F0F0")
 
     # Max value for y axis
     if Actual_D is not None:
@@ -92,7 +97,7 @@ def timedistancediagram(speed, angles, disk2_pos, D,
 
     # period limits
     for i in range(n_per + 1):
-        plot.vlines(i * per, 0, y_max, 'b', ':', lw=2)  # in ms
+        plot.vlines(i * per, 0, y_max, "b", ":", lw=2)  # in ms
 
     # beams
     t = np.linspace(-times[2], n_per * per)  # in ms
@@ -114,12 +119,12 @@ def timedistancediagram(speed, angles, disk2_pos, D,
     detection = [(D - f1[1]) / f1[0]]
 
     # wl_max
-    if disk2_mode == 'virtual_disc2_pos_6':
+    if disk2_mode == "virtual_disc2_pos_6":
         # In this case SC2 must be used. The check of disk2_mode is important
         # to prevent wrong display of wl_max
         tof = np.array([times[3], times[4]])
         pos = np.array([d_SCo, d_SC2])
-    elif disk2_mode == 'normal_mode':
+    elif disk2_mode == "normal_mode":
         if len(angles) == 6:  # SC2 pair is used
             tof = np.array([times[1], times[4]])
             pos = np.array([d_MCo, d_SC2])
@@ -142,92 +147,129 @@ def timedistancediagram(speed, angles, disk2_pos, D,
 
         # disk1: black line
         if i == -1:
-            plot.hlines(0, ip, ip + trailing_edge_MC, lw=3, label='disk 1')
+            plot.hlines(0, ip, ip + trailing_edge_MC, lw=3, label="disk 1")
         else:
             plot.hlines(0, ip, ip + trailing_edge_MC, lw=3)
 
         # disk2: blue line
         if i == -1:
-            plot.hlines(d_MCo, times[1] - trailing_edge_SC + ip,
-                        times[1] + ip, 'b', lw=3, label='disk 2')
+            plot.hlines(
+                d_MCo,
+                times[1] - trailing_edge_SC + ip,
+                times[1] + ip,
+                "b",
+                lw=3,
+                label="disk 2",
+            )
         else:
-            plot.hlines(d_MCo, times[1] - trailing_edge_SC + ip,
-                        times[1] + ip, 'b', lw=3)
+            plot.hlines(
+                d_MCo, times[1] - trailing_edge_SC + ip, times[1] + ip, "b", lw=3
+            )
 
         # disk3: green line
         if i == -1:
             plot.hlines(
-                d_SCc + 0.05, times[2] + ip, times[2] + trailing_edge_SC + ip,
-                'g', lw=3, label='disks 3 and 5')
+                d_SCc + 0.05,
+                times[2] + ip,
+                times[2] + trailing_edge_SC + ip,
+                "g",
+                lw=3,
+                label="disks 3 and 5",
+            )
         else:
             plot.hlines(
-                d_SCc + 0.05, times[2] + ip, times[2] + trailing_edge_SC + ip,
-                'g', lw=3)
+                d_SCc + 0.05, times[2] + ip, times[2] + trailing_edge_SC + ip, "g", lw=3
+            )
 
         # disk4: red line
         if i == -1:
-            plot.hlines(d_SCo, times[3] - trailing_edge_SC + ip, times[3] + ip,
-                        'r', lw=3, label='disks 4 and 6')
+            plot.hlines(
+                d_SCo,
+                times[3] - trailing_edge_SC + ip,
+                times[3] + ip,
+                "r",
+                lw=3,
+                label="disks 4 and 6",
+            )
         else:
-            plot.hlines(d_SCo, times[3] - trailing_edge_SC + ip, times[3] + ip,
-                        'r', lw=3)
+            plot.hlines(
+                d_SCo, times[3] - trailing_edge_SC + ip, times[3] + ip, "r", lw=3
+            )
 
         try:
             # disk5: green line
-            plot.hlines(d_SC2 + 0.05, times[4] + ip,
-                        times[4] + ip + trailing_edge_SC2, 'g', lw=3)
+            plot.hlines(
+                d_SC2 + 0.05,
+                times[4] + ip,
+                times[4] + ip + trailing_edge_SC2,
+                "g",
+                lw=3,
+            )
             # disk6: red line
-            plot.hlines(d_SC2, times[5] + ip - trailing_edge_SC2,
-                        times[5] + ip, 'r', lw=3)
+            plot.hlines(
+                d_SC2, times[5] + ip - trailing_edge_SC2, times[5] + ip, "r", lw=3
+            )
         except IndexError:
             # means we have no SC2!
             pass
 
         # detector (from chopper_config)
         if i == -1:
-            plot.hlines(D, *plot.get_xlim(), colors='#FFFF00', lw=4,
-                        label='detector set position')
+            plot.hlines(
+                D,
+                *plot.get_xlim(),
+                colors="#FFFF00",
+                lw=4,
+                label="detector set position",
+            )
         else:
-            plot.hlines(D, *plot.get_xlim(), colors='#FFFF00', lw=4)
+            plot.hlines(D, *plot.get_xlim(), colors="#FFFF00", lw=4)
 
         # detector (actual position)
         if Actual_D is not None:
             if i == -1:
-                plot.hlines(Actual_D, *plot.get_xlim(), colors='#FF7F39', lw=4,
-                            label='detector actual position')
+                plot.hlines(
+                    Actual_D,
+                    *plot.get_xlim(),
+                    colors="#FF7F39",
+                    lw=4,
+                    label="detector actual position",
+                )
             else:
-                plot.hlines(Actual_D, *plot.get_xlim(), colors='#FF7F39', lw=4)
+                plot.hlines(Actual_D, *plot.get_xlim(), colors="#FF7F39", lw=4)
 
-        plot.plot(t + ip, beam2, 'b')
-        plot.plot(t + ip, beam3, 'r')
+        plot.plot(t + ip, beam2, "b")
+        plot.plot(t + ip, beam3, "r")
 
-    plot.set_xlim(0, (n_per + .2) * per)
+    plot.set_xlim(0, (n_per + 0.2) * per)
     plot.set_ylim(0, y_max)
 
-    detect_st = 'First n.: '
+    detect_st = "First n.: "
     for el in detection:
-        detect_st += '%s ' % round(el, 1)
+        detect_st += "%s " % round(el, 1)
         elcorr = np.mod(el, per)
 
         if elcorr != el:
-            detect_st += '(%s ms)' % round(elcorr, 1)
+            detect_st += "(%s ms)" % round(elcorr, 1)
 
-        detect_st += ' , Last n. : '
+        detect_st += " , Last n. : "
     detect_st = detect_st[:-10]
 
-    title = 'Angles : %s (deg) at %.0f speed\n%s' % (
-        angles.round(2), speed, detect_st)
+    title = "Angles : %s (deg) at %.0f speed\n%s" % (angles.round(2), speed, detect_st)
 
-    plot.set_title(title, fontsize='x-small')
-    plot.set_xlabel('Time since start signal / ms')
-    plot.set_ylabel('Distance from master chopper / m')
-    plot.legend(loc='upper center', ncol=6, borderaxespad=0.)
-    plot.figure.suptitle(' ', fontsize=16, fontweight='bold')
+    plot.set_title(title, fontsize="x-small")
+    plot.set_xlabel("Time since start signal / ms")
+    plot.set_ylabel("Distance from master chopper / m")
+    plot.legend(loc="upper center", ncol=6, borderaxespad=0.0)
+    plot.figure.suptitle(" ", fontsize=16, fontweight="bold")
     if Actual_D is not None:
         # possible frame overlap. The warning is raised by using a orange frame
         # and a text on top of the plot
         if Actual_D > D:
-            plot.set_facecolor('orange')
+            plot.set_facecolor("orange")
             plot.figure.suptitle(
-                'POSSIBLE FRAME OVERLAP. CHECK CHOPPER SETTINGS', fontsize=16,
-                fontweight='bold', color='orange')
+                "POSSIBLE FRAME OVERLAP. CHECK CHOPPER SETTINGS",
+                fontsize=16,
+                fontweight="bold",
+                color="orange",
+            )

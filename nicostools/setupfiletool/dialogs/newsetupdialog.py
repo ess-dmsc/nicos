@@ -23,31 +23,40 @@
 
 from os import path
 
-from nicos.guisupport.qt import QDialog, QRegularExpression, \
-    QRegularExpressionValidator, uic
+from nicos.guisupport.qt import (
+    QDialog,
+    QRegularExpression,
+    QRegularExpressionValidator,
+    uic,
+)
 
 
 class NewSetupDialog(QDialog):
     def __init__(self, instruments, instrument=None, parent=None):
         QDialog.__init__(self, parent)
-        uic.loadUi(path.abspath(path.join(path.dirname(__file__),
-                                          '..',
-                                          'ui',
-                                          'dialogs',
-                                          'newsetupdialog.ui')), self)
+        uic.loadUi(
+            path.abspath(
+                path.join(
+                    path.dirname(__file__), "..", "ui", "dialogs", "newsetupdialog.ui"
+                )
+            ),
+            self,
+        )
         self.setInstruments(instruments)
         if instrument:
             self.setCurrentInstrument(instrument)
             self.comboBoxInstrument.setDisabled(True)
-        self.lineEditFileName.setValidator(QRegularExpressionValidator(
-            QRegularExpression('[A-Za-z_]{1}[A-Za-z0-9_]*')))
+        self.lineEditFileName.setValidator(
+            QRegularExpressionValidator(QRegularExpression("[A-Za-z_]{1}[A-Za-z0-9_]*"))
+        )
 
     def setInstruments(self, instruments):
         self.comboBoxInstrument.addItems(sorted(instruments))
 
     def setCurrentInstrument(self, instrument):
         self.comboBoxInstrument.setCurrentIndex(
-            self.comboBoxInstrument.findText(instrument))
+            self.comboBoxInstrument.findText(instrument)
+        )
 
     def currentInstrument(self):
         return self.comboBoxInstrument.currentText()

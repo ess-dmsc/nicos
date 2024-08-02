@@ -32,12 +32,21 @@ Generate data with and without noise and check the fit results
 import numpy as np
 import pytest
 
-from nicos.utils.fitting import CosineFit, ExponentialFit, GaussFit, \
-    LinearFit, LorentzFit, PearsonVIIFit, PolyFit, PseudoVoigtFit, \
-    SigmoidFit, TcFit
+from nicos.utils.fitting import (
+    CosineFit,
+    ExponentialFit,
+    GaussFit,
+    LinearFit,
+    LorentzFit,
+    PearsonVIIFit,
+    PolyFit,
+    PseudoVoigtFit,
+    SigmoidFit,
+    TcFit,
+)
 
 
-@pytest.fixture(scope='function')
+@pytest.fixture(scope="function")
 def fitconf(request):
     fitclass = request.param[0]
     fitparams = request.param[1]
@@ -49,32 +58,41 @@ def fitconf(request):
 
 
 def idfn(val):
-    idstr = val[0].__name__ + ': '
+    idstr = val[0].__name__ + ": "
     idstr += str(val[1])
-    idstr += ' add. pars: ' + str(val[2]) if val[2] else ''
+    idstr += " add. pars: " + str(val[2]) if val[2] else ""
     return idstr
 
 
-@pytest.mark.parametrize('fitconf', [
-    (LinearFit, {'m': 1, 't': 0}, None),
-    (LinearFit, {'m': 2, 't': 1}, None),
-    (LinearFit, {'m': -2, 't': 1}, None),
-    (LinearFit, {'m': 2, 't': -1}, None),
-    (PolyFit, {'a0': 1, 'a1': 0}, {'n': 1}),
-    (PolyFit, {'a0': 1, 'a1': 2}, {'n': 1}),
-    (PolyFit, {'a0': 1, 'a1': 2, 'a2': 2}, {'n': 2}),
-    (PolyFit, {'a0': 1, 'a1': 2, 'a2': 0.5, 'a3': 3}, {'n': 3}),
-    (GaussFit, {'x0': 2, 'A': 1, 'fwhm': 0.4, 'B': 0}, None),
-    (SigmoidFit, {'a': 1, 'b': 20, 'x0': 4, 'c': 0.5}, None),
-    (SigmoidFit, {'a': 10, 'b': -2, 'x0': 4, 'c': 0.5}, None),
-    (TcFit, {'B': 2, 'A': 15, 'Tc': 3, 'alpha': .3}, None),
-    (TcFit, {'B': 2, 'A': 15, 'Tc': 3, 'alpha': 1.3}, None),
-    (PearsonVIIFit, {'B': 1., 'A': 10., 'x0': 3., 'hwhm': 0.5, 'm': 3.}, None),
-    (PseudoVoigtFit, {'B': 1., 'A': 20., 'x0': 4., 'hwhm': .3, 'eta': .3}, None),
-    (CosineFit, {'A': 20, 'f': .5, 'x0': 2, 'B': .5}, None),
-    (ExponentialFit, {'b': -0.3, 'x0': 5}, None),
-    (LorentzFit, {'x0': 2, 'A': 1, 'fwhm': 0.5, 'B': 0}, None),
-    ], indirect=['fitconf'], ids=idfn)
+@pytest.mark.parametrize(
+    "fitconf",
+    [
+        (LinearFit, {"m": 1, "t": 0}, None),
+        (LinearFit, {"m": 2, "t": 1}, None),
+        (LinearFit, {"m": -2, "t": 1}, None),
+        (LinearFit, {"m": 2, "t": -1}, None),
+        (PolyFit, {"a0": 1, "a1": 0}, {"n": 1}),
+        (PolyFit, {"a0": 1, "a1": 2}, {"n": 1}),
+        (PolyFit, {"a0": 1, "a1": 2, "a2": 2}, {"n": 2}),
+        (PolyFit, {"a0": 1, "a1": 2, "a2": 0.5, "a3": 3}, {"n": 3}),
+        (GaussFit, {"x0": 2, "A": 1, "fwhm": 0.4, "B": 0}, None),
+        (SigmoidFit, {"a": 1, "b": 20, "x0": 4, "c": 0.5}, None),
+        (SigmoidFit, {"a": 10, "b": -2, "x0": 4, "c": 0.5}, None),
+        (TcFit, {"B": 2, "A": 15, "Tc": 3, "alpha": 0.3}, None),
+        (TcFit, {"B": 2, "A": 15, "Tc": 3, "alpha": 1.3}, None),
+        (PearsonVIIFit, {"B": 1.0, "A": 10.0, "x0": 3.0, "hwhm": 0.5, "m": 3.0}, None),
+        (
+            PseudoVoigtFit,
+            {"B": 1.0, "A": 20.0, "x0": 4.0, "hwhm": 0.3, "eta": 0.3},
+            None,
+        ),
+        (CosineFit, {"A": 20, "f": 0.5, "x0": 2, "B": 0.5}, None),
+        (ExponentialFit, {"b": -0.3, "x0": 5}, None),
+        (LorentzFit, {"x0": 2, "A": 1, "fwhm": 0.5, "B": 0}, None),
+    ],
+    indirect=["fitconf"],
+    ids=idfn,
+)
 def test_fit(fitconf):
     fitter = fitconf[0]
     xdata = fitconf[1]

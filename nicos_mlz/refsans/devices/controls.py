@@ -27,21 +27,32 @@ import operator
 from time import monotonic
 
 from nicos import session
-from nicos.core import SIMULATION, Moveable, NicosError, NicosTimeoutError, \
-    Readable, status
+from nicos.core import (
+    SIMULATION,
+    Moveable,
+    NicosError,
+    NicosTimeoutError,
+    Readable,
+    status,
+)
 from nicos.core.params import Attach, Param, floatrange, oneof
 from nicos.devices.generic.sequence import BaseSequencer, SeqDev, SequenceItem
 
 
 class SeqWaitConditional(SequenceItem):
-
-    def __init__(self, dev, timeout, limit=40, limittype='max', reason=''):
-        oneof('min', 'max')(limittype)
-        SequenceItem.__init__(self, dev=dev, limit=limit, reason=reason,
-                              timeout=timeout, limittype=limittype)
+    def __init__(self, dev, timeout, limit=40, limittype="max", reason=""):
+        oneof("min", "max")(limittype)
+        SequenceItem.__init__(
+            self,
+            dev=dev,
+            limit=limit,
+            reason=reason,
+            timeout=timeout,
+            limittype=limittype,
+        )
         self.opmap = {
-            'max': ('<', operator.lt),
-            'min': ('>', operator.gt),
+            "max": ("<", operator.lt),
+            "min": (">", operator.gt),
         }
 
         self.stopflag = False
@@ -59,43 +70,54 @@ class SeqWaitConditional(SequenceItem):
         value = self.dev.read(0)
         if self.opmap[self.limittype][1](value, self.limit):
             log = self.dev.log.info if self.waiting else self.dev.log.debug
-            log('%s %s %s continue', self.dev.format(value),
+            log(
+                "%s %s %s continue",
+                self.dev.format(value),
                 self.opmap[self.limittype][0],
-                self.dev.format(self.limit, True))
+                self.dev.format(self.limit, True),
+            )
             return True
         if self.stopflag:
-            raise NicosError('Stop received: Waiting aborted')
+            raise NicosError("Stop received: Waiting aborted")
         if monotonic() < self.endtime:
-            compstr = '<=' if self.limittype == 'max' else '>='
+            compstr = "<=" if self.limittype == "max" else ">="
             self.dev.log.info(
-                '%s %s %s, timeout in: %.1f min', self.dev.format(value),
-                compstr, self.dev.format(self.limit, True),
-                (self.endtime - monotonic()) / 60)
+                "%s %s %s, timeout in: %.1f min",
+                self.dev.format(value),
+                compstr,
+                self.dev.format(self.limit, True),
+                (self.endtime - monotonic()) / 60,
+            )
             session.delay(1)
             self.waiting = True
             return False
-        raise NicosTimeoutError(
-            f'{self.reason} after {self.timeout/60:.1f} min')
+        raise NicosTimeoutError(f"{self.reason} after {self.timeout/60:.1f} min")
 
     def stop(self):
         self.stopflag = True
 
 
 class TemperatureControlled(BaseSequencer):
-
     attached_devices = {
-        'device': Attach('main device', Moveable),
-        'temperature': Attach('temperature reading device', Readable),
+        "device": Attach("main device", Moveable),
+        "temperature": Attach("temperature reading device", Readable),
     }
 
     parameters = {
-        'maxtemp': Param('maximum temperature to move device',
-                         type=floatrange(0), default=40),
-        'timeout': Param('Maximum time to wait until temperature is below the '
-                         'maximum temperature',
-                         type=floatrange(0), default=20, unit='min',
-                         fmtstr='%.1f',
-                         settable=True, mandatory=False, chatty=True),
+        "maxtemp": Param(
+            "maximum temperature to move device", type=floatrange(0), default=40
+        ),
+        "timeout": Param(
+            "Maximum time to wait until temperature is below the "
+            "maximum temperature",
+            type=floatrange(0),
+            default=20,
+            unit="min",
+            fmtstr="%.1f",
+            settable=True,
+            mandatory=False,
+            chatty=True,
+        ),
     }
 
     def doRead(self, maxage=0):
@@ -113,8 +135,10 @@ class TemperatureControlled(BaseSequencer):
     def _generateSequence(self, target):
         return [
             SeqWaitConditional(
-                self._attached_temperature, self.timeout * 60,
+                self._attached_temperature,
+                self.timeout * 60,
                 limit=self.maxtemp,
-                reason=f'HW temperature is still above {self.maxtemp} degC'),
+                reason=f"HW temperature is still above {self.maxtemp} degC",
+            ),
             SeqDev(self._attached_device, target, True),
         ]

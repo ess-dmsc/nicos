@@ -38,38 +38,47 @@ from nicos.core.utils import multiStop
 
 class CounterRotatingMotor(Moveable):
     attached_devices = {
-        'master': Attach('Master Motor', Moveable),
-        'slave': Attach('Slave Motor', Moveable)}
+        "master": Attach("Master Motor", Moveable),
+        "slave": Attach("Slave Motor", Moveable),
+    }
 
     parameters = {
-        'slave_offset': Param('offset of master against slave',
-                              type=float,
-                              settable=True,
-                              userparam=False,
-                              prefercache=True,
-                              internal=True),
-        'old_target': Param('the last known target value',
-                            type=float,
-                            settable=True,
-                            userparam=False,
-                            prefercache=True,
-                            internal=True), }
+        "slave_offset": Param(
+            "offset of master against slave",
+            type=float,
+            settable=True,
+            userparam=False,
+            prefercache=True,
+            internal=True,
+        ),
+        "old_target": Param(
+            "the last known target value",
+            type=float,
+            settable=True,
+            userparam=False,
+            prefercache=True,
+            internal=True,
+        ),
+    }
 
     def doInit(self, mode):
-        self._offset = self._attached_master.read(0)\
-                       - self._attached_slave.read(0) - 2. * self.old_target
+        self._offset = (
+            self._attached_master.read(0)
+            - self._attached_slave.read(0)
+            - 2.0 * self.old_target
+        )
 
     def _calcNewPos(self, pos):
-        """"
-         Motors can be moved individually, therefore recalculate
-         the offset. What we want is that the motors move by the
-         same amount in opposite directions to each other. Errors
-         moving the motors go into the offset and are corrected by the
-         instrument use rby moving motors individually.
+        """ "
+        Motors can be moved individually, therefore recalculate
+        the offset. What we want is that the motors move by the
+        same amount in opposite directions to each other. Errors
+        moving the motors go into the offset and are corrected by the
+        instrument use rby moving motors individually.
         """
         master_pos = self._attached_master.read(0)
         slave_pos = self._attached_slave.read(0)
-        self.slave_offset = master_pos - slave_pos - 2. * self.old_target
+        self.slave_offset = master_pos - slave_pos - 2.0 * self.old_target
         diff = pos - self.old_target
         master_pos = master_pos + diff
         slave_pos = slave_pos - diff
@@ -79,11 +88,11 @@ class CounterRotatingMotor(Moveable):
         master_pos, slave_pos = self._calcNewPos(pos)
         ok, why = self._attached_master.isAllowed(master_pos)
         if not ok:
-            return False, '%d violates limit of master motor: %s' % (pos, why)
+            return False, "%d violates limit of master motor: %s" % (pos, why)
         ok, why = self._attached_slave.isAllowed(slave_pos)
         if not ok:
-            return False, '%d violates limit of slave motor: %s' % (pos, why)
-        return True, ''
+            return False, "%d violates limit of slave motor: %s" % (pos, why)
+        return True, ""
 
     def doStart(self, target):
         master_pos, slave_pos = self._calcNewPos(target)
@@ -92,8 +101,10 @@ class CounterRotatingMotor(Moveable):
         self.old_target = target
 
     def doRead(self, maxage=0):
-        return ((self._attached_master.read(0)
-                 - self.slave_offset) - self._attached_slave.read(0)) / 2.
+        return (
+            (self._attached_master.read(0) - self.slave_offset)
+            - self._attached_slave.read(0)
+        ) / 2.0
 
     def doStop(self):
         multiStop(self._adevs)

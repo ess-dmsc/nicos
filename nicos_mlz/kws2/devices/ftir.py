@@ -26,8 +26,17 @@
 from time import time as currenttime
 
 from nicos import session
-from nicos.core import Attach, Measurable, Moveable, NicosTimeoutError, \
-    Param, Readable, Value, listof, status
+from nicos.core import (
+    Attach,
+    Measurable,
+    Moveable,
+    NicosTimeoutError,
+    Param,
+    Readable,
+    Value,
+    listof,
+    status,
+)
 
 BUSY = 1
 READY = 2
@@ -39,16 +48,19 @@ class FTIRSpectro(Measurable):
     hardware_access = True
 
     attached_devices = {
-        'trigger_out': Attach('Output to start the FTIR', Moveable),
-        'status_in':   Attach('Input to signal status', Readable),
-        'fileno_in':   Attach('Input of file number', Readable),
-        'polarizer':   Attach('Polarizer', Moveable),
+        "trigger_out": Attach("Output to start the FTIR", Moveable),
+        "status_in": Attach("Input to signal status", Readable),
+        "fileno_in": Attach("Input of file number", Readable),
+        "polarizer": Attach("Polarizer", Moveable),
     }
 
     parameters = {
-        'polvalues': Param('Polarizer states to measure (if empty, do not '
-                           'touch polarizer)', unit='deg',
-                           type=listof(float), settable=True),
+        "polvalues": Param(
+            "Polarizer states to measure (if empty, do not " "touch polarizer)",
+            unit="deg",
+            type=listof(float),
+            settable=True,
+        ),
     }
 
     def doInit(self, mode):
@@ -60,12 +72,12 @@ class FTIRSpectro(Measurable):
         self._duration = 0
 
     def doSetPreset(self, **preset):
-        if 't' in preset:
-            self._presettime = preset['t']
+        if "t" in preset:
+            self._presettime = preset["t"]
         self._lastpreset = preset
 
     def presetInfo(self):
-        return ('t',)
+        return ("t",)
 
     def doStart(self):
         self._measuring = True
@@ -86,8 +98,10 @@ class FTIRSpectro(Measurable):
         self._measuring = False
 
     def doStatus(self, maxage=0):
-        return status.BUSY if self._measuring else status.OK, \
-            '%d done' % self._nfinished
+        return (
+            status.BUSY if self._measuring else status.OK,
+            "%d done" % self._nfinished,
+        )
 
     def doRead(self, maxage=0):
         if self._nfinished > 0:
@@ -96,8 +110,9 @@ class FTIRSpectro(Measurable):
             return [0, 0]
 
     def valueInfo(self):
-        return Value('FTIR.first', 'other', fmtstr='%d'), \
-            Value('FTIR.last', 'other', fmtstr='%d')
+        return Value("FTIR.first", "other", fmtstr="%d"), Value(
+            "FTIR.last", "other", fmtstr="%d"
+        )
 
     def _wait_for(self, sig, name):
         i = 0
@@ -105,18 +120,19 @@ class FTIRSpectro(Measurable):
             session.delay(0.1)
             i += 1
             if i == 100:
-                raise NicosTimeoutError(self, 'timeout waiting for %s '
-                                        'signal from spectrometer' % name)
+                raise NicosTimeoutError(
+                    self, "timeout waiting for %s " "signal from spectrometer" % name
+                )
 
     def _start_measurement(self):
-        self.log.debug('starting new FTIR measurement')
+        self.log.debug("starting new FTIR measurement")
         # wait for READY signal - otherwise no measurement is planned
-        self._wait_for(READY, 'READY')
+        self._wait_for(READY, "READY")
         # a \_/ flank is needed to trigger start
         self._attached_trigger_out.start(0)
         session.delay(0.05)
         self._attached_trigger_out.start(1)
-        self._wait_for(BUSY, 'BUSY')
+        self._wait_for(BUSY, "BUSY")
 
     def duringMeasureHook(self, elapsed):
         if self._pol_move:
@@ -136,14 +152,14 @@ class FTIRSpectro(Measurable):
             self._duration = currenttime() - self._started
         # if we have less than an approximate duration to go, stop
         if currenttime() > self._started + self._presettime - self._duration:
-            self.log.info('made %d FTIR measurement(s)', self._nfinished)
+            self.log.info("made %d FTIR measurement(s)", self._nfinished)
             self._measuring = False
             return
         # move to next polarizer position if wanted, else start measuring
         if self.polvalues:
             polvalue = self.polvalues[self._polindex % len(self.polvalues)]
             self._polindex += 1
-            self.log.debug('moving polarizer to %s', polvalue)
+            self.log.debug("moving polarizer to %s", polvalue)
             self._pol_move = True
             self._attached_polarizer.start(polvalue)
         else:

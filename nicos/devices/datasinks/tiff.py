@@ -24,8 +24,11 @@
 import numpy
 
 from nicos.core import NicosError, Override, Param
-from nicos.devices.datasinks.image import ImageFileReader, ImageSink, \
-    SingleFileSinkHandler
+from nicos.devices.datasinks.image import (
+    ImageFileReader,
+    ImageSink,
+    SingleFileSinkHandler,
+)
 
 try:
     import PIL
@@ -36,13 +39,12 @@ except ImportError as e:
 
 
 class TIFFImageSinkHandler(SingleFileSinkHandler):
-
-    filetype = 'tiff'
+    filetype = "tiff"
     defer_file_creation = True
     accept_final_images_only = True
 
     def writeData(self, fp, image):
-        Image.fromarray(numpy.array(image), self.sink.mode).save(fp, 'TIFF')
+        Image.fromarray(numpy.array(image), self.sink.mode).save(fp, "TIFF")
 
 
 class TIFFImageSink(ImageSink):
@@ -52,12 +54,13 @@ class TIFFImageSink(ImageSink):
     """
 
     parameters = {
-        'mode': Param('Image mode (PIL format)', type=str, default='I;16',
-                      settable=True),
+        "mode": Param(
+            "Image mode (PIL format)", type=str, default="I;16", settable=True
+        ),
     }
 
     parameter_overrides = {
-        'filenametemplate': Override(default=['%(pointcounter)08d.tiff'])
+        "filenametemplate": Override(default=["%(pointcounter)08d.tiff"])
     }
 
     handlerclass = TIFFImageSinkHandler
@@ -67,9 +70,12 @@ class TIFFImageSink(ImageSink):
         # PIL is not available.
         if PIL is None:
             self.log.error(_import_error)
-            raise NicosError(self, 'The Python Image Library (PIL) is not '
-                             'available. Please check whether it is installed '
-                             'and in your PYTHONPATH')
+            raise NicosError(
+                self,
+                "The Python Image Library (PIL) is not "
+                "available. Please check whether it is installed "
+                "and in your PYTHONPATH",
+            )
 
     def isActiveForArray(self, arraydesc):
         return len(arraydesc.shape) == 2
@@ -77,16 +83,18 @@ class TIFFImageSink(ImageSink):
 
 class TIFFFileReader(ImageFileReader):
     filetypes = [
-        ('tiff', 'TIFF File (*.tiff *.tif)'),
+        ("tiff", "TIFF File (*.tiff *.tif)"),
     ]
 
     @classmethod
     def fromfile(cls, filename):
         if PIL is None:
-            raise NicosError('%s: The Python Image Library (PIL) is not '
-                             'available. Please check whether it is installed '
-                             'and in your PYTHONPATH' % _import_error)
+            raise NicosError(
+                "%s: The Python Image Library (PIL) is not "
+                "available. Please check whether it is installed "
+                "and in your PYTHONPATH" % _import_error
+            )
         with Image.open(filename) as im:
-            if im.getbands() in ('I', ('I',)):  # single band == gray picture
+            if im.getbands() in ("I", ("I",)):  # single band == gray picture
                 return numpy.asarray(im)
-            raise NicosError('Only monochrome pictures supported')
+            raise NicosError("Only monochrome pictures supported")

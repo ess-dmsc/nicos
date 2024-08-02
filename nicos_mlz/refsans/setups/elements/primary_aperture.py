@@ -1,7 +1,7 @@
-description = 'alias for the first aperture in the optic'
+description = "alias for the first aperture in the optic"
 
-group = 'lowlevel'
+group = "lowlevel"
 
 devices = dict(
-    primary_aperture = device('nicos.devices.generic.DeviceAlias'),
+    primary_aperture=device("nicos.devices.generic.DeviceAlias"),
 )

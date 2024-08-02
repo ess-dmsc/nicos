@@ -26,8 +26,13 @@ This module contains EPICS and detector integration.
 
 from nicos.core import Override, Param, pvname
 from nicos.devices.epics.pyepics import EpicsDevice
-from nicos.devices.generic.detector import ActiveChannel, \
-    CounterChannelMixin, Detector, PassiveChannel, TimerChannelMixin
+from nicos.devices.generic.detector import (
+    ActiveChannel,
+    CounterChannelMixin,
+    Detector,
+    PassiveChannel,
+    TimerChannelMixin,
+)
 
 from nicos_sinq.devices.epics.base import EpicsReadableSinq
 
@@ -53,27 +58,28 @@ class EpicsActiveChannel(EpicsReadableSinq, ActiveChannel):
     """
 
     parameters = {
-        'presetpv':
-            Param('PV to set the preset for the count',
-                  type=pvname,
-                  mandatory=True,
-                  settable=False,
-                  userparam=False),
+        "presetpv": Param(
+            "PV to set the preset for the count",
+            type=pvname,
+            mandatory=True,
+            settable=False,
+            userparam=False,
+        ),
     }
 
     parameter_overrides = {
-        'preselection': Override(volatile=True),
+        "preselection": Override(volatile=True),
     }
 
     def _get_pv_parameters(self):
         readable_params = EpicsReadableSinq._get_pv_parameters(self)
-        return readable_params | {'presetpv'}
+        return readable_params | {"presetpv"}
 
     def doReadPreselection(self):
-        return self._get_pv('presetpv')
+        return self._get_pv("presetpv")
 
     def doWritePreselection(self, preselection):
-        self._put_pv_blocking('presetpv', preselection)
+        self._put_pv_blocking("presetpv", preselection)
 
 
 class EpicsCounterPassiveChannel(CounterChannelMixin, EpicsPassiveChannel):
@@ -112,15 +118,12 @@ class EpicsDetector(EpicsDevice, Detector):
     """
 
     parameters = {
-        'startpv':
-            Param('PV to start the counting',
-                  type=pvname,
-                  mandatory=True,
-                  userparam=False),
-        'pausepv':
-            Param('Optional PV to pause the counting',
-                  type=pvname,
-                  userparam=False),
+        "startpv": Param(
+            "PV to start the counting", type=pvname, mandatory=True, userparam=False
+        ),
+        "pausepv": Param(
+            "Optional PV to pause the counting", type=pvname, userparam=False
+        ),
     }
 
     def doPreinit(self, mode):
@@ -128,10 +131,10 @@ class EpicsDetector(EpicsDevice, Detector):
         Detector.doPreinit(self, mode)
 
     def _get_pv_parameters(self):
-        pvs = {'startpv'}
+        pvs = {"startpv"}
 
         if self.pausepv:
-            pvs.add('pausepv')
+            pvs.add("pausepv")
 
         return pvs
 
@@ -139,42 +142,40 @@ class EpicsDetector(EpicsDevice, Detector):
         # First start all the channels (if applicable) and then
         # set the detector startpv
         Detector.doStart(self)
-        self._put_pv('startpv', 1, wait=True)
+        self._put_pv("startpv", 1, wait=True)
 
     def doPause(self):
         Detector.doPause(self)
         if self.pausepv:
-            paused = self._get_pv('pausepv')
+            paused = self._get_pv("pausepv")
             if paused != 1:
-                self._put_pv('pausepv', 1)
+                self._put_pv("pausepv", 1)
             else:
-                self.log.info('Device is already paused.')
+                self.log.info("Device is already paused.")
         else:
-            self.log.warning(
-                'Cant pause, provide pausepv parameter for this to work')
+            self.log.warning("Cant pause, provide pausepv parameter for this to work")
 
     def doResume(self):
         Detector.doResume(self)
         if self.pausepv:
-            paused = self._get_pv('pausepv')
+            paused = self._get_pv("pausepv")
             if paused != 0:
-                self._put_pv('pausepv', 0)
+                self._put_pv("pausepv", 0)
             else:
-                self.log.info('Device is not paused.')
+                self.log.info("Device is not paused.")
         else:
-            self.log.warning(
-                'Cant resume, provide pausepv parameter for this to work')
+            self.log.warning("Cant resume, provide pausepv parameter for this to work")
 
     def doFinish(self):
         # After setting the startpv to 0
         # finish all the channels
-        self._put_pv('startpv', 0, wait=False)
+        self._put_pv("startpv", 0, wait=False)
         Detector.doFinish(self)
 
     def doStop(self):
         # After setting the startpv to 0
         # stop all the channels
-        self._put_pv('startpv', 0, wait=False)
+        self._put_pv("startpv", 0, wait=False)
         Detector.doStop(self)
 
     def doStatus(self, maxage=0):

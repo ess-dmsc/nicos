@@ -29,15 +29,18 @@ from nicos_mlz.jcns.devices.shutter import CLOSED, OPEN
 
 
 class MariaDetector(Detector):
-
     attached_devices = {
         "shutter": Attach("Shutter to open before exposure", Moveable),
     }
 
     parameters = {
-        "ctrl_shutter": Param("Open shutter automatically before "
-                              "exposure?", type=bool, settable=True,
-                              mandatory=False, default=True),
+        "ctrl_shutter": Param(
+            "Open shutter automatically before " "exposure?",
+            type=bool,
+            settable=True,
+            mandatory=False,
+            default=True,
+        ),
     }
 
     def doStart(self):
@@ -49,8 +52,9 @@ class MariaDetector(Detector):
     def doFinish(self):
         Detector.doFinish(self)
         if self.ctrl_shutter and self._attached_shutter.read() == CLOSED:
-            raise InvalidValueError(self, 'shutter not open after exposure, '
-                                    'check safety system')
+            raise InvalidValueError(
+                self, "shutter not open after exposure, " "check safety system"
+            )
 
     def _getWaiters(self):
         adevs = dict(self._adevs)

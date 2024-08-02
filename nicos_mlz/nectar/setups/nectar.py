@@ -1,4 +1,4 @@
-description = 'Basic Setup for NECTAR'
-group = 'basic'
+description = "Basic Setup for NECTAR"
+group = "basic"
 
-includes = ['reactor', 'servostar', 'ubahn']
+includes = ["reactor", "servostar", "ubahn"]

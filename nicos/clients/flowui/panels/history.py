@@ -24,14 +24,20 @@ import os
 
 from nicos.clients.flowui import uipath
 from nicos.clients.flowui.panels import get_icon
-from nicos.clients.gui.panels.history import \
-    HistoryPanel as DefaultHistoryPanel
-from nicos.guisupport.qt import QActionGroup, QCheckBox, QComboBox, QFrame, \
-    QHBoxLayout, QToolBar, QWidgetAction
+from nicos.clients.gui.panels.history import HistoryPanel as DefaultHistoryPanel
+from nicos.guisupport.qt import (
+    QActionGroup,
+    QCheckBox,
+    QComboBox,
+    QFrame,
+    QHBoxLayout,
+    QToolBar,
+    QWidgetAction,
+)
 
 
 class HistoryPanel(DefaultHistoryPanel):
-    ui = os.path.join(uipath, 'panels', 'ui_files',  'history.ui')
+    ui = os.path.join(uipath, "panels", "ui_files", "history.ui")
 
     def __init__(self, parent, client, options):
         DefaultHistoryPanel.__init__(self, parent, client, options)
@@ -39,7 +45,7 @@ class HistoryPanel(DefaultHistoryPanel):
         self.set_icons()
 
     def setPanelToolbar(self):
-        bar = QToolBar('History viewer')
+        bar = QToolBar("History viewer")
         bar.addAction(self.actionNew)
         bar.addAction(self.actionEditView)
         bar.addSeparator()
@@ -60,7 +66,7 @@ class HistoryPanel(DefaultHistoryPanel):
         bar.addAction(self.actionFitPeak)
         wa = QWidgetAction(bar)
         self.fitPickCheckbox = QCheckBox(bar)
-        self.fitPickCheckbox.setText('Pick')
+        self.fitPickCheckbox.setText("Pick")
         self.fitPickCheckbox.setChecked(True)
         self.actionPickInitial.setChecked(True)
         self.fitPickCheckbox.toggled.connect(self.actionPickInitial.setChecked)
@@ -85,11 +91,12 @@ class HistoryPanel(DefaultHistoryPanel):
         wa = QWidgetAction(bar)
         self.fitComboBox = QComboBox(bar)
         for a in ag.actions():
-            itemtext = a.text().replace('&', '')
+            itemtext = a.text().replace("&", "")
             self.fitComboBox.addItem(itemtext)
             self.fitfuncmap[itemtext] = a
         self.fitComboBox.currentIndexChanged.connect(
-            self.on__fitComboBox_currentIndexChanged)
+            self.on__fitComboBox_currentIndexChanged
+        )
         wa.setDefaultWidget(self.fitComboBox)
         bar.addAction(wa)
         bar.addSeparator()
@@ -99,12 +106,12 @@ class HistoryPanel(DefaultHistoryPanel):
         return bar
 
     def set_icons(self):
-        self.actionNew.setIcon(get_icon('add_circle_outline-24px.svg'))
-        self.actionEditView.setIcon(get_icon('edit-24px.svg'))
-        self.actionSavePlot.setIcon(get_icon('save-24px.svg'))
-        self.actionPrint.setIcon(get_icon('print-24px.svg'))
-        self.actionUnzoom.setIcon(get_icon('zoom_out-24px.svg'))
-        self.actionSaveData.setIcon(get_icon('archive-24px.svg'))
+        self.actionNew.setIcon(get_icon("add_circle_outline-24px.svg"))
+        self.actionEditView.setIcon(get_icon("edit-24px.svg"))
+        self.actionSavePlot.setIcon(get_icon("save-24px.svg"))
+        self.actionPrint.setIcon(get_icon("print-24px.svg"))
+        self.actionUnzoom.setIcon(get_icon("zoom_out-24px.svg"))
+        self.actionSaveData.setIcon(get_icon("archive-24px.svg"))
 
     def getToolbars(self):
         return []

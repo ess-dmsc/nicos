@@ -34,6 +34,6 @@ class CrappySensor(Sensor):
 
     def doStatus(self, maxage=0):
         stval, st = Sensor.doStatus(self, maxage)
-        if stval == status.WARN and st == 'low':
-            return status.OK, 'below sensor threshold'
+        if stval == status.WARN and st == "low":
+            return status.OK, "below sensor threshold"
         return stval, st

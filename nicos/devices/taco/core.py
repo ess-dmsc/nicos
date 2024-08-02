@@ -29,28 +29,45 @@ import TACOStates  # pylint: disable=import-error
 from TACOClient import TACOError  # pylint: disable=import-error
 
 from nicos import session
-from nicos.core import SIMULATION, CommunicationError, HasCommunication, \
-    InvalidValueError, LimitError, NicosError, Override, Param, \
-    ProgrammingError, floatrange, status, tacodev
+from nicos.core import (
+    SIMULATION,
+    CommunicationError,
+    HasCommunication,
+    InvalidValueError,
+    LimitError,
+    NicosError,
+    Override,
+    Param,
+    ProgrammingError,
+    floatrange,
+    status,
+    tacodev,
+)
 from nicos.utils import HardwareStub
 
 try:
-    from TACOErrors import DevErr_ExecutionDenied, DevErr_InternalError, \
-        DevErr_InvalidValue, DevErr_IOError, DevErr_RangeError, \
-        DevErr_RuntimeError, DevErr_SystemError
+    from TACOErrors import (
+        DevErr_ExecutionDenied,
+        DevErr_InternalError,
+        DevErr_InvalidValue,
+        DevErr_IOError,
+        DevErr_RangeError,
+        DevErr_RuntimeError,
+        DevErr_SystemError,
+    )
 except ImportError:
     DevErr_ExecutionDenied = 4010
-    DevErr_RangeError      = 4017
-    DevErr_InvalidValue    = 4018
-    DevErr_RuntimeError    = 4019
-    DevErr_InternalError   = 4020
-    DevErr_IOError         = 4024
-    DevErr_SystemError     = 4025
+    DevErr_RangeError = 4017
+    DevErr_InvalidValue = 4018
+    DevErr_RuntimeError = 4019
+    DevErr_InternalError = 4020
+    DevErr_IOError = 4024
+    DevErr_SystemError = 4025
 
 try:
     from DEVERRORS import DevErr_RPCTimedOut
 except ImportError:
-    DevErr_RPCTimedOut     = 2
+    DevErr_RPCTimedOut = 2
 
 
 class TacoDevice(HasCommunication):
@@ -98,33 +115,39 @@ class TacoDevice(HasCommunication):
     """
 
     parameters = {
-        'tacodevice':  Param('TACO device name', type=tacodev, mandatory=True,
-                             preinit=True),
-        'tacotimeout': Param('TACO network timeout for this process',
-                             unit='s', type=floatrange(0.0, 1200), default=3,
-                             settable=True, preinit=True),
+        "tacodevice": Param(
+            "TACO device name", type=tacodev, mandatory=True, preinit=True
+        ),
+        "tacotimeout": Param(
+            "TACO network timeout for this process",
+            unit="s",
+            type=floatrange(0.0, 1200),
+            default=3,
+            settable=True,
+            preinit=True,
+        ),
     }
 
     parameter_overrides = {
         # the unit isn't mandatory -- TACO usually knows it already
-        'unit': Override(mandatory=False),
+        "unit": Override(mandatory=False),
     }
 
     _TACO_STATUS_MAPPING = {
         # OK states
         TACOStates.ON: status.OK,
-        TACOStates.DEVICE_NORMAL: (status.OK, 'idle'),
-        TACOStates.POSITIVE_ENDSTOP: (status.OK, 'limit switch +'),
-        TACOStates.NEGATIVE_ENDSTOP: (status.OK, 'limit switch -'),
-        TACOStates.STOPPED: (status.OK, 'idle or paused'),
+        TACOStates.DEVICE_NORMAL: (status.OK, "idle"),
+        TACOStates.POSITIVE_ENDSTOP: (status.OK, "limit switch +"),
+        TACOStates.NEGATIVE_ENDSTOP: (status.OK, "limit switch -"),
+        TACOStates.STOPPED: (status.OK, "idle or paused"),
         TACOStates.PRESELECTION_REACHED: status.OK,
         TACOStates.DISABLED: status.OK,
         # BUSY states
         # explicit ramp string as there seem to be some inconsistencies
-        TACOStates.RAMP: (status.BUSY, 'ramping'),
+        TACOStates.RAMP: (status.BUSY, "ramping"),
         TACOStates.MOVING: status.BUSY,
         TACOStates.STOPPING: status.BUSY,
-        TACOStates.INIT: (status.BUSY, 'initializing taco device / hardware'),
+        TACOStates.INIT: (status.BUSY, "initializing taco device / hardware"),
         TACOStates.RESETTING: status.BUSY,
         TACOStates.STOP_REQUESTED: status.BUSY,
         TACOStates.COUNTING: status.BUSY,
@@ -153,11 +176,12 @@ class TacoDevice(HasCommunication):
     _dev = None
 
     def doPreinit(self, mode):
-        if self.loglevel == 'debug':
+        if self.loglevel == "debug":
             self._taco_guard = self._taco_guard_log
         if self.taco_class is None:
-            raise ProgrammingError('missing taco_class attribute in class ' +
-                                   self.__class__.__name__)
+            raise ProgrammingError(
+                "missing taco_class attribute in class " + self.__class__.__name__
+            )
         if mode != SIMULATION:
             self._dev = self._create_client()
         else:
@@ -180,8 +204,7 @@ class TacoDevice(HasCommunication):
             self._dev = HardwareStub(self)
 
     def doVersion(self):
-        return [(self.tacodevice,
-                 self._taco_guard(self._dev.deviceVersion))]
+        return [(self.tacodevice, self._taco_guard(self._dev.deviceVersion))]
 
     def doRead(self, maxage=0):
         return self._taco_guard(self._dev.read)
@@ -206,37 +229,43 @@ class TacoDevice(HasCommunication):
 
     def doReadUnit(self):
         # explicitly configured unit has precendence
-        if 'unit' in self._config:
-            return self._config['unit']
-        if hasattr(self._dev, 'unit'):
+        if "unit" in self._config:
+            return self._config["unit"]
+        if hasattr(self._dev, "unit"):
             return self._taco_guard(self._dev.unit)
-        return self.parameters['unit'].default
+        return self.parameters["unit"].default
 
     def doWriteUnit(self, value):
-        if hasattr(self._dev, 'setUnit'):
+        if hasattr(self._dev, "setUnit"):
             self._taco_guard(self._dev.setUnit, value)
-        if 'unit' in self._config:
-            if self._config['unit'] != value:
-                self.log.warning('configured unit %r in configuration differs '
-                                 'from current unit %r',
-                                 self._config['unit'], value)
+        if "unit" in self._config:
+            if self._config["unit"] != value:
+                self.log.warning(
+                    "configured unit %r in configuration differs "
+                    "from current unit %r",
+                    self._config["unit"],
+                    value,
+                )
 
     def doUpdateTacotimeout(self, value):
         if not self._sim_intercept and self._dev:
             if value != 3.0:
-                self.log.warning('%r: client network timeout changed to: '
-                                 '%.2f s', self.tacodevice, value)
+                self.log.warning(
+                    "%r: client network timeout changed to: " "%.2f s",
+                    self.tacodevice,
+                    value,
+                )
             self._taco_guard(self._dev.setClientNetworkTimeout, value)
 
     def doUpdateLoglevel(self, value):
         super().doUpdateLoglevel(value)
-        self._taco_guard = value == 'debug' and self._taco_guard_log or \
-            self._taco_guard_nolog
+        self._taco_guard = (
+            value == "debug" and self._taco_guard_log or self._taco_guard_nolog
+        )
 
     # internal utilities
 
-    def _create_client(self, devname=None, class_=None, resetok=None,
-                       timeout=None):
+    def _create_client(self, devname=None, class_=None, resetok=None, timeout=None):
         """Create a new TACO client to the device given by *devname*, using the
         Python class *class_*.  Initialize the device in a consistent state,
         handling eventual errors.
@@ -259,39 +288,49 @@ class TacoDevice(HasCommunication):
         if timeout is None:
             timeout = self.tacotimeout
 
-        self.log.debug('creating %s TACO device', class_.__name__)
+        self.log.debug("creating %s TACO device", class_.__name__)
 
         try:
             dev = class_(devname)
             self._check_server_running(dev)
         except TACOError as err:
-            self._raise_taco(err, 'Could not connect to device %r; make sure '
-                             'the device server is running' % devname)
+            self._raise_taco(
+                err,
+                "Could not connect to device %r; make sure "
+                "the device server is running" % devname,
+            )
 
         try:
             if timeout != 0:
                 if timeout != 3.0:
-                    self.log.warning('client network timeout changed to: '
-                                     '%.2f s', timeout)
+                    self.log.warning(
+                        "client network timeout changed to: " "%.2f s", timeout
+                    )
                 dev.setClientNetworkTimeout(timeout)
         except TACOError as err:
-            self.log.warning('Setting TACO network timeout failed: '
-                             '[TACO %d] %s', err.errcode, err)
+            self.log.warning(
+                "Setting TACO network timeout failed: " "[TACO %d] %s", err.errcode, err
+            )
 
         try:
             if dev.isDeviceOff():
                 dev.deviceOn()
         except TACOError as err:
-            self.log.warning('Switching TACO device %r on failed: '
-                             '[TACO %d] %s', devname, err.errcode, err)
+            self.log.warning(
+                "Switching TACO device %r on failed: " "[TACO %d] %s",
+                devname,
+                err.errcode,
+                err,
+            )
             try:
                 if dev.deviceState() == TACOStates.FAULT:
                     if resetok:
                         dev.deviceReset()
                 dev.deviceOn()
             except TACOError as err:
-                self._raise_taco(err, 'Switching device %r on after '
-                                 'reset failed' % devname)
+                self._raise_taco(
+                    err, "Switching device %r on after " "reset failed" % devname
+                )
 
         return dev
 
@@ -300,9 +339,9 @@ class TacoDevice(HasCommunication):
 
     def _taco_guard_log(self, function, *args):
         """Like _taco_guard(), but log the call."""
-        self.log.debug('TACO call: %s%r', function.__name__, args)
+        self.log.debug("TACO call: %s%r", function.__name__, args)
         if not self._dev:
-            raise NicosError(self, 'TACO Device not initialised')
+            raise NicosError(self, "TACO Device not initialised")
         with self._com_lock:
             try:
                 ret = function(*args)
@@ -310,30 +349,40 @@ class TacoDevice(HasCommunication):
                 # for performance reasons, starting the loop and querying
                 # self.comtries only triggers in the error case
                 if self.comtries > 1 or err == DevErr_RPCTimedOut:
-                    tries = 2 if err == DevErr_RPCTimedOut and \
-                        self.comtries == 1 else self.comtries - 1
-                    self.log.warning('TACO %s failed, retrying up to %d times',
-                                     function.__name__, tries, exc=1)
+                    tries = (
+                        2
+                        if err == DevErr_RPCTimedOut and self.comtries == 1
+                        else self.comtries - 1
+                    )
+                    self.log.warning(
+                        "TACO %s failed, retrying up to %d times",
+                        function.__name__,
+                        tries,
+                        exc=1,
+                    )
                     while True:
                         session.delay(self.comdelay)
                         tries -= 1
                         try:
-                            if self.taco_resetok and \
-                               self._dev.deviceState() == TACOStates.FAULT:
+                            if (
+                                self.taco_resetok
+                                and self._dev.deviceState() == TACOStates.FAULT
+                            ):
                                 self._dev.deviceInit()
                                 session.delay(self.comdelay)
                             ret = function(*args)
-                            self.log.debug('TACO return: %r', ret)
+                            self.log.debug("TACO return: %r", ret)
                             return ret
                         except TACOError:
                             if tries == 0:
                                 break  # and fall through to _raise_taco
-                            self.log.warning('TACO %s failed again',
-                                             function.__name__, exc=True)
-                self.log.debug('TACO exception: %r', err)
+                            self.log.warning(
+                                "TACO %s failed again", function.__name__, exc=True
+                            )
+                self.log.debug("TACO exception: %r", err)
                 self._raise_taco(err)
             else:
-                self.log.debug('TACO return: %r', ret)
+                self.log.debug("TACO return: %r", ret)
                 return ret
 
     def _taco_guard_nolog(self, function, *args):
@@ -348,7 +397,7 @@ class TacoDevice(HasCommunication):
         If the `comtries` parameter is > 1, the call is retried accordingly.
         """
         if not self._dev:
-            raise NicosError(self, 'TACO device not initialised')
+            raise NicosError(self, "TACO device not initialised")
         with self._com_lock:
             try:
                 return function(*args)
@@ -356,10 +405,16 @@ class TacoDevice(HasCommunication):
                 # for performance reasons, starting the loop and querying
                 # self.comtries only triggers in the error case
                 if self.comtries > 1 or err == DevErr_RPCTimedOut:
-                    tries = 2 if err == DevErr_RPCTimedOut and \
-                        self.comtries == 1 else self.comtries - 1
-                    self.log.warning('TACO %s failed, retrying up to %d times',
-                                     function.__name__, tries)
+                    tries = (
+                        2
+                        if err == DevErr_RPCTimedOut and self.comtries == 1
+                        else self.comtries - 1
+                    )
+                    self.log.warning(
+                        "TACO %s failed, retrying up to %d times",
+                        function.__name__,
+                        tries,
+                    )
                     while True:
                         session.delay(self.comdelay)
                         tries -= 1
@@ -368,7 +423,7 @@ class TacoDevice(HasCommunication):
                         except TACOError:
                             if tries == 0:
                                 break  # and fall through to _raise_taco
-                self._raise_taco(err, '%s%r' % (function.__name__, args))
+                self._raise_taco(err, "%s%r" % (function.__name__, args))
 
     _taco_guard = _taco_guard_nolog
 
@@ -377,16 +432,16 @@ class TacoDevice(HasCommunication):
         switching the device off and on.
         """
         if not self._dev:
-            raise NicosError(self, 'TACO device not initialised')
+            raise NicosError(self, "TACO device not initialised")
         with self._com_lock:
             try:
-                self.log.debug('TACO resource update: %s %s', resname, value)
+                self.log.debug("TACO resource update: %s %s", resname, value)
                 self._dev.deviceOff()
                 self._dev.deviceUpdateResource(resname, value)
                 self._dev.deviceOn()
-                self.log.debug('TACO resource update successful')
+                self.log.debug("TACO resource update successful")
             except TACOError as err:
-                self._raise_taco(err, 'While updating %s resource' % resname)
+                self._raise_taco(err, "While updating %s resource" % resname)
 
     def _raise_taco(self, err, addmsg=None):
         """Raise a suitable NicosError for a given TACOError instance."""
@@ -405,32 +460,42 @@ class TacoDevice(HasCommunication):
             cls = LimitError
         elif code in (DevErr_InvalidValue, DevErr_ExecutionDenied):
             cls = InvalidValueError
-        elif code in (DevErr_IOError, DevErr_InternalError,
-                      DevErr_RuntimeError, DevErr_SystemError):
+        elif code in (
+            DevErr_IOError,
+            DevErr_InternalError,
+            DevErr_RuntimeError,
+            DevErr_SystemError,
+        ):
             cls = CommunicationError
-        msg = '[TACO %d] %s' % (err.errcode, err)
+        msg = "[TACO %d] %s" % (err.errcode, err)
         if addmsg is not None:
-            msg = addmsg + ': ' + msg
+            msg = addmsg + ": " + msg
         exc = cls(self, msg, tacoerr=err.errcode)
         raise exc.with_traceback(tb)
 
-    def _taco_reset(self, client, resetcall='deviceReset'):
+    def _taco_reset(self, client, resetcall="deviceReset"):
         try:
             hostname = client.getServerHost()
             servername = client.getServerProcessName()
             personalname = client.getServerPersonalName()
-            self.log.info('Resetting TACO device; if this does not help try '
-                          'restarting the %s named %s on host %s.',
-                          servername, personalname, hostname)
+            self.log.info(
+                "Resetting TACO device; if this does not help try "
+                "restarting the %s named %s on host %s.",
+                servername,
+                personalname,
+                hostname,
+            )
         except AttributeError:  # older version without these API calls
-            self.log.info('Resetting TACO device; if this does not help try '
-                          'restarting the server.')
+            self.log.info(
+                "Resetting TACO device; if this does not help try "
+                "restarting the server."
+            )
         try:
-            if resetcall == 'deviceReset':
+            if resetcall == "deviceReset":
                 self._taco_guard(client.deviceReset)
             else:
                 self._taco_guard(client.deviceInit)
         except Exception as err:
-            self.log.warning('%s failed with %s', resetcall, err)
+            self.log.warning("%s failed with %s", resetcall, err)
         if self._taco_guard(client.isDeviceOff):
             self._taco_guard(client.deviceOn)

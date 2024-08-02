@@ -35,10 +35,10 @@ from os import path
 # files will be stored there for 30 days and automatically deleted.
 # the wise man keeps a local copy....
 #
-FTP_SERVER = 'ftp.frm2.tum.de'
+FTP_SERVER = "ftp.frm2.tum.de"
 FTP_PORT = 21210
-FTP_USER = 'nicd'
-FTP_P = ''.join(map(chr, [78, 103, 115, 65, 57, 84, 98, 67]))
+FTP_USER = "nicd"
+FTP_P = "".join(map(chr, [78, 103, 115, 65, 57, 84, 98, 67]))
 
 
 def ftpUpload(filename, logger=None):
@@ -51,7 +51,7 @@ def ftpUpload(filename, logger=None):
     basename = path.basename(filename)
 
     try:
-        with open(filename, 'rb') as fp:
+        with open(filename, "rb") as fp:
             ftp = FTP()
 
             ftp.connect(FTP_SERVER, FTP_PORT)
@@ -63,14 +63,15 @@ def ftpUpload(filename, logger=None):
                 pass
             ftp.cwd(subdir)
 
-            ftp.storbinary('STOR %s' % basename, fp)
+            ftp.storbinary("STOR %s" % basename, fp)
 
             ftp.quit()
             ftp.close()
     except Exception:
         if logger:
-            logger.error('Uploading ftp-file failed! Please check config and '
-                         'log files', exc=1)
+            logger.error(
+                "Uploading ftp-file failed! Please check config and " "log files", exc=1
+            )
         raise
 
-    return 'http://ftp.frm2.tum.de/outgoing/mdata/%s/%s' % (subdir, basename)
+    return "http://ftp.frm2.tum.de/outgoing/mdata/%s/%s" % (subdir, basename)

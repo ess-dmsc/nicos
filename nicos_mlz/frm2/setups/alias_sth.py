@@ -1,7 +1,7 @@
-description = 'Alias for sample rotation devices'
+description = "Alias for sample rotation devices"
 
-group = 'lowlevel'
+group = "lowlevel"
 
 devices = dict(
-    sth = device('nicos.devices.generic.DeviceAlias'),
+    sth=device("nicos.devices.generic.DeviceAlias"),
 )

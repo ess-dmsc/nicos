@@ -38,33 +38,35 @@ class PolarizationFileSinkHandler(SingleFileSinkHandler):
 
     def writeHeader(self, fp, metainfo, image):
         fp.seek(0)
-        wrapper = TextIOWrapper(fp, encoding='utf-8')
-        wrapper.write('\n%s PUMA Polarisation File Header V2.0\n' %
-                      (self.sink.commentchar * 3))
+        wrapper = TextIOWrapper(fp, encoding="utf-8")
+        wrapper.write(
+            "\n%s PUMA Polarisation File Header V2.0\n" % (self.sink.commentchar * 3)
+        )
         # XXX(dataapi): add a utility function to convert metainfo to old
         # by-category format
         bycategory = {}
         for (device, key), (_, val, unit, category) in metainfo.items():
             if category:
                 bycategory.setdefault(category, []).append(
-                    ('%s_%s' % (device, key), (val + ' ' + unit).strip()))
+                    ("%s_%s" % (device, key), (val + " " + unit).strip())
+                )
         for category, catname in INFO_CATEGORIES:
             if category not in bycategory:
                 continue
-            wrapper.write('%s %s\n' % (self.sink.commentchar * 3, catname))
+            wrapper.write("%s %s\n" % (self.sink.commentchar * 3, catname))
             for key, value in sorted(bycategory[category]):
-                wrapper.write('%25s : %s\n' % (key, value))
+                wrapper.write("%25s : %s\n" % (key, value))
         # to ease interpreting the data...
         # wrapper.write('\n%r' % self._arraydesc)
-        wrapper.write('\n')
+        wrapper.write("\n")
         wrapper.detach()
         fp.flush()
 
     def writeData(self, fp, image):
         """Write the image data part of the file (second part)."""
-        wrapper = TextIOWrapper(fp, encoding='utf-8')
+        wrapper = TextIOWrapper(fp, encoding="utf-8")
         for i, l in enumerate(image.T):
-            fmtstr = '\t'.join(['%d'] * (1 + len(l))) + '\n'
+            fmtstr = "\t".join(["%d"] * (1 + len(l))) + "\n"
             wrapper.write(fmtstr % ((i,) + tuple(l.tolist())))
         wrapper.detach()
         fp.flush()
@@ -74,17 +76,17 @@ class PolarizationFileSink(ImageSink):
     """A data sink that writes to a plain ASCII data file."""
 
     parameters = {
-        'commentchar': Param('Comment character', type=str, default='#',
-                             settable=True),
+        "commentchar": Param("Comment character", type=str, default="#", settable=True),
     }
 
     parameter_overrides = {
-        'filenametemplate': Override(default=['puma_%(pointcounter)08d']),
+        "filenametemplate": Override(default=["puma_%(pointcounter)08d"]),
     }
 
     handlerclass = PolarizationFileSinkHandler
 
     def doUpdateCommentchar(self, value):
         if len(value) > 1:
-            raise ConfigurationError('comment character should only be one '
-                                     'character')
+            raise ConfigurationError(
+                "comment character should only be one " "character"
+            )

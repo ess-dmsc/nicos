@@ -1,31 +1,32 @@
-description = 'Slit ZB1 using beckhoff controllers'
+description = "Slit ZB1 using beckhoff controllers"
 
-group = 'lowlevel'
+group = "lowlevel"
 
-includes = ['zz_absoluts']
+includes = ["zz_absoluts"]
 
-instrument_values = configdata('instrument.values')
-showcase_values = configdata('cf_showcase.showcase_values')
-optic_values = configdata('cf_optic.optic_values')
-tango_base = instrument_values['tango_base']
-code_base = instrument_values['code_base']
+instrument_values = configdata("instrument.values")
+showcase_values = configdata("cf_showcase.showcase_values")
+optic_values = configdata("cf_optic.optic_values")
+tango_base = instrument_values["tango_base"]
+code_base = instrument_values["code_base"]
 
 index = 7
 
 devices = dict(
-    zb1 = device(code_base + 'slits.SingleSlit',
+    zb1=device(
+        code_base + "slits.SingleSlit",
         # length: 13 mm
-        description = 'zb1, singleslit at nok5b before nok6',
-        unit = 'mm',
-        motor = 'zb1_motor',
-        offset = 0.0,
-        nok_start = 5873.6,  # 5856.5
-        nok_end = 5886.6,  # 5862.5
+        description="zb1, singleslit at nok5b before nok6",
+        unit="mm",
+        motor="zb1_motor",
+        offset=0.0,
+        nok_start=5873.6,  # 5856.5
+        nok_end=5886.6,  # 5862.5
         # motor = 5880.1,
-        masks = {
-            'slit':    0,
-            'point':   0,
-            'gisans':  -110 * optic_values['gisans_scale'],
+        masks={
+            "slit": 0,
+            "point": 0,
+            "gisans": -110 * optic_values["gisans_scale"],
         },
     ),
     # zb1_a = device('nicos.devices.generic.Axis',

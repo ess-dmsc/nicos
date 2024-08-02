@@ -56,8 +56,14 @@ def psimat(psi):
     """
     Build a Busing & Levy PSI matrix, psi must be in radians
     """
-    result = np.zeros((3, 3,), dtype='float64')
-    result[0][0] = 1.
+    result = np.zeros(
+        (
+            3,
+            3,
+        ),
+        dtype="float64",
+    )
+    result[0][0] = 1.0
     result[1][1] = cos(psi)
     result[1][2] = sin(psi)
     result[2][1] = -result[1][2]
@@ -70,10 +76,16 @@ def chimat(chi):
     Build a Busing & Levy CHI matrix. Input is
     in radians
     """
-    result = np.zeros((3, 3,), dtype='float64')
+    result = np.zeros(
+        (
+            3,
+            3,
+        ),
+        dtype="float64",
+    )
     result[0][0] = cos(chi)
     result[0][2] = sin(chi)
-    result[1][1] = 1.
+    result[1][1] = 1.0
     result[2][0] = -sin(chi)
     result[2][2] = cos(chi)
     return result
@@ -83,12 +95,18 @@ def phimat(phi):
     """
     Build a Busing & Levy PHI matrix. Input is in radians
     """
-    result = np.zeros((3, 3,), dtype='float64')
+    result = np.zeros(
+        (
+            3,
+            3,
+        ),
+        dtype="float64",
+    )
     result[0][0] = cos(phi)
     result[0][1] = sin(phi)
     result[1][0] = -sin(phi)
     result[1][1] = cos(phi)
-    result[2][2] = 1.
+    result[2][2] = 1.0
     return result
 
 
@@ -98,12 +116,12 @@ def turnEquatorial(z1):
     @param z1 3 component numpy array
     @return tuple of (chi, phi) in radians
     """
-    if abs(z1[0]) < .0001 and abs(z1[1]) < .0001:
+    if abs(z1[0]) < 0.0001 and abs(z1[1]) < 0.0001:
         if z1[2] < 0:
-            return -pi/2., 0
-        return pi/2., 0
+            return -pi / 2.0, 0
+        return pi / 2.0, 0
     phi = rtan(z1[1], z1[0])
-    chi = rtan(z1[2], sqrt(z1[0]**2 + z1[1]**2))
+    chi = rtan(z1[2], sqrt(z1[0] ** 2 + z1[1] ** 2))
     return chi, phi
 
 
@@ -117,14 +135,14 @@ def calcTheta(wavelength, z1):
     @param A tuple consisting of the d-value and the theta angle in
            radians
     """
-    dstar = sqrt(z1[0]**2 + z1[1]**2 + z1[2]**2)
-    if dstar < .0001:
-        return 0., 0.
+    dstar = sqrt(z1[0] ** 2 + z1[1] ** 2 + z1[2] ** 2)
+    if dstar < 0.0001:
+        return 0.0, 0.0
 
-    d = 1./dstar
-    sintheta = wavelength * dstar/2.
-    if abs(sintheta) > 1.:
-        return .0, .0
+    d = 1.0 / dstar
+    sintheta = wavelength * dstar / 2.0
+    if abs(sintheta) > 1.0:
+        return 0.0, 0.0
     theta = asin(sintheta)
     return d, theta
 
@@ -138,8 +156,8 @@ def z1ToBisecting(wavelength, z1):
     @return a tuple of theta, chi, phi in radians
     """
     d, theta = calcTheta(wavelength, z1)
-    if d == .0:
-        return .0, .0, .0
+    if d == 0.0:
+        return 0.0, 0.0, 0.0
     chi, phi = turnEquatorial(z1)
     return theta, pi - chi, pi + phi
 
@@ -191,12 +209,15 @@ def z1FromAngles(wavelength, stt, om, chi, phi):
     @param phi angle in radians
     @return The z1 vector
     """
-    th = stt/2.
-    z4 = np.array([
-        (2. * sin(th) * cos(th)) / wavelength,
-        (-2. * sin(th) * sin(th)) / wavelength,
-        .0
-    ], dtype='float64')
+    th = stt / 2.0
+    z4 = np.array(
+        [
+            (2.0 * sin(th) * cos(th)) / wavelength,
+            (-2.0 * sin(th) * sin(th)) / wavelength,
+            0.0,
+        ],
+        dtype="float64",
+    )
     return z1fromz4(z4, om, chi, phi)
 
 
@@ -213,16 +234,17 @@ def rotatePsi(om, chi, phi, psi):
     r0 = chimat(chi).dot(phimat(phi))
     psim = psimat(psi)
     r0psi = psim.dot(r0)
-    psichi = rtan(sqrt(r0psi[2][0]**2 + r0psi[2][1]**2), r0psi[2][2])
+    psichi = rtan(sqrt(r0psi[2][0] ** 2 + r0psi[2][1] ** 2), r0psi[2][2])
     psiphi = rtan(-r0psi[2][1], -r0psi[2][0])
     psiom = om + rtan(-r0psi[1][2], r0psi[0][2])
     return psiom, psichi, psiphi
+
 
 # ====================== normal beam geometry =================================
 
 
 def sign(a, b):
-    if b >= .0:
+    if b >= 0.0:
         return abs(a)
     return -abs(a)
 
@@ -237,15 +259,15 @@ def z1ToNormalBeam(wavelength, z1):
             success, 0,0,0, on failure
     """
     d, theta = calcTheta(wavelength, z1)
-    if d == .0:
+    if d == 0.0:
         return 0, 0, 0
     # Everything on omega axis is blind...
-    a = sqrt(z1[0]**2 + z1[1]**2)
-    if abs(a) < .0001:
+    a = sqrt(z1[0] ** 2 + z1[1] ** 2)
+    if abs(a) < 0.0001:
         return 0, 0, 0
     sint = sin(theta)
-    b = 2*sint**2/(wavelength * a)
-    if b > 1.:
+    b = 2 * sint**2 / (wavelength * a)
+    if b > 1.0:
         return 0, 0, 0
     a = -atan2(z1[1], -z1[0])
     b = -asin(b)
@@ -253,12 +275,12 @@ def z1ToNormalBeam(wavelength, z1):
     oma = phimat(om)
     znew = oma.dot(z1)
     if znew[0] < 0:
-        om = om - 2. * atan2(-znew[0], -znew[1])
-    b = (sign(180, om) + om)/360.
+        om = om - 2.0 * atan2(-znew[0], -znew[1])
+    b = (sign(180, om) + om) / 360.0
     b = sign(1, b) * floor(abs(b))
-    om = om - 2*pi * b
+    om = om - 2 * pi * b
     nu = asin(wavelength * z1[2])
-    gamma = acos(cos(2. * theta)/cos(nu))
+    gamma = acos(cos(2.0 * theta) / cos(nu))
     return gamma, om, nu
 
 
@@ -273,24 +295,24 @@ def biToNormalBeam(stt, omega, chi, phi):
     @return gamma, om, nu angles in radians or 0, 0, 0 in case
             of an error
     """
-    sint = sin(stt/2.)
+    sint = sin(stt / 2.0)
 
-    nu = 2. * sin(chi) * sint
-    if nu > 1.:
+    nu = 2.0 * sin(chi) * sint
+    if nu > 1.0:
         return 0, 0, 0
     nu = asin(nu)
-    nu = abs(nu) * sign(1., chi)
+    nu = abs(nu) * sign(1.0, chi)
 
     gamma = cos(stt) / cos(nu)
-    if abs(gamma) > 1.:
+    if abs(gamma) > 1.0:
         return 0, 0, 0
     gamma = acos(gamma)
-    gamma = gamma * sign(1., stt)
+    gamma = gamma * sign(1.0, stt)
 
-    ddel = asin(sint/cos(chi))
+    ddel = asin(sint / cos(chi))
     omnb = ddel + phi
     if abs(omnb) > pi:
-        if omnb < - pi:
+        if omnb < -pi:
             omnb += 2 * pi
         if omnb > pi:
             omnb -= 2 * pi
@@ -302,9 +324,9 @@ def z4FromNormalBeam(wavelength, gamma, nu):
     This is basically a conversion from polar
     to x,y ,z coordinates
     """
-    z4 = np.zeros((3,), dtype='float64')
+    z4 = np.zeros((3,), dtype="float64")
     z4[0] = (sin(gamma) * cos(nu)) / wavelength
-    z4[1] = (cos(gamma) * cos(nu) - 1.) / wavelength
+    z4[1] = (cos(gamma) * cos(nu) - 1.0) / wavelength
     z4[2] = sin(nu) / wavelength
     return z4
 
@@ -324,6 +346,7 @@ def z1FromNormalBeam(wavelength, gamma, omega, nu):
     z1 = oma.dot(z4)
     return z1
 
+
 #  UB Matrix Calculation
 # Reflections are kept in a dictionary with h, k, l and the angles
 # Some of the NB code has been lifted from the ILL program rafinb
@@ -335,14 +358,14 @@ def UVectorFromAngles(reflection):
     Calculate the B&L U vector from bisecting geometry
     angles
     """
-    u = np.zeros((3,), dtype='float64')
+    u = np.zeros((3,), dtype="float64")
 
     # The tricky bit is set again: Busing & Levy's omega is 0 in
     # bisecting position. This is why we have to correct for
     # stt/2 here
-    om = np.deg2rad(reflection['om'] - reflection['stt']/2.)
-    chi = np.deg2rad(reflection['chi'])
-    phi = np.deg2rad(reflection['phi'])
+    om = np.deg2rad(reflection["om"] - reflection["stt"] / 2.0)
+    chi = np.deg2rad(reflection["chi"])
+    phi = np.deg2rad(reflection["phi"])
     u[0] = cos(om) * cos(chi) * cos(phi) - sin(om) * sin(phi)
     u[1] = cos(om) * cos(chi) * sin(phi) + sin(om) * cos(phi)
     u[2] = cos(om) * sin(chi)
@@ -350,17 +373,15 @@ def UVectorFromAngles(reflection):
 
 
 def UNBVectorFromAngles(reflection):
-    """"
+    """ "
     Calculate the B&L U vector from normal beam geometry angles
     """
-    u = np.zeros((3,), dtype='float64')
-    gamma = np.deg2rad(reflection['gamma'])
-    om = np.deg2rad(reflection['om'])
-    nu = np.deg2rad(reflection['nu'])
-    u[0] = sin(gamma) * cos(om) * cos(nu) + \
-        sin(om) * (1. - cos(gamma) * cos(nu))
-    u[1] = sin(gamma) * sin(om) * cos(nu) - \
-        cos(om) * (1. - cos(gamma) * cos(nu))
+    u = np.zeros((3,), dtype="float64")
+    gamma = np.deg2rad(reflection["gamma"])
+    om = np.deg2rad(reflection["om"])
+    nu = np.deg2rad(reflection["nu"])
+    u[0] = sin(gamma) * cos(om) * cos(nu) + sin(om) * (1.0 - cos(gamma) * cos(nu))
+    u[1] = sin(gamma) * sin(om) * cos(nu) - cos(om) * (1.0 - cos(gamma) * cos(nu))
     u[2] = sin(nu)
     return u
 
@@ -369,8 +390,7 @@ def reflectionToHC(reflection, B):
     """
     Calculate the B&L HC vector for this reflection
     """
-    h = np.array([reflection['h'], reflection['k'], reflection['l']],
-                 dtype='float64')
+    h = np.array([reflection["h"], reflection["k"], reflection["l"]], dtype="float64")
     return B.dot(h)
 
 
@@ -393,19 +413,21 @@ def directToReciprocalLattice(cell):
     sin_beta = sin(beta)
     sin_gamma = sin(gamma)
 
-    reciprocal.alpha = \
-        acos((cos_beta * cos_gamma - cos_alfa) / sin_beta / sin_gamma)
-    reciprocal.beta = \
-        acos((cos_alfa * cos_gamma - cos_beta) / sin_alfa / sin_gamma)
-    reciprocal.gamma =\
-        acos((cos_alfa * cos_beta - cos_gamma) / sin_alfa / sin_beta)
+    reciprocal.alpha = acos((cos_beta * cos_gamma - cos_alfa) / sin_beta / sin_gamma)
+    reciprocal.beta = acos((cos_alfa * cos_gamma - cos_beta) / sin_alfa / sin_gamma)
+    reciprocal.gamma = acos((cos_alfa * cos_beta - cos_gamma) / sin_alfa / sin_beta)
 
     ad = cell.a
     bd = cell.b
     cd = cell.c
 
-    arg = 1 + 2 * cos_alfa * cos_beta * cos_gamma - cos_alfa * \
-        cos_alfa - cos_beta * cos_beta - cos_gamma * cos_gamma
+    arg = (
+        1
+        + 2 * cos_alfa * cos_beta * cos_gamma
+        - cos_alfa * cos_alfa
+        - cos_beta * cos_beta
+        - cos_gamma * cos_gamma
+    )
     if arg < 0.0:
         return None
     vol = ad * bd * cd * sqrt(arg)
@@ -425,27 +447,26 @@ def calculateBMatrix(cell):
     if not reciprocal:
         return None
 
-    B = np.zeros((3, 3), dtype='float64')
+    B = np.zeros((3, 3), dtype="float64")
     # Top row
     B[0][0] = reciprocal.a
     B[0][1] = reciprocal.b * cos(reciprocal.gamma)
     B[0][2] = reciprocal.c * cos(reciprocal.beta)
     # middle row
     B[1][1] = reciprocal.b * sin(reciprocal.gamma)
-    B[1][2] = -reciprocal.c * sin(reciprocal.beta) * \
-        cos(np.deg2rad(cell.alpha))
+    B[1][2] = -reciprocal.c * sin(reciprocal.beta) * cos(np.deg2rad(cell.alpha))
     # Bottom row
-    B[2][2] = 1. / cell.c
+    B[2][2] = 1.0 / cell.c
 
     return B
 
 
 def normalize_vector(v):
-    sqsum = .0
+    sqsum = 0.0
     for el in v:
         sqsum += el**2
     length = sqrt(sqsum)
-    if length > .00001:
+    if length > 0.00001:
         return v / length
     return v
 
@@ -458,7 +479,7 @@ def matFromTwoVectors(v1, v2):
 
     a2 = np.cross(a1, a3)
 
-    result = np.zeros((3, 3), dtype='float64')
+    result = np.zeros((3, 3), dtype="float64")
 
     for i in range(3):
         result[i][0] = a1[i]
@@ -541,8 +562,8 @@ def angleBetweenReflections(B, r1, r2):
     @param r2 Second reflection
     @return The angle between r1 and r2 in radians
     """
-    h1 = np.array([r1['h'], r1['k'], r1['l']], dtype='float64')
-    h2 = np.array([r2['h'], r2['k'], r2['l']], dtype='float64')
+    h1 = np.array([r1["h"], r1["k"], r1["l"]], dtype="float64")
+    h2 = np.array([r2["h"], r2["k"], r2["l"]], dtype="float64")
     ch1 = B.dot(h1)
     ch2 = B.dot(h2)
     return angleBetween(ch1, ch2)
@@ -563,16 +584,16 @@ def eulerian_to_kappa(omega, chi, phi, alpha, right):
     chir = np.deg2rad(chi)
     phir = np.deg2rad(phi)
     alphar = np.deg2rad(alpha)
-    if np.abs(chir) <= alphar*2.:
-        p = np.arcsin(np.tan(chir/2.)/np.tan(alphar))
+    if np.abs(chir) <= alphar * 2.0:
+        p = np.arcsin(np.tan(chir / 2.0) / np.tan(alphar))
         if right:
-            komega = omegar - p + np.pi / 2.
-            kappa = 2. * np.arcsin(np.sin(chir/2.) / np.sin(alphar))
-            kphi = phir - p - np.pi / 2.
+            komega = omegar - p + np.pi / 2.0
+            kappa = 2.0 * np.arcsin(np.sin(chir / 2.0) / np.sin(alphar))
+            kphi = phir - p - np.pi / 2.0
         else:
-            komega = omegar + p - np.pi / 2.
-            kappa = -2. * np.arcsin(np.sin(chir/2.) / np.sin(alphar))
-            kphi = phir + p + np.pi / 2.
+            komega = omegar + p - np.pi / 2.0
+            kappa = -2.0 * np.arcsin(np.sin(chir / 2.0) / np.sin(alphar))
+            kphi = phir + p + np.pi / 2.0
         return True, np.rad2deg(komega), np.rad2deg(kappa), np.rad2deg(kphi)
     return False, 0, 0, 0
 
@@ -589,14 +610,14 @@ def kappa_to_eulerian(komega, kappa, kphi, alpha, right):
     kappar = np.deg2rad(kappa)
     kphir = np.deg2rad(kphi)
     alphar = np.deg2rad(alpha)
-    p = np.arctan(np.tan(kappar/2.) * np.cos(alphar))
+    p = np.arctan(np.tan(kappar / 2.0) * np.cos(alphar))
 
     if right:
-        omega = komegar + p - np.pi/2.
-        chi = 2. * np.arcsin(np.sin(kappar/2.) * np.sin(alphar))
-        phi = kphir + p + np.pi/2.
+        omega = komegar + p - np.pi / 2.0
+        chi = 2.0 * np.arcsin(np.sin(kappar / 2.0) * np.sin(alphar))
+        phi = kphir + p + np.pi / 2.0
     else:
-        omega = komegar + p + np.pi/2.
-        chi = -2. * np.arcsin(np.sin(kappar/2.) * np.sin(alphar))
-        phi = kphir + p - np.pi/2.
+        omega = komegar + p + np.pi / 2.0
+        chi = -2.0 * np.arcsin(np.sin(kappar / 2.0) * np.sin(alphar))
+        phi = kphir + p - np.pi / 2.0
     return True, np.rad2deg(omega), np.rad2deg(chi), np.rad2deg(phi)

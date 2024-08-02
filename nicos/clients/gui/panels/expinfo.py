@@ -24,8 +24,12 @@
 """NICOS GUI panel with most important experiment info."""
 
 from nicos.clients.gui.panels import Panel, PanelDialog
-from nicos.clients.gui.panels.setup_panel import DetEnvPanel, ExpPanel, \
-    GenericSamplePanel, SetupsPanel
+from nicos.clients.gui.panels.setup_panel import (
+    DetEnvPanel,
+    ExpPanel,
+    GenericSamplePanel,
+    SetupsPanel,
+)
 from nicos.clients.gui.utils import dialogFromUi, loadUi
 from nicos.core.utils import ADMIN
 from nicos.guisupport.qt import QMessageBox, QPushButton, QTimer, pyqtSlot
@@ -63,31 +67,34 @@ class ExpInfoPanel(Panel):
       before an experiment is finished from the proposal info panel.
     """
 
-    panelName = 'Experiment Info'
+    panelName = "Experiment Info"
     _viewonly = False
 
     def __init__(self, parent, client, options):
         Panel.__init__(self, parent, client, options)
-        loadUi(self, 'panels/expinfo.ui')
+        loadUi(self, "panels/expinfo.ui")
         for ch in self.findChildren(NicosWidget):
             ch.setClient(client)
         client.setup.connect(self.on_client_setup)
         client.initstatus.connect(self.on_client_initstatus)
 
         self.detLabel.setFormatCallback(
-            lambda value, strvalue: ', '.join(sorted(value)))
+            lambda value, strvalue: ", ".join(sorted(value))
+        )
         self.envLabel.setFormatCallback(
-            lambda value, strvalue: ', '.join(sorted(value)))
+            lambda value, strvalue: ", ".join(sorted(value))
+        )
 
-        self._sample_panel = options.get('sample_panel', GenericSamplePanel)
-        self._new_exp_panel = options.get('new_exp_panel')
-        self._finish_exp_panel = options.get('finish_exp_panel')
-        self._timeout = options.get('popup_proposal_after', 0)
+        self._sample_panel = options.get("sample_panel", GenericSamplePanel)
+        self._new_exp_panel = options.get("new_exp_panel")
+        self._finish_exp_panel = options.get("finish_exp_panel")
+        self._timeout = options.get("popup_proposal_after", 0)
         if self._timeout:
             self._proposal_popup_timer = QTimer(interval=self._timeout * 3600000)
             self._proposal_popup_timer.setSingleShot(True)
             self._proposal_popup_timer.timeout.connect(
-                self.on_proposal_popup_timer_timeout)
+                self.on_proposal_popup_timer_timeout
+            )
         else:
             self._proposal_popup_timer = None
 
@@ -98,20 +105,21 @@ class ExpInfoPanel(Panel):
         self._viewonly = viewonly
         if not self._viewonly and self._timeout:
             # ask explicitly for status to restart timer if necessary
-            self.client.ask('getstatus')
+            self.client.ask("getstatus")
 
     def on_client_initstatus(self, initstatus):
-        self.setupLabel.setText(', '.join(sorted(initstatus['setups'][1])))
+        self.setupLabel.setText(", ".join(sorted(initstatus["setups"][1])))
 
     def on_client_setup(self, data):
-        self.setupLabel.setText(', '.join(sorted(data[1])))
+        self.setupLabel.setText(", ".join(sorted(data[1])))
 
     def updateStatus(self, status, exception=False):
         if self._proposal_popup_timer:
-            if status == 'idle':
-                if not self._viewonly or \
-                    (self.client.user_level is not None and
-                     self.client.user_level < ADMIN):
+            if status == "idle":
+                if not self._viewonly or (
+                    self.client.user_level is not None
+                    and self.client.user_level < ADMIN
+                ):
                     self._proposal_popup_timer.start()
             else:
                 self._proposal_popup_timer.stop()
@@ -120,10 +128,11 @@ class ExpInfoPanel(Panel):
         if self._viewonly:
             return
         dlg = QMessageBox(self)
-        dlg.setText('The experiment has been idle for more than %.1f hours.' %
-                    self._timeout)
-        contButton = QPushButton('Continue current experiment')
-        finishAndNewButton = QPushButton('Finish and start new experiment')
+        dlg.setText(
+            "The experiment has been idle for more than %.1f hours." % self._timeout
+        )
+        contButton = QPushButton("Continue current experiment")
+        finishAndNewButton = QPushButton("Finish and start new experiment")
         dlg.addButton(contButton, QMessageBox.ButtonRole.RejectRole)
         dlg.addButton(finishAndNewButton, QMessageBox.ButtonRole.ActionRole)
         dlg.exec()
@@ -134,35 +143,41 @@ class ExpInfoPanel(Panel):
 
     @pyqtSlot()
     def on_proposalBtn_clicked(self):
-        dlg = PanelDialog(self, self.client, ExpPanel, 'Proposal info',
-                          new_exp_panel=self._new_exp_panel,
-                          finish_exp_panel=self._finish_exp_panel)
+        dlg = PanelDialog(
+            self,
+            self.client,
+            ExpPanel,
+            "Proposal info",
+            new_exp_panel=self._new_exp_panel,
+            finish_exp_panel=self._finish_exp_panel,
+        )
         dlg.exec()
 
     @pyqtSlot()
     def on_setupBtn_clicked(self):
-        dlg = PanelDialog(self, self.client, SetupsPanel, 'Setups')
+        dlg = PanelDialog(self, self.client, SetupsPanel, "Setups")
         dlg.exec()
 
     @pyqtSlot()
     def on_sampleBtn_clicked(self):
-        dlg = PanelDialog(self, self.client, self._sample_panel,
-                          'Sample information')
+        dlg = PanelDialog(self, self.client, self._sample_panel, "Sample information")
         dlg.exec()
 
     @pyqtSlot()
     def on_detenvBtn_clicked(self):
-        dlg = PanelDialog(self, self.client, DetEnvPanel,
-                          'Detectors and environment')
+        dlg = PanelDialog(self, self.client, DetEnvPanel, "Detectors and environment")
         dlg.exec()
 
     @pyqtSlot()
     def on_remarkBtn_clicked(self):
-        dlg = dialogFromUi(self, 'panels/expinfo_remark.ui')
+        dlg = dialogFromUi(self, "panels/expinfo_remark.ui")
 
         def callback():
-            self.showInfo('The remark will be added to the logbook as a '
-                          'heading and will also appear in the data files.')
+            self.showInfo(
+                "The remark will be added to the logbook as a "
+                "heading and will also appear in the data files."
+            )
+
         dlg.buttonBox.helpRequested.connect(callback)
 
         for ch in dlg.findChildren(NicosWidget):
@@ -170,4 +185,4 @@ class ExpInfoPanel(Panel):
         dlg.remarkEdit.setFocus()
         if not dlg.exec():
             return
-        self.client.run('Remark(%r)' % dlg.remarkEdit.getValue())
+        self.client.run("Remark(%r)" % dlg.remarkEdit.getValue())

@@ -28,8 +28,7 @@ from nicos.core import Attach, Device, Param, Value, listof
 from nicos.core.errors import ConfigurationError
 from nicos.devices.generic.detector import ImageChannelMixin, PassiveChannel
 
-from nicos_sinq.devices.imagesink import \
-    HistogramDesc, HistogramDimDesc
+from nicos_sinq.devices.imagesink import HistogramDesc, HistogramDimDesc
 from nicos_sinq.devices.detector import ControlDetector
 from nicos_sinq.devices.sinqhm.configurator import HistogramConfArray
 
@@ -42,13 +41,13 @@ class FocusDetector(ControlDetector):
     adds discovery of the dynamic configuration
     """
 
-    _banks = {'middle', 'lower', 'upper', 'f2d'}
+    _banks = {"middle", "lower", "upper", "f2d"}
 
     def find_followers(self):
         found_followers = []
         for b in self._banks:
             try:
-                fl = session.getDevice(b + '_detector')
+                fl = session.getDevice(b + "_detector")
                 found_followers.append(fl)
             except ConfigurationError:
                 pass
@@ -61,18 +60,18 @@ class Focus2DArray(HistogramConfArray):
     data lives in a data file. This just copies the content of this file
     verbatim minus the first line as the dataText
     """
+
     parameters = {
-        'lookup_file': Param('Path to file containing the 2D lookup data',
-                             type=str),
+        "lookup_file": Param("Path to file containing the 2D lookup data", type=str),
     }
 
     def setData(self, dim, data):
         pass
 
     def dataText(self):
-        with open(self.lookup_file, 'r', encoding='utf-8') as fin:
+        with open(self.lookup_file, "r", encoding="utf-8") as fin:
             lookup = fin.readlines()
-        return ''.join(lookup[1:])
+        return "".join(lookup[1:])
 
 
 class MergedImageChannel(ImageChannelMixin, PassiveChannel):
@@ -81,14 +80,15 @@ class MergedImageChannel(ImageChannelMixin, PassiveChannel):
     merged data from the three banks. This merged data will be calculated
     by this class.
     """
+
     parameters = {
-        'mergefile': Param('file which contains the instructions for merging',
-                           type=str),
+        "mergefile": Param(
+            "file which contains the instructions for merging", type=str
+        ),
     }
 
     attached_devices = {
-        'tof': Attach('TOF array for the length of the data',
-                      HistogramConfArray)
+        "tof": Attach("TOF array for the length of the data", HistogramConfArray)
     }
 
     _idx_upper = None
@@ -96,7 +96,7 @@ class MergedImageChannel(ImageChannelMixin, PassiveChannel):
     _idx_lower = None
 
     def doInit(self, mode):
-        with open(self.mergefile, 'r', encoding='utf-8') as fin:
+        with open(self.mergefile, "r", encoding="utf-8") as fin:
             fin.readline()  # skip first line
             line = fin.readline()
             merged_length = int(line)
@@ -111,11 +111,11 @@ class MergedImageChannel(ImageChannelMixin, PassiveChannel):
                 self._idx_lower[i] = int(data[4])
 
     def doReadArray(self, quality):
-        banks = ['middle', 'upper', 'lower']
+        banks = ["middle", "upper", "lower"]
         data = []
         for b in banks:
             try:
-                im = session.getDevice(b + '_image')
+                im = session.getDevice(b + "_image")
                 raw = im.readArray(quality)
                 data.append(np.reshape(raw, im.shape))
             except ConfigurationError:
@@ -125,13 +125,13 @@ class MergedImageChannel(ImageChannelMixin, PassiveChannel):
             div = 0
             merged_row = np.zeros((data[0].shape[1],))
             if self._idx_middle[i] > 0:
-                merged_row += data[0][self._idx_middle[i]-1]
+                merged_row += data[0][self._idx_middle[i] - 1]
                 div += 1
             if self._idx_upper[i] > 0:
-                merged_row += data[1][self._idx_upper[i]-1]
+                merged_row += data[1][self._idx_upper[i] - 1]
                 div += 1
             if self._idx_lower[i] > 0:
-                merged_row += data[2][self._idx_lower[i]-1]
+                merged_row += data[2][self._idx_lower[i] - 1]
                 div += 1
             if div > 1:
                 merged_row /= div
@@ -143,10 +143,14 @@ class MergedImageChannel(ImageChannelMixin, PassiveChannel):
     def arraydesc(self):
         merged_length = len(self._idx_middle)
         tof_length = len(self._attached_tof.data) - 1
-        return HistogramDesc(self.name, 'uint32', [
-            HistogramDimDesc(merged_length, 'detector-id', ''),
-            HistogramDimDesc(tof_length, 'time_binning', '')
-        ])
+        return HistogramDesc(
+            self.name,
+            "uint32",
+            [
+                HistogramDimDesc(merged_length, "detector-id", ""),
+                HistogramDimDesc(tof_length, "time_binning", ""),
+            ],
+        )
 
     def shape(self):
         merged_length = len(self._idx_middle)
@@ -154,7 +158,7 @@ class MergedImageChannel(ImageChannelMixin, PassiveChannel):
         return merged_length, tof_length
 
     def valueInfo(self):
-        return [Value(self.name, type='counter', unit=self.unit)]
+        return [Value(self.name, type="counter", unit=self.unit)]
 
 
 class Focus2DData(Device):
@@ -166,28 +170,51 @@ class Focus2DData(Device):
     """
 
     parameters = {
-        'xdim': Param('x Dimension of the 2D detector',
-                      type=int, settable=True,
-                      userparam=False),
-        'ydim': Param('y Dimension of the 2D detector',
-                      type=int, settable=True,
-                      userparam=False),
-        'xval': Param('X coordinate for each pixel',
-                      type=listof(float), unit='mm', settable=True,
-                      userparam=False),
-        'yval': Param('Y coordinate for each pixel',
-                      type=listof(float), unit='mm', settable=True,
-                      userparam=False),
-        'distval': Param('Sample distance for each pixel',
-                         type=listof(float), unit='mm', settable=True,
-                         userparam=False),
-        'eqval': Param('Equatorial angle for each pixel for each pixel',
-                       type=listof(float), unit='deg', settable=True,
-                       userparam=False),
-        'azval': Param('Azimuthal angle for each pixel',
-                       type=listof(float), unit='deg', settable=True,
-                       userparam=False),
-        'tthval': Param('2 Theta angle for each pixel',
-                        type=listof(float), settable=True,
-                        userparam=False),
+        "xdim": Param(
+            "x Dimension of the 2D detector", type=int, settable=True, userparam=False
+        ),
+        "ydim": Param(
+            "y Dimension of the 2D detector", type=int, settable=True, userparam=False
+        ),
+        "xval": Param(
+            "X coordinate for each pixel",
+            type=listof(float),
+            unit="mm",
+            settable=True,
+            userparam=False,
+        ),
+        "yval": Param(
+            "Y coordinate for each pixel",
+            type=listof(float),
+            unit="mm",
+            settable=True,
+            userparam=False,
+        ),
+        "distval": Param(
+            "Sample distance for each pixel",
+            type=listof(float),
+            unit="mm",
+            settable=True,
+            userparam=False,
+        ),
+        "eqval": Param(
+            "Equatorial angle for each pixel for each pixel",
+            type=listof(float),
+            unit="deg",
+            settable=True,
+            userparam=False,
+        ),
+        "azval": Param(
+            "Azimuthal angle for each pixel",
+            type=listof(float),
+            unit="deg",
+            settable=True,
+            userparam=False,
+        ),
+        "tthval": Param(
+            "2 Theta angle for each pixel",
+            type=listof(float),
+            settable=True,
+            userparam=False,
+        ),
     }

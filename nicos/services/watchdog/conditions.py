@@ -111,8 +111,9 @@ class Expression(Condition):
             if self.setup_enabled and self.enabled and not self.expires_at:
                 self.expires_at = time + 6
         except Exception:
-            self.log.warning('error evaluating %r warning '
-                             'condition', self.expr, exc=1)
+            self.log.warning(
+                "error evaluating %r warning " "condition", self.expr, exc=1
+            )
         else:
             self.expires_at = 0
             self.triggered = bool(value) and self.enabled and self.setup_enabled
@@ -179,8 +180,11 @@ class ConditionWithPrecondition(Condition):
 
     @property
     def triggered(self):
-        return self.enabled and self.cond.triggered and \
-            (self.cooldown_flag or self.pre.triggered)
+        return (
+            self.enabled
+            and self.cond.triggered
+            and (self.cooldown_flag or self.pre.triggered)
+        )
 
     def is_expired(self, time):
         return self.pre.is_expired(time) or self.cond.is_expired(time)

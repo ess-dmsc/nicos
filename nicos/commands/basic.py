@@ -32,37 +32,91 @@ from collections import defaultdict
 from os import path
 
 from nicos import session
-from nicos.commands import helparglist, hiddenusercommand, parallel_safe, \
-    usercommand
-from nicos.core import ADMIN, MAINTENANCE, MASTER, SIMULATION, Device, \
-    ModeError, NicosError, Readable, UsageError
+from nicos.commands import helparglist, hiddenusercommand, parallel_safe, usercommand
+from nicos.core import (
+    ADMIN,
+    MAINTENANCE,
+    MASTER,
+    SIMULATION,
+    Device,
+    ModeError,
+    NicosError,
+    Readable,
+    UsageError,
+)
 from nicos.core.sessions.utils import EXECUTIONMODES
-from nicos.core.spm import AnyDev, Bool, DeviceName, Multi, Num, Oneof, \
-    SetupName, String, spmsyntax
+from nicos.core.spm import (
+    AnyDev,
+    Bool,
+    DeviceName,
+    Multi,
+    Num,
+    Oneof,
+    SetupName,
+    String,
+    spmsyntax,
+)
 from nicos.devices.notifiers import Mailer
-from nicos.utils import LOCALE_ENCODING, fixupScript, formatArgs, \
-    formatDuration, printTable, reexecProcess, resolveClasses
+from nicos.utils import (
+    LOCALE_ENCODING,
+    fixupScript,
+    formatArgs,
+    formatDuration,
+    printTable,
+    reexecProcess,
+    resolveClasses,
+)
 from nicos.utils.timer import Timer
 
 __all__ = [
-    'help', 'dir', 'ListCommands', 'sleep',
-    'NewSetup', 'AddSetup', 'RemoveSetup', 'ListSetups',
-    '_Restart', 'Keep',
-    'CreateDevice', 'RemoveDevice', 'CreateAllDevices',
-    'NewExperiment', 'FinishExperiment', 'AddUser', 'ListUsers',
-    'Remark', 'SetMode', 'SetSimpleMode',
-    'sync', 'ClearCache', 'UserInfo', '_RunScript', '_RunCode', 'run', 'sim',
-    'notify', 'SetMailReceivers', 'ListMailReceivers', 'SetDataReceivers',
-    'ListDataReceivers', '_trace', 'timer',
-    'LogEntry', '_LogAttach', '_LogAttachImage',
-    'SetErrorAbort', 'pause', 'abort',
+    "help",
+    "dir",
+    "ListCommands",
+    "sleep",
+    "NewSetup",
+    "AddSetup",
+    "RemoveSetup",
+    "ListSetups",
+    "_Restart",
+    "Keep",
+    "CreateDevice",
+    "RemoveDevice",
+    "CreateAllDevices",
+    "NewExperiment",
+    "FinishExperiment",
+    "AddUser",
+    "ListUsers",
+    "Remark",
+    "SetMode",
+    "SetSimpleMode",
+    "sync",
+    "ClearCache",
+    "UserInfo",
+    "_RunScript",
+    "_RunCode",
+    "run",
+    "sim",
+    "notify",
+    "SetMailReceivers",
+    "ListMailReceivers",
+    "SetDataReceivers",
+    "ListDataReceivers",
+    "_trace",
+    "timer",
+    "LogEntry",
+    "_LogAttach",
+    "_LogAttachImage",
+    "SetErrorAbort",
+    "pause",
+    "abort",
 ]
 
 
 # -- help and introspection ---------------------------------------------------
 
+
 @usercommand
-@helparglist('[object]')
+@helparglist("[object]")
 @parallel_safe
 def help(obj=None):  # pylint: disable=redefined-builtin
     """Show help for a command, for a device or for any other object.
@@ -86,14 +140,15 @@ builtins.__orig_dir = builtins.dir
 
 
 @hiddenusercommand
-@helparglist('[object]')
+@helparglist("[object]")
 @parallel_safe
 def dir(obj=None):  # pylint: disable=redefined-builtin
     """Show all public attributes for the given object."""
     if obj is None:
         return sorted(sys._getframe(1).f_locals)
-    return [name for name in builtins.__orig_dir(obj)
-            if not name.startswith(('_', 'do'))]
+    return [
+        name for name in builtins.__orig_dir(obj) if not name.startswith(("_", "do"))
+    ]
 
 
 @usercommand
@@ -105,28 +160,28 @@ def ListCommands():
 
     >>> ListCommands()
     """
-    session.log.info('Available commands:')
+    session.log.info("Available commands:")
     items = []
     for name, obj in session.getExportedObjects():
-        if getattr(obj, 'is_usercommand', False):
-            real_func = getattr(obj, 'real_func', obj)
-            if getattr(real_func, 'is_hidden', False):
+        if getattr(obj, "is_usercommand", False):
+            real_func = getattr(obj, "real_func", obj)
+            if getattr(real_func, "is_hidden", False):
                 continue
             if real_func.__name__ != name:
                 # it's an alias, don't show it again
                 continue
-            if hasattr(real_func, 'help_arglist'):
-                argspec = '(%s)' % real_func.help_arglist
+            if hasattr(real_func, "help_arglist"):
+                argspec = "(%s)" % real_func.help_arglist
             else:
                 argspec = formatArgs(real_func)
-            docstring = real_func.__doc__ or ' '
+            docstring = real_func.__doc__ or " "
             signature = real_func.__name__ + argspec
             if len(signature) > 50:
-                signature = signature[:47] + '...'
-            if not real_func.__name__.startswith('_'):
+                signature = signature[:47] + "..."
+            if not real_func.__name__.startswith("_"):
                 items.append((signature, docstring.splitlines()[0]))
     items.sort()
-    printTable(('name', 'description'), items, session.log.info)
+    printTable(("name", "description"), items, session.log.info)
 
 
 @usercommand
@@ -144,9 +199,9 @@ def sleep(secs):
     >>> sleep(0.5)    # sleep for half a second
     """
     if secs > 1:
-        session.log.info('sleeping for %.1f seconds...', secs)
+        session.log.info("sleeping for %.1f seconds...", secs)
     else:
-        session.log.debug('sleeping for %.1f seconds...', secs)
+        session.log.debug("sleeping for %.1f seconds...", secs)
 
     if session.mode == SIMULATION:
         session.clock.tick(secs)
@@ -154,10 +209,10 @@ def sleep(secs):
 
     def f_notify(tmr):
         session.breakpoint(2)  # allow break and continue here
-        session.action('%s left' % formatDuration(tmr.remaining_time()))
+        session.action("%s left" % formatDuration(tmr.remaining_time()))
 
-    session.beginActionScope('Sleeping')
-    session.action('%s left' % formatDuration(secs))
+    session.beginActionScope("Sleeping")
+    session.action("%s left" % formatDuration(secs))
     try:
         tmr = Timer(secs)
         tmr.wait(interval=1.0, notify_func=f_notify)
@@ -167,9 +222,10 @@ def sleep(secs):
 
 # -- other basic commands -----------------------------------------------------
 
+
 @usercommand
-@helparglist('[setup, ...]')
-@spmsyntax(Multi(SetupName('all')))
+@helparglist("[setup, ...]")
+@spmsyntax(Multi(SetupName("all")))
 def NewSetup(*setupnames):
     """Load the given setups instead of the current one.
 
@@ -205,18 +261,19 @@ def NewSetup(*setupnames):
         finally:
             session.endMultiCreate()
     except Exception:
-        session.log.warning('could not load new setup, falling back to '
-                            'startup setup', exc=1)
+        session.log.warning(
+            "could not load new setup, falling back to " "startup setup", exc=1
+        )
         session.unloadSetup()
-        session.loadSetup('startup')
+        session.loadSetup("startup")
     if current_mode == MASTER:
         # need to refresh master status
         session.setMode(MASTER)
 
 
 @usercommand
-@helparglist('setup, ...')
-@spmsyntax(Multi(SetupName('unloaded')))
+@helparglist("setup, ...")
+@spmsyntax(Multi(SetupName("unloaded")))
 def AddSetup(*setupnames):
     """Load the given setups additional to the current one.
 
@@ -243,8 +300,8 @@ def AddSetup(*setupnames):
 
 
 @usercommand
-@helparglist('setup, ...')
-@spmsyntax(Multi(SetupName('loaded')))
+@helparglist("setup, ...")
+@spmsyntax(Multi(SetupName("loaded")))
 def RemoveSetup(*setupnames):
     """Remove the given setups from the currently loaded ones.
 
@@ -260,18 +317,22 @@ def RemoveSetup(*setupnames):
     original = current[:]
     for setupname in setupnames:
         if setupname not in session.loaded_setups:
-            session.log.warning('%r is not a loaded setup, ignoring',
-                                setupname)
+            session.log.warning("%r is not a loaded setup, ignoring", setupname)
             continue
-        if session._setup_info[setupname]['group'] == 'basic':
-            session.log.error('basic setups cannot be removed -- use '
-                              'NewSetup() to change setups instead')
+        if session._setup_info[setupname]["group"] == "basic":
+            session.log.error(
+                "basic setups cannot be removed -- use "
+                "NewSetup() to change setups instead"
+            )
             return
         try:
             current.remove(setupname)
         except ValueError:
-            session.log.warning('the setup %r cannot be unloaded on its own '
-                                'because another setup includes it', setupname)
+            session.log.warning(
+                "the setup %r cannot be unloaded on its own "
+                "because another setup includes it",
+                setupname,
+            )
     if current == original:
         return
     NewSetup(*current)
@@ -293,22 +354,26 @@ def ListSetups(listall=False):
 
     see also: `NewSetup`, `AddSetup`, `RemoveSetup`
     """
-    session.log.info('Available setups:')
+    session.log.info("Available setups:")
     items = []
     for name, info in session.getSetupInfo().items():
         if info is None:
-            items.append((name, '', '<could not be read, check syntax>', ''))
+            items.append((name, "", "<could not be read, check syntax>", ""))
             continue
-        if info['group'] in ('special', 'configdata'):
+        if info["group"] in ("special", "configdata"):
             continue
-        if info['group'] == 'lowlevel' and not listall:
+        if info["group"] == "lowlevel" and not listall:
             continue
-        items.append((name, name in session.loaded_setups and 'yes' or '',
-                      info['description'],
-                      ', '.join(sorted(info['devices']))))
+        items.append(
+            (
+                name,
+                name in session.loaded_setups and "yes" or "",
+                info["description"],
+                ", ".join(sorted(info["devices"])),
+            )
+        )
     items.sort()
-    printTable(('name', 'loaded', 'description', 'devices'), items,
-               session.log.info)
+    printTable(("name", "loaded", "description", "devices"), items, session.log.info)
 
 
 @hiddenusercommand
@@ -317,8 +382,10 @@ def _Restart():
     """Restart the NICOS process.  Use with caution."""
     exp = session.experiment
     if exp and exp.hasProposalFinishThreads():
-        raise NicosError('Cannot restart because there is at least one '
-                         'proposal which is currently finishing.')
+        raise NicosError(
+            "Cannot restart because there is at least one "
+            "proposal which is currently finishing."
+        )
 
     import atexit
     import signal
@@ -326,6 +393,7 @@ def _Restart():
     @atexit.register
     def restart_nicos():  # pylint: disable=unused-variable
         reexecProcess()
+
     os.kill(os.getpid(), signal.SIGTERM)
 
 
@@ -341,7 +409,7 @@ def Keep(name, obj):
 
 
 @usercommand
-@helparglist('devname, ...')
+@helparglist("devname, ...")
 @spmsyntax(Multi(DeviceName))
 def CreateDevice(*devnames):
     """Create all given devices.
@@ -358,12 +426,12 @@ def CreateDevice(*devnames):
     """
     for devname in devnames:
         if not isinstance(devname, str):
-            raise UsageError('CreateDevice() arguments must be strings')
+            raise UsageError("CreateDevice() arguments must be strings")
         session.createDevice(devname, explicit=True)
 
 
 @usercommand
-@helparglist('devname, ...')
+@helparglist("devname, ...")
 @spmsyntax(Multi(AnyDev))
 def RemoveDevice(*devnames):
     """Remove all given devices from the currently loaded setup.
@@ -377,7 +445,7 @@ def RemoveDevice(*devnames):
     see also: `CreateDevice`, `CreateAllDevices`
     """
     if not devnames:
-        raise UsageError('At least one device is required')
+        raise UsageError("At least one device is required")
     for devname in devnames:
         if isinstance(devname, Device):
             devname = devname.name
@@ -385,7 +453,7 @@ def RemoveDevice(*devnames):
 
 
 @usercommand
-@helparglist('lowlevel=False')
+@helparglist("lowlevel=False")
 def CreateAllDevices(**kwargs):
     """Try to create all possible devices in the current setup.
 
@@ -401,29 +469,32 @@ def CreateAllDevices(**kwargs):
 
     see also: `CreateDevice`, `RemoveDevice`
     """
-    lowlevel = kwargs.get('lowlevel', False)
+    lowlevel = kwargs.get("lowlevel", False)
     if lowlevel and not session.checkUserLevel(ADMIN):
-        session.log.error('Creating all lowlevel devices is only allowed '
-                          'for admin users')
+        session.log.error(
+            "Creating all lowlevel devices is only allowed " "for admin users"
+        )
         lowlevel = False
 
     session.startMultiCreate()
     try:
         for devname, (_, devconfig) in session.configured_devices.items():
-            if 'namespace' not in devconfig.get('visibility', ('namespace,')) \
-               and not lowlevel:
+            if (
+                "namespace" not in devconfig.get("visibility", ("namespace,"))
+                and not lowlevel
+            ):
                 continue
             try:
                 session.createDevice(devname, explicit=True)
             except NicosError:
-                session.log.exception('error creating %s', devname)
+                session.log.exception("error creating %s", devname)
     finally:
         session.endMultiCreate()
 
 
 @usercommand
-@helparglist('proposal, [title, localcontact, user, ...]')
-def NewExperiment(proposal, title='', localcontact='', user='', **parameters):
+@helparglist("proposal, [title, localcontact, user, ...]")
+def NewExperiment(proposal, title="", localcontact="", user="", **parameters):
     """Start a new experiment with the given proposal number and title.
 
     You should also give a argument for the local contact and the primary user.
@@ -453,7 +524,7 @@ def FinishExperiment():
 
 
 @hiddenusercommand
-@helparglist('name, [email, affiliation]')
+@helparglist("name, [email, affiliation]")
 def AddUser(name, email=None, affiliation=None):
     """Add a new user to the experiment.
 
@@ -475,13 +546,12 @@ def ListUsers():
 
     >>> ListUsers()
     """
-    session.log.info('Current users:')
+    session.log.info("Current users:")
     items = []
-    for user in session.experiment.propinfo['users']:
-        items.append((user['name'], user.get('email', ''),
-                      user.get('affiliation', '')))
+    for user in session.experiment.propinfo["users"]:
+        items.append((user["name"], user.get("email", ""), user.get("affiliation", "")))
     items.sort()
-    printTable(('name', 'email', 'affiliation'), items, session.log.info)
+    printTable(("name", "email", "affiliation"), items, session.log.info)
 
 
 @usercommand
@@ -544,14 +614,14 @@ def SetMode(mode):
     ...
     >>> SetMode('master')   # switch back to master in this copy
     """
-    if mode == 'sim':
+    if mode == "sim":
         mode = SIMULATION
-    elif mode == 'maint':
+    elif mode == "maint":
         mode = MAINTENANCE
     if mode == MAINTENANCE:
         # switching to maintenance mode is dangerous since two parallel
         # sessions can execute active commands
-        session.checkAccess({'level': ADMIN})
+        session.checkAccess({"level": ADMIN})
     try:
         session.setMode(mode)
     except ModeError:
@@ -572,11 +642,15 @@ def SetSimpleMode(enable):
     """
     session.setSPMode(enable)
     if enable:
-        session.log.info('Simple parameter mode is now enabled. '
-                         'Use "SetSimpleMode false" to disable.')
+        session.log.info(
+            "Simple parameter mode is now enabled. "
+            'Use "SetSimpleMode false" to disable.'
+        )
     else:
-        session.log.info('Simple parameter mode is now disabled. '
-                         'Use "SetSimpleMode(True)" to enable.')
+        session.log.info(
+            "Simple parameter mode is now disabled. "
+            'Use "SetSimpleMode(True)" to enable.'
+        )
 
 
 @usercommand
@@ -594,7 +668,7 @@ def sync():
 
 
 @usercommand
-@helparglist('dev, ...')
+@helparglist("dev, ...")
 @spmsyntax(Multi(AnyDev))
 def ClearCache(*devnames):
     """Clear all cached information for the given device(s).
@@ -610,18 +684,22 @@ def ClearCache(*devnames):
     current setup.
     """
     if not devnames:
-        raise UsageError('At least one device name is required, use '
-                         'ClearCache(\'*\') to clear everything')
-    if devnames == ('*',):
+        raise UsageError(
+            "At least one device name is required, use "
+            "ClearCache('*') to clear everything"
+        )
+    if devnames == ("*",):
         session.cache.clear_all()
-        session.log.info('cleared ALL cached information - you probably want '
-                         'to restart the session now')
+        session.log.info(
+            "cleared ALL cached information - you probably want "
+            "to restart the session now"
+        )
         return
     for devname in devnames:
         if isinstance(devname, Device):
             devname = devname.name
         session.cache.clear(devname)
-        session.log.info('cleared cached information for %s', devname)
+        session.log.info("cleared cached information for %s", devname)
 
 
 class _Scope:
@@ -655,19 +733,19 @@ def _scriptfilename(filename):
     if not path.isabs(fn):
         fn = path.normpath(path.join(session.experiment.scriptpath, fn))
     # does the file exist?
-    if fn.endswith(('.py', '.txt')) and path.isfile(fn):
+    if fn.endswith((".py", ".txt")) and path.isfile(fn):
         return fn
-    if path.isfile(fn + '.py'):
-        return fn + '.py'
-    if path.isfile(fn + '.txt'):
-        return fn + '.txt'
+    if path.isfile(fn + ".py"):
+        return fn + ".py"
+    if path.isfile(fn + ".txt"):
+        return fn + ".txt"
     # file does not exist; does it already have an extension?
-    if fn.endswith(('.py', '.txt')):
+    if fn.endswith((".py", ".txt")):
         return fn
     # add an extension; the default depends on the current mode
     if session._spmode:
-        return fn + '.txt'
-    return fn + '.py'
+        return fn + ".txt"
+    return fn + ".py"
 
 
 class _ScriptScope:
@@ -679,47 +757,50 @@ class _ScriptScope:
         session.beginActionScope(self.filename)
         if session.experiment and session.mode in (MASTER, SIMULATION):
             session.experiment.scripts += [self.code]
-        session.elogEvent('scriptbegin', self.filename)
+        session.elogEvent("scriptbegin", self.filename)
 
     def __exit__(self, *args):
         session.endActionScope()
         if session.experiment and session.mode in (MASTER, SIMULATION):
             session.experiment.scripts = session.experiment.scripts[:-1]
-        session.elogEvent('scriptend', self.filename)
+        session.elogEvent("scriptend", self.filename)
 
 
 @hiddenusercommand
 def _RunScript(filename, statdevices, debug=False):
     fn = _scriptfilename(filename)
     if not path.isfile(fn) and os.access(fn, os.R_OK):
-        raise UsageError('The file %r does not exist or is not readable' % fn)
+        raise UsageError("The file %r does not exist or is not readable" % fn)
     if session.mode == SIMULATION:
         starttime = session.clock.time
         for dev in statdevices:
             if not isinstance(dev, Readable):
-                session.log.warning('unable to collect statistics on %r', dev)
+                session.log.warning("unable to collect statistics on %r", dev)
                 continue
             dev._sim_min = None
             dev._sim_max = None
-    session.log.info('running user script: %s', fn)
+    session.log.info("running user script: %s", fn)
     try:
-        with open(fn, 'r', encoding=LOCALE_ENCODING) as fp:
+        with open(fn, "r", encoding=LOCALE_ENCODING) as fp:
             code = fp.read()
     except Exception as e:
         if session.mode == SIMULATION:
-            session.log.exception('Dry run: error opening script')
+            session.log.exception("Dry run: error opening script")
             return
-        raise NicosError('cannot open script %r: %s' % (filename, e)) from e
+        raise NicosError("cannot open script %r: %s" % (filename, e)) from e
     # guard against bare excepts
     code = fixupScript(code)
     # quick guard against self-recursion
-    if session.experiment and session.experiment.scripts and \
-            code.strip() == session.experiment.scripts[-1].strip():
-        raise NicosError('script %r would call itself, aborting' %
-                         filename)
+    if (
+        session.experiment
+        and session.experiment.scripts
+        and code.strip() == session.experiment.scripts[-1].strip()
+    ):
+        raise NicosError("script %r would call itself, aborting" % filename)
 
     def compiler(src):
-        return compile(src + '\n', fn, 'exec')
+        return compile(src + "\n", fn, "exec")
+
     compiled = session.scriptHandler(code, fn, compiler)
     with _ScriptScope(path.basename(fn), code):
         try:
@@ -728,19 +809,23 @@ def _RunScript(filename, statdevices, debug=False):
             if debug:
                 traceback.print_exc()
             raise
-    session.log.info('finished user script: %s', fn)
+    session.log.info("finished user script: %s", fn)
     if session.mode == SIMULATION:
-        session.log.info('simulated minimum runtime: %s',
-                         formatDuration(session.clock.time - starttime,
-                                        precise=False))
+        session.log.info(
+            "simulated minimum runtime: %s",
+            formatDuration(session.clock.time - starttime, precise=False),
+        )
         for dev in statdevices:
             if not isinstance(dev, Readable):
                 continue
-            session.log.info('%s: min %s, max %s, last %s %s',
-                             dev.name,
-                             dev.format(dev._sim_min),
-                             dev.format(dev._sim_max),
-                             dev.format(dev._sim_value), dev.unit)
+            session.log.info(
+                "%s: min %s, max %s, last %s %s",
+                dev.name,
+                dev.format(dev._sim_min),
+                dev.format(dev._sim_max),
+                dev.format(dev._sim_value),
+                dev.unit,
+            )
 
 
 @hiddenusercommand
@@ -755,9 +840,10 @@ def _RunCode(code, debug=False):
             traceback.print_exc()
         raise
     if session.mode == SIMULATION:
-        session.log.info('simulated minimum runtime: %s',
-                         formatDuration(session.clock.time - starttime,
-                                        precise=False))
+        session.log.info(
+            "simulated minimum runtime: %s",
+            formatDuration(session.clock.time - starttime, precise=False),
+        )
 
 
 @usercommand
@@ -776,7 +862,7 @@ def run(filename):
 
 
 @usercommand
-@helparglist('filename_or_code, ...')
+@helparglist("filename_or_code, ...")
 def sim(what, *devices, **kwargs):
     """Run code or a script file in dry run mode.
 
@@ -804,25 +890,27 @@ def sim(what, *devices, **kwargs):
 
     >>> sim('move(mono, 1.55); read(mtt)')
     """
-    debug = bool(kwargs.get('debug', False))
+    debug = bool(kwargs.get("debug", False))
     fn = _scriptfilename(what)
-    if not path.isfile(fn) and not what.endswith(('.py', '.txt')):
+    if not path.isfile(fn) and not what.endswith((".py", ".txt")):
         try:
-            compile(what + '\n', 'exec', 'exec')
+            compile(what + "\n", "exec", "exec")
         except Exception as e:
-            raise NicosError('Argument is neither a script file nor valid '
-                             'code') from e
-        session.runSimulation('_RunCode(%r, %s)' % (what, debug))
+            raise NicosError(
+                "Argument is neither a script file nor valid " "code"
+            ) from e
+        session.runSimulation("_RunCode(%r, %s)" % (what, debug))
         return
     if session.mode == SIMULATION:
         return _RunScript(what, devices)
-    session.runSimulation('_RunScript(%r, [%s], %s)' %
-                          (what, ', '.join(dev.name for dev in devices),
-                           debug))
+    session.runSimulation(
+        "_RunScript(%r, [%s], %s)"
+        % (what, ", ".join(dev.name for dev in devices), debug)
+    )
 
 
 @usercommand
-@helparglist('[subject, ]bodytext')
+@helparglist("[subject, ]bodytext")
 @parallel_safe
 def notify(*args):
     """Send a message via a notification system (email, SMS, Slack, or others).
@@ -836,7 +924,7 @@ def notify(*args):
     """
     if len(args) == 1:
         # use first line of text as subject
-        text, = args
+        (text,) = args
         session.notify(text.splitlines()[0], text, important=False)
     elif len(args) == 2:
         subject, text = args
@@ -846,7 +934,7 @@ def notify(*args):
 
 
 @usercommand
-@helparglist('email, ...')
+@helparglist("email, ...")
 @parallel_safe
 def SetMailReceivers(*emails):
     """Set a list of email addresses for notifications.
@@ -864,15 +952,16 @@ def SetMailReceivers(*emails):
     ok = False
     exp = session.experiment
     propinfo = dict(exp.propinfo)
-    propinfo['notif_emails'] = emails
-    exp._setROParam('propinfo', propinfo)
+    propinfo["notif_emails"] = emails
+    exp._setROParam("propinfo", propinfo)
     for notifier in session.notifiers:
         if isinstance(notifier, Mailer) and not notifier.private:
             ok = True
             notifier.receivers = emails
     if not ok:
-        session.log.warning('general email notification is not configured '
-                            'in this setup')
+        session.log.warning(
+            "general email notification is not configured " "in this setup"
+        )
     else:
         ListMailReceivers()
 
@@ -888,13 +977,12 @@ def ListMailReceivers():
 
     see also: `SetMailReceivers`
     """
-    session.log.info('Email addresses for notifications:')
+    session.log.info("Email addresses for notifications:")
     items = []
     for notifier, recipients in _listReceivers(Mailer).items():
         for rec in recipients:
             items.append((notifier,) + rec)
-    printTable(('mailer', 'email address', 'info'), sorted(items),
-               session.log.info)
+    printTable(("mailer", "email address", "info"), sorted(items), session.log.info)
 
 
 def _listReceivers(classes, includeprivate=False):
@@ -906,17 +994,16 @@ def _listReceivers(classes, includeprivate=False):
     classes = resolveClasses(classes)
 
     for notifier in session.notifiers:
-        if isinstance(notifier, classes) and \
-           (includeprivate or not notifier.private):
+        if isinstance(notifier, classes) and (includeprivate or not notifier.private):
             for addr in notifier.receivers:
-                result[notifier.name].append((addr, 'receiver'))
+                result[notifier.name].append((addr, "receiver"))
             for addr, level in notifier.copies:
-                result[notifier.name].append((addr, 'copies (%s)' % level))
+                result[notifier.name].append((addr, "copies (%s)" % level))
     return result
 
 
 @usercommand
-@helparglist('email, ...')
+@helparglist("email, ...")
 @parallel_safe
 def SetDataReceivers(*emails):
     """Set a list of email addresses for data retrieval.
@@ -932,17 +1019,19 @@ def SetDataReceivers(*emails):
     """
     exp = session.experiment
     if not exp.mailserver or not exp.mailsender:
-        session.log.warning('experimental data retrieval has not been '
-                            'configured in this setup')
+        session.log.warning(
+            "experimental data retrieval has not been " "configured in this setup"
+        )
     else:
         propinfo = dict(exp.propinfo)
-        propinfo['data_emails'] = list(emails)
-        exp._setROParam('propinfo', propinfo)
+        propinfo["data_emails"] = list(emails)
+        exp._setROParam("propinfo", propinfo)
         if emails:
-            session.log.info('data retrieval email will be sent to %s',
-                             ', '.join(emails))
+            session.log.info(
+                "data retrieval email will be sent to %s", ", ".join(emails)
+            )
         else:
-            session.log.info('no data retrieval emails will be sent')
+            session.log.info("no data retrieval emails will be sent")
 
 
 @usercommand
@@ -959,21 +1048,20 @@ def ListDataReceivers():
 
     see also: `SetDataReceivers`
     """
-    session.log.info('Email addresses the data will be sent to:')
+    session.log.info("Email addresses the data will be sent to:")
     propinfo = dict(session.experiment.propinfo)
     items = set()
-    for addr in propinfo.get('data_emails', ()):
+    for addr in propinfo.get("data_emails", ()):
         items.add((addr,))
-    printTable(('email address', ), sorted(items), session.log.info)
+    printTable(("email address",), sorted(items), session.log.info)
 
 
 @usercommand
 def _trace():
     if session._lastUnhandled:
-        session.log.info(''.join(
-            traceback.format_exception(*session._lastUnhandled)))
+        session.log.info("".join(traceback.format_exception(*session._lastUnhandled)))
     else:
-        session.log.info('No previous traceback.')
+        session.log.info("No previous traceback.")
 
 
 class timer:
@@ -984,7 +1072,7 @@ class timer:
 
     def __exit__(self, *args):
         duration = time.time() - self.starttime
-        session.log.info('Elapsed time: %.3f s', duration)
+        session.log.info("Elapsed time: %.3f s", duration)
 
 
 timer = timer()
@@ -1005,7 +1093,7 @@ def LogEntry(entry):
 
     >>> # improved sample holder
     """
-    session.elogEvent('entry', entry)
+    session.elogEvent("entry", entry)
 
 
 @hiddenusercommand
@@ -1020,7 +1108,7 @@ def _LogAttach(description, paths, names):
     This is intended to be used from the NICOS GUI, from the respective
     dialogs.
     """
-    session.elogEvent('attachment', (description, paths, names))
+    session.elogEvent("attachment", (description, paths, names))
 
 
 @hiddenusercommand
@@ -1040,7 +1128,7 @@ def _LogAttachImage(description, paths, extensions, names):
     This is intended to be used from the NICOS GUI, from the respective
     dialogs.
     """
-    session.elogEvent('image', (description, paths, extensions, names))
+    session.elogEvent("image", (description, paths, extensions, names))
 
 
 @usercommand
@@ -1054,11 +1142,11 @@ def SetErrorAbort(abort):
     If it is False, report the error, notify and continue with the next
     command.
     """
-    session.experiment.errorbehavior = abort and 'abort' or 'report'
+    session.experiment.errorbehavior = abort and "abort" or "report"
 
 
 @usercommand
-def pause(prompt='Script paused by pause() command.'):
+def pause(prompt="Script paused by pause() command."):
     """Pause the script until the user confirms continuation.
 
     The *prompt* text is shown to the user.
@@ -1070,5 +1158,5 @@ def pause(prompt='Script paused by pause() command.'):
 def abort(message=None):
     """Abort any running script with a given message."""
     if message:
-        session.log.warning('Aborting script: %s', message)
+        session.log.warning("Aborting script: %s", message)
     session.abortScript()

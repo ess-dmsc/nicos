@@ -29,8 +29,7 @@ import TACOStates  # pylint: disable=import-error
 from IO import Counter, Timer  # pylint: disable=import-error
 
 from nicos.core import Param, UsageError, oneofdict
-from nicos.devices.generic import ActiveChannel, CounterChannelMixin, \
-    TimerChannelMixin
+from nicos.devices.generic import ActiveChannel, CounterChannelMixin, TimerChannelMixin
 from nicos.devices.taco.core import TacoDevice
 
 
@@ -86,37 +85,47 @@ class FRMChannel(BaseChannel, ActiveChannel):
     """
 
     parameters = {
-        'mode':  Param('Channel mode: normal, ratemeter, or preselection',
-                       type=oneofdict(
-                           {IOCommon.MODE_NORMAL: 'normal',
-                            IOCommon.MODE_RATEMETER: 'ratemeter',
-                            IOCommon.MODE_PRESELECTION: 'preselection'}),
-                       default='preselection', settable=True),
+        "mode": Param(
+            "Channel mode: normal, ratemeter, or preselection",
+            type=oneofdict(
+                {
+                    IOCommon.MODE_NORMAL: "normal",
+                    IOCommon.MODE_RATEMETER: "ratemeter",
+                    IOCommon.MODE_PRESELECTION: "preselection",
+                }
+            ),
+            default="preselection",
+            settable=True,
+        ),
     }
 
     def doReadMode(self):
-        modes = {IOCommon.MODE_NORMAL: 'normal',
-                 IOCommon.MODE_RATEMETER: 'ratemeter',
-                 IOCommon.MODE_PRESELECTION: 'preselection'}
+        modes = {
+            IOCommon.MODE_NORMAL: "normal",
+            IOCommon.MODE_RATEMETER: "ratemeter",
+            IOCommon.MODE_PRESELECTION: "preselection",
+        }
         mode = self._taco_guard(self._dev.mode)
         if mode not in modes:
-            self.log.warning('Unknown mode %r encountered!', mode)
+            self.log.warning("Unknown mode %r encountered!", mode)
             mode = IOCommon.MODE_NORMAL
         return modes[mode]
 
     def doWriteMode(self, value):
-        modes = {'normal': IOCommon.MODE_NORMAL,
-                 'ratemeter': IOCommon.MODE_RATEMETER,
-                 'preselection': IOCommon.MODE_PRESELECTION}
+        modes = {
+            "normal": IOCommon.MODE_NORMAL,
+            "ratemeter": IOCommon.MODE_RATEMETER,
+            "preselection": IOCommon.MODE_PRESELECTION,
+        }
         self._taco_guard(self._dev.setMode, modes[value])
 
     def doWriteIscontroller(self, value):
-        if self.mode == 'ratemeter':
+        if self.mode == "ratemeter":
             if value:
                 raise UsageError(self, "ratemeter channel can't be controller")
             return
         self.doStop()
-        self.mode = 'preselection' if value else 'normal'
+        self.mode = "preselection" if value else "normal"
         self._taco_guard(self._dev.enableMaster, value)
 
 

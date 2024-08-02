@@ -1,14 +1,15 @@
-description = 'FRM II neutron guide line 4a shutter'
+description = "FRM II neutron guide line 4a shutter"
 
-group = 'lowlevel'
+group = "lowlevel"
 
-includes = ['guidehall']
+includes = ["guidehall"]
 
 devices = dict(
-    NL4a = device('nicos.devices.generic.ManualSwitch',
-        description = 'NL4a shutter status',
-        states = ('open', 'closed'),
-        pollinterval = 60,
-        maxage = 120,
+    NL4a=device(
+        "nicos.devices.generic.ManualSwitch",
+        description="NL4a shutter status",
+        states=("open", "closed"),
+        pollinterval=60,
+        maxage=120,
     ),
 )

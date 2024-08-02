@@ -29,17 +29,15 @@ from nicos_mlz.kws1.devices import yamlformat
 
 
 class YAMLFileSinkHandler(yamlformat.YAMLFileSinkHandler):
-
     def _set_detector_resolution(self, det1):
-        det_img = session.getDevice('det_img')
-        if det_img.alias == 'det_img_vhrd':
-            det1['pixel_width'] = 0.2
-            det1['pixel_height'] = 0.2
+        det_img = session.getDevice("det_img")
+        if det_img.alias == "det_img_vhrd":
+            det1["pixel_width"] = 0.2
+            det1["pixel_height"] = 0.2
         else:
-            det1['pixel_width'] = 0.5
-            det1['pixel_height'] = 0.5
+            det1["pixel_width"] = 0.5
+            det1["pixel_height"] = 0.5
 
 
 class YAMLFileSink(yamlformat.YAMLFileSink):
-
     handlerclass = YAMLFileSinkHandler

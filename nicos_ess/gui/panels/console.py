@@ -31,8 +31,18 @@ from html2text import HTML2Text
 from nicos.clients.gui.dialogs.traceback import TracebackDialog
 from nicos.clients.gui.panels import Panel, showPanel
 from nicos.clients.gui.utils import enumerateWithProgress, loadUi, modePrompt
-from nicos.guisupport.qt import QAbstractPrintDialog, QDialog, QFileDialog, \
-    QMenu, QMessageBox, QPrintDialog, QPrinter, Qt, QTextEdit, pyqtSlot
+from nicos.guisupport.qt import (
+    QAbstractPrintDialog,
+    QDialog,
+    QFileDialog,
+    QMenu,
+    QMessageBox,
+    QPrintDialog,
+    QPrinter,
+    Qt,
+    QTextEdit,
+    pyqtSlot,
+)
 from nicos.guisupport.utils import setBackgroundColor
 from nicos.utils import LOCALE_ENCODING, chunks, findResource
 
@@ -57,11 +67,11 @@ class ConsolePanel(Panel):
       be used as a watermark in the console window.
     """
 
-    panelName = 'Console'
+    panelName = "Console"
 
     def __init__(self, parent, client, options):
         Panel.__init__(self, parent, client, options)
-        loadUi(self, findResource('nicos_ess/gui/panels/ui_files/console.ui'))
+        loadUi(self, findResource("nicos_ess/gui/panels/ui_files/console.ui"))
 
         self.commandInput.scrollWidget = self.outView
         self.grepPanel.hide()
@@ -82,7 +92,7 @@ class ConsolePanel(Panel):
 
         self.outView.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
 
-        self.menu = QMenu('&Output', self)
+        self.menu = QMenu("&Output", self)
         self.menu.addAction(self.actionCopy)
         self.menu.addAction(self.actionGrep)
         self.menu.addSeparator()
@@ -92,15 +102,14 @@ class ConsolePanel(Panel):
         self.menu.addAction(self.actionAttachElog)
         self.menu.addSeparator()
         self.menu.addAction(self.actionAllowLineWrap)
-        self.on_actionAllowLineWrap_triggered(
-            self.mainwindow.allowoutputlinewrap)
+        self.on_actionAllowLineWrap_triggered(self.mainwindow.allowoutputlinewrap)
 
-        self.hasinput = bool(options.get('hasinput', True))
+        self.hasinput = bool(options.get("hasinput", True))
         self.inputFrame.setVisible(self.hasinput)
-        self.hasmenu = bool(options.get('hasmenu', True))
-        if options.get('fulltime', False):
+        self.hasmenu = bool(options.get("hasmenu", True))
+        if options.get("fulltime", False):
             self.outView.setFullTimestamps(True)
-        watermark = options.get('watermark', '')
+        watermark = options.get("watermark", "")
         if watermark:
             watermark = findResource(watermark)
             if path.isfile(watermark):
@@ -117,12 +126,12 @@ class ConsolePanel(Panel):
         self.promptLabel.setVisible(not viewonly)
 
     def loadSettings(self, settings):
-        self.cmdhistory = settings.value('cmdhistory') or []
+        self.cmdhistory = settings.value("cmdhistory") or []
 
     def saveSettings(self, settings):
         # only save 100 entries of the history
         cmdhistory = self.commandInput.history[-100:]
-        settings.setValue('cmdhistory', cmdhistory)
+        settings.setValue("cmdhistory", cmdhistory)
 
     def getMenus(self):
         return []
@@ -139,8 +148,7 @@ class ConsolePanel(Panel):
 
     def completeInput(self, fullstring, lastword):
         try:
-            return self.client.ask('complete', fullstring, lastword,
-                                   default=[])
+            return self.client.ask("complete", fullstring, lastword, default=[])
         except Exception:
             return []
 
@@ -152,13 +160,13 @@ class ConsolePanel(Panel):
         self.promptLabel.setText(modePrompt(mode))
 
     def on_client_initstatus(self, state):
-        self.on_client_mode(state['mode'])
+        self.on_client_mode(state["mode"])
         self.outView.clear()
-        messages = self.client.ask('getmessages', '10000', default=[])
+        messages = self.client.ask("getmessages", "10000", default=[])
         total = len(messages) // 2500 + 1
-        for _, batch in enumerateWithProgress(chunks(messages, 2500),
-                                              text='Synchronizing...',
-                                              parent=self, total=total):
+        for _, batch in enumerateWithProgress(
+            chunks(messages, 2500), text="Synchronizing...", parent=self, total=total
+        ):
             self.outView.addMessages(batch)
         self.outView.scrollToBottom()
 
@@ -166,12 +174,12 @@ class ConsolePanel(Panel):
         self.outView.addMessage(message)
 
     def on_client_simmessage(self, simmessage):
-        if simmessage[-1] == '0':
+        if simmessage[-1] == "0":
             self.outView.addMessage(simmessage)
 
     def on_client_experiment(self, data):
         (_, proptype) = data
-        if proptype == 'user':
+        if proptype == "user":
             # only clear history and output when switching TO a user experiment
             self.commandInput.history = []
             # clear everything except the last command with output
@@ -180,22 +188,22 @@ class ConsolePanel(Panel):
     def on_outView_anchorClicked(self, url):
         """Called when the user clicks a link in the out view."""
         scheme = url.scheme()
-        if scheme == 'exec':
+        if scheme == "exec":
             # Direct execution is too dangerous. Just insert it in the editor.
             if self.inputFrame.isVisible():
                 self.commandInput.setText(url.path())
                 self.commandInput.setFocus()
-        elif scheme == 'edit':
+        elif scheme == "edit":
             if self.mainwindow.editor_wintype is None:
                 return
             win = self.mainwindow.createWindow(self.mainwindow.editor_wintype)
-            panel = win.getPanel('User editor')
+            panel = win.getPanel("User editor")
             panel.openFile(url.path())
             showPanel(panel)
-        elif scheme == 'trace':
+        elif scheme == "trace":
             TracebackDialog(self, self.outView, url.path()).show()
         else:
-            self.log.warning('Strange anchor in outView: %s', url)
+            self.log.warning("Strange anchor in outView: %s", url)
 
     @pyqtSlot()
     def on_actionPrint_triggered(self):
@@ -207,15 +215,15 @@ class ConsolePanel(Panel):
 
     @pyqtSlot()
     def on_actionSave_triggered(self):
-        fn = QFileDialog.getSaveFileName(self, 'Save', '', 'All files (*.*)')[0]
+        fn = QFileDialog.getSaveFileName(self, "Save", "", "All files (*.*)")[0]
         if not fn:
             return
         try:
             fn = fn.encode(sys.getfilesystemencoding())
-            with open(fn, 'w', encoding=LOCALE_ENCODING) as f:
+            with open(fn, "w", encoding=LOCALE_ENCODING) as f:
                 f.write(self.outView.getOutputString())
         except Exception as err:
-            QMessageBox.warning(self, 'Error', 'Writing file failed: %s' % err)
+            QMessageBox.warning(self, "Error", "Writing file failed: %s" % err)
 
     @pyqtSlot()
     def on_actionCopy_triggered(self):
@@ -227,8 +235,8 @@ class ConsolePanel(Panel):
         if html:
             htmlconv = HTML2Text()
             htmlconv.ignore_links = True
-            text = '<br>'.join(s for s in htmlconv.handle(html).split('\n') if s)
-            self.client.eval(f'LogEntry({text!r})')
+            text = "<br>".join(s for s in htmlconv.handle(html).split("\n") if s)
+            self.client.eval(f"LogEntry({text!r})")
 
     @pyqtSlot()
     def on_actionGrep_triggered(self):
@@ -271,8 +279,8 @@ class ConsolePanel(Panel):
             self.outView.setLineWrapMode(QTextEdit.LineWrapMode.NoWrap)
 
     def on_commandInput_execRequested(self, script, action):
-        if action == 'queue':
+        if action == "queue":
             self.client.run(script)
         else:
-            self.client.tell('exec', script)
-        self.commandInput.setText('')
+            self.client.tell("exec", script)
+        self.commandInput.setText("")

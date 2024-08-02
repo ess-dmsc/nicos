@@ -24,7 +24,7 @@
 
 
 class CacheEntry:
-    __slots__ = ('time', 'ttl', 'value', 'expired')
+    __slots__ = ("time", "ttl", "value", "expired")
 
     def __init__(self, time, ttl, value):
         self.time = time
@@ -34,8 +34,8 @@ class CacheEntry:
 
     def __repr__(self):
         if self.expired:
-            return '(%s+%s@%s)' % (self.time, self.ttl, self.value)
-        return '%s+%s@%s' % (self.time, self.ttl, self.value)
+            return "(%s+%s@%s)" % (self.time, self.ttl, self.value)
+        return "%s+%s@%s" % (self.time, self.ttl, self.value)
 
     def asDict(self):
         return {x: getattr(self, x) for x in self.__slots__}

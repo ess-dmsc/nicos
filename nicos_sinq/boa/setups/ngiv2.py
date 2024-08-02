@@ -1,46 +1,54 @@
-description = 'NIAG NGIV2'
+description = "NIAG NGIV2"
 
-pvprefix = 'SQ:BOA:ngiv2:'
+pvprefix = "SQ:BOA:ngiv2:"
 
 devices = dict(
-    sgtx = device('nicos_sinq.devices.epics.motor.EpicsMotor',
-        description = 'XinGI sample movement X',
-        motorpv = pvprefix + 'sgtx',
-        errormsgpv = pvprefix + 'sgtx-MsgTxt',
+    sgtx=device(
+        "nicos_sinq.devices.epics.motor.EpicsMotor",
+        description="XinGI sample movement X",
+        motorpv=pvprefix + "sgtx",
+        errormsgpv=pvprefix + "sgtx-MsgTxt",
     ),
-    sgty = device('nicos_sinq.devices.epics.motor.EpicsMotor',
-        description = 'XinGI sample movement Y',
-        motorpv = pvprefix + 'sgty',
-        errormsgpv = pvprefix + 'sgty-MsgTxt',
+    sgty=device(
+        "nicos_sinq.devices.epics.motor.EpicsMotor",
+        description="XinGI sample movement Y",
+        motorpv=pvprefix + "sgty",
+        errormsgpv=pvprefix + "sgty-MsgTxt",
     ),
-    sgtz = device('nicos_sinq.devices.epics.motor.EpicsMotor',
-        description = 'XinGI sample movement Z',
-        motorpv = pvprefix + 'sgtz',
-        errormsgpv = pvprefix + 'sgtz-MsgTxt',
+    sgtz=device(
+        "nicos_sinq.devices.epics.motor.EpicsMotor",
+        description="XinGI sample movement Z",
+        motorpv=pvprefix + "sgtz",
+        errormsgpv=pvprefix + "sgtz-MsgTxt",
     ),
-    sgry = device('nicos_sinq.devices.epics.motor.EpicsMotor',
-        description = 'XinGI sample rotation Y',
-        motorpv = pvprefix + 'sgry',
-        errormsgpv = pvprefix + 'sgry-MsgTxt',
+    sgry=device(
+        "nicos_sinq.devices.epics.motor.EpicsMotor",
+        description="XinGI sample rotation Y",
+        motorpv=pvprefix + "sgry",
+        errormsgpv=pvprefix + "sgry-MsgTxt",
     ),
-    g1tzl = device('nicos_sinq.devices.epics.motor.EpicsMotor',
-        description = 'XinGI G1 translation Z (long range)',
-        motorpv = pvprefix + 'g1tzl',
-        errormsgpv = pvprefix + 'g1tzl-MsgTxt',
+    g1tzl=device(
+        "nicos_sinq.devices.epics.motor.EpicsMotor",
+        description="XinGI G1 translation Z (long range)",
+        motorpv=pvprefix + "g1tzl",
+        errormsgpv=pvprefix + "g1tzl-MsgTxt",
     ),
-    g1tz = device('nicos_sinq.devices.epics.motor.EpicsMotor',
-        description = 'XinGI G1 translation Z',
-        motorpv = pvprefix + 'g1tz',
-        errormsgpv = pvprefix + 'g1tz-MsgTxt',
+    g1tz=device(
+        "nicos_sinq.devices.epics.motor.EpicsMotor",
+        description="XinGI G1 translation Z",
+        motorpv=pvprefix + "g1tz",
+        errormsgpv=pvprefix + "g1tz-MsgTxt",
     ),
-    g1rz = device('nicos_sinq.devices.epics.motor.EpicsMotor',
-        description = 'XinGI G1 rotation Z',
-        motorpv = pvprefix + 'g1rz',
-        errormsgpv = pvprefix + 'g1rz-MsgTxt',
+    g1rz=device(
+        "nicos_sinq.devices.epics.motor.EpicsMotor",
+        description="XinGI G1 rotation Z",
+        motorpv=pvprefix + "g1rz",
+        errormsgpv=pvprefix + "g1rz-MsgTxt",
     ),
-    g2rz = device('nicos_sinq.devices.epics.motor.EpicsMotor',
-        description = 'XinGI G2 rotation Z',
-        motorpv = pvprefix + 'g2rz',
-        errormsgpv = pvprefix + 'g2rz-MsgTxt',
+    g2rz=device(
+        "nicos_sinq.devices.epics.motor.EpicsMotor",
+        description="XinGI G2 rotation Z",
+        motorpv=pvprefix + "g2rz",
+        errormsgpv=pvprefix + "g2rz-MsgTxt",
     ),
 )

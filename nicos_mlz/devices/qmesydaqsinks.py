@@ -29,23 +29,21 @@ from nicos.devices.vendor.qmesydaq import Image
 
 
 class HistogramSinkHandler(DataSinkHandler):
-
     def prepare(self):
         self.manager.assignCounter(self.dataset)
-        filepaths = self.manager.getFilenames(self.dataset,
-                                              self.sink.filenametemplate,
-                                              self.sink.subdir)[1]
+        filepaths = self.manager.getFilenames(
+            self.dataset, self.sink.filenametemplate, self.sink.subdir
+        )[1]
         if self.sink._attached_image:
             self.sink._attached_image.histogramfile = filepaths[0]
 
 
 class ListmodeSinkHandler(DataSinkHandler):
-
     def prepare(self):
         self.manager.assignCounter(self.dataset)
-        filepaths = self.manager.getFilenames(self.dataset,
-                                              self.sink.filenametemplate,
-                                              self.sink.subdir)[1]
+        filepaths = self.manager.getFilenames(
+            self.dataset, self.sink.filenametemplate, self.sink.subdir
+        )[1]
         if self.sink._attached_image:
             self.sink._attached_image.listmodefile = filepaths[0]
 
@@ -59,9 +57,9 @@ class QMesyDAQSink(ImageSink):
     the names of the files but the directory to write the data is set in
     QMesyDAQ.
     """
+
     attached_devices = {
-        'image': Attach('Image device to set the file name', Image,
-                        optional=True),
+        "image": Attach("Image device to set the file name", Image, optional=True),
     }
 
     def isActiveForArray(self, arraydesc):
@@ -74,8 +72,9 @@ class HistogramSink(QMesyDAQSink):
     handlerclass = HistogramSinkHandler
 
     parameter_overrides = {
-        'filenametemplate': Override(mandatory=False, userparam=False,
-                                     default=['D%(pointcounter)07d.mtxt']),
+        "filenametemplate": Override(
+            mandatory=False, userparam=False, default=["D%(pointcounter)07d.mtxt"]
+        ),
     }
 
 
@@ -85,6 +84,7 @@ class ListmodeSink(QMesyDAQSink):
     handlerclass = ListmodeSinkHandler
 
     parameter_overrides = {
-        'filenametemplate': Override(mandatory=False, userparam=False,
-                                     default=['D%(pointcounter)07d.mdat']),
+        "filenametemplate": Override(
+            mandatory=False, userparam=False, default=["D%(pointcounter)07d.mdat"]
+        ),
     }

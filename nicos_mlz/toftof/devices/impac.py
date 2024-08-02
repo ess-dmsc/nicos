@@ -32,12 +32,16 @@ class TemperatureSensor(PyTangoDevice, Readable):
     """The temperature readout device of the IMPAC pyrometer."""
 
     parameters = {
-        'address': Param('Device address',
-                         type=intrange(0, 97), default=0, settable=False,),
+        "address": Param(
+            "Device address",
+            type=intrange(0, 97),
+            default=0,
+            settable=False,
+        ),
     }
 
     parameter_overrides = {
-        'comtries': Override(default=5),
+        "comtries": Override(default=5),
     }
 
     def doInit(self, mode):
@@ -45,7 +49,7 @@ class TemperatureSensor(PyTangoDevice, Readable):
 
     def doRead(self, maxage=0):
         # return current temperature
-        what = '%02dms' % self.address
+        what = "%02dms" % self.address
         temp = float(self._dev.Communicate(what))
         if temp > 77769:
             temp = -0
@@ -54,4 +58,4 @@ class TemperatureSensor(PyTangoDevice, Readable):
         return temp
 
     def doStatus(self, maxage=0):
-        return status.OK, 'idle'
+        return status.OK, "idle"

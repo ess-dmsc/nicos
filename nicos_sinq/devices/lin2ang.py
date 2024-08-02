@@ -37,18 +37,16 @@ class Lin2Ang(TransformedMoveable):
     hardware_access = False
 
     parameters = {
-        'length': Param('distance translation motor -- pivot point',
-                        type=float),
-        'offset': Param('zero offset', settable=True, userparam=True,
-                        default=0.0)
+        "length": Param("distance translation motor -- pivot point", type=float),
+        "offset": Param("zero offset", settable=True, userparam=True, default=0.0),
     }
 
     attached_devices = {
-        'translation': Attach('Translation motor', Moveable),
+        "translation": Attach("Translation motor", Moveable),
     }
 
     parameter_overrides = {
-        'mapping': Override(mandatory=False),
+        "mapping": Override(mandatory=False),
     }
 
     valuetype = float
@@ -71,5 +69,4 @@ class Lin2Ang(TransformedMoveable):
         return self._attached_translation.status(maxage)
 
     def doIsAllowed(self, target):
-        return self._attached_translation.isAllowed(
-            self._mapTargetValue(target))
+        return self._attached_translation.isAllowed(self._mapTargetValue(target))

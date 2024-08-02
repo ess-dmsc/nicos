@@ -30,6 +30,7 @@ class Experiment(FRM2Experiment):
     """Special RESEDA experiment with measurement mode support."""
 
     parameters = {
-        'measurementmode': Param('Measurement mode',
-                                 type=oneof('nrse', 'mieze'), settable=True),
+        "measurementmode": Param(
+            "Measurement mode", type=oneof("nrse", "mieze"), settable=True
+        ),
     }

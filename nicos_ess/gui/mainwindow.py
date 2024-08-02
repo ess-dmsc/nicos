@@ -102,6 +102,10 @@ try:
 except ImportError:
     HelpWindow = None
 
+INSTRUMENT = "instrument"
+EXPERIMENT = "experiment"
+PROPOSAL_ID = "proposal_ID"
+
 
 def decolor_logo(pixmap, color):
     ret_pix = QPixmap(pixmap.size())
@@ -356,8 +360,7 @@ class MainWindow(DlgUtils, QMainWindow):
         self.actionUser.setIconVisibleInMenu(True)
         self.actionExpert.setEnabled(self.client.isconnected)
         self.actionEmergencyStop.setEnabled(self.client.isconnected)
-        self._init_instrument_name()
-        self._init_experiment_name()
+        self._init_toolbar_labels(INSTRUMENT, EXPERIMENT, PROPOSAL_ID)
         self.add_status_widget()
         self.on_client_disconnected()
 
@@ -381,35 +384,39 @@ class MainWindow(DlgUtils, QMainWindow):
         self.toolbar.addWidget(self.status_text)
         self.toolbar.addWidget(self.status_label)
 
-    def _init_experiment_name(self):
-        self.experiment_label = QLabel()
-        self.experiment_label.setSizePolicy(
-            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred
-        )
-        self.experiment_label.setStyleSheet("font-size: 17pt; " "font-weight: bold")
-        self.toolBarMain.addWidget(self.experiment_label)
+    def _init_toolbar_labels(self, *args):
+        toolBarLabels = self.findChild(QWidget, "toolBarLabels")
+        toolBarRow1 = self.findChild(QWidget, "toolBarRow1")
+        toolBarRow2 = self.findChild(QWidget, "toolBarRow2")
 
-        self.experiment_text = QLabel()
-        self.experiment_text.setSizePolicy(
-            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred
-        )
-        self.experiment_text.setStyleSheet("font-size: 17pt")
-        self.toolBarMain.addWidget(self.experiment_text)
+        row1_layout = toolBarRow1.layout()
+        row1_layout.setContentsMargins(0, 10, 0, 0)
+        row2_layout = toolBarRow2.layout()
+        row2_layout.setContentsMargins(0, 0, 0, 10)
 
-    def _init_instrument_name(self):
-        self.instrument_label = QLabel()
-        self.instrument_label.setSizePolicy(
-            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred
-        )
-        self.instrument_label.setStyleSheet("font-size: 17pt; " "font-weight: bold")
-        self.toolBarMain.addWidget(self.instrument_label)
+        self.toolBarMain.addWidget(toolBarLabels)
 
-        self.instrument_text = QLabel()
-        self.instrument_text.setSizePolicy(
-            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred
-        )
-        self.instrument_text.setStyleSheet("font-size: 17pt")
-        self.toolBarMain.addWidget(self.instrument_text)
+        for name in args:
+            label, text = QLabel(), QLabel()
+            label.setSizePolicy(
+                QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Preferred
+            )
+            text.setSizePolicy(
+                QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.Preferred
+            )
+            if name == PROPOSAL_ID:
+                label.setStyleSheet("font-size: 14pt; " "font-weight: bold")
+                text.setStyleSheet("font-size: 14pt")
+                row2_layout.addWidget(label)
+                row2_layout.addWidget(text)
+            else:
+                label.setStyleSheet("font-size: 17pt; " "font-weight: bold")
+                text.setStyleSheet("font-size: 17pt")
+                row1_layout.addWidget(label)
+                row1_layout.addWidget(text)
+
+            setattr(self, f"{name}_label", label)
+            setattr(self, f"{name}_text", text)
 
     def set_icons(self):
         self.actionUser.setIcon(get_icon("settings_applications-24px.svg"))
@@ -442,25 +449,34 @@ class MainWindow(DlgUtils, QMainWindow):
         self.status_widget = StatusWidget(self)
         self.toolBarRight.addWidget(self.status_widget)
 
-    def update_instrument_text(self):
-        instrument = self.client.eval("session.instrument", None)
-        self.instrument_label.setText("Instrument:")
-        if instrument:
-            logo = decolor_logo(
-                QPixmap(path.join(root_path, "resources", f"{instrument}-logo.svg")),
-                Qt.GlobalColor.white,
-            )
-            if logo.isNull():
-                self.instrument_text.setText(instrument.upper())
-                return
-            self.instrument_text.setPixmap(
-                logo.scaledToHeight(
-                    self.toolBarMain.height(),
-                    Qt.TransformationMode.SmoothTransformation,
+    def update_text(self, *args):
+        for name in args:
+            label = getattr(self, f"{name}_label")
+            text = getattr(self, f"{name}_text")
+
+            if name == INSTRUMENT:
+                value = self.client.eval("session.instrument", None)
+                label.setText("Instrument:")
+            else:
+                value = self.client.eval("session.experiment.proposal", None)
+                label.setText("Proposal ID:")
+
+            if value:
+                logo = decolor_logo(
+                    QPixmap(path.join(root_path, "resources", f"{value}-logo.svg")),
+                    Qt.GlobalColor.white,
                 )
-            )
-        else:
-            self.instrument_text.setText("UNKNOWN")
+                if logo.isNull():
+                    text.setText(value.upper())
+                else:
+                    text.setPixmap(
+                        logo.scaledToHeight(
+                            self.toolBarMain.height(),
+                            Qt.TransformationMode.SmoothTransformation,
+                        )
+                    )
+            else:
+                text.setText("UNKNOWN")
 
     def update_experiment_text(self):
         max_text_length = 50
@@ -479,11 +495,10 @@ class MainWindow(DlgUtils, QMainWindow):
 
     def _update_toolbar_info(self):
         if self.current_status != "disconnected":
-            self.update_instrument_text()
+            self.update_text(INSTRUMENT, PROPOSAL_ID)
             self.update_experiment_text()
         else:
-            self.clear_experiment_text()
-            self.clear_instrument_text()
+            self.clear_label(INSTRUMENT, EXPERIMENT, PROPOSAL_ID)
 
     def _update_status_text(self):
         if self.current_status == "disconnected":
@@ -493,13 +508,12 @@ class MainWindow(DlgUtils, QMainWindow):
             self.status_label.setText("     Status: ")
             self.status_text.setText(self.current_status.upper())
 
-    def clear_instrument_text(self):
-        self.instrument_label.clear()
-        self.instrument_text.clear()
-
-    def clear_experiment_text(self):
-        self.experiment_label.clear()
-        self.experiment_text.clear()
+    def clear_label(self, *args):
+        for name in args:
+            label = getattr(self, f"{name}_label")
+            text = getattr(self, f"{name}_text")
+            label.clear()
+            text.clear()
 
     def addPanel(self, panel, always=True):
         if always or panel not in self.panels:

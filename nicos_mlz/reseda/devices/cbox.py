@@ -53,85 +53,128 @@ class CBoxResonanceFrequency(BaseSequencer):
     BANK_CAPACITIES = [
         [2e-08, 4.4e-08, 9.4e-08, 2e-07, 4.4e-07, 9.4e-07],  # C1
         [4.4e-10, 9.4e-10, 2e-09, 4.4e-09, 9.4e-09],  # C2
-        [4.4e-11, 6.6e-11, 9.4e-11, 2e-10]  # C3
+        [4.4e-11, 6.6e-11, 9.4e-11, 2e-10],  # C3
     ]
 
-    HIGHPASS_POLYNOM = [0.000000100879350, -0.000137497565329,
-                        0.059798285349245, 2.519127111192503]
+    HIGHPASS_POLYNOM = [
+        0.000000100879350,
+        -0.000137497565329,
+        0.059798285349245,
+        2.519127111192503,
+    ]
     HIGHPASS_CAPACITIES = [22e-9, 10e-9, 4.7e-9, 2.2e-9, 1e-9, 470e-12, 220e-12]
 
     attached_devices = {
-        'power_divider': Attach('Power divider to split the power to both '
-                                'coils', Moveable),
-        'highpass': Attach('Highpass filter to smooth the signal', Moveable),
-        'diplexer': Attach('Lowpass filter to smooth the signal (enable for '
-                           'low frequency, disable for high frequency)',
-                           Moveable),
-        'coil1_c1': Attach('Coil 1: Capacitor bank 1', Moveable),
-        'coil1_c2': Attach('Coil 1: Capacitor bank 2', Moveable),
-        'coil1_c3': Attach('Coil 1: Capacitor bank 3', Moveable),
-        'coil1_c1c2serial': Attach('Coil 1: Use c1 and c2 in serial instead of'
-                                   'parallel', Moveable),
-        'coil1_transformer': Attach('Coil 1: Used to manipulate the coil '
-                                    'resistance to match the power amplifier '
-                                    'resistance', Moveable),
-        'coil2_c1': Attach('Coil 2: Capacitor bank 1', Moveable),
-        'coil2_c2': Attach('Coil 2: Capacitor bank 2', Moveable),
-        'coil2_c3': Attach('Coil 2: Capacitor bank 3', Moveable),
-        'coil2_c1c2serial': Attach('Coil 2: Use c1 and c2 in serial instead of '
-                                   'parallel', Moveable),
-        'coil2_transformer': Attach('Coil 2: Used to manipulate the coil '
-                                    'resistance to match the power amplifier '
-                                    'resistance', Moveable),
-        'fg': Attach('Frequency generator', Moveable),
-        'coil_amp': Attach('Current in coil represented by Voltage measured by Keithley',
-                           Readable, optional=True),
+        "power_divider": Attach(
+            "Power divider to split the power to both " "coils", Moveable
+        ),
+        "highpass": Attach("Highpass filter to smooth the signal", Moveable),
+        "diplexer": Attach(
+            "Lowpass filter to smooth the signal (enable for "
+            "low frequency, disable for high frequency)",
+            Moveable,
+        ),
+        "coil1_c1": Attach("Coil 1: Capacitor bank 1", Moveable),
+        "coil1_c2": Attach("Coil 1: Capacitor bank 2", Moveable),
+        "coil1_c3": Attach("Coil 1: Capacitor bank 3", Moveable),
+        "coil1_c1c2serial": Attach(
+            "Coil 1: Use c1 and c2 in serial instead of" "parallel", Moveable
+        ),
+        "coil1_transformer": Attach(
+            "Coil 1: Used to manipulate the coil "
+            "resistance to match the power amplifier "
+            "resistance",
+            Moveable,
+        ),
+        "coil2_c1": Attach("Coil 2: Capacitor bank 1", Moveable),
+        "coil2_c2": Attach("Coil 2: Capacitor bank 2", Moveable),
+        "coil2_c3": Attach("Coil 2: Capacitor bank 3", Moveable),
+        "coil2_c1c2serial": Attach(
+            "Coil 2: Use c1 and c2 in serial instead of " "parallel", Moveable
+        ),
+        "coil2_transformer": Attach(
+            "Coil 2: Used to manipulate the coil "
+            "resistance to match the power amplifier "
+            "resistance",
+            Moveable,
+        ),
+        "fg": Attach("Frequency generator", Moveable),
+        "coil_amp": Attach(
+            "Current in coil represented by Voltage measured by Keithley",
+            Readable,
+            optional=True,
+        ),
         # if coil_amp is NOT configured, we need pa_fwdp and pa_revp !!!
-        'pa_fwdp': Attach('Device to measure the forward power for adjustment '
-                          'quality', Readable, optional=True),
-        'pa_revp': Attach('Device to measure the reverse power for adjustment '
-                          'quality', Readable, optional=True),
+        "pa_fwdp": Attach(
+            "Device to measure the forward power for adjustment " "quality",
+            Readable,
+            optional=True,
+        ),
+        "pa_revp": Attach(
+            "Device to measure the reverse power for adjustment " "quality",
+            Readable,
+            optional=True,
+        ),
     }
 
     parameters = {
         # usage parameters #
-        'use_second_coil': Param('Use 2 coils instead of one', type=bool,
-                                 volatile=True, settable=True),
+        "use_second_coil": Param(
+            "Use 2 coils instead of one", type=bool, volatile=True, settable=True
+        ),
         # adjustment parameters #
-        'cable_capacity': Param('Cumulated cable capacity', type=float,
-                                unit='F', default=50e-12),
-        'serial_output_capacity_c2': Param('Serial capacity of capacitor bank '
-                                           '2', type=float, unit='F',
-                                           default=20e-12),
-        'serial_output_capacity_c1_c2': Param('Cumulated serial capacity of '
-                                              'capacitor bank 1 and bank 2',
-                                              type=float, unit='F',
-                                              default=20e-12,),
-        'cbox2_input_capacity': Param('Input capacity for cbox2 (coil box)',
-                                      type=float, unit='F', default=8e-12),
-        'cbox2_output_capacity': Param('Output capacity for cbox2 (coil box)',
-                                       type=float, unit='F', default=9e-12),
-        'coil_inductivity': Param('Inductivity of coil 1', unit='H',
-                                   type=float, default=28.76e-6),
-        'coil_self_capacitance': Param('Self-capacitance of coil 1', unit='F',
-                                        type=float, default=5e-12),
-        'tuning_step': Param('Frequency range to tune for', type=float,
-                             default=1e3),
-        'tuning_steps': Param('Number of steps to tune around the necessary '
-                              'capacity (+/-)', type=int, default=10),
-        'tuning_points': Param('Number of points to average over for 1 '
-                               'adjustment step', type=int, default=5),
-        'diplexer_threshold_frequency': Param('Threshold frequency for '
-                                              'diplexer usage. The diplexer '
-                                              'is used if the frequency is '
-                                              'higher then the threshold',
-                                              type=float, default=1e6),
-        'transformer_threshold_frequencies': Param('Threshold frequencies for '
-                                              'transformer usage.',
-                                              type=tupleof(float, float),
-                                                   default=(0.4e6, 2e6)),
+        "cable_capacity": Param(
+            "Cumulated cable capacity", type=float, unit="F", default=50e-12
+        ),
+        "serial_output_capacity_c2": Param(
+            "Serial capacity of capacitor bank " "2",
+            type=float,
+            unit="F",
+            default=20e-12,
+        ),
+        "serial_output_capacity_c1_c2": Param(
+            "Cumulated serial capacity of " "capacitor bank 1 and bank 2",
+            type=float,
+            unit="F",
+            default=20e-12,
+        ),
+        "cbox2_input_capacity": Param(
+            "Input capacity for cbox2 (coil box)", type=float, unit="F", default=8e-12
+        ),
+        "cbox2_output_capacity": Param(
+            "Output capacity for cbox2 (coil box)", type=float, unit="F", default=9e-12
+        ),
+        "coil_inductivity": Param(
+            "Inductivity of coil 1", unit="H", type=float, default=28.76e-6
+        ),
+        "coil_self_capacitance": Param(
+            "Self-capacitance of coil 1", unit="F", type=float, default=5e-12
+        ),
+        "tuning_step": Param("Frequency range to tune for", type=float, default=1e3),
+        "tuning_steps": Param(
+            "Number of steps to tune around the necessary " "capacity (+/-)",
+            type=int,
+            default=10,
+        ),
+        "tuning_points": Param(
+            "Number of points to average over for 1 " "adjustment step",
+            type=int,
+            default=5,
+        ),
+        "diplexer_threshold_frequency": Param(
+            "Threshold frequency for "
+            "diplexer usage. The diplexer "
+            "is used if the frequency is "
+            "higher then the threshold",
+            type=float,
+            default=1e6,
+        ),
+        "transformer_threshold_frequencies": Param(
+            "Threshold frequencies for " "transformer usage.",
+            type=tupleof(float, float),
+            default=(0.4e6, 2e6),
+        ),
     }
-
 
     def doInit(self, mode):
         self._capacities = self._calculatePossibleCapacities()
@@ -140,57 +183,64 @@ class CBoxResonanceFrequency(BaseSequencer):
         return self._getResonanceFrequency(1)
 
     def doWriteUse_Second_Coil(self, value):
-        self._adevs['power_divider'].maw(value)
+        self._adevs["power_divider"].maw(value)
 
     def doReadUse_Second_Coil(self):
-        return self._adevs['power_divider'].read()
+        return self._adevs["power_divider"].read()
 
     def _generateSequence(self, target):
         return [
-            SeqDev(self._adevs['fg'], target),
-            SeqMethod(self, '_tuneInput', target),
-            SeqMethod(self, '_tuneCapacity', target),
+            SeqDev(self._adevs["fg"], target),
+            SeqMethod(self, "_tuneInput", target),
+            SeqMethod(self, "_tuneCapacity", target),
         ]
 
     def _applyCapacity(self, capacity):
         setup = self._capacities[capacity]
 
-        self.log.debug('Used setup to achieve capacity %g: c1: %d, c2: %d, c3: '
-                       '%d, c1c2serial: %d', capacity, *setup)
+        self.log.debug(
+            "Used setup to achieve capacity %g: c1: %d, c2: %d, c3: "
+            "%d, c1c2serial: %d",
+            capacity,
+            *setup,
+        )
 
-        self._adevs['coil1_c1'].maw(setup[0])
-        self._adevs['coil1_c2'].maw(setup[1])
-        self._adevs['coil1_c3'].maw(setup[2])
-        self._adevs['coil1_c1c2serial'].maw(setup[3])
+        self._adevs["coil1_c1"].maw(setup[0])
+        self._adevs["coil1_c2"].maw(setup[1])
+        self._adevs["coil1_c3"].maw(setup[2])
+        self._adevs["coil1_c1c2serial"].maw(setup[3])
 
         if self.use_second_coil:
-            self._adevs['coil2_c1'].maw(setup[0])
-            self._adevs['coil2_c2'].maw(setup[1])
-            self._adevs['coil2_c3'].maw(setup[2])
-            self._adevs['coil2_c1c2serial'].maw(setup[3])
+            self._adevs["coil2_c1"].maw(setup[0])
+            self._adevs["coil2_c2"].maw(setup[1])
+            self._adevs["coil2_c3"].maw(setup[2])
+            self._adevs["coil2_c1c2serial"].maw(setup[3])
 
     def _tuneCapacity(self, frequency):
         necessary_cap = self._calcNecessaryCapacity(frequency)
 
         caps = list(self._capacities)
         index = bisect_left(caps, necessary_cap)
-        caps = caps[max(index - self.tuning_steps, 0):index + self.tuning_steps]
+        caps = caps[max(index - self.tuning_steps, 0) : index + self.tuning_steps]
 
         result = {}
         for entry in caps:
             self._applyCapacity(entry)
-            #self._getResonanceFrequency(1)  # logging
+            # self._getResonanceFrequency(1)  # logging
             if self._attached_coil_amp:
                 quality = self._getCurrentAdjustmentQuality()
             else:
                 quality = self._getCurrentAdjustmentQualityOLD()
-            self.log.debug('Adjustment quality for %g F: %g', entry, quality)
+            self.log.debug("Adjustment quality for %g F: %g", entry, quality)
             result[quality] = entry
 
         best = max(result)
 
-        self.log.debug('Best capacity to achieve resonance '
-                       'frequency %g: %g', frequency, result[best])
+        self.log.debug(
+            "Best capacity to achieve resonance " "frequency %g: %g",
+            frequency,
+            result[best],
+        )
 
         self._applyCapacity(result[best])
 
@@ -199,13 +249,13 @@ class CBoxResonanceFrequency(BaseSequencer):
         transformator = self._determineTransformer(frequency)
         highpass = self._determineHighpass(frequency)
 
-        self._adevs['diplexer'].maw(diplexer)
-        self._adevs['coil1_transformer'].maw(transformator)
+        self._adevs["diplexer"].maw(diplexer)
+        self._adevs["coil1_transformer"].maw(transformator)
 
         if self.use_second_coil:
-            self._adevs['coil2_transformer'].maw(transformator)
+            self._adevs["coil2_transformer"].maw(transformator)
 
-        self._adevs['highpass'].maw(highpass)
+        self._adevs["highpass"].maw(highpass)
 
     def _calculatePossibleCapacities(self):
         caps = {}
@@ -219,7 +269,7 @@ class CBoxResonanceFrequency(BaseSequencer):
         return odict
 
     def _calcNecessaryCapacity(self, frequency):
-        return (1/(2*pi*frequency)) ** 2 / self.coil_inductivity
+        return (1 / (2 * pi * frequency)) ** 2 / self.coil_inductivity
 
     def _determineDiplexer(self, freq):
         return 1 if freq > self.diplexer_threshold_frequency else 0
@@ -241,8 +291,8 @@ class CBoxResonanceFrequency(BaseSequencer):
         # poly val
         x = round(frequency / 1000, 2)
         fg_f = 0
-        for (i, coeff) in enumerate(self.HIGHPASS_POLYNOM):
-            fg_f += coeff * x ** i
+        for i, coeff in enumerate(self.HIGHPASS_POLYNOM):
+            fg_f += coeff * x**i
 
         c = 1 / (2 * pi * 22 * frequency * fg_f)
 
@@ -264,21 +314,24 @@ class CBoxResonanceFrequency(BaseSequencer):
     def _getCurrentAdjustmentQuality(self):
         """Reads the current adjustment quality multiple times (defined by
         "tuning_points") and returns the median."""
-        current_coil1 = numpy.median([self._adevs['coil_amp'].read(0)
-                                      for _ in range(self.tuning_points)])
+        current_coil1 = numpy.median(
+            [self._adevs["coil_amp"].read(0) for _ in range(self.tuning_points)]
+        )
 
-       # current_coil2 = numpy.median([self._adevs['coil2_amp'].read(0)
-       #                               for _ in range(self.tuning_points)])
+        # current_coil2 = numpy.median([self._adevs['coil2_amp'].read(0)
+        #                               for _ in range(self.tuning_points)])
 
         return current_coil1
 
     def _getCurrentAdjustmentQualityOLD(self):
         """Reads the current adjustment quality multiple times (defined by
         "tuning_points") and returns the median."""
-        revp = numpy.median([self._adevs['pa_revp'].read(0)
-                             for _ in range(self.tuning_points)])
-        fwdp = numpy.median([self._adevs['pa_fwdp'].read(0)
-                             for _ in range(self.tuning_points)])
+        revp = numpy.median(
+            [self._adevs["pa_revp"].read(0) for _ in range(self.tuning_points)]
+        )
+        fwdp = numpy.median(
+            [self._adevs["pa_fwdp"].read(0) for _ in range(self.tuning_points)]
+        )
 
         return (fwdp - revp) / (fwdp + revp)
 
@@ -293,8 +346,9 @@ class CBoxResonanceFrequency(BaseSequencer):
         c2 = self._getBankCapacity(coil, 2)
 
         # fixed capacities
-        serial_output_capacity_c1 = self.serial_output_capacity_c1_c2 \
-                                    - self.serial_output_capacity_c2
+        serial_output_capacity_c1 = (
+            self.serial_output_capacity_c1_c2 - self.serial_output_capacity_c2
+        )
         coil_capacity = self.coil_self_capacitance + self.cbox2_output_capacity
 
         if self._isCBox2Bypassed(coil):  # double readout for readability
@@ -306,30 +360,29 @@ class CBoxResonanceFrequency(BaseSequencer):
                 coil_capacity += self.serial_output_capacity_c2
 
         if coil_capacity == 0:
-            result = 1 / (2 * pi
-                          * sqrt(self.coil_inductivity * serial_capacity))
+            result = 1 / (2 * pi * sqrt(self.coil_inductivity * serial_capacity))
         else:
             wp = 1 / sqrt(self.coil_inductivity * coil_capacity)
-            p = wp ** 2
+            p = wp**2
             q = -p / (self.coil_inductivity * serial_capacity)
             result = sqrt(-p / 2 + sqrt((p / 2) ** 2 - q)) / (2 * pi)
 
         result = 100 * round(result / 100, 2)
 
-        self.log.debug('Coil %d resonance frequency: %g', coil, result)
+        self.log.debug("Coil %d resonance frequency: %g", coil, result)
         return result
 
     def _getSerialCapacity(self, coil):
         result = 0
 
         # calculate bank capacities
-        c1bits = self._adevs['coil%d_c%d' % (coil, 1)].read(0)
-        c2bits = self._adevs['coil%d_c%d' % (coil, 2)].read(0)
-        c3bits = self._adevs['coil%d_c%d' % (coil, 3)].read(0)
+        c1bits = self._adevs["coil%d_c%d" % (coil, 1)].read(0)
+        c2bits = self._adevs["coil%d_c%d" % (coil, 2)].read(0)
+        c3bits = self._adevs["coil%d_c%d" % (coil, 3)].read(0)
         c1c2serial = self._isC1C2Serial(coil)
 
         result = self._calcSerialCapacity(c1bits, c2bits, c3bits, c1c2serial)
-        self.log.debug('Coil %d, serial capacity: %g', coil, result)
+        self.log.debug("Coil %d, serial capacity: %g", coil, result)
         return result
 
     def _calcSerialCapacity(self, c1bits, c2bits, c3bits, c1c2serial):
@@ -339,7 +392,7 @@ class CBoxResonanceFrequency(BaseSequencer):
         c3 = self._calcBankCapacity(3, c3bits)
 
         # check for bypasses
-        bypass_cbox1 = (not c1 and not c2)
+        bypass_cbox1 = not c1 and not c2
         bypass_cbox2 = not c3
 
         # calculate capacities of cbox1
@@ -360,14 +413,14 @@ class CBoxResonanceFrequency(BaseSequencer):
         return result
 
     def _getBankCapacity(self, coil, bank):
-        '''Reads current bank setup and calculates the bank capacity.'''
-        bits = self._adevs['coil%d_c%d' % (coil, bank)].read(0)
+        """Reads current bank setup and calculates the bank capacity."""
+        bits = self._adevs["coil%d_c%d" % (coil, bank)].read(0)
         result = self._calcBankCapacity(bank, bits)
-        self.log.debug('Coil %d, bank %d capacity: %g', coil, bank, result)
+        self.log.debug("Coil %d, bank %d capacity: %g", coil, bank, result)
         return result
 
     def _calcBankCapacity(self, bank, bits):
-        '''Calculates accumulated bank capacity.'''
+        """Calculates accumulated bank capacity."""
         # accumulate the set capacities
         result = 0
         for i, capacity in enumerate(self.BANK_CAPACITIES[bank - 1]):
@@ -380,4 +433,4 @@ class CBoxResonanceFrequency(BaseSequencer):
         return self._getBankCapacity(coil, 3) == 0
 
     def _isC1C2Serial(self, coil):
-        return self._adevs['coil%d_c1c2serial' % coil].read(0) == 1
+        return self._adevs["coil%d_c1c2serial" % coil].read(0) == 1

@@ -20,43 +20,48 @@
 #   Mark.Koennecke@psi.ch
 #
 # *****************************************************************************
-name = 'SINQ HRPT BRslit'
+name = "SINQ HRPT BRslit"
 
-includes = ['stdsystem']
+includes = ["stdsystem"]
 
-description = 'Test setup for the HRPT brslit'
+description = "Test setup for the HRPT brslit"
 
 devices = dict(
-    brle = device('nicos.devices.generic.VirtualMotor',
-        unit = 'mm',
-        description = 'Left blade',
-        abslimits = (-16, 1.5),
-        precision = 0.01,
+    brle=device(
+        "nicos.devices.generic.VirtualMotor",
+        unit="mm",
+        description="Left blade",
+        abslimits=(-16, 1.5),
+        precision=0.01,
     ),
-    brri = device('nicos.devices.generic.VirtualMotor',
-        unit = 'mm',
-        description = 'Right blade',
-        abslimits = (-16, 1.5),
-        precision = 0.01,
+    brri=device(
+        "nicos.devices.generic.VirtualMotor",
+        unit="mm",
+        description="Right blade",
+        abslimits=(-16, 1.5),
+        precision=0.01,
     ),
-    brto = device('nicos.devices.generic.VirtualMotor',
-        unit = 'mm',
-        description = 'Top blade',
-        abslimits = (-44, 1.5),
-        precision = 0.01,
+    brto=device(
+        "nicos.devices.generic.VirtualMotor",
+        unit="mm",
+        description="Top blade",
+        abslimits=(-44, 1.5),
+        precision=0.01,
     ),
-    brbo = device('nicos.devices.generic.VirtualMotor',
-        unit = 'mm',
-        description = 'Bottom blade',
-        abslimits = (-48, 1.5),
-        precision = 0.01,
+    brbo=device(
+        "nicos.devices.generic.VirtualMotor",
+        unit="mm",
+        description="Bottom blade",
+        abslimits=(-48, 1.5),
+        precision=0.01,
     ),
-    slit = device('nicos_sinq.hrpt.devices.brslit.BRSlit',
-        description = 'Slit 2 with left, right, bottom and top motors',
-        left = 'brle',
-        top = 'brto',
-        bottom = 'brbo',
-        right = 'brri',
-        visibility = (),
+    slit=device(
+        "nicos_sinq.hrpt.devices.brslit.BRSlit",
+        description="Slit 2 with left, right, bottom and top motors",
+        left="brle",
+        top="brto",
+        bottom="brbo",
+        right="brri",
+        visibility=(),
     ),
 )

@@ -1,9 +1,9 @@
-description = 'minimal NICOS startup setup'
+description = "minimal NICOS startup setup"
 
-group = 'lowlevel'
+group = "lowlevel"
 
 sysconfig = dict(
-    cache = 'ctrl.sans1.frm2.tum.de',
+    cache="ctrl.sans1.frm2.tum.de",
 )
 
 # STARTUP NEVER INCLUDES ANYTHING.

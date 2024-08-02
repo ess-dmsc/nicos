@@ -30,5 +30,4 @@ from nicos_sinq.devices.datasinks import SinqNexusFileSink
 
 class DMCNexusFileSink(SinqNexusFileSink):
     def get_output_file_dir(self):
-        return path.join(self.file_output_dir,
-                         session.experiment.title)
+        return path.join(self.file_output_dir, session.experiment.title)

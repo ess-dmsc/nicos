@@ -1,10 +1,11 @@
-description = 'Fast Shutter'
+description = "Fast Shutter"
 
-group = 'optional'
+group = "optional"
 
 devices = dict(
-    fastshutter = device('nicos.devices.generic.ManualSwitch',
-        description = 'Fast shutter',
-        states = ('open', 'closed'),
+    fastshutter=device(
+        "nicos.devices.generic.ManualSwitch",
+        description="Fast shutter",
+        states=("open", "closed"),
     ),
 )

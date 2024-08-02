@@ -1,19 +1,21 @@
-description = 'setup for the poller'
-group = 'special'
+description = "setup for the poller"
+group = "special"
 
 sysconfig = dict(
-    cache = 'resedactrl.reseda.frm2.tum.de',
+    cache="resedactrl.reseda.frm2.tum.de",
 )
 
 devices = dict(
-    Poller = device('nicos.services.poller.Poller',
-        autosetup = True,
-        alwayspoll = [],
-        neverpoll = [],
-        blacklist = ['scandet',
-#                     'cbox_0a_reg_amp',
-#                     'cbox_0b_reg_amp'
-#                     'cbox_1_reg_amp',# 'cbox_1_coil_amp', 'cbox_1_fg_amp',
-                    ]
+    Poller=device(
+        "nicos.services.poller.Poller",
+        autosetup=True,
+        alwayspoll=[],
+        neverpoll=[],
+        blacklist=[
+            "scandet",
+            #                     'cbox_0a_reg_amp',
+            #                     'cbox_0b_reg_amp'
+            #                     'cbox_1_reg_amp',# 'cbox_1_coil_amp', 'cbox_1_fg_amp',
+        ],
     ),
 )

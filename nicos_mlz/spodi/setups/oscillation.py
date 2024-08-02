@@ -1,11 +1,12 @@
-description = 'Sample oscillation'
+description = "Sample oscillation"
 
-group = 'optional'
+group = "optional"
 
 devices = dict(
-    sample_osc = device('nicos.devices.generic.oscillator.Oscillator',
-        description = 'Sample oscillation device',
-        moveable = 'sth',
-        range = (-90, 90)
+    sample_osc=device(
+        "nicos.devices.generic.oscillator.Oscillator",
+        description="Sample oscillation device",
+        moveable="sth",
+        range=(-90, 90),
     ),
 )

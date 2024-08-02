@@ -29,11 +29,14 @@ from nicos.guisupport.qt import QDialog, uic
 class AddModuleDialog(QDialog):
     def __init__(self, parent=None):
         QDialog.__init__(self, parent)
-        uic.loadUi(path.abspath(path.join(path.dirname(__file__),
-                                          '..',
-                                          'ui',
-                                          'dialogs',
-                                          'addmoduledialog.ui')), self)
+        uic.loadUi(
+            path.abspath(
+                path.join(
+                    path.dirname(__file__), "..", "ui", "dialogs", "addmoduledialog.ui"
+                )
+            ),
+            self,
+        )
 
     def getValue(self):
         return self.lineEditNewModule.text()
