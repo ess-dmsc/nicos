@@ -1,27 +1,28 @@
-description = 'Vacuum sensors of collimation tube'
+description = "Vacuum sensors of collimation tube"
 
-includes = ['system']
+includes = ["system"]
 
-excludes = ['collimation']
+excludes = ["collimation"]
 
-group = 'lowlevel'  # should not be visible to users
+group = "lowlevel"  # should not be visible to users
 
-tango_base = 'tango://hw.sans1.frm2.tum.de:10000/col/'
+tango_base = "tango://hw.sans1.frm2.tum.de:10000/col/"
 
 devices = dict(
-    col_2_m = device('nicos_mlz.sans1.devices.collimotor.MotorAllParams',
-        description = 'CollimatorMotor 2',
+    col_2_m=device(
+        "nicos_mlz.sans1.devices.collimotor.MotorAllParams",
+        description="CollimatorMotor 2",
         # IP-adresse: 172.16.17.7
-        tangodevice = tango_base + 'col-2m/modbus',
-        address = 0x4020+1*10,
-        slope = 200*4,  # FULL steps per turn * turns per mm
-        microsteps = 8,
-        unit = 'mm',
-        refpos = -8.,
-        abslimits = (-400, 600),
+        tangodevice=tango_base + "col-2m/modbus",
+        address=0x4020 + 1 * 10,
+        slope=200 * 4,  # FULL steps per turn * turns per mm
+        microsteps=8,
+        unit="mm",
+        refpos=-8.0,
+        abslimits=(-400, 600),
         # hw_disencfltr = 'enabled',
-        autozero = 20,
-        autopower =1,
+        autozero=20,
+        autopower=1,
     ),
     # at = device('nicos_mlz.sans1.devices.collimotor.MotorAllParams',
     #     description = 'Attenuator',

@@ -1,12 +1,13 @@
-description = 'Motor bus 13'
+description = "Motor bus 13"
 
-group = 'lowlevel'
+group = "lowlevel"
 
-tango_base = 'tango://pumadma.puma.frm2.tum.de:10000/puma/'
+tango_base = "tango://pumadma.puma.frm2.tum.de:10000/puma/"
 
 devices = dict(
-    motorbus13 = device('nicos.devices.vendor.ipc.IPCModBusTango',
-       tangodevice = tango_base + 'motorbus13/bio',
-       visibility = (),
+    motorbus13=device(
+        "nicos.devices.vendor.ipc.IPCModBusTango",
+        tangodevice=tango_base + "motorbus13/bio",
+        visibility=(),
     ),
 )

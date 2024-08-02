@@ -101,7 +101,7 @@ class BaseDataset:
         self.handlers = []
 
         # A user-defined "info string" for this dataset.
-        self.info = ''
+        self.info = ""
 
         # A lock to suppress updates to valuestats from the cacheCallback in
         # the datamanager
@@ -110,15 +110,18 @@ class BaseDataset:
         self.__dict__.update(kwds)
 
     def __str__(self):
-        return '<%s dataset %s..%s>' % (self.settype, str(self.uid)[:3],
-                                        str(self.uid)[-3:])
+        return "<%s dataset %s..%s>" % (
+            self.settype,
+            str(self.uid)[:3],
+            str(self.uid)[-3:],
+        )
 
     def __getstate__(self):
         # Pickling support: remove sink handler instances that likely contain
         # data that cannot be pickled, such as file objects.
         state = self.__dict__.copy()
-        state.pop('handlers', None)
-        state.pop('_statslock', None)
+        state.pop("handlers", None)
+        state.pop("_statslock", None)
         return state
 
     def dispatch(self, method, *args):
@@ -190,7 +193,7 @@ class PointDataset(BaseDataset):
                         if dt >= 0:
                             current[0] += dt
                             current[1] += dt * oldvalue
-                            current[2] += dt * oldvalue ** 2
+                            current[2] += dt * oldvalue**2
                             current[3] = min(current[3], value)
                             current[4] = max(current[4], value)
                             current[5] = timestamp
@@ -218,7 +221,7 @@ class PointDataset(BaseDataset):
         """Trim objects that are not required to be kept after finish()."""
         BaseDataset.trimResult(self)
         # remove arrays from memory in cached datasets
-        for (key, value) in self.results.items():
+        for key, value in self.results.items():
             if value is not None:
                 self.results[key] = (value[0], [])
 
@@ -232,14 +235,13 @@ class PointDataset(BaseDataset):
         """
         res = {}
         with self._statslock:
-            for devname, (t0, t1, t2,
-                          mini, maxi, _, lastv) in self._valuestats.items():
+            for devname, (t0, t1, t2, mini, maxi, _, lastv) in self._valuestats.items():
                 if t0 > 0:
                     mean = t1 / t0
-                    stdev = sqrt(abs(t2 / t0 - t1 ** 2 / t0 ** 2))
+                    stdev = sqrt(abs(t2 / t0 - t1**2 / t0**2))
                 else:
                     mean = lastv
-                    stdev = float('inf')
+                    stdev = float("inf")
                 res[devname] = mean, stdev, mini, maxi
         return res
 
@@ -301,34 +303,36 @@ class ScanDataset(BaseDataset):
                 # pylint: disable=pointless-statement
                 (subset.devvaluelist, subset.envvaluelist, subset.detvaluelist)
                 # clear all other data
-                for d in (subset.metainfo, subset.values, subset._valuestats,
-                          subset.canonical_values, subset.results):
+                for d in (
+                    subset.metainfo,
+                    subset.values,
+                    subset._valuestats,
+                    subset.canonical_values,
+                    subset.results,
+                ):
                     d.clear()
 
     @property
     def metainfo(self):
         """The metainfo is the same as for the first datapoint or subscan."""
         if not self.subsets:
-            raise ProgrammingError('metainfo is not available without points')
+            raise ProgrammingError("metainfo is not available without points")
         return self.subsets[0].metainfo
 
     @property
     def devvaluelists(self):
-        """List of all subset devvaluelist. """
-        return [subset.devvaluelist for subset in self.subsets
-                if subset.finished]
+        """List of all subset devvaluelist."""
+        return [subset.devvaluelist for subset in self.subsets if subset.finished]
 
     @property
     def envvaluelists(self):
-        """List of all subset envvaluelist. """
-        return [subset.envvaluelist for subset in self.subsets
-                if subset.finished]
+        """List of all subset envvaluelist."""
+        return [subset.envvaluelist for subset in self.subsets if subset.finished]
 
     @property
     def detvaluelists(self):
-        """List of all subset detvaluelist. """
-        return [subset.detvaluelist for subset in self.subsets
-                if subset.finished]
+        """List of all subset detvaluelist."""
+        return [subset.detvaluelist for subset in self.subsets if subset.finished]
 
 
 class SubscanDataset(ScanDataset):
@@ -352,12 +356,13 @@ class ScanData:
     """Simplified object containing scan data for serialized transfer to the
     GUI/ELog.
     """
+
     # unique id as a string
-    uid = ''
+    uid = ""
     # start time
     started = 0
     # scan info
-    scaninfo = ''
+    scaninfo = ""
     # assigned number
     counter = 0
     # file name(s)
@@ -367,7 +372,7 @@ class ScanData:
     # number of env. values
     envvalues = 0
     # chaining info
-    chain = ''
+    chain = ""
     # value info
     xvalueinfo = []
     yvalueinfo = []
@@ -397,24 +402,29 @@ class ScanData:
             self.filepaths = dataset.filepaths
             self.xindex = dataset.xindex
             self.envvalues = len(dataset.envvalueinfo)
-            self.chain = ','.join(str(uid) for uid in dataset.chain)
+            self.chain = ",".join(str(uid) for uid in dataset.chain)
             self.xvalueinfo = dataset.devvalueinfo + dataset.envvalueinfo
             self.yvalueinfo = dataset.detvalueinfo
 
             # convert result points to result lists (no arrays)
-            self.xresults = [subset.devvaluelist + subset.envvaluelist
-                             for subset in dataset.subsets]
+            self.xresults = [
+                subset.devvaluelist + subset.envvaluelist for subset in dataset.subsets
+            ]
             self.yresults = dataset.detvaluelists
 
             # convert metainfo to headerinfo
             self.headerinfo = {}
             if dataset.subsets:
-                for (devname, key), (_, val, unit, category) in \
-                        dataset.metainfo.items():
+                for (devname, key), (
+                    _,
+                    val,
+                    unit,
+                    category,
+                ) in dataset.metainfo.items():
                     if len(val) > 100:  # omit large values
                         continue
                     catlist = self.headerinfo.setdefault(category, [])
-                    catlist.append((devname, key, (val + ' ' + unit).strip()))
+                    catlist.append((devname, key, (val + " " + unit).strip()))
 
     # info derived from valueinfo
     @lazy_property

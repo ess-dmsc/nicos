@@ -1,14 +1,15 @@
-description = 'resolution args of chopper real table'
+description = "resolution args of chopper real table"
 
-group = 'lowlevel'
+group = "lowlevel"
 
-includes = ['chopper', 'detector', 'real_flight_path']
+includes = ["chopper", "detector", "real_flight_path"]
 
 devices = dict(
-    resolution = device('nicos_mlz.refsans.devices.resolution.Resolution',
-        description = description,
+    resolution=device(
+        "nicos_mlz.refsans.devices.resolution.Resolution",
+        description=description,
         # visibility = (),
-        chopper = 'chopper',
-        flightpath = 'real_flight_path',
+        chopper="chopper",
+        flightpath="real_flight_path",
     ),
 )

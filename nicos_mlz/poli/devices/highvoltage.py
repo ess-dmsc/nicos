@@ -33,6 +33,10 @@ class HVWatch(ManualSwitch):
     """
 
     parameters = {
-        'tdelta': Param('Maximum deviation of temperature from setpoint to '
-                        'switch off high voltage', type=float, default=1.5),
+        "tdelta": Param(
+            "Maximum deviation of temperature from setpoint to "
+            "switch off high voltage",
+            type=float,
+            default=1.5,
+        ),
     }

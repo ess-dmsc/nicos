@@ -34,26 +34,27 @@ from nicos.utils import findResource
 class ProtocolPanel(Panel):
     """Generate a measurement protocol from saved runs."""
 
-    panelName = 'KWS protocol'
+    panelName = "KWS protocol"
 
     def __init__(self, parent, client, options):
         Panel.__init__(self, parent, client, options)
-        loadUi(self, findResource('nicos_mlz/kws1/gui/protocol.ui'))
+        loadUi(self, findResource("nicos_mlz/kws1/gui/protocol.ui"))
 
-        self.firstEdit.setShadowText('default: all')
-        self.lastEdit.setShadowText('default: all')
+        self.firstEdit.setShadowText("default: all")
+        self.lastEdit.setShadowText("default: all")
         self.fontBox.setValue(self.outText.font().pointSize())
 
     @pyqtSlot()
     def on_genBtn_clicked(self):
-        datadir = self.client.eval('session.experiment.proposalpath', '')
+        datadir = self.client.eval("session.experiment.proposalpath", "")
         if not datadir:
-            self.showError('Cannot determine data directory! Are you '
-                           'connected?')
+            self.showError("Cannot determine data directory! Are you " "connected?")
             return
-        if not path.isdir(path.join(datadir, 'data')):
-            self.showError('Cannot read data! This tool works only when '
-                           'the data is accessible at %s.' % datadir)
+        if not path.isdir(path.join(datadir, "data")):
+            self.showError(
+                "Cannot read data! This tool works only when "
+                "the data is accessible at %s." % datadir
+            )
             return
 
         first = self.firstEdit.text() or None
@@ -61,35 +62,38 @@ class ProtocolPanel(Panel):
             try:
                 first = int(first)
             except ValueError:
-                self.showError('First run is not a number!')
+                self.showError("First run is not a number!")
                 return
         last = self.lastEdit.text() or None
         if last:
             try:
                 last = int(last)
             except ValueError:
-                self.showError('Last run is not a number!')
+                self.showError("Last run is not a number!")
                 return
 
         with_ts = self.stampBox.isChecked()
 
-        text = self.client.eval('session.experiment._generate_protocol('
-                                '%s, %s, %s)' % (first, last, with_ts))
+        text = self.client.eval(
+            "session.experiment._generate_protocol("
+            "%s, %s, %s)" % (first, last, with_ts)
+        )
         self.outText.setPlainText(text)
 
     @pyqtSlot()
     def on_saveBtn_clicked(self):
-        initialdir = self.client.eval('session.experiment.proposalpath', '')
-        fn = QFileDialog.getSaveFileName(self, 'Save protocol', initialdir,
-                                         'Text files (*.txt)')[0]
+        initialdir = self.client.eval("session.experiment.proposalpath", "")
+        fn = QFileDialog.getSaveFileName(
+            self, "Save protocol", initialdir, "Text files (*.txt)"
+        )[0]
         if not fn:
             return
         try:
             text = self.outText.toPlainText()
-            with open(fn, 'w', encoding='utf-8') as fp:
+            with open(fn, "w", encoding="utf-8") as fp:
                 fp.write(text)
         except Exception as err:
-            self.showError('Could not save: %s' % err)
+            self.showError("Could not save: %s" % err)
 
     @pyqtSlot()
     def on_printBtn_clicked(self):

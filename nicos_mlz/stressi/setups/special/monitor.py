@@ -1,196 +1,242 @@
-description = 'setup for the status monitor'
-group = 'special'
+description = "setup for the status monitor"
+group = "special"
 
 _expcolumn = Column(
-    Block('Experiment', [
-        BlockRow(
-            Field(name='Proposal', key='exp/proposal', width=7),
-            Field(name='Title', key='exp/title', width=20, istext=True, maxlen=20),
-            Field(name='Last file', key='exp/lastscan'),
-        ),
-        BlockRow(
-            Field(name='Current status', key='exp/action', width=40, istext=True, maxlen=40),
-        ),
-    ],
+    Block(
+        "Experiment",
+        [
+            BlockRow(
+                Field(name="Proposal", key="exp/proposal", width=7),
+                Field(name="Title", key="exp/title", width=20, istext=True, maxlen=20),
+                Field(name="Last file", key="exp/lastscan"),
+            ),
+            BlockRow(
+                Field(
+                    name="Current status",
+                    key="exp/action",
+                    width=40,
+                    istext=True,
+                    maxlen=40,
+                ),
+            ),
+        ],
     ),
 )
 
 _sampletable = Column(
-    Block('Sample table', [
-        BlockRow(
-            Field(dev='xt', format='%.1f'),
-        ),
-        BlockRow(
-            Field(dev='yt'),
-        ),
-        BlockRow(
-            Field(dev='zt', format='%.2f'),
-        ),
-        BlockRow(
-            Field(dev='omgs'),
-        ),
-        BlockRow(
-            Field(dev='tths'),
-        ),
-    ],
-    setups = 'sampletable or vstressi',
-    ),
-    Block('Eulerian', [
-        BlockRow(
-            Field(dev='chis'),
-        ),
-        BlockRow(
-            Field(dev='phis'),
-        ),
-    ],
-    setups = 'eulerian*',
-    ),
-    Block('Robot', [
-        BlockRow(
-            Field(dev='xt'),
-        ),
-        BlockRow(
-            Field(dev='yt'),
-        ),
-        BlockRow(
-            Field(dev='zt'),
-        ),
-        BlockRow(
-            Field(dev='chis'),
-        ),
-        BlockRow(
-            Field(dev='phis'),
-        ),
-        BlockRow(
-            Field(dev='omgs'),
-        ),
-        BlockRow(
-            Field(dev='tths'),
-        ),
-        BlockRow(
-            Field(dev='robt'),
-        ),
-        BlockRow(
-            Field(dev='robs'),
-        ),
-        BlockRow(
-            Field(dev='robsl'),
-        ),
-        BlockRow(
-            Field(dev='robsj'),
-        ),
-        BlockRow(
-            Field(dev='robsr'),
-        ),
+    Block(
+        "Sample table",
+        [
+            BlockRow(
+                Field(dev="xt", format="%.1f"),
+            ),
+            BlockRow(
+                Field(dev="yt"),
+            ),
+            BlockRow(
+                Field(dev="zt", format="%.2f"),
+            ),
+            BlockRow(
+                Field(dev="omgs"),
+            ),
+            BlockRow(
+                Field(dev="tths"),
+            ),
         ],
-        setups = 'robot*',
+        setups="sampletable or vstressi",
+    ),
+    Block(
+        "Eulerian",
+        [
+            BlockRow(
+                Field(dev="chis"),
+            ),
+            BlockRow(
+                Field(dev="phis"),
+            ),
+        ],
+        setups="eulerian*",
+    ),
+    Block(
+        "Robot",
+        [
+            BlockRow(
+                Field(dev="xt"),
+            ),
+            BlockRow(
+                Field(dev="yt"),
+            ),
+            BlockRow(
+                Field(dev="zt"),
+            ),
+            BlockRow(
+                Field(dev="chis"),
+            ),
+            BlockRow(
+                Field(dev="phis"),
+            ),
+            BlockRow(
+                Field(dev="omgs"),
+            ),
+            BlockRow(
+                Field(dev="tths"),
+            ),
+            BlockRow(
+                Field(dev="robt"),
+            ),
+            BlockRow(
+                Field(dev="robs"),
+            ),
+            BlockRow(
+                Field(dev="robsl"),
+            ),
+            BlockRow(
+                Field(dev="robsj"),
+            ),
+            BlockRow(
+                Field(dev="robsr"),
+            ),
+        ],
+        setups="robot*",
     ),
 )
 
 _measurement = Column(
-    Block('Measurement', [
-        BlockRow(
-            Field(name='timer', key='tim1/value'),
-            Field(name='monitor', key='mon/value'),
-            Field(name='counts', key='image/value'),
-        ),
+    Block(
+        "Measurement",
+        [
+            BlockRow(
+                Field(name="timer", key="tim1/value"),
+                Field(name="monitor", key="mon/value"),
+                Field(name="counts", key="image/value"),
+            ),
         ],
     ),
-    Block('Primary slit', [
-        BlockRow(
-            Field(dev='pst'),
-            Field(dev='psz'),
-            Field(dev='psw'),
-            Field(dev='psh'),
-            Field(dev='psx'),
-        ),
+    Block(
+        "Primary slit",
+        [
+            BlockRow(
+                Field(dev="pst"),
+                Field(dev="psz"),
+                Field(dev="psw"),
+                Field(dev="psh"),
+                Field(dev="psx"),
+            ),
         ],
-        setups = 'primaryslit* or vstressi',
+        setups="primaryslit* or vstressi",
     ),
-    Block('Secondary optics', [
-        BlockRow(
-            Field(dev='sst'),
-            Field(dev='ssw'),
-        ),
+    Block(
+        "Secondary optics",
+        [
+            BlockRow(
+                Field(dev="sst"),
+                Field(dev="ssw"),
+            ),
         ],
-        setups = 'secondaryslit or vstressi',
+        setups="secondaryslit or vstressi",
     ),
-    Block('Radial collimator', [
-        BlockRow(
-            Field(dev='rcdet'),
-            Field(dev='rad_fwhm'),
-        ),
+    Block(
+        "Radial collimator",
+        [
+            BlockRow(
+                Field(dev="rcdet"),
+                Field(dev="rad_fwhm"),
+            ),
         ],
-        setups = 'radial',
+        setups="radial",
     ),
-    Block('Tensile machine', [
-        BlockRow(
-            Field(dev='teload'),
-        ),
-        BlockRow(
-            Field(dev='tepos'),
-        ),
-        BlockRow(
-            Field(dev='teext'),
-        ),
+    Block(
+        "Tensile machine",
+        [
+            BlockRow(
+                Field(dev="teload"),
+            ),
+            BlockRow(
+                Field(dev="tepos"),
+            ),
+            BlockRow(
+                Field(dev="teext"),
+            ),
         ],
-        setups = 'tensile*',
+        setups="tensile*",
     ),
 )
 
 _eulerian = Column(
-    Block('', [
-        BlockRow(
-            Field(dev='ReactorPower'),),
-        BlockRow(
-            Field(dev='hv1'),
-            Field(dev='hv2'),
-        ),
+    Block(
+        "",
+        [
+            BlockRow(
+                Field(dev="ReactorPower"),
+            ),
+            BlockRow(
+                Field(dev="hv1"),
+                Field(dev="hv2"),
+            ),
         ],
     ),
-    Block('Monochromator', [
-        BlockRow(
-            Field(name='Crystal', dev='transm', istext=True),
-        ),
-        BlockRow(
-            Field(name='Wave length', dev='wav'),
-        ),
-        ]
-    ),
-    Block('Sample Temperature', [
-        BlockRow(
-              Field(dev='T'),
-        ),
+    Block(
+        "Monochromator",
+        [
+            BlockRow(
+                Field(name="Crystal", dev="transm", istext=True),
+            ),
+            BlockRow(
+                Field(name="Wave length", dev="wav"),
+            ),
         ],
-        setups = 'stressihtf* or htf* or ccr*',
+    ),
+    Block(
+        "Sample Temperature",
+        [
+            BlockRow(
+                Field(dev="T"),
+            ),
+        ],
+        setups="stressihtf* or htf* or ccr*",
     ),
 )
 
 _image = Column(
-    Block('', [
-        BlockRow(
-            Field(name='Data (linear)', picture='/stressicontrol/webroot/live_lin.png',
-                  refresh=1, width=24, height=24),
-            Field(name='Data (log)', picture='/stressicontrol/webroot/live_log.png',
-                  refresh=1, width=24, height=24),
-        ),
+    Block(
+        "",
+        [
+            BlockRow(
+                Field(
+                    name="Data (linear)",
+                    picture="/stressicontrol/webroot/live_lin.png",
+                    refresh=1,
+                    width=24,
+                    height=24,
+                ),
+                Field(
+                    name="Data (log)",
+                    picture="/stressicontrol/webroot/live_log.png",
+                    refresh=1,
+                    width=24,
+                    height=24,
+                ),
+            ),
         ],
     ),
 )
 
 devices = dict(
-    Monitor = device('nicos.services.monitor.qt.Monitor',
-        title = 'NICOS status monitor',
-        loglevel = 'info',
+    Monitor=device(
+        "nicos.services.monitor.qt.Monitor",
+        title="NICOS status monitor",
+        loglevel="info",
         # Use only 'localhost' if the cache is really running on
         # the same machine, otherwise use the hostname (official
         # computer name) or an IP address.
-        cache = 'stressictrl.stressi.frm2.tum.de',
-        font = 'Luxi Sans',
-        valuefont = 'Consolas',
-        padding = 0,
-        layout = [Row(_expcolumn),
-                  Row(_sampletable, _measurement, _eulerian),
-                  Row(_image)],
+        cache="stressictrl.stressi.frm2.tum.de",
+        font="Luxi Sans",
+        valuefont="Consolas",
+        padding=0,
+        layout=[
+            Row(_expcolumn),
+            Row(_sampletable, _measurement, _eulerian),
+            Row(_image),
+        ],
     ),
 )

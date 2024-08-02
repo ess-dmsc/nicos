@@ -27,8 +27,18 @@ import time
 
 import numpy as np
 
-from nicos.core import ArrayDesc, Attach, Measurable, Moveable, Override, \
-    Param, Readable, dictof, oneof, tupleof
+from nicos.core import (
+    ArrayDesc,
+    Attach,
+    Measurable,
+    Moveable,
+    Override,
+    Param,
+    Readable,
+    dictof,
+    oneof,
+    tupleof,
+)
 from nicos.core.constants import FINAL, INTERMEDIATE, POINT
 from nicos.core.data import DataSinkHandler
 from nicos.core.status import BUSY, OK
@@ -36,25 +46,30 @@ from nicos.devices.datasinks import FileSink
 from nicos.devices.entangle import ImageChannel
 from nicos.utils import lazy_property
 
-MODES = ['cross_auto1', 'cross_auto2', 'auto1_auto2', 'cross_cross']
+MODES = ["cross_auto1", "cross_auto2", "auto1_auto2", "cross_cross"]
 
 
 class DLSCard(ImageChannel):
     attached_devices = {
-        'wheels': Attach('The filter wheel positions', Readable,
-                         multiple=True, optional=True),
+        "wheels": Attach(
+            "The filter wheel positions", Readable, multiple=True, optional=True
+        ),
     }
 
     parameters = {
-        'angles': Param('Scattering angles of the detector',
-                        type=tupleof(float, float), mandatory=True,
-                        settable=True),
-        'mode':   Param('Measure mode', type=oneof(*MODES),
-                        default='cross_cross', settable=True),
+        "angles": Param(
+            "Scattering angles of the detector",
+            type=tupleof(float, float),
+            mandatory=True,
+            settable=True,
+        ),
+        "mode": Param(
+            "Measure mode", type=oneof(*MODES), default="cross_cross", settable=True
+        ),
     }
 
     def _get_filters(self):
-        return ' '.join('%d' % wh.read() for wh in self._attached_wheels)
+        return " ".join("%d" % wh.read() for wh in self._attached_wheels)
 
     def setMode(self):
         self._dev.readoutMode = self.mode
@@ -68,31 +83,37 @@ class DLSCard(ImageChannel):
 
     @lazy_property
     def abscissa_arraydesc(self):
-        return ArrayDesc('%s_abscissa' % self.name, shape=(264,), dtype='<f8')
+        return ArrayDesc("%s_abscissa" % self.name, shape=(264,), dtype="<f8")
 
     @lazy_property
     def intensity_arraydesc(self):
-        return ArrayDesc('%s_intensity' % self.name, shape=(100, 3), dtype='<f8')
+        return ArrayDesc("%s_intensity" % self.name, shape=(100, 3), dtype="<f8")
 
 
 class DLSDetector(Measurable):
     attached_devices = {
-        'cards':    Attach('DLS cards', DLSCard, multiple=True),
-        'shutter':  Attach('Shutter to open before measuring', Moveable),
-        'limiters': Attach('The filter wheel adjusters', Moveable, multiple=True),
-        'lasersel': Attach('The laser wavelength selector', Readable, optional=True),
+        "cards": Attach("DLS cards", DLSCard, multiple=True),
+        "shutter": Attach("Shutter to open before measuring", Moveable),
+        "limiters": Attach("The filter wheel adjusters", Moveable, multiple=True),
+        "lasersel": Attach("The laser wavelength selector", Readable, optional=True),
     }
 
     parameters = {
-        'duration':  Param('Duration of a single DLS measurement.', default=10,
-                           unit='s', settable=True),
-        'intensity': Param('Intensity to aim for when adjusting filter wheels.',
-                           default=100, unit='kHz', settable=True),
-        'wavelengthmap': Param('Laser wavelength depending on selector',
-                               unit='nm', type=dictof(str, float)),
+        "duration": Param(
+            "Duration of a single DLS measurement.", default=10, unit="s", settable=True
+        ),
+        "intensity": Param(
+            "Intensity to aim for when adjusting filter wheels.",
+            default=100,
+            unit="kHz",
+            settable=True,
+        ),
+        "wavelengthmap": Param(
+            "Laser wavelength depending on selector", unit="nm", type=dictof(str, float)
+        ),
         # these should be sample properties instead...
-        'viscosity': Param('Sample viscosity', unit='cp', settable=True),
-        'refrindex': Param('Sample refractive index', settable=True),
+        "viscosity": Param("Sample viscosity", unit="cp", settable=True),
+        "refrindex": Param("Sample refractive index", settable=True),
     }
 
     def doInit(self, mode):
@@ -104,10 +125,9 @@ class DLSDetector(Measurable):
 
     def _get_wavelength(self):
         if self._attached_lasersel:
-            return self.wavelengthmap.get(
-                self._attached_lasersel.read(), -1)
+            return self.wavelengthmap.get(self._attached_lasersel.read(), -1)
         else:
-            return self.wavelengthmap.get('', -1)
+            return self.wavelengthmap.get("", -1)
 
     def doRead(self, maxage=0):
         return []
@@ -132,16 +152,18 @@ class DLSDetector(Measurable):
         return result
 
     def doStatus(self, maxage=0):
-        return BUSY if self._measuring else OK, \
-            '%d of %d done' % (self._nfinished, self._ntotal)
+        return BUSY if self._measuring else OK, "%d of %d done" % (
+            self._nfinished,
+            self._ntotal,
+        )
 
     def doSetPreset(self, **preset):
-        if 't' in preset:
-            self._ntotal = int(preset['t'] / self.duration) or 1
+        if "t" in preset:
+            self._ntotal = int(preset["t"] / self.duration) or 1
         self._lastpreset = preset
 
     def presetInfo(self):
-        return ('t',)
+        return ("t",)
 
     def doStart(self):
         self._attached_shutter.start(1)
@@ -163,7 +185,7 @@ class DLSDetector(Measurable):
                 pass
         self._attached_shutter.start(0)
         for limiter in self._attached_limiters:
-            limiter.maw(0)   # close wheels
+            limiter.maw(0)  # close wheels
 
     def duringMeasureHook(self, elapsed):
         retval = None
@@ -171,8 +193,7 @@ class DLSDetector(Measurable):
             adj_lim = self._attached_limiters[self._adjusting]
             if adj_lim.status(0)[0] == BUSY:
                 return
-            self.log.info('reached %s adjustment: %.1f kHz', adj_lim,
-                          adj_lim.read(0))
+            self.log.info("reached %s adjustment: %.1f kHz", adj_lim, adj_lim.read(0))
             if self._adjusting == len(self._attached_limiters) - 1:
                 self._adjusting = -1
             else:
@@ -186,7 +207,7 @@ class DLSDetector(Measurable):
                 retval = INTERMEDIATE
                 self._nfinished += 1
             elif self._nfinished < self._ntotal:
-                self.log.info('starting new DLS measurement')
+                self.log.info("starting new DLS measurement")
                 for card in self._attached_cards:
                     card.setMode()
                     card.preselection = self.duration
@@ -197,7 +218,7 @@ class DLSDetector(Measurable):
         return retval
 
 
-FILETEMPLATE = '''\
+FILETEMPLATE = """\
 FPGA-CORRELATOR
 Date :	"%(date)s"
 Time :	"%(time)s"
@@ -230,49 +251,49 @@ MeanCR2 [kHz]   :	%(mean2)14.5f
 MeanCR3 [kHz]   :	%(mean3)14.5f
 
 "Correlation"
-'''
+"""
 
 
 class DLSFileSinkHandler(DataSinkHandler):
     def _write(self, arrays):
         self._counter += 1
-        for (i, card) in enumerate(self.detector._attached_cards):
-            correlation = np.stack([arrays[3*i+1],
-                                    arrays[3*i][:,0],
-                                    arrays[3*i][:,1]], 1)
-            correlation[np.isinf(correlation)] = 0.
-            intensity = arrays[3*i+2]
+        for i, card in enumerate(self.detector._attached_cards):
+            correlation = np.stack(
+                [arrays[3 * i + 1], arrays[3 * i][:, 0], arrays[3 * i][:, 1]], 1
+            )
+            correlation[np.isinf(correlation)] = 0.0
+            intensity = arrays[3 * i + 2]
 
             tmpldict = dict(
-                date = time.strftime('%m.%d.%Y'),
-                time = time.strftime('%H:%M:%S'),
-                sample = self._meta.get(('Sample', 'samplename'),
-                                        ('unknown',))[0],
-                temperature = self._meta.get(('Ts', 'value'), (-1,))[0],
-                viscosity = self.detector.viscosity,
-                refrindex = self.detector.refrindex,
-                wavelength = self.detector._get_wavelength(),
-                angle1 = card.angles[0],
-                angle2 = card.angles[1],
-                filters = card._get_filters(),
-                duration = int(self.detector.duration),
-                floatdur = int(self.detector.duration * 1000),
-                modes = card.mode,
-                mean0 = np.mean(intensity[1:, 1]),
-                mean1 = np.mean(intensity[1:, 2]),
-                mean2 = 0,
-                mean3 = 0,
+                date=time.strftime("%m.%d.%Y"),
+                time=time.strftime("%H:%M:%S"),
+                sample=self._meta.get(("Sample", "samplename"), ("unknown",))[0],
+                temperature=self._meta.get(("Ts", "value"), (-1,))[0],
+                viscosity=self.detector.viscosity,
+                refrindex=self.detector.refrindex,
+                wavelength=self.detector._get_wavelength(),
+                angle1=card.angles[0],
+                angle2=card.angles[1],
+                filters=card._get_filters(),
+                duration=int(self.detector.duration),
+                floatdur=int(self.detector.duration * 1000),
+                modes=card.mode,
+                mean0=np.mean(intensity[1:, 1]),
+                mean1=np.mean(intensity[1:, 2]),
+                mean2=0,
+                mean3=0,
             )
 
             fd = self.manager.createDataFile(
                 self.dataset,
                 self.sink.filenametemplate,
                 self.sink.subdir,
-                additionalinfo={'dlscounter': self._counter, 'dlscard': i+1})
+                additionalinfo={"dlscounter": self._counter, "dlscard": i + 1},
+            )
             fd.write(FILETEMPLATE % tmpldict)
-            np.savetxt(fd, correlation, '%14.5e')
+            np.savetxt(fd, correlation, "%14.5e")
             fd.write('\n"Count Rate"\n')
-            np.savetxt(fd, intensity, '%14.5f')
+            np.savetxt(fd, intensity, "%14.5f")
             fd.close()
 
     def prepare(self):
@@ -296,9 +317,11 @@ class DLSFileSink(FileSink):
     handlerclass = DLSFileSinkHandler
 
     parameter_overrides = {
-        'settypes':         Override(default=[POINT]),
-        'subdir':           Override(default='dls'),
-        'filenametemplate': Override(mandatory=False, userparam=False,
-                                     default=['dls_%(pointcounter)d_'
-                                              '%(dlscounter)03d_card%(dlscard)d.asc']),
+        "settypes": Override(default=[POINT]),
+        "subdir": Override(default="dls"),
+        "filenametemplate": Override(
+            mandatory=False,
+            userparam=False,
+            default=["dls_%(pointcounter)d_" "%(dlscounter)03d_card%(dlscard)d.asc"],
+        ),
     }

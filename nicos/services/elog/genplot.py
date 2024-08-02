@@ -30,69 +30,73 @@ from nicos.utils import createSubprocess
 
 def plotDataset(dataset, fn, fmt):
     if not dataset.xresults:
-        raise ValueError('no points in dataset')
+        raise ValueError("no points in dataset")
 
-    gpProcess = createSubprocess('gnuplot', shell=True,
-                                 stdin=subprocess.PIPE,
-                                 stdout=subprocess.PIPE,
-                                 stderr=subprocess.STDOUT)
+    gpProcess = createSubprocess(
+        "gnuplot",
+        shell=True,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+    )
 
     def write(s):
         gpProcess.stdin.write(s.encode())
 
-    write('set terminal %s size 600,400 dashed\n' % fmt)
-    write('set xlabel "%s (%s)"\n' % (dataset.xnames[dataset.xindex],
-                                      dataset.xunits[dataset.xindex]))
-    write('set title "Scan %s - %s"\n' %
-          (dataset.counter, dataset.scaninfo))
-    write('set grid lt 3 lc 8\n')
-    write('set style increment user\n')
+    write("set terminal %s size 600,400 dashed\n" % fmt)
+    write(
+        'set xlabel "%s (%s)"\n'
+        % (dataset.xnames[dataset.xindex], dataset.xunits[dataset.xindex])
+    )
+    write('set title "Scan %s - %s"\n' % (dataset.counter, dataset.scaninfo))
+    write("set grid lt 3 lc 8\n")
+    write("set style increment user\n")
     for ls, pt in enumerate([7, 5, 9, 11, 13, 2, 1, 3]):
-        write('set style line %d lt 1 lc %d pt %d\n' % (ls+1, ls+1, pt))
+        write("set style line %d lt 1 lc %d pt %d\n" % (ls + 1, ls + 1, pt))
 
     data = []
     for xv, yv in zip(dataset.xresults, dataset.yresults):
-        data.append('%s %s' % (xv[dataset.xindex], ' '.join(map(str, yv))))
-    data = '\n'.join(data) + '\ne\n'
+        data.append("%s %s" % (xv[dataset.xindex], " ".join(map(str, yv))))
+    data = "\n".join(data) + "\ne\n"
 
     plotterms = []
     ylabels = []
     yunits = set()
     for i, (name, info) in enumerate(zip(dataset.ynames, dataset.yvalueinfo)):
-        if info.type in ('info', 'error', 'time', 'monitor'):
+        if info.type in ("info", "error", "time", "monitor"):
             continue
         term = '"-"'
-        if info.errors == 'sqrt':
-            term += ' using 1:%d:(sqrt($%d))' % (i+2, i+2)
-        elif info.errors == 'next':
-            term += ' using 1:%d:%d' % (i+2, i+3)
+        if info.errors == "sqrt":
+            term += " using 1:%d:(sqrt($%d))" % (i + 2, i + 2)
+        elif info.errors == "next":
+            term += " using 1:%d:%d" % (i + 2, i + 3)
         else:
-            term += ' using 1:%d' % (i+2)
+            term += " using 1:%d" % (i + 2)
         term += ' title "%s (%s)"' % (name, info.unit)
-        if info.type == 'other':
-            term += ' axes x1y2'
-        term += ' with errorlines'
+        if info.type == "other":
+            term += " axes x1y2"
+        term += " with errorlines"
         plotterms.append(term)
-        ylabels.append('%s (%s)' % (name, info.unit))
+        ylabels.append("%s (%s)" % (name, info.unit))
         yunits.add(info.unit)
 
     if len(ylabels) == 1:
         write('set ylabel "%s"\n' % ylabels[0])
-        write('set key off\n')
+        write("set key off\n")
     else:
         if len(yunits) == 1:
             write('set ylabel "%s"\n' % yunits.pop())
-        write('set key outside below\n')
+        write("set key outside below\n")
 
     write('set output "%s-lin.%s"\n' % (fn, fmt))
-    write('plot %s\n' % ', '.join(plotterms))
+    write("plot %s\n" % ", ".join(plotterms))
     for i in range(len(plotterms)):
         write(data)
 
     write('set output "%s-log.%s"\n' % (fn, fmt))
-    write('set logscale y\n')
-    write('plot %s\n' % ', '.join(plotterms))
+    write("set logscale y\n")
+    write("plot %s\n" % ", ".join(plotterms))
     for i in range(len(plotterms)):
         write(data)
-    write('exit')
+    write("exit")
     gpProcess.communicate()

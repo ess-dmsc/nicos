@@ -1,15 +1,16 @@
-description = 'Camera Focusing Maxibox'
+description = "Camera Focusing Maxibox"
 
-pvprefix = 'SQ:NEUTRA:board1:'
+pvprefix = "SQ:NEUTRA:board1:"
 
-group = 'lowlevel'
+group = "lowlevel"
 
 display_order = 60
 
 devices = dict(
-    focus_maxi = device('nicos.devices.epics.pyepics.motor.HomingProtectedEpicsMotor',
-        description = 'Camera Focusing Maxibox',
-        motorpv = pvprefix + 'CMAX',
-        errormsgpv = pvprefix + 'CMAX-MsgTxt',
+    focus_maxi=device(
+        "nicos.devices.epics.pyepics.motor.HomingProtectedEpicsMotor",
+        description="Camera Focusing Maxibox",
+        motorpv=pvprefix + "CMAX",
+        errormsgpv=pvprefix + "CMAX-MsgTxt",
     ),
 )

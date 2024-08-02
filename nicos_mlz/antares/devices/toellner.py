@@ -22,6 +22,7 @@
 # *****************************************************************************
 
 """Special device to amplify an analog output."""
+
 from nicos.core import Attach, HasLimits, Moveable, Param, oneof, status
 
 
@@ -29,53 +30,54 @@ class ToellnerDc(HasLimits, Moveable):
     """Special device to amplify an analog output."""
 
     attached_devices = {
-        'amplitude': Attach('Amplitude', Moveable),
+        "amplitude": Attach("Amplitude", Moveable),
     }
 
     parameters = {
-        'input_range': Param('Input range',
-                             type=oneof('5V', '10V'), settable=True,
-                             mandatory=True),
-        'max_voltage': Param('Max Voltage',
-                             type=float, settable=False, default=20),
-        'max_current': Param('Max Current',
-                             type=float, settable=False, default=16),
-        'mode': Param('current or voltage',
-                      type=oneof('current', 'voltage'),
-                      settable=False, mandatory=True),
+        "input_range": Param(
+            "Input range", type=oneof("5V", "10V"), settable=True, mandatory=True
+        ),
+        "max_voltage": Param("Max Voltage", type=float, settable=False, default=20),
+        "max_current": Param("Max Current", type=float, settable=False, default=16),
+        "mode": Param(
+            "current or voltage",
+            type=oneof("current", "voltage"),
+            settable=False,
+            mandatory=True,
+        ),
     }
 
     def doRead(self, maxage=0):
         max_value = self.max_voltage
-        if self.mode == 'current':
+        if self.mode == "current":
             max_value = self.max_current
 
-        in_range = 5.
-        if self.input_range == '10V':
-            in_range = 10.
+        in_range = 5.0
+        if self.input_range == "10V":
+            in_range = 10.0
 
         ret = float(self._attached_amplitude.read(maxage)) / in_range * max_value
         return ret
 
     def doStart(self, target):
         max_value = self.max_voltage
-        if self.mode == 'current':
+        if self.mode == "current":
             max_value = self.max_current
 
-        in_range = 5.
-        if self.input_range == '10V':
-            in_range = 10.
+        in_range = 5.0
+        if self.input_range == "10V":
+            in_range = 10.0
 
         target = float(target) / float(max_value) * in_range
 
         self._attached_amplitude.start(target)
 
     def doReadUnit(self):
-        if self.mode == 'current':
-            return 'A'
-        return 'V'
+        if self.mode == "current":
+            return "A"
+        return "V"
 
     def doStatus(self, maxage=0):
         if self._attached_amplitude.status(0)[0] == status.DISABLED:
-            return status.DISABLED, '%s mode' % self.mode
-        return status.OK, '%s mode' % self.mode
+            return status.DISABLED, "%s mode" % self.mode
+        return status.OK, "%s mode" % self.mode

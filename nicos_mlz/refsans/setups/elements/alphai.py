@@ -1,7 +1,7 @@
-description = 'Alphai alias device'
+description = "Alphai alias device"
 
-group = 'lowlevel'
+group = "lowlevel"
 
 devices = dict(
-    alphai = device('nicos.devices.generic.DeviceAlias'),
+    alphai=device("nicos.devices.generic.DeviceAlias"),
 )

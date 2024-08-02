@@ -1,18 +1,19 @@
-description = '3He detector'
-group = 'lowlevel'
+description = "3He detector"
+group = "lowlevel"
 
-includes = ['filesavers']
+includes = ["filesavers"]
 
-tango_base = 'tango://%s:10000/reseda/' % configdata('gconfigs.tango_host')
+tango_base = "tango://%s:10000/reseda/" % configdata("gconfigs.tango_host")
 
 devices = dict(
-    timer = device('nicos.devices.generic.VirtualTimer',
-    # timer = device('nicos.devices.entangle.TimerChannel',
-        description = 'Timer channel 2',
-    #    tangodevice = tango_base + 'frmctr/timer',
-        fmtstr = '%.2f',
+    timer=device(
+        "nicos.devices.generic.VirtualTimer",
+        # timer = device('nicos.devices.entangle.TimerChannel',
+        description="Timer channel 2",
+        #    tangodevice = tango_base + 'frmctr/timer',
+        fmtstr="%.2f",
         # visibility = (),
-        unit = 's',
+        unit="s",
     ),
     # monitor1 = device('nicos.devices.entangle.CounterChannel',
     #     description = 'Monitor channel 1',

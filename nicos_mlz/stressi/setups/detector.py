@@ -1,32 +1,37 @@
-description = 'Detector devices'
+description = "Detector devices"
 
-group = 'lowlevel'
+group = "lowlevel"
 
-includes = ['hv', ]
+includes = [
+    "hv",
+]
 
-tango_base = 'tango://mesydaq.stressi.frm2.tum.de:10000/qm/qmesydaq/'
+tango_base = "tango://mesydaq.stressi.frm2.tum.de:10000/qm/qmesydaq/"
 
 devices = dict(
-    mon = device('nicos.devices.entangle.CounterChannel',
-        description = 'MON',
-        tangodevice = tango_base + 'counter0',
-        fmtstr = '%d',
-        type = 'monitor',
-        visibility = (),
+    mon=device(
+        "nicos.devices.entangle.CounterChannel",
+        description="MON",
+        tangodevice=tango_base + "counter0",
+        fmtstr="%d",
+        type="monitor",
+        visibility=(),
     ),
-    t_mon = device('nicos.devices.entangle.CounterChannel',
-        description = 'Transmission monitor',
-        tangodevice = tango_base + 'counter4',
-        fmtstr = '%d',
-        type = 'monitor',
-        visibility = (),
+    t_mon=device(
+        "nicos.devices.entangle.CounterChannel",
+        description="Transmission monitor",
+        tangodevice=tango_base + "counter4",
+        fmtstr="%d",
+        type="monitor",
+        visibility=(),
     ),
-    tim1 = device('nicos.devices.entangle.TimerChannel',
-        description = 'Timer',
-        tangodevice = tango_base + 'timer',
-        fmtstr = '%.2f',
-        unit = 's',
-        visibility = (),
+    tim1=device(
+        "nicos.devices.entangle.TimerChannel",
+        description="Timer",
+        tangodevice=tango_base + "timer",
+        fmtstr="%.2f",
+        unit="s",
+        visibility=(),
     ),
     # events = device('nicos.devices.entangle.CounterChannel',
     #     description = 'All over detector events',
@@ -36,47 +41,55 @@ devices = dict(
     #     type = 'counter',
     #     visibility = (),
     # ),
-    image = device('nicos_mlz.stressi.devices.ImageChannel',
-        description = 'Image data device',
-        tangodevice = tango_base + 'image',
-        fmtstr = '%d',
-        pollinterval = None,
-        visibility = (),
+    image=device(
+        "nicos_mlz.stressi.devices.ImageChannel",
+        description="Image data device",
+        tangodevice=tango_base + "image",
+        fmtstr="%d",
+        pollinterval=None,
+        visibility=(),
     ),
     # histogram = device('nicos_mlz.devices.qmesydaqsinks.HistogramSink',
     #     description = 'Histogram data written via QMesyDAQ',
     #     image = 'image',
     # ),
-    listmode = device('nicos_mlz.devices.qmesydaqsinks.ListmodeSink',
-        description = 'Listmode data written via QMesyDAQ',
-        image = 'image',
+    listmode=device(
+        "nicos_mlz.devices.qmesydaqsinks.ListmodeSink",
+        description="Listmode data written via QMesyDAQ",
+        image="image",
     ),
-    roi = device('nicos.devices.generic.RectROIChannel',
-        description = 'ROI',
-        roi = (122, 50, 12, 140),
+    roi=device(
+        "nicos.devices.generic.RectROIChannel",
+        description="ROI",
+        roi=(122, 50, 12, 140),
     ),
-    adet = device('nicos.devices.generic.Detector',
-        description = 'Classical detector with single channels',
-        timers = ['tim1'],
-        monitors = ['mon'],
-        counters = ['t_mon', 'roi',],  # 'events', ],
-        images = ['image'],
-        pollinterval = None,
-        liveinterval = 1.,
-        postprocess = [
-            ('roi', 'image'),
+    adet=device(
+        "nicos.devices.generic.Detector",
+        description="Classical detector with single channels",
+        timers=["tim1"],
+        monitors=["mon"],
+        counters=[
+            "t_mon",
+            "roi",
+        ],  # 'events', ],
+        images=["image"],
+        pollinterval=None,
+        liveinterval=1.0,
+        postprocess=[
+            ("roi", "image"),
         ],
     ),
-    ysd = device('nicos.devices.generic.ManualMove',
-        description = 'Distance detector to sample',
-        fmtstr = '%.1f',
-        default = 1035,
-        unit = 'mm',
-        abslimits = (700, 1700),
-        requires = {'level': 'admin'},
+    ysd=device(
+        "nicos.devices.generic.ManualMove",
+        description="Distance detector to sample",
+        fmtstr="%.1f",
+        default=1035,
+        unit="mm",
+        abslimits=(700, 1700),
+        requires={"level": "admin"},
     ),
 )
 
-startupcode = '''
+startupcode = """
 SetDetectors(adet)
-'''
+"""

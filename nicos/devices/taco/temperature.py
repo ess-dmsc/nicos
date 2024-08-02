@@ -26,67 +26,113 @@
 import TACOStates  # pylint: disable=import-error
 import Temperature  # pylint: disable=import-error
 
-from nicos.core import HasLimits, HasWindowTimeout, Moveable, MoveError, \
-    Override, Param, PositionError, Readable, oneof, status
+from nicos.core import (
+    HasLimits,
+    HasWindowTimeout,
+    Moveable,
+    MoveError,
+    Override,
+    Param,
+    PositionError,
+    Readable,
+    oneof,
+    status,
+)
 from nicos.devices.taco.core import TacoDevice
 
 
 class TemperatureSensor(TacoDevice, Readable):
     """TACO temperature sensor device."""
+
     taco_class = Temperature.Sensor
 
 
 class TemperatureController(TacoDevice, HasWindowTimeout, HasLimits, Moveable):
     """TACO temperature controller device."""
+
     taco_class = Temperature.Controller
 
     _TACO_STATUS_MAPPING = dict(TacoDevice._TACO_STATUS_MAPPING)
-    _TACO_STATUS_MAPPING[TACOStates.UNDEFINED] = (status.NOTREACHED,
-                                                  'temperature not reached')
+    _TACO_STATUS_MAPPING[TACOStates.UNDEFINED] = (
+        status.NOTREACHED,
+        "temperature not reached",
+    )
 
     parameters = {
-        'setpoint':  Param('Current temperature setpoint', unit='main',
-                           category='general'),
-        'mode':      Param('Control mode (manual, zone or openloop)',
-                           type=oneof('manual', 'zone', 'openloop'),
-                           settable=True),
-        'p':         Param('The P control parameter', settable=True,
-                           type=float, category='general', chatty=True),
-        'i':         Param('The I control parameter', settable=True,
-                           type=float, category='general', chatty=True),
-        'd':         Param('The D control parameter', settable=True,
-                           type=float, category='general', chatty=True),
-        'ramp':      Param('Temperature ramp in K/min', unit='K/min',
-                           settable=True, volatile=True, chatty=True),
-        'timeoutaction':  Param('What to do when a timeout occurs',
-                                type=oneof('continue', 'raise'), settable=True),
-        'heaterpower':    Param('Current heater power', unit='W',
-                                category='general'),
-        'controlchannel': Param('Control channel, possible values depend '
-                                'on the type of device',
-                                type=str, category='general', settable=True,
-                                chatty=True),
-        'maxheaterpower': Param('Maximum heater output', unit='W',
-                                settable=True, category='general'),
+        "setpoint": Param(
+            "Current temperature setpoint", unit="main", category="general"
+        ),
+        "mode": Param(
+            "Control mode (manual, zone or openloop)",
+            type=oneof("manual", "zone", "openloop"),
+            settable=True,
+        ),
+        "p": Param(
+            "The P control parameter",
+            settable=True,
+            type=float,
+            category="general",
+            chatty=True,
+        ),
+        "i": Param(
+            "The I control parameter",
+            settable=True,
+            type=float,
+            category="general",
+            chatty=True,
+        ),
+        "d": Param(
+            "The D control parameter",
+            settable=True,
+            type=float,
+            category="general",
+            chatty=True,
+        ),
+        "ramp": Param(
+            "Temperature ramp in K/min",
+            unit="K/min",
+            settable=True,
+            volatile=True,
+            chatty=True,
+        ),
+        "timeoutaction": Param(
+            "What to do when a timeout occurs",
+            type=oneof("continue", "raise"),
+            settable=True,
+        ),
+        "heaterpower": Param("Current heater power", unit="W", category="general"),
+        "controlchannel": Param(
+            "Control channel, possible values depend " "on the type of device",
+            type=str,
+            category="general",
+            settable=True,
+            chatty=True,
+        ),
+        "maxheaterpower": Param(
+            "Maximum heater output", unit="W", settable=True, category="general"
+        ),
     }
 
     parameter_overrides = {
-        'userlimits': Override(volatile=True),
-        'precision':  Override(mandatory=False),  # can be read from server
+        "userlimits": Override(volatile=True),
+        "precision": Override(mandatory=False),  # can be read from server
     }
 
     @property
     def errorstates(self):
-        return {status.ERROR: MoveError, status.NOTREACHED: PositionError} \
-            if self.timeoutaction == 'raise' else {status.ERROR: MoveError}
+        return (
+            {status.ERROR: MoveError, status.NOTREACHED: PositionError}
+            if self.timeoutaction == "raise"
+            else {status.ERROR: MoveError}
+        )
 
     def doStart(self, target):
         if self.status()[0] == status.BUSY:
-            self.log.debug('stopping running temperature change')
+            self.log.debug("stopping running temperature change")
             self._taco_guard(self._dev.stop)
             self._hw_wait()
         self._taco_guard(self._dev.write, target)
-        self._pollParam('setpoint', 100)
+        self._pollParam("setpoint", 100)
 
     def doTime(self, old_value, target):
         if self.ramp:
@@ -103,15 +149,15 @@ class TemperatureController(TacoDevice, HasWindowTimeout, HasLimits, Moveable):
 
     def doPoll(self, n, maxage):
         if self.ramp:
-            self._pollParam('setpoint', 1)
-            self._pollParam('heaterpower', 1)
+            self._pollParam("setpoint", 1)
+            self._pollParam("heaterpower", 1)
         if n % 50 == 0:
-            self._pollParam('setpoint', 60)
-            self._pollParam('heaterpower', 60)
-            self._pollParam('p')
-            self._pollParam('i')
-            self._pollParam('d')
-            self._pollParam('mode')
+            self._pollParam("setpoint", 60)
+            self._pollParam("heaterpower", 60)
+            self._pollParam("p")
+            self._pollParam("i")
+            self._pollParam("d")
+            self._pollParam("mode")
 
     def doReadSetpoint(self):
         return self._taco_guard(self._dev.setpoint)
@@ -133,24 +179,22 @@ class TemperatureController(TacoDevice, HasWindowTimeout, HasLimits, Moveable):
         return self._taco_guard(self._dev.manualHeaterOutput)
 
     def doReadPrecision(self):
-        return float(self._taco_guard(self._dev.deviceQueryResource,
-                                      'tolerance'))
+        return float(self._taco_guard(self._dev.deviceQueryResource, "tolerance"))
 
     def doReadWindow(self):
-        return float(self._taco_guard(self._dev.deviceQueryResource,
-                                      'window')[:-1])
+        return float(self._taco_guard(self._dev.deviceQueryResource, "window")[:-1])
 
     def doReadTimeout(self):
-        return float(self._taco_guard(self._dev.deviceQueryResource,
-                                      'timeout')[:-1])
+        return float(self._taco_guard(self._dev.deviceQueryResource, "timeout")[:-1])
 
     def doReadControlchannel(self):
-        return self._taco_guard(self._dev.deviceQueryResource, 'channel')
+        return self._taco_guard(self._dev.deviceQueryResource, "channel")
 
     def doReadMode(self):
-        modes = {1: 'manual', 2: 'zone', 3: 'openloop'}
-        return modes[int(self._taco_guard(
-            self._dev.deviceQueryResource, 'defaultmode')[:-1])]
+        modes = {1: "manual", 2: "zone", 3: "openloop"}
+        return modes[
+            int(self._taco_guard(self._dev.deviceQueryResource, "defaultmode")[:-1])
+        ]
 
     def doReadUserlimits(self):
         """Try to get up-to-date values from the hardware.
@@ -158,20 +202,19 @@ class TemperatureController(TacoDevice, HasWindowTimeout, HasLimits, Moveable):
         If one of the limits is not supported, we keep any set limit value.
         """
         try:
-            limits = list(self._params['userlimits'])
+            limits = list(self._params["userlimits"])
         except Exception:
             limits = list(self.abslimits)
-        for i, res in enumerate(['usermin', 'usermax']):
+        for i, res in enumerate(["usermin", "usermax"]):
             try:
                 limits[i] = float(self._dev.deviceQueryResource(res))
             except Exception as err:
-                if str(err) != 'resource not supported':
-                    self.log.warning('Could not query %s: %s', res, err)
+                if str(err) != "resource not supported":
+                    self.log.warning("Could not query %s: %s", res, err)
         return tuple(limits)
 
     def doReadMaxheaterpower(self):
-        return float(self._taco_guard(self._dev.deviceQueryResource,
-                                      'maxpower'))
+        return float(self._taco_guard(self._dev.deviceQueryResource, "maxpower"))
 
     def doWriteP(self, value):
         self._taco_guard(self._dev.setPParam, value)
@@ -188,37 +231,38 @@ class TemperatureController(TacoDevice, HasWindowTimeout, HasLimits, Moveable):
     def __stop_and_set(self, resource, value):
         # helper for all resources which need to stop the devices first.
         # do it, but give a warning
-        self.log.warning('Stopping device to set %r, you may need to '
-                         'start/move it again.', resource)
+        self.log.warning(
+            "Stopping device to set %r, you may need to " "start/move it again.",
+            resource,
+        )
         self._taco_guard(self._dev.stop)
         # do wait for real stop
         self._hw_wait()
         self._taco_update_resource(resource, str(value))
 
     def doWritePrecision(self, value):
-        self.__stop_and_set('tolerance', value)
+        self.__stop_and_set("tolerance", value)
 
     def doWriteWindow(self, value):
-        self.__stop_and_set('window', value)
+        self.__stop_and_set("window", value)
 
     def doWriteTimeout(self, value):
-        self.__stop_and_set('timeout', value)
+        self.__stop_and_set("timeout", value)
 
     def doWriteControlchannel(self, value):
-        self.__stop_and_set('channel', value)
+        self.__stop_and_set("channel", value)
 
     def doWriteMode(self, value):
-        modes = {'manual': '1', 'zone': '2', 'openloop': '3'}
-        self.__stop_and_set('defaultmode', modes[value])
+        modes = {"manual": "1", "zone": "2", "openloop": "3"}
+        self.__stop_and_set("defaultmode", modes[value])
 
     def doWriteMaxheaterpower(self, value):
-        self.__stop_and_set('maxpower', value)
+        self.__stop_and_set("maxpower", value)
 
     def doWriteUserlimits(self, value):
         HasLimits.doWriteUserlimits(self, value)
         try:
-            self.__stop_and_set('usermax', value[1])
+            self.__stop_and_set("usermax", value[1])
         except Exception as err:
-            if str(err) != 'resource not supported':
-                self.log.warning('Error during update of usermax resource: %s',
-                                 err)
+            if str(err) != "resource not supported":
+                self.log.warning("Error during update of usermax resource: %s", err)

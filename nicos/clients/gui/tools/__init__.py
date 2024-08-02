@@ -37,7 +37,7 @@ def runTool(window, tconfig):
         try:
             toolclass = importString(tconfig.clsname)
         except ImportError:
-            window.showError('Could not import class %r.' % tconfig.clsname)
+            window.showError("Could not import class %r." % tconfig.clsname)
         else:
             dialog = toolclass(window, window.client, **tconfig.options)
             dialog.setWindowModality(Qt.WindowModality.NonModal)
@@ -47,7 +47,7 @@ def runTool(window, tconfig):
         try:
             createSubprocess(tconfig.cmdline)
         except Exception as err:
-            window.showError('Could not execute command: %s' % err)
+            window.showError("Could not execute command: %s" % err)
 
 
 def createToolMenu(window, config, menuitem):
@@ -60,8 +60,10 @@ def createToolMenu(window, config, menuitem):
             submenu = menuitem.addMenu(tconfig.name)
             createToolMenu(window, tconfig.items, submenu)
         else:
+
             def tool_callback(on, tconfig=tconfig):
                 runTool(window, tconfig)
+
             action = QAction(tconfig.name, window)
             menuitem.addAction(action)
             action.triggered.connect(tool_callback)
@@ -75,5 +77,5 @@ def startStartupTools(window, config):
     for tconfig in config:
         if isinstance(tconfig, menu):
             startStartupTools(window, tconfig.items)
-        elif isinstance(tconfig, tool) and tconfig.options.get('runatstartup'):
+        elif isinstance(tconfig, tool) and tconfig.options.get("runatstartup"):
             QTimer.singleShot(0, lambda tc=tconfig: runTool(window, tc))

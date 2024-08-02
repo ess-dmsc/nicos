@@ -30,8 +30,7 @@ from nicos.commands.device import move
 @usercommand
 @helparglist("wlmin, wlmax, [D=22.8, chopper2_pos=3, gap=0.1, manner='normal']")
 @parallel_safe
-def chopper_config(wl_min, wl_max, D=22.8, chopper2_pos=3, gap=.1,
-                   manner='normal'):
+def chopper_config(wl_min, wl_max, D=22.8, chopper2_pos=3, gap=0.1, manner="normal"):
     """Configures the chopper.
 
     The chopper system will be moved to the settings for speed, and chopper
@@ -46,11 +45,11 @@ def chopper_config(wl_min, wl_max, D=22.8, chopper2_pos=3, gap=.1,
 
     """
     target = {
-        'wlmin': wl_min,
-        'wlmax': wl_max,
-        'D': D,
-        'chopper2_pos': chopper2_pos,
-        'gap': gap,
-        'manner': manner,
+        "wlmin": wl_min,
+        "wlmax": wl_max,
+        "D": D,
+        "chopper2_pos": chopper2_pos,
+        "gap": gap,
+        "manner": manner,
     }
-    move('chopper', target)
+    move("chopper", target)

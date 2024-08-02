@@ -26,14 +26,14 @@ from unittest.mock import patch
 
 import pytest
 
-pytest.importorskip('epics')
+pytest.importorskip("epics")
 
 from nicos.core import status
 from nicos.devices.epics.pyepics import EpicsMoveable, EpicsReadable
 
 from nicos_ess.estia.devices.attocube import IDS3010Axis, IDS3010Control
 
-session_setup = 'estia'
+session_setup = "estia"
 
 
 def create_method_patch(reason, obj, name, replacement):
@@ -46,126 +46,126 @@ def create_method_patch(reason, obj, name, replacement):
 def return_value_wrapper(value):
     def return_value(*args, **kwargs):
         return value
+
     return return_value
 
 
-@patch('epics.pv.PV')
+@patch("epics.pv.PV")
 class TestIDS3010Axis(TestCase):
-
     @pytest.fixture(autouse=True)
     def initialize_devices(self, session):
         self.session = session
-        create_method_patch(self, EpicsReadable, '_get_mapped_epics_status',
-                            return_value_wrapper((status.OK, '')))
+        create_method_patch(
+            self,
+            EpicsReadable,
+            "_get_mapped_epics_status",
+            return_value_wrapper((status.OK, "")),
+        )
 
     def test_get_pvs_name(self, mock):
+        axis1 = self.session.getDevice("ih1")
+        axis2 = self.session.getDevice("ih2")
 
-        axis1 = self.session.getDevice('ih1')
-        axis2 = self.session.getDevice('ih2')
+        assert (
+            axis1._get_pv_name("absolute_position")
+            == "ATTOCUBE:Axis1:AbsolutePosition_RBV"
+        )
+        assert axis1._get_pv_name("current_mode") == "ATTOCUBE:CurrentMode_RBV"
+        assert axis1._get_pv_name("reset_axis") == "ATTOCUBE:Axis1:Reset"
+        assert axis1._get_pv_name("reset_error") == "ATTOCUBE:Axis1:Reset:Error_RBV"
 
-        assert axis1._get_pv_name('absolute_position') == \
-               'ATTOCUBE:Axis1:AbsolutePosition_RBV'
-        assert axis1._get_pv_name('current_mode') == 'ATTOCUBE:CurrentMode_RBV'
-        assert axis1._get_pv_name('reset_axis') == 'ATTOCUBE:Axis1:Reset'
-        assert axis1._get_pv_name('reset_error') == \
-               'ATTOCUBE:Axis1:Reset:Error_RBV'
-
-        assert axis2._get_pv_name('absolute_position') == \
-               'ATTOCUBE:Axis2:AbsolutePosition_RBV'
-        assert axis2._get_pv_name('current_mode') == 'ATTOCUBE:CurrentMode_RBV'
-        assert axis2._get_pv_name('reset_axis') == 'ATTOCUBE:Axis2:Reset'
-        assert axis2._get_pv_name('reset_error') == \
-               'ATTOCUBE:Axis2:Reset:Error_RBV'
+        assert (
+            axis2._get_pv_name("absolute_position")
+            == "ATTOCUBE:Axis2:AbsolutePosition_RBV"
+        )
+        assert axis2._get_pv_name("current_mode") == "ATTOCUBE:CurrentMode_RBV"
+        assert axis2._get_pv_name("reset_axis") == "ATTOCUBE:Axis2:Reset"
+        assert axis2._get_pv_name("reset_error") == "ATTOCUBE:Axis2:Reset:Error_RBV"
 
     def test_on_reset_error_status(self, mock):
-
         def on_reset_error(obj, pvparam):
-            if pvparam == 'reset_error':
+            if pvparam == "reset_error":
                 return 1
 
-        axis = self.session.getDevice('ih1')
-        create_method_patch(self, IDS3010Axis, '_get_pv', on_reset_error)
-        assert axis.status() == (status.ERROR, 'Reset error')
+        axis = self.session.getDevice("ih1")
+        create_method_patch(self, IDS3010Axis, "_get_pv", on_reset_error)
+        assert axis.status() == (status.ERROR, "Reset error")
 
     def test_on_measurement_running_status(self, mock):
-
         def on_measurement_running(obj, pvparam):
-            if pvparam == 'current_mode':
-                return 'measurement running'
+            if pvparam == "current_mode":
+                return "measurement running"
 
-        axis = self.session.getDevice('ih1')
-        create_method_patch(self, IDS3010Axis, '_get_pv',
-                            on_measurement_running)
-        assert axis.status() == (status.OK, 'Measuring')
+        axis = self.session.getDevice("ih1")
+        create_method_patch(self, IDS3010Axis, "_get_pv", on_measurement_running)
+        assert axis.status() == (status.OK, "Measuring")
 
     def test_on_measurement_starting_status(self, mock):
-
         def on_measurement_starting(obj, pvparam):
-            if pvparam == 'current_mode':
-                return 'measurement starting'
+            if pvparam == "current_mode":
+                return "measurement starting"
 
-        axis = self.session.getDevice('ih1')
-        create_method_patch(self, IDS3010Axis, '_get_pv',
-                            on_measurement_starting)
-        assert axis.status() == (status.BUSY, 'Starting')
+        axis = self.session.getDevice("ih1")
+        create_method_patch(self, IDS3010Axis, "_get_pv", on_measurement_starting)
+        assert axis.status() == (status.BUSY, "Starting")
 
     def test_on_not_measuring_status(self, mock):
-
-        axis = self.session.getDevice('ih1')
-        create_method_patch(self, IDS3010Axis, '_get_pv',
-                            return_value_wrapper(None))
-        assert axis.status() == (status.WARN, 'Off')
+        axis = self.session.getDevice("ih1")
+        create_method_patch(self, IDS3010Axis, "_get_pv", return_value_wrapper(None))
+        assert axis.status() == (status.WARN, "Off")
 
 
-@patch('epics.pv.PV')
+@patch("epics.pv.PV")
 class TestIDS3010ControlEpics(TestCase):
-
     @staticmethod
     def on_get_pv_at_init(_, pvparam, as_string=False):
-        if pvparam == 'readpv':
-            return 'on'
-        if 'contrast' in pvparam:
-            return .2
-        if 'pilot' in pvparam:
-            return 'on'
-        if 'align' in pvparam:
-            return 'on'
-        return 'system idle'
+        if pvparam == "readpv":
+            return "on"
+        if "contrast" in pvparam:
+            return 0.2
+        if "pilot" in pvparam:
+            return "on"
+        if "align" in pvparam:
+            return "on"
+        return "system idle"
 
     @pytest.fixture(autouse=True)
     def initialize_devices(self, session):
         self.session = session
-        create_method_patch(self, EpicsMoveable, '_get_mapped_epics_status',
-                            return_value_wrapper((status.OK, '')))
-        create_method_patch(self, IDS3010Control, '_get_pv',
-                            self.on_get_pv_at_init)
+        create_method_patch(
+            self,
+            EpicsMoveable,
+            "_get_mapped_epics_status",
+            return_value_wrapper((status.OK, "")),
+        )
+        create_method_patch(self, IDS3010Control, "_get_pv", self.on_get_pv_at_init)
 
     def test_read_contrast(self, mock):
-        contrast = .2
-        create_method_patch(self, EpicsMoveable, 'doInit',
-                            return_value_wrapper(None))
-        attocube = self.session.getDevice('IDS3010')
-        create_method_patch(self, IDS3010Control, '_get_pv',
-                            return_value_wrapper(contrast))
+        contrast = 0.2
+        create_method_patch(self, EpicsMoveable, "doInit", return_value_wrapper(None))
+        attocube = self.session.getDevice("IDS3010")
+        create_method_patch(
+            self, IDS3010Control, "_get_pv", return_value_wrapper(contrast)
+        )
         assert attocube.contrast1 == contrast
 
 
 class TestMirrorDistance(TestCase):
-
     @pytest.fixture(autouse=True)
     def initialize_devices(self, session):
-        self.axis = session.getDevice('axis')
-        self.distance = session.getDevice('distance')
+        self.axis = session.getDevice("axis")
+        self.distance = session.getDevice("distance")
 
     def test_read(self):
         self.distance.offset = 0
         for angle in range(0, 360, 5):
             self.distance.angle = angle
             for value in range(0, 20):
-                value *= .5
+                value *= 0.5
                 self.axis.maw(value)
-                assert .5 * value * cos(angle / 360. * pi) == pytest.approx(
-                    self.distance.read()[0], 0.01)
+                assert 0.5 * value * cos(angle / 360.0 * pi) == pytest.approx(
+                    self.distance.read()[0], 0.01
+                )
 
     def test_set_offset(self):
         new_offset = 1.234

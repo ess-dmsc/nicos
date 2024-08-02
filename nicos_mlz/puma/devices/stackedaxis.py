@@ -38,19 +38,18 @@ class StackedAxis(HasLimits, HasPrecision, Moveable):
     """
 
     attached_devices = {
-        'bottom': Attach('bottom axis', Moveable),
-        'top': Attach('top axis', Moveable),
+        "bottom": Attach("bottom axis", Moveable),
+        "top": Attach("top axis", Moveable),
     }
 
     parameter_overrides = {
-        'abslimits': Override(mandatory=False, volatile=True),
-        'unit': Override(default='deg', mandatory=False),
+        "abslimits": Override(mandatory=False, volatile=True),
+        "unit": Override(default="deg", mandatory=False),
     }
 
     def doRead(self, maxage=0):
-        self.log.debug('doRead: %s', maxage)
-        return self._attached_bottom.read(maxage) + \
-            self._attached_top.read(maxage)
+        self.log.debug("doRead: %s", maxage)
+        return self._attached_bottom.read(maxage) + self._attached_top.read(maxage)
 
     def doStart(self, target):
         targets = self._calc_targets(target)
@@ -61,12 +60,11 @@ class StackedAxis(HasLimits, HasPrecision, Moveable):
 
     def doIsAllowed(self, target):
         targets = self._calc_targets(target)
-        for dev, t in zip([self._attached_bottom, self._attached_top],
-                          targets):
+        for dev, t in zip([self._attached_bottom, self._attached_top], targets):
             allowed = dev.isAllowed(t)
             if not allowed[0]:
                 return allowed
-        return True, ''
+        return True, ""
 
     def _calc_targets(self, target):
         """Calculate individual target positions from the sum target.
@@ -93,5 +91,7 @@ class StackedAxis(HasLimits, HasPrecision, Moveable):
         return targets
 
     def doReadAbslimits(self):
-        return [sum(x) for x in zip(self._attached_bottom.abslimits,
-                                    self._attached_top.abslimits)]
+        return [
+            sum(x)
+            for x in zip(self._attached_bottom.abslimits, self._attached_top.abslimits)
+        ]

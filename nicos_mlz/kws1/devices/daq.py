@@ -24,36 +24,61 @@
 import numpy as np
 from tango import DevState
 
-from nicos.core import MASTER, SIMULATION, Attach, ConfigurationError, \
-    Measurable, Moveable, Override, Param, Readable, Value, intrange, listof, \
-    oneof, status, tupleof
+from nicos.core import (
+    MASTER,
+    SIMULATION,
+    Attach,
+    ConfigurationError,
+    Measurable,
+    Moveable,
+    Override,
+    Param,
+    Readable,
+    Value,
+    intrange,
+    listof,
+    oneof,
+    status,
+    tupleof,
+)
 from nicos.core.constants import FINAL, INTERRUPTED
 from nicos.core.params import ArrayDesc
-from nicos.devices.generic.detector import ActiveChannel, Detector, \
-    ImageChannelMixin, PostprocessPassiveChannel
+from nicos.devices.generic.detector import (
+    ActiveChannel,
+    Detector,
+    ImageChannelMixin,
+    PostprocessPassiveChannel,
+)
 from nicos.devices.generic.virtual import VirtualImage
 from nicos.devices.tango import PyTangoDevice
 
 from nicos_mlz.jcns.devices.detector import calculateRate
 from nicos_mlz.jcns.devices.fpga import FPGATimerChannel
 
-RTMODES = ('standard', 'tof', 'realtime', 'realtime_external')
+RTMODES = ("standard", "tof", "realtime", "realtime_external")
 
 
 class KWSImageChannel(ImageChannelMixin, PyTangoDevice, ActiveChannel):
-
     attached_devices = {
-        'timer':       Attach('The timer channel', Measurable),
-        'highvoltage': Attach('The high voltage switch', Moveable,
-                              optional=True),
+        "timer": Attach("The timer channel", Measurable),
+        "highvoltage": Attach("The high voltage switch", Moveable, optional=True),
     }
 
     parameters = {
-        'mode':        Param('Measurement mode switch', type=oneof(*RTMODES),
-                             settable=True, category='general'),
-        'slices':      Param('Calculated TOF slices', internal=True,
-                             unit='us', settable=True, type=listof(int),
-                             category='general'),
+        "mode": Param(
+            "Measurement mode switch",
+            type=oneof(*RTMODES),
+            settable=True,
+            category="general",
+        ),
+        "slices": Param(
+            "Calculated TOF slices",
+            internal=True,
+            unit="us",
+            settable=True,
+            type=listof(int),
+            category="general",
+        ),
     }
 
     def doInit(self, mode):
@@ -67,13 +92,13 @@ class KWSImageChannel(ImageChannelMixin, PyTangoDevice, ActiveChannel):
 
     def _configure(self, tofsettings):
         value = self.mode
-        if value == 'standard':
+        if value == "standard":
             self._setup_standard()
-        elif value == 'tof':
+        elif value == "tof":
             self._setup_tof(False, tofsettings)
-        elif value == 'realtime':
+        elif value == "realtime":
             self._setup_tof(False, tofsettings)
-        elif value == 'realtime_external':
+        elif value == "realtime_external":
             self._setup_tof(True, tofsettings)
 
     def _setup_standard(self):
@@ -115,7 +140,7 @@ class KWSImageChannel(ImageChannelMixin, PyTangoDevice, ActiveChannel):
 
     def doPrepare(self):
         if self._attached_highvoltage:
-            self._attached_highvoltage.maw('on')
+            self._attached_highvoltage.maw("on")
         self._dev.Clear()
         self._dev.Prepare()
 
@@ -138,13 +163,14 @@ class KWSImageChannel(ImageChannelMixin, PyTangoDevice, ActiveChannel):
 
     def doStatus(self, maxage=0):
         if self._dev.State() == DevState.MOVING:
-            return status.BUSY, 'counting'
-        return status.OK, 'idle'
+            return status.BUSY, "counting"
+        return status.OK, "idle"
 
     def valueInfo(self):
-        return (Value(name='total', type='counter', fmtstr='%d',
-                      errors='sqrt', unit='cts'),
-                Value(name='rate', type='monitor', fmtstr='%.1f', unit='cps'))
+        return (
+            Value(name="total", type="counter", fmtstr="%d", errors="sqrt", unit="cts"),
+            Value(name="rate", type="monitor", fmtstr="%.1f", unit="cps"),
+        )
 
     def doReadArray(self, quality):
         shape = self.arraydesc.shape
@@ -159,8 +185,13 @@ class GEImageChannel(KWSImageChannel):
     """GE detector image with the flag to rebin to 8x8 pixel size."""
 
     parameters = {
-        'rebin8x8': Param('Rebin data to 8x8 mm pixel size', type=bool,
-                          default=False, settable=True, mandatory=False),
+        "rebin8x8": Param(
+            "Rebin data to 8x8 mm pixel size",
+            type=bool,
+            default=False,
+            settable=True,
+            mandatory=False,
+        ),
     }
 
     def _configure(self, tofsettings):
@@ -170,17 +201,25 @@ class GEImageChannel(KWSImageChannel):
 
 
 class VirtualKWSImageChannel(VirtualImage):
-
     parameters = {
-        'mode':        Param('Measurement mode switch', type=oneof(*RTMODES),
-                             settable=True, category='general'),
-        'slices':      Param('Calculated TOF slices', internal=True,
-                             unit='us', settable=True, type=listof(int),
-                             category='general'),
+        "mode": Param(
+            "Measurement mode switch",
+            type=oneof(*RTMODES),
+            settable=True,
+            category="general",
+        ),
+        "slices": Param(
+            "Calculated TOF slices",
+            internal=True,
+            unit="us",
+            settable=True,
+            type=listof(int),
+            category="general",
+        ),
     }
 
     def _configure(self, tofsettings):
-        if self.mode == 'standard':
+        if self.mode == "standard":
             self.slices = []
             self.arraydesc = ArrayDesc(self.name, self.sizes[::-1], np.uint32)
         else:
@@ -196,11 +235,12 @@ class VirtualKWSImageChannel(VirtualImage):
                     times.append(times[-1] + int(interval * q**i))
             self.slices = times
             self.arraydesc = ArrayDesc(
-                self.name, (channels,) + self.sizes[::-1], np.uint32)
+                self.name, (channels,) + self.sizes[::-1], np.uint32
+            )
 
     def doReadArray(self, quality):
         res = VirtualImage.doReadArray(self, quality)
-        if self.mode != 'standard':
+        if self.mode != "standard":
             return np.repeat([res], len(self.slices) - 1, 0)
         return res
 
@@ -209,27 +249,37 @@ class ROIRateChannel(PostprocessPassiveChannel):
     """Calculates rate on the detector outside of the beamstop."""
 
     attached_devices = {
-        'bs_x':  Attach('Beamstop x position', Readable),
-        'bs_y':  Attach('Beamstop y position', Readable),
-        'timer': Attach('The timer channel', Measurable),
+        "bs_x": Attach("Beamstop x position", Readable),
+        "bs_y": Attach("Beamstop y position", Readable),
+        "timer": Attach("The timer channel", Measurable),
     }
 
     parameters = {
-        'xscale':    Param('Pixel (scale, offset) for calculating the beamstop '
-                           'X center position from motor position',
-                           type=tupleof(float, float), settable=True),
-        'yscale':    Param('Pixel (scale, offset) for calculating the beamstop '
-                           'Y center position from motor position',
-                           type=tupleof(float, float), settable=True),
-        'size':      Param('Size of beamstop in pixels (w, h)',
-                           type=tupleof(int, int), settable=True),
-        'roi':       Param('Rectangular region of interest (x, y, w, h)',
-                           type=tupleof(int, int, int, int), settable=False),
+        "xscale": Param(
+            "Pixel (scale, offset) for calculating the beamstop "
+            "X center position from motor position",
+            type=tupleof(float, float),
+            settable=True,
+        ),
+        "yscale": Param(
+            "Pixel (scale, offset) for calculating the beamstop "
+            "Y center position from motor position",
+            type=tupleof(float, float),
+            settable=True,
+        ),
+        "size": Param(
+            "Size of beamstop in pixels (w, h)", type=tupleof(int, int), settable=True
+        ),
+        "roi": Param(
+            "Rectangular region of interest (x, y, w, h)",
+            type=tupleof(int, int, int, int),
+            settable=False,
+        ),
     }
 
     parameter_overrides = {
-        'unit':   Override(default='cps'),
-        'fmtstr': Override(default='%d'),
+        "unit": Override(default="cps"),
+        "fmtstr": Override(default="%d"),
     }
 
     _cts_seconds = [0, 0]
@@ -243,25 +293,27 @@ class ROIRateChannel(PostprocessPassiveChannel):
             w, h = self.size
             bs_x = self._attached_bs_x.read() * self.xscale[0] + self.xscale[1]
             bs_y = self._attached_bs_y.read() * self.yscale[0] + self.yscale[1]
-            x = int(round(bs_x - w/2.))
-            y = int(round(bs_y - h/2.))
-            self._setROParam('roi', (x, y, w, h))
-            outer = arr[y:y+h, x:x+w].sum()
+            x = int(round(bs_x - w / 2.0))
+            y = int(round(bs_y - h / 2.0))
+            self._setROParam("roi", (x, y, w, h))
+            outer = arr[y : y + h, x : x + w].sum()
             cts = outer
         else:
-            self._setROParam('roi', (0, 0, 0, 0))
+            self._setROParam("roi", (0, 0, 0, 0))
             cts = arr.sum()
 
         seconds = self._attached_timer.read(0)[0]
         cts_per_second = 0
 
         if seconds > 1e-8:
-            if quality in (FINAL, INTERRUPTED) or seconds <= \
-                    self._cts_seconds[1]:  # rate for full detector / time
+            if (
+                quality in (FINAL, INTERRUPTED) or seconds <= self._cts_seconds[1]
+            ):  # rate for full detector / time
                 cts_per_second = cts / seconds
             elif cts > self._cts_seconds[0]:  # live rate on detector (using deltas)
                 cts_per_second = (cts - self._cts_seconds[0]) / (
-                    seconds - self._cts_seconds[1])
+                    seconds - self._cts_seconds[1]
+                )
             else:
                 cts_per_second = 0
         self._cts_seconds = [cts, seconds]
@@ -270,37 +322,59 @@ class ROIRateChannel(PostprocessPassiveChannel):
 
     def valueInfo(self):
         return (
-            Value(name=self.name + '.roi', type='counter', fmtstr='%d', errors='sqrt'),
-            Value(name=self.name + '.signal', type='monitor', fmtstr='%.2f'),
+            Value(name=self.name + ".roi", type="counter", fmtstr="%d", errors="sqrt"),
+            Value(name=self.name + ".signal", type="monitor", fmtstr="%.2f"),
         )
 
 
 class KWSDetector(Detector):
-
     attached_devices = {
-        'shutter':     Attach('Shutter for opening and closing', Moveable,
-                              optional=True),
+        "shutter": Attach("Shutter for opening and closing", Moveable, optional=True),
     }
 
     parameters = {
-        'mode':        Param('Measurement mode switch', type=oneof(*RTMODES),
-                             settable=True, volatile=True),
-        'tofchannels': Param('Number of TOF channels',
-                             type=intrange(1, 1023), settable=True,
-                             category='general'),
-        'tofinterval': Param('Interval dt between TOF channels', type=int,
-                             unit='us', settable=True, category='general'),
-        'tofprogression':
-                       Param('Progression q of TOF intervals (t_i = dt * q^i)',
-                             type=float, default=1.0, settable=True,
-                             category='general'),
-        'tofcustom':   Param('Custom selection of TOF slices',
-                             type=listof(int), settable=True),
-        'kwscounting': Param('True when taking data with kwscount()',
-                             type=bool, default=False, settable=True,
-                             internal=True),
-        'openshutter': Param('True to open/close shutter while counting',
-                             type=bool, default=True, settable=True),
+        "mode": Param(
+            "Measurement mode switch",
+            type=oneof(*RTMODES),
+            settable=True,
+            volatile=True,
+        ),
+        "tofchannels": Param(
+            "Number of TOF channels",
+            type=intrange(1, 1023),
+            settable=True,
+            category="general",
+        ),
+        "tofinterval": Param(
+            "Interval dt between TOF channels",
+            type=int,
+            unit="us",
+            settable=True,
+            category="general",
+        ),
+        "tofprogression": Param(
+            "Progression q of TOF intervals (t_i = dt * q^i)",
+            type=float,
+            default=1.0,
+            settable=True,
+            category="general",
+        ),
+        "tofcustom": Param(
+            "Custom selection of TOF slices", type=listof(int), settable=True
+        ),
+        "kwscounting": Param(
+            "True when taking data with kwscount()",
+            type=bool,
+            default=False,
+            settable=True,
+            internal=True,
+        ),
+        "openshutter": Param(
+            "True to open/close shutter while counting",
+            type=bool,
+            default=True,
+            settable=True,
+        ),
     }
 
     _img = None
@@ -310,21 +384,23 @@ class KWSDetector(Detector):
         self._img = self._attached_images[0]
         if session_mode == MASTER:
             if not self._attached_images:
-                raise ConfigurationError(self, 'KWSDetector needs a KWSChannel '
-                                         'as attached image')
+                raise ConfigurationError(
+                    self, "KWSDetector needs a KWSChannel " "as attached image"
+                )
             self.kwscounting = False
 
     def _configure(self):
         for ch in self._channels:
             if isinstance(ch, FPGATimerChannel):
-                ch.extmode = self.mode == 'realtime_external'
+                ch.extmode = self.mode == "realtime_external"
         # TODO: ensure that total meas. time < 2**31 usec
-        self._img._configure((self.tofchannels, self.tofinterval,
-                              self.tofprogression, self.tofcustom))
+        self._img._configure(
+            (self.tofchannels, self.tofinterval, self.tofprogression, self.tofcustom)
+        )
 
     def doReadMode(self):
         if self._img is None:
-            return 'standard'  # bootstrap
+            return "standard"  # bootstrap
         return self._img.mode
 
     def doWriteMode(self, mode):
@@ -332,9 +408,9 @@ class KWSDetector(Detector):
 
     def doSetPreset(self, **preset):
         # override time preset in realtime mode
-        if self.mode in ('realtime', 'realtime_external'):
+        if self.mode in ("realtime", "realtime_external"):
             # set counter card preset to last RT slice
-            preset = {'t': self._img.slices[-1] / 1000000.0}
+            preset = {"t": self._img.slices[-1] / 1000000.0}
         Detector.doSetPreset(self, **preset)
 
     def doPrepare(self):
@@ -343,7 +419,7 @@ class KWSDetector(Detector):
 
     def doStart(self):
         if self._attached_shutter and self.openshutter:
-            self._attached_shutter.maw('open')
+            self._attached_shutter.maw("open")
         self.kwscounting = True
         Detector.doStart(self)
 
@@ -351,10 +427,10 @@ class KWSDetector(Detector):
         Detector.doFinish(self)
         self.kwscounting = False
         if self._attached_shutter and self.openshutter:
-            self._attached_shutter.maw('closed')
+            self._attached_shutter.maw("closed")
 
     def doStop(self):
         Detector.doStop(self)
         self.kwscounting = False
         if self._attached_shutter and self.openshutter:
-            self._attached_shutter.maw('closed')
+            self._attached_shutter.maw("closed")

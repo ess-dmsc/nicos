@@ -28,10 +28,13 @@ import IOCommon  # pylint: disable=import-error
 import numpy as np
 from Detector import Detector  # pylint: disable=import-error
 
-from nicos.core import FINAL, MASTER, SIMULATION, ArrayDesc, Param, Value, \
-    listof, oneof
-from nicos.devices.generic import ActiveChannel, CounterChannelMixin, \
-    PassiveChannel, TimerChannelMixin
+from nicos.core import FINAL, MASTER, SIMULATION, ArrayDesc, Param, Value, listof, oneof
+from nicos.devices.generic import (
+    ActiveChannel,
+    CounterChannelMixin,
+    PassiveChannel,
+    TimerChannelMixin,
+)
 from nicos.devices.taco.detector import BaseChannel as TacoBaseChannel
 from nicos.devices.vendor.qmesydaq import Image as QMesyDAQImage
 
@@ -47,9 +50,10 @@ class BaseChannel(TacoBaseChannel):
 
     def doWriteIscontroller(self, value):
         self._taco_guard(self._dev.stop)
-        self._taco_guard(self._dev.setMode,
-                         IOCommon.MODE_PRESELECTION if value
-                         else IOCommon.MODE_NORMAL)
+        self._taco_guard(
+            self._dev.setMode,
+            IOCommon.MODE_PRESELECTION if value else IOCommon.MODE_NORMAL,
+        )
         self._taco_guard(self._dev.enableMaster, value)
         # workaround for buggy QMesyDAQ
         if not value:
@@ -78,8 +82,9 @@ class MultiCounter(BaseChannel, PassiveChannel):
     """
 
     parameters = {
-        'channels': Param('Tuple of active channels (1 based)', settable=True,
-                          type=listof(int)),
+        "channels": Param(
+            "Tuple of active channels (1 based)", settable=True, type=listof(int)
+        ),
     }
 
     taco_class = Detector
@@ -97,9 +102,12 @@ class MultiCounter(BaseChannel, PassiveChannel):
             # ch is 1 based, data is 0 based
             total = sum(data[ch - 1] for ch in self.channels)
         else:
-            self.log.warning('not enough data returned, check config! '
-                             '(got %d elements, expected >=%d)',
-                             len(res), expected)
+            self.log.warning(
+                "not enough data returned, check config! "
+                "(got %d elements, expected >=%d)",
+                len(res),
+                expected,
+            )
             data = None
             total = 0
         resultlist = [total]
@@ -110,32 +118,45 @@ class MultiCounter(BaseChannel, PassiveChannel):
         return resultlist
 
     def valueInfo(self):
-        resultlist = [Value('ch.sum', unit='cts', errors='sqrt',
-                            type='counter', fmtstr='%d')]
+        resultlist = [
+            Value("ch.sum", unit="cts", errors="sqrt", type="counter", fmtstr="%d")
+        ]
         for ch in self.channels:
-            resultlist.append(Value('ch%d' % ch, unit='cts', errors='sqrt',
-                                    type='counter', fmtstr='%d'))
+            resultlist.append(
+                Value(
+                    "ch%d" % ch, unit="cts", errors="sqrt", type="counter", fmtstr="%d"
+                )
+            )
         return tuple(resultlist)
 
     def doReadIscontroller(self):
         return False
 
     def doReadFmtstr(self):
-        resultlist = ['sum %d']
+        resultlist = ["sum %d"]
         for ch in self.channels:
-            resultlist.append('ch%d %%d' % ch)
-        return ', '.join(resultlist)
+            resultlist.append("ch%d %%d" % ch)
+        return ", ".join(resultlist)
 
 
 class Image(BaseChannel, QMesyDAQImage):
     """Channel for QMesyDAQ that returns the last image."""
 
     parameters = {
-        'readout': Param('Readout mode of the Detector', settable=True,
-                         type=oneof('raw', 'mapped', 'amplitude'),
-                         default='mapped', mandatory=False, chatty=True),
-        'flipaxes': Param('Flip data along these axes after reading from det',
-                          type=listof(int), default=[], unit=''),
+        "readout": Param(
+            "Readout mode of the Detector",
+            settable=True,
+            type=oneof("raw", "mapped", "amplitude"),
+            default="mapped",
+            mandatory=False,
+            chatty=True,
+        ),
+        "flipaxes": Param(
+            "Flip data along these axes after reading from det",
+            type=listof(int),
+            default=[],
+            unit="",
+        ),
     }
 
     taco_class = Detector
@@ -157,21 +178,21 @@ class Image(BaseChannel, QMesyDAQImage):
         # first 3 values are sizes of dimensions
         # evaluate shape return correctly reshaped numpy array
         if (res[1], res[2]) in [(1, 1), (0, 1), (1, 0), (0, 0)]:  # 1D array
-            self.arraydesc = ArrayDesc(self.name, shape=(res[0],), dtype='<u4')
-            data = np.fromiter(res[3:], '<u4', res[0])
+            self.arraydesc = ArrayDesc(self.name, shape=(res[0],), dtype="<u4")
+            data = np.fromiter(res[3:], "<u4", res[0])
             self.readresult = [data.sum()]
         elif res[2] in [0, 1]:  # 2D array
-            self.arraydesc = ArrayDesc(self.name, shape=(res[0], res[1]),
-                                       dtype='<u4')
-            data = np.fromiter(res[3:], '<u4', res[0] * res[1])
+            self.arraydesc = ArrayDesc(self.name, shape=(res[0], res[1]), dtype="<u4")
+            data = np.fromiter(res[3:], "<u4", res[0] * res[1])
             self.readresult = [data.sum()]
-            data = data.reshape((res[0], res[1]), order='C')
+            data = data.reshape((res[0], res[1]), order="C")
         else:  # 3D array
             self.arraydesc = ArrayDesc(
-                self.name, shape=(res[0], res[1], res[2]), dtype='<u4')
-            data = np.fromiter(res[3:], '<u4', res[0] * res[1] * res[3])
+                self.name, shape=(res[0], res[1], res[2]), dtype="<u4"
+            )
+            data = np.fromiter(res[3:], "<u4", res[0] * res[1] * res[3])
             self.readresult = [data.sum()]
-            data = data.reshape((res[0], res[1], res[2]), order='C')
+            data = data.reshape((res[0], res[1], res[2]), order="C")
         for axis in self.flipaxes:
             data = np.flip(data, axis)
         return data
@@ -180,34 +201,34 @@ class Image(BaseChannel, QMesyDAQImage):
         return False
 
     def doWriteListmode(self, value):
-        self._taco_update_resource('writelistmode', '%s' % value)
-        return self._taco_guard(self._dev.deviceQueryResource, 'writelistmode')
+        self._taco_update_resource("writelistmode", "%s" % value)
+        return self._taco_guard(self._dev.deviceQueryResource, "writelistmode")
 
     def doWriteHistogram(self, value):
-        self._taco_update_resource('writehistogram', '%s' % value)
-        return self._taco_guard(self._dev.deviceQueryResource, 'writehistogram')
+        self._taco_update_resource("writehistogram", "%s" % value)
+        return self._taco_guard(self._dev.deviceQueryResource, "writehistogram")
 
     def doWriteReadout(self, value):
-        self._taco_update_resource('histogram', '%s' % value)
-        return self._taco_guard(self._dev.deviceQueryResource, 'histogram')
+        self._taco_update_resource("histogram", "%s" % value)
+        return self._taco_guard(self._dev.deviceQueryResource, "histogram")
 
     def doWriteListmodefile(self, value):
-        self._taco_update_resource('lastlistfile', '%s' % value)
-        return self._taco_guard(self._dev.deviceQueryResource, 'lastlistfile')
+        self._taco_update_resource("lastlistfile", "%s" % value)
+        return self._taco_guard(self._dev.deviceQueryResource, "lastlistfile")
 
     def doReadConfigfile(self):
-        return self._taco_guard(self._dev.deviceQueryResource, 'configfile')
+        return self._taco_guard(self._dev.deviceQueryResource, "configfile")
 
     def doReadCalibrationfile(self):
-        return self._taco_guard(self._dev.deviceQueryResource,
-                                'calibrationfile')
+        return self._taco_guard(self._dev.deviceQueryResource, "calibrationfile")
 
-#   def doReadListmodefile(self):
-#       return self._taco_guard(self._dev.deviceQueryResource, 'lastlistfile')
+    #   def doReadListmodefile(self):
+    #       return self._taco_guard(self._dev.deviceQueryResource, 'lastlistfile')
 
     def doWriteHistogramfile(self, value):
-        self._taco_update_resource('lasthistfile', '%s' % value)
-        return self._taco_guard(self._dev.deviceQueryResource, 'lasthistfile')
+        self._taco_update_resource("lasthistfile", "%s" % value)
+        return self._taco_guard(self._dev.deviceQueryResource, "lasthistfile")
+
 
 #   def doReadHistogramfile(self):
 #       return self._taco_guard(self._dev.deviceQueryResource, 'lasthistfile')

@@ -48,22 +48,27 @@ def canStartSisScan(measuremode):
 
     status = doppler.status()[0]
     if status == BUSY:
-        session.log.info('Doppler not yet ready, waiting a bit.')
+        session.log.info("Doppler not yet ready, waiting a bit.")
         if not waitForAcq():
-            raise ModeError('Scan can currently NOT be started. '
-                            'Doppler does not leave busy state.')
+            raise ModeError(
+                "Scan can currently NOT be started. "
+                "Doppler does not leave busy state."
+            )
     elif status != OK:
-        raise ModeError('Scan can not be started. '
-                        'Doppler is not synchronized.')
+        raise ModeError("Scan can not be started. " "Doppler is not synchronized.")
 
     sismode = sis.measuremode
     if measuremode != sismode:
         if sismode == INELASTIC:
-            raise ModeError('Detector is measuring in inelastic mode. '
-                            'Stop the doppler to change the mode first.')
+            raise ModeError(
+                "Detector is measuring in inelastic mode. "
+                "Stop the doppler to change the mode first."
+            )
         if sismode == ELASTIC:
-            raise ModeError('Detector is measuring in elastic mode. '
-                            'Start the doppler to change the mode first.')
+            raise ModeError(
+                "Detector is measuring in elastic mode. "
+                "Start the doppler to change the mode first."
+            )
 
     # doppler is OK, and measure modes match.
     return True
@@ -74,9 +79,13 @@ def notifyOverhang(time, interval):
     overhang = time % interval
 
     if overhang:
-        session.log.warning('Measurement will take an additional %ds '
-                            'because the total measurement time has to be a'
-                            'multiple of %ds.', interval - overhang, interval)
+        session.log.warning(
+            "Measurement will take an additional %ds "
+            "because the total measurement time has to be a"
+            "multiple of %ds.",
+            interval - overhang,
+            interval,
+        )
 
 
 def waitForAcq():
@@ -85,7 +94,7 @@ def waitForAcq():
         if doppler.status()[0] != BUSY:
             return True
         elif i == 0:
-            session.log.info('Acq is busy, waiting a bit')
+            session.log.info("Acq is busy, waiting a bit")
         session.delay(1)
 
     return False
@@ -96,19 +105,19 @@ def getClosestApproximation(total, interval, subcount=1):
         return total, 1
 
     try:
-        fileinterval = interval*subcount
+        fileinterval = interval * subcount
 
-        filecount = int(total/fileinterval)
-        newinterval = int(total/filecount)
+        filecount = int(total / fileinterval)
+        newinterval = int(total / filecount)
     except ZeroDivisionError:
-        return getClosestApproximation(total, interval-1, subcount)
+        return getClosestApproximation(total, interval - 1, subcount)
 
-    if total-newinterval*filecount > filecount/2:
+    if total - newinterval * filecount > filecount / 2:
         filecount += 1
 
-    newinterval = int(newinterval/subcount)
+    newinterval = int(newinterval / subcount)
 
-    return newinterval*filecount*subcount, newinterval
+    return newinterval * filecount * subcount, newinterval
 
 
 def getDoppler():
@@ -116,24 +125,27 @@ def getDoppler():
         if isinstance(device, Doppler):
             return device
 
-    raise UsageError('No doppler found. Load the doppler setup.')
+    raise UsageError("No doppler found. Load the doppler setup.")
 
 
 def parseDuration(interval, reason):
     try:
         return pd(interval)
     except TypeError:
-        raise UsageError('Can not parse %s from %s. '
-                         'Please provide it as a string, int or float. '
-                         'When in doubt encapsulate it in quotation marks.'
-                         % (reason, type(interval))) from None
+        raise UsageError(
+            "Can not parse %s from %s. "
+            "Please provide it as a string, int or float. "
+            "When in doubt encapsulate it in quotation marks."
+            % (reason, type(interval))
+        ) from None
     except ValueError:
-        raise UsageError('The format of the provided string for %s can not be '
-                         'converted to a duration. Please separate the values '
-                         'with spaces and/or ":", sort the durations by size '
-                         'and (only) name them with "d", "h", "m", "s". e.g. '
-                         '"1d:2h:3m:4s" or "2h:4s"'
-                         % reason) from None
+        raise UsageError(
+            "The format of the provided string for %s can not be "
+            "converted to a duration. Please separate the values "
+            'with spaces and/or ":", sort the durations by size '
+            'and (only) name them with "d", "h", "m", "s". e.g. '
+            '"1d:2h:3m:4s" or "2h:4s"' % reason
+        ) from None
 
 
 def getSisDetector():
@@ -141,8 +153,10 @@ def getSisDetector():
         if isinstance(detector, SISDetector):
             return detector
 
-    raise UsageError('No SIS Detector found/active. Add it to the '
-                     'environment after loading the sis setup.')
+    raise UsageError(
+        "No SIS Detector found/active. Add it to the "
+        "environment after loading the sis setup."
+    )
 
 
 def getSisImageDevice():
@@ -154,5 +168,4 @@ def getTemperatureController():
         if isinstance(device, SEController):
             return device
 
-    raise UsageError('No SEController found. '
-                     'Load the sample environment setup.')
+    raise UsageError("No SEController found. " "Load the sample environment setup.")

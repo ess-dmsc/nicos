@@ -48,86 +48,94 @@ class EpicsScalerRecord(EpicsDetector):
     """
 
     parameters = {
-        'statuspv': Param('Optional PV describing status of the counter',
-                          type=pvname, userparam=False),
-        'errormsgpv': Param('Optional PV providing the error message',
-                            type=pvname, userparam=False),
-        'thresholdpv': Param('Optional PV that sets the no beam threshold',
-                             type=pvname, userparam=False),
-        'thresholdcounterpv': Param('Optional PV that sets threshold counter',
-                                    type=pvname, userparam=False),
-        'threshold': Param('Threshold for no beam detection', type=float,
-                           userparam=True, settable=True),
-        'thresholdcounter': Param('Threshold counter for no beam detection',
-                                  type=float,
-                                  userparam=True, settable=True)
+        "statuspv": Param(
+            "Optional PV describing status of the counter", type=pvname, userparam=False
+        ),
+        "errormsgpv": Param(
+            "Optional PV providing the error message", type=pvname, userparam=False
+        ),
+        "thresholdpv": Param(
+            "Optional PV that sets the no beam threshold", type=pvname, userparam=False
+        ),
+        "thresholdcounterpv": Param(
+            "Optional PV that sets threshold counter", type=pvname, userparam=False
+        ),
+        "threshold": Param(
+            "Threshold for no beam detection", type=float, userparam=True, settable=True
+        ),
+        "thresholdcounter": Param(
+            "Threshold counter for no beam detection",
+            type=float,
+            userparam=True,
+            settable=True,
+        ),
     }
 
     parameter_overrides = {
-        'fmtstr': Override(userparam=False),
-        'unit': Override(userparam=False),
-        'maxage': Override(userparam=False),
-        'pollinterval': Override(userparam=False),
-        'warnlimits': Override(userparam=False)
+        "fmtstr": Override(userparam=False),
+        "unit": Override(userparam=False),
+        "maxage": Override(userparam=False),
+        "pollinterval": Override(userparam=False),
+        "warnlimits": Override(userparam=False),
     }
 
     def _get_pv_parameters(self):
         pvs = EpicsDetector._get_pv_parameters(self)
 
         if self.statuspv:
-            pvs.add('statuspv')
+            pvs.add("statuspv")
 
         if self.errormsgpv:
-            pvs.add('errormsgpv')
+            pvs.add("errormsgpv")
 
         if self.thresholdpv:
-            pvs.add('thresholdpv')
+            pvs.add("thresholdpv")
 
         if self.thresholdcounterpv:
-            pvs.add('thresholdcounterpv')
+            pvs.add("thresholdcounterpv")
 
         return pvs
 
     def doReadThreshold(self):
         if not self.thresholdpv:
-            self.log.warning('Threshold PV not set, cannot read it!')
+            self.log.warning("Threshold PV not set, cannot read it!")
             return 0.0
-        return self._get_pv('thresholdpv')
+        return self._get_pv("thresholdpv")
 
     def doWriteThreshold(self, newValue):
         if not self.thresholdpv:
-            self.log.warning('Threshold PV not set, cannot write it!')
-        self._put_pv('thresholdpv', newValue)
+            self.log.warning("Threshold PV not set, cannot write it!")
+        self._put_pv("thresholdpv", newValue)
 
     def doReadThresholdcounter(self):
         if not self.thresholdcounterpv:
-            self.log.warning('Threshold counter PV not set, cannot read it!')
+            self.log.warning("Threshold counter PV not set, cannot read it!")
             return 0.0
-        return self._get_pv('thresholdcounterpv')
+        return self._get_pv("thresholdcounterpv")
 
     def doWriteThresholdcounter(self, newValue):
         if not self.thresholdcounterpv:
-            self.log.warning('Threshold counterPV not set, cannot write it!')
-        self._put_pv('thresholdcounterpv', newValue)
+            self.log.warning("Threshold counterPV not set, cannot write it!")
+        self._put_pv("thresholdcounterpv", newValue)
 
     def doStatus(self, maxage=0):
         if self.errormsgpv:
-            to_ignore = ['OK', 'Par out of range']
-            message_text = self._get_pv('errormsgpv').strip()
+            to_ignore = ["OK", "Par out of range"]
+            message_text = self._get_pv("errormsgpv").strip()
             if message_text and message_text not in to_ignore:
                 return status.ERROR, message_text
 
-        cnt = int(self._get_pv('startpv'))
+        cnt = int(self._get_pv("startpv"))
         if cnt == 1:
             if self.statuspv:
-                status_code = int(self._get_pv('statuspv'))
+                status_code = int(self._get_pv("statuspv"))
                 if status_code == 2:
-                    return status.BUSY, 'No Beam present'
+                    return status.BUSY, "No Beam present"
                 elif status_code == 3:
-                    return status.BUSY, 'Paused'
-            return status.BUSY, 'Counting'
+                    return status.BUSY, "Paused"
+            return status.BUSY, "Counting"
         elif cnt == 0:
-            return status.OK, 'Idle'
+            return status.OK, "Idle"
 
         return EpicsDetector.doStatus(self, maxage)
 
@@ -137,7 +145,6 @@ class EpicsScalerRecord(EpicsDetector):
         # Add the channels to the info as well
         for channel in self._channels:
             value = channel.read(0)
-            ret.append((channel.name, value, '%s' % value,
-                        channel.unit, 'presets'))
+            ret.append((channel.name, value, "%s" % value, channel.unit, "presets"))
 
         return ret

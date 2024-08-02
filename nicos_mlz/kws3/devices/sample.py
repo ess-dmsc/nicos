@@ -24,8 +24,20 @@
 """KWS-3 sample position switcher."""
 
 from nicos import session
-from nicos.core import Attach, ConfigurationError, DeviceAlias, HasPrecision, \
-    Moveable, NicosError, Override, Param, anytype, dictof, listof, oneof
+from nicos.core import (
+    Attach,
+    ConfigurationError,
+    DeviceAlias,
+    HasPrecision,
+    Moveable,
+    NicosError,
+    Override,
+    Param,
+    anytype,
+    dictof,
+    listof,
+    oneof,
+)
 from nicos.devices.generic import Slit
 from nicos.utils import num_sort
 
@@ -34,20 +46,21 @@ class SamplePos(Moveable):
     """Control selector speed via SPS I/O devices."""
 
     attached_devices = {
-        'active_ap': Attach('Alias for active aperture', DeviceAlias),
-        'active_x':  Attach('Alias for active x translation', DeviceAlias),
-        'active_y':  Attach('Alias for active y translation', DeviceAlias),
+        "active_ap": Attach("Alias for active aperture", DeviceAlias),
+        "active_x": Attach("Alias for active x translation", DeviceAlias),
+        "active_y": Attach("Alias for active y translation", DeviceAlias),
     }
 
     parameters = {
-        'alloweddevs': Param('List of allowed devices for presets',
-                             type=listof(str)),
-        'presets':     Param('Presets for sample position switching',
-                             type=dictof(str, dictof(str, anytype))),
+        "alloweddevs": Param("List of allowed devices for presets", type=listof(str)),
+        "presets": Param(
+            "Presets for sample position switching",
+            type=dictof(str, dictof(str, anytype)),
+        ),
     }
 
     parameter_overrides = {
-        'unit': Override(default='', mandatory=False),
+        "unit": Override(default="", mandatory=False),
     }
 
     def doInit(self, mode):
@@ -58,24 +71,30 @@ class SamplePos(Moveable):
         for setting, values in self.presets.items():
             values = dict(values)
             try:
-                self._aliases[setting] = (values.pop('active_ap'),
-                                          values.pop('active_x'),
-                                          values.pop('active_y'))
+                self._aliases[setting] = (
+                    values.pop("active_ap"),
+                    values.pop("active_x"),
+                    values.pop("active_y"),
+                )
             except KeyError:
                 raise ConfigurationError(
-                    self, 'setting %r needs active_ap, active_x and active_y '
-                    'settings' % setting) from None
+                    self,
+                    "setting %r needs active_ap, active_x and active_y "
+                    "settings" % setting,
+                ) from None
             try:
                 for name in self._aliases[setting]:
                     session.getDevice(name)
             except NicosError as exc:
                 raise ConfigurationError(
-                    self, 'could not create/find alias targets for setting %r'
-                    % setting) from exc
+                    self, "could not create/find alias targets for setting %r" % setting
+                ) from exc
             for key in values:
                 if key not in self.alloweddevs:
-                    raise ConfigurationError(self, 'device %s is not allowed '
-                                             'to be moved by sample_pos' % key)
+                    raise ConfigurationError(
+                        self,
+                        "device %s is not allowed " "to be moved by sample_pos" % key,
+                    )
             self._devpos[setting] = values
 
     def doRead(self, maxage=0):
@@ -89,7 +108,7 @@ class SamplePos(Moveable):
             if targets == current_targets:
                 break
         else:
-            return 'unknown'
+            return "unknown"
         ok = True
         for devname, devpos in self._devpos[setting].items():
             dev = session.getDevice(devname)
@@ -102,7 +121,7 @@ class SamplePos(Moveable):
                 ok &= devval == devpos
         if ok:
             return setting
-        return 'unknown'
+        return "unknown"
 
     def doStart(self, target):
         aliases = self._aliases[target]

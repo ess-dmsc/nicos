@@ -35,5 +35,5 @@ class oneof_detector(oneof):
             return oneof.__call__(self, val)
         except ValueError:
             raise ValueError(
-                'preset %r does not exist for the current selector setting' %
-                val) from None
+                "preset %r does not exist for the current selector setting" % val
+            ) from None

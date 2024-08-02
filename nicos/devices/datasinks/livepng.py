@@ -26,8 +26,7 @@ from time import time as currenttime
 
 import numpy as np
 
-from nicos.core import DataSinkHandler, NicosError, Override, Param, \
-    intrange, limits
+from nicos.core import DataSinkHandler, NicosError, Override, Param, intrange, limits
 from nicos.devices.datasinks.image import ImageSink
 
 try:
@@ -55,18 +54,22 @@ def makeLUT(n, spec):
 
 # "Jet" colormap parametrized as in Matplotlib
 colormap = {
-    'red':   ((0., 0, 0), (0.35, 0, 0), (0.66, 1, 1), (0.89, 1, 1),
-              (1, 0.5, 0.5)),
-    'green': ((0., 0, 0), (0.125, 0, 0), (0.375, 1, 1), (0.64, 1, 1),
-              (0.91, 0, 0), (1, 0, 0)),
-    'blue':  ((0., 0.5, 0.5), (0.11, 1, 1), (0.34, 1, 1),
-              (0.65, 0, 0), (1, 0, 0))
+    "red": ((0.0, 0, 0), (0.35, 0, 0), (0.66, 1, 1), (0.89, 1, 1), (1, 0.5, 0.5)),
+    "green": (
+        (0.0, 0, 0),
+        (0.125, 0, 0),
+        (0.375, 1, 1),
+        (0.64, 1, 1),
+        (0.91, 0, 0),
+        (1, 0, 0),
+    ),
+    "blue": ((0.0, 0.5, 0.5), (0.11, 1, 1), (0.34, 1, 1), (0.65, 0, 0), (1, 0, 0)),
 }
 
 # Generate lookup table
-LUT_r = makeLUT(256, colormap['red'])
-LUT_g = makeLUT(256, colormap['green'])
-LUT_b = makeLUT(256, colormap['blue'])
+LUT_r = makeLUT(256, colormap["red"])
+LUT_g = makeLUT(256, colormap["green"])
+LUT_b = makeLUT(256, colormap["blue"])
 
 
 class PNGLiveFileSinkHandler(DataSinkHandler):
@@ -90,18 +93,18 @@ class PNGLiveFileSinkHandler(DataSinkHandler):
             image = np.sum(image, axis=self.sink.sumaxis - 1)
         max_pixel = image.max()
         if self.sink.log10:
-            zeros = (image == 0)
+            zeros = image == 0
             # set 0's to 1's to avoid division by 0 errors
             image += zeros.astype(image.dtype)
             image = np.log10(image)
             max_pixel_log = np.log10(max_pixel) if max_pixel else 1
-            norm_arr = image.astype(float) * 255. / max_pixel_log
+            norm_arr = image.astype(float) * 255.0 / max_pixel_log
             norm_arr[zeros] = 0
         else:
             if max_pixel == 0:
                 norm_arr = image
             else:
-                norm_arr = image.astype(float) * 255. / max_pixel
+                norm_arr = image.astype(float) * 255.0 / max_pixel
         try:
             if self.sink.rgb:
                 norm_arr = norm_arr.astype(np.uint8)
@@ -112,24 +115,24 @@ class PNGLiveFileSinkHandler(DataSinkHandler):
                 # Our origin is bottom left, but image origin is top left
                 rgb_arr = np.ascontiguousarray(np.flipud(rgb_arr))
                 # PIL expects (w, h) but shape is (ny, nx)
-                img = Image.frombuffer('RGB', image.shape[::-1], rgb_arr,
-                                       'raw', 'RGB', 0, 1)
+                img = Image.frombuffer(
+                    "RGB", image.shape[::-1], rgb_arr, "raw", "RGB", 0, 1
+                )
             else:
                 hist, bins = np.histogram(norm_arr.flatten(), 1024)
                 cdf = hist.cumsum()
                 cdf_normalized = cdf.astype(float) / cdf.max()
-                minval = bins[np.argmax(cdf_normalized>self.sink.histrange[0])]
-                maxval = bins[np.argmax(cdf_normalized>self.sink.histrange[1])]
-                img = (norm_arr - minval) / (maxval - minval) * 255.
+                minval = bins[np.argmax(cdf_normalized > self.sink.histrange[0])]
+                maxval = bins[np.argmax(cdf_normalized > self.sink.histrange[1])]
+                img = (norm_arr - minval) / (maxval - minval) * 255.0
                 # Our origin is bottom left, but image origin is top left
                 img = np.flipud(img)
                 img = np.clip(img, 0, 255)
                 img = Image.fromarray(img.astype(np.uint8))
-            img.thumbnail((self.sink.size, self.sink.size),
-                          PIL.Image.ANTIALIAS)
+            img.thumbnail((self.sink.size, self.sink.size), PIL.Image.ANTIALIAS)
             img.save(self.sink.filename)
         except Exception:
-            self.log.warning('could not save live PNG', exc=1)
+            self.log.warning("could not save live PNG", exc=1)
         self._last_saved = currenttime()
 
 
@@ -144,26 +147,30 @@ class PNGLiveFileSink(ImageSink):
     """
 
     parameter_overrides = {
-        'filenametemplate': Override(mandatory=False, userparam=False,
-                                     default=['']),
+        "filenametemplate": Override(mandatory=False, userparam=False, default=[""]),
     }
 
     parameters = {
-        'interval': Param('Interval to write file to disk',
-                          unit='s', default=5),
-        'filename': Param('File name for .png image',
-                          type=str, mandatory=True),
-        'log10': Param('Use logarithmic counts for image', type=bool,
-                       default=False),
-        'size': Param('Size of the generated image',
-                      unit='pixels', default=256, settable=True),
-        'rgb': Param('Create RBG image',
-                     type=bool, default=True, mandatory=False),
-        'histrange': Param('Range of histogram for scaling greyscale image',
-                           type=limits, default=(0.05, 0.95), settable=True,
-                           mandatory=False),
-        'sumaxis': Param('Axis over which should be summed if data are 3D',
-                         type=intrange(1, 3), default=1, settable=False),
+        "interval": Param("Interval to write file to disk", unit="s", default=5),
+        "filename": Param("File name for .png image", type=str, mandatory=True),
+        "log10": Param("Use logarithmic counts for image", type=bool, default=False),
+        "size": Param(
+            "Size of the generated image", unit="pixels", default=256, settable=True
+        ),
+        "rgb": Param("Create RBG image", type=bool, default=True, mandatory=False),
+        "histrange": Param(
+            "Range of histogram for scaling greyscale image",
+            type=limits,
+            default=(0.05, 0.95),
+            settable=True,
+            mandatory=False,
+        ),
+        "sumaxis": Param(
+            "Axis over which should be summed if data are 3D",
+            type=intrange(1, 3),
+            default=1,
+            settable=False,
+        ),
     }
 
     handlerclass = PNGLiveFileSinkHandler
@@ -171,9 +178,12 @@ class PNGLiveFileSink(ImageSink):
     def doPreinit(self, mode):
         if PIL is None:
             self.log.error(_import_error)
-            raise NicosError(self, 'Python Image Library (PIL) is not '
-                             'available. Please check whether it is installed '
-                             'and in your PYTHONPATH')
+            raise NicosError(
+                self,
+                "Python Image Library (PIL) is not "
+                "available. Please check whether it is installed "
+                "and in your PYTHONPATH",
+            )
 
     def isActiveForArray(self, arraydesc):
         return len(arraydesc.shape) in (2, 3)

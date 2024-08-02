@@ -1,8 +1,8 @@
-description = 'EMC setup'
-group = 'basic'
+description = "EMC setup"
+group = "basic"
 
 includes = [
-    'maria',
-    'dns',
-    'kws2',
+    "maria",
+    "dns",
+    "kws2",
 ]

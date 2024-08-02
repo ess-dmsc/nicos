@@ -27,8 +27,7 @@ from os import path
 
 from nicos.clients.flowui import uipath
 from nicos.clients.flowui.panels import get_icon
-from nicos.clients.gui.panels.cmdbuilder import \
-    CommandPanel as DefaultCommandPanel
+from nicos.clients.gui.panels.cmdbuilder import CommandPanel as DefaultCommandPanel
 from nicos.guisupport.qt import pyqtSlot
 
 
@@ -37,8 +36,8 @@ class CommandPanel(DefaultCommandPanel):
     SelectCommand widget.
     """
 
-    panelName = 'Command'
-    ui = path.join(uipath, 'panels', 'ui_files', 'cmdbuilder.ui')
+    panelName = "Command"
+    ui = path.join(uipath, "panels", "ui_files", "cmdbuilder.ui")
     frame_visible = False
 
     def __init__(self, parent, client, options):
@@ -62,18 +61,19 @@ class CommandPanel(DefaultCommandPanel):
         self.frame.setEnabled(not viewonly)
 
     def set_icons(self):
-        self.cmdBtn.setIcon(get_icon('add-24px.svg'))
-        self.simBtn.setIcon(get_icon('play_arrow_outline-24px.svg'))
+        self.cmdBtn.setIcon(get_icon("add-24px.svg"))
+        self.simBtn.setIcon(get_icon("play_arrow_outline-24px.svg"))
         self.simBtn.hide()
-        self.runBtn.setIcon(get_icon('play_arrow-24px.svg'))
+        self.runBtn.setIcon(get_icon("play_arrow-24px.svg"))
         self.frame.hide()
 
     def toggle_frame(self):
         self.frame_visible = not self.frame_visible
         self.frame.setVisible(self.frame_visible)
-        self.cmdBtn.setText('Hide Cmd' if self.frame_visible else 'New Cmd')
-        self.cmdBtn.setIcon(get_icon('remove-24px.svg' if self.frame_visible
-                                     else 'add-24px.svg'))
+        self.cmdBtn.setText("Hide Cmd" if self.frame_visible else "New Cmd")
+        self.cmdBtn.setIcon(
+            get_icon("remove-24px.svg" if self.frame_visible else "add-24px.svg")
+        )
 
     @pyqtSlot()
     def on_cmdBtn_clicked(self):

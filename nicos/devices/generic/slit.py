@@ -24,9 +24,24 @@
 """NICOS slit device."""
 
 from nicos import session
-from nicos.core import Attach, AutoDevice, HasAutoDevices, HasPrecision, \
-    InvalidValueError, Moveable, Override, Param, UsageError, Value, dictof, \
-    multiReset, multiStatus, multiWait, oneof, tupleof
+from nicos.core import (
+    Attach,
+    AutoDevice,
+    HasAutoDevices,
+    HasPrecision,
+    InvalidValueError,
+    Moveable,
+    Override,
+    Param,
+    UsageError,
+    Value,
+    dictof,
+    multiReset,
+    multiStatus,
+    multiWait,
+    oneof,
+    tupleof,
+)
 from nicos.core.utils import devIter, multiReference
 from nicos.devices.abstract import CanReference
 
@@ -35,38 +50,40 @@ class Gap(HasAutoDevices, CanReference, Moveable):
     """Base class for gap devices consisting of two blades."""
 
     parameters = {
-        'opmode': Param(
-            'Mode of operation',
-            type=oneof('2blades', '2blades_opposite',
-                       'centered', 'offcentered'),
+        "opmode": Param(
+            "Mode of operation",
+            type=oneof("2blades", "2blades_opposite", "centered", "offcentered"),
             settable=True,
         ),
-        'coordinates': Param(
-            'Coordinate convention for left/right blades',
-            type=oneof('equal', 'opposite'),
-            default='equal',
+        "coordinates": Param(
+            "Coordinate convention for left/right blades",
+            type=oneof("equal", "opposite"),
+            default="equal",
         ),
-        'fmtstr_map': Param(
-            'A dictionary mapping operation modes to format strings (used for '
-            'internal management).',
+        "fmtstr_map": Param(
+            "A dictionary mapping operation modes to format strings (used for "
+            "internal management).",
             type=dictof(str, str),
             settable=False,
             mandatory=False,
             userparam=False,
-            default={'2blades': '%.2f %.2f', '2blades_opposite': '%.2f %.2f',
-                     'centered': '%.2f', 'offcentered': '%.2f, %.2f'},
+            default={
+                "2blades": "%.2f %.2f",
+                "2blades_opposite": "%.2f %.2f",
+                "centered": "%.2f",
+                "offcentered": "%.2f, %.2f",
+            },
         ),
-        'parallel_ref': Param(
-            'Set to True if the blades\' reference drive can be done in '
-            'parallel.',
+        "parallel_ref": Param(
+            "Set to True if the blades' reference drive can be done in " "parallel.",
             type=bool,
             default=False,
         ),
     }
 
     parameter_overrides = {
-        'fmtstr': Override(volatile=True),
-        'unit': Override(mandatory=False),
+        "fmtstr": Override(volatile=True),
+        "unit": Override(mandatory=False),
     }
 
     valuetype = tupleof(float, float)
@@ -83,31 +100,44 @@ class Gap(HasAutoDevices, CanReference, Moveable):
         for name in self._axnames:
             self.__dict__[name] = self._adevs[name]
         for name, cls in self._autodevs:
-            self.add_autodevice(name, cls, slit=self, unit=self.unit,
-                                visibility=self.autodevice_visibility)
+            self.add_autodevice(
+                name,
+                cls,
+                slit=self,
+                unit=self.unit,
+                visibility=self.autodevice_visibility,
+            )
 
     def _getPositions(self, target):
-        if self.opmode.endswith('blades'):
+        if self.opmode.endswith("blades"):
             if len(target) != 2:
-                raise InvalidValueError(self, 'arguments required for '
-                                        f'2-blades mode: {self._axnames}')
+                raise InvalidValueError(
+                    self, "arguments required for " f"2-blades mode: {self._axnames}"
+                )
             positions = list(target)
-        elif self.opmode.endswith('blades_opposite'):
+        elif self.opmode.endswith("blades_opposite"):
             if len(target) != 2:
-                raise InvalidValueError(self, 'arguments required for '
-                                        f'2-blades mode: {self._axnames}')
+                raise InvalidValueError(
+                    self, "arguments required for " f"2-blades mode: {self._axnames}"
+                )
             positions = [-target[0], target[1]]
-        elif self.opmode == 'centered':
+        elif self.opmode == "centered":
             if len(target) != 1:
-                raise InvalidValueError(self, 'arguments required for '
-                                        'centered mode: '
-                                        f'[{self._autodevs[1][0]}]')
+                raise InvalidValueError(
+                    self,
+                    "arguments required for "
+                    "centered mode: "
+                    f"[{self._autodevs[1][0]}]",
+                )
             positions = [-target[0] / 2, target[0] / 2]
         else:
             if len(target) != 2:
-                raise InvalidValueError(self, 'arguments required for '
-                                        'off-centered mode: '
-                                        f'{[ad[0] for ad in self._autodevs]}')
+                raise InvalidValueError(
+                    self,
+                    "arguments required for "
+                    "off-centered mode: "
+                    f"{[ad[0] for ad in self._autodevs]}",
+                )
             positions = [target[0] - target[1] / 2, target[0] + target[1] / 2]
         return positions
 
@@ -115,19 +145,19 @@ class Gap(HasAutoDevices, CanReference, Moveable):
         return self._doIsAllowedPositions(self._getPositions(target))
 
     def _isAllowedSlitOpening(self, positions):
-        ok, why = True, ''
+        ok, why = True, ""
         if positions[1] < positions[0]:
-            ok, why = False, 'gap is negative'
+            ok, why = False, "gap is negative"
         return ok, why
 
     def _doIsAllowedPositions(self, positions):
-        f = self.coordinates == 'opposite' and -1 or +1
+        f = self.coordinates == "opposite" and -1 or +1
         for ax, axname, pos in zip(self._axes, self._axnames, positions):
-            if axname in ('left', 'bottom'):
+            if axname in ("left", "bottom"):
                 pos *= f
             ok, why = ax.isAllowed(pos)
             if not ok:
-                return ok, '[%s blade] %s' % (axname, why)
+                return ok, "[%s blade] %s" % (axname, why)
         return self._isAllowedSlitOpening(positions)
 
     def doStart(self, target):
@@ -137,7 +167,7 @@ class Gap(HasAutoDevices, CanReference, Moveable):
         raise NotImplementedError
 
     def _doStartGap(self, target, alb, art):
-        f = self.coordinates == 'opposite' and -1 or +1
+        f = self.coordinates == "opposite" and -1 or +1
         tlb, trt = target
         # determine which axis to move first, so that the blades can
         # not touch when one moves first
@@ -168,21 +198,22 @@ class Gap(HasAutoDevices, CanReference, Moveable):
 
     def _doReadPositions(self, maxage):
         clb, crt = [d.read(maxage) for d in self._axes]
-        if self.coordinates == 'opposite':
+        if self.coordinates == "opposite":
             clb *= -1
         return [clb, crt]
 
     def doRead(self, maxage=0):
         positions = self._doReadPositions(maxage)
         lb, rt = positions
-        if self.opmode == 'centered':
+        if self.opmode == "centered":
             if abs((lb + rt) / 2) > self._axes[0].precision:
-                self.log.warning('slit seems to be off-centered, but is '
-                                 'set to "centered" mode')
+                self.log.warning(
+                    "slit seems to be off-centered, but is " 'set to "centered" mode'
+                )
             return [rt - lb]
-        elif self.opmode == 'offcentered':
+        elif self.opmode == "offcentered":
             return [(lb + rt) / 2, rt - lb]
-        elif self.opmode == '2blades_opposite':
+        elif self.opmode == "2blades_opposite":
             return [-lb, rt]
         else:
             return positions
@@ -194,14 +225,15 @@ class Gap(HasAutoDevices, CanReference, Moveable):
 
     def valueInfo(self):
         vnames = []
-        if self.opmode.endswith('centered'):
-            if self.opmode.startswith('off'):
+        if self.opmode.endswith("centered"):
+            if self.opmode.startswith("off"):
                 vnames += [center[0] for center in self._autodevs[::2]]
             vnames += list(size[0] for size in self._autodevs[1::2])
         else:
             vnames = self._axnames
-        return tuple(Value(f'{self}.{vn}', unit=self.unit, fmtstr='%.2f')
-                     for vn in vnames)
+        return tuple(
+            Value(f"{self}.{vn}", unit=self.unit, fmtstr="%.2f") for vn in vnames
+        )
 
     def doStatus(self, maxage=0):
         return multiStatus(list(zip(self._axnames, self._axes)), maxage)
@@ -211,18 +243,18 @@ class Gap(HasAutoDevices, CanReference, Moveable):
         # to update the dict and then put to cache back
         tmp = dict(self.fmtstr_map)
         tmp[self.opmode] = value
-        self._setROParam('fmtstr_map', tmp)
+        self._setROParam("fmtstr_map", tmp)
 
     def doReadFmtstr(self):
         return self.fmtstr_map[self.opmode]
 
     def doWriteOpmode(self, value):
         if self._cache:
-            self._cache.invalidate(self, 'value')
-            self._cache.put(self, 'fmtstr', self.fmtstr_map[value])
+            self._cache.invalidate(self, "value")
+            self._cache.put(self, "fmtstr", self.fmtstr_map[value])
 
     def doUpdateOpmode(self, value):
-        if value == 'centered':
+        if value == "centered":
             self.valuetype = tupleof(float)
         else:
             self.valuetype = tupleof(float, float)
@@ -266,14 +298,14 @@ class HorizontalGap(Gap):
     """
 
     attached_devices = {
-        'left': Attach('Left blade', HasPrecision),
-        'right': Attach('Right blade', HasPrecision),
+        "left": Attach("Left blade", HasPrecision),
+        "right": Attach("Right blade", HasPrecision),
     }
 
     def _init_adevs(self):
-        self._autodevs = [('center', CenterGapAxis), ('width', SizeGapAxis)]
+        self._autodevs = [("center", CenterGapAxis), ("width", SizeGapAxis)]
         self._axes = [self._attached_left, self._attached_right]
-        self._axnames = ['left', 'right']
+        self._axnames = ["left", "right"]
 
     def _doStartPositions(self, positions):
         self._doStartGap(positions, self._attached_left, self._attached_right)
@@ -320,14 +352,14 @@ class VerticalGap(Gap):
     """
 
     attached_devices = {
-        'bottom': Attach('Bottom blade', HasPrecision),
-        'top': Attach('Top blade', HasPrecision),
+        "bottom": Attach("Bottom blade", HasPrecision),
+        "top": Attach("Top blade", HasPrecision),
     }
 
     def _init_adevs(self):
-        self._autodevs = [('center', CenterGapAxis), ('height', SizeGapAxis)]
+        self._autodevs = [("center", CenterGapAxis), ("height", SizeGapAxis)]
         self._axes = [self._attached_bottom, self._attached_top]
-        self._axnames = ['bottom', 'top']
+        self._axnames = ["bottom", "top"]
 
     def _doStartPositions(self, positions):
         self._doStartGap(positions, self._attached_bottom, self._attached_top)
@@ -375,62 +407,76 @@ class Slit(HorizontalGap, VerticalGap):
     """
 
     parameter_overrides = {
-        'opmode': Override(
-            type=oneof('4blades', '4blades_opposite',
-                       'centered', 'offcentered'),
-            default='4blades',
+        "opmode": Override(
+            type=oneof("4blades", "4blades_opposite", "centered", "offcentered"),
+            default="4blades",
         ),
-        'coordinates': Override(
-            description='Coordinate convention for left/right and top/bottom '
-                        'blades',
+        "coordinates": Override(
+            description="Coordinate convention for left/right and top/bottom " "blades",
         ),
-        'fmtstr_map': Override(
-            default={'4blades': '%.2f %.2f %.2f %.2f',
-                     '4blades_opposite': '%.2f %.2f %.2f %.2f',
-                     'centered': '%.2f x %.2f',
-                     'offcentered': '(%.2f, %.2f) %.2f x %.2f'},
+        "fmtstr_map": Override(
+            default={
+                "4blades": "%.2f %.2f %.2f %.2f",
+                "4blades_opposite": "%.2f %.2f %.2f %.2f",
+                "centered": "%.2f x %.2f",
+                "offcentered": "(%.2f, %.2f) %.2f x %.2f",
+            },
         ),
     }
 
     valuetype = tupleof(float, float, float, float)
 
     def _init_adevs(self):
-        self._autodevs = [('centerx', CenterXSlitAxis),
-                          ('width', WidthSlitAxis),
-                          ('centery', CenterYSlitAxis),
-                          ('height', HeightSlitAxis)]
-        self._axes = [self._attached_left, self._attached_right,
-                      self._attached_bottom, self._attached_top]
-        self._axnames = ['left', 'right', 'bottom', 'top']
+        self._autodevs = [
+            ("centerx", CenterXSlitAxis),
+            ("width", WidthSlitAxis),
+            ("centery", CenterYSlitAxis),
+            ("height", HeightSlitAxis),
+        ]
+        self._axes = [
+            self._attached_left,
+            self._attached_right,
+            self._attached_bottom,
+            self._attached_top,
+        ]
+        self._axnames = ["left", "right", "bottom", "top"]
 
     def _getPositions(self, target):
-        if self.opmode.startswith('4blades'):
+        if self.opmode.startswith("4blades"):
             if len(target) != 4:
-                raise InvalidValueError(self, 'arguments required for '
-                                        f'4-blades mode: {self._axnames}')
-            positions = (HorizontalGap._getPositions(self, target[:2])
-                         + VerticalGap._getPositions(self, target[2:]))
-        elif self.opmode == 'centered':
+                raise InvalidValueError(
+                    self, "arguments required for " f"4-blades mode: {self._axnames}"
+                )
+            positions = HorizontalGap._getPositions(
+                self, target[:2]
+            ) + VerticalGap._getPositions(self, target[2:])
+        elif self.opmode == "centered":
             if len(target) != 2:
-                raise InvalidValueError(self, 'arguments required for '
-                                        'centered mode: [width, height]')
-            positions = (HorizontalGap._getPositions(self, target[:1])
-                         + VerticalGap._getPositions(self, target[1:]))
+                raise InvalidValueError(
+                    self, "arguments required for " "centered mode: [width, height]"
+                )
+            positions = HorizontalGap._getPositions(
+                self, target[:1]
+            ) + VerticalGap._getPositions(self, target[1:])
         else:
             if len(target) != 4:
-                raise InvalidValueError(self, 'arguments required for off-'
-                                        'centered mode: [xcenter, ycenter, '
-                                        'width, height]')
-            positions = (HorizontalGap._getPositions(self, target[::2])
-                         + VerticalGap._getPositions(self, target[1::2]))
+                raise InvalidValueError(
+                    self,
+                    "arguments required for off-"
+                    "centered mode: [xcenter, ycenter, "
+                    "width, height]",
+                )
+            positions = HorizontalGap._getPositions(
+                self, target[::2]
+            ) + VerticalGap._getPositions(self, target[1::2])
         return positions
 
     def _isAllowedSlitOpening(self, positions):
-        ok, why = True, ''
+        ok, why = True, ""
         if positions[1] < positions[0]:
-            ok, why = False, 'horizontal slit opening is negative'
+            ok, why = False, "horizontal slit opening is negative"
         elif positions[3] < positions[2]:
-            ok, why = False, 'vertical slit opening is negative'
+            ok, why = False, "vertical slit opening is negative"
         return ok, why
 
     def _doStartPositions(self, positions):
@@ -439,7 +485,7 @@ class Slit(HorizontalGap, VerticalGap):
 
     def _doReadPositions(self, maxage):
         cl, cr, cb, ct = [d.read(maxage) for d in self._axes]
-        if self.coordinates == 'opposite':
+        if self.coordinates == "opposite":
             cl *= -1
             cb *= -1
         return [cl, cr, cb, ct]
@@ -447,21 +493,24 @@ class Slit(HorizontalGap, VerticalGap):
     def doRead(self, maxage=0):
         positions = self._doReadPositions(maxage)
         l, r, b, t = positions
-        if self.opmode == 'centered':
-            if abs((l + r) / 2) > self._attached_left.precision or \
-               abs((t + b) / 2) > self._attached_top.precision:
-                self.log.warning('slit seems to be off-centered, but is '
-                                 'set to "centered" mode')
+        if self.opmode == "centered":
+            if (
+                abs((l + r) / 2) > self._attached_left.precision
+                or abs((t + b) / 2) > self._attached_top.precision
+            ):
+                self.log.warning(
+                    "slit seems to be off-centered, but is " 'set to "centered" mode'
+                )
             return [r - l, t - b]
-        elif self.opmode == 'offcentered':
+        elif self.opmode == "offcentered":
             return [(l + r) / 2, (t + b) / 2, r - l, t - b]
-        elif self.opmode == '4blades_opposite':
+        elif self.opmode == "4blades_opposite":
             return [-l, r, -b, t]
         else:
             return positions
 
     def doUpdateOpmode(self, value):
-        if value == 'centered':
+        if value == "centered":
             self.valuetype = tupleof(float, float)
         else:
             self.valuetype = tupleof(float, float, float, float)
@@ -474,7 +523,7 @@ class SlitAxis(AutoDevice, Moveable):
     """
 
     attached_devices = {
-        'slit': Attach('Slit whose axis is controlled', Gap),
+        "slit": Attach("Slit whose axis is controlled", Gap),
     }
 
     valuetype = float
@@ -497,9 +546,8 @@ class SlitAxis(AutoDevice, Moveable):
 
 
 class CenterGapAxis(SlitAxis):
-
     def doStart(self, target):
-        if self._attached_slit.opmode == 'centered':
+        if self._attached_slit.opmode == "centered":
             raise UsageError('moving center in "centered" mode is not allowed')
         SlitAxis.doStart(self, target)
 
@@ -512,7 +560,6 @@ class CenterGapAxis(SlitAxis):
 
 
 class CenterXSlitAxis(CenterGapAxis):
-
     def _convertRead(self, positions):
         return (positions[0] + positions[1]) / 2
 
@@ -522,7 +569,6 @@ class CenterXSlitAxis(CenterGapAxis):
 
 
 class CenterYSlitAxis(CenterGapAxis):
-
     def _convertRead(self, positions):
         return (positions[2] + positions[3]) / 2
 
@@ -532,7 +578,6 @@ class CenterYSlitAxis(CenterGapAxis):
 
 
 class SizeGapAxis(SlitAxis):
-
     def _convertRead(self, positions):
         return positions[1] - positions[0]
 
@@ -542,25 +587,21 @@ class SizeGapAxis(SlitAxis):
 
 
 class WidthSlitAxis(SlitAxis):
-
     def _convertRead(self, positions):
         return positions[1] - positions[0]
 
     def _convertStart(self, target, current):
-        centerx = (current[0] + current[1]) / 2.
-        return (centerx - target / 2, centerx + target / 2,
-                current[2], current[3])
+        centerx = (current[0] + current[1]) / 2.0
+        return (centerx - target / 2, centerx + target / 2, current[2], current[3])
 
 
 class HeightSlitAxis(SlitAxis):
-
     def _convertRead(self, positions):
         return positions[3] - positions[2]
 
     def _convertStart(self, target, current):
         centery = (current[2] + current[3]) / 2
-        return (current[0], current[1],
-                centery - target / 2, centery + target / 2)
+        return (current[0], current[1], centery - target / 2, centery + target / 2)
 
 
 class TwoAxisSlit(CanReference, Moveable):
@@ -577,19 +618,21 @@ class TwoAxisSlit(CanReference, Moveable):
     """
 
     attached_devices = {
-        'horizontal': Attach('Horizontal slit', HasPrecision),
-        'vertical':   Attach('Vertical slit', HasPrecision),
+        "horizontal": Attach("Horizontal slit", HasPrecision),
+        "vertical": Attach("Vertical slit", HasPrecision),
     }
 
     parameters = {
-        'parallel_ref': Param('Set to True if the blades\' reference drive '
-                              'can be done in parallel.', type=bool,
-                              default=False),
+        "parallel_ref": Param(
+            "Set to True if the blades' reference drive " "can be done in parallel.",
+            type=bool,
+            default=False,
+        ),
     }
 
     parameter_overrides = {
-        'fmtstr': Override(default='%.2f %.2f'),
-        'unit': Override(mandatory=False),
+        "fmtstr": Override(default="%.2f %.2f"),
+        "unit": Override(mandatory=False),
     }
 
     valuetype = tupleof(float, float)
@@ -598,22 +641,23 @@ class TwoAxisSlit(CanReference, Moveable):
 
     def doInit(self, _mode):
         self._slits = [self._attached_horizontal, self._attached_vertical]
-        self._slitnames = ['horizontal', 'vertical']
+        self._slitnames = ["horizontal", "vertical"]
 
         for name in self._slitnames:
             self.__dict__[name] = self._adevs[name]
-        self.__dict__['width'] = self.horizontal
-        self.__dict__['height'] = self.vertical
+        self.__dict__["width"] = self.horizontal
+        self.__dict__["height"] = self.vertical
 
     def doIsAllowed(self, target):
         if len(target) != 2:
-            raise InvalidValueError(self, 'arguments required for centered '
-                                    'mode: [width, height]')
+            raise InvalidValueError(
+                self, "arguments required for centered " "mode: [width, height]"
+            )
         for slit, slitname, pos in zip(self._slits, self._slitnames, target):
             ok, why = slit.isAllowed(pos)
             if not ok:
-                return ok, '[%s slit] %s' % (slitname, why)
-        return True, ''
+                return ok, "[%s slit] %s" % (slitname, why)
+        return True, ""
 
     def doStart(self, target):
         th, tv = target
@@ -633,8 +677,9 @@ class TwoAxisSlit(CanReference, Moveable):
         return [d.read(maxage) for d in self._slits]
 
     def valueInfo(self):
-        return Value('%s.width' % self, unit=self.unit, fmtstr='%.2f'), \
-            Value('%s.height' % self, unit=self.unit, fmtstr='%.2f')
+        return Value("%s.width" % self, unit=self.unit, fmtstr="%.2f"), Value(
+            "%s.height" % self, unit=self.unit, fmtstr="%.2f"
+        )
 
     def doStatus(self, maxage=0):
         return multiStatus(list(zip(self._slitnames, self._slits)))

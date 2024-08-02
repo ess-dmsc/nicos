@@ -1,10 +1,10 @@
-description = 'Vacuum sensors of collimation tube'
+description = "Vacuum sensors of collimation tube"
 
-includes = ['system']
+includes = ["system"]
 
-excludes = ['collimation']
+excludes = ["collimation"]
 
-group = 'lowlevel'
+group = "lowlevel"
 
 devices = dict(
     # col_2_m = device('nicos_mlz.sans1.devices.collimotor.MotorAllParams',

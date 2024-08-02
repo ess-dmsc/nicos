@@ -34,21 +34,23 @@ class CollimatorLoverD(Readable):
     hardware_access = False
 
     attached_devices = {
-        'l': Attach('Distance device', Readable),
-        'd': Attach('Pinhole', Readable),
+        "l": Attach("Distance device", Readable),
+        "d": Attach("Pinhole", Readable),
     }
 
     def doInit(self, mode):
         if self._attached_l.unit != self._attached_d.unit:
-            raise ConfigurationError(self, 'different units for L and d '
-                                     '(%s vs %s)' %
-                                     (self._attached_l.unit,
-                                      self._attached_d.unit))
+            raise ConfigurationError(
+                self,
+                "different units for L and d "
+                "(%s vs %s)" % (self._attached_l.unit, self._attached_d.unit),
+            )
 
     def doRead(self, maxage=0):
         try:
-            ret = float(self._attached_l.read(maxage)) / \
-                float(self._attached_d.read(maxage))
+            ret = float(self._attached_l.read(maxage)) / float(
+                self._attached_d.read(maxage)
+            )
         except ValueError:
             ret = 0
         return ret
@@ -62,35 +64,41 @@ class GeometricBlur(Readable):
     hardware_access = False
 
     attached_devices = {
-        'l': Attach('Distance device', Readable),
-        'd': Attach('Pinhole', Readable),
-        'sdd': Attach('Sample Detector Distance', Readable),
+        "l": Attach("Distance device", Readable),
+        "d": Attach("Pinhole", Readable),
+        "sdd": Attach("Sample Detector Distance", Readable),
     }
 
     parameter_overrides = {
-        'unit': Override(volatile=True, mandatory=False),
+        "unit": Override(volatile=True, mandatory=False),
     }
 
     def doInit(self, mode):
         units = set(d.unit for d in self._adevs.values())
         if len(units) != 1:
-            raise ConfigurationError(self, 'different units for L, d and sdd '
-                                     '(%s vs %s vs %s)' %
-                                     (self._attached_l.unit,
-                                      self._attached_d.unit,
-                                      self._attached_sdd.unit))
-        if 'mm' not in units:
-            raise ConfigurationError(self, "attached devices units have to be "
-                                     "'mm'")
+            raise ConfigurationError(
+                self,
+                "different units for L, d and sdd "
+                "(%s vs %s vs %s)"
+                % (
+                    self._attached_l.unit,
+                    self._attached_d.unit,
+                    self._attached_sdd.unit,
+                ),
+            )
+        if "mm" not in units:
+            raise ConfigurationError(self, "attached devices units have to be " "'mm'")
 
     def doRead(self, maxage=0):
         try:
-            ret = float(self._attached_sdd.read(maxage)) * \
-                float(self._attached_d.read(maxage)) / \
-                float(self._attached_l.read(maxage))
+            ret = (
+                float(self._attached_sdd.read(maxage))
+                * float(self._attached_d.read(maxage))
+                / float(self._attached_l.read(maxage))
+            )
             return 1000 * ret  # convert to um
         except ValueError:
             return 0
 
     def doReadUnit(self):
-        return 'um'
+        return "um"

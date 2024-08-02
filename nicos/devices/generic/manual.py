@@ -21,10 +21,19 @@
 #
 # *****************************************************************************
 
-""""Manual" moveable devices, to keep track of manual instrument changes."""
+""" "Manual" moveable devices, to keep track of manual instrument changes."""
 
-from nicos.core import HasLimits, Moveable, Override, Param, PositionError, \
-    anytype, nonemptylistof, oneof, status
+from nicos.core import (
+    HasLimits,
+    Moveable,
+    Override,
+    Param,
+    PositionError,
+    anytype,
+    nonemptylistof,
+    oneof,
+    status,
+)
 
 
 class ManualMove(HasLimits, Moveable):
@@ -36,7 +45,7 @@ class ManualMove(HasLimits, Moveable):
     """
 
     parameters = {
-        'default': Param('Default value when freshly initialized'),
+        "default": Param("Default value when freshly initialized"),
     }
 
     hardware_access = False
@@ -53,7 +62,7 @@ class ManualMove(HasLimits, Moveable):
         return self.target
 
     def doStatus(self, maxage=0):
-        return status.OK, ''
+        return status.OK, ""
 
 
 class ManualSwitch(Moveable):
@@ -66,12 +75,13 @@ class ManualSwitch(Moveable):
     """
 
     parameters = {
-        'states': Param('List of allowed states',
-                        type=nonemptylistof(anytype), mandatory=True),
+        "states": Param(
+            "List of allowed states", type=nonemptylistof(anytype), mandatory=True
+        ),
     }
 
     parameter_overrides = {
-        'unit':   Override(mandatory=False),
+        "unit": Override(mandatory=False),
     }
 
     hardware_access = True
@@ -90,12 +100,12 @@ class ManualSwitch(Moveable):
     def doRead(self, maxage=0):
         if self.target in self.states:
             return self.target
-        raise PositionError(self, 'device is in an unknown state')
+        raise PositionError(self, "device is in an unknown state")
 
     def doStatus(self, maxage=0):
-        return status.OK, ''
+        return status.OK, ""
 
     def doIsAllowed(self, target):
         if target in self.states:
-            return True, ''
-        return False, '%r is not in %r' % (target, self.states)
+            return True, ""
+        return False, "%r is not in %r" % (target, self.states)

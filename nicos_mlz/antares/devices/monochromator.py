@@ -25,9 +25,21 @@
 
 from math import asin, degrees, radians, sin, tan
 
-from nicos.core import Attach, HasLimits, Moveable, NicosError, Override, \
-    Param, PositionError, anytype, dictof, floatrange, none_or, oneof, \
-    status
+from nicos.core import (
+    Attach,
+    HasLimits,
+    Moveable,
+    NicosError,
+    Override,
+    Param,
+    PositionError,
+    anytype,
+    dictof,
+    floatrange,
+    none_or,
+    oneof,
+    status,
+)
 from nicos.core.utils import multiStatus, statusString
 from nicos.utils import lazy_property
 
@@ -41,34 +53,45 @@ class Monochromator(HasLimits, Moveable):
     Experimental version.
     CHECK THE FORMULAS!
     """
+
     attached_devices = {
-        'phi1':        Attach('monochromator rotation 1', Moveable),
-        'phi2':        Attach('monochromator rotation 2', Moveable),
-        'translation': Attach('monochromator translation', Moveable),
-        'inout':       Attach('monochromator inout device', Moveable),
+        "phi1": Attach("monochromator rotation 1", Moveable),
+        "phi2": Attach("monochromator rotation 2", Moveable),
+        "translation": Attach("monochromator translation", Moveable),
+        "inout": Attach("monochromator inout device", Moveable),
     }
 
     parameters = {
-        'dvalue1':    Param('Lattice constant of Mono1', type=float,
-                            settable=True, mandatory=True),
-        'dvalue2':    Param('Lattice constant of Mono2', type=float,
-                            settable=True, mandatory=True),
-        'distance':   Param('Parallactic distance of monos', type=float,
-                            settable=True, mandatory=True),
-        'tolphi':     Param('Max deviation of phi1 or phi2 from calculated '
-                            'value',
-                            type=float, settable=True, default=0.01),
-        'toltrans':   Param('Max deviation of translation from calculated '
-                            'value',
-                            type=float, settable=True, default=0.01),
-        'parkingpos': Param('Monochromator parking position',
-                            type=dictof(oneof(*attached_devices.keys()),
-                                        anytype),
-                            mandatory=True),
+        "dvalue1": Param(
+            "Lattice constant of Mono1", type=float, settable=True, mandatory=True
+        ),
+        "dvalue2": Param(
+            "Lattice constant of Mono2", type=float, settable=True, mandatory=True
+        ),
+        "distance": Param(
+            "Parallactic distance of monos", type=float, settable=True, mandatory=True
+        ),
+        "tolphi": Param(
+            "Max deviation of phi1 or phi2 from calculated " "value",
+            type=float,
+            settable=True,
+            default=0.01,
+        ),
+        "toltrans": Param(
+            "Max deviation of translation from calculated " "value",
+            type=float,
+            settable=True,
+            default=0.01,
+        ),
+        "parkingpos": Param(
+            "Monochromator parking position",
+            type=dictof(oneof(*attached_devices.keys()), anytype),
+            mandatory=True,
+        ),
     }
 
     parameter_overrides = {
-        'unit': Override(mandatory=False, default='Angstrom'),
+        "unit": Override(mandatory=False, default="Angstrom"),
     }
 
     valuetype = none_or(floatrange(1.4, 6.0))
@@ -77,7 +100,7 @@ class Monochromator(HasLimits, Moveable):
 
     @lazy_property
     def devices(self):
-        return [self._adevs[i] for i in 'inout phi1 phi2 translation'.split()]
+        return [self._adevs[i] for i in "inout phi1 phi2 translation".split()]
 
     def _from_lambda(self, lam):
         """Return 3 values used for phi1, phi2 and translation."""
@@ -95,7 +118,7 @@ class Monochromator(HasLimits, Moveable):
         try:
             return abs(2 * self.dvalue1 * sin(radians(phi1)))
         except Exception:
-            raise PositionError('can not determine lambda!') from None
+            raise PositionError("can not determine lambda!") from None
 
     def _moveToParkingpos(self):
         for dev, target in self.parkingpos.items():
@@ -103,15 +126,15 @@ class Monochromator(HasLimits, Moveable):
 
     def doStart(self, target):
         if target is None:
-            self.log.debug('None given; Moving to parking position')
+            self.log.debug("None given; Moving to parking position")
             self._moveToParkingpos()
             return
 
-        if self._attached_inout.read() == 'out':
-            self.log.debug('moving monochromator into beam')
+        if self._attached_inout.read() == "out":
+            self.log.debug("moving monochromator into beam")
 
-        for d, v in zip(self.devices, ['in'] + list(self._from_lambda(target))):
-            self.log.debug('sending %s to %r', d.name, v)
+        for d, v in zip(self.devices, ["in"] + list(self._from_lambda(target))):
+            self.log.debug("sending %s to %r", d.name, v)
             d.start(v)
 
     def doStatus(self, maxage=0):
@@ -130,11 +153,9 @@ class Monochromator(HasLimits, Moveable):
         except NicosError as err:
             stvalue = (status.ERROR, str(err))
         except Exception as err:
-            stvalue = (status.ERROR, 'unhandled %s: %s' %
-                       (err.__class__.__name__, err))
+            stvalue = (status.ERROR, "unhandled %s: %s" % (err.__class__.__name__, err))
         if stvalue[0] not in status.statuses:
-            stvalue = (status.UNKNOWN,
-                       'status constant %r is unknown' % stvalue[0])
+            stvalue = (status.UNKNOWN, "status constant %r is unknown" % stvalue[0])
 
         if stvalue[0] == status.OK:
             value = self.read(maxage)
@@ -143,32 +164,44 @@ class Monochromator(HasLimits, Moveable):
             wl = self.warnlimits
             if wl:
                 if wl[0] is not None and value < wl[0]:
-                    stvalue = status.WARN, \
-                        statusString(stvalue[1], 'below warn limit (%s)' %
-                                     self.format(wl[0], unit=True))
+                    stvalue = (
+                        status.WARN,
+                        statusString(
+                            stvalue[1],
+                            "below warn limit (%s)" % self.format(wl[0], unit=True),
+                        ),
+                    )
                 elif wl[1] is not None and value > wl[1]:
-                    stvalue = status.WARN, \
-                        statusString(stvalue[1], 'above warn limit (%s)' %
-                                     self.format(wl[1], unit=True))
+                    stvalue = (
+                        status.WARN,
+                        statusString(
+                            stvalue[1],
+                            "above warn limit (%s)" % self.format(wl[1], unit=True),
+                        ),
+                    )
         return stvalue
 
     def doRead(self, maxage=0):
         pos = [d.read(maxage) for d in self.devices]
 
         # Are we in the beam?
-        if pos[0] == 'out':
+        if pos[0] == "out":
             return None
 
         # calculate lambda from phi1 and then check the other positions
         # for consistency...
         lam = self._to_lambda(*pos[1:])
-        self.log.debug('lambda seems to be %.4f Angstroms', lam)
+        self.log.debug("lambda seems to be %.4f Angstroms", lam)
         compare_pos = self._from_lambda(lam)
         tol = [self.tolphi, self.tolphi, self.toltrans]
         for d, p, t, c in zip(self.devices[1:], pos[1:], tol, compare_pos):
-            self.log.debug('%s is at %s and should be at %s for %.4f '
-                           'Angstroms', d, d.format(p), d.format(c), lam)
+            self.log.debug(
+                "%s is at %s and should be at %s for %.4f " "Angstroms",
+                d,
+                d.format(p),
+                d.format(c),
+                lam,
+            )
             if abs(p - c) > t:
-                raise PositionError('%s is too far away for %.4f Angstroms' %
-                                    (d, lam))
+                raise PositionError("%s is too far away for %.4f Angstroms" % (d, lam))
         return lam

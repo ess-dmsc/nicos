@@ -1,9 +1,9 @@
-description = 'Generic configuration settings for NEUTRA'
+description = "Generic configuration settings for NEUTRA"
 
 import os
 
-group = 'configdata'
+group = "configdata"
 
-DATA_PATH = os.environ.get('NICOSDUMP', '.') + '/neutra/'
+DATA_PATH = os.environ.get("NICOSDUMP", ".") + "/neutra/"
 
-KAFKA_BROKERS = ['localhost:9092']
+KAFKA_BROKERS = ["localhost:9092"]

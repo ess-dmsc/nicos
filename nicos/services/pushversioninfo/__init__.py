@@ -41,7 +41,7 @@ except ImportError:
     import json
 
 
-TIME_FMT = '%Y-%m-%d %H:%M:%S'
+TIME_FMT = "%Y-%m-%d %H:%M:%S"
 
 
 class PushVersionInfo(BaseCacheClient):
@@ -72,29 +72,37 @@ class PushVersionInfo(BaseCacheClient):
     """
 
     parameters = {
-        'update_uri': Param('URI to send version information to, or None to '
-                            'disable. The access token and Version info is '
-                            'directly appended to the URI, encoded as a '
-                            'query parameter.',
-                            type=none_or(str), mandatory=True,
-                            userparam=False),
-        'tokenid': Param('Id used in the keystore for the update token',
-                         type=str, default='frm2jenkins'),
-        'infokey': Param('URI parameter key for the info dict', type=str,
-                         mandatory=True),
+        "update_uri": Param(
+            "URI to send version information to, or None to "
+            "disable. The access token and Version info is "
+            "directly appended to the URI, encoded as a "
+            "query parameter.",
+            type=none_or(str),
+            mandatory=True,
+            userparam=False,
+        ),
+        "tokenid": Param(
+            "Id used in the keystore for the update token",
+            type=str,
+            default="frm2jenkins",
+        ),
+        "infokey": Param(
+            "URI parameter key for the info dict", type=str, mandatory=True
+        ),
     }
 
     parameter_overrides = {
-        'prefix': Override(mandatory=False, default='sysinfo/'),
+        "prefix": Override(mandatory=False, default="sysinfo/"),
     }
 
     def doInit(self, mode):
         if self.update_uri is None:
-            self.log.warning('No update URI configured, updates will not be '
-                             'sent')
-        if  not nicoskeystore.getCredential(self.tokenid):
-            self.log.warning('No token %s found in keystore, updates will not '
-                             'be sent' % self.tokenid)
+            self.log.warning("No update URI configured, updates will not be " "sent")
+        if not nicoskeystore.getCredential(self.tokenid):
+            self.log.warning(
+                "No token %s found in keystore, updates will not "
+                "be sent" % self.tokenid
+            )
         BaseCacheClient.doInit(self, mode)
 
     def _connect_action(self):
@@ -112,7 +120,7 @@ class PushVersionInfo(BaseCacheClient):
             infodict = dict(cache_load(value))
             if time:
                 dt = datetime.fromtimestamp(float(time))
-                infodict['time'] = dt.strftime(TIME_FMT)
+                infodict["time"] = dt.strftime(TIME_FMT)
             self.sendUpdate(infodict)
 
     def getDaemonInfo(self):
@@ -142,21 +150,24 @@ class PushVersionInfo(BaseCacheClient):
         if infodict is None:
             infodict = self.getDaemonInfo()
 
-        paramdict = {self.infokey: json.dumps(infodict),
-                     'token': token}
-        append = ''
-        if '?' not in self.update_uri:
-            append = '?'
-        elif not self.update_uri[-1] == '&':
-            append = '&'
+        paramdict = {self.infokey: json.dumps(infodict), "token": token}
+        append = ""
+        if "?" not in self.update_uri:
+            append = "?"
+        elif not self.update_uri[-1] == "&":
+            append = "&"
 
         update_string = self.update_uri + append
         update_string += urllib.parse.urlencode(paramdict)
         try:
             # pylint: disable=consider-using-with
             urllib.request.urlopen(update_string)
-            self.log.debug('update sent successfully for %s',
-                           infodict.get('service', 'base'))
+            self.log.debug(
+                "update sent successfully for %s", infodict.get("service", "base")
+            )
         except Exception:
-            self.log.debug('cannot send version information! (tried:\n%r\n)',
-                           update_string, exc=True)
+            self.log.debug(
+                "cannot send version information! (tried:\n%r\n)",
+                update_string,
+                exc=True,
+            )

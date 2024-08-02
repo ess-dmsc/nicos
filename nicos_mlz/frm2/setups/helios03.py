@@ -1,14 +1,15 @@
-description = 'Helios 3He analyzer system'
+description = "Helios 3He analyzer system"
 
-group = 'plugplay'
+group = "plugplay"
 
 devices = {
-    f'flipper_{setupname}': device('nicos_mlz.devices.helios.HePolarizer',
-        description = 'polarization direction of Helios cell with RF flipper',
-        tangodevice = f'tango://{setupname}:10000/box/helios/flipper'
+    f"flipper_{setupname}": device(
+        "nicos_mlz.devices.helios.HePolarizer",
+        description="polarization direction of Helios cell with RF flipper",
+        tangodevice=f"tango://{setupname}:10000/box/helios/flipper",
     ),
 }
 
 extended = dict(
-    representative = f'flipper_{setupname}',
+    representative=f"flipper_{setupname}",
 )

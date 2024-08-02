@@ -23,36 +23,45 @@
 from copy import deepcopy
 
 from nicos import session
-from nicos.nexus.elements import ConstDataset, DeviceAttribute, \
-    DeviceDataset, NamedImageDataset, NexusSampleEnv, NXAttribute, NXLink, \
-    NXScanLink, NXTime
+from nicos.nexus.elements import (
+    ConstDataset,
+    DeviceAttribute,
+    DeviceDataset,
+    NamedImageDataset,
+    NexusSampleEnv,
+    NXAttribute,
+    NXLink,
+    NXScanLink,
+    NXTime,
+)
 from nicos.nexus.nexussink import NexusTemplateProvider
 
 from nicos_sinq.nexus.specialelements import AbsoluteTime
 
-icon_default = {"NeXus_Version": "4.4.0",
-                "instrument": "ICON at SINQ",
-                "owner": DeviceAttribute("ICON", "responsible"),
-                "entry:NXentry": {
-                    "title": DeviceDataset("Exp", "title"),
-                    "proposal_title": DeviceDataset("Exp", "title"),
-                    "proposal_id": DeviceDataset("Exp", "proposal"),
-                    "start_time": NXTime(),
-                    "end_time": NXTime(),
-                    "definition": ConstDataset("NXtomo", "string"),
-                    "user:NXuser": {
-                        "name": DeviceDataset("Exp", "users"),
-                        "email": DeviceDataset("Exp", "localcontact")
-                    },
-                    "proposal_user:NXuser": {
-                        "name": DeviceDataset("Exp", "users"),
-                    },
-                    "control:NXmonitor": {
-                        'data': DeviceDataset('beam_current'),
-                        'count_time': DeviceDataset('exp_time'),
-                    }
-                }  # entry
-                }  # root
+icon_default = {
+    "NeXus_Version": "4.4.0",
+    "instrument": "ICON at SINQ",
+    "owner": DeviceAttribute("ICON", "responsible"),
+    "entry:NXentry": {
+        "title": DeviceDataset("Exp", "title"),
+        "proposal_title": DeviceDataset("Exp", "title"),
+        "proposal_id": DeviceDataset("Exp", "proposal"),
+        "start_time": NXTime(),
+        "end_time": NXTime(),
+        "definition": ConstDataset("NXtomo", "string"),
+        "user:NXuser": {
+            "name": DeviceDataset("Exp", "users"),
+            "email": DeviceDataset("Exp", "localcontact"),
+        },
+        "proposal_user:NXuser": {
+            "name": DeviceDataset("Exp", "users"),
+        },
+        "control:NXmonitor": {
+            "data": DeviceDataset("beam_current"),
+            "count_time": DeviceDataset("exp_time"),
+        },
+    },  # entry
+}  # root
 
 sample_common = {
     "name": DeviceDataset("Sample", "samplename"),
@@ -62,29 +71,49 @@ sample_common = {
 }
 
 instrument = {
-    'sinq:NXsource': {
-        'name': ConstDataset('SINQ', 'string'),
-        'probe': ConstDataset('neutron', 'string'),
-        'type': ConstDataset('continuous flux spallation neutron source',
-                             'string'),
+    "sinq:NXsource": {
+        "name": ConstDataset("SINQ", "string"),
+        "probe": ConstDataset("neutron", "string"),
+        "type": ConstDataset("continuous flux spallation neutron source", "string"),
     }
 }
 
 
 class ICONTemplateProvider(NexusTemplateProvider):
-    _tables = ['sample_pos1', 'sample_pos2', 'sample_pos3']
+    _tables = ["sample_pos1", "sample_pos2", "sample_pos3"]
     _detector = None
-    _detector_setups = ['andor', 'simad', 'simad2']
-    _excluded_devices = ['shuttersink', 'he_sopen', 'he_sclose',
-                         'he_ropen', 'he_rclose', 'he_renabled',
-                         'he_popen', 'he_pclose', 'fs_sopen',
-                         'fs_sclose', 'fs_ropen', 'fs_rclose',
-                         'fs_renabled', 'fs_popen', 'fs_pclose',
-                         'exp_sopen', 'exp_slcose', 'exp_sslow',
-                         'exp_sfast', 'exp_ropen', 'exp_rclose',
-                         'exp_renabled', 'exp_rfast', 'exp_popen',
-                         'exp_pclose', 'exp_pslow', 'exp_pfast',
-                         'bl1', 'bl2']
+    _detector_setups = ["andor", "simad", "simad2"]
+    _excluded_devices = [
+        "shuttersink",
+        "he_sopen",
+        "he_sclose",
+        "he_ropen",
+        "he_rclose",
+        "he_renabled",
+        "he_popen",
+        "he_pclose",
+        "fs_sopen",
+        "fs_sclose",
+        "fs_ropen",
+        "fs_rclose",
+        "fs_renabled",
+        "fs_popen",
+        "fs_pclose",
+        "exp_sopen",
+        "exp_slcose",
+        "exp_sslow",
+        "exp_sfast",
+        "exp_ropen",
+        "exp_rclose",
+        "exp_renabled",
+        "exp_rfast",
+        "exp_popen",
+        "exp_pclose",
+        "exp_pslow",
+        "exp_pfast",
+        "bl1",
+        "bl2",
+    ]
     _detectors = set()
 
     def containsDetector(self, table):
@@ -107,50 +136,50 @@ class ICONTemplateProvider(NexusTemplateProvider):
                 continue
             try:
                 dev = session.getDevice(d)
-                content[dev.name] = DeviceDataset(dev.name,
-                                                  units=NXAttribute(dev.unit,
-                                                                    'string'))
+                content[dev.name] = DeviceDataset(
+                    dev.name, units=NXAttribute(dev.unit, "string")
+                )
             except Exception as e:
-                session.log.info('Failed to write device %s, Exception: %s',
-                                 d, e)
-        equipment = ','.join(table.setups)
-        content['equipment'] = ConstDataset(equipment, 'string')
+                session.log.info("Failed to write device %s, Exception: %s", d, e)
+        equipment = ",".join(table.setups)
+        content["equipment"] = ConstDataset(equipment, "string")
         for d in det:
             table.attach(d)
-            content['detector'] = ConstDataset(d, 'string')
+            content["detector"] = ConstDataset(d, "string")
         return content
 
     def makeDetector(self, name):
         content = {}
-        content['image_key'] = DeviceDataset('image_key', dtype='int32')
-        content['x_pixel_size'] = DeviceDataset('pixel_size')
-        content['y_pixel_size'] = DeviceDataset('pixel_size')
-        content['distance'] = DeviceDataset('detector_distance')
-        content['lens'] = DeviceDataset('lenses')
-        content['sensor_material'] = DeviceDataset('scintillator')
-        content['sensor_thickness'] = DeviceDataset('scintillator_thickness')
-        content['data'] = NamedImageDataset('%s_image' % name,
-                                            signal=NXAttribute(1, 'int32'))
-        content['time_stamp'] = AbsoluteTime()
+        content["image_key"] = DeviceDataset("image_key", dtype="int32")
+        content["x_pixel_size"] = DeviceDataset("pixel_size")
+        content["y_pixel_size"] = DeviceDataset("pixel_size")
+        content["distance"] = DeviceDataset("detector_distance")
+        content["lens"] = DeviceDataset("lenses")
+        content["sensor_material"] = DeviceDataset("scintillator")
+        content["sensor_thickness"] = DeviceDataset("scintillator_thickness")
+        content["data"] = NamedImageDataset(
+            "%s_image" % name, signal=NXAttribute(1, "int32")
+        )
+        content["time_stamp"] = AbsoluteTime()
         return name, content
 
     def makeData(self, name):
         content = {}
-        content['data'] = NXLink('/entry/%s/data' % (name))
-        content['image_key'] = NXLink('/entry/%s/image_key' % name)
-        content['None'] = NXScanLink()
+        content["data"] = NXLink("/entry/%s/data" % (name))
+        content["image_key"] = NXLink("/entry/%s/image_key" % name)
+        content["None"] = NXScanLink()
         return content
 
     def _find_rotation_angle(self):
         rot_link = None
         try:
-            session.getDevice('sp2_ry')
-            rot_link = '/entry/sample_pos2/sp2_ry'
+            session.getDevice("sp2_ry")
+            rot_link = "/entry/sample_pos2/sp2_ry"
         except Exception:
             pass
         try:
-            session.getDevice('sp3_ry')
-            rot_link = '/entry/sample_pos3/sp3_ry'
+            session.getDevice("sp3_ry")
+            rot_link = "/entry/sample_pos3/sp3_ry"
         except Exception:
             pass
         return rot_link
@@ -158,26 +187,25 @@ class ICONTemplateProvider(NexusTemplateProvider):
     def getTemplate(self):
         self._detectors = set()
         full = deepcopy(icon_default)
-        entry = full['entry:NXentry']
-        entry['sample:NXsample'] = deepcopy(sample_common)
+        entry = full["entry:NXentry"]
+        entry["sample:NXsample"] = deepcopy(sample_common)
         # Find the rotation angle
         rot_link = self._find_rotation_angle()
         if rot_link:
-            entry['sample:NXsample']['rotation_angle'] = NXLink(rot_link)
+            entry["sample:NXsample"]["rotation_angle"] = NXLink(rot_link)
         for tbl in self._tables:
             tblcontent = self.makeTable(tbl)
-            entry[tbl.lower() + ':NXcollection'] = tblcontent
-        detcontent = self.makeTable('detector_pos')
+            entry[tbl.lower() + ":NXcollection"] = tblcontent
+        detcontent = self.makeTable("detector_pos")
         for det in self._detectors:
             name, content = self.makeDetector(det)
             content.update(detcontent)
-            entry[name + ':NXdetector'] = content
-            entry['data' + name + ':NXdata'] = self.makeData(name)
+            entry[name + ":NXdetector"] = content
+            entry["data" + name + ":NXdata"] = self.makeData(name)
             if rot_link:
-                entry['data' + name + ':NXdata']['rotation_angle'] =\
-                    NXLink(rot_link)
+                entry["data" + name + ":NXdata"]["rotation_angle"] = NXLink(rot_link)
         if not self._detectors:
-            session.log.error('Configuration error: no detectors found')
-        entry['icon:NXinstrument'] = deepcopy(instrument)
-        entry['icon:NXinstrument'][name] = NXLink('/entry/' + name)
+            session.log.error("Configuration error: no detectors found")
+        entry["icon:NXinstrument"] = deepcopy(instrument)
+        entry["icon:NXinstrument"][name] = NXLink("/entry/" + name)
         return full

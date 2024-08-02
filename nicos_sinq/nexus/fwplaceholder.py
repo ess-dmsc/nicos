@@ -33,6 +33,7 @@ class DevArrayPlaceholder(PlaceholderBase):
     and the length of the array. A good example use case is the two theta array
     for a powder diffractometer where the detector can be moved.
     """
+
     def __init__(self, component, step, length):
         self.component = component
         self.step = step
@@ -43,4 +44,4 @@ class DevArrayPlaceholder(PlaceholderBase):
         val = []
         for i in range(self.length):
             val.append(start + i * self.step)
-        return val, '', 'degree', 'general'
+        return val, "", "degree", "general"

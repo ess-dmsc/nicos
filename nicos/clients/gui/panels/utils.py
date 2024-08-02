@@ -24,13 +24,10 @@
 
 """Support for "auxiliary" windows containing panels."""
 
-from nicos.clients.gui.config import docked, hbox, hsplit, panel, tabbed, \
-    vbox, vsplit
+from nicos.clients.gui.config import docked, hbox, hsplit, panel, tabbed, vbox, vsplit
 from nicos.clients.gui.panels import Panel
-from nicos.clients.gui.panels.boxed import Boxed, HorizontalBoxed, \
-    VerticalBoxed
-from nicos.clients.gui.panels.splitter import HorizontalSplitter, \
-    VerticalSplitter
+from nicos.clients.gui.panels.boxed import Boxed, HorizontalBoxed, VerticalBoxed
+from nicos.clients.gui.panels.splitter import HorizontalSplitter, VerticalSplitter
 from nicos.clients.gui.panels.tabwidget import TearOffTabWidget
 from nicos.guisupport.qt import QDockWidget, QSplitter, Qt, QTabWidget
 from nicos.utils import importString
@@ -40,9 +37,9 @@ def createPanel(item, window, menuwindow, topwindow, log):
     try:
         cls = importString(item.clsname)
     except Exception:
-        log.exception('Could not import class %s to create panel', item.clsname)
+        log.exception("Could not import class %s to create panel", item.clsname)
         return None
-    log.debug('creating panel: %s', item.clsname)
+    log.debug("creating panel: %s", item.clsname)
     p = cls(menuwindow, window.client, item.options or {})
     window.addPanel(p)
     topwindow.addPanel(p, False)
@@ -50,22 +47,25 @@ def createPanel(item, window, menuwindow, topwindow, log):
     for toolbar in p.getToolbars():
         # this helps for serializing window state
         toolbar.setObjectName(toolbar.windowTitle())
-        if hasattr(menuwindow, 'toolBarWindows'):
+        if hasattr(menuwindow, "toolBarWindows"):
             menuwindow.insertToolBar(menuwindow.toolBarWindows, toolbar)
         else:
             menuwindow.addToolBar(toolbar)
         toolbar.setVisible(False)
     for menu in p.getMenus():
-        if hasattr(menuwindow, 'menuWindows'):
-            p.actions.update((
-                menuwindow.menuBar().insertMenu(
-                    menuwindow.menuWindows.menuAction(), menu),
-            ))
+        if hasattr(menuwindow, "menuWindows"):
+            p.actions.update(
+                (
+                    menuwindow.menuBar().insertMenu(
+                        menuwindow.menuWindows.menuAction(), menu
+                    ),
+                )
+            )
         else:
             p.actions.update((menuwindow.menuBar().addMenu(menu),))
 
     p.setCustomStyle(window.user_font, window.user_color)
-    if window.client.isconnected and hasattr(p, 'on_client_connected'):
+    if window.client.isconnected and hasattr(p, "on_client_connected"):
         p.on_client_connected()
     return p
 
@@ -82,8 +82,9 @@ class NotClosableDockWidget(QDockWidget):
     def __init__(self, title, parent):
         QDockWidget.__init__(self, title, parent)
         self.setFeatures(
-            QDockWidget.DockWidgetFeature.DockWidgetMovable |
-            QDockWidget.DockWidgetFeature.DockWidgetFloatable)
+            QDockWidget.DockWidgetFeature.DockWidgetMovable
+            | QDockWidget.DockWidgetFeature.DockWidgetFloatable
+        )
 
     def closeEvent(self, event):
         # Workaround for the fact that undocked QDockWidgets can still be
@@ -93,28 +94,29 @@ class NotClosableDockWidget(QDockWidget):
 
 
 def createDockedWidget(item, window, menuwindow, topwindow, log):
-    dockPosMap = {'left': Qt.DockWidgetArea.LeftDockWidgetArea,
-                  'right': Qt.DockWidgetArea.RightDockWidgetArea,
-                  'top': Qt.DockWidgetArea.TopDockWidgetArea,
-                  'bottom': Qt.DockWidgetArea.BottomDockWidgetArea}
+    dockPosMap = {
+        "left": Qt.DockWidgetArea.LeftDockWidgetArea,
+        "right": Qt.DockWidgetArea.RightDockWidgetArea,
+        "top": Qt.DockWidgetArea.TopDockWidgetArea,
+        "bottom": Qt.DockWidgetArea.BottomDockWidgetArea,
+    }
 
     mainitem, dockitems = item
     main = createWindowItem(mainitem, window, menuwindow, topwindow, log)
     for title, ditem in dockitems:
         dw = NotClosableDockWidget(title, window)
         # make the dock title bold
-        dw.setStyleSheet('QDockWidget { font-weight: bold; }')
+        dw.setStyleSheet("QDockWidget { font-weight: bold; }")
         dw.setObjectName(title)
         sub = createWindowItem(ditem, window, menuwindow, topwindow, log)
         if isinstance(sub, Panel):
             sub.hideTitle()
         dw.setWidget(sub)
         dw.setContentsMargins(6, 6, 6, 6)
-        dockPos = ditem.options.get('dockpos', 'left')
+        dockPos = ditem.options.get("dockpos", "left")
         if dockPos not in dockPosMap:
-            log.warning('Illegal dockpos specification %s for panel %r',
-                        dockPos, title)
-            dockPos = 'left'
+            log.warning("Illegal dockpos specification %s for panel %r", dockPos, title)
+            dockPos = "left"
         menuwindow.addDockWidget(dockPosMap[dockPos], dw)
     return main
 
@@ -135,8 +137,7 @@ def createWindowItem(item, window, menuwindow, topwindow, log):
     if isinstance(item, panel):
         return createPanel(item, window, menuwindow, topwindow, log)
     elif isinstance(item, hsplit):
-        return createHorizontalSplitter(item, window, menuwindow, topwindow,
-                                        log)
+        return createHorizontalSplitter(item, window, menuwindow, topwindow, log)
     elif isinstance(item, vsplit):
         return createVerticalSplitter(item, window, menuwindow, topwindow, log)
     elif isinstance(item, tabbed):

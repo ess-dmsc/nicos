@@ -24,8 +24,13 @@
 from nicos import session
 from nicos.core.errors import NicosError
 
-from nicos_ess.nexus.elements import KafkaStream, NXAttribute, NXDataset, \
-    NXGroup, NXLink
+from nicos_ess.nexus.elements import (
+    KafkaStream,
+    NXAttribute,
+    NXDataset,
+    NXGroup,
+    NXLink,
+)
 
 
 class NexusTemplateConverter:
@@ -35,16 +40,16 @@ class NexusTemplateConverter:
     """
 
     def convert(self, template, metainfo):
-        """ Convert the provided template with the given devices that
+        """Convert the provided template with the given devices that
         should be tracked during the run.
         :param template: Template dictionary
         :param metainfo: meta information of devices from dataset
         """
         if not isinstance(template, dict):
-            raise NicosError('The template should be of type dict!')
+            raise NicosError("The template should be of type dict!")
 
         # Generate the basic neXus hierarchy
-        root_name, root_value = self._populate('root:NXroot', template)
+        root_name, root_value = self._populate("root:NXroot", template)
 
         if not isinstance(root_value, NXGroup):
             return {}
@@ -62,12 +67,11 @@ class NexusTemplateConverter:
             return element, value
 
         # Group keys are named as <name>:<nxclass>
-        if ':' not in element:
-            session.log.info('Can\'t write the group %s, no nxclass defined!',
-                             element)
+        if ":" not in element:
+            session.log.info("Can't write the group %s, no nxclass defined!", element)
             return element, None
 
-        [nxname, nxclass] = element.rsplit(':', 1)
+        [nxname, nxclass] = element.rsplit(":", 1)
         group = NXGroup(nxclass)
 
         if isinstance(value, dict):

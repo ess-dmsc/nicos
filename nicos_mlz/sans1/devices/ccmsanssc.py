@@ -29,18 +29,22 @@ from nicos.devices.generic.axis import Axis
 
 
 class SwordAxis(Axis):
-
     attached_devices = {
-        'switch': Attach('The device used for switching the brake', Moveable),
+        "switch": Attach("The device used for switching the brake", Moveable),
     }
 
     parameters = {
-        'startdelay':   Param('Delay after switching on brake', type=float,
-                              mandatory=True, unit='s'),
-        'stopdelay':    Param('Delay before switching off brake', type=float,
-                              mandatory=True, unit='s'),
-        'switchvalues': Param('(on, off) values to write to brake switch',
-                              type=tupleof(anytype, anytype), default=(2, 1)),
+        "startdelay": Param(
+            "Delay after switching on brake", type=float, mandatory=True, unit="s"
+        ),
+        "stopdelay": Param(
+            "Delay before switching off brake", type=float, mandatory=True, unit="s"
+        ),
+        "switchvalues": Param(
+            "(on, off) values to write to brake switch",
+            type=tupleof(anytype, anytype),
+            default=(2, 1),
+        ),
     }
 
     def doStatus(self, maxage=0):
@@ -48,18 +52,17 @@ class SwordAxis(Axis):
         # special case: the Phytron server correctly returns an error if the
         # enable bit is not set, but since this is always the case we want to
         # present it as just a WARN state
-        if stval == status.ERROR and ststr == 'motor halted, ENABLE not set':
+        if stval == status.ERROR and ststr == "motor halted, ENABLE not set":
             return status.WARN, ststr
         return stval, ststr
 
     def doTime(self, old_value, target):
-        return Axis.doTime(
-            self, old_value, target) + self.startdelay + self.stopdelay
+        return Axis.doTime(self, old_value, target) + self.startdelay + self.stopdelay
 
     def _preMoveAction(self):
-        self._adevs['switch'].maw(self.switchvalues[1])
+        self._adevs["switch"].maw(self.switchvalues[1])
         session.delay(self.startdelay)
 
     def _postMoveAction(self):
         session.delay(self.stopdelay)
-        self._adevs['switch'].maw(self.switchvalues[0])
+        self._adevs["switch"].maw(self.switchvalues[0])

@@ -25,48 +25,54 @@ from os import path
 
 from test.utils import cache_addr, module_root, runtime_root
 
-name = 'simulation tests setup'
+name = "simulation tests setup"
 
 includes = []
 
 sysconfig = dict(
-    cache = cache_addr,
-    experiment = 'Exp',
+    cache=cache_addr,
+    experiment="Exp",
 )
 
 devices = dict(
-    Sample = device('nicos.devices.tas.TASSample'),
-    Exp = device('nicos.devices.experiment.Experiment',
-        sample = 'Sample',
-        elog = False,
-        dataroot = path.join(runtime_root, 'data'),
-        propprefix = 'p',
-        templates = path.join(module_root, 'test', 'script_templates'),
-        zipdata = True,
+    Sample=device("nicos.devices.tas.TASSample"),
+    Exp=device(
+        "nicos.devices.experiment.Experiment",
+        sample="Sample",
+        elog=False,
+        dataroot=path.join(runtime_root, "data"),
+        propprefix="p",
+        templates=path.join(module_root, "test", "script_templates"),
+        zipdata=True,
     ),
-    motor = device('nicos.devices.generic.VirtualMotor',
-        unit = 'deg',
-        curvalue = 0,
-        abslimits = (0, 5),
+    motor=device(
+        "nicos.devices.generic.VirtualMotor",
+        unit="deg",
+        curvalue=0,
+        abslimits=(0, 5),
     ),
-    timer = device('nicos.devices.generic.VirtualTimer',
-        visibility = (),
+    timer=device(
+        "nicos.devices.generic.VirtualTimer",
+        visibility=(),
     ),
-    ctr1 = device('nicos.devices.generic.VirtualCounter',
-        visibility = (),
-        type = 'counter',
-        countrate = 2000.,
-        fmtstr = '%d',
+    ctr1=device(
+        "nicos.devices.generic.VirtualCounter",
+        visibility=(),
+        type="counter",
+        countrate=2000.0,
+        fmtstr="%d",
     ),
-    det = device('nicos.devices.generic.Detector',
-        timers = ['timer'],
-        counters = ['ctr1'],
-        maxage = 3,
-        pollinterval = 0.5,
+    det=device(
+        "nicos.devices.generic.Detector",
+        timers=["timer"],
+        counters=["ctr1"],
+        maxage=3,
+        pollinterval=0.5,
     ),
-    manualsim = device('nicos.devices.generic.ManualMove',
-        abslimits = (0, 359),
-        unit = 'deg',
-        default = 45,
+    manualsim=device(
+        "nicos.devices.generic.ManualMove",
+        abslimits=(0, 359),
+        unit="deg",
+        default=45,
     ),
 )

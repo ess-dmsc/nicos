@@ -21,10 +21,10 @@
 #
 # *****************************************************************************
 
-name = 'sysconfig entry merge test 3'
+name = "sysconfig entry merge test 3"
 
-includes = ['sysconfig3']
+includes = ["sysconfig3"]
 
 sysconfig = dict(
-    datasinks = ['sink1', 'sink4'],
+    datasinks=["sink1", "sink4"],
 )

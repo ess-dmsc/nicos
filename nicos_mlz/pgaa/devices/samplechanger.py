@@ -38,8 +38,8 @@ class SeqSampleMotor(SeqDev):
             limits = self.dev.userlimits
             if isinstance(self.target, number_types):
                 if not limits[0] <= self.target <= limits[1]:
-                    raise LimitError(self.dev, 'limits are [%s, %s]' % limits)
-        if hasattr(self.dev, 'doIsAllowed'):
+                    raise LimitError(self.dev, "limits are [%s, %s]" % limits)
+        if hasattr(self.dev, "doIsAllowed"):
             allowed, remark = self.dev.doIsAllowed(self.target)
             if not allowed:
                 raise LimitError(self.dev, remark)
@@ -53,41 +53,44 @@ class SampleChanger(IsController, BaseSequencer):
     valuetype = intrange(1, 16)
 
     attached_devices = {
-        'motor': Attach('Stage rotation', Moveable),
-        'push': Attach('Moving sample to rotation stage', Moveable),
+        "motor": Attach("Stage rotation", Moveable),
+        "push": Attach("Moving sample to rotation stage", Moveable),
     }
 
     parameters = {
-        'delay': Param('Time to wait until the push device is finished',
-                       type=floatrange(0, 2), default=2, settable=False,
-                       unit='s'),
+        "delay": Param(
+            "Time to wait until the push device is finished",
+            type=floatrange(0, 2),
+            default=2,
+            settable=False,
+            unit="s",
+        ),
     }
 
     parameter_overrides = {
-        'unit': Override(default=''),
-        'fmtstr': Override(default='%.0f'),
+        "unit": Override(default=""),
+        "fmtstr": Override(default="%.0f"),
     }
 
     def isAdevTargetAllowed(self, adev, adevtarget):
         if adev == self._attached_motor:
-            if self._attached_push._attached_sensort.read(0) in ['down', 0]:
+            if self._attached_push._attached_sensort.read(0) in ["down", 0]:
                 return False, '"push" is not in top position or moving'
         elif adev == self._attached_push:
             if self._attached_motor.status(0)[0] == status.BUSY:
-                return False, 'motor moving'
+                return False, "motor moving"
             if self._attached_motor.read(0) not in list(range(1, 17)):
-                return False, 'invalid motor position'
-        return True, ''
+                return False, "invalid motor position"
+        return True, ""
 
     def _generateSequence(self, target):
         seq = []
         if target != self.doRead(0):
-            seq.append(SeqDev(self._attached_push, 'up', stoppable=False))
+            seq.append(SeqDev(self._attached_push, "up", stoppable=False))
             seq.append(SeqSleep(self.delay))
-            seq.append(SeqSampleMotor(self._attached_motor, target,
-                                      stoppable=False))
+            seq.append(SeqSampleMotor(self._attached_motor, target, stoppable=False))
             seq.append(SeqSleep(self.delay))
-            seq.append(SeqDev(self._attached_push, 'down', stoppable=False))
+            seq.append(SeqDev(self._attached_push, "down", stoppable=False))
         return seq
 
     def doRead(self, maxage=0):

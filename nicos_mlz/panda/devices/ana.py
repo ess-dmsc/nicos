@@ -27,49 +27,56 @@ from nicos.core import Attach, Moveable, Param, oneofdict, status
 from nicos.devices.entangle import AnalogOutput
 from nicos.devices.generic.axis import Axis
 
-ACTIONMODES = {0: 'alldown', 1: 'default', 2: 'dooropen', 3: 'service'}
-R_ACTIONMODES = {'alldown': 0, 'default': 1, 'dooropen': 2, 'service': 3}
+ACTIONMODES = {0: "alldown", 1: "default", 2: "dooropen", 3: "service"}
+R_ACTIONMODES = {"alldown": 0, "default": 1, "dooropen": 2, "service": 3}
 
 
 class AnaBlocks(AnalogOutput):
     parameters = {
-        'actionmode':  Param('Block behavior',
-                             type=oneofdict(ACTIONMODES),
-                             default='default',
-                             settable=True, volatile=True),
-        'powertime':   Param('How long to power pushing down blocks', type=int,
-                             settable=True, volatile=True),
-        'windowsize':  Param('Window size', volatile=True, unit='deg'),
-        'blockwidth':  Param('Block width', volatile=True, unit='deg'),
-        'blockoffset': Param('Block offset', volatile=True, unit='deg'),
+        "actionmode": Param(
+            "Block behavior",
+            type=oneofdict(ACTIONMODES),
+            default="default",
+            settable=True,
+            volatile=True,
+        ),
+        "powertime": Param(
+            "How long to power pushing down blocks",
+            type=int,
+            settable=True,
+            volatile=True,
+        ),
+        "windowsize": Param("Window size", volatile=True, unit="deg"),
+        "blockwidth": Param("Block width", volatile=True, unit="deg"),
+        "blockoffset": Param("Block offset", volatile=True, unit="deg"),
     }
 
     def doReadActionmode(self):
-        return ACTIONMODES[self._dev.GetParam('Param200')]
+        return ACTIONMODES[self._dev.GetParam("Param200")]
 
     def doWriteActionmode(self, value):
         mode = R_ACTIONMODES[value]
-        self._dev.SetParam([[mode], ['Param200']])
+        self._dev.SetParam([[mode], ["Param200"]])
 
     def doReadPowertime(self):
-        return self._dev.GetParam('Param204')
+        return self._dev.GetParam("Param204")
 
     def doWritePowertime(self, value):
-        self._dev.SetParam([[value], ['Param204']])
+        self._dev.SetParam([[value], ["Param204"]])
 
     def doReadWindowsize(self):
-        return self._dev.GetParam('Param201')
+        return self._dev.GetParam("Param201")
 
     def doReadBlockwidth(self):
-        return self._dev.GetParam('Param202')
+        return self._dev.GetParam("Param202")
 
     def doReadBlockoffset(self):
-        return self._dev.GetParam('Param203')
+        return self._dev.GetParam("Param203")
 
 
 class ATT_Axis(Axis):
     attached_devices = {
-        'anablocks': Attach('AnaBlocks device', Moveable),
+        "anablocks": Attach("AnaBlocks device", Moveable),
     }
 
     def _duringMoveAction(self, position):

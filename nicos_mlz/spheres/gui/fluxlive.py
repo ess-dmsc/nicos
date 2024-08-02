@@ -34,7 +34,7 @@ class FluxLivePanel(LiveDataPanel):
     def __init__(self, parent, client, options):
         LiveDataPanel.__init__(self, parent, client, options)
 
-        self._datakey = options.get('key', None)
+        self._datakey = options.get("key", None)
         client.cache.connect(self.on_client_cache)
         self.uuid = str(uuid1())
 
@@ -52,10 +52,10 @@ class FluxLivePanel(LiveDataPanel):
 
         if key == self._datakey:
             value = eval(value)
-            if op == '=':
+            if op == "=":
                 elastic, inelastic, direct = value
-            elif op == '!':
-                elastic = inelastic = direct = numpy.array([0]*16)
+            elif op == "!":
+                elastic = inelastic = direct = numpy.array([0] * 16)
 
             self.displayData(_time, elastic, inelastic, direct)
 
@@ -63,16 +63,11 @@ class FluxLivePanel(LiveDataPanel):
         newparams = dict(
             uid=self.uuid,
             time=time,
-            det='flux',
+            det="flux",
             tag=LIVE,
-            datadescs=[dict(
-                dtype='<u8',
-                shape=(16,),
-                plotcount=3)
-            ],
+            datadescs=[dict(dtype="<u8", shape=(16,), plotcount=3)],
         )
 
-        self.on_client_livedata(newparams,
-                                [numpy.concatenate((elastic,
-                                                    inelastic,
-                                                    direct))])
+        self.on_client_livedata(
+            newparams, [numpy.concatenate((elastic, inelastic, direct))]
+        )

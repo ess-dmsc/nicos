@@ -37,18 +37,16 @@ from nicos.utils import byteBuffer, safeName
 from nicos_ess.devices.datasinks.nexus_structure import NexusStructureTemplate
 from nicos_ess.nexus.converter import NexusTemplateConverter
 from nicos_sinq.devices.datasinks import SinqNexusFileSink
-from nicos_sinq.devices.imagesink import ImageKafkaDataSink, \
-    ImageKafkaDataSinkHandler
+from nicos_sinq.devices.imagesink import ImageKafkaDataSink, ImageKafkaDataSinkHandler
 
 
 class ImageKafkaWithLiveViewDataSinkHandler(ImageKafkaDataSinkHandler):
-
     def prepare(self):
         # Reset the counts to 0 in the Live View
         arrays = []
         for desc in self.detector.arrayInfo():
             # Empty byte array representing 0 of type uint32
-            arrays.append(numpy.zeros(numpy.prod(desc.shape), dtype='uint32'))
+            arrays.append(numpy.zeros(numpy.prod(desc.shape), dtype="uint32"))
         self.putResults(LIVE, {self.detector.name: (None, arrays)})
 
     def putResults(self, quality, results):
@@ -83,34 +81,39 @@ class ImageKafkaWithLiveViewDataSinkHandler(ImageKafkaDataSinkHandler):
                 data.append(byteBuffer(array))
             elif len(desc.shape) == 3:
                 # X-Axis summed up
-                arrayX = numpy.sum(array.reshape(desc.shape),
-                                   axis=0, dtype='uint32')[::-1].flatten()
+                arrayX = numpy.sum(array.reshape(desc.shape), axis=0, dtype="uint32")[
+                    ::-1
+                ].flatten()
                 nx.append(desc.shape[2])
                 ny.append(desc.shape[1])
                 nz.append(1)
-                tags.append('X-Integrated - Area Detector')
+                tags.append("X-Integrated - Area Detector")
                 data.append(byteBuffer(arrayX))
 
                 # TOF summed up
-                arrayT = numpy.sum(array.reshape(desc.shape),
-                                   axis=2, dtype='uint32').flatten()
+                arrayT = numpy.sum(
+                    array.reshape(desc.shape), axis=2, dtype="uint32"
+                ).flatten()
                 nx.append(desc.shape[1])
                 ny.append(desc.shape[0])
                 nz.append(1)
-                tags.append('TOF Integrated - Area Detector')
+                tags.append("TOF Integrated - Area Detector")
                 data.append(byteBuffer(arrayT))
             else:
                 continue
 
         session.updateLiveData(
-            dict(tag=LIVE,
-                 uid=self.dataset.uid,
-                 detector=self.detector.name,
-                 filenames=tags,
-                 dtypes=['<u4'],
-                 shapes=list(zip(nx, ny, nz)),
-                 time=currenttime() - self.dataset.started),
-            data)
+            dict(
+                tag=LIVE,
+                uid=self.dataset.uid,
+                detector=self.detector.name,
+                filenames=tags,
+                dtypes=["<u4"],
+                shapes=list(zip(nx, ny, nz)),
+                time=currenttime() - self.dataset.started,
+            ),
+            data,
+        )
 
 
 class ImageKafkaWithLiveViewDataSink(ImageKafkaDataSink):
@@ -118,14 +121,14 @@ class ImageKafkaWithLiveViewDataSink(ImageKafkaDataSink):
 
 
 def to_snake(s):
-    return safeName(''.join(['_'+c.lower() if c.isupper() else c for c in
-                             s]).lstrip('_'))
+    return safeName(
+        "".join(["_" + c.lower() if c.isupper() else c for c in s]).lstrip("_")
+    )
 
 
 class AmorNexusFileSink(SinqNexusFileSink):
     def get_output_file_dir(self):
-        return path.join(self.file_output_dir,
-                         to_snake(session.experiment.title))
+        return path.join(self.file_output_dir, to_snake(session.experiment.title))
 
 
 class AmorStructureTemplate(NexusStructureTemplate):
@@ -136,6 +139,7 @@ class AmorStructureTemplate(NexusStructureTemplate):
     1) Remove optional components from the template
     2) Puts the distances offset in
     """
+
     def _delete_keys_from_dict(self, dict_del, keys):
         for key in list(keys):
             if key in dict_del.keys():
@@ -151,18 +155,18 @@ class AmorStructureTemplate(NexusStructureTemplate):
     def _remove_optional_components(self, template):
         # Remove from the NeXus structure the components not present
         delete_keys = []
-        if 'deflector' not in session.loaded_setups:
-            delete_keys.append('deflector:NXmirror')
-        if 'polariser' not in session.loaded_setups:
-            delete_keys.append('polarizer:NXpolariser')
-        if 'diaphragm2' not in session.loaded_setups:
-            delete_keys.append('diaphragm2:NXslit')
-        if 'diaphragm3' not in session.loaded_setups:
-            delete_keys.append('diaphragm3:NXslit')
-        if 'diaphragm4' not in session.loaded_setups:
-            delete_keys.append('diaphragm4:NXslit')
-        if 'stz_table' not in session.loaded_setups:
-            delete_keys.append('height_offset')
+        if "deflector" not in session.loaded_setups:
+            delete_keys.append("deflector:NXmirror")
+        if "polariser" not in session.loaded_setups:
+            delete_keys.append("polarizer:NXpolariser")
+        if "diaphragm2" not in session.loaded_setups:
+            delete_keys.append("diaphragm2:NXslit")
+        if "diaphragm3" not in session.loaded_setups:
+            delete_keys.append("diaphragm3:NXslit")
+        if "diaphragm4" not in session.loaded_setups:
+            delete_keys.append("diaphragm4:NXslit")
+        if "stz_table" not in session.loaded_setups:
+            delete_keys.append("height_offset")
         self._delete_keys_from_dict(template, delete_keys)
         return template
 

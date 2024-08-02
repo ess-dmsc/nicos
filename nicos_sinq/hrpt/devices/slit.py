@@ -29,25 +29,27 @@ from nicos.devices.generic.slit import CenterGapAxis, HorizontalGap, SlitAxis
 
 
 class WidthGapAxis(SlitAxis):
-
     def _convertRead(self, positions):
-        return (positions[1] - positions[0]) / \
-               self._attached_slit.conversion_factor
+        return (positions[1] - positions[0]) / self._attached_slit.conversion_factor
 
     def _convertStart(self, target, current):
-        center = (current[0] + current[1]) / 2.
-        return (center - target / 2 * self._attached_slit.conversion_factor,
-                center + target / 2 * self._attached_slit.conversion_factor)
+        center = (current[0] + current[1]) / 2.0
+        return (
+            center - target / 2 * self._attached_slit.conversion_factor,
+            center + target / 2 * self._attached_slit.conversion_factor,
+        )
 
 
 class Gap(HorizontalGap):
-
     parameters = {
-        'conversion_factor': Param('Conversion between motor '
-                                   'readout and width',
-                                   type=float, default=22.66, userparam=False)
+        "conversion_factor": Param(
+            "Conversion between motor " "readout and width",
+            type=float,
+            default=22.66,
+            userparam=False,
+        )
     }
 
     def _init_adevs(self):
         HorizontalGap._init_adevs(self)
-        self._autodevs = [('center', CenterGapAxis), ('width', WidthGapAxis)]
+        self._autodevs = [("center", CenterGapAxis), ("width", WidthGapAxis)]

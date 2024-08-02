@@ -36,5 +36,5 @@ class LubeSwitch(DigitalOutput):
     def doStatus(self, maxage=0):
         statusval = self._dev.value  # readout is status
         if statusval != 0:
-            return status.ERROR, 'error status: %d' % statusval
-        return status.OK, ''
+            return status.ERROR, "error status: %d" % statusval
+        return status.OK, ""

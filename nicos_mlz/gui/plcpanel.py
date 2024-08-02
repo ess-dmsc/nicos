@@ -25,17 +25,22 @@
 
 from nicos.clients.gui.panels import Panel
 from nicos.clients.gui.utils import loadUi
-from nicos.guisupport.qt import QListWidgetItem, QMessageBox, Qt, \
-    QTableWidgetItem, pyqtSlot
+from nicos.guisupport.qt import (
+    QListWidgetItem,
+    QMessageBox,
+    Qt,
+    QTableWidgetItem,
+    pyqtSlot,
+)
 from nicos.utils import findResource
 
 
 class PlcDeviceControlPanel(Panel):
-    panelName = 'PLC device control'
+    panelName = "PLC device control"
 
     def __init__(self, parent, client, options):
         Panel.__init__(self, parent, client, options)
-        loadUi(self, findResource('nicos_mlz/gui/plcpanel.ui'))
+        loadUi(self, findResource("nicos_mlz/gui/plcpanel.ui"))
         self._curdev = None
         self._changed_pars = {}
         self._in_reread = False
@@ -56,14 +61,20 @@ class PlcDeviceControlPanel(Panel):
     def _update_devices(self):
         self.deviceBox.clear()
         candidates = self.client.getDeviceList(
-            'nicos.devices.tango.PyTangoDevice',
+            "nicos.devices.tango.PyTangoDevice",
             only_explicit=False,
         )
         self.deviceBox.addItems(
-            [candidate for candidate in candidates
-             if self.client.eval('session.getDevice(%r)._getProperty'
-                                 '("plc_specification")' % candidate,
-                                 default=None)])
+            [
+                candidate
+                for candidate in candidates
+                if self.client.eval(
+                    "session.getDevice(%r)._getProperty"
+                    '("plc_specification")' % candidate,
+                    default=None,
+                )
+            ]
+        )
 
     def on_deviceBox_currentIndexChanged(self, index):
         self.on_paramRereadBtn_clicked()
@@ -82,13 +93,18 @@ class PlcDeviceControlPanel(Panel):
 
     def _update_device(self, devname):
         try:
-            parlist = self.client.eval('session.getDevice(%r)._dev.'
-                                       'ListParams()' % devname)
-            cmdlist = self.client.eval('session.getDevice(%r)._dev.'
-                                       'ListCmds()' % devname)
+            parlist = self.client.eval(
+                "session.getDevice(%r)._dev." "ListParams()" % devname
+            )
+            cmdlist = self.client.eval(
+                "session.getDevice(%r)._dev." "ListCmds()" % devname
+            )
         except Exception:
-            QMessageBox.warning(self, 'Error', 'Could not retrieve the param/'
-                                'command list from device.')
+            QMessageBox.warning(
+                self,
+                "Error",
+                "Could not retrieve the param/" "command list from device.",
+            )
             return
         self.controlBox.setEnabled(True)
 
@@ -97,14 +113,15 @@ class PlcDeviceControlPanel(Panel):
         self.paramTable.clear()
         self.paramTable.setColumnCount(2)
         self.paramTable.setRowCount(len(parlist))
-        for (i, par) in enumerate(parlist):
+        for i, par in enumerate(parlist):
             nameitem = QTableWidgetItem(par)
             nameitem.setFlags(nameitem.flags() & ~Qt.ItemFlag.ItemIsEditable)
             self.paramTable.setItem(i, 0, nameitem)
-            value = self.client.eval('session.getDevice(%r)._dev.'
-                                     'GetParam(%r)' % (devname, par),
-                                     default=None)
-            valuestr = '<error>' if value is None else '%.6g' % value
+            value = self.client.eval(
+                "session.getDevice(%r)._dev." "GetParam(%r)" % (devname, par),
+                default=None,
+            )
+            valuestr = "<error>" if value is None else "%.6g" % value
             self._par_values[par] = valuestr
             self.paramTable.setItem(i, 1, QTableWidgetItem(valuestr))
         self.paramTable.resizeRowsToContents()
@@ -122,8 +139,9 @@ class PlcDeviceControlPanel(Panel):
         try:
             value = float(item.text())
         except ValueError:
-            QMessageBox.warning(self, 'Error', 'Invalid value; should be a '
-                                'floating point number.')
+            QMessageBox.warning(
+                self, "Error", "Invalid value; should be a " "floating point number."
+            )
             self._in_reread = True
             item.setText(self._par_values[name])
             self._in_reread = False
@@ -134,35 +152,41 @@ class PlcDeviceControlPanel(Panel):
     @pyqtSlot()
     def on_paramSetBtn_clicked(self):
         if not self._changed_pars:
-            QMessageBox.warning(self, 'Nothing to do', 'No params have been '
-                                'changed in the table.')
+            QMessageBox.warning(
+                self, "Nothing to do", "No params have been " "changed in the table."
+            )
             return
         for name, value in self._changed_pars.items():
             try:
-                self.client.eval('session.getDevice(%r)._dev.'
-                                 'SetParam(([%r], [%r]))' %
-                                 (self._curdev, value, name))
+                self.client.eval(
+                    "session.getDevice(%r)._dev."
+                    "SetParam(([%r], [%r]))" % (self._curdev, value, name)
+                )
             except Exception:
-                QMessageBox.warning(self, 'Error', 'Failed to set the %s '
-                                    'parameter.' % name)
-        QMessageBox.information(self, 'Info', 'All parameters have been set.')
+                QMessageBox.warning(
+                    self, "Error", "Failed to set the %s " "parameter." % name
+                )
+        QMessageBox.information(self, "Info", "All parameters have been set.")
 
     @pyqtSlot()
     def on_cmdExecBtn_clicked(self):
         cmd = self.cmdList.currentItem().text()
         arg = self.argEdit.text()
         if not arg:
-            arg = '0'
+            arg = "0"
         try:
             arg = float(arg)
         except ValueError:
-            QMessageBox.warning(self, 'Error', 'Invalid value; should be a '
-                                'floating point number.')
+            QMessageBox.warning(
+                self, "Error", "Invalid value; should be a " "floating point number."
+            )
             return
         try:
-            self.client.eval('session.getDevice(%r)._dev.'
-                             'SpecialCmd(([%r], [%r]))' %
-                             (self._curdev, arg, cmd))
+            self.client.eval(
+                "session.getDevice(%r)._dev."
+                "SpecialCmd(([%r], [%r]))" % (self._curdev, arg, cmd)
+            )
         except Exception:
-            QMessageBox.warning(self, 'Error', 'Failed to execute the %s '
-                                'command.' % cmd)
+            QMessageBox.warning(
+                self, "Error", "Failed to execute the %s " "command." % cmd
+            )

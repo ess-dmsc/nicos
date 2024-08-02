@@ -29,10 +29,27 @@
 import numpy
 
 from nicos import session
-from nicos.core import INTERMEDIATE, LIVE, Attach, DeviceMixinBase, \
-    Measurable, Moveable, Override, Param, Readable, SubscanMeasurable, \
-    UsageError, Value, anytype, listof, multiStatus, none_or, oneof, status, \
-    tupleof
+from nicos.core import (
+    INTERMEDIATE,
+    LIVE,
+    Attach,
+    DeviceMixinBase,
+    Measurable,
+    Moveable,
+    Override,
+    Param,
+    Readable,
+    SubscanMeasurable,
+    UsageError,
+    Value,
+    anytype,
+    listof,
+    multiStatus,
+    none_or,
+    oneof,
+    status,
+    tupleof,
+)
 from nicos.core.constants import FINAL
 from nicos.core.errors import ConfigurationError
 from nicos.core.scan import Scan
@@ -53,17 +70,19 @@ class PassiveChannel(Measurable):
     """
 
     parameters = {
-        'iscontroller':  Param('If this channel is an active controller',
-                               type=bool, settable=True),
-        'presetaliases': Param('Aliases for setting a preset for the first '
-                               'scalar on this channel',
-                               type=listof(str)),
+        "iscontroller": Param(
+            "If this channel is an active controller", type=bool, settable=True
+        ),
+        "presetaliases": Param(
+            "Aliases for setting a preset for the first " "scalar on this channel",
+            type=listof(str),
+        ),
     }
 
     # preset handling is slightly different in the Detector
 
     def doSetPreset(self, **preset):
-        raise UsageError(self, 'This channel cannot be used as a detector')
+        raise UsageError(self, "This channel cannot be used as a detector")
 
     # methods that can be overridden
 
@@ -81,9 +100,9 @@ class PassiveChannel(Measurable):
         if self._presetmap is not None:
             return set(self._presetmap)
         self._presetmap = {}
-        for (i, value) in enumerate(self.valueInfo()):
-            if value.type in ('counter', 'monitor', 'time', 'other'):
-                self._presetmap[value.name.replace('.', '_')] = i
+        for i, value in enumerate(self.valueInfo()):
+            if value.type in ("counter", "monitor", "time", "other"):
+                self._presetmap[value.name.replace(".", "_")] = i
         if self._presetmap:
             for alias in self.presetaliases:
                 self._presetmap[alias] = 0
@@ -117,13 +136,13 @@ class PassiveChannel(Measurable):
         pass
 
     def doRead(self, maxage=0):
-        raise NotImplementedError('implement doRead')
+        raise NotImplementedError("implement doRead")
 
     def valueInfo(self):
-        raise NotImplementedError('implement valueInfo')
+        raise NotImplementedError("implement valueInfo")
 
     def doStatus(self, maxage=0):
-        return status.OK, 'idle'
+        return status.OK, "idle"
 
 
 class DummyDetector(PassiveChannel):
@@ -135,13 +154,12 @@ class DummyDetector(PassiveChannel):
     """
 
     parameter_overrides = {
-        'unit':   Override(default='cts'),
-        'fmtstr': Override(default='%.2f'),
+        "unit": Override(default="cts"),
+        "fmtstr": Override(default="%.2f"),
     }
 
     def valueInfo(self):
-        return Value(
-            self.name, unit=self.unit, type='other', fmtstr=self.fmtstr),
+        return (Value(self.name, unit=self.unit, type="other", fmtstr=self.fmtstr),)
 
 
 class ActiveChannel(PassiveChannel):
@@ -151,8 +169,9 @@ class ActiveChannel(PassiveChannel):
     """
 
     parameters = {
-        'preselection': Param('Preset value for this channel', type=float,
-                              settable=True),
+        "preselection": Param(
+            "Preset value for this channel", type=float, settable=True
+        ),
     }
 
     # set to True to get a simplified doEstimateTime
@@ -182,10 +201,13 @@ class PostprocessPassiveChannel(PassiveChannel):
     """Base class for postprocessing `arrays` and `results`."""
 
     parameters = {
-        'readresult': Param('Storage for scalar results from image '
-                            'filtering, to be returned from doRead()',
-                            type=listof(float), settable=True,
-                            internal=True),
+        "readresult": Param(
+            "Storage for scalar results from image "
+            "filtering, to be returned from doRead()",
+            type=listof(float),
+            settable=True,
+            internal=True,
+        ),
     }
 
     def doRead(self, maxage=0):
@@ -197,7 +219,7 @@ class PostprocessPassiveChannel(PassiveChannel):
     def getReadResult(self, arrays, results, quality):
         """This method should return the new `readresult` for corresponding
         `arrays` and `results` in respect to a given `quality`."""
-        raise NotImplementedError('implement getReadResult')
+        raise NotImplementedError("implement getReadResult")
 
     def setReadResult(self, arrays, results, quality):
         """This method sets the new `readresult` which is returned in
@@ -209,29 +231,35 @@ class RectROIChannel(PostprocessPassiveChannel):
     """Calculates counts for a rectangular region of interest."""
 
     parameters = {
-        'roi': Param('Rectangular region of interest (x, y, width, height)',
-                     tupleof(int, int, int, int),
-                     settable=True, category='general'),
+        "roi": Param(
+            "Rectangular region of interest (x, y, width, height)",
+            tupleof(int, int, int, int),
+            settable=True,
+            category="general",
+        ),
     }
 
     parameter_overrides = {
-        'unit':   Override(default='cts'),
-        'fmtstr': Override(default='%d'),
+        "unit": Override(default="cts"),
+        "fmtstr": Override(default="%d"),
     }
 
     def getReadResult(self, arrays, _results, _quality):
         if any(self.roi):
             x, y, w, h = self.roi
-            return [arr[y:y + h, x:x + w].sum() if arr is not None else 0
-                    for arr in arrays]
+            return [
+                arr[y : y + h, x : x + w].sum() if arr is not None else 0
+                for arr in arrays
+            ]
         return [arr.sum() if arr is not None else 0 for arr in arrays]
 
     def valueInfo(self):
         if len(self.readresult) > 1:
-            return tuple(Value(name=self.name + '[%d]' % i, type='counter',
-                               fmtstr='%d')
-                         for i in range(1, len(self.readresult) + 1))
-        return Value(name=self.name, type='counter', fmtstr='%d'),
+            return tuple(
+                Value(name=self.name + "[%d]" % i, type="counter", fmtstr="%d")
+                for i in range(1, len(self.readresult) + 1)
+            )
+        return (Value(name=self.name, type="counter", fmtstr="%d"),)
 
 
 class RateChannel(PostprocessPassiveChannel):
@@ -239,8 +267,8 @@ class RateChannel(PostprocessPassiveChannel):
     timer."""
 
     parameter_overrides = {
-        'unit':   Override(default=''),
-        'fmtstr': Override(default='%d cts (%.1f cps)'),
+        "unit": Override(default=""),
+        "fmtstr": Override(default="%d cts (%.1f cps)"),
     }
 
     _cts_seconds = None
@@ -253,8 +281,7 @@ class RateChannel(PostprocessPassiveChannel):
 
         result = []
         if seconds > 1e-9:
-            if quality in (FINAL, INTERMEDIATE) or seconds <= \
-                    self._cts_seconds[-1]:
+            if quality in (FINAL, INTERMEDIATE) or seconds <= self._cts_seconds[-1]:
                 # rate for full detector / time
                 for i, arr in enumerate(arrays):
                     cts = arr.sum()
@@ -265,8 +292,9 @@ class RateChannel(PostprocessPassiveChannel):
                 for i, arr in enumerate(arrays):
                     cts = arr.sum()
                     result.append(cts)
-                    result.append((cts - self._cts_seconds[i]) / (
-                        seconds - self._cts_seconds[-1]))
+                    result.append(
+                        (cts - self._cts_seconds[i]) / (seconds - self._cts_seconds[-1])
+                    )
                     self._cts_seconds[i] = cts
             self._cts_seconds[-1] = seconds
             return result
@@ -276,19 +304,36 @@ class RateChannel(PostprocessPassiveChannel):
         if self.readresult and len(self.readresult) > 2:
             infos = []
             for i in range(1, len(self.readresult) // 2 + 1):
-                name = self.name + '[%d]' % i
-                infos.extend([
-                    Value(name=name + ' (total)', type='counter', fmtstr='%d',
-                          errors='sqrt', unit='cts'),
-                    Value(name=name + ' (rate)', type='monitor', fmtstr='%.1f',
-                          unit='cps'),
-                ])
+                name = self.name + "[%d]" % i
+                infos.extend(
+                    [
+                        Value(
+                            name=name + " (total)",
+                            type="counter",
+                            fmtstr="%d",
+                            errors="sqrt",
+                            unit="cts",
+                        ),
+                        Value(
+                            name=name + " (rate)",
+                            type="monitor",
+                            fmtstr="%.1f",
+                            unit="cps",
+                        ),
+                    ]
+                )
             return tuple(infos)
         return (
-            Value(name=self.name + ' (total)', type='counter', fmtstr='%d',
-                  errors='sqrt', unit='cts'),
-            Value(name=self.name + ' (rate)', type='monitor', fmtstr='%.1f',
-                  unit='cps'),
+            Value(
+                name=self.name + " (total)",
+                type="counter",
+                fmtstr="%d",
+                errors="sqrt",
+                unit="cts",
+            ),
+            Value(
+                name=self.name + " (rate)", type="monitor", fmtstr="%.1f", unit="cps"
+            ),
         )
 
 
@@ -297,8 +342,9 @@ class RateRectROIChannel(RateChannel, RectROIChannel):
 
     def getReadResult(self, arrays, results, quality):
         rs = RectROIChannel.getReadResult(self, arrays, results, quality)
-        return RateChannel.getReadResult(self, [numpy.asarray([res]) for res
-                                                in rs], results, quality)
+        return RateChannel.getReadResult(
+            self, [numpy.asarray([res]) for res in rs], results, quality
+        )
 
 
 class TimerChannelMixin(DeviceMixinBase):
@@ -307,13 +353,12 @@ class TimerChannelMixin(DeviceMixinBase):
     is_timer = True
 
     parameter_overrides = {
-        'unit':   Override(default='s'),
-        'fmtstr': Override(default='%.2f'),
+        "unit": Override(default="s"),
+        "fmtstr": Override(default="%.2f"),
     }
 
     def valueInfo(self):
-        return Value(self.name, unit=self.unit, type='time',
-                     fmtstr=self.fmtstr),
+        return (Value(self.name, unit=self.unit, type="time", fmtstr=self.fmtstr),)
 
     def doTime(self, preset):
         if self.iscontroller:
@@ -332,20 +377,29 @@ class CounterChannelMixin(DeviceMixinBase):
     is_timer = False
 
     parameters = {
-        'type': Param('Type of channel: monitor or counter',
-                      type=oneof('monitor', 'counter', 'other'),
-                      mandatory=True),
+        "type": Param(
+            "Type of channel: monitor or counter",
+            type=oneof("monitor", "counter", "other"),
+            mandatory=True,
+        ),
     }
 
     parameter_overrides = {
-        'unit':         Override(default='cts'),
-        'fmtstr':       Override(default='%d'),
-        'preselection': Override(type=int),
+        "unit": Override(default="cts"),
+        "fmtstr": Override(default="%d"),
+        "preselection": Override(type=int),
     }
 
     def valueInfo(self):
-        return Value(self.name, unit=self.unit, errors='sqrt',
-                     type=self.type, fmtstr=self.fmtstr),
+        return (
+            Value(
+                self.name,
+                unit=self.unit,
+                errors="sqrt",
+                type=self.type,
+                fmtstr=self.fmtstr,
+            ),
+        )
 
     def doSimulate(self, preset):
         if self.iscontroller:
@@ -357,16 +411,19 @@ class ImageChannelMixin(DeviceMixinBase):
     """Mixin for channels that return images."""
 
     parameters = {
-        'readresult': Param('Storage for scalar results from image '
-                            'filtering, to be returned from doRead()',
-                            type=listof(float), settable=True,
-                            internal=True),
+        "readresult": Param(
+            "Storage for scalar results from image "
+            "filtering, to be returned from doRead()",
+            type=listof(float),
+            settable=True,
+            internal=True,
+        ),
     }
 
     parameter_overrides = {
-        'unit':         Override(default='cts'),
-        'fmtstr':       Override(default='%d'),
-        'preselection': Override(type=int),
+        "unit": Override(default="cts"),
+        "fmtstr": Override(default="%d"),
+        "preselection": Override(type=int),
     }
 
     # set this to an ArrayDesc instance, either as a class attribute
@@ -401,8 +458,9 @@ class ImageChannelMixin(DeviceMixinBase):
         return self.doReadArray(quality)
 
     def doReadArray(self, quality):
-        raise NotImplementedError('implement doReadArray in %s' %
-                                  self.__class__.__name__)
+        raise NotImplementedError(
+            "implement doReadArray in %s" % self.__class__.__name__
+        )
 
 
 class Detector(Measurable):
@@ -424,34 +482,49 @@ class Detector(Measurable):
     """
 
     attached_devices = {
-        'timers':   Attach('Timer channel', PassiveChannel,
-                           multiple=True, optional=True),
-        'monitors': Attach('Monitor channels', PassiveChannel,
-                           multiple=True, optional=True),
-        'counters': Attach('Counter channels', PassiveChannel,
-                           multiple=True, optional=True),
-        'images':   Attach('Image channels', ImageChannelMixin,
-                           multiple=True, optional=True),
-        'others':   Attach('Channels that return e.g. filenames',
-                           PassiveChannel, multiple=True, optional=True),
+        "timers": Attach("Timer channel", PassiveChannel, multiple=True, optional=True),
+        "monitors": Attach(
+            "Monitor channels", PassiveChannel, multiple=True, optional=True
+        ),
+        "counters": Attach(
+            "Counter channels", PassiveChannel, multiple=True, optional=True
+        ),
+        "images": Attach(
+            "Image channels", ImageChannelMixin, multiple=True, optional=True
+        ),
+        "others": Attach(
+            "Channels that return e.g. filenames",
+            PassiveChannel,
+            multiple=True,
+            optional=True,
+        ),
     }
 
     parameters = {
-        'liveinterval':  Param('Interval to read out live images (None '
-                               'to disable live readout)',
-                               type=none_or(float), unit='s', settable=True),
-        'saveintervals': Param('Intervals to read out intermediate images '
-                               '(empty to disable); [x, y, z] will read out '
-                               'after x, then after y, then every z seconds',
-                               type=listof(float), unit='s', settable=True),
-        'postprocess':   Param('Post processing list containing tuples of '
-                               '(PostprocessPassiveChannel, '
-                               'ImageChannelMixin or PassiveChannel, ...)',
-                               type=listof(tuple)),
+        "liveinterval": Param(
+            "Interval to read out live images (None " "to disable live readout)",
+            type=none_or(float),
+            unit="s",
+            settable=True,
+        ),
+        "saveintervals": Param(
+            "Intervals to read out intermediate images "
+            "(empty to disable); [x, y, z] will read out "
+            "after x, then after y, then every z seconds",
+            type=listof(float),
+            unit="s",
+            settable=True,
+        ),
+        "postprocess": Param(
+            "Post processing list containing tuples of "
+            "(PostprocessPassiveChannel, "
+            "ImageChannelMixin or PassiveChannel, ...)",
+            type=listof(tuple),
+        ),
     }
 
     parameter_overrides = {
-        'fmtstr': Override(volatile=True),
+        "fmtstr": Override(volatile=True),
     }
 
     hardware_access = False
@@ -460,7 +533,7 @@ class Detector(Measurable):
     _last_live = 0
     _last_save = 0
     _last_save_index = 0
-    _user_comment = ''
+    _user_comment = ""
 
     def doInit(self, _mode):
         self._controlchannels = []
@@ -471,25 +544,31 @@ class Detector(Measurable):
 
         for tup in self.postprocess:
             if tup[0] not in session.configured_devices:
-                self.log.warning("device %r not found but configured in "
-                                 "'postprocess' parameter. No "
-                                 "post processing for this device. Please "
-                                 "check the detector setup.", tup[0])
+                self.log.warning(
+                    "device %r not found but configured in "
+                    "'postprocess' parameter. No "
+                    "post processing for this device. Please "
+                    "check the detector setup.",
+                    tup[0],
+                )
                 continue
             postdev = session.getDevice(tup[0])
             if not isinstance(postdev, PostprocessPassiveChannel):
-                raise ConfigurationError("Device '%s' is not a "
-                                         "PostprocessPassiveChannel" %
-                                         postdev.name)
+                raise ConfigurationError(
+                    "Device '%s' is not a " "PostprocessPassiveChannel" % postdev.name
+                )
             if postdev not in self._channels:
-                raise ConfigurationError("Device '%s' has not been configured "
-                                         "for this detector" % postdev.name)
+                raise ConfigurationError(
+                    "Device '%s' has not been configured "
+                    "for this detector" % postdev.name
+                )
             img_or_passive_devs = [session.getDevice(name) for name in tup[1:]]
             for dev in img_or_passive_devs:
                 if dev not in self._channels:
-                    raise ConfigurationError("Device '%s' has not been "
-                                             "configured for this detector" %
-                                             dev.name)
+                    raise ConfigurationError(
+                        "Device '%s' has not been "
+                        "configured for this detector" % dev.name
+                    )
                 elif isinstance(dev, PassiveChannel):
                     self._postpassives.append(dev)
             self._postprocess.append((postdev, img_or_passive_devs))
@@ -500,30 +579,34 @@ class Detector(Measurable):
         # a device may react to more than one presetkey....
         for i, dev in enumerate(self._attached_timers):
             if i == 0:
-                yield ('t', dev, 'time')
+                yield ("t", dev, "time")
             for preset in dev.presetInfo():
-                yield (preset, dev, 'time')
+                yield (preset, dev, "time")
         for dev in self._attached_monitors:
             for preset in dev.presetInfo():
-                yield (preset, dev, 'monitor')
+                yield (preset, dev, "monitor")
         for i, dev in enumerate(self._attached_counters):
             if i == 0:
-                yield ('n', dev, 'counts')
+                yield ("n", dev, "counts")
             for preset in dev.presetInfo():
-                yield (preset, dev, 'counts')
+                yield (preset, dev, "counts")
         for dev in self._attached_images + self._attached_others:
             for preset in dev.presetInfo():
-                yield (preset, dev, 'counts')
-        yield ('live', None, 'other')
+                yield (preset, dev, "counts")
+        yield ("live", None, "other")
 
     def doPreinit(self, mode):
         presetkeys = {}
         for name, dev, typ in self._presetiter():
             # later mentioned presetnames dont overwrite earlier ones
             presetkeys.setdefault(name, (dev, typ))
-        self._channels = uniq(self._attached_timers + self._attached_monitors +
-                              self._attached_counters + self._attached_images +
-                              self._attached_others)
+        self._channels = uniq(
+            self._attached_timers
+            + self._attached_monitors
+            + self._attached_counters
+            + self._attached_images
+            + self._attached_others
+        )
         self._presetkeys = presetkeys
         self._collectControllers()
 
@@ -542,13 +625,13 @@ class Detector(Measurable):
         """Returns previous preset if no preset has been set."""
         if not preset and self._lastpreset:
             return self._lastpreset
-        if 'live' not in preset:
+        if "live" not in preset:
             # do not store live as previous preset
             self._lastpreset = preset
         return preset
 
     def doSetPreset(self, **preset):
-        self._user_comment = preset.pop('info', '')
+        self._user_comment = preset.pop("info", "")
         preset = self._getPreset(preset)
         if not preset:
             # keep old settings
@@ -556,7 +639,7 @@ class Detector(Measurable):
         for controller in self._controlchannels:
             controller.iscontroller = False
         self._channel_presets = {}
-        for (name, value) in preset.items():
+        for name, value in preset.items():
             if name in self._presetkeys:
                 dev = self._presetkeys[name][0]
                 if dev is None:
@@ -566,17 +649,16 @@ class Detector(Measurable):
         self._collectControllers()
         if set(self._controlchannels) != set(self._channel_presets):
             if not self._controlchannels:
-                self.log.warning(
-                    'no controller configured, detector may not stop')
+                self.log.warning("no controller configured, detector may not stop")
             else:
                 self.log.warning(
-                    'controller setting for devices %s ignored by detector',
-                    ', '.join(set(self._channel_presets) -
-                              set(self._controlchannels)))
-        self.log.debug('    presets: %s', preset)
-        self.log.debug(' presetkeys: %s', self._presetkeys)
-        self.log.debug('controllers: %s', self._controlchannels)
-        self.log.debug('  followers: %s', self._followchannels)
+                    "controller setting for devices %s ignored by detector",
+                    ", ".join(set(self._channel_presets) - set(self._controlchannels)),
+                )
+        self.log.debug("    presets: %s", preset)
+        self.log.debug(" presetkeys: %s", self._presetkeys)
+        self.log.debug("controllers: %s", self._controlchannels)
+        self.log.debug("  followers: %s", self._followchannels)
 
     def doPrepare(self):
         self._collectControllers()
@@ -653,8 +735,9 @@ class Detector(Measurable):
         intervals = self.saveintervals
         if intervals:
             if self._last_save + intervals[self._last_save_index] < elapsed:
-                self._last_save_index = min(self._last_save_index + 1,
-                                            len(intervals) - 1)
+                self._last_save_index = min(
+                    self._last_save_index + 1, len(intervals) - 1
+                )
                 self._last_save = elapsed
                 return INTERMEDIATE
         return None
@@ -668,7 +751,7 @@ class Detector(Measurable):
         if st == status.ERROR:
             return st, text
         for controller in self._controlchannels:
-            for (name, value) in self._channel_presets.get(controller, ()):
+            for name, value in self._channel_presets.get(controller, ()):
                 if controller.presetReached(name, value, maxage):
                     return status.OK, text
         return st, text
@@ -687,15 +770,13 @@ class Detector(Measurable):
         return tuple(img.arraydesc for img in self._attached_images)
 
     def doReadFmtstr(self):
-        return ', '.join('%s = %s' % (v.name, v.fmtstr)
-                         for v in self.valueInfo())
+        return ", ".join("%s = %s" % (v.name, v.fmtstr) for v in self.valueInfo())
 
     def presetInfo(self):
-        return {'info'} | set(self._presetkeys)
+        return {"info"} | set(self._presetkeys)
 
     def doEstimateTime(self, elapsed):
-        eta = {controller.estimateTime(elapsed)
-               for controller in self._controlchannels}
+        eta = {controller.estimateTime(elapsed) for controller in self._controlchannels}
         eta.discard(None)
         if eta:
             # first controller stops, so take min
@@ -705,22 +786,24 @@ class Detector(Measurable):
     def doInfo(self):
         ret = []
         if self._user_comment:
-            ret.append(('usercomment', self._user_comment, self._user_comment,
-                        '', 'general'))
+            ret.append(
+                ("usercomment", self._user_comment, self._user_comment, "", "general")
+            )
         presets = []
-        for (_dev, devpresets) in self._channel_presets.items():
-            for (key, value) in devpresets:
+        for _dev, devpresets in self._channel_presets.items():
+            for key, value in devpresets:
                 presets.append((self._presetkeys[key][1], value))
         if len(presets) > 1:
-            mode = ' or '.join(p[0] for p in presets)
-            ret.append(('mode', mode, mode, '', 'presets'))
-            for (mode, value) in presets:
-                ret.append(('preset_%s' % mode,
-                            value, str(value), '', 'presets'))
+            mode = " or ".join(p[0] for p in presets)
+            ret.append(("mode", mode, mode, "", "presets"))
+            for mode, value in presets:
+                ret.append(("preset_%s" % mode, value, str(value), "", "presets"))
         elif presets:
             mode, value = presets[0]
-            return ret + [('mode', mode, mode, '', 'presets'),
-                          ('preset', value, str(value), '', 'presets')]
+            return ret + [
+                ("mode", mode, mode, "", "presets"),
+                ("preset", value, str(value), "", "presets"),
+            ]
         return ret
 
 
@@ -732,36 +815,36 @@ class DetectorForecast(Readable):
     """
 
     attached_devices = {
-        'det': Attach('The detector to forecast values.', Detector),
+        "det": Attach("The detector to forecast values.", Detector),
     }
 
     parameter_overrides = {
-        'unit': Override(default='', mandatory=False),
+        "unit": Override(default="", mandatory=False),
     }
 
     hardware_access = False
 
     def doRead(self, maxage=0):
         # read all values of all counters and store them by device
-        counter_values = {ch: ch.read(maxage)[0]
-                          for ch in self._attached_det._channels}
+        counter_values = {ch: ch.read(maxage)[0] for ch in self._attached_det._channels}
         # go through the controller channels and determine the one
         # closest to the preselection
         fraction_complete = 0
         for c in self._attached_det._controlchannels:
             p = float(c.preselection)
             if p > 0:
-                fraction_complete = max(fraction_complete,
-                                        counter_values[c] / p)
+                fraction_complete = max(fraction_complete, counter_values[c] / p)
         if fraction_complete == 0:
             # no controller or all zero?  just return the current values
             fraction_complete = 1.0
         # scale all counter values by that fraction
-        return [counter_values[ch] / fraction_complete
-                for ch in self._attached_det._channels]
+        return [
+            counter_values[ch] / fraction_complete
+            for ch in self._attached_det._channels
+        ]
 
     def doStatus(self, maxage=0):
-        return status.OK, ''
+        return status.OK, ""
 
     def valueInfo(self):
         return self._attached_det.valueInfo()
@@ -773,31 +856,33 @@ class GatedDetector(Detector):
     """
 
     attached_devices = {
-        'gates': Attach('Gating devices', Moveable,
-                        multiple=True, optional=True),
+        "gates": Attach("Gating devices", Moveable, multiple=True, optional=True),
     }
 
     parameters = {
-        'enablevalues':  Param('List of values to enable the gates',
-                               type=listof(anytype), default=[]),
-        'disablevalues': Param('List of values to disable the gates',
-                               type=listof(anytype), default=[]),
+        "enablevalues": Param(
+            "List of values to enable the gates", type=listof(anytype), default=[]
+        ),
+        "disablevalues": Param(
+            "List of values to disable the gates", type=listof(anytype), default=[]
+        ),
     }
 
     def _enable_gates(self):
-        self.log.debug('enabling gates')
+        self.log.debug("enabling gates")
         for dev, val in zip(self._attached_gates, self.enablevalues):
             dev.move(val)
         multiWait(self._attached_gates)
-        self.log.debug('gates enabled')
+        self.log.debug("gates enabled")
 
     def _disable_gates(self):
-        self.log.debug('disabling gates')
-        for dev, val in zip(reversed(self._attached_gates),
-                            reversed(self.disablevalues)):
+        self.log.debug("disabling gates")
+        for dev, val in zip(
+            reversed(self._attached_gates), reversed(self.disablevalues)
+        ):
             dev.move(val)
         multiWait(self._attached_gates)
-        self.log.debug('gates disabled')
+        self.log.debug("gates disabled")
 
     def doStart(self):
         self._enable_gates()
@@ -829,15 +914,19 @@ class ScanningDetector(SubscanMeasurable):
     with a given detector."""
 
     attached_devices = {
-        'scandev':  Attach('Current device to scan', Moveable),
-        'detector': Attach('Detector to scan', Measurable),
+        "scandev": Attach("Current device to scan", Moveable),
+        "detector": Attach("Detector to scan", Measurable),
     }
 
     parameters = {
-        'positions': Param('Positions to scan over', type=listof(anytype)),
-        'readresult': Param('Storage for processed results from detector, to'
-                            'be returned from doRead()', type=listof(anytype),
-                            settable=True, internal=True),
+        "positions": Param("Positions to scan over", type=listof(anytype)),
+        "readresult": Param(
+            "Storage for processed results from detector, to"
+            "be returned from doRead()",
+            type=listof(anytype),
+            settable=True,
+            internal=True,
+        ),
     }
 
     def doSetPreset(self, **preset):
@@ -845,15 +934,22 @@ class ScanningDetector(SubscanMeasurable):
 
     def doStart(self):
         positions = [[p] for p in self.positions]
-        self.readresult = self._processDataset(Scan(
-            [self._attached_scandev],
-            positions, None, detlist=[self._attached_detector],
-            preset=self._lastpreset, subscan=True).run())
+        self.readresult = self._processDataset(
+            Scan(
+                [self._attached_scandev],
+                positions,
+                None,
+                detlist=[self._attached_detector],
+                preset=self._lastpreset,
+                subscan=True,
+            ).run()
+        )
 
     def valueInfo(self):
         if self.readresult:
-            raise NotImplementedError('Result processing implemented, but '
-                                      'valueInfo missing')
+            raise NotImplementedError(
+                "Result processing implemented, but " "valueInfo missing"
+            )
         return ()
 
     def doRead(self, maxage=0):

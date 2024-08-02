@@ -39,15 +39,16 @@ class EnabledMotor(HomingProtectedEpicsMotor):
     """
 
     attached_devices = {
-        'lock': Attach('I/O to consult if the motor is allowed to run or not',
-                       Readable),
+        "lock": Attach(
+            "I/O to consult if the motor is allowed to run or not", Readable
+        ),
     }
 
     _stop_sent = False
 
     def doStart(self, target):
         if self._attached_lock.read(0) == 0:
-            raise NicosError(self, 'Motor cannot move while door is open')
+            raise NicosError(self, "Motor cannot move while door is open")
         self._stop_sent = False
         EpicsMotor.doStart(self, target)
 
@@ -56,6 +57,6 @@ class EnabledMotor(HomingProtectedEpicsMotor):
         if ret[0] == BUSY:
             if self._attached_lock.read(0) == 0 and not self._stop_sent:
                 self.stop()
-                session.log.error('Door opened, stopping motor')
+                session.log.error("Door opened, stopping motor")
                 self._stop_sent = True
         return EpicsMotor.doStatus(self, maxage)

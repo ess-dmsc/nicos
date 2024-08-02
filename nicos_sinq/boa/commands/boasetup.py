@@ -48,37 +48,39 @@ from nicos.commands.basic import AddSetup, RemoveSetup
 # For some devices I can only test presence and not on which table they sit.
 # This
 # is backed by this list containing tuples of PV name and corresponding setup
-test_presence = [('SQ:BOA:MCU4:PRESENT', 'quasi_adaptive_optics'),
-                 ('SQ:BOA:NGIV2:PRESENT', 'ngiv2'),
-                 ('SQ:BOA:AGILENT:PRESENT', 'agilent'),
-                 ('SQ:BOA:PICO:PRESENT', 'picoflipper')]
+test_presence = [
+    ("SQ:BOA:MCU4:PRESENT", "quasi_adaptive_optics"),
+    ("SQ:BOA:NGIV2:PRESENT", "ngiv2"),
+    ("SQ:BOA:AGILENT:PRESENT", "agilent"),
+    ("SQ:BOA:PICO:PRESENT", "picoflipper"),
+]
 
 # For some devices EPICS can detect on which table they sit in addition to the
 # test for presence. These devices are held in this list. There is a tuple of
 # test PV name and matching setup here.
-table_presence = [('SQ:BOA:xy1:TableIndex', 'translation1'),
-                  ('SQ:BOA:xy1:TableIndex', 'translation2'),
-                  ('SQ:BOA:drot1:TableIndex', 'drot1'),
-                  ('SQ:BOA:drot2:TableIndex', 'drot2'),
-                  ('SQ:BOA:dg:TableIndex', 'double_goniometer'),
-                  ('SQ:BOA:sl1:TableIndex', 'slit1'),
-                  ('SQ:BOA:sl2:TableIndex', 'slit2'),
-                  ('SQ:BOA:sld:TableIndex', 'detector_slit'),
-                  ('SQ:BOA:adap:TableIndex', 'fully_adaptive_optics'),
-                  ('SQ:BOA:ra:TableIndex', 'rotation_ra'),
-                  ('SQ:BOA:gbl:TableIndex', 'single_goniometer'),
-                  ('SQ:BOA:taz:TableIndex', 'translation_z')
-                  ]
+table_presence = [
+    ("SQ:BOA:xy1:TableIndex", "translation1"),
+    ("SQ:BOA:xy1:TableIndex", "translation2"),
+    ("SQ:BOA:drot1:TableIndex", "drot1"),
+    ("SQ:BOA:drot2:TableIndex", "drot2"),
+    ("SQ:BOA:dg:TableIndex", "double_goniometer"),
+    ("SQ:BOA:sl1:TableIndex", "slit1"),
+    ("SQ:BOA:sl2:TableIndex", "slit2"),
+    ("SQ:BOA:sld:TableIndex", "detector_slit"),
+    ("SQ:BOA:adap:TableIndex", "fully_adaptive_optics"),
+    ("SQ:BOA:ra:TableIndex", "rotation_ra"),
+    ("SQ:BOA:gbl:TableIndex", "single_goniometer"),
+    ("SQ:BOA:taz:TableIndex", "translation_z"),
+]
 
 # BOA table names
-tables = ['Table2', 'Table3', 'Table4', 'Table5', 'Table6']
+tables = ["Table2", "Table3", "Table4", "Table5", "Table6"]
 
 
 @usercommand
 def boadiscover():
-
     # IOC restart
-    iocrestart = session.getDevice('iocrestart')
+    iocrestart = session.getDevice("iocrestart")
     iocrestart.maw(47)
 
     to_add = []
@@ -120,20 +122,32 @@ def boadiscover():
             if setup in table.setups:
                 table.removeSetup(setup)
         # add additional setups to table
-        for setup in table_config[i+2]:
+        for setup in table_config[i + 2]:
             if setup not in table.setups:
                 table.addSetup(setup)
 
-    session.log.info('Autodiscovery finished')
-    session.log.info('Some setups: dmono, detectors etc cannot be auto '
-                     'discovered and assigned to tables')
+    session.log.info("Autodiscovery finished")
+    session.log.info(
+        "Some setups: dmono, detectors etc cannot be auto "
+        "discovered and assigned to tables"
+    )
 
 
 @usercommand
 def find_unassigned():
-    not_assignable = ['startup', 'table2', 'table3', 'table4', 'table5',
-                      'table6', 'system', 'cache', 'daemon', 'poller',
-                      'config']
+    not_assignable = [
+        "startup",
+        "table2",
+        "table3",
+        "table4",
+        "table5",
+        "table6",
+        "system",
+        "cache",
+        "daemon",
+        "poller",
+        "config",
+    ]
 
     assigned = []
     for t in tables:
@@ -147,14 +161,14 @@ def find_unassigned():
         if setup not in assigned and setup not in not_assignable:
             unassigned.append(setup)
     if not unassigned:
-        session.log.info('No unassigned setups')
+        session.log.info("No unassigned setups")
     else:
-        session.log.info('There are setups not assigned to tables:')
-        session.log.info('  %s', str(unassigned))
+        session.log.info("There are setups not assigned to tables:")
+        session.log.info("  %s", str(unassigned))
 
 
 @usercommand
 def show_table_config():
     for t in tables:
         table = session.getDevice(t)
-        session.log.info('%s  %s', t,  str(table.setups))
+        session.log.info("%s  %s", t, str(table.setups))

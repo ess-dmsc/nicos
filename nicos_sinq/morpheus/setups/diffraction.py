@@ -1,7 +1,7 @@
-description = 'Single-crystal diffraction on MORPHEUS'
+description = "Single-crystal diffraction on MORPHEUS"
 
-group = 'basic'
+group = "basic"
 
-includes = ['morpheus', 'slits', 'euler', 'monochromator']
+includes = ["morpheus", "slits", "euler", "monochromator"]
 
-excludes = ['pnr']
+excludes = ["pnr"]

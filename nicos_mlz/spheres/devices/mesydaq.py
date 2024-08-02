@@ -27,7 +27,7 @@ from nicos.devices.vendor.qmesydaq.taco import Timer as MesyTimer
 
 class Timer(MesyTimer):
     def getLastListModeFile(self):
-        return self._taco_guard(self._dev.deviceQueryResource, 'lastlistfile')
+        return self._taco_guard(self._dev.deviceQueryResource, "lastlistfile")
 
     def getLastHistModeFile(self):
-        return self._taco_guard(self._dev.deviceQueryResource, 'lasthistfile')
+        return self._taco_guard(self._dev.deviceQueryResource, "lasthistfile")

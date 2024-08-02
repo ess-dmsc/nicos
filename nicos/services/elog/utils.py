@@ -30,39 +30,49 @@ from os import path
 
 from nicos.utils.loggers import ACTION, INPUT
 
-levels = {DEBUG: 'DEBUG', INFO: 'INFO', WARNING: 'WARNING',
-          ERROR: 'ERROR', FATAL: 'FATAL', INPUT: 'INPUT'}
+levels = {
+    DEBUG: "DEBUG",
+    INFO: "INFO",
+    WARNING: "WARNING",
+    ERROR: "ERROR",
+    FATAL: "FATAL",
+    INPUT: "INPUT",
+}
 
 
 def formatTime(timeval):
-    return time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(timeval))
+    return time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(timeval))
 
 
 def formatMessage(message):
     """Format message for display in the HTML logbook."""
-    cls = 'out'
+    cls = "out"
     levelno = message[2]
     if levelno == ACTION:
-        return ''
-    if message[0] == 'nicos':
-        name = ''
+        return ""
+    if message[0] == "nicos":
+        name = ""
     else:
-        name = '%-10s: ' % message[0]
+        name = "%-10s: " % message[0]
     name = message[5] + name
     if levelno <= DEBUG:
         text = name + message[3]
-        cls = 'debug'
+        cls = "debug"
     elif levelno <= INFO:
         text = name + message[3]
     elif levelno == INPUT:
-        return '<span class="input">' + html.escape(message[3]) + '</span>'
+        return '<span class="input">' + html.escape(message[3]) + "</span>"
     elif levelno <= WARNING:
-        text = levels[levelno] + ': ' + name + message[3]
-        cls = 'warn'
+        text = levels[levelno] + ": " + name + message[3]
+        cls = "warn"
     else:
-        text = '%s [%s] %s%s' % (levels[levelno], formatTime(message[1]),
-                                 name, message[3])
-        cls = 'err'
+        text = "%s [%s] %s%s" % (
+            levels[levelno],
+            formatTime(message[1]),
+            name,
+            message[3],
+        )
+        cls = "err"
     return '<span class="%s">%s</span>' % (cls, html.escape(text))
 
 
@@ -70,10 +80,14 @@ def formatMessagePlain(message):
     """Format message for the plain-text log file."""
     levelno = message[2]
     if levelno == ACTION:
-        return ''
+        return ""
     # note: message will already contain newline at the end
-    return '%s : %-7s : %s: %s' % (formatTime(message[1]),
-                                   levels[levelno], message[0], message[3])
+    return "%s : %-7s : %s: %s" % (
+        formatTime(message[1]),
+        levels[levelno],
+        message[0],
+        message[3],
+    )
 
 
 def pretty1(fmtstr, value):
@@ -89,19 +103,19 @@ def pretty2(fmtstr, value1, value2):
     if fmt1 == fmt2:
         return fmt1
     if value1 is not None and value2 is not None:
-        if value1 != 0 and abs((value2 - value1)/value1) < 0.00001:
+        if value1 != 0 and abs((value2 - value1) / value1) < 0.00001:
             return fmt2
-        if value2 != 0 and abs((value2 - value1)/value2) < 0.00001:
+        if value2 != 0 and abs((value2 - value1) / value2) < 0.00001:
             return fmt1
-    return '%s - %s' % (fmt1, fmt2)
+    return "%s - %s" % (fmt1, fmt2)
 
 
-def create_or_open(filename, prolog=b''):
+def create_or_open(filename, prolog=b""):
     if not path.isfile(filename):
-        open(filename, 'wb').close()  # pylint: disable=consider-using-with
+        open(filename, "wb").close()  # pylint: disable=consider-using-with
     # we have to open in binary mode since we want to do a nonzero seek from
     # the end, which the text wrapper doesn't support
-    fd = open(filename, 'r+b')  # pylint: disable=consider-using-with
+    fd = open(filename, "r+b")  # pylint: disable=consider-using-with
     fd.seek(0, 2)
     if fd.tell() == 0:
         fd.write(prolog)

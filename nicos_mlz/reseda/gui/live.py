@@ -33,16 +33,19 @@ uipath = path.dirname(__file__)
 
 
 class CascadeControls(QWidget):
-
-    controlsui = f'{uipath}/cascadecontrols.ui'
+    controlsui = f"{uipath}/cascadecontrols.ui"
 
     foilsnumber = 0
 
     def __init__(self, parent=None):
         QWidget.__init__(self, parent)
         loadUi(self, self.controlsui)
-        for w in (self.foilLabel, self.foilBox, self.timeChannelLabel,
-                  self.timeChannelBox):
+        for w in (
+            self.foilLabel,
+            self.foilBox,
+            self.timeChannelLabel,
+            self.timeChannelBox,
+        ):
             w.setHidden(True)
         self.singleSlidesBox.setDisabled(True)
         self.setFoilsOrder(list(range(self.foilsnumber)))
@@ -66,8 +69,7 @@ class CascadeControls(QWidget):
                     idx = foil * timechannels + time_channel - 1
                     return data[idx]
                 startfoil = foil * timechannels
-                return numpy.sum(data[startfoil:startfoil + timechannels],
-                                 axis=0)
+                return numpy.sum(data[startfoil : startfoil + timechannels], axis=0)
             return numpy.sum(data, axis=0)
         return data
 
@@ -77,7 +79,6 @@ class CascadeControls(QWidget):
 
 
 class CascadeLiveDataPanel(LiveDataPanel):
-
     def __init__(self, parent, client, options):
         LiveDataPanel.__init__(self, parent, client, options)
 
@@ -98,13 +99,12 @@ class CascadeLiveDataPanel(LiveDataPanel):
         if data is None:  # no data
             return
 
-        arrays = data.get('dataarrays', [])
-        labels = data.get('labels', {})
-        titles = data.get('titles', {})
+        arrays = data.get("dataarrays", [])
+        labels = data.get("labels", {})
+        titles = data.get("titles", {})
 
         # copy to avoid modifications of original data
-        self.controls.setFoilsOrder(
-            self.client.eval('psd_channel.foilsorder', []))
+        self.controls.setFoilsOrder(self.client.eval("psd_channel.foilsorder", []))
 
         # if multiple datasets have to be displayed in one widget, they have
         # the same dimensions, so we only need the dimensions of one set
@@ -132,14 +132,14 @@ class CascadeLiveDataPanel(LiveDataPanel):
         """
         if uid:
             if uid not in self._datacache:
-                self.log.debug('add to cache: %s', uid)
+                self.log.debug("add to cache: %s", uid)
                 self._datacache[uid] = {}
-            self._datacache[uid]['dataarrays'] = arrays
+            self._datacache[uid]["dataarrays"] = arrays
         if display:
             if uid:
                 if titles is None:
-                    titles = self._datacache[uid].get('titles')
+                    titles = self._datacache[uid].get("titles")
                 if labels is None:
-                    labels = self._datacache[uid].get('labels')
+                    labels = self._datacache[uid].get("labels")
             self._initLiveWidget(arrays[0])
             self._setData(arrays, labels, titles)

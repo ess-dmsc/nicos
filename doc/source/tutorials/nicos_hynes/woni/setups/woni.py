@@ -1,5 +1,5 @@
-description = 'The basic WONI instrument'
+description = "The basic WONI instrument"
 
-group = 'basic'
+group = "basic"
 
-includes = ['monochromator', 'sampletable', 'detector']
+includes = ["monochromator", "sampletable", "detector"]

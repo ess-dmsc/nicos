@@ -1,8 +1,8 @@
-description = 'DEL setup in the kiosk'
+description = "DEL setup in the kiosk"
 
 includes = [
-    'voltage',
-    'table_lab',
+    "voltage",
+    "table_lab",
 ]
 
-group = 'basic'
+group = "basic"

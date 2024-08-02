@@ -27,13 +27,14 @@ from nicos.devices.entangle import PowerSupply as TangoPowerSupply
 
 class PowerSupply(TangoPowerSupply):
     """Temporary workaround fro VERY slow power supplies."""
+
     parameter_overrides = {
-        'abslimits': Override(volatile=False),
-        'current': Override(volatile=False),
-        'voltage': Override(volatile=False),
+        "abslimits": Override(volatile=False),
+        "current": Override(volatile=False),
+        "voltage": Override(volatile=False),
     }
 
     def doPoll(self, n, maxage):
         if n % 2:
-            self._pollParam('voltage', 1)
-            self._pollParam('current', 1)
+            self._pollParam("voltage", 1)
+            self._pollParam("current", 1)

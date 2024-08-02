@@ -79,16 +79,16 @@ class Rectangle(Object2D):
         self.rotation = rotation
 
     def rect(self):
-        return [self.x - self.w / 2., self.y - self.h / 2., self.w, self.h]
+        return [self.x - self.w / 2.0, self.y - self.h / 2.0, self.w, self.h]
 
     def path(self):
         x0, y0, w, h = self.rect()
         origin = [self.x, self.y]
-        coord = np.array([(x0, y0), (x0 + w, y0), (x0 + w, y0 + h),
-                          (x0, y0 + h)]) - origin
+        coord = (
+            np.array([(x0, y0), (x0 + w, y0), (x0 + w, y0 + h), (x0, y0 + h)]) - origin
+        )
         if self.rotation:
-            coord = np.array([self.rotatePoint(xy, self.rotation)
-                              for xy in coord])
+            coord = np.array([self.rotatePoint(xy, self.rotation) for xy in coord])
         return coord + origin
 
     def rotatePoint(self, xy, rotation):
@@ -153,7 +153,7 @@ def circle_values(r, cl=3, space=2):
 
     def calc_1(r, cl, space):
         pos = []
-        m = (cl + space) / 2.
+        m = (cl + space) / 2.0
         for y in np.arange(m, circle.radius(), 2 * m):
             for x in np.arange(m, circle.radius(), 2 * m):
                 square.moveto(x, y)
@@ -194,16 +194,16 @@ def circle_values(r, cl=3, space=2):
 def rectangle_values(w, h, rot, cl=3, space=2):
     """Calculate the maximum number of squares in a rotated rectangle."""
     rect = Rectangle(0, 0, w, h)
-    square = Square(0, 0, cl, 45.)
+    square = Square(0, 0, cl, 45.0)
     r = square.path()
     cl = abs(max(x for x, y in r) - min(x for x, y in r))
     d = space / math.cos(math.radians(45))
     nw = int((w + d) / (cl + d))
     nh = int((h + d) / (cl + d))
-    woffs = w / 2. - (nw * (cl + d) - d)
-    hoffs = h / 2. - (nh * (cl + d) - d)
-    wsteps = np.arange(woffs, w / 2., (cl + d))
-    hsteps = np.arange(hoffs, h / 2., (cl + d))
+    woffs = w / 2.0 - (nw * (cl + d) - d)
+    hoffs = h / 2.0 - (nh * (cl + d) - d)
+    wsteps = np.arange(woffs, w / 2.0, (cl + d))
+    hsteps = np.arange(hoffs, h / 2.0, (cl + d))
     pos = []
     for y in hsteps:
         for x in wsteps:
@@ -216,23 +216,23 @@ def rectangle_values(w, h, rot, cl=3, space=2):
 def cuboid_values(w, thickness, height, rot, cl=3, space=2):
     """Calculate the maximum number of cells in a rotated cuboid."""
     pos = [
-        [113.97 - 100, 99.27 - 100, 61.89 - 30.],
-        [113.97 - 100, 99.27 - 100, 70.18 - 30.],
-        [105.47 - 100, 90.77 - 100, 45.31 - 30.],
-        [105.47 - 100, 90.77 - 100, 53.60 - 30.],
-        [105.47 - 100, 90.77 - 100, 61.89 - 30.],
-        [105.47 - 100, 90.77 - 100, 70.18 - 30.],
-        [105.47 - 100, 90.77 - 100, 78.47 - 30.],
-        [105.47 - 100, 90.77 - 100, 86.76 - 30.],
-        [96.97 - 100, 82.27 - 100, 45.31 - 30.],
-        [96.97 - 100, 82.27 - 100, 53.60 - 30.],
-        [96.97 - 100, 82.27 - 100, 61.89 - 30.],
-        [96.97 - 100, 82.27 - 100, 70.18 - 30.],
-        [96.97 - 100, 82.27 - 100, 78.47 - 30.],
-        [96.97 - 100, 82.27 - 100, 86.76 - 30.],
-        [88.47 - 100, 73.77 - 100, 61.89 - 30.],
-        [88.47 - 100, 73.77 - 100, 70.18 - 30.],
-        [98.72 - 100, 89.07 - 100, 37.02 - 30.],
+        [113.97 - 100, 99.27 - 100, 61.89 - 30.0],
+        [113.97 - 100, 99.27 - 100, 70.18 - 30.0],
+        [105.47 - 100, 90.77 - 100, 45.31 - 30.0],
+        [105.47 - 100, 90.77 - 100, 53.60 - 30.0],
+        [105.47 - 100, 90.77 - 100, 61.89 - 30.0],
+        [105.47 - 100, 90.77 - 100, 70.18 - 30.0],
+        [105.47 - 100, 90.77 - 100, 78.47 - 30.0],
+        [105.47 - 100, 90.77 - 100, 86.76 - 30.0],
+        [96.97 - 100, 82.27 - 100, 45.31 - 30.0],
+        [96.97 - 100, 82.27 - 100, 53.60 - 30.0],
+        [96.97 - 100, 82.27 - 100, 61.89 - 30.0],
+        [96.97 - 100, 82.27 - 100, 70.18 - 30.0],
+        [96.97 - 100, 82.27 - 100, 78.47 - 30.0],
+        [96.97 - 100, 82.27 - 100, 86.76 - 30.0],
+        [88.47 - 100, 73.77 - 100, 61.89 - 30.0],
+        [88.47 - 100, 73.77 - 100, 70.18 - 30.0],
+        [98.72 - 100, 89.07 - 100, 37.02 - 30.0],
     ]
     cpos = rectangle_values(w, thickness, rot, cl, space)
     pos = []
@@ -245,7 +245,7 @@ def cuboid_values(w, thickness, height, rot, cl=3, space=2):
 def height_steps(h, cl=3, space=2):
     """Calculate the maximum number of cells in height."""
     n = int((h + space) / (cl + space))
-    offs = (h - n * (cl + space) + space) / 2. + cl / 2.
+    offs = (h - n * (cl + space) + space) / 2.0 + cl / 2.0
     steps = np.arange(offs, h, (cl + space))
     return steps
 
@@ -265,9 +265,8 @@ def sphere_values(r, cl=3, space=2):
     pos = []
     cpos_1 = []
     cpos_2 = []
-    if r >= (cl + space / 2.):
-        cpos_1 = circle_values(math.sqrt(r * r - (cl + space / 2.) ** 2), cl,
-                               space)
+    if r >= (cl + space / 2.0):
+        cpos_1 = circle_values(math.sqrt(r * r - (cl + space / 2.0) ** 2), cl, space)
     if r >= cl:
         cpos_2 = circle_values(math.sqrt(r * r - (cl * cl / 4)), cl, space)
     if len(cpos_1) > len(cpos_2):
@@ -286,6 +285,6 @@ def sphere_values(r, cl=3, space=2):
             radius = math.sqrt(r * r - h * h)
             cpos = circle_values(radius, cl, space)
             for v in cpos:
-                pos.append(v + [r + (h - cl / 2.)])
-                pos.append(v + [r - (h - cl / 2.)])
+                pos.append(v + [r + (h - cl / 2.0)])
+                pos.append(v + [r - (h - cl / 2.0)])
     return pos

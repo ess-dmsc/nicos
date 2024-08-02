@@ -25,27 +25,40 @@
 """Support for "auxiliary" windows containing panels."""
 
 from nicos.clients.gui.panels.base import Panel, SetupDepWindowMixin
-from nicos.clients.gui.utils import SettingGroup, loadBasicWindowSettings, \
-    loadUi, loadUserStyle
-from nicos.guisupport.qt import QColorDialog, QFontDialog, QMainWindow, \
-    QSplitter, QToolBar, QVBoxLayout, QWidget, pyqtSignal, pyqtSlot
+from nicos.clients.gui.utils import (
+    SettingGroup,
+    loadBasicWindowSettings,
+    loadUi,
+    loadUserStyle,
+)
+from nicos.guisupport.qt import (
+    QColorDialog,
+    QFontDialog,
+    QMainWindow,
+    QSplitter,
+    QToolBar,
+    QVBoxLayout,
+    QWidget,
+    pyqtSignal,
+    pyqtSlot,
+)
 from nicos.utils import checkSetupSpec
 from nicos.utils.loggers import NicosLogger
 
 
 class AuxiliaryWindow(SetupDepWindowMixin, QMainWindow):
+    setupSpec = ""
 
-    setupSpec = ''
-
-    closed = pyqtSignal('QMainWindow')
+    closed = pyqtSignal("QMainWindow")
 
     def __init__(self, parent, wintype, config):
         from nicos.clients.gui.panels.utils import createWindowItem
+
         QMainWindow.__init__(self, parent)
-        loadUi(self, 'auxwindow.ui')
+        loadUi(self, "auxwindow.ui")
         self.mainwindow = parent
         self.client = parent.client
-        self.log = NicosLogger('AuxiliaryWindow')
+        self.log = NicosLogger("AuxiliaryWindow")
         self.log.parent = self.mainwindow.log
 
         self.type = wintype
@@ -69,9 +82,9 @@ class AuxiliaryWindow(SetupDepWindowMixin, QMainWindow):
             for sp, st in zip(self.splitters, self.splitstate):
                 sp.restoreState(st)
 
-        setups = config[1].get('setups', '')
+        setups = config[1].get("setups", "")
         self.setSetups(setups)
-        self.client.register(self, 'session/mastersetup')
+        self.client.register(self, "session/mastersetup")
 
         SetupDepWindowMixin.__init__(self, self.client)
 
@@ -80,13 +93,13 @@ class AuxiliaryWindow(SetupDepWindowMixin, QMainWindow):
             self.panels.append(panel)
 
     def on_keyChange(self, key, value, time, expired):
-        if key == 'session/mastersetup' and self.setupSpec:
+        if key == "session/mastersetup" and self.setupSpec:
             if not checkSetupSpec(self.setupSpec, value, log=self.log):
                 self.close()
 
     def setSetups(self, setupSpec):
         self.setupSpec = setupSpec
-        self.log.debug('setups are: %r', self.setupSpec)
+        self.log.debug("setups are: %r", self.setupSpec)
 
     def getPanel(self, panelName):
         for panelobj in self.panels:
@@ -95,12 +108,11 @@ class AuxiliaryWindow(SetupDepWindowMixin, QMainWindow):
 
     def saveWindowLayout(self):
         with self.sgroup as settings:
-            settings.setValue('geometry', self.saveGeometry())
-            settings.setValue('windowstate', self.saveState())
-            settings.setValue('splitstate',
-                              [sp.saveState() for sp in self.splitters])
-            settings.setValue('font', self.user_font)
-            settings.setValue('color', self.user_color)
+            settings.setValue("geometry", self.saveGeometry())
+            settings.setValue("windowstate", self.saveState())
+            settings.setValue("splitstate", [sp.saveState() for sp in self.splitters])
+            settings.setValue("font", self.user_font)
+            settings.setValue("color", self.user_color)
 
     def closeEvent(self, event):
         for pnl in self.panels:
@@ -144,10 +156,11 @@ class AuxiliaryWindow(SetupDepWindowMixin, QMainWindow):
 class AuxiliarySubWindow(QMainWindow):
     def __init__(self, item, window, menuwindow, parent, margins):
         from nicos.clients.gui.panels.utils import createWindowItem
+
         QMainWindow.__init__(self, parent)
         self.user_color = window.user_color
         self.mainwindow = window.mainwindow
-        self.log = NicosLogger('AuxiliarySubWindow')
+        self.log = NicosLogger("AuxiliarySubWindow")
         self.log.parent = self.mainwindow.log
 
         self.panels = []
@@ -163,7 +176,13 @@ class AuxiliarySubWindow(QMainWindow):
             (subitem, setupSpec) = item
         it = createWindowItem(subitem, window, menuwindow, self, self.log)
         if it:
-            if isinstance(it, (Panel, QSplitter,)):
+            if isinstance(
+                it,
+                (
+                    Panel,
+                    QSplitter,
+                ),
+            ):
                 if isinstance(it, Panel):
                     it.hideTitle()
                     for action in it.actions:

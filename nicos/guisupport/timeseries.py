@@ -37,27 +37,42 @@ from nicos.utils import number_types, KEYEXPR_NS
 
 def buildTickDistAndSubTicks(mintime, maxtime, minticks=3):
     """Calculates tick distance and subticks for a given domain."""
-    good = [1, 2, 5, 10, 30,                           # s
-            60, 2*60, 5*60, 10*60, 15*60, 30*60,       # m
-            3600, 2*3600, 3*3600, 6*3600, 12*3600,     # h
-            24*3600, 2*24*3600, 3*24*3600, 7*24*3600]  # d
-    divs = [5, 4, 5, 5, 6,
-            6, 4, 5, 5, 3, 6,
-            6, 4, 6, 6, 6,
-            6, 6, 6, 7]
+    good = [
+        1,
+        2,
+        5,
+        10,
+        30,  # s
+        60,
+        2 * 60,
+        5 * 60,
+        10 * 60,
+        15 * 60,
+        30 * 60,  # m
+        3600,
+        2 * 3600,
+        3 * 3600,
+        6 * 3600,
+        12 * 3600,  # h
+        24 * 3600,
+        2 * 24 * 3600,
+        3 * 24 * 3600,
+        7 * 24 * 3600,
+    ]  # d
+    divs = [5, 4, 5, 5, 6, 6, 4, 5, 5, 3, 6, 6, 4, 6, 6, 6, 6, 6, 6, 7]
     upscaling = [1, 2, 5, 10]
     downscaling = [1, 0.5, 0.2, 0.1]
 
     # calculate maxticks, depends on 'good' values
     maxticks = minticks
-    for i in range(len(good)-1):
-        if maxticks < minticks * good[i+1]/good[i]:
-            maxticks = minticks * good[i+1]/good[i]
+    for i in range(len(good) - 1):
+        if maxticks < minticks * good[i + 1] / good[i]:
+            maxticks = minticks * good[i + 1] / good[i]
 
     # determine ticking range
     length = maxtime - mintime
     maxd = length / minticks
-    mind = length / (maxticks+1)
+    mind = length / (maxticks + 1)
 
     # scale to useful numbers
     scale_ind = 0
@@ -95,11 +110,11 @@ def buildTimeTicks(mintime, maxtime, minticks=3):
     tickdist, subticks = buildTickDistAndSubTicks(mintime, maxtime, minticks)
     # calculate tick positions
     minor, medium, major = [], [], []
-    for i in range(int(mintime/tickdist)-1, int(maxtime/tickdist)+1):
-        t = int(i+1) * tickdist
+    for i in range(int(mintime / tickdist) - 1, int(maxtime / tickdist) + 1):
+        t = int(i + 1) * tickdist
         major.append(t)
         for j in range(subticks):
-            minor.append(t + j*tickdist/subticks)
+            minor.append(t + j * tickdist / subticks)
     return minor, medium, major
 
 
@@ -107,11 +122,13 @@ class TimeSeries:
     """
     Represents a plot curve that shows a time series for a value.
     """
+
     minsize = 500
     maxsize = 100000
 
-    def __init__(self, descr, interval, expr, window, signal_obj,
-                 info=None, mapping=None):
+    def __init__(
+        self, descr, interval, expr, window, signal_obj, info=None, mapping=None
+    ):
         self.descr = descr
         self.expr = expr
         self.disabled = False
@@ -135,17 +152,17 @@ class TimeSeries:
 
     @property
     def title(self):
-        return self.descr + (' (' + self.info + ')' if self.info else '')
+        return self.descr + (" (" + self.info + ")" if self.info else "")
 
     # convenience API to get columns of the valid data
 
     @property
     def x(self):
-        return self.data[:self.n, 0]
+        return self.data[: self.n, 0]
 
     @property
     def y(self):
-        return self.data[:self.n, 1]
+        return self.data[: self.n, 1]
 
     def initEmpty(self):
         self.data = np.zeros((self.minsize, 2))
@@ -154,7 +171,7 @@ class TimeSeries:
         ltime = 0
         lvalue = None
         maxdelta = max(2 * self.interval, 11)
-        data = np.zeros((max(self.minsize, 3*len(history) + 2), 2))
+        data = np.zeros((max(self.minsize, 3 * len(history) + 2), 2))
         i = 0
         vtime = value = None  # stops pylint from complaining
         for vtime, value in history:
@@ -163,14 +180,15 @@ class TimeSeries:
             delta = vtime - ltime
             if self.expr:
                 try:
-                    value = eval(self.expr, KEYEXPR_NS, {'x': value})
+                    value = eval(self.expr, KEYEXPR_NS, {"x": value})
                 except Exception:
                     continue
             if not isinstance(value, number_types):
                 # if it's a string, create a new unique integer value for it
                 if isinstance(value, str):
                     value = self.string_mapping.setdefault(
-                        value, len(self.string_mapping))
+                        value, len(self.string_mapping)
+                    )
                 # other values we can't use
                 else:
                     continue
@@ -187,13 +205,13 @@ class TimeSeries:
                 i += 1
             data[i] = ltime, lvalue = max(vtime, starttime), value
             i += 1
-        if i and data[i-1, 1] != value:
+        if i and data[i - 1, 1] != value:
             # In case the final value was discarded because it came too fast,
             # add it anyway, because it will potentially be the last one for
             # longer, and synthesized.
             data[i] = vtime, value
             i += 1
-        elif i and data[i-1, 0] < endtime - self.interval:
+        elif i and data[i - 1, 0] < endtime - self.interval:
             # In case the final value is very old, synthesize a point
             # right away at the end of the interval.
             data[i] = endtime, value
@@ -204,31 +222,38 @@ class TimeSeries:
         self.n = self.real_n = i
         self.last_y = lvalue
         if self.string_mapping:
-            self.info = ', '.join(
-                '%g=%s' % (v, k) for (k, v) in
-                sorted(self.string_mapping.items(), key=lambda x: x[1]))
+            self.info = ", ".join(
+                "%g=%s" % (v, k)
+                for (k, v) in sorted(self.string_mapping.items(), key=lambda x: x[1])
+            )
 
     def synthesizeValue(self):
         if not self.n:
             return
         delta = currenttime() - self._last_update_time
         if delta > self.interval:
-            self.addValue(self.data[self.n - 1, 0] + delta, self.last_y,
-                          real=False, use_expr=False)
+            self.addValue(
+                self.data[self.n - 1, 0] + delta,
+                self.last_y,
+                real=False,
+                use_expr=False,
+            )
 
     def addValue(self, vtime, value, real=True, use_expr=True):
         if use_expr and self.expr:
             try:
-                value = eval(self.expr, KEYEXPR_NS, {'x': value})
+                value = eval(self.expr, KEYEXPR_NS, {"x": value})
             except Exception:
                 return
         if not isinstance(value, number_types):
             if isinstance(value, str):
-                value = self.string_mapping.setdefault(
-                    value, len(self.string_mapping))
-                self.info = ', '.join(
-                    '%g=%s' % (v, k) for (k, v) in
-                    sorted(self.string_mapping.items(), key=lambda x: x[1]))
+                value = self.string_mapping.setdefault(value, len(self.string_mapping))
+                self.info = ", ".join(
+                    "%g=%s" % (v, k)
+                    for (k, v) in sorted(
+                        self.string_mapping.items(), key=lambda x: x[1]
+                    )
+                )
             else:
                 return
         n, real_n = self.n, self.real_n
@@ -244,8 +269,9 @@ class TimeSeries:
             if arrsize >= self.maxsize:
                 # don't add more points, make existing ones more sparse
                 data = self.data[:real_n]
-                new_data = lttb.downsample(data[data[:, 0].argsort()],
-                                           n_out=arrsize // 2)
+                new_data = lttb.downsample(
+                    data[data[:, 0].argsort()], n_out=arrsize // 2
+                )
                 n = self.n = self.real_n = new_data.shape[0]
                 # can resize in place here
                 new_data.resize(self.data, (n * 2, 2))
@@ -258,7 +284,7 @@ class TimeSeries:
             # do not generate endless amounts of synthesized points,
             # two are enough (one at the beginning, one at the end of
             # the interval without real points)
-            self.data[n-1] = vtime, value
+            self.data[n - 1] = vtime, value
         else:
             self.data[n] = vtime, value
             self.n += 1
@@ -268,13 +294,13 @@ class TimeSeries:
         if self.window:
             i = -1
             threshold = vtime - self.window
-            while self.data[i+1, 0] < threshold and i < n:
-                if self.data[i+2, 0] > threshold:
-                    self.data[i+1, 0] = threshold
+            while self.data[i + 1, 0] < threshold and i < n:
+                if self.data[i + 2, 0] > threshold:
+                    self.data[i + 1, 0] = threshold
                     break
                 i += 1
             if i >= 0:
-                self.data[0:n - i] = self.data[i+1:n+1].copy()
-                self.n -= i+1
-                self.real_n -= i+1
+                self.data[0 : n - i] = self.data[i + 1 : n + 1].copy()
+                self.n -= i + 1
+                self.real_n -= i + 1
         self.signal_obj.timeSeriesUpdate.emit(self)

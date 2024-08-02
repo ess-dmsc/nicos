@@ -44,16 +44,16 @@ def estimateFWHM(xs, ys):
 
     # Locate left and right point from the peak center where the y-value is
     # larger than the half maximum value (offset by ymin)
-    y_halfmax = ymin + 0.5*(ymax - ymin)
+    y_halfmax = ymin + 0.5 * (ymax - ymin)
 
     i1 = 0
-    for index, yval in enumerate(ys[jmax-1::-1]):
+    for index, yval in enumerate(ys[jmax - 1 :: -1]):
         if yval <= y_halfmax:
             i1 = jmax - index
             break
 
     i2 = numpoints - 1
-    for index, yval in enumerate(ys[jmax+1:]):
+    for index, yval in enumerate(ys[jmax + 1 :]):
         if yval <= y_halfmax:
             i2 = jmax + 1 + index
             break
@@ -62,13 +62,15 @@ def estimateFWHM(xs, ys):
     if ys[i1] == y_halfmax or i1 == 0:
         x_hpeak_l = xs[i1]
     else:
-        x_hpeak_l = (y_halfmax - ys[i1 - 1]) / (ys[i1] - ys[i1 - 1]) * \
-            (xs[i1] - xs[i1 - 1]) + xs[i1 - 1]
+        x_hpeak_l = (y_halfmax - ys[i1 - 1]) / (ys[i1] - ys[i1 - 1]) * (
+            xs[i1] - xs[i1 - 1]
+        ) + xs[i1 - 1]
     if ys[i2] == y_halfmax or i2 == numpoints - 1:
         x_hpeak_r = xs[i2]
     else:
-        x_hpeak_r = (y_halfmax - ys[i2 - 1]) / (ys[i2] - ys[i2 - 1]) * \
-            (xs[i2] - xs[i2 - 1]) + xs[i2 - 1]
+        x_hpeak_r = (y_halfmax - ys[i2 - 1]) / (ys[i2] - ys[i2 - 1]) * (
+            xs[i2] - xs[i2 - 1]
+        ) + xs[i2 - 1]
 
     fwhm = abs(x_hpeak_l - x_hpeak_r)
     if fwhm == 0 or np.isinf(fwhm):

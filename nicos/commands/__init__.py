@@ -50,9 +50,11 @@ def helparglist(args):
     """Decorator that supplies a custom argument list to be displayed by
     the online help.
     """
+
     def deco(func):
         func.help_arglist = args
         return func
+
     return deco
 
 
@@ -77,13 +79,14 @@ def usercommandWrapper(func):
     This is not done in the "usercommand" decorator since the function
     should stay usable as a regular function from nicos code.
     """
-    parallel_safe = getattr(func, 'is_parallel_safe', False)
+    parallel_safe = getattr(func, "is_parallel_safe", False)
 
     @wraps(func)
     def wrapped(*args, **kwds):
         if not parallel_safe and session.checkParallel():
-            raise UsageError('the %s command cannot be used with "execute now"'
-                             % func.__name__)
+            raise UsageError(
+                'the %s command cannot be used with "execute now"' % func.__name__
+            )
         try:
             try:
                 # try executing the original function with the given arguments
@@ -96,8 +99,7 @@ def usercommandWrapper(func):
                 while traceback.tb_next:
                     traceback = traceback.tb_next
                 if traceback.tb_frame.f_code is wrapped.__code__:
-                    session.log.error('Invalid arguments for %s()',
-                                      func.__name__)
+                    session.log.error("Invalid arguments for %s()", func.__name__)
                     help(func)
                 raise
             except UsageError:
@@ -110,13 +112,16 @@ def usercommandWrapper(func):
             raise
         except Exception:
             # all others we'll handle and continue, if wanted
-            if hasattr(session.experiment, 'errorbehavior') and \
-               session.experiment.errorbehavior == 'report':
-                session.scriptEvent('exception', sys.exc_info())
+            if (
+                hasattr(session.experiment, "errorbehavior")
+                and session.experiment.errorbehavior == "report"
+            ):
+                session.scriptEvent("exception", sys.exc_info())
             else:
                 raise
+
     wrapped.is_usercommand = True
     # store a reference to the original function, so that help() can find
     # out the argument specification by looking at it
-    wrapped.real_func = getattr(func, 'real_func', func)
+    wrapped.real_func = getattr(func, "real_func", func)
     return wrapped

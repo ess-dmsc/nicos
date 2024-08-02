@@ -1,70 +1,75 @@
-description = 'Neutron Grating Interferometer'
+description = "Neutron Grating Interferometer"
 
-group = 'optional'
+group = "optional"
 
-excludes = ['ngi', 'neutrosense', 'ngi_icon']
+excludes = ["ngi", "neutrosense", "ngi_icon"]
 
-tango_host = 'phytron3.antareslab'
+tango_host = "phytron3.antareslab"
 
-tango_base = f'tango://{tango_host}:10000/box/'
+tango_base = f"tango://{tango_host}:10000/box/"
 
 devices = dict(
-    G0rz = device('nicos.devices.entangle.Motor',
-        speed = 2.5,
-        unit = 'deg',
-        description = 'Rotation of G0 grating around beam direction',
-        tangodevice = tango_base + 'phytron1/mot',
-        abslimits = (-20, 20),
-        maxage = 5,
-        pollinterval = 3,
-        precision = 0.001,
+    G0rz=device(
+        "nicos.devices.entangle.Motor",
+        speed=2.5,
+        unit="deg",
+        description="Rotation of G0 grating around beam direction",
+        tangodevice=tango_base + "phytron1/mot",
+        abslimits=(-20, 20),
+        maxage=5,
+        pollinterval=3,
+        precision=0.001,
     ),
-    G1tx = device('nicos.devices.entangle.Motor',
-        speed = 100,
-        unit = 'um',
-        description = 'Stepping of G1 perpendicular to the beam direction',
-        tangodevice = tango_base + 'phytron4/mot',
-        abslimits = (-12500, 12500),
-        userlimits = (-12500, 12500),
-        maxage = 5,
-        pollinterval = 3,
-        precision = 0.1,
+    G1tx=device(
+        "nicos.devices.entangle.Motor",
+        speed=100,
+        unit="um",
+        description="Stepping of G1 perpendicular to the beam direction",
+        tangodevice=tango_base + "phytron4/mot",
+        abslimits=(-12500, 12500),
+        userlimits=(-12500, 12500),
+        maxage=5,
+        pollinterval=3,
+        precision=0.1,
     ),
-    G1tz = device('nicos.devices.entangle.Motor',
-        speed = 5,
-        unit = 'mm',
-        description = 'Translation of G1 parallel to the beam direction',
-        tangodevice = tango_base + 'phytron3/mot',
-        abslimits = (-80, 80),
-        userlimits = (-80, 80),
-        maxage = 5,
-        pollinterval = 3,
-        precision = 0.001,
+    G1tz=device(
+        "nicos.devices.entangle.Motor",
+        speed=5,
+        unit="mm",
+        description="Translation of G1 parallel to the beam direction",
+        tangodevice=tango_base + "phytron3/mot",
+        abslimits=(-80, 80),
+        userlimits=(-80, 80),
+        maxage=5,
+        pollinterval=3,
+        precision=0.001,
     ),
-    G1rz = device('nicos.devices.entangle.Motor',
-        speed = 5,
-        unit = 'deg',
-        description = 'Rotation of G1 around the beam axis',
-        tangodevice = tango_base + 'phytron2/mot',
-        abslimits = (-20, 20),
-        userlimits = (-20, 20),
-        maxage = 5,
-        pollinterval = 3,
-        precision = 0.001,
+    G1rz=device(
+        "nicos.devices.entangle.Motor",
+        speed=5,
+        unit="deg",
+        description="Rotation of G1 around the beam axis",
+        tangodevice=tango_base + "phytron2/mot",
+        abslimits=(-20, 20),
+        userlimits=(-20, 20),
+        maxage=5,
+        pollinterval=3,
+        precision=0.001,
     ),
-    sry = device('nicos.devices.entangle.Motor',
-        speed = 5,
-        unit = 'deg',
-        description = 'Sample rotation',
-        tangodevice = tango_base + 'phytron5/mot',
-        abslimits = (-999, 999),
-        userlimits = (-999, 999),
-        maxage = 5,
-        pollinterval = 3,
-        precision = 0.001,
+    sry=device(
+        "nicos.devices.entangle.Motor",
+        speed=5,
+        unit="deg",
+        description="Sample rotation",
+        tangodevice=tango_base + "phytron5/mot",
+        abslimits=(-999, 999),
+        userlimits=(-999, 999),
+        maxage=5,
+        pollinterval=3,
+        precision=0.001,
     ),
 )
-'''
+"""
     G2rz_p = device('nicos.devices.entangle.Motor',
         speed = 0.2,
         unit = 'deg',
@@ -96,4 +101,4 @@ devices = dict(
         pollinterval = 3,
         precision = 0.01,
     ),
-'''
+"""

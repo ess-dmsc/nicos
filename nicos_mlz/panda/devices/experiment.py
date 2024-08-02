@@ -34,17 +34,19 @@ from nicos_mlz.devices.experiment import Experiment
 
 class PandaExperiment(Experiment):
     parameter_overrides = {
-        'templates':     Override(default='exp/template'),
-        'servicescript': Override(default='start_service.py'),
+        "templates": Override(default="exp/template"),
+        "servicescript": Override(default="start_service.py"),
     }
 
     parameters = {
-        'ariane_host': Param('Host for connection to ARIANE runtime',
-                             type=none_or(host(defaultport=11657)),
-                             default=None),
+        "ariane_host": Param(
+            "Host for connection to ARIANE runtime",
+            type=none_or(host(defaultport=11657)),
+            default=None,
+        ),
     }
 
     @property
     def proposalsymlink(self):
         """deviating from default of <dataroot>/current"""
-        return path.join(self.dataroot, 'currentexperiment')
+        return path.join(self.dataroot, "currentexperiment")

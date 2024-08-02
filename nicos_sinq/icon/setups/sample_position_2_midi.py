@@ -1,5 +1,5 @@
-description = 'Sample position 2 with MIDI box'
+description = "Sample position 2 with MIDI box"
 
-group = 'basic'
+group = "basic"
 
-includes = ['sample_position_2', 'camera_focus_2_midi']
+includes = ["sample_position_2", "camera_focus_2_midi"]

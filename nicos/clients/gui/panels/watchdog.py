@@ -27,18 +27,23 @@ from time import time as currenttime
 
 from nicos.clients.gui.panels import Panel
 from nicos.clients.gui.utils import loadUi
-from nicos.guisupport.qt import QByteArray, QDialogButtonBox, QHeaderView, \
-    Qt, QTreeWidgetItem
+from nicos.guisupport.qt import (
+    QByteArray,
+    QDialogButtonBox,
+    QHeaderView,
+    Qt,
+    QTreeWidgetItem,
+)
 
 
 class WatchdogPanel(Panel):
     """Provides a way to reconfigure the watchdog service on the fly."""
 
-    panelName = 'Watchdog'
+    panelName = "Watchdog"
 
     def __init__(self, parent, client, options):
         Panel.__init__(self, parent, client, options)
-        loadUi(self, 'panels/watchdog.ui')
+        loadUi(self, "panels/watchdog.ui")
 
         self._preconf_entries = {}
         self._preconf_enable = {}
@@ -49,12 +54,22 @@ class WatchdogPanel(Panel):
 
         for tree in (self.preconfTree, self.userTree):
             tree.setColumnCount(11)
-            tree.setHeaderLabels([
-                'Enabled', 'Message', 'Condition', 'Only for setup',
-                'Grace time', 'Precondition', 'Precondition time',
-                'Precondition cooldown',
-                'OK message', 'Script action', 'Warn action', 'OK action'
-            ])
+            tree.setHeaderLabels(
+                [
+                    "Enabled",
+                    "Message",
+                    "Condition",
+                    "Only for setup",
+                    "Grace time",
+                    "Precondition",
+                    "Precondition time",
+                    "Precondition cooldown",
+                    "OK message",
+                    "Script action",
+                    "Warn action",
+                    "OK action",
+                ]
+            )
             tree.header().setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
 
         self.preconfTree.header().restoreState(self._preconf_headerstate)
@@ -67,15 +82,12 @@ class WatchdogPanel(Panel):
         client.setup.connect(self.on_client_setup)
 
     def saveSettings(self, settings):
-        settings.setValue('preconf_headers',
-                          self.preconfTree.header().saveState())
-        settings.setValue('user_headers',
-                          self.userTree.header().saveState())
+        settings.setValue("preconf_headers", self.preconfTree.header().saveState())
+        settings.setValue("user_headers", self.userTree.header().saveState())
 
     def loadSettings(self, settings):
-        self._preconf_headerstate = settings.value('preconf_headers', '',
-                                                   QByteArray)
-        self._user_headerstate = settings.value('user_headers', '', QByteArray)
+        self._preconf_headerstate = settings.value("preconf_headers", "", QByteArray)
+        self._user_headerstate = settings.value("user_headers", "", QByteArray)
 
     def on_client_connected(self):
         self._update()
@@ -92,47 +104,58 @@ class WatchdogPanel(Panel):
         self._preconf_entries = {}
         self._user_entries = {}
 
-        cf = self.client.eval('session.cache.get_raw("watchdog/configured")',
-                              Ellipsis)
+        cf = self.client.eval('session.cache.get_raw("watchdog/configured")', Ellipsis)
         if cf is Ellipsis:
-            self.showError('Could not query watchdog configuration; '
-                           'are you connected to a daemon?')
+            self.showError(
+                "Could not query watchdog configuration; "
+                "are you connected to a daemon?"
+            )
             return
-        cf = sorted(cf, key=lambda entry: entry['id'])
+        cf = sorted(cf, key=lambda entry: entry["id"])
         for entry in cf:
-            eid = entry['id']
-            item = QTreeWidgetItem(self.preconfTree, [
-                '', entry['message'], entry['condition'], entry['setup'],
-                str(entry['gracetime']), entry['precondition'],
-                str(entry['precondtime']), str(entry['precondcooldown']),
-                entry['okmessage'], entry['scriptaction'], entry['action'],
-                entry['okaction']
-            ])
-            item.setCheckState(0, Qt.CheckState.Checked if entry['enabled']
-                               else Qt.CheckState.Unchecked)
-            self._preconf_enable[eid] = entry['enabled']
+            eid = entry["id"]
+            item = QTreeWidgetItem(
+                self.preconfTree,
+                [
+                    "",
+                    entry["message"],
+                    entry["condition"],
+                    entry["setup"],
+                    str(entry["gracetime"]),
+                    entry["precondition"],
+                    str(entry["precondtime"]),
+                    str(entry["precondcooldown"]),
+                    entry["okmessage"],
+                    entry["scriptaction"],
+                    entry["action"],
+                    entry["okaction"],
+                ],
+            )
+            item.setCheckState(
+                0,
+                Qt.CheckState.Checked if entry["enabled"] else Qt.CheckState.Unchecked,
+            )
+            self._preconf_enable[eid] = entry["enabled"]
             self._preconf_entries[eid] = entry
             item.setData(0, 32, eid)
 
     def on_preconfTree_itemChanged(self, item, col):
         eid = item.data(0, 32)
         if col == 0 and eid is not None:
-            self._preconf_enable[eid] = \
-                item.checkState(0) == Qt.CheckState.Checked
+            self._preconf_enable[eid] = item.checkState(0) == Qt.CheckState.Checked
 
     def on_buttonBox_clicked(self, button):
         role = self.buttonBox.buttonRole(button)
         if role == QDialogButtonBox.ButtonRole.ApplyRole:
             updates = []
-            for (eid, enabled) in self._preconf_enable.items():
-                if enabled != self._preconf_entries[eid]['enabled']:
+            for eid, enabled in self._preconf_enable.items():
+                if enabled != self._preconf_entries[eid]["enabled"]:
                     updates.append((eid, enabled))
 
             if updates:
                 msg = [currenttime(), updates]
-                self.client.eval(
-                    'session.cache.put_raw("watchdog/enable", %r)' % msg)
-                self.showInfo('Updates applied.')
+                self.client.eval('session.cache.put_raw("watchdog/enable", %r)' % msg)
+                self.showInfo("Updates applied.")
                 self._update()
         elif role == QDialogButtonBox.ButtonRole.ResetRole:
             self._update()

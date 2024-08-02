@@ -58,15 +58,24 @@ class PlotROI(ROI):
 
     def _setup_handles(self):
         positions = [
-            ([1, 1], [0, 0]), ([0, 0], [1, 1]), ([1, 0], [0, 1]),
-            ([0, 1], [1, 0]), ([1, 0.5], [0, 0.5]), ([0.5, 1], [0.5, 0]),
-            ([0, 0.5], [1, 0.5]), ([0.5, 0], [0.5, 1])
+            ([1, 1], [0, 0]),
+            ([0, 0], [1, 1]),
+            ([1, 0], [0, 1]),
+            ([0, 1], [1, 0]),
+            ([1, 0.5], [0, 0.5]),
+            ([0.5, 1], [0.5, 0]),
+            ([0, 0.5], [1, 0.5]),
+            ([0.5, 0], [0.5, 1]),
         ]
         cursors = [
-            Qt.CursorShape.SizeFDiagCursor, Qt.CursorShape.SizeFDiagCursor,
-            Qt.CursorShape.SizeBDiagCursor, Qt.CursorShape.SizeBDiagCursor,
-            Qt.CursorShape.SizeHorCursor, Qt.CursorShape.SizeVerCursor,
-            Qt.CursorShape.SizeHorCursor, Qt.CursorShape.SizeVerCursor
+            Qt.CursorShape.SizeFDiagCursor,
+            Qt.CursorShape.SizeFDiagCursor,
+            Qt.CursorShape.SizeBDiagCursor,
+            Qt.CursorShape.SizeBDiagCursor,
+            Qt.CursorShape.SizeHorCursor,
+            Qt.CursorShape.SizeVerCursor,
+            Qt.CursorShape.SizeHorCursor,
+            Qt.CursorShape.SizeVerCursor,
         ]
         for (pos, center), cursor in zip(positions, cursors):
             handle = self.addScaleHandle(pos, center)
@@ -87,9 +96,7 @@ class LineROI(DefaultLineROI):
         self._setup_handles()
 
     def paint(self, pen, options, widget):
-        r = QRectF(
-            0, 0, self.state['size'][0], self.state['size'][1]
-        ).normalized()
+        r = QRectF(0, 0, self.state["size"][0], self.state["size"][1]).normalized()
         pen.setRenderHint(QPainter.RenderHint.Antialiasing)
         pen.setPen(Qt.PenStyle.NoPen)
         pen.setBrush(mkBrush(LINE_ROI_WIDTH_COLOR))
@@ -105,23 +112,19 @@ class LineROI(DefaultLineROI):
     def _setup_handles(self):
         first_flag = False
         for handle_info in self.handles:
-            handle = handle_info['item']
-            h_type = handle_info['type']
-            if h_type == 'sr':
+            handle = handle_info["item"]
+            h_type = handle_info["type"]
+            if h_type == "sr":
                 handle.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
                 if not first_flag:
                     first_flag = True
                     handle.pen = mkPen(LINE_ROI_HANDLE_COLOR_LEFT, width=2)
                     handle.currentPen = handle.pen
-                    handle.hoverPen = mkPen(
-                        LINE_ROI_HANDLE_HOOVER_COLOR_LEFT, width=2
-                    )
+                    handle.hoverPen = mkPen(LINE_ROI_HANDLE_HOOVER_COLOR_LEFT, width=2)
                 else:
                     handle.pen = mkPen(LINE_ROI_HANDLE_COLOR_RIGHT, width=2)
                     handle.currentPen = handle.pen
-                    handle.hoverPen = mkPen(
-                        LINE_ROI_HANDLE_HOOVER_COLOR_RIGHT, width=2
-                    )
+                    handle.hoverPen = mkPen(LINE_ROI_HANDLE_HOOVER_COLOR_RIGHT, width=2)
             else:
                 handle.pen = mkPen(LINE_ROI_COLOR, width=2)
                 handle.currentPen = handle.pen

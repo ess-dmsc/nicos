@@ -27,8 +27,16 @@ from contextlib import contextmanager
 from numpy import sign
 
 from nicos import session
-from nicos.core import Attach, HasTimeout, IsController, Override, Param, \
-    floatrange, status, tupleof
+from nicos.core import (
+    Attach,
+    HasTimeout,
+    IsController,
+    Override,
+    Param,
+    floatrange,
+    status,
+    tupleof,
+)
 from nicos.core.constants import SIMULATION
 from nicos.core.errors import MoveError, PositionError
 from nicos.core.utils import filterExceptions, multiWait
@@ -45,33 +53,50 @@ class MultiAnalyzer(CanReference, IsController, HasTimeout, BaseSequencer):
     _num_axes = 11
 
     attached_devices = {
-        'translations': Attach('Translation axes of the crystals',
-                               CanReference, multiple=_num_axes),
-        'rotations': Attach('Rotation axes of the crystals',
-                            CanReference, multiple=_num_axes),
+        "translations": Attach(
+            "Translation axes of the crystals", CanReference, multiple=_num_axes
+        ),
+        "rotations": Attach(
+            "Rotation axes of the crystals", CanReference, multiple=_num_axes
+        ),
     }
 
     parameters = {
-        'distance': Param('',
-                          type=float, settable=False, default=0),
-        'mosaicity': Param('Mosaicity of the crystals',
-                           type=floatrange(0, None), unit='deg',
-                           category='general', default=0.4),
-        'bladewidth': Param('Width of the analyzer crystals',
-                            type=floatrange(0, None), unit='mm',
-                            category='general', default=25),
-        'planedistance': Param('Distance between the net planes of crystals',
-                               type=floatrange(0, None), unit='AA',
-                               category='general', default=3.354),
-        'raildistance': Param('Distance between the rails of the crystals',
-                              type=floatrange(0, None), default=20,
-                              unit='mm', category='general'),
+        "distance": Param("", type=float, settable=False, default=0),
+        "mosaicity": Param(
+            "Mosaicity of the crystals",
+            type=floatrange(0, None),
+            unit="deg",
+            category="general",
+            default=0.4,
+        ),
+        "bladewidth": Param(
+            "Width of the analyzer crystals",
+            type=floatrange(0, None),
+            unit="mm",
+            category="general",
+            default=25,
+        ),
+        "planedistance": Param(
+            "Distance between the net planes of crystals",
+            type=floatrange(0, None),
+            unit="AA",
+            category="general",
+            default=3.354,
+        ),
+        "raildistance": Param(
+            "Distance between the rails of the crystals",
+            type=floatrange(0, None),
+            default=20,
+            unit="mm",
+            category="general",
+        ),
     }
 
     parameter_overrides = {
-        'timeout': Override(default=600),
-        'unit': Override(mandatory=False, default=''),
-        'fmtstr': Override(volatile=True),
+        "timeout": Override(default=600),
+        "unit": Override(mandatory=False, default=""),
+        "fmtstr": Override(volatile=True),
     }
 
     hardware_access = False
@@ -102,23 +127,29 @@ class MultiAnalyzer(CanReference, IsController, HasTimeout, BaseSequencer):
         if not self._allowed_called:
             stat = self.doStatus(0)
             if stat[0] != status.OK:
-                return False, '%s: Controller device is busy!' % self
+                return False, "%s: Controller device is busy!" % self
             if adev in self._translation:
-                return self._check_translation(self._translation.index(adev),
-                                               adevtarget)
+                return self._check_translation(
+                    self._translation.index(adev), adevtarget
+                )
             return self._check_rotation(self._rotation.index(adev), adevtarget)
-        return True, ''
+        return True, ""
 
     def _check_rotation(self, rindex, target):
-        delta = self._translation[rindex + 1].read(0) - \
-                self._translation[rindex].read(0) \
-                if 0 <= rindex < self._num_axes - 1 else 13
+        delta = (
+            self._translation[rindex + 1].read(0) - self._translation[rindex].read(0)
+            if 0 <= rindex < self._num_axes - 1
+            else 13
+        )
         ll, hl = self._rotlimits(delta)
-        self.log.debug('%s, %s, %s', ll, target, hl)
+        self.log.debug("%s, %s, %s", ll, target, hl)
         if not ll <= target <= hl:
-            return False, 'neighbour distance: %.3f; cannot move rotation ' \
-                'to : %.3f!' % (delta, target)
-        return True, ''
+            return (
+                False,
+                "neighbour distance: %.3f; cannot move rotation "
+                "to : %.3f!" % (delta, target),
+            )
+        return True, ""
 
     def _check_translation(self, tindex, target):
         cdelta = [13, 13]  # current delta between device and neighour devices
@@ -150,11 +181,13 @@ class MultiAnalyzer(CanReference, IsController, HasTimeout, BaseSequencer):
                     if r:
                         ll, hl = self._rotlimits(dt)
                         if not ll <= r <= hl:
-                            self.log.info('(%s): %s, %s, %s', target, ll, r,
-                                          hl)
-                            self.log.info('%r, %r; %r', trans, rot, tdelta)
-                            return False, 'neighbour distance: %.3f; cannot ' \
-                                'move translation to : %.3f!' % (dt, target)
+                            self.log.info("(%s): %s, %s, %s", target, ll, r, hl)
+                            self.log.info("%r, %r; %r", trans, rot, tdelta)
+                            return (
+                                False,
+                                "neighbour distance: %.3f; cannot "
+                                "move translation to : %.3f!" % (dt, target),
+                            )
                 # elif -13 < dc < 0 and dt < 0:
                 #     # self.log.info('It is critical')
                 #     if (r is not None and r < -23.33) or rot[1] < -23.33:
@@ -166,42 +199,53 @@ class MultiAnalyzer(CanReference, IsController, HasTimeout, BaseSequencer):
                 # self.log.info('Passing device: %s %s', dc, dt)
                 # self.log.info('rotations: %s %s', r, rot[1])
                 if (r is not None and r < -23.33) or rot[1] < -23.33:
-                    return False, 'Path %s to %s is not free. One of the ' \
-                        'mirrors would hit another one. (%s, %s)' % (
-                            trans[1], target, r, rot[1])
-        return True, ''
+                    return (
+                        False,
+                        "Path %s to %s is not free. One of the "
+                        "mirrors would hit another one. (%s, %s)"
+                        % (trans[1], target, r, rot[1]),
+                    )
+        return True, ""
 
     def doIsAllowed(self, target):
         """Check if requested targets are within allowed range for devices."""
         with self._allowed():
             why = []
-            for i, (ax, t) in enumerate(zip(self._rotation,
-                                            target[self._num_axes:])):
+            for i, (ax, t) in enumerate(zip(self._rotation, target[self._num_axes :])):
                 ok, w = ax.isAllowed(t)
                 if ok:
-                    self.log.debug('requested rotation %2d to %.2f deg '
-                                   'allowed', i + 1, t)
+                    self.log.debug(
+                        "requested rotation %2d to %.2f deg " "allowed", i + 1, t
+                    )
                 else:
-                    why.append('requested rotation %d to %.2f deg out of '
-                               'limits: %s' % (i + 1, t, w))
-            for i, (ax, t) in enumerate(zip(self._translation,
-                                            target[:self._num_axes])):
+                    why.append(
+                        "requested rotation %d to %.2f deg out of "
+                        "limits: %s" % (i + 1, t, w)
+                    )
+            for i, (ax, t) in enumerate(
+                zip(self._translation, target[: self._num_axes])
+            ):
                 ok, w = ax.isAllowed(t)
                 if ok:
-                    self.log.debug('requested translation %2d to %.2f mm '
-                                   'allowed', i + 1, t)
+                    self.log.debug(
+                        "requested translation %2d to %.2f mm " "allowed", i + 1, t
+                    )
                 else:
-                    why.append('requested translation %2d to %.2f mm out of '
-                               'limits: %s' % (i + 1, t, w))
-            for i, rot in enumerate(target[self._num_axes:]):
+                    why.append(
+                        "requested translation %2d to %.2f mm out of "
+                        "limits: %s" % (i + 1, t, w)
+                    )
+            for i, rot in enumerate(target[self._num_axes :]):
                 ll, hl = self._calc_rotlimits(i, target)
                 if not ll <= rot <= hl:
-                    why.append('requested rotation %2d to %.2f deg out of '
-                               'limits: (%.3f, %3f)' % (i + 1, rot, ll, hl))
+                    why.append(
+                        "requested rotation %2d to %.2f deg out of "
+                        "limits: (%.3f, %3f)" % (i + 1, rot, ll, hl)
+                    )
             if why:
-                self.log.info('target: %s', target)
-                return False, '; '.join(why)
-            return True, ''
+                self.log.info("target: %s", target)
+                return False, "; ".join(why)
+            return True, ""
 
     def valueInfo(self):
         ret = []
@@ -210,8 +254,7 @@ class MultiAnalyzer(CanReference, IsController, HasTimeout, BaseSequencer):
         return tuple(ret)
 
     def doReadFmtstr(self):
-        return ', '.join('%s = %s' % (v.name, v.fmtstr)
-                         for v in self.valueInfo())
+        return ", ".join("%s = %s" % (v.name, v.fmtstr) for v in self.valueInfo())
 
     def _generateSequence(self, target):
         """Move multidetector to correct scattering angle of multi analyzer.
@@ -220,54 +263,54 @@ class MultiAnalyzer(CanReference, IsController, HasTimeout, BaseSequencer):
         """
         # check if requested positions already reached within precision
         if self.isAtTarget(target=target):
-            self.log.debug('device already at position, nothing to do!')
+            self.log.debug("device already at position, nothing to do!")
             return []
 
         return [
-            SeqMethod(self, '_move_translations', target),
-            SeqMethod(self, '_move_rotations', target),
+            SeqMethod(self, "_move_translations", target),
+            SeqMethod(self, "_move_rotations", target),
         ]
 
     def _move_translations(self, target):
         # first check for translation
         mvt = self._checkPositionReachedTrans(self.doRead(0), target)
         if mvt:
-            self.log.debug('The following translation axes start moving: %r',
-                           mvt)
+            self.log.debug("The following translation axes start moving: %r", mvt)
             # check if translation movement is allowed, i.e. if all
             # rotation axis at reference switch
             if not self._checkRefSwitchRotation():
                 if not self._refrotation():
-                    raise PositionError(self, 'Could not reference rotations')
+                    raise PositionError(self, "Could not reference rotations")
 
-            self.log.debug('all rotation at refswitch, start translation')
+            self.log.debug("all rotation at refswitch, start translation")
             for i, dev in enumerate(self._translation):
                 with self._allowed():
                     dev.move(target[i])
             self._hw_wait(self._translation)
 
             if self._checkPositionReachedTrans(self.doRead(0), target):
-                raise PositionError(self, 'Translation drive not successful')
-            self.log.debug('translation movement done')
+                raise PositionError(self, "Translation drive not successful")
+            self.log.debug("translation movement done")
 
     def _move_rotations(self, target):
         # Rotation Movement
         mvr = self._checkPositionReachedRot(self.doRead(0), target)
         if mvr:
-            self.log.debug('The following rotation axes start moving: %r', mvr)
+            self.log.debug("The following rotation axes start moving: %r", mvr)
             for i in mvr:
                 ll, hl = self._calc_rotlimits(i, target)
                 if not ll <= target[self._num_axes + i] <= hl:
-                    self.log.warning('neighbour is to close; cannot move '
-                                     'rotation!')
+                    self.log.warning("neighbour is to close; cannot move " "rotation!")
                     continue
                 with self._allowed():
                     self._rotation[i].move(target[self._num_axes + i])
             self._hw_wait([self._rotation[i] for i in mvr])
             if self._checkPositionReachedRot(self.doRead(0), target):
-                raise PositionError(self, 'Rotation drive not successful: '
-                                    '%r' % ['%s' % d for d in mvr])
-            self.log.debug('rotation movement done')
+                raise PositionError(
+                    self,
+                    "Rotation drive not successful: " "%r" % ["%s" % d for d in mvr],
+                )
+            self.log.debug("rotation movement done")
 
     def doReset(self):
         for dev in self._rotation + self._translation:
@@ -279,19 +322,23 @@ class MultiAnalyzer(CanReference, IsController, HasTimeout, BaseSequencer):
                 self._seq_thread.join()
                 self._seq_thread = None
             else:
-                raise MoveError(self, 'Cannot reference device, device is '
-                                'still moving (at %s)!' % self._seq_status[1])
+                raise MoveError(
+                    self,
+                    "Cannot reference device, device is "
+                    "still moving (at %s)!" % self._seq_status[1],
+                )
         with self._allowed():
-            self._startSequence([SeqMethod(self, '_checkedRefRot'),
-                                 SeqMethod(self, '_checkedRefTrans')])
+            self._startSequence(
+                [SeqMethod(self, "_checkedRefRot"), SeqMethod(self, "_checkedRefTrans")]
+            )
 
     def _checkedRefRot(self):
         if not self._refrotation():
-            self.log.warning('reference of rotations not successful')
+            self.log.warning("reference of rotations not successful")
 
     def _checkedRefTrans(self):
         if not self._reftranslation():
-            self.log.warning('reference of translations not successful')
+            self.log.warning("reference of translations not successful")
 
     def _hw_wait(self, devices):
         loops = 0
@@ -303,7 +350,7 @@ class MultiAnalyzer(CanReference, IsController, HasTimeout, BaseSequencer):
                 try:
                     done = dev.doStatus(0)[0]
                 except Exception as exc:
-                    dev.log.exception('while waiting')
+                    dev.log.exception("while waiting")
                     final_exc = filterExceptions(exc, final_exc)
                     # remove this device from the waiters - we might still
                     # have its subdevices in the list so that _hw_wait()
@@ -329,7 +376,7 @@ class MultiAnalyzer(CanReference, IsController, HasTimeout, BaseSequencer):
         if self.stoprequest == 0:
             for ax in devlist:
                 if not ax.motor.isAtReference():
-                    self.log.debug('reference: %s', ax.name)
+                    self.log.debug("reference: %s", ax.name)
                     ax.motor.reference()
             multiWait([ax.motor for ax in devlist])
 
@@ -338,8 +385,12 @@ class MultiAnalyzer(CanReference, IsController, HasTimeout, BaseSequencer):
             if ax.motor.isAtReference():
                 check += 1
             else:
-                self.log.warning('%s is not at reference: %r %r', ax.name,
-                                 ax.motor.refpos, ax.motor.read(0))
+                self.log.warning(
+                    "%s is not at reference: %r %r",
+                    ax.name,
+                    ax.motor.refpos,
+                    ax.motor.read(0),
+                )
         return check == len(devlist)
 
     def _refrotation(self):
@@ -354,10 +405,10 @@ class MultiAnalyzer(CanReference, IsController, HasTimeout, BaseSequencer):
     def _printPos(self):
         out = []
         for i, dev in enumerate(self._translation):
-            out.append('translation %2d: %7.2f %s' % (i, dev.read(), dev.unit))
+            out.append("translation %2d: %7.2f %s" % (i, dev.read(), dev.unit))
         for i, dev in enumerate(self._rotation):
-            out.append('rotation    %2d: %7.2f %s' % (i, dev.read(), dev.unit))
-        self.log.debug('%s', '\n'.join(out))
+            out.append("rotation    %2d: %7.2f %s" % (i, dev.read(), dev.unit))
+        self.log.debug("%s", "\n".join(out))
 
     def _checkRefSwitchRotation(self, rotation=None):
         if rotation is None:
@@ -366,54 +417,76 @@ class MultiAnalyzer(CanReference, IsController, HasTimeout, BaseSequencer):
             tocheck = [self._rotation[i].motor for i in rotation]
         checked = [m.isAtReference() for m in tocheck]
         for c, d in zip(checked, tocheck):
-            self.log.debug('rot switch for %s ok, check: %s', d, c)
+            self.log.debug("rot switch for %s ok, check: %s", d, c)
         return all(checked)
 
     def _rotlimits(self, delta):
-        rmini = -60.
+        rmini = -60.0
         if -13 < delta < -11.9:
-            rmini = -50 + (delta + 20.) * 3
+            rmini = -50 + (delta + 20.0) * 3
         elif -11.9 <= delta <= -2.8:
             rmini = -23.3
         elif delta > -2.8:
             rmini = -34.5 - delta * 4
         if rmini < -60:
-            rmini = -60.
+            rmini = -60.0
         return rmini, 1.7  # 1.7 max of the absolute limits of the rotations
 
     def _calc_rotlimits(self, trans, target):
-        delta = target[trans + 1] - target[trans] \
-            if 0 <= trans < self._num_axes - 1 else 12
+        delta = (
+            target[trans + 1] - target[trans] if 0 <= trans < self._num_axes - 1 else 12
+        )
         rmin, rmax = self._rotlimits(delta)
-        self.log.debug('calculated rot limits (%d %d): %.1f -> [%.1f, %.1f]',
-                       trans + 1, trans, delta, rmin, rmax)
+        self.log.debug(
+            "calculated rot limits (%d %d): %.1f -> [%.1f, %.1f]",
+            trans + 1,
+            trans,
+            delta,
+            rmin,
+            rmax,
+        )
         return rmin, rmax
 
     def _checkPositionReachedTrans(self, position, target=None):
         if target is None:
             return []
-        mv = [i for i, (t, p, trans) in enumerate(
-              zip(target[0:self._num_axes], position[0:self._num_axes],
-                  self._translation)) if abs(t - p) > trans.precision]
+        mv = [
+            i
+            for i, (t, p, trans) in enumerate(
+                zip(
+                    target[0 : self._num_axes],
+                    position[0 : self._num_axes],
+                    self._translation,
+                )
+            )
+            if abs(t - p) > trans.precision
+        ]
         for i in range(self._num_axes):
             if i in mv:
-                self.log.debug('xx%2d translation start moving', i + 1)
+                self.log.debug("xx%2d translation start moving", i + 1)
             else:
-                self.log.debug('xx%2d translation: nothing to do', i + 1)
+                self.log.debug("xx%2d translation: nothing to do", i + 1)
         return mv
 
     def _checkPositionReachedRot(self, position, target=None):
         if target is None:
             return []
-        mv = [i for i, (t, p, rot) in enumerate(
-              zip(target[self._num_axes:2 * self._num_axes],
-                  position[self._num_axes:2 * self._num_axes],
-                  self._rotation)) if abs(t - p) > rot.precision]
+        mv = [
+            i
+            for i, (t, p, rot) in enumerate(
+                zip(
+                    target[self._num_axes : 2 * self._num_axes],
+                    position[self._num_axes : 2 * self._num_axes],
+                    self._rotation,
+                )
+            )
+            if abs(t - p) > rot.precision
+        ]
         for i in range(self._num_axes):
             if i in mv:
-                self.log.debug('xx%2d rotation start moving', i + 1)
+                self.log.debug("xx%2d rotation start moving", i + 1)
             else:
-                self.log.debug('xx%2d rotation: nothing to do', i + 1)
+                self.log.debug("xx%2d rotation: nothing to do", i + 1)
         return mv
 
     def doIsAtTarget(self, pos, target):

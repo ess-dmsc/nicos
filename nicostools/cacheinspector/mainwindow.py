@@ -25,8 +25,14 @@ from os import path
 from os.path import join
 
 from nicos.guisupport.colors import colors
-from nicos.guisupport.qt import QDialog, QMainWindow, Qt, QTreeWidgetItem, \
-    QWidgetItem, uic
+from nicos.guisupport.qt import (
+    QDialog,
+    QMainWindow,
+    Qt,
+    QTreeWidgetItem,
+    QWidgetItem,
+    uic,
+)
 from nicos.guisupport.utils import setBackgroundColor
 
 # The pylint errors must be fixed, but later
@@ -37,17 +43,17 @@ from .watcher import WatcherWindow
 
 
 class MainWindow(QMainWindow):
-
     def __init__(self, cacheclient, parent=None):
         QMainWindow.__init__(self)
         colors.init_palette(self.palette())
         self.client = cacheclient
         self._treeitems = {}
-        uic.loadUi(join(path.dirname(path.abspath(__file__)), 'ui',
-                        'mainwindow.ui'), self)
+        uic.loadUi(
+            join(path.dirname(path.abspath(__file__)), "ui", "mainwindow.ui"), self
+        )
         self.watcherWindow = WatcherWindow(self)
         self.setupEvents()
-        self.ipAddress = '127.0.0.1'
+        self.ipAddress = "127.0.0.1"
         self.port = 14869
         self.showTimeStamp = True
         self.showTTL = True
@@ -87,7 +93,7 @@ class MainWindow(QMainWindow):
             return
         self.ipAddress = dlg.valueServerAddress.text()
         self.port = int(dlg.valuePort.text())
-        self.client.connect('%s:%d' % (self.ipAddress, self.port))
+        self.client.connect("%s:%d" % (self.ipAddress, self.port))
 
     def closeConnection(self):
         """Closes the connection of the cache inspector."""
@@ -139,20 +145,20 @@ class MainWindow(QMainWindow):
     def updateTree(self):
         """Updates the elements shown in the tree."""
         self.clearCacheTree()
-        filterStr = self.valueFilter.text() or ''
+        filterStr = self.valueFilter.text() or ""
         for key in self.client.keys():
             if filterStr not in key:
                 continue
             # split the key into parts
-            parts = key.split('/')
+            parts = key.split("/")
             # keys without category need a node too
             if len(parts) == 1:
-                parts = ['<no category>'] + parts
+                parts = ["<no category>"] + parts
             # add a node to the tree for each part of the key except the last
-            prefix = ''
+            prefix = ""
             parent = None
             for part in parts[:-1]:
-                prefix = part if not prefix else prefix + '/' + part
+                prefix = part if not prefix else prefix + "/" + part
                 node = self._treeitems.get(prefix)
                 if not node:
                     node = QTreeWidgetItem()
@@ -173,14 +179,20 @@ class MainWindow(QMainWindow):
         self.clearWidgetView()
         prefix = item.data(0, 32)
         self.labelPrefix.setText(prefix)
-        if prefix == '<no category>':
-            prefix = ''
-        keys = [key for key in self.client.keys()
-                if key.rpartition('/')[0] == prefix]
+        if prefix == "<no category>":
+            prefix = ""
+        keys = [key for key in self.client.keys() if key.rpartition("/")[0] == prefix]
         for key in sorted(keys):
             entry = self.client.get(key)
-            widget = EntryWidget(self.client, self.watcherWindow, entry,
-                                 True, self.showTimeStamp, self.showTTL, self)
+            widget = EntryWidget(
+                self.client,
+                self.watcherWindow,
+                entry,
+                True,
+                self.showTimeStamp,
+                self.showTTL,
+                self,
+            )
             self.layoutContent.addWidget(widget)
         self.layoutContent.addStretch()
 
@@ -191,7 +203,7 @@ class MainWindow(QMainWindow):
 
     def clearWidgetView(self):
         """Removes all widgets in the right pane."""
-        for i in range(self.layoutContent.count()-1, -1, -1):
+        for i in range(self.layoutContent.count() - 1, -1, -1):
             item = self.layoutContent.takeAt(i)
             if isinstance(item, QWidgetItem):
                 item.widget().deleteLater()

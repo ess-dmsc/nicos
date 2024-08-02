@@ -38,12 +38,11 @@ from nicos.utils import byteBuffer
 
 
 class DaemonSinkHandler(DataSinkHandler):
-
     def begin(self):
         self._dataset_emitted = False
 
     def _emitDataset(self):
-        session.emitfunc('dataset', ScanData(self.dataset))
+        session.emitfunc("dataset", ScanData(self.dataset))
 
     def addSubset(self, subset):
         if subset.settype != POINT:
@@ -55,8 +54,7 @@ class DaemonSinkHandler(DataSinkHandler):
         else:
             xvalues = subset.devvaluelist + subset.envvaluelist
             yvalues = subset.detvaluelist
-            session.emitfunc('datapoint',
-                             (str(self.dataset.uid), xvalues, yvalues))
+            session.emitfunc("datapoint", (str(self.dataset.uid), xvalues, yvalues))
 
 
 class DaemonSink(DataSink):
@@ -71,18 +69,18 @@ class DaemonSink(DataSink):
     handlerclass = DaemonSinkHandler
 
     parameter_overrides = {
-        'settypes': Override(default=[SCAN, SUBSCAN]),
+        "settypes": Override(default=[SCAN, SUBSCAN]),
     }
 
     def isActive(self, dataset):
         from nicos.services.daemon.session import DaemonSession
+
         if not isinstance(session, DaemonSession):
             return False
         return DataSink.isActive(self, dataset)
 
 
 class LiveViewSinkHandler(DataSinkHandler):
-
     def __init__(self, sink, dataset, detector):
         DataSinkHandler.__init__(self, sink, dataset, detector)
 
@@ -138,8 +136,8 @@ class LiveViewSinkHandler(DataSinkHandler):
 
         """
         return {
-            'x': {'define': 'classic'},
-            'y': {'define': 'classic'},
+            "x": {"define": "classic"},
+            "y": {"define": "classic"},
         }
 
     def getLabelArrays(self, result):
@@ -173,7 +171,7 @@ class LiveViewSinkHandler(DataSinkHandler):
                 dtype=data.dtype.str,
                 shape=data.shape,
                 labels=self.getLabelDescs(results),
-                plotcount=self.getDataSetCount(results)
+                plotcount=self.getDataSetCount(results),
             )
             datadescs.append(datadesc)
 
@@ -186,8 +184,10 @@ class LiveViewSinkHandler(DataSinkHandler):
                 datadescs=datadescs,
             )
 
-            labelbuffers = [byteBuffer(np.ascontiguousarray(arr))
-                            for arr in self.getLabelArrays(result)]
+            labelbuffers = [
+                byteBuffer(np.ascontiguousarray(arr))
+                for arr in self.getLabelArrays(result)
+            ]
 
             session.updateLiveData(parameters, databuffers, labelbuffers)
 
@@ -217,38 +217,39 @@ class LiveViewSink(ImageSink):
     """
 
     parameters = {
-        'datasets': Param('Amount of datasets in each liveimage.',
-                          type=listof(int), default=[1])
+        "datasets": Param(
+            "Amount of datasets in each liveimage.", type=listof(int), default=[1]
+        )
     }
 
     parameter_overrides = {
         # this is fixed string for labeling cached live data
-        'filenametemplate': Override(mandatory=False, userparam=False,
-                                     default=['<Live>@%d']),
+        "filenametemplate": Override(
+            mandatory=False, userparam=False, default=["<Live>@%d"]
+        ),
     }
 
     handlerclass = LiveViewSinkHandler
 
 
 class SerializedSinkHandler(DataSinkHandler):
-
     def end(self):
-        serial_file = path.join(session.experiment.datapath, '.all_datasets')
+        serial_file = path.join(session.experiment.datapath, ".all_datasets")
         if path.isfile(serial_file):
             try:
-                with open(serial_file, 'rb') as fp:
+                with open(serial_file, "rb") as fp:
                     datasets = pickle.load(fp)
             except Exception:
-                self.log.warning('could not load serialized datasets', exc=1)
+                self.log.warning("could not load serialized datasets", exc=1)
                 datasets = {}
         else:
             datasets = {}
         datasets[self.dataset.counter] = self.dataset
         try:
-            with open(serial_file, 'wb') as fp:
+            with open(serial_file, "wb") as fp:
                 pickle.dump(datasets, fp, pickle.HIGHEST_PROTOCOL)
         except Exception:
-            self.log.warning('could not save serialized datasets', exc=1)
+            self.log.warning("could not save serialized datasets", exc=1)
 
 
 class SerializedSink(DataSink):
@@ -262,5 +263,5 @@ class SerializedSink(DataSink):
     handlerclass = SerializedSinkHandler
 
     parameter_overrides = {
-        'settypes': Override(default=[SCAN, SUBSCAN]),
+        "settypes": Override(default=[SCAN, SUBSCAN]),
     }

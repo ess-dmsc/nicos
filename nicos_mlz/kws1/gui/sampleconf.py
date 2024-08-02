@@ -31,29 +31,47 @@ import time
 from nicos.clients.gui.panels import Panel
 from nicos.clients.gui.utils import dialogFromUi, loadUi
 from nicos.guisupport import typedvalue
-from nicos.guisupport.qt import QDialog, QDialogButtonBox, QFileDialog, \
-    QFrame, QLineEdit, QListWidgetItem, QMenu, QMessageBox, QRadioButton, \
-    QRegularExpression, QRegularExpressionValidator, QTableWidgetItem, \
-    QVBoxLayout, pyqtSlot
+from nicos.guisupport.qt import (
+    QDialog,
+    QDialogButtonBox,
+    QFileDialog,
+    QFrame,
+    QLineEdit,
+    QListWidgetItem,
+    QMenu,
+    QMessageBox,
+    QRadioButton,
+    QRegularExpression,
+    QRegularExpressionValidator,
+    QTableWidgetItem,
+    QVBoxLayout,
+    pyqtSlot,
+)
 from nicos.guisupport.utils import DoubleValidator
 from nicos.utils import findResource
 
-SAMPLE_KEYS = ['aperture', 'position', 'timefactor',
-               'thickness', 'detoffset', 'comment']
+SAMPLE_KEYS = [
+    "aperture",
+    "position",
+    "timefactor",
+    "thickness",
+    "detoffset",
+    "comment",
+]
 
 
 def configToFrame(frame, config):
-    frame.nameBox.setText(config['name'])
-    frame.commentBox.setText(config['comment'])
-    frame.offsetBox.setText(str(config['detoffset']))
-    frame.thickBox.setText(str(config['thickness']))
-    frame.factorBox.setText(str(config['timefactor']))
-    frame.posTbl.setRowCount(len(config['position']))
-    frame.apXBox.setText(str(config['aperture'][0]))
-    frame.apYBox.setText(str(config['aperture'][1]))
-    frame.apWBox.setText(str(config['aperture'][2]))
-    frame.apHBox.setText(str(config['aperture'][3]))
-    for i, (devname, position) in enumerate(config['position'].items()):
+    frame.nameBox.setText(config["name"])
+    frame.commentBox.setText(config["comment"])
+    frame.offsetBox.setText(str(config["detoffset"]))
+    frame.thickBox.setText(str(config["thickness"]))
+    frame.factorBox.setText(str(config["timefactor"]))
+    frame.posTbl.setRowCount(len(config["position"]))
+    frame.apXBox.setText(str(config["aperture"][0]))
+    frame.apYBox.setText(str(config["aperture"][1]))
+    frame.apWBox.setText(str(config["aperture"][2]))
+    frame.apHBox.setText(str(config["aperture"][3]))
+    for i, (devname, position) in enumerate(config["position"].items()):
         frame.posTbl.setItem(i, 0, QTableWidgetItem(devname))
         frame.posTbl.setItem(i, 1, QTableWidgetItem(str(position)))
     frame.posTbl.resizeRowsToContents()
@@ -67,82 +85,106 @@ def configFromFrame(frame):
         devpos = float(frame.posTbl.item(i, 1).text())
         position[devname] = devpos
     return {
-        'name': frame.nameBox.text(),
-        'comment': frame.commentBox.text(),
-        'detoffset': float(frame.offsetBox.text()),
-        'thickness': float(frame.thickBox.text()),
-        'timefactor': float(frame.factorBox.text()),
-        'aperture': (float(frame.apXBox.text()),
-                     float(frame.apYBox.text()),
-                     float(frame.apWBox.text()),
-                     float(frame.apHBox.text())),
-        'position': position,
+        "name": frame.nameBox.text(),
+        "comment": frame.commentBox.text(),
+        "detoffset": float(frame.offsetBox.text()),
+        "thickness": float(frame.thickBox.text()),
+        "timefactor": float(frame.factorBox.text()),
+        "aperture": (
+            float(frame.apXBox.text()),
+            float(frame.apYBox.text()),
+            float(frame.apWBox.text()),
+            float(frame.apHBox.text()),
+        ),
+        "position": position,
     }
 
 
 class ConfigEditDialog(QDialog):
-
     def __init__(self, parent, client, instrument, configs, config=None):
         QDialog.__init__(self, parent)
         self.instrument = instrument
         self.configs = configs
         self.client = client
-        self.setWindowTitle('Sample configuration')
+        self.setWindowTitle("Sample configuration")
         layout = QVBoxLayout()
         self.frm = QFrame(self)
-        loadUi(self.frm, findResource('nicos_mlz/kws1/gui/sampleconf_one.ui'))
+        loadUi(self.frm, findResource("nicos_mlz/kws1/gui/sampleconf_one.ui"))
         self.frm.addDevBtn.clicked.connect(self.on_addDevBtn_clicked)
         self.frm.delDevBtn.clicked.connect(self.on_delDevBtn_clicked)
         self.frm.readDevsBtn.clicked.connect(self.on_readDevsBtn_clicked)
         self.frm.readApBtn.clicked.connect(self.on_readApBtn_clicked)
         self.frm.nameBox.setValidator(
-            QRegularExpressionValidator(QRegularExpression(r'[A-Za-z0-9.,=+-]{1,20}'),
-                                        self))
+            QRegularExpressionValidator(
+                QRegularExpression(r"[A-Za-z0-9.,=+-]{1,20}"), self
+            )
+        )
         box = QDialogButtonBox(self)
-        box.setStandardButtons(QDialogButtonBox.StandardButton.Ok |
-                               QDialogButtonBox.StandardButton.Cancel)
+        box.setStandardButtons(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
         box.accepted.connect(self.maybeAccept)
         box.rejected.connect(self.reject)
         layout.addWidget(self.frm)
         layout.addWidget(box)
         self.setLayout(layout)
-        for box in [self.frm.offsetBox, self.frm.thickBox, self.frm.factorBox,
-                    self.frm.apXBox, self.frm.apYBox, self.frm.apWBox,
-                    self.frm.apHBox]:
+        for box in [
+            self.frm.offsetBox,
+            self.frm.thickBox,
+            self.frm.factorBox,
+            self.frm.apXBox,
+            self.frm.apYBox,
+            self.frm.apWBox,
+            self.frm.apHBox,
+        ]:
             box.setValidator(DoubleValidator(self))
         if config is not None:
             configToFrame(self.frm, config)
 
     def maybeAccept(self):
         if not self.frm.nameBox.text():
-            QMessageBox.warning(self, 'Error', 'Please enter a sample name.')
+            QMessageBox.warning(self, "Error", "Please enter a sample name.")
             self.frm.nameBox.setFocus()
             return
         name = self.frm.nameBox.text()
-        if name in [config['name'] for config in self.configs]:
-            QMessageBox.warning(self, 'Error', 'This sample name is already '
-                                'used, please use a different one.')
+        if name in [config["name"] for config in self.configs]:
+            QMessageBox.warning(
+                self,
+                "Error",
+                "This sample name is already " "used, please use a different one.",
+            )
             self.frm.nameBox.setFocus()
             return
-        for box in [self.frm.offsetBox, self.frm.thickBox, self.frm.factorBox,
-                    self.frm.apXBox, self.frm.apYBox, self.frm.apWBox,
-                    self.frm.apHBox]:
+        for box in [
+            self.frm.offsetBox,
+            self.frm.thickBox,
+            self.frm.factorBox,
+            self.frm.apXBox,
+            self.frm.apYBox,
+            self.frm.apWBox,
+            self.frm.apHBox,
+        ]:
             if not box.text():
-                QMessageBox.warning(self, 'Error', 'Please enter valid values '
-                                    'for all input fields.')
+                QMessageBox.warning(
+                    self, "Error", "Please enter valid values " "for all input fields."
+                )
                 return
         for i in range(self.frm.posTbl.rowCount()):
             devname = self.frm.posTbl.item(i, 0).text()
             devpos = self.frm.posTbl.item(i, 1).text()
-            if not devname or devname.startswith('<'):
-                QMessageBox.warning(self, 'Error', '%r is not a valid device '
-                                    'name.' % devname)
+            if not devname or devname.startswith("<"):
+                QMessageBox.warning(
+                    self, "Error", "%r is not a valid device " "name." % devname
+                )
                 return
             try:
                 devpos = float(devpos)
             except ValueError:
-                QMessageBox.warning(self, 'Error', '%r is not a valid position'
-                                    ' for device %r.' % (devpos, devname))
+                QMessageBox.warning(
+                    self,
+                    "Error",
+                    "%r is not a valid position" " for device %r." % (devpos, devname),
+                )
                 return
         self.accept()
 
@@ -156,13 +198,16 @@ class ConfigEditDialog(QDialog):
 
     def on_addDevBtn_clicked(self):
         devlist = self.client.getDeviceList(
-            'nicos.core.device.Moveable',
-            special_clause='d.valuetype is float')
-        devlist = [item for item in devlist
-                   if item.startswith(('sam_', 'hexapod_'))
-                   or '_sam_' in item]
-        dlg = dialogFromUi(self, findResource(
-            'nicos_mlz/kws1/gui/sampleconf_adddev.ui'))
+            "nicos.core.device.Moveable", special_clause="d.valuetype is float"
+        )
+        devlist = [
+            item
+            for item in devlist
+            if item.startswith(("sam_", "hexapod_")) or "_sam_" in item
+        ]
+        dlg = dialogFromUi(
+            self, findResource("nicos_mlz/kws1/gui/sampleconf_adddev.ui")
+        )
         dlg.widget = None
 
         def callback(index):
@@ -173,6 +218,7 @@ class ConfigEditDialog(QDialog):
             dlg.widget = typedvalue.DeviceValueEdit(dlg, dev=devname)
             dlg.widget.setClient(self.client)
             dlg.valueFrame.layout().insertWidget(0, dlg.widget)
+
         dlg.devBox.currentIndexChanged.connect(callback)
         dlg.devBox.addItems(devlist)
         if not dlg.exec():
@@ -186,22 +232,22 @@ class ConfigEditDialog(QDialog):
         self.frm.posTbl.removeRow(srow)
 
     def _readDev(self, name):
-        rv = self.client.eval('%s.format(%s.read())' % (name, name), None)
+        rv = self.client.eval("%s.format(%s.read())" % (name, name), None)
         if rv is None:
-            QMessageBox.warning(self, 'Error', 'Could not read device %s!' %
-                                name)
-            return '0'
+            QMessageBox.warning(self, "Error", "Could not read device %s!" % name)
+            return "0"
         return rv
 
     def on_readDevsBtn_clicked(self):
-        dlg = dialogFromUi(self, findResource(
-            'nicos_mlz/kws1/gui/sampleconf_readpos.ui'))
-        if self.instrument == 'kws1':
+        dlg = dialogFromUi(
+            self, findResource("nicos_mlz/kws1/gui/sampleconf_readpos.ui")
+        )
+        if self.instrument == "kws1":
             dlg.kws3Box.hide()
-        elif self.instrument == 'kws2':
+        elif self.instrument == "kws2":
             dlg.kws3Box.hide()
             dlg.hexaBox.hide()
-        elif self.instrument == 'kws3':
+        elif self.instrument == "kws3":
             dlg.rotBox.hide()
             dlg.transBox.hide()
             dlg.hexaBox.hide()
@@ -209,38 +255,37 @@ class ConfigEditDialog(QDialog):
         if not dlg.exec():
             return
         if dlg.rotBox.isChecked():
-            self._addRow('sam_rot', self._readDev('sam_rot'))
+            self._addRow("sam_rot", self._readDev("sam_rot"))
         if dlg.transBox.isChecked():
-            self._addRow('sam_trans_x', self._readDev('sam_trans_x'))
-            self._addRow('sam_trans_y', self._readDev('sam_trans_y'))
+            self._addRow("sam_trans_x", self._readDev("sam_trans_x"))
+            self._addRow("sam_trans_y", self._readDev("sam_trans_y"))
         if dlg.hexaBox.isChecked():
-            for axis in ('dt', 'tx', 'ty', 'tz', 'rx', 'ry', 'rz'):
-                self._addRow('hexapod_' + axis,
-                             self._readDev('hexapod_' + axis))
+            for axis in ("dt", "tx", "ty", "tz", "rx", "ry", "rz"):
+                self._addRow("hexapod_" + axis, self._readDev("hexapod_" + axis))
         if dlg.kws3Box.isChecked():
-            self._addRow('sam_x', self._readDev('sam_x'))
-            self._addRow('sam_y', self._readDev('sam_y'))
+            self._addRow("sam_x", self._readDev("sam_x"))
+            self._addRow("sam_y", self._readDev("sam_y"))
 
     def on_readApBtn_clicked(self):
-        if self.instrument != 'kws3':
-            rv = self.client.eval('ap_sam.read()', None)
+        if self.instrument != "kws3":
+            rv = self.client.eval("ap_sam.read()", None)
         else:
-            rv = self.client.eval('sam_ap.read()', None)
+            rv = self.client.eval("sam_ap.read()", None)
         if rv is None:
-            QMessageBox.warning(self, 'Error', 'Could not read aperture!')
+            QMessageBox.warning(self, "Error", "Could not read aperture!")
             return
-        self.frm.apXBox.setText('%.2f' % rv[0])
-        self.frm.apYBox.setText('%.2f' % rv[1])
-        self.frm.apWBox.setText('%.2f' % rv[2])
-        self.frm.apHBox.setText('%.2f' % rv[3])
+        self.frm.apXBox.setText("%.2f" % rv[0])
+        self.frm.apYBox.setText("%.2f" % rv[1])
+        self.frm.apWBox.setText("%.2f" % rv[2])
+        self.frm.apHBox.setText("%.2f" % rv[3])
 
 
 class KWSSamplePanel(Panel):
-    panelName = 'KWS sample setup'
+    panelName = "KWS sample setup"
 
     def __init__(self, parent, client, options):
         Panel.__init__(self, parent, client, options)
-        loadUi(self, findResource('nicos_mlz/kws1/gui/sampleconf.ui'))
+        loadUi(self, findResource("nicos_mlz/kws1/gui/sampleconf.ui"))
         self.sampleGroup.setEnabled(False)
         self.frame.setLayout(QVBoxLayout())
 
@@ -261,8 +306,8 @@ class KWSSamplePanel(Panel):
         self.configs = []
         self.dirty = False
         self.filename = None
-        self.holder_info = options.get('holder_info', [])
-        self.instrument = options.get('instrument', 'kws1')
+        self.holder_info = options.get("holder_info", [])
+        self.instrument = options.get("instrument", "kws1")
 
     @pyqtSlot()
     def on_actionEmpty_triggered(self):
@@ -274,23 +319,22 @@ class KWSSamplePanel(Panel):
     def on_actionGenerate_triggered(self):
         def read_axes():
             ax1, ax2 = dlg._info[2], dlg._info[4]
-            for (ax, box) in [(ax1, dlg.ax1Box), (ax2, dlg.ax2Box)]:
+            for ax, box in [(ax1, dlg.ax1Box), (ax2, dlg.ax2Box)]:
                 if not ax:
                     continue
-                x = self.client.eval('%s.read()' % ax, None)
+                x = self.client.eval("%s.read()" % ax, None)
                 if x is None:
-                    QMessageBox.warning(dlg, 'Error',
-                                        'Could not read %s.' % ax)
+                    QMessageBox.warning(dlg, "Error", "Could not read %s." % ax)
                     return
-                box.setText('%.1f' % x)
+                box.setText("%.1f" % x)
 
         def btn_toggled(checked):
             if checked:
                 dlg._info = dlg.sender()._info
                 ax1, ax2 = dlg._info[2], dlg._info[4]
                 for ax, lbl, box, revbox in [
-                        (ax1, dlg.ax1Lbl, dlg.ax1Box, dlg.ax1RevBox),
-                        (ax2, dlg.ax2Lbl, dlg.ax2Box, None)
+                    (ax1, dlg.ax1Lbl, dlg.ax1Box, dlg.ax1RevBox),
+                    (ax2, dlg.ax2Lbl, dlg.ax2Box, None),
                 ]:
                     if ax:
                         lbl.setText(ax)
@@ -298,15 +342,14 @@ class KWSSamplePanel(Panel):
                         box.show()
                         if revbox:
                             revbox.show()
-                            revbox.setText('%s starts at far end' % ax)
+                            revbox.setText("%s starts at far end" % ax)
                     else:
                         lbl.hide()
                         box.hide()
                         if revbox:
                             revbox.hide()
 
-        dlg = dialogFromUi(self, findResource(
-            'nicos_mlz/kws1/gui/sampleconf_gen.ui'))
+        dlg = dialogFromUi(self, findResource("nicos_mlz/kws1/gui/sampleconf_gen.ui"))
         dlg.ax1Box.setValidator(DoubleValidator(self))
         dlg.ax2Box.setValidator(DoubleValidator(self))
         dlg.readBtn.clicked.connect(read_axes)
@@ -341,18 +384,18 @@ class KWSSamplePanel(Panel):
                 if ax2:
                     position[ax2] = round(sax2 + i * dax2, 1)
                 config = dict(
-                    name = str(n),
-                    comment = '',
-                    detoffset = -335.0,
-                    thickness = 1.0,
-                    timefactor = 1.0,
-                    aperture = (0, 0, 10, 10),
-                    position = position,
+                    name=str(n),
+                    comment="",
+                    detoffset=-335.0,
+                    thickness=1.0,
+                    timefactor=1.0,
+                    aperture=(0, 0, 10, 10),
+                    position=position,
                 )
                 self.configs.append(config)
         firstitem = None
         for config in self.configs:
-            newitem = QListWidgetItem(config['name'], self.list)
+            newitem = QListWidgetItem(config["name"], self.list)
             firstitem = firstitem or newitem
         # select the first item
         self.list.setCurrentItem(firstitem)
@@ -364,15 +407,15 @@ class KWSSamplePanel(Panel):
 
     @pyqtSlot()
     def on_retrieveBtn_clicked(self):
-        sampleconf = self.client.eval('Exp.sample.samples', {})
+        sampleconf = self.client.eval("Exp.sample.samples", {})
         sampleconf = sorted(sampleconf.items())
-        self.configs = [dict(c[1]) for c in sampleconf if 'thickness' in c[1]]
+        self.configs = [dict(c[1]) for c in sampleconf if "thickness" in c[1]]
         # convert readonlydict to normal dict
         for config in self.configs:
-            config['position'] = dict(config['position'].items())
+            config["position"] = dict(config["position"].items())
         newitem = None
         for config in self.configs:
-            newitem = QListWidgetItem(config['name'], self.list)
+            newitem = QListWidgetItem(config["name"], self.list)
         # select the last item
         if newitem:
             self.list.setCurrentItem(newitem)
@@ -383,22 +426,25 @@ class KWSSamplePanel(Panel):
 
     @pyqtSlot()
     def on_openFileBtn_clicked(self):
-        initialdir = self.client.eval('session.experiment.scriptpath', '')
-        fn = QFileDialog.getOpenFileName(self, 'Open sample file', initialdir,
-                                         'Sample files (*.py)')[0]
+        initialdir = self.client.eval("session.experiment.scriptpath", "")
+        fn = QFileDialog.getOpenFileName(
+            self, "Open sample file", initialdir, "Sample files (*.py)"
+        )[0]
         if not fn:
             return
         try:
             self.configs = parse_sampleconf(fn)
         except Exception as err:
-            self.showError('Could not read file: %s\n\n'
-                           'Are you sure this is a sample file?' % err)
+            self.showError(
+                "Could not read file: %s\n\n"
+                "Are you sure this is a sample file?" % err
+            )
         else:
             self.fileGroup.setEnabled(False)
             self.sampleGroup.setEnabled(True)
             newitem = None
             for config in self.configs:
-                newitem = QListWidgetItem(config['name'], self.list)
+                newitem = QListWidgetItem(config["name"], self.list)
             # select the last item
             if newitem:
                 self.list.setCurrentItem(newitem)
@@ -411,22 +457,23 @@ class KWSSamplePanel(Panel):
             return
         do_apply = role == QDialogButtonBox.ButtonRole.ApplyRole
         if self.dirty:
-            initialdir = self.client.eval('session.experiment.scriptpath', '')
-            fn = QFileDialog.getSaveFileName(self, 'Save sample file',
-                                             initialdir, 'Sample files (*.py)')[0]
+            initialdir = self.client.eval("session.experiment.scriptpath", "")
+            fn = QFileDialog.getSaveFileName(
+                self, "Save sample file", initialdir, "Sample files (*.py)"
+            )[0]
             if not fn:
                 return False
-            if not fn.endswith('.py'):
-                fn += '.py'
+            if not fn.endswith(".py"):
+                fn += ".py"
             self.filename = fn
         try:
             script = self._generate(self.filename)
         except Exception as err:
-            self.showError('Could not write file: %s' % err)
+            self.showError("Could not write file: %s" % err)
         else:
             if do_apply:
                 self.client.run(script, self.filename)
-                self.showInfo('Sample info has been activated.')
+                self.showInfo("Sample info has been activated.")
             self.closeWindow()
 
     def on_buttonBox_rejected(self):
@@ -444,8 +491,8 @@ class KWSSamplePanel(Panel):
         self._clearDisplay()
         index = self.list.row(item)
         frm = QFrame(self)
-        loadUi(frm, findResource('nicos_mlz/kws1/gui/sampleconf_one.ui'))
-        frm.whatLbl.setText('Sample configuration')
+        loadUi(frm, findResource("nicos_mlz/kws1/gui/sampleconf_one.ui"))
+        frm.whatLbl.setText("Sample configuration")
         configToFrame(frm, self.configs[index])
         frm.addDevBtn.setVisible(False)
         frm.delDevBtn.setVisible(False)
@@ -464,15 +511,14 @@ class KWSSamplePanel(Panel):
 
     @pyqtSlot()
     def on_newBtn_clicked(self):
-        dlg = ConfigEditDialog(self, self.client, self.instrument,
-                               self.configs)
+        dlg = ConfigEditDialog(self, self.client, self.instrument, self.configs)
         if not dlg.exec():
             return
         self.dirty = True
         config = configFromFrame(dlg.frm)
-        dlg.frm.whatLbl.setText('New sample configuration')
+        dlg.frm.whatLbl.setText("New sample configuration")
         self.configs.append(config)
-        newitem = QListWidgetItem(config['name'], self.list)
+        newitem = QListWidgetItem(config["name"], self.list)
         self.list.setCurrentItem(newitem)
         self.on_list_itemClicked(newitem)
 
@@ -481,17 +527,20 @@ class KWSSamplePanel(Panel):
         index = self.list.currentRow()
         if index < 0:
             return
-        dlg = ConfigEditDialog(self, self.client, self.instrument,
-                               [config for (i, config) in
-                                enumerate(self.configs) if i != index],
-                               self.configs[index])
+        dlg = ConfigEditDialog(
+            self,
+            self.client,
+            self.instrument,
+            [config for (i, config) in enumerate(self.configs) if i != index],
+            self.configs[index],
+        )
         if not dlg.exec():
             return
         self.dirty = True
         config = configFromFrame(dlg.frm)
         self.configs[index] = config
         listitem = self.list.item(index)
-        listitem.setText(config['name'])
+        listitem.setText(config["name"])
         self.on_list_itemClicked(listitem)
 
     @pyqtSlot()
@@ -518,42 +567,44 @@ class KWSSamplePanel(Panel):
 
     @pyqtSlot()
     def on_actionCopyAperture_triggered(self):
-        self._copy_key('aperture')
+        self._copy_key("aperture")
 
     @pyqtSlot()
     def on_actionCopyDetOffset_triggered(self):
-        self._copy_key('detoffset')
+        self._copy_key("detoffset")
 
     @pyqtSlot()
     def on_actionCopyThickness_triggered(self):
-        self._copy_key('thickness')
+        self._copy_key("thickness")
 
     @pyqtSlot()
     def on_actionCopyTimeFactor_triggered(self):
-        self._copy_key('timefactor')
+        self._copy_key("timefactor")
 
     @pyqtSlot()
     def on_actionCopyAll_triggered(self):
-        self._copy_key('aperture')
-        self._copy_key('detoffset')
-        self._copy_key('thickness')
-        self._copy_key('timefactor')
+        self._copy_key("aperture")
+        self._copy_key("detoffset")
+        self._copy_key("thickness")
+        self._copy_key("timefactor")
 
     def _generate(self, filename):
-        script = ['# KWS sample file for NICOS\n',
-                  '# Written: %s\n\n' % time.asctime(),
-                  'ClearSamples()\n']
-        for (i, config) in enumerate(self.configs, start=1):
-            script.append('SetSample(%d, %r, ' % (i, config['name']))
+        script = [
+            "# KWS sample file for NICOS\n",
+            "# Written: %s\n\n" % time.asctime(),
+            "ClearSamples()\n",
+        ]
+        for i, config in enumerate(self.configs, start=1):
+            script.append("SetSample(%d, %r, " % (i, config["name"]))
             for key in SAMPLE_KEYS:
-                script.append('%s=%r' % (key, config[key]))
-                script.append(', ')
+                script.append("%s=%r" % (key, config[key]))
+                script.append(", ")
             del script[-1]  # remove last comma
-            script.append(')\n')
+            script.append(")\n")
         if filename is not None:
-            with open(filename, 'w', encoding='utf-8') as fp:
+            with open(filename, "w", encoding="utf-8") as fp:
                 fp.writelines(script)
-        return ''.join(script)
+        return "".join(script)
 
 
 class MockSample:
@@ -566,24 +617,26 @@ class MockSample:
         self.configs = []
 
     def define(self, _num, name, **entry):
-        entry['name'] = name
+        entry["name"] = name
         for key in SAMPLE_KEYS:
             if key not in entry:
-                raise ValueError('missing key %r in sample entry' % key)
+                raise ValueError("missing key %r in sample entry" % key)
         self.configs.append(entry)
 
 
 def parse_sampleconf(filename):
     builtin_ns = vars(builtins).copy()
-    for name in ('__import__', 'open', 'exec', 'execfile'):
+    for name in ("__import__", "open", "exec", "execfile"):
         builtin_ns.pop(name, None)
     mocksample = MockSample()
-    ns = {'__builtins__': builtin_ns,
-          'ClearSamples': mocksample.reset,
-          'SetSample': mocksample.define}
-    with open(filename, 'r', encoding='utf-8') as fp:
+    ns = {
+        "__builtins__": builtin_ns,
+        "ClearSamples": mocksample.reset,
+        "SetSample": mocksample.define,
+    }
+    with open(filename, "r", encoding="utf-8") as fp:
         exec(fp.read(), ns)
     # The script needs to call this, if it doesn't it is not a sample file.
     if not mocksample.reset_called:
-        raise ValueError('the script never calls ClearSamples()')
+        raise ValueError("the script never calls ClearSamples()")
     return mocksample.configs

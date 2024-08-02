@@ -27,7 +27,7 @@ from nicos.clients.gui.utils import loadUi
 from nicos.guisupport.qt import QMainWindow, QUrl, QWebPage, QWebView, pyqtSlot
 
 if QWebView is None:
-    raise ImportError('Qt webview component is not available')
+    raise ImportError("Qt webview component is not available")
 
 
 class HelpPage(QWebPage):
@@ -36,7 +36,7 @@ class HelpPage(QWebPage):
     def __init__(self, client, history, parent):
         self.client = client
         self.history = history
-        self.orig_url = QUrl('about:blank')
+        self.orig_url = QUrl("about:blank")
         self._setting_html = False
         # (pylint detects QWebPage as being None...)
         # pylint: disable=non-parent-init-called
@@ -44,7 +44,7 @@ class HelpPage(QWebPage):
 
     def setHtml(self, html, url):
         self._setting_html = True
-        if not hasattr(QWebPage, 'setHtml'):
+        if not hasattr(QWebPage, "setHtml"):
             self.parent().setHtml(html, url)  # WebKit
         else:
             QWebPage.setHtml(self, html, url)
@@ -52,7 +52,7 @@ class HelpPage(QWebPage):
         self.orig_url = url
 
     def mainFrame(self):
-        if not hasattr(QWebPage, 'mainFrame'):
+        if not hasattr(QWebPage, "mainFrame"):
             return self  # WebEngine
         return QWebPage.mainFrame(self)
 
@@ -61,25 +61,25 @@ class HelpPage(QWebPage):
             return True
         if not isinstance(url, QUrl):  # WebKit
             url = args[0].url()
-        if url.toString().startswith('#'):
+        if url.toString().startswith("#"):
             frame = self.mainFrame()
-            self.history.append((self.parent().url().toString(),
-                                 frame.scrollPosition()))
+            self.history.append(
+                (self.parent().url().toString(), frame.scrollPosition())
+            )
             el = frame.findFirstElement(url.toString())
             frame.setScrollPosition(el.geometry().topLeft())
-        elif url.toString().startswith('data:text/html'):
+        elif url.toString().startswith("data:text/html"):
             return True
         else:
             target = url.toString()
-            self.client.eval('session.showHelp(%r)' % target)
+            self.client.eval("session.showHelp(%r)" % target)
         return False
 
 
 class HelpWindow(QMainWindow):
-
     def __init__(self, parent, client):
         QMainWindow.__init__(self, parent)
-        loadUi(self, 'dialogs/helpwin.ui')
+        loadUi(self, "dialogs/helpwin.ui")
         self.history = []
         self.webView = QWebView(self)
         self.webView.setPage(HelpPage(client, self.history, self.webView))
@@ -90,13 +90,19 @@ class HelpWindow(QMainWindow):
     def showHelp(self, data):
         pseudourl, html = data
         if self._next_scrollpos is None:
-            self.history.append((self.webView.page().orig_url.toString(),
-                                 self.webView.page().mainFrame().scrollPosition()))
+            self.history.append(
+                (
+                    self.webView.page().orig_url.toString(),
+                    self.webView.page().mainFrame().scrollPosition(),
+                )
+            )
             if len(self.history) > 100:
                 self.history = self.history[-100:]
         if self._next_scrollpos is not None:
-            html += '<script>window.scrollTo(%s, %s)</script>' % (
-                self._next_scrollpos.x(), self._next_scrollpos.y())
+            html += "<script>window.scrollTo(%s, %s)</script>" % (
+                self._next_scrollpos.x(),
+                self._next_scrollpos.y(),
+            )
             self._next_scrollpos = None
         self.webView.page().setHtml(html, QUrl(pseudourl))
         self.show()
@@ -106,11 +112,11 @@ class HelpWindow(QMainWindow):
         if not self.history:
             return
         target, scrollpos = self.history[-1]
-        if not target or target == 'about:blank':
+        if not target or target == "about:blank":
             return
         del self.history[-1]
         self._next_scrollpos = scrollpos
-        self.client.eval('session.showHelp(%r)' % target)
+        self.client.eval("session.showHelp(%r)" % target)
 
     @pyqtSlot()
     def on_contentsBtn_clicked(self):
@@ -124,9 +130,10 @@ class HelpWindow(QMainWindow):
         self._search()
 
     def _search(self):
-        if hasattr(QWebPage, 'FindWrapsAroundDocument'):  # WebKit
-            self.webView.findText(self.searchBox.text(),
-                                  QWebPage.FindWrapsAroundDocument)
+        if hasattr(QWebPage, "FindWrapsAroundDocument"):  # WebKit
+            self.webView.findText(
+                self.searchBox.text(), QWebPage.FindWrapsAroundDocument
+            )
         else:
             # WebEngine wraps automatically
             self.webView.findText(self.searchBox.text())

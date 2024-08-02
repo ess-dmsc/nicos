@@ -1,53 +1,58 @@
-description = 'system setup'
+description = "system setup"
 
-group = 'lowlevel'
+group = "lowlevel"
 
 sysconfig = dict(
-    cache = 'localhost',
-    instrument = 'ErWIN',
-    experiment = 'Exp',
-    datasinks = ['conssink', 'dmnsink'],
-    notifiers = [],
+    cache="localhost",
+    instrument="ErWIN",
+    experiment="Exp",
+    datasinks=["conssink", "dmnsink"],
+    notifiers=[],
 )
 
-modules = ['nicos.commands.standard']
+modules = ["nicos.commands.standard"]
 
 devices = dict(
-    ErWIN = device('nicos.devices.instrument.Instrument',
-        description = 'demo instrument',
-        instrument = 'V-ErWIN',
-        responsible = 'R. Esponsible <r.esponsible@frm2.tum.de>',
-        website = 'https://www.nicos-controls.org',
-        operators = ['NICOS developer team'],
-        facility = 'NICOS demo instruments',
+    ErWIN=device(
+        "nicos.devices.instrument.Instrument",
+        description="demo instrument",
+        instrument="V-ErWIN",
+        responsible="R. Esponsible <r.esponsible@frm2.tum.de>",
+        website="https://www.nicos-controls.org",
+        operators=["NICOS developer team"],
+        facility="NICOS demo instruments",
     ),
-    Sample = device('nicos.devices.tas.TASSample',
-        description = 'sample object',
+    Sample=device(
+        "nicos.devices.tas.TASSample",
+        description="sample object",
     ),
-    Exp = device('nicos.devices.experiment.Experiment',
-        description = 'experiment object',
-        dataroot = 'data',
-        sample = 'Sample',
+    Exp=device(
+        "nicos.devices.experiment.Experiment",
+        description="experiment object",
+        dataroot="data",
+        sample="Sample",
     ),
-    filesink = device('nicos.devices.datasinks.AsciiScanfileSink'),
-    conssink = device('nicos.devices.datasinks.ConsoleScanSink'),
-    dmnsink = device('nicos.devices.datasinks.DaemonSink'),
-    Space = device('nicos.devices.generic.FreeSpace',
-        description = 'The amount of free space for storing data',
-        warnlimits = (5., None),
-        path = None,
-        minfree = 5,
+    filesink=device("nicos.devices.datasinks.AsciiScanfileSink"),
+    conssink=device("nicos.devices.datasinks.ConsoleScanSink"),
+    dmnsink=device("nicos.devices.datasinks.DaemonSink"),
+    Space=device(
+        "nicos.devices.generic.FreeSpace",
+        description="The amount of free space for storing data",
+        warnlimits=(5.0, None),
+        path=None,
+        minfree=5,
     ),
-    LogSpace = device('nicos.devices.generic.FreeSpace',
-        description = 'Space on log drive',
-        path = 'log',
-        warnlimits = (.5, None),
-        minfree = 0.5,
-        visibility = (),
+    LogSpace=device(
+        "nicos.devices.generic.FreeSpace",
+        description="Space on log drive",
+        path="log",
+        warnlimits=(0.5, None),
+        minfree=0.5,
+        visibility=(),
     ),
 )
 
-startupcode = '''
+startupcode = """
 from nicos.core import SIMULATION
 if not Exp.proposal and Exp._mode != SIMULATION:
     try:
@@ -59,4 +64,4 @@ if not Exp.proposal and Exp._mode != SIMULATION:
                       localcontact='H. Maier-Leibnitz <heinz.maier-leibnitz@frm2.tum.de>')
         AddUser('Nico Suser', 'nico.suser@frm2.tum.de>', 'MLZ')
         NewSample('Gd3CdB7')
-'''
+"""

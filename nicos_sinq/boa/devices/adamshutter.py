@@ -38,12 +38,15 @@ class AdamShutter(SequencerMixin, Moveable):
     """
 
     parameters = {
-        'host':      Param('Hostname (or IP) of network2serial converter',
-                           type=str, settable=True, mandatory=True),
-        'port':      Param('TCP Port on network2serial converter',
-                           type=int, default=4001),
+        "host": Param(
+            "Hostname (or IP) of network2serial converter",
+            type=str,
+            settable=True,
+            mandatory=True,
+        ),
+        "port": Param("TCP Port on network2serial converter", type=int, default=4001),
     }
-    valuetype = oneof('open', 'close', 'enclosure broken')
+    valuetype = oneof("open", "close", "enclosure broken")
     _connection = None
     readRequest = bytearray([1, 0, 0, 0, 0, 6, 1, 1, 0, 0, 0, 12])
     zeroRequest = [2, 0, 0, 0, 0, 6, 1, 5, 0, 0, 0, 0]
@@ -56,12 +59,12 @@ class AdamShutter(SequencerMixin, Moveable):
             try:
                 self.doReset()
             except Exception:
-                self.log.exception('Failed to connect to adam shutter module')
+                self.log.exception("Failed to connect to adam shutter module")
 
     def doIsAllowed(self, target):
         if self.read(0) == self._broken:
-            return False, 'Cannot move shutter when enclosure is broken'
-        return True, ''
+            return False, "Cannot move shutter when enclosure is broken"
+        return True, ""
 
     def _transact(self, request, expected_bytes):
         def inner_transact(self, request, expected_bytes):
@@ -70,7 +73,7 @@ class AdamShutter(SequencerMixin, Moveable):
             if self._connection in p[0]:
                 data = self._connection.recv(expected_bytes)
             else:
-                raise CommunicationError('No response from adam-6051')
+                raise CommunicationError("No response from adam-6051")
             return bytearray(data)
 
         try:
@@ -91,7 +94,7 @@ class AdamShutter(SequencerMixin, Moveable):
             return self.valuetype.vals[0]
         elif stat & 1:
             return self.valuetype.vals[1]
-        return 'switching between states'
+        return "switching between states"
 
     def doStart(self, target):
         """Generate and start a sequence if non is running.
@@ -99,7 +102,7 @@ class AdamShutter(SequencerMixin, Moveable):
         Just calls ``self._startSequence(self._generateSequence(target))``
         """
         if self.target == self.read(0):
-            self.log.info('Shutter is already at %s', self.target)
+            self.log.info("Shutter is already at %s", self.target)
             return
 
         if self._seq_is_running():
@@ -107,12 +110,14 @@ class AdamShutter(SequencerMixin, Moveable):
                 self._seq_thread.join()
                 self._seq_thread = None
             else:
-                raise MoveError(self, 'Cannot start device, sequence is still '
-                                      'running (at %s)!' % self._seq_status[1])
+                raise MoveError(
+                    self,
+                    "Cannot start device, sequence is still "
+                    "running (at %s)!" % self._seq_status[1],
+                )
         self._startSequence(self._generateSequence(target))
 
     def _generateSequence(self, target):
-
         seq = []
         if target == self.valuetype.vals[0]:
             address = 16
@@ -122,32 +127,29 @@ class AdamShutter(SequencerMixin, Moveable):
         self.setRequest[9] = address
 
         # This implements pulsing the bit
-        seq.append(SeqMethod(self, '_transact', bytearray(self.zeroRequest),
-                             12))
+        seq.append(SeqMethod(self, "_transact", bytearray(self.zeroRequest), 12))
 
-        seq.append(SeqSleep(.1))
+        seq.append(SeqSleep(0.1))
 
-        seq.append(SeqMethod(self, '_transact', bytearray(self.setRequest),
-                             12))
+        seq.append(SeqMethod(self, "_transact", bytearray(self.setRequest), 12))
 
-        seq.append(SeqSleep(.2))
+        seq.append(SeqSleep(0.2))
 
-        seq.append(SeqMethod(self, '_transact', bytearray(self.zeroRequest),
-                             12))
+        seq.append(SeqMethod(self, "_transact", bytearray(self.zeroRequest), 12))
 
-        seq.append(SeqSleep(.1))
+        seq.append(SeqSleep(0.1))
 
         return seq
 
     def doStatus(self, maxage=0):
         if self._seq_is_running():
-            return status.BUSY, 'Switching'
+            return status.BUSY, "Switching"
         current = self.read(maxage)
         if current == self.target:
-            return status.OK, ''
+            return status.OK, ""
         if current == self._broken:
             return status.WARN, self._broken
-        return status.BUSY, ''
+        return status.BUSY, ""
 
     def doReset(self):
         if self._connection:

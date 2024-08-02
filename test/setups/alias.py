@@ -21,44 +21,52 @@
 #
 # *****************************************************************************
 
-name = 'test_alias setup'
+name = "test_alias setup"
 
-includes = ['stdsystem', 'slit']
+includes = ["stdsystem", "slit"]
 
 devices = dict(
-    v1 = device('nicos.devices.generic.VirtualMotor',
-        abslimits = (0, 5),
-        unit = 'mm',
-        speed = 1.5,
+    v1=device(
+        "nicos.devices.generic.VirtualMotor",
+        abslimits=(0, 5),
+        unit="mm",
+        speed=1.5,
     ),
-    aliasNoDev = device('nicos.devices.generic.DeviceAlias',
-        alias = '',
-        devclass = 'nicos.core.device.Readable',
+    aliasNoDev=device(
+        "nicos.devices.generic.DeviceAlias",
+        alias="",
+        devclass="nicos.core.device.Readable",
     ),
-    aliasDev = device('nicos.devices.generic.DeviceAlias',
-        alias = '',
-        devclass = 'nicos.devices.generic.VirtualMotor',
+    aliasDev=device(
+        "nicos.devices.generic.DeviceAlias",
+        alias="",
+        devclass="nicos.devices.generic.VirtualMotor",
     ),
-    aliasDev2 = device('nicos.devices.generic.DeviceAlias',
-        alias = 'slit',
+    aliasDev2=device(
+        "nicos.devices.generic.DeviceAlias",
+        alias="slit",
     ),
-    aliasDev3 = device('nicos.devices.generic.DeviceAlias',
-        alias = '',
+    aliasDev3=device(
+        "nicos.devices.generic.DeviceAlias",
+        alias="",
     ),
-    aliasDev4 = device('nicos.devices.generic.DeviceAlias',
-        alias = '',
-        devclass = 'nicos.devices.generic.VirtualMotor',
+    aliasDev4=device(
+        "nicos.devices.generic.DeviceAlias",
+        alias="",
+        devclass="nicos.devices.generic.VirtualMotor",
     ),
-    axis_motor = device('nicos.devices.generic.VirtualMotor',
-        unit = 'mm',
-        curvalue = 0,
-        abslimits = (-100, 100),
-        userlimits = (-50, 50),
+    axis_motor=device(
+        "nicos.devices.generic.VirtualMotor",
+        unit="mm",
+        curvalue=0,
+        abslimits=(-100, 100),
+        userlimits=(-50, 50),
     ),
-    axis = device('nicos.devices.generic.Axis',
-        motor = 'axis_motor',
-        coder = 'axis_motor',
-        obs = [],
-        precision = 0,
+    axis=device(
+        "nicos.devices.generic.Axis",
+        motor="axis_motor",
+        coder="axis_motor",
+        obs=[],
+        precision=0,
     ),
 )

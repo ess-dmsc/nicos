@@ -32,9 +32,9 @@ from nicos.utils.fitting import PredefinedFit
 class MiezeFit(PredefinedFit):
     """Fits with a sine with given frequency including offset."""
 
-    names = ['mieze']
-    fit_title = 'mieze fit'
-    fit_params = ['avg', 'contrast', 'phase', 'freq']
+    names = ["mieze"]
+    fit_title = "mieze fit"
+    fit_params = ["avg", "contrast", "phase", "freq"]
     fit_p_descr = fit_params
 
     timechannels = 16
@@ -64,8 +64,8 @@ class MiezeFit(PredefinedFit):
         res.label_y = min(res.curve_x)
         res.contrast = abs(res.contrast)
         res.label_contents = [
-            ('Average', res.avg, res.davg),
-            ('Contrast', res.contrast, res.dcontrast),
-            ('Phase', res.phase, res.dphase),
-            ('Frequency', res.freq, res.dfreq),
+            ("Average", res.avg, res.davg),
+            ("Contrast", res.contrast, res.dcontrast),
+            ("Phase", res.phase, res.dphase),
+            ("Frequency", res.freq, res.dfreq),
         ]

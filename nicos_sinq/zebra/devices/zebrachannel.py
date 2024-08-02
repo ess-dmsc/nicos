@@ -25,8 +25,7 @@ import time
 
 import numpy
 
-from nicos_sinq.devices.imagesink import \
-    HistogramDimDesc
+from nicos_sinq.devices.imagesink import HistogramDimDesc
 from nicos_sinq.devices.sinqhm.channel import HistogramImageChannel
 
 
@@ -36,9 +35,10 @@ class ZebraChannel(HistogramImageChannel):
     causes problems in data analysis. This makes the data stored to
     the NeXus file exactly like in SICS.
     """
+
     @property
     def shape(self):
-        """ Shape of the data fetched. By default uses the
+        """Shape of the data fetched. By default uses the
         shape of the bank, but the subclasses can override
         the shape.
         """
@@ -49,20 +49,22 @@ class ZebraChannel(HistogramImageChannel):
         dims = []
         for ax in self.bank.axes:
             if ax.length > 1:
-                dims.append(HistogramDimDesc(ax.length, ax.label, ax.unit,
-                                             ax.bins))
+                dims.append(HistogramDimDesc(ax.length, ax.label, ax.unit, ax.bins))
         return dims
 
     def doReadBBArray(self, quality):
         if time.time() > self._dataTime + 3:
-            order = '<' if self.connector.byteorder == 'little' else '>'
-            dt = numpy.dtype('uint32')
+            order = "<" if self.connector.byteorder == "little" else ">"
+            dt = numpy.dtype("uint32")
             dt = dt.newbyteorder(order)
 
             # Read the raw bytes from the server
-            params = (('bank', self.bank.bankid), ('start', self.startid),
-                      ('end', self.endid))
-            req = self.connector.get('readhmdata.egi', params)
+            params = (
+                ("bank", self.bank.bankid),
+                ("start", self.startid),
+                ("end", self.endid),
+            )
+            req = self.connector.get("readhmdata.egi", params)
             rawdata = numpy.frombuffer(req.content, dt)
             # Set the result and return data
             self.readresult = [int(sum(rawdata))]
@@ -71,7 +73,7 @@ class ZebraChannel(HistogramImageChannel):
             if len(rawdata) >= xdim * ydim:
                 # do the magic zebra swap. The reasons for this lie in SINQ
                 # history
-                data = numpy.zeros((xdim * ydim), dtype='int32')
+                data = numpy.zeros((xdim * ydim), dtype="int32")
                 for y in range(0, ydim):
                     for x in range(0, xdim):
                         val = rawdata[x * ydim + y]
@@ -84,29 +86,32 @@ class ZebraChannel(HistogramImageChannel):
         return self._data
 
     def doReadF77Array(self, quality):
-        """ Get the data formatted as uint32 numpy array
+        """Get the data formatted as uint32 numpy array
 
-            It was noticed that NICOS was reading the array very frequently.
-            So frequently, that storing a FOCUS file took three minutes.
-            Other changes in nexussink which mitigated the problem. In addition
-            this method was changed that it reads data only after a three
-            seconds cache interval. This interval is reset both in doStart()
-            and doFinish() in order to ensure good data always.
+        It was noticed that NICOS was reading the array very frequently.
+        So frequently, that storing a FOCUS file took three minutes.
+        Other changes in nexussink which mitigated the problem. In addition
+        this method was changed that it reads data only after a three
+        seconds cache interval. This interval is reset both in doStart()
+        and doFinish() in order to ensure good data always.
         """
         if time.time() > self._dataTime + 3:
-            order = '<' if self.connector.byteorder == 'little' else '>'
-            dt = numpy.dtype('uint32')
+            order = "<" if self.connector.byteorder == "little" else ">"
+            dt = numpy.dtype("uint32")
             dt = dt.newbyteorder(order)
 
             # Read the raw bytes from the server
-            params = (('bank', self.bank.bankid), ('start', self.startid),
-                      ('end', self.endid))
-            req = self.connector.get('readhmdata.egi', params)
+            params = (
+                ("bank", self.bank.bankid),
+                ("start", self.startid),
+                ("end", self.endid),
+            )
+            req = self.connector.get("readhmdata.egi", params)
             data = numpy.frombuffer(req.content, dt)
             # Set the result and return data
             self.readresult = [int(sum(data))]
             if len(data) >= numpy.prod(self.shape):
-                self._data = data.reshape(self.shape, order='F')
+                self._data = data.reshape(self.shape, order="F")
             else:
                 self._data = data
             self._dataTime = time.time()

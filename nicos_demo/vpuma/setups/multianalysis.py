@@ -1,16 +1,20 @@
-description = 'Classical multianalysis setup'
+description = "Classical multianalysis setup"
 
-group = 'basic'
+group = "basic"
 
-modules = ['nicos_mlz.puma.commands']
+modules = ["nicos_mlz.puma.commands"]
 
-includes = ['pumabase',
-            # 'seccoll', 'collimation', 'ios', 'hv', 'notifiers',
-            'multidetector', 'multianalyzer', 'cad', 'opticalbench',
-            # 'detector',
-           ]
+includes = [
+    "pumabase",
+    # 'seccoll', 'collimation', 'ios', 'hv', 'notifiers',
+    "multidetector",
+    "multianalyzer",
+    "cad",
+    "opticalbench",
+    # 'detector',
+]
 
-excludes = ['tas', 'defcal', 'polarization']
+excludes = ["tas", "defcal", "polarization"]
 
 # devices = dict(
 #     det = device('nicos.devices.generic.Detector',
@@ -23,7 +27,7 @@ excludes = ['tas', 'defcal', 'polarization']
 #     ),
 # )
 
-startupcode = '''
+startupcode = """
 SetDetectors(det)
 med.opmode = 'multi'
-'''
+"""

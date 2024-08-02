@@ -32,7 +32,7 @@ from .table import TableBase
 class MonoTable(TableBase):
     """Class to display the monochromator including shielding and crystal."""
 
-    _color = QColor('#6666ff')
+    _color = QColor("#6666ff")
 
     def __init__(self, x, y, size=40, parent=None, scene=None):
         TableBase.__init__(self, x, y, size, parent, scene)

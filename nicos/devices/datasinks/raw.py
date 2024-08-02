@@ -29,22 +29,23 @@ from os import path
 import numpy as np
 
 from nicos import session
-from nicos.core import LIVE, ConfigurationError, DataSinkHandler, NicosError, \
-    Override
+from nicos.core import LIVE, ConfigurationError, DataSinkHandler, NicosError, Override
 from nicos.core.data.sink import NicosMetaWriterMixin
-from nicos.devices.datasinks.image import ImageFileReader, ImageSink, \
-    SingleFileSinkHandler
+from nicos.devices.datasinks.image import (
+    ImageFileReader,
+    ImageSink,
+    SingleFileSinkHandler,
+)
 
 
 class SingleTextImageSinkHandler(NicosMetaWriterMixin, SingleFileSinkHandler):
-
     defer_file_creation = True
     update_headerinfo = True
 
     def writeHeader(self, fp, metainfo, image):
         fp.seek(0)
-        np.savetxt(fp, image, fmt='%d', delimiter='\t', newline='\n')
-        fp.write(b'\n')
+        np.savetxt(fp, image, fmt="%d", delimiter="\t", newline="\n")
+        fp.write(b"\n")
         self.writeMetaInformation(fp)
         fp.flush()
 
@@ -57,25 +58,28 @@ class SingleTextImageSink(ImageSink):
     """
 
     parameter_overrides = {
-        'filenametemplate': Override(mandatory=False, userparam=False,
-                                     default=['%(proposal)s_%(pointcounter)s.raw',
-                                              '%(proposal)s_%(scancounter)s'
-                                              '_%(pointnumber)s.raw']),
+        "filenametemplate": Override(
+            mandatory=False,
+            userparam=False,
+            default=[
+                "%(proposal)s_%(pointcounter)s.raw",
+                "%(proposal)s_%(scancounter)s" "_%(pointnumber)s.raw",
+            ],
+        ),
     }
 
     handlerclass = SingleTextImageSinkHandler
 
 
 class SingleRawImageSinkHandler(NicosMetaWriterMixin, SingleFileSinkHandler):
-
     defer_file_creation = True
     update_headerinfo = True
-    filetype = 'singleraw'
+    filetype = "singleraw"
 
     def writeHeader(self, fp, metainfo, image):
         fp.seek(0)
         fp.write(np.asarray(image).tobytes())
-        fp.write(b'\n')
+        fp.write(b"\n")
         self.writeMetaInformation(fp)
         fp.flush()
 
@@ -84,17 +88,20 @@ class SingleRawImageSink(ImageSink):
     """Writes raw (binary) image data and header into a single file."""
 
     parameter_overrides = {
-        'filenametemplate': Override(mandatory=False, userparam=False,
-                                     default=['%(proposal)s_%(pointcounter)s.raw',
-                                              '%(proposal)s_%(scancounter)s'
-                                              '_%(pointnumber)s.raw']),
+        "filenametemplate": Override(
+            mandatory=False,
+            userparam=False,
+            default=[
+                "%(proposal)s_%(pointcounter)s.raw",
+                "%(proposal)s_%(scancounter)s" "_%(pointnumber)s.raw",
+            ],
+        ),
     }
 
     handlerclass = SingleRawImageSinkHandler
 
 
 class RawImageSinkHandler(NicosMetaWriterMixin, DataSinkHandler):
-
     update_headerinfo = False
 
     def __init__(self, sink, dataset, detector):
@@ -102,23 +109,26 @@ class RawImageSinkHandler(NicosMetaWriterMixin, DataSinkHandler):
         self._datafile = self._headerfile = None
         self._subdir = sink.subdir
         self._template = sink.filenametemplate
-        self._headertemplate = self._template[0].replace('.raw', '.header')
-        self._logtemplate = self._template[0].replace('.raw', '.log')
+        self._headertemplate = self._template[0].replace(".raw", ".header")
+        self._logtemplate = self._template[0].replace(".raw", ".log")
         # determine which index of the detector value is our data array
         # XXX support more than one array
         arrayinfo = self.detector.arrayInfo()
         if len(arrayinfo) > 1:
-            self.log.warning('image sink only supports one array per detector')
+            self.log.warning("image sink only supports one array per detector")
         self._arraydesc = arrayinfo[0]
 
     def prepare(self):
         self.manager.assignCounter(self.dataset)
         self._datafile = self.manager.createDataFile(
-            self.dataset, self._template, self._subdir)
+            self.dataset, self._template, self._subdir
+        )
         self._headerfile = self.manager.createDataFile(
-            self.dataset, self._headertemplate, self._subdir)
+            self.dataset, self._headertemplate, self._subdir
+        )
         self._logfile = self.manager.createDataFile(
-            self.dataset, self._logtemplate, self._subdir)
+            self.dataset, self._logtemplate, self._subdir
+        )
 
     def _writeHeader(self):
         if self._headerfile is None:
@@ -131,11 +141,13 @@ class RawImageSinkHandler(NicosMetaWriterMixin, DataSinkHandler):
         if self._logfile is None:
             return
         self._logfile.seek(0)
-        wrapper = TextIOWrapper(self._logfile, encoding='utf-8')
-        wrapper.write('%-15s\tmean\tstdev\tmin\tmax\n' % '# dev')
+        wrapper = TextIOWrapper(self._logfile, encoding="utf-8")
+        wrapper.write("%-15s\tmean\tstdev\tmin\tmax\n" % "# dev")
         for dev in self.dataset.valuestats:
-            wrapper.write('%-15s\t%.3f\t%.3f\t%.3f\t%.3f\n' %
-                          ((dev,) + self.dataset.valuestats[dev]))
+            wrapper.write(
+                "%-15s\t%.3f\t%.3f\t%.3f\t%.3f\n"
+                % ((dev,) + self.dataset.valuestats[dev])
+            )
         wrapper.detach()
         self._logfile.flush()
 
@@ -155,9 +167,9 @@ class RawImageSinkHandler(NicosMetaWriterMixin, DataSinkHandler):
             if data is not None:
                 self._writeData(self._datafile, data)
                 self._writeHeader()
-                session.notifyDataFile('raw', self.dataset.uid,
-                                       self.detector.name,
-                                       self._datafile.filepath)
+                session.notifyDataFile(
+                    "raw", self.dataset.uid, self.detector.name, self._datafile.filepath
+                )
 
     def putMetainfo(self, metainfo):
         self._writeHeader()
@@ -183,50 +195,59 @@ class RawImageSink(ImageSink):
     """
 
     parameter_overrides = {
-        'filenametemplate': Override(mandatory=False, userparam=False,
-                                     default=['%(proposal)s_%(pointcounter)s.raw',
-                                              '%(proposal)s_%(scancounter)s'
-                                              '_%(pointnumber)s.raw']),
+        "filenametemplate": Override(
+            mandatory=False,
+            userparam=False,
+            default=[
+                "%(proposal)s_%(pointcounter)s.raw",
+                "%(proposal)s_%(scancounter)s" "_%(pointnumber)s.raw",
+            ],
+        ),
     }
 
     handlerclass = RawImageSinkHandler
 
     def doInit(self, mode):
-        if '.raw' not in self.filenametemplate[0]:
-            raise ConfigurationError(self, 'first filenametemplate must '
-                                     'contain .raw which is then exchanged '
-                                     'to .header and .log for additional '
-                                     'data files')
+        if ".raw" not in self.filenametemplate[0]:
+            raise ConfigurationError(
+                self,
+                "first filenametemplate must "
+                "contain .raw which is then exchanged "
+                "to .header and .log for additional "
+                "data files",
+            )
 
 
 class RawImageFileReader(ImageFileReader):
     filetypes = [
-        ('raw', 'NICOS Raw Image File (*.raw)'),
-        ('singleraw', 'NICOS Raw Image File (*.raw)'),
+        ("raw", "NICOS Raw Image File (*.raw)"),
+        ("singleraw", "NICOS Raw Image File (*.raw)"),
     ]
 
     @classmethod
     def fromfile(cls, filename):
         def get_array_desc(line):
             _desc, shape, dtype, _axes = eval(
-                line.replace('ArrayDesc', '').replace('dtype', 'np.dtype'))
+                line.replace("ArrayDesc", "").replace("dtype", "np.dtype")
+            )
             return shape, dtype
 
-        fheader = path.splitext(filename)[0] + '.header'
+        fheader = path.splitext(filename)[0] + ".header"
         if path.isfile(fheader) and path.isfile(filename):
-            with open(fheader, 'r', encoding='utf-8', errors='replace') as fd:
+            with open(fheader, "r", encoding="utf-8", errors="replace") as fd:
                 for line in fd:
-                    if line.startswith('ArrayDesc('):
+                    if line.startswith("ArrayDesc("):
                         shape, dtype = get_array_desc(line)
                         return np.fromfile(filename, dtype).reshape(shape)
         else:
-            with open(filename, 'rb') as f:
+            with open(filename, "rb") as f:
                 content = f.read()
-                hs = content.find(b'\n### NICOS Device snapshot')
-                header = content[hs:].decode('utf-8', errors='replace')
-                for line in header.split('\n'):
-                    if line.startswith('ArrayDesc'):
+                hs = content.find(b"\n### NICOS Device snapshot")
+                header = content[hs:].decode("utf-8", errors="replace")
+                for line in header.split("\n"):
+                    if line.startswith("ArrayDesc"):
                         shape, dtype = get_array_desc(line)
-                        return np.frombuffer(content, dtype,
-                                             np.prod(shape)).reshape(shape)
-        raise NicosError('no ArrayDesc line found')
+                        return np.frombuffer(content, dtype, np.prod(shape)).reshape(
+                            shape
+                        )
+        raise NicosError("no ArrayDesc line found")

@@ -30,16 +30,26 @@ from nicos.guisupport.qt import QDialog, QListWidgetItem, Qt, uic
 class AddParameterDialog(QDialog):
     def __init__(self, parameters, existingParameters, parent=None):
         QDialog.__init__(self, parent)
-        uic.loadUi(path.abspath(path.join(path.dirname(__file__),
-                                          '..',
-                                          'ui',
-                                          'dialogs',
-                                          'addparameterdialog.ui')), self)
+        uic.loadUi(
+            path.abspath(
+                path.join(
+                    path.dirname(__file__),
+                    "..",
+                    "ui",
+                    "dialogs",
+                    "addparameterdialog.ui",
+                )
+            ),
+            self,
+        )
         self.lineEditCustomParameter.hide()
-        missingParameters = [key for key in parameters.keys()
-                             if key not in existingParameters.keys() and
-                             not key.startswith('_') and
-                             key not in ('classes', 'name')]
+        missingParameters = [
+            key
+            for key in parameters.keys()
+            if key not in existingParameters.keys()
+            and not key.startswith("_")
+            and key not in ("classes", "name")
+        ]
         if missingParameters:
             for key in sorted(missingParameters):
                 listItem = QListWidgetItem(key, self.listWidgetSelectParameter)

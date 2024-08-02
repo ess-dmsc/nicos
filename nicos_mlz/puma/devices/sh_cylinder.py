@@ -31,15 +31,20 @@ class SH_Cylinder(Moveable):
     """PUMA specific device for the shutter cylinder."""
 
     attached_devices = {
-        'io_ref': Attach('limit switches', Readable),
-        'io_air': Attach('air in the open/close direction', Moveable),
-        'io_pos': Attach('position stop, if in closed position, -1', Moveable),
+        "io_ref": Attach("limit switches", Readable),
+        "io_air": Attach("air in the open/close direction", Moveable),
+        "io_pos": Attach("position stop, if in closed position, -1", Moveable),
     }
 
     parameters = {
-        'timedelay': Param('Waiting time for the movement',
-                           type=float, default=3, settable=True,
-                           mandatory=False, unit='s'),
+        "timedelay": Param(
+            "Waiting time for the movement",
+            type=float,
+            default=3,
+            settable=True,
+            mandatory=False,
+            unit="s",
+        ),
     }
 
     def doStart(self, target):
@@ -47,14 +52,16 @@ class SH_Cylinder(Moveable):
             return
 
         if self._checkAir() != 1:
-            raise NicosError(self, 'No air! Please open the shutter with the '
-                             'button near the door.')
+            raise NicosError(
+                self,
+                "No air! Please open the shutter with the " "button near the door.",
+            )
 
         self._attached_io_air.move(0)
         session.delay(self.timedelay)
 
         if self._attached_io_ref.read(0) != 1:
-            raise NicosError(self, 'Cannot close the shutter!')
+            raise NicosError(self, "Cannot close the shutter!")
 
         if target != -1:
             self._attached_io_pos.move(target)

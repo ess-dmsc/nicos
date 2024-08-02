@@ -1,7 +1,7 @@
-description = 'alias for the current sample changer'
+description = "alias for the current sample changer"
 
-group = 'lowlevel'
+group = "lowlevel"
 
 devices = dict(
-    SampleChanger = device('nicos.devices.generic.DeviceAlias'),
+    SampleChanger=device("nicos.devices.generic.DeviceAlias"),
 )

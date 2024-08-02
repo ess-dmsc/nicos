@@ -1,24 +1,24 @@
-description = 'setup for the status monitor'
-group = 'special'
+description = "setup for the status monitor"
+group = "special"
 
 _collimationcolumn = Column(
-    SetupBlock('collimation'),
+    SetupBlock("collimation"),
 )
 
 
-
 devices = dict(
-    Monitor = device('nicos.services.monitor.qt.Monitor',
-        title = 'SANS-1 status monitor',
-        loglevel = 'debug',
+    Monitor=device(
+        "nicos.services.monitor.qt.Monitor",
+        title="SANS-1 status monitor",
+        loglevel="debug",
         # loglevel = 'info',
-        cache = 'ctrl.sans1.frm2.tum.de',
-        prefix = 'nicos/',
-        font = 'Luxi Sans',
-        valuefont = 'Consolas',
-        fontsize = 15,  # 12
-        padding = 0,  # 3
-        layout = [
+        cache="ctrl.sans1.frm2.tum.de",
+        prefix="nicos/",
+        font="Luxi Sans",
+        valuefont="Consolas",
+        fontsize=15,  # 12
+        padding=0,  # 3
+        layout=[
             Row(_collimationcolumn),
         ],
     ),

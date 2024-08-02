@@ -36,17 +36,17 @@ class Shutter(NamedDigitalOutput):
     (emergency) stops please use `NamedDigitalOutput`."""
 
     parameters = {
-        'stoptarget': Param('Target position on Stop', type=str,
-                            default='closed', userparam=False)
+        "stoptarget": Param(
+            "Target position on Stop", type=str, default="closed", userparam=False
+        )
     }
 
     def doInit(self, mode):
         NamedDigitalOutput.doInit(self, mode)
         # TODO: remove this code after successful migration
-        if self.stoptarget == 'close':
-            self._setROParam('stoptarget', CLOSED)
-            self.log.warning('stoptarget parameter has been changed to %r',
-                             CLOSED)
+        if self.stoptarget == "close":
+            self._setROParam("stoptarget", CLOSED)
+            self.log.warning("stoptarget parameter has been changed to %r", CLOSED)
 
     def doStop(self):
         self.maw(self.stoptarget)

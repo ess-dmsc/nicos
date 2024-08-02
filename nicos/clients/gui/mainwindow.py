@@ -44,16 +44,45 @@ from nicos.clients.gui.dialogs.watchdog import WatchdogDialog
 from nicos.clients.gui.panels import AuxiliaryWindow, createWindowItem
 from nicos.clients.gui.panels.console import ConsolePanel
 from nicos.clients.gui.tools import createToolMenu, startStartupTools
-from nicos.clients.gui.utils import DlgUtils, SettingGroup, dialogFromUi, \
-    loadBasicWindowSettings, loadUi, loadUserStyle, splitTunnelString
+from nicos.clients.gui.utils import (
+    DlgUtils,
+    SettingGroup,
+    dialogFromUi,
+    loadBasicWindowSettings,
+    loadUi,
+    loadUserStyle,
+    splitTunnelString,
+)
 from nicos.core.utils import ADMIN
 from nicos.guisupport.colors import colors
-from nicos.guisupport.qt import PYQT_VERSION_STR, QT_VERSION_STR, QAction, \
-    QApplication, QColorDialog, QDialog, QFontDialog, QIcon, QLabel, \
-    QMainWindow, QMenu, QMessageBox, QPixmap, QSize, QSystemTrayIcon, Qt, \
-    QTimer, QWebView, pyqtSignal, pyqtSlot
-from nicos.protocols.daemon import BREAK_NOW, STATUS_IDLE, STATUS_IDLEEXC, \
-    STATUS_INBREAK
+from nicos.guisupport.qt import (
+    PYQT_VERSION_STR,
+    QT_VERSION_STR,
+    QAction,
+    QApplication,
+    QColorDialog,
+    QDialog,
+    QFontDialog,
+    QIcon,
+    QLabel,
+    QMainWindow,
+    QMenu,
+    QMessageBox,
+    QPixmap,
+    QSize,
+    QSystemTrayIcon,
+    Qt,
+    QTimer,
+    QWebView,
+    pyqtSignal,
+    pyqtSlot,
+)
+from nicos.protocols.daemon import (
+    BREAK_NOW,
+    STATUS_IDLE,
+    STATUS_IDLEEXC,
+    STATUS_INBREAK,
+)
 from nicos.protocols.daemon.classic import DEFAULT_PORT
 from nicos.utils import checkSetupSpec, importString, parseConnectionString
 
@@ -81,38 +110,38 @@ class ToolAction(QAction):
         # the default menu rule is TextHeuristicRole, which moves 'setup' to
         # the 'Preferences' Menu on a Mac -> this is not what we want
         self.setMenuRole(self.MenuRole.NoRole)
-        setups = options.get('setups', '')
+        setups = options.get("setups", "")
         self.setupSpec = setups
         if self.setupSpec:
-            client.register(self, 'session/mastersetup')
+            client.register(self, "session/mastersetup")
 
     def on_keyChange(self, key, value, time, expired):
-        if key == 'session/mastersetup' and self.setupSpec:
+        if key == "session/mastersetup" and self.setupSpec:
             self.setVisible(checkSetupSpec(self.setupSpec, value))
 
 
 class MainWindow(DlgUtils, QMainWindow):
-    name = 'MainWindow'
+    name = "MainWindow"
     # Emitted when a panel generates code that an editor panel should add.
     codeGenerated = pyqtSignal(object)
 
     # Interval (in ms) to make "keepalive" queries to the daemon.
-    keepaliveInterval = 12*3600*1000
+    keepaliveInterval = 12 * 3600 * 1000
 
-    ui = 'main.ui'
+    ui = "main.ui"
     default_facility_logo = None
 
-    def __init__(self, log, gui_conf, viewonly=False, tunnel=''):
+    def __init__(self, log, gui_conf, viewonly=False, tunnel=""):
         QMainWindow.__init__(self)
-        DlgUtils.__init__(self, 'NICOS')
+        DlgUtils.__init__(self, "NICOS")
         colors.init_palette(self.palette())
         loadUi(self, self.ui)
 
         # set app icon in multiple sizes
         icon = QIcon()
-        icon.addFile(':/appicon')
-        icon.addFile(':/appicon-16')
-        icon.addFile(':/appicon-48')
+        icon.addFile(":/appicon")
+        icon.addFile(":/appicon-16")
+        icon.addFile(":/appicon-48")
         QApplication.setWindowIcon(icon)
 
         # hide admin label until we are connected as admin
@@ -140,8 +169,9 @@ class MainWindow(DlgUtils, QMainWindow):
         self.allowoutputlinewrap = False
 
         # set-up the initial connection data
-        self.setConnData(ConnectionData('localhost', 1301, 'guest', None,
-                                        viewonly=viewonly))
+        self.setConnData(
+            ConnectionData("localhost", 1301, "guest", None, viewonly=viewonly)
+        )
 
         # state members
         self.current_status = None
@@ -165,19 +195,20 @@ class MainWindow(DlgUtils, QMainWindow):
 
         # panel configuration
         self.gui_conf = gui_conf
-        self.facility_logo = gui_conf.options.get('facility_logo',
-                                                  self.default_facility_logo)
+        self.facility_logo = gui_conf.options.get(
+            "facility_logo", self.default_facility_logo
+        )
         self.initDataReaders()
         self.mainwindow = self
 
         # determine if there is an editor window type, because we would like to
         # have a way to open files from a console panel later
         self.editor_wintype = self.gui_conf.find_panel(
-            ('editor.EditorPanel',
-             'nicos.clients.gui.panels.editor.EditorPanel'))
+            ("editor.EditorPanel", "nicos.clients.gui.panels.editor.EditorPanel")
+        )
         self.history_wintype = self.gui_conf.find_panel(
-            ('history.HistoryPanel',
-             'nicos.clients.gui.panels.history.HistoryPanel'))
+            ("history.HistoryPanel", "nicos.clients.gui.panels.history.HistoryPanel")
+        )
 
         # additional panels
         self.panels = []
@@ -191,11 +222,13 @@ class MainWindow(DlgUtils, QMainWindow):
         self.createWindowContent()
 
         if tunnel and SSHTunnelForwarder is None:
-            self.showError('You want to establish a connection to NICOS via '
-                           "a SSH tunnel, but the 'sshtunnel' module is not "
-                           'installed. The tunneling feature will disabled.')
+            self.showError(
+                "You want to establish a connection to NICOS via "
+                "a SSH tunnel, but the 'sshtunnel' module is not "
+                "installed. The tunneling feature will disabled."
+            )
         if tunnel:
-            self.tunnel = tunnel if SSHTunnelForwarder is not None else ''
+            self.tunnel = tunnel if SSHTunnelForwarder is not None else ""
         self.tunnelServer = None
 
         # timer for reconnecting
@@ -214,10 +247,9 @@ class MainWindow(DlgUtils, QMainWindow):
         nameAction = self.trayMenu.addAction(self.instrument)
         nameAction.setEnabled(False)
         self.trayMenu.addSeparator()
-        toggleAction = self.trayMenu.addAction('Hide main window')
+        toggleAction = self.trayMenu.addAction("Hide main window")
         toggleAction.setCheckable(True)
-        toggleAction.triggered[bool].connect(
-            lambda hide: self.setVisible(not hide))
+        toggleAction.triggered[bool].connect(lambda hide: self.setVisible(not hide))
         self.trayIcon.setContextMenu(self.trayMenu)
 
         # help window
@@ -231,27 +263,31 @@ class MainWindow(DlgUtils, QMainWindow):
         self._init_toolbar()
 
     def _init_toolbar(self):
-        self.statusLabel = QLabel('', self, pixmap=QPixmap(':/disconnected'),
-                                  margin=5, minimumSize=QSize(30, 10))
+        self.statusLabel = QLabel(
+            "",
+            self,
+            pixmap=QPixmap(":/disconnected"),
+            margin=5,
+            minimumSize=QSize(30, 10),
+        )
 
         self.toolbar = self.toolBarMain
         self.toolbar.addWidget(self.statusLabel)
-        self.setStatus('disconnected')
+        self.setStatus("disconnected")
 
     def addPanel(self, panel, always=True):
         if always or panel not in self.panels:
             self.panels.append(panel)
 
     def createWindowContent(self):
-        self.sgroup = SettingGroup('MainWindow')
+        self.sgroup = SettingGroup("MainWindow")
         with self.sgroup as settings:
             loadUserStyle(self, settings)
             # load saved settings and stored layout for panel config
             self.loadSettings(settings)
 
         # create panels in the main window
-        widget = createWindowItem(self.gui_conf.main_window, self, self, self,
-                                  self.log)
+        widget = createWindowItem(self.gui_conf.main_window, self, self, self, self.log)
         if widget:
             self.centralLayout.addWidget(widget)
         self.centralLayout.setContentsMargins(0, 0, 0, 0)
@@ -273,13 +309,19 @@ class MainWindow(DlgUtils, QMainWindow):
         if not self.gui_conf.windows:
             self.menuBar().removeAction(self.menuWindows.menuAction())
         for i, wconfig in enumerate(self.gui_conf.windows):
-            action = ToolAction(self.client, QIcon(':/' + wconfig.icon),
-                                wconfig.name, wconfig.options, self)
+            action = ToolAction(
+                self.client,
+                QIcon(":/" + wconfig.icon),
+                wconfig.name,
+                wconfig.options,
+                self,
+            )
             self.toolBarWindows.addAction(action)
             self.menuWindows.addAction(action)
 
             def window_callback(on, i=i):
                 self.createWindow(i)
+
             action.triggered[bool].connect(window_callback)
         if not self.gui_conf.windows:
             self.toolBarWindows.hide()
@@ -305,7 +347,7 @@ class MainWindow(DlgUtils, QMainWindow):
             return window
         window = AuxiliaryWindow(self, wtype, wconfig)
         if window.centralLayout.count():
-            window.setWindowIcon(QIcon(':/' + wconfig.icon))
+            window.setWindowIcon(QIcon(":/" + wconfig.icon))
             self.windows[wtype] = window
             window.closed.connect(self.on_auxWindow_closed)
             for panel in window.panels:
@@ -328,7 +370,7 @@ class MainWindow(DlgUtils, QMainWindow):
             import nicos.devices.datasinks
         except ImportError:
             pass
-        classes = self.gui_conf.options.get('reader_classes', [])
+        classes = self.gui_conf.options.get("reader_classes", [])
         for clsname in classes:
             try:
                 importString(clsname)
@@ -351,13 +393,13 @@ class MainWindow(DlgUtils, QMainWindow):
 
     def _keepalive(self):
         if self.client.isconnected:
-            self.client.ask('keepalive')
+            self.client.ask("keepalive")
 
     def show(self):
         QMainWindow.show(self)
         if self.autoconnect and not self.client.isconnected:
             self.on_actionConnect_triggered(True)
-        if sys.platform == 'darwin':
+        if sys.platform == "darwin":
             # on Mac OS loadBasicWindowSettings seems not to work before show()
             # so we do it here again
             with self.sgroup as settings:
@@ -368,48 +410,50 @@ class MainWindow(DlgUtils, QMainWindow):
         startStartupTools(self, self.gui_conf.tools)
 
     def loadSettings(self, settings):
-        self.autoconnect = settings.value('autoconnect', True, bool)
+        self.autoconnect = settings.value("autoconnect", True, bool)
 
         self.connpresets = {}
         # new setting key, with dictionary values
-        for (k, v) in settings.value('connpresets_new', {}).items():
+        for k, v in settings.value("connpresets_new", {}).items():
             self.connpresets[k] = ConnectionData(**v).copy()
         # if it was empty, try old setting key with list values
         if not self.connpresets:
-            for (k, v) in settings.value('connpresets', {}).items():
+            for k, v in settings.value("connpresets", {}).items():
                 self.connpresets[k] = ConnectionData(
-                    host=v[0], port=int(v[1]), user=v[2], password=None)
+                    host=v[0], port=int(v[1]), user=v[2], password=None
+                )
         # if there are presets defined in the gui config add them and override
         # existing ones
         for key, connection in self.gui_conf.options.get(
-            'connection_presets', {}).items():
+            "connection_presets", {}
+        ).items():
             parsed = parseConnectionString(connection, DEFAULT_PORT)
             if parsed:
-                parsed['viewonly'] = True
+                parsed["viewonly"] = True
                 if key not in self.connpresets:
                     self.connpresets[key] = ConnectionData(**parsed)
                 else:  # reset only host if connection is already configured
-                    self.connpresets[key].host = parsed['host']
+                    self.connpresets[key].host = parsed["host"]
 
-        self.lastpreset = settings.value('lastpreset', '')
+        self.lastpreset = settings.value("lastpreset", "")
         if self.lastpreset in self.connpresets:
             self.setConnData(self.connpresets[self.lastpreset])
 
-        self.instrument = settings.value('instrument', self.gui_conf.name)
-        self.confirmexit = settings.value('confirmexit', True, bool)
-        self.warnwhenadmin = settings.value('warnwhenadmin', True, bool)
-        self.showtrayicon = settings.value('showtrayicon', True, bool)
-        self.autoreconnect = settings.value('autoreconnect', True, bool)
-        self.autosavelayout = settings.value('autosavelayout', True, bool)
-        self.allowoutputlinewrap = settings.value('allowoutputlinewrap', False, bool)
-        self.tunnel = settings.value('tunnel', '')
+        self.instrument = settings.value("instrument", self.gui_conf.name)
+        self.confirmexit = settings.value("confirmexit", True, bool)
+        self.warnwhenadmin = settings.value("warnwhenadmin", True, bool)
+        self.showtrayicon = settings.value("showtrayicon", True, bool)
+        self.autoreconnect = settings.value("autoreconnect", True, bool)
+        self.autosavelayout = settings.value("autosavelayout", True, bool)
+        self.allowoutputlinewrap = settings.value("allowoutputlinewrap", False, bool)
+        self.tunnel = settings.value("tunnel", "")
 
         self.update()
 
     def loadAuxWindows(self, settings):
-        open_wintypes = settings.value('auxwindows') or []
+        open_wintypes = settings.value("auxwindows") or []
         if isinstance(open_wintypes, str):
-            open_wintypes = [int(w) for w in open_wintypes.split(',')]
+            open_wintypes = [int(w) for w in open_wintypes.split(",")]
 
         for wtype in open_wintypes:
             if isinstance(wtype, str):
@@ -418,27 +462,28 @@ class MainWindow(DlgUtils, QMainWindow):
 
     def saveWindowLayout(self):
         with self.sgroup as settings:
-            settings.setValue('geometry', self.saveGeometry())
-            settings.setValue('windowstate', self.saveState())
-            settings.setValue('splitstate',
-                              [sp.saveState() for sp in self.splitters])
+            settings.setValue("geometry", self.saveGeometry())
+            settings.setValue("windowstate", self.saveState())
+            settings.setValue("splitstate", [sp.saveState() for sp in self.splitters])
             open_wintypes = list(self.windows)
-            settings.setValue('auxwindows', open_wintypes)
+            settings.setValue("auxwindows", open_wintypes)
 
     def saveSettings(self, settings):
-        settings.setValue('autoconnect', self.client.isconnected)
-        settings.setValue('connpresets_new', {k: v.serialize() for (k, v)
-                                              in self.connpresets.items()})
-        settings.setValue('lastpreset', self.lastpreset)
-        settings.setValue('font', self.user_font)
-        settings.setValue('color', self.user_color)
-        settings.setValue('tunnel', self.tunnel)
+        settings.setValue("autoconnect", self.client.isconnected)
+        settings.setValue(
+            "connpresets_new", {k: v.serialize() for (k, v) in self.connpresets.items()}
+        )
+        settings.setValue("lastpreset", self.lastpreset)
+        settings.setValue("font", self.user_font)
+        settings.setValue("color", self.user_color)
+        settings.setValue("tunnel", self.tunnel)
 
     def closeEvent(self, event):
-        if self.confirmexit and \
-           QMessageBox.question(
-               self, 'Quit', 'Do you really want to quit?'
-           ) == QMessageBox.StandardButton.No:
+        if (
+            self.confirmexit
+            and QMessageBox.question(self, "Quit", "Do you really want to quit?")
+            == QMessageBox.StandardButton.No
+        ):
             event.ignore()
             return
 
@@ -470,49 +515,54 @@ class MainWindow(DlgUtils, QMainWindow):
         QApplication.instance().quit()
 
     def setTitlebar(self, connected):
-        inststr = str(self.instrument) or 'NICOS'
+        inststr = str(self.instrument) or "NICOS"
         if connected:
-            hoststr = '%s at %s:%s' % (self.client.login, self.client.host,
-                                       self.client.port)
-            self.setWindowTitle('%s - %s' % (inststr, hoststr))
+            hoststr = "%s at %s:%s" % (
+                self.client.login,
+                self.client.host,
+                self.client.port,
+            )
+            self.setWindowTitle("%s - %s" % (inststr, hoststr))
         else:
-            self.setWindowTitle('%s - disconnected' % inststr)
+            self.setWindowTitle("%s - disconnected" % inststr)
 
     def setStatus(self, status, exception=False):
         if status == self.current_status:
             return
-        if self.client.last_action_at and \
-           self.current_status == 'running' and \
-           status in ('idle', 'paused') and \
-           currenttime() - self.client.last_action_at > 20:
+        if (
+            self.client.last_action_at
+            and self.current_status == "running"
+            and status in ("idle", "paused")
+            and currenttime() - self.client.last_action_at > 20
+        ):
             # show a visual indication of what happened
-            if status == 'paused':
-                msg = 'Script is now paused.'
+            if status == "paused":
+                msg = "Script is now paused."
             elif exception:
-                msg = 'Script has exited with an error.'
+                msg = "Script has exited with an error."
             else:
-                msg = 'Script has finished.'
+                msg = "Script has finished."
             self.trayIcon.showMessage(self.instrument, msg)
             self.client.last_action_at = 0
         self.current_status = status
-        isconnected = status != 'disconnected'
+        isconnected = status != "disconnected"
         self.actionConnect.setChecked(isconnected)
         if isconnected:
-            self.actionConnect.setText('Disconnect')
+            self.actionConnect.setText("Disconnect")
         else:
-            self.actionConnect.setText('Connect to server...')
+            self.actionConnect.setText("Connect to server...")
             self.setTitlebar(False)
         # new status icon
-        pixmap = QPixmap(':/' + status + ('exc' if exception else ''))
+        pixmap = QPixmap(":/" + status + ("exc" if exception else ""))
         self.statusLabel.setPixmap(pixmap)
-        self.statusLabel.setToolTip('Script status: %s' % status)
+        self.statusLabel.setToolTip("Script status: %s" % status)
         newicon = QIcon()
         newicon.addPixmap(pixmap, QIcon.Mode.Disabled)
         self.trayIcon.setIcon(newicon)
-        self.trayIcon.setToolTip('%s status: %s' % (self.instrument, status))
+        self.trayIcon.setToolTip("%s status: %s" % (self.instrument, status))
         if self.showtrayicon:
             self.trayIcon.show()
-        if self.promptWindow and status != 'paused':
+        if self.promptWindow and status != "paused":
             self.promptWindow.close()
         # propagate to panels
         for panel in self.panels:
@@ -523,12 +573,14 @@ class MainWindow(DlgUtils, QMainWindow):
 
     def on_client_error(self, problem, exc=None):
         if exc is not None:
-            self.log.error('Error from daemon', exc=exc)
-        problem = strftime('[%m-%d %H:%M:%S] ') + problem
+            self.log.error("Error from daemon", exc=exc)
+        problem = strftime("[%m-%d %H:%M:%S] ") + problem
         if self.errorWindow is None:
+
             def reset_errorWindow():
                 self.errorWindow = None
-            self.errorWindow = ErrorDialog(self, windowTitle='Daemon error')
+
+            self.errorWindow = ErrorDialog(self, windowTitle="Daemon error")
             self.errorWindow.accepted.connect(reset_errorWindow)
             self.errorWindow.addMessage(problem)
             self.errorWindow.show()
@@ -549,23 +601,24 @@ class MainWindow(DlgUtils, QMainWindow):
             self.on_client_error(problem)
 
     def on_client_connected(self):
-        self.setStatus('idle')
+        self.setStatus("idle")
         self._reconnect_count = 0
 
         self.setTitlebar(True)
         # get all server status info
-        initstatus = self.client.ask('getstatus')
+        initstatus = self.client.ask("getstatus")
         if initstatus:
             # handle initial status
-            self.on_client_status(initstatus['status'])
+            self.on_client_status(initstatus["status"])
             # propagate info to all components
-            self.client.signal('initstatus', initstatus)
+            self.client.signal("initstatus", initstatus)
 
         # show warning label for admin users
         self.adminLabel.setVisible(
-            self.warnwhenadmin and
-            self.client.user_level is not None and
-            self.client.user_level >= ADMIN)
+            self.warnwhenadmin
+            and self.client.user_level is not None
+            and self.client.user_level >= ADMIN
+        )
 
         self.actionViewOnly.setChecked(self.client.viewonly)
         self.actionExpert.setChecked(self.conndata.expertmode)
@@ -578,17 +631,17 @@ class MainWindow(DlgUtils, QMainWindow):
     def on_client_status(self, data):
         status = data[0]
         if status == STATUS_IDLE:
-            self.setStatus('idle')
+            self.setStatus("idle")
         elif status == STATUS_IDLEEXC:
-            self.setStatus('idle', exception=True)
+            self.setStatus("idle", exception=True)
         elif status != STATUS_INBREAK:
-            self.setStatus('running')
+            self.setStatus("running")
         else:
-            self.setStatus('paused')
+            self.setStatus("paused")
 
     def on_client_disconnected(self):
         self.adminLabel.setVisible(False)
-        self.setStatus('disconnected')
+        self.setStatus("disconnected")
         self.actionViewOnly.setChecked(True)
 
     def on_client_showhelp(self, data):
@@ -604,13 +657,14 @@ class MainWindow(DlgUtils, QMainWindow):
         # (funcname, args, ...)
         plot_func_path = data[0]
         try:
-            modname, funcname = plot_func_path.rsplit('.', 1)
-            func = getattr(__import__(modname, None, None, [funcname]),
-                           funcname)
+            modname, funcname = plot_func_path.rsplit(".", 1)
+            func = getattr(__import__(modname, None, None, [funcname]), funcname)
             func(*data[1:])
         except Exception:
-            self.log.exception('Error during clientexec:\n%s',
-                               '\n'.join(traceback.format_tb(sys.exc_info()[2])))
+            self.log.exception(
+                "Error during clientexec:\n%s",
+                "\n".join(traceback.format_tb(sys.exc_info()[2])),
+            )
 
     def on_client_plugplay(self, data):
         windowkey = data[0:2]  # (mode, setupname)
@@ -629,7 +683,7 @@ class MainWindow(DlgUtils, QMainWindow):
         if self.watchdogWindow is None:
             self.watchdogWindow = WatchdogDialog(self)
         self.watchdogWindow.addEvent(data)
-        if data[0] != 'resolved':
+        if data[0] != "resolved":
             self.watchdogWindow.show()
 
     def on_client_prompt(self, data):
@@ -639,19 +693,21 @@ class MainWindow(DlgUtils, QMainWindow):
         # show non-modal dialog box that prompts the user to continue or abort
         prompt_text = data[0]
         dlg = self.promptWindow = QMessageBox(
-            QMessageBox.Icon.Information, 'Confirmation required',
+            QMessageBox.Icon.Information,
+            "Confirmation required",
             prompt_text,
             QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,
-            self)
+            self,
+        )
         dlg.setWindowModality(Qt.WindowModality.NonModal)
 
         # give the buttons better descriptions
         btn = dlg.button(QMessageBox.StandardButton.Cancel)
-        btn.setText('Abort script')
-        btn.clicked.connect(lambda: self.client.tell_action('stop', BREAK_NOW))
+        btn.setText("Abort script")
+        btn.clicked.connect(lambda: self.client.tell_action("stop", BREAK_NOW))
         btn = dlg.button(QMessageBox.StandardButton.Ok)
-        btn.setText('Continue script')
-        btn.clicked.connect(lambda: self.client.tell_action('continue'))
+        btn.setText("Continue script")
+        btn.clicked.connect(lambda: self.client.tell_action("continue"))
         btn.setFocus()
 
         dlg.show()
@@ -684,26 +740,33 @@ class MainWindow(DlgUtils, QMainWindow):
     @pyqtSlot()
     def on_actionNicosHelp_triggered(self):
         if not HelpWindow:
-            self.showError('Cannot open help window: Qt web extension is not '
-                           'available on your system.')
+            self.showError(
+                "Cannot open help window: Qt web extension is not "
+                "available on your system."
+            )
             return
         if not self.client.isconnected:
-            self.showError('Cannot open online help: you are not connected '
-                           'to a daemon.')
+            self.showError(
+                "Cannot open online help: you are not connected " "to a daemon."
+            )
             return
         self.client.eval('session.showHelp("index")')
 
     @pyqtSlot()
     def on_actionNicosDocu_triggered(self):
         if not QWebView:
-            self.showError('Cannot open documentation window: Qt web extension'
-                           ' is not available on your system.')
+            self.showError(
+                "Cannot open documentation window: Qt web extension"
+                " is not available on your system."
+            )
             return
         from nicos.clients.gui.tools.website import WebsiteTool
 
         dlg = WebsiteTool(
-            self, self.client,
-            url='https://forge.frm2.tum.de/nicos/doc/nicos-master/documentation/')
+            self,
+            self.client,
+            url="https://forge.frm2.tum.de/nicos/doc/nicos-master/documentation/",
+        )
         dlg.setWindowModality(Qt.WindowModality.NonModal)
         dlg.show()
 
@@ -719,19 +782,26 @@ class MainWindow(DlgUtils, QMainWindow):
 
         if self.client.isconnected:
             dinfo = self.client.daemon_info.copy()
-            dinfo['server_host'] = self.client.host
+            dinfo["server_host"] = self.client.host
         else:
             dinfo = {}
-        dlg = dialogFromUi(self, 'dialogs/about.ui')
+        dlg = dialogFromUi(self, "dialogs/about.ui")
         dlg.clientVersion.setText(nicos_version)
-        dlg.pyVersion.setText('%s/%s/%s/%s/%s' % (
-            sys.version.split()[0], QT_VERSION_STR, PYQT_VERSION_STR,
-            gr.runtime_version(), gr.__version__))
-        dlg.serverHost.setText(dinfo.get('server_host', 'not connected'))
-        dlg.nicosRoot.setText(dinfo.get('nicos_root', ''))
-        dlg.serverVersion.setText(dinfo.get('daemon_version', ''))
-        dlg.customPath.setText(dinfo.get('custom_path', ''))
-        dlg.customVersion.setText(dinfo.get('custom_version', ''))
+        dlg.pyVersion.setText(
+            "%s/%s/%s/%s/%s"
+            % (
+                sys.version.split()[0],
+                QT_VERSION_STR,
+                PYQT_VERSION_STR,
+                gr.runtime_version(),
+                gr.__version__,
+            )
+        )
+        dlg.serverHost.setText(dinfo.get("server_host", "not connected"))
+        dlg.nicosRoot.setText(dinfo.get("nicos_root", ""))
+        dlg.serverVersion.setText(dinfo.get("daemon_version", ""))
+        dlg.customPath.setText(dinfo.get("custom_path", ""))
+        dlg.customVersion.setText(dinfo.get("custom_version", ""))
         dlg.contributors.setPlainText(nicos.authors.authors_list)
         dlg.adjustSize()
         dlg.exec()
@@ -747,9 +817,9 @@ class MainWindow(DlgUtils, QMainWindow):
             return
 
         self.actionConnect.setChecked(False)  # gets set by connection event
-        ret = ConnectionDialog.getConnectionData(self, self.connpresets,
-                                                 self.lastpreset,
-                                                 self.conndata, self.tunnel)
+        ret = ConnectionDialog.getConnectionData(
+            self, self.connpresets, self.lastpreset, self.conndata, self.tunnel
+        )
         new_name, new_data, save, tunnel = ret
 
         if new_data is None:
@@ -764,10 +834,12 @@ class MainWindow(DlgUtils, QMainWindow):
             try:
                 host, username, password = splitTunnelString(tunnel)
                 self.tunnelServer = SSHTunnelForwarder(
-                    host, ssh_username=username, ssh_password=password,
-                    remote_bind_address=(self.conndata.host,
-                                         self.conndata.port),
-                    compression=True)
+                    host,
+                    ssh_username=username,
+                    ssh_password=password,
+                    remote_bind_address=(self.conndata.host, self.conndata.port),
+                    compression=True,
+                )
                 self.tunnelServer.start()
                 tunnel_port = self.tunnelServer.local_bind_port
 
@@ -780,7 +852,7 @@ class MainWindow(DlgUtils, QMainWindow):
                 # password for the next connection try to avoid typing password
                 # for every (re)connection via the GUI
                 self.tunnel = tunnel
-                self.conndata.host = 'localhost'
+                self.conndata.host = "localhost"
                 self.conndata.port = tunnel_port
             except ValueError as e:
                 self.showError(str(e))

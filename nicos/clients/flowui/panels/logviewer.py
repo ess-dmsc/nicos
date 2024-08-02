@@ -26,21 +26,21 @@
 import os.path
 
 from nicos.clients.flowui import uipath
-from nicos.clients.gui.panels.logviewer import \
-    LogViewerPanel as DefaultLogViewerPanel
+from nicos.clients.gui.panels.logviewer import LogViewerPanel as DefaultLogViewerPanel
 from nicos.guisupport.qt import QDateTime
 
 
 class LogViewerPanel(DefaultLogViewerPanel):
     """Provides a possibility to view various NICOS log files, but arranges
-    logs in reverse order, i.e. latest on top """
-    ui = os.path.join(uipath, 'panels', 'ui_files', 'logviewer.ui')
+    logs in reverse order, i.e. latest on top"""
+
+    ui = os.path.join(uipath, "panels", "ui_files", "logviewer.ui")
 
     def _getFilteredLogs(self, filters):
         # local vars for readability
-        service = filters['service']
-        fromDateTime = filters['fromDateTime']
-        toDateTime = filters['toDateTime']
+        service = filters["service"]
+        fromDateTime = filters["fromDateTime"]
+        toDateTime = filters["toDateTime"]
 
         path = os.path.join(self._logPath, service)
 
@@ -48,44 +48,43 @@ class LogViewerPanel(DefaultLogViewerPanel):
 
         while True:
             # determine logfile name
-            dateStr = toDateTime.toString('yyyy-MM-dd')
-            logFile = '%s-%s.log' % (service, dateStr)
+            dateStr = toDateTime.toString("yyyy-MM-dd")
+            logFile = "%s-%s.log" % (service, dateStr)
 
             # determine logfile path
             logFile = os.path.join(path, logFile)
 
             # if logfile for given date exists, read and filter content
             if os.path.exists(logFile):
-                result += self._getFilteredFileContent(logFile, toDateTime,
-                                                       filters)
+                result += self._getFilteredFileContent(logFile, toDateTime, filters)
 
             if toDateTime.daysTo(fromDateTime) >= 0:
                 break
 
             toDateTime = toDateTime.addDays(-1)
 
-        result += '</pre>'
+        result += "</pre>"
         return result
 
     def _getFilteredFileContent(self, path, fileDate, filters):
         # local vars for readability
-        fromDateTime = filters['fromDateTime']
-        toDateTime = filters['toDateTime']
-        levels = filters['levels']
+        fromDateTime = filters["fromDateTime"]
+        toDateTime = filters["toDateTime"]
+        levels = filters["levels"]
 
         result = []
-        dateStr = fileDate.toString('yyyy-MM-dd ')
+        dateStr = fileDate.toString("yyyy-MM-dd ")
 
-        with open(path, 'r', encoding='utf-8', errors='replace') as f:
+        with open(path, "r", encoding="utf-8", errors="replace") as f:
             # store if last line was added,
             # this is used to filter tracebacks etc properly
             lastLineAdded = False
-            lastLevel = ''
+            lastLevel = ""
 
             for line in f:
                 # split line into:
                 # time, level, service, msg
-                parts = [part.strip() for part in line.split(' : ')]
+                parts = [part.strip() for part in line.split(" : ")]
 
                 # append line continuations
                 if len(parts) < 2:
@@ -93,7 +92,7 @@ class LogViewerPanel(DefaultLogViewerPanel):
                         result.append(self._colorizeLevel(line, lastLevel))
                     continue
 
-                dateTime = QDateTime.fromString(parts[0], 'HH:mm:ss,zzz')
+                dateTime = QDateTime.fromString(parts[0], "HH:mm:ss,zzz")
                 dateTime.setDate(fileDate.date())
                 level = parts[1]
 
@@ -116,4 +115,4 @@ class LogViewerPanel(DefaultLogViewerPanel):
 
             result = reversed(result)
 
-        return ''.join(result)
+        return "".join(result)

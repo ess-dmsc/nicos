@@ -30,13 +30,13 @@ from nicos.utils import findResource, formatDuration
 
 
 class SScan(Cmdlet):
-
     name = "Step Scan (start, step, end)"
     category = "Scan"
 
     def __init__(self, parent, client, options):
-        Cmdlet.__init__(self, parent, client, options,
-                        findResource('nicos_mlz/maria/gui/sscan.ui'))
+        Cmdlet.__init__(
+            self, parent, client, options, findResource("nicos_mlz/maria/gui/sscan.ui")
+        )
         self.device.addItems(self._getDeviceList())
         self.on_device_change(self.device.currentText())
         self.device.currentIndexChanged[str].connect(self.on_device_change)
@@ -57,8 +57,9 @@ class SScan(Cmdlet):
             counttime = float(self.delta.text())
             numpoints = int(round((end - start) / step + 1))
             secs = numpoints * counttime
-            self.totalLabel.setText("Total: %d points, %s" %
-                                    (numpoints, formatDuration(secs)))
+            self.totalLabel.setText(
+                "Total: %d points, %s" % (numpoints, formatDuration(secs))
+            )
         except (ValueError, ArithmeticError):
             self.totalLabel.setText("Total:")
         self.changed()
@@ -77,11 +78,13 @@ class SScan(Cmdlet):
         self.changed()
 
     def getValues(self):
-        return {"dev": self.device.currentText(),
-                "scanstart": self.start.text(),
-                "scanend": self.stop.text(),
-                "scanstep": self.step.text(),
-                "counttime": float(self.delta.text())}
+        return {
+            "dev": self.device.currentText(),
+            "scanstart": self.start.text(),
+            "scanend": self.stop.text(),
+            "scanstep": self.step.text(),
+            "counttime": float(self.delta.text()),
+        }
 
     def setValues(self, values):
         self._setDevice(values)
@@ -106,21 +109,25 @@ class SScan(Cmdlet):
     def generate(self, mode):
         values = self.getValues()
         if mode == "simple":
-            return "sscan %(dev)s %(scanstart)s %(scanstep)s %(scanend)s " \
-                   "%(counttime)s" % values
-        values['dev'] = self._getDeviceRepr(values['dev'])
-        return "sscan(%(dev)s, %(scanstart)s, %(scanstep)s, %(scanend)s, " \
-               "%(counttime)s)" % values
+            return (
+                "sscan %(dev)s %(scanstart)s %(scanstep)s %(scanend)s "
+                "%(counttime)s" % values
+            )
+        values["dev"] = self._getDeviceRepr(values["dev"])
+        return (
+            "sscan(%(dev)s, %(scanstart)s, %(scanstep)s, %(scanend)s, "
+            "%(counttime)s)" % values
+        )
 
 
 class KScan(Cmdlet):
-
-    name = 'Kinematic Scan'
-    category = 'Scan'
+    name = "Kinematic Scan"
+    category = "Scan"
 
     def __init__(self, parent, client, options):
-        Cmdlet.__init__(self, parent, client, options,
-                        findResource('nicos_mlz/maria/gui/kscan.ui'))
+        Cmdlet.__init__(
+            self, parent, client, options, findResource("nicos_mlz/maria/gui/kscan.ui")
+        )
         self.device.addItems(self._getDeviceList('hasattr(d, "speed")'))
         self.on_device_change(self.device.currentText())
         self.device.currentIndexChanged[str].connect(self.on_device_change)
@@ -137,42 +144,45 @@ class KScan(Cmdlet):
             pnts = self.numpoints.value()
             rng = abs(float(self.step.text()))
             secs = pnts * rng / float(self.speed.text())
-            self.totalLabel.setText('Total: %d points, %s' %
-                                    (pnts, formatDuration(secs)))
+            self.totalLabel.setText(
+                "Total: %d points, %s" % (pnts, formatDuration(secs))
+            )
         except (ValueError, ArithmeticError):
-            self.totalLabel.setText('Total:')
+            self.totalLabel.setText("Total:")
         self.changed()
 
     def on_device_change(self, text):
-        unit = self.client.getDeviceParam(text, 'unit')
-        value = self.client.getDeviceParam(text, 'value')
-        fmtstr = self.client.getDeviceParam(text, 'fmtstr')
+        unit = self.client.getDeviceParam(text, "unit")
+        value = self.client.getDeviceParam(text, "value")
+        fmtstr = self.client.getDeviceParam(text, "fmtstr")
         try:
             self.start.setText(fmtstr % value)
         except Exception:
             pass
-        self.unit1.setText(unit or '')
-        self.unit2.setText(unit or '')
-        self.unit3.setText((unit or '') + '/second')
+        self.unit1.setText(unit or "")
+        self.unit2.setText(unit or "")
+        self.unit3.setText((unit or "") + "/second")
         self.changed()
 
     def getValues(self):
-        return {'dev': self.device.currentText(),
-                'scanstart': self.start.text(),
-                'scanstep': self.step.text(),
-                'scanpoints': self.numpoints.value(),
-                'devspeed': self.speed.text()}
+        return {
+            "dev": self.device.currentText(),
+            "scanstart": self.start.text(),
+            "scanstep": self.step.text(),
+            "scanpoints": self.numpoints.value(),
+            "devspeed": self.speed.text(),
+        }
 
     def setValues(self, values):
         self._setDevice(values)
-        if 'scanstart' in values:
-            self.start.setText(values['scanstart'])
-        if 'scanstep' in values:
-            self.step.setText(values['scanstep'])
-        if 'scanpoints' in values:
-            self.numpoints.setValue(values['scanpoints'])
-        if 'devspeed' in values:
-            self.speed.setText(values['devspeed'])
+        if "scanstart" in values:
+            self.start.setText(values["scanstart"])
+        if "scanstep" in values:
+            self.step.setText(values["scanstep"])
+        if "scanpoints" in values:
+            self.numpoints.setValue(values["scanpoints"])
+        if "devspeed" in values:
+            self.speed.setText(values["devspeed"])
 
     def isValid(self):
         valid = [
@@ -185,12 +195,16 @@ class KScan(Cmdlet):
 
     def generate(self, mode):
         values = self.getValues()
-        if mode == 'simple':
-            return 'kscan %(dev)s %(scanstart)s %(scanstep)s %(scanpoints)s ' \
-                   '%(devspeed)s' % values
-        values['dev'] = self._getDeviceRepr(values['dev'])
-        return 'kscan(%(dev)s, %(scanstart)s, %(scanstep)s, %(scanpoints)s, ' \
-               '%(devspeed)s)' % values
+        if mode == "simple":
+            return (
+                "kscan %(dev)s %(scanstart)s %(scanstep)s %(scanpoints)s "
+                "%(devspeed)s" % values
+            )
+        values["dev"] = self._getDeviceRepr(values["dev"])
+        return (
+            "kscan(%(dev)s, %(scanstart)s, %(scanstep)s, %(scanpoints)s, "
+            "%(devspeed)s)" % values
+        )
 
 
 register(KScan)

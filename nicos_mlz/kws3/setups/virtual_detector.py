@@ -1,30 +1,33 @@
-description = 'Virtual detector motor setup'
-group = 'lowlevel'
+description = "Virtual detector motor setup"
+group = "lowlevel"
 display_order = 65
 
-excludes = ['beamstop']
+excludes = ["beamstop"]
 
 devices = dict(
-    beamstop = device('nicos_mlz.kws3.devices.resolution.Beamstop',
-        description = 'select beamstop presets',
-        moveable = 'det_beamstop_x',
-        resolution = 'resolution',
-        outpos = 100,
+    beamstop=device(
+        "nicos_mlz.kws3.devices.resolution.Beamstop",
+        description="select beamstop presets",
+        moveable="det_beamstop_x",
+        resolution="resolution",
+        outpos=100,
     ),
-    det_x = device('nicos_mlz.kws1.devices.virtual.Standin',
-        description = 'detector translation X',
+    det_x=device(
+        "nicos_mlz.kws1.devices.virtual.Standin",
+        description="detector translation X",
     ),
-    det_y = device('nicos_mlz.kws1.devices.virtual.Standin',
-        description = 'detector translation Y',
+    det_y=device(
+        "nicos_mlz.kws1.devices.virtual.Standin",
+        description="detector translation Y",
     ),
-    det_z = device('nicos_mlz.kws1.devices.virtual.Standin',
-        description = 'detector translation Z',
+    det_z=device(
+        "nicos_mlz.kws1.devices.virtual.Standin",
+        description="detector translation Z",
     ),
-    det_beamstop_x = device('nicos_mlz.kws1.devices.virtual.Standin',
-        description = 'detector beamstop_x',
+    det_beamstop_x=device(
+        "nicos_mlz.kws1.devices.virtual.Standin",
+        description="detector beamstop_x",
     ),
 )
 
-extended = dict(
-    poller_cache_reader = ['resolution']
-)
+extended = dict(poller_cache_reader=["resolution"])

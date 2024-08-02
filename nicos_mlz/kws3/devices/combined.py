@@ -32,29 +32,33 @@ class Mirror(Moveable):
     valuetype = tupleof(float, float, float)
 
     attached_devices = {
-        'x': Attach('X motor', Moveable),
-        'y': Attach('Y motor', Moveable),
-        'tilt': Attach('Tilt motor', Moveable),
+        "x": Attach("X motor", Moveable),
+        "y": Attach("Y motor", Moveable),
+        "tilt": Attach("Tilt motor", Moveable),
     }
 
     parameter_overrides = {
-        'unit':   Override(mandatory=False, default='mm'),
-        'fmtstr': Override(default='%.0f, %.0f, %.1f'),
+        "unit": Override(mandatory=False, default="mm"),
+        "fmtstr": Override(default="%.0f, %.0f, %.1f"),
     }
 
     def doRead(self, maxage=0):
-        return (self._attached_x.read(maxage),
-                self._attached_y.read(maxage),
-                self._attached_tilt.read(maxage))
+        return (
+            self._attached_x.read(maxage),
+            self._attached_y.read(maxage),
+            self._attached_tilt.read(maxage),
+        )
 
     def doIsAllowed(self, pos):
-        for (i, name, dev) in [(0, 'x', self._attached_x),
-                               (1, 'y', self._attached_y),
-                               (2, 'tilt', self._attached_tilt)]:
+        for i, name, dev in [
+            (0, "x", self._attached_x),
+            (1, "y", self._attached_y),
+            (2, "tilt", self._attached_tilt),
+        ]:
             ok, why = dev.isAllowed(pos[i])
             if not ok:
-                return False, name + ': ' + why
-        return True, ''
+                return False, name + ": " + why
+        return True, ""
 
     def doStart(self, target):
         self._attached_x.start(target[0])
@@ -68,29 +72,33 @@ class Detector(Moveable):
     valuetype = tupleof(float, float, float)
 
     attached_devices = {
-        'x': Attach('X motor', Moveable),
-        'y': Attach('Y motor', Moveable),
-        'z': Attach('Z motor', Moveable),
+        "x": Attach("X motor", Moveable),
+        "y": Attach("Y motor", Moveable),
+        "z": Attach("Z motor", Moveable),
     }
 
     parameter_overrides = {
-        'unit':   Override(mandatory=False, default='mm'),
-        'fmtstr': Override(default='%.1f, %.2f, %.0f'),
+        "unit": Override(mandatory=False, default="mm"),
+        "fmtstr": Override(default="%.1f, %.2f, %.0f"),
     }
 
     def doRead(self, maxage=0):
-        return (self._attached_x.read(maxage),
-                self._attached_y.read(maxage),
-                self._attached_z.read(maxage))
+        return (
+            self._attached_x.read(maxage),
+            self._attached_y.read(maxage),
+            self._attached_z.read(maxage),
+        )
 
     def doIsAllowed(self, pos):
-        for (i, name, dev) in [(0, 'x', self._attached_x),
-                               (1, 'y', self._attached_y),
-                               (2, 'z', self._attached_z)]:
+        for i, name, dev in [
+            (0, "x", self._attached_x),
+            (1, "y", self._attached_y),
+            (2, "z", self._attached_z),
+        ]:
             ok, why = dev.isAllowed(pos[i])
             if not ok:
-                return False, name + ': ' + why
-        return True, ''
+                return False, name + ": " + why
+        return True, ""
 
     def doStart(self, target):
         self._attached_x.start(target[0])

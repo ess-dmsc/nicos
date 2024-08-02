@@ -24,12 +24,11 @@
 """TACO power supply classes."""
 
 import DEVERRORS  # pylint: disable=import-error
-from PowerSupply import CurrentControl, VoltageControl \
-    # pylint: disable=import-error
+from PowerSupply import CurrentControl, VoltageControl
+# pylint: disable=import-error
 
 from nicos import session
-from nicos.core import HasLimits, HasOffset, Moveable, MoveError, NicosError, \
-    Param
+from nicos.core import HasLimits, HasOffset, Moveable, MoveError, NicosError, Param
 from nicos.devices.taco.core import TacoDevice
 
 
@@ -41,11 +40,20 @@ class Supply(HasOffset, HasLimits, TacoDevice, Moveable):
     """
 
     parameters = {
-        'ramp': Param('Ramp for the supply; can be zero to deactivate ramping',
-                      type=float, unit='main/min', default=0, settable=True),
-        'variance': Param('Variance of the read value to the write value; can '
-                          'be zero to deactivate variance check',
-                          type=float, unit='%', default=0),
+        "ramp": Param(
+            "Ramp for the supply; can be zero to deactivate ramping",
+            type=float,
+            unit="main/min",
+            default=0,
+            settable=True,
+        ),
+        "variance": Param(
+            "Variance of the read value to the write value; can "
+            "be zero to deactivate variance check",
+            type=float,
+            unit="%",
+            default=0,
+        ),
     }
 
     def doReadRamp(self):
@@ -67,15 +75,15 @@ class Supply(HasOffset, HasLimits, TacoDevice, Moveable):
         session.delay(0.5)  # wait until server goes into "moving" status
         if self.variance > 0:
             newvalue = self.wait()
-            maxdelta = target * (self.variance/100.) + 0.1
+            maxdelta = target * (self.variance / 100.0) + 0.1
             if abs(newvalue - target) > maxdelta:
                 if not fromvarcheck:
-                    self.log.warning('value %s instead of %s exceeds variance',
-                                     newvalue, target)
+                    self.log.warning(
+                        "value %s instead of %s exceeds variance", newvalue, target
+                    )
                     self.doStart(target, fromvarcheck=True)
                 else:
-                    raise MoveError(self,
-                                    'power supply failed to set correct value')
+                    raise MoveError(self, "power supply failed to set correct value")
 
     def doStop(self):
         self._taco_guard(self._dev.stop)
@@ -83,9 +91,11 @@ class Supply(HasOffset, HasLimits, TacoDevice, Moveable):
 
 class CurrentSupply(Supply):
     """Concrete device for TACO current supplies."""
+
     taco_class = CurrentControl
 
 
 class VoltageSupply(Supply):
     """Concrete device for TACO voltage supplies."""
+
     taco_class = VoltageControl

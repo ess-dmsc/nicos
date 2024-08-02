@@ -36,16 +36,15 @@ class SelectorLambda(HasPrecision, Moveable):
     """
 
     parameters = {
-        'twistangle': Param('Blade twist angle', mandatory=True, unit='deg'),
-        'length':     Param('Selector length', mandatory=True, unit='m'),
-        'beamcenter': Param('Beam center position', mandatory=True, unit='m'),
-        'maxspeed':   Param('Max selector speed', mandatory=True, unit='rpm'),
+        "twistangle": Param("Blade twist angle", mandatory=True, unit="deg"),
+        "length": Param("Selector length", mandatory=True, unit="m"),
+        "beamcenter": Param("Beam center position", mandatory=True, unit="m"),
+        "maxspeed": Param("Max selector speed", mandatory=True, unit="rpm"),
     }
 
     attached_devices = {
-        'seldev':  Attach('The selector speed device', Moveable),
-        'tiltdev': Attach('The tilt angle motor, if present', Moveable,
-                          optional=True),
+        "seldev": Attach("The selector speed device", Moveable),
+        "tiltdev": Attach("The tilt angle motor, if present", Moveable, optional=True),
     }
 
     hardware_access = False
@@ -64,8 +63,9 @@ class SelectorLambda(HasPrecision, Moveable):
         v0 = 3955.98
         lambda0 = self.twistangle * 60 * v0 / (360 * self.length * self.maxspeed)
         A = 2 * self.beamcenter * pi / (60 * v0)
-        return (tan(radians(tiltang)) + (A * self.maxspeed * lambda0)) / \
-            (-A**2 * self.maxspeed * lambda0 * tan(radians(tiltang)) + A)
+        return (tan(radians(tiltang)) + (A * self.maxspeed * lambda0)) / (
+            -(A**2) * self.maxspeed * lambda0 * tan(radians(tiltang)) + A
+        )
 
     def doRead(self, maxage=0):
         spd = self._attached_seldev.read(maxage)
@@ -73,18 +73,18 @@ class SelectorLambda(HasPrecision, Moveable):
 
     def doIsAllowed(self, value):
         if value == 0:
-            return False, 'zero wavelength not allowed'
+            return False, "zero wavelength not allowed"
         speed = int(self._constant(self._get_tilt(0)) / value)
         allowed, why = self._attached_seldev.isAllowed(speed)
         if not allowed:
-            why = 'requested %d rpm, %s' % (speed, why)
+            why = "requested %d rpm, %s" % (speed, why)
         return allowed, why
 
     def doStart(self, target):
         if self.isAtTarget(target=target):
             return
         speed = int(self._constant(self._get_tilt(0)) / target)
-        self.log.debug('moving selector to %d rpm', speed)
+        self.log.debug("moving selector to %d rpm", speed)
         self._attached_seldev.start(speed)
 
 
@@ -94,24 +94,24 @@ class SelectorLambdaSpread(Readable):
     """
 
     parameters = {
-        'n_lamellae': Param('Number of lamellae', mandatory=True, unit=''),
-        'd_lamellae': Param('Thickness of a lamella', mandatory=True,
-                            unit='mm'),
-        'diameter':   Param('Rotor diameter', mandatory=True, unit='m'),
+        "n_lamellae": Param("Number of lamellae", mandatory=True, unit=""),
+        "d_lamellae": Param("Thickness of a lamella", mandatory=True, unit="mm"),
+        "diameter": Param("Rotor diameter", mandatory=True, unit="m"),
     }
 
     attached_devices = {
-        'lamdev': Attach('The wavelength device', SelectorLambda),
+        "lamdev": Attach("The wavelength device", SelectorLambda),
     }
 
     def doRead(self, maxage=0):
         lamdev = self._attached_lamdev
         tilt = lamdev._get_tilt(maxage)
-        eff_twistangle = lamdev.twistangle + \
-            tilt * lamdev.length / lamdev.beamcenter
-        spread = atan((2*pi / self.n_lamellae) -
-                      (2 * self.d_lamellae / self.diameter)) / eff_twistangle
+        eff_twistangle = lamdev.twistangle + tilt * lamdev.length / lamdev.beamcenter
+        spread = (
+            atan((2 * pi / self.n_lamellae) - (2 * self.d_lamellae / self.diameter))
+            / eff_twistangle
+        )
         return 100 * spread
 
     def doStatus(self, maxage=0):
-        return status.OK, ''
+        return status.OK, ""

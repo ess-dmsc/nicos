@@ -28,17 +28,17 @@ from nicos.core import Attach, Moveable, Override, Readable, oneof, status
 class SamplePusher(Moveable):
     """Move the sample up/down inside the sample changer device."""
 
-    valuetype = oneof('down', 'up')
+    valuetype = oneof("down", "up")
 
     attached_devices = {
-        'actuator': Attach('Actuator to perform the switch', Moveable),
-        'sensort': Attach('Sensor at top of the tube.', Readable),
-        'sensorl': Attach('Sensor at down of the tube', Readable),
+        "actuator": Attach("Actuator to perform the switch", Moveable),
+        "sensort": Attach("Sensor at top of the tube.", Readable),
+        "sensorl": Attach("Sensor at down of the tube", Readable),
     }
 
     parameter_overrides = {
-        'unit': Override(default=''),
-        'fmtstr': Override(default='%s'),
+        "unit": Override(default=""),
+        "fmtstr": Override(default="%s"),
     }
 
     def doInit(self, mode):
@@ -46,22 +46,22 @@ class SamplePusher(Moveable):
 
     def doStart(self, target):
         self._attached_actuator.move(target)
-        if target == 'up':
+        if target == "up":
             self._target_sens = self._attached_sensort
-        elif target == 'down':
+        elif target == "down":
             self._target_sens = self._attached_sensorl
 
     def doStatus(self, maxage=0):
         # it is a local object so poller gives wrong state here but maw works
         if self._target_sens:
             if self._target_sens.read(maxage) == 0:
-                return status.BUSY, 'moving'
+                return status.BUSY, "moving"
             elif self._target_sens.read(maxage) == 1:
                 self._target_sens = None
-        return status.OK, 'idle'
+        return status.OK, "idle"
 
     def doRead(self, maxage=0):
         if self._attached_sensort.read(maxage):
-            return 'up'
+            return "up"
         elif self._attached_sensorl.read(maxage):
-            return 'down'
+            return "down"

@@ -1,20 +1,21 @@
 description = "sc2 height after nok9"
 
-group = 'lowlevel'
+group = "lowlevel"
 
-instrument_values = configdata('instrument.values')
+instrument_values = configdata("instrument.values")
 
-tango_base = instrument_values['tango_base']
+tango_base = instrument_values["tango_base"]
 
 devices = dict(
-    sc2 = device('nicos.devices.entangle.Motor',
-        description = 'sc2 Motor; has brake, will move down to mech. limit if '
-                      'brake and control are off, this will kill the system '
-                      '2019-05-29 photo',
-        tangodevice = tango_base + 'optic/sc2/motor',
-        refpos = -7.2946,
-        speed = 10,
-        accel = 0.05,
-        decel = 0.05,
+    sc2=device(
+        "nicos.devices.entangle.Motor",
+        description="sc2 Motor; has brake, will move down to mech. limit if "
+        "brake and control are off, this will kill the system "
+        "2019-05-29 photo",
+        tangodevice=tango_base + "optic/sc2/motor",
+        refpos=-7.2946,
+        speed=10,
+        accel=0.05,
+        decel=0.05,
     ),
 )

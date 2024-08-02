@@ -33,5 +33,15 @@ from .sampletable import SampleTable
 from .table import TableBase
 from .tabletarget import TableTarget
 
-__all__ = ('AnaTable', 'Beam', 'Crystal', 'Detector', 'DetTable', 'MonoTable',
-           'Sample', 'SampleTable', 'TableBase', 'TableTarget')
+__all__ = (
+    "AnaTable",
+    "Beam",
+    "Crystal",
+    "Detector",
+    "DetTable",
+    "MonoTable",
+    "Sample",
+    "SampleTable",
+    "TableBase",
+    "TableTarget",
+)

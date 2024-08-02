@@ -1,52 +1,58 @@
-description = 'STRESS-SPEC setup with Huber Eulerian cradle plus small xyz table'
+description = "STRESS-SPEC setup with Huber Eulerian cradle plus small xyz table"
 
-group = 'basic'
+group = "basic"
 
 includes = [
-    'eulerian_huber',
+    "eulerian_huber",
 ]
 
 sysconfig = dict(
-    datasinks = ['caresssink'],
+    datasinks=["caresssink"],
 )
 
-tango_base = 'tango://motorbox05.stressi.frm2.tum.de:10000/box/'
+tango_base = "tango://motorbox05.stressi.frm2.tum.de:10000/box/"
 
 devices = dict(
-    xe_m = device('nicos.devices.entangle.Motor',
-        tangodevice = tango_base + 'channel1/motor',
-        speed = 1,
-        fmtstr = '%.2f',
-        visibility = (),
+    xe_m=device(
+        "nicos.devices.entangle.Motor",
+        tangodevice=tango_base + "channel1/motor",
+        speed=1,
+        fmtstr="%.2f",
+        visibility=(),
     ),
-    xe = device('nicos.devices.generic.Axis',
-        description = 'X Eulerian XYZ',
-        fmtstr = '%.2f',
-        motor = 'xe_m',
-        precision = 0.01,
+    xe=device(
+        "nicos.devices.generic.Axis",
+        description="X Eulerian XYZ",
+        fmtstr="%.2f",
+        motor="xe_m",
+        precision=0.01,
     ),
-    ye_m = device('nicos.devices.entangle.Motor',
-        tangodevice = tango_base + 'channel2/motor',
-        speed = 1,
-        fmtstr = '%.2f',
-        visibility = (),
+    ye_m=device(
+        "nicos.devices.entangle.Motor",
+        tangodevice=tango_base + "channel2/motor",
+        speed=1,
+        fmtstr="%.2f",
+        visibility=(),
     ),
-    ye = device('nicos.devices.generic.Axis',
-        description = 'Y Eulerian XYZ',
-        fmtstr = '%.2f',
-        motor = 'ye_m',
-        precision = 0.01,
+    ye=device(
+        "nicos.devices.generic.Axis",
+        description="Y Eulerian XYZ",
+        fmtstr="%.2f",
+        motor="ye_m",
+        precision=0.01,
     ),
-    ze_m = device('nicos.devices.entangle.Motor',
-        tangodevice = tango_base + 'channel3/motor',
-        speed = 1,
-        fmtstr = '%.2f',
-        visibility = (),
+    ze_m=device(
+        "nicos.devices.entangle.Motor",
+        tangodevice=tango_base + "channel3/motor",
+        speed=1,
+        fmtstr="%.2f",
+        visibility=(),
     ),
-    ze = device('nicos.devices.generic.Axis',
-        description = 'Z Eulerian XYZ',
-        fmtstr = '%.2f',
-        motor = 'ze_m',
-        precision = 0.01,
+    ze=device(
+        "nicos.devices.generic.Axis",
+        description="Z Eulerian XYZ",
+        fmtstr="%.2f",
+        motor="ze_m",
+        precision=0.01,
     ),
 )

@@ -35,8 +35,7 @@ class DigitalInput(entangle.DigitalInput):
     valuetype = int
 
     parameters = {
-        'offset': Param('Offset of digital input',
-                        type=int, mandatory=True),
+        "offset": Param("Offset of digital input", type=int, mandatory=True),
     }
 
     def doRead(self, maxage=0):
@@ -51,8 +50,7 @@ class NamedDigitalInput(entangle.NamedDigitalInput):
     valuetype = int
 
     parameters = {
-        'offset': Param('Offset of digital input',
-                        type=int, mandatory=True),
+        "offset": Param("Offset of digital input", type=int, mandatory=True),
     }
 
     def doRead(self, maxage=0):
@@ -68,10 +66,10 @@ class DigitalOutput(entangle.DigitalOutput):
     valuetype = listof(int)
 
     parameters = {
-        'startoffset': Param('Starting offset of digital output values',
-                             type=int, mandatory=True),
-        'bitwidth':    Param('Number of bits to switch', type=int,
-                             mandatory=True),
+        "startoffset": Param(
+            "Starting offset of digital output values", type=int, mandatory=True
+        ),
+        "bitwidth": Param("Number of bits to switch", type=int, mandatory=True),
     }
 
     def doInit(self, mode):
@@ -80,8 +78,7 @@ class DigitalOutput(entangle.DigitalOutput):
             self._dev.WriteOutputWord([0x1120, 0])
 
     def doRead(self, maxage=0):
-        return tuple(self._dev.ReadOutputBits([self.startoffset,
-                                               self.bitwidth]))
+        return tuple(self._dev.ReadOutputBits([self.startoffset, self.bitwidth]))
 
     def doStart(self, target):
         self._dev.WriteOutputBits([self.startoffset] + target)
@@ -89,14 +86,16 @@ class DigitalOutput(entangle.DigitalOutput):
     def doIsAllowed(self, target):
         try:
             if len(target) != self.bitwidth:
-                return False, ('value needs to be a sequence of length %d, '
-                               'not %r' % (self.bitwidth, target))
+                return False, (
+                    "value needs to be a sequence of length %d, "
+                    "not %r" % (self.bitwidth, target)
+                )
         except TypeError:
-            return False, 'invalid value for device: %r' % target
-        return True, ''
+            return False, "invalid value for device: %r" % target
+        return True, ""
 
     def doReadFmtstr(self):
-        return '[' + ', '.join(['%s'] * self.bitwidth) + ']'
+        return "[" + ", ".join(["%s"] * self.bitwidth) + "]"
 
 
 class NamedDigitalOutput(entangle.NamedDigitalOutput):
@@ -105,8 +104,9 @@ class NamedDigitalOutput(entangle.NamedDigitalOutput):
     """
 
     parameters = {
-        'startoffset': Param('Starting offset of digital output values',
-                             type=int, mandatory=True),
+        "startoffset": Param(
+            "Starting offset of digital output values", type=int, mandatory=True
+        ),
     }
 
     def doInit(self, mode):

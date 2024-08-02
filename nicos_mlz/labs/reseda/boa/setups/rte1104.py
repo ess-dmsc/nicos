@@ -1,13 +1,14 @@
-description = 'Oscilloscope RTE1104 for reading the RMS values of all 4RF coils'
+description = "Oscilloscope RTE1104 for reading the RMS values of all 4RF coils"
 
-group = 'optional'
+group = "optional"
 
-tango_base = 'tango://%s:10000/reseda/' % configdata('gconfigs.tango_host')
+tango_base = "tango://%s:10000/reseda/" % configdata("gconfigs.tango_host")
 
 devices = {
-    'rte1104_io': device('nicos.devices.entangle.StringIO',
-        tangodevice = tango_base + 'rte1104/io',
-        visibility = (),
+    "rte1104_io": device(
+        "nicos.devices.entangle.StringIO",
+        tangodevice=tango_base + "rte1104/io",
+        visibility=(),
     ),
 }
 

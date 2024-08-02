@@ -30,16 +30,15 @@ from nicos.guisupport.qt import QToolBar
 
 
 class EditorPanel(DefaultEditorPanel):
-
     def __init__(self, parent, client, options):
-        if 'show_browser' not in options:
-            options['show_browser'] = False
+        if "show_browser" not in options:
+            options["show_browser"] = False
         DefaultEditorPanel.__init__(self, parent, client, options)
         self.layout().setMenuBar(self.createPanelToolbar())
         self.get_icons()
 
     def createPanelToolbar(self):
-        bar = QToolBar('Editor')
+        bar = QToolBar("Editor")
         bar.addAction(self.actionNew)
         bar.addAction(self.actionOpen)
         bar.addAction(self.actionSave)
@@ -64,19 +63,19 @@ class EditorPanel(DefaultEditorPanel):
         return bar
 
     def get_icons(self):
-        self.actionNew.setIcon(get_icon('add_circle_outline-24px.svg'))
-        self.actionOpen.setIcon(get_icon('folder_open-24px.svg'))
-        self.actionSave.setIcon(get_icon('save-24px.svg'))
-        self.actionPrint.setIcon(get_icon('print-24px.svg'))
-        self.actionUndo.setIcon(get_icon('undo-24px.svg'))
-        self.actionRedo.setIcon(get_icon('redo-24px.svg'))
-        self.actionCut.setIcon(get_icon('cut_24px.svg'))
-        self.actionCopy.setIcon(get_icon('file_copy-24px.svg'))
-        self.actionPaste.setIcon(get_icon('paste_24px.svg'))
-        self.actionRun.setIcon(get_icon('play_arrow-24px.svg'))
-        self.actionSimulate.setIcon(get_icon('play_arrow_outline-24px.svg'))
-        self.actionGet.setIcon(get_icon('eject-24px.svg'))
-        self.actionUpdate.setIcon(get_icon('refresh-24px.svg'))
+        self.actionNew.setIcon(get_icon("add_circle_outline-24px.svg"))
+        self.actionOpen.setIcon(get_icon("folder_open-24px.svg"))
+        self.actionSave.setIcon(get_icon("save-24px.svg"))
+        self.actionPrint.setIcon(get_icon("print-24px.svg"))
+        self.actionUndo.setIcon(get_icon("undo-24px.svg"))
+        self.actionRedo.setIcon(get_icon("redo-24px.svg"))
+        self.actionCut.setIcon(get_icon("cut_24px.svg"))
+        self.actionCopy.setIcon(get_icon("file_copy-24px.svg"))
+        self.actionPaste.setIcon(get_icon("paste_24px.svg"))
+        self.actionRun.setIcon(get_icon("play_arrow-24px.svg"))
+        self.actionSimulate.setIcon(get_icon("play_arrow_outline-24px.svg"))
+        self.actionGet.setIcon(get_icon("eject-24px.svg"))
+        self.actionUpdate.setIcon(get_icon("refresh-24px.svg"))
 
     def getToolbars(self):
         return []

@@ -1,11 +1,11 @@
-description = 'AMOR reduced parameter choice'
+description = "AMOR reduced parameter choice"
 
-group = 'basic'
+group = "basic"
 
-includes = ['director_devices']
+includes = ["director_devices"]
 
-excludes = ['universal', 'deflector']
+excludes = ["universal", "deflector"]
 
-startupcode = '''
+startupcode = """
 amor_director.mode = 'simple'
-'''
+"""

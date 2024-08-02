@@ -2,117 +2,148 @@
 
 main_window = docked(
     vsplit(
-        panel('nicos.clients.gui.panels.cmdbuilder.CommandPanel',
-              modules=['nicos.clients.gui.cmdlets'],
+        panel(
+            "nicos.clients.gui.panels.cmdbuilder.CommandPanel",
+            modules=["nicos.clients.gui.cmdlets"],
         ),
-        panel('nicos.clients.gui.panels.status.ScriptStatusPanel',
-              eta=True,
-              ),
+        panel(
+            "nicos.clients.gui.panels.status.ScriptStatusPanel",
+            eta=True,
+        ),
         # panel('nicos.clients.gui.panels.watch.WatchPanel'),
-        panel('nicos.clients.gui.panels.console.ConsolePanel',
-              watermark='nicos_mlz/sans1/gui/watermark.png',
-              hasinput=False,
-              ),
+        panel(
+            "nicos.clients.gui.panels.console.ConsolePanel",
+            watermark="nicos_mlz/sans1/gui/watermark.png",
+            hasinput=False,
+        ),
     ),
     # ('Watch Expressions',panel('watch.WatchPanel')),
-    ('NICOS devices',
-     panel('nicos.clients.gui.panels.devices.DevicesPanel', icons=True,
-           dockpos='right',)
+    (
+        "NICOS devices",
+        panel(
+            "nicos.clients.gui.panels.devices.DevicesPanel",
+            icons=True,
+            dockpos="right",
+        ),
     ),
-    ('Experiment info',
-     panel('nicos.clients.gui.panels.expinfo.ExpInfoPanel',
-           sample_panel=tabbed(
-               ('Sample changer',
-                panel('nicos_mlz.gui.samplechanger.SamplechangerSetupPanel',
-                      image='nicos_mlz/sans1/gui/sampleChanger22.png',
-                      positions = 22,
-                      setups='sc? or ccmsanssc',
+    (
+        "Experiment info",
+        panel(
+            "nicos.clients.gui.panels.expinfo.ExpInfoPanel",
+            sample_panel=tabbed(
+                (
+                    "Sample changer",
+                    panel(
+                        "nicos_mlz.gui.samplechanger.SamplechangerSetupPanel",
+                        image="nicos_mlz/sans1/gui/sampleChanger22.png",
+                        positions=22,
+                        setups="sc? or ccmsanssc",
+                    ),
                 ),
-               ),
-               ('Sample',
-                panel('nicos.clients.gui.panels.setup_panel.GenericSamplePanel',
-                      setups='not (sc? or ccmsanssc)',
+                (
+                    "Sample",
+                    panel(
+                        "nicos.clients.gui.panels.setup_panel.GenericSamplePanel",
+                        setups="not (sc? or ccmsanssc)",
+                    ),
                 ),
-               ),
-           ),
-           ),
+            ),
+        ),
     ),
 )
 
 windows = [
-    window('Setup', 'setup',
-           tabbed(
-               ('Experiment',
-                panel('nicos.clients.gui.panels.setup_panel.ExpPanel')),
-               ('Setups',
-                panel('nicos.clients.gui.panels.setup_panel.SetupsPanel')),
-               ('Detectors/Environment',
-                panel('nicos.clients.gui.panels.setup_panel.DetEnvPanel')),
-               ('Samples',
-                panel('nicos_mlz.gui.samplechanger.SamplechangerSetupPanel',
-                      # image='nicos_mlz/sans1/gui/sampleChanger11.png',
-                      image='nicos_mlz/sans1/gui/sampleChanger22.png',
-                      # positions = 11, setups='not setup22',)),
-                      positions = 22, setups='sc? or ccmsanssc',),
-                ),
-               ('Sample',
-                panel('nicos.clients.gui.panels.setup_panel.GenericSamplePanel',
-                      setups='not (sc? or ccmsanssc)',
-                ),
-               ),
+    window(
+        "Setup",
+        "setup",
+        tabbed(
+            ("Experiment", panel("nicos.clients.gui.panels.setup_panel.ExpPanel")),
+            ("Setups", panel("nicos.clients.gui.panels.setup_panel.SetupsPanel")),
+            (
+                "Detectors/Environment",
+                panel("nicos.clients.gui.panels.setup_panel.DetEnvPanel"),
             ),
+            (
+                "Samples",
+                panel(
+                    "nicos_mlz.gui.samplechanger.SamplechangerSetupPanel",
+                    # image='nicos_mlz/sans1/gui/sampleChanger11.png',
+                    image="nicos_mlz/sans1/gui/sampleChanger22.png",
+                    # positions = 11, setups='not setup22',)),
+                    positions=22,
+                    setups="sc? or ccmsanssc",
+                ),
+            ),
+            (
+                "Sample",
+                panel(
+                    "nicos.clients.gui.panels.setup_panel.GenericSamplePanel",
+                    setups="not (sc? or ccmsanssc)",
+                ),
+            ),
+        ),
     ),
-    window('Editor', 'editor',
-           vsplit(
-               panel('nicos.clients.gui.panels.scriptbuilder.CommandsPanel'),
-               panel('nicos.clients.gui.panels.editor.EditorPanel',
-                     tools = [
-                         tool('Scan',
-                              'nicos.clients.gui.tools.scan.ScanTool')
-                     ]
-               )
-           )
+    window(
+        "Editor",
+        "editor",
+        vsplit(
+            panel("nicos.clients.gui.panels.scriptbuilder.CommandsPanel"),
+            panel(
+                "nicos.clients.gui.panels.editor.EditorPanel",
+                tools=[tool("Scan", "nicos.clients.gui.tools.scan.ScanTool")],
+            ),
+        ),
     ),
-    window('Watches', 'leds/blue_on',
-           panel('nicos.clients.gui.panels.watch.WatchPanel')),
-    window('Scans', 'plotter',
-           panel('nicos.clients.gui.panels.scans.ScansPanel')),
-    window('History', 'find',
-           panel('nicos.clients.gui.panels.history.HistoryPanel')),
-    window('Logbook', 'table',
-           panel('nicos.clients.gui.panels.elog.ELogPanel')),
-    window('Log files', 'table',
-           panel('nicos.clients.gui.panels.logviewer.LogViewerPanel')),
-    window('Errors', 'errors',
-           panel('nicos.clients.gui.panels.errors.ErrorPanel')),
-    window('Camera', 'live',
-           panel('nicos.clients.gui.panels.live.LiveDataPanel',
-                 instrument='poli')),
+    window(
+        "Watches", "leds/blue_on", panel("nicos.clients.gui.panels.watch.WatchPanel")
+    ),
+    window("Scans", "plotter", panel("nicos.clients.gui.panels.scans.ScansPanel")),
+    window("History", "find", panel("nicos.clients.gui.panels.history.HistoryPanel")),
+    window("Logbook", "table", panel("nicos.clients.gui.panels.elog.ELogPanel")),
+    window(
+        "Log files", "table", panel("nicos.clients.gui.panels.logviewer.LogViewerPanel")
+    ),
+    window("Errors", "errors", panel("nicos.clients.gui.panels.errors.ErrorPanel")),
+    window(
+        "Camera",
+        "live",
+        panel("nicos.clients.gui.panels.live.LiveDataPanel", instrument="poli"),
+    ),
 ]
 
 tools = [
-    tool('Downtime report',
-         'nicos.clients.gui.tools.downtime.DownTimeTool',
-         sender='sans1@frm2.tum.de',
+    tool(
+        "Downtime report",
+        "nicos.clients.gui.tools.downtime.DownTimeTool",
+        sender="sans1@frm2.tum.de",
     ),
-    tool('Calculator',
-         'nicos.clients.gui.tools.calculator.CalculatorTool'),
-    tool('Neutron cross-sections',
-         'nicos.clients.gui.tools.website.WebsiteTool',
-         url='http://www.ncnr.nist.gov/resources/n-lengths/'),
-    tool('Neutron activation',
-         'nicos.clients.gui.tools.website.WebsiteTool',
-         url='https://webapps.frm2.tum.de/intranet/activation/'),
-    tool('Neutron calculations',
-         'nicos.clients.gui.tools.website.WebsiteTool',
-         url='https://webapps.frm2.tum.de/intranet/neutroncalc/'),
-    tool('Report NICOS bug or request enhancement',
-         'nicos.clients.gui.tools.bugreport.BugreportTool'),
-    tool('Emergency stop button',
-         'nicos.clients.gui.tools.estop.EmergencyStopTool',
-         runatstartup=False),
+    tool("Calculator", "nicos.clients.gui.tools.calculator.CalculatorTool"),
+    tool(
+        "Neutron cross-sections",
+        "nicos.clients.gui.tools.website.WebsiteTool",
+        url="http://www.ncnr.nist.gov/resources/n-lengths/",
+    ),
+    tool(
+        "Neutron activation",
+        "nicos.clients.gui.tools.website.WebsiteTool",
+        url="https://webapps.frm2.tum.de/intranet/activation/",
+    ),
+    tool(
+        "Neutron calculations",
+        "nicos.clients.gui.tools.website.WebsiteTool",
+        url="https://webapps.frm2.tum.de/intranet/neutroncalc/",
+    ),
+    tool(
+        "Report NICOS bug or request enhancement",
+        "nicos.clients.gui.tools.bugreport.BugreportTool",
+    ),
+    tool(
+        "Emergency stop button",
+        "nicos.clients.gui.tools.estop.EmergencyStopTool",
+        runatstartup=False,
+    ),
 ]
 
 options = {
-    'reader_classes': ['nicos_mlz.sans1.datasinks.bersans'],
+    "reader_classes": ["nicos_mlz.sans1.datasinks.bersans"],
 }

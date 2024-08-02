@@ -34,62 +34,94 @@ from nicos.devices.sample import Sample
 
 # get paths for rflfiles (*.rfl)
 rfldir_paths = [
-    path.join(config.setup_package_path, p.strip(), 'rflfiles')
+    path.join(config.setup_package_path, p.strip(), "rflfiles")
     for p in config.setup_subdirs
 ]
 
 rfl_files = []
 for p in rfldir_paths:
-    rfl_files.extend(glob.glob(path.join(p, '*.rfl')))
+    rfl_files.extend(glob.glob(path.join(p, "*.rfl")))
 
 # map filenames to full-qualified path, later definitions overwrite earlier ones
 rfl_filenames = dict((path.basename(p), p) for p in rfl_files)
 
 
 class MirrorSample(Sample):
-
     parameters = {
-        'length': Param('Length of the mirror',
-                        type=floatrange(0), settable=True, userparam=True,
-                        unit='mm', default=200),
-        'thickness': Param('Thickness of the mirror',
-                           type=floatrange(0), settable=True, userparam=True,
-                           unit='mm', default=8),
-        'height': Param('Height of the mirror',
-                        type=floatrange(0), settable=True, userparam=True,
-                        unit='mm', default=32),
-        'm': Param('Reflection index (m)',
-                   type=floatrange(1), settable=True, userparam=True,
-                   unit='', default=2),
-        'alfa': Param('Linear decrease of reflectivity m > 1',
-                      type=floatrange(0), settable=True, userparam=True,
-                      unit='', default=4.25),
-        'waviness': Param('Waviness of the mirror surface',
-                          type=floatrange(0), settable=True, userparam=True,
-                          unit='deg', default=0.01),
-        'rflfile': Param('Reflectivity file',
-                         type=oneof(None, *rfl_filenames), settable=True,
-                         userparam=True, default=None),
+        "length": Param(
+            "Length of the mirror",
+            type=floatrange(0),
+            settable=True,
+            userparam=True,
+            unit="mm",
+            default=200,
+        ),
+        "thickness": Param(
+            "Thickness of the mirror",
+            type=floatrange(0),
+            settable=True,
+            userparam=True,
+            unit="mm",
+            default=8,
+        ),
+        "height": Param(
+            "Height of the mirror",
+            type=floatrange(0),
+            settable=True,
+            userparam=True,
+            unit="mm",
+            default=32,
+        ),
+        "m": Param(
+            "Reflection index (m)",
+            type=floatrange(1),
+            settable=True,
+            userparam=True,
+            unit="",
+            default=2,
+        ),
+        "alfa": Param(
+            "Linear decrease of reflectivity m > 1",
+            type=floatrange(0),
+            settable=True,
+            userparam=True,
+            unit="",
+            default=4.25,
+        ),
+        "waviness": Param(
+            "Waviness of the mirror surface",
+            type=floatrange(0),
+            settable=True,
+            userparam=True,
+            unit="deg",
+            default=0.01,
+        ),
+        "rflfile": Param(
+            "Reflectivity file",
+            type=oneof(None, *rfl_filenames),
+            settable=True,
+            userparam=True,
+            default=None,
+        ),
     }
 
     def getReflectivityFile(self):
         return rfl_filenames.get(self.rflfile, None)
 
     def _applyParams(self, number, parameters):
-        """Apply sample parameters.
-        """
+        """Apply sample parameters."""
         Sample._applyParams(self, number, parameters)
-        if 'length' in parameters:
-            self.length = parameters['length']
-        if 'thickness' in parameters:
-            self.thickness = parameters['thickness']
-        if 'height' in parameters:
-            self.height = parameters['height']
-        if 'm' in parameters:
-            self.m = parameters['m']
-        if 'alfa' in parameters:
-            self.alfa = parameters['alfa']
-        if 'waviness' in parameters:
-            self.waviness = parameters['waviness']
-        if 'rflfile' in parameters:
-            self.rflfile = parameters['rflfile']
+        if "length" in parameters:
+            self.length = parameters["length"]
+        if "thickness" in parameters:
+            self.thickness = parameters["thickness"]
+        if "height" in parameters:
+            self.height = parameters["height"]
+        if "m" in parameters:
+            self.m = parameters["m"]
+        if "alfa" in parameters:
+            self.alfa = parameters["alfa"]
+        if "waviness" in parameters:
+            self.waviness = parameters["waviness"]
+        if "rflfile" in parameters:
+            self.rflfile = parameters["rflfile"]

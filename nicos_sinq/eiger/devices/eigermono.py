@@ -38,42 +38,46 @@ class EigerA2Controller(InterfaceLogicalMotorHandler):
     Thus, whenever moving A2, these slit blocks have to be moved
     as well. The other logical motor attached is the slit width.
     """
+
     parameters = {
-        'sizes': Param('Left and right block sizes',
-                       type=listof(float), mandatory=False,
-                       default=[-101.5, -3.5])
+        "sizes": Param(
+            "Left and right block sizes",
+            type=listof(float),
+            mandatory=False,
+            default=[-101.5, -3.5],
+        )
     }
     attached_devices = {
-        'reala2': Attach('Motor for really moving A2', Moveable),
-        'right': Attach('Motor for moving the right slit block', Moveable),
-        'left': Attach('Motor for moving the left slit block', Moveable),
+        "reala2": Attach("Motor for really moving A2", Moveable),
+        "right": Attach("Motor for moving the right slit block", Moveable),
+        "left": Attach("Motor for moving the left slit block", Moveable),
     }
 
     def doPreinit(self, mode):
-        self._status_devs = ['reala2', 'right', 'left']
+        self._status_devs = ["reala2", "right", "left"]
         InterfaceLogicalMotorHandler.doPreinit(self, mode)
 
     def doRead(self, maxage=0):
         result = {}
-        result['a2'] = self._attached_reala2.read(maxage)
+        result["a2"] = self._attached_reala2.read(maxage)
         a2Target = self._attached_reala2.target
         vall = self._attached_left.read(maxage)
         valr = self._attached_right.read(maxage)
         d2ro = self.sizes[1] - a2Target
         d2lo = self.sizes[0] + a2Target
         a2w = (d2lo - vall) + (d2ro - valr)
-        result['a2w'] = abs(a2w)
+        result["a2w"] = abs(a2w)
         return result
 
     def _get_move_list(self, targets):
         positions = []
 
-        a2 = targets['a2']
+        a2 = targets["a2"]
         positions.append((self._attached_reala2, a2))
 
-        a2w = targets['a2w']
-        right = self.sizes[1] - a2 + a2w/2.
-        left = self.sizes[0] + a2 + a2w/2.
+        a2w = targets["a2w"]
+        right = self.sizes[1] - a2 + a2w / 2.0
+        left = self.sizes[0] + a2 + a2w / 2.0
         positions.append((self._attached_right, right))
         positions.append((self._attached_left, left))
         return positions
@@ -84,37 +88,38 @@ class EigerMonochromator(SinqMonochromator):
     In addition to the normal focussing motors, EIGER also
     drives a monochromator translation.
     """
+
     attached_devices = {
-        'mt': Attach('Monochromator translation', Moveable,
-                     optional=True),
+        "mt": Attach("Monochromator translation", Moveable, optional=True),
     }
 
     parameters = {
-        'translation_pars': Param('Parameters mta, mtb for controlling the '
-                                  'monochromator translation',
-                                  type=listof(float), default=[0, 3.5]),
+        "translation_pars": Param(
+            "Parameters mta, mtb for controlling the " "monochromator translation",
+            type=listof(float),
+            default=[0, 3.5],
+        ),
     }
 
     def _movefoci(self, focmode, th, hfocuspars, vfocuspars):
         focusv = self._attached_focusv
         if focusv:
-            curve = vfocuspars[0] + vfocuspars[1]/math.sin(math.radians(
-                abs(th)))
+            curve = vfocuspars[0] + vfocuspars[1] / math.sin(math.radians(abs(th)))
             focusv.move(curve)
         focush = self._attached_focush
         if focush:
-            hcurve = hfocuspars[0] + hfocuspars[1]*math.sin(math.radians(
-                abs(th)))
+            hcurve = hfocuspars[0] + hfocuspars[1] * math.sin(math.radians(abs(th)))
             focush.move(hcurve)
         mt = self._attached_mt
         if mt:
             mtpos = self.translation_pars[0] + self.translation_pars[1] * pow(
-                curve, .75)
+                curve, 0.75
+            )
             limits = mt.abslimits
             if mtpos <= limits[0]:
-                mtpos = limits[0] + .1
+                mtpos = limits[0] + 0.1
             if mtpos >= limits[1]:
-                mtpos = limits[1] - .1
+                mtpos = limits[1] - 0.1
             mt.start(mtpos)
 
     def doStart(self, target):
@@ -125,17 +130,20 @@ class EigerMonochromator(SinqMonochromator):
         self._sim_setValue(target)
 
     def _getWaiters(self):
-        return [(name, self._adevs[name]) for name in
-                ['theta', 'twotheta', 'focush', 'focusv', 'mt']]
+        return [
+            (name, self._adevs[name])
+            for name in ["theta", "twotheta", "focush", "focusv", "mt"]
+        ]
 
     def doStatus(self, maxage=0):
         # order is important here.
-        const, text = multiStatus(self._getWaiters(),
-                                  maxage)
+        const, text = multiStatus(self._getWaiters(), maxage)
         if const == status.OK:  # all idle; check also angle relation
             tt, th = self._get_angles(maxage)
             if abs(tt - 2.0 * th) > self._axisprecision:
-                return status.NOTREACHED, 'two theta and 2*theta axis ' \
-                                          'mismatch: %s <-> %s = 2 * %s' \
-                       % (tt, 2.0 * th, th)
+                return (
+                    status.NOTREACHED,
+                    "two theta and 2*theta axis "
+                    "mismatch: %s <-> %s = 2 * %s" % (tt, 2.0 * th, th),
+                )
         return const, text

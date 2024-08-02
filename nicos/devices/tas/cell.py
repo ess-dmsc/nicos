@@ -26,8 +26,23 @@
 coordinates.
 """
 
-from numpy import arccos, arcsin, arctan2, array, cos, cross, degrees, dot, \
-    identity, pi, radians, sign, sin, sqrt, zeros
+from numpy import (
+    arccos,
+    arcsin,
+    arctan2,
+    array,
+    cos,
+    cross,
+    degrees,
+    dot,
+    identity,
+    pi,
+    radians,
+    sign,
+    sin,
+    sqrt,
+    zeros,
+)
 from numpy.linalg import inv, norm
 
 from nicos.core import ComputationError, Device, NicosError, Param, oneof, vec3
@@ -69,20 +84,20 @@ class CellBase:
             # self._matrix_euler  = identity(3)
 
     def _info(self):
-        self.log.info('direct lattice:   %4.7f   %4.7f   %4.7f',
-                      *self._lattice)
-        self.log.info('direct angles:    %4.7f   %4.7f   %4.7f',
-                      *self._angles)
-        self.log.info('plane vectors:    (%s %s %s), (%s %s %s)',
-                      *(tuple(self._orient1) + tuple(self._orient2)))
-        self.log.info('psi0:             %4.3f', self._psi0)
-        self.log.info('recip. lattice:   %4.7f   %4.7f   %4.7f',
-                      *self._lattice_rec)
-        self.log.info('recip. angles:    %4.7f   %4.7f   %4.7f',
-                      *(degrees(self._angles_rec)))
-        self.log.info('zone axis:        [%s %s %s]', *self.cal_zone())
-        self.log.info('cardan matrix:    \n%s', self._matrix_cardan)
-        self.log.info('hkl2Qcart matrix: \n%s', self._matrix)
+        self.log.info("direct lattice:   %4.7f   %4.7f   %4.7f", *self._lattice)
+        self.log.info("direct angles:    %4.7f   %4.7f   %4.7f", *self._angles)
+        self.log.info(
+            "plane vectors:    (%s %s %s), (%s %s %s)",
+            *(tuple(self._orient1) + tuple(self._orient2)),
+        )
+        self.log.info("psi0:             %4.3f", self._psi0)
+        self.log.info("recip. lattice:   %4.7f   %4.7f   %4.7f", *self._lattice_rec)
+        self.log.info(
+            "recip. angles:    %4.7f   %4.7f   %4.7f", *(degrees(self._angles_rec))
+        )
+        self.log.info("zone axis:        [%s %s %s]", *self.cal_zone())
+        self.log.info("cardan matrix:    \n%s", self._matrix_cardan)
+        self.log.info("hkl2Qcart matrix: \n%s", self._matrix)
 
     def __call__(self):
         self._info()
@@ -108,7 +123,8 @@ class CellBase:
             return [astar, alphastar]
         except Exception as err:
             raise ComputationError(
-                '%s when calculating reciprocal lattice' % err) from None
+                "%s when calculating reciprocal lattice" % err
+            ) from None
 
     def cal_volume_real(self):
         try:
@@ -120,7 +136,8 @@ class CellBase:
             raise
         except Exception as err:
             raise ComputationError(
-                '%s when calculating real space cell volume' % err) from None
+                "%s when calculating real space cell volume" % err
+            ) from None
 
     def cal_volume_rec(self):
         try:
@@ -128,8 +145,9 @@ class CellBase:
         except ComputationError:
             raise
         except Exception as err:
-            raise ComputationError('%s when calculating reciprocal space cell '
-                                   'volume' % err) from None
+            raise ComputationError(
+                "%s when calculating reciprocal space cell " "volume" % err
+            ) from None
 
     def cal_zone(self):
         return cross(self._orient1, self._orient2)
@@ -142,16 +160,19 @@ class CellBase:
             hkl = array(Qhkl, float)
             mul = self._lattice_rec * hkl  # elementwise multiplication
             co = cos(self._angles_rec)
-            sqresult = dot(mul, mul) + \
-                       2 * mul[0] * mul[1] * co[2] + \
-                       2 * mul[0] * mul[2] * co[1] + \
-                       2 * mul[1] * mul[2] * co[0]
+            sqresult = (
+                dot(mul, mul)
+                + 2 * mul[0] * mul[1] * co[2]
+                + 2 * mul[0] * mul[2] * co[1]
+                + 2 * mul[1] * mul[2] * co[0]
+            )
             return sqrt(sqresult)
         except ComputationError:
             raise
         except Exception as err:
             raise ComputationError(
-                '%s when calculating d value in real space' % err) from None
+                "%s when calculating d value in real space" % err
+            ) from None
 
     def cal_dvalue_rec(self, Qhkl):
         try:
@@ -159,8 +180,9 @@ class CellBase:
         except ComputationError:
             raise
         except Exception as err:
-            raise ComputationError('%s when calculating d value in '
-                                   'reciprocal space' % err) from None
+            raise ComputationError(
+                "%s when calculating d value in " "reciprocal space" % err
+            ) from None
 
     def matrix_crystal2lab(self):
         try:
@@ -172,8 +194,13 @@ class CellBase:
             B[0, 2] = self._lattice_rec[2] * cos(self._angles_rec[1]) * 2 * pi
             B[1, 0] = 0
             B[1, 1] = self._lattice_rec[1] * sin(self._angles_rec[2]) * 2 * pi
-            B[1, 2] = -self._lattice_rec[2] * sin(self._angles_rec[1]) * \
-                      cos(radians(self._angles[0])) * 2 * pi
+            B[1, 2] = (
+                -self._lattice_rec[2]
+                * sin(self._angles_rec[1])
+                * cos(radians(self._angles[0]))
+                * 2
+                * pi
+            )
             B[2, 0] = 0
             B[2, 1] = 0
             B[2, 2] = 2 * pi / self._lattice[2]
@@ -194,8 +221,7 @@ class CellBase:
         except ComputationError:
             raise
         except Exception as err:
-            raise ComputationError(
-                '%s when calculating UB matrix' % err) from None
+            raise ComputationError("%s when calculating UB matrix" % err) from None
 
     def cal_Umatrix(self, vec1, vec2, vec3, direction):
         try:
@@ -218,8 +244,7 @@ class CellBase:
         except ComputationError:
             raise
         except Exception as err:
-            raise ComputationError(
-                '%s when calculating U matrix' % err) from None
+            raise ComputationError("%s when calculating U matrix" % err) from None
 
     def hkl2Qcart(self, h, k, l):
         """Return the cartesian coordinates of given (h,k,l) Miller indices."""
@@ -233,7 +258,7 @@ class CellBase:
         hklcart = self.hkl2Qcart(h, k, l)
         result = dot(hklcart, self._matrix_cardan)
         if abs(result[2]) > 0.001:
-            raise ComputationError('out of plane vector; check your scattering plane')
+            raise ComputationError("out of plane vector; check your scattering plane")
         return result
 
     def Qlab2hkl(self, Qlab):
@@ -248,8 +273,7 @@ class CellBase:
         except ComputationError:
             raise
         except Exception as err:
-            raise ComputationError(
-                '%s when transforming Qlab -> hkl' % err) from None
+            raise ComputationError("%s when transforming Qlab -> hkl" % err) from None
 
     def Qcart2hkl(self, Qcart):
         mat_inv = inv(self._matrix)
@@ -274,7 +298,8 @@ class CellBase:
             raise
         except Exception as err:
             raise ComputationError(
-                '%s when transforming angles -> Q cartesian' % err) from None
+                "%s when transforming angles -> Q cartesian" % err
+            ) from None
 
     def angle2hkl(self, angles, coupled=False):
         """Calculate hkl Miller indices from instrument [ki, kf, phi, psi]."""
@@ -285,7 +310,7 @@ class CellBase:
         """Calculate Qlab from instrument [ki, kf, phi, psi]."""
         result = dot(self.angle2Qcart(angles, coupled), self._matrix_cardan)
         if abs(result[2]) > 0.001:
-            raise ComputationError('out of plane vector; check your scattering plane')
+            raise ComputationError("out of plane vector; check your scattering plane")
         return result
 
     def cal_Y(self, r1, r2, hkl):
@@ -294,7 +319,7 @@ class CellBase:
         try:
             crit = 0.000001
             hkl = self.hkl2Qlab(hkl[0], hkl[1], hkl[2])
-            qs = hkl[0]**2 + hkl[1]**2
+            qs = hkl[0] ** 2 + hkl[1] ** 2
             qabs = sqrt(qs)
 
             Y = hkl[1] / qabs
@@ -317,20 +342,19 @@ class CellBase:
         except ComputationError:
             raise
         except Exception as err:
-            raise ComputationError(
-                '%s when calculating angle (r1, Q)' % err) from None
+            raise ComputationError("%s when calculating angle (r1, Q)" % err) from None
 
     def _metric(self, a, alpha):
         m = zeros((3, 3))
-        m[0, 0] = a[0]**2
+        m[0, 0] = a[0] ** 2
         m[0, 1] = a[0] * a[1] * cos(alpha[2])
         m[0, 2] = a[0] * a[2] * cos(alpha[1])
         m[1, 0] = m[0, 1]
-        m[1, 1] = a[1]**2
+        m[1, 1] = a[1] ** 2
         m[1, 2] = a[1] * a[2] * cos(alpha[0])
         m[2, 0] = m[0, 2]
         m[2, 1] = m[1, 2]
-        m[2, 2] = a[2]**2
+        m[2, 2] = a[2] ** 2
         return m
 
     def metric_tensor(self):
@@ -373,7 +397,8 @@ class CellBase:
             raise
         except Exception as err:
             raise ComputationError(
-                '%s when calculating angle between vectors' % err) from None
+                "%s when calculating angle between vectors" % err
+            ) from None
 
     def cal_phi(self, q, ki, kf, sense):
         """Return the sample scattering angle."""
@@ -382,13 +407,13 @@ class CellBase:
             temp = (ki**2 + kf**2 - qabs**2) / (2.0 * ki * kf)
             if -1 <= temp <= 1:
                 return degrees(arctan2(sqrt(1 - temp**2), temp)) * sense
-            raise ComputationError('scattering triangle not closed when '
-                                   'calculating phi angle')
+            raise ComputationError(
+                "scattering triangle not closed when " "calculating phi angle"
+            )
         except ComputationError:
             raise
         except Exception as err:
-            raise ComputationError(
-                '%s when calculating phi angle' % err) from None
+            raise ComputationError("%s when calculating phi angle" % err) from None
 
     def cal_kf(self, ny, ki):
         """Calculate the outgoing wavevector for given energy transfer and
@@ -397,8 +422,9 @@ class CellBase:
         kf = ki**2 - K * ny
         if kf > 0.000001:
             return sqrt(kf)
-        raise ComputationError('energy transfer of %s THz not possible '
-                               'with k_i = %s' % (ny, ki))
+        raise ComputationError(
+            "energy transfer of %s THz not possible " "with k_i = %s" % (ny, ki)
+        )
 
     def cal_ki1(self, ny, kf):
         """Calculate the incoming wavevector for given energy transfer and
@@ -407,8 +433,9 @@ class CellBase:
         ki = kf**2 + K * ny
         if ki > 0.000001:
             return sqrt(ki)
-        raise ComputationError('energy transfer of %s THz not possible '
-                               'with k_f = %s' % (ny, kf))
+        raise ComputationError(
+            "energy transfer of %s THz not possible " "with k_f = %s" % (ny, kf)
+        )
 
     def cal_ki2(self, Qlab, ny, phi):
         """Calculate the incoming wavevector for given Qlab vector, energy
@@ -418,7 +445,7 @@ class CellBase:
             ki = 0
             phi = radians(phi)
             Qabs = norm(Qlab)
-            a1 = (Qabs / sin(phi))**2
+            a1 = (Qabs / sin(phi)) ** 2
             a2 = K * ny
             a3 = a2 / sin(phi)
             a3 = a1**2 - a3**2
@@ -427,12 +454,13 @@ class CellBase:
                 ki /= 2
             if ki > 0.000001:
                 return sqrt(ki)
-            raise ComputationError('energy transfer of %s THz not possible '
-                                   'with phi = %s' % (ny, phi))
+            raise ComputationError(
+                "energy transfer of %s THz not possible " "with phi = %s" % (ny, phi)
+            )
         except ComputationError:
             raise
         except Exception as err:
-            raise ComputationError('%s when calculating k_i' % err) from None
+            raise ComputationError("%s when calculating k_i" % err) from None
 
     def cal_ki3(self, Qlab, ny, alpha):
         """Calculate the incoming wavevector for given Qlab vector, energy
@@ -443,12 +471,14 @@ class CellBase:
             ki = (Qabs**2 + K * ny) / (2.0 * Qabs * cos(radians(alpha)))
             if ki > 0.000001:
                 return ki
-            raise ComputationError('energy transfer of %s THz not possible;'
-                                   ' scattering triangle not closed' % ny)
+            raise ComputationError(
+                "energy transfer of %s THz not possible;"
+                " scattering triangle not closed" % ny
+            )
         except ComputationError:
             raise
         except Exception as err:
-            raise ComputationError('%s when calculating k_i' % err) from None
+            raise ComputationError("%s when calculating k_i" % err) from None
 
     def cal_psi(self, y, alpha):
         """Calculate the rotation angle sample for given angle Y (ki, r1) and
@@ -470,12 +500,14 @@ class CellBase:
             temp = (Qabs**2 + K * ny) / (2 * Qabs * ki)
             if -1 <= temp < 1:
                 return degrees(arctan2(sqrt(1 - temp**2), temp)) * sense
-            raise ComputationError('energy transfer of %s THz not possible;'
-                                   ' scattering triangle not closed' % ny)
+            raise ComputationError(
+                "energy transfer of %s THz not possible;"
+                " scattering triangle not closed" % ny
+            )
         except ComputationError:
             raise
         except Exception as err:
-            raise ComputationError('%s when calculating alpha' % err) from None
+            raise ComputationError("%s when calculating alpha" % err) from None
 
     def cal_alpha2(self, y, psi):
         """Calculate the angle alpha (ki, Q) for given angle Y (ki, r1)
@@ -531,21 +563,21 @@ class CellBase:
             Qlab = self.hkl2Qlab(Qhkl[0], Qhkl[1], Qhkl[2])
             Y = self.cal_Y(self._orient1, self._orient2, Qhkl)
 
-            if SM in ['CKI', 'DIFF']:
+            if SM in ["CKI", "DIFF"]:
                 ki = SC
                 kf = self.cal_kf(ny, ki)
                 phi = self.cal_phi(Qlab, ki, kf, sense)
                 alpha = self.cal_alpha1(Qlab, ny, ki, sense)
                 psi = self.cal_psi(Y, alpha)
 
-            elif SM == 'CKF':
+            elif SM == "CKF":
                 kf = SC
                 ki = self.cal_ki1(ny, kf)
                 phi = self.cal_phi(Qlab, ki, kf, sense)
                 alpha = self.cal_alpha1(Qlab, ny, ki, sense)
                 psi = self.cal_psi(Y, alpha)
 
-            elif SM == 'CPSI':
+            elif SM == "CPSI":
                 psi = SC
                 alpha = self.cal_alpha2(Y, psi)
                 ki = self.cal_ki3(Qlab, ny, alpha)
@@ -556,7 +588,7 @@ class CellBase:
                 kf = self.cal_kf(ny, ki)
                 phi = self.cal_phi(Qlab, ki, kf, sphi)
 
-            elif SM == 'CPHI':
+            elif SM == "CPHI":
                 phi = SC
                 sphi = sign(phi)
                 ki = self.cal_ki2(Qlab, ny, phi)
@@ -578,8 +610,7 @@ class CellBase:
         except ComputationError:
             raise
         except Exception as err:
-            raise ComputationError(
-                '%s when calculating angles for hkl' % err) from None
+            raise ComputationError("%s when calculating angles for hkl" % err) from None
 
     hkl2angle = cal_angles
 
@@ -588,27 +619,52 @@ class Cell(CellBase, Device):
     """Cell object representing sample geometry."""
 
     parameters = {
-        'lattice': Param('Lattice constants', type=vec3, settable=True,
-                         default=[2 * pi, 2 * pi, 2 * pi], unit='A',
-                         category='sample'),
-        'angles':  Param('Lattice angles', type=vec3, settable=True,
-                         default=[90, 90, 90], unit='deg', category='sample'),
-        'orient1': Param('First orientation reflex', type=vec3,
-                         default=[1, 0, 0], settable=True, category='sample'),
-        'orient2': Param('Second orientation reflex', type=vec3,
-                         default=[0, 1, 0], settable=True, category='sample'),
-        'psi0':    Param('Zero position of psi axis', settable=True,
-                         unit='deg', category='sample'),
+        "lattice": Param(
+            "Lattice constants",
+            type=vec3,
+            settable=True,
+            default=[2 * pi, 2 * pi, 2 * pi],
+            unit="A",
+            category="sample",
+        ),
+        "angles": Param(
+            "Lattice angles",
+            type=vec3,
+            settable=True,
+            default=[90, 90, 90],
+            unit="deg",
+            category="sample",
+        ),
+        "orient1": Param(
+            "First orientation reflex",
+            type=vec3,
+            default=[1, 0, 0],
+            settable=True,
+            category="sample",
+        ),
+        "orient2": Param(
+            "Second orientation reflex",
+            type=vec3,
+            default=[0, 1, 0],
+            settable=True,
+            category="sample",
+        ),
+        "psi0": Param(
+            "Zero position of psi axis", settable=True, unit="deg", category="sample"
+        ),
         # 'coordinatesystem': Param('Coordinate system for k_i: 1 parallel x, '
         #                          '-1 parallel -x, 2 parallel y, '
         #                          '-2 parallel -y.',
         #                          type=int, default=1, settable=True),
-        'spacegroup': Param('Space group of the sample', settable=True,
-                            type=oneof(*range(1, 231), *sg_by_hm),
-                            category='sample'),
+        "spacegroup": Param(
+            "Space group of the sample",
+            settable=True,
+            type=oneof(*range(1, 231), *sg_by_hm),
+            category="sample",
+        ),
     }
 
-    parameters['spacegroup'].ext_desc = """
+    parameters["spacegroup"].ext_desc = """
 The spacegroup is either the number between 1 and 230 or the Hermann–Mauguin
 (H-M) notation.
 
@@ -648,7 +704,7 @@ The spacegroup is either the number between 1 and 230 or the Hermann–Mauguin
         try:
             get_spacegroup(val)
         except NicosError as err:
-            self.log.warning('%s; new value will be ignored', err)
+            self.log.warning("%s; new value will be ignored", err)
 
 
 class TASSample(Sample, Cell):
@@ -663,8 +719,9 @@ class TASSample(Sample, Cell):
     """
 
     parameters = {
-        'mosaic': Param('Sample mosaic', settable=True, default=0.5,
-                        unit='deg', category='sample'),
+        "mosaic": Param(
+            "Sample mosaic", settable=True, default=0.5, unit="deg", category="sample"
+        ),
     }
 
     def clear(self):
@@ -680,6 +737,13 @@ class TASSample(Sample, Cell):
     def _applyParams(self, number, parameters):
         Sample._applyParams(self, number, parameters)
         for key, value in parameters.items():
-            if key in ['lattice', 'angles', 'orient1', 'orient2', 'psi0',
-                       'spacegroup', 'mosaic']:
+            if key in [
+                "lattice",
+                "angles",
+                "orient1",
+                "orient2",
+                "psi0",
+                "spacegroup",
+                "mosaic",
+            ]:
                 setattr(self, key, value)

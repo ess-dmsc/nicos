@@ -116,6 +116,22 @@
     <bool>false</bool>
    </attribute>
    <addaction name="separator"/>
+   <widget class="QWidget" name="toolBarLabels">
+    <layout class="QVBoxLayout" name="toolBarLabels_layout">
+     <item>
+      <widget class="QWidget" name="toolBarRow1">
+       <layout class="QHBoxLayout" name="row1_layout">
+       </layout>
+      </widget>
+     </item>
+     <item>
+      <widget class="QWidget" name="toolBarRow2">
+       <layout class="QHBoxLayout" name="row2_layout">
+       </layout>
+      </widget>
+     </item>
+    </layout>
+   </widget>
   </widget>
   <widget class="QToolBar" name="toolBarWindows">
    <property name="windowTitle">

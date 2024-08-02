@@ -34,12 +34,12 @@ def determine_instrument(setup_package_path):
         # or new-style machine.instrument.frm2.tum.de)
         hostname = socket.gethostname()
         # can't use nicos.utils.getfqdn due to import dependency
-        if '.' not in hostname:
+        if "." not in hostname:
             hostname = socket.getfqdn(hostname)
-        hostparts = hostname.split('.')
-        instrument = hostparts[1].replace('-', '_')
-        if instrument == 'jcns' and hostparts[0] == 'jcnsmon':
-            instrument = 'jcnsmon'
+        hostparts = hostname.split(".")
+        instrument = hostparts[1].replace("-", "_")
+        if instrument == "jcns" and hostparts[0] == "jcnsmon":
+            instrument = "jcnsmon"
     except (ValueError, IndexError, OSError):
         pass
     else:

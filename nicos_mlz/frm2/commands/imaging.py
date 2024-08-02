@@ -30,17 +30,17 @@ from nicos.commands.imaging import grtomo, tomo
 from nicos.commands.measure import count
 from nicos.devices.datasinks.image import ImageSink
 
-__all__ = ['tomo', 'openbeamimage', 'darkimage', 'grtomo']
+__all__ = ["tomo", "openbeamimage", "darkimage", "grtomo"]
 
 
 def changeImgSinkSubdir(newsubdir):
     for entry in session.datasinks:
         if isinstance(entry, ImageSink):
-            entry._setROParam('subdir', newsubdir)
+            entry._setROParam("subdir", newsubdir)
 
 
 @usercommand
-@helparglist('shutter, [images], [detectors], [presets]')
+@helparglist("shutter, [images], [detectors], [presets]")
 # pylint: disable=keyword-arg-before-vararg
 def openbeamimage(shutter=None, nimages=1, *detlist, **preset):
     """Acquire one or more open beam images."""
@@ -53,30 +53,30 @@ def openbeamimage(shutter=None, nimages=1, *detlist, **preset):
     # TODO: better ideas for shutter control
     if shutter:
         # Shutter was given, so open it
-        maw(shutter, 'open')
-    elif limadev and getattr(limadev, '_shutter', None):
+        maw(shutter, "open")
+    elif limadev and getattr(limadev, "_shutter", None):
         # No shutter; try the lima way
         oldmode = limadev.shuttermode
-        limadev.shuttermode = 'auto'
+        limadev.shuttermode = "auto"
 
     try:
-        if hasattr(exp, 'curimgtype'):
-            exp.curimgtype = 'openbeam'
+        if hasattr(exp, "curimgtype"):
+            exp.curimgtype = "openbeam"
         changeImgSinkSubdir(relpath(exp.openbeamdir, exp.datapath))
         return [count(*detlist, **preset) for _ in range(nimages)]
     finally:
-        changeImgSinkSubdir('')
-        if hasattr(exp, 'curimgtype'):
-            exp.curimgtype = 'standard'
+        changeImgSinkSubdir("")
+        if hasattr(exp, "curimgtype"):
+            exp.curimgtype = "standard"
 
         if shutter:
-            maw(shutter, 'closed')
-        elif limadev and getattr(limadev, '_shutter', None):
+            maw(shutter, "closed")
+        elif limadev and getattr(limadev, "_shutter", None):
             limadev.shuttermode = oldmode
 
 
 @usercommand
-@helparglist('shutter, [nimages], [detectors], [presets]')
+@helparglist("shutter, [nimages], [detectors], [presets]")
 # pylint: disable=keyword-arg-before-vararg
 def darkimage(shutter=None, nimages=1, *detlist, **preset):
     """Acquire one or more dark images."""
@@ -89,23 +89,23 @@ def darkimage(shutter=None, nimages=1, *detlist, **preset):
     # TODO: better ideas for shutter control
     if shutter:
         # Shutter was given, so open it
-        maw(shutter, 'closed')
-    elif limadev and getattr(limadev, '_shutter', None):
+        maw(shutter, "closed")
+    elif limadev and getattr(limadev, "_shutter", None):
         # No shutter; try the lima way
         oldmode = limadev.shuttermode
-        limadev.shuttermode = 'always_closed'
+        limadev.shuttermode = "always_closed"
 
     try:
-        if hasattr(exp, 'curimgtype'):
-            exp.curimgtype = 'dark'
+        if hasattr(exp, "curimgtype"):
+            exp.curimgtype = "dark"
         changeImgSinkSubdir(relpath(exp.darkimagedir, exp.datapath))
         return [count(*detlist, **preset) for _ in range(nimages)]
     finally:
-        changeImgSinkSubdir('')
-        if hasattr(exp, 'curimgtype'):
-            exp.curimgtype = 'standard'
+        changeImgSinkSubdir("")
+        if hasattr(exp, "curimgtype"):
+            exp.curimgtype = "standard"
 
         if shutter:
-            maw(shutter, 'open')
-        elif limadev and getattr(limadev, '_shutter', None):
+            maw(shutter, "open")
+        elif limadev and getattr(limadev, "_shutter", None):
             limadev.shuttermode = oldmode

@@ -25,6 +25,5 @@ from nicos.devices.entangle import NamedDigitalOutput
 
 
 class StopNamedDigitalOutput(NamedDigitalOutput):
-
     def doStop(self):
         self._dev.Stop()

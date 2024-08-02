@@ -1,15 +1,15 @@
-description = 'CSPEC instrument setup'
+description = "CSPEC instrument setup"
 
-group = 'basic'
+group = "basic"
 
 includes = [
-    'eric',
-    'shutter',
-    'monitors',
-    'collimator',
-    'table',
-    'slit',
-    'vacuum',
-    'samplepot',
-    'detector',
+    "eric",
+    "shutter",
+    "monitors",
+    "collimator",
+    "table",
+    "slit",
+    "vacuum",
+    "samplepot",
+    "detector",
 ]

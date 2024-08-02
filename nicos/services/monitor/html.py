@@ -39,8 +39,7 @@ from nicos.core.constants import NOT_AVAILABLE
 from nicos.core.status import BUSY, DISABLED, ERROR, NOTREACHED, OK, WARN
 from nicos.services.monitor import Monitor as BaseMonitor
 from nicos.services.monitor.icon import nicos_icon
-from nicos.utils import checkSetupSpec, parseKeyExpression, safeWriteFile, \
-    KEYEXPR_NS
+from nicos.utils import checkSetupSpec, parseKeyExpression, safeWriteFile, KEYEXPR_NS
 
 try:
     import gr
@@ -53,7 +52,7 @@ except ImportError:
     pygr = None
 
 
-HEAD = '''\
+HEAD = """\
 <html>
 <head>
 <meta charset="utf-8"/>
@@ -83,77 +82,76 @@ table { font-family: inherit; font-size: 100%%; }
 <title>%(title)s</title>
 </head>
 <body>
-'''
+"""
 
 
 class Field:
     # what to display
-    key = ''         # main key (displayed value)
-    expr = None      # expression to transform value to final form
-    name = ''        # name of value
-    statuskey = ''   # key for value status
-    unitkey = ''     # key for value unit
-    formatkey = ''   # key for value format string
-    fixedkey = ''    # key for value fixed-ness
+    key = ""  # main key (displayed value)
+    expr = None  # expression to transform value to final form
+    name = ""  # name of value
+    statuskey = ""  # key for value status
+    unitkey = ""  # key for value unit
+    formatkey = ""  # key for value format string
+    fixedkey = ""  # key for value fixed-ness
 
     # how to display it
-    width = 8        # width of the widget (in characters, usually)
-    height = 8       # height of the widget
-    istext = False   # true if not a number but plain text
-    min = None       # minimum value
-    max = None       # maximum value; if out of range display in red
+    width = 8  # width of the widget (in characters, usually)
+    height = 8  # height of the widget
+    istext = False  # true if not a number but plain text
+    min = None  # minimum value
+    max = None  # maximum value; if out of range display in red
 
     # current values
-    value = ''       # current value
-    fixed = ''       # current fixed status
-    unit = ''        # unit for display
-    format = '%s'    # format string for display
+    value = ""  # current value
+    fixed = ""  # current fixed status
+    unit = ""  # unit for display
+    format = "%s"  # format string for display
 
     # for plots
-    plot = None           # which plot to plot this value in
-    plotwindow = 3600     # time span of plot
+    plot = None  # which plot to plot this value in
+    plotwindow = 3600  # time span of plot
 
     # for pictures
-    picture = None   # file name
+    picture = None  # file name
 
     # conditional hiding
-    setups = None    # setupspec for which should be shown (None = always)
-    enabled = True   # if the field is currently shown
+    setups = None  # setupspec for which should be shown (None = always)
+    enabled = True  # if the field is currently shown
 
     def __init__(self, prefix, desc):
         if isinstance(desc, str):
-            desc = {'dev': desc}
+            desc = {"dev": desc}
         else:
             desc = desc._options
-        if 'dev' in desc:
-            dev = desc.pop('dev')
-            if 'name' not in desc:
-                desc['name'] = dev
-            key, expr, _ = parseKeyExpression(
-                dev, False, normalize=lambda s: s.lower())
+        if "dev" in desc:
+            dev = desc.pop("dev")
+            if "name" not in desc:
+                desc["name"] = dev
+            key, expr, _ = parseKeyExpression(dev, False, normalize=lambda s: s.lower())
             dev = dev.lower()
-            desc['expr'] = expr
-            desc['key'] = prefix + dev + '/value'
-            desc['statuskey'] = prefix + dev + '/status'
-            desc['fixedkey'] = prefix + dev + '/fixed'
-            if 'unit' not in desc:
-                desc['unitkey'] = prefix + dev + '/unit'
-            if 'format' not in desc:
-                desc['formatkey'] = prefix + dev + '/fmtstr'
-        elif 'key' in desc:
-            key, expr, _ = parseKeyExpression(desc['key'], False)
-            desc['expr'] = expr
-            if 'name' not in desc:
-                desc['name'] = desc['key']
-            desc['key'] = prefix + key
-            for kn in ('statuskey', 'fixedkey', 'unitkey', 'formatkey'):
+            desc["expr"] = expr
+            desc["key"] = prefix + dev + "/value"
+            desc["statuskey"] = prefix + dev + "/status"
+            desc["fixedkey"] = prefix + dev + "/fixed"
+            if "unit" not in desc:
+                desc["unitkey"] = prefix + dev + "/unit"
+            if "format" not in desc:
+                desc["formatkey"] = prefix + dev + "/fmtstr"
+        elif "key" in desc:
+            key, expr, _ = parseKeyExpression(desc["key"], False)
+            desc["expr"] = expr
+            if "name" not in desc:
+                desc["name"] = desc["key"]
+            desc["key"] = prefix + key
+            for kn in ("statuskey", "fixedkey", "unitkey", "formatkey"):
                 if kn in desc:
-                    desc[kn] = (prefix + desc[kn]).lower().replace('.', '/')
+                    desc[kn] = (prefix + desc[kn]).lower().replace(".", "/")
         self.__dict__.update(desc)
 
     def updateKeymap(self, keymap):
         # store reference from key to field for updates
-        for kn in ('key', 'statuskey', 'fixedkey', 'unitkey', 'formatkey'):
+        for kn in ("key", "statuskey", "fixedkey", "unitkey", "formatkey"):
             key = getattr(self, kn)
             if key:
                 keymap.setdefault(key, []).append(self)
@@ -168,7 +166,7 @@ class Block:
     def __init__(self, config):
         self.enabled = True
         self._content = []
-        self.setups = config.get('setups')
+        self.setups = config.get("setups")
         self._onlyfields = []
 
     def __iadd__(self, content):
@@ -181,13 +179,14 @@ class Block:
 
     def getHTML(self):
         if self.enabled and self._content:
-            return ''.join(c.getHTML() for c in self._content)
-        return ''
+            return "".join(c.getHTML() for c in self._content)
+        return ""
 
 
 class Label:
-    def __init__(self, cls='label', width=0, text='&nbsp;',
-                 fore='inherit', back='inherit'):
+    def __init__(
+        self, cls="label", width=0, text="&nbsp;", fore="inherit", back="inherit"
+    ):
         self.cls = cls
         self.width = width
         self.text = text
@@ -197,18 +196,19 @@ class Label:
 
     def getHTML(self):
         if not self.enabled:
-            return ''
-        return ('<div class="%s" style="color: %s; min-width: %sex; '
-                'background-color: %s">%s</div>' %
-                (self.cls, self.fore, self.width, self.back, self.text))
+            return ""
+        return (
+            '<div class="%s" style="color: %s; min-width: %sex; '
+            'background-color: %s">%s</div>'
+            % (self.cls, self.fore, self.width, self.back, self.text)
+        )
 
 
-DATEFMT = '%Y-%m-%d'
-TIMEFMT = '%H:%M:%S'
+DATEFMT = "%Y-%m-%d"
+TIMEFMT = "%H:%M:%S"
 
 
 class Plot:
-
     # if the field should be displayed
     enabled = True
 
@@ -218,26 +218,26 @@ class Plot:
         self.height = height
         self.data = []
         self.lock = RLock()
-        self.plot = pygr.Plot(viewport=(.1, .95, .25, .95))
+        self.plot = pygr.Plot(viewport=(0.1, 0.95, 0.25, 0.95))
         self.axes = NicosTimePlotAxes(self.plot._viewport)
         self.plot.addAxes(self.axes)
         self.plot.setLegend(True)
         self.plot.setLegendWidth(0.07)
-        self.plot.offsetXLabel = -.2
+        self.plot.offsetXLabel = -0.2
         self.axes.setXtickCallback(self.xtickCallBack)
         self.curves = []
-        os.environ['GKS_WSTYPE'] = 'svg'
-        (fd, self.tempfile) = tempfile.mkstemp('.svg')
+        os.environ["GKS_WSTYPE"] = "svg"
+        (fd, self.tempfile) = tempfile.mkstemp(".svg")
         os.close(fd)
 
     def xtickCallBack(self, x, y, _svalue, value):
-        gr.setcharup(-1., 1.)
+        gr.setcharup(-1.0, 1.0)
         gr.settextalign(gr.TEXT_HALIGN_RIGHT, gr.TEXT_VALIGN_TOP)
-        dx = .02
+        dx = 0.02
         timeVal = time.localtime(value)
         gr.text(x + dx, y - 0.01, time.strftime(DATEFMT, timeVal))
         gr.text(x - dx, y - 0.01, time.strftime(TIMEFMT, timeVal))
-        gr.setcharup(0., 1.)
+        gr.setcharup(0.0, 1.0)
 
     def addcurve(self, name, t):
         self.curves.append(pygr.PlotCurve([t], [0], legend=name, linewidth=4))
@@ -268,9 +268,9 @@ class Plot:
 
     def getHTML(self):
         if not self.enabled:
-            return ''
+            return ""
         if not self.data or not self.curves:
-            return '<span>No data or curves found</span>'
+            return "<span>No data or curves found</span>"
         with self.lock:
             for i, (d, c) in enumerate(zip(self.data, self.curves)):
                 try:
@@ -292,20 +292,20 @@ class Plot:
         try:
             self.plot.drawGR()
         except Exception as err:
-            return html.escape('Error generating plot: %s' % err)
+            return html.escape("Error generating plot: %s" % err)
         finally:
             gr.endprint()
             gr.clearws()
-        with open(self.tempfile, 'rb') as fp:
+        with open(self.tempfile, "rb") as fp:
             imgbytes = fp.read()
-        return ('<img src="data:image/svg+xml;base64,%s" '
-                'style="width: %sex; height: %sex">' % (
-                    b64encode(imgbytes).decode(),
-                    self.width, self.height))
+        return (
+            '<img src="data:image/svg+xml;base64,%s" '
+            'style="width: %sex; height: %sex">'
+            % (b64encode(imgbytes).decode(), self.width, self.height)
+        )
 
 
 class Picture:
-
     # if the field should be displayed
     enabled = True
 
@@ -316,13 +316,16 @@ class Picture:
         self.name = name
 
     def getHTML(self):
-        s = ''
+        s = ""
         if not self.enabled:
             return s
         if self.name:
             s += '<div class="label">%s</div><br>' % self.name
         s += '<img src="%s" style="width: %sex; height: %sex">' % (
-            self.filepath, self.width, self.height)
+            self.filepath,
+            self.width,
+            self.height,
+        )
         return s
 
 
@@ -330,22 +333,21 @@ class Monitor(BaseMonitor):
     """HTML specific implementation of instrument monitor."""
 
     parameters = {
-        'filename': Param('Filename for HTML output', type=str, mandatory=True),
-        'interval': Param('Interval for writing file', default=5),
-        'noexpired': Param('If true, show expired values as "n/a"', type=bool)
+        "filename": Param("Filename for HTML output", type=str, mandatory=True),
+        "interval": Param("Interval for writing file", default=5),
+        "noexpired": Param('If true, show expired values as "n/a"', type=bool),
     }
 
     def mainLoop(self):
         while not self._stoprequest:
             try:
                 if self._content:
-                    content = ''.join(ct.getHTML() for ct in self._content)
+                    content = "".join(ct.getHTML() for ct in self._content)
                     safeWriteFile(self.filename, content, maxbackups=0)
             except Exception:
-                self.log.error('could not write status to %r', self.filename,
-                               exc=1)
+                self.log.error("could not write status to %r", self.filename, exc=1)
             else:
-                self.log.debug('wrote status to %r', self.filename)
+                self.log.debug("wrote status to %r", self.filename)
             sleep(self.interval)
 
     def closeGui(self):
@@ -360,43 +362,45 @@ class Monitor(BaseMonitor):
 
     def initGui(self):
         self._content = []
-        self._bgcolor = 'inherit'
-        self._black = 'black'
-        self._yellow = 'yellow'
-        self._green = '#00ff00'
-        self._red = 'red'
-        self._gray = 'gray'
-        self._white = 'white'
-        self._orange = '#ffa500'
+        self._bgcolor = "inherit"
+        self._black = "black"
+        self._yellow = "yellow"
+        self._green = "#00ff00"
+        self._red = "red"
+        self._gray = "gray"
+        self._white = "white"
+        self._orange = "#ffa500"
 
         headprops = dict(
-            fs = self._fontsize,
-            fst = self._timefontsize,
-            fsb = self._fontsizebig,
-            ff = self.font,
-            ffm = self.valuefont or self.font,
-            intv = self.interval,
-            title = html.escape(self.title),
-            icon = nicos_icon,
+            fs=self._fontsize,
+            fst=self._timefontsize,
+            fsb=self._fontsizebig,
+            ff=self.font,
+            ffm=self.valuefont or self.font,
+            intv=self.interval,
+            title=html.escape(self.title),
+            icon=nicos_icon,
         )
 
         self += HEAD % headprops
 
         self += '<table class="layout"><tr><td><div class="time">'
-        self._timelabel = Label('timelabel')
+        self._timelabel = Label("timelabel")
         self += self._timelabel
-        self += '</div><div>'
-        self._warnlabel = Label('warnings', back='red', text='')
+        self += "</div><div>"
+        self._warnlabel = Label("warnings", back="red", text="")
         self += self._warnlabel
-        self += '</div></td></tr>\n'
+        self += "</div></td></tr>\n"
 
         self._plots = {}
         inittime = currenttime()
 
         def _create_field(blk, config):
-            if 'widget' in config or 'gui' in config:
-                self.log.warning('ignoring "widget" or "gui" element in HTML '
-                                 'monitor configuration')
+            if "widget" in config or "gui" in config:
+                self.log.warning(
+                    'ignoring "widget" or "gui" element in HTML '
+                    "monitor configuration"
+                )
                 return None
             field = Field(self._prefix, config)
             field.updateKeymap(self._keymap)
@@ -409,22 +413,24 @@ class Monitor(BaseMonitor):
                     blk += p
                 field._plotcurve = p.addcurve(field.name, inittime)
             elif field.picture:
-                pic = Picture(field.picture, field.width, field.height,
-                              html.escape(field.name))
+                pic = Picture(
+                    field.picture, field.width, field.height, html.escape(field.name)
+                )
                 blk += pic
             else:
                 # deactivate plots
                 field.plot = None
                 # create name label
-                flabel = field._namelabel = Label('name', field.width,
-                                                  html.escape(field.name))
+                flabel = field._namelabel = Label(
+                    "name", field.width, html.escape(field.name)
+                )
                 blk += flabel
-                blk += '</td></tr><tr><td>'
+                blk += "</td></tr><tr><td>"
                 # create value label
-                cls = 'value'
+                cls = "value"
                 if field.istext:
-                    cls += ' istext'
-                vlabel = field._valuelabel = Label(cls, fore='white')
+                    cls += " istext"
+                vlabel = field._valuelabel = Label(cls, fore="white")
                 blk += vlabel
             return field
 
@@ -436,12 +442,11 @@ class Monitor(BaseMonitor):
                     block = self._resolve_block(block)
                     blk = Block(block._options)
                     blk += '<div class="block">'
-                    blk += ('<div class="blockhead">%s</div>' %
-                            html.escape(block._title))
+                    blk += '<div class="blockhead">%s</div>' % html.escape(block._title)
                     blk += '\n    <table class="blocktable">'
                     for row in block:
-                        if row in (None, '---'):
-                            blk += '<tr></tr>'
+                        if row in (None, "---"):
+                            blk += "<tr></tr>"
                         else:
                             blk += '<tr><td class="center">'
                             for field in row:
@@ -452,16 +457,16 @@ class Monitor(BaseMonitor):
                                         blk._onlyfields.append(f)
                                     else:
                                         self._onlyfields.append(f)
-                                blk += '</td></tr></table> '
-                            blk += '\n    </td></tr>'
-                    blk += '</table>\n  </div>'
+                                blk += "</td></tr></table> "
+                            blk += "\n    </td></tr>"
+                    blk += "</table>\n  </div>"
                     self += blk
                     if blk.setups:
                         self._onlyblocks.append(blk)
-                self += '</td></tr></table>\n'
-            self += '</td></tr>'
-        self += '</table>\n'
-        self += '</body></html>\n'
+                self += "</td></tr></table>\n"
+            self += "</td></tr>"
+        self += "</table>\n"
+        self += "</body></html>\n"
 
     def updateTitle(self, text):
         self._timelabel.text = text
@@ -469,8 +474,7 @@ class Monitor(BaseMonitor):
     def signalKeyChange(self, field, key, value, time, expired):
         if field.plot:
             if key == field.key and value is not None:
-                self._plots[field.plot].updatevalues(field._plotcurve,
-                                                     time, value)
+                self._plots[field.plot].updatevalues(field._plotcurve, time, value)
             return
         if key == field.key:
             # apply transformation by expression
@@ -478,7 +482,7 @@ class Monitor(BaseMonitor):
             if value is not None:
                 if field.expr:
                     try:
-                        fvalue = eval(field.expr, KEYEXPR_NS, {'x': value})
+                        fvalue = eval(field.expr, KEYEXPR_NS, {"x": value})
                     except Exception:
                         fvalue = NOT_AVAILABLE
                 else:
@@ -494,11 +498,11 @@ class Monitor(BaseMonitor):
             if expired:
                 field._valuelabel.back = self._gray
                 if self.noexpired:
-                    fvalue = 'n/a'
+                    fvalue = "n/a"
             else:
                 field._valuelabel.back = self._black
             if fvalue is None:
-                strvalue = '----'
+                strvalue = "----"
             else:
                 if isinstance(fvalue, list):
                     fvalue = tuple(fvalue)
@@ -506,7 +510,7 @@ class Monitor(BaseMonitor):
                     strvalue = field.format % fvalue
                 except Exception:
                     strvalue = str(fvalue)
-            field._valuelabel.text = strvalue or '&nbsp;'
+            field._valuelabel.text = strvalue or "&nbsp;"
         elif key == field.statuskey:
             if value is not None:
                 status = value[0]
@@ -525,43 +529,51 @@ class Monitor(BaseMonitor):
         elif key == field.unitkey:
             if value is not None:
                 field.unit = value
-                field._namelabel.text = self._labelunittext(field.name, field.unit,
-                                                            field.fixed)
+                field._namelabel.text = self._labelunittext(
+                    field.name, field.unit, field.fixed
+                )
         elif key == field.fixedkey:
-            field.fixed = value and ' (F)' or ''
-            field._namelabel.text = self._labelunittext(field.name, field.unit,
-                                                        field.fixed)
+            field.fixed = value and " (F)" or ""
+            field._namelabel.text = self._labelunittext(
+                field.name, field.unit, field.fixed
+            )
         elif key == field.formatkey:
             if value is not None:
                 field.format = value
-                self.signalKeyChange(field, field.key, field.value,
-                                     currenttime(),
-                                     field._valuelabel.back == self._gray)
+                self.signalKeyChange(
+                    field,
+                    field.key,
+                    field.value,
+                    currenttime(),
+                    field._valuelabel.back == self._gray,
+                )
 
     def _labelunittext(self, text, unit, fixed):
-        return html.escape(text) + ' <span class="unit">%s</span><span ' \
-            'class="fixed">%s</span> ' % (html.escape(unit), fixed)
+        return html.escape(
+            text
+        ) + ' <span class="unit">%s</span><span ' 'class="fixed">%s</span> ' % (
+            html.escape(unit),
+            fixed,
+        )
 
     def switchWarnPanel(self, on):
         if on:
             self._warnlabel.text = html.escape(self._currwarnings)
         else:
-            self._warnlabel.text = ''
+            self._warnlabel.text = ""
 
     def reconfigureBoxes(self):
         fields = []
         for block in self._onlyblocks:
-            block.enabled = checkSetupSpec(block.setups, self._setups,
-                                           log=self.log)
+            block.enabled = checkSetupSpec(block.setups, self._setups, log=self.log)
             # check fields inside the block, if the block isn't invisible
             if block.enabled:
                 fields.extend(block._onlyfields)
         # always check fields not in a setup controlled group
         fields.extend(self._onlyfields)
         for field in fields:
-            field.enabled = checkSetupSpec(field.setups, self._setups,
-                                           log=self.log)
-            if hasattr(field, '_namelabel'):
+            field.enabled = checkSetupSpec(field.setups, self._setups, log=self.log)
+            if hasattr(field, "_namelabel"):
                 field._namelabel.enabled = field.enabled
-            if hasattr(field, '_valuelabel'):
+            if hasattr(field, "_valuelabel"):
                 field._valuelabel.enabled = field.enabled

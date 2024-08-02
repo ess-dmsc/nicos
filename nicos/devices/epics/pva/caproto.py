@@ -39,7 +39,6 @@ FTYPE_TO_TYPE = {
     ChannelType.CHAR: bytes,
     ChannelType.LONG: int,
     ChannelType.DOUBLE: float,
-
     ChannelType.TIME_STRING: str,
     ChannelType.TIME_INT: int,
     ChannelType.TIME_FLOAT: float,
@@ -47,7 +46,6 @@ FTYPE_TO_TYPE = {
     ChannelType.TIME_CHAR: bytes,
     ChannelType.TIME_LONG: int,
     ChannelType.TIME_DOUBLE: float,
-
     ChannelType.CTRL_STRING: str,
     ChannelType.CTRL_INT: int,
     ChannelType.CTRL_FLOAT: float,
@@ -58,37 +56,38 @@ FTYPE_TO_TYPE = {
 }
 
 STATUS_TO_MESSAGE = {
-    0: 'NO_ALARM',
-    1: 'READ',
-    2: 'WRITE',
-    3: 'HIHI',
-    4: 'HIGH',
-    5: 'LOLO',
-    6: 'LOW',
-    7: 'STATE',
-    8: 'COS',
-    9: 'COMM',
-    10: 'TIMED',
-    11: 'HWLIMIT',
-    12: 'CALC',
-    13: 'SCAN',
-    14: 'LINK',
-    15: 'SOFT',
-    16: 'BAD_SUB',
-    17: 'UDF',
-    18: 'DISABLE',
-    19: 'SIMM',
-    20: 'READ_ACCESS',
-    21: 'WRITE_ACCESS',
+    0: "NO_ALARM",
+    1: "READ",
+    2: "WRITE",
+    3: "HIHI",
+    4: "HIGH",
+    5: "LOLO",
+    6: "LOW",
+    7: "STATE",
+    8: "COS",
+    9: "COMM",
+    10: "TIMED",
+    11: "HWLIMIT",
+    12: "CALC",
+    13: "SCAN",
+    14: "LINK",
+    15: "SOFT",
+    16: "BAD_SUB",
+    17: "UDF",
+    18: "DISABLE",
+    19: "SIMM",
+    20: "READ_ACCESS",
+    21: "WRITE_ACCESS",
 }
 
 # Same context can be shared across all devices.
 _Context = Context()
 
+
 @hiddenusercommand
-@helparglist('name[, timeout]')
+@helparglist("name[, timeout]")
 def caget(name, timeout=3.0):
-    """ Returns the PV's current value in its raw form via CA.
+    """Returns the PV's current value in its raw form via CA.
 
     :param name: the PV name
     :param timeout: the EPICS timeout
@@ -99,9 +98,9 @@ def caget(name, timeout=3.0):
 
 
 @hiddenusercommand
-@helparglist('name, value[, wait, timeout]')
+@helparglist("name, value[, wait, timeout]")
 def caput(name, value, wait=False, timeout=3.0):
-    """ Sets a PV's value via CA.
+    """Sets a PV's value via CA.
 
     :param name: the PV name
     :param value: the value to set
@@ -112,7 +111,7 @@ def caput(name, value, wait=False, timeout=3.0):
 
 
 class CaprotoWrapper:
-    """ Class that wraps the caproto module that provides EPICS Channel Access
+    """Class that wraps the caproto module that provides EPICS Channel Access
     (CA) support.
     """
 
@@ -128,7 +127,7 @@ class CaprotoWrapper:
 
         value = self._create_pv(pvname)
         # Do some prep work for enum types
-        if hasattr(value.metadata, 'enum_strings'):
+        if hasattr(value.metadata, "enum_strings"):
             self._choices[pvname] = self.get_value_choices(pvname)
 
     def _create_pv(self, pvname, connection_callback=None):
@@ -136,19 +135,17 @@ class CaprotoWrapper:
             pv, *_ = _Context.get_pvs(
                 pvname,
                 connection_state_callback=connection_callback,
-                timeout=self._timeout
+                timeout=self._timeout,
             )
             self._pvs[pvname] = pv
             # Do a read to force a connection
-            return pv.read(timeout=self._timeout, data_type='control')
+            return pv.read(timeout=self._timeout, data_type="control")
         except CaprotoTimeoutError:
-            raise CommunicationError(
-                f'could not connect to PV {pvname}') from None
+            raise CommunicationError(f"could not connect to PV {pvname}") from None
 
     def get_pv_value(self, pvname, as_string=False):
         try:
-            result = self._pvs[pvname].read(timeout=self._timeout,
-                                            data_type='control')
+            result = self._pvs[pvname].read(timeout=self._timeout, data_type="control")
             return self._convert_value(pvname, result, as_string)
         except CaprotoTimeoutError:
             raise TimeoutError(f"getting {pvname} timed out") from None
@@ -194,30 +191,30 @@ class CaprotoWrapper:
         values = self.get_control_values(pvname)
         return self._extract_alarm_info(values)
 
-    def get_units(self, pvname, default=''):
+    def get_units(self, pvname, default=""):
         values = self.get_control_values(pvname)
         return self._get_units(values, default)
 
     def _get_units(self, values, default):
-        if hasattr(values, 'units'):
+        if hasattr(values, "units"):
             return values.units.decode()
         return default
 
     def get_limits(self, pvname, default_low=-1e308, default_high=1e308):
         values = self.get_control_values(pvname)
-        if hasattr(values, 'lower_ctrl_limit'):
+        if hasattr(values, "lower_ctrl_limit"):
             default_low = values.lower_ctrl_limit
             default_high = values.upper_ctrl_limit
         return default_low, default_high
 
     def get_control_values(self, pvname):
         try:
-            result = self._pvs[pvname].read(timeout=self._timeout,
-                                            data_type='control')
+            result = self._pvs[pvname].read(timeout=self._timeout, data_type="control")
             return result.metadata
         except CaprotoTimeoutError:
             raise TimeoutError(
-                f"getting control values for {pvname} timed out") from None
+                f"getting control values for {pvname} timed out"
+            ) from None
 
     def get_value_choices(self, pvname):
         # Only works for enum types like MBBI and MBBO
@@ -225,12 +222,18 @@ class CaprotoWrapper:
         return self._extract_choices(value)
 
     def _extract_choices(self, value):
-        if hasattr(value, 'enum_strings'):
+        if hasattr(value, "enum_strings"):
             return [x.decode() for x in value.enum_strings]
         return []
 
-    def subscribe(self, pvname, pvparam, change_callback,
-                  connection_callback=None, as_string=False):
+    def subscribe(
+        self,
+        pvname,
+        pvparam,
+        change_callback,
+        connection_callback=None,
+        as_string=False,
+    ):
         """
         Create a monitor subscription to the specified PV.
 
@@ -243,26 +246,25 @@ class CaprotoWrapper:
         :param as_string: Whether to return the value as a string.
         :return: the subscription object.
         """
-        conn_callback = self._create_connection_callback(pvname, pvparam,
-                                                         connection_callback)
+        conn_callback = self._create_connection_callback(
+            pvname, pvparam, connection_callback
+        )
         self._create_pv(pvname, conn_callback)
 
-        value_callback = self._create_value_callback(pvname, pvparam,
-                                                     change_callback, as_string)
-        sub = self._pvs[pvname].subscribe(data_type='control')
+        value_callback = self._create_value_callback(
+            pvname, pvparam, change_callback, as_string
+        )
+        sub = self._pvs[pvname].subscribe(data_type="control")
         sub.add_callback(value_callback)
         return sub
 
-    def _create_value_callback(self, pvname, pvparam, change_callback,
-                               as_string):
-        callback = partial(self._callback, pvname, pvparam, change_callback,
-                           as_string)
+    def _create_value_callback(self, pvname, pvparam, change_callback, as_string):
+        callback = partial(self._callback, pvname, pvparam, change_callback, as_string)
         self._store_callback(callback)
         return callback
 
     def _create_connection_callback(self, pvname, pvparam, connection_callback):
-        callback = partial(self._conn_callback, pvname, pvparam,
-                           connection_callback)
+        callback = partial(self._conn_callback, pvname, pvparam, connection_callback)
         self._store_callback(callback)
         return callback
 
@@ -270,24 +272,23 @@ class CaprotoWrapper:
         # Must keep a reference to callbacks to avoid garbage collection!
         self._callbacks.add(callback)
 
-    def _callback(self, pvname, pvparam, change_callback, as_string, sub,
-                  response):
+    def _callback(self, pvname, pvparam, change_callback, as_string, sub, response):
         value = self._convert_value(pvname, response, as_string)
-        units = self._get_units(response.metadata, '')
+        units = self._get_units(response.metadata, "")
         severity, message = self._extract_alarm_info(response)
         change_callback(pvname, pvparam, value, units, severity, message)
 
     def _conn_callback(self, pvname, pvparam, connection_callback, pv, state):
-        connection_callback(pvname, pvparam, state == 'connected')
+        connection_callback(pvname, pvparam, state == "connected")
 
     def _extract_alarm_info(self, values):
         # The EPICS 'severity' matches to the NICOS `status` and the message has
         # a short description of the alarm details.
-        if hasattr(values, 'severity'):
+        if hasattr(values, "severity"):
             severity = SEVERITY_TO_STATUS[values.severity]
             message = STATUS_TO_MESSAGE[values.status]
-            return severity, '' if message == 'NO_ALARM' else message
-        return status.UNKNOWN, 'alarm information unavailable'
+            return severity, "" if message == "NO_ALARM" else message
+        return status.UNKNOWN, "alarm information unavailable"
 
     def close_subscription(self, subscription):
         subscription.clear()

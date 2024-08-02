@@ -59,32 +59,29 @@ Unit    [ SEC | MINUTE | DEGREE | URAD | RAD | MM | PIXEL |
 Help                    show this help message
 """
 
-from nicos.core import Override, Param, Readable, floatrange, intrange, \
-    oneof, status
+from nicos.core import Override, Param, Readable, floatrange, intrange, oneof, status
 from nicos.core.errors import CommunicationError
 from nicos.core.mixins import HasOffset
 from nicos.devices.entangle import StringIO
 
 
 class TriangleBase(Readable, StringIO):
-
     def _read_controller(self, index):
         index = int(index)
-        self.log.debug('_read_controller %s %d', type(index), index)
-        res = self.communicate('P 1')
-        self.log.debug('_read_controller res for %s', res)
-        res = res.split(';')
-        self.log.debug('_read_controller res %s', res)
+        self.log.debug("_read_controller %s %d", type(index), index)
+        res = self.communicate("P 1")
+        self.log.debug("_read_controller res for %s", res)
+        res = res.split(";")
+        self.log.debug("_read_controller res %s", res)
         res = [float(e) for e in res]
         return res[index]
 
 
 class TriangleMaster(TriangleBase):
-
     def doRead(self, maxage=0):
         try:
             res = self._read_controller(3)
-            self.log.debug('pos: %f', res)
+            self.log.debug("pos: %f", res)
         except IndexError:
             res = 0
         return res
@@ -92,33 +89,39 @@ class TriangleMaster(TriangleBase):
     def doStatus(self, maxage=0):
         try:
             sig = self._read_controller(3)
-            if sig <= .01:
-                return status.WARN, 'no signal'
-            return status.OK, ''
+            if sig <= 0.01:
+                return status.WARN, "no signal"
+            return status.OK, ""
         except CommunicationError:
-            return status.ERROR, 'timeout check PC! SW running and COM-Port'
+            return status.ERROR, "timeout check PC! SW running and COM-Port"
 
 
 class TriangleAngle(HasOffset, TriangleMaster):
-
     parameters = {
-        'index': Param('index of return',
-                       type=intrange(0, 1), settable=False,
-                       volatile=False, userparam=False),
-        'scale': Param('direction definition (-1, 1)',
-                       type=oneof(-1, 1), settable=False,
-                       mandatory=True),
+        "index": Param(
+            "index of return",
+            type=intrange(0, 1),
+            settable=False,
+            volatile=False,
+            userparam=False,
+        ),
+        "scale": Param(
+            "direction definition (-1, 1)",
+            type=oneof(-1, 1),
+            settable=False,
+            mandatory=True,
+        ),
     }
 
     parameter_overrides = {
-        'offset': Override(type=floatrange(-2, 2)),
+        "offset": Override(type=floatrange(-2, 2)),
     }
 
     def doRead(self, maxage=0):
         try:
-            self.log.debug('index: %d', self.index)
+            self.log.debug("index: %d", self.index)
             res = self.offset + self.scale * self._read_controller(self.index)
-            self.log.debug('pos: %f', res)
+            self.log.debug("pos: %f", res)
         except IndexError:
             res = 0
         return res

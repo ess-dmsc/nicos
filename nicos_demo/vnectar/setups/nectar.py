@@ -1,7 +1,7 @@
-description = 'Basic Setup for NECTAR'
-group = 'basic'
+description = "Basic Setup for NECTAR"
+group = "basic"
 
 includes = [
-    'reactor',
-    'servostar',
+    "reactor",
+    "servostar",
 ]

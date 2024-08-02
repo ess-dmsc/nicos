@@ -32,20 +32,19 @@ class SinqTAS(TAS):
     This just makes the sure that the scanconstant is read from
     the proper device, as requested by the scanmode
     """
+
     parameter_overrides = {
-        'scanconstant': Override(settable=False, volatile=True),
+        "scanconstant": Override(settable=False, volatile=True),
     }
 
     def doReadScanconstant(self):
-        if self.scanmode in ['CKI', 'DIFF']:
-            return to_k(self._attached_mono.read(0),
-                        self._attached_mono.unit)
-        elif self.scanmode == 'CKF':
-            return to_k(self._attached_ana.read(0),
-                        self._attached_ana.unit)
-        elif self.scanmode == 'CPSI':
+        if self.scanmode in ["CKI", "DIFF"]:
+            return to_k(self._attached_mono.read(0), self._attached_mono.unit)
+        elif self.scanmode == "CKF":
+            return to_k(self._attached_ana.read(0), self._attached_ana.unit)
+        elif self.scanmode == "CPSI":
             return self._attached_psi.read()
-        elif self.scanmode == 'CPHI':
+        elif self.scanmode == "CPHI":
             return self._attached_phi.read(0)
         raise ProgrammingError()
 
@@ -61,18 +60,23 @@ class SinqTAS(TAS):
             sc = self.scanconstant
         try:
             angles = self._attached_cell.cal_angles(
-                [qh, qk, ql], ny, sm, sc,
-                self.scatteringsense[1], self.axiscoupling, self.psi360)
+                [qh, qk, ql],
+                ny,
+                sm,
+                sc,
+                self.scatteringsense[1],
+                self.axiscoupling,
+                self.psi360,
+            )
         except ComputationError as err:
             if checkonly:
-                self.log.error('cannot calculate position: %s', err)
+                self.log.error("cannot calculate position: %s", err)
                 return
             raise
         if not printout:
             return angles
-        ok, why = True, ''
-        for devname, value in zip(['mono', 'ana', 'phi', 'psi', 'alpha'],
-                                  angles):
+        ok, why = True, ""
+        for devname, value in zip(["mono", "ana", "phi", "psi", "alpha"], angles):
             dev = self._adevs[devname]
             if dev is None:
                 continue
@@ -82,27 +86,30 @@ class SinqTAS(TAS):
                 devok, devwhy = dev.isAllowed(value)
             if not devok:
                 ok = False
-                why += 'target position %s outside limits for %s: %s -- ' % \
-                    (dev.format(value, unit=True), dev, devwhy)
-        self.log.info('ki:            %8.3f A-1', angles[0])
-        if self.scanmode != 'DIFF':
-            self.log.info('kf:            %8.3f A-1', angles[1])
+                why += "target position %s outside limits for %s: %s -- " % (
+                    dev.format(value, unit=True),
+                    dev,
+                    devwhy,
+                )
+        self.log.info("ki:            %8.3f A-1", angles[0])
+        if self.scanmode != "DIFF":
+            self.log.info("kf:            %8.3f A-1", angles[1])
         th, tth = self._attached_mono._calc_angles(angles[0])
-        self.log.info('A1: %8.3f', th)
-        self.log.info('A2: %8.3f', tth)
-        self.log.info('A3: %8.3f deg', angles[3])
-        self.log.info('A4: %8.3f deg', angles[2])
+        self.log.info("A1: %8.3f", th)
+        self.log.info("A2: %8.3f", tth)
+        self.log.info("A3: %8.3f deg", angles[3])
+        self.log.info("A4: %8.3f deg", angles[2])
         th, tth = self._attached_ana._calc_angles(angles[1])
-        self.log.info('A5: %8.3f', th)
-        self.log.info('A6: %8.3f', tth)
+        self.log.info("A5: %8.3f", th)
+        self.log.info("A6: %8.3f", tth)
         if self._attached_alpha is not None:
-            self.log.info('alpha:         %8.3f deg', angles[4])
+            self.log.info("alpha:         %8.3f deg", angles[4])
         if ok:
             self._last_calpos = pos
             if checkonly:
-                self.log.info('position allowed')
+                self.log.info("position allowed")
         else:
             if checkonly:
-                self.log.warning('position not allowed: %s', why[:-4])
+                self.log.warning("position not allowed: %s", why[:-4])
             else:
-                raise LimitError(self, 'position not allowed: ' + why[:-4])
+                raise LimitError(self, "position not allowed: " + why[:-4])

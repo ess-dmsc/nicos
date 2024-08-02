@@ -35,12 +35,11 @@ from nicos.services.cache.entry import CacheEntry
 from nicos.utils.credentials.keystore import nicoskeystore
 
 
-csv.field_size_limit(0xA00000) # 10 MB limit for influx queries with big fields
+csv.field_size_limit(0xA00000)  # 10 MB limit for influx queries with big fields
 
 
 class InfluxDBWrapper:
-    """Wrapper for InfluxDB API 2.0.
-    """
+    """Wrapper for InfluxDB API 2.0."""
 
     def __init__(self, url, token, org, bucket):
         self._update_queue = []
@@ -49,8 +48,9 @@ class InfluxDBWrapper:
         self._token = token
         self._org = org
         self._bucket = bucket
-        self._client = InfluxDBClient(url=self._url, token=self._token,
-                                      org=self._org, timeout=30_000)
+        self._client = InfluxDBClient(
+            url=self._url, token=self._token, org=self._org, timeout=30_000
+        )
         self._write_api = self._client.write_api(write_options=write_option)
         self.addNewBucket(self._bucket)
 
@@ -69,11 +69,10 @@ class InfluxDBWrapper:
 
     def addNewBucket(self, bucket_name):
         if bucket_name not in self.getBucketNames():
-            retention_rules = BucketRetentionRules(type='expire',
-                                                   every_seconds=0)
-            self._client.buckets_api().create_bucket(\
-                bucket_name=bucket_name,
-                retention_rules=retention_rules, org=self._org)
+            retention_rules = BucketRetentionRules(type="expire", every_seconds=0)
+            self._client.buckets_api().create_bucket(
+                bucket_name=bucket_name, retention_rules=retention_rules, org=self._org
+            )
 
     def query(self):
         """Returns last value for every key/subkey.
@@ -88,10 +87,10 @@ class InfluxDBWrapper:
         with self._update_lock:
             self._write(self._update_queue)
             self._update_queue = []
-        msg = f'''from(bucket:"{self._bucket}")
+        msg = f"""from(bucket:"{self._bucket}")
             |> range(start: 2007-01-01T00:00:00Z, stop: now())
             |> last(column: "_time")
-            |> drop(columns: ["_start", "_stop"])'''
+            |> drop(columns: ["_start", "_stop"])"""
         return self._client.query_api().query(msg)
 
     def queryHistory(self, measurement, field, fromtime, totime, interval):
@@ -104,23 +103,29 @@ class InfluxDBWrapper:
             self._update_queue = []
         t1 = datetime.utcfromtimestamp(fromtime).strftime("%Y-%m-%dT%H:%M:%SZ")
         t2 = datetime.utcfromtimestamp(totime).strftime("%Y-%m-%dT%H:%M:%SZ")
-        msg = f'''from(bucket:"{self._bucket}")
+        msg = f"""from(bucket:"{self._bucket}")
             |> range(start: {t1}, stop: {t2})
             |> filter(fn:(r) => r._measurement == "{measurement}")
-            |> filter(fn:(r) => r._field == "{field}")'''
+            |> filter(fn:(r) => r._field == "{field}")"""
         if interval:
-            msg += f'|> aggregateWindow(every: {interval}s, fn: last, createEmpty: false)'
+            msg += (
+                f"|> aggregateWindow(every: {interval}s, fn: last, createEmpty: false)"
+            )
         msg += '|> drop(columns: ["_start", "_stop"])'
         yield self._client.query_api().query_stream(msg)
 
     def update(self, measurement, ts, field, value, expired):
-        point = Point(measurement).time(ts).field(f'{field}', value)\
-            .tag('expired', expired)
+        point = (
+            Point(measurement).time(ts).field(f"{field}", value).tag("expired", expired)
+        )
         value_float = self._convert_to_float(value)
         if value_float:
-            point_float = Point(measurement).time(ts)\
-                .field(f'{field}_float', value_float)\
-                .tag('expired', expired)
+            point_float = (
+                Point(measurement)
+                .time(ts)
+                .field(f"{field}_float", value_float)
+                .tag("expired", expired)
+            )
         with self._update_lock:
             self._update_queue.append(point)
             if value_float:
@@ -139,9 +144,12 @@ class InfluxDBWrapper:
             value = None
         if value:
             if type(value) in [list, tuple, set]:
-                value = list(value)[0] if len(value) == 1 and \
-                    type(list(value)[0]) not in [list, tuple, set, dict] \
+                value = (
+                    list(value)[0]
+                    if len(value) == 1
+                    and type(list(value)[0]) not in [list, tuple, set, dict]
                     else None
+                )
             if isinstance(value, int):
                 value = float(value)
         return value if isinstance(value, float) else None
@@ -169,14 +177,25 @@ class InfluxDBCacheDatabase(CacheDatabase):
     """
 
     parameters = {
-        'url': Param('URL of InfluxDB instance', type=str, mandatory=True),
-        'keystoretoken': Param('Id used in the keystore for InfluxDB API token',
-                               type=str, default='influxdb', mandatory=True),
-        'org': Param('Corresponding organization name created during '
-                     'initialization of InfluxDB instance',
-                     type=str, mandatory=True),
-        'bucket': Param('Name of the bucket where data should be stored',
-                        type=str, default='nicos-cache', mandatory=True),
+        "url": Param("URL of InfluxDB instance", type=str, mandatory=True),
+        "keystoretoken": Param(
+            "Id used in the keystore for InfluxDB API token",
+            type=str,
+            default="influxdb",
+            mandatory=True,
+        ),
+        "org": Param(
+            "Corresponding organization name created during "
+            "initialization of InfluxDB instance",
+            type=str,
+            mandatory=True,
+        ),
+        "bucket": Param(
+            "Name of the bucket where data should be stored",
+            type=str,
+            default="nicos-cache",
+            mandatory=True,
+        ),
     }
 
     def doInit(self, mode):
@@ -185,26 +204,26 @@ class InfluxDBCacheDatabase(CacheDatabase):
         CacheDatabase.doInit(self, mode)
         token = nicoskeystore.getCredential(self.keystoretoken)
         if not token:
-            raise ConfigurationError('InfluxDB API token missing in keyring')
+            raise ConfigurationError("InfluxDB API token missing in keyring")
         self._client = InfluxDBWrapper(self.url, token, self.org, self.bucket)
 
     def initDatabase(self):
         tables = self._client.query()
         for table in tables:
             for record in table:
-                category = record['_measurement']
-                subkey = record['_field']
-                time = record['_time'].timestamp()
+                category = record["_measurement"]
+                subkey = record["_field"]
+                time = record["_time"].timestamp()
                 with self._recent_lock:
                     if category in self._recent:
                         _, lock, db = self._recent[category]
                         with lock:
-                            db[subkey] = CacheEntry(time, None, record['_value'])
-                            db[subkey].expired = record['expired'] == 'True'
+                            db[subkey] = CacheEntry(time, None, record["_value"])
+                            db[subkey].expired = record["expired"] == "True"
                     else:
                         db = {}
-                        db[subkey] = CacheEntry(time, None, record['_value'])
-                        db[subkey].expired = record['expired'] == 'True'
+                        db[subkey] = CacheEntry(time, None, record["_value"])
+                        db[subkey].expired = record["expired"] == "True"
                         self._recent[category] = [None, threading.Lock(), db]
 
     def doShutdown(self):
@@ -246,16 +265,18 @@ class InfluxDBCacheDatabase(CacheDatabase):
                     db[subkey] = entry
                     if not no_store:
                         time = datetime.utcfromtimestamp(entry.time)
-                        self._client.update(cat, time, subkey, entry.value,
-                                            entry.expired)
+                        self._client.update(
+                            cat, time, subkey, entry.value, entry.expired
+                        )
         return real_update
 
     def queryHistory(self, dbkey, fromtime, totime, interval):
         category, subkey = dbkey
-        for records in self._client.queryHistory(category, subkey, fromtime,
-                                                 totime, interval):
+        for records in self._client.queryHistory(
+            category, subkey, fromtime, totime, interval
+        ):
             for record in records:
-                time = record['_time'].timestamp()
-                entry = CacheEntry(time, None, record['_value'])
-                entry.expired = record['expired'] == 'True'
+                time = record["_time"].timestamp()
+                entry = CacheEntry(time, None, record["_value"])
+                entry.expired = record["expired"] == "True"
                 yield entry

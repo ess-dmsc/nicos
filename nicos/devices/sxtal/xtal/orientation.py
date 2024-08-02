@@ -52,11 +52,11 @@ def euler_from_rotmat(R):
 
     http://www.staff.city.ac.uk/~sbbh653/publications/euler.pdf
     """
-    if abs(R[2,0]) != 1:
-        theta1 = -np.arcsin(R[2,0])
+    if abs(R[2, 0]) != 1:
+        theta1 = -np.arcsin(R[2, 0])
         costh1 = np.cos(theta1)
-        psi1 = np.arctan2(R[2,1]/costh1, R[2,2]/costh1)
-        phi1 = np.arctan2(R[1,0]/costh1, R[0,0]/costh1)
+        psi1 = np.arctan2(R[2, 1] / costh1, R[2, 2] / costh1)
+        phi1 = np.arctan2(R[1, 0] / costh1, R[0, 0] / costh1)
         # -- second solution:
         # theta2 = np.pi - theta1
         # costh2 = np.cos(theta2)
@@ -65,12 +65,12 @@ def euler_from_rotmat(R):
         return psi1, theta1, phi1
     else:
         phi = 0
-        if R[2,0] == -1:
-            theta = np.pi/2
-            psi = phi + np.arctan2(R[0,1], R[0,2])
+        if R[2, 0] == -1:
+            theta = np.pi / 2
+            psi = phi + np.arctan2(R[0, 1], R[0, 2])
         else:
-            theta = -np.pi/2
-            psi = -phi + np.arctan2(-R[0,1], -R[0,2])
+            theta = -np.pi / 2
+            psi = -phi + np.arctan2(-R[0, 1], -R[0, 2])
         return psi, theta, phi
 
 
@@ -81,7 +81,7 @@ class RefinementParams:
         self.errors = {}
         self.varnames = []
         self.varinit = []
-        self.chi2 = 0.
+        self.chi2 = 0.0
 
     def __getattr__(self, name):
         return self.params[name]
@@ -154,36 +154,37 @@ class orient:
         """
         # get Euler angles from U matrix
         init_p = self.cell.cellparams()
-        Bmat = matrixfromcell(init_p.a, init_p.b, init_p.c,
-                              init_p.alpha, init_p.beta, init_p.gamma)
+        Bmat = matrixfromcell(
+            init_p.a, init_p.b, init_p.c, init_p.alpha, init_p.beta, init_p.gamma
+        )
         Umat = self.cell.rmat.T.dot(np.linalg.inv(Bmat))
         psi, theta, phi = euler_from_rotmat(Umat)
 
         if len(poslist) < 2:
-            raise ComputationError('Need at least two reflections')
+            raise ComputationError("Need at least two reflections")
         postype = poslist[0][0].ptype.upper()
 
         p = RefinementParams()
 
         # these are always varying
-        p.add('psi', psi, {})
-        p.add('theta', theta, {})
-        p.add('phi', phi, {})
+        p.add("psi", psi, {})
+        p.add("theta", theta, {})
+        p.add("phi", phi, {})
 
         # cell params
-        p.add('a', init_p.a, kwds)
-        p.add('b', init_p.b, kwds)
-        p.add('c', init_p.c, kwds)
-        p.add('alpha', init_p.alpha, kwds)
-        p.add('beta', init_p.beta, kwds)
-        p.add('gamma', init_p.gamma, kwds)
+        p.add("a", init_p.a, kwds)
+        p.add("b", init_p.b, kwds)
+        p.add("c", init_p.c, kwds)
+        p.add("alpha", init_p.alpha, kwds)
+        p.add("beta", init_p.beta, kwds)
+        p.add("gamma", init_p.gamma, kwds)
 
         # wavelength
-        p.add('wavelength', lambda0, kwds)
+        p.add("wavelength", lambda0, kwds)
 
         # axis offsets
         for axis, offset in zip(axes, offsets):
-            p.add('delta_' + axis, offset, kwds)
+            p.add("delta_" + axis, offset, kwds)
 
         def get_new_cell(p):
             # reconstruct UB matrix
@@ -195,29 +196,34 @@ class orient:
             p.update(varying)
             cell = get_new_cell(p)
             errors = []
-            for (mpos, hkl, _) in poslist:
-                cpos = PositionFactory('c', c=cell.CVector(hkl))
-                cpos = getattr(cpos, 'as' + postype)(p.wavelength)
+            for mpos, hkl, _ in poslist:
+                cpos = PositionFactory("c", c=cell.CVector(hkl))
+                cpos = getattr(cpos, "as" + postype)(p.wavelength)
                 errors.append(7.0 * (cpos.omega - mpos.omega))
                 for axis in axes:
-                    errors.append(4.0 * (
-                        getattr(cpos, axis) +
-                        np.radians(getattr(p, 'delta_' + axis)) -
-                        getattr(mpos, axis)))
+                    errors.append(
+                        4.0
+                        * (
+                            getattr(cpos, axis)
+                            + np.radians(getattr(p, "delta_" + axis))
+                            - getattr(mpos, axis)
+                        )
+                    )
             return errors
 
-        popt, pcov, infodict, errmsg, ier = \
-            scipy.optimize.leastsq(residuals, p.varinit, full_output=1)
+        popt, pcov, infodict, errmsg, ier = scipy.optimize.leastsq(
+            residuals, p.varinit, full_output=1
+        )
         nfree = len(poslist) - len(p.varinit)
         if pcov is not None and nfree > 0:
-            cost = np.sum(infodict['fvec']**2)
+            cost = np.sum(infodict["fvec"] ** 2)
             s_sq = cost / nfree
             pcov = pcov * s_sq
         else:
             pcov = np.zeros((len(popt), len(popt)), dtype=float)
-            pcov.fill(float('inf'))
+            pcov.fill(float("inf"))
         if ier not in [1, 2, 3, 4]:
-            raise ComputationError('Optimization failed: %s' % errmsg)
+            raise ComputationError("Optimization failed: %s" % errmsg)
 
         p.update(popt)
         p.update_errors(np.sqrt(pcov[i, i]) for i in range(len(popt)))

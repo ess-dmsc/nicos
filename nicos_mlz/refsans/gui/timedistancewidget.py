@@ -31,7 +31,6 @@ from nicos_mlz.refsans.lib.timedistancediagram import timedistancediagram
 
 
 class TimeDistanceWidget(QWidget):
-
     def __init__(self, parent=None):
         QWidget.__init__(self, parent)
 
@@ -42,15 +41,20 @@ class TimeDistanceWidget(QWidget):
         layout.addWidget(self.canvas)
         self.setLayout(layout)
 
-    def plot(self, speed, angles, nperiods, disc2_pos, D, disc2_mode,
-             Actual_D=None):
+    def plot(self, speed, angles, nperiods, disc2_pos, D, disc2_mode, Actual_D=None):
         # discards the old graph
         self._static_ax.clear()
 
-        timedistancediagram(speed, angles, disc2_pos, D,
-                            n_per=nperiods, disk2_mode=disc2_mode,
-                            plot=self._static_ax,
-                            Actual_D=Actual_D)
+        timedistancediagram(
+            speed,
+            angles,
+            disc2_pos,
+            D,
+            n_per=nperiods,
+            disk2_mode=disc2_mode,
+            plot=self._static_ax,
+            Actual_D=Actual_D,
+        )
 
         # refresh canvas
         self._static_ax.figure.canvas.draw()

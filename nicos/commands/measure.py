@@ -26,18 +26,33 @@
 
 from nicos import session
 from nicos.commands import helparglist, parallel_safe, usercommand
-from nicos.core.acquire import Average, CountResult, MinMax, StdDev, acquire, \
-    read_environment, stop_acquire_thread
+from nicos.core.acquire import (
+    Average,
+    CountResult,
+    MinMax,
+    StdDev,
+    acquire,
+    read_environment,
+    stop_acquire_thread,
+)
 from nicos.core.device import Measurable, SubscanMeasurable
 from nicos.core.errors import NicosError, UsageError
 from nicos.utils import createThread, number_types, printTable
 
 __all__ = [
-    'count', 'live', 'preset',
-    'SetDetectors', 'AddDetector', 'ListDetectors',
-    'SetEnvironment', 'AddEnvironment', 'ListEnvironment',
-    'ListDatasinks',
-    'avg', 'minmax', 'stddev',
+    "count",
+    "live",
+    "preset",
+    "SetDetectors",
+    "AddDetector",
+    "ListDetectors",
+    "SetEnvironment",
+    "AddEnvironment",
+    "ListEnvironment",
+    "ListDatasinks",
+    "avg",
+    "minmax",
+    "stddev",
 ]
 
 
@@ -55,17 +70,19 @@ def inner_count(detectors, preset, temporary=False, threaded=False):
 
     if session.experiment.forcescandata:
         dataman.beginScan(
-            info=preset.get('info', 'count(%s)' %
-                            ', '.join('%s=%s' % kv for kv in preset.items())),
+            info=preset.get(
+                "info", "count(%s)" % ", ".join("%s=%s" % kv for kv in preset.items())
+            ),
             npoints=1,
             environment=session.experiment.sampleenv,
             detectors=detectors,
-            preset=preset)
+            preset=preset,
+        )
 
     # start counting
-    args = dict(detectors=detectors,
-                environment=session.experiment.sampleenv,
-                preset=preset)
+    args = dict(
+        detectors=detectors, environment=session.experiment.sampleenv, preset=preset
+    )
     if temporary:
         point = dataman.beginTemporaryPoint(**args)
     else:
@@ -81,7 +98,7 @@ def inner_count(detectors, preset, temporary=False, threaded=False):
                 dataman.finishScan()
 
     if threaded:
-        session._thd_acquire = createThread('acquire', _acquire_func)
+        session._thd_acquire = createThread("acquire", _acquire_func)
         return None
     else:
         _acquire_func()
@@ -89,41 +106,42 @@ def inner_count(detectors, preset, temporary=False, threaded=False):
     result, msg = CountResult.from_point(point)
     if not session.experiment.forcescandata:
         for filename in point.filenames:
-            msg.append('file = %s' % filename)
+            msg.append("file = %s" % filename)
         if msg:
-            session.log.info('count: %s', ', '.join(msg))
+            session.log.info("count: %s", ", ".join(msg))
 
     return result
 
 
 def _count(*detlist, **preset):
-    temporary = preset.pop('temporary', False)
-    live = preset.get('live', False)
+    temporary = preset.pop("temporary", False)
+    live = preset.get("live", False)
     # sanitize detector list; support count(1) and count('info')
     detectors = []
     for det in detlist:
         if isinstance(det, number_types):
-            preset['t'] = det
+            preset["t"] = det
             continue
         elif isinstance(det, str):
-            preset['info'] = det  # XXX
+            preset["info"] = det  # XXX
             continue
         if not isinstance(det, Measurable):
-            raise UsageError('device %s is not a measurable device' % det)
+            raise UsageError("device %s is not a measurable device" % det)
         detectors.append(det)
     # check if manual scan is active
-    scan = getattr(session, '_manualscan', None)
+    scan = getattr(session, "_manualscan", None)
     if scan is not None:
         if detectors:
-            raise UsageError('cannot specify different detector list '
-                             'in manual scan')
+            raise UsageError("cannot specify different detector list " "in manual scan")
         return scan.step(**preset)
     # counting without detectors is not useful, but does not error out
     if not detectors:
         detectors = session.experiment.detectors
         if not detectors:
-            session.log.warning('counting without detector, use SetDetectors()'
-                                ' to select which detector(s) you want to use')
+            session.log.warning(
+                "counting without detector, use SetDetectors()"
+                " to select which detector(s) you want to use"
+            )
     if preset is None:
         preset = {}
     if not preset:
@@ -135,21 +153,24 @@ def _count(*detlist, **preset):
     for det in detectors:
         names.difference_update(det.presetInfo())
     if names and detectors:
-        session.log.warning('these preset keys were not recognized by any of '
-                            'the detectors: %s -- detectors are %s',
-                            ', '.join(names), ', '.join(map(str, detectors)))
+        session.log.warning(
+            "these preset keys were not recognized by any of "
+            "the detectors: %s -- detectors are %s",
+            ", ".join(names),
+            ", ".join(map(str, detectors)),
+        )
     # check detector types
     has_sub = sum(isinstance(det, SubscanMeasurable) for det in detectors)
     if has_sub > 0:
         # XXX(dataapi): support both types
         if not len(detectors) == has_sub == 1:
-            raise NicosError('cannot acquire on normal and subscan detectors')
+            raise NicosError("cannot acquire on normal and subscan detectors")
 
     return inner_count(detectors, preset, temporary, live)
 
 
 @usercommand
-@helparglist('[detectors], [presets]')
+@helparglist("[detectors], [presets]")
 def count(*detlist, **preset):
     """Perform a single counting.
 
@@ -167,12 +188,12 @@ def count(*detlist, **preset):
     Within a manual scan, this command is also used to perform the count as one
     point of the manual scan.
     """
-    preset.pop('live', None)
+    preset.pop("live", None)
     return _count(*detlist, **preset)
 
 
 @usercommand
-@helparglist('[detectors]')
+@helparglist("[detectors]")
 def live(*detlist):
     """Count until stopped generating live data.
 
@@ -186,7 +207,7 @@ def live(*detlist):
 
 
 @usercommand
-@helparglist('presets...')
+@helparglist("presets...")
 def preset(**preset):
     """Set a new default preset for the currently selected detectors.
 
@@ -203,17 +224,20 @@ def preset(**preset):
     for det in session.experiment.detectors:
         names.difference_update(det.presetInfo())
         det.setPreset(**preset)
-    session.log.info('new preset: %s',
-                     ', '.join('%s=%s' % item for item in preset.items()))
+    session.log.info(
+        "new preset: %s", ", ".join("%s=%s" % item for item in preset.items())
+    )
     if names:
-        session.log.warning('these preset keys were not recognized by any of '
-                            'the detectors: %s -- detectors are %s',
-                            ', '.join(names),
-                            ', '.join(map(str, session.experiment.detectors)))
+        session.log.warning(
+            "these preset keys were not recognized by any of "
+            "the detectors: %s -- detectors are %s",
+            ", ".join(names),
+            ", ".join(map(str, session.experiment.detectors)),
+        )
 
 
 @usercommand
-@helparglist('det, ...')
+@helparglist("det, ...")
 def SetDetectors(*detlist):
     """Select the detector device(s) to read out when calling scan() or count().
 
@@ -227,7 +251,7 @@ def SetDetectors(*detlist):
 
 
 @usercommand
-@helparglist('det, ...')
+@helparglist("det, ...")
 def AddDetector(*detlist):
     """Add the specified detector device(s) to the standard detectors.
 
@@ -245,14 +269,15 @@ def AddDetector(*detlist):
 def ListDetectors():
     """List the standard detectors."""
     if session.experiment.detlist:
-        session.log.info('standard detectors are: %s',
-                         ', '.join(session.experiment.detlist))
+        session.log.info(
+            "standard detectors are: %s", ", ".join(session.experiment.detlist)
+        )
     else:
-        session.log.info('at the moment no standard detectors are set.')
+        session.log.info("at the moment no standard detectors are set.")
 
 
 @usercommand
-@helparglist('[dev, ...]')
+@helparglist("[dev, ...]")
 def SetEnvironment(*devlist):
     """Select the device(s) to read during scans as "experiment environment".
 
@@ -268,7 +293,7 @@ def SetEnvironment(*devlist):
 
 
 @usercommand
-@helparglist('dev, ...')
+@helparglist("dev, ...")
 def AddEnvironment(*devlist):
     """Add the specified environment device(s) to the standard environment.
 
@@ -286,10 +311,11 @@ def AddEnvironment(*devlist):
 def ListEnvironment():
     """List the standard environment devices."""
     if session.experiment.envlist:
-        session.log.info('standard environment is: %s',
-                         ', '.join(session.experiment.envlist))
+        session.log.info(
+            "standard environment is: %s", ", ".join(session.experiment.envlist)
+        )
     else:
-        session.log.info('at the moment no standard environment is set.')
+        session.log.info("at the moment no standard environment is set.")
 
 
 @usercommand
@@ -297,15 +323,16 @@ def ListEnvironment():
 def ListDatasinks():
     """List the standard data sinks."""
     if session.datasinks:
-        session.log.info('Currently used data sinks are:')
+        session.log.info("Currently used data sinks are:")
         items = [
-            (ds.name, ', '.join(ds.settypes), ', '.join(ds.detectors))
+            (ds.name, ", ".join(ds.settypes), ", ".join(ds.detectors))
             for ds in session.datasinks
         ]
-        printTable(('name', 'used for', 'active for detectors'),
-                   items, session.log.info)
+        printTable(
+            ("name", "used for", "active for detectors"), items, session.log.info
+        )
     else:
-        session.log.info('At the moment no data sinks are set.')
+        session.log.info("At the moment no data sinks are set.")
 
 
 @usercommand

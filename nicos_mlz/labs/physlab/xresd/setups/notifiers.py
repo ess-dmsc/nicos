@@ -1,6 +1,6 @@
-description = 'Email notifier example'
+description = "Email notifier example"
 
-group = 'lowlevel'
+group = "lowlevel"
 
 devices = dict(
     # Configure source and copy addresses to an existing address.

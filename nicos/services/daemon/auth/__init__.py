@@ -32,7 +32,6 @@ class AuthenticationError(Exception):
 
 
 class Authenticator(Device):
-
     def authenticate(self, username, password):
         """Authenticate a user with given username and password hash.
 

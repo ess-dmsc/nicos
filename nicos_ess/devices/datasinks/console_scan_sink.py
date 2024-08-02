@@ -21,9 +21,10 @@
 # *****************************************************************************
 from nicos import session
 from nicos.core import SIMULATION
-from nicos.devices.datasinks.scan import \
-    ConsoleScanSink as BaseConsoleScanSink, \
-    ConsoleScanSinkHandler as BaseConsoleScanSinkHandler
+from nicos.devices.datasinks.scan import (
+    ConsoleScanSink as BaseConsoleScanSink,
+    ConsoleScanSinkHandler as BaseConsoleScanSinkHandler,
+)
 
 
 class ConsoleScanSinkHandler(BaseConsoleScanSinkHandler):
@@ -34,4 +35,5 @@ class ConsoleScanSinkHandler(BaseConsoleScanSinkHandler):
 
 class ConsoleScanSink(BaseConsoleScanSink):
     """A DataSink that prints scan data onto the console."""
+
     handlerclass = ConsoleScanSinkHandler

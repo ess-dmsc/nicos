@@ -32,7 +32,13 @@ class ViewableInstrument(Instrument):
     Currently only requires an additional parameter that points to the
     instrument definition file that should be loaded.
     """
+
     parameters = {
-        'idf': Param('Instrument Definition File', type=str, settable=False,
-                     userparam=False, mandatory=True),
+        "idf": Param(
+            "Instrument Definition File",
+            type=str,
+            settable=False,
+            userparam=False,
+            mandatory=True,
+        ),
     }

@@ -38,16 +38,15 @@ class ReflexList(Device):
     """
 
     parameters = {
-        'reflection_list': Param('The actual list of reflections',
-                                 type=list,
-                                 settable=True),
-        'column_headers': Param('The names of each component of the '
-                                'reflection, grouped by data type',
-                                type=tupleof(tuple, tuple, tuple),
-                                default=(('H', 'K', 'L'),
-                                         ('STT', 'OM', 'CHI', 'PHI'), ('',)),
-                                settable=True,
-                                ),
+        "reflection_list": Param(
+            "The actual list of reflections", type=list, settable=True
+        ),
+        "column_headers": Param(
+            "The names of each component of the " "reflection, grouped by data type",
+            type=tupleof(tuple, tuple, tuple),
+            default=(("H", "K", "L"), ("STT", "OM", "CHI", "PHI"), ("",)),
+            settable=True,
+        ),
     }
 
     hardware_access = False
@@ -63,22 +62,24 @@ class ReflexList(Device):
 
     def append(self, Qpos=None, angles=None, aux=None):
         if not Qpos and not angles:
-            raise InvalidValueError('One of reciprocal coordinates '
-                                    'or angles must be given')
+            raise InvalidValueError(
+                "One of reciprocal coordinates " "or angles must be given"
+            )
         if not Qpos:
-            Qpos = (0,)*self._hkl_len
+            Qpos = (0,) * self._hkl_len
         if len(Qpos) != self._hkl_len:
-            raise InvalidValueError('Reciprocal coordinates mismatch, '
-                                    'need %d, got %d'
-                                    % (self._hkl_len, len(Qpos)))
+            raise InvalidValueError(
+                "Reciprocal coordinates mismatch, "
+                "need %d, got %d" % (self._hkl_len, len(Qpos))
+            )
 
         angle_len = len(self.column_headers[1])
         if not angles:
-            angles = (0,)*angle_len
+            angles = (0,) * angle_len
         if len(angles) != angle_len:
-            raise InvalidValueError('Angle settings mismatch, '
-                                    'need %d, got %d'
-                                    % (angle_len, len(angles)))
+            raise InvalidValueError(
+                "Angle settings mismatch, " "need %d, got %d" % (angle_len, len(angles))
+            )
         if not aux:
             aux = ()
         reflist = list(self.reflection_list)
@@ -87,8 +88,7 @@ class ReflexList(Device):
 
     def get_reflection(self, idx):
         if not 0 <= idx < len(self.reflection_list):
-            raise InvalidValueError('NO reflection with '
-                                    'index %d found' % idx)
+            raise InvalidValueError("NO reflection with " "index %d found" % idx)
         return self.reflection_list[idx]
 
     def modify_reflection(self, idx, Qpos=None, angles=None, aux=None):
@@ -96,18 +96,21 @@ class ReflexList(Device):
         if not Qpos:
             Qpos = oldref[0]
         if len(Qpos) != len(oldref[0]):
-            raise InvalidValueError('Expected %d values for Q, got %d' %
-                                    (len(oldref[0]), len(Qpos)))
+            raise InvalidValueError(
+                "Expected %d values for Q, got %d" % (len(oldref[0]), len(Qpos))
+            )
         if not angles:
             angles = oldref[1]
         if len(angles) != len(oldref[1]):
-            raise InvalidValueError('Expected %d angles, got %d' %
-                                    (len(oldref[1]), len(angles)))
+            raise InvalidValueError(
+                "Expected %d angles, got %d" % (len(oldref[1]), len(angles))
+            )
         if not aux:
             aux = oldref[2]
         if len(aux) != len(oldref[2]):
-            raise InvalidValueError('Expected %d auxiliaries, got %d' %
-                                    (len(oldref[2]), len(aux)))
+            raise InvalidValueError(
+                "Expected %d auxiliaries, got %d" % (len(oldref[2]), len(aux))
+            )
         reflist = list(self.reflection_list)
         reflist[idx] = (Qpos, angles, aux)
         self.reflection_list = reflist

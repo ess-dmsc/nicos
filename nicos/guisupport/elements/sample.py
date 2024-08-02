@@ -22,8 +22,15 @@
 # *****************************************************************************
 """Classes to display the TAS instruments."""
 
-from nicos.guisupport.qt import QBrush, QColor, QGraphicsLineItem, \
-    QGraphicsRectItem, QPen, QPointF, QRectF
+from nicos.guisupport.qt import (
+    QBrush,
+    QColor,
+    QGraphicsLineItem,
+    QGraphicsRectItem,
+    QPen,
+    QPointF,
+    QRectF,
+)
 
 from .table import TableBase
 
@@ -38,12 +45,13 @@ class Sample(TableBase):
             self._color = parent._color
         TableBase.__init__(self, x, y, size, parent, scene)
         if not self._pencolor:
-            self._pencolor = QColor('#666666')
+            self._pencolor = QColor("#666666")
         self._pen = QPen(self._pencolor, 1)
         self._pen.setBrush(QBrush(self._pencolor))
         sz = size / 3
         self._polygon = QGraphicsRectItem(
-            QRectF(-QPointF(sz, sz), QPointF(sz, sz)), self)
+            QRectF(-QPointF(sz, sz), QPointF(sz, sz)), self
+        )
         self._polygon.setBrush(QBrush(self._pencolor))
         self._l1 = QGraphicsLineItem(-size, 0, size, 0, self)
         self._l1.setPen(self._pen)

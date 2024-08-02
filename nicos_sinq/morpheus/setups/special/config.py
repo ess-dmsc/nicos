@@ -1,9 +1,9 @@
-description = 'Generic configuration settings for MORPHEUS'
+description = "Generic configuration settings for MORPHEUS"
 
 import os
 
-group = 'configdata'
+group = "configdata"
 
-DATA_PATH = os.environ.get('NICOSDUMP', '.') + '/morpheus/'
+DATA_PATH = os.environ.get("NICOSDUMP", ".") + "/morpheus/"
 
-KAFKA_BROKERS = ['localhost:9092']
+KAFKA_BROKERS = ["localhost:9092"]

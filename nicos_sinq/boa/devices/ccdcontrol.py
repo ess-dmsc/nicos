@@ -30,7 +30,7 @@ from nicos_sinq.devices.detector import ControlDetector
 
 
 class BoaControlDetector(ControlDetector):
-    """"
+    """ "
     A detector control class which implements the BOA CCD counting specific
     features:
     - delay start of the el737 after starting the CCD
@@ -40,16 +40,15 @@ class BoaControlDetector(ControlDetector):
     """
 
     parameters = {
-        'minimum_rate': Param('Minimum count rate for frame',
-                              type=int,
-                              settable=True,
-                              mandatory=True),
-        'rate_monitor': Param('Monitor to check rate against',
-                              type=nicosdev,
-                              mandatory=True),
-        'elapsed_time': Param('Channel to read time from',
-                              type=nicosdev,
-                              mandatory=True)
+        "minimum_rate": Param(
+            "Minimum count rate for frame", type=int, settable=True, mandatory=True
+        ),
+        "rate_monitor": Param(
+            "Monitor to check rate against", type=nicosdev, mandatory=True
+        ),
+        "elapsed_time": Param(
+            "Channel to read time from", type=nicosdev, mandatory=True
+        ),
     }
 
     _triggerFinished = None
@@ -63,8 +62,8 @@ class BoaControlDetector(ControlDetector):
                 stat, _ = det.status()
                 if stat == BUSY:
                     break
-                time.sleep(.3)
-            time.sleep(.9)
+                time.sleep(0.3)
+            time.sleep(0.9)
             # session.log.info('Started CCD\n')
             self._attached_trigger.start()
             # session.log.info('Started Trigger\n')
@@ -75,9 +74,12 @@ class BoaControlDetector(ControlDetector):
         dev = session.getDevice(self.elapsed_time)
         t = dev.read(0)[0]
         if mon < t * self.minimum_rate:
-            session.log.info('%s, should %d cts/sec, is %f cts/dec',
-                             'Restarting because of insuffient count rate',
-                             self.minimum_rate, float(mon)/float(t))
+            session.log.info(
+                "%s, should %d cts/sec, is %f cts/dec",
+                "Restarting because of insuffient count rate",
+                self.minimum_rate,
+                float(mon) / float(t),
+            )
             self.start()
             return False
         else:
@@ -93,16 +95,15 @@ class BoaControlDetector(ControlDetector):
                 # self._attached_slave_detectors[0].stop()
                 return False
         else:
-            if all(det.isCompleted() for det in
-                   self._attached_followers):
+            if all(det.isCompleted() for det in self._attached_followers):
                 return self._testRate()
             else:
                 if time.time() > self._triggerFinished + 180:
-                    session.log.info('CCD overrun, restarting counting...')
+                    session.log.info("CCD overrun, restarting counting...")
                     self.stop()
                     start = time.monotonic()
                     while time.monotonic() - start < 200:
-                        time.sleep(1.)
+                        time.sleep(1.0)
                         if self._attached_followers[0].isCompleted():
                             break
                     self.start()

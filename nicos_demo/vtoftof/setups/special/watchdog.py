@@ -1,5 +1,5 @@
-description = 'setup for the NICOS watchdog'
-group = 'special'
+description = "setup for the NICOS watchdog"
+group = "special"
 
 # The entries in this list are dictionaries. Possible keys:
 #
@@ -23,23 +23,24 @@ group = 'special'
 # 'action' -- code to execute if condition is true (default no code is executed)
 
 watch_conditions = [
-    dict(condition = 'LogSpace_status[0] == WARN',
-         message = 'Disk space for log files becomes too low.',
-         type = 'critical',
-         gracetime = 30,
-         setup = 'system',
+    dict(
+        condition="LogSpace_status[0] == WARN",
+        message="Disk space for log files becomes too low.",
+        type="critical",
+        gracetime=30,
+        setup="system",
     ),
     dict(
-        condition = '(sixfold_value == "closed" or nl2a_value == "closed") '
-        'and reactorpower_value > 19.1',
-        message = 'NL2a or sixfold shutter closed',
-        type = 'critical',
-        setup = 'nl2a',
+        condition='(sixfold_value == "closed" or nl2a_value == "closed") '
+        "and reactorpower_value > 19.1",
+        message="NL2a or sixfold shutter closed",
+        type="critical",
+        setup="nl2a",
     ),
     dict(
-        condition = 'ch_value < 140',
-        message = 'Choppers are down! DO SOMETHING!',
-        setup = 'chopper',
+        condition="ch_value < 140",
+        message="Choppers are down! DO SOMETHING!",
+        setup="chopper",
     ),
     # dict(
     #      condition = 'flow_in_ch_cooling_value < 10',
@@ -62,11 +63,11 @@ watch_conditions = [
 # and one for priority 2 ('critical').
 
 devices = dict(
-    Watchdog = device('nicos.services.watchdog.Watchdog',
-        cache = 'localhost:14869',
-        notifiers = {'default': [],
-                     'critical': []},
-        watch = watch_conditions,
-        loglevel = 'info',
+    Watchdog=device(
+        "nicos.services.watchdog.Watchdog",
+        cache="localhost:14869",
+        notifiers={"default": [], "critical": []},
+        watch=watch_conditions,
+        loglevel="info",
     ),
 )

@@ -28,10 +28,8 @@ from nicos import session
 from nicos.core import Moveable, status
 from nicos.core.constants import FINAL, SIMULATION
 from nicos.core.errors import InvalidValueError, MoveError, NicosError
-from nicos.core.params import ArrayDesc, Attach, Override, Param, oneof, \
-    tupleof
-from nicos.devices.generic.detector import Detector, ImageChannelMixin, \
-    PassiveChannel
+from nicos.core.params import ArrayDesc, Attach, Override, Param, oneof, tupleof
+from nicos.devices.generic.detector import Detector, ImageChannelMixin, PassiveChannel
 from nicos.devices.tango import PyTangoDevice
 
 from nicos_mlz.jcns.devices.shutter import CLOSED, OPEN
@@ -55,27 +53,55 @@ class ImagePlateDrum(PyTangoDevice, Moveable):
     valuetype = oneof(POS_ERASE, POS_EXPO, POS_READ)
 
     parameters = {
-        "drumpos":     Param("Drum position in degree",
-                             type=float, settable=True, volatile=True,
-                             category="general"),
-        "readheadpos": Param("Read head motor position in mm",
-                             type=float, settable=True, volatile=True,
-                             category="general"),
-        "drumexpo":    Param("Drum expo position in degree",
-                             type=float, settable=True, volatile=True,
-                             category="general"),
-        "readspeed":   Param("Readout velocity for the detector drum in rpm",
-                             type=float, settable=True, volatile=True,
-                             category="general"),
-        "erasespeed":  Param("Erase velocity for the detector drum in rpm",
-                             type=float, settable=True, volatile=True,
-                             category="general"),
-        "freqlaser":   Param("Frequency for the laser diode in Hz",
-                             type=float, settable=True, volatile=True,
-                             category="general"),
-        "timeerase":   Param("Erasure time in seconds",
-                             type=float, settable=True, volatile=True,
-                             category="general"),
+        "drumpos": Param(
+            "Drum position in degree",
+            type=float,
+            settable=True,
+            volatile=True,
+            category="general",
+        ),
+        "readheadpos": Param(
+            "Read head motor position in mm",
+            type=float,
+            settable=True,
+            volatile=True,
+            category="general",
+        ),
+        "drumexpo": Param(
+            "Drum expo position in degree",
+            type=float,
+            settable=True,
+            volatile=True,
+            category="general",
+        ),
+        "readspeed": Param(
+            "Readout velocity for the detector drum in rpm",
+            type=float,
+            settable=True,
+            volatile=True,
+            category="general",
+        ),
+        "erasespeed": Param(
+            "Erase velocity for the detector drum in rpm",
+            type=float,
+            settable=True,
+            volatile=True,
+            category="general",
+        ),
+        "freqlaser": Param(
+            "Frequency for the laser diode in Hz",
+            type=float,
+            settable=True,
+            volatile=True,
+            category="general",
+        ),
+        "timeerase": Param(
+            "Erasure time in seconds",
+            type=float,
+            settable=True,
+            volatile=True,
+            category="general",
+        ),
     }
 
     parameter_overrides = {
@@ -107,8 +133,11 @@ class ImagePlateDrum(PyTangoDevice, Moveable):
             self._moveTo = target
             self._mapStart[target]()
         else:
-            raise MoveError(self, "Movement not allowed during device status "
-                            "'%s'" % (status.statuses[myStatus[0]]))
+            raise MoveError(
+                self,
+                "Movement not allowed during device status "
+                "'%s'" % (status.statuses[myStatus[0]]),
+            )
 
     def doStop(self):
         self.log.debug("doStop")
@@ -119,8 +148,9 @@ class ImagePlateDrum(PyTangoDevice, Moveable):
             if myStatus[0] == status.OK:
                 self.log.warning("Device already stopped.")
             else:
-                raise NicosError(self, "Internal moveTo state unknown. "
-                                       "Check device status.")
+                raise NicosError(
+                    self, "Internal moveTo state unknown. " "Check device status."
+                )
 
     def doRead(self, maxage=0):
         return self.target
@@ -130,8 +160,12 @@ class ImagePlateDrum(PyTangoDevice, Moveable):
         # operation has _not_ been completed.
         st, msg = PyTangoDevice.doStatus(self, maxage)
         if self._lastStatus == status.BUSY and st != status.BUSY:
-            self.log.debug("doStatus: leaving busy state (%d)? %d. "
-                           "Check again after a short delay.", status.BUSY, st)
+            self.log.debug(
+                "doStatus: leaving busy state (%d)? %d. "
+                "Check again after a short delay.",
+                status.BUSY,
+                st,
+            )
             session.delay(5)
             st, msg = PyTangoDevice.doStatus(self, 0)
             self.log.debug("doStatus: recheck result: %d", st)
@@ -194,33 +228,49 @@ class ImagePlateImage(ImageChannelMixin, PassiveChannel):
     }
 
     attached_devices = {
-        "imgdrum": Attach("Image Plate Detector Drum control device.",
-                          ImagePlateDrum),
+        "imgdrum": Attach("Image Plate Detector Drum control device.", ImagePlateDrum),
     }
 
     parameters = {
-        "erase":          Param("Erase image plate on next start?",
-                                type=bool, settable=True, mandatory=False,
-                                default=True),
-        "roi":            Param("Region of interest",
-                                type=tupleof(int, int, int, int),
-                                default=(0, 0, 0, 0),
-                                settable=True, volatile=True,
-                                category="general"),
-        "pixelsize":      Param("Pixel size in microns",
-                                type=oneof(125, 250, 500), default=500,
-                                settable=True, volatile=True, category="general"),
-        "file":           Param("Image file location on maatel computer",
-                                type=str, settable=True, volatile=True,
-                                category="general"),
-        "readout_millis": Param("Timeout in ms for the readout",
-                                type=int, settable=True, default=60000),
+        "erase": Param(
+            "Erase image plate on next start?",
+            type=bool,
+            settable=True,
+            mandatory=False,
+            default=True,
+        ),
+        "roi": Param(
+            "Region of interest",
+            type=tupleof(int, int, int, int),
+            default=(0, 0, 0, 0),
+            settable=True,
+            volatile=True,
+            category="general",
+        ),
+        "pixelsize": Param(
+            "Pixel size in microns",
+            type=oneof(125, 250, 500),
+            default=500,
+            settable=True,
+            volatile=True,
+            category="general",
+        ),
+        "file": Param(
+            "Image file location on maatel computer",
+            type=str,
+            settable=True,
+            volatile=True,
+            category="general",
+        ),
+        "readout_millis": Param(
+            "Timeout in ms for the readout", type=int, settable=True, default=60000
+        ),
     }
 
     def doInit(self, mode):
-        self.arraydesc = ArrayDesc(self.name,
-                                   self.MAP_SHAPE[self.pixelsize],
-                                   numpy.uint16)
+        self.arraydesc = ArrayDesc(
+            self.name, self.MAP_SHAPE[self.pixelsize], numpy.uint16
+        )
 
     def doPrepare(self):
         # erase and expo position
@@ -247,8 +297,12 @@ class ImagePlateImage(ImageChannelMixin, PassiveChannel):
         return None
 
     def doReadRoi(self):
-        return (0, self._attached_imgdrum._dev.InterestZoneY, 1250,
-                self._attached_imgdrum._dev.InterestZoneH)
+        return (
+            0,
+            self._attached_imgdrum._dev.InterestZoneY,
+            1250,
+            self._attached_imgdrum._dev.InterestZoneH,
+        )
 
     def doReadPixelsize(self):
         return self._attached_imgdrum._dev.PixelSize
@@ -257,34 +311,39 @@ class ImagePlateImage(ImageChannelMixin, PassiveChannel):
         return self._attached_imgdrum._dev.ImageFile
 
     def doWriteRoi(self, value):
-        self.log.warning("setting x offset and width are not supported "
-                         "- ignored.")
+        self.log.warning("setting x offset and width are not supported " "- ignored.")
         self._attached_imgdrum._dev.InterestZoneY = value[1]
         self._attached_imgdrum._dev.InterestZoneH = value[3]
 
     def doWritePixelsize(self, value):
         self._attached_imgdrum._dev.PixelSize = value
-        self.arraydesc = ArrayDesc(self.name, self.MAP_SHAPE[value],
-                                   numpy.uint16)
+        self.arraydesc = ArrayDesc(self.name, self.MAP_SHAPE[value], numpy.uint16)
 
     def doWriteFile(self, value):
         self._attached_imgdrum._dev.ImageFile = value
 
 
 class BiodiffDetector(Detector):
-
     attached_devices = {
         "gammashutter": Attach("Gamma shutter", Moveable),
         "photoshutter": Attach("Photo shutter", Moveable),
     }
 
     parameters = {
-        "ctrl_gammashutter": Param("Control gamma shutter?",
-                                   type=bool, settable=True, mandatory=False,
-                                   default=True),
-        "ctrl_photoshutter": Param("Control photo shutter?",
-                                   type=bool, settable=True, mandatory=False,
-                                   default=True),
+        "ctrl_gammashutter": Param(
+            "Control gamma shutter?",
+            type=bool,
+            settable=True,
+            mandatory=False,
+            default=True,
+        ),
+        "ctrl_photoshutter": Param(
+            "Control photo shutter?",
+            type=bool,
+            settable=True,
+            mandatory=False,
+            default=True,
+        ),
     }
 
     # guard against multiple prepare calls here:
@@ -314,14 +373,14 @@ class BiodiffDetector(Detector):
         self._prepared = False
 
     def _check_shutter(self):
-        if (self.ctrl_photoshutter and
-                self._attached_photoshutter.read() == CLOSED):
-            raise InvalidValueError(self, 'photo shutter not open after '
-                                    'exposure, check safety system')
-        if (self.ctrl_gammashutter and
-                self._attached_gammashutter.read() == CLOSED):
-            raise InvalidValueError(self, 'gamma shutter not open after '
-                                    'exposure, check safety system')
+        if self.ctrl_photoshutter and self._attached_photoshutter.read() == CLOSED:
+            raise InvalidValueError(
+                self, "photo shutter not open after " "exposure, check safety system"
+            )
+        if self.ctrl_gammashutter and self._attached_gammashutter.read() == CLOSED:
+            raise InvalidValueError(
+                self, "gamma shutter not open after " "exposure, check safety system"
+            )
 
     def _getWaiters(self):
         adevs = dict(self._adevs)

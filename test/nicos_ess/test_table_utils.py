@@ -21,84 +21,86 @@
 #
 # *****************************************************************************
 
-from nicos_ess.utilities.table_utils import convert_table_to_clipboard_text, \
-    extract_table_from_clipboard_text
+from nicos_ess.utilities.table_utils import (
+    convert_table_to_clipboard_text,
+    extract_table_from_clipboard_text,
+)
 
 
 class TestConvertAndExtractTable:
     def test_one_empty_cell(self):
-        clipboard_data = ''
-        table_data = [['']]
+        clipboard_data = ""
+        table_data = [[""]]
         assert extract_table_from_clipboard_text(clipboard_data) == table_data
         assert convert_table_to_clipboard_text(table_data) == clipboard_data
 
     def test_one_non_empty_cell(self):
-        clipboard_data = 'A'
-        table_data = [['A']]
+        clipboard_data = "A"
+        table_data = [["A"]]
         assert extract_table_from_clipboard_text(clipboard_data) == table_data
         assert convert_table_to_clipboard_text(table_data) == clipboard_data
 
     def test_empty_row(self):
-        clipboard_data = '\t\t'
-        table_data = [['', '', '']]
+        clipboard_data = "\t\t"
+        table_data = [["", "", ""]]
         assert extract_table_from_clipboard_text(clipboard_data) == table_data
         assert convert_table_to_clipboard_text(table_data) == clipboard_data
 
     def test_non_empty_row(self):
-        clipboard_data = 'A\tB\tC'
-        table_data = [['A', 'B', 'C']]
+        clipboard_data = "A\tB\tC"
+        table_data = [["A", "B", "C"]]
         assert extract_table_from_clipboard_text(clipboard_data) == table_data
         assert convert_table_to_clipboard_text(table_data) == clipboard_data
 
     def test_empty_column(self):
-        clipboard_data = '\n'
-        table_data = [[''],
-                      ['']]
+        clipboard_data = "\n"
+        table_data = [[""], [""]]
         assert extract_table_from_clipboard_text(clipboard_data) == table_data
         assert convert_table_to_clipboard_text(table_data) == clipboard_data
 
     def test_non_empty_column(self):
-        clipboard_data = 'A\nB'
-        table_data = [['A'],
-                    ['B']]
+        clipboard_data = "A\nB"
+        table_data = [["A"], ["B"]]
         assert extract_table_from_clipboard_text(clipboard_data) == table_data
         assert convert_table_to_clipboard_text(table_data) == clipboard_data
 
     def test_multiple_empty_cells(self):
-        clipboard_data = '\t\n\t'
-        table_data = [['', ''],
-                      ['', '']]
+        clipboard_data = "\t\n\t"
+        table_data = [["", ""], ["", ""]]
         assert extract_table_from_clipboard_text(clipboard_data) == table_data
         assert convert_table_to_clipboard_text(table_data) == clipboard_data
 
     def test_multiple_non_empty_cells(self):
-        clipboard_data = 'A1\tB1\nA2\tB2'
-        table_data = [['A1', 'B1'],
-                      ['A2', 'B2']]
+        clipboard_data = "A1\tB1\nA2\tB2"
+        table_data = [["A1", "B1"], ["A2", "B2"]]
         assert extract_table_from_clipboard_text(clipboard_data) == table_data
         assert convert_table_to_clipboard_text(table_data) == clipboard_data
 
     def test_multiple_non_empty_cells_with_excel_encoding(self):
         # Excel uses \r\n as the line separator
-        clipboard_data = 'A1\tB1\r\nA2\tB2'
-        assert extract_table_from_clipboard_text(clipboard_data) \
-               == [['A1', 'B1'],
-                   ['A2', 'B2']]
+        clipboard_data = "A1\tB1\r\nA2\tB2"
+        assert extract_table_from_clipboard_text(clipboard_data) == [
+            ["A1", "B1"],
+            ["A2", "B2"],
+        ]
 
     def test_mix_of_non_empty_cells_and_empty_cells(self):
-        clipboard_data = '\tB1\nA2\t'
-        table_data = [['', 'B1'],
-                      ['A2', '']]
+        clipboard_data = "\tB1\nA2\t"
+        table_data = [["", "B1"], ["A2", ""]]
         assert extract_table_from_clipboard_text(clipboard_data) == table_data
         assert convert_table_to_clipboard_text(table_data) == clipboard_data
 
     def test_non_empty_cells_surrounded_by_empty_cells(self):
-        clipboard_data = '\t\t\t\n\tB2\tC2\t\n\tB3\tC3\t\r\n\t\t\t'
-        table_data = [['', '', '', ''],
-                      ['', 'B2', 'C2', ''],
-                      ['', 'B3', 'C3', ''],
-                      ['', '', '', '']]
+        clipboard_data = "\t\t\t\n\tB2\tC2\t\n\tB3\tC3\t\r\n\t\t\t"
+        table_data = [
+            ["", "", "", ""],
+            ["", "B2", "C2", ""],
+            ["", "B3", "C3", ""],
+            ["", "", "", ""],
+        ]
 
         assert extract_table_from_clipboard_text(clipboard_data) == table_data
-        assert convert_table_to_clipboard_text(table_data) == \
-            '\t\t\t\n\tB2\tC2\t\n\tB3\tC3\t\n\t\t\t'
+        assert (
+            convert_table_to_clipboard_text(table_data)
+            == "\t\t\t\n\tB2\tC2\t\n\tB3\tC3\t\n\t\t\t"
+        )

@@ -26,22 +26,28 @@ import uuid
 
 import numpy as np
 
-from nicos.protocols.daemon import ClientTransport as BaseClientTransport, \
-    ProtocolError
-from nicos.protocols.daemon.classic import ACK, ENQ, LENGTH, NAK, \
-    READ_BUFSIZE, STX, code2event, command2code
+from nicos.protocols.daemon import ClientTransport as BaseClientTransport, ProtocolError
+from nicos.protocols.daemon.classic import (
+    ACK,
+    ENQ,
+    LENGTH,
+    NAK,
+    READ_BUFSIZE,
+    STX,
+    code2event,
+    command2code,
+)
 from nicos.utils import closeSocket, tcpSocket
 
 
 class ClientTransport(BaseClientTransport):
-
     def __init__(self, serializer=None):
         self.serializer = serializer
 
         self.sock = None
         self.event_sock = None
 
-        self.client_id = b''
+        self.client_id = b""
 
     def connect(self, conndata):
         self.client_id = uuid.uuid1().bytes
@@ -63,28 +69,27 @@ class ClientTransport(BaseClientTransport):
 
     def send_command(self, cmdname, args):
         data = self.serializer.serialize_cmd(cmdname, args)
-        self.sock.sendall(ENQ + command2code[cmdname] +
-                          LENGTH.pack(len(data)) + data)
+        self.sock.sendall(ENQ + command2code[cmdname] + LENGTH.pack(len(data)) + data)
 
     def recv_reply(self):
         # receive first byte + (possibly) length
-        start = b''
+        start = b""
         while len(start) < 5:
             data = self.sock.recv(5 - len(start))
             if not data:
-                raise ProtocolError('connection broken')
+                raise ProtocolError("connection broken")
             start += data
             if start == ACK:
                 return True, None
         if start[0:1] not in (NAK, STX):
-            raise ProtocolError('invalid response %r' % start)
+            raise ProtocolError("invalid response %r" % start)
         # it has a length...
-        length, = LENGTH.unpack(start[1:])
-        buf = b''
+        (length,) = LENGTH.unpack(start[1:])
+        buf = b""
         while len(buf) < length:
             read = self.sock.recv(READ_BUFSIZE)
             if not read:
-                raise ProtocolError('connection broken')
+                raise ProtocolError("connection broken")
             buf += read
 
         if not self.serializer:
@@ -93,34 +98,34 @@ class ClientTransport(BaseClientTransport):
         return self.serializer.deserialize_reply(buf, start[0:1] == STX)
 
     def _recv_blob(self):
-        start = b''
+        start = b""
         while len(start) < 4:
             data = self.event_sock.recv(4 - len(start))
             if not data:
-                raise ProtocolError('read: event connection broken')
+                raise ProtocolError("read: event connection broken")
             start += data
-        length, = LENGTH.unpack(start)
+        (length,) = LENGTH.unpack(start)
         got = 0
-        buf = np.zeros(length, 'c')  # Py3: replace with bytearray+memoryview
+        buf = np.zeros(length, "c")  # Py3: replace with bytearray+memoryview
         while got < length:
             read = self.event_sock.recv_into(buf[got:], length - got)
             if not read:
-                raise ProtocolError('read: event connection broken')
+                raise ProtocolError("read: event connection broken")
             got += read
         return buf
 
     def recv_event(self):
         # receive STX (1 byte) + eventcode (2) + nblobs(1) + length (4)
-        start = b''
+        start = b""
         while len(start) < 8:
             data = self.event_sock.recv(8 - len(start))
             if not data:
-                raise ProtocolError('read: event connection broken')
+                raise ProtocolError("read: event connection broken")
             start += data
         if start[0:1] != STX:
-            raise ProtocolError('wrong event header')
+            raise ProtocolError("wrong event header")
         nblobs = ord(start[3:4])
-        length, = LENGTH.unpack(start[4:])
+        (length,) = LENGTH.unpack(start[4:])
         got = 0
         # read into a pre-allocated buffer to avoid copying lots of data
         # around several times
@@ -129,7 +134,7 @@ class ClientTransport(BaseClientTransport):
         while got < length:
             read = self.event_sock.recv_into(buf_view[got:], length - got)
             if not read:
-                raise ProtocolError('read: event connection broken')
+                raise ProtocolError("read: event connection broken")
             got += read
         # XXX: error handling
         event = code2event[start[1:3]]

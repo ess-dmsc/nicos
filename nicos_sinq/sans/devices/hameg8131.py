@@ -36,49 +36,57 @@ class HAMEG8131(EpicsMoveable):
     """
 
     attached_devices = {
-        'port': Attach('Port to talk directly to the device',
-                       EpicsCommandReply),
-        'freq': Attach('Flipper frequency',
-                       EpicsMoveable),
-        'amp': Attach('Flipper amplitude',
-                      EpicsMoveable),
+        "port": Attach("Port to talk directly to the device", EpicsCommandReply),
+        "freq": Attach("Flipper frequency", EpicsMoveable),
+        "amp": Attach("Flipper amplitude", EpicsMoveable),
     }
 
-    valuetype = oneof('on', 'off')
+    valuetype = oneof("on", "off")
 
     def doInit(self, mode):
         if mode == SIMULATION:
             return
-        inicommands = ['RM1', 'RFI', 'OT0', 'SW0', 'SK0',
-                       'CTM', 'VPP', 'AM0', 'SIN', 'OFS:0E+0',
-                       'FRQ:2.534E+5', 'AMP:2.6E+0']
+        inicommands = [
+            "RM1",
+            "RFI",
+            "OT0",
+            "SW0",
+            "SK0",
+            "CTM",
+            "VPP",
+            "AM0",
+            "SIN",
+            "OFS:0E+0",
+            "FRQ:2.534E+5",
+            "AMP:2.6E+0",
+        ]
         for com in inicommands:
             self._attached_port.execute(com)
 
     def doIsAllowed(self, target):
-        if target == 'on':
+        if target == "on":
             freq = self._attached_freq.read(0)
             amp = self._attached_amp.read(0)
-            if freq < 1. or amp < .1:
-                return False,  'Set frequency and amplitude first'
-        return True, ''
+            if freq < 1.0 or amp < 0.1:
+                return False, "Set frequency and amplitude first"
+        return True, ""
 
     def doStart(self, target):
-        if target == 'on':
-            self._put_pv('writepv', 1)
+        if target == "on":
+            self._put_pv("writepv", 1)
         else:
-            self._put_pv('writepv', 0)
+            self._put_pv("writepv", 0)
 
     def doRead(self, maxage=0):
-        val = self._get_pv('readpv')
+        val = self._get_pv("readpv")
         freq = self._attached_freq.read(maxage)
         amp = self._attached_amp.read(maxage)
-        if val == 0 or freq < 1. or amp < .1:
-            return 'off'
-        return 'on'
+        if val == 0 or freq < 1.0 or amp < 0.1:
+            return "off"
+        return "on"
 
     def doStatus(self, maxage=0):
         pos = self.doRead(maxage)
         if pos == self.target:
-            return status.OK, 'Done'
-        return status.BUSY, 'Moving'
+            return status.OK, "Done"
+        return status.BUSY, "Moving"

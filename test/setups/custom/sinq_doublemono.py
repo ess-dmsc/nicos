@@ -20,40 +20,44 @@
 #   Mark.Koennecke@psi.ch
 #
 # *****************************************************************************
-name = 'SINQ Double Monochromator'
+name = "SINQ Double Monochromator"
 
-includes = ['stdsystem']
+includes = ["stdsystem"]
 
-description = 'Test setup for the SINQ double monochromator'
+description = "Test setup for the SINQ double monochromator"
 
 devices = dict(
-    mth1 = device('nicos.devices.generic.VirtualMotor',
-        unit = 'degree',
-        description = 'First blade rotation',
-        abslimits = (-180, 180),
-        precision = 0.01
+    mth1=device(
+        "nicos.devices.generic.VirtualMotor",
+        unit="degree",
+        description="First blade rotation",
+        abslimits=(-180, 180),
+        precision=0.01,
     ),
-    mth2 = device('nicos.devices.generic.VirtualMotor',
-        unit = 'degree',
-        description = 'Second blade rotation',
-        abslimits = (-180, 180),
-        precision = 0.01
+    mth2=device(
+        "nicos.devices.generic.VirtualMotor",
+        unit="degree",
+        description="Second blade rotation",
+        abslimits=(-180, 180),
+        precision=0.01,
     ),
-    mtx = device('nicos.devices.generic.VirtualMotor',
-        unit = 'mm',
-        description = 'Blade translation',
-        abslimits = (-1000, 1000),
-        precision = 0.01
+    mtx=device(
+        "nicos.devices.generic.VirtualMotor",
+        unit="mm",
+        description="Blade translation",
+        abslimits=(-1000, 1000),
+        precision=0.01,
     ),
-    wavelength = device('nicos_sinq.devices.doublemono.DoubleMonochromator',
-        description = 'SINQ Double Monochromator',
-        unit = 'A',
-        safe_position = 20.,
-        dvalue = 3.335,
-        distance = 100.,
-        abslimits = (2.4, 6.2),
-        mth1 = 'mth1',
-        mth2 = 'mth2',
-        mtx = 'mtx'
+    wavelength=device(
+        "nicos_sinq.devices.doublemono.DoubleMonochromator",
+        description="SINQ Double Monochromator",
+        unit="A",
+        safe_position=20.0,
+        dvalue=3.335,
+        distance=100.0,
+        abslimits=(2.4, 6.2),
+        mth1="mth1",
+        mth2="mth2",
+        mtx="mtx",
     ),
 )

@@ -32,41 +32,41 @@ from nicos.devices.entangle import VectorInput as TangoVectorInput
 
 class MVG(TangoVectorInput):
     """Interface to the MVG tango server"""
+
     parameters = {
-        'limit':
-        Param(
-            'Maximum number of departure times', type=int, settable=True,
-            default=5
+        "limit": Param(
+            "Maximum number of departure times", type=int, settable=True, default=5
         ),
-        'displaymode':
-        Param(
-            'Display mode', type=oneof('delta', 'time'), settable=True,
-            default='delta'
+        "displaymode": Param(
+            "Display mode", type=oneof("delta", "time"), settable=True, default="delta"
         ),
-        'deltaoffset':
-        Param(
-            'Only display departures at least this time in the future',
-            type=float, settable=True, default=0)
+        "deltaoffset": Param(
+            "Only display departures at least this time in the future",
+            type=float,
+            settable=True,
+            default=0,
+        ),
     }
     parameter_overrides = {
-        'unit': Override(mandatory=False, volatile=True, default='min'),
-        'fmtstr': Override(default='%s'),
-        'pollinterval': Override(default=60),
-        'maxage': Override(default=70),
+        "unit": Override(mandatory=False, volatile=True, default="min"),
+        "fmtstr": Override(default="%s"),
+        "pollinterval": Override(default=60),
+        "maxage": Override(default=70),
     }
 
     def doRead(self, maxage=0):
         raw = TangoVectorInput.doRead(self, maxage)
         now = time.time()
-        if self.displaymode == 'time':
+        if self.displaymode == "time":
             res = [
-                datetime.fromtimestamp(d).time().strftime('%H:%M') for d in raw
-                if d > now+ self.deltaoffset
-            ][0:self.limit]
+                datetime.fromtimestamp(d).time().strftime("%H:%M")
+                for d in raw
+                if d > now + self.deltaoffset
+            ][0 : self.limit]
         else:
             deltas = [d - now for d in raw if d > now + self.deltaoffset]
-            res = [str(round(d / 60)) for d in deltas][0:self.limit]
-        return ','.join(res)
+            res = [str(round(d / 60)) for d in deltas][0 : self.limit]
+        return ",".join(res)
 
     def doReadUnit(self):
-        return 'min' if self.displaymode == 'delta' else ''
+        return "min" if self.displaymode == "delta" else ""

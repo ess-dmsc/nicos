@@ -31,38 +31,61 @@ class Image(ImageChannelMixin, PassiveChannel):
     """Channel that returns the image, histogram, or spectrogram."""
 
     # initial array description, will be updated upon readImage
-    arraydesc = ArrayDesc('data', (128, 128), '<u4')
+    arraydesc = ArrayDesc("data", (128, 128), "<u4")
 
     parameters = {
-        'listmodefile': Param('List mode data file name (if it is empty, no '
-                              'file will be written)',
-                              type=str, settable=True, default='',
-                              category='instrument',
-                              ),
-        'histogramfile': Param('Histogram data file name (if it is empty, no '
-                               'file will be written)',
-                               type=str, settable=True, default='',
-                               category='instrument',
-                               ),
-        'configfile': Param('Used detector configuration file',
-                            type=str, settable=False, volatile=True,
-                            category='instrument',
-                            ),
-        'calibrationfile': Param('Used detector calibration file',
-                                 type=str, settable=False, volatile=True,
-                                 category='instrument',
-                                 ),
-        'listmode': Param('Should the Detector write list mode data files',
-                          type=bool, default=False, chatty=False,
-                          prefercache=False, settable=True),
-        'histogram': Param('Should the Detector write histogram data files',
-                           type=bool, default=False, chatty=False,
-                           prefercache=False, settable=True),
+        "listmodefile": Param(
+            "List mode data file name (if it is empty, no " "file will be written)",
+            type=str,
+            settable=True,
+            default="",
+            category="instrument",
+        ),
+        "histogramfile": Param(
+            "Histogram data file name (if it is empty, no " "file will be written)",
+            type=str,
+            settable=True,
+            default="",
+            category="instrument",
+        ),
+        "configfile": Param(
+            "Used detector configuration file",
+            type=str,
+            settable=False,
+            volatile=True,
+            category="instrument",
+        ),
+        "calibrationfile": Param(
+            "Used detector calibration file",
+            type=str,
+            settable=False,
+            volatile=True,
+            category="instrument",
+        ),
+        "listmode": Param(
+            "Should the Detector write list mode data files",
+            type=bool,
+            default=False,
+            chatty=False,
+            prefercache=False,
+            settable=True,
+        ),
+        "histogram": Param(
+            "Should the Detector write histogram data files",
+            type=bool,
+            default=False,
+            chatty=False,
+            prefercache=False,
+            settable=True,
+        ),
     }
 
     def valueInfo(self):
-        return Value('%s.sum' % self, type='counter', errors='sqrt',
-                     unit='cts', fmtstr='%d'),
+        return (
+            Value(
+                "%s.sum" % self, type="counter", errors="sqrt", unit="cts", fmtstr="%d"
+            ),
+        )
 
     def doReadCalibrationfile(self):
         return NotImplementedError('Implement "doReadCalibrationfile"')

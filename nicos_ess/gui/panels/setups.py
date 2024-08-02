@@ -25,8 +25,13 @@
 
 from nicos.clients.gui.panels import Panel
 from nicos.clients.gui.utils import loadUi
-from nicos.guisupport.qt import QDialog, QDialogButtonBox, QListWidgetItem, \
-    QPushButton, Qt
+from nicos.guisupport.qt import (
+    QDialog,
+    QDialogButtonBox,
+    QListWidgetItem,
+    QPushButton,
+    Qt,
+)
 from nicos.utils import findResource
 
 
@@ -40,14 +45,15 @@ def iterChecked(listwidget):
 
 class SetupsPanel(Panel):
     """Provides a dialog to select and load the basic and optional setups."""
-    panelName = 'Setup selection'
+
+    panelName = "Setup selection"
 
     def __init__(self, parent, client, options):
         Panel.__init__(self, parent, client, options)
-        loadUi(self, findResource('nicos_ess/gui/panels/ui_files/setups.ui'))
+        loadUi(self, findResource("nicos_ess/gui/panels/ui_files/setups.ui"))
         self.errorLabel.hide()
         self.aliasGroup.hide()
-        self._reload_btn = QPushButton('Reload current setup')
+        self._reload_btn = QPushButton("Reload current setup")
         self.finishUi()
 
         self._aliasWidgets = {}
@@ -69,47 +75,52 @@ class SetupsPanel(Panel):
     def finishUi(self):
         self.buttonBox.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         self.buttonBox.setStandardButtons(QDialogButtonBox.StandardButton.Apply)
-        self.buttonBox.addButton(self._reload_btn,
-                                 QDialogButtonBox.ButtonRole.ResetRole)
+        self.buttonBox.addButton(
+            self._reload_btn, QDialogButtonBox.ButtonRole.ResetRole
+        )
 
     def on_client_connected(self):
         # fill setups
-        self._setupinfo = self.client.eval('session.readSetupInfo()', {})
-        all_loaded = self.client.eval('session.loaded_setups', set())
+        self._setupinfo = self.client.eval("session.readSetupInfo()", {})
+        all_loaded = self.client.eval("session.loaded_setups", set())
         self._prev_aliases = self.client.eval(
-            '{d.name: d.alias for d in session.devices.values() '
-            'if "alias" in d.parameters}', {})
+            "{d.name: d.alias for d in session.devices.values() "
+            'if "alias" in d.parameters}',
+            {},
+        )
         self._loaded = set()
         self._loaded_basic = None
         self.basicSetup.clear()
         self.optSetups.clear()
         self.errorLabel.hide()
         default_flags = (
-            Qt.ItemFlag.ItemIsUserCheckable |
-            Qt.ItemFlag.ItemIsSelectable |
-            Qt.ItemFlag.ItemIsEnabled
+            Qt.ItemFlag.ItemIsUserCheckable
+            | Qt.ItemFlag.ItemIsSelectable
+            | Qt.ItemFlag.ItemIsEnabled
         )
-        keep = QListWidgetItem('<keep current>', self.basicSetup)
+        keep = QListWidgetItem("<keep current>", self.basicSetup)
         if self._setupinfo is not None:
             for name, info in sorted(self._setupinfo.items()):
                 if info is None:
                     self.errorLabel.show()
                     continue
-                if info['group'] == 'basic':
+                if info["group"] == "basic":
                     QListWidgetItem(name, self.basicSetup)
                     if name in all_loaded:
                         self._loaded_basic = name
                         self._loaded.add(name)
-                elif info['group'] == 'optional':
+                elif info["group"] == "optional":
                     item = QListWidgetItem(name, self.optSetups)
                     item.setFlags(default_flags)
                     item.setData(Qt.ItemDataRole.UserRole, 0)
                     if name in all_loaded:
                         self._loaded.add(name)
                     item.setCheckState(
-                        Qt.CheckState.Checked if name in all_loaded
-                        else Qt.CheckState.Unchecked)
-                elif info['group'] == 'plugplay':
+                        Qt.CheckState.Checked
+                        if name in all_loaded
+                        else Qt.CheckState.Unchecked
+                    )
+                elif info["group"] == "plugplay":
                     item = QListWidgetItem(name, self.optSetups)
                     item.setFlags(default_flags)
                     item.setData(Qt.ItemDataRole.UserRole, 1)
@@ -118,8 +129,10 @@ class SetupsPanel(Panel):
                     elif not self.showPnpBox.isChecked():
                         item.setHidden(True)
                     item.setCheckState(
-                        Qt.CheckState.Checked if name in all_loaded
-                        else Qt.CheckState.Unchecked)
+                        Qt.CheckState.Checked
+                        if name in all_loaded
+                        else Qt.CheckState.Unchecked
+                    )
         self.basicSetup.setCurrentItem(keep)
         self._prev_alias_config = self._alias_config
         self.setViewOnly(self.client.viewonly)
@@ -137,12 +150,12 @@ class SetupsPanel(Panel):
         self.showPnpBox.setEnabled(not viewonly)
 
     def on_basicSetup_currentItemChanged(self, item, old):
-        if item and item.text() != '<keep current>':
+        if item and item.text() != "<keep current>":
             self.showSetupInfo(item.text())
         self.updateAliasList()
 
     def on_basicSetup_itemClicked(self, item):
-        if item.text() != '<keep current>':
+        if item.text() != "<keep current>":
             self.showSetupInfo(item.text())
         self.updateAliasList()
 
@@ -158,8 +171,10 @@ class SetupsPanel(Panel):
         for i in range(self.optSetups.count()):
             item = self.optSetups.item(i)
             if item.data(Qt.ItemDataRole.UserRole) == 1:
-                item.setHidden(item.checkState() == Qt.CheckState.Unchecked and
-                               not self.showPnpBox.isChecked())
+                item.setHidden(
+                    item.checkState() == Qt.CheckState.Unchecked
+                    and not self.showPnpBox.isChecked()
+                )
 
     def on_buttonBox_clicked(self, button):
         role = self.buttonBox.buttonRole(button)
@@ -168,10 +183,10 @@ class SetupsPanel(Panel):
         elif role == QDialogButtonBox.ButtonRole.RejectRole:
             self.closeWindow()
         elif role == QDialogButtonBox.ButtonRole.ResetRole:
-            if self.client.run('NewSetup()', noqueue=True) is None:
-                self.showError('Could not reload setups, a script is running.')
+            if self.client.run("NewSetup()", noqueue=True) is None:
+                self.showError("Could not reload setups, a script is running.")
             else:
-                self.showInfo('Current setups reloaded.')
+                self.showInfo("Current setups reloaded.")
                 # Close the window only in case of use in a dialog, not in a
                 # tabbed window or similiar
                 if isinstance(self.parent(), QDialog):
@@ -180,24 +195,25 @@ class SetupsPanel(Panel):
     def showSetupInfo(self, setup):
         info = self._setupinfo[str(setup)]
         devs = []
-        for devname, devconfig in info['devices'].items():
-            if 'devlist' in devconfig[1].get('visibility', ('devlist',)):
+        for devname, devconfig in info["devices"].items():
+            if "devlist" in devconfig[1].get("visibility", ("devlist",)):
                 devs.append(devname)
-        devs = ', '.join(sorted(devs))
+        devs = ", ".join(sorted(devs))
         self.setupDescription.setText(
-            '<b>%s</b><br/>%s<br/><br/>'
-            'Devices: %s<br/>' % (setup, info['description'], devs))
+            "<b>%s</b><br/>%s<br/><br/>"
+            "Devices: %s<br/>" % (setup, info["description"], devs)
+        )
 
     def _calculateSetups(self):
         cur = self.basicSetup.currentItem()
         if cur:
             basic = cur.text()
         else:
-            basic = '<keep current>'
+            basic = "<keep current>"
         # calculate the new setups
         setups = set()
         new_basic = False
-        if basic == '<keep current>':
+        if basic == "<keep current>":
             if self._loaded_basic:
                 setups.add(self._loaded_basic)
         else:
@@ -216,7 +232,7 @@ class SetupsPanel(Panel):
             if s in seen or s not in self._setupinfo:
                 return
             seen.add(s)
-            for inc in self._setupinfo[s]['includes']:
+            for inc in self._setupinfo[s]["includes"]:
                 add_includes(inc)
                 setups.add(inc)
 
@@ -225,12 +241,11 @@ class SetupsPanel(Panel):
         # now collect alias config
         alias_config = {}
         for setup in setups:
-            if 'alias_config' in self._setupinfo[setup]:
-                aliasconfig = self._setupinfo[setup]['alias_config']
+            if "alias_config" in self._setupinfo[setup]:
+                aliasconfig = self._setupinfo[setup]["alias_config"]
                 for aliasname, targets in aliasconfig.items():
-                    for (target, prio) in targets.items():
-                        alias_config.setdefault(aliasname, []).append((target,
-                                                                       prio))
+                    for target, prio in targets.items():
+                        alias_config.setdefault(aliasname, []).append((target, prio))
         # sort by priority
         for alias in alias_config.values():
             alias.sort(key=lambda x: -x[1])
@@ -239,18 +254,21 @@ class SetupsPanel(Panel):
         # only preselect previous aliases if we have the same choices for them
         # as in the beginning
         for aliasname in sorted(alias_config):
-            preselect = self._prev_alias_config is None or \
-                (alias_config.get(aliasname) ==
-                 self._prev_alias_config.get(aliasname))
+            preselect = self._prev_alias_config is None or (
+                alias_config.get(aliasname) == self._prev_alias_config.get(aliasname)
+            )
             selections = [x[0] for x in alias_config[aliasname]]
             if aliasname in self._aliasWidgets:
                 self._aliasWidgets[aliasname].setSelections(
-                    selections,
-                    preselect and self._prev_aliases.get(aliasname))
+                    selections, preselect and self._prev_aliases.get(aliasname)
+                )
             else:
                 wid = self._aliasWidgets[aliasname] = AliasWidget(
-                    self, aliasname, selections,
-                    preselect and self._prev_aliases.get(aliasname))
+                    self,
+                    aliasname,
+                    selections,
+                    preselect and self._prev_aliases.get(aliasname),
+                )
                 layout.addWidget(wid)
         for name, wid in list(self._aliasWidgets.items()):
             if name not in alias_config:
@@ -278,21 +296,21 @@ class SetupsPanel(Panel):
             # No changes, so ignore
             return
         if not success:
-            self.showError('Could not load setups, a script is running.')
+            self.showError("Could not load setups, a script is running.")
             return
         for name, wid in self._aliasWidgets.items():
-            self.client.run('%s.alias = %r' % (name, wid.getSelection()))
+            self.client.run("%s.alias = %r" % (name, wid.getSelection()))
         if to_add or to_remove or self._aliasWidgets:
-            self.showInfo('New setups loaded.')
+            self.showInfo("New setups loaded.")
 
     def _load_basic(self, setups, noqueue=True):
-        return self._run_setup_command('NewSetup', setups, noqueue)
+        return self._run_setup_command("NewSetup", setups, noqueue)
 
     def _remove_setups(self, to_remove, noqueue=True):
-        return self._run_setup_command('RemoveSetup', to_remove, noqueue)
+        return self._run_setup_command("RemoveSetup", to_remove, noqueue)
 
     def _add_setups(self, to_add, noqueue=True):
-        return self._run_setup_command('AddSetup', to_add, noqueue)
+        return self._run_setup_command("AddSetup", to_add, noqueue)
 
     def _run_setup_command(self, cmd, setups, noqueue):
         cmd_str = f'{cmd}({", ".join(map(repr, setups))})'

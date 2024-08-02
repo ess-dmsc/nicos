@@ -30,6 +30,7 @@ The original implementation was in ANSII-C by Mark Koennecke at PSI.
 This implementation has been ported from C to python by Jakob Lass, then
 also at PSI
 """
+
 import numpy as np
 
 
@@ -93,18 +94,18 @@ def rtan(y, x):
         return 0.0
     if np.isclose(x, 0.0):
         if y < 0.0:
-            return -np.pi/2.0
+            return -np.pi / 2.0
         else:
-            return np.pi/2.0
+            return np.pi / 2.0
     if np.abs(y) < np.abs(x):
-        val = np.arctan(np.abs(y/x))
+        val = np.arctan(np.abs(y / x))
         if x < 0.0:
-            val = np.pi-val
+            val = np.pi - val
         if y < 0.0:
             val = -val
         return val
     else:
-        val = np.pi/2.0 - np.arctan(np.abs(x/y))
+        val = np.pi / 2.0 - np.arctan(np.abs(x / y))
         if x < 0.0:
             val = np.pi - val
         if y < 0.0:
@@ -123,7 +124,7 @@ def angleBetween(v1, v2):
     # calculate the length of a vector
     v1len = np.sqrt(v1.dot(v1))
     v2len = np.sqrt(v2.dot(v2))
-    angle = v1.dot(v2)/(v1len * v2len)
+    angle = v1.dot(v2) / (v1len * v2len)
     v3 = np.cross(v1, v2)
     angles = np.sqrt(v3.dot(v3)) / (v1len * v2len)
     return rtan(angles, angle)

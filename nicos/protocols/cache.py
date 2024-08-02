@@ -197,32 +197,48 @@ Works only with the "set a key" operator.  This flag makes no sense otherwise.
 
 import pickle
 import re
-from ast import Add, BinOp, Bytes, Call, Dict, List, Name, NameConstant, Num, \
-    Set, Str, Sub, Tuple, UnaryOp, USub, parse
+from ast import (
+    Add,
+    BinOp,
+    Bytes,
+    Call,
+    Dict,
+    List,
+    Name,
+    NameConstant,
+    Num,
+    Set,
+    Str,
+    Sub,
+    Tuple,
+    UnaryOp,
+    USub,
+    parse,
+)
 from base64 import b64decode, b64encode
 
 from nicos.utils import number_types, readonlydict, readonlylist
 
 DEFAULT_CACHE_PORT = 14869
 
-OP_TELL = '='
-OP_ASK = '?'
-OP_WILDCARD = '*'
-OP_SUBSCRIBE = ':'
-OP_UNSUBSCRIBE = '|'
-OP_TELLOLD = '!'
-OP_LOCK = '$'
-OP_REWRITE = '~'
+OP_TELL = "="
+OP_ASK = "?"
+OP_WILDCARD = "*"
+OP_SUBSCRIBE = ":"
+OP_UNSUBSCRIBE = "|"
+OP_TELLOLD = "!"
+OP_LOCK = "$"
+OP_REWRITE = "~"
 
-OP_LOCK_LOCK = '+'
-OP_LOCK_UNLOCK = '-'
+OP_LOCK_LOCK = "+"
+OP_LOCK_UNLOCK = "-"
 
 # put flags between key and op...
-FLAG_NO_STORE = '#'
+FLAG_NO_STORE = "#"
 
 # end/sync special token
-END_MARKER = '###'
-SYNC_MARKER = '#sync#'
+END_MARKER = "###"
+SYNC_MARKER = "#sync#"
 
 # Time constant
 CYCLETIME = 0.1
@@ -231,11 +247,20 @@ CYCLETIME = 0.1
 # Buffer size
 BUFSIZE = 8192
 
-opkeys = OP_TELL + OP_ASK + OP_WILDCARD + OP_SUBSCRIBE + OP_UNSUBSCRIBE + \
-    OP_TELLOLD + OP_LOCK + OP_REWRITE
+opkeys = (
+    OP_TELL
+    + OP_ASK
+    + OP_WILDCARD
+    + OP_SUBSCRIBE
+    + OP_UNSUBSCRIBE
+    + OP_TELLOLD
+    + OP_LOCK
+    + OP_REWRITE
+)
 
 # regular expression matching a cache protocol message
-msg_pattern = re.compile(r'''
+msg_pattern = re.compile(
+    r"""
     ^ (?:
       \s* (?P<time>\d+\.?\d*)?                   # timestamp
       \s* (?P<ttlop>[+-]?)                       # ttl operator
@@ -246,9 +271,12 @@ msg_pattern = re.compile(r'''
     \s* (?P<op>[%(opkeys)s])                        # operator
     \s* (?P<value>[^\r\n]*?)                     # value
     \s* $
-    ''' % dict(opkeys=opkeys), re.X)
+    """
+    % dict(opkeys=opkeys),
+    re.X,
+)
 
-line_pattern = re.compile(br'([^\r\n]*)\r?\n')
+line_pattern = re.compile(rb"([^\r\n]*)\r?\n")
 
 
 # PyON -- "Python object notation"
@@ -261,46 +289,53 @@ def cache_dump(obj):
     if isinstance(obj, repr_types):
         res.append(repr(obj))
     elif isinstance(obj, list):
-        res.append('[')
+        res.append("[")
         for item in obj:
             res.append(cache_dump(item))
-            res.append(',')
-        res.append(']')
+            res.append(",")
+        res.append("]")
     elif isinstance(obj, tuple):
-        res.append('(')
+        res.append("(")
         for item in obj:
             res.append(cache_dump(item))
-            res.append(',')
-        res.append(')')
+            res.append(",")
+        res.append(")")
     elif isinstance(obj, dict):
-        res.append('{')
+        res.append("{")
         for key, value in obj.items():
             res.append(cache_dump(key))
-            res.append(':')
+            res.append(":")
             res.append(cache_dump(value))
-            res.append(',')
-        res.append('}')
+            res.append(",")
+        res.append("}")
     elif isinstance(obj, frozenset):
-        res.append('{')
+        res.append("{")
         for item in obj:
             res.append(cache_dump(item))
-            res.append(',')
-        res.append('}')
+            res.append(",")
+        res.append("}")
     elif obj is None:
-        return 'None'
+        return "None"
     else:
         try:
-            resstr = 'cache_unpickle("' + \
-                b64encode(pickle.dumps(obj, protocol=0)).decode() + '")'
+            resstr = (
+                'cache_unpickle("'
+                + b64encode(pickle.dumps(obj, protocol=0)).decode()
+                + '")'
+            )
             res.append(resstr)
         except Exception as err:
-            raise ValueError(
-                'unserializable object: %r (%s)' % (obj, err)) from err
-    return ''.join(res)
+            raise ValueError("unserializable object: %r (%s)" % (obj, err)) from err
+    return "".join(res)
 
 
-_safe_names = {'None': None, 'True': True, 'False': False,
-               'inf': float('inf'), 'nan': float('nan')}
+_safe_names = {
+    "None": None,
+    "True": True,
+    "False": False,
+    "inf": float("inf"),
+    "nan": float("nan"),
+}
 
 
 def ast_eval(node):
@@ -315,8 +350,9 @@ def ast_eval(node):
         elif isinstance(node, List):
             return readonlylist(map(_convert, node.elts))
         elif isinstance(node, Dict):
-            return readonlydict((_convert(k), _convert(v)) for k, v
-                                in zip(node.keys, node.values))
+            return readonlydict(
+                (_convert(k), _convert(v)) for k, v in zip(node.keys, node.values)
+            )
         elif isinstance(node, Set):
             return frozenset(map(_convert, node.elts))
         elif isinstance(node, Name):
@@ -324,38 +360,44 @@ def ast_eval(node):
                 return _safe_names[node.id]
         elif isinstance(node, NameConstant):
             return node.value
-        elif isinstance(node, UnaryOp) and \
-                isinstance(node.op, USub) and \
-                isinstance(node.operand, Name) and \
-                node.operand.id in _safe_names:
+        elif (
+            isinstance(node, UnaryOp)
+            and isinstance(node.op, USub)
+            and isinstance(node.operand, Name)
+            and node.operand.id in _safe_names
+        ):
             return -_safe_names[node.operand.id]
-        elif isinstance(node, UnaryOp) and \
-                isinstance(node.op, USub) and \
-                isinstance(node.operand, Num):
+        elif (
+            isinstance(node, UnaryOp)
+            and isinstance(node.op, USub)
+            and isinstance(node.operand, Num)
+        ):
             return -node.operand.n
-        elif isinstance(node, BinOp) and \
-                isinstance(node.op, (Add, Sub)) and \
-                isinstance(node.right, Num) and \
-                isinstance(node.right.n, complex) and \
-                isinstance(node.left, Num) and \
-                isinstance(node.left.n, number_types):
+        elif (
+            isinstance(node, BinOp)
+            and isinstance(node.op, (Add, Sub))
+            and isinstance(node.right, Num)
+            and isinstance(node.right.n, complex)
+            and isinstance(node.left, Num)
+            and isinstance(node.left.n, number_types)
+        ):
             left = node.left.n
             right = node.right.n
             if isinstance(node.op, Add):
                 return left + right
             else:
                 return left - right
-        elif isinstance(node, Call) and node.func.id == 'cache_unpickle':
+        elif isinstance(node, Call) and node.func.id == "cache_unpickle":
             return pickle.loads(b64decode(ast_eval(node.args[0])))
-        raise ValueError('malformed literal string with %s' % node)
+        raise ValueError("malformed literal string with %s" % node)
+
     return _convert(node)
 
 
 def cache_load(entry):
     try:
         # parsing with 'eval' always gives an ast.Expression node
-        expr = parse(entry, mode='eval').body
+        expr = parse(entry, mode="eval").body
         return ast_eval(expr)
     except Exception as err:
-        raise ValueError(
-            'corrupt cache entry: %r (%s)' % (entry, err)) from err
+        raise ValueError("corrupt cache entry: %r (%s)" % (entry, err)) from err

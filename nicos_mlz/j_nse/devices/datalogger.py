@@ -31,11 +31,11 @@ class LastEvent(PyTangoDevice, Readable):
     valuetype = str
 
     parameter_overrides = {
-        'unit': Override(mandatory=False),
+        "unit": Override(mandatory=False),
     }
 
     def doReadUnit(self):
-        return ''
+        return ""
 
     def doRead(self, maxage=0):
         # The PLC stores the timestamp of the last event as two float values,
@@ -48,5 +48,5 @@ class LastEvent(PyTangoDevice, Readable):
         minute = (tod % 10000) // 100
         second = tod % 100
         # add +1 hour for timezone
-        ts = time.mktime((year, month, day, hour+1, minute, second, 0, 0, 0))
-        return time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(ts))
+        ts = time.mktime((year, month, day, hour + 1, minute, second, 0, 0, 0))
+        return time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(ts))

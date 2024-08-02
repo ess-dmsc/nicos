@@ -37,12 +37,30 @@ import numpy as np
 from psutil import AccessDenied, NoSuchProcess, Popen
 
 from nicos import session
-from nicos.core import MASTER, ArrayDesc, Attach, Override, Param, Readable, \
-    Value, Waitable, dictof, floatrange, intrange, nonemptystring, oneof, \
-    status, tupleof
+from nicos.core import (
+    MASTER,
+    ArrayDesc,
+    Attach,
+    Override,
+    Param,
+    Readable,
+    Value,
+    Waitable,
+    dictof,
+    floatrange,
+    intrange,
+    nonemptystring,
+    oneof,
+    status,
+    tupleof,
+)
 from nicos.core.constants import FINAL, LIVE
-from nicos.devices.generic import ActiveChannel, Detector as BaseDetector, \
-    ImageChannelMixin, PassiveChannel
+from nicos.devices.generic import (
+    ActiveChannel,
+    Detector as BaseDetector,
+    ImageChannelMixin,
+    PassiveChannel,
+)
 from nicos.utils import createThread
 
 # Minimum time to let McStas run before attempting to save data
@@ -69,34 +87,50 @@ class McStasSimulation(Readable):
     _mcstas_params = None
 
     parameters = {
-        'mcstasprog': Param('Name of the McStas simulation executable',
-                            type=str, settable=False),
-        'mcstasdir':  Param('Directory where McStas stores results', type=str,
-                            default='%(session.experiment.dataroot)s'
-                                    '/singlecount',
-                            settable=False),
-        'mcsiminfo':  Param('Name for the McStas Siminfo file', settable=False,
-                            type=str, default='mccode.sim'),
-        'neutronspersec': Param('Approximate simulated neutrons per second '
-                                'for machines running this device. Tune this '
-                                'parameter according to your hardware for '
-                                'realistic count times',
-                                type=dictof(nonemptystring, floatrange(1e3)),
-                                default={
-                                    'localhost': NEUTRONS_PER_SECOND_DEFAULT,
-                                },
-                               ),
-        'intensityfactor': Param('Constant multiplied with simulated McStas '
-                                 'intensity to get simulated neutron counts '
-                                 'per second', settable=True,
-                                 type=floatrange(1e-10), default=1),
-        'preselection':    Param('Simulation preset value (should be set by '
-                                 'the timer device)', type=float,
-                                 settable=True, default=1., unit='s'),
+        "mcstasprog": Param(
+            "Name of the McStas simulation executable", type=str, settable=False
+        ),
+        "mcstasdir": Param(
+            "Directory where McStas stores results",
+            type=str,
+            default="%(session.experiment.dataroot)s" "/singlecount",
+            settable=False,
+        ),
+        "mcsiminfo": Param(
+            "Name for the McStas Siminfo file",
+            settable=False,
+            type=str,
+            default="mccode.sim",
+        ),
+        "neutronspersec": Param(
+            "Approximate simulated neutrons per second "
+            "for machines running this device. Tune this "
+            "parameter according to your hardware for "
+            "realistic count times",
+            type=dictof(nonemptystring, floatrange(1e3)),
+            default={
+                "localhost": NEUTRONS_PER_SECOND_DEFAULT,
+            },
+        ),
+        "intensityfactor": Param(
+            "Constant multiplied with simulated McStas "
+            "intensity to get simulated neutron counts "
+            "per second",
+            settable=True,
+            type=floatrange(1e-10),
+            default=1,
+        ),
+        "preselection": Param(
+            "Simulation preset value (should be set by " "the timer device)",
+            type=float,
+            settable=True,
+            default=1.0,
+            unit="s",
+        ),
     }
 
     parameter_overrides = {
-        'unit': Override(mandatory=False, default=''),
+        "unit": Override(mandatory=False, default=""),
     }
 
     def doInit(self, mode):
@@ -106,11 +140,11 @@ class McStasSimulation(Readable):
 
     def doStatus(self, maxage=0):
         if self._started or (self._mythread and self._mythread.is_alive()):
-            return status.BUSY, 'running'
-        return status.OK, ''
+            return status.BUSY, "running"
+        return status.OK, ""
 
     def doRead(self, maxage=0):
-        return ''  # nothing useful here
+        return ""  # nothing useful here
 
     def _saveIntermediate(self):
         # give the simulation some time to initialize
@@ -119,7 +153,7 @@ class McStasSimulation(Readable):
 
     def _joinProcess(self):
         if self._mythread and self._mythread.is_alive():
-            self._mythread.join(1.)
+            self._mythread.join(1.0)
             if self._mythread.is_alive():
                 self.log.exception("Couldn't join readout thread.")
             else:
@@ -133,7 +167,7 @@ class McStasSimulation(Readable):
         examples:
             param=10
         """
-        raise NotImplementedError('Please implement _prepare_params method')
+        raise NotImplementedError("Please implement _prepare_params method")
 
     def _prepare(self, *datafiles):
         """Prepare the simulation parameters.
@@ -147,11 +181,12 @@ class McStasSimulation(Readable):
         """
         self._interesting_files.update(path.basename(p) for p in datafiles)
         if not self._mcstas_params:
-            self._mcstas_params = ' '.join(self._prepare_params())
-            self.log.debug('McStas parameters: %s', self._mcstas_params)
+            self._mcstas_params = " ".join(self._prepare_params())
+            self.log.debug("McStas parameters: %s", self._mcstas_params)
             self._start_time = None
             self._mcstasdirpath = session.experiment.data.expandNameTemplates(
-                self.mcstasdir)[0]
+                self.mcstasdir
+            )[0]
 
     def _start(self):
         """Start the simulation.
@@ -161,7 +196,7 @@ class McStasSimulation(Readable):
         """
         if not self._started:
             self._started = True
-            self._mythread = createThread('detector %s' % self, self._run)
+            self._mythread = createThread("detector %s" % self, self._run)
 
     def _finish(self):
         """Finish the simulation.
@@ -170,7 +205,7 @@ class McStasSimulation(Readable):
         connected to this simulation.
         """
         if self._started:
-            self.log.debug('still running, finishing up')
+            self.log.debug("still running, finishing up")
             self._send_signal(SIGTERM)
             self._joinProcess()
         self._started = False
@@ -183,22 +218,22 @@ class McStasSimulation(Readable):
             # wait for mcstas releasing interesting fds
             try:
                 while self._process and self._process.is_running():
-                    fnames = set(path.basename(f.path)
-                                 for f in self._process.open_files())
+                    fnames = set(
+                        path.basename(f.path) for f in self._process.open_files()
+                    )
                     if not (fnames & self._interesting_files):
                         break
-                    session.delay(.01)
+                    session.delay(0.01)
             except (AccessDenied, NoSuchProcess):
                 self.log.warning(
-                    'McStas process already terminated in _send_signal(%r)',
-                    sig)
-            self.log.debug(
-                'McStas process has written file on signal (%r)', sig)
+                    "McStas process already terminated in _send_signal(%r)", sig
+                )
+            self.log.debug("McStas process has written file on signal (%r)", sig)
 
     def _getDatafile(self, name):
         """Return a file object for the McStas data file with given name."""
         # pylint: disable=consider-using-with
-        return open(path.join(self._mcstasdirpath, name), 'r', encoding='utf-8')
+        return open(path.join(self._mcstasdirpath, name), "r", encoding="utf-8")
 
     def _getTime(self):
         """Return elapsed time for simulation."""
@@ -221,13 +256,16 @@ class McStasSimulation(Readable):
         default: neutronspersec['hostname -f'] * preselection
         """
         # get the default rate
-        default = self.neutronspersec.get('localhost',
-                                          NEUTRONS_PER_SECOND_DEFAULT)
+        default = self.neutronspersec.get("localhost", NEUTRONS_PER_SECOND_DEFAULT)
         # try first 'hostname -f' and then 'hostname -s' an then take
         # the default rate
-        return self.neutronspersec.get(
-            self._hostname, self.neutronspersec.get(
-                self._hostname.split('.', 1)[0], default)) * self.preselection
+        return (
+            self.neutronspersec.get(
+                self._hostname,
+                self.neutronspersec.get(self._hostname.split(".", 1)[0], default),
+            )
+            * self.preselection
+        )
 
     def _run(self):
         """Thread to run McStas simulation executable.
@@ -238,24 +276,27 @@ class McStasSimulation(Readable):
         try:
             shutil.rmtree(self._mcstasdirpath)
         except OSError:
-            self.log.warning('could not remove old data')
-        command = '%s -n %d -d %s %s' % (
-            self.mcstasprog, self._getNeutronsToSimulate(),
-            self._mcstasdirpath, self._mcstas_params,
+            self.log.warning("could not remove old data")
+        command = "%s -n %d -d %s %s" % (
+            self.mcstasprog,
+            self._getNeutronsToSimulate(),
+            self._mcstasdirpath,
+            self._mcstas_params,
         )
-        self.log.debug('run %s', command)
+        self.log.debug("run %s", command)
         try:
             self._start_time = monotonic()
-            self._process = Popen(command.split(), stdout=PIPE, stderr=PIPE,
-                                  cwd=self._workdir)
+            self._process = Popen(
+                command.split(), stdout=PIPE, stderr=PIPE, cwd=self._workdir
+            )
             out, err = self._process.communicate()
             for line in out.splitlines():
-                self.log.debug('[McStas out] %s', line.decode('utf-8', 'ignore'))
+                self.log.debug("[McStas out] %s", line.decode("utf-8", "ignore"))
             for line in err.splitlines():
-                func = self.log.warning if b'Error' in line else self.log.debug
-                func('[McStas err] %s', line.decode('utf-8', 'ignore'))
+                func = self.log.warning if b"Error" in line else self.log.debug
+                func("[McStas err] %s", line.decode("utf-8", "ignore"))
         except OSError as e:
-            self.log.error('Execution failed: %s', e)
+            self.log.error("Execution failed: %s", e)
         if self._process:
             self._process.wait()
         self._process = None
@@ -270,7 +311,7 @@ class DetectorMixin:
     """
 
     attached_devices = {
-        'mcstas': Attach('McStasSimulation device', McStasSimulation),
+        "mcstas": Attach("McStasSimulation device", McStasSimulation),
     }
 
     def duringMeasureHook(self, elapsed):
@@ -300,22 +341,23 @@ class McStasImage(ImageChannelMixin, PassiveChannel):
     """
 
     attached_devices = {
-        'mcstas': Attach('McStasSimulation device', McStasSimulation),
+        "mcstas": Attach("McStasSimulation device", McStasSimulation),
     }
 
     parameters = {
-        'size':       Param('Detector size in pixels (x, y)',
-                            type=tupleof(intrange(1, 8192), intrange(1, 8192)),
-                            mandatory=True),
-        'mcstasfile': Param('Name of the McStas data file',
-                            type=str, mandatory=True),
+        "size": Param(
+            "Detector size in pixels (x, y)",
+            type=tupleof(intrange(1, 8192), intrange(1, 8192)),
+            mandatory=True,
+        ),
+        "mcstasfile": Param("Name of the McStas data file", type=str, mandatory=True),
     }
 
     def doInit(self, mode):
-        self.arraydesc = ArrayDesc(self.name, self.size, '<u4')
+        self.arraydesc = ArrayDesc(self.name, self.size, "<u4")
 
     def doReadArray(self, quality):
-        self.log.debug('quality: %s', quality)
+        self.log.debug("quality: %s", quality)
         if quality == FINAL:
             self._attached_mcstas._joinProcess()
         self._readpsd(quality)
@@ -327,8 +369,15 @@ class McStasImage(ImageChannelMixin, PassiveChannel):
         self._attached_mcstas._prepare(self.mcstasfile)
 
     def valueInfo(self):
-        return (Value(self.name + '.sum', unit='cts', type='counter',
-                      errors='sqrt', fmtstr='%d'),)
+        return (
+            Value(
+                self.name + ".sum",
+                unit="cts",
+                type="counter",
+                errors="sqrt",
+                fmtstr="%d",
+            ),
+        )
 
     def doStart(self):
         self._attached_mcstas._start()
@@ -345,17 +394,17 @@ class McStasImage(ImageChannelMixin, PassiveChannel):
     def _readpsd(self, quality):
         try:
             with self._attached_mcstas._getDatafile(self.mcstasfile) as f:
-                lines = f.readlines()[-3 * (self.size[1] + 1):]
-            if lines[0].startswith('# Data') and self.mcstasfile in lines[0]:
+                lines = f.readlines()[-3 * (self.size[1] + 1) :]
+            if lines[0].startswith("# Data") and self.mcstasfile in lines[0]:
                 factor = self._attached_mcstas._getScaleFactor()
-                buf = np.loadtxt(lines[1:self.size[1] + 1], dtype=np.float32)
+                buf = np.loadtxt(lines[1 : self.size[1] + 1], dtype=np.float32)
                 self._buf = (buf * factor).astype(np.uint32)
                 self.readresult = [self._buf.sum()]
             elif quality != LIVE:
-                raise OSError('Did not find start line: %s' % lines[0])
+                raise OSError("Did not find start line: %s" % lines[0])
         except OSError:
             if quality != LIVE:
-                self.log.exception('Could not read result file', exc=1)
+                self.log.exception("Could not read result file", exc=1)
 
 
 class McStasTimer(ActiveChannel, Waitable):
@@ -366,15 +415,15 @@ class McStasTimer(ActiveChannel, Waitable):
     """
 
     attached_devices = {
-        'mcstas': Attach('McStasSimulation device', McStasSimulation),
+        "mcstas": Attach("McStasSimulation device", McStasSimulation),
     }
 
     parameters = {
-        'curvalue': Param('Current value', settable=True, unit='main'),
+        "curvalue": Param("Current value", settable=True, unit="main"),
     }
 
     parameter_overrides = {
-        'unit': Override(default='s'),
+        "unit": Override(default="s"),
     }
 
     is_timer = True
@@ -411,30 +460,31 @@ class McStasTimer(ActiveChannel, Waitable):
         self.doFinish()
 
     def valueInfo(self):
-        return Value(self.name, unit='s', type='time', fmtstr='%.3f'),
+        return (Value(self.name, unit="s", type="time", fmtstr="%.3f"),)
 
 
 class McStasCounter(PassiveChannel, Waitable):
     """Counter channel for McStas simulations"""
 
     attached_devices = {
-        'mcstas': Attach('McStasSimulation device', McStasSimulation),
+        "mcstas": Attach("McStasSimulation device", McStasSimulation),
     }
 
     parameters = {
-        'curvalue':        Param('Current value', settable=True, unit='main'),
-        'type':            Param('Counter type', type=oneof('monitor', 'counter'),
-                                 mandatory=True),
-        'mcstasfile':      Param('Name of the McStas data file', type=str,
-                                 mandatory=True),
-        'intensityfactor': Param('Factor to attenuate simulated counts, e.g. '
-                                 'for beam monitors', settable=True,
-                                 type=floatrange(1e-10), default=1),
+        "curvalue": Param("Current value", settable=True, unit="main"),
+        "type": Param("Counter type", type=oneof("monitor", "counter"), mandatory=True),
+        "mcstasfile": Param("Name of the McStas data file", type=str, mandatory=True),
+        "intensityfactor": Param(
+            "Factor to attenuate simulated counts, e.g. " "for beam monitors",
+            settable=True,
+            type=floatrange(1e-10),
+            default=1,
+        ),
     }
 
     parameter_overrides = {
-        'unit': Override(default='cts'),
-        'fmtstr': Override(default='%d'),
+        "unit": Override(default="cts"),
+        "fmtstr": Override(default="%d"),
     }
 
     def doInit(self, mode):
@@ -455,12 +505,12 @@ class McStasCounter(PassiveChannel, Waitable):
         try:
             with self._attached_mcstas._getDatafile(self.mcstasfile) as f:
                 for line in f:
-                    if line.startswith('# values:'):
+                    if line.startswith("# values:"):
                         sig = float(line.split()[2])
                         value = sig * self._attached_mcstas._getScaleFactor()
         except Exception:
             if self._attached_mcstas._getTime() > MIN_RUNTIME:
-                self.log.warning('could not read result file', exc=1)
+                self.log.warning("could not read result file", exc=1)
             value = 0
         self.curvalue = value * self.intensityfactor
         return self.curvalue
@@ -472,5 +522,6 @@ class McStasCounter(PassiveChannel, Waitable):
         self.doFinish()
 
     def valueInfo(self):
-        return Value(self.name, unit='cts', errors='sqrt', type=self.type,
-                     fmtstr='%d'),
+        return (
+            Value(self.name, unit="cts", errors="sqrt", type=self.type, fmtstr="%d"),
+        )

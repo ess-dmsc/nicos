@@ -1,14 +1,14 @@
-description = 'STRESS-SPEC setup with sample table'
+description = "STRESS-SPEC setup with sample table"
 
-group = 'basic'
+group = "basic"
 
 includes = [
-    'standard',
-    'sampletable',
+    "standard",
+    "sampletable",
 ]
 
 sysconfig = dict(
-    datasinks = ['caresssink'],
+    datasinks=["caresssink"],
 )
 
 # caress@stressictrl:~>dump_u1 sof

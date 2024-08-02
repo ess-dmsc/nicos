@@ -62,45 +62,54 @@ class EpicsAmorMagnet(EpicsWindowTimeoutDeviceSinq):
     calculated using the following rule:
     <basepv><pvdelim><sub-record>
     """
+
     parameters = {
-        'basepv': Param('Base name of the PVs (without delimiter).',
-                        type=pvname, mandatory=True, settable=False,
-                        userparam=False),
-        'pvdelim': Param(
-            'Delimiter used for separating basepv with record fields.',
-            type=str, mandatory=False, default=':', userparam=False,
-            settable=False),
-        'fieldfactor': Param(
-            'Factor to convert the magnet current (read value) to'
-            ' magnetic field', type=float, userparam=False, default=1.0),
+        "basepv": Param(
+            "Base name of the PVs (without delimiter).",
+            type=pvname,
+            mandatory=True,
+            settable=False,
+            userparam=False,
+        ),
+        "pvdelim": Param(
+            "Delimiter used for separating basepv with record fields.",
+            type=str,
+            mandatory=False,
+            default=":",
+            userparam=False,
+            settable=False,
+        ),
+        "fieldfactor": Param(
+            "Factor to convert the magnet current (read value) to" " magnetic field",
+            type=float,
+            userparam=False,
+            default=1.0,
+        ),
     }
 
     parameter_overrides = {
         # readpv and writepv are determined automatically from the base-PV
-        'readpv': Override(mandatory=False, userparam=False, settable=False),
-        'writepv': Override(mandatory=False, userparam=False, settable=False),
-        'maxage': Override(userparam=False),
-        'pollinterval': Override(userparam=False),
-        'warnlimits': Override(userparam=False),
-        'abslimits': Override(volatile=True),
-        'unit': Override(volatile=True)
+        "readpv": Override(mandatory=False, userparam=False, settable=False),
+        "writepv": Override(mandatory=False, userparam=False, settable=False),
+        "maxage": Override(userparam=False),
+        "pollinterval": Override(userparam=False),
+        "warnlimits": Override(userparam=False),
+        "abslimits": Override(volatile=True),
+        "unit": Override(volatile=True),
     }
 
     attached_devices = {
-        'switch': Attach('Switch to turn the magnet on/off',
-                         EpicsAmorMagnetSwitch)
+        "switch": Attach("Switch to turn the magnet on/off", EpicsAmorMagnetSwitch)
     }
 
     # Record fields with which an interaction via Channel Access is required.
     sub_records = {
-        'readpv': 'CurRBV',
-        'writepv': 'CurSet',
-
-        'highlimit': 'HighLim',
-        'lowlimit': 'LowLim',
-
-        'errorcode': 'ErrCode',
-        'errortext': 'ErrText'
+        "readpv": "CurRBV",
+        "writepv": "CurSet",
+        "highlimit": "HighLim",
+        "lowlimit": "LowLim",
+        "errorcode": "ErrCode",
+        "errortext": "ErrText",
     }
 
     def _get_pv_parameters(self):
@@ -127,40 +136,40 @@ class EpicsAmorMagnet(EpicsWindowTimeoutDeviceSinq):
         return EpicsWindowTimeoutDeviceSinq.doRead(self, maxage) / self.fieldfactor
 
     def doReadUnit(self):
-        unit = self._params.get('unit')
+        unit = self._params.get("unit")
         if not unit:
             unit = EpicsWindowTimeoutDeviceSinq.doReadUnit(self)
         return unit
 
     def doReadTarget(self):
-        return self._get_pv('writepv') / self.fieldfactor
+        return self._get_pv("writepv") / self.fieldfactor
 
     def doStatus(self, maxage=0):
-        code = self._get_pv('errorcode')
+        code = self._get_pv("errorcode")
         if code != 0:
-            msg = self._get_pv('errortext')
-            return status.ERROR, '%d: %s' % (code, msg)
+            msg = self._get_pv("errortext")
+            return status.ERROR, "%d: %s" % (code, msg)
 
         if not self._attached_switch.isEnabled:
-            return status.OK, 'Off'
+            return status.OK, "Off"
 
         return EpicsWindowTimeoutDeviceSinq.doStatus(self, maxage)
 
     def doIsAllowed(self, position):
         if not self._attached_switch.isEnabled:
-            return False, 'Magnet switched OFF'
-        return True, ''
+            return False, "Magnet switched OFF"
+        return True, ""
 
     def doStart(self, target):
         EpicsWindowTimeoutDeviceSinq.doStart(self, target * self.fieldfactor)
 
     def doReadAbslimits(self):
-        absmin = self._get_pv('lowlimit') / self.fieldfactor
-        absmax = self._get_pv('highlimit') / self.fieldfactor
+        absmin = self._get_pv("lowlimit") / self.fieldfactor
+        absmax = self._get_pv("highlimit") / self.fieldfactor
 
         return absmin, absmax
 
     def doInfo(self):
         # Add the state in the information of this magnet
-        state = 'on' if self._attached_switch.isEnabled else 'off'
-        return [('state', state, state, '', 'general')]
+        state = "on" if self._attached_switch.isEnabled else "off"
+        return [("state", state, state, "", "general")]

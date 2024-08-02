@@ -22,8 +22,15 @@
 # *****************************************************************************
 """Classes to display the TAS instruments."""
 
-from nicos.guisupport.qt import QBrush, QColor, QGraphicsEllipseItem, QPen, \
-    QPointF, QRectF, QSizeF
+from nicos.guisupport.qt import (
+    QBrush,
+    QColor,
+    QGraphicsEllipseItem,
+    QPen,
+    QPointF,
+    QRectF,
+    QSizeF,
+)
 
 from .halo import Halo
 from .table import TableBase
@@ -32,7 +39,7 @@ from .table import TableBase
 class DetTable(TableBase):
     """Class to display the detector including shielding and detector tube."""
 
-    _color = QColor('#ff66ff')
+    _color = QColor("#ff66ff")
 
     def __init__(self, x, y, size=20, parent=None, scene=None):
         TableBase.__init__(self, x, y, size, parent, scene)
@@ -42,6 +49,6 @@ class DetTable(TableBase):
         p = QPointF(self._tuberadius, self._tuberadius)
         s = QSizeF(2 * self._tuberadius, 2 * self._tuberadius)
         self._tube = QGraphicsEllipseItem(QRectF(-p, s), self)
-        self._tube.setPen(QPen(QColor('black'), 3))
-        self._tube.setBrush(QBrush(QColor('white')))
+        self._tube.setPen(QPen(QColor("black"), 3))
+        self._tube.setBrush(QBrush(QColor("white")))
         self._tube.setZValue(20)

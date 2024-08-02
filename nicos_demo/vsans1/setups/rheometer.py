@@ -1,6 +1,6 @@
-description = 'Rheoplus worksheet remote control'
+description = "Rheoplus worksheet remote control"
 
-group = 'optional'
+group = "optional"
 
 devices = dict(
     # Rheo_WS = device('nicos.devices.entangle.DigitalOutput',

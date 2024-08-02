@@ -32,19 +32,19 @@ class ChangerMotor(EpicsMotor):
     """adds a feature to force reading the encoder"""
 
     def _get_pv_name(self, pvparam):
-        if pvparam == 'forceread':
-            return 'SQ:DMC:mcu2:READCH'
+        if pvparam == "forceread":
+            return "SQ:DMC:mcu2:READCH"
         return EpicsMotor._get_pv_name(self, pvparam)
 
     def _get_pv_parameters(self):
         pvs = EpicsMotor._get_pv_parameters(self)
-        pvs.add('forceread')
+        pvs.add("forceread")
         return pvs
 
     def doReset(self):
         """force reading the encoder once"""
-        self._put_pv('forceread', 0)
-        self._put_pv('forceread', 1)
+        self._put_pv("forceread", 0)
+        self._put_pv("forceread", 1)
         sleep(1)
         self.read(0)
 
@@ -56,60 +56,64 @@ class StickMotor(EpicsMotor):
     """
 
     parameters = {
-        'opmode': Param('Operation mode of this motor',
-                        type=oneof('normal', 'continuous'), userparam=True,
-                        settable=True, volatile=True),
+        "opmode": Param(
+            "Operation mode of this motor",
+            type=oneof("normal", "continuous"),
+            userparam=True,
+            settable=True,
+            volatile=True,
+        ),
     }
 
     def _get_pv_name(self, pvparam):
-        if pvparam == 'setmode':
-            return 'SQ:DMC:mcu2:STICKMODE'
-        elif pvparam == 'getmode':
-            return 'SQ:DMC:mcu2:STICKMODE_RBV'
-        elif pvparam == 'setspeed':
-            return 'SQ:DMC:mcu2:STICKSPEED'
-        elif pvparam == 'getspeed':
-            return 'SQ:DMC:mcu2:STICKSPEED_RBV'
+        if pvparam == "setmode":
+            return "SQ:DMC:mcu2:STICKMODE"
+        elif pvparam == "getmode":
+            return "SQ:DMC:mcu2:STICKMODE_RBV"
+        elif pvparam == "setspeed":
+            return "SQ:DMC:mcu2:STICKSPEED"
+        elif pvparam == "getspeed":
+            return "SQ:DMC:mcu2:STICKSPEED_RBV"
         return EpicsMotor._get_pv_name(self, pvparam)
 
     def _get_pv_parameters(self):
         pvs = EpicsMotor._get_pv_parameters(self)
-        pvs.add('setmode')
-        pvs.add('getmode')
-        pvs.add('setspeed')
-        pvs.add('getspeed')
+        pvs.add("setmode")
+        pvs.add("getmode")
+        pvs.add("setspeed")
+        pvs.add("getspeed")
         return pvs
 
     def doReadOpmode(self):
-        val = self._get_pv('getmode')
+        val = self._get_pv("getmode")
         if val == 0:
-            return 'normal'
+            return "normal"
         else:
-            return 'continuous'
+            return "continuous"
 
     def doSetOpmode(self, target):
-        if target == 'normal':
-            self._put_pv('setmode', 0)
-        elif target == 'continuous':
-            self._put_pv('setmode', 1)
+        if target == "normal":
+            self._put_pv("setmode", 0)
+        elif target == "continuous":
+            self._put_pv("setmode", 1)
 
     def doReadSpeed(self):
-        if self.mode == 'continuous':
-            return self._get_pv('getspeed')
+        if self.mode == "continuous":
+            return self._get_pv("getspeed")
         return EpicsMotor.doReadSpeed(self)
 
     def doWriteSpeed(self, newValue):
-        if self.mode == 'continuous':
-            self._put_pv('setspeed', newValue)
+        if self.mode == "continuous":
+            self._put_pv("setspeed", newValue)
             return
         EpicsMotor.doWriteSpeed(self, newValue)
 
     def doIsAllowed(self, target):
-        if self.mode == 'continuous':
-            return False, 'Cannot set positions in continuous operation'
+        if self.mode == "continuous":
+            return False, "Cannot set positions in continuous operation"
         return EpicsMotor.doIsAllowed(self, target)
 
     def doStatus(self, maxage=0):
-        if self.mode == 'continuous':
-            return status.OK, 'Running continuous'
+        if self.mode == "continuous":
+            return status.OK, "Running continuous"
         return EpicsMotor.doStatus(self, maxage)

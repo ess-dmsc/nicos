@@ -29,40 +29,59 @@ from nicos.core.errors import NicosError
 from nicos.core.utils import ADMIN
 from nicos.guisupport.livewidget import LiveWidget1D
 from nicos.guisupport.plots import GRCOLORS, MaskedPlotCurve
-from nicos.guisupport.qt import QDialogButtonBox, QDoubleValidator, QLabel, \
-    QMessageBox, QSize, QSizePolicy, Qt, QVBoxLayout, QWidget, pyqtSlot
+from nicos.guisupport.qt import (
+    QDialogButtonBox,
+    QDoubleValidator,
+    QLabel,
+    QMessageBox,
+    QSize,
+    QSizePolicy,
+    Qt,
+    QVBoxLayout,
+    QWidget,
+    pyqtSlot,
+)
 from nicos.guisupport.widget import NicosWidget
 from nicos.utils import findResource
 
 from nicos_mlz.toftof.lib.calculations import ResolutionAnalysis
 
-COLOR_BLACK = GRCOLORS['black']
-COLOR_RED = GRCOLORS['red']
-COLOR_GREEN = GRCOLORS['green']
-COLOR_BLUE = GRCOLORS['blue']
+COLOR_BLACK = GRCOLORS["black"]
+COLOR_RED = GRCOLORS["red"]
+COLOR_GREEN = GRCOLORS["green"]
+COLOR_BLUE = GRCOLORS["blue"]
 
-ANGSTROM = '\u212b'
-DELTA = '\u0394'
-LAMBDA = '\u03bb'
-MICRO = '\xb5'
-MINUSONE = '\u207b\xb9'
+ANGSTROM = "\u212b"
+DELTA = "\u0394"
+LAMBDA = "\u03bb"
+MICRO = "\xb5"
+MINUSONE = "\u207b\xb9"
 
 
 class MiniPlot(LiveWidget1D):
-
     client = None
 
     def __init__(self, xlabel, ylabel, ncurves=1, parent=None, **kwds):
         LiveWidget1D.__init__(self, parent, **kwds)
 
         self.axes.resetCurves()
-        self.setTitles({'x': xlabel, 'y': ylabel})
+        self.setTitles({"x": xlabel, "y": ylabel})
 
         self._curves = [
-            MaskedPlotCurve([0], [1], linewidth=2, legend='',
-                            linecolor=kwds.get('color1', COLOR_BLACK)),
-            MaskedPlotCurve([0], [.1], linewidth=2, legend='',
-                            linecolor=kwds.get('color2', COLOR_GREEN)),
+            MaskedPlotCurve(
+                [0],
+                [1],
+                linewidth=2,
+                legend="",
+                linecolor=kwds.get("color1", COLOR_BLACK),
+            ),
+            MaskedPlotCurve(
+                [0],
+                [0.1],
+                linewidth=2,
+                legend="",
+                linecolor=kwds.get("color2", COLOR_GREEN),
+            ),
         ]
         for curve in self._curves[:ncurves]:
             self.axes.addCurves(curve)
@@ -78,20 +97,22 @@ class MiniPlot(LiveWidget1D):
 
 
 class PlotWidget(QWidget):
-
-    def __init__(self, title, xlabel, ylabel, ncurves=1, name='unknown',
-                 parent=None, **kwds):
+    def __init__(
+        self, title, xlabel, ylabel, ncurves=1, name="unknown", parent=None, **kwds
+    ):
         QWidget.__init__(self, parent)
         self.name = name
         parent.setLayout(QVBoxLayout())
-        self.plot = MiniPlot(xlabel, ylabel, ncurves, self, color1=COLOR_BLUE,
-                             color2=COLOR_RED, **kwds)
+        self.plot = MiniPlot(
+            xlabel, ylabel, ncurves, self, color1=COLOR_BLUE, color2=COLOR_RED, **kwds
+        )
         titleLabel = QLabel(title)
         titleLabel.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        titleLabel.setStyleSheet('QLabel {font-weight: 600}')
+        titleLabel.setStyleSheet("QLabel {font-weight: 600}")
         parent.layout().insertWidget(0, titleLabel)
-        self.plot.setSizePolicy(QSizePolicy.Policy.MinimumExpanding,
-                                QSizePolicy.Policy.MinimumExpanding)
+        self.plot.setSizePolicy(
+            QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.MinimumExpanding
+        )
         parent.layout().insertWidget(1, self.plot)
 
     def setData(self, x, y1, y2=None):
@@ -105,45 +126,63 @@ class PlotWidget(QWidget):
 
 
 class DynamicRangePlot(PlotWidget):
-
     def __init__(self, parent, **kwds):
-        PlotWidget.__init__(self, 'Dynamic Range', DELTA + 'E (meV)',
-                            '|Q| ' + ANGSTROM + MINUSONE, 2, parent=parent,
-                            **kwds)
-        self.plot._curves[0].legend = 'low'
-        self.plot._curves[1].legend = 'high'
+        PlotWidget.__init__(
+            self,
+            "Dynamic Range",
+            DELTA + "E (meV)",
+            "|Q| " + ANGSTROM + MINUSONE,
+            2,
+            parent=parent,
+            **kwds,
+        )
+        self.plot._curves[0].legend = "low"
+        self.plot._curves[1].legend = "high"
 
 
 class ElasticResolutionPlot(PlotWidget):
-
     def __init__(self, parent, **kwds):
-        PlotWidget.__init__(self, 'Elastic Resolution',
-                            LAMBDA + '(' + ANGSTROM + ')',
-                            'dE (' + MICRO + 'eV)', 1, parent=parent, **kwds)
+        PlotWidget.__init__(
+            self,
+            "Elastic Resolution",
+            LAMBDA + "(" + ANGSTROM + ")",
+            "dE (" + MICRO + "eV)",
+            1,
+            parent=parent,
+            **kwds,
+        )
         self.plot.logscale(True)
 
 
 class ResolutionPlot(PlotWidget):
-
     def __init__(self, parent, **kwds):
-        PlotWidget.__init__(self, 'Resolution', 'Energy (meV)',
-                            'dE (' + MICRO + 'eV)', 1, parent=parent, **kwds)
+        PlotWidget.__init__(
+            self,
+            "Resolution",
+            "Energy (meV)",
+            "dE (" + MICRO + "eV)",
+            1,
+            parent=parent,
+            **kwds,
+        )
         self.plot.logscale(True)
 
 
 class IntensityPlot(PlotWidget):
-
     def __init__(self, direction, parent=None, **kwds):
-        PlotWidget.__init__(self, 'Calculated intensity at PSD for spin-%s '
-                            'neutrons' % direction,
-                            'PSD channel position (cm)', 'intensity',
-                            parent=parent, **kwds)
-        self.plot._curves[0].legend = 'without analyzer'
-        self.plot._curves[1].legend = 'with analyzer'
+        PlotWidget.__init__(
+            self,
+            "Calculated intensity at PSD for spin-%s " "neutrons" % direction,
+            "PSD channel position (cm)",
+            "intensity",
+            parent=parent,
+            **kwds,
+        )
+        self.plot._curves[0].legend = "without analyzer"
+        self.plot._curves[1].legend = "with analyzer"
 
 
 class ResolutionPanel(NicosWidget, Panel):
-
     def __init__(self, parent, client, options):
         Panel.__init__(self, parent, client, options)
         self.setClient(client)
@@ -155,9 +194,9 @@ class ResolutionPanel(NicosWidget, Panel):
         else:
             self.buttonBox.rejected.connect(self.close)
 
-        self.speed.valueChanged['int'].connect(self.recalculate)
-        self.waveLength.valueChanged['double'].connect(self.recalculate)
-        self.ratio.valueChanged['int'].connect(self.recalculate)
+        self.speed.valueChanged["int"].connect(self.recalculate)
+        self.waveLength.valueChanged["double"].connect(self.recalculate)
+        self.ratio.valueChanged["int"].connect(self.recalculate)
         self.slits.currentIndexChanged.connect(self.recalculate)
         self.buttonBox.clicked.connect(self.createScript)
         self.slits.setDisabled(self.client.user_level != ADMIN)
@@ -167,19 +206,23 @@ class ResolutionPanel(NicosWidget, Panel):
 
     def initUi(self):
         with waitCursor():
-            loadUi(self,
-                   findResource('nicos_mlz/toftof/gui/resolutionpanel.ui'))
+            loadUi(self, findResource("nicos_mlz/toftof/gui/resolutionpanel.ui"))
 
             valid = QDoubleValidator()
 
-            for f in (self.E_neutron, self.Q0_min, self.Q0_max, self.dE_max,
-                      self.dE_el):
+            for f in (
+                self.E_neutron,
+                self.Q0_min,
+                self.Q0_max,
+                self.dE_max,
+                self.dE_el,
+            ):
                 f.setValidator(valid)
                 f.setReadOnly(True)
 
-            self.plot1 = DynamicRangePlot(self.drPlot, xscale='decimal')
-            self.plot2 = ElasticResolutionPlot(self.erPlot, xscale='decimal')
-            self.plot3 = ResolutionPlot(self.rPlot, xscale='decimal')
+            self.plot1 = DynamicRangePlot(self.drPlot, xscale="decimal")
+            self.plot2 = ElasticResolutionPlot(self.erPlot, xscale="decimal")
+            self.plot3 = ResolutionPlot(self.rPlot, xscale="decimal")
 
     def registerKeys(self):
         pass
@@ -187,31 +230,35 @@ class ResolutionPanel(NicosWidget, Panel):
     def on_client_connected(self):
         with waitCursor():
             missed_devices = []
-            for d in ('chSpeed', 'chRatio', 'chWL', 'chST'):
+            for d in ("chSpeed", "chRatio", "chWL", "chST"):
                 try:
-                    self.client.eval('%s.pollParam()', None)
+                    self.client.eval("%s.pollParam()", None)
                     params = self.client.getDeviceParams(d)
                     for p, v in params.items():
-                        self._update_key('%s/%s' % (d, p), v)
+                        self._update_key("%s/%s" % (d, p), v)
                 except (NicosError, NameError):
                     missed_devices += [d]
         if not missed_devices:
             self.recalculate()
         else:
-            QMessageBox.warning(self.parent().parent(), 'Error',
-                                'The following devices are not available:<br>'
-                                "'%s'" % ', '.join(missed_devices))
+            QMessageBox.warning(
+                self.parent().parent(),
+                "Error",
+                "The following devices are not available:<br>"
+                "'%s'" % ", ".join(missed_devices),
+            )
             self.buttonBox.removeButton(
-                self.buttonBox.button(QDialogButtonBox.StandardButton.Apply))
+                self.buttonBox.button(QDialogButtonBox.StandardButton.Apply)
+            )
 
     def _update_key(self, key, value):
-        if key in ['chSpeed/value', 'ch/speed']:
+        if key in ["chSpeed/value", "ch/speed"]:
             self.speed.setValue(int(value))
-        elif key in ['chRatio/value', 'ch/ratio']:
+        elif key in ["chRatio/value", "ch/ratio"]:
             self.ratio.setValue(int(value))
-        elif key in ['chWL/value', 'ch/wavelength']:
+        elif key in ["chWL/value", "ch/wavelength"]:
             self.waveLength.setValue(float(value))
-        elif key in ['chST/value', 'ch/slittype']:
+        elif key in ["chST/value", "ch/slittype"]:
             self.slits.setCurrentIndex(int(value))
 
     @pyqtSlot()
@@ -219,38 +266,45 @@ class ResolutionPanel(NicosWidget, Panel):
         try:
             self._simulate()
         except (ZeroDivisionError, IndexError):
-            QMessageBox.warning(self.parent().parent(), 'Error',
-                                'The current instrument setup is not well '
-                                'defined for polarisation analysis')
+            QMessageBox.warning(
+                self.parent().parent(),
+                "Error",
+                "The current instrument setup is not well "
+                "defined for polarisation analysis",
+            )
 
-    @pyqtSlot('QAbstractButton *')
+    @pyqtSlot("QAbstractButton *")
     def createScript(self, button):
-        if self.buttonBox.standardButton(button) \
-                == QDialogButtonBox.StandardButton.Apply:
-            maw = ['chWL, %.2f' % self.waveLength.value()]
-            maw.append('chRatio, %d' % self.ratio.value())
-            maw.append('chSpeed, %d' % self.speed.value())
-            s = ['maw(%s)' % ', '.join(maw)]
+        if (
+            self.buttonBox.standardButton(button)
+            == QDialogButtonBox.StandardButton.Apply
+        ):
+            maw = ["chWL, %.2f" % self.waveLength.value()]
+            maw.append("chRatio, %d" % self.ratio.value())
+            maw.append("chSpeed, %d" % self.speed.value())
+            s = ["maw(%s)" % ", ".join(maw)]
             if self.client.user_level == ADMIN:
-                s.append('maw(chST, %d)' % self.slits.currentIndex())
-            script = '\n'.join(s)
+                s.append("maw(chST, %d)" % self.slits.currentIndex())
+            script = "\n".join(s)
             # print(script)
             self.client.run(script, noqueue=False)
 
     def _simulate(self):
-        """Calculate
-        """
+        """Calculate"""
         ra = ResolutionAnalysis(
-            self.speed.value(), self.waveLength.value(), self.ratio.value(),
-            self.slits.currentIndex())
+            self.speed.value(),
+            self.waveLength.value(),
+            self.ratio.value(),
+            self.slits.currentIndex(),
+        )
         ra.run()
 
-        self.E_neutron.setText('%.4f' % ra.E0)
-        self.Q0_min.setText('%.4f' % ra.q_low_0)
-        self.Q0_max.setText('%.4f' % ra.q_high_0)
-        self.dE_max.setText('%.4f' % -ra.dE_min)
-        self.dE_el.setText('%.4f' % ra.dE_el)
+        self.E_neutron.setText("%.4f" % ra.E0)
+        self.Q0_min.setText("%.4f" % ra.q_low_0)
+        self.Q0_max.setText("%.4f" % ra.q_high_0)
+        self.dE_max.setText("%.4f" % -ra.dE_min)
+        self.dE_el.setText("%.4f" % ra.dE_el)
 
         self.plot1.setData(-ra.dE, ra.q_low, ra.q_high)
         self.plot2.setData(ra.lambdas, 1e3 * ra.dE_res)
-        self.plot3.setData(-1. * ra.dE, 1e3 * ra.dE_in)
+        self.plot3.setData(-1.0 * ra.dE, 1e3 * ra.dE_in)

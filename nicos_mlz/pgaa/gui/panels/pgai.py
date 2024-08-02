@@ -28,28 +28,77 @@ import sys
 # gr3 module has to be imported before any of the OpenGL module(s)
 import gr3  # pylint: disable=unused-import
 import numpy as np
-from OpenGL.GL import GL_COLOR_BUFFER_BIT, GL_DEPTH_BUFFER_BIT, \
-    GL_DEPTH_TEST, GL_LINES, GL_MODELVIEW, GL_PROJECTION, GL_SMOOTH, glBegin, \
-    glClear, glColor3f, glColor3fv, glEnable, glEnd, glLoadIdentity, \
-    glMatrixMode, glPopMatrix, glPushMatrix, glRotatef, glShadeModel, \
-    glTranslatef, glVertex3fv, glViewport
-from OpenGL.GLU import GLU_LINE, gluCylinder, gluNewQuadric, gluPerspective, \
-    gluQuadricDrawStyle
-from OpenGL.GLUT import GLUT_DEPTH, GLUT_DOUBLE, GLUT_RGB, glutInit, \
-    glutInitDisplayMode, glutSolidCone, glutSolidCube, glutStrokeString, \
-    glutWireSphere
+from OpenGL.GL import (
+    GL_COLOR_BUFFER_BIT,
+    GL_DEPTH_BUFFER_BIT,
+    GL_DEPTH_TEST,
+    GL_LINES,
+    GL_MODELVIEW,
+    GL_PROJECTION,
+    GL_SMOOTH,
+    glBegin,
+    glClear,
+    glColor3f,
+    glColor3fv,
+    glEnable,
+    glEnd,
+    glLoadIdentity,
+    glMatrixMode,
+    glPopMatrix,
+    glPushMatrix,
+    glRotatef,
+    glShadeModel,
+    glTranslatef,
+    glVertex3fv,
+    glViewport,
+)
+from OpenGL.GLU import (
+    GLU_LINE,
+    gluCylinder,
+    gluNewQuadric,
+    gluPerspective,
+    gluQuadricDrawStyle,
+)
+from OpenGL.GLUT import (
+    GLUT_DEPTH,
+    GLUT_DOUBLE,
+    GLUT_RGB,
+    glutInit,
+    glutInitDisplayMode,
+    glutSolidCone,
+    glutSolidCube,
+    glutStrokeString,
+    glutWireSphere,
+)
+
 # pylint: disable=no-name-in-module
 from OpenGL.GLUT.fonts import GLUT_STROKE_MONO_ROMAN
 
 from nicos.clients.gui.panels import Panel
 from nicos.clients.gui.utils import loadUi
-from nicos.guisupport.qt import QDialogButtonBox, QDoubleSpinBox, \
-    QFileDialog, QGridLayout, QMessageBox, QScrollBar, QStyledItemDelegate, \
-    Qt, QTableWidget, QTableWidgetItem, QWidget, pyqtSignal, pyqtSlot, QT_VER
+from nicos.guisupport.qt import (
+    QDialogButtonBox,
+    QDoubleSpinBox,
+    QFileDialog,
+    QGridLayout,
+    QMessageBox,
+    QScrollBar,
+    QStyledItemDelegate,
+    Qt,
+    QTableWidget,
+    QTableWidgetItem,
+    QWidget,
+    pyqtSignal,
+    pyqtSlot,
+    QT_VER,
+)
 from nicos.utils import findResource
 
-from nicos_mlz.pgaa.gui.panels.collision import cuboid_values, \
-    cylinder_values, sphere_values
+from nicos_mlz.pgaa.gui.panels.collision import (
+    cuboid_values,
+    cylinder_values,
+    sphere_values,
+)
 
 if QT_VER == 6:
     # pylint: disable=import-error
@@ -64,7 +113,6 @@ else:
         QGLWidget = QWidget
 
 
-
 class GLWidget(QGLWidget):
     """Class drawing the max. space and the measurement cells."""
 
@@ -72,20 +120,20 @@ class GLWidget(QGLWidget):
     activeCell = None
     aspect = 1
 
-    sample_diameter = 0.
-    sample_height = 0.
-    sample_width = 0.
-    sample_thickness = 0.
-    cl = 3.
+    sample_diameter = 0.0
+    sample_height = 0.0
+    sample_width = 0.0
+    sample_thickness = 0.0
+    cl = 3.0
 
     # one of 'cuboid', 'cylinder', 'sphere', 'free input', 'load from file'
-    shape = 'cuboid'
+    shape = "cuboid"
 
     def __init__(self, parent=None):
         QGLWidget.__init__(self, parent)
         self.yRotDeg = 0.0
         self.xRotDeg = 0.0
-        self.offsets = [0., -1., 0]
+        self.offsets = [0.0, -1.0, 0]
 
     def initializeGL(self):
         self.qglClearColor(Qt.GlobalColor.white)
@@ -100,60 +148,67 @@ class GLWidget(QGLWidget):
         glLoadIdentity()
 
         self.aspect = width / float(height)
-        gluPerspective(45., self.aspect, 1., 100.)
+        gluPerspective(45.0, self.aspect, 1.0, 100.0)
         glMatrixMode(GL_MODELVIEW)
 
     def paintGL(self):
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
         glLoadIdentity()
-        glTranslatef(0., 0., -4. / min(self.aspect, 0.7))
+        glTranslatef(0.0, 0.0, -4.0 / min(self.aspect, 0.7))
 
-        glRotatef(self.yRotDeg, 0., 1., 0.)
-        glRotatef(self.xRotDeg, 1., 0., 0.)
+        glRotatef(self.yRotDeg, 0.0, 1.0, 0.0)
+        glRotatef(self.xRotDeg, 1.0, 0.0, 0.0)
 
-        if self.shape == 'cuboid':
-            self.paintCuboid(self.sample_width, self.sample_thickness,
-                             self.sample_height, rotate=45.)
-        elif self.shape == 'cylinder':
+        if self.shape == "cuboid":
+            self.paintCuboid(
+                self.sample_width,
+                self.sample_thickness,
+                self.sample_height,
+                rotate=45.0,
+            )
+        elif self.shape == "cylinder":
             self.paintCylinder(self.sample_diameter, self.sample_height)
-        elif self.shape == 'sphere':
+        elif self.shape == "sphere":
             self.paintSphere(self.sample_diameter)
         else:
             self.sample_width = self.sample_thickness = 70
             self.sample_height = 100
-            self.paintCuboid(self.sample_width, self.sample_thickness,
-                             self.sample_height)
+            self.paintCuboid(
+                self.sample_width, self.sample_thickness, self.sample_height
+            )
 
-        self.paintArrow('x', [0, 0, 1])
-        self.paintArrow('y', [1, 0, 0])
-        self.paintArrow('z', [0, 1, 0])
-        self.paintArrow('n', [0, 0, 0])
-        self.paintArrow('gamma', [1, 0, 1])
+        self.paintArrow("x", [0, 0, 1])
+        self.paintArrow("y", [1, 0, 0])
+        self.paintArrow("z", [0, 1, 0])
+        self.paintArrow("n", [0, 0, 0])
+        self.paintArrow("gamma", [1, 0, 1])
 
         self.paintCells()
 
     def paintCells(self):
-        size = 0.0855 * self.cl / 3.
+        size = 0.0855 * self.cl / 3.0
         for i, p in enumerate(self.positions):
-            color = (1., 0., 0.) if i == self.activeCell else (0., 0., 1.)
+            color = (1.0, 0.0, 0.0) if i == self.activeCell else (0.0, 0.0, 1.0)
             glColor3fv(color)
             glPushMatrix()
-            offs = np.array([p[0], p[2], p[1]]) / 35. + self.offsets
+            offs = np.array([p[0], p[2], p[1]]) / 35.0 + self.offsets
             glTranslatef(offs[0], offs[1], offs[2])
             glutSolidCube(size)
             glPopMatrix()
 
-    def paintCuboid(self, width, thickness, height, rotate=0.):
-        verticies = np.array([
-            (1., -1., -1.),
-            (1., 1., -1.),
-            (-1., 1., -1.),
-            (-1., -1., -1.),
-            (1., -1., 1.),
-            (1., 1., 1.),
-            (-1., -1., 1.),
-            (-1., 1., 1.),
-        ])
+    def paintCuboid(self, width, thickness, height, rotate=0.0):
+        verticies = np.array(
+            [
+                (1.0, -1.0, -1.0),
+                (1.0, 1.0, -1.0),
+                (-1.0, 1.0, -1.0),
+                (-1.0, -1.0, -1.0),
+                (1.0, -1.0, 1.0),
+                (1.0, 1.0, 1.0),
+                (-1.0, -1.0, 1.0),
+                (-1.0, 1.0, 1.0),
+            ]
+        )
         edges = [
             (0, 1),
             (0, 3),
@@ -169,12 +224,12 @@ class GLWidget(QGLWidget):
             (5, 7),
         ]
 
-        scale = np.array([width, height, thickness]) / 70.
+        scale = np.array([width, height, thickness]) / 70.0
 
-        glColor3f(0., 0., 0.)
+        glColor3f(0.0, 0.0, 0.0)
         glPushMatrix()
-        glTranslatef(0., scale[1] - 1., 0.)  # move down
-        glRotatef(rotate, 0., 1., 0)
+        glTranslatef(0.0, scale[1] - 1.0, 0.0)  # move down
+        glRotatef(rotate, 0.0, 1.0, 0)
         glBegin(GL_LINES)
         for edge in edges:
             for vertex in edge:
@@ -183,12 +238,12 @@ class GLWidget(QGLWidget):
         glPopMatrix()
 
     def paintCylinder(self, diameter, height):
-        r = diameter / 70.
-        height = 2 * height / 70.
-        glColor3f(0., 0., 0.)
+        r = diameter / 70.0
+        height = 2 * height / 70.0
+        glColor3f(0.0, 0.0, 0.0)
         glPushMatrix()
         glTranslatef(*self.offsets)  # move down
-        glRotatef(-90., 1., 0., 0.)
+        glRotatef(-90.0, 1.0, 0.0, 0.0)
         quadric = gluNewQuadric()
         gluQuadricDrawStyle(quadric, GLU_LINE)
         slices = max(int(round(r * 32)), 15)
@@ -196,18 +251,18 @@ class GLWidget(QGLWidget):
         glPopMatrix()
 
     def paintSphere(self, diameter):
-        r = diameter / 70.
-        glColor3f(0., 0., 0.)
+        r = diameter / 70.0
+        glColor3f(0.0, 0.0, 0.0)
         glPushMatrix()
-        glTranslatef(0., r - 1., 0.)  # move down
-        glRotatef(90., 1., 0., 0.)
+        glTranslatef(0.0, r - 1.0, 0.0)  # move down
+        glRotatef(90.0, 1.0, 0.0, 0.0)
         slices = max(int(round(r * 32)), 9)
         glutWireSphere(r, slices, slices)
         glPopMatrix()
 
     def paintText(self, text):
         glPushMatrix()
-        glColor3fv((0., 0., 0.))
+        glColor3fv((0.0, 0.0, 0.0))
         glutStrokeString(GLUT_STROKE_MONO_ROMAN, text)
         glPopMatrix()
 
@@ -216,22 +271,22 @@ class GLWidget(QGLWidget):
         length = 0.5
         glPushMatrix()
         glColor3fv(color)
-        if direction == 'n':
-            glTranslatef(0., -1.1, 2.)
-        elif direction == 'gamma':
-            glTranslatef(1.2, -1.1, 0.)
+        if direction == "n":
+            glTranslatef(0.0, -1.1, 2.0)
+        elif direction == "gamma":
+            glTranslatef(1.2, -1.1, 0.0)
         else:
-            glTranslatef(-1., -1., 1.)
+            glTranslatef(-1.0, -1.0, 1.0)
         quadric = gluNewQuadric()
-        if direction in ('x', 'gamma'):
-            glRotatef(90., 0., 1., 0.)
-        elif direction == 'y':
-            glRotatef(90, -1., 0., 0.)
-        elif direction in ('z', 'n'):
+        if direction in ("x", "gamma"):
+            glRotatef(90.0, 0.0, 1.0, 0.0)
+        elif direction == "y":
+            glRotatef(90, -1.0, 0.0, 0.0)
+        elif direction in ("z", "n"):
             glRotatef(180, -1, 0, 0)
         gluCylinder(quadric, d, d, length, 48, 48)
         glTranslatef(0, 0, length)
-        glutSolidCone(2. * d, 0.1, 48, 48)
+        glutSolidCone(2.0 * d, 0.1, 48, 48)
         glPopMatrix()
 
     @pyqtSlot(int, int)
@@ -277,13 +332,13 @@ class GLWidget(QGLWidget):
 
     @pyqtSlot(float)
     def dim2Changed(self, value):
-        if self.shape in ('cuboid', 'cylinder'):
+        if self.shape in ("cuboid", "cylinder"):
             self.sample_height = value
             self.update()
 
     @pyqtSlot(float)
     def dim3Changed(self, value):
-        if self.shape == 'cuboid':
+        if self.shape == "cuboid":
             self.sample_thickness = value
             self.update()
 
@@ -333,7 +388,7 @@ class PositionSpinBox(QDoubleSpinBox):
         QDoubleSpinBox.__init__(self, parent)
         self.setAccelerated(True)
         self.setDecimals(2)
-        self.setSuffix(' mm')
+        self.setSuffix(" mm")
         self.setMinimum(minval)
         self.setMaximum(maxval)
         p = parent
@@ -352,8 +407,11 @@ class PositionDelegate(QStyledItemDelegate):
     """Specific table editor delegate."""
 
     def createEditor(self, parent, option, index):
-        w = PositionSpinBox(0 if index.column() == 2 else -35.,
-                            100 if index.column() == 2 else 35, parent)
+        w = PositionSpinBox(
+            0 if index.column() == 2 else -35.0,
+            100 if index.column() == 2 else 35,
+            parent,
+        )
         return w
 
     def setEditorData(self, editor, index):
@@ -382,10 +440,14 @@ class PositionTable(QTableWidget):
         if event.button() == Qt.MouseButton.RightButton:
             item = self.itemAt(event.pos())
             if item:
-                if QMessageBox.question(
-                        self, 'Remove data point', 'Do you really '
-                        'want to remove this data point?'
-                ) == QMessageBox.StandardButton.Yes:
+                if (
+                    QMessageBox.question(
+                        self,
+                        "Remove data point",
+                        "Do you really " "want to remove this data point?",
+                    )
+                    == QMessageBox.StandardButton.Yes
+                ):
                     event.accept()
                     r = item.row()
                     self.removeRow(r)
@@ -407,7 +469,7 @@ class PGAIPanel(Panel):
     Displays the measurement positions in a measurement cell, and in a table.
     """
 
-    panelName = 'PGAI'
+    panelName = "PGAI"
 
     pointAdded = pyqtSignal(float, float, float)
     pointModified = pyqtSignal(int, int, float)
@@ -416,7 +478,7 @@ class PGAIPanel(Panel):
 
     def __init__(self, parent, client, options):
         Panel.__init__(self, parent, client, options)
-        loadUi(self, findResource('nicos_mlz/pgaa/gui/panels/pgai.ui'))
+        loadUi(self, findResource("nicos_mlz/pgaa/gui/panels/pgai.ui"))
         w = self.widget.widget
         self.pointAdded.connect(w.pointAdded)
         self.pointTable.cellActivated.connect(w.positionActivated)
@@ -424,10 +486,10 @@ class PGAIPanel(Panel):
         self.pointTable.cellEntered.connect(w.positionActivated)
         self.pointTable.cellPressed.connect(w.positionActivated)
         self.pointTable.verticalHeader().sectionClicked.connect(
-            lambda row: w.positionActivated(row, 0))
+            lambda row: w.positionActivated(row, 0)
+        )
         self.newPointButton.clicked.connect(self.newPoint)
-        self.buttonBox.button(
-            QDialogButtonBox.StandardButton.SaveAll).setText('Run')
+        self.buttonBox.button(QDialogButtonBox.StandardButton.SaveAll).setText("Run")
         self.pointTable.itemChanged.connect(self.modifyPoint)
         self.pointModified.connect(w.pointModified)
         self.pointTable.setItemDelegate(PositionDelegate())
@@ -435,8 +497,7 @@ class PGAIPanel(Panel):
         self.buttonBox.accepted.connect(self.runScript)
         self.pointTable.valueChanged.connect(self.cellValueModified)
         self.sampleShape.currentIndexChanged[str].connect(w.sampleShapeChanged)
-        self.sampleShape.currentIndexChanged[str].connect(
-            self.sampleShapeChanged)
+        self.sampleShape.currentIndexChanged[str].connect(self.sampleShapeChanged)
         self.dimValue1.valueChanged.connect(w.dim1Changed)
         self.dimValue2.valueChanged.connect(w.dim2Changed)
         self.dimValue3.valueChanged.connect(w.dim3Changed)
@@ -448,8 +509,7 @@ class PGAIPanel(Panel):
         self.volumeSize.valueChanged.connect(self.sampleSizeChanged)
         self.volumeSize.valueChanged.connect(w.cubeSizeChanged)
         self.volumeDistance.valueChanged.connect(self.sampleSizeChanged)
-        self.pointTable.horizontalHeader().sectionClicked.connect(
-            self.sortOrderChanged)
+        self.pointTable.horizontalHeader().sectionClicked.connect(self.sortOrderChanged)
 
         w.dim1Changed(self.dimValue1.value())
         w.dim2Changed(self.dimValue2.value())
@@ -490,7 +550,7 @@ class PGAIPanel(Panel):
 
     def _init_cylinder(self):
         self.pointTable.clearTable()
-        radius = self.dimValue1.value() / 2.
+        radius = self.dimValue1.value() / 2.0
         height = self.dimValue2.value()
         cl = self.volumeSize.value()
         space = self.volumeDistance.value()
@@ -504,7 +564,7 @@ class PGAIPanel(Panel):
     def _init_sphere(self):
         self.pointTable.clearTable()
 
-        radius = self.dimValue1.value() / 2.
+        radius = self.dimValue1.value() / 2.0
         cl = self.volumeSize.value()
         space = self.volumeDistance.value()
         w = self.widget.widget
@@ -520,12 +580,12 @@ class PGAIPanel(Panel):
         fn = self.fileName.text()
         if fn:
             try:
-                with open(fn, 'r', encoding='utf-8') as f:
+                with open(fn, "r", encoding="utf-8") as f:
                     for line in f.readlines():
-                        x, y, z = line.split(',')
+                        x, y, z = line.split(",")
                         self.addPoint(float(x), float(y), float(z))
             except OSError:
-                self.fileName.setText('')
+                self.fileName.setText("")
 
     def addPoint(self, x, y, z):
         row = self.pointTable.rowCount()
@@ -548,14 +608,14 @@ class PGAIPanel(Panel):
         self.pointAdded.emit(x, y, z)
 
     def _create_table_widget(self, value):
-        return QTableWidgetItem('%s' % value)
+        return QTableWidgetItem("%s" % value)
 
     def updateStatus(self, status, exception=False):
         self.current_status = status
 
     @pyqtSlot()
     def selectFileName(self):
-        fn, _ = QFileDialog.getOpenFileName(self, 'Load data points')
+        fn, _ = QFileDialog.getOpenFileName(self, "Load data points")
         if fn:
             self.fileName.setText(fn)
             self.fileName.editingFinished.emit()
@@ -567,8 +627,7 @@ class PGAIPanel(Panel):
     @pyqtSlot(QTableWidgetItem)
     def modifyPoint(self, item):
         if item.isSelected():
-            self.pointModified.emit(item.row(), item.column(),
-                                    float(item.text()))
+            self.pointModified.emit(item.row(), item.column(), float(item.text()))
 
     @pyqtSlot(int, int, float)
     def cellValueModified(self, row, col, val):
@@ -576,48 +635,75 @@ class PGAIPanel(Panel):
 
     @pyqtSlot()
     def newPoint(self):
-        self.addPoint(self.newPointX.value(), self.newPointY.value(),
-                      self.newPointZ.value())
+        self.addPoint(
+            self.newPointX.value(), self.newPointY.value(), self.newPointZ.value()
+        )
 
     @pyqtSlot(str)
     def sampleShapeChanged(self, shape):
-        for w in (self.dimLabel1, self.dimValue1,
-                  self.dimLabel2, self.dimValue2,
-                  self.dimLabel3, self.dimValue3,
-                  self.fileName, self.fileNameSelect,
-                  self.lblSampleDimension, self.lblMeasurementVolume,
-                  self.volumeDistance, self.lblVolumeDistance):
+        for w in (
+            self.dimLabel1,
+            self.dimValue1,
+            self.dimLabel2,
+            self.dimValue2,
+            self.dimLabel3,
+            self.dimValue3,
+            self.fileName,
+            self.fileNameSelect,
+            self.lblSampleDimension,
+            self.lblMeasurementVolume,
+            self.volumeDistance,
+            self.lblVolumeDistance,
+        ):
             w.hide()
-        if shape == 'cuboid':
+        if shape == "cuboid":
             self._init_cuboid()
-            self.dimLabel1.setText('Width (X)')
-            self.dimLabel2.setText('Height (Y)')
-            self.dimLabel3.setText('Thickness (Z)')
-            for w in (self.dimLabel1, self.dimValue1,
-                      self.dimLabel2, self.dimValue2,
-                      self.dimLabel3, self.dimValue3,
-                      self.lblSampleDimension, self.lblMeasurementVolume,
-                      self.volumeDistance, self.lblVolumeDistance):
+            self.dimLabel1.setText("Width (X)")
+            self.dimLabel2.setText("Height (Y)")
+            self.dimLabel3.setText("Thickness (Z)")
+            for w in (
+                self.dimLabel1,
+                self.dimValue1,
+                self.dimLabel2,
+                self.dimValue2,
+                self.dimLabel3,
+                self.dimValue3,
+                self.lblSampleDimension,
+                self.lblMeasurementVolume,
+                self.volumeDistance,
+                self.lblVolumeDistance,
+            ):
                 w.show()
-        elif shape == 'cylinder':
+        elif shape == "cylinder":
             self._init_cylinder()
-            self.dimLabel1.setText('Diameter')
-            self.dimLabel2.setText('Height')
-            for w in (self.dimLabel1, self.dimValue1,
-                      self.dimLabel2, self.dimValue2,
-                      self.lblSampleDimension, self.lblMeasurementVolume,
-                      self.volumeDistance, self.lblVolumeDistance):
+            self.dimLabel1.setText("Diameter")
+            self.dimLabel2.setText("Height")
+            for w in (
+                self.dimLabel1,
+                self.dimValue1,
+                self.dimLabel2,
+                self.dimValue2,
+                self.lblSampleDimension,
+                self.lblMeasurementVolume,
+                self.volumeDistance,
+                self.lblVolumeDistance,
+            ):
                 w.show()
-        elif shape == 'sphere':
+        elif shape == "sphere":
             self._init_sphere()
-            self.dimLabel1.setText('Diameter')
-            for w in (self.dimLabel1, self.dimValue1,
-                      self.lblSampleDimension, self.lblMeasurementVolume,
-                      self.volumeDistance, self.lblVolumeDistance):
+            self.dimLabel1.setText("Diameter")
+            for w in (
+                self.dimLabel1,
+                self.dimValue1,
+                self.lblSampleDimension,
+                self.lblMeasurementVolume,
+                self.volumeDistance,
+                self.lblVolumeDistance,
+            ):
                 w.show()
-        elif shape == 'free input':
+        elif shape == "free input":
             self._init_free()
-        elif shape == 'load from file':
+        elif shape == "load from file":
             self._init_file()
             for w in (self.fileName, self.fileNameSelect):
                 w.show()
@@ -640,12 +726,18 @@ for xt, yt, zt in %(positions)s:
     shutter.maw('closed')
     print('spectra recorded and written to %%s' %% file_string)
 """
-        positions = [[float(self.pointTable.item(r, 0).text()),
-                      float(self.pointTable.item(r, 1).text()),
-                      float(self.pointTable.item(r, 2).text())]
-                     for r in range(self.pointTable.rowCount())]
-        script = template % {'positions': positions,
-                             'shutter': self.shutter.value(),
-                             'time': self.livetime.value()}
+        positions = [
+            [
+                float(self.pointTable.item(r, 0).text()),
+                float(self.pointTable.item(r, 1).text()),
+                float(self.pointTable.item(r, 2).text()),
+            ]
+            for r in range(self.pointTable.rowCount())
+        ]
+        script = template % {
+            "positions": positions,
+            "shutter": self.shutter.value(),
+            "time": self.livetime.value(),
+        }
         self.client.run(script)
         self.pointTable.clearTable()

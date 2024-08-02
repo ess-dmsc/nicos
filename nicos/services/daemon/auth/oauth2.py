@@ -25,23 +25,24 @@ from oauthlib.oauth2 import LegacyApplicationClient
 from requests_oauthlib import OAuth2Session
 
 from nicos.core import USER, Param, User
-from nicos.services.daemon.auth import AuthenticationError, \
-    Authenticator as BaseAuthenticator
+from nicos.services.daemon.auth import (
+    AuthenticationError,
+    Authenticator as BaseAuthenticator,
+)
 from nicos.utils.credentials.keystore import nicoskeystore
 
 
 class Authenticator(BaseAuthenticator):
-    """Authenticates against oAuth2 server via Password Grant type.
-    """
+    """Authenticates against oAuth2 server via Password Grant type."""
 
     parameters = {
-        'tokenurl': Param('OAuth server token url to authenticate',
-                          type=str),
-        'clientid': Param('OAuth client id',
-                          type=str),
-        'keystoretoken': Param('Id used in the keystore for the OAuth client '
-                               'secret',
-                               type=str, default='oauth2server'),
+        "tokenurl": Param("OAuth server token url to authenticate", type=str),
+        "clientid": Param("OAuth client id", type=str),
+        "keystoretoken": Param(
+            "Id used in the keystore for the OAuth client " "secret",
+            type=str,
+            default="oauth2server",
+        ),
     }
 
     def authenticate(self, username, password):
@@ -49,17 +50,20 @@ class Authenticator(BaseAuthenticator):
         error = None
         try:
             oauth = OAuth2Session(
-                client=LegacyApplicationClient(client_id=self.clientid))
+                client=LegacyApplicationClient(client_id=self.clientid)
+            )
             token = oauth.fetch_token(
-                token_url=self.tokenurl, username=username, password=password,
-                client_id=self.clientid, client_secret=secret)
+                token_url=self.tokenurl,
+                username=username,
+                password=password,
+                client_id=self.clientid,
+                client_secret=secret,
+            )
         except Exception as err:
             # this avoids leaking credential details via tracebacks
             error = str(err)
         if error:
-            raise AuthenticationError('exception during authenticate(): %s'
-                                      % error)
+            raise AuthenticationError("exception during authenticate(): %s" % error)
         if not oauth.authorized:
-            raise AuthenticationError('wrong password')
-        return User(username, USER,
-                    {'token': token, 'clientid': self.clientid})
+            raise AuthenticationError("wrong password")
+        return User(username, USER, {"token": token, "clientid": self.clientid})

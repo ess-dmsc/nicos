@@ -35,6 +35,6 @@ class TemperatureController(BaseController):
 
     def doTime(self, old_value, target):
         if old_value is None or target is None or old_value == target:
-            return 0.
+            return 0.0
         ramp = 3.5  # see docstring
         return abs(target - old_value) * (60 / ramp) + self.window

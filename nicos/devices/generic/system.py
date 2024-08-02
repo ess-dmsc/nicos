@@ -30,13 +30,14 @@ from nicos import session
 from nicos.core import Override, Param, Readable, none_or, oneof, status
 from nicos.core.errors import ConfigurationError, NicosError
 
-units = {'B': 1,
-         'KiB': 1024.,
-         'MiB': 1024. ** 2,
-         'GiB': 1024. ** 3,
-         'TiB': 1024. ** 4,
-         'PiB': 1024. ** 5,
-         }
+units = {
+    "B": 1,
+    "KiB": 1024.0,
+    "MiB": 1024.0**2,
+    "GiB": 1024.0**3,
+    "TiB": 1024.0**4,
+    "PiB": 1024.0**5,
+}
 
 
 class FreeSpace(Readable):
@@ -50,18 +51,21 @@ class FreeSpace(Readable):
     """
 
     parameters = {
-        'path':     Param('The path to the filesystem mount point (or "None") '
-                          'to check the experiment data directory).',
-                          type=none_or(str), default=None),
-        'minfree':  Param('Minimum free space for "ok" status',
-                          unit='GiB', default=5, settable=True),
+        "path": Param(
+            'The path to the filesystem mount point (or "None") '
+            "to check the experiment data directory).",
+            type=none_or(str),
+            default=None,
+        ),
+        "minfree": Param(
+            'Minimum free space for "ok" status', unit="GiB", default=5, settable=True
+        ),
     }
 
     parameter_overrides = {
-        'unit':         Override(default='GiB', mandatory=False,
-                                 type=oneof(*units)),
-        'pollinterval': Override(default=300),  # every 5 minutes is sufficient
-        'maxage':       Override(default=330),
+        "unit": Override(default="GiB", mandatory=False, type=oneof(*units)),
+        "pollinterval": Override(default=300),  # every 5 minutes is sufficient
+        "maxage": Override(default=330),
     }
 
     def doRead(self, maxage=0):
@@ -70,40 +74,44 @@ class FreeSpace(Readable):
         else:
             path = self.path
         try:
-            if os.name == 'nt':
+            if os.name == "nt":
                 free = ctypes.c_ulonglong(0)
                 ret = ctypes.windll.kernel32.GetDiskFreeSpaceExW(
-                    ctypes.c_wchar_p(path), None, None, ctypes.pointer(free))
+                    ctypes.c_wchar_p(path), None, None, ctypes.pointer(free)
+                )
                 if ret == 0:
-                    raise OSError('GetDiskFreeSpaceExW call failed')
+                    raise OSError("GetDiskFreeSpaceExW call failed")
                 return free.value / self._factor
             else:
                 st = os.statvfs(path)
                 return (st.f_frsize * st.f_bavail) / self._factor
         except OSError as err:
-            raise NicosError(
-                self, 'could not determine free space: %s' % err) from err
+            raise NicosError(self, "could not determine free space: %s" % err) from err
 
     def doStatus(self, maxage=0):
         free = self.read()
-        munit = self.parameters['minfree'].unit
-        mfactor = units.get(munit, (1024 ** 3))
+        munit = self.parameters["minfree"].unit
+        mfactor = units.get(munit, (1024**3))
         if free * self._factor < self.minfree * mfactor:
-            return status.ERROR, 'free space %(free).2f %(unit)s below ' \
-                '%(minfree).2f %(munit)s' \
-                % {'free': free,
-                   'minfree': self.minfree,
-                   'unit': self.unit,
-                   'munit': munit}
-        return status.OK, '%.2f %s free' % (free, self.unit)
+            return (
+                status.ERROR,
+                "free space %(free).2f %(unit)s below "
+                "%(minfree).2f %(munit)s"
+                % {
+                    "free": free,
+                    "minfree": self.minfree,
+                    "unit": self.unit,
+                    "munit": munit,
+                },
+            )
+        return status.OK, "%.2f %s free" % (free, self.unit)
 
     def doUpdateMinfree(self, value):
         if self._cache:
-            self._cache.invalidate(self, 'status')
+            self._cache.invalidate(self, "status")
 
     def doUpdateUnit(self, unit):
         factor = units.get(unit, None)
         if factor is None:
-            raise ConfigurationError('Unsupported unit, allowed: %s' %
-                                     ','.join(units))
+            raise ConfigurationError("Unsupported unit, allowed: %s" % ",".join(units))
         self._factor = factor

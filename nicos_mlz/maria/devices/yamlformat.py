@@ -35,7 +35,6 @@ from nicos_mlz.devices.yamlbase import YAMLBaseFileSinkHandler
 
 
 class YAMLFileSinkHandler(YAMLBaseFileSinkHandler):
-
     filetype = "MLZ.MARIA.2.0-beta1"
 
     def _processArrayInfo(self, arrayinfo):
@@ -57,13 +56,12 @@ class YAMLFileSinkHandler(YAMLBaseFileSinkHandler):
         # all available nicos devices
         devices = dict(session.devices)
         # log all devices in the dataset
-        for (info, val) in zip(self.dataset.devvalueinfo,
-                               self.dataset.devvaluelist):
+        for info, val in zip(self.dataset.devvalueinfo, self.dataset.devvaluelist):
             dev = session.getDevice(info.name)
             try:
                 state, status = dev.status()
             except NicosError:
-                dev.log.warning('could not get status for data file')
+                dev.log.warning("could not get status for data file")
                 devices.pop(info.name, None)
                 continue
             entry = self._dict()
@@ -83,7 +81,7 @@ class YAMLFileSinkHandler(YAMLBaseFileSinkHandler):
                 try:
                     state, status = dev.status()
                 except NicosError:
-                    dev.log.warning('could not get status for data file')
+                    dev.log.warning("could not get status for data file")
                     continue
                 entry["name"] = name
                 entry["unit"] = self._devpar(name, "unit")
@@ -97,11 +95,12 @@ class YAMLFileSink(ImageSink):
     """Saves MARIA image data and header in yaml format"""
 
     parameter_overrides = {
-        "filenametemplate": Override(mandatory=False, settable=False,
-                                     userparam=False,
-                                     default=["%(proposal)s_"
-                                              "%(pointcounter)010d.yaml"],
-                                     ),
+        "filenametemplate": Override(
+            mandatory=False,
+            settable=False,
+            userparam=False,
+            default=["%(proposal)s_" "%(pointcounter)010d.yaml"],
+        ),
     }
 
     handlerclass = YAMLFileSinkHandler

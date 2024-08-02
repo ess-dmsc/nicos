@@ -7,8 +7,9 @@ _PS_URL = tango_host + "/maria/toellner/%s"
 excludes = ["pow1cc"]
 
 devices = dict(
-    pow1volt = device("nicos.devices.entangle.PowerSupply",
-        description = "Power supply 1 voltage control",
-        tangodevice = _PS_URL % "pow1volt",
+    pow1volt=device(
+        "nicos.devices.entangle.PowerSupply",
+        description="Power supply 1 voltage control",
+        tangodevice=_PS_URL % "pow1volt",
     ),
 )

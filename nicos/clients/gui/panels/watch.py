@@ -25,8 +25,7 @@
 
 from nicos.clients.gui.panels import Panel
 from nicos.clients.gui.utils import loadUi
-from nicos.guisupport.qt import QInputDialog, QMessageBox, QTreeWidgetItem, \
-    pyqtSlot
+from nicos.guisupport.qt import QInputDialog, QMessageBox, QTreeWidgetItem, pyqtSlot
 from nicos.guisupport.utils import setBackgroundColor
 
 
@@ -36,11 +35,11 @@ class WatchPanel(Panel):
     It works similar to a debugger and evaluates the expressions regularly.
     """
 
-    panelName = 'Watch'
+    panelName = "Watch"
 
     def __init__(self, parent, client, options):
         Panel.__init__(self, parent, client, options)
-        loadUi(self, 'panels/watch.ui')
+        loadUi(self, "panels/watch.ui")
 
         self.watch_items = {}
         client.watch.connect(self.on_client_watch)
@@ -51,42 +50,42 @@ class WatchPanel(Panel):
         setBackgroundColor(self.watchView, back)
 
     def updateStatus(self, status, exception=False):
-        isconnected = status != 'disconnected'
+        isconnected = status != "disconnected"
         self.addWatch.setEnabled(isconnected)
         self.deleteWatch.setEnabled(isconnected)
         self.oneShotEval.setEnabled(isconnected)
 
     def on_client_initstatus(self, state):
-        self.on_client_watch(state['watch'])
+        self.on_client_watch(state["watch"])
 
     def on_client_watch(self, data):
         values = data
         names = set()
         for name, val in values.items():
-            name = name[:name.find(':')]
+            name = name[: name.find(":")]
             if name in self.watch_items:
                 self.watch_items[name].setText(1, str(val))
             else:
-                newitem = QTreeWidgetItem(self.watchView,
-                                          [str(name), str(val)])
+                newitem = QTreeWidgetItem(self.watchView, [str(name), str(val)])
                 self.watchView.addTopLevelItem(newitem)
                 self.watch_items[name] = newitem
             names.add(name)
         removed = set(self.watch_items) - names
         for itemname in removed:
             self.watchView.takeTopLevelItem(
-                self.watchView.indexOfTopLevelItem(
-                    self.watch_items[itemname]))
+                self.watchView.indexOfTopLevelItem(self.watch_items[itemname])
+            )
             del self.watch_items[itemname]
 
     @pyqtSlot()
     def on_addWatch_clicked(self):
-        expr, ok = QInputDialog.getText(self, 'Add watch expression',
-                                        'New expression to watch:')
+        expr, ok = QInputDialog.getText(
+            self, "Add watch expression", "New expression to watch:"
+        )
         if not ok:
             return
-        newexpr = [expr + ':default']
-        self.client.tell('watch', newexpr)
+        newexpr = [expr + ":default"]
+        self.client.tell("watch", newexpr)
 
     @pyqtSlot()
     def on_deleteWatch_clicked(self):
@@ -94,14 +93,15 @@ class WatchPanel(Panel):
         if not item:
             return
         expr = item.text(0)
-        delexpr = [expr + ':default']
-        self.client.tell('unwatch', delexpr)
+        delexpr = [expr + ":default"]
+        self.client.tell("unwatch", delexpr)
 
     @pyqtSlot()
     def on_oneShotEval_clicked(self):
-        expr, ok = QInputDialog.getText(self, 'Evaluate an expression',
-                                        'Expression to evaluate:')
+        expr, ok = QInputDialog.getText(
+            self, "Evaluate an expression", "Expression to evaluate:"
+        )
         if not ok:
             return
         ret = self.client.eval(expr, stringify=True)
-        QMessageBox.information(self, 'Result', ret)
+        QMessageBox.information(self, "Result", ret)

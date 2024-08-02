@@ -26,53 +26,49 @@ import pytest
 
 from test.nicos_ess.test_devices.utils import create_patch
 
-session_setup = 'ess_epics_base'
+session_setup = "ess_epics_base"
 
 
 class TestReadableDevice(unittest.TestCase):
-
     @pytest.fixture(autouse=True)
     def initialize_devices(self, session):
         self.session = session
-        self.mock = create_patch(self,'epics.pv.PV')
-        self.device = session.getDevice('DeviceReadable')
+        self.mock = create_patch(self, "epics.pv.PV")
+        self.device = session.getDevice("DeviceReadable")
 
     def test_has_read_pv(self):
-        assert self.device._get_pv_parameters() == {'readpv'}
+        assert self.device._get_pv_parameters() == {"readpv"}
 
     def test_has_readpv_name(self):
-        assert self.device._get_pv_name('readpv') == 'TEST:read'
+        assert self.device._get_pv_name("readpv") == "TEST:read"
 
 
 class TestMoveableDevice(unittest.TestCase):
-
     @pytest.fixture(autouse=True)
     def initialize_devices(self, session):
         self.session = session
-        self.mock = create_patch(self,'epics.pv.PV')
-        self.device = session.getDevice('DeviceMoveable')
+        self.mock = create_patch(self, "epics.pv.PV")
+        self.device = session.getDevice("DeviceMoveable")
 
     def test_has_read_pv(self):
-        assert self.device._get_pv_parameters() == {'readpv', 'writepv'}
+        assert self.device._get_pv_parameters() == {"readpv", "writepv"}
 
     def test_has_readpv_name(self):
-        assert self.device._get_pv_name('readpv') == 'TEST:read'
-        assert self.device._get_pv_name('writepv') == 'TEST:write'
+        assert self.device._get_pv_name("readpv") == "TEST:read"
+        assert self.device._get_pv_name("writepv") == "TEST:write"
 
 
 class TestMoveableDeviceWithTarget(unittest.TestCase):
-
     @pytest.fixture(autouse=True)
     def initialize_devices(self, session):
         self.session = session
-        self.mock = create_patch(self, 'epics.pv.PV')
-        self.device = session.getDevice('DeviceMoveableWithTarget')
+        self.mock = create_patch(self, "epics.pv.PV")
+        self.device = session.getDevice("DeviceMoveableWithTarget")
 
     def test_has_read_pv(self):
-        assert self.device._get_pv_parameters() == {'readpv', 'writepv',
-                                                    'targetpv'}
+        assert self.device._get_pv_parameters() == {"readpv", "writepv", "targetpv"}
 
     def test_has_readpv_name(self):
-        assert self.device._get_pv_name('readpv') == 'TEST:read'
-        assert self.device._get_pv_name('writepv') == 'TEST:write'
-        assert self.device._get_pv_name('targetpv') == 'TEST:target'
+        assert self.device._get_pv_name("readpv") == "TEST:read"
+        assert self.device._get_pv_name("writepv") == "TEST:write"
+        assert self.device._get_pv_name("targetpv") == "TEST:target"

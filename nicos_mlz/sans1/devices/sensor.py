@@ -31,9 +31,9 @@ from nicos.devices.entangle import Sensor
 
 class FunnySensor(Sensor):
     """Sensor which sometimes returns senseless values"""
+
     parameters = {
-        'limits': Param('range of sensible values',
-                        type=limits, settable=True),
+        "limits": Param("range of sensible values", type=limits, settable=True),
     }
 
     def doRead(self, maxage=0):
@@ -44,8 +44,14 @@ class FunnySensor(Sensor):
             if self.limits[0] <= value <= self.limits[1]:
                 return value
             # at least warn (every retry!)
-            self.log.warning('Sensor value %s outside sensible range [%s..%s]',
-                             value, self.limits[0], self.limits[1])
+            self.log.warning(
+                "Sensor value %s outside sensible range [%s..%s]",
+                value,
+                self.limits[0],
+                self.limits[1],
+            )
         # 10 times no good value -> error
-        raise PositionError('Sensor value %s outside sensible range [%s..%s]' %
-                            (value, self.limits[0], self.limits[1]))
+        raise PositionError(
+            "Sensor value %s outside sensible range [%s..%s]"
+            % (value, self.limits[0], self.limits[1])
+        )

@@ -23,21 +23,25 @@
 
 """Some convenience classes, methods for NeXus data writing."""
 
-from nicos.nexus.elements import ConstDataset, DetectorDataset, \
-    DeviceDataset, NXAttribute
+from nicos.nexus.elements import (
+    ConstDataset,
+    DetectorDataset,
+    DeviceDataset,
+    NXAttribute,
+)
 
 
-seconds = NXAttribute('s', 'string')
-counts = NXAttribute('counts', 'string')
+seconds = NXAttribute("s", "string")
+counts = NXAttribute("counts", "string")
 
 
 def ReactorSource(name, powerdev):
     """Return a typical reactor neutron source structure."""
     return {
-        'name': ConstDataset(name, 'string'),
-        'type': ConstDataset('Reactor Neutron Source', 'string'),
-        'probe': ConstDataset('neutron', 'string'),
-        'power': DeviceDataset(powerdev),
+        "name": ConstDataset(name, "string"),
+        "type": ConstDataset("Reactor Neutron Source", "string"),
+        "probe": ConstDataset("neutron", "string"),
+        "power": DeviceDataset(powerdev),
         # 'flux': ,
     }
 
@@ -45,19 +49,17 @@ def ReactorSource(name, powerdev):
 def CounterMonitor(monitor):
     """Return a fission chamber monitor structure."""
     return {
-        'mode': ConstDataset('monitor', 'string'),
-        'type': ConstDataset('Fission_Chamber', 'string'),
-        'preset': DeviceDataset(monitor, 'preselection', dtype='float',
-                                units=counts),
-        'integral': DetectorDataset(monitor, 'float', units=counts),
+        "mode": ConstDataset("monitor", "string"),
+        "type": ConstDataset("Fission_Chamber", "string"),
+        "preset": DeviceDataset(monitor, "preselection", dtype="float", units=counts),
+        "integral": DetectorDataset(monitor, "float", units=counts),
     }
 
 
 def TimerMonitor(timer):
     """Return a timer monitor structure."""
     return {
-        'mode': ConstDataset('timer', 'string'),
-        'preset': DeviceDataset(timer, 'preselection', dtype='float',
-                                units=seconds),
-        'integral': DetectorDataset(timer, 'float', units=seconds),
+        "mode": ConstDataset("timer", "string"),
+        "preset": DeviceDataset(timer, "preselection", dtype="float", units=seconds),
+        "integral": DetectorDataset(timer, "float", units=seconds),
     }

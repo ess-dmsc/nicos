@@ -27,8 +27,8 @@ from nicos.guisupport.qt import QDialog, uic
 
 
 class ConnectDialog(QDialog):
-
     def __init__(self, parent=None):
         QDialog.__init__(self, parent)
-        uic.loadUi(path.join(path.dirname(path.abspath(__file__)), 'ui',
-                             'connect.ui'), self)
+        uic.loadUi(
+            path.join(path.dirname(path.abspath(__file__)), "ui", "connect.ui"), self
+        )

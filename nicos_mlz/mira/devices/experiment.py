@@ -35,5 +35,5 @@ class Experiment(MLZExperiment):
     """
 
     parameter_overrides = {
-        'templates': Override(default='template'),
+        "templates": Override(default="template"),
     }

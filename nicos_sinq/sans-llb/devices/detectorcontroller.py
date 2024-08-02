@@ -33,24 +33,26 @@ class DetectorController(IsController, Device):
     """
 
     parameters = {
-        'xthreshold': Param('Threshold for x when driving z',
-                            type=float),
-        'zthreshold': Param('Threshold for z when driving x',
-                            type=float),
+        "xthreshold": Param("Threshold for x when driving z", type=float),
+        "zthreshold": Param("Threshold for z when driving x", type=float),
     }
 
     attached_devices = {
-        'z': Attach('Motor moving z', Moveable),
-        'x': Attach('Motor for moving x', Moveable),
+        "z": Attach("Motor moving z", Moveable),
+        "x": Attach("Motor for moving x", Moveable),
     }
 
     def isAdevTargetAllowed(self, adev, adevtarget):
         if adev == self._attached_z:
-            if self._attached_x.read(0) < self.xthreshold and \
-                    adevtarget > self.zthreshold:
-                return False, 'Move would crash into the rail'
+            if (
+                self._attached_x.read(0) < self.xthreshold
+                and adevtarget > self.zthreshold
+            ):
+                return False, "Move would crash into the rail"
         if adev == self._attached_x:
-            if self._attached_z.read(0) > self.zthreshold and \
-                    adevtarget < self.xthreshold:
-                return False, 'Move would crash into the rail'
-        return True, ''
+            if (
+                self._attached_z.read(0) > self.zthreshold
+                and adevtarget < self.xthreshold
+            ):
+                return False, "Move would crash into the rail"
+        return True, ""

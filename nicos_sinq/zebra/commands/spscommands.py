@@ -32,8 +32,16 @@ def checkzebra():
     Check the system status of ZEBRA and report on errors
     """
     ok = True
-    devices = ['opt_bench_p', 'beam_exit_p', 'exc_count',
-               'shutter_error', 'w1_p', 'w2_p', 'w1_c', 'w2_c']
+    devices = [
+        "opt_bench_p",
+        "beam_exit_p",
+        "exc_count",
+        "shutter_error",
+        "w1_p",
+        "w2_p",
+        "w1_c",
+        "w2_c",
+    ]
     for d in devices:
         dev = session.getDevice(d)
         val = dev.read(0)
@@ -41,10 +49,12 @@ def checkzebra():
             session.log.error(dev.description)
             ok = False
     if ok:
-        session.log.info('ZEBRA is healthy and happily grazing neutrons')
+        session.log.info("ZEBRA is healthy and happily grazing neutrons")
     else:
-        session.log.error('ZEBRA has problems, get a licenced '
-                          'ZEBRA veterinarian to fix the problem')
+        session.log.error(
+            "ZEBRA has problems, get a licenced "
+            "ZEBRA veterinarian to fix the problem"
+        )
 
 
 @usercommand
@@ -59,17 +69,17 @@ def zebraconf():
     # Configuring tables of setups to add or remove for various
     # conditions. Note: the keys have to match device names in the
     # SPS setup
-    to_add['w1'] = ['wagen1']
-    to_remove['w1'] = ['wagen2']
+    to_add["w1"] = ["wagen1"]
+    to_remove["w1"] = ["wagen2"]
 
-    to_add['w2'] = ['wagen2', 'detector_single']
-    to_remove['w2'] = ['wagen1', 'detector_2d']
+    to_add["w2"] = ["wagen2", "detector_single"]
+    to_remove["w2"] = ["wagen1", "detector_2d"]
 
-    to_add['twod'] = ['detector_2d']
-    to_remove['twod'] = ['detector_single']
+    to_add["twod"] = ["detector_2d"]
+    to_remove["twod"] = ["detector_single"]
 
-    to_add['euler_present'] = ['zebraeuler']
-    to_remove['euler_present'] = ['zebratas', 'zebranb']
+    to_add["euler_present"] = ["zebraeuler"]
+    to_remove["euler_present"] = ["zebratas", "zebranb"]
 
     ana = False
     setups = list(session.loaded_setups)
@@ -77,19 +87,19 @@ def zebraconf():
     for d in to_add:
         dev = session.getDevice(d)
         if dev.read(0):
-            session.log.info('Configuring for %s',  dev.description)
+            session.log.info("Configuring for %s", dev.description)
             for s in to_remove[d]:
                 if s in setups:
                     setups.remove(s)
             for s in to_add[d]:
                 if s not in setups:
                     setups.append(s)
-            if d == 'w2':
+            if d == "w2":
                 ana = True
     NewSetup(*setups)
     if ana:
-        wldev = session.getDevice('wavelength')
+        wldev = session.getDevice("wavelength")
         wl = wldev.read(0)
-        session.log.info('Driving analyzer to %f', wl)
-        anadev = session.getDevice('ana')
+        session.log.info("Driving analyzer to %f", wl)
+        anadev = session.getDevice("ana")
         anadev.maw(wl)

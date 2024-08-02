@@ -34,27 +34,25 @@ class Splitter(QSplitter, SetupDepPanelMixin):
 
     def __init__(self, item, window, menuwindow, topwindow, parent=None):
         from nicos.clients.gui.panels.utils import createWindowItem
+
         QSplitter.__init__(self, parent)
         window.splitters.append(self)
-        self.log = NicosLogger('Splitter')
+        self.log = NicosLogger("Splitter")
         self.log.parent = topwindow.log
         SetupDepPanelMixin.__init__(self, window.client, item.options)
         for subitem in item.children:
-            sub = createWindowItem(subitem, window, menuwindow, topwindow,
-                                   self.log)
+            sub = createWindowItem(subitem, window, menuwindow, topwindow, self.log)
             if sub:
                 self.addWidget(sub)
 
 
 class VerticalSplitter(Splitter):
-
     def __init__(self, item, window, menuwindow, topwindow, parent=None):
         Splitter.__init__(self, item, window, menuwindow, topwindow, parent)
         self.setOrientation(Qt.Orientation.Vertical)
 
 
 class HorizontalSplitter(Splitter):
-
     def __init__(self, item, window, menuwindow, topwindow, parent=None):
         Splitter.__init__(self, item, window, menuwindow, topwindow, parent)
         self.setOrientation(Qt.Orientation.Horizontal)

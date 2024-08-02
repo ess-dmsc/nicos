@@ -30,8 +30,15 @@ import math
 from scipy.optimize import fsolve
 
 from nicos import session
-from nicos.core import Attach, HasLimits, LimitError, Moveable, NicosError, \
-    status, usermethod
+from nicos.core import (
+    Attach,
+    HasLimits,
+    LimitError,
+    Moveable,
+    NicosError,
+    status,
+    usermethod,
+)
 from nicos.core.params import Override, Param, tupleof
 from nicos.core.utils import multiStop
 from nicos.devices.generic.sequence import BaseSequencer, SeqDev
@@ -51,25 +58,32 @@ class CalibratedMagnet(HasLimits, Moveable):
     """
 
     attached_devices = {
-        'currentsource': Attach('bipolar Powersupply', Moveable),
+        "currentsource": Attach("bipolar Powersupply", Moveable),
     }
 
     parameters = {
-        'ramp': Param('Target rate of field change per minute',
-                      unit='main/min', mandatory=False, settable=True,
-                      volatile=True),
-        'calibration': Param('Coefficients for calibration '
-                             'function: [c0, c1, c2, c3, c4] calculates '
-                             'B(I) = c0*I + c1*erf(c2*I) + c3*atan(c4*I)'
-                             ' in T',
-                             type=tupleof(float, float, float, float, float),
-                             default=(1.0, 0.0, 0.0, 0.0, 0.0), settable=True,
-                             chatty=True),
+        "ramp": Param(
+            "Target rate of field change per minute",
+            unit="main/min",
+            mandatory=False,
+            settable=True,
+            volatile=True,
+        ),
+        "calibration": Param(
+            "Coefficients for calibration "
+            "function: [c0, c1, c2, c3, c4] calculates "
+            "B(I) = c0*I + c1*erf(c2*I) + c3*atan(c4*I)"
+            " in T",
+            type=tupleof(float, float, float, float, float),
+            default=(1.0, 0.0, 0.0, 0.0, 0.0),
+            settable=True,
+            chatty=True,
+        ),
     }
 
     parameter_overrides = {
-        'unit': Override(mandatory=False, default='T'),
-        'abslimits': Override(mandatory=False, volatile=True),
+        "unit": Override(mandatory=False, default="T"),
+        "abslimits": Override(mandatory=False, volatile=True),
     }
 
     def _current2field(self, current, *coefficients):
@@ -81,10 +95,15 @@ class CalibratedMagnet(HasLimits, Moveable):
         """
         v = coefficients or self.calibration
         if len(v) != 5:
-            self.log.warning('Wrong number of coefficients in calibration '
-                             'data!  Need exactly 5 coefficients!')
-        return v[0]*current + v[1]*math.erf(v[2]*current) + \
-            v[3]*math.atan(v[4]*current)
+            self.log.warning(
+                "Wrong number of coefficients in calibration "
+                "data!  Need exactly 5 coefficients!"
+            )
+        return (
+            v[0] * current
+            + v[1] * math.erf(v[2] * current)
+            + v[3] * math.atan(v[4] * current)
+        )
 
     def _field2current(self, field):
         """Return required current in A for requested field in T.
@@ -97,12 +116,14 @@ class CalibratedMagnet(HasLimits, Moveable):
         maxfield = self._current2field(maxcurr)
         minfield = self._current2field(mincurr)
         if not minfield <= field <= maxfield:
-            raise LimitError(self,
-                             'requested field %g %s out of range %g..%g %s' %
-                             (field, self.unit, minfield, maxfield, self.unit))
+            raise LimitError(
+                self,
+                "requested field %g %s out of range %g..%g %s"
+                % (field, self.unit, minfield, maxfield, self.unit),
+            )
 
         res = fsolve(lambda cur: self._current2field(cur) - field, 0)[0]
-        self.log.debug('current for %g %s is %g', field, self.unit, res)
+        self.log.debug("current for %g %s is %g", field, self.unit, res)
         return res
 
     def doRead(self, maxage=0):
@@ -119,20 +140,21 @@ class CalibratedMagnet(HasLimits, Moveable):
 
     def doReadRamp(self):
         # This is an approximation!
-        return self.calibration[0]*abs(self._attached_currentsource.ramp)
+        return self.calibration[0] * abs(self._attached_currentsource.ramp)
 
     def doWriteRamp(self, newramp):
         # This is an approximation!
         self._attached_currentsource.ramp = newramp / self.calibration[0]
 
     def doReadAbslimits(self):
-        minfield, maxfield = [self._current2field(I)
-                              for I in self._attached_currentsource.abslimits]
+        minfield, maxfield = [
+            self._current2field(I) for I in self._attached_currentsource.abslimits
+        ]
         # include 0 in allowed range
         minfield = min(minfield, 0)
         maxfield = max(maxfield, 0)
         # get configured limits if any, or take max from source
-        limits = self._config.get('abslimits', (minfield, maxfield))
+        limits = self._config.get("abslimits", (minfield, maxfield))
         # in any way, clamp limits to what the source can handle
         limits = [clamp(i, minfield, maxfield) for i in limits]
         return min(limits), max(limits)
@@ -146,8 +168,7 @@ class CalibratedMagnet(HasLimits, Moveable):
 
     def doTime(self, old_value, target):
         # get difference in current
-        delta = abs(self._field2current(target) -
-                    self._field2current(old_value))
+        delta = abs(self._field2current(target) - self._field2current(old_value))
         # ramp is per minute, doTime should return seconds
         return 60 * delta / self._attached_currentsource.ramp
 
@@ -163,7 +184,7 @@ class CalibratedMagnet(HasLimits, Moveable):
         >>> B_mira.calibrate(Bf, 351)
         """
         scans = session.experiment.data.getLastScans()
-        self.log.info('determining calibration from scans, please wait...')
+        self.log.info("determining calibration from scans, please wait...")
         Is = []
         Bs = []
         currentcolumn = self._attached_currentsource.name
@@ -171,38 +192,41 @@ class CalibratedMagnet(HasLimits, Moveable):
         for scan in scans:
             if scan.counter not in scannumbers:
                 continue
-            if fieldcolumn not in scan.ynames or \
-                    currentcolumn not in scan.xnames:
-                self.log.info('%s is not a calibration scan', scan.counter)
+            if fieldcolumn not in scan.ynames or currentcolumn not in scan.xnames:
+                self.log.info("%s is not a calibration scan", scan.counter)
                 continue
             xindex = scan.xnames.index(currentcolumn)
             yindex = scan.ynames.index(fieldcolumn)
             yunit = scan.yunits[yindex]
-            if yunit == 'T':
+            if yunit == "T":
                 factor = 1.0
-            elif yunit == 'mT':
+            elif yunit == "mT":
                 factor = 1e-3
-            elif yunit == 'uT':
+            elif yunit == "uT":
                 factor = 1e-6
-            elif yunit == 'G':
+            elif yunit == "G":
                 factor = 1e-4
-            elif yunit == 'kG':
+            elif yunit == "kG":
                 factor = 1e-1
             else:
-                raise NicosError(self, 'unknown unit for B field '
-                                 'readout: %r' % yunit)
+                raise NicosError(
+                    self, "unknown unit for B field " "readout: %r" % yunit
+                )
             for xr, yr in zip(scan.xresults, scan.yresults):
                 Is.append(xr[xindex])
                 Bs.append(yr[yindex] * factor)
         if not Is:
-            self.log.error('no calibration data found')
+            self.log.error("no calibration data found")
             return
-        fit = Fit('calibration', self._current2field,
-                  ['c%d' % i for i in range(len(self.calibration))],
-                  [1] * len(self.calibration))
+        fit = Fit(
+            "calibration",
+            self._current2field,
+            ["c%d" % i for i in range(len(self.calibration))],
+            [1] * len(self.calibration),
+        )
         res = fit.run(Is, Bs, [1] * len(Bs))
         if res._failed:
-            self.log.warning('fit failed')
+            self.log.warning("fit failed")
             return
         self.calibration = res._pars[1]
 
@@ -236,8 +260,9 @@ class BipolarSwitchingMagnet(BaseSequencer, CalibratedMagnet):
 
         Note: need to be defined in derived classes.
         """
-        raise NotImplementedError('please use a proper derived class and '
-                                  'implement this there!')
+        raise NotImplementedError(
+            "please use a proper derived class and " "implement this there!"
+        )
 
     def _generateSequence(self, target):
         sequence = []
@@ -248,7 +273,7 @@ class BipolarSwitchingMagnet(BaseSequencer, CalibratedMagnet):
             # if the switch values are not correct, drive to zero and switch
             if curr_pol != need_pol:
                 if currentsource.read() != 0:
-                    sequence.append(SeqDev(currentsource, 0.))
+                    sequence.append(SeqDev(currentsource, 0.0))
                 # insert switching Sequence
                 self._seq_set_field_polarity(need_pol, sequence)
         sequence.append(SeqDev(currentsource, abs(target)))
@@ -257,8 +282,7 @@ class BipolarSwitchingMagnet(BaseSequencer, CalibratedMagnet):
         return sequence
 
     def doRead(self, maxage=0):
-        absfield = self._current2field(
-            self._attached_currentsource.read(maxage))
+        absfield = self._current2field(self._attached_currentsource.read(maxage))
         return self._get_field_polarity() * absfield
 
     def doStart(self, target):
@@ -277,7 +301,7 @@ class BipolarSwitchingMagnet(BaseSequencer, CalibratedMagnet):
         maxcurr = self._attached_currentsource.abslimits[1]
         maxfield = self._current2field(maxcurr)
         # get configured limits if any, or take max of source
-        limits = self._config.get('abslimits', (-maxfield, maxfield))
+        limits = self._config.get("abslimits", (-maxfield, maxfield))
         # in any way, clamp limits to what the source can handle
         limits = [clamp(i, -maxfield, maxfield) for i in limits]
         return min(limits), max(limits)

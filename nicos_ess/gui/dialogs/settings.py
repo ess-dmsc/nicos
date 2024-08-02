@@ -25,23 +25,21 @@
 
 from nicos.clients.base import ConnectionData
 from nicos.clients.gui.dialogs.instr_select import InstrSelectDialog
-from nicos.clients.gui.utils import DlgUtils, SettingGroup, dialogFromUi, \
-    loadUi
-from nicos.guisupport.qt import QDialog, QListWidgetItem, QTreeWidgetItem, \
-    pyqtSlot
+from nicos.clients.gui.utils import DlgUtils, SettingGroup, dialogFromUi, loadUi
+from nicos.guisupport.qt import QDialog, QListWidgetItem, QTreeWidgetItem, pyqtSlot
 from nicos.utils import findResource
 
 
 class SettingsDialog(DlgUtils, QDialog):
     def __init__(self, main):
         QDialog.__init__(self, main)
-        DlgUtils.__init__(self, 'Settings')
-        loadUi(self, findResource('nicos_ess/gui/dialogs/settings.ui'))
+        DlgUtils.__init__(self, "Settings")
+        loadUi(self, findResource("nicos_ess/gui/dialogs/settings.ui"))
         self.main = main
         self.sgroup = main.sgroup
 
-        genitem = QTreeWidgetItem(self.settingsTree, ['General'], -2)
-        QTreeWidgetItem(self.settingsTree, ['Connection presets'], -1)
+        genitem = QTreeWidgetItem(self.settingsTree, ["General"], -2)
+        QTreeWidgetItem(self.settingsTree, ["Connection presets"], -1)
         self.settingsTree.setCurrentItem(genitem)
         self.stacker.setCurrentIndex(0)
 
@@ -57,8 +55,9 @@ class SettingsDialog(DlgUtils, QDialog):
         # connection data page
         self.connpresets = main.connpresets
         for setting, cdata in main.connpresets.items():
-            QListWidgetItem(setting + ' (%s:%s)' % (cdata.host, cdata.port),
-                            self.settinglist).setData(32, setting)
+            QListWidgetItem(
+                setting + " (%s:%s)" % (cdata.host, cdata.port), self.settinglist
+            ).setData(32, setting)
 
     def saveSettings(self):
         self.main.instrument = self.instrument.text()
@@ -70,15 +69,16 @@ class SettingsDialog(DlgUtils, QDialog):
         self.main.allowoutputlinewrap = self.allowOutputLineWrap.isChecked()
         with self.sgroup as settings:
             settings.setValue(
-                'connpresets_new', {k: v.serialize() for (k, v)
-                                    in self.connpresets.items()})
-            settings.setValue('instrument', self.main.instrument)
-            settings.setValue('confirmexit', self.main.confirmexit)
-            settings.setValue('warnwhenadmin', self.main.warnwhenadmin)
-            settings.setValue('showtrayicon', self.main.showtrayicon)
-            settings.setValue('autoreconnect', self.main.autoreconnect)
-            settings.setValue('autosavelayout', self.main.autosavelayout)
-            settings.setValue('allowoutputlinewrap', self.main.allowoutputlinewrap)
+                "connpresets_new",
+                {k: v.serialize() for (k, v) in self.connpresets.items()},
+            )
+            settings.setValue("instrument", self.main.instrument)
+            settings.setValue("confirmexit", self.main.confirmexit)
+            settings.setValue("warnwhenadmin", self.main.warnwhenadmin)
+            settings.setValue("showtrayicon", self.main.showtrayicon)
+            settings.setValue("autoreconnect", self.main.autoreconnect)
+            settings.setValue("autosavelayout", self.main.autosavelayout)
+            settings.setValue("allowoutputlinewrap", self.main.allowoutputlinewrap)
         if self.main.showtrayicon:
             self.main.trayIcon.show()
         else:
@@ -89,24 +89,30 @@ class SettingsDialog(DlgUtils, QDialog):
         self.main.saveWindowLayout()
         for win in self.main.windows.values():
             win.saveWindowLayout()
-        self.showInfo('The window layout was saved.')
+        self.showInfo("The window layout was saved.")
 
     @pyqtSlot()
     def on_settingAdd_clicked(self):
-        dlg = dialogFromUi(self, 'dialogs/settings_conn.ui')
+        dlg = dialogFromUi(self, "dialogs/settings_conn.ui")
         if dlg.exec() != QDialog.DialogCode.Accepted:
             return
         if not dlg.name.text():
             return
         name = dlg.name.text()
         while name in self.connpresets:
-            name += '_'
+            name += "_"
         cdata = ConnectionData(
-            dlg.host.text(), dlg.port.value(), dlg.login.text(), None,
-            dlg.viewonly.isChecked(), dlg.expertmode.isChecked())
+            dlg.host.text(),
+            dlg.port.value(),
+            dlg.login.text(),
+            None,
+            dlg.viewonly.isChecked(),
+            dlg.expertmode.isChecked(),
+        )
         self.connpresets[name] = cdata
-        QListWidgetItem(name + ' (%s:%s)' % (cdata.host, cdata.port),
-                        self.settinglist).setData(32, name)
+        QListWidgetItem(
+            name + " (%s:%s)" % (cdata.host, cdata.port), self.settinglist
+        ).setData(32, name)
 
     @pyqtSlot()
     def on_settingDel_clicked(self):
@@ -122,7 +128,7 @@ class SettingsDialog(DlgUtils, QDialog):
         if item is None:
             return
         cdata = self.connpresets[item.data(32)]
-        dlg = dialogFromUi(self, 'dialogs/settings_conn.ui')
+        dlg = dialogFromUi(self, "dialogs/settings_conn.ui")
         dlg.name.setText(item.data(32))
         dlg.name.setEnabled(False)
         dlg.host.setText(cdata.host)
@@ -137,7 +143,7 @@ class SettingsDialog(DlgUtils, QDialog):
         cdata.user = dlg.login.text()
         cdata.viewonly = dlg.viewonly.isChecked()
         cdata.expertmode = dlg.expertmode.isChecked()
-        item.setText('%s (%s:%s)' % (dlg.name.text(), cdata.host, cdata.port))
+        item.setText("%s (%s:%s)" % (dlg.name.text(), cdata.host, cdata.port))
 
     def on_settingsTree_itemClicked(self, item, column):
         self.on_settingsTree_itemActivated(item, column)

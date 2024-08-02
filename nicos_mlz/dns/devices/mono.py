@@ -30,15 +30,15 @@ class Wavelength(Readable):
     """Return the DNS wavelength as given by the ton position."""
 
     attached_devices = {
-        'angle': Attach('Ton angle', Readable),
+        "angle": Attach("Ton angle", Readable),
     }
 
     parameters = {
-        'dvalue': Param('Monochromator d-value', default=3.355),
+        "dvalue": Param("Monochromator d-value", default=3.355),
     }
 
     parameter_overrides = {
-        'unit': Override(mandatory=False, default='A'),
+        "unit": Override(mandatory=False, default="A"),
     }
 
     def doRead(self, maxage=0):
@@ -46,4 +46,4 @@ class Wavelength(Readable):
         return np.sin(angle / 2) * 2 * self.dvalue
 
     def doStatus(self, maxage=0):
-        return status.OK, ''
+        return status.OK, ""

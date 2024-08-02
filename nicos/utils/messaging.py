@@ -25,7 +25,7 @@
 
 import zmq
 
-__all__ = ['nicos_zmq_ctx']
+__all__ = ["nicos_zmq_ctx"]
 
 
 nicos_zmq_ctx = zmq.Context()

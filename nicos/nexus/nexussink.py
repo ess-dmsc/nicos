@@ -32,20 +32,18 @@ from nicos.core.data.sink import DataFileBase
 from nicos.core.errors import NicosError
 from nicos.core.params import Param
 from nicos.devices.datasinks import FileSink
-from nicos.nexus.elements import NexusElementBase, NXAttribute, NXScanLink, \
-    NXTime
+from nicos.nexus.elements import NexusElementBase, NXAttribute, NXScanLink, NXTime
 from nicos.utils import importString
 
 
 class NexusFile(DataFileBase):
-
     def __init__(self, shortpath, filepath):
         DataFileBase.__init__(self, shortpath, filepath)
-        with H5File(filepath, 'w') as h5file:
-            h5file.attrs['file_name'] = numpy.string_(filepath)
-            h5file.attrs['HDF5_Version'] = numpy.string_(hdf5_version)
+        with H5File(filepath, "w") as h5file:
+            h5file.attrs["file_name"] = numpy.string_(filepath)
+            h5file.attrs["HDF5_Version"] = numpy.string_(hdf5_version)
             tf = NXTime()
-            h5file.attrs['file_time'] = numpy.string_(tf.formatTime())
+            h5file.attrs["file_time"] = numpy.string_(tf.formatTime())
 
 
 class NexusTemplateProvider:
@@ -88,6 +86,7 @@ class NexusSinkHandler(DataSinkHandler):
     collected. Thus it is necessary to keep the file closed and open and
     close it only when data needs to be updated.
     """
+
     def __init__(self, sink, dataset, detector):
         self.startdataset = None
         self._filename = None
@@ -105,15 +104,18 @@ class NexusSinkHandler(DataSinkHandler):
 
             # Generate the file
             h5file = self.manager.createDataFile(
-                self.dataset, self.sink.filenametemplate, self.sink.subdir,
-                fileclass=NexusFile)
+                self.dataset,
+                self.sink.filenametemplate,
+                self.sink.subdir,
+                fileclass=NexusFile,
+            )
             self.filepath = h5file.filepath
 
     def begin(self):
         if self.dataset.settype == POINT and not self._filename:
             self.template = copy_nexus_template(self.sink.loadTemplate())
             if not isinstance(self.template, dict):
-                raise NicosError('The template should be of type dict')
+                raise NicosError("The template should be of type dict")
 
             self._filename = self.filepath
             # Update meta information of devices, only if not present
@@ -122,34 +124,33 @@ class NexusSinkHandler(DataSinkHandler):
             self.createStructure()
 
     def createStructure(self):
-        with H5File(self._filename, 'r+') as h5file:
-            h5obj = h5file['/']
+        with H5File(self._filename, "r+") as h5file:
+            h5obj = h5file["/"]
             self.create(self.template, h5obj)
 
     def create(self, dictdata, h5obj):
         for key, val in dictdata.items():
             if isinstance(val, str):
-                val = NXAttribute(val, 'string')
+                val = NXAttribute(val, "string")
                 val.create(key, h5obj, self)
             elif isinstance(val, dict):
-                if ':' not in key:
-                    self.log.warning(
-                        'Cannot write group %r, no nxclass defined', key)
+                if ":" not in key:
+                    self.log.warning("Cannot write group %r, no nxclass defined", key)
                     continue
-                [nxname, nxclass] = key.rsplit(':', 1)
+                [nxname, nxclass] = key.rsplit(":", 1)
                 nxgroup = h5obj.create_group(nxname)
-                nxgroup.attrs['NX_class'] = numpy.string_(nxclass)
+                nxgroup.attrs["NX_class"] = numpy.string_(nxclass)
                 self.create(val, nxgroup)
             elif isinstance(val, NexusElementBase):
                 val.create(key, h5obj, self)
             else:
-                self.log.warning('Cannot write %r of type %r', key, type(val))
+                self.log.warning("Cannot write %r of type %r", key, type(val))
 
     def updateValues(self, dictdata, h5obj, values):
         if self.dataset.settype == POINT:
             for key, val in dictdata.items():
                 if isinstance(val, dict):
-                    nxname = key.split(':')[0]
+                    nxname = key.split(":")[0]
                     childh5obj = h5obj[nxname]
                     self.updateValues(val, childh5obj, values)
                 elif isinstance(val, str):
@@ -158,12 +159,12 @@ class NexusSinkHandler(DataSinkHandler):
                 elif isinstance(val, NexusElementBase):
                     val.update(key, h5obj, self, values)
                 else:
-                    self.log.warning('Cannot identify and update %r', key)
+                    self.log.warning("Cannot identify and update %r", key)
 
     def append(self, dictdata, h5obj, subset):
         for key, val in dictdata.items():
             if isinstance(val, dict):
-                nxname = key.split(':', 1)[0]
+                nxname = key.split(":", 1)[0]
                 childh5obj = h5obj[nxname]
                 self.append(val, childh5obj, subset)
             elif isinstance(val, str):
@@ -173,14 +174,14 @@ class NexusSinkHandler(DataSinkHandler):
                 try:
                     val.append(key, h5obj, self, subset)
                 except Exception as err:
-                    self.log.warning('Exception %r on key %r', err, key)
+                    self.log.warning("Exception %r on key %r", err, key)
             else:
-                self.log.warning('Cannot identify and append %r', key)
+                self.log.warning("Cannot identify and append %r", key)
 
     def putValues(self, values):
         try:
-            with H5File(self._filename, 'r+') as h5file:
-                h5obj = h5file['/']
+            with H5File(self._filename, "r+") as h5file:
+                h5obj = h5file["/"]
                 if values:
                     self.updateValues(self.template, h5obj, values)
         except BlockingIOError:
@@ -190,7 +191,7 @@ class NexusSinkHandler(DataSinkHandler):
     def resultValues(self, dictdata, h5obj, results):
         for key, val in dictdata.items():
             if isinstance(val, dict):
-                nxname = key.split(':')[0]
+                nxname = key.split(":")[0]
                 childh5obj = h5obj[nxname]
                 self.resultValues(val, childh5obj, results)
             elif isinstance(val, str):
@@ -199,39 +200,42 @@ class NexusSinkHandler(DataSinkHandler):
             elif isinstance(val, NexusElementBase):
                 val.results(key, h5obj, self, results)
             else:
-                self.log.warning('Cannot add results to %r', key)
+                self.log.warning("Cannot add results to %r", key)
 
     def putResults(self, quality, results):
         # Suppress updating data files when updating live data
         if quality == LIVE:
             return
         try:
-            with H5File(self._filename, 'r+') as h5file:
-                h5obj = h5file['/']
+            with H5File(self._filename, "r+") as h5file:
+                h5obj = h5file["/"]
                 self.resultValues(self.template, h5obj, results)
         except BlockingIOError:
-            session.log.warning('Other process is accessing NeXus file '
-                                'while saving results')
+            session.log.warning(
+                "Other process is accessing NeXus file " "while saving results"
+            )
 
     def addSubset(self, subset):
         if self.startdataset.settype == SCAN:
             self.begin()
             if self._filename is None:
-                self.log.info('skipping: %s', self.dataset.settype)
+                self.log.info("skipping: %s", self.dataset.settype)
                 return
             try:
-                with H5File(self._filename, 'r+') as h5file:
-                    h5obj = h5file['/']
+                with H5File(self._filename, "r+") as h5file:
+                    h5obj = h5file["/"]
                     self.append(self.template, h5obj, subset)
             except BlockingIOError:
-                session.log.warning('Other process is accessing NeXus file '
-                                    'while updating, possibly loosing '
-                                    'scan point')
+                session.log.warning(
+                    "Other process is accessing NeXus file "
+                    "while updating, possibly loosing "
+                    "scan point"
+                )
 
     def find_scan_link(self, h5obj, template):
         for key, val in template.items():
             if isinstance(val, dict):
-                nxname = key.split(':', 1)[0]
+                nxname = key.split(":", 1)[0]
                 childobj = h5obj[nxname]
                 link = self.find_scan_link(childobj, val)
                 if link is not None:
@@ -243,7 +247,7 @@ class NexusSinkHandler(DataSinkHandler):
     def make_scan_links(self, h5obj, template, linkpath):
         for key, val in template.items():
             if isinstance(val, dict):
-                nxname = key.split(':')[0]
+                nxname = key.split(":")[0]
                 childobj = h5obj[nxname]
                 self.make_scan_links(childobj, val, linkpath)
             elif isinstance(val, NexusElementBase):
@@ -251,19 +255,19 @@ class NexusSinkHandler(DataSinkHandler):
 
     def end(self):
         """
-            There is a trick here: The NexusSink sets the dataset only on
-            initialisation. And NICOS tries to make a new SinkHandler for the
-            ScanDataset and then for each PointDaset. The result is that I get
-            the NexusSinkHandler.end() doubly called with  last PointDataset.
-            However, I keep the startdatset.  And the NICOS engine sets the
-            startdaset.finished from None to a timestamp when it is done. I use
-            this to detect the end. If the NICOS engine in some stage changes
-            on this one, this code will break.
+        There is a trick here: The NexusSink sets the dataset only on
+        initialisation. And NICOS tries to make a new SinkHandler for the
+        ScanDataset and then for each PointDaset. The result is that I get
+        the NexusSinkHandler.end() doubly called with  last PointDataset.
+        However, I keep the startdatset.  And the NICOS engine sets the
+        startdaset.finished from None to a timestamp when it is done. I use
+        this to detect the end. If the NICOS engine in some stage changes
+        on this one, this code will break.
         """
         if self.startdataset.finished is not None:
             # if self.startdataset.settype == SCAN:
-            with H5File(self._filename, 'r+') as h5file:
-                h5obj = h5file['/']
+            with H5File(self._filename, "r+") as h5file:
+                h5obj = h5file["/"]
                 linkpath = self.find_scan_link(h5obj, self.template)
                 if linkpath is not None:
                     self.make_scan_links(h5obj, self.template, linkpath)
@@ -272,7 +276,7 @@ class NexusSinkHandler(DataSinkHandler):
             self.startdataset = None
         else:
             self.dataset = self.manager._current
-        self.log.debug('%s: # datasets %d', self, len(self.manager._stack))
+        self.log.debug("%s: # datasets %d", self, len(self.manager._stack))
 
 
 class NexusSink(FileSink):
@@ -283,10 +287,13 @@ class NexusSink(FileSink):
     NeXus elements. The actual writing work is done in the NexusSinkHandler.
     This class just initializes the handler properly.
     """
+
     parameters = {
-        'templateclass': Param('Python class implementing '
-                               'NexusTemplateProvider',
-                               type=str, mandatory=True),
+        "templateclass": Param(
+            "Python class implementing " "NexusTemplateProvider",
+            type=str,
+            mandatory=True,
+        ),
     }
 
     handlerclass = NexusSinkHandler

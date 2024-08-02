@@ -22,6 +22,7 @@
 # *****************************************************************************
 
 """NICOS GUI error and warning window."""
+
 import os
 from logging import WARNING
 
@@ -36,17 +37,19 @@ class ErrorPanel(DefaultErrorPanel):
     In comparison to the ConsolePanel it only displays messages with the
     WARNING and ERROR loglevel.
     """
-    ui = os.path.join(uipath, 'panels', 'ui_files', 'errpanel.ui')
+
+    ui = os.path.join(uipath, "panels", "ui_files", "errpanel.ui")
 
     def __init__(self, parent, client, options):
         DefaultErrorPanel.__init__(self, parent, client, options)
         self.outView.insert_position = QTextCursor.MoveOperation.Start
 
     def on_client_connected(self):
-        messages = self.client.ask('getmessages', '10000', default=[])
+        messages = self.client.ask("getmessages", "10000", default=[])
         self.outView.clear()
-        self.outView.addMessages([msg for msg in reversed(messages) if msg[2]
-                                  >= WARNING])
+        self.outView.addMessages(
+            [msg for msg in reversed(messages) if msg[2] >= WARNING]
+        )
         self.outView.scrollToBottom()
 
     def on_client_message(self, message):

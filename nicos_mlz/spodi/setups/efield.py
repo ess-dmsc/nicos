@@ -1,21 +1,23 @@
-description = 'Electric field sample stick'
+description = "Electric field sample stick"
 
-group = 'optional'
+group = "optional"
 
-tango_base = 'tango://spodisrv.spodi.frm2.tum.de:10000/spodi/hcp/'
+tango_base = "tango://spodisrv.spodi.frm2.tum.de:10000/spodi/hcp/"
 
 devices = dict(
-    E = device('nicos.devices.entangle.PowerSupply',
-        description = 'Sample environment: electrical field',
-        tangodevice = tango_base + 'hv',
-        abslimits = (0, 35000),
-        unit = 'V',
+    E=device(
+        "nicos.devices.entangle.PowerSupply",
+        description="Sample environment: electrical field",
+        tangodevice=tango_base + "hv",
+        abslimits=(0, 35000),
+        unit="V",
     ),
-    E_c = device('nicos.devices.generic.ReadonlyParamDevice',
-        description = 'HV current',
-        device = 'E',
-        parameter = 'current',
-        unit = 'A',
-        fmtstr = '%g',
+    E_c=device(
+        "nicos.devices.generic.ReadonlyParamDevice",
+        description="HV current",
+        device="E",
+        parameter="current",
+        unit="A",
+        fmtstr="%g",
     ),
 )

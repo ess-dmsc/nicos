@@ -38,11 +38,11 @@ def _find_filewriter_dev():
         # Should only be one at most
         if isinstance(dev, FileWriterControlSink):
             return dev
-    raise RuntimeError('Could not find FileWriterControlSink device')
+    raise RuntimeError("Could not find FileWriterControlSink device")
 
 
 @usercommand
-@helparglist('experiment_title')
+@helparglist("experiment_title")
 @contextmanager
 def nexusfile_open(experiment_title=None):
     """Command that creates a nexusfile and starts writing data to it
@@ -71,37 +71,36 @@ def nexusfile_open(experiment_title=None):
     try:
         active_jobs = _find_filewriter_dev().get_active_jobs()
         if not active_jobs:
-            session.log.info(
-                'Setting experiment title to: %s',
-                experiment_title)
+            session.log.info("Setting experiment title to: %s", experiment_title)
             start_filewriting(experiment_title)
         else:
             #  Allow nested calls, but give a warning since it is not
             #  a preferred way of writing scripts
             session.log.warning(
-                'Filewriter already running. '
-                'Will not start a new file with title: %s',
-                experiment_title
-                )
+                "Filewriter already running. "
+                "Will not start a new file with title: %s",
+                experiment_title,
+            )
             nested_call = True
         yield
     except Exception as e:
-        session.log.error('Could not start filewriting: %s', e)
-        session.log.warning('The rest of the batch file code will be ignored.')
+        session.log.error("Could not start filewriting: %s", e)
+        session.log.warning("The rest of the batch file code will be ignored.")
     finally:
         if not nested_call:
             stop_filewriting()
         else:
             session.log.warning(
-                'Since this context did not start the '
-                'filewriter for file with title: %s, '
-                'it will not attempt to stop the '
-                'filewriter either', experiment_title
-                )
+                "Since this context did not start the "
+                "filewriter for file with title: %s, "
+                "it will not attempt to stop the "
+                "filewriter either",
+                experiment_title,
+            )
 
 
 @usercommand
-@helparglist('experiment_title')
+@helparglist("experiment_title")
 def start_filewriting(experiment_title=None):
     """Start a file-writing job."""
     if experiment_title is not None and session.mode != SIMULATION:
@@ -110,7 +109,7 @@ def start_filewriting(experiment_title=None):
 
 
 @usercommand
-@helparglist('job_number')
+@helparglist("job_number")
 def stop_filewriting(job_number=None):
     """Stop a file-writing job.
 
@@ -127,7 +126,7 @@ def list_filewriting_jobs():
 
 @usercommand
 @requires(level=ADMIN)
-@helparglist('job_number')
+@helparglist("job_number")
 def replay_job(job_number):
     """Replay a recent file-writing job.
 

@@ -24,8 +24,7 @@
 """Class for controlling the KWS flipper."""
 
 from nicos import session
-from nicos.core import SIMULATION, Attach, HasTimeout, Moveable, Override, \
-    oneof, status
+from nicos.core import SIMULATION, Attach, HasTimeout, Moveable, Override, oneof, status
 
 
 class Flipper(HasTimeout, Moveable):
@@ -37,17 +36,17 @@ class Flipper(HasTimeout, Moveable):
 
     hardware_access = False
 
-    valuetype = oneof('off', 'on')
+    valuetype = oneof("off", "on")
 
     attached_devices = {
-        'output':  Attach('output bits', Moveable),
-        'supply':  Attach('power supply', Moveable),
+        "output": Attach("output bits", Moveable),
+        "supply": Attach("power supply", Moveable),
     }
 
     parameter_overrides = {
-        'fmtstr':   Override(default='%s'),
-        'timeout':  Override(default=2),
-        'unit':     Override(mandatory=False, default=''),
+        "fmtstr": Override(default="%s"),
+        "timeout": Override(default=2),
+        "unit": Override(mandatory=False, default=""),
     }
 
     def _getWaiters(self):
@@ -58,33 +57,33 @@ class Flipper(HasTimeout, Moveable):
         if self._mode == SIMULATION:
             # in simulation mode, we don't know that the current will
             # change when changing the voltage of the power supply
-            return status.OK, 'idle'
+            return status.OK, "idle"
         flip_bit = self._attached_output.read(maxage)
         current = self._attached_supply.current
         if flip_bit and current > 0.1:
-            return status.OK, 'idle'
+            return status.OK, "idle"
         if not flip_bit and current < 0.1:
-            return status.OK, 'idle'
-        return status.WARN, 'inconsistent'
+            return status.OK, "idle"
+        return status.WARN, "inconsistent"
 
     def doRead(self, maxage=0):
         if self._mode == SIMULATION:
             # in simulation mode, we don't know that the current will
             # change when changing the voltage of the power supply
-            return 'on' if self._attached_output.read(maxage) else 'off'
+            return "on" if self._attached_output.read(maxage) else "off"
         current = self._attached_supply.current
         if current > 0.1:
-            return 'on'
-        return 'off'
+            return "on"
+        return "off"
 
     def doStart(self, target):
-        if target == 'on':
+        if target == "on":
             self._attached_output.start(1)
         else:
             self._attached_output.start(0)
 
     def timeoutAction(self):
-        self.log.warning('did not reach target, trying again...')
+        self.log.warning("did not reach target, trying again...")
         # The output sometimes seems not to come on.  Therefore,
         # switch it off manually and try again...
         self._attached_output.start(0)

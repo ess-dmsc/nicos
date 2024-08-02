@@ -31,5 +31,5 @@ class AnaTable(MonoTable):
     """Class to display the analyzer including shielding and crystal."""
 
     def __init__(self, x, y, size=30, parent=None, scene=None):
-        self._color = QColor('lightblue')
+        self._color = QColor("lightblue")
         MonoTable.__init__(self, x, y, size, parent, scene)

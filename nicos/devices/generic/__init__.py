@@ -28,24 +28,39 @@ from nicos.core.device import DeviceAlias, NoDevice
 from nicos.devices.generic.analog import CalculatedReadable
 from nicos.devices.generic.axis import Axis
 from nicos.devices.generic.cache import CacheReader, CacheWriter
-from nicos.devices.generic.detector import ActiveChannel, \
-    CounterChannelMixin, Detector, DetectorForecast, GatedDetector, \
-    ImageChannelMixin, PassiveChannel, PostprocessPassiveChannel, \
-    RateChannel, RateRectROIChannel, RectROIChannel, ScanningDetector, \
-    TimerChannelMixin
-from nicos.devices.generic.magnet import BipolarSwitchingMagnet, \
-    CalibratedMagnet
+from nicos.devices.generic.detector import (
+    ActiveChannel,
+    CounterChannelMixin,
+    Detector,
+    DetectorForecast,
+    GatedDetector,
+    ImageChannelMixin,
+    PassiveChannel,
+    PostprocessPassiveChannel,
+    RateChannel,
+    RateRectROIChannel,
+    RectROIChannel,
+    ScanningDetector,
+    TimerChannelMixin,
+)
+from nicos.devices.generic.magnet import BipolarSwitchingMagnet, CalibratedMagnet
 from nicos.devices.generic.manual import ManualMove, ManualSwitch
 from nicos.devices.generic.oscillator import Oscillator
 from nicos.devices.generic.paramdev import ParamDevice, ReadonlyParamDevice
 from nicos.devices.generic.pulse import Pulse
 from nicos.devices.generic.sequence import BaseSequencer, LockedDevice
-from nicos.devices.generic.slit import HorizontalGap, Slit, TwoAxisSlit, \
-    VerticalGap
-from nicos.devices.generic.switcher import MultiSwitcher, ReadonlySwitcher, \
-    Switcher
+from nicos.devices.generic.slit import HorizontalGap, Slit, TwoAxisSlit, VerticalGap
+from nicos.devices.generic.switcher import MultiSwitcher, ReadonlySwitcher, Switcher
 from nicos.devices.generic.system import FreeSpace
-from nicos.devices.generic.virtual import VirtualCoder, VirtualCounter, \
-    VirtualGauss, VirtualImage, VirtualMotor, VirtualRealTemperature, \
-    VirtualReferenceMotor, VirtualScanningDetector, VirtualTemperature, \
-    VirtualTimer
+from nicos.devices.generic.virtual import (
+    VirtualCoder,
+    VirtualCounter,
+    VirtualGauss,
+    VirtualImage,
+    VirtualMotor,
+    VirtualRealTemperature,
+    VirtualReferenceMotor,
+    VirtualScanningDetector,
+    VirtualTemperature,
+    VirtualTimer,
+)

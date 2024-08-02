@@ -42,14 +42,17 @@ MAX_ANGLE_SIZE = 100
 class SetCenterDialog(QDialog):
     def __init__(self, parent):
         QDialog.__init__(self, parent)
-        loadUi(self, path.abspath(path.join(path.sep,
-                                            *parent.ui.split('/')[:-1],
-                                            'set_center.ui')))
+        loadUi(
+            self,
+            path.abspath(
+                path.join(path.sep, *parent.ui.split("/")[:-1], "set_center.ui")
+            ),
+        )
         self.XcEdit.setValidator(QIntValidator(0, 999999))
         self.YcEdit.setValidator(QIntValidator(0, 999999))
 
     def getCenter(self):
-        x, y = self.XcEdit.text() or '0', self.YcEdit.text() or '0'
+        x, y = self.XcEdit.text() or "0", self.YcEdit.text() or "0"
         return int(x), int(y)
 
 
@@ -58,8 +61,9 @@ def to_polar_image(cartesian_image, center=None, final_angle=TWO_PI):
 
     def is_valid(_center):
         # discard meaningless value
-        if not all(2 < c <= high-2 for c, high in zip(_center,
-                                                       cartesian_image.shape)):
+        if not all(
+            2 < c <= high - 2 for c, high in zip(_center, cartesian_image.shape)
+        ):
             return False
         return True
 
@@ -67,19 +71,29 @@ def to_polar_image(cartesian_image, center=None, final_angle=TWO_PI):
         center = ndimage.measurements.center_of_mass(image)
     angle_size = min(MAX_ANGLE_SIZE, min(cartesian_image.shape))
     final_radius = int(
-        min([center[0], cartesian_image.shape[0] - center[0], center[1],
-             cartesian_image.shape[1] - center[1]]))
+        min(
+            [
+                center[0],
+                cartesian_image.shape[0] - center[0],
+                center[1],
+                cartesian_image.shape[1] - center[1],
+            ]
+        )
+    )
     if final_radius == 0:
-        raise ValueError('final_radius=0, check center position')
-    polar_image, _ = convertToPolarImage(cartesian_image, center=center,
-                                         finalRadius=final_radius,
-                                         finalAngle=final_angle,
-                                         radiusSize=final_radius,
-                                         angleSize=angle_size)
+        raise ValueError("final_radius=0, check center position")
+    polar_image, _ = convertToPolarImage(
+        cartesian_image,
+        center=center,
+        finalRadius=final_radius,
+        finalAngle=final_angle,
+        radiusSize=final_radius,
+        angleSize=angle_size,
+    )
     polar_labels = {
-        'x': np.linspace(0, final_radius, final_radius),
-        'y': np.linspace(0, final_angle, angle_size)
-        }
+        "x": np.linspace(0, final_radius, final_radius),
+        "y": np.linspace(0, final_angle, angle_size),
+    }
 
     return polar_image, polar_labels
 
@@ -107,7 +121,7 @@ class SansLiveDataPanel(EssLiveDataPanel):
     plot (and back) and log scale in the form `log(1+x)`
     """
 
-    ui = path.join(uipath, 'panels', 'ui_files', 'live.ui')
+    ui = path.join(uipath, "panels", "ui_files", "live.ui")
 
     def __init__(self, parent, client, options):
         EssLiveDataPanel.__init__(self, parent, client, options)
@@ -129,9 +143,10 @@ class SansLiveDataPanel(EssLiveDataPanel):
         arrays = EssLiveDataPanel.processDataArrays(self, params, index, entry)
         if self.actionPolar.isChecked():
             try:
-                output = [to_polar_image(np.array(array),
-                                         center=self.dlg.getCenter()) for array
-                          in arrays]
+                output = [
+                    to_polar_image(np.array(array), center=self.dlg.getCenter())
+                    for array in arrays
+                ]
                 arrays = [val[0] for val in output]
             except ValueError as e:
                 log.error(e)

@@ -32,15 +32,18 @@ class CascadeIsegHV(Actuator):
     """Iseg that warns and waits before switching on the HV."""
 
     parameters = {
-        'waittime': Param('Seconds to wait before ramping up',
-                          type=int, settable=True, default=60),
+        "waittime": Param(
+            "Seconds to wait before ramping up", type=int, settable=True, default=60
+        ),
     }
 
     def doStart(self, target):
         if abs(self.read(0)) < 10 and self.waittime:
-            self.log.warning('Please make sure the Cascade detector '
-                             'is supplied with counting gas!  Waiting '
-                             'for %d seconds before ramping up the HV.',
-                             self.waittime)
+            self.log.warning(
+                "Please make sure the Cascade detector "
+                "is supplied with counting gas!  Waiting "
+                "for %d seconds before ramping up the HV.",
+                self.waittime,
+            )
             session.delay(self.waittime)
         return Actuator.doStart(self, target)

@@ -26,8 +26,16 @@
 import math
 
 from nicos import session
-from nicos.core import Attach, HasLimits, HasPrecision, Moveable, Override, \
-    Param, floatrange, status
+from nicos.core import (
+    Attach,
+    HasLimits,
+    HasPrecision,
+    Moveable,
+    Override,
+    Param,
+    floatrange,
+    status,
+)
 from nicos.core.errors import PositionError
 from nicos.core.utils import filterExceptions, multiReset, multiStatus
 
@@ -47,26 +55,34 @@ class CoupledAxis(HasPrecision, HasLimits, Moveable):
     hardware_access = False
 
     attached_devices = {
-        'tt': Attach('tth', Moveable),
-        'th': Attach('th', Moveable),
+        "tt": Attach("tth", Moveable),
+        "th": Attach("th", Moveable),
     }
 
     parameter_overrides = {
         # 'timeout': Override(settable=False, default=600),
-        'precision': Override(settable=False, default=.1),
-        'abslimits': Override(mandatory=False, default=(-60, 0)),
+        "precision": Override(settable=False, default=0.1),
+        "abslimits": Override(mandatory=False, default=(-60, 0)),
     }
 
     parameters = {
-        'difflimit': Param('increment of the allowed angle movement of one '
-                           'axis without collision of the other axis',
-                           type=floatrange(0, 60), settable=False, default=3.),
-        'dragerror': Param('Maximum deviation between both axes when read out '
-                           'during a positioning step', unit='main', default=1,
-                           settable=True),
-        '_status': Param('read only status',
-                         type=bool, settable=False, internal=True,
-                         default=False),
+        "difflimit": Param(
+            "increment of the allowed angle movement of one "
+            "axis without collision of the other axis",
+            type=floatrange(0, 60),
+            settable=False,
+            default=3.0,
+        ),
+        "dragerror": Param(
+            "Maximum deviation between both axes when read out "
+            "during a positioning step",
+            unit="main",
+            default=1,
+            settable=True,
+        ),
+        "_status": Param(
+            "read only status", type=bool, settable=False, internal=True, default=False
+        ),
     }
 
     @property
@@ -87,7 +103,7 @@ class CoupledAxis(HasPrecision, HasLimits, Moveable):
             self.__setDiffLimit()
         except PositionError:
             pass
-        self._setROParam('_status', False)
+        self._setROParam("_status", False)
 
     def doIsAllowed(self, target):
         """Check whether position given by target is allowed."""
@@ -95,9 +111,9 @@ class CoupledAxis(HasPrecision, HasLimits, Moveable):
         th_allowed = self.th.isAllowed(-target)
         if tt_allowed[0] and th_allowed[0]:
             if self._checkZero(self.tt.read(0), self.th.read(0)):
-                return True, ''
-            return False, '%s and %s are not close enough' % (self.tt, self.th)
-        return False, '; '.join([th_allowed[1], tt_allowed[1]])
+                return True, ""
+            return False, "%s and %s are not close enough" % (self.tt, self.th)
+        return False, "; ".join([th_allowed[1], tt_allowed[1]])
 
     def doStart(self, target):
         """Move coupled axis (tt/th).
@@ -105,37 +121,39 @@ class CoupledAxis(HasPrecision, HasLimits, Moveable):
         The tt axis should without moving the coupled axis th (tt + th == 0)
         """
         if self.doStatus(0)[0] == status.BUSY:
-            self.log.error('device busy')
+            self.log.error("device busy")
 
         position = (target, -target)
         if not self._checkReachedPosition(position):
             try:
-                self._setROParam('_status', True)
+                self._setROParam("_status", True)
 
                 self.__setDiffLimit()
 
                 tt = self.tt.read(0)
                 th = self.th.read(0)
 
-                if abs(tt - position[0]) > self.difflimit or \
-                   abs(th - position[1]) > self.difflimit:
+                if (
+                    abs(tt - position[0]) > self.difflimit
+                    or abs(th - position[1]) > self.difflimit
+                ):
                     delta = abs(tt - target)
                     mod = math.fmod(delta, self.difflimit)
                     steps = int(delta / self.difflimit)
-                    self.log.debug('delta/self.difflimit, mod: %s, %s', steps,
-                                   mod)
+                    self.log.debug("delta/self.difflimit, mod: %s, %s", steps, mod)
 
                     if tt > target:
-                        self.log.debug('case tt > position')
+                        self.log.debug("case tt > position")
                         delta = -self.difflimit
                     elif tt < target:
-                        self.log.debug('case tt < position')
+                        self.log.debug("case tt < position")
                         delta = self.difflimit
 
                     for i in range(1, steps + 1):
                         d = i * delta
-                        self.log.debug('step: %d, move tt: %.2f, th: %.2f:',
-                                       i, tt + d, th - d)
+                        self.log.debug(
+                            "step: %d, move tt: %.2f, th: %.2f:", i, tt + d, th - d
+                        )
                         self.__setDiffLimit()
                         self.th.move(th - d)
                         self.tt.move(tt + d)
@@ -144,22 +162,23 @@ class CoupledAxis(HasPrecision, HasLimits, Moveable):
                     steps = 1
 
                 if not self._checkReachedPosition(position):
-                    self.log.debug('step: %d, move tt: %.2f, th: %.2f:',
-                                   steps, target, -target)
+                    self.log.debug(
+                        "step: %d, move tt: %.2f, th: %.2f:", steps, target, -target
+                    )
                     self.__setDiffLimit()
                     self.th.move(-target)
                     self.tt.move(target)
                     self._hw_wait()
                 if not self._checkReachedPosition(position):
-                    PositionError(self, "couldn't reach requested position "
-                                  '%7.3f' % target)
+                    PositionError(
+                        self, "couldn't reach requested position " "%7.3f" % target
+                    )
             finally:
-                self.log.debug('Clear status flag')
-                self._setROParam('_status', False)
+                self.log.debug("Clear status flag")
+                self._setROParam("_status", False)
                 self.poll()
 
     def _hw_wait(self):
-
         loops = 0
         final_exc = None
         devlist = [self.tt, self.th]
@@ -169,7 +188,7 @@ class CoupledAxis(HasPrecision, HasLimits, Moveable):
                 try:
                     done = dev.doStatus(0)[0]
                 except Exception as exc:
-                    dev.log.exception('while waiting')
+                    dev.log.exception("while waiting")
                     final_exc = filterExceptions(exc, final_exc)
                     # remove this device from the waiters - we might still
                     # have its subdevices in the list so that _hw_wait()
@@ -200,8 +219,9 @@ class CoupledAxis(HasPrecision, HasLimits, Moveable):
             if (tt + th) <= self.difflimit:
                 self.tt.maw(-th)
                 return
-            raise PositionError(self, '%s and %s are not close enough' %
-                                (self.tt, self.th))
+            raise PositionError(
+                self, "%s and %s are not close enough" % (self.tt, self.th)
+            )
 
     def doRead(self, maxage=0):
         """Read back the value of the 2theta axis."""
@@ -211,7 +231,7 @@ class CoupledAxis(HasPrecision, HasLimits, Moveable):
     def doStatus(self, maxage=0):
         """Return status of device in dependence of the individual axes."""
         if self._status:
-            return status.BUSY, 'moving'
+            return status.BUSY, "moving"
         return multiStatus(self._adevs, maxage)
 
     def __setDiffLimit(self):
@@ -219,19 +239,20 @@ class CoupledAxis(HasPrecision, HasLimits, Moveable):
         if self._checkZero(self.tt.read(0), self.th.read(0)):
             for ax in [self.tt, self.th]:
                 p = ax.read(0)
-                self.log.debug('%s, %s', ax, p)
+                self.log.debug("%s, %s", ax, p)
                 limit = self.difflimit
-                absMin = p - (limit + 2. * ax.precision - 0.0001)
-                absMax = p + (limit + 2. * ax.precision - 0.0001)
-                self.log.debug('user limits for %s: %r',
-                               ax.name, (absMin, absMax))
+                absMin = p - (limit + 2.0 * ax.precision - 0.0001)
+                absMax = p + (limit + 2.0 * ax.precision - 0.0001)
+                self.log.debug("user limits for %s: %r", ax.name, (absMin, absMax))
                 # ax.userlimits = (absMin, absMax)
-                self.log.debug('user limits for %s: %r', ax.name,
-                               ax.userlimits)
+                self.log.debug("user limits for %s: %r", ax.name, ax.userlimits)
         else:
-            raise PositionError(self, 'cannot set new limits; coupled axes %s '
-                                'and %s are not close enough difference > %f '
-                                'deg.' % (self.tt, self.th, self.difflimit))
+            raise PositionError(
+                self,
+                "cannot set new limits; coupled axes %s "
+                "and %s are not close enough difference > %f "
+                "deg." % (self.tt, self.th, self.difflimit),
+            )
 
     def _checkReachedPosition(self, pos):
         """Check if requested positions are reached for individual axes."""
@@ -240,8 +261,7 @@ class CoupledAxis(HasPrecision, HasLimits, Moveable):
         # This may appear in the test and fresh setup systems
         if None in (self.tt.target, self.th.target):
             return False
-        return (self.tt.isAtTarget(target=pos[0])
-                and self.th.isAtTarget(target=pos[1]))
+        return self.tt.isAtTarget(target=pos[0]) and self.th.isAtTarget(target=pos[1])
 
     def _checkZero(self, tt, th):
         """Check if the two axes are within the allowed limit."""

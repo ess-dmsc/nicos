@@ -22,8 +22,21 @@
 # *****************************************************************************
 """Utilities for function fitting."""
 
-from numpy import array, cos, diagonal, exp, full_like, isinf, linspace, log, \
-    mean, pi, piecewise, power, sqrt
+from numpy import (
+    array,
+    cos,
+    diagonal,
+    exp,
+    full_like,
+    isinf,
+    linspace,
+    log,
+    mean,
+    pi,
+    piecewise,
+    power,
+    sqrt,
+)
 from scipy.optimize import curve_fit
 from scipy.signal import argrelmax
 
@@ -38,10 +51,11 @@ class FitResult:
 
     def __str__(self):
         if self._failed:
-            return 'Fit failed'
-        return 'Fit success, chi2: %8.3g, params: %s' % (
+            return "Fit failed"
+        return "Fit success, chi2: %8.3g, params: %s" % (
             self.chi2,
-            ', '.join('%s = %8.3g' % v[:2] for v in zip(*self._pars)))
+            ", ".join("%s = %8.3g" % v[:2] for v in zip(*self._pars)),
+        )
 
     def __bool__(self):
         return not self._failed
@@ -83,19 +97,20 @@ class Fit(metaclass=FitterMeta):
     names = []
     center_index = None
 
-    def __init__(self, title, model, parnames=None, parstart=None,
-                 xmin=None, xmax=None):
+    def __init__(
+        self, title, model, parnames=None, parstart=None, xmin=None, xmax=None
+    ):
         self.title = title
         self.model = model
         self.parnames = parnames if parnames is not None else []
         self.parstart = parstart if parstart is not None else []
         self.xmin = xmin
         self.xmax = xmax
-        if (parstart is not None and len(self.parnames) != len(self.parstart)):
+        if parstart is not None and len(self.parnames) != len(self.parstart):
             raise ProgrammingError(
-                'number of param names (%d) must match '
-                'number of starting values (%d)' %
-                (len(self.parnames), len(self.parstart))
+                "number of param names (%d) must match "
+                "number of starting values (%d)"
+                % (len(self.parnames), len(self.parstart))
             )
 
     def par(self, name, start):
@@ -129,27 +144,41 @@ class Fit(metaclass=FitterMeta):
 
     def run(self, x, y, dy):
         if len(x) < 2:
-            return self.result(x, y, dy, None, None,
-                               msg='need at least two data points to fit')
+            return self.result(
+                x, y, dy, None, None, msg="need at least two data points to fit"
+            )
 
         xn, yn, dyn = self._prepare(x, y, dy)
         if len(xn) < len(self.parnames):
-            return self.result(xn, yn, dyn, None, None,
-                               msg='need at least as many valid data points '
-                               'as there are parameters')
+            return self.result(
+                xn,
+                yn,
+                dyn,
+                None,
+                None,
+                msg="need at least as many valid data points "
+                "as there are parameters",
+            )
 
         if not len(self.parstart):  # pylint: disable=len-as-condition
             try:
                 self.parstart = self.guesspar(xn, yn)
             except Exception as e:
-                return self.result(xn, yn, dyn, None, None,
-                                   msg='while guessing parameters: %s' % e)
+                return self.result(
+                    xn, yn, dyn, None, None, msg="while guessing parameters: %s" % e
+                )
 
         try:
-            popt, pcov = curve_fit(self.model, xn, yn, self.parstart, dyn,
-                                   # default of 1000 can be too restrictive,
-                                   # especially with automatic initial guess
-                                   maxfev=5000)
+            popt, pcov = curve_fit(
+                self.model,
+                xn,
+                yn,
+                self.parstart,
+                dyn,
+                # default of 1000 can be too restrictive,
+                # especially with automatic initial guess
+                maxfev=5000,
+            )
             if isinf(pcov).all():
                 parerrors = full_like(popt, 0)
             else:
@@ -166,13 +195,17 @@ class Fit(metaclass=FitterMeta):
 
     def result(self, x, y, dy, parvalues, parerrors, msg=None):
         if msg is not None:
-            dct = {'_failed': True, '_message': msg, '_title': self.title}
+            dct = {"_failed": True, "_message": msg, "_title": self.title}
         else:
-            dct = {'_failed': False, '_message': msg, '_title': self.title,
-                   '_pars': (self.parnames, parvalues, parerrors)}
+            dct = {
+                "_failed": False,
+                "_message": msg,
+                "_title": self.title,
+                "_pars": (self.parnames, parvalues, parerrors),
+            }
             for name, val, err in zip(self.parnames, parvalues, parerrors):
                 dct[name] = val
-                dct['d' + name] = err
+                dct["d" + name] = err
             if self.xmin is None:
                 xmin = x[0]
             else:
@@ -181,14 +214,14 @@ class Fit(metaclass=FitterMeta):
                 xmax = x[-1]
             else:
                 xmax = self.xmax
-            dct['curve_x'] = linspace(xmin, xmax, 1000)
-            dct['curve_y'] = self.model(dct['curve_x'], *parvalues)
+            dct["curve_x"] = linspace(xmin, xmax, 1000)
+            dct["curve_y"] = self.model(dct["curve_x"], *parvalues)
             ndf = len(x) - len(parvalues)
             residuals = self.model(x, *parvalues) - y
-            dct['chi2'] = sum(power(residuals, 2) / power(dy, 2)) / ndf
-            dct['label_x'] = 0
-            dct['label_y'] = 0
-            dct['label_contents'] = []
+            dct["chi2"] = sum(power(residuals, 2) / power(dy, 2)) / ndf
+            dct["label_x"] = 0
+            dct["label_y"] = 0
+            dct["label_contents"] = []
         return FitResult(**dct)
 
 
@@ -196,8 +229,9 @@ class PredefinedFit(Fit):
     """Represents a fit with a predefined model."""
 
     def __init__(self, parstart=None, xmin=None, xmax=None):
-        Fit.__init__(self, self.fit_title, self.fit_model,
-                     self.fit_params, parstart, xmin, xmax)
+        Fit.__init__(
+            self, self.fit_title, self.fit_model, self.fit_params, parstart, xmin, xmax
+        )
 
     def result(self, x, y, dy, parvalues, parerrors, msg=None):
         res = Fit.result(self, x, y, dy, parvalues, parerrors, msg)
@@ -205,7 +239,7 @@ class PredefinedFit(Fit):
             self.process_result(res)
         return res
 
-    fit_title = ''
+    fit_title = ""
     fit_params = []
 
     def process_result(self, res):
@@ -215,10 +249,10 @@ class PredefinedFit(Fit):
 class LinearFit(PredefinedFit):
     """Fits with a straight line."""
 
-    names = ['linear', 'line']
-    fit_title = 'linear fit'
-    fit_params = ['m', 't']
-    fit_p_descr = ['slope', 'offset']
+    names = ["linear", "line"]
+    fit_title = "linear fit"
+    fit_params = ["m", "t"]
+    fit_p_descr = ["slope", "offset"]
 
     def __init__(self, parstart=None, xmin=None, xmax=None, timeseries=False):
         PredefinedFit.__init__(self, parstart, xmin, xmax)
@@ -237,19 +271,21 @@ class LinearFit(PredefinedFit):
         res.label_x = x2
         res.label_y = res.m * x2 + res.t
         if self._timeseries:
-            res.label_contents = [('Slope', '%.3f /s' % res.m, ''),
-                                  ('', '%.3f /min' % (res.m * 60), ''),
-                                  ('', '%.3f /h' % (res.m * 3600), '')]
+            res.label_contents = [
+                ("Slope", "%.3f /s" % res.m, ""),
+                ("", "%.3f /min" % (res.m * 60), ""),
+                ("", "%.3f /h" % (res.m * 3600), ""),
+            ]
         else:
-            res.label_contents = [('Slope', '%.3f' % res.m, '')]
+            res.label_contents = [("Slope", "%.3f" % res.m, "")]
 
 
 class ExponentialFit(PredefinedFit):
     """Fits with a simple exponential."""
 
-    names = ['exp', 'exponential']
-    fit_title = 'exp. fit'
-    fit_params = ['b', 'x0']
+    names = ["exp", "exponential"]
+    fit_title = "exp. fit"
+    fit_params = ["b", "x0"]
     fit_p_descr = fit_params
 
     def __init__(self, parstart=None, xmin=None, xmax=None, timeseries=False):
@@ -282,24 +318,28 @@ class ExponentialFit(PredefinedFit):
         if self._timeseries:
             if res.b < 0:
                 tc = -log(2) / res.b
-                label = 'Half life'
+                label = "Half life"
             else:
                 tc = log(2) / res.b
-                label = 'Doubling time'
-            res.label_contents = [(label, '%.3f s' % tc, ''),
-                                  ('', '%.3f min' % (tc / 60), ''),
-                                  ('', '%.3f h' % (tc / 3600), '')]
+                label = "Doubling time"
+            res.label_contents = [
+                (label, "%.3f s" % tc, ""),
+                ("", "%.3f min" % (tc / 60), ""),
+                ("", "%.3f h" % (tc / 3600), ""),
+            ]
         else:
-            res.label_contents = [('b', '%.3g' % res.b, ''),
-                                  ('x0', '%.3g' % res.x0, '')]
+            res.label_contents = [
+                ("b", "%.3g" % res.b, ""),
+                ("x0", "%.3g" % res.x0, ""),
+            ]
 
 
 class CosineFit(PredefinedFit):
     """Fits with a cosine including offset."""
 
-    names = ['cos', 'cosine']
-    fit_title = 'cosine fit'
-    fit_params = ['A', 'f', 'x0', 'B']
+    names = ["cos", "cosine"]
+    fit_title = "cosine fit"
+    fit_params = ["A", "f", "x0", "B"]
     center_index = 2
     fit_p_descr = fit_params
 
@@ -324,11 +364,11 @@ class CosineFit(PredefinedFit):
         res.label_x = res.x0
         res.label_y = min(res.curve_x)
         res.label_contents = [
-            ('Freq', res.f, res.df),
-            ('Omega', 2 * pi * res.f, 2 * pi * res.df),
-            ('Center', res.x0, res.dx0),
-            ('Ampl', res.A, res.dA),
-            ('Offset', res.B, res.dB),
+            ("Freq", res.f, res.df),
+            ("Omega", 2 * pi * res.f, 2 * pi * res.df),
+            ("Center", res.x0, res.dx0),
+            ("Ampl", res.A, res.dA),
+            ("Offset", res.B, res.dB),
         ]
 
 
@@ -343,7 +383,7 @@ class PolyFit(PredefinedFit):
 
     @property
     def fit_params(self):
-        return ['a%d' % i for i in range(self._n + 1)]
+        return ["a%d" % i for i in range(self._n + 1)]
 
     @property
     def fit_p_descr(self):
@@ -359,7 +399,7 @@ class PolyFit(PredefinedFit):
                 par = args.get(k, None)
                 if par is not None:
                     v += (par,)
-        return sum(v[i] * x ** i for i in range(self._n + 1))
+        return sum(v[i] * x**i for i in range(self._n + 1))
 
     def guesspar(self, x, y):
         return [1] + [0] * self._n
@@ -371,14 +411,14 @@ FWHM_TO_SIGMA = 2 * sqrt(2 * log(2))
 class GaussFit(PredefinedFit):
     """Fits with a Gaussian model."""
 
-    names = ['gauss', 'gaussian']
-    fit_title = 'gauss'
-    fit_params = ['x0', 'A', 'fwhm', 'B']
-    fit_p_descr = ['center', 'amplitude', 'FWHM', 'background']
+    names = ["gauss", "gaussian"]
+    fit_title = "gauss"
+    fit_params = ["x0", "A", "fwhm", "B"]
+    fit_p_descr = ["center", "amplitude", "FWHM", "background"]
     center_index = 0
 
     def fit_model(self, x, x0, A, fwhm, B):
-        return abs(B) + A * exp(-(x - x0) ** 2 / (2 * (fwhm / FWHM_TO_SIGMA) ** 2))
+        return abs(B) + A * exp(-((x - x0) ** 2) / (2 * (fwhm / FWHM_TO_SIGMA) ** 2))
 
     def guesspar(self, x, y):
         (fwhm, x0, ymax, B) = estimateFWHM(x, y)
@@ -389,19 +429,18 @@ class GaussFit(PredefinedFit):
         res.label_x = res.x0 + res.fwhm / 2
         res.label_y = res.B + res.A
         res.label_contents = [
-            ('Center', res.x0, res.dx0),
-            ('FWHM', res.fwhm, res.dfwhm),
-            ('Ampl', res.A, res.dA),
-            ('Integr', res.A * res.fwhm / FWHM_TO_SIGMA * sqrt(2 * pi), '')
+            ("Center", res.x0, res.dx0),
+            ("FWHM", res.fwhm, res.dfwhm),
+            ("Ampl", res.A, res.dA),
+            ("Integr", res.A * res.fwhm / FWHM_TO_SIGMA * sqrt(2 * pi), ""),
         ]
 
 
 class LorentzFit(PredefinedFit):
-
-    names = ['lorentzian', 'lorentz']
-    fit_title = 'lorentz'
-    fit_params = ['x0', 'A', 'fwhm', 'B']
-    fit_p_descr = ['center', 'amplitude', 'FWHM', 'background']
+    names = ["lorentzian", "lorentz"]
+    fit_title = "lorentz"
+    fit_params = ["x0", "A", "fwhm", "B"]
+    fit_p_descr = ["center", "amplitude", "FWHM", "background"]
     center_index = 0
 
     def fit_model(self, x, x0, A, fwhm, B):
@@ -416,18 +455,17 @@ class LorentzFit(PredefinedFit):
         res.label_x = res.x0 + res.fwhm / 2
         res.label_y = res.B + res.A
         res.label_contents = [
-            ('Center', res.x0, res.dx0),
-            ('FWHM', res.fwhm, res.dfwhm),
-            ('Ampl', res.A, res.dA),
-            ('Integr', res.A * res.fwhm / 2 * pi, '')
+            ("Center", res.x0, res.dx0),
+            ("FWHM", res.fwhm, res.dfwhm),
+            ("Ampl", res.A, res.dA),
+            ("Integr", res.A * res.fwhm / 2 * pi, ""),
         ]
 
 
 class PseudoVoigtFit(PredefinedFit):
-
-    names = ['pseudovoigt', 'pseudo-voigt']
-    fit_title = 'pseudo-voigt'
-    fit_params = ['B', 'A', 'x0', 'hwhm', 'eta']
+    names = ["pseudovoigt", "pseudo-voigt"]
+    fit_title = "pseudo-voigt"
+    fit_params = ["B", "A", "x0", "hwhm", "eta"]
     fit_p_descr = fit_params
     center_index = 2
 
@@ -435,15 +473,17 @@ class PseudoVoigtFit(PredefinedFit):
         eta = eta % 1.0
         return abs(B) + A * (
             # Lorentzian
-            eta / (1 + ((x - x0) / hwhm) ** 2) +
+            eta / (1 + ((x - x0) / hwhm) ** 2)
+            +
             # Gaussian
-            (1 - eta) * exp(-log(2) * ((x - x0) / hwhm) ** 2))
+            (1 - eta) * exp(-log(2) * ((x - x0) / hwhm) ** 2)
+        )
 
     def guesspar(self, x, y):
         (fwhm, x0, ymax, B) = estimateFWHM(x, y)
         A = ymax - B
         eta = 0.5
-        return [B, A, x0, fwhm / 2., eta]
+        return [B, A, x0, fwhm / 2.0, eta]
 
     def process_result(self, res):
         res.label_x = res.x0 + res.hwhm / 2
@@ -451,19 +491,18 @@ class PseudoVoigtFit(PredefinedFit):
         eta = res.eta = res.eta % 1.0
         integr = res.A * res.hwhm * (eta * pi + (1 - eta) * sqrt(pi / log(2)))
         res.label_contents = [
-            ('Center', res.x0, res.dx0),
-            ('FWHM', res.hwhm * 2, res.dhwhm * 2),
-            ('Eta', eta, res.deta),
-            ('Integr', integr, '')
+            ("Center", res.x0, res.dx0),
+            ("FWHM", res.hwhm * 2, res.dhwhm * 2),
+            ("Eta", eta, res.deta),
+            ("Integr", integr, ""),
         ]
 
 
 class PearsonVIIFit(PredefinedFit):
-
-    names = ['pearson', 'pearson-vii']
+    names = ["pearson", "pearson-vii"]
     center_index = 2
-    fit_title = 'pearson-vii'
-    fit_params = ['B', 'A', 'x0', 'hwhm', 'm']
+    fit_title = "pearson-vii"
+    fit_params = ["B", "A", "x0", "hwhm", "m"]
     fit_p_descr = fit_params
 
     def fit_model(self, x, B, A, x0, hwhm, m):
@@ -473,24 +512,24 @@ class PearsonVIIFit(PredefinedFit):
         (fwhm, x0, ymax, B) = estimateFWHM(x, y)
         A = ymax - B
         m = 5
-        return [B, A, x0, fwhm / 2., m]
+        return [B, A, x0, fwhm / 2.0, m]
 
     def process_result(self, res):
         res.label_x = res.x0 + res.hwhm / 2
         res.label_y = res.B + res.A
         res.label_contents = [
-            ('Center', res.x0, res.dx0),
-            ('FWHM', res.hwhm * 2, res.dhwhm * 2),
-            ('m', res.m, res.dm)
+            ("Center", res.x0, res.dx0),
+            ("FWHM", res.hwhm * 2, res.dhwhm * 2),
+            ("m", res.m, res.dm),
         ]
 
 
 class TcFit(PredefinedFit):
     """Fits a power law critcal temperature."""
 
-    names = ['tc', 'tcfit']
-    fit_title = 'Tc fit'
-    fit_params = ['B', 'A', 'Tc', 'alpha']
+    names = ["tc", "tcfit"]
+    fit_title = "Tc fit"
+    fit_params = ["B", "A", "Tc", "alpha"]
     fit_p_descr = fit_params
     center_index = 2
 
@@ -517,18 +556,15 @@ class TcFit(PredefinedFit):
     def process_result(self, res):
         res.label_x = res.Tc
         res.label_y = res.B + res.A  # at I_max
-        res.label_contents = [
-            ('Tc', res.Tc, res.dTc),
-            ('alpha', res.alpha, res.dalpha)
-        ]
+        res.label_contents = [("Tc", res.Tc, res.dTc), ("alpha", res.alpha, res.dalpha)]
 
 
 class SigmoidFit(PredefinedFit):
     """Fit a Sigmoid function."""
 
-    names = ['sigmoid']
-    fit_title = 'Sigmoid'
-    fit_params = ['a', 'b', 'x0', 'c']
+    names = ["sigmoid"]
+    fit_title = "Sigmoid"
+    fit_params = ["a", "b", "x0", "c"]
     fit_p_descr = fit_params
     center_index = 2
 
@@ -548,26 +584,27 @@ class SigmoidFit(PredefinedFit):
         res.label_x = res.x0
         res.label_y = res.c
         res.label_contents = [
-            ('a', res.a, res.da),
-            ('b', res.b, res.db),
-            ('x0', res.x0, res.dx0),
-            ('c', res.c, res.dc)
+            ("a", res.a, res.da),
+            ("b", res.b, res.db),
+            ("x0", res.x0, res.dx0),
+            ("c", res.c, res.dc),
         ]
 
 
 class CenterOfMass(Fit):
     """'Fit' the center of mass."""
 
-    names = ['center_of_mass']
-    fit_title = 'Center of mass'
-    fit_params = ['x0']
-    fit_p_descr = ['Center of mass']
+    names = ["center_of_mass"]
+    fit_title = "Center of mass"
+    fit_params = ["x0"]
+    fit_p_descr = ["Center of mass"]
     center_index = 0
 
     def __init__(self, xmin=None, xmax=None):
         def model(x, x0):
             return 0 * x
-        Fit.__init__(self, 'Center of mass', model, xmin=xmin, xmax=xmax)
+
+        Fit.__init__(self, "Center of mass", model, xmin=xmin, xmax=xmax)
 
     def guesspar(self, x, y):
         # no need to guess anything here.
@@ -580,6 +617,6 @@ class CenterOfMass(Fit):
         res = self.result(xn, yn, dyn, [cm], [0])
         # plot the result by showing a more or less vertical line at the
         # center-of-mass position
-        res.curve_x = array([cm-0.001, cm, cm+0.001])
+        res.curve_x = array([cm - 0.001, cm, cm + 0.001])
         res.curve_y = array([0, yn.max(), 0])
         return res

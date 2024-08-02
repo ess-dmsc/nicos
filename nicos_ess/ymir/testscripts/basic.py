@@ -9,6 +9,6 @@
 read()
 status()
 
-SetDetectors('laser')
+SetDetectors("laser")
 
 scan(mY, 10, 20, 11)

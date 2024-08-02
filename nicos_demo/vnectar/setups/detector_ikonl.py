@@ -1,66 +1,74 @@
-description = 'Andor IKON-L CCD camera'
-group = 'optional'
+description = "Andor IKON-L CCD camera"
+group = "optional"
 
-includes = ['filesavers']
-excludes = ['detector']
+includes = ["filesavers"]
+excludes = ["detector"]
 
 devices = dict(
-    timer = device('nicos.devices.generic.VirtualTimer',
-        description = 'The camera\'s internal timer',
+    timer=device(
+        "nicos.devices.generic.VirtualTimer",
+        description="The camera's internal timer",
     ),
-    det = device('nicos.devices.generic.Detector',
-        description = 'The Andor Neo sCMOS camera detector',
-        images = ['ccd'],
-        timers = ['timer'],
+    det=device(
+        "nicos.devices.generic.Detector",
+        description="The Andor Neo sCMOS camera detector",
+        images=["ccd"],
+        timers=["timer"],
     ),
-    ccd = device('nicos.devices.generic.VirtualImage',
-        description = 'The CCD detector',
-        size = (1024, 1024),
+    ccd=device(
+        "nicos.devices.generic.VirtualImage",
+        description="The CCD detector",
+        size=(1024, 1024),
     ),
-    ccdTemp = device('nicos.devices.generic.VirtualTemperature',
-        description = 'Temperature of the CCD detector',
-        pollinterval = 5,
-        maxage = 12,
-        abslimits = (-100, 0),
-        userlimits = (-100, 0),
-        unit = 'degC',
-        precision = 3,
-        fmtstr = '%.0f',
+    ccdTemp=device(
+        "nicos.devices.generic.VirtualTemperature",
+        description="Temperature of the CCD detector",
+        pollinterval=5,
+        maxage=12,
+        abslimits=(-100, 0),
+        userlimits=(-100, 0),
+        unit="degC",
+        precision=3,
+        fmtstr="%.0f",
     ),
-    fov_mot = device('nicos.devices.generic.VirtualMotor',
-        description = 'Camera translation x (field of view)',
-        abslimits = (0, 900),
-        unit = 'mm',
-        speed = 5,
-        visibility = (),
+    fov_mot=device(
+        "nicos.devices.generic.VirtualMotor",
+        description="Camera translation x (field of view)",
+        abslimits=(0, 900),
+        unit="mm",
+        speed=5,
+        visibility=(),
     ),
-    fov = device('nicos.devices.generic.Axis',
-        description = 'Camera translation x (field of view)',
-        pollinterval = 5,
-        maxage = 12,
-        fmtstr = '%.2f',
-        userlimits = (0.0001, 900),
-        precision = 0.1,
-        motor = 'fov_mot',
+    fov=device(
+        "nicos.devices.generic.Axis",
+        description="Camera translation x (field of view)",
+        pollinterval=5,
+        maxage=12,
+        fmtstr="%.2f",
+        userlimits=(0.0001, 900),
+        precision=0.1,
+        motor="fov_mot",
     ),
-    focus_mot = device('nicos.devices.generic.VirtualMotor',
-        description = 'Camera lens roation axis (focus)',
-        abslimits = (-100, 100),
-        unit = 'deg',
-        speed = 5,
-        visibility = (),
+    focus_mot=device(
+        "nicos.devices.generic.VirtualMotor",
+        description="Camera lens roation axis (focus)",
+        abslimits=(-100, 100),
+        unit="deg",
+        speed=5,
+        visibility=(),
     ),
-    focus = device('nicos.devices.generic.Axis',
-        description = 'Camera lens roation axis (focus)',
-        pollinterval = 5,
-        maxage = 12,
-        fmtstr = '%.2f',
-        userlimits = (-100, 100),
-        precision = 0.1,
-        motor = 'focus_mot',
+    focus=device(
+        "nicos.devices.generic.Axis",
+        description="Camera lens roation axis (focus)",
+        pollinterval=5,
+        maxage=12,
+        fmtstr="%.2f",
+        userlimits=(-100, 100),
+        precision=0.1,
+        motor="focus_mot",
     ),
 )
 
-startupcode = '''
+startupcode = """
 SetDetectors(det)
-'''
+"""

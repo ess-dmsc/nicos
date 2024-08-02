@@ -1,5 +1,5 @@
-description = 'NICOS startup setup'
-group = 'lowlevel'
+description = "NICOS startup setup"
+group = "lowlevel"
 
 # The startup setup is loaded first thing on NICOS session startup.  It should
 # usually stay empty.  In particular, it should not include any other setups

@@ -1,31 +1,34 @@
-description = 'FOV linear axis for the medium box (190 x 190)'
+description = "FOV linear axis for the medium box (190 x 190)"
 
-group = 'optional'
+group = "optional"
 
-excludes = ['fov_100x100', 'fov_300x300']
-includes = ['frr']
+excludes = ["fov_100x100", "fov_300x300"]
+includes = ["frr"]
 
 devices = dict(
-    fov_190_mot = device('nicos.devices.generic.VirtualMotor',
-        description = 'FOV motor',
-        visibility = (),
-        abslimits = (159, 670),
-        userlimits = (160, 669),
-        unit = 'mm',
-        speed = 5,
+    fov_190_mot=device(
+        "nicos.devices.generic.VirtualMotor",
+        description="FOV motor",
+        visibility=(),
+        abslimits=(159, 670),
+        userlimits=(160, 669),
+        unit="mm",
+        speed=5,
     ),
-    fov_190_enc = device('nicos.devices.generic.VirtualCoder',
-        description = 'FOV encoder',
-        motor = 'fov_190_mot',
-        visibility = (),
+    fov_190_enc=device(
+        "nicos.devices.generic.VirtualCoder",
+        description="FOV encoder",
+        motor="fov_190_mot",
+        visibility=(),
     ),
-    fov_190 = device('nicos.devices.generic.Axis',
-        description = 'FOV linear axis',
-        pollinterval = 5,
-        maxage = 10,
-        precision = 0.1,
-        fmtstr = '%.2f',
-        motor = 'fov_190_mot',
-        coder = 'fov_190_enc',
+    fov_190=device(
+        "nicos.devices.generic.Axis",
+        description="FOV linear axis",
+        pollinterval=5,
+        maxage=10,
+        precision=0.1,
+        fmtstr="%.2f",
+        motor="fov_190_mot",
+        coder="fov_190_enc",
     ),
 )

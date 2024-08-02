@@ -5,8 +5,8 @@
 # test: setupcode = SetDetectors(det)
 
 FinishExperiment()
-NewSample('Test_abc')
-Remark('Collimator 40x50mm')
+NewSample("Test_abc")
+Remark("Collimator 40x50mm")
 
 # Not enough space in y direction, also for x required
 maw(sty, 1)
@@ -21,11 +21,11 @@ for i in range(2):
 for i in range(2):
     darkimage(t=1)
 
-print('OB and DI Finished')
+print("OB and DI Finished")
 
 maw(stx, 20)
 maw(sty, 10)
 tomo(10, sry, t=1)
 
-print('Tomo Finished!')
-print('Test finished')
+print("Tomo Finished!")
+print("Test finished")

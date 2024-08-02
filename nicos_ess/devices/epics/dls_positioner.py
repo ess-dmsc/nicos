@@ -36,12 +36,13 @@ class DlsPositioner(ManualSwitch, EpicsMoveable):
     This device needs to be configured to have the same number of set positions
     as the IOC does.
     """
+
     attached_devices = {
-        'motor': Attach('the underlying motor', Readable),
+        "motor": Attach("the underlying motor", Readable),
     }
 
     def doStart(self, target):
-        self._put_pv('writepv', target)
+        self._put_pv("writepv", target)
 
     def doStatus(self, maxage=0):
         return self._attached_motor.status(maxage)
@@ -50,7 +51,7 @@ class DlsPositioner(ManualSwitch, EpicsMoveable):
         position = EpicsMoveable.doRead(self, maxage)
         if position in self.states:
             return position
-        raise PositionError(self, 'device is in an unknown state')
+        raise PositionError(self, "device is in an unknown state")
 
     def _get_pv_parameters(self):
-        return {'readpv', 'writepv'}
+        return {"readpv", "writepv"}

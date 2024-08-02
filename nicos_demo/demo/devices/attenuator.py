@@ -29,40 +29,43 @@ from nicos.core.mixins import HasLimits
 
 
 class Attenuator(HasLimits, Moveable):
-    """Attentuator with 3 elements having a transmission of 1/2, 1/4, and 1/16
-    """
+    """Attentuator with 3 elements having a transmission of 1/2, 1/4, and 1/16"""
 
     attached_devices = {
-        'blades': Attach('The blade devices',
-                         Moveable,
-                         multiple=3),
+        "blades": Attach("The blade devices", Moveable, multiple=3),
     }
 
     parameters = {
-        'base': Param('Attenuating base (transmission = 1 / base ** n)',
-                      default=2, userparam=False, settable=False,),
+        "base": Param(
+            "Attenuating base (transmission = 1 / base ** n)",
+            default=2,
+            userparam=False,
+            settable=False,
+        ),
     }
 
     parameter_overrides = {
-        'unit': Override(default='%', mandatory=False,),
-        'abslimits': Override(mandatory=False, default=(0, 100),
-                              settable=False),
+        "unit": Override(
+            default="%",
+            mandatory=False,
+        ),
+        "abslimits": Override(mandatory=False, default=(0, 100), settable=False),
     }
 
     def _attenuation(self, exp):
-        return 100. * (1.0 - 1.0 / self.base ** exp)
+        return 100.0 * (1.0 - 1.0 / self.base**exp)
 
     def doRead(self, maxage=0):
         exp = 0
         i = 1
         for blade in self._attached_blades:
-            if blade.read(maxage) == 'in':
+            if blade.read(maxage) == "in":
                 exp += i
             i *= 2
         return self._attenuation(exp)
 
     def doStatus(self, maxage=0):
-        return status.OK, ''
+        return status.OK, ""
 
     def doStart(self, target):
         for pos in range(8):
@@ -70,10 +73,10 @@ class Attenuator(HasLimits, Moveable):
                 # Move first in all needed blades into the beam to reduce the
                 # activation and/or save the detector and then move out the not
                 # needed ones
-                for (idx, blade) in enumerate(self._attached_blades):
+                for idx, blade in enumerate(self._attached_blades):
                     if pos & (1 << idx):
-                        blade.maw('in')
-                for (idx, blade) in enumerate(self._attached_blades):
+                        blade.maw("in")
+                for idx, blade in enumerate(self._attached_blades):
                     if not (pos & (1 << idx)):
-                        blade.maw('out')
+                        blade.maw("out")
                 break

@@ -34,28 +34,28 @@ from nicos.guisupport.qt import QDateTime, pyqtSlot
 
 class LogViewerPanel(Panel):
     """Provides a possibility to view various NICOS log files."""
-    ui = os.path.join('panels', 'logviewer.ui')
-    panelName = 'Log viewer'
+
+    ui = os.path.join("panels", "logviewer.ui")
+    panelName = "Log viewer"
 
     def __init__(self, parent, client, options):
         Panel.__init__(self, parent, client, options)
 
-        self._logPath = 'log'
+        self._logPath = "log"
 
         loadUi(self, self.ui)
 
         # initialize date/time range to display logs from yesterday
         # (same time) to now
-        self.dateTimeEditFrom.setDateTime(
-            QDateTime.currentDateTime().addDays(-1))
+        self.dateTimeEditFrom.setDateTime(QDateTime.currentDateTime().addDays(-1))
         self.dateTimeEditTo.setDateTime(QDateTime.currentDateTime())
 
         client.connected.connect(self.on_client_connected)
 
     def on_client_connected(self):
         # determine log path via daemon
-        controlPath = self.client.eval('config.nicos_root', '')
-        loggingPath = self.client.eval('config.logging_path', '')
+        controlPath = self.client.eval("config.nicos_root", "")
+        loggingPath = self.client.eval("config.logging_path", "")
 
         self._logPath = os.path.join(controlPath, loggingPath)
 
@@ -81,36 +81,34 @@ class LogViewerPanel(Panel):
         self.logContent.find(self.findLineEdit.text())
 
     def _getFilters(self):
-        result = {
-            'levels': []
-        }
+        result = {"levels": []}
 
         # determine desired levels
         if self.levelDebugCheckBox.isChecked():
-            result['levels'].append('DEBUG')
+            result["levels"].append("DEBUG")
         if self.levelInfoCheckBox.isChecked():
-            result['levels'].append('INFO')
+            result["levels"].append("INFO")
         if self.levelWarningCheckBox.isChecked():
-            result['levels'].append('WARNING')
+            result["levels"].append("WARNING")
         if self.levelErrorCheckBox.isChecked():
-            result['levels'].append('ERROR')
+            result["levels"].append("ERROR")
         if self.levelInputCheckBox.isChecked():
-            result['levels'].append('INPUT')
+            result["levels"].append("INPUT")
 
         # determine desired nicos service
-        result['service'] = self.serviceComboBox.currentText().lower()
+        result["service"] = self.serviceComboBox.currentText().lower()
 
         # determine desired date/time range
-        result['fromDateTime'] = self.dateTimeEditFrom.dateTime()
-        result['toDateTime'] = self.dateTimeEditTo.dateTime()
+        result["fromDateTime"] = self.dateTimeEditFrom.dateTime()
+        result["toDateTime"] = self.dateTimeEditTo.dateTime()
 
         return result
 
     def _getFilteredLogs(self, filters):
         # local vars for readability
-        service = filters['service']
-        fromDateTime = filters['fromDateTime']
-        toDateTime = filters['toDateTime']
+        service = filters["service"]
+        fromDateTime = filters["fromDateTime"]
+        toDateTime = filters["toDateTime"]
 
         path = os.path.join(self._logPath, service)
 
@@ -118,44 +116,43 @@ class LogViewerPanel(Panel):
 
         while True:
             # determine logfile name
-            dateStr = fromDateTime.toString('yyyy-MM-dd')
-            logFile = '%s-%s.log' % (service, dateStr)
+            dateStr = fromDateTime.toString("yyyy-MM-dd")
+            logFile = "%s-%s.log" % (service, dateStr)
 
             # determine logfile path
             logFile = os.path.join(path, logFile)
 
             # if logfile for given date exists, read and filter content
             if os.path.exists(logFile):
-                result += self._getFilteredFileContent(logFile, fromDateTime,
-                                                       filters)
+                result += self._getFilteredFileContent(logFile, fromDateTime, filters)
 
             if fromDateTime.daysTo(toDateTime) <= 0:
                 break
 
             fromDateTime = fromDateTime.addDays(1)
 
-        result += '</pre>'
+        result += "</pre>"
         return result
 
     def _getFilteredFileContent(self, path, fileDate, filters):
         # local vars for readability
-        fromDateTime = filters['fromDateTime']
-        toDateTime = filters['toDateTime']
-        levels = filters['levels']
+        fromDateTime = filters["fromDateTime"]
+        toDateTime = filters["toDateTime"]
+        levels = filters["levels"]
 
         result = []
-        dateStr = fileDate.toString('yyyy-MM-dd ')
+        dateStr = fileDate.toString("yyyy-MM-dd ")
 
-        with open(path, 'r', encoding='utf-8', errors='replace') as f:
+        with open(path, "r", encoding="utf-8", errors="replace") as f:
             # store if last line was added,
             # this is used to filter tracebacks etc properly
             lastLineAdded = False
-            lastLevel = ''
+            lastLevel = ""
 
             for line in f:
                 # split line into:
                 # time, level, service, msg
-                parts = [part.strip() for part in line.split(' : ')]
+                parts = [part.strip() for part in line.split(" : ")]
 
                 # append line continuations
                 if len(parts) < 2:
@@ -163,7 +160,7 @@ class LogViewerPanel(Panel):
                         result.append(self._colorizeLevel(line, lastLevel))
                     continue
 
-                dateTime = QDateTime.fromString(parts[0], 'HH:mm:ss,zzz')
+                dateTime = QDateTime.fromString(parts[0], "HH:mm:ss,zzz")
                 dateTime.setDate(fileDate.date())
                 level = parts[1]
 
@@ -184,16 +181,16 @@ class LogViewerPanel(Panel):
                 lastLineAdded = True
                 lastLevel = level
 
-        return ''.join(result)
+        return "".join(result)
 
     STYLES = {
-        'DEBUG':   'color: darkgray',
-        'WARNING': 'color: fuchsia',
-        'ERROR':   'color: red; font-weight: bold',
+        "DEBUG": "color: darkgray",
+        "WARNING": "color: fuchsia",
+        "ERROR": "color: red; font-weight: bold",
     }
 
     def _colorizeLevel(self, line, level):
-        style = self.STYLES.get(level, '')
+        style = self.STYLES.get(level, "")
         if style:
             return '<span style="%s">%s</span>' % (style, html.escape(line))
         return html.escape(line)

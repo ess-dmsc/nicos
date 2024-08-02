@@ -24,12 +24,18 @@
 
 from nicos.core import status
 from nicos.guisupport.elements import statuscolor
-from nicos.guisupport.qt import QBrush, QGraphicsPathItem, QPainterPath, \
-    QPen, QPointF, QRectF, QTransform
+from nicos.guisupport.qt import (
+    QBrush,
+    QGraphicsPathItem,
+    QPainterPath,
+    QPen,
+    QPointF,
+    QRectF,
+    QTransform,
+)
 
 
 class Tube(QGraphicsPathItem):
-
     _halo = None
 
     def __init__(self, parent=None, scene=None):
@@ -68,7 +74,6 @@ class Tube(QGraphicsPathItem):
 
 
 class TubeHalo(QGraphicsPathItem):
-
     def __init__(self, width=10, parent=None, scene=None):
         QGraphicsPathItem.__init__(self, parent)
         self._width = width

@@ -37,12 +37,19 @@ import rsa
 from nicos import config, get_custom_version, nicos_version, session
 from nicos.core import ADMIN, ConfigurationError, SPMError, User
 from nicos.core.data import ScanData
-from nicos.protocols.daemon import BREAK_NOW, DAEMON_COMMANDS, SIM_STATES, \
-    STATUS_IDLE, STATUS_IDLEEXC, STATUS_INBREAK, STATUS_RUNNING, \
-    STATUS_STOPPING, CloseConnection
+from nicos.protocols.daemon import (
+    BREAK_NOW,
+    DAEMON_COMMANDS,
+    SIM_STATES,
+    STATUS_IDLE,
+    STATUS_IDLEEXC,
+    STATUS_INBREAK,
+    STATUS_RUNNING,
+    STATUS_STOPPING,
+    CloseConnection,
+)
 from nicos.services.daemon.auth import AuthenticationError
-from nicos.services.daemon.script import RequestError, ScriptError, \
-    ScriptRequest
+from nicos.services.daemon.script import RequestError, ScriptError, ScriptRequest
 from nicos.services.daemon.utils import LoggerWrapper, SizedQueue
 
 command_wrappers = {}
@@ -52,44 +59,47 @@ def command(needcontrol=False, needscript=None, name=None):
     """Decorates a protocol command.  The `needcontrol` and `needscript`
     parameters can be set to avoid boilerplate in the handler functions.
     """
+
     def deco(func):
         nargsmax = func.__code__.co_argcount - 1
         nargsmin = nargsmax - len(func.__defaults__ or ())
 
         def wrapper(self, args):
             if not nargsmin <= len(args) <= nargsmax:
-                self.send_error_reply('invalid number of arguments')
+                self.send_error_reply("invalid number of arguments")
                 return
             if needcontrol:
                 if not self.check_control():
-                    self.send_error_reply('you do not have control '
-                                          'of the session')
+                    self.send_error_reply("you do not have control " "of the session")
                     return
             if needscript is True:
                 if self.controller.status in (STATUS_IDLE, STATUS_IDLEEXC):
-                    self.send_error_reply('no script is running')
+                    self.send_error_reply("no script is running")
                     return
             elif needscript is False:
                 if self.controller.status not in (STATUS_IDLE, STATUS_IDLEEXC):
-                    self.send_error_reply('a script is running')
+                    self.send_error_reply("a script is running")
                     return
             try:
                 return func(self, *args)
             except CloseConnection:
                 raise
             except Exception:
-                self.log.exception('exception executing command %s',
-                                   name or func.__name__)
-                self.send_error_reply('exception occurred executing command')
+                self.log.exception(
+                    "exception executing command %s", name or func.__name__
+                )
+                self.send_error_reply("exception occurred executing command")
+
         wrapper.__name__ = func.__name__
         wrapper.orig_function = func
         command_wrappers[name or func.__name__] = wrapper
         return func
+
     return deco
 
 
 # unique objects
-stop_queue = (object(), '', [])
+stop_queue = (object(), "", [])
 no_msg = object()
 
 
@@ -111,13 +121,13 @@ class ConnectionHandler:
         self.daemon = daemon
         self.controller = daemon._controller
         # limit memory usage to 100 Megs
-        self.event_queue = SizedQueue(100*1024*1024)
+        self.event_queue = SizedQueue(100 * 1024 * 1024)
         self.event_mask = set()
-        self.log = LoggerWrapper(self.daemon.log, '[new handler] ')
+        self.log = LoggerWrapper(self.daemon.log, "[new handler] ")
 
     def setIdent(self, ident):
         self.ident = ident
-        self.log.setPrefix('[handler #%s] ' % ident)
+        self.log.setPrefix("[handler #%s] " % ident)
 
     def close(self):
         try:
@@ -135,9 +145,8 @@ class ConnectionHandler:
             for possible in self.clientnames:
                 if allowed == possible:
                     return
-        self.send_error_reply('permission denied')
-        self.log.error('login attempt from untrusted host: %s',
-                       self.clientnames)
+        self.send_error_reply("permission denied")
+        self.log.error("login attempt from untrusted host: %s", self.clientnames)
         raise CloseConnection
 
     def check_control(self):
@@ -159,7 +168,7 @@ class ConnectionHandler:
 
     def handle(self):
         """Handle a single connection."""
-        self.log.info('connection from %s', self.clientnames)
+        self.log.info("connection from %s", self.clientnames)
 
         # check trusted hosts list, if nonempty
         if self.daemon.trustedhosts:
@@ -168,37 +177,41 @@ class ConnectionHandler:
         authenticators = self.daemon.get_authenticators()
         pubkey, privkey = rsa.newkeys(512)
         pubkey_base64 = b64encode(pubkey.save_pkcs1())
-        bannerhashing = 'rsa,plain'
+        bannerhashing = "rsa,plain"
 
         # announce version, authentication modality and serializer
-        self.send_ok_reply(dict(
-            daemon_version = nicos_version,
-            custom_version = get_custom_version(),
-            nicos_root = config.nicos_root,
-            custom_path = config.setup_package_path,
-            pw_hashing = bannerhashing,
-            rsakey = pubkey_base64,
-            protocol_version = self.get_version(),
-            serializer = self.serializer.name,
-        ))
+        self.send_ok_reply(
+            dict(
+                daemon_version=nicos_version,
+                custom_version=get_custom_version(),
+                nicos_root=config.nicos_root,
+                custom_path=config.setup_package_path,
+                pw_hashing=bannerhashing,
+                rsakey=pubkey_base64,
+                protocol_version=self.get_version(),
+                serializer=self.serializer.name,
+            )
+        )
 
         # read login credentials
         cmd, credentials = self.recv_command()
-        if cmd != 'authenticate' or len(credentials) != 1 or \
-           not isinstance(credentials[0], dict) or \
-           not all(v in credentials[0] for v in ('login', 'passwd')):
-            self.log.error('invalid login: %r, credentials=%r',
-                           cmd, credentials)
-            self.send_error_reply('invalid credentials')
+        if (
+            cmd != "authenticate"
+            or len(credentials) != 1
+            or not isinstance(credentials[0], dict)
+            or not all(v in credentials[0] for v in ("login", "passwd"))
+        ):
+            self.log.error("invalid login: %r, credentials=%r", cmd, credentials)
+            self.send_error_reply("invalid credentials")
             raise CloseConnection
 
-        password = credentials[0]['passwd']
-        if password[0:4] == 'RSA:':
+        password = credentials[0]["passwd"]
+        if password[0:4] == "RSA:":
             password = rsa.decrypt(b64decode(password[4:]), privkey).decode()
 
         # check login data according to configured authentication
-        login = credentials[0]['login']
-        self.log.info('auth request from login %r', login)
+        login = credentials[0]["login"]
+        self.log.info("auth request from login %r", login)
         if authenticators:
             auth_err = None
             for auth in authenticators:
@@ -209,17 +222,19 @@ class ConnectionHandler:
                     auth_err = err  # "err" is cleared after the except block
                     continue
             else:  # no "break": all authenticators failed
-                self.log.error('authentication failed: %s', auth_err)
+                self.log.error("authentication failed: %s", auth_err)
                 self.send_error_reply(str(auth_err))
                 raise CloseConnection
         else:
             self.user = User(login, ADMIN)
 
         # acknowledge the login
-        self.log.info('login succeeded, access level %d', self.user.level)
-        self.send_ok_reply(dict(
-            user_level = self.user.level,
-        ))
+        self.log.info("login succeeded, access level %d", self.user.level)
+        self.send_ok_reply(
+            dict(
+                user_level=self.user.level,
+            )
+        )
 
         # make the user known to controller.current_user()
         self.controller.thread_data.user = self.user
@@ -235,7 +250,7 @@ class ConnectionHandler:
         """Take events from the handler instance's event queue and send them
         to the client.
         """
-        self.log.info('event sender started')
+        self.log.info("event sender started")
         queue_get = self.event_queue.get
         event_mask = self.event_mask
         while 1:
@@ -249,15 +264,18 @@ class ConnectionHandler:
                 self.send_event(event, data, blobs)
             except socket.timeout:
                 # XXX move socket specific error handling to transport
-                self.log.error('send timeout in event sender')
+                self.log.error("send timeout in event sender")
                 break
             except OSError as err:
-                self.log.warning('connection broken in event sender: %s', err)
+                self.log.warning("connection broken in event sender: %s", err)
                 break
             except Exception:
-                self.log.exception('exception in event sender; event: %s, '
-                                   'data: %s', event, repr(data)[:1000])
-        self.log.info('closing connections from event sender')
+                self.log.exception(
+                    "exception in event sender; event: %s, " "data: %s",
+                    event,
+                    repr(data)[:1000],
+                )
+        self.log.info("closing connections from event sender")
         self.close()
 
     # -- Script control commands ----------------------------------------------
@@ -282,7 +300,8 @@ class ConnectionHandler:
             name = None
         try:
             reqid = self.controller.new_request(
-                ScriptRequest(code, name, self.user, handler=self))
+                ScriptRequest(code, name, self.user, handler=self)
+            )
         except RequestError as err:
             self.send_error_reply(str(err))
             return
@@ -298,13 +317,13 @@ class ConnectionHandler:
         :param reqid: (str) request UUID, or '*'
         :returns: ok or error (e.g. if the given script is not in the queue)
         """
-        if reqid == '*':
+        if reqid == "*":
             self.controller.block_all_requests()
         else:
             try:
                 self.controller.block_requests([reqid])
             except IndexError:
-                self.send_error_reply('script already executing')
+                self.send_error_reply("script already executing")
                 return
         self.send_ok_reply(None)
 
@@ -322,11 +341,11 @@ class ConnectionHandler:
             self.send_error_reply(str(err))
             return
         except IndexError:
-            self.send_error_reply('script doesn\'t exist')
+            self.send_error_reply("script doesn't exist")
             return
         self.send_ok_reply(None)
 
-    @command(needcontrol=True, needscript=True, name='break')
+    @command(needcontrol=True, needscript=True, name="break")
     def break_(self, level):
         """Pause the current script at the next breakpoint.
 
@@ -340,31 +359,30 @@ class ConnectionHandler:
         """
         level = int(level)
         if self.controller.status == STATUS_STOPPING:
-            self.send_error_reply('script is already stopping')
+            self.send_error_reply("script is already stopping")
         elif self.controller.status == STATUS_INBREAK:
-            self.send_error_reply('script is already paused')
+            self.send_error_reply("script is already paused")
         else:
-            session.log.info('Pause requested by %s', self.user.name)
-            self.controller.set_break(('break', level, self.user.name))
+            session.log.info("Pause requested by %s", self.user.name)
+            self.controller.set_break(("break", level, self.user.name))
             if level >= BREAK_NOW:
-                session.countloop_request = ('pause',
-                                             'Paused by %s' % self.user.name)
-            self.log.info('script pause request')
+                session.countloop_request = ("pause", "Paused by %s" % self.user.name)
+            self.log.info("script pause request")
             self.send_ok_reply(None)
 
-    @command(needcontrol=True, needscript=True, name='continue')
+    @command(needcontrol=True, needscript=True, name="continue")
     def continue_(self):
         """Continue the paused script.
 
         :returns: ok or error (e.g. if script is not paused)
         """
         if self.controller.status == STATUS_STOPPING:
-            self.send_error_reply('could not continue script')
+            self.send_error_reply("could not continue script")
         elif self.controller.status == STATUS_RUNNING:
-            self.send_error_reply('script is not paused')
+            self.send_error_reply("script is not paused")
         else:
-            self.log.info('script continue request')
-            self.controller.set_continue(('continue', 0, self.user.name))
+            self.log.info("script continue request")
+            self.controller.set_continue(("continue", 0, self.user.name))
             self.send_ok_reply(None)
 
     @command(needcontrol=True, needscript=True)
@@ -383,12 +401,12 @@ class ConnectionHandler:
         :returns: ok or error
         """
         level = int(level)
-        self.log.info('script stop request')
+        self.log.info("script stop request")
         self.controller.script_stop(level, self.user)
         self.send_ok_reply(None)
 
     # note: name finish() is already defined by BaseRequestHandler
-    @command(name='finish', needcontrol=True, needscript=True)
+    @command(name="finish", needcontrol=True, needscript=True)
     def finish_(self):
         """Finish the currently running action early and proceed.
 
@@ -396,13 +414,15 @@ class ConnectionHandler:
 
         :returns: ok or error
         """
-        self.log.info('measurement finish request')
+        self.log.info("measurement finish request")
         if self.controller.status == STATUS_STOPPING:
-            self.send_error_reply('script is stopping')
+            self.send_error_reply("script is stopping")
         else:
-            session.log.info('Early finish requested by %s', self.user.name)
-            session.countloop_request = \
-                ('finish', 'Finished early by %s' % self.user.name)
+            session.log.info("Early finish requested by %s", self.user.name)
+            session.countloop_request = (
+                "finish",
+                "Finished early by %s" % self.user.name,
+            )
         self.send_ok_reply(None)
 
     @command()
@@ -416,10 +436,11 @@ class ConnectionHandler:
         :returns: ok or error
         """
         if self.controller.status in (STATUS_IDLE, STATUS_IDLEEXC):
-            self.log.warning('immediate stop without script running')
+            self.log.warning("immediate stop without script running")
         else:
-            self.log.warning('immediate stop request in %s',
-                             self.controller.current_location(True))
+            self.log.warning(
+                "immediate stop request in %s", self.controller.current_location(True)
+            )
         self.controller.script_immediate_stop(self.user)
         self.send_ok_reply(None)
 
@@ -441,7 +462,7 @@ class ConnectionHandler:
 
     # -- Asynchronous script interaction --------------------------------------
 
-    @command(needcontrol=True, name='exec')
+    @command(needcontrol=True, name="exec")
     def exec_(self, cmd):
         """Execute a Python statement in the context of the running script.
 
@@ -450,9 +471,9 @@ class ConnectionHandler:
            an exception)
         """
         if self.controller.status == STATUS_STOPPING:
-            self.send_error_reply('script is stopping')
+            self.send_error_reply("script is stopping")
             return
-        self.log.debug('executing command in script context\n%s', cmd)
+        self.log.debug("executing command in script context\n%s", cmd)
         try:
             self.controller.exec_script(cmd, self.user, self)
         except Exception:
@@ -467,12 +488,12 @@ class ConnectionHandler:
         :param stringify: (bool) if True, return the `repr` of the result
         :returns: result of evaluation or an error if exception raised
         """
-        self.log.debug('evaluating expression in script context\n%s', expr)
+        self.log.debug("evaluating expression in script context\n%s", expr)
         try:
             retval = self.controller.eval_expression(expr, self, stringify)
         except Exception as err:
-            self.log.exception('exception in eval command')
-            self.send_error_reply('exception raised while evaluating: %s' % err)
+            self.log.exception("exception in eval command")
+            self.send_error_reply("exception raised while evaluating: %s" % err)
         else:
             self.send_ok_reply(retval)
 
@@ -486,15 +507,14 @@ class ConnectionHandler:
            process
         :returns: ok or error (e.g. if simulation is not possible)
         """
-        self.log.debug('running simulation\n%s', code)
+        self.log.debug("running simulation\n%s", code)
         try:
-            self.controller.simulate_script(uuid, code,
-                                            name or None, self.user)
+            self.controller.simulate_script(uuid, code, name or None, self.user)
         except SPMError as err:
-            self.send_error_reply('syntax error in script: %s' % err)
+            self.send_error_reply("syntax error in script: %s" % err)
         except Exception as err:
-            self.log.exception('exception in simulate command')
-            self.send_error_reply('exception raised running simulation: %s' % err)
+            self.log.exception("exception in simulate command")
+            self.send_error_reply("exception raised running simulation: %s" % err)
         else:
             self.send_ok_reply(None)
 
@@ -549,21 +569,25 @@ class ConnectionHandler:
         """
         current_script = self.controller.current_script
         request_queue = self.controller.get_queue()
-        eta = (current_script.simstate, current_script.eta) if current_script \
-            else (SIM_STATES['pending'], 0)
-        self.send_ok_reply(dict(
-            status   = (self.controller.status, self.controller.lineno),
-            script   = current_script and current_script.text or '',
-            eta      = eta,
-            scriptname = current_script and current_script.name or '',
-            watch    = self.controller.eval_watch_expressions(),
-            requests = request_queue,
-            mode     = session.mode,
-            setups   = (list(session.loaded_setups),
-                        session.explicit_setups),
-            devices  = list(session.devices),
-            devicefailures = session.device_failures,
-        ))
+        eta = (
+            (current_script.simstate, current_script.eta)
+            if current_script
+            else (SIM_STATES["pending"], 0)
+        )
+        self.send_ok_reply(
+            dict(
+                status=(self.controller.status, self.controller.lineno),
+                script=current_script and current_script.text or "",
+                eta=eta,
+                scriptname=current_script and current_script.name or "",
+                watch=self.controller.eval_watch_expressions(),
+                requests=request_queue,
+                mode=session.mode,
+                setups=(list(session.loaded_setups), session.explicit_setups),
+                devices=list(session.devices),
+                devicefailures=session.device_failures,
+            )
+        )
 
     @command()
     def getmessages(self, n):
@@ -573,10 +597,10 @@ class ConnectionHandler:
         :returns: list of messages (each message being a list of logging
            fields)
         """
-        if n == '*':
+        if n == "*":
             self.send_ok_reply(self.daemon._messages)
         else:
-            self.send_ok_reply(self.daemon._messages[-int(n):])
+            self.send_ok_reply(self.daemon._messages[-int(n) :])
 
     @command()
     def getscript(self):
@@ -585,7 +609,7 @@ class ConnectionHandler:
         :returns: code of the current script
         """
         current_script = self.controller.current_script
-        self.send_ok_reply(current_script and current_script.text or '')
+        self.send_ok_reply(current_script and current_script.text or "")
 
     @command()
     def gethistory(self, key, fromtime, totime, interval=None):
@@ -599,8 +623,9 @@ class ConnectionHandler:
         """
         if not session.cache:
             self.send_ok_reply([])
-        history = session.cache.history('', key, float(fromtime),
-                                        float(totime), interval)
+        history = session.cache.history(
+            "", key, float(fromtime), float(totime), interval
+        )
         self.send_ok_reply(history)
 
     @command()
@@ -615,8 +640,8 @@ class ConnectionHandler:
         if not session.cache:
             self.send_ok_reply([])
             return
-        if ',' in query:
-            result = session.cache.query_db(query.split(','))
+        if "," in query:
+            result = session.cache.query_db(query.split(","))
         else:
             result = session.cache.query_db(query)
         self.send_ok_reply(result)
@@ -639,16 +664,18 @@ class ConnectionHandler:
         :returns: ack or error
         """
         if not isinstance(vallist, list):
-            self.send_error_reply('wrong argument type for add_values: %s' %
-                                  vallist.__class__.__name__)
+            self.send_error_reply(
+                "wrong argument type for add_values: %s" % vallist.__class__.__name__
+            )
             return
         for val in vallist:
             if not isinstance(val, str):
-                self.send_error_reply('wrong type for add_values item: %s' %
-                                      val.__class__.__name__)
+                self.send_error_reply(
+                    "wrong type for add_values item: %s" % val.__class__.__name__
+                )
                 return
-            if ':' not in val:
-                val += ':default'
+            if ":" not in val:
+                val += ":default"
             self.controller.add_watch_expression(val)
         self.send_ok_reply(None)
 
@@ -660,18 +687,20 @@ class ConnectionHandler:
         :returns: ack or error
         """
         if not isinstance(vallist, list):
-            self.send_error_reply('wrong argument type for del_values: %s' %
-                                  vallist.__class__.__name__)
+            self.send_error_reply(
+                "wrong argument type for del_values: %s" % vallist.__class__.__name__
+            )
             return
         for val in vallist:
             if not isinstance(val, str):
-                self.send_error_reply('wrong type for del_values item: %s' %
-                                      val.__class__.__name__)
+                self.send_error_reply(
+                    "wrong type for del_values item: %s" % val.__class__.__name__
+                )
                 return
-            if ':' not in val:
-                val += ':default'
-            if val.startswith('*:'):
-                group = val[val.find(':'):]
+            if ":" not in val:
+                val += ":default"
+            if val.startswith("*:"):
+                group = val[val.find(":") :]
                 self.controller.remove_all_watch_expressions(group)
             else:
                 self.controller.remove_watch_expression(val)
@@ -687,10 +716,11 @@ class ConnectionHandler:
         :returns: a list of datasets if index is '*', or a single dataset
            otherwise; or None if the dataset does not exist
         """
-        if index == '*':
+        if index == "*":
             try:
-                self.send_ok_reply([ScanData(s) for s in
-                                    session.experiment.data.getLastScans()])
+                self.send_ok_reply(
+                    [ScanData(s) for s in session.experiment.data.getLastScans()]
+                )
             # session.experiment may be None or a stub
             except (AttributeError, ConfigurationError):
                 self.send_ok_reply([])
@@ -717,14 +747,15 @@ class ConnectionHandler:
         """
         if self.controller.status in (STATUS_IDLE, STATUS_IDLEEXC):
             if not code:
-                self.send_error_reply('no piece of code to debug given')
+                self.send_error_reply("no piece of code to debug given")
                 return
-            req = ScriptRequest(code, '', self.user, handler=self)
+            req = ScriptRequest(code, "", self.user, handler=self)
             self.controller.debug_start(req)
         else:
             if code:
-                self.send_error_reply('code to debug given, but a '
-                                      'script is already running')
+                self.send_error_reply(
+                    "code to debug given, but a " "script is already running"
+                )
                 return
             self.controller.debug_running()
         self.send_ok_reply(None)
@@ -766,7 +797,7 @@ class ConnectionHandler:
         :param content: file content encoded with base64
         :returns: file name
         """
-        fd, filename = tempfile.mkstemp(prefix='nicos')
+        fd, filename = tempfile.mkstemp(prefix="nicos")
         try:
             os.write(fd, content)
         finally:
@@ -783,8 +814,8 @@ class ConnectionHandler:
 
         :returns: ack
         """
-        if 'keepalive' in self.user.data:
-            self.user.data['keepalive']()
+        if "keepalive" in self.user.data:
+            self.user.data["keepalive"]()
         self.send_ok_reply(None)
 
     @command(needcontrol=True)
@@ -804,7 +835,7 @@ class ConnectionHandler:
         """
         if self.controller.controlling_user is self.user:
             self.controller.controlling_user = None
-        self.log.info('disconnect')
+        self.log.info("disconnect")
         self.send_ok_reply(None)
         raise CloseConnection
 
@@ -820,4 +851,4 @@ class ConnectionHandler:
 # make sure we handle all protocol defined commands
 for cmd in DAEMON_COMMANDS:
     if cmd not in command_wrappers:
-        raise RuntimeError('Daemon command %s not handled by server!' % cmd)
+        raise RuntimeError("Daemon command %s not handled by server!" % cmd)

@@ -1,8 +1,8 @@
-description = 'Generic configuration settings for SANS-LLB'
+description = "Generic configuration settings for SANS-LLB"
 import os
 
-group = 'configdata'
+group = "configdata"
 
-KAFKA_BROKERS = ['ess01:9092']
+KAFKA_BROKERS = ["ess01:9092"]
 
-DATA_PATH = os.environ.get('NICOSDUMP', '.') + '/sans-llb/'
+DATA_PATH = os.environ.get("NICOSDUMP", ".") + "/sans-llb/"

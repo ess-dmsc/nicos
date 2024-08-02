@@ -33,6 +33,7 @@ from pdb import Pdb
 
 class FakeStdin(queue.Queue):
     """A Queue that can pose as a stream with a readline() method."""
+
     def readline(self):
         return self.get()
 
@@ -52,7 +53,7 @@ class Rpdb(Pdb):
         Breakpoint.bpbynumber = [None]
         self._endcallback = endcallback
         # do not display any prompt
-        self.prompt = ''
+        self.prompt = ""
         # get input lines from our fake input stream
         self.stdin = FakeStdin()
 
@@ -68,11 +69,11 @@ class Rpdb(Pdb):
         self.set_step()
         sys.settrace(self.trace_dispatch)
         # notify user
-        self.stdout.write('remote debugging session started')
+        self.stdout.write("remote debugging session started")
 
     def finished(self):
         # notify user
-        self.stdout.write('remote debugging session finished')
+        self.stdout.write("remote debugging session finished")
         # call back to script thread
         self._endcallback()
 

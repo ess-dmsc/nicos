@@ -1,11 +1,12 @@
-description = 'setup for the NICOS watchdog'
-group = 'special'
+description = "setup for the NICOS watchdog"
+group = "special"
 
 watch_conditions = [
-    dict(condition = 'LogSpace_value < 1.5',
-         message = 'Disk space for the log files becomes too low.',
-         type = 'critical',
-         gracetime = 30,
+    dict(
+        condition="LogSpace_value < 1.5",
+        message="Disk space for the log files becomes too low.",
+        type="critical",
+        gracetime=30,
     ),
     # dict(
     #     condition = '(sixfold_value == "closed" or nl5_value == "closed") '
@@ -20,13 +21,16 @@ watch_conditions = [
     # ),
 ]
 
-includes = ['notifiers']
+includes = ["notifiers"]
 
 devices = dict(
-    Watchdog = device('nicos.services.watchdog.Watchdog',
-        cache = 'localhost',
-        notifiers = {'default': [], },  # ['email']},
-        watch = watch_conditions,
-        mailreceiverkey = 'email/receivers',
+    Watchdog=device(
+        "nicos.services.watchdog.Watchdog",
+        cache="localhost",
+        notifiers={
+            "default": [],
+        },  # ['email']},
+        watch=watch_conditions,
+        mailreceiverkey="email/receivers",
     ),
 )

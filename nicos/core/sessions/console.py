@@ -43,13 +43,13 @@ except ImportError:  # on Windows (without pyreadline)
     readline = None
 
 
-DEFAULT_BINDINGS = '''\
+DEFAULT_BINDINGS = """\
 tab: complete
 "\\e[5~": history-search-backward
 "\\e[6~": history-search-forward
 "\\e[1;3D": backward-word
 "\\e[1;3C": forward-word
-'''
+"""
 
 
 class NicosInteractiveStop(BaseException):
@@ -67,8 +67,10 @@ class NicosInteractiveConsole(code.InteractiveConsole):
 
     def __init__(self, session, global_ns):
         if readline is None:
-            raise RuntimeError('The NICOS console cannot run on platforms '
-                               'without readline or pyreadline installed.')
+            raise RuntimeError(
+                "The NICOS console cannot run on platforms "
+                "without readline or pyreadline installed."
+            )
         self.session = session
         self.log = session.log
         code.InteractiveConsole.__init__(self, global_ns)
@@ -80,8 +82,9 @@ class NicosInteractiveConsole(code.InteractiveConsole):
                 pass
         readline.set_completer(session.completefn)
         readline.set_history_length(10000)
-        self.histfile = os.environ.get('NICOS_HISTORY_FILE',
-                                       os.path.expanduser('~/.nicoshistory'))
+        self.histfile = os.environ.get(
+            "NICOS_HISTORY_FILE", os.path.expanduser("~/.nicoshistory")
+        )
         # once compiled, the interactive console uses this flag for all
         # subsequent statements it compiles
         if os.path.isfile(self.histfile):
@@ -99,26 +102,27 @@ class NicosInteractiveConsole(code.InteractiveConsole):
     def sigtermHandler(self, *args):
         raise SystemExit
 
-    def runsource(self, source, filename='<input>', symbol='single'):
+    def runsource(self, source, filename="<input>", symbol="single"):
         """Mostly copied from code.InteractiveInterpreter, but added the
         logging call before runcode().
         """
         try:
             code = self.session.commandHandler(
-                source, lambda src: self.compile(src, filename, symbol))
+                source, lambda src: self.compile(src, filename, symbol)
+            )
         except Exception:
-            self.log.exception('Cannot compile')
+            self.log.exception("Cannot compile")
             return False
 
         if code is None:
             return True
 
-        self.log.log(INPUT, '>>> ' + source)
+        self.log.log(INPUT, ">>> " + source)
         self.my_runcode(code, source)
 
         return False
 
-    def raw_input(self, prompt=''):
+    def raw_input(self, prompt=""):
         sys.stdout.write(colorcode(self.session._pscolor))
         self.session._prompting = True
         try:
@@ -129,11 +133,11 @@ class NicosInteractiveConsole(code.InteractiveConsole):
                 # usually just wants to abort the input
                 print()
                 self.session.immediateStop()
-                return ''
+                return ""
             else:
                 raise
         finally:
-            sys.stdout.write(colorcode('reset'))
+            sys.stdout.write(colorcode("reset"))
             self.session._prompting = False
         return inp
 
@@ -141,7 +145,7 @@ class NicosInteractiveConsole(code.InteractiveConsole):
         """Mostly copied from code.InteractiveInterpreter, but added better
         exception handling.
         """
-        session.scriptEvent('start', ('', source))
+        session.scriptEvent("start", ("", source))
         try:
             exec(codeobj, self.globals)
         except NicosInteractiveStop:
@@ -150,10 +154,10 @@ class NicosInteractiveConsole(code.InteractiveConsole):
             # "immediate stop" chosen
             session.immediateStop()
         except Exception:
-            session.scriptEvent('exception', sys.exc_info())
-        if hasattr(code, 'softspace') and code.softspace(sys.stdout, 0):
+            session.scriptEvent("exception", sys.exc_info())
+        if hasattr(code, "softspace") and code.softspace(sys.stdout, 0):
             print()
-        session.scriptEvent('finish', None)
+        session.scriptEvent("finish", None)
 
 
 class ConsoleSession(Session):
@@ -167,7 +171,7 @@ class ConsoleSession(Session):
         self._console = None
         Session.__init__(self, appname, daemonized)
         # prompt color
-        self._pscolor = 'reset'
+        self._pscolor = "reset"
         # showing prompt?
         self._prompting = False
         # our command completer for Python code
@@ -178,7 +182,7 @@ class ConsoleSession(Session):
         sys.displayhook = self._displayhook
 
     def _displayhook(self, value):
-        if value is not None and getattr(value, '__display__', True):
+        if value is not None and getattr(value, "__display__", True):
             self.log.log(INFO, repr(value))
 
     def loadSetup(self, *args, **kwds):  # pylint: disable=signature-differs
@@ -194,26 +198,26 @@ class ConsoleSession(Session):
         self.resetPrompt()
 
     def resetPrompt(self):
-        base = self._mode != MASTER and self._mode + ' ' or ''
-        expsetups = '+'.join(self.explicit_setups)
-        sys.ps1 = base + '(%s) %s ' % (expsetups,
-                                       '-->' if self._spmode else '>>>')
-        sys.ps2 = base + ' %s  ... ' % (' ' * len(expsetups))
+        base = self._mode != MASTER and self._mode + " " or ""
+        expsetups = "+".join(self.explicit_setups)
+        sys.ps1 = base + "(%s) %s " % (expsetups, "-->" if self._spmode else ">>>")
+        sys.ps2 = base + " %s  ... " % (" " * len(expsetups))
         self._pscolor = dict(
-            slave='brown',
-            master='darkblue',
-            maintenance='darkred',
-            simulation='turquoise'
+            slave="brown",
+            master="darkblue",
+            maintenance="darkred",
+            simulation="turquoise",
         )[self._mode]
 
     def console(self):
         """Run an interactive console, and exit after it is finished."""
-        banner = ('NICOS console ready (version %s).\nTry help() for a '
-                  'list of commands, or help(command) for help on a command.'
-                  % nicos_version)
+        banner = (
+            "NICOS console ready (version %s).\nTry help() for a "
+            "list of commands, or help(command) for help on a command." % nicos_version
+        )
         self._console = NicosInteractiveConsole(self, self.namespace)
         self._console.interact(banner)
-        sys.stdout.write(colorcode('reset'))
+        sys.stdout.write(colorcode("reset"))
 
     def completefn(self, word, index):
         if not self._spmode:
@@ -222,7 +226,7 @@ class ConsoleSession(Session):
             line = readline.get_line_buffer()
             self._matches = self._spmhandler.complete(line, word)
         try:
-            return self._matches[index] + ' '
+            return self._matches[index] + " "
         except IndexError:
             return None
 
@@ -233,8 +237,9 @@ class ConsoleSession(Session):
             raise NicosInteractiveStop(old_stoplevel)
 
     def immediateStop(self):
-        self.log.warning('stopping all devices for immediate stop')
+        self.log.warning("stopping all devices for immediate stop")
         from nicos.commands.device import stop
+
         stop()
 
     def signalHandler(self, signum, frame):
@@ -245,31 +250,31 @@ class ConsoleSession(Session):
             signal.default_int_handler(signum, frame)
         self._in_sigint = True
         try:
-            self.log.info('== Keyboard interrupt (Ctrl-C) ==')
-            self.log.info('Please enter how to proceed:')
-            self.log.info('<I> ignore this interrupt')
-            self.log.info('<H> stop after current scan point')
-            self.log.info('<L> stop after current scan')
-            self.log.info('<S> immediate stop')
+            self.log.info("== Keyboard interrupt (Ctrl-C) ==")
+            self.log.info("Please enter how to proceed:")
+            self.log.info("<I> ignore this interrupt")
+            self.log.info("<H> stop after current scan point")
+            self.log.info("<L> stop after current scan")
+            self.log.info("<S> immediate stop")
             try:
-                reply = input('---> ')
+                reply = input("---> ")
             except RuntimeError:
                 # when already in readline(), this will be raised
-                reply = 'S'
+                reply = "S"
             self.log.log(INPUT, reply)
             # first two choices are hidden, but useful for debugging purposes
-            if reply.upper() == 'R':
+            if reply.upper() == "R":
                 # handle further Ctrl-C presses with KeyboardInterrupt
                 signal.signal(signal.SIGINT, signal.default_int_handler)
-            elif reply.upper() == 'D':
+            elif reply.upper() == "D":
                 # print a stacktrace and debug
                 self.log.info(formatExtendedStack(None, 2))
                 pdb.Pdb().set_trace(sys._getframe(1))
-            elif reply.upper() == 'I':
+            elif reply.upper() == "I":
                 pass
-            elif reply.upper() == 'H':
+            elif reply.upper() == "H":
                 self._stoplevel = 2
-            elif reply.upper() == 'L':
+            elif reply.upper() == "L":
                 self._stoplevel = 1
             else:
                 # this will create a KeyboardInterrupt and run stop()
@@ -278,11 +283,11 @@ class ConsoleSession(Session):
             self._in_sigint = False
 
     @classmethod
-    def run(cls, setup='startup', simulate=False):
+    def run(cls, setup="startup", simulate=False):
         # Assign the correct class to the session singleton.
         session.__class__ = cls
         # pylint: disable=unnecessary-dunder-call
-        session.__init__('nicos')
+        session.__init__("nicos")
         session._stoplevel = 0
         session._in_sigint = False
 
@@ -295,17 +300,21 @@ class ConsoleSession(Session):
         finally:
             # After the console is finished, cleanup.
             if session.mode != SIMULATION:
-                session.log.info('shutting down...')
+                session.log.info("shutting down...")
             session.shutdown()
 
     def checkAccess(self, required):
         # for now, we have no way of knowing who the user is, so we cannot
         # respond to level= keyword
-        if 'passcode' in required:
-            code = required['passcode']
-            if input('Please enter "%s" to proceed, or press Enter to '
-                     'cancel: ' % code) != code:
-                raise AccessError('passcode not correct')
+        if "passcode" in required:
+            code = required["passcode"]
+            if (
+                input(
+                    'Please enter "%s" to proceed, or press Enter to ' "cancel: " % code
+                )
+                != code
+            ):
+                raise AccessError("passcode not correct")
         return Session.checkAccess(self, required)
 
     def clientExec(self, func, args):

@@ -31,8 +31,7 @@ class DOFlipper(NamedDigitalOutput, Waitable):
     status."""
 
     attached_devices = {
-        "powersupplies": Attach("Monitored power supplies", Readable,
-                                multiple=True),
+        "powersupplies": Attach("Monitored power supplies", Readable, multiple=True),
     }
 
     def doStatus(self, maxage=0):
@@ -40,5 +39,5 @@ class DOFlipper(NamedDigitalOutput, Waitable):
         state, status = Waitable.doStatus(self, maxage)
         if tangoState > state:
             state = tangoState
-        status = tangoStatus + ', ' + status
+        status = tangoStatus + ", " + status
         return state, status

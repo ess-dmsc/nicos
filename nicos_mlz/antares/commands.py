@@ -30,14 +30,18 @@ from nicos.commands import helparglist, hiddenusercommand, usercommand
 from nicos.commands.device import maw
 from nicos.commands.scan import scan
 
-from nicos_mlz.frm2.commands.imaging import darkimage as _darkimage, grtomo, \
-    openbeamimage as _openbeamimage, tomo
+from nicos_mlz.frm2.commands.imaging import (
+    darkimage as _darkimage,
+    grtomo,
+    openbeamimage as _openbeamimage,
+    tomo,
+)
 
-__all__ = ['tomo', 'openbeamimage', 'darkimage', 'grtomo']
+__all__ = ["tomo", "openbeamimage", "darkimage", "grtomo"]
 
 
 @usercommand
-@helparglist('shutter, [nimages], [detectors], [presets]')
+@helparglist("shutter, [nimages], [detectors], [presets]")
 # pylint: disable=keyword-arg-before-vararg
 def openbeamimage(shutter=None, nimages=1, *detlist, **preset):
     """ANTARES specific openbeam image acquisition.
@@ -49,22 +53,22 @@ def openbeamimage(shutter=None, nimages=1, *detlist, **preset):
     _openbeamimage(shutter, nimages, *detlist, **preset)
 
     src = path.join(exp.proposalpath, exp.lastopenbeamimage)
-    dst = path.join(exp.proposalpath, 'currentopenbeamimage.fits')
+    dst = path.join(exp.proposalpath, "currentopenbeamimage.fits")
 
     try:
         if path.islink(dst):
             os.remove(dst)
     except OSError as e:
-        session.log.warning('Could not remove symlink: %s', e)
+        session.log.warning("Could not remove symlink: %s", e)
 
     try:
         os.symlink(src, dst)
     except OSError as e:
-        session.log.warning('Could not create symlink: %s', e)
+        session.log.warning("Could not create symlink: %s", e)
 
 
 @usercommand
-@helparglist('shutter, [nimages], [detectors], [presets]')
+@helparglist("shutter, [nimages], [detectors], [presets]")
 # pylint: disable=keyword-arg-before-vararg
 def darkimage(shutter=None, nimages=1, *detlist, **preset):
     """ANTARES specific dark image acquisition.
@@ -75,25 +79,26 @@ def darkimage(shutter=None, nimages=1, *detlist, **preset):
     exp = session.experiment
     _darkimage(shutter, nimages, *detlist, **preset)
     src = path.join(exp.proposalpath, exp.lastdarkimage)
-    dst = path.join(exp.proposalpath, 'currentdarkimage.fits')
+    dst = path.join(exp.proposalpath, "currentdarkimage.fits")
 
     try:
         if path.islink(dst):
             os.remove(dst)
     except OSError as e:
-        session.log.warning('Could not remove symlink: %s', e)
+        session.log.warning("Could not remove symlink: %s", e)
 
     try:
         os.symlink(src, dst)
     except OSError as e:
-        session.log.warning('Could not create symlink: %s', e)
+        session.log.warning("Could not create symlink: %s", e)
 
 
 @usercommand
-@helparglist('n_points, n_periods, img_per_step, [detectors], [presets]')
+@helparglist("n_points, n_periods, img_per_step, [detectors], [presets]")
 # pylint: disable=keyword-arg-before-vararg
-def nGI_stepping(n_points, n_periods=1, img_per_step=1, start_pos=0, *detlist,
-                 **preset):
+def nGI_stepping(
+    n_points, n_periods=1, img_per_step=1, start_pos=0, *detlist, **preset
+):
     """Performs an nGI stepping scan of G1tx over n_periods over n_points,
     taking img_per_step images for each position.
 
@@ -118,13 +123,21 @@ def nGI_stepping(n_points, n_periods=1, img_per_step=1, start_pos=0, *detlist,
     stepwidth = 12.2 * n_periods / (n_points - 1)
 
     zero_pos = max(start_pos - 500, -12000)
-    scan('G1tx', start_pos, stepwidth, n_points, G1tx=zero_pos,
-         fastshutter=img_per_step * ['open'], *detlist, **preset)
-    session.getDevice('fastshutter').maw('closed')
-    session.log.info('fastshutter closed')
+    scan(
+        "G1tx",
+        start_pos,
+        stepwidth,
+        n_points,
+        G1tx=zero_pos,
+        fastshutter=img_per_step * ["open"],
+        *detlist,
+        **preset,
+    )
+    session.getDevice("fastshutter").maw("closed")
+    session.log.info("fastshutter closed")
 
 
 @hiddenusercommand
 def reset_grating():
-    maw('G1tx', -500)
-    maw('G1tx', 0)
+    maw("G1tx", -500)
+    maw("G1tx", 0)

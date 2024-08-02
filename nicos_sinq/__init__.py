@@ -33,13 +33,13 @@ from nicos_sinq.devices.loggers import create_logstash_handler
 def determine_instrument(setup_package_path):
     """SINQ specific way to find the NICOS instrument from the host name."""
     try:
-        domain = 'nicos_sinq/' + socket.getfqdn()
+        domain = "nicos_sinq/" + socket.getfqdn()
     except (ValueError, IndexError, OSError):
         pass
     else:
         # ... but only if a subdir exists for it
         if path.isdir(path.join(setup_package_path, domain)):
-            return domain.replace('/', '.')
+            return domain.replace("/", ".")
 
 
 def get_log_handlers(config):

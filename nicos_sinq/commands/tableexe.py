@@ -21,30 +21,30 @@
 #
 # *****************************************************************************
 """
-  At SINQ, we use batch files in the form of speadsheet tables in csv format.
-  The workflow is such that the instrument scientist prepares the header,
-  the user fills in er data and then executes the spreadsheet. For editing,
-  a normal spreadsheet program is used and the table then exported in csv
-  format.
+At SINQ, we use batch files in the form of speadsheet tables in csv format.
+The workflow is such that the instrument scientist prepares the header,
+the user fills in er data and then executes the spreadsheet. For editing,
+a normal spreadsheet program is used and the table then exported in csv
+format.
 
-  The header row of the table has a special meaning: it defines how the
-  following table lines are expressed through the column names. Supported are:
-  - device names, this causes the device to be driven to the value given in
-    later table rows
-  - NICOS parameter names. This causes the corresponding NICOS parameter
-    to be set
-  - timer or monitor are special names which cause a count() command to
-    be called with either a timer or monitor preset
-  - command is another special name which causes the command specified
-    as data to be executed verbatim.
+The header row of the table has a special meaning: it defines how the
+following table lines are expressed through the column names. Supported are:
+- device names, this causes the device to be driven to the value given in
+  later table rows
+- NICOS parameter names. This causes the corresponding NICOS parameter
+  to be set
+- timer or monitor are special names which cause a count() command to
+  be called with either a timer or monitor preset
+- command is another special name which causes the command specified
+  as data to be executed verbatim.
 
-  Device driving and parameter setting commands are executed first, then
-  monitor, timer or command. Of these three only one can be present in
-  any given row.
+Device driving and parameter setting commands are executed first, then
+monitor, timer or command. Of these three only one can be present in
+any given row.
 
-  The way this is implemented is that the csv file is cross compiled to a NICOS
-  python file which then is executed through the normal script running commands
-  of NICOS.
+The way this is implemented is that the csv file is cross compiled to a NICOS
+python file which then is executed through the normal script running commands
+of NICOS.
 """
 
 import csv
@@ -64,34 +64,32 @@ def _csvfilename(filename):
     if not path.isabs(fn):
         fn = path.normpath(path.join(session.experiment.scriptpath, fn))
     # does the file exist?
-    if fn.endswith(('.csv',)) and path.isfile(fn):
+    if fn.endswith((".csv",)) and path.isfile(fn):
         return fn
     # can I find it when I add an extension?
-    if path.isfile(fn + '.csv'):
-        return fn + '.csv'
+    if path.isfile(fn + ".csv"):
+        return fn + ".csv"
 
 
 @usercommand
-@helparglist('CSV file to run')
+@helparglist("CSV file to run")
 def tableexe(csvfile):
     """
-     Tableexe executes an execution table provided
-     as a CSV file
-     :param csvfile: The csv file to run
-     """
+    Tableexe executes an execution table provided
+    as a CSV file
+    :param csvfile: The csv file to run
+    """
     fname = _csvfilename(csvfile)
-    if not fname or \
-            (not path.isfile(fname) and os.access(fname, os.R_OK)):
-        raise UsageError('The file %r does not exist or is not readable'
-                         % fname)
-    with open(fname, 'r', encoding='utf-8') as fin:
-        csv_data = csv.reader(fin, delimiter=',')
+    if not fname or (not path.isfile(fname) and os.access(fname, os.R_OK)):
+        raise UsageError("The file %r does not exist or is not readable" % fname)
+    with open(fname, "r", encoding="utf-8") as fin:
+        csv_data = csv.reader(fin, delimiter=",")
         # Analyse header
         devlist = []
         parlist = []
         comlist = []
         strlist = []
-        comnames = ['timer', 'monitor', 'command']
+        comnames = ["timer", "monitor", "command"]
         header = next(csv_data)
         for col_name in header:
             if not col_name:
@@ -106,42 +104,40 @@ def tableexe(csvfile):
                 devlist.append(col_name)
                 continue
             try:
-                devname, par = col_name.split('.')
+                devname, par = col_name.split(".")
                 dev = session.getDevice(devname)
                 if par in dev.parameters:
                     parlist.append(col_name)
                     if isinstance(dev.parameters[par], str):
                         strlist.append(col_name)
                 else:
-                    raise UsageError('%s has no parameter %s' % (devname, par))
+                    raise UsageError("%s has no parameter %s" % (devname, par))
             except Exception:
-                raise UsageError(
-                    'Unrecognised column name %s' % col_name) from None
+                raise UsageError("Unrecognised column name %s" % col_name) from None
 
         # Actually execute the CSV data
         idx = 0
-        printinfo('Executing CSV from %s' % csvfile)
+        printinfo("Executing CSV from %s" % csvfile)
         for data in csv_data:
             if not data:
                 continue
             idx = idx + 1
             dev_value = []
             commands = []
-            printinfo('Working line %d of %s'
-                      % (idx, os.path.basename(csvfile)))
+            printinfo("Working line %d of %s" % (idx, os.path.basename(csvfile)))
             for col_name, value in zip(header, data):
                 if col_name in devlist:
                     dev_value.append(value)
                     continue
                 if col_name in parlist:
-                    lv = col_name.split('.')
+                    lv = col_name.split(".")
                     dev = session.getDevice(lv[0])
                     setattr(dev, lv[1], value)
                     continue
-                if col_name == 'timer':
-                    commands.append('count(t=%s)' % value)
-                elif col_name == 'monitor':
-                    commands.append('count(m=%s)' % value)
+                if col_name == "timer":
+                    commands.append("count(t=%s)" % value)
+                elif col_name == "monitor":
+                    commands.append("count(m=%s)" % value)
                 else:
                     commands.append(value)
             dev_poslist = ()

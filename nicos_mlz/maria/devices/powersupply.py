@@ -32,13 +32,18 @@ class ReadOnlyPowerSupply(AnalogInput):
     """
 
     parameters = {
-        'voltage': Param('Actual voltage', unit='V',
-                         type=float, settable=False, volatile=True),
-        'current': Param('Actual current', unit='A',
-                         type=float, settable=False, volatile=True),
-        'setpoint': Param('Setpoint for value (voltage or current) on '
-                          'initialization depending on mode',
-                          type=float, settable=False)
+        "voltage": Param(
+            "Actual voltage", unit="V", type=float, settable=False, volatile=True
+        ),
+        "current": Param(
+            "Actual current", unit="A", type=float, settable=False, volatile=True
+        ),
+        "setpoint": Param(
+            "Setpoint for value (voltage or current) on "
+            "initialization depending on mode",
+            type=float,
+            settable=False,
+        ),
     }
 
     def doInit(self, mode):
@@ -53,5 +58,5 @@ class ReadOnlyPowerSupply(AnalogInput):
 
     def doPoll(self, n, maxage):
         if n % 5 == 0:
-            self._pollParam('voltage', 1)
-            self._pollParam('current', 1)
+            self._pollParam("voltage", 1)
+            self._pollParam("current", 1)

@@ -24,8 +24,15 @@
 
 from nicos.clients.flowui.panels import get_icon
 from nicos.clients.gui.panels.scans import ScansPanel as DefaultScansPanel
-from nicos.guisupport.qt import QActionGroup, QCheckBox, QComboBox, QFrame, \
-    QHBoxLayout, QToolBar, QWidgetAction
+from nicos.guisupport.qt import (
+    QActionGroup,
+    QCheckBox,
+    QComboBox,
+    QFrame,
+    QHBoxLayout,
+    QToolBar,
+    QWidgetAction,
+)
 
 
 class ScansPanel(DefaultScansPanel):
@@ -37,13 +44,13 @@ class ScansPanel(DefaultScansPanel):
         self.set_icons()
 
     def set_icons(self):
-        self.actionPrint.setIcon(get_icon('print-24px.svg'))
-        self.actionSavePlot.setIcon(get_icon('save-24px.svg'))
-        self.actionUnzoom.setIcon(get_icon('zoom_out-24px.svg'))
-        self.actionClose.setIcon(get_icon('zoom_out-24px.svg'))
+        self.actionPrint.setIcon(get_icon("print-24px.svg"))
+        self.actionSavePlot.setIcon(get_icon("save-24px.svg"))
+        self.actionUnzoom.setIcon(get_icon("zoom_out-24px.svg"))
+        self.actionClose.setIcon(get_icon("zoom_out-24px.svg"))
 
     def createPanelToolbar(self):
-        bar = QToolBar('Scans')
+        bar = QToolBar("Scans")
         bar.addAction(self.actionSavePlot)
         bar.addAction(self.actionPrint)
         bar.addSeparator()
@@ -66,11 +73,11 @@ class ScansPanel(DefaultScansPanel):
         bar.addAction(self.actionAutoDisplay)
         bar.addAction(self.actionCombine)
 
-        fitbar = QToolBar('Scan fitting')
+        fitbar = QToolBar("Scan fitting")
         fitbar.addAction(self.actionFitPeak)
         wa = QWidgetAction(fitbar)
         self.fitPickCheckbox = QCheckBox(fitbar)
-        self.fitPickCheckbox.setText('Pick')
+        self.fitPickCheckbox.setText("Pick")
         self.fitPickCheckbox.setChecked(True)
         self.actionPickInitial.setChecked(True)
         self.fitPickCheckbox.toggled.connect(self.actionPickInitial.setChecked)
@@ -95,11 +102,12 @@ class ScansPanel(DefaultScansPanel):
         wa = QWidgetAction(fitbar)
         self.fitComboBox = QComboBox(fitbar)
         for a in ag.actions():
-            itemtext = a.text().replace('&', '')
+            itemtext = a.text().replace("&", "")
             self.fitComboBox.addItem(itemtext)
             self.fitfuncmap[itemtext] = a
         self.fitComboBox.currentIndexChanged.connect(
-            self.on_fitComboBox_currentIndexChanged)
+            self.on_fitComboBox_currentIndexChanged
+        )
         wa.setDefaultWidget(self.fitComboBox)
         fitbar.addAction(wa)
         fitbar.addSeparator()

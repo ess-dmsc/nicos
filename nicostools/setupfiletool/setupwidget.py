@@ -24,11 +24,14 @@
 
 from os import path
 
-from nicos.guisupport.qt import Qt, QTreeWidgetItem, QWidget, pyqtSignal, \
-    pyqtSlot, uic
+from nicos.guisupport.qt import Qt, QTreeWidgetItem, QWidget, pyqtSignal, pyqtSlot, uic
 
-from .dialogs import AddExcludeDialog, AddIncludeDialog, AddModuleDialog, \
-    AddSysconfigDialog
+from .dialogs import (
+    AddExcludeDialog,
+    AddIncludeDialog,
+    AddModuleDialog,
+    AddSysconfigDialog,
+)
 
 
 class SetupWidget(QWidget):
@@ -36,23 +39,26 @@ class SetupWidget(QWidget):
 
     def __init__(self, setup, availablesetups, parent=None):
         QWidget.__init__(self, parent)
-        uic.loadUi(path.join(path.dirname(path.abspath(__file__)),
-                             'ui', 'setupwidget.ui'), self)
+        uic.loadUi(
+            path.join(path.dirname(path.abspath(__file__)), "ui", "setupwidget.ui"),
+            self,
+        )
 
         # keys taken from nicos_demo/skeleton/setups/system.py
-        self.sysconfigKeys = ['cache',
-                              'instrument',
-                              'experiment',
-                              'datasinks',
-                              'notifiers']
+        self.sysconfigKeys = [
+            "cache",
+            "instrument",
+            "experiment",
+            "datasinks",
+            "notifiers",
+        ]
 
         self.lineEditDescription.textEdited.connect(self.editedSetup.emit)
         self.treeWidgetSysconfig.editedSetup.connect(self.editedSetup.emit)
         self.comboBoxGroup.activated.connect(self.editedSetup.emit)
 
         self.lineEditDescription.setText(setup.description)
-        self.comboBoxGroup.setCurrentIndex(
-            self.comboBoxGroup.findText(setup.group))
+        self.comboBoxGroup.setCurrentIndex(self.comboBoxGroup.findText(setup.group))
         for includeItem in setup.includes:
             self.listWidgetIncludes.addItem(includeItem)
         for excludeItem in setup.excludes:
@@ -71,11 +77,11 @@ class SetupWidget(QWidget):
                 for listItem in setup.sysconfig[item.text(0)]:
                     item.addChild(QTreeWidgetItem([listItem]))
             else:
-                item.addChild(QTreeWidgetItem(
-                    [setup.sysconfig[item.text(0)]]))
+                item.addChild(QTreeWidgetItem([setup.sysconfig[item.text(0)]]))
 
         if self.treeWidgetSysconfig.topLevelItemCount() == len(
-                self.sysconfigKeys):  # can't add any unknown keys
+            self.sysconfigKeys
+        ):  # can't add any unknown keys
             self.pushButtonAddSysconfig.setEnabled(False)
         else:
             self.pushButtonAddSysconfig.setEnabled(True)
@@ -86,19 +92,21 @@ class SetupWidget(QWidget):
 
     def on_listWidgetIncludes_itemSelectionChanged(self):
         self.pushButtonRemoveInclude.setEnabled(
-            self.listWidgetIncludes.currentRow() > -1)
+            self.listWidgetIncludes.currentRow() > -1
+        )
 
     def on_listWidgetExcludes_itemSelectionChanged(self):
         self.pushButtonRemoveExclude.setEnabled(
-            self.listWidgetExcludes.currentRow() > -1)
+            self.listWidgetExcludes.currentRow() > -1
+        )
 
     def on_listWidgetModules_itemSelectionChanged(self):
-        self.pushButtonRemoveModule.setEnabled(
-            self.listWidgetModules.currentRow() > -1)
+        self.pushButtonRemoveModule.setEnabled(self.listWidgetModules.currentRow() > -1)
 
     def on_treeWidgetSysconfig_itemSelectionChanged(self):
         self.pushButtonRemoveSysconfig.setEnabled(
-            len(self.treeWidgetSysconfig.selectedItems()) > 0)
+            len(self.treeWidgetSysconfig.selectedItems()) > 0
+        )
 
     @pyqtSlot()
     def on_pushButtonRemoveInclude_clicked(self):
@@ -122,17 +130,22 @@ class SetupWidget(QWidget):
         (cur.parent() or root).removeChild(cur)
 
         if self.treeWidgetSysconfig.topLevelItemCount() == len(
-                self.sysconfigKeys):  # can't add any unknown keys
+            self.sysconfigKeys
+        ):  # can't add any unknown keys
             self.pushButtonAddSysconfig.setEnabled(False)
         else:
             self.pushButtonAddSysconfig.setEnabled(True)
         self.editedSetup.emit()
 
     def _get_unused_setups(self):
-        _in = [i.text() for i in self.listWidgetIncludes.findItems(
-               '', Qt.MatchFlag.MatchContains)]
-        _ex = [i.text() for i in self.listWidgetExcludes.findItems(
-               '', Qt.MatchFlag.MatchContains)]
+        _in = [
+            i.text()
+            for i in self.listWidgetIncludes.findItems("", Qt.MatchFlag.MatchContains)
+        ]
+        _ex = [
+            i.text()
+            for i in self.listWidgetExcludes.findItems("", Qt.MatchFlag.MatchContains)
+        ]
         return list(set(self.availablesetups) - set(_in + _ex))
 
     @pyqtSlot()
@@ -171,8 +184,7 @@ class SetupWidget(QWidget):
         topLevelItems = []
         while i < self.treeWidgetSysconfig.topLevelItemCount():
             # apparently, text() returns a unicode string..? Therefore str()
-            topLevelItems.append(
-                str(self.treeWidgetSysconfig.topLevelItem(i).text(0)))
+            topLevelItems.append(str(self.treeWidgetSysconfig.topLevelItem(i).text(0)))
             i += 1
 
         for key in self.sysconfigKeys:
@@ -186,16 +198,16 @@ class SetupWidget(QWidget):
             self.treeWidgetSysconfig.addTopLevelItem(QTreeWidgetItem([key]))
             if value:
                 currentIndex = 0
-                while currentIndex < self.treeWidgetSysconfig.\
-                        topLevelItemCount():
-                    if self.treeWidgetSysconfig.topLevelItem(
-                            currentIndex).text(0) == key:
-                        self.treeWidgetSysconfig.topLevelItem(currentIndex
-                                                              ).addChild(
-                            QTreeWidgetItem([value]))
+                while currentIndex < self.treeWidgetSysconfig.topLevelItemCount():
+                    if (
+                        self.treeWidgetSysconfig.topLevelItem(currentIndex).text(0)
+                        == key
+                    ):
+                        self.treeWidgetSysconfig.topLevelItem(currentIndex).addChild(
+                            QTreeWidgetItem([value])
+                        )
                     currentIndex += 1
-            if self.treeWidgetSysconfig.topLevelItemCount() == len(
-                    self.sysconfigKeys):
+            if self.treeWidgetSysconfig.topLevelItemCount() == len(self.sysconfigKeys):
                 self.pushButtonAddSysconfig.setEnabled(False)
             self.editedSetup.emit()
 

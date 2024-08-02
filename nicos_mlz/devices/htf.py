@@ -28,18 +28,27 @@ from nicos.devices.entangle import AnalogOutput, TemperatureController
 
 
 class HTFTemperatureController(TemperatureController):
-
     attached_devices = {
-        'maxheater': Attach('Maximum heater output device', AnalogOutput),
+        "maxheater": Attach("Maximum heater output device", AnalogOutput),
     }
 
     parameters = {
-        'maxheateroutput': Param('Maximum heater output',
-                                 type=floatrange(0, 100), userparam=True,
-                                 settable=True, volatile=True, unit='%'),
-        'sensortype': Param('Currently used sensor type',
-                            type=str, userparam=True, settable=False,
-                            volatile=True, mandatory=False),
+        "maxheateroutput": Param(
+            "Maximum heater output",
+            type=floatrange(0, 100),
+            userparam=True,
+            settable=True,
+            volatile=True,
+            unit="%",
+        ),
+        "sensortype": Param(
+            "Currently used sensor type",
+            type=str,
+            userparam=True,
+            settable=False,
+            volatile=True,
+            mandatory=False,
+        ),
     }
 
     def doWriteMaxheateroutput(self, value):

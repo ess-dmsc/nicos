@@ -28,8 +28,7 @@ from .table import TableBase
 
 
 class Detector(TableBase):
-
-    _color = QColor('grey')
+    _color = QColor("grey")
 
     def __init__(self, size, radius, parent=None, scene=None):
         TableBase.__init__(self, 0, 0, size, parent, scene)

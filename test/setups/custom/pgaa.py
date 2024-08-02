@@ -21,73 +21,86 @@
 #
 # *****************************************************************************
 
-name = 'test_pgaa setup'
+name = "test_pgaa setup"
 
-includes = ['stdsystem']
+includes = ["stdsystem"]
 
 devices = dict(
-    ellipse = device('nicos.devices.generic.ManualSwitch',
-        states = [0, 1],
-        visibility = (),
+    ellipse=device(
+        "nicos.devices.generic.ManualSwitch",
+        states=[0, 1],
+        visibility=(),
     ),
-    collimator = device('nicos.devices.generic.ManualSwitch',
-        states = [0, 1],
-        visibility = (),
+    collimator=device(
+        "nicos.devices.generic.ManualSwitch",
+        states=[0, 1],
+        visibility=(),
     ),
-    ellcol = device('nicos_mlz.pgaa.devices.BeamFocus',
-        ellipse = 'ellipse',
-        collimator = 'collimator',
-        unit = '',
+    ellcol=device(
+        "nicos_mlz.pgaa.devices.BeamFocus",
+        ellipse="ellipse",
+        collimator="collimator",
+        unit="",
     ),
-    samplemotor = device('nicos.devices.generic.VirtualMotor',
-        abslimits = (1, 16),
-        speed = 0,
-        unit = '',
-        curvalue = 1,
+    samplemotor=device(
+        "nicos.devices.generic.VirtualMotor",
+        abslimits=(1, 16),
+        speed=0,
+        unit="",
+        curvalue=1,
     ),
-    pushactuator = device('nicos.devices.generic.ManualSwitch',
-        states = ['down', 'up'],
-        visibility = (),
+    pushactuator=device(
+        "nicos.devices.generic.ManualSwitch",
+        states=["down", "up"],
+        visibility=(),
     ),
-    sensort = device('nicos_demo.vpgaa.devices.PushReader',
-        moveable = 'pushactuator',
-        inverse = True,
-        visibility = (),
+    sensort=device(
+        "nicos_demo.vpgaa.devices.PushReader",
+        moveable="pushactuator",
+        inverse=True,
+        visibility=(),
     ),
-    sensorl = device('nicos_demo.vpgaa.devices.PushReader',
-        moveable = 'pushactuator',
-        visibility = (),
+    sensorl=device(
+        "nicos_demo.vpgaa.devices.PushReader",
+        moveable="pushactuator",
+        visibility=(),
     ),
-    push = device('nicos_mlz.pgaa.devices.SamplePusher',
-        unit = '',
-        actuator = 'pushactuator',
-        sensort = 'sensort',
-        sensorl = 'sensorl',
-        visibility = (),
+    push=device(
+        "nicos_mlz.pgaa.devices.SamplePusher",
+        unit="",
+        actuator="pushactuator",
+        sensort="sensort",
+        sensorl="sensorl",
+        visibility=(),
     ),
-    sc = device('nicos_mlz.pgaa.devices.SampleChanger',
-        motor = 'samplemotor',
-        push = 'push',
-        delay = 0.1,
+    sc=device(
+        "nicos_mlz.pgaa.devices.SampleChanger",
+        motor="samplemotor",
+        push="push",
+        delay=0.1,
     ),
-    att1 = device('nicos.devices.generic.ManualSwitch',
-        states = ['out', 'in'],
+    att1=device(
+        "nicos.devices.generic.ManualSwitch",
+        states=["out", "in"],
     ),
-    att2 = device('nicos.devices.generic.ManualSwitch',
-        states = ['out', 'in'],
+    att2=device(
+        "nicos.devices.generic.ManualSwitch",
+        states=["out", "in"],
     ),
-    att3 = device('nicos.devices.generic.ManualSwitch',
-        states = ['out', 'in'],
+    att3=device(
+        "nicos.devices.generic.ManualSwitch",
+        states=["out", "in"],
     ),
-    att = device('nicos_mlz.pgaa.devices.Attenuator',
-        description = 'Attenuator device',
-        moveables = ['att1', 'att2', 'att3'],
-        precision = None,
-        unit = '%',
-        fmtstr = '%.1f',
-        mapping = {
-            100.: ('out', 'out', 'out'),
-            47.: ('out', 'in', 'out'),
+    att=device(
+        "nicos_mlz.pgaa.devices.Attenuator",
+        description="Attenuator device",
+        moveables=["att1", "att2", "att3"],
+        precision=None,
+        unit="%",
+        fmtstr="%.1f",
+        mapping={
+            100.0: ("out", "out", "out"),
+            47.0: ("out", "in", "out"),
         },
     ),
 )

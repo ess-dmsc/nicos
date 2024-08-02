@@ -23,13 +23,14 @@
 
 from test.utils import cache_addr
 
-name = 'elog setup'
+name = "elog setup"
 
 devices = dict(
-    LogbookHtml = device('nicos.services.elog.handler.html.Handler'),
-    LogbookText = device('nicos.services.elog.handler.text.Handler'),
-    Logbook = device('nicos.services.elog.Logbook',
-        handlers = ['LogbookHtml', 'LogbookText'],
-        cache = cache_addr,
+    LogbookHtml=device("nicos.services.elog.handler.html.Handler"),
+    LogbookText=device("nicos.services.elog.handler.text.Handler"),
+    Logbook=device(
+        "nicos.services.elog.Logbook",
+        handlers=["LogbookHtml", "LogbookText"],
+        cache=cache_addr,
     ),
 )

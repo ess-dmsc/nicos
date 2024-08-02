@@ -40,16 +40,22 @@ class VirtualImage(BaseImage):
     """
 
     parameters = {
-        'datafile': Param('File to load the pixel data',
-                          type=str, settable=False, default='',
-                          ),
-        'detname': Param('Name of the whole detectordevice',
-                         type=str, settable=False, default='adet',
-                         ),
+        "datafile": Param(
+            "File to load the pixel data",
+            type=str,
+            settable=False,
+            default="",
+        ),
+        "detname": Param(
+            "Name of the whole detectordevice",
+            type=str,
+            settable=False,
+            default="adet",
+        ),
     }
 
     parameter_overrides = {
-        'size': Override(default=(80, 256), prefercache=False),
+        "size": Override(default=(80, 256), prefercache=False),
     }
 
     _rawdata = None
@@ -57,13 +63,17 @@ class VirtualImage(BaseImage):
     def doInit(self, mode):
         BaseImage.doInit(self, mode)
         try:
-            data = DataParser.CaressFormat(findResource(self.datafile),
-                                           self.size[1], self.size[0])
+            data = DataParser.CaressFormat(
+                findResource(self.datafile), self.size[1], self.size[0]
+            )
             self._rawdata = 0.1 * data[3]
             self._resosteps = data[1]
         except (OSError, ValueError):
-            self.log.warning('data file %s not present, returning empty array '
-                             'from virtual SPODI image', self.datafile)
+            self.log.warning(
+                "data file %s not present, returning empty array "
+                "from virtual SPODI image",
+                self.datafile,
+            )
             self._rawdata = np.zeros(self.size)
             self._resosteps = 1
 
@@ -76,12 +86,12 @@ class VirtualImage(BaseImage):
             ret.append((int(end), end % 1))
             end = math.floor(end)
         for x in range(int(start), int(end)):
-            ret.append((x, 1.))
+            ret.append((x, 1.0))
         return ret
 
     def _generate(self, t):
-        resosteps = self._cache.get(self.detname, 'resosteps')
-        step = self._cache.get(self.detname, '_step')
+        resosteps = self._cache.get(self.detname, "resosteps")
+        step = self._cache.get(self.detname, "_step")
         data = np.zeros(self.size)
         if step < resosteps:
             arng = np.arange(0, 80) * self._resosteps
@@ -95,11 +105,11 @@ class VirtualImage(BaseImage):
     def _run(self):
         while not self._stopflag:
             elapsed = self._timer.elapsed_time()
-            self.log.debug('update image: elapsed = %.1f', elapsed)
+            self.log.debug("update image: elapsed = %.1f", elapsed)
             array = self._generate(self._base_loop_delay)
             self._buf = self._buf + array
-            self.readresult = [self._buf.sum().astype('<u4')]
+            self.readresult = [self._buf.sum().astype("<u4")]
             time.sleep(self._base_loop_delay)
 
     def doReadArray(self, _quality):
-        return self._buf.astype('<u4')
+        return self._buf.astype("<u4")

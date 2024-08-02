@@ -28,14 +28,10 @@ from nicos.devices.generic import MultiSwitcher
 
 
 class HeCellLifter(HasTimeout, MultiSwitcher):
-
     @property
     def busystates(self):
         return {status.BUSY, status.NOTREACHED}
 
     @property
     def errorstates(self):
-        return {
-            status.ERROR: MoveError,
-            status.DISABLED: MoveError
-        }
+        return {status.ERROR: MoveError, status.DISABLED: MoveError}

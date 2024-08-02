@@ -30,8 +30,7 @@ from select import select
 from threading import Thread
 
 from nicos.clients.gui.utils import loadUi
-from nicos.guisupport.qt import QDialog, QMessageBox, QPushButton, \
-    pyqtSignal, pyqtSlot
+from nicos.guisupport.qt import QDialog, QMessageBox, QPushButton, pyqtSignal, pyqtSlot
 from nicos.utils import createSubprocess
 
 
@@ -49,26 +48,30 @@ class CommandsTool(QDialog):
 
     def __init__(self, parent, client, **settings):
         QDialog.__init__(self, parent)
-        loadUi(self, 'tools/commands.ui')
+        loadUi(self, "tools/commands.ui")
 
         self.closeBtn.clicked.connect(self.close)
 
-        commands = settings.get('commands', [])
+        commands = settings.get("commands", [])
         ncmds = len(commands)
         collen = min(ncmds, 8)
 
         for i, (text, cmd) in enumerate(commands):
             btn = QPushButton(text, self)
             self.buttonLayout.addWidget(btn, i % collen, i // collen)
+
             def btncmd(bcmd=cmd):
                 self.execute(bcmd)
+
             btn.clicked[()].connect(btncmd)
 
     def execute(self, cmd):
-        self.outputBox.setPlainText('[%s] Executing %s...\n' %
-                                    (time.strftime('%H:%M:%S'), cmd))
-        proc = createSubprocess(cmd, shell=True, stdout=subprocess.PIPE,
-                                stderr=subprocess.STDOUT)
+        self.outputBox.setPlainText(
+            "[%s] Executing %s...\n" % (time.strftime("%H:%M:%S"), cmd)
+        )
+        proc = createSubprocess(
+            cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT
+        )
         out = proc.communicate()[0].decode()
         self.outputBox.appendPlainText(out)
 
@@ -78,12 +81,12 @@ class CommandsTool(QDialog):
 
 
 class AsyncCommandsTool(CommandsTool):
-    """ A tool to run a long-running process in a background thread
+    """A tool to run a long-running process in a background thread
 
     The output is captured and displayed in the widget.
     """
 
-    newText = pyqtSignal(str, name='newText')
+    newText = pyqtSignal(str, name="newText")
 
     def __init__(self, parent, client, **settings):
         CommandsTool.__init__(self, parent, client, **settings)
@@ -95,17 +98,24 @@ class AsyncCommandsTool(CommandsTool):
 
     def execute(self, cmd):
         if self.proc and self.proc.poll() is None:
-            self.outputBox.appendPlainText('Tool is already running,'
-                                           ' not starting a new one.')
-        self.outputBox.setPlainText('[%s] Executing %s...\n' %
-                                    (time.strftime('%H:%M:%S'), cmd))
+            self.outputBox.appendPlainText(
+                "Tool is already running," " not starting a new one."
+            )
+        self.outputBox.setPlainText(
+            "[%s] Executing %s...\n" % (time.strftime("%H:%M:%S"), cmd)
+        )
 
-        datapath = self.client.eval('session.experiment.datapath', '')
+        datapath = self.client.eval("session.experiment.datapath", "")
         if not datapath or not path.isdir(datapath):
             datapath = None
-        self.proc = createSubprocess(cmd, shell=False, stdout=subprocess.PIPE,
-                                     stderr=subprocess.STDOUT, bufsize=0,
-                                     cwd=datapath)
+        self.proc = createSubprocess(
+            cmd,
+            shell=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            bufsize=0,
+            cwd=datapath,
+        )
         self.thread = Thread(target=self._pollOutput)
         self.thread.start()
 
@@ -116,8 +126,7 @@ class AsyncCommandsTool(CommandsTool):
                 return
             if self.proc is None:
                 return
-            (rl, _wl, _xl) = select([self.proc.stdout], [],
-                                    [self.proc.stdout], 1.)
+            (rl, _wl, _xl) = select([self.proc.stdout], [], [self.proc.stdout], 1.0)
             if rl:
                 line = self.proc.stdout.readline()
                 while line:
@@ -126,7 +135,7 @@ class AsyncCommandsTool(CommandsTool):
 
     @pyqtSlot(str)
     def appendText(self, line):
-        self.outputBox.appendPlainText(line.strip('\n'))
+        self.outputBox.appendPlainText(line.strip("\n"))
         sb = self.outputBox.verticalScrollBar()
         sb.setValue(sb.maximum())
 
@@ -138,10 +147,12 @@ class AsyncCommandsTool(CommandsTool):
         self.accept()
 
     def checkClose(self):
-        if ((self.thread and self.thread.is_alive()) or
-                (self.proc and self.proc.poll is None)):
-            res = QMessageBox.question(self, 'Message',
-                                       'Close window and kill program?')
+        if (self.thread and self.thread.is_alive()) or (
+            self.proc and self.proc.poll is None
+        ):
+            res = QMessageBox.question(
+                self, "Message", "Close window and kill program?"
+            )
             if res == QMessageBox.StandardButton.No:
                 return False
             else:

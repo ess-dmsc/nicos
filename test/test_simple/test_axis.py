@@ -30,11 +30,11 @@ from nicos.core import LimitError, status
 
 from test.utils import approx, raises
 
-session_setup = 'axis'
+session_setup = "axis"
 
 
 def test_params(session):
-    axis = session.getDevice('axis')
+    axis = session.getDevice("axis")
     # drag error should be the default: 1
     assert axis.dragerror == 1
 
@@ -43,9 +43,9 @@ def test_params(session):
     # usermin/usermax got from motor device
     assert axis.userlimits == (-50, +50)
     # unit automatically from motor device
-    assert axis.unit == 'mm'
+    assert axis.unit == "mm"
     # abslimits from config
-    axis2 = session.getDevice('limit_axis')
+    axis2 = session.getDevice("limit_axis")
     assert axis2.abslimits == (-1, +1)
     # offset
     axis2.maw(1)
@@ -55,8 +55,8 @@ def test_params(session):
 
 
 def test_motor_limits(session):
-    axis = session.getDevice('nolimit_axis')
-    motor = session.getDevice('nolimit_motor')
+    axis = session.getDevice("nolimit_axis")
+    motor = session.getDevice("nolimit_motor")
 
     assert axis.offset == 0
     assert axis.abslimits == motor.abslimits == (-100, 100)
@@ -89,7 +89,7 @@ def test_motor_limits(session):
 
 
 def test_movement(session):
-    axis = session.getDevice('axis')
+    axis = session.getDevice("axis")
     # moving once
     axis.maw(1)
     assert axis.read() == approx(1)
@@ -101,16 +101,16 @@ def test_movement(session):
     # moving out of limits?
     assert raises(LimitError, axis.move, 150)
     # simulate a busy motor
-    axis._attached_motor.curstatus = (status.BUSY, 'busy')
+    axis._attached_motor.curstatus = (status.BUSY, "busy")
     # moving while busy?
     # assert raises(NicosError, axis.move, 10)
     # forwarding of motor status by doStatus()
     assert axis.status(0)[0] == status.BUSY
-    axis._attached_motor.curstatus = (status.OK, '')
+    axis._attached_motor.curstatus = (status.OK, "")
 
     # now move for a while
     axis.maw(0)
-    motor = session.getDevice('motor')
+    motor = session.getDevice("motor")
     motor.speed = 5
     try:
         axis.move(0.5)
@@ -127,13 +127,13 @@ def test_movement(session):
 
 
 def test_reset(session):
-    axis = session.getDevice('axis')
+    axis = session.getDevice("axis")
     axis.reset()
 
 
 def test_backlash(session):
-    axis = session.getDevice('backlash_axis')
-    motor = session.getDevice('motor')
+    axis = session.getDevice("backlash_axis")
+    motor = session.getDevice("motor")
     axis.maw(0)
     motor.speed = 0.5
     axis.move(1)
@@ -143,8 +143,8 @@ def test_backlash(session):
 
 
 def test_obs(session):
-    axis = session.getDevice('obs_axis')
-    obs = session.getDevice('coder2')
+    axis = session.getDevice("obs_axis")
+    obs = session.getDevice("coder2")
     obs.offset = 0.1
     axis.maw(0)
     axis.reset()

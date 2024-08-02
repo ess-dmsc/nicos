@@ -1,11 +1,17 @@
-description = 'Kompass standard instrument'
+description = "Kompass standard instrument"
 
-group = 'basic'
+group = "basic"
 
-includes = ['mono', 'guidefocus', 'selector', 'astrium', 'sample', 'alias_sth',
-            'reactor',
-            'detector',
-            'analyzer',
-           ]
+includes = [
+    "mono",
+    "guidefocus",
+    "selector",
+    "astrium",
+    "sample",
+    "alias_sth",
+    "reactor",
+    "detector",
+    "analyzer",
+]
 
-modules = ['nicos.commands.tas']
+modules = ["nicos.commands.tas"]

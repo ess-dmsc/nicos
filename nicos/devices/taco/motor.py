@@ -38,20 +38,23 @@ class Motor(CanReference, TacoDevice, AbstractMotor):
 
     parameters = {
         # do not call deviceReset by default as it does a reference drive
-        'resetcall':  Param('What TACO method to call on reset (deviceInit or '
-                            'deviceReset)', settable=True, default='deviceInit',
-                            type=oneof('deviceInit', 'deviceReset')),
+        "resetcall": Param(
+            "What TACO method to call on reset (deviceInit or " "deviceReset)",
+            settable=True,
+            default="deviceInit",
+            type=oneof("deviceInit", "deviceReset"),
+        ),
     }
 
     parameter_overrides = {
-        'abslimits':  Override(mandatory=False),
+        "abslimits": Override(mandatory=False),
     }
 
     def doReset(self):
         self._taco_reset(self._dev, self.resetcall)
 
     def doReference(self):
-        self._setROParam('target', None)  # don't check target in wait() below
+        self._setROParam("target", None)  # don't check target in wait() below
         self._taco_guard(self._dev.deviceReset)
         self.wait()
 
@@ -71,10 +74,9 @@ class Motor(CanReference, TacoDevice, AbstractMotor):
         self._taco_guard(self._dev.setSpeed, value)
 
     def doReadAbslimits(self):
-        m1 = float(self._taco_guard(self._dev.deviceQueryResource, 'limitmin'))
-        m2 = float(self._taco_guard(self._dev.deviceQueryResource, 'limitmax'))
+        m1 = float(self._taco_guard(self._dev.deviceQueryResource, "limitmin"))
+        m2 = float(self._taco_guard(self._dev.deviceQueryResource, "limitmax"))
         if m1 >= m2:
-            self.log.warning('TACO limitmin/max (%s, %s) are not usable',
-                             m1, m2)
+            self.log.warning("TACO limitmin/max (%s, %s) are not usable", m1, m2)
             return (0, 0)
         return (m1, m2)

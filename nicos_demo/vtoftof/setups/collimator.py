@@ -1,21 +1,23 @@
-description = 'neutron guide changer or collimator'
+description = "neutron guide changer or collimator"
 
-group = 'lowlevel'
+group = "lowlevel"
 
 devices = dict(
-    ngc = device('nicos_mlz.toftof.devices.Switcher',
-        description = 'The neutron guide changer/collimator',
-        moveable = device('nicos.devices.generic.VirtualMotor',
-            fmtstr = "%7.2f",
-            abslimits = (-131.4, 0.),
-            unit = 'mm',
-            visibility = (),
-            speed = 2,
-            curvalue = -5.1,
+    ngc=device(
+        "nicos_mlz.toftof.devices.Switcher",
+        description="The neutron guide changer/collimator",
+        moveable=device(
+            "nicos.devices.generic.VirtualMotor",
+            fmtstr="%7.2f",
+            abslimits=(-131.4, 0.0),
+            unit="mm",
+            visibility=(),
+            speed=2,
+            curvalue=-5.1,
         ),
-        mapping = {
-            'linear': -5.1,
-            'focus': -131.25,
+        mapping={
+            "linear": -5.1,
+            "focus": -131.25,
         },
     ),
 )

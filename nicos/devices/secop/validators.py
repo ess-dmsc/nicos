@@ -25,8 +25,18 @@
 
 from collections import OrderedDict
 
-from nicos.core.params import anytype, dictwith, floatrange, intrange, \
-    listof, none_or, nonemptystring, oneofdict, string, tupleof
+from nicos.core.params import (
+    anytype,
+    dictwith,
+    floatrange,
+    intrange,
+    listof,
+    none_or,
+    nonemptystring,
+    oneofdict,
+    string,
+    tupleof,
+)
 from nicos.utils import readonlydict
 
 
@@ -34,10 +44,11 @@ from nicos.utils import readonlydict
 # all types must either be vanilla NICOS types or inherit from them
 # as we want to avoid pickling
 
+
 # pylint: disable=redefined-builtin
 def Secop_double(min=None, max=None, use_limits=False, **kwds):
     if use_limits and (min, max) != (None, None):
-        return floatrange(float('-inf') if min is None else min, max)
+        return floatrange(float("-inf") if min is None else min, max)
     return float
 
 
@@ -77,9 +88,9 @@ class Secop_enum(oneofdict):
         # to keep the given order instead or sorting by name, at least when
         # vals is an OrderedDict ...
         oneofdict.__init__(
-            self, OrderedDict(sorted(((v, k) for k, v in members.items()))))
-        self.__doc__ = 'one of ' + ', '.join('%s, %d' % kv
-                                             for kv in members.items())
+            self, OrderedDict(sorted(((v, k) for k, v in members.items())))
+        )
+        self.__doc__ = "one of " + ", ".join("%s, %d" % kv for kv in members.items())
 
     def __call__(self, val=None):
         if val is None:
@@ -98,9 +109,9 @@ class Secop_array(listof):
             val = [self.conv()] * self.minlen
         result = listof.__call__(self, val)
         if len(result) < self.minlen:
-            raise ValueError('value needs a length >= %d' % self.minlen)
+            raise ValueError("value needs a length >= %d" % self.minlen)
         if self.maxlen is not None and len(result) > self.maxlen:
-            raise ValueError('value needs a length <= %d' % self.maxlen)
+            raise ValueError("value needs a length <= %d" % self.maxlen)
         return result
 
 
@@ -120,18 +131,19 @@ class Secop_struct(dictwith):
 
     def __call__(self, val=None):
         if val is None:
-            return {k: conv() for k, conv in self.convs.items()
-                    if k in self.mandatorykeys}
+            return {
+                k: conv() for k, conv in self.convs.items() if k in self.mandatorykeys
+            }
         if not isinstance(val, dict):
-            raise ValueError('value needs to be a dict')
+            raise ValueError("value needs to be a dict")
         vkeys = set(val)
         msgs = []
         if vkeys - self.keys:
-            msgs.append('unknown keys: %s' % ', '.join((vkeys - self.keys)))
+            msgs.append("unknown keys: %s" % ", ".join((vkeys - self.keys)))
         if self.mandatorykeys - vkeys:
-            msgs.append('missing keys: %s' % ', '.join(self.mandatorykeys - vkeys))
+            msgs.append("missing keys: %s" % ", ".join(self.mandatorykeys - vkeys))
         if msgs:
-            raise ValueError('Key mismatch in dictionary: ' + ', '.join(msgs))
+            raise ValueError("Key mismatch in dictionary: " + ", ".join(msgs))
         ret = {}
         for k, conv in self.convs.items():
             ret[k] = conv(val.get(k))
@@ -141,4 +153,4 @@ class Secop_struct(dictwith):
 def get_validator(datainfo, use_limits):
     if datainfo is None:  # used for commands without argument or without result
         return anytype
-    return globals()['Secop_%s' % datainfo['type']](**datainfo, use_limits=use_limits)
+    return globals()["Secop_%s" % datainfo["type"]](**datainfo, use_limits=use_limits)

@@ -1,5 +1,5 @@
-description = 'setup for the NICOS watchdog'
-group = 'special'
+description = "setup for the NICOS watchdog"
+group = "special"
 
 # watch_conditions:
 pressure_value = 0.018  # no precon
@@ -27,18 +27,20 @@ pressure_precon = 0.015
 #     (default '')
 # 'action' -- code to execute if condition is true (default no code is executed)
 watch_conditions = [
-    dict(condition = 'LogSpace_status[0] == WARN',
-         message = 'Disk space for log files becomes too low.',
-         type = 'critical',
-         gracetime = 30,
+    dict(
+        condition="LogSpace_status[0] == WARN",
+        message="Disk space for log files becomes too low.",
+        type="critical",
+        gracetime=30,
     ),
-    dict(condition = 'reactorpower_value < 19.0 or sixfold_value == "closed" or'
-                     ' nl2b_value == "closed"',
-         precondition = 'sixfold_value == "open" and '
-                        'nl2b_value == "open" and '
-                        'reactorpower_value > 119.8',
-         message = 'Reactor power falling or Sixfold or NL2b closed',
-         type = 'critical',
+    dict(
+        condition='reactorpower_value < 19.0 or sixfold_value == "closed" or'
+        ' nl2b_value == "closed"',
+        precondition='sixfold_value == "open" and '
+        'nl2b_value == "open" and '
+        "reactorpower_value > 119.8",
+        message="Reactor power falling or Sixfold or NL2b closed",
+        type="critical",
     ),
     # dict(
     #     condition = 'reactorpower_value < 0.1',
@@ -51,44 +53,48 @@ watch_conditions = [
     #     message = 'NL2b or sixfold shutter closed',
     #     type = 'critical',
     # ),
-    dict(condition = 'pressure_CB_value > %.3f' % pressure_value,
-         precondition = 'pressure_CB_value < %.3f' % pressure_precon,
-         message = 'pressure_CB_value > %.3f' % pressure_value,
-         type = 'critical',
-        ),
-    dict(condition = 'pressure_SFK_value > %.3f' % pressure_value,
-         precondition = 'pressure_SFK_value < %.3f' % pressure_precon,
-         message = 'pressure_SFK_value > %.3f' % pressure_value,
-         type = 'critical',
-    ),
-    dict(condition = 'pressure_SR_value > %.3f' % pressure_value,
-         precondition = 'pressure_SR_value < %.3f' % pressure_precon,
-         message = 'pressure_SR_value > %.3f' % pressure_value,
-         type = 'critical',
+    dict(
+        condition="pressure_CB_value > %.3f" % pressure_value,
+        precondition="pressure_CB_value < %.3f" % pressure_precon,
+        message="pressure_CB_value > %.3f" % pressure_value,
+        type="critical",
     ),
     dict(
-         condition = 't_memograph_in_value > 25',
-         message = 'Cooling water temperature greater than 25 C',
-         type = 'critical',
-         priority = 2,
+        condition="pressure_SFK_value > %.3f" % pressure_value,
+        precondition="pressure_SFK_value < %.3f" % pressure_precon,
+        message="pressure_SFK_value > %.3f" % pressure_value,
+        type="critical",
+    ),
+    dict(
+        condition="pressure_SR_value > %.3f" % pressure_value,
+        precondition="pressure_SR_value < %.3f" % pressure_precon,
+        message="pressure_SR_value > %.3f" % pressure_value,
+        type="critical",
+    ),
+    dict(
+        condition="t_memograph_in_value > 25",
+        message="Cooling water temperature greater than 25 C",
+        type="critical",
+        priority=2,
     ),
 ]
 
-includes = ['notifiers']
+includes = ["notifiers"]
 
 notifiers = {
-    'default': ['email'],
-    'critical': ['email', 'smser'],
+    "default": ["email"],
+    "critical": ["email", "smser"],
 }
 
 devices = dict(
-    Watchdog = device('nicos.services.watchdog.Watchdog',
+    Watchdog=device(
+        "nicos.services.watchdog.Watchdog",
         # use only 'localhost' if the cache is really running on
         # the same machine, otherwise use the official computer
         # name
-        cache = 'localhost',
-        notifiers = notifiers,
-        mailreceiverkey = 'email/receivers',
-        watch = watch_conditions,
+        cache="localhost",
+        notifiers=notifiers,
+        mailreceiverkey="email/receivers",
+        watch=watch_conditions,
     ),
 )

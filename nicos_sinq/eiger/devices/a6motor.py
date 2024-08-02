@@ -33,13 +33,13 @@ class A6Motor(HasPrecision, BaseSequencer):
     """
 
     parameters = {
-        'wait_period': Param('Waiting time after the motor finished',
-                             type=floatrange(0), default=7),
+        "wait_period": Param(
+            "Waiting time after the motor finished", type=floatrange(0), default=7
+        ),
     }
 
     attached_devices = {
-        'raw_motor': Attach('The real motor to drive',
-                            Moveable),
+        "raw_motor": Attach("The real motor to drive", Moveable),
     }
 
     def doRead(self, maxage=0):
@@ -50,7 +50,4 @@ class A6Motor(HasPrecision, BaseSequencer):
         BaseSequencer.doStart(self, target)
 
     def _generateSequence(self, target):
-        return [
-            SeqDev(self._attached_raw_motor, target),
-            SeqSleep(self.wait_period)
-        ]
+        return [SeqDev(self._attached_raw_motor, target), SeqSleep(self.wait_period)]

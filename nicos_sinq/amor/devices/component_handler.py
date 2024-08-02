@@ -25,8 +25,7 @@ from nicos import session
 from nicos.core import Attach, Param, dictof, listof, status, usermethod
 from nicos.core.device import Moveable, Readable
 from nicos.core.errors import ConfigurationError
-from nicos.devices.generic.sequence import BaseSequencer, SeqCall, SeqDev, \
-    SeqSleep
+from nicos.devices.generic.sequence import BaseSequencer, SeqCall, SeqDev, SeqSleep
 from nicos.utils import number_types, printTable
 
 from nicos_sinq.amor.devices.sps_switch import SpsSwitch
@@ -59,23 +58,32 @@ class DistancesHandler(BaseSequencer):
     valuetype = list
 
     parameters = {
-        'components': Param('Components mapped to tuple of their offsets '
-                            '(mark_offset, scale_offset)',
-                            type=dictof(str, tuple), userparam=False),
-        'fixedcomponents': Param('Fixed components mapped to their distances',
-                                 type=dictof(str, float)),
-        'rawdistances': Param('Calculated distances of components',
-                              type=dictof(str, float), userparam=False,
-                              settable=True),
-        'order': Param('Order of components for display/measurement',
-                       type=listof(str), userparam=False)
+        "components": Param(
+            "Components mapped to tuple of their offsets "
+            "(mark_offset, scale_offset)",
+            type=dictof(str, tuple),
+            userparam=False,
+        ),
+        "fixedcomponents": Param(
+            "Fixed components mapped to their distances", type=dictof(str, float)
+        ),
+        "rawdistances": Param(
+            "Calculated distances of components",
+            type=dictof(str, float),
+            userparam=False,
+            settable=True,
+        ),
+        "order": Param(
+            "Order of components for display/measurement",
+            type=listof(str),
+            userparam=False,
+        ),
     }
 
     attached_devices = {
-        'switch': Attach('Switch to turn laser on/off', SpsSwitch),
-        'positioner': Attach('Positions laser to measure various components',
-                             Moveable),
-        'dimetix': Attach('Measures and returns the distance', Readable)
+        "switch": Attach("Switch to turn laser on/off", SpsSwitch),
+        "positioner": Attach("Positions laser to measure various components", Moveable),
+        "dimetix": Attach("Measures and returns the distance", Readable),
     }
 
     def __call__(self, components=None):
@@ -83,10 +91,10 @@ class DistancesHandler(BaseSequencer):
         # Laser, Sample and Chopper
         if not components:
             components = self._components()
-        sample = getattr(self, 'sample', None)
-        chopper = getattr(self, 'chopper', None)
+        sample = getattr(self, "sample", None)
+        chopper = getattr(self, "chopper", None)
         table = []
-        self.log.info('Horizontal distances of components:')
+        self.log.info("Horizontal distances of components:")
         for component in components:
             distance = getattr(self, component, None)
             row = [component]
@@ -94,14 +102,18 @@ class DistancesHandler(BaseSequencer):
                 if isinstance(sample, number_types):
                     row.append(str(sample - distance))
                 else:
-                    row.append('-')
+                    row.append("-")
                 if isinstance(chopper, number_types):
                     row.append(str(chopper - distance))
                 else:
-                    row.append('-')
+                    row.append("-")
                 table.append(row)
-        printTable(['Component', 'From SAMPLE', 'From CHOPPER'],
-                   table, self.log.info, rjust=True)
+        printTable(
+            ["Component", "From SAMPLE", "From CHOPPER"],
+            table,
+            self.log.info,
+            rjust=True,
+        )
 
     def doInit(self, mode):
         self._update()
@@ -112,38 +124,48 @@ class DistancesHandler(BaseSequencer):
         for component in self._components():
             self._update_component(component)
             val = getattr(self, component)
-            if val == 'UNKNOWN':
+            if val == "UNKNOWN":
                 unknown.append(component)
-            elif val == 'NOT ACTIVE' and component in session.loaded_setups:
+            elif val == "NOT ACTIVE" and component in session.loaded_setups:
                 inactive_loaded.append(component)
 
         if unknown:
-            self.log.warning('Distances for following components unknown:')
-            self.log.warning('** ' + ', '.join(unknown))
-            self.log.warning(' ')
+            self.log.warning("Distances for following components unknown:")
+            self.log.warning("** " + ", ".join(unknown))
+            self.log.warning(" ")
 
         if inactive_loaded:
-            self.log.warning('Following components are inactive but loaded in '
-                             'setups:')
-            self.log.warning('** ' + ', '.join(inactive_loaded))
-            self.log.warning('Do one of the following:')
-            self.log.warning('Unload these setups OR Run: %s.mesaure() to '
-                             'redo distances!' % self.name)
+            self.log.warning(
+                "Following components are inactive but loaded in " "setups:"
+            )
+            self.log.warning("** " + ", ".join(inactive_loaded))
+            self.log.warning("Do one of the following:")
+            self.log.warning(
+                "Unload these setups OR Run: %s.mesaure() to "
+                "redo distances!" % self.name
+            )
 
     def doInfo(self):
         ret = []
         for component in self._components():
-            ret.append((component, getattr(self, component),
-                        str(getattr(self, component)), 'mm', 'general'))
+            ret.append(
+                (
+                    component,
+                    getattr(self, component),
+                    str(getattr(self, component)),
+                    "mm",
+                    "general",
+                )
+            )
         return ret
 
     def doRead(self, maxage=0):
-        return ''
+        return ""
 
     def doStatus(self, maxage=0):
         if self._seq_is_running():
-            return status.BUSY, 'Measuring'
-        return status.OK, ''
+            return status.BUSY, "Measuring"
+        return status.OK, ""
 
     def doIsAtTarget(self, pos, target):
         return True
@@ -152,20 +174,19 @@ class DistancesHandler(BaseSequencer):
         if component in self.fixedcomponents:
             self.__dict__[component] = self.fixedcomponents.get(component)
             if printValues:
-                self._logvalues([component, "", getattr(self, component),
-                                 "FIXED"])
+                self._logvalues([component, "", getattr(self, component), "FIXED"])
             return
 
         if component in self.components:
             raw = self.rawdistances.get(component)
             if raw is None:
-                self.__dict__[component] = 'UNKNOWN'
+                self.__dict__[component] = "UNKNOWN"
                 if printValues:
                     self._logvalues([component, "", "", "UNKNOWN"])
                 return
 
             if raw > 8000:
-                self.__dict__[component] = 'NOT ACTIVE'
+                self.__dict__[component] = "NOT ACTIVE"
                 if printValues:
                     self._logvalues([component, raw, "", "NOT ACTIVE"])
                 return
@@ -181,10 +202,10 @@ class DistancesHandler(BaseSequencer):
 
     def _logvalues(self, values, isheader=False):
         if isheader:
-            values = ['{0: <13}'.format(val) for val in values]
+            values = ["{0: <13}".format(val) for val in values]
             printTable(values, [], self.log.info)
         else:
-            values = ['{0: >13}'.format(val) for val in values]
+            values = ["{0: >13}".format(val) for val in values]
             printTable([], [values], self.log.info)
 
     def _components(self):
@@ -206,7 +227,7 @@ class DistancesHandler(BaseSequencer):
 
         # Get the value from cox
         try:
-            cox = session.getDevice('cox')
+            cox = session.getDevice("cox")
         except ConfigurationError:
             coxval = 0.0
         else:
@@ -223,31 +244,28 @@ class DistancesHandler(BaseSequencer):
         seq = []
 
         # If the laser is now on, turn it on
-        if self._attached_switch.read(0) != 'ON':
-            seq.append(SeqDev(self._attached_switch, 'ON'))
+        if self._attached_switch.read(0) != "ON":
+            seq.append(SeqDev(self._attached_switch, "ON"))
             seq.append(SeqSleep(5))
 
-        seq.append(SeqCall(self._logvalues,
-                           ['Component', 'Read', 'Final', 'Comments'],
-                           True))
+        seq.append(
+            SeqCall(self._logvalues, ["Component", "Read", "Final", "Comments"], True)
+        )
 
         for component in target:
             if component not in self._components():
-                comments = 'Skipping! Component not valid..'
-                seq.append(SeqCall(self._logvalues, [component, '', '',
-                                                     comments]))
+                comments = "Skipping! Component not valid.."
+                seq.append(SeqCall(self._logvalues, [component, "", "", comments]))
                 continue
 
             if component in self.fixedcomponents:
-                comments = 'Skipping! Component fixed..'
-                seq.append(SeqCall(self._logvalues, [component, '', '',
-                                                     comments]))
+                comments = "Skipping! Component fixed.."
+                seq.append(SeqCall(self._logvalues, [component, "", "", comments]))
                 continue
 
             if component not in self._attached_positioner.mapping:
-                comments = 'Skipping! Height not configured..'
-                seq.append(SeqCall(self._logvalues, [component, '', '',
-                                                     comments]))
+                comments = "Skipping! Height not configured.."
+                seq.append(SeqCall(self._logvalues, [component, "", "", comments]))
                 continue
 
             # Move the laser to the component height
@@ -260,10 +278,10 @@ class DistancesHandler(BaseSequencer):
             seq.append(SeqCall(self._update_raw_distance, component))
             seq.append(SeqCall(self._update_component, component, True))
 
-        seq.append(SeqCall(self.log.info, 'Parking and turning off laser..'))
-        seq.append(SeqDev(self._attached_positioner, 'park'))
-        seq.append(SeqDev(self._attached_switch, 'OFF'))
-        seq.append(SeqCall(self.log.info, 'Done! Summary below:'))
+        seq.append(SeqCall(self.log.info, "Parking and turning off laser.."))
+        seq.append(SeqDev(self._attached_positioner, "park"))
+        seq.append(SeqDev(self._attached_switch, "OFF"))
+        seq.append(SeqCall(self.log.info, "Done! Summary below:"))
         seq.append(SeqCall(self.__call__, target))
         seq.append(SeqCall(self._update))
 

@@ -34,9 +34,9 @@ class HistogramItem(HistogramLUTItem):
         self,
         image=None,
         fillHistogram=True,
-        levelMode='mono',
-        gradientPosition='right',
-        orientation='vertical',
+        levelMode="mono",
+        gradientPosition="right",
+        orientation="vertical",
         color=(100, 100, 200),
     ):
         HistogramLUTItem.__init__(
@@ -50,12 +50,8 @@ class HistogramItem(HistogramLUTItem):
         self.layout.removeItem(self.axis)
         self.layout.removeItem(self.vb)
         self.layout.removeItem(self.gradient)
-        self.axis = AxisItem(
-            'bottom', linkView=self.vb, maxTickLength=-10, parent=self
-        )
-        self.axis_2 = AxisItem(
-            'left', linkView=self.vb, maxTickLength=-30, parent=self
-        )
+        self.axis = AxisItem("bottom", linkView=self.vb, maxTickLength=-10, parent=self)
+        self.axis_2 = AxisItem("left", linkView=self.vb, maxTickLength=-30, parent=self)
         self.layout.addItem(self.axis_2, 0, 0)
         self.layout.addItem(self.vb, 0, 1)
         self.layout.addItem(self.axis, 1, 1)
@@ -63,15 +59,13 @@ class HistogramItem(HistogramLUTItem):
 
         for act in self.gradient.menu.actions():
             try:
-                if act.name in ['spectrum', 'cyclic']:
+                if act.name in ["spectrum", "cyclic"]:
                     self.gradient.menu.removeAction(act)
             except AttributeError:
                 pass
 
         self.gradient.hsvAction.setCheckable(False)
-        self.gradient.hsvAction.triggered.disconnect(
-            self.gradient._setColorModeToHSV
-        )
+        self.gradient.hsvAction.triggered.disconnect(self.gradient._setColorModeToHSV)
         self.gradient.menu.removeAction(self.gradient.hsvAction)
         self.gradient.menu.removeAction(self.gradient.rgbAction)
 
@@ -98,8 +92,8 @@ class HistogramItem(HistogramLUTItem):
         if self.imageItem() is None:
             return
 
-        if self.levelMode != 'mono':
-            self.log.error('Only mono images are supported')
+        if self.levelMode != "mono":
+            self.log.error("Only mono images are supported")
             return
 
         for plot in self.plots[1:]:
@@ -131,15 +125,13 @@ class HistogramItem(HistogramLUTItem):
 
 class HistogramWidget(GraphicsView):
     def __init__(self, parent=None, remove_regions=False, *args, **kargs):
-        background = kargs.pop('background', 'default')
-        GraphicsView.__init__(
-            self, parent, useOpenGL=False, background=background
-        )
+        background = kargs.pop("background", "default")
+        GraphicsView.__init__(self, parent, useOpenGL=False, background=background)
         self.item = HistogramItem(*args, **kargs)
         self.setCentralItem(self.item)
 
-        self.orientation = kargs.get('orientation', 'vertical')
-        if self.orientation == 'vertical':
+        self.orientation = kargs.get("orientation", "vertical")
+        if self.orientation == "vertical":
             self.setSizePolicy(
                 QSizePolicy.Policy.Preferred,
                 QSizePolicy.Policy.Expanding,

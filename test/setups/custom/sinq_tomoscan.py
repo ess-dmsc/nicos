@@ -25,32 +25,35 @@ from os import path
 
 from test.utils import module_root, runtime_root
 
-description = 'Setup for SINQ Tomography scan test'
+description = "Setup for SINQ Tomography scan test"
 
-name = 'Test SINQ tomography scanning setup'
+name = "Test SINQ tomography scanning setup"
 
-includes = ['axis', 'detector']
+includes = ["axis", "detector"]
 
 devices = dict(
-    motor2 = device('nicos.devices.generic.VirtualMotor',
-        description = 'Test motor',
-        unit = 'deg',
-        curvalue = 0,
-        abslimits = (0, 360),
+    motor2=device(
+        "nicos.devices.generic.VirtualMotor",
+        description="Test motor",
+        unit="deg",
+        curvalue=0,
+        abslimits=(0, 360),
     ),
-    Exp = device('nicos_sinq.devices.experiment.TomoSinqExperiment',
-        description = ' SINQ Tomo Experiment',
-        sample = 'Sample',
-        elog = True,
-        dataroot = path.join(runtime_root, 'data'),
-        propprefix = 'p',
-        templates = path.join(module_root, 'test', 'script_templates'),
-        zipdata = True,
+    Exp=device(
+        "nicos_sinq.devices.experiment.TomoSinqExperiment",
+        description=" SINQ Tomo Experiment",
+        sample="Sample",
+        elog=True,
+        dataroot=path.join(runtime_root, "data"),
+        propprefix="p",
+        templates=path.join(module_root, "test", "script_templates"),
+        zipdata=True,
     ),
-    img_index = device('nicos.devices.generic.manual.ManualMove',
-        description = 'Keeps the index of the last measured image',
-        unit = '',
-        abslimits = (0, 1e9),
-        visibility = (),
+    img_index=device(
+        "nicos.devices.generic.manual.ManualMove",
+        description="Keeps the index of the last measured image",
+        unit="",
+        abslimits=(0, 1e9),
+        visibility=(),
     ),
 )

@@ -27,13 +27,15 @@ import numpy as np
 
 from nicos.core.constants import SIMULATION
 from nicos.core.params import Override, Param, Value, listof, oneof
-from nicos.devices.entangle import CounterChannel as BaseCounterChannel, \
-    ImageChannel as BaseImageChannel, TimerChannel as BaseTimerChannel
+from nicos.devices.entangle import (
+    CounterChannel as BaseCounterChannel,
+    ImageChannel as BaseImageChannel,
+    TimerChannel as BaseTimerChannel,
+)
 from nicos.devices.vendor.qmesydaq import Image as QMesyDAQImage
 
 
 class TimerChannel(BaseTimerChannel):
-
     def doFinish(self):
         self.doStatus(0)
         return BaseTimerChannel.doFinish(self)
@@ -44,7 +46,6 @@ class TimerChannel(BaseTimerChannel):
 
 
 class CounterChannel(BaseCounterChannel):
-
     def doFinish(self):
         self.doStatus(0)
         return BaseCounterChannel.doFinish(self)
@@ -55,21 +56,28 @@ class CounterChannel(BaseCounterChannel):
 
 
 class ImageChannel(QMesyDAQImage, BaseImageChannel):
-
     parameters = {
-        'readout': Param('Readout mode of the Detector', settable=True,
-                         type=oneof('raw', 'mapped', 'amplitude'),
-                         default='mapped', mandatory=False, chatty=True),
-        'flipaxes': Param('Flip data along these axes after reading from det',
-                          type=listof(int), default=[], unit=''),
-        'transpose': Param('Whether to transpose the image',
-                           type=bool, default=False),
+        "readout": Param(
+            "Readout mode of the Detector",
+            settable=True,
+            type=oneof("raw", "mapped", "amplitude"),
+            default="mapped",
+            mandatory=False,
+            chatty=True,
+        ),
+        "flipaxes": Param(
+            "Flip data along these axes after reading from det",
+            type=listof(int),
+            default=[],
+            unit="",
+        ),
+        "transpose": Param("Whether to transpose the image", type=bool, default=False),
     }
 
     # Use the configuration from QMesyDAQ
     parameter_overrides = {
-        'listmode': Override(volatile=True),
-        'histogram': Override(volatile=True),
+        "listmode": Override(volatile=True),
+        "histogram": Override(volatile=True),
     }
 
     def doReadRoisize(self):
@@ -77,44 +85,42 @@ class ImageChannel(QMesyDAQImage, BaseImageChannel):
         return tmp if sum(tmp) else (1, 1)
 
     def doWriteListmode(self, value):
-        self._dev.SetProperties(['writelistmode', ('%s' % value).lower()])
+        self._dev.SetProperties(["writelistmode", ("%s" % value).lower()])
         return self.doReadListmode()
 
     def doReadListmode(self):
-        return {'false': False, 'true': True}[
-            self._getProperty('writelistmode')]
+        return {"false": False, "true": True}[self._getProperty("writelistmode")]
 
     def doWriteHistogram(self, value):
-        self._dev.SetProperties(['writehistogram', ('%s' % value).lower()])
+        self._dev.SetProperties(["writehistogram", ("%s" % value).lower()])
         return self.doReadHistogram()
 
     def doReadHistogram(self):
-        return {'false': False, 'true': True}[
-            self._getProperty('writehistogram')]
+        return {"false": False, "true": True}[self._getProperty("writehistogram")]
 
     def doWriteReadout(self, value):
-        self._dev.SetProperties(['histogram', value])
-        return self._getProperty('histogram')
+        self._dev.SetProperties(["histogram", value])
+        return self._getProperty("histogram")
 
     def doWriteListmodefile(self, value):
-        self._dev.SetProperties(['lastlistfile', value])
-        return self._getProperty('lastlistfile')
+        self._dev.SetProperties(["lastlistfile", value])
+        return self._getProperty("lastlistfile")
 
-#   def doReadListmodefile(self):
-#       return self._getProperty('lastlistfile')
+    #   def doReadListmodefile(self):
+    #       return self._getProperty('lastlistfile')
 
     def doWriteHistogramfile(self, value):
-        self._dev.SetProperties(['lasthistfile', value])
-        return self._getProperty('lasthistfile')
+        self._dev.SetProperties(["lasthistfile", value])
+        return self._getProperty("lasthistfile")
 
-#   def doReadHistogramfile(self):
-#       return self._getProperty('lasthistfile')
+    #   def doReadHistogramfile(self):
+    #       return self._getProperty('lasthistfile')
 
     def doReadConfigfile(self):
-        return self._getProperty('configfile')
+        return self._getProperty("configfile")
 
     def doReadCalibrationfile(self):
-        return self._getProperty('calibrationfile')
+        return self._getProperty("calibrationfile")
 
     def doReadArray(self, quality):
         narray = BaseImageChannel.doReadArray(self, quality)
@@ -139,8 +145,9 @@ class MultiCounter(BaseImageChannel):
     """
 
     parameters = {
-        'channels': Param('Tuple of active channels (1 based)', settable=True,
-                          type=listof(int)),
+        "channels": Param(
+            "Tuple of active channels (1 based)", settable=True, type=listof(int)
+        ),
     }
 
     def doRead(self, maxage=0):
@@ -155,9 +162,12 @@ class MultiCounter(BaseImageChannel):
             # ch is 1 based, data is 0 based
             total = sum(res[ch - 1] for ch in self.channels)
         else:
-            self.log.warning('not enough data returned, check config! '
-                             '(got %d elements, expected >=%d)',
-                             len(res), expected)
+            self.log.warning(
+                "not enough data returned, check config! "
+                "(got %d elements, expected >=%d)",
+                len(res),
+                expected,
+            )
             res = None
             total = 0
         resultlist = [total]
@@ -176,15 +186,19 @@ class MultiCounter(BaseImageChannel):
         return BaseImageChannel.doStop(self)
 
     def valueInfo(self):
-        resultlist = [Value('ch.sum', unit='cts', errors='sqrt',
-                            type='counter', fmtstr='%d')]
+        resultlist = [
+            Value("ch.sum", unit="cts", errors="sqrt", type="counter", fmtstr="%d")
+        ]
         for ch in self.channels:
-            resultlist.append(Value('ch%d' % ch, unit='cts', errors='sqrt',
-                                    type='counter', fmtstr='%d'))
+            resultlist.append(
+                Value(
+                    "ch%d" % ch, unit="cts", errors="sqrt", type="counter", fmtstr="%d"
+                )
+            )
         return tuple(resultlist)
 
     def doReadIscontroller(self):
         return False
 
     def doReadFmtstr(self):
-        return ', '.join(['sum %d'] + ['ch%d %%d' % ch for ch in self.channels])
+        return ", ".join(["sum %d"] + ["ch%d %%d" % ch for ch in self.channels])

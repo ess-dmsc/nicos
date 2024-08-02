@@ -29,27 +29,28 @@ from nicos.core.errors import ConfigurationError
 
 
 @usercommand
-@helparglist('None,on or off')
+@helparglist("None,on or off")
 def sarot(op=None):
-    motc = session.getDevice('motc')
+    motc = session.getDevice("motc")
     if op is None:
-        res = int(motc.execute('ac 3'))
+        res = int(motc.execute("ac 3"))
         if res == 0:
-            return 'off'
+            return "off"
         else:
-            return 'on'
-    elif op == 'on':
-        motc.execute('ac 3 1')
-        return 'ok'
-    elif op == 'off':
-        motc.execute('ac 3 0')
-        return 'ok'
+            return "on"
+    elif op == "on":
+        motc.execute("ac 3 1")
+        return "ok"
+    elif op == "off":
+        motc.execute("ac 3 0")
+        return "ok"
     else:
-        session.log.error('Wrong argument to sarot: only inderstand None, on, off')
+        session.log.error("Wrong argument to sarot: only inderstand None, on, off")
+
 
 @usercommand
-@helparglist('offset,divisor,length')
-def UpdateHRPTBinning(offset,divisor,length):
+@helparglist("offset,divisor,length")
+def UpdateHRPTBinning(offset, divisor, length):
     """Change the time binning for histogramming the data.
 
     This is for setting the proper parameters for the calculated stroboscopic
@@ -57,7 +58,7 @@ def UpdateHRPTBinning(offset,divisor,length):
     """
     # Get the configurator device
     try:
-        configurator = session.getDevice('hm_configurator')
+        configurator = session.getDevice("hm_configurator")
         bank = configurator.banks[0]
         strobo = bank.axes[1]
         strobo.length = length
@@ -65,24 +66,23 @@ def UpdateHRPTBinning(offset,divisor,length):
         strobo.divisor = divisor
         configurator.updateConfig()
     except ConfigurationError:
-        session.log.error('The configurator device not found. Cannot proceed')
-
+        session.log.error("The configurator device not found. Cannot proceed")
 
 
 @usercommand
-@helparglist('[detectors], [presets]')
+@helparglist("[detectors], [presets]")
 def count(*detlist, **preset):
     try:
-        racoll = session.getDevice('racoll')
+        racoll = session.getDevice("racoll")
     except ConfigurationError:
         racoll = None
     if racoll is None:
-        session.log.warning('Radial collimator not found, skipping tests')
+        session.log.warning("Radial collimator not found, skipping tests")
     else:
         if racoll.startcheck():
-            maw(racoll,'on')
+            maw(racoll, "on")
 
-    std_count(*detlist,**preset)
+    std_count(*detlist, **preset)
 
     if racoll is not None:
         racoll.stopcheck()

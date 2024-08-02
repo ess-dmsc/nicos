@@ -22,13 +22,13 @@
 #
 # *****************************************************************************
 """LoKI Samples Model."""
+
 from nicos.core import ConfigurationError
 from nicos.guisupport.qt import Qt
 from nicos.guisupport.tablemodel import TableModel
 
 
 class SamplesTableModel(TableModel):
-
     def __init__(self, columns):
         TableModel.__init__(self, list(columns.keys()), None)
         self._raw_data = []
@@ -48,13 +48,16 @@ class SamplesTableModel(TableModel):
         return True
 
     def headerData(self, section, orientation, role):
-        if role == Qt.ItemDataRole.DisplayRole and \
-           orientation == Qt.Orientation.Horizontal:
+        if (
+            role == Qt.ItemDataRole.DisplayRole
+            and orientation == Qt.Orientation.Horizontal
+        ):
             return self._headings[section]
-        if role == Qt.ItemDataRole.DisplayRole and \
-           orientation == Qt.Orientation.Vertical:
-            return self.positions[section] \
-                if section < len(self.positions) else ''
+        if (
+            role == Qt.ItemDataRole.DisplayRole
+            and orientation == Qt.Orientation.Vertical
+        ):
+            return self.positions[section] if section < len(self.positions) else ""
 
     def set_positions(self, positions):
         self.positions = positions
@@ -69,23 +72,20 @@ class SamplesTableModel(TableModel):
     def extract_samples(self):
         samples = []
         sample_names = {}
-        for index, (pos,
-                    sample) in enumerate(zip(self.positions, self.raw_data)):
+        for index, (pos, sample) in enumerate(zip(self.positions, self.raw_data)):
             if self._is_sample_defined(sample):
-                name = sample.get('Name', '').strip()
+                name = sample.get("Name", "").strip()
                 if not name:
-                    raise ConfigurationError(
-                        f'Position {pos} requires a name.')
+                    raise ConfigurationError(f"Position {pos} requires a name.")
                 if name in sample_names:
-                    raise ConfigurationError('Sample names must be unique: '
-                                             f'"{name}" is already used for '
-                                             f'{sample_names[name]}')
+                    raise ConfigurationError(
+                        "Sample names must be unique: "
+                        f'"{name}" is already used for '
+                        f"{sample_names[name]}"
+                    )
                 sample_names[name] = pos
-                details = {
-                    self.columns.get(k, k): v
-                    for k, v in sample.items()
-                }
-                details['position'] = pos
+                details = {self.columns.get(k, k): v for k, v in sample.items()}
+                details["position"] = pos
                 samples.append((index, details))
         return samples
 
@@ -95,12 +95,9 @@ class SamplesTableModel(TableModel):
     def set_samples(self, samples):
         raw_data = [{} for _ in self.positions]
         for sample in samples:
-            data = {
-                k: sample[v]
-                for k, v in self.columns.items() if v in sample
-            }
-            if data and sample['position'] in self.positions:
-                raw_data[self.positions.index(sample['position'])] = data
+            data = {k: sample[v] for k, v in self.columns.items() if v in sample}
+            if data and sample["position"] in self.positions:
+                raw_data[self.positions.index(sample["position"])] = data
         while len(raw_data) < len(self.positions):
             raw_data.append({})
-        self.raw_data = raw_data[:len(self.positions)]
+        self.raw_data = raw_data[: len(self.positions)]

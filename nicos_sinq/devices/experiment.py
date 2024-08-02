@@ -44,15 +44,15 @@ class SinqDataManager(DataManager):
     def incrementCounters(self, countertype):
         result = []
         exp = session.experiment
-        if countertype == 'scan':
+        if countertype == "scan":
             val = exp.sicscounter
-            exp.updateSicsCounterFile(val+1)
+            exp.updateSicsCounterFile(val + 1)
             result.append((countertype, val))
-            result.append(('counter', val))
+            result.append(("counter", val))
             self._pointcounter = 1
-        elif countertype == 'point':
+        elif countertype == "point":
             result.append((countertype, self._pointcounter))
-            result.append(('counter', self._pointcounter))
+            result.append(("counter", self._pointcounter))
             self._pointcounter += 1
         return result
 
@@ -61,49 +61,48 @@ class SinqExperiment(Experiment):
     """Follow the current file structure used in SINQ"""
 
     parameter_overrides = {
-        'propprefix': Override(default=''),
-        'serviceexp': Override(default='Service'),
-        'sendmail': Override(default=False),
-        'zipdata': Override(default=False),
-        'title': Override(settable=True, volatile=False),
-        'users': Override(settable=True, volatile=False),
-        'elog': Override(default=False),
+        "propprefix": Override(default=""),
+        "serviceexp": Override(default="Service"),
+        "sendmail": Override(default=False),
+        "zipdata": Override(default=False),
+        "title": Override(settable=True, volatile=False),
+        "users": Override(settable=True, volatile=False),
+        "elog": Override(default=False),
     }
 
     parameters = {
-        'scriptpath': Param('Path to script files',
-                            type=absolute_path, settable=True),
-        'proposal_title': Param('Title for the proposal',
-                                type=str, settable=True,
-                                category='experiment'),
-        'user_email': Param('User email', type=str, settable=True,
-                            category='experiment'),
+        "scriptpath": Param("Path to script files", type=absolute_path, settable=True),
+        "proposal_title": Param(
+            "Title for the proposal", type=str, settable=True, category="experiment"
+        ),
+        "user_email": Param(
+            "User email", type=str, settable=True, category="experiment"
+        ),
     }
     datamanager_class = SinqDataManager
 
     def proposalpath_of(self, proposal):
         if self.proposalpath:
             return self.proposalpath
-        proposal = proposal.replace(' ', '')
-        return path.join(self.dataroot, 'proposals', time.strftime('%Y'),
-                         proposal)
+        proposal = proposal.replace(" ", "")
+        return path.join(self.dataroot, "proposals", time.strftime("%Y"), proposal)
 
     @property
     def datapath(self):
         if self.proposal:
-            prop = self.proposal.replace(' ', '')
+            prop = self.proposal.replace(" ", "")
         else:
-            prop = 'unknown_proposal'
-        return path.join(self.dataroot, 'data', time.strftime('%Y'), prop)
+            prop = "unknown_proposal"
+        return path.join(self.dataroot, "data", time.strftime("%Y"), prop)
 
     def getProposalType(self, proposal):
         proposalstr = proposal
         if not isinstance(proposalstr, str):
             proposalstr = str(proposal)
 
-        year = time.strftime('%Y')
+        year = time.strftime("%Y")
         if proposalstr.startswith(year):
-            return 'user'
+            return "user"
 
         return Experiment.getProposalType(self, proposal)
 
@@ -113,18 +112,18 @@ class SinqExperiment(Experiment):
 
     @property
     def sicscounterfile(self):
-        return path.join(self.dataroot, 'data', time.strftime('%Y'),
-                         'DataNumber')
+        return path.join(self.dataroot, "data", time.strftime("%Y"), "DataNumber")
 
     def updateSicsCounterFile(self, value):
         """Update the counter file."""
         counterpath = self.sicscounterfile
         if not path.isdir(path.dirname(counterpath)):
             os.makedirs(path.dirname(counterpath))
-        lines = ['%3s\n' % value]
-        lines.append('NEVER, EVER modify or delete this file\n')
-        lines.append('You\'ll risk eternal damnation and a reincarnation '
-                     'as a cockroach!')
+        lines = ["%3s\n" % value]
+        lines.append("NEVER, EVER modify or delete this file\n")
+        lines.append(
+            "You'll risk eternal damnation and a reincarnation " "as a cockroach!"
+        )
         writeFile(counterpath, lines)
 
     @property
@@ -142,14 +141,14 @@ class SinqExperiment(Experiment):
 
     def doWriteScriptpath(self, scriptpath):
         if not os.path.isdir(scriptpath):
-            raise ValueError('%s is not a directory' % scriptpath)
+            raise ValueError("%s is not a directory" % scriptpath)
         if not os.access(scriptpath, os.R_OK | os.W_OK | os.X_OK):
-            raise ValueError('Cannot access scriptpath %s' % scriptpath)
+            raise ValueError("Cannot access scriptpath %s" % scriptpath)
         # param set in device.py
 
     def _newPropertiesHook(self, proposal, kwds):
-        if 'proposal_title' in kwds:
-            self.proposal_title = kwds['proposal_title']
+        if "proposal_title" in kwds:
+            self.proposal_title = kwds["proposal_title"]
         return kwds
 
     def newSample(self, parameters):
@@ -166,12 +165,14 @@ class TomoSinqExperiment(SinqExperiment):
     """
 
     parameters = {
-        'tomo_params': Param('Dictionary of tomography parameters',
-                             type=dict,
-                             internal=True,
-                             settable=True),
+        "tomo_params": Param(
+            "Dictionary of tomography parameters",
+            type=dict,
+            internal=True,
+            settable=True,
+        ),
     }
 
     def doInit(self, mode):
         if mode == MASTER:
-            self.tomo_params = {'status': 'reset'}
+            self.tomo_params = {"status": "reset"}

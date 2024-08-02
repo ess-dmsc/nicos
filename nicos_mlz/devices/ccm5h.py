@@ -35,15 +35,17 @@ class AsymmetricMagnet(HasTimeout, Actuator):
     """
 
     parameters = {
-        'asymmetry': Param('Asymmetry ratio',
-                           type=oneof(0, 11, 25, 39, 53, 70),
-                           settable=True,
-                           volatile=True),
+        "asymmetry": Param(
+            "Asymmetry ratio",
+            type=oneof(0, 11, 25, 39, 53, 70),
+            settable=True,
+            volatile=True,
+        ),
     }
 
     parameter_overrides = {
         # max range * max ramp + 5'
-        'timeout': Override(mandatory=False, default=5400 + 300)
+        "timeout": Override(mandatory=False, default=5400 + 300)
     }
 
     def doReadAsymmetry(self):

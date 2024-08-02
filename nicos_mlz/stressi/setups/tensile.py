@@ -1,38 +1,41 @@
-description = 'Tensile machine'
+description = "Tensile machine"
 
-group = 'optional'
+group = "optional"
 
-nameservice = 'stressictrl.stressi.frm2.tum.de'
+nameservice = "stressictrl.stressi.frm2.tum.de"
 
 devices = dict(
-    teload = device('nicos.devices.vendor.caress.Motor',
-        description = 'load value of the tensile machine',
-        nameserver = nameservice,
-        config = 'TELOAD 500 TensileLoad.ControllableDevice',
-        absdev = False,
-        abslimits = (-50000, 50000),
-        unit = 'N',
-        fmtstr = '%.2f',
+    teload=device(
+        "nicos.devices.vendor.caress.Motor",
+        description="load value of the tensile machine",
+        nameserver=nameservice,
+        config="TELOAD 500 TensileLoad.ControllableDevice",
+        absdev=False,
+        abslimits=(-50000, 50000),
+        unit="N",
+        fmtstr="%.2f",
     ),
-    tepos = device('nicos.devices.vendor.caress.Motor',
-        description = 'position value of the tensile machine',
-        nameserver = nameservice,
-        config = 'TEPOS 500 TensilePos.ControllableDevice',
-        absdev = False,
-        abslimits = (0, 70),
+    tepos=device(
+        "nicos.devices.vendor.caress.Motor",
+        description="position value of the tensile machine",
+        nameserver=nameservice,
+        config="TEPOS 500 TensilePos.ControllableDevice",
+        absdev=False,
+        abslimits=(0, 70),
         # SPODI limits
         # abslimits = (-10, 55),
-        unit = 'mm',
-        fmtstr = '%.3f',
+        unit="mm",
+        fmtstr="%.3f",
     ),
-    teext = device('nicos.devices.vendor.caress.Motor',
-        description = 'extension value of the tensile machine',
-        nameserver = nameservice,
-        config = 'TEEXT 500 TensileExt.ControllableDevice',
-        absdev = False,
-        abslimits = (-3000, 3000),
-        unit = 'um',
-        fmtstr = '%.3f',
+    teext=device(
+        "nicos.devices.vendor.caress.Motor",
+        description="extension value of the tensile machine",
+        nameserver=nameservice,
+        config="TEEXT 500 TensileExt.ControllableDevice",
+        absdev=False,
+        abslimits=(-3000, 3000),
+        unit="um",
+        fmtstr="%.3f",
     ),
 )
 

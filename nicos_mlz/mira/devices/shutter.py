@@ -24,8 +24,7 @@
 """Class for MIRA shutter readout/operation."""
 
 from nicos import session
-from nicos.core import SIMULATION, SLAVE, ModeError, Param, Readable, status, \
-    usermethod
+from nicos.core import SIMULATION, SLAVE, ModeError, Param, Readable, status, usermethod
 from nicos.devices.tango import PyTangoDevice
 
 
@@ -38,12 +37,15 @@ class Shutter(PyTangoDevice, Readable):
     valuetype = str
 
     parameters = {
-        'openoffset':   Param('The bit offset for the "shutter open" input',
-                              type=int, mandatory=True),
-        'closeoffset':  Param('The bit offset for the "shutter closed" input',
-                              type=int, mandatory=True),
-        'switchoffset': Param('The bit offset for the "close shutter" output',
-                              type=int, mandatory=True),
+        "openoffset": Param(
+            'The bit offset for the "shutter open" input', type=int, mandatory=True
+        ),
+        "closeoffset": Param(
+            'The bit offset for the "shutter closed" input', type=int, mandatory=True
+        ),
+        "switchoffset": Param(
+            'The bit offset for the "close shutter" output', type=int, mandatory=True
+        ),
     }
 
     def doInit(self, mode):
@@ -55,27 +57,27 @@ class Shutter(PyTangoDevice, Readable):
         is_open = self._dev.ReadInputBit(self.openoffset)
         is_clsd = self._dev.ReadInputBit(self.closeoffset)
         if is_open + is_clsd == 1:
-            return status.OK, ''
+            return status.OK, ""
         else:
-            return status.BUSY, 'moving'
+            return status.BUSY, "moving"
 
     def doRead(self, maxage=0):
         is_open = self._dev.ReadInputBit(self.openoffset)
         is_clsd = self._dev.ReadInputBit(self.closeoffset)
         if is_open and not is_clsd:
-            return 'open'
+            return "open"
         elif is_clsd and not is_open:
-            return 'closed'
-        return ''
+            return "closed"
+        return ""
 
     @usermethod
     def close(self):
         """Closes instrument shutter."""
         if self._mode == SLAVE:
-            raise ModeError(self, 'closing shutter not allowed in slave mode')
+            raise ModeError(self, "closing shutter not allowed in slave mode")
         elif self._sim_intercept:
             return
         self._dev.WriteOutputBit([self.switchoffset, 1])
         session.delay(0.5)
         self._dev.WriteOutputBit([self.switchoffset, 0])
-        self.log.info('instrument shutter closed')
+        self.log.info("instrument shutter closed")

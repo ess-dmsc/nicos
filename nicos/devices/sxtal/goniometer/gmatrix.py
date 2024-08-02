@@ -20,11 +20,12 @@
 #   Björn Pedersen <bjoern.pedersen@frm2.tum.de>
 #
 # *****************************************************************************
-'''
+"""
 Gmatrix
 
 store position as goniometer matrix
-'''
+"""
+
 import numpy as np
 
 from nicos.devices.sxtal.goniometer.base import PositionBase, PositionFactory
@@ -32,12 +33,11 @@ from nicos.devices.sxtal.goniometer.posutils import Xrot, Yrot, Zrot
 
 
 class GMatrix(PositionBase):
-    ptype = 'g'
+    ptype = "g"
     theta_clockwise = 1
 
     def __init__(self, p=None, matrix=None, theta=None, _rad=False):
-        """ Constructor. Part of Position subclass protocol.
-        """
+        """Constructor. Part of Position subclass protocol."""
         PositionBase.__init__(self)
         if p:
             self.theta = p.theta
@@ -49,8 +49,7 @@ class GMatrix(PositionBase):
             self.matrix = matrix
 
     def asE(self, zeromega=0):
-        """ Conversion. Part of Position subclass protocol.
-        """
+        """Conversion. Part of Position subclass protocol."""
         # The goniometermatrix from the eulerian angles=
         # Zrot(omega)*Xrot(chi)*Zrot(phi)
         # So, with a=cos(phi)
@@ -75,7 +74,7 @@ class GMatrix(PositionBase):
         coschi = self.matrix[2, 2]
         # Assume chi positive.
         try:
-            sinchi = np.sqrt(1 - coschi ** 2)
+            sinchi = np.sqrt(1 - coschi**2)
         except ValueError:
             sinchi = 0.0
         chi = np.arctan2(sinchi, coschi)
@@ -98,70 +97,59 @@ class GMatrix(PositionBase):
             sinphi = self.matrix[2, 0] / sinchi
             cosphi = -self.matrix[2, 1] / sinchi
         phi = np.arctan2(sinphi, cosphi)
-        return PositionFactory(ptype='er',
-                               theta=self.theta,
-                               omega=omega,
-                               phi=phi,
-                               chi=chi)
+        return PositionFactory(
+            ptype="er", theta=self.theta, omega=omega, phi=phi, chi=chi
+        )
 
     def asC(self, _wavelength=None):
-        """ Conversion. Part of Position subclass protocol.
-        """
+        """Conversion. Part of Position subclass protocol."""
         return self.asE().asC()
 
     def asK(self, _wavelength=None):
-        """ Conversion. Part of Position subclass protocol.
-        """
+        """Conversion. Part of Position subclass protocol."""
         return self.asE().asK()
 
     def asB(self, _wavelength=None):
-        """ Conversion. Part of Position subclass protocol.
-        """
+        """Conversion. Part of Position subclass protocol."""
         return self.asE().asB()
 
     def asG(self, _wavelength=None):
-        """ Conversion. Part of Position subclass protocol.
-        """
+        """Conversion. Part of Position subclass protocol."""
         return self.With()
 
     def asN(self, _wavelength=None):
-        """ Conversion. Part of Position subclass protocol.
-        """
+        """Conversion. Part of Position subclass protocol."""
         return self.asE().asN()
 
     def asL(self, wavelength=None):
-        """ Conversion. Part of Position subclass protocol.
-        """
+        """Conversion. Part of Position subclass protocol."""
         return self.asE().asL(wavelength)
 
     def Xrot(self, angle):
-        """ Rotate 'angle' (clockwise) around the X axis.
-        """
+        """Rotate 'angle' (clockwise) around the X axis."""
         return self.With(matrix=np.dot(Xrot(angle), self.matrix))
 
     def Yrot(self, angle):
-        """ Rotate 'angle' (clockwise) around the Y axis.
-        """
+        """Rotate 'angle' (clockwise) around the Y axis."""
         return self.With(matrix=np.dot(Yrot(angle), self.matrix))
 
     def Zrot(self, angle):
-        """ Rotate 'angle' (clockwise) around the Z axis.
-        """
+        """Rotate 'angle' (clockwise) around the Z axis."""
         return self.With(matrix=np.dot(Zrot(angle), self.matrix))
 
     def With(self, **kw):
-        """ Make clone of this position with some angle(s) changed.
-        """
-        if not kw.get('_rad', False):
-            if kw.get('theta', None):
-                kw['theta'] = np.deg2rad(kw['theta'])
-        return PositionFactory(ptype='gr',
-                               theta=kw.get('theta', self.theta),
-                               matrix=kw.get('matrix', self.matrix))
+        """Make clone of this position with some angle(s) changed."""
+        if not kw.get("_rad", False):
+            if kw.get("theta", None):
+                kw["theta"] = np.deg2rad(kw["theta"])
+        return PositionFactory(
+            ptype="gr",
+            theta=kw.get("theta", self.theta),
+            matrix=kw.get("matrix", self.matrix),
+        )
 
     def __repr__(self):
-        """ Representation. Part of Position subclass protocol.
-        """
+        """Representation. Part of Position subclass protocol."""
         if self.theta is not None:
             theta = "%8.3f" % (np.rad2deg(self.theta))
         else:

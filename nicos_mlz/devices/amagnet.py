@@ -25,8 +25,17 @@
 Supporting classes for FRM2 magnets, currently only Garfield (amagnet).
 """
 
-from nicos.core import Attach, CanDisable, HasLimits, Moveable, Override, \
-    Param, Readable, dictof, tupleof
+from nicos.core import (
+    Attach,
+    CanDisable,
+    HasLimits,
+    Moveable,
+    Override,
+    Param,
+    Readable,
+    dictof,
+    tupleof,
+)
 from nicos.devices.generic import CalibratedMagnet
 
 
@@ -42,23 +51,23 @@ class GarfieldMagnet(CanDisable, CalibratedMagnet):
     """
 
     attached_devices = {
-        'currentreadback': Attach('Device to read back actual current',
-                                  Readable, optional=True),
-        'enable':          Attach('Switch to set for on/off', Moveable),
-        'symmetry':        Attach('Switch to read for symmetry', Moveable),
+        "currentreadback": Attach(
+            "Device to read back actual current", Readable, optional=True
+        ),
+        "enable": Attach("Switch to set for on/off", Moveable),
+        "symmetry": Attach("Switch to read for symmetry", Moveable),
     }
 
     parameters = {
-        'calibrationtable': Param('Map of coefficients for calibration '
-                                  'per symmetry setting',
-                                  type=dictof(str, tupleof(
-                                      float, float, float, float, float)),
-                                  mandatory=True),
+        "calibrationtable": Param(
+            "Map of coefficients for calibration " "per symmetry setting",
+            type=dictof(str, tupleof(float, float, float, float, float)),
+            mandatory=True,
+        ),
     }
 
     parameter_overrides = {
-        'calibration': Override(volatile=True, settable=False,
-                                mandatory=False),
+        "calibration": Override(volatile=True, settable=False, mandatory=False),
     }
 
     def doRead(self, maxage=0):
@@ -77,7 +86,7 @@ class GarfieldMagnet(CanDisable, CalibratedMagnet):
         lmin = min(max(value[0], abslimits[0]), 0)
         lmax = max(min(value[1], abslimits[1]), 0)
         newlimits = (lmin, lmax)
-        self.log.debug('Set limits: %r', newlimits)
+        self.log.debug("Set limits: %r", newlimits)
         HasLimits.doWriteUserlimits(self, newlimits)
         # intentionally not calling CalibratedMagnet.doWriteUserlimits
         # we do not want to change the limits of the current source
@@ -102,7 +111,7 @@ class GarfieldMagnet(CanDisable, CalibratedMagnet):
 
     def doEnable(self, on):
         # disabling via the enable device will rampdown fast, if needed.
-        self._attached_enable.maw('on' if on else 'off')
+        self._attached_enable.maw("on" if on else "off")
         if self._attached_currentreadback is not None:
             self._attached_currentreadback.enable()  # never disable!
         self._attached_currentsource.enable()  # never disable!

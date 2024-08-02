@@ -1,42 +1,50 @@
-description = 'Inputs from the Pilz control box'
+description = "Inputs from the Pilz control box"
 
-group = 'lowlevel'
+group = "lowlevel"
 
-tango_base = 'tango://hw.sans1.frm2.tum.de:10000/sans1/modbus/'
+tango_base = "tango://hw.sans1.frm2.tum.de:10000/sans1/modbus/"
 
 # TODO: Mapping and description of the devices
 
 devices = dict(
-    iatt1 = device('nicos.devices.entangle.NamedDigitalInput',
-        description = 'Unknown',
-        tangodevice = tango_base + 'iatt1',
+    iatt1=device(
+        "nicos.devices.entangle.NamedDigitalInput",
+        description="Unknown",
+        tangodevice=tango_base + "iatt1",
     ),
-    iatt2 = device('nicos.devices.entangle.NamedDigitalInput',
-        description = 'Unknown',
-        tangodevice = tango_base + 'iatt2',
+    iatt2=device(
+        "nicos.devices.entangle.NamedDigitalInput",
+        description="Unknown",
+        tangodevice=tango_base + "iatt2",
     ),
-    ishutter = device('nicos.devices.entangle.NamedDigitalInput',
-        description = 'Unknown',
-        tangodevice = tango_base + 'ishutter',
+    ishutter=device(
+        "nicos.devices.entangle.NamedDigitalInput",
+        description="Unknown",
+        tangodevice=tango_base + "ishutter",
     ),
-    door = device('nicos.devices.entangle.NamedDigitalInput',
-        description = 'Unknown',
-        tangodevice = tango_base + 'door',
+    door=device(
+        "nicos.devices.entangle.NamedDigitalInput",
+        description="Unknown",
+        tangodevice=tango_base + "door",
     ),
-    irc = device('nicos.devices.entangle.NamedDigitalInput',
-        description = 'Unknown',
-        tangodevice = tango_base + 'irc',
+    irc=device(
+        "nicos.devices.entangle.NamedDigitalInput",
+        description="Unknown",
+        tangodevice=tango_base + "irc",
     ),
-    eatt1 = device('nicos.devices.entangle.NamedDigitalInput',
-        description = 'Unknown',
-        tangodevice = tango_base + 'eatt1',
+    eatt1=device(
+        "nicos.devices.entangle.NamedDigitalInput",
+        description="Unknown",
+        tangodevice=tango_base + "eatt1",
     ),
-    eatt2 = device('nicos.devices.entangle.NamedDigitalInput',
-        description = 'Unknown',
-        tangodevice = tango_base + 'eatt2',
+    eatt2=device(
+        "nicos.devices.entangle.NamedDigitalInput",
+        description="Unknown",
+        tangodevice=tango_base + "eatt2",
     ),
-    eatt3 = device('nicos.devices.entangle.NamedDigitalInput',
-        description = 'Unknown',
-        tangodevice = tango_base + 'eatt3',
+    eatt3=device(
+        "nicos.devices.entangle.NamedDigitalInput",
+        description="Unknown",
+        tangodevice=tango_base + "eatt3",
     ),
 )

@@ -41,4 +41,5 @@ def create_method_patch(reason, obj, name, replacement):
 def return_value_wrapper(value):
     def return_value(*args, **kwargs):
         return value
+
     return return_value

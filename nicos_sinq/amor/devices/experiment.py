@@ -30,8 +30,10 @@ class AmorExperiment(SinqExperiment):
     """Additional experiment parameters for AMOR"""
 
     parameters = {
-        'mode': Param('Current mode of operation',
-                      type=oneof('simple', 'deflector', 'virtual_stz'),
-                      settable=True,
-                      category='experiment'),
+        "mode": Param(
+            "Current mode of operation",
+            type=oneof("simple", "deflector", "virtual_stz"),
+            settable=True,
+            category="experiment",
+        ),
     }

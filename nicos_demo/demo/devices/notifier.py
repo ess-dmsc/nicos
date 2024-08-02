@@ -37,29 +37,29 @@ except ImportError:
     xmpp = None
 
 
-NS_XHTML = 'http://www.w3.org/1999/xhtml'
+NS_XHTML = "http://www.w3.org/1999/xhtml"
 
 
 class DBusNotifier(Notifier):
-
     def send(self, subject, body, what=None, short=None, important=True):
         from nicos.guisupport.qt import QtDBus, QVariant
 
         dbus_interface = QtDBus.QDBusInterface(
-            'org.freedesktop.Notifications',
-            '/org/freedesktop/Notifications',
-            'org.freedesktop.Notifications',
+            "org.freedesktop.Notifications",
+            "/org/freedesktop/Notifications",
+            "org.freedesktop.Notifications",
         )
-        dbus_interface.call('Notify',
-                            'NICOS',                  # app_name
-                            QVariant(QVariant.UInt),  # replaces_id
-                            'dialog-warning',         # app_icon
-                            subject,                  # summary
-                            body,                     # body
-                            QVariant(QVariant.StringList),  # actions
-                            {},                       # hints
-                            10000,                    # timeout (in ms)
-                            )
+        dbus_interface.call(
+            "Notify",
+            "NICOS",  # app_name
+            QVariant(QVariant.UInt),  # replaces_id
+            "dialog-warning",  # app_icon
+            subject,  # summary
+            body,  # body
+            QVariant(QVariant.StringList),  # actions
+            {},  # hints
+            10000,  # timeout (in ms)
+        )
 
 
 class Jabberer(Notifier):
@@ -69,42 +69,43 @@ class Jabberer(Notifier):
     """
 
     parameters = {
-        'jid':       Param('Jabber JID of the notifier', type=str,
-                           mandatory=True),
-        'password':  Param('Password for the given JID', type=str,
-                           mandatory=True),
-        'receivers': Param('List of receiver JIDs', type=listof(str),
-                           settable=True),
+        "jid": Param("Jabber JID of the notifier", type=str, mandatory=True),
+        "password": Param("Password for the given JID", type=str, mandatory=True),
+        "receivers": Param("List of receiver JIDs", type=listof(str), settable=True),
     }
 
     def doInit(self, mode):
         self._jid = xmpp.protocol.JID(self.jid)
         self._client = xmpp.Client(self._jid.getDomain(), debug=[])
         self._client.connect()
-        self._client.auth(self._jid.getNode(), self.password,
-                          resource=session.instrument.instrument)
+        self._client.auth(
+            self._jid.getNode(), self.password, resource=session.instrument.instrument
+        )
 
     def send(self, subject, body, what=None, short=None, important=True):
         receivers = self.receivers
-        self.log.debug('trying to send message to %s', ', '.join(receivers))
+        self.log.debug("trying to send message to %s", ", ".join(receivers))
         for receiver in receivers:
             try:
                 msg = self._message(receiver, subject, body)
                 self._client.send(msg)
             except Exception:
-                self.log.exception('sending to %s failed', receiver)
-        self.log.info('%sjabber message sent to %s',
-                      what and what + ' ' or '', ', '.join(receivers))
+                self.log.exception("sending to %s failed", receiver)
+        self.log.info(
+            "%sjabber message sent to %s",
+            what and what + " " or "",
+            ", ".join(receivers),
+        )
 
     def _message(self, receiver, subject, body):
         """Create a message with the content as nicely formatted HTML in it."""
-        plaintext = subject + '\n\n' + body
+        plaintext = subject + "\n\n" + body
         msg = xmpp.protocol.Message(receiver, plaintext)
         msg.setSubject(subject)
-        html = msg.addChild('html', namespace=xmpp.protocol.NS_XHTML_IM)
-        htmlbody = html.addChild('body', namespace=NS_XHTML)
-        p = htmlbody.addChild('p')
-        p.addChild('strong', payload=[subject])
-        p.addChild('br')
+        html = msg.addChild("html", namespace=xmpp.protocol.NS_XHTML_IM)
+        htmlbody = html.addChild("body", namespace=NS_XHTML)
+        p = htmlbody.addChild("p")
+        p.addChild("strong", payload=[subject])
+        p.addChild("br")
         p.addData(body)
         return msg

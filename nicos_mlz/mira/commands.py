@@ -31,7 +31,7 @@ from nicos.commands.device import maw, move, stop, wait
 from nicos.commands.measure import count
 from nicos.commands.scan import manualscan
 
-__all__ = ['zero', 'setecho', 'set_cascade', 'pol', 'miezescan', 'miezetau']
+__all__ = ["zero", "setecho", "set_cascade", "pol", "miezescan", "miezetau"]
 
 
 @usercommand
@@ -44,15 +44,35 @@ def miezetau(wavelength, deltaFreq, distance):
     """
     # co.m_n  Mass of neutron
     # co.h    Planck constant
-    return (2*co.m_n**2/co.h**2 * (wavelength*1e-10)**3 * deltaFreq * distance *
-            1e9)
+    return (
+        2 * co.m_n**2 / co.h**2 * (wavelength * 1e-10) ** 3 * deltaFreq * distance * 1e9
+    )
+
 
 @usercommand
 def zero():
     """Shut down all (static) power supplies."""
-    ps = ['hrf_0a', 'hrf_0b', 'hrf_1', 'hsf_0a', 'hsf_0b', 'hsf_1', 'sf_0a',
-          'sf_0b', 'sf_1', 'gf0', 'gf1', 'gf2', 'gf4', 'gf5', 'gf6', 'gf7',
-          'gf8', 'gf9', 'gf10']
+    ps = [
+        "hrf_0a",
+        "hrf_0b",
+        "hrf_1",
+        "hsf_0a",
+        "hsf_0b",
+        "hsf_1",
+        "sf_0a",
+        "sf_0b",
+        "sf_1",
+        "gf0",
+        "gf1",
+        "gf2",
+        "gf4",
+        "gf5",
+        "gf6",
+        "gf7",
+        "gf8",
+        "gf9",
+        "gf10",
+    ]
     for powersupply in ps:
         powersupply = session.getDevice(powersupply)
         move(powersupply, 0.001)
@@ -65,8 +85,8 @@ def set_flipper_off():
     After shutting down the neutrons are guided through instrument for
     image mode (MIEZE)
     """
-    ps = ['sf_0a', 'sf_0b', 'cbox_0a_fg_amp', 'cbox_0b_fg_amp']
-    reg = ['cbox_0a_reg_amp', 'cbox_0b_reg_amp']
+    ps = ["sf_0a", "sf_0b", "cbox_0a_fg_amp", "cbox_0b_fg_amp"]
+    reg = ["cbox_0a_reg_amp", "cbox_0b_reg_amp"]
     for powersupply in ps:
         powersupply = session.getDevice(powersupply)
         move(powersupply, 0.01)
@@ -78,26 +98,26 @@ def set_flipper_off():
 @usercommand
 def setecho(time):
     """Wrap setting of an echotime."""
-    echotime = session.getDevice('echotime')
+    echotime = session.getDevice("echotime")
     move(echotime, time)
-#    set_cascade()
+    #    set_cascade()
     wait(echotime)
 
 
 @usercommand
 def set_cascade():
     """Set Cascade Frequency Generator Freqs and Trigger."""
-    echotime = session.getDevice('echotime')
-    psd_chop_freq = session.getDevice('psd_chop_freq')
-    psd_timebin_freq = session.getDevice('psd_timebin_freq')
-    fg_burst = session.getDevice('fg_burst')
+    echotime = session.getDevice("echotime")
+    psd_chop_freq = session.getDevice("psd_chop_freq")
+    psd_timebin_freq = session.getDevice("psd_timebin_freq")
+    fg_burst = session.getDevice("fg_burst")
     tau = echotime.target
-    f1 = echotime.currenttable[tau]['cbox_0a_fg_freq']
-    f2 = echotime.currenttable[tau]['cbox_0b_fg_freq']
+    f1 = echotime.currenttable[tau]["cbox_0a_fg_freq"]
+    f2 = echotime.currenttable[tau]["cbox_0b_fg_freq"]
     move(psd_chop_freq, 2 * (f2 - f1))
     move(psd_timebin_freq, 32 * (f2 - f1))
-    move(fg_burst, 'arm')
-    move(fg_burst, 'trigger')
+    move(fg_burst, "arm")
+    move(fg_burst, "trigger")
 
 
 @usercommand
@@ -107,7 +127,7 @@ def miezescan(echolist, counttime):
     echolist: list of echotimes
     counttime: counting time (the **same** for all list entries)
     """
-    echotime = session.getDevice('echotime')
+    echotime = session.getDevice("echotime")
     with manualscan(echotime, counttime):
         for etime in echolist:
             move(echotime, etime)
@@ -133,6 +153,6 @@ def freqscan(device, start, step, numsteps):
     """
     with manualscan(device):
         for i in range(numsteps):
-            maw(device, start + step*i)
+            maw(device, start + step * i)
             session.delay(0.2)
             count(1)

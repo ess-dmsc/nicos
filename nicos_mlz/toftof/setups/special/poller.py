@@ -1,15 +1,16 @@
-description = 'setup for the poller'
+description = "setup for the poller"
 
-group = 'special'
+group = "special"
 
-sysconfig = dict(cache = 'tofhw.toftof.frm2.tum.de')
+sysconfig = dict(cache="tofhw.toftof.frm2.tum.de")
 
 devices = dict(
-    Poller = device('nicos.services.poller.Poller',
-        autosetup = True,
-        poll = [],
-        neverpoll = ['detector', 'measurement', 'notifiers'],
-        alwayspoll = ['reactor'],
-        blacklist = [],
+    Poller=device(
+        "nicos.services.poller.Poller",
+        autosetup=True,
+        poll=[],
+        neverpoll=["detector", "measurement", "notifiers"],
+        alwayspoll=["reactor"],
+        blacklist=[],
     ),
 )

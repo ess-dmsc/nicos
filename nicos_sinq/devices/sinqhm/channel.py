@@ -28,8 +28,7 @@ import numpy
 from nicos.core import Attach, Override, Param, Value, dictof, status
 from nicos.devices.generic import ImageChannelMixin, PassiveChannel
 
-from nicos_sinq.devices.imagesink import \
-    HistogramDesc, HistogramDimDesc
+from nicos_sinq.devices.imagesink import HistogramDesc, HistogramDimDesc
 from nicos_sinq.devices.sinqhm.configurator import HistogramConfBank
 from nicos_sinq.devices.sinqhm.connector import HttpConnector
 
@@ -49,15 +48,13 @@ class HistogramImageChannel(ImageChannelMixin, PassiveChannel):
     type with 4 bytes.
     """
 
-    parameter_overrides = {
-        'fmtstr': Override(default='%d', userparam=False)
-    }
+    parameter_overrides = {"fmtstr": Override(default="%d", userparam=False)}
 
     attached_devices = {
-        'bank': Attach('The bank to be used for fetching the data',
-                       HistogramConfBank),
-        'connector': Attach('HTTP Connector for Histogram Memory Server',
-                            HttpConnector),
+        "bank": Attach("The bank to be used for fetching the data", HistogramConfBank),
+        "connector": Attach(
+            "HTTP Connector for Histogram Memory Server", HttpConnector
+        ),
     }
 
     _dataTime = 0
@@ -73,7 +70,7 @@ class HistogramImageChannel(ImageChannelMixin, PassiveChannel):
 
     @property
     def startid(self):
-        """ The start id of the data to be fetched from the bank.
+        """The start id of the data to be fetched from the bank.
         This method should be overridden if the starting index is
         not 0.
         """
@@ -81,7 +78,7 @@ class HistogramImageChannel(ImageChannelMixin, PassiveChannel):
 
     @property
     def endid(self):
-        """ The end id of the data to be fetched from the bank.
+        """The end id of the data to be fetched from the bank.
         By default uses the full banks capacity, but can be
         overridden in case a smaller range is required
         """
@@ -89,7 +86,7 @@ class HistogramImageChannel(ImageChannelMixin, PassiveChannel):
 
     @property
     def shape(self):
-        """ Shape of the data fetched. By default uses the
+        """Shape of the data fetched. By default uses the
         shape of the bank, but the subclasses can override
         the shape.
         """
@@ -97,15 +94,17 @@ class HistogramImageChannel(ImageChannelMixin, PassiveChannel):
 
     def _dimDesc(self):
         # Provides a description of dimensions in the histogram
-        return [HistogramDimDesc(ax.length, ax.label, ax.unit, ax.bins)
-                for ax in self.bank.axes]
+        return [
+            HistogramDimDesc(ax.length, ax.label, ax.unit, ax.bins)
+            for ax in self.bank.axes
+        ]
 
     @property
     def arraydesc(self):
-        return HistogramDesc(self.name, 'uint32', self._dimDesc())
+        return HistogramDesc(self.name, "uint32", self._dimDesc())
 
     def valueInfo(self):
-        return [Value(self.name, type='counter', unit=self.unit)]
+        return [Value(self.name, type="counter", unit=self.unit)]
 
     def doStart(self):
         self.readresult = [0]
@@ -115,29 +114,32 @@ class HistogramImageChannel(ImageChannelMixin, PassiveChannel):
         self._dataTime = 0
 
     def doReadArray(self, quality):
-        """ Get the data formatted as uint32 numpy array
+        """Get the data formatted as uint32 numpy array
 
-            It was noticed that NICOS was reading the array very frequently.
-            So frequently, that storing a FOCUS file took three minutes.
-            Other changes in nexussink which mitigated the problem. In addition
-            this method was changed that it reads data only after a three
-            seconds cache interval. This interval is reset both in doStart()
-            and doFinish() in order to ensure good data always.
+        It was noticed that NICOS was reading the array very frequently.
+        So frequently, that storing a FOCUS file took three minutes.
+        Other changes in nexussink which mitigated the problem. In addition
+        this method was changed that it reads data only after a three
+        seconds cache interval. This interval is reset both in doStart()
+        and doFinish() in order to ensure good data always.
         """
         if time.time() > self._dataTime + 3:
-            order = '<' if self.connector.byteorder == 'little' else '>'
-            dt = numpy.dtype('uint32')
+            order = "<" if self.connector.byteorder == "little" else ">"
+            dt = numpy.dtype("uint32")
             dt = dt.newbyteorder(order)
 
             # Read the raw bytes from the server
-            params = (('bank', self.bank.bankid), ('start', self.startid),
-                      ('end', self.endid))
-            req = self.connector.get('readhmdata.egi', params)
+            params = (
+                ("bank", self.bank.bankid),
+                ("start", self.startid),
+                ("end", self.endid),
+            )
+            req = self.connector.get("readhmdata.egi", params)
             data = numpy.frombuffer(req.content, dt)
             # Set the result and return data
             self.readresult = [int(sum(data))]
             if len(data) >= numpy.prod(self.shape):
-                self._data = data.reshape(self.shape, order='C')
+                self._data = data.reshape(self.shape, order="C")
             else:
                 self._data = data
             self._dataTime = time.time()
@@ -153,9 +155,10 @@ class ReshapeHistogramImageChannel(HistogramImageChannel):
     """
 
     parameters = {
-        'dimensions': Param('Desired shape of the data',
-                            type=dictof(str, int),
-                            ),
+        "dimensions": Param(
+            "Desired shape of the data",
+            type=dictof(str, int),
+        ),
     }
 
     _shape = None
@@ -165,13 +168,13 @@ class ReshapeHistogramImageChannel(HistogramImageChannel):
         self._shape = tuple(self.dimensions.values())
         res = []
         for name, dim in self.dimensions.items():
-            res.append(HistogramDimDesc(dim, name, ''))
+            res.append(HistogramDimDesc(dim, name, ""))
         self._HM_dim_desc = res
 
     def doReadArray(self, quality):
         data = HistogramImageChannel.doReadArray(self, quality)
         if len(data) >= numpy.prod(self.shape):
-            return data.reshape(self.shape, order='C')
+            return data.reshape(self.shape, order="C")
         return data
 
     @property
@@ -183,7 +186,7 @@ class ReshapeHistogramImageChannel(HistogramImageChannel):
 
 
 class HistogramMemoryChannel(PassiveChannel):
-    """ Channel which configures the histogram memory start and stop.
+    """Channel which configures the histogram memory start and stop.
 
     For starting and stopping data acquisition the following paths are to be
     used:
@@ -197,17 +200,19 @@ class HistogramMemoryChannel(PassiveChannel):
 
     The attached `connector` is used to talk to the server
     """
+
     attached_devices = {
-        'connector': Attach('HTTP Connector for Histogram Memory Server',
-                            HttpConnector),
+        "connector": Attach(
+            "HTTP Connector for Histogram Memory Server", HttpConnector
+        ),
     }
 
     parameter_overrides = {
-        'fmtstr': Override(default='', userparam=False),
-        'maxage': Override(userparam=False),
-        'pollinterval': Override(userparam=False),
-        'warnlimits': Override(userparam=False),
-        'unit': Override(userparam=False)
+        "fmtstr": Override(default="", userparam=False),
+        "maxage": Override(userparam=False),
+        "pollinterval": Override(userparam=False),
+        "warnlimits": Override(userparam=False),
+        "unit": Override(userparam=False),
     }
 
     @property
@@ -216,13 +221,13 @@ class HistogramMemoryChannel(PassiveChannel):
 
     def _text_info(self):
         # Get the text information from the server
-        req = self.connector.get('textstatus.egi')
+        req = self.connector.get("textstatus.egi")
         textinfo = {}
-        for entry in req.text.split('\n'):
-            vals = str(entry).split(':')
+        for entry in req.text.split("\n"):
+            vals = str(entry).split(":")
             if len(vals) > 1:
                 key = vals[0]
-                val = ':'.join(vals[1:])
+                val = ":".join(vals[1:])
                 if key:
                     textinfo[key] = val
         return textinfo
@@ -235,19 +240,19 @@ class HistogramMemoryChannel(PassiveChannel):
         return ()
 
     def doStart(self):
-        self.connector.get('startdaq.egi')
+        self.connector.get("startdaq.egi")
 
     def doStop(self):
-        self.connector.get('stopdaq.egi')
+        self.connector.get("stopdaq.egi")
 
     def doPause(self):
-        self.connector.get('pausedaq.egi')
+        self.connector.get("pausedaq.egi")
 
     def doResume(self):
-        self.connector.get('continuedaq.egi')
+        self.connector.get("continuedaq.egi")
 
     def doFinish(self):
-        self.connector.get('stopdaq.egi')
+        self.connector.get("stopdaq.egi")
 
     def doStatus(self, maxage=0):
         conn_status = self._attached_connector.status(maxage)
@@ -255,13 +260,13 @@ class HistogramMemoryChannel(PassiveChannel):
             return conn_status
 
         text_info = self._text_info()
-        if int(text_info['DAQ']) == 1:
-            return status.BUSY, 'Acquiring..'
+        if int(text_info["DAQ"]) == 1:
+            return status.BUSY, "Acquiring.."
 
-        return status.OK, ''
+        return status.OK, ""
 
     def doInfo(self):
         ret = []
         for item, val in self._text_info().items():
-            ret.append((item, val, '%s' % val, '', 'general'))
+            ret.append((item, val, "%s" % val, "", "general"))
         return ret

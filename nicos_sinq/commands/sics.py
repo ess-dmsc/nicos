@@ -1,5 +1,4 @@
-""" SICS equivalent NICOS commands
-"""
+"""SICS equivalent NICOS commands"""
 
 from nicos.commands.device import adjust, maw
 from nicos.commands.scan import timescan

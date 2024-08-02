@@ -46,7 +46,7 @@ from nicos.utils.messaging import nicos_zmq_ctx
 from nicos_mlz.panda.gui.ariane_vis import make_map, update_map
 
 
-__all__ = ['qaigrid', 'qaiscan']
+__all__ = ["qaigrid", "qaiscan"]
 
 
 @usercommand
@@ -73,7 +73,7 @@ def qaigrid(Q0, Q1, Q2, *args, **kwargs):
 
     Other arguments are interpreted as for a normal `qscan`.
     """
-    kwargs['initonly'] = True
+    kwargs["initonly"] = True
     qaiscan(Q0, Q1, Q2, *args, **kwargs)
 
 
@@ -114,55 +114,86 @@ def qaiscan(Q0, Q1, Q2, *args, **kwargs):
     """
     # TODO: allow selecting counter/monitor columns
 
-    maxpts = kwargs.pop('maxpoints', None)
-    maxtime = kwargs.pop('maxtime', None)
-    initpts = kwargs.pop('initpoints', 11)
-    initscans = kwargs.pop('initscans', None)
-    initres = kwargs.pop('initres', None)
-    initonly = kwargs.pop('initonly', False)
-    int_threshold = kwargs.pop('intensity_threshold', None)
-    background = kwargs.pop('background', None)
+    maxpts = kwargs.pop("maxpoints", None)
+    maxtime = kwargs.pop("maxtime", None)
+    initpts = kwargs.pop("initpoints", 11)
+    initscans = kwargs.pop("initscans", None)
+    initres = kwargs.pop("initres", None)
+    initonly = kwargs.pop("initonly", False)
+    int_threshold = kwargs.pop("intensity_threshold", None)
+    background = kwargs.pop("background", None)
     if not isinstance(initpts, (list, tuple)):
         initpts = [int(initpts), int(initpts)]
 
-    q0 = np.array(_getQ(Q0, 'Q0')).astype(float)
-    q1 = np.array(_getQ(Q1, 'Q1')).astype(float)
-    q2 = np.array(_getQ(Q2, 'Q2')).astype(float)
+    q0 = np.array(_getQ(Q0, "Q0")).astype(float)
+    q1 = np.array(_getQ(Q1, "Q1")).astype(float)
+    q2 = np.array(_getQ(Q2, "Q2")).astype(float)
 
-    scanstr = _infostr('qaigrid' if initonly else 'qaiscan',
-                      (Q0, Q1, Q2) + args, kwargs)
-    preset, scaninfo, detlist, envlist, move, multistep = \
-        _handleScanArgs(args, kwargs, scanstr)
+    scanstr = _infostr(
+        "qaigrid" if initonly else "qaiscan", (Q0, Q1, Q2) + args, kwargs
+    )
+    preset, scaninfo, detlist, envlist, move, multistep = _handleScanArgs(
+        args, kwargs, scanstr
+    )
     if multistep:
-        raise UsageError('Multi-step scan points are impossible with ARIANE')
-    scan = QAIScan(q0, q1, q2, initpts=initpts, initscans=initscans, initres=initres,
-                   initonly=initonly, maxpts=maxpts, maxtime=maxtime,
-                   background=background, int_threshold=int_threshold,
-                   firstmoves=move, detlist=detlist, envlist=envlist,
-                   preset=preset, scaninfo=scaninfo)
+        raise UsageError("Multi-step scan points are impossible with ARIANE")
+    scan = QAIScan(
+        q0,
+        q1,
+        q2,
+        initpts=initpts,
+        initscans=initscans,
+        initres=initres,
+        initonly=initonly,
+        maxpts=maxpts,
+        maxtime=maxtime,
+        background=background,
+        int_threshold=int_threshold,
+        firstmoves=move,
+        detlist=detlist,
+        envlist=envlist,
+        preset=preset,
+        scaninfo=scaninfo,
+    )
     qaiscan.last = scan  # for debugging purposes
     scan.run()
 
 
 class QAIScan(QScan):
     """Specialized Scan class for ARIANE scans."""
-    ID = b'ARIANE'
+
+    ID = b"ARIANE"
     _socket = None
 
     # pylint: disable=too-many-arguments
-    def __init__(self, q0, q1, q2, initpts, initscans, initres, initonly, maxpts,
-                 maxtime, background, int_threshold, firstmoves=None,
-                 detlist=None, envlist=None, preset=None, scaninfo=None):
-
+    def __init__(
+        self,
+        q0,
+        q1,
+        q2,
+        initpts,
+        initscans,
+        initres,
+        initonly,
+        maxpts,
+        maxtime,
+        background,
+        int_threshold,
+        firstmoves=None,
+        detlist=None,
+        envlist=None,
+        preset=None,
+        scaninfo=None,
+    ):
         # first establish connection
-        hostport = getattr(session.experiment, 'ariane_host', None)
+        hostport = getattr(session.experiment, "ariane_host", None)
         if not hostport:
-            raise UsageError('Cannot perform scan: ARIANE not configured')
+            raise UsageError("Cannot perform scan: ARIANE not configured")
         if session.mode != SIMULATION:
             self._connect(hostport)
             # ensure service is up and running
-            version = self._request('ping')['version']
-            session.log.debug('connected to ARIANE version %s', version)
+            version = self._request("ping")["version"]
+            session.log.debug("connected to ARIANE version %s", version)
 
         # conversion between Q/E and AI coordinates
 
@@ -172,8 +203,7 @@ class QAIScan(QScan):
 
         # see _pos2loc and _loc2pos for the conversions using these matrices
         self._q0 = offset
-        self._qw = np.concatenate((dir1.reshape((4, 1)),
-                                   dir2.reshape((4, 1))), axis=1)
+        self._qw = np.concatenate((dir1.reshape((4, 1)), dir2.reshape((4, 1))), axis=1)
         self._invqw = np.linalg.inv(self._qw.T @ self._qw) @ self._qw.T
         self._lim = [lim1, lim2]
         self._dlim = dlim = [lim1[1] - lim1[0], lim2[1] - lim2[0]]
@@ -195,9 +225,11 @@ class QAIScan(QScan):
 
         n_grid = 31
         # the grid in terms of AI locations
-        self._locgrid = [[lim1[0] + i * dlim[0] / (n_grid - 1),
-                          lim2[0] + j * dlim[1] / (n_grid - 1)]
-                         for i in range(n_grid) for j in range(n_grid)]
+        self._locgrid = [
+            [lim1[0] + i * dlim[0] / (n_grid - 1), lim2[0] + j * dlim[1] / (n_grid - 1)]
+            for i in range(n_grid)
+            for j in range(n_grid)
+        ]
         # the grid in terms of Q positions
         self._posgrid = [self._loc2pos(loc) for loc in self._locgrid]
 
@@ -208,20 +240,25 @@ class QAIScan(QScan):
         total_initpts = (initpts[0] * initpts[1]) // 2
 
         if maxpts and maxpts < total_initpts:
-            raise UsageError('Maximum number of points is too small; it '
-                             'includes the %d initial points' %
-                             total_initpts)
+            raise UsageError(
+                "Maximum number of points is too small; it "
+                "includes the %d initial points" % total_initpts
+            )
 
         # make a grid like this:  * * * *
         # (going in alternate      * * *
         # directions)             * * * *
         for j in range(0, ni2):
-            irange = range(0, ni1) if j % 2 == 0 else range(ni1-1, -1, -1)
+            irange = range(0, ni1) if j % 2 == 0 else range(ni1 - 1, -1, -1)
             for i in irange:
                 if i % 2 != j % 2:
                     continue
-                grid_locs.append([lim1[0] + i * dlim[0] / (ni1 - 1),
-                                  lim2[0] + j * dlim[1] / (ni2 - 1)])
+                grid_locs.append(
+                    [
+                        lim1[0] + i * dlim[0] / (ni1 - 1),
+                        lim2[0] + j * dlim[1] / (ni2 - 1),
+                    ]
+                )
         grid_locs = np.array(grid_locs)
 
         if initscans:
@@ -234,14 +271,14 @@ class QAIScan(QScan):
             if isinstance(initscans, int):
                 initscans = [initscans]
 
-            session.log.info('Processing initial points from scans...')
+            session.log.info("Processing initial points from scans...")
             initscans = set(initscans)
             init_locs = []
 
             last_datasets = session.experiment.data.getLastScans()
             sel_datasets = []
 
-            for (i, dataset) in enumerate(reversed(last_datasets), start=1):
+            for i, dataset in enumerate(reversed(last_datasets), start=1):
                 if -i in initscans:  # allow "-1" to refer to the last scan
                     initscans.discard(-i)
                     sel_datasets.append(dataset)
@@ -257,28 +294,37 @@ class QAIScan(QScan):
                             self._initial_res.append(result)
                             init_locs.extend(result[0])
                     except Exception:
-                        session.log.warning('Scan %d: could not extract '
-                                            'results for AI from point %d',
-                                            dataset.counter, subset.number,
-                                            exc=1)
+                        session.log.warning(
+                            "Scan %d: could not extract "
+                            "results for AI from point %d",
+                            dataset.counter,
+                            subset.number,
+                            exc=1,
+                        )
 
-            session.log.info('%d valid point(s) extracted', len(init_locs))
+            session.log.info("%d valid point(s) extracted", len(init_locs))
 
             if initscans:
-                session.log.warning('No dataset found for scan(s) %s',
-                                    ', '.join(map(str, initscans)))
+                session.log.warning(
+                    "No dataset found for scan(s) %s", ", ".join(map(str, initscans))
+                )
 
             if not self._initial_res:
-                raise NicosError('No results found to populate the '
-                                 'initial point grid')
+                raise NicosError(
+                    "No results found to populate the " "initial point grid"
+                )
 
             dx1 = (dlim[0] / (ni1 - 1) * 0.99) ** 2
             dx2 = (dlim[1] / (ni2 - 1) * 0.99) ** 2
 
             init_locs = np.array(init_locs)
-            is_not_covered = np.all(np.sum(
-                (grid_locs[:, np.newaxis, :] - init_locs)**2 / [dx1, dx2],
-                axis=2) > 1, axis=1)
+            is_not_covered = np.all(
+                np.sum(
+                    (grid_locs[:, np.newaxis, :] - init_locs) ** 2 / [dx1, dx2], axis=2
+                )
+                > 1,
+                axis=1,
+            )
             grid_locs = grid_locs[is_not_covered]
 
         if initres:
@@ -296,35 +342,47 @@ class QAIScan(QScan):
         # "maximum" estimated travel cost (for normalization in AI)
         corners = [q0, q1, q2, q1 + q2 - q0]
         if not self._initonly:
-            session.log.info('Calculating travel costs...')
-            cost_sim = self._getTravelCosts([(corners[0], corners[1]),
-                                             (corners[2], corners[1]),
-                                             (corners[2], corners[3]),
-                                             (corners[0], corners[3]),
-                                             (corners[0], corners[2]),
-                                             (corners[1], corners[3])])
+            session.log.info("Calculating travel costs...")
+            cost_sim = self._getTravelCosts(
+                [
+                    (corners[0], corners[1]),
+                    (corners[2], corners[1]),
+                    (corners[2], corners[3]),
+                    (corners[0], corners[3]),
+                    (corners[0], corners[2]),
+                    (corners[1], corners[3]),
+                ]
+            )
             cost_sim.join()
             if len(cost_sim.results) != 6:
-                session.log.warning('Could not calculate travel costs for AI')
+                session.log.warning("Could not calculate travel costs for AI")
                 self._travel_cost_max = 1
             else:
-                costs = [cost for cost in cost_sim.results
-                         if not np.isinf(cost)] + [1]
+                costs = [cost for cost in cost_sim.results if not np.isinf(cost)] + [1]
                 self._travel_cost_max = max(costs)
         else:
             self._travel_cost_max = 1
 
         self._startVisualization()
 
-        QScan.__init__(self, self._initial_pos, firstmoves, [], detlist,
-                       envlist, preset, scaninfo, subscan=False)
+        QScan.__init__(
+            self,
+            self._initial_pos,
+            firstmoves,
+            [],
+            detlist,
+            envlist,
+            preset,
+            scaninfo,
+            subscan=False,
+        )
 
         self._npoints = maxpts or 0
 
     def _connect(self, hostport):
         self._socket = nicos_zmq_ctx.socket(zmq.REQ)
         self._socket.setsockopt(zmq.LINGER, 0)
-        self._socket.connect('tcp://' + hostport)
+        self._socket.connect("tcp://" + hostport)
         self._poller = zmq.Poller()
         self._poller.register(self._socket, zmq.POLLIN)
 
@@ -335,8 +393,9 @@ class QAIScan(QScan):
         action = action.encode()
 
         while True:
-            self._socket.send_multipart([self.ID, b'', action,
-                                         json.dumps(data).encode()])
+            self._socket.send_multipart(
+                [self.ID, b"", action, json.dumps(data).encode()]
+            )
 
             # wait 5 seconds for a response
             for i in range(5):
@@ -344,52 +403,55 @@ class QAIScan(QScan):
                 if events:
                     break
                 if i == 0:
-                    session.log.warning('No reply from ARIANE, retrying...')
+                    session.log.warning("No reply from ARIANE, retrying...")
             else:
-                raise CommunicationError('No reply from ARIANE')
+                raise CommunicationError("No reply from ARIANE")
 
             # get the response and decode it
             reply = self._socket.recv_multipart()
             try:
-                if len(reply) != 4 or reply[:3] != [self.ID, b'', action]:
+                if len(reply) != 4 or reply[:3] != [self.ID, b"", action]:
                     raise ValueError
                 ret_data = json.loads(reply[3].decode())
 
                 # if still busy, retry (without warning)
-                if ret_data.get('busy'):
+                if ret_data.get("busy"):
                     session.delay(1)
                     continue
 
                 # if error return, raise immediately
-                if not ret_data['success']:
-                    raise CommunicationError('Error from ARIANE: %s' %
-                                             ret_data['error'])
+                if not ret_data["success"]:
+                    raise CommunicationError(
+                        "Error from ARIANE: %s" % ret_data["error"]
+                    )
             except CommunicationError:
                 raise
             except Exception as exc:
-                raise CommunicationError('Received invalid reply %r' %
-                                         reply) from exc
+                raise CommunicationError("Received invalid reply %r" % reply) from exc
             return ret_data
 
     def beginScan(self):
         QScan.beginScan(self)
 
-        self._request('reset',
-                      mode='single',
-                      axes=self._qw.T.tolist(),
-                      offset=self._q0.tolist(),
-                      limits=self._lim,
-                      level_backgr=self._background,
-                      thresh_intens=self._int_threshold,
-                      travel_cost_max=self._travel_cost_max)
+        self._request(
+            "reset",
+            mode="single",
+            axes=self._qw.T.tolist(),
+            offset=self._q0.tolist(),
+            limits=self._lim,
+            level_backgr=self._background,
+            thresh_intens=self._int_threshold,
+            travel_cost_max=self._travel_cost_max,
+        )
         self._starttime = currenttime()
 
         for res in self._initial_res:
             self._processResult(*res)
 
         if not self._initonly:
-            self._startpositions = AIPositions(self._initial_pos,
-                                               self._requestNextPoint)
+            self._startpositions = AIPositions(
+                self._initial_pos, self._requestNextPoint
+            )
 
     def handleError(self, what, err):
         try:
@@ -404,9 +466,9 @@ class QAIScan(QScan):
         # already start calculating the travel costs from the new point
         if not self._initonly:
             curpos = xvalues[0]
-            self._travel_cost_sim = self._getTravelCosts([
-                (curpos, gridpos) for gridpos in self._posgrid
-            ])
+            self._travel_cost_sim = self._getTravelCosts(
+                [(curpos, gridpos) for gridpos in self._posgrid]
+            )
         self._preparetime = currenttime()
 
         QScan.preparePoint(self, num, xvalues)
@@ -425,10 +487,9 @@ class QAIScan(QScan):
         try:
             locs, counts, ellipses = self._extractResult(sub)
         except Exception:
-            session.log.warning('Could not extract results for AI', exc=1)
+            session.log.warning("Could not extract results for AI", exc=1)
         else:
-            self._processResult(locs, counts, ellipses, with_cost=True,
-                                times=times)
+            self._processResult(locs, counts, ellipses, with_cost=True, times=times)
 
     def endScan(self):
         try:
@@ -436,28 +497,30 @@ class QAIScan(QScan):
 
             if self._initonly:
                 # print out background/threshold values from heuristics
-                res = self._request('heuris_experi_param')
-                session.log.info('Recommended AI cutoffs:')
-                if res['level_backgr'] is None:
-                    session.log.info('Background: not determined')
+                res = self._request("heuris_experi_param")
+                session.log.info("Recommended AI cutoffs:")
+                if res["level_backgr"] is None:
+                    session.log.info("Background: not determined")
                 else:
-                    session.log.info('Background: %.0f', res['level_backgr'])
-                if res['thresh_intens'] is None:
-                    session.log.info('Upper threshold: not determined')
+                    session.log.info("Background: %.0f", res["level_backgr"])
+                if res["thresh_intens"] is None:
+                    session.log.info("Upper threshold: not determined")
                 else:
-                    session.log.info('Upper threshold: %.0f',
-                                     res['thresh_intens'])
+                    session.log.info("Upper threshold: %.0f", res["thresh_intens"])
 
-            self._request('stop')
+            self._request("stop")
         finally:
             self._socket.close()
             self._socket = None
 
     def shortDesc(self):
         if self.dataset and self.dataset.counter > 0:
-            return 'AI-Scan %s/%s #%s' % (self._qw[:, 0], self._qw[:, 1],
-                                          self.dataset.counter)
-        return 'AI-Scan %s/%s' % (self._qw[:, 0], self._qw[:, 1])
+            return "AI-Scan %s/%s #%s" % (
+                self._qw[:, 0],
+                self._qw[:, 1],
+                self.dataset.counter,
+            )
+        return "AI-Scan %s/%s" % (self._qw[:, 0], self._qw[:, 1])
 
     def _guessPlotIndex(self, _xindex):
         # Basically, there is no good way to make a 1-d plot of this scan
@@ -474,18 +537,16 @@ class QAIScan(QScan):
             self._travel_cost_sim.join()
             costs = self._travel_cost_sim.results
             if len(costs) != len(self._posgrid):
-                session.log.warning('Could not calculate travel costs')
+                session.log.warning("Could not calculate travel costs")
                 costs = [1] * len(self._posgrid)
-            kwds['travel_cost_grid'] = self._locgrid
-            kwds['travel_cost_values'] = costs
+            kwds["travel_cost_grid"] = self._locgrid
+            kwds["travel_cost_values"] = costs
 
-        kwds['travel_time'], kwds['counting_time'] = times
+        kwds["travel_time"], kwds["counting_time"] = times
 
-        self._request('result',
-                      locs=locs,
-                      counts=counts,
-                      matrices_ellipses=ellipses,
-                      **kwds)
+        self._request(
+            "result", locs=locs, counts=counts, matrices_ellipses=ellipses, **kwds
+        )
         self._addVisPoint(locs, counts, ellipses)
 
     def _requestNextPoint(self, i, retry=20):
@@ -502,17 +563,18 @@ class QAIScan(QScan):
             raise StopIteration  # simulation mode: cannot guess anything
 
         # request the next point
-        reply = self._request('next_loc')
-        if reply.get('stop'):  # stop request by other side
+        reply = self._request("next_loc")
+        if reply.get("stop"):  # stop request by other side
             raise StopIteration
 
-        loc = self._last_loc = reply['loc']
+        loc = self._last_loc = reply["loc"]
         pos = self._loc2pos(loc)
         if not session.instrument.isAllowed(pos)[0]:
-            session.log.warning('Invalid point requested')
+            session.log.warning("Invalid point requested")
             if retry == 0:
-                session.log.warning('Stopping AI scan since no new valid point '
-                                    'could be found')
+                session.log.warning(
+                    "Stopping AI scan since no new valid point " "could be found"
+                )
                 raise StopIteration
             # tell AI not to go there
             self._reportInaccessible(loc)
@@ -521,14 +583,17 @@ class QAIScan(QScan):
         return [pos]
 
     def _reportInaccessible(self, loc):
-        self._request('problem_locs',
-                      locs=[loc],
-                      matrices_ellipses=[[[(20/self._dlim[0])**2, 0],
-                                          [0, (20/self._dlim[1])**2]]])
+        self._request(
+            "problem_locs",
+            locs=[loc],
+            matrices_ellipses=[
+                [[(20 / self._dlim[0]) ** 2, 0], [0, (20 / self._dlim[1]) ** 2]]
+            ],
+        )
 
     def _pos2loc(self, pos):
         # convert position [qx, qy, qz, E] to loc [a, b].
-        loc0, loc1 = (self._invqw @ (pos - self._q0))
+        loc0, loc1 = self._invqw @ (pos - self._q0)
         # clip to limits to avoid rounding inaccuracies
         return [np.clip(loc0, *self._lim[0]), np.clip(loc1, *self._lim[1])]
 
@@ -538,26 +603,28 @@ class QAIScan(QScan):
 
     def _getTravelCosts(self, paths):
         # calculate travel costs for a list of (p1, p2) paths
-        script = ['from nicos import session', '_tasinstr = session.instrument']
-        for (p1, p2) in paths:
-            script.extend([
-                'try:',
-                '  _tasinstr.maw(%s)' % list(p1),
-                '  t0 = session.clock.time',
-                '  _tasinstr.maw(%s)' % list(p2),
-                '  t1 = session.clock.time',
-                '  printinfo(%s, %s, t1 - t0)' % (list(p1), list(p2)),
-                '  session.log_sender.add_result(t1 - t0)',
-                'except:',
-                '  session.log_sender.add_result(float("inf"))',
-            ])
-        return session.runSimulation('\n'.join(script), wait=False,
-                                     uuid='ariane', quiet=True)
+        script = ["from nicos import session", "_tasinstr = session.instrument"]
+        for p1, p2 in paths:
+            script.extend(
+                [
+                    "try:",
+                    "  _tasinstr.maw(%s)" % list(p1),
+                    "  t0 = session.clock.time",
+                    "  _tasinstr.maw(%s)" % list(p2),
+                    "  t1 = session.clock.time",
+                    "  printinfo(%s, %s, t1 - t0)" % (list(p1), list(p2)),
+                    "  session.log_sender.add_result(t1 - t0)",
+                    "except:",
+                    '  session.log_sender.add_result(float("inf"))',
+                ]
+            )
+        return session.runSimulation(
+            "\n".join(script), wait=False, uuid="ariane", quiet=True
+        )
 
     def _getEllipse(self, loc):
         # fixed ellipse with 1/50 the axis range in both directions
-        return [[(50/self._dlim[0])**2, 0],
-                [0, (50/self._dlim[1])**2]]
+        return [[(50 / self._dlim[0]) ** 2, 0], [0, (50 / self._dlim[1]) ** 2]]
         # mat = resmat(*_resmat_args(tuple(self._loc2pos(loc)), {}))
         # return (self._qw.T @ mat.NP @ self._qw).tolist()
 
@@ -573,12 +640,12 @@ class QAIScan(QScan):
         locs = [self._pos2loc(ds.devvaluelist[0:4])]
 
         monindex = None
-        for (i, info) in enumerate(ds.detvalueinfo):
-            if info.type == 'monitor':
+        for i, info in enumerate(ds.detvalueinfo):
+            if info.type == "monitor":
                 monindex = i
                 break
-        for (i, info) in enumerate(ds.detvalueinfo):
-            if info.type == 'counter':
+        for i, info in enumerate(ds.detvalueinfo):
+            if info.type == "counter":
                 count = ds.detvaluelist[i]
                 if monindex is not None:
                     counts = [[count, ds.detvaluelist[monindex]]]
@@ -586,7 +653,7 @@ class QAIScan(QScan):
                     counts = [[count, 0]]
                 break
         else:
-            raise UsageError('no counter found in detector results')
+            raise UsageError("no counter found in detector results")
 
         ellipses = [self._getEllipse(locs[0])]
 
@@ -598,8 +665,8 @@ class QAIScan(QScan):
         xlabel = str(self._qw[:, 0])
         ylabel = str(self._qw[:, 1])
         if not np.allclose(0, self._q0):
-            xlabel = f'{self._q0} + x * {xlabel}'
-            ylabel = f'{self._q0} + x * {ylabel}'
+            xlabel = f"{self._q0} + x * {xlabel}"
+            ylabel = f"{self._q0} + x * {ylabel}"
         scale = self._dlim[0] / self._dlim[1]
         session.clientExec(make_map, (xlabel, ylabel, True, 1, scale, 50))
 
@@ -633,7 +700,7 @@ class AIPositions:
 def reduce(vec):
     """Reduce vector into a "unit" vector and scale, if possible."""
     # ensure small values are exactly zero
-    vec[np.isclose(0, vec)] = 0.
+    vec[np.isclose(0, vec)] = 0.0
     # reduce to the smallest nonzero value as unit
     scale = float(np.min(np.abs(vec)[vec != 0]))
     return vec / scale, scale
@@ -641,7 +708,7 @@ def reduce(vec):
 
 def determine_axes(q0, q1, q2):
     offset = q0
-    lim1l = lim2l = 0.
+    lim1l = lim2l = 0.0
 
     # reduce direction vectors
     dir1, lim1h = reduce(q1 - q0)

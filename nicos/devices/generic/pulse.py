@@ -37,41 +37,55 @@ class Pulse(BaseSequencer):
     """
 
     parameters = {
-        'onvalue': Param("Value of the attached 'switch' considered to be as "
-                         "'on'",
-                         type=anytype, settable=False, userparam=False,
-                         mandatory=True,
-                         ),
-        'offvalue': Param("Value of the attached 'switch' considered to be as "
-                          "'off'",
-                          type=anytype, settable=False, userparam=False,
-                          mandatory=True,
-                          ),
-        'ontime': Param('Time to stay at "on" value',
-                        type=float, settable=False, userparam=True,
-                        mandatory=True, unit='s',
-                        ),
+        "onvalue": Param(
+            "Value of the attached 'switch' considered to be as " "'on'",
+            type=anytype,
+            settable=False,
+            userparam=False,
+            mandatory=True,
+        ),
+        "offvalue": Param(
+            "Value of the attached 'switch' considered to be as " "'off'",
+            type=anytype,
+            settable=False,
+            userparam=False,
+            mandatory=True,
+        ),
+        "ontime": Param(
+            'Time to stay at "on" value',
+            type=float,
+            settable=False,
+            userparam=True,
+            mandatory=True,
+            unit="s",
+        ),
     }
 
     attached_devices = {
-        'moveable': Attach('Device performing the trigger signal', Moveable),
+        "moveable": Attach("Device performing the trigger signal", Moveable),
     }
 
     hardware_access = False
 
     def doInit(self, mode):
         if not self._attached_moveable.isAllowed(self.onvalue)[0]:
-            raise ConfigurationError(self, "'onvalue' is not allowed for the "
-                                     "'%s' device" % self._attached_moveable)
+            raise ConfigurationError(
+                self,
+                "'onvalue' is not allowed for the "
+                "'%s' device" % self._attached_moveable,
+            )
         if not self._attached_moveable.isAllowed(self.offvalue)[0]:
-            raise ConfigurationError(self, "'offvalue' is not allowed for the "
-                                     "'%s' device" % self._attached_moveable)
+            raise ConfigurationError(
+                self,
+                "'offvalue' is not allowed for the "
+                "'%s' device" % self._attached_moveable,
+            )
         self.valuetype = oneof(self.offvalue, self.onvalue)
 
     def doStart(self, target):
         if self._seq_is_running():
             self.stop()
-            self.log.info('waiting for trigger to stop...')
+            self.log.info("waiting for trigger to stop...")
             self._hw_wait()
             self._seq_thread.join()
             self._seq_thread = None

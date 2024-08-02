@@ -22,9 +22,10 @@
 # *****************************************************************************
 
 from nicos.core import status
-from nicos.devices.epics.pyepics import \
-    EpicsDigitalMoveable as EpicsCoreDigitalMoveable, \
-    EpicsReadable as EpicsCoreReadable
+from nicos.devices.epics.pyepics import (
+    EpicsDigitalMoveable as EpicsCoreDigitalMoveable,
+    EpicsReadable as EpicsCoreReadable,
+)
 
 
 class EpicsDigitalMoveable(EpicsCoreDigitalMoveable):
@@ -32,10 +33,11 @@ class EpicsDigitalMoveable(EpicsCoreDigitalMoveable):
     This adds a doStatus() Method to the core
     EpicsDigitalMoveable
     """
+
     def doStatus(self, maxage=0):
-        return status.OK, 'Idle'
+        return status.OK, "Idle"
 
 
 class EpicsReadable(EpicsCoreReadable):
     def doStatus(self, maxage=0):
-        return status.OK, 'Idle'
+        return status.OK, "Idle"

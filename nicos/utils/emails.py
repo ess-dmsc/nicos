@@ -36,9 +36,18 @@ from nicos.core.params import mailaddress
 # do not call this file email.py !
 
 
-def sendMail(mailserver, receiverlist, mailsender, topic, body,
-             attach_files=(), debuglevel=0, security="none",
-             username=None, keystoretoken='mailserver_password'):
+def sendMail(
+    mailserver,
+    receiverlist,
+    mailsender,
+    topic,
+    body,
+    attach_files=(),
+    debuglevel=0,
+    security="none",
+    username=None,
+    keystoretoken="mailserver_password",
+):
     """Sends an email to a list of receivers with given topic and content via
     the given server.
 
@@ -61,65 +70,67 @@ def sendMail(mailserver, receiverlist, mailsender, topic, body,
     # try to check parameters
     errors = []
     if isinstance(receiverlist, str):
-        receiverlist = receiverlist.replace(',', ' ').split()
+        receiverlist = receiverlist.replace(",", " ").split()
     try:
         mailaddress(mailsender)
     except ValueError as e:
-        errors.append('Mailsender: %s' % e)
+        errors.append("Mailsender: %s" % e)
     for a in receiverlist:
         try:
             mailaddress(a)
         except ValueError as e:
-            errors.append('Receiver: %s' % e)
+            errors.append("Receiver: %s" % e)
     for fn in attach_files:
         if not path.exists(fn):
-            errors.append('Attachment %r does not exist, please check config!' % fn)
+            errors.append("Attachment %r does not exist, please check config!" % fn)
         elif not path.isfile(fn):
-            errors.append('Attachment %r is not a file, please check config!' % fn)
+            errors.append("Attachment %r is not a file, please check config!" % fn)
     if errors:
-        return ['No mail sent because of invalid parameters'] + errors
+        return ["No mail sent because of invalid parameters"] + errors
 
     # construct msg according to
     # http://docs.python.org/library/email-examples.html#email-examples
-    receivers = ', '.join(receiverlist)
+    receivers = ", ".join(receiverlist)
     msg = MIMEMultipart()
-    msg['Subject'] = topic
-    msg['From'] = mailsender
-    msg['To'] = receivers
-    msg['Date'] = formatdate()
+    msg["Subject"] = topic
+    msg["From"] = mailsender
+    msg["To"] = receivers
+    msg["Date"] = formatdate()
     # Set Return-Path so that it isn't set (generally incorrectly) for us.
-    msg['Return-Path'] = mailsender
-    msg.attach(MIMEText(body, 'plain', 'utf-8'))
+    msg["Return-Path"] = mailsender
+    msg.attach(MIMEText(body, "plain", "utf-8"))
 
     # now attach the files
     for fn in attach_files:
-        with open(fn, 'rb') as fp:
+        with open(fn, "rb") as fp:
             filedata = fp.read()
 
-        attachment = MIMEApplication(filedata, 'x-zip')  # This may need adjustments!
-        attachment['Content-Disposition'] = 'ATTACHMENT; filename="%s"' % \
-            path.basename(fn)
+        attachment = MIMEApplication(filedata, "x-zip")  # This may need adjustments!
+        attachment["Content-Disposition"] = 'ATTACHMENT; filename="%s"' % path.basename(
+            fn
+        )
         msg.attach(attachment)
 
     # now comes the final part: send the mail
     mailer = None
     try:
-        if security == 'ssl':
+        if security == "ssl":
             mailer = smtplib.SMTP_SSL(mailserver)
-        elif security in ('tls', 'none'):
+        elif security in ("tls", "none"):
             mailer = smtplib.SMTP(mailserver)
-            if security == 'tls':
+            if security == "tls":
                 mailer.starttls()
         else:
-            raise ConfigurationError(f'Unsupported parameter security ({security})')
+            raise ConfigurationError(f"Unsupported parameter security ({security})")
         if debuglevel:
             mailer.set_debuglevel(debuglevel)
         if username:
             from nicos.utils.credentials.keystore import nicoskeystore
+
             password = nicoskeystore.getCredential(keystoretoken)
             if not password:
-                raise ConfigurationError('Mailserver password token missing in keyring')
-            mailer.login(username,password)
+                raise ConfigurationError("Mailserver password token missing in keyring")
+            mailer.login(username, password)
         mailer.sendmail(mailsender, receiverlist + [mailsender], msg.as_string())
     except Exception as e:
         return [str(e)]

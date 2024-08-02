@@ -25,8 +25,7 @@
 
 from nicos import session
 from nicos.commands import helparglist, usercommand
-from nicos.commands.scan import ADDSCANHELP0, ADDSCANHELP2, _handleScanArgs, \
-    _infostr
+from nicos.commands.scan import ADDSCANHELP0, ADDSCANHELP2, _handleScanArgs, _infostr
 from nicos.core.spm import Bare, spmsyntax
 
 from nicos_sinq.amor.scan import WallTimeScan
@@ -34,7 +33,7 @@ from nicos_sinq.devices.detector import SinqDetector
 
 
 @usercommand
-@helparglist('numpoints, walltime, ...')
+@helparglist("numpoints, walltime, ...")
 @spmsyntax(Bare)
 def walltimecount(numpoints, walltime, *args, **kwargs):
     """Count a number of times for the given amount of time on wall.
@@ -53,9 +52,18 @@ def walltimecount(numpoints, walltime, *args, **kwargs):
 
     >>> walltimecount(500, 2, delay=5)
     """
-    scanstr = _infostr('walltimecount', (numpoints, walltime, ) + args, kwargs)
-    preset, scaninfo, detlist, envlist, move, multistep = \
-        _handleScanArgs(args, kwargs, scanstr)
+    scanstr = _infostr(
+        "walltimecount",
+        (
+            numpoints,
+            walltime,
+        )
+        + args,
+        kwargs,
+    )
+    preset, scaninfo, detlist, envlist, move, multistep = _handleScanArgs(
+        args, kwargs, scanstr
+    )
 
     # Get AMOR detector
     if not detlist:
@@ -67,26 +75,28 @@ def walltimecount(numpoints, walltime, *args, **kwargs):
             detector = det
 
     if not detector:
-        session.log.error('Detector not found in the detector list')
+        session.log.error("Detector not found in the detector list")
 
     # Set the beam threshold to 0
     oldthreshold = detector.threshold
 
     # Complete the scan
-    scan = WallTimeScan([], [], numpoints, walltime, move, multistep, detlist,
-                        envlist, preset, scaninfo)
+    scan = WallTimeScan(
+        [], [], numpoints, walltime, move, multistep, detlist, envlist, preset, scaninfo
+    )
     scan.run()
 
     # Reset the beam threshold to oldvalue
     detector.threshold = oldthreshold
 
 
-walltimecount.__doc__ += \
-    (ADDSCANHELP0 + ADDSCANHELP2).replace('scan(dev, ', 'walltimecount(5, ')
+walltimecount.__doc__ += (ADDSCANHELP0 + ADDSCANHELP2).replace(
+    "scan(dev, ", "walltimecount(5, "
+)
 
 
 @usercommand
-@helparglist('state')
+@helparglist("state")
 def spin(state):
     """Change the spin state to + or -.
 
@@ -96,12 +106,12 @@ def spin(state):
 
     >>> spin('+')
     """
-    if state not in ('+', '-'):
-        session.log.error('Expected only +/- as the state for spin')
+    if state not in ("+", "-"):
+        session.log.error("Expected only +/- as the state for spin")
 
-    flipper = session.getDevice('SpinFlipper')
+    flipper = session.getDevice("SpinFlipper")
 
-    if state == '+':
-        flipper.maw('SPIN UP')
-    elif state == '-':
-        flipper.maw('SPIN DOWN')
+    if state == "+":
+        flipper.maw("SPIN UP")
+    elif state == "-":
+        flipper.maw("SPIN DOWN")

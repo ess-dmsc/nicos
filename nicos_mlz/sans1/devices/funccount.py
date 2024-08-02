@@ -23,10 +23,9 @@
 
 """Special device for Sans1 Func counter"""
 
-
 from nicos.devices.entangle import Sensor
 
-CONFIG = '''
+CONFIG = """
 *RST;
 
 :FUNC "FREQ";
@@ -54,7 +53,8 @@ CONFIG = '''
 :TRIG:DEL +0.00000000000000E+000;
 :TRIG:SLOP NEG;
 :TRIG:SOUR IMM;
-'''
+"""
+
 
 class FC53210A(Sensor):
     """Support for FC 53210A
@@ -62,18 +62,19 @@ class FC53210A(Sensor):
     derived after endless hours of debuging.
     DON'T TRUST THE MANUAL!
     """
+
     def doReset(self):
         self._dev.Reset()
         self._dev.WriteLine(CONFIG)
         self._dev.Flush()
-        self._dev.Communicate('SYST:ERR?')
+        self._dev.Communicate("SYST:ERR?")
 
     def doReadUnit(self):
-        return 'Hz'
+        return "Hz"
 
     def doRead(self, maxage=0):
         # XXX: todo: read frequency of a chopper disc and send it to the FC
         #            to avoid automeasurement (silly results)
         # note: chopper discs run in rpm, no Hz
         # return float(self._dev.Communicate('MEAS:FREQ? <expected_freq_in_HZ>'))
-        return float(self._dev.Communicate('MEAS:FREQ? (@1)'))
+        return float(self._dev.Communicate("MEAS:FREQ? (@1)"))

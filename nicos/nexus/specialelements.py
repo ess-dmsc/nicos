@@ -35,11 +35,15 @@ class NicosProgramDataset(ConstDataset):
 
     This elememt can be used for the `program_name` entry in the NXentry group.
     """
+
     def __init__(self):
-        ConstDataset.__init__(self, 'NICOS', 'string',
-                              version=NXAttribute(nicos_version, 'string'),
-                              configuration=NXAttribute(
-                                  session.explicit_setups, 'string'))
+        ConstDataset.__init__(
+            self,
+            "NICOS",
+            "string",
+            version=NXAttribute(nicos_version, "string"),
+            configuration=NXAttribute(session.explicit_setups, "string"),
+        )
 
 
 class CellArray(NexusElementBase):
@@ -48,6 +52,7 @@ class CellArray(NexusElementBase):
     The sample should be `nicos.devices.tas.Cell` or
     `nicos.devices.sxtal.SXTalSample`.
     """
+
     def __init__(self):
         self.attrs = {}
         NexusElementBase.__init__(self)
@@ -57,14 +62,19 @@ class CellArray(NexusElementBase):
         if isinstance(sample, Cell):
             data = sample.lattice + sample.angles
         elif isinstance(sample, SXTalSample):
-            data = [sample.a, sample.b, sample.c,
-                    sample.alpha, sample.beta, sample.gamma]
+            data = [
+                sample.a,
+                sample.b,
+                sample.c,
+                sample.alpha,
+                sample.beta,
+                sample.gamma,
+            ]
         else:
-            session.log.error('Your sample is no Cell and no SXTalSample')
+            session.log.error("Your sample is no Cell and no SXTalSample")
             return
-        self.attrs['units'] = NXAttribute('', 'string')
-        ds = h5parent.create_dataset(name, (6,), maxshape=(None,),
-                                     dtype='float64')
+        self.attrs["units"] = NXAttribute("", "string")
+        ds = h5parent.create_dataset(name, (6,), maxshape=(None,), dtype="float64")
         ds[...] = numpy.array(data)
         self.createAttributes(ds, sinkhandler)
 
@@ -75,6 +85,7 @@ class UBMatrix(NexusElementBase):
     The sample should be `nicos.devices.tas.Cell` or
     `nicos.devices.sxtal.SXTalSample`.
     """
+
     def __init__(self):
         self.attrs = {}
         NexusElementBase.__init__(self)
@@ -84,12 +95,11 @@ class UBMatrix(NexusElementBase):
         if isinstance(sample, Cell):
             data = sample.matrix_crystal2lab().flatten()
         elif isinstance(sample, SXTalSample):
-            data = numpy.array(sample.ubmatrix, dtype='float64').flatten()
+            data = numpy.array(sample.ubmatrix, dtype="float64").flatten()
         else:
-            session.log.error('Your sample is no Cell and no SXTalSample')
+            session.log.error("Your sample is no Cell and no SXTalSample")
             return
-        self.attrs['units'] = NXAttribute('', 'string')
-        ds = h5parent.create_dataset(name, (9,), maxshape=(None,),
-                                     dtype='float64')
+        self.attrs["units"] = NXAttribute("", "string")
+        ds = h5parent.create_dataset(name, (9,), maxshape=(None,), dtype="float64")
         ds[...] = data
         self.createAttributes(ds, sinkhandler)

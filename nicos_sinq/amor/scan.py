@@ -26,16 +26,37 @@ from nicos.core.scan import SweepScan
 
 
 class WallTimeScan(SweepScan):
-    """ Aligns counting at regular time intervals in order to facilitate
+    """Aligns counting at regular time intervals in order to facilitate
     correlation with external time controlled sample environment
     """
 
-    def __init__(self, devices, startend, numpoints, walltime, firstmoves=None,
-                 multistep=None, detlist=None, envlist=None, preset=None,
-                 scaninfo=None, subscan=False):
-        SweepScan.__init__(self, devices, startend, numpoints, firstmoves,
-                           multistep, detlist, envlist, preset, scaninfo,
-                           subscan)
+    def __init__(
+        self,
+        devices,
+        startend,
+        numpoints,
+        walltime,
+        firstmoves=None,
+        multistep=None,
+        detlist=None,
+        envlist=None,
+        preset=None,
+        scaninfo=None,
+        subscan=False,
+    ):
+        SweepScan.__init__(
+            self,
+            devices,
+            startend,
+            numpoints,
+            firstmoves,
+            multistep,
+            detlist,
+            envlist,
+            preset,
+            scaninfo,
+            subscan,
+        )
         self.walltime = walltime
 
     def preparePoint(self, num, xvalues):
@@ -44,4 +65,4 @@ class WallTimeScan(SweepScan):
         # Reset the preset depending on the elapsed time and expected time
         preset = num * self.walltime - self._etime.retrieve()
         preset = max(preset, 0)
-        self._preset = {'t': preset}
+        self._preset = {"t": preset}

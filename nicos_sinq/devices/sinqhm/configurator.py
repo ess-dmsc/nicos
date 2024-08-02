@@ -31,19 +31,19 @@ from nicos_sinq.devices.sinqhm.connector import HttpConnector
 
 
 class HistogramConfElement(Device):
-    """ Basic element for configuring the histogram memory.
+    """Basic element for configuring the histogram memory.
     Each element should be able to get a XML.
     """
 
     def getXml(self):
-        raise NotImplementedError('Method needs to te implemented')
+        raise NotImplementedError("Method needs to te implemented")
 
     def getXmlString(self, **config):
         return etree.tostring(self.getXml(), **config)
 
 
 class HistogramConfArray(HistogramConfElement):
-    """ Arrays for tof and lookup axis types are stored as separate
+    """Arrays for tof and lookup axis types are stored as separate
     entities within the XML file. The tag names must be those
     specified in the array attribute of the axis tag.
 
@@ -58,34 +58,42 @@ class HistogramConfArray(HistogramConfElement):
 
     Rank is automatically deduced from the length of the dimensions list.
     """
+
     parameters = {
-        'tag': Param('Array tag for XML', type=str, mandatory=True),
-        'dim': Param('Length of each dimension', type=listof(int),
-                     mandatory=True, settable=True),
-        'data': Param('Array data in each dimension',
-                      type=listof(float), default=[], settable=True),
-        'formatter': Param('Array data formatter', type=str),
-        'threshold': Param('Threshold for the array', type=int,
-                           settable=True),
-        'offset': Param('Offset for the array', type=int, settable=True)
+        "tag": Param("Array tag for XML", type=str, mandatory=True),
+        "dim": Param(
+            "Length of each dimension", type=listof(int), mandatory=True, settable=True
+        ),
+        "data": Param(
+            "Array data in each dimension",
+            type=listof(float),
+            default=[],
+            settable=True,
+        ),
+        "formatter": Param("Array data formatter", type=str),
+        "threshold": Param("Threshold for the array", type=int, settable=True),
+        "offset": Param("Offset for the array", type=int, settable=True),
     }
 
     def setData(self, dim, data):
-        """ Set the given data and dimensions. Checks if the dimensions
+        """Set the given data and dimensions. Checks if the dimensions
         match the data. In case a mismatch occurs the data and dims are
         not changed
         :param dim: (list) new shape of the array
         :param data: (list) Flattened list of the array (C Style, Row-Major)
         """
         if np.prod(dim) != len(data):
-            self.log.error('Mismatch in dimensions and data length: '
-                           'dims %s and data length %s', dim, len(data))
+            self.log.error(
+                "Mismatch in dimensions and data length: " "dims %s and data length %s",
+                dim,
+                len(data),
+            )
             return
         self.dim = dim
         self.data = list(data)
 
     def dataText(self):
-        """ The string that is used to write the data list in XML file.
+        """The string that is used to write the data list in XML file.
         By default format the elements of list using the provided
         formatter and writes 5 elements every row.
         The subclasses can override this method and write in their own
@@ -93,47 +101,45 @@ class HistogramConfArray(HistogramConfElement):
         :return: (string) representation of the data vector
         """
         if not self.data:
-            self.log.warning('Data for the array missing.')
-            return ''
+            self.log.warning("Data for the array missing.")
+            return ""
 
-        arraytxt = '\n'
+        arraytxt = "\n"
         newlinecount = 0
         for d in self.data:
             arraytxt += self.formatter % d
             newlinecount += 1
             if newlinecount % 5 == 0:
                 newlinecount = 0
-                arraytxt += '\n'
-        arraytxt += '\n'
+                arraytxt += "\n"
+        arraytxt += "\n"
         return arraytxt
 
     def getXml(self):
-        elem = etree.Element(self.tag, rank=str(len(self.dim)),
-                             dim=','.join([str(d) for d in self.dim]))
+        elem = etree.Element(
+            self.tag, rank=str(len(self.dim)), dim=",".join([str(d) for d in self.dim])
+        )
         elem.text = self.dataText()
         return elem
 
 
 class HistogramConfTofArray(HistogramConfArray):
-    """ Special configuration array that stores the TOF values.
+    """Special configuration array that stores the TOF values.
     The data vector represents the time bins. This class provides
     a way to change the time bins.
     """
 
     parameters = {
-        'start_delay':  Param('start delay for tof',
-                              type=int, settable=True,
-                              unit='us'),
-        'channel_width': Param('channel width', type=int,
-                               settable=True, unit='us')
+        "start_delay": Param("start delay for tof", type=int, settable=True, unit="us"),
+        "channel_width": Param("channel width", type=int, settable=True, unit="us"),
     }
     parameter_overrides = {
-        'tag': Override(mandatory=False, default='tof'),
-        'data': Override(type=listof(int)),
+        "tag": Override(mandatory=False, default="tof"),
+        "data": Override(type=listof(int)),
     }
 
     def updateTimeBins(self, tmin, tstep, channels):
-        """ Update the time binning represented using this class.
+        """Update the time binning represented using this class.
         :param tmin: minimum time value
         :param tstep: time step
         :param channels: number of channels to use
@@ -190,59 +196,66 @@ class HistogramConfAxis(HistogramConfElement):
     parameter *bins*. The parameter *bin* returns the array data
     if array is attached, otherwise the cached value.
     """
+
     parameters = {
-        'length': Param('Length of the axis', type=int, volatile=True),
-        'bins': Param('Binning information of the axis', type=list,
-                      volatile=True),
-        'mapping': Param('The mapping type of the axis',
-                         type=oneof('direct', 'calculate', 'boundary',
-                                    'lookuptable', 'map')),
-        'multiplier': Param('Multiplier in case mapping is calculate',
-                            type=int),
-        'divisor': Param('Divisor in case mapping is calculate', type=int),
-        'preoffset': Param('Offset to apply before division/multiplication',
-                           type=int),
-        'postoffset': Param('Offset to apply after division/multiplication',
-                            type=int),
-        'unit': Param('Unit for the axis', type=str),
-        'label': Param('Label for the axis', type=str)
+        "length": Param("Length of the axis", type=int, volatile=True),
+        "bins": Param("Binning information of the axis", type=list, volatile=True),
+        "mapping": Param(
+            "The mapping type of the axis",
+            type=oneof("direct", "calculate", "boundary", "lookuptable", "map"),
+        ),
+        "multiplier": Param("Multiplier in case mapping is calculate", type=int),
+        "divisor": Param("Divisor in case mapping is calculate", type=int),
+        "preoffset": Param("Offset to apply before division/multiplication", type=int),
+        "postoffset": Param("Offset to apply after division/multiplication", type=int),
+        "unit": Param("Unit for the axis", type=str),
+        "label": Param("Label for the axis", type=str),
     }
 
     attached_devices = {
-        'array': Attach('Arrays configured for this axis e.g. mappings, tof, '
-                        'lookup table', HistogramConfArray, optional=True)
+        "array": Attach(
+            "Arrays configured for this axis e.g. mappings, tof, " "lookup table",
+            HistogramConfArray,
+            optional=True,
+        )
     }
 
     # The parameters that can appear as XML attributes
-    xml_params = ['length', 'mapping', 'multiplier', 'divisor', 'preoffset',
-                  'postoffset']
+    xml_params = [
+        "length",
+        "mapping",
+        "multiplier",
+        "divisor",
+        "preoffset",
+        "postoffset",
+    ]
 
     def doReadLength(self):
         # In case an array is attached the length of the axis is automatically
         # deduced from the length of the array
-        if self._attached_array and self.mapping != 'lookuptable':
+        if self._attached_array and self.mapping != "lookuptable":
             arraylen = len(self._attached_array.data)
             if arraylen == 0:
-                self.log.warning('Data not configured in the array: %s!',
-                                 self._attached_array.name)
+                self.log.warning(
+                    "Data not configured in the array: %s!", self._attached_array.name
+                )
                 return 0
             # If mapping is boundary then length is 1 less than size of array
-            if self.mapping == 'boundary':
+            if self.mapping == "boundary":
                 arraylen = arraylen - 1
             return arraylen
         else:
-            return self._getFromCache('length', lambda x: 1)
+            return self._getFromCache("length", lambda x: 1)
 
     def doReadBins(self):
         # In case array is attached use that as bins
         if self._attached_array:
             return self._attached_array.data
         else:
-            return self._getFromCache('bins', lambda x: [])
+            return self._getFromCache("bins", lambda x: [])
 
     def getXmlAttrs(self):
-        """ Get the XML attributes for the axis
-        """
+        """Get the XML attributes for the axis"""
         attrs = {}
         for par in self.xml_params:
             if getattr(self, par, None):
@@ -250,39 +263,38 @@ class HistogramConfAxis(HistogramConfElement):
 
         if self._attached_array:
             array = self._attached_array
-            attrs['array'] = array.tag
+            attrs["array"] = array.tag
             if array.threshold:
-                attrs['threshold'] = array.threshold
+                attrs["threshold"] = array.threshold
             if array.offset:
-                attrs['offset'] = array.offset
+                attrs["offset"] = array.offset
 
         return attrs
 
     def getXml(self):
-        elem = etree.Element('axis')
+        elem = etree.Element("axis")
         for attr, val in self.getXmlAttrs().items():
             elem.set(attr, str(val))
         return elem
 
 
 class HistogramConfBank(HistogramConfElement):
-    """ The Bank configuration element of the XML file. The bank has
+    """The Bank configuration element of the XML file. The bank has
     it's associated id which is to be used when fetching data from
     this bank. The bank can also have several axes attached. The rank
     of the bank (number of dimensions of the bank) is deduced from the
     number of axes attached to this bank.
     """
-    parameters = {
-        'bankid': Param('Integer id of the bank', type=int, mandatory=True)
-    }
+
+    parameters = {"bankid": Param("Integer id of the bank", type=int, mandatory=True)}
 
     attached_devices = {
-        'axes': Attach('Axis for this bank', HistogramConfAxis, multiple=True)
+        "axes": Attach("Axis for this bank", HistogramConfAxis, multiple=True)
     }
 
     @property
     def arrays(self):
-        """ Provides a set of of all the arrays that appear in this
+        """Provides a set of of all the arrays that appear in this
         bank.
         """
         # Collect all the arrays that occur in axis
@@ -297,14 +309,14 @@ class HistogramConfBank(HistogramConfElement):
         return [ax.length for ax in self.axes]
 
     def getXml(self):
-        elem = etree.Element('bank', rank=str(len(self.axes)))
+        elem = etree.Element("bank", rank=str(len(self.axes)))
         for ax in self.axes:
             elem.append(ax.getXml())
         return elem
 
 
 class ConfiguratorBase(HistogramConfElement):
-    """ The SINQ histogram memory server is configured via an XML
+    """The SINQ histogram memory server is configured via an XML
     file containing configuration instructions. When the histogram
     memory has to be configured dynamically from the instrument
     control computer, http–POST request has to be sent to:
@@ -351,26 +363,35 @@ class ConfiguratorBase(HistogramConfElement):
     """
 
     parameters = {
-        'filler': Param('Filler algorithm to be used',
-                        type=oneof('dig', 'tof', 'tofmap', 'psd',
-                                   'hrpt', '0mq')),
-        'mask': Param('Mask added to the data packets on fiber optics',
-                      type=str, default='0x000000'),
-        'active': Param('The must have value for the packets anded with mask',
-                        type=str, default='0x000000'),
-        'increment': Param('The increment value', type=int, default=1)
+        "filler": Param(
+            "Filler algorithm to be used",
+            type=oneof("dig", "tof", "tofmap", "psd", "hrpt", "0mq"),
+        ),
+        "mask": Param(
+            "Mask added to the data packets on fiber optics",
+            type=str,
+            default="0x000000",
+        ),
+        "active": Param(
+            "The must have value for the packets anded with mask",
+            type=str,
+            default="0x000000",
+        ),
+        "increment": Param("The increment value", type=int, default=1),
     }
 
     attached_devices = {
-        'banks': Attach('Banks attached to the histogram memory',
-                        HistogramConfBank, multiple=True),
-        'connector': Attach('HTTP Connector for Histogram Memory Server',
-                            HttpConnector),
+        "banks": Attach(
+            "Banks attached to the histogram memory", HistogramConfBank, multiple=True
+        ),
+        "connector": Attach(
+            "HTTP Connector for Histogram Memory Server", HttpConnector
+        ),
     }
 
     @property
     def arrays(self):
-        """ The array elements of that should appear in the XML
+        """The array elements of that should appear in the XML
         configuration file
         """
         # Collect all the arrays that occur in banks
@@ -385,10 +406,13 @@ class ConfiguratorBase(HistogramConfElement):
         return self._attached_banks
 
     def getXml(self):
-        elem = etree.Element('sinqhm', filler=self.filler,
-                             hdr_daq_mask=self.mask,
-                             hdr_daq_active=self.active,
-                             increment=str(self.increment))
+        elem = etree.Element(
+            "sinqhm",
+            filler=self.filler,
+            hdr_daq_mask=self.mask,
+            hdr_daq_active=self.active,
+            increment=str(self.increment),
+        )
         for bank in self.banks:
             elem.append(bank.getXml())
         for array in self.arrays:
@@ -396,11 +420,11 @@ class ConfiguratorBase(HistogramConfElement):
         return elem
 
     def updateConfig(self):
-        """ Generate a new configuration XML file and send it to the server
-        """
+        """Generate a new configuration XML file and send it to the server"""
         if self._mode == SIMULATION:
             return
-        xmldata = self.getXmlString(encoding='UTF-8', xml_declaration=True,
-                                    pretty_print=True)
-        req = self._attached_connector.post('configure.egi', data=xmldata)
+        xmldata = self.getXmlString(
+            encoding="UTF-8", xml_declaration=True, pretty_print=True
+        )
+        req = self._attached_connector.post("configure.egi", data=xmldata)
         self.log.info(req.text)

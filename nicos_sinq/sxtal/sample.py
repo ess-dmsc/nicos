@@ -41,25 +41,41 @@ from nicos_sinq.sxtal.reflist import ReflexList
 
 class SXTalSample(CrystalSample):
     parameters = {
-        'ubmatrix':  Param('UB matrix', type=listof(float),
-                           category='sample', settable=True,
-                           userparam=True),
-        'bravais':   Param('Bravais lattice',
-                           type=oneof(*symmetry.Bravais.conditions),
-                           settable=True, default='P', category='sample'),
-        'laue':      Param('Laue group', type=oneof(*symmetry.symbols),
-                           settable=True, default='1', category='sample'),
-        'reflist': Param('The name of the default reflection '
-                         'list to operate upon',
-                         type=str,
-                         userparam=True),
+        "ubmatrix": Param(
+            "UB matrix",
+            type=listof(float),
+            category="sample",
+            settable=True,
+            userparam=True,
+        ),
+        "bravais": Param(
+            "Bravais lattice",
+            type=oneof(*symmetry.Bravais.conditions),
+            settable=True,
+            default="P",
+            category="sample",
+        ),
+        "laue": Param(
+            "Laue group",
+            type=oneof(*symmetry.symbols),
+            settable=True,
+            default="1",
+            category="sample",
+        ),
+        "reflist": Param(
+            "The name of the default reflection " "list to operate upon",
+            type=str,
+            userparam=True,
+        ),
     }
 
     attached_devices = {
-        'reflists': Attach('List of available reflection lists',
-                           devclass=ReflexList,
-                           multiple=True,
-                           optional=False),
+        "reflists": Attach(
+            "List of available reflection lists",
+            devclass=ReflexList,
+            multiple=True,
+            optional=False,
+        ),
     }
 
     def clear(self):
@@ -71,27 +87,27 @@ class SXTalSample(CrystalSample):
 
     def _prepare_new(self, parameters):
         CrystalSample._prepare_new(self, parameters)
-        self.bravais = parameters.pop('bravais', 'P')
-        self.laue = parameters.pop('laue', '1')
+        self.bravais = parameters.pop("bravais", "P")
+        self.laue = parameters.pop("laue", "1")
         self.ubmatrix = list(self.getUB().flatten())
 
     def doWriteUbmatrix(self, ub):
         if not ub:
             return
         if not isinstance(ub, list):
-            raise ValueError('Expecting list of 9 values')
+            raise ValueError("Expecting list of 9 values")
         if len(ub) != 9:
-            raise ValueError('Expected 9 values')
+            raise ValueError("Expected 9 values")
 
     def doWriteReflist(self, name):
         if name not in self._adevs:
-            raise InvalidValueError('% is no known reflection list' % name)
+            raise InvalidValueError("% is no known reflection list" % name)
         if not isinstance(self._adevs[name], ReflexList):
-            raise InvalidValueError('%s is not a reflection list' % name)
+            raise InvalidValueError("%s is not a reflection list" % name)
 
     def getUB(self):
         if self.ubmatrix:
-            ub = np.array(self.ubmatrix, dtype='float64')
+            ub = np.array(self.ubmatrix, dtype="float64")
             ub = ub.reshape((3, 3))
             return ub
         # Return B instead when no UB available
@@ -100,7 +116,7 @@ class SXTalSample(CrystalSample):
         if isinstance(session.experiment, TASSXTal):
             return ub
         else:
-            return ub/(2. * np.pi)
+            return ub / (2.0 * np.pi)
 
     def getRefList(self, name=None):
         if not name:

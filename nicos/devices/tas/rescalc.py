@@ -30,9 +30,31 @@ neutrons.instruments.tas.tasres from the neutrons Python package, compiled by
 Marc Janoschek.
 """
 
-from numpy import absolute, arange, arccos, arcsin, arctan2, array, \
-    concatenate, cos, cross, degrees, delete, diag, dot, exp, matrix, pi, \
-    radians, real, reshape, sin, sqrt, tan, zeros
+from numpy import (
+    absolute,
+    arange,
+    arccos,
+    arcsin,
+    arctan2,
+    array,
+    concatenate,
+    cos,
+    cross,
+    degrees,
+    delete,
+    diag,
+    dot,
+    exp,
+    matrix,
+    pi,
+    radians,
+    real,
+    reshape,
+    sin,
+    sqrt,
+    tan,
+    zeros,
+)
 from numpy.linalg import det, eig, inv, norm
 from numpy.random import randn
 
@@ -76,21 +98,29 @@ class unitcell:
         # parallel to a and third to c* (reciprocal axis)
         # X = Mx, (x in fractional units=>dimensionless, X in dimension of length)
         self.crys2cartMat = matrix(
-            [[a, b * cosg, c * cosb],
-             [0, b * sing, c * (cosa - cosb * cosg) / sing],
-             [0, 0, c * phi / sing]]
+            [
+                [a, b * cosg, c * cosb],
+                [0, b * sing, c * (cosa - cosb * cosg) / sing],
+                [0, 0, c * phi / sing],
+            ]
         )
 
         # from cartesian (X) to crystallographic setting (x) with first
         # component parallel to a and third to c* (reciprocal axis)
         # x = M^(-1)X, (x in fractional units=>dimensionless, X in dimension of length)
         self.cart2crysMat = matrix(
-            [[1. / a, -1. / (a * tan(self.gamma)), (cosa * cosg - cosb) / (a * phi * sing)],
-             [0, 1 / (b * sing), (cosb * cosg - cosa) / (b * phi * sing)],
-             [0, 0, sing / (c * phi)]]
+            [
+                [
+                    1.0 / a,
+                    -1.0 / (a * tan(self.gamma)),
+                    (cosa * cosg - cosb) / (a * phi * sing),
+                ],
+                [0, 1 / (b * sing), (cosb * cosg - cosa) / (b * phi * sing)],
+                [0, 0, sing / (c * phi)],
+            ]
         )
 
-        #----- Real space lattice vectors
+        # ----- Real space lattice vectors
 
         self.a_vec = self.crys2cart(1, 0, 0).transpose()
         self.b_vec = self.crys2cart(0, 1, 0).transpose()
@@ -98,44 +128,66 @@ class unitcell:
 
         # this is needed if you only want to roatate from the cartesion to the
         # crystal system without changing the length
-        self.crys2cartUnit = concatenate((self.a_vec / norm(self.a_vec),
-                                          self.b_vec / norm(self.b_vec),
-                                          self.c_vec / norm(self.c_vec)))
+        self.crys2cartUnit = concatenate(
+            (
+                self.a_vec / norm(self.a_vec),
+                self.b_vec / norm(self.b_vec),
+                self.c_vec / norm(self.c_vec),
+            )
+        )
         self.cart2crysUnit = self.crys2cartUnit.I
 
         # Volume of unit cell
-        self.V = dot(array(self.a_vec)[0],
-                     cross(array(self.b_vec)[0], array(self.c_vec)[0]))
+        self.V = dot(
+            array(self.a_vec)[0], cross(array(self.b_vec)[0], array(self.c_vec)[0])
+        )
 
-        #----- Reciprocal space lattice basis vectors
-        self.a_star_vec = 2 * pi * cross(array(self.b_vec)[0], array(self.c_vec)[0]) / self.V
-        self.b_star_vec = 2 * pi * cross(array(self.c_vec)[0], array(self.a_vec)[0]) / self.V
-        self.c_star_vec = 2 * pi * cross(array(self.a_vec)[0], array(self.b_vec)[0]) / self.V
+        # ----- Reciprocal space lattice basis vectors
+        self.a_star_vec = (
+            2 * pi * cross(array(self.b_vec)[0], array(self.c_vec)[0]) / self.V
+        )
+        self.b_star_vec = (
+            2 * pi * cross(array(self.c_vec)[0], array(self.a_vec)[0]) / self.V
+        )
+        self.c_star_vec = (
+            2 * pi * cross(array(self.a_vec)[0], array(self.b_vec)[0]) / self.V
+        )
 
-        #----- Reciprocal lattice index (r.l.u.) to cartesian matrix
-        self.rlu2cartMat = concatenate((matrix(self.a_star_vec).T,
-                                        matrix(self.b_star_vec).T,
-                                        matrix(self.c_star_vec).T), 1)
+        # ----- Reciprocal lattice index (r.l.u.) to cartesian matrix
+        self.rlu2cartMat = concatenate(
+            (
+                matrix(self.a_star_vec).T,
+                matrix(self.b_star_vec).T,
+                matrix(self.c_star_vec).T,
+            ),
+            1,
+        )
         self.cart2rluMat = inv(self.rlu2cartMat)
 
-        #----- Reciprocal lattice constants; note that there is a factor
+        # ----- Reciprocal lattice constants; note that there is a factor
         # 2*pi difference to CrysFML definition
         self.a_star = sqrt(dot(self.a_star_vec, self.a_star_vec))
         self.b_star = sqrt(dot(self.b_star_vec, self.b_star_vec))
         self.c_star = sqrt(dot(self.c_star_vec, self.c_star_vec))
 
-        #----- Reciprocal lattice angles
-        self.ralpha = arccos(dot(self.b_star_vec, self.c_star_vec) / (self.b_star * self.c_star))
-        self.rbeta = arccos(dot(self.a_star_vec, self.c_star_vec) / (self.a_star * self.c_star))
-        self.rgamma = arccos(dot(self.b_star_vec, self.a_star_vec) / (self.b_star * self.a_star))
+        # ----- Reciprocal lattice angles
+        self.ralpha = arccos(
+            dot(self.b_star_vec, self.c_star_vec) / (self.b_star * self.c_star)
+        )
+        self.rbeta = arccos(
+            dot(self.a_star_vec, self.c_star_vec) / (self.a_star * self.c_star)
+        )
+        self.rgamma = arccos(
+            dot(self.b_star_vec, self.a_star_vec) / (self.b_star * self.a_star)
+        )
 
-        #----- Reciprocal cell volume
+        # ----- Reciprocal cell volume
         self.VR = dot(self.a_star_vec, cross(self.b_star_vec, self.c_star_vec))
 
-        #----- Review this array, I think it has to be transposed to be useful
+        # ----- Review this array, I think it has to be transposed to be useful
         self.Q2c = matrix([self.a_star_vec, self.b_star_vec, self.c_star_vec])
 
-        #----- Metric tensors
+        # ----- Metric tensors
         self.GD = zeros([3, 3])
         self.GR = zeros([3, 3])
 
@@ -177,13 +229,29 @@ class unitcell:
         repstr += "a      b      c      alpha   beta   gamma\n"
         degree_sym = "deg"
         # pylint: disable=bad-string-format-type
-        repstr += "%2.3fA %2.3fA %2.3fA %3.1f%s   %3.1f%s   %3.1f%s\n" % \
-            (self.a, self.b, self.c, degrees(self.alpha), degree_sym,
-             degrees(self.beta), degree_sym, degrees(self.gamma), degree_sym)
+        repstr += "%2.3fA %2.3fA %2.3fA %3.1f%s   %3.1f%s   %3.1f%s\n" % (
+            self.a,
+            self.b,
+            self.c,
+            degrees(self.alpha),
+            degree_sym,
+            degrees(self.beta),
+            degree_sym,
+            degrees(self.gamma),
+            degree_sym,
+        )
         repstr += "a*     b*     c*     alpha*  beta*  gamma*\n"
-        repstr += "%2.3fA-1 %2.3fA-1 %2.3fA-1 %3.1f%s   %3.1f%s   %3.1f%s\n" % \
-            (self.a_star, self.b_star, self.c_star, degrees(self.ralpha), degree_sym,
-             degrees(self.rbeta), degree_sym, degrees(self.rgamma), degree_sym)
+        repstr += "%2.3fA-1 %2.3fA-1 %2.3fA-1 %3.1f%s   %3.1f%s   %3.1f%s\n" % (
+            self.a_star,
+            self.b_star,
+            self.c_star,
+            degrees(self.ralpha),
+            degree_sym,
+            degrees(self.rbeta),
+            degree_sym,
+            degrees(self.rgamma),
+            degree_sym,
+        )
         return repstr
 
     __repr__ = __str__
@@ -191,12 +259,14 @@ class unitcell:
     def __eq__(self, other):
         if not isinstance(other, unitcell):
             return False
-        return self.a == other.a and \
-            self.b == other.b and \
-            self.c == other.c and \
-            self.alpha == other.alpha and \
-            self.beta == other.beta and \
-            self.gamma == other.gamma
+        return (
+            self.a == other.a
+            and self.b == other.b
+            and self.c == other.c
+            and self.alpha == other.alpha
+            and self.beta == other.beta
+            and self.gamma == other.gamma
+        )
 
     # fore python3 default (unhashable)
     __hash__ = None
@@ -265,11 +335,11 @@ CFGNAMES = [
     "vertical curvature of analyser (cm-1)",
     "distance monochromator-monitor",
     "width monitor",
-    "height monitor"
+    "height monitor",
 ]
 
 MEV2AA2 = 0.48259642  # hbar**2/(2 * m_n)
-MIN2RAD = 1 / 60. * pi / 180.
+MIN2RAD = 1 / 60.0 * pi / 180.0
 
 
 class resmat:
@@ -293,11 +363,17 @@ class resmat:
         self.ERROR = None
 
         # magnitude of scattering vector
-        #----- calculate q0
-        #-----input a, b, c; alpha, beta, gamma; qx, qy, qz
-        self.unitc = unitcell(self.par['as'], self.par['bs'], self.par['cs'],
-                              self.par['aa'], self.par['bb'], self.par['cc'])
-        self.q0 = self.unitc.QCartMag(self.par['qx'], self.par['qy'], self.par['qz'])
+        # ----- calculate q0
+        # -----input a, b, c; alpha, beta, gamma; qx, qy, qz
+        self.unitc = unitcell(
+            self.par["as"],
+            self.par["bs"],
+            self.par["cs"],
+            self.par["aa"],
+            self.par["bb"],
+            self.par["cc"],
+        )
+        self.q0 = self.unitc.QCartMag(self.par["qx"], self.par["qy"], self.par["qz"])
         self.Q2c = self.unitc.Q2c
 
         # resolution
@@ -312,36 +388,38 @@ class resmat:
         # reset errors before new calculation
         self.ERROR = None
 
-        #----- recalculate q0
-        #-----input a, b, c; alpha, beta, gamma; qx, qy, qz
-        self.q0 = self.unitc.QCartMag(self.par['qx'], self.par['qy'], self.par['qz'])
+        # ----- recalculate q0
+        # -----input a, b, c; alpha, beta, gamma; qx, qy, qz
+        self.q0 = self.unitc.QCartMag(self.par["qx"], self.par["qy"], self.par["qz"])
 
-        #----- INPUT SPECTROMETER PARAMETERS.
+        # ----- INPUT SPECTROMETER PARAMETERS.
         q0 = self.q0
 
-        dm = self.par['dm']  # monochromator d-spacing in Angs
-        da = self.par['da']  # analyser d-spacing in Angs
-        etam = self.par['etam'] * MIN2RAD  # monochromator mosaic
+        dm = self.par["dm"]  # monochromator d-spacing in Angs
+        da = self.par["da"]  # analyser d-spacing in Angs
+        etam = self.par["etam"] * MIN2RAD  # monochromator mosaic
         etamp = etam  # vertical mosaic spread of the monochromator
-        etaa = self.par['etaa'] * MIN2RAD  # analyser mosaic
+        etaa = self.par["etaa"] * MIN2RAD  # analyser mosaic
         etaap = etaa  # vertical mosaic spread of the analyser
-        etas = self.par['etas'] * MIN2RAD  # sample mosaic
+        etas = self.par["etas"] * MIN2RAD  # sample mosaic
         etasp = etas  # vertical mosaic spread of the sample
-        sm = self.par['sm']  # scattering sense of monochromator [left = +1,right = -1]
-        ss = self.par['ss']  # scattering sense of sample [left = +1,right = -1]
-        sa = self.par['sa']  # scattering sense of analyser [left = +1,right = -1]
-        kfix = self.par['k']  # fixed momentum component in ang-1
-        fx = self.par['kfix']  # fx = 1 for fixed incident and 2 for scattered wavevector
+        sm = self.par["sm"]  # scattering sense of monochromator [left = +1,right = -1]
+        ss = self.par["ss"]  # scattering sense of sample [left = +1,right = -1]
+        sa = self.par["sa"]  # scattering sense of analyser [left = +1,right = -1]
+        kfix = self.par["k"]  # fixed momentum component in ang-1
+        fx = self.par[
+            "kfix"
+        ]  # fx = 1 for fixed incident and 2 for scattered wavevector
         # collimation: all input angles are in minutes of arc
-        alf0 = self.par['alpha1'] * MIN2RAD  # horizontal pre-monochromator
-        alf1 = self.par['alpha2'] * MIN2RAD  # horizontal pre-sample
-        alf2 = self.par['alpha3'] * MIN2RAD  # horizontal post-sample
-        alf3 = self.par['alpha4'] * MIN2RAD  # horizontal post-analyser
-        bet0 = self.par['beta1'] * MIN2RAD  # vertical pre-monochromator
-        bet1 = self.par['beta2'] * MIN2RAD  # vertical pre-sample
-        bet2 = self.par['beta3'] * MIN2RAD  # vertical post-sample
-        bet3 = self.par['beta4'] * MIN2RAD  # vertical post-analyser
-        w = self.par['en']  # energy transfer in meV
+        alf0 = self.par["alpha1"] * MIN2RAD  # horizontal pre-monochromator
+        alf1 = self.par["alpha2"] * MIN2RAD  # horizontal pre-sample
+        alf2 = self.par["alpha3"] * MIN2RAD  # horizontal post-sample
+        alf3 = self.par["alpha4"] * MIN2RAD  # horizontal post-analyser
+        bet0 = self.par["beta1"] * MIN2RAD  # vertical pre-monochromator
+        bet1 = self.par["beta2"] * MIN2RAD  # vertical pre-sample
+        bet2 = self.par["beta3"] * MIN2RAD  # vertical post-sample
+        bet3 = self.par["beta4"] * MIN2RAD  # vertical post-analyser
+        w = self.par["en"]  # energy transfer in meV
 
         # _____________________Instrument Parameters________________________________________
 
@@ -366,7 +444,6 @@ class resmat:
         ymon = self.cfg[14]  # width of monochromator [cm].
         zmon = self.cfg[15]  # height of monochromator [cm].
 
-
         xana = self.cfg[16]  # thickness of analyser [cm].
         yana = self.cfg[17]  # width of analyser [cm].
         zana = self.cfg[18]  # height of analyser [cm].
@@ -376,7 +453,9 @@ class resmat:
         L2 = self.cfg[21]  # distance between sample and analyser [cm].
         L3 = self.cfg[22]  # distance between analyser and detector [cm].
 
-        romh = sm * self.cfg[23]  # horizontal curvature of monochromator 1/radius [cm-1].
+        romh = (
+            sm * self.cfg[23]
+        )  # horizontal curvature of monochromator 1/radius [cm-1].
         romv = sm * self.cfg[24]  # vertical curvature of monochromator [cm-1].
         roah = sa * self.cfg[25]  # horizontal curvature of analyser [cm-1].
         roav = sa * self.cfg[26]  # vertical curvature of analyser [cm-1].
@@ -385,8 +464,8 @@ class resmat:
         monitorw = self.cfg[28] / sqrt(12)  # monitor width [cm]
         monitorh = self.cfg[29] / sqrt(12)  # monitor height [cm]
 
-        f16 = 1 / 16.
-        f12 = 1 / 12.
+        f16 = 1 / 16.0
+        f12 = 1 / 12.0
 
         # _____________________________________________________________________________
 
@@ -402,13 +481,15 @@ class resmat:
 
         cos_2theta = (ki**2 + kf**2 - q0**2) / (2 * ki * kf)
         # print cos_2theta
-        if (cos_2theta > 1 or cos_2theta < -1):
-            self.ERROR = 'scattering triangle not closed'
+        if cos_2theta > 1 or cos_2theta < -1:
+            self.ERROR = "scattering triangle not closed"
             return
 
         thetaa = sa * arcsin(pi / (da * kf))  # theta angles for analyser
         thetam = sm * arcsin(pi / (dm * ki))  # and monochromator.
-        thetas = ss * 0.5 * arccos((ki**2 + kf**2 - q0**2) / (2 * ki * kf))  # scattering angle from sample.
+        thetas = (
+            ss * 0.5 * arccos((ki**2 + kf**2 - q0**2) / (2 * ki * kf))
+        )  # scattering angle from sample.
         phi = arctan2(-kf * sin(2 * thetas), ki - kf * cos(2 * thetas))
 
         # Make up the matrices in appendix 1 of M. Popovici (1975).
@@ -423,9 +504,15 @@ class resmat:
                 alf0 = alf0_guide  # take into account collimator in the guide
 
         G = matrix(zeros((8, 8)))
-        G[0, 0] = 1 / alf0**2  # horizontal and vertical collimation matrix. The 4 Soller collimators
-        G[1, 1] = 1 / alf1**2  # are described by a 8x8 diagonal matrix with non-zero elements.
-        G[2, 2] = 1 / bet0**2  # alfi and beti are the FWHM horizontal and vertical beam divergences in
+        G[0, 0] = (
+            1 / alf0**2
+        )  # horizontal and vertical collimation matrix. The 4 Soller collimators
+        G[1, 1] = (
+            1 / alf1**2
+        )  # are described by a 8x8 diagonal matrix with non-zero elements.
+        G[2, 2] = (
+            1 / bet0**2
+        )  # alfi and beti are the FWHM horizontal and vertical beam divergences in
         G[3, 3] = 1 / bet1**2  # the collimators
         G[4, 4] = 1 / alf2**2
         G[5, 5] = 1 / alf3**2
@@ -433,23 +520,25 @@ class resmat:
         G[7, 7] = 1 / bet3**2
 
         F = matrix(zeros((4, 4)))
-        F[0, 0] = 1 / etam**2  # monochromator and analyser mosaic matrix. horizontal and vertical mosaic
+        F[0, 0] = (
+            1 / etam**2
+        )  # monochromator and analyser mosaic matrix. horizontal and vertical mosaic
         F[1, 1] = 1 / etamp**2  # spreads for monochromator and analyzer crystals
         F[2, 2] = 1 / etaa**2
         F[3, 3] = 1 / etaap**2
 
         C = matrix(zeros((4, 8)))
-        C[0, 0] = 1. / 2
+        C[0, 0] = 1.0 / 2
         C[0, 1] = C[0, 0]
         C[2, 4] = C[0, 0]
         C[2, 5] = C[0, 0]
         C[1, 2] = 1 / (2 * sin(thetam))  # thetam = scattering angle of monochromator
         C[1, 3] = -C[1, 2]  # thetam = -arcsin(Tm/2ki))epsilonm;
-                            # Tm(Ta) = 2Pi/dm(da) mono and ana scattering vectors
+        # Tm(Ta) = 2Pi/dm(da) mono and ana scattering vectors
         C[3, 6] = 1 / (2 * sin(thetaa))  # thetaa = scattering angle of analyzer
         C[3, 7] = -C[3, 6]  # thetaa = -arcsin(Ta/2kf))epsilona
-                            # epsilonm/a = 1 if sample scattering
-                            # direction opposite do mono/ana scattering dir, -1 otherwise
+        # epsilonm/a = 1 if sample scattering
+        # direction opposite do mono/ana scattering dir, -1 otherwise
         A = matrix(zeros((6, 8)))
         A[0, 0] = ki / (tan(thetam) * 2)
         A[0, 1] = -A[0, 0]
@@ -469,8 +558,8 @@ class resmat:
         B[1, 1] = B[0, 0]
         B[1, 3] = -B[0, 4]
         B[1, 4] = B[0, 3]
-        B[2, 2] = 1.
-        B[2, 5] = -1.
+        B[2, 2] = 1.0
+        B[2, 5] = -1.0
         B[3, 0] = 2 * ki / MEV2AA2
         B[3, 3] = -2 * kf / MEV2AA2
 
@@ -542,7 +631,7 @@ class resmat:
         T[3, 12] = -1 / (2 * L3 * sin(thetaa))
 
         D = matrix(zeros((8, 13)))
-        D[0, 0] = -1. / L0
+        D[0, 0] = -1.0 / L0
         D[0, 2] = -cos(thetam) / L0
         D[0, 3] = sin(thetam) / L0
         D[2, 1] = D[0, 0]
@@ -551,25 +640,29 @@ class resmat:
         D[1, 3] = sin(thetam) / L1
         D[1, 5] = sin(thetas) / L1
         D[1, 6] = cos(thetas) / L1
-        D[3, 4] = -1. / L1
+        D[3, 4] = -1.0 / L1
         D[3, 7] = -D[3, 4]
         D[4, 5] = sin(thetas) / L2
         D[4, 6] = -cos(thetas) / L2
         D[4, 8] = -cos(thetaa) / L2
         D[4, 9] = sin(thetaa) / L2
-        D[6, 7] = -1. / L2
+        D[6, 7] = -1.0 / L2
         D[6, 10] = -D[6, 7]
         D[5, 8] = cos(thetaa) / L3
         D[5, 9] = sin(thetaa) / L3
-        D[5, 11] = 1. / L3
+        D[5, 11] = 1.0 / L3
         D[7, 10] = -D[5, 11]
         D[7, 12] = D[5, 11]
 
         # Construction of the resolution matrix
         # if det(D*inv(S+T.transpose()*F*T)*D.transpose()) != 0:
-        MI = B * A * \
-            (inv(inv(D * (inv(S + T.transpose() * F * T)) * D.transpose()) + G)) * \
-            A.transpose() * B.transpose()  # including spatial effects.
+        MI = (
+            B
+            * A
+            * (inv(inv(D * (inv(S + T.transpose() * F * T)) * D.transpose()) + G))
+            * A.transpose()
+            * B.transpose()
+        )  # including spatial effects.
         # else:
         # MI = B*A*(inv(G))*A.transpose()*B.transpose()
         # MI = B*A*[inv[G+C'*F*C]]*A'*B'  # Cooper and Nathans matrix,
@@ -579,7 +672,7 @@ class resmat:
         NP = 5.545 * M  # Correction factor as input parameters
         N = NP
 
-        #----- Normalisation factor
+        # ----- Normalisation factor
 
         # mon = 1          # monochromator reflectivity
         # ana = 1          # detector and analyser crystal efficiency function. [const.]
@@ -607,8 +700,19 @@ class resmat:
 
         Rm = ki**3 / tan(thetam)
         Ra = kf**3 / tan(thetaa)
-        R0 = Rm * Ra * (2 * pi)**4 / (64 * pi**2 * sin(thetam) * sin(thetaa)) * \
-            sqrt(det(F) / det((D * (S + T.transpose() * F * T)**(-1) * D.transpose())**(-1) + G))  # Popovici
+        R0 = (
+            Rm
+            * Ra
+            * (2 * pi) ** 4
+            / (64 * pi**2 * sin(thetam) * sin(thetaa))
+            * sqrt(
+                det(F)
+                / det(
+                    (D * (S + T.transpose() * F * T) ** (-1) * D.transpose()) ** (-1)
+                    + G
+                )
+            )
+        )  # Popovici
         # Werner and Pynn correction
         # for mosaic spread of crystal.
         R0 = absolute(R0 / (etas * sqrt(1 / etas**2 + q0**2 * N[1, 1])))
@@ -629,8 +733,8 @@ class resmat:
         RM_[3, 3] = M[2, 2]
         RM_[3, 1] = M[2, 1]
         RM_[1, 3] = M[1, 2]
-        R0 = R0 / (2 * pi)**2 * sqrt(det(RM_))
-        #---------------------------------------------------------------------------------------------
+        R0 = R0 / (2 * pi) ** 2 * sqrt(det(RM_))
+        # ---------------------------------------------------------------------------------------------
         # Include kf/ki part of cross section
         R0 = R0 * kf / ki
         # include monitor efficiency
@@ -648,8 +752,10 @@ class resmat:
         t[0, 6] = 1 / (2 * L1mon)
         t[1, 1] = -1 / (2 * L0 * sin(thetam))
         t[1, 4] = (1 / L0 + 1 / L1mon - 2 * sin(thetam) * romv) / (2 * sin(thetam))
-        sinv = matrix(diag((ysrc, zsrc, xmon, ymon, zmon, monitorw, monitorh)))  # S-1 matrix
-        s = sinv**(-1)
+        sinv = matrix(
+            diag((ysrc, zsrc, xmon, ymon, zmon, monitorw, monitorh))
+        )  # S-1 matrix
+        s = sinv ** (-1)
         d = matrix(zeros((4, 7)))
         d[0, 0] = -1 / L0
         d[0, 2] = -cos(thetam) / L0
@@ -661,18 +767,27 @@ class resmat:
         d[1, 5] = 0
         d[1, 6] = 1 / L1mon
         d[3, 4] = -1 / L1mon
-        Rmon = (2 * pi)**2 / (8 * pi * sin(thetam)) * \
-               sqrt(det(f) / det((d * (s + t.transpose() * f * t)**(-1) * d.transpose())**(-1) + g))
-               # first term can be written as pi/2 = (2*pi)**2 /8 *pi
+        Rmon = (
+            (2 * pi) ** 2
+            / (8 * pi * sin(thetam))
+            * sqrt(
+                det(f)
+                / det(
+                    (d * (s + t.transpose() * f * t) ** (-1) * d.transpose()) ** (-1)
+                    + g
+                )
+            )
+        )
+        # first term can be written as pi/2 = (2*pi)**2 /8 *pi
         Rmon = Rmon * ki**3 / tan(thetam)
         R0 = R0 * ki  # 1/ki monitor efficiency
         R0 = R0 / Rmon
-        #------ END OF ZHELUDEV's CORRECTION
-        #----- Final error check
+        # ------ END OF ZHELUDEV's CORRECTION
+        # ----- Final error check
         if NP.imag.all() == 0:
             self.ERROR = None
         else:
-            self.ERROR = 'problem with matrix calculation'
+            self.ERROR = "problem with matrix calculation"
             return
 
         self.R0 = absolute(R0)
@@ -682,22 +797,25 @@ class resmat:
     def __str__(self):
         """Returns info string about resolution matrix."""
         info = self.par.copy()
-        if self.par['kfix'] == 1:
-            info['efixstr'] = 'fixed incident energy k_i = %2.4f A-1' % self.par['k']
+        if self.par["kfix"] == 1:
+            info["efixstr"] = "fixed incident energy k_i = %2.4f A-1" % self.par["k"]
         else:
-            info['efixstr'] = 'fixed final energy k_f = %2.4f A-1' % self.par['k']
-        info['q0'] = self.q0
+            info["efixstr"] = "fixed final energy k_f = %2.4f A-1" % self.par["k"]
+        info["q0"] = self.q0
         if not self.ERROR:
             mat = self.NP.tolist()
-            info['mat'] = '\n'.join(''.join(('%5.2f' % mat[i][j]).rjust(10)
-                                            for j in range(4)) for i in range(4))
+            info["mat"] = "\n".join(
+                "".join(("%5.2f" % mat[i][j]).rjust(10) for j in range(4))
+                for i in range(4)
+            )
             # Calculate Bragg width in direction of scan and for w-scan, and
             # corresponding Lorentz factors
             bragw = self.calcBragg()
-            info['brqx'], info['brqy'], info['brqz'], info['brva'], info['brde'] = bragw
-            info['R0'] = self.R0
+            info["brqx"], info["brqy"], info["brqz"], info["brva"], info["brde"] = bragw
+            info["R0"] = self.R0
 
-        p1 = """\
+        p1 = (
+            """\
 Resolution matrix for a triple axis spectrometer calculated by the Popovici method:
 
 Spectrometer Setup:
@@ -724,11 +842,14 @@ scattering vector Q = %(q0)2.5f A-1
 
 Resolution Info:
 ================
-""" % info
+"""
+            % info
+        )
         if self.ERROR:
-            p2 = 'ERROR: ' + self.ERROR
+            p2 = "ERROR: " + self.ERROR
         else:
-            p2 = """\
+            p2 = (
+                """\
 => Resolution Volume: R0 = %(R0)3.3f A-3*meV
 
 => Resolution Matrix (in frame Qx, Qy, Qz, E):
@@ -737,7 +858,9 @@ Resolution Info:
 => Bragg widths:
    Qx       Qy       Qz (A-1)  Vanadium  dE (meV)
    %(brqx)1.5f  %(brqy)1.5f  %(brqz)1.5f   %(brva)1.5f   %(brde)1.5f
-""" % info
+"""
+                % info
+            )
         return p1 + p2
 
     __repr__ = __str__
@@ -754,13 +877,13 @@ Resolution Info:
         scattering plane (zone axis).
         """
 
-        #----- Work out transformations
+        # ----- Work out transformations
         a = self
-        A1 = matrix([a.par['ax'], a.par['ay'], a.par['az']]).transpose()
-        A2 = matrix([a.par['bx'], a.par['by'], a.par['bz']]).transpose()
+        A1 = matrix([a.par["ax"], a.par["ay"], a.par["az"]]).transpose()
+        A2 = matrix([a.par["bx"], a.par["by"], a.par["bz"]]).transpose()
         V1 = self.Q2c * A1
         V2 = self.Q2c * A2
-        #----- Form unit vectors V1, V2, V3 in scattering plane
+        # ----- Form unit vectors V1, V2, V3 in scattering plane
 
         V3 = cross(V1.transpose(), V2.transpose())
         V2 = cross(V3, V1.transpose())
@@ -774,10 +897,10 @@ Resolution Info:
         self.S = U * self.Q2c
 
     def sethklen(self, h, k, l, en):
-        self.par['qx'] = h
-        self.par['qy'] = k
-        self.par['qz'] = l
-        self.par['en'] = en
+        self.par["qx"] = h
+        self.par["qy"] = k
+        self.par["qz"] = l
+        self.par["en"] = en
         self.calc_popovici()
         self.calc_STrafo()
 
@@ -793,10 +916,10 @@ Resolution Info:
 
         E = matrix(real(diag(E)))
         sigma = zeros((1, 4))[0]
-        sigma[0] = real(1. / sqrt(E[0, 0]))
-        sigma[1] = real(1. / sqrt(E[1, 1]))
-        sigma[2] = real(1. / sqrt(E[2, 2]))
-        sigma[3] = real(1. / sqrt(E[3, 3]))
+        sigma[0] = real(1.0 / sqrt(E[0, 0]))
+        sigma[1] = real(1.0 / sqrt(E[1, 1]))
+        sigma[2] = real(1.0 / sqrt(E[2, 2]))
+        sigma[3] = real(1.0 / sqrt(E[3, 3]))
         self.b_mat = reshape(inv(V.transpose().transpose()), (1, 16))
         # self.b_mat=reshape(inv((V.transpose())),(1,16))
         # print 'b_mat'
@@ -809,7 +932,7 @@ Resolution Info:
         self.sethklen(h, k, l, en)
 
         #   [R0,NP,vi,vf,Error]=feval(method,f,Qmag,p,mon_flag);
-        self.R0_corrected = real(self.R0 / (sqrt(det(self.NP)) / (2 * pi)**2))
+        self.R0_corrected = real(self.R0 / (sqrt(det(self.NP)) / (2 * pi) ** 2))
         # corrected resolution volume as Monte Carlo integral is over a
         # normalised ellipsoid.
 
@@ -829,12 +952,12 @@ Resolution Info:
         cos_theta = float(TT[0, 0] / sqrt(dot(TT.transpose(), TT)))
         sin_theta = float(TT[1, 0] / sqrt(dot(TT.transpose(), TT)))
 
-        #----- Rotation matrix from system of resolution matrix
+        # ----- Rotation matrix from system of resolution matrix
         # to system defined by V1, V2, V3 => V1,V2 define scattering plane,
         # V3 is zone axis, thus perpendicular to the scattering plane
         R = [[cos_theta, sin_theta, 0], [-sin_theta, cos_theta, 0], [0, 0, 1]]
         T = matrix(zeros((4, 4)))
-        T[3, 3] = 1.
+        T[3, 3] = 1.0
         T[0:3, 0:3] = array(R * self.S).real
         # self.S performs transformation in h,k,l, en ([Rlu] & [meV])
         self.M = T.transpose() * self.NP * T
@@ -877,28 +1000,34 @@ Resolution Info:
 
     def showCFG(self):
         """Displays spectrometer configuration."""
-        msg = '\nSpectrometer Configuration:\n'
-        msg += '--------------------------\n\n'
-        msg += 'NR' + ('Value   :  ').rjust(16) + 'Explanation\n'
-        msg += '===============================\n'
+        msg = "\nSpectrometer Configuration:\n"
+        msg += "--------------------------\n\n"
+        msg += "NR" + ("Value   :  ").rjust(16) + "Explanation\n"
+        msg += "===============================\n"
         for i in range(len(self.cfg)):
-            msg += '%2i' % i + ('%1.3f   :  ' % self.cfg[i]).rjust(16) + '%s\n' % self.cfgnames[i]
+            msg += (
+                "%2i" % i
+                + ("%1.3f   :  " % self.cfg[i]).rjust(16)
+                + "%s\n" % self.cfgnames[i]
+            )
         print(msg)
 
     def resellipse(self):
         """Returns the projections of the resolution ellipse of a triple axis."""
         A = self.NP
 
-        #----- Remove the vertical component from the matrix.
-        B = [[A[0, 0], A[0, 1], A[0, 3]],
-             [A[1, 0], A[1, 1], A[1, 3]],
-             [A[3, 0], A[3, 1], A[3, 3]]]
+        # ----- Remove the vertical component from the matrix.
+        B = [
+            [A[0, 0], A[0, 1], A[0, 3]],
+            [A[1, 0], A[1, 1], A[1, 3]],
+            [A[3, 0], A[3, 1], A[3, 3]],
+        ]
         B = matrix(B)
-        #----- Work out projections for different cuts through the ellipse
+        # ----- Work out projections for different cuts through the ellipse
 
-        #----- S is the rotation matrix that diagonalises the projected ellipse
+        # ----- S is the rotation matrix that diagonalises the projected ellipse
 
-        #----- 1. Qx, Qy plane
+        # ----- 1. Qx, Qy plane
         # (this is maximal extension of the resolution ellipsoid parallel to x and
         # y, whereas the slice added later is just a cut through the ellipsoid in
         # the xy-plane)
@@ -913,7 +1042,7 @@ Resolution Info:
         hwhm_xp, hwhm_yp, theta = calcEllipseAxis(MP)
         xys_x, xys_y = ellipse_coords(hwhm_xp, hwhm_yp, theta)
 
-        #----- 2. Qx, W plane
+        # ----- 2. Qx, W plane
         _R0P, MP = GaussInt(1, R0, B)
         hwhm_xp, hwhm_yp, theta = calcEllipseAxis(MP)
         xw_x, xw_y = ellipse_coords(hwhm_xp, hwhm_yp, theta)
@@ -923,7 +1052,7 @@ Resolution Info:
         hwhm_xp, hwhm_yp, theta = calcEllipseAxis(MP)
         xws_x, xws_y = ellipse_coords(hwhm_xp, hwhm_yp, theta)
 
-        #----- 3. Qy, W plane
+        # ----- 3. Qy, W plane
         _R0P, MP = GaussInt(0, R0, B)
         hwhm_xp, hwhm_yp, theta = calcEllipseAxis(MP)
         yw_x, yw_y = ellipse_coords(hwhm_xp, hwhm_yp, theta)
@@ -933,9 +1062,20 @@ Resolution Info:
         hwhm_xp, hwhm_yp, theta = calcEllipseAxis(MP)
         yws_x, yws_y = ellipse_coords(hwhm_xp, hwhm_yp, theta)
 
-        return xy_x, xy_y, xys_x, xys_y, \
-            xw_x, xw_y, xws_x, xws_y, \
-            yw_x, yw_y, yws_x, yws_y
+        return (
+            xy_x,
+            xy_y,
+            xys_x,
+            xys_y,
+            xw_x,
+            xw_y,
+            xws_x,
+            xws_y,
+            yw_x,
+            yw_y,
+            yws_x,
+            yws_y,
+        )
 
 
 def rc_int(index, r0, m):
@@ -953,15 +1093,17 @@ def rc_int(index, r0, m):
 
     mp = m
     b = m[:, index] + m[index, :].transpose()
-    c = b[0:len(b) - 1]
+    c = b[0 : len(b) - 1]
     c[0:index] = b[0:index]
-    c[index:len(b) - 1] = b[index + 1:len(b)]
+    c[index : len(b) - 1] = b[index + 1 : len(b)]
     b = c
     T = matrix(zeros((len(mp) - 1, len(mp) - 1)))
     T[0:index, 0:index] = mp[0:index, 0:index]
-    T[index:len(mp) - 1, 0:index] = mp[index + 1:len(mp), 0:index]
-    T[0:index, index:len(mp) - 1] = mp[0:index, index + 1:len(mp)]
-    T[index:(len(mp) - 1), index:(len(mp) - 1)] = mp[(index + 1):len(mp), (index + 1):len(mp)]
+    T[index : len(mp) - 1, 0:index] = mp[index + 1 : len(mp), 0:index]
+    T[0:index, index : len(mp) - 1] = mp[0:index, index + 1 : len(mp)]
+    T[index : (len(mp) - 1), index : (len(mp) - 1)] = mp[
+        (index + 1) : len(mp), (index + 1) : len(mp)
+    ]
     # c=[0:len(mp)-1,0:len(mp)-1]
     mp = T
     mp = mp - 1 / (4 * m[index, index]) * b * b.transpose()
@@ -970,16 +1112,17 @@ def rc_int(index, r0, m):
 
 # functions for calculating ellipsoid cuts and projections
 
+
 def calcEllipseAxis(MP):
     const = 1.17741
     MP = matrix(MP)
     theta = 0.5 * arctan2(2 * MP[0, 1], MP[0, 0] - MP[1, 1])
-    S = matrix([[cos(theta), sin(theta)],
-                [-sin(theta), cos(theta)]])
+    S = matrix([[cos(theta), sin(theta)], [-sin(theta), cos(theta)]])
     MP = S * MP * S.transpose()
     hwhm_xp = const / sqrt(MP[0, 0])
     hwhm_yp = const / sqrt(MP[1, 1])
     return hwhm_xp, hwhm_yp, theta
+
 
 def GaussInt(index, r0, m):
     """Function that takes a matrix and performs a Gaussian integral
@@ -996,11 +1139,14 @@ def GaussInt(index, r0, m):
     mp = zeros((len(m) - 1, len(m) - 1))
     mp[0:index, 0:index] = m[0:index, 0:index]
     if index < (len(m) - 1):
-        mp[index:len(m) - 1, 0:index] = m[index + 1:len(m), 0:index]
-        mp[0:index, index:len(m) - 1] = m[0:index, index + 1:len(m)]
-        mp[index:len(m) - 1, index:len(m) - 1] = m[index + 1:len(m), index + 1:len(m)]
-    mp = mp - 1. / (4 * m[index, index]) * b.transpose() * b
+        mp[index : len(m) - 1, 0:index] = m[index + 1 : len(m), 0:index]
+        mp[0:index, index : len(m) - 1] = m[0:index, index + 1 : len(m)]
+        mp[index : len(m) - 1, index : len(m) - 1] = m[
+            index + 1 : len(m), index + 1 : len(m)
+        ]
+    mp = mp - 1.0 / (4 * m[index, index]) * b.transpose() * b
     return r, mp
+
 
 def ellipse_coords(a, b, phi):
     """Return coordinates for ellipse with semiaxes a, b and rotated by phi."""
@@ -1031,9 +1177,11 @@ def calc_MC(x, fit_par, sqw, resmat, NMC):
         resmat.calcResEllipsoid(*QE)
 
         if resmat.ERROR:
-            print('Scattering triangle will not close for point: '
-                  'qh = %1.3f qk = %1.3f ql = %1.3f en = %1.3f' % tuple(QE))
-            print('Attention: Intensity is therefore equal to zero at this point!')
+            print(
+                "Scattering triangle will not close for point: "
+                "qh = %1.3f qk = %1.3f ql = %1.3f en = %1.3f" % tuple(QE)
+            )
+            print("Attention: Intensity is therefore equal to zero at this point!")
             continue
         sigma = resmat.calcSigma()
         xp = matrix(zeros((4, NMC)))
@@ -1043,10 +1191,10 @@ def calc_MC(x, fit_par, sqw, resmat, NMC):
         xp[3, :] = sigma[3] * randn(NMC)
         XMC = reshape(resmat.b_mat[0:16], (4, 4)).transpose() * xp
 
-        qh = XMC[0, :] + resmat.par['qx']
-        qk = XMC[1, :] + resmat.par['qy']
-        ql = XMC[2, :] + resmat.par['qz']
-        w = XMC[3, :] + resmat.par['en']
+        qh = XMC[0, :] + resmat.par["qx"]
+        qk = XMC[1, :] + resmat.par["qy"]
+        ql = XMC[2, :] + resmat.par["qz"]
+        w = XMC[3, :] + resmat.par["en"]
 
         s = zeros(NMC)
         for i in range(NMC):
@@ -1089,12 +1237,22 @@ def demosqw(qh, qk, ql, en, par, QE, sigma):
     # Bragg intensity (will not work with MC integration, use center points and
     # width given by resolution calculation, but we take the MC energy to get
     # some randomness)
-    Ibr = 10000 * exp(-(qch**2 / sigma[0]**2 + qck**2 / sigma[1]**2 +
-                        qcl**2 / sigma[2]**2 + en**2 / sigma[3]**2))
+    Ibr = 10000 * exp(
+        -(
+            qch**2 / sigma[0] ** 2
+            + qck**2 / sigma[1] ** 2
+            + qcl**2 / sigma[2] ** 2
+            + en**2 / sigma[3] ** 2
+        )
+    )
     # Phonon intensity (assume isotropic dispersion with Lorentz lineshape)
     q = sqrt(qqh**2 + qqk**2 + qql**2)
     omega = 10 * sin(q * pi)
     gamma = 0.05
-    Iph = 10 / max(absolute(en), 0.1) * gamma * (
-        1 / ((en - omega)**2 + gamma**2) + 1 / ((en + omega)**2 + gamma**2))
+    Iph = (
+        10
+        / max(absolute(en), 0.1)
+        * gamma
+        * (1 / ((en - omega) ** 2 + gamma**2) + 1 / ((en + omega) ** 2 + gamma**2))
+    )
     return 1e6 * par[0] * (Ibr + Iph)

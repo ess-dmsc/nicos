@@ -1,21 +1,23 @@
-description = 'Stanford SR-850 lock-in amplifier, for susceptibility measurements'
-group = 'optional'
+description = "Stanford SR-850 lock-in amplifier, for susceptibility measurements"
+group = "optional"
 
-includes = ['base']
+includes = ["base"]
 
-tango_base = 'tango://miractrl.mira.frm2.tum.de:10000/mira/'
+tango_base = "tango://miractrl.mira.frm2.tum.de:10000/mira/"
 
 devices = dict(
-    M = device('nicos_mlz.mira.devices.sr850.Amplifier',
-        description = 'SR850 lock-in amplifier',
-        tangodevice = tango_base + 'sr850/io',
+    M=device(
+        "nicos_mlz.mira.devices.sr850.Amplifier",
+        description="SR850 lock-in amplifier",
+        tangodevice=tango_base + "sr850/io",
     ),
-    M2 = device('nicos_mlz.mira.devices.sr850.Amplifier',
-        description = 'SR850 lock-in amplifier',
-        tangodevice = tango_base + 'sr850/io2',
+    M2=device(
+        "nicos_mlz.mira.devices.sr850.Amplifier",
+        description="SR850 lock-in amplifier",
+        tangodevice=tango_base + "sr850/io2",
     ),
 )
 
-startupcode = '''
+startupcode = """
 SetDetectors(M, M2)
-'''
+"""

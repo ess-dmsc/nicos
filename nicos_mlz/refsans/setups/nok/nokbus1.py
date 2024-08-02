@@ -1,10 +1,10 @@
-description = 'IPC Motor bus device configuration'
+description = "IPC Motor bus device configuration"
 
-group = 'lowlevel'
+group = "lowlevel"
 
-instrument_values = configdata('instrument.values')
+instrument_values = configdata("instrument.values")
 
-tango_base = instrument_values['tango_base']
+tango_base = instrument_values["tango_base"]
 
 # data from instrument.inf
 # used for:
@@ -17,8 +17,9 @@ tango_base = instrument_values['tango_base']
 #
 
 devices = dict(
-    nokbus1 = device('nicos.devices.vendor.ipc.IPCModBusTango',
-       tangodevice = tango_base + 'test/ipcsms_a/bio',
-       visibility = (),
+    nokbus1=device(
+        "nicos.devices.vendor.ipc.IPCModBusTango",
+        tangodevice=tango_base + "test/ipcsms_a/bio",
+        visibility=(),
     ),
 )

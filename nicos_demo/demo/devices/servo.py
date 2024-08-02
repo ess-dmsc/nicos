@@ -34,21 +34,33 @@ import time
 import serial
 
 from nicos import session
-from nicos.core import POLLER, SIMULATION, Attach, Device, HasOffset, \
-    Override, Param, floatrange, intrange, status
+from nicos.core import (
+    POLLER,
+    SIMULATION,
+    Attach,
+    Device,
+    HasOffset,
+    Override,
+    Param,
+    floatrange,
+    intrange,
+    status,
+)
 from nicos.devices.abstract import Motor
 from nicos.utils import createThread
 
-CRLF = '\r\n'
+CRLF = "\r\n"
 
 
 class SerComIO(Device):
     parameters = {
-        'devfile':      Param('Name of device file', type=str,
-                              default='/dev/ttyACM0'),
-        'pollinterval': Param('Pollinterval for registered super devices',
-                              type=floatrange(0.01, 10), default=1.,
-                              settable=True),
+        "devfile": Param("Name of device file", type=str, default="/dev/ttyACM0"),
+        "pollinterval": Param(
+            "Pollinterval for registered super devices",
+            type=floatrange(0.01, 10),
+            default=1.0,
+            settable=True,
+        ),
     }
 
     _dev = None
@@ -70,24 +82,24 @@ class SerComIO(Device):
     def doInit(self, mode):
         if mode != SIMULATION:
             if session.sessiontype != POLLER:
-                for d in [self.devfile, '/dev/ttyACM0', '/dev/ttyACM1']:
+                for d in [self.devfile, "/dev/ttyACM0", "/dev/ttyACM1"]:
                     try:
                         self._dev = serial.Serial(d, timeout=0.03)
                         break
                     except Exception:
                         pass
                 self._lock = threading.RLock()
-                self._dev.write(' ' + CRLF + CRLF)  # init sequence
+                self._dev.write(" " + CRLF + CRLF)  # init sequence
                 self._dev.readall()
 
     def communicate(self, cmd):
         with self._lock:
-            self.log.debug('cmd: %r', cmd)
+            self.log.debug("cmd: %r", cmd)
             self._dev.write(cmd + CRLF)
             res = [l.strip() for l in self._dev.read(10000).splitlines()]
             res = [l for l in res if l if l != ">>>"]
-            res = res[-1] if res else ''
-            self.log.debug('got: %r', res)
+            res = res[-1] if res else ""
+            self.log.debug("got: %r", res)
             return res
 
     def doShutdown(self):
@@ -107,7 +119,7 @@ class SerComIO(Device):
         else:
             self._polls = [device]
             if (self._thread is None) or not self._thread.is_alive():
-                self._thread = createThread('servo poller', self._poller)
+                self._thread = createThread("servo poller", self._poller)
 
     def delPollDev(self, device):
         """removes a device from our mini-poller
@@ -120,14 +132,14 @@ class SerComIO(Device):
 
 class MicroPythonServo(HasOffset, Motor):
     attached_devices = {
-        'io': Attach('Comm device', SerComIO),
+        "io": Attach("Comm device", SerComIO),
     }
     parameters = {
-        'channel': Param('Channel (1..4)', type=intrange(1, 4), default=1),
+        "channel": Param("Channel (1..4)", type=intrange(1, 4), default=1),
     }
     parameter_overrides = {
-        'precision': Override(default=1),
-        'fmtstr':    Override(default='%d'),
+        "precision": Override(default=1),
+        "fmtstr": Override(default="%d"),
     }
 
     _busytime = 0
@@ -135,30 +147,30 @@ class MicroPythonServo(HasOffset, Motor):
     def doInit(self, mode):
         if mode != SIMULATION:
             io = self._attached_io
-            io.communicate('import pyb')
-            io.communicate('s%d=pyb.Servo(%d)' % (self.channel, self.channel))
-            io.communicate('s%d.calibration(600,2400,1500,2400,2400)' %
-                           self.channel)
-            io.communicate('s%d.angle(%f)' % (self.channel, self.target or 0.))
+            io.communicate("import pyb")
+            io.communicate("s%d=pyb.Servo(%d)" % (self.channel, self.channel))
+            io.communicate("s%d.calibration(600,2400,1500,2400,2400)" % self.channel)
+            io.communicate("s%d.angle(%f)" % (self.channel, self.target or 0.0))
             io.addPollDev(self)
 
     def doRead(self, maxage=None):
-        return float(self._attached_io.communicate('s%d.angle()' %
-                                                   self.channel)) - self.offset
+        return (
+            float(self._attached_io.communicate("s%d.angle()" % self.channel))
+            - self.offset
+        )
 
     def doStart(self, target):
         duration = abs(self.read(0) - target) / self.speed
         target = target + self.offset
-        cmd = ("s%d.angle(%f,%d)" %
-               (self.channel, target, int(duration * 1000)))
+        cmd = "s%d.angle(%f,%d)" % (self.channel, target, int(duration * 1000))
         self.log.debug(cmd)
         self._attached_io.communicate(cmd)
         self._busytime = time.time() + duration
 
     def doStatus(self, maxage=None):
         if time.time() < self._busytime:
-            return status.BUSY, ''
-        return status.OK, ''
+            return status.BUSY, ""
+        return status.OK, ""
 
     def doShutdown(self):
         self._attached_io.delPollDev(self)

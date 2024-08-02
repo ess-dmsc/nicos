@@ -16,12 +16,12 @@ maw(sty_huber, 0)
 
 tomo(10, sry_huber, t=1)
 
-printinfo('Tomo Finished!')
+printinfo("Tomo Finished!")
 
-maw(shutter2, 'closed')
-maw(shutter1, 'closed')
+maw(shutter2, "closed")
+maw(shutter1, "closed")
 
 for i in range(2):
     darkimage(t=1)
 
-printinfo('Test finished')
+printinfo("Test finished")

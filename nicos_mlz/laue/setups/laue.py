@@ -1,12 +1,8 @@
-description = 'laue basic setup'
-group = 'basic'
+description = "laue basic setup"
+group = "basic"
 
-modules = [
-    'nicos.commands.utility',
-    'nicos_mlz.laue.lauecommands'
-]
+modules = ["nicos.commands.utility", "nicos_mlz.laue.lauecommands"]
 
-devices = dict(
-)
+devices = dict()
 
-includes = ['detector', 'kappa', 'reactor', 'slits']
+includes = ["detector", "kappa", "reactor", "slits"]

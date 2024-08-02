@@ -20,28 +20,30 @@
 #   Mark Koennecke <mark.koennecke@psi.ch>
 #
 # *****************************************************************************
-name = 'SINQ BOA Table'
+name = "SINQ BOA Table"
 
-description = 'Setup for testing the BOA table module'
+description = "Setup for testing the BOA table module"
 
 includes = [
-    'generic',
+    "generic",
 ]
 
 devices = dict(
-    rb = device('nicos.devices.generic.VirtualMotor',
-        unit = 'mm',
-        description = 'First motor of rotation table',
-        abslimits = (-100, 100),
+    rb=device(
+        "nicos.devices.generic.VirtualMotor",
+        unit="mm",
+        description="First motor of rotation table",
+        abslimits=(-100, 100),
     ),
-    rc = device('nicos.devices.generic.VirtualMotor',
-        unit = 'mm',
-        description = 'Second motor of rotation table',
-        abslimits = (-100, 100),
+    rc=device(
+        "nicos.devices.generic.VirtualMotor",
+        unit="mm",
+        description="Second motor of rotation table",
+        abslimits=(-100, 100),
     ),
-    table_test = device('nicos_sinq.boa.devices.boatable'
-        '.BoaTable',
-        description = "Boa Table Testing",
-        standard_devices = ['rb', 'rc']
+    table_test=device(
+        "nicos_sinq.boa.devices.boatable" ".BoaTable",
+        description="Boa Table Testing",
+        standard_devices=["rb", "rc"],
     ),
 )

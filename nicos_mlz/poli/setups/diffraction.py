@@ -1,5 +1,5 @@
-description = 'Setup for unpolarized diffraction'
+description = "Setup for unpolarized diffraction"
 
-group = 'basic'
+group = "basic"
 
-includes = ['detector', 'table_lifting']
+includes = ["detector", "table_lifting"]

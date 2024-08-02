@@ -22,8 +22,9 @@
 # *****************************************************************************
 
 from nicos.clients.flowui.panels import get_icon
-from nicos.clients.gui.panels.status import \
-    ScriptStatusPanel as DefaultScriptStatusPanel
+from nicos.clients.gui.panels.status import (
+    ScriptStatusPanel as DefaultScriptStatusPanel,
+)
 
 
 class ScriptStatusPanel(DefaultScriptStatusPanel):
@@ -33,16 +34,16 @@ class ScriptStatusPanel(DefaultScriptStatusPanel):
         self.layout().setMenuBar(self.bar)
 
     def set_icons(self):
-        self.actionBreak.setIcon(get_icon('pause-24px.svg'))
-        self.actionBreak2.setIcon(get_icon('pause-24px.svg'))
-        self.actionBreakCount.setIcon(get_icon('pause_red-24px.svg'))
-        self.actionContinue.setIcon(get_icon('play_arrow-24px.svg'))
-        self.actionEmergencyStop.setIcon(get_icon('cancel_red-24px.svg'))
-        self.actionFinish.setIcon(get_icon('done-24px.svg'))
-        self.actionFinishEarly.setIcon(get_icon('finish_early-24px.svg'))
-        self.actionFinishEarlyAndStop.setIcon(get_icon('skip_next-24px.svg'))
-        self.actionStop.setIcon(get_icon('stop-24px.svg'))
-        self.actionStop2.setIcon(get_icon('stop-24px.svg'))
+        self.actionBreak.setIcon(get_icon("pause-24px.svg"))
+        self.actionBreak2.setIcon(get_icon("pause-24px.svg"))
+        self.actionBreakCount.setIcon(get_icon("pause_red-24px.svg"))
+        self.actionContinue.setIcon(get_icon("play_arrow-24px.svg"))
+        self.actionEmergencyStop.setIcon(get_icon("cancel_red-24px.svg"))
+        self.actionFinish.setIcon(get_icon("done-24px.svg"))
+        self.actionFinishEarly.setIcon(get_icon("finish_early-24px.svg"))
+        self.actionFinishEarlyAndStop.setIcon(get_icon("skip_next-24px.svg"))
+        self.actionStop.setIcon(get_icon("stop-24px.svg"))
+        self.actionStop2.setIcon(get_icon("stop-24px.svg"))
 
     def getToolbars(self):
         return []

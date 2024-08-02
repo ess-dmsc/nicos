@@ -32,9 +32,7 @@ class Motor(BaseMotor):
     NICOS precision read-only and read it from Tango.
     """
 
-    parameter_overrides = {
-        'precision': Override(volatile=True, settable=False)
-    }
+    parameter_overrides = {"precision": Override(volatile=True, settable=False)}
 
     def doReadPrecision(self):
-        return float(self._getProperty('precision'))
+        return float(self._getProperty("precision"))

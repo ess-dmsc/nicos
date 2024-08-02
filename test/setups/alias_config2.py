@@ -21,18 +21,19 @@
 #
 # *****************************************************************************
 
-name = 'test_alias_config setup'
+name = "test_alias_config setup"
 
-includes = ['stdsystem', 'alias_T']
+includes = ["stdsystem", "alias_T"]
 
 devices = dict(
-    T_cryo4 = device('nicos.devices.generic.VirtualMotor',
-        abslimits = (0, 5),
-        unit = 'K',
-        speed = 1.5,
+    T_cryo4=device(
+        "nicos.devices.generic.VirtualMotor",
+        abslimits=(0, 5),
+        unit="K",
+        speed=1.5,
     ),
 )
 
 alias_config = {
-    'T': {'T_cryo4': 200},
+    "T": {"T_cryo4": 200},
 }

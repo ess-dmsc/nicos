@@ -35,7 +35,6 @@ from test.utils import daemon_addr
 
 
 class CmdClient(NicosCmdClient):
-
     interact = None
     test_output = []
     test_signals = []
@@ -45,7 +44,7 @@ class CmdClient(NicosCmdClient):
         try:
             cmd = next(self.interact)
         except StopIteration:
-            assert False, 'ran out of commands in input'
+            assert False, "ran out of commands in input"
         del self.test_output[:]
         del self.test_signals[:]
         return cmd
@@ -54,10 +53,10 @@ class CmdClient(NicosCmdClient):
         self.test_output.append(string)
 
     def put_error(self, string):
-        self.test_output.append('ERROR ' + string)
+        self.test_output.append("ERROR " + string)
 
     def put_client(self, string):
-        self.test_output.append('# ' + string)
+        self.test_output.append("# " + string)
 
     def signal(self, name, data=None, exc=None):
         self.test_signals.append((name, data, exc))
@@ -74,9 +73,9 @@ def test_textclient(daemon):
             while not any(msg in line for line in out):
                 sleep(0.01)
                 if monotonic() > start + timeout:
-                    print('!!! messages:', out)
+                    print("!!! messages:", out)
                     return False
-            print('messages:', out)
+            print("messages:", out)
             return True
 
         def wait_idle(timeout=5):
@@ -84,95 +83,94 @@ def test_textclient(daemon):
             have_processing = have_busy = have_idle = False
             while not (have_processing and have_busy and have_idle):
                 sleep(0.01)
-                for (name, data, _) in sig:
-                    if name == 'processing':
+                for name, data, _ in sig:
+                    if name == "processing":
                         have_processing = True
-                    elif name == 'status' and data[0] == STATUS_RUNNING:
+                    elif name == "status" and data[0] == STATUS_RUNNING:
                         have_busy = True
-                    elif name == 'status' and data[0] == STATUS_IDLE:
+                    elif name == "status" and data[0] == STATUS_IDLE:
                         have_idle = True
                 if monotonic() > start + timeout:
-                    print('!!! events:', sig)
-                    assert False, 'idle wait timeout'
-            print('events:', sig)
+                    print("!!! events:", sig)
+                    assert False, "idle wait timeout"
+            print("events:", sig)
 
         # messages after connection
-        assert has_msg_wait('# Loaded setups:')
-        assert has_msg('# Connected to')
+        assert has_msg_wait("# Loaded setups:")
+        assert has_msg("# Connected to")
 
-        yield '/log 100'
-        assert has_msg('# Printing 100 previous messages.')
-        assert has_msg('setting up NICOS')
-        assert has_msg('# End of messages.')
+        yield "/log 100"
+        assert has_msg("# Printing 100 previous messages.")
+        assert has_msg("setting up NICOS")
+        assert has_msg("# End of messages.")
 
-        yield '/help'
-        assert has_msg('# This is the NICOS command-line client')
+        yield "/help"
+        assert has_msg("# This is the NICOS command-line client")
 
-        assert has_msg_wait('[idle]', 10)
+        assert has_msg_wait("[idle]", 10)
 
         yield 'NewSetup("daemontest")'
-        assert has_msg_wait('setups loaded: daemontest')
+        assert has_msg_wait("setups loaded: daemontest")
 
         wait_idle()
-        yield '/sim read()'
-        assert has_msg_wait('# Simulated minimum runtime')
-        assert has_msg('dm1')
-        assert has_msg('dm2')
+        yield "/sim read()"
+        assert has_msg_wait("# Simulated minimum runtime")
+        assert has_msg("dm1")
+        assert has_msg("dm2")
 
-        yield 'read()'
-        assert has_msg_wait('dm2')
-        assert has_msg('dm1')
+        yield "read()"
+        assert has_msg_wait("dm2")
+        assert has_msg("dm1")
 
         wait_idle()
-        yield 'help(read)'
-        assert has_msg_wait('Help on the read command')
+        yield "help(read)"
+        assert has_msg_wait("Help on the read command")
 
         wait_idle()
         yield 'set(dm2, "speed", 1); maw(dm2, 25)'
-        assert has_msg_wait('moving to')
-        yield 'maw(dm2, 50)'
-        assert has_msg('# A script is already running')
-        yield 'Q'  # queue
-        assert has_msg('# Command queued')
+        assert has_msg_wait("moving to")
+        yield "maw(dm2, 50)"
+        assert has_msg("# A script is already running")
+        yield "Q"  # queue
+        assert has_msg("# Command queued")
 
         sleep(0.1)  # wait for the new request event to arrive
-        yield '/pending'
-        assert has_msg('# Showing pending')
-        assert has_msg('maw(dm2, 50)')
+        yield "/pending"
+        assert has_msg("# Showing pending")
+        assert has_msg("maw(dm2, 50)")
 
-        yield '/where'
-        assert has_msg('# Printing current script')
-        assert has_msg('--->')
-        assert has_msg('maw(dm2, 25)')
+        yield "/where"
+        assert has_msg("# Printing current script")
+        assert has_msg("--->")
+        assert has_msg("maw(dm2, 25)")
 
-        yield '/cancel *'
-        assert has_msg_wait('removed from queue')
-        assert has_msg('# No scripts or commands')
+        yield "/cancel *"
+        assert has_msg_wait("removed from queue")
+        assert has_msg("# No scripts or commands")
 
-        yield '/trace'
-        assert has_msg_wait('# End of stacktrace')
-        assert has_msg('in maw')
+        yield "/trace"
+        assert has_msg_wait("# End of stacktrace")
+        assert has_msg("in maw")
 
-        yield '/spy'
-        yield 'dm1()'
-        assert has_msg_wait('-> 0.0')
-        yield 'xxxxx'
-        assert has_msg_wait('cannot be evaluated')
-        yield '/spy'
+        yield "/spy"
+        yield "dm1()"
+        assert has_msg_wait("-> 0.0")
+        yield "xxxxx"
+        assert has_msg_wait("cannot be evaluated")
+        yield "/spy"
 
-        yield '/stop'
-        assert has_msg('Stop request')
-        assert has_msg('Your choice?')
-        yield 'S'  # stop immediately
-        assert has_msg_wait('all devices stopped')
+        yield "/stop"
+        assert has_msg("Stop request")
+        assert has_msg("Your choice?")
+        yield "S"  # stop immediately
+        assert has_msg_wait("all devices stopped")
 
-        yield '/disconnect'
-        assert has_msg_wait('# Disconnected from server')
+        yield "/disconnect"
+        assert has_msg_wait("# Disconnected from server")
 
-        yield '/quit'
+        yield "/quit"
 
-    CmdClient.interact = dialog(CmdClient.test_output,
-                                CmdClient.test_signals)
-    with mock.patch('nicos.clients.cli.NicosCmdClient', CmdClient):
+    CmdClient.interact = dialog(CmdClient.test_output, CmdClient.test_signals)
+    with mock.patch("nicos.clients.cli.NicosCmdClient", CmdClient):
         nocolor()
-        cli_main(['', 'guest:guest@' + daemon_addr])
+        cli_main(["", "guest:guest@" + daemon_addr])

@@ -1,7 +1,7 @@
-description = 'minimal NICOS startup setup'
+description = "minimal NICOS startup setup"
 
-group = 'lowlevel'
+group = "lowlevel"
 
 sysconfig = dict(
-    cache = 'tofhw.toftof.frm2.tum.de:14869',
+    cache="tofhw.toftof.frm2.tum.de:14869",
 )

@@ -1,13 +1,13 @@
-description = 'PUMA triple-axis setup with FRM2-Detector'
+description = "PUMA triple-axis setup with FRM2-Detector"
 
-group = 'basic'
+group = "basic"
 
 includes = [
-    'pumabase',
+    "pumabase",
     # 'seccoll',
     # 'collimation',
     # 'ios',
     # 'hv',
     # 'notifiers',
-    'detector',
+    "detector",
 ]

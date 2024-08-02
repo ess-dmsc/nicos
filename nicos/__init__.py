@@ -33,17 +33,18 @@ from nicos.configmod import config
 
 # Determine our version(s).
 from nicos._vendor.gitversion import get_git_version, get_nicos_version  # isort:skip
+
 __version__ = nicos_version = get_nicos_version()
 
 # Check for Python version 3.6+.
 if sys.version_info[:2] < (3, 6):
-    raise ImportError('NICOS requires Python 3.6 or higher')
+    raise ImportError("NICOS requires Python 3.6 or higher")
 
 
 # Create the nicos session object here to allow the import of submodules.
 # The real class is set later.
 class Session:
-    log = getLogger('Nicos early logger')
+    log = getLogger("Nicos early logger")
 
 
 session = Session()
@@ -59,6 +60,7 @@ def get_custom_version():
 try:
     # numpy 1.14+ compat
     import numpy
-    numpy.set_printoptions(sign=' ')
+
+    numpy.set_printoptions(sign=" ")
 except Exception:
     pass

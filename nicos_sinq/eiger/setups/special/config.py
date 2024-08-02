@@ -1,9 +1,9 @@
-description = 'Generic configuration settings for EIGER'
+description = "Generic configuration settings for EIGER"
 
 import os
 
-group = 'configdata'
+group = "configdata"
 
-DATA_PATH = os.environ.get('NICOSDUMP', '.') + '/eiger/'
+DATA_PATH = os.environ.get("NICOSDUMP", ".") + "/eiger/"
 
-KAFKA_BROKERS = ['localhost:9092']
+KAFKA_BROKERS = ["localhost:9092"]

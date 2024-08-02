@@ -41,8 +41,7 @@ done in three different holding registers with addresses n, n+2, n+4.
 
 from time import monotonic
 
-from nicos.core import SIMULATION, Attach, InvalidValueError, Param, listof, \
-    status
+from nicos.core import SIMULATION, Attach, InvalidValueError, Param, listof, status
 from nicos.devices import entangle
 
 from nicos_mlz.mira.devices.axis import HoveringAxis
@@ -54,13 +53,13 @@ class Stargate(entangle.DigitalOutput):
     valuetype = listof(int)
 
     parameters = {
-        'offset_in':  Param('Offset of digital input values',
-                            type=int, mandatory=True),
-        'offset_out': Param('Offset of digital output values',
-                            type=int, mandatory=True),
-        'chevron_att_angles': Param('att angle for shielding elements',
-                                    type=listof(listof(int)),
-                                    mandatory=True),
+        "offset_in": Param("Offset of digital input values", type=int, mandatory=True),
+        "offset_out": Param(
+            "Offset of digital output values", type=int, mandatory=True
+        ),
+        "chevron_att_angles": Param(
+            "att angle for shielding elements", type=listof(listof(int)), mandatory=True
+        ),
     }
 
     _started = 0
@@ -79,8 +78,8 @@ class Stargate(entangle.DigitalOutput):
 
     def doStatus(self, maxage=0):
         if self._started and self._started + 3 > monotonic():
-            return status.BUSY, 'moving/waiting'
-        return status.OK, ''
+            return status.BUSY, "moving/waiting"
+        return status.OK, ""
 
     def doStart(self, target):
         bitvals = [0, 0, 0]
@@ -91,30 +90,30 @@ class Stargate(entangle.DigitalOutput):
             bitidx = (curidx % 4) * 2
 
             if curval:
-                bitvals[byteidx] |= (1 << bitidx)
+                bitvals[byteidx] |= 1 << bitidx
             else:
-                bitvals[byteidx] |= (1 << (bitidx+1))
+                bitvals[byteidx] |= 1 << (bitidx + 1)
 
         self._dev.WriteOutputWords([self.offset_out] + bitvals)
         self._started = monotonic()
 
     def doIsAllowed(self, value):
         if len(value) != 11:
-            raise InvalidValueError(self, 'list must have 11 entries')
+            raise InvalidValueError(self, "list must have 11 entries")
         # map everything to 0 or 1
         value = [bool(v) for v in value]
         # check allowed positions
         if value == [True] * 11:
             # open everything is allowed
-            return True, ''
+            return True, ""
         if sum(value) > 2:
-            return False, 'cannot open more than 2 chevrons'
+            return False, "cannot open more than 2 chevrons"
         if value[0] or value[10]:
-            return False, 'cannot open first or last chevron'
-        return True, ''
+            return False, "cannot open first or last chevron"
+        return True, ""
 
     def doReadFmtstr(self):
-        return '[' + ', '.join(['%d'] * 11) + ']'
+        return "[" + ", ".join(["%d"] * 11) + "]"
 
     def get_chevrons_for_att(self, att):
         chevrons = []
@@ -136,20 +135,25 @@ class Stargate(entangle.DigitalOutput):
 
 class ATT(HoveringAxis):
     attached_devices = {
-        'stargate': Attach('stargate switch device', Stargate),
+        "stargate": Attach("stargate switch device", Stargate),
     }
 
     parameters = {
-        'movestargate': Param('Whether to move the stargate with the axis',
-                              type=bool, settable=True, default=True),
+        "movestargate": Param(
+            "Whether to move the stargate with the axis",
+            type=bool,
+            settable=True,
+            default=True,
+        ),
     }
 
     def _move_stargate(self):
         if self.movestargate:
             self._attached_stargate.start(
-                self._attached_stargate.get_chevrons_for_att(self.target))
+                self._attached_stargate.get_chevrons_for_att(self.target)
+            )
         else:
-            self.log.warning('moving stargate blocks is disabled')
+            self.log.warning("moving stargate blocks is disabled")
 
     def _preMoveAction(self):
         self._move_stargate()
@@ -167,12 +171,12 @@ class ATT(HoveringAxis):
             return HoveringAxis.doStatus(self, maxage)
         sgstat = self._attached_stargate.status(maxage)
         if sgstat[0] == status.BUSY:
-            return status.BUSY, 'stargate moving'
+            return status.BUSY, "stargate moving"
         axstat = HoveringAxis.doStatus(self, maxage)
         if axstat[0] == status.BUSY:
             return axstat
         axvalue = HoveringAxis.doRead(self, maxage)
         chevrons = list(self._attached_stargate.read(maxage))
         if chevrons != self._attached_stargate.get_chevrons_for_att(axvalue):
-            return status.ERROR, 'invalid stargate position for att angle'
+            return status.ERROR, "invalid stargate position for att angle"
         return axstat

@@ -25,8 +25,10 @@
 import hashlib
 
 from nicos.core import GUEST, USER, Param, User, listof, oneof
-from nicos.services.daemon.auth import AuthenticationError, \
-    Authenticator as BaseAuthenticator
+from nicos.services.daemon.auth import (
+    AuthenticationError,
+    Authenticator as BaseAuthenticator,
+)
 from nicos.services.daemon.auth.params import UserPassLevelAuthEntry
 
 
@@ -62,40 +64,44 @@ class Authenticator(BaseAuthenticator):
     """
 
     parameters = {
-        'hashing': Param('Type of hash used for the password (sha1 or md5)',
-                         type=oneof('sha1', 'md5')),
-        'passwd':  Param('List of (username, password_hash, userlevel) tuples',
-                         type=listof(UserPassLevelAuthEntry)),
+        "hashing": Param(
+            "Type of hash used for the password (sha1 or md5)",
+            type=oneof("sha1", "md5"),
+        ),
+        "passwd": Param(
+            "List of (username, password_hash, userlevel) tuples",
+            type=listof(UserPassLevelAuthEntry),
+        ),
     }
 
     def _hash(self, password):
-        if self.hashing == 'sha1':
+        if self.hashing == "sha1":
             password = hashlib.sha1(password.encode()).hexdigest()
-        elif self.hashing == 'md5':
+        elif self.hashing == "md5":
             password = hashlib.md5(password.encode()).hexdigest()
         return password
 
     def authenticate(self, username, password):
         username = username.strip()
         if not username:
-            raise AuthenticationError('No username, please identify yourself!')
+            raise AuthenticationError("No username, please identify yourself!")
         # check for exact match (also matches empty password if username
         # matches)
-        for (user, pw, level) in self.passwd:
+        for user, pw, level in self.passwd:
             if user == username:
                 if not pw or pw == self._hash(password):
                     if not password and level > USER:
                         level = USER  # limit passwordless entries to USER
                     return User(username, level)
                 else:
-                    raise AuthenticationError('Invalid username or password!')
+                    raise AuthenticationError("Invalid username or password!")
         # check for unspecified user
-        for (user, pw, level) in self.passwd:
-            if user == '':  # pylint: disable=compare-to-empty-string
+        for user, pw, level in self.passwd:
+            if user == "":  # pylint: disable=compare-to-empty-string
                 if pw and pw == self._hash(password):
                     level = min(level, USER)  # limit passworded anonymous to USER
                     return User(username, level)
                 elif not pw:  # fix passwordless anonymous to GUEST
                     return User(username, GUEST)
         # do not give a hint whether username or password is wrong...
-        raise AuthenticationError('Invalid username or password!')
+        raise AuthenticationError("Invalid username or password!")

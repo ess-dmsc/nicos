@@ -1,11 +1,12 @@
-description = 'BOA Goniometer GBL'
+description = "BOA Goniometer GBL"
 
-pvprefix = 'SQ:BOA:gbl:'
+pvprefix = "SQ:BOA:gbl:"
 
 devices = dict(
-    gbl = device('nicos.devices.epics.pyepics.motor.EpicsMotor',
-        description = 'Goniometer GBL',
-        motorpv = pvprefix + 'GBL',
-        errormsgpv = pvprefix + 'GBL-MsgTxt',
+    gbl=device(
+        "nicos.devices.epics.pyepics.motor.EpicsMotor",
+        description="Goniometer GBL",
+        motorpv=pvprefix + "GBL",
+        errormsgpv=pvprefix + "GBL-MsgTxt",
     ),
 )

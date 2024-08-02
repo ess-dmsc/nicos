@@ -34,4 +34,4 @@ class BeamLimiter(Slit):
     """
 
     def _isAllowedSlitOpening(self, positions):
-        return True, ''
+        return True, ""

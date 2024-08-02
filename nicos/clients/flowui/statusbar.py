@@ -23,9 +23,21 @@
 
 from nicos.clients.gui.panels.console import ConsolePanel
 from nicos.clients.gui.panels.live import LiveDataPanel
-from nicos.guisupport.qt import QButtonGroup, QColor, QHBoxLayout, QObject, \
-    QPainter, QPushButton, QSizePolicy, QStackedWidget, QStatusBar, Qt, \
-    QVBoxLayout, QWidget, pyqtSignal
+from nicos.guisupport.qt import (
+    QButtonGroup,
+    QColor,
+    QHBoxLayout,
+    QObject,
+    QPainter,
+    QPushButton,
+    QSizePolicy,
+    QStackedWidget,
+    QStatusBar,
+    Qt,
+    QVBoxLayout,
+    QWidget,
+    pyqtSignal,
+)
 
 
 def addStatusBar(mainwindow):
@@ -44,9 +56,9 @@ class StatusBarOverlay(QWidget):
         layout = QVBoxLayout()
 
         line = QHBoxLayout()
-        self.graphicsButton = QPushButton('Graphics')
-        self.logButton = QPushButton('Log')
-        self.toggleButton = QPushButton('Show')
+        self.graphicsButton = QPushButton("Graphics")
+        self.logButton = QPushButton("Log")
+        self.toggleButton = QPushButton("Show")
         self.graphicsButton.setCheckable(True)
         self.logButton.setCheckable(True)
         self.toggleButton.setCheckable(True)
@@ -61,7 +73,7 @@ class StatusBarOverlay(QWidget):
         line.addWidget(self.toggleButton)
         line.addStretch()
 
-        line.setObjectName('ButtonsLayout')
+        line.setObjectName("ButtonsLayout")
         layout.addLayout(line)
 
         del line
@@ -74,13 +86,13 @@ class StatusBarOverlay(QWidget):
         self.set_hidden()
 
     def set_hidden(self):
-        self.toggleButton.setText('Show')
+        self.toggleButton.setText("Show")
         for button in [self.graphicsButton, self.logButton]:
             button.setChecked(False)
             button.setDisabled(True)
 
     def set_visible(self):
-        self.toggleButton.setText('Hide')
+        self.toggleButton.setText("Hide")
         self.graphicsButton.setChecked(True)
         self.graphicsButton.setDisabled(False)
         self.logButton.setDisabled(False)
@@ -94,14 +106,13 @@ class StatusBarOverlay(QWidget):
 
 
 class StatusBar(QStatusBar):
-
     def __init__(self, parent=None):
         super().__init__(parent)
         layout = self.layout()
 
-        self.graphicsButton = QPushButton('Graphics')
-        self.logButton = QPushButton('Log')
-        self.toggleButton = QPushButton('Show')
+        self.graphicsButton = QPushButton("Graphics")
+        self.logButton = QPushButton("Log")
+        self.toggleButton = QPushButton("Show")
         self.graphicsButton.setCheckable(True)
         self.logButton.setCheckable(True)
         self.toggleButton.setCheckable(True)
@@ -126,13 +137,13 @@ class StatusBar(QStatusBar):
         self.set_hidden()
 
     def set_hidden(self):
-        self.toggleButton.setText('Show')
+        self.toggleButton.setText("Show")
         for button in [self.graphicsButton, self.logButton]:
             button.setChecked(False)
             button.setDisabled(True)
 
     def set_visible(self):
-        self.toggleButton.setText('Hide')
+        self.toggleButton.setText("Hide")
         self.graphicsButton.setChecked(True)
         self.graphicsButton.setDisabled(False)
         self.logButton.setDisabled(False)
@@ -169,8 +180,7 @@ class TranslucentWidget(QWidget):
 
         layout.addWidget(self.widgets)
 
-        self.setSizePolicy(QSizePolicy.Policy.Expanding,
-                           QSizePolicy.Policy.Expanding)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
         if toolbar:
             self.resize(parent.size() - toolbar.size())

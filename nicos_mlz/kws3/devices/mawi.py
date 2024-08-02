@@ -29,14 +29,16 @@ class MeanTemp(PyTangoDevice, Readable):
     """Returns mean temperature of some channels of a MawiTherm VectorInput."""
 
     parameters = {
-        'first': Param('First channel to include', type=intrange(1, 8),
-                       default=1, settable=True),
-        'last':  Param('Last channel to include', type=intrange(1, 8),
-                       default=8, settable=True),
+        "first": Param(
+            "First channel to include", type=intrange(1, 8), default=1, settable=True
+        ),
+        "last": Param(
+            "Last channel to include", type=intrange(1, 8), default=8, settable=True
+        ),
     }
 
     def doRead(self, maxage=0):
         if self.first > self.last:
             return 0
-        allchannels = self._dev.value[self.first - 1:self.last]
+        allchannels = self._dev.value[self.first - 1 : self.last]
         return float(sum(allchannels) / len(allchannels))

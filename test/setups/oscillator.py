@@ -21,28 +21,32 @@
 #
 # *****************************************************************************
 
-name = 'test_oscillator setup'
+name = "test_oscillator setup"
 
-includes = ['axis']
+includes = ["axis"]
 
 devices = dict(
     # Take range from the 'axis' device
-    osci = device('nicos.devices.generic.Oscillator',
-        moveable = 'axis',
+    osci=device(
+        "nicos.devices.generic.Oscillator",
+        moveable="axis",
     ),
     # Set own range and it is stoppable
-    osci2 = device('nicos.devices.generic.Oscillator',
-        moveable = 'axis',
-        range = (0, 50),
-        stoppable = True,
+    osci2=device(
+        "nicos.devices.generic.Oscillator",
+        moveable="axis",
+        range=(0, 50),
+        stoppable=True,
     ),
     # configured range outside the attached device limits
-    osci3 = device('nicos.devices.generic.Oscillator',
-        moveable = 'axis',
-        range = (-110, 0),
+    osci3=device(
+        "nicos.devices.generic.Oscillator",
+        moveable="axis",
+        range=(-110, 0),
     ),
-    osci4 = device('nicos.devices.generic.Oscillator',
-        moveable = 'axis',
-        range = (0, 110),
+    osci4=device(
+        "nicos.devices.generic.Oscillator",
+        moveable="axis",
+        range=(0, 110),
     ),
 )

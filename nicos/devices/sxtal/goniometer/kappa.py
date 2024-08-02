@@ -20,7 +20,7 @@
 #   Björn Pedersen <bjoern.pedersen@frm2.tum.de>
 #
 # *****************************************************************************
-'''
+"""
 Kappa
 
 a class for storing kappa positions
@@ -28,7 +28,7 @@ a class for storing kappa positions
 All angle move clockwise for positive values.
 
 to allow conversions, the kappa-angle alpha needs to be known
-'''
+"""
 
 import numpy as np
 
@@ -38,19 +38,22 @@ from nicos.devices.sxtal.goniometer.posutils import Yrot, Zrot, normalangle
 
 
 class Kappa(PositionBase):
-    ptype = 'k'
+    ptype = "k"
     theta_clockwise = 1
     phi_clockwise = 1
     omega_clockwise = 1
 
-    def __init__(self, p=None,
-                 theta=None, ttheta=None,
-                 omega=None,
-                 kappa=None,
-                 phi=None,
-                 _rad=False):
-        """ Constructor. Part of Position subclass protocol.
-        """
+    def __init__(
+        self,
+        p=None,
+        theta=None,
+        ttheta=None,
+        omega=None,
+        kappa=None,
+        phi=None,
+        _rad=False,
+    ):
+        """Constructor. Part of Position subclass protocol."""
         PositionBase.__init__(self)
         self.alpha = np.deg2rad(60)  # TODO: get from experiment?
         if p:
@@ -60,7 +63,7 @@ class Kappa(PositionBase):
             self.phi = normalangle(p.phi)
         else:
             if ttheta is not None:
-                theta = ttheta / 2.
+                theta = ttheta / 2.0
 
             self.theta = self._r2d(theta, _rad)
             self.omega = self._r2d(omega, _rad)
@@ -68,37 +71,39 @@ class Kappa(PositionBase):
             self.phi = self._r2d(phi, _rad)
 
     def Alternate(self):
-        """ The alternate Kappa position that has the same orientation.
-        """
+        """The alternate Kappa position that has the same orientation."""
         return self.asE().Alternate().asK()
 
     def NegateTheta(self):
-        """ The same position with negative theta.
+        """The same position with negative theta.
 
-            Keep the same reflection active in the center of the detector.
+        Keep the same reflection active in the center of the detector.
         """
-        return self.With(theta=-self.theta,
-                         omega=self.omega + np.deg2rad(180) - 2 * self.theta,
-                         _rad=True)
+        return self.With(
+            theta=-self.theta,
+            omega=self.omega + np.deg2rad(180) - 2 * self.theta,
+            _rad=True,
+        )
 
     def asG(self, _wavelength=None):
-        """ Conversion. Part of Position subclass protocol.
-        """
+        """Conversion. Part of Position subclass protocol."""
         return PositionFactory(
-            ptype='gr',
+            ptype="gr",
             theta=self.theta,
-            matrix=np.dot(Zrot(self.omega),
-                          np.dot(Yrot(-self.alpha),
-                                 np.dot(Zrot(self.kappa),
-                                        np.dot(Yrot(self.alpha), Zrot(self.phi))))))
+            matrix=np.dot(
+                Zrot(self.omega),
+                np.dot(
+                    Yrot(-self.alpha),
+                    np.dot(Zrot(self.kappa), np.dot(Yrot(self.alpha), Zrot(self.phi))),
+                ),
+            ),
+        )
 
     def asE(self, _wavelength=None):
-        """ Conversion. Part of Position subclass protocol.
-        """
+        """Conversion. Part of Position subclass protocol."""
         if self.kappa is None:
             print("DBG> Convert incomplete kappa to eulerian!")
-            return PositionFactory(ptype='e',
-                                   theta=self.theta)
+            return PositionFactory(ptype="e", theta=self.theta)
         halfkappa = 0.5 * self.kappa
         # Modulo 360
         while halfkappa > np.pi / 2:
@@ -112,69 +117,66 @@ class Kappa(PositionBase):
         phie = self.phi + x
         sinc = np.sin(self.alpha) * np.sin(halfkappa)
         chie = 2.0 * np.arcsin(sinc)
-        return PositionFactory(ptype='er',
-                               theta=self.theta,
-                               omega=normalangle(omegae),
-                               chi=normalangle(chie),
-                               phi=normalangle(phie))
+        return PositionFactory(
+            ptype="er",
+            theta=self.theta,
+            omega=normalangle(omegae),
+            chi=normalangle(chie),
+            phi=normalangle(phie),
+        )
 
     def asB(self, _wavelength=None):
-        """ Conversion. Part of Position subclass protocol.
-        """
+        """Conversion. Part of Position subclass protocol."""
         return self.asE().asB()
 
     def asC(self, wavelength=None):
-        """ Conversion. Part of Position subclass protocol.
-        """
+        """Conversion. Part of Position subclass protocol."""
         return self.asB().asC(wavelength)
 
     def asK(self, _wavelength=None):
-        """ Conversion. Part of Position subclass protocol.
-        """
+        """Conversion. Part of Position subclass protocol."""
         return self.With()
 
     def asN(self, _wavelength=None):
-        """ Conversion. Part of Position subclass protocol.
-        """
+        """Conversion. Part of Position subclass protocol."""
         return self.asE().asN()
 
     def asL(self, wavelength=None):
-        """ Conversion. Part of Position subclass protocol.
-        """
+        """Conversion. Part of Position subclass protocol."""
         return self.asC().asL(wavelength)
 
     def With(self, **kw):
-        """ Make clone of this position with some angle(s) changed.
-        """
-        if not kw.get('_rad', False):
-            for var in ('theta', 'phi', 'kappa', 'omega'):
+        """Make clone of this position with some angle(s) changed."""
+        if not kw.get("_rad", False):
+            for var in ("theta", "phi", "kappa", "omega"):
                 if kw.get(var, None) is not None:
                     kw[var] = np.deg2rad(kw[var])
-        return PositionFactory(ptype='kr',
-                               theta=kw.get('theta', self.theta),
-                               omega=kw.get('omega', self.omega),
-                               kappa=kw.get('kappa', self.kappa),
-                               phi=kw.get('phi', self.phi))
+        return PositionFactory(
+            ptype="kr",
+            theta=kw.get("theta", self.theta),
+            omega=kw.get("omega", self.omega),
+            kappa=kw.get("kappa", self.kappa),
+            phi=kw.get("phi", self.phi),
+        )
 
     def towards(self, other, fraction):
         if not other.ptype == self.ptype:
-            raise NicosError('cannot interpolate between different ptyped positions')
+            raise NicosError("cannot interpolate between different ptyped positions")
         f0 = 1.0 - fraction
         f1 = fraction
         kw = {}
         if self.theta is not None and other.theta is not None:
-            kw['theta'] = self.theta * f0 + other.theta * f1
+            kw["theta"] = self.theta * f0 + other.theta * f1
         if self.omega is not None and other.omega is not None:
-            kw['omega'] = self.omega * f0 + other.omega * f1
+            kw["omega"] = self.omega * f0 + other.omega * f1
         if self.phi is not None and other.phi is not None:
-            kw['phi'] = self.phi * f0 + other.phi * f1
+            kw["phi"] = self.phi * f0 + other.phi * f1
         if self.kappa is not None and other.kappa is not None:
-            kw['kappa'] = self.kappa * f0 + other.kappa * f1
+            kw["kappa"] = self.kappa * f0 + other.kappa * f1
         return self.With(**kw)
 
     def __repr__(self):
-        """ Representation. Part of Position subclass protocol.
-        """
+        """Representation. Part of Position subclass protocol."""
         s = "[Kappa angles:"
         if self.theta is not None:
             s = s + " theta=%8.3f" % (np.rad2deg(self.theta))

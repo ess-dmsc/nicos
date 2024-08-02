@@ -35,29 +35,28 @@ class GuideField(BaseSequencer):
     """
 
     attached_devices = {
-        'magnet': Attach('Guide field magnet', Moveable),
+        "magnet": Attach("Guide field magnet", Moveable),
     }
 
     parameters = {
-        'hold_value': Param('Holding value', type=float, default=1.2,
-                            settable=True),
+        "hold_value": Param("Holding value", type=float, default=1.2, settable=True),
     }
 
-    valuetype = oneof('+', '-')
+    valuetype = oneof("+", "-")
 
     def _generateSequence(self, target):
         seq = []
 
-        if target == '+':
+        if target == "+":
             seq.append((SeqDev(self._attached_magnet, 17.9)))
-            seq.append(SeqSleep(1.))
+            seq.append(SeqSleep(1.0))
             seq.append(SeqDev(self._attached_magnet, self.hold_value))
-        elif target == '-':
+        elif target == "-":
             seq.append(SeqDev(self._attached_magnet, -17.9))
-            seq.append(SeqSleep(1.))
+            seq.append(SeqSleep(1.0))
             seq.append(SeqDev(self._attached_magnet, self.hold_value))
         else:
-            raise ProgrammingError('Invalid value requested')
+            raise ProgrammingError("Invalid value requested")
 
         return seq
 

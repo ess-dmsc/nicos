@@ -38,17 +38,17 @@ class DaemonCommand(PyFunction):
 
     def handle_signature(self, sig, signode):
         self.object = command_wrappers[sig].orig_function
-        sig = '%s%s' % (sig, formatArgs(self.object, strip_self=True))
+        sig = "%s%s" % (sig, formatArgs(self.object, strip_self=True))
         return PyFunction.handle_signature(self, sig, signode)
 
     def needs_arglist(self):
         return True
 
     def get_index_text(self, modname, name_cls):
-        return '%s (daemon command)' % name_cls[0]
+        return "%s (daemon command)" % name_cls[0]
 
     def before_content(self):
-        dstring = prepare_docstring(self.object.__doc__ or '')
+        dstring = prepare_docstring(self.object.__doc__ or "")
         # overwrite content of directive
         self.content = ViewList(dstring)
         PyFunction.before_content(self)
@@ -58,18 +58,17 @@ class DaemonEvent(PyVariable):
     """Directive for daemon command description."""
 
     doc_field_types = [
-        Field('arg', label='Argument', has_arg=False, names=('arg',)),
+        Field("arg", label="Argument", has_arg=False, names=("arg",)),
     ]
 
     def needs_arglist(self):
         return False
 
     def get_index_text(self, modname, name_cls):
-        return '%s (daemon event)' % name_cls[0]
+        return "%s (daemon event)" % name_cls[0]
 
 
 def setup(app):
-    app.add_directive('daemoncmd', DaemonCommand)
-    app.add_directive('daemonevt', DaemonEvent)
-    return {'parallel_read_safe': True,
-            'version': '0.1.0'}
+    app.add_directive("daemoncmd", DaemonCommand)
+    app.add_directive("daemonevt", DaemonEvent)
+    return {"parallel_read_safe": True, "version": "0.1.0"}

@@ -29,9 +29,19 @@ from nicos_mlz.kws1.devices.experiment import KWSExperiment
 class KWS3Experiment(KWSExperiment):
     """Experiment object customization for KWS."""
 
-    DATA_SUFFIX = '.yaml'
-    PROTO_HEADERS = ['Run', 'Pnt', 'Sel', 'Reso', 'SamPos', 'Det', 'Sample',
-                     'Time', 'Cts', 'Rate']
+    DATA_SUFFIX = ".yaml"
+    PROTO_HEADERS = [
+        "Run",
+        "Pnt",
+        "Sel",
+        "Reso",
+        "SamPos",
+        "Det",
+        "Sample",
+        "Time",
+        "Cts",
+        "Rate",
+    ]
     RUNNO_INDEX = 0
     IGNORE_SENV = ()
 
@@ -47,44 +57,44 @@ def unquote(line):
 
 
 def read_det_file(runno, senv, fname):
-    data = {'#': runno, 'Run': str(runno)}
-    data['Pnt'] = fname.split('_')[1].lstrip('0')
-    with open(fname, encoding='utf-8') as it:
+    data = {"#": runno, "Run": str(runno)}
+    data["Pnt"] = fname.split("_")[1].lstrip("0")
+    with open(fname, encoding="utf-8") as it:
         devname = envname = None
         for line in it:
-            if line.startswith('        started:'):
-                day, timeofday = unquote(line).split('T')
-                data['Started'] = timeofday
-                data['Day'] = day
-            elif line.startswith('        environment:'):
+            if line.startswith("        started:"):
+                day, timeofday = unquote(line).split("T")
+                data["Started"] = timeofday
+                data["Day"] = day
+            elif line.startswith("        environment:"):
                 break
         for line in it:
-            if line.startswith('        -   name:'):
+            if line.startswith("        -   name:"):
                 envname = line.split()[-1]
-                if envname != 'etime':
+                if envname != "etime":
                     senv.add(envname)
-            elif line.startswith('            value:'):
-                if envname and envname != 'etime':
+            elif line.startswith("            value:"):
+                if envname and envname != "etime":
                     data[envname] = unquote(line)
-            elif line.startswith('    devices:'):
+            elif line.startswith("    devices:"):
                 break
         for line in it:
-            if line.startswith('    -   name:'):
+            if line.startswith("    -   name:"):
                 devname = line.split()[-1]
-            elif line.startswith('        value:'):
-                if devname == 'resolution':
-                    data['Reso'] = unquote(line)
-                elif devname == 'selector':
-                    data['Sel'] = unquote(line)
-                elif devname == 'sample_pos':
-                    data['SamPos'] = unquote(line)
-                elif devname == 'detector':
-                    data['Det'] = unquote(line)
-                elif devname == 'Sample':
-                    data['Sample'] = unquote(line)
-                elif devname == 'det_img':
-                    data['Cts'] = '%.2g' % float(next(it).split()[-1])
-                    data['Rate'] = '%.0f' % float(next(it).split()[-1])
-                elif devname == 'timer':
-                    data['Time'] = '%.1fs' % float(next(it).split()[-1])
+            elif line.startswith("        value:"):
+                if devname == "resolution":
+                    data["Reso"] = unquote(line)
+                elif devname == "selector":
+                    data["Sel"] = unquote(line)
+                elif devname == "sample_pos":
+                    data["SamPos"] = unquote(line)
+                elif devname == "detector":
+                    data["Det"] = unquote(line)
+                elif devname == "Sample":
+                    data["Sample"] = unquote(line)
+                elif devname == "det_img":
+                    data["Cts"] = "%.2g" % float(next(it).split()[-1])
+                    data["Rate"] = "%.0f" % float(next(it).split()[-1])
+                elif devname == "timer":
+                    data["Time"] = "%.1fs" % float(next(it).split()[-1])
     return data

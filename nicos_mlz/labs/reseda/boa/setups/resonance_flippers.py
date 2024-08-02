@@ -1,19 +1,20 @@
-description = 'Resonance flippers'
-group = 'lowlevel'
+description = "Resonance flippers"
+group = "lowlevel"
 display_order = 24
 
-tango_base = 'tango://%s:10000/reseda/' % configdata('gconfigs.tango_host')
+tango_base = "tango://%s:10000/reseda/" % configdata("gconfigs.tango_host")
 
 devices = dict(
-    hrf_0a = device('nicos.devices.entangle.PowerSupply',
-        description = 'Helmholtz coils for resonant flippers arm 0 - A',
-        tangodevice = tango_base + 'spf1/current',
-        fmtstr = '%.3f',
-        tangotimeout = 5.0,
-        pollinterval = 60,
-        maxage = 120,
-        unit = 'A',
-        precision = 0.02,
+    hrf_0a=device(
+        "nicos.devices.entangle.PowerSupply",
+        description="Helmholtz coils for resonant flippers arm 0 - A",
+        tangodevice=tango_base + "spf1/current",
+        fmtstr="%.3f",
+        tangotimeout=5.0,
+        pollinterval=60,
+        maxage=120,
+        unit="A",
+        precision=0.02,
     ),
     # hrf_0a_current = device('nicos.devices.entangle.Sensor',
     #     description = 'Read back of the current in arm 0 - A coil',
@@ -32,15 +33,16 @@ devices = dict(
     #     motor = 'hrf_0a_rot_m',
     #     precision = 0.05,
     # ),
-    hrf_0b = device('nicos.devices.entangle.PowerSupply',
-        description = 'Helmholtz coils for resonant flipper arm 0 - B',
-        tangodevice =  tango_base + 'spf2/current',
-        fmtstr = '%.3f',
-        tangotimeout = 5.0,
-        pollinterval = 60,
-        maxage = 120,
-        unit = 'A',
-        precision = 0.02,
+    hrf_0b=device(
+        "nicos.devices.entangle.PowerSupply",
+        description="Helmholtz coils for resonant flipper arm 0 - B",
+        tangodevice=tango_base + "spf2/current",
+        fmtstr="%.3f",
+        tangotimeout=5.0,
+        pollinterval=60,
+        maxage=120,
+        unit="A",
+        precision=0.02,
     ),
     # hrf_0b_current = device('nicos.devices.entangle.Sensor',
     #     description = 'Read back of the current in arm 0 - B coil',

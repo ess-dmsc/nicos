@@ -31,7 +31,6 @@ from .base import IPCModBusRS232
 
 
 class IPCModBusTango(PyTangoDevice, IPCModBusRS232):
-
     def doInit(self, mode):
         IPCModBusRS232.doInit(self, mode)
         if mode != SIMULATION:
@@ -39,4 +38,4 @@ class IPCModBusTango(PyTangoDevice, IPCModBusRS232):
 
     def _transmit(self, request, retlen, last_try=False):
         reply = self._dev.BinaryCommunicate([retlen] + [ord(x) for x in request])
-        return ''.join(map(chr, reply))
+        return "".join(map(chr, reply))

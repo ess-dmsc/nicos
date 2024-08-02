@@ -27,12 +27,21 @@
 
 from time import sleep
 
-from nicos.core import Attach, ConfigurationError, HasOffset, MoveError, \
-    NicosError, Override, Param, PositionError, floatrange, status, \
-    waitForCompletion
+from nicos.core import (
+    Attach,
+    ConfigurationError,
+    HasOffset,
+    MoveError,
+    NicosError,
+    Override,
+    Param,
+    PositionError,
+    floatrange,
+    status,
+    waitForCompletion,
+)
 from nicos.core.constants import MASTER, SIMULATION
-from nicos.devices.abstract import Axis as AbstractAxis, CanReference, Coder, \
-    Motor
+from nicos.devices.abstract import Axis as AbstractAxis, CanReference, Coder, Motor
 from nicos.utils import createThread
 
 
@@ -40,28 +49,41 @@ class Axis(CanReference, AbstractAxis):
     """Axis implemented in Python, with NICOS devices for motor and coders."""
 
     attached_devices = {
-        'motor': Attach('Axis motor device', Motor),
-        'coder': Attach('Main axis encoder device', Coder, optional=True),
-        'obs':   Attach('Auxiliary encoders used to verify position', Coder,
-                        optional=True, multiple=True),
+        "motor": Attach("Axis motor device", Motor),
+        "coder": Attach("Main axis encoder device", Coder, optional=True),
+        "obs": Attach(
+            "Auxiliary encoders used to verify position",
+            Coder,
+            optional=True,
+            multiple=True,
+        ),
     }
 
     parameter_overrides = {
-        'precision': Override(mandatory=True,),
+        "precision": Override(
+            mandatory=True,
+        ),
         # these are not mandatory for the axis: the motor should have them
         # defined anyway, and by default they are correct for the axis as well
-        'abslimits': Override(mandatory=False, volatile=True),
-        'userlimits': Override(volatile=True),
+        "abslimits": Override(mandatory=False, volatile=True),
+        "userlimits": Override(volatile=True),
     }
 
     parameters = {
-        'speed':       Param('Motor speed', unit='main/s', volatile=True,
-                             settable=True),
-        'jitter':      Param('Amount of position jitter allowed', unit='main',
-                             type=floatrange(0.0, 10.0), settable=True),
-        'obsreadings': Param('Number of observer readings to average over '
-                             'when determining current position', type=int,
-                             default=100, settable=True),
+        "speed": Param("Motor speed", unit="main/s", volatile=True, settable=True),
+        "jitter": Param(
+            "Amount of position jitter allowed",
+            unit="main",
+            type=floatrange(0.0, 10.0),
+            settable=True,
+        ),
+        "obsreadings": Param(
+            "Number of observer readings to average over "
+            "when determining current position",
+            type=int,
+            default=100,
+            settable=True,
+        ),
     }
 
     hardware_access = False
@@ -70,44 +92,61 @@ class Axis(CanReference, AbstractAxis):
 
     def doInit(self, mode):
         if self._attached_coder is None:
-            self.log.debug('using the motor as coder too as no coder was '
-                           'specified in the setup file')
+            self.log.debug(
+                "using the motor as coder too as no coder was "
+                "specified in the setup file"
+            )
         # Check that motor and coder have the same unit
         elif self._attached_coder.unit != self._attached_motor.unit:
-            raise ConfigurationError(self, 'different units for motor and '
-                                     'coder (%s vs %s)' %
-                                     (self._attached_motor.unit,
-                                      self._attached_coder.unit)
-                                     )
+            raise ConfigurationError(
+                self,
+                "different units for motor and "
+                "coder (%s vs %s)"
+                % (self._attached_motor.unit, self._attached_coder.unit),
+            )
         # Check that all observers have the same unit as the motor
         for ob in self._attached_obs:
             if self._attached_motor.unit != ob.unit:
-                raise ConfigurationError(self, 'different units for motor '
-                                         'and observer %s' % ob)
+                raise ConfigurationError(
+                    self, "different units for motor " "and observer %s" % ob
+                )
 
         # Check for userlimits in configuration
-        if 'userlimits' in self._config:
-            self.log.warning('userlimits in setup file ignored; configure '
-                             'them on the motor device if really needed')
-        if getattr(self._attached_motor, 'offset', 0) != 0:
-            self.log.warning('motor has a nonzero offset; this will cause '
-                             'general confusion and problems with userlimits')
+        if "userlimits" in self._config:
+            self.log.warning(
+                "userlimits in setup file ignored; configure "
+                "them on the motor device if really needed"
+            )
+        if getattr(self._attached_motor, "offset", 0) != 0:
+            self.log.warning(
+                "motor has a nonzero offset; this will cause "
+                "general confusion and problems with userlimits"
+            )
 
-        self._hascoder = self._attached_coder is not None and \
-            self._attached_motor != self._attached_coder
+        self._hascoder = (
+            self._attached_coder is not None
+            and self._attached_motor != self._attached_coder
+        )
         self._errorstate = None
         self._posthread = None
         self._stoprequest = 0
         self._maxdiff = self.dragerror if self._hascoder else 0.0
 
-        if mode == MASTER and self._hascoder and \
-           self.motor.status()[0] != status.BUSY and \
-           abs(self.motor.read() - self.coder.read()) > self.precision:
-            self.log.warning('motor and encoder have different positions '
-                             '(%s vs. %s), setting motor position to coder '
-                             'position' % (
-                                 self.motor.format(self.motor.read()),
-                                 self.coder.format(self.coder.read())))
+        if (
+            mode == MASTER
+            and self._hascoder
+            and self.motor.status()[0] != status.BUSY
+            and abs(self.motor.read() - self.coder.read()) > self.precision
+        ):
+            self.log.warning(
+                "motor and encoder have different positions "
+                "(%s vs. %s), setting motor position to coder "
+                "position"
+                % (
+                    self.motor.format(self.motor.read()),
+                    self.coder.format(self.coder.read()),
+                )
+            )
             self.motor.setPosition(self._getReading())
 
     # legacy properties for users, DO NOT USE lazy_property here!
@@ -127,14 +166,18 @@ class Axis(CanReference, AbstractAxis):
         mot_amin, mot_amax = self._attached_motor.abslimits
         # if abslimits are configured, use them, but they can only restrict,
         # not widen, the motor's abslimits
-        if 'abslimits' in self._config:
-            amin, amax = self._config['abslimits']
+        if "abslimits" in self._config:
+            amin, amax = self._config["abslimits"]
             if amin < mot_amin - abs(mot_amin * 1e-12):
-                raise ConfigurationError(self, 'abslimits: min (%s) below '
-                                         "motor's min (%s)" % (amin, mot_amin))
+                raise ConfigurationError(
+                    self,
+                    "abslimits: min (%s) below " "motor's min (%s)" % (amin, mot_amin),
+                )
             if amax > mot_amax + abs(mot_amax * 1e-12):
-                raise ConfigurationError(self, 'abslimits: max (%s) above '
-                                         "motor's max (%s)" % (amax, mot_amax))
+                raise ConfigurationError(
+                    self,
+                    "abslimits: max (%s) above " "motor's max (%s)" % (amax, mot_amax),
+                )
         else:
             amin, amax = mot_amin, mot_amax
         return amin, amax
@@ -151,30 +194,31 @@ class Axis(CanReference, AbstractAxis):
         limits = rval if rval else value
         # if the offset is currently changing, we need to use _new_offset
         self._attached_motor.userlimits = (
-            limits[0] + getattr(self, '_new_offset', self.offset),
-            limits[1] + getattr(self, '_new_offset', self.offset)
+            limits[0] + getattr(self, "_new_offset", self.offset),
+            limits[1] + getattr(self, "_new_offset", self.offset),
         )
 
     def doIsAllowed(self, target):
         # do limit check here already instead of in the thread
         ok, why = self._attached_motor.isAllowed(target + self.offset)
         if not ok:
-            return ok, 'motor cannot move there (offset = %.3f): %s' % (
-                self.offset, why)
-        return True, ''
+            return ok, "motor cannot move there (offset = %.3f): %s" % (
+                self.offset,
+                why,
+            )
+        return True, ""
 
     def doStart(self, target):
         """Starts the movement of the axis to target."""
         if self._mode == SIMULATION:
-            if not self._checkTargetPosition(self.read(0), target,
-                                             error=False):
+            if not self._checkTargetPosition(self.read(0), target, error=False):
                 self._attached_motor.start(target + self.offset)
                 if self._hascoder:
                     self._attached_coder._sim_setValue(target + self.offset)
             return
 
         if self.status(0)[0] == status.BUSY:
-            self.log.debug('need to stop axis first')
+            self.log.debug("need to stop axis first")
             self.stop()
             waitForCompletion(self, ignore_errors=True)
 
@@ -189,13 +233,13 @@ class Axis(CanReference, AbstractAxis):
         self._stoprequest = 0
         self._errorstate = None
         if self._checkTargetPosition(self.read(0), target, error=False):
-            self.log.debug('not moving, already at %.4f within precision',
-                           target)
+            self.log.debug("not moving, already at %.4f within precision", target)
             return
 
         self._target = target
-        self._posthread = createThread('positioning thread %s' % self,
-                                       self.__positioningThread)
+        self._posthread = createThread(
+            "positioning thread %s" % self, self.__positioningThread
+        )
 
     def _getWaiters(self):
         if self._mode == SIMULATION:
@@ -207,19 +251,20 @@ class Axis(CanReference, AbstractAxis):
     def doStatus(self, maxage=0):
         """Return the status of the motor controller."""
         if self._mode == SIMULATION:
-            return (status.OK, '')
+            return (status.OK, "")
         elif self._posthread and self._posthread.is_alive():
-            return (status.BUSY, 'moving')
+            return (status.BUSY, "moving")
         elif self._errorstate:
             return (status.ERROR, str(self._errorstate))
         else:
-            self.log.debug('no motion thread, using motor status')
+            self.log.debug("no motion thread, using motor status")
             return self._attached_motor.status(maxage)
 
     def doRead(self, maxage=0):
         """Return the current position from coder controller."""
-        return (self._attached_coder if self._hascoder else
-                self._attached_motor).read(maxage) - self.offset
+        return (self._attached_coder if self._hascoder else self._attached_motor).read(
+            maxage
+        ) - self.offset
 
     def doPoll(self, i, maxage):
         self._attached_motor.poll(i, maxage)
@@ -257,21 +302,20 @@ class Axis(CanReference, AbstractAxis):
             self._errorstate = None
         self._attached_motor.setPosition(self._getReading())
         if not self._hascoder:
-            self.log.info('reset done; use %s.reference() to do a reference '
-                          'drive', self)
+            self.log.info(
+                "reset done; use %s.reference() to do a reference " "drive", self
+            )
 
     def doReference(self):
         """Do a reference drive, if the motor supports it."""
         if self._hascoder:
-            self.log.error('this is an encoded axis, '
-                           'referencing makes no sense')
+            self.log.error("this is an encoded axis, " "referencing makes no sense")
             return
         motor = self._attached_motor
         if isinstance(motor, CanReference):
             return motor.reference()
         else:
-            self.log.error('motor %s does not have a reference routine',
-                           motor)
+            self.log.error("motor %s does not have a reference routine", motor)
 
     def doStop(self):
         """Stops the movement of the motor."""
@@ -287,16 +331,18 @@ class Axis(CanReference, AbstractAxis):
             raise errorstate  # pylint: disable=raising-bad-type
 
     def doTime(self, old_value, target):
-        if hasattr(self._attached_motor, 'doTime'):
+        if hasattr(self._attached_motor, "doTime"):
             return self._attached_motor.doTime(old_value, target)
-        return abs(target - old_value) / self.speed if self.speed != 0 else 0.
+        return abs(target - old_value) / self.speed if self.speed != 0 else 0.0
 
     def doWriteDragerror(self, value):
         if not self._hascoder:
             if value != 0:
-                self.log.warning('setting a nonzero value for dragerror only '
-                                 'works if a coder was specified in the setup, '
-                                 'which is different from the motor')
+                self.log.warning(
+                    "setting a nonzero value for dragerror only "
+                    "works if a coder was specified in the setup, "
+                    "which is different from the motor"
+                )
             return 0.0
         else:
             self._maxdiff = value
@@ -311,8 +357,10 @@ class Axis(CanReference, AbstractAxis):
         """Called on adjust(), overridden to forbid adjusting while moving."""
         self._new_offset = value
         if self.status(0)[0] == status.BUSY:
-            raise NicosError(self, 'axis is moving now, please issue a stop '
-                             'command and try it again')
+            raise NicosError(
+                self,
+                "axis is moving now, please issue a stop " "command and try it again",
+            )
         if self._errorstate:
             raise self._errorstate  # pylint: disable=raising-bad-type
         del self._new_offset
@@ -354,18 +402,22 @@ class Axis(CanReference, AbstractAxis):
         if self._maxdiff <= 0:
             return True
         diff = abs(self._attached_motor.read() - self._attached_coder.read())
-        self.log.debug('motor/coder diff: %s', diff)
+        self.log.debug("motor/coder diff: %s", diff)
         if diff > self._maxdiff:
-            self._errorstate = MoveError(self, 'drag error (primary coder): '
-                                         'difference %.4g, maximum %.4g' %
-                                         (diff, self._maxdiff))
+            self._errorstate = MoveError(
+                self,
+                "drag error (primary coder): "
+                "difference %.4g, maximum %.4g" % (diff, self._maxdiff),
+            )
             return False
         for obs in self._attached_obs:
             diff = abs(self._attached_motor.read() - obs.read())
             if diff > self._maxdiff:
                 self._errorstate = PositionError(
-                    self, 'drag error (%s): difference %.4g, maximum %.4g' %
-                    (obs.name, diff, self._maxdiff))
+                    self,
+                    "drag error (%s): difference %.4g, maximum %.4g"
+                    % (obs.name, diff, self._maxdiff),
+                )
                 return False
         return True
 
@@ -377,20 +429,21 @@ class Axis(CanReference, AbstractAxis):
         """
         delta_last = self._lastdiff
         delta_curr = abs(pos - target)
-        self.log.debug('position delta: %s, was %s', delta_curr, delta_last)
+        self.log.debug("position delta: %s, was %s", delta_curr, delta_last)
         # at the end of the move, the motor can slightly overshoot during
         # movement we also allow for small jitter, since airpads usually wiggle
         # a little resulting in non monotonic movement!
-        ok = (delta_last >= (delta_curr - self.jitter)) or \
-            delta_curr < self.precision
+        ok = (delta_last >= (delta_curr - self.jitter)) or delta_curr < self.precision
         # since we allow to move away a little, we want to remember the
         # smallest distance so far so that we can detect a slow crawl away from
         # the target which we would otherwise miss
         self._lastdiff = min(delta_last, delta_curr)
         if not ok:
-            self._errorstate = MoveError(self, 'not moving to target: '
-                                         'last delta %.4g, current delta %.4g'
-                                         % (delta_last, delta_curr))
+            self._errorstate = MoveError(
+                self,
+                "not moving to target: "
+                "last delta %.4g, current delta %.4g" % (delta_last, delta_curr),
+            )
             return False
         return True
 
@@ -402,8 +455,10 @@ class Axis(CanReference, AbstractAxis):
         diff = abs(pos - target)
         prec = self.precision
         if (0 < prec <= diff) or (prec == 0 and diff):
-            msg = 'precision error: difference %.4g, precision %.4g' % \
-                  (diff, self.precision)
+            msg = "precision error: difference %.4g, precision %.4g" % (
+                diff,
+                self.precision,
+            )
             if error:
                 self._errorstate = MoveError(msg)
             else:
@@ -413,8 +468,11 @@ class Axis(CanReference, AbstractAxis):
         for obs in self._attached_obs:
             diff = abs(target - (obs.read() - self.offset))
             if 0 < maxdiff < diff:
-                msg = 'precision error (%s): difference %.4g, maximum %.4g' % \
-                      (obs, diff, maxdiff)
+                msg = "precision error (%s): difference %.4g, maximum %.4g" % (
+                    obs,
+                    diff,
+                    maxdiff,
+                )
                 if error:
                     self._errorstate = PositionError(msg)
                 else:
@@ -431,8 +489,7 @@ class Axis(CanReference, AbstractAxis):
         try:
             self._preMoveAction()
         except Exception as err:
-            self._setErrorState(MoveError, 'error in pre-move action: %s' %
-                                err)
+            self._setErrorState(MoveError, "error in pre-move action: %s" % err)
             return
         target = self._target
         self._errorstate = None
@@ -443,8 +500,9 @@ class Axis(CanReference, AbstractAxis):
             # make sure not to move twice if coming from the side in the
             # direction of the backlash
             backlashpos = target + backlash
-            if (backlash > 0 and lastpos < target) or \
-               (backlash < 0 and lastpos > target):
+            if (backlash > 0 and lastpos < target) or (
+                backlash < 0 and lastpos > target
+            ):
                 # if backlash position is not allowed, just don't use it
                 if self.isAllowed(backlashpos)[0]:
                     positions.insert(0, (backlashpos, False))
@@ -457,23 +515,21 @@ class Axis(CanReference, AbstractAxis):
                     if self.isAllowed(limit)[0]:
                         positions.insert(0, (limit, False))
                     else:
-                        self.log.debug('cannot move to backlash position')
-        for (pos, precise) in positions:
+                        self.log.debug("cannot move to backlash position")
+        for pos, precise in positions:
             try:
                 self.__positioning(pos, precise)
             except Exception as err:
-                self._setErrorState(MoveError,
-                                    'error in positioning: %s' % err)
+                self._setErrorState(MoveError, "error in positioning: %s" % err)
             if self._stoprequest == 2 or self._errorstate:
                 break
         try:
             self._postMoveAction()
         except Exception as err:
-            self._setErrorState(MoveError,
-                                'error in post-move action: %s' % err)
+            self._setErrorState(MoveError, "error in post-move action: %s" % err)
 
     def __positioning(self, target, precise=True):
-        self.log.debug('start positioning, target is %s', target)
+        self.log.debug("start positioning, target is %s", target)
         moving = False
         offset = self.offset
         tries = self.maxtries
@@ -490,7 +546,7 @@ class Axis(CanReference, AbstractAxis):
 
         while moving:
             if self._stoprequest == 1:
-                self.log.debug('stopping motor')
+                self.log.debug("stopping motor")
                 self._attached_motor.stop()
                 self._stoprequest = 2
                 stoptries = 10
@@ -504,37 +560,40 @@ class Axis(CanReference, AbstractAxis):
             if mstatus != status.BUSY:
                 # motor stopped; check why
                 if self._stoprequest == 1:
-                    self.log.debug('stop requested')
+                    self.log.debug("stop requested")
                     # will stop on next loop
                 elif self._stoprequest == 2:
-                    self.log.debug('stop requested, leaving positioning')
+                    self.log.debug("stop requested, leaving positioning")
                     # manual stop
                     moving = False
                 elif not precise and not self._errorstate:
-                    self.log.debug('motor stopped and precise positioning '
-                                   'not requested')
+                    self.log.debug(
+                        "motor stopped and precise positioning " "not requested"
+                    )
                     moving = False
-                elif self._checkTargetPosition(target, pos,
-                                               error=not self._errorstate):
-                    self.log.debug('target reached, leaving positioning')
+                elif self._checkTargetPosition(target, pos, error=not self._errorstate):
+                    self.log.debug("target reached, leaving positioning")
                     # target reached
                     moving = False
                 elif mstatus == status.ERROR:
-                    self.log.debug('motor in error status (%s), trying reset',
-                                   mstatusinfo)
+                    self.log.debug(
+                        "motor in error status (%s), trying reset", mstatusinfo
+                    )
                     # motor in error state -> try resetting
                     newstatus = self._attached_motor.reset()
                     # if that failed, stop immediately
                     if newstatus[0] == status.ERROR:
                         moving = False
-                        self._setErrorState(MoveError, 'motor in error state: '
-                                            '%s' % newstatus[1])
+                        self._setErrorState(
+                            MoveError, "motor in error state: " "%s" % newstatus[1]
+                        )
                 elif tries > 0:
                     if tries == 1:
-                        self.log.warning('last try: %s', self._errorstate)
+                        self.log.warning("last try: %s", self._errorstate)
                     else:
-                        self.log.debug('target not reached, retrying: %s',
-                                       self._errorstate)
+                        self.log.debug(
+                            "target not reached, retrying: %s", self._errorstate
+                        )
                     self._errorstate = None
                     # target not reached, get the current position, set the
                     # motor to this position and restart it. _getReading is the
@@ -545,29 +604,33 @@ class Axis(CanReference, AbstractAxis):
                     tries -= 1
                 else:
                     moving = False
-                    self._setErrorState(MoveError, 'target not reached after '
-                                        '%d tries: %s' % (self.maxtries,
-                                                          self._errorstate))
+                    self._setErrorState(
+                        MoveError,
+                        "target not reached after "
+                        "%d tries: %s" % (self.maxtries, self._errorstate),
+                    )
             elif not self._checkMoveToTarget(target, pos):
-                self.log.debug('stopping motor because not moving to target')
+                self.log.debug("stopping motor because not moving to target")
                 self._attached_motor.stop()
                 # should now go into next try
             elif not self._checkDragerror():
-                self.log.debug('stopping motor due to drag error')
+                self.log.debug("stopping motor due to drag error")
                 self._attached_motor.stop()
                 # should now go into next try
             elif self._stoprequest == 0:
                 try:
                     self._duringMoveAction(pos)
                 except Exception as err:
-                    self._setErrorState(MoveError, 'error in during-move '
-                                        'action: %s' % err)
+                    self._setErrorState(
+                        MoveError, "error in during-move " "action: %s" % err
+                    )
                     self._stoprequest = 1
             elif self._stoprequest == 2:
                 # motor should stop, but does not want to?
                 stoptries -= 1
                 if stoptries < 0:
-                    self._setErrorState(MoveError, 'motor did not stop after '
-                                        'stop request, aborting')
+                    self._setErrorState(
+                        MoveError, "motor did not stop after " "stop request, aborting"
+                    )
                     moving = False
-        self.log.debug('inner positioning loop finshed')
+        self.log.debug("inner positioning loop finshed")

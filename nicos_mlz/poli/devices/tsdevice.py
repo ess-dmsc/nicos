@@ -32,13 +32,13 @@ class Timestamp(Readable):
     """Device to get timestamps in scan data files."""
 
     parameter_overrides = {
-        'unit': Override(mandatory=False, default=''),
+        "unit": Override(mandatory=False, default=""),
     }
 
     valuetype = str
 
     def doStatus(self, maxage=0):
-        return status.OK, ''
+        return status.OK, ""
 
     def doRead(self, maxage=0):
-        return time.strftime('%Y-%m-%d_%H:%M:%S')
+        return time.strftime("%Y-%m-%d_%H:%M:%S")

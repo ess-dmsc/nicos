@@ -1,97 +1,109 @@
-description = 'Camini Camera Synchronisation Detector'
+description = "Camini Camera Synchronisation Detector"
 
-pvprefix = 'SQ:ICON:CAMINI:'
-pvprefix_sumi = 'SQ:ICON:sumi:'
-pvprefix_ai = 'SQ:ICON:B5ADC:'
+pvprefix = "SQ:ICON:CAMINI:"
+pvprefix_sumi = "SQ:ICON:sumi:"
+pvprefix_ai = "SQ:ICON:B5ADC:"
 
-includes = ['shutters']
-excludes = ['detector_phys', 'beam_monitor']
+includes = ["shutters"]
+excludes = ["detector_phys", "beam_monitor"]
 
 display_order = 90
 
 devices = dict(
-    cam_shut = device('nicos_sinq.devices.epics.EpicsReadable',
-        description = 'Camera shutter open',
-        readpv = pvprefix + 'SHUTTER',
-        visibility = (),
+    cam_shut=device(
+        "nicos_sinq.devices.epics.EpicsReadable",
+        description="Camera shutter open",
+        readpv=pvprefix + "SHUTTER",
+        visibility=(),
     ),
-    cam_arm = device('nicos_sinq.devices.epics.EpicsReadable',
-        description = 'Camera ready for acquisition',
-        readpv = pvprefix + 'ARM',
-        visibility = (),
+    cam_arm=device(
+        "nicos_sinq.devices.epics.EpicsReadable",
+        description="Camera ready for acquisition",
+        readpv=pvprefix + "ARM",
+        visibility=(),
     ),
-    cam_trig = device('nicos_sinq.devices.epics.EpicsDigitalMoveable',
-        description = 'Camera trigger signal',
-        readpv = pvprefix + 'TRIG',
-        writepv = pvprefix + 'TRIG',
-        visibility = (),
+    cam_trig=device(
+        "nicos_sinq.devices.epics.EpicsDigitalMoveable",
+        description="Camera trigger signal",
+        readpv=pvprefix + "TRIG",
+        writepv=pvprefix + "TRIG",
+        visibility=(),
     ),
-    cam_aux = device('nicos_sinq.devices.epics.base.EpicsAnalogMoveableSinq',
-        description = 'Exposure valid signal',
-        readpv = pvprefix + 'AUX',
-        writepv = pvprefix + 'AUX',
-        visibility = (),
+    cam_aux=device(
+        "nicos_sinq.devices.epics.base.EpicsAnalogMoveableSinq",
+        description="Exposure valid signal",
+        readpv=pvprefix + "AUX",
+        writepv=pvprefix + "AUX",
+        visibility=(),
     ),
-    cam_valid = device('nicos_sinq.devices.epics.EpicsDigitalMoveable',
-        description = 'Metadata valid signal',
-        readpv = pvprefix + 'VALID',
-        writepv = pvprefix + 'VALID',
-        visibility = (),
+    cam_valid=device(
+        "nicos_sinq.devices.epics.EpicsDigitalMoveable",
+        description="Metadata valid signal",
+        readpv=pvprefix + "VALID",
+        writepv=pvprefix + "VALID",
+        visibility=(),
     ),
-    camini = device('nicos_sinq.devices.camini.CaminiDetector',
-        description = 'Synchronization with the CAMINI camera '
-        'software',
-        trigpv = pvprefix + 'TRIG',
-        validpv = pvprefix + 'VALID',
-        metapv = pvprefix + 'META',
-        shutpv = pvprefix + 'SHUTTER',
-        armpv = pvprefix + 'ARM',
-        filepv = pvprefix + 'FILE',
-        shutter = 'exp_shutter',
-        auto = 'exp_auto',
-        beam_current = 'beam_current',
-        rate_threshold = 'exp_threshold',
-        arm_timeout = 5.0,
-        shutter_timeout = 5.0,
-        exposure_timeout = 300.0,
+    camini=device(
+        "nicos_sinq.devices.camini.CaminiDetector",
+        description="Synchronization with the CAMINI camera " "software",
+        trigpv=pvprefix + "TRIG",
+        validpv=pvprefix + "VALID",
+        metapv=pvprefix + "META",
+        shutpv=pvprefix + "SHUTTER",
+        armpv=pvprefix + "ARM",
+        filepv=pvprefix + "FILE",
+        shutter="exp_shutter",
+        auto="exp_auto",
+        beam_current="beam_current",
+        rate_threshold="exp_threshold",
+        arm_timeout=5.0,
+        shutter_timeout=5.0,
+        exposure_timeout=300.0,
     ),
-    exp_threshold = device('nicos_sinq.devices.epics.generic.WindowMoveable',
-        description = 'Exposure threshold',
-        readpv = pvprefix_sumi + 'THRES',
-        writepv = pvprefix_sumi + 'THRES',
-        precision = 10,
-        abslimits = (-100, 2000),
+    exp_threshold=device(
+        "nicos_sinq.devices.epics.generic.WindowMoveable",
+        description="Exposure threshold",
+        readpv=pvprefix_sumi + "THRES",
+        writepv=pvprefix_sumi + "THRES",
+        precision=10,
+        abslimits=(-100, 2000),
     ),
-    exp_ok = device('nicos_sinq.devices.epics.EpicsReadable',
-        description = 'Exposure sufficient',
-        readpv = pvprefix + 'AUX',
+    exp_ok=device(
+        "nicos_sinq.devices.epics.EpicsReadable",
+        description="Exposure sufficient",
+        readpv=pvprefix + "AUX",
     ),
-    exp_avg = device('nicos_sinq.devices.epics.EpicsReadable',
-        description = 'Average exposure',
-        readpv = pvprefix_sumi + 'BEAMAVG',
+    exp_avg=device(
+        "nicos_sinq.devices.epics.EpicsReadable",
+        description="Average exposure",
+        readpv=pvprefix_sumi + "BEAMAVG",
     ),
-    beam_current = device('nicos_sinq.devices.epics.EpicsReadable',
-        description = 'Beam current',
-        readpv = pvprefix_ai + 'V4',
+    beam_current=device(
+        "nicos_sinq.devices.epics.EpicsReadable",
+        description="Beam current",
+        readpv=pvprefix_ai + "V4",
     ),
-    exp_time = device('nicos_sinq.devices.epics.EpicsReadable',
-        description = 'Exposure time',
-        readpv = pvprefix_sumi + 'EXPTIME',
+    exp_time=device(
+        "nicos_sinq.devices.epics.EpicsReadable",
+        description="Exposure time",
+        readpv=pvprefix_sumi + "EXPTIME",
     ),
-    oracle = device('nicos_sinq.devices.beamoracle.BeamOracle',
-        description = 'Device to sum proton count',
-        pvprefix = pvprefix_sumi,
-        visibility = (),
+    oracle=device(
+        "nicos_sinq.devices.beamoracle.BeamOracle",
+        description="Device to sum proton count",
+        pvprefix=pvprefix_sumi,
+        visibility=(),
     ),
-    camera = device('nicos_sinq.devices.ccdcontrol.NIAGControl',
-        description = 'Count control for NIAG CCD detectors',
-        trigger = 'camini',
-        followers = ['oracle'],
-        rate_monitor = 'oracle',
-        rate_threshold = 'exp_threshold',
-        exp_ok = 'exp_ok',
-    )
+    camera=device(
+        "nicos_sinq.devices.ccdcontrol.NIAGControl",
+        description="Count control for NIAG CCD detectors",
+        trigger="camini",
+        followers=["oracle"],
+        rate_monitor="oracle",
+        rate_threshold="exp_threshold",
+        exp_ok="exp_ok",
+    ),
 )
-startupcode = '''
+startupcode = """
 SetDetectors(camera)
-'''
+"""

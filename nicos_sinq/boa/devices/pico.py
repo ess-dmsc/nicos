@@ -34,12 +34,11 @@ class PicoSwitch(MappedMoveable):
     """
 
     attached_devices = {
-        'directmcu': Attach('Direct connection to MCU',
-                            EpicsCommandReply),
+        "directmcu": Attach("Direct connection to MCU", EpicsCommandReply),
     }
 
     def _startRaw(self, target):
-        self._attached_directmcu.execute('M596=%d', target)
+        self._attached_directmcu.execute("M596=%d", target)
 
     def doRead(self, maxage=0):
         # Cannot read that

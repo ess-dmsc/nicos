@@ -32,7 +32,7 @@ from nicos.devices.tas.mono import Monochromator, from_k, to_k
 
 
 class XmlHandler(SingleFileSinkHandler):
-    filetype = 'xml'
+    filetype = "xml"
     accept_final_images_only = True
 
     def writeData(self, fp, image):
@@ -40,7 +40,8 @@ class XmlHandler(SingleFileSinkHandler):
         timer = self.sink._attached_timer
         mono = self.sink._attached_mono
         write = fp.write
-        write(b'''\
+        write(
+            b"""\
 <measurement_file>
 
 <instrument_name>MIRA</instrument_name>
@@ -53,10 +54,14 @@ class XmlHandler(SingleFileSinkHandler):
 <beam_monitor>%d</beam_monitor>
 <resolution>1024</resolution>
 
-<detector_value>\n''' % (self.sink._attached_sampledet.read(),
-                         from_k(to_k(mono.read(), mono.unit), 'A'),
-                         timer.read()[0],
-                         mon.read()[0]))
+<detector_value>\n"""
+            % (
+                self.sink._attached_sampledet.read(),
+                from_k(to_k(mono.read(), mono.unit), "A"),
+                timer.read()[0],
+                mon.read()[0],
+            )
+        )
 
         h, w = image.shape
         if self.sink._format is None or self.sink._format[0] != image.shape:
@@ -66,39 +71,39 @@ class XmlHandler(SingleFileSinkHandler):
                     for _y in range(h):
                         for fy in range(1024 // h):
                             if fx % 4 == 0 and fy % 4 == 0:
-                                p.append('%f ')
+                                p.append("%f ")
                             else:
-                                p.append('0 ')
-                    p.append('\n')
-            self.sink._format = (image.shape, ''.join(p))
+                                p.append("0 ")
+                    p.append("\n")
+            self.sink._format = (image.shape, "".join(p))
 
         filled = np.repeat(np.repeat(image, 256 // w, 0), 256 // h, 1)
         if filled.shape == (256, 256):
-            write((self.sink._format[1] % tuple(filled.ravel() / 4.)).encode())
+            write((self.sink._format[1] % tuple(filled.ravel() / 4.0)).encode())
 
-        write(b'''\
+        write(b"""\
 </detector_value>
 
 </measurement_data>
 
 </measurement_file>
-''')
+""")
 
 
 class XmlSink(ImageSink):
-
     handlerclass = XmlHandler
 
     attached_devices = {
-        'timer':     Attach('Timer readout', ActiveChannel),
-        'monitor':   Attach('Monitor readout', ActiveChannel),
-        'mono':      Attach('Monochromator device to read out', Monochromator),
-        'sampledet': Attach('Sample-detector distance readout', Readable),
+        "timer": Attach("Timer readout", ActiveChannel),
+        "monitor": Attach("Monitor readout", ActiveChannel),
+        "mono": Attach("Monochromator device to read out", Monochromator),
+        "sampledet": Attach("Sample-detector distance readout", Readable),
     }
 
     parameter_overrides = {
-        'filenametemplate': Override(default=['mira_cas_%(pointcounter)08d.xml'],
-                                     settable=False),
+        "filenametemplate": Override(
+            default=["mira_cas_%(pointcounter)08d.xml"], settable=False
+        ),
     }
 
     _format = None

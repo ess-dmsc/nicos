@@ -1,7 +1,7 @@
-description = 'LoKI basic instrument setup'
+description = "LoKI basic instrument setup"
 
-group = 'basic'
+group = "basic"
 
 includes = [
-    'aperture',
+    "aperture",
 ]

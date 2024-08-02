@@ -32,20 +32,26 @@ class Trigger(PyTangoDevice, Moveable):
     This should only be used with SCPI devices and the string to be send
     should *not* provoke an answer.
     """
+
     parameters = {
-        'strings': Param('mapping of nicos-value to pre-configured string',
-                         type=dictof(str, str), settable=True, unit=''),
-        'safesetting': Param('selection of a \'safe\' setting',
-                             type=str, settable=True, unit=''),
+        "strings": Param(
+            "mapping of nicos-value to pre-configured string",
+            type=dictof(str, str),
+            settable=True,
+            unit="",
+        ),
+        "safesetting": Param(
+            "selection of a 'safe' setting", type=str, settable=True, unit=""
+        ),
     }
     parameter_overrides = {
-        'unit' : Override(default='', mandatory=False),
+        "unit": Override(default="", mandatory=False),
     }
 
     def doInit(self, mode):
         self.valuetype = oneof(*self.strings.keys())
         if self.target not in self.strings:
-            self._setROParam('target', self.safesetting)
+            self._setROParam("target", self.safesetting)
 
     def doStart(self, target):
         # !ALWAYS! send selected string
@@ -56,10 +62,10 @@ class Trigger(PyTangoDevice, Moveable):
         # which will only come after the above string was fully processed
         # note: this relies on the fact that the selected string above will NOT
         # provoke an answer, but just set parameters (base it on the *LRN? output)
-        self._dev.Communicate('SYST:ERROR?')
+        self._dev.Communicate("SYST:ERROR?")
 
     def doStatus(self, maxage=0):
-        return status.OK, 'indeterminate'
+        return status.OK, "indeterminate"
 
     def read(self, maxage=0):
         # fix bad overwrite from StringIO

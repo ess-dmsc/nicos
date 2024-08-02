@@ -34,29 +34,25 @@ class ZebraWavelength(Monochromator):
     """
 
     attached_devices = {
-        'mexz': Attach('Monochromator lift device', Moveable),
-        'pg': Attach('PG filter', Moveable),
-        'moml': Attach('Lower omega', Moveable),
-        'mcvl': Attach('Lower curvature', Moveable),
-        'momu': Attach('Upper omega', Moveable),
-        'mcvu': Attach('Upper curvature', Moveable),
+        "mexz": Attach("Monochromator lift device", Moveable),
+        "pg": Attach("PG filter", Moveable),
+        "moml": Attach("Lower omega", Moveable),
+        "mcvl": Attach("Lower curvature", Moveable),
+        "momu": Attach("Upper omega", Moveable),
+        "mcvu": Attach("Upper curvature", Moveable),
     }
 
     _wl_map = {
-        1.178: [('mexz', 547.445), ('pg', 'Out'), ('moml', -99.906),
-                ('mcvl', 2.2)],
-        2.305: [('mexz', .5), ('pg', 'In'), ('momu', -13.18),
-                ('mcvu', 220)],
-        1.383: [('pg', 'Out'), ('mexz', 547.445), ('moml', -35.02),
-                ('mcvl', 6.2)],
-        0.778: [('pg', 'Out'), ('mcvl', 2.2), ('mexz', 547.445),
-                ('moml', -89.937)]
+        1.178: [("mexz", 547.445), ("pg", "Out"), ("moml", -99.906), ("mcvl", 2.2)],
+        2.305: [("mexz", 0.5), ("pg", "In"), ("momu", -13.18), ("mcvu", 220)],
+        1.383: [("pg", "Out"), ("mexz", 547.445), ("moml", -35.02), ("mcvl", 6.2)],
+        0.778: [("pg", "Out"), ("mcvl", 2.2), ("mexz", 547.445), ("moml", -89.937)],
     }
 
     _wait_dev = []
 
     def doRead(self, maxage=0):
-        excluded = ['mcvl', 'mcvu']
+        excluded = ["mcvl", "mcvu"]
         for key, data in self._wl_map.items():
             isValid = True
             for entry in data:
@@ -93,4 +89,4 @@ class ZebraWavelength(Monochromator):
     def doStatus(self, maxage=0):
         if self._wait_dev:
             return multiStatus(self._wait_dev, maxage)
-        return status.OK, ''
+        return status.OK, ""

@@ -33,23 +33,21 @@ from nicos_demo.demo.devices.cpuload import CPULoad
 
 
 class CPUPercentage(CPULoad):
-
     parameters = {
-        'index': Param('CPU number',
-                       type=none_or(int), settable=True, default=None),
+        "index": Param("CPU number", type=none_or(int), settable=True, default=None),
     }
 
     def doStatus(self, maxage=0):
-        return status.OK, '%s' % self.index
+        return status.OK, "%s" % self.index
 
     def _run(self):
         while True:
             if self.index is None:
-                self._setROParam(
-                    'lastvalue', psutil.cpu_percent(self.interval))
+                self._setROParam("lastvalue", psutil.cpu_percent(self.interval))
             else:
                 self._setROParam(
-                    'lastvalue', psutil.cpu_percent(percpu=True)[self.index])
+                    "lastvalue", psutil.cpu_percent(percpu=True)[self.index]
+                )
 
 
 class ProcessIdentifier(Readable):
@@ -57,20 +55,28 @@ class ProcessIdentifier(Readable):
 
     High use of a CPU indicates a process running out of control.
     """
+
     _PIDint = None
     _PIDobject = None
 
     parameters = {
-        'processname': Param('Name of the process to be checked',
-                             type=str, settable=True, default='cache'),
-        'interval': Param('Interval for load detection',
-                          type=floatrange(0.1, 60),
-                          default=0.1, settable=False,),
+        "processname": Param(
+            "Name of the process to be checked",
+            type=str,
+            settable=True,
+            default="cache",
+        ),
+        "interval": Param(
+            "Interval for load detection",
+            type=floatrange(0.1, 60),
+            default=0.1,
+            settable=False,
+        ),
     }
 
     def loadint(self):
-        self.log.debug('Get PID for >%s<', self.processname)
-        self._PIDint = 'nothing found'
+        self.log.debug("Get PID for >%s<", self.processname)
+        self._PIDint = "nothing found"
         # Search for processes containing the processname in command line
         # This is typical for NICOS processes where the main process is the
         # Python interpreter itself.
@@ -90,5 +96,5 @@ class ProcessIdentifier(Readable):
         if self._PIDint is None:
             self.loadint()
         if isinstance(self._PIDint, int):
-            return status.OK, '%d' % self._PIDint
+            return status.OK, "%d" % self._PIDint
         return status.WARN, self._PIDint

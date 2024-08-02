@@ -27,7 +27,7 @@ from nicos.clients.gui.utils import loadUi
 from nicos.guisupport.qt import QDialog, QUrl, QWebView
 
 if QWebView is None:
-    raise ImportError('Qt webview component is not available')
+    raise ImportError("Qt webview component is not available")
 
 
 class WebsiteTool(QDialog):
@@ -40,13 +40,13 @@ class WebsiteTool(QDialog):
 
     def __init__(self, parent, client, **settings):
         QDialog.__init__(self, parent)
-        loadUi(self, 'tools/website.ui')
+        loadUi(self, "tools/website.ui")
         self.webView = QWebView(self)
         self.layout().addWidget(self.webView)
         self.backBtn.clicked.connect(self.webView.back)
         self.fwdBtn.clicked.connect(self.webView.forward)
 
-        site = settings.get('url', '')
+        site = settings.get("url", "")
         if site:
             self.webView.load(QUrl(site))
 

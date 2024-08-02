@@ -31,10 +31,22 @@ class Sample(BaseSample):
     """Refsans specific sample."""
 
     parameters = {
-        'width': Param('width of sample lateral',
-                       type=floatrange(0, 100), settable=True, default=100,
-                       unit='mm', fmtstr='%.1f', category='sample'),
-        'length': Param('length of sample in beam',
-                        type=floatrange(0, 100), settable=True, default=100,
-                        unit='mm', fmtstr='%.1f', category='sample'),
+        "width": Param(
+            "width of sample lateral",
+            type=floatrange(0, 100),
+            settable=True,
+            default=100,
+            unit="mm",
+            fmtstr="%.1f",
+            category="sample",
+        ),
+        "length": Param(
+            "length of sample in beam",
+            type=floatrange(0, 100),
+            settable=True,
+            default=100,
+            unit="mm",
+            fmtstr="%.1f",
+            category="sample",
+        ),
     }

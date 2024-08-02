@@ -35,7 +35,7 @@ class SampleChanger(MultiSwitcher):
     """
 
     parameter_overrides = {
-        'blockingmove': Override(default=True, settable=False),
+        "blockingmove": Override(default=True, settable=False),
     }
 
     def doStart(self, target):
@@ -45,6 +45,6 @@ class SampleChanger(MultiSwitcher):
     def _startRaw(self, target):
         """Initiate movement of the moveable to the translated raw value."""
         samplenr = int(self._mapReadValue(target)[1:])
-        self.log.debug('move to: %s %s', target, samplenr)
+        self.log.debug("move to: %s %s", target, samplenr)
         MultiSwitcher._startRaw(self, target)
         session.experiment.sample.select(samplenr)

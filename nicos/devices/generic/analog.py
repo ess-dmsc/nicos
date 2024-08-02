@@ -33,50 +33,56 @@ class CalculatedReadable(Readable):
     """Calculates the sum, difference, product, or quotient of 2 devices."""
 
     attached_devices = {
-        'device1': Attach('first device for calculation', Readable),
-        'device2': Attach('second device for calculation', Readable),
+        "device1": Attach("first device for calculation", Readable),
+        "device2": Attach("second device for calculation", Readable),
     }
 
     parameters = {
-        'op': Param('Operation between the device values',
-                    type=oneof('mul', '*', 'div', '/', 'add', '+', 'sub', '-'),
-                    settable=False, mandatory=True, default='div'),
+        "op": Param(
+            "Operation between the device values",
+            type=oneof("mul", "*", "div", "/", "add", "+", "sub", "-"),
+            settable=False,
+            mandatory=True,
+            default="div",
+        ),
     }
 
     parameter_overrides = {
-        'unit': Override(mandatory=False, settable=True),
+        "unit": Override(mandatory=False, settable=True),
     }
 
     def doInit(self, mode):
         if self._attached_device1.unit != self._attached_device2.unit:
             raise ConfigurationError(
-                self, 'different units for device1 and device2 (%s vs %s)' %
-                (self._attached_device1.unit, self._attached_device2.unit))
+                self,
+                "different units for device1 and device2 (%s vs %s)"
+                % (self._attached_device1.unit, self._attached_device2.unit),
+            )
 
     def doRead(self, maxage=0):
         """Return the calculated value of to readable devices."""
         value1 = self._attached_device1.read(maxage)
         value2 = self._attached_device2.read(maxage)
 
-        self.log.debug('value 1: %f 2: %f', value1, value2)
-        if self.op in ('add', '+'):
+        self.log.debug("value 1: %f 2: %f", value1, value2)
+        if self.op in ("add", "+"):
             result = value1 + value2
-        elif self.op in ('sub', '-'):
+        elif self.op in ("sub", "-"):
             result = value1 - value2
-        elif self.op in ('mul', '*'):
+        elif self.op in ("mul", "*"):
             result = value1 * value2
-        elif self.op in ('div', '/'):
+        elif self.op in ("div", "/"):
             result = value1 / value2
-        self.log.debug('final result: %f', result)
+        self.log.debug("final result: %f", result)
         return result
 
     def doReadUnit(self):
-        unit = self._params.get('unit')
+        unit = self._params.get("unit")
         if unit is None:
-            if self.op in ('div', '/'):
-                unit = ''
-            elif self.op in ('mul', '*'):
-                unit = '%s^2' % self._attached_device1.unit
+            if self.op in ("div", "/"):
+                unit = ""
+            elif self.op in ("mul", "*"):
+                unit = "%s^2" % self._attached_device1.unit
             else:
                 unit = self._attached_device1.unit
         return unit

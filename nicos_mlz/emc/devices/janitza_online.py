@@ -28,79 +28,81 @@ from nicos.devices.entangle import AnalogInput
 
 # Helper classes:
 
+
 class BaseInput(AnalogInput):
     """Base class for the different Janitza online values"""
 
     parameters = {
-        'variables': Param('Variables that are internally read', listof(str)),
+        "variables": Param("Variables that are internally read", listof(str)),
     }
 
     def _GetListProperty(self, name):
         s = self._getProperty(name)
-        if s == '[]':
+        if s == "[]":
             return []
         else:
-            return s[1:-1].split(', ')
+            return s[1:-1].split(", ")
 
     def doReadVariables(self):
-        return self._GetListProperty('variables')
+        return self._GetListProperty("variables")
 
 
 class SpecialInput(BaseInput):
     """Base class for devices with a scalar 'limit' property"""
 
     parameters = {
-        'limit': Param('Alarm limit', float, settable=True),
+        "limit": Param("Alarm limit", float, settable=True),
     }
 
     def doReadLimit(self):
-        return float(self._getProperty('limit'))
+        return float(self._getProperty("limit"))
 
     def doWriteLimit(self, value):
-        self._dev.SetProperties(['limit', str(value)])
+        self._dev.SetProperties(["limit", str(value)])
         return self.doReadLimit()
 
 
 # Tango devices:
 
+
 class VectorInput(BaseInput):
     """Vector input with high and low alarm limits"""
 
     parameters = {
-        'limitmin':  Param('Low alarm limit', listof(float), settable=True),
-        'limitmax': Param('High alarm limit', listof(float), settable=True),
+        "limitmin": Param("Low alarm limit", listof(float), settable=True),
+        "limitmax": Param("High alarm limit", listof(float), settable=True),
     }
 
     def doReadLimitmin(self):
-        return map(float, self._GetListProperty('limitmin'))
+        return map(float, self._GetListProperty("limitmin"))
 
     def doWriteLimitmin(self, value):
-        self._dev.SetProperties(['limitmin', str(value)])
+        self._dev.SetProperties(["limitmin", str(value)])
         return self.doReadLimitmin()
 
     def doReadLimitmax(self):
-        return map(float, self._GetListProperty('limitmax'))
+        return map(float, self._GetListProperty("limitmax"))
 
     def doWriteLimitmax(self, value):
-        self._dev.SetProperties(['limitmax', str(value)])
+        self._dev.SetProperties(["limitmax", str(value)])
         return self.doReadLimitmax()
 
 
 class Neutral(SpecialInput):
     parameter_overrides = {
-        'limit': Override(description='Max difference of neutral and summed current')
+        "limit": Override(description="Max difference of neutral and summed current")
     }
 
 
 class RCM(SpecialInput):
     parameter_overrides = {
-        'limit': Override(description='Max quotient of residual current and power')
+        "limit": Override(description="Max quotient of residual current and power")
     }
 
 
 class Leakage(SpecialInput):
     parameter_overrides = {
-        'limit': Override(description='Max difference of PE and differential current')
+        "limit": Override(description="Max difference of PE and differential current")
     }
 
 
@@ -108,22 +110,37 @@ class OnlineMonitor(Readable):
     """Combines all relevant online values for an instrument"""
 
     attached_devices = {
-        'voltages': Attach('Voltages U_L1, U_L2, U_L3',
-                           Readable, multiple=True, optional=True),
-        'currents': Attach('Currents I_L1, I_L2, I_L3, I_L4, I_L5',
-                           Readable, multiple=True, optional=True),
-        'neutral':  Attach('Neutral Currents I_N, I_sum',
-                           Readable, multiple=True, optional=True),
-        'rcm':      Attach('Residual Currents I_L5, I_L6, S_sum',
-                           Readable, multiple=True, optional=True),
-        'leakage':  Attach('Ground leakage I_L5, I_L6',
-                           Readable, multiple=True, optional=True),
-        'thd':      Attach('Total harmonic distortion THD_I_L1, THD_I_L2, '
-                           'THD_I_L3', Readable, multiple=True, optional=True),
+        "voltages": Attach(
+            "Voltages U_L1, U_L2, U_L3", Readable, multiple=True, optional=True
+        ),
+        "currents": Attach(
+            "Currents I_L1, I_L2, I_L3, I_L4, I_L5",
+            Readable,
+            multiple=True,
+            optional=True,
+        ),
+        "neutral": Attach(
+            "Neutral Currents I_N, I_sum", Readable, multiple=True, optional=True
+        ),
+        "rcm": Attach(
+            "Residual Currents I_L5, I_L6, S_sum",
+            Readable,
+            multiple=True,
+            optional=True,
+        ),
+        "leakage": Attach(
+            "Ground leakage I_L5, I_L6", Readable, multiple=True, optional=True
+        ),
+        "thd": Attach(
+            "Total harmonic distortion THD_I_L1, THD_I_L2, " "THD_I_L3",
+            Readable,
+            multiple=True,
+            optional=True,
+        ),
     }
 
     parameter_overrides = {
-        'unit': Override(mandatory=False, default=''),
+        "unit": Override(mandatory=False, default=""),
     }
 
     valuetype = str
@@ -142,9 +159,9 @@ class OnlineMonitor(Readable):
                     devstate, devtext = dev.status(maxage)
                     if devstate != status.OK:
                         devname = dev.name
-                        if devname.startswith(self.name + '_'):
-                            devname = devname[len(self.name) + 1:]
-                        text.append('%s: %s' % (devname, devtext))
+                        if devname.startswith(self.name + "_"):
+                            devname = devname[len(self.name) + 1 :]
+                        text.append("%s: %s" % (devname, devtext))
                         state = max(state, devstate)
-        text = ', '.join(text) or 'ok'
+        text = ", ".join(text) or "ok"
         return state, text

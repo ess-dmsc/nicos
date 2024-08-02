@@ -1,13 +1,14 @@
-description = 'Reseda arm controller setup'
-group = 'lowlevel'
+description = "Reseda arm controller setup"
+group = "lowlevel"
 
-includes = ['arm_1', 'arm_2']
+includes = ["arm_1", "arm_2"]
 
 devices = dict(
-    armctrl = device('nicos_mlz.reseda.devices.ArmController',
-        description = 'Arm controller',
-        arm1 = 'arm1_rot',
-        arm2 = 'arm2_rot',
-        minangle = 50,
+    armctrl=device(
+        "nicos_mlz.reseda.devices.ArmController",
+        description="Arm controller",
+        arm1="arm1_rot",
+        arm2="arm2_rot",
+        minangle=50,
     ),
 )

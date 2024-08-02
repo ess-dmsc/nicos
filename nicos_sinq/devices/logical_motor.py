@@ -39,22 +39,23 @@ class InterfaceLogicalMotorHandler(Moveable):
     This may be different from the list of attached devices when logical
     motors operate on conditional components.
     """
+
     hardware_access = False
 
     parameter_overrides = {
-        'fmtstr': Override(volatile=True),
-        'unit': Override(mandatory=False, default='degree'),
+        "fmtstr": Override(volatile=True),
+        "unit": Override(mandatory=False, default="degree"),
     }
 
     valuetype = dict
 
     status_to_msg = {
-        status.ERROR: 'Error in %s',
-        status.BUSY: 'Moving: %s ...',
-        status.WARN: 'Warning in %s',
-        status.NOTREACHED: '%s did not reach target!',
-        status.UNKNOWN: 'Unknown status in %s!',
-        status.OK: 'Ready.'
+        status.ERROR: "Error in %s",
+        status.BUSY: "Moving: %s ...",
+        status.WARN: "Warning in %s",
+        status.NOTREACHED: "%s did not reach target!",
+        status.UNKNOWN: "Unknown status in %s!",
+        status.OK: "Ready.",
     }
 
     def doPreinit(self, mode):
@@ -67,19 +68,19 @@ class InterfaceLogicalMotorHandler(Moveable):
 
     def format(self, value, unit=False):
         try:
-            fmtstr = ', '.join(f'{mt}=%({mt}).3f' for mt in value)
+            fmtstr = ", ".join(f"{mt}=%({mt}).3f" for mt in value)
             ret = fmtstr % value
         except (TypeError, ValueError):
             ret = str(value)
         if unit and self.unit:
-            return ret + ' ' + self.unit
+            return ret + " " + self.unit
         return ret
 
     def doReadFmtstr(self):
-        return ', '.join(mt + '=%(' + mt + ').3f' for mt in self._motortypes)
+        return ", ".join(mt + "=%(" + mt + ").3f" for mt in self._motortypes)
 
     def _get_dev(self, dev):
-        return getattr(self, '_attached_%s' % dev, None)
+        return getattr(self, "_attached_%s" % dev, None)
 
     def _read_dev(self, dev):
         dev = self._get_dev(dev)
@@ -89,8 +90,9 @@ class InterfaceLogicalMotorHandler(Moveable):
         return component in session.loaded_setups
 
     def _getWaiters(self):
-        devs = {dev: self._get_dev(dev) for dev in self._status_devs
-                if self._get_dev(dev)}
+        devs = {
+            dev: self._get_dev(dev) for dev in self._status_devs if self._get_dev(dev)
+        }
         return devs
 
     def doStatus(self, maxage=0):
@@ -101,8 +103,8 @@ class InterfaceLogicalMotorHandler(Moveable):
 
         if st_devs[0] in self.status_to_msg:
             msg = self.status_to_msg[st_devs[0]]
-            if '%' in msg:
-                msg = msg % ', '.join(devs)
+            if "%" in msg:
+                msg = msg % ", ".join(devs)
             return st_devs[0], msg
 
         return st_devs
@@ -126,21 +128,25 @@ class InterfaceLogicalMotorHandler(Moveable):
             allowed, msg = motor.isAllowed(target)
             if not allowed:
                 faults.append(motor.name)
-                self.log.error('%s cannot be moved to %s, reason %s',
-                               motor.name,
-                               motor.format(target, motor.unit), msg)
+                self.log.error(
+                    "%s cannot be moved to %s, reason %s",
+                    motor.name,
+                    motor.format(target, motor.unit),
+                    msg,
+                )
 
         # Return false if some motors cannot reach their new target
         if faults:
-            return False, '%s not movable!' % ', '.join(faults)
+            return False, "%s not movable!" % ", ".join(faults)
 
         # Return True if everything ok
-        return True, ''
+        return True, ""
 
     def doStart(self, targets):
         for motor, target in self._get_move_list(self._get_targets(targets)):
-            self.log.debug('New target for %s: %s', motor,
-                           motor.format(target, motor.unit))
+            self.log.debug(
+                "New target for %s: %s", motor, motor.format(target, motor.unit)
+            )
             motor.move(target)
 
     def _get_targets(self, targets):
@@ -153,9 +159,12 @@ class InterfaceLogicalMotorHandler(Moveable):
                 # target from motor itself
                 motor = self._logical_motors.get(mt)
                 if not motor:
-                    self.log.debug('Missing the logical motor %s! '
-                                   'Using target = %s (current position) ',
-                                   mt, current[mt])
+                    self.log.debug(
+                        "Missing the logical motor %s! "
+                        "Using target = %s (current position) ",
+                        mt,
+                        current[mt],
+                    )
                     targets_dict[mt] = current[mt]
                 elif motor.target is not None:
                     targets_dict[mt] = round(motor.target or current[mt], 3)
@@ -181,15 +190,16 @@ class LogicalMotor(Motor):
     hardware_access = False
 
     parameter_overrides = {
-        'unit': Override(mandatory=False, default='degree'),
-        'target': Override(volatile=True),
-        'abslimits': Override(mandatory=False, default=(-3.0, 3.0)),
-        'userlimits': Override(mandatory=False, default=(-3.0, 3.0))
+        "unit": Override(mandatory=False, default="degree"),
+        "target": Override(volatile=True),
+        "abslimits": Override(mandatory=False, default=(-3.0, 3.0)),
+        "userlimits": Override(mandatory=False, default=(-3.0, 3.0)),
     }
 
     attached_devices = {
-        'controller': Attach('Controller for the logical motors',
-                             InterfaceLogicalMotorHandler)
+        "controller": Attach(
+            "Controller for the logical motors", InterfaceLogicalMotorHandler
+        )
     }
 
     def doInit(self, mode):
@@ -199,7 +209,7 @@ class LogicalMotor(Motor):
         return self._attached_controller.read(maxage)[self.name]
 
     def doReadTarget(self):
-        return self._getFromCache('target', self.doRead)
+        return self._getFromCache("target", self.doRead)
 
     def doStatus(self, maxage=0):
         # Check for error and warning in the dependent devices
@@ -218,4 +228,4 @@ class LogicalMotor(Motor):
         if self.status(0)[0] == status.BUSY:
             self._attached_controller.stop()
             # Reset the target for this motor
-            self._setROParam('target', self.doRead(0))
+            self._setROParam("target", self.doRead(0))

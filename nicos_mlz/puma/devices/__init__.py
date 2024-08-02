@@ -37,13 +37,21 @@ from nicos_mlz.puma.devices.mtt import MttAxis
 from nicos_mlz.puma.devices.multianalyzer import MultiAnalyzer
 from nicos_mlz.puma.devices.multidetector import MultiDetectorLayout
 from nicos_mlz.puma.devices.pgfilter import PGFilter
-from nicos_mlz.puma.devices.seccoll import SecCollBlockChanger, SecCollLift, \
-    SecCollPair, SecondaryCollimator
+from nicos_mlz.puma.devices.seccoll import (
+    SecCollBlockChanger,
+    SecCollLift,
+    SecCollPair,
+    SecondaryCollimator,
+)
 from nicos_mlz.puma.devices.senseswitch import SenseSwitch
 from nicos_mlz.puma.devices.sh_cylinder import SH_Cylinder
 from nicos_mlz.puma.devices.spectro import PUMA
 from nicos_mlz.puma.devices.sr7 import SR7Shutter
 from nicos_mlz.puma.devices.stackedaxis import StackedAxis
 from nicos_mlz.puma.devices.tango import CycleCounter
-from nicos_mlz.puma.devices.virtual import VirtualDigitalInput, \
-    VirtualDigitalOutput, VirtualLogoFeedback, VirtualReferenceMotor
+from nicos_mlz.puma.devices.virtual import (
+    VirtualDigitalInput,
+    VirtualDigitalOutput,
+    VirtualLogoFeedback,
+    VirtualReferenceMotor,
+)

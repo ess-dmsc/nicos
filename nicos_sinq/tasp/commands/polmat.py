@@ -44,10 +44,11 @@ def normalize(data):
 
     :param data: dict[i, j] of (counts, monitor) wih i in XYZ and j in ALL
     :return: dict[i, j] of (signal, sigma ** 2) with the same keys as data
-    """"""
+    """ """
     """
-    return {key: (cnts/mon, max(cnts, 1) / mon ** 2)
-            for key, (cnts, mon) in data.items()}
+    return {
+        key: (cnts / mon, max(cnts, 1) / mon**2) for key, (cnts, mon) in data.items()
+    }
 
 
 def calc_polmat(data, background=None, neg=1):
@@ -80,29 +81,32 @@ def calc_polmat(data, background=None, neg=1):
             ysum = ypos + yneg
             if ysum:
                 pij = neg * (ypos - yneg) / ysum
-                dpij2 = ((1 - pij) / ysum) ** 2 * d2pos + \
-                        ((1 + pij) / ysum) ** 2 * d2neg
+                dpij2 = ((1 - pij) / ysum) ** 2 * d2pos + (
+                    (1 + pij) / ysum
+                ) ** 2 * d2neg
             else:
                 pij = 0
                 dpij2 = 1
             result[i, j] = pij, math.sqrt(dpij2)
-            sum2 += pij ** 2
-            sumd2 += dpij2 * pij ** 2
+            sum2 += pij**2
+            sumd2 += dpij2 * pij**2
         result[i, 0] = math.sqrt(sum2), math.sqrt(sumd2 / (sum2 or 1))
     return result
 
 
 def print_polmat(result):
     """print the result as in the SICS polmat command"""
-    session.log.info("  pix     sigma     piy     sigma     piz    '"
-                     " sigma     |Pi|    sigma")
+    session.log.info(
+        "  pix     sigma     piy     sigma     piz    '" " sigma     |Pi|    sigma"
+    )
     for i in XYZ:
-        session.log.info('  '.join(["%7.3f %7.3f" % result[i, j] for j
-                                    in (X, Y, Z, 0)]))
+        session.log.info(
+            "  ".join(["%7.3f %7.3f" % result[i, j] for j in (X, Y, Z, 0)])
+        )
 
 
 def test_gufi(gufi):
-    return abs(gufi._attached_magnet.read(0) - gufi.hold_value) < .1
+    return abs(gufi._attached_magnet.read(0) - gufi.hold_value) < 0.1
 
 
 def check_gufi(gufi):
@@ -113,7 +117,7 @@ def check_gufi(gufi):
     """
     gufiok = test_gufi(gufi)
     while not gufiok:
-        session.log.info('Trying to fix gufi...')
+        session.log.info("Trying to fix gufi...")
         gufi.maw(gufi.target)
         gufiok = test_gufi(gufi)
         if not gufiok:
@@ -122,8 +126,8 @@ def check_gufi(gufi):
 
 
 @usercommand
-@helparglist('QE position, optional background QE position, counting preset')
-def polmat(qpos, bqpos=None, neg=False,  **preset):
+@helparglist("QE position, optional background QE position, counting preset")
+def polmat(qpos, bqpos=None, neg=False, **preset):
     """
     Measures a polarisation matrix. Drives to qpos and then
     measures all the permutations of the mupad vectors. With this
@@ -136,14 +140,14 @@ def polmat(qpos, bqpos=None, neg=False,  **preset):
 
     polmat((1.37, -1.37, 0, 0), bqpos=(1.5, -1.5, 0, 0), t=5)
     """
-    tasp = session.getDevice('TASP')
+    tasp = session.getDevice("TASP")
     tasp.maw(qpos)
-    musw = session.getDevice('munumsw')
-    gufi = session.getDevice('gufi')
-    SetEnvironment('i1', 'i2', 'i3', 'i4')
+    musw = session.getDevice("munumsw")
+    gufi = session.getDevice("gufi")
+    SetEnvironment("i1", "i2", "i3", "i4")
     data = {}
-    counter = session.getDevice('ctr1')
-    monitor = session.getDevice('mon1')
+    counter = session.getDevice("ctr1")
+    monitor = session.getDevice("mon1")
     if neg:
         sign = -1
     else:
@@ -152,7 +156,7 @@ def polmat(qpos, bqpos=None, neg=False,  **preset):
         for x in XYZ:
             for y in ALL:
                 check_gufi(gufi)
-                musw.maw((sign*x, y))
+                musw.maw((sign * x, y))
                 count(**preset)
                 data[x, y] = (counter.read(0)[0], monitor.read(0)[0])
 
@@ -163,7 +167,7 @@ def polmat(qpos, bqpos=None, neg=False,  **preset):
             for x in XYZ:
                 for y in ALL:
                     check_gufi(gufi)
-                    musw.maw((sign*x, y))
+                    musw.maw((sign * x, y))
                     count(**preset)
                     bgk[x, y] = (counter.read(0)[0], monitor.read(0)[0])
     else:

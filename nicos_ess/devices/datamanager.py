@@ -21,6 +21,7 @@
 #
 # *****************************************************************************
 """ESS datamanager device."""
+
 import os
 
 from nicos import session
@@ -40,8 +41,7 @@ class DataManager(BaseDataManager):
         exp = session.experiment
         filepath = os.path.join(exp.dataroot, exp.counterfile)
         if not os.path.isfile(filepath):
-            session.log.warning('creating new empty file counter file at %s',
-                                filepath)
+            session.log.warning("creating new empty file counter file at %s", filepath)
         nextnum = readFileCounter(filepath, countertype) + 1
         updateFileCounter(filepath, countertype, nextnum)
-        return [('counter', nextnum)]
+        return [("counter", nextnum)]

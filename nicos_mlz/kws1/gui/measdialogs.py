@@ -27,19 +27,39 @@ import itertools
 from collections import OrderedDict
 
 from nicos.clients.gui.utils import DlgUtils, loadUi
-from nicos.guisupport.qt import QDialog, QFileDialog, QFrame, QLabel, \
-    QListWidgetItem, Qt, QTableWidgetItem, QTableWidgetSelectionRange, \
-    QVBoxLayout, QWidget, pyqtSignal, pyqtSlot
+from nicos.guisupport.qt import (
+    QDialog,
+    QFileDialog,
+    QFrame,
+    QLabel,
+    QListWidgetItem,
+    Qt,
+    QTableWidgetItem,
+    QTableWidgetSelectionRange,
+    QVBoxLayout,
+    QWidget,
+    pyqtSignal,
+    pyqtSlot,
+)
 from nicos.guisupport.utils import DoubleValidator
 from nicos.utils import findResource, formatDuration
 
-from nicos_mlz.kws1.gui.measelement import Chopper, Collimation, Detector, \
-    Device, Lenses, MeasTime, Polarizer, Sample, Selector
+from nicos_mlz.kws1.gui.measelement import (
+    Chopper,
+    Collimation,
+    Detector,
+    Device,
+    Lenses,
+    MeasTime,
+    Polarizer,
+    Sample,
+    Selector,
+)
 from nicos_mlz.kws1.gui.sampleconf import parse_sampleconf
 
-SAMPLES = 'samples'
-DETSETS = 'instrument configuration'
-DEVICES = 'other devices'
+SAMPLES = "samples"
+DETSETS = "instrument configuration"
+DEVICES = "other devices"
 
 LOOPS = [
     SAMPLES,
@@ -61,15 +81,15 @@ class MeasDef:
 
     def getElements(self):
         elements = [
-            ('selector', Selector),
-            ('detector', Detector),
-            ('collimation', Collimation),
-            ('polarizer', Polarizer),
-            ('lenses', Lenses),
+            ("selector", Selector),
+            ("detector", Detector),
+            ("collimation", Collimation),
+            ("polarizer", Polarizer),
+            ("lenses", Lenses),
         ]
         if not self.rtmode:
-            elements.insert(2, ('chopper', Chopper))  # before collimation
-            elements.append(('time', MeasTime))
+            elements.insert(2, ("chopper", Chopper))  # before collimation
+            elements.append(("time", MeasTime))
         return elements
 
     def getEntries(self, loop):
@@ -84,9 +104,11 @@ class MeasDef:
         # this is a list of list of dicts:
         # [[A1, A2, ...], [B1, ...], [C1, ...], ...]
         # where An, Bn, Cn are OrderedDicts with keyword=value for kwscount
-        dict_lists = self.getEntries(self.loops[0]) + \
-            self.getEntries(self.loops[1]) + \
-            self.getEntries(self.loops[2])
+        dict_lists = (
+            self.getEntries(self.loops[0])
+            + self.getEntries(self.loops[1])
+            + self.getEntries(self.loops[2])
+        )
         # if there are no settings at all, we have no entries
         if not dict_lists:
             return []
@@ -100,22 +122,22 @@ class MeasDef:
             result.append(entry)
         # post-process sample measurement time factor
         for entry in result:
-            if 'sample' in entry and 'time' in entry:
-                entry['time'] = new_time = \
-                    MeasTime('time', None, entry['time'].getValue())
-                new_time.value *= entry['sample'].extra[1]
+            if "sample" in entry and "time" in entry:
+                entry["time"] = new_time = MeasTime(
+                    "time", None, entry["time"].getValue()
+                )
+                new_time.value *= entry["sample"].extra[1]
         return result
 
 
 class SampleDialog(DlgUtils, QDialog):
-
     def __init__(self, parent, measdef, client):
         self.measdef = measdef
         self.samplefile = None
         self.client = client
-        DlgUtils.__init__(self, 'Sample selection')
+        DlgUtils.__init__(self, "Sample selection")
         QDialog.__init__(self, parent)
-        loadUi(self, findResource('nicos_mlz/kws1/gui/samples.ui'))
+        loadUi(self, findResource("nicos_mlz/kws1/gui/samples.ui"))
 
         self._init_samplefile = False
         self.samplefile = measdef.samplefile
@@ -128,9 +150,8 @@ class SampleDialog(DlgUtils, QDialog):
 
         if self.measdef.samples:
             for sam in self.measdef.samples[0]:
-                newitem = QListWidgetItem(sam['sample'].getValue(),
-                                          self.selList)
-                newitem.setData(SAMPLE_NUM, sam['sample'].extra[0])
+                newitem = QListWidgetItem(sam["sample"].getValue(), self.selList)
+                newitem.setData(SAMPLE_NUM, sam["sample"].extra[0])
 
     def _reinit(self, sampleconfigs):
         self.selList.clear()
@@ -138,26 +159,34 @@ class SampleDialog(DlgUtils, QDialog):
         self._times = {}
 
         for number, sample in sampleconfigs.items():
-            item = QListWidgetItem(sample['name'], self.allList)
+            item = QListWidgetItem(sample["name"], self.allList)
             item.setData(SAMPLE_NUM, number)
-            self._times[number] = sample.get('timefactor', 1.0)
+            self._times[number] = sample.get("timefactor", 1.0)
 
     def toDefs(self):
         results = []
-        for item in self.selList.findItems('', Qt.MatchFlag.MatchContains):
+        for item in self.selList.findItems("", Qt.MatchFlag.MatchContains):
             num = item.data(SAMPLE_NUM)
-            results.append(OrderedDict(sample=Sample(
-                'sample', self.client, item.text(),
-                extra=(num, self._times.get(num, 1.0)))))
+            results.append(
+                OrderedDict(
+                    sample=Sample(
+                        "sample",
+                        self.client,
+                        item.text(),
+                        extra=(num, self._times.get(num, 1.0)),
+                    )
+                )
+            )
         return [results]
 
     def on_sampleFileBtn_toggled(self, on):
         if not on:
             return
         if not self._init_samplefile:
-            initialdir = self.client.eval('session.experiment.scriptpath', '')
-            fn = QFileDialog.getOpenFileName(self, 'Open sample file',
-                                             initialdir, 'Sample files (*.py)')[0]
+            initialdir = self.client.eval("session.experiment.scriptpath", "")
+            fn = QFileDialog.getOpenFileName(
+                self, "Open sample file", initialdir, "Sample files (*.py)"
+            )[0]
             if not fn:
                 self.currentSamplesBtn.setChecked(True)
                 return
@@ -166,8 +195,10 @@ class SampleDialog(DlgUtils, QDialog):
         try:
             configs = parse_sampleconf(fn)
         except Exception as err:
-            self.showError('Could not read file: %s\n\n'
-                           'Are you sure this is a sample file?' % err)
+            self.showError(
+                "Could not read file: %s\n\n"
+                "Are you sure this is a sample file?" % err
+            )
             self.currentSamplesBtn.setChecked(True)
             return
         self.samplefile = fn
@@ -186,7 +217,7 @@ class SampleDialog(DlgUtils, QDialog):
         if not on:
             return
         self.samplefile = None
-        self._reinit(self.client.eval('Exp.sample.samples', None) or {})
+        self._reinit(self.client.eval("Exp.sample.samples", None) or {})
 
     @pyqtSlot()
     def on_rightBtn_clicked(self):
@@ -221,13 +252,12 @@ class SampleDialog(DlgUtils, QDialog):
 
 
 class DetsetDialog(QDialog):
-
     def __init__(self, parent, measdef, client):
         self._edit = None
         self.measdef = measdef
         self.client = client
         QDialog.__init__(self, parent)
-        loadUi(self, findResource('nicos_mlz/kws1/gui/detsets.ui'))
+        loadUi(self, findResource("nicos_mlz/kws1/gui/detsets.ui"))
         self.table.setColumnCount(len(measdef.getElements()))
 
         # apply current settings
@@ -249,6 +279,7 @@ class DetsetDialog(QDialog):
             def handler(new_value, eltype=eltype):
                 for other in self._new_elements.values():
                     other.otherChanged(eltype, new_value)
+
             element.changed.connect(handler)
             headers.append(element.getLabel())
             layout = QVBoxLayout()
@@ -261,7 +292,8 @@ class DetsetDialog(QDialog):
         self.table.resizeColumnsToContents()
         for i in range(len(measdef.getElements())):
             self.table.setColumnWidth(
-                i, round(max(50, 1.5 * self.table.columnWidth(i))))
+                i, round(max(50, 1.5 * self.table.columnWidth(i)))
+            )
         self.table.resizeRowsToContents()
 
     def keyPressEvent(self, event):
@@ -341,7 +373,8 @@ class DetsetDialog(QDialog):
         self._rows[ix], self._rows[ix + 1] = self._rows[ix + 1], self._rows[ix]
         self.table.setCurrentCell(ix + 1, self.table.currentColumn())
         self.table.setRangeSelected(
-            QTableWidgetSelectionRange(ix + 1, 0, ix + 1, ncols - 1), True)
+            QTableWidgetSelectionRange(ix + 1, 0, ix + 1, ncols - 1), True
+        )
 
     @pyqtSlot()
     def on_upBtn_clicked(self):
@@ -358,7 +391,8 @@ class DetsetDialog(QDialog):
         self._rows[ix], self._rows[ix - 1] = self._rows[ix - 1], self._rows[ix]
         self.table.setCurrentCell(ix - 1, self.table.currentColumn())
         self.table.setRangeSelected(
-            QTableWidgetSelectionRange(ix - 1, 0, ix - 1, ncols - 1), True)
+            QTableWidgetSelectionRange(ix - 1, 0, ix - 1, ncols - 1), True
+        )
 
     @pyqtSlot()
     def on_delBtn_clicked(self):
@@ -386,7 +420,7 @@ class DevicesWidget(QWidget):
         self.client = client
         self.devs = devs
         QWidget.__init__(self, parent)
-        loadUi(self, findResource('nicos_mlz/kws1/gui/devices_one.ui'))
+        loadUi(self, findResource("nicos_mlz/kws1/gui/devices_one.ui"))
 
         self.table.setColumnCount(len(devs))
         self.table.setHorizontalHeaderLabels(devs)
@@ -411,9 +445,8 @@ class DevicesWidget(QWidget):
         self.table.setRowCount(last + 1)
         if elements is None:
             elements = [Device(dev, self.client) for dev in self.devs]
-        for (i, element) in enumerate(elements):
-            self.table.setItem(last, i,
-                               QTableWidgetItem(element.getDispValue()))
+        for i, element in enumerate(elements):
+            self.table.setItem(last, i, QTableWidgetItem(element.getDispValue()))
         self._rows.append(elements)
         self.table.resizeRowsToContents()
 
@@ -431,7 +464,7 @@ class DevicesWidget(QWidget):
         widget = element.createWidget(self, self.client)
         widget.setFocus()
         self.table.setCellWidget(i, j, widget)
-        self.table.item(i, j).setText('')
+        self.table.item(i, j).setText("")
         self._edit = (i, j, element)
 
     @pyqtSlot()
@@ -457,7 +490,8 @@ class DevicesWidget(QWidget):
         self._rows[ix], self._rows[ix + 1] = self._rows[ix + 1], self._rows[ix]
         self.table.setCurrentCell(ix + 1, self.table.currentColumn())
         self.table.setRangeSelected(
-            QTableWidgetSelectionRange(ix + 1, 0, ix + 1, ncols - 1), True)
+            QTableWidgetSelectionRange(ix + 1, 0, ix + 1, ncols - 1), True
+        )
 
     @pyqtSlot()
     def on_upBtn_clicked(self):
@@ -474,7 +508,8 @@ class DevicesWidget(QWidget):
         self._rows[ix], self._rows[ix - 1] = self._rows[ix - 1], self._rows[ix]
         self.table.setCurrentCell(ix - 1, self.table.currentColumn())
         self.table.setRangeSelected(
-            QTableWidgetSelectionRange(ix - 1, 0, ix - 1, ncols - 1), True)
+            QTableWidgetSelectionRange(ix - 1, 0, ix - 1, ncols - 1), True
+        )
 
     @pyqtSlot()
     def on_delBtn_clicked(self):
@@ -490,74 +525,73 @@ class DevicesWidget(QWidget):
 # Devices that should not appear in the list of additional devices to move,
 # because they are already covered by the detector/collimation/... dialog.
 DEV_BLACKLIST = {
-    'ap_sam',
-    'attenuator',
-    'beamstop',
-    'beamstop_x',
-    'beamstop_y',
-    'chopper',
-    'chopper_params',
-    'collimation',
-    'coll_guides',
-    'det_beamstop_x',
-    'det_ext_rt',
-    'det_x',
-    'det_y',
-    'det_z',
-    'detector',
-    'flipper',
-    'gedet_HV',
-    'gedet_power',
-    'lenses',
-    'mir_ap1',
-    'mir_ap2',
-    'mir_tilt',
-    'mir_x',
-    'mir_y',
-    'pol_switch',
-    'pol_tilt',
-    'pol_y',
-    'polarizer',
-    'psd_x',
-    'psd_y',
-    'resolution',
-    'Sample',
-    'sam01_ap',
-    'sam01_x',
-    'sam01_y',
-    'sam10_ap',
-    'sam10_x',
-    'sam10_y',
-    'sam_ap',
-    'sam_hub_x',
-    'sam_hub_y',
-    'sam_chi',
-    'sam_phi',
-    'sam_rot',
-    'sam_trans_x',
-    'sam_trans_y',
-    'sam_x',
-    'sam_y',
-    'selector',
-    'selector_speed',
-    'selector_lambda',
-    'sel_ap1',
-    'sel_ap2',
-    'sel_lambda',
-    'sel_rot',
-    'sel_speed',
-    'shutter',
-    'sixfold_shutter',
+    "ap_sam",
+    "attenuator",
+    "beamstop",
+    "beamstop_x",
+    "beamstop_y",
+    "chopper",
+    "chopper_params",
+    "collimation",
+    "coll_guides",
+    "det_beamstop_x",
+    "det_ext_rt",
+    "det_x",
+    "det_y",
+    "det_z",
+    "detector",
+    "flipper",
+    "gedet_HV",
+    "gedet_power",
+    "lenses",
+    "mir_ap1",
+    "mir_ap2",
+    "mir_tilt",
+    "mir_x",
+    "mir_y",
+    "pol_switch",
+    "pol_tilt",
+    "pol_y",
+    "polarizer",
+    "psd_x",
+    "psd_y",
+    "resolution",
+    "Sample",
+    "sam01_ap",
+    "sam01_x",
+    "sam01_y",
+    "sam10_ap",
+    "sam10_x",
+    "sam10_y",
+    "sam_ap",
+    "sam_hub_x",
+    "sam_hub_y",
+    "sam_chi",
+    "sam_phi",
+    "sam_rot",
+    "sam_trans_x",
+    "sam_trans_y",
+    "sam_x",
+    "sam_y",
+    "selector",
+    "selector_speed",
+    "selector_lambda",
+    "sel_ap1",
+    "sel_ap2",
+    "sel_lambda",
+    "sel_rot",
+    "sel_speed",
+    "shutter",
+    "sixfold_shutter",
 }
 
 
 class DevicesDialog(QDialog):
-
     def __init__(self, parent, measdef, client):
         self.measdef = measdef
         self.client = client
         QDialog.__init__(self, parent)
-        loadUi(self, findResource('nicos_mlz/kws1/gui/devices.ui'))
+        loadUi(self, findResource("nicos_mlz/kws1/gui/devices.ui"))
 
         self.frame = QFrame(self)
         self.scrollArea.setWidget(self.frame)
@@ -565,7 +599,7 @@ class DevicesDialog(QDialog):
         self.frame.layout().setContentsMargins(0, 0, 10, 0)
         self.frame.layout().addStretch()
 
-        devlist = client.getDeviceList('nicos.core.device.Moveable')
+        devlist = client.getDeviceList("nicos.core.device.Moveable")
         for dev in devlist:
             if dev not in DEV_BLACKLIST:
                 QListWidgetItem(dev, self.devList)
@@ -583,7 +617,7 @@ class DevicesDialog(QDialog):
 
     def _addWidget(self, devs):
         w = DevicesWidget(self.frame, self.client, devs)
-        self.frame.layout().insertWidget(self.frame.layout().count()-1, w)
+        self.frame.layout().insertWidget(self.frame.layout().count() - 1, w)
         w.remove.connect(self.on_removeWidget)
         self._widgets.append(w)
         return w
@@ -606,19 +640,18 @@ class DevicesDialog(QDialog):
 
 
 class RtConfigDialog(QDialog):
-
     DEFAULT_SETTINGS = {
-        'channels': 1,
-        'interval': 1,
-        'intervalunit': 0,  # us
-        'progq': 1.0,
-        'trigger': 'external',
-        'totaltime': 0.,    # s
+        "channels": 1,
+        "interval": 1,
+        "intervalunit": 0,  # us
+        "progq": 1.0,
+        "trigger": "external",
+        "totaltime": 0.0,  # s
     }
 
     def __init__(self, parent):
         QDialog.__init__(self, parent)
-        loadUi(self, findResource('nicos_mlz/kws1/gui/rtconfig.ui'))
+        loadUi(self, findResource("nicos_mlz/kws1/gui/rtconfig.ui"))
         self.progBox.setValidator(DoubleValidator(self))
         self.chanBox.valueChanged.connect(self._update_time)
         self.intervalBox.valueChanged.connect(self._update_time)
@@ -628,19 +661,20 @@ class RtConfigDialog(QDialog):
         self.progBox.textChanged.connect(self._update_time)
 
     def _update_time(self):
-        self.totalLbl.setText('Total time: %s' %
-                              formatDuration(self.getSettings()['totaltime']))
+        self.totalLbl.setText(
+            "Total time: %s" % formatDuration(self.getSettings()["totaltime"])
+        )
 
     def setSettings(self, settings):
-        self.chanBox.setValue(settings['channels'])
-        self.intervalBox.setValue(settings['interval'])
-        self.intervalUnitBox.setCurrentIndex(settings['intervalunit'])
-        if settings['progq'] == 1.0:
+        self.chanBox.setValue(settings["channels"])
+        self.intervalBox.setValue(settings["interval"])
+        self.intervalUnitBox.setCurrentIndex(settings["intervalunit"])
+        if settings["progq"] == 1.0:
             self.linBtn.setChecked(True)
         else:
             self.progBtn.setChecked(True)
-        self.progBox.setText(str(settings['progq']))
-        if settings['trigger'] == 'external':
+        self.progBox.setText(str(settings["progq"]))
+        if settings["trigger"] == "external":
             self.extBtn.setChecked(True)
         else:
             self.immBtn.setChecked(True)
@@ -649,17 +683,18 @@ class RtConfigDialog(QDialog):
     def getSettings(self):
         progq = float(self.progBox.text())
         settings = {
-            'channels': self.chanBox.value(),
-            'interval': self.intervalBox.value(),
-            'intervalunit': self.intervalUnitBox.currentIndex(),
-            'progq': 1.0 if self.linBtn.isChecked() else progq,
-            'trigger': 'external' if self.extBtn.isChecked() else 'immediate',
+            "channels": self.chanBox.value(),
+            "interval": self.intervalBox.value(),
+            "intervalunit": self.intervalUnitBox.currentIndex(),
+            "progq": 1.0 if self.linBtn.isChecked() else progq,
+            "trigger": "external" if self.extBtn.isChecked() else "immediate",
         }
         tottime = 0
-        interval = settings['interval'] * \
-            {0: 1, 1: 1e3, 2: 1e6}[settings['intervalunit']]
-        q = settings['progq']
-        for i in range(settings['channels']):
+        interval = (
+            settings["interval"] * {0: 1, 1: 1e3, 2: 1e6}[settings["intervalunit"]]
+        )
+        q = settings["progq"]
+        for i in range(settings["channels"]):
             tottime += int(interval * q**i)
-        settings['totaltime'] = tottime / 1000000.
+        settings["totaltime"] = tottime / 1000000.0
         return settings

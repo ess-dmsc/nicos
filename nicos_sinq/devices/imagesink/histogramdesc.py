@@ -20,18 +20,16 @@
 #   Nikhil Biyani <nikhil.biyani@psi.ch>
 #
 # *****************************************************************************
-""" Extend the array description and support additional data for histograms
-"""
+"""Extend the array description and support additional data for histograms"""
 
 from nicos.core import ArrayDesc
 from nicos.core.errors import ConfigurationError
 
 
 class HistogramDimDesc:
-    """Class to describe metadata one dimension in histogram
-    """
+    """Class to describe metadata one dimension in histogram"""
 
-    def __init__(self, length, label='', unit='', bins=None):
+    def __init__(self, length, label="", unit="", bins=None):
         self.length = length
         self.label = label
         self.unit = unit
@@ -39,8 +37,7 @@ class HistogramDimDesc:
 
 
 class HistogramDesc(ArrayDesc):
-    """Describes the metadata of a histogram.
-    """
+    """Describes the metadata of a histogram."""
 
     def __init__(self, name, dtype, dims):
         shape = []
@@ -49,8 +46,9 @@ class HistogramDesc(ArrayDesc):
         dimbins = []
         for dim in dims:
             if not isinstance(dim, HistogramDimDesc):
-                raise ConfigurationError('%s should be of type '
-                                         'HistogramDimDesc' % dim)
+                raise ConfigurationError(
+                    "%s should be of type " "HistogramDimDesc" % dim
+                )
             shape.append(dim.length)
             dimnames.append(dim.label)
             dimunits.append(dim.unit)

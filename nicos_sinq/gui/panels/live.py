@@ -27,8 +27,7 @@ A slider allows to select which scanpoint to display"""
 import numpy as np
 from nicos.guisupport.qt import Qt, QLabel
 
-from nicos.clients.flowui.panels.live import \
-    LiveDataPanel as FlowuiLiveDataPanel
+from nicos.clients.flowui.panels.live import LiveDataPanel as FlowuiLiveDataPanel
 from nicos.guisupport.qt import QSlider, QVBoxLayout, QWidget
 
 
@@ -37,7 +36,7 @@ class ScanSlider(QWidget):
         QWidget.__init__(self, parent)
         self.setLayout(QVBoxLayout())
         self.slider = QSlider(Qt.Orientation.Horizontal, self)
-        self.title = QLabel('Scanpoint selection', self)
+        self.title = QLabel("Scanpoint selection", self)
         self.title.setMaximumHeight(25)
         self.layout().addWidget(self.title)
         self.layout().addWidget(self.slider)
@@ -73,16 +72,17 @@ class LiveDataPanel(FlowuiLiveDataPanel):
             if data is None:
                 return
 
-        arrays = data.get('dataarrays', [])
-        labels = data.get('labels', {})
-        titles = data.get('titles', {})
+        arrays = data.get("dataarrays", [])
+        labels = data.get("labels", {})
+        titles = data.get("titles", {})
 
         if len(np.asarray(arrays).shape) == 4:
             _arrays = np.asarray(arrays)
             self.scan_slider.show()
             self.scan_slider.slider.setMaximum(_arrays.shape[1] - 1)
             self.scan_slider.title.setText(
-                f'Scanpoint selection: <# {self.scan_slider.slider.value()+1}>')
+                f"Scanpoint selection: <# {self.scan_slider.slider.value()+1}>"
+            )
 
             _arrays = _arrays[:, self.scan_slider.slider.value(), ...]
         else:

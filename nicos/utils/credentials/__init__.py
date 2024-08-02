@@ -33,21 +33,20 @@ except ImportError:
 
 
 class NicosKeyStore:
-    '''Abstract base class for nicos key stores
-    '''
+    """Abstract base class for nicos key stores"""
 
-    def getCredential(self, credid, domain='nicos'):
-        '''return a stored credential
+    def getCredential(self, credid, domain="nicos"):
+        """return a stored credential
 
         *credid*  The id /username for which we want to get the credential
 
         *domain*  The domain where we store the credential
-        '''
+        """
 
         raise NotImplementedError
 
-    def setCredential(self, credid, passwd, domain='nicos'):
-        '''set a credential in the store
+    def setCredential(self, credid, passwd, domain="nicos"):
+        """set a credential in the store
 
         *credid*  The id /username for which we want to set the credential
 
@@ -55,16 +54,16 @@ class NicosKeyStore:
             plain-text representable value
 
         *domain*  The domain where we store the credential
-        '''
+        """
 
         raise NotImplementedError
 
-    def delCredential(self, credid, domain='nicos'):
-        '''delete a stored credential
+    def delCredential(self, credid, domain="nicos"):
+        """delete a stored credential
 
         *credid*  The id /username for which we want to get the credential
 
         *domain*  The domain where we store the credential
-        '''
+        """
 
         raise NotImplementedError

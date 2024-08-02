@@ -27,31 +27,51 @@ import pytest
 from numpy import allclose, dot, sqrt
 
 from nicos.commands.measure import count
-from nicos.commands.tas import Q, _resmat_args, acc_bragg, alu, calpos, \
-    checkalign, copper, ho_spurions, pos, qcscan, qscan, rescal, rp, \
-    setalign
-from nicos.core import ComputationError, ConfigurationError, \
-    InvalidValueError, LimitError, MoveError, PositionError, UsageError, \
-    status
+from nicos.commands.tas import (
+    Q,
+    _resmat_args,
+    acc_bragg,
+    alu,
+    calpos,
+    checkalign,
+    copper,
+    ho_spurions,
+    pos,
+    qcscan,
+    qscan,
+    rescal,
+    rp,
+    setalign,
+)
+from nicos.core import (
+    ComputationError,
+    ConfigurationError,
+    InvalidValueError,
+    LimitError,
+    MoveError,
+    PositionError,
+    UsageError,
+    status,
+)
 from nicos.devices.sxtal.goniometer.posutils import Xrot, Yrot, Zrot
 
 from test.utils import ErrorLogged, approx, raises
 
-session_setup = 'tas'
+session_setup = "tas"
 
 
-@pytest.fixture(scope='function')
+@pytest.fixture(scope="function")
 def tas(session):
-    """ Create a common set up at the start of the TAS test."""
+    """Create a common set up at the start of the TAS test."""
 
-    tasdev = session.getDevice('Tas')
-    tasdev.scanmode = 'CKF'
+    tasdev = session.getDevice("Tas")
+    tasdev.scanmode = "CKF"
     tasdev.scanconstant = 2.662
     tasdev.scatteringsense = (1, -1, 1)
-    tasdev.energytransferunit = 'THz'
-    tasdev._attached_mono.unit = 'A-1'
-    tasdev._attached_ana.unit = 'A-1'
-    sample = session.getDevice('Sample')
+    tasdev.energytransferunit = "THz"
+    tasdev._attached_mono.unit = "A-1"
+    tasdev._attached_ana.unit = "A-1"
+    sample = session.getDevice("Sample")
     sample.lattice = [2.77, 2.77, 2.77]
     sample.angles = [90, 90, 90]
     sample.orient1 = [1, 0, 0]
@@ -66,19 +86,19 @@ def assertPos(pos1, pos2):
 
 
 def test_mono_device(session):
-    mono = session.getDevice('t_mono')
-    mth = session.getDevice('t_mth')
+    mono = session.getDevice("t_mono")
+    mth = session.getDevice("t_mth")
     # unit switching
-    mono.unit = 'A-1'
+    mono.unit = "A-1"
     mono.maw(1.4)
     assert mono.read(0) == approx(1.4, abs=1e-3)
     assert mono.target == 1.4
-    mono.unit = 'meV'
+    mono.unit = "meV"
     assert mono.read(0) == approx(4.061, abs=1e-3)
     assert mono.target == approx(4.061, abs=1e-3)
     assert mono.status()[0] == status.OK
 
-    for unit in ['THz', 'A', 'A-1']:
+    for unit in ["THz", "A", "A-1"]:
         mono.unit = unit
         assert mono.status()[0] == status.OK
 
@@ -94,7 +114,7 @@ def test_mono_device(session):
 
     mono.maw(1.5)
 
-    for mode in ['flat', 'vertical', 'double', 'manual']:
+    for mode in ["flat", "vertical", "double", "manual"]:
         mono.focmode = mode
         mono.maw(1.5)
 
@@ -103,30 +123,30 @@ def test_mono_device(session):
     mono.hfocuspars = mono.hfocuspars
     mono.vfocuspars = mono.vfocuspars
 
-    mtt = session.getDevice('t_mtt')
+    mtt = session.getDevice("t_mtt")
     mtt.move(mtt.read(0) + 2)
     mono.finish()
 
-    assert mono._calcurvature(1., 1., 1) == approx(1.058, abs=1e-3)
+    assert mono._calcurvature(1.0, 1.0, 1) == approx(1.058, abs=1e-3)
 
 
 def test_tas_mono_foci(session, tas):
-    mono = session.getDevice('t_mono')
-    mono._setROParam('target', None)
+    mono = session.getDevice("t_mono")
+    mono._setROParam("target", None)
     val = mono.read(0)
-    for mode in ['flat', 'vertical', 'double', 'manual']:
+    for mode in ["flat", "vertical", "double", "manual"]:
         mono.focmode = mode
         mono.wait()
         assert mono.read(0) == val
 
 
 def test_tas_device(session, tas):
-    mono = session.getDevice('t_mono')
-    ana = session.getDevice('t_ana')
-    phi = session.getDevice('t_phi')
-    psi = session.getDevice('t_psi')
-    ki = session.getDevice('t_ki')
-    kf = session.getDevice('t_kf')
+    mono = session.getDevice("t_mono")
+    ana = session.getDevice("t_ana")
+    phi = session.getDevice("t_phi")
+    psi = session.getDevice("t_psi")
+    ki = session.getDevice("t_ki")
+    kf = session.getDevice("t_kf")
 
     # test the correct driving of motors
     tas.maw([1, 0, 0, 1])
@@ -150,27 +170,26 @@ def test_tas_device(session, tas):
     tas.scatteringsense = [-1, 1, -1]
     tas.maw([1, 0, 0, 1])
     assert phi() == approx(46.6, abs=0.1)  # now with "+" sign
-    assert raises(ConfigurationError, setattr, tas, 'scatteringsense',
-                  [2, 0, 2])
+    assert raises(ConfigurationError, setattr, tas, "scatteringsense", [2, 0, 2])
 
     # test energytransferunit
     mono(1)
     ana(2)
-    tas.energytransferunit = 'meV'
+    tas.energytransferunit = "meV"
     assert tas()[3] == approx(-6.216, abs=1e-3)
-    tas.energytransferunit = 'THz'
+    tas.energytransferunit = "THz"
     assert tas()[3] == approx(-1.503, abs=1e-3)
-    assert raises(InvalidValueError, setattr, tas, 'energytransferunit', 'A-1')
+    assert raises(InvalidValueError, setattr, tas, "energytransferunit", "A-1")
 
     # test scanmode
-    tas.scanmode = 'CKI'
+    tas.scanmode = "CKI"
     tas.scanconstant = 2.662
     tas.maw([1, 0, 0, 1])
     assert mono() == approx(2.662, abs=1e-3)
-    tas.scanmode = 'CKF'
+    tas.scanmode = "CKF"
     tas.maw([1, 0, 0, 1])
     assert ana() == approx(2.662, abs=1e-3)
-    tas.scanmode = 'DIFF'
+    tas.scanmode = "DIFF"
     tas.scanconstant = 2.5
     ana(2.5)
     tas.maw([1, 0, 0, 0])
@@ -179,7 +198,7 @@ def test_tas_device(session, tas):
     assertPos(tas(), [1, 0, 0, 0])
     # XXX shouldn't this result in an error?
     # assert raises(tas, [1, 0, 0, 1])
-    assert raises(ConfigurationError, setattr, tas, 'scanmode', 'BLAH')
+    assert raises(ConfigurationError, setattr, tas, "scanmode", "BLAH")
 
     # test sub-devices and wavevector devices
     kf(2.662)
@@ -196,28 +215,42 @@ def test_tas_device(session, tas):
 
 def test_error_handling(session, log, tas):
     # check that if one subdev errors out, we wait for the other subdevs
-    mfh = session.getDevice('t_mfh')
-    phi = session.getDevice('t_phi')
+    mfh = session.getDevice("t_mfh")
+    phi = session.getDevice("t_phi")
 
     tas.maw([1.01, 0, 0, 1])
     phi.speed = 1
-    mfh._status_exception = PositionError(mfh, 'wrong position')
+    mfh._status_exception = PositionError(mfh, "wrong position")
     with log.allow_errors():
         try:
             tas.maw([1, 0, 0, 1])
         except MoveError:
             pass
         else:
-            assert False, 'PositionError not raised'
+            assert False, "PositionError not raised"
         # but we still arrived with phi
         assert phi() == approx(-46.6, abs=0.1)
 
 
 def test_qscan(session, tas):
-    sgx = session.getDevice('sgx')
-    qscan((1, 0, 0), Q(0, 0, 0, 0.1), 5, sgx, 'scaninfo', t=1)
-    qscan((0, 0, 0), (0, 0, 0), 5, 2.5, t_kf=2.662, manual=1,
-          h=1, k=1, l=1, e=0, dH=0, dk=0, dl=0, dE=.1)
+    sgx = session.getDevice("sgx")
+    qscan((1, 0, 0), Q(0, 0, 0, 0.1), 5, sgx, "scaninfo", t=1)
+    qscan(
+        (0, 0, 0),
+        (0, 0, 0),
+        5,
+        2.5,
+        t_kf=2.662,
+        manual=1,
+        h=1,
+        k=1,
+        l=1,
+        e=0,
+        dH=0,
+        dk=0,
+        dl=0,
+        dE=0.1,
+    )
     qcscan((1, 0, 0), Q(0, 0, 0, 0.1), 3, manual=[1, 2])
     qscan((1, 0, 0), Q(0, 0, 0, 0), 1)
 
@@ -228,7 +261,7 @@ def test_qscan(session, tas):
 
 
 def test_tas_commands(session, log, tas):
-    tas.scanmode = 'CKI'
+    tas.scanmode = "CKI"
     tas.scanconstant = 1.57
 
     # calpos()/pos()
@@ -238,7 +271,7 @@ def test_tas_commands(session, log, tas):
         (0.5, 0.5, 0.5, 0, 1.57),
         ((0.5, 0.5, 0.5, 0),),
         (Q(0.5, 0.5, 0.5, 0),),
-        (Q(0.5, 0.5, 0.5, 0), 1.57)
+        (Q(0.5, 0.5, 0.5, 0), 1.57),
     ]:
         # move tas to known position
         tas.maw([0.4, 0.4, 0.4, 0.2])
@@ -251,7 +284,7 @@ def test_tas_commands(session, log, tas):
         assertPos(tas(), [0.5, 0.5, 0.5, 0])
 
     tas.maw([0.4, 0.4, 0.4, 0.2])
-    with log.assert_warns('position not allowed'):
+    with log.assert_warns("position not allowed"):
         calpos(0.7, 0.7, 0.7, 0)
     calpos(0.5, 0.5, 0.5, 0)
     assert raises(ErrorLogged, calpos, 1, 0, 0, 1)
@@ -267,22 +300,22 @@ def test_tas_commands(session, log, tas):
 
 
 def test_qmodulus(session, log):
-    qmod = session.getDevice('Qmod')
-    assert qmod.unit == 'A-1'
-    assert qmod.status(0) == (status.OK, '')
+    qmod = session.getDevice("Qmod")
+    assert qmod.unit == "A-1"
+    assert qmod.status(0) == (status.OK, "")
     assert qmod.read(0) == approx(10.8822, abs=1e-4)
 
 
 def test_setalign(session, tas):
-    pos(.5, .5, .5)
-    setalign((-.5, .5, .5))
-    assertPos(tas.read(0), [-.5, .5, .5, 0])
+    pos(0.5, 0.5, 0.5)
+    setalign((-0.5, 0.5, 0.5))
+    assertPos(tas.read(0), [-0.5, 0.5, 0.5, 0])
 
 
 def test_checkalign(session, tas):
-    tas = session.getDevice('Tas')
-    tdet = session.getDevice('vtasdet')
-    tas.scanmode = 'CKI'
+    tas = session.getDevice("Tas")
+    tdet = session.getDevice("vtasdet")
+    tas.scanmode = "CKI"
     tas.scanconstant = 1.57
     checkalign((1, 0, 0), 0.05, 2, tdet, accuracy=0.1)
 
@@ -296,17 +329,17 @@ def test_helper_commands(tas):
 
 
 def test_resolution(session, tas):
-    tas.scanmode = 'CKI'
+    tas.scanmode = "CKI"
     tas.maw([1.01, 0, 0, 1])
     cell = tas._attached_cell
     cfg, par = _resmat_args((1, 1, 0, 0), {})
     assert len(cfg) == 30
-    assert par['qx'] == 1
-    assert par['en'] == 0
-    assert par['as'] == cell.lattice[0]
-    assert par['alpha1'] == 20
-    assert par['alpha4'] == 60
-    assert par['beta1'] == 6000
+    assert par["qx"] == 1
+    assert par["en"] == 0
+    assert par["as"] == cell.lattice[0]
+    assert par["alpha1"] == 20
+    assert par["alpha4"] == 60
+    assert par["beta1"] == 6000
 
     rescal()
     rescal(1, 1, 0)
@@ -314,8 +347,8 @@ def test_resolution(session, tas):
 
 
 def test_virtualdet(session, tas):
-    tdet = session.getDevice('vtasdet')
-    tas.scanmode = 'CKI'
+    tdet = session.getDevice("vtasdet")
+    tas.scanmode = "CKI"
     tas.scanconstant = 1.57
     tas.maw([1, 0, 0, 0])
     countres = count(tdet, 1)
@@ -333,8 +366,8 @@ def test_virtualdet(session, tas):
 
 
 def test_virtualgonios(session, tas):
-    gx, gy = session.getDevice('sgx'), session.getDevice('sgy')
-    v1, v2 = session.getDevice('vg1'), session.getDevice('vg2')
+    gx, gy = session.getDevice("sgx"), session.getDevice("sgy")
+    v1, v2 = session.getDevice("vg1"), session.getDevice("vg2")
 
     # when psi0 = 0, gx == v1 and gy == v2
     tas._attached_cell.psi0 = 0

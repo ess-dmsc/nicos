@@ -38,16 +38,25 @@ class FPGATimerChannel(TimerChannel):
     """
 
     parameters = {
-        'extmode':    Param('Arm for external start instead of starting',
-                            type=bool, default=False, settable=True),
-        'extmask':    Param('Bitmask of the inputs to use for external start',
-                            type=int, default=0),
-        'exttimeout': Param('Timeout for waiting for external start',
-                            type=float, unit='s', default=600),
-        'extwait':    Param('If nonzero, we are waiting for external start '
-                            'since that timestamp',
-                            type=float, default=0, settable=True,
-                            internal=True),
+        "extmode": Param(
+            "Arm for external start instead of starting",
+            type=bool,
+            default=False,
+            settable=True,
+        ),
+        "extmask": Param(
+            "Bitmask of the inputs to use for external start", type=int, default=0
+        ),
+        "exttimeout": Param(
+            "Timeout for waiting for external start", type=float, unit="s", default=600
+        ),
+        "extwait": Param(
+            "If nonzero, we are waiting for external start " "since that timestamp",
+            type=float,
+            default=0,
+            settable=True,
+            internal=True,
+        ),
     }
 
     def doStart(self):
@@ -60,19 +69,19 @@ class FPGATimerChannel(TimerChannel):
         # Normal mode: Gate is active
         if st[0] == status.BUSY:
             if self.extmode and self.extwait and self._mode == MASTER:
-                self.log.info('external signal arrived, counting...')
+                self.log.info("external signal arrived, counting...")
                 self.extwait = 0
             return st
         elif self.extmode and self.extwait > 0:
             # External mode: there is no status indication of "waiting",
             # so use the time as an indication of wait/done
             if self._dev.value > 0:
-                return (status.OK, '')
+                return (status.OK, "")
             elif currenttime() > self.extwait + self.exttimeout:
-                raise MoveError(self, 'timeout waiting for external start')
-            return (status.BUSY, 'waiting for external start')
+                raise MoveError(self, "timeout waiting for external start")
+            return (status.BUSY, "waiting for external start")
         else:
-            return (status.OK, '')
+            return (status.OK, "")
 
     def doFinish(self):
         self.doStop()

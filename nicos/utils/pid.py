@@ -30,8 +30,17 @@ class PID:
     Proportional–integral–derivative controller.
     """
 
-    def __init__(self, init_arg, setpoint, P=0.1, I=0.1, D=0.05,
-                 current_time=None, arg_min=None, arg_max=None):
+    def __init__(
+        self,
+        init_arg,
+        setpoint,
+        P=0.1,
+        I=0.1,
+        D=0.05,
+        current_time=None,
+        arg_min=None,
+        arg_max=None,
+    ):
         self._Kp = P
         self._Ki = I
         self._Kd = D

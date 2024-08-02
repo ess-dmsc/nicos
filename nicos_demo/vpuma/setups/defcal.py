@@ -1,17 +1,23 @@
-description = 'Calibration of the deflectors'
+description = "Calibration of the deflectors"
 
-group = 'basic'
+group = "basic"
 
 includes = [
-    'pumabase',
+    "pumabase",
     # 'seccoll', 'collimation', 'ios', 'hv', 'notifiers',
-    'multidetector', 'multianalyzer', 'rdcad', 'opticalbench', 'slits',
-    'pollengths',
+    "multidetector",
+    "multianalyzer",
+    "rdcad",
+    "opticalbench",
+    "slits",
+    "pollengths",
     # 'detector',
 ]
 
 sysconfig = dict(
-    datasinks = ['polsink',]
+    datasinks=[
+        "polsink",
+    ]
 )
 
 devices = dict(
@@ -41,10 +47,10 @@ devices = dict(
     #         ('peak3', 'image'),
     #     ],
     # ),
-    polsink = device('nicos_mlz.puma.datasinks.PolarizationFileSink'),
+    polsink=device("nicos_mlz.puma.datasinks.PolarizationFileSink"),
 )
 
-startupcode = '''
+startupcode = """
 med.opmode = 'pa'
 # SetDetectors(det)
-'''
+"""

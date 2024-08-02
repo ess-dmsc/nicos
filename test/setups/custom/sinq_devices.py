@@ -24,19 +24,21 @@ import nicos.devices.generic
 
 import nicos_sinq.devices.channel
 
-name = 'Special devices for SINQ'
+name = "Special devices for SINQ"
 
-description = 'Test setup for the SINQ special devices'
+description = "Test setup for the SINQ special devices"
 
 devices = dict(
-    dev = device('nicos.core.device.Readable', unit = ''),
-    dev_preset = device('nicos_sinq.devices.channel.ReadableToChannel',
-        precision = 0.1,
-        window = 5,
-        dev = 'dev'
+    dev=device("nicos.core.device.Readable", unit=""),
+    dev_preset=device(
+        "nicos_sinq.devices.channel.ReadableToChannel",
+        precision=0.1,
+        window=5,
+        dev="dev",
     ),
-    image_forwarder_sink = device('test.nicos_sinq.devices.test_det_image_forwarder.MockImageForwarderSink',
-        brokers = ['localhost:9092'],
-        output_topic = 'TEST_detector',
+    image_forwarder_sink=device(
+        "test.nicos_sinq.devices.test_det_image_forwarder.MockImageForwarderSink",
+        brokers=["localhost:9092"],
+        output_topic="TEST_detector",
     ),
 )

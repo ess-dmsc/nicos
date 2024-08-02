@@ -26,8 +26,7 @@
 from nicos.core import Override, Readable
 from nicos.core.params import Attach
 
-from nicos_mlz.refsans.lib.calculations import chopper_resolution, \
-    pre_sample_path
+from nicos_mlz.refsans.lib.calculations import chopper_resolution, pre_sample_path
 
 
 class Resolution(Readable):
@@ -36,42 +35,44 @@ class Resolution(Readable):
     The chopper controller device is used to detect the real and virtual
     position of the second disc (chopper2).
     """
+
     attached_devices = {
-        'chopper': Attach('chopper controller device', Readable),
-        'flightpath': Attach('Read the real flightpath', Readable),
+        "chopper": Attach("chopper controller device", Readable),
+        "flightpath": Attach("Read the real flightpath", Readable),
     }
 
     parameter_overrides = {
-        'unit': Override(volatile=True, mandatory=False),
+        "unit": Override(volatile=True, mandatory=False),
     }
 
     def doRead(self, maxage=0):
         return chopper_resolution(
-            self._attached_chopper.read(maxage).get('chopper2_pos', 5),
-            self._attached_flightpath.read(maxage))
+            self._attached_chopper.read(maxage).get("chopper2_pos", 5),
+            self._attached_flightpath.read(maxage),
+        )
 
     def doReadUnit(self):
-        return '%'
+        return "%"
 
 
 class RealFlightPath(Readable):
     attached_devices = {
-        'table': Attach('port to read real table', Readable),
-        'pivot': Attach('port to read real pivot', Readable),
+        "table": Attach("port to read real table", Readable),
+        "pivot": Attach("port to read real pivot", Readable),
     }
 
     parameter_overrides = {
-        'unit': Override(volatile=True, mandatory=False),
+        "unit": Override(volatile=True, mandatory=False),
     }
 
     def doRead(self, maxage=0):
         table = self._attached_table.read(maxage)
         pivot = self._attached_pivot.read(maxage)
-        self.log.debug('table=%s, pivot=%s', table, pivot)
+        self.log.debug("table=%s, pivot=%s", table, pivot)
         # in meter
         D = (table + pivot * self._attached_pivot.grid + pre_sample_path) / 1e3
-        self.log.debug('D=%.2f %s', D, self.unit)
+        self.log.debug("D=%.2f %s", D, self.unit)
         return D
 
     def doReadUnit(self):
-        return 'm'
+        return "m"

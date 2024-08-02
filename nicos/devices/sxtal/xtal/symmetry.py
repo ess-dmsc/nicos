@@ -34,17 +34,15 @@ lxor = np.logical_xor
 
 
 class Bravais:
-
     conditions = {
-        'C': lambda h, k, l: (lnot((h + k) % 2)),
-        'A': lambda h, k, l: (lnot((k + l) % 2)),
-        'B': lambda h, k, l: (lnot((h + l) % 2)),
-        'I': lambda h, k, l: (lnot((h + k + l) % 2)),
-        'R': lambda h, k, l: (lnot((-h + k + l) % 3)),
-        'F': lambda h, k, l: (land(
-            (lnot((h + k) % 2)),
-            (lnot((h + l) % 2)))),
-        'P': lambda h, k, l: lor(h, True)}
+        "C": lambda h, k, l: (lnot((h + k) % 2)),
+        "A": lambda h, k, l: (lnot((k + l) % 2)),
+        "B": lambda h, k, l: (lnot((h + l) % 2)),
+        "I": lambda h, k, l: (lnot((h + k + l) % 2)),
+        "R": lambda h, k, l: (lnot((-h + k + l) % 3)),
+        "F": lambda h, k, l: (land((lnot((h + k) % 2)), (lnot((h + l) % 2)))),
+        "P": lambda h, k, l: lor(h, True),
+    }
 
     def __init__(self, bravais):
         self.bravais = bravais
@@ -53,11 +51,26 @@ class Bravais:
         if self.bravais in Bravais.conditions:
             return Bravais.conditions[self.bravais](*hkl)
         else:
-            return Bravais.conditions['P'](*hkl)
+            return Bravais.conditions["P"](*hkl)
 
-symbols = ('1', '-1', '2/m', '4/mmm', '6/mmm', '4/m', '6/m',
-           '-3m1', '-31m', '-3', 'R-3m1', 'R-31m', 'R-3',
-           'm3m', 'm3')
+
+symbols = (
+    "1",
+    "-1",
+    "2/m",
+    "4/mmm",
+    "6/mmm",
+    "4/m",
+    "6/m",
+    "-3m1",
+    "-31m",
+    "-3",
+    "R-3m1",
+    "R-31m",
+    "R-3",
+    "m3m",
+    "m3",
+)
 
 
 class Laue:
@@ -70,99 +83,78 @@ class Laue:
 
     def uniq(self, hkl):
         h, k, l = hkl
-        if self.laue == '-1':
-            return lnot(land(np.equal(l, 0),
-                             lor(np.less(k, 0),
-                                 np.less(h, 0)
-                                 )
-                             )
-                        )
-        if self.laue == '2/m':
-            return lnot(land(np.equal(l, 0),
-                             np.less(h, 0))
-                        )
-        if self.laue in ('4/mmm', '6/mmm'):
+        if self.laue == "-1":
+            return lnot(land(np.equal(l, 0), lor(np.less(k, 0), np.less(h, 0))))
+        if self.laue == "2/m":
+            return lnot(land(np.equal(l, 0), np.less(h, 0)))
+        if self.laue in ("4/mmm", "6/mmm"):
             return lnot(np.less(h, k))
-        if self.laue in ('4/m', '6/m'):
-            return lnot(land(np.less(h, k),
-                             np.equal(h, 0)
-                             )
-                        )
-        if self.laue == '-3m1':
-            return lnot(land(np.less(h, k),
-                             np.equal(l, 0)
-                             )
-                        )
-        if self.laue == '-31m':
-            return lnot(lor(np.less(h, k),
-                            land(np.less(l, 0),
-                                 np.equal(k, 0)
-                                 )
-                            )
-                        )
-        if self.laue == '-3':
-            return lnot(land(np.less(h, k),
-                             land(lor(np.less_equal(k, h), np.less_equal(h, 0)),
-                                  lor(np.equal(l, 0),
-                                      lor(np.equal(k, 0),
-                                          np.greater_equal(np.abs(h), k)
-                                          )
-                                      )
-                                  )
-                             )
-                        )
-        if self.laue == 'R-3m':
-            return lnot(lor(land(np.greater_equal(l, 0),
-                                 lor(np.less(h, k),
-                                     np.less(k, l)
-                                     )
-                                 ), land(np.equal(k, 0),
-                                         land(np.greater_equal(h, np.abs(l)
-                                                               ), lor(np.less_equal(k, 0),
-                                                                      np.less(h, k)
-                                                                      )
-                                              )
-                                         )
-                            )
-                        )
-        if self.laue == 'R-3':
-            return lnot(lor(land(np.greater_equal(l, 0),
-                                 lor(np.less(k, 0),
-                                     lor(np.greater_equal(h, k),
-                                         np.greater_equal(k, l)
-                                         )
-                                     )
-                                 ),
-                            lor(lor(np.less(k, 0),
-                                    land(lor(np.less_equal(h, 0),
-                                             np.not_equal(k, 0)),
-                                         lor(np.less(h, k),
-                                             np.less(k, 0))
-                                         )
-                                    ),
-                                lor(np.equal(h, 0),
-                                    np.less_equal(k, l)
-                                    )
-                                )
-                            )
-                        )
-        if self.laue == 'm3m':
-            return lnot(lor(np.less(h, k),
-                            lor(np.less(k, l),
-                                np.less(h, l)
-                                )
-                            )
-                        )
+        if self.laue in ("4/m", "6/m"):
+            return lnot(land(np.less(h, k), np.equal(h, 0)))
+        if self.laue == "-3m1":
+            return lnot(land(np.less(h, k), np.equal(l, 0)))
+        if self.laue == "-31m":
+            return lnot(lor(np.less(h, k), land(np.less(l, 0), np.equal(k, 0))))
+        if self.laue == "-3":
+            return lnot(
+                land(
+                    np.less(h, k),
+                    land(
+                        lor(np.less_equal(k, h), np.less_equal(h, 0)),
+                        lor(
+                            np.equal(l, 0),
+                            lor(np.equal(k, 0), np.greater_equal(np.abs(h), k)),
+                        ),
+                    ),
+                )
+            )
+        if self.laue == "R-3m":
+            return lnot(
+                lor(
+                    land(np.greater_equal(l, 0), lor(np.less(h, k), np.less(k, l))),
+                    land(
+                        np.equal(k, 0),
+                        land(
+                            np.greater_equal(h, np.abs(l)),
+                            lor(np.less_equal(k, 0), np.less(h, k)),
+                        ),
+                    ),
+                )
+            )
+        if self.laue == "R-3":
+            return lnot(
+                lor(
+                    land(
+                        np.greater_equal(l, 0),
+                        lor(
+                            np.less(k, 0),
+                            lor(np.greater_equal(h, k), np.greater_equal(k, l)),
+                        ),
+                    ),
+                    lor(
+                        lor(
+                            np.less(k, 0),
+                            land(
+                                lor(np.less_equal(h, 0), np.not_equal(k, 0)),
+                                lor(np.less(h, k), np.less(k, 0)),
+                            ),
+                        ),
+                        lor(np.equal(h, 0), np.less_equal(k, l)),
+                    ),
+                )
+            )
+        if self.laue == "m3m":
+            return lnot(lor(np.less(h, k), lor(np.less(k, l), np.less(h, l))))
 
-        if self.laue == 'm3':
-            return lnot(land(lor(np.less(h, k), np.less(k, l)),
-                             lor(np.equal(h, 0),
-                                 lor(np.greater_equal(h, k),
-                                     np.less_equal(h, l)
-                                     )
-                                 )
-                             )
-                        )
+        if self.laue == "m3":
+            return lnot(
+                land(
+                    lor(np.less(h, k), np.less(k, l)),
+                    lor(
+                        np.equal(h, 0), lor(np.greater_equal(h, k), np.less_equal(h, l))
+                    ),
+                )
+            )
         return lor(h, True)
 
 
@@ -173,24 +165,87 @@ class SpaceGroup:
     def allowed(self, hkl):
         return can_reflect(self.spgr, *hkl)
 
+
 valid = {
-    'C': [(0, 0, 3), (1, 1, 0), (2, 2, 0), (-1, 1, 0), (1, -1, 0), (3, 3, 1), (4, 4, 3)],
-    'A': [(1, 0, 0), (0, 1, 1), (0, 2, 2), (0, -1, 1), (0, 1, -1,), (3, 3, 1), (3, 4, 4)],
-    'B': [(0, 1, 0), (1, 0, 1), (2, 0, 2), (-1, 0, 1), (1, 0, -1,), (3, 3, 1), (4, 3, 4)],
-    'I': [(0, 1, 1), (1, 0, 1), (1, 1, 0), (0, -1, 1), (-1, 0, 1), (-1, 1, 0),
-          (0, 1, -1), (1, 0, -1), (1, -1, 0), (0, -1, -1), (-1, 0, -1), (-1, -1, 0)],
-    'R': [(0, 1, 2), (0, 2, 1), (1, 2, 2), (-1, 2, 0)],
-    'F': [(1, 1, 1), (2, 2, 2), (2, 2, 0), (-1, 1, -1)]
+    "C": [
+        (0, 0, 3),
+        (1, 1, 0),
+        (2, 2, 0),
+        (-1, 1, 0),
+        (1, -1, 0),
+        (3, 3, 1),
+        (4, 4, 3),
+    ],
+    "A": [
+        (1, 0, 0),
+        (0, 1, 1),
+        (0, 2, 2),
+        (0, -1, 1),
+        (
+            0,
+            1,
+            -1,
+        ),
+        (3, 3, 1),
+        (3, 4, 4),
+    ],
+    "B": [
+        (0, 1, 0),
+        (1, 0, 1),
+        (2, 0, 2),
+        (-1, 0, 1),
+        (
+            1,
+            0,
+            -1,
+        ),
+        (3, 3, 1),
+        (4, 3, 4),
+    ],
+    "I": [
+        (0, 1, 1),
+        (1, 0, 1),
+        (1, 1, 0),
+        (0, -1, 1),
+        (-1, 0, 1),
+        (-1, 1, 0),
+        (0, 1, -1),
+        (1, 0, -1),
+        (1, -1, 0),
+        (0, -1, -1),
+        (-1, 0, -1),
+        (-1, -1, 0),
+    ],
+    "R": [(0, 1, 2), (0, 2, 1), (1, 2, 2), (-1, 2, 0)],
+    "F": [(1, 1, 1), (2, 2, 2), (2, 2, 0), (-1, 1, -1)],
 }
 
 invalid = {
-    'C': [(0, 1, 2), (2, 1, 0), (1, 2, 0), (-1, 2, 0), (2, -1, 0)],
-    'A': [(1, 1, 0), (0, 2, 1), (0, 2, -1)],
-    'B': [(1, 1, 0), (1, 0, 0), (1, 0, 2), (-1, 0, 2), (2, 0, -1,)],
-    'I': [(1, 1, 1), (1, -1, 1), (-1, 1, 1), (-1, -1, 1), (1, 1, -1), (-1, 1, -1),
-          (1, -1, -1), (-1, -1, -1)],
-    'R': [(1, 1, 2), (-1, 2, 1), (2, 2, 2), (-2, 2, 0)],
-    'F': [(1, 1, 0), (0, 1, 1), (1, 0, 1)]
+    "C": [(0, 1, 2), (2, 1, 0), (1, 2, 0), (-1, 2, 0), (2, -1, 0)],
+    "A": [(1, 1, 0), (0, 2, 1), (0, 2, -1)],
+    "B": [
+        (1, 1, 0),
+        (1, 0, 0),
+        (1, 0, 2),
+        (-1, 0, 2),
+        (
+            2,
+            0,
+            -1,
+        ),
+    ],
+    "I": [
+        (1, 1, 1),
+        (1, -1, 1),
+        (-1, 1, 1),
+        (-1, -1, 1),
+        (1, 1, -1),
+        (-1, 1, -1),
+        (1, -1, -1),
+        (-1, -1, -1),
+    ],
+    "R": [(1, 1, 2), (-1, 2, 1), (2, 2, 2), (-2, 2, 0)],
+    "F": [(1, 1, 0), (0, 1, 1), (1, 0, 1)],
 }
 
 
@@ -208,9 +263,10 @@ def _testlaue(sym):
     # This is a 'template' function
     # uniq only contains test data
     from nicos.devices.sxtal.xtal.uniqdata import uniq
-    lauein = np.array([(h, k, l) for l in range(-2, 3)
-                       for k in range(-2, 3)
-                       for h in range(-2, 3)])
+
+    lauein = np.array(
+        [(h, k, l) for l in range(-2, 3) for k in range(-2, 3) for h in range(-2, 3)]
+    )
     l = Laue(sym)
     res = l.uniqds(lauein)
     if sym in uniq:
@@ -224,7 +280,8 @@ def _test():
             # test output.
             def tf1(t, mode, hkl):
                 _testbravais(t, mode, hkl)
-            tf1.description = 'Bravais allowed %s %s' % (t, hkl)
+
+            tf1.description = "Bravais allowed %s %s" % (t, hkl)
             yield tf1, t, True, hkl
     for t, vals in invalid.items():
         for hkl in vals:
@@ -232,7 +289,8 @@ def _test():
             # test output.
             def tf2(t, mode, hkl):
                 _testbravais(t, mode, hkl)
-            tf2.description = 'Bravais forbidden %s %s' % (t, hkl)
+
+            tf2.description = "Bravais forbidden %s %s" % (t, hkl)
             yield tf2, t, False, hkl
 
     for sym in symbols:
@@ -240,5 +298,6 @@ def _test():
         # test output.
         def tf3(sym):
             _testlaue(sym)
-        tf3.description = 'Laue uniqds for %s' % sym
+
+        tf3.description = "Laue uniqds for %s" % sym
         yield tf3, sym

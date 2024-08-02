@@ -6,7 +6,7 @@ import flatbuffers
 
 
 class ArrayULong(object):
-    __slots__ = ['_tab']
+    __slots__ = ["_tab"]
 
     @classmethod
     def GetRootAsArrayULong(cls, buf, offset):
@@ -26,15 +26,15 @@ class ArrayULong(object):
             a = self._tab.Vector(o)
             return self._tab.Get(
                 flatbuffers.number_types.Uint64Flags,
-                a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 8))
+                a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 8),
+            )
         return 0
 
     # ArrayULong
     def ValueAsNumpy(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         if o != 0:
-            return self._tab.GetVectorAsNumpy(
-                flatbuffers.number_types.Uint64Flags, o)
+            return self._tab.GetVectorAsNumpy(flatbuffers.number_types.Uint64Flags, o)
         return 0
 
     # ArrayULong
@@ -51,7 +51,8 @@ def ArrayULongStart(builder):
 
 def ArrayULongAddValue(builder, value):
     builder.PrependUOffsetTRelativeSlot(
-        0, flatbuffers.number_types.UOffsetTFlags.py_type(value), 0)
+        0, flatbuffers.number_types.UOffsetTFlags.py_type(value), 0
+    )
 
 
 def ArrayULongStartValueVector(builder, numElems):

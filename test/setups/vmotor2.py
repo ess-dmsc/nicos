@@ -21,14 +21,15 @@
 #
 # *****************************************************************************
 
-name = 'virtual motor setup 2'
+name = "virtual motor setup 2"
 
-includes = ['stdsystem']
+includes = ["stdsystem"]
 
 devices = dict(
-    vmotor = device('nicos.devices.generic.VirtualMotor',
-        unit = 'mm',
-        initval = 0,
-        abslimits = (-100, 80),
+    vmotor=device(
+        "nicos.devices.generic.VirtualMotor",
+        unit="mm",
+        initval=0,
+        abslimits=(-100, 80),
     ),
 )

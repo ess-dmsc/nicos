@@ -24,8 +24,14 @@
 
 from nicos.core import status
 from nicos.guisupport.elements.colors import statuscolor
-from nicos.guisupport.qt import QBrush, QGraphicsEllipseItem, QPen, QPointF, \
-    QRectF, QSizeF
+from nicos.guisupport.qt import (
+    QBrush,
+    QGraphicsEllipseItem,
+    QPen,
+    QPointF,
+    QRectF,
+    QSizeF,
+)
 
 
 class Halo(QGraphicsEllipseItem):
@@ -34,8 +40,9 @@ class Halo(QGraphicsEllipseItem):
     def __init__(self, x, y, size=60, width=10, parent=None, scene=None):
         self._width = width
         s = size + width / 2
-        QGraphicsEllipseItem.__init__(self, QRectF(-QPointF(s, s),
-                                      QSizeF(2 * s, 2 * s)), parent)
+        QGraphicsEllipseItem.__init__(
+            self, QRectF(-QPointF(s, s), QSizeF(2 * s, 2 * s)), parent
+        )
         self.setBrush(QBrush(statuscolor[status.OK]))
         if not parent and scene:
             scene.addItem(self)

@@ -36,7 +36,7 @@ def qrange(wavelength, detpos, rmin, rmax):
 
     const = 4 * pi / wavelength
 
-    qmin = const * sin(atan2(rmin, detpos) / 2.)
-    qmax = const * sin(atan2(rmax, detpos) / 2.)
+    qmin = const * sin(atan2(rmin, detpos) / 2.0)
+    qmax = const * sin(atan2(rmax, detpos) / 2.0)
 
     return qmin, qmax

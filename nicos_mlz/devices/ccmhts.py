@@ -31,7 +31,7 @@ class WaterFlow(AnalogInput):
     """Scales the read value from l/s to l/min."""
 
     parameter_overrides = {
-        'unit': Override(default='l/min', mandatory=False, settable=False),
+        "unit": Override(default="l/min", mandatory=False, settable=False),
     }
 
     def doRead(self, maxage=0):

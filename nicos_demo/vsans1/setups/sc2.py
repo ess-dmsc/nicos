@@ -1,30 +1,33 @@
-description = 'sample changer 2 devices'
+description = "sample changer 2 devices"
 
-group = 'optional'
+group = "optional"
 
-includes = ['sample_changer', 'sample_table_1']
+includes = ["sample_changer", "sample_table_1"]
 
 devices = dict(
-    sc2_y = device('nicos.devices.generic.Axis',
-        description = 'Sample Changer 1/2 Axis',
-        pollinterval = 15,
-        maxage = 60,
-        fmtstr = '%.2f',
-        abslimits = (-0, 600),
-        precision = 0.01,
-        motor = 'sc2_ymot',
+    sc2_y=device(
+        "nicos.devices.generic.Axis",
+        description="Sample Changer 1/2 Axis",
+        pollinterval=15,
+        maxage=60,
+        fmtstr="%.2f",
+        abslimits=(-0, 600),
+        precision=0.01,
+        motor="sc2_ymot",
     ),
-    sc2_ymot = device('nicos.devices.generic.VirtualMotor',
-        description = 'Sample Changer 1/2 Axis motor',
-        fmtstr = '%.2f',
-        abslimits = (-0, 600),
-        unit = 'mm',
-        visibility = (),
+    sc2_ymot=device(
+        "nicos.devices.generic.VirtualMotor",
+        description="Sample Changer 1/2 Axis motor",
+        fmtstr="%.2f",
+        abslimits=(-0, 600),
+        unit="mm",
+        visibility=(),
     ),
-    sc2 = device('nicos.devices.generic.MultiSwitcher',
-        description = 'Sample Changer 2 Huber device',
-        moveables = ['sc2_y', 'st1_z'],
-        mapping = {
+    sc2=device(
+        "nicos.devices.generic.MultiSwitcher",
+        description="Sample Changer 2 Huber device",
+        moveables=["sc2_y", "st1_z"],
+        mapping={
             11: [592.5, -32],
             10: [533.5, -32],
             9: [474.5, -32],
@@ -48,13 +51,13 @@ devices = dict(
             13: [61.5, 27],
             12: [2.5, 27],
         },
-        fallback = 0,
-        fmtstr = '%d',
-        precision = [0.05, 0.05],
-        blockingmove = False,
+        fallback=0,
+        fmtstr="%d",
+        precision=[0.05, 0.05],
+        blockingmove=False,
     ),
 )
 
 alias_config = {
-    'SampleChanger': {'sc2': 100},
+    "SampleChanger": {"sc2": 100},
 }

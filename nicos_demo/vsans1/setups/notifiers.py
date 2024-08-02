@@ -1,6 +1,6 @@
-description = 'Email and SMS notifiers'
+description = "Email and SMS notifiers"
 
-group = 'lowlevel'
+group = "lowlevel"
 
 devices = dict(
     # email = device('nicos.devices.notifiers.Mailer',

@@ -26,8 +26,11 @@ from gzip import GzipFile as StdGzipFile
 import numpy
 
 from nicos.core.data.sink import GzipFile
-from nicos.devices.datasinks.image import ImageFileReader, ImageSink, \
-    MultipleFileSinkHandler
+from nicos.devices.datasinks.image import (
+    ImageFileReader,
+    ImageSink,
+    MultipleFileSinkHandler,
+)
 from nicos.utils import File
 
 
@@ -50,7 +53,7 @@ class NPImageFileReader(ImageFileReader):
     @classmethod
     def fromfile(cls, filename):
         """Reads numpy array from .txt file."""
-        return numpy.loadtxt(File(filename, 'r'))
+        return numpy.loadtxt(File(filename, "r"))
 
 
 class NPGZImageSinkHandler(NPImageSinkHandler):
@@ -73,4 +76,4 @@ class NPGZImageFileReader(ImageFileReader):
     @classmethod
     def fromfile(cls, filename):
         """Reads numpy array from .gz file."""
-        return numpy.loadtxt(StdGzipFile(filename, 'r'))
+        return numpy.loadtxt(StdGzipFile(filename, "r"))

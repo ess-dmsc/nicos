@@ -26,22 +26,23 @@
 from nicos import session
 from nicos.core import Override
 
-from nicos_mlz.kws1.devices.kwsfileformat import KWSFileSink as KWS1FileSink, \
-    KWSFileSinkHandler as KWS1FileSinkHandler
+from nicos_mlz.kws1.devices.kwsfileformat import (
+    KWSFileSink as KWS1FileSink,
+    KWSFileSinkHandler as KWS1FileSinkHandler,
+)
 
 
 class KWSFileSinkHandler(KWS1FileSinkHandler):
-
     def getDetectorPos(self):
         """Return (x, y, z) for detector position."""
-        if session.getDevice('det_img').alias == 'det_img_jum':
-            x = session.getDevice('psd_x').read()
-            y = session.getDevice('psd_y').read()
+        if session.getDevice("det_img").alias == "det_img_jum":
+            x = session.getDevice("psd_x").read()
+            y = session.getDevice("psd_y").read()
             z = 17.0
         else:
-            x = session.getDevice('beamstop_x').read()
-            y = session.getDevice('beamstop_y').read()
-            z = session.getDevice('det_z').read()
+            x = session.getDevice("beamstop_x").read()
+            y = session.getDevice("beamstop_y").read()
+            z = session.getDevice("det_z").read()
         return (x, y, z)
 
 
@@ -51,5 +52,5 @@ class KWSFileSink(KWS1FileSink):
     handlerclass = KWSFileSinkHandler
 
     parameter_overrides = {
-        'instrname': Override(default='KWS2'),
+        "instrname": Override(default="KWS2"),
     }

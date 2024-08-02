@@ -15,7 +15,7 @@ from subprocess import PIPE, Popen
 # read config file and set environment variables
 from nicos import config
 
-__all__ = ['get_git_version', 'get_nicos_version']
+__all__ = ["get_git_version", "get_nicos_version"]
 
 
 config.apply()
@@ -24,45 +24,48 @@ config.apply()
 def get_releasefile_path():
     # due the way we import it, the path will point to the nicos dir.
     thispath = path.normpath(path.dirname(path.dirname(__file__)))
-    return path.join(thispath, 'RELEASE-VERSION')
+    return path.join(thispath, "RELEASE-VERSION")
 
 
 def translate_version(ver):
-    ver = ver.lstrip('v').rsplit('-', 2)
-    return '%s.post%s+%s' % tuple(ver) if len(ver) == 3 else ver[0]
+    ver = ver.lstrip("v").rsplit("-", 2)
+    return "%s.post%s+%s" % tuple(ver) if len(ver) == 3 else ver[0]
 
 
 def get_git_version(abbrev=4, cwd=None):
     try:
-        with Popen(['git', 'describe', '--abbrev=%d' % abbrev],
-                   cwd=cwd or config.nicos_root,
-                   stdout=PIPE, stderr=PIPE) as p:
+        with Popen(
+            ["git", "describe", "--abbrev=%d" % abbrev],
+            cwd=cwd or config.nicos_root,
+            stdout=PIPE,
+            stderr=PIPE,
+        ) as p:
             stdout, stderr = p.communicate()
     except Exception as err:
         raise RuntimeError(str(err)) from None
-    ver = translate_version(stdout.strip().decode('utf-8', 'ignore'))
+    ver = translate_version(stdout.strip().decode("utf-8", "ignore"))
     if ver:
         return ver
-    return 'Cannot find a version number!'
+    return "Cannot find a version number!"
 
 
 def read_release_version():
     try:
-        with open(get_releasefile_path(), 'r', encoding='utf-8') as f:
+        with open(get_releasefile_path(), "r", encoding="utf-8") as f:
             return f.readline().strip()
     except Exception as err:
         raise RuntimeError(str(err)) from None
 
 
 def write_release_version(version):
-    with open(get_releasefile_path(), 'w', encoding='utf-8') as f:
+    with open(get_releasefile_path(), "w", encoding="utf-8") as f:
         f.write("%s\n" % version)
 
 
 def get_nicos_version(abbrev=4):
     # determine the version from git and from RELEASE-VERSION
     git_version = release_version = None
-    git_ver_error = rel_ver_error = 'no error'
+    git_ver_error = rel_ver_error = "no error"
     try:
         git_version = get_git_version(abbrev)
     except RuntimeError as err:
@@ -83,7 +86,7 @@ def get_nicos_version(abbrev=4):
     elif release_version:
         return release_version
     else:
-        return 'Cannot find a version number!'
+        return "Cannot find a version number!"
 
 
 if __name__ == "__main__":

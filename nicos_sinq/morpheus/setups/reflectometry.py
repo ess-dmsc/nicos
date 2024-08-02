@@ -1,7 +1,7 @@
-description = 'Polarized Neutron Reflectivity on MORPHEUS'
+description = "Polarized Neutron Reflectivity on MORPHEUS"
 
-group = 'basic'
+group = "basic"
 
-includes = ['morpheus', 'slits', 'monochromator']
+includes = ["morpheus", "slits", "monochromator"]
 
-excludes = ['a34_aliases', 'diffraction', 'tas']
+excludes = ["a34_aliases", "diffraction", "tas"]

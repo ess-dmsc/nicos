@@ -26,14 +26,13 @@
 import time
 
 from nicos.clients.gui.utils import loadUi
-from nicos.guisupport.qt import QDialog, QDialogButtonBox, QFrame, \
-    QVBoxLayout, QWidget
+from nicos.guisupport.qt import QDialog, QDialogButtonBox, QFrame, QVBoxLayout, QWidget
 
 
 class WatchdogDialog(QDialog):
     def __init__(self, main):
         QDialog.__init__(self, main)
-        loadUi(self, 'dialogs/watchdog.ui')
+        loadUi(self, "dialogs/watchdog.ui")
 
         self.frame = QFrame(self)
         self.scrollArea.setWidget(self.frame)
@@ -42,35 +41,37 @@ class WatchdogDialog(QDialog):
         self.frame.layout().addStretch()
 
         def btn(button):
-            if self.buttonBox.buttonRole(button) \
-                    == QDialogButtonBox.ButtonRole.ResetRole:
+            if (
+                self.buttonBox.buttonRole(button)
+                == QDialogButtonBox.ButtonRole.ResetRole
+            ):
                 for w in self.frame.children():
                     if isinstance(w, QWidget):
                         w.hide()
             else:
                 self.close()
+
         self.buttonBox.clicked.connect(btn)
 
     def addEvent(self, data):
         # data: [event type, timestamp, message, watchdog entry id]
         layout = self.frame.layout()
-        if data[0] == 'resolved':
+        if data[0] == "resolved":
             for i in range(layout.count()):
                 widget = layout.itemAt(i).widget()
-                if getattr(widget, 'entry_id', None) == data[3]:
-                    widget.datelabel.setText(widget.datelabel.text() +
-                                             ' [RESOLVED]')
+                if getattr(widget, "entry_id", None) == data[3]:
+                    widget.datelabel.setText(widget.datelabel.text() + " [RESOLVED]")
             return
 
         w = QWidget(self.frame)
-        loadUi(w, 'dialogs/watchdog_item.ui')
+        loadUi(w, "dialogs/watchdog_item.ui")
         if len(data) > 3:  # compatibility for older watchdogs
             w.entry_id = data[3]
-        layout.insertWidget(self.frame.layout().count()-1, w)
-        timestamp = time.strftime('%Y-%m-%d %H:%M', time.localtime(data[1]))
-        if data[0] == 'warning':
-            w.datelabel.setText('Watchdog alert - ' + timestamp)
+        layout.insertWidget(self.frame.layout().count() - 1, w)
+        timestamp = time.strftime("%Y-%m-%d %H:%M", time.localtime(data[1]))
+        if data[0] == "warning":
+            w.datelabel.setText("Watchdog alert - " + timestamp)
             w.messagelabel.setText(data[2])
-        elif data[0] == 'action':
-            w.datelabel.setText('Watchdog action - ' + timestamp)
-            w.messagelabel.setText('Executing action:\n' + data[2])
+        elif data[0] == "action":
+            w.datelabel.setText("Watchdog action - " + timestamp)
+            w.messagelabel.setText("Executing action:\n" + data[2])

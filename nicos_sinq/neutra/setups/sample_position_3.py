@@ -1,51 +1,57 @@
-description = 'Sample position 3 motorization'
+description = "Sample position 3 motorization"
 
-group = 'basic'
+group = "basic"
 
-includes = ['camera_focus_3', 'beam_limiter_2', 'shutters', 'detector']
+includes = ["camera_focus_3", "beam_limiter_2", "shutters", "detector"]
 
 display_order = 50
 
 devices = dict(
-    sp3_tx = device('nicos.devices.epics.pyepics.motor.HomingProtectedEpicsMotor',
-        description = 'Sample Position 3, Translation X',
-        motorpv = 'SQ:NEUTRA:board1:SP3TX',
-        errormsgpv = 'SQ:NEUTRA:board1:SP3TX-MsgTxt',
-        precision = 0.01,
+    sp3_tx=device(
+        "nicos.devices.epics.pyepics.motor.HomingProtectedEpicsMotor",
+        description="Sample Position 3, Translation X",
+        motorpv="SQ:NEUTRA:board1:SP3TX",
+        errormsgpv="SQ:NEUTRA:board1:SP3TX-MsgTxt",
+        precision=0.01,
     ),
-    sp3_ty_axis = device('nicos.devices.epics.pyepics.motor.HomingProtectedEpicsMotor',
-        description = 'Sample Position 3, Translation Y Axis',
-        motorpv = 'SQ:NEUTRA:board1:SP3TY',
-        errormsgpv = 'SQ:NEUTRA:board1:SP3TY-MsgTxt',
-        precision = 0.01,
-        visibility = set(),
+    sp3_ty_axis=device(
+        "nicos.devices.epics.pyepics.motor.HomingProtectedEpicsMotor",
+        description="Sample Position 3, Translation Y Axis",
+        motorpv="SQ:NEUTRA:board1:SP3TY",
+        errormsgpv="SQ:NEUTRA:board1:SP3TY-MsgTxt",
+        precision=0.01,
+        visibility=set(),
     ),
-    sp3_ty_brake = device('nicos.devices.epics.pyepics.EpicsDigitalMoveable',
-        description = 'Sample Position 3, Translation Y Brake',
-        readpv = 'SQ:NEUTRA:b4io4:BrakeSP3',
-        writepv = 'SQ:NEUTRA:b4io4:BrakeSP3',
-        visibility = set(),
+    sp3_ty_brake=device(
+        "nicos.devices.epics.pyepics.EpicsDigitalMoveable",
+        description="Sample Position 3, Translation Y Brake",
+        readpv="SQ:NEUTRA:b4io4:BrakeSP3",
+        writepv="SQ:NEUTRA:b4io4:BrakeSP3",
+        visibility=set(),
     ),
-    sp3_ty = device('nicos.devices.generic.sequence.LockedDevice',
-        description = 'Sample Position 3, Translation Y',
-        device = 'sp3_ty_axis',
-        lock = 'sp3_ty_brake',
-        unlockvalue = 1,
-        lockvalue = 0,
-        unit = 'mm',
+    sp3_ty=device(
+        "nicos.devices.generic.sequence.LockedDevice",
+        description="Sample Position 3, Translation Y",
+        device="sp3_ty_axis",
+        lock="sp3_ty_brake",
+        unlockvalue=1,
+        lockvalue=0,
+        unit="mm",
     ),
-    sp3_ry = device('nicos.devices.epics.pyepics.motor.HomingProtectedEpicsMotor',
-        description = 'Sample Position 2, Rotation Y',
-        motorpv = 'SQ:NEUTRA:board3:SP23RY',
-        errormsgpv = 'SQ:NEUTRA:board3:SP23RY-MsgTxt',
-        precision = 0.01,
-        unit = 'deg',
+    sp3_ry=device(
+        "nicos.devices.epics.pyepics.motor.HomingProtectedEpicsMotor",
+        description="Sample Position 2, Rotation Y",
+        motorpv="SQ:NEUTRA:board3:SP23RY",
+        errormsgpv="SQ:NEUTRA:board3:SP23RY-MsgTxt",
+        precision=0.01,
+        unit="deg",
     ),
-    sp3_rz = device('nicos.devices.epics.pyepics.motor.HomingProtectedEpicsMotor',
-        description = 'Sample Position 2, Rotation Z',
-        motorpv = 'SQ:NEUTRA:board3:SP23RZ',
-        errormsgpv = 'SQ:NEUTRA:board3:SP23RZ-MsgTxt',
-        precision = 0.01,
-        unit = 'deg',
+    sp3_rz=device(
+        "nicos.devices.epics.pyepics.motor.HomingProtectedEpicsMotor",
+        description="Sample Position 2, Rotation Z",
+        motorpv="SQ:NEUTRA:board3:SP23RZ",
+        errormsgpv="SQ:NEUTRA:board3:SP23RZ-MsgTxt",
+        precision=0.01,
+        unit="deg",
     ),
 )

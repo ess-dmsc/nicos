@@ -32,17 +32,22 @@ import numpy as np
 from nicos.core import Override, Param
 from nicos.core.constants import POINT
 from nicos.core.errors import NicosError
-from nicos.devices.datasinks.image import ImageFileReader, ImageSink, \
-    SingleFileSinkHandler
-from nicos.devices.datasinks.special import LiveViewSink as BaseLiveViewSink, \
-    LiveViewSinkHandler as BaseLiveViewSinkHandler
+from nicos.devices.datasinks.image import (
+    ImageFileReader,
+    ImageSink,
+    SingleFileSinkHandler,
+)
+from nicos.devices.datasinks.special import (
+    LiveViewSink as BaseLiveViewSink,
+    LiveViewSinkHandler as BaseLiveViewSinkHandler,
+)
 from nicos.utils import findResource
 
 
 class CaressHistogramHandler(SingleFileSinkHandler):
     """Handler for the CaressHistogram data sink."""
 
-    filetype = 'ctxt'
+    filetype = "ctxt"
 
     def __init__(self, sink, dataset, detector):
         SingleFileSinkHandler.__init__(self, sink, dataset, detector)
@@ -55,24 +60,28 @@ class CaressHistogramHandler(SingleFileSinkHandler):
         bycategory = {}
         detectors = self.sink.detectors
         for (dev, key), (_, v, _, cat) in _metainfo.items():
-            if dev in detectors + ['UBahn', 'Space', 'tths'] and \
-               cat == 'general':
+            if dev in detectors + ["UBahn", "Space", "tths"] and cat == "general":
                 continue
             if cat:
-                bycategory.setdefault(cat, []).append((dev, key, v,))
-        detector = detectors[0] if detectors else 'adet'
-        _comment = 'monrate = %.1f ' % _metainfo[detector, 'rates'][0][0]
-        if 'general' in bycategory:
-            for device, _key, value in bycategory['general']:
-                if _key == 'value':
-                    _comment += '%s = %s ' % (device, value)
-        _resosteps = _metainfo[detector, 'resosteps'][0]
-        _range = _metainfo[detector, 'range'][0]
+                bycategory.setdefault(cat, []).append(
+                    (
+                        dev,
+                        key,
+                        v,
+                    )
+                )
+        detector = detectors[0] if detectors else "adet"
+        _comment = "monrate = %.1f " % _metainfo[detector, "rates"][0][0]
+        if "general" in bycategory:
+            for device, _key, value in bycategory["general"]:
+                if _key == "value":
+                    _comment += "%s = %s " % (device, value)
+        _resosteps = _metainfo[detector, "resosteps"][0]
+        _range = _metainfo[detector, "range"][0]
         _stepsize = _range / _resosteps
-        _startpos = _metainfo[detector, '_startpos'][0]
+        _startpos = _metainfo[detector, "_startpos"][0]
         _start = _startpos - (_resosteps - 1) * _stepsize
-        _acqtime = (self.dataset.finished or currenttime()) - \
-            self.dataset.started
+        _acqtime = (self.dataset.finished or currenttime()) - self.dataset.started
         _total_counts = image.sum()
 
         # for d, k in _metainfo.keys():
@@ -81,44 +90,47 @@ class CaressHistogramHandler(SingleFileSinkHandler):
         #         self.log.info(' %s.%s %r', d, k, _metainfo[d, k])
 
         header = []
-        date = strftime('%d.%m.%Y')
-        time = strftime('%H:%M:%S')
-        header.append('QMesyDAQ CARESS Histogram File  %s  %s' % (date, time))
-        header.append('')
-        header.append('Run:\t%d' % self.dataset.counter)
-        header.append('Resosteps:\t%d' % _resosteps)
-        header.append('2Theta start:\t%.2f' % _start)
-        header.append('2Theta range:\t%.2f' % _range)
-        header.append('')
-        header.append('Comment:\t%s' % _comment)
-        header.append('')
-        header.append('Acquisition Time\t%d' % _acqtime)
-        header.append('Total Counts\t%d' % _total_counts)
-        if _metainfo[detector, 'mode'][0] == 'time':
-            header.append('Preset timer seconds:\t%.0f' %
-                          _metainfo[detector, 'preset'][0])
+        date = strftime("%d.%m.%Y")
+        time = strftime("%H:%M:%S")
+        header.append("QMesyDAQ CARESS Histogram File  %s  %s" % (date, time))
+        header.append("")
+        header.append("Run:\t%d" % self.dataset.counter)
+        header.append("Resosteps:\t%d" % _resosteps)
+        header.append("2Theta start:\t%.2f" % _start)
+        header.append("2Theta range:\t%.2f" % _range)
+        header.append("")
+        header.append("Comment:\t%s" % _comment)
+        header.append("")
+        header.append("Acquisition Time\t%d" % _acqtime)
+        header.append("Total Counts\t%d" % _total_counts)
+        if _metainfo[detector, "mode"][0] == "time":
+            header.append(
+                "Preset timer seconds:\t%.0f" % _metainfo[detector, "preset"][0]
+            )
         else:
-            header.append('Preset monitor_1 counts:\t%d' %
-                          _metainfo[detector, 'preset'][0])
-        header.append('')
-        header.append('CARESS XY data: 1 row title (position numbers), then '
-                      '(resosteps x 80) position data in columns')
-        header.append('\t' + '\t'.join(['%d' % x for x in range(1, 255)]))
+            header.append(
+                "Preset monitor_1 counts:\t%d" % _metainfo[detector, "preset"][0]
+            )
+        header.append("")
+        header.append(
+            "CARESS XY data: 1 row title (position numbers), then "
+            "(resosteps x 80) position data in columns"
+        )
+        header.append("\t" + "\t".join(["%d" % x for x in range(1, 255)]))
 
         # write Header
         for line in header:
-            fp.write(('%s\n' % line).encode())
+            fp.write(("%s\n" % line).encode())
 
         for i, v in enumerate(image):
             _pos = _start + i * _stepsize
-            fp.write(('%.2f\t%s\n' %
-                      (_pos, '\t'.join(['%d' % x for x in v]))).encode())
-        fp.write(b'\n')
+            fp.write(("%.2f\t%s\n" % (_pos, "\t".join(["%d" % x for x in v]))).encode())
+        fp.write(b"\n")
 
-        fp.write(b'total sum\n')
+        fp.write(b"total sum\n")
         for i, v in enumerate(image):
             _pos = _start + i * _stepsize
-            fp.write(('%.2f\t%d\n' % (_pos, v.sum())).encode())
+            fp.write(("%.2f\t%d\n" % (_pos, v.sum())).encode())
 
         fp.flush()
 
@@ -134,10 +146,13 @@ class CaressHistogram(ImageSink):
     """
 
     parameter_overrides = {
-        'filenametemplate': Override(mandatory=False, settable=False,
-                                     userparam=False,
-                                     default=['run%(pointcounter)07d.ctxt']),
-        'settypes': Override(default=[POINT]),
+        "filenametemplate": Override(
+            mandatory=False,
+            settable=False,
+            userparam=False,
+            default=["run%(pointcounter)07d.ctxt"],
+        ),
+        "settypes": Override(default=[POINT]),
     }
 
     handlerclass = CaressHistogramHandler
@@ -147,40 +162,46 @@ class CaressHistogram(ImageSink):
 
 
 class CaressHistogramReader(ImageFileReader):
-    filetypes = [('ctxt', 'CARESS Histogram File (*.ctxt)')]
+    filetypes = [("ctxt", "CARESS Histogram File (*.ctxt)")]
 
-    correctionfile = 'nicos_mlz/spodi/data/detcorrection.dat'
+    correctionfile = "nicos_mlz/spodi/data/detcorrection.dat"
 
     @classmethod
     def fromfile(cls, filename):
         ndim = 254
         ndet = 80
         sizes = (ndet, ndim)
-        corrData = DataParser.ReadCorrectionFile(
-            findResource(cls.correctionfile))
-        with open(filename, 'r', encoding='utf-8') as f:
-            regex = re.compile(r'\w+ = ')
-            if not f.readline().startswith('QMesyDAQ CARESS Histogram File'):
-                raise NicosError('File is not a CARESS histogram file.')
+        corrData = DataParser.ReadCorrectionFile(findResource(cls.correctionfile))
+        with open(filename, "r", encoding="utf-8") as f:
+            regex = re.compile(r"\w+ = ")
+            if not f.readline().startswith("QMesyDAQ CARESS Histogram File"):
+                raise NicosError("File is not a CARESS histogram file.")
             for line in f:
-                if line.startswith('Resosteps'):
+                if line.startswith("Resosteps"):
                     resosteps = int(line.split()[1])
-                elif line.startswith('2Theta start'):
+                elif line.startswith("2Theta start"):
                     startpos = float(line.split()[2])
-                elif line.startswith('Comment'):
-                    s = line.split(':')[-1].strip()
+                elif line.startswith("Comment"):
+                    s = line.split(":")[-1].strip()
                     for k, v in zip(regex.findall(s), regex.split(s)[1:]):
-                        if k.split(' = ')[0] == 'detsampledist':
+                        if k.split(" = ")[0] == "detsampledist":
                             detsampledist = float(v)
             thetaRaw = DataParser.ThetaInitial(startpos, resosteps, ndet)
-            thetaCorr = DataParser.ThetaModified(
-                thetaRaw, corrData, resosteps, ndet)
+            thetaCorr = DataParser.ThetaModified(thetaRaw, corrData, resosteps, ndet)
 
         data = DataParser.CaressFormat(filename, sizes[1], sizes[0])[-1]
-        return np.sum(DataParser.RingStraight(
-            thetaCorr, thetaRaw, DataParser.VertCalibIntensCorr(
-                data, corrData, resosteps, ndet, ndim),
-            resosteps, ndet, ndim, detsampledist), axis=1)
+        return np.sum(
+            DataParser.RingStraight(
+                thetaCorr,
+                thetaRaw,
+                DataParser.VertCalibIntensCorr(data, corrData, resosteps, ndet, ndim),
+                resosteps,
+                ndet,
+                ndim,
+                detsampledist,
+            ),
+            axis=1,
+        )
 
 
 class Straight:
@@ -191,29 +212,36 @@ class Straight:
     def prepare(self):
         if self.sink.correctionfile:
             self.corrData = DataParser.ReadCorrectionFile(
-                findResource(self.sink.correctionfile))
+                findResource(self.sink.correctionfile)
+            )
 
     def _ringStraight(self, result):
         if not self.sink.correctionfile:
             return result[1]
         metainfo = self.dataset.metainfo
         ndim = 254
-        det = self.sink.detectors[0] if self.sink.detectors else 'adet'
-        ndet = metainfo[det, 'numinputs'][0]
-        resosteps = metainfo[det, 'resosteps'][0]
-        _range = metainfo[det, 'range'][0]
+        det = self.sink.detectors[0] if self.sink.detectors else "adet"
+        ndet = metainfo[det, "numinputs"][0]
+        resosteps = metainfo[det, "resosteps"][0]
+        _range = metainfo[det, "range"][0]
         stepsize = _range / resosteps
-        startpos = metainfo[det, '_startpos'][0]
+        startpos = metainfo[det, "_startpos"][0]
         start = startpos - (resosteps - 1) * stepsize
         thetaRaw = DataParser.ThetaInitial(start, resosteps, ndet)
-        thetaCorr = DataParser.ThetaModified(
-            thetaRaw, self.corrData, resosteps, ndet)
-        return [DataParser.RingStraight(
-                thetaCorr, thetaRaw,
+        thetaCorr = DataParser.ThetaModified(thetaRaw, self.corrData, resosteps, ndet)
+        return [
+            DataParser.RingStraight(
+                thetaCorr,
+                thetaRaw,
                 DataParser.VertCalibIntensCorr(
-                    result[1][0], self.corrData, resosteps, ndet, ndim),
-                resosteps, ndet, ndim,
-                metainfo['detsampledist', 'value'][0])]
+                    result[1][0], self.corrData, resosteps, ndet, ndim
+                ),
+                resosteps,
+                ndet,
+                ndim,
+                metainfo["detsampledist", "value"][0],
+            )
+        ]
 
 
 class LiveViewSinkHandler(Straight, BaseLiveViewSinkHandler):
@@ -227,18 +255,21 @@ class LiveViewSinkHandler(Straight, BaseLiveViewSinkHandler):
 
     def getLabelDescs(self, result):
         ds = self.dataset
-        resosteps = ds.metainfo['adet', 'resosteps'][0]
-        ninputs = ds.metainfo['adet', 'numinputs'][0]
+        resosteps = ds.metainfo["adet", "resosteps"][0]
+        ninputs = ds.metainfo["adet", "numinputs"][0]
         start, _, step = self._calcStartEndStep(
-            ds.metainfo['adet', '_startpos'][0], resosteps,
-            ds.metainfo['adet', 'range'][0], ninputs * resosteps)
+            ds.metainfo["adet", "_startpos"][0],
+            resosteps,
+            ds.metainfo["adet", "range"][0],
+            ninputs * resosteps,
+        )
         return {
-            'x': {
-                'define': 'range',
-                'title': 'tths (deg)',
-                'start': start,
-                'length': resosteps * ninputs,
-                'step': step,
+            "x": {
+                "define": "range",
+                "title": "tths (deg)",
+                "start": start,
+                "length": resosteps * ninputs,
+                "step": step,
             },
         }
 
@@ -262,7 +293,11 @@ class LiveViewSink(BaseLiveViewSink):
     handlerclass = LiveViewSinkHandler
 
     parameters = {
-        'correctionfile': Param('Intensity correction file',
-                                type=str, settable=False, prefercache=False,
-                                default=''),
+        "correctionfile": Param(
+            "Intensity correction file",
+            type=str,
+            settable=False,
+            prefercache=False,
+            default="",
+        ),
     }

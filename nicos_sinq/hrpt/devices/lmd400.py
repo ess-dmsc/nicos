@@ -28,41 +28,66 @@ from nicos.devices.epics.pyepics import EpicsDevice
 
 class LMD400(EpicsDevice, Device):
     """
-        The LMD400 is a data logger which is used at HRPT for watching over
-        the detector.
-        It sends two types of data:
-        - an alarm string
-        - Some numbers indicating the temperature of the detector
+    The LMD400 is a data logger which is used at HRPT for watching over
+    the detector.
+    It sends two types of data:
+    - an alarm string
+    - Some numbers indicating the temperature of the detector
     """
 
     parameters = {
-        'basepv': Param('Base name of the PVs with delimiter.', type=pvname,
-                        mandatory=True, settable=False, userparam=False),
-        'alarm': Param('Alarm status of the LMD400', type=str, mandatory=False,
-                       volatile=True, default='Nothing read',
-                       userparam=True,
-                       settable=False),
-        'values': Param('LMD400 values', type=listof(float), volatile=True,
-                        default=[0, 0, 0, 0, 0, 0, 0, 0, 0, ], userparam=True,
-                        settable=False)}
+        "basepv": Param(
+            "Base name of the PVs with delimiter.",
+            type=pvname,
+            mandatory=True,
+            settable=False,
+            userparam=False,
+        ),
+        "alarm": Param(
+            "Alarm status of the LMD400",
+            type=str,
+            mandatory=False,
+            volatile=True,
+            default="Nothing read",
+            userparam=True,
+            settable=False,
+        ),
+        "values": Param(
+            "LMD400 values",
+            type=listof(float),
+            volatile=True,
+            default=[
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+            ],
+            userparam=True,
+            settable=False,
+        ),
+    }
 
-    pv_parameters = {'alarm', 'values'}
+    pv_parameters = {"alarm", "values"}
 
     def _get_pv_name(self, pvparam):
-        prefix = getattr(self, 'basepv')
-        if pvparam == 'alarm':
-            return prefix + 'ALARM'
-        elif pvparam == 'values':
-            return prefix + 'VALUES'
+        prefix = getattr(self, "basepv")
+        if pvparam == "alarm":
+            return prefix + "ALARM"
+        elif pvparam == "values":
+            return prefix + "VALUES"
         else:
-            raise ConfigurationError(
-                'requested invalid pv %s for LMD400' % (pvparam))
+            raise ConfigurationError("requested invalid pv %s for LMD400" % (pvparam))
 
     def _get_pv_parameters(self):
         return self.pv_parameters
 
     def doReadAlarm(self):
-        return self._get_pv('alarm', as_string=True)
+        return self._get_pv("alarm", as_string=True)
 
     def doReadValues(self):
-        return self._get_pv('values').tolist()
+        return self._get_pv("values").tolist()

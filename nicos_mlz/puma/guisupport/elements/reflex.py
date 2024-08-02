@@ -35,8 +35,7 @@ class Reflex(TableBase):
 
     number = 0
 
-    def __init__(self, radius, crystal, sample, detector, parent=None,
-                 scene=None):
+    def __init__(self, radius, crystal, sample, detector, parent=None, scene=None):
         self._number = Reflex.number + 1
         Reflex.number += 1
         self._crystal = crystal
@@ -48,20 +47,27 @@ class Reflex(TableBase):
     def _calculate_reflection(self):
         x1, y1 = self._crystal.scenePos().x(), self._crystal.scenePos().y()
         x2, y2 = self._detector.scenePos().x(), self._detector.scenePos().y()
-        inangle = math.degrees(math.atan(
-            (self._crystal.scenePos().y() - self._sample.scenePos().y()) /
-            abs(self._sample.scenePos().x() - self._crystal.scenePos().x())))
+        inangle = math.degrees(
+            math.atan(
+                (self._crystal.scenePos().y() - self._sample.scenePos().y())
+                / abs(self._sample.scenePos().x() - self._crystal.scenePos().x())
+            )
+        )
         outangle = inangle + 2 * self._crystal.rotation()
         if self._number == show:
-            print('calc reflection: x1, y1, x2, y2, rot: %f, %f, %f %f %f' % (
-                x1, y1, x2, y2, self._detector.rotation()))
+            print(
+                "calc reflection: x1, y1, x2, y2, rot: %f, %f, %f %f %f"
+                % (x1, y1, x2, y2, self._detector.rotation())
+            )
         # m = (x2 - x1) / (y2 - y1)
         m = math.tan(math.radians(outangle))
         r = self._radius
         if self._number == show:
-            print('%f %f %f m: %f, r: %f' % (inangle, self._crystal.rotation(),
-                                             outangle, m, r))
-        m2_1 = (1 + m * m)
+            print(
+                "%f %f %f m: %f, r: %f"
+                % (inangle, self._crystal.rotation(), outangle, m, r)
+            )
+        m2_1 = 1 + m * m
         t = m * (x1 - x2) + y2 - y1
         sq = math.sqrt(m2_1 * r * r - t * t)
         x = (x1 + m * m * x2 + m * (y1 - y2) - sq) / m2_1
@@ -69,7 +75,7 @@ class Reflex(TableBase):
         r1 = math.sqrt(x * x + y * y)
         if self._number == show:
             print(self._crystal.pos(), self._crystal.scenePos())
-            print('x, y: %f, %f %f' % (x, y, r1))
+            print("x, y: %f, %f %f" % (x, y, r1))
             print()
         return outangle, r1
 

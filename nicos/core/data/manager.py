@@ -30,13 +30,21 @@ from time import time as currenttime
 
 from nicos import session
 from nicos.core.constants import BLOCK, POINT, SCAN, SIMULATION, SUBSCAN
-from nicos.core.data.dataset import BlockDataset, PointDataset, ScanDataset, \
-    SubscanDataset
+from nicos.core.data.dataset import (
+    BlockDataset,
+    PointDataset,
+    ScanDataset,
+    SubscanDataset,
+)
 from nicos.core.data.sink import DataFile
 from nicos.core.errors import ProgrammingError
 from nicos.core.utils import DeviceValueDict
-from nicos.utils import DEFAULT_FILE_MODE, lazy_property, readFileCounter, \
-    updateFileCounter
+from nicos.utils import (
+    DEFAULT_FILE_MODE,
+    lazy_property,
+    readFileCounter,
+    updateFileCounter,
+)
 
 
 class DataManager:
@@ -55,7 +63,7 @@ class DataManager:
 
     @lazy_property
     def log(self):
-        logger = session.getLogger('nicos-data')
+        logger = session.getLogger("nicos-data")
         logger.setLevel(logging.INFO)
         return logger
 
@@ -106,12 +114,12 @@ class DataManager:
         from the scan to the keywords for creating a point dataset.
         """
         if self._current:
-            if 'devices' not in kwds:
-                kwds['devices'] = self._current.devices
-            if 'environment' not in kwds:
-                kwds['environment'] = self._current.environment
-            if 'detectors' not in kwds:
-                kwds['detectors'] = self._current.detectors
+            if "devices" not in kwds:
+                kwds["devices"] = self._current.devices
+            if "environment" not in kwds:
+                kwds["environment"] = self._current.environment
+            if "detectors" not in kwds:
+                kwds["detectors"] = self._current.detectors
 
     def beginPoint(self, **kwds):
         """Create and begin a new point dataset."""
@@ -130,7 +138,7 @@ class DataManager:
     def finishPoint(self):
         """Finish the current point dataset."""
         if self._current.settype != POINT:
-            self.log.warning('no data point to finish here')
+            self.log.warning("no data point to finish here")
             return
         point = self._stack.pop()
         self._finish(point)
@@ -138,7 +146,7 @@ class DataManager:
     def finishScan(self):
         """Finish the current scan dataset."""
         if self._current.settype not in (SCAN, SUBSCAN):
-            self.log.warning('no scan to finish here')
+            self.log.warning("no scan to finish here")
             return
         scan = self._stack.pop()
         self._finish(scan)
@@ -146,7 +154,7 @@ class DataManager:
     def finishBlock(self):
         """Finish the current block dataset."""
         if self._current.settype != BLOCK:
-            self.log.warning('no block to finish here')
+            self.log.warning("no block to finish here")
             return
         block = self._stack.pop()
         self._finish(block)
@@ -172,7 +180,7 @@ class DataManager:
 
         Finally dispatches corresponding sink handlers.
         """
-        self.log.debug('created new dataset %s', dataset)
+        self.log.debug("created new dataset %s", dataset)
         if not skip_handlers:
             for sink in session.datasinks:
                 if sink.isActive(dataset):
@@ -180,33 +188,34 @@ class DataManager:
                     dataset.handlers.extend(handlers)
             # Sorting handlers for right execution order
             dataset.handlers = sorted(
-                dataset.handlers, key=lambda _handler: _handler.ordering)
+                dataset.handlers, key=lambda _handler: _handler.ordering
+            )
         if self._current:
             self._current.subsets.append(dataset)
             dataset.number = len(self._current.subsets)
         self._stack.append(dataset)
-        dataset.dispatch('prepare')
-        dataset.dispatch('begin')
+        dataset.dispatch("prepare")
+        dataset.dispatch("begin")
         return dataset
 
     def _clean(self, upto=()):
         """Finish leftover datasets that aren't instances of *upto*."""
         while self._stack and self._stack[-1].settype not in upto:
             last = self._stack.pop()
-            self.log.warning('Cleaning up %s from stack?!', last)
+            self.log.warning("Cleaning up %s from stack?!", last)
             try:
                 self._finish(last)
             except Exception:
-                self.log.exception('while cleaning up dataset %s', last)
+                self.log.exception("while cleaning up dataset %s", last)
 
     def _finish(self, dataset):
         """Finish up the dataset."""
         if dataset.finished is None:
             dataset.finished = currenttime()
-        self.log.debug('finishing up %s', dataset)
-        dataset.dispatch('end')
+        self.log.debug("finishing up %s", dataset)
+        dataset.dispatch("end")
         if self._stack:
-            self._stack[-1].dispatch('addSubset', dataset)
+            self._stack[-1].dispatch("addSubset", dataset)
         dataset.trimResult()
 
     #
@@ -220,10 +229,10 @@ class DataManager:
         (rawvalue, strvalue, unit, category)}``.
         """
         if self._current.settype != POINT:
-            self.log.warning('No current point dataset, ignoring metainfo')
+            self.log.warning("No current point dataset, ignoring metainfo")
             return
         self._current.metainfo.update(metainfo)
-        self._current.dispatch('putMetainfo', metainfo)
+        self._current.dispatch("putMetainfo", metainfo)
 
     def putValues(self, values):
         """Put some values into the topmost (point) dataset.
@@ -234,10 +243,10 @@ class DataManager:
         device for the point.
         """
         if self._current.settype != POINT:
-            self.log.warning('No current point dataset, ignoring values')
+            self.log.warning("No current point dataset, ignoring values")
             return
         self._current._addvalues(values)
-        self._current.dispatch('putValues', values)
+        self._current.dispatch("putValues", values)
 
     def putResults(self, quality, results):
         """Put some detector results into the topmost (point) dataset.
@@ -250,10 +259,10 @@ class DataManager:
         ``{devname: (readvalue, arrays)}``.
         """
         if self._current.settype != POINT:
-            self.log.warning('No current point dataset, ignoring results')
+            self.log.warning("No current point dataset, ignoring results")
             return
         self._current.results.update(results)
-        self._current.dispatch('putResults', quality, results)
+        self._current.dispatch("putResults", quality, results)
 
     def updateMetainfo(self):
         """Utility function to gather metainfo from all relevant devices and
@@ -262,22 +271,28 @@ class DataManager:
         Relevant devices are selected by the "metadata" entry in the
         visibility parameter.
         """
-        devices = [dev for (_, dev) in
-                   sorted(session.devices.items(),
-                          key=lambda name_dev: name_dev[0].lower())]
+        devices = [
+            dev
+            for (_, dev) in sorted(
+                session.devices.items(), key=lambda name_dev: name_dev[0].lower()
+            )
+        ]
         newinfo = {}
         for device in devices:
-            if 'metadata' not in device.visibility:
+            if "metadata" not in device.visibility:
                 continue
             for key, value, strvalue, unit, category in device.info():
                 newinfo[device.name, key] = (value, strvalue, unit, category)
         self.putMetainfo(newinfo)
 
     def cacheCallback(self, key, value, time):
-        if (not self._current or self._current.settype != POINT
-            or self._current.finished is not None):
+        if (
+            not self._current
+            or self._current.settype != POINT
+            or self._current.finished is not None
+        ):
             return
-        devname = session.device_case_map.get(key.split('/')[0])
+        devname = session.device_case_map.get(key.split("/")[0])
         if devname is not None:
             try:
                 self.putValues({devname: (time, value)})
@@ -301,18 +316,19 @@ class DataManager:
         if dataset.counter != 0:
             return
         if session.mode == SIMULATION:
-            raise ProgrammingError('assignCounter should not be called in '
-                                   'simulation mode')
+            raise ProgrammingError(
+                "assignCounter should not be called in " "simulation mode"
+            )
 
         new_counters = self.incrementCounters(dataset.countertype)
-        for (attr, value) in new_counters:
+        for attr, value in new_counters:
             setattr(dataset, attr, value)
 
         # push special counters into parameters for display
         if dataset.settype == SCAN:
-            session.experiment._setROParam('lastscan', dataset.counter)
+            session.experiment._setROParam("lastscan", dataset.counter)
         elif dataset.settype == POINT:
-            session.experiment._setROParam('lastpoint', dataset.counter)
+            session.experiment._setROParam("lastpoint", dataset.counter)
 
     def incrementCounters(self, countertype):
         """Increment the counters for the given *countertype*.
@@ -324,15 +340,19 @@ class DataManager:
         """
         exp = session.experiment
         if not path.isfile(path.join(exp.dataroot, exp.counterfile)):
-            session.log.warning('creating new empty file counter file at %s',
-                                path.join(exp.dataroot, exp.counterfile))
+            session.log.warning(
+                "creating new empty file counter file at %s",
+                path.join(exp.dataroot, exp.counterfile),
+            )
         # Keep track of which files we have already updated, since the proposal
         # and the sample specific counter might be the same file.
         seen = set()
         result = []
-        for directory, attr in [(exp.dataroot, 'counter'),
-                                (exp.proposalpath, 'propcounter'),
-                                (exp.samplepath, 'samplecounter')]:
+        for directory, attr in [
+            (exp.dataroot, "counter"),
+            (exp.proposalpath, "propcounter"),
+            (exp.samplepath, "samplecounter"),
+        ]:
             counterpath = path.normpath(path.join(directory, exp.counterfile))
             nextnum = readFileCounter(counterpath, countertype) + 1
             if counterpath not in seen:
@@ -358,10 +378,10 @@ class DataManager:
         result = {}
         # get all parent counters into the keywords
         for ds in self._stack:
-            result[ds.countertype + 'counter'] = ds.counter
-            result[ds.countertype + 'propcounter'] = ds.propcounter
-            result[ds.countertype + 'samplecounter'] = ds.samplecounter
-            result[ds.countertype + 'number'] = ds.number
+            result[ds.countertype + "counter"] = ds.counter
+            result[ds.countertype + "propcounter"] = ds.propcounter
+            result[ds.countertype + "samplecounter"] = ds.samplecounter
+            result[ds.countertype + "number"] = ds.number
         return result
 
     def expandNameTemplates(self, nametemplates, additionalinfo=None):
@@ -384,18 +404,24 @@ class DataManager:
                 filename = nametmpl % DeviceValueDict(kwds)
             except KeyError as err:
                 if not exc:
-                    exc = KeyError('can\'t create datafile, illegal key %s in '
-                                   'filename template %r!' % (err, nametmpl))
+                    exc = KeyError(
+                        "can't create datafile, illegal key %s in "
+                        "filename template %r!" % (err, nametmpl)
+                    )
                 continue
             except TypeError as err:
                 if not exc:
-                    exc = TypeError('error expanding data file name: %s, check '
-                                    'filename template %r!' % (err, nametmpl))
+                    exc = TypeError(
+                        "error expanding data file name: %s, check "
+                        "filename template %r!" % (err, nametmpl)
+                    )
                 continue
             except ValueError as err:
                 if not exc:
-                    exc = ValueError('error expanding data file name: %s, check '
-                                     'filename template %r!' % (err, nametmpl))
+                    exc = ValueError(
+                        "error expanding data file name: %s, check "
+                        "filename template %r!" % (err, nametmpl)
+                    )
                 continue
             filenames.append(filename)
         if exc and not filenames:
@@ -422,16 +448,17 @@ class DataManager:
         the `additionalinfo` keyword argument.
         """
         if dataset.counter == 0:
-            raise ProgrammingError('a counter number must be assigned to the '
-                                   'dataset first')
-        addinfo = kwargs.pop('additionalinfo', {})
-        filenames = self.expandNameTemplates(nametemplates,
-                                             additionalinfo=addinfo)
+            raise ProgrammingError(
+                "a counter number must be assigned to the " "dataset first"
+            )
+        addinfo = kwargs.pop("additionalinfo", {})
+        filenames = self.expandNameTemplates(nametemplates, additionalinfo=addinfo)
         filename = filenames[0]
-        filepaths = [session.experiment.getDataFilename(ln, *subdirs)
-                     for ln in filenames]
+        filepaths = [
+            session.experiment.getDataFilename(ln, *subdirs) for ln in filenames
+        ]
 
-        if not kwargs.get('nomeasdata'):
+        if not kwargs.get("nomeasdata"):
             shortpath = path.join(*subdirs + (filename,))
             dataset.filenames.append(shortpath)
             dataset.filepaths.append(filepaths[0])
@@ -440,18 +467,24 @@ class DataManager:
 
     def linkFiles(self, filepath, linkpaths):
         """Creates hardlinks in *linkpaths*, pointing to *filepath*."""
-        linkfunc = os.link if hasattr(os, 'link') else \
-            os.symlink if hasattr(os, 'symlink') else None
+        linkfunc = (
+            os.link
+            if hasattr(os, "link")
+            else os.symlink
+            if hasattr(os, "symlink")
+            else None
+        )
         if linkfunc:  # pylint: disable=using-constant-test
             for linkpath in linkpaths:
-                self.log.debug('linking %r to %r', linkpath, filepath)
+                self.log.debug("linking %r to %r", linkpath, filepath)
                 try:
                     linkfunc(filepath, linkpath)
                 except OSError:
-                    self.log.warning('linking %r to %r failed, ignoring',
-                                     linkpath, filepath)
+                    self.log.warning(
+                        "linking %r to %r failed, ignoring", linkpath, filepath
+                    )
         else:
-            self.log.warning('can\'t link datafiles, no os support!')
+            self.log.warning("can't link datafiles, no os support!")
 
     def createDataFile(self, dataset, nametemplates, *subdirs, **kwargs):
         """Creates and returns a file named according to the given list of
@@ -475,27 +508,32 @@ class DataManager:
         this as a measurement data file in the dataset.  (Useful for either
         temporary files or auxiliary data files.)
         """
-        fileclass = kwargs.get('fileclass', DataFile)
+        fileclass = kwargs.get("fileclass", DataFile)
         if session.mode == SIMULATION:
-            raise ProgrammingError('createDataFile should not be called in '
-                                   'simulation mode')
-        filename, filepaths = self.getFilenames(dataset, nametemplates,
-                                                *subdirs, **kwargs)
+            raise ProgrammingError(
+                "createDataFile should not be called in " "simulation mode"
+            )
+        filename, filepaths = self.getFilenames(
+            dataset, nametemplates, *subdirs, **kwargs
+        )
         filepath = filepaths[0]
         shortpath = path.join(*subdirs + (filename,))
 
-        self.log.debug('creating file %r using fileclass %r', filename,
-                       fileclass)
+        self.log.debug("creating file %r using fileclass %r", filename, fileclass)
         if fileclass == DataFile:
             datafile = fileclass(
-                shortpath, filepath, kwargs.pop('filemode', None),
-                kwargs.pop('logger', None))
+                shortpath,
+                filepath,
+                kwargs.pop("filemode", None),
+                kwargs.pop("logger", None),
+            )
         else:
             datafile = fileclass(shortpath, filepath)
         exp = session.experiment
         if exp.managerights:
-            os.chmod(filepath,
-                     exp.managerights.get('enableFileMode', DEFAULT_FILE_MODE))
+            os.chmod(
+                filepath, exp.managerights.get("enableFileMode", DEFAULT_FILE_MODE)
+            )
             # XXX add chown here?
 
         self.linkFiles(filepath, filepaths[1:])

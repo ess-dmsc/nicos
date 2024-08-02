@@ -27,13 +27,26 @@ from nicos.utils.loggers import NicosLogger
 
 
 class RabbitProducer:
-    HEADER_KEYS = {'proposal', 'subject', 'note', 'attachment', 'file',
-                   'line_count', 'img_rows'}
+    HEADER_KEYS = {
+        "proposal",
+        "subject",
+        "note",
+        "attachment",
+        "file",
+        "line_count",
+        "img_rows",
+    }
 
-    def __init__(self, rabbit_url, rabbit_port, rabbit_virtual_host,
-                 rabbit_username, rabbit_password, rabbit_static_queue):
-
-        self.log = NicosLogger('rabbit_producer')
+    def __init__(
+        self,
+        rabbit_url,
+        rabbit_port,
+        rabbit_virtual_host,
+        rabbit_username,
+        rabbit_password,
+        rabbit_static_queue,
+    ):
+        self.log = NicosLogger("rabbit_producer")
         self.rabbit_url = rabbit_url
         self.rabbit_port = rabbit_port
         self.virtual_host = rabbit_virtual_host
@@ -41,13 +54,17 @@ class RabbitProducer:
         self.rabbit_password = rabbit_password
         self.queue = rabbit_static_queue
 
-        self.credentials = pika.PlainCredentials(self.rabbit_username,
-                                                 self.rabbit_password)
+        self.credentials = pika.PlainCredentials(
+            self.rabbit_username, self.rabbit_password
+        )
         self._params = pika.connection.ConnectionParameters(
-            host=self.rabbit_url, port=self.rabbit_port,
+            host=self.rabbit_url,
+            port=self.rabbit_port,
             virtual_host=self.virtual_host,
-            heartbeat=600, blocked_connection_timeout=300,
-            credentials=self.credentials)
+            heartbeat=600,
+            blocked_connection_timeout=300,
+            credentials=self.credentials,
+        )
 
         self._conn = None
         self._channel = None
@@ -59,14 +76,14 @@ class RabbitProducer:
 
     def _produce(self, headers, message):
         self._channel.queue_declare(queue=self.queue, durable=True)
-        self._channel.basic_publish(exchange='',
-                                    routing_key=self.queue,
-                                    body=message,
-                                    properties=pika.BasicProperties(
-                                        headers=headers,
-                                        delivery_mode=
-                                        pika.spec.PERSISTENT_DELIVERY_MODE
-                                    ))
+        self._channel.basic_publish(
+            exchange="",
+            routing_key=self.queue,
+            body=message,
+            properties=pika.BasicProperties(
+                headers=headers, delivery_mode=pika.spec.PERSISTENT_DELIVERY_MODE
+            ),
+        )
 
     def handle_attachment(self, headers, png_stream):
         self.produce(headers=headers, message=png_stream)
@@ -84,12 +101,14 @@ class RabbitProducer:
                         self.connect()
                     self._produce(headers, message)
                     return
-                except (pika.exceptions.ChannelWrongStateError,
-                        pika.exceptions.StreamLostError,
-                        pika.exceptions.AMQPHeartbeatTimeout,
-                        pika.exceptions.AMQPConnectionError,
-                        AttributeError) as e:
-                    self.log.debug('reconnect #%d due to %r', retry + 1, e)
+                except (
+                    pika.exceptions.ChannelWrongStateError,
+                    pika.exceptions.StreamLostError,
+                    pika.exceptions.AMQPHeartbeatTimeout,
+                    pika.exceptions.AMQPConnectionError,
+                    AttributeError,
+                ) as e:
+                    self.log.debug("reconnect #%d due to %r", retry + 1, e)
                     exc = e
             raise exc
 

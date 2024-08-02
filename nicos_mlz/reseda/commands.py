@@ -32,10 +32,10 @@ from nicos.commands.measure import count
 from nicos.commands.scan import manualscan
 from nicos.core import NicosError
 
-__all__ = ['zero', 'setecho', 'set_cascade', 'pol', 'miezescan', 'miezetau']
+__all__ = ["zero", "setecho", "set_cascade", "pol", "miezescan", "miezetau"]
 
 
-@helparglist('wavelength, deltaFreq, distance')
+@helparglist("wavelength, deltaFreq, distance")
 @usercommand
 def miezetau(wavelength, deltaFreq, distance):
     """Calculate MIEZE time.
@@ -46,16 +46,37 @@ def miezetau(wavelength, deltaFreq, distance):
     """
     # co.m_n  Mass of neutron
     # co.h    Planck constant
-    return (2*co.m_n**2/co.h**2 * (wavelength*1e-10)**3 * deltaFreq * distance *
-            1e9)
+    return (
+        2 * co.m_n**2 / co.h**2 * (wavelength * 1e-10) ** 3 * deltaFreq * distance * 1e9
+    )
 
 
 @usercommand
 def zero():
     """Shut down all (static) power supplies."""
-    ps = ['hrf_0a', 'hrf_0b', 'hrf_1a', 'hrf_1b', 'hsf_0a', 'hsf_0b', 'hsf_1',
-          'sf_0a', 'sf_0b', 'sf_1', 'gf1', 'gf2', 'gf4', 'gf5', 'gf6', 'gf7',
-          'gf8', 'gf9', 'gf10', 'nse0', 'nse1']
+    ps = [
+        "hrf_0a",
+        "hrf_0b",
+        "hrf_1a",
+        "hrf_1b",
+        "hsf_0a",
+        "hsf_0b",
+        "hsf_1",
+        "sf_0a",
+        "sf_0b",
+        "sf_1",
+        "gf1",
+        "gf2",
+        "gf4",
+        "gf5",
+        "gf6",
+        "gf7",
+        "gf8",
+        "gf9",
+        "gf10",
+        "nse0",
+        "nse1",
+    ]
     waitlist = []
     for powersupply in ps:
         try:
@@ -67,10 +88,10 @@ def zero():
     wait(*waitlist)
 
     # Stop regulation and turn fg_amp off
-    reg_devs = ['cbox_0a_reg_amp', 'cbox_0b_reg_amp']
+    reg_devs = ["cbox_0a_reg_amp", "cbox_0b_reg_amp"]
     try:
-        session.getDevice('cbox_1_reg_amp')
-        reg_devs.append('cbox_1_reg_amp')
+        session.getDevice("cbox_1_reg_amp")
+        reg_devs.append("cbox_1_reg_amp")
     except NicosError:
         pass
     stop(*reg_devs)
@@ -87,8 +108,8 @@ def set_flipper_off():
     After shutting down the neutrons are guided through instrument for
     image mode (MIEZE)
     """
-    ps = ['sf_0a', 'sf_0b', 'cbox_0a_fg_amp', 'cbox_0b_fg_amp']
-    reg = ['cbox_0a_reg_amp', 'cbox_0b_reg_amp']
+    ps = ["sf_0a", "sf_0b", "cbox_0a_fg_amp", "cbox_0b_fg_amp"]
+    reg = ["cbox_0a_reg_amp", "cbox_0b_reg_amp"]
     for powersupply in ps:
         powersupply = session.getDevice(powersupply)
         move(powersupply, 0.01)
@@ -97,7 +118,7 @@ def set_flipper_off():
         stop(regulator)
 
 
-@helparglist('time[, f1, f2]')
+@helparglist("time[, f1, f2]")
 @usercommand
 def setecho(time, f1=None, f2=None):
     """Wrap setting of an echotime.
@@ -105,13 +126,13 @@ def setecho(time, f1=None, f2=None):
     If frequencies 'f1' and/or 'f2' are not given, they will be taken from
     the echo time table to configure the cascade setup.
     """
-    echotime = session.getDevice('echotime')
+    echotime = session.getDevice("echotime")
     move(echotime, time)
     set_cascade(f1, f2)
     wait(echotime)
 
 
-@helparglist('[f1, f2]')
+@helparglist("[f1, f2]")
 @usercommand
 def set_cascade(f1=None, f2=None):
     """Set Cascade Frequency Generator Freqs and Trigger.i
@@ -119,23 +140,23 @@ def set_cascade(f1=None, f2=None):
     If frequencies 'f1' and/or 'f2' are not given, they will be taken from
     the echo time table.
     """
-    psd_chop_freq = session.getDevice('psd_chop_freq')
-    psd_timebin_freq = session.getDevice('psd_timebin_freq')
-    fg_burst = session.getDevice('fg_burst')
+    psd_chop_freq = session.getDevice("psd_chop_freq")
+    psd_timebin_freq = session.getDevice("psd_timebin_freq")
+    fg_burst = session.getDevice("fg_burst")
     if f1 is None:
-        et = session.getDevice('echotime')
-        f1 = et.currenttable[et.target]['cbox_0a_fg_freq']
+        et = session.getDevice("echotime")
+        f1 = et.currenttable[et.target]["cbox_0a_fg_freq"]
     if f2 is None:
-        et = session.getDevice('echotime')
-        f2 = et.currenttable[et.target]['cbox_0b_fg_freq']
+        et = session.getDevice("echotime")
+        f2 = et.currenttable[et.target]["cbox_0b_fg_freq"]
     move(psd_chop_freq, 2 * (f2 - f1))
     move(psd_timebin_freq, 32 * (f2 - f1))
-    move(fg_burst, 'arm')
-    move(fg_burst, 'trigger')
+    move(fg_burst, "arm")
+    move(fg_burst, "trigger")
     wait()
 
 
-@helparglist('echolist, counttime')
+@helparglist("echolist, counttime")
 @usercommand
 def miezescan(echolist, counttime):
     """Iterate over a list of echotimes -> measure one S(Q,t) curve
@@ -144,21 +165,21 @@ def miezescan(echolist, counttime):
     counttime: counting time (the **same** for all list entries)
     """
     # psd_channel.mode = 'tof'
-    echotime = session.getDevice('echotime')
+    echotime = session.getDevice("echotime")
     with manualscan(echotime, counttime):
         for etime in echolist:
             setecho(etime)
             count(counttime)
 
 
-@helparglist('up, down')
+@helparglist("up, down")
 @usercommand
 def pol(up, down):
     """Calculate contrast or polarisation."""
     return (up - down) / (up + down)
 
 
-@helparglist('device, start, step, numsteps, time=0.2')
+@helparglist("device, start, step, numsteps, time=0.2")
 @usercommand
 def freqscan(device, start, step, numsteps, time=0.2):
     """Special scan for finding a resonance.
@@ -181,11 +202,11 @@ def freqscan(device, start, step, numsteps, time=0.2):
 def img():
     "Setting the Cascade Detector to image mode"
 
-    session.getDevice('psd_channel').mode = 'image'
+    session.getDevice("psd_channel").mode = "image"
 
 
 @usercommand
 def tof():
     "Settting the Cascade Detector to tof mode"
 
-    session.getDevice('psd_channel').mode = 'tof'
+    session.getDevice("psd_channel").mode = "tof"

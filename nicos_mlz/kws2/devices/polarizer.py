@@ -23,36 +23,48 @@
 
 """Class for controlling the KWS2 polarizer."""
 
-from nicos.core import Attach, HasTimeout, Moveable, Override, Param, \
-    Readable, listof, oneof, status
+from nicos.core import (
+    Attach,
+    HasTimeout,
+    Moveable,
+    Override,
+    Param,
+    Readable,
+    listof,
+    oneof,
+    status,
+)
 
-POL_SETTINGS = ['out', 'up', 'down']
+POL_SETTINGS = ["out", "up", "down"]
 
 
 class Polarizer(HasTimeout, Moveable):
-    """Controls both the position of the polarizer and the spin flipper.
-    """
+    """Controls both the position of the polarizer and the spin flipper."""
 
     valuetype = oneof(*POL_SETTINGS)
 
     hardware_access = True
 
     attached_devices = {
-        'output':    Attach('output setter', Moveable),
-        'input_in':  Attach('input for limit switch "in" position', Readable),
-        'input_out': Attach('input for limit switch "out" position', Readable),
-        'flipper':   Attach('3He flipper', Moveable),
+        "output": Attach("output setter", Moveable),
+        "input_in": Attach('input for limit switch "in" position', Readable),
+        "input_out": Attach('input for limit switch "out" position', Readable),
+        "flipper": Attach("3He flipper", Moveable),
     }
 
     parameter_overrides = {
-        'fmtstr':    Override(default='%s'),
-        'timeout':   Override(default=10),
-        'unit':      Override(mandatory=False, default=''),
+        "fmtstr": Override(default="%s"),
+        "timeout": Override(default=10),
+        "unit": Override(mandatory=False, default=""),
     }
 
     parameters = {
-        'values':   Param('Possible values (for GUI)', internal=True,
-                          type=listof(str), default=POL_SETTINGS),
+        "values": Param(
+            "Possible values (for GUI)",
+            internal=True,
+            type=listof(str),
+            default=POL_SETTINGS,
+        ),
     }
 
     def doStatus(self, maxage=0):
@@ -61,11 +73,10 @@ class Polarizer(HasTimeout, Moveable):
         # check individual bits
         if is_in ^ is_out != 3:
             # inconsistent state, check switches
-            if ((is_in & 2) and (is_out & 2)) or \
-               ((is_in & 1) and (is_out & 1)):
+            if ((is_in & 2) and (is_out & 2)) or ((is_in & 1) and (is_out & 1)):
                 # both switches on?
-                return status.ERROR, 'both switches on for element(s)'
-            return status.BUSY, 'elements moving'
+                return status.ERROR, "both switches on for element(s)"
+            return status.BUSY, "elements moving"
         # HasTimeout will check for target reached
         return self._attached_flipper.status(maxage)
 
@@ -74,11 +85,11 @@ class Polarizer(HasTimeout, Moveable):
         if is_in == 3:
             return self._attached_flipper.read()
         elif is_in > 0:
-            return 'inconsistent'
-        return 'out'
+            return "inconsistent"
+        return "out"
 
     def doStart(self, target):
-        if target == 'out':
+        if target == "out":
             self._attached_output.start(0)
         else:
             self._attached_output.start(3)

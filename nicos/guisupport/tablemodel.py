@@ -33,7 +33,7 @@ class TableModel(QAbstractTableModel):
     data_updated = pyqtSignal()
 
     def __init__(self, headings, mappings=None, transposed=False):
-        """ Constructor.
+        """Constructor.
 
         :param headings: the column headings.
         :param mappings: maps the headings to the keys in the underlying data.
@@ -66,13 +66,12 @@ class TableModel(QAbstractTableModel):
         """
         self._raw_data = data
 
-        new_table = self._empty_table(len(self._headings),
-                                      len(self._raw_data))
+        new_table = self._empty_table(len(self._headings), len(self._raw_data))
 
         for i, item in enumerate(self._raw_data):
             for j, heading in enumerate(self._headings):
                 key = self._mappings.get(heading, heading)
-                new_table[i][j] = str(item.get(key, ''))
+                new_table[i][j] = str(item.get(key, ""))
 
         self._table_data = new_table
         self._emit_update()
@@ -115,23 +114,30 @@ class TableModel(QAbstractTableModel):
         return len(self._headings) if self._transposed else len(self._raw_data)
 
     def flags(self, index):
-        return Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled | \
-            Qt.ItemFlag.ItemIsEditable
+        return (
+            Qt.ItemFlag.ItemIsSelectable
+            | Qt.ItemFlag.ItemIsEnabled
+            | Qt.ItemFlag.ItemIsEditable
+        )
 
     def headerData(self, section, orientation, role):
-        if role == Qt.ItemDataRole.DisplayRole and \
-           orientation == Qt.Orientation.Horizontal:
+        if (
+            role == Qt.ItemDataRole.DisplayRole
+            and orientation == Qt.Orientation.Horizontal
+        ):
             return section + 1 if self._transposed else self._headings[section]
-        if role == Qt.ItemDataRole.DisplayRole and \
-           orientation == Qt.Orientation.Vertical:
+        if (
+            role == Qt.ItemDataRole.DisplayRole
+            and orientation == Qt.Orientation.Vertical
+        ):
             return self._headings[section] if self._transposed else section + 1
 
     def _empty_table(self, columns, rows):
-        return [[''] * columns for _ in range(rows)]
+        return [[""] * columns for _ in range(rows)]
 
     def insert_row(self, position):
         self._raw_data.insert(position, {})
-        self._table_data.insert(position, [''] * len(self._headings))
+        self._table_data.insert(position, [""] * len(self._headings))
         self._emit_update()
 
     def remove_rows(self, row_indices):

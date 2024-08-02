@@ -1,5 +1,5 @@
-description = 'global configuration data '
+description = "global configuration data "
 
-group = 'configdata'
+group = "configdata"
 
-tango_host = 'localhost'
+tango_host = "localhost"

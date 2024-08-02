@@ -27,16 +27,21 @@ from nicos.devices.abstract import Moveable
 
 
 class CoupledMotor(Moveable):
-
     attached_devices = {
-        'maxis': Attach('Main axis to move', Moveable),
-        'caxis': Attach('Coupled axis (to main axis) by the relation '
-                        'caxis = maxis / 2 + offset', Moveable)
+        "maxis": Attach("Main axis to move", Moveable),
+        "caxis": Attach(
+            "Coupled axis (to main axis) by the relation " "caxis = maxis / 2 + offset",
+            Moveable,
+        ),
     }
 
     parameters = {
-        'offset': Param('Offset between mainAxis and slaveAxis',
-                        type=float, default=.0, settable=True)
+        "offset": Param(
+            "Offset between mainAxis and slaveAxis",
+            type=float,
+            default=0.0,
+            settable=True,
+        )
     }
 
     def doStart(self, value):
@@ -45,8 +50,7 @@ class CoupledMotor(Moveable):
 
     def doIsAtTarget(self, pos, target):
         axis = self._attached_maxis.isAtTarget(pos, target)
-        coupled = self._attached_caxis.isAtTarget(
-            target=target / 2 + self.offset)
+        coupled = self._attached_caxis.isAtTarget(target=target / 2 + self.offset)
 
         return axis and coupled
 

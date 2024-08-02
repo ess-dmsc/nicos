@@ -25,11 +25,18 @@
 
 from math import asin, pi, sin
 
-from nicos.core import SIMULATION, Attach, HasLimits, HasPrecision, Moveable, \
-    Override, Param, status
+from nicos.core import (
+    SIMULATION,
+    Attach,
+    HasLimits,
+    HasPrecision,
+    Moveable,
+    Override,
+    Param,
+    status,
+)
 from nicos.core.errors import ConfigurationError, PositionError
-from nicos.devices.abstract import \
-    TransformedMoveable as BaseTransformedMoveable
+from nicos.devices.abstract import TransformedMoveable as BaseTransformedMoveable
 from nicos.devices.generic import Switcher
 
 from nicos_mlz.stressi.devices.mixins import TransformMove
@@ -47,40 +54,57 @@ class Wavelength(HasLimits, Moveable):
     """Device for adjusting initial/final wavelength."""
 
     parameters = {
-        'crystal': Param('Used crystal',
-                         type=str, unit='', settable=True, volatile=True,
-                         category='instrument'),
-        'plane': Param('Used scattering plane of the crystal', type=str,
-                       unit='', mandatory=True, settable=True,
-                       category='instrument'),
+        "crystal": Param(
+            "Used crystal",
+            type=str,
+            unit="",
+            settable=True,
+            volatile=True,
+            category="instrument",
+        ),
+        "plane": Param(
+            "Used scattering plane of the crystal",
+            type=str,
+            unit="",
+            mandatory=True,
+            settable=True,
+            category="instrument",
+        ),
     }
 
     parameter_overrides = {
-        'unit': Override(volatile=True),
+        "unit": Override(volatile=True),
     }
 
     attached_devices = {
-        'omgm': Attach('Monochromator table', Moveable),
-        'base': Attach('Device to move', Moveable),
-        'crystal': Attach('The crystal switcher', Switcher),
+        "omgm": Attach("Monochromator table", Moveable),
+        "base": Attach("Device to move", Moveable),
+        "crystal": Attach("The crystal switcher", Switcher),
     }
 
     valuetype = float
 
     hardware_access = False
 
-    _lut = {'Ge': {'311': [1.7058, 9.45, 0.65],
-                   '511': [1.08879, 0.0, 0.65],
-                   '711': [0.79221, -4.37, 0.65]},
-            # 511, 400, 311
-            'Si': {'511': [1.0452, 15.79, 0.45],
-                   '400': [1.35773, 0.0, 0.45],
-                   '311': [1.6376, 25.24, 0.45]},
-            # 400, 200, 600
-            'PG': {'400': [1.6771, 0.0, 0.0],
-                   '200': [3.3542, 0.0, 0.0],
-                   '600': [1.11807, 0.0, 0.0]},
-            }
+    _lut = {
+        "Ge": {
+            "311": [1.7058, 9.45, 0.65],
+            "511": [1.08879, 0.0, 0.65],
+            "711": [0.79221, -4.37, 0.65],
+        },
+        # 511, 400, 311
+        "Si": {
+            "511": [1.0452, 15.79, 0.45],
+            "400": [1.35773, 0.0, 0.45],
+            "311": [1.6376, 25.24, 0.45],
+        },
+        # 400, 200, 600
+        "PG": {
+            "400": [1.6771, 0.0, 0.0],
+            "200": [3.3542, 0.0, 0.0],
+            "600": [1.11807, 0.0, 0.0],
+        },
+    }
 
     def _crystal(self):
         return self._lut[self.crystal] if self.crystal in self._lut else None
@@ -91,54 +115,52 @@ class Wavelength(HasLimits, Moveable):
             p = crystal.get(self.plane, None)
             if p:
                 return p[0]
-            raise ConfigurationError('No plane of the crystal set.')
-        raise ConfigurationError('No crystal set.')
+            raise ConfigurationError("No plane of the crystal set.")
+        raise ConfigurationError("No crystal set.")
 
     def doInit(self, mode):
         crystal = self._crystal()
         if crystal:
             if not self.plane:
-                self._params['plane'] = p = sorted(crystal.keys())[0]
+                self._params["plane"] = p = sorted(crystal.keys())[0]
                 if self._mode != SIMULATION:
-                    self._cache.put(self, 'plane', p)
+                    self._cache.put(self, "plane", p)
 
     def doStatus(self, maxage=0):
-        for dev in (self._attached_base, self._attached_omgm,
-                    self._attached_crystal):
+        for dev in (self._attached_base, self._attached_omgm, self._attached_crystal):
             ok, why = dev.status(maxage)
             if ok != status.OK:
-                return ok, '%s: %s' % (dev, why)
+                return ok, "%s: %s" % (dev, why)
         try:
             self._d(maxage)
-            return status.OK, 'idle'
+            return status.OK, "idle"
         except ConfigurationError as e:
             return status.ERROR, str(e)
 
     def doRead(self, maxage=0):
         try:
             mono = self._attached_base.read(maxage)
-            return 2 * self._d(maxage) * sin(mono * pi / (2 * 180.))
+            return 2 * self._d(maxage) * sin(mono * pi / (2 * 180.0))
         except ConfigurationError:
             return None
 
     def doStart(self, target):
         crystal = self._crystal()
         if not crystal:
-            raise ConfigurationError(self, 'Not valid setup')
+            raise ConfigurationError(self, "Not valid setup")
         plane = crystal.get(self.plane, None)
         if not plane:
-            raise ConfigurationError(self, 'No valid mono configuration')
-        tthm = asin(target / (2 * self._d())) / pi * 360.
+            raise ConfigurationError(self, "No valid mono configuration")
+        tthm = asin(target / (2 * self._d())) / pi * 360.0
         omgm = tthm / 2.0 + plane[1] + plane[2]
-        self.log.debug('%s will be moved to %.3f', self._attached_base, tthm)
-        self.log.debug('%s will be moved to %.3f', self._attached_omgm, omgm)
-        if self._attached_base.isAllowed(tthm) and \
-           self._attached_omgm.isAllowed(omgm):
+        self.log.debug("%s will be moved to %.3f", self._attached_base, tthm)
+        self.log.debug("%s will be moved to %.3f", self._attached_omgm, omgm)
+        if self._attached_base.isAllowed(tthm) and self._attached_omgm.isAllowed(omgm):
             self._attached_base.start(tthm)
             self._attached_omgm.start(omgm)
 
     def doReadUnit(self):
-        return 'AA'
+        return "AA"
 
     def doReadCrystal(self):
         try:
@@ -155,8 +177,10 @@ class Wavelength(HasLimits, Moveable):
         crystal = self._crystal()
         if crystal:
             if not crystal.get(target, None):
-                raise ValueError('The "%s" plane is not allowed for "%s" '
-                                 'crystal' % (target, crystal))
+                raise ValueError(
+                    'The "%s" plane is not allowed for "%s" '
+                    "crystal" % (target, crystal)
+                )
         else:
-            raise ConfigurationError('No valid setup of the monochromator')
+            raise ConfigurationError("No valid setup of the monochromator")
         return target

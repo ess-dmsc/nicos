@@ -24,8 +24,16 @@
 """Helpers for commandlets for KWS(-1)."""
 
 from nicos.guisupport import typedvalue
-from nicos.guisupport.qt import QCheckBox, QComboBox, QHBoxLayout, QLineEdit, \
-    QObject, QSpinBox, QWidget, pyqtSignal
+from nicos.guisupport.qt import (
+    QCheckBox,
+    QComboBox,
+    QHBoxLayout,
+    QLineEdit,
+    QObject,
+    QSpinBox,
+    QWidget,
+    pyqtSignal,
+)
 from nicos.guisupport.utils import DoubleValidator
 from nicos.utils import num_sort
 
@@ -33,7 +41,7 @@ from nicos.utils import num_sort
 class MeasElement(QObject):
     """Represents one setting for a measurement that can be manipulated."""
 
-    LABEL = ''
+    LABEL = ""
     ORDER = 1
 
     changed = pyqtSignal(object)
@@ -80,13 +88,13 @@ class MeasElement(QObject):
 class ChoiceElement(MeasElement):
     """Base for elements that allow an arbitrary choice."""
 
-    CACHE_KEY = ''
+    CACHE_KEY = ""
     SORT_KEY = lambda self, x: None  # keep previous ordering
     VALUES = []
 
     def createWidget(self, parent, client):
         if self.CACHE_KEY:
-            values = client.getDeviceParam(*self.CACHE_KEY.split('/'))
+            values = client.getDeviceParam(*self.CACHE_KEY.split("/"))
             try:
                 values = sorted(values or [], key=self.SORT_KEY)
             except TypeError:  # unsortable?
@@ -124,7 +132,7 @@ class CheckElement(MeasElement):
         self.changed.emit(self.value)
 
     def getDispValue(self):
-        return 'yes' if self.value else 'no'
+        return "yes" if self.value else "no"
 
 
 class FloatElement(MeasElement):
@@ -135,26 +143,26 @@ class FloatElement(MeasElement):
             self.value = 10.0
         self._widget = QLineEdit(parent)
         self._widget.setValidator(DoubleValidator(parent))
-        self._widget.setText('%g' % self.value)
+        self._widget.setText("%g" % self.value)
         self._widget.textChanged.connect(self._updateValue)
         return self._widget
 
     def _updateValue(self, text):
-        self.value = float(text.replace(',', '.'))
+        self.value = float(text.replace(",", "."))
         self.changed.emit(self.value)
 
 
 class Detector(MeasElement):
     """Element for selecting detector distance, depending on selector."""
 
-    CACHE_KEY = 'detector/presets'
+    CACHE_KEY = "detector/presets"
     SORT_KEY = lambda self, x: num_sort(x)
-    LABEL = 'Detector'
+    LABEL = "Detector"
 
     _allvalues = None
 
     def clientUpdate(self, client):
-        self._allvalues = client.getDeviceParam(*self.CACHE_KEY.split('/'))
+        self._allvalues = client.getDeviceParam(*self.CACHE_KEY.split("/"))
         self._values = []
 
     def createWidget(self, parent, client):
@@ -171,7 +179,7 @@ class Detector(MeasElement):
             self._widget.setCurrentIndex(self._values.index(self.value))
 
     def otherChanged(self, eltype, value):
-        if eltype == 'selector' and self._allvalues is not None:
+        if eltype == "selector" and self._allvalues is not None:
             self._values = sorted(self._allvalues[value], key=self.SORT_KEY)
             if self.value not in self._values:
                 if self._values:
@@ -189,14 +197,13 @@ class Detector(MeasElement):
 class Chopper(MeasElement):
     """Element for selecting chopper TOF resolution."""
 
-    CACHE_KEY = 'chopper/resolutions'
+    CACHE_KEY = "chopper/resolutions"
     SORT_KEY = lambda self, x: num_sort(x)
-    LABEL = 'TOF dλ/λ'
+    LABEL = "TOF dλ/λ"
 
     def createWidget(self, parent, client):
-        resos = client.getDeviceParam(*self.CACHE_KEY.split('/'))
-        self._values = ['off'] + ['%.1f%%' % v
-                                  for v in (resos or [])] + ['manual']
+        resos = client.getDeviceParam(*self.CACHE_KEY.split("/"))
+        self._values = ["off"] + ["%.1f%%" % v for v in (resos or [])] + ["manual"]
         self._widget = QComboBox(parent)
         self._widget.addItems(self._values)
         if self.value is not None and self.value in self._values:
@@ -212,31 +219,31 @@ class Chopper(MeasElement):
 
 
 class Selector(ChoiceElement):
-    CACHE_KEY = 'selector/mapping'
+    CACHE_KEY = "selector/mapping"
     SORT_KEY = lambda self, x: num_sort(x)
-    LABEL = 'Selector'
+    LABEL = "Selector"
 
 
 class Polarizer(ChoiceElement):
-    CACHE_KEY = 'polarizer/values'
-    LABEL = 'Polarizer'
+    CACHE_KEY = "polarizer/values"
+    LABEL = "Polarizer"
 
 
 class Lenses(ChoiceElement):
-    CACHE_KEY = 'lenses/values'
-    LABEL = 'Lenses'
+    CACHE_KEY = "lenses/values"
+    LABEL = "Lenses"
 
 
 class Collimation(ChoiceElement):
-    CACHE_KEY = 'collimation/mapping'
+    CACHE_KEY = "collimation/mapping"
     SORT_KEY = lambda self, x: num_sort(x)
-    LABEL = 'Collimation'
+    LABEL = "Collimation"
 
 
 class MeasTime(MeasElement):
     """Element for selecting measurement time in different time units."""
 
-    LABEL = 'Time'
+    LABEL = "Time"
 
     def createWidget(self, parent, client):
         if self.value is None:
@@ -248,7 +255,7 @@ class MeasTime(MeasElement):
         self._widget.number.setMinimum(1)
         self._widget.number.setMaximum(10000)
         self._widget.unit = QComboBox(self._widget)
-        self._widget.unit.addItems(['sec', 'min', 'hr'])
+        self._widget.unit.addItems(["sec", "min", "hr"])
         self._widget.unit.setCurrentIndex(1)
         layout.addWidget(self._widget.number)
         layout.addWidget(self._widget.unit)
@@ -283,16 +290,16 @@ class MeasTime(MeasElement):
     def getDispValue(self):
         # TODO: better display here
         if self.value % 3600 == 0:
-            return '%d hr' % (self.value // 3600)
+            return "%d hr" % (self.value // 3600)
         elif self.value % 60 == 0:
-            return '%d min' % (self.value // 60)
+            return "%d min" % (self.value // 60)
         else:
-            return '%d sec' % self.value
+            return "%d sec" % self.value
 
 
 class Sample(ChoiceElement):
-    CACHE_KEY = 'exp/samples'
-    LABEL = 'Sample'
+    CACHE_KEY = "exp/samples"
+    LABEL = "Sample"
     ORDER = 0
 
 
@@ -313,8 +320,9 @@ class Device(MeasElement):
             self.value = self._valuetype()
 
     def createWidget(self, parent, client):
-        self._widget = typedvalue.create(parent, self._valuetype, self.value,
-                                         allow_enter=False)
+        self._widget = typedvalue.create(
+            parent, self._valuetype, self.value, allow_enter=False
+        )
         self._widget.valueModified.connect(self._updateValue)
         return self._widget
 

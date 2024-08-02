@@ -30,15 +30,13 @@ from nicos.core.sessions.setups import readSetups
 
 from test.utils import ErrorLogged, module_root, raises
 
-session_setup = 'empty'
+session_setup = "empty"
 
 
 def test_raisers(session):
-    assert raises(ConfigurationError,
-                  getattr, session.experiment, 'envlist')
-    assert raises(ConfigurationError,
-                  setattr, session.experiment, 'envlist', [])
-    assert raises(ConfigurationError, getattr, session.instrument, 'instrument')
+    assert raises(ConfigurationError, getattr, session.experiment, "envlist")
+    assert raises(ConfigurationError, setattr, session.experiment, "envlist", [])
+    assert raises(ConfigurationError, getattr, session.instrument, "instrument")
 
     assert bool(session.experiment) is False
 
@@ -47,19 +45,23 @@ def test_raisers(session):
 
 
 def test_sysconfig(session):
-    session.loadSetup('sysconfig1')
-    assert session.current_sysconfig['datasinks'] == set(['sink1', 'sink2'])
-    assert session.current_sysconfig['notifiers'] == set([])
-    session.loadSetup('sysconfig2')  # ... which includes sysconfig3
-    assert session.current_sysconfig['datasinks'] == set(['sink1', 'sink2',
-                                                          'sink3', 'sink4'])
-    assert session.current_sysconfig['notifiers'] == set(['notif1'])
+    session.loadSetup("sysconfig1")
+    assert session.current_sysconfig["datasinks"] == set(["sink1", "sink2"])
+    assert session.current_sysconfig["notifiers"] == set([])
+    session.loadSetup("sysconfig2")  # ... which includes sysconfig3
+    assert session.current_sysconfig["datasinks"] == set(
+        ["sink1", "sink2", "sink3", "sink4"]
+    )
+    assert session.current_sysconfig["notifiers"] == set(["notif1"])
 
     session.unloadSetup()
-    assert 'datasinks' not in session.current_sysconfig
+    assert "datasinks" not in session.current_sysconfig
 
 
 def test_device_names(session):
-    assert raises(ErrorLogged, readSetups,
-                  [path.join(module_root, 'test', 'faulty_setups')],
-                  session.log)
+    assert raises(
+        ErrorLogged,
+        readSetups,
+        [path.join(module_root, "test", "faulty_setups")],
+        session.log,
+    )

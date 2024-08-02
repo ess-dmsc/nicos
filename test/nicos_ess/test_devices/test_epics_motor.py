@@ -23,32 +23,33 @@
 
 import pytest
 
-pytest.importorskip('graypy')
+pytest.importorskip("graypy")
 
 from nicos.commands.device import adjust
 
 from nicos.devices.epics.pyepics.motor import EpicsMotor
 
-session_setup = 'ess_motors'
+session_setup = "ess_motors"
 
 
 class FakeEpicsMotor(EpicsMotor):
     """
     Epics motor with fake getting and setting of PVs.
     """
+
     position = 0
 
     values = {
-        'speed': 10,
-        'position': position,
-        'stop': 0,
-        'lowlimit': -110,
-        'highlimit': 110,
-        'readpv': position,
-        'writepv': position,
-        'offset': 0,
-        'enable': 1,
-        'direction': 0
+        "speed": 10,
+        "position": position,
+        "stop": 0,
+        "lowlimit": -110,
+        "highlimit": 110,
+        "readpv": position,
+        "writepv": position,
+        "offset": 0,
+        "enable": 1,
+        "direction": 0,
     }
 
     def doPreinit(self, mode):
@@ -63,16 +64,16 @@ class FakeEpicsMotor(EpicsMotor):
     def _put_pv(self, pvparam, value, wait=False):
         self.values[pvparam] = value
 
-        if pvparam == 'offset':
-            self.values['lowlimit'] += value
-            self.values['highlimit'] += value
+        if pvparam == "offset":
+            self.values["lowlimit"] += value
+            self.values["highlimit"] += value
 
     def _put_pv_blocking(self, pvparam, value, update_rate=0.1, timeout=60):
         self.values[pvparam] = value
 
-        if pvparam == 'offset':
-            self.values['lowlimit'] += value
-            self.values['highlimit'] += value
+        if pvparam == "offset":
+            self.values["lowlimit"] += value
+            self.values["highlimit"] += value
 
     def _get_pv(self, pvparam, as_string=False):
         return self.values[pvparam]
@@ -81,7 +82,7 @@ class FakeEpicsMotor(EpicsMotor):
 class DerivedEpicsMotor(FakeEpicsMotor):
     def doPreinit(self, mode):
         self._record_fields = dict(FakeEpicsMotor._record_fields)
-        self._record_fields.update({'extra_field': 'XTR'})
+        self._record_fields.update({"extra_field": "XTR"})
 
 
 class TestEpicsMotor:
@@ -90,9 +91,9 @@ class TestEpicsMotor:
     @pytest.fixture(autouse=True)
     def prepare(self, session):
         self.session = session
-        self.motor = self.session.getDevice('motor1')
-        self.motor.values['lowlimit'] = -110
-        self.motor.values['highlimit'] = 110
+        self.motor = self.session.getDevice("motor1")
+        self.motor.values["lowlimit"] = -110
+        self.motor.values["highlimit"] = 110
         self.motor.offset = 0
 
     def test_adjust_command_sets_offset_correctly(self):
@@ -159,16 +160,15 @@ class TestEpicsMotor:
         self.motor.offset = new_offset
 
         # Check new limits
-        assert (low + new_offset,
-                high + new_offset) == self.motor.userlimits
+        assert (low + new_offset, high + new_offset) == self.motor.userlimits
 
 
 class TestDerivedEpicsMotor:
     @pytest.fixture(autouse=True)
     def prepare(self, session):
         self.session = session
-        self.motor1 = self.session.getDevice('motor1')
-        self.motor2 = self.session.getDevice('motor2')
+        self.motor1 = self.session.getDevice("motor1")
+        self.motor2 = self.session.getDevice("motor2")
 
     def test_record_fields(self):
         motor1_fields = self.motor1._record_fields

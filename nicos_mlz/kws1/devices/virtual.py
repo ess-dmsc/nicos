@@ -33,18 +33,18 @@ class Standin(HasPrecision, ManualMove):
     """
 
     parameter_overrides = {
-        'abslimits': Override(mandatory=False),
-        'unit':      Override(mandatory=False),
+        "abslimits": Override(mandatory=False),
+        "unit": Override(mandatory=False),
     }
 
     def doStatus(self, maxage=0):
-        return status.WARN, 'virtual'
+        return status.WARN, "virtual"
 
 
 class NonvirtualStandin(HasPrecision, ManualMove):
     parameter_overrides = {
-        'abslimits': Override(mandatory=False),
-        'unit':      Override(mandatory=False),
+        "abslimits": Override(mandatory=False),
+        "unit": Override(mandatory=False),
     }
 
 
@@ -55,4 +55,4 @@ class StandinSwitch(ManualSwitch):
         sc, _ = ManualSwitch.doStatus(self, maxage)
         if sc == status.OK:
             sc = status.WARN
-        return sc, 'virtual'
+        return sc, "virtual"

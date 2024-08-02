@@ -27,8 +27,8 @@
 import socket
 
 socke = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-socke.bind(('127.0.0.1', 2108))
+socke.bind(("127.0.0.1", 2108))
 
 while True:
     data, addr = socke.recvfrom(1024)
-    print('Received: ' + str(data))
+    print("Received: " + str(data))

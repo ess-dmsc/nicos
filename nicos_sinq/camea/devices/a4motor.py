@@ -40,13 +40,17 @@ class CameaA4Motor(Moveable):
     hardware_access = False
 
     parameters = {
-        'a4offset': Param('Special offset for CAMEA',
-                          type=float, settable=True, userparam=True,
-                          default=0),
+        "a4offset": Param(
+            "Special offset for CAMEA",
+            type=float,
+            settable=True,
+            userparam=True,
+            default=0,
+        ),
     }
 
     attached_devices = {
-        'rawa4': Attach('Real motor for driving A4', Moveable),
+        "rawa4": Attach("Real motor for driving A4", Moveable),
     }
 
     def doStart(self, target):

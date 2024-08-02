@@ -1,31 +1,34 @@
-description = 'sample changer 1 devices'
+description = "sample changer 1 devices"
 
-group = 'optional'
+group = "optional"
 
-includes = ['sample_changer', 'sample_table_1']
+includes = ["sample_changer", "sample_table_1"]
 
 devices = dict(
-    sc1_y = device('nicos.devices.generic.Axis',
-        description = 'Sample Changer 1 Axis',
-        pollinterval = 15,
-        maxage = 60,
-        fmtstr = '%.2f',
-        abslimits = (-0, 600),
-        precision = 0.01,
-        motor = 'sc1_ymot',
+    sc1_y=device(
+        "nicos.devices.generic.Axis",
+        description="Sample Changer 1 Axis",
+        pollinterval=15,
+        maxage=60,
+        fmtstr="%.2f",
+        abslimits=(-0, 600),
+        precision=0.01,
+        motor="sc1_ymot",
     ),
-    sc1_ymot = device('nicos.devices.generic.VirtualMotor',
-        description = 'Sample Changer 1 Axis motor',
-        fmtstr = '%.2f',
-        abslimits = (-0, 600),
-        visibility = (),
-        curvalue = 594.5,
-        unit = 'mm',
+    sc1_ymot=device(
+        "nicos.devices.generic.VirtualMotor",
+        description="Sample Changer 1 Axis motor",
+        fmtstr="%.2f",
+        abslimits=(-0, 600),
+        visibility=(),
+        curvalue=594.5,
+        unit="mm",
     ),
-    sc1 = device('nicos.devices.generic.MultiSwitcher',
-        description = 'Sample Changer 1 Huber device',
-        moveables = ['sc1_y', 'st1_z'],
-        mapping = {
+    sc1=device(
+        "nicos.devices.generic.MultiSwitcher",
+        description="Sample Changer 1 Huber device",
+        moveables=["sc1_y", "st1_z"],
+        mapping={
             1: [594.5, -31],
             2: [535.5, -31],
             3: [476.5, -31],
@@ -49,13 +52,13 @@ devices = dict(
             21: [63.5, 28],
             22: [4.5, 28],
         },
-        fallback = 0,
-        fmtstr = '%d',
-        precision = [0.05, 0.05],
-        blockingmove = False,
+        fallback=0,
+        fmtstr="%d",
+        precision=[0.05, 0.05],
+        blockingmove=False,
     ),
 )
 
 alias_config = {
-    'SampleChanger': {'sc1': 100},
+    "SampleChanger": {"sc1": 100},
 }

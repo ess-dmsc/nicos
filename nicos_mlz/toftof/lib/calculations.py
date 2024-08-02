@@ -30,18 +30,19 @@ import numpy as np
 
 try:
     from scipy import constants
+
     h = constants.Planck
     mn = constants.neutron_mass
     e = constants.elementary_charge
     hbar = constants.hbar
 except ImportError:
-    h = 6.62606896e-34                  # Planck constant [Js]
-    mn = 1.674927211e-27                # Neutron mass [kg]
-    e = 1.602176487e-19                 # Elementary charge [C]
-    hbar = h / (2 * pi)                 # h-bar
+    h = 6.62606896e-34  # Planck constant [Js]
+    mn = 1.674927211e-27  # Neutron mass [kg]
+    e = 1.602176487e-19  # Elementary charge [C]
+    hbar = h / (2 * pi)  # h-bar
 
 # in us (1e6) / AA (1e-10) / m
-alpha = 1e6 * (mn / h) / 1e10           # Should be 252.7784
+alpha = 1e6 * (mn / h) / 1e10  # Should be 252.7784
 
 
 def sgn(x):
@@ -57,9 +58,9 @@ ttr = 5.0e-8
 # a[1-7]: distance chopper1 - chopperX in m
 a = (11.4, 0.0, 0.1, 3.397, 7.953, 8.028, 9.925, 10.0)
 
-Lsd = 4                                 # flight distance sample-detector
-Lpm = a[7] - a[1]                       # flight distance chopper1-chopper7
-Lms = a[0] - a[7]                       # flight distance chopper7-sample
+Lsd = 4  # flight distance sample-detector
+Lpm = a[7] - a[1]  # flight distance chopper1-chopper7
+Lms = a[0] - a[7]  # flight distance chopper7-sample
 
 # offsets of chopper zero position in deg (definition of the sign is unknown
 # chopperOffset = (0.00, 0.00, -0.25, 0.45, 0.39, -0.25, 0.13, 0.36)
@@ -72,7 +73,7 @@ chopperOffset = (0.00, 0.00, 0.00, 0.0, 0.0, 0.0, 0.70, 0.70)
 sigmaxcrc = (0.0, 1.0, -1.0, -1.0, -1.0, 1.0, -1.0, -1.0)
 
 # signs for normally rotating ch1/2 and ch6/7 (all others run like chopper1)
-sigmax = (0.0, 1.0, 1.0, -1.0, -1.0, 1.0, -1.0, 1.0)    # pronounce: sigma x
+sigmax = (0.0, 1.0, 1.0, -1.0, -1.0, 1.0, -1.0, 1.0)  # pronounce: sigma x
 
 # phases for different slit types
 # for the large(g)/large(g) there are no offsets and slit type is 0
@@ -103,16 +104,16 @@ def calculateChopperDelay(wl, speed, ratio, st, ch5_90deg_offset):
     # calculate the speed in Hz instead of given speed in rpms
     speed /= 60.0
     if ch5_90deg_offset:  # chopper 5 90 deg rotated
-        chdelay = -1.e6 / (ratio2 * (4 * speed))
+        chdelay = -1.0e6 / (ratio2 * (4 * speed))
     if st == 1:
-        chdelay = 1.e6 / (4 * speed)
+        chdelay = 1.0e6 / (4 * speed)
     # a[5] is the distance between chopper disc 1 and 5
     # alpha see description
-    chdelay += (alpha * wl * a[5] - 1.e6 * (1.0 / ratio2 - 1.0) / (4 * speed))
-    chdelay %= 1.e6 / (2 * speed)
+    chdelay += alpha * wl * a[5] - 1.0e6 * (1.0 / ratio2 - 1.0) / (4 * speed)
+    chdelay %= 1.0e6 / (2 * speed)
     chdelay -= 100.0
     if chdelay < 0:
-        chdelay += 1.e6 / (2 * speed)
+        chdelay += 1.0e6 / (2 * speed)
     return int(round(chdelay))
 
 
@@ -129,7 +130,7 @@ def calculateCounterDelay(wl, speed, ratio, delay, ch5_90deg_offset):
     n = int(tel / (ratio / (2 * speed)))
     tel -= n * (ratio / (2 * speed))
     # round to multiple of 100ns, (property of electronics)
-    return int(round(tel / (2*ttr))) * 2 * ttr
+    return int(round(tel / (2 * ttr))) * 2 * ttr
 
 
 def calculateFrameTime(speed, ratio):
@@ -151,6 +152,7 @@ def calculateFrameTime(speed, ratio):
 
 # calculation of flight times
 
+
 def t1(x, y, ilambda=4.5, offset=0.0):
     """Return the flight time [s] of a neutron of wavelength *ilambda* [A] from
     chopper *x* to chopper *y*, plus the distance *offset*.
@@ -166,6 +168,7 @@ def t2(x, ilambda=4.5, offset=0.0):
 
 
 # calculation of chopper phases
+
 
 def phi1(x, w, ilambda=4.5):
     """Return the angle [deg] that chopper *x* turns until neutrons of
@@ -205,6 +208,7 @@ def phi(x, w, ilambda=4.5, crc=1, slittype=0, ratio=1, ch5_90deg_offset=0):
 
 # Energy resolution calculation
 
+
 def Eres1(li, w, st=0, crc=1, dL=0.0, lf=None):
     """Return energy resolution at position *x* [m] downstream the sample.
 
@@ -218,30 +222,30 @@ def Eres1(li, w, st=0, crc=1, dL=0.0, lf=None):
         return (0, 0)
     wc = w / 60.0
     if st == 0:
-        ap = 13.82              # aperture P-Chopper
-        am = 5.0                # aperture M-Chopper
+        ap = 13.82  # aperture P-Chopper
+        am = 5.0  # aperture M-Chopper
     elif st == 1:
-        ap = 13.82 / 2.         # aperture P-Chopper
-        am = 5.0 / 2.           # aperture M-Chopper
+        ap = 13.82 / 2.0  # aperture P-Chopper
+        am = 5.0 / 2.0  # aperture M-Chopper
     else:
-        ap = 13.82              # aperture P-Chopper
-        am = 5.0 / 2.          # aperture M-Chopper
-    tm = am / (2. * 360 * wc)   # opening time M-Chopper
-    tp = ap / (2. * 360 * wc)   # opening time P-Chopper
+        ap = 13.82  # aperture P-Chopper
+        am = 5.0 / 2.0  # aperture M-Chopper
+    tm = am / (2.0 * 360 * wc)  # opening time M-Chopper
+    tp = ap / (2.0 * 360 * wc)  # opening time P-Chopper
     if crc == 0:
-        tm *= 2.
-        tp *= 2.
+        tm *= 2.0
+        tp *= 2.0
     # Lpd = a[0] + x            # flight distance chopper1-detector
     li *= 1.0e-10
     if lf is None:
         lf = li
     lfi = lf / li
 
-    A = tm * (Lpm + Lms + Lsd * lfi ** 3)
-    B = tp * (Lms + Lsd * lfi ** 3)
+    A = tm * (Lpm + Lms + Lsd * lfi**3)
+    B = tp * (Lms + Lsd * lfi**3)
     C = Lpm * mn * lf * dL / h
-    dt = sqrt(A * A + B * B + C * C) / Lpm             # uncertainty in time
-    res = h ** 3 * dt / (mn * mn * e * Lsd * lf ** 3)  # uncertainty in energy
+    dt = sqrt(A * A + B * B + C * C) / Lpm  # uncertainty in time
+    res = h**3 * dt / (mn * mn * e * Lsd * lf**3)  # uncertainty in energy
 
     return (res, dt)
 
@@ -250,11 +254,10 @@ def Energy(wavelength):
     """Convert neutron wavelength to neutron energy."""
 
     k0 = 2 * pi / (wavelength * 1e-10)
-    return 1000. * (hbar * k0) ** 2 / (2 * mn * e)
+    return 1000.0 * (hbar * k0) ** 2 / (2 * mn * e)
 
 
 class ResolutionAnalysis:
-
     def __init__(self, chSpeed, chWL, chRatio, chST):
         self.speed = chSpeed
         self.wl = chWL
@@ -270,41 +273,52 @@ class ResolutionAnalysis:
     def run(self):
         # Calculate Dynamic Range
 
-        tobs = 1. / (2. * self.speed / 60.) * self.ratio
+        tobs = 1.0 / (2.0 * self.speed / 60.0) * self.ratio
         lambda_max = tobs * 1e6 / (alpha * Lsd) * 1e-10
         kf_min = 2 * pi / lambda_max
 
         self.dE_all = np.arange(-self.E0, 50 + 0.1, 0.1)
 
-        kf_all = np.abs(np.sqrt(
-            1e-3 * 2 * mn * e * self.dE_all / (hbar * hbar) + self.k0 * self.k0))
+        kf_all = np.abs(
+            np.sqrt(1e-3 * 2 * mn * e * self.dE_all / (hbar * hbar) + self.k0 * self.k0)
+        )
         index = np.argwhere(kf_all >= kf_min).flatten()
         self.dE = self.dE_all[index]
         self.dE_min = min(self.dE)
         kf = kf_all[index]
 
         self.q_low = 1e-10 * np.sqrt(
-            self.k0 * self.k0 + kf * kf - 2 * abs(self.k0) * np.abs(kf) *
-            cos(2 * radians(low_angle)))
+            self.k0 * self.k0
+            + kf * kf
+            - 2 * abs(self.k0) * np.abs(kf) * cos(2 * radians(low_angle))
+        )
         self.q_high = 1e-10 * np.sqrt(
-            self.k0 * self.k0 + kf * kf - 2 * abs(self.k0) * np.abs(kf) *
-            cos(2 * radians(high_angle)))
+            self.k0 * self.k0
+            + kf * kf
+            - 2 * abs(self.k0) * np.abs(kf) * cos(2 * radians(high_angle))
+        )
 
-        self.q_low_0 = 1e-10 * self.k0 * sqrt(
-            2 * (1 - cos(radians(2 * low_angle))))
-        self.q_high_0 = 1e-10 * self.k0 * sqrt(
-            2 * (1 - cos(radians(2 * high_angle))))
+        self.q_low_0 = 1e-10 * self.k0 * sqrt(2 * (1 - cos(radians(2 * low_angle))))
+        self.q_high_0 = 1e-10 * self.k0 * sqrt(2 * (1 - cos(radians(2 * high_angle))))
 
         # Calculate elastic resolution
         self.lambdas = np.arange(1, 20.1, 0.1)
-        i2 = np.argwhere(((self.lambdas - self.wl) * (self.lambdas - self.wl))
-                         < 1e-15).flatten().astype(int).tolist()
-        self.dE_res = np.array([1000 * Eres1(l, self.speed, self.st, dL=Ls)[0]
-                                for l in self.lambdas])
+        i2 = (
+            np.argwhere(((self.lambdas - self.wl) * (self.lambdas - self.wl)) < 1e-15)
+            .flatten()
+            .astype(int)
+            .tolist()
+        )
+        self.dE_res = np.array(
+            [1000 * Eres1(l, self.speed, self.st, dL=Ls)[0] for l in self.lambdas]
+        )
         self.dE_el = (1e3 * self.dE_res[i2])[0]
 
         # Calculate inelastic resolution
         self.lambdaf = 2 * pi / kf
         self.dE_in = np.array(
-            [1e3 * Eres1(self.wl, self.speed, self.st, dL=Ls, lf=l)[0]
-             for l in self.lambdaf])
+            [
+                1e3 * Eres1(self.wl, self.speed, self.st, dL=Ls, lf=l)[0]
+                for l in self.lambdaf
+            ]
+        )

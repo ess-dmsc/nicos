@@ -49,25 +49,28 @@ from itertools import chain, cycle, islice
 from nicos.core.device import Device
 from nicos.core.errors import SPMError
 
-id_re = re.compile('[a-zA-Z_][a-zA-Z0-9_]*$')
+id_re = re.compile("[a-zA-Z_][a-zA-Z0-9_]*$")
 string1_re = re.compile(r"'(\\\\|\\'|[^'])*'")
 string2_re = re.compile(r'"(\\\\|\\"|[^"])*"')
-spaces_re = re.compile(r'\s+')
-nospace_re = re.compile(r'[^ \t;]+')
+spaces_re = re.compile(r"\s+")
+nospace_re = re.compile(r"[^ \t;]+")
 
 
 def spmsyntax(*arguments, **options):
     """Decorator to give a function specific SPM syntax advice, for parameter
     checking and completion.
     """
+
     def deco(func):
         func.spmsyntax = arguments, options
         return func
+
     return deco
 
 
 class bare(str):
     """String that repr()s as itself without quotes."""
+
     def __repr__(self):
         return str(self)
 
@@ -80,17 +83,17 @@ class NoParse(Exception):
 
 
 class Token:
-    desc = 'token'
+    desc = "token"
 
     def handle(self, arg, session):
-        raise NoParse('strange token', arg)
+        raise NoParse("strange token", arg)
 
     def complete(self, text, session, argsofar):
         return []
 
 
 class String(Token):
-    desc = 'string'
+    desc = "string"
 
     def handle(self, arg, session):
         if string1_re.match(arg) or string2_re.match(arg):
@@ -102,38 +105,40 @@ String = String()
 
 
 class Bare(Token):
-    desc = 'value'
+    desc = "value"
 
     def handle(self, arg, session):
         if id_re.match(arg):
             if arg not in session.namespace:
                 return arg
-        return bare('(' + arg + ')')
+        return bare("(" + arg + ")")
 
 
 Bare = Bare()
 
 
 class Num(Token):
-    desc = 'number'
+    desc = "number"
 
     def handle(self, arg, session):
         try:
             return float(arg)
         except ValueError:
-            raise NoParse('number', arg) from None
+            raise NoParse("number", arg) from None
+
 
 Num = Num()
 
 
 class Int(Token):
-    desc = 'integer'
+    desc = "integer"
 
     def handle(self, arg, session):
         try:
             return int(arg)
         except ValueError:
-            raise NoParse('integer', arg) from None
+            raise NoParse("integer", arg) from None
+
 
 Int = Int()
 
@@ -144,7 +149,7 @@ class Oneof(Token):
 
     @property
     def desc(self):
-        return 'one of ' + ', '.join(self.choices)
+        return "one of " + ", ".join(self.choices)
 
     def handle(self, arg, session):
         if arg.lower() not in self.choices:
@@ -156,48 +161,51 @@ class Oneof(Token):
 
 
 class Bool(Token):
-    desc = 'boolean'
+    desc = "boolean"
 
     def handle(self, arg, session):
-        if arg.lower() not in ['true', 'false']:
-            raise NoParse('true or false', arg)
+        if arg.lower() not in ["true", "false"]:
+            raise NoParse("true or false", arg)
         return bare(arg.capitalize())
 
     def complete(self, text, session, argsofar):
-        return [c for c in ['true', 'false'] if c.startswith(text)]
+        return [c for c in ["true", "false"] if c.startswith(text)]
 
 
 Bool = Bool()
 
 
 class Dev(Token):
-    desc = 'device name'
+    desc = "device name"
 
     def __init__(self, devtype=Device):
         self.devtype = devtype
 
     def clsrep(self, cls):
         if isinstance(cls, tuple):
-            return ' or '.join(self.clsrep(c) for c in cls)
+            return " or ".join(self.clsrep(c) for c in cls)
         return cls.__name__
 
     def handle(self, arg, session):
         if arg not in session.explicit_devices:
-            raise NoParse('device name', arg)
+            raise NoParse("device name", arg)
         if not isinstance(session.devices[arg], self.devtype):
-            raise NoParse('%s device' % self.clsrep(self.devtype), arg)
+            raise NoParse("%s device" % self.clsrep(self.devtype), arg)
         return bare(arg)
 
     def complete(self, text, session, argsofar):
-        return [dev for dev in session.explicit_devices if dev.startswith(text)
-                and isinstance(session.devices[dev], self.devtype)]
+        return [
+            dev
+            for dev in session.explicit_devices
+            if dev.startswith(text) and isinstance(session.devices[dev], self.devtype)
+        ]
 
 
 AnyDev = Dev()
 
 
 class DevParam(Token):
-    desc = 'parameter name'
+    desc = "parameter name"
 
     def handle(self, arg, session):
         return arg
@@ -214,43 +222,49 @@ DevParam = DevParam()
 
 
 class SetupName(Token):
-    desc = 'setup name'
+    desc = "setup name"
 
     def __init__(self, what):
         self.what = what
 
     def handle(self, arg, session):
         if arg not in session._setup_info:
-            raise NoParse('setup name', arg)
+            raise NoParse("setup name", arg)
         return arg
 
     def complete(self, text, session, argsofar):
-        all_setups = [name for (name, info) in session._setup_info.items()
-                      if info and info['group'] in ('basic', 'optional',
-                                                    'plugplay', '')]
-        if self.what == 'all':
+        all_setups = [
+            name
+            for (name, info) in session._setup_info.items()
+            if info and info["group"] in ("basic", "optional", "plugplay", "")
+        ]
+        if self.what == "all":
             candidates = all_setups
-        elif self.what == 'unloaded':
-            candidates = [setup for setup in all_setups
-                          if setup not in session.explicit_setups]
-        elif self.what == 'loaded':
+        elif self.what == "unloaded":
+            candidates = [
+                setup for setup in all_setups if setup not in session.explicit_setups
+            ]
+        elif self.what == "loaded":
             candidates = session.explicit_setups
         return [c for c in candidates if c.startswith(text)]
 
 
 class DeviceName(Token):
-    desc = 'device name'
+    desc = "device name"
 
     def handle(self, arg, session):
         if arg not in session.configured_devices:
-            raise NoParse('device name', arg)
+            raise NoParse("device name", arg)
         return arg
 
     def complete(self, text, session, argsofar):
         # This also completes normally non-visible devices, since the token
         # is used for CreateDevice.
-        return [c for c in session.configured_devices
-                if c.startswith(text) and c not in session.devices]
+        return [
+            c
+            for c in session.configured_devices
+            if c.startswith(text) and c not in session.devices
+        ]
 
 
 DeviceName = DeviceName()
@@ -273,34 +287,40 @@ class SPMHandler:
     def complete(self, command, word):
         def select(candidates, word):
             return [c for c in candidates if c.startswith(word)]
+
         try:
             # XXX could complete "?" too
-            if command.startswith(('!', '?')) or command.endswith('?'):
+            if command.startswith(("!", "?")) or command.endswith("?"):
                 return []
-            if command.startswith(':'):
+            if command.startswith(":"):
                 return self.complete(command[1:].strip(), word)
             commands = self.tokenize(command, partial=True)
             tokens = commands[-1]  # only last command is interesting
             if not word:
-                tokens.append('')
+                tokens.append("")
             command = tokens[0]
             if len(tokens) == 1:
                 # complete command
-                return select([n for (n, o) in self.session.namespace.items()
-                               if hasattr(o, 'is_usercommand') or
-                               isinstance(o, Device)], word)
+                return select(
+                    [
+                        n
+                        for (n, o) in self.session.namespace.items()
+                        if hasattr(o, "is_usercommand") or isinstance(o, Device)
+                    ],
+                    word,
+                )
             cmdobj = self.session.namespace.get(command)
             if isinstance(cmdobj, Device):
                 return []
-            if not hasattr(cmdobj, 'is_usercommand'):
+            if not hasattr(cmdobj, "is_usercommand"):
                 return []
             return self.complete_command(cmdobj, tokens[1:], word)
         except Exception as err:
-            self.session.log.debug('error during completion: %s', err)
+            self.session.log.debug("error during completion: %s", err)
             return []
 
     def complete_command(self, command, args, word):
-        syntax = getattr(command, 'spmsyntax', None)
+        syntax = getattr(command, "spmsyntax", None)
         if syntax is None:
             return []
         arguments, options = syntax
@@ -334,44 +354,47 @@ class SPMHandler:
             try:
                 lines.append(self.handle_line(command))
             except SPMError as err:
-                err.args = ('in %s, line %d: ' % (fn or 'unnamed',
-                                                  lineno + 1) + err.args[0],)
+                err.args = (
+                    "in %s, line %d: " % (fn or "unnamed", lineno + 1) + err.args[0],
+                )
                 raise
-        return '\n'.join(lines)
+        return "\n".join(lines)
 
     def handle_line(self, command):
-        if command.startswith('#'):
+        if command.startswith("#"):
             # Comments (only in script files)
-            return 'pass'
-        if command.startswith('!'):
+            return "pass"
+        if command.startswith("!"):
             # Python escape
             return command[1:].strip()
-        if command.startswith('?') or command.endswith('?'):
+        if command.startswith("?") or command.endswith("?"):
             # Help escape
-            return 'help(%s)' % command.strip('?')
-        if command.startswith(':'):
+            return "help(%s)" % command.strip("?")
+        if command.startswith(":"):
             # Simulation escape
             code = self.handle_line(command[1:])
-            return 'sim(%r)' % code
+            return "sim(%r)" % code
         try:
             commands = self.tokenize(command)
         except NoParse as err:
-            return self.error('could not parse starting at %r, expected %s' %
-                              (err.token, err.expected))
+            return self.error(
+                "could not parse starting at %r, expected %s"
+                % (err.token, err.expected)
+            )
         code = []
         for tokens in commands:
             if not tokens:
-                code.append('pass')
+                code.append("pass")
                 continue
             command = tokens[0]
             cmdobj = self.session.namespace.get(command)
-            if hasattr(cmdobj, 'is_usercommand'):
+            if hasattr(cmdobj, "is_usercommand"):
                 code.append(self.handle_command(cmdobj, tokens[1:]))
             elif isinstance(cmdobj, Device):
                 code.append(self.handle_device(cmdobj, tokens[1:]))
             else:
-                return self.error('no such command or device: %r' % command)
-        return '; '.join(code)
+                return self.error("no such command or device: %r" % command)
+        return "; ".join(code)
 
     def tokenize(self, command, partial=False):
         rest = command
@@ -384,48 +407,48 @@ class SPMHandler:
                     if partial:
                         tokens.append(rest)
                         return tokens
-                    raise NoParse('single-quoted string', rest)
+                    raise NoParse("single-quoted string", rest)
                 tokens.append(m.group())
-                rest = rest[m.end():]
+                rest = rest[m.end() :]
             elif rest.startswith('"'):
                 m = string2_re.match(rest)
                 if not m:
                     if partial:
                         tokens.append(rest)
                         return tokens
-                    raise NoParse('double-quoted string', rest)
+                    raise NoParse("double-quoted string", rest)
                 tokens.append(m.group())
-                rest = rest[m.end():]
-            elif rest.startswith('('):
+                rest = rest[m.end() :]
+            elif rest.startswith("("):
                 i = 1
                 while i < len(rest):
-                    if rest[i] == ')':
+                    if rest[i] == ")":
                         break
                     i += 1
                 else:
                     if partial:
                         tokens.append(rest)
                         return tokens
-                    raise NoParse('closing parenthesis', rest)
-                tokens.append(rest[:i + 1])
-                rest = rest[i + 1:]
-            elif rest.startswith('['):
+                    raise NoParse("closing parenthesis", rest)
+                tokens.append(rest[: i + 1])
+                rest = rest[i + 1 :]
+            elif rest.startswith("["):
                 i = 1
                 while i < len(rest):
-                    if rest[i] == ']':
+                    if rest[i] == "]":
                         break
                     i += 1
                 else:
                     if partial:
                         tokens.append(rest)
                         return tokens
-                    raise NoParse('closing bracket', rest)
-                tokens.append(rest[:i + 1])
-                rest = rest[i + 1:]
+                    raise NoParse("closing bracket", rest)
+                tokens.append(rest[: i + 1])
+                rest = rest[i + 1 :]
             elif rest[0].isspace():
                 m = spaces_re.match(rest)
-                rest = rest[m.end():]
-            elif rest.startswith(';'):
+                rest = rest[m.end() :]
+            elif rest.startswith(";"):
                 # serial command execution
                 commands.append([])
                 tokens = commands[-1]
@@ -433,18 +456,18 @@ class SPMHandler:
             else:
                 m = nospace_re.match(rest)
                 tokens.append(m.group())
-                rest = rest[m.end():]
+                rest = rest[m.end() :]
         return commands
 
     def handle_device(self, device, args):
         if not args:
-            return 'read(%s)' % device
+            return "read(%s)" % device
         elif len(args) == 1:
-            return 'maw(%s, %s)' % (device, args[0])
-        return self.error('too many arguments for simple device command')
+            return "maw(%s, %s)" % (device, args[0])
+        return self.error("too many arguments for simple device command")
 
     def handle_command(self, command, args):
-        syntax = getattr(command, 'spmsyntax', None)
+        syntax = getattr(command, "spmsyntax", None)
         if syntax is None:
             syntax = ((Bare,) * len(args), {})
         arguments, options = syntax
@@ -460,36 +483,40 @@ class SPMHandler:
         for element in arguments:
             if not args:
                 if nargs < posargs or (nargs - posargs) % multargs != 0:
-                    return self.error('premature end of command, expected %s'
-                                      % element.desc)
+                    return self.error(
+                        "premature end of command, expected %s" % element.desc
+                    )
                 break
             try:
                 parg = element.handle(args[0], self.session)
             except NoParse as err:
-                return self.error('invalid argument at %r, expected %s' %
-                                  (err.token, err.expected))
+                return self.error(
+                    "invalid argument at %r, expected %s" % (err.token, err.expected)
+                )
             cmdargs.append(parg)
             args = args[1:]
             nargs += 1
         # now come options
         cmdopts = {}
         if len(args) % 2:
-            return self.error('too many arguments at %r, expected end of '
-                              'command' % args[-1])
+            return self.error(
+                "too many arguments at %r, expected end of " "command" % args[-1]
+            )
         while args:
             opt, val = args[:2]
             args = args[2:]
             if not id_re.match(opt):
-                return self.error('invalid syntax at %r, expected option name'
-                                  % opt)
+                return self.error("invalid syntax at %r, expected option name" % opt)
             if opt in options:
                 try:
                     val = options[opt].handle(val, self.session)
                 except NoParse as err:
-                    return self.error('invalid argument at %r, expected %s' %
-                                      (err.token, err.expected))
+                    return self.error(
+                        "invalid argument at %r, expected %s"
+                        % (err.token, err.expected)
+                    )
             else:
                 val = bare(val)
             cmdopts[opt] = val
         # now nothing should be left
-        return command.__name__ + '(*%s, **%s)' % (cmdargs, cmdopts)
+        return command.__name__ + "(*%s, **%s)" % (cmdargs, cmdopts)

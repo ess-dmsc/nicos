@@ -28,9 +28,8 @@ from nicos.guisupport.livewidget import IntegralLiveWidget, LiveWidget1D
 
 
 class AutoScaleLiveWidget1D(LiveWidget1D):
-
     def __init__(self, parent=None, **kwargs):
-        kwargs.update({'xscale': 'decimal'})
+        kwargs.update({"xscale": "decimal"})
         LiveWidget1D.__init__(self, parent, **kwargs)
 
     def getYMax(self):
@@ -54,7 +53,6 @@ class AutoScaleLiveWidget1D(LiveWidget1D):
 
 
 class AutoScaleLiveDataPanel(LiveDataPanel):
-
     def _initLiveWidget(self, array):
         """Initialize livewidget based on array's shape"""
         if len(array.shape) == 1:

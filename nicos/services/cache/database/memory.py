@@ -74,8 +74,9 @@ class MemoryCacheDatabaseWithHistory(MemoryCacheDatabase):
     """
 
     parameters = {
-        'maxentries': Param('Maximum history length',
-                            type=intrange(0, 100), default=10, settable=False),
+        "maxentries": Param(
+            "Maximum history length", type=intrange(0, 100), default=10, settable=False
+        ),
     }
 
     def updateEntries(self, categories, subkey, no_store, entry):
@@ -107,4 +108,4 @@ class MemoryCacheDatabaseWithHistory(MemoryCacheDatabase):
                 elif not inrange and entry.value and entry.time < fromtime:
                     last_before = entry
         except Exception:
-            self.log.exception('error reading store for history query')
+            self.log.exception("error reading store for history query")

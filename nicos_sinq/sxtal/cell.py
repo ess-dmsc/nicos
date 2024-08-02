@@ -30,6 +30,7 @@ The original implementation was in ANSII-C by Mark Koennecke at PSI.
 This implementation has been ported from C to python by Jakob Lass, then
 also at PSI
 """
+
 import numpy as np
 
 from nicos_sinq.sxtal.trigd import Acosd, Cosd, Sind
@@ -56,22 +57,24 @@ def directToReciprocalLattice(directLattice):
     sin_beta = Sind(beta)
     sin_gamma = Sind(gamma)
 
-    reciprocal.alpha = Acosd((cos_beta * cos_gamma - cos_alfa) /
-                             sin_beta / sin_gamma)
-    reciprocal.beta = Acosd((cos_alfa * cos_gamma - cos_beta) /
-                            sin_alfa / sin_gamma)
-    reciprocal.gamma = Acosd((cos_alfa * cos_beta - cos_gamma) /
-                             sin_alfa / sin_beta)
+    reciprocal.alpha = Acosd((cos_beta * cos_gamma - cos_alfa) / sin_beta / sin_gamma)
+    reciprocal.beta = Acosd((cos_alfa * cos_gamma - cos_beta) / sin_alfa / sin_gamma)
+    reciprocal.gamma = Acosd((cos_alfa * cos_beta - cos_gamma) / sin_alfa / sin_beta)
 
     ad = directLattice.a
     bd = directLattice.b
     cd = directLattice.c
 
-    arg = 1 + 2 * cos_alfa * cos_beta * cos_gamma - cos_alfa * cos_alfa -\
-        cos_beta * cos_beta - cos_gamma * cos_gamma
+    arg = (
+        1
+        + 2 * cos_alfa * cos_beta * cos_gamma
+        - cos_alfa * cos_alfa
+        - cos_beta * cos_beta
+        - cos_gamma * cos_gamma
+    )
     if arg < 0.0:
-        raise AttributeError('Reciprocal lattice has negative volume!')
-    vol = ad * bd * cd * np.sqrt(arg)/(2 * np.pi)
+        raise AttributeError("Reciprocal lattice has negative volume!")
+    vol = ad * bd * cd * np.sqrt(arg) / (2 * np.pi)
     reciprocal.a = bd * cd * sin_alfa / vol
     reciprocal.b = ad * cd * sin_beta / vol
     reciprocal.c = bd * ad * sin_gamma / vol
@@ -80,8 +83,7 @@ def directToReciprocalLattice(directLattice):
 
 
 reciprocalToDirectLattice = directToReciprocalLattice
-reciprocalToDirectLattice.__doc__ = \
-    "Calculate direct lattice from reciprocal lattice"
+reciprocalToDirectLattice.__doc__ = "Calculate direct lattice from reciprocal lattice"
 
 
 def calculateBMatrix(direct):
@@ -104,8 +106,8 @@ def calculateBMatrix(direct):
 
 
 def cellFromUB(UB):
-    GINV = np.einsum('ji,jk->ik', UB, UB)
-    G = np.linalg.inv(GINV)*(2*np.pi)**2
+    GINV = np.einsum("ji,jk->ik", UB, UB)
+    G = np.linalg.inv(GINV) * (2 * np.pi) ** 2
     a = np.sqrt(G[0][0])
     b = np.sqrt(G[1][1])
     c = np.sqrt(G[2][2])
@@ -131,16 +133,16 @@ def cellFromUBX(UB):
 
 
 def scatteringVectorLength(B, hkl):
-    psi = B.dot(np.array(hkl, dtype='float64'))
+    psi = B.dot(np.array(hkl, dtype="float64"))
     return np.sqrt(psi.dot(psi))
 
 
-class Cell():
+class Cell:
     """Cell object to hold information about crystal cell structures"""
 
-    def __init__(self, a=None, b=None, c=None,
-                 alpha=None, beta=None, gamma=None,
-                 UB=None):
+    def __init__(
+        self, a=None, b=None, c=None, alpha=None, beta=None, gamma=None, UB=None
+    ):
         """
         There are two ways to initialize the cell:
         a) a UB is given as a keyword argument. In that case the cell is
@@ -158,19 +160,25 @@ class Cell():
             self.gamma = defaultValue(gamma, 90.0)
         else:
             _cell = cellFromUB(UB)
-            self.a, self.b, self.c, self.alpha, self.beta, self.gamma = \
-                _cell.a, _cell.b, _cell.c, _cell.alpha, _cell.beta, _cell.gamma
+            self.a, self.b, self.c, self.alpha, self.beta, self.gamma = (
+                _cell.a,
+                _cell.b,
+                _cell.c,
+                _cell.alpha,
+                _cell.beta,
+                _cell.gamma,
+            )
 
     def __str__(self):
-        returnString = 'cell.Cell('
+        returnString = "cell.Cell("
         keyString = []
-        for key in ['a', 'b', 'c', 'alpha', 'beta', 'gamma']:
-            keyString.append('{:}={:.1f}'.format(key, getattr(self, key)))
-        returnString += ', '.join(keyString)+')'
+        for key in ["a", "b", "c", "alpha", "beta", "gamma"]:
+            keyString.append("{:}={:.1f}".format(key, getattr(self, key)))
+        returnString += ", ".join(keyString) + ")"
         return returnString
 
     def __eq__(self, other):
-        keys = ['a', 'b', 'c', 'alpha', 'beta', 'gamma']
+        keys = ["a", "b", "c", "alpha", "beta", "gamma"]
         selfValues = [getattr(self, key) for key in keys]
         otherValues = [getattr(other, key) for key in keys]
         return np.all(np.isclose(selfValues, otherValues))

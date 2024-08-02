@@ -52,7 +52,7 @@ class RateImageChannel(ImageChannel):
     """
 
     attached_devices = {
-        'timer': Attach('The timer channel', Measurable),
+        "timer": Attach("The timer channel", Measurable),
     }
 
     def doInit(self, mode):
@@ -68,10 +68,18 @@ class RateImageChannel(ImageChannel):
         return narray
 
     def valueInfo(self):
-        return (Value(name=self.name + ' (total)', type='counter', fmtstr='%d',
-                      errors='sqrt', unit='cts'),
-                Value(name=self.name + ' (rate)', type='monitor',
-                      fmtstr='%.1f', unit='cps'),)
+        return (
+            Value(
+                name=self.name + " (total)",
+                type="counter",
+                fmtstr="%d",
+                errors="sqrt",
+                unit="cts",
+            ),
+            Value(
+                name=self.name + " (rate)", type="monitor", fmtstr="%.1f", unit="cps"
+            ),
+        )
 
 
 class NDPRateImageChannel(RateImageChannel):

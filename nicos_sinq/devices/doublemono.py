@@ -39,17 +39,20 @@ class DoubleMonochromator(HasLimits, IsController, BaseSequencer):
     """
 
     attached_devices = {
-        'mth1': Attach('First monochromator blade theta', Moveable),
-        'mth2': Attach('Second monochromator blade theta', Moveable),
-        'mtx': Attach('Translation between blades', Moveable), }
+        "mth1": Attach("First monochromator blade theta", Moveable),
+        "mth2": Attach("Second monochromator blade theta", Moveable),
+        "mtx": Attach("Translation between blades", Moveable),
+    }
 
     parameters = {
-        'safe_position': Param('Position at which the blades can pass each '
-                               'other safely', type=float),
-        'dvalue': Param('Lattice constant of Monochromator blades', type=float,
-                        mandatory=True),
-        'distance': Param('Parallactic distance of monos', type=float,
-                          mandatory=True), }
+        "safe_position": Param(
+            "Position at which the blades can pass each " "other safely", type=float
+        ),
+        "dvalue": Param(
+            "Lattice constant of Monochromator blades", type=float, mandatory=True
+        ),
+        "distance": Param("Parallactic distance of monos", type=float, mandatory=True),
+    }
     _allowed_called = False
 
     @contextmanager
@@ -65,12 +68,16 @@ class DoubleMonochromator(HasLimits, IsController, BaseSequencer):
         self._allowed_called = False
 
     def _checksafe(self):
-        if fabs(self._attached_mth1.read(
-                0) - self.safe_position) > self._attached_mth1.precision:
-            raise NicosError(self, 'MTH1 has not reached a safe position')
-        if fabs(self._attached_mth2.read(
-                0) - self.safe_position) > self._attached_mth2.precision:
-            raise NicosError(self, 'MTH2 has not reached a safe position')
+        if (
+            fabs(self._attached_mth1.read(0) - self.safe_position)
+            > self._attached_mth1.precision
+        ):
+            raise NicosError(self, "MTH1 has not reached a safe position")
+        if (
+            fabs(self._attached_mth2.read(0) - self.safe_position)
+            > self._attached_mth2.precision
+        ):
+            raise NicosError(self, "MTH2 has not reached a safe position")
 
     def _calcMonoPosition(self, target):
         theta = degrees(asin(target / float(2 * self.dvalue)))
@@ -82,16 +89,17 @@ class DoubleMonochromator(HasLimits, IsController, BaseSequencer):
         th1 = self._attached_mth1.read(0)
         th2 = self._attached_mth2.read(0)
         if abs(th1 - th2) > self._attached_mth1.precision:
-            raise PositionError('Double Monochromator blades out of sync, '
-                                '%f versus %d' % (th1, th2))
+            raise PositionError(
+                "Double Monochromator blades out of sync, " "%f versus %d" % (th1, th2)
+            )
         if abs(th1 - theta) > self._attached_mth1.precision:
-            raise PositionError('Blades did not arrive at target')
+            raise PositionError("Blades did not arrive at target")
 
-        if (abs(trans - self._attached_mtx.read(
-                0))) > self._attached_mtx.precision:
-            raise PositionError('Double monochromator translation not in '
-                                'position, should %f, is %f'
-                                % (trans, self._attached_mtx.read(0)))
+        if (abs(trans - self._attached_mtx.read(0))) > self._attached_mtx.precision:
+            raise PositionError(
+                "Double monochromator translation not in "
+                "position, should %f, is %f" % (trans, self._attached_mtx.read(0))
+            )
 
     def _runMtx(self, trans):
         with self._allowed():
@@ -102,17 +110,22 @@ class DoubleMonochromator(HasLimits, IsController, BaseSequencer):
 
         seq = []
 
-        seq.append((SeqDev(self._attached_mth1, self.safe_position),
-                    SeqDev(self._attached_mth2, self.safe_position)))
+        seq.append(
+            (
+                SeqDev(self._attached_mth1, self.safe_position),
+                SeqDev(self._attached_mth2, self.safe_position),
+            )
+        )
 
-        seq.append(SeqMethod(self, '_checksafe'))
+        seq.append(SeqMethod(self, "_checksafe"))
 
-        seq.append(SeqMethod(self, '_runMtx', trans))
+        seq.append(SeqMethod(self, "_runMtx", trans))
 
-        seq.append((SeqDev(self._attached_mth1, theta),
-                    SeqDev(self._attached_mth2, theta)))
+        seq.append(
+            (SeqDev(self._attached_mth1, theta), SeqDev(self._attached_mth2, theta))
+        )
 
-        seq.append(SeqMethod(self, '_checkArrival'))
+        seq.append(SeqMethod(self, "_checkArrival"))
 
         return seq
 
@@ -122,13 +135,13 @@ class DoubleMonochromator(HasLimits, IsController, BaseSequencer):
 
     def isAdevTargetAllowed(self, adev, adevtarget):
         if self._allowed_called:
-            return True, ''
+            return True, ""
 
         if adev == self._attached_mtx:
             try:
                 self._checksafe()
-                return True, 'Position Allowed'
+                return True, "Position Allowed"
             except NicosError:
-                return False, 'Monochromator blades not in a safe position'
+                return False, "Monochromator blades not in a safe position"
         else:
-            return True, 'Position Allowed'
+            return True, "Position Allowed"

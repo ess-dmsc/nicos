@@ -32,23 +32,47 @@ from os import path
 import gr
 import numpy as np
 import numpy.ma
-from gr.pygr import CoordConverter, ErrorBar, Plot, PlotAxes, \
-    RegionOfInterest, Text
+from gr.pygr import CoordConverter, ErrorBar, Plot, PlotAxes, RegionOfInterest, Text
 from gr.pygr.helper import ColorIndexGenerator
 
 from nicos.clients.gui.dialogs.data import DataExportDialog
 from nicos.clients.gui.utils import DlgPresets, DlgUtils, dialogFromUi, loadUi
-from nicos.guisupport.plots import DATEFMT, GRMARKS, TIMEFMT, \
-    MaskedPlotCurve, NicosPlotAxes, NicosTimePlotAxes
-from nicos.guisupport.qt import QAction, QApplication, QCursor, QDialog, \
-    QFont, QListWidgetItem, QMenu, QPoint, Qt
-from nicos.guisupport.qtgr import InteractiveGRWidget, LegendEvent, \
-    MouseEvent, ROIEvent
+from nicos.guisupport.plots import (
+    DATEFMT,
+    GRMARKS,
+    TIMEFMT,
+    MaskedPlotCurve,
+    NicosPlotAxes,
+    NicosTimePlotAxes,
+)
+from nicos.guisupport.qt import (
+    QAction,
+    QApplication,
+    QCursor,
+    QDialog,
+    QFont,
+    QListWidgetItem,
+    QMenu,
+    QPoint,
+    Qt,
+)
+from nicos.guisupport.qtgr import InteractiveGRWidget, LegendEvent, MouseEvent, ROIEvent
 from nicos.guisupport.utils import savePlot, scaledFont
 from nicos.utils import number_types, safeName
-from nicos.utils.fitting import CosineFit, ExponentialFit, Fit, FitError, \
-    FitResult, GaussFit, LinearFit, LorentzFit, PearsonVIIFit, \
-    PseudoVoigtFit, SigmoidFit, TcFit
+from nicos.utils.fitting import (
+    CosineFit,
+    ExponentialFit,
+    Fit,
+    FitError,
+    FitResult,
+    GaussFit,
+    LinearFit,
+    LorentzFit,
+    PearsonVIIFit,
+    PseudoVoigtFit,
+    SigmoidFit,
+    TcFit,
+)
 
 
 def cleanArray(arr):
@@ -59,8 +83,9 @@ def cleanArray(arr):
     try:
         return np.asarray(arr, float)
     except ValueError:
-        return np.array([x if isinstance(x, number_types) else None
-                         for x in arr], float)
+        return np.array(
+            [x if isinstance(x, number_types) else None for x in arr], float
+        )
 
 
 def prepareData(x, y, dy, norm):
@@ -84,7 +109,7 @@ def prepareData(x, y, dy, norm):
     x = x[indices]
     y = y[indices]
     if not y.size:
-        raise ValueError('y does not contain any value')
+        raise ValueError("y does not contain any value")
     if dy.size:
         dy = dy[indices]
         # remove error bars that aren't finite
@@ -96,7 +121,7 @@ def prepareData(x, y, dy, norm):
 
 
 class Fitter:
-    title = 'unknown fit'
+    title = "unknown fit"
     picks = []
 
     def __init__(self, plot, window, action, curve, pickmode):
@@ -138,7 +163,7 @@ class Fitter:
         try:
             res = self.do_fit()
         except FitError as e:
-            self.plot.showInfo('Fitting failed: %s.' % e)
+            self.plot.showInfo("Fitting failed: %s." % e)
             return
         self.plot._plotFit(res)
 
@@ -150,14 +175,14 @@ class Fitter:
 
 
 class LinearFitter(Fitter):
-    title = 'linear fit'
-    picks = ['First point', 'Second point']
+    title = "linear fit"
+    picks = ["First point", "Second point"]
 
     def do_fit(self):
         if self.pickmode:
             (xmin, y1), (xmax, y2) = self.values  # pylint: disable=unbalanced-tuple-unpacking
             m0 = (y2 - y1) / (xmax - xmin)
-            pars = [m0, y1 - m0*xmin]
+            pars = [m0, y1 - m0 * xmin]
         else:
             pars = None
             xmin, xmax = self.limitsFromPlot()
@@ -167,8 +192,8 @@ class LinearFitter(Fitter):
 
 
 class ExponentialFitter(Fitter):
-    title = 'exp. fit'
-    picks = ['First point', 'Second point']
+    title = "exp. fit"
+    picks = ["First point", "Second point"]
 
     def do_fit(self):
         if self.pickmode:
@@ -185,17 +210,17 @@ class ExponentialFitter(Fitter):
 
 
 class CosineFitter(Fitter):
-    title = 'cosine fit'
-    picks = ['Maximum', 'Next minimum']
+    title = "cosine fit"
+    picks = ["Maximum", "Next minimum"]
 
     def do_fit(self):
         pars = None
         if self.pickmode:
             (x1, y1), (x2, y2) = self.values  # pylint: disable=unbalanced-tuple-unpacking
-            a = abs(y1 - y2) / 2.
-            b = (y1 + y2) / 2.
+            a = abs(y1 - y2) / 2.0
+            b = (y1 + y2) / 2.0
             width = abs(x1 - x2)
-            freq = 1 / (width * 2.)
+            freq = 1 / (width * 2.0)
             pars = [a, freq, x1, b]
 
         f = CosineFit(pars)
@@ -203,13 +228,13 @@ class CosineFitter(Fitter):
 
 
 class LorentzFitter(Fitter):
-    title = 'peak fit'
-    picks = ['Background', 'Peak', 'Half Maximum']
+    title = "peak fit"
+    picks = ["Background", "Peak", "Half Maximum"]
 
     def do_fit(self):
         if self.pickmode:
             (xb, yb), (x0, y0), (xw, _) = self.values  # pylint: disable=unbalanced-tuple-unpacking
-            pars = [x0, abs(y0-yb), abs(x0-xw), yb]
+            pars = [x0, abs(y0 - yb), abs(x0 - xw), yb]
             totalwidth = abs(x0 - xb)
             xmin = x0 - totalwidth
             xmax = x0 + totalwidth
@@ -222,13 +247,13 @@ class LorentzFitter(Fitter):
 
 
 class GaussFitter(Fitter):
-    title = 'peak fit'
-    picks = ['Background', 'Peak', 'Half Maximum']
+    title = "peak fit"
+    picks = ["Background", "Peak", "Half Maximum"]
 
     def do_fit(self):
         if self.pickmode:
             (xb, yb), (x0, y0), (xw, _) = self.values  # pylint: disable=unbalanced-tuple-unpacking
-            pars = [x0, abs(y0-yb), abs(x0-xw), yb]
+            pars = [x0, abs(y0 - yb), abs(x0 - xw), yb]
             totalwidth = abs(x0 - xb)
             xmin = x0 - totalwidth
             xmax = x0 + totalwidth
@@ -241,13 +266,13 @@ class GaussFitter(Fitter):
 
 
 class SigmoidFitter(Fitter):
-    title = 'sigmoid fit'
-    picks = ['Left point', 'Right point']
+    title = "sigmoid fit"
+    picks = ["Left point", "Right point"]
 
     def do_fit(self):
         if self.pickmode:
             (xmin, y1), (xmax, y2) = self.values  # pylint: disable=unbalanced-tuple-unpacking
-            pars = [y2 - y1, 1, (xmax - xmin) / 2. + xmin, y1]
+            pars = [y2 - y1, 1, (xmax - xmin) / 2.0 + xmin, y1]
         else:
             pars = None
             xmin, xmax = self.limitsFromPlot()
@@ -257,8 +282,8 @@ class SigmoidFitter(Fitter):
 
 
 class PseudoVoigtFitter(Fitter):
-    title = 'peak fit (PV)'
-    picks = ['Background', 'Peak', 'Half Maximum']
+    title = "peak fit (PV)"
+    picks = ["Background", "Peak", "Half Maximum"]
 
     def do_fit(self):
         if self.pickmode:
@@ -276,13 +301,13 @@ class PseudoVoigtFitter(Fitter):
 
 
 class PearsonVIIFitter(Fitter):
-    title = 'peak fit (PVII)'
-    picks = ['Background', 'Peak', 'Half Maximum']
+    title = "peak fit (PVII)"
+    picks = ["Background", "Peak", "Half Maximum"]
 
     def do_fit(self):
         if self.pickmode:
             (xb, yb), (x0, y0), (xw, _) = self.values  # pylint: disable=unbalanced-tuple-unpacking
-            pars = [yb, abs(y0-yb), x0, abs(x0-xw), 5.0]
+            pars = [yb, abs(y0 - yb), x0, abs(x0 - xw), 5.0]
             totalwidth = abs(x0 - xb)
             xmin = x0 - totalwidth
             xmax = x0 + totalwidth
@@ -295,8 +320,8 @@ class PearsonVIIFitter(Fitter):
 
 
 class TcFitter(Fitter):
-    title = 'Tc fit'
-    picks = ['Background', 'Tc']
+    title = "Tc fit"
+    picks = ["Background", "Tc"]
 
     def do_fit(self):
         pars = None
@@ -305,7 +330,7 @@ class TcFitter(Fitter):
             alpha0 = 0.5
             # guess A from maximum data point
             Tmin = min(self.data[0])
-            A0 = max(self.data[1]) / ((Tc-Tmin)/Tc)**alpha0
+            A0 = max(self.data[1]) / ((Tc - Tmin) / Tc) ** alpha0
             pars = [Ib, A0, Tc, alpha0]
 
         f = TcFit(pars)
@@ -313,13 +338,18 @@ class TcFitter(Fitter):
 
 
 class ArbyFitDialog(QDialog):
-
     def __init__(self, parent):
         QDialog.__init__(self, parent)
-        loadUi(self, 'panels/fit_arby.ui')
-        self.presets = DlgPresets('fit_arby',
-                                  [(self.function, ''), (self.fitparams, ''),
-                                   (self.xfrom, ''), (self.xto, '')])
+        loadUi(self, "panels/fit_arby.ui")
+        self.presets = DlgPresets(
+            "fit_arby",
+            [
+                (self.function, ""),
+                (self.fitparams, ""),
+                (self.xfrom, ""),
+                (self.xto, ""),
+            ],
+        )
         self.presets.load()
         for name in sorted(ArbitraryFitter.arby_functions):
             QListWidgetItem(name, self.oftenUsed)
@@ -327,7 +357,7 @@ class ArbyFitDialog(QDialog):
     def on_oftenUsed_itemClicked(self, item):
         params, func = ArbitraryFitter.arby_functions[item.text()]
         self.function.setText(func)
-        self.fitparams.setPlainText('\n'.join(params))
+        self.fitparams.setPlainText("\n".join(params))
 
     def getFunction(self):
         self.presets.save()
@@ -345,7 +375,7 @@ class ArbyFitDialog(QDialog):
             xmax, xmin = xmin, xmax
         params, values = [], []
         for line in self.fitparams.toPlainText().splitlines():
-            name_value = line.strip().split('=', 2)
+            name_value = line.strip().split("=", 2)
             if len(name_value) < 2:
                 continue
             params.append(name_value[0])
@@ -358,21 +388,21 @@ class ArbyFitDialog(QDialog):
 
 
 class ArbitraryFitter(Fitter):
-    title = 'fit'
+    title = "fit"
 
     arby_functions = {
-        'Gaussian x2': (
-            ['a =', 'b =', 'c =', 'x1 =', 'x2 =', 's1 =', 's2 ='],
-            'a + b*exp(-(x-x1)**2/s1**2) + c*exp(-(x-x2)**2/s2**2)',
+        "Gaussian x2": (
+            ["a =", "b =", "c =", "x1 =", "x2 =", "s1 =", "s2 ="],
+            "a + b*exp(-(x-x1)**2/s1**2) + c*exp(-(x-x2)**2/s2**2)",
         ),
-        'Gaussian x3 symm.': (
-            ['a =', 'b =', 'c =', 'x0 =', 'x1 =', 's0 =', 's1 ='],
-            'a + b*exp(-(x-x0-x1)**2/s1**2) + b*exp(-(x-x0+x1)**2/s1**2) + '
-            'c*exp(-(x-x0)**2/s0**2)',
+        "Gaussian x3 symm.": (
+            ["a =", "b =", "c =", "x0 =", "x1 =", "s0 =", "s1 ="],
+            "a + b*exp(-(x-x0-x1)**2/s1**2) + b*exp(-(x-x0+x1)**2/s1**2) + "
+            "c*exp(-(x-x0)**2/s0**2)",
         ),
-        'Parabola': (
-            ['a =', 'b =', 'c ='],
-            'a*x**2 + b*x + c',
+        "Parabola": (
+            ["a =", "b =", "c ="],
+            "a*x**2 + b*x + c",
         ),
     }
 
@@ -385,17 +415,17 @@ class ArbitraryFitter(Fitter):
         fcnstr, params, values, xmin, xmax = dlg.getFunction()
 
         ns = {}
-        exec('from numpy import *', ns)
+        exec("from numpy import *", ns)
         try:
-            model = eval('lambda x, %s: %s' % (', '.join(params), fcnstr), ns)
+            model = eval("lambda x, %s: %s" % (", ".join(params), fcnstr), ns)
         except SyntaxError as e:
-            self.plot.showInfo('Syntax error in function: %s' % e)
+            self.plot.showInfo("Syntax error in function: %s" % e)
             return
 
-        f = Fit('fit', model, params, values, xmin, xmax)
+        f = Fit("fit", model, params, values, xmin, xmax)
         res = f.run(*self.data)
         if res._failed:
-            self.plot.showInfo('Fitting failed: %s.' % res._message)
+            self.plot.showInfo("Fitting failed: %s." % res._message)
             return
         res.label_x = res.curve_x[0]
         res.label_y = max(res.curve_y)
@@ -405,17 +435,38 @@ class ArbitraryFitter(Fitter):
 
 
 class NicosPlotCurve(MaskedPlotCurve):
-
     GR_MARKER_SIZE = 1.0
 
-    _parent = ''
+    _parent = ""
 
-    def __init__(self, x, y, errBar1=None, errBar2=None,
-                 linetype=gr.LINETYPE_SOLID, markertype=GRMARKS['dot'],
-                 linecolor=None, markercolor=1, legend=None, fillx=0, filly=0):
-        MaskedPlotCurve.__init__(self, x, y, errBar1, errBar2,
-                                 linetype, markertype, linecolor, markercolor,
-                                 legend, fillx=fillx, filly=filly)
+    def __init__(
+        self,
+        x,
+        y,
+        errBar1=None,
+        errBar2=None,
+        linetype=gr.LINETYPE_SOLID,
+        markertype=GRMARKS["dot"],
+        linecolor=None,
+        markercolor=1,
+        legend=None,
+        fillx=0,
+        filly=0,
+    ):
+        MaskedPlotCurve.__init__(
+            self,
+            x,
+            y,
+            errBar1,
+            errBar2,
+            linetype,
+            markertype,
+            linecolor,
+            markercolor,
+            legend,
+            fillx=fillx,
+            filly=filly,
+        )
         self._dependent = []
         self._enableErrBars = True
 
@@ -482,12 +533,11 @@ class NicosPlotCurve(MaskedPlotCurve):
 
 
 class NicosPlot(DlgUtils):
-
     HAS_AUTOSCALE = False
-    SAVE_EXT = ['.png']
+    SAVE_EXT = [".png"]
 
     def __init__(self, window, timeaxis=False):
-        DlgUtils.__init__(self, 'Plot')
+        DlgUtils.__init__(self, "Plot")
         self.parent_window = window
         self.plotcurves = []
         self.show_all = False
@@ -516,7 +566,7 @@ class NicosPlot(DlgUtils):
         raise NotImplementedError
 
     def subTitleString(self):
-        return ''
+        return ""
 
     def xaxisName(self):
         raise NotImplementedError
@@ -615,9 +665,9 @@ class NicosPlot(DlgUtils):
         if not visible_curves:
             return
         if len(visible_curves) > 1:
-            dlg = dialogFromUi(self, 'panels/selector.ui')
-            dlg.setWindowTitle('Select curve to fit')
-            dlg.label.setText('Select a curve:')
+            dlg = dialogFromUi(self, "panels/selector.ui")
+            dlg.setWindowTitle("Select curve to fit")
+            dlg.label.setText("Select a curve:")
             for _, descr in visible_curves:
                 QListWidgetItem(descr, dlg.list)
             dlg.list.setCurrentRow(0)
@@ -640,10 +690,10 @@ class NicosPlot(DlgUtils):
             self.fitter.cancel()
         fitcurve = self.selectCurve()
         if not fitcurve:
-            return self.showError('Plot must have a visible curve '
-                                  'to be fitted.')
-        self.fitter = fitterclass(self, self.parent_window,
-                                  fitteraction, fitcurve, pickmode)
+            return self.showError("Plot must have a visible curve " "to be fitted.")
+        self.fitter = fitterclass(
+            self, self.parent_window, fitteraction, fitcurve, pickmode
+        )
         self.fitter.begin()
 
     def _getCurveData(self, curve):
@@ -676,11 +726,12 @@ class NicosPlot(DlgUtils):
     def modifyData(self):
         visible_curves = self.visibleCurves()
         # get input from the user: which curves should be modified how
-        dlg = dialogFromUi(self, 'panels/modify.ui')
+        dlg = dialogFromUi(self, "panels/modify.ui")
 
         def checkAll():
             for i in range(dlg.list.count()):
                 dlg.list.item(i).setCheckState(Qt.CheckState.Checked)
+
         dlg.selectall.clicked.connect(checkAll)
         for i, descr in visible_curves:
             li = QListWidgetItem(descr, dlg.list)
@@ -710,10 +761,9 @@ class NicosPlot(DlgUtils):
 
 
 class NicosGrPlot(NicosPlot, InteractiveGRWidget):
-
     axescls = NicosPlotAxes
     HAS_AUTOSCALE = True
-    SAVE_EXT = ['.svg', '.png']
+    SAVE_EXT = [".svg", ".png"]
 
     def __init__(self, parent, window, timeaxis=False):
         InteractiveGRWidget.__init__(self, parent)
@@ -725,18 +775,21 @@ class NicosGrPlot(NicosPlot, InteractiveGRWidget):
         self.mouselocation = None
         self._cursor = self.cursor()
         self._mouseSelEnabled = self.getMouseSelectionEnabled()
-        self._markertype = GRMARKS['circle']
+        self._markertype = GRMARKS["circle"]
 
         dictPrintType = dict(gr.PRINT_TYPE)
         for prtype in [gr.PRINT_JPEG, gr.PRINT_TIF]:
             dictPrintType.pop(prtype)
-        self._saveTypes = (";;".join(dictPrintType.values()) + ";;" +
-                           ";;".join(gr.GRAPHIC_TYPE.values()))
+        self._saveTypes = (
+            ";;".join(dictPrintType.values())
+            + ";;"
+            + ";;".join(gr.GRAPHIC_TYPE.values())
+        )
         self._saveName = None
         self._color = ColorIndexGenerator()
         # avoid the first and therefore most used color being yellow
         self._color.getNextColorIndex()
-        self._plot = Plot(viewport=(.1, .85, .15, .88))
+        self._plot = Plot(viewport=(0.1, 0.85, 0.15, 0.88))
         self._plot.setLegendWidth(0.05)
         self._axes = self.axescls(viewport=self._plot.viewport)
         self._axes.backgroundColor = 0
@@ -744,8 +797,9 @@ class NicosGrPlot(NicosPlot, InteractiveGRWidget):
         self._plot.title = self.titleString()
         self.addPlot(self._plot)
 
-        self.cbm.addHandler(LegendEvent.ROI_CLICKED, self.on_legendItemClicked,
-                            LegendEvent)
+        self.cbm.addHandler(
+            LegendEvent.ROI_CLICKED, self.on_legendItemClicked, LegendEvent
+        )
         self.cbm.addHandler(ROIEvent.ROI_CLICKED, self.on_roiItemClicked, ROIEvent)
         self.cbm.addHandler(MouseEvent.MOUSE_PRESS, self.on_fitPicker_selected)
         self.cbm.addHandler(MouseEvent.MOUSE_MOVE, self.on_mouseMove)
@@ -755,16 +809,24 @@ class NicosGrPlot(NicosPlot, InteractiveGRWidget):
         self.updateDisplay()
 
     def xtickCallBack(self, x, y, _svalue, value):
-        gr.setcharup(-1. if self.leftTurnedLegend else 1., 1.)
-        gr.settextalign(gr.TEXT_HALIGN_RIGHT if self.leftTurnedLegend else
-                        gr.TEXT_HALIGN_LEFT, gr.TEXT_VALIGN_TOP)
-        dx = .015
+        gr.setcharup(-1.0 if self.leftTurnedLegend else 1.0, 1.0)
+        gr.settextalign(
+            gr.TEXT_HALIGN_RIGHT if self.leftTurnedLegend else gr.TEXT_HALIGN_LEFT,
+            gr.TEXT_VALIGN_TOP,
+        )
+        dx = 0.015
         timeVal = time.localtime(value)
-        gr.text(x + (dx if self.leftTurnedLegend else -dx), y,
-                time.strftime(DATEFMT, timeVal))
-        gr.text(x - (dx if self.leftTurnedLegend else -dx), y,
-                time.strftime(TIMEFMT, timeVal))
-        gr.setcharup(0., 1.)
+        gr.text(
+            x + (dx if self.leftTurnedLegend else -dx),
+            y,
+            time.strftime(DATEFMT, timeVal),
+        )
+        gr.text(
+            x - (dx if self.leftTurnedLegend else -dx),
+            y,
+            time.strftime(TIMEFMT, timeVal),
+        )
+        gr.setcharup(0.0, 1.0)
 
     def setAutoScaleFlags(self, xflag, yflag):
         mask = 0x0
@@ -792,9 +854,9 @@ class NicosGrPlot(NicosPlot, InteractiveGRWidget):
         self.plotcurves = []
         self.addAllCurves()
         if self.timeaxis:
-            self._plot.viewport = (.1, .85, .18, .88)
+            self._plot.viewport = (0.1, 0.85, 0.18, 0.88)
             self._axes.setXtickCallback(self.xtickCallBack)
-            self._plot.offsetXLabel = -.08
+            self._plot.offsetXLabel = -0.08
 
         scale = self.yaxisScale()  # pylint: disable=assignment-from-none
         if scale:
@@ -820,8 +882,8 @@ class NicosGrPlot(NicosPlot, InteractiveGRWidget):
         if len(title_bytes) > gr.text_maxsize:
             # truncate string to byte length, incomplete UTF-8 chars will
             # be removed
-            title = title_bytes[:gr.text_maxsize - 3].decode(errors='ignore')
-            title += '...'  # indicate truncation
+            title = title_bytes[: gr.text_maxsize - 3].decode(errors="ignore")
+            title += "..."  # indicate truncation
         return title
 
     def isLegendEnabled(self):
@@ -862,7 +924,7 @@ class NicosGrPlot(NicosPlot, InteractiveGRWidget):
         self.update()
 
     def setSymbols(self, on):
-        markertype = self._markertype if on else GRMARKS['dot']
+        markertype = self._markertype if on else GRMARKS["dot"]
         for axis in self._plot.getAxes():
             for curve in axis.getCurves():
                 curve.markertype = markertype
@@ -906,17 +968,15 @@ class NicosGrPlot(NicosPlot, InteractiveGRWidget):
                 actionClipboard = QAction("Copy fit values to clipboard", menu)
                 menu.addAction(actionClipboard)
                 p0dc = event.getDC()
-                selectedItem = menu.exec(
-                    self.mapToGlobal(QPoint(p0dc.x, p0dc.y)))
+                selectedItem = menu.exec(self.mapToGlobal(QPoint(p0dc.x, p0dc.y)))
                 if selectedItem == actionClipboard:
                     res = event.roi.reference
-                    text = '\n'.join(
-                        (n + '\t' if n else '\t') +
-                        (v + '\t' if isinstance(v, str)
-                         else '%g\t' % v) +
-                        (dv if isinstance(dv, str)
-                         else '%g' % dv)
-                        for (n, v, dv) in res.label_contents)
+                    text = "\n".join(
+                        (n + "\t" if n else "\t")
+                        + (v + "\t" if isinstance(v, str) else "%g\t" % v)
+                        + (dv if isinstance(dv, str) else "%g" % dv)
+                        for (n, v, dv) in res.label_contents
+                    )
                     QApplication.clipboard().setText(text)
 
     def on_mouseMove(self, event):
@@ -932,8 +992,9 @@ class NicosGrPlot(NicosPlot, InteractiveGRWidget):
             self.parent_window.statusBar.clearMessage()
 
     def addPlotCurve(self, plotcurve, replot=False):
-        existing_curve = next((c for c in self._axes.getCurves()
-                               if c._parent is plotcurve._parent), None)
+        existing_curve = next(
+            (c for c in self._axes.getCurves() if c._parent is plotcurve._parent), None
+        )
         if existing_curve and not replot:
             existing_curve.visible = plotcurve.visible
             existing_curve.legend = plotcurve.legend
@@ -962,8 +1023,9 @@ class NicosGrPlot(NicosPlot, InteractiveGRWidget):
                 plotcurve.markercolor = color
             else:
                 color = plotcurve.linecolor
-            plotcurve.markertype = self._markertype if self.hasSymbols \
-                else GRMARKS['dot']
+            plotcurve.markertype = (
+                self._markertype if self.hasSymbols else GRMARKS["dot"]
+            )
             if plotcurve.errorBar1:
                 plotcurve.errorBar1.markercolor = color
             if plotcurve.errorBar2:
@@ -972,13 +1034,11 @@ class NicosGrPlot(NicosPlot, InteractiveGRWidget):
             self.plotcurves.append(plotcurve)
 
     def savePlot(self):
-        self._saveName = savePlot(self, gr.PRINT_TYPE[gr.PRINT_PDF],
-                                  self._saveName)
+        self._saveName = savePlot(self, gr.PRINT_TYPE[gr.PRINT_PDF], self._saveName)
         return self._saveName
 
     def printPlot(self):
-        self.printDialog("Nicos-" + self._saveName if self._saveName
-                         else "untitled")
+        self.printDialog("Nicos-" + self._saveName if self._saveName else "untitled")
         return True
 
     @property
@@ -1018,7 +1078,7 @@ class NicosGrPlot(NicosPlot, InteractiveGRWidget):
         self.setMouseSelectionEnabled(False)
 
     def _fitRequestPick(self, paramname):
-        self.statusMessage = 'Fitting: Click on %s' % paramname
+        self.statusMessage = "Fitting: Click on %s" % paramname
         self.parent_window.statusBar.showMessage(self.statusMessage)
 
     def _leaveFitMode(self):
@@ -1029,25 +1089,33 @@ class NicosGrPlot(NicosPlot, InteractiveGRWidget):
 
     def _plotFit(self, fitter):
         color = self._color.getNextColorIndex()
-        resultcurve = NicosPlotCurve(fitter.curve_x, fitter.curve_y,
-                                     legend=fitter._title,
-                                     linecolor=color, markercolor=color)
+        resultcurve = NicosPlotCurve(
+            fitter.curve_x,
+            fitter.curve_y,
+            legend=fitter._title,
+            linecolor=color,
+            markercolor=color,
+        )
         self.addPlotCurve(resultcurve, True)
-        resultcurve.markertype = GRMARKS['dot']
+        resultcurve.markertype = GRMARKS["dot"]
         self.parent_window.statusBar.showMessage("Fitting complete")
 
-        text = '\n'.join(
-            (n + ': ' if n else '') +
-            (v if isinstance(v, str) else '%g' % v) +
-            (dv if isinstance(dv, str) else ' +/- %g' % dv)
-            for (n, v, dv) in fitter.label_contents)
-        grtext = Text(fitter.label_x, fitter.label_y, text, self._axes, .012,
-                      hideviewport=False)
+        text = "\n".join(
+            (n + ": " if n else "")
+            + (v if isinstance(v, str) else "%g" % v)
+            + (dv if isinstance(dv, str) else " +/- %g" % dv)
+            for (n, v, dv) in fitter.label_contents
+        )
+        grtext = Text(
+            fitter.label_x, fitter.label_y, text, self._axes, 0.012, hideviewport=False
+        )
         resultcurve.dependent.append(grtext)
-        coord = CoordConverter(self._axes.sizex, self._axes.sizey,
-                               self._axes.getWindow())
-        roi = RegionOfInterest(reference=fitter, regionType=RegionOfInterest.TEXT,
-                               axes=self._axes)
+        coord = CoordConverter(
+            self._axes.sizex, self._axes.sizey, self._axes.getWindow()
+        )
+        roi = RegionOfInterest(
+            reference=fitter, regionType=RegionOfInterest.TEXT, axes=self._axes
+        )
         for nxi, nyi in zip(*grtext.getBoundingBox()):
             coord.setNDC(nxi, nyi)
             roi.append(coord.getWC(self._axes.viewport))
@@ -1055,14 +1123,16 @@ class NicosGrPlot(NicosPlot, InteractiveGRWidget):
         self.update()
 
     def on_fitPicker_selected(self, point):
-        if self.fitter and point.getButtons() & MouseEvent.LEFT_BUTTON and \
-                point.getWindow():
+        if (
+            self.fitter
+            and point.getButtons() & MouseEvent.LEFT_BUTTON
+            and point.getWindow()
+        ):
             p = point.getWC(self._plot.viewport)
             self.fitter.addPick((p.x, p.y))
 
     def _modifyCurve(self, curve, op):
-        new_y = [eval(op, {'x': v1, 'y': v2})
-                 for (v1, v2) in zip(curve.x, curve.y)]
+        new_y = [eval(op, {"x": v1, "y": v2}) for (v1, v2) in zip(curve.x, curve.y)]
         if curve.errorBar1:
             curve.errorBar1.y = new_y
         if curve.errorBar2:
@@ -1074,7 +1144,6 @@ class NicosGrPlot(NicosPlot, InteractiveGRWidget):
 
 
 class ViewPlot(NicosGrPlot):
-
     axescls = NicosTimePlotAxes
 
     def __init__(self, parent, window, view):
@@ -1091,10 +1160,10 @@ class ViewPlot(NicosGrPlot):
         return self.view.name
 
     def xaxisName(self):
-        return 'time'
+        return "time"
 
     def yaxisName(self):
-        return 'value'
+        return "value"
 
     def yaxisScale(self):
         if self.view.yfrom is not None:
@@ -1103,7 +1172,7 @@ class ViewPlot(NicosGrPlot):
     def on_mouseMove(self, event):
         wc = event.getWC(self._plot.viewport)
         # overridden to show the correct timestamp
-        ts = time.strftime(DATEFMT + ' ' + TIMEFMT, time.localtime(wc.x))
+        ts = time.strftime(DATEFMT + " " + TIMEFMT, time.localtime(wc.x))
         if self.statusMessage:
             msg = "%s (X = %s, Y = %g)" % (self.statusMessage, ts, wc.y)
         else:
@@ -1123,25 +1192,32 @@ class ViewPlot(NicosGrPlot):
         if n > 0:
             color = self._color.getNextColorIndex()
             notfinites = np.argwhere(np.invert(np.isfinite(series.y)))
-            plotcurve = NicosPlotCurve(np.delete(series.x, notfinites),
-                                       np.delete(series.y, notfinites),
-                                       legend=series.title,
-                                       linecolor=color, markercolor=color)
+            plotcurve = NicosPlotCurve(
+                np.delete(series.x, notfinites),
+                np.delete(series.y, notfinites),
+                legend=series.title,
+                linecolor=color,
+                markercolor=color,
+            )
             plotcurve._parent = series
             self.series2curve[series] = plotcurve
             self.addPlotCurve(plotcurve, replot)
         return plotcurve
 
     def visibleCurves(self):
-        return [(i, self._getCurveLegend(plotcurve))
-                for (i, plotcurve) in enumerate(self.plotcurves)
-                if self._isCurveVisible(plotcurve)]
+        return [
+            (i, self._getCurveLegend(plotcurve))
+            for (i, plotcurve) in enumerate(self.plotcurves)
+            if self._isCurveVisible(plotcurve)
+        ]
 
     def visibleDataCurves(self):
-        return [(i, self._getCurveLegend(plotcurve))
-                for (i, plotcurve) in enumerate(self.plotcurves)
-                if self._isCurveVisible(plotcurve)
-                and 'fit' not in self._getCurveLegend(plotcurve)]
+        return [
+            (i, self._getCurveLegend(plotcurve))
+            for (i, plotcurve) in enumerate(self.plotcurves)
+            if self._isCurveVisible(plotcurve)
+            and "fit" not in self._getCurveLegend(plotcurve)
+        ]
 
     def pointsAdded(self, series):
         plotcurve = self.series2curve[series]
@@ -1160,11 +1236,14 @@ class ViewPlot(NicosGrPlot):
         return self._plot.getAxes(0).getWindow()
 
     def saveData(self):
-        curvenames = [self._getCurveLegend(plotcurve)
-                      for plotcurve in self.plotcurves]
-        dlg = DataExportDialog(self, curvenames,
-                               'Select curve(s), file name and format',
-                               '', 'ASCII data files (*.dat)')
+        curvenames = [self._getCurveLegend(plotcurve) for plotcurve in self.plotcurves]
+        dlg = DataExportDialog(
+            self,
+            curvenames,
+            "Select curve(s), file name and format",
+            "",
+            "ASCII data files (*.dat)",
+        )
         res = dlg.exec()
         if res != QDialog.DialogCode.Accepted:
             return
@@ -1172,23 +1251,28 @@ class ViewPlot(NicosGrPlot):
             return
         fmtno = dlg.formatCombo.currentIndex()
         sel_filename = dlg.selectedFiles()[0]
-        if '.' not in sel_filename:
-            sel_filename += '.dat'
+        if "." not in sel_filename:
+            sel_filename += ".dat"
         base, ext = path.splitext(sel_filename)
 
         curve_index = dlg.curveCombo.currentIndex()
         if curve_index == 0:
-            curvedata = [convertXCol(fmtno, *self._getCurveData(c)[:2])
-                         for c in self.plotcurves]
+            curvedata = [
+                convertXCol(fmtno, *self._getCurveData(c)[:2]) for c in self.plotcurves
+            ]
             if len(curvedata) > 1:
-                filenames = [base + '_' +
-                             safeName(self._getCurveLegend(c)) + ext
-                             for c in self.plotcurves]
+                filenames = [
+                    base + "_" + safeName(self._getCurveLegend(c)) + ext
+                    for c in self.plotcurves
+                ]
             else:
                 filenames = [sel_filename]
         elif curve_index == 1:
-            curvedata = [synthesizeSingleCurveData(
-                [self._getCurveData(c)[:2] for c in self.plotcurves], fmtno)]
+            curvedata = [
+                synthesizeSingleCurveData(
+                    [self._getCurveData(c)[:2] for c in self.plotcurves], fmtno
+                )
+            ]
             filenames = [sel_filename]
         else:
             curve = self.plotcurves[curve_index - 2]
@@ -1196,22 +1280,28 @@ class ViewPlot(NicosGrPlot):
             filenames = [sel_filename]
 
         for curve, filename in zip(curvedata, filenames):
-            np.savetxt(filename, curve, fmt='%s')
+            np.savetxt(filename, curve, fmt="%s")
 
 
 def convertXCol(fmtno, x, *ys):
     ystack = [np.asarray(y) for y in ys]
-    if fmtno == 0:    # seconds since first datapoint
+    if fmtno == 0:  # seconds since first datapoint
         x = np.asarray(x)
         return np.stack([x - x[0]] + ystack, 1)
     elif fmtno == 1:  # UNIX timestamp
         x = np.asarray(x)
         return np.stack([x] + ystack, 1)
     elif fmtno == 2:  # formatted time
-        return np.stack([np.array([time.strftime('%Y-%m-%d.%H:%M:%S',
-                                                 time.localtime(v))
-                                   for v in x])] + ystack, 1)
-    raise NotImplementedError('invalid time format')
+        return np.stack(
+            [
+                np.array(
+                    [time.strftime("%Y-%m-%d.%H:%M:%S", time.localtime(v)) for v in x]
+                )
+            ]
+            + ystack,
+            1,
+        )
+    raise NotImplementedError("invalid time format")
 
 
 def synthesizeSingleCurveData(curvedata, fmtno, window=0.1):
@@ -1231,8 +1321,7 @@ def synthesizeSingleCurveData(curvedata, fmtno, window=0.1):
 
     while True:
         # find the curve with the least unused timestamp
-        ileast = min(range(ncurves),
-                     key=lambda i: timestamps[i][indices[i]])
+        ileast = min(range(ncurves), key=lambda i: timestamps[i][indices[i]])
         lastvalues[ileast] = yvalues[ileast][indices[ileast]]
         ts = timestamps[ileast][indices[ileast]]
         indices[ileast] += 1
@@ -1256,7 +1345,6 @@ def synthesizeSingleCurveData(curvedata, fmtno, window=0.1):
 
 
 class DataSetPlot(NicosGrPlot):
-
     axescls = NicosPlotAxes
 
     def __init__(self, parent, window, dataset):
@@ -1269,14 +1357,15 @@ class DataSetPlot(NicosGrPlot):
         return "Scan %s %s" % (self.dataset.name, self.dataset.scaninfo)
 
     def subTitleString(self):
-        return "started %s" % time.strftime(DATEFMT + ' ' + TIMEFMT,
-                                            self.dataset.started)
+        return "started %s" % time.strftime(
+            DATEFMT + " " + TIMEFMT, self.dataset.started
+        )
 
     def xaxisName(self):
         return self.current_xname
 
     def yaxisName(self):
-        return ''
+        return ""
 
     def addAllCurves(self):
         for curve in self.dataset.curves:
@@ -1286,8 +1375,7 @@ class DataSetPlot(NicosGrPlot):
             self._axes.curveDataChanged(visiblePlotCurves[-1])
 
     def addCurve(self, curve, replot=False):
-        if self.current_xname != 'Default' and \
-           self.current_xname not in curve.datax:
+        if self.current_xname != "Default" and self.current_xname not in curve.datax:
             return
         if not curve.datay:
             return
@@ -1296,19 +1384,21 @@ class DataSetPlot(NicosGrPlot):
         self.setCurveData(curve, plotcurve)
         self.addPlotCurve(plotcurve, replot)
         if curve.function:
-            plotcurve.markertype = GRMARKS['dot']
+            plotcurve.markertype = GRMARKS["dot"]
         return plotcurve
 
     def setCurveData(self, curve, plotcurve):
-        xname = curve.default_xname \
-            if self.current_xname == 'Default' else self.current_xname
-        if self.normalized == 'Maximum':
+        xname = (
+            curve.default_xname
+            if self.current_xname == "Default"
+            else self.current_xname
+        )
+        if self.normalized == "Maximum":
             norm = [max(curve.datay)] * len(curve.datay)
         else:
             norm = curve.datanorm[self.normalized] if self.normalized else None
         try:
-            x, y, dy = prepareData(curve.datax[xname], curve.datay,
-                                   curve.datady, norm)
+            x, y, dy = prepareData(curve.datax[xname], curve.datay, curve.datady, norm)
         except ValueError:
             # empty column, should be ignored
             x, y, dy = np.array([0]), np.array([0]), None
@@ -1320,7 +1410,7 @@ class DataSetPlot(NicosGrPlot):
         plotcurve.y = y
         plotcurve.filly = 0.1 if self.isLogScaling() else 0
         plotcurve.visible = not (curve.disabled or curve.hidden or not x.size)
-        plotcurve.legend = curve.full_description if not curve.hidden else ''
+        plotcurve.legend = curve.full_description if not curve.hidden else ""
 
     def enableCurvesFrom(self, otherplot):
         visible = {}
@@ -1344,9 +1434,11 @@ class DataSetPlot(NicosGrPlot):
             self.update()
 
     def visibleCurves(self):
-        return [(i, curve.full_description)
-                for (i, curve) in enumerate(self.dataset.curves)
-                if self._isCurveVisible(self.plotcurves[i])]
+        return [
+            (i, curve.full_description)
+            for (i, curve) in enumerate(self.dataset.curves)
+            if self._isCurveVisible(self.plotcurves[i])
+        ]
 
     def visibleDataCurves(self):
         # visibleCurves only includes data curves anyway
@@ -1354,7 +1446,7 @@ class DataSetPlot(NicosGrPlot):
 
     def setLogScale(self, on):
         NicosGrPlot.setLogScale(self, on)
-        filly = .1 if self.isLogScaling() else 0
+        filly = 0.1 if self.isLogScaling() else 0
         for axis in self._plot.getAxes():
             for curve in axis.getCurves():
                 curve.filly = filly
@@ -1373,8 +1465,9 @@ class DataSetPlot(NicosGrPlot):
     def fitQuick(self):
         if not self.mouselocation:
             return
-        (_coord, _axes, curve) = self._plot.pick(self.mouselocation.getNDC(),
-                                                 self.dwidth, self.dheight)
+        (_coord, _axes, curve) = self._plot.pick(
+            self.mouselocation.getNDC(), self.dwidth, self.dheight
+        )
         if not curve:
             return
         self.fitter = GaussFitter(self, self.parent_window, None, curve, False)

@@ -23,9 +23,22 @@
 
 """Class for controlling the collimation."""
 
-from nicos.core import Attach, ConfigurationError, HasLimits, HasTimeout, \
-    Moveable, Override, Param, Readable, dictof, intrange, listof, oneof, \
-    status, tupleof
+from nicos.core import (
+    Attach,
+    ConfigurationError,
+    HasLimits,
+    HasTimeout,
+    Moveable,
+    Override,
+    Param,
+    Readable,
+    dictof,
+    intrange,
+    listof,
+    oneof,
+    status,
+    tupleof,
+)
 from nicos.devices.entangle import Motor as TangoMotor
 from nicos.devices.generic.slit import TwoAxisSlit
 from nicos.utils import num_sort
@@ -45,12 +58,15 @@ class CollimationSlit(TwoAxisSlit):
     """Two-axis slit with an additional parameter for the "open" position."""
 
     parameters = {
-        'openpos':   Param('Position to move slit completely open',
-                           type=tupleof(float, float), default=(50.0, 50.0)),
+        "openpos": Param(
+            "Position to move slit completely open",
+            type=tupleof(float, float),
+            default=(50.0, 50.0),
+        ),
     }
 
     parameter_overrides = {
-        'fmtstr':    Override(default='%.1f x %.1f'),
+        "fmtstr": Override(default="%.1f x %.1f"),
     }
 
 
@@ -58,21 +74,21 @@ class CollimationGuides(HasTimeout, HasLimits, Moveable):
     """Controlling the collimation guide elements."""
 
     attached_devices = {
-        'output':    Attach('output setter', Moveable),
-        'input_in':  Attach('input for limit switch "in" position', Readable),
-        'input_out': Attach('input for limit switch "out" position', Readable),
-        'sync_bit':  Attach('sync bit output', Moveable),
+        "output": Attach("output setter", Moveable),
+        "input_in": Attach('input for limit switch "in" position', Readable),
+        "input_out": Attach('input for limit switch "out" position', Readable),
+        "sync_bit": Attach("sync bit output", Moveable),
     }
 
     parameters = {
-        'first':     Param('first element controlled', type=int, default=2),
+        "first": Param("first element controlled", type=int, default=2),
     }
 
     parameter_overrides = {
-        'fmtstr':    Override(default='%d'),
-        'timeout':   Override(default=10),
-        'unit':      Override(mandatory=False, default='m'),
-        'abslimits': Override(mandatory=False, default=(2, 20)),
+        "fmtstr": Override(default="%d"),
+        "timeout": Override(default=10),
+        "unit": Override(mandatory=False, default="m"),
+        "abslimits": Override(mandatory=False, default=(2, 20)),
     }
 
     def doInit(self, mode):
@@ -88,11 +104,12 @@ class CollimationGuides(HasTimeout, HasLimits, Moveable):
                 # inconsistent state, check switches
                 if is_in & mask:
                     # both switches on?
-                    return status.ERROR, 'both switches on for element ' \
-                        'at %d m' % (i + self.first)
-                return status.BUSY, 'elements moving'
+                    return status.ERROR, "both switches on for element " "at %d m" % (
+                        i + self.first
+                    )
+                return status.BUSY, "elements moving"
         # HasTimeout will check for target reached
-        return status.OK, 'idle'
+        return status.OK, "idle"
 
     def doRead(self, maxage=0):
         is_in = self._attached_input_in.read(maxage)
@@ -118,29 +135,38 @@ class Collimation(Moveable):
     hardware_access = False
 
     attached_devices = {
-        'guides':  Attach('guides', Moveable),
-        'slits':   Attach('slit devices', CollimationSlit, multiple=True),
+        "guides": Attach("guides", Moveable),
+        "slits": Attach("slit devices", CollimationSlit, multiple=True),
     }
 
     parameters = {
-        'slitpos': Param('Positions of the attached slits', unit='m',
-                         type=listof(int), mandatory=True),
-        'mapping': Param('Maps position name to guide and slit w/h',
-                         type=dictof(str, tupleof(int, float, float)),
-                         mandatory=True),
+        "slitpos": Param(
+            "Positions of the attached slits",
+            unit="m",
+            type=listof(int),
+            mandatory=True,
+        ),
+        "mapping": Param(
+            "Maps position name to guide and slit w/h",
+            type=dictof(str, tupleof(int, float, float)),
+            mandatory=True,
+        ),
     }
 
     parameter_overrides = {
-        'fmtstr':  Override(default='%s'),
-        'unit':    Override(mandatory=False, default=''),
+        "fmtstr": Override(default="%s"),
+        "unit": Override(mandatory=False, default=""),
     }
 
     def doInit(self, mode):
         self.valuetype = oneof(*sorted(self.mapping, key=num_sort))
         if len(self._attached_slits) != len(self.slitpos):
-            raise ConfigurationError(self, 'number of elements in slitpos '
-                                     'parameter must match number of attached '
-                                     'slit devices')
+            raise ConfigurationError(
+                self,
+                "number of elements in slitpos "
+                "parameter must match number of attached "
+                "slit devices",
+            )
 
     def doRead(self, maxage=0):
         def matches(v1, v2):
@@ -148,27 +174,27 @@ class Collimation(Moveable):
 
         guidelen = self._attached_guides.read(maxage)
         if guidelen not in self.slitpos:
-            return 'unknown'
+            return "unknown"
         slitvals = [slit.read(maxage) for slit in self._attached_slits]
-        for (posname, (pos_guidelen, pos_w, pos_h)) in self.mapping.items():
+        for posname, (pos_guidelen, pos_w, pos_h) in self.mapping.items():
             if pos_guidelen != guidelen:
                 continue
             ok = True
-            for (slitpos, slit, (w, h)) in zip(self.slitpos,
-                                               self._attached_slits, slitvals):
+            for slitpos, slit, (w, h) in zip(
+                self.slitpos, self._attached_slits, slitvals
+            ):
                 if slitpos == pos_guidelen:
                     ok &= matches(w, pos_w) and matches(h, pos_h)
                 else:
-                    ok &= matches(w, slit.openpos[0]) and \
-                        matches(h, slit.openpos[1])
+                    ok &= matches(w, slit.openpos[0]) and matches(h, slit.openpos[1])
             if ok:
                 return posname
-        return 'unknown'
+        return "unknown"
 
     def doStart(self, target):
         pos_guidelen, pos_w, pos_h = self.mapping[target]
         self._attached_guides.start(pos_guidelen)
-        for (slitpos, slit) in zip(self.slitpos, self._attached_slits):
+        for slitpos, slit in zip(self.slitpos, self._attached_slits):
             if slitpos == pos_guidelen:
                 slit.start((pos_w, pos_h))
             else:

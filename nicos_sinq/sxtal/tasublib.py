@@ -30,13 +30,13 @@ The original implementation was in ANSII-C by Mark Koennecke at PSI.
 This implementation has been ported from C to python by Jakob Lass, then
 also at PSI
 """
+
 from copy import deepcopy
 
 import numpy as np
 
 from nicos_sinq.sxtal.singlexlib import matFromTwoVectors
-from nicos_sinq.sxtal.trigd import Acosd, Atand2, Cosd, Rtand, Sind, \
-    angleBetween
+from nicos_sinq.sxtal.trigd import Acosd, Atand2, Cosd, Rtand, Sind, angleBetween
 
 
 def tasAngleBetween(v1, v2):
@@ -45,11 +45,11 @@ def tasAngleBetween(v1, v2):
 
 def fmod(x, y):
     s = np.sign(x)
-    res = s*np.mod(np.abs(x), y)
+    res = s * np.mod(np.abs(x), y)
     return res
 
 
-class tasQEPosition():
+class tasQEPosition:
     def __init__(self, ki, kf, qh, qk, ql, qm):
         self.ki = ki
         self.kf = kf
@@ -59,10 +59,16 @@ class tasQEPosition():
         self.qm = qm
 
 
-class tasAngles():
-    def __init__(self, monochromator_two_theta, a3,
-                 sample_two_theta, sgl, sgu,
-                 analyzer_two_theta):
+class tasAngles:
+    def __init__(
+        self,
+        monochromator_two_theta,
+        a3,
+        sample_two_theta,
+        sgl,
+        sgu,
+        analyzer_two_theta,
+    ):
         self.monochromator_two_theta = monochromator_two_theta
         self.a3 = a3
         self.sample_two_theta = sample_two_theta
@@ -71,12 +77,24 @@ class tasAngles():
         self.analyzer_two_theta = analyzer_two_theta
 
 
-class tasReflection():
-    def __init__(self, qe=None, angles=None, ki=None, kf=None,
-                 qh=None, qk=None, ql=None, qm=None,
-                 monochromator_two_theta=None, a3=None,
-                 sample_two_theta=None,
-                 sgl=None, sgu=None, analyzer_two_theta=None):
+class tasReflection:
+    def __init__(
+        self,
+        qe=None,
+        angles=None,
+        ki=None,
+        kf=None,
+        qh=None,
+        qk=None,
+        ql=None,
+        qm=None,
+        monochromator_two_theta=None,
+        a3=None,
+        sample_two_theta=None,
+        sgl=None,
+        sgu=None,
+        analyzer_two_theta=None,
+    ):
         if isinstance(qe, tasReflection):
             self.qe = deepcopy(qe.qe)
             self.angles = deepcopy(qe.angles)
@@ -86,10 +104,14 @@ class tasReflection():
             else:
                 self.qe = qe
             if angles is None:
-                self.angles = tasAngles(monochromator_two_theta,
-                                        a3, sample_two_theta,
-                                        sgl, sgu,
-                                        analyzer_two_theta)
+                self.angles = tasAngles(
+                    monochromator_two_theta,
+                    a3,
+                    sample_two_theta,
+                    sgl,
+                    sgu,
+                    analyzer_two_theta,
+                )
             else:
                 self.angles = angles
 
@@ -102,7 +124,8 @@ class tasReflection():
             return getattr(self.angles, key)
         else:
             raise AttributeError(
-                "'tasReflection' object hs no attribute '{}'".format(key))
+                "'tasReflection' object hs no attribute '{}'".format(key)
+            )
 
 
 ECONST = 2.072  # 2.072122396
@@ -115,7 +138,7 @@ def energyToK(energy):
 
 def KToEnergy(K):
     """Convert K in 1/A to E in meV"""
-    return ECONST*np.power(K, 2.0)
+    return ECONST * np.power(K, 2.0)
 
 
 def tasReflectionToHC(r, B):
@@ -136,35 +159,36 @@ def calcTheta(ki, kf, two_theta):
     tan(theta) = --------------------------
                    |kf|sin(two_theta)
     """
-    return Rtand(np.abs(ki) - np.abs(kf) * Cosd(two_theta),
-                 np.abs(kf) * Sind(two_theta))
+    return Rtand(
+        np.abs(ki) - np.abs(kf) * Cosd(two_theta), np.abs(kf) * Sind(two_theta)
+    )
 
 
 def tasAngleBetweenReflections(B, r1, r2):
     """Calculate angle between two reflections"""
-    return tasAngleBetweenReflectionsHKL(B,
-                                         r1.qh, r1.qk, r1.ql,
-                                         r2.qh, r2.qk, r2.ql)
+    return tasAngleBetweenReflectionsHKL(B, r1.qh, r1.qk, r1.ql, r2.qh, r2.qk, r2.ql)
 
 
-def tasAngleBetweenReflectionsHKL(B,
-                                  h1, k1, l1,
-                                  h2, k2, l2):
+def tasAngleBetweenReflectionsHKL(B, h1, k1, l1, h2, k2, l2):
     """Calculate angle between two reflections"""
     v1 = np.array([h1, k1, l1])
     v2 = np.array([h2, k2, l2])
 
-    chi1 = np.einsum('ij,j...->i...', B, v1)
-    chi2 = np.einsum('ij,j...->i...', B, v2)
+    chi1 = np.einsum("ij,j...->i...", B, v1)
+    chi2 = np.einsum("ij,j...->i...", B, v2)
 
     angle = tasAngleBetween(chi1, chi2)
     return angle
 
 
 def uFromAngles(om, sgu, sgl):
-    u = np.array([Cosd(om)*Cosd(sgl),
-                  -Sind(om)*Cosd(sgu)+Cosd(om)*Sind(sgl)*Sind(sgu),
-                  Sind(om)*Sind(sgu)+Cosd(om)*Sind(sgl)*Cosd(sgu)])
+    u = np.array(
+        [
+            Cosd(om) * Cosd(sgl),
+            -Sind(om) * Cosd(sgu) + Cosd(om) * Sind(sgl) * Sind(sgu),
+            Sind(om) * Sind(sgu) + Cosd(om) * Sind(sgl) * Cosd(sgu),
+        ]
+    )
     return u
 
 
@@ -175,8 +199,8 @@ def calcTasUVectorFromAngles(rr):
     r.sample_two_theta = np.abs(r.sample_two_theta)
     theta = calcTheta(r.ki, r.kf, r.sample_two_theta)
 
-    om = r.angles.a3 - ss*theta
-    m = uFromAngles(om, r.angles.sgu, ss*r.angles.sgl)
+    om = r.angles.a3 - ss * theta
+    m = uFromAngles(om, r.angles.sgu, ss * r.angles.sgl)
     return m
 
 
@@ -186,33 +210,32 @@ def tasReflectionToQC(r, UB):
 
 def tasReflectionToQCHKL(h, k, ll, UB):
     Q = np.array([h, k, ll])
-    return np.einsum('ij,j...->i...', UB, Q)
+    return np.einsum("ij,j...->i...", UB, Q)
 
 
 def makeAuxReflection(B, r1, ss, hkl):
     r2 = tasReflection(r1)
     r2.qe.qh, r2.qe.qk, r2.qe.ql = hkl
 
-    theta = calcTheta(r1.qe.ki, r1.qe.kf,
-                      ss*r1.angles.sample_two_theta)
-    om = r1.angles.a3 - ss*theta
+    theta = calcTheta(r1.qe.ki, r1.qe.kf, ss * r1.angles.sample_two_theta)
+    om = r1.angles.a3 - ss * theta
 
-    om += tasAngleBetweenReflectionsHKL(B, r1.qh, r1.qk,
-                                        r1.ql, *hkl)
+    om += tasAngleBetweenReflectionsHKL(B, r1.qh, r1.qk, r1.ql, *hkl)
 
     QC = tasReflectionToHC(r2.qe, B)
     q = np.linalg.norm(QC)
 
-    cos2t = np.divide(r1.ki * r1.ki + r1.kf * r1.kf - q * q,
-                      (2. * np.abs(r1.ki) * np.abs(r1.kf)))
-    if np.abs(cos2t) > 1.:
-        raise RuntimeError('Scattering angle not closed!')
+    cos2t = np.divide(
+        r1.ki * r1.ki + r1.kf * r1.kf - q * q, (2.0 * np.abs(r1.ki) * np.abs(r1.kf))
+    )
+    if np.abs(cos2t) > 1.0:
+        raise RuntimeError("Scattering angle not closed!")
 
     r2.angles.sample_two_theta = ss * Acosd(cos2t)
-    theta = calcTheta(r1.qe.ki, r1.qe.kf, ss*r2.angles.sample_two_theta)
-    r2.angles.a3 = om + ss*theta
+    theta = calcTheta(r1.qe.ki, r1.qe.kf, ss * r2.angles.sample_two_theta)
+    r2.angles.a3 = om + ss * theta
 
-    r2.angles.a3 = fmod(r2.angles.a3 + ss*180., 360.) - ss*180.
+    r2.angles.a3 = fmod(r2.angles.a3 + ss * 180.0, 360.0) - ss * 180.0
 
     return r2
 
@@ -222,13 +245,16 @@ def calcTwoTheta(B, ref, ss):
 
     q = np.linalg.norm(QC)
 
-    cos2t = np.divide(ref.ki * ref.ki + ref.kf * ref.kf - q * q,
-                      (2. * np.abs(ref.ki) * np.abs(ref.kf)))
+    cos2t = np.divide(
+        ref.ki * ref.ki + ref.kf * ref.kf - q * q,
+        (2.0 * np.abs(ref.ki) * np.abs(ref.kf)),
+    )
 
-    if np.abs(cos2t) > 1.:
+    if np.abs(cos2t) > 1.0:
         raise RuntimeError(
-            'Calculated abs(cos2t) value {} bigger than 1!'
-            ' Scattering angle not closed'.format(np.abs(cos2t)))
+            "Calculated abs(cos2t) value {} bigger than 1!"
+            " Scattering angle not closed".format(np.abs(cos2t))
+        )
 
     value = ss * Acosd(cos2t)
     return value
@@ -238,7 +264,7 @@ def calcPlaneNormal(r1, r2):
     u1 = calcTasUVectorFromAngles(r1)
     u2 = calcTasUVectorFromAngles(r2)
     planeNormal = np.cross(u1, u2)
-    planeNormal *= 1.0/np.linalg.norm(planeNormal)
+    planeNormal *= 1.0 / np.linalg.norm(planeNormal)
 
     # In TasCode code is commented out performing check
     # for sign of planeNormal[2] is performed.
@@ -249,7 +275,6 @@ def calcPlaneNormal(r1, r2):
 
 
 def calcTasUBFromTwoReflections(cell, r1, r2):
-
     B = cell.calculateBMatrix()
 
     h1 = tasReflectionToHC(r1.qe, B)
@@ -276,11 +301,11 @@ def calcTasUBFromTwoReflections(cell, r1, r2):
 def buildRMatrix(UB, planeNormal, qe):
     U1V = tasReflectionToQC(qe, UB)
 
-    U1V *= 1.0/np.linalg.norm(U1V)
+    U1V *= 1.0 / np.linalg.norm(U1V)
     U2V = np.cross(planeNormal, U1V)
 
-    if np.linalg.norm(U2V) < .0001:
-        raise RuntimeError('Found vector is too short')
+    if np.linalg.norm(U2V) < 0.0001:
+        raise RuntimeError("Found vector is too short")
     TV = buildTVMatrix(U1V, U2V)
 
     TVINV = np.linalg.inv(TV)
@@ -288,9 +313,9 @@ def buildRMatrix(UB, planeNormal, qe):
 
 
 def buildTVMatrix(U1V, U2V):
-    U2V *= 1.0/np.linalg.norm(U2V)
+    U2V *= 1.0 / np.linalg.norm(U2V)
     T3V = np.cross(U1V, U2V)
-    T3V *= 1.0/np.linalg.norm(T3V)
+    T3V *= 1.0 / np.linalg.norm(T3V)
 
     T = np.zeros((3, 3))
 
@@ -303,14 +328,13 @@ def buildTVMatrix(U1V, U2V):
 
 
 def calcTasQAngles(UB, planeNormal, ss, a3offset, qe):
-
     R = buildRMatrix(UB, planeNormal, qe)
     angles = tasAngles(0, 0, 0, 0, 0, 0)
 
-    cossgl = np.sqrt(R[0][0]*R[0][0]+R[1][0]*R[1][0])
-    angles.sgl = ss*Atand2(-R[2][0], cossgl)
-    if np.abs(angles.sgl - 90.) < .5:
-        raise RuntimeError('Combination of UB and Q is not valid')
+    cossgl = np.sqrt(R[0][0] * R[0][0] + R[1][0] * R[1][0])
+    angles.sgl = ss * Atand2(-R[2][0], cossgl)
+    if np.abs(angles.sgl - 90.0) < 0.5:
+        raise RuntimeError("Combination of UB and Q is not valid")
 
     #    Now, this is slightly different then in the publication by M. Lumsden.
     #    The reason is that the atan2 helps to determine the sign of om
@@ -325,28 +349,28 @@ def calcTasQAngles(UB, planeNormal, ss, a3offset, qe):
     #    The definitions of the R components are taken from M. Lumsden
     #    R-matrix definition.
 
-    om = Atand2(R[1][0]/cossgl, R[0][0]/cossgl)
-    angles.sgu = Atand2(R[2][1]/cossgl, R[2][2]/cossgl)
+    om = Atand2(R[1][0] / cossgl, R[0][0] / cossgl)
+    angles.sgu = Atand2(R[2][1] / cossgl, R[2][2] / cossgl)
 
     QC = tasReflectionToQC(qe, UB)
 
     q = np.linalg.norm(QC)
 
-    cos2t = (qe.ki * qe.ki + qe.kf * qe.kf -
-             q * q) / (2. * np.abs(qe.ki) * np.abs(qe.kf))
-    if np.abs(cos2t) > 1.:
-        raise RuntimeError('Scattering angle cannot '
-                           'be closed, cos2t =  ', cos2t)
+    cos2t = (qe.ki * qe.ki + qe.kf * qe.kf - q * q) / (
+        2.0 * np.abs(qe.ki) * np.abs(qe.kf)
+    )
+    if np.abs(cos2t) > 1.0:
+        raise RuntimeError("Scattering angle cannot " "be closed, cos2t =  ", cos2t)
     theta = calcTheta(qe.ki, qe.kf, Acosd(cos2t))
     angles.sample_two_theta = ss * Acosd(cos2t)
 
-    angles.a3 = om + ss*theta + a3offset
+    angles.a3 = om + ss * theta + a3offset
     #
     #    put a3 into -180, 180 properly. We can always turn by 180
     #    because the scattering geometry is symmetric in this respect.
     #    It is like looking at the scattering plane from the other side
 
-    angles.a3 = fmod(angles.a3 + ss*180., 360.) - ss*180.
+    angles.a3 = fmod(angles.a3 + ss * 180.0, 360.0) - ss * 180.0
     return angles
 
 
@@ -355,7 +379,7 @@ def calcScatteringPlaneNormal(qe1, qe2):
     v2 = [qe2.qh, qe2.qk, qe2.ql]
 
     planeNormal = np.cross(v1, v2)
-    planeNormal *= 1.0/np.linalg.norm(planeNormal)
+    planeNormal *= 1.0 / np.linalg.norm(planeNormal)
 
     return planeNormal
 
@@ -371,12 +395,11 @@ def calcTasQH(ub, angles, ki, kf):
 
     theta = calcTheta(ki, kf, abs(sample_two_theta))
 
-    om = om - ss*theta
-    qv = uFromAngles(om, sgu, ss*sgl)
+    om = om - ss * theta
+    qv = uFromAngles(om, sgu, ss * sgl)
     # normalize the QV vector to be the length of the Q vector
     # Thereby take into account the physicists magic fudge
     # 2PI factor
-    q = np.sqrt(ki**2 + kf**2 -
-                2. * ki * kf * Cosd(sample_two_theta))
+    q = np.sqrt(ki**2 + kf**2 - 2.0 * ki * kf * Cosd(sample_two_theta))
     qv *= q
     return ubinv.dot(qv)

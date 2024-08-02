@@ -25,6 +25,7 @@
 """
 This module contains specific EPICS devices.
 """
+
 from nicos.core import Device, Param, pvname, usermethod
 from nicos.core.constants import SIMULATION
 from nicos.devices.abstract import MappedMoveable
@@ -40,11 +41,12 @@ class EpicsMappedMoveable(MappedMoveable, EpicsDigitalMoveableSinq):
     """
 
     parameters = {
-        'ignore_stop':
-            Param('Whether to do anything when stop is called',
-                  type=bool,
-                  default=False,
-                  userparam=False),
+        "ignore_stop": Param(
+            "Whether to do anything when stop is called",
+            type=bool,
+            default=False,
+            userparam=False,
+        ),
     }
 
     def doInit(self, mode):
@@ -96,25 +98,27 @@ class EpicsCommandReply(EpicsDevice, Device):
     """
 
     parameters = {
-        'commandpv':
-            Param('PV to issue commands to the asyn controller',
-                  type=pvname,
-                  mandatory=True,
-                  settable=False,
-                  userparam=False),
-        'replypv':
-            Param('PV that stores the reply generated from execution',
-                  type=pvname,
-                  mandatory=False,
-                  settable=False,
-                  userparam=False),
+        "commandpv": Param(
+            "PV to issue commands to the asyn controller",
+            type=pvname,
+            mandatory=True,
+            settable=False,
+            userparam=False,
+        ),
+        "replypv": Param(
+            "PV that stores the reply generated from execution",
+            type=pvname,
+            mandatory=False,
+            settable=False,
+            userparam=False,
+        ),
     }
 
     def _get_pv_parameters(self):
-        pvs = {'commandpv'}
+        pvs = {"commandpv"}
 
         if self.replypv:
-            pvs.add('replypv')
+            pvs.add("replypv")
 
         return pvs
 
@@ -125,9 +129,9 @@ class EpicsCommandReply(EpicsDevice, Device):
         Returns the reply if the replypv is set
         """
         if self._mode == SIMULATION:
-            return ''
+            return ""
         # Send the command to the commandpv
-        self._put_pv_blocking('commandpv', command)
+        self._put_pv_blocking("commandpv", command)
 
         # If reply PV is set, return it's output
-        return self._get_pv('replypv') if self.replypv else ''
+        return self._get_pv("replypv") if self.replypv else ""

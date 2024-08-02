@@ -23,16 +23,18 @@
 
 from test.utils import cache_addr
 
-name = 'cache setup'
+name = "cache setup"
 
 devices = dict(
-    Server = device('nicos.services.cache.server.CacheServer',
-        server = cache_addr,
-        db = 'DB',
-        loglevel = 'debug',
+    Server=device(
+        "nicos.services.cache.server.CacheServer",
+        server=cache_addr,
+        db="DB",
+        loglevel="debug",
     ),
-    DB = device('test.utils.TestCacheDatabase',
-        storepath = 'cache',
-        loglevel = 'debug',
+    DB=device(
+        "test.utils.TestCacheDatabase",
+        storepath="cache",
+        loglevel="debug",
     ),
 )

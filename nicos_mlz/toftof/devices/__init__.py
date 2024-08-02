@@ -21,8 +21,17 @@
 #
 # *****************************************************************************
 
-from nicos_mlz.toftof.devices.chopper import CRC, Controller, Disc, Ratio, \
-    SlitType, Speed, SpeedReadout, VirtualController, Wavelength
+from nicos_mlz.toftof.devices.chopper import (
+    CRC,
+    Controller,
+    Disc,
+    Ratio,
+    SlitType,
+    Speed,
+    SpeedReadout,
+    VirtualController,
+    Wavelength,
+)
 from nicos_mlz.toftof.devices.detector import Detector, TOFTOFChannel
 from nicos_mlz.toftof.devices.experiment import Experiment
 from nicos_mlz.toftof.devices.neutronguide import Switcher

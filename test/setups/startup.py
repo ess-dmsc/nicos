@@ -21,9 +21,9 @@
 #
 # *****************************************************************************
 
-description = 'minimal NICOS startup setup'
-group = 'lowlevel'
+description = "minimal NICOS startup setup"
+group = "lowlevel"
 
 includes = []
 
-modules = ['nicos.commands.standard']
+modules = ["nicos.commands.standard"]

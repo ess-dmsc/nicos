@@ -32,27 +32,29 @@ from nicos.core import Override, status
 from nicos.core.data.dataset import ScanDataset
 from nicos.core.data.sink import GzipFile
 from nicos.core.utils import formatStatus
-from nicos.devices.datasinks.image import ImageFileReader, ImageSink, \
-    SingleFileSinkHandler
+from nicos.devices.datasinks.image import (
+    ImageFileReader,
+    ImageSink,
+    SingleFileSinkHandler,
+)
 from nicos.utils import byteBuffer
 
 from nicos_mlz.devices.yamlbase import YAMLBaseFileSinkHandler
 
 
 class YAMLFileSinkHandler(YAMLBaseFileSinkHandler):
-
-    filetype = 'MLZ.KWS1.2.0-gamma1'
+    filetype = "MLZ.KWS1.2.0-gamma1"
 
     objects = []
     units = []
 
     def _set_detector_resolution(self, det1):
-        det_img = session.getDevice('det_img')
-        det1['pixel_width'] = 8.0
-        if getattr(det_img, 'rebin8x8', False):
-            det1['pixel_height'] = 8.0
+        det_img = session.getDevice("det_img")
+        det1["pixel_width"] = 8.0
+        if getattr(det_img, "rebin8x8", False):
+            det1["pixel_height"] = 8.0
         else:
-            det1['pixel_height'] = 4.0
+            det1["pixel_height"] = 4.0
 
     def _write_instr_data(self, meas, image):
         manager = session.experiment.data  # get datamanager
@@ -60,77 +62,75 @@ class YAMLFileSinkHandler(YAMLBaseFileSinkHandler):
         stack = manager._stack
         if len(stack) >= 2 and isinstance(stack[-2], ScanDataset):
             scands = stack[-2]
-            meas['info'] = scands.info
+            meas["info"] = scands.info
         else:
-            meas['info'] = self.dataset.info
+            meas["info"] = self.dataset.info
 
         sample = session.experiment.sample
-        meas['sample']['comment'] = sample.comment
-        meas['sample']['timefactor'] = sample.timefactor
-        meas['sample']['thickness'] = sample.thickness / 1000  # in m
-        meas['sample']['detoffset'] = sample.detoffset / 1000
+        meas["sample"]["comment"] = sample.comment
+        meas["sample"]["timefactor"] = sample.timefactor
+        meas["sample"]["thickness"] = sample.thickness / 1000  # in m
+        meas["sample"]["detoffset"] = sample.detoffset / 1000
 
         det1 = self._dict()
-        det1['type'] = 'position_sensitive_detector'
+        det1["type"] = "position_sensitive_detector"
         try:
-            det1['mode'] = self.dataset.metainfo['det_img', 'mode'][0]
+            det1["mode"] = self.dataset.metainfo["det_img", "mode"][0]
             # the first entry in "slices" is always 0 in the TOF modes
-            slices = self.dataset.metainfo['det_img', 'slices'][0][1:]
+            slices = self.dataset.metainfo["det_img", "slices"][0][1:]
         except KeyError:
-            det1['mode'] = 'normal'
+            det1["mode"] = "normal"
             slices = []
-        det1['time_channels'] = len(slices) or 1
-        det1['time_slices_us'] = self._flowlist(slices)
-        det1['pixels_x'] = image.shape[-1]
-        det1['pixels_y'] = image.shape[-2]
+        det1["time_channels"] = len(slices) or 1
+        det1["time_slices_us"] = self._flowlist(slices)
+        det1["pixels_x"] = image.shape[-1]
+        det1["pixels_y"] = image.shape[-2]
         self._set_detector_resolution(det1)
-        values = det1['results'] = self._dict()
-        for (info, val) in zip(self.dataset.detvalueinfo,
-                               self.dataset.detvaluelist):
+        values = det1["results"] = self._dict()
+        for info, val in zip(self.dataset.detvalueinfo, self.dataset.detvaluelist):
             values[info.name] = val
-        det1['data'] = '<see .array file>'
-        det1['dataformat'] = '32-bit integer'
+        det1["data"] = "<see .array file>"
+        det1["dataformat"] = "32-bit integer"
 
-        meas['detectors'] = [det1]
+        meas["detectors"] = [det1]
 
         # store device information
         deventries = {}
 
-        for ((dev, key), meta) in sorted(self.dataset.metainfo.items()):
-            if dev in ('Exp', 'Sample') or dev.startswith('KWS'):
+        for (dev, key), meta in sorted(self.dataset.metainfo.items()):
+            if dev in ("Exp", "Sample") or dev.startswith("KWS"):
                 continue
-            if meta[3] == 'limits':
+            if meta[3] == "limits":
                 continue
             if dev not in deventries:
                 deventry = deventries[dev] = self._dict()
-                deventry['name'] = dev
+                deventry["name"] = dev
             else:
                 deventry = deventries[dev]
-            if key == 'status':
+            if key == "status":
                 if meta[0][0] == status.OK:
                     continue
-                deventry['status'] = formatStatus(meta[0])
+                deventry["status"] = formatStatus(meta[0])
                 continue
             deventry[key] = meta[0]
-            if key == 'value' and meta[2]:
-                deventry['unit'] = meta[2]
+            if key == "value" and meta[2]:
+                deventry["unit"] = meta[2]
 
-        meas['devices'] = [
-            entry for (_, entry) in sorted(deventries.items())
-            if len(entry) > 1
+        meas["devices"] = [
+            entry for (_, entry) in sorted(deventries.items()) if len(entry) > 1
         ]
 
 
 NAME_TEMPLATE = (
-    '%(pointcounter)08d_%(pointnumber)04d_'
-    '%(proposal)s_'
-    '%(session.experiment.sample.filename)s_'
-    'C%(coll_guides)dm_'
-    'D%(detector)s_'
-    'L%(selector)s_'
-    'P%(polarizer)s_'
-    '%(det_img.mode)s.'
-    '%(session.instrument.name)s'
+    "%(pointcounter)08d_%(pointnumber)04d_"
+    "%(proposal)s_"
+    "%(session.experiment.sample.filename)s_"
+    "C%(coll_guides)dm_"
+    "D%(detector)s_"
+    "L%(selector)s_"
+    "P%(polarizer)s_"
+    "%(det_img.mode)s."
+    "%(session.instrument.name)s"
 )
 
 
@@ -138,10 +138,12 @@ class YAMLFileSink(ImageSink):
     """Saves DNS image data and header in yaml format"""
 
     parameter_overrides = {
-        'filenametemplate': Override(mandatory=False, settable=False,
-                                     userparam=False,
-                                     default=[NAME_TEMPLATE + '.yaml'],
-                                     ),
+        "filenametemplate": Override(
+            mandatory=False,
+            settable=False,
+            userparam=False,
+            default=[NAME_TEMPLATE + ".yaml"],
+        ),
     }
 
     handlerclass = YAMLFileSinkHandler
@@ -153,40 +155,42 @@ class YAMLFileSink(ImageSink):
 class BinarySinkHandler(SingleFileSinkHandler):
     """Numpy text format filesaver using `numpy.savetxt`"""
 
-    filetype = 'arraygz'
+    filetype = "arraygz"
     fileclass = GzipFile
 
     def writeData(self, fp, image):
-        fp.write(byteBuffer(image.astype('<u4', 'C')))
+        fp.write(byteBuffer(image.astype("<u4", "C")))
 
 
 class BinaryArraySink(ImageSink):
     handlerclass = BinarySinkHandler
 
     parameter_overrides = {
-        'filenametemplate': Override(mandatory=False, settable=False,
-                                     userparam=False,
-                                     default=[NAME_TEMPLATE + '.array.gz'],
-                                     ),
+        "filenametemplate": Override(
+            mandatory=False,
+            settable=False,
+            userparam=False,
+            default=[NAME_TEMPLATE + ".array.gz"],
+        ),
     }
 
 
 class BinaryArrayReader(ImageFileReader):
-    filetypes = [('arraygz', 'Compressed image array (*.array.gz)')]
+    filetypes = [("arraygz", "Compressed image array (*.array.gz)")]
 
     @classmethod
     def fromfile(cls, filename):
-        yamlname = filename.replace('.array.gz', '.yaml')
+        yamlname = filename.replace(".array.gz", ".yaml")
         dim_x = dim_y = dim_t = 1
 
-        with open(yamlname, 'r', encoding='utf-8') as fp:
+        with open(yamlname, "r", encoding="utf-8") as fp:
             for line in fp:
                 line = line.strip()
-                if line.startswith('pixels_x:'):
+                if line.startswith("pixels_x:"):
                     dim_x = int(line.split()[-1])
-                elif line.startswith('pixels_y:'):
+                elif line.startswith("pixels_y:"):
                     dim_y = int(line.split()[-1])
-                elif line.startswith('time_channels:'):
+                elif line.startswith("time_channels:"):
                     dim_t = int(line.split()[-1])
         if dim_t > 1:
             shape = (dim_t, dim_y, dim_x)
@@ -194,4 +198,4 @@ class BinaryArrayReader(ImageFileReader):
             shape = (dim_y, dim_x)
 
         with gzip.open(filename) as fp:
-            return np.frombuffer(fp.read(), '<u4').reshape(shape)
+            return np.frombuffer(fp.read(), "<u4").reshape(shape)

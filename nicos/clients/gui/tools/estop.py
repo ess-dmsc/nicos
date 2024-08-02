@@ -24,8 +24,18 @@
 """Always-on-top emergency stop button."""
 
 from nicos.clients.gui.utils import SettingGroup
-from nicos.guisupport.qt import QAbstractButton, QByteArray, QHBoxLayout, \
-    QIcon, QMainWindow, QPainter, QPoint, QSize, Qt, QWidget
+from nicos.guisupport.qt import (
+    QAbstractButton,
+    QByteArray,
+    QHBoxLayout,
+    QIcon,
+    QMainWindow,
+    QPainter,
+    QPoint,
+    QSize,
+    Qt,
+    QWidget,
+)
 
 
 class PicButton(QAbstractButton):
@@ -40,8 +50,8 @@ class PicButton(QAbstractButton):
         pixmap = self.icon.pixmap(self._size, mode)
         painter.drawPixmap(
             QPoint(0, 0),
-            pixmap.scaled(event.rect().size(),
-                          Qt.AspectRatioMode.KeepAspectRatio))
+            pixmap.scaled(event.rect().size(), Qt.AspectRatioMode.KeepAspectRatio),
+        )
 
     def sizeHint(self):
         return self._size
@@ -60,18 +70,18 @@ class EmergencyStopTool(QMainWindow):
     def __init__(self, parent, client, **settings):
         QMainWindow.__init__(self, parent)
         self.client = client
-        self.setWindowTitle(' ')  # window title is unnecessary
+        self.setWindowTitle(" ")  # window title is unnecessary
         flags = self.windowFlags()
         flags |= Qt.WindowType.WindowStaysOnTopHint
         flags ^= Qt.WindowType.WindowMinimizeButtonHint
         self.setWindowFlags(flags)
 
-        self.sgroup = SettingGroup('EstopTool')
+        self.sgroup = SettingGroup("EstopTool")
         with self.sgroup as settings:
-            self.restoreGeometry(settings.value('geometry', '', QByteArray))
+            self.restoreGeometry(settings.value("geometry", "", QByteArray))
 
-        icon = QIcon(':/estop')
-        icon.addFile(':/estopdown', mode=QIcon.Mode.Active)
+        icon = QIcon(":/estop")
+        icon.addFile(":/estopdown", mode=QIcon.Mode.Active)
         self.btn = PicButton(icon, self)
 
         widget = QWidget(self)
@@ -85,11 +95,11 @@ class EmergencyStopTool(QMainWindow):
         self.show()
 
     def dostop(self):
-        self.client.tell('emergency')
+        self.client.tell("emergency")
 
     def _saveSettings(self):
         with self.sgroup as settings:
-            settings.setValue('geometry', self.saveGeometry())
+            settings.setValue("geometry", self.saveGeometry())
 
     def closeEvent(self, event):
         self._saveSettings()

@@ -35,25 +35,48 @@ class CalibrationData(Device):
     """
 
     parameters = {
-        'amplitude': Param('Amplitude', type=listof(float),
-                           settable=True,
-                           category='instrument', default=[]),
-        'energy': Param('Final analyser energy', type=listof(float),
-                        settable=True,
-                        category='instrument', default=[]),
-        'a4offset': Param('Offset in A4', type=listof(float),
-                          settable=True,
-                          category='instrument', default=[]),
-        'width': Param('width', type=listof(float),
-                       settable=True,
-                       category='instrument', default=[]),
-        'background': Param('Background', type=listof(float),
-                            settable=True, default=[],
-                            category='instrument'),
-        'boundaries': Param('Analyser boundaries', type=listof(int),
-                            settable=True, default=[],
-                            category='instrument'),
-
+        "amplitude": Param(
+            "Amplitude",
+            type=listof(float),
+            settable=True,
+            category="instrument",
+            default=[],
+        ),
+        "energy": Param(
+            "Final analyser energy",
+            type=listof(float),
+            settable=True,
+            category="instrument",
+            default=[],
+        ),
+        "a4offset": Param(
+            "Offset in A4",
+            type=listof(float),
+            settable=True,
+            category="instrument",
+            default=[],
+        ),
+        "width": Param(
+            "width",
+            type=listof(float),
+            settable=True,
+            category="instrument",
+            default=[],
+        ),
+        "background": Param(
+            "Background",
+            type=listof(float),
+            settable=True,
+            default=[],
+            category="instrument",
+        ),
+        "boundaries": Param(
+            "Analyser boundaries",
+            type=listof(int),
+            settable=True,
+            default=[],
+            category="instrument",
+        ),
     }
 
     @usermethod
@@ -66,7 +89,7 @@ class CalibrationData(Device):
         w = []
         bck = []
         bound = []
-        with open(filename, 'r', encoding='utf-8') as fin:
+        with open(filename, "r", encoding="utf-8") as fin:
             csvreader = csv.reader(fin)
             next(csvreader)
             next(csvreader)

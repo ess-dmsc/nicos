@@ -1,105 +1,116 @@
-description = 'Detector setup'
-group = 'lowlevel'
+description = "Detector setup"
+group = "lowlevel"
 display_order = 20
 
-includes = ['gedet', 'vacuumsys']
-excludes = ['virtual_detector']
+includes = ["gedet", "vacuumsys"]
+excludes = ["virtual_detector"]
 
-presets = configdata('config_detector.DETECTOR_PRESETS')
-offsets = configdata('config_detector.DETECTOR_OFFSETS')
-small_pos = configdata('config_detector.SMALL_DET_POSITION')
+presets = configdata("config_detector.DETECTOR_PRESETS")
+offsets = configdata("config_detector.DETECTOR_OFFSETS")
+small_pos = configdata("config_detector.SMALL_DET_POSITION")
 
-tango_base = 'tango://phys.kws2.frm2:10000/kws2/'
+tango_base = "tango://phys.kws2.frm2:10000/kws2/"
 
 devices = dict(
-    detector = device('nicos_mlz.kws2.devices.detector.DetectorPosSwitcher',
-        description = 'high-level detector presets',
-        det_z = 'det_z',
-        bs_x = 'beamstop_x',
-        bs_y = 'beamstop_y',
-        psd_x = 'psd_x',
-        psd_y = 'psd_y',
-        attenuator = 'attenuator',
-        presets = {
+    detector=device(
+        "nicos_mlz.kws2.devices.detector.DetectorPosSwitcher",
+        description="high-level detector presets",
+        det_z="det_z",
+        bs_x="beamstop_x",
+        bs_y="beamstop_y",
+        psd_x="psd_x",
+        psd_y="psd_y",
+        attenuator="attenuator",
+        presets={
             lam: {
                 p: dict(
-                    x = v['x'],
-                    y = v['y'],
-                    z = v.get('z', small_pos),
-                    attenuator = v.get('attenuator', 'out'),
-                    small = v.get('det') == 'small'
+                    x=v["x"],
+                    y=v["y"],
+                    z=v.get("z", small_pos),
+                    attenuator=v.get("attenuator", "out"),
+                    small=v.get("det") == "small",
                 )
                 for (p, v) in settings.items()
             }
             for (lam, settings) in presets.items()
         },
-        offsets = offsets,
-        fallback = 'unknown',
-        psdtoppos = 0.0,
-        detbackpos = 20.0,
+        offsets=offsets,
+        fallback="unknown",
+        psdtoppos=0.0,
+        detbackpos=20.0,
     ),
-    attenuator = device('nicos_mlz.kws2.devices.attenuator.Attenuator',
-        description = 'beam attenuator (S21)',
-        input = 'atten_in',
-        output = 'atten_set',
-        timeout = 300.,
+    attenuator=device(
+        "nicos_mlz.kws2.devices.attenuator.Attenuator",
+        description="beam attenuator (S21)",
+        input="atten_in",
+        output="atten_set",
+        timeout=300.0,
     ),
-    atten_in = device('nicos.devices.entangle.DigitalInput',
-        tangodevice = tango_base + 'sps/s21_read',
-        visibility = (),
+    atten_in=device(
+        "nicos.devices.entangle.DigitalInput",
+        tangodevice=tango_base + "sps/s21_read",
+        visibility=(),
     ),
-    atten_set = device('nicos.devices.entangle.DigitalOutput',
-        tangodevice = tango_base + 'sps/s21_write',
-        visibility = (),
+    atten_set=device(
+        "nicos.devices.entangle.DigitalOutput",
+        tangodevice=tango_base + "sps/s21_write",
+        visibility=(),
     ),
-    beamstop_x = device('nicos.devices.entangle.Motor',
-        description = 'beamstop translation X',
-        tangodevice = tango_base + 'fzjs7/beamstop_x',
-        unit = 'mm',
-        precision = 0.1,
-        fmtstr = '%.1f',
+    beamstop_x=device(
+        "nicos.devices.entangle.Motor",
+        description="beamstop translation X",
+        tangodevice=tango_base + "fzjs7/beamstop_x",
+        unit="mm",
+        precision=0.1,
+        fmtstr="%.1f",
     ),
-    beamstop_y = device('nicos.devices.entangle.Motor',
-        description = 'beamstop translation Y',
-        tangodevice = tango_base + 'fzjs7/beamstop_y',
-        unit = 'mm',
-        precision = 2,
-        fmtstr = '%.1f',
+    beamstop_y=device(
+        "nicos.devices.entangle.Motor",
+        description="beamstop translation Y",
+        tangodevice=tango_base + "fzjs7/beamstop_y",
+        unit="mm",
+        precision=2,
+        fmtstr="%.1f",
     ),
-    beamstop_y_encoder = device('nicos_mlz.kws2.devices.detector.DetectorBsEncoder',
-        description = 'additional encoder of beamstop translation Y',
-        tangodevice = tango_base + 'sps/beamstop_y_encoder',
-        unit = 'mm',
-        fmtstr = '%.2f',
-        visibility = (),
+    beamstop_y_encoder=device(
+        "nicos_mlz.kws2.devices.detector.DetectorBsEncoder",
+        description="additional encoder of beamstop translation Y",
+        tangodevice=tango_base + "sps/beamstop_y_encoder",
+        unit="mm",
+        fmtstr="%.2f",
+        visibility=(),
     ),
-    det_z = device('nicos_mlz.kws1.devices.detector.DetectorZAxis',
-        description = 'detector translation Z',
-        motor = 'det_z_mot',
-        hv = 'gedet_HV',
-        abslimits = (0.0, 20.01),
+    det_z=device(
+        "nicos_mlz.kws1.devices.detector.DetectorZAxis",
+        description="detector translation Z",
+        motor="det_z_mot",
+        hv="gedet_HV",
+        abslimits=(0.0, 20.01),
     ),
-    det_z_mot = device('nicos_mlz.kws1.devices.detector.LockedMotor',
-        description = 'detector translation Z',
-        tangodevice = tango_base + 'fzjs7/detector_z',
-        unit = 'm',
-        precision = 0.002,
-        visibility = ()
+    det_z_mot=device(
+        "nicos_mlz.kws1.devices.detector.LockedMotor",
+        description="detector translation Z",
+        tangodevice=tango_base + "fzjs7/detector_z",
+        unit="m",
+        precision=0.002,
+        visibility=(),
     ),
-    psd_x = device('nicos_mlz.kws1.devices.detector.LockedMotor',
-        description = 'small detector translation X',
-        tangodevice = tango_base + 'fzjs7/psd_x',
-        unit = 'mm',
-        precision = 0.01,
+    psd_x=device(
+        "nicos_mlz.kws1.devices.detector.LockedMotor",
+        description="small detector translation X",
+        tangodevice=tango_base + "fzjs7/psd_x",
+        unit="mm",
+        precision=0.01,
     ),
-    psd_y = device('nicos_mlz.kws1.devices.detector.LockedMotor',
-        description = 'small detector translation Y',
-        tangodevice = tango_base + 'fzjs7/psd_y',
-        unit = 'mm',
-        precision = 0.01,
+    psd_y=device(
+        "nicos_mlz.kws1.devices.detector.LockedMotor",
+        description="small detector translation Y",
+        tangodevice=tango_base + "fzjs7/psd_y",
+        unit="mm",
+        precision=0.01,
     ),
 )
 
 extended = dict(
-    representative = 'detector',
+    representative="detector",
 )

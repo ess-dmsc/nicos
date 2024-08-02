@@ -20,8 +20,7 @@
 #   Michele Brambilla <michele.brambilla@psi.ch>
 #
 # *****************************************************************************
-from nicos.guisupport.qt import Qt, QHBoxLayout, QLabel, QScrollArea, \
-    QSizePolicy
+from nicos.guisupport.qt import Qt, QHBoxLayout, QLabel, QScrollArea, QSizePolicy
 
 from nicos.clients.gui.panels import Panel
 
@@ -32,8 +31,7 @@ class CommandOutput(Panel):
         self.setLayout(QHBoxLayout())
         scroll = QScrollArea()
         self.setMaximumHeight(55)
-        scroll.setSizePolicy(QSizePolicy.Policy.Expanding,
-                             QSizePolicy.Policy.Minimum)
+        scroll.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
         scroll.setWidgetResizable(True)
         scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
@@ -41,8 +39,9 @@ class CommandOutput(Panel):
 
         self.outputMessage = QLabel()
         self.outputMessage.setMaximumHeight(30)
-        self.outputMessage.setSizePolicy(QSizePolicy.Policy.Expanding,
-                                         QSizePolicy.Policy.Minimum)
+        self.outputMessage.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum
+        )
         scroll.setWidget(self.outputMessage)
         self.layout().addWidget(scroll)
         client.message.connect(self.on_client_message)

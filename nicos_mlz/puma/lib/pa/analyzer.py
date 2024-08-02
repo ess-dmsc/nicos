@@ -44,7 +44,7 @@ def anaeff(theta0, theta, gamma, alpha, lsa, lsd, x, y, xp, eta, b, r, nv):
     :param r: the reflectivity
     :param nv: neutron type: 0 - transmitted, 1 - reflected at deflector
     """
-    a = 1.
+    a = 1.0
     xn = xA(alpha, gamma, lsa, lsd, y, xp, nv)
     dx = b * sin(radians(theta0))
     ang = theta - theta0

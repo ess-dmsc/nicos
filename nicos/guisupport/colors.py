@@ -38,46 +38,49 @@ class ColorStorage:
     QStyleHints::colorSchemeChanged will be introduced. When moving to that
     version, this class can be changed to use these instead of is_light_template.
     """
+
     def init_palette(self, palette):
         """Define standard colors."""
         self.palette = palette
 
         # shortcuts to commonly used palette colors
-        self.base = self.palette.color(QPalette.ColorGroup.Active,
-                                       QPalette.ColorRole.Base)
-        self.text = self.palette.color(QPalette.ColorGroup.Active,
-                                       QPalette.ColorRole.WindowText)
+        self.base = self.palette.color(
+            QPalette.ColorGroup.Active, QPalette.ColorRole.Base
+        )
+        self.text = self.palette.color(
+            QPalette.ColorGroup.Active, QPalette.ColorRole.WindowText
+        )
 
         # unchanging colors
         self.transparent = Qt.GlobalColor.transparent
-        self.lowlevel = QColor('#666666')
+        self.lowlevel = QColor("#666666")
         self.is_light = is_light_theme(palette)
 
         def sw(light, dark):
             return QColor(light if self.is_light else dark)
 
         # device tree
-        self.dev_fg_ok = sw('#00aa00', '#00dd00')
-        self.dev_fg_unknown = sw('#cccccc', '#777777')
-        self.dev_bg_warning = sw('#ffa500', '#ffa500')
-        self.dev_bg_busy = sw(Qt.GlobalColor.yellow, '#c2cc00')
-        self.dev_bg_error = sw('#ff6655', '#c72514')
-        self.dev_bg_disabled = sw('#bbbbbb', self.base.lighter(130))
+        self.dev_fg_ok = sw("#00aa00", "#00dd00")
+        self.dev_fg_unknown = sw("#cccccc", "#777777")
+        self.dev_bg_warning = sw("#ffa500", "#ffa500")
+        self.dev_bg_busy = sw(Qt.GlobalColor.yellow, "#c2cc00")
+        self.dev_bg_error = sw("#ff6655", "#c72514")
+        self.dev_bg_disabled = sw("#bbbbbb", self.base.lighter(130))
 
         # value expired and  fixed
-        self.value_fixed = sw(Qt.GlobalColor.blue, '#305eb3')
-        self.value_expired = sw('#aaaaaa', '#444444')
+        self.value_fixed = sw(Qt.GlobalColor.blue, "#305eb3")
+        self.value_expired = sw("#aaaaaa", "#444444")
 
         # Command Line
-        self.cmd_running = sw('#ffdddd', '#d4af37')
-        self.cmd_inactive = sw('#c9c9c9', '#444444')
+        self.cmd_running = sw("#ffdddd", "#d4af37")
+        self.cmd_inactive = sw("#c9c9c9", "#444444")
 
         # Cmdlets
-        self.invalid = sw('#ffcccc', '##e6320f')
+        self.invalid = sw("#ffcccc", "##e6320f")
 
         # CacheInspector
-        self.ttl_color = sw('#fffa66', '#ff8f00')
-        self.expired_color = sw('#ce9b9b', '#674e4e')
+        self.ttl_color = sw("#fffa66", "#ff8f00")
+        self.expired_color = sw("#ce9b9b", "#674e4e")
 
     def switch_color(self, light, dark):
         """switch for locally defined colors that do not make sense to be

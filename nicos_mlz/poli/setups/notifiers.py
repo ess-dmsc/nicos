@@ -1,22 +1,23 @@
-description = 'Email and SMS notifiers'
+description = "Email and SMS notifiers"
 
-group = 'lowlevel'
+group = "lowlevel"
 
 devices = dict(
     # Configure source and copy addresses to an existing address.
-    email = device('nicos.devices.notifiers.Mailer',
-        mailserver = 'mailhost.frm2.tum.de',
-        sender = 'poli@frm2.tum.de',
-        copies = [
-            ('jianhui.xu@frm2.tum.de', 'all'),
-            ('g.brandl@fz-juelich.de', 'all'),
+    email=device(
+        "nicos.devices.notifiers.Mailer",
+        mailserver="mailhost.frm2.tum.de",
+        sender="poli@frm2.tum.de",
+        copies=[
+            ("jianhui.xu@frm2.tum.de", "all"),
+            ("g.brandl@fz-juelich.de", "all"),
         ],
-        subject = 'POLI NICOS',
+        subject="POLI NICOS",
     ),
-
     # Configure SMS receivers if wanted and registered with IT.
-    smser = device('nicos.devices.notifiers.SMSer',
-        server = 'triton.admin.frm2',
-        receivers = [],
+    smser=device(
+        "nicos.devices.notifiers.SMSer",
+        server="triton.admin.frm2",
+        receivers=[],
     ),
 )

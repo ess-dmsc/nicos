@@ -22,11 +22,12 @@
 # *****************************************************************************
 
 """Module to test custom log handlers."""
+
 from logging import Handler
 
 import pytest
 
-pytest.importorskip('kafka.errors')
+pytest.importorskip("kafka.errors")
 
 from kafka.errors import NoBrokersAvailable
 from mock import patch
@@ -52,8 +53,7 @@ class Config:
             self.__setattr__(key, value)
 
 
-@pytest.mark.skipif(ESSGELFTCPHandler is None,
-                    reason="graypy module not installed")
+@pytest.mark.skipif(ESSGELFTCPHandler is None, reason="graypy module not installed")
 class TestGraylogHandler:
     logging_type = ESSGELFTCPHandler
 
@@ -61,19 +61,21 @@ class TestGraylogHandler:
         assert issubclass(self.logging_type, Handler)
 
     def test_create_graylog_logger(self):
-        handlers = get_ess_log_handlers(Config(graylog='//someserver:12201'))
+        handlers = get_ess_log_handlers(Config(graylog="//someserver:12201"))
         assert handlers
         assert isinstance(handlers[0], self.logging_type)
 
     def test_import_ess_graylog(self):
         handlers = get_facility_log_handlers(
-            Config(graylog='//someserver:12201', setup_package='nicos_ess'))
+            Config(graylog="//someserver:12201", setup_package="nicos_ess")
+        )
         assert handlers
         assert isinstance(handlers[0], self.logging_type)
 
 
-@pytest.mark.skipif(KafkaLoggingHandler is None,
-                    reason="kafka-logging-handler module not installed")
+@pytest.mark.skipif(
+    KafkaLoggingHandler is None, reason="kafka-logging-handler module not installed"
+)
 class TestKafkaHandler:
     logger_type = KafkaLoggingHandler
 
@@ -81,40 +83,43 @@ class TestKafkaHandler:
         assert issubclass(self.logger_type, Handler)
 
     @pytest.mark.skipif(
-        parse_version(
-            get_distribution('kafka-logging-handler').version) >
-        parse_version('0.2.4'),
-        reason='kafka-logging-handler > 0.2.4 does not raise the exception')
+        parse_version(get_distribution("kafka-logging-handler").version)
+        > parse_version("0.2.4"),
+        reason="kafka-logging-handler > 0.2.4 does not raise the exception",
+    )
     def test_kafka_logger_raises_if_no_broker_is_connected(self):
         # Since no kafka broker is present, raises NoBrokersAvailable
         with pytest.raises(NoBrokersAvailable):
-            get_ess_log_handlers(
-                Config(kafka_logger='//someserver:9092/log_topic'))
+            get_ess_log_handlers(Config(kafka_logger="//someserver:9092/log_topic"))
 
-    @patch.object(KafkaLoggingHandler, '__init__', return_value=None)
+    @patch.object(KafkaLoggingHandler, "__init__", return_value=None)
     def test_create_kafka_logger(self, obj):
         # Test that the Kafka handler is created
         handlers = get_ess_log_handlers(
-            Config(kafka_logger='//someserver:9092/log_topic'))
+            Config(kafka_logger="//someserver:9092/log_topic")
+        )
         assert handlers
         assert isinstance(handlers[0], self.logger_type)
 
-    @patch.object(KafkaLoggingHandler, '__init__', return_value=None)
+    @patch.object(KafkaLoggingHandler, "__init__", return_value=None)
     def test_create_kafka_logger_fails_if_topic_is_missing(self, obj):
         with pytest.raises(ConfigurationError):
-            get_ess_log_handlers(Config(kafka_logger='//someserver:9092'))
+            get_ess_log_handlers(Config(kafka_logger="//someserver:9092"))
 
-    @patch.object(KafkaLoggingHandler, '__init__', return_value=None)
+    @patch.object(KafkaLoggingHandler, "__init__", return_value=None)
     def test_import_ess_kafka_logger(self, obj):
         handlers = get_facility_log_handlers(
-            Config(kafka_logger='//someserver:9092/log_topic',
-                   setup_package='nicos_ess'))
+            Config(
+                kafka_logger="//someserver:9092/log_topic", setup_package="nicos_ess"
+            )
+        )
         assert handlers
         assert isinstance(handlers[0], self.logger_type)
 
 
-@pytest.mark.skipif(AsynchronousLogstashHandler is None,
-                    reason="logstash handler module not installed")
+@pytest.mark.skipif(
+    AsynchronousLogstashHandler is None, reason="logstash handler module not installed"
+)
 class TestALogstashHandler:
     logger_type = AsynchronousLogstashHandler
 
@@ -122,50 +127,57 @@ class TestALogstashHandler:
         assert issubclass(self.logger_type, Handler)
 
     def test_create_logstash_logger(self):
-        handlers = get_sinq_log_handlers(
-            Config(logstash='//someserver:27017'))
+        handlers = get_sinq_log_handlers(Config(logstash="//someserver:27017"))
         assert handlers
         assert isinstance(handlers[0], self.logger_type)
 
     def test_create_graylog_or_kafka_logger_returns_none(self):
         handlers = get_sinq_log_handlers(
-            Config(graylog='//someserver:12201',
-                   kafka_logger='//someserver:9092/log_topic'))
+            Config(
+                graylog="//someserver:12201", kafka_logger="//someserver:9092/log_topic"
+            )
+        )
         assert not handlers
 
     def test_import_sinq_logstash(self):
         handlers = get_facility_log_handlers(
-            Config(logstash='//someserver:5566',
-                   setup_package='nicos_sinq'))
+            Config(logstash="//someserver:5566", setup_package="nicos_sinq")
+        )
         assert handlers
         assert isinstance(handlers[0], self.logger_type)
 
 
-@pytest.mark.skipif(KafkaLoggingHandler is None or ESSGELFTCPHandler is None,
-                    reason="graypy and/or kafka-logging-handler module not "
-                           "installed")
+@pytest.mark.skipif(
+    KafkaLoggingHandler is None or ESSGELFTCPHandler is None,
+    reason="graypy and/or kafka-logging-handler module not " "installed",
+)
 class TestMultipleHandlers:
-
-    @patch.object(KafkaLoggingHandler, '__init__', return_value=None)
+    @patch.object(KafkaLoggingHandler, "__init__", return_value=None)
     def test_import_ess_loggers(self, obj):
-        config = Config(graylog='//someserver:12201',
-                        kafka_logger='//someserver:9092/log_topic',
-                        logstash='//someserver:5566',
-                        setup_package='nicos_ess')
+        config = Config(
+            graylog="//someserver:12201",
+            kafka_logger="//someserver:9092/log_topic",
+            logstash="//someserver:5566",
+            setup_package="nicos_ess",
+        )
         handlers = get_facility_log_handlers(config)
-        assert [handler for handler in handlers if
-                isinstance(handler, KafkaLoggingHandler)]
-        assert [handler for handler in handlers if
-                isinstance(handler, ESSGELFTCPHandler)]
+        assert [
+            handler for handler in handlers if isinstance(handler, KafkaLoggingHandler)
+        ]
+        assert [
+            handler for handler in handlers if isinstance(handler, ESSGELFTCPHandler)
+        ]
 
 
 class TestNoHandlers:
     def test_import_demo_loggers(self):
-        config = Config(graylog='//someserver:12201',
-                        kafka_logger='//someserver:9092/log_topic',
-                        setup_package='nicos_demo')
+        config = Config(
+            graylog="//someserver:12201",
+            kafka_logger="//someserver:9092/log_topic",
+            setup_package="nicos_demo",
+        )
         assert get_facility_log_handlers(config) == []
 
     def test_no_loggers_created_if_options_is_empty(self):
-        config = Config(setup_package='nicos_ess')
+        config = Config(setup_package="nicos_ess")
         assert get_facility_log_handlers(config) == []

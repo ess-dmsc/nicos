@@ -26,46 +26,58 @@ from nicos.core import Attach, Override, Param, Readable, anytype, dictof
 
 class MantidDevice(Readable):
     parameters = {
-        'args': Param('Additional arguments to MoveInstrumentComponent.',
-                      type=dictof(str, anytype)),
-        'algorithm': Param('Mantid algorithm name.',
-                           type=str, settable=False, userparam=False,
-                           mandatory=True),
+        "args": Param(
+            "Additional arguments to MoveInstrumentComponent.",
+            type=dictof(str, anytype),
+        ),
+        "algorithm": Param(
+            "Mantid algorithm name.",
+            type=str,
+            settable=False,
+            userparam=False,
+            mandatory=True,
+        ),
     }
 
-    parameter_overrides = {
-        'unit': Override(mandatory=False)
-    }
+    parameter_overrides = {"unit": Override(mandatory=False)}
 
     valuetype = dictof(str, anytype)
 
 
 class MantidTranslationDevice(MantidDevice):
     attached_devices = {
-        'x': Attach('Device that determines x-translation of component.',
-                    Readable, optional=True),
-        'y': Attach('Device that determines y-translation of component.',
-                    Readable, optional=True),
-        'z': Attach('Device that determines z-translation of component.',
-                    Readable, optional=True),
+        "x": Attach(
+            "Device that determines x-translation of component.",
+            Readable,
+            optional=True,
+        ),
+        "y": Attach(
+            "Device that determines y-translation of component.",
+            Readable,
+            optional=True,
+        ),
+        "z": Attach(
+            "Device that determines z-translation of component.",
+            Readable,
+            optional=True,
+        ),
     }
 
     parameter_overrides = {
-        'algorithm': Override(default='MoveInstrumentComponent',
-                              mandatory=False)
+        "algorithm": Override(default="MoveInstrumentComponent", mandatory=False)
     }
 
     def doRead(self, maxage=0):
         device_args = {}
 
         if self._attached_x:
-            device_args['X'] = self._attached_x.read(maxage)
+            device_args["X"] = self._attached_x.read(maxage)
 
         if self._attached_y:
-            device_args['Y'] = self._attached_y.read(maxage)
+            device_args["Y"] = self._attached_y.read(maxage)
 
         if self._attached_z:
-            device_args['Z'] = self._attached_z.read(maxage)
+            device_args["Z"] = self._attached_z.read(maxage)
 
         device_args.update(self.args)
 
@@ -74,31 +86,32 @@ class MantidTranslationDevice(MantidDevice):
 
 class MantidRotationDevice(MantidDevice):
     attached_devices = {
-        'angle': Attach('Device that describes rotation angle of component.',
-                        Readable, optional=False),
-
+        "angle": Attach(
+            "Device that describes rotation angle of component.",
+            Readable,
+            optional=False,
+        ),
     }
 
     parameters = {
-        'x': Param('X component of rotation vector', type=float, default=0.0),
-        'y': Param('Y component of rotation vector', type=float, default=0.0),
-        'z': Param('Z component of rotation vector', type=float, default=0.0),
+        "x": Param("X component of rotation vector", type=float, default=0.0),
+        "y": Param("Y component of rotation vector", type=float, default=0.0),
+        "z": Param("Z component of rotation vector", type=float, default=0.0),
     }
 
     parameter_overrides = {
-        'algorithm': Override(default='RotateInstrumentComponent',
-                              mandatory=False)
+        "algorithm": Override(default="RotateInstrumentComponent", mandatory=False)
     }
 
     def doRead(self, maxage=0):
         device_args = {}
 
-        device_args['X'] = self.x
-        device_args['Y'] = self.y
-        device_args['Z'] = self.z
+        device_args["X"] = self.x
+        device_args["Y"] = self.y
+        device_args["Z"] = self.z
 
         if self._attached_angle:
-            device_args['Angle'] = self._attached_angle.read(maxage)
+            device_args["Angle"] = self._attached_angle.read(maxage)
 
         device_args.update(self.args)
 

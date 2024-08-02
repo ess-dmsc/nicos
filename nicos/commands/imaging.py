@@ -22,6 +22,7 @@
 # *****************************************************************************
 
 """Imaging commands."""
+
 import math
 
 from nicos import session
@@ -35,21 +36,20 @@ from nicos.core.errors import NicosError
 from nicos.core.scan import SkipPoint
 from nicos.utils import number_types
 
-__all__ = ['tomo', 'grtomo']
+__all__ = ["tomo", "grtomo"]
 
 
 def _tomo(title, angles, moveables, imgsperangle, *detlist, **preset):
-
     if moveables is None:
         # TODO: currently, sry is the common name on nectar and antares for the
         # sample rotation (phi - around y axis).  Is this convenience function
         # ok, or should it be omitted and added to the instrument custom?
-        moveables = (session.getDevice('sry'),)
+        moveables = (session.getDevice("sry"),)
     elif isinstance(moveables, Moveable):
         moveables = (moveables,)
     moveables = tuple(moveables)
 
-    session.log.debug('used angles: %r', angles)
+    session.log.debug("used angles: %r", angles)
 
     with manualscan(*(moveables + detlist), _title=title) as scan:
         for angle in angles:
@@ -64,8 +64,9 @@ def _tomo(title, angles, moveables, imgsperangle, *detlist, **preset):
                         except NicosError:
                             if not i:
                                 raise
-                            session.log.warning('Count failed, try it again.'
-                                                '%d remaining tries', i)
+                            session.log.warning(
+                                "Count failed, try it again." "%d remaining tries", i
+                            )
                             if detlist:
                                 reset(*detlist)
                             else:
@@ -77,11 +78,14 @@ def _tomo(title, angles, moveables, imgsperangle, *detlist, **preset):
 
 
 @usercommand
-@helparglist('nangles, moveables, imgsperangle=1, ref_first=True, start=0, '
-             '[detectors], [presets]')
+@helparglist(
+    "nangles, moveables, imgsperangle=1, ref_first=True, start=0, "
+    "[detectors], [presets]"
+)
 # pylint: disable=keyword-arg-before-vararg
-def tomo(nangles, moveables=None, imgsperangle=1, ref_first=True, start=0,
-         *detlist, **preset):
+def tomo(
+    nangles, moveables=None, imgsperangle=1, ref_first=True, start=0, *detlist, **preset
+):
     """Performs a tomography.
 
     This is done by scanning over 360 deg in *nangles* steps and capturing a
@@ -111,37 +115,47 @@ def tomo(nangles, moveables=None, imgsperangle=1, ref_first=True, start=0,
     angles = floatrange(0.0, 360.0, num=nangles)
     if isinstance(start, number_types) and start != 0:
         if ref_first is False:  # explicit check for ref_first=False
-            angles = sorted([180.] + angles)
+            angles = sorted([180.0] + angles)
         # remove unnecessary angles for continued tomography
-        startidx = min(range(len(angles)),
-                       key=lambda i: abs(angles[i] - start))
+        startidx = min(range(len(angles)), key=lambda i: abs(angles[i] - start))
         angles = angles[startidx:]
 
-        title = 'append tomo: %.3f deg scan with %d scan points' % (
-            angles[-1] - angles[0], len(angles))
-        session.log.info('%s', title)
-        session.log.debug('remaining angles: %r', angles)
+        title = "append tomo: %.3f deg scan with %d scan points" % (
+            angles[-1] - angles[0],
+            len(angles),
+        )
+        session.log.info("%s", title)
+        session.log.debug("remaining angles: %r", angles)
     else:
-        title = '360 deg tomography'
+        title = "360 deg tomography"
         angles = [180.0] + angles
         # This only for compatibility to older scripts
         if isinstance(ref_first, Measurable):
             detlist += (ref_first,)
         elif ref_first is False:  # explicit check for ref_first=False
             angles = sorted(angles)
-        session.log.debug('angles: %r', angles)
+        session.log.debug("angles: %r", angles)
 
-    session.log.info('Performing %s scan.', title)
+    session.log.info("Performing %s scan.", title)
 
-    _tomo('tomo', angles, moveables, imgsperangle, *detlist, **preset)
+    _tomo("tomo", angles, moveables, imgsperangle, *detlist, **preset)
 
 
 @usercommand
-@helparglist('nangles, moveables, imgsperangle=1, img180=True, startpoint=0, '
-             '[detectors], [presets]')
+@helparglist(
+    "nangles, moveables, imgsperangle=1, img180=True, startpoint=0, "
+    "[detectors], [presets]"
+)
 # pylint: disable=keyword-arg-before-vararg
-def grtomo(nangles, moveables=None, imgsperangle=1, img180=True, startpoint=0,
-           *detlist, **preset):
+def grtomo(
+    nangles,
+    moveables=None,
+    imgsperangle=1,
+    img180=True,
+    startpoint=0,
+    *detlist,
+    **preset,
+):
     """Golden Ratio tomography.
 
     Performs a tomography by scanning over nangles steps in a sequence from
@@ -161,13 +175,15 @@ def grtomo(nangles, moveables=None, imgsperangle=1, img180=True, startpoint=0,
     >>> grtomo(500, sry, 5, True, det_neo, det_ikonl, t=1) # full version
     """
 
-    title = 'golden ratio tomography'
+    title = "golden ratio tomography"
 
     angles = []
     if img180 and startpoint == 0:
         angles += [180.0]
-    angles += [math.degrees((i * (1 + math.sqrt(5) / 2.0) * 2 * math.pi) %
-                            (2 * math.pi)) for i in range(startpoint, nangles)]
+    angles += [
+        math.degrees((i * (1 + math.sqrt(5) / 2.0) * 2 * math.pi) % (2 * math.pi))
+        for i in range(startpoint, nangles)
+    ]
 
     # This only for compatibility to older scripts
     if isinstance(img180, Measurable):
@@ -175,15 +191,15 @@ def grtomo(nangles, moveables=None, imgsperangle=1, img180=True, startpoint=0,
     if isinstance(startpoint, Measurable):
         detlist += (startpoint,)
 
-    session.log.info('Performing %s scan.', title)
+    session.log.info("Performing %s scan.", title)
 
     if moveables is None:
         # TODO: currently, sry is the common name on nectar and antares for the
         # sample rotation (phi - around y axis).  Is this convenience function
         # ok, or should it be omitted and added to the instrument custom?
-        moveables = (session.getDevice('sry'),)
+        moveables = (session.getDevice("sry"),)
     elif isinstance(moveables, Moveable):
         moveables = (moveables,)
     moveables = tuple(moveables)
 
-    _tomo('grtomo', angles, moveables, imgsperangle, *detlist, **preset)
+    _tomo("grtomo", angles, moveables, imgsperangle, *detlist, **preset)

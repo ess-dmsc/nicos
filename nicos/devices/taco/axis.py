@@ -28,11 +28,22 @@ import TACOStates  # pylint: disable=import-error
 from Motor import Motor as TACOMotor  # pylint: disable=import-error
 
 from nicos import session
-from nicos.core import ADMIN, SLAVE, Attach, ModeError, Moveable, Param, \
-    anytype, oneof, requires, status, tupleof, usermethod
+from nicos.core import (
+    ADMIN,
+    SLAVE,
+    Attach,
+    ModeError,
+    Moveable,
+    Param,
+    anytype,
+    oneof,
+    requires,
+    status,
+    tupleof,
+    usermethod,
+)
 from nicos.devices.abstract import Axis as AbstractAxis, CanReference
-from nicos.devices.generic.sequence import SeqCall, SeqDev, SeqSleep, \
-    SequencerMixin
+from nicos.devices.generic.sequence import SeqCall, SeqDev, SeqSleep, SequencerMixin
 from nicos.devices.taco.core import TacoDevice
 
 
@@ -42,24 +53,25 @@ class Axis(CanReference, TacoDevice, AbstractAxis):
     taco_class = TACOMotor
 
     _TACO_STATUS_MAPPING = dict(TacoDevice._TACO_STATUS_MAPPING)
-    _TACO_STATUS_MAPPING[TACOStates.INIT] = (status.BUSY, 'referencing')
-    _TACO_STATUS_MAPPING[TACOStates.RESETTING] = (status.BUSY, 'referencing')
-    _TACO_STATUS_MAPPING[TACOStates.ALARM] = (status.NOTREACHED, 'position not reached')
+    _TACO_STATUS_MAPPING[TACOStates.INIT] = (status.BUSY, "referencing")
+    _TACO_STATUS_MAPPING[TACOStates.RESETTING] = (status.BUSY, "referencing")
+    _TACO_STATUS_MAPPING[TACOStates.ALARM] = (status.NOTREACHED, "position not reached")
 
     parameters = {
-        'speed':     Param('Motor speed', unit='main/s', settable=True),
-        'accel':     Param('Motor acceleration', unit='main/s^2',
-                           settable=True),
-        'refspeed':  Param('Speed driving to reference switch', unit='main/s',
-                           settable=True),
-        'refswitch': Param('Switch to use as reference', type=str,
-                           settable=True),
-        'refpos':    Param('Position of the reference switch', unit='main',
-                           settable=True),
+        "speed": Param("Motor speed", unit="main/s", settable=True),
+        "accel": Param("Motor acceleration", unit="main/s^2", settable=True),
+        "refspeed": Param(
+            "Speed driving to reference switch", unit="main/s", settable=True
+        ),
+        "refswitch": Param("Switch to use as reference", type=str, settable=True),
+        "refpos": Param("Position of the reference switch", unit="main", settable=True),
         # do not call deviceReset by default as it does a reference drive
-        'resetcall': Param('What TACO method to call on reset (deviceInit or '
-                           'deviceReset)', settable=True, default='deviceInit',
-                           type=oneof('deviceInit', 'deviceReset')),
+        "resetcall": Param(
+            "What TACO method to call on reset (deviceInit or " "deviceReset)",
+            settable=True,
+            default="deviceInit",
+            type=oneof("deviceInit", "deviceReset"),
+        ),
     }
 
     def doStart(self, target):
@@ -74,13 +86,13 @@ class Axis(CanReference, TacoDevice, AbstractAxis):
             return 0
         if s > v**2 / a:  # do we reach nominal speed?
             return s / v + v / a
-        return 2 * (s / a)**0.5
+        return 2 * (s / a) ** 0.5
 
     def doReset(self):
         self._taco_reset(self._dev, self.resetcall)
 
     @usermethod
-    @requires(level=ADMIN, helpmsg='use adjust() to set a new offset')
+    @requires(level=ADMIN, helpmsg="use adjust() to set a new offset")
     def setPosition(self, pos):
         """Sets the current position of the axis to the target.
 
@@ -88,8 +100,7 @@ class Axis(CanReference, TacoDevice, AbstractAxis):
         virtually in simulation mode.
         """
         if self._mode == SLAVE:
-            raise ModeError(self, 'setting new position not possible in '
-                            'slave mode')
+            raise ModeError(self, "setting new position not possible in " "slave mode")
         elif self._sim_intercept:
             self._sim_setValue(pos)
             return
@@ -102,10 +113,12 @@ class Axis(CanReference, TacoDevice, AbstractAxis):
 
     def doReference(self):
         """Do a reference drive of the axis (do not use with encoded axes)."""
-        self.log.info('referencing the axis, please wait...')
+        self.log.info("referencing the axis, please wait...")
         self._taco_guard(self._dev.deviceReset)
-        while self._taco_guard(self._dev.deviceState) \
-                                  in (TACOStates.INIT, TACOStates.RESETTING):
+        while self._taco_guard(self._dev.deviceState) in (
+            TACOStates.INIT,
+            TACOStates.RESETTING,
+        ):
             session.delay(0.3)
         if self._taco_guard(self._dev.isDeviceOff):
             self._taco_guard(self._dev.deviceOn)
@@ -119,49 +132,44 @@ class Axis(CanReference, TacoDevice, AbstractAxis):
         self._taco_guard(self._dev.setSpeed, value)
 
     def doReadDragerror(self):
-        return float(self._taco_guard(
-            self._dev.deviceQueryResource, 'dragerror'))
+        return float(self._taco_guard(self._dev.deviceQueryResource, "dragerror"))
 
     def doWriteDragerror(self, value):
-        self._taco_update_resource('dragerror', str(value))
+        self._taco_update_resource("dragerror", str(value))
 
     def doReadPrecision(self):
-        return float(self._taco_guard(
-            self._dev.deviceQueryResource, 'precision'))
+        return float(self._taco_guard(self._dev.deviceQueryResource, "precision"))
 
     def doWritePrecision(self, value):
-        self._taco_update_resource('precision', str(value))
+        self._taco_update_resource("precision", str(value))
 
     def doReadMaxtries(self):
-        return int(self._taco_guard(
-            self._dev.deviceQueryResource, 'maxtries'))
+        return int(self._taco_guard(self._dev.deviceQueryResource, "maxtries"))
 
     def doWriteMaxtries(self, value):
-        self._taco_update_resource('maxtries', str(value))
+        self._taco_update_resource("maxtries", str(value))
 
     def doReadLoopdelay(self):
-        return float(self._taco_guard(
-            self._dev.deviceQueryResource, 'loopdelay'))
+        return float(self._taco_guard(self._dev.deviceQueryResource, "loopdelay"))
 
     def doWriteLoopdelay(self, value):
-        self._taco_update_resource('loopdelay', str(value))
+        self._taco_update_resource("loopdelay", str(value))
 
     def doReadBacklash(self):
-        return float(self._taco_guard(
-            self._dev.deviceQueryResource, 'backlash'))
+        return float(self._taco_guard(self._dev.deviceQueryResource, "backlash"))
 
     def doWriteBacklash(self, value):
-        self._taco_update_resource('backlash', str(value))
+        self._taco_update_resource("backlash", str(value))
 
     # resources that need to be set on the motor, not the axis device
 
     def _readMotorParam(self, resource, conv=float):
-        motorname = self._taco_guard(self._dev.deviceQueryResource, 'motor')
+        motorname = self._taco_guard(self._dev.deviceQueryResource, "motor")
         client = TACOMotor(motorname)
         return conv(client.deviceQueryResource(resource))
 
     def _writeMotorParam(self, resource, value):
-        motorname = self._taco_guard(self._dev.deviceQueryResource, 'motor')
+        motorname = self._taco_guard(self._dev.deviceQueryResource, "motor")
         client = TACOMotor(motorname)
         client.deviceOff()
         try:
@@ -170,44 +178,49 @@ class Axis(CanReference, TacoDevice, AbstractAxis):
             client.deviceOn()
 
     def doReadAccel(self):
-        return self._readMotorParam('accel')
+        return self._readMotorParam("accel")
 
     def doWriteAccel(self, value):
-        self._writeMotorParam('accel', value)
+        self._writeMotorParam("accel", value)
 
     def doReadRefspeed(self):
-        return self._readMotorParam('refspeed')
+        return self._readMotorParam("refspeed")
 
     def doWriteRefspeed(self, value):
-        self._writeMotorParam('refspeed', value)
+        self._writeMotorParam("refspeed", value)
 
     def doReadRefswitch(self):
-        return self._readMotorParam('refswitch', str)
+        return self._readMotorParam("refswitch", str)
 
     def doWriteRefswitch(self, value):
-        self._writeMotorParam('refswitch', value)
+        self._writeMotorParam("refswitch", value)
 
     def doReadRefpos(self):
-        return self._readMotorParam('refpos')
+        return self._readMotorParam("refpos")
 
     def doWriteRefpos(self, value):
-        self._writeMotorParam('refpos', value)
+        self._writeMotorParam("refpos", value)
 
 
 class HoveringAxis(SequencerMixin, Axis):
     """An axis that also controls air for airpads."""
 
     attached_devices = {
-        'switch': Attach('The device used for switching air on and off', Moveable),
+        "switch": Attach("The device used for switching air on and off", Moveable),
     }
 
     parameters = {
-        'startdelay':   Param('Delay after switching on air', type=float,
-                              mandatory=True, unit='s'),
-        'stopdelay':    Param('Delay before switching off air', type=float,
-                              mandatory=True, unit='s'),
-        'switchvalues': Param('(off, on) values to write to switch device',
-                              type=tupleof(anytype, anytype), default=(0, 1)),
+        "startdelay": Param(
+            "Delay after switching on air", type=float, mandatory=True, unit="s"
+        ),
+        "stopdelay": Param(
+            "Delay before switching off air", type=float, mandatory=True, unit="s"
+        ),
+        "switchvalues": Param(
+            "(off, on) values to write to switch device",
+            type=tupleof(anytype, anytype),
+            default=(0, 1),
+        ),
     }
 
     hardware_access = True
@@ -230,7 +243,7 @@ class HoveringAxis(SequencerMixin, Axis):
     def doStart(self, target):
         if self._seq_is_running():
             self.stop()
-            self.log.info('waiting for axis to stop...')
+            self.log.info("waiting for axis to stop...")
             self.wait()
         if abs(target - self.read()) < self.precision:
             return
@@ -241,5 +254,4 @@ class HoveringAxis(SequencerMixin, Axis):
         Axis.doStop(self)
 
     def doTime(self, old_value, target):
-        return Axis.doTime(
-            self, old_value, target) + self.startdelay + self.stopdelay
+        return Axis.doTime(self, old_value, target) + self.startdelay + self.stopdelay

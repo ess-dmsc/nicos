@@ -37,27 +37,28 @@ class SafetyInputs(Readable):
     The safety system has a lot of status lines which are connected to a
     separate input which is integrated into the NICOS system.
     """
+
     attached_devices = {
-        'i7053': Attach('three 7053 modules', DigitalInput, multiple=3),
+        "i7053": Attach("three 7053 modules", DigitalInput, multiple=3),
     }
 
     parameter_overrides = {
-        'unit':   Override(mandatory=False),
-        'fmtstr': Override(default='0x%012x'),
-        'maxage': Override(default=0),
+        "unit": Override(mandatory=False),
+        "fmtstr": Override(default="0x%012x"),
+        "maxage": Override(default=0),
     }
 
     def _readHWState(self, maxage=0):
         state = 0
         for i, sdev in enumerate(self._attached_i7053):
-            state |= (sdev.read(maxage) << (16 * i))
+            state |= sdev.read(maxage) << (16 * i)
         return state
 
     def doRead(self, maxage=0):
         state = self._readHWState(maxage)
-        self.log.info('val description')
+        self.log.info("val description")
         for i, bit in enumerate(bin(state)[2:][::-1]):
-            self.log.debug('%s   %s', bit, bit_description[i])
+            self.log.debug("%s   %s", bit, bit_description[i])
         return state
 
     def doStatus(self, maxage=0):
@@ -70,20 +71,20 @@ class Shutter(Moveable):
     """TOFTOF Shutter Control."""
 
     attached_devices = {
-        'open':   Attach('Shutter open button device', DigitalOutput),
-        'close':  Attach('Shutter close button device', DigitalOutput),
-        'status': Attach('Shutter status device', DigitalOutput),
+        "open": Attach("Shutter open button device", DigitalOutput),
+        "close": Attach("Shutter close button device", DigitalOutput),
+        "status": Attach("Shutter status device", DigitalOutput),
     }
 
     parameter_overrides = {
-        'unit':   Override(mandatory=False),
-        'fmtstr': Override(default='%s'),
+        "unit": Override(mandatory=False),
+        "fmtstr": Override(default="%s"),
     }
 
-    valuetype = oneofdict({0: 'closed', 1: 'open'})
+    valuetype = oneofdict({0: "closed", 1: "open"})
 
     def doStart(self, target):
-        if target == 'open':
+        if target == "open":
             self._attached_open.start(1)
             session.delay(0.01)
             self._attached_open.start(0)
@@ -93,15 +94,18 @@ class Shutter(Moveable):
             self._attached_close.start(0)
 
     def doStop(self):
-        self.log.info('note: shutter collimator does not use stop() anymore, '
-                      'use move(%s, "closed")', self)
+        self.log.info(
+            "note: shutter collimator does not use stop() anymore, "
+            'use move(%s, "closed")',
+            self,
+        )
 
     def doRead(self, maxage=0):
         ret = self._attached_status.read(maxage)
         if ret == 1:
-            return 'closed'
+            return "closed"
         else:
-            return 'open'
+            return "open"
 
     def doStatus(self, maxage=0):
-        return status.OK, ''
+        return status.OK, ""

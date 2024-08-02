@@ -1,21 +1,22 @@
-description = 'setup for Eurotherm sample heater'
-group = 'optional'
+description = "setup for Eurotherm sample heater"
+group = "optional"
 
-includes = ['alias_T']
+includes = ["alias_T"]
 
-tango_base = 'tango://phys.kws1.frm2:10000/kws1/'
+tango_base = "tango://phys.kws1.frm2:10000/kws1/"
 
 devices = dict(
-    T_et = device('nicos.devices.entangle.TemperatureController',
-        description = 'Eurotherm temperature controller',
-        tangodevice = tango_base + 'eurotherm/control',
-        abslimits = (0, 200),
-        precision = 0.1,
+    T_et=device(
+        "nicos.devices.entangle.TemperatureController",
+        description="Eurotherm temperature controller",
+        tangodevice=tango_base + "eurotherm/control",
+        abslimits=(0, 200),
+        precision=0.1,
     ),
 )
 
-alias_config = dict(T = {'T_et': 100})
+alias_config = dict(T={"T_et": 100})
 
 extended = dict(
-    representative = 'T_et',
+    representative="T_et",
 )

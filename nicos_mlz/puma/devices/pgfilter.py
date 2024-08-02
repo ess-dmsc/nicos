@@ -31,49 +31,50 @@ class PGFilter(Moveable):
     """PUMA specific device for the PG filter."""
 
     attached_devices = {
-        'io_status': Attach('status of the limit switches', Readable),
-        'io_set': Attach('output to set', Moveable),
+        "io_status": Attach("status of the limit switches", Readable),
+        "io_set": Attach("output to set", Moveable),
     }
 
-    valuetype = oneof('in', 'out')
+    valuetype = oneof("in", "out")
 
     def doStart(self, target):
         try:
             if self.doStatus()[0] != status.OK:
-                raise NicosError(self, 'filter returned wrong position')
+                raise NicosError(self, "filter returned wrong position")
 
             if target == self.read(0):
                 return
 
-            if target == 'in':
+            if target == "in":
                 self._attached_io_set.move(1)
-            elif target == 'out':
+            elif target == "out":
                 self._attached_io_set.move(0)
             else:
                 # shouldn't happen...
-                self.log.info('PG filter: illegal input')
+                self.log.info("PG filter: illegal input")
                 return
 
             session.delay(2)
 
             if self.doStatus()[0] == status.ERROR:
-                raise NicosError(self, 'PG filter is not readable, please '
-                                 'check device!')
+                raise NicosError(
+                    self, "PG filter is not readable, please " "check device!"
+                )
         finally:
-            self.log.info('PG filter: %s', self.read(0))
+            self.log.info("PG filter: %s", self.read(0))
 
     def doRead(self, maxage=0):
         result = self._attached_io_status.read(maxage)
         if result == 2:
-            return 'in'
+            return "in"
         elif result == 1:
-            return 'out'
+            return "out"
         else:
-            raise NicosError(self, 'PG filter is not readable, check device!')
+            raise NicosError(self, "PG filter is not readable, check device!")
 
     def doStatus(self, maxage=0):
         s = self._attached_io_status.read(maxage)
         if s in [1, 2]:
-            return (status.OK, 'idle')
+            return (status.OK, "idle")
         else:
-            return (status.ERROR, 'filter is in error state')
+            return (status.ERROR, "filter is in error state")

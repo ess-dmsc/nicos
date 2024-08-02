@@ -31,12 +31,15 @@ from nicos.devices.tas import TASSample as NicosTASSample
 
 
 class MLZSampleMixin(DeviceMixinBase):
-    """Special mixin with MLZ-specific sample ID from the sample tracker. """
+    """Special mixin with MLZ-specific sample ID from the sample tracker."""
 
     parameters = {
-        'sampleid': Param('Sample ID from the sample tracker',
-                          type=none_or(int), settable=True,
-                          category='sample'),
+        "sampleid": Param(
+            "Sample ID from the sample tracker",
+            type=none_or(int),
+            settable=True,
+            category="sample",
+        ),
     }
 
     def clear(self):
@@ -45,7 +48,7 @@ class MLZSampleMixin(DeviceMixinBase):
 
     def _applyParams(self, number, parameters):
         """Apply sample tracker id."""
-        self.sampleid = parameters.get('id')
+        self.sampleid = parameters.get("id")
 
 
 class Sample(MLZSampleMixin, NicosSample):

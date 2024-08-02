@@ -1,19 +1,21 @@
-description = 'SANS-1 magic box'
+description = "SANS-1 magic box"
 
-group = 'optional'
+group = "optional"
 
 devices = {}
 
 for i in range(0, 8):
-    devices['in_%i' % i] = device('nicos.devices.generic.ManualSwitch',
-        description = 'Input pin %i' % i,
-        visibility = (),
-        states = (0, 1),
+    devices["in_%i" % i] = device(
+        "nicos.devices.generic.ManualSwitch",
+        description="Input pin %i" % i,
+        visibility=(),
+        states=(0, 1),
     )
-    devices['out_%i' % i] = device('nicos.devices.generic.ManualSwitch',
-        description = 'Output pin %i' % i,
-        visibility = (),
-        states = (0, 1),
+    devices["out_%i" % i] = device(
+        "nicos.devices.generic.ManualSwitch",
+        description="Output pin %i" % i,
+        visibility=(),
+        states=(0, 1),
     )
 
-devices['out_1'][1]['visibility'] = ('metadata', 'devlist', 'namespace')
+devices["out_1"][1]["visibility"] = ("metadata", "devlist", "namespace")

@@ -23,8 +23,11 @@
 
 from nicos.clients.gui.panels import PanelDialog
 from nicos.clients.gui.panels.generic import GenericPanel
-from nicos.clients.gui.panels.setup_panel import DetEnvPanel, \
-    GenericSamplePanel, SetupsPanel
+from nicos.clients.gui.panels.setup_panel import (
+    DetEnvPanel,
+    GenericSamplePanel,
+    SetupsPanel,
+)
 from nicos.guisupport.qt import pyqtSlot
 from nicos.guisupport.widget import NicosWidget
 
@@ -32,7 +35,6 @@ from nicos_sinq.amor.gui.panels.newexp import AmorNewExpPanel
 
 
 class AmorExpPanel(GenericPanel):
-
     def __init__(self, parent, client, options):
         GenericPanel.__init__(self, parent, client, options)
         for ch in self.findChildren(NicosWidget):
@@ -41,35 +43,40 @@ class AmorExpPanel(GenericPanel):
         client.initstatus.connect(self.on_client_initstatus)
 
         self.detLabel.setFormatCallback(
-            lambda value, strvalue: ', '.join(sorted(value)))
+            lambda value, strvalue: ", ".join(sorted(value))
+        )
         self.envLabel.setFormatCallback(
-            lambda value, strvalue: ', '.join(sorted(value)))
+            lambda value, strvalue: ", ".join(sorted(value))
+        )
 
     def on_client_initstatus(self, initstatus):
-        self.setupLabel.setText(', '.join(sorted(initstatus['setups'][1])))
+        self.setupLabel.setText(", ".join(sorted(initstatus["setups"][1])))
 
     def on_client_setup(self, data):
-        self.setupLabel.setText(', '.join(sorted(data[1])))
+        self.setupLabel.setText(", ".join(sorted(data[1])))
 
     @pyqtSlot()
     def on_proposalBtn_clicked(self):
-        dlg = PanelDialog(self, self.client, AmorNewExpPanel, 'Proposal info',
-                          uifile='nicos_sinq/amor/gui/panels/newexp.ui')
+        dlg = PanelDialog(
+            self,
+            self.client,
+            AmorNewExpPanel,
+            "Proposal info",
+            uifile="nicos_sinq/amor/gui/panels/newexp.ui",
+        )
         dlg.exec()
 
     @pyqtSlot()
     def on_setupBtn_clicked(self):
-        dlg = PanelDialog(self, self.client, SetupsPanel, 'Setups')
+        dlg = PanelDialog(self, self.client, SetupsPanel, "Setups")
         dlg.exec()
 
     @pyqtSlot()
     def on_sampleBtn_clicked(self):
-        dlg = PanelDialog(self, self.client, GenericSamplePanel,
-                          'Sample information')
+        dlg = PanelDialog(self, self.client, GenericSamplePanel, "Sample information")
         dlg.exec()
 
     @pyqtSlot()
     def on_detenvBtn_clicked(self):
-        dlg = PanelDialog(self, self.client, DetEnvPanel,
-                          'Detectors and environment')
+        dlg = PanelDialog(self, self.client, DetEnvPanel, "Detectors and environment")
         dlg.exec()

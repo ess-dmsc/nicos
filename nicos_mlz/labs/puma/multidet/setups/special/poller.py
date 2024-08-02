@@ -1,21 +1,20 @@
-description = 'setup for the poller'
-group = 'special'
+description = "setup for the poller"
+group = "special"
 
-sysconfig = dict(
-    cache = 'pumadma.puma.frm2.tum.de'
-)
+sysconfig = dict(cache="pumadma.puma.frm2.tum.de")
 
 devices = dict(
-    Poller = device('nicos.services.poller.Poller',
-        autosetup = True,
+    Poller=device(
+        "nicos.services.poller.Poller",
+        autosetup=True,
         # setups for which all devices are polled
         # poll = ['lakeshore', 'detector', 'befilter'],
         # setups which are always polled
-        alwayspoll = [],
+        alwayspoll=[],
         # setups which are never polled
-        neverpoll = [
-            'motorbus10',
-            'motorbus13',
+        neverpoll=[
+            "motorbus10",
+            "motorbus13",
         ],
     ),
 )

@@ -35,8 +35,8 @@ from nicos.core import Attach, Moveable, NicosError, Param, vec3
 from nicos.core.status import BUSY, OK
 from nicos.devices.sample import Sample
 
-sys.path.append('/home/resi/pedersen/workspace/singlecounter')
-sys.path.append('/home/resi/pedersen/workspace/nonius_new/app')
+sys.path.append("/home/resi/pedersen/workspace/singlecounter")
+sys.path.append("/home/resi/pedersen/workspace/nonius_new/app")
 
 
 # imports from the nonius libs
@@ -56,11 +56,12 @@ class ResiPositionProxy:
 
     see: http://code.activestate.com/recipes/252151-generalized-delegates-and-proxies/
     """
+
     __hardware = None
     pos = None
 
     def __init__(self, pos):
-        #super(ResiPositionProxy, self).__init__(pos)
+        # super(ResiPositionProxy, self).__init__(pos)
         self.pos = pos
 
     @classmethod
@@ -69,8 +70,9 @@ class ResiPositionProxy:
 
     def __getattr__(self, name):
         return getattr(self.pos, name)
+
     def __setattr__(self, name, value):
-        if name == 'pos':
+        if name == "pos":
             self.__dict__[name] = value
         elif self.pos:
             return setattr(self.pos, name, value)
@@ -80,41 +82,48 @@ class ResiPositionProxy:
 
     def __getstate__(self):
         return self.pos.storable()
+
     def __setstate__(self, state):
         self.pos = position.PositionFromStorage(ResiPositionProxy.__hardware, state)
 
 
 class ResiDevice(Moveable):
-    '''
+    """
     Main device for RESI
 
      * talks to the HUBER controller for all 4 axes.
      * handles cell calculations
 
-    '''
+    """
+
     name = None
 
     def doPreinit(self, mode):
-        '''
+        """
         Constructor
-        '''
+        """
         # the hardware will use a dummy driver if no hardware is detected
         if HuberScan is None:
-            raise NicosError(self, 'Nonius scan libraries not found on this '
-                             'system, cannot use ResiDevice')
+            raise NicosError(
+                self,
+                "Nonius scan libraries not found on this "
+                "system, cannot use ResiDevice",
+            )
         self._hardware = HuberScan()
         try:
             self._hardware.LoadRmat()
         except RuntimeError as e:
             print(e)
-            print('Setting a default cell (quartz): 4.9287,4.9827,5.3788, 90,90,120')
-            self._hardware.SetCellParam(a=4.9287, b=4.9287, c=5.3788, alpha=90.000, beta=90.000, gamma=120.000)
-        self._hardware.cell.conventionalsystem = 'triclinic'
+            print("Setting a default cell (quartz): 4.9287,4.9827,5.3788, 90,90,120")
+            self._hardware.SetCellParam(
+                a=4.9287, b=4.9287, c=5.3788, alpha=90.000, beta=90.000, gamma=120.000
+            )
+        self._hardware.cell.conventionalsystem = "triclinic"
         self._hardware.cell.standardize = 0
-        self._hardware.cell.pointgroup = '1'
+        self._hardware.cell.pointgroup = "1"
         self._hardware.bisect.cell = self._hardware.cell
         ResiPositionProxy.SetHardware(self._hardware)
-        #self.loglevel='debug'
+        # self.loglevel='debug'
 
     def doRead(self, maxage=0):
         return ResiPositionProxy(self._hardware.GetPosition(maxage))
@@ -123,18 +132,26 @@ class ResiDevice(Moveable):
         self._hardware.Goto(**target)
 
     def doStatus(self, maxage=0):
-        statusmap = {0: (OK, 'idle'), 1: (BUSY, 'moving')}
+        statusmap = {0: (OK, "idle"), 1: (BUSY, "moving")}
         hwstatus = self._hardware.hw.hwll.isrunning()
         return statusmap[hwstatus][0], statusmap[hwstatus][1]
 
     def doInfo(self):
         info = []
         pos = ResiPositionProxy(self._hardware.GetPosition())
-        info.append(('position', pos, str(pos), '', 'experiment'))
-        info.append(('reflex', self._hardware.current_reflex,
-                     str(self._hardware.current_reflex), '', 'experiment'))
-        info.append(('cell', self._hardware.cell,
-                     str(self._hardware.cell), '', 'sample'))
+        info.append(("position", pos, str(pos), "", "experiment"))
+        info.append(
+            (
+                "reflex",
+                self._hardware.current_reflex,
+                str(self._hardware.current_reflex),
+                "",
+                "experiment",
+            )
+        )
+        info.append(
+            ("cell", self._hardware.cell, str(self._hardware.cell), "", "sample")
+        )
         return info
 
     def doStop(self):
@@ -142,10 +159,10 @@ class ResiDevice(Moveable):
         self._hardware.Finish()
 
     def dogetScanDataSet(self, **kw):
-        ''' Get a list of reflections to scan from the unit cell infomation
+        """Get a list of reflections to scan from the unit cell infomation
 
         arguments: either thmin/thmax  or dmin/dmax have to be specified
-        '''
+        """
         return self._hardware.getScanDataset(**kw)
 
 
@@ -154,16 +171,18 @@ class ResiVAxis(Moveable):
 
     this device exports a single axis from the resi device
     """
-    attached_devices = {
-        'basedevice': Attach('the base device', ResiDevice)
-    }
-    parameters = {
-        'mapped_axis': Param('Mapped axis', type=str, mandatory=True)
-    }
+
+    attached_devices = {"basedevice": Attach("the base device", ResiDevice)}
+    parameters = {"mapped_axis": Param("Mapped axis", type=str, mandatory=True)}
+
     def doStart(self, target):
-        self._attached_basedevice.start({self.mapped_axis:target})
+        self._attached_basedevice.start({self.mapped_axis: target})
+
     def doRead(self, maxage=0):
-        return math.degrees(getattr(self._attached_basedevice.read(maxage), self.mapped_axis))
+        return math.degrees(
+            getattr(self._attached_basedevice.read(maxage), self.mapped_axis)
+        )
+
     def doIsCompleted(self):
         # the moves are currently blocking due to restrictions in the underlying hardware access layer.
         return True
@@ -171,15 +190,26 @@ class ResiVAxis(Moveable):
 
 class ResiSample(Sample):
     """Cell object representing sample geometry."""
-    attached_devices = {
-        'basedevice': Attach('the base device', ResiDevice)
-    }
+
+    attached_devices = {"basedevice": Attach("the base device", ResiDevice)}
     parameters = {
-        'lattice': Param('Lattice constants', type=vec3, settable=True,
-                         default=[5, 5 , 5], unit='A',
-                         category='sample'),
-        'angles':  Param('Lattice angles', type=vec3, settable=True,
-                         default=[90, 90, 90], unit='deg', category='sample'),
+        "lattice": Param(
+            "Lattice constants",
+            type=vec3,
+            settable=True,
+            default=[5, 5, 5],
+            unit="A",
+            category="sample",
+        ),
+        "angles": Param(
+            "Lattice angles",
+            type=vec3,
+            settable=True,
+            default=[90, 90, 90],
+            unit="deg",
+            category="sample",
+        ),
     }
+
     def doRead(self, maxage=0):
         return repr(self._attached_basedevice.cell)

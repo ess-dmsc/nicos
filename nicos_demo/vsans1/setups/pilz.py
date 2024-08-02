@@ -1,6 +1,6 @@
-description = 'Inputs from the Pilz control box'
+description = "Inputs from the Pilz control box"
 
-group = 'lowlevel'
+group = "lowlevel"
 
 # TODO: Mapping and description of the devices
 

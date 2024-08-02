@@ -32,28 +32,30 @@ class EFUStatus(Readable):
     """
     This device reports Event Formation Unit status.
     """
+
     parameters = {
-        'ipconfig':
-            Param('IP and port configuration',
-                  type=host(defaultport=DEFAULT_EFU_PORT),
-                  mandatory=True,
-                  userparam=False),
+        "ipconfig": Param(
+            "IP and port configuration",
+            type=host(defaultport=DEFAULT_EFU_PORT),
+            mandatory=True,
+            userparam=False,
+        ),
     }
 
     parameter_overrides = {
-        'unit': Override(mandatory=False, settable=False, volatile=False),
+        "unit": Override(mandatory=False, settable=False, volatile=False),
     }
 
     # key-value pairs translating integer values to an EFU status.
     _stat_to_status = {
-        0: (status.ERROR, 'EFU offline'),
-        1: (status.WARN, 'Processing and output stages inactive'),
-        2: (status.WARN, 'Input and output stages inactive'),
-        3: (status.WARN, 'Output stage inactive'),
-        4: (status.WARN, 'Input and processing stage inactive'),
-        5: (status.WARN, 'Processing stage inactive'),
-        6: (status.WARN, 'Input stage inactive'),
-        7: (status.OK, ''),
+        0: (status.ERROR, "EFU offline"),
+        1: (status.WARN, "Processing and output stages inactive"),
+        2: (status.WARN, "Input and output stages inactive"),
+        3: (status.WARN, "Output stage inactive"),
+        4: (status.WARN, "Input and processing stage inactive"),
+        5: (status.WARN, "Processing stage inactive"),
+        6: (status.WARN, "Input stage inactive"),
+        7: (status.OK, ""),
     }
 
     def doInit(self, mode):
@@ -61,10 +63,10 @@ class EFUStatus(Readable):
         self._command = f'echo "RUNTIMESTATS" | nc {efu_host} {efu_port}'
 
     def doRead(self, maxage=0):
-        return ''
+        return ""
 
     def doStatus(self, maxage=0):
-        unknown_status = (status.ERROR, 'Status could not be retrieved')
+        unknown_status = (status.ERROR, "Status could not be retrieved")
         try:
             # The command will return an integer value which translates into a
             # status of the EFU.
@@ -72,7 +74,5 @@ class EFUStatus(Readable):
             stat = int(raw_stat.split()[-1])
             return self._stat_to_status.get(stat, unknown_status)
         except (ValueError, IndexError, CalledProcessError) as e:
-            self.log.error(
-                'Could not correctly access EFU status. '
-                'Error was: %s', e)
+            self.log.error("Could not correctly access EFU status. " "Error was: %s", e)
             return unknown_status

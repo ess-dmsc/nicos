@@ -27,25 +27,23 @@ from nicos.core.utils import multiWait
 
 
 class ShutterHandler(DataSinkHandler):
-
     _startDataset = None
 
     def _moveShutter(self, target):
-        if self.sink._attached_auto.read(0) == 'auto':
-            session.log.info('Moving shutter to %s', target)
+        if self.sink._attached_auto.read(0) == "auto":
+            session.log.info("Moving shutter to %s", target)
             self.sink._attached_shutter1.start(target)
             self.sink._attached_shutter2.start(target)
-            multiWait([self.sink._attached_shutter1,
-                       self.sink._attached_shutter2])
+            multiWait([self.sink._attached_shutter1, self.sink._attached_shutter2])
 
     def prepare(self):
         if self.dataset.settype == SCAN and not self._startDataset:
             self._startDataset = self.dataset
-            self._moveShutter('open')
+            self._moveShutter("open")
 
     def end(self):
         if self.dataset == self._startDataset:
-            self._moveShutter('closed')
+            self._moveShutter("closed")
             self._startDataset = None
 
 
@@ -56,12 +54,12 @@ class ShutterSink(DataSink):
     on a ManualMove which decides if automatic shutter management is enabled
     or not.
     """
-    attached_devices = {
-        'shutter1': Attach('First shutter to open', Moveable),
-        'shutter2': Attach('Second shutter to open', Moveable),
-        'auto': Attach('Devices which knows if we are in automatic '
-                       'or manual mode',
-                       Readable),
 
+    attached_devices = {
+        "shutter1": Attach("First shutter to open", Moveable),
+        "shutter2": Attach("Second shutter to open", Moveable),
+        "auto": Attach(
+            "Devices which knows if we are in automatic " "or manual mode", Readable
+        ),
     }
     handlerclass = ShutterHandler

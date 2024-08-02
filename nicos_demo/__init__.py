@@ -26,4 +26,4 @@
 
 def determine_instrument(setup_package_path):
     """The default instrument is just always the demo instrument."""
-    return 'demo'
+    return "demo"

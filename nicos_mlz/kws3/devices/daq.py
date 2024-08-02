@@ -24,8 +24,19 @@
 import numpy
 from scipy.signal import convolve2d
 
-from nicos.core import Attach, DeviceAlias, Measurable, Moveable, Override, \
-    Param, Value, listof, oneof, status, tupleof
+from nicos.core import (
+    Attach,
+    DeviceAlias,
+    Measurable,
+    Moveable,
+    Override,
+    Param,
+    Value,
+    listof,
+    oneof,
+    status,
+    tupleof,
+)
 from nicos.devices.generic.detector import PostprocessPassiveChannel
 
 
@@ -33,38 +44,43 @@ class DetSwitcher(Moveable):
     """Switches the channel alias device between HRD and VHRD."""
 
     attached_devices = {
-        'alias': Attach('the alias to switch', DeviceAlias),
-        'hrd':   Attach('the HRD device', Measurable),
-        'vhrd':  Attach('the VHRD device', Measurable),
+        "alias": Attach("the alias to switch", DeviceAlias),
+        "hrd": Attach("the HRD device", Measurable),
+        "vhrd": Attach("the VHRD device", Measurable),
     }
 
-    _values = ['HRD', 'VHRD']
+    _values = ["HRD", "VHRD"]
 
     parameters = {
-        'values': Param('Possible values', type=listof(str),
-                        default=_values, settable=False, internal=True),
+        "values": Param(
+            "Possible values",
+            type=listof(str),
+            default=_values,
+            settable=False,
+            internal=True,
+        ),
     }
 
     parameter_overrides = {
-        'unit':  Override(default='', mandatory=False),
+        "unit": Override(default="", mandatory=False),
     }
 
     valuetype = oneof(*_values)
 
     def doRead(self, maxage=0):
         if self._attached_alias.alias == self._attached_hrd.name:
-            return 'HRD'
+            return "HRD"
         elif self._attached_alias.alias == self._attached_vhrd.name:
-            return 'VHRD'
-        return 'unknown'
+            return "VHRD"
+        return "unknown"
 
     def doStatus(self, maxage=0):
-        if self.doRead(maxage) == 'unknown':
-            return status.WARN, ''
-        return status.OK, ''
+        if self.doRead(maxage) == "unknown":
+            return status.WARN, ""
+        return status.OK, ""
 
     def doStart(self, target):
-        if target == 'HRD':
+        if target == "HRD":
             self._attached_alias.alias = self._attached_hrd
         else:
             self._attached_alias.alias = self._attached_vhrd
@@ -74,39 +90,46 @@ class ConvolutionMax(PostprocessPassiveChannel):
     """Convolves the detector image with NxN ones and returns the maximum."""
 
     parameters = {
-        'npixels': Param('Size of kernel', type=int, default=5, settable=True),
+        "npixels": Param("Size of kernel", type=int, default=5, settable=True),
     }
 
     parameter_overrides = {
-        'unit':   Override(default='cts'),
-        'fmtstr': Override(default='%d'),
+        "unit": Override(default="cts"),
+        "fmtstr": Override(default="%d"),
     }
 
     def setReadResult(self, arrays, results, quality):
         kern = numpy.ones((self.npixels, self.npixels))
-        self.readresult = [convolve2d(a, kern, mode='valid').max()
-                           if a is not None else 0
-                           for a in arrays]
+        self.readresult = [
+            convolve2d(a, kern, mode="valid").max() if a is not None else 0
+            for a in arrays
+        ]
 
     def valueInfo(self):
-        return Value(name=self.name, type='counter', fmtstr='%d'),
+        return (Value(name=self.name, type="counter", fmtstr="%d"),)
 
 
 class ROIChannel(PostprocessPassiveChannel):
     """Calculates counts for a rectangular or ellipsoid region of interest."""
 
     parameters = {
-        'roi':   Param('Rectangular region of interest (x1, y1, x2, y2)',
-                       type=tupleof(int, int, int, int),
-                       settable=True, category='general'),
-        'shape': Param('Select the shape of the ROI',
-                       type=oneof('rectangle', 'ellipse'),
-                       settable=True, category='general'),
+        "roi": Param(
+            "Rectangular region of interest (x1, y1, x2, y2)",
+            type=tupleof(int, int, int, int),
+            settable=True,
+            category="general",
+        ),
+        "shape": Param(
+            "Select the shape of the ROI",
+            type=oneof("rectangle", "ellipse"),
+            settable=True,
+            category="general",
+        ),
     }
 
     parameter_overrides = {
-        'unit':   Override(default='cts'),
-        'fmtstr': Override(default='%d'),
+        "unit": Override(default="cts"),
+        "fmtstr": Override(default="%d"),
     }
 
     def getReadResult(self, arrays, _results, _quality):
@@ -115,18 +138,20 @@ class ROIChannel(PostprocessPassiveChannel):
             return [0, 0]
         if any(self.roi):
             x1, y1, x2, y2 = self.roi
-            if self.shape == 'rectangle':
+            if self.shape == "rectangle":
                 inner = arr[y1:y2, x1:x2].sum()
             else:
-                cx = (x1 + x2)/2.
-                cy = (y1 + y2)/2.
+                cx = (x1 + x2) / 2.0
+                cy = (y1 + y2) / 2.0
                 y, x = numpy.indices(arr.shape)
-                ix = ((y - cy)/(y2 - cy))**2 - ((x - cx)/(x2 - cx))**2 <= 1
+                ix = ((y - cy) / (y2 - cy)) ** 2 - ((x - cx) / (x2 - cx)) ** 2 <= 1
                 inner = arr[ix].sum()
             outer = arr.sum() - inner
             return [inner, outer]
         return [arr.sum(), 0]
 
     def valueInfo(self):
-        return (Value(name=self.name + '.in', type='counter', fmtstr='%d'),
-                Value(name=self.name + '.out', type='counter', fmtstr='%d'))
+        return (
+            Value(name=self.name + ".in", type="counter", fmtstr="%d"),
+            Value(name=self.name + ".out", type="counter", fmtstr="%d"),
+        )

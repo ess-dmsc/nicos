@@ -28,18 +28,32 @@ positions.
 
 from nicos.clients.gui.panels import AuxiliaryWindow, Panel
 from nicos.clients.gui.panels.tabwidget import DetachedWindow
-from nicos.guisupport.qt import QAbstractButton, QAbstractItemView, \
-    QDialogButtonBox, QEvent, QLabel, QLineEdit, QPixmap, QSize, QStyle, \
-    QStyleOptionHeader, QStylePainter, Qt, QTableWidget, QVBoxLayout
+from nicos.guisupport.qt import (
+    QAbstractButton,
+    QAbstractItemView,
+    QDialogButtonBox,
+    QEvent,
+    QLabel,
+    QLineEdit,
+    QPixmap,
+    QSize,
+    QStyle,
+    QStyleOptionHeader,
+    QStylePainter,
+    Qt,
+    QTableWidget,
+    QVBoxLayout,
+)
 from nicos.utils import findResource
 
 
 class TableWidget(QTableWidget):
     """Fancy QTableWidget with settable CornerButtonWidget by AL"""
+
     def __init__(self, parent=None):
         QTableWidget.__init__(self, parent)
 
-        self._cornerText = ''
+        self._cornerText = ""
 
         self._cornerButton = self.findChildren(QAbstractButton)[0]
         self._cornerButton.installEventFilter(self)
@@ -52,8 +66,8 @@ class TableWidget(QTableWidget):
         opt = QStyleOptionHeader()
         opt.text = text
         size = self._cornerButton.style().sizeFromContents(
-            QStyle.ContentsType.CT_HeaderSection, opt, QSize(),
-            self._cornerButton)
+            QStyle.ContentsType.CT_HeaderSection, opt, QSize(), self._cornerButton
+        )
         self.verticalHeader().setMinimumWidth(size.width())
 
     def eventFilter(self, obj, event):
@@ -76,8 +90,10 @@ class CustomButtonPanel(Panel):
     with a QDialogButtonBox at the lower right and some glue magic for
     fancy stuff...
     """
-    buttons = (QDialogButtonBox.StandardButton.Close |
-               QDialogButtonBox.StandardButton.Apply)
+
+    buttons = (
+        QDialogButtonBox.StandardButton.Close | QDialogButtonBox.StandardButton.Apply
+    )
 
     def __init__(self, parent, client, options):
         Panel.__init__(self, parent, client, options)
@@ -87,30 +103,35 @@ class CustomButtonPanel(Panel):
 
         # make a buttonBox
         self.buttonBox = QDialogButtonBox(self.buttons, parent=self)
-        self.buttonBox.setObjectName('buttonBox')
+        self.buttonBox.setObjectName("buttonBox")
 
         # put buttonBox below main content
         self.vBoxLayout.addWidget(self.buttonBox)
 
-        allButtons = 'Ok Open Save Cancel Close Discard Apply Reset '\
-                     'RestoreDefaults Help SaveAll Yes YesToAll No NoToAll '\
-                     'Abort Retry Ignore'.split()
+        allButtons = (
+            "Ok Open Save Cancel Close Discard Apply Reset "
+            "RestoreDefaults Help SaveAll Yes YesToAll No NoToAll "
+            "Abort Retry Ignore".split()
+        )
         for btn_name in allButtons:
-            btn = self.buttonBox.button(getattr(QDialogButtonBox.StandardButton,
-                                                btn_name))
+            btn = self.buttonBox.button(
+                getattr(QDialogButtonBox.StandardButton, btn_name)
+            )
             if btn:
-                handler = getattr(self, 'on_buttonBox_%s_clicked' % btn_name,
-                                  None)
+                handler = getattr(self, "on_buttonBox_%s_clicked" % btn_name, None)
                 if not handler:
+
                     def handler(self=self, n=btn_name):
-                        self.showError('on_buttonBox_%s_clicked not '
-                                       'implemented!' % n)
+                        self.showError(
+                            "on_buttonBox_%s_clicked not " "implemented!" % n
+                        )
+
                 btn.clicked.connect(handler)
 
     def panelState(self):
         """returns current window state as obtained from the stack of parents"""
         obj = self
-        while hasattr(obj, 'parent'):
+        while hasattr(obj, "parent"):
             if isinstance(obj, AuxiliaryWindow):
                 return "tab"
             elif isinstance(obj, DetachedWindow):
@@ -123,7 +144,7 @@ class CustomButtonPanel(Panel):
 
     def on_buttonBox_Ok_clicked(self):
         """OK = Apply + Close"""
-        if hasattr(self, 'on_buttonBox_Apply_clicked'):
+        if hasattr(self, "on_buttonBox_Apply_clicked"):
             self.on_buttonBox_Apply_clicked()
         self.on_buttonBox_Close_clicked()
 
@@ -136,11 +157,14 @@ class SamplechangerSetupPanel(CustomButtonPanel):
     samplechanger - name of the main samplechanger device (must be Moveable or
                     DeviceAlias)
     """
+
     # this needs to be unique!
-    panelName = 'Samplechanger setup'
-    buttons = (QDialogButtonBox.StandardButton.Close |
-               QDialogButtonBox.StandardButton.Apply |
-               QDialogButtonBox.StandardButton.Ok)
+    panelName = "Samplechanger setup"
+    buttons = (
+        QDialogButtonBox.StandardButton.Close
+        | QDialogButtonBox.StandardButton.Apply
+        | QDialogButtonBox.StandardButton.Ok
+    )
 
     _numSamples = 0
 
@@ -150,65 +174,67 @@ class SamplechangerSetupPanel(CustomButtonPanel):
         self._tableWidget = TableWidget(self)
 
         self._tableWidget.setColumnCount(1)
-        self._tableWidget.setHorizontalHeaderLabels(['Sample name'])
+        self._tableWidget.setHorizontalHeaderLabels(["Sample name"])
         self._tableWidget.horizontalHeaderItem(0).setTextAlignment(
-            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
+        )
         self._tableWidget.setSortingEnabled(False)
-        self._tableWidget.setCornerLabel('Position')
+        self._tableWidget.setCornerLabel("Position")
 
         self.vBoxLayout.insertWidget(0, self._tableWidget)
 
         client.connected.connect(self.on_client_connected)
         client.setup.connect(self.on_client_connected)
 
-        image = options.get('image', None)
+        image = options.get("image", None)
         # insert the optional image at top...
         if image:
             l = QLabel(self)
             l.setText(image)
             # insert above scrollArea
-            self.vBoxLayout.insertWidget(
-                0, l, alignment=Qt.AlignmentFlag.AlignHCenter)
+            self.vBoxLayout.insertWidget(0, l, alignment=Qt.AlignmentFlag.AlignHCenter)
             p = QPixmap()
             if p.load(findResource(image)):
                 l.setPixmap(p)
             else:
-                msg = 'Loading of Image %r failed:' % image
-                msg += '\n\nCheck GUI config file for %r' % __file__
+                msg = "Loading of Image %r failed:" % image
+                msg += "\n\nCheck GUI config file for %r" % __file__
                 self.showError(msg)
 
-        self._numSamples = int(options.get('positions', 11))
+        self._numSamples = int(options.get("positions", 11))
         self._tableWidget.setRowCount(self._numSamples)
         # fill in widgets into grid
         for pos in range(self._numSamples):
-            self._tableWidget.setCellWidget(pos, 0, QLineEdit(''))
+            self._tableWidget.setCellWidget(pos, 0, QLineEdit(""))
 
         self._tableWidget.horizontalHeader().setStretchLastSection(100)
         # now fill in data
         self._update_sample_info()
 
     def _update_sample_info(self):
-        names = self.client.eval('Exp.sample.samples', None)
+        names = self.client.eval("Exp.sample.samples", None)
         if names is None:
             return
         for i in range(self._numSamples):
-            name = names.get(i + 1, {}).get('name', '')
+            name = names.get(i + 1, {}).get("name", "")
             self._tableWidget.cellWidget(i, 0).setText(name)
 
     def _applyChanges(self):
-        code = ['ClearSamples()']
+        code = ["ClearSamples()"]
 
         for i in range(self._numSamples):
             name = self._tableWidget.cellWidget(i, 0).text().strip()
             if name:
-                code.append('SetSample(%d, %r)' % (i + 1, name))
+                code.append("SetSample(%d, %r)" % (i + 1, name))
 
-        self.client.run('\n'.join(code) + '\n')
+        self.client.run("\n".join(code) + "\n")
 
-        st = self.client.ask('getstatus')
-        if st and st['requests']:
-            self.showInfo('Name changes were queued and will be updated\n'
-                          'after the currently executed script finished.')
+        st = self.client.ask("getstatus")
+        if st and st["requests"]:
+            self.showInfo(
+                "Name changes were queued and will be updated\n"
+                "after the currently executed script finished."
+            )
 
     def on_client_connected(self):
         self._update_sample_info()

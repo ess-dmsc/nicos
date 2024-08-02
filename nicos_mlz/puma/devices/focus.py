@@ -31,14 +31,12 @@ class FocusAxis(Axis):
     """Special Axis for the monochromator and analyser focus."""
 
     parameters = {
-        'uplimit': Param('The upper limit',
-                         type=float, unit='deg', settable=False),
-        'lowlimit': Param('The upper limit',
-                          type=float, unit='deg', settable=False),
-        'startpos': Param('The backlash position',
-                          type=float, unit='deg', settable=False),
-        'flatpos': Param('The flat position',
-                         type=float, unit='deg', settable=False),
+        "uplimit": Param("The upper limit", type=float, unit="deg", settable=False),
+        "lowlimit": Param("The upper limit", type=float, unit="deg", settable=False),
+        "startpos": Param(
+            "The backlash position", type=float, unit="deg", settable=False
+        ),
+        "flatpos": Param("The flat position", type=float, unit="deg", settable=False),
     }
 
     def doStart(self, target):
@@ -49,12 +47,12 @@ class FocusAxis(Axis):
         elif target < self.lowlimit:
             target = self.lowlimit
         if self.target != target:
-            self._setROParam('target', target)
+            self._setROParam("target", target)
 
         # This is the calculation of a dynamic changing backlash
         # If a blacklash is needed, it should start from the 'startpos' value
         curpos = self.read(0)
         direct = (target - curpos) * (curpos - self.startpos)
         self.backlash = self.startpos - target if direct < 0 else 0
-        self.log.debug('backlash is now: %.3f', self.backlash)
+        self.log.debug("backlash is now: %.3f", self.backlash)
         Axis.doStart(self, target)

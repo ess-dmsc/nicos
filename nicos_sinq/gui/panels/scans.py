@@ -33,14 +33,13 @@ from nicos_sinq.devices.illasciisink import ILLAsciiScanfileReader
 
 
 class ScansPanel(FlowUIScansPanel):
-
     def set_icons(self):
         FlowUIScansPanel.set_icons(self)
-        self.actionOpen.setIcon(get_icon('folder_open-24px.svg'))
+        self.actionOpen.setIcon(get_icon("folder_open-24px.svg"))
 
     def createPanelToolbar(self):
         default_bar, fitbar = FlowUIScansPanel.createPanelToolbar(self)
-        bar = QToolBar('Scans')
+        bar = QToolBar("Scans")
         bar.addAction(self.actionOpen)
         for action in default_bar.actions():
             bar.addAction(action)
@@ -50,11 +49,12 @@ class ScansPanel(FlowUIScansPanel):
     def on_actionOpen_triggered(self):
         """Open image file using registered reader classes."""
         ffilters = {
-            'Scan files (*.dat)': AsciiScanfileReader,
-            'SINQ TAS files (*.dat *.scn)': ILLAsciiScanfileReader,
+            "Scan files (*.dat)": AsciiScanfileReader,
+            "SINQ TAS files (*.dat *.scn)": ILLAsciiScanfileReader,
         }
-        fdialog = FileFilterDialog(self, "Open data files", "",
-                                   ";;".join(ffilters.keys()))
+        fdialog = FileFilterDialog(
+            self, "Open data files", "", ";;".join(ffilters.keys())
+        )
         if self._fileopen_filter:
             fdialog.selectNameFilter(self._fileopen_filter)
         if fdialog.exec() != QDialog.DialogCode.Accepted:
@@ -65,8 +65,6 @@ class ScansPanel(FlowUIScansPanel):
         self._fileopen_filter = fdialog.selectedNameFilter()
         for f in files:
             try:
-                self.data.on_client_dataset(
-                    ffilters[self._fileopen_filter](f).scandata
-                )
+                self.data.on_client_dataset(ffilters[self._fileopen_filter](f).scandata)
             except Exception as err:
                 self.showError("Can't load scan file: %s (%s)" % (f, err))

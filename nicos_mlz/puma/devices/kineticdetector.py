@@ -39,22 +39,22 @@ class KineticDetector(Detector):
         for i, dev in enumerate(self._attached_timers):
             if isinstance(dev, ActiveChannel):
                 if i == 0:
-                    yield ('t', dev, 'time')
-                    yield ('time', dev, 'time')
-                yield ('timer%d' % (i + 1), dev, 'time')
+                    yield ("t", dev, "time")
+                    yield ("time", dev, "time")
+                yield ("timer%d" % (i + 1), dev, "time")
         for i, dev in enumerate(self._attached_monitors):
             if isinstance(dev, ActiveChannel):
-                if dev.name.lower().startswith('mon'):
-                    yield ('mon%d' % (i + 1), dev, 'monitor')
+                if dev.name.lower().startswith("mon"):
+                    yield ("mon%d" % (i + 1), dev, "monitor")
                 else:
-                    yield (dev.name.lower(), dev, 'monitor')
+                    yield (dev.name.lower(), dev, "monitor")
         for i, dev in enumerate(self._attached_counters):
             if isinstance(dev, ActiveChannel):
                 if i == 0:
-                    yield ('n', dev)
-                yield ('det%d' % (i + 1), dev, 'counts')
-                yield ('ctr%d' % (i + 1), dev, 'counts')
+                    yield ("n", dev)
+                yield ("det%d" % (i + 1), dev, "counts")
+                yield ("ctr%d" % (i + 1), dev, "counts")
         for i, dev in enumerate(self._attached_images):
             if isinstance(dev, ActiveChannel):
-                yield ('img%d' % (i + 1), dev, 'counts')
-        yield ('live', None, 'other')
+                yield ("img%d" % (i + 1), dev, "counts")
+        yield ("live", None, "other")

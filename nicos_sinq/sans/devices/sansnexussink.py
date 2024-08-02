@@ -27,5 +27,5 @@ from nicos_sinq.devices.datasinks import SwitchableNexusSink
 
 class SANSNexusSink(SwitchableNexusSink):
     parameter_overrides = {
-        'settypes': Override(settable=True),
+        "settypes": Override(settable=True),
     }

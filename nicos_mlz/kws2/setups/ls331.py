@@ -1,24 +1,23 @@
-description = 'LakeShore 331 temperature control/sensor'
+description = "LakeShore 331 temperature control/sensor"
 
-group = 'optional'
+group = "optional"
 
-includes = ['alias_T']
+includes = ["alias_T"]
 
-tango_base = 'tango://phys.kws2.frm2:10000/kws2/'
+tango_base = "tango://phys.kws2.frm2:10000/kws2/"
 
 devices = dict(
-    T_ls331_A = device('nicos.devices.entangle.Sensor',
-        description = 'Sensor A of LakeShore',
-        tangodevice = tango_base + 'ls331/sensora',
-        unit = 'degC',
-        fmtstr = '%.2f',
+    T_ls331_A=device(
+        "nicos.devices.entangle.Sensor",
+        description="Sensor A of LakeShore",
+        tangodevice=tango_base + "ls331/sensora",
+        unit="degC",
+        fmtstr="%.2f",
     ),
 )
 
-alias_config = {
-    'Ts': {'T_ls331_A': 80}
-}
+alias_config = {"Ts": {"T_ls331_A": 80}}
 
 extended = dict(
-    representative = 'T_ls331_A',
+    representative="T_ls331_A",
 )

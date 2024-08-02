@@ -1,15 +1,22 @@
-description = 'Virtual TOFTOF instrument setup'
+description = "Virtual TOFTOF instrument setup"
 
-group = 'basic'
+group = "basic"
 
 includes = [
-    'detector', 'chopper', 'vacuum', 'voltage', 'table', 'slit', 'collimator',
-    'rc', 'reactor',
-    'nl2a',
+    "detector",
+    "chopper",
+    "vacuum",
+    "voltage",
+    "table",
+    "slit",
+    "collimator",
+    "rc",
+    "reactor",
+    "nl2a",
 ]
 
-startupcode = '''
+startupcode = """
 SetDetectors(det)
 SetEnvironment(ReactorPower)
 # AddEnvironment(chDS)
-'''
+"""

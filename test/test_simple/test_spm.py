@@ -27,7 +27,7 @@ from nicos.core import SPMError
 
 from test.utils import raises
 
-session_setup = 'axis'
+session_setup = "axis"
 session_spmode = True
 
 
@@ -38,28 +38,28 @@ def spmexec(session, source):
 def test_spm(session):
     # note the use of createDevice here; devices used via SPM must be in the
     # "explicit devices" list, but the TestSession does not autocreate devices
-    axis = session.createDevice('axis', explicit=True)
+    axis = session.createDevice("axis", explicit=True)
     axis.maw(0)
 
     # normal command execution
-    spmexec(session, 'maw axis 1')
+    spmexec(session, "maw axis 1")
     assert axis() == 1
-    spmexec(session, 'scan axis 1 1 2')
+    spmexec(session, "scan axis 1 1 2")
     assert axis() == 2
 
     # "direct" invocation of devices
-    spmexec(session, 'axis 2')
+    spmexec(session, "axis 2")
     assert axis() == 2
 
     # more complicated commands
-    session.createDevice('slow_motor', explicit=True)
+    session.createDevice("slow_motor", explicit=True)
     # automatic stringification of some parameters
-    spmexec(session, 'get slow_motor userlimits')
+    spmexec(session, "get slow_motor userlimits")
     # args in parentheses/brackets are preserved
-    spmexec(session, 'set slow_motor userlimits (0, 2)')
+    spmexec(session, "set slow_motor userlimits (0, 2)")
 
     # invalid or missing syntax
-    assert raises(SPMError, spmexec, session, 'get axis')
-    assert raises(SPMError, spmexec, session, 'read @axis')
+    assert raises(SPMError, spmexec, session, "get axis")
+    assert raises(SPMError, spmexec, session, "read @axis")
     # only one form allowed
-    assert raises(SPMError, spmexec, session, 'scan axis [0, 1, 2]')
+    assert raises(SPMError, spmexec, session, "scan axis [0, 1, 2]")

@@ -32,19 +32,19 @@ class ProcDevice(Moveable):
     wait for it to finish.
     """
 
-    parameters = {'subprocess': Param('Path of subprocess to run',
-                                      type=str, mandatory=True),
-                  'args': Param('Arguments for the subprocess',
-                                type=listof(str), mandatory=True), }
+    parameters = {
+        "subprocess": Param("Path of subprocess to run", type=str, mandatory=True),
+        "args": Param("Arguments for the subprocess", type=listof(str), mandatory=True),
+    }
 
     parameter_overrides = {
-        'unit': Override(description='(not used)', mandatory=False),
+        "unit": Override(description="(not used)", mandatory=False),
     }
     _subprocess = None
 
     def doStart(self, target):
         if self._subprocess is not None:
-            raise InvalidValueError('Process is still running')
+            raise InvalidValueError("Process is still running")
 
         fullargs = list(self.args)
         fullargs.insert(0, self.subprocess)
@@ -61,7 +61,7 @@ class ProcDevice(Moveable):
             return True
 
     def doRead(self, maxage=0):
-        return .0
+        return 0.0
 
     def doStop(self):
         if self._subprocess is not None:

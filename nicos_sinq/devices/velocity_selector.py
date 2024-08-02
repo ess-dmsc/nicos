@@ -34,9 +34,9 @@ class VSForbiddenMoveable(WindowMoveable):
     """
 
     parameters = {
-        'forbidden_regions': Param('List of forbidden regions',
-                                   type=listof(tupleof(int, int)),
-                                   mandatory=True)
+        "forbidden_regions": Param(
+            "List of forbidden regions", type=listof(tupleof(int, int)), mandatory=True
+        )
     }
 
     valuetype = int
@@ -44,11 +44,12 @@ class VSForbiddenMoveable(WindowMoveable):
     def doIsAllowed(self, value):
         for region in self.forbidden_regions:
             if region[0] < value < region[1]:
-                return False, \
-                       'Desired value value is within ' \
-                       'forbidden region %f to %f' \
-                       % (region[0], region[1])
-        return True, ''
+                return (
+                    False,
+                    "Desired value value is within "
+                    "forbidden region %f to %f" % (region[0], region[1]),
+                )
+        return True, ""
 
 
 class VSTiltMotor(EpicsMotor):
@@ -56,21 +57,23 @@ class VSTiltMotor(EpicsMotor):
     The tilt motor for a velocity selector can only be moved when
     the selector is standing. This class ensures just that.
     """
+
     attached_devices = {
-        'vs_rotation': Attach('Velcocity Selector Rotation',
-                              Moveable),
+        "vs_rotation": Attach("Velcocity Selector Rotation", Moveable),
     }
 
     parameters = {
-        'limit': Param('Limit below which the rotation is considered standing',
-                       type=float, mandatory=True)
+        "limit": Param(
+            "Limit below which the rotation is considered standing",
+            type=float,
+            mandatory=True,
+        )
     }
 
     def doIsAllowed(self, target):
         if self._attached_vs_rotation.read(0) > self.limit:
-            return False, \
-                   'Velocity Selector must be stopped before moving tilt'
-        return True, ''
+            return False, "Velocity Selector must be stopped before moving tilt"
+        return True, ""
 
     def doStart(self, target):
         EpicsMotor.doStart(self, target)
@@ -83,22 +86,31 @@ class VSLambda(Moveable):
     """
 
     attached_devices = {
-        'seldev':  Attach('The selector speed device', Moveable),
-        'tiltdev': Attach('The tilt angle motor, if present', Moveable,
-                          optional=True),
+        "seldev": Attach("The selector speed device", Moveable),
+        "tiltdev": Attach("The tilt angle motor, if present", Moveable, optional=True),
     }
 
     def _calcCoefficients(self):
         tilt = self._attached_tiltdev.read(0)
-        tsq = tilt*tilt
-        tter = tilt*tsq
-        tquat = tter*tilt
+        tsq = tilt * tilt
+        tter = tilt * tsq
+        tquat = tter * tilt
 
-        A = 0.01223 + (0.000360495 * tilt) + (0.000313819 * tsq) + \
-            (0.0000304937 * tter) + (0.000000931533 * tquat)
+        A = (
+            0.01223
+            + (0.000360495 * tilt)
+            + (0.000313819 * tsq)
+            + (0.0000304937 * tter)
+            + (0.000000931533 * tquat)
+        )
 
-        B = 12721.11905 - (611.74127 * tilt) - (12.44417 * tsq) - \
-            (0.12411 * tter) + (0.00583 * tquat)
+        B = (
+            12721.11905
+            - (611.74127 * tilt)
+            - (12.44417 * tsq)
+            - (0.12411 * tter)
+            + (0.00583 * tquat)
+        )
         return A, B
 
     def doRead(self, maxage):
@@ -110,16 +122,16 @@ class VSLambda(Moveable):
 
     def doIsAllowed(self, value):
         if value == 0:
-            return False, 'zero wavelength not allowed'
+            return False, "zero wavelength not allowed"
         A, B = self._calcCoefficients()
-        speed = B/(value - A)
+        speed = B / (value - A)
         allowed, why = self._attached_seldev.isAllowed(speed)
         if not allowed:
-            why = 'requested %d rpm, %s' % (speed, why)
+            why = "requested %d rpm, %s" % (speed, why)
         return allowed, why
 
     def doStart(self, target):
         A, B = self._calcCoefficients()
-        speed = B/(target - A)
-        self.log.debug('moving selector to %d rpm', speed)
+        speed = B / (target - A)
+        self.log.debug("moving selector to %d rpm", speed)
         self._attached_seldev.start(speed)

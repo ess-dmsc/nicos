@@ -26,17 +26,32 @@
 
 from math import cos, pi, radians, sqrt
 
-from nicos.core import SIMULATION, Attach, AutoDevice, ComputationError, \
-    HasAutoDevices, InvalidValueError, LimitError, Moveable, Override, Param, \
-    Readable, Value, multiStatus, oneof, status, tupleof
+from nicos.core import (
+    SIMULATION,
+    Attach,
+    AutoDevice,
+    ComputationError,
+    HasAutoDevices,
+    InvalidValueError,
+    LimitError,
+    Moveable,
+    Override,
+    Param,
+    Readable,
+    Value,
+    multiStatus,
+    oneof,
+    status,
+    tupleof,
+)
 from nicos.devices.instrument import Instrument
 from nicos.devices.tas import spurions
 from nicos.devices.tas.cell import Cell
 from nicos.devices.tas.mono import THZ2MEV, Monochromator, from_k, to_k
 
-SCANMODES = ['CKI', 'CKF', 'CPHI', 'CPSI', 'DIFF']
+SCANMODES = ["CKI", "CKF", "CPHI", "CPSI", "DIFF"]
 
-ENERGYTRANSFERUNITS = ['meV', 'THz']
+ENERGYTRANSFERUNITS = ["meV", "THz"]
 
 
 class TAS(HasAutoDevices, Instrument, Moveable):
@@ -47,46 +62,72 @@ class TAS(HasAutoDevices, Instrument, Moveable):
     """
 
     attached_devices = {
-        'cell':  Attach('Unit cell object to calculate angles', Cell),
-        'mono':  Attach('Monochromator device', Monochromator),
-        'ana':   Attach('Analysator device', Monochromator),
-        'phi':   Attach('Sample scattering angle', Moveable),
-        'psi':   Attach('Sample rocking angle', Moveable),
-        'alpha': Attach('Device moved to "alpha" angle between ki and Q',
-                        Moveable, optional=True),
+        "cell": Attach("Unit cell object to calculate angles", Cell),
+        "mono": Attach("Monochromator device", Monochromator),
+        "ana": Attach("Analysator device", Monochromator),
+        "phi": Attach("Sample scattering angle", Moveable),
+        "psi": Attach("Sample rocking angle", Moveable),
+        "alpha": Attach(
+            'Device moved to "alpha" angle between ki and Q', Moveable, optional=True
+        ),
     }
 
     parameters = {
-        'scanmode':     Param('Operation mode: one of ' + ', '.join(SCANMODES),
-                              type=oneof(*SCANMODES), default='CKI',
-                              settable=True, category='instrument'),
-        'scanconstant': Param('Constant of the operation mode', type=float,
-                              default=0, settable=True, category='instrument'),
-        'axiscoupling': Param('Whether the sample th/tt axes are coupled',
-                              type=bool, default=False, settable=True,
-                              category='instrument'),
-        'psi360':       Param('Whether the range of psi is 0-360 deg '
-                              '(otherwise -180-180 deg is assumed)',
-                              type=bool, default=True, settable=True,
-                              category='instrument'),
-        'scatteringsense': Param('Scattering sense', default=(1, -1, 1),
-                                 type=tupleof(oneof(1, -1),
-                                              oneof(1, -1),
-                                              oneof(1, -1)), settable=True,
-                                 chatty=True, category='instrument'),
-        'energytransferunit': Param('Energy transfer unit', type=str,
-                                    default='THz', settable=True),
-        'collimation':  Param('Collimation settings', type=str,
-                              settable=True, category='instrument'),
-        'spurioncheck': Param('Whether to check for spurions during simulation',
-                              settable=True, type=bool, default=True),
+        "scanmode": Param(
+            "Operation mode: one of " + ", ".join(SCANMODES),
+            type=oneof(*SCANMODES),
+            default="CKI",
+            settable=True,
+            category="instrument",
+        ),
+        "scanconstant": Param(
+            "Constant of the operation mode",
+            type=float,
+            default=0,
+            settable=True,
+            category="instrument",
+        ),
+        "axiscoupling": Param(
+            "Whether the sample th/tt axes are coupled",
+            type=bool,
+            default=False,
+            settable=True,
+            category="instrument",
+        ),
+        "psi360": Param(
+            "Whether the range of psi is 0-360 deg "
+            "(otherwise -180-180 deg is assumed)",
+            type=bool,
+            default=True,
+            settable=True,
+            category="instrument",
+        ),
+        "scatteringsense": Param(
+            "Scattering sense",
+            default=(1, -1, 1),
+            type=tupleof(oneof(1, -1), oneof(1, -1), oneof(1, -1)),
+            settable=True,
+            chatty=True,
+            category="instrument",
+        ),
+        "energytransferunit": Param(
+            "Energy transfer unit", type=str, default="THz", settable=True
+        ),
+        "collimation": Param(
+            "Collimation settings", type=str, settable=True, category="instrument"
+        ),
+        "spurioncheck": Param(
+            "Whether to check for spurions during simulation",
+            settable=True,
+            type=bool,
+            default=True,
+        ),
     }
 
     parameter_overrides = {
-        'fmtstr': Override(default='[%6.4f, %6.4f, %6.4f, %6.4f]'),
-        'unit':   Override(default='rlu rlu rlu THz', mandatory=False,
-                           settable=True),
-        'visibility': Override(default={'metadata', 'namespace', 'devlist'}),
+        "fmtstr": Override(default="[%6.4f, %6.4f, %6.4f, %6.4f]"),
+        "unit": Override(default="rlu rlu rlu THz", mandatory=False, settable=True),
+        "visibility": Override(default={"metadata", "namespace", "devlist"}),
     }
 
     valuetype = tupleof(float, float, float, float)
@@ -94,42 +135,81 @@ class TAS(HasAutoDevices, Instrument, Moveable):
     hardware_access = False
 
     def doInit(self, mode):
-        self.add_autodevice('h', TASIndex, namespace='global',
-                            unit='rlu', fmtstr='%.3f', index=0,
-                            visibility=self.autodevice_visibility, tas=self)
-        self.add_autodevice('k', TASIndex, namespace='global',
-                            unit='rlu', fmtstr='%.3f', index=1,
-                            visibility=self.autodevice_visibility, tas=self)
-        self.add_autodevice('l', TASIndex, namespace='global',
-                            unit='rlu', fmtstr='%.3f', index=2,
-                            visibility=self.autodevice_visibility, tas=self)
-        self.add_autodevice('E', TASIndex, namespace='global',
-                            unit=self.energytransferunit, fmtstr='%.3f',
-                            index=3, visibility=self.autodevice_visibility,
-                            tas=self)
+        self.add_autodevice(
+            "h",
+            TASIndex,
+            namespace="global",
+            unit="rlu",
+            fmtstr="%.3f",
+            index=0,
+            visibility=self.autodevice_visibility,
+            tas=self,
+        )
+        self.add_autodevice(
+            "k",
+            TASIndex,
+            namespace="global",
+            unit="rlu",
+            fmtstr="%.3f",
+            index=1,
+            visibility=self.autodevice_visibility,
+            tas=self,
+        )
+        self.add_autodevice(
+            "l",
+            TASIndex,
+            namespace="global",
+            unit="rlu",
+            fmtstr="%.3f",
+            index=2,
+            visibility=self.autodevice_visibility,
+            tas=self,
+        )
+        self.add_autodevice(
+            "E",
+            TASIndex,
+            namespace="global",
+            unit=self.energytransferunit,
+            fmtstr="%.3f",
+            index=3,
+            visibility=self.autodevice_visibility,
+            tas=self,
+        )
         self._last_calpos = None
 
         if self.scatteringsense[0] != self._attached_mono.scatteringsense:
-            self.log.warning('%s.scatteringsense is not the same as '
-                             '%s.scatteringsense[0], please reset %s',
-                             self._attached_mono, self, self)
+            self.log.warning(
+                "%s.scatteringsense is not the same as "
+                "%s.scatteringsense[0], please reset %s",
+                self._attached_mono,
+                self,
+                self,
+            )
         if self.scatteringsense[2] != self._attached_ana.scatteringsense:
-            self.log.warning('%s.scatteringsense is not the same as '
-                             '%s.scatteringsense[2], please reset %s',
-                             self._attached_ana, self, self)
+            self.log.warning(
+                "%s.scatteringsense is not the same as "
+                "%s.scatteringsense[2], please reset %s",
+                self._attached_ana,
+                self,
+                self,
+            )
 
     def _getWaiters(self):
-        if self.scanmode == 'DIFF':
+        if self.scanmode == "DIFF":
             res = [self._attached_mono, self._attached_phi, self._attached_psi]
         else:
-            res = [self._attached_mono, self._attached_ana,
-                   self._attached_phi, self._attached_psi]
+            res = [
+                self._attached_mono,
+                self._attached_ana,
+                self._attached_phi,
+                self._attached_psi,
+            ]
         if self._attached_alpha is not None:
             res.append(self._attached_alpha)
         return res
 
     def _thz(self, ny):
-        if self.energytransferunit == 'meV':
+        if self.energytransferunit == "meV":
             return ny / THZ2MEV
         return ny
 
@@ -138,12 +218,18 @@ class TAS(HasAutoDevices, Instrument, Moveable):
         ny = self._thz(ny)
         try:
             angles = self._attached_cell.cal_angles(
-                [qh, qk, ql], ny, self.scanmode, self.scanconstant,
-                self.scatteringsense[1], self.axiscoupling, self.psi360)
+                [qh, qk, ql],
+                ny,
+                self.scanmode,
+                self.scanconstant,
+                self.scatteringsense[1],
+                self.axiscoupling,
+                self.psi360,
+            )
         except ComputationError as err:
             return False, str(err)
         # check limits for the individual axes
-        for devname, value in zip(['mono', 'ana', 'phi', 'psi', 'alpha'], angles):
+        for devname, value in zip(["mono", "ana", "phi", "psi", "alpha"], angles):
             dev = self._adevs[devname]
             if dev is None:
                 continue
@@ -152,16 +238,25 @@ class TAS(HasAutoDevices, Instrument, Moveable):
             else:
                 ok, why = dev.isAllowed(value)
             if not ok:
-                return ok, 'target position %s outside limits for %s: %s' % \
-                    (dev.format(value, unit=True), dev, why)
-        return True, ''
+                return ok, "target position %s outside limits for %s: %s" % (
+                    dev.format(value, unit=True),
+                    dev,
+                    why,
+                )
+        return True, ""
 
     def _sim_getMinMax(self):
         ret = []
         if self._sim_min is not None:
-            for i, name in enumerate(['h', 'k', 'l', 'E']):
-                ret.append((name, '%.4f' % self._sim_value[i],
-                            '%.4f' % self._sim_min[i], '%.4f' % self._sim_max[i]))
+            for i, name in enumerate(["h", "k", "l", "E"]):
+                ret.append(
+                    (
+                        name,
+                        "%.4f" % self._sim_value[i],
+                        "%.4f" % self._sim_min[i],
+                        "%.4f" % self._sim_max[i],
+                    )
+                )
         return ret
 
     def _sim_setValue(self, pos):
@@ -178,21 +273,32 @@ class TAS(HasAutoDevices, Instrument, Moveable):
         qh, qk, ql, ny = target
         ny = self._thz(ny)
         angles = self._attached_cell.cal_angles(
-            [qh, qk, ql], ny, self.scanmode, self.scanconstant,
-            self.scatteringsense[1], self.axiscoupling, self.psi360)
-        mono, ana, phi, psi, alpha = self._attached_mono, self._attached_ana, \
-            self._attached_phi, self._attached_psi, self._attached_alpha
-        self.log.debug('moving phi/stt to %s', angles[2])
+            [qh, qk, ql],
+            ny,
+            self.scanmode,
+            self.scanconstant,
+            self.scatteringsense[1],
+            self.axiscoupling,
+            self.psi360,
+        )
+        mono, ana, phi, psi, alpha = (
+            self._attached_mono,
+            self._attached_ana,
+            self._attached_phi,
+            self._attached_psi,
+            self._attached_alpha,
+        )
+        self.log.debug("moving phi/stt to %s", angles[2])
         phi.start(angles[2])
-        self.log.debug('moving psi/sth to %s', angles[3])
+        self.log.debug("moving psi/sth to %s", angles[3])
         psi.start(angles[3])
         if alpha is not None:
-            self.log.debug('moving alpha to %s', angles[4])
+            self.log.debug("moving alpha to %s", angles[4])
             alpha.start(angles[4])
-        self.log.debug('moving mono to %s', angles[0])
+        self.log.debug("moving mono to %s", angles[0])
         mono.start(from_k(angles[0], mono.unit))
-        if self.scanmode != 'DIFF':
-            self.log.debug('moving ana to %s', angles[1])
+        if self.scanmode != "DIFF":
+            self.log.debug("moving ana to %s", angles[1])
             ana.start(from_k(angles[1], ana.unit))
         # spurion check
         if self.spurioncheck and self._mode == SIMULATION:
@@ -204,61 +310,77 @@ class TAS(HasAutoDevices, Instrument, Moveable):
         # make sure index members read the latest value
         for index in (self.h, self.k, self.l, self.E):
             if index._cache:
-                index._cache.invalidate(index, 'value')
+                index._cache.invalidate(index, "value")
 
     def doStatus(self, maxage=0):
-        if self.scanmode == 'DIFF':
-            return multiStatus(((name, self._adevs[name]) for name in
-                                ['mono', 'phi', 'psi', 'alpha']), maxage)
+        if self.scanmode == "DIFF":
+            return multiStatus(
+                ((name, self._adevs[name]) for name in ["mono", "phi", "psi", "alpha"]),
+                maxage,
+            )
         else:
-            return multiStatus(((name, self._adevs[name]) for name in
-                                ['mono', 'ana', 'phi', 'psi', 'alpha']), maxage)
+            return multiStatus(
+                (
+                    (name, self._adevs[name])
+                    for name in ["mono", "ana", "phi", "psi", "alpha"]
+                ),
+                maxage,
+            )
 
     def doWriteScanmode(self, val):
-        if val == 'DIFF':
-            self.log.warning('Switching to two-axis mode; you are responsible '
-                             'for moving the analyzer axes to the desired '
-                             'position')
+        if val == "DIFF":
+            self.log.warning(
+                "Switching to two-axis mode; you are responsible "
+                "for moving the analyzer axes to the desired "
+                "position"
+            )
 
     def doWriteScatteringsense(self, val):
         self._attached_mono.scatteringsense = val[0]
         self._attached_ana.scatteringsense = val[2]
 
     def doReadUnit(self):
-        return 'rlu rlu rlu %s' % self.energytransferunit
+        return "rlu rlu rlu %s" % self.energytransferunit
 
     def doWriteEnergytransferunit(self, val):
         if val not in ENERGYTRANSFERUNITS:
-            raise InvalidValueError(self,
-                                    'invalid energy transfer unit: %r' % val)
+            raise InvalidValueError(self, "invalid energy transfer unit: %r" % val)
         if self._cache:
-            self._cache.invalidate(self, 'value')
-        self.unit = 'rlu rlu rlu %s' % val
+            self._cache.invalidate(self, "value")
+        self.unit = "rlu rlu rlu %s" % val
         self.E.unit = val
 
     def valueInfo(self):
-        return Value('h', unit='rlu', fmtstr='%.4f'), \
-            Value('k', unit='rlu', fmtstr='%.4f'), \
-            Value('l', unit='rlu', fmtstr='%.4f'), \
-            Value('E', unit=self.energytransferunit, fmtstr='%.4f')
+        return (
+            Value("h", unit="rlu", fmtstr="%.4f"),
+            Value("k", unit="rlu", fmtstr="%.4f"),
+            Value("l", unit="rlu", fmtstr="%.4f"),
+            Value("E", unit=self.energytransferunit, fmtstr="%.4f"),
+        )
 
     def doRead(self, maxage=0):
-        mono, ana, phi, psi = self._attached_mono, self._attached_ana, \
-                              self._attached_phi, self._attached_psi
+        mono, ana, phi, psi = (
+            self._attached_mono,
+            self._attached_ana,
+            self._attached_phi,
+            self._attached_psi,
+        )
         # read out position
         monovalue = to_k(mono.read(maxage), mono.unit)
-        if self.scanmode == 'DIFF':
+        if self.scanmode == "DIFF":
             hkl = self._attached_cell.angle2hkl(
                 [monovalue, monovalue, phi.read(maxage), psi.read(maxage)],
-                self.axiscoupling)
+                self.axiscoupling,
+            )
             ny = 0
         else:
             anavalue = to_k(ana.read(maxage), ana.unit)
             hkl = self._attached_cell.angle2hkl(
                 [monovalue, anavalue, phi.read(maxage), psi.read(maxage)],
-                self.axiscoupling)
+                self.axiscoupling,
+            )
             ny = self._attached_cell.cal_ny(monovalue, anavalue)
-            if self.energytransferunit == 'meV':
+            if self.energytransferunit == "meV":
                 ny *= THZ2MEV
         return [hkl[0], hkl[1], hkl[2], ny]
 
@@ -271,18 +393,24 @@ class TAS(HasAutoDevices, Instrument, Moveable):
             sc = self.scanconstant
         try:
             angles = self._attached_cell.cal_angles(
-                [qh, qk, ql], ny, sm, sc,
-                self.scatteringsense[1], self.axiscoupling, self.psi360)
+                [qh, qk, ql],
+                ny,
+                sm,
+                sc,
+                self.scatteringsense[1],
+                self.axiscoupling,
+                self.psi360,
+            )
         except ComputationError as err:
             if checkonly:
-                self.log.error('cannot calculate position: %s', err)
+                self.log.error("cannot calculate position: %s", err)
                 return
             else:
                 raise
         if not printout:
             return angles
-        ok, why = True, ''
-        for devname, value in zip(['mono', 'ana', 'phi', 'psi', 'alpha'], angles):
+        ok, why = True, ""
+        for devname, value in zip(["mono", "ana", "phi", "psi", "alpha"], angles):
             dev = self._adevs[devname]
             if dev is None:
                 continue
@@ -292,53 +420,59 @@ class TAS(HasAutoDevices, Instrument, Moveable):
                 devok, devwhy = dev.isAllowed(value)
             if not devok:
                 ok = False
-                why += 'target position %s outside limits for %s: %s -- ' % \
-                    (dev.format(value, unit=True), dev, devwhy)
-        self.log.info('ki:            %8.3f A-1', angles[0])
-        if self.scanmode != 'DIFF':
-            self.log.info('kf:            %8.3f A-1', angles[1])
-        self.log.info('2theta sample: %8.3f deg', angles[2])
-        self.log.info('theta sample:  %8.3f deg', angles[3])
+                why += "target position %s outside limits for %s: %s -- " % (
+                    dev.format(value, unit=True),
+                    dev,
+                    devwhy,
+                )
+        self.log.info("ki:            %8.3f A-1", angles[0])
+        if self.scanmode != "DIFF":
+            self.log.info("kf:            %8.3f A-1", angles[1])
+        self.log.info("2theta sample: %8.3f deg", angles[2])
+        self.log.info("theta sample:  %8.3f deg", angles[3])
         if self._attached_alpha is not None:
-            self.log.info('alpha:         %8.3f deg', angles[4])
+            self.log.info("alpha:         %8.3f deg", angles[4])
         if ok:
             self._last_calpos = pos
             if checkonly:
-                self.log.info('position allowed')
+                self.log.info("position allowed")
         else:
             if checkonly:
-                self.log.warning('position not allowed: %s', why[:-4])
+                self.log.warning("position not allowed: %s", why[:-4])
             else:
-                raise LimitError(self, 'position not allowed: ' + why[:-4])
+                raise LimitError(self, "position not allowed: " + why[:-4])
 
     def _reverse_calpos(self, phi, psi, **kwds):
-        if 'E' in kwds:
-            ny = self._thz(kwds['E'])
-            if self.scanmode == 'CKI':
+        if "E" in kwds:
+            ny = self._thz(kwds["E"])
+            if self.scanmode == "CKI":
                 ki = self.scanconstant
                 kf = self._attached_cell.cal_kf(ny, ki)
-            elif self.scanmode == 'CKF':
+            elif self.scanmode == "CKF":
                 kf = self.scanconstant
                 ki = self._attached_cell.cal_ki1(ny, kf)
             else:
-                self.log.error('cannot calculate position with scanmode %s',
-                               self.scanmode)
-        elif 'ki' in kwds or 'kf' in kwds:
-            ki = kwds.get('ki')
-            kf = kwds.get('kf')
+                self.log.error(
+                    "cannot calculate position with scanmode %s", self.scanmode
+                )
+        elif "ki" in kwds or "kf" in kwds:
+            ki = kwds.get("ki")
+            kf = kwds.get("kf")
             if not ki or not kf:
-                self.log.error('must give both ki and kf arguments')
+                self.log.error("must give both ki and kf arguments")
         else:
             ki = self._attached_mono.read()
             kf = self._attached_ana.read()
         ny = self._attached_cell.cal_ny(ki, kf)
-        if self.energytransferunit == 'meV':
+        if self.energytransferunit == "meV":
             ny *= THZ2MEV
         hkl = self._calhkl([ki, kf, phi, psi])
-        self.log.info('ki: %8.3f A-1', ki)
-        self.log.info('kf: %8.3f A-1', kf)
-        self.log.info('pos: [%.4f, %.4f, %.4f, %.4f] rlu rlu rlu %s',
-                      *(tuple(hkl) + (ny, self.energytransferunit)))
+        self.log.info("ki: %8.3f A-1", ki)
+        self.log.info("kf: %8.3f A-1", kf)
+        self.log.info(
+            "pos: [%.4f, %.4f, %.4f, %.4f] rlu rlu rlu %s",
+            *(tuple(hkl) + (ny, self.energytransferunit)),
+        )
 
     def _calhkl(self, angles):
         return self._attached_cell.angle2hkl(angles, self.axiscoupling)
@@ -350,18 +484,22 @@ class TAS(HasAutoDevices, Instrument, Moveable):
 
         Must be overridden for instruments with collimation support.
         """
+
         def to_coll(v):
-            if v == 'open':
+            if v == "open":
                 return 6000
             return int(v)
+
         try:
             a1, a2, a3, a4, b1, b2, b3, b4 = map(to_coll, self.collimation.split())
         except Exception:
             try:
                 a1, a2, a3, a4 = map(to_coll, self.collimation.split())
             except Exception:
-                self.log.warning('collimation parameter should be set to '
-                                 '"a1 a2 a3 a4 b1 b2 b3 b4", assuming open')
+                self.log.warning(
+                    "collimation parameter should be set to "
+                    '"a1 a2 a3 a4 b1 b2 b3 b4", assuming open'
+                )
                 return [6000, 6000, 6000, 6000, 6000, 6000, 6000, 6000]
             else:
                 return [a1, a2, a3, a4, 6000, 6000, 6000, 6000]
@@ -371,42 +509,35 @@ class TAS(HasAutoDevices, Instrument, Moveable):
     def _getResolutionParameters(self):
         """Return a list of 30 parameters used for resolution calculation."""
         return [
-            0,   # circular (0) or rectangular (1) source
-            5,   # width of source / diameter (cm)
-            5,   # height of source / diameter (cm)
-            0,   # no guide (0) or guide (1)
-            1,   # horizontal guide divergence (min/AA)
-            1,   # vertical guide divergence (min/AA)
-
-            1,   # cylindrical (0) or cuboid (1) sample
-            1,   # sample width / diameter perp. to Q (cm)
-            1,   # sample width / diameter along Q (cm)
-            1,   # sample height (cm)
-
-            1,   # circular (0) or rectangular (1) detector
-            2.5, # width / diameter of the detector (cm)
+            0,  # circular (0) or rectangular (1) source
+            5,  # width of source / diameter (cm)
+            5,  # height of source / diameter (cm)
+            0,  # no guide (0) or guide (1)
+            1,  # horizontal guide divergence (min/AA)
+            1,  # vertical guide divergence (min/AA)
+            1,  # cylindrical (0) or cuboid (1) sample
+            1,  # sample width / diameter perp. to Q (cm)
+            1,  # sample width / diameter along Q (cm)
+            1,  # sample height (cm)
+            1,  # circular (0) or rectangular (1) detector
+            2.5,  # width / diameter of the detector (cm)
             10,  # height / diameter of the detector (cm)
-
-            0.2, # thickness of monochromator (cm)
+            0.2,  # thickness of monochromator (cm)
             20,  # width of monochromator (cm)
             20,  # height of monochromator (cm)
-
-            0.2, # thickness of analyzer (cm)
+            0.2,  # thickness of analyzer (cm)
             15,  # width of analyzer (cm)
             15,  # height of analyzer (cm)
-
-            200, # distance source - monochromator (cm)
-            200, # distance monochromator - sample (cm)
-            100, # distance sample - analyzer (cm)
-            100, # distance analyzer - detector (cm)
-
-            0,   # horizontal curvature of monochromator (1/cm)
-            0,   # vertical curvature of monochromator (1/cm)
-            0,   # horizontal curvature of analyzer (1/cm)
-            0,   # vertical curvature of analyzer (1/cm)
-
-            100, # distance monochromator - monitor (cm)
-            4,   # width of monitor (cm)
+            200,  # distance source - monochromator (cm)
+            200,  # distance monochromator - sample (cm)
+            100,  # distance sample - analyzer (cm)
+            100,  # distance analyzer - detector (cm)
+            0,  # horizontal curvature of monochromator (1/cm)
+            0,  # vertical curvature of monochromator (1/cm)
+            0,  # horizontal curvature of analyzer (1/cm)
+            0,  # vertical curvature of analyzer (1/cm)
+            100,  # distance monochromator - monitor (cm)
+            4,  # width of monitor (cm)
             10,  # height of monitor (cm)
         ]
 
@@ -414,8 +545,10 @@ class TAS(HasAutoDevices, Instrument, Moveable):
         for line in spurions.check_acc_bragg(self, *pos):
             self.log.info(line)
         for line in spurions.check_ho_spurions(
-                to_k(self._attached_ana.read(), self._attached_ana.unit),
-                pos[3] - 0.25, pos[3] + 0.25):
+            to_k(self._attached_ana.read(), self._attached_ana.unit),
+            pos[3] - 0.25,
+            pos[3] + 0.25,
+        ):
             self.log.info(line)
         kival = to_k(self._attached_mono.read(), self._attached_mono.unit)
         phival = self._attached_phi.read()
@@ -431,11 +564,11 @@ class TASIndex(AutoDevice, Moveable):
     """
 
     parameters = {
-        'index': Param('The index into the TAS value', type=int),
+        "index": Param("The index into the TAS value", type=int),
     }
 
     attached_devices = {
-        'tas': Attach('The spectrometer to control', TAS),
+        "tas": Attach("The spectrometer to control", TAS),
     }
 
     valuetype = float
@@ -457,17 +590,16 @@ class TASConstant(Moveable):
     """
 
     parameters = {
-        'scanmode': Param('Scanmode to set', type=oneof(*SCANMODES),
-                          mandatory=True),
+        "scanmode": Param("Scanmode to set", type=oneof(*SCANMODES), mandatory=True),
     }
 
     parameter_overrides = {
-        'unit':     Override(volatile=True),
+        "unit": Override(volatile=True),
     }
 
     attached_devices = {
-        'base': Attach('Device to move (mono or ana)', Moveable),
-        'tas':  Attach('The spectrometer for setting scanmode', TAS),
+        "base": Attach("Device to move (mono or ana)", Moveable),
+        "tas": Attach("The spectrometer for setting scanmode", TAS),
     }
 
     valuetype = float
@@ -502,7 +634,7 @@ class TASConstant(Moveable):
     def doStop(self):
         self._attached_base.stop()
 
-    def fix(self, reason=''):
+    def fix(self, reason=""):
         # fix the base as well, avoids surprises
         Moveable.fix(self, reason)
         return self._attached_base.fix(reason)
@@ -525,11 +657,14 @@ class Wavevector(TASConstant):
     def doStart(self, target):
         tas = self._attached_tas
         if self._start(target):
-            tas.log.info('scan mode is now %s at %s',
-                         self.scanmode, self.format(target, unit=True))
+            tas.log.info(
+                "scan mode is now %s at %s",
+                self.scanmode,
+                self.format(target, unit=True),
+            )
 
     def doReadUnit(self):
-        return 'A-1'
+        return "A-1"
 
 
 class Energy(TASConstant):
@@ -540,14 +675,18 @@ class Energy(TASConstant):
 
     def doRead(self, maxage=0):
         mono = self._attached_base
-        return from_k(to_k(mono.read(maxage), mono.unit),
-                      self._attached_tas.energytransferunit)
+        return from_k(
+            to_k(mono.read(maxage), mono.unit), self._attached_tas.energytransferunit
+        )
 
     def doStart(self, target):
         tas = self._attached_tas
         if self._start(to_k(target, tas.energytransferunit)):
-            tas.log.info('scan mode is now %s at %s',
-                         self.scanmode, self.format(target, unit=True))
+            tas.log.info(
+                "scan mode is now %s at %s",
+                self.scanmode,
+                self.format(target, unit=True),
+            )
 
     def doReadUnit(self):
         return self._attached_tas.energytransferunit
@@ -565,12 +704,15 @@ class Wavelength(TASConstant):
 
     def doStart(self, target):
         tas = self._attached_tas
-        if self._start(to_k(target, 'A')):
-            tas.log.info('scan mode is now %s at %s',
-                         self.scanmode, self.format(target, unit=True))
+        if self._start(to_k(target, "A")):
+            tas.log.info(
+                "scan mode is now %s at %s",
+                self.scanmode,
+                self.format(target, unit=True),
+            )
 
     def doReadUnit(self):
-        return 'AA'
+        return "AA"
 
 
 class QModulus(Readable):
@@ -579,24 +721,24 @@ class QModulus(Readable):
     """
 
     parameter_overrides = {
-        'unit':     Override(volatile=True),
+        "unit": Override(volatile=True),
     }
 
     attached_devices = {
-        'tas':  Attach('The spectrometer', TAS),
+        "tas": Attach("The spectrometer", TAS),
     }
 
     hardware_access = False
 
     def doStatus(self, maxage=0):
-        return status.OK, ''
+        return status.OK, ""
 
     def doRead(self, maxage=0):
         tas = self._attached_tas
         ki = to_k(tas._attached_mono.read(maxage), tas._attached_mono.unit)
         kf = to_k(tas._attached_ana.read(maxage), tas._attached_ana.unit)
         phi = tas._attached_phi.read(maxage)
-        return sqrt(ki**2 + kf**2 - 2*ki*kf*cos(radians(phi)))
+        return sqrt(ki**2 + kf**2 - 2 * ki * kf * cos(radians(phi)))
 
     def doReadUnit(self):
-        return 'A-1'
+        return "A-1"

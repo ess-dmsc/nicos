@@ -38,30 +38,47 @@ class S7Switch(EpicsDevice, MappedMoveable):
     """
 
     attached_devices = {
-        'button': Attach('Pulse device to cause toggling the state',
-                         Pulse),
+        "button": Attach("Pulse device to cause toggling the state", Pulse),
     }
 
     parameters = {
-        'readpv': Param('PV to read the current state', type=pvname,
-                        mandatory=True, settable=False, userparam=False),
-        'lasttarget': Param('Store the last raw target of move', type=bool,
-                            settable=True, internal=True, default=None),
-        'lasttoggle': Param('Store the time when last toggled', type=int,
-                            settable=True, internal=True, default=0),
-        'timeout': Param('Timeout when we consider the operation to '
-                         'have failed', type=int, mandatory=True,
-                         userparam=False),
+        "readpv": Param(
+            "PV to read the current state",
+            type=pvname,
+            mandatory=True,
+            settable=False,
+            userparam=False,
+        ),
+        "lasttarget": Param(
+            "Store the last raw target of move",
+            type=bool,
+            settable=True,
+            internal=True,
+            default=None,
+        ),
+        "lasttoggle": Param(
+            "Store the time when last toggled",
+            type=int,
+            settable=True,
+            internal=True,
+            default=0,
+        ),
+        "timeout": Param(
+            "Timeout when we consider the operation to " "have failed",
+            type=int,
+            mandatory=True,
+            userparam=False,
+        ),
     }
 
     def doInit(self, mode):
         MappedMoveable.doInit(self, mode)
 
     def _get_pv_parameters(self):
-        return {'readpv'}
+        return {"readpv"}
 
     def _readRaw(self, maxage=0):
-        return self._get_pv('readpv')
+        return self._get_pv("readpv")
 
     def _startRaw(self, target):
         if target == self._readRaw(0):
@@ -72,53 +89,69 @@ class S7Switch(EpicsDevice, MappedMoveable):
 
     def doStatus(self, maxage=0):
         now = currenttime()
-        if self.lasttarget is not None and \
-                self.lasttarget != self._readRaw(maxage):
-            if now > self.lasttoggle+self.timeout:
-                return (status.WARN, '%s not reached!'
-                        % self._inverse_mapping[self.lasttarget])
-            return status.BUSY, ''
-        return status.OK, ''
+        if self.lasttarget is not None and self.lasttarget != self._readRaw(maxage):
+            if now > self.lasttoggle + self.timeout:
+                return (
+                    status.WARN,
+                    "%s not reached!" % self._inverse_mapping[self.lasttarget],
+                )
+            return status.BUSY, ""
+        return status.OK, ""
 
 
 class S7Shutter(S7Switch):
     """
     A shutter as implemented on a SPS S7 programmed by Roman Bürge
     """
+
     parameters = {
         # The readpv inherited from S7Switch is used to test for shutter open
-        'readypv': Param('PV to read if the enclosure is broken', type=pvname,
-                         mandatory=True, settable=False, userparam=False),
-        'closedpv': Param('PV to read if the shutter is closed', type=pvname,
-                          mandatory=True, settable=False, userparam=False),
-        'errorpv': Param('PV to read if there is a shutter error',
-                         type=none_or(pvname), mandatory=False, settable=False,
-                         userparam=False),
+        "readypv": Param(
+            "PV to read if the enclosure is broken",
+            type=pvname,
+            mandatory=True,
+            settable=False,
+            userparam=False,
+        ),
+        "closedpv": Param(
+            "PV to read if the shutter is closed",
+            type=pvname,
+            mandatory=True,
+            settable=False,
+            userparam=False,
+        ),
+        "errorpv": Param(
+            "PV to read if there is a shutter error",
+            type=none_or(pvname),
+            mandatory=False,
+            settable=False,
+            userparam=False,
+        ),
     }
 
     parameter_overrides = {
-        'mapping': Override(default={'open': 0, 'closed': 1,
-                                     'enclosure broken': 2,
-                                     'shutter error': 3},
-                            mandatory=False)
+        "mapping": Override(
+            default={"open": 0, "closed": 1, "enclosure broken": 2, "shutter error": 3},
+            mandatory=False,
+        )
     }
 
-    valuetype = oneof('open', 'closed')
+    valuetype = oneof("open", "closed")
 
     def _get_pv_parameters(self):
-        par = {'readpv', 'readypv', 'closedpv'}
+        par = {"readpv", "readypv", "closedpv"}
         if self.errorpv:
-            par.add('errorpv')
+            par.add("errorpv")
         return par
 
     def _readRaw(self, maxage=0):
-        if self._get_pv('readpv'):
+        if self._get_pv("readpv"):
             return 0
-        if not self._get_pv('readypv'):
+        if not self._get_pv("readypv"):
             return 2
-        if self.errorpv and self._get_pv('errorpv'):
+        if self.errorpv and self._get_pv("errorpv"):
             return 3
-        if self._get_pv('closedpv'):
+        if self._get_pv("closedpv"):
             return 1
 
     def _startRaw(self, target):
@@ -131,21 +164,21 @@ class S7Shutter(S7Switch):
             self.lasttoggle = currenttime()
             self._attached_button.start(1)
         else:
-            session.log.error('Cannot set shutter into error states')
+            session.log.error("Cannot set shutter into error states")
             return
 
         if state == 2:
-            session.log.error('Cannot move shutter, enclosure is broken')
+            session.log.error("Cannot move shutter, enclosure is broken")
             return
         if state == 3:
-            session.log.error('Shutter system error, cannot move')
+            session.log.error("Shutter system error, cannot move")
             return
 
     def doIsAllowed(self, target):
-        if target in ['open', 'closed']:
-            if not self._get_pv('readypv'):
-                return False, 'Enclosure is broken'
-            if self.errorpv and self._get_pv('errorpv'):
-                return False, 'Shutter system error'
+        if target in ["open", "closed"]:
+            if not self._get_pv("readypv"):
+                return False, "Enclosure is broken"
+            if self.errorpv and self._get_pv("errorpv"):
+                return False, "Shutter system error"
             else:
-                return True, ''
+                return True, ""

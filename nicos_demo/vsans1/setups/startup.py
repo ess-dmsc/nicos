@@ -1,8 +1,7 @@
-description = 'minimal NICOS startup setup'
+description = "minimal NICOS startup setup"
 
-group = 'lowlevel'
+group = "lowlevel"
 
-sysconfig = dict(
-)
+sysconfig = dict()
 
 # STARTUP NEVER INCLUDES ANYTHING.

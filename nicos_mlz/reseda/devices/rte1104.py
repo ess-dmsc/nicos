@@ -25,66 +25,75 @@
 import math
 
 from nicos import session
-from nicos.core import Attach, Moveable, Override, Param, Readable, intrange, \
-    status
+from nicos.core import Attach, Moveable, Override, Param, Readable, intrange, status
 from nicos.devices.entangle import StringIO
 
 
 class RTE1104(Readable):
-
     parameters = {
-        'channel': Param('calculation channel',
-                         type=intrange(1, 8), settable=False,
-                         default=1),
-        'timescale': Param('Time scale setting',
-                           type=float, settable=True, userparam=True,
-                           volatile=True, category='general'),
-        'yscale': Param('Y axis scaling',
-                        type=float, settable=True, userparam=True,
-                        volatile=True, category='general'),
+        "channel": Param(
+            "calculation channel", type=intrange(1, 8), settable=False, default=1
+        ),
+        "timescale": Param(
+            "Time scale setting",
+            type=float,
+            settable=True,
+            userparam=True,
+            volatile=True,
+            category="general",
+        ),
+        "yscale": Param(
+            "Y axis scaling",
+            type=float,
+            settable=True,
+            userparam=True,
+            volatile=True,
+            category="general",
+        ),
     }
 
     attached_devices = {
-        'io': Attach('Communication device', StringIO),
+        "io": Attach("Communication device", StringIO),
     }
 
     def doRead(self, maxage=0):
-        return float(self._attached_io.communicate('MEAS%d:ARES?' %
-                                                   self.channel))
+        return float(self._attached_io.communicate("MEAS%d:ARES?" % self.channel))
 
     def doStatus(self, maxage=0):
-        return status.OK, ''
+        return status.OK, ""
 
     def doReadTimescale(self):
-        return float(self._attached_io.communicate('TIM:SCAL?'))
+        return float(self._attached_io.communicate("TIM:SCAL?"))
 
     def doWriteTimescale(self, value):
-        self._attached_io.writeLine('TIM:SCAL %g' % value)
+        self._attached_io.writeLine("TIM:SCAL %g" % value)
 
     def doReadYscale(self):
-        return float(self._attached_io.communicate('CHAN%d:SCAL?' %
-                                                   self.channel))
+        return float(self._attached_io.communicate("CHAN%d:SCAL?" % self.channel))
 
     def doWriteYscale(self, value):
-        self._attached_io.writeLine('CHAN%d:SCAL %g' %
-                                    (self.channel, value))
+        self._attached_io.writeLine("CHAN%d:SCAL %g" % (self.channel, value))
 
 
 class RTE1104TimescaleSetting(Moveable):
-
     attached_devices = {
-        'io': Attach('Communication device', StringIO),
-        'freqgen': Attach('frequency generator', Moveable, optional=True),
+        "io": Attach("Communication device", StringIO),
+        "freqgen": Attach("frequency generator", Moveable, optional=True),
     }
 
     parameters = {
-        'timescale': Param('Time scale setting',
-                           type=float, settable=False, userparam=False,
-                           default=10., category='general'),
+        "timescale": Param(
+            "Time scale setting",
+            type=float,
+            settable=False,
+            userparam=False,
+            default=10.0,
+            category="general",
+        ),
     }
 
     parameter_overrides = {
-        'unit': Override(mandatory=False, default='Hz'),
+        "unit": Override(mandatory=False, default="Hz"),
     }
 
     valuetype = float
@@ -93,12 +102,12 @@ class RTE1104TimescaleSetting(Moveable):
         # main value is freq!
         if self._attached_freqgen:
             return self._attached_freqgen.read(maxage)
-        return self.timescale / float(self._attached_io.communicate(
-            'TIM:SCAL?'))  # % self.channel))
+        return self.timescale / float(
+            self._attached_io.communicate("TIM:SCAL?")
+        )  # % self.channel))
 
     def doStart(self, target):
-        self._attached_io.writeLine(
-            'TIM:SCAL %g' % (self.timescale / float(target)))
+        self._attached_io.writeLine("TIM:SCAL %g" % (self.timescale / float(target)))
         session.delay(0.5)
         if self._attached_freqgen:
             self._attached_freqgen.start(target)
@@ -106,25 +115,23 @@ class RTE1104TimescaleSetting(Moveable):
     def doStatus(self, maxage=0):
         if self._attached_freqgen:
             return self._attached_freqgen.status(maxage)
-        return status.OK, ''
+        return status.OK, ""
 
 
 class RTE1104YScaleSetting(Moveable):
-
     parameters = {
-        'channel': Param('Input channel',
-                         type=intrange(1, 4), settable=False,
-                         default=1),
+        "channel": Param(
+            "Input channel", type=intrange(1, 4), settable=False, default=1
+        ),
     }
 
     attached_devices = {
-        'io': Attach('Communication device', StringIO),
-        'regulator': Attach('regulator for the amplitude', Moveable,
-                            optional=True),
+        "io": Attach("Communication device", StringIO),
+        "regulator": Attach("regulator for the amplitude", Moveable, optional=True),
     }
 
     parameter_overrides = {
-        'unit': Override(mandatory=False, volatile=True),
+        "unit": Override(mandatory=False, volatile=True),
     }
 
     valuetype = float
@@ -132,27 +139,25 @@ class RTE1104YScaleSetting(Moveable):
     def doReadUnit(self):
         if self._attached_regulator:
             return self._attached_regulator.unit
-        return 'V'
+        return "V"
 
     def doRead(self, maxage=0):
         # main value is target amplitude
         if self._attached_regulator:
             return self._attached_regulator.read(maxage)
-        setting = float(self._attached_io.communicate('CHAN%d:SCAL?' %
-                                                      self.channel))
-        return setting * 10. / (2.2 * math.sqrt(2))
+        setting = float(self._attached_io.communicate("CHAN%d:SCAL?" % self.channel))
+        return setting * 10.0 / (2.2 * math.sqrt(2))
 
     def doStart(self, target):
-        setting = math.ceil(target * math.sqrt(2.) * 2.2) / 10.
-        self._attached_io.writeLine('CHAN%d:SCAL %g' %
-                                    (self.channel, setting))
+        setting = math.ceil(target * math.sqrt(2.0) * 2.2) / 10.0
+        self._attached_io.writeLine("CHAN%d:SCAL %g" % (self.channel, setting))
         if self._attached_regulator:
             self._attached_regulator.start(target)
 
     def doStatus(self, maxage=0):
         if self._attached_regulator:
             return self._attached_regulator.status(maxage)
-        return status.OK, ''
+        return status.OK, ""
 
     def doStop(self):
         if self._attached_regulator:

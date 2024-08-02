@@ -34,23 +34,31 @@ from nicos import config, session as nicos_session
 from nicos.core import MASTER
 from nicos.utils import updateFileCounter
 
-from test.utils import TestSession, cache_addr, cleanup, killSubprocess, \
-    startCache, startElog
+from test.utils import (
+    TestSession,
+    cache_addr,
+    cleanup,
+    killSubprocess,
+    startCache,
+    startElog,
+)
 
 
 # This fixture will run during the entire test suite.  Therefore, the special
 # cache stresstests must use a different port.
-@pytest.fixture(scope='session', autouse=True)
+@pytest.fixture(scope="session", autouse=True)
 def setup_test_suite():
     """General test suite setup (handles cacheserver and elog server)"""
     # make the test suite run the same independent of the hostname
-    os.environ['INSTRUMENT'] = 'test'
+    os.environ["INSTRUMENT"] = "test"
     try:
         cleanup()
     except OSError:
-        sys.stderr.write('Failed to clean up old test dir. Check if NICOS '
-                         'processes are still running.')
-        sys.stderr.write('=' * 80)
+        sys.stderr.write(
+            "Failed to clean up old test dir. Check if NICOS "
+            "processes are still running."
+        )
+        sys.stderr.write("=" * 80)
         raise
     cache = startCache(cache_addr)
     elog = startElog()
@@ -59,7 +67,7 @@ def setup_test_suite():
     killSubprocess(cache)
 
 
-@pytest.fixture(scope='class')
+@pytest.fixture(scope="class")
 def session(request):
     """Test session fixture"""
 
@@ -67,21 +75,22 @@ def session(request):
     # pylint: disable=unnecessary-dunder-call
     nicos_session.__init__(request.module.__name__)
     # override the sessionid: test module, and a finer resolved timestamp
-    nicos_session.sessionid = '%s-%s' % (request.module.__name__, time.time())
-    nicos_session.setMode(getattr(request.module, 'session_mode', MASTER))
+    nicos_session.sessionid = "%s-%s" % (request.module.__name__, time.time())
+    nicos_session.setMode(getattr(request.module, "session_mode", MASTER))
     if request.module.session_setup:
         nicos_session.unloadSetup()
-        nicos_session.loadSetup(request.module.session_setup,
-                                **getattr(request.module,
-                                          'session_load_kw', {}))
-    if getattr(request.module, 'session_spmode', False):
+        nicos_session.loadSetup(
+            request.module.session_setup,
+            **getattr(request.module, "session_load_kw", {}),
+        )
+    if getattr(request.module, "session_spmode", False):
         nicos_session.setSPMode(True)
     yield nicos_session
     nicos_session.setSPMode(False)
     nicos_session.shutdown()
 
 
-@pytest.fixture(scope='class')
+@pytest.fixture(scope="class")
 def dataroot(request, session):
     """Dataroot handling fixture"""
 
@@ -90,12 +99,12 @@ def dataroot(request, session):
     os.makedirs(dataroot)
 
     counter = path.join(dataroot, exp.counterfile)
-    updateFileCounter(counter, 'scan', 42)
-    updateFileCounter(counter, 'point', 42)
+    updateFileCounter(counter, "scan", 42)
+    updateFileCounter(counter, "point", 42)
 
-    exp._setROParam('dataroot', dataroot)
-    exp.new(1234, user='testuser')
-    exp.sample.new({'name': 'mysample'})
+    exp._setROParam("dataroot", dataroot)
+    exp.new(1234, user="testuser")
+    exp.sample.new({"name": "mysample"})
 
     return dataroot
 

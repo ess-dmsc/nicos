@@ -1,5 +1,5 @@
-description = 'setup for the NICOS watchdog'
-group = 'special'
+description = "setup for the NICOS watchdog"
+group = "special"
 
 # The entries in this list are dictionaries. Possible keys:
 #
@@ -25,13 +25,14 @@ watch_conditions = [
     # ),
 ]
 
-includes = ['notifiers']
+includes = ["notifiers"]
 
 devices = dict(
-    Watchdog = device('nicos.services.watchdog.Watchdog',
-        cache = 'localhost',
-        notifiers = {'default': ['email']},
-        watch = watch_conditions,
-        mailreceiverkey = 'email/receivers',
+    Watchdog=device(
+        "nicos.services.watchdog.Watchdog",
+        cache="localhost",
+        notifiers={"default": ["email"]},
+        watch=watch_conditions,
+        mailreceiverkey="email/receivers",
     ),
 )

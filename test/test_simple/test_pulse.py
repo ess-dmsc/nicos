@@ -28,11 +28,10 @@ from nicos.devices.generic.manual import ManualSwitch
 
 from test.utils import raises
 
-session_setup = 'pulse'
+session_setup = "pulse"
 
 
 class PulseSwitch(ManualSwitch):
-
     _started_to = []
 
     def doStart(self, target):
@@ -41,47 +40,50 @@ class PulseSwitch(ManualSwitch):
 
 
 def test_params(session):
-    pulse1 = session.getDevice('pulse1')
+    pulse1 = session.getDevice("pulse1")
     # check well defined device
-    assert pulse1.onvalue == 'up'
-    assert pulse1.offvalue == 'down'
+    assert pulse1.onvalue == "up"
+    assert pulse1.offvalue == "down"
     assert pulse1.ontime == 0.01
 
     # check the test for 'up' and 'down' values
-    assert raises(ConfigurationError, session.getDevice, 'pulse2')
-    assert raises(ConfigurationError, session.getDevice, 'pulse3')
+    assert raises(ConfigurationError, session.getDevice, "pulse2")
+    assert raises(ConfigurationError, session.getDevice, "pulse3")
 
 
 def test_movement(session):
-    pulse1 = session.getDevice('pulse1')
-    sw = session.getDevice('sw')
+    pulse1 = session.getDevice("pulse1")
+    sw = session.getDevice("sw")
 
     # check sequence running
     del sw._started_to[:]
-    pulse1.maw('up')
-    assert sw.read(0) == 'down'
-    assert sw._started_to == ['up', 'down']
-    assert pulse1.isAtTarget(target='down')
+    pulse1.maw("up")
+    assert sw.read(0) == "down"
+    assert sw._started_to == ["up", "down"]
+    assert pulse1.isAtTarget(target="down")
 
     del sw._started_to[:]
-    pulse1.maw('down')
-    assert sw.read(0) == 'down'
-    assert sw._started_to == ['down']
+    pulse1.maw("down")
+    assert sw.read(0) == "down"
+    assert sw._started_to == ["down"]
 
 
 def test_starting(session):
-    pulse1 = session.getDevice('pulse1')
-    sw = session.getDevice('sw')
+    pulse1 = session.getDevice("pulse1")
+    sw = session.getDevice("sw")
     # Test the start if sequence was running
     del sw._started_to[:]
-    pulse1.move('up')
-    pulse1.maw('up')
-    assert sw._started_to == ['up', 'down', 'up', 'down'] or \
-           sw._started_to == ['up', 'up', 'down']
+    pulse1.move("up")
+    pulse1.maw("up")
+    assert sw._started_to == ["up", "down", "up", "down"] or sw._started_to == [
+        "up",
+        "up",
+        "down",
+    ]
 
     # Test the start if target == read value
     del sw._started_to[:]
-    pulse1.maw('down')
-    pulse1.move('down')
+    pulse1.maw("down")
+    pulse1.move("down")
     waitForCompletion(pulse1)
-    assert sw._started_to == ['down', 'down']  # started two times
+    assert sw._started_to == ["down", "down"]  # started two times

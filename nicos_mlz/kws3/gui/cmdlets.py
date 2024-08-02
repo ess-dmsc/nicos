@@ -29,58 +29,55 @@ from nicos.utils import findResource, num_sort
 
 from nicos_mlz.kws1.gui.cmdlets import MeasureTable as KWS1MeasureTable
 from nicos_mlz.kws1.gui.measdialogs import MeasDef as KWS1MeasDef
-from nicos_mlz.kws1.gui.measelement import ChoiceElement, Chopper, MeasTime, \
-    Selector
+from nicos_mlz.kws1.gui.measelement import ChoiceElement, Chopper, MeasTime, Selector
 
 
 class Detector(ChoiceElement):
-    CACHE_KEY = 'detector/values'
-    LABEL = 'Detector'
+    CACHE_KEY = "detector/values"
+    LABEL = "Detector"
 
 
 class Resolution(ChoiceElement):
-    CACHE_KEY = 'resolution/mapping'
+    CACHE_KEY = "resolution/mapping"
     SORT_KEY = lambda self, x: num_sort(x)
-    LABEL = 'Resolution'
+    LABEL = "Resolution"
 
 
 class SamplePos(ChoiceElement):
-    CACHE_KEY = 'sample_pos/presets'
+    CACHE_KEY = "sample_pos/presets"
     SORT_KEY = lambda self, x: num_sort(x)
-    LABEL = 'Sample position'
+    LABEL = "Sample position"
 
 
 class Beamstop(ChoiceElement):
-    LABEL = 'Beamstop'
-    VALUES = ['out', 'in']
+    LABEL = "Beamstop"
+    VALUES = ["out", "in"]
 
 
 class Polarizer(ChoiceElement):
     # CACHE_KEY = 'polarizer/mapping'
     # SORT_KEY = lambda self, x: num_sort(x)
-    LABEL = 'Polarizer'
-    VALUES = ['out', 'up', 'down']
+    LABEL = "Polarizer"
+    VALUES = ["out", "up", "down"]
 
 
 class MeasDef(KWS1MeasDef):
-
     def getElements(self):
         elements = [
-            ('selector', Selector),
-            ('resolution', Resolution),
-            ('sample_pos', SamplePos),
-            ('beamstop', Beamstop),
-            ('detector', Detector),
-            ('polarizer', Polarizer),
+            ("selector", Selector),
+            ("resolution", Resolution),
+            ("sample_pos", SamplePos),
+            ("beamstop", Beamstop),
+            ("detector", Detector),
+            ("polarizer", Polarizer),
         ]
         if not self.rtmode:
-            elements.append(('chopper', Chopper))
-            elements.append(('time', MeasTime))
+            elements.append(("chopper", Chopper))
+            elements.append(("time", MeasTime))
         return elements
 
 
 class MeasureTable(KWS1MeasureTable):
-
     meas_def_class = MeasDef
 
     def __init__(self, parent, client, options):
@@ -93,13 +90,13 @@ register(MeasureTable)
 
 
 class RestoreState(Cmdlet):
-
-    name = 'Device state as script'
-    category = 'Other'
+    name = "Device state as script"
+    category = "Other"
 
     def __init__(self, parent, client, options):
-        Cmdlet.__init__(self, parent, client, options,
-                        findResource('nicos_mlz/kws3/gui/restore.ui'))
+        Cmdlet.__init__(
+            self, parent, client, options, findResource("nicos_mlz/kws3/gui/restore.ui")
+        )
         for devname in self._getDeviceList():
             item = QListWidgetItem(devname, self.devList)
             item.setCheckState(Qt.CheckState.Unchecked)
@@ -113,11 +110,10 @@ class RestoreState(Cmdlet):
                 value = self.client.getDeviceValue(dev)
                 if value is not None:
                     entries.append((self._getDeviceRepr(dev), value))
-        if mode == 'simple':
-            return 'maw ' + ''.join(' %s %r' % e for e in entries)
+        if mode == "simple":
+            return "maw " + "".join(" %s %r" % e for e in entries)
         else:
-            return 'maw(\n' + \
-                ''.join('    %s, %r,\n' % e for e in entries) + ')'
+            return "maw(\n" + "".join("    %s, %r,\n" % e for e in entries) + ")"
 
 
 register(RestoreState)

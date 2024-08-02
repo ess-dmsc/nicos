@@ -28,9 +28,19 @@ import sys
 
 from nicos import nicos_version
 from nicos.clients.gui.utils import DlgUtils, loadUi
-from nicos.guisupport.qt import PYQT_VERSION_STR, QT_VERSION_STR, QCheckBox, \
-    QDesktopServices, QDialog, QDialogButtonBox, QGridLayout, QLabel, \
-    QLineEdit, QSettings, QUrl
+from nicos.guisupport.qt import (
+    PYQT_VERSION_STR,
+    QT_VERSION_STR,
+    QCheckBox,
+    QDesktopServices,
+    QDialog,
+    QDialogButtonBox,
+    QGridLayout,
+    QLabel,
+    QLineEdit,
+    QSettings,
+    QUrl,
+)
 
 try:
     import redminelib
@@ -41,29 +51,29 @@ except ImportError:
         redminelib = None
 
 
-TRACKER_URL = 'https://forge.frm2.tum.de/redmine'
-TICKET_URL = 'https://forge.frm2.tum.de/redmine/issues/%d'
-PROJECT_ID = 'NICOS'
-CREATE_TICKET_URL = 'https://forge.frm2.tum.de/redmine/projects/nicos/issues/new'
+TRACKER_URL = "https://forge.frm2.tum.de/redmine"
+TICKET_URL = "https://forge.frm2.tum.de/redmine/issues/%d"
+PROJECT_ID = "NICOS"
+CREATE_TICKET_URL = "https://forge.frm2.tum.de/redmine/projects/nicos/issues/new"
 
 
 class BugreportTool(DlgUtils, QDialog):
-    toolName = 'BugreportTool'
+    toolName = "BugreportTool"
 
     def __init__(self, parent, client, **kwds):
         QDialog.__init__(self, parent)
         DlgUtils.__init__(self, self.toolName)
-        loadUi(self, 'tools/bugreport.ui')
+        loadUi(self, "tools/bugreport.ui")
         self.client = client
 
-        settings = QSettings('nicos', 'secrets')
-        settings.beginGroup('Redmine')
-        self.instrument = settings.value('instrument', '')
-        self.apikey = settings.value('apikey')
-        self.username = settings.value('username')
+        settings = QSettings("nicos", "secrets")
+        settings.beginGroup("Redmine")
+        self.instrument = settings.value("instrument", "")
+        self.apikey = settings.value("apikey")
+        self.username = settings.value("username")
 
-        self.traceback = kwds.get('traceback')
-        self.log_excerpt = kwds.get('log_excerpt', '')
+        self.traceback = kwds.get("traceback")
+        self.log_excerpt = kwds.get("log_excerpt", "")
         if not self.traceback:
             self.tbLabel.hide()
             self.scriptBox.hide()
@@ -74,44 +84,52 @@ class BugreportTool(DlgUtils, QDialog):
 
         self.stacker.setCurrentIndex(0)
         self.subject.setFocus()
-        btn = self.buttonBox.addButton('Login details',
-                                       QDialogButtonBox.ButtonRole.ResetRole)
+        btn = self.buttonBox.addButton(
+            "Login details", QDialogButtonBox.ButtonRole.ResetRole
+        )
         btn.clicked.connect(self._queryDetails)
 
         if not redminelib:
-            self.showError('Reporting is not possible since the '
-                           'python-redmine module is not installed.')
+            self.showError(
+                "Reporting is not possible since the "
+                "python-redmine module is not installed."
+            )
             return  # don't add Submit button
         elif not self.instrument or not self.apikey:
             if not self._queryDetails():
                 return
 
-        self.buttonBox.addButton('Submit',
-                                 QDialogButtonBox.ButtonRole.AcceptRole)
+        self.buttonBox.addButton("Submit", QDialogButtonBox.ButtonRole.AcceptRole)
 
         self.titleLabel.setText(
             'Submit a ticket for instrument "%s" (as user %s)'
-            % (self.instrument, self.username))
+            % (self.instrument, self.username)
+        )
 
     def _queryDetails(self):
         dlg = QDialog(self)
-        dlg.setWindowTitle('Login details for ticket tracker required')
+        dlg.setWindowTitle("Login details for ticket tracker required")
         layout = QGridLayout()
-        layout.addWidget(QLabel('Please enter details for the ticket tracker. '
-                                'You can contact the instrument control group '
-                                'for help.', dlg))
-        layout.addWidget(QLabel('Instrument name:', dlg))
+        layout.addWidget(
+            QLabel(
+                "Please enter details for the ticket tracker. "
+                "You can contact the instrument control group "
+                "for help.",
+                dlg,
+            )
+        )
+        layout.addWidget(QLabel("Instrument name:", dlg))
         instrBox = QLineEdit(self.instrument, dlg)
-        instrBox.setEnabled(self.instrument != 'none')
+        instrBox.setEnabled(self.instrument != "none")
         layout.addWidget(instrBox)
-        noinstrBox = QCheckBox('No instrument', dlg)
-        noinstrBox.setChecked(self.instrument == 'none')
+        noinstrBox = QCheckBox("No instrument", dlg)
+        noinstrBox.setChecked(self.instrument == "none")
         noinstrBox.toggled.connect(lambda c: instrBox.setEnabled(not c))
         layout.addWidget(noinstrBox)
-        layout.addWidget(QLabel('Username:', dlg))
+        layout.addWidget(QLabel("Username:", dlg))
         userBox = QLineEdit(self.username, dlg)
         layout.addWidget(userBox)
-        layout.addWidget(QLabel('Password:', dlg))
+        layout.addWidget(QLabel("Password:", dlg))
         passwdBox = QLineEdit(dlg)
         passwdBox.setEchoMode(QLineEdit.Password)
         layout.addWidget(passwdBox)
@@ -123,31 +141,35 @@ class BugreportTool(DlgUtils, QDialog):
         layout.addWidget(buttonbox)
         dlg.setLayout(layout)
         if dlg.exec() == QDialog.DialogCode.Accepted:
-            rm = redminelib.Redmine(TRACKER_URL, username=userBox.text(),
-                                    password=passwdBox.text())
+            rm = redminelib.Redmine(
+                TRACKER_URL, username=userBox.text(), password=passwdBox.text()
+            )
             try:
                 apikey = rm.auth().api_key
             except Exception as err:
                 self.showError(str(err))
                 return False
-            self.showInfo('Login successful.  Your API key has been stored '
-                          'for further reports.')
-            settings = QSettings('nicos', 'secrets')
-            settings.beginGroup('Redmine')
+            self.showInfo(
+                "Login successful.  Your API key has been stored "
+                "for further reports."
+            )
+            settings = QSettings("nicos", "secrets")
+            settings.beginGroup("Redmine")
             if noinstrBox.isChecked():
-                self.instrument = 'none'
+                self.instrument = "none"
             else:
                 self.instrument = instrBox.text()
             self.apikey = apikey
             self.username = userBox.text()
-            settings.setValue('instrument', self.instrument)
-            settings.setValue('apikey', self.apikey)
-            settings.setValue('username', self.username)
+            settings.setValue("instrument", self.instrument)
+            settings.setValue("apikey", self.apikey)
+            settings.setValue("username", self.username)
             if not self.instrument or not self.apikey:
                 return False
             self.titleLabel.setText(
                 'Submit a ticket for instrument "%s" (as user %s)'
-                % (self.instrument, self.username))
+                % (self.instrument, self.username)
+            )
             return True
 
     def on_buttonBox_accepted(self):
@@ -155,38 +177,41 @@ class BugreportTool(DlgUtils, QDialog):
         is_critical = self.highPrio.isChecked()
         subject = self.subject.text().strip()
         info = [
-            'Used versions:',
-            '    Client: %s' % nicos_version,
-            '    Python: %s' % sys.version.split()[0],
-            '    Qt:     %s' % QT_VERSION_STR,
-            '    PyQt:   %s' % PYQT_VERSION_STR,
+            "Used versions:",
+            "    Client: %s" % nicos_version,
+            "    Python: %s" % sys.version.split()[0],
+            "    Qt:     %s" % QT_VERSION_STR,
+            "    PyQt:   %s" % PYQT_VERSION_STR,
         ]
         if self.client.isconnected:
             dinfo = self.client.daemon_info.copy()
             info += [
-                '    Server: %s' % dinfo.get('daemon_version', ''),
-                'Connected to: %s' % self.client.host,
-                '    root: %s' % dinfo.get('nicos_root', ''),
-                '    custom:',
-                '        path:    %s' % dinfo.get('custom_path', ''),
-                '        version: %s' % dinfo.get('custom_version', ''),
+                "    Server: %s" % dinfo.get("daemon_version", ""),
+                "Connected to: %s" % self.client.host,
+                "    root: %s" % dinfo.get("nicos_root", ""),
+                "    custom:",
+                "        path:    %s" % dinfo.get("custom_path", ""),
+                "        version: %s" % dinfo.get("custom_version", ""),
             ]
         description = self.descText.toPlainText().strip()
-        description += '\n\n' + '\n'.join(info)
+        description += "\n\n" + "\n".join(info)
         reproduction = self.reproText.toPlainText().strip()
         add_log = self.scriptBox.isChecked()
 
         if not subject or not description:
-            self.showError('Please enter a ticket subject and description.')
+            self.showError("Please enter a ticket subject and description.")
             return
 
         try:
-            ticket_num = self.submitIssue(ticket_type, is_critical, subject,
-                                          description, reproduction, add_log)
+            ticket_num = self.submitIssue(
+                ticket_type, is_critical, subject, description, reproduction, add_log
+            )
         except Exception as e:
-            self.showError('Unfortunately, something went wrong submitting '
-                           'the ticket (%s). The tracker page will now be '
-                           'opened, please enter the ticket there.' % e)
+            self.showError(
+                "Unfortunately, something went wrong submitting "
+                "the ticket (%s). The tracker page will now be "
+                "opened, please enter the ticket there." % e
+            )
             QDesktopServices.openUrl(QUrl(CREATE_TICKET_URL))
             return
 
@@ -199,23 +224,31 @@ class BugreportTool(DlgUtils, QDialog):
     def on_ticketUrl_released(self):
         QDesktopServices.openUrl(QUrl(self.ticketUrl.text()))
 
-    def submitIssue(self, ticket_type, is_critical, subject, description,
-                    reproduction, add_log):
-
+    def submitIssue(
+        self, ticket_type, is_critical, subject, description, reproduction, add_log
+    ):
         def wrap(text):
-            return html.escape(text).replace('\n\n', '</p><p>'). \
-                replace('\n', '<br/>')
+            return html.escape(text).replace("\n\n", "</p><p>").replace("\n", "<br/>")
 
-        full_desc = '<p>' + wrap(description) + '</p>'
+        full_desc = "<p>" + wrap(description) + "</p>"
         if reproduction:
-            full_desc += '\n\n<p><b>Reproduction:</b></p>' + \
-                         '<p>' + wrap(reproduction) + '</p>'
+            full_desc += (
+                "\n\n<p><b>Reproduction:</b></p>" + "<p>" + wrap(reproduction) + "</p>"
+            )
         if self.traceback:
-            full_desc += '\n\n<p><b>Traceback:</b></p>\n' + \
-                         '<pre>' + html.escape(self.traceback) + '</pre>'
+            full_desc += (
+                "\n\n<p><b>Traceback:</b></p>\n"
+                + "<pre>"
+                + html.escape(self.traceback)
+                + "</pre>"
+            )
         if add_log and self.log_excerpt:
-            full_desc += '\n\n<p><b>Log excerpt:</b></p>\n' + \
-                         '<pre>' + html.escape(self.log_excerpt) + '</pre>'
+            full_desc += (
+                "\n\n<p><b>Log excerpt:</b></p>\n"
+                + "<pre>"
+                + html.escape(self.log_excerpt)
+                + "</pre>"
+            )
 
         rm = redminelib.Redmine(TRACKER_URL, key=self.apikey)
         issue = rm.issue.new()
@@ -226,10 +259,10 @@ class BugreportTool(DlgUtils, QDialog):
         issue.tracker_id = tracker_id
         issue.description = full_desc
         if is_critical:
-            prios = rm.enumeration.filter(resource='issue_priorities')
-            prio_id = [p.id for p in prios if p.name == 'Urgent'][0]
+            prios = rm.enumeration.filter(resource="issue_priorities")
+            prio_id = [p.id for p in prios if p.name == "Urgent"][0]
             issue.priority_id = prio_id
-        if self.instrument != 'none':
-            issue.custom_fields = [{'id': 1, 'value': self.instrument}]
+        if self.instrument != "none":
+            issue.custom_fields = [{"id": 1, "value": self.instrument}]
         issue.save()
         return issue.id

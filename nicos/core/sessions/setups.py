@@ -27,9 +27,7 @@ from nicos.core.params import nicosdev_re
 from nicos.utils import Device
 from nicos.utils.files import iterSetups
 
-SETUP_GROUPS = {
-    'basic', 'optional', 'plugplay', 'lowlevel', 'special', 'configdata'
-}
+SETUP_GROUPS = {"basic", "optional", "plugplay", "lowlevel", "special", "configdata"}
 
 
 class MonitorElement:
@@ -37,7 +35,6 @@ class MonitorElement:
 
 
 class HasChildren:
-
     def __init__(self, *children):
         self._children = children
 
@@ -51,7 +48,7 @@ class HasChildren:
         return self._children[index]
 
     def __repr__(self):
-        return '%s<%r>' % (self.__class__.__name__, self._children)
+        return "%s<%r>" % (self.__class__.__name__, self._children)
 
 
 class Row(HasChildren, MonitorElement):
@@ -59,7 +56,6 @@ class Row(HasChildren, MonitorElement):
 
 
 class Column(HasChildren, MonitorElement):
-
     def __add__(self, other):
         if isinstance(other, tuple):
             return Column(*(self._children + other))
@@ -76,15 +72,13 @@ class Column(HasChildren, MonitorElement):
 
 
 class Block(HasChildren, MonitorElement):
-
     def __init__(self, title, children, **options):
         self._title = title
         HasChildren.__init__(self, *children)
         self._options = options
 
     def __repr__(self):
-        return 'Block<%r, %r, %r>' % (self._title, self._children,
-                                      self._options)
+        return "Block<%r, %r, %r>" % (self._title, self._children, self._options)
 
 
 class Field(MonitorElement):
@@ -113,32 +107,36 @@ class Field(MonitorElement):
         return self._options.pop(key)
 
     def __repr__(self):
-        return 'Field<%r>' % self._options
+        return "Field<%r>" % self._options
 
 
 class SetupBlock(MonitorElement):
-    def __init__(self, setupname, blockname='default'):
+    def __init__(self, setupname, blockname="default"):
         self._setupname = setupname
         self._blockname = blockname
 
     def __repr__(self):
-        return 'SetupBlock<%s:%s>' % (self._setupname, self._blockname)
+        return "SetupBlock<%s:%s>" % (self._setupname, self._blockname)
 
 
 def readSetups(paths, logger):
     """Read all setups on the given paths."""
     infodict = {}
     all_setups = dict(iterSetups(paths))
-    for (setupname, filename) in all_setups.items():
+    for setupname, filename in all_setups.items():
         readSetup(infodict, setupname, filename, all_setups, logger)
     # check if all includes exist
     for name, info in infodict.items():
         if info is None:
             continue  # erroneous setup
-        for include in info['includes']:
+        for include in info["includes"]:
             if not infodict.get(include):
-                logger.error('Setup "%s" includes setup "%s" which does not '
-                             'exist or has errors', name, include)
+                logger.error(
+                    'Setup "%s" includes setup "%s" which does not '
+                    "exist or has errors",
+                    name,
+                    include,
+                )
                 infodict[name] = None
     return infodict
 
@@ -149,38 +147,48 @@ def prepareNamespace(setupname, filepath, all_setups):
     dep_files = set()
     # device() is a helper function to make configuration prettier
     ns = {
-        'device': lambda cls, **params: Device((cls, params)),
-        'configdata': make_configdata(filepath, all_setups, dep_files),
-        'setupname': setupname,
-        '_dep_files': dep_files,
-        'Row': Row, 'Column': Column, 'BlockRow': Row,
-        'Block': Block, 'Field': Field, 'SetupBlock': SetupBlock,
+        "device": lambda cls, **params: Device((cls, params)),
+        "configdata": make_configdata(filepath, all_setups, dep_files),
+        "setupname": setupname,
+        "_dep_files": dep_files,
+        "Row": Row,
+        "Column": Column,
+        "BlockRow": Row,
+        "Block": Block,
+        "Field": Field,
+        "SetupBlock": SetupBlock,
     }
     return ns
 
 
 def make_configdata(filepath, all_setups, dep_files):
     """Create a configdata() function for use in setups."""
+
     def configdata(name):
         from nicos.core.errors import ConfigurationError
+
         try:
-            setupname, element = name.split('.')
+            setupname, element = name.split(".")
         except ValueError:
-            raise ConfigurationError('configdata() argument must be in the '
-                                     'form \'module.valuename\'') from None
+            raise ConfigurationError(
+                "configdata() argument must be in the " "form 'module.valuename'"
+            ) from None
         if setupname not in all_setups:
             raise ConfigurationError('config setup "%s" not found' % setupname)
         else:
             fullname = all_setups[setupname]
         ns = {}
-        with open(fullname, encoding='utf-8') as fp:
+        with open(fullname, encoding="utf-8") as fp:
             exec(fp.read(), ns)
         dep_files.add(fullname)
         try:
             return ns[element]
         except KeyError:
-            raise ConfigurationError('value named %s not found in config setup'
-                                     ' "%s"' % (element, setupname)) from None
+            raise ConfigurationError(
+                "value named %s not found in config setup"
+                ' "%s"' % (element, setupname)
+            ) from None
+
     return configdata
 
 
@@ -189,17 +197,21 @@ def fixup_stacked_devices(logger, devdict):
     Replace <adevname> = Device(..) entries in devices dict with a proper
     name and move the device definition under that name.
     """
+
     def add_new_dev(devname, subname, devconfig):
         # guess a name:
-        newname = '%s_%s' % (devname, subname)
+        newname = "%s_%s" % (devname, subname)
         while newname in devdict:
-            logger.error('Device %r already exists, but is also a '
-                         'subdevice of %r which should be renamed',
-                         newname, devname)
-            newname = '_' + newname
+            logger.error(
+                "Device %r already exists, but is also a "
+                "subdevice of %r which should be renamed",
+                newname,
+                devname,
+            )
+            newname = "_" + newname
         # set subDevice visibility if not specified otherwise
-        if 'visibility' not in devconfig[1]:
-            devconfig[1]['visibility'] = ()
+        if "visibility" not in devconfig[1]:
+            devconfig[1]["visibility"] = ()
         # 'rename' device, keeping logical connection
         devdict[newname] = devconfig
         return newname
@@ -215,12 +227,13 @@ def fixup_stacked_devices(logger, devdict):
                     newname = add_new_dev(devname, subname, config)
                     dev[1][subname] = newname
                     patched = True
-                elif isinstance(config, (tuple, list)) and \
-                        any(isinstance(e, Device) for e in config):
+                elif isinstance(config, (tuple, list)) and any(
+                    isinstance(e, Device) for e in config
+                ):
                     dev[1][subname] = list(config)
                     for idx, item in enumerate(config):
                         if isinstance(item, Device):
-                            subentryname = '%s%d' % (subname, idx + 1)
+                            subentryname = "%s%d" % (subname, idx + 1)
                             newname = add_new_dev(devname, subentryname, item)
                             dev[1][subname][idx] = newname
                             patched = True
@@ -229,73 +242,78 @@ def fixup_stacked_devices(logger, devdict):
 
 def readSetup(infodict, modname, filepath, all_setups, logger):
     try:
-        with open(filepath, 'rb') as modfile:
+        with open(filepath, "rb") as modfile:
             code = modfile.read()
     except OSError as err:
-        logger.exception('Could not read setup '
-                         'module %r: %s', filepath, err)
+        logger.exception("Could not read setup " "module %r: %s", filepath, err)
         return
     ns = prepareNamespace(modname, filepath, all_setups)
     try:
         exec(code, ns)
     except Exception as err:
-        logger.exception('An error occurred while processing '
-                         'setup %r: %s', filepath, err)
+        logger.exception(
+            "An error occurred while processing " "setup %r: %s", filepath, err
+        )
         return
-    devices = fixup_stacked_devices(logger, ns.get('devices', {}))
+    devices = fixup_stacked_devices(logger, ns.get("devices", {}))
     for devname in devices:
         if not nicosdev_re.match(devname):
-            logger.exception('While processing setup %r: device name %r is '
-                             'invalid, names must be Python identifiers',
-                             filepath, devname)
+            logger.exception(
+                "While processing setup %r: device name %r is "
+                "invalid, names must be Python identifiers",
+                filepath,
+                devname,
+            )
             return
     info = {
-        'description': ns.get('description', modname),
-        'group': ns.get('group', 'optional'),
-        'sysconfig': ns.get('sysconfig', {}),
-        'includes': ns.get('includes', []),
-        'excludes': ns.get('excludes', []),
-        'modules': ns.get('modules', []),
-        'devices': devices,
-        'alias_config': ns.get('alias_config', {}),
-        'startupcode': ns.get('startupcode', ''),
-        'display_order': ns.get('display_order', 50),
-        'extended': ns.get('extended', {}),
-        'monitor_blocks': ns.get('monitor_blocks', {}),
-        'watch_conditions': ns.get('watch_conditions', []),
-        'help_topics': ns.get('help_topics', {}),
+        "description": ns.get("description", modname),
+        "group": ns.get("group", "optional"),
+        "sysconfig": ns.get("sysconfig", {}),
+        "includes": ns.get("includes", []),
+        "excludes": ns.get("excludes", []),
+        "modules": ns.get("modules", []),
+        "devices": devices,
+        "alias_config": ns.get("alias_config", {}),
+        "startupcode": ns.get("startupcode", ""),
+        "display_order": ns.get("display_order", 50),
+        "extended": ns.get("extended", {}),
+        "monitor_blocks": ns.get("monitor_blocks", {}),
+        "watch_conditions": ns.get("watch_conditions", []),
+        "help_topics": ns.get("help_topics", {}),
         # internal value, not to be set by setups
-        '_filenames_': [filepath] + list(ns.get('_dep_files', ())),
+        "_filenames_": [filepath] + list(ns.get("_dep_files", ())),
     }
-    if info['group'] not in SETUP_GROUPS:
-        logger.warning('Setup %s has an invalid group (valid groups '
-                       'are: %s)', modname, ', '.join(SETUP_GROUPS))
-        info['group'] = 'optional'
+    if info["group"] not in SETUP_GROUPS:
+        logger.warning(
+            "Setup %s has an invalid group (valid groups " "are: %s)",
+            modname,
+            ", ".join(SETUP_GROUPS),
+        )
+        info["group"] = "optional"
     if modname in infodict:
         # setup already exists; override/extend with new values
         oldinfo = infodict[modname] or {}
-        oldinfo['description'] = ns.get('description',
-                                        oldinfo['description'])
-        oldinfo['group'] = ns.get('group', oldinfo['group'])
-        oldinfo['sysconfig'].update(info['sysconfig'])
-        oldinfo['includes'].extend(info['includes'])
-        oldinfo['excludes'].extend(info['excludes'])
-        oldinfo['modules'].extend(info['modules'])
-        oldinfo['devices'].update(info['devices'])
+        oldinfo["description"] = ns.get("description", oldinfo["description"])
+        oldinfo["group"] = ns.get("group", oldinfo["group"])
+        oldinfo["sysconfig"].update(info["sysconfig"])
+        oldinfo["includes"].extend(info["includes"])
+        oldinfo["excludes"].extend(info["excludes"])
+        oldinfo["modules"].extend(info["modules"])
+        oldinfo["devices"].update(info["devices"])
         # remove devices overridden by "None" entries completely
-        for devname, value in list(oldinfo['devices'].items()):
+        for devname, value in list(oldinfo["devices"].items()):
             if value is None:
-                del oldinfo['devices'][devname]
-        oldinfo['startupcode'] += '\n' + info['startupcode']
-        oldinfo['alias_config'].update(info['alias_config'])
-        oldinfo['display_order'] = ns.get('display_order',
-                                          oldinfo['display_order'])
-        oldinfo['extended'].update(info['extended'])
-        oldinfo['monitor_blocks'].update(info['monitor_blocks'])
-        oldinfo['watch_conditions'].extend(info['watch_conditions'])
-        oldinfo['help_topics'].update(info['help_topics'])
-        oldinfo['_filenames_'].extend(info['_filenames_'])
-        logger.debug('%r setup partially merged with version '
-                     'from parent directory', modname)
+                del oldinfo["devices"][devname]
+        oldinfo["startupcode"] += "\n" + info["startupcode"]
+        oldinfo["alias_config"].update(info["alias_config"])
+        oldinfo["display_order"] = ns.get("display_order", oldinfo["display_order"])
+        oldinfo["extended"].update(info["extended"])
+        oldinfo["monitor_blocks"].update(info["monitor_blocks"])
+        oldinfo["watch_conditions"].extend(info["watch_conditions"])
+        oldinfo["help_topics"].update(info["help_topics"])
+        oldinfo["_filenames_"].extend(info["_filenames_"])
+        logger.debug(
+            "%r setup partially merged with version " "from parent directory", modname
+        )
     else:
         infodict[modname] = info

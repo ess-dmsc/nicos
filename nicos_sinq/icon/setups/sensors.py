@@ -1,20 +1,22 @@
-description = 'Beam line environmental sensors'
+description = "Beam line environmental sensors"
 
-group = 'lowlevel'
+group = "lowlevel"
 
 display_order = 95
 
-pvprefix = 'SQ:ICON:sensors:'
+pvprefix = "SQ:ICON:sensors:"
 
 devices = dict(
-    temperature = device('nicos.devices.epics.pyepics.EpicsReadable',
-        description = 'Beam line temperature',
-        readpv = pvprefix + 'TEMP',
-        unit = 'degC',
+    temperature=device(
+        "nicos.devices.epics.pyepics.EpicsReadable",
+        description="Beam line temperature",
+        readpv=pvprefix + "TEMP",
+        unit="degC",
     ),
-    humidity = device('nicos.devices.epics.pyepics.EpicsReadable',
-        description = 'Beam line relative humidity',
-        readpv = pvprefix + 'RH',
-        unit = '%',
+    humidity=device(
+        "nicos.devices.epics.pyepics.EpicsReadable",
+        description="Beam line relative humidity",
+        readpv=pvprefix + "RH",
+        unit="%",
     ),
 )

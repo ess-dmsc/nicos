@@ -1,44 +1,50 @@
-description = 'detectors'
-group = 'lowlevel'  # is included by panda.py
+description = "detectors"
+group = "lowlevel"  # is included by panda.py
 display_order = 70
 
-excludes = ['qmesydaq']
+excludes = ["qmesydaq"]
 
-tango_base = 'tango://phys.panda.frm2:10000/panda/'
+tango_base = "tango://phys.panda.frm2:10000/panda/"
 
 devices = dict(
-    timer = device('nicos.devices.entangle.TimerChannel',
-        tangodevice = tango_base + 'frmctr2/timer',
-        visibility = (),
+    timer=device(
+        "nicos.devices.entangle.TimerChannel",
+        tangodevice=tango_base + "frmctr2/timer",
+        visibility=(),
     ),
-    mon1 = device('nicos.devices.entangle.CounterChannel',
-        tangodevice = tango_base + 'frmctr2/mon1',
-        type = 'monitor',
-        fmtstr = '%d',
-        visibility = (),
+    mon1=device(
+        "nicos.devices.entangle.CounterChannel",
+        tangodevice=tango_base + "frmctr2/mon1",
+        type="monitor",
+        fmtstr="%d",
+        visibility=(),
     ),
-    mon2 = device('nicos.devices.entangle.CounterChannel',
-        tangodevice = tango_base + 'frmctr2/mon2',
-        type = 'monitor',
-        fmtstr = '%d',
-        visibility = (),
+    mon2=device(
+        "nicos.devices.entangle.CounterChannel",
+        tangodevice=tango_base + "frmctr2/mon2",
+        type="monitor",
+        fmtstr="%d",
+        visibility=(),
     ),
-    det1 = device('nicos.devices.entangle.CounterChannel',
-        tangodevice = tango_base + 'frmctr2/det1',
-        type = 'counter',
-        fmtstr = '%d',
-        visibility = (),
+    det1=device(
+        "nicos.devices.entangle.CounterChannel",
+        tangodevice=tango_base + "frmctr2/det1",
+        type="counter",
+        fmtstr="%d",
+        visibility=(),
     ),
-    det2 = device('nicos.devices.entangle.CounterChannel',
-        tangodevice = tango_base + 'frmctr2/det2',
-        type = 'counter',
-        fmtstr = '%d',
-        visibility = (),
+    det2=device(
+        "nicos.devices.entangle.CounterChannel",
+        tangodevice=tango_base + "frmctr2/det2",
+        type="counter",
+        fmtstr="%d",
+        visibility=(),
     ),
-    mon1_c = device('nicos.devices.tas.OrderCorrectedMonitor',
-        description = 'Monitor corrected for higher-order influence',
-        ki = 'ki',
-        mapping = {
+    mon1_c=device(
+        "nicos.devices.tas.OrderCorrectedMonitor",
+        description="Monitor corrected for higher-order influence",
+        ki="ki",
+        mapping={
             1.2: 3.40088101,
             1.3: 2.20258647,
             1.4: 1.97398164,
@@ -71,18 +77,19 @@ devices = dict(
             4.1: 1.00121974,
         },
     ),
-    det = device('nicos.devices.generic.Detector',
-        description = 'combined four channel single counter detector',
-        timers = ['timer'],
-        monitors = ['mon1', 'mon2', 'mon1_c'],
-        counters = ['det1', 'det2'],
+    det=device(
+        "nicos.devices.generic.Detector",
+        description="combined four channel single counter detector",
+        timers=["timer"],
+        monitors=["mon1", "mon2", "mon1_c"],
+        counters=["det1", "det2"],
         # counters = ['det2'],
-        postprocess = [('mon1_c', 'mon1')],
-        maxage = 1,
-        pollinterval = 1,
+        postprocess=[("mon1_c", "mon1")],
+        maxage=1,
+        pollinterval=1,
     ),
 )
 
-startupcode = '''
+startupcode = """
 SetDetectors(det)
-'''
+"""

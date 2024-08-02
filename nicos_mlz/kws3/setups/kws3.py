@@ -1,14 +1,14 @@
-description = 'KWS-3 setup'
-group = 'basic'
+description = "KWS-3 setup"
+group = "basic"
 
-modules = ['nicos_mlz.kws3.commands']
+modules = ["nicos_mlz.kws3.commands"]
 
 includes = [
-    'sample',
-    'selector',
-    'detector',
-    'shutters',
-    'polarizer',
-    'daq',
-    'vacuumsys',
+    "sample",
+    "selector",
+    "detector",
+    "shutters",
+    "polarizer",
+    "daq",
+    "vacuumsys",
 ]
