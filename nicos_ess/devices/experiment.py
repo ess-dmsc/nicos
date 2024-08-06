@@ -225,15 +225,9 @@ class EssExperiment(Experiment):
     def _extract_samples(self, query_result):
         samples = []
         for sample in query_result.samples:
-            mass = f"{sample.mass_or_volume[0]} {sample.mass_or_volume[1]}".strip()
-            density = f"{sample.density[0]} {sample.density[1]}".strip()
             samples.append(
                 {
                     "name": sample.name,
-                    "formula": sample.formula,
-                    "number_of": sample.number,
-                    "mass_volume": mass,
-                    "density": density,
                     "temperature": "0",
                     "electric_field": "0",
                     "magnetic_field": "0",
