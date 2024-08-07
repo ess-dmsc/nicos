@@ -62,6 +62,10 @@ main_window = docked(
                                 "nicos_ess.loki.gui.panels.spectrometer.SpectrometerPanel"
                             ),
                         ),
+                        ('Rheometer Setup',
+                         panel(
+                             'nicos_ess.gui.panels.rheometer.RheometerPanel'
+                         )),
                         (
                             "Script Status",
                             panel(
