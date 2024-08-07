@@ -418,7 +418,7 @@ class DevicesPanel(Panel):
         self._dev2setup = {}
         self._setupinfo = self.client.eval("session.getSetupInfo()", {})
         if self._setupinfo is None:
-            self.log.warning("session.getSetupInfo() returned None instead " "of {}")
+            self.log.warning("session.getSetupInfo() returned None instead of {}")
             return
         for setupname, info in self._setupinfo.items():
             if info is None:
@@ -749,8 +749,7 @@ class DevicesPanel(Panel):
                 self.on_client_device(("destroy", [self._menu_dev]))
                 return
             if self.askQuestion(
-                "This will unload the device until the setup "
-                "is loaded again. Proceed?"
+                "This will unload the device until the setup is loaded again. Proceed?"
             ):
                 self.exec_command("RemoveDevice(%r)" % self._menu_dev, ask_queue=False)
 
@@ -903,8 +902,10 @@ class ControlDialog(QDialog):
         )
         self.settingsBtn.clicked.connect(self.on_settingsBtn_clicked)
 
-        # trigger parameter poll
-        self.client.eval("%s.pollParams()" % self.devname, None)
+        # trigger poll of volatile parameters
+        self.client.eval(
+            f"session.getDevice({self.devname!r}).asyncPollVolatileParams()", None
+        )
 
         # now get all cache keys pertaining to the device and set the
         # properties we want
@@ -1089,13 +1090,15 @@ class ControlDialog(QDialog):
         # QCursor.pos is more reliable then the given pos
         action = menu.exec(QCursor.pos())
 
-        if action:
-            cmd = "session.getDevice(%r).pollParams(volatile_only=False%s)" % (
-                self.devname,
-                ", param_list=[%r]" % item.text(0) if action == refreshAction else "",
-            )
-            # poll even non volatile parameter as requested explicitly
-            self.client.eval(cmd, None)
+        if action == copyAction:
+            board = QGuiApplication.clipboard()
+            board.setText(item.text(1))
+        elif action:
+            arg = repr(item.text(0)) if action == refreshAction else ""
+            # will poll even nonvolatile parameters, as requested explicitly
+            cmd = f"session.getDevice({self.devname!r}).pollParams({arg})"
+            with waitCursor():
+                self.client.eval(cmd, None)
 
     @pyqtSlot()
     def on_settingsBtn_clicked(self):
@@ -1143,8 +1146,7 @@ class ControlDialog(QDialog):
             QMessageBox.warning(
                 self,
                 "Error",
-                "The entered limits are not "
-                "within the absolute limits for the device.",
+                "The entered limits are not within the absolute limits for the device.",
             )
             # retry
             self.on_actionSetLimits_triggered()
@@ -1263,7 +1265,7 @@ class ControlDialog(QDialog):
             # shouldn't happen, but if it does, at least give an indication that
             # something went wrong
             QMessageBox.warning(
-                self, "Error", "The entered value is invalid " "for this parameter."
+                self, "Error", "The entered value is invalid for this parameter."
             )
             return
         if self.devrepr == self.devname:
