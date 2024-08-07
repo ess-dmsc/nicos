@@ -457,9 +457,11 @@ class MainWindow(DlgUtils, QMainWindow):
             if name == INSTRUMENT:
                 value = self.client.eval("session.instrument", None)
                 label.setText("Instrument:")
-            else:
+            elif name == PROPOSAL_ID:
                 value = self.client.eval("session.experiment.proposal", None)
                 label.setText("Proposal ID:")
+            else:
+                value = ""
 
             if value:
                 logo = decolor_logo(
