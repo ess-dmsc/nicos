@@ -29,7 +29,16 @@ from datetime import datetime, timedelta
 
 from streaming_data_types import deserialise_f144
 
-from nicos.core import SIMULATION, Override, Param, Readable, host, listof
+from nicos.core import (
+    SIMULATION,
+    Override,
+    Param,
+    Readable,
+    host,
+    listof,
+    status,
+    tupleof,
+)
 
 from nicos_ess.devices.kafka.consumer import KafkaConsumer
 from nicos_ess.utilities.json_utils import generate_nxlog_json
@@ -74,6 +83,12 @@ class ComponentTrackingDevice(Readable):
             settable=True,
             mandatory=False,
         ),
+        "curstatus": Param(
+            "Store the current device status",
+            internal=True,
+            type=tupleof(int, str),
+            settable=True,
+        ),
     }
 
     parameter_overrides = {
@@ -89,6 +104,7 @@ class ComponentTrackingDevice(Readable):
         if mode != SIMULATION:
             self._consumer = KafkaConsumer.create(self.brokers)
             self._consumer.subscribe(self.response_topic)
+            self._setROParam("curstatus", (status.OK, ""))
         else:
             self._consumer = None
 
@@ -117,6 +133,9 @@ class ComponentTrackingDevice(Readable):
                 if name.endswith(":valid"):
                     validity[name.split(":")[0]] = values["value"] == 1
         if not messages:
+            self._setROParam(
+                "curstatus", (status.WARN, "Could not retrieve messages from Kafka.")
+            )
             return {}
 
         self.gollum_data = messages
@@ -128,7 +147,6 @@ class ComponentTrackingDevice(Readable):
             else:
                 component["distance_from_sample"] = "Not detected"
         self._update_unconfirmed_components(components_data)
-
         return self._unconfirmed_components
 
     def _update_unconfirmed_components(self, new_components):
@@ -142,6 +160,7 @@ class ComponentTrackingDevice(Readable):
             temp.append(new_component)
         self._unconfirmed_components = temp
         self._last_scan_timestamp = datetime.now()
+        self._setROParam("curstatus", (status.OK, ""))
 
     def _extract_components(self, data):
         components = {}
@@ -217,3 +236,6 @@ class ComponentTrackingDevice(Readable):
 
     def doRead(self, maxage=0):
         return ""
+
+    def doStatus(self, maxage=0):
+        return self.curstatus
