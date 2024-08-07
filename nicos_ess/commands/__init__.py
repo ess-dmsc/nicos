@@ -33,3 +33,4 @@ from nicos_ess.commands.filewriter import (
     stop_filewriting,
 )
 from nicos_ess.commands.wait import waitfor_stable
+from nicos_ess.commands.sample import set_sample_fields, clear_sample_fields

@@ -74,6 +74,7 @@ from nicos.core.utils import system_user
 from nicos.devices.cacheclient import CacheClient, CacheLockError, SyncCacheClient
 from nicos.devices.instrument import Instrument
 from nicos.devices.notifiers import Notifier
+from nicos_ess.devices.sample import EssSample
 from nicos.protocols.cache import FLAG_NO_STORE
 from nicos.utils import fixupScript, formatArgs, formatDocstring, formatScriptError
 from nicos.utils.loggers import (
@@ -1169,6 +1170,21 @@ class Session:
                 raise UsageError(source, "device must be one of %s" % clsrep(cls))
             raise UsageError(source, "device must be a %s" % (cls or Device).__name__)
         return dev
+
+    def clearSampleFields(self, fields):
+        sample_dev = None
+        for dev in self.devices.values():
+            if isinstance(dev, EssSample):
+                sample_dev = dev
+        if not sample_dev:
+            self.log.warning("Sample device does not exist or has not been created.")
+            return
+
+        for field in fields:
+            if hasattr(sample_dev, field):
+                setattr(sample_dev, field, "")
+            else:
+                self.log.warning(f"Sample device has no field '{field}'")
 
     def _deviceNotFound(self, devname, source=None):
         """Called when a required device was not found in the currently

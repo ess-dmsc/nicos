@@ -488,6 +488,7 @@ class DevicesPanel(Panel):
             catitem = self.tree.topLevelItem(i)
             cat = catitem.text(0)
             catitem.setToolTip(0, self._setupinfo[cat].get("description", ""))
+        self._clear_sample_fields()
 
     def on_client_device(self, data):
         (action, devlist) = data
@@ -796,8 +797,25 @@ class DevicesPanel(Panel):
         if dlg:
             dlg.deleteLater()
 
-    # API shared with ControlDialog
+    def _clear_sample_fields(self):
+        state = self.client.ask("getstatus")
+        if not state:
+            return
+        sample_params = (
+            self.client.getDeviceParams("Sample")
+            if "Sample" in state["devices"]
+            else {}
+        )
+        curr_devs = self.client.getDeviceList()
+        if curr_devs:
+            clear_fields = [
+                field
+                for field in ("temperature", "electric_field", "magnetic_field")
+                if sample_params.get(field) and sample_params[field] not in curr_devs
+            ]
+            self.client.eval("session.clearSampleFields(%r)" % clear_fields)
 
+    # API shared with ControlDialog
     def exec_command(self, command, ask_queue=True, immediate=False):
         if ask_queue and not immediate and self._current_status != "idle":
             qwindow = ScriptExecQuestion()
@@ -1213,7 +1231,6 @@ class ControlDialog(QDialog):
             params = self.client.getDeviceParams(self.devname)
             curr_value = params[pname]
             catitems = self.device_panel._catitems
-            devinfo = self.device_panel._devinfo
             system_devs = [
                 catitems[c].child(i).text(0)
                 for c in catitems
@@ -1221,9 +1238,7 @@ class ControlDialog(QDialog):
                 for i in range(catitems[c].childCount())
             ]
             non_system_devs = [
-                devinfo[d]["name"]
-                for d in devinfo
-                if devinfo[d]["name"] not in system_devs
+                d for d in self.client.getDeviceList() if d not in system_devs
             ]
             if curr_value not in non_system_devs:
                 curr_value = ""
