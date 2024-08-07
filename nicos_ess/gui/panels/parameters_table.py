@@ -116,7 +116,7 @@ class ParametersTable(QWidget):
         else:
             dlg.target = DeviceParamEdit(self, dev=self.devname, param=pname)
             dlg.target.setClient(self.client)
-        dlg.paramName.setText("Parameter: %s.%s" % (self.devname, pname))
+        dlg.paramName.setText(f"Parameter: {self.devname}.{pname}")
         dlg.paramDesc.setText(self.param_info[pname]["description"])
         dlg.paramValue.setText(str(self.param_values[pname]) + " " + punit)
         dlg.targetLayout.addWidget(dlg.target)
@@ -137,7 +137,7 @@ class ParametersTable(QWidget):
             return
 
         self.devices_panel.exec_command(
-            "set('%s', '%s', %r)" % (self.devname, pname, new_value)
+            f"set('{self.devname}', '{pname}', {new_value!r})"
         )
 
     def on_context_menu(self, pos):
@@ -153,9 +153,9 @@ class ParametersTable(QWidget):
         action = menu.exec(QCursor.pos())
 
         if action:
-            cmd = "session.getDevice(%r).pollParams(volatile_only=False%s)" % (
+            cmd = "session.getDevice({!r}).pollParams({})".format(
                 self.devname,
-                ", param_list=[%r]" % item.text(0) if action == refreshAction else "",
+                f"param_list=[{item.text(0)!r}]" if action == refreshAction else "",
             )
             # poll even non volatile parameter as requested explicitly
             self.client.eval(cmd, None)
