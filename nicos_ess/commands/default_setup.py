@@ -9,6 +9,7 @@ def default_setup():
     )
 
     for devname, dev in session.devices.items():
+        session.log.info(f"configured devices: {system_devs}")
         if devname not in system_devs:
             session.log.info(f"non system dev: {dev}")
         session.log.info(f"system dev: {dev}")
