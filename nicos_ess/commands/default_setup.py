@@ -4,5 +4,8 @@ from nicos.commands import usercommand
 
 @usercommand
 def default_setup():
-    for dev in session.devices.values():
-        session.log.info(dev)
+    system_devs = session.configured_devices if "system" in session.loaded_setup else {}
+
+    for devname, dev in session.devices.items():
+        if devname not in system_devs:
+            session.log.info(dev)
