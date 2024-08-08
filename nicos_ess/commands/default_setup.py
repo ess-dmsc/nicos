@@ -4,5 +4,5 @@ from nicos.commands import usercommand
 
 @usercommand
 def default_setup():
-    for dev in session.devices:
-        print(dev)
+    for dev in session.devices.values():
+        session.log.info(dev)
