@@ -35,7 +35,13 @@ from nicos.guisupport.qt import (
     QVBoxLayout,
     QWidget,
     QGridLayout,
+    QDialog,
+    QTimer,
 )
+from nicos_ess.gui.widgets.pyqtgraph.pixel_display_dialog import PixelDialog
+
+
+CONTROLLER_REFRESH_INTERVAL = 1000
 
 
 class ImageViewController(QWidget):
@@ -44,6 +50,11 @@ class ImageViewController(QWidget):
         self.plotwidget = parent
         self.disp_image = None
         self.pix_to_mm_ratio = None
+
+        self.refresh_timer = QTimer(self)
+        self.refresh_timer.timeout.connect(self.update_controller)
+        self.refresh_timer.start(CONTROLLER_REFRESH_INTERVAL)
+
         self.build_ui()
 
     def initialize_ui(self):
@@ -118,6 +129,12 @@ class ImageViewController(QWidget):
             QFrame.Shape.WinPanel | QFrame.Shadow.Raised
         )
         self.crosshair_roi_info_layout = QGridLayout()
+
+        self.selector_roi_info_layout_frame = QFrame()
+        self.selector_roi_info_layout_frame.setFrameStyle(
+            QFrame.Shape.WinPanel | QFrame.Shadow.Raised
+        )
+        self.selector_roi_info_layout = QGridLayout()
 
         self.build_roi_start_settings()
         self.build_roi_size_settings()
@@ -210,13 +227,32 @@ class ImageViewController(QWidget):
         )
         self.crosshair_roi_info_layout.addWidget(self.crosshair_roi_pos_y_le, 1, 4)
 
+        self.selector_roi_select_cb = QCheckBox("Select Pixels")
+        self.selector_roi_select_cb.clicked.connect(self.selector_roi_select_clicked)
+
+        self.selector_roi_counter_label = QLabel("Selected Pixels: 0")
+
+        self.selector_roi_display_btn = QPushButton("Display Pixels")
+        self.selector_roi_display_btn.clicked.connect(self.selector_roi_display)
+
+        self.selector_roi_info_layout.addWidget(
+            self.selector_roi_select_cb, 0, 0, Qt.AlignmentFlag.AlignLeft
+        )
+        self.selector_roi_info_layout.addWidget(
+            self.selector_roi_counter_label, 0, 1, Qt.AlignmentFlag.AlignRight
+        )
+
+        self.selector_roi_info_layout.addWidget(self.selector_roi_display_btn, 1, 0)
+
         self.roi_info_layout_frame.setLayout(self.roi_info_layout)
         self.line_roi_info_layout_frame.setLayout(self.line_roi_info_layout)
         self.crosshair_roi_info_layout_frame.setLayout(self.crosshair_roi_info_layout)
+        self.selector_roi_info_layout_frame.setLayout(self.selector_roi_info_layout)
 
         self.roi_info_vbox_layout.addWidget(self.roi_info_layout_frame)
         self.roi_info_vbox_layout.addWidget(self.line_roi_info_layout_frame)
         self.roi_info_vbox_layout.addWidget(self.crosshair_roi_info_layout_frame)
+        self.roi_info_vbox_layout.addWidget(self.selector_roi_info_layout_frame)
 
         self.roi_info_frame.setLayout(self.roi_info_vbox_layout)
 
@@ -498,6 +534,23 @@ class ImageViewController(QWidget):
         else:
             self.plotwidget.hide_crosshair_roi()
         self.update_roi_view()
+
+    def selector_roi_select_clicked(self):
+        self.plotwidget.select_pixels = self.selector_roi_select_cb.isChecked()
+
+    def selector_roi_display(self):
+        pixel_dialog = PixelDialog(self.plotwidget.selected_pixels, parent=self)
+        if pixel_dialog.exec_() == QDialog.Accepted:
+            self.plotwidget.selected_pixels = pixel_dialog.selected_pixels
+        self.update_selected_pixel_counter()
+
+    def update_selected_pixel_counter(self):
+        self.selector_roi_counter_label.setText(
+            f"Selected Pixels: {len(self.plotwidget.selected_pixels)}"
+        )
+
+    def update_controller(self):
+        self.update_selected_pixel_counter()
 
     def show_profile_clicked(self):
         if self.plotwidget.image_view_controller.profile_cb.isChecked():
