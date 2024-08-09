@@ -34,6 +34,7 @@ from nicos.guisupport.qt import (
     QSizePolicy,
     QVBoxLayout,
     QWidget,
+    QTimer,
 )
 
 from nicos_ess.gui.panels.live_pyqt import (
@@ -44,6 +45,8 @@ from nicos_ess.gui.panels.live_pyqt import (
     layout_iterator,
 )
 
+READBACK_UPDATE_INTERVAL = 1000
+
 
 class ADControl(QWidget):
     def __init__(self, parent=None):
@@ -52,6 +55,9 @@ class ADControl(QWidget):
         self.parent = parent
         self.selected_device = None
         self.last_acquisition_time = 0.0
+        self.update_timer = QTimer(self)
+        self.update_timer.setInterval(READBACK_UPDATE_INTERVAL)
+        self.update_timer.setSingleShot(True)
         self.fields = []
 
         self.init_ui()
@@ -387,9 +393,13 @@ class ADControl(QWidget):
                 field.setText(field_readback.text())
 
     def update_readback_values(self):
+        if self.update_timer.isActive():
+            return
+
         if not self.selected_device:
             return
 
+        self.parent.eval_command("%s.pollParams()" % self.selected_device, None)
         param_info = self.parent.client.getDeviceParams(self.selected_device)
         if not param_info:
             return
@@ -397,9 +407,12 @@ class ADControl(QWidget):
         self._update_text_fields(param_info)
         self._update_start_acq_button_style(param_info.get("status", (None, None))[1])
         self._highlight_differing_readback_values()
+        self.update_timer.start()
 
     def _update_text_fields(self, param_info):
-        self.acquisition_time.readback.setText(str(param_info.get("acquiretime")))
+        self.acquisition_time.readback.setText(
+            str(round(param_info.get("acquiretime"), 3))
+        )
         self.acquisition_period.readback.setText(str(param_info.get("acquireperiod")))
         self.start_x.readback.setText(str(param_info.get("startx")))
         self.start_y.readback.setText(str(param_info.get("starty")))
@@ -437,61 +450,96 @@ class ADControl(QWidget):
                     "background-color: rgba(255, 255, 255, 0%)"
                 )
 
-    def _exec_command_if_device_selected(self, command_template, *args):
+    def _eval_command_if_device_selected(self, command_template, *args):
         if not self.selected_device:
             return
         command = command_template % ((self.selected_device,) + args)
-        self.parent.exec_command(command)
+        self.parent.eval_command(command)
 
     def on_acq_start(self):
         # self._turn_off_correction()
         self._turn_off_preview()
         self.parent.plotwidget.image_view_controller.disp_image = None
         self.last_acquisition_time = float(self.acquisition_time.readback.text())
-        self._exec_command_if_device_selected("%s.prepare()")
+        self._eval_command_if_device_selected("%s.prepare()")
         # Don't set presets, run with config from here
-        self._exec_command_if_device_selected("%s.doAcquire()")
+        self._eval_command_if_device_selected("%s.doAcquire()")
 
     def on_acq_stop(self):
-        self._exec_command_if_device_selected("%s.stop()")
+        self._eval_command_if_device_selected("%s.stop()")
 
     def on_acq_mode_changed(self, index):
         mode = str(self.acq_mode_combo.currentText())
-        self._exec_command_if_device_selected('%s.imagemode = "%s"', mode)
+        self._eval_command_if_device_selected('%s.doWriteImagemode("%s")', mode)
+        self._eval_command_if_device_selected(
+            '%s._cache.put(%s, "%s", "%s")', self.selected_device, "imagemode", mode
+        )
 
     def on_binning_changed(self, index):
         binning = str(self.binning_combo.currentText())
-        self._exec_command_if_device_selected('%s.binning = "%s"', binning)
+        self._eval_command_if_device_selected('%s.doWriteBinning("%s")', binning)
+        self._eval_command_if_device_selected(
+            '%s._cache.put(%s, "%s", "%s")', self.selected_device, "binning", binning
+        )
 
     def on_acquisition_time_changed(self):
         acquisition_time = float(self.acquisition_time.text())
-        self._exec_command_if_device_selected("%s.acquiretime = %f", acquisition_time)
+        self._eval_command_if_device_selected(
+            "%s.doWriteAcquiretime(%f)", acquisition_time
+        )
+        self._eval_command_if_device_selected(
+            '%s._cache.put(%s, "%s", %f)',
+            self.selected_device,
+            "acquiretime",
+            acquisition_time,
+        )
 
     def on_acquisition_period_changed(self):
         acquisition_period = float(self.acquisition_period.text())
-        self._exec_command_if_device_selected(
-            "%s.acquireperiod = %f", acquisition_period
+        self._eval_command_if_device_selected(
+            "%s.doWriteAcquireperiod(%f)", acquisition_period
+        )
+        self._eval_command_if_device_selected(
+            '%s._cache.put(%s, "%s", %f)',
+            self.selected_device,
+            "acquireperiod",
+            acquisition_period,
         )
 
     def on_start_x_changed(self):
         start_x = int(self.start_x.text())
-        self._exec_command_if_device_selected("%s.startx = %d", start_x)
+        self._eval_command_if_device_selected("%s.doWriteStartx(%d)", start_x)
+        self._eval_command_if_device_selected(
+            '%s._cache.put(%s, "%s", %d)', self.selected_device, "startx", start_x
+        )
 
     def on_start_y_changed(self):
         start_y = int(self.start_y.text())
-        self._exec_command_if_device_selected("%s.starty = %d", start_y)
+        self._eval_command_if_device_selected("%s.doWriteStarty(%d)", start_y)
+        self._eval_command_if_device_selected(
+            '%s._cache.put(%s, "%s", %d)', self.selected_device, "starty", start_y
+        )
 
     def on_size_x_changed(self):
         size_x = int(self.size_x.text())
-        self._exec_command_if_device_selected("%s.sizex = %d", size_x)
+        self._eval_command_if_device_selected("%s.doWriteSizex(%d)", size_x)
+        self._eval_command_if_device_selected(
+            '%s._cache.put(%s, "%s", %d)', self.selected_device, "sizex", size_x
+        )
 
     def on_size_y_changed(self):
         size_y = int(self.size_y.text())
-        self._exec_command_if_device_selected("%s.sizey = %d", size_y)
+        self._eval_command_if_device_selected("%s.doWriteSizey(%d)", size_y)
+        self._eval_command_if_device_selected(
+            '%s._cache.put(%s, "%s", %d)', self.selected_device, "sizey", size_y
+        )
 
     def on_num_images_changes(self):
         num_images = int(self.num_images.text())
-        self._exec_command_if_device_selected("%s.numimages = %d", num_images)
+        self._eval_command_if_device_selected("%s.doWriteNumimages(%d)", num_images)
+        self._eval_command_if_device_selected(
+            '%s._cache.put(%s, "%s", %d)', self.selected_device, "numimages", num_images
+        )
 
 
 class MultiLiveDataPanel(DefaultMultiLiveDataPanel):
@@ -541,7 +589,11 @@ class MultiLiveDataPanel(DefaultMultiLiveDataPanel):
 
     def on_client_cache(self, data):
         _, key, _, _ = data
-        self.ad_controller.update_readback_values()
+        if (
+            self.ad_controller.selected_device
+            and self.ad_controller.selected_device in key
+        ):
+            self.ad_controller.update_readback_values()
         self.scroll.setMaximumWidth(self.ad_controller.size().width())
         if key == "exp/detlist":
             self.ad_controller.detector_combo.clear()

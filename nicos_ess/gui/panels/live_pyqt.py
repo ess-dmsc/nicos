@@ -182,6 +182,9 @@ class LiveDataPanel(Panel):
     def exec_command(self, command):
         self.client.tell("exec", command)
 
+    def eval_command(self, command, *args, **kwargs):
+        return self.client.eval(command, *args, **kwargs)
+
     def on_client_livedata(self, params, blobs):
         self.log.debug("on_client_livedata: %r", params)
         # blobs is a list of data blobs and labels blobs

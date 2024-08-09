@@ -30,6 +30,7 @@ from streaming_data_types import deserialise_ADAr, deserialise_ad00
 from streaming_data_types.utils import get_schema
 
 from nicos import session
+from nicos.commands.basic import sleep
 from nicos.core import (
     LIVE,
     SIMULATION,
@@ -468,7 +469,7 @@ class AreaDetector(EpicsDevice, ImageChannelMixin, Measurable):
                 image = deserialiser(value).data
                 self.putResult(LIVE, image, timestamp)
 
-        time.sleep(sleep_time)
+        sleep(sleep_time)
         # Jump to the latest message as more messages are produced faster than
         # can be processed
         self._kafka_subscriber.consumer.seek_to_end()
@@ -499,7 +500,7 @@ class AreaDetector(EpicsDevice, ImageChannelMixin, Measurable):
         elif severity == status.WARN:
             self.log.warning(msg_format, pv_value, stat)
 
-    def _limit_range(self, value, max_pv):
+    def _limit_size(self, value, max_pv):
         max_value = self._get_pv(max_pv)
         if value > max_value:
             value = max_value
@@ -507,9 +508,19 @@ class AreaDetector(EpicsDevice, ImageChannelMixin, Measurable):
             self.subarraymode = True
         return int(value)
 
+    def _limit_start(self, value):
+        if value < 0:
+            value = 0
+        elif value > 0:
+            self.subarraymode = True
+        return int(value)
+
     def check_if_max_size(self):
-        if self.sizex == self._get_pv("max_size_x") and self.sizey == self._get_pv(
-            "max_size_y"
+        if (
+            self.sizex == self._get_pv("max_size_x")
+            and self.sizey == self._get_pv("max_size_y")
+            and self.startx == 0
+            and self.starty == 0
         ):
             self.subarraymode = False
 
@@ -548,27 +559,27 @@ class AreaDetector(EpicsDevice, ImageChannelMixin, Measurable):
         return self._get_pv("size_x_rbv")
 
     def doWriteSizex(self, value):
-        self._put_pv("size_x", self._limit_range(value, "max_size_x"))
+        self._put_pv("size_x", self._limit_size(value, "max_size_x"))
         self.check_if_max_size()
 
     def doReadSizey(self):
         return self._get_pv("size_y_rbv")
 
     def doWriteSizey(self, value):
-        self._put_pv("size_y", self._limit_range(value, "max_size_y"))
+        self._put_pv("size_y", self._limit_size(value, "max_size_y"))
         self.check_if_max_size()
 
     def doReadStartx(self):
         return self._get_pv("min_x_rbv")
 
     def doWriteStartx(self, value):
-        self._put_pv("min_x", self._limit_range(value, "max_size_x"))
+        self._put_pv("min_x", self._limit_start(value))
 
     def doReadStarty(self):
         return self._get_pv("min_y_rbv")
 
     def doWriteStarty(self, value):
-        self._put_pv("min_y", self._limit_range(value, "max_size_y"))
+        self._put_pv("min_y", self._limit_start(value))
 
     def doReadAcquiretime(self):
         return self._get_pv("acquire_time_rbv")
