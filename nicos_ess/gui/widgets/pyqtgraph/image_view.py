@@ -91,6 +91,8 @@ class ImageView(QWidget):
         self.saved_cm = None
         self.autolevel_complete = False
         self.image = None
+        self.select_pixels = False
+        self.selected_pixels = []
         self._use_metric_length = False
         self._line_roi_drag_active = False
         self._roi_drag_active = False
@@ -109,6 +111,10 @@ class ImageView(QWidget):
         self.statisticsAction = QAction("Calculate Statistics", self)
         self.statisticsAction.triggered.connect(self.calculate_statistics)
         self.view.menu.addAction(self.statisticsAction)
+
+        self.addSelectedPixelAction = QAction("Add Selected Pixel", self)
+        self.addSelectedPixelAction.triggered.connect(self.add_selected_pixel)
+        self.view.menu.addAction(self.addSelectedPixelAction)
 
         for child in self.view.menu.actions():
             if child.text() == "View All":
@@ -348,10 +354,6 @@ class ImageView(QWidget):
                 self.crosshair_roi.horizontal_line.setPos(view_center.y())
                 self.crosshair_roi.first_show = False
 
-            pos_i, pos_j = (
-                int(self.crosshair_roi.vertical_line.value()),
-                int(self.crosshair_roi.horizontal_line.value()),
-            )
             self.image_item.sigImageChanged.connect(self.crosshair_roi_changed)
             self.crosshair_roi.vertical_line.sigPositionChanged.connect(
                 self.crosshair_roi_changed
@@ -495,6 +497,11 @@ class ImageView(QWidget):
 
     def mousePressEvent(self, event):
         self.clicked.emit(self.name)
+
+    def add_selected_pixel(self):
+        pos = self.image_item.last_clicked
+        if pos is not None and pos not in self.selected_pixels and self.select_pixels:
+            self.selected_pixels.append(pos)
 
     def enter_roi_drag_mode(self):
         if self._line_roi_drag_active:
@@ -912,18 +919,13 @@ class ImageView(QWidget):
             return
 
         data_x = data.mean(axis=self.axes["y"])
-        data_y = data.mean(axis=self.axes["x"])
         self.line_roi_mean = data.mean()
         self.line_roi_std = data.std()
         self.line_roi_max = data.max()
         self.line_roi_min = data.min()
 
-        x_ref, y_ref = np.floor(coords[0][0][0]), np.floor(coords[1][0][0])
-
         coords_x = coords[:, :, 0] - coords[:, 0:1, 0]
-        coords_y = coords[:, 0, :] - coords[:, 0, 0:1]
-        xvals = (coords_x**2).sum(axis=0) ** 0.5  # + x_ref
-        yvals = (coords_y**2).sum(axis=0) ** 0.5  # + y_ref
+        xvals = (coords_x**2).sum(axis=0) ** 0.5
 
         self.line_roi_trace.setData(x=xvals, y=data_x)
         self.line_roi_trace_left.setData(x=[xvals[0]], y=[data_x[0]])

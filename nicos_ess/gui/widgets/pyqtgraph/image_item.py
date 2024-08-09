@@ -44,6 +44,7 @@ class CustomImageItem(ImageItem):
         self._defining_roi = False
         self._use_metric_length = False
         self._pix_to_mm_ratio = None
+        self.last_clicked = None
 
     def set_define_roi_mode(self, state):
         self._defining_roi = state
@@ -65,6 +66,7 @@ class CustomImageItem(ImageItem):
         return i, j
 
     def mousePressEvent(self, event):
+        self.last_clicked = self.get_pos(event)
         if self._defining_roi:
             self.start_coord = self.get_pos(event)
             if self._use_metric_length:
