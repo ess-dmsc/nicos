@@ -9,9 +9,7 @@ def default_setup():
     )"""
 
     # session.log.info(f"loaded setups: {session.loaded_setups}")
-
-    for d in session._setup_info:
-        session.log.info(f"setup info: {d}")
+    session.log.info(f"setup info: {session._setup_info['system']}")
 
     """for devname, dev in session.devices.items():
         if devname not in system_devs:
