@@ -210,11 +210,11 @@ class NexusStructureJsonFile(NexusStructureProvider):
             samples_dict, skip_keys=["number_of"]
         )
 
+        nxinstrument_structure = self._find_nxinstrument(structure)
+
         for field_name, field_metainfo in link_info.items():
             value = field_metainfo[0]
-            dev_path = self._find_device_path(
-                structure["children"][0]["children"][0], value
-            )
+            dev_path = self._find_device_path(nxinstrument_structure, value)
 
             field_dict = (
                 {field_name: f"/entry/{'/'.join(dev_path)}"}
@@ -247,6 +247,19 @@ class NexusStructureJsonFile(NexusStructureProvider):
             "Could not find the NXsample group in the NeXus JSON structure"
         )
         return structure
+
+    def _find_nxinstrument(self, structure):
+        for child in structure["children"][0]["children"]:
+            if not isinstance(child, dict) or "attributes" not in child:
+                continue
+
+            if any(
+                attr.get("name") == "NX_class" and attr.get("values") == "NXinstrument"
+                for attr in child["attributes"]
+            ):
+                return child
+
+        return None
 
     def _find_device_path(self, structure, dev_name):
         def search_node(node, path):
