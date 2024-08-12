@@ -64,11 +64,15 @@ class AreaDetector(EpicsDevice, ImageChannelMixin, Measurable):
         "acquireperiod": Param(
             "Time between exposure starts.", settable=True, volatile=True
         ),
+        "thresholdfine": Param("Fine threshold", settable=True, volatile=True),
+        "thresholdcoarse": Param("Coarse threshold", settable=True, volatile=True),
     }
 
     _control_pvs = {
         "acquire_time": "AcquireTime",
         "acquire_period": "AcquirePeriod",
+        "threshold_fine": "CHIP0_Vth_fine",
+        "threshold_coarse": "CHIP0_Vth_coarse",
     }
 
     _record_fields = {}
@@ -228,6 +232,18 @@ class AreaDetector(EpicsDevice, ImageChannelMixin, Measurable):
 
     def doWriteAcquireperiod(self, value):
         self._put_pv("acquire_period", value)
+
+    def doReadThresholdfine(self):
+        return self._get_pv("threshold_fine_rbv")
+
+    def doWriteThresholdfine(self, value):
+        self._put_pv("threshold_fine", value)
+
+    def doReadThresholdcoarse(self):
+        return self._get_pv("threshold_coarse_rbv")
+
+    def doWriteThresholdcoarse(self, value):
+        self._put_pv("threshold_coarse", value)
 
 
 class AreaDetectorCollector(Detector):

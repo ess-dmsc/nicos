@@ -95,6 +95,8 @@ class ADControl(QWidget):
                 self.create_acquisition_period_field,
                 2,
             ),
+            ("Coarse Threshold:", self.create_line_edit, 3),
+            ("Fine Threshold:", self.create_line_edit, 4),
         ]
 
         for label_text, field_method, row in disp_fields:
@@ -205,6 +207,18 @@ class ADControl(QWidget):
             "Set Value", self.on_acquisition_period_changed
         )
         return self.acquisition_period
+
+    def create_threshold_coarse_field(self):
+        self.threshold_coarse = self.create_line_edit(
+            "Set Value", self.on_threshold_coarse_changed
+        )
+        return self.threshold_coarse
+
+    def create_threshold_fine_field(self):
+        self.threshold_fine = self.create_line_edit(
+            "Set Value", self.on_threshold_fine_changed
+        )
+        return self.threshold_fine
 
     def create_combo_box(self, items, callback):
         combo_box = QComboBox()
@@ -368,10 +382,10 @@ class ADControl(QWidget):
         self.update_timer.start()
 
     def _update_text_fields(self, param_info):
-        self.acquisition_time.readback.setText(
-            str(round(param_info.get("acquiretime"), 3))
-        )
+        self.acquisition_time.readback.setText(str(param_info.get("acquiretime")))
         self.acquisition_period.readback.setText(str(param_info.get("acquireperiod")))
+        self.threshold_coarse.readback.setText(str(param_info.get("thresholdcoarse")))
+        self.threshold_fine.readback.setText(str(param_info.get("thresholdfine")))
 
     def _update_start_acq_button_style(self, status):
         if status == "":  # pylint: disable=compare-to-empty-string
@@ -441,6 +455,30 @@ class ADControl(QWidget):
             self.selected_device,
             "acquireperiod",
             acquisition_period,
+        )
+
+    def on_threshold_coarse_changed(self):
+        threshold_coarse = int(self.threshold_coarse.text())
+        self._eval_command_if_device_selected(
+            "%s.doWriteThresholdcoarse(%d)", threshold_coarse
+        )
+        self._eval_command_if_device_selected(
+            '%s._cache.put(%s, "%s", %d)',
+            self.selected_device,
+            "thresholdcoarse",
+            threshold_coarse,
+        )
+
+    def on_threshold_fine_changed(self):
+        threshold_fine = int(self.threshold_fine.text())
+        self._eval_command_if_device_selected(
+            "%s.doWriteThresholdfine(%d)", threshold_fine
+        )
+        self._eval_command_if_device_selected(
+            '%s._cache.put(%s, "%s", %d)',
+            self.selected_device,
+            "thresholdfine",
+            threshold_fine,
         )
 
 
