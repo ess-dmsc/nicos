@@ -95,8 +95,8 @@ class ADControl(QWidget):
                 self.create_acquisition_period_field,
                 2,
             ),
-            ("Coarse Threshold:", self.create_line_edit, 3),
-            ("Fine Threshold:", self.create_line_edit, 4),
+            ("Coarse Threshold:", self.create_threshold_coarse_field, 3),
+            ("Fine Threshold:", self.create_threshold_fine_field, 4),
         ]
 
         for label_text, field_method, row in disp_fields:
