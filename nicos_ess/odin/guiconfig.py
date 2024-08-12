@@ -1,3 +1,4 @@
+# ruff: noqa: F821
 """NICOS GUI default configuration."""
 
 main_window = docked(
@@ -21,9 +22,15 @@ main_window = docked(
                             ),
                         ),
                         ("Scan Plot", panel("nicos_ess.gui.panels.scans.ScansPanel")),
+                        # (
+                        #     "Detector Image",
+                        #     panel("nicos_ess.odin.gui.panels.live.MultiLiveDataPanel"),
+                        # ),
                         (
-                            "Detector Image",
-                            panel("nicos_ess.odin.gui.panels.live.MultiLiveDataPanel"),
+                            "Timepix",
+                            panel(
+                                "nicos_ess.odin.gui.panels.timepix.MultiLiveDataPanel"
+                            ),
                         ),
                         (
                             "Component Tracking",
