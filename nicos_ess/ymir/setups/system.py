@@ -10,10 +10,6 @@ sysconfig = dict(
     datasinks=["conssink", "daemonsink", "liveview"],
 )
 
-alias_config = {
-    "NexusStructure": {"NexusStructure_Basic": 100, "NexusStructure_AreaDetector": 50},
-}
-
 modules = ["nicos.commands.standard", "nicos_ess.commands"]
 
 devices = dict(
@@ -52,12 +48,6 @@ devices = dict(
     ),
     NexusStructure_Basic=device(
         "nicos_ess.devices.datasinks.nexus_structure.NexusStructureJsonFile",
-        description="Provides the NeXus structure",
-        nexus_config_path="nicos_ess/ymir/nexus/ymir_nexus.json",
-        visibility=(),
-    ),
-    NexusStructure_AreaDetector=device(
-        "nicos_ess.devices.datasinks.nexus_structure.NexusStructureAreaDetector",
         description="Provides the NeXus structure",
         nexus_config_path="nicos_ess/ymir/nexus/ymir_nexus.json",
         area_det_collector_device="area_detector_collector",
