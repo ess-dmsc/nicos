@@ -41,7 +41,11 @@ from nicos.core import (
     Param,
 )
 
-from nicos_ess.utilities.json_utils import generate_nxlog_json, build_json
+from nicos_ess.utilities.json_utils import (
+    generate_nxlog_json,
+    build_json,
+    generate_group_json,
+)
 from nicos.utils import createThread
 from nicos_ess.devices.kafka.producer import KafkaProducer
 from nicos_ess.devices.kafka.status_handler import KafkaStatusHandler
@@ -97,9 +101,10 @@ class EpicsKafkaForwarder(KafkaStatusHandler):
         return self._generate_json_configs()
 
     def get_component_nexus_json(self):
-        return build_json(
+        children = build_json(
             session.devices["component_tracking"]._generate_json_configs_groups()
         )
+        return generate_group_json("component_tracker", "NXcollection", children)
 
     def _get_forwarder_config(self, dev):
         for nexus_config_dict in dev.nexus_config:
