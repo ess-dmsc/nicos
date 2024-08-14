@@ -142,7 +142,7 @@ class NexusStructureJsonFile(NexusStructureProvider):
         extra_devices = session.getDevice("KafkaForwarder").get_nexus_json()
 
         if self._check_for_device("component_tracking"):
-            extra_devices.extend(
+            extra_devices.append(
                 session.getDevice("KafkaForwarder").get_component_nexus_json()
             )
 
