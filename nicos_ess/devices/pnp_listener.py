@@ -79,12 +79,15 @@ class UDPHeartbeatsManager(Device):
                 pv_name = parts[1]
                 if pv_name not in self._pv_list:
                     self._pv_list.append(pv_name)
-                    self.log.info(f"New PnP heartbeat received: {pv_name}")
+                    self.log.info(
+                        f"New PnP heartbeat received: {pv_name}. Adding to heartbeat list."
+                    )
+                self.log.info(f"Received UDP packet with pv_name: {pv_name}")
 
             except Exception as e:
                 self.log.error(f"Error receiving UDP packet: {e}")
 
-            time.sleep(0.1)
+            time.sleep(1)
 
     def _send_heartbeats(self):
         self.log.info("Heartbeat thread started.")
