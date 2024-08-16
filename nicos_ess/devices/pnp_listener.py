@@ -24,7 +24,9 @@ import re
 import socket
 import threading
 
+from nicos.commands.basic import sleep
 from nicos.core import SIMULATION, POLLER
+from nicos.devices.epics.pva.p4p import pvget, pvput
 from nicos.utils import createThread
 from nicos.core.device import Device, Param
 
@@ -44,37 +46,60 @@ class UDPHeartbeatsManager(Device):
         self._sock.bind(("", self.port))
         self._stop_event = threading.Event()
         self._listener_thread = createThread("udp_thread", self._listen_for_packets)
+        self._heartbeat_thread = createThread("heartbeat_thread", self._send_heartbeats)
+        self._pv_list = []
 
     def doStart(self):
         self._stop_event.clear()
         if self._listener_thread is None:
             self._listener_thread = createThread("udp_thread", self._listen_for_packets)
+        if self._heartbeat_thread is None:
+            self._heartbeat_thread = createThread(
+                "heartbeat_thread", self._send_heartbeats
+            )
 
     def doStop(self):
         self._stop_event.set()
-        if self._listener_thread.is_alive():
+        if self._listener_thread and self._listener_thread.is_alive():
             self._listener_thread.join()
             self._listener_thread = None
+        if self._heartbeat_thread and self._heartbeat_thread.is_alive():
+            self._heartbeat_thread.join()
+            self._heartbeat_thread = None
         self._sock.close()
 
     def _listen_for_packets(self):
         while not self._stop_event.is_set():
             try:
                 data, _ = self._sock.recvfrom(1024)  # Buffer size 1024 bytes
-                message = data.decode(
-                    "ascii", errors="ignore"
-                )  # Decode and ignore non-ASCII chars
-                self.log.info(f"Received UDP packet: {message}")
-                message = re.sub(
-                    r"[^\x20-\x7E]+", "\x00", message
-                )  # Replace non-printable characters with null
-                parts = [
-                    part for part in message.split("\x00") if part
-                ]  # Split and remove empty parts
-
-                self.log.info(f"Received parts: {parts}")
+                message = data.decode("ascii", errors="ignore")
+                message = re.sub(r"[^\x20-\x7E]+", "\x00", message)
+                parts = [part for part in message.split("\x00") if part]
+                if len(parts) >= 3:
+                    pv_name = parts[2]
+                    if pv_name not in self._pv_list:
+                        self._pv_list.append(pv_name)
+                        self.log.info(f"New PnP heartbeat received: {pv_name}")
             except Exception as e:
                 self.log.error(f"Error receiving UDP packet: {e}")
+            sleep(0.1)
+
+    def _send_heartbeats(self):
+        while not self._stop_event.is_set():
+            for pv_name in list(
+                self._pv_list
+            ):  # Create a copy of the list for safe iteration
+                try:
+                    current_value = pvget(pv_name)
+                    self.log.info(f"Current value of {pv_name}: {current_value}")
+                    pvput(pv_name, current_value + 1)
+                except Exception as e:
+                    self.log.warning(f"Failed updating {pv_name}: {e}")
+                    self._pv_list.remove(pv_name)
+            sleep(0.5)  # Wait 2 seconds before the next update cycle
+            sleep(0.5)
+            sleep(0.5)
+            sleep(0.5)
 
     def close(self):
         self.doStop()
