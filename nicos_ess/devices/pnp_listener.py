@@ -23,8 +23,8 @@
 import re
 import socket
 import threading
+import time
 
-from nicos.commands.basic import sleep
 from nicos.core import SIMULATION, POLLER
 from nicos.devices.epics.pva.p4p import pvget, pvput
 from nicos.utils import createThread
@@ -75,14 +75,15 @@ class UDPHeartbeatsManager(Device):
                 message = data.decode("ascii", errors="ignore")
                 message = re.sub(r"[^\x20-\x7E]+", "\x00", message)
                 parts = [part for part in message.split("\x00") if part]
-                if len(parts) >= 3:
-                    pv_name = parts[2]
-                    if pv_name not in self._pv_list:
-                        self._pv_list.append(pv_name)
-                        self.log.info(f"New PnP heartbeat received: {pv_name}")
+                pv_name = parts[2]
+                if pv_name not in self._pv_list:
+                    self._pv_list.append(pv_name)
+                    self.log.info(f"New PnP heartbeat received: {pv_name}")
+
             except Exception as e:
                 self.log.error(f"Error receiving UDP packet: {e}")
-            sleep(0.1)
+
+            time.sleep(0.1)
 
     def _send_heartbeats(self):
         while not self._stop_event.is_set():
@@ -96,10 +97,7 @@ class UDPHeartbeatsManager(Device):
                 except Exception as e:
                     self.log.warning(f"Failed updating {pv_name}: {e}")
                     self._pv_list.remove(pv_name)
-            sleep(0.5)  # Wait 2 seconds before the next update cycle
-            sleep(0.5)
-            sleep(0.5)
-            sleep(0.5)
+            time.sleep(2)
 
     def close(self):
         self.doStop()
