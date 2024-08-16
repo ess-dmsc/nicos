@@ -20,8 +20,7 @@
 #   Jonas Petersson <jonas.petersson@ess.eu>
 #
 # *****************************************************************************
-
-
+import re
 import socket
 import threading
 
@@ -60,7 +59,12 @@ class UDPHeartbeatsManager(Device):
         while not self._stop_event.is_set():
             try:
                 data, _ = self._sock.recvfrom(1024)  # Buffer size 1024 bytes
-                message = data.decode("ascii")
+                message = data.decode(
+                    "ascii", errors="ignore"
+                )  # Decode and ignore non-ASCII chars
+                message = re.sub(
+                    r"[^\x20-\x7E]+", "", message
+                )  # Remove non-printable characters
                 self.log.info(f"Received UDP message: {message}")
             except Exception as e:
                 self.log.error(f"Error receiving UDP packet: {e}")
