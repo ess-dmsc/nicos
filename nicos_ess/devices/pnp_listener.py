@@ -43,16 +43,18 @@ class UDPHeartbeatsManager(Device):
         self._sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self._sock.bind(("", self.port))
         self._stop_event = threading.Event()
+        self._listener_thread = createThread("udp_thread", self._listen_for_packets)
 
     def doStart(self):
         self._stop_event.clear()
-        self._listener_thread = createThread("udp_thread", self._listen_for_packets)
-        self._listener_thread.start()
+        if self._listener_thread is None:
+            self._listener_thread = createThread("udp_thread", self._listen_for_packets)
 
     def doStop(self):
         self._stop_event.set()
         if self._listener_thread.is_alive():
             self._listener_thread.join()
+            self._listener_thread = None
         self._sock.close()
 
     def _listen_for_packets(self):
@@ -63,9 +65,12 @@ class UDPHeartbeatsManager(Device):
                     "ascii", errors="ignore"
                 )  # Decode and ignore non-ASCII chars
                 message = re.sub(
-                    r"[^\x20-\x7E]+", "", message
-                )  # Remove non-printable characters
-                self.log.info(f"Received UDP message: {message}")
+                    r"[^\x20-\x7E]+", "\x00", message
+                )  # Replace non-printable characters with null
+
+                # Split the message by null characters
+                parts = message.split("\x00")
+                self.log.info(f"Received parts: {parts}")
             except Exception as e:
                 self.log.error(f"Error receiving UDP packet: {e}")
 
