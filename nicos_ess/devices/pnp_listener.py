@@ -75,7 +75,7 @@ class UDPHeartbeatsManager(Device):
                 message = data.decode("ascii", errors="ignore")
                 message = re.sub(r"[^\x20-\x7E]+", "\x00", message)
                 parts = [part for part in message.split("\x00") if part]
-                pv_name = parts[2]
+                pv_name = parts[1]
                 if pv_name not in self._pv_list:
                     self._pv_list.append(pv_name)
                     self.log.info(f"New PnP heartbeat received: {pv_name}")
