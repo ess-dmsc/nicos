@@ -25,7 +25,7 @@
 import socket
 import threading
 
-from nicos.core import SIMULATION
+from nicos.core import SIMULATION, POLLER
 from nicos.utils import createThread
 from nicos.core.device import Device, Param
 
@@ -37,6 +37,8 @@ class UDPHeartbeatsManager(Device):
 
     def doInit(self, mode):
         if mode == SIMULATION:
+            return
+        if mode == POLLER:
             return
 
         self._sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
