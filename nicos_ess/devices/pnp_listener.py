@@ -67,9 +67,10 @@ class UDPHeartbeatsManager(Device):
                 message = re.sub(
                     r"[^\x20-\x7E]+", "\x00", message
                 )  # Replace non-printable characters with null
+                parts = [
+                    part for part in message.split("\x00") if part
+                ]  # Split and remove empty parts
 
-                # Split the message by null characters
-                parts = message.split("\x00")
                 self.log.info(f"Received parts: {parts}")
             except Exception as e:
                 self.log.error(f"Error receiving UDP packet: {e}")
