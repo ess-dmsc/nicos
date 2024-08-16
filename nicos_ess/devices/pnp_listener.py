@@ -64,6 +64,7 @@ class UDPHeartbeatsManager(Device):
                 message = data.decode(
                     "ascii", errors="ignore"
                 )  # Decode and ignore non-ASCII chars
+                self.log.info(f"Received UDP packet: {message}")
                 message = re.sub(
                     r"[^\x20-\x7E]+", "\x00", message
                 )  # Replace non-printable characters with null
