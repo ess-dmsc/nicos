@@ -50,6 +50,7 @@ class UDPHeartbeatsManager(Device):
         self._pv_list = []
 
     def doStart(self):
+        self._sock.bind(("", self.port))
         self._stop_event.clear()
         if self._listener_thread is None:
             self._listener_thread = createThread("udp_thread", self._listen_for_packets)
@@ -86,18 +87,24 @@ class UDPHeartbeatsManager(Device):
             time.sleep(0.1)
 
     def _send_heartbeats(self):
-        while not self._stop_event.is_set():
-            for pv_name in list(
-                self._pv_list
-            ):  # Create a copy of the list for safe iteration
-                try:
-                    current_value = pvget(pv_name)
-                    self.log.info(f"Current value of {pv_name}: {current_value}")
-                    pvput(pv_name, current_value + 1)
-                except Exception as e:
-                    self.log.warning(f"Failed updating {pv_name}: {e}")
-                    self._pv_list.remove(pv_name)
-            time.sleep(2)
+        self.log.info("Heartbeat thread started.")
+        try:
+            while not self._stop_event.is_set():
+                for pv_name in list(
+                    self._pv_list
+                ):  # Create a copy of the list for safe iteration
+                    try:
+                        current_value = pvget(pv_name)
+                        self.log.info(f"Current value of {pv_name}: {current_value}")
+                        pvput(pv_name, current_value + 1)
+                    except Exception as e:
+                        self.log.warning(f"Failed updating {pv_name}: {e}")
+                        self._pv_list.remove(pv_name)
+                time.sleep(2)
+        except Exception as e:
+            self.log.error(f"Heartbeat thread encountered an error: {e}")
+        finally:
+            self.log.info("Heartbeat thread stopped.")
 
     def close(self):
         self.doStop()
