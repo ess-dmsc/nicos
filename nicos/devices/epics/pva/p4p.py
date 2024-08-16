@@ -20,6 +20,7 @@
 #   Matt Clarke <matt.clarke@ess.eu>
 #
 # *****************************************************************************
+import logging
 from collections.abc import Iterable
 from functools import partial
 from threading import Lock
@@ -35,6 +36,10 @@ from nicos.devices.epics.status import SEVERITY_TO_STATUS
 # nt=False tells p4p not to try to map types itself
 # we want to do this manually to avoid information loss
 _CONTEXT = Context("pva", nt=False)
+
+p4p_logger = logging.getLogger("p4p")
+p4p_logger.setLevel(logging.INFO)
+p4p_logger.propagate = False
 
 
 @hiddenusercommand
