@@ -1,11 +1,11 @@
-description = "Motors for the robot adjuster for Selene 1"
+description = "Motors for the robot adjuster for Selene 2"
 
-pvprefix = "ESTIA-Sel1:MC-MCU-01:"
+pvprefix = "ESTIA-Sel2:MC-MCU-01:"
 
 group = "lowlevel"
 
 devices = dict(
-    robot1_pos=device(
+    robot2_pos=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         motorpv=f"{pvprefix}Mtr6",
         powerautopv=f"{pvprefix}Mtr6-PwrAuto",
@@ -17,7 +17,7 @@ devices = dict(
         monitor=True,
         pva=True,
     ),
-    robot1_vert=device(
+    robot2_vert=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         motorpv=f"{pvprefix}Mtr7",
         powerautopv=f"{pvprefix}Mtr7-PwrAuto",
@@ -29,7 +29,7 @@ devices = dict(
         monitor=True,
         pva=True,
     ),
-    clutch1_1=device(
+    clutch2_1=device(
         "nicos.devices.epics.pva.EpicsStringReadable",
         description="Clutch 1",
         readpv=f"{pvprefix}Mtr6-OpenClutch",
@@ -38,7 +38,7 @@ devices = dict(
         monitor=True,
         pva=True,
     ),
-    clutch1_2=device(
+    clutch2_2=device(
         "nicos.devices.epics.pva.EpicsStringReadable",
         description="Clutch 2",
         readpv=f"{pvprefix}Mtr12-OpenClutch",
@@ -47,7 +47,7 @@ devices = dict(
         monitor=True,
         pva=True,
     ),
-    driver1_1_approach=device(
+    driver2_1_approach=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         motorpv=f"{pvprefix}Mtr8",
         powerautopv=f"{pvprefix}Mtr8-PwrAuto",
@@ -56,13 +56,13 @@ devices = dict(
         reseterrorpv=f"{pvprefix}Mtr8-ErrRst",
         temppv=f"{pvprefix}Mtr8-Temp",
         unit="mm",
-        userlimits=(0, 25),
+        userlimits=(-28, 0),
         maxage=None,
         pollinterval=None,
         monitor=True,
         pva=True,
     ),
-    driver1_2_approach=device(
+    driver2_2_approach=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         motorpv=f"{pvprefix}Mtr9",
         powerautopv=f"{pvprefix}Mtr9-PwrAuto",
@@ -71,13 +71,13 @@ devices = dict(
         reseterrorpv=f"{pvprefix}Mtr9-ErrRst",
         temppv=f"{pvprefix}Mtr9-Temp",
         unit="mm",
-        userlimits=(0, 25),
+        userlimits=(-28, 0),
         maxage=None,
         pollinterval=None,
         monitor=True,
         pva=True,
     ),
-    driver1_1_adjust=device(
+    driver2_1_adjust=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         motorpv=f"{pvprefix}Mtr10",
         powerautopv=f"{pvprefix}Mtr10-PwrAuto",
@@ -92,7 +92,7 @@ devices = dict(
         monitor=True,
         pva=True,
     ),
-    driver1_2_adjust=device(
+    driver2_2_adjust=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         motorpv=f"{pvprefix}Mtr11",
         powerautopv=f"{pvprefix}Mtr11-PwrAuto",
@@ -107,9 +107,8 @@ devices = dict(
         monitor=True,
         pva=True,
     ),
-    driver1_1_hex_state=device(
+    driver2_1_hex_state=device(
         "nicos.devices.epics.pva.EpicsMappedReadable",
-        description="Hexscrew state",
         readpv=f"{pvprefix}Mtr8-HexScrew",
         visibility=(),
         maxage=None,
@@ -117,9 +116,8 @@ devices = dict(
         pollinterval=None,
         pva=True,
     ),
-    driver1_2_hex_state=device(
+    driver2_2_hex_state=device(
         "nicos.devices.epics.pva.EpicsMappedReadable",
-        description="Hexscrew state",
         readpv=f"{pvprefix}Mtr9-HexScrew",
         visibility=(),
         maxage=None,
