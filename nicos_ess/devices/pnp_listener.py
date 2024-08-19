@@ -25,6 +25,7 @@ import socket
 import threading
 import time
 
+from nicos import session
 from nicos.core import SIMULATION, POLLER
 from nicos.devices.epics.pva.p4p import pvget, pvput
 from nicos.utils import createThread
@@ -108,6 +109,20 @@ class UDPHeartbeatsManager(Device):
             self.log.error(f"Heartbeat thread encountered an error: {e}")
         finally:
             self.log.info("Heartbeat thread stopped.")
+
+    def _find_setup(self, pv_name):
+        pass
+
+    def _send_pnp_event(self, event, setup_name, description):
+        session.pnpEvent(event, setup_name, description)
+
+    def on_pnp_device_detected(self, pv_name):
+        pv_root = ":".join(pv_name.split(":")[:2])
+        self.log.info(f"New PnP device detected: {pv_root}")
+
+        # Find the setup name from the PV name
+        setup_name = self._find_setup(pv_root)
+        self.log.info(f"Setup name: {setup_name}")
 
     def close(self):
         self.doStop()
