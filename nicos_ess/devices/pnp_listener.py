@@ -80,6 +80,7 @@ class UDPHeartbeatsManager(Device):
                 pv_name = parts[1]
                 if pv_name not in self._pv_list:
                     self._pv_list.append(pv_name)
+                    self.on_pnp_device_detected(pv_name)
                     self.log.info(
                         f"New PnP heartbeat received: {pv_name}. Adding to heartbeat list."
                     )
@@ -103,6 +104,7 @@ class UDPHeartbeatsManager(Device):
                         pvput(pv_name, current_value + 1)
                     except Exception as e:
                         self.log.warning(f"Failed updating {pv_name}: {e}")
+                        self.on_pnp_device_removed(pv_name)
                         self._pv_list.remove(pv_name)
                 time.sleep(2)
         except Exception as e:
@@ -134,6 +136,18 @@ class UDPHeartbeatsManager(Device):
         # Find the setup name from the PV name
         setup_name = self._find_setup(pv_root)
         self.log.info(f"Setup name: {setup_name}")
+
+        self._send_pnp_event("added", setup_name, pv_name)
+
+    def on_pnp_device_removed(self, pv_name):
+        pv_root = ":".join(pv_name.split(":")[:2])
+        self.log.info(f"PnP device removed: {pv_root}")
+
+        # Find the setup name from the PV name
+        setup_name = self._find_setup(pv_root)
+        self.log.info(f"Setup name: {setup_name}")
+
+        self._send_pnp_event("removed", setup_name, pv_name)
 
     def close(self):
         self.doStop()
