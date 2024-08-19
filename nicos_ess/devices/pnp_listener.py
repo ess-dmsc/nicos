@@ -110,8 +110,19 @@ class UDPHeartbeatsManager(Device):
         finally:
             self.log.info("Heartbeat thread stopped.")
 
-    def _find_setup(self, pv_name):
-        pass
+    def _find_setup(self, pv_root):
+        """
+        Find the setup name from the PV root. The pv_root is the first part of the PV name like "foo:bar"
+        """
+        all_setups = session.getSetupInfo()
+        for setup_name, setup_dict in all_setups.items():
+            setup_pv_root = setup_dict.get("pnp_pv_root", None)
+            if not setup_pv_root:
+                continue
+
+            if setup_pv_root == pv_root:
+                return setup_name
+        return None
 
     def _send_pnp_event(self, event, setup_name, description):
         session.pnpEvent(event, setup_name, description)
