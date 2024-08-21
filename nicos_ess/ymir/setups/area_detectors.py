@@ -2,23 +2,15 @@
 description = "The area detector for YMIR"
 
 devices = dict(
-    orca_kafka_plugin=device(
-        "nicos_ess.devices.epics.area_detector.ADKafkaPlugin",
-        description="The configuration of the Kafka plugin for the Orca camera.",
-        kafkapv="YMIR-Det1:Kfk1:",
-        brokerpv="KafkaBrokerAddress_RBV",
-        topicpv="KafkaTopic_RBV",
-        sourcepv="SourceName_RBV",
-        visibility=(),
-    ),
     orca_camera=device(
         "nicos_ess.devices.epics.area_detector.AreaDetector",
         description="The light tomography Orca camera.",
         pv_root="YMIR-Det1:cam1:",
+        image_pv="YMIR-Det1:image1:ArrayData",
         ad_kafka_plugin="orca_kafka_plugin",
-        image_topic="ymir_camera",
+        topicpv="YMIR-Det1:Kfk1:KafkaTopic_RBV",
+        sourcepv="YMIR-Det1:Kfk1:SourceName_RBV",
         unit="images",
-        brokers=configdata("config.KAFKA_BROKERS"),
         pollinterval=None,
         pva=True,
         monitor=True,
