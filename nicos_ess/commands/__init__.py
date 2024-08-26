@@ -13,3 +13,4 @@ from nicos_ess.commands.filewriter import (
 )
 from nicos_ess.commands.wait import waitfor_stable
 from nicos_ess.commands.sample import set_sample_fields, clear_sample_fields
+from nicos_ess.commands.scichat import scichat_send
