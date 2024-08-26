@@ -77,9 +77,45 @@ try:
 except ImportError:
     HelpWindow = None
 
-INSTRUMENT = "instrument"
-EXPERIMENT = "experiment"
-PROPOSAL_ID = "proposal_ID"
+
+class ToolbarItem:
+    INSTRUMENT = {
+        "name": "instrument",
+        "location": "row_1",
+        "label": "Instrument",
+        "data_source": "session.instrument",
+        "stringify": False,
+        "upper_case": True,
+    }
+    EXPERIMENT = {
+        "name": "experiment",
+        "location": "row_1",
+        "label": "     Experiment",
+        "data_source": "session.experiment.title",
+        "stringify": False,
+    }
+    PROPOSAL_ID = {
+        "name": "proposal_ID",
+        "location": "row_2",
+        "label": "Proposal ID",
+        "data_source": "session.experiment.proposal",
+        "stringify": False,
+    }
+    RUN_NUMBER = {
+        "name": "run_number",
+        "location": "row_2",
+        "label": "Run Number",
+        "data_source": "session.experiment.get_current_run_number()",
+        "stringify": True,
+    }
+
+
+ALL_TOOLBAR_ITEMS = [
+    ToolbarItem.INSTRUMENT,
+    ToolbarItem.EXPERIMENT,
+    ToolbarItem.PROPOSAL_ID,
+    ToolbarItem.RUN_NUMBER,
+]
 
 
 def decolor_logo(pixmap, color):
@@ -335,7 +371,7 @@ class MainWindow(DlgUtils, QMainWindow):
         self.actionUser.setIconVisibleInMenu(True)
         self.actionExpert.setEnabled(self.client.isconnected)
         self.actionEmergencyStop.setEnabled(self.client.isconnected)
-        self._init_toolbar_labels(INSTRUMENT, EXPERIMENT, PROPOSAL_ID)
+        self._init_toolbar_labels(*ALL_TOOLBAR_ITEMS)
         self.add_status_widget()
         self.on_client_disconnected()
 
@@ -364,14 +400,16 @@ class MainWindow(DlgUtils, QMainWindow):
         toolBarRow1 = self.findChild(QWidget, "toolBarRow1")
         toolBarRow2 = self.findChild(QWidget, "toolBarRow2")
 
-        row1_layout = toolBarRow1.layout()
-        row1_layout.setContentsMargins(0, 10, 0, 0)
-        row2_layout = toolBarRow2.layout()
-        row2_layout.setContentsMargins(0, 0, 0, 10)
+        row_1_layout = toolBarRow1.layout()
+        row_1_layout.setContentsMargins(0, 10, 0, 0)
+        row_2_layout = toolBarRow2.layout()
+        row_2_layout.setContentsMargins(0, 0, 0, 10)
 
         self.toolBarMain.addWidget(toolBarLabels)
 
-        for name in args:
+        for item in args:
+            name = item.get("name")
+            location = item.get("location")
             label, text = QLabel(), QLabel()
             label.setSizePolicy(
                 QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Preferred
@@ -379,16 +417,16 @@ class MainWindow(DlgUtils, QMainWindow):
             text.setSizePolicy(
                 QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.Preferred
             )
-            if name == PROPOSAL_ID:
-                label.setStyleSheet("font-size: 14pt; " "font-weight: bold")
-                text.setStyleSheet("font-size: 14pt")
-                row2_layout.addWidget(label)
-                row2_layout.addWidget(text)
-            else:
+            if location == "row_1":
                 label.setStyleSheet("font-size: 17pt; " "font-weight: bold")
                 text.setStyleSheet("font-size: 17pt")
-                row1_layout.addWidget(label)
-                row1_layout.addWidget(text)
+                row_1_layout.addWidget(label)
+                row_1_layout.addWidget(text)
+            elif location == "row_2":
+                label.setStyleSheet("font-size: 14pt; " "font-weight: bold")
+                text.setStyleSheet("font-size: 14pt")
+                row_2_layout.addWidget(label)
+                row_2_layout.addWidget(text)
 
             setattr(self, f"{name}_label", label)
             setattr(self, f"{name}_text", text)
@@ -425,18 +463,19 @@ class MainWindow(DlgUtils, QMainWindow):
         self.toolBarRight.addWidget(self.status_widget)
 
     def update_text(self, *args):
-        for name in args:
+        max_text_length = 50
+        for item in args:
+            name = item.get("name")
+
             label = getattr(self, f"{name}_label")
             text = getattr(self, f"{name}_text")
 
-            if name == INSTRUMENT:
-                value = self.client.eval("session.instrument", None)
-                label.setText("Instrument:")
-            elif name == PROPOSAL_ID:
-                value = self.client.eval("session.experiment.proposal", None)
-                label.setText("Proposal ID:")
-            else:
-                value = ""
+            value = self.client.eval(
+                item.get("data_source", ""),
+                None,
+                stringify=item.get("stringify", False),
+            )
+            label.setText(f"{item.get('label', '')}:")
 
             if value:
                 logo = decolor_logo(
@@ -444,7 +483,10 @@ class MainWindow(DlgUtils, QMainWindow):
                     Qt.GlobalColor.white,
                 )
                 if logo.isNull():
-                    text.setText(value.upper())
+                    if item.get("upper_case", False):
+                        text.setText(value.upper()[0:max_text_length])
+                    else:
+                        text.setText(value[0:max_text_length])
                 else:
                     text.setPixmap(
                         logo.scaledToHeight(
@@ -454,13 +496,6 @@ class MainWindow(DlgUtils, QMainWindow):
                     )
             else:
                 text.setText("UNKNOWN")
-
-    def update_experiment_text(self):
-        max_text_length = 50
-        experiment = self.client.eval("session.experiment.title", None)
-        if experiment is not None:
-            self.experiment_label.setText("     Experiment:")
-            self.experiment_text.setText(experiment[0:max_text_length])
 
     @staticmethod
     def setQSS(style_file):
@@ -472,10 +507,9 @@ class MainWindow(DlgUtils, QMainWindow):
 
     def _update_toolbar_info(self):
         if self.current_status != "disconnected":
-            self.update_text(INSTRUMENT, PROPOSAL_ID)
-            self.update_experiment_text()
+            self.update_text(*ALL_TOOLBAR_ITEMS)
         else:
-            self.clear_label(INSTRUMENT, EXPERIMENT, PROPOSAL_ID)
+            self.clear_label(*ALL_TOOLBAR_ITEMS)
 
     def _update_status_text(self):
         if self.current_status == "disconnected":
@@ -486,7 +520,8 @@ class MainWindow(DlgUtils, QMainWindow):
             self.status_text.setText(self.current_status.upper())
 
     def clear_label(self, *args):
-        for name in args:
+        for item in args:
+            name = item.get("name")
             label = getattr(self, f"{name}_label")
             text = getattr(self, f"{name}_text")
             label.clear()

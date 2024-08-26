@@ -17,7 +17,7 @@ from nicos.core import (
     none_or,
 )
 from nicos.devices.experiment import Experiment
-from nicos.utils import createThread
+from nicos.utils import createThread, readFileCounter
 
 from nicos_ess.devices.datamanager import DataManager
 
@@ -79,6 +79,16 @@ class EssExperiment(Experiment):
 
     def doReadLocalcontact(self):
         return self.propinfo.get("localcontacts", [])
+
+    def get_current_run_number(self):
+        if not path.isfile(path.join(self.dataroot, self.counterfile)):
+            session.log.warning(
+                f"No run number file found at: {path.join(self.dataroot, self.counterfile)}"
+            )
+            return None
+        counterpath = path.normpath(path.join(self.dataroot, self.counterfile))
+        nextnum = readFileCounter(counterpath, "file")
+        return nextnum
 
     def new(self, proposal, title=None, localcontact=None, user=None, **kwds):
         if self._mode == SIMULATION:
