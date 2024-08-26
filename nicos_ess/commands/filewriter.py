@@ -3,6 +3,7 @@ from contextlib import contextmanager
 from nicos import session
 from nicos.commands import helparglist, usercommand
 from nicos.core import ADMIN, SIMULATION, requires
+from nicos_ess.commands.scichat import scichat_send
 
 from nicos_ess.devices.datasinks.file_writer import FileWriterControlSink
 
@@ -80,6 +81,7 @@ def start_filewriting(experiment_title=None):
     if experiment_title is not None and session.mode != SIMULATION:
         session.experiment.update(title=experiment_title)
     _find_filewriter_dev().start_job()
+    scichat_send(f"starting filewriting for '{session.experiment.title}'")
 
 
 @usercommand
@@ -90,6 +92,7 @@ def stop_filewriting(job_number=None):
     :param job_number: the job to stop, only required if more than one job.
     """
     _find_filewriter_dev().stop_job(job_number)
+    scichat_send("stopping filewriting")
 
 
 @usercommand
