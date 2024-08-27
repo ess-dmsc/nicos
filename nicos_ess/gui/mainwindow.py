@@ -108,13 +108,20 @@ class ToolbarItem:
         "data_source": "session.experiment.get_current_run_number()",
         "stringify": True,
     }
+    RUN_TITLE = {
+        "name": "run_title",
+        "location": "row_1",
+        "label": "     Run Title",
+        "data_source": "session.experiment.run_title",
+        "stringify": False,
+    }
 
 
 ALL_TOOLBAR_ITEMS = [
     ToolbarItem.INSTRUMENT,
-    ToolbarItem.EXPERIMENT,
     ToolbarItem.PROPOSAL_ID,
     ToolbarItem.RUN_NUMBER,
+    ToolbarItem.RUN_TITLE,
 ]
 
 
@@ -158,8 +165,10 @@ class StatusWidget(QWidget):
         self._create_resources()
 
         # Example statuses
-        # self.add_status("Shutter Status", 'shutter/status', 'CLOSED', status_type='icon_text')
-        # self.add_status("Proton Charge", 'proton/charge', '0 µC', status_type='text')
+        # self.add_status(
+        #     "Shutter Status", "shutter/status", "CLOSED", status_type="icon_text"
+        # )
+        # self.add_status("Proton Charge", "proton/charge", "0 µC", status_type="text")
 
         self.grid_layout.setColumnStretch(self.grid_layout.columnCount() + 1, 1)
 

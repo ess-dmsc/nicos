@@ -4,4 +4,4 @@ from nicos.commands import usercommand
 
 @usercommand
 def set_title(title):
-    session.experiment.update(title=title)
+    session.experiment.run_title = title

@@ -43,6 +43,13 @@ class EssExperiment(Experiment):
             type=none_or(str),
             userparam=False,
         ),
+        "run_title": Param(
+            "Title of the current run",
+            type=str,
+            settable=True,
+            default="",
+            category="experiment",
+        ),
     }
 
     parameter_overrides = {
@@ -83,7 +90,7 @@ class EssExperiment(Experiment):
     def get_current_run_number(self):
         if not path.isfile(path.join(self.dataroot, self.counterfile)):
             session.log.warning(
-                f"No run number file found at: {path.join(self.dataroot, self.counterfile)}"
+                f"No run number file at: {path.join(self.dataroot, self.counterfile)}"
             )
             return None
         counterpath = path.normpath(path.join(self.dataroot, self.counterfile))

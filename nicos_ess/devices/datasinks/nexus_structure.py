@@ -100,9 +100,12 @@ class NexusStructureJsonFile(NexusStructureProvider):
 
     def _insert_metadata(self, structure, metainfo, counter):
         datasets = [
-            self._create_dataset("title", metainfo[("Exp", "title")][0]),
+            self._create_dataset("title", metainfo[("Exp", "run_title")][0]),
             self._create_dataset(
                 "experiment_identifier", metainfo[("Exp", "proposal")][0]
+            ),
+            self._create_dataset(
+                "experiment_description", metainfo[("Exp", "title")][0]
             ),
             self._create_dataset("entry_identifier", str(counter)),
             self._create_dataset("entry_identifier_uuid", metainfo[("Exp", "job_id")]),
@@ -138,7 +141,8 @@ class NexusStructureJsonFile(NexusStructureProvider):
 
         if not self.area_det_collector_device:
             raise ConfigurationError(
-                "Area detector collector device not set for structure with area detector"
+                "Area detector collector device not "
+                "set for structure with area detector"
             )
 
         self._replace_area_detector_placeholder(structure)
@@ -238,7 +242,8 @@ class NexusStructureJsonFile(NexusStructureProvider):
 
             if not dev_path:
                 session.log.warn(
-                    f"Sample field '{field_name}' cannot be linked to device '{value}' since device is not in structure."
+                    f"Sample field '{field_name}' cannot be linked to "
+                    f"device '{value}' since device is not in structure."
                 )
 
             samples_list.extend(self._generate_samples_link_list(field_dict))
