@@ -234,17 +234,17 @@ class NexusStructureJsonFile(NexusStructureProvider):
             value = field_metainfo[0]
             dev_path = self._find_device_path(nxinstrument_structure, value)
 
+            if not dev_path:
+                session.log.debug(
+                    f"Sample field '{field_name}' cannot be linked to device '{value}' since device is not in structure. Skipping."
+                )
+                continue
+
             field_dict = (
                 {field_name: f"/entry/{'/'.join(dev_path)}"}
                 if dev_path
                 else {field_name: value}
             )
-
-            if not dev_path:
-                session.log.warn(
-                    f"Sample field '{field_name}' cannot be linked to "
-                    f"device '{value}' since device is not in structure."
-                )
 
             samples_list.extend(self._generate_samples_link_list(field_dict))
 
