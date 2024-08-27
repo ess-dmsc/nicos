@@ -5,7 +5,7 @@ devices = dict(
     CacheKafka=device(
         "nicos_ess.devices.cache_kafka_forwarder.CacheKafkaForwarder",
         dev_ignore=["space", "sample"],
-        brokers=["10.100.1.19:8093"],
+        brokers=configdata("config.KAFKA_BROKERS"),
         output_topic="coda_nicos_devices",
     ),
     Collector=device(
