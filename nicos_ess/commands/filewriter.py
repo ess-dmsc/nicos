@@ -17,9 +17,9 @@ def _find_filewriter_dev():
 
 
 @usercommand
-@helparglist("experiment_title")
+@helparglist("run_title")
 @contextmanager
-def nexusfile_open(experiment_title=None):
+def nexusfile_open(run_title=None):
     """Command that creates a nexusfile and starts writing data to it
     for as long as your script is running within the indentation.
 
@@ -41,20 +41,20 @@ def nexusfile_open(experiment_title=None):
     is the one that was started with the first command call.
     """
     nested_call = False
-    if experiment_title is None:
-        experiment_title = session.experiment.title
+    if run_title is None:
+        run_title = session.experiment.run_title
     try:
         active_jobs = _find_filewriter_dev().get_active_jobs()
         if not active_jobs:
-            session.log.info("Setting experiment title to: %s", experiment_title)
-            start_filewriting(experiment_title)
+            session.log.info("Setting run title to: %s", run_title)
+            start_filewriting(run_title)
         else:
             #  Allow nested calls, but give a warning since it is not
             #  a preferred way of writing scripts
             session.log.warning(
                 "Filewriter already running. "
                 "Will not start a new file with title: %s",
-                experiment_title,
+                run_title,
             )
             nested_call = True
         yield
@@ -70,18 +70,18 @@ def nexusfile_open(experiment_title=None):
                 "filewriter for file with title: %s, "
                 "it will not attempt to stop the "
                 "filewriter either",
-                experiment_title,
+                run_title,
             )
 
 
 @usercommand
-@helparglist("experiment_title")
-def start_filewriting(experiment_title=None):
+@helparglist("run_title")
+def start_filewriting(run_title=None):
     """Start a file-writing job."""
-    if experiment_title is not None and session.mode != SIMULATION:
-        session.experiment.update(title=experiment_title)
+    if run_title is not None and session.mode != SIMULATION:
+        session.experiment.run_title = run_title
     _find_filewriter_dev().start_job()
-    scichat_send(f"starting filewriting for '{session.experiment.title}'")
+    scichat_send(f"starting filewriting for '{session.experiment.run_title}'")
 
 
 @usercommand
