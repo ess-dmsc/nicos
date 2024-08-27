@@ -272,7 +272,7 @@ class ExpPanel(PanelBase):
             self._is_proposal_system_available()
 
     def applyChanges(self):
-        self.queryDBButton.setFocus(True)
+        self.queryDBButton.setFocus()
         if self.mainwindow.current_status != "idle":
             self.showInfo("Cannot change settings while a script is running!")
             return
