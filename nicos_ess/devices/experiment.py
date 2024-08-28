@@ -9,21 +9,63 @@ from yuos_query.yuos_client import YuosCacheClient
 from nicos import session
 from nicos.core import (
     SIMULATION,
-    Override,
+    Attach,
+    Device,
     Param,
     UsageError,
     listof,
     mailaddress,
     none_or,
+    oneof,
 )
-from nicos.devices.experiment import Experiment
+from nicos.core.params import subdir, expanded_path
+from nicos.devices.sample import Sample
 from nicos.utils import createThread, readFileCounter
 
 from nicos_ess.devices.datamanager import DataManager
 
 
-class EssExperiment(Experiment):
+class EssExperiment(Device):
     parameters = {
+        "proposal": Param(
+            "Current proposal number or proposal string",
+            type=str,
+            category="experiment",
+        ),
+        "propinfo": Param(
+            "Dict of info for the current proposal",
+            type=dict,
+            default={},
+            internal=True,
+        ),
+        "title": Param(
+            "Proposal title",
+            type=str,
+            volatile=True,
+            category="experiment",
+            settable=True,
+        ),
+        "run_title": Param(
+            "Title of the current run",
+            type=str,
+            settable=True,
+            default="",
+            category="experiment",
+        ),
+        "users": Param(
+            "User names and emails for the proposal",
+            default=[],
+            type=listof(dict),
+            volatile=True,
+            category="experiment",
+        ),
+        "localcontact": Param(
+            "Local contacts for current experiment",
+            default=[],
+            type=listof(dict),
+            volatile=True,
+            category="experiment",
+        ),
         "cache_filepath": Param(
             "Path to the proposal cache",
             type=str,
@@ -43,31 +85,48 @@ class EssExperiment(Experiment):
             type=none_or(str),
             userparam=False,
         ),
-        "run_title": Param(
-            "Title of the current run",
-            type=str,
+        "counterfile": Param(
+            "Name of the file with data counters in " "dataroot and datapath",
+            default="counters",
+            userparam=False,
+            type=subdir,
+        ),
+        "lastpoint": Param(
+            "Last used value of the point counter - " "ONLY for display purposes",
+            type=int,
+            internal=True,
+        ),
+        "dataroot": Param(
+            "Root data path under which all proposal " "specific paths are created",
+            mandatory=True,
+            type=expanded_path,
+        ),
+        "scripts": Param(
+            "Currently executed scripts",
+            type=listof(str),
             settable=True,
-            default="",
-            category="experiment",
+            internal=True,
+            no_sim_restore=True,
+        ),
+        "errorbehavior": Param(
+            "Behavior on unhandled errors in commands",
+            type=oneof("abort", "report"),
+            default="abort",
+            settable=True,
+            userparam=False,
         ),
     }
 
-    parameter_overrides = {
-        "propprefix": Override(default=""),
-        "proptype": Override(settable=True),
-        "serviceexp": Override(default="Service"),
-        "sendmail": Override(default=False, settable=False),
-        "zipdata": Override(default=False, settable=False),
-        "users": Override(default=[], type=listof(dict)),
-        "localcontact": Override(default=[], type=listof(dict)),
-        "title": Override(settable=True),
-        "elog": Override(default=False, settable=False),
+    attached_devices = {
+        "sample": Attach("The device object representing the sample", Sample),
     }
 
     datamanager_class = DataManager
 
+    def doPreinit(self, mode):
+        self.__dict__["data"] = self.datamanager_class()
+
     def doInit(self, mode):
-        Experiment.doInit(self, mode)
         self._yuos_client = None
         self._update_proposal_cache_worker = createThread(
             "update_cache", self._update_proposal_cache, start=False
@@ -88,12 +147,11 @@ class EssExperiment(Experiment):
         return self.propinfo.get("localcontacts", [])
 
     def get_current_run_number(self):
-        if not path.isfile(path.join(self.dataroot, self.counterfile)):
-            session.log.warning(
-                f"No run number file at: {path.join(self.dataroot, self.counterfile)}"
-            )
+        full_path = path.join(self.dataroot, self.counterfile)
+        if not path.isfile(full_path):
+            session.log.warning(f"No run number file found at: {full_path}")
             return None
-        counterpath = path.normpath(path.join(self.dataroot, self.counterfile))
+        counterpath = path.normpath(full_path)
         nextnum = readFileCounter(counterpath, "file")
         return nextnum
 
@@ -123,7 +181,6 @@ class EssExperiment(Experiment):
         propinfo = self._newPropertiesHook(proposal, kwds)
         self._setROParam("propinfo", propinfo)
         self._setROParam("proposal", proposal)
-        self.proptype = "service" if proposal == "0" else "user"
 
         # Update cached values of the volatile parameters
         self._pollParam("title")
@@ -132,11 +189,34 @@ class EssExperiment(Experiment):
         self._newSetupHook()
         session.experimentCallback(self.proposal, None)
 
+    def _newPropertiesHook(self, proposal, kwds):
+        """Hook for querying a database for proposal related data.
+
+        Should return an updated kwds dictionary.
+        """
+        return kwds
+
+    def _newSetupHook(self):
+        """Hook for doing additional setup work on new experiments,
+        after everything has been set up.
+        """
+
     def update(self, title=None, users=None, localcontacts=None):
         self._check_users(users)
         self._check_local_contacts(localcontacts)
         title = str(title) if title else ""
-        Experiment.update(self, title, users, localcontacts)
+        propinfo = dict(self.propinfo)
+        if title is not None:
+            propinfo["title"] = title
+        if users is not None:
+            propinfo["users"] = users
+        if localcontacts is not None:
+            propinfo["localcontacts"] = localcontacts
+        self._setROParam("propinfo", propinfo)
+        # Update cached values of the volatile parameters
+        self._pollParam("title")
+        self._pollParam("users")
+        self._pollParam("localcontact")
 
     def proposalpath_of(self, proposal):
         if self.fixed_proposal_path is not None:
@@ -246,6 +326,10 @@ class EssExperiment(Experiment):
             "affiliation": affiliation,
             "facility_user_id": fed_id,
         }
+
+    @property
+    def sample(self):
+        return self._attached_sample
 
     def get_samples(self):
         return [dict(x) for x in self.sample.samples.values()]
