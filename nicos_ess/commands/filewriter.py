@@ -83,7 +83,7 @@ def start_filewriting(run_title=None):
     _find_filewriter_dev().start_job()
     message = (
         "Starting filewriting\n"
-        f"  Title: {session.experiment.run_title}"
+        f"  Title: {session.experiment.run_title}\n"
         f"  Run number: {session.experiment.get_current_run_number()}"
     )
     scichat_send(message)
