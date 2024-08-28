@@ -46,7 +46,7 @@ class ProposalSettings:
         title="",
         users=None,
         local_contacts=None,
-        abort_on_error="",
+        abort_on_error=True,
         notifications=None,
         samples=None,
     ):
