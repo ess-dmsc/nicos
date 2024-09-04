@@ -37,7 +37,8 @@ devices = dict(
     KafkaForwarderStatus=device(
         "nicos_ess.devices.forwarder.EpicsKafkaForwarder",
         description="Monitors the status of the Forwarder",
-        statustopic="odin_forwarder_status",
+        statustopic="odin_forwarder_dynamic_status",
+        config_topic="odin_forwarder_dynamic_config",
         brokers=configdata("config.KAFKA_BROKERS"),
     ),
     SciChat=device(

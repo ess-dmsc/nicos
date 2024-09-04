@@ -47,7 +47,8 @@ devices = dict(
     KafkaForwarderStatus=device(
         "nicos_ess.devices.forwarder.EpicsKafkaForwarder",
         description="Monitors the status of the Forwarder",
-        statustopic="estia_forwarder_status",
+        statustopic="estia_forwarder_dynamic_status",
+        config_topic="estia_forwarder_dynamic_config",
         brokers=configdata("config.KAFKA_BROKERS"),
     ),
     NexusStructure=device(
