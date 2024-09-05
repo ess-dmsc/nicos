@@ -338,3 +338,6 @@ class EssExperiment(Device):
         # Do not try to create unwanted directories as
         # in nicos/devices/experiment
         pass
+
+    def _scrubDetEnvLists(self):
+        pass
