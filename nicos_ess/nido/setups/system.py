@@ -34,7 +34,7 @@ devices = dict(
     pnp_listener=device(
         "nicos_ess.devices.pnp_listener.UDPHeartbeatsManager",
         description="Listens for PnP heartbeats",
-        port=50000,
+        port=24601,
     ),
     conssink=device(
         "nicos_ess.devices.datasinks.console_scan_sink.ConsoleScanSink",
