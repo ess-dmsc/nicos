@@ -26,7 +26,7 @@ import threading
 import time
 
 from nicos import session
-from nicos.core import SIMULATION, POLLER
+from nicos.core import SIMULATION, MAIN
 from nicos.devices.epics.pva.p4p import pvget, pvput
 from nicos.utils import createThread
 from nicos.core.device import Device, Param
@@ -40,7 +40,7 @@ class UDPHeartbeatsManager(Device):
     def doInit(self, mode):
         if mode == SIMULATION:
             return
-        if mode == POLLER:
+        if session.sessiontype != MAIN:
             return
 
         self._sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -82,7 +82,8 @@ class UDPHeartbeatsManager(Device):
                     self._pv_list.append(pv_name)
                     self.on_pnp_device_detected(pv_name)
                     self.log.info(
-                        f"New PnP heartbeat received: {pv_name}. Adding to heartbeat list."
+                        f"New PnP heartbeat received: {pv_name}. "
+                        f"Adding to heartbeat list."
                     )
                 self.log.info(f"Received UDP packet with pv_name: {pv_name}")
 
@@ -114,7 +115,8 @@ class UDPHeartbeatsManager(Device):
 
     def _find_setup(self, pv_root):
         """
-        Find the setup name from the PV root. The pv_root is the first part of the PV name like "foo:bar"
+        Find the setup name from the PV root.
+        The pv_root is the first part of the PV name like "foo:bar"
         """
         all_setups = session.getSetupInfo()
         for setup_name, setup_dict in all_setups.items():
