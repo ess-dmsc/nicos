@@ -1,4 +1,5 @@
 # ruff: noqa: F821
+
 description = "system setup"
 
 group = "lowlevel"
@@ -53,37 +54,43 @@ devices = dict(
     NexusStructure_loki=device(
         "nicos_ess.devices.datasinks.nexus_structure.NexusStructureJsonFile",
         description="Provides the NeXus structure",
-        nexus_config_path="nexus-json-templates/loki/loki.json",
+        nexus_config_path="nexus-json-templates/loki/loki-dynamic.json",
+        instrument_name="loki",
         visibility=(),
     ),
     NexusStructure_dream=device(
         "nicos_ess.devices.datasinks.nexus_structure.NexusStructureJsonFile",
         description="Provides the NeXus structure",
-        nexus_config_path="nexus-json-templates/dream/dream.json",
+        nexus_config_path="nexus-json-templates/dream/dream-dynamic.json",
+        instrument_name="dream",
         visibility=(),
     ),
     NexusStructure_bifrost=device(
         "nicos_ess.devices.datasinks.nexus_structure.NexusStructureJsonFile",
         description="Provides the NeXus structure",
-        nexus_config_path="nexus-json-templates/bifrost/bifrost.json",
+        nexus_config_path="nexus-json-templates/bifrost/bifrost-dynamic.json",
+        instrument_name="bifrost",
         visibility=(),
     ),
     NexusStructure_nmx=device(
         "nicos_ess.devices.datasinks.nexus_structure.NexusStructureJsonFile",
         description="Provides the NeXus structure",
-        nexus_config_path="nexus-json-templates/nmx/nmx.json",
+        nexus_config_path="nexus-json-templates/nmx/nmx-dynamic.json",
+        instrument_name="nmx",
         visibility=(),
     ),
     NexusStructure_odin=device(
         "nicos_ess.devices.datasinks.nexus_structure.NexusStructureJsonFile",
         description="Provides the NeXus structure",
-        nexus_config_path="nexus-json-templates/odin/odin.json",
+        nexus_config_path="nexus-json-templates/odin/odin-dynamic.json",
+        instrument_name="odin",
         visibility=(),
     ),
     NexusStructure_tbl=device(
         "nicos_ess.devices.datasinks.nexus_structure.NexusStructureJsonFile",
         description="Provides the NeXus structure",
-        nexus_config_path="nexus-json-templates/tbl/tbl.json",
+        nexus_config_path="nexus-json-templates/tbl/tbl-mb-dynamic.json",
+        instrument_name="tbl",
         visibility=(),
     ),
     NexusStructure=device(

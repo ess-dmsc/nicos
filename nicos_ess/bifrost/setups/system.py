@@ -45,7 +45,8 @@ devices = dict(
     NexusStructure_Basic=device(
         "nicos_ess.devices.datasinks.nexus_structure.NexusStructureJsonFile",
         description="Provides the NeXus structure",
-        nexus_config_path="nicos_ess/bifrost/nexus/bifrost_basic.json",
+        nexus_config_path="nexus-json-templates/bifrost/bifrost-dynamic.json",
+        instrument_name="bifrost",
         visibility=(),
     ),
     NexusStructure=device(
