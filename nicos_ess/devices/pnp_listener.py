@@ -45,14 +45,36 @@ class UDPHeartbeatsManager(Device):
         if session.sessiontype != MAIN:
             return
 
-        self._sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self._sock.bind(("", self.port))
+        self._create_socket()
+        self._bind_socket()
         self._stop_event = threading.Event()
         self._listener_thread = createThread("udp_thread", self._listen_for_packets)
         self._heartbeat_thread = createThread("heartbeat_thread", self._send_heartbeats)
 
+    def _create_socket(self):
+        if session.sessiontype == MAIN:
+            self._sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+    def _bind_socket(self):
+        if session.sessiontype == MAIN:
+            self._sock.bind(("", self.port))
+
+    def _close_socket(self):
+        if session.sessiontype == MAIN:
+            self._sock.close()
+
+    def _socket_recvfrom(self):
+        if session.sessiontype == MAIN:
+            return self._sock.recvfrom(1024)
+        return None, None
+
     def doStart(self):
-        self._sock.bind(("", self.port))
+        try:
+            self._bind_socket()
+        except OSError as e:
+            self.log.error(f"Failed to bind socket: {e}")
+            return
+
         self._stop_event.clear()
         if self._listener_thread is None:
             self._listener_thread = createThread("udp_thread", self._listen_for_packets)
@@ -69,12 +91,14 @@ class UDPHeartbeatsManager(Device):
         if self._heartbeat_thread and self._heartbeat_thread.is_alive():
             self._heartbeat_thread.join()
             self._heartbeat_thread = None
-        self._sock.close()
+        self._close_socket()
 
     def _listen_for_packets(self):
         while not self._stop_event.is_set():
             try:
-                data, _ = self._sock.recvfrom(1024)  # Buffer size 1024 bytes
+                data, _ = self._socket_recvfrom()
+                if not data:
+                    continue
                 message = data.decode("ascii", errors="ignore")
                 message = re.sub(r"[^\x20-\x7E]+", "\x00", message)
                 parts = [part for part in message.split("\x00") if part]
