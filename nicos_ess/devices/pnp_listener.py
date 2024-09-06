@@ -83,7 +83,11 @@ class UDPHeartbeatsManager(Device):
 
     def _socket_recvfrom(self):
         if session.sessiontype == MAIN:
-            return self._sock.recvfrom(1024)
+            try:
+                return self._sock.recvfrom(1024)
+            except socket.timeout:
+                pass
+
         return None, None
 
     # def doStart(self):
@@ -199,10 +203,26 @@ class UDPHeartbeatsManager(Device):
         self._send_pnp_event("removed", setup_name, pv_name)
 
     def close(self):
+        self.log.info("Closing UDPHeartbeatsManager.")
+        self._stop_event.set()
+
+        if self._listener_thread and self._listener_thread.is_alive():
+            self.log.info("Waiting for listener thread to stop.")
+            self._listener_thread.join()
+            self.log.info("Listener thread stopped.")
+
+        if self._heartbeat_thread and self._heartbeat_thread.is_alive():
+            self.log.info("Waiting for heartbeat thread to stop.")
+            self._heartbeat_thread.join()
+            self.log.info("Heartbeat thread stopped.")
+
+        self.log.info("Closing socket.")
         self._shutdown_socket()
 
+        self.log.info("UDPHeartbeatsManager closed.")
+
     def doShutdown(self):
-        self._shutdown_socket()
+        self.close()
 
     # def close(self):
     #     self.doStop()
