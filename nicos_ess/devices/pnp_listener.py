@@ -37,6 +37,8 @@ class UDPHeartbeatsManager(Device):
         "port": Param("UDP port to listen on", type=int, mandatory=True),
     }
 
+    _pv_list = []
+
     def doInit(self, mode):
         if mode == SIMULATION:
             return
@@ -48,7 +50,6 @@ class UDPHeartbeatsManager(Device):
         self._stop_event = threading.Event()
         self._listener_thread = createThread("udp_thread", self._listen_for_packets)
         self._heartbeat_thread = createThread("heartbeat_thread", self._send_heartbeats)
-        self._pv_list = []
 
     def doStart(self):
         self._sock.bind(("", self.port))
