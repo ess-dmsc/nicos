@@ -75,6 +75,11 @@ class UDPHeartbeatsManager(Device):
         if session.sessiontype == MAIN:
             self._sock.close()
 
+    def _shutdown_socket(self):
+        if session.sessiontype == MAIN:
+            self._sock.shutdown(socket.SHUT_RDWR)
+            self._sock.close()
+
     def _socket_recvfrom(self):
         if session.sessiontype == MAIN:
             return self._sock.recvfrom(1024)
@@ -189,8 +194,11 @@ class UDPHeartbeatsManager(Device):
 
         self._send_pnp_event("removed", setup_name, pv_name)
 
+    def close(self):
+        self._shutdown_socket()
+
     def doShutdown(self):
-        self._close_socket()
+        self._shutdown_socket()
 
     # def close(self):
     #     self.doStop()
