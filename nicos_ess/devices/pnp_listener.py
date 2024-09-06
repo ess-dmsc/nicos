@@ -26,7 +26,7 @@ import threading
 import time
 
 from nicos import session
-from nicos.core import SIMULATION, MAIN
+from nicos.core import SIMULATION, MAIN, POLLER
 from nicos.devices.epics.pva.p4p import pvget, pvput
 from nicos.utils import createThread
 from nicos.core.device import Device, Param
@@ -39,17 +39,18 @@ class UDPHeartbeatsManager(Device):
 
     _pv_list = []
 
-    def doInit(self, mode):
-        if mode == SIMULATION:
-            return
-        if session.sessiontype != MAIN:
-            return
+    def doPreinit(self, mode):
+        if session.sessiontype != POLLER and mode != SIMULATION:
+            self._create_socket()
+            self._bind_socket()
+            self._stop_event = threading.Event()
 
-        self._create_socket()
-        self._bind_socket()
-        self._stop_event = threading.Event()
-        self._listener_thread = createThread("udp_thread", self._listen_for_packets)
-        self._heartbeat_thread = createThread("heartbeat_thread", self._send_heartbeats)
+    def doInit(self, mode):
+        if session.sessiontype != POLLER and mode != SIMULATION:
+            self._listener_thread = createThread("udp_thread", self._listen_for_packets)
+            self._heartbeat_thread = createThread(
+                "heartbeat_thread", self._send_heartbeats
+            )
 
     def _create_socket(self):
         if session.sessiontype == MAIN:
@@ -68,30 +69,31 @@ class UDPHeartbeatsManager(Device):
             return self._sock.recvfrom(1024)
         return None, None
 
-    def doStart(self):
-        try:
-            self._bind_socket()
-        except OSError as e:
-            self.log.error(f"Failed to bind socket: {e}")
-            return
-
-        self._stop_event.clear()
-        if self._listener_thread is None:
-            self._listener_thread = createThread("udp_thread", self._listen_for_packets)
-        if self._heartbeat_thread is None:
-            self._heartbeat_thread = createThread(
-                "heartbeat_thread", self._send_heartbeats
-            )
-
-    def doStop(self):
-        self._stop_event.set()
-        if self._listener_thread and self._listener_thread.is_alive():
-            self._listener_thread.join()
-            self._listener_thread = None
-        if self._heartbeat_thread and self._heartbeat_thread.is_alive():
-            self._heartbeat_thread.join()
-            self._heartbeat_thread = None
-        self._close_socket()
+    # def doStart(self):
+    #     try:
+    #         self._bind_socket()
+    #     except OSError as e:
+    #         self.log.error(f"Failed to bind socket: {e}")
+    #         return
+    #
+    #     self._stop_event.clear()
+    #     if self._listener_thread is None:
+    #         self._listener_thread = createThread("udp_thread",
+    #         self._listen_for_packets)
+    #     if self._heartbeat_thread is None:
+    #         self._heartbeat_thread = createThread(
+    #             "heartbeat_thread", self._send_heartbeats
+    #         )
+    #
+    # def doStop(self):
+    #     self._stop_event.set()
+    #     if self._listener_thread and self._listener_thread.is_alive():
+    #         self._listener_thread.join()
+    #         self._listener_thread = None
+    #     if self._heartbeat_thread and self._heartbeat_thread.is_alive():
+    #         self._heartbeat_thread.join()
+    #         self._heartbeat_thread = None
+    #     self._close_socket()
 
     def _listen_for_packets(self):
         while not self._stop_event.is_set():
@@ -176,6 +178,13 @@ class UDPHeartbeatsManager(Device):
 
         self._send_pnp_event("removed", setup_name, pv_name)
 
-    def close(self):
-        self.doStop()
-        super().close()
+    def doShutdown(self):
+        self._close_socket()
+
+    # def close(self):
+    #     self.doStop()
+    #     super().close()
+    #
+    # def doShutdown(self):
+    #     self.doStop()
+    #     super().doShutdown()
