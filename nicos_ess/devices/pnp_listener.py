@@ -89,9 +89,8 @@ class UDPHeartbeatsManager(Device):
         return None, None
 
     def _listen_for_packets(self):
-        self.log.info("UDP listener thread started.")
+        self.log.debug("UDP listener thread started.")
         while not self._stop_event.is_set():
-            self.log.info("Listening for UDP packets.")
             try:
                 data, _ = self._socket_recvfrom()
                 if not data:
@@ -104,11 +103,11 @@ class UDPHeartbeatsManager(Device):
                     if pv_name not in self._pv_list:
                         self._pv_list.append(pv_name)
                         self.on_pnp_device_detected(pv_name)
-                        self.log.info(
+                        self.log.debug(
                             f"New PnP heartbeat received: {pv_name}. "
                             f"Adding to heartbeat list."
                         )
-                self.log.info(f"Received UDP packet with pv_name: {pv_name}")
+                self.log.debug(f"Received UDP packet with pv_name: {pv_name}")
 
             except Exception as e:
                 self.log.error(f"Error receiving UDP packet: {e}")
@@ -116,15 +115,14 @@ class UDPHeartbeatsManager(Device):
             time.sleep(1)
 
     def _send_heartbeats(self):
-        self.log.info("Heartbeat thread started.")
+        self.log.debug("Heartbeat thread started.")
         try:
             while not self._stop_event.is_set():
-                self.log.info("Sending heartbeats.")
                 with self._lock:
                     for pv_name in list(self._pv_list):
                         try:
                             current_value = pvget(pv_name)
-                            self.log.info(
+                            self.log.debug(
                                 f"Current value of {pv_name}: {current_value}"
                             )
                             pvput(pv_name, current_value + 1)
@@ -136,7 +134,7 @@ class UDPHeartbeatsManager(Device):
         except Exception as e:
             self.log.error(f"Heartbeat thread encountered an error: {e}")
         finally:
-            self.log.info("Heartbeat thread stopped.")
+            self.log.debug("Heartbeat thread stopped.")
 
     def _find_setup(self, pv_root):
         """
@@ -158,42 +156,33 @@ class UDPHeartbeatsManager(Device):
 
     def on_pnp_device_detected(self, pv_name):
         pv_root = ":".join(pv_name.split(":")[:2])
-        self.log.info(f"New PnP device detected: {pv_root}")
+        self.log.debug(f"New PnP device detected: {pv_root}")
 
-        # Find the setup name from the PV name
         setup_name = self._find_setup(pv_root)
-        self.log.info(f"Setup name: {setup_name}")
+        self.log.debug(f"Setup name: {setup_name}")
 
         self._send_pnp_event("added", setup_name, pv_name)
 
     def on_pnp_device_removed(self, pv_name):
         pv_root = ":".join(pv_name.split(":")[:2])
-        self.log.info(f"PnP device removed: {pv_root}")
+        self.log.debug(f"PnP device removed: {pv_root}")
 
-        # Find the setup name from the PV name
         setup_name = self._find_setup(pv_root)
-        self.log.info(f"Setup name: {setup_name}")
+        self.log.debug(f"Setup name: {setup_name}")
 
         self._send_pnp_event("removed", setup_name, pv_name)
 
     def close(self):
-        self.log.info("Closing UDPHeartbeatsManager.")
         self._stop_event.set()
 
         if self._listener_thread and self._listener_thread.is_alive():
-            self.log.info("Waiting for listener thread to stop.")
             self._listener_thread.join()
-            self.log.info("Listener thread stopped.")
 
         if self._heartbeat_thread and self._heartbeat_thread.is_alive():
-            self.log.info("Waiting for heartbeat thread to stop.")
             self._heartbeat_thread.join()
-            self.log.info("Heartbeat thread stopped.")
 
-        self.log.info("Closing socket.")
         self._close_socket()
-
-        self.log.info("UDPHeartbeatsManager closed.")
+        self.log.debug("UDPHeartbeatsManager closed.")
 
     def doShutdown(self):
         self.close()
