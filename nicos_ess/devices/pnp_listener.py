@@ -112,7 +112,9 @@ class UDPHeartbeatsManager(Device):
     #     self._close_socket()
 
     def _listen_for_packets(self):
+        self.log.info("UDP listener thread started.")
         while not self._stop_event.is_set():
+            self.log.info("Listening for UDP packets.")
             try:
                 data, _ = self._socket_recvfrom()
                 if not data:
@@ -139,6 +141,7 @@ class UDPHeartbeatsManager(Device):
         self.log.info("Heartbeat thread started.")
         try:
             while not self._stop_event.is_set():
+                self.log.info("Sending heartbeats.")
                 for pv_name in list(
                     self._pv_list
                 ):  # Create a copy of the list for safe iteration
