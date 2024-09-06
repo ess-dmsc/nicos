@@ -9,9 +9,20 @@ from nicos.core import (
     Param,
     relative_path,
     ConfigurationError,
+    oneof,
 )
 
 from nicos_ess.nexus.converter import NexusTemplateConverter
+
+ALLOWED_INSTRUMENT_NAMES = [
+    "dream",
+    "loki",
+    "tbl",
+    "odin",
+    "ymir",
+    "nmx",
+    "bifrost",
+]
 
 
 class NexusStructureProvider(Device):
@@ -38,6 +49,13 @@ class NexusStructureJsonFile(NexusStructureProvider):
             mandatory=False,
             userparam=True,
             settable=True,
+        ),
+        "instrument_name": Param(
+            "Instrument name",
+            type=oneof(*ALLOWED_INSTRUMENT_NAMES),
+            mandatory=True,
+            userparam=True,
+            settable=False,
         ),
     }
 
@@ -236,7 +254,8 @@ class NexusStructureJsonFile(NexusStructureProvider):
 
             if not dev_path:
                 session.log.debug(
-                    f"Sample field '{field_name}' cannot be linked to device '{value}' since device is not in structure. Skipping."
+                    f"Sample field '{field_name}' cannot be linked to device "
+                    f"'{value}' since device is not in structure. Skipping."
                 )
                 continue
 

@@ -23,7 +23,16 @@ from streaming_data_types.fbschemas.action_response_answ.ActionOutcome import (
 from streaming_data_types.fbschemas.action_response_answ.ActionType import ActionType
 
 from nicos import session
-from nicos.core import ADMIN, MASTER, Attach, Param, host, listof, status
+from nicos.core import (
+    ADMIN,
+    MASTER,
+    Attach,
+    Param,
+    host,
+    listof,
+    status,
+    ConfigurationError,
+)
 from nicos.core.constants import SIMULATION
 from nicos.core.device import Device
 from nicos.core.params import anytype
@@ -369,7 +378,7 @@ class FileWriterController:
             stop_time,
             nexus_structure=structure,
             broker="",
-            instrument_name="",
+            instrument_name=self._get_instrument_name(),
             run_name="",
             control_topic=self.instrument_topic,
         )
@@ -389,6 +398,19 @@ class FileWriterController:
             time.sleep(0.1)
 
         return job_id, delivery_info
+
+    def _get_instrument_name(self):
+        device = self._check_for_device("NexusStructure")
+        if device:
+            return device.instrument_name
+        self.log.warning("Could not locate instrument name from NexusStructure device")
+        return ""
+
+    def _check_for_device(self, name):
+        try:
+            return session.getDevice(name)
+        except ConfigurationError:
+            return None
 
     def request_stop(self, job_id, stop_time, service_id):
         message = serialise_6s4t(
