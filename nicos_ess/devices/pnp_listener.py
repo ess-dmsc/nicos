@@ -217,7 +217,7 @@ class UDPHeartbeatsManager(Device):
             self.log.info("Heartbeat thread stopped.")
 
         self.log.info("Closing socket.")
-        self._shutdown_socket()
+        self._close_socket()
 
         self.log.info("UDPHeartbeatsManager closed.")
 
