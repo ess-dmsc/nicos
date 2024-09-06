@@ -38,6 +38,9 @@ class UDPHeartbeatsManager(Device):
     }
 
     _pv_list = []
+    _heartbeat_thread = None
+    _listener_thread = None
+    _lock = threading.Lock()
 
     def doPreinit(self, mode):
         if session.sessiontype != POLLER and mode != SIMULATION:
@@ -76,11 +79,6 @@ class UDPHeartbeatsManager(Device):
         if session.sessiontype == MAIN:
             self._sock.close()
 
-    def _shutdown_socket(self):
-        if session.sessiontype == MAIN:
-            self._sock.shutdown(socket.SHUT_RDWR)
-            self._sock.close()
-
     def _socket_recvfrom(self):
         if session.sessiontype == MAIN:
             try:
@@ -89,32 +87,6 @@ class UDPHeartbeatsManager(Device):
                 pass
 
         return None, None
-
-    # def doStart(self):
-    #     try:
-    #         self._bind_socket()
-    #     except OSError as e:
-    #         self.log.error(f"Failed to bind socket: {e}")
-    #         return
-    #
-    #     self._stop_event.clear()
-    #     if self._listener_thread is None:
-    #         self._listener_thread = createThread("udp_thread",
-    #         self._listen_for_packets)
-    #     if self._heartbeat_thread is None:
-    #         self._heartbeat_thread = createThread(
-    #             "heartbeat_thread", self._send_heartbeats
-    #         )
-    #
-    # def doStop(self):
-    #     self._stop_event.set()
-    #     if self._listener_thread and self._listener_thread.is_alive():
-    #         self._listener_thread.join()
-    #         self._listener_thread = None
-    #     if self._heartbeat_thread and self._heartbeat_thread.is_alive():
-    #         self._heartbeat_thread.join()
-    #         self._heartbeat_thread = None
-    #     self._close_socket()
 
     def _listen_for_packets(self):
         self.log.info("UDP listener thread started.")
@@ -128,13 +100,14 @@ class UDPHeartbeatsManager(Device):
                 message = re.sub(r"[^\x20-\x7E]+", "\x00", message)
                 parts = [part for part in message.split("\x00") if part]
                 pv_name = parts[1]
-                if pv_name not in self._pv_list:
-                    self._pv_list.append(pv_name)
-                    self.on_pnp_device_detected(pv_name)
-                    self.log.info(
-                        f"New PnP heartbeat received: {pv_name}. "
-                        f"Adding to heartbeat list."
-                    )
+                with self._lock:
+                    if pv_name not in self._pv_list:
+                        self._pv_list.append(pv_name)
+                        self.on_pnp_device_detected(pv_name)
+                        self.log.info(
+                            f"New PnP heartbeat received: {pv_name}. "
+                            f"Adding to heartbeat list."
+                        )
                 self.log.info(f"Received UDP packet with pv_name: {pv_name}")
 
             except Exception as e:
@@ -147,17 +120,18 @@ class UDPHeartbeatsManager(Device):
         try:
             while not self._stop_event.is_set():
                 self.log.info("Sending heartbeats.")
-                for pv_name in list(
-                    self._pv_list
-                ):  # Create a copy of the list for safe iteration
-                    try:
-                        current_value = pvget(pv_name)
-                        self.log.info(f"Current value of {pv_name}: {current_value}")
-                        pvput(pv_name, current_value + 1)
-                    except Exception as e:
-                        self.log.warning(f"Failed updating {pv_name}: {e}")
-                        self.on_pnp_device_removed(pv_name)
-                        self._pv_list.remove(pv_name)
+                with self._lock:
+                    for pv_name in list(self._pv_list):
+                        try:
+                            current_value = pvget(pv_name)
+                            self.log.info(
+                                f"Current value of {pv_name}: {current_value}"
+                            )
+                            pvput(pv_name, current_value + 1)
+                        except Exception as e:
+                            self.log.warning(f"Failed updating {pv_name}: {e}")
+                            self.on_pnp_device_removed(pv_name)
+                            self._pv_list.remove(pv_name)
                 time.sleep(2)
         except Exception as e:
             self.log.error(f"Heartbeat thread encountered an error: {e}")
@@ -223,11 +197,3 @@ class UDPHeartbeatsManager(Device):
 
     def doShutdown(self):
         self.close()
-
-    # def close(self):
-    #     self.doStop()
-    #     super().close()
-    #
-    # def doShutdown(self):
-    #     self.doStop()
-    #     super().doShutdown()
