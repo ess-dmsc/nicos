@@ -58,7 +58,18 @@ class UDPHeartbeatsManager(Device):
 
     def _bind_socket(self):
         if session.sessiontype == MAIN:
-            self._sock.bind(("", self.port))
+            for i in range(1, 11):
+                retry_time = i
+                try:
+                    self._sock.bind(("", self.port))
+                    return
+                except OSError as e:
+                    self.log.debug(
+                        f"Failed to bind socket: {e},"
+                        f" retrying in {retry_time} seconds."
+                    )
+                    time.sleep(retry_time)
+            self.log.error("Failed to bind socket after 10 retries.")
 
     def _close_socket(self):
         if session.sessiontype == MAIN:
