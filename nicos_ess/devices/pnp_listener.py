@@ -55,6 +55,7 @@ class UDPHeartbeatsManager(Device):
     def _create_socket(self):
         if session.sessiontype == MAIN:
             self._sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            self._sock.settimeout(1)
 
     def _bind_socket(self):
         if session.sessiontype == MAIN:
