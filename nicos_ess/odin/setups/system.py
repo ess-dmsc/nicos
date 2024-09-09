@@ -11,7 +11,6 @@ sysconfig = dict(
 )
 
 modules = ["nicos.commands.standard", "nicos_ess.commands"]
-
 devices = dict(
     ODIN=device(
         "nicos.devices.instrument.Instrument",
@@ -50,13 +49,8 @@ devices = dict(
         "nicos_ess.devices.datasinks.nexus_structure.NexusStructureJsonFile",
         description="Provides the NeXus structure",
         nexus_config_path="nicos_ess/odin/nexus/odin_nexus.json",
-        visibility=(),
-    ),
-    NexusStructure_AreaDetector=device(
-        "nicos_ess.devices.datasinks.nexus_structure.NexusStructureAreaDetector",
-        description="Provides the NeXus structure",
-        nexus_config_path="nicos_ess/odin/nexus/odin_nexus.json",
         area_det_collector_device="area_detector_collector",
+        instrument_name="odin",
         visibility=(),
     ),
     NexusStructure=device(
