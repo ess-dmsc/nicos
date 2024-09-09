@@ -44,6 +44,7 @@ devices = dict(
         description="Provides the NeXus structure",
         nexus_config_path="nicos_ess/nido/nexus/nido_nexus.json",
         area_det_collector_device="area_detector_collector",
+        instrument_name="nido",
         visibility=(),
     ),
     NexusStructure=device(
