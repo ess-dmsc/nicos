@@ -11,12 +11,15 @@ from nicos.core import (
     SIMULATION,
     Attach,
     Device,
+    Measurable,
     Param,
     UsageError,
     listof,
     mailaddress,
     none_or,
     oneof,
+    DevStatistics,
+    Readable,
 )
 from nicos.core.params import subdir, expanded_path
 from nicos.devices.sample import Sample
@@ -96,6 +99,16 @@ class EssExperiment(Device):
             type=int,
             internal=True,
         ),
+        "lastscan": Param(
+            "Last used value of the scan counter - " "ONLY for display purposes",
+            type=int,
+            internal=True,
+        ),
+        "forcescandata": Param(
+            "If true, force scan datasets to be created " "also for single counts",
+            type=bool,
+            default=False,
+        ),
         "dataroot": Param(
             "Root data path under which all proposal " "specific paths are created",
             mandatory=True,
@@ -114,6 +127,18 @@ class EssExperiment(Device):
             default="abort",
             settable=True,
             userparam=False,
+        ),
+        "detlist": Param(
+            "List of default detector device names",
+            type=listof(str),
+            settable=True,
+            internal=True,
+        ),
+        "envlist": Param(
+            "List of default environment device names to " "read at every scan point",
+            type=listof(str),
+            settable=True,
+            internal=True,
         ),
     }
 
@@ -339,5 +364,106 @@ class EssExperiment(Device):
         # in nicos/devices/experiment
         pass
 
+    def setDetectors(self, detectors):
+        dlist = []
+        for det in detectors:
+            if isinstance(det, Device):
+                det = det.name
+            if det not in dlist:
+                dlist.append(det)
+        self.detlist = dlist
+        # try to create them right now
+        self.detectors  # pylint: disable=pointless-statement
+
+    @property
+    def detectors(self):
+        if self._detlist is not None:
+            return self._detlist[:]
+        detlist = []
+        all_created = True
+        for detname in self.detlist:
+            try:
+                det = session.getDevice(detname, source=self)
+            except Exception:
+                self.log.warning("could not create %r detector device", detname, exc=1)
+                all_created = False
+            else:
+                if not isinstance(det, Measurable):
+                    self.log.warning(
+                        "cannot use device %r as a " "detector: it is not a Measurable",
+                        det,
+                    )
+                    all_created = False
+                else:
+                    detlist.append(det)
+        if all_created:
+            self._detlist = detlist
+        return detlist[:]
+
+    def doUpdateDetlist(self, detectors):
+        self._detlist = None  # clear list of actual devices
+
     def _scrubDetEnvLists(self):
-        pass
+        """Remove devices from detlist that don't exist anymore
+        after a setup change.
+        """
+        newlist = []
+        for devname in self.detlist:
+            if devname not in session.configured_devices:
+                self.log.warning(
+                    "removing device %r from detector list, it "
+                    "does not exist in any loaded setup",
+                    devname,
+                )
+            else:
+                newlist.append(devname)
+        self.detlist = newlist
+
+    @property
+    def sampleenv(self):
+        if self._envlist is not None:
+            return self._envlist[:]
+        devlist = []
+        all_created = True
+        for devname in self.envlist:
+            try:
+                if ":" in devname:
+                    devname, stat = devname.split(":")
+                    dev = session.getDevice(devname, source=self)
+                    dev = DevStatistics.subclasses[stat](dev)
+                else:
+                    dev = session.getDevice(devname, source=self)
+            except Exception:
+                self.log.warning(
+                    "could not create %r environment device", devname, exc=1
+                )
+                all_created = False
+            else:
+                if not isinstance(dev, (Readable, DevStatistics)):
+                    self.log.warning(
+                        "cannot use device %r as " "environment: it is not a Readable",
+                        dev,
+                    )
+                    all_created = False
+                else:
+                    devlist.append(dev)
+        if all_created:
+            self._envlist = devlist
+        return devlist[:]
+
+    def setEnvironment(self, devices):
+        dlist = []
+        for dev in devices:
+            if isinstance(dev, Device):
+                dev = dev.name
+            elif isinstance(dev, DevStatistics):
+                dev = str(dev)
+            if dev not in dlist:
+                dlist.append(dev)
+        self.envlist = dlist
+        # try to create them right now
+        self.sampleenv  # pylint: disable=pointless-statement
+        session.elogEvent("environment", dlist)
+
+    def doUpdateEnvlist(self, devices):
+        self._envlist = None  # clear list of actual devices
