@@ -1,3 +1,4 @@
+# ruff: noqa: F821
 description = "system setup"
 
 group = "lowlevel"
@@ -29,6 +30,11 @@ devices = dict(
         fixed_proposal_path="",
         sample="Sample",
         cache_filepath="/opt/nicos-data/cached_proposals.json",
+    ),
+    pnp_listener=device(
+        "nicos_ess.devices.pnp_listener.UDPHeartbeatsManager",
+        description="Listens for PnP heartbeats",
+        port=24601,
     ),
     conssink=device(
         "nicos_ess.devices.datasinks.console_scan_sink.ConsoleScanSink",
