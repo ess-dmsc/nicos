@@ -16,7 +16,7 @@
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
     <layout class="QGridLayout" name="gridLayout_4">
-     <item row="1" column="0">
+     <item row="1" column="0" rowspan="3">
       <widget class="QListWidget" name="basicSetup">
        <property name="minimumSize">
         <size>
@@ -28,6 +28,23 @@
      </item>
      <item row="1" column="1">
       <widget class="QListWidget" name="optSetups">
+       <property name="minimumSize">
+        <size>
+         <width>180</width>
+         <height>0</height>
+        </size>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="1">
+      <widget class="QLabel" name="label_pnp">
+       <property name="text">
+        <string>Select plug and play setups:     </string>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="1">
+      <widget class="QListWidget" name="pnpSetups">
        <property name="minimumSize">
         <size>
          <width>180</width>
@@ -50,14 +67,7 @@
        </property>
       </widget>
      </item>
-     <item row="2" column="1">
-      <widget class="QCheckBox" name="showPnpBox">
-       <property name="text">
-        <string>Show all plug &amp;&amp; play components</string>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="2" rowspan="2">
+     <item row="1" column="2" rowspan="3">
       <widget class="QLabel" name="setupDescription">
        <property name="minimumSize">
         <size>

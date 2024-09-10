@@ -1,6 +1,7 @@
 # ruff: noqa: F821
 description = "A little device to test pnp_listener"
 
+group = "plugplay"
 pnp_pv_root = "foo:bar"
 
 devices = dict(

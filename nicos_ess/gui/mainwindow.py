@@ -14,7 +14,6 @@ from nicos.clients.gui.config import tabbed
 from nicos.clients.gui.data import DataHandler
 from nicos.clients.gui.dialogs.debug import DebugConsole
 from nicos.clients.gui.dialogs.error import ErrorDialog
-from nicos.clients.gui.dialogs.pnp import PnPSetupQuestion
 from nicos.clients.gui.dialogs.watchdog import WatchdogDialog
 from nicos.clients.gui.panels import AuxiliaryWindow, createWindowItem
 from nicos.clients.gui.panels.console import ConsolePanel
@@ -70,6 +69,7 @@ from nicos.utils import (
 
 from nicos_ess.gui.dialogs.auth import ConnectionDialog
 from nicos_ess.gui.dialogs.settings import SettingsDialog
+from nicos_ess.gui.panels.setups import SetupsPanel
 from nicos_ess.gui.utils import get_icon, root_path
 
 try:
@@ -927,17 +927,16 @@ class MainWindow(DlgUtils, QMainWindow):
             )
 
     def on_client_plugplay(self, data):
-        windowkey = data[0:2]  # (mode, setupname)
-        if windowkey in self.pnpWindows:
-            self.pnpWindows[windowkey].activateWindow()
-        else:
-            window = PnPSetupQuestion(self, self.client, data)
-            self.pnpWindows[windowkey] = window
-            window.closed.connect(self.on_pnpWindow_closed)
-            window.show()
+        print(f"data: {data}")
+        hide = False if data[0] == "added" else True
+        name = data[1]
+        print(f"Hiding: {hide} for setup {name}")
 
-    def on_pnpWindow_closed(self, window):
-        self.pnpWindows.pop(window.data[0:2], None)
+        for panel in self.panels:
+            if isinstance(panel, SetupsPanel):
+                setups_panel = panel
+                setups_panel.toggle_pnp_setup_visibility(name, hide)
+                break
 
     def on_client_watchdog(self, data):
         if self.watchdogWindow is None:
