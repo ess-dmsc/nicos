@@ -126,6 +126,7 @@ class UDPHeartbeatsManager(Device):
                                 f"Current value of {pv_name}: {current_value}"
                             )
                             pvput(pv_name, current_value + 1)
+                            self.on_pnp_device_detected(pv_name)
                         except Exception as e:
                             self.log.warning(f"Failed updating {pv_name}: {e}")
                             self.on_pnp_device_removed(pv_name)
