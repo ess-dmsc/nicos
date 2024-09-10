@@ -267,6 +267,7 @@ def readSetup(infodict, modname, filepath, all_setups, logger):
             return
     info = {
         "description": ns.get("description", modname),
+        "pnp_pv_root": ns.get("pnp_pv_root", None),
         "group": ns.get("group", "optional"),
         "sysconfig": ns.get("sysconfig", {}),
         "includes": ns.get("includes", []),
