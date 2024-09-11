@@ -6,7 +6,7 @@ devices = dict(
         "nicos_ess.devices.cache_kafka_forwarder.CacheKafkaForwarder",
         dev_ignore=["space", "sample"],
         brokers=configdata("config.KAFKA_BROKERS"),
-        output_topic="loki_nicos_devices",
+        output_topic="nmx_nicos_devices",
     ),
     Collector=device(
         "nicos.services.collector.Collector",
