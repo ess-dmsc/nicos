@@ -16,7 +16,8 @@ devices = dict(
             {
                 "group_name": "foobar",
                 "nx_class": "NXcollection",
-                "units": "K",
+                "units": "",
+                "suffix": "readback",
                 "source_name": f"{pnp_pv_root}:PNPHeartBeatCnt-S",
                 "schema": "f144",
                 "topic": "bifrost_motion",
