@@ -12,5 +12,17 @@ devices = dict(
         monitor=True,
         pollinterval=0.5,
         maxage=None,
+        nexus_config=[
+            {
+                "group_name": "foobar",
+                "nx_class": "NXcollection",
+                "units": "K",
+                "source_name": f"{pnp_pv_root}:PNPHeartBeatCnt-S",
+                "schema": "f144",
+                "topic": "bifrost_motion",
+                "protocol": "pva",
+                "periodic": 1,
+            },
+        ],
     ),
 )
