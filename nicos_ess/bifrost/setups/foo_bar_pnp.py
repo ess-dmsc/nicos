@@ -26,6 +26,5 @@ devices = dict(
                 "periodic": 1,
             },
         ],
-
     ),
 )
