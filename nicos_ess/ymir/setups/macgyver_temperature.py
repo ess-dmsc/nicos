@@ -15,6 +15,7 @@ for i in range(1, 5):
                 "group_name": "macgyver_temperature",
                 "nx_class": "NXcollection",
                 "units": "K",
+                "suffix": "readback",
                 "source_name": f"{pv_root}thermo_{i}-R",
                 "schema": "f144",
                 "topic": "ymir_motion",
