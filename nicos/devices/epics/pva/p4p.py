@@ -193,7 +193,7 @@ class P4pWrapper:
         with self.lock:
             self.disconnected.add(pvname)
 
-        request = _CONTEXT.makeRequest("field(value,timeStamp,alarm,control,display)")
+        request = "field(value,timeStamp,alarm,control,display)"
 
         callback = partial(
             self._callback,
