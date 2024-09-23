@@ -165,7 +165,6 @@ class EpicsDevice(DeviceMixinBase):
         """
         Override this for custom behaviour in sub-classes.
         """
-        self.log.warn(f"value {name} {param} {value} {session.sessiontype == POLLER}")
         cache_key = self._get_cache_relation(param)
         if cache_key:
             self._cache.put(self._name, cache_key, value, time.time())
@@ -211,7 +210,6 @@ class EpicsDevice(DeviceMixinBase):
     def doStatus(self, maxage=0):
         if session.sessiontype == POLLER or not self.monitor:
             return self.do_status(maxage)
-        self.log.warn("cache")
         return self._cache.get(self, "status")
 
     def do_status(self, maxage=0):
@@ -293,7 +291,6 @@ class EpicsReadable(EpicsDevice, Readable):
         EpicsDevice.doInit(self, mode)
 
     def doRead(self, maxage=0):
-        self.log.warn("doRead")
         return self._get_pv("readpv")
 
     def _get_pv_parameters(self):
@@ -412,7 +409,6 @@ class EpicsMoveable(EpicsDevice, Moveable):
             return self._get_pv("writepv")
 
     def doRead(self, maxage=0):
-        self.log.warn("doRead1")
         return self._get_pv("readpv")
 
     def doStart(self, value):
@@ -482,7 +478,6 @@ class EpicsAnalogMoveable(HasPrecision, HasLimits, EpicsMoveable):
         return self._epics_wrapper.get_units(self._param_to_pv["readpv"])
 
     def do_status(self, maxage=0):
-        self.log.warn("doStatus")
         severity, msg = EpicsMoveable.do_status(self, maxage)
 
         if severity in [status.ERROR, status.WARN]:
