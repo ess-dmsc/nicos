@@ -208,14 +208,6 @@ class EpicsDevice(DeviceMixinBase):
         return ".".join([stem, self._record_fields.get(pvparam, "")])
 
     def doStatus(self, maxage=0):
-        if session.sessiontype == POLLER or not self.monitor:
-            return self.do_status(maxage)
-        return self._cache.get(self, "status")
-
-    def do_status(self, maxage=0):
-        """
-        Override this for custom behaviour in sub-classes.
-        """
         # For most devices we only care about the status of the read PV
         try:
             severity, msg = self.get_alarm_status("readpv")
@@ -477,8 +469,8 @@ class EpicsAnalogMoveable(HasPrecision, HasLimits, EpicsMoveable):
     def doReadUnit(self):
         return self._epics_wrapper.get_units(self._param_to_pv["readpv"])
 
-    def do_status(self, maxage=0):
-        severity, msg = EpicsMoveable.do_status(self, maxage)
+    def doStatus(self, maxage=0):
+        severity, msg = EpicsMoveable.doStatus(self, maxage)
 
         if severity in [status.ERROR, status.WARN]:
             return severity, msg
@@ -544,7 +536,7 @@ class EpicsMappedReadable(MappedReadable, EpicsReadable):
     def doRead(self, maxage=0):
         return self._get_pv("readpv", as_string=True)
 
-    def do_status(self, maxage=0):
+    def doStatus(self, maxage=0):
         stat, msg = MappedReadable.doStatus(self, maxage)
         return stat, "" if stat == status.OK else msg
 
@@ -614,7 +606,7 @@ class EpicsMappedMoveable(MappedMoveable, EpicsMoveable):
         if not self.ignore_stop:
             EpicsMoveable.doStop(self)
 
-    def do_status(self, maxage=0):
+    def doStatus(self, maxage=0):
         stat, msg = MappedMoveable.doStatus(self, maxage)
         return stat, "" if stat == status.OK else msg
 
