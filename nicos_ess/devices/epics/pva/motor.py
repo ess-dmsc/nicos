@@ -278,7 +278,7 @@ class EpicsMotor(CanDisable, CanReference, HasOffset, EpicsMoveable, Motor):
     def doReadTarget(self):
         return self._get_pv("writepv")
 
-    def doStatus(self, maxage=0):
+    def do_status(self):
         with self._lock:
             epics_status, message = self._get_alarm_status()
             self._motor_status = epics_status, message

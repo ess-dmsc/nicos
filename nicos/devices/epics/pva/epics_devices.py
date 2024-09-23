@@ -139,12 +139,11 @@ class EpicsDevice(DeviceMixinBase):
 
     def _register_pv_callbacks(self):
         self._epics_subscriptions = []
-        value_pvs = list(self._cache_relations.keys())
-        status_pvs = self._get_status_parameters()
+        pvs = set(self._cache_relations.keys())
+        pvs = pvs.union(self._get_status_parameters())
+
         if session.sessiontype == POLLER:
-            self._subscribe_params(value_pvs, self.value_change_callback)
-        else:
-            self._subscribe_params(status_pvs or value_pvs, self.status_change_callback)
+            self._subscribe_params(pvs, self.value_change_callback)
 
     def _subscribe_params(self, pvparams, change_callback):
         for pvparam in pvparams:
@@ -166,26 +165,27 @@ class EpicsDevice(DeviceMixinBase):
         """
         Override this for custom behaviour in sub-classes.
         """
+        self.log.warn(f"value {name} {param} {value} {session.sessiontype == POLLER}")
         cache_key = self._get_cache_relation(param)
         if cache_key:
             self._cache.put(self._name, cache_key, value, time.time())
             if param == "readpv":
                 self._cache.put(self._name, "unit", units, time.time())
-
-    def status_change_callback(
-        self, name, param, value, units, severity, message, **kwargs
-    ):
-        """
-        Override this for custom behaviour in sub-classes.
-        """
-        current_status = self.doStatus()
-        self._cache.put(self._name, "status", current_status, time.time())
+        if param in self._get_status_parameters():
+            current_status = self.doStatus()
+            self._cache.put(self._name, "status", current_status, time.time())
 
     def connection_change_callback(self, name, pvparam, is_connected, **kwargs):
         if is_connected:
             self.log.debug("%s connected!", name)
         else:
             self.log.warning("%s disconnected!", name)
+            self._cache.put(
+                self._name,
+                "status",
+                (status.ERROR, "communication failure"),
+                time.time(),
+            )
 
     def _get_cache_relation(self, param):
         # Returns the cache key associated with the parameter.
@@ -209,6 +209,14 @@ class EpicsDevice(DeviceMixinBase):
         return ".".join([stem, self._record_fields.get(pvparam, "")])
 
     def doStatus(self, maxage=0):
+        if session.sessiontype == POLLER:
+            return self.do_status()
+        return self._cache.get(self, "status")
+
+    def do_status(self):
+        """
+        Override this for custom behaviour in sub-classes.
+        """
         # For most devices we only care about the status of the read PV
         try:
             severity, msg = self.get_alarm_status("readpv")
