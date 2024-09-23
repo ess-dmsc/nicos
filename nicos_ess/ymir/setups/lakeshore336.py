@@ -9,6 +9,8 @@ devices = dict(
         readpv="{}KRDG0".format(pv_root),
         pva=True,
         monitor=True,
+        pollinterval=0.5,
+        maxage=None,
     ),
     ls336_SP_A=device(
         "nicos.devices.epics.pva.EpicsAnalogMoveable",
@@ -17,6 +19,8 @@ devices = dict(
         writepv="{}SETP_S1".format(pv_root),
         pva=True,
         monitor=True,
+        pollinterval=0.5,
+        maxage=None,
     ),
     ls336_T_B=device(
         "nicos.devices.epics.pva.EpicsReadable",
@@ -24,6 +28,8 @@ devices = dict(
         readpv="{}KRDG1".format(pv_root),
         pva=True,
         monitor=True,
+        pollinterval=0.5,
+        maxage=None,
     ),
     ls336_SP_B=device(
         "nicos.devices.epics.pva.EpicsAnalogMoveable",
@@ -32,6 +38,8 @@ devices = dict(
         writepv="{}SETP_S2".format(pv_root),
         pva=True,
         monitor=True,
+        pollinterval=0.5,
+        maxage=None,
     ),
     ls336_T_C=device(
         "nicos.devices.epics.pva.EpicsReadable",
@@ -39,6 +47,8 @@ devices = dict(
         readpv="{}KRDG2".format(pv_root),
         pva=True,
         monitor=True,
+        pollinterval=0.5,
+        maxage=None,
     ),
     ls336_SP_C=device(
         "nicos.devices.epics.pva.EpicsAnalogMoveable",
@@ -47,6 +57,8 @@ devices = dict(
         writepv="{}SETP_S3".format(pv_root),
         pva=True,
         monitor=True,
+        pollinterval=0.5,
+        maxage=None,
     ),
     ls336_T_D=device(
         "nicos.devices.epics.pva.EpicsReadable",
@@ -54,6 +66,8 @@ devices = dict(
         readpv="{}KRDG3".format(pv_root),
         pva=True,
         monitor=True,
+        pollinterval=0.5,
+        maxage=None,
     ),
     ls336_SP_D=device(
         "nicos.devices.epics.pva.EpicsAnalogMoveable",
@@ -62,6 +76,8 @@ devices = dict(
         writepv="{}SETP_S4".format(pv_root),
         pva=True,
         monitor=True,
+        pollinterval=0.5,
+        maxage=None,
     ),
     ls336_HTR1=device(
         "nicos.devices.epics.pva.EpicsReadable",
@@ -69,6 +85,8 @@ devices = dict(
         readpv="{}HTR1".format(pv_root),
         pva=True,
         monitor=True,
+        pollinterval=0.5,
+        maxage=None,
     ),
     ls336_HTR2=device(
         "nicos.devices.epics.pva.EpicsReadable",
@@ -76,6 +94,8 @@ devices = dict(
         readpv="{}HTR2".format(pv_root),
         pva=True,
         monitor=True,
+        pollinterval=0.5,
+        maxage=None,
     ),
     ls336_HTR1_RANGE=device(
         "nicos.devices.epics.pva.EpicsMappedMoveable",
@@ -84,6 +104,8 @@ devices = dict(
         writepv="{}RANGE_S1".format(pv_root),
         pva=True,
         monitor=True,
+        pollinterval=0.5,
+        maxage=None,
     ),
     ls336_HTR2_RANGE=device(
         "nicos.devices.epics.pva.EpicsMappedMoveable",
@@ -92,6 +114,8 @@ devices = dict(
         writepv="{}RANGE_S2".format(pv_root),
         pva=True,
         monitor=True,
+        pollinterval=0.5,
+        maxage=None,
     ),
     ls336_HTR1_RAMP_RATE=device(
         "nicos.devices.epics.pva.EpicsAnalogMoveable",
@@ -100,6 +124,8 @@ devices = dict(
         writepv="{}RAMP_S1".format(pv_root),
         pva=True,
         monitor=True,
+        pollinterval=0.5,
+        maxage=None,
     ),
     ls336_HTR2_RAMP_RATE=device(
         "nicos.devices.epics.pva.EpicsAnalogMoveable",
@@ -108,6 +134,8 @@ devices = dict(
         writepv="{}RAMP_S2".format(pv_root),
         pva=True,
         monitor=True,
+        pollinterval=0.5,
+        maxage=None,
     ),
     ls336_HTR1_RAMP=device(
         "nicos.devices.epics.pva.EpicsMappedMoveable",
@@ -116,6 +144,8 @@ devices = dict(
         writepv="{}RAMPST_S1".format(pv_root),
         pva=True,
         monitor=True,
+        pollinterval=0.5,
+        maxage=None,
     ),
     ls336_HTR2_RAMP=device(
         "nicos.devices.epics.pva.EpicsMappedMoveable",
@@ -124,5 +154,7 @@ devices = dict(
         writepv="{}RAMPST_S2".format(pv_root),
         pva=True,
         monitor=True,
+        pollinterval=0.5,
+        maxage=None,
     ),
 )

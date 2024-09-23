@@ -11,9 +11,10 @@ devices = dict(
         topicpv="YMIR-Det1:Kfk1:KafkaTopic_RBV",
         sourcepv="YMIR-Det1:Kfk1:SourceName_RBV",
         unit="images",
-        pollinterval=None,
         pva=True,
         monitor=True,
+        pollinterval=0.5,
+        maxage=None,
     ),
     orca_image_type=device(
         "nicos_ess.devices.epics.area_detector.ImageType",
