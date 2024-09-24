@@ -4,7 +4,7 @@ from nicos.core import Moveable, Override, Param, oneof, pvname, status
 from nicos.core.errors import ConfigurationError
 from nicos.core.mixins import CanDisable, HasLimits, HasOffset
 from nicos.devices.abstract import CanReference, Motor
-from nicos.devices.epics.pva.epics_devices import EpicsMoveable
+from nicos.devices.epics.pva.epics_devices import EpicsMoveable, RecordInfo
 
 
 class EpicsMotor(CanDisable, CanReference, HasOffset, EpicsMoveable, Motor):
@@ -115,104 +115,62 @@ class EpicsMotor(CanDisable, CanReference, HasOffset, EpicsMoveable, Motor):
 
     _motor_status = (status.OK, "")
 
-    # Fields of the motor record for which an interaction via Channel Access
-    # is required.
     _record_fields = {
-        "readpv": "RBV",
-        "writepv": "VAL",
-        "stop": "STOP",
-        "donemoving": "DMOV",
-        "moving": "MOVN",
-        "miss": "MISS",
-        "homeforward": "HOMF",
-        "homereverse": "HOMR",
-        "speed": "VELO",
-        "offset": "OFF",
-        "highlimit": "HLM",
-        "lowlimit": "LLM",
-        "softlimit": "LVIO",
-        "lowlimitswitch": "LLS",
-        "highlimitswitch": "HLS",
-        "enable": "CNEN",
-        "set": "SET",
-        "foff": "FOFF",
-        "units": "EGU",
-        "alarm_status": "STAT",
-        "alarm_severity": "SEVR",
-        "position_deadband": "RDBD",
-        "description": "DESC",
-        "monitor_deadband": "MDEL",
+        "readpv": RecordInfo("value", ".RBV", False),
+        "writepv": RecordInfo("target", ".VAL", False),
+        "stop": RecordInfo("", ".STOP", False),
+        "homeforward": RecordInfo("", ".HOMF", False),
+        "homereverse": RecordInfo("", ".HOMR", False),
+        "speed": RecordInfo("", ".VELO", False),
+        "offset": RecordInfo("", ".OFF", False),
+        "highlimit": RecordInfo("", ".HLM", False),
+        "lowlimit": RecordInfo("", ".LLM", False),
+        "softlimit": RecordInfo("", ".LVIO", False),
+        "enable": RecordInfo("", ".CNEN", False),
+        "set": RecordInfo("", ".SET", False),
+        "foff": RecordInfo("", ".FOFF", False),
+        "units": RecordInfo("", ".EGU", False),
+        "position_deadband": RecordInfo("", ".RDBD", False),
+        "description": RecordInfo("", ".DESC", False),
+        "monitor_deadband": RecordInfo("", ".MDEL", True),
+        "donemoving": RecordInfo("", ".DMOV", True),
+        "moving": RecordInfo("", ".MOVN", True),
+        "miss": RecordInfo("", ".MISS", True),
+        "alarm_status": RecordInfo("", ".STAT", True),
+        "alarm_severity": RecordInfo("", ".SEVR", True),
+        "lowlimitswitch": RecordInfo("", ".LLS", True),
+        "highlimitswitch": RecordInfo("", ".HLS", True),
+        "powerauto": RecordInfo("", "-PwrAuto", False),
+        "errormsg": RecordInfo("", "-MsgTxt", True),
+        "errorbit": RecordInfo("", "-Err", True),
+        "reseterror": RecordInfo("", "-ErrRst", False),
     }
 
     _suffixes = {
-        "powerauto": "-PwrAuto",
-        "errormsg": "-MsgTxt",
-        "errorbit": "-Err",
-        "reseterror": "-ErrRst",
+        "powerauto",
+        "errormsg",
+        "errorbit",
+        "reseterror",
     }
 
-    _cache_relations = {
-        "readpv": "value",
-        "units": "unit",
-        "writepv": "target",
-    }
+    def doPreinit(self, mode):
+        for suffix in self._suffixes:
+            if not getattr(self, "has_" + suffix) and suffix in self._record_fields:
+                del self._record_fields[suffix]
+        EpicsMoveable.doPreinit(self, mode)
 
     def doInit(self, mode):
         self._lock = threading.Lock()
         EpicsMoveable.doInit(self, mode)
 
     def _get_pv_parameters(self):
-        """
-        Implementation of inherited method to automatically account for fields
-        present in motor record.
-
-        :return: List of PV aliases.
-        """
-        pvs = set(self._record_fields.keys())
-
-        for suffix in self._suffixes:
-            if getattr(self, "has_" + suffix):
-                pvs.add(suffix)
-
-        return pvs
-
-    def _get_status_parameters(self):
-        status_pars = {
-            "miss",
-            "donemoving",
-            "moving",
-            "lowlimitswitch",
-            "highlimitswitch",
-            "softlimit",
-            "alarm_status",
-            "alarm_severity",
-        }
-
-        if self.has_errormsg:
-            status_pars.add("errormsg")
-        return status_pars
+        return set(self._record_fields.keys())
 
     def _get_pv_name(self, pvparam):
-        """
-        Implementation of inherited method that translates between PV aliases
-        and actual PV names. Automatically adds a prefix to the PV name
-        according to the motorpv parameter.
-
-        :param pvparam: PV alias.
-        :return: Actual PV name.
-        """
         motor_record_prefix = getattr(self, "motorpv")
         motor_field = self._record_fields.get(pvparam)
 
-        if motor_field is not None:
-            return ".".join((motor_record_prefix, motor_field))
-
-        motor_suffix = self._suffixes.get(pvparam)
-
-        if motor_suffix is not None:
-            return "".join((motor_record_prefix, motor_suffix))
-
-        return getattr(self, pvparam)
+        return "".join((motor_record_prefix, motor_field.pv_suffix))
 
     def doReadSpeed(self):
         return self._get_pv("speed")
