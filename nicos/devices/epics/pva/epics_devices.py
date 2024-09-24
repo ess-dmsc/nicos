@@ -144,8 +144,6 @@ class EpicsDevice(DeviceMixinBase):
         self._epics_subscriptions = []
         value_pvs = [k for k, v in self._record_fields.items() if not v.is_status]
         status_pvs = [k for k, v in self._record_fields.items() if v.is_status]
-        self.log.warning(f"value_pvs = {value_pvs}")
-        self.log.warning(f"status_pvs = {status_pvs}")
         self._subscribe_params(value_pvs, self.value_change_callback)
         status_pvs = self._get_status_parameters()
         if status_pvs:
@@ -171,7 +169,6 @@ class EpicsDevice(DeviceMixinBase):
         """
         Override this for custom behaviour in sub-classes.
         """
-        self.log.warn(f"value '{name}' {param} {value}")
         time_stamp = time.time()
         self._cache.put(self._name, name.replace(":", ""), value, time_stamp)
         cache_key = self._record_fields[param].cache_key
@@ -186,7 +183,6 @@ class EpicsDevice(DeviceMixinBase):
         """
         Override this for custom behaviour in sub-classes.
         """
-        self.log.warn(f"status {name} {param} {value}")
         time_stamp = time.time()
         if param != "readpv":
             self._cache.put(self._name, name.replace(":", ""), value, time_stamp)
@@ -250,10 +246,9 @@ class EpicsDevice(DeviceMixinBase):
 
     def _get_pv(self, pvparam, as_string=False):
         pv_name = self._param_to_pv[pvparam]
-        if session.sessiontype != POLLER and self.monitor:
+        if self.monitor:
             result = self._cache.get(self.name, pv_name.replace(":", ""))
             if result is not None:
-                self.log.warn(f"from cache {pvparam}")
                 return result
 
         self.log.warn(f"cache miss {pvparam}")
@@ -302,8 +297,7 @@ class EpicsReadable(EpicsDevice, Readable):
         return self._get_pv("readpv")
 
     def _get_pv_parameters(self):
-        fields = set(self._record_fields.keys())
-        return fields
+        return set(self._record_fields.keys())
 
     def doReadUnit(self):
         return self._epics_wrapper.get_units(self._param_to_pv["readpv"])
@@ -317,16 +311,10 @@ class EpicsStringReadable(EpicsReadable):
 
     valuetype = str
 
-    _record_fields = {
-        "readpv": "",
-    }
-
-    _cache_relations = {
-        "readpv": "value",
-    }
+    _record_fields = {"readpv": RecordInfo("value", "", False)}
 
     def _get_pv_parameters(self):
-        return {"readpv"}
+        return set(self._record_fields.keys())
 
     def _subscribe(self, change_callback, pvname, pvparam):
         return self._epics_wrapper.subscribe(
@@ -376,9 +364,10 @@ class EpicsMoveable(EpicsDevice, Moveable):
         "target": Override(volatile=True),
     }
 
-    _cache_relations = {
-        "readpv": "value",
-        "writepv": "target",
+    _record_fields = {
+        "readpv": RecordInfo("value", "", False),
+        "writepv": RecordInfo("target", "", False),
+        "targetpv": RecordInfo("", "", False),
     }
 
     def _get_pv_parameters(self):
@@ -434,9 +423,9 @@ class EpicsStringMoveable(EpicsMoveable):
 
     valuetype = str
 
-    _cache_relations = {
-        "readpv": "value",
-        "writepv": "target",
+    _record_fields = {
+        "readpv": RecordInfo("value", "", False),
+        "writepv": RecordInfo("target", "", False),
     }
 
     def _get_pv_parameters(self):
@@ -467,18 +456,11 @@ class EpicsAnalogMoveable(HasPrecision, HasLimits, EpicsMoveable):
         "unit": Override(mandatory=False, settable=False, volatile=True),
     }
 
-    _record_fields = {
-        "readpv": "",
-        "writepv": "",
-    }
-
-    _cache_relations = {"readpv": "value", "writepv": "target"}
-
     def _get_pv_parameters(self):
         fields = set(self._record_fields.keys())
 
-        if self.targetpv:
-            return fields | {"targetpv"}
+        if not self.targetpv:
+            fields = fields.remove("targetpv")
 
         return fields
 
@@ -497,6 +479,7 @@ class EpicsAnalogMoveable(HasPrecision, HasLimits, EpicsMoveable):
         return status.OK, msg
 
     def doReadAbslimits(self):
+        # TODO: cache?
         return self._get_limits("writepv")
 
 
@@ -520,6 +503,10 @@ class EpicsMappedReadable(MappedReadable, EpicsReadable):
         "unit": Override(mandatory=False, settable=False, volatile=False),
         # Mapping values are read from EPICS
         "mapping": Override(mandatory=False, settable=False, userparam=False),
+    }
+
+    _record_fields = {
+        "readpv": RecordInfo("value", "", False),
     }
 
     def _get_pv_parameters(self):
@@ -581,6 +568,11 @@ class EpicsMappedMoveable(MappedMoveable, EpicsMoveable):
         "unit": Override(mandatory=False, settable=False, volatile=False),
         # Mapping values are read from EPICS
         "mapping": Override(mandatory=False, settable=False, userparam=False),
+    }
+
+    _record_fields = {
+        "readpv": RecordInfo("value", "", False),
+        "writepv": RecordInfo("target", "", False),
     }
 
     def _get_pv_parameters(self):
