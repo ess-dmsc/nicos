@@ -1,4 +1,4 @@
-from nicos.core import Attach, Override, Param, Readable, Waitable, status
+from nicos.core import Attach, Override, Param, Readable, Waitable, status, listof
 from nicos.devices.abstract import MappedMoveable, Moveable
 from nicos.devices.epics.pva import EpicsDevice
 from nicos.devices.epics.status import SEVERITY_TO_STATUS, STAT_TO_STATUS
@@ -93,6 +93,12 @@ class ChopperAlarms(EpicsDevice, Readable):
 
 class EssChopperController(MappedMoveable):
     """Handles the status and hardware control for an ESS chopper system"""
+
+    parameters = {
+        "slit_edges": Param(
+            "Slit edges of the chopper", type=listof(listof(float)), default=[]
+        ),
+    }
 
     attached_devices = {
         "state": Attach("Current state of the chopper", Readable),
