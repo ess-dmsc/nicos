@@ -65,7 +65,7 @@ class RheometerPanel(Panel):
         edit_frame = self.build_edit_layout()
         display_frame = self.build_display_layout()
 
-        splitter = QSplitter(Qt.Horizontal)
+        splitter = QSplitter(Qt.Orientation.Horizontal)
         splitter.addWidget(edit_frame)
         splitter.addWidget(display_frame)
         splitter.setStretchFactor(0, 0)
@@ -198,7 +198,7 @@ class RheometerPanel(Panel):
         self.tableView.setModel(self.tableModel)
 
         self.tableView.setWordWrap(True)
-        self.tableView.setTextElideMode(Qt.ElideNone)
+        self.tableView.setTextElideMode(Qt.TextElideMode.ElideNone)
 
         self.tableModel.setHorizontalHeaderLabels(
             [
