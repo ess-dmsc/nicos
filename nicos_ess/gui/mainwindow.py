@@ -927,10 +927,8 @@ class MainWindow(DlgUtils, QMainWindow):
             )
 
     def on_client_plugplay(self, data):
-        print(f"data: {data}")
         hide = False if data[0] == "added" else True
         name = data[1]
-        print(f"Hiding: {hide} for setup {name}")
 
         for panel in self.panels:
             if isinstance(panel, SetupsPanel):
