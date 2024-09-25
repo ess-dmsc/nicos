@@ -169,6 +169,7 @@ class EpicsDevice(DeviceMixinBase):
         """
         Override this for custom behaviour in sub-classes.
         """
+        self.log.warn(f"{name} {severity} {message}")
         time_stamp = time.time()
         self._cache.put(self._name, name.replace(":", ""), value, time_stamp)
         cache_key = self._record_fields[param].cache_key
@@ -219,6 +220,9 @@ class EpicsDevice(DeviceMixinBase):
         return ".".join([stem, self._record_fields.get(pvparam, "")])
 
     def doStatus(self, maxage=0):
+        if session.sessiontype != POLLER and self.monitor:
+            return self._cache.get(self._name, "status")
+
         # For most devices we only care about the status of the read PV
         try:
             severity, msg = self.get_alarm_status("readpv")
@@ -268,7 +272,6 @@ class EpicsDevice(DeviceMixinBase):
         )
 
     def get_alarm_status(self, pvparam):
-        # TODO: hit cache
         return self._epics_wrapper.get_alarm_status(self._param_to_pv[pvparam])
 
 
