@@ -49,15 +49,15 @@ class HistogramDataViewer(QWidget):
         self.log_mode_checkbox.stateChanged.connect(self.toggle_log_mode)
         # hbox.addWidget(self.log_mode_checkbox)  # Dont use yet
 
-        self.mean_label = QLabel("Mean: 0 nm")
+        self.mean_label = QLabel("Mean: 0 ns")
         self.mean_label.setStyleSheet("color: blue")
         hbox.addWidget(self.mean_label)
 
-        self.stddev_label = QLabel("Std. Dev: 0 nm")
+        self.stddev_label = QLabel("Std. Dev: 0 ns")
         self.stddev_label.setStyleSheet("color: red")
         hbox.addWidget(self.stddev_label)
 
-        self.fwhm_label = QLabel("FWHM: 0 nm")
+        self.fwhm_label = QLabel("FWHM: 0 ns")
         hbox.addWidget(self.fwhm_label)
 
         layout.addLayout(hbox)
@@ -66,7 +66,7 @@ class HistogramDataViewer(QWidget):
         self.plot_widget.showGrid(x=True, y=True, alpha=0.2)
 
         self.plot_widget.setLabel("left", "Counts")
-        self.plot_widget.setLabel("bottom", "Value")
+        self.plot_widget.setLabel("bottom", "Value", units="s")
 
         self.bar_graph_item = None
         self.mean_line = pg.InfiniteLine(pos=0, angle=90, pen=pg.mkPen("b", width=2))
@@ -127,12 +127,12 @@ class HistogramDataViewer(QWidget):
         self.mean = mean
         self.stddev = stddev
         self.fwhm = fwhm
-        self.mean_label.setText(f"Mean: {self.mean:.2f} nm")
-        self.stddev_label.setText(f"Std. Dev: {self.stddev:.2f} nm")
-        self.fwhm_label.setText(f"FWHM: {self.fwhm:.2f} nm")
-        self.mean_line.setValue(self.mean)
-        self.std_left_line.setValue(self.mean - self.stddev)
-        self.std_right_line.setValue(self.mean + self.stddev)
+        self.mean_label.setText(f"Mean: {self.mean:.2f} ns")
+        self.stddev_label.setText(f"Std. Dev: {self.stddev:.2f} ns")
+        self.fwhm_label.setText(f"FWHM: {self.fwhm:.2f} ns")
+        self.mean_line.setValue(self.mean / 1e9)
+        self.std_left_line.setValue((self.mean - self.stddev) / 1e9)
+        self.std_right_line.setValue((self.mean + self.stddev) / 1e9)
 
         brushes = []
         for bin_center in x:
@@ -141,14 +141,14 @@ class HistogramDataViewer(QWidget):
             else:
                 brushes.append((140, 140, 140, 200))
 
-        self.set_data(x=x, y=y, brushes=brushes)
+        self.set_data(x=x / 1e9, y=y, brushes=brushes)
 
     def clear(self):
         if self.bar_graph_item is not None:
             self.plot_widget.removeItem(self.bar_graph_item)
-        self.mean_label.setText("Mean: 0 nm")
-        self.stddev_label.setText("Std. Dev: 0 nm")
-        self.fwhm_label.setText("FWHM: 0 nm")
+        self.mean_label.setText("Mean: 0 ns")
+        self.stddev_label.setText("Std. Dev: 0 ns")
+        self.fwhm_label.setText("FWHM: 0 ns")
 
 
 class TrendViewer(QWidget):
@@ -192,7 +192,7 @@ class TrendViewer(QWidget):
         self.left_view = pg.ViewBox()
         self.plot_widget = pg.PlotWidget(
             viewBox=self.left_view,
-            axisItems={"bottom": TimeAxisItem(orientation="bottom")},
+            axisItems={"bottom": TimeAxisItem(orientation="bottom", units="")},
         )
         self.plot_widget.showGrid(x=True, y=True)
         legend = self.plot_widget.addLegend(
