@@ -76,6 +76,7 @@ class P4pWrapper:
         self._values = {}
         self._alarms = {}
         self._choices = {}
+        self._limits = {}
 
     def connect_pv(self, pvname):
         # Check pv is available
@@ -146,6 +147,9 @@ class P4pWrapper:
 
     def get_limits(self, pvname, default_low=-1e308, default_high=1e308):
         result = _CONTEXT.get(pvname, timeout=self._timeout)
+        return self._extract_limits(result, default_low, default_high)
+
+    def _extract_limits(self, result, default_low=-1e308, default_high=1e308):
         try:
             default_low = result["display"]["limitLow"]
             default_high = result["display"]["limitHigh"]
@@ -248,6 +252,8 @@ class P4pWrapper:
                 self._units[pvname] = self._get_units(result, "")
             if "alarm.status" in change_set or "alarm.severity" in change_set:
                 self._alarms[pvname] = self._extract_alarm_info(result)
+            if "display.limitLow" in change_set:
+                self._limits[pvname] = self._extract_limits(result)
 
             if pvname in self._values:
                 severity, msg = self._alarms.get(pvname, (status.UNKNOWN, ""))
@@ -256,6 +262,7 @@ class P4pWrapper:
                     pvparam,
                     self._values[pvname],
                     self._units.get(pvname, ""),
+                    self._limits.get(pvname, None),
                     severity,
                     msg,
                 )

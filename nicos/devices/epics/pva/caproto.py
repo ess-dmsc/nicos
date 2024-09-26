@@ -202,6 +202,9 @@ class CaprotoWrapper:
 
     def get_limits(self, pvname, default_low=-1e308, default_high=1e308):
         values = self.get_control_values(pvname)
+        return self._get_limits(values, default_low, default_high)
+
+    def _get_limits(self, values, default_low=-1e308, default_high=1e308):
         if hasattr(values, "lower_ctrl_limit"):
             default_low = values.lower_ctrl_limit
             default_high = values.upper_ctrl_limit
@@ -275,8 +278,9 @@ class CaprotoWrapper:
     def _callback(self, pvname, pvparam, change_callback, as_string, sub, response):
         value = self._convert_value(pvname, response, as_string)
         units = self._get_units(response.metadata, "")
+        limits = self._get_limits(response.metadata)
         severity, message = self._extract_alarm_info(response)
-        change_callback(pvname, pvparam, value, units, severity, message)
+        change_callback(pvname, pvparam, value, units, limits, severity, message)
 
     def _conn_callback(self, pvname, pvparam, connection_callback, pv, state):
         connection_callback(pvname, pvparam, state == "connected")

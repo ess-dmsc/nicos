@@ -283,14 +283,14 @@ class AreaDetector(EpicsDevice, ImageChannelMixin, Measurable):
         self.arraydesc = ArrayDesc(self.name, shape=shape, dtype=data_type)
 
     def status_change_callback(
-        self, name, param, value, units, severity, message, **kwargs
+        self, name, param, value, units, limits, severity, message, **kwargs
     ):
         if param == "readpv" and value != 0:
             if time.monotonic() >= self._last_update + self._plot_update_delay:
                 _thread = createThread(f"get_image_{time.time_ns()}", self.get_image)
 
         EpicsDevice.status_change_callback(
-            self, name, param, value, units, severity, message, **kwargs
+            self, name, param, value, units, limits, severity, message, **kwargs
         )
 
     def doIsCompleted(self):
