@@ -424,9 +424,6 @@ class EpicsStringMoveable(EpicsMoveable):
         "writepv": "target",
     }
 
-    def _get_pv_parameters(self):
-        return {"readpv", "writepv"}
-
     def _subscribe(self, change_callback, pvname, pvparam):
         return self._epics_wrapper.subscribe(
             pvname,
