@@ -28,7 +28,7 @@ class EpicsCounter(CounterChannelMixin, EpicsReadable, PassiveChannel):
     }
 
     def value_change_callback(
-        self, name, param, value, units, severity, message, **kwargs
+        self, name, param, value, units, limits, severity, message, **kwargs
     ):
         if self.started:
             value = sum(value) if isinstance(value, Iterable) else value

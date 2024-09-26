@@ -161,7 +161,7 @@ class EpicsDevice(DeviceMixinBase):
         )
 
     def value_change_callback(
-        self, name, param, value, units, severity, message, **kwargs
+        self, name, param, value, units, limits, severity, message, **kwargs
     ):
         """
         Override this for custom behaviour in sub-classes.
@@ -173,7 +173,7 @@ class EpicsDevice(DeviceMixinBase):
                 self._cache.put(self._name, "unit", units, time.time())
 
     def status_change_callback(
-        self, name, param, value, units, severity, message, **kwargs
+        self, name, param, value, units, limits, severity, message, **kwargs
     ):
         """
         Override this for custom behaviour in sub-classes.
@@ -326,13 +326,13 @@ class EpicsStringReadable(EpicsReadable):
         return self._get_pv("readpv", as_string=True)
 
     def value_change_callback(
-        self, name, param, value, units, severity, message, **kwargs
+        self, name, param, value, units, limits, severity, message, **kwargs
     ):
         if isinstance(value, numpy.ndarray):
             # It is a char waveform
             value = "".join(chr(x) for x in value)
         EpicsDevice.value_change_callback(
-            self, name, param, value, units, severity, message, **kwargs
+            self, name, param, value, units, limits, severity, message, **kwargs
         )
 
 
@@ -539,10 +539,10 @@ class EpicsMappedReadable(MappedReadable, EpicsReadable):
         return stat, "" if stat == status.OK else msg
 
     def value_change_callback(
-        self, name, param, value, units, severity, message, **kwargs
+        self, name, param, value, units, limits, severity, message, **kwargs
     ):
         EpicsDevice.value_change_callback(
-            self, name, param, value, units, severity, message, **kwargs
+            self, name, param, value, units, limits, severity, message, **kwargs
         )
 
 

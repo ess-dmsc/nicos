@@ -183,7 +183,7 @@ class OceanInsightSpectrometer(EpicsDevice, PassiveChannel):
         return self._spectrum_array
 
     def status_change_callback(
-        self, name, param, value, units, severity, message, **kwargs
+        self, name, param, value, units, limits, severity, message, **kwargs
     ):
         if param == "spectrum":
             self._spectrum_array = value
@@ -195,7 +195,7 @@ class OceanInsightSpectrometer(EpicsDevice, PassiveChannel):
                 self._last_update = time.monotonic()
 
         EpicsDevice.status_change_callback(
-            self, name, param, value, units, severity, message, **kwargs
+            self, name, param, value, units, limits, severity, message, **kwargs
         )
 
     def valueInfo(self):
