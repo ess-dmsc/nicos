@@ -2,13 +2,14 @@
 
 description = "Hamamatsu light intensifier"
 
-pv_root = "YMIR-Det1:NDet-GInt-001:"
+hama_root = "YMIR-Det1:NDet-GInt-001:"
+gate_root = "YMIR-TS:Ctrl-EVR-03:"
 
 devices = dict(
     hama_pmt_value=device(
         "nicos.devices.epics.pva.EpicsReadable",
         description="The current value of the intensifier",
-        readpv=f"{pv_root}IntensifierValue-R",
+        readpv=f"{hama_root}IntensifierValue-R",
         pva=True,
         monitor=True,
         pollinterval=0.5,
@@ -17,7 +18,7 @@ devices = dict(
     hama_pmt_status=device(
         "nicos.devices.epics.pva.EpicsStringReadable",
         description="The status of the intensifier",
-        readpv=f"{pv_root}Status-R",
+        readpv=f"{hama_root}Status-R",
         pva=True,
         monitor=True,
         pollinterval=0.5,
@@ -27,8 +28,8 @@ devices = dict(
     hama_pmt_gain=device(
         "nicos.devices.epics.pva.EpicsDigitalMoveable",
         description="The gain of the intensifier",
-        readpv=f"{pv_root}IntensifierGain-R",
-        writepv=f"{pv_root}IntensifierGain-S",
+        readpv=f"{hama_root}IntensifierGain-R",
+        writepv=f"{hama_root}IntensifierGain-S",
         pva=True,
         monitor=True,
         pollinterval=0.5,
@@ -38,7 +39,7 @@ devices = dict(
     hama_pmt_connection=device(
         "nicos.devices.epics.pva.EpicsStringReadable",
         description="The connection status of the intensifier",
-        readpv=f"{pv_root}DeviceConnected-R",
+        readpv=f"{hama_root}DeviceConnected-R",
         pva=True,
         monitor=True,
         pollinterval=0.5,
@@ -48,8 +49,8 @@ devices = dict(
     hama_pmt=device(
         "nicos_ess.devices.epics.hama_intensifier.HamaIntensifierController",
         description="The control of the intensifier",
-        readpv=f"{pv_root}OperationCtrl-R",
-        writepv=f"{pv_root}OperationCtrl-S",
+        readpv=f"{hama_root}OperationCtrl-R",
+        writepv=f"{hama_root}OperationCtrl-S",
         pva=True,
         monitor=True,
         pollinterval=0.5,
@@ -63,12 +64,38 @@ devices = dict(
     hama_pmt_mode=device(
         "nicos.devices.epics.pva.EpicsMappedMoveable",
         description="The operation mode of the intensifier",
-        readpv=f"{pv_root}OperationMode-R",
-        writepv=f"{pv_root}OperationMode-R",
+        readpv=f"{hama_root}OperationMode-R",
+        writepv=f"{hama_root}OperationMode-S",
         pva=True,
         monitor=True,
         pollinterval=0.5,
         maxage=None,
         visibility=(),
+    ),
+    gate_delay=device(
+        "nicos.devices.epics.pva.EpicsAnalogMoveable",
+        description="The delay of the gate",
+        readpv=f"{gate_root}DlyGen1Delay-RB",
+        writepv=f"{gate_root}DlyGen1Delay-SP",
+        abslimits=(0, 71400),
+        userlimits=(0, 71400),
+        pva=True,
+        monitor=True,
+        pollinterval=0.5,
+        maxage=None,
+        precision=0.1,
+    ),
+    gate_width=device(
+        "nicos.devices.epics.pva.EpicsAnalogMoveable",
+        description="The width of the gate",
+        readpv=f"{gate_root}DlyGen1Width-RB",
+        writepv=f"{gate_root}DlyGen1Width-SP",
+        abslimits=(0, 71400),
+        userlimits=(0, 71400),
+        pva=True,
+        monitor=True,
+        pollinterval=0.5,
+        maxage=None,
+        precision=0.1,
     ),
 )
