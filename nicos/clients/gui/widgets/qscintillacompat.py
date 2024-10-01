@@ -126,7 +126,7 @@ class QScintillaCompatible(QPlainTextEdit):
         if not self.isReadOnly():
             selection = QTextEdit.ExtraSelection()
             lineColor = colors.switch_color(
-                QColor(Qt.GlobalColor.yellow).lighter(160), colors.base.lighter(140)
+                QColor(Qt.GlobalColor.yellow).lighter(160), QColor(Qt.GlobalColor.yellow).lighter(140)
             )
 
             selection.format.setBackground(lineColor)
