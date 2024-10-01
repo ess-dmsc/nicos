@@ -694,7 +694,10 @@ class EditorPanel(Panel):
             self.check_python_code()
 
         pos = event.pos()
-        line = self.currentEditor.lineAt(pos)
+        try:
+            line = self.currentEditor.lineAt(pos)
+        except AttributeError:
+            line = -1
 
         if line != self.currentEditor.hoverLineNumber:
             self.currentEditor.hoverLineNumber = line
@@ -706,7 +709,7 @@ class EditorPanel(Panel):
                 )
             else:
                 QToolTip.hideText()
-        super(QsciScintilla, self.currentEditor).mouseMoveEvent(event)
+        super((QsciScintilla if has_scintilla else QScintillaCompatible), self.currentEditor).mouseMoveEvent(event)
 
     def _get_global_position(self, event):
         try:
@@ -745,7 +748,6 @@ class EditorPanel(Panel):
                 continue
 
             self.error_messages[self.currentEditor][line_number] = message
-            self._highlight_error(line_number, error_code)
 
     def _is_editor_and_error_checks_valid(self):
         return self.currentEditor and hasattr(self, "error_messages")
@@ -757,9 +759,10 @@ class EditorPanel(Panel):
 
     def _set_indicator_styles(self):
         for indicator_number, color in enumerate([INDICATOR_RED, INDICATOR_GREEN]):
-            self._set_indicator_style(
-                indicator_number, self.currentEditor.INDIC_SQUIGGLE
-            )
+            if has_scintilla:
+                self._set_indicator_style(
+                    indicator_number, self.currentEditor.INDIC_SQUIGGLE
+                )
             self._set_indicator_color(indicator_number, QColor(*color))
 
     def _parse_error_line(self, parts):
@@ -781,34 +784,39 @@ class EditorPanel(Panel):
         self._fill_indicator_range(start_pos, line_length)
 
     def _set_current_indicator(self, indicator_number):
-        self.currentEditor.SendScintilla(
-            self.currentEditor.SCI_SETINDICATORCURRENT, indicator_number
-        )
+        if has_scintilla:
+            self.currentEditor.SendScintilla(
+                self.currentEditor.SCI_SETINDICATORCURRENT, indicator_number
+            )
 
     def _clear_indicator_range(self, length):
-        self.currentEditor.SendScintilla(
-            self.currentEditor.SCI_INDICATORCLEARRANGE, 0, length
-        )
+        if has_scintilla:
+            self.currentEditor.SendScintilla(
+                self.currentEditor.SCI_INDICATORCLEARRANGE, 0, length
+            )
 
     def _set_indicator_style(self, indicator_number, style):
-        self.currentEditor.SendScintilla(
-            self.currentEditor.SCI_INDICSETSTYLE, indicator_number, style
-        )
+        if has_scintilla:
+            self.currentEditor.SendScintilla(
+                self.currentEditor.SCI_INDICSETSTYLE, indicator_number, style
+            )
 
     def _set_indicator_color(self, indicator_number, color):
-        self.currentEditor.SendScintilla(
-            self.currentEditor.SCI_INDICSETFORE, indicator_number, color
-        )
+        if has_scintilla:
+            self.currentEditor.SendScintilla(
+                self.currentEditor.SCI_INDICSETFORE, indicator_number, color
+            )
 
     def _get_line_position_and_length(self, line_number):
-        start_pos = self.currentEditor.positionFromLineIndex(line_number, 0)
-        line_length = len(self.currentEditor.text(line_number))
+        start_pos = self.currentEditor.positionFromLineIndex(line_number, 0) if has_scintilla else 0
+        line_length = len(self.currentEditor.text(line_number)) if has_scintilla else self.currentEditor.text()
         return start_pos, line_length
 
     def _fill_indicator_range(self, start_pos, line_length):
-        self.currentEditor.SendScintilla(
-            self.currentEditor.SCI_INDICATORFILLRANGE, start_pos, line_length
-        )
+        if has_scintilla:
+            self.currentEditor.SendScintilla(
+                self.currentEditor.SCI_INDICATORFILLRANGE, start_pos, line_length
+            )
 
     def on_client_connected(self):
         self.loaded_devices = list(self.client.eval("session.devices", {}).keys())
