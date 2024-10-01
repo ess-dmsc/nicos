@@ -76,7 +76,7 @@ Start the NICOS client with your selected instrument's configuration:
 
 ### Step 3: Run with QT6 (For Mac Silicon)
 
-If you are on a Mac with silicon architecture or prefer QT6, use the following command:
+If you prefer QT6, use the following command (not required on macOS with silicon architecture):
 ```bash
 NICOS_QT=6 ./bin/nicos-gui -c nicos_ess/<instrument>/guiconfig.py
 ```
