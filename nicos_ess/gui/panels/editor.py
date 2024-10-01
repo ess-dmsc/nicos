@@ -748,6 +748,7 @@ class EditorPanel(Panel):
                 continue
 
             self.error_messages[self.currentEditor][line_number] = message
+            self._highlight_error(line_number, error_code)
 
     def _is_editor_and_error_checks_valid(self):
         return self.currentEditor and hasattr(self, "error_messages")
