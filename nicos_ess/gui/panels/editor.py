@@ -687,15 +687,15 @@ class EditorPanel(Panel):
         return editor
 
     def handle_mouse_move_event(self, event):
+        if not has_scintilla:
+            return
+
         if self.currentEditor not in self.error_messages:
             self.setup_error_highlighting()
             self.check_python_code()
 
         pos = event.pos()
-        try:
-            line = self.currentEditor.lineAt(pos)
-        except AttributeError:
-            line = -1
+        line = self.currentEditor.lineAt(pos)
 
         if line != self.currentEditor.hoverLineNumber:
             self.currentEditor.hoverLineNumber = line
@@ -707,7 +707,7 @@ class EditorPanel(Panel):
                 )
             else:
                 QToolTip.hideText()
-        super((QsciScintilla if has_scintilla else QScintillaCompatible), self.currentEditor).mouseMoveEvent(event)
+        super(QsciScintilla, self.currentEditor).mouseMoveEvent(event)
 
     def _get_global_position(self, event):
         try:
@@ -717,12 +717,18 @@ class EditorPanel(Panel):
         return global_pos
 
     def setup_error_highlighting(self):
+        if not has_scintilla:
+            return
+
         self.check_timer = QTimer()
         self.check_timer.setSingleShot(True)
         self.check_timer.timeout.connect(self.check_python_code)
         self.currentEditor.textChanged.connect(lambda: self.check_timer.start(1000))
 
     def check_python_code(self):
+        if not has_scintilla:
+            return
+
         if not self._is_editor_and_error_checks_valid():
             return
 
@@ -758,10 +764,9 @@ class EditorPanel(Panel):
 
     def _set_indicator_styles(self):
         for indicator_number, color in enumerate([INDICATOR_RED, INDICATOR_GREEN]):
-            if has_scintilla: # INDIC_SQUIGGLE not available for non-scintilla
-                self._set_indicator_style(
-                    indicator_number, self.currentEditor.INDIC_SQUIGGLE
-                )
+            self._set_indicator_style(
+                indicator_number, self.currentEditor.INDIC_SQUIGGLE
+            )
             self._set_indicator_color(indicator_number, QColor(*color))
 
     def _parse_error_line(self, parts):
@@ -783,49 +788,31 @@ class EditorPanel(Panel):
         self._fill_indicator_range(start_pos, line_length)
 
     def _set_current_indicator(self, indicator_number):
-        if not has_scintilla:
-            return
-
         self.currentEditor.SendScintilla(
             self.currentEditor.SCI_SETINDICATORCURRENT, indicator_number
         )
 
     def _clear_indicator_range(self, length):
-        if not has_scintilla:
-            return
-
         self.currentEditor.SendScintilla(
             self.currentEditor.SCI_INDICATORCLEARRANGE, 0, length
         )
 
     def _set_indicator_style(self, indicator_number, style):
-        if not has_scintilla:
-            return
-
         self.currentEditor.SendScintilla(
             self.currentEditor.SCI_INDICSETSTYLE, indicator_number, style
         )
 
     def _set_indicator_color(self, indicator_number, color):
-        if not has_scintilla:
-            return
-
         self.currentEditor.SendScintilla(
             self.currentEditor.SCI_INDICSETFORE, indicator_number, color
         )
 
     def _get_line_position_and_length(self, line_number):
-        if not has_scintilla:
-            return 0, len(self.currentEditor.text())
-
         start_pos = self.currentEditor.positionFromLineIndex(line_number, 0)
         line_length = len(self.currentEditor.text(line_number))
         return start_pos, line_length
 
     def _fill_indicator_range(self, start_pos, line_length):
-        if not has_scintilla:
-            return
-
         self.currentEditor.SendScintilla(
             self.currentEditor.SCI_INDICATORFILLRANGE, start_pos, line_length
         )
