@@ -528,11 +528,9 @@ class EditorPanel(Panel):
                 lexer.setPaper(self.custom_back, i)
             # make keywords bold
             lexer.setFont(bold, 5)
-        else:
-            editor.setFont(self.custom_font)
-        if has_scintilla:
             lexer.setDefaultPaper(self.custom_back)
         else:
+            editor.setFont(self.custom_font)
             setBackgroundColor(editor, self.custom_back)
 
     def enableFileActions(self, on):
@@ -760,7 +758,7 @@ class EditorPanel(Panel):
 
     def _set_indicator_styles(self):
         for indicator_number, color in enumerate([INDICATOR_RED, INDICATOR_GREEN]):
-            if has_scintilla:
+            if has_scintilla: # INDIC_SQUIGGLE not available for non-scintilla
                 self._set_indicator_style(
                     indicator_number, self.currentEditor.INDIC_SQUIGGLE
                 )
@@ -785,39 +783,52 @@ class EditorPanel(Panel):
         self._fill_indicator_range(start_pos, line_length)
 
     def _set_current_indicator(self, indicator_number):
-        if has_scintilla:
-            self.currentEditor.SendScintilla(
-                self.currentEditor.SCI_SETINDICATORCURRENT, indicator_number
-            )
+        if not has_scintilla:
+            return
+
+        self.currentEditor.SendScintilla(
+            self.currentEditor.SCI_SETINDICATORCURRENT, indicator_number
+        )
 
     def _clear_indicator_range(self, length):
-        if has_scintilla:
-            self.currentEditor.SendScintilla(
-                self.currentEditor.SCI_INDICATORCLEARRANGE, 0, length
-            )
+        if not has_scintilla:
+            return
+
+        self.currentEditor.SendScintilla(
+            self.currentEditor.SCI_INDICATORCLEARRANGE, 0, length
+        )
 
     def _set_indicator_style(self, indicator_number, style):
-        if has_scintilla:
-            self.currentEditor.SendScintilla(
-                self.currentEditor.SCI_INDICSETSTYLE, indicator_number, style
-            )
+        if not has_scintilla:
+            return
+
+        self.currentEditor.SendScintilla(
+            self.currentEditor.SCI_INDICSETSTYLE, indicator_number, style
+        )
 
     def _set_indicator_color(self, indicator_number, color):
-        if has_scintilla:
-            self.currentEditor.SendScintilla(
-                self.currentEditor.SCI_INDICSETFORE, indicator_number, color
-            )
+        if not has_scintilla:
+            return
+
+        self.currentEditor.SendScintilla(
+            self.currentEditor.SCI_INDICSETFORE, indicator_number, color
+        )
 
     def _get_line_position_and_length(self, line_number):
-        start_pos = self.currentEditor.positionFromLineIndex(line_number, 0) if has_scintilla else 0
-        line_length = len(self.currentEditor.text(line_number)) if has_scintilla else self.currentEditor.text()
+        if not has_scintilla:
+            return 0, len(self.currentEditor.text())
+
+        start_pos = self.currentEditor.positionFromLineIndex(line_number, 0)
+        line_length = len(self.currentEditor.text(line_number))
         return start_pos, line_length
 
     def _fill_indicator_range(self, start_pos, line_length):
-        if has_scintilla:
-            self.currentEditor.SendScintilla(
-                self.currentEditor.SCI_INDICATORFILLRANGE, start_pos, line_length
-            )
+        if not has_scintilla:
+            return
+
+        self.currentEditor.SendScintilla(
+            self.currentEditor.SCI_INDICATORFILLRANGE, start_pos, line_length
+        )
 
     def on_client_connected(self):
         self.loaded_devices = list(self.client.eval("session.devices", {}).keys())
