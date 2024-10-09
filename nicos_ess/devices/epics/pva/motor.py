@@ -1,13 +1,22 @@
 import threading
+import time
+import copy
 
-from nicos.core import Moveable, Override, Param, oneof, pvname, status
+from nicos import session
+from nicos.core import Moveable, Override, Param, POLLER, oneof, pvname, status
 from nicos.core.errors import ConfigurationError
 from nicos.core.mixins import CanDisable, HasLimits, HasOffset
 from nicos.devices.abstract import CanReference, Motor
-from nicos.devices.epics.pva.epics_devices import EpicsMoveable
+from nicos_ess.devices.epics.pva.epics_devices import (
+    RecordInfo,
+    RecordType,
+    EpicsParameters,
+    create_wrapper,
+    get_from_cache_or,
+)
 
 
-class EpicsMotor(CanDisable, CanReference, HasOffset, EpicsMoveable, Motor):
+class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
     """
     This device exposes some of the functionality provided by the EPICS motor
     record. The PV names for the fields of the record (readback, speed, etc.)
@@ -101,9 +110,6 @@ class EpicsMotor(CanDisable, CanReference, HasOffset, EpicsMoveable, Motor):
     }
 
     parameter_overrides = {
-        # readpv and writepv are determined automatically from the base PV
-        "readpv": Override(mandatory=False, userparam=False, settable=False),
-        "writepv": Override(mandatory=False, userparam=False, settable=False),
         # speed, limits and offset may change from outside, can't rely on cache
         "speed": Override(volatile=True),
         "offset": Override(volatile=True, chatty=False),
@@ -115,107 +121,117 @@ class EpicsMotor(CanDisable, CanReference, HasOffset, EpicsMoveable, Motor):
 
     _motor_status = (status.OK, "")
 
-    # Fields of the motor record for which an interaction via Channel Access
-    # is required.
     _record_fields = {
-        "readpv": "RBV",
-        "writepv": "VAL",
-        "stop": "STOP",
-        "donemoving": "DMOV",
-        "moving": "MOVN",
-        "miss": "MISS",
-        "homeforward": "HOMF",
-        "homereverse": "HOMR",
-        "speed": "VELO",
-        "offset": "OFF",
-        "highlimit": "HLM",
-        "lowlimit": "LLM",
-        "softlimit": "LVIO",
-        "lowlimitswitch": "LLS",
-        "highlimitswitch": "HLS",
-        "enable": "CNEN",
-        "set": "SET",
-        "foff": "FOFF",
-        "units": "EGU",
-        "alarm_status": "STAT",
-        "alarm_severity": "SEVR",
-        "position_deadband": "RDBD",
-        "description": "DESC",
-        "monitor_deadband": "MDEL",
+        "value": RecordInfo("value", ".RBV", RecordType.BOTH),
+        "target": RecordInfo("target", ".VAL", RecordType.VALUE),
+        "stop": RecordInfo("", ".STOP", RecordType.VALUE),
+        "speed": RecordInfo("", ".VELO", RecordType.VALUE),
+        "offset": RecordInfo("", ".OFF", RecordType.VALUE),
+        "highlimit": RecordInfo("", ".HLM", RecordType.VALUE),
+        "lowlimit": RecordInfo("", ".LLM", RecordType.VALUE),
+        "enable": RecordInfo("", ".CNEN", RecordType.VALUE),
+        "set": RecordInfo("", ".SET", RecordType.VALUE),
+        "foff": RecordInfo("", ".FOFF", RecordType.VALUE),
+        "unit": RecordInfo("unit", ".EGU", RecordType.VALUE),
+        "homeforward": RecordInfo("", ".HOMF", RecordType.VALUE),
+        "homereverse": RecordInfo("", ".HOMR", RecordType.VALUE),
+        "position_deadband": RecordInfo("", ".RDBD", RecordType.VALUE),
+        "description": RecordInfo("", ".DESC", RecordType.VALUE),
+        "monitor_deadband": RecordInfo("", ".MDEL", RecordType.VALUE),
+        "maxspeed": RecordInfo("", ".VMAX", RecordType.VALUE),
+        "donemoving": RecordInfo("", ".DMOV", RecordType.STATUS),
+        "moving": RecordInfo("", ".MOVN", RecordType.STATUS),
+        "miss": RecordInfo("", ".MISS", RecordType.STATUS),
+        "alarm_status": RecordInfo("", ".STAT", RecordType.STATUS),
+        "alarm_severity": RecordInfo("", ".SEVR", RecordType.STATUS),
+        "softlimit": RecordInfo("", ".LVIO", RecordType.STATUS),
+        "lowlimitswitch": RecordInfo("", ".LLS", RecordType.STATUS),
+        "highlimitswitch": RecordInfo("", ".HLS", RecordType.STATUS),
+        "errorbit": RecordInfo("", "-Err", RecordType.STATUS),
+        "reseterror": RecordInfo("", "-ErrRst", RecordType.STATUS),
+        "powerauto": RecordInfo("", "-PwrAuto", RecordType.STATUS),
+        "errormsg": RecordInfo("", "-MsgTxt", RecordType.STATUS),
     }
 
-    _suffixes = {
-        "powerauto": "-PwrAuto",
-        "errormsg": "-MsgTxt",
-        "errorbit": "-Err",
-        "reseterror": "-ErrRst",
-    }
+    _epics_wrapper = None
+    _epics_subscriptions = []
 
-    _cache_relations = {
-        "readpv": "value",
-        "units": "unit",
-        "writepv": "target",
-    }
+    def doPreinit(self, mode):
+        self._lock = threading.Lock()
+        self._epics_subscriptions = []
+        self._record_fields = copy.deepcopy(self._record_fields)
+        self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
+        # Check PV exists
+        self._epics_wrapper.connect_pv(self.motorpv)
+
+        if not self.has_errorbit:
+            del self._record_fields["errorbit"]
+        if not self.has_reseterror:
+            del self._record_fields["reseterror"]
+        if not self.has_powerauto:
+            del self._record_fields["powerauto"]
+        if not self.has_errormsg:
+            del self._record_fields["errormsg"]
 
     def doInit(self, mode):
-        self._lock = threading.Lock()
-        EpicsMoveable.doInit(self, mode)
+        if session.sessiontype == POLLER and self.monitor:
+            for k, v in self._record_fields.items():
+                if v.record_type in [RecordType.VALUE, RecordType.BOTH]:
+                    self._epics_subscriptions.append(
+                        self._epics_wrapper.subscribe(
+                            f"{self.motorpv}{v.pv_suffix}",
+                            k,
+                            self._value_change_callback,
+                            self._connection_change_callback,
+                        )
+                    )
+                if v.record_type in [RecordType.STATUS, RecordType.BOTH]:
+                    self._epics_subscriptions.append(
+                        self._epics_wrapper.subscribe(
+                            f"{self.motorpv}{v.pv_suffix}",
+                            k,
+                            self._status_change_callback,
+                            self._connection_change_callback,
+                        )
+                    )
 
-    def _get_pv_parameters(self):
-        """
-        Implementation of inherited method to automatically account for fields
-        present in motor record.
+    def doRead(self, maxage=0):
+        return self._get_cached_pv_or_ask("value")
 
-        :return: List of PV aliases.
-        """
-        pvs = set(self._record_fields.keys())
-
-        for suffix in self._suffixes:
-            if getattr(self, "has_" + suffix):
-                pvs.add(suffix)
-
-        return pvs
-
-    def _get_status_parameters(self):
-        status_pars = {
-            "miss",
-            "donemoving",
-            "moving",
-            "lowlimitswitch",
-            "highlimitswitch",
-            "softlimit",
-            "alarm_status",
-            "alarm_severity",
-        }
-
-        if self.has_errormsg:
-            status_pars.add("errormsg")
-        return status_pars
-
-    def _get_pv_name(self, pvparam):
-        """
-        Implementation of inherited method that translates between PV aliases
-        and actual PV names. Automatically adds a prefix to the PV name
-        according to the motorpv parameter.
-
-        :param pvparam: PV alias.
-        :return: Actual PV name.
-        """
-        motor_record_prefix = getattr(self, "motorpv")
-        motor_field = self._record_fields.get(pvparam)
-
-        if motor_field is not None:
-            return ".".join((motor_record_prefix, motor_field))
-
-        motor_suffix = self._suffixes.get(pvparam)
-
-        if motor_suffix is not None:
-            return "".join((motor_record_prefix, motor_suffix))
-
-        return getattr(self, pvparam)
+    def doReadUnit(self):
+        return self._get_cached_pv_or_ask("unit")
 
     def doReadSpeed(self):
-        return self._get_pv("speed")
+        return self._get_cached_pv_or_ask("speed")
+
+    def doReadOffset(self):
+        return self._get_cached_pv_or_ask("offset")
+
+    def doReadTarget(self):
+        return self._get_cached_pv_or_ask("target")
+
+    def doReadAbslimits(self):
+        absmin = self._get_cached_pv_or_ask("lowlimit")
+        absmax = self._get_cached_pv_or_ask("highlimit")
+        return absmin, absmax
+
+    def doReadPosition_Deadband(self):
+        return self._get_cached_pv_or_ask("position_deadband")
+
+    def doReadPv_Desc(self):
+        return self._get_cached_pv_or_ask("description")
+
+    def doReadMonitor_Deadband(self):
+        return self._get_cached_pv_or_ask("monitor_deadband")
+
+    def doReadPrecision(self):
+        return self._get_cached_pv_or_ask("position_deadband")
+
+    def isAtTarget(self, pos=None, target=None):
+        return self._get_cached_pv_or_ask("miss") == 0
+
+    def doStart(self, value):
+        self._put_pv("target", value)
 
     def doWriteSpeed(self, value):
         speed = self._get_valid_speed(value)
@@ -230,8 +246,9 @@ class EpicsMotor(CanDisable, CanReference, HasOffset, EpicsMoveable, Motor):
 
         self._put_pv("speed", speed)
 
-    def doReadOffset(self):
-        return self._get_pv("offset")
+    def doWriteMonitor_Deadband(self, value):
+        deadband = value
+        self._put_pv("monitor_deadband", max(deadband, 0))
 
     def doWriteOffset(self, value):
         # In EPICS, the offset is defined in following way:
@@ -240,14 +257,19 @@ class EpicsMotor(CanDisable, CanReference, HasOffset, EpicsMoveable, Motor):
             diff = value - self.offset
 
             # Set the offset in motor record
-            self._put_pv_blocking("offset", value)
+            self._epics_wrapper.put_pv_value_blocking(
+                f"{self.motorpv}{self._record_fields['offset'].pv_suffix}",
+                value,
+                block_timeout=10,
+            )
 
             # Read the absolute limits from the device as they have changed.
-            self.abslimits  # pylint: disable=pointless-statement
+            lowlimit = self._get_pv("lowlimit")
+            highlimit = self._get_pv("highlimit")
 
             # Adjust user limits into allowed range
-            usmin = max(self.userlimits[0] + diff, self.abslimits[0])
-            usmax = min(self.userlimits[1] + diff, self.abslimits[1])
+            usmin = max(self.userlimits[0] + diff, lowlimit)
+            usmax = min(self.userlimits[1] + diff, highlimit)
             self.userlimits = (usmin, usmax)
 
             self.log.info("The new user limits are: " + str(self.userlimits))
@@ -258,27 +280,40 @@ class EpicsMotor(CanDisable, CanReference, HasOffset, EpicsMoveable, Motor):
         diff = oldvalue - newvalue
         self.offset -= diff
 
-    def _get_valid_speed(self, newValue):
-        min_speed, max_speed = self._get_speed_limits()
-        valid_speed = newValue
-        if min_speed != 0.0:
-            valid_speed = max(min_speed, valid_speed)
+    def doStop(self):
+        self._put_pv("stop", 1)
 
-        if max_speed != 0.0:
-            valid_speed = min(max_speed, valid_speed)
+    def doReset(self):
+        if self.has_errorbit and self.has_reseterror:
+            error_bit = self._get_cached_pv_or_ask("errorbit")
+            if error_bit == 0:
+                self.log.warning("Error bit is not set, can not reset error state.")
+            else:
+                self._put_pv("reseterror", 1)
 
-        return valid_speed
+    def doReference(self):
+        self._put_pv("home%s" % self.reference_direction, 1)
 
-    def doRead(self, maxage=0):
-        return self._get_pv("readpv")
+    def doEnable(self, on):
+        self._put_pv("enable", 1 if on else 0)
 
-    def doStart(self, value):
-        self._put_pv("writepv", value)
+    def doSetPosition(self, pos):
+        self._put_pv("set", 1)
+        self._put_pv("foff", 1)
+        self._put_pv("target", pos)
+        self._put_pv("set", 0)
+        self._put_pv("foff", 0)
 
-    def doReadTarget(self):
-        return self._get_pv("writepv")
+    def isAllowed(self, pos):
+        if self.userlimits == (0, 0) and self.abslimits == (0, 0):
+            # No limits defined
+            return True, ""
+        return Moveable.isAllowed(self, pos)
 
     def doStatus(self, maxage=0):
+        return get_from_cache_or(self, "status", self._do_status)
+
+    def _do_status(self):
         with self._lock:
             epics_status, message = self._get_alarm_status()
             self._motor_status = epics_status, message
@@ -287,43 +322,118 @@ class EpicsMotor(CanDisable, CanReference, HasOffset, EpicsMoveable, Motor):
         elif epics_status == status.WARN:
             return status.WARN, message
 
-        done_moving = self._get_pv("donemoving")
-        moving = self._get_pv("moving")
+        done_moving = self._get_cached_pv_or_ask("donemoving")
+        moving = self._get_cached_pv_or_ask("moving")
         if done_moving == 0 or moving != 0:
-            if self._get_pv("homeforward") or self._get_pv("homereverse"):
+            if self._get_cached_pv_or_ask("homeforward") or self._get_cached_pv_or_ask(
+                "homereverse"
+            ):
                 return status.BUSY, message or "homing"
             return status.BUSY, message or f"moving to {self.target}"
 
         if self.has_powerauto:
-            powerauto_enabled = self._get_pv("powerauto")
+            powerauto_enabled = self._get_cached_pv_or_ask("powerauto")
         else:
             powerauto_enabled = 0
 
-        if not powerauto_enabled and not self._get_pv("enable"):
+        if not powerauto_enabled and not self._get_cached_pv_or_ask("enable"):
             return status.WARN, "motor is not enabled"
 
-        miss = self._get_pv("miss")
+        miss = self._get_cached_pv_or_ask("miss")
         if miss != 0:
             return (status.NOTREACHED, message or "did not reach target position.")
 
-        high_limitswitch = self._get_pv("highlimitswitch")
+        high_limitswitch = self._get_cached_pv_or_ask("highlimitswitch")
         if high_limitswitch != 0:
             return status.WARN, message or "at high limit switch."
 
-        low_limitswitch = self._get_pv("lowlimitswitch")
+        low_limitswitch = self._get_cached_pv_or_ask("lowlimitswitch")
         if low_limitswitch != 0:
             return status.WARN, message or "at low limit switch."
 
-        limit_violation = self._get_pv("softlimit")
+        limit_violation = self._get_cached_pv_or_ask("softlimit")
         if limit_violation != 0:
             return status.WARN, message or "soft limit violation."
 
         return status.OK, message
 
+    def _value_change_callback(
+        self, name, param, value, units, limits, severity, message, **kwargs
+    ):
+        time_stamp = time.time()
+        cache_key = self._record_fields[param].cache_key
+        cache_key = param if not cache_key else cache_key
+        self._cache.put(self._name, cache_key, value, time_stamp)
+
+    def _status_change_callback(
+        self, name, param, value, units, limits, severity, message, **kwargs
+    ):
+        time_stamp = time.time()
+        cache_key = self._record_fields[param].cache_key
+        cache_key = param if not cache_key else cache_key
+
+        if param == "value":
+            self._cache.put(self._name, "value_status", (severity, message), time_stamp)
+        else:
+            self._cache.put(self._name, cache_key, value, time_stamp)
+        self._cache.put(self._name, "status", self._do_status(), time_stamp)
+
+    def _connection_change_callback(self, name, param, is_connected, **kwargs):
+        if param != self._record_fields["value"].cache_key:
+            return
+
+        if is_connected:
+            self.log.debug("%s connected!", name)
+        else:
+            self.log.warning("%s disconnected!", name)
+            self._cache.put(
+                self._name,
+                "status",
+                (status.ERROR, "communication failure"),
+                time.time(),
+            )
+
+    def _get_cached_pv_or_ask(self, param, as_string=False):
+        """
+        Gets the PV value from the cache if possible, else get it from the device.
+        """
+        return get_from_cache_or(
+            self,
+            param,
+            lambda: self._get_pv(param, as_string),
+        )
+
+    def _get_pv(self, param, as_string=False):
+        return self._epics_wrapper.get_pv_value(
+            f"{self.motorpv}{self._record_fields[param].pv_suffix}", as_string
+        )
+
+    def _put_pv(self, param, value):
+        self._epics_wrapper.put_pv_value(
+            f"{self.motorpv}{self._record_fields[param].pv_suffix}", value
+        )
+
+    def _get_valid_speed(self, value):
+        max_speed = self._get_cached_pv_or_ask("maxspeed")
+
+        # Cannot be negative
+        valid_speed = max(0.0, value)
+
+        # In EPICS if max speed is 0 then there is no limit
+        if max_speed > 0.0:
+            valid_speed = min(max_speed, valid_speed)
+
+        return valid_speed
+
     def _get_alarm_status(self):
-        stat, msg = self.get_alarm_status("readpv")
+        def _get_value_status():
+            pv = f"{self.motorpv}{self._record_fields['value'].pv_suffix}"
+            return self._epics_wrapper.get_alarm_status(pv)
+
+        stat, msg = get_from_cache_or(self, "value_status", _get_value_status)
+
         if self.has_errormsg:
-            err_msg = self._get_pv("errormsg", as_string=True)
+            err_msg = self._get_cached_pv_or_ask("errormsg", as_string=True)
             if stat == status.UNKNOWN:
                 stat = status.ERROR
             if self._motor_status != (stat, err_msg):
@@ -339,12 +449,6 @@ class EpicsMotor(CanDisable, CanReference, HasOffset, EpicsMoveable, Motor):
         elif stat == status.ERROR:
             self.log.error("%s (%s)", error_msg, epics_msg)
 
-    def _get_speed_limits(self):
-        return self._get_limits("speed")
-
-    def doStop(self):
-        self._put_pv("stop", 1, False)
-
     def _checkLimits(self, limits):
         # Called by doReadUserlimits and doWriteUserlimits
         low, high = self.abslimits
@@ -359,67 +463,9 @@ class EpicsMotor(CanDisable, CanReference, HasOffset, EpicsMoveable, Motor):
                 "absolute limits (%s, %s)" % (low, high)
             )
 
-    def doReadAbslimits(self):
-        absmin = self._get_pv("lowlimit")
-        absmax = self._get_pv("highlimit")
-        return absmin, absmax
-
-    def doReset(self):
-        if self.has_errorbit and self.has_reseterror:
-            error_bit = self._get_pv("errorbit")
-            if error_bit == 0:
-                self.log.warning("Error bit is not set, can not reset error state.")
-            else:
-                self._put_pv("reseterror", 1)
-
-    def doReference(self):
-        self._put_pv("home%s" % self.reference_direction, 1)
-
-    def doEnable(self, on):
-        what = 1 if on else 0
-        self._put_pv("enable", what, False)
-
-    def doSetPosition(self, pos):
-        self._put_pv("set", 1)
-        self._put_pv("foff", 1)
-        self._put_pv("writepv", pos)
-        self._put_pv("set", 0)
-        self._put_pv("foff", 0)
-
-    def isAtTarget(self, pos=None, target=None):
-        return self._get_pv("miss") == 0
-
-    def doReadUnit(self):
-        return self._get_pv("units")
-
     def _check_in_range(self, curval, userlimits):
         if userlimits == (0, 0) and self.abslimits == (0, 0):
             # No limits defined, so must be in range
             return status.OK, ""
 
         return HasLimits._check_in_range(self, curval, userlimits)
-
-    def doReadPosition_Deadband(self):
-        return self._get_pv("position_deadband")
-
-    def doReadPv_Desc(self):
-        return self._get_pv("description")
-
-    def isAllowed(self, pos):
-        if self.userlimits == (0, 0) and self.abslimits == (0, 0):
-            # No limits defined
-            return True, ""
-
-        return Moveable.isAllowed(self, pos)
-
-    def doReadMonitor_Deadband(self):
-        return self._get_pv("monitor_deadband")
-
-    def doWriteMonitor_Deadband(self, value):
-        deadband = value
-        if deadband < 0:
-            deadband = 0
-        self._put_pv("monitor_deadband", deadband)
-
-    def doReadPrecision(self):
-        return self._get_pv("position_deadband")
