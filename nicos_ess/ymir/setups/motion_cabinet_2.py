@@ -67,7 +67,7 @@ devices = dict(
         monitor_deadband=0.01,
         pva=True,
         monitor=True,
-        pollinterval=0.5,
+        pollinterval=None,
         maxage=None,
     ),
     rotation_stage=device(
@@ -112,7 +112,7 @@ devices = dict(
         monitor_deadband=0.01,
         pva=True,
         monitor=True,
-        pollinterval=0.5,
+        pollinterval=None,
         maxage=None,
     ),
     sample_changer_axis=device(
