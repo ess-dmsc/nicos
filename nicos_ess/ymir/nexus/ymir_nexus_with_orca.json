@@ -103,6 +103,64 @@
                         "values": ".",
                         "dtype": "string"
                       }
+                    },
+                    {
+                      "name": "exposure_time",
+                      "type": "group",
+                      "attributes": [
+                        {
+                          "name": "NX_class",
+                          "dtype": "string",
+                          "values": "NXlog"
+                        }
+                      ],
+                      "children": [
+                        {
+                          "module": "f144",
+                          "config": {
+                            "source": "YMIR-Det1:cam1:AcquireTime_RBV",
+                            "topic": "ymir_motion",
+                            "dtype": "double",
+                            "value_units": "s"
+                          },
+                          "attributes": [
+                            {
+                              "name": "units",
+                              "dtype": "string",
+                              "values": "s"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "name": "acquire_period",
+                      "type": "group",
+                      "attributes": [
+                        {
+                          "name": "NX_class",
+                          "dtype": "string",
+                          "values": "NXlog"
+                        }
+                      ],
+                      "children": [
+                        {
+                          "module": "f144",
+                          "config": {
+                            "source": "YMIR-Det1:cam1:AcquirePeriod_RBV",
+                            "topic": "ymir_motion",
+                            "dtype": "double",
+                            "value_units": "s"
+                          },
+                          "attributes": [
+                            {
+                              "name": "units",
+                              "dtype": "string",
+                              "values": "s"
+                            }
+                          ]
+                        }
+                      ]
                     }
                   ]
                 }
