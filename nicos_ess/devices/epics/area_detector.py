@@ -21,11 +21,13 @@ from nicos.core import (
     pvname,
     status,
     usermethod,
+    Attach,
 )
 from nicos.devices.epics.pva import EpicsDevice
 from nicos.devices.epics.status import SEVERITY_TO_STATUS, STAT_TO_STATUS
 from nicos.devices.generic import Detector, ImageChannelMixin, ManualSwitch
 from nicos.utils import byteBuffer, createThread
+from nicos_ess.devices.epics.pva import EpicsMappedMoveable, EpicsAnalogMoveable
 
 deserialiser_by_schema = {
     "ADAr": deserialise_ADAr,
@@ -58,6 +60,12 @@ class ImageMode(Enum):
     SINGLE = 0
     MULTIPLE = 1
     CONTINUOUS = 2
+
+
+class CoolingMode(Enum):
+    OFF = 0
+    ON = 1
+    MAX = 2
 
 
 class ImageType(ManualSwitch):
@@ -493,6 +501,123 @@ class AreaDetector(EpicsDevice, ImageChannelMixin, Measurable):
         return self._get_pv("topicpv", as_string=True), self._get_pv(
             "sourcepv", as_string=True
         )
+
+
+class OrcaFlash4(AreaDetector):
+    """
+    Device that controls and acquires data from an Orca Flash 4 area detector.
+    """
+
+    parameters = {
+        "chip_coolingmode": Param(
+            "Cooling mode of the camera.",
+            type=oneof("off", "on", "max"),
+            settable=True,
+            volatile=True,
+        ),
+        "chip_temperature": Param(
+            "Temperature of the camera.", settable=False, volatile=True
+        ),
+        "watercooler_mode": Param(
+            "Set if the watercooler is on or off.",
+            settable=True,
+            volatile=True,
+            type=oneof("ON", "OFF"),
+        ),
+        "watercooler_temperature": Param(
+            "Temperature of the water cooling the camera.", settable=True, volatile=True
+        ),
+    }
+
+    attached_devices = {
+        "watercooler_mode": Attach(
+            "Run mode on/off", EpicsMappedMoveable, optional=True
+        ),
+        "watercooler_temperature": Attach(
+            "Temperature of the water", EpicsAnalogMoveable, optional=True
+        ),
+    }
+
+    _control_pvs = {
+        "size_x": "SizeX",
+        "size_y": "SizeY",
+        "min_x": "MinX",
+        "min_y": "MinY",
+        "bin_x": "BinX",
+        "bin_y": "BinY",
+        "acquire_time": "AcquireTime",
+        "acquire_period": "AcquirePeriod",
+        "num_images": "NumImages",
+        "num_exposures": "NumExposures",
+        "image_mode": "ImageMode",
+    }
+
+    def _set_custom_record_fields(self):
+        AreaDetector._set_custom_record_fields(self)
+        self._record_fields["chip_temperature"] = "Temperature-R"
+        self._record_fields["cooling_mode"] = "SensorCooler-S"
+        self._record_fields["cooling_mode_rbv"] = "SensorCooler-RB"
+
+    def doReadChip_Coolingmode(self):
+        return CoolingMode(self._get_pv("cooling_mode_rbv")).name.lower()
+
+    def doWriteChip_Coolingmode(self, value):
+        if self.watercooler_mode.upper() == "OFF" and value.upper() != "OFF":
+            if self._attached_watercooler_mode is None:
+                self.log.warning(
+                    f"Cannot set chip cooling mode to {value} "
+                    f"because there is no attached cooler."
+                )
+                return
+
+            self.log.warning(
+                f"Cannot set chip cooling mode to {value} if water cooler is OFF."
+            )
+            return
+
+        self._put_pv("cooling_mode", CoolingMode[value.upper()].value)
+
+    def doReadChip_Temperature(self):
+        return self._get_pv("chip_temperature")
+
+    def doReadWatercooler_Mode(self):
+        if self._attached_watercooler_mode is not None:
+            watercooler_mode = self._attached_watercooler_mode.read()
+
+            if (
+                self.chip_coolingmode.upper() != "OFF"
+                and watercooler_mode.upper() == "OFF"
+            ):
+                self.log.warning(
+                    f"The chip cooling mode is {self.chip_coolingmode}. "
+                    f"Turn it off since the water cooler is off."
+                )
+                self.chip_coolingmode = "off"
+
+            return watercooler_mode
+
+        # We don't know the value but safe to assume it is off
+        return "OFF"
+
+    def doWriteWatercooler_Mode(self, value):
+        if value.upper() == "OFF" and self.chip_coolingmode.upper() != "OFF":
+            self.log.warning(
+                f"Cannot turn off water cooler if cooling mode "
+                f"is {self.chip_coolingmode}."
+            )
+            return
+
+        if self._attached_watercooler_mode is not None:
+            self._attached_watercooler_mode.start(value)
+
+    def doReadWatercooler_Temperature(self):
+        if self._attached_watercooler_temperature is not None:
+            return self._attached_watercooler_temperature.read()
+        return -273.15
+
+    def doWriteWatercooler_Temperature(self, value):
+        if self._attached_watercooler_temperature is not None:
+            self._attached_watercooler_temperature.start(value)
 
 
 class AreaDetectorCollector(Detector):

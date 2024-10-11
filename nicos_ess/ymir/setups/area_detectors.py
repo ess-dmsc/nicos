@@ -1,9 +1,35 @@
 # ruff: noqa: F821
+
 description = "The area detector for YMIR"
 
+water_cooler_pv_root = "YMIR-Det1:NDet-JFL300-001:"
+
 devices = dict(
+    watercooler_mode=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
+        description="The water cooler mode.",
+        readpv=f"{water_cooler_pv_root}Mode-R",
+        writepv=f"{water_cooler_pv_root}Mode-S",
+        visibility=(),
+        pva=True,
+        monitor=True,
+        pollinterval=None,
+        maxage=None,
+    ),
+    watercooler_temperature=device(
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="The water cooler temperature.",
+        readpv=f"{water_cooler_pv_root}Temperature-R",
+        writepv=f"{water_cooler_pv_root}TemperatureSP0-S",
+        targetpv=f"{water_cooler_pv_root}TemperatureSP0-R",
+        visibility=(),
+        pva=True,
+        monitor=True,
+        pollinterval=None,
+        maxage=None,
+    ),
     orca_camera=device(
-        "nicos_ess.devices.epics.area_detector.AreaDetector",
+        "nicos_ess.devices.epics.area_detector.OrcaFlash4",
         description="The light tomography Orca camera.",
         pv_root="YMIR-Det1:cam1:",
         image_pv="YMIR-Det1:image1:ArrayData",
@@ -15,6 +41,8 @@ devices = dict(
         monitor=True,
         pollinterval=0.5,
         maxage=None,
+        watercooler_mode="watercooler_mode",
+        watercooler_temperature="watercooler_temperature",
     ),
     orca_image_type=device(
         "nicos_ess.devices.epics.area_detector.ImageType",
