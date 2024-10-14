@@ -53,6 +53,10 @@ main_window = docked(
             panel("nicos_ess.gui.panels.history.HistoryPanel"),
         ),
         (
+            "History(TESTING)",
+            panel("nicos_ess.gui.panels.history_pyqt.HistoryPanel"),
+        ),
+        (
             "Logs",
             tabbed(
                 ("Errors", panel("nicos_ess.gui.panels.errors.ErrorPanel")),
