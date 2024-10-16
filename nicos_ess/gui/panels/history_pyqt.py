@@ -430,6 +430,14 @@ class HistoryPanel(Panel):
 
         self._window_length = 100
 
+        self.data = self.mainwindow.data
+
+        self.data.datasetAdded.connect(self.on_scan_info)
+        self.data.pointsAdded.connect(self.on_scan_data)
+        self.data.fitAdded.connect(self.on_scan_fit)
+        self.client.scan_start_event.connect(self.on_scan_start)
+        self.client.scan_end_event.connect(self.on_scan_end)
+
         self.initialize_view_widget()
         self.initialize_ui()
         self.create_toolbar()
@@ -439,6 +447,56 @@ class HistoryPanel(Panel):
         self._poll_timer = QTimer(self)
         self._poll_timer.timeout.connect(self.on_poll)
         self._poll_timer.start(100)
+
+    def on_scan_start(self, info):
+        """
+        The info is a dictionary with the following keys:
+        "devices": str, "fromdate": int
+        The info does not contain any other information.
+        We then need to build a view from this info. and spawn a new history view.
+        """
+        default_view_info = {
+            "name": f"Scan {info['fromdate']} {info['devices']}",
+            "devices": info["devices"],
+            "fromdate": info["fromdate"],
+            "todate": time.time() + 60 * 60 * 24,  # some time in the future
+            "simpleTime": False,
+            "simpleTimeSpec": "1h",
+            "slidingWindow": False,
+            "frombox": True,
+            "tobox": False,
+            "customY": False,
+            "customYFrom": "",
+            "customYTo": "",
+        }
+        self.create_view_from_info(default_view_info)
+        self.views_list.setCurrentRow(self.views_list.count() - 1)
+        print("on_scan_start", info)
+
+    def on_scan_end(self, info):
+        """
+        This one gets the view from the list of views and edits it, by adding a todate.
+        The info contains the following keys:
+        "devices": str, "fromdate": int, "todate": int
+        """
+        name = f"Scan {info['fromdate']} {info['devices']}"
+        for view in self.views:
+            view_info = view.data(Qt.ItemDataRole.UserRole)
+            if view_info.get("name") == name:
+                view_info["todate"] = info["todate"]
+                view_info["tobox"] = True
+                self.update_view(view, view_info)
+
+        print("on_scan_end", info)
+
+    def on_scan_info(self, blob):
+        print("on_scan_info", blob)
+
+    def on_scan_data(self, dataset):
+        print("on_scan_data", dataset)
+
+    def on_scan_fit(self, dataset, fit):
+        print("on_scan_fit", dataset, fit)
 
     def initialize_ui(self):
         self.main_layout = QVBoxLayout()

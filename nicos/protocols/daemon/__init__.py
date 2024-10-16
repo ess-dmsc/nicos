@@ -164,6 +164,10 @@ DAEMON_EVENTS = {
     "simmessage": (0x101B, False),
     # a request/script is done processing
     "done": (0x101C, False),
+    # a signal which indicates that a scan has started
+    "scan_start_event": (0x101D, False),
+    # a signal which indicates that a scan has finished
+    "scan_end_event": (0x101E, False),
 }
 
 # possible states of ETA simulation
