@@ -459,7 +459,7 @@ class HistoryPanel(Panel):
             "name": f"Scan {info['fromdate']} {info['devices']}",
             "devices": info["devices"],
             "fromdate": info["fromdate"],
-            "todate": time.time() + 60 * 60 * 24,  # some time in the future
+            "todate": int(time.time() + 60 * 60 * 24),  # some time in the future
             "simpleTime": False,
             "simpleTimeSpec": "1h",
             "slidingWindow": False,
