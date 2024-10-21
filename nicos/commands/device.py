@@ -83,6 +83,7 @@ __all__ = [
     "adjust",
     "version",
     "history",
+    "home",
     "limits",
     "resetlimits",
     "reference",
@@ -1084,7 +1085,7 @@ def resetlimits(*devlist):
 @usercommand
 @spmsyntax(Dev(CanReference))
 def reference(dev, *args):
-    """Do a reference drive of the device, if possible.
+    """Do a reference drive (homing) of the device, if possible.
 
     How the reference drive is done depends on the device settings.
     Example:
@@ -1094,12 +1095,19 @@ def reference(dev, *args):
     try:
         dev = session.getDevice(dev, CanReference)
     except UsageError:
-        session.log.error("%s has no reference function", dev)
+        session.log.error("%s has no homing function", dev)
         return
     newpos = dev.reference(*args)
-    dev.log.info(
-        "reference drive complete, position is now %s", dev.format(newpos, unit=True)
-    )
+    dev.log.info("homing complete, position is now %s", dev.format(newpos, unit=True))
+
+
+@usercommand
+@spmsyntax(Dev(CanReference))
+def home(dev, *args):
+    """Home the device if possible. This is equal to performing a reference drive of
+    the device.
+    """
+    reference(dev, *args)
 
 
 @usercommand

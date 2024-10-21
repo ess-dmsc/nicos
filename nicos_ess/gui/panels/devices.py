@@ -952,7 +952,7 @@ class ControlDialog(QDialog):
         if "nicos.core.mixins.HasOffset" in classes:
             menu.addAction(self.actionAdjustOffset)
         if "nicos.devices.abstract.CanReference" in classes:
-            menu.addAction(self.actionReference)
+            menu.addAction(self.actionHome)
         if "nicos.devices.abstract.Coder" in classes:
             menu.addAction(self.actionSetPosition)
         if "nicos.core.device.Moveable" in classes:
@@ -1150,8 +1150,8 @@ class ControlDialog(QDialog):
             self.device_panel.exec_command(cmd)
 
     @pyqtSlot()
-    def on_actionReference_triggered(self):
-        self.device_panel.exec_command("reference(%s)" % self.devrepr)
+    def on_actionHome_triggered(self):
+        self.device_panel.exec_command("home(%s)" % self.devrepr)
 
     @pyqtSlot()
     def on_actionFix_triggered(self):

@@ -77,6 +77,7 @@ from nicos.commands.device import (
     get,
     getall,
     history,
+    home,
     info,
     limits,
     maw,
@@ -683,12 +684,16 @@ class TestDevice:
 
     def test_reference(self, session, log):
         """Check reference() command."""
-        motor = session.getDevice("motor")
-        with log.assert_errors("has no reference function"):
-            reference(motor)
         axis = session.getDevice("nocoder_axis")
         axis.maw(1)
         reference(axis)
+        assert axis.read(0) == 0.0
+
+    def test_home(self, session, log):
+        """Check home() command."""
+        axis = session.getDevice("nocoder_axis")
+        axis.maw(1)
+        home(axis)
         assert axis.read(0) == 0.0
 
     def test_waitfor(self, session, log):

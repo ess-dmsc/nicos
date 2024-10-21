@@ -331,9 +331,9 @@
     <string>Release</string>
    </property>
   </action>
-  <action name="actionReference">
+  <action name="actionHome">
    <property name="text">
-    <string>Reference drive</string>
+    <string>Home device</string>
    </property>
   </action>
   <action name="actionEnable">
