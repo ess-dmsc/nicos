@@ -58,7 +58,6 @@ class SynopticProject:
     def save(self, filename):
         data = self._collect_data()
 
-        # Save the data as compact JSON without indentation
         with zipfile.ZipFile(filename, "w") as zipf:
             json_data = json.dumps(data)
             zipf.writestr("config.json", json_data)
@@ -68,38 +67,32 @@ class SynopticProject:
             json_data = zipf.read("config.json")
             data = json.loads(json_data)
 
-            # Decode the background image from base64
             background_image_raw = data.get("background_image")
             if background_image_raw:
                 image_data = base64.b64decode(background_image_raw)
 
-                # Load image from the binary data
                 image = QPixmap()
                 image.loadFromData(image_data)
                 self.synoptic_widget.background_image = image
                 self.synoptic_widget.scene.background_image = image
 
-                # Set the scene rect to match the image size
                 self.synoptic_widget.scene.setSceneRect(
                     0, 0, image.width(), image.height()
                 )
                 self.synoptic_widget.scene.invalidate()
 
-                # Fit the view to the new scene rect
-                self.synoptic_widget.graphics_view.fitInView(
-                    self.synoptic_widget.scene.sceneRect(),
-                    Qt.AspectRatioMode.KeepAspectRatio,
-                )
+                # self.synoptic_widget.graphics_view.fitInView(
+                #     self.synoptic_widget.scene.sceneRect(),
+                #     Qt.AspectRatioMode.KeepAspectRatio,
+                # )
             else:
                 self.synoptic_widget.background_image = None
                 self.synoptic_widget.scene.background_image = None
                 self.synoptic_widget.scene.invalidate()
 
-            # Apply the shapes and other data
             self._apply_data(data)
 
     def _collect_data(self):
-        # Encode the background image as base64 using QBuffer
         if self.synoptic_widget.background_image:
             buffer = QBuffer()
             buffer.open(QIODevice.OpenModeFlag.WriteOnly)
@@ -108,19 +101,16 @@ class SynopticProject:
         else:
             background_image_base64 = None
 
-        # Return data as a dictionary
         return {
             "shapes": [shape.to_dict() for shape in self.synoptic_widget.shapes],
             "background_image": background_image_base64,
         }
 
     def _apply_data(self, data):
-        # Remove existing shapes
         for shape in self.synoptic_widget.shapes:
             self.synoptic_widget.scene.removeItem(shape)
         self.synoptic_widget.shapes.clear()
 
-        # Recreate shapes from the loaded data
         for shape_data in data.get("shapes", []):
             shape = ResizableShape.from_dict(shape_data)
             self.synoptic_widget.scene.addItem(shape)
@@ -650,13 +640,12 @@ class SynopticWidget(QWidget):
                 return
             self.background_image = image
             self.scene.background_image = self.background_image
-            # Set the scene rect to match the image size
 
             self.scene.setSceneRect(0, 0, image.width(), image.height())
-            self.graphics_view.fitInView(
-                self.scene.sceneRect(), Qt.AspectRatioMode.KeepAspectRatio
-            )
-            self.scene.invalidate()  # Redraw the scene
+            # self.graphics_view.fitInView(
+            #     self.scene.sceneRect(), Qt.AspectRatioMode.KeepAspectRatio
+            # )
+            self.scene.invalidate()
 
     def save_synoptic(self):
         filename, _ = QFileDialog.getSaveFileName(
