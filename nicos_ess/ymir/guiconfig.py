@@ -30,6 +30,10 @@ main_window = docked(
                             panel("nicos_ess.gui.panels.chopper.ChopperPanel"),
                         ),
                         (
+                            "Synoptic",
+                            panel("nicos_ess.gui.panels.synoptic.SynopticPanel"),
+                        ),
+                        (
                             "Script Status",
                             panel(
                                 "nicos_ess.gui.panels.status.ScriptStatusPanel",
