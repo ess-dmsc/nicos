@@ -1,4 +1,5 @@
 from nicos.clients.gui.panels import Panel
+from nicos.core import status
 from nicos.guisupport.qt import (
     QMainWindow,
     QWidget,
@@ -138,16 +139,19 @@ class ResizableShape(QGraphicsRectItem):
         self.update_text_position()
 
     def update_status(self, status_tuple):
-        code, status = status_tuple
-        self.device_status = status
-        if code == 200:
+        code, status_msg = status_tuple
+        self.device_status = status_tuple
+
+        if code == status.OK:
             self.setBrush(QBrush(QColor("green")))
-        elif code < 300:
+        elif code == status.BUSY:
             self.setBrush(QBrush(QColor("yellow")))
-        elif code < 500:
+        elif code == status.WARN:
             self.setBrush(QBrush(QColor("orange")))
-        else:
+        elif code == status.ERROR:
             self.setBrush(QBrush(QColor("red")))
+        else:
+            self.setBrush(QBrush(QColor("lightgray")))
 
     def update_text_position(self):
         rect = self.rect()
