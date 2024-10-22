@@ -1,3 +1,4 @@
+import base64
 import json
 import zipfile
 
@@ -34,6 +35,9 @@ from nicos.guisupport.qt import (
     pyqtSignal,
     QFileDialog,
     QMessageBox,
+    QBuffer,
+    QIODevice,
+    QPixmap,
 )
 from nicos_ess.gui.panels.devices import DevicesPanel
 
@@ -53,26 +57,70 @@ class SynopticProject:
 
     def save(self, filename):
         data = self._collect_data()
+
+        # Save the data as compact JSON without indentation
         with zipfile.ZipFile(filename, "w") as zipf:
-            json_data = json.dumps(data, indent=2)
+            json_data = json.dumps(data)
             zipf.writestr("config.json", json_data)
 
     def load(self, filename):
         with zipfile.ZipFile(filename, "r") as zipf:
             json_data = zipf.read("config.json")
             data = json.loads(json_data)
+
+            # Decode the background image from base64
+            background_image_raw = data.get("background_image")
+            if background_image_raw:
+                image_data = base64.b64decode(background_image_raw)
+
+                # Load image from the binary data
+                image = QPixmap()
+                image.loadFromData(image_data)
+                self.synoptic_widget.background_image = image
+                self.synoptic_widget.scene.background_image = image
+
+                # Set the scene rect to match the image size
+                self.synoptic_widget.scene.setSceneRect(
+                    0, 0, image.width(), image.height()
+                )
+                self.synoptic_widget.scene.invalidate()
+
+                # Fit the view to the new scene rect
+                self.synoptic_widget.graphics_view.fitInView(
+                    self.synoptic_widget.scene.sceneRect(),
+                    Qt.AspectRatioMode.KeepAspectRatio,
+                )
+            else:
+                self.synoptic_widget.background_image = None
+                self.synoptic_widget.scene.background_image = None
+                self.synoptic_widget.scene.invalidate()
+
+            # Apply the shapes and other data
             self._apply_data(data)
 
     def _collect_data(self):
+        # Encode the background image as base64 using QBuffer
+        if self.synoptic_widget.background_image:
+            buffer = QBuffer()
+            buffer.open(QIODevice.OpenModeFlag.WriteOnly)
+            self.synoptic_widget.background_image.save(buffer, "PNG")
+            background_image_base64 = base64.b64encode(buffer.data()).decode("utf-8")
+        else:
+            background_image_base64 = None
+
+        # Return data as a dictionary
         return {
             "shapes": [shape.to_dict() for shape in self.synoptic_widget.shapes],
+            "background_image": background_image_base64,
         }
 
     def _apply_data(self, data):
+        # Remove existing shapes
         for shape in self.synoptic_widget.shapes:
             self.synoptic_widget.scene.removeItem(shape)
         self.synoptic_widget.shapes.clear()
 
+        # Recreate shapes from the loaded data
         for shape_data in data.get("shapes", []):
             shape = ResizableShape.from_dict(shape_data)
             self.synoptic_widget.scene.addItem(shape)
@@ -179,8 +227,12 @@ class ResizableShape(QGraphicsRectItem):
 
         if isinstance(value, str):
             val_str = f"{value} ({unit})" if unit else f"{value}"
-        else:
+        elif isinstance(value, float):
             val_str = f"{value:.2f} ({unit})" if unit else f"{value:.2f}"
+        elif isinstance(value, int):
+            val_str = f"{value} ({unit})" if unit else f"{value}"
+        else:
+            val_str = str(value)
 
         self.device_value_text.setPlainText(val_str)
         self.update_text_position()
@@ -477,6 +529,24 @@ class ResizableShape(QGraphicsRectItem):
         return shape
 
 
+class SynopticScene(QGraphicsScene):
+    """Custom QGraphicsScene to handle background image."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.background_image = None
+
+    def drawBackground(self, painter, rect):
+        super().drawBackground(painter, rect)
+        if self.background_image:
+            center_x, center_y = (
+                self.background_image.width() // 2,
+                self.background_image.height() // 2,
+            )
+
+            painter.drawPixmap(-center_x, -center_y, self.background_image)
+
+
 class SynopticWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -531,7 +601,7 @@ class SynopticWidget(QWidget):
         self.sidebar_layout.addStretch()
         self.layout.addWidget(self.sidebar)
 
-        self.scene = QGraphicsScene(self)
+        self.scene = SynopticScene(self)
         self.graphics_view = SynopticGraphicsView(self.scene)
         self.graphics_view.setRenderHint(QPainter.RenderHint.Antialiasing)
         self.graphics_view.setTransformationAnchor(
@@ -549,6 +619,11 @@ class SynopticWidget(QWidget):
         self.device_combo.currentTextChanged.connect(self.update_device_link)
         self.settings_layout.addWidget(self.device_label)
         self.settings_layout.addWidget(self.device_combo)
+
+        self.set_background_button = QPushButton("Set Background Image")
+        self.set_background_button.clicked.connect(self.set_background_image)
+        self.sidebar_layout.addWidget(self.set_background_button)
+
         self.settings_layout.addStretch()
         self.layout.addWidget(self.settings_panel)
         self.settings_panel.setVisible(False)
@@ -563,6 +638,25 @@ class SynopticWidget(QWidget):
         self.toggle_edit_mode(False)
 
         self.shapes = []
+
+    def set_background_image(self):
+        filename, _ = QFileDialog.getOpenFileName(
+            self, "Select Background Image", "", "Image Files (*.png *.jpg *.bmp)"
+        )
+        if filename:
+            image = QPixmap(filename)
+            if image.isNull():
+                QMessageBox.warning(self, "Error", "Failed to load image.")
+                return
+            self.background_image = image
+            self.scene.background_image = self.background_image
+            # Set the scene rect to match the image size
+
+            self.scene.setSceneRect(0, 0, image.width(), image.height())
+            self.graphics_view.fitInView(
+                self.scene.sceneRect(), Qt.AspectRatioMode.KeepAspectRatio
+            )
+            self.scene.invalidate()  # Redraw the scene
 
     def save_synoptic(self):
         filename, _ = QFileDialog.getSaveFileName(
@@ -580,6 +674,16 @@ class SynopticWidget(QWidget):
             self.toggle_edit_mode(False)
             project = SynopticProject(self)
             project.load(filename)
+
+        parent = self.parentWidget()
+        if not parent:
+            return
+
+        for shape in self.shapes:
+            try:
+                parent.poll_device(shape.device)
+            except NameError:
+                pass
 
     def set_device_list(self, devices):
         self.devices = devices
@@ -630,6 +734,12 @@ class SynopticWidget(QWidget):
         if selected_items:
             shape = selected_items[0]
             shape.set_device(device_name or None)
+            parent = self.parentWidget()
+            if parent:
+                try:
+                    parent.poll_device(device_name)
+                except NameError:
+                    pass
 
     def on_client_cache(self, data):
         (time, key, op, value) = data
@@ -806,6 +916,9 @@ class SynopticPanel(Panel):
 
     def eval_command(self, command, *args, **kwargs):
         return self.client.eval(command, *args, **kwargs)
+
+    def poll_device(self, device_name):
+        self.eval_command(f"{device_name}.poll()")
 
     def on_device_double_clicked(self, device_name):
         if self.device_panel:
