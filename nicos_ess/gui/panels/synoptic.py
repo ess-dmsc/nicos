@@ -28,7 +28,9 @@ from nicos.guisupport.qt import (
     QRectF,
     QPointF,
     QLineF,
+    pyqtSignal,
 )
+from nicos_ess.gui.panels.devices import DevicesPanel
 
 
 class ShapeType:
@@ -133,9 +135,15 @@ class ResizableShape(QGraphicsRectItem):
         self.device_name_text.setPlainText(device_name or "")
         self.update_text_position()
 
-    def update_value(self, value):
+    def update_value(self, value, unit=None):
         self.device_value = value
-        self.device_value_text.setPlainText(f"{value:.2f}")
+
+        if isinstance(value, str):
+            val_str = f"{value} ({unit})" if unit else f"{value}"
+        else:
+            val_str = f"{value:.2f} ({unit})" if unit else f"{value:.2f}"
+
+        self.device_value_text.setPlainText(val_str)
         self.update_text_position()
 
     def update_status(self, status_tuple):
@@ -143,7 +151,7 @@ class ResizableShape(QGraphicsRectItem):
         self.device_status = status_tuple
 
         if code == status.OK:
-            self.setBrush(QBrush(QColor("green")))
+            self.setBrush(QBrush(QColor(0, 255, 0)))  # green
         elif code == status.BUSY:
             self.setBrush(QBrush(QColor("yellow")))
         elif code == status.WARN:
@@ -413,6 +421,7 @@ class SynopticWidget(QWidget):
         super().__init__(parent)
         self.is_edit_mode = False
         self.devices = []
+        self.units_dict = {}
         self.init_ui()
 
         self.scene.selectionChanged.connect(self.on_selection_changed)
@@ -487,6 +496,9 @@ class SynopticWidget(QWidget):
         self.device_combo.clear()
         self.device_combo.addItems([""] + devices)
 
+    def set_units_dict(self, units_dict):
+        self.units_dict = units_dict
+
     def toggle_edit_mode(self, checked):
         self.is_edit_mode = checked
         self.graphics_view.set_edit_mode(checked)
@@ -531,10 +543,11 @@ class SynopticWidget(QWidget):
     def on_client_cache(self, data):
         (time, key, op, value) = data
         device_name, attribute = key.split("/")
+        unit = self.units_dict.get(device_name, None)
         for shape in self.shapes:
             if shape.device == device_name:
                 if attribute == "value":
-                    shape.update_value(value)
+                    shape.update_value(value, unit)
                 elif attribute == "status":
                     shape.update_status(value)
 
@@ -554,6 +567,8 @@ class SynopticWidget(QWidget):
 
 
 class SynopticGraphicsView(QGraphicsView):
+    deviceDoubleClicked = pyqtSignal(str)
+
     def __init__(self, scene, parent=None):
         super().__init__(scene, parent)
         self.is_edit_mode = False
@@ -612,6 +627,24 @@ class SynopticGraphicsView(QGraphicsView):
         else:
             super().mouseMoveEvent(event)
 
+    def mouseDoubleClickEvent(self, event):
+        def get_item(item):
+            if isinstance(item, ResizableShape):
+                return item
+            elif isinstance(item, QGraphicsTextItem):
+                return item.parentItem()
+            else:
+                return None
+
+        if not self.is_edit_mode and event.button() == Qt.MouseButton.LeftButton:
+            item = self.itemAt(event.pos())
+            item = get_item(item)
+            if item:
+                devname = item.device
+                if devname:
+                    self.deviceDoubleClicked.emit(devname)
+        super().mouseDoubleClickEvent(event)
+
     def mousePressEvent(self, event):
         if self.is_edit_mode and event.button() == Qt.MouseButton.LeftButton:
             item = self.itemAt(event.pos())
@@ -656,6 +689,7 @@ class SynopticPanel(Panel):
         Panel.__init__(self, parent, client, options)
 
         self.synoptic_widget = SynopticWidget()
+        self.device_panel = None
 
         self.initialize_ui()
         self.build_ui()
@@ -672,12 +706,19 @@ class SynopticPanel(Panel):
         client.setup.connect(self.on_client_setup)
         client.connected.connect(self.on_client_connected)
         client.cache.connect(self.on_client_cache)
+        self.synoptic_widget.graphics_view.deviceDoubleClicked.connect(
+            self.on_device_double_clicked
+        )
 
     def exec_command(self, command):
         self.client.tell("exec", command)
 
     def eval_command(self, command, *args, **kwargs):
         return self.client.eval(command, *args, **kwargs)
+
+    def on_device_double_clicked(self, device_name):
+        if self.device_panel:
+            self.device_panel._open_control_dialog(device_name)
 
     def on_client_cache(self, data):
         (time, key, op, value) = data
@@ -695,6 +736,11 @@ class SynopticPanel(Panel):
     def on_client_connected(self):
         self._update_device_list()
 
+        panels = self.mainwindow.panels
+        for panel in panels:
+            if isinstance(panel, DevicesPanel):
+                self.device_panel = panel
+
     def on_client_setup(self):
         self._update_device_list()
 
@@ -704,6 +750,16 @@ class SynopticPanel(Panel):
             return
         devlist = state["devices"]
         self.synoptic_widget.set_device_list(devlist)
+
+        units_dict = {}
+        for device in devlist:
+            try:
+                units = self._get_cached_value(f"{device}/unit")[0][1]
+            except IndexError:
+                units = None
+            units_dict[device] = units
+
+        self.synoptic_widget.set_units_dict(units_dict)
 
     def closeEvent(self, event):
         return QMainWindow.closeEvent(self, event)
