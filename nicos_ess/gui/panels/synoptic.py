@@ -1,3 +1,6 @@
+import json
+import zipfile
+
 from nicos.clients.gui.panels import Panel
 from nicos.core import status
 from nicos.guisupport.qt import (
@@ -29,6 +32,8 @@ from nicos.guisupport.qt import (
     QPointF,
     QLineF,
     pyqtSignal,
+    QFileDialog,
+    QMessageBox,
 )
 from nicos_ess.gui.panels.devices import DevicesPanel
 
@@ -38,6 +43,40 @@ class ShapeType:
     CIRCLE = "circle"
     PENTAGON = "pentagon"
     TRIANGLE = "triangle"
+
+
+class SynopticProject:
+    """Class to handle saving and loading of synoptic configurations."""
+
+    def __init__(self, synoptic_widget):
+        self.synoptic_widget = synoptic_widget
+
+    def save(self, filename):
+        data = self._collect_data()
+        with zipfile.ZipFile(filename, "w") as zipf:
+            json_data = json.dumps(data, indent=2)
+            zipf.writestr("config.json", json_data)
+
+    def load(self, filename):
+        with zipfile.ZipFile(filename, "r") as zipf:
+            json_data = zipf.read("config.json")
+            data = json.loads(json_data)
+            self._apply_data(data)
+
+    def _collect_data(self):
+        return {
+            "shapes": [shape.to_dict() for shape in self.synoptic_widget.shapes],
+        }
+
+    def _apply_data(self, data):
+        for shape in self.synoptic_widget.shapes:
+            self.synoptic_widget.scene.removeItem(shape)
+        self.synoptic_widget.shapes.clear()
+
+        for shape_data in data.get("shapes", []):
+            shape = ResizableShape.from_dict(shape_data)
+            self.synoptic_widget.scene.addItem(shape)
+            self.synoptic_widget.shapes.append(shape)
 
 
 class ResizeHandle(QGraphicsRectItem):
@@ -415,18 +454,43 @@ class ResizableShape(QGraphicsRectItem):
 
         return total_rect
 
+    def to_dict(self):
+        return {
+            "shape_type": self.shape_type,
+            "position": [self.pos().x(), self.pos().y()],
+            "rect": [
+                self.rect().x(),
+                self.rect().y(),
+                self.rect().width(),
+                self.rect().height(),
+            ],
+            "device": self.device,
+        }
+
+    @classmethod
+    def from_dict(cls, data):
+        shape = cls(shape_type=data["shape_type"])
+        shape.setPos(*data["position"])
+        rect = QRectF(*data["rect"])
+        shape.setRect(rect)
+        shape.set_device(data.get("device"))
+        return shape
+
 
 class SynopticWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.is_edit_mode = False
         self.devices = []
+        self.shapes = []
         self.units_dict = {}
         self.init_ui()
 
         self.scene.selectionChanged.connect(self.on_selection_changed)
 
     def on_selection_changed(self):
+        if not self.is_edit_mode:
+            return
         selected_items = self.scene.selectedItems()
         if selected_items:
             shape = selected_items[0]
@@ -489,7 +553,33 @@ class SynopticWidget(QWidget):
         self.layout.addWidget(self.settings_panel)
         self.settings_panel.setVisible(False)
 
+        self.save_button = QPushButton("Save Synoptic")
+        self.save_button.clicked.connect(self.save_synoptic)
+        self.load_button = QPushButton("Load Synoptic")
+        self.load_button.clicked.connect(self.load_synoptic)
+        self.sidebar_layout.addWidget(self.save_button)
+        self.sidebar_layout.addWidget(self.load_button)
+
+        self.toggle_edit_mode(False)
+
         self.shapes = []
+
+    def save_synoptic(self):
+        filename, _ = QFileDialog.getSaveFileName(
+            self, "Save Synoptic", "", "Synoptic Files (*.syn)"
+        )
+        if filename:
+            project = SynopticProject(self)
+            project.save(filename)
+
+    def load_synoptic(self):
+        filename, _ = QFileDialog.getOpenFileName(
+            self, "Load Synoptic", "", "Synoptic Files (*.syn)"
+        )
+        if filename:
+            self.toggle_edit_mode(False)
+            project = SynopticProject(self)
+            project.load(filename)
 
     def set_device_list(self, devices):
         self.devices = devices
@@ -515,7 +605,7 @@ class SynopticWidget(QWidget):
         else:
             self.settings_panel.setVisible(True)
 
-    def add_shape(self, shape_type):
+    def add_shape(self, shape_type, selected=True):
         shape = ResizableShape(shape_type)
 
         grid_size = self.graphics_view.grid_size
@@ -531,8 +621,9 @@ class SynopticWidget(QWidget):
         shape.setPos(0, 0)
         shape.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, True)
         shape.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, True)
-        shape.setSelected(True)
-        self.show_settings_panel(shape)
+        shape.setSelected(selected)
+        if selected:
+            self.show_settings_panel(shape)
 
     def update_device_link(self, device_name):
         selected_items = self.scene.selectedItems()
@@ -718,7 +809,16 @@ class SynopticPanel(Panel):
 
     def on_device_double_clicked(self, device_name):
         if self.device_panel:
-            self.device_panel._open_control_dialog(device_name)
+            try:
+                self.device_panel._open_control_dialog(device_name)
+            except KeyError:
+                QMessageBox.warning(
+                    self,
+                    "Device not found",
+                    f"Device {device_name} not found or is an expert device.",
+                )
+            except Exception as e:
+                print(f"Failed to open control dialog: {e}")
 
     def on_client_cache(self, data):
         (time, key, op, value) = data
