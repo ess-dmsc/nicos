@@ -227,10 +227,14 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
     def doReadPrecision(self):
         return self._get_cached_pv_or_ask("position_deadband")
 
-    def isAtTarget(self, pos=None, target=None):
+    def doIsAtTarget(self, pos=None, target=None):
         return self._get_cached_pv_or_ask("miss") == 0
 
     def doStart(self, value):
+        if abs(self.read(0) - value) <= self.precision:
+            return
+
+        self._cache.put(self._name, "status", (status.BUSY, "Moving abs"), time.time())
         self._put_pv("target", value)
 
     def doWriteSpeed(self, value):
