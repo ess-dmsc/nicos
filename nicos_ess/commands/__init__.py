@@ -1,4 +1,5 @@
 # pylint: skip-file
+from nicos.commands.device import waitfor_stable
 from nicos.devices.epics.pva.caproto import caget, caput
 from nicos.devices.epics.pva.p4p import pvget, pvput
 from nicos_ess.commands.base import set_title
@@ -11,4 +12,3 @@ from nicos_ess.commands.filewriter import (
     stop_filewriting,
 )
 from nicos_ess.commands.sample import clear_sample_fields, set_sample_fields
-from nicos_ess.commands.wait import waitfor_stable
