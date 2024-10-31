@@ -321,8 +321,8 @@ class LineData(QObject):
             raw_data = []
         self.raw_data = raw_data
         self._name = name
-        self._timestamps = None
-        self._values = None
+        self._timestamps = []
+        self._values = []
         self._expires = expires
         self._throttle_rate_ms = throttle_rate_ms
         self._synthetic_rate_ms = synthetic_rate_ms
@@ -614,8 +614,10 @@ class HistoryPanel(Panel):
             self._update_view_info(PlotTypes.HISTOGRAM.value, selected_signals)
 
     def on_poll(self):
-        for line in self._lines.values():
-            line.update_synthetic_data()
+        pass  # make it a setting if we want to create
+        # synthetic data for the specific view
+        # for line in self._lines.values():
+        #     line.update_synthetic_data()
 
     def loadSettings(self, settings):
         self.splitterstate = settings.value("splitter", "", QByteArray)
@@ -734,16 +736,17 @@ class HistoryPanel(Panel):
             data = self._get_history(device, fr, to, interval)
 
             if not data:
-                rescaled_to = to - 60 if live_updating else to
-                #  No history data available, synthesise some fake data based
-                #  on the last known value
-                result = self._get_cached_value(device)
-                last_value = [res for res in result if res[0] == device][0][1]
-                num_fake_points = max((rescaled_to - fr) // 60, 100)
-                data = [
-                    (ts, last_value)
-                    for ts in np.linspace(fr, rescaled_to, num_fake_points)
-                ]
+                # rescaled_to = to - 60 if live_updating else to
+                # #  No history data available, synthesise some fake data based
+                # #  on the last known value
+                # result = self._get_cached_value(device)
+                # last_value = [res for res in result if res[0] == device][0][1]
+                # num_fake_points = max((rescaled_to - fr) // 60, 100)
+                # data = [
+                #     (ts, last_value)
+                #     for ts in np.linspace(fr, rescaled_to, num_fake_points)
+                # ]
+                data = []
 
             try:
                 units = self._get_cached_value(f"{desc}/unit")[0][1]

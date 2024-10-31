@@ -2082,6 +2082,12 @@ class Measurable(Waitable):
         "_lastpreset": Param(
             "The latest used preset", internal=True, type=dict, settable=True
         ),
+        "finalvalue": Param(
+            "The final value of a measurement",
+            unit="main",
+            type=anytype,
+            settable=True,
+        ),
     }
 
     errorstates = {status.ERROR: NicosError}
@@ -2236,6 +2242,7 @@ class Measurable(Waitable):
                 self._sim_started = None
             return
         self.doFinish()
+        self.finalvalue = self.doRead()
 
     @usermethod
     def stop(self):

@@ -1,6 +1,6 @@
 # pylint: skip-file
-from nicos.devices.epics.pva.caproto import caget, caput
-from nicos.devices.epics.pva.p4p import pvget, pvput
+# from nicos.devices.epics.pva.caproto import caget, caput
+# from nicos.devices.epics.pva.p4p import pvget, pvput
 
 from nicos_ess.commands.base import set_title
 

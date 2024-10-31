@@ -85,6 +85,23 @@ def interpolate_to_common_timestamps(*args):
     return common_ts, interp_funcs, interp_data
 
 
+def interpolate_to_detector_timestamps(
+    dev_timestamps, dev_data, det_timestamps, det_data
+):
+    dev_interp = interp1d(dev_timestamps, dev_data, kind="linear", bounds_error=True)
+
+    # Limit the detector data to the range of the device data to avoid extrapolation
+    idx_low = np.searchsorted(det_timestamps, dev_interp.x[0])
+    idx_high = np.searchsorted(det_timestamps, dev_interp.x[-1])
+
+    det_timestamps = det_timestamps[idx_low:idx_high]
+    det_data = det_data[idx_low:idx_high]
+
+    interp_dev_data = dev_interp(det_timestamps)
+
+    return det_timestamps, interp_dev_data, det_data
+
+
 class TimeAxisItem(pg.AxisItem):
     def tickStrings(self, values, scale, spacing):
         return [str(datetime.fromtimestamp(value)) for value in values]
@@ -101,3 +118,15 @@ class ClickableLabel(QLabel):
 class PlotTypes(Enum):
     XY = "xyPlot"
     HISTOGRAM = "histogramPlot"
+
+
+if __name__ == "__main__":
+    dev_timestamps = np.array([1, 2, 3, 4, 5])
+    dev_data = np.array([11, 12, 13, 14, 15])
+
+    det_timestamps = np.array([1.5, 2.5, 3.5, 4.5])
+    det_data = np.array([150, 250, 350, 450])
+
+    det_timestamps, interp_dev_data, det_data = interpolate_to_detector_timestamps(
+        dev_timestamps, dev_data, det_timestamps, det_data
+    )

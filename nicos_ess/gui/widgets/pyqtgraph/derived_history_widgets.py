@@ -12,10 +12,10 @@ from nicos.guisupport.qt import (
 )
 from nicos_ess.gui.widgets.pyqtgraph.utils.fitter import Fitter1D, FitType
 from nicos_ess.gui.widgets.pyqtgraph.utils.utils import (
-    interpolate_to_common_timestamps,
     COLORS,
     PlotTypes,
     HISTOGRAM_COLORS,
+    interpolate_to_detector_timestamps,
 )
 
 pg.setConfigOption("background", "w")
@@ -287,6 +287,8 @@ class XYPlot(DerivedWidgetBase):
         idx_2_1, idx_2_2 = np.searchsorted(
             data[2], [self._left_bound, self._right_bound]
         )
+        idx_1_2 = min(idx_1_2, len(data[0]) - 1)
+        idx_2_2 = min(idx_2_2, len(data[2]) - 1)
 
         if self._last_timestamp_bounds == (
             data[0][idx_1_1],
@@ -306,28 +308,40 @@ class XYPlot(DerivedWidgetBase):
             data[2][idx_2_2],
         )
 
-        data[0], data[1] = data[0][idx_1_1:idx_1_2], data[1][idx_1_1:idx_1_2]
-        data[2], data[3] = data[2][idx_2_1:idx_2_2], data[3][idx_2_1:idx_2_2]
+        data[0], data[1] = (
+            data[0][idx_1_1 : idx_1_2 + 1],
+            data[1][idx_1_1 : idx_1_2 + 1],
+        )
+        data[2], data[3] = (
+            data[2][idx_2_1 : idx_2_2 + 1],
+            data[3][idx_2_1 : idx_2_2 + 1],
+        )
+
+        print(f"slice indices: {idx_1_1}, {idx_1_2}, {idx_2_1}, {idx_2_2}")
+
+        infostr = ""
+        for ts, dat in zip(data[2], data[3]):
+            infostr += f"{ts}: {dat}\n"
+
+        print(infostr)
+        print(f"The last dev_ts is {data[0][-1]}")
 
         try:
-            common_ts, interp_funcs, interp_data = interpolate_to_common_timestamps(
-                *data
-            )
+            common_ts, dev_data, det_data = interpolate_to_detector_timestamps(*data)
         except AssertionError as e:
             print(e)
             return
 
-        common_ts = common_ts[
-            (common_ts >= self._left_bound) & (common_ts <= self._right_bound)
+        labels = [
+            line.get_name()
+            for line in lines.values()
+            if line.get_name() in self._keys_to_correlate
         ]
-        interp_data = [
-            data[(common_ts >= common_ts[0]) & (common_ts <= common_ts[-1])]
-            for data in interp_data
+        units = [
+            line.get_units()
+            for line in lines.values()
+            if line.get_name() in self._keys_to_correlate
         ]
-
-        labels = list(lines.keys())
-
-        units = [line.get_units() for line in lines.values()]
 
         bottom_label_str = f"{labels[0]} ({units[0]})" if units[0] else labels[0]
         left_label_str = f"{labels[1]} ({units[1]})" if units[1] else labels[1]
@@ -337,8 +351,8 @@ class XYPlot(DerivedWidgetBase):
         self.plotwidget.setLabel("left", left_label_str)
 
         self._plots["xyPlot"] = self.plotwidget.plot(
-            interp_data[0],
-            interp_data[1],
+            dev_data,
+            det_data,
             pen=None,
             symbol="o",
             symbolPen=COLORS[0],

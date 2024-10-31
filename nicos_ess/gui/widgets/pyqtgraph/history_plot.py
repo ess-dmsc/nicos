@@ -276,7 +276,7 @@ class HistoryWidget(QWidget):
         self._ts_plots[key] = plot_item
         self._ts_plot_states[key] = "left_view"
         self._hover_markers[key] = pg.ScatterPlotItem(
-            [timestamps[0]], [values[0]], pen=mkPen("k"), brush=mkBrush(color), size=10
+            [], [], pen=mkPen("k"), brush=mkBrush(color), size=10
         )
         self._hover_markers[key].setVisible(False)
         self._hover_markers[key].setZValue(10)
@@ -317,8 +317,16 @@ class HistoryWidget(QWidget):
             units = line.get_units()
             color = line.get_color()
             self._add_plot_line(key, timestamps, values, color, units)
-            curr_min_ts = min(curr_min_ts, np.min(timestamps))
-            curr_max_ts = max(curr_max_ts, np.max(timestamps))
+            curr_min_ts = (
+                min(curr_min_ts, np.min(timestamps))
+                if len(timestamps) > 0
+                else curr_min_ts
+            )
+            curr_max_ts = (
+                max(curr_max_ts, np.max(timestamps))
+                if len(timestamps) > 0
+                else curr_max_ts
+            )
 
         self.legend_layout.addStretch()
         self._update_infinite_lines(curr_min_ts, curr_max_ts)
