@@ -115,6 +115,9 @@ class SamplePanel(QWidget):  # QWidget
 
         # left panel, sample list
         self.sample_selector_widget = QListWidget()
+        self.sample_selector_widget.itemSelectionChanged.connect(
+            self.sample_selection_changed
+        )
 
         # right panel, sample info
         self.sample_info_main_widget = QWidget()
@@ -188,96 +191,91 @@ class SamplePanel(QWidget):  # QWidget
             self.display_sample_info
         )
 
-        self.status_view()
+        # show relevant widgets
+        self.mode_start()
 
-    def status_view(self):
-        #  add button enabled
-        self.button_add_sample.setEnabled(True)
-        #  edit button disabled
-        self.button_edit_sample.setDisabled(True)
-        #  sample selector enabled / none selected
-        self.sample_selector_widget.setEnabled(True)
+    def mode_start(self):
+        # no sample selected
+        self.mode_view()
         self.sample_selector_widget.clearSelection()
+        self.button_edit_sample.setEnabled(False)
+        self.sample_id_widgets_list[1].setText("")
+        for i, row in enumerate(self.sample_info_widgets_list):
+            row[1].setText("")
+            row[2].setText("")
+
+    def mode_view(self):
+        #  add button enabled
+        #  edit button disabled
+        #  sample selector enabled / none selected
         #  sample ID view mode
+        #  sample info view mode
+        #  add field, cancel, save button hidden
+        self.button_add_sample.setEnabled(True)
+        self.button_edit_sample.setEnabled(True)
+        self.sample_selector_widget.setEnabled(True)
         self.sample_id_widgets_list[0].show()
         self.sample_id_widgets_list[1].show()
         self.sample_id_widgets_list[2].hide()
-        #  sample info view mode
         for i, row in enumerate(self.sample_info_widgets_list):
             for j, widget in enumerate(row):
                 if j == 2:
                     widget.hide()
                 else:
                     widget.show()
-        #  add field, cancel, save button hidden
         self.sample_info_button_row_widget.hide()
 
-    def left_panel_disabled(self):
-        self.button_add_sample.setDisabled(True)
-        self.button_edit_sample.setDisabled(True)
-        self.sample_selector_widget.setDisabled(True)
+    def mode_edit(self):
+        #  add button disabled
+        #  edit button disabled
+        #  sample selector disabled
+        #  --- sample ID view or edit mode ---
+        #  sample info edit mode
+        #  add field button shown
+        #  cancel, save button shown
+        self.button_add_sample.setEnabled(False)
+        self.button_edit_sample.setEnabled(False)
+        self.sample_selector_widget.setEnabled(False)
+        for i, row in enumerate(self.sample_info_widgets_list):
+            for j, widget in enumerate(row):
+                if j == 1:
+                    widget.hide()
+                else:
+                    widget.show()
+        self.sample_info_button_row_widget.show()
+
+    def sample_selection_changed(self):
+        selected = self.sample_selector_widget.currentItem()
+        if selected is None:
+            self.button_edit_sample.setEnabled(False)
+        else:
+            self.button_edit_sample.setEnabled(True)
 
     def display_sample_info(self, item):
-        if item is not None:
-            # status
-            #  add button enabled
-            #  edit button enabled
-            #  sample selector enabled
-            #  sample ID view mode
-            #  sample info view mode
-            #  add field button hidden
-            #  cancel, save button hidden
-            sample_id = item.text()
-            self.sample_id_widgets_list[1].setText(sample_id)
-            sample = self.proposal.samples[sample_id]
-            for i, (key, val) in enumerate(sample.annotations.items()):
-                self.sample_info_widgets_list[i][0].setText(key)
-                self.sample_info_widgets_list[i][1].setText(str(val))
-            self.button_edit_sample.setEnabled(True)
-        else:
-            # triggered from cancel button
-            self.sample_id_widgets_list[1].setText("")
-            for i in range(len(self.sample_info_widgets_list)):
-                self.sample_info_widgets_list[i][1].setText("")
-
-    def add_sample(self):
-        # status
-        #  add button disabled
-        #  edit button disabled
-        #  sample selector disabled
-        #  sample ID edit mode
-        #  sample info edit mode
-        #  add field button shown
-        #  cancel, save button shown
-        self.sample_id_widgets_list[1].hide()
-        self.sample_id_widgets_list[2].show()
-        for i, key in enumerate(self.proposal.sample_annotation_keys):
-            self.sample_info_widgets_list[i][0].setText(key)
-            self.sample_info_widgets_list[i][1].hide()
-            self.sample_info_widgets_list[i][2].show()
-        self.sample_info_button_row_widget.show()
-        self.left_panel_disabled()
-
-    def edit_sample(self):
-        # status
-        #  add button disabled
-        #  edit button disabled
-        #  sample selector disabled
-        #  sample ID view mode
-        #  sample info edit mode
-        #  add field button shown
-        #  cancel, save button shown
-        sample_id = self.sample_selector_widget.currentItem().text()
+        self.mode_view()
+        sample_id = item.text()
+        self.sample_id_widgets_list[1].setText(sample_id)
         sample = self.proposal.samples[sample_id]
         for i, (key, val) in enumerate(sample.annotations.items()):
-            self.sample_info_widgets_list[i][1].hide()
-            self.sample_info_widgets_list[i][2].show()
-            self.sample_info_widgets_list[i][2].setText(str(val))
-        self.sample_info_button_row_widget.show()
-        self.left_panel_disabled()
+            self.sample_info_widgets_list[i][0].setText(key)
+            self.sample_info_widgets_list[i][1].setText(str(val))
+
+    def add_sample(self):
+        self.mode_edit()
+        self.sample_selector_widget.clearSelection()
+        self.sample_id_widgets_list[1].hide()
+        self.sample_id_widgets_list[2].show()
+
+    def edit_sample(self):
+        self.mode_edit()
+        self.sample_id_widgets_list[1].show()
+        self.sample_id_widgets_list[2].hide()
+        for i, row in enumerate(self.sample_info_widgets_list):
+            current_val = self.sample_info_widgets_list[i][1].text()
+            self.sample_info_widgets_list[i][2].setText(current_val)
 
     def add_info_field(self):
-        # go to start status
+        # not working properly, field is still there if cancel
         n_rows = len(self.sample_info_widgets_list)
         new_widgets = [QLineEdit(), QLabel(), QLineEdit()]
         self.sample_info_widgets_list.append(new_widgets)
@@ -289,28 +287,15 @@ class SamplePanel(QWidget):  # QWidget
                 widget.hide()
 
     def cancel_add_or_edit(self):
-        self.sample_id_widgets_list[2].setText("")
-        remove_empty_fields = []
-        for i, row in enumerate(self.sample_info_widgets_list):
-            for j, widget in enumerate(row):
-                if j == 0:
-                    if widget.text() == "":
-                        remove_empty_fields.append(i)
-                if j == 2:
-                    widget.setText("")
-        if len(remove_empty_fields) > 0:
-            for index in remove_empty_fields:
-                print(index)
-                print(len(self.sample_info_widgets_list))
-                del self.sample_info_widgets_list[index]
-                print(len(self.sample_info_widgets_list))
-        self.status_view()
-        self.display_sample_info(None)
+        self.mode_start()
 
     def save_add_or_edit(self):
-        # go to start status
         print("not implemented")
-        self.status_view()
+        self.mode_view()
+        # should go to view mode for new sample
+        # if add, create sample, add sample to proposal, add annotation keys to proposal
+        # if edit, edit sample in proposal
+        # question: if a field is added to a sample, should existing samples get a default/NA value?
 
 
 if __name__ == "__main__":
