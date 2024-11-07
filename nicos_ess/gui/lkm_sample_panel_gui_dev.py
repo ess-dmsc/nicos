@@ -18,9 +18,9 @@ from PyQt6.QtWidgets import (
 )
 
 
-KEY_COLUMN = 0
-VAL_COLUMN = 1
-EDT_COLUMN = 2
+# KEY_COLUMN = 0
+# VAL_COLUMN = 1
+# EDT_COLUMN = 2
 
 
 class Sample:
@@ -105,6 +105,15 @@ class AnnotationWidgetGroup:
     def get_widgets(self):
         return [self.key_wid, self.key_wid_editable, self.val_wid, self.edt_wid]
 
+    def add_and_align_left(self, layout, row):
+        column = 0
+        widgets = self.get_widgets()
+        for widget in widgets:
+            layout.addWidget(
+                widget, row, column, alignment=Qt.AlignmentFlag.AlignLeft
+            )
+            column += 1
+
 
 class TopButtonLayout(QWidget):
     def __init__(self):
@@ -117,26 +126,48 @@ class TopButtonLayout(QWidget):
         self.layout.addStretch()
 
 
-class SampleInfoLayout(QWidget, N):
+class SampleInfoLayout(QWidget):
     ID_ROW = 0
+
+    def __init__(self, N):
+        super().__init__()
+        self.N = N
+        self.widget = QWidget()
+        self.grid_layouts = QVBoxLayout()
+        self.id_layout = QGridLayout()
+        self.info_layout = QGridLayout()
+        self.id_widgets = AnnotationWidgetGroup("Sample ID")
+        self.id_widgets.add_and_align_left(self.id_layout, self.ID_ROW)
+        self.widgets_list = self.get_N_widget_rows()
+        self.widgets_in_edit = []
+        self.grid_layouts.addLayout(self.id_layout)
+        self.grid_layouts.addLayout(self.info_layout)
+
+    def get_N_widget_rows(self):
+        widgets_list = []
+        for i in range(self.N):
+            widget_grp = AnnotationWidgetGroup()
+            widgets_list.append(widget_grp)
+            widget_grp.add_and_align_left(self.info_layout, row=i)
+        return widgets_list
+
+
+class ControlButtonsWidget(QWidget):
     def __init__(self):
         super().__init__()
+        self.layout = QHBoxLayout()
         self.widget = QWidget()
-        self.layout = QVBoxLayout()
-        self.btn_layout = QHBoxLayout()
-        self.id_layout = QGridLayout()
-        self.id_widgets = AnnotationWidgetGroup("Sample ID")
-        self.add_and_align_left(
-            self.id_widgets.get_widgets(),
-            self.id_layout,
-            self.ID_ROW
-        )
+        self.btn_add_info = QPushButton("Add field")
+        self.btn_cancel = QPushButton("Cancel")
+        self.btn_save = QPushButton("Save")
+        self.add_and_align_left(self.btn_add_info, self.layout)
+        self.layout.addStretch()
+        self.add_and_align_left(self.btn_cancel, self.layout)
+        self.add_and_align_left(self.btn_save, self.layout)
+        self.widget.setLayout(self.layout)
 
-    def add_and_align_left(self, widgets, layout, row):
-        column = 0
-        for widget in widgets:
-            layout.addWidget(widget, row, column, alignment=Qt.AlignmentFlag.AlignLeft)
-            column += 1
+    def add_and_align_left(self, widget, layout):
+        layout.addWidget(widget, alignment=Qt.AlignmentFlag.AlignLeft)
 
 
 class SamplePanel(QWidget):
@@ -145,198 +176,123 @@ class SamplePanel(QWidget):
 
         self.proposal = get_a_test_proposal()
 
-        self.sample_main_layout = QVBoxLayout()
-
         self.top_buttons = TopButtonLayout()
         self.top_buttons.btn_add.clicked.connect(self.add_sample)
         self.top_buttons.btn_edt.clicked.connect(self.edit_sample)
 
-        self.panel_splitter = QSplitter()
-
         self.sample_selector_widget = QListWidget()
-        self.sample_selector_widget.addItems(self.proposal.samples.keys())
         self.sample_selector_widget.itemClicked.connect(
             self.display_sample_info
         )
-
-
-
-
-
-        add_wid_left_align(
-            self.sample_id_widgets.key_wid, self.sample_id_widgets_layout
-        )
-        add_wid_left_align(
-            self.sample_id_widgets.val_wid, self.sample_id_widgets_layout
-        )
-        add_wid_left_align(
-            self.sample_id_widgets.edt_wid, self.sample_id_widgets_layout
+        self.sample_info = SampleInfoLayout(
+            len(self.proposal.sample_annotation_keys)
         )
 
-        # annotation rows for all other annotations
-        self.sample_info_widgets_layout = QGridLayout()
-        self.sample_info_widgets_list = []
-        self.sample_info_widgets_in_edit = []
-        for row_index, annotation in enumerate(
-            self.proposal.sample_annotation_keys
-        ):
-            widget_grp = AnnotationWidgetGroup(annotation)
-            self.sample_info_widgets_list.append(widget_grp)
-            add_wid_grid_left_align(
-                widget_grp.key_wid,
-                self.sample_info_widgets_layout,
-                row_index,
-                KEY_COLUMN,
-            )
-            add_wid_grid_left_align(
-                widget_grp.val_wid,
-                self.sample_info_widgets_layout,
-                row_index,
-                VAL_COLUMN,
-            )
-            add_wid_grid_left_align(
-                widget_grp.edt_wid,
-                self.sample_info_widgets_layout,
-                row_index,
-                EDT_COLUMN,
-            )
+        self.ctrl_buttons = ControlButtonsWidget()
+        self.ctrl_buttons.btn_add_info.clicked.connect(self.add_info_field)
+        self.ctrl_buttons.btn_cancel.clicked.connect(self.cancel_add_or_edit)
+        self.ctrl_buttons.btn_save.clicked.connect(self.save_add_or_edit)
 
-        # control buttons for add and editing samples
-        self.sample_info_button_row_layout = QHBoxLayout()
-        self.sample_info_button_row_widget = QWidget()
-        self.button_add_info_field = QPushButton("Add field")
-        self.button_cancel = QPushButton("Cancel")
-        self.button_save = QPushButton("Save")
-        self.button_add_info_field.clicked.connect(self.add_info_field)
-        self.button_cancel.clicked.connect(self.cancel_add_or_edit)
-        self.button_save.clicked.connect(self.save_add_or_edit)
-        add_wid_left_align(
-            self.button_add_info_field, self.sample_info_button_row_layout
-        )
-        self.sample_info_button_row_layout.addStretch()
-        add_wid_left_align(
-            self.button_cancel, self.sample_info_button_row_layout
-        )
-        add_wid_left_align(self.button_save, self.sample_info_button_row_layout)
-        self.sample_info_button_row_widget.setLayout(
-            self.sample_info_button_row_layout
-        )
-        self.sample_info_button_row_widget.hide()
+        self.sample_info_outer_layout = QVBoxLayout()
+        self.sample_info_outer_layout.addLayout(self.sample_info.grid_layouts)
+        self.sample_info_outer_layout.addWidget(self.ctrl_buttons.widget)
+        self.sample_info_outer_layout.addStretch()
+        self.sample_info_widget = QWidget()
+        self.sample_info_widget.setLayout(self.sample_info_outer_layout)
 
-        # combine widgets and layouts
-        self.sample_info_main_layout.addLayout(self.sample_id_widgets_layout)
-        self.sample_info_main_layout.addLayout(self.sample_info_widgets_layout)
-        self.sample_info_main_layout.addWidget(
-            self.sample_info_button_row_widget
-        )
-        self.sample_info_main_layout.addStretch()
-        self.sample_info_main_widget.setLayout(self.sample_info_main_layout)
-
+        self.panel_splitter = QSplitter()
         self.panel_splitter.addWidget(self.sample_selector_widget)
-        self.panel_splitter.addWidget(self.sample_info_main_widget)
+        self.panel_splitter.addWidget(self.sample_info_widget)
 
-        self.sample_main_layout.addLayout(self.top_button_row_layout)
+        self.sample_main_widget = QWidget()
+        self.sample_main_layout = QVBoxLayout()
+        self.sample_main_layout.addLayout(self.top_buttons.layout)
         self.sample_main_layout.addWidget(self.panel_splitter)
 
-        # show relevant widgets
-        self.mode_start()
+        self.sample_selector_widget.addItems(self.proposal.samples.keys())
+        for i, annotation in enumerate(self.proposal.sample_annotation_keys):
+            widget_grp = self.sample_info.widgets_list[i]
+            widget_grp.key_wid.setText(annotation)
 
-    def mode_start(self):
+        # show relevant widgets
+
+        self.mode_reset()
+
+    def mode_reset(self):
         self.mode_view()
         self.sample_selector_widget.clearSelection()
-        self.button_edit_sample.setEnabled(False)
-        self.sample_id_widgets.val_wid.setText("")
-        for widget_grp in self.sample_info_widgets_list:
+        self.top_buttons.btn_edt.setEnabled(False)
+        self.sample_info.id_widgets.val_wid.setText("")
+        for widget_grp in self.sample_info.widgets_list:
+            widget_grp.key_wid_editable.setText("")
             widget_grp.val_wid.setText("")
             widget_grp.edt_wid.setText("")
 
     def mode_view(self):
-        self.button_add_sample.setEnabled(True)
-        self.button_edit_sample.setEnabled(True)
+        self.top_buttons.btn_add.setEnabled(True)
+        self.top_buttons.btn_edt.setEnabled(True)
         self.sample_selector_widget.setEnabled(True)
-        self.sample_id_widgets.key_wid.show()
-        self.sample_id_widgets.val_wid.show()
-        self.sample_id_widgets.edt_wid.hide()
-        for widget_grp in self.sample_info_widgets_list:
+        self.sample_info.id_widgets.key_wid.show()
+        self.sample_info.id_widgets.key_wid_editable.hide()
+        self.sample_info.id_widgets.val_wid.show()
+        self.sample_info.id_widgets.edt_wid.hide()
+        for widget_grp in self.sample_info.widgets_list:
             widget_grp.key_wid.show()
             widget_grp.key_wid_editable.hide()
             widget_grp.val_wid.show()
             widget_grp.edt_wid.hide()
-        self.sample_info_button_row_widget.hide()
+        self.ctrl_buttons.widget.hide()
 
     def mode_edit(self):
-        self.button_add_sample.setEnabled(False)
-        self.button_edit_sample.setEnabled(False)
+        self.top_buttons.btn_add.setEnabled(True)
+        self.top_buttons.btn_edt.setEnabled(True)
         self.sample_selector_widget.setEnabled(False)
-        for widget_grp in self.sample_info_widgets_list:
+        for widget_grp in self.sample_info.widgets_list:
             widget_grp.val_wid.hide()
             widget_grp.edt_wid.show()
-        self.sample_info_button_row_widget.show()
+        self.ctrl_buttons.widget.show()
 
     def display_sample_info(self, item):
         self.mode_view()
         sample_id = item.text()
-        self.sample_id_widgets.val_wid.setText(sample_id)
+        self.sample_info.id_widgets.val_wid.setText(sample_id)
         sample = self.proposal.samples[sample_id]
         for row_index, (key, val) in enumerate(sample.annotations.items()):
-            self.sample_info_widgets_list[row_index].key_wid.setText(key)
-            self.sample_info_widgets_list[row_index].val_wid.setText(str(val))
+            self.sample_info.widgets_list[row_index].key_wid.setText(key)
+            self.sample_info.widgets_list[row_index].val_wid.setText(str(val))
 
     def add_sample(self):
         self.mode_edit()
         self.sample_selector_widget.clearSelection()
-        for widget_grp in self.sample_info_widgets_list:
+        self.sample_info.id_widgets.val_wid.hide()
+        self.sample_info.id_widgets.edt_wid.show()
+        for widget_grp in self.sample_info.widgets_list:
             widget_grp.edt_wid.setText("")
-        self.sample_id_widgets.val_wid.hide()
-        self.sample_id_widgets.edt_wid.show()
+
+    def get_current_value(self, row_index):
+        return self.sample_info.widgets_list[row_index].val_wid.text()
 
     def edit_sample(self):
         self.mode_edit()
-        self.sample_id_widgets.val_wid.show()
-        self.sample_id_widgets.edt_wid.hide()
-        for row_index, widget_grp in enumerate(self.sample_info_widgets_list):
-            current_val = self.sample_info_widgets_list[
-                row_index
-            ].val_wid.text()
-            self.sample_info_widgets_list[row_index].edt_wid.setText(
-                current_val
+        self.sample_info.id_widgets.val_wid.show()
+        self.sample_info.id_widgets.edt_wid.hide()
+        for row_index, widget_grp in enumerate(self.sample_info.widgets_list):
+            self.sample_info.widgets_list[row_index].edt_wid.setText(
+                self.get_current_value(row_index)
             )
 
     def get_next_row_index(self):
-        n_saved = len(self.sample_info_widgets_list)
-        n_in_edit = len(self.sample_info_widgets_in_edit)
+        n_saved = len(self.sample_info.widgets_list)
+        n_in_edit = len(self.sample_info.widgets_in_edit)
         return n_saved + n_in_edit + 1
 
     def add_info_field(self):
         row_index = self.get_next_row_index()
         new_widget_grp = AnnotationWidgetGroup()
+        new_widget_grp.add_and_align_left(self.sample_info.info_layout, row_index)
         new_widget_grp.key_wid.hide()
         new_widget_grp.val_wid.hide()
-        self.sample_info_widgets_in_edit.append(new_widget_grp)
-        add_wid_grid_left_align(
-            new_widget_grp.key_wid,
-            self.sample_info_widgets_layout,
-            row_index,
-            KEY_COLUMN,
-        )
-        add_wid_grid_left_align(
-            new_widget_grp.key_wid_editable,
-            self.sample_info_widgets_layout,
-            row_index,
-            KEY_COLUMN,
-        )
-        add_wid_grid_left_align(
-            new_widget_grp.val_wid,
-            self.sample_info_widgets_layout,
-            row_index,
-            VAL_COLUMN,
-        )
-        add_wid_grid_left_align(
-            new_widget_grp.edt_wid,
-            self.sample_info_widgets_layout,
-            row_index,
-            EDT_COLUMN,
-        )
+        self.sample_info.widgets_in_edit.append(new_widget_grp)
 
     def cancel_add_or_edit(self):
         for widget_grp in self.sample_info_widgets_in_edit:
