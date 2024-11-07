@@ -306,7 +306,11 @@ class SpectrometerControl(QWidget):
     def update_readback_values(self):
         if not self.selected_device:
             return
-        self.parent.client.eval(f"{self.selected_device}.pollParams()")
+
+        try:
+            self.parent.client.eval(f"{self.selected_device}.pollParams()")
+        except NameError:
+            return
 
         param_info = self.parent.client.getDeviceParams(self.selected_device)
         if not param_info:
