@@ -25,7 +25,7 @@ ALLOWED_INSTRUMENT_NAMES = [
     "bifrost",
 ]
 if environ.get("NICOS_LEGACY_MODE") == "1":
-    ALLOWED_INSTRUMENT_NAMES.append
+    ALLOWED_INSTRUMENT_NAMES.append("")
 
 class NexusStructureProvider(Device):
     parameter_overrides = {
