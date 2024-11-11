@@ -1,6 +1,5 @@
 import copy
 import json
-from os import environ
 
 from nicos import session
 from nicos.core import (
@@ -25,6 +24,7 @@ ALLOWED_INSTRUMENT_NAMES = [
     "bifrost",
     ""
 ]
+
 
 class NexusStructureProvider(Device):
     parameter_overrides = {
