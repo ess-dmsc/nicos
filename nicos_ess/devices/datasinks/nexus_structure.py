@@ -23,9 +23,8 @@ ALLOWED_INSTRUMENT_NAMES = [
     "ymir",
     "nmx",
     "bifrost",
+    ""
 ]
-if environ.get("NICOS_LEGACY_MODE") == "1":
-    ALLOWED_INSTRUMENT_NAMES.append("")
 
 class NexusStructureProvider(Device):
     parameter_overrides = {
