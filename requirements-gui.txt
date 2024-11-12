@@ -11,8 +11,10 @@ PyQtWebEngine>=5.15.5;sys_platform=='win32'
 QScintilla>=2.12;sys_platform=='win32'
 
 # Mac: Qt 6 is available for both arm64 and intel
-PyQt6>=6.3.1;sys_platform=='darwin'
-PyQt6-WebEngine>=6.3.1;sys_platform=='darwin'
+PyQt6==6.6.1;sys_platform=='darwin'
+PyQt6-Qt6==6.6.2;sys_platform=='darwin'
+PyQt6-WebEngine==6.6.0;sys_platform=='darwin'
+PyQt6-WebEngine-Qt6==6.6.0;sys_platform=='darwin'
 PyQt6-QScintilla>=2.13;sys_platform=='darwin'
 
 confluent-kafka
