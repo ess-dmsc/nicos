@@ -334,12 +334,13 @@ class SamplePanel(QWidget):
     def confirm_edit_clicked(self):
         sample_id = self.sample_selector.currentItem().text()
         sample = self.proposal.samples[sample_id]
-        self.save_edited_annotations(sample)
-        self.save_new_annotations(sample)
-        self.set_annotation_values(sample_id)
-        self.reset_existing_annotation_values_to_edit()
-        self.reset_new_annotation_values_to_edit()
-        self.show_sample_view_mode()
+        if self.check_all_new_annotations_have_keys():
+            self.save_edited_annotations(sample)
+            self.save_new_annotations(sample)
+            self.set_annotation_values(sample_id)
+            self.reset_existing_annotation_values_to_edit()
+            self.reset_new_annotation_values_to_edit()
+            self.show_sample_view_mode()
 
     def cancel_edit_clicked(self):
         self.reset_existing_annotation_values_to_edit()
@@ -484,9 +485,7 @@ class SamplePanel(QWidget):
 
     def save_new_annotations(self, sample):
         if len(self.sample_annotations.new_annotation_rows) > 0:
-            for i, annotation_row in enumerate(
-                self.sample_annotations.new_annotation_rows
-            ):
+            for annotation_row in self.sample_annotations.new_annotation_rows:
                 new_key = annotation_row.edit_key_widget.text()
                 new_value = annotation_row.edit_value_widget.text()
                 sample.set_annotation(new_key, new_value)
@@ -494,7 +493,27 @@ class SamplePanel(QWidget):
                 annotation_row.remove(
                     self.sample_annotations.new_annotations_layout
                 )
-                del self.sample_annotations.new_annotation_rows[i]
+            self.sample_annotations.new_annotation_rows = []
+
+    def check_all_new_annotations_have_keys(self):
+        checks_ok = True
+        for annotation_row in self.sample_annotations.new_annotation_rows:
+            new_key = annotation_row.edit_key_widget.text()
+            if new_key == "":
+                self.display_empty_key_error(annotation_row)
+                checks_ok = False
+            else:
+                self.reset_empty_key_error(annotation_row)
+        return checks_ok
+
+
+    def display_empty_key_error(self, annotation_row):
+        annotation_row.info_message.setText(
+            "Please add a name for the annotation"
+        )
+
+    def reset_empty_key_error(self, annotation_row):
+        annotation_row.info_message.setText("")
 
     def discard_new_annotations(self):
         if len(self.sample_annotations.new_annotation_rows) > 0:
@@ -503,6 +522,8 @@ class SamplePanel(QWidget):
                     self.sample_annotations.new_annotations_layout
                 )
                 self.sample_annotations.new_annotation_rows = []
+
+
 
     def check_unique_sample_id(self, sample_id):
         if sample_id == "":
