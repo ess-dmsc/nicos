@@ -32,19 +32,26 @@ devices = dict(
         sample="Sample",
         cache_filepath="/opt/nicos-data/cached_proposals.json",
     ),
+    pnp_listener=device(
+        "nicos_ess.devices.pnp_listener.UDPHeartbeatsManager",
+        description="Listens for PnP heartbeats",
+        port=24601,
+    ),
     conssink=device("nicos_ess.devices.datasinks.console_scan_sink.ConsoleScanSink"),
     daemonsink=device("nicos.devices.datasinks.DaemonSink"),
     liveview=device("nicos.devices.datasinks.LiveViewSink"),
     KafkaForwarderStatus=device(
         "nicos_ess.devices.forwarder.EpicsKafkaForwarder",
         description="Monitors the status of the Forwarder",
-        statustopic="bifrost_forwarder_status",
+        statustopic="bifrost_forwarder_dynamic_status",
+        config_topic="bifrost_forwarder_dynamic_config",
         brokers=configdata("config.KAFKA_BROKERS"),
     ),
     NexusStructure_Basic=device(
         "nicos_ess.devices.datasinks.nexus_structure.NexusStructureJsonFile",
         description="Provides the NeXus structure",
-        nexus_config_path="nicos_ess/bifrost/nexus/bifrost_basic.json",
+        nexus_config_path="nexus-json-templates/bifrost/bifrost-dynamic.json",
+        instrument_name="bifrost",
         visibility=(),
     ),
     NexusStructure=device(

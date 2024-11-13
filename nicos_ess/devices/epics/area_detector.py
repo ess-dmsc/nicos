@@ -1,62 +1,33 @@
-# *****************************************************************************
-# NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
-#
-# This program is free software; you can redistribute it and/or modify it under
-# the terms of the GNU General Public License as published by the Free Software
-# Foundation; either version 2 of the License, or (at your option) any later
-# version.
-#
-# This program is distributed in the hope that it will be useful, but WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-# FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
-# details.
-#
-# You should have received a copy of the GNU General Public License along with
-# this program; if not, write to the Free Software Foundation, Inc.,
-# 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-#
-# Module authors:
-#   Kenan Muric <kenan.muric@ess.eu>
-#   Jonas Petersson <jonas.petersson@ess.eu>
-#
-# *****************************************************************************
 import threading
 import time
 from enum import Enum
 
 import numpy
 from streaming_data_types import deserialise_ADAr, deserialise_ad00
-from streaming_data_types.utils import get_schema
 
 from nicos import session
-from nicos.commands.basic import sleep
 from nicos.core import (
     LIVE,
     SIMULATION,
     ArrayDesc,
-    Attach,
     CacheError,
-    Device,
     Measurable,
     Override,
     Param,
     Value,
     floatrange,
-    host,
-    listof,
     multiStatus,
     oneof,
     pvname,
     status,
     usermethod,
+    Attach,
 )
 from nicos.devices.epics.pva import EpicsDevice
 from nicos.devices.epics.status import SEVERITY_TO_STATUS, STAT_TO_STATUS
 from nicos.devices.generic import Detector, ImageChannelMixin, ManualSwitch
-from nicos.utils import byteBuffer
-
-from nicos_ess.devices.kafka.consumer import KafkaSubscriber
+from nicos.utils import byteBuffer, createThread
+from nicos_ess.devices.epics.pva import EpicsMappedMoveable, EpicsAnalogMoveable
 
 deserialiser_by_schema = {
     "ADAr": deserialise_ADAr,
@@ -91,11 +62,10 @@ class ImageMode(Enum):
     CONTINUOUS = 2
 
 
-class ADKafkaStatus:
-    CONNECTED = 0
-    CONNECTING = 1
-    DISCONNECTED = 2
-    ERROR = 3
+class CoolingMode(Enum):
+    OFF = 0
+    ON = 1
+    MAX = 2
 
 
 class ImageType(ManualSwitch):
@@ -161,142 +131,32 @@ class ImageType(ManualSwitch):
         self.move(INVALID)
 
 
-class ADKafkaPlugin(EpicsDevice, Device):
-    """
-    Device that allows to configure the EPICS ADPluginKafka
-    """
-
-    parameters = {
-        "kafkapv": Param("EPICS prefix", type=pvname, mandatory=True),
-        "brokerpv": Param(
-            "PV with the Kafka broker address", type=pvname, mandatory=True
-        ),
-        "topicpv": Param("PV with the Kafka topic", type=pvname, mandatory=True),
-        "statuspv": Param(
-            "PV with the status of the Kafka connection",
-            type=pvname or None,
-            mandatory=False,
-            default=None,
-        ),
-        "msgpv": Param(
-            "PV with further message from Kafka",
-            type=pvname or None,
-            mandatory=False,
-            default=None,
-        ),
-        "sourcepv": Param("PV with the Kafka source", type=pvname, mandatory=True),
-    }
-
-    def _get_pv_parameters(self):
-        """
-        Implementation of inherited method to automatically account for fields
-        present in area detector record.
-
-        :return: List of PV aliases.
-        """
-        pvs = ["brokerpv", "topicpv"]
-        if self.statuspv:
-            pvs.append("statuspv")
-        if self.msgpv:
-            pvs.append("msgpv")
-        pvs.append("sourcepv")
-        return pvs
-
-    def _get_pv_name(self, pvparam):
-        """
-        Implementation of inherited method that translates between PV aliases
-        and actual PV names. Automatically adds a prefix to the PV name
-        according to the kafkapv parameter.
-
-        :param pvparam: PV alias.
-        :return: Actual PV name.
-        """
-        return self.kafkapv + (getattr(self, pvparam) or "")
-
-    @property
-    def broker(self):
-        try:
-            result = self._get_pv("brokerpv")
-        except Exception as e:
-            result = e
-        return result
-
-    @property
-    def topic(self):
-        try:
-            result = self._get_pv("topicpv")
-        except Exception as e:
-            result = e
-        return result
-
-    def doStatus(self, maxage=0):
-        message = self._get_status_message()
-
-        if not self.broker:
-            return status.ERROR, "Empty broker"
-        if not self.topic:
-            return status.ERROR, "Empty topic"
-
-        if self.msgpv:
-            message = self._get_pv("msgpv") or message
-
-        if self.statuspv:
-            st = self._get_pv("statuspv")
-            if st == ADKafkaStatus.CONNECTING:
-                return status.WARN, "Connecting"
-            if st != ADKafkaStatus.CONNECTED:
-                return status.ERROR, message
-
-        return status.OK, message
-
-    def _get_status_message(self):
-        """
-        Get the status message from the PluginKafka if the PV exists.
-
-        :return: The status message if it exists, otherwise an empty string.
-        """
-        if not self.msgpv:
-            return ""
-
-        return self._get_pv("msgpv", as_string=True)
-
-    def _get_source(self):
-        try:
-            result = self._get_pv("sourcepv")
-        except Exception as e:
-            result = e
-        return result
-
-    def get_topic_and_source(self):
-        return self.topic, self._get_source()
-
-
 class AreaDetector(EpicsDevice, ImageChannelMixin, Measurable):
     """
-    Device that controls and acquires data from an area detector that uses
-    the Kafka plugin for area detectors.
+    Device that controls and acquires data from an area detector.
     """
 
     parameters = {
         "pv_root": Param("Area detector EPICS prefix", type=pvname, mandatory=True),
+        "image_pv": Param("Image PV name", type=pvname, mandatory=True),
         "iscontroller": Param(
             "If this channel is an active controller",
             type=bool,
             settable=True,
             default=True,
         ),
-        "image_topic": Param(
-            "Topic where the image is.",
+        "topicpv": Param(
+            "Topic pv name where the image is.",
             type=str,
             mandatory=True,
-            settable=True,
+            settable=False,
             default=False,
         ),
-        "brokers": Param(
-            "Kafka broker for the images.",
-            type=listof(host(defaultport=9092)),
+        "sourcepv": Param(
+            "Source pv name for the image data on the topic.",
+            type=str,
             mandatory=True,
-            settable=True,
+            settable=False,
             default=False,
         ),
         "imagemode": Param(
@@ -356,15 +216,10 @@ class AreaDetector(EpicsDevice, ImageChannelMixin, Measurable):
 
     _record_fields = {}
 
-    attached_devices = {
-        "ad_kafka_plugin": Attach(
-            "Area detector Kafka plugin", ADKafkaPlugin, optional=False
-        ),
-    }
-
     _image_array = numpy.zeros((10, 10))
     _detector_collector_name = ""
-    _kafka_subscriber = None
+    _last_update = 0
+    _plot_update_delay = 2.0
 
     def doPreinit(self, mode):
         if mode == SIMULATION:
@@ -375,19 +230,10 @@ class AreaDetector(EpicsDevice, ImageChannelMixin, Measurable):
         self._record_fields.update(self._control_pvs)
         self._set_custom_record_fields()
         EpicsDevice.doPreinit(self, mode)
-        self._kafka_subscriber = KafkaSubscriber(self.brokers)
         self._image_processing_lock = threading.Lock()
 
     def doPrepare(self):
         self._update_status(status.BUSY, "Preparing")
-        self._kafka_subscriber._stoprequest = False
-        try:
-            self._kafka_subscriber.subscribe(
-                [self.image_topic], self.new_messages_callback
-            )
-        except Exception as error:
-            self._update_status(status.ERROR, str(error))
-            raise
         self._update_status(status.OK, "")
         self.arraydesc = self.arrayInfo()
 
@@ -410,12 +256,21 @@ class AreaDetector(EpicsDevice, ImageChannelMixin, Measurable):
         self._record_fields["array_rate_rbv"] = "ArrayRate_RBV"
         self._record_fields["acquire"] = "Acquire"
         self._record_fields["acquire_status"] = "AcquireBusy"
+        self._record_fields["image_pv"] = self.image_pv
+        self._record_fields["topicpv"] = self.topicpv
+        self._record_fields["sourcepv"] = self.sourcepv
 
     def _get_pv_parameters(self):
-        return set(self._record_fields)
+        return set(self._record_fields) | set(["image_pv", "topicpv", "sourcepv"])
 
     def _get_pv_name(self, pvparam):
         pv_name = self._record_fields.get(pvparam)
+        if "image_pv" == pvparam:
+            return self.image_pv
+        if "topicpv" == pvparam:
+            return self.topicpv
+        if "sourcepv" == pvparam:
+            return self.sourcepv
         if pv_name:
             return self.pv_root + pv_name
         return getattr(self, pvparam)
@@ -429,8 +284,32 @@ class AreaDetector(EpicsDevice, ImageChannelMixin, Measurable):
 
     def update_arraydesc(self):
         shape = self._get_pv("size_y"), self._get_pv("size_x")
+        binning_factor = int(self.binning[0])
+        shape = (shape[0] // binning_factor, shape[1] // binning_factor)
+        self._plot_update_delay = (shape[0] * shape[1]) / 2097152.0
         data_type = data_type_t[self._get_pv("data_type", as_string=True)]
         self.arraydesc = ArrayDesc(self.name, shape=shape, dtype=data_type)
+
+    def status_change_callback(
+        self, name, param, value, units, limits, severity, message, **kwargs
+    ):
+        if param == "readpv" and value != 0:
+            if time.monotonic() >= self._last_update + self._plot_update_delay:
+                _thread = createThread(f"get_image_{time.time_ns()}", self.get_image)
+
+        EpicsDevice.status_change_callback(
+            self, name, param, value, units, limits, severity, message, **kwargs
+        )
+
+    def doIsCompleted(self):
+        _thread = createThread(f"get_image_{time.time_ns()}", self.get_image)
+
+    def get_image(self):
+        dataarray = self._get_pv("image_pv")
+        shape = self.arrayInfo().shape
+        dataarray = dataarray.reshape(shape)
+        self.putResult(LIVE, dataarray, time.time())
+        self._last_update = time.monotonic()
 
     def putResult(self, quality, data, timestamp):
         self._image_array = data
@@ -455,24 +334,8 @@ class AreaDetector(EpicsDevice, ImageChannelMixin, Measurable):
                 datadescs=datadesc,
             )
             labelbuffers = []
-            session.updateLiveData(parameters, databuffer, labelbuffers)
-
-    def new_messages_callback(self, messages):
-        message = messages[0]
-        timestamp = message[0][1]
-        value = message[1]
-        approx_image_size = numpy.sqrt(len(value) / 2)
-        sleep_time = 2 * (approx_image_size / 2048)
-
-        with self._image_processing_lock:
-            if deserialiser := deserialiser_by_schema.get(get_schema(value)):
-                image = deserialiser(value).data
-                self.putResult(LIVE, image, timestamp)
-
-        sleep(sleep_time)
-        # Jump to the latest message as more messages are produced faster than
-        # can be processed
-        self._kafka_subscriber.consumer.seek_to_end()
+            with self._image_processing_lock:
+                session.updateLiveData(parameters, databuffer, labelbuffers)
 
     def doSetPreset(self, **preset):
         if not preset:
@@ -546,7 +409,6 @@ class AreaDetector(EpicsDevice, ImageChannelMixin, Measurable):
         self.doStop()
 
     def doStop(self):
-        self._kafka_subscriber.stop_consuming()
         self._put_pv("acquire", 0)
 
     def doRead(self, maxage=0):
@@ -636,10 +498,126 @@ class AreaDetector(EpicsDevice, ImageChannelMixin, Measurable):
         self._put_pv("binning_factor", value)
 
     def get_topic_and_source(self):
-        return self._attached_ad_kafka_plugin.get_topic_and_source()
+        return self._get_pv("topicpv", as_string=True), self._get_pv(
+            "sourcepv", as_string=True
+        )
 
-    def doShutdown(self):
-        self._kafka_subscriber.close()
+
+class OrcaFlash4(AreaDetector):
+    """
+    Device that controls and acquires data from an Orca Flash 4 area detector.
+    """
+
+    parameters = {
+        "chip_coolingmode": Param(
+            "Cooling mode of the camera.",
+            type=oneof("off", "on", "max"),
+            settable=True,
+            volatile=True,
+        ),
+        "chip_temperature": Param(
+            "Temperature of the camera.", settable=False, volatile=True
+        ),
+        "watercooler_mode": Param(
+            "Set if the watercooler is on or off.",
+            settable=True,
+            volatile=True,
+            type=oneof("ON", "OFF"),
+        ),
+        "watercooler_temperature": Param(
+            "Temperature of the water cooling the camera.", settable=True, volatile=True
+        ),
+    }
+
+    attached_devices = {
+        "watercooler_mode": Attach(
+            "Run mode on/off", EpicsMappedMoveable, optional=True
+        ),
+        "watercooler_temperature": Attach(
+            "Temperature of the water", EpicsAnalogMoveable, optional=True
+        ),
+    }
+
+    _control_pvs = {
+        "size_x": "SizeX",
+        "size_y": "SizeY",
+        "min_x": "MinX",
+        "min_y": "MinY",
+        "bin_x": "BinX",
+        "bin_y": "BinY",
+        "acquire_time": "AcquireTime",
+        "acquire_period": "AcquirePeriod",
+        "num_images": "NumImages",
+        "num_exposures": "NumExposures",
+        "image_mode": "ImageMode",
+    }
+
+    def _set_custom_record_fields(self):
+        AreaDetector._set_custom_record_fields(self)
+        self._record_fields["chip_temperature"] = "Temperature-R"
+        self._record_fields["cooling_mode"] = "SensorCooler-S"
+        self._record_fields["cooling_mode_rbv"] = "SensorCooler-RB"
+
+    def doReadChip_Coolingmode(self):
+        return CoolingMode(self._get_pv("cooling_mode_rbv")).name.lower()
+
+    def doWriteChip_Coolingmode(self, value):
+        if self.watercooler_mode.upper() == "OFF" and value.upper() != "OFF":
+            if self._attached_watercooler_mode is None:
+                self.log.warning(
+                    f"Cannot set chip cooling mode to {value} "
+                    f"because there is no attached cooler."
+                )
+                return
+
+            self.log.warning(
+                f"Cannot set chip cooling mode to {value} if water cooler is OFF."
+            )
+            return
+
+        self._put_pv("cooling_mode", CoolingMode[value.upper()].value)
+
+    def doReadChip_Temperature(self):
+        return self._get_pv("chip_temperature")
+
+    def doReadWatercooler_Mode(self):
+        if self._attached_watercooler_mode is not None:
+            watercooler_mode = self._attached_watercooler_mode.read()
+
+            if (
+                self.chip_coolingmode.upper() != "OFF"
+                and watercooler_mode.upper() == "OFF"
+            ):
+                self.log.warning(
+                    f"The chip cooling mode is {self.chip_coolingmode}. "
+                    f"Turn it off since the water cooler is off."
+                )
+                self.chip_coolingmode = "off"
+
+            return watercooler_mode
+
+        # We don't know the value but safe to assume it is off
+        return "OFF"
+
+    def doWriteWatercooler_Mode(self, value):
+        if value.upper() == "OFF" and self.chip_coolingmode.upper() != "OFF":
+            self.log.warning(
+                f"Cannot turn off water cooler if cooling mode "
+                f"is {self.chip_coolingmode}."
+            )
+            return
+
+        if self._attached_watercooler_mode is not None:
+            self._attached_watercooler_mode.start(value)
+
+    def doReadWatercooler_Temperature(self):
+        if self._attached_watercooler_temperature is not None:
+            return self._attached_watercooler_temperature.read()
+        return -273.15
+
+    def doWriteWatercooler_Temperature(self, value):
+        if self._attached_watercooler_temperature is not None:
+            self._attached_watercooler_temperature.start(value)
 
 
 class AreaDetectorCollector(Detector):

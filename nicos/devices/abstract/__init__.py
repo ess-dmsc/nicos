@@ -120,15 +120,15 @@ class Axis(HasOffset, HasPrecision, HasLimits, Moveable):
 
 
 class CanReference(DeviceMixinBase):
-    """Mixin class for axis devices to provide a reference drive function.
+    """Mixin class for axis devices to provide a reference drive (homing) function.
 
-    This reference drive will be used by the `reference` user command.
+    This reference drive will be used by the `home` user command.
 
-    .. automethod:: reference
+    .. automethod:: home
 
     .. method:: doReference(*args)
 
-       This method is called by `reference` to do the reference drive.  It
+       This method is called by `home` to do the reference drive.  It
        should initiate a reference drive, wait for its completion and set the
        device position to the "reference position".  It can return the new
        current position after referencing, or None.
@@ -136,13 +136,13 @@ class CanReference(DeviceMixinBase):
 
     @usermethod
     def reference(self, *args):
-        """Do a reference drive of the axis."""
+        """Home the device, same as do a reference drive of the axis."""
         if self._mode == SLAVE:
-            raise ModeError(self, "referencing not possible in slave mode")
+            raise ModeError(self, "homing not possible in slave mode")
         elif self._sim_intercept:
             return
         elif hasattr(self, "fixed") and self.fixed:
-            self.log.error("device fixed, not referencing: %s", self.fixed)
+            self.log.error("device fixed, not homing: %s", self.fixed)
             return
         newpos = self.doReference(*args)
         if newpos is None:

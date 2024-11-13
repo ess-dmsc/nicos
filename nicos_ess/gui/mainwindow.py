@@ -1,28 +1,3 @@
-# *****************************************************************************
-# NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
-#
-# This program is free software; you can redistribute it and/or modify it under
-# the terms of the GNU General Public License as published by the Free Software
-# Foundation; either version 2 of the License, or (at your option) any later
-# version.
-#
-# This program is distributed in the hope that it will be useful, but WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-# FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
-# details.
-#
-# You should have received a copy of the GNU General Public License along with
-# this program; if not, write to the Free Software Foundation, Inc.,
-# 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-#
-# Module authors:
-#   Georg Brandl <g.brandl@fz-juelich.de>
-#   Christian Felder <c.felder@fz-juelich.de>
-#   Michele Brambilla <michele.brambilla@psi.ch>
-#
-# *****************************************************************************
-
 """NICOS GUI main window."""
 
 import sys
@@ -39,7 +14,6 @@ from nicos.clients.gui.config import tabbed
 from nicos.clients.gui.data import DataHandler
 from nicos.clients.gui.dialogs.debug import DebugConsole
 from nicos.clients.gui.dialogs.error import ErrorDialog
-from nicos.clients.gui.dialogs.pnp import PnPSetupQuestion
 from nicos.clients.gui.dialogs.watchdog import WatchdogDialog
 from nicos.clients.gui.panels import AuxiliaryWindow, createWindowItem
 from nicos.clients.gui.panels.console import ConsolePanel
@@ -95,6 +69,7 @@ from nicos.utils import (
 
 from nicos_ess.gui.dialogs.auth import ConnectionDialog
 from nicos_ess.gui.dialogs.settings import SettingsDialog
+from nicos_ess.gui.panels.setups import SetupsPanel
 from nicos_ess.gui.utils import get_icon, root_path
 
 try:
@@ -102,9 +77,52 @@ try:
 except ImportError:
     HelpWindow = None
 
-INSTRUMENT = "instrument"
-EXPERIMENT = "experiment"
-PROPOSAL_ID = "proposal_ID"
+
+class ToolbarItem:
+    INSTRUMENT = {
+        "name": "instrument",
+        "location": "row_1",
+        "label": "Instrument",
+        "data_source": "session.instrument",
+        "stringify": False,
+        "upper_case": True,
+    }
+    EXPERIMENT = {
+        "name": "experiment",
+        "location": "row_1",
+        "label": "     Experiment",
+        "data_source": "session.experiment.title",
+        "stringify": False,
+    }
+    PROPOSAL_ID = {
+        "name": "proposal_ID",
+        "location": "row_2",
+        "label": "Proposal ID",
+        "data_source": "session.experiment.proposal",
+        "stringify": False,
+    }
+    RUN_NUMBER = {
+        "name": "run_number",
+        "location": "row_2",
+        "label": "Run Number",
+        "data_source": "session.experiment.get_current_run_number()",
+        "stringify": True,
+    }
+    RUN_TITLE = {
+        "name": "run_title",
+        "location": "row_1",
+        "label": "     Run Title",
+        "data_source": "session.experiment.run_title",
+        "stringify": False,
+    }
+
+
+ALL_TOOLBAR_ITEMS = [
+    ToolbarItem.INSTRUMENT,
+    ToolbarItem.PROPOSAL_ID,
+    ToolbarItem.RUN_NUMBER,
+    ToolbarItem.RUN_TITLE,
+]
 
 
 def decolor_logo(pixmap, color):
@@ -147,8 +165,10 @@ class StatusWidget(QWidget):
         self._create_resources()
 
         # Example statuses
-        # self.add_status("Shutter Status", 'shutter/status', 'CLOSED', status_type='icon_text')
-        # self.add_status("Proton Charge", 'proton/charge', '0 µC', status_type='text')
+        # self.add_status(
+        #     "Shutter Status", "shutter/status", "CLOSED", status_type="icon_text"
+        # )
+        # self.add_status("Proton Charge", "proton/charge", "0 µC", status_type="text")
 
         self.grid_layout.setColumnStretch(self.grid_layout.columnCount() + 1, 1)
 
@@ -360,7 +380,7 @@ class MainWindow(DlgUtils, QMainWindow):
         self.actionUser.setIconVisibleInMenu(True)
         self.actionExpert.setEnabled(self.client.isconnected)
         self.actionEmergencyStop.setEnabled(self.client.isconnected)
-        self._init_toolbar_labels(INSTRUMENT, EXPERIMENT, PROPOSAL_ID)
+        self._init_toolbar_labels(*ALL_TOOLBAR_ITEMS)
         self.add_status_widget()
         self.on_client_disconnected()
 
@@ -389,14 +409,16 @@ class MainWindow(DlgUtils, QMainWindow):
         toolBarRow1 = self.findChild(QWidget, "toolBarRow1")
         toolBarRow2 = self.findChild(QWidget, "toolBarRow2")
 
-        row1_layout = toolBarRow1.layout()
-        row1_layout.setContentsMargins(0, 10, 0, 0)
-        row2_layout = toolBarRow2.layout()
-        row2_layout.setContentsMargins(0, 0, 0, 10)
+        row_1_layout = toolBarRow1.layout()
+        row_1_layout.setContentsMargins(0, 10, 0, 0)
+        row_2_layout = toolBarRow2.layout()
+        row_2_layout.setContentsMargins(0, 0, 0, 10)
 
         self.toolBarMain.addWidget(toolBarLabels)
 
-        for name in args:
+        for item in args:
+            name = item.get("name")
+            location = item.get("location")
             label, text = QLabel(), QLabel()
             label.setSizePolicy(
                 QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Preferred
@@ -404,16 +426,16 @@ class MainWindow(DlgUtils, QMainWindow):
             text.setSizePolicy(
                 QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.Preferred
             )
-            if name == PROPOSAL_ID:
-                label.setStyleSheet("font-size: 14pt; " "font-weight: bold")
-                text.setStyleSheet("font-size: 14pt")
-                row2_layout.addWidget(label)
-                row2_layout.addWidget(text)
-            else:
+            if location == "row_1":
                 label.setStyleSheet("font-size: 17pt; " "font-weight: bold")
                 text.setStyleSheet("font-size: 17pt")
-                row1_layout.addWidget(label)
-                row1_layout.addWidget(text)
+                row_1_layout.addWidget(label)
+                row_1_layout.addWidget(text)
+            elif location == "row_2":
+                label.setStyleSheet("font-size: 14pt; " "font-weight: bold")
+                text.setStyleSheet("font-size: 14pt")
+                row_2_layout.addWidget(label)
+                row_2_layout.addWidget(text)
 
             setattr(self, f"{name}_label", label)
             setattr(self, f"{name}_text", text)
@@ -450,18 +472,19 @@ class MainWindow(DlgUtils, QMainWindow):
         self.toolBarRight.addWidget(self.status_widget)
 
     def update_text(self, *args):
-        for name in args:
+        max_text_length = 50
+        for item in args:
+            name = item.get("name")
+
             label = getattr(self, f"{name}_label")
             text = getattr(self, f"{name}_text")
 
-            if name == INSTRUMENT:
-                value = self.client.eval("session.instrument", None)
-                label.setText("Instrument:")
-            elif name == PROPOSAL_ID:
-                value = self.client.eval("session.experiment.proposal", None)
-                label.setText("Proposal ID:")
-            else:
-                value = ""
+            value = self.client.eval(
+                item.get("data_source", ""),
+                None,
+                stringify=item.get("stringify", False),
+            )
+            label.setText(f"{item.get('label', '')}:")
 
             if value:
                 logo = decolor_logo(
@@ -469,7 +492,10 @@ class MainWindow(DlgUtils, QMainWindow):
                     Qt.GlobalColor.white,
                 )
                 if logo.isNull():
-                    text.setText(value.upper())
+                    if item.get("upper_case", False):
+                        text.setText(value.upper()[0:max_text_length])
+                    else:
+                        text.setText(value[0:max_text_length])
                 else:
                     text.setPixmap(
                         logo.scaledToHeight(
@@ -479,13 +505,6 @@ class MainWindow(DlgUtils, QMainWindow):
                     )
             else:
                 text.setText("UNKNOWN")
-
-    def update_experiment_text(self):
-        max_text_length = 50
-        experiment = self.client.eval("session.experiment.title", None)
-        if experiment is not None:
-            self.experiment_label.setText("     Experiment:")
-            self.experiment_text.setText(experiment[0:max_text_length])
 
     @staticmethod
     def setQSS(style_file):
@@ -497,10 +516,9 @@ class MainWindow(DlgUtils, QMainWindow):
 
     def _update_toolbar_info(self):
         if self.current_status != "disconnected":
-            self.update_text(INSTRUMENT, PROPOSAL_ID)
-            self.update_experiment_text()
+            self.update_text(*ALL_TOOLBAR_ITEMS)
         else:
-            self.clear_label(INSTRUMENT, EXPERIMENT, PROPOSAL_ID)
+            self.clear_label(*ALL_TOOLBAR_ITEMS)
 
     def _update_status_text(self):
         if self.current_status == "disconnected":
@@ -511,7 +529,8 @@ class MainWindow(DlgUtils, QMainWindow):
             self.status_text.setText(self.current_status.upper())
 
     def clear_label(self, *args):
-        for name in args:
+        for item in args:
+            name = item.get("name")
             label = getattr(self, f"{name}_label")
             text = getattr(self, f"{name}_text")
             label.clear()
@@ -908,17 +927,14 @@ class MainWindow(DlgUtils, QMainWindow):
             )
 
     def on_client_plugplay(self, data):
-        windowkey = data[0:2]  # (mode, setupname)
-        if windowkey in self.pnpWindows:
-            self.pnpWindows[windowkey].activateWindow()
-        else:
-            window = PnPSetupQuestion(self, self.client, data)
-            self.pnpWindows[windowkey] = window
-            window.closed.connect(self.on_pnpWindow_closed)
-            window.show()
+        hide = False if data[0] == "added" else True
+        name = data[1]
 
-    def on_pnpWindow_closed(self, window):
-        self.pnpWindows.pop(window.data[0:2], None)
+        for panel in self.panels:
+            if isinstance(panel, SetupsPanel):
+                setups_panel = panel
+                setups_panel.toggle_pnp_setup_visibility(name, hide)
+                break
 
     def on_client_watchdog(self, data):
         if self.watchdogWindow is None:

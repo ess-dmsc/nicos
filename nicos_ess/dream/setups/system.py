@@ -37,13 +37,15 @@ devices = dict(
     KafkaForwarderStatus=device(
         "nicos_ess.devices.forwarder.EpicsKafkaForwarder",
         description="Monitors the status of the Forwarder",
-        statustopic="status_topic",
+        statustopic="dream_forwarder_dynamic_status",
+        config_topic="dream_forwarder_dynamic_config",
         brokers=configdata("config.KAFKA_BROKERS"),
     ),
     NexusStructure=device(
         "nicos_ess.devices.datasinks.nexus_structure.NexusStructureJsonFile",
         description="Provides the NeXus structure",
         nexus_config_path="nicos_ess/dream/nexus/nexus_config.json",
+        instrument_name="dream",
         visibility=(),
     ),
     FileWriterStatus=device(

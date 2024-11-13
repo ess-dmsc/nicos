@@ -1,30 +1,4 @@
-# *****************************************************************************
-# NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
-#
-# This program is free software; you can redistribute it and/or modify it under
-# the terms of the GNU General Public License as published by the Free Software
-# Foundation; either version 2 of the License, or (at your option) any later
-# version.
-#
-# This program is distributed in the hope that it will be useful, but WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-# FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
-# details.
-#
-# You should have received a copy of the GNU General Public License along with
-# this program; if not, write to the Free Software Foundation, Inc.,
-# 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-#
-# Module authors:
-#   Michael Wedel <michael.wedel@esss.se>
-#   Nikhil Biyani <nikhil.biyani@psi.ch>
-#   Michael Hart <michael.hart@stfc.ac.uk>
-#   Matt Clarke <matt.clarke@ess.eu>
-#   Kenan Muric <kenan.muric@ess.eu>
-#
-# *****************************************************************************
-from nicos.core import Attach, Override, Param, Readable, Waitable, status
+from nicos.core import Attach, Override, Param, Readable, Waitable, status, listof
 from nicos.devices.abstract import MappedMoveable, Moveable
 from nicos.devices.epics.pva import EpicsDevice
 from nicos.devices.epics.status import SEVERITY_TO_STATUS, STAT_TO_STATUS
@@ -119,6 +93,12 @@ class ChopperAlarms(EpicsDevice, Readable):
 
 class EssChopperController(MappedMoveable):
     """Handles the status and hardware control for an ESS chopper system"""
+
+    parameters = {
+        "slit_edges": Param(
+            "Slit edges of the chopper", type=listof(listof(float)), default=[]
+        ),
+    }
 
     attached_devices = {
         "state": Attach("Current state of the chopper", Readable),

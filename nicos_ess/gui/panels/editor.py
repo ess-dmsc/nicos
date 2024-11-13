@@ -1,26 +1,3 @@
-# *****************************************************************************
-# NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
-#
-# This program is free software; you can redistribute it and/or modify it under
-# the terms of the GNU General Public License as published by the Free Software
-# Foundation; either version 2 of the License, or (at your option) any later
-# version.
-#
-# This program is distributed in the hope that it will be useful, but WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-# FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
-# details.
-#
-# You should have received a copy of the GNU General Public License along with
-# this program; if not, write to the Free Software Foundation, Inc.,
-# 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-#
-# Module authors:
-#   Georg Brandl <g.brandl@fz-juelich.de>
-#
-# *****************************************************************************
-
 """NICOS GUI user editor window."""
 
 import os
@@ -551,11 +528,9 @@ class EditorPanel(Panel):
                 lexer.setPaper(self.custom_back, i)
             # make keywords bold
             lexer.setFont(bold, 5)
-        else:
-            editor.setFont(self.custom_font)
-        if has_scintilla:
             lexer.setDefaultPaper(self.custom_back)
         else:
+            editor.setFont(self.custom_font)
             setBackgroundColor(editor, self.custom_back)
 
     def enableFileActions(self, on):
@@ -712,6 +687,9 @@ class EditorPanel(Panel):
         return editor
 
     def handle_mouse_move_event(self, event):
+        if not has_scintilla:
+            return
+
         if self.currentEditor not in self.error_messages:
             self.setup_error_highlighting()
             self.check_python_code()
@@ -739,12 +717,18 @@ class EditorPanel(Panel):
         return global_pos
 
     def setup_error_highlighting(self):
+        if not has_scintilla:
+            return
+
         self.check_timer = QTimer()
         self.check_timer.setSingleShot(True)
         self.check_timer.timeout.connect(self.check_python_code)
         self.currentEditor.textChanged.connect(lambda: self.check_timer.start(1000))
 
     def check_python_code(self):
+        if not has_scintilla:
+            return
+
         if not self._is_editor_and_error_checks_valid():
             return
 

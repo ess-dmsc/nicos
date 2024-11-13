@@ -1,27 +1,48 @@
 # ruff: noqa: F821
+
 description = "The area detector for YMIR"
 
+water_cooler_pv_root = "YMIR-Det1:NDet-JFL300-001:"
+
 devices = dict(
-    orca_kafka_plugin=device(
-        "nicos_ess.devices.epics.area_detector.ADKafkaPlugin",
-        description="The configuration of the Kafka plugin for the Orca camera.",
-        kafkapv="YMIR-Det1:Kfk1:",
-        brokerpv="KafkaBrokerAddress_RBV",
-        topicpv="KafkaTopic_RBV",
-        sourcepv="SourceName_RBV",
+    watercooler_mode=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
+        description="The water cooler mode.",
+        readpv=f"{water_cooler_pv_root}Mode-R",
+        writepv=f"{water_cooler_pv_root}Mode-S",
         visibility=(),
-    ),
-    orca_camera=device(
-        "nicos_ess.devices.epics.area_detector.AreaDetector",
-        description="The light tomography Orca camera.",
-        pv_root="YMIR-Det1:cam1:",
-        ad_kafka_plugin="orca_kafka_plugin",
-        image_topic="ymir_camera",
-        unit="images",
-        brokers=configdata("config.KAFKA_BROKERS"),
-        pollinterval=None,
         pva=True,
         monitor=True,
+        pollinterval=None,
+        maxage=None,
+    ),
+    watercooler_temperature=device(
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="The water cooler temperature.",
+        readpv=f"{water_cooler_pv_root}Temperature-R",
+        writepv=f"{water_cooler_pv_root}TemperatureSP0-S",
+        targetpv=f"{water_cooler_pv_root}TemperatureSP0-R",
+        visibility=(),
+        pva=True,
+        monitor=True,
+        pollinterval=None,
+        maxage=None,
+    ),
+    orca_camera=device(
+        "nicos_ess.devices.epics.area_detector.OrcaFlash4",
+        description="The light tomography Orca camera.",
+        pv_root="YMIR-Det1:cam1:",
+        image_pv="YMIR-Det1:image1:ArrayData",
+        ad_kafka_plugin="orca_kafka_plugin",
+        topicpv="YMIR-Det1:Kfk1:KafkaTopic_RBV",
+        sourcepv="YMIR-Det1:Kfk1:SourceName_RBV",
+        unit="images",
+        pva=True,
+        monitor=True,
+        pollinterval=0.5,
+        maxage=None,
+        watercooler_mode="watercooler_mode",
+        watercooler_temperature="watercooler_temperature",
     ),
     orca_image_type=device(
         "nicos_ess.devices.epics.area_detector.ImageType",

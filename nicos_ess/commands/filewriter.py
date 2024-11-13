@@ -1,34 +1,9 @@
-# *****************************************************************************
-# NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
-#
-# This program is free software; you can redistribute it and/or modify it under
-# the terms of the GNU General Public License as published by the Free Software
-# Foundation; either version 2 of the License, or (at your option) any later
-# version.
-#
-# This program is distributed in the hope that it will be useful, but WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-# FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
-# details.
-#
-# You should have received a copy of the GNU General Public License along with
-# this program; if not, write to the Free Software Foundation, Inc.,
-# 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-#
-# Module authors:
-#   AÜC Hardal <umit.hardal@ess.eu>
-#   Ebad Kamil <Ebad.Kamil@ess.eu>
-#   Matt Clarke <matt.clarke@ess.eu>
-#   Kenan Muric <kenan.muric@ess.eu>
-#   Jonas Petersson <jonas.petersson@ess.eu>
-#
-# *****************************************************************************
 from contextlib import contextmanager
 
 from nicos import session
 from nicos.commands import helparglist, usercommand
 from nicos.core import ADMIN, SIMULATION, requires
+from nicos_ess.commands.scichat import scichat_send
 
 from nicos_ess.devices.datasinks.file_writer import FileWriterControlSink
 
@@ -42,9 +17,9 @@ def _find_filewriter_dev():
 
 
 @usercommand
-@helparglist("experiment_title")
+@helparglist("run_title")
 @contextmanager
-def nexusfile_open(experiment_title=None):
+def nexusfile_open(run_title=None):
     """Command that creates a nexusfile and starts writing data to it
     for as long as your script is running within the indentation.
 
@@ -66,20 +41,20 @@ def nexusfile_open(experiment_title=None):
     is the one that was started with the first command call.
     """
     nested_call = False
-    if experiment_title is None:
-        experiment_title = session.experiment.title
+    if run_title is None:
+        run_title = session.experiment.run_title
     try:
         active_jobs = _find_filewriter_dev().get_active_jobs()
         if not active_jobs:
-            session.log.info("Setting experiment title to: %s", experiment_title)
-            start_filewriting(experiment_title)
+            session.log.info("Setting run title to: %s", run_title)
+            start_filewriting(run_title)
         else:
             #  Allow nested calls, but give a warning since it is not
             #  a preferred way of writing scripts
             session.log.warning(
                 "Filewriter already running. "
                 "Will not start a new file with title: %s",
-                experiment_title,
+                run_title,
             )
             nested_call = True
         yield
@@ -95,17 +70,23 @@ def nexusfile_open(experiment_title=None):
                 "filewriter for file with title: %s, "
                 "it will not attempt to stop the "
                 "filewriter either",
-                experiment_title,
+                run_title,
             )
 
 
 @usercommand
-@helparglist("experiment_title")
-def start_filewriting(experiment_title=None):
+@helparglist("run_title")
+def start_filewriting(run_title=None):
     """Start a file-writing job."""
-    if experiment_title is not None and session.mode != SIMULATION:
-        session.experiment.update(title=experiment_title)
+    if run_title is not None and session.mode != SIMULATION:
+        session.experiment.run_title = run_title
     _find_filewriter_dev().start_job()
+    message = (
+        "Starting filewriting\n"
+        f"  Title: {session.experiment.run_title}\n"
+        f"  Run number: {session.experiment.get_current_run_number()}"
+    )
+    scichat_send(message)
 
 
 @usercommand
@@ -116,6 +97,7 @@ def stop_filewriting(job_number=None):
     :param job_number: the job to stop, only required if more than one job.
     """
     _find_filewriter_dev().stop_job(job_number)
+    scichat_send("stopping filewriting")
 
 
 @usercommand

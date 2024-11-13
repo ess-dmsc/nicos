@@ -1,28 +1,3 @@
-# *****************************************************************************
-# NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2023 by the NICOS contributors (see AUTHORS)
-#
-# This program is free software; you can redistribute it and/or modify it under
-# the terms of the GNU General Public License as published by the Free Software
-# Foundation; either version 2 of the License, or (at your option) any later
-# version.
-#
-# This program is distributed in the hope that it will be useful, but WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-# FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
-# details.
-#
-# You should have received a copy of the GNU General Public License along with
-# this program; if not, write to the Free Software Foundation, Inc.,
-# 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-#
-# Module authors:
-#   AÜC Hardal <umit.hardal@ess.eu>
-#   Ebad Kamil <Ebad.Kamil@ess.eu>
-#   Matt Clarke <matt.clarke@ess.eu>
-#   Kenan Muric <kenan.muric@ess.eu>
-#
-# *****************************************************************************
 import copy
 import json
 import threading
@@ -48,7 +23,16 @@ from streaming_data_types.fbschemas.action_response_answ.ActionOutcome import (
 from streaming_data_types.fbschemas.action_response_answ.ActionType import ActionType
 
 from nicos import session
-from nicos.core import ADMIN, MASTER, Attach, Param, host, listof, status
+from nicos.core import (
+    ADMIN,
+    MASTER,
+    Attach,
+    Param,
+    host,
+    listof,
+    status,
+    ConfigurationError,
+)
 from nicos.core.constants import SIMULATION
 from nicos.core.device import Device
 from nicos.core.params import anytype
@@ -394,7 +378,7 @@ class FileWriterController:
             stop_time,
             nexus_structure=structure,
             broker="",
-            instrument_name="",
+            instrument_name=self._get_instrument_name(),
             run_name="",
             control_topic=self.instrument_topic,
         )
@@ -414,6 +398,19 @@ class FileWriterController:
             time.sleep(0.1)
 
         return job_id, delivery_info
+
+    def _get_instrument_name(self):
+        device = self._check_for_device("NexusStructure")
+        if device:
+            return device.instrument_name
+        self.log.warning("Could not locate instrument name from NexusStructure device")
+        return ""
+
+    def _check_for_device(self, name):
+        try:
+            return session.getDevice(name)
+        except ConfigurationError:
+            return None
 
     def request_stop(self, job_id, stop_time, service_id):
         message = serialise_6s4t(

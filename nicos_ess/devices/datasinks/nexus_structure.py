@@ -1,26 +1,3 @@
-# *****************************************************************************
-# NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
-#
-# This program is free software; you can redistribute it and/or modify it under
-# the terms of the GNU General Public License as published by the Free Software
-# Foundation; either version 2 of the License, or (at your option) any later
-# version.
-#
-# This program is distributed in the hope that it will be useful, but WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-# FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
-# details.
-#
-# You should have received a copy of the GNU General Public License along with
-# this program; if not, write to the Free Software Foundation, Inc.,
-# 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-#
-# Module authors:
-#   Matt Clarke <matt.clarke@ess.eu>
-#   Kenan Muric <kenan.muric@ess.eu>
-#
-# *****************************************************************************
 import copy
 import json
 
@@ -32,9 +9,20 @@ from nicos.core import (
     Param,
     relative_path,
     ConfigurationError,
+    oneof,
 )
 
 from nicos_ess.nexus.converter import NexusTemplateConverter
+
+ALLOWED_INSTRUMENT_NAMES = [
+    "dream",
+    "loki",
+    "tbl",
+    "odin",
+    "ymir",
+    "nmx",
+    "bifrost",
+]
 
 
 class NexusStructureProvider(Device):
@@ -61,6 +49,13 @@ class NexusStructureJsonFile(NexusStructureProvider):
             mandatory=False,
             userparam=True,
             settable=True,
+        ),
+        "instrument_name": Param(
+            "Instrument name",
+            type=oneof(*ALLOWED_INSTRUMENT_NAMES),
+            mandatory=True,
+            userparam=True,
+            settable=False,
         ),
     }
 
@@ -123,9 +118,12 @@ class NexusStructureJsonFile(NexusStructureProvider):
 
     def _insert_metadata(self, structure, metainfo, counter):
         datasets = [
-            self._create_dataset("title", metainfo[("Exp", "title")][0]),
+            self._create_dataset("title", metainfo[("Exp", "run_title")][0]),
             self._create_dataset(
                 "experiment_identifier", metainfo[("Exp", "proposal")][0]
+            ),
+            self._create_dataset(
+                "experiment_description", metainfo[("Exp", "title")][0]
             ),
             self._create_dataset("entry_identifier", str(counter)),
             self._create_dataset("entry_identifier_uuid", metainfo[("Exp", "job_id")]),
@@ -161,7 +159,8 @@ class NexusStructureJsonFile(NexusStructureProvider):
 
         if not self.area_det_collector_device:
             raise ConfigurationError(
-                "Area detector collector device not set for structure with area detector"
+                "Area detector collector device not "
+                "set for structure with area detector"
             )
 
         self._replace_area_detector_placeholder(structure)
@@ -253,16 +252,18 @@ class NexusStructureJsonFile(NexusStructureProvider):
             value = field_metainfo[0]
             dev_path = self._find_device_path(nxinstrument_structure, value)
 
+            if not dev_path:
+                session.log.debug(
+                    f"Sample field '{field_name}' cannot be linked to device "
+                    f"'{value}' since device is not in structure. Skipping."
+                )
+                continue
+
             field_dict = (
                 {field_name: f"/entry/{'/'.join(dev_path)}"}
                 if dev_path
                 else {field_name: value}
             )
-
-            if not dev_path:
-                session.log.warn(
-                    f"Sample field '{field_name}' cannot be linked to device '{value}' since device is not in structure."
-                )
 
             samples_list.extend(self._generate_samples_link_list(field_dict))
 

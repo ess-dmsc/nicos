@@ -50,6 +50,19 @@ devices = dict(
         pollinterval=0.5,
         maxage=None,
     ),
+    bwc1_chopper_delay_errors=device(
+        "nicos.devices.epics.pva.EpicsReadable",
+        description="The current delay.",
+        readpv="{}DiffTSSamples".format(pv_root_1),
+        visibility=(
+            "metadata",
+            "namespace",
+        ),
+        pva=True,
+        monitor=True,
+        pollinterval=0.5,
+        maxage=None,
+    ),
     bwc1_chopper_phased=device(
         "nicos.devices.epics.pva.EpicsMappedReadable",
         description="The chopper is in phase.",
@@ -79,6 +92,11 @@ devices = dict(
         pollinterval=0.5,
         maxage=None,
     ),
+    bwc1_chopper_alarms=device(
+        "nicos_ess.devices.epics.chopper.ChopperAlarms",
+        description="The chopper alarms",
+        pv_root=pv_root_1,
+    ),
     bwc1_chopper=device(
         "nicos_ess.devices.epics.chopper.EssChopperController",
         description="The chopper controller",
@@ -86,6 +104,8 @@ devices = dict(
         command="bwc1_chopper_control",
         speed="bwc1_chopper_speed",
         chic_conn="bwc1_chopper_chic",
+        alarms="bwc1_chopper_alarms",
+        slit_edges=[[-80.5, 80.5]],
     ),
     bwc2_chopper_status=device(
         "nicos.devices.epics.pva.EpicsMappedReadable",
@@ -132,6 +152,19 @@ devices = dict(
         pollinterval=0.5,
         maxage=None,
     ),
+    bwc2_chopper_delay_errors=device(
+        "nicos.devices.epics.pva.EpicsReadable",
+        description="The current delay.",
+        readpv="{}DiffTSSamples".format(pv_root_2),
+        visibility=(
+            "metadata",
+            "namespace",
+        ),
+        pva=True,
+        monitor=True,
+        pollinterval=0.5,
+        maxage=None,
+    ),
     bwc2_chopper_phased=device(
         "nicos.devices.epics.pva.EpicsMappedReadable",
         description="The chopper is in phase.",
@@ -161,6 +194,11 @@ devices = dict(
         pollinterval=0.5,
         maxage=None,
     ),
+    bwc2_chopper_alarms=device(
+        "nicos_ess.devices.epics.chopper.ChopperAlarms",
+        description="The chopper alarms",
+        pv_root=pv_root_2,
+    ),
     bwc2_chopper=device(
         "nicos_ess.devices.epics.chopper.EssChopperController",
         description="The chopper controller",
@@ -168,5 +206,7 @@ devices = dict(
         command="bwc2_chopper_control",
         speed="bwc2_chopper_speed",
         chic_conn="bwc2_chopper_chic",
+        alarms="bwc2_chopper_alarms",
+        slit_edges=[[-80.5, 80.5]],
     ),
 )

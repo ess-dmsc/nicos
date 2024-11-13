@@ -1,29 +1,7 @@
-# *****************************************************************************
-# NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
-#
-# This program is free software; you can redistribute it and/or modify it under
-# the terms of the GNU General Public License as published by the Free Software
-# Foundation; either version 2 of the License, or (at your option) any later
-# version.
-#
-# This program is distributed in the hope that it will be useful, but WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-# FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
-# details.
-#
-# You should have received a copy of the GNU General Public License along with
-# this program; if not, write to the Free Software Foundation, Inc.,
-# 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-#
-# Module authors:
-#   Georg Brandl <g.brandl@fz-juelich.de>
-#
-# *****************************************************************************
-
 """NICOS GUI experiment setup window."""
 
 from nicos.clients.gui.panels import Panel
+from nicos.clients.gui.panels.setup_panel import AliasWidget
 from nicos.clients.gui.utils import loadUi
 from nicos.guisupport.qt import (
     QDialog,
@@ -92,6 +70,7 @@ class SetupsPanel(Panel):
         self._loaded_basic = None
         self.basicSetup.clear()
         self.optSetups.clear()
+        self.pnpSetups.clear()
         self.errorLabel.hide()
         default_flags = (
             Qt.ItemFlag.ItemIsUserCheckable
@@ -121,18 +100,19 @@ class SetupsPanel(Panel):
                         else Qt.CheckState.Unchecked
                     )
                 elif info["group"] == "plugplay":
-                    item = QListWidgetItem(name, self.optSetups)
+                    item = QListWidgetItem(name, self.pnpSetups)
                     item.setFlags(default_flags)
                     item.setData(Qt.ItemDataRole.UserRole, 1)
                     if name in all_loaded:
                         self._loaded.add(name)
-                    elif not self.showPnpBox.isChecked():
-                        item.setHidden(True)
                     item.setCheckState(
                         Qt.CheckState.Checked
                         if name in all_loaded
                         else Qt.CheckState.Unchecked
                     )
+                    if name not in all_loaded:
+                        item.setHidden(True)
+
         self.basicSetup.setCurrentItem(keep)
         self._prev_alias_config = self._alias_config
         self.setViewOnly(self.client.viewonly)
@@ -140,6 +120,7 @@ class SetupsPanel(Panel):
     def on_client_disconnected(self):
         self.basicSetup.clear()
         self.optSetups.clear()
+        self.pnpSetups.clear()
         self.setViewOnly(True)
 
     def setViewOnly(self, viewonly):
@@ -147,7 +128,7 @@ class SetupsPanel(Panel):
             button.setEnabled(not viewonly)
         self.basicSetup.setEnabled(not viewonly)
         self.optSetups.setEnabled(not viewonly)
-        self.showPnpBox.setEnabled(not viewonly)
+        self.pnpSetups.setEnabled(not viewonly)
 
     def on_basicSetup_currentItemChanged(self, item, old):
         if item and item.text() != "<keep current>":
@@ -166,15 +147,6 @@ class SetupsPanel(Panel):
     def on_optSetups_itemClicked(self, item):
         self.showSetupInfo(item.text())
         self.updateAliasList()
-
-    def on_showPnpBox_stateChanged(self, state):
-        for i in range(self.optSetups.count()):
-            item = self.optSetups.item(i)
-            if item.data(Qt.ItemDataRole.UserRole) == 1:
-                item.setHidden(
-                    item.checkState() == Qt.CheckState.Unchecked
-                    and not self.showPnpBox.isChecked()
-                )
 
     def on_buttonBox_clicked(self, button):
         role = self.buttonBox.buttonRole(button)
@@ -204,6 +176,12 @@ class SetupsPanel(Panel):
             "Devices: %s<br/>" % (setup, info["description"], devs)
         )
 
+    def toggle_pnp_setup_visibility(self, name, hide):
+        for i in range(self.pnpSetups.count()):
+            item = self.pnpSetups.item(i)
+            if item.text() == name:
+                item.setHidden(hide)
+
     def _calculateSetups(self):
         cur = self.basicSetup.currentItem()
         if cur:
@@ -220,6 +198,8 @@ class SetupsPanel(Panel):
             setups.add(basic)
             new_basic = True
         for item in iterChecked(self.optSetups):
+            setups.add(item.text())
+        for item in iterChecked(self.pnpSetups):
             setups.add(item.text())
         return setups, new_basic
 
