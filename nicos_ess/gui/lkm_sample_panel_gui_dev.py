@@ -49,29 +49,29 @@ class Proposal:
 def get_a_test_proposal():
     a_test_proposal = Proposal(proposal_id="123")
 
-    a_test_proposal.add_sample("Sample1")
-    a_test_proposal.samples["Sample1"].set_annotation("state", "solid")
-    a_test_proposal.samples["Sample1"].set_annotation("annot_string", "InfoA")
-    a_test_proposal.samples["Sample1"].set_annotation("annot_int", 1)
-    a_test_proposal.samples["Sample1"].set_annotation("annot_float", 0.5)
-
-    a_test_proposal.add_sample("Sample2")
-    a_test_proposal.samples["Sample2"].set_annotation("state", "liquid")
-    a_test_proposal.samples["Sample2"].set_annotation("annot_string", "InfoB")
-    a_test_proposal.samples["Sample2"].set_annotation("annot_int", 2)
-    a_test_proposal.samples["Sample2"].set_annotation("annot_float", 0.4)
-
-    a_test_proposal.add_sample("Sample3")
-    a_test_proposal.samples["Sample3"].set_annotation("state", "powder")
-    a_test_proposal.samples["Sample3"].set_annotation("annot_string", "InfoC")
-    a_test_proposal.samples["Sample3"].set_annotation("annot_int", 3)
-    a_test_proposal.samples["Sample3"].set_annotation("annot_float", 0.3)
-
-    a_test_proposal.add_sample("Sample4")
-    a_test_proposal.samples["Sample4"].set_annotation("state", "crystal")
-    a_test_proposal.samples["Sample4"].set_annotation("annot_string", "InfoD")
-    a_test_proposal.samples["Sample4"].set_annotation("annot_int", 4)
-    a_test_proposal.samples["Sample4"].set_annotation("annot_float", 0.2)
+    # a_test_proposal.add_sample("Sample1")
+    # a_test_proposal.samples["Sample1"].set_annotation("state", "solid")
+    # a_test_proposal.samples["Sample1"].set_annotation("annot_string", "InfoA")
+    # a_test_proposal.samples["Sample1"].set_annotation("annot_int", 1)
+    # a_test_proposal.samples["Sample1"].set_annotation("annot_float", 0.5)
+    #
+    # a_test_proposal.add_sample("Sample2")
+    # a_test_proposal.samples["Sample2"].set_annotation("state", "liquid")
+    # a_test_proposal.samples["Sample2"].set_annotation("annot_string", "InfoB")
+    # a_test_proposal.samples["Sample2"].set_annotation("annot_int", 2)
+    # a_test_proposal.samples["Sample2"].set_annotation("annot_float", 0.4)
+    #
+    # a_test_proposal.add_sample("Sample3")
+    # a_test_proposal.samples["Sample3"].set_annotation("state", "powder")
+    # a_test_proposal.samples["Sample3"].set_annotation("annot_string", "InfoC")
+    # a_test_proposal.samples["Sample3"].set_annotation("annot_int", 3)
+    # a_test_proposal.samples["Sample3"].set_annotation("annot_float", 0.3)
+    #
+    # a_test_proposal.add_sample("Sample4")
+    # a_test_proposal.samples["Sample4"].set_annotation("state", "crystal")
+    # a_test_proposal.samples["Sample4"].set_annotation("annot_string", "InfoD")
+    # a_test_proposal.samples["Sample4"].set_annotation("annot_int", 4)
+    # a_test_proposal.samples["Sample4"].set_annotation("annot_float", 0.2)
 
     return a_test_proposal
 
@@ -109,13 +109,11 @@ class AnnotationRow:
         ]
 
     def add_and_align_left(self, layout, row):
-        column = 0
         widgets = self.get_widgets()
-        for widget in widgets:
+        for column_index, widget in enumerate(widgets):
             layout.addWidget(
-                widget, row, column, alignment=Qt.AlignmentFlag.AlignLeft
+                widget, row, column_index, alignment=Qt.AlignmentFlag.AlignLeft
             )
-            column += 1
 
     def remove(self, layout):
         widgets = self.get_widgets()
@@ -155,10 +153,7 @@ class SampleAnnotationWidgetLayout(QWidget):
 
     def add_annotation_row(self, key="", value=""):
         current_rows = len(self.annotation_rows)
-        if current_rows == 0:
-            i = 0
-        else:
-            i = current_rows + 1
+        i = 0 if current_rows == 0 else current_rows + 1
         annotation_row = AnnotationRow(key, value)
         self.annotation_rows.append(annotation_row)
         annotation_row.add_and_align_left(self.annotations_layout, row=i)
@@ -506,7 +501,6 @@ class SamplePanel(QWidget):
                 self.reset_empty_key_error(annotation_row)
         return checks_ok
 
-
     def display_empty_key_error(self, annotation_row):
         annotation_row.info_message.setText(
             "Please add a name for the annotation"
@@ -523,14 +517,11 @@ class SamplePanel(QWidget):
                 )
                 self.sample_annotations.new_annotation_rows = []
 
-
-
     def check_unique_sample_id(self, sample_id):
         if sample_id == "":
             self.display_missing_id_error()
         elif sample_id in self.proposal.samples.keys():
             self.display_duplicate_id_error()
-            return False
         else:
             self.reset_sample_id_error()
             return True
