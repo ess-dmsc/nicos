@@ -565,6 +565,17 @@ class EpicsStringMoveable(EpicsParameters, Moveable):
             )
 
 
+def _update_mapped_choices(mapped_device):
+    choices = mapped_device._epics_wrapper.get_value_choices(mapped_device.readpv)
+    new_mapping = {}
+    for i, choice in enumerate(choices):
+        new_mapping[choice] = i
+    mapped_device._setROParam("mapping", new_mapping)
+    mapped_device._inverse_mapping = {}
+    for k, v in mapped_device.mapping.items():
+        mapped_device._inverse_mapping[v] = k
+
+
 class EpicsMappedReadable(EpicsReadable, MappedReadable):
     valuetype = str
 
@@ -578,13 +589,8 @@ class EpicsMappedReadable(EpicsReadable, MappedReadable):
     def doInit(self, mode):
         EpicsReadable.doInit(self, mode)
 
-        if session.sessiontype != POLLER:
-            choices = self._epics_wrapper.get_value_choices(self.readpv)
-            # Create mapping from EPICS information
-            new_mapping = {}
-            for i, choice in enumerate(choices):
-                new_mapping[choice] = i
-            self._setROParam("mapping", new_mapping)
+        if session.sessiontype != POLLER and not self.monitor:
+            _update_mapped_choices(self)
         MappedReadable.doInit(self, mode)
 
     def doRead(self, maxage=0):
@@ -600,6 +606,8 @@ class EpicsMappedReadable(EpicsReadable, MappedReadable):
         if name != self.readpv:
             # Unexpected updates ignored
             return
+        if not self.mapping:
+            _update_mapped_choices(self)
         time_stamp = time.time()
         self._cache.put(
             self._name,
@@ -692,13 +700,8 @@ class EpicsMappedMoveable(EpicsParameters, MappedMoveable):
                     )
                 )
 
-        if session.sessiontype != POLLER:
-            choices = self._epics_wrapper.get_value_choices(self.readpv)
-            # Create mapping from EPICS information
-            new_mapping = {}
-            for i, choice in enumerate(choices):
-                new_mapping[choice] = i
-            self._setROParam("mapping", new_mapping)
+        if session.sessiontype != POLLER and not self.monitor:
+            _update_mapped_choices(self)
         MappedMoveable.doInit(self, mode)
 
     def doRead(self, maxage=0):
@@ -732,6 +735,8 @@ class EpicsMappedMoveable(EpicsParameters, MappedMoveable):
             return
         time_stamp = time.time()
         if name == self.readpv:
+            if not self.mapping:
+                _update_mapped_choices(self)
             self._cache.put(
                 self._name,
                 param,
