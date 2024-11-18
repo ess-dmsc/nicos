@@ -10,7 +10,18 @@ sysconfig = dict(
     datasinks=["conssink", "daemonsink", "liveview"],
 )
 
-modules = ["nicos.commands.standard", "nicos_ess.commands"]
+
+modules = [
+    'nicos.commands.standard', 'nicos_ess.commands'
+]
+
+alias_config = {
+    'NexusStructure': {
+        'NexusStructure_Basic': 50,
+    },
+}
+
+KAFKA_BROKERS = ['10.102.80.32:8093']
 
 devices = dict(
     NIDO=device(
@@ -45,12 +56,10 @@ devices = dict(
     liveview=device(
         "nicos.devices.datasinks.LiveViewSink",
     ),
-    NexusStructure_AreaDetector=device(
-        "nicos_ess.devices.datasinks.nexus_structure.NexusStructureAreaDetector",
-        description="Provides the NeXus structure",
-        nexus_config_path="nicos_ess/nido/nexus/nido_nexus.json",
-        area_det_collector_device="area_detector_collector",
-        instrument_name="nido",
+    NexusStructure_Basic=device(
+        'nicos_ess.devices.datasinks.nexus_structure.NexusStructureJsonFile',
+        description='Provides the NeXus structure',
+        nexus_config_path='nicos_ess/nido/nexus/nido_nexus.json',
         visibility=(),
     ),
     NexusStructure=device(
@@ -79,7 +88,3 @@ devices = dict(
         brokers=configdata("config.KAFKA_BROKERS"),
     ),
 )
-
-alias_config = {
-    "NexusStructure": {"NexusStructure_AreaDetector": 50},
-}
