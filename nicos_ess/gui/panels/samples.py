@@ -1,6 +1,8 @@
 from nicos.guisupport.qt import (
+    QGridLayout,
     QHBoxLayout,
     QLabel,
+    QLineEdit,
     QListWidget,
     QPushButton,
     Qt,
@@ -34,6 +36,7 @@ class SamplePanel(PanelBase):
         self.add_ctrl_buttons = self.construct_add_ctrl_buttons()
         self.edit_ctrl_buttons = self.construct_edit_ctrl_buttons()
         self.sample_selector = self.construct_sample_selector()
+        self.sample_annotations = self.construct_sample_annotations()
 
         self.a_button = QPushButton("Click me")
         self.a_button.clicked.connect(self.button_clicked)
@@ -81,13 +84,47 @@ class SamplePanel(PanelBase):
         # sample_selector_widget.itemClicked.connect(self.sample_selection_updated)
         return sample_selector_widget
 
+    def construct_sample_annotations(self):
+        sample_annotations = SampleAnnotationWidgetLayout()
+        return sample_annotations
+
     def button_clicked(self):
         self.a_label.setText("Hello!")
 
 
+class AnnotationRow:
+    def __init__(self, key="", value=""):
+        self.key_widget = QLabel(key)
+        self.edit_key_widget = QLineEdit()
+        self.value_widget = QLabel(str(value))
+        self.edit_value_widget = QLineEdit()
+        self.info_message = QLabel()
+
+    def get_widgets(self):
+        return [
+            self.key_widget,
+            self.edit_key_widget,
+            self.value_widget,
+            self.edit_value_widget,
+            self.info_message,
+        ]
+
+    def add_and_align_left(self, layout, row):
+        widgets = self.get_widgets()
+        for column_index, widget in enumerate(widgets):
+            layout.addWidget(
+                widget, row, column_index, alignment=Qt.AlignmentFlag.AlignLeft
+            )
+
+    def remove(self, layout):
+        widgets = self.get_widgets()
+        for widget in widgets:
+            layout.removeWidget(widget)
+
+
 class AddControlButtonsLayout(QWidget):
     def __init__(self):
-        super().__init__()
+        QWidget.__init__(self)
         self.layout = QHBoxLayout()
         self.btn_cancel = QPushButton("Cancel")
         self.btn_add = QPushButton("Add")
@@ -101,7 +138,7 @@ class AddControlButtonsLayout(QWidget):
 
 class EditControlButtonsLayout(QWidget):
     def __init__(self):
-        super().__init__()
+        QWidget.__init__(self)
         self.layout = QHBoxLayout()
         self.btn_add_annotation = QPushButton("Add field")
         self.btn_cancel = QPushButton("Cancel")
@@ -115,9 +152,38 @@ class EditControlButtonsLayout(QWidget):
         layout.addWidget(button, alignment=Qt.AlignmentFlag.AlignLeft)
 
 
+class SampleAnnotationWidgetLayout(QWidget):
+    ID_ROW = 0
+
+    def __init__(self):
+        QWidget.__init__(self)
+        self.layout = QVBoxLayout()
+        self.id_layout = QGridLayout()
+        self.annotations_layout = QGridLayout()
+        self.new_annotations_layout = QGridLayout()
+        self.id_row = AnnotationRow()
+        self.id_row.add_and_align_left(self.id_layout, self.ID_ROW)
+        self.annotation_rows = []
+        self.new_annotation_rows = []
+        self.layout.addLayout(self.id_layout)
+        self.layout.addLayout(self.annotations_layout)
+        self.layout.addLayout(self.new_annotations_layout)
+
+    def add_annotation_row(self, key="", value=""):
+        current_rows = len(self.annotation_rows)
+        i = 0 if current_rows == 0 else current_rows + 1
+        annotation_row = AnnotationRow(key, value)
+        self.annotation_rows.append(annotation_row)
+        annotation_row.add_and_align_left(self.annotations_layout, row=i)
+
+    def remove_annotation_row(self, annotation_row, i):
+        annotation_row.remove(self.new_annotations_layout)
+        del self.new_annotation_rows[i]
+
+
 class TopButtonLayout(QWidget):
     def __init__(self):
-        super().__init__()
+        QWidget.__init__(self)
         self.layout = QHBoxLayout()
         self.btn_add = QPushButton("Add sample")
         self.btn_edit = QPushButton("Edit sample")
