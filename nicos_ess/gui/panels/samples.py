@@ -5,6 +5,7 @@ from nicos.guisupport.qt import (
     QLineEdit,
     QListWidget,
     QPushButton,
+    QSplitter,
     Qt,
     QVBoxLayout,
     QWidget,
@@ -37,6 +38,10 @@ class SamplePanel(PanelBase):
         self.edit_ctrl_buttons = self.construct_edit_ctrl_buttons()
         self.sample_selector = self.construct_sample_selector()
         self.sample_annotations = self.construct_sample_annotations()
+        self.sample_annotation_outer_layoutwidget = (
+            self.construct_sample_annotation_outer_layoutwidget()
+        )
+        self.panel_splitter = self.construct_splitter()
 
         self.a_button = QPushButton("Click me")
         self.a_button.clicked.connect(self.button_clicked)
@@ -44,8 +49,7 @@ class SamplePanel(PanelBase):
 
         layout = QVBoxLayout()
         layout.addLayout(self.top_buttons.layout)
-        layout.addWidget(self.add_ctrl_buttons.widget)
-        layout.addWidget(self.edit_ctrl_buttons.widget)
+        layout.addWidget(self.panel_splitter)
         layout.addWidget(self.a_button)
         layout.addWidget(self.a_button)
 
@@ -87,6 +91,22 @@ class SamplePanel(PanelBase):
     def construct_sample_annotations(self):
         sample_annotations = SampleAnnotationWidgetLayout()
         return sample_annotations
+
+    def construct_sample_annotation_outer_layoutwidget(self):
+        sample_annotation_outer_layout = QVBoxLayout()
+        sample_annotation_outer_layout.addLayout(self.sample_annotations.layout)
+        sample_annotation_outer_layout.addWidget(self.add_ctrl_buttons.widget)
+        sample_annotation_outer_layout.addWidget(self.edit_ctrl_buttons.widget)
+        sample_annotation_outer_layout.addStretch()
+        sample_annotation_outer_layoutwidget = QWidget()
+        sample_annotation_outer_layoutwidget.setLayout(sample_annotation_outer_layout)
+        return sample_annotation_outer_layoutwidget
+
+    def construct_splitter(self):
+        panel_splitter = QSplitter()
+        panel_splitter.addWidget(self.sample_selector)
+        panel_splitter.addWidget(self.sample_annotation_outer_layoutwidget)
+        return panel_splitter
 
     def button_clicked(self):
         self.a_label.setText("Hello!")
