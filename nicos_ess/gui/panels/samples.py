@@ -32,6 +32,7 @@ class SamplePanel(PanelBase):
         PanelBase.__init__(self, parent, client, options)
         self.parent = parent
         self.options = options
+        self._in_edit_mode = False
 
         self.top_buttons = self.construct_top_menu()
         self.add_ctrl_buttons = self.construct_add_ctrl_buttons()
@@ -46,8 +47,9 @@ class SamplePanel(PanelBase):
         layout = QVBoxLayout()
         layout.addLayout(self.top_buttons.layout)
         layout.addWidget(self.panel_splitter)
-
         self.setLayout(layout)
+
+        self.initialise_connection_status_listeners()
 
     def construct_top_menu(self):
         top_buttons = TopButtonLayout()
@@ -104,8 +106,49 @@ class SamplePanel(PanelBase):
         panel_splitter.addWidget(self.sample_annotation_outer_layoutwidget)
         return panel_splitter
 
-    def button_clicked(self):
-        self.a_label.setText("Hello!")
+    def on_client_connected(self):
+        self.setViewOnly(self.client.viewonly)
+
+    def on_client_disconnected(self):
+        if not self._in_edit_mode:
+            self._clear_data()
+
+    def initialise_connection_status_listeners(self):
+        PanelBase.initialise_connection_status_listeners(self)
+        self.client.setup.connect(self.on_client_setup)
+
+    def on_client_setup(self, data):
+        self._register_listeners()
+
+    def _register_listeners(self):
+        self.client.register(self, "sample/samples")
+        self.client.on_connected_event()
+
+    def on_keyChange(self, key, value, time, expired):
+        print("on key change")
+        print(key)
+        if key == "sample/samples":
+            # TODO: find out how this can be triggered
+            print("key sample")
+            self._update_sample_selector()
+
+    def _update_sample_selector(self, samples):
+        print("update sample selector")
+        # TODO: add check to see if sample already exists
+        sample_names = [value for key, value in samples[0].items() if key == "name"]
+        self.sample_selector.addItems(sample_names)
+
+    def _update_samples(self):
+        samples = self.client.eval("session.experiment.get_samples()", {})
+        self._update_sample_selector(samples)
+
+    def _clear_data(self):
+        pass
+
+
+# from nicos import session
+# Sample.samples = {0: {'name': "A name"}}
+# session.experiment.get_samples()
 
 
 class AnnotationRow:
