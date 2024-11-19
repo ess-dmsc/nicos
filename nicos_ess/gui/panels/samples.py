@@ -43,19 +43,11 @@ class SamplePanel(PanelBase):
         )
         self.panel_splitter = self.construct_splitter()
 
-        self.a_button = QPushButton("Click me")
-        self.a_button.clicked.connect(self.button_clicked)
-        self.a_label = QLabel("")
-
         layout = QVBoxLayout()
         layout.addLayout(self.top_buttons.layout)
         layout.addWidget(self.panel_splitter)
-        layout.addWidget(self.a_button)
-        layout.addWidget(self.a_button)
 
         self.setLayout(layout)
-
-        print("working?")
 
     def construct_top_menu(self):
         top_buttons = TopButtonLayout()
@@ -70,6 +62,7 @@ class SamplePanel(PanelBase):
         add_ctrl_buttons.widget.setLayout(add_ctrl_buttons.layout)
         # add_ctrl_buttons.btn_cancel.clicked.connect(self.cancel_add_clicked)
         # add_ctrl_buttons.btn_add.clicked.connect(self.confirm_add_clicked)
+        add_ctrl_buttons.widget.hide()
         return add_ctrl_buttons
 
     def construct_edit_ctrl_buttons(self):
@@ -81,6 +74,7 @@ class SamplePanel(PanelBase):
         # )
         # edit_ctrl_buttons.btn_cancel.clicked.connect(self.cancel_edit_clicked)
         # edit_ctrl_buttons.btn_save.clicked.connect(self.confirm_edit_clicked)
+        edit_ctrl_buttons.widget.hide()
         return edit_ctrl_buttons
 
     def construct_sample_selector(self):
@@ -90,6 +84,8 @@ class SamplePanel(PanelBase):
 
     def construct_sample_annotations(self):
         sample_annotations = SampleAnnotationWidgetLayout()
+        sample_annotations.id_row.edit_key_widget.hide()
+        sample_annotations.id_row.edit_value_widget.hide()
         return sample_annotations
 
     def construct_sample_annotation_outer_layoutwidget(self):
