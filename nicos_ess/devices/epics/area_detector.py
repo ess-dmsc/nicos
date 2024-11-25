@@ -523,14 +523,14 @@ class NGemDetector(AreaDetector):
             type=str,
             mandatory=True,
             settable=False,
-            default=False,
+            default="",
         ),
         "sourcepv": Param(
             "Source pv name for the image data on the topic.",
             type=str,
             mandatory=True,
             settable=False,
-            default=False,
+            default="",
         ),
     }
 
