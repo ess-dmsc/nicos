@@ -566,7 +566,7 @@ class NGemDetector(AreaDetector):
         # self._record_fields["sourcepv"] = self.sourcepv
 
     def _get_pv_parameters(self):
-        return set(self._record_fields) | set(["image_pv", "topicpv", "sourcepv"])
+        return set(self._record_fields) | set(["image_pv"])
 
     def _get_pv_name(self, pvparam):
         pv_name = self._record_fields.get(pvparam)
