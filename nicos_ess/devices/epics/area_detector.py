@@ -518,20 +518,20 @@ class NGemDetector(AreaDetector):
             settable=True,
             default=True,
         ),
-        # "topicpv": Param(
-        #     "Topic pv name where the image is.",
-        #     type=str,
-        #     mandatory=True,
-        #     settable=False,
-        #     default="",
-        # ),
-        # "sourcepv": Param(
-        #     "Source pv name for the image data on the topic.",
-        #     type=str,
-        #     mandatory=True,
-        #     settable=False,
-        #     default="",
-        # ),
+        "topicpv": Param(
+            "Topic pv name where the image is.",
+            type=str,
+            mandatory=True,
+            settable=False,
+            default="",
+        ),
+        "sourcepv": Param(
+            "Source pv name for the image data on the topic.",
+            type=str,
+            mandatory=True,
+            settable=False,
+            default="",
+        ),
     }
 
     _record_fields = {}
@@ -562,11 +562,11 @@ class NGemDetector(AreaDetector):
         # self._record_fields["array_rate_rbv"] = "ArrayRate_RBV"
         self._record_fields["acquire"] = "Acquire"
         self._record_fields["image_pv"] = self.image_pv
-        # self._record_fields["topicpv"] = self.topicpv
-        # self._record_fields["sourcepv"] = self.sourcepv
+        self._record_fields["topicpv"] = self.topicpv
+        self._record_fields["sourcepv"] = self.sourcepv
 
     def _get_pv_parameters(self):
-        return set(self._record_fields) | set(["image_pv"])
+        return set(self._record_fields) | set(["image_pv", "topicpv", "sourcepv"])
 
     def _get_pv_name(self, pvparam):
         pv_name = self._record_fields.get(pvparam)
@@ -682,10 +682,9 @@ class NGemDetector(AreaDetector):
         return self._image_array
 
     def get_topic_and_source(self):
-        # return self._get_pv("topicpv", as_string=True), self._get_pv(
-        #     "sourcepv", as_string=True
-        # )
-        return "", ""
+        return self._get_pv("topicpv", as_string=True), self._get_pv(
+            "sourcepv", as_string=True
+        )
 
 
 class OrcaFlash4(AreaDetector):
