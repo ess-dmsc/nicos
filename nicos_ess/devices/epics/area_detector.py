@@ -541,8 +541,6 @@ class NGemDetector(AreaDetector):
         ),
         "sizex": Param("Image X size.", settable=True, volatile=True),
         "sizey": Param("Image Y size.", settable=True, volatile=True),
-        "startx": Param("Image X start index.", settable=True, volatile=True),
-        "starty": Param("Image Y start index.", settable=True, volatile=True),
         "acquiretime": Param("Exposure time ", settable=True, volatile=True),
         "acquireperiod": Param(
             "Time between exposure starts.", settable=True, volatile=True
@@ -557,8 +555,6 @@ class NGemDetector(AreaDetector):
     _control_pvs = {
         "size_x": "SizeX",
         "size_y": "SizeY",
-        "min_x": "MinX",
-        "min_y": "MinY",
         "acquire_time": "AcquireTime",
         "acquire_period": "AcquirePeriod",
         "num_images": "NumImages",
@@ -761,18 +757,6 @@ class NGemDetector(AreaDetector):
     def doWriteSizey(self, value):
         self._put_pv("size_y", self._limit_size(value, "max_size_y"))
         self.check_if_max_size()
-
-    def doReadStartx(self):
-        return self._get_pv("min_x_rbv")
-
-    def doWriteStartx(self, value):
-        self._put_pv("min_x", self._limit_start(value))
-
-    def doReadStarty(self):
-        return self._get_pv("min_y_rbv")
-
-    def doWriteStarty(self, value):
-        self._put_pv("min_y", self._limit_start(value))
 
     def doReadAcquiretime(self):
         return self._get_pv("acquire_time_rbv")
