@@ -503,6 +503,65 @@ class AreaDetector(EpicsDevice, ImageChannelMixin, Measurable):
         )
 
 
+class NGemDetector(AreaDetector):
+    """
+    Device that controls and acquires data from a nGEM detector.
+    Only uses a subset of the AreaDetector parameters.
+    """
+
+    parameter_overrides = {
+        "binning": Override(
+            default="1x1", settable=False, mandatory=False, volatile=False
+        ),
+        "subarraymode": Override(
+            default=False, settable=False, mandatory=False, volatile=False
+        ),
+        "binx": Override(default=1, settable=False, mandatory=False, volatile=False),
+        "biny": Override(default=1, settable=False, mandatory=False, volatile=False),
+    }
+
+    _control_pvs = {
+        "size_x": "SizeX",
+        "size_y": "SizeY",
+        "min_x": "MinX",
+        "min_y": "MinY",
+        "acquire_time": "AcquireTime",
+        "acquire_period": "AcquirePeriod",
+        "num_images": "NumImages",
+        "num_exposures": "NumExposures",
+        "image_mode": "ImageMode",
+    }
+
+    def _set_custom_record_fields(self):
+        self._record_fields["max_size_x"] = "MaxSizeX_RBV"
+        self._record_fields["max_size_y"] = "MaxSizeY_RBV"
+        self._record_fields["data_type"] = "DataType_RBV"
+        self._record_fields["subarray_mode"] = "SubarrayMode-S"
+        self._record_fields["subarray_mode_rbv"] = "SubarrayMode-RB"
+        self._record_fields["readpv"] = "NumImagesCounter_RBV"
+        self._record_fields["detector_state"] = "DetectorState_RBV"
+        self._record_fields["detector_state.STAT"] = "DetectorState_RBV.STAT"
+        self._record_fields["detector_state.SEVR"] = "DetectorState_RBV.SEVR"
+        self._record_fields["array_rate_rbv"] = "ArrayRate_RBV"
+        self._record_fields["acquire"] = "Acquire"
+        self._record_fields["acquire_status"] = "AcquireBusy"
+        self._record_fields["image_pv"] = self.image_pv
+        self._record_fields["topicpv"] = self.topicpv
+        self._record_fields["sourcepv"] = self.sourcepv
+
+    def doReadBinning(self):
+        return "1x1"
+
+    def doReadSubarraymode(self):
+        return False
+
+    def doReadBinx(self):
+        return 1
+
+    def doReadBiny(self):
+        return 1
+
+
 class OrcaFlash4(AreaDetector):
     """
     Device that controls and acquires data from an Orca Flash 4 area detector.
