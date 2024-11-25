@@ -541,7 +541,6 @@ class NGemDetector(AreaDetector):
         ),
         "sizex": Param("Image X size.", settable=True, volatile=True),
         "sizey": Param("Image Y size.", settable=True, volatile=True),
-        "acquiretime": Param("Exposure time ", settable=True, volatile=True),
         "numimages": Param(
             "Number of images to take (only in imageMode=multiple).",
             settable=True,
@@ -552,7 +551,6 @@ class NGemDetector(AreaDetector):
     _control_pvs = {
         "size_x": "SizeX",
         "size_y": "SizeY",
-        "acquire_time": "AcquireTime",
         "num_images": "NumImages",
         "image_mode": "ImageMode",
     }
@@ -753,12 +751,6 @@ class NGemDetector(AreaDetector):
     def doWriteSizey(self, value):
         self._put_pv("size_y", self._limit_size(value, "max_size_y"))
         self.check_if_max_size()
-
-    def doReadAcquiretime(self):
-        return self._get_pv("acquire_time_rbv")
-
-    def doWriteAcquiretime(self, value):
-        self._put_pv("acquire_time", value)
 
     def doReadNumimages(self):
         return self._get_pv("num_images_rbv")
