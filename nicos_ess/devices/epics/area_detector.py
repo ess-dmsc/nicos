@@ -559,7 +559,7 @@ class NGemDetector(AreaDetector):
 
     def _set_custom_record_fields(self):
         self._record_fields["readpv"] = "NumImagesCounter_RBV"
-        self._record_fields["array_rate_rbv"] = "ArrayRate_RBV"
+        # self._record_fields["array_rate_rbv"] = "ArrayRate_RBV"
         self._record_fields["acquire"] = "Acquire"
         self._record_fields["image_pv"] = self.image_pv
         # self._record_fields["topicpv"] = self.topicpv
