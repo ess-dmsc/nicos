@@ -572,10 +572,10 @@ class NGemDetector(AreaDetector):
         pv_name = self._record_fields.get(pvparam)
         if "image_pv" == pvparam:
             return self.image_pv
-        # if "topicpv" == pvparam:
-        #     return self.topicpv
-        # if "sourcepv" == pvparam:
-        #     return self.sourcepv
+        if "topicpv" == pvparam:
+            return self.topicpv
+        if "sourcepv" == pvparam:
+            return self.sourcepv
         if pv_name:
             return self.pv_root + pv_name
         return getattr(self, pvparam)
