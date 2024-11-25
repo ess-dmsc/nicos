@@ -575,7 +575,6 @@ class NGemDetector(AreaDetector):
         self._record_fields["detector_state.SEVR"] = "DetectorState_RBV.SEVR"
         self._record_fields["array_rate_rbv"] = "ArrayRate_RBV"
         self._record_fields["acquire"] = "Acquire"
-        self._record_fields["acquire_status"] = "AcquireBusy"
         self._record_fields["image_pv"] = self.image_pv
         self._record_fields["topicpv"] = self.topicpv
         self._record_fields["sourcepv"] = self.sourcepv
@@ -664,7 +663,7 @@ class NGemDetector(AreaDetector):
         self._lastpreset = preset.copy()
 
     def doStatus(self, maxage=0):
-        detector_state = self._get_pv("acquire_status", True)
+        detector_state = "Done" if self._get_pv("acquire") == 0 else "Acquiring"
         alarm_status = STAT_TO_STATUS.get(
             self._get_pv("detector_state.STAT"), status.UNKNOWN
         )
