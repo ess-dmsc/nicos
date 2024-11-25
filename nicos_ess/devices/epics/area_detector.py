@@ -532,13 +532,6 @@ class NGemDetector(AreaDetector):
             settable=False,
             default=False,
         ),
-        "sizex": Param("Image X size.", settable=True, volatile=True),
-        "sizey": Param("Image Y size.", settable=True, volatile=True),
-    }
-
-    _control_pvs = {
-        "size_x": "SizeX",
-        "size_y": "SizeY",
     }
 
     _record_fields = {}
@@ -551,10 +544,6 @@ class NGemDetector(AreaDetector):
     def doPreinit(self, mode):
         if mode == SIMULATION:
             return
-        self._record_fields = {
-            key + "_rbv": value + "_RBV" for key, value in self._control_pvs.items()
-        }
-        self._record_fields.update(self._control_pvs)
         self._set_custom_record_fields()
         EpicsDevice.doPreinit(self, mode)
         self._image_processing_lock = threading.Lock()
@@ -599,7 +588,7 @@ class NGemDetector(AreaDetector):
         return self.arraydesc
 
     def update_arraydesc(self):
-        shape = self._get_pv("size_y"), self._get_pv("size_x")
+        shape = 128, 128
         binning_factor = 1
         shape = (shape[0] // binning_factor, shape[1] // binning_factor)
         self._plot_update_delay = (shape[0] * shape[1]) / 2097152.0
@@ -673,30 +662,7 @@ class NGemDetector(AreaDetector):
         elif severity == status.WARN:
             self.log.warning(msg_format, pv_value, stat)
 
-    def _limit_size(self, value, max_pv):
-        max_value = self._get_pv(max_pv)
-        if value > max_value:
-            value = max_value
-        return int(value)
-
-    def _limit_start(self, value):
-        if value < 0:
-            value = 0
-        return int(value)
-
     def doStart(self, **preset):
-        num_images = self._lastpreset.get("n", None)
-
-        if num_images == 0:
-            return
-        elif not num_images or num_images < 0:
-            self.imagemode = "continuous"
-        elif num_images == 1:
-            self.imagemode = "single"
-        elif num_images > 1:
-            self.imagemode = "multiple"
-            self.numimages = num_images
-
         self.doAcquire()
 
     def doAcquire(self):
@@ -713,20 +679,6 @@ class NGemDetector(AreaDetector):
 
     def doReadArray(self, quality):
         return self._image_array
-
-    def doReadSizex(self):
-        return self._get_pv("size_x_rbv")
-
-    def doWriteSizex(self, value):
-        self._put_pv("size_x", self._limit_size(value, "max_size_x"))
-        self.check_if_max_size()
-
-    def doReadSizey(self):
-        return self._get_pv("size_y_rbv")
-
-    def doWriteSizey(self, value):
-        self._put_pv("size_y", self._limit_size(value, "max_size_y"))
-        self.check_if_max_size()
 
     def get_topic_and_source(self):
         return self._get_pv("topicpv", as_string=True), self._get_pv(
