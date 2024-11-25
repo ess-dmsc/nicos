@@ -558,7 +558,7 @@ class NGemDetector(AreaDetector):
         self._cache.put(self._name, "status", self._current_status, time.time())
 
     def _set_custom_record_fields(self):
-        self._record_fields["readpv"] = "NumImagesCounter_RBV"
+        # self._record_fields["readpv"] = "NumImagesCounter_RBV"
         # self._record_fields["array_rate_rbv"] = "ArrayRate_RBV"
         self._record_fields["acquire"] = "Acquire"
         self._record_fields["image_pv"] = self.image_pv
@@ -675,7 +675,8 @@ class NGemDetector(AreaDetector):
         self._put_pv("acquire", 0)
 
     def doRead(self, maxage=0):
-        return self._get_pv("readpv")
+        # return self._get_pv("readpv")
+        return 0
 
     def doReadArray(self, quality):
         return self._image_array
