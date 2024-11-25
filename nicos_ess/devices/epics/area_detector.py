@@ -509,15 +509,49 @@ class NGemDetector(AreaDetector):
     Only uses a subset of the AreaDetector parameters.
     """
 
-    parameter_overrides = {
-        "binning": Override(
-            default="1x1", settable=False, mandatory=False, volatile=False
+    parameters = {
+        "pv_root": Param("Area detector EPICS prefix", type=pvname, mandatory=True),
+        "image_pv": Param("Image PV name", type=pvname, mandatory=True),
+        "iscontroller": Param(
+            "If this channel is an active controller",
+            type=bool,
+            settable=True,
+            default=True,
         ),
-        "subarraymode": Override(
-            default=False, settable=False, mandatory=False, volatile=False
+        "topicpv": Param(
+            "Topic pv name where the image is.",
+            type=str,
+            mandatory=True,
+            settable=False,
+            default=False,
         ),
-        "binx": Override(default=1, settable=False, mandatory=False, volatile=False),
-        "biny": Override(default=1, settable=False, mandatory=False, volatile=False),
+        "sourcepv": Param(
+            "Source pv name for the image data on the topic.",
+            type=str,
+            mandatory=True,
+            settable=False,
+            default=False,
+        ),
+        "imagemode": Param(
+            "Mode to acquire images.",
+            type=oneof("single", "multiple", "continuous"),
+            settable=True,
+            default="continuous",
+            volatile=True,
+        ),
+        "sizex": Param("Image X size.", settable=True, volatile=True),
+        "sizey": Param("Image Y size.", settable=True, volatile=True),
+        "startx": Param("Image X start index.", settable=True, volatile=True),
+        "starty": Param("Image Y start index.", settable=True, volatile=True),
+        "acquiretime": Param("Exposure time ", settable=True, volatile=True),
+        "acquireperiod": Param(
+            "Time between exposure starts.", settable=True, volatile=True
+        ),
+        "numimages": Param(
+            "Number of images to take (only in imageMode=multiple).",
+            settable=True,
+            volatile=True,
+        ),
     }
 
     _control_pvs = {
@@ -528,16 +562,37 @@ class NGemDetector(AreaDetector):
         "acquire_time": "AcquireTime",
         "acquire_period": "AcquirePeriod",
         "num_images": "NumImages",
-        "num_exposures": "NumExposures",
         "image_mode": "ImageMode",
     }
 
+    _record_fields = {}
+
+    _image_array = numpy.zeros((10, 10))
+    _detector_collector_name = ""
+    _last_update = 0
+    _plot_update_delay = 2.0
+
+    def doPreinit(self, mode):
+        if mode == SIMULATION:
+            return
+        self._record_fields = {
+            key + "_rbv": value + "_RBV" for key, value in self._control_pvs.items()
+        }
+        self._record_fields.update(self._control_pvs)
+        self._set_custom_record_fields()
+        EpicsDevice.doPreinit(self, mode)
+        self._image_processing_lock = threading.Lock()
+
+    def doPrepare(self):
+        self._update_status(status.BUSY, "Preparing")
+        self._update_status(status.OK, "")
+        self.arraydesc = self.arrayInfo()
+
+    def _update_status(self, new_status, message):
+        self._current_status = new_status, message
+        self._cache.put(self._name, "status", self._current_status, time.time())
+
     def _set_custom_record_fields(self):
-        self._record_fields["max_size_x"] = "MaxSizeX_RBV"
-        self._record_fields["max_size_y"] = "MaxSizeY_RBV"
-        self._record_fields["data_type"] = "DataType_RBV"
-        self._record_fields["subarray_mode"] = "SubarrayMode-S"
-        self._record_fields["subarray_mode_rbv"] = "SubarrayMode-RB"
         self._record_fields["readpv"] = "NumImagesCounter_RBV"
         self._record_fields["detector_state"] = "DetectorState_RBV"
         self._record_fields["detector_state.STAT"] = "DetectorState_RBV.STAT"
@@ -549,17 +604,204 @@ class NGemDetector(AreaDetector):
         self._record_fields["topicpv"] = self.topicpv
         self._record_fields["sourcepv"] = self.sourcepv
 
-    def doReadBinning(self):
-        return "1x1"
+    def _get_pv_parameters(self):
+        return set(self._record_fields) | set(["image_pv", "topicpv", "sourcepv"])
 
-    def doReadSubarraymode(self):
-        return False
+    def _get_pv_name(self, pvparam):
+        pv_name = self._record_fields.get(pvparam)
+        if "image_pv" == pvparam:
+            return self.image_pv
+        if "topicpv" == pvparam:
+            return self.topicpv
+        if "sourcepv" == pvparam:
+            return self.sourcepv
+        if pv_name:
+            return self.pv_root + pv_name
+        return getattr(self, pvparam)
 
-    def doReadBinx(self):
-        return 1
+    def valueInfo(self):
+        return (Value(self.name, fmtstr="%d"),)
 
-    def doReadBiny(self):
-        return 1
+    def arrayInfo(self):
+        self.update_arraydesc()
+        return self.arraydesc
+
+    def update_arraydesc(self):
+        shape = self._get_pv("size_y"), self._get_pv("size_x")
+        binning_factor = 1
+        shape = (shape[0] // binning_factor, shape[1] // binning_factor)
+        self._plot_update_delay = (shape[0] * shape[1]) / 2097152.0
+        data_type = numpy.uint16
+        self.arraydesc = ArrayDesc(self.name, shape=shape, dtype=data_type)
+
+    def status_change_callback(
+        self, name, param, value, units, limits, severity, message, **kwargs
+    ):
+        if param == "readpv" and value != 0:
+            if time.monotonic() >= self._last_update + self._plot_update_delay:
+                _thread = createThread(f"get_image_{time.time_ns()}", self.get_image)
+
+        EpicsDevice.status_change_callback(
+            self, name, param, value, units, limits, severity, message, **kwargs
+        )
+
+    def doIsCompleted(self):
+        _thread = createThread(f"get_image_{time.time_ns()}", self.get_image)
+
+    def get_image(self):
+        dataarray = self._get_pv("image_pv")
+        shape = self.arrayInfo().shape
+        dataarray = dataarray.reshape(shape)
+        self.putResult(LIVE, dataarray, time.time())
+        self._last_update = time.monotonic()
+
+    def putResult(self, quality, data, timestamp):
+        self._image_array = data
+        databuffer = [byteBuffer(numpy.ascontiguousarray(data))]
+        datadesc = [
+            dict(
+                dtype=data.dtype.str,
+                shape=data.shape,
+                labels={
+                    "x": {"define": "classic"},
+                    "y": {"define": "classic"},
+                },
+                plotcount=1,
+            )
+        ]
+        if databuffer:
+            parameters = dict(
+                uid=0,
+                time=timestamp,
+                det=self._detector_collector_name,
+                tag=LIVE,
+                datadescs=datadesc,
+            )
+            labelbuffers = []
+            with self._image_processing_lock:
+                session.updateLiveData(parameters, databuffer, labelbuffers)
+
+    def doSetPreset(self, **preset):
+        if not preset:
+            # keep old settings
+            return
+        self._lastpreset = preset.copy()
+
+    def doStatus(self, maxage=0):
+        detector_state = self._get_pv("acquire_status", True)
+        alarm_status = STAT_TO_STATUS.get(
+            self._get_pv("detector_state.STAT"), status.UNKNOWN
+        )
+        alarm_severity = SEVERITY_TO_STATUS.get(
+            self._get_pv("detector_state.SEVR"), status.UNKNOWN
+        )
+        if detector_state != "Done" and alarm_severity < status.BUSY:
+            alarm_severity = status.BUSY
+        self._write_alarm_to_log(detector_state, alarm_severity, alarm_status)
+        return alarm_severity, "%s, image mode is %s" % (detector_state, self.imagemode)
+
+    def _write_alarm_to_log(self, pv_value, severity, stat):
+        msg_format = "%s (%s)"
+        if severity in [status.ERROR, status.UNKNOWN]:
+            self.log.error(msg_format, pv_value, stat)
+        elif severity == status.WARN:
+            self.log.warning(msg_format, pv_value, stat)
+
+    def _limit_size(self, value, max_pv):
+        max_value = self._get_pv(max_pv)
+        if value > max_value:
+            value = max_value
+        return int(value)
+
+    def _limit_start(self, value):
+        if value < 0:
+            value = 0
+        return int(value)
+
+    def doStart(self, **preset):
+        num_images = self._lastpreset.get("n", None)
+
+        if num_images == 0:
+            return
+        elif not num_images or num_images < 0:
+            self.imagemode = "continuous"
+        elif num_images == 1:
+            self.imagemode = "single"
+        elif num_images > 1:
+            self.imagemode = "multiple"
+            self.numimages = num_images
+
+        self.doAcquire()
+
+    def doAcquire(self):
+        self._put_pv("acquire", 1)
+
+    def doFinish(self):
+        self.doStop()
+
+    def doStop(self):
+        self._put_pv("acquire", 0)
+
+    def doRead(self, maxage=0):
+        return self._get_pv("readpv")
+
+    def doReadArray(self, quality):
+        return self._image_array
+
+    def doReadSizex(self):
+        return self._get_pv("size_x_rbv")
+
+    def doWriteSizex(self, value):
+        self._put_pv("size_x", self._limit_size(value, "max_size_x"))
+        self.check_if_max_size()
+
+    def doReadSizey(self):
+        return self._get_pv("size_y_rbv")
+
+    def doWriteSizey(self, value):
+        self._put_pv("size_y", self._limit_size(value, "max_size_y"))
+        self.check_if_max_size()
+
+    def doReadStartx(self):
+        return self._get_pv("min_x_rbv")
+
+    def doWriteStartx(self, value):
+        self._put_pv("min_x", self._limit_start(value))
+
+    def doReadStarty(self):
+        return self._get_pv("min_y_rbv")
+
+    def doWriteStarty(self, value):
+        self._put_pv("min_y", self._limit_start(value))
+
+    def doReadAcquiretime(self):
+        return self._get_pv("acquire_time_rbv")
+
+    def doWriteAcquiretime(self, value):
+        self._put_pv("acquire_time", value)
+
+    def doReadAcquireperiod(self):
+        return self._get_pv("acquire_period_rbv")
+
+    def doWriteAcquireperiod(self, value):
+        self._put_pv("acquire_period", value)
+
+    def doReadNumimages(self):
+        return self._get_pv("num_images_rbv")
+
+    def doWriteNumimages(self, value):
+        self._put_pv("num_images", value)
+
+    def doWriteImagemode(self, value):
+        self._put_pv("image_mode", ImageMode[value.upper()].value)
+
+    def doReadImagemode(self):
+        return ImageMode(self._get_pv("image_mode")).name.lower()
+
+    def get_topic_and_source(self):
+        return self._get_pv("topicpv", as_string=True), self._get_pv(
+            "sourcepv", as_string=True
+        )
 
 
 class OrcaFlash4(AreaDetector):
