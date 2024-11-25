@@ -570,9 +570,6 @@ class NGemDetector(AreaDetector):
 
     def _set_custom_record_fields(self):
         self._record_fields["readpv"] = "NumImagesCounter_RBV"
-        self._record_fields["detector_state"] = "DetectorState_RBV"
-        self._record_fields["detector_state.STAT"] = "DetectorState_RBV.STAT"
-        self._record_fields["detector_state.SEVR"] = "DetectorState_RBV.SEVR"
         self._record_fields["array_rate_rbv"] = "ArrayRate_RBV"
         self._record_fields["acquire"] = "Acquire"
         self._record_fields["image_pv"] = self.image_pv
@@ -663,16 +660,10 @@ class NGemDetector(AreaDetector):
         self._lastpreset = preset.copy()
 
     def doStatus(self, maxage=0):
+        alarm_severity = status.OK
         detector_state = "Done" if self._get_pv("acquire") == 0 else "Acquiring"
-        alarm_status = STAT_TO_STATUS.get(
-            self._get_pv("detector_state.STAT"), status.UNKNOWN
-        )
-        alarm_severity = SEVERITY_TO_STATUS.get(
-            self._get_pv("detector_state.SEVR"), status.UNKNOWN
-        )
-        if detector_state != "Done" and alarm_severity < status.BUSY:
+        if detector_state != "Done":
             alarm_severity = status.BUSY
-        self._write_alarm_to_log(detector_state, alarm_severity, alarm_status)
         return alarm_severity, "%s, image mode is %s" % (detector_state, self.imagemode)
 
     def _write_alarm_to_log(self, pv_value, severity, stat):
