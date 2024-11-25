@@ -532,27 +532,13 @@ class NGemDetector(AreaDetector):
             settable=False,
             default=False,
         ),
-        "imagemode": Param(
-            "Mode to acquire images.",
-            type=oneof("single", "multiple", "continuous"),
-            settable=True,
-            default="continuous",
-            volatile=True,
-        ),
         "sizex": Param("Image X size.", settable=True, volatile=True),
         "sizey": Param("Image Y size.", settable=True, volatile=True),
-        "numimages": Param(
-            "Number of images to take (only in imageMode=multiple).",
-            settable=True,
-            volatile=True,
-        ),
     }
 
     _control_pvs = {
         "size_x": "SizeX",
         "size_y": "SizeY",
-        "num_images": "NumImages",
-        "image_mode": "ImageMode",
     }
 
     _record_fields = {}
@@ -751,18 +737,6 @@ class NGemDetector(AreaDetector):
     def doWriteSizey(self, value):
         self._put_pv("size_y", self._limit_size(value, "max_size_y"))
         self.check_if_max_size()
-
-    def doReadNumimages(self):
-        return self._get_pv("num_images_rbv")
-
-    def doWriteNumimages(self, value):
-        self._put_pv("num_images", value)
-
-    def doWriteImagemode(self, value):
-        self._put_pv("image_mode", ImageMode[value.upper()].value)
-
-    def doReadImagemode(self):
-        return ImageMode(self._get_pv("image_mode")).name.lower()
 
     def get_topic_and_source(self):
         return self._get_pv("topicpv", as_string=True), self._get_pv(
