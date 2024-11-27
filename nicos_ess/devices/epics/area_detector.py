@@ -503,7 +503,7 @@ class AreaDetector(EpicsDevice, ImageChannelMixin, Measurable):
         )
 
 
-class NGemDetector(AreaDetector):
+class NGemDetector(EpicsDevice, ImageChannelMixin, Measurable):
     """
     Device that controls and acquires data from a nGEM detector.
     Only uses a subset of the AreaDetector parameters.
@@ -517,20 +517,6 @@ class NGemDetector(AreaDetector):
             type=bool,
             settable=True,
             default=True,
-        ),
-        "topicpv": Param(
-            "Topic pv name where the image is.",
-            type=str,
-            mandatory=True,
-            settable=False,
-            default="",
-        ),
-        "sourcepv": Param(
-            "Source pv name for the image data on the topic.",
-            type=str,
-            mandatory=True,
-            settable=False,
-            default="",
         ),
     }
 
@@ -683,9 +669,6 @@ class NGemDetector(AreaDetector):
 
     def get_topic_and_source(self):
         return "", ""
-        # return self._get_pv("topicpv", as_string=True), self._get_pv(
-        #     "sourcepv", as_string=True
-        # )
 
 
 class OrcaFlash4(AreaDetector):
