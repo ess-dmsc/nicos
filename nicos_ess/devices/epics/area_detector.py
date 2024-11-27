@@ -518,6 +518,13 @@ class NGemDetector(EpicsDevice, ImageChannelMixin, Measurable):
             settable=True,
             default=True,
         ),
+        "imagemode": Param(
+            "Mode to acquire images.",
+            type=oneof("single", "multiple", "continuous"),
+            settable=True,
+            default="continuous",
+            volatile=True,
+        ),
     }
 
     _record_fields = {}
@@ -544,12 +551,9 @@ class NGemDetector(EpicsDevice, ImageChannelMixin, Measurable):
         self._cache.put(self._name, "status", self._current_status, time.time())
 
     def _set_custom_record_fields(self):
-        # self._record_fields["readpv"] = "NumImagesCounter_RBV"
-        # self._record_fields["array_rate_rbv"] = "ArrayRate_RBV"
+        self._record_fields["readpv"] = "NumImagesCounter_RBV"
         self._record_fields["acquire"] = "Acquire"
         self._record_fields["image_pv"] = self.image_pv
-        # self._record_fields["topicpv"] = self.topicpv
-        # self._record_fields["sourcepv"] = self.sourcepv
 
     def _get_pv_parameters(self):
         return set(self._record_fields) | set(["image_pv"])
@@ -558,10 +562,6 @@ class NGemDetector(EpicsDevice, ImageChannelMixin, Measurable):
         pv_name = self._record_fields.get(pvparam)
         if "image_pv" == pvparam:
             return self.image_pv
-        # if "topicpv" == pvparam:
-        #     return self.topicpv
-        # if "sourcepv" == pvparam:
-        #     return self.sourcepv
         if pv_name:
             return self.pv_root + pv_name
         return getattr(self, pvparam)
@@ -661,8 +661,13 @@ class NGemDetector(EpicsDevice, ImageChannelMixin, Measurable):
         self._put_pv("acquire", 0)
 
     def doRead(self, maxage=0):
-        # return self._get_pv("readpv")
-        return 0
+        return self._get_pv("readpv")
+
+    def doWriteImagemode(self, value):
+        self._put_pv("image_mode", ImageMode[value.upper()].value)
+
+    def doReadImagemode(self):
+        return ImageMode(self._get_pv("image_mode")).name.lower()
 
     def doReadArray(self, quality):
         return self._image_array
