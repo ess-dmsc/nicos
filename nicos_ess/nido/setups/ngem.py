@@ -6,6 +6,7 @@ devices = dict(
         description="The ngem.",
         pv_root="TBL-Det1:cam1:",
         image_pv="TBL-Det1:image1:ArrayData",
+        counter_pv="TBL-Det1:cam1:ArrayCounter",
         unit="images",
         pva=True,
         monitor=True,

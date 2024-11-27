@@ -512,6 +512,7 @@ class NGemDetector(EpicsDevice, ImageChannelMixin, Measurable):
     parameters = {
         "pv_root": Param("Area detector EPICS prefix", type=pvname, mandatory=True),
         "image_pv": Param("Image PV name", type=pvname, mandatory=True),
+        "counter_pv": Param("Counter PV name", type=pvname, mandatory=True),
         "iscontroller": Param(
             "If this channel is an active controller",
             type=bool,
@@ -559,17 +560,19 @@ class NGemDetector(EpicsDevice, ImageChannelMixin, Measurable):
         self._cache.put(self._name, "status", self._current_status, time.time())
 
     def _set_custom_record_fields(self):
-        self._record_fields["readpv"] = "NumImagesCounter_RBV"
-        self._record_fields["acquire"] = "Acquire"
+        self._record_fields["readpv"] = self.counter_pv
         self._record_fields["image_pv"] = self.image_pv
+        self._record_fields["acquire"] = "Acquire"
 
     def _get_pv_parameters(self):
-        return set(self._record_fields) | set(["image_pv"])
+        return set(self._record_fields) | set(["image_pv", "counter_pv"])
 
     def _get_pv_name(self, pvparam):
         pv_name = self._record_fields.get(pvparam)
         if "image_pv" == pvparam:
             return self.image_pv
+        if "counter_pv" == pvparam:
+            return self.counter_pv
         if pv_name:
             return self.pv_root + pv_name
         return getattr(self, pvparam)

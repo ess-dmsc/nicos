@@ -129,8 +129,8 @@
                     {
                       "module": "ev44",
                       "config": {
-                        "source": "caen",
-                        "topic": "nido_perfgen"
+                        "source": "tbl3he",
+                        "topic": "staging_detector"
                       }
                     }
                   ]
