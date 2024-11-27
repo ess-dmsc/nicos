@@ -88,7 +88,7 @@
                     {
                       "module": "ev44",
                       "config": {
-                        "source": "ngem",
+                        "source": "schema",
                         "topic": "nido_camera"
                       }
                     }
