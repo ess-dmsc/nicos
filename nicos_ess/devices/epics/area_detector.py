@@ -529,6 +529,10 @@ class NGemDetector(EpicsDevice, ImageChannelMixin, Measurable):
 
     _record_fields = {}
 
+    _control_pvs = {
+        "image_mode": "ImageMode",
+    }
+
     _image_array = numpy.zeros((10, 10))
     _detector_collector_name = ""
     _last_update = 0
@@ -537,6 +541,10 @@ class NGemDetector(EpicsDevice, ImageChannelMixin, Measurable):
     def doPreinit(self, mode):
         if mode == SIMULATION:
             return
+        self._record_fields = {
+            key + "_rbv": value + "_RBV" for key, value in self._control_pvs.items()
+        }
+        self._record_fields.update(self._control_pvs)
         self._set_custom_record_fields()
         EpicsDevice.doPreinit(self, mode)
         self._image_processing_lock = threading.Lock()
