@@ -116,7 +116,7 @@
               ],
               "children": [
                 {
-                  "name": "he3_events",
+                  "name": "bank_0_events",
                   "type": "group",
                   "attributes": [
                     {
@@ -130,6 +130,26 @@
                       "module": "ev44",
                       "config": {
                         "source": "bank0",
+                        "topic": "staging_detector"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "bank_1_events",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXevent_data"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "ev44",
+                      "config": {
+                        "source": "bank1",
                         "topic": "staging_detector"
                       }
                     }
