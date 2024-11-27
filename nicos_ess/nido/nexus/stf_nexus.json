@@ -1,0 +1,174 @@
+{
+  "children": [
+    {
+      "name": "entry",
+      "type": "group",
+      "attributes": [
+        {
+          "name": "NX_class",
+          "dtype": "string",
+          "values": "NXentry"
+        }
+      ],
+      "children": [
+        {
+          "module": "dataset",
+          "config": {
+            "name": "title",
+            "values": "$TITLE$",
+            "type": "string"
+          }
+        },
+        {
+          "module": "dataset",
+          "config": {
+            "name": "experiment_identifier",
+            "values": "$EXP_ID$",
+            "type": "string"
+          }
+        },
+        {
+          "module": "dataset",
+          "config": {
+            "name": "entry_identifier",
+            "values": "$ENTRY_ID$",
+            "type": "string"
+          }
+        },
+        {
+          "module": "dataset",
+          "config": {
+            "name": "entry_identifier_uuid",
+            "values": "$JOB_ID$",
+            "type": "string"
+          }
+        },
+        {
+          "name": "instrument",
+          "type": "group",
+          "attributes": [
+            {
+              "name": "NX_class",
+              "dtype": "string",
+              "values": "NXinstrument"
+            }
+          ],
+          "children": [
+            {
+              "module": "dataset",
+              "config": {
+                "name": "name",
+                "values": "NIDO",
+                "type": "string"
+              },
+              "children": []
+            },
+            {
+              "name": "ngem",
+              "type": "group",
+              "attributes": [
+                {
+                  "name": "NX_class",
+                  "dtype": "string",
+                  "values": "NXdetector"
+                }
+              ],
+              "children": [
+                {
+                  "name": "ngem_events",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXevent_data"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "ev44",
+                      "config": {
+                        "source": "ngem",
+                        "topic": "nido_camera"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "depends_on",
+                    "values": ".",
+                    "dtype": "string"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "he3",
+              "type": "group",
+              "attributes": [
+                {
+                  "name": "NX_class",
+                  "dtype": "string",
+                  "values": "NXdetector"
+                }
+              ],
+              "children": [
+                {
+                  "name": "he3_events",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXevent_data"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "ev44",
+                      "config": {
+                        "source": "caen",
+                        "topic": "nido_perfgen"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "depends_on",
+                    "values": ".",
+                    "dtype": "string"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "sample",
+          "type": "group",
+          "attributes": [
+            {
+              "name": "NX_class",
+              "dtype": "string",
+              "values": "NXsample"
+            }
+          ],
+          "children": [
+            {
+              "module": "dataset",
+              "config": {
+                "name": "name",
+                "values": "lego",
+                "type": "string"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
