@@ -129,7 +129,7 @@
                     {
                       "module": "ev44",
                       "config": {
-                        "source": "tbl3he",
+                        "source": "bank0",
                         "topic": "staging_detector"
                       }
                     }
