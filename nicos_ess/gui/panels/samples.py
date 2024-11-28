@@ -91,7 +91,7 @@ class SamplePanel(PanelBase):
 
     def construct_sample_selector(self):
         sample_selector_widget = QListWidget()
-        # sample_selector_widget.itemClicked.connect(self.sample_selection_updated)
+        sample_selector_widget.itemClicked.connect(self.selection_updated)
         return sample_selector_widget
 
     def construct_sample_annotations(self):
@@ -157,6 +157,9 @@ class SamplePanel(PanelBase):
 
     ###########################################################
 
+    def selection_updated(self):
+        self.enable_top_buttons()
+
     def add_sample_clicked(self):
         self.show_add_sample()
 
@@ -192,11 +195,12 @@ class SamplePanel(PanelBase):
             self.sample_selector.addItem(item)
             self.sample_selector.setCurrentItem(item)
         else:
-            sample_identifiers = self._get_sample_identifiers()
-            selector_items = self.items_in_selector()
-            if len(sample_identifiers) > len(selector_items):
-                for index in range(len(selector_items), len(sample_identifiers)):
-                    self.sample_selector.insertItem(index, sample_identifiers[index])
+            pass
+        #     sample_identifiers = self._get_sample_identifiers()
+        #     selector_items = self.items_in_selector()
+        #     if len(sample_identifiers) > len(selector_items):
+        #         for index in range(len(selector_items), len(sample_identifiers)):
+        #             self.sample_selector.insertItem(index, sample_identifiers[index])
 
     def items_in_selector(self):
         items = []
