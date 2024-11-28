@@ -1,6 +1,8 @@
 from PyQt5.QtWidgets import QListWidgetItem
 
 from nicos.guisupport.qt import (
+    QDialog,
+    QDialogButtonBox,
     QGridLayout,
     QHBoxLayout,
     QLabel,
@@ -48,6 +50,7 @@ class SamplePanel(PanelBase):
             self.construct_sample_annotation_outer_layout_widget()
         )
         self.panel_splitter = self.construct_splitter()
+        self.remove_sample_dialog = self.construct_remove_sample_dialog()
 
         layout = QVBoxLayout()
         layout.addLayout(self.top_buttons.layout)
@@ -60,7 +63,7 @@ class SamplePanel(PanelBase):
         top_buttons = TopButtonLayout()
         top_buttons.btn_add.clicked.connect(self.add_sample_clicked)
         # top_buttons.btn_edit.clicked.connect(self.edit_sample_clicked)
-        # top_buttons.btn_remove.clicked.connect(self.remove_sample_clicked)
+        top_buttons.btn_remove.clicked.connect(self.remove_sample_clicked)
         top_buttons.btn_edit.setEnabled(False)
         top_buttons.btn_remove.setEnabled(False)
         return top_buttons
@@ -116,6 +119,12 @@ class SamplePanel(PanelBase):
         panel_splitter.addWidget(self.sample_annotation_outer_layout_widget)
         return panel_splitter
 
+    def construct_remove_sample_dialog(self):
+        dialog = RemoveSampleDialog()
+        dialog.buttonBox.accepted.connect(self.confirm_remove_clicked)
+        dialog.buttonBox.rejected.connect(self.cancel_remove_clicked)
+        return dialog
+
     def on_client_connected(self):
         self.setViewOnly(self.client.viewonly)
 
@@ -143,6 +152,14 @@ class SamplePanel(PanelBase):
     def _write_samples(self, samples):
         self.client.run(f"Exp.sample.set_samples({samples})")
 
+    def _remove_sample(self, sample_to_remove):
+        samples = self._get_samples()
+        updated_samples = {}
+        for i, sample in enumerate(samples):
+            if sample[SAMPLE_IDENTIFIER_KEY] != sample_to_remove:
+                updated_samples[i] = sample
+        self._write_samples(updated_samples)
+
     def _clear_data(self):
         pass
 
@@ -163,14 +180,6 @@ class SamplePanel(PanelBase):
     def add_sample_clicked(self):
         self.show_add_sample()
 
-    def show_add_sample(self):
-        self.show_empty_view()
-        self.set_id_key()
-        self.show_sample_id_edit()
-        self.show_add_ctrl_buttons()
-        self.disable_top_buttons()
-        self.disable_sample_selector()
-
     def cancel_add_clicked(self):
         self.reset_new_sample_id()
         self.reset_existing_annotation_values_to_edit()
@@ -188,6 +197,21 @@ class SamplePanel(PanelBase):
             self.reset_new_sample_id()
             self.reset_existing_annotation_values()
             self.show_sample_view_mode()
+
+    def remove_sample_clicked(self):
+        self.show_remove_sample_dialog()
+
+    def cancel_remove_clicked(self):
+        self.show_sample_view_mode()
+        self.remove_sample_dialog.close()
+
+    def confirm_remove_clicked(self):
+        selected_sample = self.sample_selector.currentItem().text()
+        self._remove_sample(selected_sample)
+        selected_row = self.sample_selector.currentRow()
+        self.sample_selector.takeItem(selected_row)
+        self.remove_sample_dialog.close()
+        self.show_empty_view()
 
     def update_sample_selector_items(self, new_sample=None):
         if new_sample:
@@ -219,8 +243,7 @@ class SamplePanel(PanelBase):
     #
 
     #
-    # def remove_sample_clicked(self):
-    #     self.show_remove_sample_dialog()
+
     #
     # def add_annotation_clicked(self):
     #     row_index = len(self.sample_annotations.new_annotation_rows) + 1
@@ -255,17 +278,7 @@ class SamplePanel(PanelBase):
     #
 
     #
-    # def confirm_remove_clicked(self):
-    #     selected_sample = self.sample_selector.currentItem().text()
-    #     self._remove_sample(selected_sample)
-    #     selected_row = self.sample_selector.currentRow()
-    #     self.sample_selector.takeItem(selected_row)
-    #     self.remove_sample_dialog.close()
-    #     self.show_empty_view()
-    #
-    # def cancel_remove_clicked(self):
-    #     self.show_sample_view_mode()
-    #     self.remove_sample_dialog.close()
+
     #
     def show_empty_view(self):
         self.hide_sample_id()
@@ -294,12 +307,20 @@ class SamplePanel(PanelBase):
     #     self.disable_sample_selector()
     #
 
-    #
-    # def show_remove_sample_dialog(self):
-    #     label_text = f"Remove sample: '{selected_sample}'"
-    #     selected_sample = self.sample_selector.currentItem().text()
-    #     self.remove_sample_dialog.message.setText(label_text)
-    #     self.remove_sample_dialog.exec()
+    def show_add_sample(self):
+        self.show_empty_view()
+        self.set_id_key()
+        self.show_sample_id_edit()
+        self.show_add_ctrl_buttons()
+        self.disable_top_buttons()
+        self.disable_sample_selector()
+
+    def show_remove_sample_dialog(self):
+        selected_sample = self.sample_selector.currentItem().text()
+        label_text = f"Remove sample: '{selected_sample}'"
+        self.remove_sample_dialog.message.setText(label_text)
+        self.remove_sample_dialog.exec()
+
     #
     # def display_sample(self, sample_identifier):
     #     self.set_id_key()
@@ -536,10 +557,7 @@ class SamplePanel(PanelBase):
     #     all_annotations = dict(**edited_annotations, **new_annotations)
     #     all_annotations[SAMPLE_IDENTIFIER_KEY] = sample_identifier
     #     return all_annotations
-    #
-    # def _remove_sample(self, samplename):
-    #     print("to do")
-    #
+
     def _update_sample_in_proposal(self, sample_identifier):
         current_samples = self._get_samples()
         new_sample = {SAMPLE_IDENTIFIER_KEY: sample_identifier}
@@ -634,6 +652,21 @@ class EditControlButtonsLayout(QWidget):
 
     def add_and_align_left(self, button, layout):
         layout.addWidget(button, alignment=Qt.AlignmentFlag.AlignLeft)
+
+
+class RemoveSampleDialog(QDialog):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Remove sample")
+        buttons = (
+            QDialogButtonBox.StandardButton.Yes | QDialogButtonBox.StandardButton.Cancel
+        )
+        self.buttonBox = QDialogButtonBox(buttons)
+        layout = QVBoxLayout()
+        self.message = QLabel()
+        layout.addWidget(self.message)
+        layout.addWidget(self.buttonBox)
+        self.setLayout(layout)
 
 
 class SampleAnnotationWidgetLayout(QWidget):
