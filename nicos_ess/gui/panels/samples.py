@@ -1,3 +1,5 @@
+import time
+
 from PyQt5.QtWidgets import QListWidgetItem
 
 from nicos.guisupport.qt import (
@@ -13,17 +15,6 @@ from nicos.guisupport.qt import (
     Qt,
     QVBoxLayout,
     QWidget,
-    # QAction,
-    # QCursor,
-    # QHeaderView,
-    # QItemDelegate,
-    # QKeySequence,
-    # QMenu,
-    # QShortcut,
-    # Qt,
-    # QTableView,
-    # QTableWidgetItem,
-    # pyqtSlot,
 )
 
 from nicos_ess.gui.panels.panel import PanelBase
@@ -62,7 +53,7 @@ class SamplePanel(PanelBase):
     def construct_top_menu(self):
         top_buttons = TopButtonLayout()
         top_buttons.btn_add.clicked.connect(self.add_sample_clicked)
-        # top_buttons.btn_edit.clicked.connect(self.edit_sample_clicked)
+        top_buttons.btn_edit.clicked.connect(self.edit_sample_clicked)
         top_buttons.btn_remove.clicked.connect(self.remove_sample_clicked)
         top_buttons.btn_edit.setEnabled(False)
         top_buttons.btn_remove.setEnabled(False)
@@ -82,11 +73,11 @@ class SamplePanel(PanelBase):
         edit_ctrl_buttons = EditControlButtonsLayout()
         edit_ctrl_buttons.widget = QWidget()
         edit_ctrl_buttons.widget.setLayout(edit_ctrl_buttons.layout)
-        # edit_ctrl_buttons.btn_add_annotation.clicked.connect(
-        #     self.add_annotation_clicked
-        # )
-        # edit_ctrl_buttons.btn_cancel.clicked.connect(self.cancel_edit_clicked)
-        # edit_ctrl_buttons.btn_save.clicked.connect(self.confirm_edit_clicked)
+        edit_ctrl_buttons.btn_add_annotation.clicked.connect(
+            self.add_annotation_clicked
+        )
+        edit_ctrl_buttons.btn_cancel.clicked.connect(self.cancel_edit_clicked)
+        edit_ctrl_buttons.btn_save.clicked.connect(self.confirm_edit_clicked)
         edit_ctrl_buttons.btn_add_annotation.hide()
         edit_ctrl_buttons.btn_cancel.hide()
         edit_ctrl_buttons.btn_save.hide()
@@ -117,6 +108,8 @@ class SamplePanel(PanelBase):
         panel_splitter = QSplitter()
         panel_splitter.addWidget(self.sample_selector)
         panel_splitter.addWidget(self.sample_annotation_outer_layout_widget)
+        panel_splitter.setStretchFactor(0, 1)
+        panel_splitter.setStretchFactor(1, 12)
         return panel_splitter
 
     def construct_remove_sample_dialog(self):
@@ -134,17 +127,13 @@ class SamplePanel(PanelBase):
 
     def initialise_connection_status_listeners(self):
         PanelBase.initialise_connection_status_listeners(self)
-        self.client.register(self, "exp/propinfo")
-        # for monitor in self.to_monitor:
-        #     self.client.register(self, monitor)
+        for monitor in self.to_monitor:
+            self.client.register(self, monitor)
 
     def on_keyChange(self, key, value, time, expired):
         print("key change, key:", key)
-        # if key in self.to_monitor:
-        if key == "exp/propinfo":
+        if key in self.to_monitor:
             self.update_sample_selector_items()
-
-    ###########################################################
 
     def _get_samples(self):
         return self.client.eval("session.experiment.get_samples()", {})
@@ -170,10 +159,27 @@ class SamplePanel(PanelBase):
             sample_identifiers.append(sample[SAMPLE_IDENTIFIER_KEY])
         return sample_identifiers
 
-    ###########################################################
+    def _get_sample(self, sample_identifier):
+        samples = self._get_samples()
+        for sample in samples:
+            for key, val in sample.items():
+                if key == SAMPLE_IDENTIFIER_KEY and val == sample_identifier:
+                    return sample
+
+    def _get_updated_sample(self, sample_identifier):
+        edited_annotations = self.save_edited_annotations()
+        new_annotations = self.save_new_annotations()
+        all_annotations = dict(**edited_annotations, **new_annotations)
+        all_annotations[SAMPLE_IDENTIFIER_KEY] = sample_identifier
+        return all_annotations
 
     def selection_updated(self):
+        selected_sample = self.sample_selector.currentItem().text()
         self.enable_top_buttons()
+        self.set_id_key()
+        self.set_id_value(selected_sample)
+        self.set_annotation_values(selected_sample)
+        self.show_sample_view_mode()
 
     def add_sample_clicked(self):
         self.show_add_sample()
@@ -181,17 +187,16 @@ class SamplePanel(PanelBase):
     def cancel_add_clicked(self):
         self.reset_new_sample_id()
         self.reset_existing_annotation_values_to_edit()
+        self.reset_sample_id_error()
         self.show_sample_view_mode()
         self.show_empty_view()
 
     def confirm_add_clicked(self):
         new_sample = self.sample_annotations.id_row.edit_value_widget.text()
         if self.check_unique_sample_id(new_sample):
-            self._update_sample_in_proposal(new_sample)
-            self.update_sample_selector_items(new_sample)
-            # self.sample_selector.setCurrentItem(new_widget_item)
+            self._add_sample_to_proposal(new_sample)
+            self.update_sample_selector_items()
             self.set_id_value(new_sample)
-            # self.check_for_existing_annotation_keys()
             self.reset_new_sample_id()
             self.reset_existing_annotation_values()
             self.show_sample_view_mode()
@@ -211,17 +216,48 @@ class SamplePanel(PanelBase):
         self.remove_sample_dialog.close()
         self.show_empty_view()
 
-    def update_sample_selector_items(self, new_sample=None):
-        if new_sample:
-            item = QListWidgetItem(new_sample)
-            self.sample_selector.addItem(item)
-            self.sample_selector.setCurrentItem(item)
-        else:
-            sample_identifiers = self._get_sample_identifiers()
-            selector_items = self.items_in_selector()
-            if len(sample_identifiers) > len(selector_items):
-                for index in range(len(selector_items), len(sample_identifiers)):
-                    self.sample_selector.insertItem(index, sample_identifiers[index])
+    def edit_sample_clicked(self):
+        self.show_sample_edit_mode()
+
+    def add_annotation_clicked(self):
+        row_index = len(self.sample_annotations.new_annotation_rows) + 1
+        new_annotation_row = AnnotationRow()
+        self.sample_annotations.new_annotation_rows.append(new_annotation_row)
+        new_annotation_row.add_and_align_left(
+            self.sample_annotations.new_annotations_layout, row_index
+        )
+        self.show_new_sample_annotations_edit()
+
+    def cancel_edit_clicked(self):
+        self.reset_existing_annotation_values_to_edit()
+        self.reset_new_annotation_values_to_edit()
+        self.discard_new_annotations()
+        self.show_sample_view_mode()
+
+    def confirm_edit_clicked(self):
+        selected_sample = self.sample_selector.currentItem().text()
+        if self.check_all_new_annotations_have_keys():
+            self._update_proposal(selected_sample)
+            time.sleep(0.1)
+            self.set_annotation_values(selected_sample)
+            self.reset_existing_annotation_values_to_edit()
+            self.reset_new_annotation_values_to_edit()
+            self.show_sample_view_mode()
+
+    def update_sample_selector_items(self):
+        sample_identifiers = self._get_sample_identifiers()
+        selector_items = self.items_in_selector()
+        new_samples = set(sample_identifiers) - set(selector_items)
+        removed_samples = set(selector_items) - set(sample_identifiers)
+        if len(removed_samples) > 0:
+            for i, sample in enumerate(selector_items):
+                if sample in removed_samples:
+                    self.sample_selector.takeItem(i)
+        if len(new_samples) > 0:
+            for sample in new_samples:
+                item = QListWidgetItem(sample)
+                self.sample_selector.addItem(item)
+                self.sample_selector.setCurrentItem(item)
 
     def items_in_selector(self):
         items = []
@@ -234,49 +270,6 @@ class SamplePanel(PanelBase):
         self.sample_selector.clearSelection()
         return items
 
-    #
-    # def edit_sample_clicked(self):
-    #     self.show_sample_edit_mode()
-    #
-
-    #
-
-    #
-    # def add_annotation_clicked(self):
-    #     row_index = len(self.sample_annotations.new_annotation_rows) + 1
-    #     new_annotation_row = AnnotationRow()
-    #     self.sample_annotations.new_annotation_rows.append(new_annotation_row)
-    #     new_annotation_row.add_and_align_left(
-    #         self.sample_annotations.new_annotations_layout, row_index
-    #     )
-    #     self.show_new_sample_annotations_edit()
-    #
-    # def confirm_edit_clicked(self):
-    #     selected_sample = self.sample_selector.currentItem().text()
-    #     if self.check_all_new_annotations_have_keys():
-    #         self._update_sample_in_proposal(selected_sample)
-    #         self.set_annotation_values(selected_sample)
-    #         self.reset_existing_annotation_values_to_edit()
-    #         self.reset_new_annotation_values_to_edit()
-    #         self.show_sample_view_mode()
-    #
-    # def cancel_edit_clicked(self):
-    #     self.reset_existing_annotation_values_to_edit()
-    #     self.reset_new_annotation_values_to_edit()
-    #     self.discard_new_annotations()
-    #     self.show_sample_view_mode()
-    #
-
-    #
-    #
-    #
-    #
-    #
-    #
-
-    #
-
-    #
     def show_empty_view(self):
         self.hide_sample_id()
         self.hide_sample_annotations()
@@ -293,16 +286,14 @@ class SamplePanel(PanelBase):
         self.enable_top_buttons()
         self.enable_sample_selector()
 
-    #
-    # def show_sample_edit_mode(self):
-    #     self.show_sample_id()
-    #     self.show_sample_annotations_edit()
-    #     self.show_new_sample_annotations_edit()
-    #     self.hide_add_ctrl_buttons()
-    #     self.show_edit_ctrl_buttons()
-    #     self.disable_top_buttons()
-    #     self.disable_sample_selector()
-    #
+    def show_sample_edit_mode(self):
+        self.show_sample_id()
+        self.show_sample_annotations_edit()
+        self.show_new_sample_annotations_edit()
+        self.hide_add_ctrl_buttons()
+        self.show_edit_ctrl_buttons()
+        self.disable_top_buttons()
+        self.disable_sample_selector()
 
     def show_add_sample(self):
         self.show_empty_view()
@@ -318,50 +309,45 @@ class SamplePanel(PanelBase):
         self.remove_sample_dialog.message.setText(label_text)
         self.remove_sample_dialog.exec()
 
-    #
-    # def display_sample(self, sample_identifier):
-    #     self.set_id_key()
-    #     self.set_id_value(sample_identifier)
-    #     self.set_annotation_values(sample_identifier)
-    #     self.show_sample_view_mode()
-    #
     def set_id_key(self):
         self.sample_annotations.id_row.key_widget.setText(SAMPLE_IDENTIFIER_KEY)
 
-    #
     def set_id_value(self, sample_identifier):
         self.sample_annotations.id_row.value_widget.setText(str(sample_identifier))
 
-    #
-    # def set_annotation_keys(self, sample_identifier):
-    #     sample = self._get_sample(sample_identifier)
-    #     for i, key in enumerate(sample.keys()):
-    #         if i < len(self.sample_annotations.annotation_rows):
-    #             annotation_row = self.sample_annotations.annotation_rows[i]
-    #             annotation_row.key_widget.setText(str(key))
-    #         else:
-    #             self.sample_annotations.add_annotation_row(key, "")
-    #
-    # def set_annotation_values(self, sample_identifier):
-    #     sample = self._get_sample(sample_identifier)
-    #     printed_keys = []
-    #     if len(self.sample_annotations.annotation_rows) > 0:
-    #         for annotation_row in self.sample_annotations.annotation_rows:
-    #             key = annotation_row.key_widget.text()
-    #             if key in sample.keys():
-    #                 value = sample[key]
-    #                 annotation_row.value_widget.setText(str(value))
-    #             else:
-    #                 annotation_row.value_widget.setText("")
-    #             printed_keys.append(key)
-    #     for key, value in sample.items():
-    #         if key not in printed_keys:
-    #             self.sample_annotations.add_annotation_row(key, value)
-    #
-    # def copy_existing_annotation_values_to_edit(self):
-    #     for annotation_row in self.sample_annotations.annotation_rows:
-    #         value = annotation_row.value_widget.text()
-    #         annotation_row.edit_value_widget.setText(str(value))
+    def set_annotation_keys(self, sample_identifier):
+        sample = self._get_sample(sample_identifier)
+        for i, key in enumerate(sample.keys()):
+            if i < len(self.sample_annotations.annotation_rows):
+                annotation_row = self.sample_annotations.annotation_rows[i]
+                annotation_row.key_widget.setText(str(key))
+            else:
+                self.sample_annotations.add_annotation_row(key, "")
+
+    def set_annotation_values(self, sample_identifier):
+        sample = self._get_sample(sample_identifier)
+        printed_keys = []
+        if len(self.sample_annotations.annotation_rows) > 0:
+            for annotation_row in self.sample_annotations.annotation_rows:
+                key = annotation_row.key_widget.text()
+                if key == SAMPLE_IDENTIFIER_KEY:
+                    continue
+                if key in sample.keys():
+                    value = sample[key]
+                    annotation_row.value_widget.setText(str(value))
+                else:
+                    annotation_row.value_widget.setText("")
+                printed_keys.append(key)
+        for key, value in sample.items():
+            if key == SAMPLE_IDENTIFIER_KEY:
+                continue
+            if key not in printed_keys:
+                self.sample_annotations.add_annotation_row(key, value)
+
+    def copy_existing_annotation_values_to_edit(self):
+        for annotation_row in self.sample_annotations.annotation_rows:
+            value = annotation_row.value_widget.text()
+            annotation_row.edit_value_widget.setText(str(value))
 
     def reset_existing_annotation_values(self):
         for annotation_row in self.sample_annotations.annotation_rows:
@@ -371,60 +357,59 @@ class SamplePanel(PanelBase):
         for annotation_row in self.sample_annotations.annotation_rows:
             annotation_row.edit_value_widget.setText("")
 
-    #
-    # def reset_new_annotation_values_to_edit(self):
-    #     for annotation_row in self.sample_annotations.new_annotation_rows:
-    #         annotation_row.edit_key_widget.setText("")
-    #         annotation_row.edit_value_widget.setText("")
-    #
+    def reset_new_annotation_values_to_edit(self):
+        for annotation_row in self.sample_annotations.new_annotation_rows:
+            annotation_row.edit_key_widget.setText("")
+            annotation_row.edit_value_widget.setText("")
+
     def reset_new_sample_id(self):
         self.sample_annotations.id_row.edit_value_widget.setText("")
 
-    #
-    # def save_edited_annotations(self):
-    #     annotations = {}
-    #     for annotation_row in self.sample_annotations.annotation_rows:
-    #         key = annotation_row.key_widget.text()
-    #         new_value = annotation_row.edit_value_widget.text()
-    #         annotations[key] = new_value
-    #     return annotations
-    #
-    # def save_new_annotations(self):
-    #     annotations = {}
-    #     if len(self.sample_annotations.new_annotation_rows) > 0:
-    #         for annotation_row in self.sample_annotations.new_annotation_rows:
-    #             new_key = annotation_row.edit_key_widget.text()
-    #             new_value = annotation_row.edit_value_widget.text()
-    #             annotations[new_key] = new_value
-    #             self.sample_annotations.add_annotation_row(new_key, new_value)
-    #             annotation_row.remove(self.sample_annotations.new_annotations_layout)
-    #         self.sample_annotations.new_annotation_rows = []
-    #     return annotations
-    #
-    # def check_all_new_annotations_have_keys(self):
-    #     checks_ok = True
-    #     for annotation_row in self.sample_annotations.new_annotation_rows:
-    #         new_key = annotation_row.edit_key_widget.text()
-    #         if new_key == "":
-    #             self.display_empty_key_error(annotation_row)
-    #             checks_ok = False
-    #         else:
-    #             self.reset_empty_key_error(annotation_row)
-    #     return checks_ok
-    #
-    # def display_empty_key_error(self, annotation_row):
-    #     annotation_row.info_message.setText(
-    #         f"Please add a {SAMPLE_IDENTIFIER_KEY} for the annotation"
-    #     )
-    #
-    # def reset_empty_key_error(self, annotation_row):
-    #     annotation_row.info_message.setText("")
-    #
-    # def discard_new_annotations(self):
-    #     if len(self.sample_annotations.new_annotation_rows) > 0:
-    #         for annotation_row in self.sample_annotations.new_annotation_rows:
-    #             annotation_row.remove(self.sample_annotations.new_annotations_layout)
-    #             self.sample_annotations.new_annotation_rows = []
+    def save_edited_annotations(self):
+        annotations = {}
+        for annotation_row in self.sample_annotations.annotation_rows:
+            key = annotation_row.key_widget.text()
+            new_value = annotation_row.edit_value_widget.text()
+            annotations[key] = new_value
+        return annotations
+
+    def save_new_annotations(self):
+        annotations = {}
+        if len(self.sample_annotations.new_annotation_rows) > 0:
+            for annotation_row in self.sample_annotations.new_annotation_rows:
+                new_key = annotation_row.edit_key_widget.text()
+                new_value = annotation_row.edit_value_widget.text()
+                annotations[new_key] = new_value
+                self.sample_annotations.add_annotation_row(new_key, new_value)
+                annotation_row.remove(self.sample_annotations.new_annotations_layout)
+            self.sample_annotations.new_annotation_rows = []
+        return annotations
+
+    def check_all_new_annotations_have_keys(self):
+        print(2)
+        checks_ok = True
+        for annotation_row in self.sample_annotations.new_annotation_rows:
+            new_key = annotation_row.edit_key_widget.text()
+            if new_key == "":
+                self.display_empty_key_error(annotation_row)
+                checks_ok = False
+            else:
+                self.reset_empty_key_error(annotation_row)
+        return checks_ok
+
+    def display_empty_key_error(self, annotation_row):
+        annotation_row.info_message.setText(
+            f"Please add a {SAMPLE_IDENTIFIER_KEY} for the annotation"
+        )
+
+    def reset_empty_key_error(self, annotation_row):
+        annotation_row.info_message.setText("")
+
+    def discard_new_annotations(self):
+        if len(self.sample_annotations.new_annotation_rows) > 0:
+            for annotation_row in self.sample_annotations.new_annotation_rows:
+                annotation_row.remove(self.sample_annotations.new_annotations_layout)
+                self.sample_annotations.new_annotation_rows = []
 
     def check_unique_sample_id(self, sample_identifier):
         if sample_identifier == "":
@@ -443,14 +428,7 @@ class SamplePanel(PanelBase):
 
     def reset_sample_id_error(self):
         self.sample_annotations.id_row.info_message.setText("")
-        self.sample_annotations.id_row.info_message.setText("")
 
-    def check_for_existing_annotation_keys(self):
-        if self.sample_selector.count() > 1:
-            existing_sample_id = self.sample_selector.item(0).text()
-            self.set_annotation_keys(existing_sample_id)
-
-    #
     def show_sample_id(self):
         self.sample_annotations.id_row.key_widget.show()
         self.sample_annotations.id_row.value_widget.show()
@@ -476,22 +454,21 @@ class SamplePanel(PanelBase):
             annotation_row.edit_key_widget.hide()
             annotation_row.edit_value_widget.hide()
 
-    #
-    # def show_sample_annotations_edit(self):
-    #     self.copy_existing_annotation_values_to_edit()
-    #     for annotation_row in self.sample_annotations.annotation_rows:
-    #         annotation_row.key_widget.show()
-    #         annotation_row.value_widget.hide()
-    #         annotation_row.edit_key_widget.hide()
-    #         annotation_row.edit_value_widget.show()
-    #
-    # def show_new_sample_annotations_edit(self):
-    #     for annotation_row in self.sample_annotations.new_annotation_rows:
-    #         annotation_row.key_widget.hide()
-    #         annotation_row.value_widget.hide()
-    #         annotation_row.edit_key_widget.show()
-    #         annotation_row.edit_value_widget.show()
-    #
+    def show_sample_annotations_edit(self):
+        self.copy_existing_annotation_values_to_edit()
+        for annotation_row in self.sample_annotations.annotation_rows:
+            annotation_row.key_widget.show()
+            annotation_row.value_widget.hide()
+            annotation_row.edit_key_widget.hide()
+            annotation_row.edit_value_widget.show()
+
+    def show_new_sample_annotations_edit(self):
+        for annotation_row in self.sample_annotations.new_annotation_rows:
+            annotation_row.key_widget.hide()
+            annotation_row.value_widget.hide()
+            annotation_row.edit_key_widget.show()
+            annotation_row.edit_value_widget.show()
+
     def hide_sample_annotations(self):
         for annotation_row in self.sample_annotations.annotation_rows:
             annotation_row.key_widget.hide()
@@ -499,22 +476,19 @@ class SamplePanel(PanelBase):
             annotation_row.edit_key_widget.hide()
             annotation_row.edit_value_widget.hide()
 
-    #
     def show_add_ctrl_buttons(self):
         self.add_ctrl_buttons.btn_cancel.show()
         self.add_ctrl_buttons.btn_add.show()
 
-    #
     def hide_add_ctrl_buttons(self):
         self.add_ctrl_buttons.btn_add.hide()
         self.add_ctrl_buttons.btn_cancel.hide()
 
-    #
-    # def show_edit_ctrl_buttons(self):
-    #     self.edit_ctrl_buttons.btn_save.show()
-    #     self.edit_ctrl_buttons.btn_cancel.show()
-    #     self.edit_ctrl_buttons.btn_add_annotation.show()
-    #
+    def show_edit_ctrl_buttons(self):
+        self.edit_ctrl_buttons.btn_save.show()
+        self.edit_ctrl_buttons.btn_cancel.show()
+        self.edit_ctrl_buttons.btn_add_annotation.show()
+
     def hide_edit_ctrl_buttons(self):
         self.edit_ctrl_buttons.btn_save.hide()
         self.edit_ctrl_buttons.btn_cancel.hide()
@@ -540,55 +514,34 @@ class SamplePanel(PanelBase):
     def disable_sample_selector(self):
         self.sample_selector.setEnabled(False)
 
-    #
-    # def _get_sample(self, sample_identifier):
-    #     samples = self._get_samples()
-    #     for sample in samples:
-    #         for key, val in sample.items():
-    #             if key == SAMPLE_IDENTIFIER_KEY and val == sample_identifier:
-    #                 return sample
-    #
-    # def _get_updated_sample(self, sample_identifier):
-    #     edited_annotations = self.save_edited_annotations()
-    #     new_annotations = self.save_new_annotations()
-    #     all_annotations = dict(**edited_annotations, **new_annotations)
-    #     all_annotations[SAMPLE_IDENTIFIER_KEY] = sample_identifier
-    #     return all_annotations
+    def _update_proposal(self, sample_identifier):
+        if sample_identifier in self._get_sample_identifiers():
+            self._update_sample_in_proposal(sample_identifier)
+        else:
+            self._add_sample_to_proposal(sample_identifier)
 
-    def _update_sample_in_proposal(self, sample_identifier):
+    def _add_sample_to_proposal(self, sample_identifier):
         current_samples = self._get_samples()
         new_sample = {SAMPLE_IDENTIFIER_KEY: sample_identifier}
         samples = {}
         if len(current_samples) > 0:
             for index, sample in enumerate(current_samples):
-                if not sample.get(SAMPLE_IDENTIFIER_KEY, ""):
-                    sample[SAMPLE_IDENTIFIER_KEY] = f"sample {index + 1}"
                 samples[index] = sample
                 samples[index + 1] = new_sample
         else:
             samples[0] = new_sample
         self._write_samples(samples)
 
-    #
-    #
-    #
-    #     samples = self._get_samples()
-    #     update_index = None
-    #     for i, sample in enumerate(samples):
-    #         for key, value in sample.items():
-    #             if key == SAMPLE_IDENTIFIER_KEY and value == sample_identifier:
-    #                 update_index = i
-    #     if update_index:
-    #         samples[update_index] = self._get_updated_sample(sample_identifier)
-    #         self._write_samples(samples)
-    #
-
-    #
-
-    #
-
-
-##################################################################################3
+    def _update_sample_in_proposal(self, sample_identifier):
+        current_samples = self._get_samples()
+        updated_sample = self._get_updated_sample(sample_identifier)
+        samples = {}
+        for index, sample in enumerate(current_samples):
+            if sample[SAMPLE_IDENTIFIER_KEY] == sample_identifier:
+                samples[index] = updated_sample
+            else:
+                samples[index] = sample
+        self._write_samples(samples)
 
 
 class AnnotationRow:
@@ -612,7 +565,10 @@ class AnnotationRow:
         widgets = self.get_widgets()
         for column_index, widget in enumerate(widgets):
             layout.addWidget(
-                widget, row, column_index, alignment=Qt.AlignmentFlag.AlignLeft
+                widget,
+                row,
+                column_index,
+                alignment=Qt.AlignmentFlag.AlignLeft,
             )
 
     def remove(self, layout):
