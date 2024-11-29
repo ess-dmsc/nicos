@@ -1,7 +1,5 @@
 import time
 
-from PyQt5.QtWidgets import QListWidgetItem
-
 from nicos.guisupport.qt import (
     QDialog,
     QDialogButtonBox,
@@ -10,6 +8,7 @@ from nicos.guisupport.qt import (
     QLabel,
     QLineEdit,
     QListWidget,
+    QListWidgetItem,
     QPushButton,
     QSplitter,
     Qt,
