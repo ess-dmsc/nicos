@@ -167,9 +167,7 @@ class SamplePanel(PanelBase):
         sample_identifiers = []
         samples = self._get_samples()
         for sample in samples:
-            for key, value in sample.items():
-                if key == SAMPLE_IDENTIFIER_KEY:
-                    sample_identifiers.append(value)
+            sample_identifiers.append(sample[SAMPLE_IDENTIFIER_KEY])
         return sample_identifiers
 
     ###########################################################
@@ -219,12 +217,11 @@ class SamplePanel(PanelBase):
             self.sample_selector.addItem(item)
             self.sample_selector.setCurrentItem(item)
         else:
-            pass
-        #     sample_identifiers = self._get_sample_identifiers()
-        #     selector_items = self.items_in_selector()
-        #     if len(sample_identifiers) > len(selector_items):
-        #         for index in range(len(selector_items), len(sample_identifiers)):
-        #             self.sample_selector.insertItem(index, sample_identifiers[index])
+            sample_identifiers = self._get_sample_identifiers()
+            selector_items = self.items_in_selector()
+            if len(sample_identifiers) > len(selector_items):
+                for index in range(len(selector_items), len(sample_identifiers)):
+                    self.sample_selector.insertItem(index, sample_identifiers[index])
 
     def items_in_selector(self):
         items = []
