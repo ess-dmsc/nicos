@@ -89,7 +89,7 @@ class ChopperPanel(Panel):
         self._selected_chopper = name
         self._update_delay_errors(f"{name}_delay_errors")
 
-    def handle_cache_data(self, data):
+    def handle_delay_errors(self, data):
         timestamp, key, value = data
         dev_name = key.split("/")[0]
         dev_name = dev_name.replace("_delay_errors", "")
@@ -175,52 +175,63 @@ class ChopperPanel(Panel):
         return [chopper["chopper"] for chopper in self.chopper_widget.chopper_data]
 
     def on_client_cache(self, data):
-        """
-        Fix this method when we know the real data structure.
-        """
         timestamp, key, _, value = data
 
-        loaded_choppers = self._get_loaded_choppers()
-        device_name = key.split("/")[0]
-        chopper_name = (
-            device_name.replace("_delay", "")
-            .replace("_speed", "")
-            .replace("_delay_errors", "")
-        )
-        parameter_name = key.split("/")[1]
-
-        if not any(chopper in key for chopper in loaded_choppers):
-            return
+        device_name, parameter_name = key.split("/")
 
         if parameter_name != "value":
             return
 
-        if device_name.endswith("delay"):
-            delay = float(value)
-            frequency = self.eval_command(
-                f"{device_name.replace('_delay', '_speed')}.read()", default=None
-            )
-            if not frequency:
-                return
-            frequency = float(frequency)
-            angle = nanoseconds_to_degrees(delay, frequency)
-            self.chopper_widget.set_chopper_angle(device_name, -angle)
+        chopper_name = self._extract_chopper_name(device_name)
 
-        if device_name.endswith("speed"):
-            frequency = float(value)
-            self.chopper_widget.set_chopper_speed(chopper_name, frequency)
+        loaded_choppers = self._get_loaded_choppers()
+        if chopper_name not in loaded_choppers:
+            return
 
-            delay = self.eval_command(
-                f"{device_name.replace('_speed', '_delay')}.read()", default=None
-            )
-            if not delay:
-                return
-            delay = float(delay)
-            angle = nanoseconds_to_degrees(delay, frequency)
-            self.chopper_widget.set_chopper_angle(device_name, -angle)
-
-        if "delay_errors" in key:
+        if device_name.endswith("_delay"):
+            self._handle_delay_update(chopper_name, value)
+        elif device_name.endswith("_speed"):
+            self._handle_speed_update(chopper_name, value)
+        elif device_name.endswith("_park_angle"):
+            self._handle_park_angle_update(chopper_name, value)
+        elif device_name.endswith("_delay_errors"):
             self._update_delay_errors(device_name)
+
+    def _extract_chopper_name(self, device_name):
+        suffixes = ["_delay", "_speed", "_delay_errors", "_park_angle"]
+        for suffix in suffixes:
+            if device_name.endswith(suffix):
+                return device_name[: -len(suffix)]
+        return device_name
+
+    def _handle_delay_update(self, chopper_name, delay_value):
+        delay = float(delay_value)
+        frequency = self.eval_command(f"{chopper_name}_speed.read()", default=None)
+        if frequency is not None and frequency != 0:
+            frequency = float(frequency)
+            self._update_chopper_angle(chopper_name, delay, frequency)
+
+    def _handle_speed_update(self, chopper_name, speed_value):
+        frequency = float(speed_value)
+        self.chopper_widget.set_chopper_speed(chopper_name, frequency)
+        if frequency != 0:
+            delay = self.eval_command(f"{chopper_name}_delay.read()", default=None)
+            if delay is not None:
+                delay = float(delay)
+                self._update_chopper_angle(chopper_name, delay, frequency)
+
+    def _handle_park_angle_update(self, chopper_name, park_angle_value):
+        park_angle = float(park_angle_value)
+        self.chopper_widget.set_chopper_park_angle(chopper_name, park_angle)
+        frequency = self.eval_command(f"{chopper_name}_speed.read()", default=None)
+        if frequency is not None:
+            frequency = float(frequency)
+            if frequency == 0:
+                self.chopper_widget.set_chopper_angle(chopper_name, park_angle)
+
+    def _update_chopper_angle(self, chopper_name, delay, frequency):
+        angle = nanoseconds_to_degrees(delay, frequency)
+        self.chopper_widget.set_chopper_angle(chopper_name, -angle)
 
     def _update_delay_errors(self, device_name):
         array = self.eval_command(f"{device_name}.read()", default=None)
@@ -229,13 +240,21 @@ class ChopperPanel(Panel):
                 self.histogram_widget.clear()
                 self.trend_widget.clear()
             return
-        self.handle_cache_data((time.time(), f"{device_name}/value", array))
+        self.handle_delay_errors((time.time(), f"{device_name}/value", array))
+
+    def _poll_all_choppers(self):
+        signal_suffixes = ["_delay", "_speed", "_park_angle"]
+        for chopper_name in self._get_loaded_choppers():
+            for suffix in signal_suffixes:
+                _ = self.eval_command(f"{chopper_name}{suffix}.poll()", default=None)
 
     def on_client_connected(self):
         self._get_chopper_info()
+        self._poll_all_choppers()
 
     def on_client_setup(self, setup):
         self._get_chopper_info()
+        self._poll_all_choppers()
 
     def on_client_disconnect(self):
         self.chopper_widget.clear()
