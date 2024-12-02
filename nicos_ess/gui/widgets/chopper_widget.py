@@ -66,6 +66,16 @@ class ChopperWidget(QWidget):
         except KeyError:
             pass
 
+    def set_chopper_park_angle(self, chopper_name, angle):
+        try:
+            for i, chopper in enumerate(self.chopper_data):
+                if chopper["chopper"] == chopper_name:
+                    chopper["parking_angle"] = angle
+                    self.update()
+                    return
+        except KeyError:
+            pass
+
     def resizeEvent(self, event):
         self.update()
 
@@ -81,7 +91,8 @@ class ChopperWidget(QWidget):
         for i, chopper in enumerate(self.chopper_data):
             radius = chopper_radius
             slit_edges = chopper["slit_edges"]
-            current_speed = chopper.get("speed", None)
+            current_speed = chopper.get("speed", 0.0)
+            parking_angle = chopper.get("parking_angle", None)
             center = positions[i]
 
             is_selected = self._selected_chopper == chopper["chopper"]
@@ -128,14 +139,26 @@ class ChopperWidget(QWidget):
                 continue
 
             painter.setPen(Qt.GlobalColor.black)
-            speed_text = f"{current_speed:.3f} Hz"
-            speed_rect = QRectF(
+            if not is_moving and parking_angle is not None:
+                value_text = f"{parking_angle:.3f}°"
+            else:
+                value_text = f"{current_speed:.3f} Hz"
+            value_rect = QRectF(
                 center.x() - radius * 1.5,
                 center.y() + text_height,
                 radius * 3.0,
                 text_height,
             )
-            painter.drawText(speed_rect, Qt.AlignmentFlag.AlignCenter, speed_text)
+            painter.drawText(value_rect, Qt.AlignmentFlag.AlignCenter, value_text)
+
+            status_text = "Rotating" if is_moving else "Parked"
+            status_rect = QRectF(
+                center.x() - radius * 1.5,
+                center.y() + 2 * text_height,
+                radius * 3.0,
+                text_height,
+            )
+            painter.drawText(status_rect, Qt.AlignmentFlag.AlignCenter, status_text)
 
     def calculate_grid(self, count, aspect_ratio):
         best_diff = float("inf")
