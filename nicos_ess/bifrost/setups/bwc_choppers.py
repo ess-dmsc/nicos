@@ -51,9 +51,10 @@ devices = dict(
         maxage=None,
     ),
     bwc1_chopper_delay_errors=device(
-        "nicos_ess.devices.epics.pva.EpicsReadable",
+        "nicos_ess.devices.epics.chopper_delay_error.ChopperDelayError",
         description="The current delay.",
         readpv="{}DiffTSSamples".format(pv_root_1),
+        unit="ns",
         visibility=(
             "metadata",
             "namespace",
@@ -153,9 +154,10 @@ devices = dict(
         maxage=None,
     ),
     bwc2_chopper_delay_errors=device(
-        "nicos_ess.devices.epics.pva.EpicsReadable",
+        "nicos_ess.devices.epics.chopper_delay_error.ChopperDelayError",
         description="The current delay.",
         readpv="{}DiffTSSamples".format(pv_root_2),
+        unit="ns",
         visibility=(
             "metadata",
             "namespace",

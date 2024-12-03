@@ -234,13 +234,13 @@ class ChopperPanel(Panel):
         self.chopper_widget.set_chopper_angle(chopper_name, -angle)
 
     def _update_delay_errors(self, device_name):
-        array = self.eval_command(f"{device_name}.read()", default=None)
+        array = self.eval_command(f"{device_name}.raw_errors", default=None)
         if array is None:
             if device_name.startswith(self._selected_chopper):
                 self.histogram_widget.clear()
                 self.trend_widget.clear()
             return
-        self.handle_delay_errors((time.time(), f"{device_name}/value", array))
+        self.handle_delay_errors((time.time(), f"{device_name}/raw_errors", array))
 
     def _poll_all_choppers(self):
         signal_suffixes = ["_delay", "_speed", "_park_angle"]
