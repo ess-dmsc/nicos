@@ -41,6 +41,7 @@ class SamplePanel(PanelBase):
         )
         self.panel_splitter = self.construct_splitter()
         self.remove_sample_dialog = self.construct_remove_sample_dialog()
+        self.selected_sample = None
 
         layout = QVBoxLayout()
         layout.addLayout(self.top_buttons.layout)
@@ -133,6 +134,8 @@ class SamplePanel(PanelBase):
         print("key change, key:", key)
         if key in self.to_monitor:
             self.update_sample_selector_items()
+            self.update_sample_selection(self.selected_sample)
+        print(self.selected_sample)
 
     def _get_samples(self):
         return self.client.eval("session.experiment.get_samples()", {})
@@ -173,12 +176,12 @@ class SamplePanel(PanelBase):
         return all_annotations
 
     def selection_updated(self):
+        print("selection updated")
         selected_sample = self.sample_selector.currentItem().text()
-        self.enable_top_buttons()
-        self.set_id_key()
-        self.set_id_value(selected_sample)
-        self.set_annotation_values(selected_sample)
+        self.selected_sample = selected_sample
+        self.set_sample_info_to_widgets()
         self.show_sample_view_mode()
+        print("selected sample", self.selected_sample)
 
     def add_sample_clicked(self):
         self.show_add_sample()
@@ -192,12 +195,14 @@ class SamplePanel(PanelBase):
 
     def confirm_add_clicked(self):
         new_sample = self.sample_annotations.id_row.edit_value_widget.text()
+        self.selected_sample = new_sample
         if self.check_unique_sample_id(new_sample):
             self._add_sample_to_proposal(new_sample)
             self.update_sample_selector_items()
             self.set_id_value(new_sample)
             self.reset_new_sample_id()
             self.reset_existing_annotation_values()
+            self.update_sample_selection(self.selected_sample)
             self.show_sample_view_mode()
 
     def remove_sample_clicked(self):
@@ -213,7 +218,14 @@ class SamplePanel(PanelBase):
         selected_row = self.sample_selector.currentRow()
         self.sample_selector.takeItem(selected_row)
         self.remove_sample_dialog.close()
-        self.show_empty_view()
+        samples_in_selector = self.items_in_selector()
+        if len(samples_in_selector) == 0:
+            self.selected_sample = None
+            self.show_empty_view()
+        else:
+            self.selected_sample = samples_in_selector[-1]
+            self.update_sample_selection(self.selected_sample)
+            self.show_sample_view_mode()
 
     def edit_sample_clicked(self):
         self.show_sample_edit_mode()
@@ -241,6 +253,7 @@ class SamplePanel(PanelBase):
             self.set_annotation_values(selected_sample)
             self.reset_existing_annotation_values_to_edit()
             self.reset_new_annotation_values_to_edit()
+            self.update_sample_selection(selected_sample)
             self.show_sample_view_mode()
 
     def update_sample_selector_items(self):
@@ -256,12 +269,11 @@ class SamplePanel(PanelBase):
             for sample in new_samples:
                 item = QListWidgetItem(sample)
                 self.sample_selector.addItem(item)
-                self.sample_selector.setCurrentItem(item)
+                # self.sample_selector.setCurrentItem(item)
 
     def items_in_selector(self):
         items = []
         rows = self.sample_selector.count()
-        print(rows)
         if rows > 0:
             for i in range(rows):
                 self.sample_selector.setCurrentRow(i)
@@ -269,12 +281,29 @@ class SamplePanel(PanelBase):
         self.sample_selector.clearSelection()
         return items
 
+    def get_index_to_select(self, sample_to_select):
+        items = self.items_in_selector()
+        return items.index(sample_to_select)
+
+    def update_sample_selection(self, sample_to_select=None):
+        if sample_to_select is not None:
+            select_index = self.get_index_to_select(sample_to_select)
+            self.sample_selector.setCurrentRow(select_index)
+        else:
+            self.sample_selector.clearSelection()
+
+    def set_sample_info_to_widgets(self):
+        self.enable_top_buttons()
+        self.set_id_key()
+        self.set_id_value(self.selected_sample)
+        self.set_annotation_values(self.selected_sample)
+
     def show_empty_view(self):
         self.hide_sample_id()
         self.hide_sample_annotations()
         self.hide_add_ctrl_buttons()
         self.hide_edit_ctrl_buttons()
-        self.sample_selector.clearSelection()
+        # self.sample_selector.clearSelection()
         self.disable_edit_and_remove()
 
     def show_sample_view_mode(self):
@@ -345,6 +374,8 @@ class SamplePanel(PanelBase):
 
     def copy_existing_annotation_values_to_edit(self):
         for annotation_row in self.sample_annotations.annotation_rows:
+            key = annotation_row.key_widget.text()
+            annotation_row.edit_key_widget.setText(str(key))
             value = annotation_row.value_widget.text()
             annotation_row.edit_value_widget.setText(str(value))
 
@@ -385,7 +416,6 @@ class SamplePanel(PanelBase):
         return annotations
 
     def check_all_new_annotations_have_keys(self):
-        print(2)
         checks_ok = True
         for annotation_row in self.sample_annotations.new_annotation_rows:
             new_key = annotation_row.edit_key_widget.text()
@@ -456,9 +486,9 @@ class SamplePanel(PanelBase):
     def show_sample_annotations_edit(self):
         self.copy_existing_annotation_values_to_edit()
         for annotation_row in self.sample_annotations.annotation_rows:
-            annotation_row.key_widget.show()
+            annotation_row.key_widget.hide()
             annotation_row.value_widget.hide()
-            annotation_row.edit_key_widget.hide()
+            annotation_row.edit_key_widget.show()
             annotation_row.edit_value_widget.show()
 
     def show_new_sample_annotations_edit(self):
@@ -550,6 +580,11 @@ class AnnotationRow:
         self.value_widget = QLabel(str(value))
         self.edit_value_widget = QLineEdit()
         self.info_message = QLabel()
+        # self.set_sizes()
+
+    def set_sizes(self):
+        self.key_widget.setMaximumWidth(10)
+        self.edit_key_widget.setMaximumWidth(10)
 
     def get_widgets(self):
         return [
@@ -562,11 +597,16 @@ class AnnotationRow:
 
     def add_and_align_left(self, layout, row):
         widgets = self.get_widgets()
+        rowwidth = 1
+        colwidth = {0: 1, 1: 1, 2: 3, 3: 3, 4: 1}
         for column_index, widget in enumerate(widgets):
+            widget.resize(widget.sizeHint())
             layout.addWidget(
                 widget,
                 row,
                 column_index,
+                rowwidth,
+                colwidth[column_index],
                 alignment=Qt.AlignmentFlag.AlignLeft,
             )
 
