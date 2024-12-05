@@ -2,13 +2,8 @@
 
 main_window = docked(
     tabbed(
-        (
-            "Setup",
-            tabbed(
-                ("Experiment", panel("nicos_ess.gui.panels.exp_panel.ExpPanel")),
-                ("Instrument", panel("nicos_ess.gui.panels.setups.SetupsPanel")),
-            ),
-        ),
+        ("Experiment", panel("nicos_ess.gui.panels.exp_panel.ExpPanel")),
+        ("Setup", panel("nicos_ess.gui.panels.setups.SetupsPanel")),
         ("  ", panel("nicos_ess.gui.panels.empty.EmptyPanel")),
         (
             "Instrument interaction",
@@ -28,13 +23,11 @@ main_window = docked(
                         ("Scan Plot", panel("nicos_ess.gui.panels.scans.ScansPanel")),
                         (
                             "Detector Image",
-                            panel("nicos_ess.gui.panels.live_gr.MultiLiveDataPanel"),
+                            panel("nicos_ess.gui.panels.live_pyqt.MultiLiveDataPanel"),
                         ),
                         (
-                            "Comparison Panel",
-                            panel(
-                                "nicos_ess.dream.gui.comparison_panel.ComparisonPanel"
-                            ),
+                            "Choppers",
+                            panel("nicos_ess.gui.panels.chopper.ChopperPanel"),
                         ),
                         (
                             "Script Status",
@@ -53,9 +46,8 @@ main_window = docked(
         ),
         (
             "Scripting",
-            panel("nicos_ess.gui.panels.editor.EditorPanel", tools=None),
+            panel("nicos.clients.flowui.panels.editor.EditorPanel", tools=None),
         ),
-        ("Detector Image", panel("nicos_ess.gui.panels.live_gr.MultiLiveDataPanel")),
         (
             "History",
             panel("nicos_ess.gui.panels.history.HistoryPanel"),
@@ -76,10 +68,6 @@ main_window = docked(
 windows = []
 
 options = {
-    "reader_classes": [
-        "nicos.devices.datasinks.text",
-        "nicos_ess.dream.devices.datasinks.numpy_reader",
-    ],
     "facility": "ess",
     "mainwindow_class": "nicos_ess.gui.mainwindow.MainWindow",
 }

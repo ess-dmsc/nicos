@@ -52,16 +52,22 @@ devices = dict(
         "nicos_ess.devices.datasinks.file_writer.FileWriterStatus",
         description="Status of the file-writer",
         brokers=configdata("config.KAFKA_BROKERS"),
-        statustopic="DREAM_controlTopic",
+        statustopic="dream_filewriter",
         unit="",
     ),
     FileWriterControl=device(
         "nicos_ess.devices.datasinks.file_writer.FileWriterControlSink",
         description="Control for the file-writer",
         brokers=configdata("config.KAFKA_BROKERS"),
-        pool_topic="DREAM_jobPool",
+        pool_topic="ess_filewriter_pool",
         status="FileWriterStatus",
         nexus="NexusStructure",
+        use_instrument_directory=True,
+    ),
+    SciChat=device(
+        "nicos_ess.devices.scichat.ScichatBot",
+        description="Sends messages to SciChat",
+        brokers=configdata("config.KAFKA_BROKERS"),
     ),
 )
 
