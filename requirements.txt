@@ -1,4 +1,5 @@
 --extra-index-url https://forge.frm2.tum.de/simple
+urllib3==1.26.20
 caproto
 confluent-kafka==2.4.0
 ess-streaming-data-types>=0.26.1
