@@ -1,6 +1,5 @@
 import time
 
-from PyQt5.QtWidgets import QSizePolicy
 
 from nicos.guisupport.qt import (
     QDialog,
@@ -91,14 +90,14 @@ class SamplePanel(PanelBase):
         return sample_selector_widget
 
     def construct_sample_annotations(self):
-        sample_annotations = SampleAnnotationWidgetLayout()
-        sample_annotations.id_row.key_edt.hide()
-        sample_annotations.id_row.val_edt.hide()
+        sample_annotations = SampleInfoLayout()
+        # sample_annotations.id_row.key_edt.hide()
+        # sample_annotations.id_row.val_edt.hide()
         return sample_annotations
 
     def construct_sample_annotation_outer_layout_widget(self):
         sample_annotation_outer_layout = QVBoxLayout()
-        sample_annotation_outer_layout.addLayout(self.sample_annotations.layout)
+        sample_annotation_outer_layout.addLayout(self.sample_annotations.grid_layout)
         sample_annotation_outer_layout.addWidget(self.add_ctrl_buttons.widget)
         sample_annotation_outer_layout.addWidget(self.edt_ctrl_buttons.widget)
         sample_annotation_outer_layout.addStretch()
@@ -636,8 +635,8 @@ class EditControlButtonsLayout(QWidget):
         # self.btn_add_annotation = QPushButton("Add field")
         self.btn_cancel = QPushButton("Cancel")
         self.btn_save = QPushButton("Save changes")
-        self.btn_cancel.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        self.btn_save.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        # self.btn_cancel.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        # self.btn_save.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         # self.add_and_align_left(self.btn_add_annotation, self.layout)
         # self.layout.addStretch()
         self.layout.addWidget(self.btn_cancel)
@@ -660,22 +659,33 @@ class RemoveSampleDialog(QDialog):
         self.setLayout(layout)
 
 
-class SampleAnnotationWidgetLayout(QWidget):
+class SampleInfoLayout(QWidget):
     ID_ROW = 0
 
     def __init__(self):
         QWidget.__init__(self)
-        self.layout = QVBoxLayout()
-        self.id_layout = QGridLayout()
-        self.annotations_layout = QGridLayout()
-        self.new_annotations_layout = QGridLayout()
-        self.id_row = AnnotationRow()
-        self.id_row.add_and_align_left(self.id_layout, self.ID_ROW)
-        self.annotation_rows = []
-        self.new_annotation_rows = []
-        self.layout.addLayout(self.id_layout)
-        self.layout.addLayout(self.annotations_layout)
-        self.layout.addLayout(self.new_annotations_layout)
+        # self.layout = QVBoxLayout()
+        self.grid_layout = QGridLayout()
+        self.header_key = QLabel("Property")
+        self.header_val = QLabel("Value")
+        header_style_sheet = "font-weight:bold;"
+        self.header_key.setStyleSheet(header_style_sheet)
+        self.header_val.setStyleSheet(header_style_sheet)
+        self.grid_layout.addWidget(self.header_key, 0, 0)
+        self.grid_layout.addWidget(self.header_val, 0, 1)
+        self.grid_layout.setColumnStretch(self.grid_layout.columnCount(), 1)
+
+        self.sample_info = []
+        # self.id_layout = QGridLayout()
+        # self.annotations_layout = QGridLayout()
+        # self.new_annotations_layout = QGridLayout()
+        # self.id_row = AnnotationRow()
+        # self.id_row.add_and_align_left(self.id_layout, self.ID_ROW)
+        # self.annotation_rows = []
+        # self.new_annotation_rows = []
+        # self.layout.addLayout(self.id_layout)
+        # self.layout.addLayout(self.annotations_layout)
+        # self.layout.addLayout(self.new_annotations_layout)
 
     def add_annotation_row(self, key="", value=""):
         current_rows = len(self.annotation_rows)
