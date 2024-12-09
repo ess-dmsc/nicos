@@ -1,5 +1,7 @@
 import time
 
+from PyQt5.QtWidgets import QSizePolicy
+
 from nicos.guisupport.qt import (
     QDialog,
     QDialogButtonBox,
@@ -33,7 +35,7 @@ class SamplePanel(PanelBase):
 
         self.top_buttons = self.construct_top_menu()
         self.add_ctrl_buttons = self.construct_add_ctrl_buttons()
-        self.edit_ctrl_buttons = self.construct_edit_ctrl_buttons()
+        self.edt_ctrl_buttons = self.construct_edt_ctrl_buttons()
         self.sample_selector = self.construct_sample_selector()
         self.sample_annotations = self.construct_sample_annotations()
         self.sample_annotation_outer_layout_widget = (
@@ -69,16 +71,16 @@ class SamplePanel(PanelBase):
         add_ctrl_buttons.btn_add.hide()
         return add_ctrl_buttons
 
-    def construct_edit_ctrl_buttons(self):
+    def construct_edt_ctrl_buttons(self):
         edit_ctrl_buttons = EditControlButtonsLayout()
         edit_ctrl_buttons.widget = QWidget()
         edit_ctrl_buttons.widget.setLayout(edit_ctrl_buttons.layout)
-        edit_ctrl_buttons.btn_add_annotation.clicked.connect(
-            self.add_annotation_clicked
-        )
+        # edit_ctrl_buttons.btn_add_annotation.clicked.connect(
+        #     self.add_annotation_clicked
+        # )
         edit_ctrl_buttons.btn_cancel.clicked.connect(self.cancel_edit_clicked)
         edit_ctrl_buttons.btn_save.clicked.connect(self.confirm_edit_clicked)
-        edit_ctrl_buttons.btn_add_annotation.hide()
+        # edit_ctrl_buttons.btn_add_annotation.hide()
         edit_ctrl_buttons.btn_cancel.hide()
         edit_ctrl_buttons.btn_save.hide()
         return edit_ctrl_buttons
@@ -98,7 +100,7 @@ class SamplePanel(PanelBase):
         sample_annotation_outer_layout = QVBoxLayout()
         sample_annotation_outer_layout.addLayout(self.sample_annotations.layout)
         sample_annotation_outer_layout.addWidget(self.add_ctrl_buttons.widget)
-        sample_annotation_outer_layout.addWidget(self.edit_ctrl_buttons.widget)
+        sample_annotation_outer_layout.addWidget(self.edt_ctrl_buttons.widget)
         sample_annotation_outer_layout.addStretch()
         sample_annotation_outer_layout_widget = QWidget()
         sample_annotation_outer_layout_widget.setLayout(sample_annotation_outer_layout)
@@ -514,14 +516,14 @@ class SamplePanel(PanelBase):
         self.add_ctrl_buttons.btn_cancel.hide()
 
     def show_edit_ctrl_buttons(self):
-        self.edit_ctrl_buttons.btn_save.show()
-        self.edit_ctrl_buttons.btn_cancel.show()
-        self.edit_ctrl_buttons.btn_add_annotation.show()
+        self.edt_ctrl_buttons.btn_save.show()
+        self.edt_ctrl_buttons.btn_cancel.show()
+        # self.edt_ctrl_buttons.btn_add_annotation.show()
 
     def hide_edit_ctrl_buttons(self):
-        self.edit_ctrl_buttons.btn_save.hide()
-        self.edit_ctrl_buttons.btn_cancel.hide()
-        self.edit_ctrl_buttons.btn_add_annotation.hide()
+        self.edt_ctrl_buttons.btn_save.hide()
+        self.edt_ctrl_buttons.btn_cancel.hide()
+        # self.edt_ctrl_buttons.btn_add_annotation.hide()
 
     def enable_top_buttons(self):
         self.top_buttons.btn_add.setEnabled(True)
@@ -621,29 +623,26 @@ class AddControlButtonsLayout(QWidget):
         QWidget.__init__(self)
         self.layout = QHBoxLayout()
         self.btn_cancel = QPushButton("Cancel")
-        self.btn_add = QPushButton("Add")
+        self.btn_add = QPushButton("Save sample")
+        self.layout.addWidget(self.btn_cancel)
+        self.layout.addWidget(self.btn_add)
         self.layout.addStretch()
-        self.add_and_align_left(self.btn_cancel, self.layout)
-        self.add_and_align_left(self.btn_add, self.layout)
-
-    def add_and_align_left(self, button, layout):
-        layout.addWidget(button, alignment=Qt.AlignmentFlag.AlignLeft)
 
 
 class EditControlButtonsLayout(QWidget):
     def __init__(self):
         QWidget.__init__(self)
         self.layout = QHBoxLayout()
-        self.btn_add_annotation = QPushButton("Add field")
+        # self.btn_add_annotation = QPushButton("Add field")
         self.btn_cancel = QPushButton("Cancel")
-        self.btn_save = QPushButton("Save")
-        self.add_and_align_left(self.btn_add_annotation, self.layout)
+        self.btn_save = QPushButton("Save changes")
+        self.btn_cancel.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.btn_save.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        # self.add_and_align_left(self.btn_add_annotation, self.layout)
+        # self.layout.addStretch()
+        self.layout.addWidget(self.btn_cancel)
+        self.layout.addWidget(self.btn_save)
         self.layout.addStretch()
-        self.add_and_align_left(self.btn_cancel, self.layout)
-        self.add_and_align_left(self.btn_save, self.layout)
-
-    def add_and_align_left(self, button, layout):
-        layout.addWidget(button, alignment=Qt.AlignmentFlag.AlignLeft)
 
 
 class RemoveSampleDialog(QDialog):
