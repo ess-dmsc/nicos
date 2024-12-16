@@ -54,10 +54,13 @@ class SamplePanelWidgets(QWidget):
         self.sample_info_grid_layout = QGridLayout()
         self.header_key = QLabel("Property")
         self.header_val = QLabel("Value")
+        self.spacer_width = QLabel()
+        self.spacer_width.setFixedSize(150, 10)
         self.header_key.setStyleSheet("font-weight:bold;")
         self.header_val.setStyleSheet("font-weight:bold;")
         self.sample_info_grid_layout.addWidget(self.header_key, 0, 0)
         self.sample_info_grid_layout.addWidget(self.header_val, 0, 1)
+        self.sample_info_grid_layout.addWidget(self.spacer_width, 1, 0)
         self.sample_info_grid_layout.setColumnStretch(
             self.sample_info_grid_layout.columnCount(), 1
         )
