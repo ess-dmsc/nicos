@@ -29,7 +29,7 @@ class SamplePanel(PanelBase):
         self._in_edit_mode = False
         self.to_monitor = ["sample/samples", "exp/propinfo"]
         self.mode = None
-        self.sample_info_in_widgets = []
+        self.sample_info_widgets = []
 
         self.widgets = SamplePanelWidgets()
         self.remove_sample_dialog = RemoveSampleDialog()
@@ -50,7 +50,7 @@ class SamplePanel(PanelBase):
         self.widgets.btn_remove.clicked.connect(self.remove_sample_clicked)
         self.widgets.btn_cancel.clicked.connect(self.cancel_clicked)
         self.widgets.btn_save.clicked.connect(self.save_clicked)
-        # self.widgets.btn_add_prop.clicked.connect()
+        self.widgets.btn_add_prop.clicked.connect(self.add_property_clicked)
         self.remove_sample_dialog.buttonBox.accepted.connect(
             self.confirm_remove_clicked
         )
@@ -58,14 +58,17 @@ class SamplePanel(PanelBase):
 
     def add_sample_clicked(self):
         self.mode = "add"
-        self.show_add_sample()
+        self.show_add_sample_view()
 
     def edit_sample_clicked(self):
         self.mode = "edit"
-        self.show_edit_sample()
+        self.show_edit_sample_view()
 
     def remove_sample_clicked(self):
         self.show_remove_sample_dialog()
+
+    def add_property_clicked(self):
+        self.add_sample_info_row_to_layout()
 
     def cancel_clicked(self):
         pass
@@ -82,7 +85,7 @@ class SamplePanel(PanelBase):
         self.widgets.header_key.hide()
         self.widgets.header_val.hide()
 
-    def show_add_sample(self):
+    def show_add_sample_view(self):
         self.widgets.btn_save.setText("Save sample")
         self.widgets.btn_add.setEnabled(False)
         self.widgets.btn_edit.setEnabled(False)
@@ -92,40 +95,58 @@ class SamplePanel(PanelBase):
         self.widgets.btn_save.show()
         self.widgets.header_key.show()
         self.widgets.header_val.show()
-        if len(self.sample_info_in_widgets) == 0:
-            sample_info_row = SampleInfoRow()
-            self.sample_info_in_widgets.append(sample_info_row)
-            self.add_sample_info_row_to_layout(sample_info_row)
-            sample_info_row.key_lab.setText(SAMPLE_IDENTIFIER_KEY)
-            sample_info_row.key_lab.show()
-            sample_info_row.key_edt.hide()
-            sample_info_row.val_lab.hide()
-            sample_info_row.val_edt.show()
+        if len(self.sample_info_widgets) == 0:
+            self.add_sample_info_row_to_layout()
+            self.sample_info_widgets[0].key_lab.setText(SAMPLE_IDENTIFIER_KEY)  # fix
+        self.show_add_sample_widgets()
 
-    def add_sample_info_row_to_layout(self, sample_info_row):
-        row_i = len(self.sample_info_in_widgets) + 1
-        self.widgets.sample_info_grid_layout.addWidget(
-            sample_info_row.key_lab, row_i, 0
-        )
-        self.widgets.sample_info_grid_layout.addWidget(
-            sample_info_row.key_edt, row_i, 0
-        )
-        self.widgets.sample_info_grid_layout.addWidget(
-            sample_info_row.val_lab, row_i, 1
-        )
-        self.widgets.sample_info_grid_layout.addWidget(
-            sample_info_row.val_edt, row_i, 1
-        )
-        self.widgets.sample_info_grid_layout.addWidget(
-            sample_info_row.message, row_i, 2
-        )
+    def add_sample_info_row_to_layout(self):
+        row_i = len(self.sample_info_widgets) + 1
+        row = SampleInfoRow()
+        self.sample_info_widgets.append(row)
+        self.widgets.sample_info_grid_layout.addWidget(row.key_lab, row_i, 0)
+        self.widgets.sample_info_grid_layout.addWidget(row.key_edt, row_i, 0)
+        self.widgets.sample_info_grid_layout.addWidget(row.val_lab, row_i, 1)
+        self.widgets.sample_info_grid_layout.addWidget(row.val_edt, row_i, 1)
+        self.widgets.sample_info_grid_layout.addWidget(row.message, row_i, 2)
 
-    def show_sample_annotations(self):
-        for annotation_row in self.sample_annotations.annotation_rows:
-            annotation_row.key_lab.show()
-            annotation_row.val_lab.show()
-            annotation_row.key_edt.hide()
-            annotation_row.val_edt.hide()
+    def show_add_sample_widgets(self):
+        for i, sample_info_row in enumerate(self.sample_info_widgets):
+            if i == 0:
+                sample_info_row.key_lab.show()
+                sample_info_row.key_edt.hide()
+                sample_info_row.val_lab.hide()
+                sample_info_row.val_edt.show()
+            else:
+                sample_info_row.key_lab.hide()
+                sample_info_row.key_edt.show()
+                sample_info_row.val_lab.hide()
+                sample_info_row.val_edt.show()
+
+    def show_edit_sample_view(self):
+        self.widgets.btn_save.setText("Save changes")
+        self.widgets.btn_add.setEnabled(False)
+        self.widgets.btn_edit.setEnabled(False)
+        self.widgets.btn_remove.setEnabled(False)
+        self.widgets.btn_add_prop.show()
+        self.widgets.btn_cancel.show()
+        self.widgets.btn_save.show()
+        self.widgets.header_key.show()
+        self.widgets.header_val.show()
+        self.show_edit_sample_widgets()
+
+    def show_edit_sample_widgets(self):
+        for i, sample_info_row in enumerate(self.sample_info_widgets):
+            if i == 0:
+                sample_info_row.key_lab.show()
+                sample_info_row.key_edt.hide()
+                sample_info_row.val_lab.show()
+                sample_info_row.val_edt.hide()
+            else:
+                sample_info_row.key_lab.hide()
+                sample_info_row.key_edt.show()
+                sample_info_row.val_lab.hide()
+                sample_info_row.val_edt.show()
 
     def construct_top_menu(self):
         top_buttons = TopButtonLayout()
@@ -404,14 +425,14 @@ class SamplePanel(PanelBase):
     def set_id_value(self, sample_identifier):
         self.sample_annotations.id_row.val_lab.setText(str(sample_identifier))
 
-    def set_annotation_keys(self, sample_identifier):
-        sample = self._get_sample(sample_identifier)
-        for i, key in enumerate(sample.keys()):
-            if i < len(self.sample_annotations.annotation_rows):
-                annotation_row = self.sample_annotations.annotation_rows[i]
-                annotation_row.key_lab.setText(str(key))
-            else:
-                self.sample_annotations.add_annotation_row(key, "")
+    # def set_annotation_keys(self, sample_identifier):
+    #     sample = self._get_sample(sample_identifier)
+    #     for i, key in enumerate(sample.keys()):
+    #         if i < len(self.sample_annotations.annotation_rows):
+    #             annotation_row = self.sample_annotations.annotation_rows[i]
+    #             annotation_row.key_lab.setText(str(key))
+    #         else:
+    #             self.sample_annotations.add_annotation_row(key, "")
 
     def set_annotation_values(self, sample_identifier):
         sample = self._get_sample(sample_identifier)
