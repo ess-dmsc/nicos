@@ -29,6 +29,7 @@ class SamplePanel(PanelBase):
         self.options = options
         self._in_edit_mode = False
         self.to_monitor = ["sample/samples", "exp/propinfo"]
+        self.mode = None
 
         self.widgets = SamplePanelWidgets()
         self.remove_sample_dialog = RemoveSampleDialog()
@@ -39,7 +40,47 @@ class SamplePanel(PanelBase):
         self.layout.addStretch()
         self.setLayout(self.layout)
 
+        self.connect_signals()
         # self.initialise_connection_status_listeners()
+        self.show_empty_view()
+
+    def connect_signals(self):
+        self.widgets.btn_add.clicked.connect(self.add_sample_clicked)
+        self.widgets.btn_edit.clicked.connect(self.edit_sample_clicked)
+        self.widgets.btn_remove.clicked.connect(self.remove_sample_clicked)
+        self.widgets.btn_cancel.clicked.connect(self.cancel_clicked)
+        self.widgets.btn_save.clicked.connect(self.save_clicked)
+        # self.widgets.btn_add_prop.clicked.connect()
+        self.remove_sample_dialog.buttonBox.accepted.connect(
+            self.confirm_remove_clicked
+        )
+        self.remove_sample_dialog.buttonBox.rejected.connect(self.cancel_remove_clicked)
+
+    def add_sample_clicked(self):
+        self.mode = "add"
+        self.show_add_sample()
+
+    def edit_sample_clicked(self):
+        self.mode = "edit"
+        self.show_edit_sample()
+
+    def remove_sample_clicked(self):
+        self.show_remove_sample_dialog()
+
+    def cancel_clicked(self):
+        pass
+
+    def save_clicked(self):
+        pass
+
+    def show_empty_view(self):
+        self.widgets.btn_edit.setEnabled(False)
+        self.widgets.btn_remove.setEnabled(False)
+        self.widgets.btn_add_prop.hide()
+        self.widgets.btn_cancel.hide()
+        self.widgets.btn_save.hide()
+        self.widgets.header_key.hide()
+        self.widgets.header_val.hide()
 
     def construct_top_menu(self):
         top_buttons = TopButtonLayout()
@@ -174,9 +215,6 @@ class SamplePanel(PanelBase):
         self.show_sample_view_mode()
         print("selected sample", self.selected_sample)
 
-    def add_sample_clicked(self):
-        self.show_add_sample()
-
     def cancel_add_clicked(self):
         self.reset_new_sample_id()
         self.reset_existing_annotation_values_to_edit()
@@ -196,9 +234,6 @@ class SamplePanel(PanelBase):
             self.update_sample_selection(self.selected_sample)
             self.show_sample_view_mode()
 
-    def remove_sample_clicked(self):
-        self.show_remove_sample_dialog()
-
     def cancel_remove_clicked(self):
         self.show_sample_view_mode()
         self.remove_sample_dialog.close()
@@ -217,9 +252,6 @@ class SamplePanel(PanelBase):
             self.selected_sample = samples_in_selector[-1]
             self.update_sample_selection(self.selected_sample)
             self.show_sample_view_mode()
-
-    def edit_sample_clicked(self):
-        self.show_sample_edit_mode()
 
     def add_annotation_clicked(self):
         row_index = len(self.sample_annotations.new_annotation_rows) + 1
@@ -290,14 +322,6 @@ class SamplePanel(PanelBase):
         # self.set_id_value(self.selected_sample)
         # self.set_annotation_values(self.selected_sample)
 
-    def show_empty_view(self):
-        self.hide_sample_id()
-        self.hide_sample_annotations()
-        self.hide_add_ctrl_buttons()
-        self.hide_edit_ctrl_buttons()
-        # self.sample_selector.clearSelection()
-        self.disable_edit_and_remove()
-
     def show_sample_view_mode(self):
         self.show_sample_id()
         self.show_sample_annotations()
@@ -306,7 +330,7 @@ class SamplePanel(PanelBase):
         self.enable_top_buttons()
         self.enable_sample_selector()
 
-    def show_sample_edit_mode(self):
+    def show_edit_sample(self):
         self.show_sample_id()
         self.show_sample_annotations_edit()
         self.show_new_sample_annotations_edit()

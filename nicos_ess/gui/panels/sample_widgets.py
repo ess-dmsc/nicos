@@ -30,17 +30,17 @@ class SamplePanelWidgets(QWidget):
 
         self.save_btns_layout = QHBoxLayout()
         self.btn_cancel = QPushButton("Cancel")
-        self.btn_add = QPushButton("Save")
+        self.btn_save = QPushButton("Save")
         self.save_btns_layout.addWidget(self.btn_cancel)
-        self.save_btns_layout.addWidget(self.btn_add)
+        self.save_btns_layout.addWidget(self.btn_save)
         self.save_btns_layout.addStretch()
 
         self.add_prop_layout = QGridLayout()
-        self.btn_add = QPushButton("Add sample property")
+        self.btn_add_prop = QPushButton("Add sample property")
         self.btn_add.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         self.spacer_label = QLabel()
         self.add_prop_layout.addWidget(self.spacer_label, 0, 0)
-        self.add_prop_layout.addWidget(self.btn_add, 1, 0)
+        self.add_prop_layout.addWidget(self.btn_add_prop, 1, 0)
         self.add_prop_layout.addWidget(self.spacer_label, 2, 0)
         self.add_prop_layout.setColumnStretch(self.add_prop_layout.columnCount(), 1)
 
