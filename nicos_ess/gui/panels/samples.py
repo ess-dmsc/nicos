@@ -9,7 +9,6 @@ from nicos.guisupport.qt import (
     QListWidgetItem,
     QPushButton,
     QSplitter,
-    Qt,
     QVBoxLayout,
     QWidget,
 )
@@ -30,6 +29,7 @@ class SamplePanel(PanelBase):
         self._in_edit_mode = False
         self.to_monitor = ["sample/samples", "exp/propinfo"]
         self.mode = None
+        self.sample_info_in_widgets = []
 
         self.widgets = SamplePanelWidgets()
         self.remove_sample_dialog = RemoveSampleDialog()
@@ -81,6 +81,51 @@ class SamplePanel(PanelBase):
         self.widgets.btn_save.hide()
         self.widgets.header_key.hide()
         self.widgets.header_val.hide()
+
+    def show_add_sample(self):
+        self.widgets.btn_save.setText("Save sample")
+        self.widgets.btn_add.setEnabled(False)
+        self.widgets.btn_edit.setEnabled(False)
+        self.widgets.btn_remove.setEnabled(False)
+        self.widgets.btn_add_prop.show()
+        self.widgets.btn_cancel.show()
+        self.widgets.btn_save.show()
+        self.widgets.header_key.show()
+        self.widgets.header_val.show()
+        if len(self.sample_info_in_widgets) == 0:
+            sample_info_row = SampleInfoRow()
+            self.sample_info_in_widgets.append(sample_info_row)
+            self.add_sample_info_row_to_layout(sample_info_row)
+            sample_info_row.key_lab.setText(SAMPLE_IDENTIFIER_KEY)
+            sample_info_row.key_lab.show()
+            sample_info_row.key_edt.hide()
+            sample_info_row.val_lab.hide()
+            sample_info_row.val_edt.show()
+
+    def add_sample_info_row_to_layout(self, sample_info_row):
+        row_i = len(self.sample_info_in_widgets) + 1
+        self.widgets.sample_info_grid_layout.addWidget(
+            sample_info_row.key_lab, row_i, 0
+        )
+        self.widgets.sample_info_grid_layout.addWidget(
+            sample_info_row.key_edt, row_i, 0
+        )
+        self.widgets.sample_info_grid_layout.addWidget(
+            sample_info_row.val_lab, row_i, 1
+        )
+        self.widgets.sample_info_grid_layout.addWidget(
+            sample_info_row.val_edt, row_i, 1
+        )
+        self.widgets.sample_info_grid_layout.addWidget(
+            sample_info_row.message, row_i, 2
+        )
+
+    def show_sample_annotations(self):
+        for annotation_row in self.sample_annotations.annotation_rows:
+            annotation_row.key_lab.show()
+            annotation_row.val_lab.show()
+            annotation_row.key_edt.hide()
+            annotation_row.val_edt.hide()
 
     def construct_top_menu(self):
         top_buttons = TopButtonLayout()
@@ -255,7 +300,7 @@ class SamplePanel(PanelBase):
 
     def add_annotation_clicked(self):
         row_index = len(self.sample_annotations.new_annotation_rows) + 1
-        new_annotation_row = AnnotationRow()
+        new_annotation_row = SampleInfoRow()
         self.sample_annotations.new_annotation_rows.append(new_annotation_row)
         new_annotation_row.add_and_align_left(
             self.sample_annotations.new_annotations_layout, row_index
@@ -339,13 +384,13 @@ class SamplePanel(PanelBase):
         self.disable_top_buttons()
         self.disable_sample_selector()
 
-    def show_add_sample(self):
-        self.show_empty_view()
-        self.set_id_key()
-        self.show_sample_id_edit()
-        self.show_add_ctrl_buttons()
-        self.disable_top_buttons()
-        self.disable_sample_selector()
+    # def show_add_sample(self):
+    #     self.show_empty_view()
+    #     self.set_id_key()
+    #     self.show_sample_id_edit()
+    #     self.show_add_ctrl_buttons()
+    #     self.disable_top_buttons()
+    #     self.disable_sample_selector()
 
     def show_remove_sample_dialog(self):
         selected_sample = self.sample_selector.currentItem().text()
@@ -492,13 +537,6 @@ class SamplePanel(PanelBase):
         self.sample_annotations.id_row.key_edt.hide()
         self.sample_annotations.id_row.val_edt.hide()
 
-    def show_sample_annotations(self):
-        for annotation_row in self.sample_annotations.annotation_rows:
-            annotation_row.key_lab.show()
-            annotation_row.val_lab.show()
-            annotation_row.key_edt.hide()
-            annotation_row.val_edt.hide()
-
     def show_sample_annotations_edit(self):
         self.copy_existing_annotation_values_to_edit()
         for annotation_row in self.sample_annotations.annotation_rows:
@@ -589,47 +627,47 @@ class SamplePanel(PanelBase):
         self._write_samples(samples)
 
 
-class AnnotationRow:
-    def __init__(self, key="", value=""):
-        self.key_lab = QLabel(str(key))
+class SampleInfoRow:
+    def __init__(self):
+        self.key_lab = QLabel()
         self.key_edt = QLineEdit()
-        self.val_lab = QLabel(str(value))
+        self.val_lab = QLabel()
         self.val_edt = QLineEdit()
         self.message = QLabel()
         # self.set_sizes()
 
-    def set_sizes(self):
-        self.key_lab.setMaximumWidth(10)
-        self.key_edt.setMaximumWidth(10)
-
-    def get_widgets(self):
-        return [
-            self.key_lab,
-            self.key_edt,
-            self.val_lab,
-            self.val_edt,
-            self.message,
-        ]
-
-    def add_and_align_left(self, layout, row):
-        widgets = self.get_widgets()
-        rowwidth = 1
-        colwidth = {0: 1, 1: 1, 2: 3, 3: 3, 4: 1}
-        for column_index, widget in enumerate(widgets):
-            widget.resize(widget.sizeHint())
-            layout.addWidget(
-                widget,
-                row,
-                column_index,
-                rowwidth,
-                colwidth[column_index],
-                alignment=Qt.AlignmentFlag.AlignLeft,
-            )
-
-    def remove(self, layout):
-        widgets = self.get_widgets()
-        for widget in widgets:
-            layout.removeWidget(widget)
+    # def set_sizes(self):
+    #     self.key_lab.setMaximumWidth(10)
+    #     self.key_edt.setMaximumWidth(10)
+    #
+    # def get_widgets(self):
+    #     return [
+    #         self.key_lab,
+    #         self.key_edt,
+    #         self.val_lab,
+    #         self.val_edt,
+    #         self.message,
+    #     ]
+    #
+    # def add_and_align_left(self, layout, row):
+    #     widgets = self.get_widgets()
+    #     rowwidth = 1
+    #     colwidth = {0: 1, 1: 1, 2: 3, 3: 3, 4: 1}
+    #     for column_index, widget in enumerate(widgets):
+    #         widget.resize(widget.sizeHint())
+    #         layout.addWidget(
+    #             widget,
+    #             row,
+    #             column_index,
+    #             rowwidth,
+    #             colwidth[column_index],
+    #             alignment=Qt.AlignmentFlag.AlignLeft,
+    #         )
+    #
+    # def remove(self, layout):
+    #     widgets = self.get_widgets()
+    #     for widget in widgets:
+    #         layout.removeWidget(widget)
 
 
 class AddControlButtonsLayout(QWidget):
@@ -706,7 +744,7 @@ class SampleInfoLayout(QWidget):
     def add_annotation_row(self, key="", value=""):
         current_rows = len(self.annotation_rows)
         i = 0 if current_rows == 0 else current_rows + 1
-        annotation_row = AnnotationRow(key, value)
+        annotation_row = SampleInfoRow(key, value)
         self.annotation_rows.append(annotation_row)
         annotation_row.add_and_align_left(self.annotations_layout, row=i)
 

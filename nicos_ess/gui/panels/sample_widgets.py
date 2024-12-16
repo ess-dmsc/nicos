@@ -42,6 +42,8 @@ class SamplePanelWidgets(QWidget):
         self.add_prop_layout.addWidget(self.spacer_label, 0, 0)
         self.add_prop_layout.addWidget(self.btn_add_prop, 1, 0)
         self.add_prop_layout.addWidget(self.spacer_label, 2, 0)
+        self.add_prop_layout.addWidget(self.spacer_label, 3, 0)
+        self.add_prop_layout.addWidget(self.spacer_label, 4, 0)
         self.add_prop_layout.setColumnStretch(self.add_prop_layout.columnCount(), 1)
 
         self.sample_selector = QListWidget()
