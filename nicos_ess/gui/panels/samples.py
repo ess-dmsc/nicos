@@ -61,6 +61,22 @@ class SamplePanel(PanelBase):
             self.update_sample_selector_items()
             # self.update_sample_selection(self.selected_sample)
 
+    def update_sample_selector_items(self):
+        sample_ids = self._get_sample_ids()
+        print(sample_ids)
+        selector_items = self.get_selector_items()
+        new_samples = set(sample_ids) - set(selector_items)
+        removed_samples = set(selector_items) - set(sample_ids)
+        if len(removed_samples) > 0:
+            for i, sample in enumerate(selector_items):
+                if sample in removed_samples:
+                    self.widgets.sample_selector.takeItem(i)
+        if len(new_samples) > 0:
+            for sample in sorted(new_samples):
+                item = QListWidgetItem(sample)
+                self.widgets.sample_selector.addItem(item)
+                # self.sample_selector.setCurrentItem(item)
+
     def add_sample_clicked(self):
         self.mode = "add"
         self.show_add_sample_view()
@@ -160,6 +176,16 @@ class SamplePanel(PanelBase):
     #     if not self._in_edit_mode:
     #         self._clear_data()
 
+    def get_selector_items(self):
+        items = []
+        rows = self.widgets.sample_selector.count()
+        if rows > 0:
+            for i in range(rows):
+                self.widgets.sample_selector.setCurrentRow(i)
+                items.append(self.widgets.sample_selector.currentItem().text())
+        self.widgets.sample_selector.clearSelection()
+        return items
+
     def _get_samples(self):
         return self.client.eval("session.experiment.get_samples()", {})
 
@@ -177,12 +203,12 @@ class SamplePanel(PanelBase):
     def _clear_data(self):
         pass
 
-    def _get_sample_identifiers(self):
-        sample_identifiers = []
+    def _get_sample_ids(self):
+        sample_ids = []
         samples = self._get_samples()
         for sample in samples:
-            sample_identifiers.append(sample[SAMPLE_IDENTIFIER_KEY])
-        return sample_identifiers
+            sample_ids.append(sample[SAMPLE_IDENTIFIER_KEY])
+        return sample_ids
 
     def _get_sample(self, sample_identifier):
         samples = self._get_samples()
@@ -235,7 +261,7 @@ class SamplePanel(PanelBase):
         selected_row = self.sample_selector.currentRow()
         self.sample_selector.takeItem(selected_row)
         self.remove_sample_dialog.close()
-        samples_in_selector = self.items_in_selector()
+        samples_in_selector = self.get_selector_items()
         if len(samples_in_selector) == 0:
             self.selected_sample = None
             self.show_empty_view()
@@ -270,33 +296,8 @@ class SamplePanel(PanelBase):
             self.update_sample_selection(selected_sample)
             self.show_sample_view_mode()
 
-    def update_sample_selector_items(self):
-        sample_identifiers = self._get_sample_identifiers()
-        selector_items = self.items_in_selector()
-        new_samples = set(sample_identifiers) - set(selector_items)
-        removed_samples = set(selector_items) - set(sample_identifiers)
-        if len(removed_samples) > 0:
-            for i, sample in enumerate(selector_items):
-                if sample in removed_samples:
-                    self.sample_selector.takeItem(i)
-        if len(new_samples) > 0:
-            for sample in new_samples:
-                item = QListWidgetItem(sample)
-                self.sample_selector.addItem(item)
-                # self.sample_selector.setCurrentItem(item)
-
-    def items_in_selector(self):
-        items = []
-        rows = self.sample_selector.count()
-        if rows > 0:
-            for i in range(rows):
-                self.sample_selector.setCurrentRow(i)
-                items.append(self.sample_selector.currentItem().text())
-        self.sample_selector.clearSelection()
-        return items
-
     def get_index_to_select(self, sample_to_select):
-        items = self.items_in_selector()
+        items = self.get_selector_items()
         return items.index(sample_to_select)
 
     def update_sample_selection(self, sample_to_select=None):
@@ -450,7 +451,7 @@ class SamplePanel(PanelBase):
     def check_unique_sample_id(self, sample_identifier):
         if sample_identifier == "":
             self.display_missing_id_error()
-        elif sample_identifier in self._get_sample_identifiers():
+        elif sample_identifier in self._get_sample_ids():
             self.display_duplicate_id_error()
         else:
             self.reset_sample_id_error()
@@ -544,7 +545,7 @@ class SamplePanel(PanelBase):
         self.sample_selector.setEnabled(False)
 
     def _update_proposal(self, sample_identifier):
-        if sample_identifier in self._get_sample_identifiers():
+        if sample_identifier in self._get_sample_ids():
             self._update_sample_in_proposal(sample_identifier)
         else:
             self._add_sample_to_proposal(sample_identifier)
