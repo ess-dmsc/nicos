@@ -1,16 +1,10 @@
 import time
 
 from nicos.guisupport.qt import (
-    QGridLayout,
-    QHBoxLayout,
     QLabel,
     QLineEdit,
-    QListWidget,
     QListWidgetItem,
-    QPushButton,
-    QSplitter,
     QVBoxLayout,
-    QWidget,
 )
 
 from nicos_ess.gui.panels.panel import PanelBase
@@ -41,7 +35,7 @@ class SamplePanel(PanelBase):
         self.setLayout(self.layout)
 
         self.connect_signals()
-        # self.initialise_connection_status_listeners()
+        self.initialise_connection_status_listeners()
         self.show_empty_view()
 
     def connect_signals(self):
@@ -55,6 +49,17 @@ class SamplePanel(PanelBase):
             self.confirm_remove_clicked
         )
         self.remove_sample_dialog.buttonBox.rejected.connect(self.cancel_remove_clicked)
+
+    def initialise_connection_status_listeners(self):
+        PanelBase.initialise_connection_status_listeners(self)
+        for monitor in self.to_monitor:
+            self.client.register(self, monitor)
+
+    def on_keyChange(self, key, value, time, expired):
+        print("key change, key:", key)
+        if key in self.to_monitor:
+            self.update_sample_selector_items()
+            # self.update_sample_selection(self.selected_sample)
 
     def add_sample_clicked(self):
         self.mode = "add"
@@ -148,92 +153,12 @@ class SamplePanel(PanelBase):
                 sample_info_row.val_lab.hide()
                 sample_info_row.val_edt.show()
 
-    def construct_top_menu(self):
-        top_buttons = TopButtonLayout()
-        top_buttons.btn_add.clicked.connect(self.add_sample_clicked)
-        top_buttons.btn_edit.clicked.connect(self.edit_sample_clicked)
-        top_buttons.btn_remove.clicked.connect(self.remove_sample_clicked)
-        top_buttons.btn_edit.setEnabled(False)
-        top_buttons.btn_remove.setEnabled(False)
-        return top_buttons
-
-    def construct_add_ctrl_buttons(self):
-        add_ctrl_buttons = AddControlButtonsLayout()
-        add_ctrl_buttons.widget = QWidget()
-        add_ctrl_buttons.widget.setLayout(add_ctrl_buttons.layout)
-        add_ctrl_buttons.btn_cancel.clicked.connect(self.cancel_add_clicked)
-        add_ctrl_buttons.btn_add.clicked.connect(self.confirm_add_clicked)
-        add_ctrl_buttons.btn_cancel.hide()
-        add_ctrl_buttons.btn_add.hide()
-        return add_ctrl_buttons
-
-    def construct_edt_ctrl_buttons(self):
-        edit_ctrl_buttons = EditControlButtonsLayout()
-        edit_ctrl_buttons.widget = QWidget()
-        edit_ctrl_buttons.widget.setLayout(edit_ctrl_buttons.layout)
-        # edit_ctrl_buttons.btn_add_annotation.clicked.connect(
-        #     self.add_annotation_clicked
-        # )
-        edit_ctrl_buttons.btn_cancel.clicked.connect(self.cancel_edit_clicked)
-        edit_ctrl_buttons.btn_save.clicked.connect(self.confirm_edit_clicked)
-        # edit_ctrl_buttons.btn_add_annotation.hide()
-        edit_ctrl_buttons.btn_cancel.hide()
-        edit_ctrl_buttons.btn_save.hide()
-        return edit_ctrl_buttons
-
-    def construct_sample_selector(self):
-        sample_selector_widget = QListWidget()
-        sample_selector_widget.itemClicked.connect(self.selection_updated)
-        return sample_selector_widget
-
-    def construct_sample_annotations(self):
-        sample_annotations = SampleInfoLayout()
-        # sample_annotations.id_row.key_edt.hide()
-        # sample_annotations.id_row.val_edt.hide()
-        return sample_annotations
-
-    def construct_sample_annotation_outer_layout_widget(self):
-        sample_annotation_outer_layout = QVBoxLayout()
-        sample_annotation_outer_layout.addLayout(self.sample_annotations.grid_layout)
-        sample_annotation_outer_layout.addWidget(self.add_ctrl_buttons.widget)
-        sample_annotation_outer_layout.addWidget(self.edt_ctrl_buttons.widget)
-        sample_annotation_outer_layout.addStretch()
-        sample_annotation_outer_layout_widget = QWidget()
-        sample_annotation_outer_layout_widget.setLayout(sample_annotation_outer_layout)
-        return sample_annotation_outer_layout_widget
-
-    def construct_splitter(self):
-        panel_splitter = QSplitter()
-        panel_splitter.addWidget(self.sample_selector)
-        panel_splitter.addWidget(self.sample_annotation_outer_layout_widget)
-        panel_splitter.setStretchFactor(0, 1)
-        panel_splitter.setStretchFactor(1, 12)
-        return panel_splitter
-
-    def construct_remove_sample_dialog(self):
-        dialog = RemoveSampleDialog()
-        dialog.buttonBox.accepted.connect(self.confirm_remove_clicked)
-        dialog.buttonBox.rejected.connect(self.cancel_remove_clicked)
-        return dialog
-
     def on_client_connected(self):
         self.setViewOnly(self.client.viewonly)
 
     # def on_client_disconnected(self):
     #     if not self._in_edit_mode:
     #         self._clear_data()
-
-    def initialise_connection_status_listeners(self):
-        PanelBase.initialise_connection_status_listeners(self)
-        for monitor in self.to_monitor:
-            self.client.register(self, monitor)
-
-    def on_keyChange(self, key, value, time, expired):
-        print("key change, key:", key)
-        if key in self.to_monitor:
-            self.update_sample_selector_items()
-            self.update_sample_selection(self.selected_sample)
-        print(self.selected_sample)
 
     def _get_samples(self):
         return self.client.eval("session.experiment.get_samples()", {})
@@ -405,13 +330,13 @@ class SamplePanel(PanelBase):
         self.disable_top_buttons()
         self.disable_sample_selector()
 
-    # def show_add_sample(self):
-    #     self.show_empty_view()
-    #     self.set_id_key()
-    #     self.show_sample_id_edit()
-    #     self.show_add_ctrl_buttons()
-    #     self.disable_top_buttons()
-    #     self.disable_sample_selector()
+    def show_add_sample(self):
+        self.show_empty_view()
+        self.set_id_key()
+        self.show_sample_id_edit()
+        self.show_add_ctrl_buttons()
+        self.disable_top_buttons()
+        self.disable_sample_selector()
 
     def show_remove_sample_dialog(self):
         selected_sample = self.sample_selector.currentItem().text()
@@ -655,133 +580,3 @@ class SampleInfoRow:
         self.val_lab = QLabel()
         self.val_edt = QLineEdit()
         self.message = QLabel()
-        # self.set_sizes()
-
-    # def set_sizes(self):
-    #     self.key_lab.setMaximumWidth(10)
-    #     self.key_edt.setMaximumWidth(10)
-    #
-    # def get_widgets(self):
-    #     return [
-    #         self.key_lab,
-    #         self.key_edt,
-    #         self.val_lab,
-    #         self.val_edt,
-    #         self.message,
-    #     ]
-    #
-    # def add_and_align_left(self, layout, row):
-    #     widgets = self.get_widgets()
-    #     rowwidth = 1
-    #     colwidth = {0: 1, 1: 1, 2: 3, 3: 3, 4: 1}
-    #     for column_index, widget in enumerate(widgets):
-    #         widget.resize(widget.sizeHint())
-    #         layout.addWidget(
-    #             widget,
-    #             row,
-    #             column_index,
-    #             rowwidth,
-    #             colwidth[column_index],
-    #             alignment=Qt.AlignmentFlag.AlignLeft,
-    #         )
-    #
-    # def remove(self, layout):
-    #     widgets = self.get_widgets()
-    #     for widget in widgets:
-    #         layout.removeWidget(widget)
-
-
-class AddControlButtonsLayout(QWidget):
-    def __init__(self):
-        QWidget.__init__(self)
-        self.layout = QHBoxLayout()
-        self.btn_cancel = QPushButton("Cancel")
-        self.btn_add = QPushButton("Save sample")
-        self.layout.addWidget(self.btn_cancel)
-        self.layout.addWidget(self.btn_add)
-        self.layout.addStretch()
-
-
-class EditControlButtonsLayout(QWidget):
-    def __init__(self):
-        QWidget.__init__(self)
-        self.layout = QHBoxLayout()
-        # self.btn_add_annotation = QPushButton("Add field")
-        self.btn_cancel = QPushButton("Cancel")
-        self.btn_save = QPushButton("Save changes")
-        # self.btn_cancel.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        # self.btn_save.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        # self.add_and_align_left(self.btn_add_annotation, self.layout)
-        # self.layout.addStretch()
-        self.layout.addWidget(self.btn_cancel)
-        self.layout.addWidget(self.btn_save)
-        self.layout.addStretch()
-
-
-# class RemoveSampleDialog(QDialog):
-#     def __init__(self):
-#         super().__init__()
-#         self.setWindowTitle("Remove sample")
-#         buttons = (
-#             QDialogButtonBox.StandardButton.Yes |
-#             QDialogButtonBox.StandardButton.Cancel
-#         )
-#         self.buttonBox = QDialogButtonBox(buttons)
-#         layout = QVBoxLayout()
-#         self.message = QLabel()
-#         layout.addWidget(self.message)
-#         layout.addWidget(self.buttonBox)
-#         self.setLayout(layout)
-
-
-class SampleInfoLayout(QWidget):
-    ID_ROW = 0
-
-    def __init__(self):
-        QWidget.__init__(self)
-        # self.layout = QVBoxLayout()
-        self.grid_layout = QGridLayout()
-        self.header_key = QLabel("Property")
-        self.header_val = QLabel("Value")
-        header_style_sheet = "font-weight:bold;"
-        self.header_key.setStyleSheet(header_style_sheet)
-        self.header_val.setStyleSheet(header_style_sheet)
-        self.grid_layout.addWidget(self.header_key, 0, 0)
-        self.grid_layout.addWidget(self.header_val, 0, 1)
-        self.grid_layout.setColumnStretch(self.grid_layout.columnCount(), 1)
-
-        self.sample_info = []
-        # self.id_layout = QGridLayout()
-        # self.annotations_layout = QGridLayout()
-        # self.new_annotations_layout = QGridLayout()
-        # self.id_row = AnnotationRow()
-        # self.id_row.add_and_align_left(self.id_layout, self.ID_ROW)
-        # self.annotation_rows = []
-        # self.new_annotation_rows = []
-        # self.layout.addLayout(self.id_layout)
-        # self.layout.addLayout(self.annotations_layout)
-        # self.layout.addLayout(self.new_annotations_layout)
-
-    def add_annotation_row(self, key="", value=""):
-        current_rows = len(self.annotation_rows)
-        i = 0 if current_rows == 0 else current_rows + 1
-        annotation_row = SampleInfoRow(key, value)
-        self.annotation_rows.append(annotation_row)
-        annotation_row.add_and_align_left(self.annotations_layout, row=i)
-
-    def remove_annotation_row(self, annotation_row, i):
-        annotation_row.remove(self.new_annotations_layout)
-        del self.new_annotation_rows[i]
-
-
-class TopButtonLayout(QWidget):
-    def __init__(self):
-        QWidget.__init__(self)
-        self.layout = QHBoxLayout()
-        self.btn_add = QPushButton("Add sample")
-        self.btn_edit = QPushButton("Edit sample")
-        self.btn_remove = QPushButton("Remove sample")
-        self.layout.addWidget(self.btn_add)
-        self.layout.addWidget(self.btn_edit)
-        self.layout.addWidget(self.btn_remove)
-        self.layout.addStretch()
