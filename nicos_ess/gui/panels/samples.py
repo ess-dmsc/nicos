@@ -1,9 +1,6 @@
 import time
 
-
 from nicos.guisupport.qt import (
-    QDialog,
-    QDialogButtonBox,
     QGridLayout,
     QHBoxLayout,
     QLabel,
@@ -18,6 +15,7 @@ from nicos.guisupport.qt import (
 )
 
 from nicos_ess.gui.panels.panel import PanelBase
+from nicos_ess.gui.panels.sample_widgets import SamplePanelWidgets, RemoveSampleDialog
 
 SAMPLE_IDENTIFIER_KEY = "name"
 
@@ -32,24 +30,16 @@ class SamplePanel(PanelBase):
         self._in_edit_mode = False
         self.to_monitor = ["sample/samples", "exp/propinfo"]
 
-        self.top_buttons = self.construct_top_menu()
-        self.add_ctrl_buttons = self.construct_add_ctrl_buttons()
-        self.edt_ctrl_buttons = self.construct_edt_ctrl_buttons()
-        self.sample_selector = self.construct_sample_selector()
-        self.sample_annotations = self.construct_sample_annotations()
-        self.sample_annotation_outer_layout_widget = (
-            self.construct_sample_annotation_outer_layout_widget()
-        )
-        self.panel_splitter = self.construct_splitter()
-        self.remove_sample_dialog = self.construct_remove_sample_dialog()
-        self.selected_sample = None
+        self.widgets = SamplePanelWidgets()
+        self.remove_sample_dialog = RemoveSampleDialog()
 
-        layout = QVBoxLayout()
-        layout.addLayout(self.top_buttons.layout)
-        layout.addWidget(self.panel_splitter)
-        self.setLayout(layout)
+        self.layout = QVBoxLayout()
+        self.layout.addWidget(self.widgets.top_btns)
+        self.layout.addWidget(self.widgets.panel_splitter)
+        self.layout.addStretch()
+        self.setLayout(self.layout)
 
-        self.initialise_connection_status_listeners()
+        # self.initialise_connection_status_listeners()
 
     def construct_top_menu(self):
         top_buttons = TopButtonLayout()
@@ -180,7 +170,7 @@ class SamplePanel(PanelBase):
         print("selection updated")
         selected_sample = self.sample_selector.currentItem().text()
         self.selected_sample = selected_sample
-        self.set_sample_info_to_widgets()
+        self.copy_sample_info_to_widgets(selected_sample)
         self.show_sample_view_mode()
         print("selected sample", self.selected_sample)
 
@@ -293,11 +283,12 @@ class SamplePanel(PanelBase):
         else:
             self.sample_selector.clearSelection()
 
-    def set_sample_info_to_widgets(self):
+    def copy_sample_info_to_widgets(self, sample):
         self.enable_top_buttons()
-        self.set_id_key()
-        self.set_id_value(self.selected_sample)
-        self.set_annotation_values(self.selected_sample)
+        # sample = self._get_sample()
+        # self.set_id_key()
+        # self.set_id_value(self.selected_sample)
+        # self.set_annotation_values(self.selected_sample)
 
     def show_empty_view(self):
         self.hide_sample_id()
@@ -644,19 +635,20 @@ class EditControlButtonsLayout(QWidget):
         self.layout.addStretch()
 
 
-class RemoveSampleDialog(QDialog):
-    def __init__(self):
-        super().__init__()
-        self.setWindowTitle("Remove sample")
-        buttons = (
-            QDialogButtonBox.StandardButton.Yes | QDialogButtonBox.StandardButton.Cancel
-        )
-        self.buttonBox = QDialogButtonBox(buttons)
-        layout = QVBoxLayout()
-        self.message = QLabel()
-        layout.addWidget(self.message)
-        layout.addWidget(self.buttonBox)
-        self.setLayout(layout)
+# class RemoveSampleDialog(QDialog):
+#     def __init__(self):
+#         super().__init__()
+#         self.setWindowTitle("Remove sample")
+#         buttons = (
+#             QDialogButtonBox.StandardButton.Yes |
+#             QDialogButtonBox.StandardButton.Cancel
+#         )
+#         self.buttonBox = QDialogButtonBox(buttons)
+#         layout = QVBoxLayout()
+#         self.message = QLabel()
+#         layout.addWidget(self.message)
+#         layout.addWidget(self.buttonBox)
+#         self.setLayout(layout)
 
 
 class SampleInfoLayout(QWidget):
