@@ -39,6 +39,7 @@ class SamplePanel(PanelBase):
         self.show_empty_view()
 
     def connect_signals(self):
+        self.widgets.sample_selector.itemClicked.connect(self.selection_updated)
         self.widgets.btn_add.clicked.connect(self.add_sample_clicked)
         self.widgets.btn_edit.clicked.connect(self.edit_sample_clicked)
         self.widgets.btn_remove.clicked.connect(self.remove_sample_clicked)
@@ -61,6 +62,167 @@ class SamplePanel(PanelBase):
             self.update_sample_selector_items()
             # self.update_sample_selection(self.selected_sample)
 
+    def selection_updated(self):
+        self.mode = "view"
+        self.update_sample_view()
+        self.show_sample_view()
+
+    def add_sample_clicked(self):
+        self.mode = "add"
+        if len(self.sample_info_widgets) == 0:
+            self.add_sample_info_row_to_layout()
+            self.sample_info_widgets[0].key_lab.setText(SAMPLE_IDENTIFIER_KEY)  # fix
+        self.reset_widget_val_text()
+        self.widgets.sample_selector.setEnabled(False)
+        self.widgets.btn_add.setEnabled(False)
+        self.widgets.btn_edit.setEnabled(False)
+        self.widgets.btn_remove.setEnabled(False)
+        self.show_add_sample_view()
+
+    def edit_sample_clicked(self):
+        self.mode = "edit"
+        self.widgets.sample_selector.setEnabled(False)
+        self.widgets.btn_add.setEnabled(False)
+        self.widgets.btn_edit.setEnabled(False)
+        self.widgets.btn_remove.setEnabled(False)
+        self.show_edit_sample_view()
+
+    def remove_sample_clicked(self):
+        self.show_remove_sample_dialog()
+
+    def add_property_clicked(self):
+        self.add_sample_info_row_to_layout()
+
+    def cancel_clicked(self):
+        self.widgets.sample_selector.setEnabled(True)
+        self.widgets.btn_add.setEnabled(True)
+        self.widgets.btn_edit.setEnabled(True)
+        self.widgets.btn_remove.setEnabled(True)
+        self.update_sample_view()
+        self.show_sample_view()
+
+    def save_clicked(self):
+        self.widgets.sample_selector.setEnabled(True)
+        self.widgets.btn_add.setEnabled(True)
+        self.widgets.btn_edit.setEnabled(True)
+        self.widgets.btn_remove.setEnabled(True)
+        self.update_sample_view()
+        self.show_sample_view()
+
+    def show_empty_view(self):
+        self.widgets.btn_edit.setEnabled(False)
+        self.widgets.btn_remove.setEnabled(False)
+        self.widgets.btn_add_prop.hide()
+        self.widgets.btn_cancel.hide()
+        self.widgets.btn_save.hide()
+        self.widgets.header_key.hide()
+        self.widgets.header_val.hide()
+
+    def show_sample_view(self):
+        self.widgets.btn_edit.setEnabled(True)
+        self.widgets.btn_remove.setEnabled(True)
+        self.widgets.btn_add_prop.hide()
+        self.widgets.btn_cancel.hide()
+        self.widgets.btn_save.hide()
+        self.widgets.header_key.show()
+        self.widgets.header_val.show()
+        self.show_view_sample_widgets()
+
+    def show_add_sample_view(self):
+        self.widgets.btn_save.setText("Save sample")
+        self.widgets.btn_add.setEnabled(False)
+        self.widgets.btn_edit.setEnabled(False)
+        self.widgets.btn_remove.setEnabled(False)
+        self.widgets.btn_add_prop.show()
+        self.widgets.btn_cancel.show()
+        self.widgets.btn_save.show()
+        self.widgets.header_key.show()
+        self.widgets.header_val.show()
+        self.show_add_sample_widgets()
+
+    def show_edit_sample_view(self):
+        self.widgets.btn_save.setText("Save changes")
+        self.widgets.btn_add.setEnabled(False)
+        self.widgets.btn_edit.setEnabled(False)
+        self.widgets.btn_remove.setEnabled(False)
+        self.widgets.btn_add_prop.show()
+        self.widgets.btn_cancel.show()
+        self.widgets.btn_save.show()
+        self.widgets.header_key.show()
+        self.widgets.header_val.show()
+        self.show_edit_sample_widgets()
+
+    def update_sample_view(self):
+        self.reset_widget_val_text()
+        selected_sample = self.widgets.sample_selector.currentItem().text()
+        sample = self._get_sample(selected_sample)
+        self.set_widget_text(sample)
+
+    def set_widget_text(self, sample):
+        for i, (key, val) in enumerate(sample.items()):
+            if i >= len(self.sample_info_widgets):
+                self.add_sample_info_row_to_layout()
+            sample_info_row = self.sample_info_widgets[i]
+            sample_info_row.key_lab.setText(str(key))
+            sample_info_row.key_edt.setText(str(key))
+            sample_info_row.val_lab.setText(str(val))
+            sample_info_row.val_edt.setText(str(val))
+
+    def reset_widget_val_text(self):
+        for sample_info_row in self.sample_info_widgets:
+            sample_info_row.val_lab.setText("")
+            sample_info_row.val_edt.setText("")
+
+    def show_view_sample_widgets(self):
+        for sample_info_row in self.sample_info_widgets:
+            sample_info_row.key_lab.show()
+            sample_info_row.key_edt.hide()
+            sample_info_row.val_lab.show()
+            sample_info_row.val_edt.hide()
+
+    def show_add_sample_widgets(self):
+        for i, sample_info_row in enumerate(self.sample_info_widgets):
+            if i == 0:
+                sample_info_row.key_lab.show()
+                sample_info_row.key_edt.hide()
+                sample_info_row.val_lab.hide()
+                sample_info_row.val_edt.show()
+            else:
+                sample_info_row.key_lab.hide()
+                sample_info_row.key_edt.show()
+                sample_info_row.val_lab.hide()
+                sample_info_row.val_edt.show()
+
+    def show_edit_sample_widgets(self):
+        for i, sample_info_row in enumerate(self.sample_info_widgets):
+            if i == 0:
+                sample_info_row.key_lab.show()
+                sample_info_row.key_edt.hide()
+                sample_info_row.val_lab.show()
+                sample_info_row.val_edt.hide()
+            else:
+                sample_info_row.key_lab.hide()
+                sample_info_row.key_edt.show()
+                sample_info_row.val_lab.hide()
+                sample_info_row.val_edt.show()
+
+    def add_sample_info_row_to_layout(self):
+        row_i = len(self.sample_info_widgets) + 1
+        row = SampleInfoRow()
+        self.sample_info_widgets.append(row)
+        self.widgets.sample_info_grid_layout.addWidget(row.key_lab, row_i, 0)
+        self.widgets.sample_info_grid_layout.addWidget(row.key_edt, row_i, 0)
+        self.widgets.sample_info_grid_layout.addWidget(row.val_lab, row_i, 1)
+        self.widgets.sample_info_grid_layout.addWidget(row.val_edt, row_i, 1)
+        self.widgets.sample_info_grid_layout.addWidget(row.message, row_i, 2)
+
+    def on_client_connected(self):
+        self.setViewOnly(self.client.viewonly)
+
+    # def on_client_disconnected(self):
+    #     if not self._in_edit_mode:
+    #         self._clear_data()
+
     def update_sample_selector_items(self):
         sample_ids = self._get_sample_ids()
         print(sample_ids)
@@ -76,105 +238,6 @@ class SamplePanel(PanelBase):
                 item = QListWidgetItem(sample)
                 self.widgets.sample_selector.addItem(item)
                 # self.sample_selector.setCurrentItem(item)
-
-    def add_sample_clicked(self):
-        self.mode = "add"
-        self.show_add_sample_view()
-
-    def edit_sample_clicked(self):
-        self.mode = "edit"
-        self.show_edit_sample_view()
-
-    def remove_sample_clicked(self):
-        self.show_remove_sample_dialog()
-
-    def add_property_clicked(self):
-        self.add_sample_info_row_to_layout()
-
-    def cancel_clicked(self):
-        pass
-
-    def save_clicked(self):
-        pass
-
-    def show_empty_view(self):
-        self.widgets.btn_edit.setEnabled(False)
-        self.widgets.btn_remove.setEnabled(False)
-        self.widgets.btn_add_prop.hide()
-        self.widgets.btn_cancel.hide()
-        self.widgets.btn_save.hide()
-        self.widgets.header_key.hide()
-        self.widgets.header_val.hide()
-
-    def show_add_sample_view(self):
-        self.widgets.btn_save.setText("Save sample")
-        self.widgets.btn_add.setEnabled(False)
-        self.widgets.btn_edit.setEnabled(False)
-        self.widgets.btn_remove.setEnabled(False)
-        self.widgets.btn_add_prop.show()
-        self.widgets.btn_cancel.show()
-        self.widgets.btn_save.show()
-        self.widgets.header_key.show()
-        self.widgets.header_val.show()
-        if len(self.sample_info_widgets) == 0:
-            self.add_sample_info_row_to_layout()
-            self.sample_info_widgets[0].key_lab.setText(SAMPLE_IDENTIFIER_KEY)  # fix
-        self.show_add_sample_widgets()
-
-    def add_sample_info_row_to_layout(self):
-        row_i = len(self.sample_info_widgets) + 1
-        row = SampleInfoRow()
-        self.sample_info_widgets.append(row)
-        self.widgets.sample_info_grid_layout.addWidget(row.key_lab, row_i, 0)
-        self.widgets.sample_info_grid_layout.addWidget(row.key_edt, row_i, 0)
-        self.widgets.sample_info_grid_layout.addWidget(row.val_lab, row_i, 1)
-        self.widgets.sample_info_grid_layout.addWidget(row.val_edt, row_i, 1)
-        self.widgets.sample_info_grid_layout.addWidget(row.message, row_i, 2)
-
-    def show_add_sample_widgets(self):
-        for i, sample_info_row in enumerate(self.sample_info_widgets):
-            if i == 0:
-                sample_info_row.key_lab.show()
-                sample_info_row.key_edt.hide()
-                sample_info_row.val_lab.hide()
-                sample_info_row.val_edt.show()
-            else:
-                sample_info_row.key_lab.hide()
-                sample_info_row.key_edt.show()
-                sample_info_row.val_lab.hide()
-                sample_info_row.val_edt.show()
-
-    def show_edit_sample_view(self):
-        self.widgets.btn_save.setText("Save changes")
-        self.widgets.btn_add.setEnabled(False)
-        self.widgets.btn_edit.setEnabled(False)
-        self.widgets.btn_remove.setEnabled(False)
-        self.widgets.btn_add_prop.show()
-        self.widgets.btn_cancel.show()
-        self.widgets.btn_save.show()
-        self.widgets.header_key.show()
-        self.widgets.header_val.show()
-        self.show_edit_sample_widgets()
-
-    def show_edit_sample_widgets(self):
-        for i, sample_info_row in enumerate(self.sample_info_widgets):
-            if i == 0:
-                sample_info_row.key_lab.show()
-                sample_info_row.key_edt.hide()
-                sample_info_row.val_lab.show()
-                sample_info_row.val_edt.hide()
-            else:
-                sample_info_row.key_lab.hide()
-                sample_info_row.key_edt.show()
-                sample_info_row.val_lab.hide()
-                sample_info_row.val_edt.show()
-
-    def on_client_connected(self):
-        self.setViewOnly(self.client.viewonly)
-
-    # def on_client_disconnected(self):
-    #     if not self._in_edit_mode:
-    #         self._clear_data()
 
     def get_selector_items(self):
         items = []
@@ -210,11 +273,11 @@ class SamplePanel(PanelBase):
             sample_ids.append(sample[SAMPLE_IDENTIFIER_KEY])
         return sample_ids
 
-    def _get_sample(self, sample_identifier):
+    def _get_sample(self, sample_id):
         samples = self._get_samples()
         for sample in samples:
             for key, val in sample.items():
-                if key == SAMPLE_IDENTIFIER_KEY and val == sample_identifier:
+                if key == SAMPLE_IDENTIFIER_KEY and val == sample_id:
                     return sample
 
     def _get_updated_sample(self, sample_identifier):
@@ -223,14 +286,6 @@ class SamplePanel(PanelBase):
         all_annotations = dict(**edited_annotations, **new_annotations)
         all_annotations[SAMPLE_IDENTIFIER_KEY] = sample_identifier
         return all_annotations
-
-    def selection_updated(self):
-        print("selection updated")
-        selected_sample = self.sample_selector.currentItem().text()
-        self.selected_sample = selected_sample
-        self.copy_sample_info_to_widgets(selected_sample)
-        self.show_sample_view_mode()
-        print("selected sample", self.selected_sample)
 
     def cancel_add_clicked(self):
         self.reset_new_sample_id()
@@ -350,35 +405,6 @@ class SamplePanel(PanelBase):
 
     def set_id_value(self, sample_identifier):
         self.sample_annotations.id_row.val_lab.setText(str(sample_identifier))
-
-    # def set_annotation_keys(self, sample_identifier):
-    #     sample = self._get_sample(sample_identifier)
-    #     for i, key in enumerate(sample.keys()):
-    #         if i < len(self.sample_annotations.annotation_rows):
-    #             annotation_row = self.sample_annotations.annotation_rows[i]
-    #             annotation_row.key_lab.setText(str(key))
-    #         else:
-    #             self.sample_annotations.add_annotation_row(key, "")
-
-    def set_annotation_values(self, sample_identifier):
-        sample = self._get_sample(sample_identifier)
-        printed_keys = []
-        if len(self.sample_annotations.annotation_rows) > 0:
-            for annotation_row in self.sample_annotations.annotation_rows:
-                key = annotation_row.key_lab.text()
-                if key == SAMPLE_IDENTIFIER_KEY:
-                    continue
-                if key in sample.keys():
-                    value = sample[key]
-                    annotation_row.val_lab.setText(str(value))
-                else:
-                    annotation_row.val_lab.setText("")
-                printed_keys.append(key)
-        for key, value in sample.items():
-            if key == SAMPLE_IDENTIFIER_KEY:
-                continue
-            if key not in printed_keys:
-                self.sample_annotations.add_annotation_row(key, value)
 
     def copy_existing_annotation_values_to_edit(self):
         for annotation_row in self.sample_annotations.annotation_rows:
