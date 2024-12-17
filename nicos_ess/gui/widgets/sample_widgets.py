@@ -17,34 +17,54 @@ class SamplePanelWidgets(QWidget):
     def __init__(self):
         QWidget.__init__(self)
 
+        self.spacer_height = QLabel()
+        self.spacer_width = QLabel()
+        self.spacer_width.setFixedSize(150, 10)
+
         self.top_btns = QWidget()
-        self.top_btns_layout = QHBoxLayout()
+        self.top_btns_layout_row_first = QHBoxLayout()
+        self.top_btns_layout_row_second = QHBoxLayout()
         self.btn_add = QPushButton("Add sample")
         self.btn_edit = QPushButton("Edit sample")
         self.btn_remove = QPushButton("Remove sample")
-        self.top_btns_layout.addWidget(self.btn_add)
-        self.top_btns_layout.addWidget(self.btn_edit)
-        self.top_btns_layout.addWidget(self.btn_remove)
-        self.top_btns_layout.addStretch()
+        self.btn_custom = QPushButton("Customize Properties")
+        self.top_btns_layout_row_first.addWidget(self.btn_add)
+        self.top_btns_layout_row_first.addWidget(self.btn_edit)
+        self.top_btns_layout_row_first.addWidget(self.btn_remove)
+        self.top_btns_layout_row_first.addStretch()
+        self.top_btns_layout_row_second.addWidget(self.btn_custom)
+        self.top_btns_layout_row_second.addStretch()
+        self.top_btns_layout = QVBoxLayout()
+        self.top_btns_layout.addLayout(self.top_btns_layout_row_first)
+        self.top_btns_layout.addLayout(self.top_btns_layout_row_second)
         self.top_btns.setLayout(self.top_btns_layout)
 
+        self.save_btns = QWidget()
         self.save_btns_layout = QHBoxLayout()
         self.btn_cancel = QPushButton("Cancel")
         self.btn_save = QPushButton("Save")
         self.save_btns_layout.addWidget(self.btn_cancel)
         self.save_btns_layout.addWidget(self.btn_save)
         self.save_btns_layout.addStretch()
+        self.save_btns.setLayout(self.save_btns_layout)
 
-        self.add_prop_layout = QGridLayout()
+        self.save_btns_grid_layout = QGridLayout()
+        self.save_btns_grid_layout.addWidget(self.spacer_height, 0, 0)
+        self.save_btns_grid_layout.addWidget(self.spacer_height, 1, 0)
+        self.save_btns_grid_layout.addWidget(self.save_btns, 2, 0)
+        self.save_btns_grid_layout.setColumnStretch(
+            self.save_btns_grid_layout.columnCount(), 1
+        )
+
+        self.add_prop_grid_layout = QGridLayout()
         self.btn_add_prop = QPushButton("Add sample property")
         self.btn_add.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        self.spacer_label = QLabel()
-        self.add_prop_layout.addWidget(self.spacer_label, 0, 0)
-        self.add_prop_layout.addWidget(self.btn_add_prop, 1, 0)
-        self.add_prop_layout.addWidget(self.spacer_label, 2, 0)
-        self.add_prop_layout.addWidget(self.spacer_label, 3, 0)
-        self.add_prop_layout.addWidget(self.spacer_label, 4, 0)
-        self.add_prop_layout.setColumnStretch(self.add_prop_layout.columnCount(), 1)
+        self.spacer_height = QLabel()
+        self.add_prop_grid_layout.addWidget(self.spacer_height, 0, 0)
+        self.add_prop_grid_layout.addWidget(self.btn_add_prop, 1, 0)
+        self.add_prop_grid_layout.setColumnStretch(
+            self.add_prop_grid_layout.columnCount(), 1
+        )
 
         self.sample_selector = QListWidget()
 
@@ -66,8 +86,8 @@ class SamplePanelWidgets(QWidget):
         )
 
         self.sample_info_layout.addLayout(self.sample_info_grid_layout)
-        self.sample_info_layout.addLayout(self.add_prop_layout)
-        self.sample_info_layout.addLayout(self.save_btns_layout)
+        self.sample_info_layout.addLayout(self.add_prop_grid_layout)
+        self.sample_info_layout.addLayout(self.save_btns_grid_layout)
         self.sample_info_layout.addStretch()
         self.sample_info.setLayout(self.sample_info_layout)
 

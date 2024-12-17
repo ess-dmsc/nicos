@@ -10,6 +10,7 @@ from nicos.guisupport.qt import (
 from nicos_ess.gui.panels.panel import PanelBase
 from nicos_ess.gui.widgets.sample_widgets import SamplePanelWidgets, RemoveSampleDialog
 
+MANDATORY_PROPERTIES = ["name"]
 SAMPLE_IDENTIFIER_KEY = "name"
 
 
@@ -77,6 +78,7 @@ class SamplePanel(PanelBase):
         self.widgets.btn_add.setEnabled(False)
         self.widgets.btn_edit.setEnabled(False)
         self.widgets.btn_remove.setEnabled(False)
+        self.widgets.btn_custom.setEnabled(False)
         self.show_add_sample_view()
 
     def edit_sample_clicked(self):
@@ -85,7 +87,18 @@ class SamplePanel(PanelBase):
         self.widgets.btn_add.setEnabled(False)
         self.widgets.btn_edit.setEnabled(False)
         self.widgets.btn_remove.setEnabled(False)
+        self.widgets.btn_custom.setEnabled(False)
         self.show_edit_sample_view()
+
+    def customize_clicked(self):
+        self.mode = "customize"
+        self.reset_widget_val_text()
+        self.widgets.sample_selector.setEnabled(False)
+        self.widgets.btn_add.setEnabled(False)
+        self.widgets.btn_edit.setEnabled(False)
+        self.widgets.btn_remove.setEnabled(False)
+        self.widgets.btn_custom.setEnabled(False)
+        self.show_customize_view()
 
     def remove_sample_clicked(self):
         self.show_remove_sample_dialog()
@@ -98,6 +111,7 @@ class SamplePanel(PanelBase):
         self.widgets.btn_add.setEnabled(True)
         self.widgets.btn_edit.setEnabled(True)
         self.widgets.btn_remove.setEnabled(True)
+        self.widgets.btn_custom.setEnabled(True)
         self.update_sample_view()
         self.show_sample_view()
 
@@ -106,6 +120,7 @@ class SamplePanel(PanelBase):
         self.widgets.btn_add.setEnabled(True)
         self.widgets.btn_edit.setEnabled(True)
         self.widgets.btn_remove.setEnabled(True)
+        self.widgets.btn_custom.setEnabled(True)
         self.update_sample_view()
         self.show_sample_view()
 
@@ -130,27 +145,31 @@ class SamplePanel(PanelBase):
 
     def show_add_sample_view(self):
         self.widgets.btn_save.setText("Save sample")
-        self.widgets.btn_add.setEnabled(False)
-        self.widgets.btn_edit.setEnabled(False)
-        self.widgets.btn_remove.setEnabled(False)
-        self.widgets.btn_add_prop.show()
+        self.widgets.btn_add_prop.hide()
         self.widgets.btn_cancel.show()
         self.widgets.btn_save.show()
         self.widgets.header_key.show()
         self.widgets.header_val.show()
-        self.show_add_sample_widgets()
+        self.reset_widget_val_text()
+        self.show_edit_val_sample_widgets()
 
     def show_edit_sample_view(self):
         self.widgets.btn_save.setText("Save changes")
-        self.widgets.btn_add.setEnabled(False)
-        self.widgets.btn_edit.setEnabled(False)
-        self.widgets.btn_remove.setEnabled(False)
+        self.widgets.btn_add_prop.hide()
+        self.widgets.btn_cancel.show()
+        self.widgets.btn_save.show()
+        self.widgets.header_key.show()
+        self.widgets.header_val.show()
+        self.show_edit_val_sample_widgets()
+
+    def show_customize_view(self):
+        self.widgets.btn_save.setText("Save changes")
         self.widgets.btn_add_prop.show()
         self.widgets.btn_cancel.show()
         self.widgets.btn_save.show()
         self.widgets.header_key.show()
         self.widgets.header_val.show()
-        self.show_edit_sample_widgets()
+        self.show_custom_key_sample_widgets()
 
     def update_sample_view(self):
         self.reset_widget_val_text()
@@ -180,31 +199,31 @@ class SamplePanel(PanelBase):
             sample_info_row.val_lab.show()
             sample_info_row.val_edt.hide()
 
-    def show_add_sample_widgets(self):
-        for i, sample_info_row in enumerate(self.sample_info_widgets):
-            if i == 0:
-                sample_info_row.key_lab.show()
-                sample_info_row.key_edt.hide()
-                sample_info_row.val_lab.hide()
-                sample_info_row.val_edt.show()
-            else:
-                sample_info_row.key_lab.hide()
-                sample_info_row.key_edt.show()
-                sample_info_row.val_lab.hide()
-                sample_info_row.val_edt.show()
+    def show_edit_val_sample_widgets(self):
+        for sample_info_row in self.sample_info_widgets:
+            sample_info_row.key_lab.show()
+            sample_info_row.key_edt.hide()
+            sample_info_row.val_lab.hide()
+            sample_info_row.val_edt.show()
 
-    def show_edit_sample_widgets(self):
-        for i, sample_info_row in enumerate(self.sample_info_widgets):
-            if i == 0:
+    def show_custom_key_sample_widgets(self):
+        for sample_info_row in self.sample_info_widgets:
+            if sample_info_row.key_lab.text() in MANDATORY_PROPERTIES:
                 sample_info_row.key_lab.show()
                 sample_info_row.key_edt.hide()
-                sample_info_row.val_lab.show()
+                sample_info_row.val_lab.hide()
                 sample_info_row.val_edt.hide()
             else:
                 sample_info_row.key_lab.hide()
                 sample_info_row.key_edt.show()
                 sample_info_row.val_lab.hide()
-                sample_info_row.val_edt.show()
+                sample_info_row.val_edt.hide()
+
+    def show_remove_sample_dialog(self):
+        selected_sample = self.widgets.sample_selector.currentItem().text()
+        label_text = f"Remove sample: '{selected_sample}'"
+        self.remove_sample_dialog.message.setText(label_text)
+        self.remove_sample_dialog.exec()
 
     def add_sample_info_row_to_layout(self):
         row_i = len(self.sample_info_widgets) + 1
@@ -393,12 +412,6 @@ class SamplePanel(PanelBase):
         self.show_add_ctrl_buttons()
         self.disable_top_buttons()
         self.disable_sample_selector()
-
-    def show_remove_sample_dialog(self):
-        selected_sample = self.sample_selector.currentItem().text()
-        label_text = f"Remove sample: '{selected_sample}'"
-        self.remove_sample_dialog.message.setText(label_text)
-        self.remove_sample_dialog.exec()
 
     def set_id_key(self):
         self.sample_annotations.id_row.key_lab.setText(SAMPLE_IDENTIFIER_KEY)
