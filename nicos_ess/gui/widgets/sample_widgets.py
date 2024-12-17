@@ -6,8 +6,6 @@ from nicos.guisupport.qt import (
     QLabel,
     QListWidget,
     QPushButton,
-    QSizePolicy,
-    QSplitter,
     QVBoxLayout,
     QWidget,
 )
@@ -18,26 +16,25 @@ class SamplePanelWidgets(QWidget):
         QWidget.__init__(self)
 
         self.spacer_height = QLabel()
-        self.spacer_width = QLabel()
-        self.spacer_width.setFixedSize(150, 10)
+        self.spacer_width_wide = QLabel()
+        self.spacer_width_wide.setFixedSize(150, 10)
+        self.spacer_width_narrow = QLabel()
+        self.spacer_width_narrow.setFixedSize(40, 10)
 
-        self.top_btns = QWidget()
-        self.top_btns_layout_row_first = QHBoxLayout()
-        self.top_btns_layout_row_second = QHBoxLayout()
+        self.top_btns_layout_left = QHBoxLayout()
         self.btn_add = QPushButton("Add sample")
         self.btn_edit = QPushButton("Edit sample")
         self.btn_remove = QPushButton("Remove sample")
-        self.btn_custom = QPushButton("Customize Properties")
-        self.top_btns_layout_row_first.addWidget(self.btn_add)
-        self.top_btns_layout_row_first.addWidget(self.btn_edit)
-        self.top_btns_layout_row_first.addWidget(self.btn_remove)
-        self.top_btns_layout_row_first.addStretch()
-        self.top_btns_layout_row_second.addWidget(self.btn_custom)
-        self.top_btns_layout_row_second.addStretch()
-        self.top_btns_layout = QVBoxLayout()
-        self.top_btns_layout.addLayout(self.top_btns_layout_row_first)
-        self.top_btns_layout.addLayout(self.top_btns_layout_row_second)
-        self.top_btns.setLayout(self.top_btns_layout)
+        self.top_btns_layout_left.addWidget(self.btn_add)
+        self.top_btns_layout_left.addWidget(self.btn_edit)
+        self.top_btns_layout_left.addWidget(self.btn_remove)
+        self.top_btns_layout_left.addStretch()
+
+        self.top_btns_right = QWidget()
+        self.top_btns_layout_right = QHBoxLayout()
+        self.btn_custom = QPushButton("Customize properties")
+        self.top_btns_layout_right.addWidget(self.btn_custom)
+        self.top_btns_layout_right.addStretch()
 
         self.save_btns = QWidget()
         self.save_btns_layout = QHBoxLayout()
@@ -58,7 +55,6 @@ class SamplePanelWidgets(QWidget):
 
         self.add_prop_grid_layout = QGridLayout()
         self.btn_add_prop = QPushButton("Add sample property")
-        self.btn_add.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         self.spacer_height = QLabel()
         self.add_prop_grid_layout.addWidget(self.spacer_height, 0, 0)
         self.add_prop_grid_layout.addWidget(self.btn_add_prop, 1, 0)
@@ -68,34 +64,38 @@ class SamplePanelWidgets(QWidget):
 
         self.sample_selector = QListWidget()
 
-        self.sample_info = QWidget()
-        self.sample_info_layout = QVBoxLayout()
-
         self.sample_info_grid_layout = QGridLayout()
         self.header_key = QLabel("Property")
         self.header_val = QLabel("Value")
-        self.spacer_width = QLabel()
-        self.spacer_width.setFixedSize(150, 10)
         self.header_key.setStyleSheet("font-weight:bold;")
         self.header_val.setStyleSheet("font-weight:bold;")
         self.sample_info_grid_layout.addWidget(self.header_key, 0, 0)
         self.sample_info_grid_layout.addWidget(self.header_val, 0, 1)
-        self.sample_info_grid_layout.addWidget(self.spacer_width, 1, 0)
+        self.sample_info_grid_layout.addWidget(self.spacer_width_wide, 1, 0)
         self.sample_info_grid_layout.setColumnStretch(
             self.sample_info_grid_layout.columnCount(), 1
         )
 
-        self.sample_info_layout.addLayout(self.sample_info_grid_layout)
-        self.sample_info_layout.addLayout(self.add_prop_grid_layout)
-        self.sample_info_layout.addLayout(self.save_btns_grid_layout)
-        self.sample_info_layout.addStretch()
-        self.sample_info.setLayout(self.sample_info_layout)
+        self.left_layout = QVBoxLayout()
+        self.left_layout.addLayout(self.top_btns_layout_left)
+        self.left_layout.addWidget(self.spacer_height)
+        self.left_layout.addWidget(self.sample_selector)
 
-        self.panel_splitter = QSplitter()
-        self.panel_splitter.addWidget(self.sample_selector)
-        self.panel_splitter.addWidget(self.sample_info)
-        self.panel_splitter.setStretchFactor(0, 1)
-        self.panel_splitter.setStretchFactor(1, 12)
+        self.right_layout = QVBoxLayout()
+        self.right_layout.addLayout(self.top_btns_layout_right)
+        self.right_layout.addWidget(self.spacer_height)
+        self.right_layout.addLayout(self.sample_info_grid_layout)
+        self.right_layout.addLayout(self.add_prop_grid_layout)
+        self.right_layout.addLayout(self.save_btns_grid_layout)
+        self.right_layout.addStretch()
+
+        self.sample_panel_widget = QWidget()
+        self.layout = QHBoxLayout()
+        self.layout.addLayout(self.left_layout)
+        self.layout.addWidget(self.spacer_width_narrow)
+        self.layout.addLayout(self.right_layout)
+        self.layout.addStretch()
+        self.sample_panel_widget.setLayout(self.layout)
 
 
 class RemoveSampleDialog(QDialog):

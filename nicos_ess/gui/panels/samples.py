@@ -30,9 +30,8 @@ class SamplePanel(PanelBase):
         self.remove_sample_dialog = RemoveSampleDialog()
 
         self.layout = QVBoxLayout()
-        self.layout.addWidget(self.widgets.top_btns)
-        self.layout.addWidget(self.widgets.panel_splitter)
-        self.layout.addStretch()
+        self.layout.addWidget(self.widgets.sample_panel_widget)
+        # self.layout.addStretch()
         self.setLayout(self.layout)
 
         self.connect_signals()
@@ -130,8 +129,7 @@ class SamplePanel(PanelBase):
         self.widgets.btn_add_prop.hide()
         self.widgets.btn_cancel.hide()
         self.widgets.btn_save.hide()
-        self.widgets.header_key.hide()
-        self.widgets.header_val.hide()
+        self.show_empty_sample_widgets()
 
     def show_sample_view(self):
         self.widgets.btn_edit.setEnabled(True)
@@ -139,8 +137,6 @@ class SamplePanel(PanelBase):
         self.widgets.btn_add_prop.hide()
         self.widgets.btn_cancel.hide()
         self.widgets.btn_save.hide()
-        self.widgets.header_key.show()
-        self.widgets.header_val.show()
         self.show_view_sample_widgets()
 
     def show_add_sample_view(self):
@@ -148,8 +144,6 @@ class SamplePanel(PanelBase):
         self.widgets.btn_add_prop.hide()
         self.widgets.btn_cancel.show()
         self.widgets.btn_save.show()
-        self.widgets.header_key.show()
-        self.widgets.header_val.show()
         self.reset_widget_val_text()
         self.show_edit_val_sample_widgets()
 
@@ -158,8 +152,6 @@ class SamplePanel(PanelBase):
         self.widgets.btn_add_prop.hide()
         self.widgets.btn_cancel.show()
         self.widgets.btn_save.show()
-        self.widgets.header_key.show()
-        self.widgets.header_val.show()
         self.show_edit_val_sample_widgets()
 
     def show_customize_view(self):
@@ -167,8 +159,6 @@ class SamplePanel(PanelBase):
         self.widgets.btn_add_prop.show()
         self.widgets.btn_cancel.show()
         self.widgets.btn_save.show()
-        self.widgets.header_key.show()
-        self.widgets.header_val.show()
         self.show_custom_key_sample_widgets()
 
     def update_sample_view(self):
@@ -191,6 +181,13 @@ class SamplePanel(PanelBase):
         for sample_info_row in self.sample_info_widgets:
             sample_info_row.val_lab.setText("")
             sample_info_row.val_edt.setText("")
+
+    def show_empty_sample_widgets(self):
+        for sample_info_row in self.sample_info_widgets:
+            sample_info_row.key_lab.show()
+            sample_info_row.key_edt.hide()
+            sample_info_row.val_lab.hide()
+            sample_info_row.val_edt.hide()
 
     def show_view_sample_widgets(self):
         for sample_info_row in self.sample_info_widgets:
