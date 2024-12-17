@@ -8,7 +8,7 @@ from nicos.guisupport.qt import (
 )
 
 from nicos_ess.gui.panels.panel import PanelBase
-from nicos_ess.gui.panels.sample_widgets import SamplePanelWidgets, RemoveSampleDialog
+from nicos_ess.gui.widgets.sample_widgets import SamplePanelWidgets, RemoveSampleDialog
 
 SAMPLE_IDENTIFIER_KEY = "name"
 
