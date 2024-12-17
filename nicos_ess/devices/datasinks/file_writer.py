@@ -182,7 +182,6 @@ class FileWriterStatus(KafkaStatusHandler):
         ]
 
     def new_messages_callback(self, messages):
-        self.log.warn(messages)
         for _, msg in sorted(messages, key=lambda x: x[0]):
             if msg[4:8] in self._type_to_handler:
                 with self._lock:
