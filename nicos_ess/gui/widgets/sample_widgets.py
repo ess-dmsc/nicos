@@ -17,7 +17,7 @@ class SamplePanelWidgets(QWidget):
 
         self.spacer_height = QLabel()
         self.spacer_width_wide = QLabel()
-        self.spacer_width_wide.setFixedSize(150, 10)
+        self.spacer_width_wide.setFixedSize(200, 10)
         self.spacer_width_narrow = QLabel()
         self.spacer_width_narrow.setFixedSize(40, 10)
 
