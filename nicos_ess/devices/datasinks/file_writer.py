@@ -182,6 +182,7 @@ class FileWriterStatus(KafkaStatusHandler):
         ]
 
     def new_messages_callback(self, messages):
+        self.log.warn(messages)
         for _, msg in sorted(messages, key=lambda x: x[0]):
             if msg[4:8] in self._type_to_handler:
                 with self._lock:
@@ -469,7 +470,7 @@ class FileWriterControlSink(Device):
         )
         if mode != SIMULATION:
             self._consumer = KafkaConsumer.create(self.brokers)
-            self._consumer.subscribe(self.pool_topic)
+            self._consumer.subscribe([self.pool_topic])
 
     def start_job(self):
         """Start a new file-writing job."""

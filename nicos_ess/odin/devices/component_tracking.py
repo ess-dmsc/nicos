@@ -78,7 +78,7 @@ class ComponentTrackingDevice(Readable):
     def doPreinit(self, mode):
         if mode != SIMULATION:
             self._consumer = KafkaConsumer.create(self.brokers)
-            self._consumer.subscribe(self.response_topic)
+            self._consumer.subscribe([self.response_topic])
             self._setROParam("curstatus", (status.OK, ""))
         else:
             self._consumer = None

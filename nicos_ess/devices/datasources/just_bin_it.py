@@ -445,7 +445,7 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
         self._command_sender = KafkaProducer.create(self.brokers)
         # Set up the response message consumer
         self._response_consumer = KafkaConsumer.create(self.brokers)
-        self._response_consumer.subscribe(self.response_topic)
+        self._response_consumer.subscribe([self.response_topic])
 
     def doInit(self, mode):
         pass
