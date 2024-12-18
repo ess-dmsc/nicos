@@ -35,16 +35,10 @@ class SamplePanel(PanelBase):
         self.layout.addWidget(self.widgets.sample_panel_widget)
         self.setLayout(self.layout)
 
-        self.initialise_connection_status_listeners()
         self.connect_signals()
+        self.initialise_connection_status_listeners()
 
-        # self.set_initial_view()
         self.show_empty_view()
-
-    def initialise_connection_status_listeners(self):
-        PanelBase.initialise_connection_status_listeners(self)
-        for monitor in self.to_monitor:
-            self.client.register(self, monitor)
 
     def connect_signals(self):
         self.widgets.sample_selector.itemSelectionChanged.connect(
@@ -60,6 +54,11 @@ class SamplePanel(PanelBase):
             self.confirm_remove_clicked
         )
         self.remove_sample_dialog.buttonBox.rejected.connect(self.cancel_remove_clicked)
+
+    def initialise_connection_status_listeners(self):
+        PanelBase.initialise_connection_status_listeners(self)
+        for monitor in self.to_monitor:
+            self.client.register(self, monitor)
 
     def on_keyChange(self, key, value, time, expired):
         print("key change, key:", key)
@@ -103,22 +102,10 @@ class SamplePanel(PanelBase):
         self.show_add_sample_view()
 
     def edit_sample_clicked(self):
-        """
-        TODO
-        set mode to "edit"
-        set value fields
-        -- and --
-        show value label for sample id
-        show value fields for rest
-        show cancel save buttons
-        lock panel widgets
-        """
         self.mode = "edit"
-        self.widgets.sample_selector.setEnabled(False)
-        self.widgets.btn_add.setEnabled(False)
-        self.widgets.btn_edit.setEnabled(False)
-        self.widgets.btn_remove.setEnabled(False)
-        self.widgets.btn_custom.setEnabled(False)
+        selected_sample_id = self.get_current_selected()
+        self.set_val_widget_text(selected_sample_id)
+        self.toggle_lock_or_unlock_widgets()
         self.show_edit_sample_view()
 
     def customize_clicked(self):
@@ -172,11 +159,16 @@ class SamplePanel(PanelBase):
         self.mode = "view"
         self.reset_val_widget_text()
         self.toggle_lock_or_unlock_widgets()
-        if self.previously_selected is not None:
+        selected_id = self.get_current_selected()
+        if selected_id:
+            self.set_key_widget_text()
+            self.set_val_widget_text(selected_id)
+        elif self.previously_selected:
             self.select_sample(self.previously_selected)
             self.previously_selected = None
         else:
             self.reset_key_widget_text()
+            self.reset_val_widget_text()
         self.hide_cancel_save_buttons()
         self.hide_add_property_button()
         self.show_sample_view()
@@ -338,10 +330,18 @@ class SamplePanel(PanelBase):
 
     def show_edit_sample_view(self):
         self.widgets.btn_save.setText("Save changes")
-        self.widgets.btn_add_prop.hide()
-        self.widgets.btn_cancel.show()
-        self.widgets.btn_save.show()
-        self.show_edit_val_sample_widgets()
+        self.show_cancel_save_buttons()
+        for sample_info_row in self.sample_info_widgets:
+            if sample_info_row.key_lab.text() == SAMPLE_IDENTIFIER_KEY:
+                sample_info_row.key_lab.show()
+                sample_info_row.key_edt.hide()
+                sample_info_row.val_lab.show()
+                sample_info_row.val_edt.hide()
+            else:
+                sample_info_row.key_lab.show()
+                sample_info_row.key_edt.hide()
+                sample_info_row.val_lab.hide()
+                sample_info_row.val_edt.show()
 
     def show_customize_view(self):
         self.widgets.btn_save.setText("Save changes")
