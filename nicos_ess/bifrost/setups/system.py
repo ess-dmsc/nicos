@@ -43,7 +43,7 @@ devices = dict(
     KafkaForwarderStatus=device(
         "nicos_ess.devices.forwarder.EpicsKafkaForwarder",
         description="Monitors the status of the Forwarder",
-        statustopic="bifrost_forwarder_dynamic_status",
+        statustopic=["bifrost_forwarder_dynamic_status"],
         config_topic="bifrost_forwarder_dynamic_config",
         brokers=configdata("config.KAFKA_BROKERS"),
     ),
@@ -63,7 +63,7 @@ devices = dict(
         "nicos_ess.devices.datasinks.file_writer.FileWriterStatus",
         description="Status of the file-writer",
         brokers=configdata("config.KAFKA_BROKERS"),
-        statustopic="bifrost_filewriter",
+        statustopic=["bifrost_filewriter"],
         unit="",
     ),
     FileWriterControl=device(

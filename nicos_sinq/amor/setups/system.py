@@ -54,7 +54,7 @@ devices = dict(
         "nicos_ess.devices.datasinks.file_writer.FileWriterStatus",
         description="Status of the file-writer",
         brokers=configdata("config.KAFKA_BROKERS"),
-        statustopic="AMOR_filewriter",
+        statustopic=["AMOR_filewriter"],
         unit="",
     ),
     FileWriterControl=device(

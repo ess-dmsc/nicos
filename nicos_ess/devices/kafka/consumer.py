@@ -41,27 +41,33 @@ class KafkaConsumer:
         }
         self._consumer = Consumer({**config, **options})
 
-    def subscribe(self, topic_name, partitions=None):
-        """Subscribe to a topic.
+    def subscribe(self, topics):
+        """Subscribe to topics.
 
-        :param topic_name: The topic to subscribe to.
-        :param partitions: Which partitions to subscribe to. Optional, defaults
-            to all partitions.
+        Note: will unsubscribe any previous subscriptions.
+
+        :param topics: The topics to subscribe to.
         """
-        try:
-            metadata = self._consumer.list_topics(topic_name, timeout=5)
-        except KafkaException as exc:
-            raise ConfigurationError(
-                "could not obtain metadata for topic " f"{topic_name}"
-            ) from exc
+        topic_partitions = []
+        for topic_name in topics:
+            try:
+                metadata = self._consumer.list_topics(topic_name, timeout=5)
+            except KafkaException as exc:
+                raise ConfigurationError(
+                    "could not obtain metadata for topic " f"{topic_name}"
+                ) from exc
 
-        if topic_name not in metadata.topics:
-            raise ConfigurationError(f"provided topic {topic_name} does " "not exist")
+            if topic_name not in metadata.topics:
+                raise ConfigurationError(
+                    f"provided topic {topic_name} does " "not exist"
+                )
 
-        partitions = (
-            partitions if partitions else metadata.topics[topic_name].partitions
-        )
-        topic_partitions = [TopicPartition(topic_name, p) for p in partitions]
+            topic_partitions.extend(
+                [
+                    TopicPartition(topic_name, p)
+                    for p in metadata.topics[topic_name].partitions
+                ]
+            )
 
         self._consumer.assign(topic_partitions)
 
@@ -148,8 +154,7 @@ class KafkaSubscriber:
         self.stop_consuming(True)
 
         self._consumer.unsubscribe()
-        for t in topics:
-            self._consumer.subscribe(t)
+        self._consumer.subscribe(topics)
 
         self._messages_callback = messages_callback
         self._no_messages_callback = no_messages_callback

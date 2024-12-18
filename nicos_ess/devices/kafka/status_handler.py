@@ -38,8 +38,8 @@ class KafkaStatusHandler(Readable):
             userparam=False,
         ),
         "statustopic": Param(
-            "Kafka topic where status messages are written",
-            type=str,
+            "Kafka topic(s) where status messages are written",
+            type=listof(str),
             settable=False,
             preinit=True,
             mandatory=True,
@@ -78,7 +78,7 @@ class KafkaStatusHandler(Readable):
         if session.sessiontype != POLLER and mode != SIMULATION:
             self._kafka_subscriber = KafkaSubscriber(self.brokers)
             self._kafka_subscriber.subscribe(
-                [self.statustopic],
+                self.statustopic,
                 self.new_messages_callback,
                 self.no_messages_callback,
             )
