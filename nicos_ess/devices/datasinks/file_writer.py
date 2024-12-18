@@ -437,7 +437,15 @@ class FileWriterControlSink(Device):
             userparam=False,
         ),
         "pool_topic": Param(
-            "List of kafka brokers to connect to",
+            "The job pool topic for the filewriters",
+            type=str,
+            settable=False,
+            preinit=True,
+            mandatory=True,
+            userparam=False,
+        ),
+        "instrument_topic": Param(
+            "The instrument specific topic for filewriting",
             type=str,
             settable=False,
             preinit=True,
@@ -464,7 +472,7 @@ class FileWriterControlSink(Device):
         self._controller = FileWriterController(
             self.brokers,
             self.pool_topic,
-            self._attached_status.statustopic,
+            self.instrument_topic,
             self.timeoutinterval,
         )
         if mode != SIMULATION:
