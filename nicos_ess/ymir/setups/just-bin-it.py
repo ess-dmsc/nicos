@@ -33,7 +33,7 @@ devices = dict(
         unit="",
         command_topic="ymir_jbi_commands",
         response_topic="ymir_jbi_responses",
-        statustopic="ymir_jbi_heartbeat",
+        statustopic=["ymir_jbi_heartbeat"],
         images=["det_image1", "det_image2"],
         hist_schema="hs01",
     ),

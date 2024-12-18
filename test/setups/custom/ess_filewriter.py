@@ -47,7 +47,7 @@ devices = dict(
         "nicos_ess.devices.datasinks.file_writer.FileWriterStatus",
         description="Status for file-writer",
         brokers=["someserver:9092"],
-        statustopic="TEST_controlTopic",
+        statustopic=["TEST_controlTopic"],
         unit="",
     ),
     FileWriterControl=device(
