@@ -131,6 +131,234 @@ class ImageType(ManualSwitch):
         self.move(INVALID)
 
 
+class AreaDetectorBase(EpicsDevice, ImageChannelMixin, Measurable):
+    parameters = {
+        "pv_root": Param("Area detector EPICS prefix", type=pvname, mandatory=True),
+        "image_pv": Param("Image PV name", type=pvname, mandatory=True),
+        "iscontroller": Param(
+            "If this channel is an active controller",
+            type=bool,
+            settable=True,
+            default=True,
+        ),
+        "acquiretime": Param("Exposure time ", settable=True, volatile=True),
+        "acquireperiod": Param(
+            "Time between exposure starts.", settable=True, volatile=True
+        ),
+    }
+
+    _control_pvs = {
+        "acquire_time": "AcquireTime",
+        "acquire_period": "AcquirePeriod",
+    }
+
+    _record_fields = {}
+
+    _image_array = numpy.zeros((10, 10))
+    _detector_collector_name = ""
+    _last_update = 0
+    _plot_update_delay = 2.0
+
+    def doPreinit(self, mode):
+        if mode == SIMULATION:
+            return
+        self._record_fields = {
+            key + "_rbv": value + "_RBV" for key, value in self._control_pvs.items()
+        }
+        self._record_fields.update(self._control_pvs)
+        self._set_custom_record_fields()
+        EpicsDevice.doPreinit(self, mode)
+        self._image_processing_lock = threading.Lock()
+
+    def doPrepare(self):
+        self._update_status(status.BUSY, "Preparing")
+        self._update_status(status.OK, "")
+        self.arraydesc = self.arrayInfo()
+
+    def _update_status(self, new_status, message):
+        self._current_status = new_status, message
+        self._cache.put(self._name, "status", self._current_status, time.time())
+
+    def _set_custom_record_fields(self):
+        self._record_fields["max_size_x"] = "MaxSizeX_RBV"
+        self._record_fields["max_size_y"] = "MaxSizeY_RBV"
+        self._record_fields["data_type"] = "DataType_RBV"
+        self._record_fields["readpv"] = "NumImagesCounter_RBV"
+        self._record_fields["detector_state"] = "DetectorState_RBV"
+        self._record_fields["detector_state.STAT"] = "DetectorState_RBV.STAT"
+        self._record_fields["detector_state.SEVR"] = "DetectorState_RBV.SEVR"
+        self._record_fields["array_rate_rbv"] = "ArrayRate_RBV"
+        self._record_fields["acquire"] = "Acquire"
+        self._record_fields["acquire_status"] = "AcquireBusy"
+        self._record_fields["image_pv"] = self.image_pv
+
+    def _get_pv_parameters(self):
+        return set(self._record_fields) | set(["image_pv"])
+
+    def _get_pv_name(self, pvparam):
+        pv_name = self._record_fields.get(pvparam)
+        if "image_pv" == pvparam:
+            return self.image_pv
+        if pv_name:
+            return self.pv_root + pv_name
+        return getattr(self, pvparam)
+
+    def valueInfo(self):
+        return (Value(self.name, fmtstr="%d"),)
+
+    def arrayInfo(self):
+        self.update_arraydesc()
+        return self.arraydesc
+
+    def update_arraydesc(self):
+        shape = self._get_pv("max_size_y"), self._get_pv("max_size_x")
+        self._plot_update_delay = (shape[0] * shape[1]) / 2097152.0
+        data_type = numpy.uint32
+        self.arraydesc = ArrayDesc(self.name, shape=shape, dtype=data_type)
+
+    def status_change_callback(
+        self, name, param, value, units, limits, severity, message, **kwargs
+    ):
+        if param == "readpv" and value != 0:
+            if time.monotonic() >= self._last_update + self._plot_update_delay:
+                _thread = createThread(f"get_image_{time.time_ns()}", self.get_image)
+
+        EpicsDevice.status_change_callback(
+            self, name, param, value, units, limits, severity, message, **kwargs
+        )
+
+    def doIsCompleted(self):
+        _thread = createThread(f"get_image_{time.time_ns()}", self.get_image)
+
+    def get_image(self):
+        dataarray = self._get_pv("image_pv")
+        shape = self.arrayInfo().shape
+        dataarray = dataarray.reshape(shape)
+        self.putResult(LIVE, dataarray, time.time())
+        self._last_update = time.monotonic()
+
+    def putResult(self, quality, data, timestamp):
+        self._image_array = data
+        databuffer = [byteBuffer(numpy.ascontiguousarray(data))]
+        datadesc = [
+            dict(
+                dtype=data.dtype.str,
+                shape=data.shape,
+                labels={
+                    "x": {"define": "classic"},
+                    "y": {"define": "classic"},
+                },
+                plotcount=1,
+            )
+        ]
+        if databuffer:
+            parameters = dict(
+                uid=0,
+                time=timestamp,
+                det=self._detector_collector_name,
+                tag=LIVE,
+                datadescs=datadesc,
+            )
+            labelbuffers = []
+            with self._image_processing_lock:
+                session.updateLiveData(parameters, databuffer, labelbuffers)
+
+    def doSetPreset(self, **preset):
+        if not preset:
+            # keep old settings
+            return
+        self._lastpreset = preset.copy()
+
+    def doStatus(self, maxage=0):
+        detector_state = self._get_pv("acquire_status", True)
+        alarm_status = STAT_TO_STATUS.get(
+            self._get_pv("detector_state.STAT"), status.UNKNOWN
+        )
+        alarm_severity = SEVERITY_TO_STATUS.get(
+            self._get_pv("detector_state.SEVR"), status.UNKNOWN
+        )
+        if detector_state != "Done" and alarm_severity < status.BUSY:
+            alarm_severity = status.BUSY
+        self._write_alarm_to_log(detector_state, alarm_severity, alarm_status)
+        return alarm_severity, detector_state
+
+    def _write_alarm_to_log(self, pv_value, severity, stat):
+        msg_format = "%s (%s)"
+        if severity in [status.ERROR, status.UNKNOWN]:
+            self.log.error(msg_format, pv_value, stat)
+        elif severity == status.WARN:
+            self.log.warning(msg_format, pv_value, stat)
+
+    def doStart(self, **preset):
+        self.doAcquire()
+
+    def doAcquire(self):
+        self._put_pv("acquire", 1)
+
+    def doFinish(self):
+        self.doStop()
+
+    def doStop(self):
+        self._put_pv("acquire", 0)
+
+    def doRead(self, maxage=0):
+        return self._get_pv("readpv")
+
+    def doReadArray(self, quality):
+        return self._image_array
+
+    def doReadAcquiretime(self):
+        return self._get_pv("acquire_time_rbv")
+
+    def doWriteAcquiretime(self, value):
+        self._put_pv("acquire_time", value)
+
+    def doReadAcquireperiod(self):
+        return self._get_pv("acquire_period_rbv")
+
+    def doWriteAcquireperiod(self, value):
+        self._put_pv("acquire_period", value)
+
+    def get_topic_and_source(self):
+        return None, None
+
+
+class TimepixDetector(AreaDetectorBase):
+    parameters = {
+        "threshold_fine": Param(
+            "Threshold fine value.",
+            settable=True,
+            volatile=True,
+        ),
+        "threshold_coarse": Param(
+            "Threshold coarse value.",
+            settable=True,
+            volatile=True,
+        ),
+    }
+
+    def doPreinit(self, mode):
+        self._control_pvs.update(
+            {
+                "threshold_fine": "CHIP0_Vth_fine",
+                "threshold_coarse": "CHIP0_Vth_coarse",
+            }
+        )
+        AreaDetectorBase.doPreinit(self, mode)
+
+    def doReadThreshold_Fine(self):
+        return self._get_pv("threshold_fine_rbv")
+
+    def doWriteThreshold_Fine(self, value):
+        self._put_pv("threshold_fine", value)
+
+    def doReadThreshold_Coarse(self):
+        return self._get_pv("threshold_coarse_rbv")
+
+    def doWriteThreshold_Coarse(self, value):
+        self._put_pv("threshold_coarse", value)
+
+
 class AreaDetector(EpicsDevice, ImageChannelMixin, Measurable):
     """
     Device that controls and acquires data from an area detector.
