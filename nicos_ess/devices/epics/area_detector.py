@@ -212,10 +212,8 @@ class AreaDetectorBase(EpicsDevice, ImageChannelMixin, Measurable):
 
     def update_arraydesc(self):
         shape = self._get_pv("max_size_y"), self._get_pv("max_size_x")
-        binning_factor = int(self.binning[0])
-        shape = (shape[0] // binning_factor, shape[1] // binning_factor)
         self._plot_update_delay = (shape[0] * shape[1]) / 2097152.0
-        data_type = data_type_t[self._get_pv("data_type", as_string=True)]
+        data_type = numpy.uint32
         self.arraydesc = ArrayDesc(self.name, shape=shape, dtype=data_type)
 
     def status_change_callback(
