@@ -18,6 +18,7 @@ workflow:
 
 stages:
   - test
+  - redis_package_artifact
 
 test:
   stage: test
@@ -29,3 +30,13 @@ test:
       - test/test-output.xml
     reports:
       junit: test/test-output.xml
+
+download_redis:
+  stage: redis_package_artifact
+  script:
+    - echo "Downloading Redis package"
+    - wget http://download.redis.io/releases/redis-6.2.14.tar.gz -O redis-6.2.14.tar.gz
+  artifacts:
+    paths:
+      - redis-6.2.14.tar.gz
+  when: manual
