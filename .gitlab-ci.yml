@@ -34,10 +34,8 @@ test:
 store_redis_package_as_artifact:
   stage: redis_package_artifact
   script:
-    - echo "Installing wget"
-    - yum install -y wget
     - echo "Downloading Redis package"
-    - wget http://download.redis.io/releases/redis-6.2.14.tar.gz -O redis-6.2.14.tar.gz
+    - curl -o redis-6.2.14.tar.gz http://download.redis.io/releases/redis-6.2.14.tar.gz
   artifacts:
     paths:
       - redis-6.2.14.tar.gz
