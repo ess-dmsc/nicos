@@ -282,7 +282,7 @@ class AreaDetectorBase(EpicsDevice, ImageChannelMixin, Measurable):
         if detector_state != "Done" and alarm_severity < status.BUSY:
             alarm_severity = status.BUSY
         self._write_alarm_to_log(detector_state, alarm_severity, alarm_status)
-        return alarm_severity, "%s, image mode is %s" % (detector_state, self.imagemode)
+        return alarm_severity, detector_state
 
     def _write_alarm_to_log(self, pv_value, severity, stat):
         msg_format = "%s (%s)"
