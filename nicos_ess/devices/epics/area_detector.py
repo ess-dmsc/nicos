@@ -323,6 +323,42 @@ class AreaDetectorBase(EpicsDevice, ImageChannelMixin, Measurable):
         return None, None
 
 
+class TimepixDetector(AreaDetectorBase):
+    parameters = {
+        "threshold_fine": Param(
+            "Threshold fine value.",
+            settable=True,
+            volatile=True,
+        ),
+        "threshold_coarse": Param(
+            "Threshold coarse value.",
+            settable=True,
+            volatile=True,
+        ),
+    }
+
+    def doPreinit(self, mode):
+        self._control_pvs.update(
+            {
+                "threshold_fine": "CHIP0_Vth_fine",
+                "threshold_coarse": "CHIP0_Vth_coarse",
+            }
+        )
+        AreaDetectorBase.doPreinit(self, mode)
+
+    def doReadThreshold_fine(self):
+        return self._get_pv("threshold_fine_rbv")
+
+    def doWriteThreshold_fine(self, value):
+        self._put_pv("threshold_fine", value)
+
+    def doReadThreshold_coarse(self):
+        return self._get_pv("threshold_coarse_rbv")
+
+    def doWriteThreshold_coarse(self, value):
+        self._put_pv("threshold_coarse", value)
+
+
 class AreaDetector(EpicsDevice, ImageChannelMixin, Measurable):
     """
     Device that controls and acquires data from an area detector.
