@@ -346,16 +346,16 @@ class TimepixDetector(AreaDetectorBase):
         )
         AreaDetectorBase.doPreinit(self, mode)
 
-    def doReadThreshold_fine(self):
+    def doReadThreshold_Fine(self):
         return self._get_pv("threshold_fine_rbv")
 
-    def doWriteThreshold_fine(self, value):
+    def doWriteThreshold_Fine(self, value):
         self._put_pv("threshold_fine", value)
 
-    def doReadThreshold_coarse(self):
+    def doReadThreshold_Coarse(self):
         return self._get_pv("threshold_coarse_rbv")
 
-    def doWriteThreshold_coarse(self, value):
+    def doWriteThreshold_Coarse(self, value):
         self._put_pv("threshold_coarse", value)
 
 
