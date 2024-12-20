@@ -6,7 +6,7 @@ devices = dict(
         description="Readback of a f144 motor",
         brokers=configdata("config.KAFKA_BROKERS"),
         topic=["ymir_motion"],
-        source_name="YMIR-BmScn:MC-LinY-01:Mtr",
+        source_name="YMIR-BmScn:MC-LinY-01:Mtr.RBV",
         unit="mm",
     ),
 )
