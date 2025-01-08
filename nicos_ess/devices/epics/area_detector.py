@@ -132,10 +132,6 @@ class ImageType(ManualSwitch):
 
 
 class AreaDetector(EpicsDevice, ImageChannelMixin, Measurable):
-    """
-    Device that controls and acquires data from an area detector.
-    """
-
     parameters = {
         "pv_root": Param("Area detector EPICS prefix", type=pvname, mandatory=True),
         "image_pv": Param("Image PV name", type=pvname, mandatory=True),
@@ -145,73 +141,15 @@ class AreaDetector(EpicsDevice, ImageChannelMixin, Measurable):
             settable=True,
             default=True,
         ),
-        "topicpv": Param(
-            "Topic pv name where the image is.",
-            type=str,
-            mandatory=True,
-            settable=False,
-            default=False,
-        ),
-        "sourcepv": Param(
-            "Source pv name for the image data on the topic.",
-            type=str,
-            mandatory=True,
-            settable=False,
-            default=False,
-        ),
-        "imagemode": Param(
-            "Mode to acquire images.",
-            type=oneof("single", "multiple", "continuous"),
-            settable=True,
-            default="continuous",
-            volatile=True,
-        ),
-        "binning": Param(
-            "Binning factor",
-            type=oneof("1x1", "2x2", "4x4"),
-            settable=True,
-            default="1x1",
-            volatile=True,
-        ),
-        "subarraymode": Param(
-            "Subarray of whole image active.",
-            type=bool,
-            settable=True,
-            default=False,
-            volatile=True,
-        ),
-        "sizex": Param("Image X size.", settable=True, volatile=True),
-        "sizey": Param("Image Y size.", settable=True, volatile=True),
-        "startx": Param("Image X start index.", settable=True, volatile=True),
-        "starty": Param("Image Y start index.", settable=True, volatile=True),
-        "binx": Param("Binning factor X", settable=True, volatile=True),
-        "biny": Param("Binning factor Y", settable=True, volatile=True),
         "acquiretime": Param("Exposure time ", settable=True, volatile=True),
         "acquireperiod": Param(
             "Time between exposure starts.", settable=True, volatile=True
         ),
-        "numimages": Param(
-            "Number of images to take (only in imageMode=multiple).",
-            settable=True,
-            volatile=True,
-        ),
-        "numexposures": Param(
-            "Number of exposures per image.", settable=True, volatile=True
-        ),
     }
 
     _control_pvs = {
-        "size_x": "SizeX",
-        "size_y": "SizeY",
-        "min_x": "MinX",
-        "min_y": "MinY",
-        "bin_x": "BinX",
-        "bin_y": "BinY",
         "acquire_time": "AcquireTime",
         "acquire_period": "AcquirePeriod",
-        "num_images": "NumImages",
-        "num_exposures": "NumExposures",
-        "image_mode": "ImageMode",
     }
 
     _record_fields = {}
@@ -245,10 +183,6 @@ class AreaDetector(EpicsDevice, ImageChannelMixin, Measurable):
         self._record_fields["max_size_x"] = "MaxSizeX_RBV"
         self._record_fields["max_size_y"] = "MaxSizeY_RBV"
         self._record_fields["data_type"] = "DataType_RBV"
-        self._record_fields["subarray_mode"] = "SubarrayMode-S"
-        self._record_fields["subarray_mode_rbv"] = "SubarrayMode-RB"
-        self._record_fields["binning_factor"] = "Binning-S"
-        self._record_fields["binning_factor_rbv"] = "Binning-RB"
         self._record_fields["readpv"] = "NumImagesCounter_RBV"
         self._record_fields["detector_state"] = "DetectorState_RBV"
         self._record_fields["detector_state.STAT"] = "DetectorState_RBV.STAT"
@@ -257,20 +191,14 @@ class AreaDetector(EpicsDevice, ImageChannelMixin, Measurable):
         self._record_fields["acquire"] = "Acquire"
         self._record_fields["acquire_status"] = "AcquireBusy"
         self._record_fields["image_pv"] = self.image_pv
-        self._record_fields["topicpv"] = self.topicpv
-        self._record_fields["sourcepv"] = self.sourcepv
 
     def _get_pv_parameters(self):
-        return set(self._record_fields) | set(["image_pv", "topicpv", "sourcepv"])
+        return set(self._record_fields) | set(["image_pv"])
 
     def _get_pv_name(self, pvparam):
         pv_name = self._record_fields.get(pvparam)
         if "image_pv" == pvparam:
             return self.image_pv
-        if "topicpv" == pvparam:
-            return self.topicpv
-        if "sourcepv" == pvparam:
-            return self.sourcepv
         if pv_name:
             return self.pv_root + pv_name
         return getattr(self, pvparam)
@@ -283,11 +211,9 @@ class AreaDetector(EpicsDevice, ImageChannelMixin, Measurable):
         return self.arraydesc
 
     def update_arraydesc(self):
-        shape = self._get_pv("size_y"), self._get_pv("size_x")
-        binning_factor = int(self.binning[0])
-        shape = (shape[0] // binning_factor, shape[1] // binning_factor)
+        shape = self._get_pv("max_size_y"), self._get_pv("max_size_x")
         self._plot_update_delay = (shape[0] * shape[1]) / 2097152.0
-        data_type = data_type_t[self._get_pv("data_type", as_string=True)]
+        data_type = numpy.uint32
         self.arraydesc = ArrayDesc(self.name, shape=shape, dtype=data_type)
 
     def status_change_callback(
@@ -354,6 +280,229 @@ class AreaDetector(EpicsDevice, ImageChannelMixin, Measurable):
         if detector_state != "Done" and alarm_severity < status.BUSY:
             alarm_severity = status.BUSY
         self._write_alarm_to_log(detector_state, alarm_severity, alarm_status)
+        return alarm_severity, detector_state
+
+    def _write_alarm_to_log(self, pv_value, severity, stat):
+        msg_format = "%s (%s)"
+        if severity in [status.ERROR, status.UNKNOWN]:
+            self.log.error(msg_format, pv_value, stat)
+        elif severity == status.WARN:
+            self.log.warning(msg_format, pv_value, stat)
+
+    def doStart(self, **preset):
+        self.doAcquire()
+
+    def doAcquire(self):
+        self._put_pv("acquire", 1)
+
+    def doFinish(self):
+        self.doStop()
+
+    def doStop(self):
+        self._put_pv("acquire", 0)
+
+    def doRead(self, maxage=0):
+        return self._get_pv("readpv")
+
+    def doReadArray(self, quality):
+        return self._image_array
+
+    def doReadAcquiretime(self):
+        return self._get_pv("acquire_time_rbv")
+
+    def doWriteAcquiretime(self, value):
+        self._put_pv("acquire_time", value)
+
+    def doReadAcquireperiod(self):
+        return self._get_pv("acquire_period_rbv")
+
+    def doWriteAcquireperiod(self, value):
+        self._put_pv("acquire_period", value)
+
+    def get_topic_and_source(self):
+        return None, None
+
+
+class TimepixDetector(AreaDetector):
+    parameters = {
+        "threshold_fine": Param(
+            "Threshold fine value.",
+            settable=True,
+            volatile=True,
+        ),
+        "threshold_coarse": Param(
+            "Threshold coarse value.",
+            settable=True,
+            volatile=True,
+        ),
+    }
+
+    def doPreinit(self, mode):
+        self._control_pvs.update(
+            {
+                "threshold_fine": "CHIP0_Vth_fine",
+                "threshold_coarse": "CHIP0_Vth_coarse",
+            }
+        )
+        AreaDetector.doPreinit(self, mode)
+
+    def doReadThreshold_Fine(self):
+        return self._get_pv("threshold_fine_rbv")
+
+    def doWriteThreshold_Fine(self, value):
+        self._put_pv("threshold_fine", value)
+
+    def doReadThreshold_Coarse(self):
+        return self._get_pv("threshold_coarse_rbv")
+
+    def doWriteThreshold_Coarse(self, value):
+        self._put_pv("threshold_coarse", value)
+
+
+class OrcaFlash4(AreaDetector):
+    """
+    Device that controls and acquires data from an Orca Flash 4 area detector.
+    """
+
+    parameters = {
+        "topicpv": Param(
+            "Topic pv name where the image is.",
+            type=str,
+            mandatory=True,
+            settable=False,
+            default=False,
+        ),
+        "sourcepv": Param(
+            "Source pv name for the image data on the topic.",
+            type=str,
+            mandatory=True,
+            settable=False,
+            default=False,
+        ),
+        "imagemode": Param(
+            "Mode to acquire images.",
+            type=oneof("single", "multiple", "continuous"),
+            settable=True,
+            default="continuous",
+            volatile=True,
+        ),
+        "binning": Param(
+            "Binning factor",
+            type=oneof("1x1", "2x2", "4x4"),
+            settable=True,
+            default="1x1",
+            volatile=True,
+        ),
+        "subarraymode": Param(
+            "Subarray of whole image active.",
+            type=bool,
+            settable=True,
+            default=False,
+            volatile=True,
+        ),
+        "sizex": Param("Image X size.", settable=True, volatile=True),
+        "sizey": Param("Image Y size.", settable=True, volatile=True),
+        "startx": Param("Image X start index.", settable=True, volatile=True),
+        "starty": Param("Image Y start index.", settable=True, volatile=True),
+        "binx": Param("Binning factor X", settable=True, volatile=True),
+        "biny": Param("Binning factor Y", settable=True, volatile=True),
+        "numimages": Param(
+            "Number of images to take (only in imageMode=multiple).",
+            settable=True,
+            volatile=True,
+        ),
+        "numexposures": Param(
+            "Number of exposures per image.", settable=True, volatile=True
+        ),
+        "chip_coolingmode": Param(
+            "Cooling mode of the camera.",
+            type=oneof("off", "on", "max"),
+            settable=True,
+            volatile=True,
+        ),
+        "chip_temperature": Param(
+            "Temperature of the camera.", settable=False, volatile=True
+        ),
+        "watercooler_mode": Param(
+            "Set if the watercooler is on or off.",
+            settable=True,
+            volatile=True,
+            type=oneof("ON", "OFF"),
+        ),
+        "watercooler_temperature": Param(
+            "Temperature of the water cooling the camera.", settable=True, volatile=True
+        ),
+    }
+
+    attached_devices = {
+        "watercooler_mode": Attach(
+            "Run mode on/off", EpicsMappedMoveable, optional=True
+        ),
+        "watercooler_temperature": Attach(
+            "Temperature of the water", EpicsAnalogMoveable, optional=True
+        ),
+    }
+
+    _control_pvs = {
+        "size_x": "SizeX",
+        "size_y": "SizeY",
+        "min_x": "MinX",
+        "min_y": "MinY",
+        "bin_x": "BinX",
+        "bin_y": "BinY",
+        "acquire_time": "AcquireTime",
+        "acquire_period": "AcquirePeriod",
+        "num_images": "NumImages",
+        "num_exposures": "NumExposures",
+        "image_mode": "ImageMode",
+    }
+
+    def _set_custom_record_fields(self):
+        AreaDetector._set_custom_record_fields(self)
+        self._record_fields["subarray_mode"] = "SubarrayMode-S"
+        self._record_fields["subarray_mode_rbv"] = "SubarrayMode-RB"
+        self._record_fields["binning_factor"] = "Binning-S"
+        self._record_fields["binning_factor_rbv"] = "Binning-RB"
+        self._record_fields["chip_temperature"] = "Temperature-R"
+        self._record_fields["cooling_mode"] = "SensorCooler-S"
+        self._record_fields["cooling_mode_rbv"] = "SensorCooler-RB"
+        self._record_fields["topicpv"] = self.topicpv
+        self._record_fields["sourcepv"] = self.sourcepv
+
+    def _get_pv_parameters(self):
+        return set(self._record_fields) | set(["image_pv", "topicpv", "sourcepv"])
+
+    def _get_pv_name(self, pvparam):
+        pv_name = self._record_fields.get(pvparam)
+        if "image_pv" == pvparam:
+            return self.image_pv
+        if "topicpv" == pvparam:
+            return self.topicpv
+        if "sourcepv" == pvparam:
+            return self.sourcepv
+        if pv_name:
+            return self.pv_root + pv_name
+        return getattr(self, pvparam)
+
+    def update_arraydesc(self):
+        shape = self._get_pv("size_y"), self._get_pv("size_x")
+        binning_factor = int(self.binning[0])
+        shape = (shape[0] // binning_factor, shape[1] // binning_factor)
+        self._plot_update_delay = (shape[0] * shape[1]) / 2097152.0
+        data_type = data_type_t[self._get_pv("data_type", as_string=True)]
+        self.arraydesc = ArrayDesc(self.name, shape=shape, dtype=data_type)
+
+    def doStatus(self, maxage=0):
+        detector_state = self._get_pv("acquire_status", True)
+        alarm_status = STAT_TO_STATUS.get(
+            self._get_pv("detector_state.STAT"), status.UNKNOWN
+        )
+        alarm_severity = SEVERITY_TO_STATUS.get(
+            self._get_pv("detector_state.SEVR"), status.UNKNOWN
+        )
+        if detector_state != "Done" and alarm_severity < status.BUSY:
+            alarm_severity = status.BUSY
+        self._write_alarm_to_log(detector_state, alarm_severity, alarm_status)
         return alarm_severity, "%s, image mode is %s" % (detector_state, self.imagemode)
 
     def _write_alarm_to_log(self, pv_value, severity, stat):
@@ -402,21 +551,6 @@ class AreaDetector(EpicsDevice, ImageChannelMixin, Measurable):
 
         self.doAcquire()
 
-    def doAcquire(self):
-        self._put_pv("acquire", 1)
-
-    def doFinish(self):
-        self.doStop()
-
-    def doStop(self):
-        self._put_pv("acquire", 0)
-
-    def doRead(self, maxage=0):
-        return self._get_pv("readpv")
-
-    def doReadArray(self, quality):
-        return self._image_array
-
     def doReadSizex(self):
         return self._get_pv("size_x_rbv")
 
@@ -442,18 +576,6 @@ class AreaDetector(EpicsDevice, ImageChannelMixin, Measurable):
 
     def doWriteStarty(self, value):
         self._put_pv("min_y", self._limit_start(value))
-
-    def doReadAcquiretime(self):
-        return self._get_pv("acquire_time_rbv")
-
-    def doWriteAcquiretime(self, value):
-        self._put_pv("acquire_time", value)
-
-    def doReadAcquireperiod(self):
-        return self._get_pv("acquire_period_rbv")
-
-    def doWriteAcquireperiod(self, value):
-        self._put_pv("acquire_period", value)
 
     def doReadBinx(self):
         return self._get_pv("bin_x_rbv")
@@ -501,62 +623,6 @@ class AreaDetector(EpicsDevice, ImageChannelMixin, Measurable):
         return self._get_pv("topicpv", as_string=True), self._get_pv(
             "sourcepv", as_string=True
         )
-
-
-class OrcaFlash4(AreaDetector):
-    """
-    Device that controls and acquires data from an Orca Flash 4 area detector.
-    """
-
-    parameters = {
-        "chip_coolingmode": Param(
-            "Cooling mode of the camera.",
-            type=oneof("off", "on", "max"),
-            settable=True,
-            volatile=True,
-        ),
-        "chip_temperature": Param(
-            "Temperature of the camera.", settable=False, volatile=True
-        ),
-        "watercooler_mode": Param(
-            "Set if the watercooler is on or off.",
-            settable=True,
-            volatile=True,
-            type=oneof("ON", "OFF"),
-        ),
-        "watercooler_temperature": Param(
-            "Temperature of the water cooling the camera.", settable=True, volatile=True
-        ),
-    }
-
-    attached_devices = {
-        "watercooler_mode": Attach(
-            "Run mode on/off", EpicsMappedMoveable, optional=True
-        ),
-        "watercooler_temperature": Attach(
-            "Temperature of the water", EpicsAnalogMoveable, optional=True
-        ),
-    }
-
-    _control_pvs = {
-        "size_x": "SizeX",
-        "size_y": "SizeY",
-        "min_x": "MinX",
-        "min_y": "MinY",
-        "bin_x": "BinX",
-        "bin_y": "BinY",
-        "acquire_time": "AcquireTime",
-        "acquire_period": "AcquirePeriod",
-        "num_images": "NumImages",
-        "num_exposures": "NumExposures",
-        "image_mode": "ImageMode",
-    }
-
-    def _set_custom_record_fields(self):
-        AreaDetector._set_custom_record_fields(self)
-        self._record_fields["chip_temperature"] = "Temperature-R"
-        self._record_fields["cooling_mode"] = "SensorCooler-S"
-        self._record_fields["cooling_mode_rbv"] = "SensorCooler-RB"
 
     def doReadChip_Coolingmode(self):
         return CoolingMode(self._get_pv("cooling_mode_rbv")).name.lower()

@@ -56,6 +56,7 @@ devices = dict(
         brokers=["someserver:9092"],
         unit="",
         pool_topic="TEST_jobPool",
+        instrument_topic="TEST_filewriter",
         nexus="NexusStructure",
         status="FileWriterStatus",
     ),

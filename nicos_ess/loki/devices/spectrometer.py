@@ -352,7 +352,6 @@ class SpectrometerCollector(Detector):
         "fmtstr": Override(default="%d"),
         "liveinterval": Override(type=floatrange(0.5), default=1, userparam=True),
         "pollinterval": Override(default=1, userparam=True, settable=False),
-        "statustopic": Override(default="", mandatory=False),
     }
 
     def doPreinit(self, mode):

@@ -69,6 +69,7 @@ devices = dict(
         description="Control for the file-writer",
         brokers=configdata("config.KAFKA_BROKERS"),
         pool_topic="ess_filewriter_pool",
+        instrument_topic="odin_filewriter",
         status="FileWriterStatus",
         nexus="NexusStructure",
         use_instrument_directory=True,
