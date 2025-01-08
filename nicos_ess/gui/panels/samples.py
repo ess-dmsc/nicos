@@ -28,14 +28,9 @@ class SamplePanel(PanelBase):
         self.to_monitor = ["sample/samples"]  # add "exp/propinfo"?
         self._samples_loaded = None
 
-        # self._samples_in_edit = None
-        # self._sample_properties = None
-        # self._previously_selected = None
-
         self.widgets = SamplePanelWidgets()
-        self.add_dialog = AddSampleDialog()
-        self.remove_dialog = RemoveSampleDialog()
-
+        self.add_dialog = None
+        self.remove_dialog = None
         self.layout = QVBoxLayout()
         self.layout.addWidget(self.widgets.sample_panel_widget)
         self.setLayout(self.layout)
@@ -47,19 +42,23 @@ class SamplePanel(PanelBase):
 
     def connect_signals(self):
         self.widgets.btn_add.clicked.connect(self.add_sample_clicked)
-        self.add_dialog.button_box.accepted.connect(self.confirm_add)
-        self.add_dialog.button_box.rejected.connect(self.cancel_add)
-
         self.widgets.btn_remove.clicked.connect(self.remove_sample_clicked)
-        self.remove_dialog.button_box.accepted.connect(self.confirm_remove)
-        self.remove_dialog.button_box.rejected.connect(self.cancel_remove)
-
         self.widgets.btn_edit.clicked.connect(self.edit_sample_clicked)
         self.widgets.btn_custom.clicked.connect(self.customize_clicked)
         self.widgets.btn_save.clicked.connect(self.save_clicked)
         self.widgets.btn_cancel.clicked.connect(self.cancel_clicked)
-
         self.widgets.selector.itemSelectionChanged.connect(self.selection_updated)
+        self.widgets.btn_TEST_PRINT.clicked.connect(self.TEST_PRINT_CLICKED)
+
+    def create_add_dialog(self):
+        self.add_dialog = AddSampleDialog()
+        self.add_dialog.button_box.accepted.connect(self.confirm_add)
+        self.add_dialog.button_box.rejected.connect(self.cancel_add)
+
+    def create_remove_dialog(self):
+        self.remove_dialog = RemoveSampleDialog()
+        self.remove_dialog.button_box.accepted.connect(self.confirm_remove)
+        self.remove_dialog.button_box.rejected.connect(self.cancel_remove)
 
     def initialise_connection_status_listeners(self):
         PanelBase.initialise_connection_status_listeners(self)
@@ -71,12 +70,15 @@ class SamplePanel(PanelBase):
         if not self._in_edit_mode and key in self.to_monitor:
             self._samples_loaded = self._get_samples()
             if len(self._samples_loaded) > 0:
-                self.add_sample_ids_to_selector()
+                self.add_all_sample_ids_to_selector()
             # self._sample_properties = self._get_sample_properties()
             # for sample_property in self._sample_properties:
             #     self.add_property_to_table(sample_property)
             # self.load_sample_selector_items()
             # print(self._samples_in_edit)
+
+    def TEST_PRINT_CLICKED(self):
+        print(self._samples_loaded)
 
     def selection_updated(self):
         """
@@ -87,10 +89,42 @@ class SamplePanel(PanelBase):
         if selected_sample_id:
             sample = self.get_sample(selected_sample_id)
             self.add_sample_to_table(sample)
-            # self.set_key_widget_text(selected_sample)
-            # self.set_val_widget_text(selected_sample)
-            # self.toggle_lock_or_unlock_widgets()
-            # self.show_sample_view()
+        else:
+            self.empty_table()
+
+    def add_sample_clicked(self):
+        self.create_add_dialog()
+        self.add_dialog.exec()
+
+    def confirm_add(self):
+        new_sample_id = self.add_dialog.sample_id.text()
+        valid_check = self.valid_new_sample(new_sample_id)
+        if valid_check is True:
+            self.add_sample(new_sample_id)
+            self.add_sample_id_to_selector(new_sample_id)
+            self.select_sample(new_sample_id)
+            self.add_dialog.close()
+        else:
+            self.add_dialog.message.setText(valid_check)
+
+    def cancel_add(self):
+        self.add_dialog.close()
+
+    def remove_sample_clicked(self):
+        self.create_remove_dialog()
+        selected_sample_id = self.get_current_selected()
+        label_text = f"Remove sample: '{selected_sample_id}'"
+        self.remove_dialog.message.setText(label_text)
+        self.remove_dialog.exec()
+
+    def confirm_remove(self):
+        selected_sample_id = self.get_current_selected()
+        self.remove_sample(selected_sample_id)
+        self.remove_sample_id_from_selector()
+        self.remove_dialog.close()
+
+    def cancel_remove(self):
+        self.remove_dialog.close()
 
     def _get_samples(self):
         samples = self.client.eval("session.experiment.get_samples()", {})
@@ -118,55 +152,25 @@ class SamplePanel(PanelBase):
         for i, (key, val) in enumerate(sample.items()):
             if i >= row_count:
                 self.widgets.info_table.insertRow(i)
-            self.widgets.info_table.setItem(i, 0, QTableWidgetItem(key))
-            self.widgets.info_table.setItem(i, 1, QTableWidgetItem(val))
+            key_item = self.read_only_item(QTableWidgetItem(key))
+            val_item = self.read_only_item(QTableWidgetItem(val))
+            self.widgets.info_table.setItem(i, 0, key_item)
+            self.widgets.info_table.setItem(i, 1, val_item)
 
-    def add_sample_clicked(self):
-        """
-        todo
-        make selections work
-        """
-        self.add_dialog.exec()
-        # self.previously_selected = self.get_current_selected()
-        # self.clear_sample_selection()
+    def editable_item(self, item):
+        item.setFlags(item.flags() ^ Qt.ItemFlag.ItemIsSelectable)
+        return item
 
-    def confirm_add(self):
-        new_sample = self.add_dialog.sample_id.text()
-        valid_check = self.valid_new_sample(new_sample)
-        if valid_check is True:
-            self.add_sample(new_sample)
-            self.add_dialog.close()
-        else:
-            self.add_dialog.message.setText(valid_check)
+    def read_only_item(self, item):
+        item.setFlags(
+            item.flags() ^ Qt.ItemFlag.ItemIsEditable ^ Qt.ItemFlag.ItemIsSelectable
+        )
+        return item
 
-    def cancel_add(self):
-        """
-        todo
-        if sample was selected before, reselect that sample
-        else no selection
-        also what about existing dialog with the cross?
-        """
-        pass
-
-    def remove_sample_clicked(self):
-        self.show_remove_sample_dialog()
-
-    def confirm_remove(self):
-        """
-        todo
-        remove sample from self._samples_in_edit
-        remove sample from selector
-        if sample left in selector, select the last sample
-        else no selection
-        """
-        pass
-
-    def cancel_remove(self):
-        """
-        todo
-        the selected sample remains selected
-        """
-        pass
+    def empty_table(self):
+        row_count = self.widgets.info_table.rowCount()
+        for i in range(row_count):
+            self.widgets.info_table.removeRow(i)
 
     def edit_sample_clicked(self):
         """
@@ -250,13 +254,20 @@ class SamplePanel(PanelBase):
         # self.widgets.header_val.show()
         # self.show_sample_view()
 
-    def add_sample_ids_to_selector(self):
+    def add_sample_id_to_selector(self, sample_id):
+        item = QListWidgetItem(sample_id)
+        self.widgets.selector.addItem(item)
+
+    def add_all_sample_ids_to_selector(self):
         existing_items = self.get_existing_selector_items()
         for sample in self._samples_loaded:
             sample_id = sample[SAMPLE_IDENTIFIER_KEY]
             if sample_id not in existing_items:
-                item = QListWidgetItem(sample_id)
-                self.widgets.selector.addItem(item)
+                self.add_sample_id_to_selector(sample_id)
+
+    def remove_sample_id_from_selector(self):
+        selected_row = self.widgets.selector.currentRow()
+        self.widgets.selector.takeItem(selected_row)
 
     def get_existing_selector_items(self):
         return [
@@ -282,21 +293,29 @@ class SamplePanel(PanelBase):
         self.widgets.selector.clearSelection()
 
     def add_sample(self, sample_id):
-        new_sample = {SAMPLE_IDENTIFIER_KEY: sample_id}
-        new_properties = {
-            key: ""
-            for key in self._sample_properties
-            if not key == SAMPLE_IDENTIFIER_KEY
-        }
-        new_sample.update(new_properties)
-        self._samples_in_edit.append(new_sample)
-        self.load_sample_selector_items()
+        new_sample = {key: "" for key in self.get_all_sample_properties()}
+        new_sample[SAMPLE_IDENTIFIER_KEY] = sample_id
+        self._samples_loaded.append(new_sample)
+
+    def remove_sample(self, sample_id):
+        for i, sample in enumerate(self._samples_loaded):
+            if sample[SAMPLE_IDENTIFIER_KEY] == sample_id:
+                del self._samples_loaded[i]
+                break
 
     def valid_new_sample(self, sample_id):
         if sample_id == "":
             return "Please add a sample id"
         # elif sample exist: return False
         return True
+
+    def get_all_sample_properties(self):
+        properties = [SAMPLE_IDENTIFIER_KEY]
+        if len(self._samples_loaded) > 0:
+            for sample in self._samples_loaded:
+                keys = [prop for prop in sample.keys() if prop not in properties]
+                properties.extend(keys)
+        return properties
 
     ### --------------------------------------------------- ###
 
