@@ -1,6 +1,6 @@
 from nicos.guisupport.qt import (
     QListWidgetItem,
-    # QPushButton,
+    QPushButton,
     Qt,
     QTableWidgetItem,
     QVBoxLayout,
@@ -31,6 +31,8 @@ class SamplePanel(PanelBase):
         self.widgets = SamplePanelWidgets()
         self.add_dialog = None
         self.remove_dialog = None
+        self.add_row_button = None
+        self.delete_row_button = None
         self.layout = QVBoxLayout()
         self.layout.addWidget(self.widgets.sample_panel_widget)
         self.setLayout(self.layout)
@@ -78,7 +80,20 @@ class SamplePanel(PanelBase):
             self.editable_item(item)
 
     def customise_clicked(self):
-        nrows = self.widgets.info_table.rowCount()
+        self.make_properties_editable()
+        self.add_row_to_table()
+        self.create_add_row_button()
+        self.add_button_to_last_row()
+
+    def create_add_row_button(self):
+        self.add_row_button = QPushButton("Add row")
+        self.add_row_button.clicked.connect(self.add_row_clicked)
+
+    def number_of_rows_in_table(self):
+        return self.widgets.info_table.rowCount()
+
+    def make_properties_editable(self):
+        nrows = self.number_of_rows_in_table()
         for i in range(nrows):
             self.widgets.info_table.item(i, self.widgets.VALUE_COL_INDEX).setText("")
             if i != 0:
@@ -86,17 +101,27 @@ class SamplePanel(PanelBase):
                     self.widgets.info_table.item(i, self.widgets.PROPERTY_COL_INDEX)
                 )
 
-    ## TODO:
-    # def new_property_placeholder_row(self):
-    #     row_i = self.widgets.info_table.rowCount()
-    #     self.widgets.info_table.insertRow(row_i)
-    #
-    # def add_property_row_button(self):
-    #
-    #     add_button = QPushButton("Add row")
-    #
-    #     self.widgets.info_table.setCellWidget(row_i,
-    #     self.widgets.PROPERTY_COL_INDEX, add_button)
+    def add_row_to_table(self):
+        nrows = self.number_of_rows_in_table()
+        self.widgets.info_table.insertRow(nrows)
+
+    def add_button_to_last_row(self):
+        nrows = self.number_of_rows_in_table()
+        row_i = nrows - 1
+        self.widgets.info_table.setCellWidget(
+            row_i, self.widgets.PROPERTY_COL_INDEX, self.add_row_button
+        )
+
+    def remove_button_from_last_row(self):
+        nrows = self.number_of_rows_in_table()
+        row_i = nrows - 1
+        self.widgets.info_table.removeCellWidget(row_i, self.widgets.PROPERTY_COL_INDEX)
+
+    def add_row_clicked(self):
+        self.remove_button_from_last_row()
+        self.add_row_to_table()
+        self.create_add_row_button()
+        self.add_button_to_last_row()
 
     def save_clicked(self):
         """
