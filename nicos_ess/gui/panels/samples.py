@@ -1,6 +1,5 @@
 from nicos.guisupport.qt import (
     QListWidgetItem,
-    QPushButton,
     Qt,
     QTableWidgetItem,
     QVBoxLayout,
@@ -29,22 +28,20 @@ class SamplePanel(PanelBase):
         self._samples_loaded = None
 
         self.widgets = SamplePanelWidgets()
-        self.add_dialog = None
-        self.remove_dialog = None
-        self.add_row_button = None
-        self.delete_row_button = None
         self.layout = QVBoxLayout()
         self.layout.addWidget(self.widgets.sample_panel_widget)
         self.setLayout(self.layout)
         self.connect_signals()
         self.initialise_connection_status_listeners()
 
+        self.add_row_flag = False
+
     def add_sample_clicked(self):
         self.create_add_dialog()
-        self.add_dialog.exec()
+        self.widgets.add_dialog.exec()
 
     def confirm_add(self):
-        new_sample_id = self.add_dialog.sample_id.text()
+        new_sample_id = self.widgets.add_dialog.sample_id.text()
         valid_check = self.valid_new_sample(new_sample_id)
         if valid_check is True:
             self.add_empty_sample(new_sample_id)
@@ -52,17 +49,17 @@ class SamplePanel(PanelBase):
             self.select_sample(new_sample_id)
             self.add_dialog.close()
         else:
-            self.add_dialog.message.setText(valid_check)
+            self.widgets.add_dialog.message.setText(valid_check)
 
     def cancel_add(self):
-        self.add_dialog.close()
+        self.widgets.add_dialog.close()
 
     def remove_sample_clicked(self):
         self.create_remove_dialog()
         selected_sample_id = self.get_current_selected()
         label_text = f"Remove sample: '{selected_sample_id}'"
-        self.remove_dialog.message.setText(label_text)
-        self.remove_dialog.exec()
+        self.widgts.remove_dialog.message.setText(label_text)
+        self.widgets.remove_dialog.exec()
 
     def confirm_remove(self):
         selected_sample_id = self.get_current_selected()
@@ -81,47 +78,92 @@ class SamplePanel(PanelBase):
 
     def customise_clicked(self):
         self.make_properties_editable()
+        self.remove_values_from_table()
         self.add_row_to_table()
-        self.create_add_row_button()
-        self.add_button_to_last_row()
+        self.widgets.create_add_row_button(self.add_row_clicked)
+        self.widgets.create_delete_row_button(self.delete_row_clicked)
+        self.insert_add_button_to_last_row()
 
-    def create_add_row_button(self):
-        self.add_row_button = QPushButton("Add row")
-        self.add_row_button.clicked.connect(self.add_row_clicked)
+    def table_cell_changed(self, cur_row, cur_col, prev_row, prev_col):
+        self.remove_button_from_previously_selected_row(prev_row)
+
+    def table_cell_activated(self):
+        nrows = self.number_of_rows_in_table()
+        row_i = self.widgets.info_table.currentRow()
+        if row_i != 0 and row_i < nrows - 1:
+            self.widgets.create_delete_row_button(self.delete_row_clicked)
+            # print(2)
+            # print("current row:", cur_row)
+            # print("current col:", cur_col)
+            # print("previous row:", prev_row)
+            # print("previous col:", prev_col)
+
+            self.insert_delete_button_to_selected_row(row_i)
+
+    def get_selected_cell(self):
+        selected_cell = self.widgets.info_table.selectedRanges()
+        if len(selected_cell) == 0:
+            return None
+        cell = {"row": selected_cell[0].topRow(), "col": selected_cell[0].leftColumn()}
+        return cell
 
     def number_of_rows_in_table(self):
         return self.widgets.info_table.rowCount()
 
     def make_properties_editable(self):
         nrows = self.number_of_rows_in_table()
+        for i in range(1, nrows):
+            self.editable_item(
+                self.widgets.info_table.item(i, self.widgets.PROPERTY_COL_INDEX)
+            )
+        self.widgets.info_table.clearSelection()
+
+    def remove_values_from_table(self):
+        nrows = self.number_of_rows_in_table()
         for i in range(nrows):
             self.widgets.info_table.item(i, self.widgets.VALUE_COL_INDEX).setText("")
-            if i != 0:
-                self.editable_item(
-                    self.widgets.info_table.item(i, self.widgets.PROPERTY_COL_INDEX)
-                )
 
     def add_row_to_table(self):
-        nrows = self.number_of_rows_in_table()
-        self.widgets.info_table.insertRow(nrows)
+        self.make_properties_editable()
+        row_i = self.number_of_rows_in_table()
+        self.widgets.info_table.insertRow(row_i)
+        key_item = QTableWidgetItem()
+        val_item = QTableWidgetItem()
+        self.read_only_item(key_item)
+        self.read_only_item(val_item)
+        self.widgets.info_table.setItem(
+            row_i, self.widgets.PROPERTY_COL_INDEX, key_item
+        )
+        self.widgets.info_table.setItem(row_i, self.widgets.VALUE_COL_INDEX, val_item)
 
-    def add_button_to_last_row(self):
-        nrows = self.number_of_rows_in_table()
-        row_i = nrows - 1
+        # self.widgets.info_table.clearSelection()
+
+    def insert_add_button_to_last_row(self):
+        row_i = self.number_of_rows_in_table() - 1
         self.widgets.info_table.setCellWidget(
-            row_i, self.widgets.PROPERTY_COL_INDEX, self.add_row_button
+            row_i, self.widgets.PROPERTY_COL_INDEX, self.widgets.add_row_btn
         )
 
     def remove_button_from_last_row(self):
-        nrows = self.number_of_rows_in_table()
-        row_i = nrows - 1
+        row_i = self.number_of_rows_in_table() - 1
         self.widgets.info_table.removeCellWidget(row_i, self.widgets.PROPERTY_COL_INDEX)
+
+    def insert_delete_button_to_selected_row(self, row_i):
+        self.widgets.info_table.setCellWidget(
+            row_i, self.widgets.VALUE_COL_INDEX, self.widgets.delete_row_btn
+        )
+
+    def remove_button_from_previously_selected_row(self, row_i):
+        self.widgets.info_table.removeCellWidget(row_i, self.widgets.VALUE_COL_INDEX)
 
     def add_row_clicked(self):
         self.remove_button_from_last_row()
         self.add_row_to_table()
-        self.create_add_row_button()
-        self.add_button_to_last_row()
+        self.widgets.create_add_row_button(self.add_row_clicked)
+        self.insert_add_button_to_last_row()
+
+    def delete_row_clicked(self):
+        pass
 
     def save_clicked(self):
         """
@@ -212,16 +254,18 @@ class SamplePanel(PanelBase):
         self.widgets.btn_cancel.clicked.connect(self.cancel_clicked)
         self.widgets.selector.itemSelectionChanged.connect(self.selection_updated)
         self.widgets.btn_TEST_PRINT.clicked.connect(self.TEST_PRINT_CLICKED)
+        self.widgets.info_table.currentCellChanged.connect(self.table_cell_changed)
+        self.widgets.info_table.itemSelectionChanged.connect(self.table_cell_activated)
 
     def create_add_dialog(self):
-        self.add_dialog = AddSampleDialog()
-        self.add_dialog.button_box.accepted.connect(self.confirm_add)
-        self.add_dialog.button_box.rejected.connect(self.cancel_add)
+        self.widgets.add_dialog = AddSampleDialog()
+        self.widgets.add_dialog.button_box.accepted.connect(self.confirm_add)
+        self.widgets.add_dialog.button_box.rejected.connect(self.cancel_add)
 
     def create_remove_dialog(self):
-        self.remove_dialog = RemoveSampleDialog()
-        self.remove_dialog.button_box.accepted.connect(self.confirm_remove)
-        self.remove_dialog.button_box.rejected.connect(self.cancel_remove)
+        self.widgets.remove_dialog = RemoveSampleDialog()
+        self.widgets.remove_dialog.button_box.accepted.connect(self.confirm_remove)
+        self.widgets.remove_dialog.button_box.rejected.connect(self.cancel_remove)
 
     def valid_new_sample(self, sample_id):
         if sample_id == "":
@@ -254,7 +298,9 @@ class SamplePanel(PanelBase):
             self.widgets.info_table.setItem(i, self.widgets.VALUE_COL_INDEX, val_item)
 
     def editable_item(self, item):
-        item.setFlags(item.flags() | Qt.ItemFlag.ItemIsEditable)
+        item.setFlags(
+            item.flags() | Qt.ItemFlag.ItemIsEditable | Qt.ItemFlag.ItemIsSelectable
+        )
         return item
 
     def read_only_item(self, item):
