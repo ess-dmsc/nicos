@@ -1,24 +1,13 @@
 import copy
 import time
+
 from nicos import session
-from nicos.core import (
-    Attach,
-    Override,
-    Param,
-    Readable,
-    Waitable,
-    status,
-    listof,
-    POLLER,
-)
+from nicos.core import POLLER, Attach, Override, Param, Readable, Waitable, \
+    listof, status
 from nicos.devices.abstract import MappedMoveable, Moveable
-from nicos_ess.devices.epics.pva.epics_devices import (
-    EpicsParameters,
-    create_wrapper,
-    get_from_cache_or,
-    RecordInfo,
-    RecordType,
-)
+
+from nicos_ess.devices.epics.pva.epics_devices import EpicsParameters, \
+    RecordInfo, RecordType, create_wrapper, get_from_cache_or
 
 
 class ChopperAlarms(EpicsParameters, Readable):
@@ -54,11 +43,8 @@ class ChopperAlarms(EpicsParameters, Readable):
         self._epics_subscriptions = []
         self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
         # Check PV exists
-        self._epics_wrapper.connect_pv(self.motorpv)
-
-        for pv in self._chopper_alarm_names:
-            for pv_field in ["", ".STAT", ".SEVR"]:
-                self._record_fields[pv + pv_field] = self.pv_root + pv + pv_field
+        pv = f"{self.pv_root}{self._record_fields['comm_alarm'].pv_suffix}"
+        self._epics_wrapper.connect_pv(pv)
 
     def doInit(self, mode):
         if session.sessiontype == POLLER and self.monitor:
