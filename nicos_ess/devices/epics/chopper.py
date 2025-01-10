@@ -112,7 +112,8 @@ class ChopperAlarms(EpicsParameters, Readable):
         self._cache.put(self._name, "status", self._do_status(), time_stamp)
 
     def _connection_change_callback(self, name, param, is_connected, **kwargs):
-        if param != self._record_fields["value"].cache_key:
+        # Only check for one PV
+        if param != self._record_fields["communication"].cache_key:
             return
 
         if is_connected:
