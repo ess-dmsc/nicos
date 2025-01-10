@@ -63,6 +63,7 @@ class ChopperAlarms(EpicsParameters, Readable):
         self._epics_wrapper.connect_pv(pv)
 
     def doInit(self, mode):
+        self.log.error("DOINIT")
         if session.sessiontype == POLLER and self.monitor:
             for k, v in self._record_fields.items():
                 self.log.warn(f"connecting to {k}")
