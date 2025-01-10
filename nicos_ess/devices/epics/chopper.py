@@ -1,10 +1,27 @@
-from nicos.core import Attach, Override, Param, Readable, Waitable, status, listof
+import copy
+import time
+from nicos import session
+from nicos.core import (
+    Attach,
+    Override,
+    Param,
+    Readable,
+    Waitable,
+    status,
+    listof,
+    POLLER,
+)
 from nicos.devices.abstract import MappedMoveable, Moveable
-from nicos.devices.epics.pva import EpicsDevice
-from nicos.devices.epics.status import SEVERITY_TO_STATUS, STAT_TO_STATUS
+from nicos_ess.devices.epics.pva.epics_devices import (
+    EpicsParameters,
+    create_wrapper,
+    get_from_cache_or,
+    RecordInfo,
+    RecordType,
+)
 
 
-class ChopperAlarms(EpicsDevice, Readable):
+class ChopperAlarms(EpicsParameters, Readable):
     """
     This device handles chopper alarms.
     """
@@ -19,76 +36,102 @@ class ChopperAlarms(EpicsDevice, Readable):
     }
 
     _alarm_state = {}
-    _chopper_alarm_names = {
-        "Comm_Alrm",
-        "HW_Alrm",
-        "IntLock_Alrm",
-        "Lvl_Alrm",
-        "Pos_Alrm",
-        "Pwr_Alrm",
-        "Ref_Alrm",
-        "SW_Alrm",
-        "Volt_Alrm",
+    _record_fields = {
+        "comm_alarm": RecordInfo("value", "Comm_Alrm", RecordType.STATUS),
+        "hw_alarm": RecordInfo("", "HW_Alrm", RecordType.STATUS),
+        "intlock_alarm": RecordInfo("", "IntLock_Alrm", RecordType.STATUS),
+        "lvl_alarm": RecordInfo("", "Lvl_Alrm", RecordType.STATUS),
+        "pos_alarm": RecordInfo("", "Pos_Alrm", RecordType.STATUS),
+        "pwr_alarm": RecordInfo("", "Pwr_Alrm", RecordType.STATUS),
+        "ref_alarm": RecordInfo("", "Ref_Alrm", RecordType.STATUS),
+        "sw_alarm": RecordInfo("", "SW_Alrm", RecordType.STATUS),
+        "volt_alarm": RecordInfo("", "Volt_Alrm", RecordType.STATUS),
     }
-    _record_fields = {}
-    _cache_relations = {}
 
     def doPreinit(self, mode):
-        self._alarm_state = {
-            name: (status.OK, "") for name in self._chopper_alarm_names
-        }
+        self._record_fields = copy.deepcopy(self._record_fields)
+        self._alarm_state = {name: (status.OK, "") for name in self._record_fields}
+        self._epics_subscriptions = []
+        self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
+        # Check PV exists
+        self._epics_wrapper.connect_pv(self.motorpv)
 
         for pv in self._chopper_alarm_names:
             for pv_field in ["", ".STAT", ".SEVR"]:
                 self._record_fields[pv + pv_field] = self.pv_root + pv + pv_field
-        EpicsDevice.doPreinit(self, mode)
 
-    def _get_pv_parameters(self):
-        return set(self._record_fields)
-
-    def _get_status_parameters(self):
-        return self._chopper_alarm_names
-
-    def _get_pv_name(self, pvparam):
-        return self._record_fields[pvparam]
+    def doInit(self, mode):
+        if session.sessiontype == POLLER and self.monitor:
+            for k, v in self._record_fields.items():
+                self._epics_subscriptions.append(
+                    self._epics_wrapper.subscribe(
+                        f"{self.pv_root}{v.pv_suffix}",
+                        k,
+                        self._status_change_callback,
+                        self._connection_change_callback,
+                    )
+                )
 
     def doRead(self, maxage=0):
         return ""
 
     def doStatus(self, maxage=0):
+        return get_from_cache_or(self, "status", self._do_status)
+
+    def _do_status(self):
         """
         Goes through all alarms in the chopper and returns the alarm encountered
         with the highest severity. All alarms are printed in the session log.
         """
-        message = ""
+        worst_message = ""
         highest_severity = status.OK
-        for name in self._chopper_alarm_names:
-            pv_value = self._get_pv(name, as_string=True)
-            stat = self._get_alarm_status(name)
-            severity = self._get_alarm_sevr(name)
-            if pv_value:
-                if self._alarm_state[name] != (severity, stat):
-                    self._write_alarm_to_log(pv_value, severity, stat)
+        for name in self._record_fields:
+            severity, message = self._get_cached_status_or_ask(name)
+            if severity != status.OK:
+                if self._alarm_state[name] != (severity, message):
+                    self._write_alarm_to_log(severity, message)
                 if severity > highest_severity:
                     highest_severity = severity
-                    message = pv_value
-            self._alarm_state[name] = severity, stat
-        return highest_severity, message
+                    worst_message = message
+            self._alarm_state[name] = (severity, message)
+        return highest_severity, worst_message
 
-    def _get_alarm_status(self, name):
-        status_raw = self._get_pv(name + ".STAT")
-        return STAT_TO_STATUS.get(status_raw, status.UNKNOWN)
+    def _status_change_callback(
+        self, name, param, value, units, limits, severity, message, **kwargs
+    ):
+        time_stamp = time.time()
+        cache_key = param
 
-    def _get_alarm_sevr(self, name):
-        severity_raw = self._get_pv(name + ".SEVR")
-        return SEVERITY_TO_STATUS.get(severity_raw, status.UNKNOWN)
+        self._cache.put(self._name, cache_key, (severity, message), time_stamp)
+        self._cache.put(self._name, "status", self._do_status(), time_stamp)
 
-    def _write_alarm_to_log(self, pv_value, severity, stat):
-        msg_format = "%s (%s)"
+    def _connection_change_callback(self, name, param, is_connected, **kwargs):
+        if param != self._record_fields["value"].cache_key:
+            return
+
+        if is_connected:
+            self.log.debug("%s connected!", name)
+        else:
+            self.log.warning("%s disconnected!", name)
+            self._cache.put(
+                self._name,
+                "status",
+                (status.ERROR, "communication failure"),
+                time.time(),
+            )
+
+    def _get_cached_status_or_ask(self, name):
+        def _get_status_values(pv):
+            return self._epics_wrapper.get_alarm_status(pv)
+
+        pv = f"{self.pv_root}{self._record_fields[name].pv_suffix}"
+        return get_from_cache_or(self, name, _get_status_values(pv))
+
+    def _write_alarm_to_log(self, severity, message):
         if severity in [status.ERROR, status.UNKNOWN]:
-            self.log.error(msg_format, pv_value, stat)
+            self.log.error("%s", message)
         elif severity == status.WARN:
-            self.log.warning(msg_format, pv_value, stat)
+            self.log.warning("%s", message)
 
 
 class EssChopperController(MappedMoveable):
