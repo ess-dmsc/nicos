@@ -99,6 +99,10 @@ devices = dict(
         "nicos_ess.devices.epics.chopper.ChopperAlarms",
         description="The chopper alarms",
         pv_root=pv_root_band_chopper,
+        pva=True,
+        monitor=True,
+        pollinterval=None,
+        maxage=None,
     ),
     band_chopper=device(
         "nicos_ess.devices.epics.chopper.EssChopperController",
