@@ -100,6 +100,7 @@ class ChopperAlarms(EpicsParameters, Readable):
     ):
         time_stamp = time.time()
         cache_key = param
+        self.log.warn(f"status {param}, {value} {severity}, {message}")
 
         self._cache.put(self._name, cache_key, (severity, message), time_stamp)
         self._cache.put(self._name, "status", self._do_status(), time_stamp)
