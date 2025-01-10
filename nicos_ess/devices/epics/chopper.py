@@ -39,15 +39,15 @@ class ChopperAlarms(EpicsParameters, Readable):
 
     _alarm_state = {}
     _record_fields = {
-        "comm_alarm": RecordInfo("value", "Comm_Alrm", RecordType.STATUS),
-        "hw_alarm": RecordInfo("", "HW_Alrm", RecordType.STATUS),
-        "intlock_alarm": RecordInfo("", "IntLock_Alrm", RecordType.STATUS),
-        "lvl_alarm": RecordInfo("", "Lvl_Alrm", RecordType.STATUS),
-        "pos_alarm": RecordInfo("", "Pos_Alrm", RecordType.STATUS),
-        "pwr_alarm": RecordInfo("", "Pwr_Alrm", RecordType.STATUS),
-        "ref_alarm": RecordInfo("", "Ref_Alrm", RecordType.STATUS),
-        "sw_alarm": RecordInfo("", "SW_Alrm", RecordType.STATUS),
-        "volt_alarm": RecordInfo("", "Volt_Alrm", RecordType.STATUS),
+        "communication": RecordInfo("value", "Comm_Alrm", RecordType.STATUS),
+        "hardware": RecordInfo("", "HW_Alrm", RecordType.STATUS),
+        "interlock": RecordInfo("", "IntLock_Alrm", RecordType.STATUS),
+        "level": RecordInfo("", "Lvl_Alrm", RecordType.STATUS),
+        "position": RecordInfo("", "Pos_Alrm", RecordType.STATUS),
+        "power": RecordInfo("", "Pwr_Alrm", RecordType.STATUS),
+        "reference": RecordInfo("", "Ref_Alrm", RecordType.STATUS),
+        "software": RecordInfo("", "SW_Alrm", RecordType.STATUS),
+        "voltage": RecordInfo("", "Volt_Alrm", RecordType.STATUS),
     }
 
     def doPreinit(self, mode):
@@ -55,8 +55,8 @@ class ChopperAlarms(EpicsParameters, Readable):
         self._alarm_state = {name: (status.OK, "") for name in self._record_fields}
         self._epics_subscriptions = []
         self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
-        # Check PV exists
-        pv = f"{self.pv_root}{self._record_fields['comm_alarm'].pv_suffix}"
+        # Check one of the PV exists
+        pv = f"{self.pv_root}{self._record_fields['communication'].pv_suffix}"
         self._epics_wrapper.connect_pv(pv)
 
     def doInit(self, mode):
@@ -88,10 +88,10 @@ class ChopperAlarms(EpicsParameters, Readable):
             severity, message = self._get_cached_status_or_ask(name)
             if severity != status.OK:
                 if self._alarm_state[name] != (severity, message):
-                    self._write_alarm_to_log(severity, message)
+                    self._write_alarm_to_log(name, severity, message)
                 if severity > highest_severity:
                     highest_severity = severity
-                    worst_message = message
+                    worst_message = f"{name} ({message})"
             self._alarm_state[name] = (severity, message)
         return highest_severity, worst_message
 
@@ -127,11 +127,11 @@ class ChopperAlarms(EpicsParameters, Readable):
         pv = f"{self.pv_root}{self._record_fields[name].pv_suffix}"
         return get_from_cache_or(self, name, lambda: _get_status_values(pv))
 
-    def _write_alarm_to_log(self, severity, message):
+    def _write_alarm_to_log(self, name, severity, message):
         if severity in [status.ERROR, status.UNKNOWN]:
-            self.log.error("%s", message)
+            self.log.error("%s (%s)", name, message)
         elif severity == status.WARN:
-            self.log.warning("%s", message)
+            self.log.warning("%s (%s)", name, message)
 
 
 class EssChopperController(MappedMoveable):
