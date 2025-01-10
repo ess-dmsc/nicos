@@ -50,6 +50,9 @@ class ChopperAlarms(EpicsParameters, Readable):
         "voltage": RecordInfo("", "Volt_Alrm", RecordType.STATUS),
     }
 
+    _epics_wrapper = None
+    _epics_subscriptions = []
+
     def doPreinit(self, mode):
         self._record_fields = copy.deepcopy(self._record_fields)
         self._alarm_state = {name: (status.OK, "") for name in self._record_fields}
@@ -62,6 +65,7 @@ class ChopperAlarms(EpicsParameters, Readable):
     def doInit(self, mode):
         if session.sessiontype == POLLER and self.monitor:
             for k, v in self._record_fields.items():
+                self.log.warn(f"connecting to {k}")
                 self._epics_subscriptions.append(
                     self._epics_wrapper.subscribe(
                         f"{self.pv_root}{v.pv_suffix}",
