@@ -125,7 +125,7 @@ class ChopperAlarms(EpicsParameters, Readable):
             return self._epics_wrapper.get_alarm_status(pv)
 
         pv = f"{self.pv_root}{self._record_fields[name].pv_suffix}"
-        return get_from_cache_or(self, name, _get_status_values(pv))
+        return get_from_cache_or(self, name, lambda: _get_status_values(pv))
 
     def _write_alarm_to_log(self, severity, message):
         if severity in [status.ERROR, status.UNKNOWN]:
