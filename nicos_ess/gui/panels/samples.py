@@ -85,27 +85,29 @@ class SamplePanel(PanelBase):
         self.insert_add_button_to_last_row()
 
     def table_cell_changed(self, cur_row, cur_col, prev_row, prev_col):
+        print(prev_row)
         self.remove_button_from_previously_selected_row(prev_row)
 
+    def table_cell_clicked(self, cur_row, cur_col):
+        pass
+
     def table_cell_activated(self):
+        col_i = self.widgets.info_table.currentColumn()
+        if col_i == self.widgets.VALUE_COL_INDEX:
+            return
         nrows = self.number_of_rows_in_table()
         row_i = self.widgets.info_table.currentRow()
         if row_i != 0 and row_i < nrows - 1:
             self.widgets.create_delete_row_button(self.delete_row_clicked)
-            # print(2)
-            # print("current row:", cur_row)
-            # print("current col:", cur_col)
-            # print("previous row:", prev_row)
-            # print("previous col:", prev_col)
-
             self.insert_delete_button_to_selected_row(row_i)
 
-    def get_selected_cell(self):
-        selected_cell = self.widgets.info_table.selectedRanges()
-        if len(selected_cell) == 0:
-            return None
-        cell = {"row": selected_cell[0].topRow(), "col": selected_cell[0].leftColumn()}
-        return cell
+    # def get_selected_cell(self):
+    #     selected_cell = self.widgets.info_table.selectedRanges()
+    #     if len(selected_cell) == 0:
+    #         return None
+    #     cell = {"row": selected_cell[0].topRow(),
+    #     "col": selected_cell[0].leftColumn()}
+    #     return cell
 
     def number_of_rows_in_table(self):
         return self.widgets.info_table.rowCount()
@@ -116,7 +118,7 @@ class SamplePanel(PanelBase):
             self.editable_item(
                 self.widgets.info_table.item(i, self.widgets.PROPERTY_COL_INDEX)
             )
-        self.widgets.info_table.clearSelection()
+        # self.widgets.info_table.clearSelection()
 
     def remove_values_from_table(self):
         nrows = self.number_of_rows_in_table()
@@ -127,16 +129,12 @@ class SamplePanel(PanelBase):
         self.make_properties_editable()
         row_i = self.number_of_rows_in_table()
         self.widgets.info_table.insertRow(row_i)
-        key_item = QTableWidgetItem()
-        val_item = QTableWidgetItem()
-        self.read_only_item(key_item)
-        self.read_only_item(val_item)
+        key_item = self.read_only_item(QTableWidgetItem())
+        val_item = self.read_only_item(QTableWidgetItem())
         self.widgets.info_table.setItem(
             row_i, self.widgets.PROPERTY_COL_INDEX, key_item
         )
         self.widgets.info_table.setItem(row_i, self.widgets.VALUE_COL_INDEX, val_item)
-
-        # self.widgets.info_table.clearSelection()
 
     def insert_add_button_to_last_row(self):
         row_i = self.number_of_rows_in_table() - 1
@@ -255,6 +253,7 @@ class SamplePanel(PanelBase):
         self.widgets.selector.itemSelectionChanged.connect(self.selection_updated)
         self.widgets.btn_TEST_PRINT.clicked.connect(self.TEST_PRINT_CLICKED)
         self.widgets.info_table.currentCellChanged.connect(self.table_cell_changed)
+        # self.widgets.info_table.CellClicked.connect(self.table_cell_clicked)
         self.widgets.info_table.itemSelectionChanged.connect(self.table_cell_activated)
 
     def create_add_dialog(self):
