@@ -12,6 +12,7 @@ from nicos_ess.gui.widgets.sample_widgets import (
     SamplePanelWidgets,
 )
 
+
 DEFAULT_PROPERTIES = ["state", "weight"]
 SAMPLE_IDENTIFIER_KEY = "name"
 
@@ -26,6 +27,9 @@ class SamplePanel(PanelBase):
         self.to_monitor = ["sample/samples"]
         self._in_edit_mode = False
         self._samples_loaded = None
+        self._sample_properties = {}
+        self._sample_properties_edit = {}
+        self._table_selected_row = None
 
         self.widgets = SamplePanelWidgets()
         self.layout = QVBoxLayout()
@@ -47,7 +51,7 @@ class SamplePanel(PanelBase):
             self.add_empty_sample(new_sample_id)
             self.add_sample_id_to_selector(new_sample_id)
             self.select_sample(new_sample_id)
-            self.add_dialog.close()
+            self.wigets.add_dialog.close()
         else:
             self.widgets.add_dialog.message.setText(valid_check)
 
@@ -77,6 +81,7 @@ class SamplePanel(PanelBase):
             self.editable_item(item)
 
     def customise_clicked(self):
+        self.save_properties_before_edit()
         self.make_properties_editable()
         self.remove_values_from_table()
         self.add_row_to_table()
@@ -84,14 +89,26 @@ class SamplePanel(PanelBase):
         self.widgets.create_delete_row_button(self.delete_row_clicked)
         self.insert_add_button_to_last_row()
 
-    def table_cell_changed(self, cur_row, cur_col, prev_row, prev_col):
-        print(prev_row)
-        self.remove_button_from_previously_selected_row(prev_row)
+    def save_properties_before_edit(self):
+        nrows = self.number_of_rows_in_table()
+        properties = {}
+        for i in range(1, nrows):
+            prop = self.widgets.info_table.item(
+                i, self.widgets.PROPERTY_COL_INDEX
+            ).text()
+            properties[i] = prop
+        self._sample_properties = properties
+        self._sample_properties_edit = properties
 
-    def table_cell_clicked(self, cur_row, cur_col):
+    def table_cell_changed(self, cur_row, cur_col, prev_row, prev_col):
+        # self.remove_button_from_previously_selected_row(prev_row)
         pass
 
+    def table_cell_clicked(self, cur_row, cur_col):
+        self.remove_button_from_previously_selected_row(self._table_selected_row)
+
     def table_cell_activated(self):
+        self._table_selected_row = self.widgets.info_table.currentRow()
         col_i = self.widgets.info_table.currentColumn()
         if col_i == self.widgets.VALUE_COL_INDEX:
             return
@@ -100,14 +117,6 @@ class SamplePanel(PanelBase):
         if row_i != 0 and row_i < nrows - 1:
             self.widgets.create_delete_row_button(self.delete_row_clicked)
             self.insert_delete_button_to_selected_row(row_i)
-
-    # def get_selected_cell(self):
-    #     selected_cell = self.widgets.info_table.selectedRanges()
-    #     if len(selected_cell) == 0:
-    #         return None
-    #     cell = {"row": selected_cell[0].topRow(),
-    #     "col": selected_cell[0].leftColumn()}
-    #     return cell
 
     def number_of_rows_in_table(self):
         return self.widgets.info_table.rowCount()
@@ -135,6 +144,7 @@ class SamplePanel(PanelBase):
             row_i, self.widgets.PROPERTY_COL_INDEX, key_item
         )
         self.widgets.info_table.setItem(row_i, self.widgets.VALUE_COL_INDEX, val_item)
+        self._sample_properties_edit[row_i] = ""
 
     def insert_add_button_to_last_row(self):
         row_i = self.number_of_rows_in_table() - 1
@@ -161,7 +171,21 @@ class SamplePanel(PanelBase):
         self.insert_add_button_to_last_row()
 
     def delete_row_clicked(self):
-        pass
+        print("delete clicked")
+        row_i = self.widgets.info_table.currentRow()
+        # self.remove_button_from_previously_selected_row(row_i)
+        self.widgets.info_table.removeRow(row_i)
+        properties_edit = {}
+        for key, val in self._sample_properties_edit.items():
+            if key < row_i:
+                properties_edit[key] = val
+            elif key == row_i:
+                continue
+            else:
+                properties_edit[key - 1] = val
+        self._sample_properties_edit = properties_edit
+
+    # Sample.samples = {0: {"name": "S1", "A": "a1", "B": "b1", "C": "c1", "D": "d1"}, 1: {"name": "S2", "A": "a2", "B": "b2", "C": "c2", "D": "d2"}} # noqa
 
     def save_clicked(self):
         """
@@ -189,6 +213,8 @@ class SamplePanel(PanelBase):
                 self.remove_sample_id_from_selector(selected_sample_id)
                 self.add_sample_id_to_selector(sample_id)
                 self.select_sample(sample_id)
+        else:
+            print(self._sample_properties_edit)
 
         self.make_table_read_only()
 
@@ -253,7 +279,7 @@ class SamplePanel(PanelBase):
         self.widgets.selector.itemSelectionChanged.connect(self.selection_updated)
         self.widgets.btn_TEST_PRINT.clicked.connect(self.TEST_PRINT_CLICKED)
         self.widgets.info_table.currentCellChanged.connect(self.table_cell_changed)
-        # self.widgets.info_table.CellClicked.connect(self.table_cell_clicked)
+        self.widgets.info_table.cellClicked.connect(self.table_cell_clicked)
         self.widgets.info_table.itemSelectionChanged.connect(self.table_cell_activated)
 
     def create_add_dialog(self):
