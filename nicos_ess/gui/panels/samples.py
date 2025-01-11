@@ -30,6 +30,7 @@ class SamplePanel(PanelBase):
         self._sample_properties = {}
         self._sample_properties_edit = {}
         self._table_selected_row = None
+        self._mode = "view"
 
         self.widgets = SamplePanelWidgets()
         self.layout = QVBoxLayout()
@@ -81,6 +82,7 @@ class SamplePanel(PanelBase):
             self.editable_item(item)
 
     def customise_clicked(self):
+        self._mode = "customize"
         self.save_properties_before_edit()
         self.make_properties_editable()
         self.remove_values_from_table()
@@ -105,18 +107,29 @@ class SamplePanel(PanelBase):
         pass
 
     def table_cell_clicked(self, cur_row, cur_col):
-        self.remove_button_from_previously_selected_row(self._table_selected_row)
-
-    def table_cell_activated(self):
-        self._table_selected_row = self.widgets.info_table.currentRow()
-        col_i = self.widgets.info_table.currentColumn()
-        if col_i == self.widgets.VALUE_COL_INDEX:
+        if self._mode == "view":
+            return
+        if self._table_selected_row:
+            self.remove_button_from_previously_selected_row(self._table_selected_row)
+        self._table_selected_row = cur_row
+        if cur_row == 0 or cur_col == self.widgets.VALUE_COL_INDEX:
             return
         nrows = self.number_of_rows_in_table()
-        row_i = self.widgets.info_table.currentRow()
-        if row_i != 0 and row_i < nrows - 1:
+        if cur_row != 0 and cur_row < nrows - 1:
             self.widgets.create_delete_row_button(self.delete_row_clicked)
-            self.insert_delete_button_to_selected_row(row_i)
+            self.insert_delete_button_to_selected_row(cur_row)
+
+    def table_cell_activated(self):
+        # self._table_selected_row = self.widgets.info_table.currentRow()
+        # col_i = self.widgets.info_table.currentColumn()
+        # if col_i == self.widgets.VALUE_COL_INDEX:
+        #     return
+        # nrows = self.number_of_rows_in_table()
+        # row_i = self.widgets.info_table.currentRow()
+        # if row_i != 0 and row_i < nrows - 1:
+        #     self.widgets.create_delete_row_button(self.delete_row_clicked)
+        #     self.insert_delete_button_to_selected_row(row_i)
+        pass
 
     def number_of_rows_in_table(self):
         return self.widgets.info_table.rowCount()
@@ -165,6 +178,8 @@ class SamplePanel(PanelBase):
         self.widgets.info_table.removeCellWidget(row_i, self.widgets.VALUE_COL_INDEX)
 
     def add_row_clicked(self):
+        if self._table_selected_row:
+            self.remove_button_from_previously_selected_row(self._table_selected_row)
         self.remove_button_from_last_row()
         self.add_row_to_table()
         self.widgets.create_add_row_button(self.add_row_clicked)
