@@ -30,7 +30,7 @@ class SamplePanel(PanelBase):
         self._sample_properties = {}
         self._sample_properties_edit = {}
         self._table_selected_row = None
-        self._mode = "view"
+        self._mode = None
 
         self.widgets = SamplePanelWidgets()
         self.layout = QVBoxLayout()
@@ -82,7 +82,7 @@ class SamplePanel(PanelBase):
             self.editable_item(item)
 
     def customise_clicked(self):
-        self._mode = "customize"
+        self._mode = "customise"
         self.save_properties_before_edit()
         self.make_properties_editable()
         self.remove_values_from_table()
@@ -107,7 +107,7 @@ class SamplePanel(PanelBase):
         pass
 
     def table_cell_clicked(self, cur_row, cur_col):
-        if self._mode == "view":
+        if self._mode != "customise":
             return
         if self._table_selected_row:
             self.remove_button_from_previously_selected_row(self._table_selected_row)
@@ -184,6 +184,7 @@ class SamplePanel(PanelBase):
         self.add_row_to_table()
         self.widgets.create_add_row_button(self.add_row_clicked)
         self.insert_add_button_to_last_row()
+        self.widgets.info_table.clearSelection()
 
     def delete_row_clicked(self):
         print("delete clicked")
@@ -199,6 +200,8 @@ class SamplePanel(PanelBase):
             else:
                 properties_edit[key - 1] = val
         self._sample_properties_edit = properties_edit
+        print(self._sample_properties_edit)
+        self.widgets.info_table.clearSelection()
 
     # Sample.samples = {0: {"name": "S1", "A": "a1", "B": "b1", "C": "c1", "D": "d1"}, 1: {"name": "S2", "A": "a2", "B": "b2", "C": "c2", "D": "d2"}} # noqa
 
@@ -209,7 +212,7 @@ class SamplePanel(PanelBase):
         hide cancel and save buttons
         show edit and customize buttons
         """
-
+        self._mode = None
         sample_id = self.widgets.info_table.item(0, self.widgets.VALUE_COL_INDEX).text()
         if sample_id:
             selected_sample_id = self.get_current_selected()
@@ -234,6 +237,7 @@ class SamplePanel(PanelBase):
         self.make_table_read_only()
 
     def cancel_clicked(self):
+        self._mode = None
         """
         make table non editable
         hide cancel and save buttons
