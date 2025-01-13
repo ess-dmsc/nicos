@@ -88,18 +88,21 @@ class ChopperAlarms(EpicsParameters, Readable):
         Goes through all alarms in the chopper and returns the alarm encountered
         with the highest severity. All alarms are printed in the session log.
         """
-        worst_message = ""
+        in_alarm = []
         highest_severity = status.OK
         for name in self._record_fields:
             severity, message = self._get_cached_status_or_ask(name)
             if severity != status.OK:
                 if self._alarm_state[name] != (severity, message):
+                    # Only log once
                     self._write_alarm_to_log(name, severity, message)
                 if severity > highest_severity:
                     highest_severity = severity
-                    worst_message = f"{name} ({message})"
+                    in_alarm = [name]
+                elif severity == highest_severity:
+                    in_alarm.append(name)
             self._alarm_state[name] = (severity, message)
-        return highest_severity, worst_message
+        return highest_severity, ", ".join(in_alarm)
 
     def _status_change_callback(
         self, name, param, value, units, limits, severity, message, **kwargs
