@@ -12,8 +12,7 @@ from nicos_ess.gui.widgets.sample_widgets import (
     SamplePanelWidgets,
 )
 
-
-DEFAULT_PROPERTIES = ["state", "weight"]
+DEFAULT_PROPERTIES = ["A", "B", "C", "D"]
 SAMPLE_IDENTIFIER_KEY = "name"
 
 
@@ -30,6 +29,7 @@ class SamplePanel(PanelBase):
         self._sample_properties = {}
         self._sample_properties_edit = {}
         self._table_selected_row = None
+        self._add_row_flag = False
         self._mode = None
 
         self.widgets = SamplePanelWidgets()
@@ -38,8 +38,24 @@ class SamplePanel(PanelBase):
         self.setLayout(self.layout)
         self.connect_signals()
         self.initialise_connection_status_listeners()
+        self.set_starting_properties()
 
-        self.add_row_flag = False
+    def set_starting_properties(self):
+        properties = [SAMPLE_IDENTIFIER_KEY]
+        if DEFAULT_PROPERTIES:
+            properties.extend(DEFAULT_PROPERTIES)
+        for i, prop in enumerate(properties):
+            self.insert_table_row()
+            self.set_table_cell_text(prop, i, self.widgets.PROPERTY_COL_INDEX)
+            self.set_table_cell_text("", i, self.widgets.VALUE_COL_INDEX)
+
+    def set_table_cell_text(self, text, row, col):
+        item = self.read_only_item(QTableWidgetItem(text))
+        self.widgets.info_table.setItem(row, col, item)
+
+    def insert_table_row(self):
+        i = self.number_of_rows_in_table()
+        self.widgets.info_table.insertRow(i)
 
     def add_sample_clicked(self):
         self.create_add_dialog()
@@ -83,7 +99,6 @@ class SamplePanel(PanelBase):
 
     def customise_clicked(self):
         self._mode = "customise"
-        self.clear_sample_selection()
         self.save_properties_before_edit()
         self.make_properties_editable()
         self.remove_values_from_table()
