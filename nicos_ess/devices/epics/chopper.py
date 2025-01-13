@@ -63,11 +63,8 @@ class ChopperAlarms(EpicsParameters, Readable):
         self._epics_wrapper.connect_pv(pv)
 
     def doInit(self, mode):
-        self.log.error(f"DOINIT {session.sessiontype} {self.monitor}")
         if session.sessiontype == POLLER and self.monitor:
-            self.log.error("DOINIT")
             for k, v in self._record_fields.items():
-                self.log.warn(f"connecting to {k}")
                 self._epics_subscriptions.append(
                     self._epics_wrapper.subscribe(
                         f"{self.pv_root}{v.pv_suffix}",
@@ -109,8 +106,6 @@ class ChopperAlarms(EpicsParameters, Readable):
     ):
         time_stamp = time.time()
         cache_key = param
-        self.log.warn(f"HELLO!!!!!! {param}, {value} {severity}, {message}")
-
         self._cache.put(self._name, cache_key, (severity, message), time_stamp)
         self._cache.put(self._name, "status", self._do_status(), time_stamp)
 
