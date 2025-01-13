@@ -16,7 +16,7 @@ devices = dict(
         readpv="{}Cmd".format(pv_root),
         writepv="{}Cmd".format(pv_root),
         requires={"level": "admin"},
-        visibility=set(),
+        visibility=(),
     ),
     mini_chopper_speed=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
@@ -43,11 +43,13 @@ devices = dict(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The status of the CHIC connection.",
         readpv="{}ConnectedR".format(chic_root),
-        visibility=set(),
+        visibility=(),
     ),
     mini_chopper=device(
         "nicos_ess.devices.epics.chopper.EssChopperController",
         description="The mini-chopper controller",
+        pollinterval=0.5,
+        maxage=None,
         state="mini_chopper_status",
         command="mini_chopper_control",
         speed="mini_chopper_speed",
