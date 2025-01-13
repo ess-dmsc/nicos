@@ -283,7 +283,7 @@ def ess_scan(dev, *args, **kwargs):
     # Emit 'scan_start_event'
     start_time = int(time.time())
 
-    device_str = ", ".join([d.name for d in devs])
+    device_str = ", ".join([f"{d.name}.finalvalue" for d in devs])
     det_str = ", ".join([f"{d.name}.finalvalue" for d in additional_devices])
     device_str = f"{device_str}, {det_str}" if det_str else device_str
 
@@ -313,6 +313,13 @@ def ess_scan(dev, *args, **kwargs):
 
             # Wait for detectors to complete
             wait_for_detectors(detlist)
+
+            # update cache like cache put  device.finalvalue device.read()
+            for dev in devs:
+                session.cache.put(dev.name, "finalvalue", dev.read())
+
+            for det in additional_devices:
+                session.cache.put(det.name, "finalvalue", det.read())
 
             # Wait for measurement to be done
             sleep(sleep_time)
