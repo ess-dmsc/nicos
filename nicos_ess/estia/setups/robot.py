@@ -34,19 +34,13 @@ devices = dict(
         has_powerauto=False,
     ),
     clutch1=device(
-        "nicos.devices.epics.pva.EpicsStringReadable",
+        "nicos_ess.devices.epics.pva.EpicsStringReadable",
         description="Clutch 1",
         readpv=f"{pvprefix}m6-OpenClutch",
-        pollinterval=None,
-        monitor=True,
-        pva=True,
     ),
     clutch2=device(
-        "nicos.devices.epics.pva.EpicsStringReadable",
+        "nicos_ess.devices.epics.pva.EpicsStringReadable",
         description="Clutch 2",
         readpv=f"{pvprefix}m12-OpenClutch",
-        pollinterval=None,
-        monitor=True,
-        pva=True,
     ),
 )

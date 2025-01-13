@@ -7,8 +7,5 @@ devices = dict(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Rotation stage",
         motorpv=f"{pv_root}m",
-        pollinterval=None,
-        monitor=True,
-        pva=True,
     ),
 )

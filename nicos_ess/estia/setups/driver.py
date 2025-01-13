@@ -20,13 +20,9 @@ devices = dict(
         userlimits=(0, 360),
     ),
     driver1_1_hex_state=device(
-        "nicos.devices.epics.pva.EpicsMappedReadable",
+        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="Hexscrew state",
         readpv=f"{pvprefix}Mtr8-HexScrew",
-        pollinterval=None,
-        monitor=True,
-        maxage=None,
-        pva=True,
     ),
     driver1_2_approach=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
@@ -45,12 +41,8 @@ devices = dict(
         userlimits=(0, 360),
     ),
     driver1_2_hex_state=device(
-        "nicos.devices.epics.pva.EpicsMappedReadable",
+        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="Hexscrew state",
         readpv=f"{pvprefix}Mtr9-HexScrew",
-        pollinterval=None,
-        monitor=True,
-        maxage=None,
-        pva=True,
     ),
 )

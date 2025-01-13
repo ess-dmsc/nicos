@@ -12,7 +12,7 @@ devices = dict(
         maxage=None,
     ),
     heavy_shutter_status=device(
-        "nicos.devices.epics.pva.EpicsStringReadable",
+        "nicos_ess.devices.epics.pva.EpicsStringReadable",
         description="Status of the heavy shutter",
         readpv="YMIR-HvSht:MC-Pne-01:ShtMsgTxt",
     ),
@@ -23,7 +23,7 @@ devices = dict(
         writepv="YMIR-Fil:MC-Pne-01:ShtOpen",
     ),
     filter_1_status=device(
-        "nicos.devices.epics.pva.EpicsStringReadable",
+        "nicos_ess.devices.epics.pva.EpicsStringReadable",
         description="Status of the filter 1",
         readpv="YMIR-Fil:MC-Pne-01:ShtMsgTxt",
     ),
@@ -34,7 +34,7 @@ devices = dict(
         writepv="YMIR-Fil:MC-Pne-02:ShtOpen",
     ),
     filter_2_status=device(
-        "nicos.devices.epics.pva.EpicsStringReadable",
+        "nicos_ess.devices.epics.pva.EpicsStringReadable",
         description="Status of the filter 2",
         readpv="YMIR-Fil:MC-Pne-02:ShtMsgTxt",
     ),
