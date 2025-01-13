@@ -52,7 +52,7 @@ class SamplePanel(PanelBase):
             self.add_empty_sample(new_sample_id)
             self.add_sample_id_to_selector(new_sample_id)
             self.select_sample(new_sample_id)
-            self.wigets.add_dialog.close()
+            self.widgets.add_dialog.close()
         else:
             self.widgets.add_dialog.message.setText(valid_check)
 
@@ -83,6 +83,7 @@ class SamplePanel(PanelBase):
 
     def customise_clicked(self):
         self._mode = "customise"
+        self.clear_sample_selection()
         self.save_properties_before_edit()
         self.make_properties_editable()
         self.remove_values_from_table()
@@ -102,10 +103,6 @@ class SamplePanel(PanelBase):
         self._sample_properties = properties
         self._sample_properties_edit = properties
 
-    def table_cell_changed(self, cur_row, cur_col, prev_row, prev_col):
-        # self.remove_button_from_previously_selected_row(prev_row)
-        pass
-
     def table_cell_clicked(self, cur_row, cur_col):
         if self._mode != "customise":
             return
@@ -119,18 +116,6 @@ class SamplePanel(PanelBase):
             self.widgets.create_delete_row_button(self.delete_row_clicked)
             self.insert_delete_button_to_selected_row(cur_row)
 
-    def table_cell_activated(self):
-        # self._table_selected_row = self.widgets.info_table.currentRow()
-        # col_i = self.widgets.info_table.currentColumn()
-        # if col_i == self.widgets.VALUE_COL_INDEX:
-        #     return
-        # nrows = self.number_of_rows_in_table()
-        # row_i = self.widgets.info_table.currentRow()
-        # if row_i != 0 and row_i < nrows - 1:
-        #     self.widgets.create_delete_row_button(self.delete_row_clicked)
-        #     self.insert_delete_button_to_selected_row(row_i)
-        pass
-
     def number_of_rows_in_table(self):
         return self.widgets.info_table.rowCount()
 
@@ -140,7 +125,6 @@ class SamplePanel(PanelBase):
             self.editable_item(
                 self.widgets.info_table.item(i, self.widgets.PROPERTY_COL_INDEX)
             )
-        # self.widgets.info_table.clearSelection()
 
     def remove_values_from_table(self):
         nrows = self.number_of_rows_in_table()
@@ -238,24 +222,22 @@ class SamplePanel(PanelBase):
 
     def cancel_clicked(self):
         self._mode = None
-        """
-        make table non editable
-        hide cancel and save buttons
-        show edit and customize buttons
-        """
-        pass
+        self.empty_table()
+        selected_sample_id = self.get_current_selected()
+        if selected_sample_id:
+            sample = self.get_sample(selected_sample_id)
+            self.add_sample_to_table(sample)
 
     def selection_updated(self):
         """
         if sample selected: add values to table
         if no sample selected: remove values from table
         """
+        self.empty_table()
         selected_sample_id = self.get_current_selected()
         if selected_sample_id:
             sample = self.get_sample(selected_sample_id)
             self.add_sample_to_table(sample)
-        else:
-            self.empty_table()
 
     def on_keyChange(self, key, value, time, expired):
         print("key change, key:", key)
@@ -297,9 +279,7 @@ class SamplePanel(PanelBase):
         self.widgets.btn_cancel.clicked.connect(self.cancel_clicked)
         self.widgets.selector.itemSelectionChanged.connect(self.selection_updated)
         self.widgets.btn_TEST_PRINT.clicked.connect(self.TEST_PRINT_CLICKED)
-        self.widgets.info_table.currentCellChanged.connect(self.table_cell_changed)
         self.widgets.info_table.cellClicked.connect(self.table_cell_clicked)
-        self.widgets.info_table.itemSelectionChanged.connect(self.table_cell_activated)
 
     def create_add_dialog(self):
         self.widgets.add_dialog = AddSampleDialog()
@@ -389,7 +369,11 @@ class SamplePanel(PanelBase):
                 return sample
 
     def empty_table(self):
-        self.widgets.info_table.setRowCount(0)
+        nrows = self.number_of_rows_in_table()
+        if nrows == 0:
+            return
+        self.widgets.info_table.item(0, self.widgets.VALUE_COL_INDEX).setText("")
+        self.widgets.info_table.setRowCount(1)
 
     def get_existing_selector_items(self):
         return [
