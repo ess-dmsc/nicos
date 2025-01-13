@@ -109,6 +109,8 @@ devices = dict(
     band_chopper=device(
         "nicos_ess.devices.epics.chopper.EssChopperController",
         description="The chopper controller",
+        pollinterval=0.5,
+        maxage=None,
         state="band_chopper_status",
         command="band_chopper_control",
         speed="band_chopper_speed",
@@ -218,6 +220,8 @@ devices = dict(
     overlap_chopper=device(
         "nicos_ess.devices.epics.chopper.EssChopperController",
         description="The chopper controller",
+        pollinterval=0.5,
+        maxage=None,
         state="overlap_chopper_status",
         command="overlap_chopper_control",
         speed="overlap_chopper_speed",
@@ -327,6 +331,8 @@ devices = dict(
     pulse_shaping_chopper_1=device(
         "nicos_ess.devices.epics.chopper.EssChopperController",
         description="The chopper controller",
+        pollinterval=0.5,
+        maxage=None,
         state="pulse_shaping_chopper_1_status",
         command="pulse_shaping_chopper_1_control",
         speed="pulse_shaping_chopper_1_speed",
@@ -455,6 +461,8 @@ devices = dict(
     pulse_shaping_chopper_2=device(
         "nicos_ess.devices.epics.chopper.EssChopperController",
         description="The chopper controller",
+        pollinterval=0.5,
+        maxage=None,
         state="pulse_shaping_chopper_2_status",
         command="pulse_shaping_chopper_2_control",
         speed="pulse_shaping_chopper_2_speed",

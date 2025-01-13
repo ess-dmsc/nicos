@@ -103,6 +103,8 @@ devices = dict(
     bwc1_chopper=device(
         "nicos_ess.devices.epics.chopper.EssChopperController",
         description="The chopper controller",
+        pollinterval=0.5,
+        maxage=None,
         state="bwc1_chopper_status",
         command="bwc1_chopper_control",
         speed="bwc1_chopper_speed",
@@ -208,6 +210,8 @@ devices = dict(
     bwc2_chopper=device(
         "nicos_ess.devices.epics.chopper.EssChopperController",
         description="The chopper controller",
+        pollinterval=0.5,
+        maxage=None,
         state="bwc2_chopper_status",
         command="bwc2_chopper_control",
         speed="bwc2_chopper_speed",
