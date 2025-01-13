@@ -58,7 +58,7 @@ class ChopperAlarms(EpicsParameters, Readable):
         self._alarm_state = {name: (status.OK, "") for name in self._record_fields}
         self._epics_subscriptions = []
         self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
-        # Check one of the PV exists
+        # Check one of the PVs exists
         pv = f"{self.pv_root}{self._record_fields['communication'].pv_suffix}"
         self._epics_wrapper.connect_pv(pv)
 
