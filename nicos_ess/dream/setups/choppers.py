@@ -99,6 +99,10 @@ devices = dict(
         "nicos_ess.devices.epics.chopper.ChopperAlarms",
         description="The chopper alarms",
         pv_root=pv_root_band_chopper,
+        pva=True,
+        monitor=True,
+        pollinterval=None,
+        maxage=None,
     ),
     band_chopper=device(
         "nicos_ess.devices.epics.chopper.EssChopperController",
@@ -202,6 +206,10 @@ devices = dict(
         "nicos_ess.devices.epics.chopper.ChopperAlarms",
         description="The chopper alarms",
         pv_root=pv_root_overlap_chopper,
+        pva=True,
+        monitor=True,
+        pollinterval=None,
+        maxage=None,
     ),
     overlap_chopper=device(
         "nicos_ess.devices.epics.chopper.EssChopperController",
@@ -305,6 +313,10 @@ devices = dict(
         "nicos_ess.devices.epics.chopper.ChopperAlarms",
         description="The chopper alarms",
         pv_root=pv_root_pulse_shaping_chopper_1,
+        pva=True,
+        monitor=True,
+        pollinterval=None,
+        maxage=None,
     ),
     pulse_shaping_chopper_1=device(
         "nicos_ess.devices.epics.chopper.EssChopperController",
@@ -427,6 +439,10 @@ devices = dict(
         "nicos_ess.devices.epics.chopper.ChopperAlarms",
         description="The chopper alarms",
         pv_root=pv_root_pulse_shaping_chopper_2,
+        pva=True,
+        monitor=True,
+        pollinterval=None,
+        maxage=None,
     ),
     pulse_shaping_chopper_2=device(
         "nicos_ess.devices.epics.chopper.EssChopperController",
