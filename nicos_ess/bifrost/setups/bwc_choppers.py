@@ -78,6 +78,7 @@ devices = dict(
         description="The chopper's park angle.",
         readpv="{}Pos_R".format(pv_root_1),
         writepv="{}Park_S".format(pv_root_1),
+        visibility=(),
         pva=True,
         monitor=True,
         pollinterval=None,
@@ -97,6 +98,7 @@ devices = dict(
         "nicos_ess.devices.epics.chopper.ChopperAlarms",
         description="The chopper alarms",
         pv_root=pv_root_1,
+        visibility=(),
     ),
     bwc1_chopper=device(
         "nicos_ess.devices.epics.chopper.EssChopperController",
@@ -181,6 +183,7 @@ devices = dict(
         description="The chopper's park angle.",
         readpv="{}Pos_R".format(pv_root_2),
         writepv="{}Park_S".format(pv_root_2),
+        visibility=(),
         pva=True,
         monitor=True,
         pollinterval=None,
@@ -200,6 +203,7 @@ devices = dict(
         "nicos_ess.devices.epics.chopper.ChopperAlarms",
         description="The chopper alarms",
         pv_root=pv_root_2,
+        visibility=(),
     ),
     bwc2_chopper=device(
         "nicos_ess.devices.epics.chopper.EssChopperController",
