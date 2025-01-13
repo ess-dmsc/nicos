@@ -9,8 +9,4 @@ for i in range(1, 9):
         "nicos_ess.devices.epics.pva.EpicsBoolReadable",
         description=f"MacGyver box digital in {i}",
         readpv=f"{pv_root}digital_in_{i}-R",
-        pva=True,
-        monitor=True,
-        pollinterval=None,
-        maxage=None,
     )

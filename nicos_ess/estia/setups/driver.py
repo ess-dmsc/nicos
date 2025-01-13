@@ -10,10 +10,6 @@ devices = dict(
         unit="mm",
         abslimits=(0, 25),
         userlimits=(0, 25),
-        pollinterval=None,
-        monitor=True,
-        maxage=None,
-        pva=True,
     ),
     driver1_1_adjust=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
@@ -22,10 +18,6 @@ devices = dict(
         unit="mm",
         abslimits=(0, 360),
         userlimits=(0, 360),
-        pollinterval=None,
-        monitor=True,
-        maxage=None,
-        pva=True,
     ),
     driver1_1_hex_state=device(
         "nicos.devices.epics.pva.EpicsMappedReadable",
@@ -43,10 +35,6 @@ devices = dict(
         unit="mm",
         abslimits=(0, 25),
         userlimits=(0, 25),
-        pollinterval=None,
-        monitor=True,
-        maxage=None,
-        pva=True,
     ),
     driver1_2_adjust=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
@@ -55,10 +43,6 @@ devices = dict(
         unit="mm",
         abslimits=(0, 360),
         userlimits=(0, 360),
-        pollinterval=None,
-        monitor=True,
-        maxage=None,
-        pva=True,
     ),
     driver1_2_hex_state=device(
         "nicos.devices.epics.pva.EpicsMappedReadable",

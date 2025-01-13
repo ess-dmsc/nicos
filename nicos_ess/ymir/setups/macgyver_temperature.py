@@ -23,8 +23,4 @@ for i in range(1, 5):
                 "periodic": 1,
             },
         ],
-        pva=True,
-        monitor=True,
-        pollinterval=None,
-        maxage=None,
     )

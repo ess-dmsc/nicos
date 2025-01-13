@@ -9,9 +9,5 @@ devices = dict(
         "nicos_ess.devices.epics.pva.EpicsReadable",
         description="Heartbeat readback",
         readpv=f"{pnp_pv_root}:PNPHeartBeatCnt-S",
-        pva=True,
-        monitor=True,
-        pollinterval=None,
-        maxage=None,
     ),
 )

@@ -10,8 +10,4 @@ for i in range(1, 9):
         description=f"MacGyver box digital out {i}",
         readpv=f"{pv_root}digital_out_{i}-R",
         writepv=f"{pv_root}digital_out_{i}-S",
-        pva=True,
-        monitor=True,
-        pollinterval=None,
-        maxage=None,
     )

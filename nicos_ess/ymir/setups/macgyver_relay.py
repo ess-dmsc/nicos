@@ -10,8 +10,4 @@ for i in range(1, 5):
         description=f"MacGyver box relay {i}",
         readpv=f"{pv_root}relay_{i}-R",
         writepv=f"{pv_root}relay_{i}-S",
-        pva=True,
-        monitor=True,
-        pollinterval=None,
-        maxage=None,
     )
