@@ -98,9 +98,9 @@ class ChopperAlarms(EpicsParameters, Readable):
                     self._write_alarm_to_log(name, severity, message)
                 if severity > highest_severity:
                     highest_severity = severity
-                    in_alarm = [name]
+                    in_alarm = [f"{name} alarm"]
                 elif severity == highest_severity:
-                    in_alarm.append(name)
+                    in_alarm.append(f"{name} alarm")
             self._alarm_state[name] = (severity, message)
         return highest_severity, ", ".join(in_alarm)
 
