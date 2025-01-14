@@ -156,17 +156,21 @@ class SamplePanel(PanelBase):
     def delete_row_clicked(self):
         row = self._get_selected_row()
         self._delete_table_row(row)
-        properties_edit = {}
+        properties_new_indices = self._shift_properties_after_delete_row(row)
+        self._sample_properties_edit = properties_new_indices
+        print(self._sample_properties_edit)
+        self._clear_table_selection()
+
+    def _shift_properties_after_delete_row(self, row):
+        properties_new_indices = {}
         for key, val in self._sample_properties_edit.items():
             if key < row:
-                properties_edit[key] = val
+                properties_new_indices[key] = val
             elif key == row:
                 continue
             else:
-                properties_edit[key - 1] = val
-        self._sample_properties_edit = properties_edit
-        print(self._sample_properties_edit)
-        self._clear_table_selection()
+                properties_new_indices[key - 1] = val
+        return properties_new_indices
 
     # Sample.samples = {0: {"name": "S1", "A": "a1", "B": "b1", "C": "c1", "D": "d1"}, 1: {"name": "S2", "A": "a2", "B": "b2", "C": "c2", "D": "d2"}} # noqa
 
@@ -178,28 +182,38 @@ class SamplePanel(PanelBase):
         show edit and customize buttons
         """
         self._mode = None
-        sample_id = self.widgets.info_table.item(0, self.widgets.VALUE_COL_INDEX).text()
+        sample_id = self._get_table_cell_text(0, self.widgets.VALUE_COL_INDEX)
         if sample_id:
             selected_sample_id = self._get_current_selected()
             sample = {SAMPLE_IDENTIFIER_KEY: sample_id}
-            for i in range(1, self.widgets.info_table.rowCount()):
-                key = self.widgets.info_table.item(
-                    i, self.widgets.PROPERTY_COL_INDEX
-                ).text()
-                val = self.widgets.info_table.item(
-                    i, self.widgets.VALUE_COL_INDEX
-                ).text()
+            for i in range(1, self._number_of_rows_in_table()):
+                key = self._get_table_cell_text(i, self.widgets.PROPERTY_COL_INDEX)
+                val = self._get_table_cell_text(i, self.widgets.VALUE_COL_INDEX)
                 sample[key] = val
             self._remove_sample(selected_sample_id)
-            self.add_sample(sample)
+            self._add_sample(sample)
             if sample_id != selected_sample_id:
                 self._remove_sample_id_from_selector(selected_sample_id)
                 self._add_sample_id_to_selector(sample_id)
                 self._select_sample(sample_id)
         else:
-            print(self._sample_properties_edit)
+            self.make_table_read_only()
+            if self._table_selected_row:
+                self._remove_button_from_previously_selected_row(
+                    self._table_selected_row
+                )
+            self._remove_button_from_last_row()
+            self._delete_empty_table_rows()
+            properties_in_table = {}
+            for i in range(1, self._number_of_rows_in_table()):
+                key = self._get_table_cell_text(i, self.widgets.PROPERTY_COL_INDEX)
+                properties_in_table[i] = key
 
-        self.make_table_read_only()
+            print("old", self._samples_loaded[0])
+            print("new", properties_in_table)
+
+    def update_properties(self):
+        pass
 
     def cancel_clicked(self):
         self._mode = None
@@ -281,6 +295,8 @@ class SamplePanel(PanelBase):
         item = self.widgets.info_table.item(row, col)
         if item:
             return item.text()
+        else:
+            return ""
 
     def _get_selected_row(self):
         return self.widgets.info_table.currentRow()
@@ -300,6 +316,15 @@ class SamplePanel(PanelBase):
 
     def _delete_table_row(self, row):
         self.widgets.info_table.removeRow(row)
+
+    def _delete_empty_table_rows(self):
+        for row in range(self._number_of_rows_in_table() - 1, 0, -1):
+            key = self._get_table_cell_text(row, self.widgets.PROPERTY_COL_INDEX)
+            print("row", row, "key", key)
+            if key == "":
+                self._delete_table_row(row)
+                properties_new_indices = self._shift_properties_after_delete_row(row)
+                self._sample_properties_edit = properties_new_indices
 
     def _clear_table_selection(self):
         self.widgets.info_table.clearSelection()
@@ -329,7 +354,7 @@ class SamplePanel(PanelBase):
         if len(properties) > 0:
             for prop in properties:
                 new_sample[prop] = ""
-        self.add_sample(new_sample)
+        self._add_sample(new_sample)
 
     def _get_properties(self):
         properties = []
@@ -343,7 +368,7 @@ class SamplePanel(PanelBase):
                 properties = DEFAULT_PROPERTIES
         return properties
 
-    def add_sample(self, sample):
+    def _add_sample(self, sample):
         self._samples_loaded.append(sample)
 
     def _add_sample_id_to_selector(self, sample_id):
