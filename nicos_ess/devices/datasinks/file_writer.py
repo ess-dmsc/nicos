@@ -178,7 +178,7 @@ class FileWriterStatus(KafkaStatusHandler):
         for v in self.job_history:
             job = JobRecord.from_dict(v)
             self._jobs_in_order[job.job_id] = job
-            if not job.stop_requested:
+            if not job.stop_requested and job.state != JobState.REJECTED:
                 # Assume it is still in progress.
                 # Update the timeout so it doesn't time out immediately
                 job.set_next_update(job.update_interval)
