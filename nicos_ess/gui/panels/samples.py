@@ -147,27 +147,27 @@ class SamplePanel(PanelBase):
         if self._table_selected_row:
             self._remove_button_from_previously_selected_row(self._table_selected_row)
         self._remove_button_from_last_row()
+        self._insert_table_row()
+        self._make_properties_editable()
         self._add_button_to_last_row()
         self.widgets.create_add_row_button(self.add_row_clicked)
-        self.insert_add_button_to_last_row()
-        self.widgets.info_table.clearSelection()
+        self._add_button_to_last_row()
+        self._clear_table_selection()
 
     def delete_row_clicked(self):
-        print("delete clicked")
-        row_i = self.widgets.info_table.currentRow()
-        # self.remove_button_from_previously_selected_row(row_i)
-        self.widgets.info_table.removeRow(row_i)
+        row = self._get_selected_row()
+        self._delete_table_row(row)
         properties_edit = {}
         for key, val in self._sample_properties_edit.items():
-            if key < row_i:
+            if key < row:
                 properties_edit[key] = val
-            elif key == row_i:
+            elif key == row:
                 continue
             else:
                 properties_edit[key - 1] = val
         self._sample_properties_edit = properties_edit
         print(self._sample_properties_edit)
-        self.widgets.info_table.clearSelection()
+        self._clear_table_selection()
 
     # Sample.samples = {0: {"name": "S1", "A": "a1", "B": "b1", "C": "c1", "D": "d1"}, 1: {"name": "S2", "A": "a2", "B": "b2", "C": "c2", "D": "d2"}} # noqa
 
@@ -283,6 +283,9 @@ class SamplePanel(PanelBase):
         if item:
             return item.text()
 
+    def _get_selected_row(self):
+        return self.widgets.info_table.currentRow()
+
     def _delete_table_cell_widget(self, row, col):
         self.widgets.info_table.removeCellWidget(row, col)
 
@@ -295,6 +298,12 @@ class SamplePanel(PanelBase):
         self.widgets.info_table.insertRow(i)
         self._set_table_cell_text("", i, self.widgets.PROPERTY_COL_INDEX)
         self._set_table_cell_text("", i, self.widgets.VALUE_COL_INDEX)
+
+    def _delete_table_row(self, row):
+        self.widgets.info_table.removeRow(row)
+
+    def _clear_table_selection(self):
+        self.widgets.info_table.clearSelection()
 
     def _create_add_dialog(self):
         self.widgets.add_dialog = AddSampleDialog()
