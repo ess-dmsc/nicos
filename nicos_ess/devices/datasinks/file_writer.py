@@ -193,6 +193,7 @@ class FileWriterStatus(KafkaStatusHandler):
         job_id = status_info["job_id"]
         if job_id not in self._jobs:
             return
+        session.log.warn(f"status message={status_info}")
         self._jobs[job_id].on_writing(result.update_interval)
         self._update_status()
 
@@ -209,6 +210,7 @@ class FileWriterStatus(KafkaStatusHandler):
         result = deserialise_wrdn(message)
         if result.job_id not in self._jobs:
             return
+        session.log.warn(f"stop message={result}")
 
         self.log.debug("stop message response for %s", result.job_id)
         if result.error_encountered:
@@ -226,6 +228,8 @@ class FileWriterStatus(KafkaStatusHandler):
         result = deserialise_answ(message)
         if result.job_id not in self._jobs:
             return
+        session.log.warn(f"response message={result}")
+
         if result.action == ActionType.StartJob:
             self._on_start_response(result)
         elif result.action == ActionType.SetStopTime:
@@ -241,6 +245,7 @@ class FileWriterStatus(KafkaStatusHandler):
         else:
             self.log.debug("request to start writing failed for job %s", result.job_id)
             self._jobs[result.job_id].no_start_ack(result.message)
+        session.log.warn(f"on start message={result}")
 
     def _on_stop_response(self, result):
         if not self._jobs[result.job_id].stop_requested:
@@ -253,6 +258,7 @@ class FileWriterStatus(KafkaStatusHandler):
         else:
             self.log.debug("request to stop writing failed for job %s", result.job_id)
             self._jobs[result.job_id].set_error_msg(result.message)
+        session.log.warn(f"on stop message={result}")
 
     def no_messages_callback(self):
         with self._lock:
