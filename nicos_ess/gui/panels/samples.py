@@ -38,7 +38,6 @@ class SamplePanel(PanelBase):
         self.setLayout(self.layout)
         self.connect_signals()
         self.initialise_connection_status_listeners()
-        self._set_starting_properties()
 
     def add_sample_btn_clicked(self):
         self._create_add_dialog()
@@ -225,6 +224,7 @@ class SamplePanel(PanelBase):
         print("key change, key:", key)
         if not self._in_edit_mode and key in self.to_monitor:
             self._samples_loaded = self._get_samples()
+            self._set_starting_properties()
             if len(self._samples_loaded) > 0:
                 self.add_all_sample_ids_to_selector()
             # self._sample_properties = self._get_sample_properties()
@@ -264,10 +264,9 @@ class SamplePanel(PanelBase):
         self.widgets.info_table.cellClicked.connect(self.table_cell_clicked)
 
     def _set_starting_properties(self):
-        properties = [SAMPLE_IDENTIFIER_KEY]
-        if DEFAULT_PROPERTIES:
-            properties.extend(DEFAULT_PROPERTIES)
-        for i, prop in enumerate(properties):
+        properties = self._get_properties()
+        keys = [SAMPLE_IDENTIFIER_KEY] + properties
+        for i, prop in enumerate(keys):
             self._insert_table_row()
             self._set_table_cell_text(prop, i, self.widgets.PROPERTY_COL_INDEX)
 
@@ -327,7 +326,23 @@ class SamplePanel(PanelBase):
     def _add_empty_sample(self, sample_id):
         new_sample = {key: "" for key in self.get_all_sample_properties()}
         new_sample[SAMPLE_IDENTIFIER_KEY] = sample_id
-        self._samples_loaded.append(new_sample)
+        properties = self._get_properties()
+        if len(properties) > 0:
+            for prop in properties:
+                new_sample[prop] = ""
+        self.add_sample(new_sample)
+
+    def _get_properties(self):
+        properties = []
+        if self._samples_loaded and len(self._samples_loaded) > 0:
+            sample = self._samples_loaded[0]
+            properties = [
+                prop for prop in sample.keys() if prop != SAMPLE_IDENTIFIER_KEY
+            ]
+        else:
+            if DEFAULT_PROPERTIES:
+                properties = DEFAULT_PROPERTIES
+        return properties
 
     def add_sample(self, sample):
         self._samples_loaded.append(sample)
@@ -423,13 +438,13 @@ class SamplePanel(PanelBase):
     def clear_sample_selection(self):
         self.widgets.selector.clearSelection()
 
-    def get_all_sample_properties(self):
-        properties = [SAMPLE_IDENTIFIER_KEY]
-        if len(self._samples_loaded) > 0:
-            for sample in self._samples_loaded:
-                keys = [prop for prop in sample.keys() if prop not in properties]
-                properties.extend(keys)
-        return properties
+    # def get_all_sample_properties(self):
+    #     properties = [SAMPLE_IDENTIFIER_KEY]
+    #     if len(self._samples_loaded) > 0:
+    #         for sample in self._samples_loaded:
+    #             keys = [prop for prop in sample.keys() if prop not in properties]
+    #             properties.extend(keys)
+    #     return properties
 
     ### --------------------------------------------------- ###
 
