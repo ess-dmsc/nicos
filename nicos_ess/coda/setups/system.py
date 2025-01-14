@@ -89,7 +89,7 @@ devices = dict(
     NexusStructure_tbl=device(
         "nicos_ess.devices.datasinks.nexus_structure.NexusStructureJsonFile",
         description="Provides the NeXus structure",
-        nexus_config_path="nexus-json-templates/tbl/tbl-mb-dynamic.json",
+        nexus_config_path="nexus-json-templates/tbl/tbl-dynamic.json",
         instrument_name="tbl",
         visibility=(),
     ),
