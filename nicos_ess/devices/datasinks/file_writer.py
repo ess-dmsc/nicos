@@ -537,6 +537,10 @@ class FileWriterControlSink(Device):
         job.stop_time = stop_time
         self._attached_status.add_job(job)
 
+        while self._attached_status[job_id] != JobState.STARTED:
+            self.log.error(f"waiting for job {job_id}")
+        self.log.error("job started")
+
     def stop_job(self, job_number=None):
         """Stop a file-writing job.
 
