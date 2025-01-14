@@ -535,6 +535,9 @@ class FileWriterControlSink(Device):
 
         while self._attached_status.jobs[job_id].state == JobState.NOT_STARTED:
             time.sleep(0.5)
+        self.log.warn(
+            f"not waiting as job is {self._attached_status.jobs[job_id].state}"
+        )
         if self._attached_status.jobs[job_id].state == JobState.STARTED:
             self.log.error("job started")
         elif self._attached_status.jobs[job_id].state == JobState.REJECTED:
