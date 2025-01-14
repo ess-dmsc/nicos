@@ -193,7 +193,6 @@ class FileWriterStatus(KafkaStatusHandler):
         job_id = status_info["job_id"]
         if job_id not in self._jobs:
             return
-        session.log.warn(f"status message={status_info}")
         self._jobs[job_id].on_writing(result.update_interval)
         self._update_status()
 
@@ -237,13 +236,13 @@ class FileWriterStatus(KafkaStatusHandler):
 
     def _on_start_response(self, result):
         if result.outcome == ActionOutcome.Success:
-            self.log.debug(
+            self.log.warn(
                 "request to start writing succeeded for job %s", result.job_id
             )
             self._jobs[result.job_id].on_writing(self.statusinterval)
             self._jobs[result.job_id].service_id = result.service_id
         else:
-            self.log.debug("request to start writing failed for job %s", result.job_id)
+            self.log.warn("request to start writing failed for job %s", result.job_id)
             self._jobs[result.job_id].no_start_ack(result.message)
         session.log.warn(f"on start message={result}")
 
