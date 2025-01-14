@@ -211,7 +211,6 @@ class FileWriterStatus(KafkaStatusHandler):
             return
         session.log.warn(f"stop message={result}")
 
-        self.log.debug("stop message response for %s", result.job_id)
         if result.error_encountered:
             self._jobs[result.job_id].on_lost(result.message)
             if self._jobs[result.job_id].stop_requested:
@@ -227,7 +226,6 @@ class FileWriterStatus(KafkaStatusHandler):
         result = deserialise_answ(message)
         if result.job_id not in self._jobs:
             return
-        session.log.warn(f"response message={result}")
 
         if result.action == ActionType.StartJob:
             self._on_start_response(result)
@@ -244,7 +242,6 @@ class FileWriterStatus(KafkaStatusHandler):
         else:
             self.log.warn("request to start writing failed for job %s", result.job_id)
             self._jobs[result.job_id].start_rejected(result.message)
-        session.log.warn(f"on start message={result}")
 
     def _on_stop_response(self, result):
         if not self._jobs[result.job_id].stop_requested:
@@ -537,7 +534,6 @@ class FileWriterControlSink(Device):
         self._attached_status.add_job(job)
 
         while self._attached_status.jobs[job_id].state == JobState.NOT_STARTED:
-            self.log.error(f"waiting for job {job_id}")
             time.sleep(0.5)
         if self._attached_status.jobs[job_id].state == JobState.STARTED:
             self.log.error("job started")
