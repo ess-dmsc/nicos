@@ -91,40 +91,49 @@ class JobRecord:
         return self.__dict__
 
     def on_writing(self, update_interval):
+        session.log.warn("on_writing")
         self.set_next_update(update_interval)
         self.state = JobState.STARTED
         self.error_msg = ""
 
     def set_next_update(self, update_interval):
+        session.log.warn("set_next_update")
         self.update_interval = update_interval // 1000
         self.next_update = currenttime() + self.update_interval
 
     def set_error_msg(self, error_msg):
+        session.log.warn("set_error_msg")
         # Only record the first error message as the rest will be related
         if not self.error_msg:
             self.error_msg = error_msg
 
     def start_rejected(self, error_msg):
+        session.log.warn("start_rejected")
         self.state = JobState.REJECTED
         self.set_error_msg(error_msg)
 
     def on_stop(self):
+        session.log.warn("on_stop")
         self.state = JobState.WRITTEN
 
     def on_lost(self, error_msg):
+        session.log.warn("on_lost")
         self.state = JobState.FAILED
         self.set_error_msg(error_msg)
 
     def is_overdue(self, leeway):
+        session.log.warn("is_overdue")
         return (
             self.state == JobState.STARTED and currenttime() > self.next_update + leeway
         )
 
     def stop_request(self, stop_time):
+        session.log.warn("stop_request")
         self.stop_time = stop_time
 
     @property
     def stop_requested(self):
+        session.log.warn("stop_requested")
         return self.stop_time is not None
 
     def get_state_string(self):
