@@ -104,7 +104,7 @@ class JobRecord:
         if not self.error_msg:
             self.error_msg = error_msg
 
-    def no_start_ack(self, error_msg):
+    def start_rejected(self, error_msg):
         self.state = JobState.REJECTED
         self.set_error_msg(error_msg)
 
@@ -194,6 +194,7 @@ class FileWriterStatus(KafkaStatusHandler):
         if job_id not in self._jobs:
             return
         self._jobs[job_id].on_writing(result.update_interval)
+        self.log.warn("_update_status called in _on_status_message")
         self._update_status()
 
     def _job_stopped(self, job_id):
@@ -221,6 +222,7 @@ class FileWriterStatus(KafkaStatusHandler):
             self._jobs[result.job_id].on_stop()
             self._job_stopped(result.job_id)
         self._update_cached_jobs()
+        self.log.warn("_update_status called in _on_stopped_message")
         self._update_status()
 
     def _on_response_message(self, message):
@@ -243,7 +245,7 @@ class FileWriterStatus(KafkaStatusHandler):
             self._jobs[result.job_id].service_id = result.service_id
         else:
             self.log.warn("request to start writing failed for job %s", result.job_id)
-            self._jobs[result.job_id].no_start_ack(result.message)
+            self._jobs[result.job_id].start_rejected(result.message)
         session.log.warn(f"on start message={result}")
 
     def _on_stop_response(self, result):
@@ -262,6 +264,7 @@ class FileWriterStatus(KafkaStatusHandler):
     def no_messages_callback(self):
         with self._lock:
             self._check_for_lost_jobs()
+            self.log.warn("_update_status called in no_messages_callback")
             self._update_status()
 
     def _check_for_lost_jobs(self):
@@ -542,7 +545,7 @@ class FileWriterControlSink(Device):
         if self._attached_status.jobs[job_id].state == JobState.STARTED:
             self.log.error("job started")
         elif self._attached_status.jobs[job_id].state == JobState.REJECTED:
-            self.log.error("job rejected")
+            self.log.error(self.attached_status.jobs[job_id].error_msg)
         elif self._attached_status.jobs[job_id].state == JobState.FAILED:
             self.log.error("job failed")
 
