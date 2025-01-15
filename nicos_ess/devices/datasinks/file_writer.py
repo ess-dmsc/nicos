@@ -364,12 +364,7 @@ class FileWriterController:
         self.timeout_interval = timeout_interval * 2
         self.command_channel = None
 
-    def request_start(
-        self, filename, structure, start_time, stop_time=None, job_id=None
-    ):
-        if not job_id:
-            job_id = str(uuid.uuid1())
-
+    def request_start(self, filename, structure, job_id, start_time, stop_time=None):
         if not stop_time:
             stop_time = start_time + timedelta(days=365.25 * 10)
 
@@ -525,13 +520,16 @@ class FileWriterControlSink(Device):
         job_id=None,
     ):
         start_time = start_time if start_time else datetime.now()
-        job_id, commit_info = self._controller.request_start(
-            filename, structure, start_time, stop_time, job_id
-        )
-        job = JobRecord(job_id, counter, start_time, commit_info)
+        job_id = job_id if job_id else str(uuid.uuid1())
+        job = JobRecord(job_id, counter, start_time, -1)
         job.replay_of = replay_of
         job.stop_time = stop_time
         self._attached_status.add_job(job)
+
+        job_id, kafka_offset = self._controller.request_start(
+            filename, structure, job_id, start_time, stop_time
+        )
+        job.kafka_offset = kafka_offset
 
         while self._attached_status.jobs[job_id].state == JobState.NOT_STARTED:
             time.sleep(0.5)
