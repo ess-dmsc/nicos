@@ -158,8 +158,11 @@ class CacheKafkaForwarder(ForwarderBase, Device):
             name, value, timestamp, is_value = self._queue.get()
             try:
                 if is_value:
-                    # Convert value from string to correct type
+                    # Convert value from string representation to correct type
                     value = cache_load(value)
+                    if isinstance(value, bool):
+                        # Convert to 1 or 0
+                        value = int(value)
                     if not isinstance(value, str):
                         # Policy decision: don't send strings via f144
                         buffer = to_f144(name, value, timestamp)
