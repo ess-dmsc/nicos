@@ -197,12 +197,6 @@ class FileWriterStatus(KafkaStatusHandler):
         self._update_status()
 
     def _job_stopped(self, job_id):
-        if self._jobs[job_id].error_msg:
-            session.log.error(
-                "Job #%s failed to write successfully, "
-                "run `list_filewriting_jobs` for more details",
-                self._jobs[job_id].job_number,
-            )
         del self._jobs[job_id]
 
     def _on_stopped_message(self, message):
@@ -501,7 +495,6 @@ class FileWriterControlSink(Device):
             self._start_job(
                 file_path, file_num, structure, start_time=start_time, job_id=job_id
             )
-        self.log.info("Filewriting started")
 
     def _generate_filepath(self, file_num):
         proposal = session.experiment.propinfo.get("proposal")
@@ -537,7 +530,7 @@ class FileWriterControlSink(Device):
             f"not waiting as job is {self._attached_status.jobs[job_id].state}"
         )
         if self._attached_status.jobs[job_id].state == JobState.STARTED:
-            self.log.error("job started")
+            self.log.info("Filewriting started")
         elif self._attached_status.jobs[job_id].state == JobState.REJECTED:
             self.log.error(self._attached_status.jobs[job_id].error_msg)
             self._attached_status._update_cached_jobs()
