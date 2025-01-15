@@ -34,13 +34,15 @@ class SamplePanelWidgets(QWidget):
         self.side_edit_btn_layout = QVBoxLayout()
         self.btn_edit = QPushButton("Edit sample")
         self.btn_custom = QPushButton("Customise properties")
-        self.btn_save = QPushButton("Save")
+        self.btn_save_edit = QPushButton("Save")
+        self.btn_save_prop = QPushButton("Save")
         self.btn_cancel = QPushButton("Cancel")
         self.btn_TEST_PRINT = QPushButton("TESTING: Print samples")
 
         self.side_edit_btn_layout.addWidget(self.btn_edit)
         self.side_edit_btn_layout.addWidget(self.btn_custom)
-        self.side_edit_btn_layout.addWidget(self.btn_save)
+        self.side_edit_btn_layout.addWidget(self.btn_save_edit)
+        self.side_edit_btn_layout.addWidget(self.btn_save_prop)
         self.side_edit_btn_layout.addWidget(self.btn_cancel)
         self.side_edit_btn_layout.addWidget(self.btn_TEST_PRINT)
         self.side_edit_btn_layout.addStretch()
@@ -61,6 +63,15 @@ class SamplePanelWidgets(QWidget):
         self.horizontal_layout.addWidget(self.selector)
         self.horizontal_layout.addWidget(self.info_table)
         self.horizontal_layout.addLayout(self.side_edit_btn_layout)
+
+        self.btn_remove.setEnabled(False)
+        self.btn_edit.setEnabled(False)
+        self.btn_save_edit.hide()
+        self.btn_save_prop.hide()
+        self.btn_cancel.hide()
+
+        self.btn_save_edit.setStyleSheet("background-color: limegreen")
+        self.btn_save_prop.setStyleSheet("background-color: limegreen")
 
         self.sample_panel_widget = QWidget()
         self.layout = QVBoxLayout()
@@ -109,6 +120,19 @@ class RemoveSampleDialog(QDialog):
             QDialogButtonBox.StandardButton.Yes | QDialogButtonBox.StandardButton.Cancel
         )
         self.button_box = QDialogButtonBox(btns)
+        self.dialog_layout = QVBoxLayout()
+        self.message = QLabel()
+        self.dialog_layout.addWidget(self.message)
+        self.dialog_layout.addWidget(self.button_box)
+        self.setLayout(self.dialog_layout)
+
+
+class ErrorDialog(QDialog):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Error")
+        btn = QDialogButtonBox.StandardButton.Ok
+        self.button_box = QDialogButtonBox(btn)
         self.dialog_layout = QVBoxLayout()
         self.message = QLabel()
         self.dialog_layout.addWidget(self.message)

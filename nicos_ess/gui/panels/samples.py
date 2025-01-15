@@ -8,11 +8,12 @@ from nicos.guisupport.qt import (
 from nicos_ess.gui.panels.panel import PanelBase
 from nicos_ess.gui.widgets.sample_widgets import (
     AddSampleDialog,
+    ErrorDialog,
     RemoveSampleDialog,
     SamplePanelWidgets,
 )
 
-DEFAULT_PROPERTIES = ["A", "B", "C", "D"]
+DEFAULT_PROPERTIES = ["optional_default_1", "optional_default_2", "optional_default_3"]
 SAMPLE_IDENTIFIER_KEY = "name"
 
 
@@ -26,11 +27,8 @@ class SamplePanel(PanelBase):
         self.to_monitor = ["sample/samples"]
         self._in_edit_mode = False
         self._samples_loaded = None
-        self._sample_properties = {}
-        self._sample_properties_edit = {}
+        self._properties_in_edit = {}
         self._table_selected_row = None
-        self._add_row_flag = False
-        self._mode = None
 
         self.widgets = SamplePanelWidgets()
         self.layout = QVBoxLayout()
@@ -44,15 +42,16 @@ class SamplePanel(PanelBase):
         self.widgets.add_dialog.exec()
 
     def confirm_add(self):
+        self._in_edit_mode = True
         new_sample_id = self._get_new_sample_id()
         valid_check = self._valid_new_sample(new_sample_id)
-        if valid_check is True:
+        if valid_check[0] is True:
             self._add_empty_sample(new_sample_id)
             self._add_sample_id_to_selector(new_sample_id)
             self._select_sample(new_sample_id)
             self.widgets.add_dialog.close()
         else:
-            self.widgets.add_dialog.message.setText(valid_check)
+            self.widgets.add_dialog.message.setText(valid_check[1])
 
     def cancel_add(self):
         self.widgets.add_dialog.close()
@@ -65,6 +64,7 @@ class SamplePanel(PanelBase):
         self.widgets.remove_dialog.exec()
 
     def confirm_remove(self):
+        self._in_edit_mode = True
         selected_sample_id = self._get_current_selected()
         self._remove_sample(selected_sample_id)
         self._remove_sample_id_from_selector(selected_sample_id)
@@ -74,13 +74,18 @@ class SamplePanel(PanelBase):
         self.widgets.remove_dialog.close()
 
     def edit_sample_clicked(self):
+        self._hide_edit_customise_buttons()
+        self._show_edit_control_buttons()
+        self._lock_sample_selector()
         nrows = self._number_of_rows_in_table()
         for i in range(nrows):
             item = self._get_table_item(i, self.widgets.VALUE_COL_INDEX)
             self.editable_item(item)
 
     def customise_clicked(self):
-        self._mode = "customise"
+        self._hide_edit_customise_buttons()
+        self._show_customise_control_buttons()
+        self._lock_sample_selector()
         self._save_properties_before_edit()
         self._make_properties_editable()
         self._remove_sample_values_from_table()
@@ -88,59 +93,6 @@ class SamplePanel(PanelBase):
         self.widgets.create_delete_row_button(self.delete_row_clicked)
         self._insert_table_row()
         self._add_button_to_last_row()
-
-    def _save_properties_before_edit(self):
-        nrows = self._number_of_rows_in_table()
-        properties = {}
-        for i in range(1, nrows):
-            prop = self._get_table_cell_text(i, self.widgets.PROPERTY_COL_INDEX)
-            properties[i] = prop
-        self._sample_properties = properties
-        self._sample_properties_edit = properties
-
-    def table_cell_clicked(self, row, col):
-        if self._mode != "customise":
-            return
-        if self._table_selected_row:
-            self._remove_button_from_previously_selected_row(self._table_selected_row)
-        self._table_selected_row = row
-        if row == 0 or col == self.widgets.VALUE_COL_INDEX:
-            return
-        nrows = self._number_of_rows_in_table()
-        if row != 0 and row < nrows - 1:
-            self.widgets.create_delete_row_button(self.delete_row_clicked)
-            self._add_button_to_selected_row(row)
-
-    def _number_of_rows_in_table(self):
-        return self.widgets.info_table.rowCount()
-
-    def _make_properties_editable(self):
-        nrows = self._number_of_rows_in_table()
-        for i in range(1, nrows):
-            self._make_table_cell_editable(i, self.widgets.PROPERTY_COL_INDEX)
-
-    def _remove_sample_values_from_table(self):
-        nrows = self._number_of_rows_in_table()
-        for i in range(nrows):
-            self._set_table_cell_text("", i, self.widgets.VALUE_COL_INDEX)
-
-    def _add_button_to_last_row(self):
-        row = self._number_of_rows_in_table() - 1
-        self._set_table_cell_widget(
-            self.widgets.add_row_btn, row, self.widgets.PROPERTY_COL_INDEX
-        )
-
-    def _remove_button_from_last_row(self):
-        row = self._number_of_rows_in_table() - 1
-        self._delete_table_cell_widget(row, self.widgets.PROPERTY_COL_INDEX)
-
-    def _add_button_to_selected_row(self, row):
-        self._set_table_cell_widget(
-            self.widgets.delete_row_btn, row, self.widgets.VALUE_COL_INDEX
-        )
-
-    def _remove_button_from_previously_selected_row(self, row):
-        self._delete_table_cell_widget(row, self.widgets.VALUE_COL_INDEX)
 
     def add_row_clicked(self):
         if self._table_selected_row:
@@ -155,73 +107,118 @@ class SamplePanel(PanelBase):
 
     def delete_row_clicked(self):
         row = self._get_selected_row()
+        i = row - 1
+        if len(self._properties_in_edit) > i:
+            key = list(self._properties_in_edit.keys())[i]
+            self._properties_in_edit.pop(key)
         self._delete_table_row(row)
-        properties_new_indices = self._shift_properties_after_delete_row(row)
-        self._sample_properties_edit = properties_new_indices
-        print(self._sample_properties_edit)
         self._clear_table_selection()
-
-    def _shift_properties_after_delete_row(self, row):
-        properties_new_indices = {}
-        for key, val in self._sample_properties_edit.items():
-            if key < row:
-                properties_new_indices[key] = val
-            elif key == row:
-                continue
-            else:
-                properties_new_indices[key - 1] = val
-        return properties_new_indices
 
     # Sample.samples = {0: {"name": "S1", "A": "a1", "B": "b1", "C": "c1", "D": "d1"}, 1: {"name": "S2", "A": "a2", "B": "b2", "C": "c2", "D": "d2"}} # noqa
 
-    def save_clicked(self):
-        """
-        update values in self._samples_in_edit
-        make table non editable
-        hide cancel and save buttons
-        show edit and customize buttons
-        """
-        self._mode = None
-        sample_id = self._get_table_cell_text(0, self.widgets.VALUE_COL_INDEX)
-        if sample_id:
-            selected_sample_id = self._get_current_selected()
-            sample = {SAMPLE_IDENTIFIER_KEY: sample_id}
-            for i in range(1, self._number_of_rows_in_table()):
-                key = self._get_table_cell_text(i, self.widgets.PROPERTY_COL_INDEX)
-                val = self._get_table_cell_text(i, self.widgets.VALUE_COL_INDEX)
-                sample[key] = val
-            self._remove_sample(selected_sample_id)
-            self._add_sample(sample)
-            if sample_id != selected_sample_id:
-                self._remove_sample_id_from_selector(selected_sample_id)
-                self._add_sample_id_to_selector(sample_id)
-                self._select_sample(sample_id)
-        else:
-            self.make_table_read_only()
-            if self._table_selected_row:
-                self._remove_button_from_previously_selected_row(
-                    self._table_selected_row
-                )
-            self._remove_button_from_last_row()
-            self._delete_empty_table_rows()
-            properties_in_table = {}
-            for i in range(1, self._number_of_rows_in_table()):
-                key = self._get_table_cell_text(i, self.widgets.PROPERTY_COL_INDEX)
-                properties_in_table[i] = key
+    def save_edit_clicked(self):
+        self._in_edit_mode = True
+        new_id = self._get_table_cell_text(0, self.widgets.VALUE_COL_INDEX)
+        old_id = self._get_current_selected()
+        if new_id != old_id:
+            valid_check = self._valid_new_sample(new_id)
+            if valid_check[0] is True:
+                self._replace_sample_id_in_selector(old_id, new_id)
+            else:
+                self._show_error_diaglog(valid_check[1])
+                return
+        self._update_sample_after_edit(old_id, new_id)
+        self._select_sample(new_id)
+        self._hide_edit_control_buttons()
+        self._show_edit_customise_buttons()
+        self._make_table_read_only()
+        self._unlock_sample_selector()
 
-            print("old", self._samples_loaded[0])
-            print("new", properties_in_table)
+    def _show_error_diaglog(self, message):
+        self._create_error_dialog()
+        self.widgets.error_dialog.message.setText(message)
+        self.widgets.error_dialog.exec()
 
-    def update_properties(self):
-        pass
+    def _close_error_dialog(self):
+        self.widgets.error_dialog.close()
+
+    def _update_sample_after_edit(self, old_id, new_id):
+        sample = {SAMPLE_IDENTIFIER_KEY: new_id}
+        for i in range(1, self._number_of_rows_in_table()):
+            key = self._get_table_cell_text(i, self.widgets.PROPERTY_COL_INDEX)
+            val = self._get_table_cell_text(i, self.widgets.VALUE_COL_INDEX)
+            sample[key] = val
+        self._remove_sample(old_id)
+        self._add_sample(sample)
+
+    def _replace_sample_id_in_selector(self, old_id, new_id):
+        self._remove_sample_id_from_selector(old_id)
+        self._add_sample_id_to_selector(new_id)
+
+    def save_prop_clicked(self):
+        self._in_edit_mode = True
+        self._hide_customise_control_buttons()
+        self._show_edit_customise_buttons()
+        self._unlock_sample_selector()
+        self._make_table_read_only()
+        if self._table_selected_row:
+            self._remove_button_from_previously_selected_row(self._table_selected_row)
+        self._remove_button_from_last_row()
+        self._delete_empty_table_rows()
+        self._update_sample_properties()
+        selected_sample_id = self._get_current_selected()
+        if selected_sample_id:
+            sample = self.get_sample(selected_sample_id)
+            self.add_sample_to_table(sample)
+
+    def _update_sample_properties(self):
+        updated_properties = self._get_updated_properties()
+        updated_samples = []
+        for sample in self._samples_loaded:
+            updated_sample = self._get_sample_with_new_properties(
+                sample, updated_properties
+            )
+            updated_samples.append(updated_sample)
+        self._samples_loaded = updated_samples
+
+    def _get_updated_properties(self):
+        updated_properties = []
+        for i in range(1, self._number_of_rows_in_table()):
+            key = self._get_table_cell_text(i, self.widgets.PROPERTY_COL_INDEX)
+            updated_properties.append(key)
+        return updated_properties
+
+    def _get_sample_with_new_properties(self, sample, updated_properties):
+        updated_sample = {}
+        new_property_counter = 0
+        for i, (k, v) in enumerate(sample.items()):
+            if i == 0:
+                updated_sample[k] = v
+                continue
+            if i in self._properties_in_edit.keys():
+                new_key = updated_properties[new_property_counter]
+                updated_sample[new_key] = v
+                new_property_counter += 1
+        if len(updated_properties) > len(self._properties_in_edit):
+            new_properties = updated_properties[len(self._properties_in_edit) :]
+            for p in new_properties:
+                updated_sample[p] = ""
+        return updated_sample
 
     def cancel_clicked(self):
-        self._mode = None
+        self._hide_edit_control_buttons()
+        self._hide_customise_control_buttons()
+        self._show_edit_customise_buttons()
+        self._unlock_sample_selector()
+        self._make_table_read_only()
         self.empty_table()
         selected_sample_id = self._get_current_selected()
         if selected_sample_id:
             sample = self.get_sample(selected_sample_id)
             self.add_sample_to_table(sample)
+        else:
+            self._set_starting_properties()
+        self._delete_empty_table_rows()
 
     def selection_updated(self):
         """
@@ -233,6 +230,11 @@ class SamplePanel(PanelBase):
         if selected_sample_id:
             sample = self.get_sample(selected_sample_id)
             self.add_sample_to_table(sample)
+            self.widgets.btn_remove.setEnabled(True)
+            self.widgets.btn_edit.setEnabled(True)
+        else:
+            self.widgets.btn_remove.setEnabled(False)
+            self.widgets.btn_edit.setEnabled(False)
 
     def on_keyChange(self, key, value, time, expired):
         print("key change, key:", key)
@@ -241,11 +243,6 @@ class SamplePanel(PanelBase):
             self._set_starting_properties()
             if len(self._samples_loaded) > 0:
                 self.add_all_sample_ids_to_selector()
-            # self._sample_properties = self._get_sample_properties()
-            # for sample_property in self._sample_properties:
-            #     self.add_property_to_table(sample_property)
-            # self.load_sample_selector_items()
-            # print(self._samples_in_edit)
 
     def _get_samples(self):
         samples = self.client.eval("session.experiment.get_samples()", {})
@@ -271,11 +268,12 @@ class SamplePanel(PanelBase):
         self.widgets.btn_remove.clicked.connect(self.remove_sample_btn_clicked)
         self.widgets.btn_edit.clicked.connect(self.edit_sample_clicked)
         self.widgets.btn_custom.clicked.connect(self.customise_clicked)
-        self.widgets.btn_save.clicked.connect(self.save_clicked)
+        self.widgets.btn_save_edit.clicked.connect(self.save_edit_clicked)
+        self.widgets.btn_save_prop.clicked.connect(self.save_prop_clicked)
         self.widgets.btn_cancel.clicked.connect(self.cancel_clicked)
         self.widgets.selector.itemSelectionChanged.connect(self.selection_updated)
         self.widgets.btn_TEST_PRINT.clicked.connect(self.TEST_PRINT_CLICKED)
-        self.widgets.info_table.cellClicked.connect(self.table_cell_clicked)
+        self.widgets.info_table.cellClicked.connect(self._table_cell_clicked)
 
     def _set_starting_properties(self):
         properties = self._get_properties()
@@ -318,16 +316,68 @@ class SamplePanel(PanelBase):
         self.widgets.info_table.removeRow(row)
 
     def _delete_empty_table_rows(self):
-        for row in range(self._number_of_rows_in_table() - 1, 0, -1):
+        empty_rows = []
+        for row in range(1, self._number_of_rows_in_table()):
             key = self._get_table_cell_text(row, self.widgets.PROPERTY_COL_INDEX)
-            print("row", row, "key", key)
             if key == "":
+                empty_rows.append(row)
+        if len(empty_rows) > 0:
+            for row in sorted(empty_rows, reverse=True):
                 self._delete_table_row(row)
-                properties_new_indices = self._shift_properties_after_delete_row(row)
-                self._sample_properties_edit = properties_new_indices
 
     def _clear_table_selection(self):
         self.widgets.info_table.clearSelection()
+
+    def _save_properties_before_edit(self):
+        self._properties_in_edit = {}
+        for i in range(1, self._number_of_rows_in_table()):
+            prop = self._get_table_cell_text(i, self.widgets.PROPERTY_COL_INDEX)
+            self._properties_in_edit[i] = prop
+
+    def _table_cell_clicked(self, row, col):
+        if self.widgets.btn_save_prop.isVisible():
+            if self._table_selected_row:
+                self._remove_button_from_previously_selected_row(
+                    self._table_selected_row
+                )
+            self._table_selected_row = row
+            if row == 0 or col == self.widgets.VALUE_COL_INDEX:
+                return
+            nrows = self._number_of_rows_in_table()
+            if row != 0 and row < nrows - 1:
+                self.widgets.create_delete_row_button(self.delete_row_clicked)
+                self._add_button_to_selected_row(row)
+
+    def _number_of_rows_in_table(self):
+        return self.widgets.info_table.rowCount()
+
+    def _make_properties_editable(self):
+        nrows = self._number_of_rows_in_table()
+        for i in range(1, nrows):
+            self._make_table_cell_editable(i, self.widgets.PROPERTY_COL_INDEX)
+
+    def _remove_sample_values_from_table(self):
+        nrows = self._number_of_rows_in_table()
+        for i in range(nrows):
+            self._set_table_cell_text("", i, self.widgets.VALUE_COL_INDEX)
+
+    def _add_button_to_last_row(self):
+        row = self._number_of_rows_in_table() - 1
+        self._set_table_cell_widget(
+            self.widgets.add_row_btn, row, self.widgets.PROPERTY_COL_INDEX
+        )
+
+    def _remove_button_from_last_row(self):
+        row = self._number_of_rows_in_table() - 1
+        self._delete_table_cell_widget(row, self.widgets.PROPERTY_COL_INDEX)
+
+    def _add_button_to_selected_row(self, row):
+        self._set_table_cell_widget(
+            self.widgets.delete_row_btn, row, self.widgets.VALUE_COL_INDEX
+        )
+
+    def _remove_button_from_previously_selected_row(self, row):
+        self._delete_table_cell_widget(row, self.widgets.VALUE_COL_INDEX)
 
     def _create_add_dialog(self):
         self.widgets.add_dialog = AddSampleDialog()
@@ -339,14 +389,19 @@ class SamplePanel(PanelBase):
         self.widgets.remove_dialog.button_box.accepted.connect(self.confirm_remove)
         self.widgets.remove_dialog.button_box.rejected.connect(self.cancel_remove)
 
+    def _create_error_dialog(self):
+        self.widgets.error_dialog = ErrorDialog()
+        self.widgets.error_dialog.button_box.accepted.connect(self._close_error_dialog)
+
     def _get_new_sample_id(self):
         return self.widgets.add_dialog.sample_id.text()
 
     def _valid_new_sample(self, sample_id):
         if sample_id == "":
-            return "Please add a sample id"
-        # elif sample exist: return False
-        return True
+            return False, "Please add a sample id"
+        elif sample_id in self.get_existing_selector_items():
+            return False, "Sample already exist"
+        return True, ""
 
     def _add_empty_sample(self, sample_id):
         new_sample = {SAMPLE_IDENTIFIER_KEY: sample_id}
@@ -426,7 +481,7 @@ class SamplePanel(PanelBase):
         if len(items) == 1:
             return self.widgets.selector.indexFromItem(items[0]).row()
 
-    def make_table_read_only(self):
+    def _make_table_read_only(self):
         for i in range(self.widgets.info_table.rowCount()):
             item_prop = self.widgets.info_table.item(i, self.widgets.PROPERTY_COL_INDEX)
             item_val = self.widgets.info_table.item(i, self.widgets.VALUE_COL_INDEX)
@@ -461,6 +516,40 @@ class SamplePanel(PanelBase):
 
     def clear_sample_selection(self):
         self.widgets.selector.clearSelection()
+
+    def _show_edit_customise_buttons(self):
+        self.widgets.btn_edit.show()
+        self.widgets.btn_custom.show()
+
+    def _hide_edit_customise_buttons(self):
+        self.widgets.btn_edit.hide()
+        self.widgets.btn_custom.hide()
+
+    def _show_edit_control_buttons(self):
+        self.widgets.btn_save_edit.show()
+        self.widgets.btn_cancel.show()
+
+    def _hide_edit_control_buttons(self):
+        self.widgets.btn_save_edit.hide()
+        self.widgets.btn_cancel.hide()
+
+    def _show_customise_control_buttons(self):
+        self.widgets.btn_save_prop.show()
+        self.widgets.btn_cancel.show()
+
+    def _hide_customise_control_buttons(self):
+        self.widgets.btn_save_prop.hide()
+        self.widgets.btn_cancel.hide()
+
+    def _lock_sample_selector(self):
+        self.widgets.selector.setEnabled(False)
+        self.widgets.btn_add.setEnabled(False)
+        self.widgets.btn_remove.setEnabled(False)
+
+    def _unlock_sample_selector(self):
+        self.widgets.selector.setEnabled(True)
+        self.widgets.btn_add.setEnabled(True)
+        self.widgets.btn_remove.setEnabled(True)
 
     # def get_all_sample_properties(self):
     #     properties = [SAMPLE_IDENTIFIER_KEY]
