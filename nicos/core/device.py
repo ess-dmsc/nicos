@@ -1290,6 +1290,7 @@ class Readable(Device):
             stvalue = (status.ERROR, "unhandled %s: %s" % (err.__class__.__name__, err))
         if stvalue[0] not in status.statuses:
             stvalue = (status.UNKNOWN, "status constant %r is unknown" % stvalue[0])
+            self.log.warn(f"status value {stvalue}")
 
         if stvalue[0] == status.OK:
             value = None

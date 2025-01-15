@@ -203,7 +203,6 @@ class FileWriterStatus(KafkaStatusHandler):
         result = deserialise_wrdn(message)
         if result.job_id not in self._jobs:
             return
-        session.log.warn(f"stop message={result}")
 
         if result.error_encountered:
             self._jobs[result.job_id].on_lost(result.message)
@@ -248,7 +247,6 @@ class FileWriterStatus(KafkaStatusHandler):
         else:
             self.log.debug("request to stop writing failed for job %s", result.job_id)
             self._jobs[result.job_id].set_error_msg(result.message)
-        session.log.warn(f"on stop message={result}")
 
     def no_messages_callback(self):
         with self._lock:
