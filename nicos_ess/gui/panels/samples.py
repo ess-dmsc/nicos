@@ -50,6 +50,7 @@ class SamplePanel(PanelBase):
             self._add_sample_id_to_selector(new_sample_id)
             self._select_sample(new_sample_id)
             self.widgets.add_dialog.close()
+            self.edit_sample_clicked()
         else:
             self.widgets.add_dialog.message.setText(valid_check[1])
 

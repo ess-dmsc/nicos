@@ -12,7 +12,7 @@ from nicos.guisupport.qt import (
     QWidget,
 )
 
-from PyQt5.QtWidgets import QAbstractItemView
+from PyQt5.QtWidgets import QAbstractItemView, QSizePolicy
 
 
 class SamplePanelWidgets(QWidget):
@@ -58,6 +58,8 @@ class SamplePanelWidgets(QWidget):
         self.info_table.setHorizontalHeaderItem(self.PROPERTY_COL_INDEX, property_item)
         self.info_table.setHorizontalHeaderItem(self.VALUE_COL_INDEX, value_item)
         self.info_table.setSelectionMode(QAbstractItemView.SingleSelection)
+        self.info_table.resizeColumnToContents(0)
+        self.info_table.horizontalHeader().setStretchLastSection(True)
 
         self.horizontal_layout = QHBoxLayout()
         self.horizontal_layout.addWidget(self.selector)
@@ -81,10 +83,12 @@ class SamplePanelWidgets(QWidget):
 
     def create_add_row_button(self, signal=None):
         self.add_row_btn = QPushButton("Add row")
+        self.add_row_btn.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         self.add_row_btn.clicked.connect(signal)
 
     def create_delete_row_button(self, signal=None):
         self.delete_row_btn = QPushButton("Delete row")
+        self.delete_row_btn.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         self.delete_row_btn.clicked.connect(signal)
 
 
