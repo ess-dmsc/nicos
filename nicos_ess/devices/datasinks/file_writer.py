@@ -283,6 +283,7 @@ class FileWriterStatus(KafkaStatusHandler):
         if self._mode == MASTER:
             self._setROParam("curstatus", new_status)
             if self._cache:
+                self.log.warn("cache updated")
                 self._cache.put(self._name, "status", new_status, currenttime())
 
     @property
