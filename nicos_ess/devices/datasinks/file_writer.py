@@ -279,6 +279,7 @@ class FileWriterStatus(KafkaStatusHandler):
             self._set_status(new_status)
 
     def _set_status(self, new_status):
+        self.log.warn(f"new status {new_status}")
         if self._mode == MASTER:
             self._setROParam("curstatus", new_status)
             if self._cache:
