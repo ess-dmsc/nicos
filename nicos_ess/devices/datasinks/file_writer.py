@@ -163,6 +163,7 @@ class FileWriterStatus(Readable):
             "Store the current device status",
             internal=True,
             type=tupleof(int, str),
+            default=(status.OK, ""),
             settable=True,
         ),
         "statusinterval": Param(
@@ -338,7 +339,7 @@ class FileWriterStatus(Readable):
     def _set_status(self, new_status):
         self.log.warn(f"new status {new_status}")
         if self._mode == MASTER:
-            # self._setROParam("curstatus", new_status)
+            self._setROParam("curstatus", new_status)
             if self._cache:
                 self.log.warn("cache updated")
                 self._cache.put(self._name, "status", new_status, currenttime())
