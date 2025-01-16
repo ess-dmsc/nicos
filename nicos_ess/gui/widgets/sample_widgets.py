@@ -38,7 +38,6 @@ class SamplePanelWidgets(QWidget):
         self.btn_save_edit = QPushButton("Save")
         self.btn_save_prop = QPushButton("Save")
         self.btn_cancel = QPushButton("Cancel")
-        # self.btn_TEST_PRINT = QPushButton("TESTING: Print samples")
         self.btn_edit.setFixedWidth(button_width)
         self.btn_custom.setFixedWidth(button_width)
         self.btn_save_edit.setFixedWidth(button_width)
@@ -50,7 +49,6 @@ class SamplePanelWidgets(QWidget):
         self.side_edit_btn_layout.addWidget(self.btn_save_edit)
         self.side_edit_btn_layout.addWidget(self.btn_save_prop)
         self.side_edit_btn_layout.addWidget(self.btn_cancel)
-        # self.side_edit_btn_layout.addWidget(self.btn_TEST_PRINT)
         self.side_edit_btn_layout.addStretch()
 
         self.selector = QListWidget()
