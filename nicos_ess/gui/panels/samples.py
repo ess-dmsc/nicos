@@ -149,6 +149,9 @@ class SamplePanel(PanelBase):
         if selected_sample_id:
             sample = self.get_loaded_sample(selected_sample_id)
             self._add_sample_to_table(sample)
+            self._enable_remove_and_edit_buttons(True)
+        else:
+            self._enable_remove_and_edit_buttons(False)
 
     def cancel_clicked(self):
         self._hide_edit_control_buttons()
@@ -162,8 +165,10 @@ class SamplePanel(PanelBase):
         if selected_sample_id:
             sample = self.get_loaded_sample(selected_sample_id)
             self._add_sample_to_table(sample)
+            self._enable_remove_and_edit_buttons(True)
         else:
             self._remove_sample_values_from_table()
+            self._enable_remove_and_edit_buttons(False)
         self._delete_empty_table_rows()
         self._make_table_read_only()
         self._unlock_sample_selector()
@@ -174,11 +179,9 @@ class SamplePanel(PanelBase):
         if selected_sample_id:
             sample = self.get_loaded_sample(selected_sample_id)
             self._add_sample_to_table(sample)
-            self.widgets.btn_remove.setEnabled(True)
-            self.widgets.btn_edit.setEnabled(True)
+            self._enable_remove_and_edit_buttons(True)
         else:
-            self.widgets.btn_remove.setEnabled(False)
-            self.widgets.btn_edit.setEnabled(False)
+            self._enable_remove_and_edit_buttons(False)
 
     def table_cell_clicked(self, row, col):
         if self.widgets.btn_save_prop.isVisible():
@@ -242,7 +245,6 @@ class SamplePanel(PanelBase):
             self._load_samples_from_proposal()
 
     def _load_samples_from_proposal(self):
-        print(1)
         self._samples_loaded = self._get_samples()
         self._set_starting_properties()
         if len(self._samples_loaded) > 0:
@@ -598,3 +600,7 @@ class SamplePanel(PanelBase):
         self.widgets.selector.setEnabled(True)
         self.widgets.btn_add.setEnabled(True)
         self.widgets.btn_remove.setEnabled(True)
+
+    def _enable_remove_and_edit_buttons(self, flag=True):
+        self.widgets.btn_remove.setEnabled(flag)
+        self.widgets.btn_edit.setEnabled(flag)
