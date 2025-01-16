@@ -12,7 +12,7 @@ from nicos.guisupport.qt import (
     QWidget,
 )
 
-from PyQt5.QtWidgets import QAbstractItemView, QSizePolicy
+from PyQt5.QtWidgets import QAbstractItemView
 
 
 class SamplePanelWidgets(QWidget):
@@ -31,20 +31,26 @@ class SamplePanelWidgets(QWidget):
         self.top_add_remove_btn_layout.addWidget(self.btn_remove)
         self.top_add_remove_btn_layout.addStretch()
 
+        button_width = 180
         self.side_edit_btn_layout = QVBoxLayout()
         self.btn_edit = QPushButton("Edit sample")
         self.btn_custom = QPushButton("Customise properties")
         self.btn_save_edit = QPushButton("Save")
         self.btn_save_prop = QPushButton("Save")
         self.btn_cancel = QPushButton("Cancel")
-        self.btn_TEST_PRINT = QPushButton("TESTING: Print samples")
+        # self.btn_TEST_PRINT = QPushButton("TESTING: Print samples")
+        self.btn_edit.setFixedWidth(button_width)
+        self.btn_custom.setFixedWidth(button_width)
+        self.btn_save_edit.setFixedWidth(button_width)
+        self.btn_save_prop.setFixedWidth(button_width)
+        self.btn_cancel.setFixedWidth(button_width)
 
         self.side_edit_btn_layout.addWidget(self.btn_edit)
         self.side_edit_btn_layout.addWidget(self.btn_custom)
         self.side_edit_btn_layout.addWidget(self.btn_save_edit)
         self.side_edit_btn_layout.addWidget(self.btn_save_prop)
         self.side_edit_btn_layout.addWidget(self.btn_cancel)
-        self.side_edit_btn_layout.addWidget(self.btn_TEST_PRINT)
+        # self.side_edit_btn_layout.addWidget(self.btn_TEST_PRINT)
         self.side_edit_btn_layout.addStretch()
 
         self.selector = QListWidget()
@@ -83,12 +89,12 @@ class SamplePanelWidgets(QWidget):
 
     def create_add_row_button(self, signal=None):
         self.add_row_btn = QPushButton("Add row")
-        self.add_row_btn.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.add_row_btn.setFixedWidth(100)
         self.add_row_btn.clicked.connect(signal)
 
     def create_delete_row_button(self, signal=None):
         self.delete_row_btn = QPushButton("Delete row")
-        self.delete_row_btn.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.delete_row_btn.setFixedWidth(100)
         self.delete_row_btn.clicked.connect(signal)
 
 
