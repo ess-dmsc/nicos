@@ -27,6 +27,7 @@ class SamplePanel(PanelBase):
         self.to_monitor = ["sample/samples"]
         self._in_edit_mode = False
         self._samples_loaded = None
+        self._sample_properties = []
         self._properties_in_edit = {}
         self._table_selected_row = None
 
@@ -175,6 +176,7 @@ class SamplePanel(PanelBase):
 
     def _update_sample_properties(self):
         updated_properties = self._get_updated_properties()
+        self._sample_properties = updated_properties
         updated_samples = []
         for sample in self._samples_loaded:
             updated_sample = self._get_sample_with_new_properties(
@@ -212,14 +214,17 @@ class SamplePanel(PanelBase):
         self._hide_customise_control_buttons()
         self._show_edit_customise_buttons()
         self._unlock_sample_selector()
+        if self._table_selected_row:
+            self._remove_button_from_previously_selected_row(self._table_selected_row)
+        self._remove_button_from_last_row()
         self._make_table_read_only()
-        self.empty_table()
+        self._set_properties()
         selected_sample_id = self._get_current_selected()
         if selected_sample_id:
             sample = self.get_sample(selected_sample_id)
             self.add_sample_to_table(sample)
         else:
-            self._set_starting_properties()
+            self._remove_sample_values_from_table()
         self._delete_empty_table_rows()
 
     def selection_updated(self):
@@ -275,9 +280,17 @@ class SamplePanel(PanelBase):
 
     def _set_starting_properties(self):
         properties = self._get_properties()
+        self._sample_properties = properties
         keys = [SAMPLE_IDENTIFIER_KEY] + properties
         for i, prop in enumerate(keys):
             self._insert_table_row()
+            self._set_table_cell_text(prop, i, self.widgets.PROPERTY_COL_INDEX)
+
+    def _set_properties(self):
+        keys = [SAMPLE_IDENTIFIER_KEY] + self._sample_properties
+        for i, prop in enumerate(keys):
+            if i >= self._number_of_rows_in_table():
+                self._insert_table_row()
             self._set_table_cell_text(prop, i, self.widgets.PROPERTY_COL_INDEX)
 
     def _set_table_cell_text(self, text, row, col):
