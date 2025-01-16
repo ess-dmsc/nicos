@@ -11,10 +11,6 @@ devices = dict(
         readpv=f"{water_cooler_pv_root}Mode-R",
         writepv=f"{water_cooler_pv_root}Mode-S",
         visibility=(),
-        pva=True,
-        monitor=True,
-        pollinterval=None,
-        maxage=None,
     ),
     watercooler_temperature=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
@@ -23,10 +19,6 @@ devices = dict(
         writepv=f"{water_cooler_pv_root}TemperatureSP0-S",
         targetpv=f"{water_cooler_pv_root}TemperatureSP0-R",
         visibility=(),
-        pva=True,
-        monitor=True,
-        pollinterval=None,
-        maxage=None,
     ),
     orca_camera=device(
         "nicos_ess.devices.epics.area_detector.OrcaFlash4",

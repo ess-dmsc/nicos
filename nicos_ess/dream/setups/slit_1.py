@@ -8,8 +8,6 @@ devices = dict(
         precision=0.1,
         description="X axis alignment",
         motorpv=f"{prefix}:m4",
-        pva=True,
-        monitor=True,
     ),
     blade_r=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
@@ -17,8 +15,6 @@ devices = dict(
         precision=0.1,
         description="Y axis alignment",
         motorpv=f"{prefix}:m5",
-        pva=True,
-        monitor=True,
     ),
     blade_t=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
@@ -26,8 +22,6 @@ devices = dict(
         precision=0.1,
         description="Z axis alignment",
         motorpv=f"{prefix}:m6",
-        pva=True,
-        monitor=True,
     ),
     blade_b=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
@@ -35,8 +29,6 @@ devices = dict(
         precision=0.1,
         description="Z axis alignment",
         motorpv=f"{prefix}:m7",
-        pva=True,
-        monitor=True,
     ),
     slit_1=device(
         "nicos.devices.generic.slit.Slit",

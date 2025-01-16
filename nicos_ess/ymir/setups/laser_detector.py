@@ -2,14 +2,10 @@ description = "The laser detector in the YMIR cave"
 
 devices = dict(
     laser_pv=device(
-        "nicos.devices.epics.pva.EpicsReadable",
+        "nicos_ess.devices.epics.pva.EpicsReadable",
         description="The laser PV",
         readpv="YMIR-SETS:SE-BADC-001:SLOWDATA",
         visibility=(),
-        pva=True,
-        monitor=True,
-        pollinterval=0.5,
-        maxage=None,
     ),
     laser_timing_status=device(
         "nicos_ess.ymir.devices.laser_detector.TimingStatusDevice",

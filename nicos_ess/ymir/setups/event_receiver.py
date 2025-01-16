@@ -4,23 +4,20 @@ pv_root = "YMIR-TS:Ctrl-EVR-01:"
 
 devices = dict(
     EVR_time=device(
-        "nicos.devices.epics.pva.EpicsStringReadable",
+        "nicos_ess.devices.epics.pva.EpicsStringReadable",
         description="Status of the EVR timing",
         readpv="{}Time-Valid-Sts".format(pv_root),
-        monitor=True,
     ),
     EVR_link=device(
-        "nicos.devices.epics.pva.EpicsStringReadable",
+        "nicos_ess.devices.epics.pva.EpicsStringReadable",
         description="Status of link to EVG",
         readpv="{}Link-Sts".format(pv_root),
-        monitor=True,
     ),
     NTP_DIFF=device(
-        "nicos.devices.epics.pva.EpicsReadable",
+        "nicos_ess.devices.epics.pva.EpicsReadable",
         description="The difference between the Utgård EVR and the NTP client",
         readpv="LABS-VIP:time-fs725-01:NSDiffNTPEVR",
         unit="ns",
-        monitor=True,
     ),
     EFU_stat=device(
         "nicos_ess.devices.efu_status.EFUStatus",
