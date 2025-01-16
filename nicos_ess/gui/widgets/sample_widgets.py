@@ -103,7 +103,7 @@ class AddSampleDialog(QDialog):
         super().__init__()
         self.setWindowTitle("Add sample")
         btns = (
-            QDialogButtonBox.StandardButton.Yes | QDialogButtonBox.StandardButton.Cancel
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
         )
         self.button_box = QDialogButtonBox(btns)
         self.dialog_layout = QVBoxLayout()
@@ -127,7 +127,7 @@ class RemoveSampleDialog(QDialog):
         super().__init__()
         self.setWindowTitle("Remove sample")
         btns = (
-            QDialogButtonBox.StandardButton.Yes | QDialogButtonBox.StandardButton.Cancel
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
         )
         self.button_box = QDialogButtonBox(btns)
         self.dialog_layout = QVBoxLayout()
