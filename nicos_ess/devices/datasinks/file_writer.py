@@ -26,22 +26,24 @@ from nicos import session
 from nicos.core import (
     ADMIN,
     MASTER,
+    POLLER,
     Attach,
+    ConfigurationError,
+    Override,
     Param,
     host,
     listof,
     status,
-    ConfigurationError,
+    tupleof,
 )
 from nicos.core.constants import SIMULATION
-from nicos.core.device import Device
+from nicos.core.device import Device, Readable
 from nicos.core.params import anytype
 from nicos.utils import printTable, readFileCounter, updateFileCounter
 
 from nicos_ess.devices.datasinks.nexus_structure import NexusStructureProvider
-from nicos_ess.devices.kafka.consumer import KafkaConsumer
+from nicos_ess.devices.kafka.consumer import KafkaConsumer, KafkaSubscriber
 from nicos_ess.devices.kafka.producer import KafkaProducer
-from nicos_ess.devices.kafka.status_handler import KafkaStatusHandler
 
 
 class AlreadyWritingException(Exception):
@@ -131,10 +133,45 @@ class JobRecord:
         return str(self.state).split(".")[1]
 
 
-class FileWriterStatus(KafkaStatusHandler):
+class FileWriterStatus(Readable):
     """Monitors Kafka for the status of any file-writing jobs."""
 
     parameters = {
+        "brokers": Param(
+            "List of kafka brokers to connect to",
+            type=listof(host(defaultport=9092)),
+            mandatory=True,
+            preinit=True,
+            userparam=False,
+        ),
+        "statustopic": Param(
+            "Kafka topic(s) where status messages are written",
+            type=listof(str),
+            settable=False,
+            preinit=True,
+            mandatory=True,
+            userparam=False,
+        ),
+        "timeoutinterval": Param(
+            "Time to wait (secs) before communication is considered lost",
+            type=int,
+            default=5,
+            settable=True,
+            userparam=False,
+        ),
+        "curstatus": Param(
+            "Store the current device status",
+            internal=True,
+            type=tupleof(int, str),
+            settable=True,
+        ),
+        "statusinterval": Param(
+            "Expected time (secs) interval for the status message updates",
+            type=int,
+            default=2,
+            settable=True,
+            internal=True,
+        ),
         "job_history": Param(
             description="stores the most recent jobs in the cache",
             type=listof(anytype),
@@ -150,8 +187,20 @@ class FileWriterStatus(KafkaStatusHandler):
         ),
     }
 
+    parameter_overrides = {
+        "unit": Override(mandatory=False, userparam=False),
+    }
+
+    _kafka_subscriber = None
+
     def doPreinit(self, mode):
-        KafkaStatusHandler.doPreinit(self, mode)
+        if session.sessiontype != POLLER and mode != SIMULATION:
+            self._kafka_subscriber = KafkaSubscriber(self.brokers)
+            self._kafka_subscriber.subscribe(
+                self.statustopic,
+                self.new_messages_callback,
+                self.no_messages_callback,
+            )
         self._lock = threading.RLock()
         self._jobs = {}
         self._jobs_in_order = OrderedDict()
@@ -164,6 +213,12 @@ class FileWriterStatus(KafkaStatusHandler):
 
     def doInit(self, mode):
         self._retrieve_cache_jobs()
+
+    def doRead(self, maxage=0):
+        return ""
+
+    def doStatus(self, maxage=0):
+        return self.curstatus
 
     def _retrieve_cache_jobs(self):
         for v in self.job_history:
@@ -198,6 +253,8 @@ class FileWriterStatus(KafkaStatusHandler):
 
     def _job_stopped(self, job_id):
         del self._jobs[job_id]
+        self._update_cached_jobs()
+        self._update_status()
 
     def _on_stopped_message(self, message):
         result = deserialise_wrdn(message)
@@ -317,6 +374,9 @@ class FileWriterStatus(KafkaStatusHandler):
     @property
     def jobs(self):
         return copy.deepcopy(self._jobs)
+
+    def doShutdown(self):
+        self._kafka_subscriber.close()
 
 
 def incrementFileCounter():
