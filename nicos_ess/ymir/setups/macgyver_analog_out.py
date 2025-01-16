@@ -11,8 +11,4 @@ for i in range(1, 5):
         readpv=f"{pv_root}analog_out_{i}-R",
         writepv=f"{pv_root}analog_out_{i}-S",
         precision=0.0001,
-        pva=True,
-        monitor=True,
-        pollinterval=None,
-        maxage=None,
     )
