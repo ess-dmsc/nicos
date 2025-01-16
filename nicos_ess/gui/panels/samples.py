@@ -213,11 +213,10 @@ class SamplePanel(PanelBase):
         self._hide_edit_control_buttons()
         self._hide_customise_control_buttons()
         self._show_edit_customise_buttons()
-        self._unlock_sample_selector()
         if self._table_selected_row:
             self._remove_button_from_previously_selected_row(self._table_selected_row)
         self._remove_button_from_last_row()
-        self._make_table_read_only()
+
         self._set_properties()
         selected_sample_id = self._get_current_selected()
         if selected_sample_id:
@@ -226,9 +225,11 @@ class SamplePanel(PanelBase):
         else:
             self._remove_sample_values_from_table()
         self._delete_empty_table_rows()
+        self._make_table_read_only()
+        self._unlock_sample_selector()
 
     def selection_updated(self):
-        self.empty_table()
+        self.empty_table_values()
         selected_sample_id = self._get_current_selected()
         if selected_sample_id:
             sample = self.get_sample(selected_sample_id)
@@ -242,10 +243,39 @@ class SamplePanel(PanelBase):
     def on_keyChange(self, key, value, time, expired):
         print("key change, key:", key)
         if not self._in_edit_mode and key in self.to_monitor:
-            self._samples_loaded = self._get_samples()
-            self._set_starting_properties()
-            if len(self._samples_loaded) > 0:
-                self.add_all_sample_ids_to_selector()
+            self._load_samples_from_proposal()
+
+    def _load_samples_from_proposal(self):
+        self._samples_loaded = self._get_samples()
+        self._set_starting_properties()
+        if len(self._samples_loaded) > 0:
+            self.add_all_sample_ids_to_selector()
+
+    def on_client_connected(self):
+        PanelBase.on_client_connected(self)
+
+    def on_client_disconnected(self):
+        self._clear_table()
+        self._clear_selector()
+        self._clear_data()
+        PanelBase.on_client_disconnected(self)
+
+    def setViewOnly(self, viewonly):
+        self.widgets.btn_add.setEnabled(not viewonly)
+        self.widgets.btn_remove.setEnabled(not viewonly)
+        self.widgets.btn_edit.setEnabled(not viewonly)
+        self.widgets.btn_custom.setEnabled(not viewonly)
+        self.widgets.btn_save_edit.setEnabled(not viewonly)
+        self.widgets.btn_save_prop.setEnabled(not viewonly)
+        self.widgets.btn_cancel.setEnabled(not viewonly)
+        self.widgets.selector.setEnabled(not viewonly)
+        self.widgets.info_table.setEnabled(not viewonly)
+
+    def _clear_data(self):
+        self._samples_loaded = None
+        self._sample_properties = []
+        self._properties_in_edit = {}
+        self._table_selected_row = None
 
     def _get_samples(self):
         samples = self.client.eval("session.experiment.get_samples()", {})
@@ -506,12 +536,17 @@ class SamplePanel(PanelBase):
             if sample[SAMPLE_IDENTIFIER_KEY] == sample_id:
                 return sample
 
-    def empty_table(self):
+    def empty_table_values(self):
         nrows = self._number_of_rows_in_table()
         if nrows == 0:
             return
         self.widgets.info_table.item(0, self.widgets.VALUE_COL_INDEX).setText("")
-        # self.widgets.info_table.setRowCount(1)
+
+    def _clear_table(self):
+        self.widgets.info_table.setRowCount(0)
+
+    def _clear_selector(self):
+        self.widgets.selector.clear()
 
     def get_existing_selector_items(self):
         return [
@@ -529,7 +564,9 @@ class SamplePanel(PanelBase):
 
     def _show_edit_customise_buttons(self):
         self.widgets.btn_edit.show()
+        self.widgets.btn_edit.setEnabled(True)
         self.widgets.btn_custom.show()
+        self.widgets.btn_custom.setEnabled(True)
 
     def _hide_edit_customise_buttons(self):
         self.widgets.btn_edit.hide()
@@ -537,7 +574,9 @@ class SamplePanel(PanelBase):
 
     def _show_edit_control_buttons(self):
         self.widgets.btn_save_edit.show()
+        self.widgets.btn_save_edit.setEnabled(True)
         self.widgets.btn_cancel.show()
+        self.widgets.btn_cancel.setEnabled(True)
 
     def _hide_edit_control_buttons(self):
         self.widgets.btn_save_edit.hide()
@@ -545,7 +584,9 @@ class SamplePanel(PanelBase):
 
     def _show_customise_control_buttons(self):
         self.widgets.btn_save_prop.show()
+        self.widgets.btn_save_prop.setEnabled(True)
         self.widgets.btn_cancel.show()
+        self.widgets.btn_cancel.setEnabled(True)
 
     def _hide_customise_control_buttons(self):
         self.widgets.btn_save_prop.hide()
