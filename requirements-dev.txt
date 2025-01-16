@@ -1,6 +1,6 @@
 -r requirements.txt
 
-isort
+isort=5.13.2
 memory_profiler
 mock>=1.0
 pre-commit
