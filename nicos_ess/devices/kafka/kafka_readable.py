@@ -1,4 +1,3 @@
-import threading
 from time import sleep
 
 import numpy as np
@@ -158,8 +157,9 @@ class Da00Readable(Device):
     source_name = "some_source"
 
     def doInit(self, mode):
-        self._run_thread = threading.Thread(target=self._run, daemon=True)
-        self._run_thread.start()
+        pass
+        # self._run_thread = threading.Thread(target=self._run, daemon=True)
+        # self._run_thread.start()
 
     def _run(self):
         while True:
