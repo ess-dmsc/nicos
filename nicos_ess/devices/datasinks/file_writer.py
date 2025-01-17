@@ -719,7 +719,7 @@ class FileWriterControlSink(Device):
             data = self._consumer.poll(timeout_ms=5)
             # Because there are multiple partitions, we might not get the message
             # we want immediately. So, we need to check whether the message is the
-            # correct one.
+            # one we are looking for.
             if data and data.partition() == partition and data.offset() == offset:
                 break
             if not data and time.monotonic() > poll_start + time_out_s:
