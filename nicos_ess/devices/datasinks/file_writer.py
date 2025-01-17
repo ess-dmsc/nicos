@@ -577,7 +577,7 @@ class FileWriterControlSink(Device):
     ):
         start_time = start_time if start_time else datetime.now()
         job_id = job_id if job_id else str(uuid.uuid1())
-        job = JobRecord(job_id, counter, start_time, -1)
+        job = JobRecord(job_id, counter, start_time, (-1, -1))
         job.replay_of = replay_of
         job.stop_time = stop_time
         self._attached_status.add_job(job)
@@ -714,10 +714,14 @@ class FileWriterControlSink(Device):
         partition, offset = job_to_replay.kafka_offset
         self._consumer.seek(self.pool_topic, partition=partition, offset=offset)
         poll_start = time.monotonic()
-        data = self._consumer.poll(timeout_ms=5)
         time_out_s = 5
-        while not data:
+        while True:
             data = self._consumer.poll(timeout_ms=5)
+            # Because there are multiple partitions, we might not get the message
+            # we want immediately. So, we need to check whether the message is the
+            # correct one.
+            if data and data.partition() == partition and data.offset() == offset:
+                break
             if not data and time.monotonic() > poll_start + time_out_s:
                 raise RuntimeError(
                     "Could not replay job as could not retrieve job "
