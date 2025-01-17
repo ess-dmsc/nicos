@@ -50,6 +50,10 @@ class AlreadyWritingException(Exception):
     pass
 
 
+class StartWritingRejectedException(Exception):
+    pass
+
+
 class JobState(Enum):
     STARTED = (0,)
     NOT_STARTED = (1,)
@@ -291,7 +295,6 @@ class FileWriterStatus(Readable):
             self._jobs[result.job_id].on_writing(self.statusinterval)
             self._jobs[result.job_id].service_id = result.service_id
         else:
-            self.log.warn("request to start writing failed for job %s", result.job_id)
             self._jobs[result.job_id].start_rejected(result.message)
 
     def _on_stop_response(self, result):
@@ -587,15 +590,14 @@ class FileWriterControlSink(Device):
 
         while self._attached_status.jobs[job_id].state == JobState.NOT_STARTED:
             time.sleep(0.5)
-        self.log.warn(
-            f"not waiting as job is {self._attached_status.jobs[job_id].state}"
-        )
         if self._attached_status.jobs[job_id].state == JobState.STARTED:
             self.log.info("Filewriting started")
         elif self._attached_status.jobs[job_id].state == JobState.REJECTED:
-            self.log.error(self._attached_status.jobs[job_id].error_msg)
             self._attached_status._update_cached_jobs()
             self._attached_status._job_stopped(job_id)
+            raise StartWritingRejectedException(
+                self._attached_status.jobs[job_id].error_msg
+            )
         elif self._attached_status.jobs[job_id].state == JobState.FAILED:
             self.log.error("job failed")
 
