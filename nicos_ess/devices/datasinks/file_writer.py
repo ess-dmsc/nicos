@@ -40,6 +40,7 @@ from nicos.core.constants import SIMULATION
 from nicos.core.device import Device, Readable
 from nicos.core.params import anytype
 from nicos.utils import printTable, readFileCounter, updateFileCounter
+from nicos.utils.timer import Timer
 
 from nicos_ess.devices.datasinks.nexus_structure import NexusStructureProvider
 from nicos_ess.devices.kafka.consumer import KafkaConsumer, KafkaSubscriber
@@ -587,7 +588,8 @@ class FileWriterControlSink(Device):
         job.kafka_offset = kafka_offset
 
         while self._attached_status.jobs[job_id].state == JobState.NOT_STARTED:
-            time.sleep(0.5)
+            tmr = Timer(0.5)
+            tmr.wait(interval=0.1)
         if self._attached_status.jobs[job_id].state == JobState.STARTED:
             self.log.info("Filewriting started")
         elif self._attached_status.jobs[job_id].state == JobState.REJECTED:
