@@ -645,15 +645,18 @@ class FileWriterControlSink(Device):
         partition, offset = job_to_replay.kafka_offset
         self._consumer.seek(self.pool_topic, partition=partition, offset=offset)
         poll_start = time.monotonic()
-        data = self._consumer.poll(timeout_ms=5)
         time_out_s = 5
-        while not data:
+        while True:
             data = self._consumer.poll(timeout_ms=5)
+            # Because there are multiple partitions, we might not get the message
+            # we want immediately. So, we need to check whether the message is the
+            # one we are looking for.
+            if data and data.partition() == partition and data.offset() == offset:
+                break
             if not data and time.monotonic() > poll_start + time_out_s:
                 raise RuntimeError(
                     "Could not replay job as could not retrieve job "
                     "information from Kafka"
-                )
 
         message = deserialise_pl72(data.value())
 
