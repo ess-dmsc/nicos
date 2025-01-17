@@ -593,11 +593,10 @@ class FileWriterControlSink(Device):
         if self._attached_status.jobs[job_id].state == JobState.STARTED:
             self.log.info("Filewriting started")
         elif self._attached_status.jobs[job_id].state == JobState.REJECTED:
+            error_msg = self._attached_status.jobs[job_id].error_msg
             self._attached_status._update_cached_jobs()
             self._attached_status._job_stopped(job_id)
-            raise StartWritingRejectedException(
-                self._attached_status.jobs[job_id].error_msg
-            )
+            raise StartWritingRejectedException(error_msg)
         elif self._attached_status.jobs[job_id].state == JobState.FAILED:
             self.log.error("job failed")
 
