@@ -118,7 +118,11 @@ class ExpPanel(PanelBase):
         self._tables = (self.sampleTable, self.contactsTable, self.userTable)
 
         self._sample_tab_layout = self.findChild(QVBoxLayout, "sample_outer_layout")
-        self._sample_tab_layout.addWidget(SamplePanel(parent, client, options))
+        self._sample_tab_widget = SamplePanel(parent, client, options)
+        self._sample_tab_layout.addWidget(self._sample_tab_widget)
+        self._sample_tab_widget.samples_edited.connect(
+            self._set_buttons_and_warning_behaviour
+        )
 
         self.hide_samples = options.get("hide_sample", False)
         if self.hide_samples:

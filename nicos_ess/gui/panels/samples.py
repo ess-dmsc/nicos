@@ -20,7 +20,7 @@ SAMPLE_IDENTIFIER_KEY = "name"
 
 class SamplePanel(PanelBase):
     panelName = "Sample info panel"
-    edited_signal = pyqtSignal(object)
+    samples_edited = pyqtSignal(object)
 
     def __init__(self, parent, client, options):
         PanelBase.__init__(self, parent, client, options)
@@ -47,7 +47,7 @@ class SamplePanel(PanelBase):
     @in_edit_mode.setter
     def in_edit_mode(self, value):
         self._in_edit_mode = value
-        self.edited_signal.emit(value)
+        self.samples_edited.emit(value)
 
     def add_sample_btn_clicked(self):
         self._create_add_dialog()
