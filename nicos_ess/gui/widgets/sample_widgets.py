@@ -79,10 +79,15 @@ class SamplePanelWidgets(QWidget):
         self.btn_save_edit.setStyleSheet("background-color: limegreen")
         self.btn_save_prop.setStyleSheet("background-color: limegreen")
 
+        panel_header = QLabel("Samples")
+        panel_header.setStyleSheet("font-size: 20pt")
+
         self.sample_panel_widget = QWidget()
         self.layout = QVBoxLayout()
+        self.layout.addWidget(panel_header)
         self.layout.addLayout(self.top_add_remove_btn_layout)
         self.layout.addLayout(self.horizontal_layout)
+        self.layout.setContentsMargins(0, 0, 0, 0)
         self.sample_panel_widget.setLayout(self.layout)
 
     def create_add_row_button(self, signal=None):
