@@ -1,4 +1,5 @@
 from nicos.guisupport.qt import (
+    pyqtSignal,
     QListWidgetItem,
     Qt,
     QTableWidgetItem,
@@ -19,6 +20,7 @@ SAMPLE_IDENTIFIER_KEY = "name"
 
 class SamplePanel(PanelBase):
     panelName = "Sample info panel"
+    edited_signal = pyqtSignal(object)
 
     def __init__(self, parent, client, options):
         PanelBase.__init__(self, parent, client, options)
@@ -28,6 +30,7 @@ class SamplePanel(PanelBase):
         self._in_edit_mode = False
         self._samples_loaded = None
         self._properties_in_edit = {}
+        self._tentative_new_sample = None
         self._table_selected_row = None
 
         self.widgets = SamplePanelWidgets()
@@ -37,12 +40,20 @@ class SamplePanel(PanelBase):
         self.connect_signals()
         self.initialise_connection_status_listeners()
 
+    @property
+    def in_edit_mode(self):
+        return self._in_edit_mode
+
+    @in_edit_mode.setter
+    def in_edit_mode(self, value):
+        self._in_edit_mode = value
+        self.edited_signal.emit(value)
+
     def add_sample_btn_clicked(self):
         self._create_add_dialog()
         self.widgets.add_dialog.exec()
 
     def confirm_add(self):
-        self._in_edit_mode = True
         new_sample_id = self._get_new_sample_id()
         valid_check = self._valid_new_sample(new_sample_id)
         if valid_check[0] is True:
@@ -50,6 +61,7 @@ class SamplePanel(PanelBase):
             self._add_sample_id_to_selector(new_sample_id)
             self._select_sample(new_sample_id)
             self.widgets.add_dialog.close()
+            self._tentative_new_sample = new_sample_id
             self.edit_sample_clicked()
         else:
             self.widgets.add_dialog.message.setText(valid_check[1])
@@ -65,7 +77,7 @@ class SamplePanel(PanelBase):
         self.widgets.remove_dialog.exec()
 
     def confirm_remove(self):
-        self._in_edit_mode = True
+        self.in_edit_mode = True
         selected_sample_id = self._get_current_selected()
         self._remove_sample(selected_sample_id)
         self._remove_sample_values_from_table()
@@ -85,7 +97,7 @@ class SamplePanel(PanelBase):
             self.editable_item(item)
 
     def save_edit_clicked(self):
-        self._in_edit_mode = True
+        self.in_edit_mode = True
         new_id = self._get_table_cell_text(0, self.widgets.VALUE_COL_INDEX)
         old_id = self._get_current_selected()
         if new_id != old_id:
@@ -95,6 +107,7 @@ class SamplePanel(PanelBase):
             else:
                 self._show_error_dialog(valid_check[1])
                 return
+        self._tentative_new_sample = None
         self._update_sample_after_edit(old_id, new_id)
         self._select_sample(new_id)
         self._hide_edit_control_buttons()
@@ -135,7 +148,7 @@ class SamplePanel(PanelBase):
         self._clear_table_selection()
 
     def save_prop_clicked(self):
-        self._in_edit_mode = True
+        self.in_edit_mode = True
         self._hide_customise_control_buttons()
         self._show_edit_customise_buttons()
         self._unlock_sample_selector()
@@ -163,9 +176,15 @@ class SamplePanel(PanelBase):
         self._add_properties_to_table()
         selected_sample_id = self._get_current_selected()
         if selected_sample_id:
-            sample = self.get_loaded_sample(selected_sample_id)
-            self._add_sample_to_table(sample)
-            self._enable_remove_and_edit_buttons(True)
+            if self._tentative_new_sample:
+                self._remove_sample_id_from_selector(self._tentative_new_sample)
+                self._remove_sample_values_from_table()
+                self._tentative_new_sample = None
+                self.selection_updated()
+            else:
+                sample = self.get_loaded_sample(selected_sample_id)
+                self._add_sample_to_table(sample)
+                self._enable_remove_and_edit_buttons(True)
         else:
             self._remove_sample_values_from_table()
             self._enable_remove_and_edit_buttons(False)
@@ -241,7 +260,7 @@ class SamplePanel(PanelBase):
 
     def on_keyChange(self, key, value, time, expired):
         print("key change, key:", key)
-        if not self._in_edit_mode and key in self.to_monitor:
+        if not self.in_edit_mode and key in self.to_monitor:
             self._load_samples_from_proposal()
 
     def _load_samples_from_proposal(self):
