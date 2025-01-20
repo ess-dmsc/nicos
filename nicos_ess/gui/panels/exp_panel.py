@@ -12,12 +12,14 @@ from nicos.guisupport.qt import (
     QIntValidator,
     QListWidgetItem,
     Qt,
+    QVBoxLayout,
     pyqtSlot,
 )
 from nicos.guisupport.tablemodel import TableModel
 from nicos.utils import decodeAny, findResource
 
 from nicos_ess.gui.panels.panel import PanelBase
+from nicos_ess.gui.panels.samples import SamplePanel
 
 USER_FIELDS = ["name", "email", "affiliation"]
 CONTACT_FIELDS = ["name", "email", "affiliation"]
@@ -79,7 +81,7 @@ class ExpPanel(PanelBase):
 
     def __init__(self, parent, client, options):
         PanelBase.__init__(self, parent, client, options)
-        loadUi(self, findResource("nicos_ess/gui/panels/ui_files/exp_panel.ui"))
+        loadUi(self, findResource("nicos_ess/gui/panels/ui_files/exp_panel_tabbed.ui"))
 
         self.old_settings = ProposalSettings()
         self.new_settings = ProposalSettings()
@@ -114,6 +116,9 @@ class ExpPanel(PanelBase):
 
         self._text_controls = (self.propTitle, self.proposalNum)
         self._tables = (self.sampleTable, self.contactsTable, self.userTable)
+
+        self._sample_tab_layout = self.findChild(QVBoxLayout, "sample_outer_layout")
+        self._sample_tab_layout.addWidget(SamplePanel(parent, client, options))
 
         self.hide_samples = options.get("hide_sample", False)
         if self.hide_samples:
