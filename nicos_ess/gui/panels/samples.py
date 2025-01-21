@@ -388,10 +388,7 @@ class SamplePanel(PanelBase):
 
     def _add_empty_sample(self, sample_id):
         new_sample = {SAMPLE_IDENTIFIER_KEY: sample_id}
-        if len(self._samples_loaded) > 0:
-            properties = self._get_properties_from_loaded_sample()
-        else:
-            properties = self._get_default_properties()
+        properties = self._get_properties_from_table()
         if len(properties) > 0:
             for prop in properties:
                 new_sample[prop] = ""
