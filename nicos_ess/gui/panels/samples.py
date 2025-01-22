@@ -14,7 +14,7 @@ from nicos_ess.gui.widgets.sample_widgets import (
     SamplePanelWidgets,
 )
 
-DEFAULT_PROPERTIES = []
+DEFAULT_PROPERTIES = ["optional_default_1", "optional_default_2", "optional_default_3"]
 SAMPLE_IDENTIFIER_KEY = "name"
 
 
