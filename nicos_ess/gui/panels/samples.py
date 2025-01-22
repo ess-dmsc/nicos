@@ -28,7 +28,7 @@ class SamplePanel(PanelBase):
         self.options = options
         self.to_monitor = ["sample/samples"]
         self._in_edit_mode = False
-        self._samples_loaded = None
+        self._samples_loaded = []
         self._properties_in_edit = {}
         self._tentative_new_sample = None
         self._table_selected_row = None
@@ -288,7 +288,7 @@ class SamplePanel(PanelBase):
         self.widgets.selector.clear()
 
     def _clear_data(self):
-        self._samples_loaded = None
+        self._samples_loaded = []
         self._sample_properties = []
         self._properties_in_edit = {}
         self._table_selected_row = None
