@@ -1,3 +1,5 @@
+-r requirements.txt
+
 --extra-index-url https://forge.frm2.tum.de/simple
 urllib3==1.26.20
 
