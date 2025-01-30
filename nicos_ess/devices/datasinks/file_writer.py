@@ -657,6 +657,7 @@ class FileWriterControlSink(Device):
                 raise RuntimeError(
                     "Could not replay job as could not retrieve job "
                     "information from Kafka"
+                )
 
         message = deserialise_pl72(data.value())
 
