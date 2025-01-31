@@ -587,7 +587,7 @@ class EpicsMappedReadable(EpicsReadable, MappedReadable):
         # MBBI, BI, etc. do not have units
         "unit": Override(mandatory=False, settable=False, volatile=False),
         # Mapping values are read from EPICS
-        "mapping": Override(mandatory=False, settable=False, userparam=False),
+        'mapping': Override(internal=True, mandatory=False, settable=False)
     }
 
     def doInit(self, mode):
@@ -648,7 +648,7 @@ class EpicsMappedMoveable(EpicsParameters, MappedMoveable):
         # MBBI, BI, etc. do not have units
         "unit": Override(mandatory=False, settable=False, volatile=False),
         # Mapping values are read from EPICS
-        "mapping": Override(mandatory=False, settable=False, userparam=False),
+        'mapping': Override(internal=True, mandatory=False, settable=False)
     }
 
     _record_fields = {
