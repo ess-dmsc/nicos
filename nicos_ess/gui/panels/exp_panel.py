@@ -323,13 +323,13 @@ class ExpPanel(PanelBase):
 
     def _set_samples(self):
         if (
-            self.hide_samples
-            or self.samples_model.raw_data == self.old_settings.samples
+            self._sample_tab_widget.new_sample_info
+            == self._sample_tab_widget.old_sample_info
         ):
             return
 
         samples = {}
-        for index, sample in enumerate(self.samples_model.raw_data):
+        for index, sample in enumerate(self._sample_tab_widget.new_sample_info):
             if not sample.get("name", ""):
                 sample["name"] = f"sample {index + 1}"
             samples[index] = sample
