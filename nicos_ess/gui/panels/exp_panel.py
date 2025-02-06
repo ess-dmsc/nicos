@@ -200,6 +200,7 @@ class ExpPanel(PanelBase):
                 samples,
             )
             self.new_settings = deepcopy(self.old_settings)
+            self._sample_tab_widget.load_samples(samples)
             self._update_panel()
 
     def _update_panel(self):
@@ -460,9 +461,8 @@ class ExpPanel(PanelBase):
                 self.new_settings != self.old_settings,
                 self.users_model.raw_data != self.old_settings.users,
                 new_contacts != old_contacts,
-                self.samples_model.raw_data != self.old_settings.samples
-                if not self.hide_samples
-                else False,
+                self._sample_tab_widget.new_sample_info
+                != self._sample_tab_widget.old_sample_info,
             )
         )
 

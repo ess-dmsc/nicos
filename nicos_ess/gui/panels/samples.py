@@ -264,13 +264,13 @@ class SamplePanel(PanelBase):
         self.widgets.btn_remove.setEnabled(False)
         self.widgets.btn_edit.setEnabled(False)
 
-    def on_keyChange(self, key, value, time, expired):
-        print("key change, key:", key)
-        if not self.in_edit_mode and key in self.to_monitor:
-            self._load_samples_from_proposal()
+    # def on_keyChange(self, key, value, time, expired):
+    #     print("key change, key:", key)
+    #     if not self.in_edit_mode and key in self.to_monitor:
+    #         self.load_samples()
 
-    def _load_samples_from_proposal(self):
-        self.old_sample_info = self._get_samples()
+    def load_samples(self, samples=None):
+        self.old_sample_info = samples if samples else self._get_samples()
         self.new_sample_info = copy(self.old_sample_info)
         self._set_starting_properties()
         if len(self.new_sample_info) > 0:
@@ -412,11 +412,10 @@ class SamplePanel(PanelBase):
                 break
 
     def _add_all_sample_ids_to_selector(self):
-        existing_items = self.get_existing_selector_items()
+        self.widgets.selector.clear()
         for sample in self.new_sample_info:
             sample_id = sample[SAMPLE_IDENTIFIER_KEY]
-            if sample_id not in existing_items:
-                self._add_sample_id_to_selector(sample_id)
+            self._add_sample_id_to_selector(sample_id)
 
     def _replace_sample_id_in_selector(self, old_id, new_id):
         self._remove_sample_id_from_selector(old_id)
