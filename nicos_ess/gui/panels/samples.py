@@ -1,3 +1,5 @@
+from copy import copy
+
 from nicos.guisupport.qt import (
     pyqtSignal,
     QListWidgetItem,
@@ -7,6 +9,7 @@ from nicos.guisupport.qt import (
 )
 
 from nicos_ess.gui.panels.panel import PanelBase
+
 from nicos_ess.gui.widgets.sample_widgets import (
     AddSampleDialog,
     ErrorDialog,
@@ -27,8 +30,11 @@ class SamplePanel(PanelBase):
         self.parent = parent
         self.options = options
         self.to_monitor = ["sample/samples"]
+
+        self.old_sample_info = []
+        self.new_sample_info = []
+
         self._in_edit_mode = False
-        self._samples_loaded = []
         self._properties_in_edit = {}
         self._tentative_new_sample = None
         self._table_selected_row = None
@@ -264,9 +270,10 @@ class SamplePanel(PanelBase):
             self._load_samples_from_proposal()
 
     def _load_samples_from_proposal(self):
-        self._samples_loaded = self._get_samples()
+        self.old_sample_info = self._get_samples()
+        self.new_sample_info = copy(self.old_sample_info)
         self._set_starting_properties()
-        if len(self._samples_loaded) > 0:
+        if len(self.new_sample_info) > 0:
             self._add_all_sample_ids_to_selector()
 
     def _get_samples(self):
@@ -277,7 +284,7 @@ class SamplePanel(PanelBase):
             return []
 
     def get_loaded_sample(self, sample_id):
-        for sample in self._samples_loaded:
+        for sample in self.new_sample_info:
             if sample[SAMPLE_IDENTIFIER_KEY] == sample_id:
                 return sample
 
@@ -288,7 +295,8 @@ class SamplePanel(PanelBase):
         self.widgets.selector.clear()
 
     def _clear_data(self):
-        self._samples_loaded = []
+        self.old_sample_info = []
+        self.new_sample_info = []
         self._sample_properties = []
         self._properties_in_edit = {}
         self._table_selected_row = None
@@ -334,12 +342,12 @@ class SamplePanel(PanelBase):
         updated_properties = self._get_properties_from_table()
         self._sample_properties = updated_properties
         updated_samples = []
-        for sample in self._samples_loaded:
+        for sample in self.new_sample_info:
             updated_sample = self._get_sample_with_new_properties(
                 sample, updated_properties
             )
             updated_samples.append(updated_sample)
-        self._samples_loaded = updated_samples
+        self.new_sample_info = updated_samples
 
     def _get_sample_with_new_properties(self, sample, updated_properties):
         updated_sample = {}
@@ -362,7 +370,7 @@ class SamplePanel(PanelBase):
         return DEFAULT_PROPERTIES
 
     def _get_properties_from_loaded_sample(self):
-        sample = self._samples_loaded[0]
+        sample = self.new_sample_info[0]
         properties = [
             prop for prop in sample.keys() if not prop == SAMPLE_IDENTIFIER_KEY
         ]
@@ -395,17 +403,17 @@ class SamplePanel(PanelBase):
         self._add_sample(new_sample)
 
     def _add_sample(self, sample):
-        self._samples_loaded.append(sample)
+        self.new_sample_info.append(sample)
 
     def _remove_sample(self, sample_id):
-        for i, sample in enumerate(self._samples_loaded):
+        for i, sample in enumerate(self.new_sample_info):
             if sample[SAMPLE_IDENTIFIER_KEY] == sample_id:
-                del self._samples_loaded[i]
+                del self.new_sample_info[i]
                 break
 
     def _add_all_sample_ids_to_selector(self):
         existing_items = self.get_existing_selector_items()
-        for sample in self._samples_loaded:
+        for sample in self.new_sample_info:
             sample_id = sample[SAMPLE_IDENTIFIER_KEY]
             if sample_id not in existing_items:
                 self._add_sample_id_to_selector(sample_id)
@@ -438,7 +446,7 @@ class SamplePanel(PanelBase):
         ]
 
     def _set_starting_properties(self):
-        if len(self._samples_loaded) > 0:
+        if len(self.new_sample_info) > 0:
             properties = self._get_properties_from_loaded_sample()
         else:
             properties = self._get_default_properties()
