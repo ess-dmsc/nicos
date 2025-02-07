@@ -685,6 +685,11 @@ class Filewriter(Moveable):
         else:
             self._current_job_messages["written"] = (True, "")
 
+        self._update_cached_jobs()
+        self._current_job = None
+        self.stored_job = None
+        self._current_job_messages = {}
+
     def _check_okay_to_start(self):
         if not session.experiment.propinfo.get("proposal"):
             raise RuntimeError("cannot start writing as proposal number not set")
