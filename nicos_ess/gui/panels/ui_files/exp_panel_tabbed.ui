@@ -349,7 +349,7 @@
        <string>Samples</string>
       </property>
       <attribute name="title">
-       <string>Samples</string>
+       <string>Placeholder(Samples)</string>
       </attribute>
       <layout class="QVBoxLayout" name="verticalLayout_6">
        <item>
