@@ -641,7 +641,7 @@ class Filewriter(Moveable):
         self._current_job_messages = {}
 
     def _new_messages_callback(self, messages):
-        self.status(0)
+        self.doStatus()
         if not self._current_job:
             return
 
