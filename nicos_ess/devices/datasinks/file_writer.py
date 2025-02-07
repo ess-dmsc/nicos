@@ -33,8 +33,8 @@ from nicos.core import (
     none_or,
     status,
 )
-from nicos.core.constants import SIMULATION
-from nicos.core.params import anytype
+from nicos.core.constants import SIMULATION, MASTER
+from nicos.core.params import anytype, tupleof
 from nicos.utils import printTable, readFileCounter, updateFileCounter, createThread
 
 from nicos_ess.devices.datasinks.nexus_structure import NexusStructureProvider
@@ -271,6 +271,12 @@ class Filewriter(Moveable):
             internal=True,
             settable=True,
         ),
+        "curstatus": Param(
+            "Store the current device status",
+            internal=True,
+            type=tupleof(int, str),
+            settable=True,
+        ),
     }
 
     parameter_overrides = {
@@ -307,6 +313,9 @@ class Filewriter(Moveable):
             self._no_messages_callback,
         )
 
+        if self._mode == MASTER:
+            self._setROParam("curstatus", (status.WARN, "Trying to connect..."))
+
     def doInit(self, mode):
         if session.sessiontype == POLLER or mode == SIMULATION:
             return
@@ -326,26 +335,27 @@ class Filewriter(Moveable):
         pass
 
     def doStatus(self, maxage=0):
+        return self.curstatus
         # TODO: This needs to be called from somewhere
 
-        if not self._current_job:
-            return status.OK, ""
-
-        if (
-            "start" in self._current_job_messages
-            and "stop" not in self._current_job_messages
-        ):
-            started, error_msg = self._current_job_messages["start"]
-            if not started:
-                return status.ERROR, error_msg
-            return status.BUSY, "writing..."
-        elif "stop" in self._current_job_messages:
-            stopped, error_msg = self._current_job_messages["stop"]
-            if not stopped:
-                return status.ERROR, error_msg
-            return status.BUSY, "finishing up..."
-
-        return status.UNKNOWN, "Unknown status"
+        # if not self._current_job:
+        #     return status.OK, ""
+        #
+        # if (
+        #     "start" in self._current_job_messages
+        #     and "stop" not in self._current_job_messages
+        # ):
+        #     started, error_msg = self._current_job_messages["start"]
+        #     if not started:
+        #         return status.ERROR, error_msg
+        #     return status.BUSY, "writing..."
+        # elif "stop" in self._current_job_messages:
+        #     stopped, error_msg = self._current_job_messages["stop"]
+        #     if not stopped:
+        #         return status.ERROR, error_msg
+        #     return status.BUSY, "finishing up..."
+        #
+        # return status.UNKNOWN, "Unknown status"
 
         # if self._current_job:
         #     return status.BUSY, "writing..."
@@ -641,7 +651,10 @@ class Filewriter(Moveable):
         self._current_job_messages = {}
 
     def _new_messages_callback(self, messages):
-        self.doStatus()
+        # self._get_curstatus()
+
+        self._setROParam("curstatus", self._get_curstatus())
+
         if not self._current_job:
             return
 
@@ -657,6 +670,26 @@ class Filewriter(Moveable):
 
     def _no_messages_callback(self):
         pass
+
+    def _get_curstatus(self):
+        if not self._current_job:
+            return status.OK, ""
+
+        if (
+            "start" in self._current_job_messages
+            and "stop" not in self._current_job_messages
+        ):
+            started, error_msg = self._current_job_messages["start"]
+            if not started:
+                return status.ERROR, error_msg
+            return status.BUSY, "writing..."
+        elif "stop" in self._current_job_messages:
+            stopped, error_msg = self._current_job_messages["stop"]
+            if not stopped:
+                return status.ERROR, error_msg
+            return status.BUSY, "finishing up..."
+
+        return status.UNKNOWN, "Unknown status"
 
     def _on_status_message(self, message):
         msg = deserialise_x5f2(message)
