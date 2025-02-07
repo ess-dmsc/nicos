@@ -452,7 +452,7 @@ class Filewriter(Moveable):
         time_out_s = 5
         self.log.warn("seeked to offset")
         while True:
-            if self._immediate_stop:
+            if self._immediate_stop.is_set():
                 return
 
             self.log.warn("polling")
@@ -509,7 +509,7 @@ class Filewriter(Moveable):
         # )
         #
         # while "written" not in self._current_job_messages:
-        #     if self._immediate_stop:
+        #     if self._immediate_stop.is_set():
         #         return
         #     time.sleep(0.2)
         #
@@ -552,7 +552,7 @@ class Filewriter(Moveable):
         self.stored_job = self._current_job.as_dict()
 
         while "start" not in self._current_job_messages:
-            if self._immediate_stop:
+            if self._immediate_stop.is_set():
                 return
             time.sleep(0.1)
 
@@ -571,7 +571,7 @@ class Filewriter(Moveable):
 
         timeout = time.monotonic() + self.stoptimeout
         while "stop" not in self._current_job_messages:
-            if self._immediate_stop:
+            if self._immediate_stop.is_set():
                 self.log.warn("immediate stop, returning out of stop loop")
                 return
             if time.monotonic() > timeout:
