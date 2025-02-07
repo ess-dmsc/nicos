@@ -388,7 +388,7 @@ class Filewriter(Moveable):
 
         createThread(
             "file_writer_stop_job",
-            target=self._stop_job_worker,
+            target=self._stop_job,
             daemon=True,
             start=True,
         )
