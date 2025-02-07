@@ -4,10 +4,9 @@ main_window = docked(
     tabbed(
         (
             "Experiment",
-            panel("nicos_ess.gui.panels.exp_panel.ExpPanel", hide_sample=True),
+            panel("nicos_ess.gui.panels.exp_panel.ExpPanel", hide_sample=False),
         ),
         ("Setup", panel("nicos_ess.gui.panels.setups.SetupsPanel")),
-        ("Samples", panel("nicos_ess.gui.panels.samples.SamplePanel")),
         ("  ", panel("nicos_ess.gui.panels.empty.EmptyPanel")),
         (
             "Instrument interaction",
