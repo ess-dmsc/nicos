@@ -12,14 +12,12 @@ from nicos.guisupport.qt import (
     QIntValidator,
     QListWidgetItem,
     Qt,
-    QVBoxLayout,
     pyqtSlot,
 )
 from nicos.guisupport.tablemodel import TableModel
 from nicos.utils import decodeAny, findResource
 
 from nicos_ess.gui.panels.panel import PanelBase
-from nicos_ess.gui.panels.samples import SamplePanel
 
 USER_FIELDS = ["name", "email", "affiliation"]
 CONTACT_FIELDS = ["name", "email", "affiliation"]
@@ -81,7 +79,7 @@ class ExpPanel(PanelBase):
 
     def __init__(self, parent, client, options):
         PanelBase.__init__(self, parent, client, options)
-        loadUi(self, findResource("nicos_ess/gui/panels/ui_files/exp_panel_tabbed.ui"))
+        loadUi(self, findResource("nicos_ess/gui/panels/ui_files/exp_panel.ui"))
 
         self.old_settings = ProposalSettings()
         self.new_settings = ProposalSettings()
@@ -116,13 +114,6 @@ class ExpPanel(PanelBase):
 
         self._text_controls = (self.propTitle, self.proposalNum)
         self._tables = (self.sampleTable, self.contactsTable, self.userTable)
-
-        self._sample_tab_layout = self.findChild(QVBoxLayout, "sample_outer_layout")
-        self._sample_tab_widget = SamplePanel(parent, client, options)
-        self._sample_tab_layout.addWidget(self._sample_tab_widget)
-        self._sample_tab_widget.samples_edited.connect(
-            self._set_buttons_and_warning_behaviour
-        )
 
         self.hide_samples = options.get("hide_sample", False)
         if self.hide_samples:
@@ -200,7 +191,6 @@ class ExpPanel(PanelBase):
                 samples,
             )
             self.new_settings = deepcopy(self.old_settings)
-            self._sample_tab_widget.load_samples(samples)
             self._update_panel()
 
     def _update_panel(self):
@@ -324,13 +314,13 @@ class ExpPanel(PanelBase):
 
     def _set_samples(self):
         if (
-            self._sample_tab_widget.new_sample_info
-            == self._sample_tab_widget.old_sample_info
+            self.hide_samples
+            or self.samples_model.raw_data == self.old_settings.samples
         ):
             return
 
         samples = {}
-        for index, sample in enumerate(self._sample_tab_widget.new_sample_info):
+        for index, sample in enumerate(self.samples_model.raw_data):
             if not sample.get("name", ""):
                 sample["name"] = f"sample {index + 1}"
             samples[index] = sample
@@ -461,8 +451,9 @@ class ExpPanel(PanelBase):
                 self.new_settings != self.old_settings,
                 self.users_model.raw_data != self.old_settings.users,
                 new_contacts != old_contacts,
-                self._sample_tab_widget.new_sample_info
-                != self._sample_tab_widget.old_sample_info,
+                self.samples_model.raw_data != self.old_settings.samples
+                if not self.hide_samples
+                else False,
             )
         )
 
