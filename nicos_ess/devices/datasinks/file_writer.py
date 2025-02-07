@@ -450,11 +450,14 @@ class Filewriter(Moveable):
         self._consumer.seek(self.pool_topic, partition=partition, offset=offset - 1)
         poll_start = time.monotonic()
         time_out_s = 5
+        self.log.warn("seeked to offset")
         while True:
             if self._immediate_stop:
                 return
 
+            self.log.warn("polling")
             data = self._consumer.poll(timeout_ms=5)
+            self.log.warn("polled")
             # Because there are multiple partitions, we might not get the message
             # we want immediately. So, we need to check whether the message is the
             # one we are looking for.
