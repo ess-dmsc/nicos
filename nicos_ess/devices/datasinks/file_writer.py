@@ -609,8 +609,9 @@ class Filewriter(Moveable):
 
         started, error_msg = self._current_job_messages["start"]
 
+        self.log.warn(f"started: {started}")
         if started:
-            self.log.info("file writing started")
+            self.log.warn("file writing started")
             self._current_job.state = JobState.STARTED
             self._update_cached_jobs()
         else:
@@ -766,6 +767,7 @@ class Filewriter(Moveable):
             self._current_job = JobRecord.from_dict(self.stored_job)
 
     def _update_cached_jobs(self):
+        self.log.warn("updating cached jobs")
         temp = [x for x in self.job_history]
         temp.append(self._current_job.as_dict())
         while len(temp) > self.job_history_limit:
