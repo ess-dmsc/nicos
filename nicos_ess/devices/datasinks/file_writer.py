@@ -611,7 +611,11 @@ class Filewriter(Moveable):
 
         if started:
             self.log.info("file writing started")
+            self._current_job.state = JobState.STARTED
+            self._update_cached_jobs()
         else:
+            self._current_job.state = JobState.REJECTED
+            self._update_cached_jobs()
             raise StartWritingRejectedException(error_msg)
 
     def _stop_job(self):
@@ -651,10 +655,7 @@ class Filewriter(Moveable):
         self._current_job_messages = {}
 
     def _new_messages_callback(self, messages):
-        # self._get_curstatus()
-
         self._setROParam("curstatus", self._get_curstatus())
-
         if not self._current_job:
             return
 
@@ -738,6 +739,18 @@ class Filewriter(Moveable):
             self._current_job_messages["written"] = (False, result.message)
         else:
             self._current_job_messages["written"] = (True, "")
+
+        stopped, error_msg = self._current_job_messages["stop"]
+
+        if stopped:
+            self.log.info("file writing stopped")
+            self._current_job.state = JobState.WRITTEN
+        else:
+            self.log.error(
+                f"there was an issue with stopping file writing: {error_msg}"
+            )
+            self._current_job.state = JobState.FAILED
+            self._current_job.error_msg = error_msg
 
         self._update_cached_jobs()
         self._current_job = None
