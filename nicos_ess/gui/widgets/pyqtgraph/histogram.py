@@ -24,15 +24,20 @@ class HistogramItem(HistogramLUTItem):
             gradientPosition=gradientPosition,
             orientation=orientation,
         )
-        self.layout.removeItem(self.axis)
-        self.layout.removeItem(self.vb)
-        self.layout.removeItem(self.gradient)
-        self.axis = AxisItem("bottom", linkView=self.vb, maxTickLength=-10, parent=self)
-        self.axis_2 = AxisItem("left", linkView=self.vb, maxTickLength=-30, parent=self)
-        self.layout.addItem(self.axis_2, 0, 0)
-        self.layout.addItem(self.vb, 0, 1)
-        self.layout.addItem(self.axis, 1, 1)
-        self.layout.addItem(self.gradient, 2, 1)
+        if orientation == "horizontal":
+            self.layout.removeItem(self.axis)
+            self.layout.removeItem(self.vb)
+            self.layout.removeItem(self.gradient)
+            self.axis = AxisItem(
+                "bottom", linkView=self.vb, maxTickLength=-10, parent=self
+            )
+            self.axis_2 = AxisItem(
+                "left", linkView=self.vb, maxTickLength=-30, parent=self
+            )
+            self.layout.addItem(self.axis_2, 0, 0)
+            self.layout.addItem(self.vb, 0, 1)
+            self.layout.addItem(self.axis, 1, 1)
+            self.layout.addItem(self.gradient, 2, 1)
 
         for act in self.gradient.menu.actions():
             try:
