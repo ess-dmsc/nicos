@@ -338,6 +338,7 @@ class Filewriter(Moveable):
         # Give any loops time to stop
         time.sleep(0.5)
         self._immediate_stop.set()
+        self.stop_job()
 
     def start_job(self):
         if self._mode == SIMULATION:
@@ -592,6 +593,7 @@ class Filewriter(Moveable):
         timeout = time.monotonic() + self.stoptimeout
         while "stop" not in self._current_job_messages:
             if self._immediate_stop:
+                self.log.warn("immediate stop, returning out of stop loop")
                 return
             if time.monotonic() > timeout:
                 self._current_job_messages["stop"] = (
