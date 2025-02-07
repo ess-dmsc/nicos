@@ -79,7 +79,7 @@ class SamplePanelWidgets(QWidget):
         self.btn_save_edit.setStyleSheet("background-color: limegreen")
         self.btn_save_prop.setStyleSheet("background-color: limegreen")
 
-        panel_header = QLabel("Sample information")
+        panel_header = QLabel("Samples")
         panel_header.setStyleSheet(
             "font-size: 20pt;" "font-weight: 50;" "padding-top: 20px;"
         )
