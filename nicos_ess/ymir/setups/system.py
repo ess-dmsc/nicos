@@ -81,7 +81,7 @@ devices = dict(
     #     use_instrument_directory=True,
     # ),
     FileWriter=device(
-        "nicos_ess.devices.datasinks.file_writer.FileWriter",
+        "nicos_ess.devices.datasinks.file_writer.Filewriter",
         description="Device that controls the filewriter",
         brokers=configdata("config.KAFKA_BROKERS"),
         pool_topic="ess_filewriter_pool",
