@@ -336,30 +336,6 @@ class Filewriter(Moveable):
 
     def doStatus(self, maxage=0):
         return self.curstatus
-        # TODO: This needs to be called from somewhere
-
-        # if not self._current_job:
-        #     return status.OK, ""
-        #
-        # if (
-        #     "start" in self._current_job_messages
-        #     and "stop" not in self._current_job_messages
-        # ):
-        #     started, error_msg = self._current_job_messages["start"]
-        #     if not started:
-        #         return status.ERROR, error_msg
-        #     return status.BUSY, "writing..."
-        # elif "stop" in self._current_job_messages:
-        #     stopped, error_msg = self._current_job_messages["stop"]
-        #     if not stopped:
-        #         return status.ERROR, error_msg
-        #     return status.BUSY, "finishing up..."
-        #
-        # return status.UNKNOWN, "Unknown status"
-
-        # if self._current_job:
-        #     return status.BUSY, "writing..."
-        # return status.OK, ""
 
     def doStop(self):
         # TODO: why is this not being called?
@@ -397,9 +373,7 @@ class Filewriter(Moveable):
             "general",
         )
         structure = self._attached_nexus.get_structure(metainfo, file_num)
-        # self._start_job(
-        #     file_path, file_num, structure, start_time=start_time, job_id=job_id
-        # )
+
         _ = createThread(
             "file_writer_start_job",
             target=self._start_job,
@@ -423,40 +397,6 @@ class Filewriter(Moveable):
             daemon=True,
             start=True,
         )
-
-        # job_id = self._current_job.job_id
-        # stop_time = datetime.now()
-        # self._current_job.stop_time = stop_time
-        # self._controller.request_stop(job_id, stop_time)
-        #
-        # timeout = time.monotonic() + self.stoptimeout
-        # while "stop" not in self._current_job_messages:
-        #     if self._immediate_stop:
-        #         return
-        #     if time.monotonic() > timeout:
-        #         self._current_job_messages["stop"] = (
-        #             False,
-        #             "timed out waiting for stop to be acknowledged",
-        #         )
-        #         break
-        #     time.sleep(0.2)
-        #
-        # stopped, error_msg = self._current_job_messages["stop"]
-        #
-        # if stopped:
-        #     self.log.info("file writing stopped")
-        #     self._current_job.state = JobState.WRITTEN
-        # else:
-        #     self.log.error(
-        #         f"there was an issue with stopping file writing: {error_msg}"
-        #     )
-        #     self._current_job.state = JobState.FAILED
-        #     self._current_job.error_msg = error_msg
-        #
-        # self._update_cached_jobs()
-        # self._current_job = None
-        # self.stored_job = None
-        # self._current_job_messages = {}
 
     def list_jobs(self):
         def _state_to_str(job_state):
@@ -504,6 +444,8 @@ class Filewriter(Moveable):
                 "Could not replay job as no stop time defined " "for that job"
             )
 
+        self.log.warn(f"replaying job {job_number}")
+        self._immediate_stop.clear()
         partition, offset = job_to_replay.kafka_offset
         self._consumer.seek(self.pool_topic, partition=partition, offset=offset)
         poll_start = time.monotonic()
@@ -524,6 +466,8 @@ class Filewriter(Moveable):
                     "information from Kafka"
                 )
 
+        self.log.warn("retrieved job information from Kafka")
+
         message = deserialise_pl72(data.value())
 
         file_num = incrementFileCounter()
@@ -541,6 +485,8 @@ class Filewriter(Moveable):
             daemon=True,
             start=True,
         )
+
+        self.log.warn("started job thread")
 
         # do we need a stop_thread?
         # stop_thread = createThread(
@@ -716,7 +662,7 @@ class Filewriter(Moveable):
         else:
             self._current_job_messages["start"] = (False, result.message)
             self._current_job.state = JobState.REJECTED
-        self._update_cached_jobs()
+            self._update_cached_jobs()
 
     def _on_stop_response(self, result):
         if not self._current_job.stop_time:
@@ -765,7 +711,6 @@ class Filewriter(Moveable):
             self._current_job = JobRecord.from_dict(self.stored_job)
 
     def _update_cached_jobs(self):
-        self.log.warn("updating cached jobs")
         temp = [x for x in self.job_history]
         temp.append(self._current_job.as_dict())
         while len(temp) > self.job_history_limit:
