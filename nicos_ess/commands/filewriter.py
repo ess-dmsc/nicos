@@ -91,12 +91,9 @@ def start_filewriting(run_title=None):
 
 @usercommand
 @helparglist("job_number")
-def stop_filewriting(job_number=None):
-    """Stop a file-writing job.
-
-    :param job_number: the job to stop, only required if more than one job.
-    """
-    _find_filewriter_dev().stop_job(job_number)
+def stop_filewriting():
+    """Stop a file-writing job."""
+    _find_filewriter_dev().stop_job()
     scichat_send("stopping filewriting")
 
 
