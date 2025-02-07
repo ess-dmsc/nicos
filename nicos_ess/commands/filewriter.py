@@ -5,15 +5,15 @@ from nicos.commands import helparglist, usercommand
 from nicos.core import ADMIN, SIMULATION, requires
 from nicos_ess.commands.scichat import scichat_send
 
-from nicos_ess.devices.datasinks.file_writer import FileWriterControlSink
+from nicos_ess.devices.datasinks.file_writer import Filewriter
 
 
 def _find_filewriter_dev():
     for dev in session.devices.values():
         # Should only be one at most
-        if isinstance(dev, FileWriterControlSink):
+        if isinstance(dev, Filewriter):
             return dev
-    raise RuntimeError("Could not find FileWriterControlSink device")
+    raise RuntimeError("Could not find Filewriter device")
 
 
 @usercommand
@@ -44,19 +44,19 @@ def nexusfile_open(run_title=None):
     if run_title is None:
         run_title = session.experiment.run_title
     try:
-        active_jobs = _find_filewriter_dev().get_active_jobs()
-        if not active_jobs:
-            session.log.info("Setting run title to: %s", run_title)
-            start_filewriting(run_title)
-        else:
-            #  Allow nested calls, but give a warning since it is not
-            #  a preferred way of writing scripts
-            session.log.warning(
-                "Filewriter already running. "
-                "Will not start a new file with title: %s",
-                run_title,
-            )
-            nested_call = True
+        # active_jobs = _find_filewriter_dev().get_active_jobs()
+        # if not active_jobs:
+        session.log.info("Setting run title to: %s", run_title)
+        start_filewriting(run_title)
+        # else:
+        #     #  Allow nested calls, but give a warning since it is not
+        #     #  a preferred way of writing scripts
+        #     session.log.warning(
+        #         "Filewriter already running. "
+        #         "Will not start a new file with title: %s",
+        #         run_title,
+        #     )
+        #     nested_call = True
         yield
     except Exception as e:
         session.log.error("Could not start filewriting: %s", e)
