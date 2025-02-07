@@ -609,14 +609,9 @@ class Filewriter(Moveable):
 
         started, error_msg = self._current_job_messages["start"]
 
-        self.log.warn(f"started: {started}")
         if started:
-            self.log.warn("file writing started")
-            self._current_job.state = JobState.STARTED
-            self._update_cached_jobs()
+            self.log.info("file writing started")
         else:
-            self._current_job.state = JobState.REJECTED
-            self._update_cached_jobs()
             raise StartWritingRejectedException(error_msg)
 
     def _stop_job(self):
@@ -717,8 +712,11 @@ class Filewriter(Moveable):
     def _on_start_response(self, result):
         if result.outcome == ActionOutcome.Success:
             self._current_job_messages["start"] = (True, "")
+            self._current_job.state = JobState.STARTED
         else:
             self._current_job_messages["start"] = (False, result.message)
+            self._current_job.state = JobState.REJECTED
+        self._update_cached_jobs()
 
     def _on_stop_response(self, result):
         if not self._current_job.stop_time:
