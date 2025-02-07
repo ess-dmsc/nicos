@@ -327,9 +327,29 @@ class Filewriter(Moveable):
 
     def doStatus(self, maxage=0):
         # TODO: This needs to be called from somewhere
-        if self._current_job:
+
+        if not self._current_job:
+            return status.OK, ""
+
+        if (
+            "start" in self._current_job_messages
+            and "stop" not in self._current_job_messages
+        ):
+            started, error_msg = self._current_job_messages["start"]
+            if not started:
+                return status.ERROR, error_msg
             return status.BUSY, "writing..."
-        return status.OK, ""
+        elif "stop" in self._current_job_messages:
+            stopped, error_msg = self._current_job_messages["stop"]
+            if not stopped:
+                return status.ERROR, error_msg
+            return status.BUSY, "finishing up..."
+
+        return status.UNKNOWN, "Unknown status"
+
+        # if self._current_job:
+        #     return status.BUSY, "writing..."
+        # return status.OK, ""
 
     def doStop(self):
         # TODO: why is this not being called?
@@ -621,6 +641,7 @@ class Filewriter(Moveable):
         self._current_job_messages = {}
 
     def _new_messages_callback(self, messages):
+        self.status(0)
         if not self._current_job:
             return
 
