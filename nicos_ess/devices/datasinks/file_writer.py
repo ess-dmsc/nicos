@@ -447,7 +447,7 @@ class Filewriter(Moveable):
         self.log.warn(f"replaying job {job_number}")
         self._immediate_stop.clear()
         partition, offset = job_to_replay.kafka_offset
-        self._consumer.seek(self.pool_topic, partition=partition, offset=offset)
+        self._consumer.seek(self.pool_topic, partition=partition, offset=offset - 1)
         poll_start = time.monotonic()
         time_out_s = 5
         while True:
