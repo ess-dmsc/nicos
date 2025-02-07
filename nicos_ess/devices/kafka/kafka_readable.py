@@ -18,11 +18,10 @@ from nicos.core import (
     status,
     LIVE,
     ArrayDesc,
+    Override,
 )
 from nicos.utils import byteBuffer
 from nicos_ess.devices.kafka.consumer import KafkaSubscriber
-
-from nicos.core.device import Device
 
 
 def gen_image():
@@ -152,9 +151,10 @@ class F144Readable(KafkaReadable):
                 )
 
 
-class Da00Readable(Device):
+class Da00Readable(KafkaReadable):
     data_structure = {}
-    source_name = "some_source"
+    # source_name = "some_source"
+    parameter_overrides = {"unit": Override(mandatory=False, default="")}
 
     def doInit(self, mode):
         pass
@@ -181,7 +181,13 @@ class Da00Readable(Device):
                 self.update_arraydesc()
 
                 if self.data_structure:
-                    self.putResult(1, self.get_plot_data(), timestamp, msg.source_name)
+                    self.putResult(
+                        1,
+                        self.get_plot_data(),
+                        timestamp,
+                        msg.source_name,
+                        self.data_structure["plot_type"],
+                    )
             except Exception as e:
                 print(f"Could not decode message from topic: {e}")
 
@@ -194,6 +200,7 @@ class Da00Readable(Device):
                 self.data_structure["signal"] = var.data
                 self.data_structure["signal_axes"] = var.axes
                 self.data_structure["signal_shape"] = var.shape
+                self.data_structure["plot_type"] = var.label
                 variables.remove(var)
 
         for var in variables:
@@ -221,7 +228,7 @@ class Da00Readable(Device):
         except KeyError:
             return None
 
-    def putResult(self, quality, data, timestamp, source_name):
+    def putResult(self, quality, data, timestamp, source_name, plot_type=None):
         signal_data = data.pop(-1)
         databuffer = [byteBuffer(np.ascontiguousarray(signal_data))]
         datadesc = [
@@ -233,6 +240,7 @@ class Da00Readable(Device):
                     "y": {"define": "classic"},
                 },
                 plotcount=1,
+                plot_type=plot_type,
                 label_shape=tuple([len(label_data) for label_data in data]),
                 label_dtypes=tuple([label_data.dtype.str for label_data in data]),
             )
@@ -241,11 +249,10 @@ class Da00Readable(Device):
             parameters = dict(
                 uid=0,
                 time=timestamp,
-                det=f"beamlime_{source_name}",
+                det=source_name,
                 tag=LIVE,
                 datadescs=datadesc,
             )
-            # first transform all label data to a SINGLE float64 array
             data = np.ascontiguousarray(np.concatenate(data), dtype=np.float64)
             labelbuffers = [byteBuffer(data)]
             session.updateLiveData(parameters, databuffer, labelbuffers)

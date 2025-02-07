@@ -1,6 +1,6 @@
 import numpy as np
 import pyqtgraph as pg
-from pyqtgraph import ColorMap, GraphicsView, ImageItem, PlotWidget, ViewBox, mkPen
+from pyqtgraph import ColorMap, GraphicsView, ImageItem, PlotWidget, mkPen
 
 from nicos.guisupport.qt import (
     QAction,
@@ -44,15 +44,55 @@ VERT_SPLITTER_SIZES_2 = [100, 500, 100]
 VERT_SPLITTER_SIZES_3 = [50, 1000]
 
 
+class CustomAxisItem(pg.AxisItem):
+    def __init__(self, orientation, **kwargs):
+        super().__init__(orientation, **kwargs)
+        self.labels_array = None
+
+    def setLabelsArray(self, arr):
+        self.labels_array = np.asarray(arr, dtype=float)
+        self.update()
+
+    def tickStrings(self, values, scale, spacing):
+        if self.labels_array is None:
+            return super().tickStrings(values, scale, spacing)
+
+        strings = []
+        for val in values:
+            idx = np.searchsorted(self.labels_array, val)
+            if idx == 0:
+                if val < np.min(self.labels_array):
+                    strings.append("")
+                else:
+                    strings.append(f"{self.labels_array[0]:.4g}")
+                continue
+            elif idx >= len(self.labels_array):
+                if val > np.max(self.labels_array):
+                    strings.append("")
+                else:
+                    strings.append(f"{self.labels_array[-1]:.4g}")
+                continue
+            else:
+                if abs(val - self.labels_array[idx - 1]) < abs(
+                    val - self.labels_array[idx]
+                ):
+                    label_val = self.labels_array[idx - 1]
+                else:
+                    label_val = self.labels_array[idx]
+            strings.append(f"{label_val:.4g}")
+        return strings
+
+
 class ImageView(QWidget):
     sigTimeChanged = pyqtSignal(object, object)
     sigProcessingChanged = pyqtSignal(object)
     clicked = pyqtSignal(str)
 
-    def __init__(self, parent=None, name="", *args):
+    def __init__(self, parent=None, name="", histogram_orientation="horizontal", *args):
         QWidget.__init__(self, parent, *args)
         self.parent = parent
         self.name = name
+        self.histogram_orientation = histogram_orientation
 
         self.log = NicosLogger("ImageView")
         self.log.parent = parent.log.parent
@@ -143,10 +183,11 @@ class ImageView(QWidget):
         self.hover_label = QLabel(self)
         self.graphics_view = GraphicsView()
         self.scene = self.graphics_view.scene()
-        self.view = ViewBox()
-        self.view.invertY()
-        self.view.setAspectLocked(True)
-        self.graphics_view.setCentralItem(self.view)
+        self.image_plot = pg.PlotItem()
+        self.image_plot.invertY()
+        self.image_plot.setAspectLocked(True)
+        self.view = self.image_plot.vb
+        self.graphics_view.setCentralItem(self.image_plot)
 
     def build_image_controller_tab(self):
         self.image_view_controller = ImageViewController(self)
@@ -189,7 +230,9 @@ class ImageView(QWidget):
         self.view.addItem(self.line_roi)
 
     def build_histograms(self):
-        self.settings_histogram = HistogramWidget(orientation="horizontal")
+        self.settings_histogram = HistogramWidget(
+            orientation=self.histogram_orientation
+        )
         self.settings_histogram.gradient.loadPreset("viridis")
         self.settings_histogram.item.log = self.log
         self.settings_histogram.item.setImageItem(self.image_item)
@@ -272,13 +315,16 @@ class ImageView(QWidget):
         self.splitter_vert_1.addWidget(self.line_plot)
 
         self.splitter_vert_2 = QSplitter(Qt.Orientation.Vertical)
-        self.splitter_vert_2.addWidget(self.settings_histogram)
+        if self.histogram_orientation == "horizontal":
+            self.splitter_vert_2.addWidget(self.settings_histogram)
         self.splitter_vert_2.addWidget(self.graphics_view)
         self.splitter_vert_2.addWidget(self.bottom_plot)
 
         self.splitter_hori_1 = QSplitter(Qt.Orientation.Horizontal)
         self.splitter_hori_1.addWidget(self.splitter_vert_1)
         self.splitter_hori_1.addWidget(self.splitter_vert_2)
+        if self.histogram_orientation == "vertical":
+            self.splitter_hori_1.addWidget(self.settings_histogram)
 
         self.splitter_vert_3 = QSplitter(Qt.Orientation.Vertical)
         # self.splitter_vert_3.addWidget(self.image_view_controller)
@@ -305,6 +351,17 @@ class ImageView(QWidget):
         self.splitter_vert_2.splitterMoved.connect(
             lambda x: self.splitter_moved(self.splitter_vert_2)
         )
+
+    def set_aspect_locked(self, state):
+        self.image_plot.setAspectLocked(state)
+
+    def add_image_axes(self):
+        self.custom_bottom_axis = CustomAxisItem(orientation="bottom")
+        self.custom_left_axis = CustomAxisItem(orientation="left")
+        self.image_plot.setAxisItems(
+            {"bottom": self.custom_bottom_axis, "left": self.custom_left_axis}
+        )
+        self.image_plot.showGrid(x=True, y=True, alpha=0.2)
 
     def set_crosshair_roi_visibility(self, visible, ignore_connections=False):
         self.roi_crosshair_active = visible
@@ -709,6 +766,67 @@ class ImageView(QWidget):
             np.array(arrays[0]).T.astype(np.float64),
             autoLevels=False,
         )
+
+        if labels:
+            self._handle_image_labels(labels)
+
+    def _handle_image_labels(self, labels):
+        image = self.image_item.image
+        if image is None:
+            self.log.warning("No image data available when handling labels.")
+            return
+
+        if not (
+            hasattr(self, "custom_bottom_axis") or hasattr(self, "custom_left_axis")
+        ):
+            self.log.warning("No custom axes available when handling labels.")
+            return
+
+        x_pixels, y_pixels = image.shape[0], image.shape[1]
+
+        try:
+            x_labels = np.asarray(labels.get("x"), dtype=float)
+            y_labels = np.asarray(labels.get("y"), dtype=float)
+        except Exception as e:
+            self.log.error("Error converting labels: %s", e)
+            return
+
+        if x_labels is None or y_labels is None:
+            self.log.warning("Missing 'x' or 'y' labels in _handle_image_labels.")
+            return
+
+        if x_labels.size == x_pixels + 1:
+            x_min, x_max = x_labels[0], x_labels[-1]
+        elif x_labels.size == x_pixels:
+            dx = x_labels[1] - x_labels[0] if x_pixels > 1 else 1.0
+            x_min, x_max = x_labels[0] - dx / 2.0, x_labels[-1] + dx / 2.0
+        else:
+            self.log.warning(
+                "Unexpected number of x labels; defaulting to min/max from labels."
+            )
+            x_min, x_max = float(x_labels.min()), float(x_labels.max())
+
+        if y_labels.size == y_pixels + 1:
+            y_min, y_max = y_labels[0], y_labels[-1]
+        elif y_labels.size == y_pixels:
+            dy = y_labels[1] - y_labels[0] if y_pixels > 1 else 1.0
+            y_min, y_max = y_labels[0] - dy / 2.0, y_labels[-1] + dy / 2.0
+        else:
+            self.log.warning(
+                "Unexpected number of y labels; defaulting to min/max from labels."
+            )
+            y_min, y_max = float(y_labels.min()), float(y_labels.max())
+
+        if self._use_metric_length:
+            x_min, x_max = self._pix_to_mm(x_min), self._pix_to_mm(x_max)
+            y_min, y_max = self._pix_to_mm(y_min), self._pix_to_mm(y_max)
+            x_labels = self._pix_to_mm(x_labels)
+            y_labels = self._pix_to_mm(y_labels)
+
+        self.image_item.setRect(x_min, y_min, x_max - x_min, y_max - y_min)
+
+        self.custom_bottom_axis.setLabelsArray(x_labels)
+        self.custom_left_axis.setLabelsArray(y_labels)
 
     def save_state(self):
         return {

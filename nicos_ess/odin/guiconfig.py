@@ -32,6 +32,10 @@ main_window = docked(
                             ),
                         ),
                         (
+                            "Beamlime Panel",
+                            panel("nicos_ess.gui.panels.beamlime.BeamLimePanel"),
+                        ),
+                        (
                             "Script Status",
                             panel(
                                 "nicos_ess.gui.panels.status.ScriptStatusPanel",
