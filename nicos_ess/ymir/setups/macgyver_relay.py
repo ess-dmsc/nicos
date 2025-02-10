@@ -6,12 +6,8 @@ devices = dict()
 
 for i in range(1, 5):
     devices[f"macgyver_relay_{i}"] = device(
-        "nicos_ess.devices.epics.pva.EpicsBoolMoveable",
+        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description=f"MacGyver box relay {i}",
         readpv=f"{pv_root}relay_{i}-R",
         writepv=f"{pv_root}relay_{i}-S",
-        pva=True,
-        monitor=True,
-        pollinterval=None,
-        maxage=None,
     )

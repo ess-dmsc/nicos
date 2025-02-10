@@ -9,18 +9,12 @@ devices = dict(
         motorpv=f"{pvprefix}m12",
         has_powerauto=False,
         fmtstr="%.1f",
-        pollinterval=None,
-        monitor=True,
-        pva=True,
     ),
     mpos=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Cart positioning",
         motorpv=f"{pvprefix}m13",
         has_powerauto=False,
-        pollinterval=None,
-        monitor=True,
-        pva=True,
     ),
     mcart=device(
         "nicos.devices.generic.sequence.LockedDevice",

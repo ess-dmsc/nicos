@@ -75,8 +75,8 @@ class EpicsParameters:
             mandatory=False,
             default=3.0,
         ),
-        "monitor": Param("Use a PV monitor", type=bool, default=False),
-        "pva": Param("Use pva", type=bool, default=DEFAULT_EPICS_PROTOCOL == "pva"),
+        "monitor": Param("Use a PV monitor", type=bool, default=True),
+        "pva": Param("Use pva", type=bool, default=True),
         "to_forward": Param(
             "Associated PVs that should be forward by the forwarder",
             type=listof(tupleof(str, str, str, str, int)),
@@ -89,6 +89,10 @@ class EpicsParameters:
             default=[],
             userparam=False,
         ),
+    }
+    parameter_overrides = {
+        "pollinterval": Override(default=None),
+        "maxage": Override(default=None),
     }
 
 
@@ -583,7 +587,7 @@ class EpicsMappedReadable(EpicsReadable, MappedReadable):
         # MBBI, BI, etc. do not have units
         "unit": Override(mandatory=False, settable=False, volatile=False),
         # Mapping values are read from EPICS
-        "mapping": Override(mandatory=False, settable=False, userparam=False),
+        'mapping': Override(internal=True, mandatory=False, settable=False)
     }
 
     def doInit(self, mode):
@@ -644,7 +648,7 @@ class EpicsMappedMoveable(EpicsParameters, MappedMoveable):
         # MBBI, BI, etc. do not have units
         "unit": Override(mandatory=False, settable=False, volatile=False),
         # Mapping values are read from EPICS
-        "mapping": Override(mandatory=False, settable=False, userparam=False),
+        'mapping': Override(internal=True, mandatory=False, settable=False)
     }
 
     _record_fields = {

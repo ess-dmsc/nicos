@@ -6,12 +6,8 @@ pnp_pv_root = "foo:bar"
 
 devices = dict(
     heartbeat_read=device(
-        "nicos.devices.epics.pva.EpicsReadable",
+        "nicos_ess.devices.epics.pva.EpicsReadable",
         description="Heartbeat readback",
         readpv=f"{pnp_pv_root}:PNPHeartBeatCnt-S",
-        pva=True,
-        monitor=True,
-        pollinterval=0.5,
-        maxage=None,
     ),
 )
