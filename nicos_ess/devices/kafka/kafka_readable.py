@@ -180,13 +180,19 @@ class Da00Readable(KafkaReadable):
                 self._parse_new_data(variables)
                 self.update_arraydesc()
 
+                if len(self.arrayInfo().shape) == 1:
+                    plot_type = "hist-1d"
+                else:
+                    plot_type = "hist-2d"
+
                 if self.data_structure:
                     self.putResult(
                         1,
                         self.get_plot_data(),
                         timestamp,
                         msg.source_name,
-                        self.data_structure["plot_type"],
+                        plot_type,
+                        # self.data_structure["plot_type"],
                     )
             except Exception as e:
                 print(f"Could not decode message from topic: {e}")
