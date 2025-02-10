@@ -2,7 +2,7 @@ from contextlib import contextmanager
 
 from nicos import session
 from nicos.commands import helparglist, usercommand
-from nicos.core import ADMIN, SIMULATION, requires
+from nicos.core import ADMIN, SIMULATION, requires, waitForCompletion
 from nicos_ess.commands.scichat import scichat_send
 
 from nicos_ess.devices.datasinks.file_writer import Filewriter
@@ -44,19 +44,19 @@ def nexusfile_open(run_title=None):
     if run_title is None:
         run_title = session.experiment.run_title
     try:
-        # active_jobs = _find_filewriter_dev().get_active_jobs()
-        # if not active_jobs:
-        session.log.info("Setting run title to: %s", run_title)
-        start_filewriting(run_title)
-        # else:
-        #     #  Allow nested calls, but give a warning since it is not
-        #     #  a preferred way of writing scripts
-        #     session.log.warning(
-        #         "Filewriter already running. "
-        #         "Will not start a new file with title: %s",
-        #         run_title,
-        #     )
-        #     nested_call = True
+        active_job = _find_filewriter_dev().get_active_job()
+        if not active_job:
+            session.log.info("Setting run title to: %s", run_title)
+            start_filewriting(run_title)
+        else:
+            #  Allow nested calls, but give a warning since it is not
+            #  a preferred way of writing scripts
+            session.log.warning(
+                "Filewriter already running. "
+                "Will not start a new file with title: %s",
+                run_title,
+            )
+            nested_call = True
         yield
     except Exception as e:
         session.log.error("Could not start filewriting: %s", e)
@@ -80,21 +80,25 @@ def start_filewriting(run_title=None):
     """Start a file-writing job."""
     if run_title is not None and session.mode != SIMULATION:
         session.experiment.run_title = run_title
-    _find_filewriter_dev().start_job()
+    dev = _find_filewriter_dev()
+    dev.start_job()
     message = (
         "Starting filewriting\n"
         f"  Title: {session.experiment.run_title}\n"
         f"  Run number: {session.experiment.get_current_run_number()}"
     )
     scichat_send(message)
+    waitForCompletion(dev)
 
 
 @usercommand
 @helparglist("job_number")
 def stop_filewriting():
     """Stop a file-writing job."""
-    _find_filewriter_dev().stop_job()
+    dev = _find_filewriter_dev()
+    dev.stop_job()
     scichat_send("stopping filewriting")
+    waitForCompletion(dev)
 
 
 @usercommand
@@ -111,4 +115,6 @@ def replay_job(job_number):
 
     :param job_number: the number of the job to replay.
     """
-    _find_filewriter_dev().replay_job(job_number)
+    dev = _find_filewriter_dev()
+    dev.replay_job(job_number)
+    waitForCompletion(dev)

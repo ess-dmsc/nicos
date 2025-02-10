@@ -334,6 +334,14 @@ class Filewriter(Moveable):
     def doStart(self, value):
         pass
 
+    def doIsCompleted(self):
+        if self._current_job:
+            return False
+        return True
+
+    def get_active_job(self):
+        return self._current_job
+
     def doStatus(self, maxage=0):
         return self.curstatus
 
@@ -374,7 +382,7 @@ class Filewriter(Moveable):
         )
         structure = self._attached_nexus.get_structure(metainfo, file_num)
 
-        _ = createThread(
+        createThread(
             "file_writer_start_job",
             target=self._start_job,
             args=(file_path, file_num, structure),
@@ -476,7 +484,7 @@ class Filewriter(Moveable):
         file_num = incrementFileCounter()
         file_path = generate_filepath(file_num)
 
-        _ = createThread(
+        createThread(
             "file_writer_start_job",
             target=self._start_job,
             args=(file_path, file_num, message.nexus_structure),
