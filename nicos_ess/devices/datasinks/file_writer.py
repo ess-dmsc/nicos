@@ -347,22 +347,18 @@ class Filewriter(Moveable):
     def doStatus(self, maxage=0):
         return self.curstatus
 
+    def _update_status(self):
+        self._setROParam("curstatus", self._get_curstatus())
+
     def doStop(self):
-        self.log.warn("Dostop: immediate stop triggered")
         self._cleanup()
 
     def _cleanup(self):
-        self.log.info("Cleanup: initiating immediate stop cleanup.")
-
         self._immediate_stop.set()
 
         if self._current_job is not None:
             try:
-                now = datetime.now()
-                self.log.info(
-                    "Cleanup: sending stop message for job %s", self._current_job.job_id
-                )
-                self._controller.request_stop(self._current_job.job_id, now)
+                self._controller.request_stop(self._current_job.job_id, datetime.now())
             except Exception as e:
                 self.log.error("Cleanup: error sending stop message: %s", e)
 
@@ -379,8 +375,15 @@ class Filewriter(Moveable):
         self._current_job = None
         self.stored_job = None
         self._current_job_messages.clear()
+        self._update_status()
 
-        self.log.info("Cleanup: immediate stop cleanup complete.")
+    def _force_stop_all_history(self):
+        """
+        Expert method that normally should not be used.
+        It will request the stop of all jobs in the history.
+        """
+        for job in self.job_history:
+            self._controller.request_stop(job["job_id"], datetime.now())
 
     def start_job(self):
         if self._mode == SIMULATION:
@@ -488,14 +491,11 @@ class Filewriter(Moveable):
         self._consumer.seek(self.pool_topic, partition=partition, offset=offset)
         poll_start = time.monotonic()
         time_out_s = 5
-        self.log.warn("seeked to offset")
         while True:
             if self._immediate_stop.is_set():
                 return
 
-            self.log.warn("polling")
             data = self._consumer.poll(timeout_ms=5)
-            self.log.warn("polled")
             # Because there are multiple partitions, we might not get the message
             # we want immediately. So, we need to check whether the message is the
             # one we are looking for.
@@ -506,8 +506,6 @@ class Filewriter(Moveable):
                     "Could not replay job as could not retrieve job "
                     "information from Kafka"
                 )
-
-        self.log.warn("retrieved job information from Kafka")
 
         message = deserialise_pl72(data.value())
 
@@ -547,6 +545,7 @@ class Filewriter(Moveable):
         self._current_job = job
         self._current_job_messages = {}
 
+        self._update_status()
         job_id, kafka_offset = self._controller.request_start(
             filename, structure, job_id, start_time, stop_time
         )
@@ -554,6 +553,7 @@ class Filewriter(Moveable):
         self.stored_job = self._current_job.as_dict()
 
         while "start" not in self._current_job_messages:
+            self._update_status()
             if self._immediate_stop.is_set():
                 self._is_blocking.clear()
                 return
@@ -576,8 +576,9 @@ class Filewriter(Moveable):
 
         timeout = time.monotonic() + self.stoptimeout
         while "stop" not in self._current_job_messages:
+            self._update_status()
             if self._immediate_stop.is_set():
-                self.log.warn("immediate stop, returning out of stop loop")
+                self.log.info("immediate stop, returning out of stop loop")
                 self._is_blocking.clear()
                 return
             if time.monotonic() > timeout:
@@ -606,12 +607,12 @@ class Filewriter(Moveable):
         self.stored_job = None
         self._current_job_messages = {}
         self._is_blocking.clear()
+        self._update_status()
 
     def _new_messages_callback(self, messages):
-        self._setROParam("curstatus", self._get_curstatus())
+        self._update_status()
 
         for _, msg in sorted(messages, key=lambda x: x[0]):
-            self.log.error(msg[4:8])
             schema = msg[4:8]
             if schema == b"wrdn":
                 self._on_writing_finished(msg)
@@ -620,7 +621,6 @@ class Filewriter(Moveable):
             return
 
         for _, msg in sorted(messages, key=lambda x: x[0]):
-            self.log.error(msg[4:8])
             schema = msg[4:8]
             if schema == b"x5f2":
                 self._on_status_message(msg)
@@ -657,18 +657,13 @@ class Filewriter(Moveable):
             self._current_job_messages["status"] = status_info
 
     def _on_response_message(self, message):
-        self.log.warn("on_response")
         result = deserialise_answ(message)
-        self.log.warn(f"{result.job_id}")
-        self.log.warn(result)
         if result.job_id != self._current_job.job_id:
             return
 
         if result.action == ActionType.StartJob:
-            self.log.warn(f"on_start_response {result}")
             self._on_start_response(result)
         elif result.action == ActionType.SetStopTime:
-            self.log.warn(f"on_stopt_response {result}")
             self._on_stop_response(result)
 
     def _on_start_response(self, result):
@@ -700,7 +695,6 @@ class Filewriter(Moveable):
             self._update_historical_jobs(result)
             return
 
-        self.log.warn(result)
         if result.error_encountered:
             self._current_job_messages["written"] = (False, result.message)
         else:
