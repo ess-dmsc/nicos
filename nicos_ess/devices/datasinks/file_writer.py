@@ -609,6 +609,13 @@ class Filewriter(Moveable):
 
     def _new_messages_callback(self, messages):
         self._setROParam("curstatus", self._get_curstatus())
+
+        for _, msg in sorted(messages, key=lambda x: x[0]):
+            self.log.error(msg[4:8])
+            schema = msg[4:8]
+            if schema == b"wrdn":
+                self._on_writing_finished(msg)
+
         if not self._current_job:
             return
 
@@ -619,8 +626,6 @@ class Filewriter(Moveable):
                 self._on_status_message(msg)
             elif schema == b"answ":
                 self._on_response_message(msg)
-            elif schema == b"wrdn":
-                self._on_writing_finished(msg)
 
     def _no_messages_callback(self):
         pass
@@ -690,6 +695,11 @@ class Filewriter(Moveable):
 
     def _on_writing_finished(self, message):
         result = deserialise_wrdn(message)
+
+        if not self._current_job:
+            self._update_historical_jobs(result)
+            return
+
         self.log.warn(result)
         if result.error_encountered:
             self._current_job_messages["written"] = (False, result.message)
@@ -720,6 +730,18 @@ class Filewriter(Moveable):
         self.stored_job = None
         self._current_job_messages = {}
         self._is_blocking.clear()
+
+    def _update_historical_jobs(self, finished_job):
+        job_id = finished_job.job_id
+        for job in self.job_history:
+            if job["state"] == JobState.WRITTEN:
+                continue
+
+            if job["job_id"] == job_id:
+                job["state"] = JobState.WRITTEN
+                job["stop_time"] = datetime.now()
+                job["error_msg"] = finished_job.message
+                break
 
     def _check_okay_to_start(self):
         if not session.experiment.propinfo.get("proposal"):
