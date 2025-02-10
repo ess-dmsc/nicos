@@ -45,6 +45,17 @@ devices = dict(
         config_topic="nmx_forwarder_dynamic_config",
         brokers=configdata("config.KAFKA_BROKERS"),
     ),
+    FileWriter=device(
+        "nicos_ess.devices.datasinks.file_writer.Filewriter",
+        description="Device that controls the filewriter",
+        brokers=configdata("config.KAFKA_BROKERS"),
+        pool_topic="ess_filewriter_pool",
+        instrument_topic="nmx_filewriter",
+        statustopic=["nmx_filewriter", "ess_filewriter_status"],
+        timeoutinterval=5,
+        stoptimeout=5,
+        nexus="NexusStructure",
+    ),
     SciChat=device(
         "nicos_ess.devices.scichat.ScichatBot",
         description="Sends messages to SciChat",
