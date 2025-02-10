@@ -292,6 +292,7 @@ class Filewriter(Moveable):
     _current_job = None
     _current_job_messages = {}
     _immediate_stop = threading.Event()
+    _is_blocking = threading.Event()
 
     def doPreinit(self, mode):
         if session.sessiontype == POLLER or mode == SIMULATION:
@@ -320,6 +321,7 @@ class Filewriter(Moveable):
         if session.sessiontype == POLLER or mode == SIMULATION:
             return
         self._immediate_stop.clear()
+        self._is_blocking.clear()
         self._retrieve_last_job()
 
     def doRead(self, maxage=0):
@@ -335,7 +337,7 @@ class Filewriter(Moveable):
         pass
 
     def doIsCompleted(self):
-        if self._current_job:
+        if self._is_blocking.is_set():
             return False
         return True
 
@@ -382,6 +384,7 @@ class Filewriter(Moveable):
         )
         structure = self._attached_nexus.get_structure(metainfo, file_num)
 
+        self._is_blocking.set()
         createThread(
             "file_writer_start_job",
             target=self._start_job,
@@ -399,6 +402,7 @@ class Filewriter(Moveable):
             self.log.warn("no file writing in progress - ignoring stop command")
             return
 
+        self._is_blocking.set()
         createThread(
             "file_writer_stop_job",
             target=self._stop_job,
@@ -484,6 +488,7 @@ class Filewriter(Moveable):
         file_num = incrementFileCounter()
         file_path = generate_filepath(file_num)
 
+        self._is_blocking.set()
         createThread(
             "file_writer_start_job",
             target=self._start_job,
@@ -496,43 +501,6 @@ class Filewriter(Moveable):
             daemon=True,
             start=True,
         )
-
-        self.log.warn("started job thread")
-
-        # do we need a stop_thread?
-        # stop_thread = createThread(
-        #     "file_writer_stop_job",
-        #     target=self._stop_job_worker,
-        #     daemon=True,
-        #     start=True
-        # )
-
-        # self._start_job(
-        #     file_path,
-        #     file_num,
-        #     message.nexus_structure,
-        #     job_to_replay.start_time,
-        #     job_to_replay.stop_time,
-        #     replay_of=job_number,
-        # )
-        #
-        # while "written" not in self._current_job_messages:
-        #     if self._immediate_stop.is_set():
-        #         return
-        #     time.sleep(0.2)
-        #
-        # written, error_msg = self._current_job_messages["written"]
-        # if written:
-        #     self.log.info(f"job {job_number} replayed successfully")
-        #     self._current_job.state = JobState.WRITTEN
-        # else:
-        #     self.log.error(f"could replay job {job_number}: {error_msg}")
-        #     self._current_job.state = JobState.FAILED
-        #
-        # self._update_cached_jobs()
-        # self._current_job = None
-        # self.stored_job = None
-        # self._current_job_messages = {}
 
     def _start_job(
         self,
@@ -561,6 +529,7 @@ class Filewriter(Moveable):
 
         while "start" not in self._current_job_messages:
             if self._immediate_stop.is_set():
+                self._is_blocking.clear()
                 return
             time.sleep(0.1)
 
@@ -568,7 +537,9 @@ class Filewriter(Moveable):
 
         if started:
             self.log.info("file writing started")
+            self._is_blocking.clear()
         else:
+            self._is_blocking.clear()
             raise StartWritingRejectedException(error_msg)
 
     def _stop_job(self):
@@ -581,12 +552,14 @@ class Filewriter(Moveable):
         while "stop" not in self._current_job_messages:
             if self._immediate_stop.is_set():
                 self.log.warn("immediate stop, returning out of stop loop")
+                self._is_blocking.clear()
                 return
             if time.monotonic() > timeout:
                 self._current_job_messages["stop"] = (
                     False,
                     "timed out waiting for stop to be acknowledged",
                 )
+                self._is_blocking.clear()
                 break
             time.sleep(0.2)
 
@@ -606,6 +579,7 @@ class Filewriter(Moveable):
         self._current_job = None
         self.stored_job = None
         self._current_job_messages = {}
+        self._is_blocking.clear()
 
     def _new_messages_callback(self, messages):
         self._setROParam("curstatus", self._get_curstatus())
@@ -719,6 +693,7 @@ class Filewriter(Moveable):
         self._current_job = None
         self.stored_job = None
         self._current_job_messages = {}
+        self._is_blocking.clear()
 
     def _check_okay_to_start(self):
         if not session.experiment.propinfo.get("proposal"):
