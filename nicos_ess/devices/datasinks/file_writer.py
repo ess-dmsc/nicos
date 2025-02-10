@@ -635,6 +635,11 @@ class Filewriter(Moveable):
             return status.OK, ""
 
         if (
+            "start" not in self._current_job_messages
+            and "stop" not in self._current_job_messages
+        ):
+            return status.BUSY, "waiting for start acknowledgment"
+        elif (
             "start" in self._current_job_messages
             and "stop" not in self._current_job_messages
         ):
