@@ -688,17 +688,24 @@ class Filewriter(Moveable):
         else:
             self._current_job_messages["written"] = (True, "")
 
-        stopped, error_msg = self._current_job_messages["stop"]
+        stopped, error_msg = self._current_job_messages.get("stop", (False, ""))
 
         if stopped:
             self.log.info("file writing stopped")
             self._current_job.state = JobState.WRITTEN
         else:
-            self.log.error(
-                f"there was an issue with stopping file writing: {error_msg}"
+            written, written_error_msg = self._current_job_messages.get(
+                "written", (False, "")
             )
-            self._current_job.state = JobState.FAILED
-            self._current_job.error_msg = error_msg
+            if written:
+                self.log.info("file writing finished")
+                self._current_job.state = JobState.WRITTEN
+            else:
+                self.log.error(
+                    f"there was an issue with stopping file writing: {error_msg}"
+                )
+                self._current_job.state = JobState.FAILED
+                self._current_job.error_msg = error_msg
 
         self._update_cached_jobs()
         self._current_job = None
