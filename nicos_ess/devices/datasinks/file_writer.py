@@ -348,13 +348,39 @@ class Filewriter(Moveable):
         return self.curstatus
 
     def doStop(self):
-        # TODO: why is this not being called?
-        self.log.warn("Dostop")
+        self.log.warn("Dostop: immediate stop triggered")
+        self._cleanup()
+
+    def _cleanup(self):
+        self.log.info("Cleanup: initiating immediate stop cleanup.")
+
         self._immediate_stop.set()
-        # Give any loops time to stop
-        time.sleep(0.5)
-        self._immediate_stop.set()
-        self.stop_job()
+
+        if self._current_job is not None:
+            try:
+                now = datetime.now()
+                self.log.info(
+                    "Cleanup: sending stop message for job %s", self._current_job.job_id
+                )
+                self._controller.request_stop(self._current_job.job_id, now)
+            except Exception as e:
+                self.log.error("Cleanup: error sending stop message: %s", e)
+
+        wait_seconds = 0
+        max_wait = self.stoptimeout
+        while self._is_blocking.is_set() and wait_seconds < max_wait:
+            time.sleep(0.1)
+            wait_seconds += 0.1
+
+        if self._current_job is not None:
+            self._update_cached_jobs()
+
+        self._is_blocking.clear()
+        self._current_job = None
+        self.stored_job = None
+        self._current_job_messages.clear()
+
+        self.log.info("Cleanup: immediate stop cleanup complete.")
 
     def start_job(self):
         if self._mode == SIMULATION:
@@ -459,7 +485,7 @@ class Filewriter(Moveable):
         self.log.warn(f"replaying job {job_number}")
         self._immediate_stop.clear()
         partition, offset = job_to_replay.kafka_offset
-        self._consumer.seek(self.pool_topic, partition=partition, offset=offset - 1)
+        self._consumer.seek(self.pool_topic, partition=partition, offset=offset)
         poll_start = time.monotonic()
         time_out_s = 5
         self.log.warn("seeked to offset")
