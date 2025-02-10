@@ -168,9 +168,11 @@ class Da00Readable(KafkaReadable):
             sleep(0.5)
 
     def new_messages_callback(self, messages):
+        self.log.warn(f"New messages: {messages}")
         for timestamp, message in messages:
             try:
                 if get_schema(message) != "da00":
+                    self.log.warn(f"Schema not da00: {get_schema(message)}")
                     continue
                 msg = deserialise_da00(message)
                 # if msg.source_name != self.source_name:
@@ -180,7 +182,9 @@ class Da00Readable(KafkaReadable):
                 self._parse_new_data(variables)
                 self.update_arraydesc()
 
+                self.log.warn("Data structure if")
                 if self.data_structure:
+                    self.log.warn("Plotting data")
                     self.putResult(
                         1,
                         self.get_plot_data(),
