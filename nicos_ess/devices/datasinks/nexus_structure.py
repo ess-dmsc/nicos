@@ -22,7 +22,8 @@ ALLOWED_INSTRUMENT_NAMES = [
     "ymir",
     "nmx",
     "bifrost",
-    ""
+    "estia",
+    "",
 ]
 
 
