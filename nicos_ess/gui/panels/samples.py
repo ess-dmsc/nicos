@@ -17,7 +17,7 @@ from nicos_ess.gui.widgets.sample_widgets import (
     SamplePanelWidgets,
 )
 
-DEFAULT_PROPERTIES = ["optional_default_1", "optional_default_2", "optional_default_3"]
+DEFAULT_PROPERTIES = []
 SAMPLE_IDENTIFIER_KEY = "name"
 
 
@@ -89,6 +89,7 @@ class SamplePanel(PanelBase):
         self._remove_sample_values_from_table()
         self._remove_sample_id_from_selector(selected_sample_id)
         self.widgets.remove_dialog.close()
+        self._check_for_changes()
 
     def cancel_remove(self):
         self.widgets.remove_dialog.close()
@@ -120,6 +121,7 @@ class SamplePanel(PanelBase):
         self._show_edit_customise_buttons()
         self._make_table_read_only()
         self._unlock_sample_selector()
+        self._check_for_changes()
 
     def customise_clicked(self):
         self._hide_edit_customise_buttons()
@@ -171,6 +173,7 @@ class SamplePanel(PanelBase):
             self._enable_remove_and_edit_buttons(True)
         else:
             self._enable_remove_and_edit_buttons(False)
+        self._check_for_changes()
 
     def cancel_clicked(self):
         self._hide_edit_control_buttons()
@@ -232,6 +235,8 @@ class SamplePanel(PanelBase):
         self.widgets.btn_cancel.clicked.connect(self.cancel_clicked)
         self.widgets.selector.itemSelectionChanged.connect(self.selection_updated)
         self.widgets.info_table.cellClicked.connect(self.table_cell_clicked)
+        self.widgets.btn_apply.clicked.connect(self.apply_changes)
+        self.widgets.btn_discard.clicked.connect(self.discard_changes)
 
     def initialise_connection_status_listeners(self):
         PanelBase.initialise_connection_status_listeners(self)
@@ -259,15 +264,39 @@ class SamplePanel(PanelBase):
         self.widgets.btn_cancel.setEnabled(not viewonly)
         self.widgets.selector.setEnabled(not viewonly)
         self.widgets.info_table.setEnabled(not viewonly)
+        self._set_buttons_and_warning_behaviour(False)
+
+    def _check_for_changes(self):
+        has_changed = self.new_sample_info != self.old_sample_info
+        self._set_buttons_and_warning_behaviour(has_changed)
+
+    def apply_changes(self):
+        if self.mainwindow.current_status != "idle":
+            self.showInfo("Cannot change settings while a script is running!")
+            return
+        try:
+            self._set_samples()
+            self._set_buttons_and_warning_behaviour(False)
+        except Exception as error:
+            self.showError(str(error))
+
+    def discard_changes(self):
+        self.load_samples()
+        self._check_for_changes()
+
+    def _set_buttons_and_warning_behaviour(self, changed):
+        self.widgets.btn_apply.setEnabled(changed)
+        self.widgets.btn_discard.setEnabled(changed)
+        self.widgets.label_warning.setVisible(changed)
 
     def _button_behaviour_on_connect(self):
         self.widgets.btn_remove.setEnabled(False)
         self.widgets.btn_edit.setEnabled(False)
 
-    # def on_keyChange(self, key, value, time, expired):
-    #     print("key change, key:", key)
-    #     if not self.in_edit_mode and key in self.to_monitor:
-    #         self.load_samples()
+    def on_keyChange(self, key, value, time, expired):
+        print("key change, key:", key)
+        if not self.in_edit_mode and key in self.to_monitor:
+            self.load_samples()
 
     def load_samples(self, samples=None):
         self.old_sample_info = samples if samples else self._get_samples()
@@ -282,6 +311,16 @@ class SamplePanel(PanelBase):
             return samples
         else:
             return []
+
+    def _set_samples(self):
+        if self.new_sample_info == self.old_sample_info:
+            return
+        samples = {}
+        for index, sample in enumerate(self.new_sample_info):
+            if not sample.get("name", ""):
+                sample["name"] = f"sample {index + 1}"
+            samples[index] = sample
+        self.client.run(f"Exp.sample.set_samples({dict(samples)})")
 
     def get_loaded_sample(self, sample_id):
         for sample in self.new_sample_info:
