@@ -6,7 +6,11 @@ main_window = docked(
             "Experiment",
             panel("nicos_ess.gui.panels.exp_panel.ExpPanel", hide_sample=False),
         ),
-        ("Setup", panel("nicos_ess.gui.panels.setups.SetupsPanel")),
+        ("Instrument setup", panel("nicos_ess.gui.panels.setups.SetupsPanel")),
+        (
+            "Sample configuration",
+            panel("nicos_ess.gui.panels.samples.SamplePanel"),
+        ),
         ("  ", panel("nicos_ess.gui.panels.empty.EmptyPanel")),
         (
             "Instrument interaction",
