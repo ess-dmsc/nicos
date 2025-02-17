@@ -30,11 +30,11 @@ devices = dict(
         sample="Sample",
         cache_filepath="/opt/nicos-data/cached_proposals.json",
     ),
-    pnp_listener=device(
-        "nicos_ess.devices.pnp_listener.UDPHeartbeatsManager",
-        description="Listens for PnP heartbeats",
-        port=24601,
-    ),
+    # pnp_listener=device(
+    #     "nicos_ess.devices.pnp_listener.UDPHeartbeatsManager",
+    #     description="Listens for PnP heartbeats",
+    #     port=24601,
+    # ),
     conssink=device(
         "nicos_ess.devices.datasinks.console_scan_sink.ConsoleScanSink",
     ),
@@ -44,13 +44,13 @@ devices = dict(
     liveview=device(
         "nicos.devices.datasinks.LiveViewSink",
     ),
-    KafkaForwarder=device(
-        "nicos_ess.devices.forwarder.EpicsKafkaForwarder",
-        description="Monitors and configures the Forwarder",
-        statustopic=["ymir_forwarder_dynamic_status"],
-        config_topic="ymir_forwarder_dynamic_config",
-        brokers=configdata("config.KAFKA_BROKERS"),
-    ),
+    # KafkaForwarder=device(
+    #     "nicos_ess.devices.forwarder.EpicsKafkaForwarder",
+    #     description="Monitors and configures the Forwarder",
+    #     statustopic=["ymir_forwarder_dynamic_status"],
+    #     config_topic="ymir_forwarder_dynamic_config",
+    #     brokers=configdata("config.KAFKA_BROKERS"),
+    # ),
     NexusStructure_Basic=device(
         "nicos_ess.devices.datasinks.nexus_structure.NexusStructureJsonFile",
         description="Provides the NeXus structure",
@@ -63,26 +63,26 @@ devices = dict(
         "nicos.devices.generic.DeviceAlias",
         devclass="nicos_ess.devices.datasinks.nexus_structure.NexusStructureJsonFile",
     ),
-    FileWriterStatus=device(
-        "nicos_ess.devices.datasinks.file_writer.FileWriterStatus",
-        description="Status of the file-writer",
-        brokers=configdata("config.KAFKA_BROKERS"),
-        statustopic=["ymir_filewriter"],
-        unit="",
-    ),
-    FileWriterControl=device(
-        "nicos_ess.devices.datasinks.file_writer.FileWriterControlSink",
-        description="Control for the file-writer",
-        brokers=configdata("config.KAFKA_BROKERS"),
-        pool_topic="ess_filewriter_pool",
-        instrument_topic="ymir_filewriter",
-        status="FileWriterStatus",
-        nexus="NexusStructure",
-        use_instrument_directory=True,
-    ),
-    SciChat=device(
-        "nicos_ess.devices.scichat.ScichatBot",
-        description="Sends messages to SciChat",
-        brokers=configdata("config.KAFKA_BROKERS"),
-    ),
+    # FileWriterStatus=device(
+    #     "nicos_ess.devices.datasinks.file_writer.FileWriterStatus",
+    #     description="Status of the file-writer",
+    #     brokers=configdata("config.KAFKA_BROKERS"),
+    #     statustopic=["ymir_filewriter"],
+    #     unit="",
+    # ),
+    # FileWriterControl=device(
+    #     "nicos_ess.devices.datasinks.file_writer.FileWriterControlSink",
+    #     description="Control for the file-writer",
+    #     brokers=configdata("config.KAFKA_BROKERS"),
+    #     pool_topic="ess_filewriter_pool",
+    #     instrument_topic="ymir_filewriter",
+    #     status="FileWriterStatus",
+    #     nexus="NexusStructure",
+    #     use_instrument_directory=True,
+    # ),
+    # SciChat=device(
+    #     "nicos_ess.devices.scichat.ScichatBot",
+    #     description="Sends messages to SciChat",
+    #     brokers=configdata("config.KAFKA_BROKERS"),
+    # ),
 )
