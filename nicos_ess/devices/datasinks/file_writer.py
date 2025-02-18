@@ -152,7 +152,8 @@ class FileWriterStatus(KafkaStatusHandler):
     def doPreinit(self, mode):
         KafkaStatusHandler.doPreinit(self, mode)
         self._lock = threading.RLock()
-        self._is_blocking = threading.Event().clear()
+        self._is_blocking = threading.Event()
+        self._is_blocking.clear()
         self._jobs = {}
         self._jobs_in_order = OrderedDict()
         self._update_status()
@@ -512,7 +513,7 @@ class FileWriterControlSink(Device):
             self._consumer.subscribe([self.pool_topic])
 
     def doIsCompleted(self):
-        is_blocking = self.attached_status.is_it_blocking()
+        is_blocking = self._attached_status.is_it_blocking()
         if is_blocking:
             return False
         return True
