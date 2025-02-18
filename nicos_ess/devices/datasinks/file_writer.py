@@ -106,6 +106,9 @@ class JobRecord:
     def no_start_ack(self, error_msg):
         self.state = JobState.REJECTED
         self.set_error_msg(error_msg)
+        session.log.error(
+            f"Job #{self.job_number} failed to start writing: {error_msg}"
+        )
 
     def on_stop(self):
         self.state = JobState.WRITTEN
@@ -113,6 +116,9 @@ class JobRecord:
     def on_lost(self, error_msg):
         self.state = JobState.FAILED
         self.set_error_msg(error_msg)
+        session.log.error(
+            f"Job #{self.job_number} failed to write successfully: {error_msg}"
+        )
 
     def is_overdue(self, leeway):
         return (
@@ -527,7 +533,7 @@ class FileWriterControlSink(Waitable):
         return self._attached_status.curstatus
 
     def doRead(self, maxage=0):
-        return self.get_active_jobs()
+        return len(self.get_active_jobs())
 
     def start_job(self):
         """Start a new file-writing job."""
