@@ -27,17 +27,16 @@ from nicos.core import (
     ADMIN,
     MASTER,
     Attach,
+    ConfigurationError,
     Param,
     host,
     listof,
     status,
-    ConfigurationError,
 )
 from nicos.core.constants import SIMULATION
 from nicos.core.device import Device
 from nicos.core.params import anytype
 from nicos.utils import printTable, readFileCounter, updateFileCounter
-
 from nicos_ess.devices.datasinks.nexus_structure import NexusStructureProvider
 from nicos_ess.devices.kafka.consumer import KafkaConsumer
 from nicos_ess.devices.kafka.producer import KafkaProducer
@@ -118,6 +117,12 @@ class JobRecord:
     def is_overdue(self, leeway):
         return (
             self.state == JobState.STARTED and currenttime() > self.next_update + leeway
+        )
+
+    def is_not_started(self, leeway):
+        return (
+            self.state == JobState.NOT_STARTED
+            and currenttime() > self.start_time + leeway
         )
 
     def stop_request(self, stop_time):
@@ -257,6 +262,7 @@ class FileWriterStatus(KafkaStatusHandler):
     def no_messages_callback(self):
         with self._lock:
             self._check_for_lost_jobs()
+            self._check_rejected_jobs()
             self._update_status()
 
     def _check_for_lost_jobs(self):
@@ -269,6 +275,15 @@ class FileWriterStatus(KafkaStatusHandler):
                 # Sent stop command before lost
                 self._job_stopped(overdue)
         if overdue_jobs:
+            self._update_cached_jobs()
+
+    def _check_rejected_jobs(self):
+        not_started_jobs = [
+            k for k, v in self._jobs.items() if v.is_not_started(self.timeoutinterval)
+        ]
+        for not_started in not_started_jobs:
+            self._jobs[not_started].no_start_ack("no start acknowledgement")
+        if not_started_jobs:
             self._update_cached_jobs()
 
     def doInfo(self):
@@ -614,11 +629,11 @@ class FileWriterControlSink(Device):
                     "number is required to start writing."
                 )
             else:
-                raise RuntimeError("cannot start writing as proposal number not " "set")
+                raise RuntimeError("cannot start writing as proposal number not set")
         active_jobs = self.get_active_jobs()
         if active_jobs:
             raise AlreadyWritingException(
-                "cannot start writing as writing " "already in progress"
+                "cannot start writing as writing already in progress"
             )
 
     def get_active_jobs(self):
@@ -660,12 +675,10 @@ class FileWriterControlSink(Device):
                 job_to_replay = job
                 break
         if not job_to_replay:
-            raise RuntimeError(
-                "Could not replay job as that job number was " "not found"
-            )
+            raise RuntimeError("Could not replay job as that job number was not found")
         if not job_to_replay:
             raise RuntimeError(
-                "Could not replay job as no stop time defined " "for that job"
+                "Could not replay job as no stop time defined for that job"
             )
 
         partition, offset = job_to_replay.kafka_offset
