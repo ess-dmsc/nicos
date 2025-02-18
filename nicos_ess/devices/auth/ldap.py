@@ -34,7 +34,7 @@ class Authenticator(LDAPAuthenticator):
         try:
             connection = ldap3.Connection(
                 self.uri,
-                user=f"{username}@ESSS.SE",
+                user=f"{username}@ess.eu",
                 password=password,
                 auto_bind=True,
                 read_only=True,
