@@ -197,7 +197,6 @@ class ExpPanel(PanelBase):
         self.proposalNum.setText(self.old_settings.proposal_id)
         self.propTitle.setText(self.old_settings.title)
         self.errorAbortBox.setChecked(self.old_settings.abort_on_error)
-        self.notifEmails.setPlainText("\n".join(self.old_settings.notifications))
         self._update_samples_model(self.old_settings.samples)
         self._update_users_model(self.old_settings.users)
         self._update_contacts_model(self.old_settings.local_contacts)
@@ -242,7 +241,6 @@ class ExpPanel(PanelBase):
         self._update_samples_model([])
         self._update_users_model([])
         self._update_contacts_model([])
-        self.notifEmails.setPlainText("")
         self.old_settings = ProposalSettings()
         self.new_settings = ProposalSettings()
         PanelBase.on_client_disconnected(self)
@@ -257,7 +255,6 @@ class ExpPanel(PanelBase):
             control.setEnabled(not viewonly)
         for table in self._tables:
             self.set_table_read_only(table, viewonly)
-        self.notifEmails.setEnabled(not viewonly)
         self.errorAbortBox.setEnabled(not viewonly)
         self.queryDBButton.setEnabled(not viewonly)
         self.addUserButton.setEnabled(not viewonly)
@@ -430,13 +427,6 @@ class ExpPanel(PanelBase):
     @pyqtSlot()
     def on_errorAbortBox_clicked(self):
         self.new_settings.abort_on_error = self.errorAbortBox.isChecked()
-        self._check_for_changes()
-
-    @pyqtSlot()
-    def on_notifEmails_textChanged(self):
-        self.new_settings.notifications = (
-            self.notifEmails.toPlainText().strip().splitlines()
-        )
         self._check_for_changes()
 
     def _normalise_contacts(self, contacts):
