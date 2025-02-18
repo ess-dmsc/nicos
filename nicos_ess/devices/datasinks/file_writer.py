@@ -34,8 +34,8 @@ from nicos.core import (
     status,
 )
 from nicos.core.constants import SIMULATION
-from nicos.core.device import Device
-from nicos.core.params import anytype
+from nicos.core.device import Device, Waitable
+from nicos.core.params import Override, anytype
 from nicos.utils import printTable, readFileCounter, updateFileCounter
 from nicos_ess.devices.datasinks.nexus_structure import NexusStructureProvider
 from nicos_ess.devices.kafka.consumer import KafkaConsumer
@@ -458,7 +458,7 @@ class FileWriterController:
         producer.produce(self.instrument_topic, message)
 
 
-class FileWriterControlSink(Device):
+class FileWriterControlSink(Waitable):
     """Sink for the NeXus file-writer"""
 
     parameters = {
@@ -499,6 +499,11 @@ class FileWriterControlSink(Device):
         "nexus": Attach("Supplies the NeXus file structure", NexusStructureProvider),
     }
 
+    parameter_overrides = {
+        "unit": Override(default="", settable=False, mandatory=False),
+        "fmtstr": Override(default="%d", settable=False, mandatory=False),
+    }
+
     def doInit(self, mode):
         self._active_sim_job = False
         self._consumer = None
@@ -517,6 +522,12 @@ class FileWriterControlSink(Device):
         if is_blocking:
             return False
         return True
+
+    def doStatus(self, maxage=0):
+        return self._attached_status.curstatus
+
+    def doRead(self, maxage=0):
+        return self.get_active_jobs()
 
     def start_job(self):
         """Start a new file-writing job."""
