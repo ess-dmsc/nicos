@@ -3,15 +3,14 @@ import json
 
 from nicos import session
 from nicos.core import (
+    ConfigurationError,
     Device,
     NicosError,
     Override,
     Param,
-    relative_path,
-    ConfigurationError,
     oneof,
+    relative_path,
 )
-
 from nicos_ess.nexus.converter import NexusTemplateConverter
 
 ALLOWED_INSTRUMENT_NAMES = [
@@ -23,7 +22,7 @@ ALLOWED_INSTRUMENT_NAMES = [
     "nmx",
     "bifrost",
     "estia",
-    ""
+    "",
 ]
 
 
@@ -127,6 +126,7 @@ class NexusStructureJsonFile(NexusStructureProvider):
             self._create_dataset(
                 "experiment_description", metainfo[("Exp", "title")][0]
             ),
+            self._create_dataset("scripts", metainfo[("Exp", "scripts")][-1]),
             self._create_dataset("entry_identifier", str(counter)),
             self._create_dataset("entry_identifier_uuid", metainfo[("Exp", "job_id")]),
         ]
