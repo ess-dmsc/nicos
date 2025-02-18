@@ -284,7 +284,14 @@ class FileWriterStatus(KafkaStatusHandler):
 
     def _update_status(self):
         new_status = (status.OK, "")
-        if len(self._jobs) > 0:
+        job_states = {job.state for job in self._jobs.values()}
+        if {JobState.FAILED, JobState.REJECTED}.intersection(job_states):
+            new_status = (status.ERROR, "job failed")
+            for job in self._jobs.values():
+                if job.state in (JobState.FAILED, JobState.REJECTED):
+                    self._job_stopped(job.job_id)
+
+        elif len(self._jobs) > 0:
             new_status = (status.BUSY, "recording data")
         if new_status != self.curstatus:
             self._set_status(new_status)
