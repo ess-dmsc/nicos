@@ -2,9 +2,8 @@ from contextlib import contextmanager
 
 from nicos import session
 from nicos.commands import helparglist, usercommand
-from nicos.core import ADMIN, SIMULATION, requires
+from nicos.core import ADMIN, SIMULATION, requires, waitForCompletion
 from nicos_ess.commands.scichat import scichat_send
-
 from nicos_ess.devices.datasinks.file_writer import FileWriterControlSink
 
 
@@ -52,8 +51,7 @@ def nexusfile_open(run_title=None):
             #  Allow nested calls, but give a warning since it is not
             #  a preferred way of writing scripts
             session.log.warning(
-                "Filewriter already running. "
-                "Will not start a new file with title: %s",
+                "Filewriter already running. Will not start a new file with title: %s",
                 run_title,
             )
             nested_call = True
@@ -80,13 +78,15 @@ def start_filewriting(run_title=None):
     """Start a file-writing job."""
     if run_title is not None and session.mode != SIMULATION:
         session.experiment.run_title = run_title
-    _find_filewriter_dev().start_job()
+    dev = _find_filewriter_dev()
+    dev.start_job()
     message = (
         "Starting filewriting\n"
         f"  Title: {session.experiment.run_title}\n"
         f"  Run number: {session.experiment.get_current_run_number()}"
     )
     scichat_send(message)
+    waitForCompletion(dev)
 
 
 @usercommand
@@ -96,8 +96,10 @@ def stop_filewriting(job_number=None):
 
     :param job_number: the job to stop, only required if more than one job.
     """
-    _find_filewriter_dev().stop_job(job_number)
+    dev = _find_filewriter_dev()
+    dev.stop_job(job_number)
     scichat_send("stopping filewriting")
+    waitForCompletion(dev)
 
 
 @usercommand
@@ -114,4 +116,6 @@ def replay_job(job_number):
 
     :param job_number: the number of the job to replay.
     """
-    _find_filewriter_dev().replay_job(job_number)
+    dev = _find_filewriter_dev()
+    dev.replay_job(job_number)
+    waitForCompletion(dev)
