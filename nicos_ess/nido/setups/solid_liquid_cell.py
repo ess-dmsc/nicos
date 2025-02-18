@@ -1,6 +1,6 @@
 description = "The solid liquid cells for ESTIA"
 
-pv_root = "SE:SE-BV:"
+pv_root = "SE:SE-EK9000-001:"
 
 devices = dict()
 
