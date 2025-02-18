@@ -64,22 +64,16 @@ devices = dict(
         "nicos.devices.generic.DeviceAlias",
         devclass="nicos_ess.devices.datasinks.nexus_structure.NexusStructureJsonFile",
     ),
-    FileWriterStatus=device(
-        "nicos_ess.devices.datasinks.file_writer.FileWriterStatus",
-        description="Status of the file-writer",
-        brokers=configdata("config.KAFKA_BROKERS"),
-        statustopic=["nido_filewriter", "ess_filewriter_status"],
-        unit="",
-    ),
-    FileWriterControl=device(
-        "nicos_ess.devices.datasinks.file_writer.FileWriterControlSink",
-        description="Control for the file-writer",
+    FileWriter=device(
+        "nicos_ess.devices.datasinks.file_writer.Filewriter",
+        description="Device that controls the filewriter",
         brokers=configdata("config.KAFKA_BROKERS"),
         pool_topic="ess_filewriter_pool",
         instrument_topic="nido_filewriter",
-        status="FileWriterStatus",
+        statustopic=["nido_filewriter", "ess_filewriter_status"],
+        timeoutinterval=5,
+        stoptimeout=5,
         nexus="NexusStructure",
-        use_instrument_directory=True,
     ),
     SciChat=device(
         "nicos_ess.devices.scichat.ScichatBot",
