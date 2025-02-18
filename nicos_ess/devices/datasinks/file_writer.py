@@ -119,12 +119,6 @@ class JobRecord:
             self.state == JobState.STARTED and currenttime() > self.next_update + leeway
         )
 
-    def is_not_started(self, leeway):
-        return (
-            self.state == JobState.NOT_STARTED
-            and currenttime() > self.start_time + leeway
-        )
-
     def stop_request(self, stop_time):
         self.stop_time = stop_time
 
@@ -158,6 +152,7 @@ class FileWriterStatus(KafkaStatusHandler):
     def doPreinit(self, mode):
         KafkaStatusHandler.doPreinit(self, mode)
         self._lock = threading.RLock()
+        self._is_blocking = threading.Event().clear()
         self._jobs = {}
         self._jobs_in_order = OrderedDict()
         self._update_status()
@@ -246,6 +241,8 @@ class FileWriterStatus(KafkaStatusHandler):
         else:
             self.log.debug("request to start writing failed for job %s", result.job_id)
             self._jobs[result.job_id].no_start_ack(result.message)
+        self.log.warn(f"Cleared start blocking flag for job {result.job_id}")
+        self._is_blocking.clear()
 
     def _on_stop_response(self, result):
         if not self._jobs[result.job_id].stop_requested:
@@ -258,11 +255,12 @@ class FileWriterStatus(KafkaStatusHandler):
         else:
             self.log.debug("request to stop writing failed for job %s", result.job_id)
             self._jobs[result.job_id].set_error_msg(result.message)
+        self.log.warn(f"Cleared stop blocking flag for job {result.job_id}")
+        self._is_blocking.clear()
 
     def no_messages_callback(self):
         with self._lock:
             self._check_for_lost_jobs()
-            self._check_rejected_jobs()
             self._update_status()
 
     def _check_for_lost_jobs(self):
@@ -275,19 +273,6 @@ class FileWriterStatus(KafkaStatusHandler):
                 # Sent stop command before lost
                 self._job_stopped(overdue)
         if overdue_jobs:
-            self._update_cached_jobs()
-
-    def _check_rejected_jobs(self):
-        self.log.warn("checking for rejected jobs")
-        not_started_jobs = [
-            k for k, v in self._jobs.items() if v.is_not_started(self.timeoutinterval)
-        ]
-        self.log.warn("not started jobs: %s", not_started_jobs)
-        for not_started in not_started_jobs:
-            self.log.warn("job %s was not started", not_started)
-            self._jobs[not_started].no_start_ack("no start acknowledgement")
-        if not_started_jobs:
-            self.log.warn("updating cached jobs")
             self._update_cached_jobs()
 
     def doInfo(self):
@@ -340,6 +325,15 @@ class FileWriterStatus(KafkaStatusHandler):
     @property
     def jobs(self):
         return copy.deepcopy(self._jobs)
+
+    def set_blocking(self):
+        self._is_blocking.set()
+
+    def clear_blocking(self):
+        self._is_blocking.clear()
+
+    def is_it_blocking(self):
+        return self._is_blocking.is_set()
 
 
 def incrementFileCounter():
@@ -517,6 +511,12 @@ class FileWriterControlSink(Device):
             self._consumer = KafkaConsumer.create(self.brokers)
             self._consumer.subscribe([self.pool_topic])
 
+    def doIsCompleted(self):
+        is_blocking = self.attached_status.is_it_blocking()
+        if is_blocking:
+            return False
+        return True
+
     def start_job(self):
         """Start a new file-writing job."""
         self.check_okay_to_start()
@@ -575,6 +575,7 @@ class FileWriterControlSink(Device):
         job.replay_of = replay_of
         job.stop_time = stop_time
         self._attached_status.add_job(job)
+        self._attached_status.set_blocking()
 
     def stop_job(self, job_number=None):
         """Stop a file-writing job.
@@ -623,6 +624,7 @@ class FileWriterControlSink(Device):
         job = self._attached_status.jobs[job_id]
         self._controller.request_stop(job.job_id, stop_time, job.service_id)
         self._attached_status.mark_for_stop(job_id, stop_time)
+        self._attached_status.set_blocking()
 
     def check_okay_to_start(self):
         if not session.experiment.propinfo.get("proposal"):
