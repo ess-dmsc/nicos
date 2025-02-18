@@ -14,11 +14,15 @@ devices = dict(
     LDAPAuth=device(
         "nicos_ess.devices.auth.ldap.Authenticator",
         uri=[
-            "esss.lu.se",
+            "dc01.esss.lu.se",
+            "dc02.esss.lu.se",
+            "dc03.esss.lu.se"
         ],
         userbasedn="dc=esss,dc=lu,dc=se",
         grouproles={
-            "ECDC": "admin",
+            #"ECDC SE": "admin", # Uncomment to give 'ECDC SE' group admin powers 
+            "ECDC SE": "user", # Uncomment to give 'ECDC SE' group user powers 
+            #"ECDC SE": "guest", # Uncomment to give 'ECDC SE' group guest powers 
         },
     ),
     Daemon=device(
