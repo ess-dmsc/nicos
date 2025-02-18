@@ -106,9 +106,6 @@ class JobRecord:
     def no_start_ack(self, error_msg):
         self.state = JobState.REJECTED
         self.set_error_msg(error_msg)
-        session.log.error(
-            f"Job #{self.job_number} failed to start writing: {error_msg}"
-        )
 
     def on_stop(self):
         self.state = JobState.WRITTEN
@@ -116,9 +113,6 @@ class JobRecord:
     def on_lost(self, error_msg):
         self.state = JobState.FAILED
         self.set_error_msg(error_msg)
-        session.log.error(
-            f"Job #{self.job_number} failed to write successfully: {error_msg}"
-        )
 
     def is_overdue(self, leeway):
         return (
@@ -246,7 +240,7 @@ class FileWriterStatus(KafkaStatusHandler):
             self._jobs[result.job_id].on_writing(self.statusinterval)
             self._jobs[result.job_id].service_id = result.service_id
         else:
-            self.log.debug("request to start writing failed for job %s", result.job_id)
+            self.log.error("request to start writing failed for job %s", result.job_id)
             self._jobs[result.job_id].no_start_ack(result.message)
         self.log.warn(f"Cleared start blocking flag for job {result.job_id}")
         self._is_blocking.clear()
@@ -260,7 +254,7 @@ class FileWriterStatus(KafkaStatusHandler):
                 "request to stop writing succeeded for job %s", result.job_id
             )
         else:
-            self.log.debug("request to stop writing failed for job %s", result.job_id)
+            self.log.error("request to stop writing failed for job %s", result.job_id)
             self._jobs[result.job_id].set_error_msg(result.message)
         self.log.warn(f"Cleared stop blocking flag for job {result.job_id}")
         self._is_blocking.clear()
