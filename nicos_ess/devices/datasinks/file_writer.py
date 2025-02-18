@@ -278,12 +278,16 @@ class FileWriterStatus(KafkaStatusHandler):
             self._update_cached_jobs()
 
     def _check_rejected_jobs(self):
+        self.log.warn("checking for rejected jobs")
         not_started_jobs = [
             k for k, v in self._jobs.items() if v.is_not_started(self.timeoutinterval)
         ]
+        self.log.warn("not started jobs: %s", not_started_jobs)
         for not_started in not_started_jobs:
+            self.log.warn("job %s was not started", not_started)
             self._jobs[not_started].no_start_ack("no start acknowledgement")
         if not_started_jobs:
+            self.log.warn("updating cached jobs")
             self._update_cached_jobs()
 
     def doInfo(self):
