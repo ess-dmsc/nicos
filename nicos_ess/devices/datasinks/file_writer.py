@@ -337,8 +337,11 @@ class FileWriterStatus(KafkaStatusHandler):
     def jobs(self):
         return copy.deepcopy(self._jobs)
 
-    def set_blocking(self):
+    def set_blocking(self, timeout=5):
         self._is_blocking.set()
+        timer = threading.Timer(timeout, self.clear_blocking)
+        timer.daemon = True
+        timer.start()
 
     def clear_blocking(self):
         self._is_blocking.clear()
