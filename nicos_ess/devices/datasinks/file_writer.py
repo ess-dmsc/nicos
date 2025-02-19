@@ -289,6 +289,9 @@ class FileWriterStatus(KafkaStatusHandler):
             new_status = (status.ERROR, "job failed")
             for job in self._jobs.values():
                 if job.state in (JobState.FAILED, JobState.REJECTED):
+                    if not job.stop_time:
+                        job.stop_time = datetime.now()
+
                     self._job_stopped(job.job_id)
 
         elif len(self._jobs) > 0:
