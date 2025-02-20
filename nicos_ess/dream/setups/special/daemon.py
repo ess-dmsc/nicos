@@ -20,7 +20,7 @@ devices = dict(
         ],
         userbasedn="dc=esss,dc=lu,dc=se",
         grouproles={
-            "ECDC SE": "guest"
+            "ECDC SE": "user"
         },
     ),
     Daemon=device(
