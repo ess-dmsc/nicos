@@ -11,10 +11,23 @@ devices = dict(
             ("admin", "f3309476bdb36550aa8fb90ae748c9cc", "admin"),
         ],
     ),
+    LDAPAuth=device(
+        "nicos_ess.devices.auth.ldap.Authenticator",
+        uri=[
+            "dc01.esss.lu.se",
+            "dc02.esss.lu.se",
+            "dc03.esss.lu.se"
+        ],
+        userbasedn="dc=esss,dc=lu,dc=se",
+        grouproles={
+            "ECDC": "user",
+            "ECDC SE": "user"
+        },
+    ),
     Daemon=device(
         "nicos.services.daemon.NicosDaemon",
         server="",
-        authenticators=["Auth"],
+        authenticators=["Auth", "LDAPAuth"],
         loglevel="debug",
     ),
 )
