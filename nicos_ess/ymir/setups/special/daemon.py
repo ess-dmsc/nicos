@@ -20,9 +20,8 @@ devices = dict(
         ],
         userbasedn="dc=esss,dc=lu,dc=se",
         grouproles={
-            #"ECDC SE": "admin", # Uncomment to give 'ECDC SE' group admin powers 
-            "ECDC SE": "user", # Uncomment to give 'ECDC SE' group user powers 
-            #"ECDC SE": "guest", # Uncomment to give 'ECDC SE' group guest powers 
+            "ECDC": "user",
+            "ECDC SE": "user"
         },
     ),
     Daemon=device(

@@ -21,6 +21,7 @@ devices = dict(
         ],
         userbasedn="dc=esss,dc=lu,dc=se",
         grouproles={
+            "ECDC": "user",
             "ECDC SE": "user"
         },
     ),
