@@ -126,7 +126,7 @@ class NexusStructureJsonFile(NexusStructureProvider):
             self._create_dataset(
                 "experiment_description", metainfo[("Exp", "title")][0]
             ),
-            self._create_dataset("scripts", metainfo[("Exp", "scripts")][-1]),
+            self._create_dataset("scripts", metainfo[("Exp", "scripts")][0]),
             self._create_dataset("entry_identifier", str(counter)),
             self._create_dataset("entry_identifier_uuid", metainfo[("Exp", "job_id")]),
         ]
