@@ -11,20 +11,19 @@ from nicos.core import (
     SIMULATION,
     Attach,
     Device,
+    DevStatistics,
     Measurable,
     Param,
+    Readable,
     UsageError,
     listof,
     mailaddress,
     none_or,
     oneof,
-    DevStatistics,
-    Readable,
 )
-from nicos.core.params import subdir, expanded_path
+from nicos.core.params import expanded_path, subdir
 from nicos.devices.sample import Sample
 from nicos.utils import createThread, readFileCounter
-
 from nicos_ess.devices.datamanager import DataManager
 
 
@@ -89,28 +88,28 @@ class EssExperiment(Device):
             userparam=False,
         ),
         "counterfile": Param(
-            "Name of the file with data counters in " "dataroot and datapath",
+            "Name of the file with data counters in dataroot and datapath",
             default="counters",
             userparam=False,
             type=subdir,
         ),
         "lastpoint": Param(
-            "Last used value of the point counter - " "ONLY for display purposes",
+            "Last used value of the point counter - ONLY for display purposes",
             type=int,
             internal=True,
         ),
         "lastscan": Param(
-            "Last used value of the scan counter - " "ONLY for display purposes",
+            "Last used value of the scan counter - ONLY for display purposes",
             type=int,
             internal=True,
         ),
         "forcescandata": Param(
-            "If true, force scan datasets to be created " "also for single counts",
+            "If true, force scan datasets to be created also for single counts",
             type=bool,
             default=False,
         ),
         "dataroot": Param(
-            "Root data path under which all proposal " "specific paths are created",
+            "Root data path under which all proposal specific paths are created",
             mandatory=True,
             type=expanded_path,
         ),
@@ -120,6 +119,7 @@ class EssExperiment(Device):
             settable=True,
             internal=True,
             no_sim_restore=True,
+            category="experiment",
         ),
         "errorbehavior": Param(
             "Behavior on unhandled errors in commands",
@@ -135,7 +135,7 @@ class EssExperiment(Device):
             internal=True,
         ),
         "envlist": Param(
-            "List of default environment device names to " "read at every scan point",
+            "List of default environment device names to read at every scan point",
             type=listof(str),
             settable=True,
             internal=True,
@@ -182,7 +182,7 @@ class EssExperiment(Device):
 
     def new(self, proposal, title=None, localcontact=None, user=None, **kwds):
         if self._mode == SIMULATION:
-            raise UsageError("Simulating switching experiments is not " "supported!")
+            raise UsageError("Simulating switching experiments is not supported!")
 
         proposal = str(proposal)
 
@@ -390,7 +390,7 @@ class EssExperiment(Device):
             else:
                 if not isinstance(det, Measurable):
                     self.log.warning(
-                        "cannot use device %r as a " "detector: it is not a Measurable",
+                        "cannot use device %r as a detector: it is not a Measurable",
                         det,
                     )
                     all_created = False
@@ -441,7 +441,7 @@ class EssExperiment(Device):
             else:
                 if not isinstance(dev, (Readable, DevStatistics)):
                     self.log.warning(
-                        "cannot use device %r as " "environment: it is not a Readable",
+                        "cannot use device %r as environment: it is not a Readable",
                         dev,
                     )
                     all_created = False
