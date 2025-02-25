@@ -301,7 +301,6 @@ class EssExperiment(Device):
                 "localcontacts": [],
                 "samples": self._extract_samples(prop),
                 "dataemails": [],
-                "notif_emails": [],
                 "errors": [],
                 "warnings": [],
             }
