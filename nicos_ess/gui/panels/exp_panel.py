@@ -47,7 +47,6 @@ class ProposalSettings:
         users=None,
         local_contacts=None,
         abort_on_error=True,
-        notifications=None,
         samples=None,
     ):
         self.proposal_id = proposal_id
@@ -55,7 +54,6 @@ class ProposalSettings:
         self.users = users if users else []
         self.local_contacts = local_contacts if local_contacts else [{}]
         self.samples = samples if samples else []
-        self.notifications = notifications if notifications else []
         self.abort_on_error = abort_on_error
 
     def __eq__(self, other):
@@ -64,7 +62,6 @@ class ProposalSettings:
             or self.title != other.title
             or self.users != other.users
             or self.local_contacts != other.local_contacts
-            or self.notifications != other.notifications
             or self.abort_on_error != other.abort_on_error
             or self.samples != other.samples
         ):
@@ -172,9 +169,6 @@ class ExpPanel(PanelBase):
             "session.experiment.errorbehavior",
             None,
         )
-        notif_emails = self.client.eval(
-            'session.experiment.propinfo["notif_emails"]', []
-        )
 
         samples = self.client.eval("session.experiment.get_samples()", {})
 
@@ -187,7 +181,6 @@ class ExpPanel(PanelBase):
                 users,
                 contacts,
                 values[4] == "abort",
-                notif_emails,
                 samples,
             )
             self.new_settings = deepcopy(self.old_settings)
@@ -276,7 +269,6 @@ class ExpPanel(PanelBase):
         try:
             self._set_experiment()
             self._set_samples()
-            self._set_notification_receivers()
             self._set_abort_on_error()
             self._update_proposal_info()
         except Exception as error:
@@ -327,13 +319,6 @@ class ExpPanel(PanelBase):
         abort_on_error = self.new_settings.abort_on_error
         if abort_on_error != self.old_settings.abort_on_error:
             self.client.run("SetErrorAbort(%s)" % abort_on_error)
-
-    def _set_notification_receivers(self):
-        notifications = self.new_settings.notifications
-        if notifications != self.old_settings.notifications:
-            self.client.run(
-                "SetMailReceivers(%s)" % ", ".join(map(repr, notifications))
-            )
 
     @pyqtSlot()
     def on_addUserButton_clicked(self):
