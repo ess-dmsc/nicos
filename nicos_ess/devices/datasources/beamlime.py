@@ -212,8 +212,8 @@ class DataChannel(CounterChannelMixin, PassiveChannel):
         if len(self.data_structure["signal_axes"]):
             # create signal axes based on the shape of the signal with arange
             for i, axis_name in enumerate(self.data_structure["signal_axes"]):
-                exists = self.data_structure.get(axis_name)
-                if exists:
+                exists = self.data_structure.get(axis_name, None)
+                if exists is not None:
                     continue
                 arr = np.arange(self.data_structure["signal_shape"][i])
                 # store the numeric array in the data_structure under the string key
