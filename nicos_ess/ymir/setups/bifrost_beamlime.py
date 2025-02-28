@@ -1,16 +1,22 @@
 description = "The beamlime."
 
 devices = dict(
-    hist_1d_source=device(
+    detector_sliding=device(
         "nicos_ess.devices.datasources.beamlime.DataChannel",
         description="A just-bin-it image channel",
-        source_name="hist_1d_source",
+        source_name="unified_detector:sliding",
         type="counter",
     ),
-    hist_2d_source=device(
+    detector_cumulative=device(
         "nicos_ess.devices.datasources.beamlime.DataChannel",
         description="A just-bin-it image channel",
-        source_name="hist_2d_source",
+        source_name="unified_detector:cumulative",
+        type="counter",
+    ),
+    detector_roi=device(
+        "nicos_ess.devices.datasources.beamlime.DataChannel",
+        description="A just-bin-it image channel",
+        source_name="unified_detector:roi",
         type="counter",
     ),
     beamlime_collector=device(
@@ -19,7 +25,7 @@ devices = dict(
         brokers=["localhost:9092"],
         topic=["bifrost_beamlime_data"],
         command_topic="bifrost_beamlime_data",
-        others=["hist_1d_source", "hist_2d_source"],
+        others=["detector_sliding", "detector_cumulative", "detector_roi"],
         schema="da00",
     ),
 )
