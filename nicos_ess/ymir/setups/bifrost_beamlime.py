@@ -22,7 +22,7 @@ devices = dict(
     beamlime_collector=device(
         "nicos_ess.devices.datasources.beamlime.BeamLimeCollector",
         description="The just-bin-it histogrammer",
-        brokers=["localhost:9092"],
+        brokers=configdata("config.KAFKA_BROKERS"),
         topic=["bifrost_beamlime_data"],
         command_topic="bifrost_beamlime_data",
         others=["detector_sliding", "detector_cumulative", "detector_roi"],
