@@ -5,6 +5,7 @@ from confluent_kafka import OFFSET_END, Consumer, KafkaException, TopicPartition
 
 from nicos.core.errors import ConfigurationError
 from nicos.utils import createThread
+from nicos_ess.devices.kafka.utils import create_sasl_config
 
 
 class KafkaConsumer:
@@ -22,8 +23,7 @@ class KafkaConsumer:
         :param options: Extra configuration options. See the Confluent Kafka
             documents for the full list of options.
         """
-        # options = {**options, **create_sasl_config()}
-        # REMEMBER TO PUT THIS BACK IN
+        options = {**options, **create_sasl_config()}
         return KafkaConsumer(brokers, starting_offset, **options)
 
     def __init__(self, brokers, starting_offset="latest", **options):
@@ -186,4 +186,6 @@ class KafkaSubscriber:
                 self._messages_callback(messages)
             elif self._no_messages_callback:
                 self._no_messages_callback()
-            time.sleep(0.01)
+                time.sleep(0.01)
+            else:
+                time.sleep(0.01)
