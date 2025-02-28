@@ -1,26 +1,25 @@
 import time
-import numpy as np
 
+import numpy as np
 from streaming_data_types import deserialise_da00
 from streaming_data_types.utils import get_schema
 
-from nicos.core import (
-    Param,
-    tupleof,
-    status,
-    SIMULATION,
-    POLLER,
-    Override,
-    LIVE,
-    ArrayDesc,
-    listof,
-    host,
-    multiStatus,
-)
-from nicos.utils import byteBuffer
 from nicos import session
-
-from nicos.devices.generic import PassiveChannel, Detector, CounterChannelMixin
+from nicos.core import (
+    LIVE,
+    POLLER,
+    SIMULATION,
+    ArrayDesc,
+    Override,
+    Param,
+    host,
+    listof,
+    multiStatus,
+    status,
+    tupleof,
+)
+from nicos.devices.generic import CounterChannelMixin, Detector, PassiveChannel
+from nicos.utils import byteBuffer
 from nicos_ess.devices.kafka.consumer import KafkaSubscriber
 
 
@@ -188,6 +187,9 @@ class DataChannel(CounterChannelMixin, PassiveChannel):
 
         for var in variables:
             if var.name == "signal":
+                self.log.warn(
+                    f"Found signal data for {self.name} with the shape {var.shape} and actual shape {var.data.shape}"
+                )
                 self.data_structure["signal"] = var.data
                 self.data_structure["signal_axes"] = var.axes
                 self.data_structure["signal_shape"] = var.shape
@@ -206,6 +208,21 @@ class DataChannel(CounterChannelMixin, PassiveChannel):
             self.data_structure[var_axis] = var.data
             self.data_structure[var_axis + "_axes"] = var.axes
             self.data_structure[var_axis + "_shape"] = var.shape
+
+        if len(self.data_structure["signal_axes"]):
+            # create signal axes based on the shape of the signal with arange
+            self.data_structure["signal_axes"] = [
+                np.arange(0, self.data_structure["signal_shape"][i])
+                for i in range(len(self.data_structure["signal_shape"]))
+            ]
+
+        self.log.warn(
+            f"The final signal shape is {self.data_structure['signal_shape']} with the actual shape {self.data_structure['signal'].shape}"
+        )
+        for axis in self.data_structure["signal_axes"]:
+            self.log.warn(
+                f"Axis {axis} has shape {self.data_structure[axis + '_shape']} with the actual shape {self.data_structure[axis].shape}"
+            )
 
     def get_plot_data(self):
         """
