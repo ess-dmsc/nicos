@@ -5,7 +5,6 @@ from confluent_kafka import OFFSET_END, Consumer, KafkaException, TopicPartition
 
 from nicos.core.errors import ConfigurationError
 from nicos.utils import createThread
-
 from nicos_ess.devices.kafka.utils import create_sasl_config
 
 
@@ -187,4 +186,6 @@ class KafkaSubscriber:
                 self._messages_callback(messages)
             elif self._no_messages_callback:
                 self._no_messages_callback()
-            time.sleep(0.5)
+                time.sleep(0.01)
+            else:
+                time.sleep(0.01)

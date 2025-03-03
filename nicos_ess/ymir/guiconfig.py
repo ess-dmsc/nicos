@@ -26,6 +26,10 @@ main_window = docked(
                             panel("nicos_ess.gui.panels.live_pyqt.MultiLiveDataPanel"),
                         ),
                         (
+                            "Beamlime Panel",
+                            panel("nicos_ess.gui.panels.beamlime.BeamLimePanel"),
+                        ),
+                        (
                             "Chopper",
                             panel("nicos_ess.gui.panels.chopper.ChopperPanel"),
                         ),
