@@ -37,8 +37,8 @@ class CustomImageItem(ImageItem):
         pos = event.pos()
         i, j = pos.x(), pos.y()
         i, j = (
-            int(np.clip(i, 0, self.image.shape[0] - 1)),
-            int(np.clip(j, 0, self.image.shape[1] - 1)),
+            int(np.clip(i, 0, self.image.shape[0])),
+            int(np.clip(j, 0, self.image.shape[1])),
         )
         return i, j
 
