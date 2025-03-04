@@ -351,7 +351,7 @@ class BeamLimeCollector(Detector):
                 self.no_messages_callback,
             )
 
-            self._kafka_producer = KafkaProducer(self.brokers)
+            self._kafka_producer = KafkaProducer.create(self.brokers)
 
         self._collectControllers()
         self._update_status(status.WARN, "Initializing BeamLimeCollector...")
