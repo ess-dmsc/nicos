@@ -566,3 +566,17 @@ QDialog QComboBox {
     color: black;
     background-color: white;
 }
+
+QLineEdit:disabled, QComboBox:disabled, QPushButton:disabled {
+    background-color: #d4d8dc; /* Light gray background */
+    color: #959ea7; /* Gray text */
+}
+
+QCheckBox:disabled {
+    color: #959ea7;
+}
+
+QPushButton:disabled {
+    background-color: #e0e0e0; /* Light gray */
+    color: #a0a0a0; /* Muted text */
+}
