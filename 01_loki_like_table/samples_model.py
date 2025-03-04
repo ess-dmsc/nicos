@@ -5,12 +5,15 @@ from tablemodel import TableModel
 
 class SampleTableModel(TableModel):
     def __init__(self, columns, num_rows=2):
-        TableModel.__init__(self, headings=list(columns.keys()), mappings=None)
-        self._default_num_rows = num_rows
-        self._raw_data = [{} for _ in range(num_rows)]
-        self._table_data = self._empty_table(len(columns), num_rows)
-        self.positions = [range(1, num_rows + 1)]
-        self.columns = columns
+        TableModel.__init__(self, headings=columns, mappings=None)
+        # self._default_num_rows = num_rows
+        self.raw_data = [{} for _ in range(num_rows)]
+        # # self._table_data = self._empty_table(len(columns), num_rows)
+        #
+        # # self.positions = [range(1, num_rows+1)]
+        # # self.columns = columns
+        # print(self.raw_data)
+        # print(self.table_data)
 
     def setData(self, index, value, role):
         if role != Qt.ItemDataRole.EditRole:
@@ -45,67 +48,72 @@ class SampleTableModel(TableModel):
             self.headerDataChanged.emit(orientation, section, section)
         return True
 
-    def insert_column(self, position, name):
-        self.beginInsertColumns(QModelIndex(), position, position)
-        self._headings.insert(position, name)
+    @property
+    def column_headers(self):
+        return self._headings
 
-        new_columns = list(self.columns.items())
-        new_columns.insert(position, (name, name))
-        self.columns = dict(new_columns)
+    def add_column_header(self, name, col_index):
+        self.column_headers.insert(col_index, name)
+
+    def delete_column_header(self, col_index):
+        del self.column_headers[col_index]
+
+    def insert_column(self, col_index, name):
+        self.beginInsertColumns(QModelIndex(), col_index, col_index)
+        self.add_column_header(name, col_index)
 
         new_raw_data = []
-        for row in self._raw_data:
+        for row in self.raw_data:
             new_row = {}
             for i, (key, val) in enumerate(row.items()):
-                if i == position:
+                if i == col_index:
                     new_row[name] = ""
                 new_row[key] = val
             new_raw_data.append(new_row)
-        self._raw_data = new_raw_data
-
-        new_table_data = []
-        for row in self._table_data:
-            row.insert(position, "")
-            new_table_data.append(row)
-        self._table_data = new_table_data
+        self.raw_data = new_raw_data
 
         self.endInsertColumns()
         self._emit_update()
 
-    def delete_columns(self, column_indices):
-        self.beginRemoveColumns(QModelIndex(), min(column_indices), max(column_indices))
-        for index in sorted(column_indices, reverse=True):
-            if index == 0:
+    def delete_columns(self, col_indices):
+        self.beginRemoveColumns(QModelIndex(), min(col_indices), max(col_indices))
+        col_indices_reverse = sorted(list(set(col_indices)), reverse=True)
+        for col_index in col_indices_reverse:
+            if col_index == 0:
                 continue
-            del self._headings[index]
-            columns_key = list(self.columns.keys())[index]
-            del self.columns[columns_key]
+            self.delete_column_header(col_index)
 
             new_raw_data = []
-            for row in self._raw_data:
+            for row in self.raw_data:
                 new_row = {}
                 for i, (key, val) in enumerate(row.items()):
-                    if i != index:
+                    if i != col_index:
                         new_row[key] = val
                 new_raw_data.append(new_row)
-            self._raw_data = new_raw_data
-
-            new_table_data = []
-            for row in self._table_data:
-                del row[index]
-                new_table_data.append(row)
-            self._table_data = new_table_data
+            self.raw_data = new_raw_data
 
         self.endRemoveColumns()
         self._emit_update()
 
+    def rename_column(self, index, new_col_name):
+        self.delete_column_header(index)
+        self.add_column_header(new_col_name, index)
+
+        new_raw_data = []
+        for row in self.raw_data:
+            new_row = {}
+            for i, (key, val) in enumerate(row.items()):
+                if i == index:
+                    new_row[new_col_name] = val
+                else:
+                    new_row[key] = val
+            new_raw_data.append(new_row)
+        self.raw_data = new_raw_data
+        self._emit_update()
+
     def clear(self):
         """Clears the data but keeps the rows."""
-        self._raw_data = [{} for _ in self._raw_data]
-        self._table_data = self._empty_table(
-            len(self.columns.keys()), len(self._raw_data)
-        )
-        self._emit_update()
+        self.raw_data = [{} for _ in self.raw_data]
 
     def _empty_table(self, columns, rows):
         return [[""] * columns for _ in range(rows)]

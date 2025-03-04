@@ -1,6 +1,5 @@
 import sys
 import os
-from collections import OrderedDict
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QIcon, QKeySequence
@@ -9,6 +8,7 @@ from PyQt5.QtWidgets import (
     QApplication,
     QDialog,
     QDialogButtonBox,
+    QFileDialog,
     QHBoxLayout,
     QHeaderView,
     QLabel,
@@ -25,6 +25,7 @@ from PyQt5.QtWidgets import (
 from samples_model import SampleTableModel
 from table_helper import TableHelper, Clipboard
 from csv_utils import (
+    export_table_to_csv_stream,
     import_table_from_csv_file,
 )
 
@@ -44,17 +45,15 @@ class SampleTablePanel(QWidget):
         QWidget.__init__(self)
         self._in_edit_mode = True
         self.last_save_location = None
-        self._configure_sample_table()
+        self._create_sample_table()
         self._create_toolbar()
 
         self.layout = QVBoxLayout()
         self.layout.addWidget(self.sample_table)
         self.layout.insertWidget(0, self.toolbar.toolbar)
 
-    def _configure_sample_table(self):
-        columns = OrderedDict(
-            {SAMPLE_IDENTIFIER_COL_NAME: SAMPLE_IDENTIFIER, "Notes": "notes"}
-        )
+    def _create_sample_table(self):
+        columns = [SAMPLE_IDENTIFIER_COL_NAME, "Notes"]
         self.sample_model = SampleTableModel(columns)
         self.sample_table = QTableView()
         self.sample_table.setModel(self.sample_model)
@@ -71,6 +70,142 @@ class SampleTablePanel(QWidget):
         self.sample_table.setAlternatingRowColors(True)
         self.sample_table.setStyleSheet(TABLE_QSS)
         self._create_keyboard_shortcuts()
+
+    def _create_toolbar(self):
+        self.toolbar = TableToolBar()
+        self.toolbar.open_action.triggered.connect(self._open_file)
+        self.toolbar.save_action.triggered.connect(self._save_table)
+        self.toolbar.add_row_below_action.triggered.connect(self._insert_row_below)
+        self.toolbar.copy_row_action.triggered.connect(self._copy_row)
+        self.toolbar.delete_row_action.triggered.connect(self._delete_rows)
+        self.toolbar.add_col_right_action.triggered.connect(self._dialog_for_new_column)
+        # self.toolbar.move_col_right_action.triggered.connect(self._move_cols_right)
+        # self.toolbar.move_col_left_action.triggered.connect(self._move_cols_left)
+        self.toolbar.rename_col_action.triggered.connect(self._prepare_rename_column)
+        self.toolbar.delete_col_action.triggered.connect(self._delete_cols)
+        self.toolbar.clear_action.triggered.connect(self._clear_table)
+
+    def _open_file(self):
+        #####
+        self.last_save_location = os.path.join(
+            "~", "ess", "projects", "qt_testing", "loki_like_sample_table", "testdata"
+        )
+        #####
+        try:
+            filename = QFileDialog.getOpenFileName(
+                self,
+                "Open table",
+                os.path.expanduser("~")
+                if self.last_save_location is None
+                else self.last_save_location,
+                "Table files (*.csv)",
+            )[0]
+            if not filename:
+                return
+
+            headers, data = import_table_from_csv_file(filename)
+            headers = [SAMPLE_IDENTIFIER_COL_NAME] + headers[1:]
+            for i, header in enumerate(headers):
+                if header not in self.sample_model.column_headers:
+                    self.sample_model.insert_column(i, header)
+
+            raw_data = []
+            for row in data:
+                raw_data.append(dict(zip(headers, row)))
+
+            # Clear existing table before populating from file
+            self.sample_model.clear()
+            self.sample_model.raw_data = raw_data
+
+        except Exception as error:
+            print("There was a problem loading the selected file: " f"{error}")
+
+    def _save_table(self):
+        filename = QFileDialog.getSaveFileName(
+            self,
+            "Save table",
+            os.path.expanduser("~")
+            if self.last_save_location is None
+            else self.last_save_location,
+            "Table files (*.csv)",
+            initialFilter="*.csv",
+        )[0]
+
+        if not filename:
+            return
+        if not filename.endswith(".csv"):
+            filename = filename + ".csv"
+
+        self.last_save_location = os.path.dirname(filename)
+        try:
+            headers = self.sample_model.column_headers
+            data = self.sample_model.table_data
+            with open(filename, "w", encoding="utf-8") as file:
+                export_table_to_csv_stream(file, data, headers)
+        except Exception as ex:
+            self.showError(f"Cannot write table contents to {filename}:\n{ex}")
+
+    def _insert_row_below(self):
+        if self.sample_model.num_entries == 0:
+            self.sample_table.model().insert_row(0)
+            self.sample_table.selectRow(0)
+            return
+        _, highest = self._get_selected_rows_limits()
+        if highest is not None:
+            position = highest + 1
+        else:
+            position = len(self.sample_model.raw_data)
+        self.sample_table.model().insert_row(position)
+
+    def _copy_row(self):
+        lowest, highest = self._get_selected_rows_limits()
+        if highest is None:
+            return
+
+        copied_data = list(self.sample_model.raw_data)[lowest : highest + 1]
+        data_above_insert = self.sample_model.raw_data[: highest + 1]
+        data_below_insert = self.sample_model.raw_data[highest + 1 :]
+
+        new_data = data_above_insert + copied_data + data_below_insert
+        self.sample_model.raw_data = new_data
+
+    def _delete_rows(self):
+        to_remove = {
+            index.row()
+            for index in self.sample_table.selectedIndexes()
+            if index.isValid() and index.row() < self.sample_model.num_entries
+        }
+        self.sample_table.model().remove_rows(to_remove)
+
+    def _insert_col_right(self):
+        column_name = self.dialog.column_name.text()
+        _, highest = self._get_selected_cols_limits()
+        if highest is not None:
+            col_position = highest + 1
+        else:
+            col_position = len(self.sample_model.raw_data)
+        self.sample_model.insert_column(col_position, column_name)
+
+    def _rename_col(self):
+        lowest, _ = self._get_selected_cols_limits()
+        new_column_name = self.dialog.column_name.text()
+        self.sample_model.rename_column(lowest, new_column_name)
+
+    def _delete_cols(self):
+        to_remove = [index.column() for index in self.sample_table.selectedIndexes()]
+        if 0 in to_remove:
+            to_remove = [index for index in to_remove if index != 0]
+        if len(to_remove) > 0:
+            self.sample_model.delete_columns(to_remove)
+
+    def _clear_table(self):
+        self.sample_model.clear()
+
+    def _prepare_rename_column(self):
+        lowest, highest = self._get_selected_cols_limits()
+        if lowest != highest:
+            return
+        self._dialog_for_renaming_column()
 
     def _create_keyboard_shortcuts(self):
         for key, to_call in [
@@ -101,173 +236,22 @@ class SampleTablePanel(QWidget):
         if self._in_edit_mode:
             self.table_helper.clear_selected()
 
-    def _create_toolbar(self):
-        self.toolbar = TableToolBar()
-        self.toolbar.open_action.triggered.connect(self._open_file)
-        self.toolbar.save_action.triggered.connect(self._save_table)
-        self.toolbar.add_row_below_action.triggered.connect(self._insert_row_below)
-        self.toolbar.copy_row_action.triggered.connect(self._copy_row)
-        self.toolbar.delete_row_action.triggered.connect(self._delete_rows)
-        self.toolbar.add_col_right_action.triggered.connect(
-            self._dialog_for_new_column_name
-        )
-        self.toolbar.move_col_right_action.triggered.connect(print)
-        self.toolbar.move_col_left_action.triggered.connect(print)
-        self.toolbar.rename_col_action.triggered.connect(print)
-        self.toolbar.delete_col_action.triggered.connect(self._delete_cols)
-        self.toolbar.clear_action.triggered.connect(self._clear_table)
-
-    def _open_file(self):
-        #####
-        self.last_save_location = os.path.join(
-            "~", "ess", "projects", "qt_testing", "loki_like_sample_table", "testdata"
-        )
-        #####
-        try:
-            filename = "testdata/two_samples_notes.csv"
-
-            # filename = QFileDialog.getOpenFileName(
-            #     self,
-            #     "Open table",
-            #     os.path.expanduser("~")
-            #     if self.last_save_location is None
-            #     else self.last_save_location,
-            #     "Table files (*.csv)",
-            # )[0]
-            #
-            # if not filename:
-            #     return
-
-            headers, data = import_table_from_csv_file(filename)
-            print(headers)
-            self.sample_model.delete_columns(
-                list(range(1, len(self.sample_model.columns)))
-            )
-
-            ##### to do
-            headers = [SAMPLE_IDENTIFIER_COL_NAME] + headers[1:]
-            print(headers)
-            if "notes" not in [header.lower() for header in headers]:
-                headers.append("Notes")
-            else:
-                pass
-            print(headers)
-            new_columns = {}
-            for i, header in enumerate(headers):
-                if header not in self.sample_model.columns.keys():
-                    self.sample_model.insert_column(i, header)
-                    new_columns[header] = header
-            print(new_columns)
-            raw_data = []
-            for row in data:
-                raw_data.append(dict(zip(headers, row)))
-
-            print(raw_data)
-
-            # Clear existing table before populating from file
-            self.sample_model.clear()
-            self.sample_model.raw_data = raw_data
-            # self._fill_table(headers, data)
-            #
-            # for name in headers:
-            #     if name in self.columns and self.columns[name].optional:
-            #         self.optional_columns_to_checkbox[name].setChecked(True)
-        except Exception as error:
-            print("There was a problem loading the selected file: " f"{error}")
-
-    def _save_table(self):
-        print(self.sample_model._raw_data)
-        print(self.sample_model._table_data)
-        pass
-        # if self.is_data_in_hidden_columns():
-        #     self.showError(
-        #         "Cannot save because there is data in a non-visible "
-        #         "optional column(s)."
-        #     )
-        #     return
-        #
-        # filename = QFileDialog.getSaveFileName(
-        #     self,
-        #     "Save table",
-        #     osp.expanduser("~")
-        #     if self.last_save_location is None
-        #     else self.last_save_location,
-        #     "Table files (*.txt)",
-        #     initialFilter="*.txt",
-        # )[0]
-        #
-        # if not filename:
-        #     return
-        # if not filename.endswith(".txt"):
-        #     filename = filename + ".txt"
-        #
-        # self.last_save_location = osp.dirname(filename)
-        # try:
-        #     headers = self._extract_headers_from_table()
-        #     data = self._extract_data_from_table()
-        #     with open(filename, "w", encoding="utf-8") as file:
-        #         # Record the duration types in the file before the csv block
-        #         file.write(f"{self.comboTransDurationType.currentText()}\n")
-        #         file.write(f"{self.comboSansDurationType.currentText()}\n")
-        #         export_table_to_csv_stream(file, data, headers)
-        # except Exception as ex:
-        #     self.showError(f"Cannot write table contents to {filename}:\n{ex}")
-
-    def _insert_row_below(self):
-        if self.sample_model.num_entries == 0:
-            self.sample_table.model().insert_row(0)
-            self.sample_table.selectRow(0)
-            return
-        _, highest = self._get_selected_rows_limits()
-        if highest is not None:
-            position = highest + 1
-        else:
-            position = len(self.sample_model._raw_data)
-        self.sample_table.model().insert_row(position)
-
-    def _copy_row(self):
-        lowest, highest = self._get_selected_rows_limits()
-        new_data = []
-        for index in range(lowest, highest + 1):
-            row_data = self.sample_model._raw_data[index]
-            new_data.append(row_data)
-
-        new_data_with_indices = zip(
-            range(highest + 1, highest + 1 + len(new_data)), new_data
-        )
-        for index, data in new_data_with_indices:
-            self.sample_model._raw_data.insert(index, data)
-            self.sample_model._table_data.insert(index, list(data.values()))
-        self.sample_model._emit_update()
-
-    def _delete_rows(self):
-        to_remove = {
-            index.row()
-            for index in self.sample_table.selectedIndexes()
-            if index.isValid() and index.row() < self.sample_model.num_entries
-        }
-        self.sample_table.model().remove_rows(to_remove)
-
-    def _insert_col_right(self):
-        column_name = self.dialog.column_name.text()
-        _, highest = self._get_selected_cols_limits()
-        position = (
-            min(highest + 1, len(self.sample_model.columns) - 1) if highest else 1
-        )
-        self.sample_model.insert_column(position, column_name)
-
-    def _delete_cols(self):
-        to_remove = [index.column() for index in self.sample_table.selectedIndexes()]
-        if len(to_remove) > 0:
-            self.sample_model.delete_columns(to_remove)
-
-    def _clear_table(self):
-        self.sample_model.clear()
-
-    def _dialog_for_new_column_name(self):
+    def _dialog_for_new_column(self):
         self.dialog = ColNameDialog()
+        self.dialog.setWindowTitle("Add column")
         if self.dialog.exec():
             self._insert_col_right()
+
+    def _dialog_for_renaming_column(self):
+        self.dialog = ColNameDialog()
+        self.dialog.setWindowTitle("Rename column")
+        if self.dialog.exec():
+            self._rename_col()
+
+    def _info_dialog(self, message):
+        self.dialog = InfoDialog()
+        self.dialog.message.setText(message)
+        self.dialog.exec()
 
     def _get_selected_rows_limits(self):
         lowest = None
@@ -310,25 +294,25 @@ class TableToolBar(QWidget):
         self.add_row_below_action = QAction("Add\nRow", self)
         self.add_row_below_action.setIcon(get_icon("add_row_below-24px.svg"))
 
-        self.copy_row_action = QAction("Copy\nRow(s)", self)
+        self.copy_row_action = QAction("Copy\nRows", self)
         self.copy_row_action.setIcon(get_icon("add_row_below-24px.svg"))
 
-        self.delete_row_action = QAction("Delete\nRow(s)", self)
+        self.delete_row_action = QAction("Delete\nRows", self)
         self.delete_row_action.setIcon(get_icon("delete_row-24px.svg"))
 
         self.add_col_right_action = QAction("Add\nColumn", self)
         self.add_col_right_action.setIcon(get_icon("add_col_right.svg"))
 
-        self.move_col_right_action = QAction("Move\nColumn(s)\nRight", self)
-        self.move_col_right_action.setIcon(get_icon("warning_orange-24px"))
+        # self.move_col_right_action = QAction("Move\nColumns", self)
+        # self.move_col_right_action.setIcon(get_icon("move_col_right.svg"))
 
-        self.move_col_left_action = QAction("Move\nColumn(s)\nLeft", self)
-        self.move_col_left_action.setIcon(get_icon("warning_orange-24px"))
+        # self.move_col_left_action = QAction("Move\nColumns", self)
+        # self.move_col_left_action.setIcon(get_icon("move_col_left.svg"))
 
         self.rename_col_action = QAction("Rename\nColumn", self)
-        self.rename_col_action.setIcon(get_icon("warning_orange-24px"))
+        self.rename_col_action.setIcon(get_icon("rename_col.svg"))
 
-        self.delete_col_action = QAction("Delete\nColumn(s)", self)
+        self.delete_col_action = QAction("Delete\nColumns", self)
         self.delete_col_action.setIcon(get_icon("delete_col.svg"))
 
         self.clear_action = QAction("Clear\nTable", self)
@@ -346,9 +330,8 @@ class TableToolBar(QWidget):
         self._add_action(self.toolbar, self.copy_row_action)
         self._add_action(self.toolbar, self.delete_row_action)
         self._add_action(self.toolbar, self.add_col_right_action)
-
-        self._add_action(self.toolbar, self.move_col_right_action)
-        self._add_action(self.toolbar, self.move_col_left_action)
+        # self._add_action(self.toolbar, self.move_col_right_action)
+        # self._add_action(self.toolbar, self.move_col_left_action)
         self._add_action(self.toolbar, self.rename_col_action)
         self._add_action(self.toolbar, self.delete_col_action)
         self._add_action(self.toolbar, self.clear_action)
@@ -365,7 +348,6 @@ class TableToolBar(QWidget):
 class ColNameDialog(QDialog):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Add column")
 
         dialog_btns = QDialogButtonBox.Ok | QDialogButtonBox.Cancel
         self.btn_box = QDialogButtonBox(dialog_btns)
@@ -379,6 +361,21 @@ class ColNameDialog(QDialog):
         line_layout.addWidget(message)
         line_layout.addWidget(self.column_name)
         layout.addLayout(line_layout)
+        layout.addWidget(self.btn_box)
+        self.setLayout(layout)
+
+
+class InfoDialog(QDialog):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Info")
+        dialog_btns = QDialogButtonBox.Close
+        self.btn_box = QDialogButtonBox(dialog_btns)
+        self.btn_box.rejected.connect(self.reject)
+
+        layout = QVBoxLayout()
+        message = QLabel()
+        layout.addWidget(message)
         layout.addWidget(self.btn_box)
         self.setLayout(layout)
 
