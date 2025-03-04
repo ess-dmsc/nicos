@@ -6,14 +6,8 @@ from tablemodel import TableModel
 class SampleTableModel(TableModel):
     def __init__(self, columns, num_rows=2):
         TableModel.__init__(self, headings=columns, mappings=None)
-        # self._default_num_rows = num_rows
+        self._default_num_rows = num_rows
         self.raw_data = [{} for _ in range(num_rows)]
-        # # self._table_data = self._empty_table(len(columns), num_rows)
-        #
-        # # self.positions = [range(1, num_rows+1)]
-        # # self.columns = columns
-        # print(self.raw_data)
-        # print(self.table_data)
 
     def setData(self, index, value, role):
         if role != Qt.ItemDataRole.EditRole:
@@ -61,7 +55,6 @@ class SampleTableModel(TableModel):
     def insert_column(self, col_index, name):
         self.beginInsertColumns(QModelIndex(), col_index, col_index)
         self.add_column_header(name, col_index)
-
         new_raw_data = []
         for row in self.raw_data:
             new_row = {}
@@ -71,7 +64,6 @@ class SampleTableModel(TableModel):
                 new_row[key] = val
             new_raw_data.append(new_row)
         self.raw_data = new_raw_data
-
         self.endInsertColumns()
         self._emit_update()
 
@@ -82,7 +74,6 @@ class SampleTableModel(TableModel):
             if col_index == 0:
                 continue
             self.delete_column_header(col_index)
-
             new_raw_data = []
             for row in self.raw_data:
                 new_row = {}
@@ -91,14 +82,12 @@ class SampleTableModel(TableModel):
                         new_row[key] = val
                 new_raw_data.append(new_row)
             self.raw_data = new_raw_data
-
         self.endRemoveColumns()
         self._emit_update()
 
     def rename_column(self, index, new_col_name):
         self.delete_column_header(index)
         self.add_column_header(new_col_name, index)
-
         new_raw_data = []
         for row in self.raw_data:
             new_row = {}
@@ -112,8 +101,4 @@ class SampleTableModel(TableModel):
         self._emit_update()
 
     def clear(self):
-        """Clears the data but keeps the rows."""
-        self.raw_data = [{} for _ in self.raw_data]
-
-    def _empty_table(self, columns, rows):
-        return [[""] * columns for _ in range(rows)]
+        self.raw_data = [{} for _ in range(self._default_num_rows)]
