@@ -1,3 +1,4 @@
+import json
 import time
 
 import numpy as np
@@ -21,6 +22,7 @@ from nicos.core import (
 from nicos.devices.generic import CounterChannelMixin, Detector, PassiveChannel
 from nicos.utils import byteBuffer
 from nicos_ess.devices.kafka.consumer import KafkaSubscriber
+from nicos_ess.devices.kafka.producer import KafkaProducer
 
 
 class DataChannel(CounterChannelMixin, PassiveChannel):
@@ -187,9 +189,6 @@ class DataChannel(CounterChannelMixin, PassiveChannel):
 
         for var in variables:
             if var.name == "signal":
-                self.log.warn(
-                    f"Found signal data for {self.name} with the shape {var.shape} and actual shape {var.data.shape}"
-                )
                 self.data_structure["signal"] = var.data
                 self.data_structure["signal_axes"] = var.axes
                 self.data_structure["signal_shape"] = var.shape
@@ -219,14 +218,6 @@ class DataChannel(CounterChannelMixin, PassiveChannel):
                 # store the numeric array in the data_structure under the string key
                 self.data_structure[axis_name] = arr
                 self.data_structure[axis_name + "_shape"] = arr.shape
-
-        self.log.warn(
-            f"The final signal shape is {self.data_structure['signal_shape']} with the actual shape {self.data_structure['signal'].shape}"
-        )
-        for axis in self.data_structure["signal_axes"]:
-            self.log.warn(
-                f"Axis {axis} has shape {self.data_structure[axis + '_shape']} with the actual shape {self.data_structure[axis].shape}"
-            )
 
     def get_plot_data(self):
         """
@@ -271,13 +262,13 @@ class DataChannel(CounterChannelMixin, PassiveChannel):
 
     def _send_command_to_collector(self, param_name, value):
         if self._collector:
-            target = f"{self.source_name}/{param_name}"
-            self._collector.send_command(target, value)
+            self._collector.send_command(param_name, value)
 
     def doStart(self):
         self._update_status(status.BUSY, "Started acquisition")
-        self.last_clear = time.time()
-        self._send_command_to_collector("clear", self.last_clear)
+        self.last_clear = time.time_ns()
+        message = json.dumps({"value": self.last_clear, "unit": "ns"}).encode("utf-8")
+        self._send_command_to_collector("start_time", message)
 
     def doStop(self):
         self._update_status(status.OK, "Stopped acquisition")
@@ -348,6 +339,9 @@ class BeamLimeCollector(Detector):
                 self.new_messages_callback,
                 self.no_messages_callback,
             )
+
+            self._kafka_producer = KafkaProducer.create(self.brokers)
+
         self._collectControllers()
         self._update_status(status.WARN, "Initializing BeamLimeCollector...")
 
@@ -360,8 +354,22 @@ class BeamLimeCollector(Detector):
     def doStatus(self, maxage=0):
         return multiStatus(self._channels, maxage)
 
-    def send_command(self, target, value):
-        self.log.warn(f"Sending command to {target}: {value}")
+    def send_command(self, param_name, message):
+        def cb(err, msg):
+            if err:
+                self.log.warn(f"Error sending command: {err}")
+            else:
+                self.log.debug(f"Command sent: {msg}")
+
+        if self._kafka_producer:
+            self._kafka_producer.produce(
+                self.command_topic,
+                message=message,
+                key=param_name,
+                on_delivery_callback=cb,
+            )
+        else:
+            self.log.warn("No producer available to send command")
 
     def new_messages_callback(self, messages):
         for timestamp, message in messages:
