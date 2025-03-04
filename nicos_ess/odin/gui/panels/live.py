@@ -10,17 +10,18 @@ from nicos.guisupport.qt import (
     QLineEdit,
     QPushButton,
     QSizePolicy,
+    QTimer,
     QVBoxLayout,
     QWidget,
-    QTimer,
 )
-
 from nicos_ess.gui.panels.live_pyqt import (
     DEFAULT_TAB_WIDGET_MAX_WIDTH,
     DEFAULT_TAB_WIDGET_MIN_WIDTH,
-    MultiLiveDataPanel as DefaultMultiLiveDataPanel,
     Preview,
     layout_iterator,
+)
+from nicos_ess.gui.panels.live_pyqt import (
+    MultiLiveDataPanel as DefaultMultiLiveDataPanel,
 )
 
 READBACK_UPDATE_INTERVAL = 1000
@@ -361,10 +362,46 @@ class ADControl(QWidget):
         self.parent.plotwidget.update_trace()
         self.parent.plotwidget.settings_histogram.item.imageChanged()
 
+    def _disable_all_fields(self):
+        for field, _ in self.fields:
+            field.setEnabled(False)
+
+        self.acq_mode_combo.setEnabled(False)
+        self.binning_combo.setEnabled(False)
+
+    def _enable_fields_for(self, param_info):
+        if "acquiretime" in param_info:
+            self.acquisition_time.setEnabled(True)
+            self.acquisition_time.readback.setEnabled(True)
+        if "acquireperiod" in param_info:
+            self.acquisition_period.setEnabled(True)
+            self.acquisition_period.readback.setEnabled(True)
+        if "startx" in param_info:
+            self.start_x.setEnabled(True)
+            self.start_x.readback.setEnabled(True)
+        if "starty" in param_info:
+            self.start_y.setEnabled(True)
+            self.start_y.readback.setEnabled(True)
+        if "sizex" in param_info:
+            self.size_x.setEnabled(True)
+            self.size_x.readback.setEnabled(True)
+        if "sizey" in param_info:
+            self.size_y.setEnabled(True)
+            self.size_y.readback.setEnabled(True)
+        if "numimages" in param_info:
+            self.num_images.setEnabled(True)
+            self.num_images.readback.setEnabled(True)
+
+        if "imagemode" in param_info:
+            self.acq_mode_combo.setEnabled(True)
+        if "binning" in param_info:
+            self.binning_combo.setEnabled(True)
+
     def on_detector_changed(self, index):
         self.selected_device = self.detector_combo.currentText()
         if not self.selected_device:
             return
+        self._disable_all_fields()
         self.update_readback_values()
         for field, field_readback in self.fields:
             if isinstance(field, QLineEdit):
@@ -381,6 +418,8 @@ class ADControl(QWidget):
         param_info = self.parent.client.getDeviceParams(self.selected_device)
         if not param_info:
             return
+
+        self._enable_fields_for(param_info)
 
         self._update_text_fields(param_info)
         self._update_start_acq_button_style(param_info.get("status", (None, None))[1])
@@ -418,6 +457,9 @@ class ADControl(QWidget):
 
     def _highlight_differing_readback_values(self):
         for input_field, readback_field in self.fields:
+            if not input_field.isEnabled():
+                continue
+
             if input_field.text() == "":  # pylint: disable=compare-to-empty-string
                 continue
 
