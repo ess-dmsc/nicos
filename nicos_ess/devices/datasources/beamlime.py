@@ -278,9 +278,7 @@ class DataChannel(CounterChannelMixin, PassiveChannel):
     def doStart(self):
         self._update_status(status.BUSY, "Started acquisition")
         self.last_clear = time.time_ns()
-        message = (
-            json.dumps({"value": self.last_clear, "unit": "ns"}).encode("utf-8"),
-        )
+        message = json.dumps({"value": self.last_clear, "unit": "ns"}).encode("utf-8")
         self._send_command_to_collector("start_time", message)
 
     def doStop(self):
