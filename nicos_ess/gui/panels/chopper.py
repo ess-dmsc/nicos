@@ -268,7 +268,7 @@ class ChopperPanel(Panel):
 
         for dev_name in devices.keys():
             slit_edges = self.client.eval(f"{dev_name}.slit_edges", None)
-            if not slit_edges:
+            if slit_edges is None:
                 continue
 
             chopper_info.append({"slit_edges": slit_edges, "chopper": dev_name})
