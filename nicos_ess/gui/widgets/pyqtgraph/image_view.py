@@ -15,6 +15,9 @@ from nicos.guisupport.qt import (
     pyqtSlot,
 )
 from nicos.utils.loggers import NicosLogger
+from nicos_ess.gui.widgets.pyqtgraph.histogram import HistogramWidget
+from nicos_ess.gui.widgets.pyqtgraph.image_item import CustomImageItem
+from nicos_ess.gui.widgets.pyqtgraph.image_view_controller import ImageViewController
 from nicos_ess.gui.widgets.pyqtgraph.roi import (
     CROSS_COLOR,
     CROSS_HOOVER_COLOR,
@@ -25,13 +28,10 @@ from nicos_ess.gui.widgets.pyqtgraph.roi import (
     ROI_HANDLE_COLOR,
     ROI_HANDLE_HOOVER_COLOR,
     ROI_HOOVER_COLOR,
-    PlotROI,
-    LineROI,
     CrossROI,
+    LineROI,
+    PlotROI,
 )
-from nicos_ess.gui.widgets.pyqtgraph.histogram import HistogramWidget
-from nicos_ess.gui.widgets.pyqtgraph.image_item import CustomImageItem
-from nicos_ess.gui.widgets.pyqtgraph.image_view_controller import ImageViewController
 from nicos_ess.gui.widgets.pyqtgraph.stats_dialog import StatisticsDialog
 
 pg.setConfigOption("background", "w")
@@ -88,7 +88,14 @@ class ImageView(QWidget):
     sigProcessingChanged = pyqtSignal(object)
     clicked = pyqtSignal(str)
 
-    def __init__(self, parent=None, name="", histogram_orientation="horizontal", *args):
+    def __init__(
+        self,
+        parent=None,
+        name="",
+        histogram_orientation="horizontal",
+        simple_mode=False,
+        *args,
+    ):
         QWidget.__init__(self, parent, *args)
         self.parent = parent
         self.name = name
@@ -113,6 +120,8 @@ class ImageView(QWidget):
         self._use_metric_length = False
         self._line_roi_drag_active = False
         self._roi_drag_active = False
+        self._simple_mode = simple_mode
+        self._roi_callback = None
         self.axes = {"t": None, "x": 0, "y": 1, "c": None}
 
         self.initialize_ui()
@@ -408,6 +417,18 @@ class ImageView(QWidget):
         for item in [self.full_hori_trace, self.full_vert_trace]:
             item.setVisible(visible)
 
+    def hide_all_plots(self):
+        for item in [
+            self.left_roi_trace,
+            self.bottom_roi_trace,
+            self.roi_histogram.item.plot,
+            self.left_plot,
+            self.bottom_plot,
+            self.line_plot,
+            self.roi_histogram,
+        ]:
+            item.setVisible(False)
+
     def set_roi_visibility(self, visible, ignore_connections=False):
         if visible:
             self.roi.setState(self.saved_roi_state)
@@ -542,7 +563,7 @@ class ImageView(QWidget):
             self.exit_line_roi_drag_mode()
         elif self._roi_drag_active:
             self.exit_roi_drag_mode()
-        if not self.image_view_controller.roi_cb.isChecked():
+        if not self.image_view_controller.roi_cb.isChecked() and not self._simple_mode:
             self.image_view_controller.roi_cb.click()
         QApplication.setOverrideCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self.view.setMouseEnabled(False, False)
@@ -562,7 +583,10 @@ class ImageView(QWidget):
             self.exit_line_roi_drag_mode()
         elif self._roi_drag_active:
             self.exit_roi_drag_mode()
-        if not self.image_view_controller.line_roi_cb.isChecked():
+        if (
+            not self.image_view_controller.line_roi_cb.isChecked()
+            and not self._simple_mode
+        ):
             self.image_view_controller.line_roi_cb.click()
         QApplication.setOverrideCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self.view.setMouseEnabled(False, False)
@@ -887,6 +911,9 @@ class ImageView(QWidget):
         else:
             return f"{value:.{precision}f}"
 
+    def register_roi_callback(self, callback):
+        self._roi_callback = callback
+
     @pyqtSlot()
     def crosshair_roi_changed(self):
         # Extract image data from ROI
@@ -960,6 +987,11 @@ class ImageView(QWidget):
         )
 
         if data is None:
+            return
+
+        if self._simple_mode:
+            if self._roi_callback:
+                self._roi_callback(data, coords)
             return
 
         self.histogram_image_item.setImage(data, autoLevels=False)
