@@ -238,7 +238,7 @@ class BeamLimePanel(Panel):
         if plot_type == "hist-1d" and isinstance(plot_widget, LineView):
             plot_widget.set_data([data], {"x": labels[0]})
         elif plot_type == "hist-2d" and isinstance(plot_widget, ImageView):
-            plot_widget.set_data([data], {"x": labels[0], "y": labels[1]})
+            plot_widget.set_data([data], {"x": labels[1], "y": labels[0]})
         else:
             return
 
