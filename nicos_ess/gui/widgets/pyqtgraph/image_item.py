@@ -8,10 +8,11 @@ class CustomImageItem(ImageItem):
     hoverData = pyqtSignal(str)
     dragData = pyqtSignal(tuple)
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, view_box, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.setAcceptHoverEvents(True)
         self.hoverData.emit("")
+        self._view_box = view_box
         self.start_coord = None
         self.end_coord = None
         self.timer = QTimer()
@@ -34,12 +35,8 @@ class CustomImageItem(ImageItem):
         return pix * self._pix_to_mm_ratio
 
     def get_pos(self, event):
-        pos = event.pos()
-        i, j = pos.x(), pos.y()
-        i, j = (
-            int(np.clip(i, 0, self.image.shape[0])),
-            int(np.clip(j, 0, self.image.shape[1])),
-        )
+        viewPos = self._view_box.mapSceneToView(event.scenePos())
+        i, j = viewPos.x(), viewPos.y()
         return i, j
 
     def mousePressEvent(self, event):
@@ -92,7 +89,11 @@ class CustomImageItem(ImageItem):
             self.hoverData.emit("")  # Clear any previous title
         else:
             i, j = self.get_pos(event)
-            value = self.image[i, j]
+            try:
+                value = self.image[i, j]
+            except IndexError:
+                self.hoverData.emit("")  # Clear any previous title
+                return
             if self._use_metric_length:
                 self.hoverData.emit(
                     f"Coordinates: ({self._pix_to_mm(i):.2f} mm, {self._pix_to_mm(j):.2f} mm), Value: {value:.2f}"

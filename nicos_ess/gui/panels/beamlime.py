@@ -132,25 +132,14 @@ class BeamLimePlot(QFrame):
         else:
             print("Not an image view; ROI definition is not applicable for 1D plots.")
 
-    def _roi_updated_callback(self, data, coords):
+    def _roi_updated_callback(self, pos, size):
         """
         Called whenever the user finishes dragging or changes the ROI in the ImageView.
         You receive the ROI sub-array (data) and the mapped coordinates (coords).
         """
-        print("ROI updated callback in BeamLimePlot!")
-        print(
-            f"ROI shape = {data.shape}, ROI coords shape = {coords[0].shape}, {coords[1].shape}"
-        )
-
-        # DO WHATEVER YOU WANT HERE:
-        # e.g., compute some stats, forward them to a logger, or store them in self.parent
-        roi_mean = data.mean()
-        roi_std = data.std()
-        print(f"ROI mean={roi_mean:.3f}, std={roi_std:.3f}")
-
         # If you want to call the parent panel, do something like:
         if hasattr(self.parent, "on_roi_data"):
-            self.parent.on_roi_data(self, data, coords)
+            self.parent.on_roi_data(self, pos, size)
 
     def update_combobox(self, choices, current_text):
         self.source_combo.blockSignals(True)
@@ -226,19 +215,28 @@ class BeamLimePanel(Panel):
         data_dtype = datadesc["dtype"]
         label_dtypes = datadesc.get("label_dtypes")
         plot_type = datadesc.get("plot_type")
+        label_shape = label_shape[::-1]
+        label_dtypes = label_dtypes[::-1]
 
         data = np.frombuffer(blobs[0], dtype=data_dtype).reshape(data_shape)
-        labels = []
-        for i, (shape, dtype) in enumerate(zip(label_shape, label_dtypes)):
-            label = np.frombuffer(
-                blobs[1][i * shape * 8 : (i + 1) * shape * 8], dtype=np.float64
-            ).astype(dtype)
-            labels.append(label)
+        # labels = []
+        # for i, (shape, dtype) in enumerate(zip(label_shape, label_dtypes)):
+        #     label = np.frombuffer(
+        #         blobs[1][i * shape * 8 : (i + 1) * shape * 8], dtype=np.float64
+        #     ).astype(dtype)
+        #     labels.append(label)
 
         if plot_type == "hist-1d" and isinstance(plot_widget, LineView):
-            plot_widget.set_data([data], {"x": labels[0]})
+            labels = np.frombuffer(blobs[1], dtype=np.float64).astype(label_dtypes[0])
+            plot_widget.set_data([data], {"x": labels})
         elif plot_type == "hist-2d" and isinstance(plot_widget, ImageView):
-            plot_widget.set_data([data], {"x": labels[1], "y": labels[0]})
+            labels_y = np.frombuffer(
+                blobs[1][: label_shape[1] * 8], dtype=np.float64
+            ).astype(label_dtypes[0])
+            labels_x = np.frombuffer(
+                blobs[1][label_shape[1] * 8 :], dtype=np.float64
+            ).astype(label_dtypes[1])
+            plot_widget.set_data([data], {"x": labels_x, "y": labels_y})
         else:
             return
 
@@ -263,10 +261,14 @@ class BeamLimePanel(Panel):
     def on_client_connected(self):
         self.client.tell("eventunmask", ["livedata"])
 
-    def on_roi_data(self, child_plot_widget, data, coords):
-        print(
-            f"ROI data received in BeamLimePanel from {child_plot_widget}: {data.shape}, {coords[0].shape}, {coords[1].shape}"
-        )
+    def on_roi_data(self, child_plot_widget, pos, size):
+        """Callback to handle ROI data from a child plot widget."""
+        # pos and size are the ROI coordinates in the data array
+        # Do something with the ROI data, e.g. send it to the server
+        print(f"ROI data received from {child_plot_widget}: pos={pos}, size={size}")
+        start_x, start_y = pos.x(), pos.y()
+        end_x, end_y = start_x + size.x(), start_y + size.y()
+        print(f"ROI in x from {start_x} to {end_x}, in y from {start_y} to {end_y}")
 
     def exec_command(self, command):
         self.client.tell("exec", command)

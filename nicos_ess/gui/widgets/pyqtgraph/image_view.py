@@ -202,7 +202,7 @@ class ImageView(QWidget):
         self.image_view_controller = ImageViewController(self)
 
     def build_main_image_item(self):
-        self.image_item = CustomImageItem()
+        self.image_item = CustomImageItem(view_box=self.image_plot.vb)
         self.image_item.setAutoDownsample(True)
         self.view.addItem(self.image_item)
 
@@ -566,6 +566,7 @@ class ImageView(QWidget):
         if not self.image_view_controller.roi_cb.isChecked() and not self._simple_mode:
             self.image_view_controller.roi_cb.click()
         QApplication.setOverrideCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self.roi.hide()
         self.view.setMouseEnabled(False, False)
         self.image_item.set_define_roi_mode(True)
         self.image_item.dragData.connect(self.define_roi)
@@ -612,6 +613,8 @@ class ImageView(QWidget):
             )
             size = tuple(map(lambda x: max(x, 0), raw_size))
             self.roi.setSize(size=size)
+            if not self.roi.isVisible():
+                self.roi.show()
         else:
             self.exit_roi_drag_mode()
 
@@ -991,7 +994,7 @@ class ImageView(QWidget):
 
         if self._simple_mode:
             if self._roi_callback:
-                self._roi_callback(data, coords)
+                self._roi_callback(self.roi.pos(), self.roi.size())
             return
 
         self.histogram_image_item.setImage(data, autoLevels=False)
