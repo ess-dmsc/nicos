@@ -221,11 +221,14 @@ class DataChannel(CounterChannelMixin, PassiveChannel):
 
     def get_plot_data(self):
         """
-        Returns data in the order [x, y, z] for plotting. Like [axes_1, axes_2, signal].
+        Returns data in the order [y, x, z] for plotting. Like [axes_2, axes_1, signal].
+        The reason for swapping the x and y axes is that we are transposing the data
+        when we plot it in the GUI.
         """
         try:
             axes_to_plot_against = self.data_structure["signal_axes"]
             plot_data = [self.data_structure[axis] for axis in axes_to_plot_against]
+            plot_data.reverse()
             plot_data.append(self.data_structure["signal"])
             return plot_data
         except KeyError:
