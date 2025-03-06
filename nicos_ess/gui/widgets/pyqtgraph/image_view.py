@@ -7,6 +7,7 @@ from nicos.guisupport.qt import (
     QApplication,
     QCursor,
     QLabel,
+    QPointF,
     QSplitter,
     Qt,
     QVBoxLayout,
@@ -994,7 +995,16 @@ class ImageView(QWidget):
 
         if self._simple_mode:
             if self._roi_callback:
-                self._roi_callback(self.roi.pos(), self.roi.size())
+                pos_in_percentage = QPointF(
+                    self.roi.pos().x() / self.image_item.image.shape[0],
+                    self.roi.pos().y() / self.image_item.image.shape[1],
+                )
+                size_in_percentage = QPointF(
+                    self.roi.size().x() / self.image_item.image.shape[0],
+                    self.roi.size().y() / self.image_item.image.shape[1],
+                )
+
+                self._roi_callback(pos_in_percentage, size_in_percentage)
             return
 
         self.histogram_image_item.setImage(data, autoLevels=False)

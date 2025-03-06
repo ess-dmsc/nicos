@@ -1,8 +1,9 @@
 """NICOS BeamLime liveview."""
 
 import numpy as np
-from PyQt5.QtCore import QTimer, pyqtSlot
-from PyQt5.QtWidgets import (
+
+from nicos.clients.gui.panels import Panel
+from nicos.guisupport.qt import (
     QAction,
     QComboBox,
     QFrame,
@@ -10,12 +11,12 @@ from PyQt5.QtWidgets import (
     QHBoxLayout,
     QMenu,
     QPushButton,
+    QTimer,
     QToolButton,
     QVBoxLayout,
     QWidget,
+    pyqtSlot,
 )
-
-from nicos.clients.gui.panels import Panel
 from nicos_ess.gui.widgets.pyqtgraph.image_view import ImageView
 from nicos_ess.gui.widgets.pyqtgraph.line_view import LineView
 
@@ -274,6 +275,7 @@ class BeamLimePanel(Panel):
             [end_x, end_y],
             [start_x, end_y],
         ]
+        print(f"ROI data from {child_plot_widget.name}: {coords}")
         self.run_command(f"{child_plot_widget.name}.roi={coords}")
 
     def exec_command(self, command):

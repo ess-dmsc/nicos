@@ -287,7 +287,18 @@ class DataChannel(CounterChannelMixin, PassiveChannel):
         self._send_command_to_collector("roi_active", value)
 
     def doWriteRoi(self, value):
-        self._send_command_to_collector("roi", value)
+        roi_rectangle = {
+            "x": {
+                "low": min([coord[0] for coord in value]),
+                "high": max([coord[0] for coord in value]),
+            },
+            "y": {
+                "low": min([coord[1] for coord in value]),
+                "high": max([coord[1] for coord in value]),
+            },
+        }
+        message = json.dumps(roi_rectangle).encode("utf-8")
+        self._send_command_to_collector("roi_rectangle", message)
 
 
 class BeamLimeCollector(Detector):
