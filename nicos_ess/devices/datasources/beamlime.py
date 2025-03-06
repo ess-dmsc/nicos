@@ -252,7 +252,8 @@ class DataChannel(CounterChannelMixin, PassiveChannel):
             parameters = dict(
                 uid=0,
                 time=timestamp,
-                det=source_name,
+                det=self.name,
+                source_name=source_name,
                 tag=LIVE,
                 datadescs=datadesc,
             )
