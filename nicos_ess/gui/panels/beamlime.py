@@ -29,6 +29,7 @@ class BeamLimePlot(QFrame):
     def __init__(self, parent):
         super().__init__(parent)
         self.parent = parent
+        self.name = ""
         self.current_view = None
         self.build_ui()
         self.source_combo.currentIndexChanged.connect(self.on_plot_changed)
@@ -108,6 +109,7 @@ class BeamLimePlot(QFrame):
 
         parent.connected_plots[selection] = (view, self.source_combo)
         parent.currently_selected_plots[self] = selection
+        self.name = selection
 
         parent._on_plot_livedata(view, params, blobs)
 
@@ -137,7 +139,6 @@ class BeamLimePlot(QFrame):
         Called whenever the user finishes dragging or changes the ROI in the ImageView.
         You receive the ROI sub-array (data) and the mapped coordinates (coords).
         """
-        # If you want to call the parent panel, do something like:
         if hasattr(self.parent, "on_roi_data"):
             self.parent.on_roi_data(self, pos, size)
 
@@ -265,13 +266,21 @@ class BeamLimePanel(Panel):
         """Callback to handle ROI data from a child plot widget."""
         # pos and size are the ROI coordinates in the data array
         # Do something with the ROI data, e.g. send it to the server
-        print(f"ROI data received from {child_plot_widget}: pos={pos}, size={size}")
         start_x, start_y = pos.x(), pos.y()
         end_x, end_y = start_x + size.x(), start_y + size.y()
-        print(f"ROI in x from {start_x} to {end_x}, in y from {start_y} to {end_y}")
+        coords = [
+            [start_x, start_y],
+            [end_x, start_y],
+            [end_x, end_y],
+            [start_x, end_y],
+        ]
+        self.run_command(f"{child_plot_widget.name}.roi={coords}")
 
     def exec_command(self, command):
         self.client.tell("exec", command)
+
+    def run_command(self, command):
+        return self.client.run(command)
 
     def eval_command(self, command, *args, **kwargs):
         return self.client.eval(command, *args, **kwargs)

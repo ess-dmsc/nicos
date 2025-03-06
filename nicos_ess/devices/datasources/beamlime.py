@@ -71,7 +71,7 @@ class DataChannel(CounterChannelMixin, PassiveChannel):
         ),
         "roi": Param(
             "Region of interest, coordinates with winding order by index",
-            type=list,
+            type=listof(listof(int)),
             default=[],
             userparam=True,
             settable=True,
