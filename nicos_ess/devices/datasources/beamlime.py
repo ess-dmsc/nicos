@@ -373,10 +373,6 @@ class BeamLimeCollector(Detector):
             else:
                 self.log.debug(f"Command sent: {msg}")
 
-        if "start_time" not in param_name:
-            self.log.warn(f"Sending command {param_name} with message {message}")
-            return
-
         if self._kafka_producer:
             self._kafka_producer.produce(
                 self.command_topic,
