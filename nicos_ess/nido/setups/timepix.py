@@ -4,8 +4,8 @@ devices = dict(
     timepix=device(
         "nicos_ess.devices.epics.area_detector.TimepixDetector",
         description="TimePix3 detector.",
-        pv_root="Tpx3:cam1:",
-        image_pv="Tpx3:image1:ArrayData",
+        pv_root="LabS-ECDC:NDet-TPX3-001:cam1:",
+        image_pv="LabS-ECDC:NDet-TPX3-001:image1:ArrayData",
         unit="images",
         pollinterval=None,
         pva=True,
@@ -14,7 +14,7 @@ devices = dict(
     timepix_event_counter=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
         description="TimePix3 photon event counter",
-        readpv="Tpx3:cam1:PelEvtRate_RBV",
+        readpv="LabS-ECDC:NDet-TPX3-001:cam1:PelEvtRate_RBV",
     ),
     area_detector_collector=device(
         "nicos_ess.devices.epics.area_detector.AreaDetectorCollector",
