@@ -31,7 +31,7 @@ class BeamLimePlot(QFrame):
         self.source_combo.currentIndexChanged.connect(self.on_plot_changed)
 
     def build_ui(self):
-        self.setFrameStyle(QFrame.Box)
+        self.setFrameStyle(QFrame.Shape.Box)
         self.setLineWidth(1)
         self.main_layout = QVBoxLayout(self)
         self.setLayout(self.main_layout)
