@@ -1,8 +1,9 @@
 """NICOS BeamLime liveview."""
 
 import numpy as np
-from PyQt5.QtCore import pyqtSlot
-from PyQt5.QtWidgets import (
+
+from nicos.clients.gui.panels import Panel
+from nicos.guisupport.qt import (
     QComboBox,
     QFrame,
     QGridLayout,
@@ -10,9 +11,8 @@ from PyQt5.QtWidgets import (
     QPushButton,
     QVBoxLayout,
     QWidget,
+    pyqtSlot,
 )
-
-from nicos.clients.gui.panels import Panel
 from nicos_ess.gui.widgets.pyqtgraph.image_view import ImageView
 from nicos_ess.gui.widgets.pyqtgraph.line_view import LineView
 
@@ -31,7 +31,7 @@ class BeamLimePlot(QFrame):
         self.source_combo.currentIndexChanged.connect(self.on_plot_changed)
 
     def build_ui(self):
-        self.setFrameStyle(QFrame.Box)
+        self.setFrameStyle(QFrame.Shape.Box)
         self.setLineWidth(1)
         self.main_layout = QVBoxLayout(self)
         self.setLayout(self.main_layout)
