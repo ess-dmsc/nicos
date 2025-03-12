@@ -10,6 +10,18 @@ sysconfig = dict(
     datasinks=["conssink", "daemonsink", "liveview"],
 )
 
+alias_config = {
+    "NexusStructure": {
+        "NexusStructure_Basic": 101,
+        "NexusStructure_loki": 100,
+        "NexusStructure_dream": 99,
+        "NexusStructure_bifrost": 98,
+        "NexusStructure_nmx": 97,
+        "NexusStructure_odin": 96,
+        "NexusStructure_tbl": 95,
+        "NexusStructure_estia": 94,
+    },
+}
 modules = ["nicos.commands.standard", "nicos_ess.commands"]
 
 devices = dict(
@@ -50,6 +62,55 @@ devices = dict(
         statustopic=["ymir_forwarder_dynamic_status"],
         config_topic="ymir_forwarder_dynamic_config",
         brokers=configdata("config.KAFKA_BROKERS"),
+    ),
+    NexusStructure_loki=device(
+        "nicos_ess.devices.datasinks.nexus_structure.NexusStructureJsonFile",
+        description="Provides the NeXus structure",
+        nexus_config_path="nexus-json-templates/loki/loki-dynamic.json",
+        instrument_name="loki",
+        visibility=(),
+    ),
+    NexusStructure_dream=device(
+        "nicos_ess.devices.datasinks.nexus_structure.NexusStructureJsonFile",
+        description="Provides the NeXus structure",
+        nexus_config_path="nexus-json-templates/dream/dream-dynamic.json",
+        instrument_name="dream",
+        visibility=(),
+    ),
+    NexusStructure_bifrost=device(
+        "nicos_ess.devices.datasinks.nexus_structure.NexusStructureJsonFile",
+        description="Provides the NeXus structure",
+        nexus_config_path="nexus-json-templates/bifrost/bifrost-dynamic.json",
+        instrument_name="bifrost",
+        visibility=(),
+    ),
+    NexusStructure_nmx=device(
+        "nicos_ess.devices.datasinks.nexus_structure.NexusStructureJsonFile",
+        description="Provides the NeXus structure",
+        nexus_config_path="nexus-json-templates/nmx/nmx-dynamic.json",
+        instrument_name="nmx",
+        visibility=(),
+    ),
+    NexusStructure_odin=device(
+        "nicos_ess.devices.datasinks.nexus_structure.NexusStructureJsonFile",
+        description="Provides the NeXus structure",
+        nexus_config_path="nexus-json-templates/odin/odin-dynamic.json",
+        instrument_name="odin",
+        visibility=(),
+    ),
+    NexusStructure_tbl=device(
+        "nicos_ess.devices.datasinks.nexus_structure.NexusStructureJsonFile",
+        description="Provides the NeXus structure",
+        nexus_config_path="nexus-json-templates/tbl/tbl-dynamic.json",
+        instrument_name="tbl",
+        visibility=(),
+    ),
+    NexusStructure_estia=device(
+        "nicos_ess.devices.datasinks.nexus_structure.NexusStructureJsonFile",
+        description="Provides the NeXus structure",
+        nexus_config_path="nexus-json-templates/estia/estia-dynamic.json",
+        instrument_name="estia",
+        visibility=(),
     ),
     NexusStructure_Basic=device(
         "nicos_ess.devices.datasinks.nexus_structure.NexusStructureJsonFile",
