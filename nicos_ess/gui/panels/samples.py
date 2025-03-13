@@ -1,9 +1,9 @@
 import os
 import sys
+from copy import deepcopy
 
 from nicos.guisupport.qt import (
     QAction,
-    QApplication,
     QDialog,
     QDialogButtonBox,
     QFileDialog,
@@ -12,7 +12,7 @@ from nicos.guisupport.qt import (
     QKeySequence,
     QLabel,
     QLineEdit,
-    QMainWindow,
+    QPushButton,
     QShortcut,
     Qt,
     QTableView,
@@ -21,7 +21,6 @@ from nicos.guisupport.qt import (
     QVBoxLayout,
     QWidget,
 )
-from nicos.utils import findResource
 from nicos_ess.gui.panels.panel import PanelBase
 from nicos_ess.gui.panels.samples_model import SampleTableModel
 from nicos_ess.gui.tables.table_helper import Clipboard, TableHelper
@@ -40,34 +39,50 @@ class SampleTablePanel(PanelBase):
     def __init__(self, parent, client, options):
         PanelBase.__init__(self, parent, client, options)
         self._in_edit_mode = True
-        self.last_save_location = None
+        self.to_monitor = ["sample/samples"]
+        self._last_save_location = None
+
         self.table = SampleTable(DEFAULT_COLUMNS)
         self.toolbar = TableToolBar()
+        self.buttons = ApplyDiscardButtons()
 
         self.layout = QVBoxLayout()
         self.layout.addWidget(self.toolbar.toolbar)
         self.layout.addWidget(self.table.view)
+        self.layout.addLayout(self.buttons.layout)
         self.setLayout(self.layout)
+
+        self.current_sample_data = deepcopy(self.table.model.raw_data)
 
         self._create_keyboard_shortcuts()
         self._connect_signals()
 
-    def _connect_signals(self):
-        self.toolbar.open_action.triggered.connect(self._open_file)
-        self.toolbar.save_action.triggered.connect(self._save_table)
-        self.toolbar.add_row_below_action.triggered.connect(self._add_row_below)
-        self.toolbar.copy_row_action.triggered.connect(self._copy_row)
-        self.toolbar.delete_row_action.triggered.connect(self._delete_rows)
-        self.toolbar.add_col_right_action.triggered.connect(self._prepare_add_column)
-        # self.toolbar.move_col_right_action.triggered.connect(self._move_cols_right)
-        # self.toolbar.move_col_left_action.triggered.connect(self._move_cols_left)
-        self.toolbar.rename_col_action.triggered.connect(self._prepare_rename_column)
-        self.toolbar.delete_col_action.triggered.connect(self._delete_cols)
-        self.toolbar.clear_action.triggered.connect(self._clear_table)
+    def _check_for_changes(self):
+        changed = self.current_sample_data != self.table.model.raw_data
+        self.buttons.set_buttons_and_warning_behaviour(changed)
+
+    def _apply_changes(self):
+        self._set_samples()
+        self.current_sample_data = deepcopy(self.table.model.raw_data)
+        self.buttons.set_buttons_and_warning_behaviour(False)
+
+    def _discard_changes(self):
+        self.table.model.raw_data = deepcopy(self.current_sample_data)
+
+    def _set_samples(self):
+        if self.table.model.raw_data == self.current_sample_data:
+            return
+
+        samples = {}
+        for index, sample in enumerate(self.tabel.model.raw_data):
+            if not sample.get("name", ""):
+                sample["name"] = f"sample {index + 1}"
+            samples[index] = sample
+        self.client.run(f"Exp.sample.set_samples({dict(samples)})")
 
     def _open_file(self):
         #####
-        self.last_save_location = os.path.join(
+        self._last_save_location = os.path.join(
             "~", "ess", "projects", "qt_testing", "loki_like_sample_table", "testdata"
         )
         #####
@@ -76,8 +91,8 @@ class SampleTablePanel(PanelBase):
                 self,
                 "Open table",
                 os.path.expanduser("~")
-                if self.last_save_location is None
-                else self.last_save_location,
+                if self._last_save_location is None
+                else self._last_save_location,
                 "Table files (*.csv)",
             )[0]
             if not filename:
@@ -104,8 +119,8 @@ class SampleTablePanel(PanelBase):
             self,
             "Save table",
             os.path.expanduser("~")
-            if self.last_save_location is None
-            else self.last_save_location,
+            if self._last_save_location is None
+            else self._last_save_location,
             "Table files (*.csv)",
             initialFilter="*.csv",
         )[0]
@@ -115,7 +130,7 @@ class SampleTablePanel(PanelBase):
         if not filename.endswith(".csv"):
             filename = filename + ".csv"
 
-        self.last_save_location = os.path.dirname(filename)
+        self._last_save_location = os.path.dirname(filename)
         try:
             headers = self.table.model.column_headers
             data = self.table.model.table_data
@@ -235,6 +250,24 @@ class SampleTablePanel(PanelBase):
         if self._in_edit_mode:
             self.table.helper.clear_selected()
 
+    def _connect_signals(self):
+        self.toolbar.open_action.triggered.connect(self._open_file)
+        self.toolbar.save_action.triggered.connect(self._save_table)
+        self.toolbar.add_row_below_action.triggered.connect(self._add_row_below)
+        self.toolbar.copy_row_action.triggered.connect(self._copy_row)
+        self.toolbar.delete_row_action.triggered.connect(self._delete_rows)
+        self.toolbar.add_col_right_action.triggered.connect(self._prepare_add_column)
+        # self.toolbar.move_col_right_action.triggered.connect(self._move_cols_right)
+        # self.toolbar.move_col_left_action.triggered.connect(self._move_cols_left)
+        self.toolbar.rename_col_action.triggered.connect(self._prepare_rename_column)
+        self.toolbar.delete_col_action.triggered.connect(self._delete_cols)
+        self.toolbar.clear_action.triggered.connect(self._clear_table)
+
+        self.table.model.data_updated.connect(self._check_for_changes)
+
+        self.buttons.btn_apply.clicked.connect(self._apply_changes)
+        self.buttons.btn_discard.clicked.connect(self._discard_changes)
+
 
 class SampleTable:
     def __init__(self, columns):
@@ -329,6 +362,29 @@ class TableToolBar(QWidget):
         widget = toolbar.widgetForAction(action)
         if isinstance(widget, QToolButton):
             widget.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
+
+
+class ApplyDiscardButtons(QWidget):
+    def __init__(self):
+        QWidget.__init__(self)
+        self.layout = QHBoxLayout()
+        self.lbl_warning = QLabel("Changes to the samples have not been applied!")
+        self.btn_apply = QPushButton("Apply")
+        self.btn_discard = QPushButton("Discard")
+        self.lbl_warning.setStyleSheet("font-weight: bold;color: red;")
+        self.btn_apply.setFixedWidth(80)
+        self.btn_discard.setFixedWidth(80)
+        self.layout.addStretch()
+        self.layout.addWidget(self.lbl_warning)
+        self.layout.addWidget(self.btn_apply)
+        self.layout.addWidget(self.btn_discard)
+
+        self.set_buttons_and_warning_behaviour(False)
+
+    def set_buttons_and_warning_behaviour(self, changed):
+        self.btn_apply.setEnabled(changed)
+        self.btn_discard.setEnabled(changed)
+        self.lbl_warning.setVisible(changed)
 
 
 class ColNameDialog(QDialog):
