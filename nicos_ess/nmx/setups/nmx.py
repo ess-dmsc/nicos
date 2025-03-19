@@ -1,4 +1,4 @@
-description = "LoKI basic instrument setup"
+description = "NMX basic instrument setup"
 
 group = "basic"
 
