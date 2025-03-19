@@ -23,7 +23,7 @@ class KafkaConsumer:
         :param options: Extra configuration options. See the Confluent Kafka
             documents for the full list of options.
         """
-        options = {**options, **create_sasl_config()}
+        #options = {**options, **create_sasl_config()}
         return KafkaConsumer(brokers, starting_offset, **options)
 
     def __init__(self, brokers, starting_offset="latest", **options):
