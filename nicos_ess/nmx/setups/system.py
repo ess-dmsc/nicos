@@ -45,9 +45,33 @@ devices = dict(
         config_topic="nmx_forwarder_dynamic_config",
         brokers=configdata("config.KAFKA_BROKERS"),
     ),
-    SciChat=device(
-        "nicos_ess.devices.scichat.ScichatBot",
-        description="Sends messages to SciChat",
+    NexusStructure_Basic=device(
+        "nicos_ess.devices.datasinks.nexus_structure.NexusStructureJsonFile",
+        description="Provides the NeXus structure",
+        nexus_config_path="nexus-json-templates/nmx/nmx-dynamic.json",
+        instrument_name="",
+        visibility=(),
+    ),
+    NexusStructure=device(
+        "nicos.devices.generic.DeviceAlias",
+        alias="NexusStructure_Basic",
+        devclass="nicos_ess.devices.datasinks.nexus_structure.NexusStructureJsonFile",
+    ),
+    FileWriterStatus=device(
+        "nicos_ess.devices.datasinks.file_writer.FileWriterStatus",
+        description="Status of the file-writer",
         brokers=configdata("config.KAFKA_BROKERS"),
+        statustopic=["nmx_filewriter", "ess_filewriter_status"],
+        unit="",
+    ),
+    FileWriterControl=device(
+        "nicos_ess.devices.datasinks.file_writer.FileWriterControlSink",
+        description="Control for the file-writer",
+        brokers=configdata("config.KAFKA_BROKERS"),
+        pool_topic="ess_filewriter_pool",
+        instrument_topic="nmx_filewriter",
+        status="FileWriterStatus",
+        nexus="NexusStructure",
+        use_instrument_directory=True,
     ),
 )
