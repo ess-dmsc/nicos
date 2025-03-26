@@ -38,6 +38,18 @@ devices = dict(
     liveview=device(
         "nicos.devices.datasinks.LiveViewSink",
     ),
+    NexusStructure_Basic=device(
+        "nicos_ess.devices.datasinks.nexus_structure.NexusStructureJsonFile",
+        description="Provides the NeXus structure",
+        nexus_config_path="/tmp/nmx_test.json",
+        instrument_name="",
+        visibility=(),
+    ),
+    NexusStructure=device(
+        "nicos.devices.generic.DeviceAlias",
+        alias="NexusStructure_Basic",
+        devclass="nicos_ess.devices.datasinks.nexus_structure.NexusStructureJsonFile",
+    ),
     FileWriterStatus=device(
         "nicos_ess.devices.datasinks.file_writer.FileWriterStatus",
         description="Status of the file-writer",
