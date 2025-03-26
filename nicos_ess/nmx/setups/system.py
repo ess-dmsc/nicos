@@ -41,7 +41,7 @@ devices = dict(
     NexusStructure_Basic=device(
         "nicos_ess.devices.datasinks.nexus_structure.NexusStructureJsonFile",
         description="Provides the NeXus structure",
-        nexus_config_path="/tmp/nmx_test.json",
+        nexus_config_path="nmx_test/nmx_test.json",
         instrument_name="",
         visibility=(),
     ),
