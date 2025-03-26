@@ -15,6 +15,9 @@ from nicos.guisupport.qt import (
     pyqtSlot,
 )
 from nicos.utils.loggers import NicosLogger
+from nicos_ess.gui.widgets.pyqtgraph.histogram import HistogramWidget
+from nicos_ess.gui.widgets.pyqtgraph.image_item import CustomImageItem
+from nicos_ess.gui.widgets.pyqtgraph.image_view_controller import ImageViewController
 from nicos_ess.gui.widgets.pyqtgraph.roi import (
     CROSS_COLOR,
     CROSS_HOOVER_COLOR,
@@ -25,13 +28,10 @@ from nicos_ess.gui.widgets.pyqtgraph.roi import (
     ROI_HANDLE_COLOR,
     ROI_HANDLE_HOOVER_COLOR,
     ROI_HOOVER_COLOR,
-    PlotROI,
-    LineROI,
     CrossROI,
+    LineROI,
+    PlotROI,
 )
-from nicos_ess.gui.widgets.pyqtgraph.histogram import HistogramWidget
-from nicos_ess.gui.widgets.pyqtgraph.image_item import CustomImageItem
-from nicos_ess.gui.widgets.pyqtgraph.image_view_controller import ImageViewController
 from nicos_ess.gui.widgets.pyqtgraph.stats_dialog import StatisticsDialog
 
 pg.setConfigOption("background", "w")
@@ -133,12 +133,21 @@ class ImageView(QWidget):
         self.addSelectedPixelAction.triggered.connect(self.add_selected_pixel)
         self.view.menu.addAction(self.addSelectedPixelAction)
 
+        self.aspectLockedAction = QAction("Aspect Locked", self)
+        self.aspectLockedAction.setCheckable(True)
+        self.aspectLockedAction.setChecked(True)
+        self.aspectLockedAction.triggered.connect(self.set_aspect_locked)
+        self.view.menu.addAction(self.aspectLockedAction)
+
         for child in self.view.menu.actions():
             if child.text() == "View All":
                 child.triggered.connect(self.set_auto_scale_axis)
 
     def set_auto_scale_axis(self):
         self.view.enableAutoRange(x=True, y=True)
+
+    def set_aspect_locked(self):
+        self.image_plot.setAspectLocked(self.aspectLockedAction.isChecked())
 
     def calculate_statistics(self):
         image_stats = {
