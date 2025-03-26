@@ -45,9 +45,4 @@ devices = dict(
         config_topic="nmx_forwarder_dynamic_config",
         brokers=configdata("config.KAFKA_BROKERS"),
     ),
-    SciChat=device(
-        "nicos_ess.devices.scichat.ScichatBot",
-        description="Sends messages to SciChat",
-        brokers=configdata("config.KAFKA_BROKERS"),
-    ),
 )
