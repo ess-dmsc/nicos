@@ -507,9 +507,8 @@ class FileWriterControlSink(Device):
         self.log.info("Filewriting started")
 
     def _generate_filepath(self, file_num):
-        proposal = session.experiment.propinfo.get("proposal")
-        proposal_path = session.experiment.proposalpath_of(proposal)
-        filename = f"{proposal}_{file_num:0>8}.hdf"
+        proposal_path = "/tmp/"
+        filename = f"{file_num:0>8}.hdf"
         return path.join(proposal_path, filename)
 
     def _start_job(
@@ -580,15 +579,7 @@ class FileWriterControlSink(Device):
         self._attached_status.mark_for_stop(job_id, stop_time)
 
     def check_okay_to_start(self):
-        if not session.experiment.propinfo.get("proposal"):
-            if self._mode == SIMULATION:
-                self.log.warning(
-                    "no proposal number has been set. "
-                    "When performing the real run a proposal "
-                    "number is required to start writing."
-                )
-            else:
-                raise RuntimeError("cannot start writing as proposal number not " "set")
+        self.log.warning("no proposal number has been set. ")
         active_jobs = self.get_active_jobs()
         if active_jobs:
             raise AlreadyWritingException(
