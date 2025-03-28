@@ -19,7 +19,7 @@ def create_sasl_config():
     mechanism = os.environ.get("KAFKA_SSL_MECHANISM")
     cert_filepath = os.environ.get("KAFKA_CERT_PATH")
     username = os.environ.get("KAFKA_USER")
-    password = nicoskeystore.getCredential("kafka_auth")
+    password = "" # nicoskeystore.getCredential("kafka_auth")
 
     supported_security_protocols = ["SASL_PLAINTEXT", "SASL_SSL"]
     supported_sasl_mechanisms = ["PLAIN", "SCRAM-SHA-512", "SCRAM-SHA-256"]
