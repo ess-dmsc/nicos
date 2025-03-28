@@ -86,7 +86,7 @@ def start_filewriting(run_title=None):
         f"  Title: {session.experiment.run_title}\n"
         f"  Run number: {session.experiment.get_current_run_number()}"
     )
-    scichat_send(message)
+#    scichat_send(message)
 
 
 @usercommand
@@ -97,7 +97,7 @@ def stop_filewriting(job_number=None):
     :param job_number: the job to stop, only required if more than one job.
     """
     _find_filewriter_dev().stop_job(job_number)
-    scichat_send("stopping filewriting")
+#    scichat_send("stopping filewriting")
 
 
 @usercommand
