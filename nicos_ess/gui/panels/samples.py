@@ -56,6 +56,24 @@ class SampleTablePanel(PanelBase):
 
         self._create_keyboard_shortcuts()
         self._connect_signals()
+        self.initialise_connection_status_listeners()
+
+    def initialise_connection_status_listeners(self):
+        PanelBase.initialise_connection_status_listeners(self)
+        for monitor in self.to_monitor:
+            self.client.register(self, monitor)
+
+    def on_keyChange(self, key, value, time, expired):
+        print("key change, key:", key)
+        # if not self.in_edit_mode and key in self.to_monitor:
+        self.load_samples()
+
+    def load_samples(self):
+        samples = self._get_samples()
+        if len(samples) == 0:
+            return
+        headers = [header for header in samples[0].keys()]
+        print(headers)
 
     def _check_for_changes(self):
         changed = self.current_sample_data != self.table.model.raw_data
@@ -68,6 +86,13 @@ class SampleTablePanel(PanelBase):
 
     def _discard_changes(self):
         self.table.model.raw_data = deepcopy(self.current_sample_data)
+
+    def _get_samples(self):
+        samples = self.client.eval("session.experiment.get_samples()", {})
+        if len(samples) != 0:
+            return samples
+        else:
+            return []
 
     def _set_samples(self):
         if self.table.model.raw_data == self.current_sample_data:
