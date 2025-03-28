@@ -32,6 +32,7 @@ class EssExperiment(Device):
         "proposal": Param(
             "Current proposal number or proposal string",
             type=str,
+            default="123456",
             category="experiment",
         ),
         "propinfo": Param(
@@ -83,7 +84,7 @@ class EssExperiment(Device):
         ),
         "fixed_proposal_path": Param(
             "Override the generated proposal file path",
-            default=None,
+            default="/tmp/",
             type=none_or(str),
             userparam=False,
         ),
