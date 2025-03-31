@@ -1,6 +1,7 @@
 import os
 import sys
 from copy import deepcopy
+from email.utils import UEMPTYSTRING
 
 from nicos.guisupport.qt import (
     QAction,
@@ -32,7 +33,8 @@ from nicos_ess.utilities.csv_utils import (
 
 TABLE_QSS = "alternate-background-color: aliceblue;"
 SAMPLE_IDENTIFIER = "name"
-DEFAULT_COLUMNS = ["Sample name", "Notes"]
+IDENTIFIER_COL_NAME = "Sample name"
+DEFAULT_COLUMNS = [IDENTIFIER_COL_NAME, "Notes"]
 
 
 class SampleTablePanel(PanelBase):
@@ -69,20 +71,35 @@ class SampleTablePanel(PanelBase):
         self.load_samples()
 
     def load_samples(self):
+        self.table.model.clear()
         samples = self._get_samples()
         if len(samples) == 0:
             return
-        headers = [header for header in samples[0].keys()]
-        print(headers)
+
+        current_headers = [header for header in self.table.model.column_headers]
+        sample_headers = [header for header in samples[0].keys()]
+        empty_columns = {
+            header: "" for header in current_headers if header not in sample_headers
+        }
+        all_headers = list(sample_headers)
+        all_headers.extend(x for x in current_headers if x not in all_headers)
+
+        new_data = []
+        for row in samples:
+            row.update(empty_columns)
+            new_data.append(row)
+
+        self.table.model.add_missing_columns(all_headers)
+        self.table.model.raw_data = new_data
 
     def _check_for_changes(self):
         changed = self.current_sample_data != self.table.model.raw_data
         self.buttons.set_buttons_and_warning_behaviour(changed)
 
     def _apply_changes(self):
+        self.buttons.set_buttons_and_warning_behaviour(False)
         self._set_samples()
         self.current_sample_data = deepcopy(self.table.model.raw_data)
-        self.buttons.set_buttons_and_warning_behaviour(False)
 
     def _discard_changes(self):
         self.table.model.raw_data = deepcopy(self.current_sample_data)
@@ -90,16 +107,29 @@ class SampleTablePanel(PanelBase):
     def _get_samples(self):
         samples = self.client.eval("session.experiment.get_samples()", {})
         if len(samples) != 0:
+            samples = self.rename_sample_id_column(samples)
             return samples
         else:
             return []
+
+    def rename_sample_id_column(self, samples):
+        new_samples = []
+        for row in samples:
+            new_row = {}
+            for key, val in row.items():
+                if key == SAMPLE_IDENTIFIER:
+                    new_row[IDENTIFIER_COL_NAME] = val
+                else:
+                    new_row[key] = val
+            new_samples.append(new_row)
+        return new_samples
 
     def _set_samples(self):
         if self.table.model.raw_data == self.current_sample_data:
             return
 
         samples = {}
-        for index, sample in enumerate(self.tabel.model.raw_data):
+        for index, sample in enumerate(self.table.model.raw_data):
             if not sample.get("name", ""):
                 sample["name"] = f"sample {index + 1}"
             samples[index] = sample
@@ -124,16 +154,14 @@ class SampleTablePanel(PanelBase):
                 return
 
             headers, data = import_table_from_csv_file(filename)
-            headers = [DEFAULT_COLUMNS[0]] + headers[1:]
-            for i, header in enumerate(headers):
-                if not header in self.table.model.column_headers:
-                    self.table.model.insert_column(i, header)
+            headers = [IDENTIFIER_COL_NAME] + headers[1:]
 
             raw_data = []
             for row in data:
                 raw_data.append(dict(zip(headers, row)))
 
             self.table.model.clear()
+            self.table.model.add_missing_columns(headers)
             self.table.model.raw_data = raw_data
 
         except Exception as error:

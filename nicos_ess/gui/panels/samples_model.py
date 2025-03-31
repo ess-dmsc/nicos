@@ -66,6 +66,11 @@ class SampleTableModel(TableModel):
         self.endInsertColumns()
         self._emit_update()
 
+    def add_missing_columns(self, headers):
+        for i, header in enumerate(headers):
+            if header not in self.column_headers:
+                self.insert_column(i, header)
+
     def delete_columns(self, col_indices):
         self.beginRemoveColumns(QModelIndex(), min(col_indices), max(col_indices))
         col_indices_reverse = sorted(list(set(col_indices)), reverse=True)
