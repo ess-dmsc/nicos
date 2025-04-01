@@ -7,5 +7,7 @@ devices = dict(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The status of the battery",
         readpv="{}BatteryStatusInt-R".format(pv_root),
+        mapping={1: "Unknown", 2: "Normal", 3: "Low", 4: "Depleted"},
+        visibility=(),
     )
 )
