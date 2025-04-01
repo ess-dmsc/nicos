@@ -1,6 +1,6 @@
 description = "The Read-out Master Module (RMM)."
 
-pv_root = "BIFRO:NDet-RMM-001:"
+pv_root = "BIFRO-Det:NDet-RMM-001:"
 
 
 devices = dict(
