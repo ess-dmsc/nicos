@@ -7,6 +7,9 @@ from nicos.core.errors import ConfigurationError
 from nicos.utils import createThread
 from nicos_ess.devices.kafka.utils import create_sasl_config
 
+ASSIGNMENT_TIMEOUT = 5
+ASSIGNMENT_POLL_INTERVAL = 0.1
+
 
 class KafkaConsumer:
     """Class for wrapping the Confluent Kafka consumer."""
@@ -53,13 +56,11 @@ class KafkaConsumer:
                 metadata = self._consumer.list_topics(topic_name, timeout=5)
             except KafkaException as exc:
                 raise ConfigurationError(
-                    "could not obtain metadata for topic " f"{topic_name}"
+                    f"could not obtain metadata for topic {topic_name}"
                 ) from exc
 
             if topic_name not in metadata.topics:
-                raise ConfigurationError(
-                    f"provided topic {topic_name} does " "not exist"
-                )
+                raise ConfigurationError(f"provided topic {topic_name} does not exist")
 
             topic_partitions.extend(
                 [
@@ -69,6 +70,21 @@ class KafkaConsumer:
             )
 
         self._consumer.assign(topic_partitions)
+
+        self._confirm_nonempty_assignment(topics)
+
+    def _confirm_nonempty_assignment(self, topics):
+        start_time = time.monotonic()
+        while True:
+            msg = self._consumer.poll(timeout=ASSIGNMENT_POLL_INTERVAL)
+            assigned_partitions = self._consumer.assignment()
+            if assigned_partitions:
+                break
+
+            if time.monotonic() - start_time > ASSIGNMENT_TIMEOUT:
+                raise ConfigurationError(
+                    f"Timed out waiting for assignment on topic(s) {topics}"
+                )
 
     def unsubscribe(self):
         """Remove any existing subscriptions."""

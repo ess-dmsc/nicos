@@ -12,17 +12,16 @@ from nicos.core import (
     Param,
     Value,
     floatrange,
+    host,
     listof,
     multiStatus,
     oneof,
     status,
     tupleof,
-    host,
 )
 from nicos.core.constants import LIVE, MASTER, SIMULATION
 from nicos.devices.generic import Detector, ImageChannelMixin, PassiveChannel
 from nicos.utils import createThread
-
 from nicos_ess.devices.kafka.consumer import KafkaConsumer, KafkaSubscriber
 from nicos_ess.devices.kafka.producer import KafkaProducer
 from nicos_ess.devices.kafka.status_handler import (
@@ -274,13 +273,29 @@ class JustBinItImage(ImageChannelMixin, PassiveChannel):
         self._zero_data()
         self._hist_edges = np.array([])
         self._hist_sum = 0
-        try:
-            self._kafka_subscriber.subscribe(
-                [self.hist_topic], self.new_messages_callback
-            )
-        except Exception as error:
-            self._update_status(status.ERROR, str(error))
-            raise
+
+        max_retries = 3
+        backoff_sec = 1
+        for attempt in range(max_retries):
+            try:
+                self._kafka_subscriber.subscribe(
+                    [self.hist_topic], self.new_messages_callback
+                )
+                break
+            except Exception as error:
+                self.log.error(
+                    "Subscription attempt %d/%d failed: %s",
+                    attempt + 1,
+                    max_retries,
+                    error,
+                )
+                if attempt < max_retries - 1:
+                    self.log.info("Retrying in %d second(s)...", backoff_sec)
+                    time.sleep(backoff_sec)
+                else:
+                    self._update_status(status.ERROR, str(error))
+                    raise
+
         self._update_status(status.OK, "")
 
     def new_messages_callback(self, messages):
@@ -593,12 +608,12 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
             if i not in self._presetkeys:
                 valid_keys = ", ".join(self._presetkeys)
                 raise InvalidValueError(
-                    self, f"unrecognised preset {i}, should" f" one of {valid_keys}"
+                    self, f"unrecognised preset {i}, should one of {valid_keys}"
                 )
         if "t" in preset and len(self._presetkeys.intersection(preset.keys())) > 1:
             raise InvalidValueError(
                 self,
-                "Cannot set number of detector counts" " and a time interval together",
+                "Cannot set number of detector counts and a time interval together",
             )
         self._lastpreset = preset.copy()
 
