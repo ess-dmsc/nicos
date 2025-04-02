@@ -31,6 +31,10 @@ main_window = docked(
                             panel("nicos_ess.gui.panels.live_gr.MultiLiveDataPanel"),
                         ),
                         (
+                            "Choppers",
+                            panel("nicos_ess.gui.panels.chopper.ChopperPanel"),
+                        ),
+                        (
                             "Spectrometer",
                             panel(
                                 "nicos_ess.loki.gui.panels.spectrometer.SpectrometerPanel"
