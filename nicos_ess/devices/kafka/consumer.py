@@ -71,21 +71,6 @@ class KafkaConsumer:
 
         self._consumer.assign(topic_partitions)
 
-        self._confirm_nonempty_assignment(topics)
-
-    def _confirm_nonempty_assignment(self, topics):
-        start_time = time.monotonic()
-        while True:
-            msg = self._consumer.poll(timeout=ASSIGNMENT_POLL_INTERVAL)
-            assigned_partitions = self._consumer.assignment()
-            if assigned_partitions:
-                break
-
-            if time.monotonic() - start_time > ASSIGNMENT_TIMEOUT:
-                raise ConfigurationError(
-                    f"Timed out waiting for assignment on topic(s) {topics}"
-                )
-
     def unsubscribe(self):
         """Remove any existing subscriptions."""
         self._consumer.unsubscribe()

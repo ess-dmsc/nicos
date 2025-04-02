@@ -274,35 +274,23 @@ class JustBinItImage(ImageChannelMixin, PassiveChannel):
         self._hist_edges = np.array([])
         self._hist_sum = 0
 
-        max_retries = 3
-        backoff_sec = 1
-        for attempt in range(max_retries):
-            try:
-                self._kafka_subscriber.subscribe(
-                    [self.hist_topic],
-                    self.new_messages_callback,
-                )
-                break
-            except Exception as error:
-                self.log.error(
-                    "Subscription attempt %d/%d failed: %s",
-                    attempt + 1,
-                    max_retries,
-                    error,
-                )
-                if attempt < max_retries - 1:
-                    self.log.info("Retrying in %d second(s)...", backoff_sec)
-                    time.sleep(backoff_sec)
-                else:
-                    self._update_status(status.ERROR, str(error))
-                    raise
+        try:
+            self._kafka_subscriber.subscribe(
+                [self.hist_topic],
+                self.new_messages_callback,
+            )
+        except Exception as error:
+            self._update_status(status.ERROR, str(error))
+            raise
 
         self._update_status(status.OK, "")
 
     def new_messages_callback(self, messages):
-        if self.name == "det_image1":
-            self.log.warn(f"Name: {self.name}, the messages are {messages}")
-        for _, message in messages:
+        for (_, timestamp), message in messages:
+            if timestamp / 1e3 < self._start_time:
+                self.log.warn(f"Skipping message with timestamp {timestamp}")
+                continue
+
             deserialiser = deserialiser_by_schema.get(get_schema(message))
             if not deserialiser:
                 continue
@@ -358,7 +346,8 @@ class JustBinItImage(ImageChannelMixin, PassiveChannel):
 
     def get_configuration(self):
         # Generate a unique-ish id
-        self._unique_id = "nicos-{}-{}".format(self.name, int(time.time()))
+        self._start_time = int(time.time())
+        self._unique_id = "nicos-{}-{}".format(self.name, self._start_time)
 
         return {
             "type": hist_type_by_name[self.hist_type].name,
