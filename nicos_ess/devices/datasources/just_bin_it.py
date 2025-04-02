@@ -300,6 +300,8 @@ class JustBinItImage(ImageChannelMixin, PassiveChannel):
         self._update_status(status.OK, "")
 
     def new_messages_callback(self, messages):
+        if self.name == "det_image1":
+            self.log.warn(f"Name: {self.name}, the messages are {messages}")
         for _, message in messages:
             deserialiser = deserialiser_by_schema.get(get_schema(message))
             if not deserialiser:
@@ -307,6 +309,9 @@ class JustBinItImage(ImageChannelMixin, PassiveChannel):
             hist = deserialiser(message)
             info = json.loads(hist["info"])
             self.log.debug("received unique id = {}".format(info["id"]))
+            self.log.warn(
+                f"Name: {self.name}, the id is {info['id']} and the unique id is {self._unique_id}"
+            )
             if info["id"] != self._unique_id:
                 continue
             if info["state"] in ["COUNTING", "INITIALISED"]:
