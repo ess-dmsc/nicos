@@ -279,7 +279,9 @@ class JustBinItImage(ImageChannelMixin, PassiveChannel):
         for attempt in range(max_retries):
             try:
                 self._kafka_subscriber.subscribe(
-                    [self.hist_topic], self.new_messages_callback
+                    [self.hist_topic],
+                    self.new_messages_callback,
+                    self.no_messages_callback,
                 )
                 break
             except Exception as error:
@@ -297,6 +299,9 @@ class JustBinItImage(ImageChannelMixin, PassiveChannel):
                     raise
 
         self._update_status(status.OK, "")
+
+    def no_messages_callback(self):
+        self.log.warning("No messages received from Kafka")
 
     def new_messages_callback(self, messages):
         for _, message in messages:
