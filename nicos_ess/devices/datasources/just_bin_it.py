@@ -288,7 +288,6 @@ class JustBinItImage(ImageChannelMixin, PassiveChannel):
     def new_messages_callback(self, messages):
         for (_, timestamp), message in messages:
             if timestamp / 1e3 < self._start_time:
-                self.log.warn(f"Skipping message with timestamp {timestamp}")
                 continue
 
             deserialiser = deserialiser_by_schema.get(get_schema(message))
@@ -297,9 +296,6 @@ class JustBinItImage(ImageChannelMixin, PassiveChannel):
             hist = deserialiser(message)
             info = json.loads(hist["info"])
             self.log.debug("received unique id = {}".format(info["id"]))
-            self.log.warn(
-                f"Name: {self.name}, the id is {info['id']} and the unique id is {self._unique_id}"
-            )
             if info["id"] != self._unique_id:
                 continue
             if info["state"] in ["COUNTING", "INITIALISED"]:
