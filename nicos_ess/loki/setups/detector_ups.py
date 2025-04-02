@@ -9,10 +9,4 @@ devices = dict(
         readpv="{}BatteryStatusStr-R".format(pv_root),
         visibility=(),
     ),
-    output_source=device(
-        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
-        description="Present source of output power in string. None mean no output at all.",
-        readpv="{}OutputSourceStr-R".format(pv_root),
-        visibility=(),
-    ),
 )
