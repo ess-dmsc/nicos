@@ -298,6 +298,16 @@ class JustBinItImage(ImageChannelMixin, PassiveChannel):
             self.log.debug("received unique id = {}".format(info["id"]))
             if info["id"] != self._unique_id:
                 continue
+
+            if (
+                self.status
+                in [(status.BUSY, "Preparing"), (status.BUSY, "Waiting to start...")]
+                and info["state"] == "FINISHED"
+            ):
+                # Old stray message?? Why is it coming through?
+                self.log.warning("Received FINISHED message for a previous run")
+                continue
+
             if info["state"] in ["COUNTING", "INITIALISED"]:
                 self._update_status(status.BUSY, "Counting")
             elif info["state"] == "ERROR":
