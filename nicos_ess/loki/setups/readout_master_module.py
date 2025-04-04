@@ -24,17 +24,17 @@ devices = dict(
         description="The configuration message",
         readpv="{}ConfigMessage-R".format(pv_root),
     ),
-    rmm_ref_clk_freq_ok=device(
+    rmm_ref_clock_freq_ok=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The reference clock frequency status",
         readpv="{}RefClkFreqOk-R".format(pv_root),
     ),
-    rmm_mrf_msg=device(
+    rmm_mrf_message=device(
         "nicos_ess.devices.epics.pva.EpicsStringReadable",
         description="The MRF message",
         readpv="{}MrfMsg-R".format(pv_root),
     ),
-    rmm_timing_mode_src=device(
+    rmm_timing_mode_source=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The source timing mode",
         readpv="{}TimingModeSrc-R".format(pv_root),
