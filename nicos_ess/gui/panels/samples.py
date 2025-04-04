@@ -91,6 +91,8 @@ class SampleTablePanel(PanelBase):
 
         self.table.model.add_missing_columns(all_headers)
         self.table.model.raw_data = new_data
+        self.current_sample_data = deepcopy(self.table.model.raw_data)
+        self.buttons.set_buttons_and_warning_behaviour(False)
 
     def _check_for_changes(self):
         changed = self.current_sample_data != self.table.model.raw_data
@@ -114,14 +116,12 @@ class SampleTablePanel(PanelBase):
 
     def rename_sample_id_column(self, samples):
         new_samples = []
-        for row in samples:
-            new_row = {}
-            for key, val in row.items():
-                if key == SAMPLE_IDENTIFIER:
-                    new_row[IDENTIFIER_COL_NAME] = val
-                else:
-                    new_row[key] = val
-            new_samples.append(new_row)
+        for sample in samples:
+            id_col = {}
+            id_col[IDENTIFIER_COL_NAME] = sample.pop(SAMPLE_IDENTIFIER)
+            updated_sample = id_col.update(sample)
+            print(updated_sample)
+            new_samples.append(updated_sample)
         return new_samples
 
     def _set_samples(self):
@@ -130,8 +130,11 @@ class SampleTablePanel(PanelBase):
 
         samples = {}
         for index, sample in enumerate(self.table.model.raw_data):
-            if not sample.get("name", ""):
-                sample["name"] = f"sample {index + 1}"
+            if sample[IDENTIFIER_COL_NAME] == "":
+                sample[SAMPLE_IDENTIFIER] = f"sample {index + 1}"
+            else:
+                sample[SAMPLE_IDENTIFIER] = sample[IDENTIFIER_COL_NAME]
+            sample.pop(IDENTIFIER_COL_NAME)
             samples[index] = sample
         self.client.run(f"Exp.sample.set_samples({dict(samples)})")
 
