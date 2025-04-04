@@ -1,6 +1,7 @@
 import math
-import numpy as np
 from enum import Enum
+
+import numpy as np
 
 from nicos.clients.gui.panels import Panel
 from nicos.guisupport.livewidget import DATATYPES
@@ -19,7 +20,6 @@ from nicos.guisupport.qt import (
     QVBoxLayout,
     QWidget,
 )
-
 from nicos_ess.gui.panels.live_pyqt import process_axis_labels, process_data_arrays
 from nicos_ess.gui.widgets.pyqtgraph.line_view import LineView
 
@@ -409,6 +409,7 @@ class SpectrometerPanel(Panel):
         self.client.livedata.connect(self.on_client_livedata)
         self.client.connected.connect(self.on_client_connected)
         self.client.cache.connect(self.on_client_cache)
+        self.client.setup.connect(self.on_client_setup)
 
     def build_ui(self):
         layout = QVBoxLayout()
@@ -509,6 +510,9 @@ class SpectrometerPanel(Panel):
 
     def on_client_cache(self, data):
         self.spectrometer_controller.update_readback_values()
+
+    def on_client_setup(self):
+        print("on_client_setup called")
 
     def on_client_livedata(self, params, blobs):
         if params["det"] != self.current_spectrometer:
