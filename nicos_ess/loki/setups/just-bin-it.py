@@ -327,16 +327,16 @@ devices = dict(
     ),
 )
 
-startupcode = """
-SetDetectors(
-    bank0_det,
-    bank1_det,
-    bank2_det,
-    bank3_det,
-    bank4_det,
-    bank5_det,
-    bank6_det,
-    bank7_det,
-    bank8_det,
-)
-"""
+# startupcode = """
+# SetDetectors(
+#     bank0_det,
+#     bank1_det,
+#     bank2_det,
+#     bank3_det,
+#     bank4_det,
+#     bank5_det,
+#     bank6_det,
+#     bank7_det,
+#     bank8_det,
+# )
+# """
