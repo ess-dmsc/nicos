@@ -31,6 +31,7 @@ devices = dict(
         description="The just-bin-it histogrammer",
         brokers=configdata("config.KAFKA_BROKERS"),
         unit="",
+        event_schema="ev44",
         command_topic="loki_jbi_commands",
         response_topic="loki_jbi_responses",
         statustopic=["loki_jbi_heartbeat"],
