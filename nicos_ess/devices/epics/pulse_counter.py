@@ -46,11 +46,7 @@ class PulseCounter(CounterChannelMixin, EpicsReadable, PassiveChannel):
 
     def doStart(self):
         self.total = 0
-        self.offset = get_from_cache_or(
-            self,
-            self._record_fields["readpv"].cache_key,
-            lambda: self._epics_wrapper.get_pv_value(self.readpv),
-        )
+        self.offset = self._epics_wrapper.get_pv_value(self.readpv)
         self.started = True
 
     def doFinish(self):
