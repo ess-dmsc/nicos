@@ -17,11 +17,17 @@ devices = dict(
         fmtstr="%.2f",
         unit="s",
     ),
+    pulse_counter=device(
+        "nicos_ess.devices.epics.pulse_counter.PulseCounter",
+        description="EVR Pulse Counter",
+        readpv="YMIR-TS:Ctrl-EVR-01:EvtACnt-I",
+        fmtstr="%d",
+    ),
     detector=device(
         "nicos.devices.generic.Detector",
         description="Classical detector with single channels",
         timers=["timer"],
-        counters=["counter"],
+        counters=["counter", "pulse_counter"],
         # monitors=["mon"],
         maxage=86400,
         pollinterval=None,
