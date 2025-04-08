@@ -12,17 +12,16 @@ from nicos.core import (
     Param,
     Value,
     floatrange,
+    host,
     listof,
     multiStatus,
     oneof,
     status,
     tupleof,
-    host,
 )
 from nicos.core.constants import LIVE, MASTER, SIMULATION
 from nicos.devices.generic import Detector, ImageChannelMixin, PassiveChannel
 from nicos.utils import createThread
-
 from nicos_ess.devices.kafka.consumer import KafkaConsumer, KafkaSubscriber
 from nicos_ess.devices.kafka.producer import KafkaProducer
 from nicos_ess.devices.kafka.status_handler import (
@@ -589,16 +588,16 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
         if not preset:
             # keep old settings
             return
-        for i in preset:
-            if i not in self._presetkeys:
-                valid_keys = ", ".join(self._presetkeys)
-                raise InvalidValueError(
-                    self, f"unrecognised preset {i}, should" f" one of {valid_keys}"
-                )
+        # for i in preset:
+        #     if i not in self._presetkeys:
+        #         valid_keys = ", ".join(self._presetkeys)
+        #         raise InvalidValueError(
+        #             self, f"unrecognised preset {i}, should" f" one of {valid_keys}"
+        #         )
         if "t" in preset and len(self._presetkeys.intersection(preset.keys())) > 1:
             raise InvalidValueError(
                 self,
-                "Cannot set number of detector counts" " and a time interval together",
+                "Cannot set number of detector counts and a time interval together",
             )
         self._lastpreset = preset.copy()
 
