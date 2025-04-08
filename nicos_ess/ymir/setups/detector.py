@@ -1,16 +1,6 @@
 description = "Test detector ymir"
 
 devices = dict(
-    # mon=device(
-    #     "nicos.devices.generic.VirtualCounter",
-    #     description="Simulated MON1",
-    #     fmtstr="%d",
-    #     type="monitor",
-    # ),
-    counter=device(
-        "nicos.devices.generic.DeviceAlias",
-        devclass="nicos.devices.generic.PassiveChannel",
-    ),
     timer=device(
         "nicos.devices.generic.VirtualTimer",
         description="Simulated TIM1",
@@ -27,8 +17,7 @@ devices = dict(
         "nicos.devices.generic.Detector",
         description="Classical detector with single channels",
         timers=["timer"],
-        counters=["counter", "pulse_counter"],
-        # monitors=["mon"],
+        counters=["pulse_counter"],
         maxage=86400,
         pollinterval=None,
     ),
