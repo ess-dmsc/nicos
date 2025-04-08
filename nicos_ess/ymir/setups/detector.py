@@ -20,7 +20,7 @@ devices = dict(
     detector=device(
         "nicos.devices.generic.Detector",
         description="Classical detector with single channels",
-        timers=["tim1"],
+        timers=["timer"],
         counters=["counter"],
         # monitors=["mon"],
         maxage=86400,
