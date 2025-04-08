@@ -21,7 +21,7 @@ from nicos.core import (
 )
 from nicos.core.constants import LIVE, MASTER, SIMULATION
 from nicos.devices.generic import Detector, ImageChannelMixin, PassiveChannel
-from nicos.utils import createThread
+from nicos.utils import createThread, uniq
 from nicos_ess.devices.kafka.consumer import KafkaConsumer, KafkaSubscriber
 from nicos_ess.devices.kafka.producer import KafkaProducer
 from nicos_ess.devices.kafka.status_handler import (
@@ -432,9 +432,22 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
 
     def doPreinit(self, mode):
         presetkeys = {"t"}
-        for image_channel in self._attached_images:
-            presetkeys.add(image_channel.name)
+        # for image_channel in self._attached_images:
+        #     presetkeys.add(image_channel.name)
+
+        self._channels = uniq(
+            self._attached_timers
+            + self._attached_monitors
+            + self._attached_counters
+            + self._attached_images
+            + self._attached_others
+        )
+
+        for channel in self._channels:
+            presetkeys.add(channel.name)
+        self._collectControllers()
         self._presetkeys = presetkeys
+
         if mode == SIMULATION:
             return
 
