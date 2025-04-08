@@ -7,23 +7,24 @@ devices = dict(
         brokers=configdata("config.KAFKA_BROKERS"),
         unit="",
         event_schema="ev44",
+        hist_schema="hs01",
+        liveinterval=5,
         command_topic="loki_jbi_commands",
         response_topic="loki_jbi_responses",
         statustopic=["loki_jbi_heartbeat"],
         images=[
-            "bank0_2d_count_image",
-            "bank1_2d_count_image",
-            "bank2_2d_count_image",
-            "bank3_2d_count_image",
-            "bank4_2d_count_image",
-            "bank5_2d_count_image",
-            "bank6_2d_count_image",
-            "bank7_2d_count_image",
-            "bank8_2d_count_image",
+            "bank0_data",
+            "bank1_data",
+            "bank2_data",
+            "bank3_data",
+            "bank4_data",
+            "bank5_data",
+            "bank6_data",
+            "bank7_data",
+            "bank8_data",
         ],
-        hist_schema="hs01",
     ),
-    bank0_2d_count_image=device(
+    bank0_data=device(
         "nicos_ess.devices.datasources.just_bin_it.JustBinItImage",
         description="A just-bin-it image channel",
         hist_topic="loki_visualisation",
@@ -35,7 +36,7 @@ devices = dict(
         det_height=1568,
         det_range=(1, 802816),
     ),
-    bank1_2d_count_image=device(
+    bank1_data=device(
         "nicos_ess.devices.datasources.just_bin_it.JustBinItImage",
         description="A just-bin-it image channel",
         hist_topic="loki_visualisation",
@@ -47,7 +48,7 @@ devices = dict(
         det_height=448,
         det_range=(802817, 1032192),
     ),
-    bank2_2d_count_image=device(
+    bank2_data=device(
         "nicos_ess.devices.datasources.just_bin_it.JustBinItImage",
         description="A just-bin-it image channel",
         hist_topic="loki_visualisation",
@@ -59,7 +60,7 @@ devices = dict(
         det_height=336,
         det_range=(1032193, 1204224),
     ),
-    bank3_2d_count_image=device(
+    bank3_data=device(
         "nicos_ess.devices.datasources.just_bin_it.JustBinItImage",
         description="A just-bin-it image channel",
         hist_topic="loki_visualisation",
@@ -71,7 +72,7 @@ devices = dict(
         det_height=448,
         det_range=(1204225, 1433600),
     ),
-    bank4_2d_count_image=device(
+    bank4_data=device(
         "nicos_ess.devices.datasources.just_bin_it.JustBinItImage",
         description="A just-bin-it image channel",
         hist_topic="loki_visualisation",
@@ -83,7 +84,7 @@ devices = dict(
         det_height=336,
         det_range=(1433601, 1605632),
     ),
-    bank5_2d_count_image=device(
+    bank5_data=device(
         "nicos_ess.devices.datasources.just_bin_it.JustBinItImage",
         description="A just-bin-it image channel",
         hist_topic="loki_visualisation",
@@ -95,7 +96,7 @@ devices = dict(
         det_height=784,
         det_range=(1605633, 2007040),
     ),
-    bank6_2d_count_image=device(
+    bank6_data=device(
         "nicos_ess.devices.datasources.just_bin_it.JustBinItImage",
         description="A just-bin-it image channel",
         hist_topic="loki_visualisation",
@@ -107,7 +108,7 @@ devices = dict(
         det_height=896,
         det_range=(2007041, 2465792),
     ),
-    bank7_2d_count_image=device(
+    bank7_data=device(
         "nicos_ess.devices.datasources.just_bin_it.JustBinItImage",
         description="A just-bin-it image channel",
         hist_topic="loki_visualisation",
@@ -119,7 +120,7 @@ devices = dict(
         det_height=560,
         det_range=(2465793, 2752512),
     ),
-    bank8_2d_count_image=device(
+    bank8_data=device(
         "nicos_ess.devices.datasources.just_bin_it.JustBinItImage",
         description="A just-bin-it image channel",
         hist_topic="loki_visualisation",
