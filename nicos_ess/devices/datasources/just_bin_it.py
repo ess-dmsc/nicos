@@ -452,8 +452,15 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
     def doPrepare(self):
         self._exit_thread = False
         self._conditions_thread = None
-        for image_channel in self._attached_images:
-            image_channel.doPrepare()
+
+        self._collectControllers()
+        for follower in self._followchannels:
+            follower.prepare()
+        for controller in self._controlchannels:
+            controller.prepare()
+
+        # for image_channel in self._attached_images:
+        #     image_channel.doPrepare()
 
     def doStart(self, **preset):
         self._last_live = -(self.liveinterval or 0)
@@ -483,8 +490,13 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
         self._send_command(self.command_topic, json.dumps(config).encode())
 
         # Tell the channels to start
-        for image_channel in self._attached_images:
-            image_channel.doStart()
+        # for image_channel in self._attached_images:
+        #     image_channel.doStart()
+
+        for follower in self._followchannels:
+            follower.start()
+        for controller in self._controlchannels:
+            controller.start()
 
         # Check for acknowledgement of the command being received
         self._ack_thread = createThread(
