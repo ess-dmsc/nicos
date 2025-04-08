@@ -1,3 +1,5 @@
+import time
+
 from nicos.core import Override, Param, Value, oneof, status
 from nicos.devices.generic import CounterChannelMixin, PassiveChannel
 from nicos_ess.devices.epics.pva import EpicsReadable
@@ -33,10 +35,13 @@ class PulseCounter(CounterChannelMixin, EpicsReadable, PassiveChannel):
     def _value_change_callback(
         self, name, param, value, units, limits, severity, message, **kwargs
     ):
-        EpicsReadable._value_change_callback(
-            self, name, param, value, units, limits, severity, message, **kwargs
-        )
+        if name != self.readpv:
+            # Unexpected updates ignored
+            return
+        time_stamp = time.time()
+        self._cache.put(self._name, "unit", units, time_stamp)
         if self.started:
+            self._cache.put(self._name, param, value - self.offset, time_stamp)
             self._setROParam("total", value)
 
     def doStart(self):
