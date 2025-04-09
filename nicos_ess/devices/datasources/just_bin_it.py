@@ -430,36 +430,36 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
     _conditions = {}
     hardware_access = True
 
-    def doPreinit(self, mode):
-        presetkeys = {}
-        # for image_channel in self._attached_images:
-        #     presetkeys.add(image_channel.name)
-
-        for name, dev, typ in self._presetiter():
-            # later mentioned presetnames dont overwrite earlier ones
-            presetkeys.setdefault(name, (dev, typ))
-        for channel in self._attached_images:
-            presetkeys.setdefault(channel.name, (channel, "counts"))
-        self._channels = uniq(
-            self._attached_timers
-            + self._attached_monitors
-            + self._attached_counters
-            + self._attached_images
-            + self._attached_others
-        )
-        self._presetkeys = presetkeys
-        self._collectControllers()
-
-        if mode == SIMULATION:
-            return
-
-        if self.statustopic:
-            # Enable heartbeat monitoring
-            KafkaStatusHandler.doPreinit(self, mode)
-        self._command_sender = KafkaProducer.create(self.brokers)
-        # Set up the response message consumer
-        self._response_consumer = KafkaConsumer.create(self.brokers)
-        self._response_consumer.subscribe([self.response_topic])
+    # def doPreinit(self, mode):
+    #     presetkeys = {}
+    #     # for image_channel in self._attached_images:
+    #     #     presetkeys.add(image_channel.name)
+    #
+    #     for name, dev, typ in self._presetiter():
+    #         # later mentioned presetnames dont overwrite earlier ones
+    #         presetkeys.setdefault(name, (dev, typ))
+    #     for channel in self._attached_images:
+    #         presetkeys.setdefault(channel.name, (channel, "counts"))
+    #     self._channels = uniq(
+    #         self._attached_timers
+    #         + self._attached_monitors
+    #         + self._attached_counters
+    #         + self._attached_images
+    #         + self._attached_others
+    #     )
+    #     self._presetkeys = presetkeys
+    #     self._collectControllers()
+    #
+    #     if mode == SIMULATION:
+    #         return
+    #
+    #     if self.statustopic:
+    #         # Enable heartbeat monitoring
+    #         KafkaStatusHandler.doPreinit(self, mode)
+    #     self._command_sender = KafkaProducer.create(self.brokers)
+    #     # Set up the response message consumer
+    #     self._response_consumer = KafkaConsumer.create(self.brokers)
+    #     self._response_consumer.subscribe([self.response_topic])
 
     # def doInit(self, mode):
     #     pass
@@ -477,47 +477,47 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
         # for image_channel in self._attached_images:
         #     image_channel.doPrepare()
 
-    def doStart(self, **preset):
-        self._last_live = -(self.liveinterval or 0)
-
-        # Generate a unique-ish id
-        unique_id = "nicos-{}-{}".format(self.name, int(time.time()))
-        self.log.debug("set unique id = %s", unique_id)
-
-        self._conditions = {}
-
-        for image_channel in self._attached_images:
-            val = self._lastpreset.get(image_channel.name, 0)
-            if val:
-                self._conditions[image_channel] = val
-
-        # count_interval = self._lastpreset.get("t", None)
-        count_interval = None
-        config = self._create_config(count_interval, unique_id)
-
-        if count_interval:
-            self.log.debug(
-                "Requesting just-bin-it to start counting for %s seconds",
-                count_interval,
-            )
-        else:
-            self.log.debug("Requesting just-bin-it to start counting")
-
-        self._send_command(self.command_topic, json.dumps(config).encode())
-
-        # Tell the channels to start
-        # for image_channel in self._attached_images:
-        #     image_channel.doStart()
-
-        for follower in self._followchannels:
-            follower.start()
-        for controller in self._controlchannels:
-            controller.start()
-
-        # Check for acknowledgement of the command being received
-        self._ack_thread = createThread(
-            "jbi-ack", self._check_for_ack, (unique_id, self.ack_timeout)
-        )
+    # def doStart(self, **preset):
+    #     self._last_live = -(self.liveinterval or 0)
+    #
+    #     # Generate a unique-ish id
+    #     unique_id = "nicos-{}-{}".format(self.name, int(time.time()))
+    #     self.log.debug("set unique id = %s", unique_id)
+    #
+    #     self._conditions = {}
+    #
+    #     for image_channel in self._attached_images:
+    #         val = self._lastpreset.get(image_channel.name, 0)
+    #         if val:
+    #             self._conditions[image_channel] = val
+    #
+    #     # count_interval = self._lastpreset.get("t", None)
+    #     count_interval = None
+    #     config = self._create_config(count_interval, unique_id)
+    #
+    #     if count_interval:
+    #         self.log.debug(
+    #             "Requesting just-bin-it to start counting for %s seconds",
+    #             count_interval,
+    #         )
+    #     else:
+    #         self.log.debug("Requesting just-bin-it to start counting")
+    #
+    #     self._send_command(self.command_topic, json.dumps(config).encode())
+    #
+    #     # Tell the channels to start
+    #     # for image_channel in self._attached_images:
+    #     #     image_channel.doStart()
+    #
+    #     for follower in self._followchannels:
+    #         follower.start()
+    #     for controller in self._controlchannels:
+    #         controller.start()
+    #
+    #     # Check for acknowledgement of the command being received
+    #     self._ack_thread = createThread(
+    #         "jbi-ack", self._check_for_ack, (unique_id, self.ack_timeout)
+    #     )
 
     def _check_for_ack(self, identifier, timeout_duration):
         timeout = int(time.time()) + timeout_duration
