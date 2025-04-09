@@ -611,29 +611,32 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
         self._response_consumer.close()
 
     def doSetPreset(self, **preset):
-        if not preset:
-            # keep old settings
-            return
-        # for i in preset:
-        #     if i not in self._presetkeys:
-        #         valid_keys = ", ".join(self._presetkeys)
+        Detector.doSetPreset(self, **preset)
+        #     if not preset:
+        #         # keep old settings
+        #         return
+        #     # for i in preset:
+        #     #     if i not in self._presetkeys:
+        #     #         valid_keys = ", ".join(self._presetkeys)
+        #     #         raise InvalidValueError(
+        #     #             self, f"unrecognised preset {i}, should" f" one of {valid_keys}"
+        #     #         )
+        #     if "t" in preset and len(self._presetkeys.intersection(preset.keys())) > 1:
         #         raise InvalidValueError(
-        #             self, f"unrecognised preset {i}, should" f" one of {valid_keys}"
+        #             self,
+        #             "Cannot set number of detector counts and a time interval together",
         #         )
-        if "t" in preset and len(self._presetkeys.intersection(preset.keys())) > 1:
-            raise InvalidValueError(
-                self,
-                "Cannot set number of detector counts and a time interval together",
-            )
         self._lastpreset = preset.copy()
 
     def doStop(self):
         self.log.warn("doStop called")
         self._do_stop()
+        Detector.doStop(self)
 
     def doFinish(self):
         self.log.warn("doFinish called")
         self._do_stop()
+        Detector.doFinish(self)
 
     def _do_stop(self):
         self._stop_job_threads()
