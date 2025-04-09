@@ -511,79 +511,79 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
     #         "jbi-ack", self._check_for_ack, (unique_id, self.ack_timeout)
     #     )
     #
-    # def _check_for_ack(self, identifier, timeout_duration):
-    #     timeout = int(time.time()) + timeout_duration
-    #     acknowledged = False
-    #     while not (acknowledged or self._exit_thread):
-    #         message = self._response_consumer.poll(timeout_ms=50)
-    #         if message:
-    #             msg = json.loads(message.value())
-    #             if "msg_id" in msg and msg["msg_id"] == identifier:
-    #                 acknowledged = self._handle_message(msg)
-    #                 break
-    #         # Check for timeout
-    #         if not acknowledged and int(time.time()) > timeout:
-    #             err_msg = (
-    #                 "Count aborted as no acknowledgement received from "
-    #                 "just-bin-it within timeout duration "
-    #                 f"({timeout_duration} seconds)"
-    #             )
-    #             self.log.error(err_msg)
-    #             break
-    #     if not acknowledged:
-    #         # Couldn't start histogramming, so stop the channels etc.
-    #         self._stop_histogramming()
-    #         for image_channel in self._attached_images:
-    #             image_channel.doStop()
-    #         return
-    #
-    #     if self._conditions:
-    #         self._conditions_thread = createThread(
-    #             "jbi-conditions", self._check_conditions, (self._conditions.copy(),)
-    #         )
-    #
-    # def _check_conditions(self, conditions):
-    #     while not self._exit_thread:
-    #         if conditions and all(
-    #             ch.read()[0] >= val for ch, val in conditions.items()
-    #         ):
-    #             self._stop_histogramming()
-    #             break
-    #         time.sleep(0.1)
-    #
-    # def _handle_message(self, msg):
-    #     if "response" in msg and msg["response"] == "ACK":
-    #         self.log.debug("Counting request acknowledged by just-bin-it")
-    #         return True
-    #     elif "response" in msg and msg["response"] == "ERR":
-    #         self.log.error("just-bin-it could not start counting: %s", msg["message"])
-    #     else:
-    #         self.log.error("Unknown response message received from just-bin-it")
-    #     return False
-    #
-    # def _send_command(self, topic, message):
-    #     self._command_sender.produce(topic, message)
-    #
-    # def _create_config(self, interval, identifier):
-    #     histograms = []
-    #
-    #     for image_channel in self._attached_images:
-    #         histograms.append(image_channel.get_configuration())
-    #
-    #     config_base = {
-    #         "cmd": "config",
-    #         "msg_id": identifier,
-    #         "input_schema": self.event_schema,
-    #         "output_schema": self.hist_schema,
-    #         "histograms": histograms,
-    #     }
-    #
-    #     if interval:
-    #         config_base["interval"] = interval
-    #     else:
-    #         # If no interval then start open-ended count
-    #         config_base["start"] = int(time.time()) * 1000
-    #     return config_base
+    def _check_for_ack(self, identifier, timeout_duration):
+        timeout = int(time.time()) + timeout_duration
+        acknowledged = False
+        while not (acknowledged or self._exit_thread):
+            message = self._response_consumer.poll(timeout_ms=50)
+            if message:
+                msg = json.loads(message.value())
+                if "msg_id" in msg and msg["msg_id"] == identifier:
+                    acknowledged = self._handle_message(msg)
+                    break
+            # Check for timeout
+            if not acknowledged and int(time.time()) > timeout:
+                err_msg = (
+                    "Count aborted as no acknowledgement received from "
+                    "just-bin-it within timeout duration "
+                    f"({timeout_duration} seconds)"
+                )
+                self.log.error(err_msg)
+                break
+        if not acknowledged:
+            # Couldn't start histogramming, so stop the channels etc.
+            self._stop_histogramming()
+            for image_channel in self._attached_images:
+                image_channel.doStop()
+            return
+
+        if self._conditions:
+            self._conditions_thread = createThread(
+                "jbi-conditions", self._check_conditions, (self._conditions.copy(),)
+            )
+
+    def _check_conditions(self, conditions):
+        while not self._exit_thread:
+            if conditions and all(
+                ch.read()[0] >= val for ch, val in conditions.items()
+            ):
+                self._stop_histogramming()
+                break
+            time.sleep(0.1)
+
+    def _handle_message(self, msg):
+        if "response" in msg and msg["response"] == "ACK":
+            self.log.debug("Counting request acknowledged by just-bin-it")
+            return True
+        elif "response" in msg and msg["response"] == "ERR":
+            self.log.error("just-bin-it could not start counting: %s", msg["message"])
+        else:
+            self.log.error("Unknown response message received from just-bin-it")
+        return False
+
+    def _send_command(self, topic, message):
+        self._command_sender.produce(topic, message)
+
+    def _create_config(self, interval, identifier):
+        histograms = []
+
+        for image_channel in self._attached_images:
+            histograms.append(image_channel.get_configuration())
+
+        config_base = {
+            "cmd": "config",
+            "msg_id": identifier,
+            "input_schema": self.event_schema,
+            "output_schema": self.hist_schema,
+            "histograms": histograms,
+        }
+
+        if interval:
+            config_base["interval"] = interval
+        else:
+            # If no interval then start open-ended count
+            config_base["start"] = int(time.time()) * 1000
+        return config_base
 
     # def valueInfo(self):
     #     return tuple(
@@ -598,9 +598,9 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
     # def doReadArrays(self, quality):
     #     return [image.readArray(quality) for image in self._attached_images]
     #
-    # def _stop_histogramming(self):
-    #     self._send_command(self.command_topic, b'{"cmd": "stop"}')
-    #
+    def _stop_histogramming(self):
+        self._send_command(self.command_topic, b'{"cmd": "stop"}')
+
     # def doShutdown(self):
     #     self._response_consumer.close()
 
@@ -632,18 +632,19 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
     #     self._do_stop()
     #     Detector.doFinish(self)
     #
-    # def _do_stop(self):
-    #     self._stop_job_threads()
-    #     self._stop_histogramming()
-    #
-    # def _stop_job_threads(self):
-    #     self._exit_thread = True
-    #     self.stop_consuming(self._ack_thread)
-    #     self.stop_consuming(self._conditions_thread)
-    #
-    # def stop_consuming(self, thread):
-    #     if thread and thread.is_alive():
-    #         thread.join()
+    def _do_stop(self):
+        self._stop_job_threads()
+        self._stop_histogramming()
+
+    def _stop_job_threads(self):
+        self._exit_thread = True
+        self.stop_consuming(self._ack_thread)
+        self.stop_consuming(self._conditions_thread)
+
+    def stop_consuming(self, thread):
+        if thread and thread.is_alive():
+            thread.join()
+
     #
     # def doStatus(self, maxage=0):
     #     curstatus = self._cache.get(self, "status")
@@ -651,16 +652,17 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
     #         return curstatus
     #     return multiStatus(self._channels, maxage)
     #
-    # def _status_update_callback(self, messages):
-    #     # Called on heartbeat received
-    #     if self._mode == MASTER:
-    #         if self._cache.get(self, "status") == DISCONNECTED_STATE:
-    #             self._cache.put(self, "status", (status.OK, ""), time.time())
-    #
-    # def no_messages_callback(self):
-    #     if self._mode == MASTER and not self.is_process_running():
-    #         # No heartbeat
-    #         self._cache.put(self, "status", DISCONNECTED_STATE, time.time())
+    def _status_update_callback(self, messages):
+        # Called on heartbeat received
+        if self._mode == MASTER:
+            if self._cache.get(self, "status") == DISCONNECTED_STATE:
+                self._cache.put(self, "status", (status.OK, ""), time.time())
+
+    def no_messages_callback(self):
+        if self._mode == MASTER and not self.is_process_running():
+            # No heartbeat
+            self._cache.put(self, "status", DISCONNECTED_STATE, time.time())
+
     #
     # def doReset(self):
     #     pass
