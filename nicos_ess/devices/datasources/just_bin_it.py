@@ -423,7 +423,7 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
         "statustopic": Override(default="", mandatory=False),
     }
     _last_live = 0
-    _presetkeys = {"t"}
+    _presetkeys = {}
     _ack_thread = None
     _conditions_thread = None
     _exit_thread = False
@@ -431,7 +431,7 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
     hardware_access = True
 
     def doPreinit(self, mode):
-        presetkeys = {"t"}
+        presetkeys = {}
         # for image_channel in self._attached_images:
         #     presetkeys.add(image_channel.name)
 
@@ -442,9 +442,11 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
             + self._attached_images
             + self._attached_others
         )
-
+        for name, dev, typ in self._presetiter():
+            # later mentioned presetnames dont overwrite earlier ones
+            presetkeys.setdefault(name, (dev, typ))
         for channel in self._channels:
-            presetkeys.add(channel.name)
+            presetkeys.setdefault(channel.name, (channel, channel.type))
         self._collectControllers()
         self._presetkeys = presetkeys
 
