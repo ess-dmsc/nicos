@@ -445,8 +445,8 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
         for name, dev, typ in self._presetiter():
             # later mentioned presetnames dont overwrite earlier ones
             presetkeys.setdefault(name, (dev, typ))
-        for channel in self._channels:
-            presetkeys.setdefault(channel.name, (channel, channel.type))
+        for channel in self._attached_images:
+            presetkeys.setdefault(channel.name, (channel, "counts"))
         self._collectControllers()
         self._presetkeys = presetkeys
 
