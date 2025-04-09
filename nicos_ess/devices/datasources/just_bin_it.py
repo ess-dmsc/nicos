@@ -469,48 +469,48 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
     # for image_channel in self._attached_images:
     #     image_channel.doPrepare()
 
-    # def doStart(self, **preset):
-    #     self._last_live = -(self.liveinterval or 0)
-    #
-    #     # Generate a unique-ish id
-    #     unique_id = "nicos-{}-{}".format(self.name, int(time.time()))
-    #     self.log.debug("set unique id = %s", unique_id)
-    #
-    #     self._conditions = {}
-    #
-    #     for image_channel in self._attached_images:
-    #         val = self._lastpreset.get(image_channel.name, 0)
-    #         if val:
-    #             self._conditions[image_channel] = val
-    #
-    #     # count_interval = self._lastpreset.get("t", None)
-    #     count_interval = None
-    #     config = self._create_config(count_interval, unique_id)
-    #
-    #     if count_interval:
-    #         self.log.debug(
-    #             "Requesting just-bin-it to start counting for %s seconds",
-    #             count_interval,
-    #         )
-    #     else:
-    #         self.log.debug("Requesting just-bin-it to start counting")
-    #
-    #     self._send_command(self.command_topic, json.dumps(config).encode())
-    #
-    #     # Tell the channels to start
-    #     # for image_channel in self._attached_images:
-    #     #     image_channel.doStart()
-    #
-    #     for follower in self._followchannels:
-    #         follower.start()
-    #     for controller in self._controlchannels:
-    #         controller.start()
-    #
-    #     # Check for acknowledgement of the command being received
-    #     self._ack_thread = createThread(
-    #         "jbi-ack", self._check_for_ack, (unique_id, self.ack_timeout)
-    #     )
-    #
+    def doStart(self, **preset):
+        self._last_live = -(self.liveinterval or 0)
+
+        # Generate a unique-ish id
+        unique_id = "nicos-{}-{}".format(self.name, int(time.time()))
+        self.log.debug("set unique id = %s", unique_id)
+
+        self._conditions = {}
+
+        for image_channel in self._attached_images:
+            val = self._lastpreset.get(image_channel.name, 0)
+            if val:
+                self._conditions[image_channel] = val
+
+        # count_interval = self._lastpreset.get("t", None)
+        count_interval = None
+        config = self._create_config(count_interval, unique_id)
+
+        if count_interval:
+            self.log.debug(
+                "Requesting just-bin-it to start counting for %s seconds",
+                count_interval,
+            )
+        else:
+            self.log.debug("Requesting just-bin-it to start counting")
+
+        self._send_command(self.command_topic, json.dumps(config).encode())
+
+        # Tell the channels to start
+        # for image_channel in self._attached_images:
+        #     image_channel.doStart()
+
+        for follower in self._followchannels:
+            follower.start()
+        for controller in self._controlchannels:
+            controller.start()
+
+        # Check for acknowledgement of the command being received
+        self._ack_thread = createThread(
+            "jbi-ack", self._check_for_ack, (unique_id, self.ack_timeout)
+        )
+
     def _check_for_ack(self, identifier, timeout_duration):
         timeout = int(time.time()) + timeout_duration
         acknowledged = False
