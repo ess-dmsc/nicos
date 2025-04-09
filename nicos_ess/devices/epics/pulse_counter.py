@@ -49,7 +49,6 @@ class PulseCounter(CounterChannelMixin, EpicsReadable, PassiveChannel):
         self.total = 0
         self.offset = self._epics_wrapper.get_pv_value(self.readpv)
         self.started = True
-        self._setROParam("status", (status.BUSY, "counting"))
 
     def doFinish(self):
         self.started = False
