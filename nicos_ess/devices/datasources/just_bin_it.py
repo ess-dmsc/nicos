@@ -595,14 +595,14 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
     #         data for channel in self._attached_images for data in channel.read(maxage)
     #     ]
 
-    # def doReadArrays(self, quality):
-    #     return [image.readArray(quality) for image in self._attached_images]
-    #
+    def doReadArrays(self, quality):
+        return [image.readArray(quality) for image in self._attached_images]
+
     def _stop_histogramming(self):
         self._send_command(self.command_topic, b'{"cmd": "stop"}')
 
-    # def doShutdown(self):
-    #     self._response_consumer.close()
+    def doShutdown(self):
+        self._response_consumer.close()
 
     def doSetPreset(self, **preset):
         Detector.doSetPreset(self, **preset)
@@ -665,25 +665,24 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
             # No heartbeat
             self._cache.put(self, "status", DISCONNECTED_STATE, time.time())
 
-    #
-    # def doReset(self):
-    #     pass
-    #
-    # # def doInfo(self):
-    # #     return [data for channel in self._attached_images for data in channel.doInfo()]
-    #
-    # def duringMeasureHook(self, elapsed):
-    #     if self.liveinterval is not None:
-    #         if elapsed > self._last_live + self.liveinterval:
-    #             self._last_live = elapsed
-    #             return LIVE
-    #     return None
-    #
-    # def arrayInfo(self):
-    #     return tuple(image.arrayInfo() for image in self._attached_images)
-    #
-    # def doTime(self, preset):
-    #     return 0
+    def doReset(self):
+        pass
 
-    # def presetInfo(self):
-    #     return tuple(self._presetkeys)
+    # def doInfo(self):
+    #     return [data for channel in self._attached_images for data in channel.doInfo()]
+
+    def duringMeasureHook(self, elapsed):
+        if self.liveinterval is not None:
+            if elapsed > self._last_live + self.liveinterval:
+                self._last_live = elapsed
+                return LIVE
+        return None
+
+    def arrayInfo(self):
+        return tuple(image.arrayInfo() for image in self._attached_images)
+
+    def doTime(self, preset):
+        return 0
+
+    def presetInfo(self):
+        return tuple(self._presetkeys)
