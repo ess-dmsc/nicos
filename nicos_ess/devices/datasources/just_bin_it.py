@@ -458,16 +458,10 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
         self._response_consumer = KafkaConsumer.create(self.brokers)
         self._response_consumer.subscribe([self.response_topic])
 
-    # def doInit(self, mode):
-    #     pass
-
     def doPrepare(self):
         self._exit_thread = False
         self._conditions_thread = None
         Detector.doPrepare(self)
-
-    # for image_channel in self._attached_images:
-    #     image_channel.doPrepare()
 
     def doStart(self, **preset):
         self._last_live = -(self.liveinterval or 0)
@@ -496,10 +490,6 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
             self.log.debug("Requesting just-bin-it to start counting")
 
         self._send_command(self.command_topic, json.dumps(config).encode())
-
-        # Tell the channels to start
-        # for image_channel in self._attached_images:
-        #     image_channel.doStart()
 
         for follower in self._followchannels:
             follower.start()
@@ -585,16 +575,6 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
             config_base["start"] = int(time.time()) * 1000
         return config_base
 
-    # def valueInfo(self):
-    #     return tuple(
-    #         info for channel in self._attached_images for info in channel.valueInfo()
-    #     )
-
-    # def doRead(self, maxage=0):
-    #     return [
-    #         data for channel in self._attached_images for data in channel.read(maxage)
-    #     ]
-
     def doReadArrays(self, quality):
         return [image.readArray(quality) for image in self._attached_images]
 
@@ -609,6 +589,7 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
         if not preset:
             # keep old settings
             return
+        # we need to implement a new way of checking faulty keys?
         # for i in preset:
         #     if i not in self._presetkeys:
         #         valid_keys = ", ".join(self._presetkeys)
@@ -620,8 +601,6 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
                 self,
                 "Cannot set number of detector counts and a time interval together",
             )
-
-    # self._lastpreset = preset.copy()
 
     def doStop(self):
         self.log.warn("doStop called")
@@ -646,14 +625,12 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
         if thread and thread.is_alive():
             thread.join()
 
-    #
     def doStatus(self, maxage=0):
         curstatus = self._cache.get(self, "status")
         if curstatus and curstatus[0] == status.ERROR:
             return curstatus
         return Detector.doStatus(self, maxage)
 
-    #
     def _status_update_callback(self, messages):
         # Called on heartbeat received
         if self._mode == MASTER:
@@ -664,12 +641,6 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
         if self._mode == MASTER and not self.is_process_running():
             # No heartbeat
             self._cache.put(self, "status", DISCONNECTED_STATE, time.time())
-
-    def doReset(self):
-        pass
-
-    # def doInfo(self):
-    #     return [data for channel in self._attached_images for data in channel.doInfo()]
 
     def duringMeasureHook(self, elapsed):
         if self.liveinterval is not None:
