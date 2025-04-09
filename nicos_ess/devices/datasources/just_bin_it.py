@@ -489,7 +489,8 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
             if val:
                 self._conditions[image_channel] = val
 
-        count_interval = self._lastpreset.get("t", None)
+        # count_interval = self._lastpreset.get("t", None)
+        count_interval = None
         config = self._create_config(count_interval, unique_id)
 
         if count_interval:
@@ -627,9 +628,11 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
         self._lastpreset = preset.copy()
 
     def doStop(self):
+        self.log.warn("doStop called")
         self._do_stop()
 
     def doFinish(self):
+        self.log.warn("doFinish called")
         self._do_stop()
 
     def _do_stop(self):
