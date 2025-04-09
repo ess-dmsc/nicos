@@ -17,14 +17,14 @@ lv_info = {
 hv_pvs = {}
 for board in hv_info["boards"]:
     for channel in hv_info["channels"]:
-        key = f"HV_{board}:Ch{channel}"
+        key = f"HV_{board}_Ch{channel}"
         val = f"{pv_root}-{hv_info['id']}-{board}:Ch{channel}"
         hv_pvs[key] = val
 
 lv_pvs = {}
 for board in lv_info["boards"]:
     for channel in lv_info["channels"]:
-        key = f"LV_{board}:Ch{channel}"
+        key = f"LV_{board}_Ch{channel}"
         val = f"{pv_root}-{lv_info['id']}-{board}:Ch{channel}"
         lv_pvs[key] = val
 
