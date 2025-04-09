@@ -593,15 +593,15 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
             config_base["start"] = int(time.time()) * 1000
         return config_base
 
-    def valueInfo(self):
-        return tuple(
-            info for channel in self._attached_images for info in channel.valueInfo()
-        )
+    # def valueInfo(self):
+    #     return tuple(
+    #         info for channel in self._attached_images for info in channel.valueInfo()
+    #     )
 
-    def doRead(self, maxage=0):
-        return [
-            data for channel in self._attached_images for data in channel.read(maxage)
-        ]
+    # def doRead(self, maxage=0):
+    #     return [
+    #         data for channel in self._attached_images for data in channel.read(maxage)
+    #     ]
 
     def doReadArrays(self, quality):
         return [image.readArray(quality) for image in self._attached_images]
@@ -612,23 +612,23 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
     def doShutdown(self):
         self._response_consumer.close()
 
-    def doSetPreset(self, **preset):
-        Detector.doSetPreset(self, **preset)
-        #     if not preset:
-        #         # keep old settings
-        #         return
-        #     # for i in preset:
-        #     #     if i not in self._presetkeys:
-        #     #         valid_keys = ", ".join(self._presetkeys)
-        #     #         raise InvalidValueError(
-        #     #             self, f"unrecognised preset {i}, should" f" one of {valid_keys}"
-        #     #         )
-        #     if "t" in preset and len(self._presetkeys.intersection(preset.keys())) > 1:
-        #         raise InvalidValueError(
-        #             self,
-        #             "Cannot set number of detector counts and a time interval together",
-        #         )
-        self._lastpreset = preset.copy()
+    # def doSetPreset(self, **preset):
+    #     Detector.doSetPreset(self, **preset)
+    #     if not preset:
+    #         # keep old settings
+    #         return
+    #     # for i in preset:
+    #     #     if i not in self._presetkeys:
+    #     #         valid_keys = ", ".join(self._presetkeys)
+    #     #         raise InvalidValueError(
+    #     #             self, f"unrecognised preset {i}, should" f" one of {valid_keys}"
+    #     #         )
+    #     if "t" in preset and len(self._presetkeys.intersection(preset.keys())) > 1:
+    #         raise InvalidValueError(
+    #             self,
+    #             "Cannot set number of detector counts and a time interval together",
+    #         )
+    # self._lastpreset = preset.copy()
 
     def doStop(self):
         self.log.warn("doStop called")
@@ -657,7 +657,7 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
         curstatus = self._cache.get(self, "status")
         if curstatus and curstatus[0] == status.ERROR:
             return curstatus
-        return multiStatus(self._attached_images, maxage)
+        return multiStatus(self._channels, maxage)
 
     def _status_update_callback(self, messages):
         # Called on heartbeat received
@@ -673,8 +673,8 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
     def doReset(self):
         pass
 
-    def doInfo(self):
-        return [data for channel in self._attached_images for data in channel.doInfo()]
+    # def doInfo(self):
+    #     return [data for channel in self._attached_images for data in channel.doInfo()]
 
     def duringMeasureHook(self, elapsed):
         if self.liveinterval is not None:
@@ -689,5 +689,5 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
     def doTime(self, preset):
         return 0
 
-    def presetInfo(self):
-        return tuple(self._presetkeys)
+    # def presetInfo(self):
+    #     return tuple(self._presetkeys)
