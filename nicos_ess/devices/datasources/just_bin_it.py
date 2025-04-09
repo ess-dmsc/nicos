@@ -461,15 +461,10 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
     # def doInit(self, mode):
     #     pass
 
-    # def doPrepare(self):
-    #     self._exit_thread = False
-    #     self._conditions_thread = None
-    #
-    #     self._collectControllers()
-    #     for follower in self._followchannels:
-    #         follower.prepare()
-    #     for controller in self._controlchannels:
-    #         controller.prepare()
+    def doPrepare(self):
+        self._exit_thread = False
+        self._conditions_thread = None
+        Detector.doPrepare(self)
 
     # for image_channel in self._attached_images:
     #     image_channel.doPrepare()
