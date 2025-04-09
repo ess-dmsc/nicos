@@ -647,11 +647,12 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
             thread.join()
 
     #
-    # def doStatus(self, maxage=0):
-    #     curstatus = self._cache.get(self, "status")
-    #     if curstatus and curstatus[0] == status.ERROR:
-    #         return curstatus
-    #     return multiStatus(self._channels, maxage)
+    def doStatus(self, maxage=0):
+        curstatus = self._cache.get(self, "status")
+        if curstatus and curstatus[0] == status.ERROR:
+            return curstatus
+        return multiStatus(self._channels, maxage)
+
     #
     def _status_update_callback(self, messages):
         # Called on heartbeat received
