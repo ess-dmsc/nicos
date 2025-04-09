@@ -3,9 +3,6 @@ import time
 from nicos.core import Override, Param, Value, oneof, status
 from nicos.devices.generic import CounterChannelMixin, PassiveChannel
 from nicos_ess.devices.epics.pva import EpicsReadable
-from nicos_ess.devices.epics.pva.epics_devices import get_from_cache_or
-
-# YMIR-TS:Ctrl-EVR-01:EvtACnt-I
 
 
 class PulseCounter(CounterChannelMixin, EpicsReadable, PassiveChannel):
@@ -44,10 +41,15 @@ class PulseCounter(CounterChannelMixin, EpicsReadable, PassiveChannel):
             self._cache.put(self._name, param, value - self.offset, time_stamp)
             self._setROParam("total", value)
 
+    def doPrepare(self):
+        self.total = 0
+        self.offset = 0
+
     def doStart(self):
         self.total = 0
         self.offset = self._epics_wrapper.get_pv_value(self.readpv)
         self.started = True
+        self._setROParam("status", (status.BUSY, "counting"))
 
     def doFinish(self):
         self.started = False
@@ -61,9 +63,7 @@ class PulseCounter(CounterChannelMixin, EpicsReadable, PassiveChannel):
         return status.OK, ""
 
     def doRead(self, maxage=0):
-        if self.started:
-            return int(self.total - self.offset)
-        return 0
+        return int(self.total - self.offset)
 
     def valueInfo(self):
         return (Value(self.name, unit=self.unit, fmtstr=self.fmtstr),)
