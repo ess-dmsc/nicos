@@ -430,36 +430,33 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
     _conditions = {}
     hardware_access = True
 
-    # def doPreinit(self, mode):
-    #     presetkeys = {}
-    #     # for image_channel in self._attached_images:
-    #     #     presetkeys.add(image_channel.name)
-    #
-    #     for name, dev, typ in self._presetiter():
-    #         # later mentioned presetnames dont overwrite earlier ones
-    #         presetkeys.setdefault(name, (dev, typ))
-    #     for channel in self._attached_images:
-    #         presetkeys.setdefault(channel.name, (channel, "counts"))
-    #     self._channels = uniq(
-    #         self._attached_timers
-    #         + self._attached_monitors
-    #         + self._attached_counters
-    #         + self._attached_images
-    #         + self._attached_others
-    #     )
-    #     self._presetkeys = presetkeys
-    #     self._collectControllers()
-    #
-    #     if mode == SIMULATION:
-    #         return
-    #
-    #     if self.statustopic:
-    #         # Enable heartbeat monitoring
-    #         KafkaStatusHandler.doPreinit(self, mode)
-    #     self._command_sender = KafkaProducer.create(self.brokers)
-    #     # Set up the response message consumer
-    #     self._response_consumer = KafkaConsumer.create(self.brokers)
-    #     self._response_consumer.subscribe([self.response_topic])
+    def doPreinit(self, mode):
+        presetkeys = {}
+        for name, dev, typ in self._presetiter():
+            # later mentioned presetnames dont overwrite earlier ones
+            presetkeys.setdefault(name, (dev, typ))
+        for channel in self._attached_images:
+            presetkeys.setdefault(channel.name, (channel, "counts"))
+        self._channels = uniq(
+            self._attached_timers
+            + self._attached_monitors
+            + self._attached_counters
+            + self._attached_images
+            + self._attached_others
+        )
+        self._presetkeys = presetkeys
+        self._collectControllers()
+
+        if mode == SIMULATION:
+            return
+
+        if self.statustopic:
+            # Enable heartbeat monitoring
+            KafkaStatusHandler.doPreinit(self, mode)
+        self._command_sender = KafkaProducer.create(self.brokers)
+        # Set up the response message consumer
+        self._response_consumer = KafkaConsumer.create(self.brokers)
+        self._response_consumer.subscribe([self.response_topic])
 
     # def doInit(self, mode):
     #     pass
