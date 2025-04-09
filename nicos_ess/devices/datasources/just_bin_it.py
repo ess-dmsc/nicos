@@ -623,16 +623,16 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
 
     # self._lastpreset = preset.copy()
 
-    # def doStop(self):
-    #     self.log.warn("doStop called")
-    #     self._do_stop()
-    #     Detector.doStop(self)
-    #
-    # def doFinish(self):
-    #     self.log.warn("doFinish called")
-    #     self._do_stop()
-    #     Detector.doFinish(self)
-    #
+    def doStop(self):
+        self.log.warn("doStop called")
+        self._do_stop()
+        Detector.doStop(self)
+
+    def doFinish(self):
+        self.log.warn("doFinish called")
+        self._do_stop()
+        Detector.doFinish(self)
+
     def _do_stop(self):
         self._stop_job_threads()
         self._stop_histogramming()
