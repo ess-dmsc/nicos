@@ -27,8 +27,8 @@ devices = dict(
         tof_range=(0, 10000000),
     ),
     timer=device(
-        "nicos.devices.generic.VirtualTimer",
-        description="Simulated TIM1",
+        "nicos_ess.devices.timer.TimerChannel",
+        description="Timer",
         fmtstr="%.2f",
         unit="s",
     ),
