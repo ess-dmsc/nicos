@@ -651,7 +651,7 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
         curstatus = self._cache.get(self, "status")
         if curstatus and curstatus[0] == status.ERROR:
             return curstatus
-        return multiStatus(self._channels, maxage)
+        return Detector.doStatus(self, maxage)
 
     #
     def _status_update_callback(self, messages):
