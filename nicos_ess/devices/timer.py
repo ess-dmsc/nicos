@@ -15,15 +15,22 @@ class TimerChannel(VirtualTimer):
         ),
     }
 
+    def doPrepare(self):
+        self.curvalue = 0
+
     def _counting(self):
         self.log.debug("timing to %.3f", self.preselection)
-        finish_at = time.time() + self.preselection - self.curvalue
+        start_time = time.time() - self.curvalue
+
         try:
             while not self._stopflag:
-                if self.iscontroller and time.time() >= finish_at:
+                now = time.time()
+                elapsed = now - start_time
+                if self.iscontroller and elapsed >= self.preselection:
                     self.curvalue = self.preselection
                     break
+
+                self.curvalue = elapsed
                 time.sleep(self.update_interval)
-                self.curvalue += self.update_interval
         finally:
             self.curstatus = (status.OK, "idle")
