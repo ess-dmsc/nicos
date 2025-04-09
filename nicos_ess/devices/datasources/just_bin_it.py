@@ -435,6 +435,11 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
         # for image_channel in self._attached_images:
         #     presetkeys.add(image_channel.name)
 
+        for name, dev, typ in self._presetiter():
+            # later mentioned presetnames dont overwrite earlier ones
+            presetkeys.setdefault(name, (dev, typ))
+        for channel in self._attached_images:
+            presetkeys.setdefault(channel.name, (channel, "counts"))
         self._channels = uniq(
             self._attached_timers
             + self._attached_monitors
@@ -442,13 +447,8 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
             + self._attached_images
             + self._attached_others
         )
-        for name, dev, typ in self._presetiter():
-            # later mentioned presetnames dont overwrite earlier ones
-            presetkeys.setdefault(name, (dev, typ))
-        for channel in self._attached_images:
-            presetkeys.setdefault(channel.name, (channel, "counts"))
-        self._collectControllers()
         self._presetkeys = presetkeys
+        self._collectControllers()
 
         if mode == SIMULATION:
             return
@@ -461,8 +461,8 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
         self._response_consumer = KafkaConsumer.create(self.brokers)
         self._response_consumer.subscribe([self.response_topic])
 
-    def doInit(self, mode):
-        pass
+    # def doInit(self, mode):
+    #     pass
 
     def doPrepare(self):
         self._exit_thread = False
