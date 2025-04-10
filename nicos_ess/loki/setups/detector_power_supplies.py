@@ -36,7 +36,6 @@ for key, val in hv_pvs.items():
         "nicos_ess.devices.epics.pva.EpicsReadable",
         description=f"Detector HV A7030DP module {key} voltage",
         readpv=f"{val}-VMon",
-        visibility=(),
     )
 
 for key, val in hv_pvs.items():
@@ -44,7 +43,6 @@ for key, val in hv_pvs.items():
         "nicos_ess.devices.epics.pva.EpicsReadable",
         description=f"Detector HV A7030DP module {key} current",
         readpv=f"{val}-IMon",
-        visibility=(),
     )
 
 for key, val in lv_pvs.items():
@@ -52,7 +50,6 @@ for key, val in lv_pvs.items():
         "nicos_ess.devices.epics.pva.EpicsReadable",
         description=f"Detector LV A2552 module {key} voltage",
         readpv=f"{val}-VMon",
-        visibility=(),
     )
 
 for key, val in lv_pvs.items():
@@ -60,5 +57,4 @@ for key, val in lv_pvs.items():
         "nicos_ess.devices.epics.pva.EpicsReadable",
         description=f"Detector LV A2552 module {key} current",
         readpv=f"{val}-IMon",
-        visibility=(),
     )
