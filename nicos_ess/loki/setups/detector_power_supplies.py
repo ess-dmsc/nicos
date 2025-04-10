@@ -1,5 +1,3 @@
-from nicos_mlz.refsans.setups.elements.humidity import visibility
-
 description = "The high and low voltage power supplies for the LoKI detector."
 
 pv_root = "LOKI-DtCmn:PwrC"
