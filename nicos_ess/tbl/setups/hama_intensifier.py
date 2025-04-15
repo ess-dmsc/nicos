@@ -2,30 +2,30 @@
 
 description = "Hamamatsu light intensifier"
 
-hama_root = "TBL-DtCMS:NDet-ImgInt-001:"
-gate_root = "YMIR-TS:Ctrl-EVR-03:"
+hama_root = "TBL-DtCMOS:NDet-ImgInt-001:"
+gate_root = "TBL-DtCmn:Ctrl-EVR-001:"
 
 devices = dict(
     hama_pmt_value=device(
-        "nicos_ess.devices.epics.pva.EpicsReadable",
+        "nicos.devices.epics.pva.EpicsReadable",
         description="The current value of the intensifier",
         readpv=f"{hama_root}IntensifierValue-R",
     ),
     hama_pmt_status=device(
-        "nicos_ess.devices.epics.pva.EpicsStringReadable",
+        "nicos.devices.epics.pva.EpicsStringReadable",
         description="The status of the intensifier",
         readpv=f"{hama_root}Status-R",
         visibility=(),
     ),
     hama_pmt_gain=device(
-        "nicos_ess.devices.epics.pva.EpicsDigitalMoveable",
+        "nicos.devices.epics.pva.EpicsDigitalMoveable",
         description="The gain of the intensifier",
         readpv=f"{hama_root}IntensifierGain-R",
         writepv=f"{hama_root}IntensifierGain-S",
         visibility=(),
     ),
     hama_pmt_connection=device(
-        "nicos_ess.devices.epics.pva.EpicsStringReadable",
+        "nicos.devices.epics.pva.EpicsStringReadable",
         description="The connection status of the intensifier",
         readpv=f"{hama_root}DeviceConnected-R",
         visibility=(),
@@ -42,14 +42,14 @@ devices = dict(
         mode="hama_pmt_mode",
     ),
     hama_pmt_mode=device(
-        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
+        "nicos.devices.epics.pva.EpicsMappedMoveable",
         description="The operation mode of the intensifier",
         readpv=f"{hama_root}OperationMode-R",
         writepv=f"{hama_root}OperationMode-S",
         visibility=(),
     ),
     gate_delay=device(
-        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        "nicos.devices.epics.pva.EpicsAnalogMoveable",
         description="The delay of the gate",
         readpv=f"{gate_root}DlyGen1Delay-RB",
         writepv=f"{gate_root}DlyGen1Delay-SP",
@@ -58,7 +58,7 @@ devices = dict(
         precision=0.1,
     ),
     gate_width=device(
-        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        "nicos.devices.epics.pva.EpicsAnalogMoveable",
         description="The width of the gate",
         readpv=f"{gate_root}DlyGen1Width-RB",
         writepv=f"{gate_root}DlyGen1Width-SP",
