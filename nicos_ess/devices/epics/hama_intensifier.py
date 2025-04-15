@@ -1,7 +1,7 @@
 from enum import Enum
 
 from nicos.core import status, Attach, Param, oneof
-from nicos.devices.epics.pva import (
+from nicos_ess.devices.epics.pva import (
     EpicsMappedMoveable,
     EpicsReadable,
     EpicsStringReadable,
