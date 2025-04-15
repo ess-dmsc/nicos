@@ -12,17 +12,16 @@ from nicos.core import (
     Param,
     Value,
     floatrange,
+    host,
     listof,
     multiStatus,
     oneof,
     status,
     tupleof,
-    host,
 )
 from nicos.core.constants import LIVE, MASTER, SIMULATION
 from nicos.devices.generic import Detector, ImageChannelMixin, PassiveChannel
-from nicos.utils import createThread
-
+from nicos.utils import createThread, uniq
 from nicos_ess.devices.kafka.consumer import KafkaConsumer, KafkaSubscriber
 from nicos_ess.devices.kafka.producer import KafkaProducer
 from nicos_ess.devices.kafka.status_handler import (
@@ -424,7 +423,7 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
         "statustopic": Override(default="", mandatory=False),
     }
     _last_live = 0
-    _presetkeys = {"t"}
+    _presetkeys = {}
     _ack_thread = None
     _conditions_thread = None
     _exit_thread = False
@@ -432,10 +431,22 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
     hardware_access = True
 
     def doPreinit(self, mode):
-        presetkeys = {"t"}
-        for image_channel in self._attached_images:
-            presetkeys.add(image_channel.name)
+        presetkeys = {}
+        for name, dev, typ in self._presetiter():
+            # later mentioned presetnames dont overwrite earlier ones
+            presetkeys.setdefault(name, (dev, typ))
+        for channel in self._attached_images:
+            presetkeys.setdefault(channel.name, (channel, "counts"))
+        self._channels = uniq(
+            self._attached_timers
+            + self._attached_monitors
+            + self._attached_counters
+            + self._attached_images
+            + self._attached_others
+        )
         self._presetkeys = presetkeys
+        self._collectControllers()
+
         if mode == SIMULATION:
             return
 
@@ -447,14 +458,10 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
         self._response_consumer = KafkaConsumer.create(self.brokers)
         self._response_consumer.subscribe([self.response_topic])
 
-    def doInit(self, mode):
-        pass
-
     def doPrepare(self):
         self._exit_thread = False
         self._conditions_thread = None
-        for image_channel in self._attached_images:
-            image_channel.doPrepare()
+        Detector.doPrepare(self)
 
     def doStart(self, **preset):
         self._last_live = -(self.liveinterval or 0)
@@ -470,7 +477,8 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
             if val:
                 self._conditions[image_channel] = val
 
-        count_interval = self._lastpreset.get("t", None)
+        # count_interval = self._lastpreset.get("t", None)
+        count_interval = None
         config = self._create_config(count_interval, unique_id)
 
         if count_interval:
@@ -483,9 +491,10 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
 
         self._send_command(self.command_topic, json.dumps(config).encode())
 
-        # Tell the channels to start
-        for image_channel in self._attached_images:
-            image_channel.doStart()
+        for follower in self._followchannels:
+            follower.start()
+        for controller in self._controlchannels:
+            controller.start()
 
         # Check for acknowledgement of the command being received
         self._ack_thread = createThread(
@@ -566,16 +575,6 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
             config_base["start"] = int(time.time()) * 1000
         return config_base
 
-    def valueInfo(self):
-        return tuple(
-            info for channel in self._attached_images for info in channel.valueInfo()
-        )
-
-    def doRead(self, maxage=0):
-        return [
-            data for channel in self._attached_images for data in channel.read(maxage)
-        ]
-
     def doReadArrays(self, quality):
         return [image.readArray(quality) for image in self._attached_images]
 
@@ -586,27 +585,32 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
         self._response_consumer.close()
 
     def doSetPreset(self, **preset):
+        Detector.doSetPreset(self, **preset)
         if not preset:
             # keep old settings
             return
-        for i in preset:
-            if i not in self._presetkeys:
-                valid_keys = ", ".join(self._presetkeys)
-                raise InvalidValueError(
-                    self, f"unrecognised preset {i}, should" f" one of {valid_keys}"
-                )
+        # we need to implement a new way of checking faulty keys?
+        # for i in preset:
+        #     if i not in self._presetkeys:
+        #         valid_keys = ", ".join(self._presetkeys)
+        #         raise InvalidValueError(
+        #             self, f"unrecognised preset {i}, should" f" one of {valid_keys}"
+        #         )
         if "t" in preset and len(self._presetkeys.intersection(preset.keys())) > 1:
             raise InvalidValueError(
                 self,
-                "Cannot set number of detector counts" " and a time interval together",
+                "Cannot set number of detector counts and a time interval together",
             )
-        self._lastpreset = preset.copy()
 
     def doStop(self):
+        self.log.warn("doStop called")
         self._do_stop()
+        Detector.doStop(self)
 
     def doFinish(self):
+        self.log.warn("doFinish called")
         self._do_stop()
+        Detector.doFinish(self)
 
     def _do_stop(self):
         self._stop_job_threads()
@@ -625,7 +629,7 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
         curstatus = self._cache.get(self, "status")
         if curstatus and curstatus[0] == status.ERROR:
             return curstatus
-        return multiStatus(self._attached_images, maxage)
+        return Detector.doStatus(self, maxage)
 
     def _status_update_callback(self, messages):
         # Called on heartbeat received
@@ -637,12 +641,6 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
         if self._mode == MASTER and not self.is_process_running():
             # No heartbeat
             self._cache.put(self, "status", DISCONNECTED_STATE, time.time())
-
-    def doReset(self):
-        pass
-
-    def doInfo(self):
-        return [data for channel in self._attached_images for data in channel.doInfo()]
 
     def duringMeasureHook(self, elapsed):
         if self.liveinterval is not None:
