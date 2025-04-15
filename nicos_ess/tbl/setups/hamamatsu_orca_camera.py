@@ -2,7 +2,7 @@
 
 description = "TBL Hamamatsu Orca camera"
 
-water_cooler_pv_root = "TBL-DtCMS:NDet-FTCtrl-001:"
+water_cooler_pv_root = "TBL-DtCMOS:NDet-FTCtrl-001:"
 
 devices = dict(
     watercooler_mode=device(
@@ -23,11 +23,11 @@ devices = dict(
     orca_camera=device(
         "nicos_ess.devices.epics.area_detector.OrcaFlash4",
         description="The light tomography Orca camera.",
-        pv_root="TBL-DtCMS:NDet-OrcF43:",
-        image_pv="TBL-DtCMS:image1:ArrayData",
+        pv_root="TBL-DtCMOS:NDet-OrcF43:",
+        image_pv="TBL-DtCMOS:image1:ArrayData",
         ad_kafka_plugin="orca_kafka_plugin",
-        topicpv="TBL-DtCMS:Kfk1:KafkaTopic_RBV",
-        sourcepv="TBL-DtCMS:Kfk1:SourceName_RBV",
+        topicpv="TBL-DtCMOS:Kfk1:KafkaTopic_RBV",
+        sourcepv="TBL-DtCMOS:Kfk1:SourceName_RBV",
         unit="images",
         pva=True,
         monitor=True,
