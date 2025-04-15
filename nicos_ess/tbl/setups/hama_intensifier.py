@@ -2,8 +2,8 @@
 
 description = "Hamamatsu light intensifier"
 
-hama_root = "TBL-DtCMS:NDet-ImgInt-001:"
-gate_root = "YMIR-TS:Ctrl-EVR-03:"
+hama_root = "TBL-DtCMOS:NDet-ImgInt-001:"
+gate_root = "TBL-DtCmn:Ctrl-EVR-001:"
 
 devices = dict(
     hama_pmt_value=device(
