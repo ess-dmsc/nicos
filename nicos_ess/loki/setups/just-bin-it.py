@@ -23,6 +23,13 @@ devices = dict(
             "bank7_data",
             "bank8_data",
         ],
+        timers=["timer"],
+    ),
+    timer=device(
+        "nicos_ess.devices.timer.TimerChannel",
+        description="Timer",
+        fmtstr="%.2f",
+        unit="s",
     ),
     bank0_data=device(
         "nicos_ess.devices.datasources.just_bin_it.JustBinItImage",
