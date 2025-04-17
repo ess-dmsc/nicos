@@ -368,6 +368,7 @@ class JustBinItImage(ImageChannelMixin, PassiveChannel):
 
     def doShutdown(self):
         self._kafka_subscriber.close()
+        self._update_status(status.OK, "")
 
 
 class JustBinItDetector(Detector, KafkaStatusHandler):
