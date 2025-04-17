@@ -18,6 +18,7 @@ devices = dict(
             "he3_det_2",
         ],
         timers=["timer"],
+        counters=["pulse_counter"],
     ),
     timer=device(
         "nicos_ess.devices.timer.TimerChannel",
