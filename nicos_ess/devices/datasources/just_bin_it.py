@@ -368,6 +368,7 @@ class JustBinItImage(ImageChannelMixin, PassiveChannel):
 
     def doShutdown(self):
         self._kafka_subscriber.close()
+        self._update_status(status.OK, "")
 
 
 class JustBinItDetector(Detector, KafkaStatusHandler):
@@ -582,6 +583,7 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
         self._send_command(self.command_topic, b'{"cmd": "stop"}')
 
     def doShutdown(self):
+        self._do_stop()
         self._response_consumer.close()
 
     def doSetPreset(self, **preset):
@@ -603,12 +605,10 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
             )
 
     def doStop(self):
-        self.log.warn("doStop called")
         self._do_stop()
         Detector.doStop(self)
 
     def doFinish(self):
-        self.log.warn("doFinish called")
         self._do_stop()
         Detector.doFinish(self)
 
