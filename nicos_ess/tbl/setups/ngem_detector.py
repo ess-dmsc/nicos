@@ -34,7 +34,7 @@ devices = dict(
         readpv="TBL-DtGEM:NDet-nGem-001:FailedPushes-R",
         visiblitity=(),
     ),
-    area_detector_collector=device(
+    ngem_area_detector_collector=device(
         "nicos_ess.devices.epics.area_detector.AreaDetectorCollector",
         description="Area detector collector",
         images=["ngem"],

@@ -16,7 +16,7 @@ devices = dict(
         description="TimePix3 photon event counter",
         readpv="TBL-DtTPX:NDet-TPX3-001:cam1:PelEvtRate_RBV",
     ),
-    area_detector_collector=device(
+    timepix_area_detector_collector=device(
         "nicos_ess.devices.epics.area_detector.AreaDetectorCollector",
         description="Area detector collector",
         images=["timepix"],
