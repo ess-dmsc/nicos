@@ -26,19 +26,27 @@ devices = dict(
         det_range=(1, 13500),
         tof_range=(0, 10000000),
     ),
-    det=device(
+    jbi_detector=device(
         "nicos_ess.devices.datasources.just_bin_it.JustBinItDetector",
         description="The just-bin-it histogrammer",
         brokers=configdata("config.KAFKA_BROKERS"),
         unit="",
+        event_schema="ev44",
+        hist_schema="hs01",
         command_topic="bifrost_jbi_commands",
         response_topic="bifrost_jbi_responses",
         statustopic=["bifrost_jbi_heartbeat"],
         images=["det_image1", "det_image2"],
-        hist_schema="hs01",
+        timers=["timer"],
+    ),
+    timer=device(
+        "nicos_ess.devices.timer.TimerChannel",
+        description="Timer",
+        fmtstr="%.2f",
+        unit="s",
     ),
 )
 
-startupcode = """ 
-SetDetectors(det)
+startupcode = """
+SetDetectors(jbi_detector)
 """
