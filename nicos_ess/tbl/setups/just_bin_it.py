@@ -18,12 +18,19 @@ devices = dict(
             "he3_det_2",
         ],
         timers=["timer"],
+        counters=["pulse_counter"],
     ),
     timer=device(
         "nicos_ess.devices.timer.TimerChannel",
         description="Timer",
         fmtstr="%.2f",
         unit="s",
+    ),
+    pulse_counter=device(
+        "nicos_ess.devices.epics.pulse_counter.PulseCounter",
+        description="EVR Pulse Counter",
+        readpv="TBL-DtCmn:Ctrl-EVR-001:EvtHCnt-I",
+        fmtstr="%d",
     ),
     mb_det=device(
         "nicos_ess.devices.datasources.just_bin_it.JustBinItImage",
