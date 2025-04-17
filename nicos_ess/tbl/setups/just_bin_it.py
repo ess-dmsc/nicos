@@ -46,8 +46,8 @@ devices = dict(
         brokers=configdata("config.KAFKA_BROKERS"),
         unit="evts",
         hist_type="2-D DET",
-        det_width=4,
-        det_height=100,
+        det_width=100,
+        det_height=4,
         det_range=(1, 400),
     ),
     he3_det_2=device(
@@ -59,8 +59,8 @@ devices = dict(
         brokers=configdata("config.KAFKA_BROKERS"),
         unit="evts",
         hist_type="2-D DET",
-        det_width=4,
-        det_height=100,
+        det_width=100,
+        det_height=4,
         det_range=(401, 800),
     ),
 )
