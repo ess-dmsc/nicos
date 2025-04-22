@@ -1,9 +1,10 @@
+import ast
 import threading
 
 from nicos.core import Param
 from nicos.services.cache.database import CacheDatabase
-from nicos.services.cache.entry import CacheEntry
 from nicos.services.cache.endpoints.redis_client import RedisClient
+from nicos.services.cache.entry import CacheEntry
 
 
 class RedisCacheDatabase(CacheDatabase):
@@ -136,6 +137,9 @@ class RedisCacheDatabase(CacheDatabase):
         self._hash_set(key, time, ttl, value, expired)
 
         try:
+            non_string_value = ast.literal_eval(value)
+            if isinstance(non_string_value, list) and len(non_string_value) == 1:
+                value = non_string_value[0]
             numeric_value = float(value)
             timestamp = int(float(time) * 1000)
 
