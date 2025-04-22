@@ -1,9 +1,10 @@
+import ast
 import threading
 
 from nicos.core import Param
 from nicos.services.cache.database import CacheDatabase
-from nicos.services.cache.entry import CacheEntry
 from nicos.services.cache.endpoints.redis_client import RedisClient
+from nicos.services.cache.entry import CacheEntry
 
 
 class RedisCacheDatabase(CacheDatabase):
@@ -54,15 +55,13 @@ class RedisCacheDatabase(CacheDatabase):
     def _redis_pubsub(self):
         return self._client.pubsub()
 
-    def _convert_to_number_if_possible(self, value, try_int=False):
+    def _convert_to_number_if_possible(self, value):
         try:
-            is_string_float = "." in value or "e" in value or "E" in value
-            if try_int and not is_string_float:
-                return int(value)
-            return float(value)
-        except ValueError:
+            converted_value = ast.literal_eval(value)
+            if isinstance(converted_value, (int, float)):
+                return converted_value
             return value
-        except TypeError:
+        except (ValueError, SyntaxError):
             return value
 
     def _format_key(self, category, subkey):
@@ -96,7 +95,7 @@ class RedisCacheDatabase(CacheDatabase):
         return CacheEntry(
             self._convert_to_number_if_possible(data.get("time", None)),
             self._convert_to_number_if_possible(data.get("ttl", None)),
-            self._convert_to_number_if_possible(data.get("value", None), True),
+            self._convert_to_number_if_possible(data.get("value", None)),
         )
 
     def _get_data(self, key):
@@ -136,6 +135,9 @@ class RedisCacheDatabase(CacheDatabase):
         self._hash_set(key, time, ttl, value, expired)
 
         try:
+            non_string_value = ast.literal_eval(value) if type(value) == str else value
+            if isinstance(non_string_value, list) and len(non_string_value) == 1:
+                value = non_string_value[0]
             numeric_value = float(value)
             timestamp = int(float(time) * 1000)
 
