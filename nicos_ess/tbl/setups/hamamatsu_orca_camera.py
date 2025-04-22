@@ -40,7 +40,7 @@ devices = dict(
         "nicos_ess.devices.epics.area_detector.ImageType",
         description="Image type for the tomography setup.",
     ),
-    area_detector_collector=device(
+    orca_area_detector_collector=device(
         "nicos_ess.devices.epics.area_detector.AreaDetectorCollector",
         description="Area detector collector",
         images=["orca_camera"],
