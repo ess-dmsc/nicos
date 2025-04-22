@@ -57,7 +57,10 @@ class RedisCacheDatabase(CacheDatabase):
 
     def _convert_to_number_if_possible(self, value):
         try:
-            return ast.literal_eval(value)
+            converted_value = ast.literal_eval(value)
+            if isinstance(converted_value, (int, float)):
+                return converted_value
+            return value
         except (ValueError, SyntaxError):
             return value
 
