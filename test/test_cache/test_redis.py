@@ -110,6 +110,17 @@ def test_format_key(db):
 def test_convert_number_if_possible(db):
     assert db._convert_to_number_if_possible("3.14") == 3.14
     assert db._convert_to_number_if_possible("42") == 42
+    assert db._convert_to_number_if_possible("-3.14") == -3.14
+    assert db._convert_to_number_if_possible("0") == 0
+    assert db._convert_to_number_if_possible("-42") == -42
+    assert db._convert_to_number_if_possible("3.14e10") == 3.14e10
+    assert db._convert_to_number_if_possible("3.14e-10") == 3.14e-10
+    assert db._convert_to_number_if_possible("3.14E10") == 3.14e10
+    assert db._convert_to_number_if_possible("3.14E-10") == 3.14e-10
+    assert db._convert_to_number_if_possible("[10,]") == [10]
+    assert db._convert_to_number_if_possible("[10, 20]") == [10, 20]
+    assert db._convert_to_number_if_possible("{'key': 10}") == {"key": 10}
+    assert db._convert_to_number_if_possible("{'key': 'value'}") == {"key": "value"}
     assert db._convert_to_number_if_possible("not_a_number") == "not_a_number"
     assert db._convert_to_number_if_possible(None) is None
 
