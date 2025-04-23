@@ -57,6 +57,7 @@ class PulseCounter(CounterChannelMixin, EpicsReadable, PassiveChannel):
 
     def doStop(self):
         self.started = False
+        self._cache.put(self._name, "status", (status.OK, ""), time.time())
 
     def doStatus(self, maxage=0):
         if self.started:
