@@ -25,7 +25,3 @@ devices = dict(
         unit="",
     ),
 )
-
-startupcode = """
-SetDetectors(area_detector_collector)
-"""
