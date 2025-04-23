@@ -46,12 +46,14 @@ class PulseCounter(CounterChannelMixin, EpicsReadable, PassiveChannel):
         self.offset = 0
 
     def doStart(self):
-        self.total = 0
-        self.offset = self._epics_wrapper.get_pv_value(self.readpv)
+        val = self._epics_wrapper.get_pv_value(self.readpv)
+        self.total = val
+        self.offset = val
         self.started = True
 
     def doFinish(self):
         self.started = False
+        self._cache.put(self._name, "status", (status.OK, ""), time.time())
 
     def doStop(self):
         self.started = False
@@ -62,7 +64,7 @@ class PulseCounter(CounterChannelMixin, EpicsReadable, PassiveChannel):
         return status.OK, ""
 
     def doRead(self, maxage=0):
-        return int(self.total - self.offset)
+        return max(int(self.total - self.offset), 0)
 
     def valueInfo(self):
         return (Value(self.name, unit=self.unit, fmtstr=self.fmtstr),)
