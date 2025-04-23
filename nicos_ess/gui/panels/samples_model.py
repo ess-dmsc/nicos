@@ -8,39 +8,39 @@ class SampleTableModel(TableModel):
         self._default_num_rows = num_rows
         self.raw_data = [{} for _ in range(num_rows)]
 
-    def setData(self, index, value, role):
-        if role != Qt.ItemDataRole.EditRole:
-            return False
-        row, column = self._get_row_and_column(index)
-        value = value.strip()
-        self._table_data[row][column] = value
-        self._raw_data[row][self._headings[column]] = value
-        self._emit_update()
-        return True
-
-    def headerData(self, section, orientation, role):
-        if (
-            role == Qt.ItemDataRole.DisplayRole
-            and orientation == Qt.Orientation.Horizontal
-        ):
-            return self._headings[section]
-        if (
-            role == Qt.ItemDataRole.DisplayRole
-            and orientation == Qt.Orientation.Vertical
-        ):
-            return section + 1
-
-    def setHeaderData(
-        self, section, orientation, value, role=Qt.ItemDataRole.DisplayRole
-    ):
-        if (
-            role == Qt.ItemDataRole.DisplayRole
-            and orientation == Qt.Orientation.Horizontal
-        ):
-            self._headings[section] = value
-            self.headerDataChanged.emit(orientation, section, section)
-        return True
-
+    # def setData(self, index, value, role):
+    #     if role != Qt.ItemDataRole.EditRole:
+    #         return False
+    #     row, column = self._get_row_and_column(index)
+    #     value = value.strip()
+    #     self._table_data[row][column] = value
+    #     self._raw_data[row][self._headings[column]] = value
+    #     self._emit_update()
+    #     return True
+    #
+    # def headerData(self, section, orientation, role):
+    #     if (
+    #         role == Qt.ItemDataRole.DisplayRole
+    #         and orientation == Qt.Orientation.Horizontal
+    #     ):
+    #         return self._headings[section]
+    #     if (
+    #         role == Qt.ItemDataRole.DisplayRole
+    #         and orientation == Qt.Orientation.Vertical
+    #     ):
+    #         return section + 1
+    #
+    # def setHeaderData(
+    #     self, section, orientation, value, role=Qt.ItemDataRole.DisplayRole
+    # ):
+    #     if (
+    #         role == Qt.ItemDataRole.DisplayRole
+    #         and orientation == Qt.Orientation.Horizontal
+    #     ):
+    #         self._headings[section] = value
+    #         self.headerDataChanged.emit(orientation, section, section)
+    #     return True
+    #
     @property
     def column_headers(self):
         return self._headings
@@ -50,6 +50,16 @@ class SampleTableModel(TableModel):
 
     def delete_column_header(self, col_index):
         del self.column_headers[col_index]
+
+    def copy_rows(self, row_indices):
+        row_indices = sorted(row_indices)
+        i_max = row_indices[-1]
+        rows_to_copy = [self.raw_data[i] for i in row_indices]
+        rows_above_insert = self.raw_data[: i_max + 1]
+        rows_below_insert = self.raw_data[i_max + 1 :]
+        new_data = rows_above_insert + rows_to_copy + rows_below_insert
+        self.raw_data = new_data
+        self._emit_update()
 
     def insert_column(self, col_index, name):
         self.beginInsertColumns(QModelIndex(), col_index, col_index)
@@ -66,12 +76,12 @@ class SampleTableModel(TableModel):
         self.endInsertColumns()
         self._emit_update()
 
-    def add_missing_columns(self, headers):
-        for i, header in enumerate(headers):
-            if header not in self.column_headers:
-                self.insert_column(i, header)
-
-    def delete_columns(self, col_indices):
+    # def add_missing_columns(self, headers):
+    #     for i, header in enumerate(headers):
+    #         if header not in self.column_headers:
+    #             self.insert_column(i, header)
+    #
+    def remove_columns(self, col_indices):
         self.beginRemoveColumns(QModelIndex(), min(col_indices), max(col_indices))
         col_indices_reverse = sorted(list(set(col_indices)), reverse=True)
         for col_index in col_indices_reverse:
@@ -104,5 +114,5 @@ class SampleTableModel(TableModel):
         self.raw_data = new_raw_data
         self._emit_update()
 
-    def clear(self):
-        self.raw_data = [{} for _ in range(self._default_num_rows)]
+    # def clear(self):
+    #     self.raw_data = [{} for _ in range(self._default_num_rows)]

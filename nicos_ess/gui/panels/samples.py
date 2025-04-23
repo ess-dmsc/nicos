@@ -267,7 +267,7 @@ class SampleTablePanel(PanelBase):
         if 0 in to_remove:
             to_remove = [index for index in to_remove if index != 0]
         if len(to_remove) > 0:
-            self.table.model.delete_columns(to_remove)
+            self.table.model.remove_columns(to_remove)
 
     def _info_dialog(self, message):
         self.dialog = InfoDialog()
