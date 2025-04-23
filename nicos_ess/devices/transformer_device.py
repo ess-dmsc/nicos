@@ -1,4 +1,4 @@
-from nicos.core import Attach, Moveable, Param, ProgrammingError
+from nicos.core import Attach, Moveable, Param, multiStatus
 from nicos.devices.abstract import TransformedMoveable
 
 
@@ -10,14 +10,13 @@ def degrees_to_nanoseconds(degrees, frequency):
     return degrees * 1e9 / (frequency * 360)
 
 
-class TransformedAttachedMoveable(TransformedMoveable):
+class ChopperPhase(TransformedMoveable):
     parameters = {
         "speed": Param(
             description="Rotation speed of the chopper in Hz",
-            default=14,
             type=float,
-            settable=True,
-            mandatory=True,
+            settable=False,
+            volatile=True,
         ),
         "offset": Param(
             description="Offset of the chopper in degrees",
@@ -29,49 +28,35 @@ class TransformedAttachedMoveable(TransformedMoveable):
     }
 
     attached_devices = {
-        "raw_device": Attach("The attached devices", Moveable, optional=False)
+        "phase_ns_dev": Attach(
+            "The attached phase device (ns)", Moveable, optional=False
+        ),
+        "speed_dev": Attach("The attached speed device (hz)", Moveable, optional=False),
     }
-
-    def _mapReadValue(self, value):
-        raise ProgrammingError(
-            self, "Somebody please implement a proper " "_mapReadValue method!"
-        )
 
     def _readRaw(self, maxage=0):
-        return self._attached_raw_device.read()
-
-    def _mapTargetValue(self, target):
-        raise ProgrammingError(
-            self, "Somebody please implement a proper " "_mapTargetValue method!"
-        )
+        return self._attached_phase_ns_dev.read()
 
     def _startRaw(self, target):
-        self._attached_raw_device.start(target)
+        self._attached_phase_ns_dev.start(target)
 
     def doStatus(self, maxage=0):
-        return self._attached_raw_device.status(maxage=maxage)
+        return multiStatus(
+            (
+                ("phase", self._attached_phase_ns_dev),
+                ("speed", self._attached_speed_dev),
+            ),
+            maxage=maxage,
+        )
 
-
-class ChopperPhase(TransformedAttachedMoveable):
-    parameters = {
-        "speed": Param(
-            description="Rotation speed of the chopper in Hz",
-            default=14,
-            type=float,
-            settable=True,
-            mandatory=True,
-        ),
-        "offset": Param(
-            description="Offset of the chopper in degrees",
-            default=0,
-            type=float,
-            settable=True,
-            mandatory=True,
-        ),
-    }
+    def _mapTargetValue(self, target):
+        try:
+            return degrees_to_nanoseconds(target + self.offset, self.speed)
+        except ZeroDivisionError as e:
+            raise ValueError("Phase cannot be set when speed is 0") from e
 
     def _mapReadValue(self, value):
         return nanoseconds_to_degrees(value, self.speed) - self.offset
 
-    def _mapTargetValue(self, target):
-        return degrees_to_nanoseconds(target + self.offset, self.speed)
+    def doReadSpeed(self, maxage=0):
+        return abs(self._attached_speed_dev.read(maxage=maxage))
