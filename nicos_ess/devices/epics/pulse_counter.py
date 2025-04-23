@@ -50,6 +50,7 @@ class PulseCounter(CounterChannelMixin, EpicsReadable, PassiveChannel):
         self.total = val
         self.offset = val
         self.started = True
+        self._cache.put(self._name, "status", (status.BUSY, "counting"), time.time())
 
     def doFinish(self):
         self.started = False
