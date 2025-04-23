@@ -33,8 +33,8 @@ devices = dict(
         monitor=True,
         pollinterval=0.5,
         maxage=None,
-        watercooler_mode=None, #"watercooler_mode",
-        watercooler_temperature=None #"watercooler_temperature",
+        watercooler_mode=None,  # "watercooler_mode",
+        watercooler_temperature=None,  # "watercooler_temperature",
     ),
     orca_image_type=device(
         "nicos_ess.devices.epics.area_detector.ImageType",
@@ -49,7 +49,3 @@ devices = dict(
         unit="",
     ),
 )
-
-startupcode = """
-SetDetectors(area_detector_collector)
-"""
