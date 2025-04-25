@@ -3,13 +3,14 @@ import time
 from enum import Enum
 
 import numpy
-from streaming_data_types import deserialise_ADAr, deserialise_ad00
+from streaming_data_types import deserialise_ad00, deserialise_ADAr
 
 from nicos import session
 from nicos.core import (
     LIVE,
     SIMULATION,
     ArrayDesc,
+    Attach,
     CacheError,
     Measurable,
     Override,
@@ -21,13 +22,12 @@ from nicos.core import (
     pvname,
     status,
     usermethod,
-    Attach,
 )
 from nicos.devices.epics.pva import EpicsDevice
 from nicos.devices.epics.status import SEVERITY_TO_STATUS, STAT_TO_STATUS
 from nicos.devices.generic import Detector, ImageChannelMixin, ManualSwitch
 from nicos.utils import byteBuffer, createThread
-from nicos_ess.devices.epics.pva import EpicsMappedMoveable, EpicsAnalogMoveable
+from nicos_ess.devices.epics.pva import EpicsAnalogMoveable, EpicsMappedMoveable
 
 deserialiser_by_schema = {
     "ADAr": deserialise_ADAr,
@@ -147,13 +147,6 @@ class AreaDetector(EpicsDevice, ImageChannelMixin, Measurable):
         ),
     }
 
-    _control_pvs = {
-        "acquire_time": "AcquireTime",
-        "acquire_period": "AcquirePeriod",
-    }
-
-    _record_fields = {}
-
     _image_array = numpy.zeros((10, 10))
     _detector_collector_name = ""
     _last_update = 0
@@ -162,6 +155,11 @@ class AreaDetector(EpicsDevice, ImageChannelMixin, Measurable):
     def doPreinit(self, mode):
         if mode == SIMULATION:
             return
+
+        self._control_pvs = {
+            "acquire_time": "AcquireTime",
+            "acquire_period": "AcquirePeriod",
+        }
         self._record_fields = {
             key + "_rbv": value + "_RBV" for key, value in self._control_pvs.items()
         }
@@ -338,13 +336,13 @@ class TimepixDetector(AreaDetector):
     }
 
     def doPreinit(self, mode):
+        AreaDetector.doPreinit(self, mode)
         self._control_pvs.update(
             {
                 "threshold_fine": "CHIP0_Vth_fine",
                 "threshold_coarse": "CHIP0_Vth_coarse",
             }
         )
-        AreaDetector.doPreinit(self, mode)
 
     def doReadThreshold_Fine(self):
         return self._get_pv("threshold_fine_rbv")
@@ -718,7 +716,7 @@ class AreaDetectorCollector(Detector):
             if (topic, source) == area_detector.get_topic_and_source():
                 return area_detector.arrayInfo().shape
         self.log.error(
-            "No array size was found for area detector " "with topic %s and source %s.",
+            "No array size was found for area detector with topic %s and source %s.",
             topic,
             source,
         )
