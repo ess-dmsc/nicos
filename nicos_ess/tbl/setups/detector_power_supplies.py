@@ -42,7 +42,7 @@ for key, val in hv_pvs.items():
 
 for key, val in hv_pvs.items():
     devices[f"{key}_current_setpoint"] = device(
-        "nicos_ess.devices.epics.pva.EpicsAnalogMovable",
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
         description=f"Detector HV A7030DP module {key} set voltage",
         readpv=f"{val}-V0Set",
         visibility=(),
