@@ -34,17 +34,11 @@ for board in hv_info["boards"]:
 devices = dict()
 
 for key, val in hv_pvs.items():
-    devices[f"{key}_voltage_readback"] = device(
-        "nicos_ess.devices.epics.pva.EpicsReadable",
-        description=f"Detector HV A7030DP module {key} voltage",
-        readpv=f"{val}-VMon",
-    )
-
-for key, val in hv_pvs.items():
-    devices[f"{key}_current_setpoint"] = device(
+    devices[f"{key}_voltage"] = device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
         description=f"Detector HV A7030DP module {key} set voltage",
-        readpv=f"{val}-V0Set",
+        readpv=f"{val}-VMon",
+        writepv=f"{val}-V0Set",
         visibility=(),
     )
 
@@ -57,7 +51,7 @@ for key, val in hv_pvs.items():
     )
 
 for key, val in hv_pvs.items():
-    devices[f"{key}_current_readback"] = device(
+    devices[f"{key}_leak_current"] = device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
         description=f"Detector HV A7030DP module {key} current",
         readpv=f"{val}-IMon",
