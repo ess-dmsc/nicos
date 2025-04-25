@@ -49,7 +49,7 @@ for key, val in hv_pvs.items():
     )
 
 for key, val in hv_pvs.items():
-    devices[f"{key}_current_setpoint"] = device(
+    devices[f"{key}_enabled"] = device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description=f"Detector HV A7030DP module {key} power on/off",
         readpv=f"{val}-Status-ON",
