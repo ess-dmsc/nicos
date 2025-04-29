@@ -48,7 +48,7 @@ devices = dict(
     mini_chopper_alarm_level=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The chopper alarm status",
-        readpv="{}Lvl_Alrm".format(chic_root),
+        readpv="{}Lvl_Alrm".format(pv_root),
         visibility=(),
     ),
     mini_chopper_chic=device(
