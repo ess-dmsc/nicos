@@ -239,6 +239,14 @@ class JustBinItImage(ImageChannelMixin, PassiveChannel):
             userparam=True,
             settable=True,
         ),
+        "event_rate": Param(
+            "The neutron event rate",
+            type=float,
+            unit="counts/s",
+            default=0.0,
+            userparam=False,
+            settable=False,
+        ),
     }
 
     parameter_overrides = {
@@ -260,6 +268,7 @@ class JustBinItImage(ImageChannelMixin, PassiveChannel):
 
     def doInit(self, mode):
         self._hist_sum = 0
+        self.event_rate = 0.0
         self._zero_data()
 
     def _zero_data(self):
@@ -273,6 +282,7 @@ class JustBinItImage(ImageChannelMixin, PassiveChannel):
         self._zero_data()
         self._hist_edges = np.array([])
         self._hist_sum = 0
+        self.event_rate = 0.0
         try:
             self._kafka_subscriber.subscribe(
                 [self.hist_topic], self.new_messages_callback
@@ -305,6 +315,8 @@ class JustBinItImage(ImageChannelMixin, PassiveChannel):
                 self._kafka_subscriber.stop_consuming()
                 self._update_status(status.OK, "")
                 break
+
+            self.event_rate = info.get("event_rate", 0.0)
 
             self._hist_data = hist_type_by_name[self.hist_type].transform_data(
                 hist["data"], rotation=self.rotation
