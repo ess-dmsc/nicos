@@ -4,69 +4,88 @@ description = (
 
 pv_root = "TBL-DtCmn:PwrC"
 
-hv_info = {
-    "id": "HVM",
-    "boards": ["101", "102"],
-    "channels": [f"{ch:>02}" for ch in range(0, 4)],
-}
+# Define board/channel info
+hv_sources = [
+    {
+        "id": "HVM",
+        "boards": ["100", "101", "102"],
+        "channels": [f"{ch:02}" for ch in range(12)],
+        "board_type": "A7030DP",
+    },
+    {
+        "id": "HVM",
+        "boards": ["103", "104"],
+        "channels": [f"{ch:02}" for ch in range(8)],
+        "board_type": "A1589",
+    },
+]
 
-# lv_info = {
-#     "id": "LVM",
-#     "boards": [str(board) for board in range(107, 116)],
-#     "channels": [f"{ch:>02}" for ch in range(0, 8)],
-# }
-
-hv_pvs = {}
-for board in hv_info["boards"]:
-    for channel in hv_info["channels"]:
-        key = f"HV_{board}_Ch{channel}"
-        val = f"{pv_root}-{hv_info['id']}-{board}:Ch{channel}"
-        hv_pvs[key] = val
-
-# lv_pvs = {}
-# for board in lv_info["boards"]:
-#     for channel in lv_info["channels"]:
-#         key = f"LV_{board}_Ch{channel}"
-#         val = f"{pv_root}-{lv_info['id']}-{board}:Ch{channel}"
-#         lv_pvs[key] = val
+lv_sources = [
+    {
+        "id": "LVM",
+        "boards": ["105"],
+        "channels": [f"{ch:02}" for ch in range(8)],
+        "board_type": "2552",
+    }
+]
 
 
-devices = dict()
+def generate_pvs(sources, prefix):
+    pvs = {}
+    for source in sources:
+        for board in source["boards"]:
+            for channel in source["channels"]:
+                key = f"{prefix}_{board}_Ch{channel}"
+                pvs[key] = {
+                    "board_type": source["board_type"],
+                    "pv": f"{pv_root}-{source['id']}-{board}:Ch{channel}",
+                }
+    return pvs
 
-for key, val in hv_pvs.items():
-    devices[f"{key}_voltage"] = device(
-        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
-        description=f"Detector HV A7030DP module {key} set voltage",
-        readpv=f"{val}-VMon",
-        writepv=f"{val}-V0Set",
-        visibility=(),
-    )
 
-for key, val in hv_pvs.items():
-    devices[f"{key}_enabled"] = device(
-        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
-        description=f"Detector HV A7030DP module {key} power on/off",
-        readpv=f"{val}-Status-ON",
-        visibility=(),
-    )
+def add_devices(pvs, prefix):
+    for key, dev_info in pvs.items():
+        pv_prefix = dev_info["pv"]
+        board_type = dev_info["board_type"]
+        # Read-only devices
+        devices[f"{key}_voltage"] = device(
+            "nicos_ess.devices.epics.pva.EpicsReadable",
+            description=f"Detector {prefix} {board_type} module {key} read voltage",
+            readpv=f"{pv_prefix}-VMon",
+        )
+        devices[f"{key}_leak_current"] = device(
+            "nicos_ess.devices.epics.pva.EpicsReadable",
+            description=f"Detector {prefix} {board_type} module {key} current",
+            readpv=f"{pv_prefix}-IMon",
+        )
+        devices[f"{key}_enabled"] = device(
+            "nicos_ess.devices.epics.pva.EpicsMappedReadable",
+            description=f"Detector {prefix} {board_type} module {key} power on/off",
+            readpv=f"{pv_prefix}-Status-ON",
+        )
+        # Admin write devices
+        devices[f"{key}_voltage_setpoint"] = device(
+            "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+            description=f"Detector {prefix} {board_type} module {key} set voltage",
+            readpv=f"{pv_prefix}-VMon",
+            writepv=f"{pv_prefix}-V0Set",
+            visibility=(),
+            requires={"level": "admin"},
+        )
+        devices[f"{key}_enabled"] = device(
+            "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
+            description=f"Detector {prefix} {board_type} module {key} power on/off",
+            readpv=f"{pv_prefix}-Status-ON",
+            writepv=f"{pv_prefix}-Pw",
+            visibility=(),
+            requires={"level": "admin"},
+        )
 
-for key, val in hv_pvs.items():
-    devices[f"{key}_leak_current"] = device(
-        "nicos_ess.devices.epics.pva.EpicsReadable",
-        description=f"Detector HV A7030DP module {key} current",
-        readpv=f"{val}-IMon",
-    )
 
-# for key, val in lv_pvs.items():
-#     devices[f"{key}_voltage"] = device(
-#         "nicos_ess.devices.epics.pva.EpicsReadable",
-#         description=f"Detector LV A2552 module {key} voltage",
-#         readpv=f"{val}-VMon",
-#     )
-#
-# for key, val in lv_pvs.items():
-#     devices[f"{key}_current"] = device(
-#         "nicos_ess.devices.epics.pva.EpicsReadable",
-#         description=f"Detector LV A2552 module {key} current",
-#         readpv=f"{val}-IMon",
-#     )
+# Main setup
+hv_pvs = generate_pvs(hv_sources, "HV")
+lv_pvs = generate_pvs(lv_sources, "LV")
+
+devices = {}
+add_devices(hv_pvs, "HV")
+add_devices(lv_pvs, "LV")
