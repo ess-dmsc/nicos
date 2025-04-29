@@ -36,6 +36,11 @@ devices = dict(
         watercooler_mode="watercooler_mode",
         watercooler_temperature="watercooler_temperature",
     ),
+    orca_chip_temperature=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description="CMOS chip temperature",
+        readpv="TBL-DtCMOS:NDet-OrcF43:Temperature-R",
+    ),
     orca_image_type=device(
         "nicos_ess.devices.epics.area_detector.ImageType",
         description="Image type for the tomography setup.",
