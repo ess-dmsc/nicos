@@ -5,7 +5,7 @@ chic_root = "YMIR-ChpSy1:Chop-CHIC-001:"
 
 devices = dict(
     mini_chopper_status=device(
-        "nicos_ess.devices.epics.pva.EpicsStringReadable",
+        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The chopper status.",
         readpv="{}Chop_Stat".format(pv_root),
         visibility=(),
