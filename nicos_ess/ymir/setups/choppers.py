@@ -40,7 +40,7 @@ devices = dict(
         visibility=(),
     ),
     mini_chopper_vacuum_status=device(
-        "nicos_ess.devices.epics.pva.EpicsStringReadable",
+        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The chopper vacuum",
         readpv="{}Vac_Stat".format(pv_root),
         visibility=(),
