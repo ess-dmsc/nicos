@@ -336,13 +336,22 @@ class TimepixDetector(AreaDetector):
     }
 
     def doPreinit(self, mode):
-        AreaDetector.doPreinit(self, mode)
-        self._control_pvs.update(
-            {
-                "threshold_fine": "CHIP0_Vth_fine",
-                "threshold_coarse": "CHIP0_Vth_coarse",
-            }
-        )
+        if mode == SIMULATION:
+            return
+
+        self._control_pvs = {
+            "acquire_time": "AcquireTime",
+            "acquire_period": "AcquirePeriod",
+            "threshold_fine": "CHIP0_Vth_fine",
+            "threshold_coarse": "CHIP0_Vth_coarse",
+        }
+        self._record_fields = {
+            key + "_rbv": value + "_RBV" for key, value in self._control_pvs.items()
+        }
+        self._record_fields.update(self._control_pvs)
+        self._set_custom_record_fields()
+        EpicsDevice.doPreinit(self, mode)
+        self._image_processing_lock = threading.Lock()
 
     def doReadThreshold_Fine(self):
         return self._get_pv("threshold_fine_rbv")
