@@ -141,10 +141,6 @@ class AreaDetector(EpicsDevice, ImageChannelMixin, Measurable):
             settable=True,
             default=True,
         ),
-        "acquiretime": Param("Exposure time ", settable=True, volatile=True),
-        "acquireperiod": Param(
-            "Time between exposure starts.", settable=True, volatile=True
-        ),
     }
 
     _image_array = numpy.zeros((10, 10))
@@ -156,14 +152,6 @@ class AreaDetector(EpicsDevice, ImageChannelMixin, Measurable):
         if mode == SIMULATION:
             return
 
-        self._control_pvs = {
-            "acquire_time": "AcquireTime",
-            "acquire_period": "AcquirePeriod",
-        }
-        self._record_fields = {
-            key + "_rbv": value + "_RBV" for key, value in self._control_pvs.items()
-        }
-        self._record_fields.update(self._control_pvs)
         self._set_custom_record_fields()
         EpicsDevice.doPreinit(self, mode)
         self._image_processing_lock = threading.Lock()
@@ -305,18 +293,6 @@ class AreaDetector(EpicsDevice, ImageChannelMixin, Measurable):
     def doReadArray(self, quality):
         return self._image_array
 
-    def doReadAcquiretime(self):
-        return self._get_pv("acquire_time_rbv")
-
-    def doWriteAcquiretime(self, value):
-        self._put_pv("acquire_time", value)
-
-    def doReadAcquireperiod(self):
-        return self._get_pv("acquire_period_rbv")
-
-    def doWriteAcquireperiod(self, value):
-        self._put_pv("acquire_period", value)
-
     def get_topic_and_source(self):
         return None, None
 
@@ -332,6 +308,10 @@ class TimepixDetector(AreaDetector):
             "Threshold coarse value.",
             settable=True,
             volatile=True,
+        ),
+        "acquiretime": Param("Exposure time ", settable=True, volatile=True),
+        "acquireperiod": Param(
+            "Time between exposure starts.", settable=True, volatile=True
         ),
     }
 
@@ -352,6 +332,18 @@ class TimepixDetector(AreaDetector):
         self._set_custom_record_fields()
         EpicsDevice.doPreinit(self, mode)
         self._image_processing_lock = threading.Lock()
+
+    def doReadAcquiretime(self):
+        return self._get_pv("acquire_time_rbv")
+
+    def doWriteAcquiretime(self, value):
+        self._put_pv("acquire_time", value)
+
+    def doReadAcquireperiod(self):
+        return self._get_pv("acquire_period_rbv")
+
+    def doWriteAcquireperiod(self, value):
+        self._put_pv("acquire_period", value)
 
     def doReadThreshold_Fine(self):
         return self._get_pv("threshold_fine_rbv")
@@ -438,6 +430,10 @@ class OrcaFlash4(AreaDetector):
         ),
         "watercooler_temperature": Param(
             "Temperature of the water cooling the camera.", settable=True, volatile=True
+        ),
+        "acquiretime": Param("Exposure time ", settable=True, volatile=True),
+        "acquireperiod": Param(
+            "Time between exposure starts.", settable=True, volatile=True
         ),
     }
 
@@ -703,6 +699,17 @@ class OrcaFlash4(AreaDetector):
         if self._attached_watercooler_temperature is not None:
             self._attached_watercooler_temperature.start(value)
 
+    def doReadAcquiretime(self):
+        return self._get_pv("acquire_time_rbv")
+
+    def doWriteAcquiretime(self, value):
+        self._put_pv("acquire_time", value)
+
+    def doReadAcquireperiod(self):
+        return self._get_pv("acquire_period_rbv")
+
+    def doWriteAcquireperiod(self, value):
+        self._put_pv("acquire_period", value)
 
 class AreaDetectorCollector(Detector):
     """
