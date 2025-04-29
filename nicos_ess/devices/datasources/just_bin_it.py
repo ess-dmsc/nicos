@@ -316,7 +316,7 @@ class JustBinItImage(ImageChannelMixin, PassiveChannel):
                 self._update_status(status.OK, "")
                 break
 
-            self.event_rate = info.get("event_rate", 0.0)
+            self.event_rate = info.get("rate", 0.0)
 
             self._hist_data = hist_type_by_name[self.hist_type].transform_data(
                 hist["data"], rotation=self.rotation
