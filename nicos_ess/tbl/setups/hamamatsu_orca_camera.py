@@ -2,6 +2,10 @@
 
 description = "TBL Hamamatsu Orca camera"
 
+camera_system_pv_root = "TBL-DtCMOS:"
+camera_device_pv_root = "NDet-OrcF43:"
+camera_ndplugin_pv_root = "image1:"
+camera_kafkaplugin_pv_root = "Kfk1:"
 water_cooler_pv_root = "TBL-DtCMOS:NDet-FTCtrl-001:"
 
 devices = dict(
@@ -23,11 +27,11 @@ devices = dict(
     orca_camera=device(
         "nicos_ess.devices.epics.area_detector.OrcaFlash4",
         description="The light tomography Orca camera.",
-        pv_root="TBL-DtCMOS:NDet-OrcF43:",
-        image_pv="TBL-DtCMOS:image1:ArrayData",
+        pv_root=f"{camera_system_pv_root}{camera_device_pv_root}",
+        image_pv=f"{camera_system_pv_root}{camera_ndplugin_pv_root}ArrayData",
         ad_kafka_plugin="orca_kafka_plugin",
-        topicpv="TBL-DtCMOS:Kfk1:KafkaTopic_RBV",
-        sourcepv="TBL-DtCMOS:Kfk1:SourceName_RBV",
+        topicpv=f"{camera_system_pv_root}{camera_kafkaplugin_pv_root}KafkaTopic_RBV",
+        sourcepv=f"{camera_system_pv_root}{camera_kafkaplugin_pv_root}SourceName_RBV",
         unit="images",
         pva=True,
         monitor=True,
@@ -39,7 +43,7 @@ devices = dict(
     orca_chip_temperature=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
         description="CMOS chip temperature",
-        readpv="TBL-DtCMOS:NDet-OrcF43:Temperature-R",
+        readpv=f"{camera_system_pv_root}{camera_device_pv_root}Temperature-R",
     ),
     orca_image_type=device(
         "nicos_ess.devices.epics.area_detector.ImageType",
