@@ -39,6 +39,18 @@ devices = dict(
         readpv="{}ParkPos_Stat".format(pv_root),
         visibility=(),
     ),
+    mini_chopper_vacuum_status=device(
+        "nicos_ess.devices.epics.pva.EpicsStringReadable",
+        description="The chopper vacuum",
+        readpv="{}Vac_Stat".format(pv_root),
+        visibility=(),
+    ),
+    mini_chopper_alarm_level=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
+        description="The chopper alarm status",
+        readpv="{}Lvl_Alrm".format(chic_root),
+        visibility=(),
+    ),
     mini_chopper_chic=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The status of the CHIC connection.",
