@@ -442,22 +442,29 @@ class OrcaFlash4(AreaDetector):
     }
 
     def doPreinit(self, mode):
-        AreaDetector.doPreinit(self, mode)
-        self._control_pvs.update(
-            {
-                "size_x": "SizeX",
-                "size_y": "SizeY",
-                "min_x": "MinX",
-                "min_y": "MinY",
-                "bin_x": "BinX",
-                "bin_y": "BinY",
-                "acquire_time": "AcquireTime",
-                "acquire_period": "AcquirePeriod",
-                "num_images": "NumImages",
-                "num_exposures": "NumExposures",
-                "image_mode": "ImageMode",
-            }
-        )
+        if mode == SIMULATION:
+            return
+
+        self._control_pvs = {
+            "size_x": "SizeX",
+            "size_y": "SizeY",
+            "min_x": "MinX",
+            "min_y": "MinY",
+            "bin_x": "BinX",
+            "bin_y": "BinY",
+            "acquire_time": "AcquireTime",
+            "acquire_period": "AcquirePeriod",
+            "num_images": "NumImages",
+            "num_exposures": "NumExposures",
+            "image_mode": "ImageMode",
+        }
+        self._record_fields = {
+            key + "_rbv": value + "_RBV" for key, value in self._control_pvs.items()
+        }
+        self._record_fields.update(self._control_pvs)
+        self._set_custom_record_fields()
+        EpicsDevice.doPreinit(self, mode)
+        self._image_processing_lock = threading.Lock()
 
     def _set_custom_record_fields(self):
         AreaDetector._set_custom_record_fields(self)
