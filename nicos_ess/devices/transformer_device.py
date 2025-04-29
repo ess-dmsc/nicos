@@ -2,14 +2,6 @@ from nicos.core import Attach, Moveable, Param, multiStatus
 from nicos.devices.abstract import TransformedMoveable
 
 
-def nanoseconds_to_degrees(timedelta, frequency):
-    return timedelta * frequency * 360 / 1e9
-
-
-def degrees_to_nanoseconds(degrees, frequency):
-    return degrees * 1e9 / (frequency * 360)
-
-
 class ChopperPhase(TransformedMoveable):
     parameters = {
         "speed": Param(
@@ -40,6 +32,12 @@ class ChopperPhase(TransformedMoveable):
     def _startRaw(self, target):
         self._attached_phase_ns_dev.start(target)
 
+    def _nanoseconds_to_degrees(self, timedelta):
+        return timedelta * self.speed * 360 / 1e9
+
+    def _degrees_to_nanoseconds(self, degrees):
+        return degrees * 1e9 / (self.speed * 360)
+
     def doStatus(self, maxage=0):
         return multiStatus(
             (
@@ -51,12 +49,12 @@ class ChopperPhase(TransformedMoveable):
 
     def _mapTargetValue(self, target):
         try:
-            return degrees_to_nanoseconds(target + self.offset, self.speed)
+            return self._degrees_to_nanoseconds(target + self.offset)
         except ZeroDivisionError as e:
             raise ValueError("Phase cannot be set when speed is 0") from e
 
     def _mapReadValue(self, value):
-        return nanoseconds_to_degrees(value, self.speed) - self.offset
+        return self._nanoseconds_to_degrees(value) - self.offset
 
     def doReadSpeed(self, maxage=0):
         return abs(self._attached_speed_dev.read(maxage=maxage))
