@@ -441,19 +441,23 @@ class OrcaFlash4(AreaDetector):
         ),
     }
 
-    _control_pvs = {
-        "size_x": "SizeX",
-        "size_y": "SizeY",
-        "min_x": "MinX",
-        "min_y": "MinY",
-        "bin_x": "BinX",
-        "bin_y": "BinY",
-        "acquire_time": "AcquireTime",
-        "acquire_period": "AcquirePeriod",
-        "num_images": "NumImages",
-        "num_exposures": "NumExposures",
-        "image_mode": "ImageMode",
-    }
+    def doPreinit(self, mode):
+        AreaDetector.doPreinit(self, mode)
+        self._control_pvs.update(
+            {
+                "size_x": "SizeX",
+                "size_y": "SizeY",
+                "min_x": "MinX",
+                "min_y": "MinY",
+                "bin_x": "BinX",
+                "bin_y": "BinY",
+                "acquire_time": "AcquireTime",
+                "acquire_period": "AcquirePeriod",
+                "num_images": "NumImages",
+                "num_exposures": "NumExposures",
+                "image_mode": "ImageMode",
+            }
+        )
 
     def _set_custom_record_fields(self):
         AreaDetector._set_custom_record_fields(self)
