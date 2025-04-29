@@ -245,7 +245,7 @@ class JustBinItImage(ImageChannelMixin, PassiveChannel):
             unit="counts/s",
             default=0.0,
             userparam=False,
-            settable=False,
+            settable=True,
         ),
     }
 
