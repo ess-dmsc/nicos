@@ -3,9 +3,9 @@ description = "LoKI heavy shutter"
 pv_root = "LOKI-HvSht:MC-Pne-01:"
 
 devices = dict(
-    heavy_shutter_status=device(
+    heavy_shutter=device(
         "nicos_ess.devices.epics.pva.EpicsStringReadable",
-        description="Status of the heavy shutter",
+        description="Heavy shutter - pneumatic axis 1 in motion cabinet 1",
         readpv=f"{pv_root}ShtMsgTxt",
     ),
     heavy_shutter_error=device(
