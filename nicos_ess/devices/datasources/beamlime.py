@@ -103,16 +103,12 @@ class DataChannel(CounterChannelMixin, PassiveChannel):
         "pollinterval": Override(default=None, userparam=False, settable=False),
     }
 
-    data_structure = {}
-    _current_status = (status.UNKNOWN, "")
-    _signal_data = np.array([])
-    _signal_data_sum = 0
-    _collector = None
-
     def doPreinit(self, mode):
-        self._current_status = (status.OK, "")
+        self.data_structure = {}
         self._signal_data = np.array([])
         self._signal_data_sum = 0
+        self._collector = None
+        self._current_status = (status.OK, "")
         if mode == SIMULATION:
             return
         self._update_status(status.OK, "")
@@ -181,7 +177,7 @@ class DataChannel(CounterChannelMixin, PassiveChannel):
                     # self.data_structure["plot_type"],
                 )
         except Exception as e:
-            print(f"Could not update data for {self.name}: {e}")
+            self._update_status(status.ERROR, str(e))
 
     def _parse_new_data(self, variables):
         if not variables:
@@ -265,13 +261,16 @@ class DataChannel(CounterChannelMixin, PassiveChannel):
             self._collector.send_command(param_name, value)
 
     def doStart(self):
-        self._update_status(status.BUSY, "Started acquisition")
+        self._update_status(status.BUSY, "Counting")
         self.last_clear = time.time_ns()
         message = json.dumps({"value": self.last_clear, "unit": "ns"}).encode("utf-8")
         self._send_command_to_collector("start_time", message)
 
     def doStop(self):
-        self._update_status(status.OK, "Stopped acquisition")
+        self._update_status(status.OK, "")
+
+    def doFinish(self):
+        self._update_status(status.OK, "")
 
     def doWriteNum_Bins(self, value):
         self._send_command_to_collector("num_bins", value)
@@ -287,6 +286,9 @@ class DataChannel(CounterChannelMixin, PassiveChannel):
 
     def doWriteRoi(self, value):
         self._send_command_to_collector("roi", value)
+
+    def doShutdown(self):
+        self._update_status(status.OK, "")
 
 
 class BeamLimeCollector(Detector):
@@ -322,10 +324,9 @@ class BeamLimeCollector(Detector):
         ),
     }
 
-    _kafka_subscriber = None
-
     def doPreinit(self, mode):
         Detector.doPreinit(self, mode)
+        self._kafka_subscriber = None
         if mode == SIMULATION:
             return
 
@@ -347,12 +348,6 @@ class BeamLimeCollector(Detector):
 
     def _update_status(self, new_status, msg=""):
         self._cache.put(self, "status", (new_status, msg), time.time())
-
-    def doRead(self, maxage=0):
-        return [data for channel in self._channels for data in channel.read(maxage)]
-
-    def doStatus(self, maxage=0):
-        return multiStatus(self._channels, maxage)
 
     def send_command(self, param_name, message):
         def cb(err, msg):
