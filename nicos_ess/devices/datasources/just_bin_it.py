@@ -478,7 +478,6 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
             if val:
                 self._conditions[image_channel] = val
 
-        # count_interval = self._lastpreset.get("t", None)
         count_interval = None
         config = self._create_config(count_interval, unique_id)
 
@@ -585,24 +584,6 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
     def doShutdown(self):
         self._do_stop()
         self._response_consumer.close()
-
-    # def doSetPreset(self, **preset):
-    #     Detector.doSetPreset(self, **preset)
-    #     if not preset:
-    #         # keep old settings
-    #         return
-    # we need to implement a new way of checking faulty keys?
-    # for i in preset:
-    #     if i not in self._presetkeys:
-    #         valid_keys = ", ".join(self._presetkeys)
-    #         raise InvalidValueError(
-    #             self, f"unrecognised preset {i}, should" f" one of {valid_keys}"
-    #         )
-    # if "t" in preset and len(self._presetkeys.intersection(preset.keys())) > 1:
-    #     raise InvalidValueError(
-    #         self,
-    #         "Cannot set number of detector counts and a time interval together",
-    #     )
 
     def doStop(self):
         self._do_stop()
