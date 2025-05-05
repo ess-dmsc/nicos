@@ -312,15 +312,15 @@ class SpectrometerControl(QWidget):
         #     self.parent.client.eval(f"{self.selected_device}.pollParams()")
         # except NameError:
         #     return
-
-        param_info = self.parent.client.getDeviceParams(self.selected_device)
-        if not param_info:
-            return
-
-        self._update_text_fields(param_info)
-        self._update_start_acq_button_style(param_info.get("status", (None, None))[1])
-        self._highlight_differing_readback_values()
-        self._update_warnings(param_info)
+        #
+        # param_info = self.parent.client.getDeviceParams(self.selected_device)
+        # if not param_info:
+        #     return
+        #
+        # self._update_text_fields(param_info)
+        # self._update_start_acq_button_style(param_info.get("status", (None, None))[1])
+        # self._highlight_differing_readback_values()
+        # self._update_warnings(param_info)
 
     def _update_warnings(self, param_info):
         if param_info["darkvalid"]:
