@@ -25,6 +25,9 @@ class PowerSupplyChannel(MappedMoveable):
     parameter_overrides = {
         "fmtstr": Override(default="%s"),
         "unit": Override(mandatory=False),
+        "mapping": Override(
+            mandatory=False, settable=True, userparam=False, volatile=True
+        ),
     }
 
     hardware_access = False
