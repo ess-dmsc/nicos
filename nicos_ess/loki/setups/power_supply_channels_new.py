@@ -55,6 +55,7 @@ for key, channel in all_channels.items():
     channel_status = device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         readpv=f"{pv_root}-Status-ON",
+        mapping={"Power is OFF": 0, "Power is ON": 1},
     )
     channel_power_control = device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
@@ -68,6 +69,7 @@ for key, channel in all_channels.items():
         channel=channel["channel"],
         pollinterval=0.5,
         maxage=None,
+        unit="V",
         voltage=channel_voltage,
         current=channel_current,
         status=channel_status,

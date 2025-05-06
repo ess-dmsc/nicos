@@ -44,11 +44,11 @@ class PowerSupplyChannel(MappedMoveable):
             self._attached_power_control.doStart(target)
 
     def doStatus(self, maxage=0):
-        msg = self._attached_status.doRead()
-        if msg.lower() == "no" or msg.lower() == "yes":
-            return status.OK, f"Power is ON: {msg}"
+        power_stat_msg = self._attached_status.doRead()
+        stat, msg = self._attached_voltage.doStatus()
+        if stat == status.OK:
+            return stat, power_stat_msg
         else:
-            stat, msg = self._attached_status.doStatus(self, maxage)
             return stat, msg
 
     def doReset(self):
