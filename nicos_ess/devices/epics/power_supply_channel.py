@@ -23,14 +23,14 @@ class PowerSupplyChannel(MappedMoveable):
     }
 
     parameter_overrides = {
-        "fmtstr": Override(default="%s"),
-        "unit": Override(mandatory=False),
+        "fmtstr": Override(default="%2.f"),
+        "unit": Override(default="V", mandatory=False),
         "mapping": Override(
             mandatory=False, settable=False, userparam=False, volatile=True
         ),
     }
     hardware_access = False
-    valuetype = str
+    valuetype = float
 
     def doRead(self, maxage=0):
         return self._attached_voltage.doRead()
