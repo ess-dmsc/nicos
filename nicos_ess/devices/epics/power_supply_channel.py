@@ -31,11 +31,6 @@ class PowerSupplyChannel(EpicsParameters, MappedMoveable):
     hardware_access = False
     valuetype = str
 
-    def __init__(self, name, **config):
-        super().__init__(name, config)
-        self._attached_status = None
-        self._attached_power_control = None
-
     def doRead(self, maxage=0):
         return self._attached_status.doRead()
 
