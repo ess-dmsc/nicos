@@ -26,7 +26,7 @@ class PowerSupplyChannel(MappedMoveable):
         "fmtstr": Override(default="%s"),
         "unit": Override(mandatory=False),
         "mapping": Override(
-            mandatory=False, settable=True, userparam=False, volatile=True
+            mandatory=False, settable=True, userparam=False, volatile=False
         ),
     }
 
@@ -56,8 +56,5 @@ class PowerSupplyChannel(MappedMoveable):
     #     # Ignore
     #     pass
     #
-    def doReadMappingPowerControl(self):
-        return self._attached_power_control.mapping
-
-    def doReadMappingPowerStatus(self):
-        return self._attached_status.mapping
+    # def doReadMapping(self):
+    #     return self._attached_power_control.mapping
