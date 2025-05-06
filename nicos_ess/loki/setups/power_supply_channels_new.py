@@ -1,5 +1,3 @@
-import nicos_ess.devices.epics.pva
-
 description = "The high and low voltage power supplies for the LoKI detector."
 
 pv_root = "LOKI-DtCmn:PwrC"
