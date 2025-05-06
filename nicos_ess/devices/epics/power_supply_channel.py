@@ -7,7 +7,7 @@ from nicos.core import (
 from nicos.devices.abstract import MappedMoveable, MappedReadable, Readable
 
 
-class PowerSupplyChannel(MappedMoveable):
+class PowerSupplyChannel(Readable):
     parameters = {
         "board": Param("Power supply board"),
         "channel": Param("Power supply channel"),
@@ -17,7 +17,7 @@ class PowerSupplyChannel(MappedMoveable):
         "current": Attach("Monitored current", Readable),
         "status": Attach(
             "Status of the power in the power supply channel",
-            Readable,
+            MappedReadable,
         ),
         "power_control": Attach("Control of the power supply channel", MappedMoveable),
     }
@@ -35,13 +35,13 @@ class PowerSupplyChannel(MappedMoveable):
     def doRead(self, maxage=0):
         return self._attached_voltage.doRead()
 
-    def doStart(self, target):
-        if target.lower == "on":
-            self._attached_power_control.doStart(target)
-
-    def doStop(self, target):
-        if target.lower == "off":
-            self._attached_power_control.doStart(target)
+    # def doStart(self, target):
+    #     if target.lower == "on":
+    #         self._attached_power_control.doStart(target)
+    #
+    # def doStop(self, target):
+    #     if target.lower == "off":
+    #         self._attached_power_control.doStart(target)
 
     def doStatus(self, maxage=0):
         power_stat_msg = self._attached_status.doRead()
@@ -51,9 +51,9 @@ class PowerSupplyChannel(MappedMoveable):
         else:
             return stat, msg
 
-    def doReset(self):
-        # Ignore
-        pass
-
-    def doReadMapping(self):
-        return self._attached_power_control.mapping
+    # def doReset(self):
+    #     # Ignore
+    #     pass
+    #
+    # def doReadMapping(self):
+    #     return self._attached_power_control.mapping
