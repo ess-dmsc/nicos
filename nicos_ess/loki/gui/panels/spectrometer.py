@@ -1,6 +1,8 @@
 import math
-import numpy as np
+import time
 from enum import Enum
+
+import numpy as np
 
 from nicos.clients.gui.panels import Panel
 from nicos.guisupport.livewidget import DATATYPES
@@ -19,7 +21,6 @@ from nicos.guisupport.qt import (
     QVBoxLayout,
     QWidget,
 )
-
 from nicos_ess.gui.panels.live_pyqt import process_axis_labels, process_data_arrays
 from nicos_ess.gui.widgets.pyqtgraph.line_view import LineView
 
@@ -304,6 +305,7 @@ class SpectrometerControl(QWidget):
         self._switch_plot(self.display_dark_backgrd, self.parent.show_dark_background)
 
     def update_readback_values(self):
+        time.sleep(2)
         if not self.selected_device:
             return
 
