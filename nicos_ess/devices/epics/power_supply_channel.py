@@ -56,5 +56,5 @@ class PowerSupplyChannel(MappedMoveable):
     #     # Ignore
     #     pass
     #
-    # def doReadMapping(self):
-    #     return self._attached_power_control.mapping
+    def doReadMapping(self):
+        return self._attached_power_control.mapping
