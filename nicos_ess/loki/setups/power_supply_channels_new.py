@@ -27,16 +27,16 @@ for board in hv_info["boards"]:
         hv_channels[key] = channel_info
 
 lv_channels = {}
-# for board in lv_info["boards"]:
-#     for channel in lv_info["channels"]:
-#         key = f"LV_{board}_Ch{channel}"
-#         channel_info = {
-#             "description": f"Detector LV A2552 module {key} voltage",
-#             "board": board,
-#             "channel": channel,
-#             "pv_root_channel": f"{pv_root}-{lv_info['id']}-{board}:Ch{channel}",
-#         }
-#         lv_channels[key] = channel_info
+for board in lv_info["boards"]:
+    for channel in lv_info["channels"]:
+        key = f"LV_{board}_Ch{channel}"
+        channel_info = {
+            "description": f"Detector LV A2552 module {key} voltage",
+            "board": board,
+            "channel": channel,
+            "pv_root_channel": f"{pv_root}-{lv_info['id']}-{board}:Ch{channel}",
+        }
+        lv_channels[key] = channel_info
 
 all_channels = {**hv_channels, **lv_channels}
 
