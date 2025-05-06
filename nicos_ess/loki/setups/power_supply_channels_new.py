@@ -59,7 +59,7 @@ for key, channel in all_channels.items():
         writepv=f"{pv_root}-Pw",
     )
     power_supply_channel = device(
-        "nicos_ess.devices.epics.power_supply_channels.PowerSupplyChannel",
+        "nicos_ess.devices.epics.power_supply_channel.PowerSupplyChannel",
         description=channel["description"],
         board=channel["board"],
         channel=channel["channel"],
