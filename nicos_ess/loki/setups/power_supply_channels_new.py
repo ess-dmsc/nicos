@@ -45,19 +45,19 @@ devices = dict()
 for key, channel in all_channels.items():
     pv_root = channel["pv_root_channel"]
     channel_voltage = device(
-        "nicos_ess.devices.epics.pva.epics_devices.EpicsReadable",
+        "nicos_ess.devices.epics.pva.EpicsReadable",
         readpv=f"{pv_root}-VMon",
     )
     channel_current = device(
-        "nicos_ess.devices.epics.pva.epics_devices.EpicsReadable",
+        "nicos_ess.devices.epics.pva.EpicsReadable",
         readpv=f"{pv_root}-IMon",
     )
     channel_status = device(
-        "nicos_ess.devices.epics.pva.epics_devices.EpicsMappedReadable",
+        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         readpv=f"{pv_root}-Status-ON",
     )
     channel_power_control = device(
-        "nicos_ess.devices.epics.pva.epics_devices.EpicsMappedMovable",
+        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         readpv=f"{pv_root}-Pw-RB",
         writepv=f"{pv_root}-Pw",
     )
