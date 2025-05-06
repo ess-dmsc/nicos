@@ -15,28 +15,28 @@ lv_info = {
 }
 
 hv_channels = {}
-# for board in hv_info["boards"]:
-#     for channel in hv_info["channels"]:
-#         key = f"HV_{board}_Ch{channel}"
-#         channel_info = {
-#             "description": f"Detector HV A7030DP module {key}",
-#             "board": board,
-#             "channel": channel,
-#             "pv_root_channel": f"{pv_root}-{hv_info['id']}-{board}:Ch{channel}",
-#         }
-#         hv_channels[key] = channel_info
-
-lv_channels = {}
-for board in lv_info["boards"]:
-    for channel in lv_info["channels"]:
-        key = f"LV_{board}_Ch{channel}"
+for board in hv_info["boards"]:
+    for channel in hv_info["channels"]:
+        key = f"HV_{board}_Ch{channel}"
         channel_info = {
-            "description": f"Detector LV A2552 module {key} voltage",
+            "description": f"Detector HV A7030DP module {key}",
             "board": board,
             "channel": channel,
-            "pv_root_channel": f"{pv_root}-{lv_info['id']}-{board}:Ch{channel}",
+            "pv_root_channel": f"{pv_root}-{hv_info['id']}-{board}:Ch{channel}",
         }
-        lv_channels[key] = channel_info
+        hv_channels[key] = channel_info
+
+lv_channels = {}
+# for board in lv_info["boards"]:
+#     for channel in lv_info["channels"]:
+#         key = f"LV_{board}_Ch{channel}"
+#         channel_info = {
+#             "description": f"Detector LV A2552 module {key} voltage",
+#             "board": board,
+#             "channel": channel,
+#             "pv_root_channel": f"{pv_root}-{lv_info['id']}-{board}:Ch{channel}",
+#         }
+#         lv_channels[key] = channel_info
 
 all_channels = {**hv_channels, **lv_channels}
 
@@ -69,7 +69,6 @@ for key, channel in all_channels.items():
         channel=channel["channel"],
         pollinterval=0.5,
         maxage=None,
-        unit="V",
         voltage=channel_voltage,
         current=channel_current,
         status=channel_status,
