@@ -48,7 +48,10 @@ class PowerSupplyChannel(MappedMoveable):
         power_stat_msg = self._attached_status.doRead()
         stat, msg = self._attached_voltage.doStatus()
         if stat == status.OK:
-            return stat, power_stat_msg
+            if power_stat_msg == "Power is OFF":
+                return status.OK, power_stat_msg
+            elif power_stat_msg == "Power is ON":
+                return status.BUSY, power_stat_msg
         else:
             return stat, msg
 

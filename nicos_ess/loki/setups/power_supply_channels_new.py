@@ -10,7 +10,16 @@ hv_info = {
 
 lv_info = {
     "id": "LVM",
-    "boards": [str(board) for board in range(107, 116)],
+    "boards": [
+        "107",
+        "108",
+        "110",
+        "111",
+        "112",
+        "113",
+        "114",
+        "115",
+    ],  # [str(board) for board in range(107, 116)],
     "channels": [f"{ch:>02}" for ch in range(0, 8)],
 }
 
