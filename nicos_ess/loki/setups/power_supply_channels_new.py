@@ -67,7 +67,7 @@ for key, channel in all_channels.items():
         pollinterval=0.5,
         maxage=None,
         unit="V",
-        fmtstr="%2.f",
+        fmtstr="%.3f",
         voltage=channel_voltage,
         current=channel_current,
         status=channel_status,
