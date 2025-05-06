@@ -305,23 +305,23 @@ class SpectrometerControl(QWidget):
         self._switch_plot(self.display_dark_backgrd, self.parent.show_dark_background)
 
     def update_readback_values(self):
-        time.sleep(2)
-        if not self.selected_device:
-            return
-
-        try:
-            self.parent.client.eval(f"{self.selected_device}.pollParams()")
-        except NameError:
-            return
-
-        param_info = self.parent.client.getDeviceParams(self.selected_device)
-        if not param_info:
-            return
-
-        self._update_text_fields(param_info)
-        self._update_start_acq_button_style(param_info.get("status", (None, None))[1])
-        self._highlight_differing_readback_values()
-        self._update_warnings(param_info)
+        pass
+        # if not self.selected_device:
+        #     return
+        #
+        # try:
+        #     self.parent.client.eval(f"{self.selected_device}.pollParams()")
+        # except NameError:
+        #     return
+        #
+        # param_info = self.parent.client.getDeviceParams(self.selected_device)
+        # if not param_info:
+        #     return
+        #
+        # self._update_text_fields(param_info)
+        # self._update_start_acq_button_style(param_info.get("status", (None, None))[1])
+        # self._highlight_differing_readback_values()
+        # self._update_warnings(param_info)
 
     def _update_warnings(self, param_info):
         if param_info["darkvalid"]:
