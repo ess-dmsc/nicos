@@ -40,7 +40,7 @@ for board in lv_info["boards"]:
         }
         lv_channels[key] = channel_info
 
-all_channels = hv_channels | lv_channels
+all_channels = {**hv_channels, **lv_channels}
 
 devices = dict()
 
