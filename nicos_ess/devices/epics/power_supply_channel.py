@@ -2,6 +2,7 @@ from nicos.core import (
     Attach,
     Override,
     Param,
+    status,
 )
 from nicos.devices.abstract import MappedMoveable, MappedReadable, Readable
 
@@ -16,7 +17,7 @@ class PowerSupplyChannel(MappedMoveable):
         "current": Attach("Monitored current", Readable),
         "status": Attach(
             "Status of the power in the power supply channel",
-            MappedReadable,
+            Readable,
         ),
         "power_control": Attach("Control of the power supply channel", MappedMoveable),
     }
@@ -32,7 +33,7 @@ class PowerSupplyChannel(MappedMoveable):
     valuetype = str
 
     def doRead(self, maxage=0):
-        return self._attached_status.doRead()
+        return self._attached_voltage.doRead()
 
     def doStart(self, target):
         if target.lower == "on":
@@ -43,7 +44,12 @@ class PowerSupplyChannel(MappedMoveable):
             self._attached_power_control.doStart(target)
 
     def doStatus(self, maxage=0):
-        return self._attached_status.doRead()
+        msg = self._attached_status.doRead()
+        if msg.lower() == "no" or msg.lower() == "yes":
+            return status.OK, f"Power is ON: {msg}"
+        else:
+            stat, msg = self._attached_status.doStatus(self, maxage)
+            return stat, msg
 
     def doReset(self):
         # Ignore
