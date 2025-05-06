@@ -2,30 +2,22 @@ from nicos.core import (
     Attach,
     Param,
 )
-from nicos.devices.abstract import MappedMoveable
-from nicos_ess.devices.epics.pva import (
-    EpicsMappedMoveable,
-    EpicsMappedReadable,
-    EpicsReadable,
-)
-from nicos_ess.devices.epics.pva.epics_devices import EpicsParameters
+from nicos.devices.abstract import MappedMoveable, MappedReadable, Readable
 
 
-class PowerSupplyChannel(EpicsParameters, MappedMoveable):
+class PowerSupplyChannel(MappedMoveable):
     parameters = {
         "board": Param("Power supply board"),
         "channel": Param("Power supply channel"),
     }
     attached_devices = {
-        "voltage": Attach("Monitored voltage", EpicsReadable),
-        "current": Attach("Monitored current", EpicsReadable),
+        "voltage": Attach("Monitored voltage", Readable),
+        "current": Attach("Monitored current", Readable),
         "status": Attach(
             "Status of the power in the power supply channel",
-            EpicsMappedReadable,
+            MappedReadable,
         ),
-        "power_control": Attach(
-            "Control of the power supply channel", EpicsMappedMoveable
-        ),
+        "power_control": Attach("Control of the power supply channel", MappedMoveable),
     }
 
     hardware_access = False
