@@ -1,5 +1,6 @@
 from nicos.core import (
     Attach,
+    Override,
     Param,
 )
 from nicos.devices.abstract import MappedMoveable, MappedReadable, Readable
@@ -20,6 +21,13 @@ class PowerSupplyChannel(MappedMoveable):
         "power_control": Attach("Control of the power supply channel", MappedMoveable),
     }
 
+    parameter_overrides = {
+        "fmtstr": Override(default="%s"),
+        "unit": Override(mandatory=False),
+        "mapping": Override(
+            mandatory=False, settable=False, userparam=False, volatile=True
+        ),
+    }
     hardware_access = False
     valuetype = str
 
