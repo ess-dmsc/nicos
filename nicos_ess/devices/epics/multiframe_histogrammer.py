@@ -192,7 +192,7 @@ class MultiFrameHistogrammer(ImageChannelMixin, EpicsReadable, PassiveChannel):
                 plotcount=1,
                 plot_type="hist-1d",
                 label_shape=tuple([self._frame_time_array.shape]),
-                label_dtype=tuple([self._frame_time_array.dtype.str]),
+                label_dtypes=tuple([self._frame_time_array.dtype.str]),
             )
         ]
         if databuffer:
