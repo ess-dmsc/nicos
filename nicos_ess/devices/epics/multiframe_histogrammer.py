@@ -53,6 +53,9 @@ class MultiFrameHistogrammer(ImageChannelMixin, EpicsParameters, PassiveChannel)
             settable=True,
             default=True,
         ),
+        "readpv": Param(
+            "PV for reading device value", type=pvname, mandatory=True, userparam=False
+        ),
         "source_name_input": Param(
             "Source name for input.",
             type=str,
