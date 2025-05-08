@@ -18,9 +18,8 @@ from nicos.guisupport.qt import (
     QWidget,
     pyqtProperty,
 )
-
-from nicos_ess.gui.widgets.pyqtgraph.line_view import LineView
 from nicos_ess.gui.widgets.pyqtgraph.image_view import ImageView
+from nicos_ess.gui.widgets.pyqtgraph.line_view import LineView
 
 TAB_WIDGET_MIN_WIDTH = 200
 DEFAULT_TAB_WIDGET_MIN_WIDTH = 0
@@ -113,9 +112,7 @@ class LiveDataPanel(Panel):
         try:
             descriptions = params["datadescs"]
         except KeyError:
-            self.log.warning(
-                'Livedata with tag "Live" without ' '"datadescs" provided.'
-            )
+            self.log.warning('Livedata with tag "Live" without "datadescs" provided.')
             return
 
         # pylint: disable=len-as-condition
@@ -703,7 +700,7 @@ class MultiLiveDataPanel(LiveDataPanel):
     def _update_and_process_preview_data(self, params, blobs):
         parent = params["det"]
         if parent not in self._detectors:
-            self.log.warning(f"Detector {parent} not found in detectors")
+            self.log.debug(f"Detector {parent} not found in detectors")
             return
         self._detectors[parent].update_cache(params, blobs)
         datacount = len(params["datadescs"])
@@ -736,7 +733,7 @@ class MultiLiveDataPanel(LiveDataPanel):
         self._detector_selected = det_name
         parent = self._previews[det_name].detector
         if parent not in self._detectors:
-            self.log.warning(f"Detector {parent} not found in detectors")
+            self.log.debug(f"Detector {parent} not found in detectors")
             return
         pars, blob = self._detectors[parent].get_preview_data(self._detector_selected)
         is_2d = isinstance(self._previews[det_name].widget, ImageView)
