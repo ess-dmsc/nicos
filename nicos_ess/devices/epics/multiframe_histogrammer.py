@@ -137,6 +137,7 @@ class MultiFrameHistogrammer(EpicsDevice, ImageChannelMixin, PassiveChannel):
     def status_change_callback(
         self, name, param, value, units, limits, severity, message, **kwargs
     ):
+        self.log.warn("Status change callback called for %s", name)
         if param == "signal":
             self._signal_array = value
             self.readresult = np.sum(value, axis=0)
@@ -147,6 +148,14 @@ class MultiFrameHistogrammer(EpicsDevice, ImageChannelMixin, PassiveChannel):
             self._frame_time_array = value
 
         EpicsDevice.status_change_callback(
+            self, name, param, value, units, limits, severity, message, **kwargs
+        )
+
+    def value_change_callback(
+        self, name, param, value, units, limits, severity, message, **kwargs
+    ):
+        self.log.warn("Value change callback called for %s", name)
+        EpicsDevice.value_change_callback(
             self, name, param, value, units, limits, severity, message, **kwargs
         )
 
