@@ -1,6 +1,7 @@
 import math
-import numpy as np
 from enum import Enum
+
+import numpy as np
 
 from nicos.clients.gui.panels import Panel
 from nicos.guisupport.livewidget import DATATYPES
@@ -19,7 +20,6 @@ from nicos.guisupport.qt import (
     QVBoxLayout,
     QWidget,
 )
-
 from nicos_ess.gui.panels.live_pyqt import process_axis_labels, process_data_arrays
 from nicos_ess.gui.widgets.pyqtgraph.line_view import LineView
 
