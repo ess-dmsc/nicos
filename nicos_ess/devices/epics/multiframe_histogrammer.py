@@ -206,8 +206,9 @@ class MultiFrameHistogrammer(ImageChannelMixin, EpicsReadable, PassiveChannel):
         return set(self._record_fields.keys())
 
     def _get_pv_name(self, pvparam):
-        pv_name = self._record_fields.get(pvparam)
-        if pv_name:
+        pv_record_info = self._record_fields.get(pvparam)
+        if pv_record_info:
+            pv_name = pv_record_info.pv_suffix
             return self.pv_root + pv_name
         return getattr(self, pvparam)
 
