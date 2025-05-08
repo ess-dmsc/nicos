@@ -6,6 +6,14 @@ from nicos.core import ADMIN, SIMULATION, requires
 
 from nicos_ess.devices.datasinks.file_writer import FileWriterControlSink
 
+__all__ = [
+    "nexusfile_open",
+    "start_filewriting",
+    "stop_filewriting",
+    "list_filewriting_jobs",
+    "replay_job",
+]
+
 
 def _find_filewriter_dev():
     for dev in session.devices.values():

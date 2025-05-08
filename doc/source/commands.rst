@@ -4,6 +4,8 @@ User Commands
 - `Getting help`_
 - `Device commands`_
 - `Scanning commands`_
+- `Filewriting commands`_
+- `SciChat commands`_
 - `Output commands`_
 - `Setup-related commands`_
 - `Experiment-related commands`_
@@ -173,6 +175,21 @@ Scanning commands
 .. autofunction:: appendscan
 .. autofunction:: manualscan
 .. autofunction:: gridscan
+
+Filewriting commands
+------------------
+.. module:: nicos_ess.commands.filewriter
+
+.. autofunction:: nexusfile_open
+.. autofunction:: start_filewriting
+.. autofunction:: stop_filewriting
+.. autofunction:: list_filewriting_jobs
+
+SciChat commands
+----------------
+.. module:: nicos_ess.commands.scichat
+
+.. autofunction:: scichat_send
 
 On-line analysis commands
 -------------------------

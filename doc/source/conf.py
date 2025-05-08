@@ -45,8 +45,8 @@ extensions = [
     "sphinx.ext.inheritance_diagram",
     "sphinx.ext.todo",
     "sphinx.ext.mathjax",
-    "ext.setupdoc",
-    "ext.daemondoc",
+    # "ext.setupdoc",
+    # "ext.daemondoc",
     "ext.stubs",
     "ext.nicosclassdoc",
     "sphinxcontrib.seqdiag",
@@ -443,6 +443,7 @@ man_pages = [("index", "nicos", "NICOS Documentation", ["NICOS contributors"], 1
 # from the doc: Setting None is equivalent to giving the option
 # name in the list format (i.e. it means “yes/true/on”).
 autodoc_default_options = {"members": None}
+autodoc_mock_imports = ["p4p", "pvxs"]
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {"https://docs.python.org/": None}
