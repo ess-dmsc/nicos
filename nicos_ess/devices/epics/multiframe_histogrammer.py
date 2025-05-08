@@ -94,7 +94,7 @@ class MultiFrameHistogrammer(ImageChannelMixin, EpicsReadable, PassiveChannel):
         ),
     }
 
-    _plot_update_delay = 0.25
+    _plot_update_delay = 1.0
 
     def doPreinit(self, mode):
         self._record_fields = {
@@ -141,29 +141,25 @@ class MultiFrameHistogrammer(ImageChannelMixin, EpicsReadable, PassiveChannel):
     def value_change_callback(
         self, name, param, value, units, limits, severity, message, **kwargs
     ):
-        self.log.warn(f"Value change callback: {param} for name {name}")
         if (
             param == "readpv"
             and time.monotonic() < self._last_update + self._plot_update_delay
         ):
-            self.log.warn(
-                f"Skippin because {time.monotonic()} >= {self._last_update} + {self._plot_update_delay}"
-            )
             return
         elif param == "readpv":
-            self.log.warn(f"Updating {self._name} with {param}")
             self._signal_array = value
             self.readresult = [np.sum(value, axis=0)]
-
             self.log.warn(f"Trying to put {self.readresult}")
             self.putResult(LIVE, value)
             self._last_update = time.monotonic()
 
         cache_key = self._get_cache_relation(param)
         if cache_key:
-            self._cache.put(self._name, cache_key, value, time.time())
             if param == "readpv":
+                self._cache.put(self._name, cache_key, self.readresult, time.time())
                 self._cache.put(self._name, "unit", units, time.time())
+            else:
+                self._cache.put(self._name, cache_key, value, time.time())
 
     def valueInfo(self):
         return (Value(self.name, unit=self.unit, fmtstr=self.fmtstr),)
@@ -217,6 +213,9 @@ class MultiFrameHistogrammer(ImageChannelMixin, EpicsReadable, PassiveChannel):
         if pv_name:
             return self.pv_root + pv_name
         return getattr(self, pvparam)
+
+    def doRead(self, maxage=0):
+        return self.readresult
 
     def doStart(self):
         self.readresult = [0]
