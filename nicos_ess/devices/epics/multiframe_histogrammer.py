@@ -138,38 +138,25 @@ class MultiFrameHistogrammer(ImageChannelMixin, EpicsReadable, PassiveChannel):
             self._subscribe_params(value_pvs, self.value_change_callback)
             self._subscribe_params(status_pvs or value_pvs, self.status_change_callback)
 
-    def status_change_callback(
-        self, name, param, value, units, limits, severity, message, **kwargs
-    ):
-        self.log.warn("Status change callback called for %s", name)
-        if param == "readpv":
-            self._signal_array = value
-            self.readresult = np.sum(value, axis=0)
-            if time.monotonic() >= self._last_update + self._plot_update_delay:
-                self.putResult(LIVE, value)
-                self._last_update = time.monotonic()
-        elif param == "frame_time":
-            self._frame_time_array = value
-
-        EpicsReadable.status_change_callback(
-            self, name, param, value, units, limits, severity, message, **kwargs
-        )
-
     def value_change_callback(
         self, name, param, value, units, limits, severity, message, **kwargs
     ):
         self.log.warn(
             f"Value change callback called for {name} and param {param} with value {value}"
         )
+        if param == "readpv":
+            return
         # if param == "readpv":
         #     self._signal_array = value
         #     self.readresult = np.sum(value, axis=0)
         #     if time.monotonic() >= self._last_update + self._plot_update_delay:
         #         self.putResult(LIVE, value)
         #         self._last_update = time.monotonic()
-        EpicsReadable.value_change_callback(
-            self, name, param, value, units, limits, severity, message, **kwargs
-        )
+        cache_key = self._get_cache_relation(param)
+        if cache_key:
+            self._cache.put(self._name, cache_key, value, time.time())
+            if param == "readpv":
+                self._cache.put(self._name, "unit", units, time.time())
 
     def valueInfo(self):
         return (Value(self.name, unit=self.unit, fmtstr=self.fmtstr),)
