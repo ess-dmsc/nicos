@@ -152,14 +152,11 @@ class MultiFrameHistogrammer(ImageChannelMixin, EpicsReadable, PassiveChannel):
             return
         elif param == "readpv":
             self.log.warn(f"Updating {self._name} with {param}")
-            try:
-                self._signal_array = value
-                self.readresult = np.sum(value, axis=0)
-            except Exception as e:
-                self.log.error(f"Error in value change callback: {e}")
+            self._signal_array = value
+            self.readresult = [np.sum(value, axis=0)]
 
             self.log.warn(f"Trying to put {self.readresult}")
-            # self.putResult(LIVE, value)
+            self.putResult(LIVE, value)
             self._last_update = time.monotonic()
 
         cache_key = self._get_cache_relation(param)
