@@ -141,17 +141,18 @@ class MultiFrameHistogrammer(ImageChannelMixin, EpicsReadable, PassiveChannel):
     def value_change_callback(
         self, name, param, value, units, limits, severity, message, **kwargs
     ):
-        self.log.warn(
-            f"Value change callback called for {name} and param {param} with value {value}"
-        )
         if (
             param == "readpv"
             and time.monotonic() >= self._last_update + self._plot_update_delay
         ):
+            self.log.warn(
+                f"Skippin because {time.monotonic()} >= {self._last_update} + {self._plot_update_delay}"
+            )
             return
         elif param == "readpv":
             self._signal_array = value
             self.readresult = np.sum(value, axis=0)
+            self.log.warn(f"Trying to put {self.readresult}")
             self.putResult(LIVE, value)
             self._last_update = time.monotonic()
 
