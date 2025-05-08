@@ -169,6 +169,7 @@ class MultiFrameHistogrammer(ImageChannelMixin, EpicsReadable, PassiveChannel):
         try:
             return ArrayDesc(self.name, shape=self._signal_array.shape, dtype=np.int32)
         except Exception as e:
+            self.log.error(f"Cannot create array descriptor for {self.name}: {e}")
             raise InvalidValueError(
                 f"Cannot create array descriptor for {self.name}: {e}"
             )
