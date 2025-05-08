@@ -36,9 +36,7 @@ from nicos_ess.devices.epics.pva.epics_devices import (
 )
 
 
-class MultiFrameHistogrammer(
-    ImageChannelMixin, EpicsParameters, Readable, PassiveChannel
-):
+class MultiFrameHistogrammer(ImageChannelMixin, EpicsParameters, PassiveChannel):
     """
     Device that controls and acquires data from a multiframe-histogrammer.
     """
