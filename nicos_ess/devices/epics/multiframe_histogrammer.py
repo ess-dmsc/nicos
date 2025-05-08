@@ -134,11 +134,23 @@ class MultiFrameHistogrammer(ImageChannelMixin, EpicsReadable, PassiveChannel):
         self._epics_subscriptions = []
         value_pvs = list(self._cache_relations.keys())
         status_pvs = self._get_status_parameters()
-        if session.sessiontype != POLLER:
+        if session.sessiontype == POLLER:
             self._subscribe_params(value_pvs, self.value_change_callback)
+        else:
             self._subscribe_params(status_pvs or value_pvs, self.status_change_callback)
 
     def value_change_callback(
+        self, name, param, value, units, limits, severity, message, **kwargs
+    ):
+        cache_key = self._get_cache_relation(param)
+        if cache_key:
+            if param == "readpv":
+                self._cache.put(self._name, cache_key, self.readresult, time.time())
+                self._cache.put(self._name, "unit", units, time.time())
+            else:
+                self._cache.put(self._name, cache_key, value, time.time())
+
+    def status_change_callback(
         self, name, param, value, units, limits, severity, message, **kwargs
     ):
         if (
@@ -154,13 +166,8 @@ class MultiFrameHistogrammer(ImageChannelMixin, EpicsReadable, PassiveChannel):
             self.putResult(LIVE, value)
             self._last_update = time.monotonic()
 
-        cache_key = self._get_cache_relation(param)
-        if cache_key:
-            if param == "readpv":
-                self._cache.put(self._name, cache_key, self.readresult, time.time())
-                self._cache.put(self._name, "unit", units, time.time())
-            else:
-                self._cache.put(self._name, cache_key, value, time.time())
+        current_status = self.doStatus()
+        self._cache.put(self._name, "status", current_status, time.time())
 
     def valueInfo(self):
         return (Value(self.name, unit=self.unit, fmtstr=self.fmtstr),)
