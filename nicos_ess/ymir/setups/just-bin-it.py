@@ -32,12 +32,12 @@ devices = dict(
         fmtstr="%.2f",
         unit="s",
     ),
-    pulse_counter=device(
-        "nicos_ess.devices.epics.pulse_counter.PulseCounter",
-        description="EVR Pulse Counter",
-        readpv="YMIR-TS:Ctrl-EVR-01:EvtACnt-I",
-        fmtstr="%d",
-    ),
+    # pulse_counter=device(
+    #     "nicos_ess.devices.epics.pulse_counter.PulseCounter",
+    #     description="EVR Pulse Counter",
+    #     readpv="YMIR-TS:Ctrl-EVR-01:EvtACnt-I",
+    #     fmtstr="%d",
+    # ),
     mfh=device(
         "nicos_ess.devices.epics.multiframe_histogrammer.MultiFrameHistogrammer",
         description="The just-bin-it histogrammer",
@@ -51,9 +51,9 @@ devices = dict(
         command_topic="ymir_jbi_commands",
         response_topic="ymir_jbi_responses",
         statustopic=["ymir_jbi_heartbeat"],
-        images=["det_image1", "det_image2"],
+        images=["det_image1", "det_image2", "mfh"],
         timers=["timer"],
-        counters=["pulse_counter"],
+        # counters=["pulse_counter"],
         hist_schema="hs01",
     ),
 )
