@@ -110,7 +110,7 @@ class MultiFrameHistogrammer(ImageChannelMixin, EpicsReadable, PassiveChannel):
             "num_histograms": RecordInfo("", "num_histograms", RecordType.VALUE),
         }
 
-        EpicsDevice.doPreinit(self, mode)
+        EpicsReadable.doPreinit(self, mode)
         self.started = False
         self._current_status = (status.OK, "")
         self._signal_array = []
@@ -146,7 +146,7 @@ class MultiFrameHistogrammer(ImageChannelMixin, EpicsReadable, PassiveChannel):
         elif param == "frame_time":
             self._frame_time_array = value
 
-        EpicsDevice.status_change_callback(
+        EpicsReadable.status_change_callback(
             self, name, param, value, units, limits, severity, message, **kwargs
         )
 
@@ -154,7 +154,7 @@ class MultiFrameHistogrammer(ImageChannelMixin, EpicsReadable, PassiveChannel):
         self, name, param, value, units, limits, severity, message, **kwargs
     ):
         self.log.warn("Value change callback called for %s", name)
-        EpicsDevice.value_change_callback(
+        EpicsReadable.value_change_callback(
             self, name, param, value, units, limits, severity, message, **kwargs
         )
 
