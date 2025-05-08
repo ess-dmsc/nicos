@@ -34,12 +34,12 @@ main_window = docked(
                             "Choppers",
                             panel("nicos_ess.gui.panels.chopper.ChopperPanel"),
                         ),
-                        (
-                            "Spectrometer",
-                            panel(
-                                "nicos_ess.loki.gui.panels.spectrometer.SpectrometerPanel"
-                            ),
-                        ),
+                        # (
+                        #     "Spectrometer",
+                        #     panel(
+                        #         "nicos_ess.loki.gui.panels.spectrometer.SpectrometerPanel"
+                        #     ),
+                        # ),
                         (
                             "Rheometer Setup",
                             panel("nicos_ess.gui.panels.rheometer.RheometerPanel"),
