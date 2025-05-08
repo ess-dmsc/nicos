@@ -107,8 +107,8 @@ class MultiFrameHistogrammer(ImageChannelMixin, EpicsReadable, PassiveChannel):
             "num_histograms": "num_histograms",
         }
         self._current_status = (status.OK, "")
-        self._signal_array = []
-        self._frame_time_array = []
+        self._signal_array = np.array([])
+        self._frame_time_array = np.array([])
         self._last_update = 0
         EpicsReadable.doPreinit(self, mode)
         if session.sessiontype != POLLER:
@@ -116,8 +116,8 @@ class MultiFrameHistogrammer(ImageChannelMixin, EpicsReadable, PassiveChannel):
             self.started = False
 
     def doPrepare(self):
-        self._signal_array = []
-        self._frame_time_array = []
+        self._signal_array = np.array([])
+        self._frame_time_array = np.array([])
         self.readresult = [0]
         self._last_update = 0
         self.started = False
@@ -150,6 +150,7 @@ class MultiFrameHistogrammer(ImageChannelMixin, EpicsReadable, PassiveChannel):
             self._signal_array = value
             self.readresult = [np.sum(value, axis=0)]
             self.log.warn(f"Trying to put {self.readresult}")
+            self.update_arraydesc(self)
             self.putResult(LIVE, value)
             self._last_update = time.monotonic()
 
@@ -165,11 +166,13 @@ class MultiFrameHistogrammer(ImageChannelMixin, EpicsReadable, PassiveChannel):
         return (Value(self.name, unit=self.unit, fmtstr=self.fmtstr),)
 
     def arrayInfo(self):
-        return ArrayDesc(
-            self.name,
-            shape=self._signal_array.shape,
-            dtype=self._signal_array.dtype,
-        )
+        return self.update_arraydesc()
+
+    def update_arraydesc(self):
+        if self._signal_array:
+            return ArrayDesc(self.name, shape=self._signal_array.shape, dtype=np.int32)
+        else:
+            return ArrayDesc(self.name, shape=(), dtype=np.int32)
 
     def putResult(self, quality, data):
         databuffer = [byteBuffer(np.ascontiguousarray(data))]
