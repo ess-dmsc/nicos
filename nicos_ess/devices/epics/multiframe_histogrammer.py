@@ -100,7 +100,7 @@ class MultiFrameHistogrammer(EpicsDevice, ImageChannelMixin, PassiveChannel):
 
     _record_fields = {
         "frame_time": "frame_time",
-        "signal": "signal",
+        "readpv": "signal",
         "source_name_input": "source_name_input",
         "source_name_output": "source_name_output",
         "topic_input": "topic_input",
@@ -138,7 +138,7 @@ class MultiFrameHistogrammer(EpicsDevice, ImageChannelMixin, PassiveChannel):
         self, name, param, value, units, limits, severity, message, **kwargs
     ):
         self.log.warn("Status change callback called for %s", name)
-        if param == "signal":
+        if param == "readpv":
             self._signal_array = value
             self.readresult = np.sum(value, axis=0)
             if time.monotonic() >= self._last_update + self._plot_update_delay:
