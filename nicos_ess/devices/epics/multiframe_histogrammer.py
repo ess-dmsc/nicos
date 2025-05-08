@@ -189,6 +189,9 @@ class MultiFrameHistogrammer(ImageChannelMixin, EpicsReadable, PassiveChannel):
                     },
                 },
                 plotcount=1,
+                plot_type="hist-1d",
+                label_shape=tuple(data.shape),
+                label_dtype=tuple(data.dtype.str),
             )
         ]
         if databuffer:
