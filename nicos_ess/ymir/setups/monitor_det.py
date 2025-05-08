@@ -11,6 +11,7 @@ devices = dict(
         "nicos_ess.devices.epics.multiframe_histogrammer.MultiFrameHistogrammer",
         description="Multi-frame histogrammer",
         pv_root="TEST:DEVICE:",
+        readpv="TEST:DEVICE:signal",
         pva=True,
         monitor=True,
         pollinterval=None,

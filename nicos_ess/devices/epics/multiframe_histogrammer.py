@@ -25,9 +25,11 @@ from nicos.devices.epics.pva import EpicsDevice
 from nicos.devices.epics.status import SEVERITY_TO_STATUS, STAT_TO_STATUS
 from nicos.devices.generic import ImageChannelMixin, PassiveChannel
 from nicos.utils import byteBuffer
+from nicos_ess.devices.epics.pva import EpicsReadable
+from nicos_ess.devices.epics.pva.epics_devices import RecordInfo, RecordType
 
 
-class MultiFrameHistogrammer(EpicsDevice, ImageChannelMixin, PassiveChannel):
+class MultiFrameHistogrammer(ImageChannelMixin, EpicsReadable, PassiveChannel):
     """
     Device that controls and acquires data from a multiframe-histogrammer.
     """
@@ -93,24 +95,21 @@ class MultiFrameHistogrammer(EpicsDevice, ImageChannelMixin, PassiveChannel):
         ),
     }
 
-    parameter_overrides = {
-        "unit": Override(default="count", settable=False, mandatory=False),
-        "fmtstr": Override(default="%d"),
-    }
-
-    _record_fields = {
-        "frame_time": "frame_time",
-        "readpv": "signal",
-        "source_name_input": "source_name_input",
-        "source_name_output": "source_name_output",
-        "topic_input": "topic_input",
-        "topic_output": "topic_output",
-        "num_histograms": "num_histograms",
-    }
-
     _plot_update_delay = 0.25
 
     def doPreinit(self, mode):
+        self._record_fields = {
+            "readpv": RecordInfo("value", "", RecordType.BOTH),
+            "frame_time": RecordInfo("", "frame_time", RecordType.VALUE),
+            "source_name_input": RecordInfo("", "source_name_input", RecordType.VALUE),
+            "source_name_output": RecordInfo(
+                "", "source_name_output", RecordType.VALUE
+            ),
+            "topic_input": RecordInfo("", "topic_input", RecordType.VALUE),
+            "topic_output": RecordInfo("", "topic_output", RecordType.VALUE),
+            "num_histograms": RecordInfo("", "num_histograms", RecordType.VALUE),
+        }
+
         EpicsDevice.doPreinit(self, mode)
         self.started = False
         self._current_status = (status.OK, "")
