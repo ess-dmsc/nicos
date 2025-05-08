@@ -147,6 +147,14 @@ class MultiFrameHistogrammer(ImageChannelMixin, EpicsReadable, PassiveChannel):
             self, name, param, value, units, limits, severity, message, **kwargs
         )
 
+    def _register_pv_callbacks(self):
+        self._epics_subscriptions = []
+        value_pvs = list(self._cache_relations.keys())
+        status_pvs = self._get_status_parameters()
+        if session.sessiontype != POLLER:
+            self._subscribe_params(value_pvs, self.value_change_callback)
+            self._subscribe_params(status_pvs or value_pvs, self.status_change_callback)
+
     def value_change_callback(
         self, name, param, value, units, limits, severity, message, **kwargs
     ):
