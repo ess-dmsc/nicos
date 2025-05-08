@@ -38,6 +38,11 @@ devices = dict(
         readpv="YMIR-TS:Ctrl-EVR-01:EvtACnt-I",
         fmtstr="%d",
     ),
+    mfh=device(
+        "nicos_ess.devices.epics.multiframe_histogrammer.MultiFrameHistogrammer",
+        description="The just-bin-it histogrammer",
+        pv_root="TEST:DEVICE",
+    ),
     det=device(
         "nicos_ess.devices.datasources.just_bin_it.JustBinItDetector",
         description="The just-bin-it histogrammer",
