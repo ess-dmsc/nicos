@@ -166,47 +166,42 @@ class MultiFrameHistogrammer(ImageChannelMixin, EpicsReadable, PassiveChannel):
         return (Value(self.name, unit=self.unit, fmtstr=self.fmtstr),)
 
     def arrayInfo(self):
-        try:
-            return ArrayDesc(self.name, shape=self._signal_array.shape, dtype=np.int32)
-        except Exception as e:
-            self.log.error(f"Cannot create array descriptor for {self.name}: {e}")
-            raise InvalidValueError(
-                f"Cannot create array descriptor for {self.name}: {e}"
-            )
+        return ArrayDesc(self.name, shape=self._signal_array.shape, dtype=np.int32)
 
     def putResult(self, quality, data):
-        databuffer = [byteBuffer(np.ascontiguousarray(data))]
-        datadesc = [
-            dict(
-                dtype=data.dtype.str,
-                shape=data.shape,
-                labels={
-                    "x": {
-                        "define": "array",
-                        "index": 0,
-                        "dtype": "<f4",
-                    },
-                },
-                plotcount=1,
-            )
-        ]
-        if databuffer:
-            parameters = dict(
-                uid=0,
-                time=time.time(),
-                det=self.name,
-                tag=LIVE,
-                datadescs=datadesc,
-            )
-            self._frame_time_array = self._get_pv("frame_time")
-            labelbuffers = [
-                byteBuffer(
-                    np.ascontiguousarray(
-                        np.array(self._frame_time_array).astype(np.float32)
-                    )
-                )
-            ]
-            session.updateLiveData(parameters, databuffer, labelbuffers)
+        self.log.warn(f"Trying to put data")
+        # databuffer = [byteBuffer(np.ascontiguousarray(data))]
+        # datadesc = [
+        #     dict(
+        #         dtype=data.dtype.str,
+        #         shape=data.shape,
+        #         labels={
+        #             "x": {
+        #                 "define": "array",
+        #                 "index": 0,
+        #                 "dtype": "<f4",
+        #             },
+        #         },
+        #         plotcount=1,
+        #     )
+        # ]
+        # if databuffer:
+        #     parameters = dict(
+        #         uid=0,
+        #         time=time.time(),
+        #         det=self.name,
+        #         tag=LIVE,
+        #         datadescs=datadesc,
+        #     )
+        #     self._frame_time_array = self._get_pv("frame_time")
+        #     labelbuffers = [
+        #         byteBuffer(
+        #             np.ascontiguousarray(
+        #                 np.array(self._frame_time_array).astype(np.float32)
+        #             )
+        #         )
+        #     ]
+        #     session.updateLiveData(parameters, databuffer, labelbuffers)
 
     def _get_pv_parameters(self):
         return set(self._record_fields.keys())
