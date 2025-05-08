@@ -166,13 +166,12 @@ class MultiFrameHistogrammer(ImageChannelMixin, EpicsReadable, PassiveChannel):
         return (Value(self.name, unit=self.unit, fmtstr=self.fmtstr),)
 
     def arrayInfo(self):
-        return self.update_arraydesc()
-
-    def update_arraydesc(self):
-        if self._signal_array:
+        try:
             return ArrayDesc(self.name, shape=self._signal_array.shape, dtype=np.int32)
-        else:
-            return ArrayDesc(self.name, shape=(), dtype=np.int32)
+        except Exception as e:
+            raise InvalidValueError(
+                f"Cannot create array descriptor for {self.name}: {e}"
+            )
 
     def putResult(self, quality, data):
         databuffer = [byteBuffer(np.ascontiguousarray(data))]
