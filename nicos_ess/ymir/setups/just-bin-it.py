@@ -41,7 +41,7 @@ devices = dict(
     mfh=device(
         "nicos_ess.devices.epics.multiframe_histogrammer.MultiFrameHistogrammer",
         description="The just-bin-it histogrammer",
-        pv_root="TEST:DEVICE",
+        pv_root="TEST:DEVICE:",
     ),
     det=device(
         "nicos_ess.devices.datasources.just_bin_it.JustBinItDetector",
