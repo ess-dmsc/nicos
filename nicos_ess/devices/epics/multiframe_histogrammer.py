@@ -176,7 +176,7 @@ class MultiFrameHistogrammer(ImageChannelMixin, EpicsReadable, PassiveChannel):
 
     def putResult(self, quality, data):
         self.log.warn(f"Trying to put data")
-        self._frame_time_array = self._get_pv("frame_time")
+        self._frame_time_array = self._get_pv("frame_time").astype(np.float64)
         databuffer = [byteBuffer(np.ascontiguousarray(data))]
         datadesc = [
             dict(
@@ -203,13 +203,7 @@ class MultiFrameHistogrammer(ImageChannelMixin, EpicsReadable, PassiveChannel):
                 tag=LIVE,
                 datadescs=datadesc,
             )
-            labelbuffers = [
-                byteBuffer(
-                    np.ascontiguousarray(
-                        np.array(self._frame_time_array).astype(np.float32)
-                    )
-                )
-            ]
+            labelbuffers = [byteBuffer(np.ascontiguousarray(self._frame_time_array))]
             session.updateLiveData(parameters, databuffer, labelbuffers)
 
     def _get_pv_parameters(self):
