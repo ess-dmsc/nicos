@@ -2,6 +2,8 @@ from nicos import session
 from nicos.commands import usercommand
 from nicos_ess.devices.scichat import ScichatBot
 
+__all__ = ["scichat_send"]
+
 
 def _find_scichat_dev():
     for dev in session.devices.values():
