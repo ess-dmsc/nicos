@@ -1,5 +1,7 @@
 """NICOS BeamLime liveview."""
 
+from functools import partial
+
 import numpy as np
 
 from nicos.clients.gui.panels import Panel
@@ -197,14 +199,8 @@ class BeamLimePanel(Panel):
                     vs = QSplitter(Qt.Vertical)
                     col_splitters.append(hsplit)
 
-        for splitter in row_splitters:
-            splitter.splitterMoved.connect(
-                lambda _: self._mirror_sizes(splitter, row_splitters)
-            )
-        for splitter in col_splitters:
-            splitter.splitterMoved.connect(
-                lambda _: self._mirror_sizes(splitter, col_splitters)
-            )
+        for sp in row_splitters:
+            sp.splitterMoved.connect(partial(self._mirror_sizes, sp, row_splitters))
 
         self.layout().addWidget(root)
         self.grid_root = root
