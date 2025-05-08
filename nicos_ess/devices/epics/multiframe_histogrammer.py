@@ -143,7 +143,7 @@ class MultiFrameHistogrammer(ImageChannelMixin, EpicsReadable, PassiveChannel):
     ):
         if (
             param == "readpv"
-            and time.monotonic() >= self._last_update + self._plot_update_delay
+            and time.monotonic() < self._last_update + self._plot_update_delay
         ):
             self.log.warn(
                 f"Skippin because {time.monotonic()} >= {self._last_update} + {self._plot_update_delay}"
