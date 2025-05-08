@@ -149,6 +149,7 @@ class MultiFrameHistogrammer(ImageChannelMixin, EpicsReadable, PassiveChannel):
         elif param == "readpv":
             self._signal_array = value
             self.readresult = [np.sum(value, axis=0)]
+            self.update_arraydesc()
             self.log.warn(f"Trying to put {self.readresult}")
             self.putResult(LIVE, value)
             self._last_update = time.monotonic()
@@ -165,7 +166,13 @@ class MultiFrameHistogrammer(ImageChannelMixin, EpicsReadable, PassiveChannel):
         return (Value(self.name, unit=self.unit, fmtstr=self.fmtstr),)
 
     def arrayInfo(self):
-        return ArrayDesc(self.name, shape=self._signal_array.shape, dtype=np.int32)
+        return self.update_arraydesc(self)
+
+    def update_arraydesc(self):
+        self.arraydesc = ArrayDesc(
+            self.name, shape=self._signal_array.shape, dtype=np.int32
+        )
+        return self.arraydesc
 
     def putResult(self, quality, data):
         self.log.warn(f"Trying to put data")
