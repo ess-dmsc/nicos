@@ -176,6 +176,7 @@ class MultiFrameHistogrammer(ImageChannelMixin, EpicsReadable, PassiveChannel):
 
     def putResult(self, quality, data):
         self.log.warn(f"Trying to put data")
+        self._frame_time_array = self._get_pv("frame_time")
         databuffer = [byteBuffer(np.ascontiguousarray(data))]
         datadesc = [
             dict(
@@ -190,8 +191,8 @@ class MultiFrameHistogrammer(ImageChannelMixin, EpicsReadable, PassiveChannel):
                 },
                 plotcount=1,
                 plot_type="hist-1d",
-                label_shape=tuple(data.shape),
-                label_dtype=tuple(data.dtype.str),
+                label_shape=tuple(self._frame_time_array.shape),
+                label_dtype=tuple(self._frame_time_array.dtype.str),
             )
         ]
         if databuffer:
@@ -202,7 +203,6 @@ class MultiFrameHistogrammer(ImageChannelMixin, EpicsReadable, PassiveChannel):
                 tag=LIVE,
                 datadescs=datadesc,
             )
-            self._frame_time_array = self._get_pv("frame_time")
             labelbuffers = [
                 byteBuffer(
                     np.ascontiguousarray(
