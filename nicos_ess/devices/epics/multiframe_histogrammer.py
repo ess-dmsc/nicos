@@ -150,7 +150,6 @@ class MultiFrameHistogrammer(ImageChannelMixin, EpicsReadable, PassiveChannel):
             self._signal_array = value
             self.readresult = [np.sum(value, axis=0)]
             self.log.warn(f"Trying to put {self.readresult}")
-            self.update_arraydesc(self)
             self.putResult(LIVE, value)
             self._last_update = time.monotonic()
 
