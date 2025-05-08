@@ -22,21 +22,13 @@ from nicos.core import (
     pvname,
     status,
 )
-from nicos.devices.epics.pva import EpicsDevice
+from nicos.devices.epics.pva import EpicsReadable
 from nicos.devices.epics.status import SEVERITY_TO_STATUS, STAT_TO_STATUS
 from nicos.devices.generic import ImageChannelMixin, PassiveChannel
 from nicos.utils import byteBuffer
-from nicos_ess.devices.epics.pva import EpicsReadable
-from nicos_ess.devices.epics.pva.epics_devices import (
-    EpicsParameters,
-    RecordInfo,
-    RecordType,
-    create_wrapper,
-    get_from_cache_or,
-)
 
 
-class MultiFrameHistogrammer(ImageChannelMixin, EpicsParameters, PassiveChannel):
+class MultiFrameHistogrammer(ImageChannelMixin, EpicsReadable, PassiveChannel):
     """
     Device that controls and acquires data from a multiframe-histogrammer.
     """
@@ -52,9 +44,6 @@ class MultiFrameHistogrammer(ImageChannelMixin, EpicsParameters, PassiveChannel)
             type=bool,
             settable=True,
             default=True,
-        ),
-        "readpv": Param(
-            "PV for reading device value", type=pvname, mandatory=True, userparam=False
         ),
         "source_name_input": Param(
             "Source name for input.",
@@ -109,38 +98,21 @@ class MultiFrameHistogrammer(ImageChannelMixin, EpicsParameters, PassiveChannel)
 
     def doPreinit(self, mode):
         self._record_fields = {
-            "readpv": RecordInfo("value", "", RecordType.BOTH),
-            "frame_time": RecordInfo("", "frame_time", RecordType.VALUE),
-            "source_name_input": RecordInfo("", "source_name_input", RecordType.VALUE),
-            "source_name_output": RecordInfo(
-                "", "source_name_output", RecordType.VALUE
-            ),
-            "topic_input": RecordInfo("", "topic_input", RecordType.VALUE),
-            "topic_output": RecordInfo("", "topic_output", RecordType.VALUE),
-            "num_histograms": RecordInfo("", "num_histograms", RecordType.VALUE),
+            "readpv": "signal",
+            "frame_time": "frame_time",
+            "source_name_input": "source_name_input",
+            "source_name_output": "source_name_output",
+            "topic_input": "topic_input",
+            "topic_output": "topic_output",
+            "num_histograms": "num_histograms",
         }
-
-        self._epics_subscriptions = []
-        self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
-        self._epics_wrapper.connect_pv(self.readpv)
         self.started = False
         self._current_status = (status.OK, "")
         self._signal_array = []
         self._frame_time_array = []
         self.readresult = [0]
         self._last_update = 0
-
-    def doInit(self, mode):
-        if session.sessiontype == POLLER and self.monitor:
-            for k, v in self._record_fields.items():
-                self._epics_subscriptions.append(
-                    self._epics_wrapper.subscribe(
-                        f"{self.pv_root}{v.pv_suffix}",
-                        k,
-                        self._status_change_callback,
-                        self._connection_change_callback,
-                    )
-                )
+        EpicsReadable.doPreinit(self, mode)
 
     def doPrepare(self):
         self._signal_array = []
@@ -230,9 +202,8 @@ class MultiFrameHistogrammer(ImageChannelMixin, EpicsParameters, PassiveChannel)
         return set(self._record_fields.keys())
 
     def _get_pv_name(self, pvparam):
-        pv_record_info = self._record_fields.get(pvparam)
-        if pv_record_info:
-            pv_name = pv_record_info.pv_suffix
+        pv_name = self._record_fields.get(pvparam)
+        if pv_name:
             return self.pv_root + pv_name
         return getattr(self, pvparam)
 
@@ -250,16 +221,6 @@ class MultiFrameHistogrammer(ImageChannelMixin, EpicsParameters, PassiveChannel)
         if self.started:
             return status.BUSY, "counting"
         return status.OK, ""
-
-    def _get_pv(self, pvparam):
-        return get_from_cache_or(
-            self,
-            self._record_fields[pvparam].cache_key,
-            lambda: self._epics_wrapper.get_pv_value(self._get_pv_name(pvparam)),
-        )
-
-    def _put_pv(self, pvparam, value):
-        self._epics_wrapper.put_pv_value(self._get_pv_name(pvparam), value)
 
     def doReadSource_Name_Input(self):
         return self._get_pv("source_name_input")
