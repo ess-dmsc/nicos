@@ -11,6 +11,7 @@ from nicos.core import (
     InvalidValueError,
     Override,
     Param,
+    Readable,
     Value,
     anytype,
     dictof,
@@ -26,10 +27,18 @@ from nicos.devices.epics.status import SEVERITY_TO_STATUS, STAT_TO_STATUS
 from nicos.devices.generic import ImageChannelMixin, PassiveChannel
 from nicos.utils import byteBuffer
 from nicos_ess.devices.epics.pva import EpicsReadable
-from nicos_ess.devices.epics.pva.epics_devices import RecordInfo, RecordType
+from nicos_ess.devices.epics.pva.epics_devices import (
+    EpicsParameters,
+    RecordInfo,
+    RecordType,
+    create_wrapper,
+    get_from_cache_or,
+)
 
 
-class MultiFrameHistogrammer(ImageChannelMixin, EpicsReadable, PassiveChannel):
+class MultiFrameHistogrammer(
+    ImageChannelMixin, EpicsParameters, Readable, PassiveChannel
+):
     """
     Device that controls and acquires data from a multiframe-histogrammer.
     """
@@ -110,13 +119,27 @@ class MultiFrameHistogrammer(ImageChannelMixin, EpicsReadable, PassiveChannel):
             "num_histograms": RecordInfo("", "num_histograms", RecordType.VALUE),
         }
 
-        EpicsReadable.doPreinit(self, mode)
+        self._epics_subscriptions = []
+        self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
+        self._epics_wrapper.connect_pv(self.readpv)
         self.started = False
         self._current_status = (status.OK, "")
         self._signal_array = []
         self._frame_time_array = []
         self.readresult = [0]
         self._last_update = 0
+
+    def doInit(self, mode):
+        if session.sessiontype == POLLER and self.monitor:
+            for k, v in self._record_fields.items():
+                self._epics_subscriptions.append(
+                    self._epics_wrapper.subscribe(
+                        f"{self.pv_root}{v.pv_suffix}",
+                        k,
+                        self._status_change_callback,
+                        self._connection_change_callback,
+                    )
+                )
 
     def doPrepare(self):
         self._signal_array = []
@@ -226,6 +249,16 @@ class MultiFrameHistogrammer(ImageChannelMixin, EpicsReadable, PassiveChannel):
         if self.started:
             return status.BUSY, "counting"
         return status.OK, ""
+
+    def _get_pv(self, pvparam):
+        return get_from_cache_or(
+            self,
+            self._record_fields[pvparam].cache_key,
+            lambda: self._epics_wrapper.get_pv_value(self._get_pv_name(pvparam)),
+        )
+
+    def _put_pv(self, pvparam, value):
+        self._epics_wrapper.put_pv_value(self._get_pv_name(pvparam), value)
 
     def doReadSource_Name_Input(self):
         return self._get_pv("source_name_input")
