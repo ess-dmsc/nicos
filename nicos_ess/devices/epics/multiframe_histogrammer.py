@@ -6,24 +6,13 @@ from nicos import session
 from nicos.core import (
     LIVE,
     POLLER,
-    SIMULATION,
     ArrayDesc,
-    InvalidValueError,
-    Override,
     Param,
-    Readable,
     Value,
-    anytype,
-    dictof,
-    floatrange,
-    listof,
-    multiStatus,
-    oneof,
     pvname,
     status,
 )
 from nicos.devices.epics.pva import EpicsReadable
-from nicos.devices.epics.status import SEVERITY_TO_STATUS, STAT_TO_STATUS
 from nicos.devices.generic import ImageChannelMixin, PassiveChannel
 from nicos.utils import byteBuffer
 
@@ -130,15 +119,6 @@ class MultiFrameHistogrammer(ImageChannelMixin, EpicsReadable, PassiveChannel):
     def doReadArray(self, quality):
         return self._signal_array
 
-    def _register_pv_callbacks(self):
-        self._epics_subscriptions = []
-        value_pvs = list(self._cache_relations.keys())
-        status_pvs = self._get_status_parameters()
-        if session.sessiontype == POLLER:
-            self._subscribe_params(value_pvs, self.value_change_callback)
-        else:
-            self._subscribe_params(status_pvs or value_pvs, self.status_change_callback)
-
     def value_change_callback(
         self, name, param, value, units, limits, severity, message, **kwargs
     ):
@@ -162,7 +142,6 @@ class MultiFrameHistogrammer(ImageChannelMixin, EpicsReadable, PassiveChannel):
             self._signal_array = value
             self.readresult = [np.sum(value, axis=0)]
             self.update_arraydesc()
-            self.log.warn(f"Trying to put {self.readresult}")
             self.putResult(LIVE, value)
             self._last_update = time.monotonic()
 
@@ -182,7 +161,6 @@ class MultiFrameHistogrammer(ImageChannelMixin, EpicsReadable, PassiveChannel):
         return self.arraydesc
 
     def putResult(self, quality, data):
-        self.log.warn(f"Trying to put data")
         self._frame_time_array = self._get_pv("frame_time").astype(np.float64)
         databuffer = [byteBuffer(np.ascontiguousarray(data))]
         datadesc = [
