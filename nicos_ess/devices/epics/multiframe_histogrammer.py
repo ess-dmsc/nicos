@@ -169,6 +169,10 @@ class MultiFrameHistogrammer(ImageChannelMixin, EpicsReadable, PassiveChannel):
 
     def putResult(self, quality, data):
         self.log.warn(f"Trying to put data")
+        self.log.warn(f"The current arrayinfo is {self.arrayInfo()}")
+        self.log.warn(
+            f"The data shape is {data.shape} and the data type is {data.dtype}"
+        )
         # databuffer = [byteBuffer(np.ascontiguousarray(data))]
         # datadesc = [
         #     dict(
