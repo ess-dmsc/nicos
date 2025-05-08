@@ -106,13 +106,14 @@ class MultiFrameHistogrammer(ImageChannelMixin, EpicsReadable, PassiveChannel):
             "topic_output": "topic_output",
             "num_histograms": "num_histograms",
         }
-        self.started = False
         self._current_status = (status.OK, "")
         self._signal_array = []
         self._frame_time_array = []
         self.readresult = [0]
         self._last_update = 0
         EpicsReadable.doPreinit(self, mode)
+        if session.sessiontype != POLLER:
+            self.started = False
 
     def doPrepare(self):
         self._signal_array = []
