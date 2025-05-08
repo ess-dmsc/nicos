@@ -109,10 +109,10 @@ class MultiFrameHistogrammer(ImageChannelMixin, EpicsReadable, PassiveChannel):
         self._current_status = (status.OK, "")
         self._signal_array = []
         self._frame_time_array = []
-        self.readresult = [0]
         self._last_update = 0
         EpicsReadable.doPreinit(self, mode)
         if session.sessiontype != POLLER:
+            self.readresult = [0]
             self.started = False
 
     def doPrepare(self):
@@ -130,6 +130,14 @@ class MultiFrameHistogrammer(ImageChannelMixin, EpicsReadable, PassiveChannel):
     def doReadArray(self, quality):
         return self._signal_array
 
+    def _register_pv_callbacks(self):
+        self._epics_subscriptions = []
+        value_pvs = list(self._cache_relations.keys())
+        status_pvs = self._get_status_parameters()
+        if session.sessiontype != POLLER:
+            self._subscribe_params(value_pvs, self.value_change_callback)
+            self._subscribe_params(status_pvs or value_pvs, self.status_change_callback)
+
     def status_change_callback(
         self, name, param, value, units, limits, severity, message, **kwargs
     ):
@@ -146,14 +154,6 @@ class MultiFrameHistogrammer(ImageChannelMixin, EpicsReadable, PassiveChannel):
         EpicsReadable.status_change_callback(
             self, name, param, value, units, limits, severity, message, **kwargs
         )
-
-    def _register_pv_callbacks(self):
-        self._epics_subscriptions = []
-        value_pvs = list(self._cache_relations.keys())
-        status_pvs = self._get_status_parameters()
-        if session.sessiontype != POLLER:
-            self._subscribe_params(value_pvs, self.value_change_callback)
-            self._subscribe_params(status_pvs or value_pvs, self.status_change_callback)
 
     def value_change_callback(
         self, name, param, value, units, limits, severity, message, **kwargs
