@@ -5,16 +5,43 @@ import numpy as np
 from nicos.clients.gui.panels import Panel
 from nicos.guisupport.qt import (
     QComboBox,
+    QDialog,
+    QDialogButtonBox,
+    QFormLayout,
     QFrame,
     QGridLayout,
     QHBoxLayout,
     QPushButton,
+    QSpinBox,
+    QSplitter,
+    Qt,
     QVBoxLayout,
     QWidget,
     pyqtSlot,
 )
 from nicos_ess.gui.widgets.pyqtgraph.image_view import ImageView
 from nicos_ess.gui.widgets.pyqtgraph.line_view import LineView
+
+
+class LayoutDialog(QDialog):
+    """Simple dialog with two spin-boxes."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Plot grid size")
+        self.rows_sb = QSpinBox(minimum=1, maximum=6, value=2)
+        self.cols_sb = QSpinBox(minimum=1, maximum=6, value=2)
+        form = QFormLayout(self)
+        form.addRow("Rows:", self.rows_sb)
+        form.addRow("Columns:", self.cols_sb)
+        btn_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        btn_box.accepted.connect(self.accept)
+        btn_box.rejected.connect(self.reject)
+        form.addWidget(btn_box)
+
+    @property
+    def dims(self):
+        return self.rows_sb.value(), self.cols_sb.value()
 
 
 class BeamLimePlot(QFrame):
@@ -122,35 +149,77 @@ class BeamLimePanel(Panel):
         self.build_ui()
         self.setup_connections(client)
 
+    @pyqtSlot()
+    def show_layout_dialog(self):
+        dlg = LayoutDialog(self)
+        if dlg.exec_() == QDialog.Accepted:
+            rows, cols = dlg.dims
+            self.create_splitter_grid(rows, cols)
+
     def initialize_ui(self):
         layout = QVBoxLayout()
         self.setLayout(layout)
 
     def build_ui(self):
-        self.add_plot_btn = QPushButton("Add Plot")
-        self.add_plot_btn.clicked.connect(self.add_plot_widget)
-        self.layout().addWidget(self.add_plot_btn)
+        self.layout_btn = QPushButton("Set plot configuration…")
+        self.layout_btn.clicked.connect(self.show_layout_dialog)
+        self.layout().addWidget(self.layout_btn)
 
-        self.plots_container = QWidget()
-        self.plots_layout = QGridLayout(self.plots_container)
-        self.plots_container.setLayout(self.plots_layout)
-        self.layout().addWidget(self.plots_container)
+        self.grid_root = None
+        self.create_splitter_grid(2, 2)
 
-        for _ in range(2):
-            self.add_plot_widget()
+    def create_splitter_grid(self, rows: int, cols: int):
+        """
+        Rebuild the plot matrix as an rows×cols web of QSplitters.
+        Dragging a handle in one row / column mirrors the change in
+        every sibling splitter so the grid acts like a single entity.
+        """
+        if self.grid_root is not None:
+            self.layout().removeWidget(self.grid_root)
+            self.grid_root.deleteLater()
+        self.plot_widgets.clear()
+        self.connected_plots.clear()
+        self.currently_selected_plots.clear()
 
-    def add_plot_widget(self):
-        plot_widget = BeamLimePlot(self)
-        self.plot_widgets.append(plot_widget)
-        col_count = 2
-        index = len(self.plot_widgets) - 1
-        row = index // col_count
-        col = index % col_count
-        self.plots_layout.addWidget(plot_widget, row, col)
-        for i in range(self.plots_layout.rowCount()):
-            self.plots_layout.setRowStretch(i, 1)
-        for i in range(self.plots_layout.columnCount()):
-            self.plots_layout.setColumnStretch(i, 1)
+        root = QSplitter(Qt.Vertical, self)
+        row_splitters: list[QSplitter] = []
+        col_splitters: list[QSplitter] = []
+
+        for r in range(rows):
+            hsplit = QSplitter(Qt.Horizontal, root)
+            row_splitters.append(hsplit)
+            for c in range(cols):
+                plot = BeamLimePlot(self)
+                self.plot_widgets.append(plot)
+                hsplit.addWidget(plot)
+
+                if len(col_splitters) < cols:
+                    vs = QSplitter(Qt.Vertical)
+                    col_splitters.append(hsplit)
+
+        for splitter in row_splitters:
+            splitter.splitterMoved.connect(
+                lambda _: self._mirror_sizes(splitter, row_splitters)
+            )
+        for splitter in col_splitters:
+            splitter.splitterMoved.connect(
+                lambda _: self._mirror_sizes(splitter, col_splitters)
+            )
+
+        self.layout().addWidget(root)
+        self.grid_root = root
+        root.show()
+
+    @staticmethod
+    def _mirror_sizes(sender: QSplitter, siblings: list[QSplitter]):
+        """Copy the sender’s size distribution onto every sibling."""
+        sizes = sender.sizes()
+        for sp in siblings:
+            if sp is sender:
+                continue
+            sp.blockSignals(True)
+            sp.setSizes(sizes)
+            sp.blockSignals(False)
 
     def setup_connections(self, client):
         client.livedata.connect(self.on_client_livedata)
