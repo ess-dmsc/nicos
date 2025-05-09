@@ -53,13 +53,11 @@ class KafkaConsumer:
                 metadata = self._consumer.list_topics(topic_name, timeout=5)
             except KafkaException as exc:
                 raise ConfigurationError(
-                    "could not obtain metadata for topic " f"{topic_name}"
+                    f"could not obtain metadata for topic {topic_name}"
                 ) from exc
 
             if topic_name not in metadata.topics:
-                raise ConfigurationError(
-                    f"provided topic {topic_name} does " "not exist"
-                )
+                raise ConfigurationError(f"provided topic {topic_name} does not exist")
 
             topic_partitions.extend(
                 [
@@ -83,7 +81,7 @@ class KafkaConsumer:
         :return: A message or None if no message received within the
             timeout.
         """
-        return self._consumer.poll(timeout_ms // 1000)
+        return self._consumer.poll(timeout_ms / 1000)
 
     def close(self):
         """Close the consumer."""
