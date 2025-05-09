@@ -169,8 +169,6 @@ class BeamLimePanel(Panel):
         label_dtypes = datadesc.get("label_dtypes")
         plot_type = datadesc.get("plot_type")
 
-        print(label_shape, label_dtypes)
-
         data = np.frombuffer(blobs[0], dtype=data_dtype).reshape(data_shape)
         labels = []
         for i, (shape, dtype) in enumerate(zip(label_shape, label_dtypes)):
