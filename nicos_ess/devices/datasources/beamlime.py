@@ -83,6 +83,12 @@ class DataChannel(CounterChannelMixin, PassiveChannel):
             userparam=True,
             settable=True,
         ),
+        "update_period": Param(
+            "Time interval for data updates (ms)",
+            type=int,
+            userparam=True,
+            settable=True,
+        ),
         "curstatus": Param(
             "Store the current device status",
             internal=True,
@@ -288,6 +294,10 @@ class DataChannel(CounterChannelMixin, PassiveChannel):
 
     def doWriteRoi(self, value):
         self._send_command_to_collector("roi", value)
+
+    def doWriteUpdate_Period(self, value):
+        message = json.dumps({"value": value, "unit": "ms"}).encode("utf-8")
+        self._send_command_to_collector("update_every", message)
 
     def doShutdown(self):
         self._update_status(status.OK, "")
