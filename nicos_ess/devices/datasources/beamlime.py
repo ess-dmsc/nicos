@@ -104,7 +104,7 @@ class DataChannel(CounterChannelMixin, PassiveChannel):
     }
 
     def doPreinit(self, mode):
-        self.data_structure = {}
+        self._data_structure = {}
         self._signal_data = np.array([])
         self._signal_data_sum = 0
         self._collector = None
@@ -128,9 +128,9 @@ class DataChannel(CounterChannelMixin, PassiveChannel):
         return self.update_arraydesc()
 
     def update_arraydesc(self):
-        if self.data_structure:
+        if self._data_structure:
             return ArrayDesc(
-                self.name, shape=self.data_structure["signal_shape"], dtype=np.int32
+                self.name, shape=self._data_structure["signal_shape"], dtype=np.int32
             )
         else:
             return ArrayDesc(self.name, shape=(), dtype=np.int32)
@@ -148,11 +148,11 @@ class DataChannel(CounterChannelMixin, PassiveChannel):
                 )
                 return
 
-            self.data_structure.clear()
+            self._data_structure.clear()
             variables = message.data
             self._parse_new_data(variables)
             self.update_arraydesc()
-            self._signal_data = self.data_structure["signal"]
+            self._signal_data = self._data_structure["signal"]
             self._signal_data_sum = (
                 int(self._signal_data.sum()) if self._signal_data.size else 0
             )
@@ -168,7 +168,7 @@ class DataChannel(CounterChannelMixin, PassiveChannel):
                 self.log.warn(f"Unknown plot type for device {self.name}")
                 return
 
-            if self.data_structure:
+            if self._data_structure:
                 self.putResult(
                     1,
                     self.get_plot_data(),
@@ -186,44 +186,44 @@ class DataChannel(CounterChannelMixin, PassiveChannel):
 
         for var in variables:
             if var.name == "signal":
-                self.data_structure["signal"] = var.data
-                self.data_structure["signal_axes"] = var.axes
-                self.data_structure["signal_shape"] = var.shape
-                self.data_structure["plot_type"] = var.label
+                self._data_structure["signal"] = var.data
+                self._data_structure["signal_axes"] = var.axes
+                self._data_structure["signal_shape"] = var.shape
+                self._data_structure["plot_type"] = var.label
                 variables.remove(var)
 
         for var in variables:
             var_axes = var.axes
-            if not any([ax in var_axes for ax in self.data_structure["signal_axes"]]):
+            if not any([ax in var_axes for ax in self._data_structure["signal_axes"]]):
                 continue
             if len(var_axes) != 1:
                 continue
 
             var_axis = str(var_axes[0])
 
-            self.data_structure[var_axis] = var.data
-            self.data_structure[var_axis + "_axes"] = var.axes
-            self.data_structure[var_axis + "_shape"] = var.shape
+            self._data_structure[var_axis] = var.data
+            self._data_structure[var_axis + "_axes"] = var.axes
+            self._data_structure[var_axis + "_shape"] = var.shape
 
-        if len(self.data_structure["signal_axes"]):
+        if len(self._data_structure["signal_axes"]):
             # create signal axes based on the shape of the signal with arange
-            for i, axis_name in enumerate(self.data_structure["signal_axes"]):
-                exists = self.data_structure.get(axis_name, None)
+            for i, axis_name in enumerate(self._data_structure["signal_axes"]):
+                exists = self._data_structure.get(axis_name, None)
                 if exists is not None:
                     continue
-                arr = np.arange(self.data_structure["signal_shape"][i])
+                arr = np.arange(self._data_structure["signal_shape"][i])
                 # store the numeric array in the data_structure under the string key
-                self.data_structure[axis_name] = arr
-                self.data_structure[axis_name + "_shape"] = arr.shape
+                self._data_structure[axis_name] = arr
+                self._data_structure[axis_name + "_shape"] = arr.shape
 
     def get_plot_data(self):
         """
         Returns data in the order [x, y, z] for plotting. Like [axes_1, axes_2, signal].
         """
         try:
-            axes_to_plot_against = self.data_structure["signal_axes"]
-            plot_data = [self.data_structure[axis] for axis in axes_to_plot_against]
-            plot_data.append(self.data_structure["signal"])
+            axes_to_plot_against = self._data_structure["signal_axes"]
+            plot_data = [self._data_structure[axis] for axis in axes_to_plot_against]
+            plot_data.append(self._data_structure["signal"])
             return plot_data
         except KeyError:
             return None
