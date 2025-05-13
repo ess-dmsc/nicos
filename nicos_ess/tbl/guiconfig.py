@@ -20,12 +20,14 @@ main_window = docked(
                                 hasinput=False,
                             ),
                         ),
-                        (
-                            "Scan Plot", 
-                            panel("nicos_ess.gui.panels.scans.ScansPanel")),
+                        ("Scan Plot", panel("nicos_ess.gui.panels.scans.ScansPanel")),
                         (
                             "Detector Image",
                             panel("nicos_ess.tbl.gui.panels.live.MultiLiveDataPanel"),
+                        ),
+                        (
+                            "Beamlime Panel",
+                            panel("nicos_ess.gui.panels.beamlime.BeamLimePanel"),
                         ),
                         (
                             "Script Status",
