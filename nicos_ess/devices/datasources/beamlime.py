@@ -109,6 +109,7 @@ class DataChannel(CounterChannelMixin, PassiveChannel):
         self._signal_data_sum = 0
         self._collector = None
         self._current_status = (status.OK, "")
+        self._source_prefix = self.source_name.resplit("/", 1)[0]
         if mode == SIMULATION:
             return
         self._update_status(status.OK, "")
@@ -257,8 +258,9 @@ class DataChannel(CounterChannelMixin, PassiveChannel):
             session.updateLiveData(parameters, databuffer, labelbuffers)
 
     def _send_command_to_collector(self, param_name, value):
+        full_key = f"{self._source_prefix}/{param_name}"
         if self._collector:
-            self._collector.send_command(param_name, value)
+            self._collector.send_command(full_key, value)
 
     def doStart(self):
         self._update_status(status.BUSY, "Counting")
