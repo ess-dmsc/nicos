@@ -109,7 +109,7 @@ class DataChannel(CounterChannelMixin, PassiveChannel):
         self._signal_data_sum = 0
         self._collector = None
         self._current_status = (status.OK, "")
-        self._source_prefix = self.source_name.resplit("/", 1)[0]
+        self._source_prefix = self.source_name.rsplit("/", 1)[0]
         if mode == SIMULATION:
             return
         self._update_status(status.OK, "")
