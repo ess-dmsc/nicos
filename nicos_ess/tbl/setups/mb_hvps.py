@@ -33,36 +33,24 @@ def add_devices(pvs, prefix):
         pv_prefix = dev_info["pv"]
         board_type = dev_info["board_type"]
         # Read-only devices
-        devices[f"{key}_voltage"] = device(
-            "nicos_ess.devices.epics.pva.EpicsReadable",
-            description=f"Detector {prefix} {board_type} module {key} read voltage",
-            readpv=f"{pv_prefix}-VMon",
-        )
         devices[f"{key}_leak_current"] = device(
             "nicos_ess.devices.epics.pva.EpicsReadable",
             description=f"Detector {prefix} {board_type} module {key} current",
             readpv=f"{pv_prefix}-IMon",
         )
-        devices[f"{key}_enabled"] = device(
-            "nicos_ess.devices.epics.pva.EpicsMappedReadable",
-            description=f"Detector {prefix} {board_type} module {key} power on/off",
-            readpv=f"{pv_prefix}-Status-ON",
-        )
         # Admin write devices
-        devices[f"{key}_voltage_setpoint"] = device(
+        devices[f"{key}_voltage"] = device(
             "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
             description=f"Detector {prefix} {board_type} module {key} set voltage",
             readpv=f"{pv_prefix}-VMon",
             writepv=f"{pv_prefix}-V0Set",
-            visibility=(),
             requires={"level": "admin"},
         )
-        devices[f"{key}_enabled"] = device(
+        devices[f"{key}_enable"] = device(
             "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
             description=f"Detector {prefix} {board_type} module {key} power on/off",
             readpv=f"{pv_prefix}-Status-ON",
             writepv=f"{pv_prefix}-Pw",
-            visibility=(),
             requires={"level": "admin"},
         )
 
