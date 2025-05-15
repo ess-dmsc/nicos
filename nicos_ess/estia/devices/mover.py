@@ -3,43 +3,6 @@ import numpy as np
 from nicos.core import Attach, Moveable, Override, Param, Value, multiStatus, tupleof
 
 
-def s_to_angle(s, E=5):
-    return np.degrees(np.arcsin(2 * s / (E * np.sqrt(2))))
-
-
-def angle_to_s(angle_deg, E=5):
-    return 0.5 * E * np.sqrt(2) * np.sin(np.radians(angle_deg))
-
-
-def cartesian_to_mover(cart, r=1.9964, E=5):
-    sqrt2 = np.sqrt(2)
-    D = np.array(
-        [
-            [0.5, 0.5, -r / 2, -0.25, -0.25],
-            [-0.5, 0.5, r / 2, 0.25, -0.25],
-            [0.5, 0.5, (1 - 2 * r) / 4, 0.25, 0.25],
-            [-0.5, 0.5, (1 + 2 * r) / 4, -0.25, 0.25],
-            [0.0, 1 / sqrt2, -1 / (2 * sqrt2), 0.0, 1 / (2 * sqrt2)],
-        ]
-    )
-    return s_to_angle(D @ cart, E)
-
-
-def mover_to_cartesian(angles_deg, r=1.9964, E=5):
-    sqrt2 = np.sqrt(2)
-    D = np.array(
-        [
-            [0.5, 0.5, -r / 2, -0.25, -0.25],
-            [-0.5, 0.5, r / 2, 0.25, -0.25],
-            [0.5, 0.5, (1 - 2 * r) / 4, 0.25, 0.25],
-            [-0.5, 0.5, (1 + 2 * r) / 4, -0.25, 0.25],
-            [0.0, 1 / sqrt2, -1 / (2 * sqrt2), 0.0, 1 / (2 * sqrt2)],
-        ]
-    )
-    s = angle_to_s(np.asarray(angles_deg, dtype=float), E)
-    return np.linalg.inv(D) @ s
-
-
 class SeleneMover(Moveable):
     """
     Move y, z, Rx, Ry, Rz of the Selene guide carriage **as one logical axis**.
