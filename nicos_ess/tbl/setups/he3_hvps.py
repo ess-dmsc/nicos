@@ -8,25 +8,10 @@ pv_root = "TBL-DtCmn:PwrC"
 hv_sources = [
     {
         "id": "HVM",
-        "boards": ["100", "101", "102"],
-        "channels": [f"{ch:02}" for ch in range(12)],
+        "boards": ["101", "102"],
+        "channels": [f"{ch:02}" for ch in range(4)],
         "board_type": "A7030DP",
     },
-    {
-        "id": "HVM",
-        "boards": ["103", "104"],
-        "channels": [f"{ch:02}" for ch in range(8)],
-        "board_type": "A1589",
-    },
-]
-
-lv_sources = [
-    {
-        "id": "LVM",
-        "boards": ["105"],
-        "channels": [f"{ch:02}" for ch in range(8)],
-        "board_type": "2552",
-    }
 ]
 
 
@@ -48,44 +33,30 @@ def add_devices(pvs, prefix):
         pv_prefix = dev_info["pv"]
         board_type = dev_info["board_type"]
         # Read-only devices
-        devices[f"{key}_voltage"] = device(
-            "nicos_ess.devices.epics.pva.EpicsReadable",
-            description=f"Detector {prefix} {board_type} module {key} read voltage",
-            readpv=f"{pv_prefix}-VMon",
-        )
         devices[f"{key}_leak_current"] = device(
             "nicos_ess.devices.epics.pva.EpicsReadable",
             description=f"Detector {prefix} {board_type} module {key} current",
             readpv=f"{pv_prefix}-IMon",
         )
-        devices[f"{key}_enabled"] = device(
-            "nicos_ess.devices.epics.pva.EpicsMappedReadable",
-            description=f"Detector {prefix} {board_type} module {key} power on/off",
-            readpv=f"{pv_prefix}-Status-ON",
-        )
         # Admin write devices
-        devices[f"{key}_voltage_setpoint"] = device(
+        devices[f"{key}_voltage"] = device(
             "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
             description=f"Detector {prefix} {board_type} module {key} set voltage",
             readpv=f"{pv_prefix}-VMon",
             writepv=f"{pv_prefix}-V0Set",
-            visibility=(),
             requires={"level": "admin"},
         )
-        devices[f"{key}_enabled"] = device(
+        devices[f"{key}_enable"] = device(
             "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
             description=f"Detector {prefix} {board_type} module {key} power on/off",
             readpv=f"{pv_prefix}-Status-ON",
             writepv=f"{pv_prefix}-Pw",
-            visibility=(),
             requires={"level": "admin"},
         )
 
 
 # Main setup
-hv_pvs = generate_pvs(hv_sources, "HV")
-lv_pvs = generate_pvs(lv_sources, "LV")
+hv_pvs = generate_pvs(hv_sources, "he3")
 
 devices = {}
 add_devices(hv_pvs, "HV")
-add_devices(lv_pvs, "LV")
