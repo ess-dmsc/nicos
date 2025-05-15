@@ -310,7 +310,7 @@ class JustBinItImage(ImageChannelMixin, PassiveChannel):
                     if "error_message" in info
                     else "unknown error"
                 )
-                self._update_status(status.ERROR, error_msg)
+                self._update_status(status.WARN, error_msg)
             elif info["state"] == "FINISHED":
                 self._kafka_subscriber.stop_consuming()
                 self._update_status(status.OK, "")
