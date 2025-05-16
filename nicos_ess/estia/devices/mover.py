@@ -9,7 +9,7 @@ class SeleneMover(Moveable):
     """
 
     # Order must match the column order of matrix *D*
-    motor_names = ("flreus", "prreds", "prlids", "prlius1", "prlius2")
+    motor_names = ("s1", "s2", "s3", "s4", "s5")
 
     attached_devices = {name: Attach(name.upper(), Moveable) for name in motor_names}
 
@@ -23,17 +23,17 @@ class SeleneMover(Moveable):
     }
 
     parameter_overrides = {
-        "fmtstr": Override(default="[.3f, %.3f, %.3f, %.3f, %.3f]"),
+        "fmtstr": Override(default="[%.3f, %.3f, %.3f, %.3f, %.3f]"),
         "unit": Override(default="", mandatory=False, settable=True),
     }
 
     valuetype = tupleof(float, float, float, float, float)  # y, z, Rx, Ry, Rz
 
     def _s_to_angle(self, s, E=5):
-        return np.degrees(np.arcsin(2 * s / (E * np.sqrt(2))))
+        return np.degrees(np.arcsin(2 * s / (E * np.sqrt(2)))) + 180
 
     def _angle_to_s(self, angle_deg, E=5):
-        return 0.5 * E * np.sqrt(2) * np.sin(np.radians(angle_deg))
+        return 0.5 * E * np.sqrt(2) * np.sin(np.radians(angle_deg + 180))
 
     def _cartesian_to_mover(self, cart, r=1.9964, E=5):
         sqrt2 = np.sqrt(2)

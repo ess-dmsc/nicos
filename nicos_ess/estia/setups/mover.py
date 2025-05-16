@@ -3,7 +3,7 @@ description = "Selene1 mover motors"
 pvprefix = "PSI-ESTIARND:MC-MCU-01:"
 
 devices = dict(
-    mover_fl_re_us=device(
+    mover_s1=device(
         "nicos.devices.generic.VirtualMotor",
         # "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="M1 Selene1 1-Mover FL-RE-US",
@@ -13,7 +13,7 @@ devices = dict(
         unit="deg",
         speed=5,
     ),
-    mover_pr_re_ds=device(
+    mover_s2=device(
         "nicos.devices.generic.VirtualMotor",
         # "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="M2 Selene1 1-Mover PR-RE-DS",
@@ -23,7 +23,7 @@ devices = dict(
         unit="deg",
         speed=5,
     ),
-    mover_pr_li_ds=device(
+    mover_s3=device(
         "nicos.devices.generic.VirtualMotor",
         # "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="M3 Selene1 1-Mover PR-LI-DS",
@@ -33,7 +33,7 @@ devices = dict(
         unit="deg",
         speed=5,
     ),
-    mover_pr_li_us1=device(
+    mover_s4=device(
         "nicos.devices.generic.VirtualMotor",
         # "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="M4 Selene1 2-Mover PR-LI-US-1",
@@ -43,7 +43,7 @@ devices = dict(
         unit="deg",
         speed=5,
     ),
-    mover_pr_li_us2=device(
+    mover_s5=device(
         "nicos.devices.generic.VirtualMotor",
         # "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="M5 Selene1 2-Mover PR-LI-US-2",
@@ -56,10 +56,10 @@ devices = dict(
     mover=device(
         "nicos_ess.estia.devices.mover.SeleneMover",
         description="Selene1 1-Mover",
-        flreus="mover_fl_re_us",
-        prreds="mover_pr_re_ds",
-        prlids="mover_pr_li_ds",
-        prlius1="mover_pr_li_us1",
-        prlius2="mover_pr_li_us2",
+        s1="mover_s1",
+        s2="mover_s2",
+        s3="mover_s3",
+        s4="mover_s4",
+        s5="mover_s5",
     ),
 )
