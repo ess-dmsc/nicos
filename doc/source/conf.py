@@ -334,7 +334,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    ("documentation", "NICOS.tex", "NICOS Documentation", author, "manual", False),
+    ("op_manual", "NICOS.tex", "NICOS Documentation", author, "manual", False),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
