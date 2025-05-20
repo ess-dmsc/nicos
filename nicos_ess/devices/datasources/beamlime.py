@@ -13,6 +13,7 @@ from nicos.core import (
     ArrayDesc,
     Override,
     Param,
+    dictof,
     host,
     listof,
     multiStatus,
@@ -43,15 +44,15 @@ class DataChannel(CounterChannelMixin, PassiveChannel):
         ),
         "toa_range": Param(
             "Time-of-arrival range",
-            type=tupleof(int, int),
-            default=(0, 100_000_000),
+            type=dict,  # {"enabled": bool, "low": float, "high": float, "unit": str}
+            default={"enabled": False, "low": 0, "high": 100_000, "unit": "us"},
             userparam=True,
             settable=True,
         ),
         "num_bins": Param(
-            "Number of bins (for 1D) or binning param (for 2D)",
+            "Number of time-of-arrival bins",
             type=int,
-            default=100,
+            default=1000,
             userparam=True,
             settable=True,
         ),
@@ -62,17 +63,10 @@ class DataChannel(CounterChannelMixin, PassiveChannel):
             userparam=True,
             settable=True,
         ),
-        "roi_active": Param(
-            "Region of interest active",
-            type=bool,
-            default=False,
-            userparam=True,
-            settable=True,
-        ),
-        "roi": Param(
-            "Region of interest, coordinates with winding order by index",
-            type=list,
-            default=[],
+        "roi_rectangle": Param(
+            "ROI rectangle with low/high bounds per axis",
+            type=dict,
+            default={"x": {"low": 0, "high": 100}, "y": {"low": 0, "high": 100}},
             userparam=True,
             settable=True,
         ),
@@ -281,19 +275,25 @@ class DataChannel(CounterChannelMixin, PassiveChannel):
         self._update_status(status.OK, "")
 
     def doWriteNum_Bins(self, value):
-        self._send_command_to_collector("num_bins", value)
+        message = str(value).encode("utf-8")
+        self._send_command_to_collector("num_bins", message)
 
     def doWriteSliding_Window(self, value):
         self._send_command_to_collector("sliding_window", value)
 
     def doWriteToa_Range(self, value):
-        self._send_command_to_collector("toa_range", value)
+        if isinstance(value, dict):
+            if not all(key in value for key in ["enabled", "low", "high", "unit"]):
+                raise ValueError("Invalid TOA range value")
+            message = json.dumps(value).encode("utf-8")
+            self._send_command_to_collector("toa_range", message)
 
-    def doWriteRoi_Active(self, value):
-        self._send_command_to_collector("roi_active", value)
-
-    def doWriteRoi(self, value):
-        self._send_command_to_collector("roi", value)
+    def doWriteRoi_Rectangle(self, value):
+        if isinstance(value, dict):
+            if not all(key in value for key in ["x", "y"]):
+                raise ValueError("Invalid ROI rectangle value")
+            message = json.dumps(value).encode("utf-8")
+            self._send_command_to_collector("roi_rectangle", message)
 
     def doWriteUpdate_Period(self, value):
         message = json.dumps({"value": value, "unit": "ms"}).encode("utf-8")
