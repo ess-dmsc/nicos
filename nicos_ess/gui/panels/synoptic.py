@@ -735,7 +735,6 @@ class SynopticWidget(QWidget):
         device_name, attribute = key.split("/")
         unit = self.units_dict.get(device_name, None)
         for shape in self.shapes:
-            print(shape.device, device_name, attribute)
             if shape.device == device_name:
                 if attribute == "value":
                     shape.update_value(value, unit)
