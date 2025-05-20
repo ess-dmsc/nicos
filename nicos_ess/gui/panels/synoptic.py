@@ -208,7 +208,7 @@ class ResizableShape(QGraphicsRectItem):
         self.update_text_position()
 
     def set_device(self, device_name):
-        self.device = device_name
+        self.device = device_name.lower()
         self.device_name_text.setPlainText(device_name or "")
         self.update_text_position()
 
@@ -735,6 +735,7 @@ class SynopticWidget(QWidget):
         device_name, attribute = key.split("/")
         unit = self.units_dict.get(device_name, None)
         for shape in self.shapes:
+            print(shape.device, device_name, attribute)
             if shape.device == device_name:
                 if attribute == "value":
                     shape.update_value(value, unit)
