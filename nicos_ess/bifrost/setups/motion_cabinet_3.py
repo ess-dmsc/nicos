@@ -17,6 +17,16 @@ devices = dict(
         description="Status of the the Get-Lost-Tube In-Beam Positioner",
         readpv="BIFROST-InBm:MC-Pne-01:ShtMsgTxt",
     ),
+    cabinet_3_pressure_1=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description="Cabinet 3 pressure 1",
+        readpv="BIFROST-MCS3:MC-MCU-03:Pressure1",
+    ),
+    cabinet_3_pressure_2=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description="Cabinet 3 pressure 2",
+        readpv="BIFROST-MCS3:MC-MCU-03:Pressure2",
+    ),
     sample_stack_rotation=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Rotational sample stack",
@@ -35,11 +45,21 @@ devices = dict(
         motorpv="BIFROST-DivSl1:MC-SlYp-01:Mtr",
         monitor_deadband=0.01,
     ),
+    divergence_slit_1_left_temp=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description="Divergence slit 1 right temperature",
+        readpv="BIFROST-DivSl1:MC-SlYp-01:Mtr-Temp",
+    ),
     divergence_slit_1_right=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Divergence slit 1 right",
         motorpv="BIFROST-DivSl1:MC-SlYm-01:Mtr",
         monitor_deadband=0.01,
+    ),
+    divergence_slit_1_right_temp=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description="Divergence slit 1 right temperature",
+        readpv="BIFROST-DivSl1:MC-SlYm-01:Mtr-Temp",
     ),
     divergence_slit_1=device(
         "nicos.devices.generic.slit.HorizontalGap",
@@ -55,11 +75,21 @@ devices = dict(
         motorpv="BIFROST-DivSl2:MC-SlYp-01:Mtr",
         monitor_deadband=0.01,
     ),
+    divergence_slit_2_left_temp=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description="Divergence slit 2 left temperature",
+        readpv="BIFROST-DivSl2:MC-SlYp-01:Mtr-Temp",
+    ),
     divergence_slit_2_right=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Divergence slit 2 right",
         motorpv="BIFROST-DivSl2:MC-SlYm-01:Mtr",
         monitor_deadband=0.01,
+    ),
+    divergence_slit_2_right_temp=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description="Divergence slit 2 right temperature",
+        readpv="BIFROST-DivSl2:MC-SlYm-01:Mtr-Temp",
     ),
     divergence_slit_2=device(
         "nicos.devices.generic.slit.HorizontalGap",
@@ -75,11 +105,21 @@ devices = dict(
         motorpv="BIFROST-DivSl3:MC-SlYp-01:Mtr",
         monitor_deadband=0.01,
     ),
+    divergence_slit_3_left_temp=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description="Divergence slit 3 left temperature",
+        readpv="BIFROST-DivSl3:MC-SlYp-01:Mtr-Temp",
+    ),
     divergence_slit_3_right=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Divergence slit 3 right",
         motorpv="BIFROST-DivSl3:MC-SlYm-01:Mtr",
         monitor_deadband=0.01,
+    ),
+    divergence_slit_3_right_temp=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description="Divergence slit 3 right temperature",
+        readpv="BIFROST-DivSl3:MC-SlYm-01:Mtr-Temp",
     ),
     divergence_slit_3=device(
         "nicos.devices.generic.slit.HorizontalGap",
