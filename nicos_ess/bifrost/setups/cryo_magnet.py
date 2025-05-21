@@ -61,11 +61,9 @@ devices = dict(
         mapping={"False": 0, "True": 1},
     ),
     flush_running=device(
-        "nicos_ess.devices.epics.manual_switch.ManualSwitch",
+        "nicos_ess.devices.epics.pva.EpicsStringReadable",
         description="Is the Flushing running",
         readpv=f"{pv_root}Flush-Running-r",
-        states=["False", "True"],
-        mapping={"False": 0, "True": 1},
     ),
     flush_state=device(
         "nicos_ess.devices.epics.pva.EpicsStringReadable",
@@ -104,11 +102,9 @@ devices = dict(
         mapping={"position": 0, "pressure": 1, "table": 2},
     ),
     ln2f=device(
-        "nicos_ess.devices.epics.manual_switch.ManualSwitch",
+        "nicos_ess.devices.epics.pva.EpicsStringReadable",
         description="LN2 filling in progress",
         readpv=f"{pv_root}LN2F-r",
-        states=["False", "True"],
-        mapping={"False": 0, "True": 1},
     ),
     ln2f_fill=device(
         "nicos_ess.devices.epics.manual_switch.ManualSwitch",
