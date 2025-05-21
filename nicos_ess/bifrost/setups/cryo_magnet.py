@@ -109,7 +109,7 @@ devices = dict(
     ln2f_fill=device(
         "nicos_ess.devices.epics.manual_switch.ManualSwitch",
         description="Start/stop LN2 fill",
-        readpv=f"{pv_root}LLN2F-Fill-s",
+        readpv=f"{pv_root}LN2F-Fill-s",
         writepv=f"{pv_root}LN2F-Fill-s",
         states=["False", "True"],
         mapping={"False": 0, "True": 1},
