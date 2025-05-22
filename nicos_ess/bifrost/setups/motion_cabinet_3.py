@@ -2,6 +2,12 @@ description = "Motion cabinet 3"
 
 
 devices = dict(
+    cabinet_3_status=device(
+        "nicos_ess.devices.epics.mbbi_direct.MBBIDirectStatus",
+        description="Cabinet 3 status",
+        pv_root="BIFROST-Cabinet",
+        number_of_bits=24,
+    ),
     get_lost_tube=device(
         "nicos_ess.devices.epics.pva.shutter.EpicsShutter",
         description="Get-Lost-Tube In-Beam Positioner",
