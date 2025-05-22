@@ -93,7 +93,7 @@ class MBBIDirectStatus(EpicsParameters, Readable):
             message = self._bit_map.get(name, None)
             highest_severity = severity = status.WARN
 
-            if self._alarm_state[name] != (severity, message):
+            if self._alarm_state.get(name) != (severity, message):
                 self._write_alarm_to_log(name, severity, message)
             in_alarm.append(f"{message} Alarm")
             self._alarm_state[name] = (severity, message)
