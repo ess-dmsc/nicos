@@ -46,9 +46,14 @@ devices = dict(
         description="LS336 sample loop status",
         readpv=f"{pv_root}Sample:status-R",
     ),
-    # ---------------------------------------------------------------------
-    # VTI loop (LS336 channel A / loop 2) + pressure/valve (Mercury)
-    # ---------------------------------------------------------------------
+    vti_setpoint=device(
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="VTI temperature set-point (K)",
+        readpv=f"{pv_root}VTI:Setpoint-R",
+        writepv=f"{pv_root}VTI:Setpoint-S",
+        abslimits=(0, 1505),
+        userlimits=(0, 1505),
+    ),
     vti_temp=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
         description="VTI temperature (K)",
@@ -140,7 +145,7 @@ devices = dict(
         readpv=f"{pv_root}Magnet:switchHeater-R",
         writepv=f"{pv_root}Magnet:switchHeater-S",
         states=["OFF", "ON"],
-        mapping={"OFF": 0, "ON": 1},
+        mapping={"OFF": "OFF", "ON": "ON"},
         pollinterval=0.5,
         monitor=True,
         pva=True,
