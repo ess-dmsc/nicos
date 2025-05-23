@@ -60,6 +60,19 @@ devices = dict(
         readpv=f"{pv_root}VTI:Temp-R",
         abslimits=(0, 1505),
         userlimits=(0, 1505),
+        nexus_config=[
+            {
+                "group_name": "cryo_magnet_1",
+                "nx_class": "NXcollection",
+                "units": "K",
+                "suffix": "readback",
+                "source_name": f"{pv_root}VTI:Temp-R",
+                "schema": "f144",
+                "topic": "bifrost_sample_env",
+                "protocol": "pva",
+                "periodic": 1,
+            },
+        ],
     ),
     vti_heater=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
