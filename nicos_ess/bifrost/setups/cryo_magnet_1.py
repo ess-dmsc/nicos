@@ -1,107 +1,164 @@
 # ruff: noqa: F821
-description = "General Cryo Magnet Setup"
+# NICOS setup for SE‑VM1B cryomagnet, VTI and sample control (LS336 + Mercury)
 
-pv_root = "SE-VM2:Magnet:"
+
+description = "Cryo Magnet, VTI and Sample control setup (LS336 + Mercury)"
+
+pv_root = "SE-VM1B:"
+
 
 devices = dict(
-    actual_value=device(
-        "nicos_ess.devices.epics.pva.EpicsAnalogReadable",
-        description="Actual value of IPS",
-        readpv=pv_root + "value-R",
+    sample_temp=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description="Sample temperature (K)",
+        readpv=f"{pv_root}Sample:Temp-R",
+        abslimits=(0, 1505),
+        userlimits=(0, 1505),
     ),
-    target_value=device(
+    sample_setpoint=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
-        description="Ramp target value of IPS",
-        readpv=pv_root + "target-R",
-        writepv=pv_root + "target-S",
+        description="Sample temperature set‑point (K)",
+        readpv=f"{pv_root}Sample:Setpoint-R",
+        writepv=f"{pv_root}Sample:Setpoint-S",
+        abslimits=(0, 1505),
+        userlimits=(0, 1505),
     ),
-    actual_ramp_speed=device(
+    sample_heater=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description="Sample heater output (%)",
+        readpv=f"{pv_root}Sample:HeaterPower-R",
+        abslimits=(0, 100),
+        userlimits=(0, 100),
+    ),
+    sample_heater_range=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
-        description="Actual ramp speed of IPS",
-        readpv=pv_root + "_ramp-R",
-        writepv=pv_root + "_ramp-S",
+        description="Sample heater range index",
+        readpv=f"{pv_root}Sample:HtrRange-R",
+        writepv=f"{pv_root}Sample:HtrRange-S",
     ),
-    use_ramp_speed=device(
+    sample_calibration=device(
+        "nicos_ess.devices.epics.pva.EpicsStringReadable",
+        description="Sample sensor calibration curve header",
+        readpv=f"{pv_root}Sample:Calibration-R",
+    ),
+    sample_status=device(
+        "nicos_ess.devices.epics.pva.EpicsStringReadable",
+        description="LS336 sample loop status",
+        readpv=f"{pv_root}Sample:status-R",
+    ),
+    # ---------------------------------------------------------------------
+    # VTI loop (LS336 channel A / loop 2) + pressure/valve (Mercury)
+    # ---------------------------------------------------------------------
+    vti_temp=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description="VTI temperature (K)",
+        readpv=f"{pv_root}VTI:Temp-R",
+        abslimits=(0, 1505),
+        userlimits=(0, 1505),
+    ),
+    vti_heater=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description="VTI heater output (%)",
+        readpv=f"{pv_root}VTI:HeaterPower-R",
+        abslimits=(0, 100),
+        userlimits=(0, 100),
+    ),
+    vti_heater_range=device(
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="VTI heater range index",
+        readpv=f"{pv_root}VTI:HtrRange-R",
+        writepv=f"{pv_root}VTI:HtrRange-S",
+    ),
+    vti_calibration=device(
+        "nicos_ess.devices.epics.pva.EpicsStringReadable",
+        description="VTI sensor calibration curve header",
+        readpv=f"{pv_root}VTI:Calibration-R",
+    ),
+    vti_pressure=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description="VTI pressure (mbar)",
+        readpv=f"{pv_root}VTI:pressure-R",
+        abslimits=(0, 1100),
+        userlimits=(0, 1100),
+    ),
+    vti_valve=device(
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="Needle‑valve opening (%)",
+        readpv=f"{pv_root}VTI:NVopening-R",
+        writepv=f"{pv_root}VTI:NVopening-S",
+        abslimits=(0, 100),
+        userlimits=(0, 100),
+    ),
+    vti_status=device(
+        "nicos_ess.devices.epics.pva.EpicsStringReadable",
+        description="LS336 VTI loop status",
+        readpv=f"{pv_root}VTI:status-R",
+    ),
+    ln2_level=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description="Magnet liquid‑nitrogen level (%)",
+        readpv=f"{pv_root}Magnet:LN2-R",
+        abslimits=(0, 100),
+        userlimits=(0, 100),
+    ),
+    lhe_level=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description="Magnet liquid‑helium level (%)",
+        readpv=f"{pv_root}Magnet:LHe-R",
+        abslimits=(0, 100),
+        userlimits=(0, 100),
+    ),
+    mag_field=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description="Magnet persistent field (T)",
+        readpv=f"{pv_root}Magnet:Field-R",
+        abslimits=(-15, 15),
+        userlimits=(-15, 15),
+    ),
+    mag_target=device(
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="Magnet target field (T)",
+        readpv=f"{pv_root}Magnet:FieldTarget-R",
+        writepv=f"{pv_root}Magnet:FieldTarget-S",
+        abslimits=(-15, 15),
+        userlimits=(-15, 15),
+    ),
+    mag_current=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description="Magnet power‑supply current (A)",
+        readpv=f"{pv_root}Magnet:Current-R",
+    ),
+    mag_ramp_rate=device(
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="Magnet field ramp rate (T/min)",
+        readpv=f"{pv_root}Magnet:FieldRampRate-R",
+        writepv=f"{pv_root}Magnet:FieldRampRate-S",
+    ),
+    mag_switch_heater=device(
         "nicos_ess.devices.epics.manual_switch.ManualSwitch",
-        description="Use defined ramp speed to approach target value of IPS",
-        readpv=pv_root + "_use_ramp-R",
-        writepv=pv_root + "_use_ramp-S",
+        description="Persistent‑switch heater",
+        readpv=f"{pv_root}Magnet:switchHeater-R",
+        writepv=f"{pv_root}Magnet:switchHeater-S",
+        states=["OFF", "ON"],
+        mapping={"OFF": 0, "ON": 1},
         pollinterval=0.5,
         monitor=True,
         pva=True,
-        states=["False", "True"],
-        mapping={"False": 0, "True": 1},
     ),
-    ramp_setpoint=device(
-        "nicos_ess.devices.epics.pva.EpicsAnalogReadable",
-        description="Actual target value in ramp of IPS",
-        readpv=pv_root + "_ramp_setpoint-R",
-    ),
-    time_to_target=device(
-        "nicos_ess.devices.epics.pva.EpicsAnalogReadable",
-        description="Expected time to target of IPS",
-        readpv=pv_root + "_time_to_target-R",
-    ),
-    stop=device(
-        "nicos_ess.devices.epics.pva.EpicsStringReadable",
-        description="Stop the ramp of IPS",
-        readpv=pv_root + "stop-R",
-    ),
-    prepare=device(
-        "nicos_ess.devices.epics.pva.EpicsStringReadable",
-        description="Prepare the ramp of IPS",
-        readpv=pv_root + "_prepare-R",
-    ),
-    go=device(
+    mag_action=device(
         "nicos_ess.devices.epics.manual_switch.ManualSwitch",
-        description="Start the ramp of IPS",
-        readpv=pv_root + "go-R",
-        writepv=pv_root + "go-S",
-        states=["False", "True"],
-        mapping={"False": 0, "True": 1},
+        description="IPS action command",
+        readpv=f"{pv_root}Magnet:action-R",
+        writepv=f"{pv_root}Magnet:action-S",
+        states=["hold", "ramp", "pause", "idle"],
+        mapping={"hold": 0, "ramp": 1, "pause": 2, "idle": 3},
         pollinterval=0.5,
         monitor=True,
         pva=True,
     ),
-    abort=device(
+    mag_status=device(
         "nicos_ess.devices.epics.pva.EpicsStringReadable",
-        description="Abort the ramp of IPS",
-        readpv=pv_root + "abort-R",
-    ),
-    shutdown=device(
-        "nicos_ess.devices.epics.pva.EpicsStringReadable",
-        description="Set the magnet to 0T of IPS",
-        readpv=pv_root + "shutdown-R",
-    ),
-    persistent_mode=device(
-        "nicos_ess.devices.epics.manual_switch.ManualSwitch",
-        description="Set persistent mode after ramp of IPS",
-        readpv=pv_root + "_go_persistent-R",
-        writepv=pv_root + "_go_persistent-S",
-        states=["False", "True"],
-        mapping={"False": 0, "True": 1},
-        pollinterval=0.5,
-        monitor=True,
-        pva=True,
-    ),
-    magnet_persistent=device(
-        "nicos_ess.devices.epics.pva.EpicsStringReadable",
-        description="Magnet in Persistent mode of IPS",
-        readpv=pv_root + "_persistent-R",
-    ),
-    switch_status=device(
-        "nicos_ess.devices.epics.pva.EpicsAnalogReadable",
-        description="Switch heater status of IPS",
-        readpv=pv_root + "_switchstatus-R",
-    ),
-    output_of_powersupply=device(
-        "nicos_ess.devices.epics.pva.EpicsAnalogReadable",
-        description="Returns the power supply output field of IPS",
-        readpv=pv_root + "_output_of_powersupply-R",
-    ),
-    magnet_ips_status=device(
-        "nicos_ess.devices.epics.pva.EpicsStringReadable",
-        description="Status of the IPS",
-        readpv=pv_root + "status-R",
+        description="IPS status string",
+        readpv=f"{pv_root}Magnet:status-R",
     ),
 )
