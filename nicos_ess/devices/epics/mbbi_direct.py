@@ -90,7 +90,8 @@ class MBBIDirectStatus(EpicsParameters, Readable):
             if value == 0:
                 continue
 
-            message = self._bit_map.get(name, None)
+            bit_name = self._bit_map.get(name, None)
+            message = self._get_cached_value_or_ask(bit_name)
             highest_severity = severity = status.WARN
 
             if self._alarm_state.get(name) != (severity, message):
