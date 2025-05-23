@@ -37,6 +37,19 @@ devices = dict(
         readpv=f"{pv_root}P1-r",
         abslimits=(0, 1100),
         userlimits=(0, 1100),
+        nexus_config=[
+            {
+                "group_name": "pumping_cart_205",
+                "nx_class": "NXcollection",
+                "units": "hPa",
+                "suffix": "readback",
+                "source_name": f"{pv_root}P1-r",
+                "schema": "f144",
+                "topic": "bifrost_sample_env",
+                "protocol": "pva",
+                "periodic": 1,
+            },
+        ],
     ),
     p_2=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
@@ -44,6 +57,19 @@ devices = dict(
         readpv=f"{pv_root}P2-r",
         abslimits=(0, 1100),
         userlimits=(0, 1100),
+        nexus_config=[
+            {
+                "group_name": "pumping_cart_205",
+                "nx_class": "NXcollection",
+                "units": "hPa",
+                "suffix": "readback",
+                "source_name": f"{pv_root}P2-r",
+                "schema": "f144",
+                "topic": "bifrost_sample_env",
+                "protocol": "pva",
+                "periodic": 1,
+            },
+        ],
     ),
     ln2=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
