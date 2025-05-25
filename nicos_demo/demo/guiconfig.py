@@ -25,6 +25,13 @@ main_window = docked(
                 setups="sans",
             ),
         ),
+        (
+            "Synoptic",
+            vsplit(
+                panel("nicos_ess.gui.panels.svgsynoptic.SynopticPanel"),
+                setups="sans",
+            ),
+        ),
     ),
     (
         "NICOS devices",
