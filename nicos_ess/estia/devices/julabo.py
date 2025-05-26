@@ -170,14 +170,14 @@ class TemperatureController(HasDisablePv, EpicsAnalogMoveable):
             status_code = self._get_pv("statuscodepv")
             if status_code < 0:
                 status_msg = self._get_pv("statusmsgpv")
-                return status.ERROR, "%d: %s" % (status_code, status_msg)
+                return status.ERROR, f"{status_code}: {status_msg}"
 
         if not self.isEnabled:
             return status.WARN, "Device is switched off"
 
         return EpicsAnalogMoveable.doStatus(self, maxage)
 
-    def doReadTarget(self, maxage=0):
+    def doReadTarget(self):
         return self._get_pv("setpoint1")
 
     def doReadPower(self):
