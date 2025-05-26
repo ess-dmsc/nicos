@@ -33,9 +33,11 @@ class KafkaConsumer:
         :param options: Extra configuration options. See the Confluent Kafka
             documents for the full list of options.
         """
+        # check if group.id is provided in options
+        group_id = options.get("group_id", f"nicos-consumer-{uuid.uuid4()}")
         config = {
             "bootstrap.servers": ",".join(brokers),
-            "group.id": uuid.uuid4(),
+            "group.id": group_id,
             "auto.offset.reset": starting_offset,
         }
         self._consumer = Consumer({**config, **options})
