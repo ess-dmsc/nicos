@@ -1,6 +1,7 @@
 import asyncio
 import datetime
 import functools
+import json
 import logging
 import secrets
 import threading
@@ -23,6 +24,7 @@ from pydantic import BaseModel, Field, PositiveInt
 
 from nicos.clients.base import ConnectionData, NicosClient
 from nicos.core.status import BUSY, DISABLED, ERROR, NOTREACHED, OK, UNKNOWN, WARN
+from nicos.protocols.cache import cache_load
 from nicos.protocols.daemon import STATUS_IDLE, STATUS_IDLEEXC
 
 _STATUS_CSS = {
@@ -56,25 +58,68 @@ def decode_jwt(token: str) -> dict:
 
 
 class BridgeClient(NicosClient):
+    """
+    Wrap one NICOS‐client connection and expose two independent queues:
+      • log_queue  – human-readable daemon / script messages
+      • dev_queue  – JSON snippets with live device updates
+    """
+
     def __init__(self, loop: asyncio.AbstractEventLoop, log_func):
         super().__init__(log_func)
         self.loop = loop
         self.status = "idle"
-        self.msg_queue: asyncio.Queue[str] = asyncio.Queue(maxsize=1_000)
 
-    def _emit(self, line: str):
+        # separate streams
+        self.log_queue: asyncio.Queue[str] = asyncio.Queue(maxsize=1_000)
+        self.dev_queue: asyncio.Queue[str] = asyncio.Queue(maxsize=1_000)
+
+    # ------------------------------------------------------------------ helpers
+    def _emit_log(self, line: str) -> None:
         self.loop.call_soon_threadsafe(
-            functools.partial(self.msg_queue.put_nowait, line[:5000])
+            functools.partial(self.log_queue.put_nowait, line[:5000])
+        )
+
+    def _emit_dev(self, payload: dict) -> None:
+        self.loop.call_soon_threadsafe(
+            functools.partial(self.dev_queue.put_nowait, json.dumps(payload))
         )
 
     def signal(self, name, data=None, exc=None):
         if name == "status":
             st, _ = data
             self.status = "idle" if st in (STATUS_IDLE, STATUS_IDLEEXC) else "run"
+
         elif name == "message":
             src, ts, _lvl, txt = data[0], data[1], data[2], data[3]
-            t = time.strftime("%H:%M:%S", time.localtime(ts))
-            self._emit(f"[{t}] {src}: {txt.rstrip()}")
+            tstamp = time.strftime("%H:%M:%S", time.localtime(ts))
+            self._emit_log(f"[{tstamp}] {src}: {txt.rstrip()}")
+
+        elif name == "cache":
+            _ts, key, _op, raw = data
+            if "/" not in key:
+                return
+            dev, sub = key.rsplit("/", 1)
+            if sub not in ("value", "status"):
+                return
+
+            if sub == "status":
+                code, text = cache_load(raw) if raw else (UNKNOWN, "?")
+                value = self.getDeviceValue(dev)
+            else:
+                value = cache_load(raw) if raw else None
+                st = self.getCacheKey(dev.lower() + "/status")
+                code, text = st[1] if st else (UNKNOWN, "?")
+
+            self._emit_dev(
+                {
+                    "dev": dev,
+                    "value": value,
+                    "code": int(code),
+                    "text": str(text),
+                    "css": _STATUS_CSS.get(code, "unk"),
+                }
+            )
+
         elif name in ("broken", "disconnected"):
             LOG.warning("daemon event: %s", name)
 
@@ -182,23 +227,38 @@ def api_dev_value(dev: str, client: BridgeClient = Depends(get_client)):
     return {"device": dev, "value": val}
 
 
-@app.get("/api/devices", response_model=list[DeviceInfo])
-def devices(client: BridgeClient = Depends(get_client)):
-    out = []
-    for dev in client.getDeviceList():
-        val = client.getDeviceValue(dev)
-        cache_entry = client.getCacheKey(dev.lower() + "/status")  # (ts, (code, txt))
-        code, txt = cache_entry[1] if cache_entry else (UNKNOWN, "?")
-        out.append(
-            DeviceInfo(
-                name=dev,
-                value=val,
-                status_code=code,
-                css=_STATUS_CSS.get(code, "unk"),
-                status_text=str(txt),
-            )
+@app.websocket("/ws/devices")
+async def ws_devices(sock: WebSocket):
+    await sock.accept()
+    first = await sock.receive_json()
+    client = await _jwt_to_client(first.get("token", ""))
+    if not client:
+        await sock.close(code=4401)
+        return
+
+    snap = []
+    for name in client.getDeviceList():
+        val = client.getDeviceValue(name)
+        st = client.getCacheKey(name.lower() + "/status")
+        code, txt = st[1] if st else (UNKNOWN, "?")
+        snap.append(
+            {
+                "dev": name,
+                "value": val,
+                "code": int(code),
+                "text": str(txt),
+                "css": _STATUS_CSS.get(code, "unk"),
+            }
         )
-    return out
+    await sock.send_text(json.dumps({"full": snap}))
+
+    q = client.dev_queue
+    try:
+        while True:
+            upd = await q.get()
+            await sock.send_text(upd)
+    except WebSocketDisconnect:
+        pass
 
 
 @app.post("/api/eval")
@@ -247,13 +307,13 @@ async def ws_status(sock: WebSocket):
 @app.websocket("/ws/logs")
 async def ws_logs(sock: WebSocket):
     await sock.accept()
-    data = await sock.receive_json()
-    client = await _jwt_to_client(data.get("token", ""))
+    first = await sock.receive_json()
+    client = await _jwt_to_client(first.get("token", ""))
     if not client:
         await sock.close(code=4401)
         return
 
-    q = client.msg_queue
+    q = client.log_queue
     try:
         while True:
             line = await q.get()

@@ -158,8 +158,9 @@
 </main>
 
 <script>
-let token = "", ws, wsStat=null, wsLog=null, pollTimer=null;
+let token = "", ws, wsStat=null, wsLog=null, wsDev = null;
 let history = [], histIndex = -1;
+const rows = Object.create(null);
 
 async function login() {
   document.getElementById('loginErr').textContent = "";
@@ -184,8 +185,7 @@ async function login() {
     query.classList.remove('hidden');
     startWS();
     startLogStream();
-    pollDevices();
-    pollTimer = setInterval(pollDevices, 500);
+    startDeviceWS();
   } catch (e) {
     loginErr.textContent = e.message;
   }
@@ -216,29 +216,39 @@ async function logout() {
     method: 'POST',
     headers: { Authorization: 'Bearer ' + token }
   });
-  clearInterval(pollTimer);
   ws?.close();
+  wsDev?.close();
   token = "";
   query.classList.add('hidden');
   loginForm.classList.remove('hidden');
 }
 
-async function pollDevices(){
-  const r = await fetch("/api/devices",
-        { headers:{ Authorization:`Bearer ${token}` } });
-  if(!r.ok) return;
+function startDeviceWS() {
+  wsDev = new WebSocket(`ws://${location.host}/ws/devices`);
+  wsDev.onopen = () => wsDev.send(JSON.stringify({ token }));
+  wsDev.onmessage = (ev) => {
+    const msg = JSON.parse(ev.data);
+    if (msg.full) {
+      msg.full.forEach(applyUpdate);
+    } else {
+      applyUpdate(msg);
+    }
+  };
+  wsDev.onclose = () => console.warn("device WebSocket closed");
+}
 
-  const list = await r.json();
-  const tbody = devtbl.tBodies[0];
-  tbody.innerHTML = "";
-
-  list.forEach(d => {
-    const tr = tbody.insertRow();
-    tr.className = "status-" + d.css;      // <─ colour row
-    tr.insertCell().textContent = d.name;
-    tr.insertCell().textContent = (d.value === null ? "—" : d.value);
-    tr.insertCell().textContent = d.status_text;   // human readable
-  });
+function applyUpdate(d) {
+  let tr = rows[d.dev];
+  if (!tr) {
+    tr = rows[d.dev] = devtbl.tBodies[0].insertRow();
+    tr.insertCell();
+    tr.insertCell();
+    tr.insertCell();
+  }
+  tr.className = "status-" + d.css;
+  tr.cells[0].textContent = d.dev;
+  tr.cells[1].textContent = d.value === null ? "—" : d.value;
+  tr.cells[2].textContent = d.text;
 }
 
 function startLogStream() {
