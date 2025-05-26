@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>NICOS Web Client</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    tr.status-ok td   { background-color: #d4edda; color: #155724; }
+    tr.status-busy td { background-color: #fff3cd; color: #856404; }
+    tr.status-warn td { background-color: #ffeeba; color: #856404; }
+    tr.status-err td  { background-color: #f8d7da; color: #721c24; }
+    tr.status-unk td  { background-color: #e2e3e5; color: #383d41; }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", sans-serif;
+      background: #f8f9fa;
+      color: #212529;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: #343a40;
+      color: white;
+      padding: 1rem 2rem;
+      font-size: 1.5rem;
+    }
+
+    main {
+      flex: 1;
+      display: flex;
+      padding: 1rem;
+      gap: 1rem;
+    }
+
+    section {
+      background: white;
+      border-radius: 8px;
+      padding: 1rem;
+      flex: 1;
+      box-shadow: 0 0 6px rgba(0, 0, 0, 0.05);
+      display: flex;
+      flex-direction: column;
+    }
+
+    label {
+      display: flex;
+      margin-bottom: 0.5rem;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    input[type="text"], input[type="password"], input[type="number"] {
+      flex: 1;
+      padding: 0.4rem;
+      font-size: 1rem;
+    }
+
+    button {
+      padding: 0.5rem 1rem;
+      margin-top: 0.5rem;
+      font-size: 1rem;
+      cursor: pointer;
+      background: #007bff;
+      border: none;
+      color: white;
+      border-radius: 4px;
+    }
+
+    button:hover {
+      background: #0056b3;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    #cmd {
+      font-family: monospace;
+      font-size: 1rem;
+      width: 100%;
+      padding: 0.4rem;
+    }
+
+    #logstream, #out {
+      background: #000;
+      color: #0f0;
+      font-family: monospace;
+      font-size: 0.9rem;
+      padding: 1rem;
+      margin-top: 1rem;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      flex: 1;
+      border-radius: 4px;
+    }
+
+    #logstream {
+      max-height: 300px;
+    }
+
+    .statusbar {
+      background: #f1f3f5;
+      padding: 0.5rem 1rem;
+      font-size: 0.9rem;
+      border-top: 1px solid #dee2e6;
+    }
+
+    .row {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .row > * {
+      flex: 1;
+    }
+  </style>
+</head>
+<body>
+
+<header>NICOS Web Client</header>
+
+<main>
+  <section id="loginForm">
+    <h2>Login</h2>
+    <label>Host <input id="host" type="text" value="localhost" /></label>
+    <label>Port <input id="port" type="number" value="1301" /></label>
+    <label>User <input id="user" type="text" value="guest" /></label>
+    <label>Password <input id="pw" type="password" /></label>
+    <button onclick="login()">Connect</button>
+    <div id="loginErr" style="color:red; margin-top:0.5rem;"></div>
+  </section>
+
+  <section id="query" class="hidden">
+    <h2>Command Line</h2>
+    <input id="cmd" placeholder="Type NICOS command and press Enter" />
+    <div class="row">
+      <button onclick="logout()">Logout</button>
+    </div>
+    <div id="out" style="display:none;"></div>
+    <div id="logstream"></div>
+    <h3 style="margin:.5rem 0;">Devices</h3>
+      <div style="flex:1;overflow:auto">
+        <table id="devtbl">
+          <thead>
+            <tr><th>Name</th><th>Value</th><th>Status</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    <div class="statusbar">Daemon status: <span id="status">—</span></div>
+  </section>
+</main>
+
+<script>
+let token = "", ws, wsStat=null, wsLog=null, pollTimer=null;
+let history = [], histIndex = -1;
+
+async function login() {
+  document.getElementById('loginErr').textContent = "";
+  const body = {
+    host: host.value,
+    port: +port.value,
+    user: user.value,
+    password: pw.value,
+    viewonly: false,
+    expertmode: false
+  };
+  try {
+    const r = await fetch('/api/login', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(body)
+    });
+    if (!r.ok) throw new Error('Login failed');
+      const data = await r.json();
+      token = data.access_token;
+    loginForm.classList.add('hidden');
+    query.classList.remove('hidden');
+    startWS();
+    startLogStream();
+    pollDevices();
+    pollTimer = setInterval(pollDevices, 500);
+  } catch (e) {
+    loginErr.textContent = e.message;
+  }
+}
+
+async function sendCommand() {
+  const command = cmd.value.trim();
+  if (!command) return;
+  history.push(command);
+  histIndex = history.length;
+  cmd.value = "";
+  try {
+    await fetch('/api/command', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer ' + token
+      },
+      body: JSON.stringify({ command })
+    });
+  } catch (e) {
+    console.error("Command failed:", e);
+  }
+}
+
+async function logout() {
+  await fetch('/api/logout', {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + token }
+  });
+  clearInterval(pollTimer);
+  ws?.close();
+  token = "";
+  query.classList.add('hidden');
+  loginForm.classList.remove('hidden');
+}
+
+async function pollDevices(){
+  const r = await fetch("/api/devices",
+        { headers:{ Authorization:`Bearer ${token}` } });
+  if(!r.ok) return;
+
+  const list = await r.json();
+  const tbody = devtbl.tBodies[0];
+  tbody.innerHTML = "";
+
+  list.forEach(d => {
+    const tr = tbody.insertRow();
+    tr.className = "status-" + d.css;      // <─ colour row
+    tr.insertCell().textContent = d.name;
+    tr.insertCell().textContent = (d.value === null ? "—" : d.value);
+    tr.insertCell().textContent = d.status_text;   // human readable
+  });
+}
+
+function startLogStream() {
+  const logWS = new WebSocket(`ws://${location.host}/ws/logs`);
+  logWS.onopen = () => {
+    logWS.send(JSON.stringify({ token }));
+  };
+  logWS.onmessage = (ev) => {
+    const el = document.getElementById('logstream');
+    el.textContent += ev.data + '\n';
+    el.scrollTop = el.scrollHeight;
+  };
+  logWS.onclose = () => {
+    console.warn("Log WebSocket closed");
+  };
+}
+
+function startWS() {
+  ws = new WebSocket(`ws://${location.host}/ws`);
+  ws.onopen = () => {
+    ws.send(JSON.stringify({ token }));
+  };
+  ws.onmessage = (ev) => {
+    const d = JSON.parse(ev.data);
+    if (d.status) document.getElementById('status').textContent = d.status;
+  };
+  ws.onclose = () => {
+    document.getElementById('status').textContent = 'socket closed';
+  };
+}
+
+document.getElementById('cmd').addEventListener('keydown', (ev) => {
+  if (ev.key === "Enter") {
+    sendCommand();
+  } else if (ev.key === "ArrowUp") {
+    if (histIndex > 0) {
+      histIndex--;
+      cmd.value = history[histIndex];
+    }
+  } else if (ev.key === "ArrowDown") {
+    if (histIndex < history.length - 1) {
+      histIndex++;
+      cmd.value = history[histIndex];
+    } else {
+      cmd.value = "";
+    }
+  }
+});
+</script>
+</body>
+</html>
