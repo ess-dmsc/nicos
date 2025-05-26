@@ -43,9 +43,10 @@ class DataChannel(CounterChannelMixin, PassiveChannel):
             settable=True,
         ),
         "toa_range": Param(
-            "Time-of-arrival range",
-            type=dict,  # {"enabled": bool, "low": float, "high": float, "unit": str}
-            default={"enabled": False, "low": 0, "high": 100_000, "unit": "us"},
+            "Time-of-arrival range in microseconds",
+            type=tupleof(int, int),
+            default=(0, 100_000),
+            unit="us",
             userparam=True,
             settable=True,
         ),
@@ -53,13 +54,6 @@ class DataChannel(CounterChannelMixin, PassiveChannel):
             "Number of time-of-arrival bins",
             type=int,
             default=1000,
-            userparam=True,
-            settable=True,
-        ),
-        "sliding_window": Param(
-            "Sliding window size in seconds",
-            type=float,
-            default=10.0,
             userparam=True,
             settable=True,
         ),
@@ -74,12 +68,14 @@ class DataChannel(CounterChannelMixin, PassiveChannel):
             "Last clear time",
             type=int,
             default=0,
+            unit="ns",
             userparam=True,
             settable=True,
         ),
         "update_period": Param(
             "Time interval for data updates (ms)",
             type=int,
+            unit="ms",
             userparam=True,
             settable=True,
         ),
@@ -278,15 +274,11 @@ class DataChannel(CounterChannelMixin, PassiveChannel):
         message = str(value).encode("utf-8")
         self._send_command_to_collector("num_bins", message)
 
-    def doWriteSliding_Window(self, value):
-        self._send_command_to_collector("sliding_window", value)
-
     def doWriteToa_Range(self, value):
-        if isinstance(value, dict):
-            if not all(key in value for key in ["enabled", "low", "high", "unit"]):
-                raise ValueError("Invalid TOA range value")
-            message = json.dumps(value).encode("utf-8")
-            self._send_command_to_collector("toa_range", message)
+        enabled = False if value[0] == 0 and value[1] == 0 else True
+        data = {"enabled": enabled, "low": value[0], "high": value[1], "unit": "us"}
+        message = json.dumps(data).encode("utf-8")
+        self._send_command_to_collector("toa_range", message)
 
     def doWriteRoi_Rectangle(self, value):
         if isinstance(value, dict):
