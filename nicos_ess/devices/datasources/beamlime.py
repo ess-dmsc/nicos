@@ -306,14 +306,14 @@ class DataChannel(CounterChannelMixin, PassiveChannel):
 
     def doWriteNum_Bins(self, value):
         message = str(value).encode("utf-8")
-        self._send_command_to_collector("num_bins", message)
+        self._send_command_to_collector("time_of_arrival_bins", message)
 
     def doReadNum_Bins(self):
         val = self._cfg("time_of_arrival_bins", parse_json=False)
         try:
             return int(val)
         except Exception:
-            return self.num_bins
+            return 0
 
     def doWriteToa_Range(self, value):
         enabled = False if value[0] == 0 and value[1] == 0 else True
@@ -335,8 +335,8 @@ class DataChannel(CounterChannelMixin, PassiveChannel):
     def doReadUpdate_Period(self, maxage=0):
         cfg = self._cfg("update_every")
         if isinstance(cfg, dict):
-            return cfg.get("value", self.update_period)
-        return self.update_period
+            return cfg.get("value", 0)
+        return 0
 
     def doShutdown(self):
         self._update_status(status.OK, "")
