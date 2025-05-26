@@ -313,7 +313,7 @@ class DataChannel(CounterChannelMixin, PassiveChannel):
         try:
             return int(val)
         except Exception:
-            return 0
+            return self._params["num_bins"]
 
     def doWriteToa_Range(self, value):
         enabled = False if value[0] == 0 and value[1] == 0 else True
@@ -335,8 +335,8 @@ class DataChannel(CounterChannelMixin, PassiveChannel):
     def doReadUpdate_Period(self, maxage=0):
         cfg = self._cfg("update_every")
         if isinstance(cfg, dict):
-            return cfg.get("value", 0)
-        return 0
+            return cfg.get("value", self._params["update_period"])
+        return self._params["update_period"]
 
     def doShutdown(self):
         self._update_status(status.OK, "")
