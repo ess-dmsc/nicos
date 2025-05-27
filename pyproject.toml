@@ -1,3 +1,39 @@
+[project]
+name = "nicos"
+version = "0.0.1"
+dependencies = [
+    "requests",
+    'importlib-metadata; python_version<"3.10"',
+    "urllib3==1.26.20",
+    "caproto",
+    "confluent-kafka==2.4.0",
+    "ess-streaming-data-types>=0.26.1",
+    "flake8>=5.0.0",
+    "html2text>=3.200.3",
+    "h5py>=2.6",
+    "kafka-logging-handler<=0.2.4",
+    "keyring==24.3.0",
+    "keyrings.alt==5.0.0",
+    "ldap3>=2.0.0",
+    "lttb>=0.2.2",
+    "nicos-pyctl>=1.0",
+    "numpy>=1.10.0",
+    "p4p>=4.0.0",
+    "psutil>=2.0",
+    "pycryptodomex>=3.4.7",
+    "pyqtgraph>=0.12.4",
+    "pyzmq>=13.1.0",
+    "rsa>=3.1.2",
+    "scipy>=0.9.0",
+    "toml>=0.10",
+    "redis==5.0.4",
+    "GitPython",
+    "yuos_query @ https://github.com/ess-dmsc/yuos_query/releases/download/v0.1.22/yuos_query-0.1.22-py3-none-any.whl"
+]
+
+[tool.setuptools]
+packages = ["nicos", "nicos_demo", "nicos_ess"]
+
 [tool.ruff]
 exclude = [
     "nicos_mlz/",
