@@ -1,5 +1,6 @@
 import json
 import time
+from uuid import uuid4
 
 import numpy as np
 from streaming_data_types import deserialise_da00
@@ -13,6 +14,7 @@ from nicos.core import (
     ArrayDesc,
     Override,
     Param,
+    dictof,
     host,
     listof,
     multiStatus,
@@ -20,8 +22,8 @@ from nicos.core import (
     tupleof,
 )
 from nicos.devices.generic import CounterChannelMixin, Detector, PassiveChannel
-from nicos.utils import byteBuffer
-from nicos_ess.devices.kafka.consumer import KafkaSubscriber
+from nicos.utils import byteBuffer, createThread
+from nicos_ess.devices.kafka.consumer import KafkaConsumer, KafkaSubscriber
 from nicos_ess.devices.kafka.producer import KafkaProducer
 
 
@@ -42,52 +44,45 @@ class DataChannel(CounterChannelMixin, PassiveChannel):
             settable=True,
         ),
         "toa_range": Param(
-            "Time-of-arrival range",
+            "Time-of-arrival range in microseconds",
             type=tupleof(int, int),
-            default=(0, 100_000_000),
+            default=(0, 100_000),
+            unit="us",
             userparam=True,
             settable=True,
+            volatile=True,
         ),
         "num_bins": Param(
-            "Number of bins (for 1D) or binning param (for 2D)",
+            "Number of time-of-arrival bins",
             type=int,
-            default=100,
+            default=1000,
             userparam=True,
             settable=True,
+            volatile=True,
         ),
-        "sliding_window": Param(
-            "Sliding window size in seconds",
-            type=float,
-            default=10.0,
+        "roi_rectangle": Param(
+            "ROI rectangle with low/high bounds per axis",
+            type=dict,
+            default={"x": {"low": 0, "high": 100}, "y": {"low": 0, "high": 100}},
             userparam=True,
             settable=True,
-        ),
-        "roi_active": Param(
-            "Region of interest active",
-            type=bool,
-            default=False,
-            userparam=True,
-            settable=True,
-        ),
-        "roi": Param(
-            "Region of interest, coordinates with winding order by index",
-            type=list,
-            default=[],
-            userparam=True,
-            settable=True,
+            volatile=True,
         ),
         "last_clear": Param(
             "Last clear time",
             type=int,
             default=0,
+            unit="ns",
             userparam=True,
             settable=True,
         ),
         "update_period": Param(
             "Time interval for data updates (ms)",
             type=int,
+            unit="ms",
             userparam=True,
             settable=True,
+            volatile=True,
         ),
         "curstatus": Param(
             "Store the current device status",
@@ -109,6 +104,13 @@ class DataChannel(CounterChannelMixin, PassiveChannel):
         "pollinterval": Override(default=None, userparam=False, settable=False),
     }
 
+    _WILDCARD_KEYS = (
+        "{src}/{svc}/{param}",
+        "*/{svc}/{param}",
+        "{src}/*/{param}",
+        "*/*/{param}",
+    )
+
     def doPreinit(self, mode):
         self._data_structure = {}
         self._signal_data = np.array([])
@@ -119,6 +121,31 @@ class DataChannel(CounterChannelMixin, PassiveChannel):
         if mode == SIMULATION:
             return
         self._update_status(status.OK, "")
+
+    def _cfg(self, param, default=None, parse_json=True):
+        """Resolve param with wildcard precedence via NICOS cache."""
+        if not self._collector:
+            return default
+
+        try:
+            src, svc = self._source_prefix.split("/", 1)
+        except ValueError:
+            return default
+
+        for pattern in self._WILDCARD_KEYS:
+            key = "beamlime_cfg/" + pattern.format(src=src, svc=svc, param=param)
+            raw = self._collector._cache.get(self._collector, key)
+            if raw is None:
+                continue
+            if not parse_json:
+                return raw
+            try:
+                return json.loads(
+                    raw.decode() if isinstance(raw, (bytes, bytearray)) else raw
+                )
+            except Exception:
+                return raw
+        return default
 
     def _update_status(self, new_status, message):
         self._current_status = (new_status, message)
@@ -281,23 +308,59 @@ class DataChannel(CounterChannelMixin, PassiveChannel):
         self._update_status(status.OK, "")
 
     def doWriteNum_Bins(self, value):
-        self._send_command_to_collector("num_bins", value)
+        message = str(value).encode("utf-8")
+        self._send_command_to_collector("time_of_arrival_bins", message)
 
-    def doWriteSliding_Window(self, value):
-        self._send_command_to_collector("sliding_window", value)
+    def doReadNum_Bins(self):
+        val = self._cfg("time_of_arrival_bins", parse_json=False)
+        try:
+            return int(val)
+        except Exception:
+            return self._params["num_bins"]
 
     def doWriteToa_Range(self, value):
-        self._send_command_to_collector("toa_range", value)
+        enabled = False if value[0] == 0 and value[1] == 0 else True
+        data = {"enabled": enabled, "low": value[0], "high": value[1], "unit": "us"}
+        message = json.dumps(data).encode("utf-8")
+        self._send_command_to_collector("toa_range", message)
 
-    def doWriteRoi_Active(self, value):
-        self._send_command_to_collector("roi_active", value)
+    def doReadToa_Range(self, maxage=0):
+        cfg = self._cfg("toa_range")
+        if isinstance(cfg, dict):
+            return (cfg.get("low", 0), cfg.get("high", 100_000))
+        return self._params["toa_range"]
 
-    def doWriteRoi(self, value):
-        self._send_command_to_collector("roi", value)
+    def doWriteRoi_Rectangle(self, value):
+        if isinstance(value, dict):
+            if not all(key in value for key in ["x", "y"]):
+                raise ValueError("Invalid ROI rectangle value")
+            message = json.dumps(value).encode("utf-8")
+            self._send_command_to_collector("roi_rectangle", message)
+
+    def doReadRoi_Rectangle(self, maxage=0):
+        cfg = self._cfg("roi_rectangle")
+        if isinstance(cfg, dict):
+            return {
+                "x": {
+                    "low": cfg.get("x", {}).get("low", 0),
+                    "high": cfg.get("x", {}).get("high", 100),
+                },
+                "y": {
+                    "low": cfg.get("y", {}).get("low", 0),
+                    "high": cfg.get("y", {}).get("high", 100),
+                },
+            }
+        return self._params["roi_rectangle"]
 
     def doWriteUpdate_Period(self, value):
         message = json.dumps({"value": value, "unit": "ms"}).encode("utf-8")
         self._send_command_to_collector("update_every", message)
+
+    def doReadUpdate_Period(self, maxage=0):
+        cfg = self._cfg("update_every")
+        if isinstance(cfg, dict):
+            return cfg.get("value", self._params["update_period"])
+        return self._params["update_period"]
 
     def doShutdown(self):
         self._update_status(status.OK, "")
@@ -334,6 +397,13 @@ class BeamLimeCollector(Detector):
             userparam=False,
             settable=False,
         ),
+        "cfg_group_id": Param(
+            "Kafka consumer group for cfg topic",
+            type=str,
+            default="nicos-beamlime-cfg",
+            settable=True,
+            userparam=False,
+        ),
     }
 
     def doPreinit(self, mode):
@@ -342,10 +412,10 @@ class BeamLimeCollector(Detector):
         if mode == SIMULATION:
             return
 
-        if session.sessiontype != POLLER:
-            for channel in self._channels:
-                channel._collector = self
+        for channel in self._channels:
+            channel._collector = self
 
+        if session.sessiontype != POLLER:
             self._kafka_subscriber = KafkaSubscriber(self.brokers)
             self._kafka_subscriber.subscribe(
                 self.topic,
@@ -354,9 +424,33 @@ class BeamLimeCollector(Detector):
             )
 
             self._kafka_producer = KafkaProducer.create(self.brokers)
+            self.cfg_group_id = f"nicos-beamlime-cfg-{uuid4().hex}"
+
+            if self.command_topic:
+                self._cmd_consumer = KafkaConsumer.create(
+                    self.brokers,
+                    starting_offset="earliest",
+                    group_id=self.cfg_group_id,
+                )
+                self._cmd_consumer.subscribe([self.command_topic])
+                self._cfg_thread = createThread("cfg_tail", self._tail_cfg_topic)
 
         self._collectControllers()
         self._update_status(status.WARN, "Initializing BeamLimeCollector...")
+
+    def _tail_cfg_topic(self):
+        while True:
+            msg = self._cmd_consumer.poll(timeout_ms=100)
+            if not msg:
+                time.sleep(0.1)
+                continue
+
+            key = msg.key().decode() if msg.key() else ""
+            value = msg.value()
+
+            cache_key = f"beamlime_cfg/{key}"
+            self._cache.put(self._name, cache_key, value, time.time())
+            self._cmd_consumer._consumer.commit(msg, asynchronous=False)
 
     def _update_status(self, new_status, msg=""):
         self._cache.put(self, "status", (new_status, msg), time.time())
