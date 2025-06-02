@@ -19,7 +19,6 @@ devices = dict(
         brokers=configdata("config.KAFKA_BROKERS"),
         topic=["tbl_beamlime_data"],
         command_topic="tbl_beamlime_commands",
-        cfg_group_id="nicos-tbl-beamlime-cfg",
         others=["monitor1_current", "monitor1_cumulative"],
         schema="da00",
     ),

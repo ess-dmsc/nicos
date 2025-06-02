@@ -1,5 +1,6 @@
 import json
 import time
+from uuid import uuid4
 
 import numpy as np
 from streaming_data_types import deserialise_da00
@@ -374,7 +375,11 @@ class BeamLimeCollector(Detector):
             settable=False,
         ),
         "cfg_group_id": Param(
-            "Kafka consumer group for cfg topic", type=str, default="nicos-beamlime-cfg"
+            "Kafka consumer group for cfg topic",
+            type=str,
+            default="nicos-beamlime-cfg",
+            settable=True,
+            userparam=False,
         ),
     }
 
@@ -396,6 +401,7 @@ class BeamLimeCollector(Detector):
             )
 
             self._kafka_producer = KafkaProducer.create(self.brokers)
+            self.cfg_group_id = f"nicos-beamlime-cfg-{uuid4().hex}"
 
             if self.command_topic:
                 self._cmd_consumer = KafkaConsumer.create(
