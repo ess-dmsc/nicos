@@ -384,10 +384,10 @@ class BeamLimeCollector(Detector):
         if mode == SIMULATION:
             return
 
-        if session.sessiontype != POLLER:
-            for channel in self._channels:
-                channel._collector = self
+        for channel in self._channels:
+            channel._collector = self
 
+        if session.sessiontype != POLLER:
             self._kafka_subscriber = KafkaSubscriber(self.brokers)
             self._kafka_subscriber.subscribe(
                 self.topic,
