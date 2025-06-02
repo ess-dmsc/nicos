@@ -131,7 +131,7 @@ class DataChannel(CounterChannelMixin, PassiveChannel):
 
         for pattern in self._WILDCARD_KEYS:
             key = "beamlime_cfg/" + pattern.format(src=src, svc=svc, param=param)
-            raw = self._collector._cache.get(key)
+            raw = self._collector._cache.get(self._collector, key)
             if raw is None:
                 continue
             if not parse_json:
@@ -420,7 +420,7 @@ class BeamLimeCollector(Detector):
             value = msg.value()
 
             cache_key = f"beamlime_cfg/{key}"
-            self._cache.put(self, cache_key, value, time.time())
+            self._cache.put(self._name, cache_key, value, time.time())
             self._cmd_consumer._consumer.commit(msg, asynchronous=False)
 
     def _update_status(self, new_status, msg=""):
