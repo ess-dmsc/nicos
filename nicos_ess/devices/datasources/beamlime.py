@@ -50,6 +50,7 @@ class DataChannel(CounterChannelMixin, PassiveChannel):
             unit="us",
             userparam=True,
             settable=True,
+            volatile=True,
         ),
         "num_bins": Param(
             "Number of time-of-arrival bins",
@@ -65,6 +66,7 @@ class DataChannel(CounterChannelMixin, PassiveChannel):
             default={"x": {"low": 0, "high": 100}, "y": {"low": 0, "high": 100}},
             userparam=True,
             settable=True,
+            volatile=True,
         ),
         "last_clear": Param(
             "Last clear time",
