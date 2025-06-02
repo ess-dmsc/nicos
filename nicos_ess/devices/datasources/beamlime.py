@@ -322,12 +322,33 @@ class DataChannel(CounterChannelMixin, PassiveChannel):
         message = json.dumps(data).encode("utf-8")
         self._send_command_to_collector("toa_range", message)
 
+    def doReadToa_Range(self, maxage=0):
+        cfg = self._cfg("toa_range")
+        if isinstance(cfg, dict):
+            return (cfg.get("low", 0), cfg.get("high", 100_000))
+        return self._params["toa_range"]
+
     def doWriteRoi_Rectangle(self, value):
         if isinstance(value, dict):
             if not all(key in value for key in ["x", "y"]):
                 raise ValueError("Invalid ROI rectangle value")
             message = json.dumps(value).encode("utf-8")
             self._send_command_to_collector("roi_rectangle", message)
+
+    def doReadRoi_Rectangle(self, maxage=0):
+        cfg = self._cfg("roi_rectangle")
+        if isinstance(cfg, dict):
+            return {
+                "x": {
+                    "low": cfg.get("x", {}).get("low", 0),
+                    "high": cfg.get("x", {}).get("high", 100),
+                },
+                "y": {
+                    "low": cfg.get("y", {}).get("low", 0),
+                    "high": cfg.get("y", {}).get("high", 100),
+                },
+            }
+        return self._params["roi_rectangle"]
 
     def doWriteUpdate_Period(self, value):
         message = json.dumps({"value": value, "unit": "ms"}).encode("utf-8")
