@@ -50,3 +50,98 @@ class MappedController(MappedMoveable):
         if not mapped_value:
             return "In Between"
         return mapped_value
+
+class MultiTargetMapping(MappedMoveable):
+    """
+    Class for devices that map one key to a set (tuple) of values
+
+    Pratically same as `MappedController` class but maps to a tuple
+    instead of a single value.
+
+    TODO: refactor this class to somehow allow single values too, as
+    `MappedController` does. I tried implementing it by formatting 
+    the inputs from float, int to tuple but then the values on the left
+    corner of GUI appeared as 'In Between' for a new value added manually
+    by the user.
+    """
+
+    parameters = {
+        "mappingstatus": Param(
+            "Current status that regards the mapping",
+            type=tupleof(int, str),
+            settable=True,
+            default=(status.OK, "idle"),
+            no_sim_restore=True,
+        ),
+    }
+
+    parameter_overrides = {
+        "mapping": Override(mandatory=True, settable=True, userparam=False),
+    }
+
+    attached_devices = {
+        "controlled_devices": Attach("Moveable channels", Moveable, multiple=True),
+    }
+
+    def doInit(self, mode):
+        MappedMoveable.doInit(self, mode)
+
+    def doStart(self, value):
+        targets = self.mapping.get(value, None)
+        if targets is None:
+            message = (
+                f"Position '{value}' not in mapping "\
+                "and I will not move anything."
+            ) 
+            self.mappingstatus = (status.WARN, message)
+        else:
+            self.mappingstatus = (status.OK, 'idle')
+            for channel, target in zip(
+                    self._attached_controlled_devices, targets):
+                channel.doStart(target)
+
+    def doStatus(self, maxage=0):
+        devices_status = max(
+            (channel.doStatus(maxage) for
+                channel in self._attached_controlled_devices),            
+        )
+        return max(devices_status, self.mappingstatus)
+
+    def doRead(self, maxage=0):
+        return self._mapReadValue(self._readRaw(maxage))
+
+    def doWriteMapping(self, mapping):
+        self.valuetype = oneof(*sorted(mapping, key=num_sort))
+
+    def _readRaw(self, maxage=0):
+        return tuple(
+            channel.read(maxage)
+            for channel in self._attached_controlled_devices
+        )
+
+    def _mapReadValue(self, value):
+
+        def _abs_diff(tuple1, tuple2):
+            return tuple(abs(a - b) for a, b in zip(tuple1, tuple2))
+
+        def _ch_prec_tuple():
+            return tuple(channel.precision for channel in
+                        self._attached_controlled_devices)
+
+        def _less_than_elementwise(tuple1, tuple2):
+            return all(a < b for a, b in zip(tuple1, tuple2))
+
+        def _check_has_precision():
+            return all(isinstance(device, HasPrecision)
+                       for device in self._attached_controlled_devices)
+
+        if _check_has_precision():
+            for k, v in self.mapping.items():
+                if _less_than_elementwise(_abs_diff(v, value), _ch_prec_tuple()):
+                    return k
+
+        inverse_mapping = {v: k for k, v in self.mapping.items()}
+        mapped_value = inverse_mapping.get(value, None)
+        if not mapped_value:
+            return "In Between"
+        return mapped_value
