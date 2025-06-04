@@ -1,6 +1,6 @@
 description = "TBL adjustable collimator set"
 
-collimator_map={
+collimator_map = {
     "LNN": (144.14, 65, 80),
     "LN1": (144.14, 65, 35),
     "LN3": (144.14, 65, 0),
@@ -17,21 +17,21 @@ collimator_map={
     "3S10": (74.14, 76, 0),
     "3M1": (74.14, 36, 104.8),
     "3M3": (74.14, 36, 69.8),
-    "3M5": (74.14,36, 34.8),
+    "3M5": (74.14, 36, 34.8),
     "3M10": (74.14, 36, 0),
     "3L1": (74.14, 3, 104.8),
     "3L3": (74.14, 3, 69.8),
     "3L5": (74.14, 3, 34.8),
     "3L10": (74.14, 3, 0),
-    "10M5": (4.14, 103,  105.1),
-    "10M1": (4.14, 103,  70.1),
-    "10MN": (4.14, 103,  0),
+    "10M5": (4.14, 103, 105.1),
+    "10M1": (4.14, 103, 70.1),
+    "10MN": (4.14, 103, 0),
     "10L5": (4.14, 66, 105.1),
     "10L1": (4.14, 66, 70.1),
     "10LN": (4.14, 66, 0),
     "10N5": (4.14, 0, 105.1),
     "10N1": (4.14, 0, 70.1),
-    "10NN": (4.14, 0, 0)
+    "10NN": (4.14, 0, 0),
 }
 
 devices = dict(
@@ -41,11 +41,21 @@ devices = dict(
         motorpv="TBL-AttChg:MC-LinY-01:Mtr",
         monitor_deadband=0.01,
     ),
+    axis_attenuator_changer_temp=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description="Attenuator changer temperature",
+        readpv="TBL-AttChg:MC-LinY-01:Mtr-Temp",
+    ),
     axis_horizontal=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Collimator horizontal",
         motorpv="TBL-PinLin:MC-LinY-01:Mtr",
         monitor_deadband=0.01,
+    ),
+    axis_horizontal_temp=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description="Collimator horizontal temperature",
+        readpv="TBL-PinLin:MC-LinY-01:Mtr-Temp",
     ),
     axis_vertical=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
@@ -53,31 +63,37 @@ devices = dict(
         motorpv="TBL-PinLif:MC-LinZ-01:Mtr",
         monitor_deadband=0.01,
     ),
+    axis_vertical_temp=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description="Collimator vertical temperature",
+        readpv="TBL-PinLif:MC-LinZ-01:Mtr-Temp",
+    ),
     axis_pinhole_changer=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Pinhole changer",
         motorpv="TBL-PinChg:MC-LinY-01:Mtr",
         monitor_deadband=0.01,
     ),
+    axis_pinhole_changer_temp=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description="Pinhole changer temperature",
+        readpv="TBL-PinChg:MC-LinY-01:Mtr-Temp",
+    ),
     config_set=device(
         "nicos_ess.devices.mapped_controller.MultiTargetMapping",
         controlled_devices=[
             "axis_horizontal",
             "axis_attenuator_changer",
-            "axis_pinhole_changer"
+            "axis_pinhole_changer",
         ],
-        mapping=collimator_map
+        mapping=collimator_map,
     ),
     multi_target_composer=device(
         "nicos_ess.devices.mapped_controller.MultiTargetComposer",
         unit="",
         composition_output="config_set",
-        composition_inputs=[
-            "config_collimator",
-            "config_attenuator",
-            "config_pinhole"
-        ],
-        visibility=()
+        composition_inputs=["config_collimator", "config_attenuator", "config_pinhole"],
+        visibility=(),
     ),
     config_collimator=device(
         "nicos_ess.devices.mapped_controller.MultiTargetSelector",
@@ -87,7 +103,7 @@ devices = dict(
             "Large collimator": "L",
             "3 mm collimator": "3",
             "10 mm collimator": "10",
-        }
+        },
     ),
     config_attenuator=device(
         "nicos_ess.devices.mapped_controller.MultiTargetSelector",
@@ -98,7 +114,7 @@ devices = dict(
             "Small attenuator": "S",
             "Medium attenuator": "M",
             "Large attenuator": "L",
-        }
+        },
     ),
     config_pinhole=device(
         "nicos_ess.devices.mapped_controller.MultiTargetSelector",
@@ -110,6 +126,6 @@ devices = dict(
             "3 mm pinhole": "3",
             "5 mm pinhole": "5",
             "10 mm pinhole": "10",
-        }
+        },
     ),
 )

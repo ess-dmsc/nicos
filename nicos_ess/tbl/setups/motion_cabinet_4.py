@@ -1,6 +1,22 @@
 description = "Motion cabinet 4"
 
 devices = dict(
+    cabinet_4_status=device(
+        "nicos_ess.devices.epics.mbbi_direct.MBBIDirectStatus",
+        description="Cabinet 4 status",
+        pv_root="TBL-MCS4:MC-MCU-04:Cabinet",
+        number_of_bits=24,
+    ),
+    cabinet_4_pressure_1=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description="Cabinet 4 pressure 1",
+        readpv="TBL-MCS4:MC-MCU-04:Pressure1",
+    ),
+    cabinet_4_pressure_2=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description="Cabinet 4 pressure 2",
+        readpv="TBL-MCS4:MC-MCU-04:Pressure2",
+    ),
     mc_pne_415=device(
         "nicos_ess.devices.epics.pva.shutter.EpicsShutter",
         description="Motion control pneumatic axis #415",
@@ -114,5 +130,5 @@ devices = dict(
         description="Motion control electrical axis #414",
         motorpv="TBL-TBL:MC-Pos-414:Mtr",
         monitor_deadband=0.01,
-    )
+    ),
 )
