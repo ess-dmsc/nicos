@@ -5,7 +5,7 @@ devices = dict(
     cabinet_3_status=device(
         "nicos_ess.devices.epics.mbbi_direct.MBBIDirectStatus",
         description="Cabinet 3 status",
-        pv_root="BIFROST-Cabinet",
+        pv_root="BIFRO-MCS3:MC-MCU-03:Cabinet",
         number_of_bits=24,
     ),
     get_lost_tube=device(
