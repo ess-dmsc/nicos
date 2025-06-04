@@ -53,6 +53,11 @@ class MBBIDirectStatus(EpicsParameters, Readable):
         self._bit_map = {}
         self._alarm_state = {}
         self._record_fields = {}
+        self._record_fields["communication"] = RecordInfo(
+            "value",
+            "",
+            RecordType.STATUS,
+        )
         for i in range(self.number_of_bits):
             hex = f"{i:x}".upper()
             self._record_fields[f"bit_value_{i}"] = RecordInfo(
