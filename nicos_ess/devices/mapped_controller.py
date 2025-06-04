@@ -5,12 +5,25 @@ from nicos.core import (
     Override,
     InvalidValueError,
     oneof,
+    Param,
+    tupleof,
+    status,
 )
 from nicos.devices.abstract import MappedMoveable
 from nicos.utils import num_sort
 
 
 class MappedController(MappedMoveable):
+    parameters = {
+        "mappingstatus": Param(
+            "Current status that regards the mapping",
+            type=tupleof(int, str),
+            settable=True,
+            default=(status.OK, "idle"),
+            no_sim_restore=True,
+        ),
+    }
+
     parameter_overrides = {
         "mapping": Override(mandatory=True, settable=True, userparam=False),
     }
@@ -25,11 +38,20 @@ class MappedController(MappedMoveable):
     def doStart(self, value):
         target = self.mapping.get(value, None)
         if target is None:
-            raise InvalidValueError(self, f"Position '{value}' not in mapping")
-        self._attached_controlled_device.doStart(target)
+            message = (
+                f"Position '{value}' not in mapping "\
+                "and I will not move anything."
+            )
+            self.mappingstatus = (status.WARN, message)
+        else:
+            self.mappingstatus = (status.OK, 'idle')
+            self._attached_controlled_device.doStart(target)
 
     def doStatus(self, maxage=0):
-        return self._attached_controlled_device.doStatus(maxage)
+        return max(
+            self._attached_controlled_device.doStatus(maxage),
+            self.mappingstatus
+        )
 
     def doRead(self, maxage=0):
         return self._mapReadValue(self._readRaw(maxage))
