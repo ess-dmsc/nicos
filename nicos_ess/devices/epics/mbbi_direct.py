@@ -122,6 +122,7 @@ class MBBIDirectStatus(EpicsParameters, Readable):
 
         if is_connected:
             self.log.debug("%s connected!", name)
+            self._cache.put(self._name, "status", self._do_status(), time.time())
         else:
             self.log.warning("%s disconnected!", name)
             self._cache.put(
