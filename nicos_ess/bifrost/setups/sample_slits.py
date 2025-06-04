@@ -1,0 +1,49 @@
+description = "SmarAct piezo sample slits"
+
+
+devices = dict(
+    sample_slit_y_p=device(
+        "nicos_ess.devices.epics.pva.motor.EpicsMotor",
+        description="Sample slit Y+",
+        motorpv="BIFRO-SpSl1:MC-SlYp-01:PiezoMtr",
+        has_powerauto=False,
+        monitor_deadband=0.01,
+    ),
+    sample_slit_y_m=device(
+        "nicos_ess.devices.epics.pva.motor.EpicsMotor",
+        description="Sample slit Y-",
+        motorpv="BIFRO-SpSl1:MC-SlYm-01:PiezoMtr",
+        has_powerauto=False,
+        monitor_deadband=0.01,
+    ),
+    sample_slit_height=device(
+        "nicos.devices.generic.slit.VerticalGap",
+        description="Sample slit Height abstraction device",
+        opmode="2blades",
+        coordinates="equal",
+        left="sample_slit_y_m",
+        right="sample_slit_y_p",
+    ),
+    sample_slit_z_p=device(
+        "nicos_ess.devices.epics.pva.motor.EpicsMotor",
+        description="Sample slit Z+",
+        motorpv="BIFRO-SpSl1:MC-SlZp-01:PiezoMtr",
+        has_powerauto=False,
+        monitor_deadband=0.01,
+    ),
+    sample_slit_z_m=device(
+        "nicos_ess.devices.epics.pva.motor.EpicsMotor",
+        description="Sample slit Z-",
+        motorpv="BIFRO-SpSl1:MC-SlZm-01:PiezoMtr",
+        has_powerauto=False,
+        monitor_deadband=0.01,
+    ),
+    sample_slit_width=device(
+        "nicos.devices.generic.slit.HorizontalGap",
+        description="Sample slit Width abstraction device",
+        opmode="2blades",
+        coordinates="equal",
+        left="sample_slit_z_m",
+        right="sample_slit_z_p",
+    ),
+)
