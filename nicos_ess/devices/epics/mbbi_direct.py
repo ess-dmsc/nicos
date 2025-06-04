@@ -61,10 +61,10 @@ class MBBIDirectStatus(EpicsParameters, Readable):
         for i in range(self.number_of_bits):
             hex = f"{i:x}".upper()
             self._record_fields[f"bit_value_{i}"] = RecordInfo(
-                "", f".B{hex}", RecordType.STATUS
+                "", f".B{hex}", RecordType.VALUE
             )
             self._record_fields[f"bit_name_{i}"] = RecordInfo(
-                "", f"{self.bitname_prefix}{i}", RecordType.STATUS
+                "", f"{self.bitname_prefix}{i}", RecordType.VALUE
             )
             self._bit_map[f"bit_value_{i}"] = f"bit_name_{i}"
 
