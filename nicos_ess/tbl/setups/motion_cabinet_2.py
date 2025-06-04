@@ -12,6 +12,7 @@ devices = dict(
         description="Filter changer 1",
         motorpv="TBL-FilChg:MC-LinY-01:Mtr",
         monitor_deadband=0.01,
+        has_powerauto=False,
     ),
     filter_changer_axis_1_temp=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
@@ -28,6 +29,7 @@ devices = dict(
         description="Filter changer 2",
         motorpv="TBL-FilChg:MC-LinY-02:Mtr",
         monitor_deadband=0.01,
+        has_powerauto=False,
     ),
     filter_changer_axis_2_temp=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
@@ -44,6 +46,7 @@ devices = dict(
         description="Filter changer 3",
         motorpv="TBL-FilChg:MC-LinY-03:Mtr",
         monitor_deadband=0.01,
+        has_powerauto=False,
     ),
     filter_changer_axis_3_temp=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",

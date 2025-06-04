@@ -40,6 +40,7 @@ devices = dict(
         description="Attenuator changer",
         motorpv="TBL-AttChg:MC-LinY-01:Mtr",
         monitor_deadband=0.01,
+        has_powerauto=False,
     ),
     axis_attenuator_changer_temp=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
@@ -51,6 +52,7 @@ devices = dict(
         description="Collimator horizontal",
         motorpv="TBL-PinLin:MC-LinY-01:Mtr",
         monitor_deadband=0.01,
+        has_powerauto=False,
     ),
     axis_horizontal_temp=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
@@ -62,6 +64,7 @@ devices = dict(
         description="Collimator horizontal",
         motorpv="TBL-PinLif:MC-LinZ-01:Mtr",
         monitor_deadband=0.01,
+        has_powerauto=False,
     ),
     axis_vertical_temp=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
@@ -73,6 +76,7 @@ devices = dict(
         description="Pinhole changer",
         motorpv="TBL-PinChg:MC-LinY-01:Mtr",
         monitor_deadband=0.01,
+        has_powerauto=False,
     ),
     axis_pinhole_changer_temp=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
