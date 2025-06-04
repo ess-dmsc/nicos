@@ -27,8 +27,8 @@ devices = dict(
         description="Sample slit Height abstraction device",
         opmode="2blades",
         coordinates="equal",
-        left="sample_slit_y_m",
-        right="sample_slit_y_p",
+        bottom="sample_slit_y_m",
+        top="sample_slit_y_p",
     ),
     sample_slit_z_p=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
