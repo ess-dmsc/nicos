@@ -7,6 +7,9 @@ devices = dict(
         description="Sample slit Y+",
         motorpv="BIFRO-SpSl1:MC-SlYp-01:PiezoMtr",
         has_powerauto=False,
+        has_errormsg=False,
+        has_errorbit=False,
+        has_reseterror=False,
         monitor_deadband=0.01,
     ),
     sample_slit_y_m=device(
@@ -14,6 +17,9 @@ devices = dict(
         description="Sample slit Y-",
         motorpv="BIFRO-SpSl1:MC-SlYm-01:PiezoMtr",
         has_powerauto=False,
+        has_errormsg=False,
+        has_errorbit=False,
+        has_reseterror=False,
         monitor_deadband=0.01,
     ),
     sample_slit_height=device(
@@ -29,6 +35,9 @@ devices = dict(
         description="Sample slit Z+",
         motorpv="BIFRO-SpSl1:MC-SlZp-01:PiezoMtr",
         has_powerauto=False,
+        has_errormsg=False,
+        has_errorbit=False,
+        has_reseterror=False,
         monitor_deadband=0.01,
     ),
     sample_slit_z_m=device(
@@ -36,6 +45,9 @@ devices = dict(
         description="Sample slit Z-",
         motorpv="BIFRO-SpSl1:MC-SlZm-01:PiezoMtr",
         has_powerauto=False,
+        has_errormsg=False,
+        has_errorbit=False,
+        has_reseterror=False,
         monitor_deadband=0.01,
     ),
     sample_slit_width=device(
