@@ -37,6 +37,13 @@ class MBBIDirectStatus(EpicsParameters, Readable):
             settable=False,
             mandatory=True,
         ),
+        "bitname_prefix": Param(
+            "Prefix for bit names",
+            type=str,
+            settable=False,
+            mandatory=False,
+            default="BitNam",
+        ),
     }
     parameter_overrides = {
         "unit": Override(mandatory=False, settable=False, volatile=False),
@@ -52,7 +59,7 @@ class MBBIDirectStatus(EpicsParameters, Readable):
                 "", f".B{hex}", RecordType.STATUS
             )
             self._record_fields[f"bit_name_{i}"] = RecordInfo(
-                "", f"BitNam{i}", RecordType.STATUS
+                "", f"{self.bitname_prefix}{i}", RecordType.STATUS
             )
             self._bit_map[f"bit_value_{i}"] = f"bit_name_{i}"
 
