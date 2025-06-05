@@ -117,7 +117,7 @@ class MBBIDirectStatus(EpicsParameters, Readable):
     ):
         time_stamp = time.time()
         cache_key = param
-        self._cache.put(self._name, cache_key, (severity, message), time_stamp)
+        self._cache.put(self._name, cache_key, value, time_stamp)
         self._cache.put(self._name, "status", self._do_status(), time_stamp)
 
     def _connection_change_callback(self, name, param, is_connected, **kwargs):
