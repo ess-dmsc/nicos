@@ -1,6 +1,22 @@
 description = "Motion cabinet 4"
 
 devices = dict(
+    cabinet_4_status=device(
+        "nicos_ess.devices.epics.mbbi_direct.MBBIDirectStatus",
+        description="Cabinet 4 status",
+        pv_root="TBL-MCS4:MC-MCU-04:Cabinet",
+        number_of_bits=24,
+    ),
+    cabinet_4_pressure_1=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description="Cabinet 4 pressure 1",
+        readpv="TBL-MCS4:MC-MCU-04:Pressure1",
+    ),
+    cabinet_4_pressure_2=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description="Cabinet 4 pressure 2",
+        readpv="TBL-MCS4:MC-MCU-04:Pressure2",
+    ),
     mc_pne_415=device(
         "nicos_ess.devices.epics.pva.shutter.EpicsShutter",
         description="Motion control pneumatic axis #415",
@@ -36,83 +52,97 @@ devices = dict(
         description="Motion control electrical axis #401",
         motorpv="TBL-TBL:MC-Pos-401:Mtr",
         monitor_deadband=0.01,
+        has_powerauto=False,
     ),
     mc_mtr_402=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Motion control electrical axis #402",
         motorpv="TBL-TBL:MC-Pos-402:Mtr",
         monitor_deadband=0.01,
+        has_powerauto=False,
     ),
     mc_mtr_403=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Motion control electrical axis #403",
         motorpv="TBL-TBL:MC-Pos-403:Mtr",
         monitor_deadband=0.01,
+        has_powerauto=False,
     ),
     mc_mtr_404=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Motion control electrical axis #404",
         motorpv="TBL-TBL:MC-Pos-404:Mtr",
         monitor_deadband=0.01,
+        has_powerauto=False,
     ),
     mc_mtr_405=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Motion control electrical axis #405",
         motorpv="TBL-TBL:MC-Pos-405:Mtr",
         monitor_deadband=0.01,
+        has_powerauto=False,
     ),
     mc_mtr_406=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Motion control electrical axis #406",
         motorpv="TBL-TBL:MC-Pos-406:Mtr",
         monitor_deadband=0.01,
+        has_powerauto=False,
     ),
     mc_mtr_407=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Motion control electrical axis #407",
         motorpv="TBL-TBL:MC-Pos-407:Mtr",
         monitor_deadband=0.01,
+        has_powerauto=False,
     ),
     mc_mtr_408=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Motion control electrical axis #408",
         motorpv="TBL-TBL:MC-Pos-408:Mtr",
         monitor_deadband=0.01,
+        has_powerauto=False,
     ),
     mc_mtr_409=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Motion control electrical axis #409",
         motorpv="TBL-TBL:MC-Pos-409:Mtr",
         monitor_deadband=0.01,
+        has_powerauto=False,
     ),
     mc_mtr_410=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Motion control electrical axis #410",
         motorpv="TBL-TBL:MC-Pos-410:Mtr",
         monitor_deadband=0.01,
+        has_powerauto=False,
     ),
     mc_mtr_411=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Motion control electrical axis #411",
         motorpv="TBL-TBL:MC-Pos-411:Mtr",
         monitor_deadband=0.01,
+        has_powerauto=False,
     ),
     mc_mtr_412=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Motion control electrical axis #412",
         motorpv="TBL-TBL:MC-Pos-412:Mtr",
         monitor_deadband=0.01,
+        has_powerauto=False,
     ),
     mc_mtr_413=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Motion control electrical axis #413",
         motorpv="TBL-TBL:MC-Pos-413:Mtr",
         monitor_deadband=0.01,
+        has_powerauto=False,
     ),
     mc_mtr_414=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Motion control electrical axis #414",
         motorpv="TBL-TBL:MC-Pos-414:Mtr",
         monitor_deadband=0.01,
-    )
+        has_powerauto=False,
+    ),
 )
