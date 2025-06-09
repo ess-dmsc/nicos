@@ -9,15 +9,15 @@ from nicos.core import (
     InvalidValueError,
     status,
     multiStatus,
-    PositionError
+    PositionError,
 )
 from nicos.devices.abstract import (
     MappedMoveable,
 )
 from nicos.utils import num_sort
 
-class MappedController(MappedMoveable):
 
+class MappedController(MappedMoveable):
     parameter_overrides = {
         "mapping": Override(mandatory=True, settable=True, userparam=False),
     }
@@ -30,7 +30,6 @@ class MappedController(MappedMoveable):
         MappedMoveable.doInit(self, mode)
 
     def doIsAllowed(self, key):
-
         why = []
         target = self.mapping.get(key, None)
         if target is None:
@@ -74,6 +73,7 @@ class MappedController(MappedMoveable):
             return "In Between"
         return mapped_value
 
+
 class MultiTargetMapping(MappedMoveable):
     """
     Class for devices that map one key to a set (tuple) of values
@@ -82,7 +82,7 @@ class MultiTargetMapping(MappedMoveable):
     instead of a single value.
 
     TODO: refactor this class to somehow allow single values too, as
-    `MappedController` does. I tried implementing it by formatting 
+    `MappedController` does. I tried implementing it by formatting
     the inputs from float, int to tuple but then the values on the left
     corner of GUI appeared as 'In Between' for a new value added manually
     by the user.
@@ -97,10 +97,8 @@ class MultiTargetMapping(MappedMoveable):
     }
 
     def doStart(self, value):
-
         targets = self.mapping.get(value, None)
-        for channel, target in zip(
-                self._attached_controlled_devices, targets):
+        for channel, target in zip(self._attached_controlled_devices, targets):
             channel.doStart(target)
 
     def doStatus(self, maxage=0):
@@ -116,25 +114,26 @@ class MultiTargetMapping(MappedMoveable):
 
     def _readRaw(self, maxage=0):
         return tuple(
-            channel.read(maxage)
-            for channel in self._attached_controlled_devices
+            channel.read(maxage) for channel in self._attached_controlled_devices
         )
 
     def _mapReadValue(self, value):
-
         def _abs_diff(tuple1, tuple2):
             return tuple(abs(a - b) for a, b in zip(tuple1, tuple2))
 
         def _ch_prec_tuple():
-            return tuple(channel.precision for channel in
-                        self._attached_controlled_devices)
+            return tuple(
+                channel.precision for channel in self._attached_controlled_devices
+            )
 
         def _less_than_elementwise(tuple1, tuple2):
             return all(a < b for a, b in zip(tuple1, tuple2))
 
         def _check_has_precision():
-            return all(isinstance(device, HasPrecision)
-                       for device in self._attached_controlled_devices)
+            return all(
+                isinstance(device, HasPrecision)
+                for device in self._attached_controlled_devices
+            )
 
         if _check_has_precision():
             for k, v in self.mapping.items():
@@ -147,6 +146,7 @@ class MultiTargetMapping(MappedMoveable):
             return "In Between"
         return mapped_value
 
+
 class MultiTargetSelector(MappedMoveable):
     """
     Select amongst a dict of values to be used for the composer,
@@ -157,7 +157,7 @@ class MultiTargetSelector(MappedMoveable):
         "idx": Param(
             "Index that this selector will write on the final string",
             type=int,
-            mandatory=True
+            mandatory=True,
         ),
     }
 
@@ -187,32 +187,33 @@ class MultiTargetSelector(MappedMoveable):
 
     def _readRaw(self, maxage=0):
         mapped_val_str = self._attached_composer.read(maxage)
-        if mapped_val_str == 'In Between':
+        if mapped_val_str == "In Between":
             return mapped_val_str
         mapped_val_list = mapped_val_str.split(",")
         return mapped_val_list[self.idx]
-    
+
     def doRead(self, maxage=0):
         return self._mapReadValue(self._readRaw(maxage))
-    
+
     def _mapReadValue(self, target):
         try:
             return MappedMoveable._mapReadValue(self, target)
         except PositionError:
             return target
-    
+
     def get_idx(self):
         return self.idx
 
     def get_internal_val(self):
         return self._internal_val
 
+
 class MultiTargetComposer(Moveable, Readable):
     """
     Concatenates strings from MultiTargetSelector
     and sends it to MultiTargetMapping
     """
-    
+
     parameter_overrides = {
         "unit": Override(mandatory=False),
     }
@@ -228,13 +229,11 @@ class MultiTargetComposer(Moveable, Readable):
         self._selectors.append(selector_object)
 
     def doStart(self, value):
-        out_tgt = [None]*len(self._selectors)
+        out_tgt = [None] * len(self._selectors)
         for selector in self._selectors:
             val = selector.get_internal_val()
             if not val:
-                raise InvalidValueError(
-                    f"Perhaps you need to set {selector}?"
-                )
+                raise InvalidValueError(f"Perhaps you need to set {selector}?")
             idx = selector.get_idx()
             out_tgt[idx] = val
         out = self._attached_out
