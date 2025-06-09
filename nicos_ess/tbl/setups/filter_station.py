@@ -1,4 +1,4 @@
-description="Filter station axes, motor temperatures and mapped positions"
+description = "Filter station axes, motor temperatures and mapped positions"
 
 devices = dict(
     bank_1_axis=device(
@@ -64,8 +64,8 @@ devices = dict(
         description="Filter bank 3 discrete postions",
         controlled_device="bank_3_axis",
         mapping={
-            "Blank": 1, 
-            "Bismuth (Poly crystal) 50mm dia. 60 mm long": 57.07, 
+            "Blank": 1,
+            "Bismuth (Poly crystal) 50mm dia. 60 mm long": 57.07,
             "Beam Monitor (I-BM)": 221.07,
         },
     ),
