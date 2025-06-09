@@ -1,4 +1,4 @@
-collimator_map={
+collimator_map = {
     "L,N,N": (144.14, 65, 80),
     "L,N,1": (144.14, 65, 35),
     "L,N,3": (144.14, 65, 0),
@@ -15,21 +15,21 @@ collimator_map={
     "3,S,10": (74.14, 76, 0),
     "3,M,1": (74.14, 36, 104.8),
     "3,M,3": (74.14, 36, 69.8),
-    "3,M,5": (74.14,36, 34.8),
+    "3,M,5": (74.14, 36, 34.8),
     "3,M,10": (74.14, 36, 0),
     "3,L,1": (74.14, 3, 104.8),
     "3,L,3": (74.14, 3, 69.8),
     "3,L,5": (74.14, 3, 34.8),
     "3,L,10": (74.14, 3, 0),
-    "10,M,5": (4.14, 103,  105.1),
-    "10,M,1": (4.14, 103,  70.1),
-    "10,M,N": (4.14, 103,  0),
+    "10,M,5": (4.14, 103, 105.1),
+    "10,M,1": (4.14, 103, 70.1),
+    "10,M,N": (4.14, 103, 0),
     "10,L,5": (4.14, 66, 105.1),
     "10,L,1": (4.14, 66, 70.1),
     "10,L,N": (4.14, 66, 0),
     "10,N,5": (4.14, 0, 105.1),
     "10,N,1": (4.14, 0, 70.1),
-    "10,N,N": (4.14, 0, 0)
+    "10,N,N": (4.14, 0, 0),
 }
 
 devices = dict(
@@ -86,14 +86,14 @@ devices = dict(
         controlled_devices=[
             "axis_horizontal",
             "axis_attenuator_changer",
-            "axis_pinhole_changer"
+            "axis_pinhole_changer",
         ],
-        mapping=collimator_map
+        mapping=collimator_map,
     ),
     mapping_composer=device(
         "nicos_ess.devices.mapped_controller.MultiTargetComposer",
         out="config_set",
-        visibility=()
+        visibility=(),
     ),
     config_collimator=device(
         "nicos_ess.devices.mapped_controller.MultiTargetSelector",
@@ -103,7 +103,7 @@ devices = dict(
             "Large collimator": "L",
             "3 mm collimator": "3",
             "10 mm collimator": "10",
-        }
+        },
     ),
     config_attenuator=device(
         "nicos_ess.devices.mapped_controller.MultiTargetSelector",
@@ -114,7 +114,7 @@ devices = dict(
             "Small attenuator": "S",
             "Medium attenuator": "M",
             "Large attenuator": "L",
-        }
+        },
     ),
     config_pinhole=device(
         "nicos_ess.devices.mapped_controller.MultiTargetSelector",
@@ -126,6 +126,6 @@ devices = dict(
             "3 mm pinhole": "3",
             "5 mm pinhole": "5",
             "10 mm pinhole": "10",
-        }
+        },
     ),
 )
