@@ -3,27 +3,20 @@ from nicos.core import (
     Moveable,
     HasPrecision,
     Override,
-    InvalidValueError,
+    Readable,
     oneof,
     Param,
-    anytype,
-    tupleof,
+    InvalidValueError,
     status,
+    multiStatus,
+    PositionError
 )
-from nicos.devices.abstract import MappedMoveable
+from nicos.devices.abstract import (
+    MappedMoveable,
+)
 from nicos.utils import num_sort
 
-
 class MappedController(MappedMoveable):
-    parameters = {
-        "mappingstatus": Param(
-            "Current status that regards the mapping",
-            type=tupleof(int, str),
-            settable=True,
-            default=(status.OK, "idle"),
-            no_sim_restore=True,
-        ),
-    }
 
     parameter_overrides = {
         "mapping": Override(mandatory=True, settable=True, userparam=False),
@@ -36,23 +29,30 @@ class MappedController(MappedMoveable):
     def doInit(self, mode):
         MappedMoveable.doInit(self, mode)
 
+    def doIsAllowed(self, key):
+
+        why = []
+        target = self.mapping.get(key, None)
+        if target is None:
+            why.append(f"Position '{key}' not in mapping")
+        else:
+            dev = self._attached_controlled_device
+            ok, _why = dev.isAllowed(target)
+            if ok:
+                self.log.debug(f"{dev}: requested target {target} allowed.")
+            else:
+                why.append(f"{dev}: requested target {target} Not allowed; {_why}")
+
+        if why:
+            return False, why
+        return True, ""
+
     def doStart(self, value):
         target = self.mapping.get(value, None)
-        if target is None:
-            message = (
-                f"Position '{value}' not in mapping "\
-                "and I will not move anything."
-            )
-            self.mappingstatus = (status.WARN, message)
-        else:
-            self.mappingstatus = (status.OK, 'idle')
-            self._attached_controlled_device.doStart(target)
+        self._attached_controlled_device.start(target)
 
     def doStatus(self, maxage=0):
-        return max(
-            self._attached_controlled_device.doStatus(maxage),
-            self.mappingstatus
-        )
+        return self._attached_controlled_device.status(maxage)
 
     def doRead(self, maxage=0):
         return self._mapReadValue(self._readRaw(maxage))
@@ -88,16 +88,6 @@ class MultiTargetMapping(MappedMoveable):
     by the user.
     """
 
-    parameters = {
-        "mappingstatus": Param(
-            "Current status that regards the mapping",
-            type=tupleof(int, str),
-            settable=True,
-            default=(status.OK, "idle"),
-            no_sim_restore=True,
-        ),
-    }
-
     parameter_overrides = {
         "mapping": Override(mandatory=True, settable=True, userparam=False),
     }
@@ -106,29 +96,17 @@ class MultiTargetMapping(MappedMoveable):
         "controlled_devices": Attach("Moveable channels", Moveable, multiple=True),
     }
 
-    def doInit(self, mode):
-        MappedMoveable.doInit(self, mode)
-
     def doStart(self, value):
+
         targets = self.mapping.get(value, None)
-        if targets is None:
-            message = (
-                f"Position '{value}' not in mapping "\
-                "and I will not move anything."
-            ) 
-            self.mappingstatus = (status.WARN, message)
-        else:
-            self.mappingstatus = (status.OK, 'idle')
-            for channel, target in zip(
-                    self._attached_controlled_devices, targets):
-                channel.doStart(target)
+        for channel, target in zip(
+                self._attached_controlled_devices, targets):
+            channel.doStart(target)
 
     def doStatus(self, maxage=0):
-        devices_status = max(
-            (channel.doStatus(maxage) for
-                channel in self._attached_controlled_devices),            
-        )
-        return max(devices_status, self.mappingstatus)
+        if self._adevs:
+            return multiStatus(self._adevs, maxage)
+        return (status.UNKNOWN, "doStatus not implemented")
 
     def doRead(self, maxage=0):
         return self._mapReadValue(self._readRaw(maxage))
@@ -169,86 +147,101 @@ class MultiTargetMapping(MappedMoveable):
             return "In Between"
         return mapped_value
 
-class MultiTargetSelector(MappedController):
+class MultiTargetSelector(MappedMoveable):
     """
-    Selector amongst some keys and sends it to MultiTargetComposer
-    that can handle several different MultiTargetSelector as channels
+    Select amongst a dict of values to be used for the composer,
+    together with more selectors, to assembly a key
     """
 
     parameters = {
-        "mapped_selected_value": Param(
-            "Selected value from map (MultiTargetSelector class internal use only)",
-            unit="main",
-            fmtstr="main",
-            type=anytype,
-            default=None,
-            settable=True
-        )
-    }
-
-    def doInit(self, mode):
-        MappedController.doInit(self, mode)
-
-    def doStart(self, value):
-        self.mapped_selected_value = self.mapping.get(value, None)
-        self._attached_controlled_device.doStart(value)
-
-    def doRead(self, maxage=0):
-        return self.mapped_selected_value
-
-    def doStatus(self, maxage=0):
-        return self._attached_controlled_device.doStatus(maxage)
-
-class MultiTargetComposer(Moveable):
-    """
-    Concatenates strings from a list of MultiTargetSelector
-    and sends it to MultiTargetMapping
-    """
-    
-    parameters = {
-        "composerstatus": Param(
-            "Current status that regards the mapping composer",
-            type=tupleof(int, str),
-            settable=True,
-            default=(status.OK, "idle"),
-            no_sim_restore=True,
+        "idx": Param(
+            "Index that this selector will write on the final string",
+            type=int,
+            mandatory=True
         ),
     }
 
+    parameter_overrides = {
+        "unit": Override(mandatory=False),
+    }
+
     attached_devices = {
-        "composition_inputs": Attach("Selector channels", Moveable, multiple=True),
-        "composition_output": Attach("Output to MultiTargetMapping", Moveable),
+        "composer": Attach("Selector channels", Moveable, optional=False),
+    }
+
+    parameter_overrides = {
+        "mapping": Override(mandatory=True, settable=True, userparam=False),
     }
 
     def doInit(self, mode):
-        for input in self._attached_composition_inputs:
-            print(input)
+        self._attached_composer.register_selector(self)
+        self._internal_val = None
+        MappedMoveable.doInit(self, mode)
 
     def doStart(self, value):
-        full_key=""
-
-        for input in self._attached_composition_inputs:
-            individual_key=input.doRead()
-            if individual_key is None:
-                message = (
-                    f"Selector '{input}' is None, "\
-                    "perhaps you forgot setting them? "\
-                    "I will not move anything."
-                )
-                self.composerstatus = (status.WARN, message)
-                break
-            else:
-                self.composerstatus = (status.OK, 'idle')
-                full_key+=str(individual_key)
-
-        else:
-            self._attached_composition_output.doStart(full_key)
-
-    def doRead(self, maxage=0):
-        return self._attached_composition_output.doRead(maxage)
+        self._internal_val = self.mapping.get(value)
+        self._attached_composer.start(self.mapping.get(value))
 
     def doStatus(self, maxage=0):
-        return max(
-            self._attached_composition_output.doStatus(maxage),
-            self.composerstatus
-        )
+        return self._attached_composer.status(maxage)
+
+    def _readRaw(self, maxage=0):
+        mapped_val_str = self._attached_composer.read(maxage)
+        if mapped_val_str == 'In Between':
+            return mapped_val_str
+        mapped_val_list = mapped_val_str.split(",")
+        return mapped_val_list[self.idx]
+    
+    def doRead(self, maxage=0):
+        return self._mapReadValue(self._readRaw(maxage))
+    
+    def _mapReadValue(self, target):
+        try:
+            return MappedMoveable._mapReadValue(self, target)
+        except PositionError:
+            return target
+    
+    def get_idx(self):
+        return self.idx
+
+    def get_internal_val(self):
+        return self._internal_val
+
+class MultiTargetComposer(Moveable, Readable):
+    """
+    Concatenates strings from MultiTargetSelector
+    and sends it to MultiTargetMapping
+    """
+    
+    parameter_overrides = {
+        "unit": Override(mandatory=False),
+    }
+
+    attached_devices = {
+        "out": Attach("Selector channels", MappedMoveable),
+    }
+
+    def doInit(self, mode):
+        self._selectors = []
+
+    def register_selector(self, selector_object):
+        self._selectors.append(selector_object)
+
+    def doStart(self, value):
+        out_tgt = [None]*len(self._selectors)
+        for selector in self._selectors:
+            val = selector.get_internal_val()
+            if not val:
+                raise InvalidValueError(
+                    f"Perhaps you need to set {selector}?"
+                )
+            idx = selector.get_idx()
+            out_tgt[idx] = val
+        out = self._attached_out
+        out.start(",".join(out_tgt))
+
+    def doRead(self, maxage=0):
+        return self._attached_out.read(maxage)
+
+    def doStatus(self, maxage=0):
+        return self._attached_out.status(maxage)
