@@ -19,9 +19,9 @@ devices = dict(
         controlled_device="bank_1_axis",
         mapping={
             "Blank": 1,
-            "Bismuth (<0001> crystal) 40 mm dia. 50 mm long": 56.66,
-            "Cadmium (Polycrystal) 40mm dia. 50 mm long": 131.66,
-            "Sapphire (<0001> crystal) 40mm dia. 50 mm long": 206.66,
+            "Bi: ⌀40 x 50 mm": 56.66,
+            "Cd: ⌀40 x 50 mm": 131.66,
+            "Sapphire: ⌀40 x 50 mm": 206.66,
         },
     ),
     bank_2_axis=device(
@@ -42,9 +42,9 @@ devices = dict(
         controlled_device="bank_2_axis",
         mapping={
             "Blank": 1,
-            "Bismuth (Poly crystal) 50mm dia. 25 mm long": 58.91,
-            "Beryllium (Polycrystal) 50mm dia. 40 mm long": 133.91,
-            "Silicon (<111> crystal) 40mm dia. 50 mm long": 208.91,
+            "Bi: ⌀50 x 25 mm": 58.91,
+            "Be: ⌀50 x 40 mm": 133.91,
+            "Si: ⌀40 x 50 mm": 208.91,
         },
     ),
     bank_3_axis=device(
@@ -65,8 +65,8 @@ devices = dict(
         controlled_device="bank_3_axis",
         mapping={
             "Blank": 1,
-            "Bismuth (Poly crystal) 50mm dia. 60 mm long": 57.07,
-            "Beam Monitor (I-BM)": 221.07,
+            "Bi: ⌀50 x 60 mm": 57.07,
+            "Beam Monitor": 221.07,
         },
     ),
 )
