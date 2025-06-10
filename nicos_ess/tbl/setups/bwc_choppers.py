@@ -22,8 +22,8 @@ devices = dict(
     bwc1_chopper_speed=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
         description="The current speed.",
-        readpv="{}Spd_R".format(pv_root_1),
-        writepv="{}Spd_S".format(pv_root_1),
+        readpv="{}SpdNex_R".format(pv_root_1),
+        writepv="{}SpdNex_S".format(pv_root_1),
         abslimits=(0.0, 0.0),
         precision=0.1,
     ),
@@ -98,8 +98,8 @@ devices = dict(
     bwc2_chopper_speed=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
         description="The current speed.",
-        readpv="{}Spd_R".format(pv_root_2),
-        writepv="{}Spd_S".format(pv_root_2),
+        readpv="{}SpdNex_R".format(pv_root_2),
+        writepv="{}SpdNex_S".format(pv_root_2),
         abslimits=(0.0, 0.0),
         precision=0.1,
     ),
