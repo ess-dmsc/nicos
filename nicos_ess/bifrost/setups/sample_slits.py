@@ -1,0 +1,86 @@
+description = "SmarAct piezo sample slits"
+
+
+devices = dict(
+    sample_slit_y_p=device(
+        "nicos_ess.devices.epics.pva.motor.SmaractPiezoMotor",
+        description="Sample slit Y+",
+        motorpv="BIFRO-SpSl1:MC-SlYp-01:PzMtr",
+        has_powerauto=False,
+        has_errormsg=False,
+        has_errorbit=False,
+        has_reseterror=False,
+        monitor_deadband=0.01,
+    ),
+    sample_slit_y_p_pot=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description="Sample slit Y+ potentiometer readback",
+        readpv="BIFRO-SpSl1:MC-SlYp-01:PzMtr-PosReadback",
+    ),
+    sample_slit_y_m=device(
+        "nicos_ess.devices.epics.pva.motor.SmaractPiezoMotor",
+        description="Sample slit Y-",
+        motorpv="BIFRO-SpSl1:MC-SlYm-01:PzMtr",
+        has_powerauto=False,
+        has_errormsg=False,
+        has_errorbit=False,
+        has_reseterror=False,
+        monitor_deadband=0.01,
+    ),
+    sample_slit_y_m_pot=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description="Sample slit Y- potentiometer readback",
+        readpv="BIFRO-SpSl1:MC-SlYm-01:PzMtr-PosReadback",
+    ),
+    sample_slit_height=device(
+        "nicos.devices.generic.slit.VerticalGap",
+        description="Sample slit Height abstraction device",
+        opmode="2blades",
+        coordinates="equal",
+        bottom="sample_slit_y_m",
+        top="sample_slit_y_p",
+    ),
+    sample_slit_z_p=device(
+        "nicos_ess.devices.epics.pva.motor.SmaractPiezoMotor",
+        description="Sample slit Z+",
+        motorpv="BIFRO-SpSl1:MC-SlZp-01:PzMtr",
+        has_powerauto=False,
+        has_errormsg=False,
+        has_errorbit=False,
+        has_reseterror=False,
+        monitor_deadband=0.01,
+    ),
+    sample_slit_z_p_pot=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description="Sample slit Z+ potentiometer readback",
+        readpv="BIFRO-SpSl1:MC-SlZp-01:PzMtr-PosReadback",
+    ),
+    sample_slit_z_m=device(
+        "nicos_ess.devices.epics.pva.motor.SmaractPiezoMotor",
+        description="Sample slit Z-",
+        motorpv="BIFRO-SpSl1:MC-SlZm-01:PzMtr",
+        has_powerauto=False,
+        has_errormsg=False,
+        has_errorbit=False,
+        has_reseterror=False,
+        monitor_deadband=0.01,
+    ),
+    sample_slit_z_m_pot=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description="Sample slit Z- potentiometer readback",
+        readpv="BIFRO-SpSl1:MC-SlZm-01:PzMtr-PosReadback",
+    ),
+    sample_slit_width=device(
+        "nicos.devices.generic.slit.HorizontalGap",
+        description="Sample slit Width abstraction device",
+        opmode="2blades",
+        coordinates="equal",
+        left="sample_slit_z_m",
+        right="sample_slit_z_p",
+    ),
+    sample_slit_linear_position=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description="Sample slit linear position readback from potentiometer",
+        readpv="BIFRO-SpSl1:MC-LinX-01:PzMtr-PosReadback",
+    ),
+)
