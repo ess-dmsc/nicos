@@ -1,16 +1,16 @@
+import copy
 import threading
 import time
-import copy
 
 from nicos import session
-from nicos.core import Moveable, Override, Param, POLLER, oneof, pvname, status
+from nicos.core import POLLER, Moveable, Override, Param, oneof, pvname, status
 from nicos.core.errors import ConfigurationError
 from nicos.core.mixins import CanDisable, HasLimits, HasOffset
 from nicos.devices.abstract import CanReference, Motor
 from nicos_ess.devices.epics.pva.epics_devices import (
+    EpicsParameters,
     RecordInfo,
     RecordType,
-    EpicsParameters,
     create_wrapper,
     get_from_cache_or,
 )
@@ -119,47 +119,41 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         "precision": Override(mandatory=False, settable=False, volatile=True),
     }
 
-    _motor_status = (status.OK, "")
-
-    _record_fields = {
-        "value": RecordInfo("value", ".RBV", RecordType.BOTH),
-        "target": RecordInfo("target", ".VAL", RecordType.VALUE),
-        "stop": RecordInfo("", ".STOP", RecordType.VALUE),
-        "speed": RecordInfo("", ".VELO", RecordType.VALUE),
-        "offset": RecordInfo("", ".OFF", RecordType.VALUE),
-        "highlimit": RecordInfo("", ".HLM", RecordType.VALUE),
-        "lowlimit": RecordInfo("", ".LLM", RecordType.VALUE),
-        "enable": RecordInfo("", ".CNEN", RecordType.VALUE),
-        "set": RecordInfo("", ".SET", RecordType.VALUE),
-        "foff": RecordInfo("", ".FOFF", RecordType.VALUE),
-        "unit": RecordInfo("unit", ".EGU", RecordType.VALUE),
-        "homeforward": RecordInfo("", ".HOMF", RecordType.VALUE),
-        "homereverse": RecordInfo("", ".HOMR", RecordType.VALUE),
-        "position_deadband": RecordInfo("", ".RDBD", RecordType.VALUE),
-        "description": RecordInfo("", ".DESC", RecordType.VALUE),
-        "monitor_deadband": RecordInfo("", ".MDEL", RecordType.VALUE),
-        "maxspeed": RecordInfo("", ".VMAX", RecordType.VALUE),
-        "donemoving": RecordInfo("", ".DMOV", RecordType.STATUS),
-        "moving": RecordInfo("", ".MOVN", RecordType.STATUS),
-        "miss": RecordInfo("", ".MISS", RecordType.STATUS),
-        "alarm_status": RecordInfo("", ".STAT", RecordType.STATUS),
-        "alarm_severity": RecordInfo("", ".SEVR", RecordType.STATUS),
-        "softlimit": RecordInfo("", ".LVIO", RecordType.STATUS),
-        "lowlimitswitch": RecordInfo("", ".LLS", RecordType.STATUS),
-        "highlimitswitch": RecordInfo("", ".HLS", RecordType.STATUS),
-        "errorbit": RecordInfo("", "-Err", RecordType.STATUS),
-        "reseterror": RecordInfo("", "-ErrRst", RecordType.STATUS),
-        "powerauto": RecordInfo("", "-PwrAuto", RecordType.STATUS),
-        "errormsg": RecordInfo("", "-MsgTxt", RecordType.STATUS),
-    }
-
-    _epics_wrapper = None
-    _epics_subscriptions = []
-
     def doPreinit(self, mode):
         self._lock = threading.Lock()
         self._epics_subscriptions = []
-        self._record_fields = copy.deepcopy(self._record_fields)
+        self._motor_status = (status.OK, "")
+        self._record_fields = {
+            "value": RecordInfo("value", ".RBV", RecordType.BOTH),
+            "target": RecordInfo("target", ".VAL", RecordType.VALUE),
+            "stop": RecordInfo("", ".STOP", RecordType.VALUE),
+            "speed": RecordInfo("", ".VELO", RecordType.VALUE),
+            "offset": RecordInfo("", ".OFF", RecordType.VALUE),
+            "highlimit": RecordInfo("", ".HLM", RecordType.VALUE),
+            "lowlimit": RecordInfo("", ".LLM", RecordType.VALUE),
+            "enable": RecordInfo("", ".CNEN", RecordType.VALUE),
+            "set": RecordInfo("", ".SET", RecordType.VALUE),
+            "foff": RecordInfo("", ".FOFF", RecordType.VALUE),
+            "unit": RecordInfo("unit", ".EGU", RecordType.VALUE),
+            "homeforward": RecordInfo("", ".HOMF", RecordType.VALUE),
+            "homereverse": RecordInfo("", ".HOMR", RecordType.VALUE),
+            "position_deadband": RecordInfo("", ".RDBD", RecordType.VALUE),
+            "description": RecordInfo("", ".DESC", RecordType.VALUE),
+            "monitor_deadband": RecordInfo("", ".MDEL", RecordType.VALUE),
+            "maxspeed": RecordInfo("", ".VMAX", RecordType.VALUE),
+            "donemoving": RecordInfo("", ".DMOV", RecordType.STATUS),
+            "moving": RecordInfo("", ".MOVN", RecordType.STATUS),
+            "miss": RecordInfo("", ".MISS", RecordType.STATUS),
+            "alarm_status": RecordInfo("", ".STAT", RecordType.STATUS),
+            "alarm_severity": RecordInfo("", ".SEVR", RecordType.STATUS),
+            "softlimit": RecordInfo("", ".LVIO", RecordType.STATUS),
+            "lowlimitswitch": RecordInfo("", ".LLS", RecordType.STATUS),
+            "highlimitswitch": RecordInfo("", ".HLS", RecordType.STATUS),
+            "errorbit": RecordInfo("", "-Err", RecordType.STATUS),
+            "reseterror": RecordInfo("", "-ErrRst", RecordType.STATUS),
+            "powerauto": RecordInfo("", "-PwrAuto", RecordType.STATUS),
+            "errormsg": RecordInfo("", "-MsgTxt", RecordType.STATUS),
+        }
         self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
         # Check PV exists
         self._epics_wrapper.connect_pv(self.motorpv)
@@ -253,8 +247,7 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
 
         if speed != value:
             self.log.warning(
-                "Selected speed %s is outside the parameter "
-                "limits, using %s instead.",
+                "Selected speed %s is outside the parameter limits, using %s instead.",
                 value,
                 speed,
             )
@@ -484,3 +477,142 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
             return status.OK, ""
 
         return HasLimits._check_in_range(self, curval, userlimits)
+
+
+class SmaractPiezoMotor(EpicsMotor):
+    """
+    This device is a subclass of EpicsMotor that is used for the piezo motors
+    from Smaract.
+    """
+
+    parameters = {
+        "openloop": Param(
+            "Open-loop control mode of the piezo motor.",
+            type=bool,
+            settable=True,
+            volatile=True,
+            userparam=True,
+        ),
+        "stepfrequency": Param(
+            "Step frequency of the piezo motor.",
+            type=float,
+            settable=True,
+            volatile=True,
+            userparam=True,
+        ),
+        "stepsizeforward": Param(
+            "Step size forward of the piezo motor.",
+            type=float,
+            settable=True,
+            volatile=True,
+            userparam=True,
+        ),
+        "stepsizereverse": Param(
+            "Step size reverse of the piezo motor.",
+            type=float,
+            settable=True,
+            volatile=True,
+            userparam=True,
+        ),
+        "mclfrequency": Param(
+            "MCL frequency of the piezo motor.",
+            type=int,
+            settable=True,
+            volatile=True,
+            userparam=True,
+        ),
+    }
+
+    def doPreinit(self, mode):
+        self._lock = threading.Lock()
+        self._epics_subscriptions = []
+        self._motor_status = (status.OK, "")
+        self._record_fields = {
+            "value": RecordInfo("value", ".RBV", RecordType.BOTH),
+            "target": RecordInfo("target", ".VAL", RecordType.VALUE),
+            "stop": RecordInfo("", ".STOP", RecordType.VALUE),
+            "speed": RecordInfo("", ".VELO", RecordType.VALUE),
+            "offset": RecordInfo("", ".OFF", RecordType.VALUE),
+            "highlimit": RecordInfo("", ".HLM", RecordType.VALUE),
+            "lowlimit": RecordInfo("", ".LLM", RecordType.VALUE),
+            "enable": RecordInfo("", ".CNEN", RecordType.VALUE),
+            "set": RecordInfo("", ".SET", RecordType.VALUE),
+            "foff": RecordInfo("", ".FOFF", RecordType.VALUE),
+            "unit": RecordInfo("unit", ".EGU", RecordType.VALUE),
+            "homeforward": RecordInfo("", ".HOMF", RecordType.VALUE),
+            "homereverse": RecordInfo("", ".HOMR", RecordType.VALUE),
+            "position_deadband": RecordInfo("", ".RDBD", RecordType.VALUE),
+            "description": RecordInfo("", ".DESC", RecordType.VALUE),
+            "monitor_deadband": RecordInfo("", ".MDEL", RecordType.VALUE),
+            "maxspeed": RecordInfo("", ".VMAX", RecordType.VALUE),
+            "donemoving": RecordInfo("", ".DMOV", RecordType.STATUS),
+            "moving": RecordInfo("", ".MOVN", RecordType.STATUS),
+            "miss": RecordInfo("", ".MISS", RecordType.STATUS),
+            "alarm_status": RecordInfo("", ".STAT", RecordType.STATUS),
+            "alarm_severity": RecordInfo("", ".SEVR", RecordType.STATUS),
+            "softlimit": RecordInfo("", ".LVIO", RecordType.STATUS),
+            "lowlimitswitch": RecordInfo("", ".LLS", RecordType.STATUS),
+            "highlimitswitch": RecordInfo("", ".HLS", RecordType.STATUS),
+            "errorbit": RecordInfo("", "-Err", RecordType.STATUS),
+            "reseterror": RecordInfo("", "-ErrRst", RecordType.STATUS),
+            "powerauto": RecordInfo("", "-PwrAuto", RecordType.STATUS),
+            "errormsg": RecordInfo("", "-MsgTxt", RecordType.STATUS),
+            "openloop": RecordInfo("", "-openLoop", RecordType.VALUE),
+            "stepfrequency": RecordInfo("", "-STEPFREQ", RecordType.VALUE),
+            "stepsizeforward": RecordInfo("", "-STEPSIZEF", RecordType.VALUE),
+            "stepsizereverse": RecordInfo("", "-STEPSIZER", RecordType.VALUE),
+            "mclfrequency": RecordInfo("", "-setMclFreq", RecordType.VALUE),
+            "mclfrequency_rb": RecordInfo("", "-Freq-MCL-RB", RecordType.VALUE),
+        }
+        self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
+        # Check PV exists
+        self._epics_wrapper.connect_pv(self.motorpv)
+
+        if not self.has_errorbit:
+            del self._record_fields["errorbit"]
+        if not self.has_reseterror:
+            del self._record_fields["reseterror"]
+        if not self.has_powerauto:
+            del self._record_fields["powerauto"]
+        if not self.has_errormsg:
+            del self._record_fields["errormsg"]
+
+    def doReadOpenloop(self):
+        return self._get_cached_pv_or_ask("openloop")
+
+    def doWriteOpenloop(self, value):
+        if value not in (0, 1):
+            raise ValueError("Open-loop value must be 0 or 1.")
+        self._put_pv("openloop", value)
+
+    def doReadStepfrequency(self):
+        return self._get_cached_pv_or_ask("stepfrequency")
+
+    def doWriteStepfrequency(self, value):
+        if value < 0:
+            raise ValueError("Step frequency must be non-negative.")
+        self._put_pv("stepfrequency", value)
+
+    def doReadStepsizeforward(self):
+        return self._get_cached_pv_or_ask("stepsizeforward")
+
+    def doWriteStepsizeforward(self, value):
+        if value < 0:
+            raise ValueError("Step size forward must be non-negative.")
+        self._put_pv("stepsizeforward", value)
+
+    def doReadStepsizereverse(self):
+        return self._get_cached_pv_or_ask("stepsizereverse")
+
+    def doWriteStepsizereverse(self, value):
+        if value < 0:
+            raise ValueError("Step size reverse must be non-negative.")
+        self._put_pv("stepsizereverse", value)
+
+    def doReadMclfrequency(self):
+        return self._get_cached_pv_or_ask("mclfrequency_rb")
+
+    def doWriteMclfrequency(self, value):
+        if value < 0:
+            raise ValueError("MCL frequency must be non-negative.")
+        self._put_pv("mclfrequency", value)
