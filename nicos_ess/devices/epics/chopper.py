@@ -13,7 +13,6 @@ from nicos.core import (
     status,
 )
 from nicos.devices.abstract import MappedMoveable, Moveable
-
 from nicos_ess.devices.epics.pva.epics_devices import (
     EpicsParameters,
     RecordInfo,
@@ -145,6 +144,18 @@ class EssChopperController(MappedMoveable):
     parameters = {
         "slit_edges": Param(
             "Slit edges of the chopper", type=listof(listof(float)), default=[]
+        ),
+        "resolver_offset": Param(
+            "Offset of the resolver in degrees",
+            type=float,
+            default=0.0,
+            unit="degrees",
+        ),
+        "tdc_offset": Param(
+            "Offset of the TDC in degrees",
+            type=float,
+            default=0.0,
+            unit="degrees",
         ),
     }
 

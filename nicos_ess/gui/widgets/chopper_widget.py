@@ -1,18 +1,17 @@
 import json
-import sys
 import math
-
+import sys
 
 from nicos.guisupport.qt import (
-    QColor,
-    QWidget,
     QApplication,
+    QBrush,
+    QColor,
     QPainter,
     QPen,
-    QBrush,
-    Qt,
     QPointF,
     QRectF,
+    Qt,
+    QWidget,
     pyqtSignal,
 )
 
@@ -91,6 +90,8 @@ class ChopperWidget(QWidget):
         for i, chopper in enumerate(self.chopper_data):
             radius = chopper_radius
             slit_edges = chopper["slit_edges"]
+            resolver_offset = chopper.get("resolver_offset", 0.0)
+            tdc_offset = chopper.get("tdc_offset", 0.0)
             current_speed = chopper.get("speed", 0.0)
             parking_angle = chopper.get("parking_angle", None)
             center = positions[i]
@@ -98,13 +99,16 @@ class ChopperWidget(QWidget):
             is_selected = self._selected_chopper == chopper["chopper"]
             is_moving = current_speed is not None and abs(current_speed) > 0
 
+            angle = self.angles[i]
+            angle += tdc_offset if is_moving else resolver_offset
+
             self.draw_chopper(
                 painter,
                 center,
                 radius,
                 slit_edges,
                 slit_height,
-                self.angles[i],
+                angle,
                 is_selected,
                 is_moving,
             )
