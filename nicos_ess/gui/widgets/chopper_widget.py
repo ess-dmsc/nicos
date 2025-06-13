@@ -251,19 +251,36 @@ class ChopperWidget(QWidget):
             painter.setPen(QPen(Qt.GlobalColor.blue, 2))
         else:
             painter.setPen(QPen(Qt.GlobalColor.black, 2))
-        painter.drawEllipse(center, radius, radius)
+        painter.drawEllipse(center, radius - slit_height, radius - slit_height)
 
-        painter.setBrush(QBrush(Qt.GlobalColor.black))
+        painter.setBrush(QBrush(Qt.GlobalColor.darkGray))
         painter.setPen(QPen(Qt.GlobalColor.black, 0))
         for slit in slit_edges:
             start_angle = -slit[0] + rotation_angle
             end_angle = -slit[1] + rotation_angle
             self.draw_slit(painter, center, radius, start_angle, end_angle, slit_height)
 
+        painter.setBrush(QBrush(Qt.GlobalColor.black))
+        painter.setPen(QPen(Qt.GlobalColor.black, 0))
+        for slit in slit_edges:
+            start_angle = -slit[0] + rotation_angle
+            end_angle = -slit[1] + rotation_angle
+            self.draw_boron_coating(
+                painter, center, radius, start_angle, end_angle, slit_height
+            )
+
     def draw_slit(self, painter, center, radius, start_angle, end_angle, slit_height):
         reduced_radius = radius - slit_height
 
         num_points = 50
+
+        sweep = end_angle - start_angle
+        if sweep == 0:
+            return
+        if sweep > 0:
+            start_angle, end_angle = end_angle, start_angle + 360
+        else:
+            start_angle, end_angle = end_angle, start_angle - 360
 
         start_angle_rad = math.radians(start_angle)
         end_angle_rad = math.radians(end_angle)
@@ -283,6 +300,46 @@ class ChopperWidget(QWidget):
             angle = end_angle_rad - i * angle_step
             x = center.x() + reduced_radius * math.cos(angle)
             y = center.y() - reduced_radius * math.sin(angle)
+            inner_arc_points.append(QPointF(x, y))
+
+        all_points = outer_arc_points + inner_arc_points
+
+        painter.drawPolygon(*all_points)
+
+    def draw_boron_coating(
+        self, painter, center, radius, start_angle, end_angle, slit_height
+    ):
+        inner_radius = radius - slit_height + radius * 0.05
+        outer_radius = radius * 0.95
+
+        num_points = 50
+
+        sweep = end_angle - start_angle
+        if sweep == 0:
+            return
+        if sweep > 0:
+            start_angle, end_angle = end_angle, start_angle + 360
+        else:
+            start_angle, end_angle = end_angle, start_angle - 360
+
+        start_angle_rad = math.radians(start_angle)
+        end_angle_rad = math.radians(end_angle)
+
+        outer_arc_points = []
+        inner_arc_points = []
+
+        angle_step = (end_angle_rad - start_angle_rad) / num_points
+
+        for i in range(num_points + 1):
+            angle = start_angle_rad + i * angle_step
+            x = center.x() + outer_radius * math.cos(angle)
+            y = center.y() - outer_radius * math.sin(angle)
+            outer_arc_points.append(QPointF(x, y))
+
+        for i in range(num_points + 1):
+            angle = end_angle_rad - i * angle_step
+            x = center.x() + inner_radius * math.cos(angle)
+            y = center.y() - inner_radius * math.sin(angle)
             inner_arc_points.append(QPointF(x, y))
 
         all_points = outer_arc_points + inner_arc_points
