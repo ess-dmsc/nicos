@@ -34,6 +34,14 @@ devices = dict(
         writepv="{}ChopDly-S".format(pv_root_1),
         abslimits=(0.0, 0.0),
     ),
+    psc1_chopper_phase=device(
+        "nicos_ess.devices.transformer_device.ChopperPhase",
+        description="The phase of the chopper.",
+        phase_ns_dev="psc1_chopper_delay",
+        speed_dev="psc1_chopper_speed",
+        offset=0,
+        unit="degrees",
+    ),
     psc1_chopper_delay_errors=device(
         "nicos_ess.devices.epics.chopper_delay_error.ChopperDelayError",
         description="The current delay.",
@@ -55,6 +63,15 @@ devices = dict(
         readpv="{}Pos_R".format(pv_root_1),
         writepv="{}Park_S".format(pv_root_1),
         visibility=(),
+    ),
+    psc1_chopper_park_control=device(
+        "nicos_ess.devices.mapped_controller.MappedController",
+        description="The park control for the PSC1 chopper.",
+        controlled_device="psc1_chopper_park_angle",
+        mapping={
+            "Open": 195.0,
+            "Closed": 0.0,
+        },
     ),
     psc1_chopper_chic=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
@@ -110,6 +127,14 @@ devices = dict(
         writepv="{}ChopDly-S".format(pv_root_2),
         abslimits=(0.0, 0.0),
     ),
+    psc2_chopper_phase=device(
+        "nicos_ess.devices.transformer_device.ChopperPhase",
+        description="The phase of the chopper.",
+        phase_ns_dev="psc2_chopper_delay",
+        speed_dev="psc2_chopper_speed",
+        offset=0,
+        unit="degrees",
+    ),
     psc2_chopper_delay_errors=device(
         "nicos_ess.devices.epics.chopper_delay_error.ChopperDelayError",
         description="The current delay.",
@@ -131,6 +156,15 @@ devices = dict(
         readpv="{}Pos_R".format(pv_root_2),
         writepv="{}Park_S".format(pv_root_2),
         visibility=(),
+    ),
+    psc2_chopper_park_control=device(
+        "nicos_ess.devices.mapped_controller.MappedController",
+        description="The park control for the PSC2 chopper.",
+        controlled_device="psc2_chopper_park_angle",
+        mapping={
+            "Open": 195.0,
+            "Closed": 0.0,
+        },
     ),
     psc2_chopper_chic=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
