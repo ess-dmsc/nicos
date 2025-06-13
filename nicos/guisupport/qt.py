@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-2025 by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -26,12 +26,11 @@
 # pylint: disable=wildcard-import, unused-import, unused-wildcard-import
 
 import os
-import platform
 import sys
 
 NICOS_QT = os.environ.get("NICOS_QT")
 
-if NICOS_QT == "6" or (platform.processor() == "arm" and platform.system() == "Darwin" and NICOS_QT is None):
+if NICOS_QT == "6":
     # pylint: disable=import-error
 
     from PyQt6 import uic
@@ -45,11 +44,11 @@ if NICOS_QT == "6" or (platform.processor() == "arm" and platform.system() == "D
     import nicos.guisupport.gui_rc_qt6
 
     try:
-        from PyQt6 import QtWebEngineWidgets, QtWebEngineCore
-        from PyQt6.QtWebEngineWidgets import QWebEngineView as QWebView
-        from PyQt6.QtWebEngineCore import QWebEnginePage as QWebPage
+        from PyQt6 import QtWebEngineCore, QtWebEngineWidgets
+        from PyQt6.QtWebEngineCore import QWebEnginePage
+        from PyQt6.QtWebEngineWidgets import QWebEngineView
     except (ImportError, RuntimeError):
-        QWebView = QWebPage = None
+        QWebEnginePage = QWebEngineView = None
 
     try:
         from PyQt6 import sip
@@ -87,12 +86,6 @@ else:
 
     import nicos.guisupport.gui_rc_qt5
 
-    # compat for Qt < 5.11
-    if not hasattr(QFontMetrics, "horizontalAdvance"):
-        QFontMetrics.horizontalAdvance = lambda self, *args, **kwargs: self.width(
-            *args, **kwargs
-        )
-
     try:
         from PyQt5 import sip
     except ImportError:
@@ -100,17 +93,9 @@ else:
 
     try:
         from PyQt5 import QtWebEngineWidgets
+        from PyQt5.QtWebEngineWidgets import QWebEnginePage, QWebEngineView
     except (ImportError, RuntimeError):
-        try:
-            from PyQt5 import QtWebKitWidgets
-        except (ImportError, RuntimeError):
-            QWebView = QWebPage = None
-        else:
-            QWebView = QtWebKitWidgets.QWebView
-            QWebPage = QtWebKitWidgets.QWebPage
-    else:
-        QWebView = QtWebEngineWidgets.QWebEngineView
-        QWebPage = QtWebEngineWidgets.QWebEnginePage
+        QWebEnginePage = QWebEngineView = None
 
     try:
         from PyQt5 import QtDBus

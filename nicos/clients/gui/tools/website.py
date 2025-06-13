@@ -1,6 +1,6 @@
 # *****************************************************************************
 # NICOS, the Networked Instrument Control System of the MLZ
-# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+# Copyright (c) 2009-2025 by the NICOS contributors (see AUTHORS)
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License as published by the Free Software
@@ -24,9 +24,9 @@
 """Browser GUI tool."""
 
 from nicos.clients.gui.utils import loadUi
-from nicos.guisupport.qt import QDialog, QUrl, QWebView
+from nicos.guisupport.qt import QDialog, QUrl, QWebEngineView
 
-if QWebView is None:
+if QWebEngineView is None:
     raise ImportError("Qt webview component is not available")
 
 
@@ -41,7 +41,7 @@ class WebsiteTool(QDialog):
     def __init__(self, parent, client, **settings):
         QDialog.__init__(self, parent)
         loadUi(self, "tools/website.ui")
-        self.webView = QWebView(self)
+        self.webView = QWebEngineView(self)
         self.layout().addWidget(self.webView)
         self.backBtn.clicked.connect(self.webView.back)
         self.fwdBtn.clicked.connect(self.webView.forward)
