@@ -557,7 +557,8 @@ class SmaractPiezoMotor(EpicsMotor):
             "reseterror": RecordInfo("", "-ErrRst", RecordType.STATUS),
             "powerauto": RecordInfo("", "-PwrAuto", RecordType.STATUS),
             "errormsg": RecordInfo("", "-MsgTxt", RecordType.STATUS),
-            "openloop": RecordInfo("", "-openLoop", RecordType.VALUE),
+            "openloop": RecordInfo("", ".URIP", RecordType.VALUE),
+            "openloop_rb": RecordInfo("", "-openLoop", RecordType.VALUE),
             "stepfrequency": RecordInfo("", "-STEPFREQ", RecordType.VALUE),
             "stepsizeforward": RecordInfo("", "-STEPSIZEF", RecordType.VALUE),
             "stepsizereverse": RecordInfo("", "-STEPSIZER", RecordType.VALUE),
@@ -578,12 +579,10 @@ class SmaractPiezoMotor(EpicsMotor):
             del self._record_fields["errormsg"]
 
     def doReadOpenloop(self):
-        return self._get_cached_pv_or_ask("openloop")
+        return bool(self._get_cached_pv_or_ask("openloop_rb"))
 
     def doWriteOpenloop(self, value):
-        if value not in (0, 1):
-            raise ValueError("Open-loop value must be 0 or 1.")
-        self._put_pv("openloop", value)
+        self._put_pv("openloop", int(value))
 
     def doReadStepfrequency(self):
         return self._get_cached_pv_or_ask("stepfrequency")
