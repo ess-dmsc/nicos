@@ -65,13 +65,10 @@ devices = dict(
         visibility=(),
     ),
     psc1_chopper_park_control=device(
-        "nicos_ess.devices.mapped_controller.MappedController",
+        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="The park control for the PSC1 chopper.",
-        controlled_device="psc1_chopper_park_angle",
-        mapping={
-            "Open": 195.0,
-            "Closed": 0.0,
-        },
+        readpv="{}ParkPos_S".format(pv_root_1),
+        writepv="{}ParkPos_S".format(pv_root_1),
     ),
     psc1_chopper_chic=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
@@ -158,13 +155,10 @@ devices = dict(
         visibility=(),
     ),
     psc2_chopper_park_control=device(
-        "nicos_ess.devices.mapped_controller.MappedController",
+        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="The park control for the PSC2 chopper.",
-        controlled_device="psc2_chopper_park_angle",
-        mapping={
-            "Open": 195.0,
-            "Closed": 0.0,
-        },
+        readpv="{}ParkPos_S".format(pv_root_2),
+        writepv="{}ParkPos_S".format(pv_root_2),
     ),
     psc2_chopper_chic=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
