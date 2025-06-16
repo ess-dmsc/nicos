@@ -1,6 +1,6 @@
 description = "Collimation system for LoKI"
 
-pv_root = "TBD"
+pv_root = "LOKI"
 selector_1_pv_root = f"{pv_root}-ColCh1:"
 selector_2_pv_root = f"{pv_root}-ColCh2:"
 slit_set_1_pv_root = f"{pv_root}-ColSl1:"
@@ -54,30 +54,30 @@ devices = dict(
         motorpv=f"{slit_set_1_pv_root}MC-SlZm-01:Mtr",
         monitor_deadband=0.01,
     ),
-    slit_set_1_horizontal_center=device(
-        "nicos_ess.devices.epics.pva.motor.EpicsMotor",
-        description="Collimation slit set 1 horizontal center",
-        motorpv=f"{slit_set_1_pv_root}MC-Yc-01:Mtr",
-        monitor_deadband=0.01,
-    ),
-    slit_set_1_horizontal_gap=device(
-        "nicos_ess.devices.epics.pva.motor.EpicsMotor",
-        description="Collimation slit set 1 horizontal gap",
-        motorpv=f"{slit_set_1_pv_root}MC-Yg-01:Mtr",
-        monitor_deadband=0.01,
-    ),
-    slit_set_1_vertical_center=device(
-        "nicos_ess.devices.epics.pva.motor.EpicsMotor",
-        description="Collimation slit set 1 vertical center",
-        motorpv=f"{slit_set_1_pv_root}MC-Zc-01:Mtr",
-        monitor_deadband=0.01,
-    ),
-    slit_set_1_vertical_gap=device(
-        "nicos_ess.devices.epics.pva.motor.EpicsMotor",
-        description="Collimation slit set 1 vertical gap",
-        motorpv=f"{slit_set_1_pv_root}MC-Zg-01:Mtr",
-        monitor_deadband=0.01,
-    ),
+    # slit_set_1_horizontal_center=device(
+    #     "nicos_ess.devices.epics.pva.motor.EpicsMotor",
+    #     description="Collimation slit set 1 horizontal center",
+    #     motorpv=f"{slit_set_1_pv_root}MC-Yc-01:Mtr",
+    #     monitor_deadband=0.01,
+    # ),
+    # slit_set_1_horizontal_gap=device(
+    #     "nicos_ess.devices.epics.pva.motor.EpicsMotor",
+    #     description="Collimation slit set 1 horizontal gap",
+    #     motorpv=f"{slit_set_1_pv_root}MC-Yg-01:Mtr",
+    #     monitor_deadband=0.01,
+    # ),
+    # slit_set_1_vertical_center=device(
+    #     "nicos_ess.devices.epics.pva.motor.EpicsMotor",
+    #     description="Collimation slit set 1 vertical center",
+    #     motorpv=f"{slit_set_1_pv_root}MC-Zc-01:Mtr",
+    #     monitor_deadband=0.01,
+    # ),
+    # slit_set_1_vertical_gap=device(
+    #     "nicos_ess.devices.epics.pva.motor.EpicsMotor",
+    #     description="Collimation slit set 1 vertical gap",
+    #     motorpv=f"{slit_set_1_pv_root}MC-Zg-01:Mtr",
+    #     monitor_deadband=0.01,
+    # ),
     slit_set_2_left_blade=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Collimation slit set 2 left blade - electrical axis 5 in motion cabinet 2",
@@ -102,31 +102,31 @@ devices = dict(
         motorpv=f"{slit_set_2_pv_root}MC-SlZm-01:Mtr",
         monitor_deadband=0.01,
     ),
-    slit_set_2_horizontal_center=device(
-        # readable?
-        "nicos_ess.devices.epics.pva.motor.EpicsMotor",
-        description="Collimation slit set 2 horizontal center",
-        motorpv=f"{slit_set_2_pv_root}MC-Yc-01:Mtr",
-        monitor_deadband=0.01,
-    ),
-    slit_set_2_horizontal_gap=device(
-        "nicos_ess.devices.epics.pva.motor.EpicsMotor",
-        description="Collimation slit set 2 horizontal gap",
-        motorpv=f"{slit_set_2_pv_root}MC-Yg-01:Mtr",
-        monitor_deadband=0.01,
-    ),
-    slit_set_2_vertical_center=device(
-        "nicos_ess.devices.epics.pva.motor.EpicsMotor",
-        description="Collimation slit set 2 vertical center",
-        motorpv=f"{slit_set_2_pv_root}MC-Zc-01:Mtr",
-        monitor_deadband=0.01,
-    ),
-    slit_set_2_vertical_gap=device(
-        "nicos_ess.devices.epics.pva.motor.EpicsMotor",
-        description="Collimation slit set 2 vertical gap",
-        motorpv=f"{slit_set_2_pv_root}MC-Zg-01:Mtr",
-        monitor_deadband=0.01,
-    ),
+    # slit_set_2_horizontal_center=device(
+    #     # readable?
+    #     "nicos_ess.devices.epics.pva.motor.EpicsMotor",
+    #     description="Collimation slit set 2 horizontal center",
+    #     motorpv=f"{slit_set_2_pv_root}MC-Yc-01:Mtr",
+    #     monitor_deadband=0.01,
+    # ),
+    # slit_set_2_horizontal_gap=device(
+    #     "nicos_ess.devices.epics.pva.motor.EpicsMotor",
+    #     description="Collimation slit set 2 horizontal gap",
+    #     motorpv=f"{slit_set_2_pv_root}MC-Yg-01:Mtr",
+    #     monitor_deadband=0.01,
+    # ),
+    # slit_set_2_vertical_center=device(
+    #     "nicos_ess.devices.epics.pva.motor.EpicsMotor",
+    #     description="Collimation slit set 2 vertical center",
+    #     motorpv=f"{slit_set_2_pv_root}MC-Zc-01:Mtr",
+    #     monitor_deadband=0.01,
+    # ),
+    # slit_set_2_vertical_gap=device(
+    #     "nicos_ess.devices.epics.pva.motor.EpicsMotor",
+    #     description="Collimation slit set 2 vertical gap",
+    #     motorpv=f"{slit_set_2_pv_root}MC-Zg-01:Mtr",
+    #     monitor_deadband=0.01,
+    # ),
     slit_set_3_left_blade=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Collimation slit set 3 left blade - electrical axis 9 in motion cabinet 2",
@@ -151,28 +151,28 @@ devices = dict(
         motorpv=f"{slit_set_3_pv_root}MC-SlZm-01:Mtr",
         monitor_deadband=0.01,
     ),
-    slit_set_3_horizontal_center=device(
-        "nicos_ess.devices.epics.pva.motor.EpicsMotor",
-        description="Collimation slit set 3 horizontal center",
-        motorpv=f"{slit_set_3_pv_root}MC-Yc-01:Mtr",
-        monitor_deadband=0.01,
-    ),
-    slit_set_3_horizontal_gap=device(
-        "nicos_ess.devices.epics.pva.motor.EpicsMotor",
-        description="Collimation slit set 3 horizontal gap",
-        motorpv=f"{slit_set_3_pv_root}MC-Yg-01:Mtr",
-        monitor_deadband=0.01,
-    ),
-    slit_set_3_vertical_center=device(
-        "nicos_ess.devices.epics.pva.motor.EpicsMotor",
-        description="Collimation slit set 3 vertical center",
-        motorpv=f"{slit_set_3_pv_root}MC-Zc-01:Mtr",
-        monitor_deadband=0.01,
-    ),
-    slit_set_3_vertical_gap=device(
-        "nicos_ess.devices.epics.pva.motor.EpicsMotor",
-        description="Collimation slit set 3 vertical gap",
-        motorpv=f"{slit_set_3_pv_root}MC-Zg-01:Mtr",
-        monitor_deadband=0.01,
-    ),
+    # slit_set_3_horizontal_center=device(
+    #     "nicos_ess.devices.epics.pva.motor.EpicsMotor",
+    #     description="Collimation slit set 3 horizontal center",
+    #     motorpv=f"{slit_set_3_pv_root}MC-Yc-01:Mtr",
+    #     monitor_deadband=0.01,
+    # ),
+    # slit_set_3_horizontal_gap=device(
+    #     "nicos_ess.devices.epics.pva.motor.EpicsMotor",
+    #     description="Collimation slit set 3 horizontal gap",
+    #     motorpv=f"{slit_set_3_pv_root}MC-Yg-01:Mtr",
+    #     monitor_deadband=0.01,
+    # ),
+    # slit_set_3_vertical_center=device(
+    #     "nicos_ess.devices.epics.pva.motor.EpicsMotor",
+    #     description="Collimation slit set 3 vertical center",
+    #     motorpv=f"{slit_set_3_pv_root}MC-Zc-01:Mtr",
+    #     monitor_deadband=0.01,
+    # ),
+    # slit_set_3_vertical_gap=device(
+    #     "nicos_ess.devices.epics.pva.motor.EpicsMotor",
+    #     description="Collimation slit set 3 vertical gap",
+    #     motorpv=f"{slit_set_3_pv_root}MC-Zg-01:Mtr",
+    #     monitor_deadband=0.01,
+    # ),
 )
