@@ -1,10 +1,10 @@
 from nicos.core import (
-    Param,
-    nonemptylistof,
-    anytype,
     Override,
-    oneof,
+    Param,
     PositionError,
+    anytype,
+    nonemptylistof,
+    oneof,
     status,
 )
 from nicos.devices.epics.pva import EpicsMoveable
@@ -57,7 +57,7 @@ class ManualSwitch(EpicsMoveable):
     def doRead(self, maxage=0):
         if self.target in self.states:
             return self.target
-        raise PositionError(self, "device is in an unknown state")
+        return "Unknown target %r not in %r" % (self.target, self.states)
 
     def doStatus(self, maxage=0):
         return status.OK, ""
