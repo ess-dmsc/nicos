@@ -46,20 +46,20 @@ devices = dict(
         "nicos_ess.devices.epics.pva.EpicsReadable",
         description="Lakeshore temperature channel C",
         readpv=f"{pv_root}TempC-r",
+        nexus_config=[
+            {
+                "group_name": "pumping_cart_205",
+                "nx_class": "NXcollection",
+                "units": "K",
+                "suffix": "readback",
+                "source_name": f"{pv_root}TempC-r",
+                "schema": "f144",
+                "topic": "bifrost_sample_env",
+                "protocol": "pva",
+                "periodic": 1,
+            },
+        ],
     ),
-    nexus_config=[
-        {
-            "group_name": "pumping_cart_205",
-            "nx_class": "NXcollection",
-            "units": "K",
-            "suffix": "readback",
-            "source_name": f"{pv_root}TempC-r",
-            "schema": "f144",
-            "topic": "bifrost_sample_env",
-            "protocol": "pva",
-            "periodic": 1,
-        },
-    ],
     lakeshore_temp_d=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
         description="Lakeshore temperature channel D",
