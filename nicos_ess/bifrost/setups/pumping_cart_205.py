@@ -6,7 +6,7 @@ devices = dict(
     # ------------------------------------------------------------------
     # Lakeshore temperatures
     # ------------------------------------------------------------------
-    regulator_temp=device(
+    pc205_regulator_temp=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
         description="Lakeshore temperature channel A (regulator)",
         readpv=f"{pv_root}TempA-r",
@@ -24,7 +24,7 @@ devices = dict(
             },
         ],
     ),
-    sample_temp=device(
+    pc205_sample_temp=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
         description="Lakeshore temperature channel B (sample)",
         readpv=f"{pv_root}TempB-r",
@@ -42,7 +42,7 @@ devices = dict(
             },
         ],
     ),
-    lakeshore_temp_c=device(
+    pc205_lakeshore_temp_c=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
         description="Lakeshore temperature channel C",
         readpv=f"{pv_root}TempC-r",
@@ -60,7 +60,7 @@ devices = dict(
             },
         ],
     ),
-    lakeshore_temp_d=device(
+    pc205_lakeshore_temp_d=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
         description="Lakeshore temperature channel D",
         readpv=f"{pv_root}TempD-r",
@@ -81,12 +81,10 @@ devices = dict(
     # ------------------------------------------------------------------
     # Vacuum transducers on the pumping cart
     # ------------------------------------------------------------------
-    pressure_sensor_1=device(
+    pc205_pressure_sensor_1=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
         description="Vacuum transducer 1 (pumping cart 205)",
         readpv=f"{pv_root}P1-r",
-        abslimits=(0, 1100),
-        userlimits=(0, 1100),
         nexus_config=[
             {
                 "group_name": "pumping_cart_205",
@@ -101,12 +99,10 @@ devices = dict(
             },
         ],
     ),
-    pressure_sensor_2=device(
+    pc205_pressure_sensor_2=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
         description="Vacuum transducer 2 (pumping cart 205)",
         readpv=f"{pv_root}P2-r",
-        abslimits=(0, 1100),
-        userlimits=(0, 1100),
         nexus_config=[
             {
                 "group_name": "pumping_cart_205",
@@ -124,14 +120,12 @@ devices = dict(
     # ------------------------------------------------------------------
     # Nitrogen level and filling control
     # ------------------------------------------------------------------
-    ln2_level=device(
+    pc205_ln2_level=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
         description="Liquid-nitrogen level",
         readpv=f"{pv_root}LN2-r",
-        abslimits=(0, 100),
-        userlimits=(0, 100),
     ),
-    ln2f_fill_switch=device(
+    pc205_ln2f_fill_switch=device(
         "nicos_ess.devices.epics.manual_switch.ManualSwitch",
         description="Start/stop LN2 fill",
         readpv=f"{pv_root}LN2F-Fill-s",
@@ -139,7 +133,7 @@ devices = dict(
         states=["False", "True"],
         mapping={"False": 0, "True": 1},
     ),
-    ln2f_auto_switch=device(
+    pc205_ln2f_auto_switch=device(
         "nicos_ess.devices.epics.manual_switch.ManualSwitch",
         description="LN2 auto-fill on/off",
         readpv=f"{pv_root}LN2F-Auto-s",
@@ -147,12 +141,12 @@ devices = dict(
         states=["False", "True"],
         mapping={"False": 0, "True": 1},
     ),
-    ln2f_state=device(
+    pc205_ln2f_state=device(
         "nicos_ess.devices.epics.pva.EpicsStringReadable",
         description="State of the LN2 filling state machine",
         readpv=f"{pv_root}LN2F-State-r",
     ),
-    ln2f_activity=device(
+    pc205_ln2f_activity=device(
         "nicos_ess.devices.epics.pva.EpicsStringReadable",
         description="LN2 filling in progress",
         readpv=f"{pv_root}LN2F-r",
@@ -160,7 +154,7 @@ devices = dict(
     # ------------------------------------------------------------------
     # Flush cycle
     # ------------------------------------------------------------------
-    flush_switch=device(
+    pc205_flush_switch=device(
         "nicos_ess.devices.epics.manual_switch.ManualSwitch",
         description="Start/stop the Flush cycle",
         readpv=f"{pv_root}Flush-s",
@@ -168,7 +162,7 @@ devices = dict(
         states=["False", "True"],
         mapping={"False": 0, "True": 1},
     ),
-    flush_state=device(
+    pc205_flush_state=device(
         "nicos_ess.devices.epics.pva.EpicsStringReadable",
         description="Current state of the Flush state machine",
         readpv=f"{pv_root}Flush-State-r",
@@ -176,14 +170,12 @@ devices = dict(
     # ------------------------------------------------------------------
     # Cold valve
     # ------------------------------------------------------------------
-    cvalve_position=device(
+    pc205_cvalve_position=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
         description="Cold valve current position",
         readpv=f"{pv_root}CValve-r",
-        abslimits=(0, 100),
-        userlimits=(0, 100),
     ),
-    cvalve_target=device(
+    pc205_cvalve_target=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
         description="Cold valve target position",
         readpv=f"{pv_root}CValve-Target-s",
@@ -194,7 +186,7 @@ devices = dict(
     # ------------------------------------------------------------------
     # Pressure-regulator set-point
     # ------------------------------------------------------------------
-    p_reg_pressure_setpoint=device(
+    pc205_p_reg_pressure_setpoint=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
         description="Pressure-regulator pressure set point",
         readpv=f"{pv_root}PReg-PSP-s",
@@ -206,12 +198,12 @@ devices = dict(
     # ------------------------------------------------------------------
     # Regulator-heater channels
     # ------------------------------------------------------------------
-    reg_heater_power=device(
+    pc205_reg_heater_power=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
         description="Regulator heater power (readback)",
         readpv=f"{pv_root}reg-htr-r",
     ),
-    reg_heater_range=device(
+    pc205_reg_heater_range=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
         description="Regulator heater range",
         readpv=f"{pv_root}reg-htr_range-s",
@@ -219,7 +211,7 @@ devices = dict(
         abslimits=(0, 100),
         userlimits=(0, 100),
     ),
-    reg_heater_setpoint=device(
+    pc205_reg_heater_setpoint=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
         description="Regulator heater set point",
         readpv=f"{pv_root}reg-setpoint-s",
@@ -230,12 +222,12 @@ devices = dict(
     # ------------------------------------------------------------------
     # Sample-heater channels
     # ------------------------------------------------------------------
-    sample_heater_power=device(
+    pc205_sample_heater_power=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
         description="Sample heater power (readback)",
         readpv=f"{pv_root}sample-htr-r",
     ),
-    sample_heater_range=device(
+    pc205_sample_heater_range=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
         description="Sample heater range",
         readpv=f"{pv_root}sample-htr_range-s",
@@ -243,7 +235,7 @@ devices = dict(
         abslimits=(0, 100),
         userlimits=(0, 100),
     ),
-    sample_heater_setpoint=device(
+    pc205_sample_heater_setpoint=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
         description="Sample heater set point",
         readpv=f"{pv_root}sample-setpoint-s",
