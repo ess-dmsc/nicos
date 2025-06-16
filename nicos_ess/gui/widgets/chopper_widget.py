@@ -97,7 +97,9 @@ class ChopperWidget(QWidget):
             center = positions[i]
 
             is_selected = self._selected_chopper == chopper["chopper"]
-            is_moving = current_speed is not None and abs(current_speed) > 0
+            is_moving = (
+                current_speed is not None and abs(current_speed) > 2
+            )  # resolver is active under 2hz
 
             angle = self.angles[i]
             angle += tdc_offset if is_moving else resolver_offset
@@ -258,7 +260,9 @@ class ChopperWidget(QWidget):
         for slit in slit_edges:
             start_angle = -slit[0] + rotation_angle
             end_angle = -slit[1] + rotation_angle
-            self.draw_slit(painter, center, radius, start_angle, end_angle, slit_height)
+            self.draw_blade(
+                painter, center, radius, start_angle, end_angle, slit_height
+            )
 
         painter.setBrush(QBrush(Qt.GlobalColor.black))
         painter.setPen(QPen(Qt.GlobalColor.black, 0))
@@ -269,7 +273,7 @@ class ChopperWidget(QWidget):
                 painter, center, radius, start_angle, end_angle, slit_height
             )
 
-    def draw_slit(self, painter, center, radius, start_angle, end_angle, slit_height):
+    def draw_blade(self, painter, center, radius, start_angle, end_angle, slit_height):
         reduced_radius = radius - slit_height
 
         num_points = 50
