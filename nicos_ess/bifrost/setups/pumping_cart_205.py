@@ -6,7 +6,7 @@ devices = dict(
     # ------------------------------------------------------------------
     # Lakeshore temperatures
     # ------------------------------------------------------------------
-    pc205_regulator_temp=device(
+    pc205_reg_temp=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
         description="Lakeshore temperature channel A (regulator)",
         readpv=f"{pv_root}TempA-r",
@@ -216,8 +216,8 @@ devices = dict(
         description="Regulator heater set point",
         readpv=f"{pv_root}reg-setpoint-s",
         writepv=f"{pv_root}reg-setpoint-s",
-        abslimits=(0, 100),
-        userlimits=(0, 100),
+        abslimits=(0, 1000),
+        userlimits=(0, 1000),
     ),
     # ------------------------------------------------------------------
     # Sample-heater channels
@@ -240,7 +240,7 @@ devices = dict(
         description="Sample heater set point",
         readpv=f"{pv_root}sample-setpoint-s",
         writepv=f"{pv_root}sample-setpoint-s",
-        abslimits=(0, 100),
-        userlimits=(0, 100),
+        abslimits=(0, 1000),
+        userlimits=(0, 1000),
     ),
 )
