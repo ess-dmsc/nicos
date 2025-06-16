@@ -1,6 +1,7 @@
 import json
 import math
 import sys
+from enum import Enum
 
 from nicos.guisupport.qt import (
     QApplication,
@@ -14,6 +15,14 @@ from nicos.guisupport.qt import (
     QWidget,
     pyqtSignal,
 )
+
+
+class Colors(Enum):
+    GREEN = QColor(30, 255, 30, 255)
+    GRAY = Qt.GlobalColor.gray
+    BLUE = Qt.GlobalColor.blue
+    DARK_GRAY = Qt.GlobalColor.darkGray
+    BLACK = Qt.GlobalColor.black
 
 
 class ChopperWidget(QWidget):
@@ -85,7 +94,7 @@ class ChopperWidget(QWidget):
 
         positions, chopper_radius = self.calculate_positions(len(self.chopper_data))
         slit_height = chopper_radius * 0.3
-        line_length = chopper_radius * 1.25
+        line_length = chopper_radius * 1.1
 
         for i, chopper in enumerate(self.chopper_data):
             radius = chopper_radius
@@ -115,16 +124,16 @@ class ChopperWidget(QWidget):
                 is_moving,
             )
 
-            painter.setPen(QPen(Qt.GlobalColor.blue, 4))
+            painter.setPen(QPen(Colors.BLUE.value, 4))
             line_x = center.x()
             line_y = center.y() - line_length
             painter.drawLine(center, QPointF(line_x, line_y))
 
             chopper_name = chopper["chopper"]
             if is_selected:
-                painter.setPen(Qt.GlobalColor.blue)
+                painter.setPen(Colors.BLUE.value)
             else:
-                painter.setPen(Qt.GlobalColor.black)
+                painter.setPen(Colors.BLACK.value)
             font = painter.font()
             font.setPointSize(int(radius / 8))
             painter.setFont(font)
@@ -144,7 +153,7 @@ class ChopperWidget(QWidget):
             if current_speed is None:
                 continue
 
-            painter.setPen(Qt.GlobalColor.black)
+            painter.setPen(Colors.BLACK.value)
             if not is_moving and parking_angle is not None:
                 value_text = f"{parking_angle:.3f}°"
             else:
@@ -165,6 +174,68 @@ class ChopperWidget(QWidget):
                 text_height,
             )
             painter.drawText(status_rect, Qt.AlignmentFlag.AlignCenter, status_text)
+
+        self.draw_legend(painter, chopper_radius)
+
+    def draw_legend(self, painter: QPainter, ref_radius: float) -> None:
+        painter.save()
+
+        icon = max(12, int(ref_radius * 0.20))
+        gap_y = 4
+        gap_x = 6
+        margin = 8
+
+        f = painter.font()
+        f.setPointSize(max(7, int(icon * 0.90)))
+        painter.setFont(f)
+        fm = painter.fontMetrics()
+
+        def text_baseline(y_pos: int) -> int:
+            return y_pos + (icon + fm.ascent()) // 2
+
+        def _row(y_pos: int, brush: QBrush, label: str) -> int:
+            painter.setPen(Colors.BLACK.value)
+            painter.setBrush(brush)
+            painter.drawRect(margin, y_pos, icon, icon)
+
+            painter.setPen(QPen(Colors.BLACK.value, 0))
+            painter.setBrush(Qt.NoBrush)
+            painter.drawText(margin + icon + gap_x, text_baseline(y_pos), label)
+            return y_pos + icon + gap_y
+
+        y = margin
+
+        gray_w = icon
+        gray_h = icon
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(Colors.DARK_GRAY.value)
+        painter.drawRect(margin, y, gray_w, gray_h)
+
+        stripe_h = gray_h // 2
+        stripe_y = y + (gray_h - stripe_h) // 2
+        painter.setBrush(Colors.BLACK.value)
+        painter.drawRect(margin, stripe_y, gray_w, stripe_h)
+
+        painter.setPen(QPen(Colors.BLACK.value, 0))
+        painter.setBrush(Qt.NoBrush)
+        painter.drawText(margin + gray_w + gap_x, text_baseline(y), "Coated blade")
+
+        y += icon + gap_y
+
+        painter.setPen(QPen(Colors.BLUE.value, 4))
+        line_x = margin + icon // 2
+        painter.drawLine(line_x, y, line_x, y + icon)
+
+        painter.setPen(QPen(Colors.BLACK.value, 0))
+        painter.setBrush(Qt.NoBrush)
+        painter.drawText(margin + icon + gap_x, text_baseline(y), "Beam guide")
+
+        y += gray_h + gap_y
+
+        y = _row(y, QBrush(Colors.GREEN.value), "Rotating")
+        _row(y, QBrush(Colors.GRAY.value), "Parked")
+
+        painter.restore()
 
     def calculate_grid(self, count, aspect_ratio):
         best_diff = float("inf")
@@ -245,18 +316,18 @@ class ChopperWidget(QWidget):
         moving=False,
     ):
         if moving:
-            painter.setBrush(QBrush(QColor(30, 255, 30, 255)))
+            painter.setBrush(QBrush(Colors.GREEN.value))
         else:
-            painter.setBrush(QBrush(Qt.GlobalColor.gray))
+            painter.setBrush(QBrush(Colors.GRAY.value))
 
         if selected:
-            painter.setPen(QPen(Qt.GlobalColor.blue, 2))
+            painter.setPen(QPen(Colors.BLUE.value, 2))
         else:
-            painter.setPen(QPen(Qt.GlobalColor.black, 2))
+            painter.setPen(QPen(Colors.BLACK.value, 2))
         painter.drawEllipse(center, radius - slit_height, radius - slit_height)
 
-        painter.setBrush(QBrush(Qt.GlobalColor.darkGray))
-        painter.setPen(QPen(Qt.GlobalColor.black, 0))
+        painter.setBrush(QBrush(Colors.DARK_GRAY.value))
+        painter.setPen(QPen(Colors.BLACK.value, 0))
         for slit in slit_edges:
             start_angle = -slit[0] + rotation_angle
             end_angle = -slit[1] + rotation_angle
@@ -264,8 +335,8 @@ class ChopperWidget(QWidget):
                 painter, center, radius, start_angle, end_angle, slit_height
             )
 
-        painter.setBrush(QBrush(Qt.GlobalColor.black))
-        painter.setPen(QPen(Qt.GlobalColor.black, 0))
+        painter.setBrush(QBrush(Colors.BLACK.value))
+        painter.setPen(QPen(Colors.BLACK.value, 0))
         for slit in slit_edges:
             start_angle = -slit[0] + rotation_angle
             end_angle = -slit[1] + rotation_angle
