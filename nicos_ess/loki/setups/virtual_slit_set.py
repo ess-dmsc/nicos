@@ -1,4 +1,4 @@
-description = "Slit set 1"
+description = "Virtual slit set"
 
 group = "optional"
 
