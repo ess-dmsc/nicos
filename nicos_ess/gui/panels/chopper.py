@@ -231,7 +231,7 @@ class ChopperPanel(Panel):
 
     def _update_chopper_angle(self, chopper_name, delay, frequency):
         angle = nanoseconds_to_degrees(delay, frequency)
-        self.chopper_widget.set_chopper_angle(chopper_name, -angle)
+        self.chopper_widget.set_chopper_angle(chopper_name, angle)
 
     def _update_delay_errors(self, device_name):
         array = self.eval_command(f"{device_name}.raw_errors", default=None)
@@ -267,10 +267,15 @@ class ChopperPanel(Panel):
         chopper_info = []
 
         for dev_name in devices.keys():
-            slit_edges = self.client.eval(f"{dev_name}.slit_edges", None)
-            if slit_edges is None:
-                continue
+            disc_info = {"chopper": dev_name}
+            for param in ["slit_edges", "resolver_offset", "tdc_offset"]:
+                value = self.client.eval(f"{dev_name}.{param}", None)
+                if value is None:
+                    continue
 
-            chopper_info.append({"slit_edges": slit_edges, "chopper": dev_name})
+                disc_info[param] = value
+
+            if "slit_edges" in disc_info:
+                chopper_info.append(disc_info)
 
         self.chopper_widget.update_chopper_data(chopper_info)

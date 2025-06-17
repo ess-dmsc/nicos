@@ -57,4 +57,4 @@ class ChopperPhase(TransformedMoveable):
         return self._nanoseconds_to_degrees(value) - self.offset
 
     def doReadSpeed(self, maxage=0):
-        return abs(self._attached_speed_dev.read(maxage=maxage))
+        return abs(self._attached_speed_dev.doReadTarget(maxage=maxage))
