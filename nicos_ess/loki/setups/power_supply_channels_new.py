@@ -51,26 +51,33 @@ all_channels = {**hv_channels, **lv_channels}
 
 devices = dict()
 
+count = 0
 for key, channel in all_channels.items():
     pv_root = channel["pv_root_channel"]
     channel_voltage = device(
-        "nicos_ess.devices.epics.pva.EpicsReadable", 
-        readpv=f"{pv_root}-VMon",
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        #readpv=f"{pv_root}-VMon"
+        readpv="test:random",
         unit="V"
     )
     channel_current = device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
-        readpv=f"{pv_root}-IMon",
+        #readpv=f"{pv_root}-IMon",
+        readpv="test:random",
     )
     channel_status = device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
-        readpv=f"{pv_root}-Status-ON",
+        #readpv=f"{pv_root}-Status-ON",
+        readpv="test:Binary-R",
         mapping={"Power is OFF": 0, "Power is ON": 1},
     )
     channel_power_control = device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
-        readpv=f"{pv_root}-Pw-RB",
-        writepv=f"{pv_root}-Pw",
+        #readpv=f"{pv_root}-Pw-RB",
+        #writepv=f"{pv_root}-Pw",
+        readpv="test:Binary-R",
+        writepv="test:Binary-S",
+        mapping={"OFF": 0, "ON": 1},
     )
     power_supply_channel = device(
         "nicos_ess.devices.epics.power_supply_channel.PowerSupplyChannel",
@@ -83,5 +90,42 @@ for key, channel in all_channels.items():
         current=channel_current,
         status=channel_status,
         power_control=channel_power_control,
+        mapping={"OFF": 0, "ON": 1},
+        visibility={}
     )
     devices[f"{key}_power_supply_channel"] = power_supply_channel
+
+    count += 1
+    if count == 15:
+        break # Creating few PS just for testing 
+
+# List of channels selected for a PS module (bank)
+bank_0_channels = [
+    {"ps_type": "HV", "board": "100", "channels": [f"{ch:>02}" for ch in range(0, 12)]},
+    {"ps_type": "HV", "board": "101", "channels": [f"{ch:>02}" for ch in range(0, 2)]},
+]
+
+keys = []
+for i in range(len(bank_0_channels)):
+    
+    ps_type = bank_0_channels[i]["ps_type"]
+    board = bank_0_channels[i]["board"]
+    channels = bank_0_channels[i]["channels"]
+    
+    for channel in channels: 
+        key = f"{ps_type}_{board}_Ch{channel}"
+        keys.append(key)
+
+ps_channels = [devices[f"{key}_power_supply_channel"] for key in keys]
+
+power_supply_module = device(
+        "nicos_ess.devices.epics.power_supply_channel.PowerSupplyBank",
+        description="Bank 0 Power Supplies (Detector Carriage)",
+        pollinterval=1.0,
+        maxage=None,
+        fmtstr="%.3f",
+        ps_channels=ps_channels,
+        mapping={"OFF": 0, "ON": 1},
+    )
+
+devices["PS_Bank_0"] = power_supply_module
