@@ -34,6 +34,14 @@ devices = dict(
         writepv="{}ChopDly-S".format(pv_root_1),
         abslimits=(0.0, 0.0),
     ),
+    bwc1_chopper_phase=device(
+        "nicos_ess.devices.transformer_device.ChopperPhase",
+        description="The phase of the chopper.",
+        phase_ns_dev="bwc1_chopper_delay",
+        speed_dev="bwc1_chopper_speed",
+        offset=0,
+        unit="degrees",
+    ),
     bwc1_chopper_delay_errors=device(
         "nicos_ess.devices.epics.chopper_delay_error.ChopperDelayError",
         description="The current delay.",
@@ -55,6 +63,12 @@ devices = dict(
         readpv="{}Pos_R".format(pv_root_1),
         writepv="{}Park_S".format(pv_root_1),
         visibility=(),
+    ),
+    bwc1_chopper_park_control=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
+        description="The park control for the BWC1 chopper.",
+        readpv="{}ParkPos_S".format(pv_root_1),
+        writepv="{}ParkPos_S".format(pv_root_1),
     ),
     bwc1_chopper_chic=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
@@ -79,7 +93,8 @@ devices = dict(
         speed="bwc1_chopper_speed",
         chic_conn="bwc1_chopper_chic",
         alarms="bwc1_chopper_alarms",
-        slit_edges=[],
+        slit_edges=[[0, 90]],
+        #resolver_offset=TBD,
     ),
     bwc2_chopper_status=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
@@ -110,6 +125,14 @@ devices = dict(
         writepv="{}ChopDly-S".format(pv_root_2),
         abslimits=(0.0, 0.0),
     ),
+    bwc2_chopper_phase=device(
+        "nicos_ess.devices.transformer_device.ChopperPhase",
+        description="The phase of the chopper.",
+        phase_ns_dev="bwc2_chopper_delay",
+        speed_dev="bwc2_chopper_speed",
+        offset=0,
+        unit="degrees",
+    ),
     bwc2_chopper_delay_errors=device(
         "nicos_ess.devices.epics.chopper_delay_error.ChopperDelayError",
         description="The current delay.",
@@ -131,6 +154,12 @@ devices = dict(
         readpv="{}Pos_R".format(pv_root_2),
         writepv="{}Park_S".format(pv_root_2),
         visibility=(),
+    ),
+    bwc2_chopper_park_control=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
+        description="The park control for the BWC2 chopper.",
+        readpv="{}ParkPos_S".format(pv_root_2),
+        writepv="{}ParkPos_S".format(pv_root_2),
     ),
     bwc2_chopper_chic=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
@@ -154,6 +183,7 @@ devices = dict(
         speed="bwc2_chopper_speed",
         chic_conn="bwc2_chopper_chic",
         alarms="bwc2_chopper_alarms",
-        slit_edges=[],
+        slit_edges=[[0, 260]],
+        #resolver_offset=TBD,
     ),
 )
