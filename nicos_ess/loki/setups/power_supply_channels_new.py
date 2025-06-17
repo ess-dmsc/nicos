@@ -55,22 +55,22 @@ for key, channel in all_channels.items():
     pv_root = channel["pv_root_channel"]
     channel_voltage = device(
         "nicos_ess.devices.epics.pva.EpicsReadable", 
-        readpv=f"{pv_root}-VMon",
+        readpv="test:random",
         unit="V"
     )
     channel_current = device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
-        readpv=f"{pv_root}-IMon",
+        readpv="test:random",
     )
     channel_status = device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
-        readpv=f"{pv_root}-Status-ON",
+        readpv="test:Binary-R",
         mapping={"Power is OFF": 0, "Power is ON": 1},
     )
     channel_power_control = device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
-        readpv=f"{pv_root}-Pw-RB",
-        writepv=f"{pv_root}-Pw",
+        readpv="test:Binary-R",
+        writepv="test:Binary-S",
     )
     power_supply_channel = device(
         "nicos_ess.devices.epics.power_supply_channel.PowerSupplyChannel",
@@ -83,5 +83,8 @@ for key, channel in all_channels.items():
         current=channel_current,
         status=channel_status,
         power_control=channel_power_control,
+        mapping={"OFF": 0, "ON": 1},
     )
     devices[f"{key}_power_supply_channel"] = power_supply_channel
+
+    break # Creating one PS just for testing 
