@@ -1,4 +1,4 @@
-description = "Collimator selector unit 1"
+description = "Virtual collimator"
 
 group = "optional"
 
