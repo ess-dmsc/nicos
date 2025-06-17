@@ -1,4 +1,4 @@
-description = "Chopper 2"
+description = "Virtual chopper"
 
 group = "optional"
 
