@@ -166,8 +166,8 @@ class AreaDetector(EpicsDevice, ImageChannelMixin, PassiveChannel, Measurable):
 
     def doPrepare(self):
         self._update_status(status.BUSY, "Preparing")
-        self._update_status(status.OK, "")
         self.arraydesc = self.arrayInfo()
+        self._update_status(status.OK, "")
 
     def _update_status(self, new_status, message):
         self._current_status = new_status, message
@@ -299,6 +299,7 @@ class AreaDetector(EpicsDevice, ImageChannelMixin, PassiveChannel, Measurable):
         self.doAcquire()
 
     def doAcquire(self):
+        self._update_status(status.BUSY, "Starting acquisition...")
         self._put_pv("acquire", 1)
 
     def doFinish(self):
