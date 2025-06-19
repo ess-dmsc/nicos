@@ -225,11 +225,15 @@ class AreaDetector(EpicsDevice, ImageChannelMixin, PassiveChannel, Measurable):
         _thread = createThread(f"get_image_{time.time_ns()}", self.get_image)
 
     def get_image(self):
+        start_time = time.monotonic()
         dataarray = self._get_pv("image_pv")
         shape = self.arrayInfo().shape
         dataarray = dataarray.reshape(shape)
         self.putResult(LIVE, dataarray, time.time())
         self._last_update = time.monotonic()
+        self.log.warn(
+            f"It took {time.monotonic() - start_time:.4f} seconds to get the image."
+        )
 
     def putResult(self, quality, data, timestamp):
         self._image_array = data
