@@ -24,6 +24,10 @@ devices = dict(
         targetpv=f"{water_cooler_pv_root}TemperatureSP0-R",
         visibility=(),
     ),
+    orca_sharpness=device(
+        "nicos_ess.devices.virtual.area_detector.SharpnessChannel",
+        description="Sharpness post processing channel for the area detector.",
+    ),
     orca_camera=device(
         "nicos_ess.devices.epics.area_detector.OrcaFlash4",
         description="The light tomography Orca camera.",
@@ -53,6 +57,8 @@ devices = dict(
         "nicos_ess.devices.epics.area_detector.AreaDetectorCollector",
         description="Area detector collector",
         images=["orca_camera"],
+        others=["orca_sharpness"],
+        postprocess=[("orca_sharpness", "orca_camera")],
         liveinterval=1,
         pollinterval=1,
         unit="",

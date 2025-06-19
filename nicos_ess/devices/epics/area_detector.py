@@ -3,6 +3,7 @@ import time
 from enum import Enum
 
 import numpy
+from scipy.ndimage import laplace
 from streaming_data_types import deserialise_ad00, deserialise_ADAr
 
 from nicos import session
@@ -17,6 +18,7 @@ from nicos.core import (
     Param,
     Value,
     floatrange,
+    listof,
     multiStatus,
     oneof,
     pvname,
@@ -25,7 +27,12 @@ from nicos.core import (
 )
 from nicos.devices.epics.pva import EpicsDevice
 from nicos.devices.epics.status import SEVERITY_TO_STATUS, STAT_TO_STATUS
-from nicos.devices.generic import Detector, ImageChannelMixin, ManualSwitch
+from nicos.devices.generic import (
+    Detector,
+    ImageChannelMixin,
+    ManualSwitch,
+    PostprocessPassiveChannel,
+)
 from nicos.utils import byteBuffer, createThread
 from nicos_ess.devices.epics.pva import EpicsAnalogMoveable, EpicsMappedMoveable
 
@@ -711,6 +718,61 @@ class OrcaFlash4(AreaDetector):
     def doWriteAcquireperiod(self, value):
         self._put_pv("acquire_period", value)
 
+
+class SharpnessChannel(PostprocessPassiveChannel):
+    parameters = {
+        "algorithm": Param(
+            "Sharpness algorithm to use",
+            type=oneof("laplace_variance", "laplace_amplitude"),
+            default="laplace_variance",
+            settable=True,
+            userparam=True,
+        ),
+        "roi": Param(
+            "Region of interest for the sharpness calculation, x0, y0, x1, y1",
+            type=listof(int),
+            default=[0, 0, 10000, 10000],
+            settable=True,
+            userparam=True,
+        ),
+    }
+
+    def _slice_array(self, image):
+        """Slice the image array according to the ROI. If out of bounds,
+        it will slice to the edge of the image."""
+        x0, y0, x1, y1 = self.roi
+        if x0 < 0:
+            x0 = 0
+        if y0 < 0:
+            y0 = 0
+        if x1 > image.shape[1]:
+            x1 = image.shape[1]
+        if y1 > image.shape[0]:
+            y1 = image.shape[0]
+        return image[y0:y1, x0:x1]
+
+    def _laplace_variance_sharpness(self, image):
+        return laplace(self._slice_array(image)).var()
+
+    def _laplace_amplitude_sharpness(self, image):
+        return numpy.mean(laplace(self._slice_array(image)) ** 2)
+
+    def getReadResult(self, arrays, results, quality):
+        """This method should return the new `readresult` for corresponding
+        `arrays` and `results` in respect to a given `quality`."""
+        sharpness = [0 for _ in arrays]
+        if self.algorithm == "laplace_variance":
+            sharpness = [self._laplace_variance_sharpness(arr) for arr in arrays]
+        elif self.algorithm == "laplace_amplitude":
+            sharpness = [self._laplace_amplitude_sharpness(arr) for arr in arrays]
+
+        return sharpness
+
+    def valueInfo(self):
+        """This method should return the value information for the channel."""
+        return (Value(self.name, fmtstr="%f"),)
+
+
 class AreaDetectorCollector(Detector):
     """
     A device class that collects the area detectors present in the instrument
@@ -725,18 +787,19 @@ class AreaDetectorCollector(Detector):
         "statustopic": Override(default="", mandatory=False),
     }
 
-    _presetkeys = set()
+    # _presetkeys = set()
     _hardware_access = False
 
     def doPreinit(self, mode):
+        Detector.doPreinit(self, mode)
         for image_channel in self._attached_images:
             image_channel._detector_collector_name = self.name
-            self._presetkeys.add(image_channel.name)
-        self._channels = self._attached_images
-        self._collectControllers()
+            self._presetkeys[image_channel.name] = (image_channel, "counts")
+        # self._channels = self._attached_images
+        # self._collectControllers()
 
-    def _collectControllers(self):
-        self._controlchannels, self._followchannels = self._attached_images, []
+    # def _collectControllers(self):
+    #     self._controlchannels, self._followchannels = self._attached_images, []
 
     def get_array_size(self, topic, source):
         for area_detector in self._attached_images:
@@ -750,38 +813,39 @@ class AreaDetectorCollector(Detector):
         return []
 
     def doSetPreset(self, **preset):
+        Detector.doSetPreset(self, **preset)
         if not preset:
             # keep old settings
             return
 
-        for controller in self._controlchannels:
-            sub_preset = preset.get(controller.name, None)
+        for image in self._attached_images:
+            sub_preset = preset.get(image.name, None)
             if sub_preset:
-                controller.doSetPreset(**{"n": sub_preset})
+                image.doSetPreset(**{"n": sub_preset})
 
         self._lastpreset = preset.copy()
 
-    def doStatus(self, maxage=0):
-        return multiStatus(self._attached_images, maxage)
-
-    def doRead(self, maxage=0):
-        return []
-
-    def doReadArrays(self, quality):
-        return [image.readArray(quality) for image in self._attached_images]
-
-    def doReset(self):
-        pass
-
-    def duringMeasureHook(self, elapsed):
-        if self.liveinterval is not None:
-            if elapsed > self._last_live + self.liveinterval:
-                self._last_live = elapsed
-                return LIVE
-        return None
-
-    def arrayInfo(self):
-        return tuple(ch.arrayInfo() for ch in self._attached_images)
-
-    def doTime(self, preset):
-        return 0
+    # def doStatus(self, maxage=0):
+    #     return multiStatus(self._attached_images, maxage)
+    #
+    # def doRead(self, maxage=0):
+    #     return []
+    #
+    # def doReadArrays(self, quality):
+    #     return [image.readArray(quality) for image in self._attached_images]
+    #
+    # def doReset(self):
+    #     pass
+    #
+    # def duringMeasureHook(self, elapsed):
+    #     if self.liveinterval is not None:
+    #         if elapsed > self._last_live + self.liveinterval:
+    #             self._last_live = elapsed
+    #             return LIVE
+    #     return None
+    #
+    # def arrayInfo(self):
+    #     return tuple(ch.arrayInfo() for ch in self._attached_images)
+    #
+    # def doTime(self, preset):
+    #     return 0
