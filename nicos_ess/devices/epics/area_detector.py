@@ -214,7 +214,14 @@ class AreaDetector(EpicsDevice, ImageChannelMixin, PassiveChannel, Measurable):
         self, name, param, value, units, limits, severity, message, **kwargs
     ):
         if param == "readpv" and value != 0:
+            self.log.warn(f"Image completed: {name} {param}={value}")
             if time.monotonic() >= self._last_update + self._plot_update_delay:
+                self.log.warn(
+                    f"Since the total time since last update is {time.monotonic() - self._last_update:.4f} seconds, we will update the image."
+                )
+                self.log.warn(
+                    f"The total delay is {self._plot_update_delay:.4f} seconds."
+                )
                 _thread = createThread(f"get_image_{time.time_ns()}", self.get_image)
 
         EpicsDevice.status_change_callback(
@@ -222,6 +229,7 @@ class AreaDetector(EpicsDevice, ImageChannelMixin, PassiveChannel, Measurable):
         )
 
     def doIsCompleted(self):
+        self.log.warn(f"Calling doIsCompleted for {self.name}.")
         _thread = createThread(f"get_image_{time.time_ns()}", self.get_image)
 
     def get_image(self):
@@ -294,6 +302,7 @@ class AreaDetector(EpicsDevice, ImageChannelMixin, PassiveChannel, Measurable):
         self._put_pv("acquire", 1)
 
     def doFinish(self):
+        self.log.warn(f"Calling doFinish for {self.name}.")
         self.doStop()
 
     def doStop(self):
