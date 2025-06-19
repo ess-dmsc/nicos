@@ -303,6 +303,7 @@ class AreaDetector(EpicsDevice, ImageChannelMixin, PassiveChannel, Measurable):
 
     def doFinish(self):
         self.log.warn(f"Calling doFinish for {self.name}.")
+        self.get_image()  # always get the final image before finishing
         self.doStop()
 
     def doStop(self):
