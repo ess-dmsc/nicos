@@ -31,6 +31,7 @@ from nicos.devices.generic import (
     Detector,
     ImageChannelMixin,
     ManualSwitch,
+    PassiveChannel,
     PostprocessPassiveChannel,
 )
 from nicos.utils import byteBuffer, createThread
@@ -138,7 +139,7 @@ class ImageType(ManualSwitch):
         self.move(INVALID)
 
 
-class AreaDetector(EpicsDevice, ImageChannelMixin, Measurable):
+class AreaDetector(EpicsDevice, ImageChannelMixin, PassiveChannel, Measurable):
     parameters = {
         "pv_root": Param("Area detector EPICS prefix", type=pvname, mandatory=True),
         "image_pv": Param("Image PV name", type=pvname, mandatory=True),
