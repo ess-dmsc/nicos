@@ -572,7 +572,17 @@ class OrcaFlash4(AreaDetector):
         ):
             self.subarraymode = False
 
-    def doStart(self, **preset):
+    def doSetPreset(self, **preset):
+        self.log.warn(f"Setting preset for {self.name} to {preset}")
+        if not preset:
+            # keep old settings
+            return
+
+        # we need this I think
+
+        self._lastpreset = preset.copy()
+
+    def doStart(self):
         num_images = self._lastpreset.get("n", None)
 
         if num_images == 0:
