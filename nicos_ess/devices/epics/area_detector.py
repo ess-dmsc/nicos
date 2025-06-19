@@ -574,20 +574,11 @@ class OrcaFlash4(AreaDetector):
 
     def doSetPreset(self, **preset):
         self.log.warn(f"Setting preset for {self.name} to {preset}")
-        if not preset:
-            # keep old settings
+        num_images = preset.get("n", None)
+
+        if num_images is None:
             return
-
-        # we need this I think
-
-        self._lastpreset = preset.copy()
-
-    def doStart(self):
-        num_images = self._lastpreset.get("n", None)
-
-        if num_images == 0:
-            return
-        elif not num_images or num_images < 0:
+        elif num_images < 0:
             self.imagemode = "continuous"
         elif num_images == 1:
             self.imagemode = "single"
@@ -595,6 +586,9 @@ class OrcaFlash4(AreaDetector):
             self.imagemode = "multiple"
             self.numimages = num_images
 
+        self._lastpreset = preset.copy()
+
+    def doStart(self):
         self.doAcquire()
 
     def doReadSizex(self):
