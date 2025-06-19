@@ -25,7 +25,7 @@ devices = dict(
         visibility=(),
     ),
     orca_sharpness=device(
-        "nicos_ess.devices.virtual.area_detector.SharpnessChannel",
+        "nicos_ess.devices.epics.area_detector.SharpnessChannel",
         description="Sharpness post processing channel for the area detector.",
     ),
     orca_camera=device(
