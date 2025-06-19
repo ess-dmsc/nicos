@@ -94,7 +94,7 @@ devices = dict(
         chic_conn="sfoc1_chopper_chic",
         alarms="sfoc1_chopper_alarms",
         slit_edges=[[0, 190]],
-        #resolver_offset=TBD,
+        resolver_offset=-145,
     ),
     sfoc2_chopper_status=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
@@ -184,6 +184,6 @@ devices = dict(
         chic_conn="sfoc2_chopper_chic",
         alarms="sfoc2_chopper_alarms",
         slit_edges=[[0, 190]],
-        #resolver_offset=TBD,
+        resolver_offset=35,
     ),
 )
