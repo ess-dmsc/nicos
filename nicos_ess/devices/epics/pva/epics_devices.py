@@ -27,11 +27,10 @@ This module contains some classes for NICOS - EPICS integration.
 
 import os
 import time
-
-import numpy
-
 from collections import namedtuple
 from enum import Enum
+
+import numpy
 
 from nicos import session
 from nicos.core import (
@@ -52,7 +51,6 @@ from nicos.core import (
     tupleof,
 )
 from nicos.devices.abstract import MappedMoveable, MappedReadable
-
 
 DEFAULT_EPICS_PROTOCOL = os.environ.get("DEFAULT_EPICS_PROTOCOL", "ca")
 
@@ -375,6 +373,13 @@ class EpicsAnalogMoveable(EpicsParameters, HasPrecision, HasLimits, Moveable):
     def doStop(self):
         self.doStart(self.doRead())
 
+    def _set_limits(self, limits, time_stamp):
+        low, high = limits
+        ulow, uhigh = self.doReadUserlimits()
+        ulow, uhigh = max(low, ulow), min(high, uhigh)
+        self._cache.put(self._name, "abslimits", limits, time_stamp)
+        self._cache.put(self._name, "userlimits", (ulow, uhigh), time_stamp)
+
     def _value_change_callback(
         self, name, param, value, units, limits, severity, message, **kwargs
     ):
@@ -386,7 +391,7 @@ class EpicsAnalogMoveable(EpicsParameters, HasPrecision, HasLimits, Moveable):
             self._cache.put(self._name, param, value, time_stamp)
             self._cache.put(self._name, "unit", units, time_stamp)
         if name == self.writepv and limits:
-            self._cache.put(self._name, "abslimits", limits, time_stamp)
+            self._set_limits(limits, time_stamp)
         if name == self.writepv and not self.target:
             self._cache.put(self._name, param, value, time_stamp)
         if name == self.targetpv:
@@ -587,7 +592,7 @@ class EpicsMappedReadable(EpicsReadable, MappedReadable):
         # MBBI, BI, etc. do not have units
         "unit": Override(mandatory=False, settable=False, volatile=False),
         # Mapping values are read from EPICS
-        'mapping': Override(internal=True, mandatory=False, settable=False)
+        "mapping": Override(internal=True, mandatory=False, settable=False),
     }
 
     def doInit(self, mode):
@@ -648,7 +653,7 @@ class EpicsMappedMoveable(EpicsParameters, MappedMoveable):
         # MBBI, BI, etc. do not have units
         "unit": Override(mandatory=False, settable=False, volatile=False),
         # Mapping values are read from EPICS
-        'mapping': Override(internal=True, mandatory=False, settable=False)
+        "mapping": Override(internal=True, mandatory=False, settable=False),
     }
 
     _record_fields = {
