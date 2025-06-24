@@ -88,4 +88,21 @@ for key, channel in all_channels.items():
     )
     devices[f"{key}_power_supply_channel"] = power_supply_channel
 
-    break # Creating one PS just for testing 
+key = ["HV_100_Ch00", "HV_100_Ch01"]
+power_supply_channel = [
+    devices[f"{key[0]}_power_supply_channel"], # todo: turn into list
+    devices[f"{key[1]}_power_supply_channel"]
+]
+
+power_supply_module = device(
+        "nicos_ess.devices.epics.power_supply_channel.PowerSupplyModule",
+        description="Bank 0 Power Supplies (Detector Carriage)",
+        pollinterval=1.0,
+        maxage=None,
+        unit="V",
+        fmtstr="%.3f",
+        power_supply_channel=power_supply_channel,
+        mapping={"OFF": 0, "ON": 1},
+    )
+
+devices["PS_Bank_0"] = power_supply_module

@@ -65,3 +65,16 @@ class PowerSupplyChannel(MappedMoveable):
     #
     # def doReadMapping(self):
     #     return self._attached_power_control.mapping
+
+
+class PowerSupplyModule(MappedMoveable):
+    attached_devices = {
+        "power_supply_channel": Attach("Monitored voltage", PowerSupplyChannel),
+    }
+
+    parameter_overrides = {
+        "unit": Override(mandatory=False),
+        "mapping": Override(
+            mandatory=False, settable=True, userparam=False, volatile=False
+        ),
+    }
