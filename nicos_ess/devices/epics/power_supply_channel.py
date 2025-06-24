@@ -68,9 +68,9 @@ class PowerSupplyChannel(MappedMoveable):
 
 
 class PowerSupplyModule(MappedMoveable):
-    attached_devices = {
-        "power_supply_channel": Attach("Monitored voltage", PowerSupplyChannel),
-    }
+    #attached_devices = {
+    #    "attached_channels": Attach("Power Supply channel", PowerSupplyChannel),
+    #}
 
     parameter_overrides = {
         "unit": Override(mandatory=False),
@@ -78,3 +78,38 @@ class PowerSupplyModule(MappedMoveable):
             mandatory=False, settable=True, userparam=False, volatile=False
         ),
     }
+
+    hardware_access = False
+    valuetype = bool
+
+    def doRead(self, maxage=0):
+        for ps_channel in self.attached_devices:
+            print("ps_channel = " + str(ps_channel))
+            ps_channel_power_rbv = ps_channel._attached_power_control.doRead()
+            print("ps_channel_power_rbv = " + str(ps_channel_power_rbv))
+        return True
+
+    def doStart(self, value):
+        target = self.mapping.get(value, None)
+        if target is None:
+            raise InvalidValueError(self, f"Position '{value}' not in mapping")
+        for ps_channel in self.attached_devices:
+            ps_channel._attached_power_control.doStart(value)
+
+    def doStop(self, value):
+        target = self.mapping.get(value, None)
+        if target is None:
+            raise InvalidValueError(self, f"Position '{value}' not in mapping")
+        for ps_channel in self.attached_devices:
+            ps_channel._attached_power_control.doStart(value)
+
+    '''def doStatus(self, maxage=0):
+        power_stat_msg = self._attached_status.doRead()
+        stat, msg = self._attached_voltage.doStatus()
+        if stat == status.OK:
+            if power_stat_msg == "Power is OFF":
+                return status.OK, power_stat_msg
+            elif power_stat_msg == "Power is ON":
+                return status.BUSY, power_stat_msg
+        else:
+            return stat, msg'''

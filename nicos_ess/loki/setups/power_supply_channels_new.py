@@ -89,7 +89,7 @@ for key, channel in all_channels.items():
     devices[f"{key}_power_supply_channel"] = power_supply_channel
 
 key = ["HV_100_Ch00", "HV_100_Ch01"]
-power_supply_channel = [
+ps_channels = [
     devices[f"{key[0]}_power_supply_channel"], # todo: turn into list
     devices[f"{key[1]}_power_supply_channel"]
 ]
@@ -101,7 +101,7 @@ power_supply_module = device(
         maxage=None,
         unit="V",
         fmtstr="%.3f",
-        power_supply_channel=power_supply_channel,
+        attached_devices=ps_channels,
         mapping={"OFF": 0, "ON": 1},
     )
 
