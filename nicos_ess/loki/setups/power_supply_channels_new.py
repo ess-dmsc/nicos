@@ -71,6 +71,7 @@ for key, channel in all_channels.items():
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         readpv="test:Binary-R",
         writepv="test:Binary-S",
+        mapping={"OFF": 0, "ON": 1},
     )
     power_supply_channel = device(
         "nicos_ess.devices.epics.power_supply_channel.PowerSupplyChannel",
