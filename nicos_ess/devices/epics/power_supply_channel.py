@@ -36,15 +36,17 @@ class PowerSupplyChannel(MappedMoveable):
     def doRead(self, maxage=0):
         return self._attached_voltage.doRead()
 
-    def doStart(self, target):
-        print("PS doStart target.lower() = " + str(target.lower()))
-        if target.lower() == "on":
-            print("PS calling _attached_power_control.doStart")
-            self._attached_power_control.doStart(target.lower())
+    def doStart(self, value):
+        target = self.mapping.get(value, None)
+        if target is None:
+            raise InvalidValueError(self, f"Position '{value}' not in mapping")
+        self._attached_power_control.doStart(value)
 
-    def doStop(self, target):
-        if target.lower == "off":
-            self._attached_power_control.doStart(target.lower())
+    def doStop(self, value):
+        target = self.mapping.get(value, None)
+        if target is None:
+            raise InvalidValueError(self, f"Position '{value}' not in mapping")
+        self._attached_power_control.doStart(value)
 
     def doStatus(self, maxage=0):
         power_stat_msg = self._attached_status.doRead()
