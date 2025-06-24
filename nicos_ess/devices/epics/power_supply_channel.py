@@ -87,7 +87,9 @@ class PowerSupplyModule(MappedMoveable):
             print("ps_channel = " + str(ps_channel))
             ps_channel_power_rbv = ps_channel._attached_power_control.doRead()
             print("ps_channel_power_rbv = " + str(ps_channel_power_rbv))
-        return "Module ON"
+            if ps_channel_power_rbv == "ON":
+                return "ON"
+        return "OFF"
 
     def doStart(self, value):
         print("Module doStart")
