@@ -101,7 +101,7 @@ power_supply_module = device(
         maxage=None,
         unit="V",
         fmtstr="%.3f",
-        attached_devices=ps_channels,
+        ps_channels=ps_channels,
         mapping={"OFF": 0, "ON": 1},
     )
 
