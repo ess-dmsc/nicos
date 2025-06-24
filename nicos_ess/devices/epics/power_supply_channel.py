@@ -109,13 +109,19 @@ class PowerSupplyModule(MappedMoveable):
             print("Module - Stopping: " + str(ps_channel))
             ps_channel._attached_power_control.doStart(value)
 
-    def doStatus(self, maxage=0):
-        power_stat_msg = self._attached_status.doRead()
-        stat, msg = self._attached_voltage.doStatus()
-        if stat == status.OK:
-            if power_stat_msg == "Power is OFF":
-                return status.OK, power_stat_msg
-            elif power_stat_msg == "Power is ON":
-                return status.BUSY, power_stat_msg
-        else:
+    def doStatus(self, maxage=0):        
+        for ps_channel in self._attached_ps_channels:
+            stat, msg = ps_channel.doStatus()
+            
+            if msg == "Power is ON":
+                msg = "Module is ON"
+                return stat, msg
+
+            if msg != "Power is OFF":
+                return stat, msg
+            
+            if msg == "Power is OFF":
+                msg = "Module is OFF"
+
             return stat, msg
+            
