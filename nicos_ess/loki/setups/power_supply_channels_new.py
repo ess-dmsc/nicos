@@ -88,18 +88,31 @@ for key, channel in all_channels.items():
     )
     devices[f"{key}_power_supply_channel"] = power_supply_channel
 
-key = ["HV_100_Ch00", "HV_100_Ch01"]
-ps_channels = [
-    devices[f"{key[0]}_power_supply_channel"], # todo: turn into list
-    devices[f"{key[1]}_power_supply_channel"]
+# List of channels selected for a PS module (bank)
+bank_0_channels = [
+    {"ps_type": "HV", "board": "100", "channels": [f"{ch:>02}" for ch in [0, 2, 4]]},
+    #{"ps_type": "HV", "board": "101", "channels": [f"{ch:>02}" for ch in range(0, 3)]},
+    #{"ps_type": "LV", "board": "107", "channels": [f"{ch:>02}" for ch in range(0, 3)]},
 ]
+
+keys = []
+for i in range(len(bank_0_channels)):
+
+    ps_type = bank_0_channels[i]["ps_type"]
+    board = bank_0_channels[i]["board"]
+    channels = bank_0_channels[i]["channels"]
+    
+    for channel in channels: 
+        key = f"{ps_type}_{board}_Ch{channel}"
+        keys.append(key)
+
+ps_channels = [devices[f"{key}_power_supply_channel"] for key in keys]
 
 power_supply_module = device(
         "nicos_ess.devices.epics.power_supply_channel.PowerSupplyModule",
         description="Bank 0 Power Supplies (Detector Carriage)",
         pollinterval=1.0,
         maxage=None,
-        unit="V",
         fmtstr="%.3f",
         ps_channels=ps_channels,
         mapping={"OFF": 0, "ON": 1},

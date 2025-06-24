@@ -80,7 +80,7 @@ class PowerSupplyModule(MappedMoveable):
     }
 
     hardware_access = False
-    #valuetype = bool
+    valuetype = bool
 
     def doRead(self, maxage=0):
         for ps_channel in self._attached_ps_channels:
