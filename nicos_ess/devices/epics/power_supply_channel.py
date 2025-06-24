@@ -90,23 +90,17 @@ class PowerSupplyModule(MappedMoveable):
         return "OFF"
 
     def doStart(self, value):
-        print("Module doStart")
-        print("_attached_ps_channels = " + str(self._attached_ps_channels))
         target = self.mapping.get(value, None)
         if target is None:
             raise InvalidValueError(self, f"Position '{value}' not in mapping")
         for ps_channel in self._attached_ps_channels:
-            print("Module - Starting: " + str(ps_channel))
             ps_channel._attached_power_control.doStart(value)
 
     def doStop(self, value):
-        print("Module doStop")
-        print("_attached_ps_channels = " + str(self._attached_ps_channels))
         target = self.mapping.get(value, None)
         if target is None:
             raise InvalidValueError(self, f"Position '{value}' not in mapping")
         for ps_channel in self._attached_ps_channels:
-            print("Module - Stopping: " + str(ps_channel))
             ps_channel._attached_power_control.doStart(value)
 
     def doStatus(self, maxage=0):        
