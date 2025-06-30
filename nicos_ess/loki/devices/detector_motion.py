@@ -3,7 +3,6 @@ from nicos.core import (
     Param,
 )
 from nicos_ess.devices.epics.pva.motor import EpicsMotor
-#from nicos_ess.loki.setups.power_supply_channels_new import devices
 from nicos import session
 
 class LOKIDetectorMotion(EpicsMotor):

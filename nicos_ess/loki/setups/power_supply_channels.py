@@ -4,7 +4,13 @@ pv_root = "LOKI-DtCmn:PwrC"
 
 hv_info = {
     "id": "HVM",
-    "boards": ["100", "101", "102", "105", "106"],
+    "boards": [
+        "100", 
+        "101", 
+        #"102", 
+        #"105", 
+        #"106",
+        ],
     "channels": [f"{ch:>02}" for ch in range(0, 12)],
 }
 
@@ -13,13 +19,13 @@ lv_info = {
     "boards": [
         "107",
         "108",
-        "110",
-        "111",
-        "112",
-        "113",
-        "114",
-        "115",
-    ],  # [str(board) for board in range(107, 116)],
+        #"110",
+        #"111",
+        #"112",
+        #"113",
+        #"114",
+        #"115",
+    ],
     "channels": [f"{ch:>02}" for ch in range(0, 8)],
 }
 
@@ -51,32 +57,26 @@ all_channels = {**hv_channels, **lv_channels}
 
 devices = dict()
 
-count = 0
 for key, channel in all_channels.items():
     pv_root = channel["pv_root_channel"]
     channel_voltage = device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
-        #readpv=f"{pv_root}-VMon"
-        readpv="test:random",
+        readpv=f"{pv_root}-VMon",
         unit="V"
     )
     channel_current = device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
-        #readpv=f"{pv_root}-IMon",
-        readpv="test:random",
+        readpv=f"{pv_root}-IMon",
     )
     channel_status = device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
-        #readpv=f"{pv_root}-Status-ON",
-        readpv="test:Binary-R",
+        readpv=f"{pv_root}-Status-ON",
         mapping={"Power is OFF": 0, "Power is ON": 1},
     )
     channel_power_control = device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
-        #readpv=f"{pv_root}-Pw-RB",
-        #writepv=f"{pv_root}-Pw",
-        readpv="test:Binary-R",
-        writepv="test:Binary-S",
+        readpv=f"{pv_root}-Pw-RB",
+        writepv=f"{pv_root}-Pw",
         mapping={"OFF": 0, "ON": 1},
     )
     power_supply_channel = device(
@@ -94,10 +94,6 @@ for key, channel in all_channels.items():
         visibility={}
     )
     devices[f"{key}_power_supply_channel"] = power_supply_channel
-
-    count += 1
-    if count == 15:
-        break # Creating few PS just for testing 
 
 # List of channels selected for a PS module (bank)
 bank_0_channels = [
