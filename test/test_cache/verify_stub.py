@@ -61,9 +61,6 @@ def test_execute_command_ts_create_add_range(real_redis_client, stub_redis_clien
     real_range = real_redis_client.execute_command("TS.RANGE", key, 0, 3)
     stub_range = stub_redis_client.execute_command("TS.RANGE", key, 0, 3)
 
-    print(f"The real range is: {real_range}")
-    print(f"The stub range is: {stub_range}")
-
     assert real_range == stub_range
 
 
@@ -80,3 +77,31 @@ def test_pubsub(real_redis_client, stub_redis_client):
 
     assert real_pubsub is not None
     assert stub_pubsub is None
+
+
+def test_scan_iter(real_redis_client, stub_redis_client):
+    keys = ["test_key1", "test_key2", "test_key3"]
+    mapping = {"field1": "value1", "field2": "value2"}
+
+    for key in keys:
+        real_redis_client.hset(key, mapping)
+        stub_redis_client.hset(key, mapping)
+
+    real_keys = list(real_redis_client.scan_iter())
+    stub_keys = list(stub_redis_client.scan_iter())
+
+    assert sorted(real_keys) == sorted(stub_keys)
+
+
+def test_pipeline(real_redis_client, stub_redis_client):
+    with real_redis_client._redis.pipeline() as pipe:
+        pipe.hset("pipeline_key", "field1", "value1")
+        pipe.hgetall("pipeline_key")
+        real_results = pipe.execute()
+
+    with stub_redis_client._redis.pipeline() as pipe:
+        pipe.hset("pipeline_key", "field1", "value1")
+        pipe.hgetall("pipeline_key")
+        stub_results = pipe.execute()
+
+    assert real_results == stub_results
