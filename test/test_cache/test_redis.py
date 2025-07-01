@@ -1,6 +1,7 @@
 import logging
 import threading
 import time
+from typing import Union
 
 import pytest
 from mock.mock import MagicMock
@@ -123,7 +124,7 @@ class RedisStub:
         now = float(args[0]) if args else time.time()
         return self.clean_expired(now)
 
-    def clean_expired(self, now: float | None = None) -> int:
+    def clean_expired(self, now: Union[float, None] = None) -> int:
         if now is None:
             now = time.time()
 
