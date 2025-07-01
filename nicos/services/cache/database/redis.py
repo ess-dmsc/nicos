@@ -5,7 +5,7 @@ from __future__ import annotations
 import ast
 import threading
 import time
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Union
 
 from nicos.core import Param
 from nicos.services.cache.database import CacheDatabase
@@ -60,7 +60,7 @@ class RedisCacheDatabase(CacheDatabase):
     _snapshot_building = False
     _SNAPSHOT_TTL = 5.0
 
-    def doInit(self, mode: str, injected_client: RedisClient | None = None):
+    def doInit(self, mode: str, injected_client: Union[RedisClient, None] = None):
         self._client = injected_client or RedisClient(
             host=self.host, port=self.port, db=self.db
         )
@@ -135,7 +135,7 @@ class RedisCacheDatabase(CacheDatabase):
         key = subkey if category == "nocat" else f"{category}/{subkey}"
         return key, f"{key}_ts"
 
-    def _entry_from_hash(self, h: Dict[str, str] | None):
+    def _entry_from_hash(self, h: Union[Dict[str, str], None]):
         if not h or not {"time", "ttl", "value"}.issubset(h):
             return None
 

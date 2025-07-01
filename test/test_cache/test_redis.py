@@ -177,7 +177,7 @@ class TestableRedisCacheDatabase(RedisCacheDatabase):
 
 
 def _store_ttl_entry(db, category: str, subkey: str,
-                     *, ttl: float | None, value="some_value") -> CacheEntry:
+                     *, ttl: Union[float, None], value="some_value") -> CacheEntry:
     entry = CacheEntry(time.time(), ttl, value)
     db._set_data(category, subkey, entry)
     return entry
