@@ -183,6 +183,10 @@ def _store_ttl_entry(db, category: str, subkey: str,
     return entry
 
 
+def _dummy_iter():
+    yield (("dummy", "key"), CacheEntry(time.time(), None, "val"))
+
+
 @pytest.fixture
 def redis_client():
     return RedisClientStub()
@@ -514,3 +518,34 @@ def test_setting_none_or_empty_string_removes_entry(db):
 
     db._set_data("test/key", "value", CacheEntry("123", "456", ""))
     assert db._get_data("test/key/value") is None
+
+
+def test_iterentries_uses_snapshot_after_first_call(monkeypatch, db):
+    # speed the test up: shorten the snapshot TTL to 0.1 s
+    monkeypatch.setattr(TestableRedisCacheDatabase, "_SNAPSHOT_TTL", 0.1, raising=False)
+
+    stream_spy = MagicMock(side_effect=lambda self, batch=512: _dummy_iter())
+    monkeypatch.setattr(TestableRedisCacheDatabase,
+                        "_iter_entries_stream",
+                        stream_spy,
+                        raising=True)
+
+    # first call should trigger the real stream build
+    result_1 = list(db.iterEntries())
+    assert stream_spy.call_count == 1
+
+    # immediate second call should use the cached snapshot
+    result_2 = list(db.iterEntries())
+    assert stream_spy.call_count == 1
+
+    # wait for TTL to expire, then call again. snapshot must rebuild
+    time.sleep(0.15)
+    result_3 = list(db.iterEntries())
+    assert stream_spy.call_count == 2
+
+    # result 1 and 2 should be the same,
+    # but 3 should differ since it rebuilds the snapshot
+    assert result_1 == result_2
+    assert result_1 != result_3
+    # The keys should be the same in all results
+    assert result_1[0][0] == result_2[0][0] == result_3[0][0]
