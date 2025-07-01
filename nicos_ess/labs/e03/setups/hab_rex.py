@@ -7,7 +7,6 @@ devices = dict(
         "nicos_ess.devices.epics.pva.shutter.EpicsShutter",
         description="Nozzle Switcher",
         readpv=f"{pv_root}ActualPosInterpret",
-        targetpv=f"{pv_root}ConfiguredPos-RB",
         writepv=f"{pv_root}SetPosition",
         pva=True,
         monitor=True,
