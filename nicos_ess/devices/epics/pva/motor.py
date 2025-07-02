@@ -292,6 +292,7 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
 
         # Leave calibration mode
         self._put_pv("set", 0)
+        self._put_pv("foff", 1)
 
         self._cache.put(self._name, "offset", new_off, time.time())
         self.log.info("Offset changed to %s", new_off)
