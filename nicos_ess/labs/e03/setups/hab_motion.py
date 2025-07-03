@@ -11,8 +11,8 @@ devices = dict(
         description="Axis X position",
         readpv=f"{pv_root}axis-x-position-r",
         writepv=f"{pv_root}axis-x-s",
-        abslimits=(0, 100),  # Adjust if needed
-        userlimits=(0, 100),
+        abslimits=(0, 300),
+        userlimits=(0, 300),
     ),
     htp003_axis_x_enable=device(
         "nicos_ess.devices.epics.manual_switch.ManualSwitch",
@@ -60,6 +60,8 @@ devices = dict(
         description="Axis Y position",
         readpv=f"{pv_root}axis-y-position-r",
         writepv=f"{pv_root}axis-y-s",
+        abslimits=(0, 300),
+        userlimits=(0, 300),
     ),
     htp003_axis_y_enable=device(
         "nicos_ess.devices.epics.manual_switch.ManualSwitch",
@@ -107,6 +109,8 @@ devices = dict(
         description="Axis Z position",
         readpv=f"{pv_root}axis-z-position-r",
         writepv=f"{pv_root}axis-z-s",
+        abslimits=(0, 400),
+        userlimits=(0, 400),
     ),
     htp003_axis_z_enable=device(
         "nicos_ess.devices.epics.manual_switch.ManualSwitch",
