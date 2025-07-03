@@ -71,7 +71,7 @@ class OctopyMotor(EpicsParameters, CanDisable, CanReference, Motor):
         }
 
         self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
-        self._epics_wrapper.connect_pv(self.motorpv)
+        self._epics_wrapper.connect_pv(f"{self.motorpv}-s")
 
     def doInit(self, mode):
         if session.sessiontype == POLLER and self.monitor:
