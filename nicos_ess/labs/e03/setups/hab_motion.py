@@ -64,6 +64,15 @@ devices = dict(
     # ------------------------------------------------------------------
     # Axis Y
     # ------------------------------------------------------------------
+    hab_motor_y=device(
+        "nicos_ess.devices.epics.pva.octopy_motor.OctopyMotor",
+        description="Axis Y motor",
+        motorpv=f"{pv_root}axis-y",
+        precision=0.05,
+        unit="mm",
+        abslimits=(0, 300),
+        userlimits=(0, 300),
+    ),
     htp003_axis_y=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
         description="Axis Y position",
@@ -113,6 +122,15 @@ devices = dict(
     # ------------------------------------------------------------------
     # Axis Z
     # ------------------------------------------------------------------
+    hab_motor_z=device(
+        "nicos_ess.devices.epics.pva.octopy_motor.OctopyMotor",
+        description="Axis Z motor",
+        motorpv=f"{pv_root}axis-z",
+        precision=0.05,
+        unit="mm",
+        abslimits=(0, 400),
+        userlimits=(0, 400),
+    ),
     htp003_axis_z=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
         description="Axis Z position",
