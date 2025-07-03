@@ -11,6 +11,7 @@ devices = dict(
         description="Axis X motor",
         motorpv=f"{pv_root}axis-x",
         precision=0.05,
+        unit="mm",
         abslimits=(0, 300),
         userlimits=(0, 300),
     ),
