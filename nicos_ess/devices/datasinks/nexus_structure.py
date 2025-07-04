@@ -22,7 +22,7 @@ ALLOWED_INSTRUMENT_NAMES = [
     "nmx",
     "bifrost",
     "estia",
-    "",
+    "freia",
 ]
 
 
