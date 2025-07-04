@@ -4,7 +4,6 @@ group = "special"
 devices = dict(
     DB=device(
         "nicos.services.cache.server.FlatfileCacheDatabase",
-        "nicos.services.cache.server.MemoryCacheDatabase",
         storepath="/opt/nicos-data/cache",
         loglevel="info",
     ),
