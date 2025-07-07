@@ -4,7 +4,7 @@ devices = dict(
     m2_beam_monitor=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="In-beam monitor M2 Halo - electrical axis 3 in motion cabinet 3",
-        motorpv="InBmM2:MC-LinZ-01:Mtr",
+        motorpv="LOKI-InBmM2:MC-LinZ-01:Mtr",
         monitor_deadband=0.01,
     ),
     m2_beam_monitor_positioner=device(
