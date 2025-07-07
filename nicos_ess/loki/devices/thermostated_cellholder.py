@@ -11,10 +11,12 @@ from nicos.core import (
     anytype,
     dictof,
     listof,
+    oneof,
     tupleof,
 )
 from nicos.devices.abstract import MappedMoveable
 from nicos.devices.generic import MultiSwitcher
+from nicos.utils import num_sort
 
 
 class ThermoStatedCellHolder(MultiSwitcher):
@@ -22,7 +24,7 @@ class ThermoStatedCellHolder(MultiSwitcher):
 
     parameters = {
         "cartridges": Param(
-            "Cartridge configurations " "(top-left to bottom-right)",
+            "Cartridge configurations (top-left to bottom-right)",
             type=listof(dictof(str, anytype)),
             userparam=False,
             settable=True,
@@ -108,6 +110,7 @@ class ThermoStatedCellHolder(MultiSwitcher):
             for label, position in zip(labels, positions):
                 new_mapping[label] = position
         self.mapping = new_mapping
+        self.valuetype = oneof(*sorted(self.mapping, key=num_sort))
 
     def doWriteCartridges(self, cartridges):
         self._generate_mapping(cartridges)
@@ -117,11 +120,11 @@ class ThermoStatedCellHolder(MultiSwitcher):
         xlimits = self._attached_xmotor.userlimits
         if x < xlimits[0] or x > xlimits[1]:
             raise LimitError(
-                f"cartridge x position ({x}) outside motor limits " f"({xlimits})"
+                f"cartridge x position ({x}) outside motor limits ({xlimits})"
             )
 
         ylimits = self._attached_ymotor.userlimits
         if y < ylimits[0] or y > ylimits[1]:
             raise LimitError(
-                f"cartridge y position ({y}) outside motor limits " f"({ylimits})"
+                f"cartridge y position ({y}) outside motor limits ({ylimits})"
             )
