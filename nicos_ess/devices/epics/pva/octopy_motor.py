@@ -52,7 +52,7 @@ class OctopyMotor(EpicsParameters, CanDisable, CanReference, Motor):
 
     parameter_overrides = {
         # velocity may be changed from outside, don't cache forever
-        "speed": Override(volatile=True),
+        "speed": Override(volatile=True, unit="mm/s"),
     }
 
     def doPreinit(self, mode):
@@ -117,19 +117,19 @@ class OctopyMotor(EpicsParameters, CanDisable, CanReference, Motor):
         self._put_pv("target", value)
 
     def doStop(self):
-        self._put_pv("stop", "True")
+        self._put_pv("stop", 1)
 
     def doEnable(self, on):
-        self._put_pv("enable", "True" if on else "False")
+        self._put_pv("enable", 1 if on else 0)
 
     def doWriteSpeed(self, value):
         self._put_pv("speed", max(0.0, value))
 
     def doReference(self):
-        self._put_pv("home", "True")
+        self._put_pv("home", 1)
 
     def doReset(self):
-        self._put_pv("reset", "True")
+        self._put_pv("reset", 1)
 
     def doIsAtTarget(self, pos=None, target=None):
         if pos is None:
@@ -149,7 +149,7 @@ class OctopyMotor(EpicsParameters, CanDisable, CanReference, Motor):
             return status.BUSY, f"moving to {self.target}"
 
         # Check if the motor is enabled
-        is_enabled = self._get_cached_pv_or_ask("enable") == "True"
+        is_enabled = self._get_cached_pv_or_ask("enable") == 1
         if not is_enabled:
             return status.WARN, "Motor is not enabled"
 
