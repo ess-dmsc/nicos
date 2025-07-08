@@ -32,7 +32,8 @@ from time import time as currenttime
 
 import rsa
 
-from nicos.clients.proto.classic import ClientTransport
+# from nicos.clients.proto.classic import ClientTransport
+from nicos.clients.proto.fastapi import ClientTransport
 from nicos.protocols.daemon import ACTIVE_COMMANDS, DAEMON_EVENTS, ProtocolError
 from nicos.protocols.daemon.classic import COMPATIBLE_PROTO_VERSIONS, PROTO_VERSION
 from nicos.utils import createThread
