@@ -22,7 +22,7 @@ class ThermoStatedCellHolder(MultiSwitcher):
 
     parameters = {
         "cartridges": Param(
-            "Cartridge configurations " "(top-left to bottom-right)",
+            "Cartridge configurations (top-left to bottom-right)",
             type=listof(dictof(str, anytype)),
             userparam=False,
             settable=True,
@@ -34,9 +34,9 @@ class ThermoStatedCellHolder(MultiSwitcher):
             userparam=False,
             unit="mm",
             default={
-                "narrow": 20,
-                "wide": 10,
-                "rotation": 40,
+                "narrow": 29,
+                "wide": 55,
+                "rotation": 96,
             },
         ),
         "number_cells": Param(
@@ -117,11 +117,11 @@ class ThermoStatedCellHolder(MultiSwitcher):
         xlimits = self._attached_xmotor.userlimits
         if x < xlimits[0] or x > xlimits[1]:
             raise LimitError(
-                f"cartridge x position ({x}) outside motor limits " f"({xlimits})"
+                f"cartridge x position ({x}) outside motor limits ({xlimits})"
             )
 
         ylimits = self._attached_ymotor.userlimits
         if y < ylimits[0] or y > ylimits[1]:
             raise LimitError(
-                f"cartridge y position ({y}) outside motor limits " f"({ylimits})"
+                f"cartridge y position ({y}) outside motor limits ({ylimits})"
             )
