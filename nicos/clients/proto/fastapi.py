@@ -88,19 +88,10 @@ class ClientTransport(BaseClientTransport):
             raise ProtocolError("timeout awaiting reply") from None
 
     def recv_event(self):
-        """Return (event_name, payload_as_list, blobs) – classic NICOS shape."""
         try:
-            evtname, payload_bytes, blobs = self._event_q.get(timeout=None)
-        except queue.Empty:  # should never happen
+            return self._event_q.get(timeout=None)  # (evtname, payload, blobs)
+        except queue.Empty:  # pragma: no cover
             raise ProtocolError("event queue unexpectedly empty")
-
-        evtname2, payload = self.serializer.deserialize_event(payload_bytes, evtname)
-        if evtname2 != evtname:  # sanity-check, remove later probably
-            raise ProtocolError(
-                f"deserializer returned {evtname2!r}, expected {evtname!r}"
-            )
-
-        return evtname, payload, blobs
 
     def _receiver_loop(self):
         """Demultiplex replies vs. events and fill the local queues."""
@@ -117,16 +108,10 @@ class ClientTransport(BaseClientTransport):
 
             lead = frame[:1]
 
-            # ------------------------------------------------------------------ #
-            #  1. one-byte positive reply without payload ---------------------- #
-            # ------------------------------------------------------------------ #
             if lead == ACK:
                 self._reply_q.put((True, None))
                 continue
 
-            # ------------------------------------------------------------------ #
-            #  2. positive or negative reply with serializer payload ------------ #
-            # ------------------------------------------------------------------ #
             if lead in (STX, NAK):
                 success = lead == STX
                 declared_len = LENGTH.unpack(frame[1:5])[0]
@@ -135,7 +120,6 @@ class ClientTransport(BaseClientTransport):
                     self._reply_q.put((False, "length mismatch"))
                     continue
 
-                # let the serializer unpickle / unpack ------------------------ #
                 try:
                     _ignored, msg = self.serializer.deserialize_reply(
                         serializer_blob, success
@@ -144,7 +128,6 @@ class ClientTransport(BaseClientTransport):
                     self._reply_q.put((False, f"deserialization error: {exc}"))
                     continue
 
-                # ensure “(bool, …)” envelope --------------------------------- #
                 if (
                     not isinstance(msg, tuple)
                     or len(msg) != 2
@@ -156,10 +139,9 @@ class ClientTransport(BaseClientTransport):
                 okflag, inner = msg
 
                 if not okflag:
-                    self._reply_q.put((False, inner))  # server error text
+                    self._reply_q.put((False, inner))
                     continue
 
-                # event frames arrive inside an *OK* reply -------------------- #
                 if (
                     isinstance(inner, tuple)
                     and inner
@@ -173,9 +155,6 @@ class ClientTransport(BaseClientTransport):
                     self._reply_q.put((True, inner))
                 continue
 
-            # ------------------------------------------------------------------ #
-            #  3. anything else is garbage ------------------------------------ #
-            # ------------------------------------------------------------------ #
             self._reply_q.put((False, "unknown frame type"))
 
     def _recv_nowait(self):

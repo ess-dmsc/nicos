@@ -7,8 +7,8 @@ FastAPI / WebSocket transport plugin
 from __future__ import annotations
 
 import asyncio
-import pickle  # default serializer – may be replaced by MessagePack/ProtoBuf
 import queue
+import socket
 import threading
 import time
 import weakref
@@ -81,7 +81,12 @@ class ServerTransport(ConnectionHandler, BaseServerTransport):
         self.serializer = server.serializer
         self.sock = websocket
         self.event_sock = websocket
-        self.clientnames = []
+        self.clientnames = [self.websocket.client.host]  # fallback
+        try:
+            host, aliases, addrlist = socket.gethostbyaddr(self.websocket.client.host)
+            self.clientnames = [host] + aliases + addrlist
+        except socket.herror:
+            pass
 
         self._in_queue: "queue.Queue[bytes | None]" = queue.Queue()
 
@@ -151,18 +156,25 @@ class ServerTransport(ConnectionHandler, BaseServerTransport):
         _run_in_loop(self.loop, self.websocket.send_bytes(blob))
 
     def send_event(self, evtname, payload, blobs):
-        evt_blob = self.serializer.serialize_event(evtname, payload)
-        outer = (True, ("event", evtname, evt_blob, blobs))
+        outer = (True, ("event", evtname, payload, blobs))
         data = self.serializer.serialize_ok_reply(outer)
         blob = STX + LENGTH.pack(len(data)) + data
         fut = _run_in_loop(self.loop, self.websocket.send_bytes(blob))
-        fut.add_done_callback(lambda f: f.exception())  # surface async errors
+        fut.add_done_callback(lambda f: f.exception())
 
     def close(self):
+        if getattr(self, "_closed", False):
+            return
+        self._closed = True
+
         try:
             _run_in_loop(self.loop, self.websocket.close())
         except Exception:
             pass
+
+        if not self._ingest_task.done():
+            self._ingest_task.cancel()
+
         ConnectionHandler.close(self)
 
 
@@ -184,9 +196,19 @@ class Server(BaseServer):
         self._ident_lock = threading.Lock()
         self._next_ident = 0
 
+        self._by_host: dict[str, list[ServerTransport]] = {}
+
         @self._app.websocket("/ws")
         async def ws_endpoint(websocket: WebSocket):  # noqa: D401
             await websocket.accept()  # JWT gatekeeping can go here ?
+
+            host = websocket.client.host
+            if len(self._by_host.get(host, [])) >= 10:  # configurable limit
+                await websocket.close(
+                    code=4000, reason="too many connections from host"
+                )
+                return
+
             loop = asyncio.get_running_loop()
             ident = self._new_ident()
             handler = ServerTransport(self.daemon, websocket, self, ident, loop)
@@ -207,13 +229,21 @@ class Server(BaseServer):
 
     def _register_handler(self, handler: ServerTransport):
         self._handlers[handler.ident] = handler
+        self._by_host.setdefault(handler.clientnames[0], []).append(handler)
 
     def _run_handler(self, handler: ServerTransport):
         try:
             handler.handle()
+        except CloseConnection:
+            handler.log.info("client requested clean shutdown")
+        except Exception:
+            handler.log.exception("unexpected error in handler thread")
         finally:
             handler.close()
             self._handlers.pop(handler.ident, None)
+            lst = self._by_host.get(handler.clientnames[0], [])
+            if handler in lst:
+                lst.remove(handler)
 
     def start(self, interval: float | None = None):  # noqa: D401
         """Start uvicorn in *another* thread so we keep the same blocking API."""
