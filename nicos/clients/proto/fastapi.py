@@ -15,6 +15,16 @@ from websockets.sync.client import connect as ws_connect  # type: ignore
 
 from nicos.protocols.daemon import ClientTransport as BaseClientTransport
 from nicos.protocols.daemon import ProtocolError
+from nicos.protocols.daemon.classic import (
+    ACK,
+    ENQ,
+    LENGTH,
+    NAK,
+    SERIALIZERS,
+    STX,
+    code2command,
+    command2code,
+)
 from nicos.utils import createThread
 
 # -----------------------------------------------------------------------------
@@ -43,7 +53,6 @@ class ClientTransport(BaseClientTransport):
         self._reader_thread = createThread("ws-receiver", self._receiver_loop)
 
         # The banner tells us which serializer to use. Fix later
-        from nicos.protocols.daemon.classic import SERIALIZERS
 
         name = "classic"  # hardcoded for now
         self.serializer = SERIALIZERS[name]()
@@ -64,9 +73,12 @@ class ClientTransport(BaseClientTransport):
         self.ws = None
 
     def send_command(self, cmdname, args):
+        """Serialize *cmdname*/*args* and push one binary WS frame."""
         if not self.ws:
             raise ProtocolError("not connected")
-        frame = pickle.dumps((cmdname, *args))
+
+        payload = self.serializer.serialize_cmd(cmdname, args)
+        frame = ENQ + command2code[cmdname] + LENGTH.pack(len(payload)) + payload
         self.ws.send(frame)
 
     def recv_reply(self):
@@ -91,28 +103,80 @@ class ClientTransport(BaseClientTransport):
         return evtname, payload, blobs
 
     def _receiver_loop(self):
-        """Background thread: demultiplex frames → reply_q / event_q."""
+        """Demultiplex replies vs. events and fill the local queues."""
         while True:
             try:
-                frame = self.ws.recv()
+                frame: bytes = self.ws.recv()
             except Exception:
-                # push sentinel so waiting calls unblock gracefully
                 self._reply_q.put((False, "connection lost"))
                 break
-            try:
-                obj = pickle.loads(frame)
-            except Exception as exc:  # noqa: BLE001
-                self._reply_q.put((False, f"unpickle error: {exc}"))
+
+            if not frame:  # never zero-length in our protocol
+                self._reply_q.put((False, "empty frame"))
                 continue
 
-            if isinstance(obj, tuple) and len(obj) >= 1 and obj[0] == "event":
-                print(f"Received event: {obj[1]!r}")
-                _, evtname, payload, blobs = obj
-                self._event_q.put((evtname, payload, blobs))
-            elif isinstance(obj, tuple) and len(obj) == 2 and isinstance(obj[0], bool):
-                self._reply_q.put(obj)  # (success, payload)
-            else:
-                self._reply_q.put((False, "malformed frame"))
+            lead = frame[:1]
+
+            # ------------------------------------------------------------------ #
+            #  1. one-byte positive reply without payload ---------------------- #
+            # ------------------------------------------------------------------ #
+            if lead == ACK:
+                self._reply_q.put((True, None))
+                continue
+
+            # ------------------------------------------------------------------ #
+            #  2. positive or negative reply with serializer payload ------------ #
+            # ------------------------------------------------------------------ #
+            if lead in (STX, NAK):
+                success = lead == STX
+                declared_len = LENGTH.unpack(frame[1:5])[0]
+                serializer_blob = frame[5:]
+                if len(serializer_blob) != declared_len:
+                    self._reply_q.put((False, "length mismatch"))
+                    continue
+
+                # let the serializer unpickle / unpack ------------------------ #
+                try:
+                    _ignored, msg = self.serializer.deserialize_reply(
+                        serializer_blob, success
+                    )
+                except Exception as exc:
+                    self._reply_q.put((False, f"deserialization error: {exc}"))
+                    continue
+
+                # ensure “(bool, …)” envelope --------------------------------- #
+                if (
+                    not isinstance(msg, tuple)
+                    or len(msg) != 2
+                    or not isinstance(msg[0], bool)
+                ):
+                    self._reply_q.put((False, "malformed reply envelope"))
+                    continue
+
+                okflag, inner = msg
+
+                if not okflag:
+                    self._reply_q.put((False, inner))  # server error text
+                    continue
+
+                # event frames arrive inside an *OK* reply -------------------- #
+                if (
+                    isinstance(inner, tuple)
+                    and inner
+                    and inner[0] == "event"
+                    and len(inner) == 4
+                ):
+                    _, evtname, evt_blob, blobs = inner
+                    _, payload = self.serializer.deserialize_event(evt_blob, evtname)
+                    self._event_q.put((evtname, payload, blobs))
+                else:
+                    self._reply_q.put((True, inner))
+                continue
+
+            # ------------------------------------------------------------------ #
+            #  3. anything else is garbage ------------------------------------ #
+            # ------------------------------------------------------------------ #
+            self._reply_q.put((False, "unknown frame type"))
 
     def _recv_nowait(self):
         """Read a single frame synchronously (only used in tests)."""

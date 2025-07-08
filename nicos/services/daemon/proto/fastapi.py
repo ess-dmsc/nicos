@@ -24,6 +24,16 @@ from nicos.protocols.daemon import (
 from nicos.protocols.daemon import (
     ServerTransport as BaseServerTransport,
 )
+from nicos.protocols.daemon.classic import (
+    ACK,
+    ENQ,
+    LENGTH,
+    NAK,
+    SERIALIZERS,
+    STX,
+    code2command,
+    command2code,
+)
 from nicos.services.daemon.handler import (
     ConnectionHandler,
     command_wrappers,
@@ -102,32 +112,51 @@ class ServerTransport(ConnectionHandler, BaseServerTransport):
         return PROTO_VERSION
 
     def recv_command(self):
-        """Blocking call used by ConnectionHandler.handle()."""
+        """Blocking – extract one command from the queue."""
         frame = self._in_queue.get()
         if frame is None:
             raise CloseConnection
+
+        if len(frame) < 7 or frame[:1] != ENQ:
+            raise ProtocolError("invalid command header")
+
+        cmdcode = frame[1:3]
+        declared_len = LENGTH.unpack(frame[3:7])[0]
+        serializer_blob = frame[7:]
+
+        if len(serializer_blob) != declared_len:
+            raise ProtocolError("command length mismatch")
+
         try:
-            cmd, *args = pickle.loads(frame)
-            return cmd, tuple(args)
+            cmdname = code2command[cmdcode]
+        except KeyError:
+            raise ProtocolError("unknown command code")
+
+        try:
+            return self.serializer.deserialize_cmd(serializer_blob, cmdname)
         except Exception as exc:
-            raise ProtocolError("invalid command frame") from exc
+            raise ProtocolError("invalid command payload") from exc
 
     def send_ok_reply(self, payload):
-        try:
-            blob = pickle.dumps((True, payload))
-            _run_in_loop(self.loop, self.websocket.send_bytes(blob))
-        except Exception as exc:  # noqa: BLE001
-            raise ProtocolError("send_ok_reply failed") from exc
+        if payload is None:
+            blob = ACK
+        else:
+            data = self.serializer.serialize_ok_reply((True, payload))
+            blob = STX + LENGTH.pack(len(data)) + data
+        _run_in_loop(self.loop, self.websocket.send_bytes(blob))
 
     def send_error_reply(self, reason):
-        blob = pickle.dumps((False, reason))
+        data = self.serializer.serialize_error_reply((False, reason))
+        blob = NAK + LENGTH.pack(len(data)) + data
         _run_in_loop(self.loop, self.websocket.send_bytes(blob))
 
     def send_event(self, evtname, payload, blobs):
-        self.log.info("sending event %s to %d clients", evtname, len(blobs))
-        blob = pickle.dumps(("event", evtname, payload, blobs))
+        evt_blob = self.serializer.serialize_event(evtname, payload)
+        outer = (True, ("event", evtname, evt_blob, blobs))
+        data = self.serializer.serialize_ok_reply(outer)
+        blob = STX + LENGTH.pack(len(data)) + data
         fut = _run_in_loop(self.loop, self.websocket.send_bytes(blob))
-        fut.add_done_callback(lambda f: f.exception())
+        fut.add_done_callback(lambda f: f.exception())  # surface async errors
 
     def close(self):
         try:
@@ -142,6 +171,7 @@ class Server(BaseServer):
 
     def __init__(self, daemon, address: tuple[str, int], serializer):
         super().__init__(daemon, address, serializer)
+        self.serializer = SERIALIZERS["classic"]()
 
         self._app = FastAPI()
         self._loop: asyncio.AbstractEventLoop | None = None
