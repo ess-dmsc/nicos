@@ -58,19 +58,11 @@ class ClientTransport(BaseClientTransport):
     def connect(self, conndata):
         """Establish WebSocket connection **and** read the banner."""
         self._clear_queues()
-
         url = f"wss://{conndata.host}:{conndata.port}/ws"
         ssl_ctx = ssl.create_default_context()
         ssl_ctx.load_verify_locations("ssl/ca.pem")
         self.ws = ws_connect(url, open_timeout=30.0, ssl=ssl_ctx)
-
         self._reader_thread = createThread("ws-receiver", self._receiver_loop)
-
-        # The banner tells us which serializer to use. Fix later
-
-        name = "classic"  # hardcoded for now
-        self.serializer = SERIALIZERS[name]()
-
         return True
 
     def connect_events(self, conndata):
@@ -126,6 +118,15 @@ class ClientTransport(BaseClientTransport):
             if lead == ACK:
                 self._reply_q.put((True, None))
                 continue
+
+            if lead == STX and self.serializer is None:
+                declared_len = LENGTH.unpack(frame[1:5])[0]
+                serializer_blob = frame[5 : 5 + declared_len]
+                try:
+                    self.serializer = self.determine_serializer(serializer_blob, True)
+                except ProtocolError as exc:
+                    self._reply_q.put((False, f"cannot choose serializer: {exc}"))
+                    break
 
             if lead in (STX, NAK):
                 success = lead == STX
