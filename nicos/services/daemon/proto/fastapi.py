@@ -33,6 +33,7 @@ from nicos.protocols.daemon.classic import (
     STX,
     code2command,
     command2code,
+    event2code,
 )
 from nicos.services.daemon.handler import (
     ConnectionHandler,
@@ -156,10 +157,21 @@ class ServerTransport(ConnectionHandler, BaseServerTransport):
         _run_in_loop(self.loop, self.websocket.send_bytes(blob))
 
     def send_event(self, evtname, payload, blobs):
-        outer = (True, ("event", evtname, payload, blobs))
-        data = self.serializer.serialize_ok_reply(outer)
-        blob = STX + LENGTH.pack(len(data)) + data
-        fut = _run_in_loop(self.loop, self.websocket.send_bytes(blob))
+        async def _push():
+            header = (
+                STX
+                + event2code[evtname]
+                + bytes([len(blobs)])
+                + LENGTH.pack(len(payload))
+                + payload
+            )
+            await self.websocket.send_bytes(header)
+
+            for blob in blobs:
+                mv = memoryview(blob) if not isinstance(blob, memoryview) else blob
+                await self.websocket.send_bytes(LENGTH.pack(len(mv)) + mv)
+
+        fut = _run_in_loop(self.loop, _push())
         fut.add_done_callback(lambda f: f.exception())
 
     def close(self):
@@ -257,6 +269,7 @@ class Server(BaseServer):
             port=port,
             log_level="info",
             log_config=None,
+            ws_max_size=64 << 20,  # 64 MiB
             ssl_certfile="ssl/server.crt",
             ssl_keyfile="ssl/server.key",
         )

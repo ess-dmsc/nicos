@@ -23,6 +23,7 @@ from nicos.protocols.daemon.classic import (
     SERIALIZERS,
     STX,
     code2command,
+    code2event,
     command2code,
 )
 from nicos.utils import createThread
@@ -61,7 +62,7 @@ class ClientTransport(BaseClientTransport):
         url = f"wss://{conndata.host}:{conndata.port}/ws"
         ssl_ctx = ssl.create_default_context()
         ssl_ctx.load_verify_locations("ssl/ca.pem")
-        self.ws = ws_connect(url, open_timeout=30.0, ssl=ssl_ctx)
+        self.ws = ws_connect(url, open_timeout=30.0, max_size=None, ssl=ssl_ctx)
         self._reader_thread = createThread("ws-receiver", self._receiver_loop)
         return True
 
@@ -127,6 +128,30 @@ class ClientTransport(BaseClientTransport):
                 except ProtocolError as exc:
                     self._reply_q.put((False, f"cannot choose serializer: {exc}"))
                     break
+
+            if lead == STX and frame[1:3] in code2event:
+                evtcode = frame[1:3]
+                nblobs = frame[3]
+                (paylen,) = LENGTH.unpack(frame[4:8])
+                payload = frame[8 : 8 + paylen]
+
+                evtname, payobj = self.serializer.deserialize_event(
+                    payload, code2event[evtcode]
+                )
+
+                blobs: list[bytes | memoryview] = []
+                for _ in range(nblobs):
+                    blob_frame = self.ws.recv()
+                    if len(blob_frame) < 4:
+                        raise ProtocolError("blob header too short")
+                    (blen,) = LENGTH.unpack(blob_frame[:4])
+                    blob = memoryview(blob_frame)[4:]
+                    if len(blob) != blen:
+                        raise ProtocolError("blob size mismatch")
+                    blobs.append(blob)
+
+                self._event_q.put((evtname, payobj, blobs))
+                continue
 
             if lead in (STX, NAK):
                 success = lead == STX

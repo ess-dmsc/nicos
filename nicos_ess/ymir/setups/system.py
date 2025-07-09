@@ -35,13 +35,13 @@ devices = dict(
         "nicos_ess.devices.sample.EssSample",
         description="The currently used sample",
     ),
-    # Exp=device(
-    #     "nicos_ess.devices.experiment.EssExperiment",
-    #     description="experiment object",
-    #     dataroot="/opt/nicos-data",
-    #     sample="Sample",
-    #     cache_filepath="/opt/nicos-data/cached_proposals.json",
-    # ),
+    Exp=device(
+        "nicos_ess.devices.experiment.EssExperiment",
+        description="experiment object",
+        dataroot="/opt/nicos-data",
+        sample="Sample",
+        cache_filepath="/opt/nicos-data/cached_proposals.json",
+    ),
     # pnp_listener=device(
     #     "nicos_ess.devices.pnp_listener.UDPHeartbeatsManager",
     #     description="Listens for PnP heartbeats",
