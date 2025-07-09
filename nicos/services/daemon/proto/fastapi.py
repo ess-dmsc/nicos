@@ -15,6 +15,7 @@ import weakref
 from typing import Any
 
 from nicos.protocols.daemon import (
+    DAEMON_EVENTS,
     CloseConnection,
     ProtocolError,
 )
@@ -75,27 +76,39 @@ class ServerTransport(ConnectionHandler, BaseServerTransport):
         websocket: WebSocket,
         server: "Server",
         ident: int,
+        client_id: bytes,
         loop: asyncio.AbstractEventLoop,
     ) -> None:
+        """Create one handler bound to the *control* WebSocket.
+
+        *client_id* is the 16-byte token that pairs this handler with the optional
+        blob channel.
+        """
         self.websocket = websocket
         self.loop = loop
         self.serializer = server.serializer
-        self.sock = websocket
+
+        self.sock = websocket  # aliases kept for compatibility
         self.event_sock = websocket
-        self.clientnames = [self.websocket.client.host]  # fallback
+        self.client_id = client_id
+
+        self.clientnames = [websocket.client.host]
         try:
-            host, aliases, addrlist = socket.gethostbyaddr(self.websocket.client.host)
+            host, aliases, addrlist = socket.gethostbyaddr(websocket.client.host)
             self.clientnames = [host] + aliases + addrlist
         except socket.herror:
             pass
 
         self._in_queue: "queue.Queue[bytes | None]" = queue.Queue()
+        self.blob_websocket: WebSocket | None = None
 
         self._ingest_task = loop.create_task(self._ingest())
 
+        self._closed = False
+        self._closed_event = asyncio.Event()
+
         ConnectionHandler.__init__(self, daemon)
         self.setIdent(ident)
-
         server._register_handler(self)
 
         createThread(f"event_sender-{ident}", self.event_sender)
@@ -111,6 +124,27 @@ class ServerTransport(ConnectionHandler, BaseServerTransport):
         except Exception:  # pragma: no cover – unexpected network error
             self.log.exception("websocket ingest crash")
             self._in_queue.put(None)
+
+    def attach_blob_socket(self, websocket: WebSocket) -> None:
+        """Bind the *second* WebSocket that carries only LENGTH+blob frames."""
+        self.blob_websocket: WebSocket = websocket
+        self.log.info("blob channel established")
+
+        async def _ingest_blob():
+            # the daemon never *reads* from the blob socket,
+            # but we must watch for disconnects to clean up
+            try:
+                while True:
+                    await websocket.receive_bytes()
+            except WebSocketDisconnect:
+                self.log.info("blob channel disconnected")
+            except Exception:  # pragma: no cover
+                self.log.exception("blob ingest crash")
+
+            # if the blob channel dies we close the whole handler
+            self.close()
+
+        _run_in_loop(self.loop, _ingest_blob())
 
     def get_version(self):
         from nicos.protocols.daemon.classic import PROTO_VERSION
@@ -157,6 +191,15 @@ class ServerTransport(ConnectionHandler, BaseServerTransport):
         _run_in_loop(self.loop, self.websocket.send_bytes(blob))
 
     def send_event(self, evtname, payload, blobs):
+        """Send one NICOS event.
+
+        *Header* + *payload* always travel over the control socket.
+
+        If the event type allows blobs and the client opened a blob socket,
+        raw buffers are streamed over that socket; otherwise they fall back to
+        the control socket exactly like in the classic implementation.
+        """
+
         async def _push():
             header = (
                 STX
@@ -167,15 +210,27 @@ class ServerTransport(ConnectionHandler, BaseServerTransport):
             )
             await self.websocket.send_bytes(header)
 
+            # choose the right channel for the blobs
+            ws_target = (
+                getattr(self, "blob_websocket", None)
+                if DAEMON_EVENTS.get(evtname, (None, False))[1] and blobs
+                else self.websocket
+            )
+
             for blob in blobs:
-                mv = memoryview(blob) if not isinstance(blob, memoryview) else blob
-                await self.websocket.send_bytes(LENGTH.pack(len(mv)) + mv)
+                mv = blob if isinstance(blob, memoryview) else memoryview(blob)
+                await ws_target.send_bytes(LENGTH.pack(len(mv)) + mv)
 
         fut = _run_in_loop(self.loop, _push())
         fut.add_done_callback(lambda f: f.exception())
 
+    async def wait_closed(self):
+        """Coroutine used by the blob endpoint to keep the connection alive."""
+        await self._closed_event.wait()
+
     def close(self):
-        if getattr(self, "_closed", False):
+        """Terminate both WebSockets and wake up anyone awaiting `wait_closed()`."""
+        if self._closed:
             return
         self._closed = True
 
@@ -183,9 +238,19 @@ class ServerTransport(ConnectionHandler, BaseServerTransport):
             _run_in_loop(self.loop, self.websocket.close())
         except Exception:
             pass
+        if self.blob_websocket is not None:
+            try:
+                _run_in_loop(self.loop, self.blob_websocket.close())
+            except Exception:
+                pass
 
         if not self._ingest_task.done():
             self._ingest_task.cancel()
+
+        try:
+            _run_in_loop(self.loop, self._closed_event.set())
+        except Exception:
+            pass
 
         ConnectionHandler.close(self)
 
@@ -205,30 +270,57 @@ class Server(BaseServer):
         self._handlers: "weakref.WeakValueDictionary[int, ServerTransport]" = (
             weakref.WeakValueDictionary()
         )
+        self._by_host: dict[str, list[ServerTransport]] = {}
+        self._by_clientid: dict[tuple[str, bytes], ServerTransport] = {}
         self._ident_lock = threading.Lock()
         self._next_ident = 0
 
-        self._by_host: dict[str, list[ServerTransport]] = {}
-
         @self._app.websocket("/ws")
         async def ws_endpoint(websocket: WebSocket):  # noqa: D401
-            await websocket.accept()  # JWT gatekeeping can go here ?
+            await websocket.accept()
+
+            client_id = await websocket.receive_bytes()
+            if len(client_id) != 16:
+                await websocket.close(code=4000, reason="invalid client-id")
+                return
 
             host = websocket.client.host
-            if len(self._by_host.get(host, [])) >= 10:  # configurable limit
-                await websocket.close(
-                    code=4000, reason="too many connections from host"
-                )
+            if len(self._by_host.get(host, [])) >= 10:  # limit per host
+                await websocket.close(code=4001, reason="too many connections")
                 return
 
             loop = asyncio.get_running_loop()
             ident = self._new_ident()
-            handler = ServerTransport(self.daemon, websocket, self, ident, loop)
+            handler = ServerTransport(
+                self.daemon,
+                websocket,
+                self,
+                ident,
+                client_id,
+                loop,
+            )
+
+            self._by_clientid[(host, client_id)] = handler
 
             cmd_thread = createThread(
                 f"ws-handler-{ident}", self._run_handler, args=(handler,)
             )
             await asyncio.to_thread(cmd_thread.join)
+
+        @self._app.websocket("/ws/blob")
+        async def ws_blob_endpoint(websocket: WebSocket):  # noqa: D401
+            await websocket.accept()
+
+            client_id = await websocket.receive_bytes()
+            host = websocket.client.host
+            handler = self._by_clientid.get((host, client_id))
+            if handler is None:
+                await websocket.close(code=4002, reason="no control connection")
+                return
+
+            handler.attach_blob_socket(websocket)
+
+            await handler.wait_closed()
 
         @self._app.get("/healthz")
         async def healthz():  # noqa: D401

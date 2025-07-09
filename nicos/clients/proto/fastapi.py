@@ -57,17 +57,29 @@ class ClientTransport(BaseClientTransport):
                 break
 
     def connect(self, conndata):
-        """Establish WebSocket connection **and** read the banner."""
+        """Establish control WebSocket and create receiver thread."""
         self._clear_queues()
+        self.client_id = uuid.uuid1().bytes
         url = f"wss://{conndata.host}:{conndata.port}/ws"
         ssl_ctx = ssl.create_default_context()
         ssl_ctx.load_verify_locations("ssl/ca.pem")
         self.ws = ws_connect(url, open_timeout=30.0, max_size=None, ssl=ssl_ctx)
+        self.ws.send(self.client_id)
+
         self._reader_thread = createThread("ws-receiver", self._receiver_loop)
         return True
 
     def connect_events(self, conndata):
-        """No‑op: events arrive over the same WebSocket."""
+        """Open the second WebSocket that is dedicated to blobs."""
+        if self.ws is None:
+            raise ProtocolError("control socket not connected")
+
+        url = f"wss://{conndata.host}:{conndata.port}/ws/blob"
+        ssl_ctx = ssl.create_default_context()
+        ssl_ctx.load_verify_locations("ssl/ca.pem")
+        self.ws_blob = ws_connect(url, open_timeout=10.0, max_size=None, ssl=ssl_ctx)
+
+        self.ws_blob.send(self.client_id)
 
     def disconnect(self):
         if self.ws:
@@ -141,7 +153,8 @@ class ClientTransport(BaseClientTransport):
 
                 blobs: list[bytes | memoryview] = []
                 for _ in range(nblobs):
-                    blob_frame = self.ws.recv()
+                    ws_src = getattr(self, "ws_blob", None) or self.ws
+                    blob_frame = ws_src.recv()
                     if len(blob_frame) < 4:
                         raise ProtocolError("blob header too short")
                     (blen,) = LENGTH.unpack(blob_frame[:4])
