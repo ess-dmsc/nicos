@@ -8,6 +8,7 @@ import numpy as np
 from nicos import session
 from nicos.core import (
     LIVE,
+    POLLER,
     SIMULATION,
     ArrayDesc,
     CacheError,
@@ -19,9 +20,8 @@ from nicos.core import (
     multiStatus,
     oneof,
     status,
-    usermethod,
     tupleof,
-    POLLER,
+    usermethod,
 )
 from nicos.devices.generic import Detector, ImageChannelMixin, ManualSwitch
 from nicos.utils import byteBuffer, createThread
@@ -339,8 +339,8 @@ class AreaDetector(ImageChannelMixin, Measurable):
         status, message = self._ad_simulator._status
         self._update_status(status, message)
         self.log.info("Image acquired")
-        if time.monotonic() - self._last_update > self._plot_update_delay:
-            _thread = createThread(f"get_image_{time.time_ns()}", self.get_image)
+        # if time.monotonic() - self._last_update > self._plot_update_delay:
+        _thread = createThread(f"get_image_{time.time_ns()}", self.get_image)
 
     def get_image(self):
         dataarray = self._ad_simulator._image
@@ -519,7 +519,7 @@ class AreaDetectorCollector(Detector):
             if (topic, source) == area_detector.get_topic_and_source():
                 return area_detector.arrayInfo().shape
         self.log.error(
-            "No array size was found for area detector " "with topic %s and source %s.",
+            "No array size was found for area detector with topic %s and source %s.",
             topic,
             source,
         )

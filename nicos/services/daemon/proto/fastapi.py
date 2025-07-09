@@ -7,12 +7,14 @@ FastAPI / WebSocket transport plugin
 from __future__ import annotations
 
 import asyncio
+import collections
+import heapq
 import queue
 import socket
 import threading
 import time
 import weakref
-from typing import Any
+from typing import Any, List, Tuple
 
 from nicos.protocols.daemon import (
     DAEMON_EVENTS,
@@ -52,6 +54,91 @@ except ModuleNotFoundError as err:  # pragma: no cover
     ) from err
 
 __all__ = ["Server"]
+
+
+CTRL_PRIO = 0  # control/metadata
+BLOB_PRIO = 10  # image, livedata, … (anything allowed to be dropped)
+STOP_PRIO = 99  # sentinel (always delivered last)
+
+
+Payload = Tuple[str, bytes, List[bytes]]  # (event, data, blobs)
+Node = Tuple[int, int, int, Payload]  # (prio, seq, size, payload)
+
+
+class PrioritySizedQueue(queue.Queue):
+    """SizedQueue with priorities but **unchanged public interface**.
+
+    * Every ``put(item)`` works as before; an optional keyword ``priority=``
+      lets the caller label items (default = ``BLOB_PRIO``).
+    * ``get()`` still returns exactly the original ``item``.
+    * When the queue (measured in bytes) is full and a **higher-priority**
+      item is offered, the oldest low-priority blob is discarded to make room.
+    """
+
+    def __init__(self, max_bytes: int):
+        super().__init__(0)
+        self._max = max_bytes
+        self.queue = []
+        self._used = 0
+        self._seq = 0
+
+    def _qsize(self) -> int:
+        return len(self.queue)
+
+    def _sizeof(self, payload: Any) -> int:
+        if isinstance(payload, tuple) and len(payload) == 3:
+            _evt, data, blobs = payload
+            return len(data) + sum(len(b) for b in blobs)
+        return 1  # fallback
+
+    def put(self, item: Payload, block=True, timeout=None, *, priority=BLOB_PRIO):
+        """Same signature as ``queue.Queue.put`` plus the *priority* keyword."""
+        size = self._sizeof(item)
+        if size > self._max:
+            raise queue.Full("single item exceeds queue limit")
+
+        with self.not_full:
+            endtime = None
+            while self._used + size > self._max:
+                # try to free space by dumping one low-priority blob
+                if priority == CTRL_PRIO or not self._evict_one_blob(priority):
+                    if not block:
+                        raise queue.Full
+                    if timeout is None:
+                        self.not_full.wait()
+                    else:
+                        if endtime is None:
+                            endtime = time.monotonic() + timeout
+                        remaining = endtime - time.monotonic()
+                        if remaining <= 0.0:
+                            raise queue.Full
+                        self.not_full.wait(remaining)
+
+            heapq.heappush(self.queue, (priority, self._seq, size, item))
+            self._seq += 1
+            self._used += size
+            self.not_empty.notify()
+
+    def _evict_one_blob(self, incoming_prio: int) -> bool:
+        """Remove one queued blob with prio ≥ ``incoming_prio``; return True if dropped."""
+        # scan from *oldest* (heap keeps smallest first, so start from the end)
+        for idx in range(len(self.queue) - 1, -1, -1):
+            prio, _seq, sz, payload = self.queue[idx]
+            if prio >= incoming_prio:
+                del self.queue[idx]
+                heapq.heapify(self.queue)
+                self._used -= sz
+                return True
+        return False
+
+    def _get(self) -> Payload:
+        prio, _seq, sz, payload = heapq.heappop(self.queue)
+        self._used -= sz
+        return payload
+
+
+def _is_blob(evt: str) -> bool:
+    return DAEMON_EVENTS.get(evt, (None, False))[1]
 
 
 def _run_in_loop(loop: asyncio.AbstractEventLoop, coro):
@@ -108,6 +195,7 @@ class ServerTransport(ConnectionHandler, BaseServerTransport):
         self._closed_event = asyncio.Event()
 
         ConnectionHandler.__init__(self, daemon)
+        self.event_queue = PrioritySizedQueue(100 * 1024 * 1024)  # 100 MiB
         self.setIdent(ident)
         server._register_handler(self)
 
@@ -178,15 +266,18 @@ class ServerTransport(ConnectionHandler, BaseServerTransport):
             raise ProtocolError("invalid command payload") from exc
 
     def send_ok_reply(self, payload):
+        """Send ACK or STX + payload exactly like the classic daemon."""
         if payload is None:
             blob = ACK
         else:
-            data = self.serializer.serialize_ok_reply((True, payload))
+            # classic protocol: NO extra (True, …) wrapper
+            data = self.serializer.serialize_ok_reply(payload)
             blob = STX + LENGTH.pack(len(data)) + data
         _run_in_loop(self.loop, self.websocket.send_bytes(blob))
 
     def send_error_reply(self, reason):
-        data = self.serializer.serialize_error_reply((False, reason))
+        """Send NAK + payload exactly like the classic daemon."""
+        data = self.serializer.serialize_error_reply(reason)  # no (False, …) wrapper
         blob = NAK + LENGTH.pack(len(data)) + data
         _run_in_loop(self.loop, self.websocket.send_bytes(blob))
 
@@ -216,6 +307,12 @@ class ServerTransport(ConnectionHandler, BaseServerTransport):
                 if DAEMON_EVENTS.get(evtname, (None, False))[1] and blobs
                 else self.websocket
             )
+
+            if len(blobs) > 0:
+                # print to check if we are using the blob channel or # the control channel
+                self.log.warning(
+                    f"Sending {len(blobs)} blobs over {'blob' if ws_target is self.blob_websocket else 'control'} channel"
+                )
 
             for blob in blobs:
                 mv = blob if isinstance(blob, memoryview) else memoryview(blob)
@@ -387,6 +484,17 @@ class Server(BaseServer):
         for hdlr in list(self._handlers.values()):
             hdlr.close()
 
+    def _discard_handler(self, hdlr: ServerTransport) -> None:
+        """Remove the handler from all tracking maps and close it."""
+        try:
+            hdlr.close()
+        except Exception:
+            pass
+        self._handlers.pop(hdlr.ident, None)
+        lst = self._by_host.get(hdlr.clientnames[0], [])
+        if hdlr in lst:
+            lst.remove(hdlr)
+
     def emit(
         self,
         event: str,
@@ -394,11 +502,21 @@ class Server(BaseServer):
         blobs: list[bytes],
         handler: ServerTransport | None = None,
     ):
-        data = self.serializer.serialize_event(event, data)
-        targets = (handler,) if handler else list(self._handlers.values())
-        for hdlr in targets:
+        payload = self.serializer.serialize_event(event, data)
+        is_blob = DAEMON_EVENTS.get(event, (None, False))[1]
+        prio = BLOB_PRIO if is_blob else CTRL_PRIO
+
+        targets = [handler] if handler else list(self._handlers.values())
+        for h in targets:
+            if getattr(h, "_closed", False):
+                self._discard_handler(h)
+                continue
             try:
-                hdlr.event_queue.put((event, data, blobs), timeout=0.1)
+                h.event_queue.put((event, payload, blobs), priority=prio, block=False)
             except queue.Full:
-                self.daemon.log.warning("handler %d queue full → dropping", hdlr.ident)
-                hdlr.close()
+                if not is_blob:  # control event must succeed
+                    self.daemon.log.warning(
+                        "control queue full → drop handler %d", h.ident
+                    )
+                    self._discard_handler(h)
+                # blob events silently dropped when full
