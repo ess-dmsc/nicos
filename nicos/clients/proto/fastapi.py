@@ -43,8 +43,22 @@ class ClientTransport(BaseClientTransport):
         self._event_q: "queue.Queue[tuple[str, Any, list[bytes]]]" = queue.Queue()
         self._reader_thread: threading.Thread | None = None
 
+    def _clear_queues(self):
+        while not self._reply_q.empty():
+            try:
+                self._reply_q.get_nowait()
+            except queue.Empty:
+                break
+        while not self._event_q.empty():
+            try:
+                self._event_q.get_nowait()
+            except queue.Empty:
+                break
+
     def connect(self, conndata):
         """Establish WebSocket connection **and** read the banner."""
+        self._clear_queues()
+
         url = f"wss://{conndata.host}:{conndata.port}/ws"
         ssl_ctx = ssl.create_default_context()
         ssl_ctx.load_verify_locations("ssl/ca.pem")
@@ -71,6 +85,7 @@ class ClientTransport(BaseClientTransport):
         if self._reader_thread:
             self._reader_thread.join(timeout=1.0)
         self.ws = None
+        self._clear_queues()
 
     def send_command(self, cmdname, args):
         """Serialize *cmdname*/*args* and push one binary WS frame."""
