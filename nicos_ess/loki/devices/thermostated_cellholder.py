@@ -36,9 +36,9 @@ class ThermoStatedCellHolder(MultiSwitcher):
             userparam=False,
             unit="mm",
             default={
-                "narrow": 20,
-                "wide": 10,
-                "rotation": 40,
+                "narrow": 29,
+                "wide": 55,
+                "rotation": 96,
             },
         ),
         "number_cells": Param(
