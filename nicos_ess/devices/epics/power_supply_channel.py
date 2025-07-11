@@ -108,14 +108,14 @@ class PowerSupplyBank(MappedMoveable):
             stat, msg = ps_channel.doStatus()
             
             if msg == "Power is ON":
-                msg = "Module is ON"
+                msg = "Bank is ON"
                 return stat, msg
 
             if msg != "Power is OFF":
                 return stat, msg
             
             if msg == "Power is OFF":
-                msg = "Module is OFF"
+                msg = "Bank is OFF"
 
             return stat, msg
             
