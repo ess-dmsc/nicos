@@ -103,19 +103,24 @@ class PowerSupplyBank(MappedMoveable):
         for ps_channel in self._attached_ps_channels:
             ps_channel._attached_power_control.doStart(value)
 
-    def doStatus(self, maxage=0):        
+    def doStatus(self, maxage=0):
+        on_channels = 0
+        num_of_channels = len(self._attached_ps_channels)
+
         for ps_channel in self._attached_ps_channels:
             stat, msg = ps_channel.doStatus()
             
             if msg == "Power is ON":
-                msg = "Bank is ON"
-                return stat, msg
+                on_channels += 1
+        
+        if on_channels == num_of_channels:
+            msg = "Bank is ON (all channels are ON)"
+        elif on_channels > 0:
+            msg = "Bank is ON ({} of {} channels are ON)".format(
+                on_channels, num_of_channels
+            )
+        else:
+            msg = "Bank is OFF (all channels are OFF)"
 
-            if msg != "Power is OFF":
-                return stat, msg
-            
-            if msg == "Power is OFF":
-                msg = "Bank is OFF"
-
-            return stat, msg
+        return stat, msg
             
