@@ -18,12 +18,11 @@ from nicos.guisupport.qt import (
     pyqtSlot,
 )
 from nicos.utils import findResource
-
 from nicos_ess.gui.panels.panel import PanelBase
-from nicos_ess.gui.utils import get_icon
-from nicos_ess.loki.gui.samples_model import SamplesTableModel
 from nicos_ess.gui.tables.table_delegates import LimitsDelegate, ReadOnlyDelegate
 from nicos_ess.gui.tables.table_helper import Clipboard, TableHelper
+from nicos_ess.gui.utils import get_icon
+from nicos_ess.loki.gui.samples_model import SamplesTableModel
 
 
 class LokiSampleHolderPanel(PanelBase):
@@ -86,7 +85,7 @@ class LokiSampleHolderPanel(PanelBase):
     def _style_scroll_area_contents(self, widget):
         # A workaround to get the formatting correct for the main widget
         # without breaking other widgets in the scroll area.
-        widget.setStyleSheet(f"QWidget#{widget.objectName()}" "{background: white}")
+        widget.setStyleSheet(f"QWidget#{widget.objectName()}{{background: white}}")
 
     def initialise_connection_status_listeners(self):
         PanelBase.initialise_connection_status_listeners(self)
@@ -107,7 +106,7 @@ class LokiSampleHolderPanel(PanelBase):
 
     def _find_device(self):
         devices = self.client.getDeviceList(
-            "nicos_ess.loki.devices.thermostated_cellholder." "ThermoStatedCellHolder"
+            "nicos_ess.loki.devices.thermostated_cellholder.ThermoStatedCellHolder"
         )
         # Should only be one
         self._dev_name = devices[0] if devices else None
@@ -311,8 +310,10 @@ class LokiSampleHolderPanel(PanelBase):
         x = float(table.item(0, 0).text())
         y = float(table.item(0, 1).text())
         num_cells = self.number_cells[combo.currentText()]
+        cell_spacing = self.cell_spacings[combo.currentText()]
+        x_max = x + (num_cells - 1) * cell_spacing
         try:
-            self._check_x_valid(x * num_cells, x_delegate)
+            self._check_x_valid(x_max, x_delegate)
             self._check_y_range(y, y_delegate)
         except ConfigurationError as error:
             self.showError(f"{error}")
@@ -367,9 +368,7 @@ class LokiSampleHolderPanel(PanelBase):
         if not self._dev_name:
             return
         if self.mainwindow.current_status != "idle":
-            self.showError(
-                "Could not set values as a command/script is in " "progress."
-            )
+            self.showError("Could not set values as a command/script is in progress.")
             return
         try:
             # Extract all data before sending to avoid samples and holders
