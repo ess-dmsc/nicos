@@ -1,4 +1,4 @@
-description = "Power supplies configuration utils"
+description = "Power supplies configuration and utils"
 
 group = "configdata"
 

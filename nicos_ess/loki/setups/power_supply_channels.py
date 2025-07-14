@@ -1,4 +1,4 @@
-description = "The high and low voltage power supplies for the LoKI detector."
+description = "All LOKI power supplies (high and low voltage)."
 
 pv_root = "LOKI-DtCmn:PwrC"
 
