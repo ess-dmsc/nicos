@@ -1,26 +1,27 @@
 description = "The area detector for NIDO"
 
+camera_system_pv_root = "Orca:"
+camera_device_pv_root = ""
+camera_ndplugin_pv_root = "image1:"
+camera_kafkaplugin_pv_root = "Kfk1:"
+water_cooler_pv_root = ""
+
 devices = dict(
-    orca_kafka_plugin=device(
-        "nicos_ess.devices.epics.area_detector.ADKafkaPlugin",
-        description="The configuration of the Kafka plugin for the Orca camera.",
-        kafkapv="Orca:Kfk1:",
-        brokerpv="KafkaBrokerAddress_RBV",
-        topicpv="KafkaTopic_RBV",
-        sourcepv="SourceName_RBV",
-        visibility=(),
-    ),
     orca_camera=device(
-        "nicos_ess.devices.epics.area_detector.AreaDetector",
+        "nicos_ess.devices.epics.area_detector.OrcaFlash4",
         description="The light tomography Orca camera.",
-        pv_root="Orca:cam1:",
+        pv_root=f"{camera_system_pv_root}{camera_device_pv_root}",
+        image_pv=f"{camera_system_pv_root}{camera_ndplugin_pv_root}ArrayData",
         ad_kafka_plugin="orca_kafka_plugin",
-        image_topic="nido_camera",
+        topicpv=f"{camera_system_pv_root}{camera_kafkaplugin_pv_root}KafkaTopic_RBV",
+        sourcepv=f"{camera_system_pv_root}{camera_kafkaplugin_pv_root}SourceName_RBV",
         unit="images",
-        brokers=configdata("config.KAFKA_BROKERS"),
-        pollinterval=None,
         pva=True,
         monitor=True,
+        pollinterval=0.5,
+        maxage=None,
+        watercooler_mode="watercooler_mode",
+        watercooler_temperature="watercooler_temperature",
     ),
     orca_image_type=device(
         "nicos_ess.devices.epics.area_detector.ImageType",
