@@ -7,6 +7,21 @@ camera_kafkaplugin_pv_root = "Kfk1:"
 water_cooler_pv_root = ""
 
 devices = dict(
+    watercooler_mode=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
+        description="The water cooler mode.",
+        readpv=f"{water_cooler_pv_root}Mode-R",
+        writepv=f"{water_cooler_pv_root}Mode-S",
+        visibility=(),
+    ),
+    watercooler_temperature=device(
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="The water cooler temperature.",
+        readpv=f"{water_cooler_pv_root}Temperature-R",
+        writepv=f"{water_cooler_pv_root}TemperatureSP0-S",
+        targetpv=f"{water_cooler_pv_root}TemperatureSP0-R",
+        visibility=(),
+    ),
     orca_camera=device(
         "nicos_ess.devices.epics.area_detector.OrcaFlash4",
         description="The light tomography Orca camera.",
