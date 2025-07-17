@@ -13,10 +13,10 @@ devices = dict(
         maxage=None,
         mapping={
             "out-of-beam": 0,
-            "moving_out": 1,
-            "moving_in": 2,
+            "moving-out": 1,
+            "moving-in": 2,
             "in-beam": 3,
-            "in_the_middle": 4,
+            "in-the-middle": 4,
         },
     ),
     experiment_shutter=device(
