@@ -2,6 +2,11 @@ import numpy as np
 
 from nicos.core import Attach, Moveable, Override, Param, Value, multiStatus, tupleof
 
+MOVER_LENGTH_SG1 = 2750
+MOVER_LENGTH_SG2 = 3600
+BEAM_HEIGHT_SG1 = 1088
+BEAM_HEIGHT_SG2 = 1098
+
 
 class SeleneMover(Moveable):
     """
@@ -20,6 +25,21 @@ class SeleneMover(Moveable):
         "guide_ratio": Param(
             "Guide ratio h/w", type=float, default=1.9964, settable=False
         ),
+        "mover_width": Param(
+            "distance between mover feet, w", type=float, default=550, settable=False
+        ),
+        "mover_length": Param(
+            "Length distance between mover feet, w for selene guide 1",
+            type=float,
+            default=MOVER_LENGTH_SG1,
+            settable=True,
+        ),
+        "beam_height": Param(
+            "Height of the beam above the mover plane for selene guide 1",
+            type=float,
+            default=BEAM_HEIGHT_SG1,
+            settable=True,
+        ),
     }
 
     parameter_overrides = {
@@ -29,47 +49,149 @@ class SeleneMover(Moveable):
 
     valuetype = tupleof(float, float, float, float, float)  # y, z, Rx, Ry, Rz
 
-    def _s_to_angle(self, s, E=5):
-        return np.degrees(np.arcsin(2 * s / (E * np.sqrt(2)))) + 180
+    def _s_to_angle(self, s):
+        return np.degrees(np.arcsin(2 * s / (self.eccentricity * np.sqrt(2)))) + 180
 
-    def _angle_to_s(self, angle_deg, E=5):
-        return 0.5 * E * np.sqrt(2) * np.sin(np.radians(angle_deg + 180))
+    def _angle_to_s(self, angle_deg):
+        return 0.5 * self.eccentricity * np.sqrt(2) * np.sin(np.radians(angle_deg))
 
-    def _cartesian_to_mover(self, cart, r=1.9964, E=5):
-        sqrt2 = np.sqrt(2)
-        D = np.array(
+    def SG_from_params(self):
+        """Get SG used based on mover_length and beam_height"""
+        SG_params = {
+            "SG1": [MOVER_LENGTH_SG1, BEAM_HEIGHT_SG1],
+            "SG2": [MOVER_LENGTH_SG2, BEAM_HEIGHT_SG2],
+        }
+        for sg in SG_params:
+            if SG_params[sg] == [self.mover_length, self.beam_height]:
+                return sg
+
+    def get_r(self):
+        return self.beam_height / self.mover_width
+
+    def get_A(self):
+        A_SG1 = np.array(
             [
-                [0.5, 0.5, -r / 2, -0.25, -0.25],
-                [-0.5, 0.5, r / 2, 0.25, -0.25],
-                [0.5, 0.5, (1 - 2 * r) / 4, 0.25, 0.25],
-                [-0.5, 0.5, (1 + 2 * r) / 4, -0.25, 0.25],
-                [0.0, 1 / sqrt2, -1 / (2 * sqrt2), 0.0, 1 / (2 * sqrt2)],
+                [0, 1, -1, 0, 0],
+                [0, 0, 0, 1, -1],
+                [0, 1, 1, 0, 0],
+                [0, 0, 0, 1, 1],
+                [np.sqrt(2), 0, 0, 0, 0],
             ]
         )
-        return self._s_to_angle(D @ cart, E)
 
-    def _mover_to_cartesian(self, angles_deg, r=1.9964, E=5):
-        sqrt2 = np.sqrt(2)
-        D = np.array(
+        A_SG2 = np.array(
             [
-                [0.5, 0.5, -r / 2, -0.25, -0.25],
-                [-0.5, 0.5, r / 2, 0.25, -0.25],
-                [0.5, 0.5, (1 - 2 * r) / 4, 0.25, 0.25],
-                [-0.5, 0.5, (1 + 2 * r) / 4, -0.25, 0.25],
-                [0.0, 1 / sqrt2, -1 / (2 * sqrt2), 0.0, 1 / (2 * sqrt2)],
+                [0, 1, -1, 0, 0],
+                [0, 0, 0, -1, 1],
+                [0, 1, 1, 0, 0],
+                [0, 0, 0, 1, 1],
+                [np.sqrt(2), 0, 0, 0, 0],
             ]
         )
-        s = self._angle_to_s(np.asarray(angles_deg, dtype=float), E)
-        return np.linalg.inv(D) @ s
+
+        if self.SG_from_params() == "SG1":
+            return A_SG1
+        elif self.SG_from_params() == "SG2":
+            return A_SG2
+
+    def _mover_to_cartesian(self, angles):
+        """
+        Takes in a cart (either selene guide 1 or 2) and converts the desired y, z,
+        or rotation into a movement in angle for each mover foot motor.
+        This follows the naming convention of the mover feet documentation
+        for the matrix names.
+
+        Returns: np.ndarray of 5 angles
+        """
+        r = self.get_r()
+        A = self.get_A()
+
+        B = np.array(
+            [
+                [0, 0, r, 0, 0],
+                [0, 0, r, 0, 0],
+                [0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0],
+            ]
+        )
+
+        M = np.array(
+            [
+                [1 / 2, 1 / 2, 0, 0, 0],
+                [0, 0, 1 / 2, 1 / 4, 1 / 4],
+                [0, 0, 0, 1, -1],
+                [0, 0, -1, 1 / 2, 1 / 2],
+                [1, -1, 0, 0, 0],
+            ]
+        )
+
+        # calculation of motor positions
+        # conversion of angle to displacement as per documentation
+
+        D_inv = np.linalg.inv(np.linalg.inv(M @ A) @ (np.identity(5) - M @ B))
+        S = self._angle_to_s(angles - 180)
+        X = D_inv @ S
+
+        X[2] = np.degrees(np.arcsin(X[2] / self.mover_width))
+        X[3] = np.degrees(np.arcsin(X[3] / self.mover_length))
+        X[4] = np.degrees(np.arcsin(X[4] / self.mover_length))
+
+        return X
+
+    def _cartesian_to_mover(self, cart):
+        """
+        Takes in a cart (either selene guide 1 or 2) and converts the desired y, z,
+        or rotation into a movement in angle for each mover foot motor.
+        This follows the naming convention of the mover feet documentation
+        for the matrix names.
+
+        Returns: np.ndarray of 5 angles
+        """
+        r = self.get_r()
+        A = self.get_A()
+
+        B = np.array(
+            [
+                [0, 0, r, 0, 0],
+                [0, 0, r, 0, 0],
+                [0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0],
+            ]
+        )
+
+        M = np.array(
+            [
+                [1 / 2, 1 / 2, 0, 0, 0],
+                [0, 0, 1 / 2, 1 / 4, 1 / 4],
+                [0, 0, 0, 1, -1],
+                [0, 0, -1, 1 / 2, 1 / 2],
+                [1, -1, 0, 0, 0],
+            ]
+        )
+
+        # calculation of motor positions
+        # conversion of angle to displacement as per documentation
+        rho = self.mover_width * np.sin(np.radians(cart[2]))
+        phi = self.mover_length * np.sin(np.radians(cart[3]))
+        omega = self.mover_length * np.sin(np.radians(cart[4]))
+
+        D = np.linalg.inv(M @ A) @ (np.identity(5) - M @ B)
+        X = np.array([cart[0], cart[1], rho, phi, omega])
+        S = D @ X
+
+        angles_to_rotate = self._s_to_angle(S)
+        return angles_to_rotate
 
     def _angles(self, cart):
         return self._cartesian_to_mover(
-            np.asarray(cart, dtype=float), r=self.guide_ratio, E=self.eccentricity
+            np.asarray(cart, dtype=float), r=self.get_r(), E=self.eccentricity
         )
 
-    def _cartesian(self, angles):
+    def _cartesian(self, angles, cart):
         return self._mover_to_cartesian(
-            np.asarray(angles, dtype=float), r=self.guide_ratio, E=self.eccentricity
+            np.asarray(angles, dtype=float), r=self.get_r(), E=self.eccentricity
         )
 
     def _extractPos(self, cart):
