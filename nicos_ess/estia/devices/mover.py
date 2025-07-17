@@ -96,12 +96,13 @@ class SeleneMover(Moveable):
 
     def _mover_to_cartesian(self, angles):
         """
-        Takes in a cart (either selene guide 1 or 2) and converts the desired y, z,
-        or rotation into a movement in angle for each mover foot motor.
+        Takes in an array of angles from the mover feet motors (either selene guide 1 or 2)
+        and converts the angles into an array of [y, z, Rx, Ry, Rz]
         This follows the naming convention of the mover feet documentation
-        for the matrix names.
+        for the matrix names and Cartesian axes (z is vertical against gravity and y
+        is across the beam, the R's are rotations around the corresponding axis.
 
-        Returns: np.ndarray of 5 angles
+        Returns:  np.ndarray [y, z, Rx, Ry, Rz]
         """
         r = self.get_r()
         A = self.get_A()
@@ -146,7 +147,7 @@ class SeleneMover(Moveable):
         This follows the naming convention of the mover feet documentation
         for the matrix names.
 
-        Returns: np.ndarray of 5 angles
+        Returns: np.ndarray of 5 angles for each of the 5 motors on the feet
         """
         r = self.get_r()
         A = self.get_A()
