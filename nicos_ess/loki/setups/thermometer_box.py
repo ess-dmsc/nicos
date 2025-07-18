@@ -1,6 +1,6 @@
 description = "The temperature readout box for LOKI."
 
-pv_root = "LOKI:SmplTmp-IOC-001:"
+pv_root = "LOKI-SE:Proc-TIC-001:"
 
 devices = dict()
 
