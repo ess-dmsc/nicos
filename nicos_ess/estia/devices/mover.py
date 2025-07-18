@@ -187,12 +187,12 @@ class SeleneMover(Moveable):
 
     def _angles(self, cart):
         return self._cartesian_to_mover(
-            np.asarray(cart, dtype=float), r=self.get_r(), E=self.eccentricity
+            np.asarray(cart, dtype=float),
         )
 
-    def _cartesian(self, angles, cart):
+    def _cartesian(self, angles):
         return self._mover_to_cartesian(
-            np.asarray(angles, dtype=float), r=self.get_r(), E=self.eccentricity
+            np.asarray(angles, dtype=float),
         )
 
     def _extractPos(self, cart):
