@@ -3,11 +3,12 @@ from nicos.core import (
     Override,
     Param,
     status,
+    CanDisable,
 )
 from nicos.devices.abstract import MappedMoveable, MappedReadable, Readable
 
 
-class PowerSupplyChannel(MappedMoveable):
+class PowerSupplyChannel(CanDisable, MappedReadable):
     parameters = {
         "board": Param("Power supply board"),
         "channel": Param("Power supply channel"),
@@ -36,18 +37,6 @@ class PowerSupplyChannel(MappedMoveable):
     def doRead(self, maxage=0):
         return self._attached_voltage.doRead()
 
-    def doStart(self, value):
-        target = self.mapping.get(value, None)
-        if target is None:
-            raise InvalidValueError(self, f"Position '{value}' not in mapping")
-        self._attached_power_control.doStart(value)
-
-    def doStop(self, value):
-        target = self.mapping.get(value, None)
-        if target is None:
-            raise InvalidValueError(self, f"Position '{value}' not in mapping")
-        self._attached_power_control.doStart(value)
-
     def doStatus(self, maxage=0):
         power_stat_msg = self._attached_status.doRead()
         stat, msg = self._attached_voltage.doStatus()
@@ -58,6 +47,15 @@ class PowerSupplyChannel(MappedMoveable):
                 return status.BUSY, power_stat_msg
         else:
             return stat, msg
+    
+    def doEnable(self, on):
+        value = "ON" if on else "OFF"
+        target = self.mapping.get(value, None)
+        if target is None:
+            raise InvalidValueError(self, f"Position '{value}' not in mapping")
+
+        if self._attached_power_control is not None:
+            self._attached_power_control.doStart(value)
 
     # def doReset(self):
     #     # Ignore
@@ -67,7 +65,7 @@ class PowerSupplyChannel(MappedMoveable):
     #     return self._attached_power_control.mapping
 
 
-class PowerSupplyBank(MappedMoveable):
+class PowerSupplyBank(CanDisable, MappedReadable):
     attached_devices = {
         "ps_channels": Attach("Power Supply channel", PowerSupplyChannel, multiple=True),
     }
@@ -88,18 +86,13 @@ class PowerSupplyBank(MappedMoveable):
             if ps_channel_power_rbv == "ON":
                 return "ON"
         return "OFF"
-
-    def doStart(self, value):
+    
+    def doEnable(self, on):
+        value = "ON" if on else "OFF"
         target = self.mapping.get(value, None)
         if target is None:
             raise InvalidValueError(self, f"Position '{value}' not in mapping")
-        for ps_channel in self._attached_ps_channels:
-            ps_channel._attached_power_control.doStart(value)
 
-    def doStop(self, value):
-        target = self.mapping.get(value, None)
-        if target is None:
-            raise InvalidValueError(self, f"Position '{value}' not in mapping")
         for ps_channel in self._attached_ps_channels:
             ps_channel._attached_power_control.doStart(value)
 
