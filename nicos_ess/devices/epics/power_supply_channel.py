@@ -44,7 +44,7 @@ class PowerSupplyChannel(CanDisable, MappedReadable):
             if power_stat_msg == "Power is OFF":
                 return status.OK, power_stat_msg
             elif power_stat_msg == "Power is ON":
-                return status.BUSY, power_stat_msg
+                return status.OK, power_stat_msg
         else:
             return stat, msg
     
@@ -109,6 +109,7 @@ class PowerSupplyBank(CanDisable, MappedReadable):
         
         if on_channels == num_of_channels:
             msg = "Bank is ON (all channels are ON)"
+            stat = status.OK
         elif on_channels > 0:
             msg = "Bank is ON ({} of {} channels are ON)".format(
                 on_channels, num_of_channels
