@@ -29,13 +29,13 @@ class SeleneMover(Moveable):
             "distance between mover feet, w", type=float, default=550, settable=False
         ),
         "mover_length": Param(
-            "Length distance between mover feet, w for selene guide 1",
+            "Length distance between mover feet, for a selene guide",
             type=float,
             default=MOVER_LENGTH_SG1,
             settable=True,
         ),
         "beam_height": Param(
-            "Height of the beam above the mover plane for selene guide 1",
+            "Height of the beam above the mover plane for a selene guide",
             type=float,
             default=BEAM_HEIGHT_SG1,
             settable=True,
