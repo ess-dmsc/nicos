@@ -1,13 +1,14 @@
 description = "Selene1 mover motors"
 
-pvprefix = "ESTIA-SG1SM:MC-RotX-"
+pvprefix_1 = "ESTIA-SG1SM:MC-RotX-"
+pvprefix_2 = "ESTIA-SG1DM:MC-RotX-"
 
 devices = dict(
     m1_mover_fl_re_us=device(
         # "nicos.devices.generic.VirtualMotor",
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="M1 Selene1 1-Mover FL-RE-US",
-        motorpv=f"{pvprefix}01:Mtr",
+        motorpv=f"{pvprefix_1}01:Mtr",
         # has_powerauto=False,
         abslimits=(90, 270),
         unit="deg",
@@ -17,7 +18,7 @@ devices = dict(
         # "nicos.devices.generic.VirtualMotor",
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="M2 Selene1 1-Mover PR-RE-DS",
-        motorpv=f"{pvprefix}02:Mtr",
+        motorpv=f"{pvprefix_1}02:Mtr",
         # has_powerauto=False,
         abslimits=(90, 270),
         unit="deg",
@@ -27,7 +28,7 @@ devices = dict(
         # "nicos.devices.generic.VirtualMotor",
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="M3 Selene1 1-Mover PR-LI-DS",
-        motorpv=f"{pvprefix}03:Mtr",
+        motorpv=f"{pvprefix_1}03:Mtr",
         # has_powerauto=False,
         abslimits=(90, 270),
         unit="deg",
@@ -37,7 +38,7 @@ devices = dict(
         # "nicos.devices.generic.VirtualMotor",
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="M4 Selene1 2-Mover PR-LI-US-1",
-        motorpv=f"{pvprefix}04:Mtr",
+        motorpv=f"{pvprefix_2}01:Mtr",
         # has_powerauto=False,
         abslimits=(90, 270),
         unit="deg",
@@ -47,7 +48,7 @@ devices = dict(
         # "nicos.devices.generic.VirtualMotor",
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="M5 Selene1 2-Mover PR-LI-US-2",
-        motorpv=f"{pvprefix}05:Mtr",
+        motorpv=f"{pvprefix_2}02:Mtr",
         # has_powerauto=False,
         abslimits=(90, 270),
         unit="deg",
