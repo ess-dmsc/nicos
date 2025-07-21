@@ -114,6 +114,7 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         "speed": Override(volatile=True),
         "offset": Override(volatile=True, chatty=False),
         "abslimits": Override(volatile=True, mandatory=False),
+        "userlimits": Override(volatile=True, chatty=False),
         # Units and precision are set by EPICS, so cannot be changed
         "unit": Override(mandatory=False, settable=False, volatile=True),
         "precision": Override(mandatory=False, settable=False, volatile=True),
@@ -125,15 +126,19 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         self._motor_status = (status.OK, "")
         self._record_fields = {
             "value": RecordInfo("value", ".RBV", RecordType.BOTH),
+            "dialvalue": RecordInfo("", ".DRBV", RecordType.VALUE),
             "target": RecordInfo("target", ".VAL", RecordType.VALUE),
             "stop": RecordInfo("", ".STOP", RecordType.VALUE),
             "speed": RecordInfo("", ".VELO", RecordType.VALUE),
             "offset": RecordInfo("", ".OFF", RecordType.VALUE),
             "highlimit": RecordInfo("", ".HLM", RecordType.VALUE),
             "lowlimit": RecordInfo("", ".LLM", RecordType.VALUE),
+            "dialhighlimit": RecordInfo("", ".DHLM", RecordType.VALUE),
+            "diallowlimit": RecordInfo("", ".DLLM", RecordType.VALUE),
             "enable": RecordInfo("", ".CNEN", RecordType.VALUE),
             "set": RecordInfo("", ".SET", RecordType.VALUE),
             "foff": RecordInfo("", ".FOFF", RecordType.VALUE),
+            "dir": RecordInfo("", ".DIR", RecordType.VALUE),
             "unit": RecordInfo("unit", ".EGU", RecordType.VALUE),
             "homeforward": RecordInfo("", ".HOMF", RecordType.VALUE),
             "homereverse": RecordInfo("", ".HOMR", RecordType.VALUE),
@@ -205,9 +210,16 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         return self._get_cached_pv_or_ask("target")
 
     def doReadAbslimits(self):
-        absmin = self._get_cached_pv_or_ask("lowlimit")
-        absmax = self._get_cached_pv_or_ask("highlimit")
+        absmin = self._get_cached_pv_or_ask("diallowlimit")
+        absmax = self._get_cached_pv_or_ask("dialhighlimit")
         return absmin, absmax
+
+    def doReadUserlimits(self):
+        umin = self._get_cached_pv_or_ask("lowlimit")
+        umax = self._get_cached_pv_or_ask("highlimit")
+        limits = (umin, umax)
+        self._checkLimits(limits)
+        return umin, umax
 
     def doReadPosition_Deadband(self):
         return self._get_cached_pv_or_ask("position_deadband")
@@ -258,29 +270,37 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         deadband = value
         self._put_pv("monitor_deadband", max(deadband, 0))
 
-    def doWriteOffset(self, value):
-        # In EPICS, the offset is defined in following way:
-        # USERval = HARDval + offset
-        if self.offset != value:
-            diff = value - self.offset
+    def doWriteOffset(self, new_off):
+        """Shift the user ↔ dial offset via SET/FOFF; limits follow automatically."""
+        if self.offset == new_off:
+            return
 
-            # Set the offset in motor record
-            self._epics_wrapper.put_pv_value_blocking(
-                f"{self.motorpv}{self._record_fields['offset'].pv_suffix}",
-                value,
-                block_timeout=10,
-            )
+        if self._get_pv("moving") or not self._get_pv("donemoving"):
+            raise RuntimeError(f"{self}: cannot change OFF while motor is moving")
 
-            # Read the absolute limits from the device as they have changed.
-            lowlimit = self._get_pv("lowlimit")
-            highlimit = self._get_pv("highlimit")
+        # Calculate the user value that makes OFF = new_off
+        dir_sign = 1 if self._get_pv("dir", as_string=True) == "Pos" else -1
+        dial_now = self._get_pv("dialvalue")
+        user_target = dial_now * dir_sign + new_off  # user = dial·DIR + OFF
 
-            # Adjust user limits into allowed range
-            usmin = max(self.userlimits[0] + diff, lowlimit)
-            usmax = min(self.userlimits[1] + diff, highlimit)
-            self.userlimits = (usmin, usmax)
+        # Enter calibration mode with variable offset
+        self._put_pv("set", 1)
+        self._put_pv("foff", 0)
 
-            self.log.info("The new user limits are: " + str(self.userlimits))
+        # Write VAL – record calculates OFF and shifts HLM/LLM
+        self._put_pv("target", user_target)
+
+        # Leave calibration mode
+        self._put_pv("set", 0)
+
+        self._cache.put(self._name, "offset", new_off, time.time())
+        self.log.info("Offset changed to %s", new_off)
+
+    def doWriteUserlimits(self, value):
+        self._checkLimits(value)
+        low, high = value
+        self._put_pv("lowlimit", low)
+        self._put_pv("highlimit", high)
 
     def doAdjust(self, oldvalue, newvalue):
         # For EPICS the offset sign convention differs to that of the base
@@ -457,18 +477,41 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         elif stat == status.ERROR:
             self.log.error("%s (%s)", error_msg, epics_msg)
 
-    def _checkLimits(self, limits):
-        # Called by doReadUserlimits and doWriteUserlimits
-        low, high = self.abslimits
-        if low == 0 and high == 0:
-            # No limits defined in IOC.
-            # Could be a rotation stage for example.
-            return
+    def _user_to_dial(self, val):
+        """
+        Convert a user-coordinate value to dial (hardware) units.
 
-        if limits[0] < low or limits[1] > high:
+        user = dial * DIR + OFF      ⇒     dial = (user - OFF) / DIR
+        """
+        dir_sign = 1 if self._get_pv("dir", as_string=True) == "Pos" else -1
+        return (val - self.offset) / dir_sign
+
+    def _checkLimits(self, limits):
+        """
+        Validate that requested *user* limits lie inside the *dial* abs-limits.
+
+        NICOS base version adds the offset; for EPICS we have to subtract it.
+        """
+        umin, umax = limits
+        amin, amax = self.abslimits  # dial / hardware numbers
+
+        umin_hw = self._user_to_dial(umin)  # convert to dial units
+        umax_hw = self._user_to_dial(umax)
+
+        if umin_hw > umax_hw:
             raise ConfigurationError(
-                "cannot set user limits outside of "
-                "absolute limits (%s, %s)" % (low, high)
+                self,
+                f"user minimum ({umin}) above user maximum ({umax})",
+            )
+        if umin_hw < amin - abs(amin * 1e-12):
+            raise ConfigurationError(
+                self,
+                f"user minimum ({umin}) below absolute minimum ({amin})",
+            )
+        if umax_hw > amax + abs(amax * 1e-12):
+            raise ConfigurationError(
+                self,
+                f"user maximum ({umax}) above absolute maximum ({amax})",
             )
 
     def _check_in_range(self, curval, userlimits):
