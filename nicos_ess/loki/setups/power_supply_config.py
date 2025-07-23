@@ -58,7 +58,13 @@ for board in LV_INFO["boards"]:
 ALL_CHANNELS = {**hv_channels, **lv_channels}
 
 def get_channel_keys(bank_channels):
+    """ Receive a list of channels sets, and return a list of keys.
+    
+    A key is a string (e.g., "HV_101_Ch02") used as an index for the ALL_CHANNELS
+    dict (where the complete information of channel is stored).
+    """
     keys = []
+    # For each channel set (list)
     for i in range(len(bank_channels)):
         ps_type = bank_channels[i]["ps_type"]
         board = bank_channels[i]["board"]
