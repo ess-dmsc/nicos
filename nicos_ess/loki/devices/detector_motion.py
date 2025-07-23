@@ -26,18 +26,25 @@ class LOKIDetectorMotion(EpicsMotor):
         try:
             ps_bank = session.devices[self.ps_bank_name]
         except Exception as e:
-            print("Detector motion: Error when trying to get PS Bank setup({})".format(e))
-            print("Detector motion: No Power Supply Bank found in setup. Not moving.")
-            return False
+            return False, "No Power Supply Bank found in setup ({}).".format(e)
 
         if ps_bank.doRead() == "ON":
-            print("Detector motion: Power Supply Bank is ON (it should be OFF). Not moving.")
-            return False
-        print("Detector motion: Power Supply Bank is OFF. Moving is okay.")
-        return True
+            return False, "Power Supply Bank is still ON (it should be OFF)."
+        return True, "Power Supply Bank is OFF. Moving is okay."
     
-    def _check_start(self, pos):
-        """ Overwrites super method."""
-        if not self.is_ps_bank_off():
-            return Ellipsis
-        return super()._check_start(pos)
+    def doIsAllowed(self, pos):
+        """ Hook method from the Device class to check if movement is allowed.
+
+        Parameters
+        ----------
+        pos : any
+            Target position (not used).
+
+        Returns
+        -------
+        ok : bool
+            True if movement is permitted, False otherwise.
+        why : str
+            Message indicating why movement is or isn't allowed.
+        """
+        return self.is_ps_bank_off()
