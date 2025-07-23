@@ -19,21 +19,10 @@ class LOKIDetectorMotion(EpicsMotor):
             mandatory=True,
         ),
     }
-
-    def is_ps_bank_off(self):
-        """ Checks if Power Supply Bank is OFF."""
-        ps_bank = None
-        try:
-            ps_bank = session.devices[self.ps_bank_name]
-        except Exception as e:
-            return False, "No Power Supply Bank found in setup ({}).".format(e)
-
-        if ps_bank.doRead() == "ON":
-            return False, "Power Supply Bank is still ON (it should be OFF)."
-        return True, "Power Supply Bank is OFF. Moving is okay."
     
     def doIsAllowed(self, pos):
-        """ Hook method from the Device class to check if movement is allowed.
+        """ Hook method from the Device class to check if movement is allowed,
+        by verifying if Power Supply Bank is OFF.
 
         Parameters
         ----------
@@ -47,4 +36,12 @@ class LOKIDetectorMotion(EpicsMotor):
         why : str
             Message indicating why movement is or isn't allowed.
         """
-        return self.is_ps_bank_off()
+        ps_bank = None
+        try:
+            ps_bank = session.devices[self.ps_bank_name]
+        except Exception as e:
+            return False, "No Power Supply Bank found in setup ({}).".format(e)
+
+        if ps_bank.doRead() == "ON":
+            return False, "Power Supply Bank is still ON (it should be OFF)."
+        return True, "Power Supply Bank is OFF. Moving is okay."
