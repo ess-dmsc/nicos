@@ -8,6 +8,7 @@ description = "Power Supplies Bank 0 for the detector carriage (HV)."
 # Name of PS Bank and the list of channels selected for it.
 BANK_NAME = "PS_Bank_0_HV"
 BANK_CHANNELS = [
+    # Each item in the list is a set of channels.
     {"ps_type": "HV", "board": "100", "channels": [f"{ch:>02}" for ch in range(0, 12)]},
     {"ps_type": "HV", "board": "101", "channels": [f"{ch:>02}" for ch in range(0, 2)]},
 ]
