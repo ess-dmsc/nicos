@@ -6,12 +6,12 @@ from nicos_ess.devices.epics.pva.motor import EpicsMotor
 from nicos import session
 
 class LOKIDetectorMotion(EpicsMotor):
-    """
-    Device that controls the detector motion, with a check for the 
-    detector power supply bank before movement is attempted.
+    """Control detector motion, ensuring power bank safety.
 
-    The detector power supply bank must be OFF before any movement is done.
+    This class ensures that the detector's power supply bank is OFF
+    before allowing any movement.
     """
+    
     parameters = {
         "ps_bank_name": Param(
             "Detector power supply bank name in setup",
