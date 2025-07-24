@@ -9,7 +9,6 @@ devices = dict(
         abslimits=(-70, 125),
         # fmtstr="%.f",
         unit="mm",
-        speed=1,
     ),
     ty=device(
         "nicos.devices.generic.virtual.VirtualMotor",
@@ -17,7 +16,6 @@ devices = dict(
         abslimits=(-40, 40),
         # fmtstr="%.f",
         unit="mm",
-        speed=1,
     ),
     tz=device(
         "nicos.devices.generic.virtual.VirtualMotor",
@@ -25,7 +23,6 @@ devices = dict(
         abslimits=(-55, 65),
         # fmtstr="%.f",
         unit="mm",
-        speed=1,
     ),
     rx=device(
         "nicos.devices.generic.virtual.VirtualMotor",
@@ -33,7 +30,6 @@ devices = dict(
         abslimits=(0, 5),
         # fmtstr="%.f",
         unit="deg",
-        speed=1.5,
     ),
     ry=device(
         "nicos.devices.generic.virtual.VirtualMotor",
@@ -41,7 +37,6 @@ devices = dict(
         abslimits=(-12, 2.5),
         # fmtstr="%.f",
         unit="deg",
-        speed=1.5,
     ),
     rz=device(
         "nicos.devices.generic.virtual.VirtualMotor",
@@ -49,10 +44,16 @@ devices = dict(
         abslimits=(0, 0.5),
         # fmtstr="%.f",
         unit="deg",
-        speed=1.5,
+    ),
+    table=device(
+        "nicos.devices.generic.virtual.VirtualMotor",
+        description="Table Translation",
+        abslimits=(0, 300),
+        # fmtstr="%.f",
+        unit="mm",
     ),
     hexapod=device(
-        "nicos_ess.devices.virtual.hexapod.VirtualHexapod",
+        "nicos_ess.devices.virtual.hexapod.TableHexapod",
         description="Hexapod Device",
         tx="tx",
         ty="ty",
@@ -60,5 +61,6 @@ devices = dict(
         rx="rx",
         ry="ry",
         rz="rz",
+        table="table",
     ),
 )
