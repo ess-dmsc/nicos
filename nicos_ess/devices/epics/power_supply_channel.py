@@ -55,7 +55,7 @@ class PowerSupplyChannel(CanDisable, MappedReadable):
             raise InvalidValueError(self, f"Position '{value}' not in mapping")
 
         if self._attached_power_control is not None:
-            self._attached_power_control.doStart(value)
+            self._attached_power_control.start(value)
 
 
 class PowerSupplyBank(CanDisable, MappedReadable):
@@ -87,7 +87,7 @@ class PowerSupplyBank(CanDisable, MappedReadable):
             raise InvalidValueError(self, f"Position '{value}' not in mapping")
 
         for ps_channel in self._attached_ps_channels:
-            ps_channel._attached_power_control.doStart(value)
+            ps_channel._attached_power_control.start(value)
 
     def doStatus(self, maxage=0):
         on_channels = 0
