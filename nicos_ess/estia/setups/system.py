@@ -51,12 +51,17 @@ devices = dict(
         config_topic="estia_forwarder_dynamic_config",
         brokers=configdata("config.KAFKA_BROKERS"),
     ),
-    NexusStructure=device(
+    NexusStructure_Basic=device(
         "nicos_ess.devices.datasinks.nexus_structure.NexusStructureJsonFile",
         description="Provides the NeXus structure",
-        nexus_config_path="nicos_ess/estia/nexus/nexus_config.json",
+        nexus_config_path="nexus-json-templates/estia/estia-dynamic.json",
         instrument_name="estia",
         visibility=(),
+    ),
+    NexusStructure=device(
+        "nicos.devices.generic.DeviceAlias",
+        alias="NexusStructure_Basic",
+        devclass="nicos_ess.devices.datasinks.nexus_structure.NexusStructureJsonFile",
     ),
     FileWriterStatus=device(
         "nicos_ess.devices.datasinks.file_writer.FileWriterStatus",
