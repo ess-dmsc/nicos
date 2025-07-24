@@ -39,7 +39,7 @@ class PowerSupplyChannel(CanDisable, MappedReadable):
 
     def doStatus(self, maxage=0):
         power_stat_msg = self._attached_status.read()
-        stat, msg = self._attached_voltage.doStatus()
+        stat, msg = self._attached_voltage.status()
         if stat == status.OK:
             if power_stat_msg == "Power is OFF":
                 return status.OK, power_stat_msg
@@ -95,7 +95,7 @@ class PowerSupplyBank(CanDisable, MappedReadable):
         stat = status.BUSY
 
         for ps_channel in self._attached_ps_channels:
-            _, msg = ps_channel.doStatus()
+            _, msg = ps_channel.status()
             
             if msg == "Power is ON":
                 on_channels += 1
