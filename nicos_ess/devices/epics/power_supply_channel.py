@@ -35,10 +35,10 @@ class PowerSupplyChannel(CanDisable, MappedReadable):
     valuetype = float
 
     def doRead(self, maxage=0):
-        return self._attached_voltage.doRead()
+        return self._attached_voltage.read()
 
     def doStatus(self, maxage=0):
-        power_stat_msg = self._attached_status.doRead()
+        power_stat_msg = self._attached_status.read()
         stat, msg = self._attached_voltage.doStatus()
         if stat == status.OK:
             if power_stat_msg == "Power is OFF":
@@ -75,7 +75,7 @@ class PowerSupplyBank(CanDisable, MappedReadable):
 
     def doRead(self, maxage=0):
         for ps_channel in self._attached_ps_channels:
-            ps_channel_power_rbv = ps_channel._attached_power_control.doRead()
+            ps_channel_power_rbv = ps_channel._attached_power_control.read()
             if ps_channel_power_rbv == "ON":
                 return "ON"
         return "OFF"
