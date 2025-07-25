@@ -41,13 +41,11 @@ from nicos.guisupport.qt import (
     QPrintDialog,
     QPrinter,
     QPushButton,
-    Qt,
     QTextDocument,
     QTextEdit,
     QTimer,
     QToolBar,
     QUrl,
-    QWebEnginePage,
     QWebEngineView,
     pyqtSlot,
 )
@@ -57,7 +55,7 @@ if QWebEngineView is None:
 
 
 class ELogPanel(Panel):
-    """Provides a HTML widget for the electronic logbook."""
+    """Provides an HTML widget for the electronic logbook."""
 
     panelName = "Electronic logbook"
 
@@ -84,11 +82,6 @@ class ELogPanel(Panel):
         self.activeGroup.addAction(self.actionAddRemark)
         self.activeGroup.addAction(self.actionAttachFile)
         self.activeGroup.addAction(self.actionNewSample)
-
-        page = self.preview.page()
-        if hasattr(page, "setForwardUnsupportedContent"):  # QWebKit only
-            page.setForwardUnsupportedContent(True)
-            page.unsupportedContent.connect(self.on_page_unsupportedContent)
 
     def getMenus(self):
         if not self.menus:
@@ -130,13 +123,7 @@ class ELogPanel(Panel):
             bar.addWidget(btn)
 
             def callback():
-                if hasattr(QWebEnginePage, "FindWrapsAroundDocument"):  # WebKit
-                    self.preview.findText(
-                        box.text(), QWebEnginePage.FindWrapsAroundDocument
-                    )
-                else:
-                    # WebEngine wraps automatically
-                    self.preview.findText(box.text())
+                self.preview.findText(box.text())
 
             box.returnPressed.connect(callback)
             btn.clicked.connect(callback)
@@ -148,29 +135,6 @@ class ELogPanel(Panel):
         self.activeGroup.setEnabled(not viewonly)
 
     def on_timer_timeout(self):
-        if hasattr(self.preview.page(), "mainFrame"):  # QWebKit only
-            try:
-                frame = self.preview.page().mainFrame().childFrames()[1]
-            except IndexError:
-                self.log.error("No logbook seems to be loaded.")
-                self.on_client_connected()
-                return
-            scrollval = frame.scrollBarValue(Qt.Orientation.Vertical)
-            was_at_bottom = scrollval == frame.scrollBarMaximum(Qt.Orientation.Vertical)
-
-            # restore current scrolling position in document on reload
-            def callback(new_size):
-                nframe = self.preview.page().mainFrame().childFrames()[1]
-                if was_at_bottom:
-                    nframe.setScrollBarValue(
-                        Qt.Orientation.Vertical,
-                        nframe.scrollBarMaximum(Qt.Orientation.Vertical),
-                    )
-                else:
-                    nframe.setScrollBarValue(Qt.Orientation.Vertical, scrollval)
-                self.preview.loadFinished.disconnect(callback)
-
-            self.preview.loadFinished.connect(callback)
         self.preview.reload()
 
     def on_client_connected(self):
