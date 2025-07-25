@@ -45,6 +45,13 @@ devices = dict(
         # fmtstr="%.f",
         unit="deg",
     ),
+    table=device(
+        "nicos.devices.generic.virtual.VirtualMotor",
+        description="Rotation Stage Translation",
+        abslimits=(-180, 180),
+        # fmtstr="%.f",
+        unit="deg",
+    ),
     hexapod=device(
         "nicos_ess.devices.virtual.hexapod.TableHexapod",
         description="Hexapod Device",
@@ -54,5 +61,6 @@ devices = dict(
         rx="rx",
         ry="ry",
         rz="rz",
+        table="table",
     ),
 )

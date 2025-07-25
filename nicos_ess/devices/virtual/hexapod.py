@@ -32,12 +32,16 @@ class VirtualHexapod(Moveable):
     valuetype = tupleof(float, float, float, float, float, float)
     attached_devices = {name: Attach(name, Moveable) for name in axis_names}
 
-    # def doInit(self):
-    #    self._setSpeed()
+    def doInit(self, mode):
+        self._setSpeed(self.speed)
 
     def _readPos(self, maxage):
         pos = [self._adevs[name].read(maxage) for name in self.axis_names]
         return pos
+
+    def _setSpeed(self, speed):
+        for name in self.axis_names:
+            self._adevs[name]._setROParam("speed", speed)
 
     def doStart(self, target):
         for name, target in zip(self.axis_names, target):
@@ -56,9 +60,8 @@ class VirtualHexapod(Moveable):
                 return ok, f"{name} {why}"
         return ok, why
 
-    def doUpdateSpeed(self, speed):
-        for name in self.axis_names:
-            self._adevs[name].speed = speed
+    def doWriteSpeed(self, speed):
+        return self._setSpeed(speed)
 
     def valueInfo(self):
         return (
@@ -72,6 +75,8 @@ class VirtualHexapod(Moveable):
 
 
 class TableHexapod(VirtualHexapod):
+    """Hexapod with additional movement stage attached to it"""
+
     attached_devices = {
         "table": Attach("Table", Moveable),
     }
@@ -91,5 +96,7 @@ class TableHexapod(VirtualHexapod):
             Value("Rx", unit="deg", fmtstr="%.3f"),
             Value("Ry", unit="deg", fmtstr="%.3f"),
             Value("Rz", unit="deg", fmtstr="%.3f"),
-            Value("Table", unit="mm", fmtstr="%.3f"),
+            Value(
+                "Table", unit=f"{self._adevs['table'].unit}", fmtstr="%.3f"
+            ),  # translation or rotation (mm or deg)
         )
