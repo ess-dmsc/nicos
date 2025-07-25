@@ -1,3 +1,5 @@
+import numpy as np
+
 from nicos.core import (
     Attach,
     Moveable,
@@ -14,12 +16,19 @@ class VirtualHexapod(Moveable):
     """Virtual Hexapod with six axis of movement"""
 
     parameters = {
-        "speed": Param(
-            "Virtual hexapod speed",
+        "t_speed": Param(
+            "Virtual translation speed",
             settable=True,
-            type=floatrange(0, 2),
+            type=floatrange(0.01, 20),
             default=1,
             unit="mm/s",
+        ),
+        "r_speed": Param(
+            "Virtual rotation speed",
+            settable=True,
+            type=floatrange(0.001, 1.5),
+            default=0.01,
+            unit="deg/s",
         ),
     }
 
@@ -33,15 +42,26 @@ class VirtualHexapod(Moveable):
     attached_devices = {name: Attach(name, Moveable) for name in axis_names}
 
     def doInit(self, mode):
-        self._setSpeed(self.speed)
+        self._setTSpeed(self.t_speed)
+        self._setRSpeed(self.r_speed)
 
     def _readPos(self, maxage):
         pos = [self._adevs[name].read(maxage) for name in self.axis_names]
         return pos
 
-    def _setSpeed(self, speed):
+    def _setTSpeed(self, t_speed):
         for name in self.axis_names:
-            self._adevs[name]._setROParam("speed", speed)
+            if self._adevs[name].unit == "mm/s":
+                self._adevs[name]._setROParam("speed", t_speed)
+            else:
+                continue
+
+    def _setRSpeed(self, r_speed):
+        for name in self.axis_names:
+            if self._adevs[name].unit == "deg/s":
+                self._adevs[name]._setROParam("speed", r_speed)
+            else:
+                continue
 
     def doStart(self, target):
         for name, target in zip(self.axis_names, target):
@@ -60,8 +80,11 @@ class VirtualHexapod(Moveable):
                 return ok, f"{name} {why}"
         return ok, why
 
-    def doWriteSpeed(self, speed):
-        return self._setSpeed(speed)
+    def doWriteT_Speed(self, speed):
+        return self._setTSpeed(speed)
+
+    def doWriteR_Speed(self, speed):
+        return self._setRSpeed(speed)
 
     def valueInfo(self):
         return (
