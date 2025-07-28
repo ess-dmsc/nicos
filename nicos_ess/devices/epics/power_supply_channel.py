@@ -57,13 +57,6 @@ class PowerSupplyChannel(CanDisable, MappedReadable):
         if self._attached_power_control is not None:
             self._attached_power_control.doStart(value)
 
-    # def doReset(self):
-    #     # Ignore
-    #     pass
-    #
-    # def doReadMapping(self):
-    #     return self._attached_power_control.mapping
-
 
 class PowerSupplyBank(CanDisable, MappedReadable):
     attached_devices = {
