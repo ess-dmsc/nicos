@@ -40,33 +40,16 @@ class VirtualHexapod(Moveable):
     attached_devices = {name: Attach(name, Moveable) for name in axis_names}
 
     def doInit(self, mode):
-        self._setTSpeed(self.t_speed)
-        self._setRSpeed(self.r_speed)
-
-    def _readPos(self, maxage):
-        pos = [self._adevs[name].read(maxage) for name in self.axis_names]
-        return pos
-
-    def _setTSpeed(self, t_speed):
-        for name in self.axis_names:
-            if self._adevs[name].unit == "mm":
-                self._adevs[name]._setROParam("speed", t_speed)
-            else:
-                continue
-
-    def _setRSpeed(self, r_speed):
-        for name in self.axis_names:
-            if self._adevs[name].unit == "deg":
-                self._adevs[name]._setROParam("speed", r_speed)
-            else:
-                continue
+        self._setSpeed(self.t_speed, "mm")
+        self._setSpeed(self.r_speed, "deg")
 
     def doStart(self, target):
         for name, target in zip(self.axis_names, target):
             self._adevs[name].start(target)
 
     def doRead(self, maxage=0):
-        return self._readPos(maxage)
+        pos = [self._adevs[name].read(maxage) for name in self.axis_names]
+        return pos
 
     def doStatus(self, maxage=0):
         return multiStatus(self._adevs, maxage=maxage)
@@ -78,21 +61,31 @@ class VirtualHexapod(Moveable):
                 return ok, f"{name} {why}"
         return ok, why
 
+    def _setSpeed(self, speed, unit):
+        for name in self.axis_names:
+            if unit in self._adevs[name].unit.lower():
+                self._adevs[name]._setROParam("speed", speed)
+
     def doWriteT_Speed(self, speed):
-        return self._setTSpeed(speed)
+        self._setSpeed(speed, "mm")
 
     def doWriteR_Speed(self, speed):
-        return self._setRSpeed(speed)
+        self._setSpeed(speed, "deg")
 
     def valueInfo(self):
-        return (
+        return [
+            Value(name.capitalize(), unit=f"{self._adevs[name].unit}", fmtstr="%.3f")
+            for name in self.axis_names
+        ]
+
+        """return (
             Value("Tx", unit="mm", fmtstr="%.3f"),
             Value("Ty", unit="mm", fmtstr="%.3f"),
             Value("Tz", unit="mm", fmtstr="%.3f"),
             Value("Rx", unit="deg", fmtstr="%.3f"),
             Value("Ry", unit="deg", fmtstr="%.3f"),
             Value("Rz", unit="deg", fmtstr="%.3f"),
-        )
+        )"""
 
 
 class TableHexapod(VirtualHexapod):
@@ -109,7 +102,7 @@ class TableHexapod(VirtualHexapod):
     axis_names = ("tx", "ty", "tz", "rx", "ry", "rz", "table")
     valuetype = tupleof(float, float, float, float, float, float, float)
 
-    def valueInfo(self):
+    """def valueInfo(self):
         return (
             Value("Tx", unit="mm", fmtstr="%.3f"),
             Value("Ty", unit="mm", fmtstr="%.3f"),
@@ -120,4 +113,4 @@ class TableHexapod(VirtualHexapod):
             Value(
                 "Table", unit=f"{self._adevs['table'].unit}", fmtstr="%.3f"
             ),  # translation or rotation (mm or deg)
-        )
+        )"""
