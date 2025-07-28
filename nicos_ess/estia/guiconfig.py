@@ -38,6 +38,7 @@ main_window = docked(
                 panel(
                     "nicos_ess.gui.panels.devices.DevicesPanel",
                     dockpos="right",
+                    show_target=True,
                 ),
             ),  # hsplit
         ),
