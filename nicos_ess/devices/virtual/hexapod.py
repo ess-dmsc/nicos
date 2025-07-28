@@ -1,5 +1,3 @@
-import numpy as np
-
 from nicos.core import (
     Attach,
     Moveable,
@@ -51,14 +49,14 @@ class VirtualHexapod(Moveable):
 
     def _setTSpeed(self, t_speed):
         for name in self.axis_names:
-            if self._adevs[name].unit == "mm/s":
+            if self._adevs[name].unit == "mm":
                 self._adevs[name]._setROParam("speed", t_speed)
             else:
                 continue
 
     def _setRSpeed(self, r_speed):
         for name in self.axis_names:
-            if self._adevs[name].unit == "deg/s":
+            if self._adevs[name].unit == "deg":
                 self._adevs[name]._setROParam("speed", r_speed)
             else:
                 continue
