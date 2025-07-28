@@ -78,15 +78,6 @@ class VirtualHexapod(Moveable):
             for name in self.axis_names
         ]
 
-        """return (
-            Value("Tx", unit="mm", fmtstr="%.3f"),
-            Value("Ty", unit="mm", fmtstr="%.3f"),
-            Value("Tz", unit="mm", fmtstr="%.3f"),
-            Value("Rx", unit="deg", fmtstr="%.3f"),
-            Value("Ry", unit="deg", fmtstr="%.3f"),
-            Value("Rz", unit="deg", fmtstr="%.3f"),
-        )"""
-
 
 class TableHexapod(VirtualHexapod):
     """Hexapod with additional movement stage attached to it"""
@@ -101,16 +92,3 @@ class TableHexapod(VirtualHexapod):
 
     axis_names = ("tx", "ty", "tz", "rx", "ry", "rz", "table")
     valuetype = tupleof(float, float, float, float, float, float, float)
-
-    """def valueInfo(self):
-        return (
-            Value("Tx", unit="mm", fmtstr="%.3f"),
-            Value("Ty", unit="mm", fmtstr="%.3f"),
-            Value("Tz", unit="mm", fmtstr="%.3f"),
-            Value("Rx", unit="deg", fmtstr="%.3f"),
-            Value("Ry", unit="deg", fmtstr="%.3f"),
-            Value("Rz", unit="deg", fmtstr="%.3f"),
-            Value(
-                "Table", unit=f"{self._adevs['table'].unit}", fmtstr="%.3f"
-            ),  # translation or rotation (mm or deg)
-        )"""
