@@ -35,11 +35,11 @@ class PowerSupplyChannel(CanDisable, MappedReadable):
     valuetype = float
 
     def doRead(self, maxage=0):
-        return self._attached_voltage.doRead()
+        return self._attached_voltage.read()
 
     def doStatus(self, maxage=0):
-        power_stat_msg = self._attached_status.doRead()
-        stat, msg = self._attached_voltage.doStatus()
+        power_stat_msg = self._attached_status.read()
+        stat, msg = self._attached_voltage.status()
         if stat == status.OK:
             if power_stat_msg == "Power is OFF":
                 return status.OK, power_stat_msg
@@ -55,7 +55,7 @@ class PowerSupplyChannel(CanDisable, MappedReadable):
             raise InvalidValueError(self, f"Position '{value}' not in mapping")
 
         if self._attached_power_control is not None:
-            self._attached_power_control.doStart(value)
+            self._attached_power_control.start(value)
 
 
 class PowerSupplyBank(CanDisable, MappedReadable):
@@ -75,7 +75,7 @@ class PowerSupplyBank(CanDisable, MappedReadable):
 
     def doRead(self, maxage=0):
         for ps_channel in self._attached_ps_channels:
-            ps_channel_power_rbv = ps_channel._attached_power_control.doRead()
+            ps_channel_power_rbv = ps_channel._attached_power_control.read()
             if ps_channel_power_rbv == "ON":
                 return "ON"
         return "OFF"
@@ -87,7 +87,7 @@ class PowerSupplyBank(CanDisable, MappedReadable):
             raise InvalidValueError(self, f"Position '{value}' not in mapping")
 
         for ps_channel in self._attached_ps_channels:
-            ps_channel._attached_power_control.doStart(value)
+            ps_channel._attached_power_control.start(value)
 
     def doStatus(self, maxage=0):
         on_channels = 0
@@ -95,7 +95,7 @@ class PowerSupplyBank(CanDisable, MappedReadable):
         stat = status.BUSY
 
         for ps_channel in self._attached_ps_channels:
-            _, msg = ps_channel.doStatus()
+            _, msg = ps_channel.status()
             
             if msg == "Power is ON":
                 on_channels += 1
