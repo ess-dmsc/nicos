@@ -1,17 +1,36 @@
+import threading
+
 from nicos.core import (
     Attach,
     Override,
     Param,
     status,
     CanDisable,
+    pvname,
 )
+#from nicos.core import POLLER, Moveable, Override, Param, oneof, pvname, status
 from nicos.devices.abstract import MappedMoveable, MappedReadable, Readable
 
+from nicos_ess.devices.epics.pva.epics_devices import (
+    EpicsParameters,
+    RecordInfo,
+    RecordType,
+    create_wrapper,
+    get_from_cache_or,
+)
 
-class PowerSupplyChannel(CanDisable, MappedReadable):
+
+class PowerSupplyChannel(EpicsParameters, CanDisable, MappedReadable):
     parameters = {
         "board": Param("Power supply board"),
         "channel": Param("Power supply channel"),
+        "ps_pv": Param(
+            "Power supply record PV.",
+            type=pvname,
+            mandatory=True,
+            settable=False,
+            userparam=False,
+        ),
     }
     attached_devices = {
         "voltage": Attach("Monitored voltage", Readable),
@@ -33,6 +52,22 @@ class PowerSupplyChannel(CanDisable, MappedReadable):
 
     hardware_access = False
     valuetype = float
+
+    def doPreinit(self, mode):
+        self._lock = threading.Lock()
+        self._epics_subscriptions = []
+        self._ps_status = (status.OK, "")
+        self._record_fields = {
+            "voltage_monitor": RecordInfo("v_mon", "-VMon", RecordType.BOTH),
+            "current_monitor": RecordInfo("i_mon", "-IMon", RecordType.BOTH),
+            "power_rb": RecordInfo("pw_rb", "-Pw-RB", RecordType.STATUS),
+            "power": RecordInfo("pw", "-Pw", RecordType.VALUE),
+            "status_on": RecordInfo("status", "-Status-ON", RecordType.STATUS),
+        }
+        self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
+        # Check PV exists
+        print("CHECK PV EXISTS: " + self.ps_pv + "-VMon")
+        self._epics_wrapper.connect_pv(self.ps_pv + "-VMon")
 
     def doRead(self, maxage=0):
         return self._attached_voltage.doRead()

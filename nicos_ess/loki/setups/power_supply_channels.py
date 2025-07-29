@@ -82,6 +82,7 @@ for key, channel in all_channels.items():
     power_supply_channel = device(
         "nicos_ess.devices.epics.power_supply_channel.PowerSupplyChannel",
         description=channel["description"],
+        ps_pv=pv_root,
         pollinterval=0.5,
         maxage=None,
         unit="V",
