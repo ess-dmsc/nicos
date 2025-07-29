@@ -11,7 +11,7 @@ from nicos.core import (
 
 
 class VirtualHexapod(Moveable):
-    """Virtual Hexapod with six axis of movement"""
+    """Virtual Hexapod with six axes of movement"""
 
     parameters = {
         "t_speed": Param(
@@ -31,7 +31,7 @@ class VirtualHexapod(Moveable):
     }
 
     parameter_overrides = {
-        "fmtstr": Override(default="[%.3f, %.3f, %.3f, %.3f, %.3f]"),
+        "fmtstr": Override(default="[%.3f, %.3f, %.3f, %.3f, %.3f, %.3f]"),
         "unit": Override(default="", mandatory=False, settable=True),
     }
 
@@ -87,7 +87,7 @@ class TableHexapod(VirtualHexapod):
     }
 
     parameter_overrides = {
-        "fmtstr": Override(default="[%.3f, %.3f, %.3f, %.3f, %.3f, %.3f]"),
+        "fmtstr": Override(default="[%.3f, %.3f, %.3f, %.3f, %.3f, %.3f, %.3f]"),
     }
 
     axis_names = ("tx", "ty", "tz", "rx", "ry", "rz", "table")
