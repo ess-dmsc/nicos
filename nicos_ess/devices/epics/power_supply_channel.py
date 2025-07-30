@@ -29,7 +29,7 @@ class PowerSupplyChannel(EpicsParameters, CanDisable, MappedReadable):
             type=pvname,
             mandatory=True,
         ),
-        "voltage": Param("Power supply board"),
+        "voltage_monitor": Param("Voltage monitor readback value"),
     }
     attached_devices = {
         "voltage": Attach("Monitored voltage", Readable),
