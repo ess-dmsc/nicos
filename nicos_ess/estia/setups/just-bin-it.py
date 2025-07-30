@@ -10,8 +10,8 @@ devices = dict(
         brokers=configdata("config.KAFKA_BROKERS"),
         source="just-bin-it",
         unit="evts",
-        hist_type="2-D TOF",
-        det_range=(0, 10000),
+        hist_type="2-D DET",
+        det_range=(98305, 196608),
     ),
     det=device(
         "nicos_ess.devices.datasources.just_bin_it.JustBinItDetector",
