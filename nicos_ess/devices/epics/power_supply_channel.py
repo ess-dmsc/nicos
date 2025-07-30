@@ -72,6 +72,7 @@ class PowerSupplyChannel(EpicsParameters, CanDisable, MappedReadable):
         return self._attached_voltage.doRead()
 
     def doStatus(self, maxage=0):
+        # TODO: Refactor/simplify this status method
         power_stat_msg = self._attached_status.doRead()
         stat, msg = self._attached_voltage.doStatus()
         if stat == status.OK:
