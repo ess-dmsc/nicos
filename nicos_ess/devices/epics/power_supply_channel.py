@@ -24,12 +24,17 @@ class PowerSupplyChannel(EpicsParameters, CanDisable, MappedReadable):
     parameters = {
         "board": Param("Power supply board"),
         "channel": Param("Power supply channel"),
-        "ps_pv": Param(
-            "Power supply record PV.",
+        "ps_pv": Param("Power supply record PV.",
             type=pvname,
             mandatory=True,
         ),
-        "voltage_monitor": Param("Voltage monitor readback value"),
+        "voltage_monitor": Param("Voltage monitor readback value", 
+            volatile=True,
+            # Not sure if setting internal and userparam are making a difference.
+            # Setting them anyway just for readability.
+            internal=True,
+            userparam=True, 
+        ),
     }
     attached_devices = {
         "voltage": Attach("Monitored voltage", Readable),
@@ -92,8 +97,11 @@ class PowerSupplyChannel(EpicsParameters, CanDisable, MappedReadable):
         if self._attached_power_control is not None:
             self._attached_power_control.doStart(value)
     
-    def doReadVoltage(self):
-        return self._get_cached_pv_or_ask("voltage_monitor")
+    def doReadVoltage_Monitor(self):
+        val = self._get_cached_pv_or_ask("voltage_monitor")
+        if not self.fmtstr:
+            return val
+        return self.fmtstr % val
     
     def _get_cached_pv_or_ask(self, param, as_string=False):
         """
