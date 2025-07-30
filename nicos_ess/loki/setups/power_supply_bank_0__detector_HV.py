@@ -20,6 +20,7 @@ keys = get_channel_keys(BANK_CHANNELS)
 devices = dict()
 ps_channels = []
 
+count = 0
 for key in keys:
     # NOTE: For now, devices must be created in the same file.
     # Moving it to a reusable method power_supply_config.py lead to import errors.
@@ -53,6 +54,7 @@ for key in keys:
         maxage=None,
         unit="V",
         fmtstr="%.3f",
+        ps_pv=pv_root,
         voltage=channel_voltage,
         current=channel_current,
         status=channel_status,
@@ -62,6 +64,9 @@ for key in keys:
     )
     devices[f"{key}_ps_channel"] = power_supply_channel
     ps_channels.append(power_supply_channel)
+
+    count +=1
+    if count == 3: break
 
 # Bank device
 power_supply_module = device(

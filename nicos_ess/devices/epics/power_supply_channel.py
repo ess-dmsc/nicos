@@ -28,9 +28,8 @@ class PowerSupplyChannel(EpicsParameters, CanDisable, MappedReadable):
             "Power supply record PV.",
             type=pvname,
             mandatory=True,
-            settable=False,
-            userparam=False,
         ),
+        "voltage": Param("Power supply board"),
     }
     attached_devices = {
         "voltage": Attach("Monitored voltage", Readable),
@@ -58,7 +57,7 @@ class PowerSupplyChannel(EpicsParameters, CanDisable, MappedReadable):
         self._epics_subscriptions = []
         self._ps_status = (status.OK, "")
         self._record_fields = {
-            "voltage_monitor": RecordInfo("v_mon", "-VMon", RecordType.BOTH),
+            "voltage_monitor": RecordInfo("v_mon", "-VMon", RecordType.VALUE), # Before it was BOTH
             "current_monitor": RecordInfo("i_mon", "-IMon", RecordType.BOTH),
             "power_rb": RecordInfo("pw_rb", "-Pw-RB", RecordType.STATUS),
             "power": RecordInfo("pw", "-Pw", RecordType.VALUE),
@@ -91,6 +90,26 @@ class PowerSupplyChannel(EpicsParameters, CanDisable, MappedReadable):
 
         if self._attached_power_control is not None:
             self._attached_power_control.doStart(value)
+    
+    def doReadVoltage(self):
+        return self._get_cached_pv_or_ask("voltage_monitor")
+    
+    def _get_cached_pv_or_ask(self, param, as_string=False):
+        """
+        From EpicsMotor class.
+        Gets the PV value from the cache if possible, else get it from the device.
+        """
+        return get_from_cache_or(
+            self,
+            param,
+            lambda: self._get_pv(param, as_string),
+        )
+
+    def _get_pv(self, param, as_string=False):
+        """From EpicsMotor class"""
+        return self._epics_wrapper.get_pv_value(
+            f"{self.ps_pv}{self._record_fields[param].pv_suffix}", as_string
+        )
 
 
 class PowerSupplyBank(CanDisable, MappedReadable):
