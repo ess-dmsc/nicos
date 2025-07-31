@@ -8,9 +8,10 @@ devices = dict(
         hist_topic="estia_visualisation",
         data_topic="estia_detector",
         brokers=configdata("config.KAFKA_BROKERS"),
-        source="just-bin-it",
         unit="evts",
         hist_type="2-D DET",
+        det_width=1536,
+        det_height=128,
         det_range=(98305, 196608),
     ),
     det=device(
