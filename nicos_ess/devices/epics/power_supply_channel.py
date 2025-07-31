@@ -58,6 +58,7 @@ class PowerSupplyChannel(EpicsParameters, CanDisable, MappedReadable):
     valuetype = float
 
     def doPreinit(self, mode):
+        """ From EpicsMotor class."""
         self._lock = threading.Lock()
         self._epics_subscriptions = []
         self._ps_status = (status.OK, "")
@@ -74,7 +75,8 @@ class PowerSupplyChannel(EpicsParameters, CanDisable, MappedReadable):
         self._epics_wrapper.connect_pv(self.ps_pv + "-VMon")
 
     def doRead(self, maxage=0):
-        return self._attached_voltage.doRead()
+        print("PS DO READ")
+        return self.doReadVoltage_Monitor()
 
     def doStatus(self, maxage=0):
         # TODO: Refactor/simplify this status method
@@ -98,16 +100,24 @@ class PowerSupplyChannel(EpicsParameters, CanDisable, MappedReadable):
             self._attached_power_control.doStart(value)
     
     def doReadVoltage_Monitor(self):
-        val = self._get_cached_pv_or_ask("voltage_monitor")
-        if not self.fmtstr:
-            return val
-        return self.fmtstr % val
+        print("DO READ VOLTAGE MON")
+        #val = self._get_cached_pv_or_ask("voltage_monitor")
+        # test: get direct from cache
+        val = self._get_pv(param="voltage_monitor", as_string=False)
+
+        #if not self.fmtstr:
+        #    return val
+        #return self.fmtstr % val
+        
+        # test: return unformated
+        return val
     
     def _get_cached_pv_or_ask(self, param, as_string=False):
         """
         From EpicsMotor class.
         Gets the PV value from the cache if possible, else get it from the device.
         """
+        print("GET CACHED OR ASK")
         return get_from_cache_or(
             self,
             param,
@@ -116,6 +126,7 @@ class PowerSupplyChannel(EpicsParameters, CanDisable, MappedReadable):
 
     def _get_pv(self, param, as_string=False):
         """From EpicsMotor class"""
+        print("GET PV")
         return self._epics_wrapper.get_pv_value(
             f"{self.ps_pv}{self._record_fields[param].pv_suffix}", as_string
         )
