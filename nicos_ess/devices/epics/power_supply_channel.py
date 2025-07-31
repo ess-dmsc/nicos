@@ -63,16 +63,19 @@ class PowerSupplyChannel(EpicsParameters, CanDisable, MappedReadable):
         self._epics_subscriptions = []
         self._ps_status = (status.OK, "")
         self._record_fields = {
-            "voltage_monitor": RecordInfo("v_mon", "-VMon", RecordType.VALUE), # Before it was BOTH
-            "current_monitor": RecordInfo("i_mon", "-IMon", RecordType.BOTH),
-            "power_rb": RecordInfo("pw_rb", "-Pw-RB", RecordType.STATUS),
-            "power": RecordInfo("pw", "-Pw", RecordType.VALUE),
-            "status_on": RecordInfo("status", "-Status-ON", RecordType.STATUS),
+            #"voltage_monitor": RecordInfo("v_mon", "-VMon", RecordType.VALUE), # Before it was BOTH
+            "voltage_monitor": RecordInfo("v_mon", "random", RecordType.VALUE), # Before it was BOTH
+            #"current_monitor": RecordInfo("i_mon", "-IMon", RecordType.BOTH),
+            #"power_rb": RecordInfo("pw_rb", "-Pw-RB", RecordType.STATUS),
+            #"power": RecordInfo("pw", "-Pw", RecordType.VALUE),
+            #"status_on": RecordInfo("status", "-Status-ON", RecordType.STATUS),
         }
         self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
         # Check PV exists
-        print("CHECK PV EXISTS: " + self.ps_pv + "-VMon")
-        self._epics_wrapper.connect_pv(self.ps_pv + "-VMon")
+        #print("CHECK PV EXISTS: " + self.ps_pv + "-VMon")
+        #self._epics_wrapper.connect_pv(self.ps_pv + "-VMon")
+        print("CHECK PV EXISTS: " + self.ps_pv + "random")
+        self._epics_wrapper.connect_pv(self.ps_pv + "random")
 
     def doRead(self, maxage=0):
         print("PS DO READ")
@@ -101,14 +104,14 @@ class PowerSupplyChannel(EpicsParameters, CanDisable, MappedReadable):
     
     def doReadVoltage_Monitor(self):
         print("DO READ VOLTAGE MON")
-        #val = self._get_cached_pv_or_ask("voltage_monitor")
+        val = self._get_cached_pv_or_ask("voltage_monitor")
         # test: get direct from cache
-        val = self._get_pv(param="voltage_monitor", as_string=False)
+        #val = self._get_pv(param="voltage_monitor", as_string=False)
 
         #if not self.fmtstr:
         #    return val
         #return self.fmtstr % val
-        
+
         # test: return unformated
         return val
     
@@ -118,6 +121,7 @@ class PowerSupplyChannel(EpicsParameters, CanDisable, MappedReadable):
         Gets the PV value from the cache if possible, else get it from the device.
         """
         print("GET CACHED OR ASK")
+        print("SELF.MONITOR = " + str(self.monitor))
         return get_from_cache_or(
             self,
             param,

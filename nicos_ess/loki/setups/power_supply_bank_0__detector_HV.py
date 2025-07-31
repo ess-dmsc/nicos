@@ -29,7 +29,8 @@ for key in keys:
     pv_root = channel["pv_root_channel"]
     channel_voltage = device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
-        readpv=f"{pv_root}-VMon",
+        #readpv=f"{pv_root}-VMon",
+        readpv="test:random",
         unit="V"
     )
     channel_current = device(
@@ -54,7 +55,8 @@ for key in keys:
         maxage=None,
         unit="V",
         fmtstr="%.3f",
-        ps_pv=pv_root,
+        #ps_pv=pv_root,
+        ps_pv="test:",
         voltage=channel_voltage,
         current=channel_current,
         status=channel_status,
