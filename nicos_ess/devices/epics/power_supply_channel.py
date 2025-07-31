@@ -1,5 +1,7 @@
 import threading
+import time
 
+from nicos import session
 from nicos.core import (
     Attach,
     Override,
@@ -7,6 +9,7 @@ from nicos.core import (
     status,
     CanDisable,
     pvname,
+    POLLER,
 )
 #from nicos.core import POLLER, Moveable, Override, Param, oneof, pvname, status
 from nicos.devices.abstract import MappedMoveable, MappedReadable, Readable
@@ -63,8 +66,8 @@ class PowerSupplyChannel(EpicsParameters, CanDisable, MappedReadable):
         self._epics_subscriptions = []
         self._ps_status = (status.OK, "")
         self._record_fields = {
-            #"voltage_monitor": RecordInfo("v_mon", "-VMon", RecordType.VALUE), # Before it was BOTH
-            "voltage_monitor": RecordInfo("v_mon", "random", RecordType.VALUE), # Before it was BOTH
+            #"voltage_monitor": RecordInfo("", "-VMon", RecordType.VALUE), # Before it was BOTH
+            "voltage_monitor": RecordInfo("", "random", RecordType.VALUE), # Before it was BOTH
             #"current_monitor": RecordInfo("i_mon", "-IMon", RecordType.BOTH),
             #"power_rb": RecordInfo("pw_rb", "-Pw-RB", RecordType.STATUS),
             #"power": RecordInfo("pw", "-Pw", RecordType.VALUE),
@@ -77,9 +80,36 @@ class PowerSupplyChannel(EpicsParameters, CanDisable, MappedReadable):
         print("CHECK PV EXISTS: " + self.ps_pv + "random")
         self._epics_wrapper.connect_pv(self.ps_pv + "random")
 
+    def doInit(self, mode):
+        """ From EpicsMotor class."""
+        print("DOINIT")
+        if session.sessiontype == POLLER and self.monitor:
+            for k, v in self._record_fields.items():
+                print("DOINIT for k = " + str(k))
+                if v.record_type in [RecordType.VALUE, RecordType.BOTH]:
+                    print("DO INIT ADD CBS TO VALUE")
+                    self._epics_subscriptions.append(
+                        self._epics_wrapper.subscribe(
+                            f"{self.ps_pv}{v.pv_suffix}",
+                            k,
+                            self._value_change_callback,
+                            self._connection_change_callback,
+                        )
+                    )
+                if v.record_type in [RecordType.STATUS, RecordType.BOTH]:
+                    self._epics_subscriptions.append(
+                        self._epics_wrapper.subscribe(
+                            f"{self.ps_pv}{v.pv_suffix}",
+                            k,
+                            self._status_change_callback,
+                            self._connection_change_callback,
+                        )
+                    )
+
     def doRead(self, maxage=0):
         print("PS DO READ")
         return self.doReadVoltage_Monitor()
+        # Format value?
 
     def doStatus(self, maxage=0):
         # TODO: Refactor/simplify this status method
@@ -113,6 +143,7 @@ class PowerSupplyChannel(EpicsParameters, CanDisable, MappedReadable):
         #return self.fmtstr % val
 
         # test: return unformated
+        print("VAL = " + str(val))
         return val
     
     def _get_cached_pv_or_ask(self, param, as_string=False):
@@ -120,8 +151,7 @@ class PowerSupplyChannel(EpicsParameters, CanDisable, MappedReadable):
         From EpicsMotor class.
         Gets the PV value from the cache if possible, else get it from the device.
         """
-        print("GET CACHED OR ASK")
-        print("SELF.MONITOR = " + str(self.monitor))
+        print("GET CACHED OR ASK from param = " + str(param))
         return get_from_cache_or(
             self,
             param,
@@ -134,6 +164,48 @@ class PowerSupplyChannel(EpicsParameters, CanDisable, MappedReadable):
         return self._epics_wrapper.get_pv_value(
             f"{self.ps_pv}{self._record_fields[param].pv_suffix}", as_string
         )
+    
+    def _value_change_callback(
+        self, name, param, value, units, limits, severity, message, **kwargs
+    ):
+        time_stamp = time.time()
+        cache_key = self._record_fields[param].cache_key
+        cache_key = param if not cache_key else cache_key
+        self._cache.put(self._name, cache_key, value, time_stamp)
+        print("VALUE CB for " + str(param) + " with value = " + str(value) + " add to param = " + str(param) + "and cache key = " + str(cache_key))
+
+    def _status_change_callback(
+        self, name, param, value, units, limits, severity, message, **kwargs
+    ):
+        print("STATUS CB for " + str(param))
+        time_stamp = time.time()
+        cache_key = self._record_fields[param].cache_key
+        cache_key = param if not cache_key else cache_key
+
+        if param == "value":
+            self._cache.put(self._name, "value_status", (severity, message), time_stamp)
+        else:
+            self._cache.put(self._name, cache_key, value, time_stamp)
+        self._cache.put(self._name, "status", self._do_status(), time_stamp)
+
+    def _connection_change_callback(self, name, param, is_connected, **kwargs):
+
+        print("CONNECTION CB for " + str(param))
+
+        # I think we don't need this check for PS
+        #if param != self._record_fields["value"].cache_key:
+        #    return
+
+        if is_connected:
+            self.log.debug("%s connected!", name)
+        else:
+            self.log.warning("%s disconnected!", name)
+            self._cache.put(
+                self._name,
+                "status",
+                (status.ERROR, "communication failure"),
+                time.time(),
+            )
 
 
 class PowerSupplyBank(CanDisable, MappedReadable):
