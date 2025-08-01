@@ -78,9 +78,12 @@ class PowerSupplyChannel(EpicsParameters, CanDisable, MappedReadable):
             # Test: change later to read prefixes!
             "voltage_monitor": RecordInfo("", "random", RecordType.VALUE), # Before it was BOTH
             "current_monitor": RecordInfo("", "random", RecordType.VALUE),
-            #"power_rb": RecordInfo("pw_rb", "-Pw-RB", RecordType.STATUS),
-            #"power": RecordInfo("pw", "-Pw", RecordType.VALUE),
-            #"status_on": RecordInfo("status", "-Status-ON", RecordType.STATUS),
+            #"power_rb": RecordInfo("", "-Pw-RB", RecordType.VALUE),
+            
+            #"power": RecordInfo("", "-Pw", RecordType.VALUE),
+            "power": RecordInfo("", "Binary-S", RecordType.VALUE),
+            
+            #"status_on": RecordInfo("", "-Status-ON", RecordType.STATUS),
         }
         self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
         # Check PV exists
@@ -144,13 +147,8 @@ class PowerSupplyChannel(EpicsParameters, CanDisable, MappedReadable):
         return stat, msg
     
     def doEnable(self, on):
-        value = "ON" if on else "OFF"
-        target = self.mapping.get(value, None)
-        if target is None:
-            raise InvalidValueError(self, f"Position '{value}' not in mapping")
-
-        if self._attached_power_control is not None:
-            self._attached_power_control.doStart(value)
+        print("PS CH ENABLE = " + str(1 if on else 0))
+        self._put_pv("power", 1 if on else 0)
     
     def doReadVoltage_Monitor(self):
         print("DO READ VOLTAGE MON")
@@ -184,6 +182,13 @@ class PowerSupplyChannel(EpicsParameters, CanDisable, MappedReadable):
         print("GET PV")
         return self._epics_wrapper.get_pv_value(
             f"{self.ps_pv}{self._record_fields[param].pv_suffix}", as_string
+        )
+    
+    def _put_pv(self, param, value):
+        """From EpicsMotor class"""
+        print("PV PUT = " + str(f"{self.ps_pv}{self._record_fields[param].pv_suffix}"))
+        self._epics_wrapper.put_pv_value(
+            f"{self.ps_pv}{self._record_fields[param].pv_suffix}", value
         )
     
     def _value_change_callback(
