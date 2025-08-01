@@ -8,8 +8,8 @@ description = "Power Supplies Bank 0 for the detector carriage (LV)."
 # Name of PS Bank and the list of channels selected for it.
 BANK_NAME = "PS_Bank_0_LV"
 BANK_CHANNELS = [
-    {"ps_type": "LV", "board": "107", "channels": [f"{ch:>02}" for ch in range(0, 8)]},
-    {"ps_type": "LV", "board": "108", "channels": [f"{ch:>02}" for ch in range(0, 6)]},
+    {"ps_type": "LV", "board": "106", "channels": [f"{ch:>02}" for ch in range(0, 8)]},
+    {"ps_type": "LV", "board": "107", "channels": [f"{ch:>02}" for ch in range(0, 6)]},
 ]
 
 # Keys to access channel info
