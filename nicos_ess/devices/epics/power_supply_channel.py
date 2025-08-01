@@ -38,6 +38,15 @@ class PowerSupplyChannel(EpicsParameters, CanDisable, MappedReadable):
             internal=True,
             userparam=True, 
         ),
+        "current_monitor": Param("Current monitor readback value", 
+            volatile=True,
+            internal=True,
+            userparam=True,
+        ),
+        "current_units": Param("Current monitor readback unit", 
+            default="uA",
+            type=str,
+        ),
     }
     attached_devices = {
         "voltage": Attach("Monitored voltage", Readable),
@@ -66,9 +75,9 @@ class PowerSupplyChannel(EpicsParameters, CanDisable, MappedReadable):
         self._epics_subscriptions = []
         self._ps_status = (status.OK, "")
         self._record_fields = {
-            #"voltage_monitor": RecordInfo("", "-VMon", RecordType.VALUE), # Before it was BOTH
-            "voltage_monitor": RecordInfo("", "random", RecordType.BOTH), # Before it was BOTH
-            #"current_monitor": RecordInfo("i_mon", "-IMon", RecordType.BOTH),
+            # Test: change later to read prefixes!
+            "voltage_monitor": RecordInfo("", "random", RecordType.VALUE), # Before it was BOTH
+            "current_monitor": RecordInfo("", "random", RecordType.VALUE),
             #"power_rb": RecordInfo("pw_rb", "-Pw-RB", RecordType.STATUS),
             #"power": RecordInfo("pw", "-Pw", RecordType.VALUE),
             #"status_on": RecordInfo("status", "-Status-ON", RecordType.STATUS),
@@ -117,12 +126,21 @@ class PowerSupplyChannel(EpicsParameters, CanDisable, MappedReadable):
 
         voltage_val = self.doReadVoltage_Monitor()
         voltage_val = self.fmtstr % voltage_val if voltage_val else voltage_val
+
+        current_val = self.doReadCurrent_Monitor()
+        current_val = self.fmtstr % current_val if current_val else current_val
         
         if stat != status.OK:
             return stat, msg
-        if not voltage_val:
+        if not voltage_val and not current_val:
             return status.OK, power_stat_msg
-        msg = power_stat_msg + " ({} {})".format(voltage_val, self.unit)
+        
+        if voltage_val and not current_val:
+            msg = power_stat_msg + " ({} {})".format(voltage_val, self.unit)
+        elif not voltage_val and current_val:
+            msg = power_stat_msg + " ({} {})".format(current_val, self.current_units)
+        else:
+            msg = power_stat_msg + " ({} {} / {} {})".format(voltage_val, self.unit, current_val, self.current_units)
         return stat, msg
     
     def doEnable(self, on):
@@ -142,6 +160,11 @@ class PowerSupplyChannel(EpicsParameters, CanDisable, MappedReadable):
 
         # test: return unformated
         print("VAL = " + str(val))
+        return val
+    
+    def doReadCurrent_Monitor(self):
+        print("DO READ CURRENT MON")
+        val = self._get_cached_pv_or_ask("current_monitor")
         return val
     
     def _get_cached_pv_or_ask(self, param, as_string=False):
