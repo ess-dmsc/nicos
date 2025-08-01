@@ -6,7 +6,7 @@ from nicos_ess.loki.setups.power_supply_config import (
 description = "Power Supplies Bank 0 for the detector carriage (HV)."
 
 # Name of PS Bank and the list of channels selected for it.
-BANK_NAME = "PS_Bank_0_HV"
+BANK_NAME = "HV_Bank_0"
 BANK_CHANNELS = [
     # Each item in the list is a set of channels.
     {"ps_type": "HV", "board": "100", "channels": [f"{ch:>02}" for ch in range(0, 12)]},
