@@ -52,15 +52,6 @@ class PowerSupplyChannel(EpicsParameters, CanDisable, MappedReadable):
             type=str,
         ),
     }
-    attached_devices = {
-        "voltage": Attach("Monitored voltage", Readable),
-        "current": Attach("Monitored current", Readable),
-        "status": Attach(
-            "Status of the power in the power supply channel",
-            MappedReadable,
-        ),
-        "power_control": Attach("Control of the power supply channel", MappedMoveable),
-    }
 
     hardware_access = False
     valuetype = int

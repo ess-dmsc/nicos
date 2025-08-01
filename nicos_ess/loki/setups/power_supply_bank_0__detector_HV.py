@@ -27,27 +27,6 @@ for key in keys:
     # TODO: Simplify PSChhanel with PV subscription!
     channel = ALL_CHANNELS[key]
     pv_root = channel["pv_root_channel"]
-    channel_voltage = device(
-        "nicos_ess.devices.epics.pva.EpicsReadable",
-        #readpv=f"{pv_root}-VMon",
-        readpv="test:random",
-        unit="V"
-    )
-    channel_current = device(
-        "nicos_ess.devices.epics.pva.EpicsReadable",
-        readpv=f"{pv_root}-IMon",
-    )
-    channel_status = device(
-        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
-        readpv=f"{pv_root}-Status-ON",
-        mapping={"Power is OFF": 0, "Power is ON": 1},
-    )
-    channel_power_control = device(
-        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
-        readpv=f"{pv_root}-Pw-RB",
-        writepv=f"{pv_root}-Pw",
-        mapping={"OFF": 0, "ON": 1},
-    )
     power_supply_channel = device(
         "nicos_ess.devices.epics.power_supply_channel.PowerSupplyChannel",
         description=channel["description"],
@@ -55,10 +34,6 @@ for key in keys:
         maxage=None,
         #ps_pv=pv_root,
         ps_pv="test:",
-        voltage=channel_voltage,
-        current=channel_current,
-        status=channel_status,
-        power_control=channel_power_control,
         mapping={"OFF": 0, "ON": 1},
         visibility={}
     )
