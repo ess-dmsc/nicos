@@ -38,12 +38,16 @@ class PowerSupplyChannel(EpicsParameters, CanDisable, MappedReadable):
             internal=True,
             userparam=True, 
         ),
+        "voltage_units": Param("Voltage monitor readback units", 
+            default="V",
+            type=str,
+        ),
         "current_monitor": Param("Current monitor readback value", 
             volatile=True,
             internal=True,
             userparam=True,
         ),
-        "current_units": Param("Current monitor readback unit", 
+        "current_units": Param("Current monitor readback units", 
             default="uA",
             type=str,
         ),
@@ -136,11 +140,11 @@ class PowerSupplyChannel(EpicsParameters, CanDisable, MappedReadable):
             return status.OK, power_stat_msg
         
         if voltage_val and not current_val:
-            msg = power_stat_msg + " ({} {})".format(voltage_val, self.unit)
+            msg = power_stat_msg + " ({} {})".format(voltage_val, self.voltage_units)
         elif not voltage_val and current_val:
             msg = power_stat_msg + " ({} {})".format(current_val, self.current_units)
         else:
-            msg = power_stat_msg + " ({} {} / {} {})".format(voltage_val, self.unit, current_val, self.current_units)
+            msg = power_stat_msg + " ({} {} / {} {})".format(voltage_val, self.voltage_units, current_val, self.current_units)
         return stat, msg
     
     def doEnable(self, on):
