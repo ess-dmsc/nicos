@@ -67,7 +67,7 @@ class PowerSupplyChannel(EpicsParameters, CanDisable, MappedReadable):
         self._ps_status = (status.OK, "")
         self._record_fields = {
             #"voltage_monitor": RecordInfo("", "-VMon", RecordType.VALUE), # Before it was BOTH
-            "voltage_monitor": RecordInfo("", "random", RecordType.VALUE), # Before it was BOTH
+            "voltage_monitor": RecordInfo("", "random", RecordType.BOTH), # Before it was BOTH
             #"current_monitor": RecordInfo("i_mon", "-IMon", RecordType.BOTH),
             #"power_rb": RecordInfo("pw_rb", "-Pw-RB", RecordType.STATUS),
             #"power": RecordInfo("pw", "-Pw", RecordType.VALUE),
@@ -109,19 +109,21 @@ class PowerSupplyChannel(EpicsParameters, CanDisable, MappedReadable):
     def doRead(self, maxage=0):
         print("PS DO READ")
         return self.doReadVoltage_Monitor()
-        # Format value?
 
     def doStatus(self, maxage=0):
         # TODO: Refactor/simplify this status method
         power_stat_msg = self._attached_status.doRead()
         stat, msg = self._attached_voltage.doStatus()
-        if stat == status.OK:
-            if power_stat_msg == "Power is OFF":
-                return status.OK, power_stat_msg
-            elif power_stat_msg == "Power is ON":
-                return status.OK, power_stat_msg
-        else:
+
+        voltage_val = self.doReadVoltage_Monitor()
+        voltage_val = self.fmtstr % voltage_val if voltage_val else voltage_val
+        
+        if stat != status.OK:
             return stat, msg
+        if not voltage_val:
+            return status.OK, power_stat_msg
+        msg = power_stat_msg + " ({} {})".format(voltage_val, self.unit)
+        return stat, msg
     
     def doEnable(self, on):
         value = "ON" if on else "OFF"
@@ -137,10 +139,6 @@ class PowerSupplyChannel(EpicsParameters, CanDisable, MappedReadable):
         val = self._get_cached_pv_or_ask("voltage_monitor")
         # test: get direct from cache
         #val = self._get_pv(param="voltage_monitor", as_string=False)
-
-        #if not self.fmtstr:
-        #    return val
-        #return self.fmtstr % val
 
         # test: return unformated
         print("VAL = " + str(val))
