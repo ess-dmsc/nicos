@@ -81,7 +81,8 @@ class PowerSupplyChannel(EpicsParameters, CanDisable, MappedReadable):
             #"power": RecordInfo("", "-Pw", RecordType.VALUE),
             "power": RecordInfo("", "Binary-S", RecordType.VALUE),
             
-            #"status_on": RecordInfo("", "-Status-ON", RecordType.STATUS),
+            #"status_on": RecordInfo("", "-Status-ON", RecordType.VALUE), # Should it be STATUS instead?
+            "status_on": RecordInfo("", "Binary-R", RecordType.VALUE), # Should it be STATUS instead?
         }
         self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
         # Check PV exists
@@ -122,30 +123,31 @@ class PowerSupplyChannel(EpicsParameters, CanDisable, MappedReadable):
 
     def doRead(self, maxage=0):
         return self._mapReadValue(self._readRaw(maxage))
+    
+    def status_on(self):
+        return bool(self._get_cached_pv_or_ask("status_on"))
 
     def doStatus(self, maxage=0):
-        # TODO: Refactor/simplify this status method
-        power_stat_msg = self._attached_status.doRead()
-        stat, msg = self._attached_voltage.doStatus()
-
+        # TODO: Refactor/simplify this status method.
+        # TODO: Check other status bit PVs for errors?
+        channel_stat_msg = "Channel is ON" if self.status_on() else "Channel is OFF"
+        
         voltage_val = self.doReadVoltage_Monitor()
-        voltage_val = self.fmtstr % voltage_val if voltage_val else voltage_val
+        voltage_val = self.fmtstr % voltage_val if type(voltage_val) == float else None
 
         current_val = self.doReadCurrent_Monitor()
-        current_val = self.fmtstr % current_val if current_val else current_val
+        current_val = self.fmtstr % current_val if type(current_val) == float else None
         
-        if stat != status.OK:
-            return stat, msg
-        if not voltage_val and not current_val:
-            return status.OK, power_stat_msg
-        
-        if voltage_val and not current_val:
-            msg = power_stat_msg + " ({} {})".format(voltage_val, self.voltage_units)
-        elif not voltage_val and current_val:
-            msg = power_stat_msg + " ({} {})".format(current_val, self.current_units)
-        else:
-            msg = power_stat_msg + " ({} {} / {} {})".format(voltage_val, self.voltage_units, current_val, self.current_units)
-        return stat, msg
+        msg = channel_stat_msg + " ({} {} / {} {})".format(
+            voltage_val if voltage_val else '?', 
+            self.voltage_units, 
+            current_val if current_val else '?', 
+            self.current_units
+        )
+
+        if not voltage_val or not current_val:
+            return status.ERROR, msg        
+        return status.OK, msg
     
     def doEnable(self, on):
         print("PS CH ENABLE = " + str(1 if on else 0))
