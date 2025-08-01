@@ -42,6 +42,7 @@ class LOKIDetectorMotion(EpicsMotor):
         except Exception as e:
             return False, "No Power Supply Bank found in setup ({}).".format(e)
 
-        if ps_bank.doRead() == "ON":
+        _, bank_status_msg = ps_bank.doStatus()
+        if "ON" in bank_status_msg:
             return False, "Power Supply Bank is still ON (it should be OFF)."
         return True, "Power Supply Bank is OFF. Moving is okay."
