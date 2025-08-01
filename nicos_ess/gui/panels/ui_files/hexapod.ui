@@ -22,7 +22,7 @@
      <height>486</height>
     </rect>
    </property>
-   <layout class="QHBoxLayout" name="horizontalLayout">
+   <layout class="QHBoxLayout" name="hexapodControls">
     <item>
      <layout class="QVBoxLayout" name="verticalLayout">
       <item>
