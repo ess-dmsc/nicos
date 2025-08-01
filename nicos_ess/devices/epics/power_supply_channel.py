@@ -41,9 +41,9 @@ class PowerSupplyChannel(CanDisable, MappedReadable):
         power_stat_msg = self._attached_status.read()
         stat, msg = self._attached_voltage.status()
         if stat == status.OK:
-            if power_stat_msg == "Power is OFF":
+            if power_stat_msg == "Channel is OFF":
                 return status.OK, power_stat_msg
-            elif power_stat_msg == "Power is ON":
+            elif power_stat_msg == "Channel is ON":
                 return status.OK, power_stat_msg
         else:
             return stat, msg
@@ -97,7 +97,7 @@ class PowerSupplyBank(CanDisable, MappedReadable):
         for ps_channel in self._attached_ps_channels:
             _, msg = ps_channel.status()
             
-            if msg == "Power is ON":
+            if msg == "Channel is ON":
                 on_channels += 1
         
         if on_channels == num_of_channels:

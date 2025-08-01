@@ -38,7 +38,7 @@ for key in keys:
     channel_status = device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         readpv=f"{pv_root}-Status-ON",
-        mapping={"Power is OFF": 0, "Power is ON": 1},
+        mapping={"Channel is OFF": 0, "Channel is ON": 1},
     )
     channel_power_control = device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
