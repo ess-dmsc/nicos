@@ -58,16 +58,8 @@ class PowerSupplyChannel(EpicsParameters, CanDisable, MappedReadable):
         "power_control": Attach("Control of the power supply channel", MappedMoveable),
     }
 
-    parameter_overrides = {
-        "fmtstr": Override(default="%s"),
-        "unit": Override(mandatory=False),
-        "mapping": Override(
-            mandatory=False, settable=True, userparam=False, volatile=False
-        ),
-    }
-
     hardware_access = False
-    valuetype = float
+    valuetype = int
 
     def doPreinit(self, mode):
         """ From EpicsMotor class."""
@@ -78,7 +70,9 @@ class PowerSupplyChannel(EpicsParameters, CanDisable, MappedReadable):
             # Test: change later to read prefixes!
             "voltage_monitor": RecordInfo("", "random", RecordType.VALUE), # Before it was BOTH
             "current_monitor": RecordInfo("", "random", RecordType.VALUE),
+
             #"power_rb": RecordInfo("", "-Pw-RB", RecordType.VALUE),
+            "power_rb": RecordInfo("", "Binary-R", RecordType.VALUE),
             
             #"power": RecordInfo("", "-Pw", RecordType.VALUE),
             "power": RecordInfo("", "Binary-S", RecordType.VALUE),
@@ -117,10 +111,13 @@ class PowerSupplyChannel(EpicsParameters, CanDisable, MappedReadable):
                             self._connection_change_callback,
                         )
                     )
+        MappedReadable.doInit(self, mode)
+
+    def _readRaw(self, maxage=0):
+        return self._get_cached_pv_or_ask("power_rb")
 
     def doRead(self, maxage=0):
-        print("PS DO READ")
-        return self.doReadVoltage_Monitor()
+        return self._mapReadValue(self._readRaw(maxage))
 
     def doStatus(self, maxage=0):
         # TODO: Refactor/simplify this status method

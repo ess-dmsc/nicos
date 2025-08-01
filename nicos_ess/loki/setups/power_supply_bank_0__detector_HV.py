@@ -53,8 +53,6 @@ for key in keys:
         description=channel["description"],
         pollinterval=0.5,
         maxage=None,
-        unit="V",
-        fmtstr="%.3f",
         #ps_pv=pv_root,
         ps_pv="test:",
         voltage=channel_voltage,
