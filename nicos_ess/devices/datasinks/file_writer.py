@@ -313,6 +313,13 @@ class FileWriterStatus(KafkaStatusHandler):
                             else None
                         )
 
+                        if (
+                            stop_time
+                            and start_time
+                            and (stop_time - start_time > timedelta(days=365.25))
+                        ):
+                            stop_time = None  # a large stop time means no stop time set
+
                         if tmp_jobs[jid].start_time != start_time:
                             self.log.warn(f"Start time mismatch for job {jid}: ")
                         else:
