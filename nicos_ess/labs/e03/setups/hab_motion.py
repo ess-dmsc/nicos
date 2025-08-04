@@ -3,9 +3,6 @@ description = "Setup for SE-HTP-003 sample holder system (non-motorrecord axes).
 pv_root = "SE:SE-HTP-003:"
 
 devices = dict(
-    # ------------------------------------------------------------------
-    # Axis X
-    # ------------------------------------------------------------------
     hab_motor_x=device(
         "nicos_ess.devices.epics.pva.octopy_motor.OctopyMotor",
         description="Axis X motor",
@@ -15,55 +12,6 @@ devices = dict(
         abslimits=(0, 300),
         userlimits=(0, 300),
     ),
-    # htp003_axis_x=device(
-    #     "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
-    #     description="Axis X position",
-    #     readpv=f"{pv_root}axis-x-position-r",
-    #     writepv=f"{pv_root}axis-x-s",
-    #     abslimits=(0, 300),
-    #     userlimits=(0, 300),
-    # ),
-    # htp003_axis_x_enable=device(
-    #     "nicos_ess.devices.epics.manual_switch.ManualSwitch",
-    #     description="Enable Axis X",
-    #     readpv=f"{pv_root}axis-x-enable-s",
-    #     writepv=f"{pv_root}axis-x-enable-s",
-    #     states=["False", "True"],
-    #     mapping={"False": 0, "True": 1},
-    # ),
-    # htp003_axis_x_home=device(
-    #     "nicos_ess.devices.epics.manual_switch.ManualSwitch",
-    #     description="Home Axis X",
-    #     readpv=f"{pv_root}axis-x-home-s",
-    #     writepv=f"{pv_root}axis-x-home-s",
-    #     states=["False", "True"],
-    #     mapping={"False": 0, "True": 1},
-    # ),
-    # htp003_axis_x_reset=device(
-    #     "nicos_ess.devices.epics.manual_switch.ManualSwitch",
-    #     description="Reset Axis X",
-    #     readpv=f"{pv_root}axis-x-reset-s",
-    #     writepv=f"{pv_root}axis-x-reset-s",
-    #     states=["False", "True"],
-    #     mapping={"False": 0, "True": 1},
-    # ),
-    # htp003_axis_x_halt=device(
-    #     "nicos_ess.devices.epics.manual_switch.ManualSwitch",
-    #     description="Halt Axis X",
-    #     readpv=f"{pv_root}axis-x-halt-s",
-    #     writepv=f"{pv_root}axis-x-halt-s",
-    #     states=["False", "True"],
-    #     mapping={"False": 0, "True": 1},
-    # ),
-    # htp003_axis_x_velocity=device(
-    #     "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
-    #     description="Axis X velocity",
-    #     readpv=f"{pv_root}axis-x-velocity-s",
-    #     writepv=f"{pv_root}axis-x-velocity-s",
-    # ),
-    # ------------------------------------------------------------------
-    # Axis Y
-    # ------------------------------------------------------------------
     hab_motor_y=device(
         "nicos_ess.devices.epics.pva.octopy_motor.OctopyMotor",
         description="Axis Y motor",
@@ -73,55 +21,6 @@ devices = dict(
         abslimits=(0, 300),
         userlimits=(0, 300),
     ),
-    # htp003_axis_y=device(
-    #     "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
-    #     description="Axis Y position",
-    #     readpv=f"{pv_root}axis-y-position-r",
-    #     writepv=f"{pv_root}axis-y-s",
-    #     abslimits=(0, 300),
-    #     userlimits=(0, 300),
-    # ),
-    # htp003_axis_y_enable=device(
-    #     "nicos_ess.devices.epics.manual_switch.ManualSwitch",
-    #     description="Enable Axis Y",
-    #     readpv=f"{pv_root}axis-y-enable-s",
-    #     writepv=f"{pv_root}axis-y-enable-s",
-    #     states=["False", "True"],
-    #     mapping={"False": 0, "True": 1},
-    # ),
-    # htp003_axis_y_home=device(
-    #     "nicos_ess.devices.epics.manual_switch.ManualSwitch",
-    #     description="Home Axis Y",
-    #     readpv=f"{pv_root}axis-y-home-s",
-    #     writepv=f"{pv_root}axis-y-home-s",
-    #     states=["False", "True"],
-    #     mapping={"False": 0, "True": 1},
-    # ),
-    # htp003_axis_y_reset=device(
-    #     "nicos_ess.devices.epics.manual_switch.ManualSwitch",
-    #     description="Reset Axis Y",
-    #     readpv=f"{pv_root}axis-y-reset-s",
-    #     writepv=f"{pv_root}axis-y-reset-s",
-    #     states=["False", "True"],
-    #     mapping={"False": 0, "True": 1},
-    # ),
-    # htp003_axis_y_halt=device(
-    #     "nicos_ess.devices.epics.manual_switch.ManualSwitch",
-    #     description="Halt Axis Y",
-    #     readpv=f"{pv_root}axis-y-halt-s",
-    #     writepv=f"{pv_root}axis-y-halt-s",
-    #     states=["False", "True"],
-    #     mapping={"False": 0, "True": 1},
-    # ),
-    # htp003_axis_y_velocity=device(
-    #     "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
-    #     description="Axis Y velocity",
-    #     readpv=f"{pv_root}axis-y-velocity-s",
-    #     writepv=f"{pv_root}axis-y-velocity-s",
-    # ),
-    # ------------------------------------------------------------------
-    # Axis Z
-    # ------------------------------------------------------------------
     hab_motor_z=device(
         "nicos_ess.devices.epics.pva.octopy_motor.OctopyMotor",
         description="Axis Z motor",
@@ -131,55 +30,6 @@ devices = dict(
         abslimits=(0, 400),
         userlimits=(0, 400),
     ),
-    # htp003_axis_z=device(
-    #     "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
-    #     description="Axis Z position",
-    #     readpv=f"{pv_root}axis-z-position-r",
-    #     writepv=f"{pv_root}axis-z-s",
-    #     abslimits=(0, 400),
-    #     userlimits=(0, 400),
-    # ),
-    # htp003_axis_z_enable=device(
-    #     "nicos_ess.devices.epics.manual_switch.ManualSwitch",
-    #     description="Enable Axis Z",
-    #     readpv=f"{pv_root}axis-z-enable-s",
-    #     writepv=f"{pv_root}axis-z-enable-s",
-    #     states=["False", "True"],
-    #     mapping={"False": 0, "True": 1},
-    # ),
-    # htp003_axis_z_home=device(
-    #     "nicos_ess.devices.epics.manual_switch.ManualSwitch",
-    #     description="Home Axis Z",
-    #     readpv=f"{pv_root}axis-z-home-s",
-    #     writepv=f"{pv_root}axis-z-home-s",
-    #     states=["False", "True"],
-    #     mapping={"False": 0, "True": 1},
-    # ),
-    # htp003_axis_z_reset=device(
-    #     "nicos_ess.devices.epics.manual_switch.ManualSwitch",
-    #     description="Reset Axis Z",
-    #     readpv=f"{pv_root}axis-z-reset-s",
-    #     writepv=f"{pv_root}axis-z-reset-s",
-    #     states=["False", "True"],
-    #     mapping={"False": 0, "True": 1},
-    # ),
-    # htp003_axis_z_halt=device(
-    #     "nicos_ess.devices.epics.manual_switch.ManualSwitch",
-    #     description="Halt Axis Z",
-    #     readpv=f"{pv_root}axis-z-halt-s",
-    #     writepv=f"{pv_root}axis-z-halt-s",
-    #     states=["False", "True"],
-    #     mapping={"False": 0, "True": 1},
-    # ),
-    # htp003_axis_z_velocity=device(
-    #     "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
-    #     description="Axis Z velocity",
-    #     readpv=f"{pv_root}axis-z-velocity-s",
-    #     writepv=f"{pv_root}axis-z-velocity-s",
-    # ),
-    # ------------------------------------------------------------------
-    # Sample Holder State
-    # ------------------------------------------------------------------
     hab_holder_has_sample=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
         description="Sample presence detected",
@@ -194,17 +44,6 @@ devices = dict(
         states=["Hold", "Release"],
         mapping={"Hold": 0, "Release": 1},
     ),
-    # ------------------------------------------------------------------
-    # System Info
-    # ------------------------------------------------------------------
-    # htp003_ip_address=device(
-    #     "nicos_ess.devices.epics.pva.EpicsStringReadable",
-    #     description="System IP address",
-    #     readpv=f"{pv_root}system-ipaddress-r",
-    # ),
-    # ------------------------------------------------------------------
-    # Temperature Sensors
-    # ------------------------------------------------------------------
     htp003_temp_1=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
         description="Temperature sensor 1",

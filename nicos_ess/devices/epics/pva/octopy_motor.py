@@ -37,9 +37,6 @@ class OctopyMotor(EpicsParameters, CanDisable, CanReference, Motor):
 
     valuetype = float
 
-    # ---------------------------------------------------------------------
-    # NICOS parameters
-    # ---------------------------------------------------------------------
     parameters = {
         "motorpv": Param(
             "Base PV name (without the trailing suffix).",
