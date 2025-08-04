@@ -1,4 +1,7 @@
 import logging
+import threading
+import time
+from typing import Union
 
 import pytest
 from mock.mock import MagicMock
@@ -18,9 +21,38 @@ class RedisClientStub(RedisClient):
         super().__init__(host, port, db, injected_redis=RedisStub())
 
 
+class RedisStubPipeline:
+    def __init__(self, redis_stub):
+        self._redis = redis_stub
+        self._results = []
+
+    def hset(self, *args, **kwargs):
+        self._results.append(self._redis.hset(*args, **kwargs))
+        return self
+
+    def hgetall(self, key):
+        self._results.append(self._redis.hgetall(key))
+        return self
+
+    def execute_command(self, command, *args):
+        self._results.append(self._redis.execute_command(command, *args))
+        return self
+
+    def execute(self):
+        results, self._results = self._results, []
+        return results
+
+    def __enter__(self): return self
+    def __exit__(self, exc_type, exc, tb):
+        if exc_type is None:
+            self.execute()
+
+
 class RedisStub:
     def __init__(self):
         self._fake_db = {}
+        self._scripts = {}
+        self._cleaner_sha = None
 
     def hset(self, name, key=None, value=None, mapping=None, items=None):
         if mapping:
@@ -58,12 +90,67 @@ class RedisStub:
                 for k, v in timeseries.items()
                 if float(fromtime) <= float(k) <= float(totime)
             ]
+        elif command == "DEL":
+            for key in args:
+                self._fake_db.pop(key, None)
+                return len(args)
+        return 0
 
     def keys(self, pattern="*"):
         return [key for key in self._fake_db.keys() if fnmatch.fnmatch(key, pattern)]
 
     def pubsub(self):
         return None
+
+    def scan_iter(self, match="*", count=None):
+        for key in self._fake_db.keys():
+            if fnmatch.fnmatch(key, match):
+                yield key
+
+    def pipeline(self, *args, **kwargs):
+        return RedisStubPipeline(self)
+
+    def script_load(self, script: str) -> str:
+        sha = f"sha{len(self._scripts) + 1}"
+        self._scripts[sha] = script
+        if self._cleaner_sha is None:
+            self._cleaner_sha = sha
+        return sha
+
+    def evalsha(self, sha: str, numkeys: int, *args):
+        if sha not in self._scripts:
+            raise RedisError("NOSCRIPT No matching script")
+
+        now = float(args[0]) if args else time.time()
+        return self.clean_expired(now)
+
+    def clean_expired(self, now: Union[float, None] = None) -> int:
+        if now is None:
+            now = time.time()
+
+        cleaned = 0
+        for key, mapping in self._fake_db.items():
+
+            if key.endswith("_ts") or key.endswith("_snapshot"):
+                continue
+            if not isinstance(mapping, dict):
+                continue
+
+            ttl_str   = mapping.get("ttl")
+            time_str  = mapping.get("time")
+            expired   = mapping.get("expired", "False")
+
+            if ttl_str and ttl_str != "None" and expired == "False":
+                try:
+                    ttl = float(ttl_str)
+                    t0  = float(time_str)
+                except (TypeError, ValueError):
+                    continue
+                if (t0 + ttl) < now:
+                    mapping["expired"] = "True"
+                    cleaned += 1
+
+        return cleaned
 
 
 class TestableRedisCacheDatabase(RedisCacheDatabase):
@@ -89,6 +176,17 @@ class TestableRedisCacheDatabase(RedisCacheDatabase):
         object.__setattr__(self, name, value)
 
 
+def _store_ttl_entry(db, category: str, subkey: str,
+                     *, ttl: Union[float, None], value="some_value") -> CacheEntry:
+    entry = CacheEntry(time.time(), ttl, value)
+    db._set_data(category, subkey, entry)
+    return entry
+
+
+def _dummy_iter():
+    yield (("dummy", "key"), CacheEntry(time.time(), None, "val"))
+
+
 @pytest.fixture
 def redis_client():
     return RedisClientStub()
@@ -99,6 +197,15 @@ def db(redis_client):
     return TestableRedisCacheDatabase(injected_client=redis_client)
 
 
+@pytest.fixture(autouse=True)
+def _isolate_redis_snapshot():
+    yield
+    RedisCacheDatabase._snapshot_ready = threading.Event()
+    RedisCacheDatabase._snapshot_data  = []
+    RedisCacheDatabase._snapshot_time  = 0.0
+    RedisCacheDatabase._snapshot_building = False
+
+
 def test_format_key(db):
     assert db._format_key("category", "subkey") == (
         "category/subkey",
@@ -107,28 +214,28 @@ def test_format_key(db):
     assert db._format_key("nocat", "subkey") == ("subkey", "subkey_ts")
 
 
-def test_convert_number_if_possible(db):
-    assert db._convert_to_number_if_possible("3.14") == 3.14
-    assert db._convert_to_number_if_possible("42") == 42
-    assert db._convert_to_number_if_possible("-3.14") == -3.14
-    assert db._convert_to_number_if_possible("0") == 0
-    assert db._convert_to_number_if_possible("-42") == -42
-    assert db._convert_to_number_if_possible("3.14e10") == 3.14e10
-    assert db._convert_to_number_if_possible("3.14e-10") == 3.14e-10
-    assert db._convert_to_number_if_possible("3.14E10") == 3.14e10
-    assert db._convert_to_number_if_possible("3.14E-10") == 3.14e-10
-    assert db._convert_to_number_if_possible("[10,]") == "[10,]"
-    assert db._convert_to_number_if_possible("[10, 20]") == "[10, 20]"
-    assert db._convert_to_number_if_possible("{'key': 10}") == "{'key': 10}"
-    assert db._convert_to_number_if_possible("{'key': 'value'}") == "{'key': 'value'}"
-    assert db._convert_to_number_if_possible("not_a_number") == "not_a_number"
-    assert db._convert_to_number_if_possible(None) is None
+def test_literal_or_str(db):
+    assert db._literal_or_str("3.14") == 3.14
+    assert db._literal_or_str("42") == 42
+    assert db._literal_or_str("-3.14") == -3.14
+    assert db._literal_or_str("0") == 0
+    assert db._literal_or_str("-42") == -42
+    assert db._literal_or_str("3.14e10") == 3.14e10
+    assert db._literal_or_str("3.14e-10") == 3.14e-10
+    assert db._literal_or_str("3.14E10") == 3.14e10
+    assert db._literal_or_str("3.14E-10") == 3.14e-10
+    assert db._literal_or_str("[10,]") == "[10,]"
+    assert db._literal_or_str("[10, 20]") == "[10, 20]"
+    assert db._literal_or_str("{'key': 10}") == "{'key': 10}"
+    assert db._literal_or_str("{'key': 'value'}") == "{'key': 'value'}"
+    assert db._literal_or_str("not_a_number") == "not_a_number"
+    assert db._literal_or_str(None) is None
 
 
-def test_format_get_results(db):
+def test_entry_from_hash_results(db):
     data = {"time": "123", "ttl": "456", "value": "some_value", "expired": "False"}
     assert (
-        db._format_get_results(data).asDict()
+        db._entry_from_hash(data).asDict()
         == CacheEntry(123, 456, "some_value").asDict()
     )
 
@@ -266,7 +373,6 @@ def test_query_history(db):
 
 
 def test_can_handle_redis_exception_set_data(db):
-    # create an exception when calling hset. Use mock library
     db._client._redis.hset = MagicMock(
         side_effect=RedisError("Mocked RedisError for hset")
     )
@@ -276,7 +382,6 @@ def test_can_handle_redis_exception_set_data(db):
 
 
 def test_can_handle_redis_exception_get_data(db):
-    # create an exception when calling hgetall. Use mock library
     db._client._redis.hgetall = MagicMock(
         side_effect=RedisError("Mocked RedisError for hgetall")
     )
@@ -351,3 +456,96 @@ def test_set_data_with_missing_fields(db):
     except TypeError:
         pass
     assert db._get_data("test/key/value") is None
+
+
+def test_entry_is_not_expired_before_ttl(db):
+    _store_ttl_entry(db, "ttlcat/key", "value", ttl=0.2)
+    result = db.getEntry(("ttlcat/key", "value"))
+    assert result is not None
+    assert result.expired is False
+
+
+def test_entry_turns_expired_after_ttl(db):
+    ttl = 0.15
+    _store_ttl_entry(db, "ttlcat/key2", "value", ttl=ttl)
+    time.sleep(ttl + 0.05)
+    result = db.getEntry(("ttlcat/key2", "value"))
+
+    assert result is not None
+    assert result.expired is True
+
+
+def test_iterentries_reports_expired_flag(db):
+    ttl = 0.1
+    _store_ttl_entry(db, "iter/key", "v", ttl=ttl, value=42)
+    _store_ttl_entry(db, "iter/key", "v2", ttl=None, value=99)
+
+    time.sleep(ttl + 0.05)
+
+    entries = {(cat + "/" + sub): entry for (cat, sub), entry in db.iterEntries()}
+
+    assert "iter/key/v"  in entries
+    assert "iter/key/v2" in entries
+
+    assert entries["iter/key/v" ].expired is True
+    assert entries["iter/key/v2"].expired is False
+
+
+def test_entry_without_ttl_never_expires(db):
+    _store_ttl_entry(db, "notimeout/key", "value", ttl=None)
+    time.sleep(0.2)
+    result = db.getEntry(("notimeout/key", "value"))
+    assert result is not None
+    assert result.expired is False
+
+
+def test_explicitly_stored_expired_flag_is_preserved(db):
+    entry = CacheEntry(time.time(), 60.0, "foo")
+    entry.expired = True
+    db._set_data("explicit/key", "val", entry)
+
+    retrieved = db.getEntry(("explicit/key", "val"))
+    assert retrieved is not None
+    assert retrieved.expired is True
+
+
+def test_setting_none_or_empty_string_removes_entry(db):
+    db._set_data("test/key", "value", CacheEntry("123", "456", "some_value"))
+    assert db._get_data("test/key/value") is not None
+
+    db._set_data("test/key", "value", CacheEntry("123", "456", None))
+    assert db._get_data("test/key/value") is None
+
+    db._set_data("test/key", "value", CacheEntry("123", "456", ""))
+    assert db._get_data("test/key/value") is None
+
+
+def test_iterentries_uses_snapshot_after_first_call(monkeypatch, db):
+    # speed the test up: shorten the snapshot TTL to 0.1 s
+    monkeypatch.setattr(TestableRedisCacheDatabase, "_SNAPSHOT_TTL", 0.1, raising=False)
+
+    stream_spy = MagicMock(side_effect=lambda self, batch=512: _dummy_iter())
+    monkeypatch.setattr(TestableRedisCacheDatabase,
+                        "_iter_entries_stream",
+                        stream_spy,
+                        raising=True)
+
+    # first call should trigger the real stream build
+    result_1 = list(db.iterEntries())
+    assert stream_spy.call_count == 1
+
+    # immediate second call should use the cached snapshot
+    result_2 = list(db.iterEntries())
+    assert stream_spy.call_count == 1
+
+    # wait for TTL to expire, then call again. snapshot must rebuild
+    time.sleep(0.15)
+    result_3 = list(db.iterEntries())
+    assert stream_spy.call_count == 2
+
+    # result 1 and 2 should be the same,
+    # but 3 should differ since it rebuilds the snapshot
+    assert result_1 == result_2
+    assert result_1 != result_3
+    # The keys should be the same in all results
+    assert result_1[0][0] == result_2[0][0] == result_3[0][0]
