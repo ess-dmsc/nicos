@@ -1,3 +1,5 @@
+from nicos.core import ConfigurationError
+
 description = "Power supplies configuration and utils"
 
 group = "configdata"
@@ -19,8 +21,8 @@ HV_INFO = {
 LV_INFO = {
     "id": "LVM",
     "boards": [
+        "106",
         "107",
-        "108",
         #"110",
         #"111",
         #"112",
@@ -57,6 +59,9 @@ for board in LV_INFO["boards"]:
 
 ALL_CHANNELS = {**hv_channels, **lv_channels}
 
+def validate_channel_key(key):
+    return bool(ALL_CHANNELS.get(key))
+
 def get_channel_keys(bank_channels):
     """ Receive a list of channels sets, and return a list of keys.
     
@@ -72,5 +77,8 @@ def get_channel_keys(bank_channels):
         
         for channel in channels: 
             key = f"{ps_type}_{board}_Ch{channel}"
+            if not validate_channel_key(key):
+                raise ConfigurationError(f"PS config: channel key not found ({key}).")
             keys.append(key)
+
     return keys

@@ -8,6 +8,6 @@ devices = dict(
         description="Detector carriage - electrical axis 1 in motion cabinet 5",
         motorpv=f"{pv_root}MC-LinX-01:Mtr",
         monitor_deadband=0.01,
-        ps_bank_name="PS_Bank_0_HV",
+        ps_bank_name="HV_Bank_0",
     )
 )
