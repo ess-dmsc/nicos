@@ -245,10 +245,12 @@ class FileWriterStatus(KafkaStatusHandler):
                     pl = deserialise_pl72(mbytes)
                     jid = pl.job_id
                     if jid not in tmp_jobs:
+                        start_time = datetime.fromtimestamp(pl.start_time / 1000.0)
+                        stop_time = datetime.fromtimestamp(pl.stop_time / 1000.0)
                         jr = JobRecord(
-                            jid, 0, pl.start_time, (msg.partition(), msg.offset())
+                            jid, 0, start_time, (msg.partition(), msg.offset())
                         )
-                        jr.stop_time = pl.stop_time
+                        jr.stop_time = stop_time
                         ordered[jid] = jr
                         tmp_jobs[jid] = jr
                 except Exception:
@@ -292,6 +294,25 @@ class FileWriterStatus(KafkaStatusHandler):
                     jid = js.get("job_id")
                     if jid and jid in tmp_jobs:
                         tmp_jobs[jid].on_writing(st.update_interval)
+                        # try getting the start and stop time from the status_json
+                        start_time = js.get("start_time")
+                        stop_time = js.get("stop_time")
+                        start_time = (
+                            datetime.fromtimestamp(start_time / 1000.0)
+                            if start_time
+                            else None
+                        )
+                        stop_time = (
+                            datetime.fromtimestamp(stop_time / 1000.0)
+                            if stop_time
+                            else None
+                        )
+
+                        if tmp_jobs[jid].start_time != start_time:
+                            self.log.warn(f"Start time mismatch for job {jid}: ")
+                        else:
+                            tmp_jobs[jid].stop_time = stop_time
+
                 except Exception:
                     pass
 
