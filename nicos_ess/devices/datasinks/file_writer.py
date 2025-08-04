@@ -747,9 +747,6 @@ class FileWriterController:
             return None
 
     def request_stop(self, job_id, stop_time, service_id):
-        session.log.warning(
-            f"Requesting stop for job {job_id} at {stop_time} with service {service_id}"
-        )
         message = serialise_6s4t(
             job_id=job_id,
             command_id=str(uuid.uuid1()),
@@ -896,17 +893,10 @@ class FileWriterControlSink(Device):
 
         if job_id and job_id in self._attached_status.marked_for_stop:
             # Already stopping so ignore
-            self.log.warn(
-                "job %s is already marked for stop, ignoring stop request", job_id
-            )
             return
 
         active_jobs = self.get_active_jobs()
         if not active_jobs:
-            self.log.warn(
-                "no active jobs to stop, nothing to do. "
-                "Perhaps you already stopped the job?"
-            )
             return
 
         if len(active_jobs) == 1:
@@ -920,11 +910,7 @@ class FileWriterControlSink(Device):
 
         stop_time = datetime.now()
         job = self._attached_status.jobs[job_id]
-        self.log.warn(
-            f"Requesting stop for job {job.job_number} at {stop_time} and service {job.service_id}"
-        )
         self._controller.request_stop(job.job_id, stop_time, job.service_id)
-        self.log.warn(f"Marking job {job.job_number} for stop at {stop_time}")
         self._attached_status.mark_for_stop(job_id, stop_time)
 
     def check_okay_to_start(self):
