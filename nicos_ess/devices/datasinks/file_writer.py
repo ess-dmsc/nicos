@@ -33,7 +33,7 @@ from nicos.core import (
     listof,
     status,
 )
-from nicos.core.constants import SIMULATION
+from nicos.core.constants import POLLER, SIMULATION
 from nicos.core.device import Device
 from nicos.core.params import anytype
 from nicos.utils import printTable, readFileCounter, updateFileCounter
@@ -192,14 +192,15 @@ class FileWriterStatus(KafkaStatusHandler):
 
     def doInit(self, mode):
         self._retrieve_cache_jobs()
-        try:
-            self._bootstrap_history()
-        except Exception as e:
-            self.log.warning("Bootstrap of job and pool history failed: %s", e)
-        self.set_resubscribe(
-            resubscribe_after_s=self.resubscribe_after_s,
-            active=self.resubscribe_enabled,
-        )
+        if session.sessiontype != POLLER and mode != SIMULATION:
+            try:
+                self._bootstrap_history()
+            except Exception as e:
+                self.log.warning("Bootstrap of job and pool history failed: %s", e)
+            self.set_resubscribe(
+                resubscribe_after_s=self.resubscribe_after_s,
+                active=self.resubscribe_enabled,
+            )
 
     def _retrieve_cache_jobs(self):
         for v in self.job_history:
@@ -247,8 +248,12 @@ class FileWriterStatus(KafkaStatusHandler):
                     if jid not in tmp_jobs:
                         start_time = datetime.fromtimestamp(pl.start_time / 1000.0)
                         stop_time = datetime.fromtimestamp(pl.stop_time / 1000.0)
+                        filename = pl.filename
+                        job_number = int(
+                            filename.split("/")[-1].split("_")[-1].split(".")[0]
+                        )
                         jr = JobRecord(
-                            jid, 0, start_time, (msg.partition(), msg.offset())
+                            jid, job_number, start_time, (msg.partition(), msg.offset())
                         )
                         jr.stop_time = stop_time
                         ordered[jid] = jr
