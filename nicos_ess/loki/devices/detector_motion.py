@@ -1,6 +1,7 @@
 from nicos.core import (
     Override,
     Param,
+    status,
 )
 from nicos_ess.devices.epics.pva.motor import EpicsMotor
 from nicos import session
@@ -42,7 +43,12 @@ class LOKIDetectorMotion(EpicsMotor):
         except Exception as e:
             return False, "No Power Supply Bank found in setup ({}).".format(e)
 
-        _, bank_status_msg = ps_bank.status()
-        if "ON" in bank_status_msg:
+        bank_stat, _ = ps_bank.status()
+        bank_on, _ = ps_bank.status_on()
+        
+        if bank_stat != status.OK:
+            return False, "Power Supply Bank is in a NOT OK state."
+        if bank_on:
             return False, "Power Supply Bank is still ON (it should be OFF)."
+        print("Detector motion: Power Supply Bank is OFF. Moving is okay.")
         return True, "Power Supply Bank is OFF. Moving is okay."
