@@ -11,13 +11,12 @@ from nicos.core import (
     Override,
     Param,
     Readable,
+    host,
+    listof,
     status,
     tupleof,
-    listof,
-    host,
 )
 from nicos.core.constants import SIMULATION
-
 from nicos_ess.devices.kafka.consumer import KafkaSubscriber
 
 DISCONNECTED_STATE = (status.ERROR, "Disconnected")
@@ -90,6 +89,14 @@ class KafkaStatusHandler(Readable):
         if self._mode == MASTER:
             self._setROParam("curstatus", (status.WARN, "Trying to connect..."))
 
+    def set_resubscribe(self, resubscribe_after_s=30, active=True):
+        """Set the resubscribe parameters for the Kafka subscriber.
+        :param resubscribe_after_s: Time in seconds after which to resubscribe if no messages are received.
+        :param active: Whether to enable resubscription.
+        """
+        if self._kafka_subscriber:
+            self._kafka_subscriber.set_resubscribe(resubscribe_after_s, active=active)
+
     def doRead(self, maxage=0):
         return ""
 
@@ -132,12 +139,13 @@ class KafkaStatusHandler(Readable):
         """
 
     def _set_next_update(self, update_interval):
-        update_interval = update_interval // 1000
-        if self.statusinterval != update_interval:
-            self._setROParam("statusinterval", update_interval)
+        secs = max(1, int(update_interval) // 1000)
+        if self.statusinterval != secs:
+            self._setROParam("statusinterval", secs)
         next_update = currenttime() + self.statusinterval
         if next_update > self._next_update:
             self._next_update = next_update
 
     def doShutdown(self):
-        self._kafka_subscriber.close()
+        if self._kafka_subscriber:
+            self._kafka_subscriber.close()

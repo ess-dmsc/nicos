@@ -27,17 +27,16 @@ from nicos.core import (
     ADMIN,
     MASTER,
     Attach,
+    ConfigurationError,
     Param,
     host,
     listof,
     status,
-    ConfigurationError,
 )
 from nicos.core.constants import SIMULATION
 from nicos.core.device import Device
 from nicos.core.params import anytype
 from nicos.utils import printTable, readFileCounter, updateFileCounter
-
 from nicos_ess.devices.datasinks.nexus_structure import NexusStructureProvider
 from nicos_ess.devices.kafka.consumer import KafkaConsumer
 from nicos_ess.devices.kafka.producer import KafkaProducer
@@ -49,10 +48,10 @@ class AlreadyWritingException(Exception):
 
 
 class JobState(Enum):
-    STARTED = (0,)
-    NOT_STARTED = (1,)
-    WRITTEN = (2,)
-    REJECTED = (3,)
+    STARTED = 0
+    NOT_STARTED = 1
+    WRITTEN = 2
+    REJECTED = 3
     FAILED = 4
 
 
@@ -96,7 +95,7 @@ class JobRecord:
         self.error_msg = ""
 
     def set_next_update(self, update_interval):
-        self.update_interval = update_interval // 1000
+        self.update_interval = update_interval / 1000
         self.next_update = currenttime() + self.update_interval
 
     def set_error_msg(self, error_msg):
@@ -148,6 +147,34 @@ class FileWriterStatus(KafkaStatusHandler):
             internal=True,
             settable=True,
         ),
+        "bootstrap_lookback_days": Param(
+            description="On startup, rebuild jobs/pool from this many days back",
+            type=int,
+            default=7,
+            internal=True,
+            settable=True,
+        ),
+        "resubscribe_enabled": Param(
+            description="Enable auto-resubscribe when status goes quiet",
+            type=bool,
+            default=True,
+            internal=True,
+            settable=True,
+        ),
+        "resubscribe_after_s": Param(
+            description="No messages for this many seconds triggers resubscribe",
+            type=int,
+            default=30,
+            internal=True,
+            settable=True,
+        ),
+        "recovery_leeway_before_start_s": Param(
+            description="When recovering a 'lost' job, start scanning this many seconds before job.start_time",
+            type=int,
+            default=5,
+            internal=True,
+            settable=True,
+        ),
     }
 
     def doPreinit(self, mode):
@@ -161,9 +188,18 @@ class FileWriterStatus(KafkaStatusHandler):
             b"answ": self._on_response_message,
             b"wrdn": self._on_stopped_message,
         }
+        self._pool = {}
 
     def doInit(self, mode):
         self._retrieve_cache_jobs()
+        try:
+            self._bootstrap_history()
+        except Exception as e:
+            self.log.warning("Bootstrap of job and pool history failed: %s", e)
+        self.set_resubscribe(
+            resubscribe_after_s=self.resubscribe_after_s,
+            active=self.resubscribe_enabled,
+        )
 
     def _retrieve_cache_jobs(self):
         for v in self.job_history:
@@ -175,6 +211,115 @@ class FileWriterStatus(KafkaStatusHandler):
                 job.set_next_update(job.update_interval)
                 self._jobs[job.job_id] = job
 
+    def _bootstrap_history(self):
+        """
+        Rebuild recent jobs and pool from Kafka by scanning back bootstrap_lookback_days.
+
+        - Consumes from the topics in statustopic (instrument-specific + general).
+        - Replays pl72/answ/x5f2/wrdn to reconstruct job state (best effort).
+        - Tracks pool membership from x5f2 using host_name (one filewriter per host).
+        """
+        lookback_s = max(0, int(self.bootstrap_lookback_days)) * 86400
+        since_ms = int((currenttime() - lookback_s) * 1000)
+
+        consumer = KafkaConsumer.create(self.brokers, starting_offset="earliest")
+        consumer.subscribe(self.statustopic)
+        consumer.seek_all_assigned_to_timestamp(since_ms)
+
+        tmp_jobs = {}
+        ordered = OrderedDict()
+
+        # Limit runtime so startup is predictable; extend if you want deeper replay
+        deadline = currenttime() + 5.0  # seconds
+        while currenttime() < deadline:
+            msg = consumer.poll(timeout_ms=10)
+            if not msg:
+                continue
+            mbytes = msg.value()
+            if not mbytes or len(mbytes) < 8:
+                continue
+            ftype = mbytes[4:8]
+
+            if ftype == b"pl72":
+                try:
+                    pl = deserialise_pl72(mbytes)
+                    jid = pl.job_id
+                    if jid not in tmp_jobs:
+                        jr = JobRecord(
+                            jid, 0, pl.start_time, (msg.partition(), msg.offset())
+                        )
+                        jr.stop_time = pl.stop_time
+                        ordered[jid] = jr
+                        tmp_jobs[jid] = jr
+                except Exception:
+                    pass
+
+            elif ftype == b"answ":
+                try:
+                    ans = deserialise_answ(mbytes)
+                    jr = tmp_jobs.get(ans.job_id)
+                    if not jr:
+                        continue
+                    if ans.action == ActionType.StartJob:
+                        if ans.outcome == ActionOutcome.Success:
+                            jr.on_writing(self.statusinterval)
+                            jr.service_id = ans.service_id
+                        else:
+                            jr.no_start_ack(ans.message)
+                except Exception:
+                    pass
+
+            elif ftype == b"x5f2":
+                try:
+                    st = deserialise_x5f2(mbytes)
+                    try:
+                        js = json.loads(st.status_json) if st.status_json else {}
+                    except Exception:
+                        js = {}
+
+                    # Pool tracking by host_name (PID may change)
+                    host_name, service_id, state_norm = (
+                        self._extract_fw_identity_and_state(st, js)
+                    )
+                    if host_name:
+                        self._pool[host_name] = {
+                            "state": state_norm,
+                            "last": currenttime(),
+                            "service_id": service_id,
+                        }
+
+                    # Job heartbeat if present
+                    jid = js.get("job_id")
+                    if jid and jid in tmp_jobs:
+                        tmp_jobs[jid].on_writing(st.update_interval)
+                except Exception:
+                    pass
+
+            elif ftype == b"wrdn":
+                try:
+                    dn = deserialise_wrdn(mbytes)
+                    jr = tmp_jobs.get(dn.job_id)
+                    if not jr:
+                        continue
+                    if dn.error_encountered:
+                        jr.on_lost(dn.message)
+                    else:
+                        jr.on_stop()
+                except Exception:
+                    pass
+
+        consumer.close()
+
+        # Merge into live structures
+        with self._lock:
+            for jid, jr in ordered.items():
+                if jid not in self._jobs_in_order:
+                    self._jobs_in_order[jid] = jr
+                    if jr.state in (JobState.NOT_STARTED, JobState.STARTED):
+                        self._jobs[jid] = jr
+            self._update_cached_jobs()
+            self._update_status()
+
     def _update_cached_jobs(self):
         self.job_history = [
             self._jobs_in_order[k].as_dict()
@@ -183,18 +328,110 @@ class FileWriterStatus(KafkaStatusHandler):
 
     def new_messages_callback(self, messages):
         for _, msg in sorted(messages, key=lambda x: x[0]):
-            if msg[4:8] in self._type_to_handler:
+            msg_type = msg[4:8]
+            handler = self._type_to_handler.get(msg_type)
+            if handler:
                 with self._lock:
-                    self._type_to_handler[msg[4:8]](msg)
+                    try:
+                        handler(msg)
+                    except Exception as e:
+                        self.log.warning(
+                            "Error handling message type %s: %s", msg_type, e
+                        )
+
+    def pool_idle_busy(self):
+        """
+        :return: (idle_count, total_count) for the pool derived from x5f2.
+                 'IDLE' (case-insensitive) is treated as idle; anything else is busy/unknown.
+        """
+        if not self._pool:
+            return (0, 0)
+        total = len(self._pool)
+        idle = sum(
+            1 for v in self._pool.values() if (v.get("state") or "").upper() == "IDLE"
+        )
+        return (idle, total)
+
+    def _extract_fw_identity_and_state(self, result, status_info):
+        """
+        Normalize identity and state for a filewriter from a Status (x5f2) message.
+
+        Identity:   host_name (one filewriter per host)
+        State:      "IDLE" / "WRITING" / None (unknown)
+                    - Prefer explicit 'state' string.
+                    - Fallback: job_id == "not_currently_writing" -> IDLE
+                    - Fallback: file_being_written is blank/whitespace -> IDLE
+                    - Fallback: start_time > 0 -> WRITING
+        """
+        # Identity
+        host_name = getattr(result, "host_name", None) or status_info.get("host_name")
+        service_id = getattr(result, "service_id", None) or status_info.get(
+            "service_id", ""
+        )
+
+        # Primary state from JSON keys (may be lowercase)
+        state_raw = status_info.get("state")
+
+        state_norm = None
+        if isinstance(state_raw, str) and state_raw.strip():
+            state_norm = state_raw.strip().upper()
+        else:
+            # Derive state from other fields typical of your messages
+            job_id_js = status_info.get("job_id")
+            file_being_written = status_info.get("file_being_written")
+            if (
+                isinstance(job_id_js, str)
+                and job_id_js.strip().lower() == "not_currently_writing"
+            ):
+                state_norm = "IDLE"
+            elif isinstance(file_being_written, str) and not file_being_written.strip():
+                state_norm = "IDLE"
+            else:
+                # As a last resort, if start_time > 0 assume we're writing
+                try:
+                    st = int(status_info.get("start_time") or 0)
+                    if st > 0:
+                        state_norm = "WRITING"
+                except Exception:
+                    pass
+
+        return host_name, service_id or "", state_norm
 
     def _on_status_message(self, message):
         result = deserialise_x5f2(message)
-        status_info = json.loads(result.status_json)
-        job_id = status_info["job_id"]
-        if job_id not in self._jobs:
-            return
-        self._jobs[job_id].on_writing(result.update_interval)
-        self._update_status()
+
+        # Maintain heartbeat so DISCONNECTED transitions work
+        try:
+            self._set_next_update(result.update_interval)
+        except Exception:
+            pass
+
+        # Parse status_json (may be empty/oddly formatted)
+        try:
+            status_info = json.loads(result.status_json) if result.status_json else {}
+        except Exception:
+            status_info = {}
+
+        # --- Pool (per-host) tracking ---
+        host_name, service_id, state_norm = self._extract_fw_identity_and_state(
+            result, status_info
+        )
+        if host_name:
+            self._pool[host_name] = {
+                "state": state_norm,
+                "last": currenttime(),
+                "service_id": service_id,
+            }
+
+        # --- Job heartbeat / progress ---
+        job_id = status_info.get("job_id")
+        if job_id and job_id in self._jobs:
+            # Keep the job "alive" with the writer's reported update interval
+            # This works regardless of the JSON 'state' capitalization.
+            update_interval = getattr(result, "update_interval", None)
+            if update_interval is not None:
+                self._jobs[job_id].on_writing(update_interval)
+            self._update_status()
 
     def _job_stopped(self, job_id):
         if self._jobs[job_id].error_msg:
@@ -255,6 +492,9 @@ class FileWriterStatus(KafkaStatusHandler):
             self._jobs[result.job_id].set_error_msg(result.message)
 
     def no_messages_callback(self):
+        # Preserve base behavior (can set DISCONNECTED when overdue)
+        KafkaStatusHandler.no_messages_callback(self)
+
         with self._lock:
             self._check_for_lost_jobs()
             self._update_status()
@@ -264,12 +504,71 @@ class FileWriterStatus(KafkaStatusHandler):
             k for k, v in self._jobs.items() if v.is_overdue(self.timeoutinterval)
         ]
         for overdue in overdue_jobs:
+            # Attempt recovery via WRDN scan from (start_time - leeway)
+            try:
+                recovered = self._try_recover_via_wrdn(overdue)
+                if recovered:
+                    continue
+            except Exception as e:
+                self.log.debug("Recovery via WRDN scan failed for %s: %s", overdue, e)
+
+            # If not recovered, mark lost
             self._jobs[overdue].on_lost("lost connection to job")
             if self._jobs[overdue].stop_time:
                 # Sent stop command before lost
                 self._job_stopped(overdue)
+
         if overdue_jobs:
             self._update_cached_jobs()
+
+    def _try_recover_via_wrdn(self, job_id):
+        """
+        Look for a WRDN for this job by scanning from (start_time - recovery_leeway_before_start_s).
+        If found, finalize the job locally and return True; else False.
+        """
+        job = self._jobs.get(job_id) or self._jobs_in_order.get(job_id)
+        if not job:
+            return False
+
+        # Compute start-of-scan (ms since epoch)
+        start_ts = max(
+            0.0, job.start_time.timestamp() - float(self.recovery_leeway_before_start_s)
+        )
+        since_ms = int(start_ts * 1000)
+
+        consumer = None
+        try:
+            consumer = KafkaConsumer.create(self.brokers, starting_offset="earliest")
+            consumer.subscribe(self.statustopic)
+            # Align all current assignments to the timestamp
+            consumer.seek_all_assigned_to_timestamp(since_ms)
+
+            # Scan for a short bounded period; WRDN should be near the job end
+            deadline = currenttime() + 3.0  # seconds to scan
+            while currenttime() < deadline:
+                msg = consumer.poll(timeout_ms=10)
+                if not msg:
+                    continue
+                mbytes = msg.value()
+                if not mbytes or len(mbytes) < 8:
+                    continue
+                if mbytes[4:8] != b"wrdn":
+                    continue
+                dn = deserialise_wrdn(mbytes)
+                if dn.job_id == job_id:
+                    if dn.error_encountered:
+                        self._jobs[job_id].on_lost(dn.message)
+                    else:
+                        self._jobs[job_id].on_stop()
+                        self._job_stopped(job_id)
+                    # Update caches/status
+                    self._update_cached_jobs()
+                    self._update_status()
+                    return True
+            return False
+        finally:
+            if consumer:
+                consumer.close()
 
     def doInfo(self):
         result = [(f"{self.name}", "", "", "", "general")]
@@ -403,7 +702,9 @@ class FileWriterController:
         device = self._check_for_device("NexusStructure")
         if device:
             return device.instrument_name
-        self.log.warning("Could not locate instrument name from NexusStructure device")
+        session.log.warning(
+            "Could not locate instrument name from NexusStructure device"
+        )
         return ""
 
     def _check_for_device(self, name):
@@ -588,11 +889,11 @@ class FileWriterControlSink(Device):
                     "number is required to start writing."
                 )
             else:
-                raise RuntimeError("cannot start writing as proposal number not " "set")
+                raise RuntimeError("cannot start writing as proposal number not set")
         active_jobs = self.get_active_jobs()
         if active_jobs:
             raise AlreadyWritingException(
-                "cannot start writing as writing " "already in progress"
+                "cannot start writing as writing already in progress"
             )
 
     def get_active_jobs(self):
@@ -634,12 +935,10 @@ class FileWriterControlSink(Device):
                 job_to_replay = job
                 break
         if not job_to_replay:
-            raise RuntimeError(
-                "Could not replay job as that job number was " "not found"
-            )
+            raise RuntimeError("Could not replay job as that job number was not found")
         if not job_to_replay:
             raise RuntimeError(
-                "Could not replay job as no stop time defined " "for that job"
+                "Could not replay job as no stop time defined for that job"
             )
 
         partition, offset = job_to_replay.kafka_offset

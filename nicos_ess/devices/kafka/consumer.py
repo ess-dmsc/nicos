@@ -3,6 +3,7 @@ import uuid
 
 from confluent_kafka import OFFSET_END, Consumer, KafkaException, TopicPartition
 
+from nicos import session
 from nicos.core.errors import ConfigurationError
 from nicos.utils import createThread
 from nicos_ess.devices.kafka.utils import create_sasl_config
@@ -139,6 +140,40 @@ class KafkaConsumer:
             tp.offset = OFFSET_END
         self._seek(partitions, timeout_s)
 
+    def offsets_for_times(self, topic_partitions, timeout_s=5):
+        """
+        Return TopicPartition entries with offsets at/after the given timestamps.
+
+        :param topic_partitions: list[TopicPartition] with .offset set to a timestamp (ms since epoch)
+        :param timeout_s: timeout for the underlying call
+        :return: list[TopicPartition] with .offset set to the corresponding offsets
+        """
+        return self._consumer.offsets_for_times(topic_partitions, timeout=timeout_s)
+
+    def seek_all_assigned_to_timestamp(self, timestamp_ms, timeout_s=5):
+        """
+        Seek all currently assigned partitions to the first offset at/after timestamp_ms.
+
+        :param timestamp_ms: milliseconds since Unix epoch
+        :param timeout_s: timeout for metadata/seek operations
+        """
+        assigned = self._consumer.assignment()
+        if not assigned:
+            return
+
+        req = []
+        for tp in assigned:
+            req.append(TopicPartition(tp.topic, tp.partition, timestamp_ms))
+
+        resolved = self._consumer.offsets_for_times(req, timeout=timeout_s)
+
+        to_seek = []
+        for tp in resolved:
+            if tp.offset is not None and tp.offset >= 0:
+                to_seek.append(TopicPartition(tp.topic, tp.partition, tp.offset))
+        if to_seek:
+            self._seek(to_seek, timeout_s)
+
 
 class KafkaSubscriber:
     """Continuously listens for messages on the specified topics"""
@@ -149,12 +184,20 @@ class KafkaSubscriber:
         self._stop_requested = False
         self._messages_callback = None
         self._no_messages_callback = None
+        self._last_msg_ts_monotonic = time.monotonic()
+        self._topics = []
+        self._brokers = brokers
+        self._resub_attempts = 0
+        self._cooldown_until = 0.0
+        self._resubscribe_after_s = 30
+        self._resubscribe_active = False
 
     def subscribe(self, topics, messages_callback, no_messages_callback=None):
         self.stop_consuming(True)
 
         self._consumer.unsubscribe()
         self._consumer.subscribe(topics)
+        self._topics = topics
 
         self._messages_callback = messages_callback
         self._no_messages_callback = no_messages_callback
@@ -162,6 +205,15 @@ class KafkaSubscriber:
         self._polling_thread = createThread(
             f"polling_thread_{int(time.monotonic())}", self._monitor_topics
         )
+
+    def set_resubscribe(self, resubscribe_after_s=30, active=True):
+        """Set the resubscribe parameters.
+        :param resubscribe_after_s: Time in seconds after which to resubscribe if no messages are received.
+        :param active: Whether to enable resubscription.
+        """
+        self._resubscribe_after_s = resubscribe_after_s
+        self._resubscribe_active = active
+        self._last_msg_ts_monotonic = time.monotonic()
 
     def stop_consuming(self, wait_for_join=False):
         self._stop_requested = True
@@ -178,10 +230,16 @@ class KafkaSubscriber:
 
     def _monitor_topics(self):
         while not self._stop_requested:
-            data = self._consumer.poll(timeout_ms=5)
+            try:
+                data = self._consumer.poll(timeout_ms=5)
+            except Exception as e:
+                session.log.error(f"Error polling Kafka consumer: {e}")
+                time.sleep(0.1)
+                continue
             messages = []
             if data:
                 messages.append((data.timestamp(), data.value()))
+                self._last_msg_ts_monotonic = time.monotonic()
 
             if messages and self._messages_callback:
                 self._messages_callback(messages)
@@ -190,3 +248,34 @@ class KafkaSubscriber:
                 time.sleep(0.01)
             else:
                 time.sleep(0.01)
+
+            now = time.monotonic()
+            if (
+                self._resubscribe_active
+                and now - self._last_msg_ts_monotonic > self._resubscribe_after_s
+                and now >= self._cooldown_until
+            ):
+                try:
+                    self._consumer.unsubscribe()
+                    self._consumer.subscribe(self._topics)
+                except Exception:
+                    pass
+                finally:
+                    self._last_msg_ts_monotonic = time.monotonic()
+                    self._resub_attempts += 1
+                    backoff = min(
+                        30.0, 2.0 ** min(5, self._resub_attempts)
+                    )  # cap at 32s
+                    self._cooldown_until = now + backoff
+                    if self._resub_attempts >= 3:
+                        # full recreate after a few silent resubs
+                        try:
+                            self._consumer.close()
+                        except Exception:
+                            pass
+                        self._consumer = KafkaConsumer.create(self._brokers)
+                        try:
+                            self._consumer.subscribe(self._topics)
+                        except Exception:
+                            pass
+                        self._resub_attempts = 0
