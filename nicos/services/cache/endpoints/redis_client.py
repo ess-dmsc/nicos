@@ -70,3 +70,27 @@ class RedisClient:
 
     def shutdown(self):
         self._redis.shutdown()
+
+    @handle_redis_errors(
+        default_return=iter(()), custom_message="Failed during SCAN iteration"
+    )
+    def scan_iter(self, *args, **kwargs):
+        return self._redis.scan_iter(*args, **kwargs)
+
+    @handle_redis_errors(
+        default_return=None, custom_message="Failed to create pipeline"
+    )
+    def pipeline(self, *args, **kwargs):
+        return self._redis.pipeline(*args, **kwargs)
+
+    @handle_redis_errors(
+        default_return=None, custom_message="Failed to execute script in Redis"
+    )
+    def script_load(self, script):
+        return self._redis.script_load(script)
+
+    @handle_redis_errors(
+        default_return=None, custom_message="Failed to execute Lua script in Redis"
+    )
+    def evalsha(self, sha, numkeys=0, *keys_and_args):
+        return self._redis.evalsha(sha, numkeys, *keys_and_args)
