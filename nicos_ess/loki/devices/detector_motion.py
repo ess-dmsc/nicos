@@ -30,7 +30,9 @@ class LOKIDetectorMotion(EpicsMotor):
             print("Detector motion: No Power Supply Bank found in setup. Not moving.")
             return False
 
-        if ps_bank.doRead() == "ON":
+        ps_bank_power = ps_bank.read()
+        ps_bank_power_raw = ps_bank.mapping(ps_bank_power)
+        if ps_bank_power_raw:
             print("Detector motion: Power Supply Bank is ON (it should be OFF). Not moving.")
             return False
         print("Detector motion: Power Supply Bank is OFF. Moving is okay.")
