@@ -234,18 +234,18 @@ class PowerSupplyBank(CanDisable, MappedReadable):
     }
 
     parameter_overrides = {
-        "unit": Override(mandatory=False),
         "mapping": Override(
             mandatory=False, settable=True, userparam=False, volatile=False
         ),
     }
 
     hardware_access = False
-    valuetype = bool
+    valuetype = int
 
     def doRead(self, maxage=0):
+        """Return ON if there is at least one channel ON. Otherwise, return OFF."""
         for ps_channel in self._attached_ps_channels:
-            ps_channel_power_rbv = ps_channel._attached_power_control.doRead()
+            ps_channel_power_rbv = ps_channel.doRead()
             if ps_channel_power_rbv == "ON":
                 return "ON"
         return "OFF"
@@ -257,26 +257,24 @@ class PowerSupplyBank(CanDisable, MappedReadable):
             raise InvalidValueError(self, f"Position '{value}' not in mapping")
 
         for ps_channel in self._attached_ps_channels:
-            ps_channel._attached_power_control.doStart(value)
+            ps_channel.doEnable(value)
 
     def doStatus(self, maxage=0):
         on_channels = 0
         num_of_channels = len(self._attached_ps_channels)
-        stat = status.BUSY
+        stat = status.OK
 
         for ps_channel in self._attached_ps_channels:
-            _, msg = ps_channel.doStatus()
-            
-            if msg == "Power is ON":
+            if ps_channel.status_on():
                 on_channels += 1
         
         if on_channels == num_of_channels:
             msg = "Bank is ON (all channels are ON)"
-            stat = status.OK
         elif on_channels > 0:
             msg = "Bank is ON ({} of {} channels are ON)".format(
                 on_channels, num_of_channels
             )
+            stat = status.BUSY
         else:
             msg = "Bank is OFF (all channels are OFF)"
             stat = status.OK
