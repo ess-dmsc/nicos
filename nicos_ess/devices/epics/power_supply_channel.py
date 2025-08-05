@@ -255,13 +255,9 @@ class PowerSupplyBank(CanDisable, MappedReadable):
         return self._mapReadValue(self._readRaw(maxage))
     
     def doEnable(self, on):
-        value = "ON" if on else "OFF"
-        target = self.mapping.get(value, None)
-        if target is None:
-            raise InvalidValueError(self, f"Position '{value}' not in mapping")
-
+        """ Enable/Disable all channels of this bank."""
         for ps_channel in self._attached_ps_channels:
-            ps_channel.doEnable(value)
+            ps_channel.doEnable(on)
 
     def doStatus(self, maxage=0):
         on_channels = 0
