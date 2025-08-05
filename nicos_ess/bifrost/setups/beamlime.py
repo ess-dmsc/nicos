@@ -1,5 +1,11 @@
 description = "The beamlime."
 
+KAFKA_BROKERS_YMIR = [
+    "10.100.4.15:8093",
+    "10.100.4.17:8093",
+    "10.100.5.29:8093",
+]
+
 devices = dict(
     detector_sliding=device(
         "nicos_ess.devices.datasources.beamlime.DataChannel",
@@ -22,7 +28,7 @@ devices = dict(
     beamlime_collector=device(
         "nicos_ess.devices.datasources.beamlime.BeamLimeCollector",
         description="The just-bin-it histogrammer",
-        brokers=["10.100.4.15:8093", "10.100.4.17:8093", "10.100.5.29:8093"],
+        brokers=KAFKA_BROKERS_YMIR,  #TODO: revert back to configdata("config.KAFKA_BROKERS"),
         topic=["bifrost_beamlime_data"],
         command_topic="bifrost_beamlime_commands",
         others=["detector_sliding", "detector_cumulative", "detector_roi"],
