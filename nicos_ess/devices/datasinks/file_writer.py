@@ -234,7 +234,10 @@ class FileWriterStatus(KafkaStatusHandler):
         since_ms = int((currenttime() - lookback_s) * 1000)
 
         consumer = KafkaConsumer.create(self.brokers, starting_offset="earliest")
-        consumer.subscribe(self.statustopic)
+        topics = [
+            topic for topic in self.statustopic if "ess_filewriter_status" != topic
+        ]
+        consumer.subscribe(topics)
         target_offsets = consumer.get_high_watermark_offsets()
         consumer.seek_all_assigned_to_timestamp(since_ms)
 
