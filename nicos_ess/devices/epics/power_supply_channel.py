@@ -11,7 +11,6 @@ from nicos.core import (
     pvname,
     POLLER,
 )
-#from nicos.core import POLLER, Moveable, Override, Param, oneof, pvname, status
 from nicos.devices.abstract import MappedMoveable, MappedReadable, Readable
 
 from nicos_ess.devices.epics.pva.epics_devices import (
@@ -74,12 +73,9 @@ class PowerSupplyChannel(EpicsParameters, CanDisable, MappedReadable):
 
     def doInit(self, mode):
         """ From EpicsMotor class."""
-        print("DOINIT")
         if session.sessiontype == POLLER and self.monitor:
             for k, v in self._record_fields.items():
-                print("DOINIT for k = " + str(k))
                 if v.record_type in [RecordType.VALUE, RecordType.BOTH]:
-                    print("DO INIT ADD CBS TO VALUE")
                     self._epics_subscriptions.append(
                         self._epics_wrapper.subscribe(
                             f"{self.ps_pv}{v.pv_suffix}",
@@ -131,21 +127,13 @@ class PowerSupplyChannel(EpicsParameters, CanDisable, MappedReadable):
         return status.OK, msg
     
     def doEnable(self, on):
-        print("PS CH ENABLE = " + str(1 if on else 0))
         self._put_pv("power", 1 if on else 0)
     
     def doReadVoltage_Monitor(self):
-        print("DO READ VOLTAGE MON")
         val = self._get_cached_pv_or_ask("voltage_monitor")
-        # test: get direct from cache
-        #val = self._get_pv(param="voltage_monitor", as_string=False)
-
-        # test: return unformated
-        print("VAL = " + str(val))
         return val
     
     def doReadCurrent_Monitor(self):
-        print("DO READ CURRENT MON")
         val = self._get_cached_pv_or_ask("current_monitor")
         return val
     
@@ -154,7 +142,6 @@ class PowerSupplyChannel(EpicsParameters, CanDisable, MappedReadable):
         From EpicsMotor class.
         Gets the PV value from the cache if possible, else get it from the device.
         """
-        print("GET CACHED OR ASK from param = " + str(param))
         return get_from_cache_or(
             self,
             param,
@@ -163,14 +150,12 @@ class PowerSupplyChannel(EpicsParameters, CanDisable, MappedReadable):
 
     def _get_pv(self, param, as_string=False):
         """From EpicsMotor class"""
-        print("GET PV")
         return self._epics_wrapper.get_pv_value(
             f"{self.ps_pv}{self._record_fields[param].pv_suffix}", as_string
         )
     
     def _put_pv(self, param, value):
         """From EpicsMotor class"""
-        print("PV PUT = " + str(f"{self.ps_pv}{self._record_fields[param].pv_suffix}"))
         self._epics_wrapper.put_pv_value(
             f"{self.ps_pv}{self._record_fields[param].pv_suffix}", value
         )
@@ -182,12 +167,10 @@ class PowerSupplyChannel(EpicsParameters, CanDisable, MappedReadable):
         cache_key = self._record_fields[param].cache_key
         cache_key = param if not cache_key else cache_key
         self._cache.put(self._name, cache_key, value, time_stamp)
-        print("VALUE CB for " + str(param) + " with value = " + str(value) + " add to param = " + str(param) + "and cache key = " + str(cache_key))
 
     def _status_change_callback(
         self, name, param, value, units, limits, severity, message, **kwargs
     ):
-        print("STATUS CB for " + str(param))
         time_stamp = time.time()
         cache_key = self._record_fields[param].cache_key
         cache_key = param if not cache_key else cache_key
@@ -199,13 +182,6 @@ class PowerSupplyChannel(EpicsParameters, CanDisable, MappedReadable):
         self._cache.put(self._name, "status", self._do_status(), time_stamp)
 
     def _connection_change_callback(self, name, param, is_connected, **kwargs):
-
-        print("CONNECTION CB for " + str(param))
-
-        # I think we don't need this check for PS
-        #if param != self._record_fields["value"].cache_key:
-        #    return
-
         if is_connected:
             self.log.debug("%s connected!", name)
         else:
