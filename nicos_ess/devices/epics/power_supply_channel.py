@@ -243,10 +243,12 @@ class PowerSupplyBank(CanDisable, MappedReadable):
     valuetype = int
     
     def _readRaw(self, maxage=0):
-        """Return 1 if there is at least one channel powered ON. Otherwise, return 0."""
+        """ Return 1 if there is at least one channel powered ON. Otherwise, return 0."""
         for ps_channel in self._attached_ps_channels:
             ps_channel_power_rbv = ps_channel.read()
-            ps_channel_power_rbv_raw = ps_channel.mapping(ps_channel_power_rbv)
+            ps_channel_power_rbv_raw = ps_channel.mapping.get(ps_channel_power_rbv)
+            if ps_channel_power_rbv_raw is None:
+                return None
             if ps_channel_power_rbv_raw:
                 return 1
         return 0
