@@ -193,21 +193,7 @@ class FileWriterStatus(KafkaStatusHandler):
     def doInit(self, mode):
         self._retrieve_cache_jobs()
         if session.sessiontype != POLLER and mode == MASTER:
-            self.log.warn(
-                f"Bootstrapping in {mode} mode from session type {session.sessiontype}"
-            )
-            try:
-                self._bootstrap_history()
-            except Exception as e:
-                self.log.warning("Bootstrap of job and pool history failed: %s", e)
-            self.set_resubscribe(
-                resubscribe_after_s=self.resubscribe_after_s,
-                active=self.resubscribe_enabled,
-            )
-        else:
-            self.log.warn(
-                f"Tried bootstrapping in {mode} mode from session type {session.sessiontype}, skipping."
-            )
+            self._init_master_mode()
 
     def _retrieve_cache_jobs(self):
         for v in self.job_history:
@@ -218,6 +204,23 @@ class FileWriterStatus(KafkaStatusHandler):
                 # Update the timeout so it doesn't time out immediately
                 job.set_next_update(job.update_interval)
                 self._jobs[job.job_id] = job
+
+    def _init_master_mode(self):
+        try:
+            self._bootstrap_history()
+        except Exception as e:
+            self.log.warning("Bootstrap of job and pool history failed: %s", e)
+        self.set_resubscribe(
+            resubscribe_after_s=self.resubscribe_after_s,
+            active=self.resubscribe_enabled,
+        )
+
+    def _setMode(self, mode):
+        # Called when the daemon switches from SLAVE -> MASTER after startup.
+        was = getattr(self, "_mode", None)
+        super()._setMode(mode)
+        if was != MASTER and mode == MASTER and session.sessiontype != POLLER:
+            self._init_master_mode()
 
     def _bootstrap_history(self):
         """
@@ -232,18 +235,31 @@ class FileWriterStatus(KafkaStatusHandler):
 
         consumer = KafkaConsumer.create(self.brokers, starting_offset="earliest")
         consumer.subscribe(self.statustopic)
+        target_offsets = consumer.get_watermark_offsets()
         consumer.seek_all_assigned_to_timestamp(since_ms)
 
         tmp_jobs = {}
         ordered = OrderedDict()
 
-        # Limit runtime so startup is predictable; extend if you want deeper replay
-        deadline = currenttime() + 5.0  # seconds
-        while currenttime() < deadline:
+        # # Limit runtime so startup is predictable; extend if you want deeper replay
+        # deadline = currenttime() + 5.0  # seconds
+        # while currenttime() < deadline:
+
+        # while offsets are below the initial offsets, keep polling
+        current_offsets = {key: -1 for key in target_offsets.keys()}
+        while all(
+            [
+                off_1 < off_2
+                for off_1, off_2 in zip(
+                    current_offsets.values(), target_offsets.values()
+                )
+            ]
+        ):
             msg = consumer.poll(timeout_ms=10)
             if not msg:
                 continue
             mbytes = msg.value()
+            current_offsets[f"{msg.topic()}_{msg.partition()}"] = msg.offset()
             if not mbytes or len(mbytes) < 8:
                 continue
             ftype = mbytes[4:8]

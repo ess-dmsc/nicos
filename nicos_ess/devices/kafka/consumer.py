@@ -150,6 +150,24 @@ class KafkaConsumer:
         """
         return self._consumer.offsets_for_times(topic_partitions, timeout=timeout_s)
 
+    def get_high_watermark_offsets(self, timeout_s=5):
+        """
+        Get the current high watermark offsets for all assigned partitions.
+
+        :param timeout_s: timeout for metadata operations
+        :return: dict[TopicPartition, high_offset]
+        """
+        assigned = self._consumer.assignment()
+        if not assigned:
+            return []
+
+        return {
+            f"{tp.topic}_{tp.partition}": self._consumer.get_watermark_offsets(
+                tp, timeout=timeout_s
+            )[1]
+            for tp in assigned
+        }
+
     def seek_all_assigned_to_timestamp(self, timestamp_ms, timeout_s=5):
         """
         Seek all currently assigned partitions to the first offset at/after timestamp_ms.
