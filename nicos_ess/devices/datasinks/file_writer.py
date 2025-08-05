@@ -192,7 +192,7 @@ class FileWriterStatus(KafkaStatusHandler):
 
     def doInit(self, mode):
         self._retrieve_cache_jobs()
-        if session.sessiontype != POLLER and mode != SIMULATION:
+        if session.sessiontype != POLLER and mode == MASTER:
             try:
                 self._bootstrap_history()
             except Exception as e:
@@ -200,6 +200,10 @@ class FileWriterStatus(KafkaStatusHandler):
             self.set_resubscribe(
                 resubscribe_after_s=self.resubscribe_after_s,
                 active=self.resubscribe_enabled,
+            )
+        else:
+            self.log.warn(
+                f"Tried bootstrapping in {mode} mode from session type {session.sessiontype}, skipping."
             )
 
     def _retrieve_cache_jobs(self):
