@@ -62,25 +62,15 @@ class PowerSupplyChannel(EpicsParameters, CanDisable, MappedReadable):
         self._epics_subscriptions = []
         self._ps_status = (status.OK, "")
         self._record_fields = {
-            # Test: change later to read prefixes!
-            "voltage_monitor": RecordInfo("", "random", RecordType.VALUE), # Before it was BOTH
-            "current_monitor": RecordInfo("", "random", RecordType.VALUE),
-
-            #"power_rb": RecordInfo("", "-Pw-RB", RecordType.VALUE),
-            "power_rb": RecordInfo("", "Binary-R", RecordType.VALUE),
-            
-            #"power": RecordInfo("", "-Pw", RecordType.VALUE),
-            "power": RecordInfo("", "Binary-S", RecordType.VALUE),
-            
-            #"status_on": RecordInfo("", "-Status-ON", RecordType.VALUE), # Should it be STATUS instead?
-            "status_on": RecordInfo("", "Binary-R", RecordType.VALUE), # Should it be STATUS instead?
+            "voltage_monitor": RecordInfo("", "-VMon", RecordType.VALUE),
+            "current_monitor": RecordInfo("", "-IMon", RecordType.VALUE),
+            "power_rb": RecordInfo("", "Pw-RB", RecordType.VALUE),
+            "power": RecordInfo("", "Pw", RecordType.VALUE),
+            "status_on": RecordInfo("", "-Status-ON", RecordType.VALUE),
         }
         self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
-        # Check PV exists
-        #print("CHECK PV EXISTS: " + self.ps_pv + "-VMon")
-        #self._epics_wrapper.connect_pv(self.ps_pv + "-VMon")
-        print("CHECK PV EXISTS: " + self.ps_pv + "random")
-        self._epics_wrapper.connect_pv(self.ps_pv + "random")
+        # Check if PV exists
+        self._epics_wrapper.connect_pv(self.ps_pv + "-VMon")
 
     def doInit(self, mode):
         """ From EpicsMotor class."""
