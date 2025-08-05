@@ -255,7 +255,7 @@ class FileWriterStatus(KafkaStatusHandler):
         self.log.warn(f"Current offsets for bootstrap: {current_offsets}")
         while all(
             [
-                off_1 < off_2
+                off_1 < off_2 - 1
                 for off_1, off_2 in zip(
                     current_offsets.values(), target_offsets.values()
                 )
