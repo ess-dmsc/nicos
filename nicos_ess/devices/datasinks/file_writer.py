@@ -193,6 +193,9 @@ class FileWriterStatus(KafkaStatusHandler):
     def doInit(self, mode):
         self._retrieve_cache_jobs()
         if session.sessiontype != POLLER and mode == MASTER:
+            self.log.warn(
+                f"Bootstrapping in {mode} mode from session type {session.sessiontype}"
+            )
             try:
                 self._bootstrap_history()
             except Exception as e:
