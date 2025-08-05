@@ -37,7 +37,6 @@ for key in keys:
         mapping={"OFF": 0, "ON": 1},
         visibility={}
     )
-    devices[f"{key}_ps_channel"] = power_supply_channel
     ps_channels.append(power_supply_channel)
 
     count +=1
