@@ -235,7 +235,7 @@ class FileWriterStatus(KafkaStatusHandler):
 
         consumer = KafkaConsumer.create(self.brokers, starting_offset="earliest")
         consumer.subscribe(self.statustopic)
-        target_offsets = consumer.get_watermark_offsets()
+        target_offsets = consumer.get_high_watermark_offsets()
         consumer.seek_all_assigned_to_timestamp(since_ms)
 
         tmp_jobs = {}
