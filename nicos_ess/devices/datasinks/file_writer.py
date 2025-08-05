@@ -238,6 +238,8 @@ class FileWriterStatus(KafkaStatusHandler):
         target_offsets = consumer.get_high_watermark_offsets()
         consumer.seek_all_assigned_to_timestamp(since_ms)
 
+        self.log.warn(f"Target offsets for bootstrap: {target_offsets}")
+
         tmp_jobs = {}
         ordered = OrderedDict()
 
@@ -247,6 +249,7 @@ class FileWriterStatus(KafkaStatusHandler):
 
         # while offsets are below the initial offsets, keep polling
         current_offsets = {key: -1 for key in target_offsets.keys()}
+        self.log.warn(f"Current offsets for bootstrap: {current_offsets}")
         while all(
             [
                 off_1 < off_2
@@ -260,6 +263,7 @@ class FileWriterStatus(KafkaStatusHandler):
                 continue
             mbytes = msg.value()
             current_offsets[f"{msg.topic()}_{msg.partition()}"] = msg.offset()
+            self.log.warn(f"Current offsets for bootstrap: {current_offsets}")
             if not mbytes or len(mbytes) < 8:
                 continue
             ftype = mbytes[4:8]
