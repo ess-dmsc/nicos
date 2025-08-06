@@ -342,7 +342,7 @@ class FileWriterStatus(KafkaStatusHandler):
                 except Exception:
                     pass
 
-        consumer.close()
+        # consumer.close()
 
         # Merge into live structures
         with self._lock:
@@ -398,6 +398,8 @@ class FileWriterStatus(KafkaStatusHandler):
                         }
                 except Exception:
                     pass
+
+        consumer.close()
 
     def _update_cached_jobs(self):
         self.job_history = [
