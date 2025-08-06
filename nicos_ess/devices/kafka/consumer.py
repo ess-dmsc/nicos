@@ -162,7 +162,7 @@ class KafkaConsumer:
             return []
 
         return {
-            f"{tp.topic}_{tp.partition}": self._consumer.get_watermark_offsets(
+            (tp.topic, tp.partition): self._consumer.get_watermark_offsets(
                 tp, timeout=timeout_s
             )[1]
             for tp in assigned

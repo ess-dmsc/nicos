@@ -10,6 +10,7 @@ from os import path
 from time import time as currenttime
 
 from streaming_data_types import (
+    deserialise_6s4t,
     deserialise_answ,
     deserialise_pl72,
     deserialise_wrdn,
@@ -226,18 +227,20 @@ class FileWriterStatus(KafkaStatusHandler):
         """
         Rebuild recent jobs and pool from Kafka by scanning back bootstrap_lookback_days.
 
-        - Consumes from the topics in statustopic (instrument-specific + general).
-        - Replays pl72/answ/x5f2/wrdn to reconstruct job state (best effort).
+        - Consumes from the instrument_topic in statustopic (instrument-specific + general).
+        - Replays pl72/answ/x5f2/wrdn/6s4t to reconstruct job state (best effort).
         - Tracks pool membership from x5f2 using host_name (one filewriter per host).
         """
         lookback_s = max(0, int(self.bootstrap_lookback_days)) * 86400
         since_ms = int((currenttime() - lookback_s) * 1000)
 
         consumer = KafkaConsumer.create(self.brokers, starting_offset="earliest")
-        topics = [
+        instrument_topic = [
             topic for topic in self.statustopic if "ess_filewriter_status" != topic
         ]
-        consumer.subscribe(topics)
+        pool_topic = ["ess_filewriter_status"]
+        consumer.subscribe(instrument_topic)
+        consumer.poll(0)
         target_offsets = consumer.get_high_watermark_offsets()
         consumer.seek_all_assigned_to_timestamp(since_ms)
 
@@ -245,10 +248,6 @@ class FileWriterStatus(KafkaStatusHandler):
 
         tmp_jobs = {}
         ordered = OrderedDict()
-
-        # # Limit runtime so startup is predictable; extend if you want deeper replay
-        # deadline = currenttime() + 5.0  # seconds
-        # while currenttime() < deadline:
 
         # while offsets are below the initial offsets, keep polling
         current_offsets = {key: -1 for key in target_offsets.keys()}
@@ -265,13 +264,17 @@ class FileWriterStatus(KafkaStatusHandler):
             if not msg:
                 continue
             mbytes = msg.value()
-            current_offsets[f"{msg.topic()}_{msg.partition()}"] = msg.offset()
+            current_offsets[(msg.topic(), msg.partition())] = msg.offset()
             self.log.warn(f"Current offsets for bootstrap: {current_offsets}")
             if not mbytes or len(mbytes) < 8:
                 continue
             ftype = mbytes[4:8]
 
-            if ftype == b"pl72":
+            if ftype == b"x5f2":
+                # ignore status messages when rebuilding history
+                continue
+
+            elif ftype == b"pl72":
                 try:
                     pl = deserialise_pl72(mbytes)
                     jid = pl.job_id
@@ -306,54 +309,22 @@ class FileWriterStatus(KafkaStatusHandler):
                 except Exception:
                     pass
 
-            elif ftype == b"x5f2":
+            elif ftype == b"6s4t":
+                # get stop time from the stop message
                 try:
-                    st = deserialise_x5f2(mbytes)
-                    try:
-                        js = json.loads(st.status_json) if st.status_json else {}
-                    except Exception:
-                        js = {}
+                    st = deserialise_6s4t(mbytes)
 
-                    # Pool tracking by host_name (PID may change)
-                    host_name, service_id, state_norm = (
-                        self._extract_fw_identity_and_state(st, js)
+                    jid = st.job_id
+
+                    stop_time = (
+                        datetime.fromtimestamp(st.stop_time / 1000.0)
+                        if st.stop_time
+                        else None
                     )
-                    if host_name:
-                        self._pool[host_name] = {
-                            "state": state_norm,
-                            "last": currenttime(),
-                            "service_id": service_id,
-                        }
 
-                    # Job heartbeat if present
-                    jid = js.get("job_id")
                     if jid and jid in tmp_jobs:
-                        tmp_jobs[jid].on_writing(st.update_interval)
-                        # try getting the start and stop time from the status_json
-                        start_time = js.get("start_time")
-                        stop_time = js.get("stop_time")
-                        start_time = (
-                            datetime.fromtimestamp(start_time / 1000.0)
-                            if start_time
-                            else None
-                        )
-                        stop_time = (
-                            datetime.fromtimestamp(stop_time / 1000.0)
-                            if stop_time
-                            else None
-                        )
-
-                        if (
-                            stop_time
-                            and start_time
-                            and (stop_time - start_time > timedelta(days=365.25))
-                        ):
-                            stop_time = None  # a large stop time means no stop time set
-
-                        if tmp_jobs[jid].start_time != start_time:
-                            self.log.warn(f"Start time mismatch for job {jid}: ")
-                        else:
-                            tmp_jobs[jid].stop_time = stop_time
+                        jr = tmp_jobs[jid]
+                        jr.stop_time = stop_time
 
                 except Exception:
                     pass
@@ -382,6 +353,51 @@ class FileWriterStatus(KafkaStatusHandler):
                         self._jobs[jid] = jr
             self._update_cached_jobs()
             self._update_status()
+
+        # look back 10 min for the pool status
+        since_ms = int((currenttime() - 600) * 1000)
+        consumer.subscribe(pool_topic)
+        consumer.poll(0)
+        target_offsets = consumer.get_high_watermark_offsets()
+        consumer.seek_all_assigned_to_timestamp(since_ms)
+        current_offsets = {key: -1 for key in target_offsets.keys()}
+
+        while all(
+            [
+                off_1 < off_2 - 1
+                for off_1, off_2 in zip(
+                    current_offsets.values(), target_offsets.values()
+                )
+            ]
+        ):
+            msg = consumer.poll(timeout_ms=10)
+            if not msg:
+                continue
+            mbytes = msg.value()
+            current_offsets[(msg.topic(), msg.partition())] = msg.offset()
+            if not mbytes or len(mbytes) < 8:
+                continue
+            ftype = mbytes[4:8]
+            if ftype == b"x5f2":
+                try:
+                    st = deserialise_x5f2(mbytes)
+                    try:
+                        js = json.loads(st.status_json) if st.status_json else {}
+                    except Exception:
+                        js = {}
+
+                    # Pool tracking by host_name (PID may change)
+                    host_name, service_id, state_norm = (
+                        self._extract_fw_identity_and_state(st, js)
+                    )
+                    if host_name:
+                        self._pool[host_name] = {
+                            "state": state_norm,
+                            "last": currenttime(),
+                            "service_id": service_id,
+                        }
+                except Exception:
+                    pass
 
     def _update_cached_jobs(self):
         self.job_history = [
