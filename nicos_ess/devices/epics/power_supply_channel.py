@@ -23,6 +23,12 @@ from nicos_ess.devices.epics.pva.epics_devices import (
 
 
 class PowerSupplyChannel(EpicsParameters, CanDisable, MappedReadable):
+    """ Power Supply Channel class
+
+    It can reads and control the power of a channel (enable/disable the device).
+    Also, it reads its voltage, current, and status.
+    """
+
     parameters = {
         "board": Param("Power supply board"),
         "channel": Param("Power supply channel"),
@@ -93,6 +99,7 @@ class PowerSupplyChannel(EpicsParameters, CanDisable, MappedReadable):
         return self._mapReadValue(self._readRaw(maxage))
     
     def status_on(self):
+        """ Returns a simplified (bool) status."""
         return bool(self._get_cached_pv_or_ask("status_on"))
 
     def doStatus(self, maxage=0):
@@ -155,12 +162,14 @@ class PowerSupplyChannel(EpicsParameters, CanDisable, MappedReadable):
     def _value_change_callback(
         self, name, param, value, units, limits, severity, message, **kwargs
     ):
+        """From EpicsMotor class"""
         time_stamp = time.time()
         cache_key = self._record_fields[param].cache_key
         cache_key = param if not cache_key else cache_key
         self._cache.put(self._name, cache_key, value, time_stamp)
 
     def _connection_change_callback(self, name, param, is_connected, **kwargs):
+        """From EpicsMotor class"""
         if is_connected:
             self.log.debug("%s connected!", name)
         else:
@@ -174,6 +183,17 @@ class PowerSupplyChannel(EpicsParameters, CanDisable, MappedReadable):
 
 
 class PowerSupplyBank(CanDisable, MappedReadable):
+    """ Power Supply Bank class
+
+    A power supply bank is a set of power supply channels (attached to it).
+    It can read and control the power (on/off) of all attached channels
+    (enable/disable them all at once, with a single command).
+    
+    The status of the bank is the combined status of their channels:
+    - A bank is on when at least one of its channels is on.
+    - Otherwise, if all channels are off, them the bank is off.
+    """
+
     attached_devices = {
         "ps_channels": Attach("Power Supply channel", PowerSupplyChannel, multiple=True),
     }
@@ -207,8 +227,15 @@ class PowerSupplyBank(CanDisable, MappedReadable):
             ps_channel.doEnable(on)
 
     def status_on(self):
-        """ Return whether Bank is ON (at least one channel is on) or not,
-        and how many channels are ON."""
+        """ Returns a simplified status.
+        Returns
+        -------
+        status_on : bool
+            Whether Bank is ON (at least one channel is on) or not.
+        
+        channels_on : int
+            How many channels are ON. """
+
         num_of_channels = len(self._attached_ps_channels)
         status_on = None
         on_channels = 0
