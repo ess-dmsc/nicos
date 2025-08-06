@@ -32,7 +32,7 @@ devices = dict(
             "default_loading_position": (2, 198, 53.75),
             "default_center_position": (2, 100, 53.75),
             "default_sample_holder_lower": (120, 100, 198),
-            "default_sample_holder_rotation": (120, 100, 0),
+            "default_sample_holder_rotation": (120, 100, 5),
         },
     ),
     linear_sample_changer=device(
