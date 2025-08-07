@@ -244,11 +244,7 @@ class NexusStructureJsonFile(NexusStructureProvider):
         if not samples_info:
             return structure
 
-        try:
-            samples_dict = samples_info[0][0]
-        except KeyError:
-            return structure
-
+        samples_dict = samples_info[0][0]
         samples_list = self._generate_samples_group_list(
             samples_dict, skip_keys=["number_of"]
         )
