@@ -1,3 +1,5 @@
+from time import sleep
+
 from nicos.core import (
     Override,
     Param,
@@ -90,23 +92,24 @@ class LOKIDetectorMotion(EpicsMotor):
     
     def get_ps_bank(self):
         return session.devices[self.ps_bank_name]
+    
+    def _check_start(self, pos):
+        """ Overwrites super method.
 
-    #def doStart(self, pos):
-    #    print("DET MOTION - DO START")
-    #    print(self.start)
-
-    #@usermethod
-    def start(self, pos):
-        pass
-        #Overwrite start method to disable/enable PS bank before/after 
-        #the movement.
-
-        #print("DET MOTION - START")
+        PS: As start() couldn't be overwritten, _check_start and _start_unchecked
+        had to be customized.
+        """
 
         print(f"Detector motion: Disabling {self.ps_bank_name}...")
-        #self.disable_ps_bank()
+        self.disable_ps_bank()
+        # Add check of status off and voltage 0, with some retries.
 
-        super().start(pos)
-        
+        return super()._check_start(pos)
+    
+    def _start_unchecked(self, pos):
+        # Maybe we can use doStart instead, as it is the last step of _start_unchecked!!
+        """ Overwrites super method."""
+        super()._start_unchecked(pos)
         print(f"Detector motion: Enabling {self.ps_bank_name}...")
-        #self.enable_ps_bank()
+        self.enable_ps_bank()
+        # Add check of status on, with some retries.
