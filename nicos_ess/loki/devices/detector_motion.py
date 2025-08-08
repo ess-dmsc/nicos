@@ -3,8 +3,14 @@ from nicos.core import (
     Param,
     status,
 )
+from nicos.core.utils import (
+    usermethod,
+)
 from nicos_ess.devices.epics.pva.motor import EpicsMotor
 from nicos import session
+
+WAIT_FOR_ENABLE = 3 
+
 
 class LOKIDetectorMotion(EpicsMotor):
     """Control detector motion, ensuring power bank safety.
@@ -68,3 +74,39 @@ class LOKIDetectorMotion(EpicsMotor):
 
         print("Detector motion: Power Supply Bank is OFF. Moving is okay.")
         return True, "Power Supply Bank is OFF. Moving is okay."
+    
+    def _enable_ps_bank(self, ps_bank, on):
+        for channel in ps_bank._attached_ps_channels:
+            channel.enable() if on else channel.disable()
+        sleep(WAIT_FOR_ENABLE)
+
+    def enable_ps_bank(self):
+        ps_bank = self.get_ps_bank()
+        self._enable_ps_bank(ps_bank, True)
+
+    def disable_ps_bank(self):
+        ps_bank = self.get_ps_bank()
+        self._enable_ps_bank(ps_bank, False)
+    
+    def get_ps_bank(self):
+        return session.devices[self.ps_bank_name]
+
+    #def doStart(self, pos):
+    #    print("DET MOTION - DO START")
+    #    print(self.start)
+
+    #@usermethod
+    def start(self, pos):
+        pass
+        #Overwrite start method to disable/enable PS bank before/after 
+        #the movement.
+
+        #print("DET MOTION - START")
+
+        print(f"Detector motion: Disabling {self.ps_bank_name}...")
+        #self.disable_ps_bank()
+
+        super().start(pos)
+        
+        print(f"Detector motion: Enabling {self.ps_bank_name}...")
+        #self.enable_ps_bank()
