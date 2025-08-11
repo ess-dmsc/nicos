@@ -11,7 +11,8 @@ from nicos.core.utils import (
 from nicos_ess.devices.epics.pva.motor import EpicsMotor
 from nicos import session
 
-WAIT_FOR_ENABLE = 3 
+WAIT = 3
+MAX_RETRIES = 10
 
 
 class LOKIDetectorMotion(EpicsMotor):
@@ -30,7 +31,6 @@ class LOKIDetectorMotion(EpicsMotor):
     }
     
     def bank_voltage_is_zero(self, ps_bank):
-
         if ps_bank is None:
             print("Detector motion: Power supply bank provided for the voltage check is None.")
             return False # Return false to make check fail
@@ -80,7 +80,6 @@ class LOKIDetectorMotion(EpicsMotor):
     def _enable_ps_bank(self, ps_bank, on):
         for channel in ps_bank._attached_ps_channels:
             channel.enable() if on else channel.disable()
-        sleep(WAIT_FOR_ENABLE)
 
     def enable_ps_bank(self):
         ps_bank = self.get_ps_bank()
@@ -94,22 +93,35 @@ class LOKIDetectorMotion(EpicsMotor):
         return session.devices[self.ps_bank_name]
     
     def _check_start(self, pos):
-        """ Overwrites super method.
+        """ Overwrite super method.
 
-        PS: As start() couldn't be overwritten, _check_start and _start_unchecked
-        had to be customized.
-        """
+        Note: As start() can't be overwritten, _check_start had to be
+        customized in order to add the disable_ps_bank() step before
+        movement can be issued."""
 
         print(f"Detector motion: Disabling {self.ps_bank_name}...")
         self.disable_ps_bank()
-        # Add check of status off and voltage 0, with some retries.
+        sleep(WAIT) # Wait for disable to be complete
+
+        # Check if bank is off before checking the voltage.
+        ps_bank = self.get_ps_bank()
+        bank_on, _ = ps_bank.status_on()
+        if bank_on:
+            return Ellipsis
+
+        # Wait for voltage to be 0, it may take a while.
+        for retry in range(MAX_RETRIES):
+            if self.bank_voltage_is_zero(ps_bank):
+                break
+            sleep(WAIT)
 
         return super()._check_start(pos)
     
-    def _start_unchecked(self, pos):
-        # Maybe we can use doStart instead, as it is the last step of _start_unchecked!!
-        """ Overwrites super method."""
-        super()._start_unchecked(pos)
+    def doStart(self, target):
+        """ Perfome movement as per usual, and after this enable PS Bank. """
+
+        super().doStart(target)
         print(f"Detector motion: Enabling {self.ps_bank_name}...")
         self.enable_ps_bank()
         # Add check of status on, with some retries.
+
