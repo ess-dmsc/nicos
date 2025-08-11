@@ -27,11 +27,10 @@ This module contains some classes for NICOS - EPICS integration.
 
 import os
 import time
-
-import numpy
-
 from collections import namedtuple
 from enum import Enum
+
+import numpy
 
 from nicos import session
 from nicos.core import (
@@ -52,7 +51,6 @@ from nicos.core import (
     tupleof,
 )
 from nicos.devices.abstract import MappedMoveable, MappedReadable
-
 
 DEFAULT_EPICS_PROTOCOL = os.environ.get("DEFAULT_EPICS_PROTOCOL", "ca")
 
@@ -261,6 +259,12 @@ class EpicsAnalogMoveable(EpicsParameters, HasPrecision, HasLimits, Moveable):
             mandatory=False,
             userparam=False,
         ),
+        "can_stop": Param(
+            "If True, the device can be stopped by writing the current value to the write PV",
+            type=bool,
+            default=False,
+            userparam=False,
+        ),
     }
 
     parameter_overrides = {
@@ -373,7 +377,8 @@ class EpicsAnalogMoveable(EpicsParameters, HasPrecision, HasLimits, Moveable):
         self._epics_wrapper.put_pv_value(self.writepv, value)
 
     def doStop(self):
-        self.doStart(self.doRead())
+        if self.can_stop:
+            self.start(self.doRead())
 
     def _value_change_callback(
         self, name, param, value, units, limits, severity, message, **kwargs
@@ -447,6 +452,12 @@ class EpicsStringMoveable(EpicsParameters, Moveable):
             "Optional target readback PV.",
             type=none_or(pvname),
             mandatory=False,
+            userparam=False,
+        ),
+        "can_stop": Param(
+            "If True, the device can be stopped by writing the current value to the write PV",
+            type=bool,
+            default=False,
             userparam=False,
         ),
     }
@@ -528,7 +539,8 @@ class EpicsStringMoveable(EpicsParameters, Moveable):
         self._epics_wrapper.put_pv_value(self.writepv, value)
 
     def doStop(self):
-        self.doStart(self.doRead())
+        if self.can_stop:
+            self.start(self.doRead())
 
     def _value_change_callback(
         self, name, param, value, units, limits, severity, message, **kwargs
@@ -587,7 +599,7 @@ class EpicsMappedReadable(EpicsReadable, MappedReadable):
         # MBBI, BI, etc. do not have units
         "unit": Override(mandatory=False, settable=False, volatile=False),
         # Mapping values are read from EPICS
-        'mapping': Override(internal=True, mandatory=False, settable=False)
+        "mapping": Override(internal=True, mandatory=False, settable=False),
     }
 
     def doInit(self, mode):
@@ -648,7 +660,7 @@ class EpicsMappedMoveable(EpicsParameters, MappedMoveable):
         # MBBI, BI, etc. do not have units
         "unit": Override(mandatory=False, settable=False, volatile=False),
         # Mapping values are read from EPICS
-        'mapping': Override(internal=True, mandatory=False, settable=False)
+        "mapping": Override(internal=True, mandatory=False, settable=False),
     }
 
     _record_fields = {
