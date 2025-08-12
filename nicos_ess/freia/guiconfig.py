@@ -23,7 +23,10 @@ main_window = docked(
                         ("Scan Plot", panel("nicos_ess.gui.panels.scans.ScansPanel")),
                         (
                             "Hexapod",
-                            panel("nicos_ess.gui.panels.hexapod.HexapodPanel"),
+                            vsplit(
+                                panel("nicos_ess.gui.panels.hexapod.HexapodPanel"),
+                                panel("nicos_ess.gui.panels.console.ConsolePanel"),
+                            ),
                         ),
                         (
                             "Detector Image",

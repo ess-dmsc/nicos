@@ -39,15 +39,15 @@ devices = dict(
         abslimits=(0, 0.5),
         unit="deg",
     ),
-    test=device(
-        "nicos.devices.generic.virtual.VirtualMotor",
-        description="Table Translation",
-        abslimits=(0, 300),
-        unit="mm",
-    ),
-    hexapod=device(
-        "nicos_ess.devices.virtual.hexapod.TableHexapod",
-        # "nicos_ess.devices.virtual.hexapod.VirtualHexapod",
+    # test=device(
+    #    "nicos.devices.generic.virtual.VirtualMotor",
+    #    description="Table Translation",
+    #    abslimits=(0, 300),
+    #    unit="mm",
+    # ),
+    freia_hexapod=device(
+        # "nicos_ess.devices.virtual.hexapod.TableHexapod",
+        "nicos_ess.devices.virtual.hexapod.VirtualHexapod",
         description="Hexapod Device",
         tx="tx",
         ty="ty",
@@ -55,6 +55,6 @@ devices = dict(
         rx="rx",
         ry="ry",
         rz="rz",
-        table="test",
+        # table="test",
     ),
 )
