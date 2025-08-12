@@ -36,12 +36,12 @@ class LOKIDetectorMotion(EpicsMotor):
         self._ps_bank = self.get_ps_bank()
         super().doInit(mode)
 
-    def bank_voltage_is_zero(self, ps_bank):
-        if ps_bank is None:
+    def bank_voltage_is_zero(self):
+        if self._ps_bank is None:
             print("Detector motion: Power supply bank provided for the voltage check is None.")
             return False # Return false to make check fail
 
-        for channel in ps_bank._attached_ps_channels:
+        for channel in self._ps_bank._attached_ps_channels:
             if channel.doReadVoltage_Monitor() > 0:
                 print("Detector motion: Some power supply voltages are not zero.")
                 return False
@@ -74,21 +74,21 @@ class LOKIDetectorMotion(EpicsMotor):
             return False, "Power Supply Bank is in a NOT OK state."
         if bank_on:
             return False, "Power Supply Bank is still ON (its channels should be OFF)."
-        if not self.bank_voltage_is_zero(self._ps_bank):
+        if not self.bank_voltage_is_zero():
             return False, "Power Supply Bank is still ON (its voltages should be zero)."
 
         print("Detector motion: Power Supply Bank is OFF. Moving is okay.")
         return True, "Power Supply Bank is OFF. Moving is okay."
     
-    def _enable_ps_bank(self, ps_bank, on):
-        for channel in ps_bank._attached_ps_channels:
+    def _enable_ps_bank(self, on):
+        for channel in self._ps_bank._attached_ps_channels:
             channel.enable() if on else channel.disable()
 
     def enable_ps_bank(self):
-        self._enable_ps_bank(self._ps_bank, True)
+        self._enable_ps_bank(True)
 
     def disable_ps_bank(self):
-        self._enable_ps_bank(self._ps_bank, False)
+        self._enable_ps_bank(False)
     
     def get_ps_bank(self):
         return session.devices[self.ps_bank_name]
@@ -113,7 +113,7 @@ class LOKIDetectorMotion(EpicsMotor):
 
         # Wait for voltage to be 0, it may take a while.
         for retry in range(MAX_RETRIES):
-            if self.bank_voltage_is_zero(self._ps_bank):
+            if self.bank_voltage_is_zero():
                 break
             sleep(WAIT)
 
