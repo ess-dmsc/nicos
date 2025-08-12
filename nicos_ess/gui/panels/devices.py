@@ -218,11 +218,11 @@ class DevicesPanel(Panel):
             value = [value] if isinstance(value, str) else list(value)
             self.param_display[key.lower()] = value
 
-        self.tree.header().restoreState(self._headerstate)
-        self.clear()
-
         if not bool(options.get("show_target")):
             self.tree.header().hideSection(2)
+
+        self.tree.header().restoreState(self._headerstate)
+        self.clear()
 
         self.devmenu = QMenu(self)
         self.devmenu.addAction(self.actionMove)

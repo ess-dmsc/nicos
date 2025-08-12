@@ -8,21 +8,14 @@ devices = dict(
         passwd=[
             ("guest", "", "guest"),
             ("user", "d3bde5ce3e546626df42771c58986d4e", "user"),
-            ("admin", "f3309476bdb36550aa8fb90ae748c9cc", "admin"),
+            ("admin", "21232f297a57a5a743894a0e4a801fc3", "admin"),
         ],
     ),
     LDAPAuth=device(
         "nicos_ess.devices.auth.ldap.Authenticator",
-        uri=[
-            "dc01.esss.lu.se",
-            "dc02.esss.lu.se",
-            "dc03.esss.lu.se"
-        ],
+        uri=["dc01.esss.lu.se", "dc02.esss.lu.se", "dc03.esss.lu.se"],
         userbasedn="dc=esss,dc=lu,dc=se",
-        grouproles={
-            "ECDC": "user",
-            "ECDC SE": "user"
-        },
+        grouproles={"ECDC": "user", "ECDC SE": "user"},
     ),
     Daemon=device(
         "nicos.services.daemon.NicosDaemon",
