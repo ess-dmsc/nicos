@@ -38,14 +38,12 @@ class LOKIDetectorMotion(EpicsMotor):
 
     def bank_voltage_is_zero(self):
         if self._ps_bank is None:
-            print("Detector motion: Power supply bank provided for the voltage check is None.")
+            print("Power Supply Bank: bank instance provided for the voltage check is NONE.")
             return False # Return false to make check fail
 
         for channel in self._ps_bank._attached_ps_channels:
             if channel.doReadVoltage_Monitor() > 0:
-                print("Detector motion: Some power supply voltages are not zero.")
                 return False
-        print("Detector motion: Power supply voltages are zero.")
         return True
 
     def doIsAllowed(self, pos):
@@ -65,7 +63,7 @@ class LOKIDetectorMotion(EpicsMotor):
             Message indicating why movement is or isn't allowed.
         """
         if self._ps_bank is None:
-            return False, "No Power Supply Bank found in setup ({}).".format(e)
+            return False, "No Power Supply Bank is None ({}).".format(e)
 
         bank_stat, _ = self._ps_bank.status()
         bank_on, _ = self._ps_bank.status_on()
@@ -75,9 +73,9 @@ class LOKIDetectorMotion(EpicsMotor):
         if bank_on:
             return False, "Power Supply Bank is still ON (its channels should be OFF)."
         if not self.bank_voltage_is_zero():
-            return False, "Power Supply Bank is still ON (its voltages should be zero)."
+            return False, "Power Supply Bank voltages are still > 0 (all voltages should be ZERO)."
 
-        print("Detector motion: Power Supply Bank is OFF. Moving is okay.")
+        print("Detector motion: Power Supply Bank is OFF and voltages are ZERO. Moving is okay.")
         return True, "Power Supply Bank is OFF. Moving is okay."
     
     def _enable_ps_bank(self, on):
@@ -104,7 +102,7 @@ class LOKIDetectorMotion(EpicsMotor):
 
         print(f"Detector motion: Disabling {self.ps_bank_name}...")
         self.disable_ps_bank()
-        sleep(WAIT) # Wait for disable to be complete
+        sleep(WAIT) # Wait for disable to be complete.
 
         # Check if bank is off before checking the voltage.
         bank_on, _ = self._ps_bank.status_on()
@@ -112,10 +110,14 @@ class LOKIDetectorMotion(EpicsMotor):
             return Ellipsis # Fail check.
 
         # Wait for voltage to be 0, it may take a while.
+        print(f"Detector motion: Waiting {self.ps_bank_name} voltages to be zero...")
         for retry in range(MAX_RETRIES):
             if self.bank_voltage_is_zero():
-                break
+                break # Success
             sleep(WAIT)
+            
+            if retry == MAX_RETRIES - 1:
+                print(f"Detector motion: Reached maximum number of retries for voltage check.")
 
         return super()._check_start(pos)
     
