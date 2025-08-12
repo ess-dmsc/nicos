@@ -31,6 +31,14 @@ devices = dict(
         description="The high voltage status of the monitor detector",
         readpv="BIFRO-BM1:NDet-CDTIBM-001:HighVoltageStatus-R",
     ),
+    bunker_cbm_n_summation=device(
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="The sampling period of the monitor detector",
+        readpv="BIFRO-BM1:NDet-CDTIBM-002:AdcSummation-R",
+        writepv="BIFRO-BM1:NDet-CDTIBM-002:AdcSummation-S",
+        unit="us",
+        abslimits=(1, 100),
+    ),
     chopper_cbm_sampling_period=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
         description="The sampling period of the monitor detector",
@@ -38,6 +46,14 @@ devices = dict(
         writepv="BIFRO-BM1:NDet-CDTIBM-002:SamplingPeriod-S",
         unit="us",
         abslimits=(1.2, 132.3),
+    ),
+    chopper_cbm_n_summation=device(
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="The sampling period of the monitor detector",
+        readpv="BIFRO-BM1:NDet-CDTIBM-002:AdcSummation-R",
+        writepv="BIFRO-BM1:NDet-CDTIBM-002:AdcSummation-S",
+        unit="us",
+        abslimits=(1, 100),
     ),
     chopper_cbm_high_voltage=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
