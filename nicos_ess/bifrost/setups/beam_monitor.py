@@ -39,6 +39,12 @@ devices = dict(
         unit="",
         abslimits=(1, 100),
     ),
+    bunker_cbm_start_ramp=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
+        description="Start voltage ramp for the bunker monitor HVPS",
+        readpv="BIFRO-BM1:NDet-CDTIBM-001:HighVoltTask-S",
+        writepv="BIFRO-BM1:NDet-CDTIBM-001:HighVoltTask-S",
+    ),
     chopper_cbm_sampling_period=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
         description="The sampling period of the monitor detector",
@@ -67,5 +73,11 @@ devices = dict(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The high voltage status of the monitor detector",
         readpv="BIFRO-BM1:NDet-CDTIBM-002:HighVoltageStatus-R",
+    ),
+    chopper_cbm_start_ramp=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
+        description="Start voltage ramp for the chopper monitor HVPS",
+        readpv="BIFRO-BM1:NDet-CDTIBM-002:HighVoltTask-S",
+        writepv="BIFRO-BM1:NDet-CDTIBM-002:HighVoltTask-S",
     ),
 )
