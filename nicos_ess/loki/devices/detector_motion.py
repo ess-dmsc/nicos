@@ -114,7 +114,7 @@ class LOKIDetectorMotion(EpicsMotor):
 
         bank_on, _ = self._ps_bank.status_on()
         if bank_on:
-            print(f"Detector motion: Bank {self.ps_bank_name} could not be disabled.")
+            session.log.error(f"Detector motion: Bank {self.ps_bank_name} could not be disabled.")
             return Ellipsis
 
         # Wait for voltage to be 0, it may take a while.
@@ -129,7 +129,7 @@ class LOKIDetectorMotion(EpicsMotor):
             sleep(WAIT)
             
             if retry == MAX_RETRIES - 1:
-                print(f"Detector motion: Reached maximum number of retries for voltage check.")
+                session.log.error(f"Detector motion: Reached maximum retries for voltage check ({self.ps_bank_name}).")
 
         return super()._check_start(pos)
     
@@ -151,4 +151,4 @@ class LOKIDetectorMotion(EpicsMotor):
         if bank_on:
             print(f"Detector motion: {self.ps_bank_name} enabled.")
         else:
-            print(f"Detector motion: {self.ps_bank_name} COULD NOT be enabled.")
+            session.log.error(f"Detector motion: {self.ps_bank_name} COULD NOT be enabled.")
