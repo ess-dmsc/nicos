@@ -30,11 +30,9 @@ class LOKIDetectorMotion(EpicsMotor):
         ),
     }
     
-    _ps_bank = None
-    
     def doInit(self, mode):
+        EpicsMotor.doInit(self, mode)
         self._ps_bank = self.get_ps_bank()
-        super().doInit(mode)
 
     def bank_voltage_is_zero(self):
         if self._ps_bank is None:
