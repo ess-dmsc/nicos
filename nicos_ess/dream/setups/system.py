@@ -41,12 +41,17 @@ devices = dict(
         config_topic="dream_forwarder_dynamic_config",
         brokers=configdata("config.KAFKA_BROKERS"),
     ),
-    NexusStructure=device(
+    NexusStructure_Basic=device(
         "nicos_ess.devices.datasinks.nexus_structure.NexusStructureJsonFile",
         description="Provides the NeXus structure",
-        nexus_config_path="nicos_ess/dream/nexus/nexus_config.json",
+        nexus_config_path="nexus-json-templates/dream/dream-dynamic.json",
         instrument_name="dream",
         visibility=(),
+    ),
+    NexusStructure=device(
+        "nicos.devices.generic.DeviceAlias",
+        alias="NexusStructure_Basic",
+        devclass="nicos_ess.devices.datasinks.nexus_structure.NexusStructureJsonFile",
     ),
     FileWriterStatus=device(
         "nicos_ess.devices.datasinks.file_writer.FileWriterStatus",
