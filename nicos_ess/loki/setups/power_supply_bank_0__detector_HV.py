@@ -32,8 +32,11 @@ for key in keys:
         maxage=None,
         ps_pv=pv_root,
         mapping={"OFF": 0, "ON": 1},
+        visibility={}
     )
-    ps_channels.append(power_supply_channel)
+    devices[f"{key}"] = power_supply_channel
+
+channel_keys = list(devices.keys())
 
 # Bank device
 power_supply_module = device(
@@ -41,7 +44,7 @@ power_supply_module = device(
         description="Bank 0 HV Power Supplies (Detector Carriage)",
         pollinterval=1.0,
         maxage=None,
-        ps_channels=ps_channels,
+        ps_channels=channel_keys,
         mapping={"OFF": 0, "ON": 1},
     )
 
