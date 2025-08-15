@@ -316,7 +316,7 @@ class DataChannel(CounterChannelMixin, PassiveChannel):
         try:
             return int(val)
         except Exception:
-            return self._params["num_bins"]
+            return self._params.get("num_bins", 1000)
 
     def doWriteToa_Range(self, value):
         enabled = False if value[0] == 0 and value[1] == 0 else True
@@ -328,7 +328,7 @@ class DataChannel(CounterChannelMixin, PassiveChannel):
         cfg = self._cfg("toa_range")
         if isinstance(cfg, dict):
             return (cfg.get("low", 0), cfg.get("high", 100_000))
-        return self._params["toa_range"]
+        return self._params.get("toa_range", (0, 100_000))
 
     def doWriteRoi_Rectangle(self, value):
         if isinstance(value, dict):
@@ -350,7 +350,10 @@ class DataChannel(CounterChannelMixin, PassiveChannel):
                     "high": cfg.get("y", {}).get("high", 100),
                 },
             }
-        return self._params["roi_rectangle"]
+        return self._params.get(
+            "roi_rectangle",
+            {"x": {"low": 0, "high": 100}, "y": {"low": 0, "high": 100}},
+        )
 
     def doWriteUpdate_Period(self, value):
         message = json.dumps({"value": value, "unit": "ms"}).encode("utf-8")
@@ -360,7 +363,7 @@ class DataChannel(CounterChannelMixin, PassiveChannel):
         cfg = self._cfg("update_every")
         if isinstance(cfg, dict):
             return cfg.get("value", self._params["update_period"])
-        return self._params["update_period"]
+        return self._params.get("update_period", 1000)
 
     def doShutdown(self):
         self._update_status(status.OK, "")
