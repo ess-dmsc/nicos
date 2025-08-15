@@ -19,6 +19,7 @@ keys = get_channel_keys(BANK_CHANNELS)
 # Create channels
 devices = dict()
 ps_channels = []
+module_num = 1
 
 for key in keys:
     channel = ALL_CHANNELS[key]
@@ -34,7 +35,8 @@ for key in keys:
         mapping={"OFF": 0, "ON": 1},
         visibility={}
     )
-    devices[f"{key}"] = power_supply_channel
+    devices[f"M{module_num:02d}_{key}"] = power_supply_channel
+    module_num += 1
 
 channel_keys = list(devices.keys())
 
