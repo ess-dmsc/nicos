@@ -1,7 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>Hexapod</class>
- <widget class="QWidget" name="Hexapod">
+ <class>hexControl</class>
+ <widget class="QWidget" name="hexControl">
+  <property name="enabled">
+   <bool>true</bool>
+  </property>
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -16,258 +19,263 @@
   <widget class="QWidget" name="horizontalLayoutWidget">
    <property name="geometry">
     <rect>
-     <x>9</x>
-     <y>49</y>
-     <width>847</width>
-     <height>486</height>
+     <x>10</x>
+     <y>60</y>
+     <width>891</width>
+     <height>593</height>
     </rect>
    </property>
-   <layout class="QHBoxLayout" name="hexapodControls">
+   <layout class="QHBoxLayout" name="hexapodControls" stretch="0,1,1">
+    <property name="spacing">
+     <number>0</number>
+    </property>
     <item>
-     <layout class="QVBoxLayout" name="verticalLayout">
+     <layout class="QVBoxLayout" name="layout0" stretch="0,0">
+      <property name="sizeConstraint">
+       <enum>QLayout::SetFixedSize</enum>
+      </property>
       <item>
-       <layout class="QVBoxLayout" name="verticalLayout_7">
-        <item>
-         <widget class="QGroupBox" name="grpCurrentPos">
-          <property name="title">
-           <string>Current Position</string>
-          </property>
-          <layout class="QGridLayout" name="gridLayout_3">
-           <item row="0" column="1">
-            <widget class="QLabel" name="curTx">
-             <property name="minimumSize">
-              <size>
-               <width>80</width>
-               <height>0</height>
-              </size>
-             </property>
-             <property name="text">
-              <string>0.00</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="1">
-            <widget class="QLabel" name="curTz">
-             <property name="minimumSize">
-              <size>
-               <width>80</width>
-               <height>0</height>
-              </size>
-             </property>
-             <property name="text">
-              <string>0.00</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-             </property>
-            </widget>
-           </item>
-           <item row="4" column="2">
-            <widget class="QLabel" name="label_28">
-             <property name="text">
-              <string>ry deg</string>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="2">
-            <widget class="QLabel" name="label_23">
-             <property name="text">
-              <string>tx mm</string>
-             </property>
-            </widget>
-           </item>
-           <item row="5" column="2">
-            <widget class="QLabel" name="label_31">
-             <property name="text">
-              <string>rz deg</string>
-             </property>
-            </widget>
-           </item>
-           <item row="4" column="0">
-            <widget class="QLabel" name="label_27">
-             <property name="minimumSize">
-              <size>
-               <width>30</width>
-               <height>0</height>
-              </size>
-             </property>
-             <property name="text">
-              <string>ry:</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-             </property>
-            </widget>
-           </item>
-           <item row="3" column="0">
-            <widget class="QLabel" name="label_24">
-             <property name="minimumSize">
-              <size>
-               <width>30</width>
-               <height>0</height>
-              </size>
-             </property>
-             <property name="text">
-              <string>rx:</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-             </property>
-            </widget>
-           </item>
-           <item row="5" column="0">
-            <widget class="QLabel" name="label_30">
-             <property name="minimumSize">
-              <size>
-               <width>30</width>
-               <height>0</height>
-              </size>
-             </property>
-             <property name="text">
-              <string>rz:</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-             </property>
-            </widget>
-           </item>
-           <item row="3" column="1">
-            <widget class="QLabel" name="curRx">
-             <property name="minimumSize">
-              <size>
-               <width>80</width>
-               <height>0</height>
-              </size>
-             </property>
-             <property name="text">
-              <string>0.00</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="0">
-            <widget class="QLabel" name="label_29">
-             <property name="text">
-              <string>tz:</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-             </property>
-            </widget>
-           </item>
-           <item row="3" column="2">
-            <widget class="QLabel" name="label_25">
-             <property name="text">
-              <string>rx deg</string>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="2">
-            <widget class="QLabel" name="label_35">
-             <property name="text">
-              <string>tz mm</string>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="1">
-            <widget class="QLabel" name="curTy">
-             <property name="minimumSize">
-              <size>
-               <width>80</width>
-               <height>0</height>
-              </size>
-             </property>
-             <property name="text">
-              <string>0.00</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-             </property>
-            </widget>
-           </item>
-           <item row="5" column="1">
-            <widget class="QLabel" name="curRz">
-             <property name="minimumSize">
-              <size>
-               <width>80</width>
-               <height>0</height>
-              </size>
-             </property>
-             <property name="toolTip">
-              <string>This is only the Hexapod rotation around Z</string>
-             </property>
-             <property name="text">
-              <string>0.00</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="0">
-            <widget class="QLabel" name="label_26">
-             <property name="text">
-              <string>ty:</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="0">
-            <widget class="QLabel" name="label_22">
-             <property name="text">
-              <string>tx:</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="2">
-            <widget class="QLabel" name="label_34">
-             <property name="text">
-              <string>ty mm</string>
-             </property>
-            </widget>
-           </item>
-           <item row="4" column="1">
-            <widget class="QLabel" name="curRy">
-             <property name="minimumSize">
-              <size>
-               <width>80</width>
-               <height>0</height>
-              </size>
-             </property>
-             <property name="text">
-              <string>0.00</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </widget>
-        </item>
-       </layout>
+       <widget class="QGroupBox" name="curPos">
+        <property name="title">
+         <string>Current Position</string>
+        </property>
+        <layout class="QGridLayout" name="gridLayout_7" columnstretch="1,1,2">
+         <item row="0" column="1">
+          <widget class="QLabel" name="curTx">
+           <property name="minimumSize">
+            <size>
+             <width>80</width>
+             <height>0</height>
+            </size>
+           </property>
+           <property name="text">
+            <string>0.00</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="1">
+          <widget class="QLabel" name="curTz">
+           <property name="minimumSize">
+            <size>
+             <width>80</width>
+             <height>0</height>
+            </size>
+           </property>
+           <property name="text">
+            <string>0.00</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+           </property>
+          </widget>
+         </item>
+         <item row="4" column="2">
+          <widget class="QLabel" name="label_32">
+           <property name="text">
+            <string>ry deg</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="2">
+          <widget class="QLabel" name="label_33">
+           <property name="text">
+            <string>tx mm</string>
+           </property>
+          </widget>
+         </item>
+         <item row="5" column="2">
+          <widget class="QLabel" name="label_41">
+           <property name="text">
+            <string>rz deg</string>
+           </property>
+          </widget>
+         </item>
+         <item row="4" column="0">
+          <widget class="QLabel" name="label_44">
+           <property name="minimumSize">
+            <size>
+             <width>30</width>
+             <height>0</height>
+            </size>
+           </property>
+           <property name="text">
+            <string>ry:</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+           </property>
+          </widget>
+         </item>
+         <item row="3" column="0">
+          <widget class="QLabel" name="label_45">
+           <property name="minimumSize">
+            <size>
+             <width>30</width>
+             <height>0</height>
+            </size>
+           </property>
+           <property name="text">
+            <string>rx:</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+           </property>
+          </widget>
+         </item>
+         <item row="5" column="0">
+          <widget class="QLabel" name="label_46">
+           <property name="minimumSize">
+            <size>
+             <width>30</width>
+             <height>0</height>
+            </size>
+           </property>
+           <property name="text">
+            <string>rz:</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+           </property>
+          </widget>
+         </item>
+         <item row="3" column="1">
+          <widget class="QLabel" name="curRx">
+           <property name="minimumSize">
+            <size>
+             <width>80</width>
+             <height>0</height>
+            </size>
+           </property>
+           <property name="text">
+            <string>0.00</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="0">
+          <widget class="QLabel" name="label_47">
+           <property name="text">
+            <string>tz:</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+           </property>
+          </widget>
+         </item>
+         <item row="3" column="2">
+          <widget class="QLabel" name="label_48">
+           <property name="text">
+            <string>rx deg</string>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="2">
+          <widget class="QLabel" name="label_49">
+           <property name="text">
+            <string>tz mm</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="1">
+          <widget class="QLabel" name="curTy">
+           <property name="minimumSize">
+            <size>
+             <width>80</width>
+             <height>0</height>
+            </size>
+           </property>
+           <property name="text">
+            <string>0.00</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+           </property>
+          </widget>
+         </item>
+         <item row="5" column="1">
+          <widget class="QLabel" name="curRz">
+           <property name="minimumSize">
+            <size>
+             <width>80</width>
+             <height>0</height>
+            </size>
+           </property>
+           <property name="toolTip">
+            <string>This is only the Hexapod rotation around Z</string>
+           </property>
+           <property name="text">
+            <string>0.00</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0">
+          <widget class="QLabel" name="label_50">
+           <property name="text">
+            <string>ty:</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="0">
+          <widget class="QLabel" name="label_51">
+           <property name="text">
+            <string>tx:</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="2">
+          <widget class="QLabel" name="label_52">
+           <property name="text">
+            <string>ty mm</string>
+           </property>
+          </widget>
+         </item>
+         <item row="4" column="1">
+          <widget class="QLabel" name="curRy">
+           <property name="minimumSize">
+            <size>
+             <width>80</width>
+             <height>0</height>
+            </size>
+           </property>
+           <property name="text">
+            <string>0.00</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
       </item>
       <item>
-       <widget class="QGroupBox" name="grpVelocities">
+       <widget class="QGroupBox" name="grpStatus">
         <property name="font">
          <font>
-          <pointsize>8</pointsize>
+          <pointsize>11</pointsize>
          </font>
         </property>
         <property name="title">
          <string>Status</string>
         </property>
-        <layout class="QGridLayout" name="gridLayout_5">
+        <layout class="QGridLayout" name="gridLayout_5" rowstretch="0,0,0,0,0,0" columnstretch="0,0">
+         <property name="sizeConstraint">
+          <enum>QLayout::SetDefaultConstraint</enum>
+         </property>
          <property name="topMargin">
           <number>5</number>
          </property>
@@ -275,7 +283,7 @@
           <number>7</number>
          </property>
          <property name="verticalSpacing">
-          <number>4</number>
+          <number>15</number>
          </property>
          <item row="4" column="0" alignment="Qt::AlignLeft">
           <widget class="QLabel" name="label_83">
@@ -287,58 +295,8 @@
            </property>
           </widget>
          </item>
-         <item row="2" column="0" alignment="Qt::AlignLeft">
-          <widget class="QLabel" name="label_78">
-           <property name="text">
-            <string>In Position</string>
-           </property>
-           <property name="alignment">
-            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="0" alignment="Qt::AlignLeft">
-          <widget class="QLabel" name="label_80">
-           <property name="frameShape">
-            <enum>QFrame::NoFrame</enum>
-           </property>
-           <property name="text">
-            <string>Initialized</string>
-           </property>
-           <property name="alignment">
-            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-           </property>
-          </widget>
-         </item>
-         <item row="1" column="0" alignment="Qt::AlignLeft">
-          <widget class="QLabel" name="label_81">
-           <property name="text">
-            <string>Control On</string>
-           </property>
-           <property name="alignment">
-            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-           </property>
-          </widget>
-         </item>
-         <item row="3" column="0" alignment="Qt::AlignLeft">
-          <widget class="QLabel" name="label_82">
-           <property name="text">
-            <string>Home Complete</string>
-           </property>
-           <property name="alignment">
-            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-           </property>
-          </widget>
-         </item>
-         <item row="5" column="0">
-          <widget class="QLabel" name="label_7">
-           <property name="text">
-            <string>Error</string>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="1">
-          <widget class="QLabel" name="statusInitialized">
+         <item row="2" column="1">
+          <widget class="QLabel" name="statusPosition">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
              <horstretch>0</horstretch>
@@ -399,8 +357,8 @@
            </property>
           </widget>
          </item>
-         <item row="2" column="1">
-          <widget class="QLabel" name="statusPosition">
+         <item row="0" column="1">
+          <widget class="QLabel" name="statusInitialized">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
              <horstretch>0</horstretch>
@@ -430,34 +388,10 @@
            </property>
           </widget>
          </item>
-         <item row="3" column="1">
-          <widget class="QLabel" name="statusHome">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="minimumSize">
-            <size>
-             <width>16</width>
-             <height>16</height>
-            </size>
-           </property>
-           <property name="maximumSize">
-            <size>
-             <width>16</width>
-             <height>16</height>
-            </size>
-           </property>
+         <item row="5" column="0">
+          <widget class="QLabel" name="label_7">
            <property name="text">
-            <string/>
-           </property>
-           <property name="pixmap">
-            <pixmap resource="../../../../resources/nicos-gui.qrc">:/leds/status_white</pixmap>
-           </property>
-           <property name="scaledContents">
-            <bool>true</bool>
+            <string>Error</string>
            </property>
           </widget>
          </item>
@@ -492,6 +426,60 @@
            </property>
           </widget>
          </item>
+         <item row="0" column="0" alignment="Qt::AlignLeft">
+          <widget class="QLabel" name="label_80">
+           <property name="frameShape">
+            <enum>QFrame::NoFrame</enum>
+           </property>
+           <property name="text">
+            <string>Initialized</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+           </property>
+          </widget>
+         </item>
+         <item row="3" column="1">
+          <widget class="QLabel" name="statusHome">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>16</width>
+             <height>16</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>16</width>
+             <height>16</height>
+            </size>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="pixmap">
+            <pixmap resource="../../../../resources/nicos-gui.qrc">:/leds/status_white</pixmap>
+           </property>
+           <property name="scaledContents">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item row="3" column="0" alignment="Qt::AlignLeft">
+          <widget class="QLabel" name="label_82">
+           <property name="text">
+            <string>Home Complete</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+           </property>
+          </widget>
+         </item>
          <item row="5" column="1">
           <widget class="QLabel" name="statusError">
            <property name="sizePolicy">
@@ -523,23 +511,97 @@
            </property>
           </widget>
          </item>
+         <item row="2" column="0" alignment="Qt::AlignLeft">
+          <widget class="QLabel" name="label_78">
+           <property name="text">
+            <string>In Position</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0">
+          <widget class="QLabel" name="label_81">
+           <property name="text">
+            <string>Control On</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+           </property>
+          </widget>
+         </item>
         </layout>
        </widget>
       </item>
      </layout>
     </item>
     <item>
-     <layout class="QVBoxLayout" name="verticalLayout_2">
+     <layout class="QVBoxLayout" name="verticalLayout_2" stretch="0,0">
+      <property name="spacing">
+       <number>3</number>
+      </property>
+      <property name="sizeConstraint">
+       <enum>QLayout::SetDefaultConstraint</enum>
+      </property>
+      <property name="leftMargin">
+       <number>9</number>
+      </property>
+      <property name="rightMargin">
+       <number>9</number>
+      </property>
+      <property name="bottomMargin">
+       <number>9</number>
+      </property>
       <item>
        <layout class="QVBoxLayout" name="verticalLayout_5">
+        <property name="rightMargin">
+         <number>0</number>
+        </property>
         <item>
-         <widget class="QGroupBox" name="grpNewPos">
+         <widget class="QGroupBox" name="newPos">
           <property name="title">
            <string>New Position</string>
           </property>
-          <layout class="QGridLayout" name="gridLayout">
+          <layout class="QGridLayout" name="gridLayout" rowstretch="0,0,0,0,0,0,0" columnstretch="0,0,0,0,0">
+           <property name="leftMargin">
+            <number>9</number>
+           </property>
+           <property name="topMargin">
+            <number>32</number>
+           </property>
+           <property name="rightMargin">
+            <number>9</number>
+           </property>
+           <property name="bottomMargin">
+            <number>33</number>
+           </property>
+           <property name="spacing">
+            <number>6</number>
+           </property>
+           <item row="5" column="3">
+            <widget class="QLabel" name="label_38">
+             <property name="text">
+              <string>deg</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="3">
+            <widget class="QLabel" name="label_37">
+             <property name="text">
+              <string>mm</string>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="3">
+            <widget class="QLabel" name="label_40">
+             <property name="text">
+              <string>deg</string>
+             </property>
+            </widget>
+           </item>
            <item row="5" column="2">
-            <widget class="QDoubleSpinBox" name="inpNewRy">
+            <widget class="QDoubleSpinBox" name="newRz">
              <property name="buttonSymbols">
               <enum>QAbstractSpinBox::NoButtons</enum>
              </property>
@@ -554,34 +616,131 @@
              </property>
             </widget>
            </item>
-           <item row="7" column="2">
-            <spacer name="verticalSpacer">
-             <property name="orientation">
-              <enum>Qt::Vertical</enum>
+           <item row="4" column="2">
+            <widget class="QDoubleSpinBox" name="newRy">
+             <property name="buttonSymbols">
+              <enum>QAbstractSpinBox::NoButtons</enum>
              </property>
-             <property name="sizeHint" stdset="0">
+             <property name="decimals">
+              <number>2</number>
+             </property>
+             <property name="minimum">
+              <double>-200.000000000000000</double>
+             </property>
+             <property name="maximum">
+              <double>200.000000000000000</double>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="3">
+            <widget class="QLabel" name="label_36">
+             <property name="text">
+              <string>mm</string>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="2">
+            <widget class="QDoubleSpinBox" name="newTz">
+             <property name="buttonSymbols">
+              <enum>QAbstractSpinBox::NoButtons</enum>
+             </property>
+             <property name="decimals">
+              <number>2</number>
+             </property>
+             <property name="minimum">
+              <double>-200.000000000000000</double>
+             </property>
+             <property name="maximum">
+              <double>200.000000000000000</double>
+             </property>
+            </widget>
+           </item>
+           <item row="6" column="4">
+            <widget class="QPushButton" name="butStop">
+             <property name="text">
+              <string>Stop</string>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="2">
+            <widget class="QDoubleSpinBox" name="newRx">
+             <property name="buttonSymbols">
+              <enum>QAbstractSpinBox::NoButtons</enum>
+             </property>
+             <property name="decimals">
+              <number>2</number>
+             </property>
+             <property name="minimum">
+              <double>-200.000000000000000</double>
+             </property>
+             <property name="maximum">
+              <double>200.000000000000000</double>
+             </property>
+            </widget>
+           </item>
+           <item row="5" column="1">
+            <widget class="QLabel" name="label_6">
+             <property name="minimumSize">
               <size>
-               <width>20</width>
-               <height>50</height>
+               <width>30</width>
+               <height>0</height>
               </size>
              </property>
-            </spacer>
-           </item>
-           <item row="6" column="3">
-            <widget class="QLabel" name="label_38">
              <property name="text">
-              <string>deg</string>
+              <string>rz</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="6" column="0">
+            <widget class="QPushButton" name="butStart">
+             <property name="text">
+              <string>Start</string>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="1">
+            <widget class="QLabel" name="label_43">
+             <property name="minimumSize">
+              <size>
+               <width>30</width>
+               <height>0</height>
+              </size>
+             </property>
+             <property name="text">
+              <string>rx</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
              </property>
             </widget>
            </item>
            <item row="4" column="3">
-            <widget class="QLabel" name="label_40">
+            <widget class="QLabel" name="label_42">
              <property name="text">
               <string>deg</string>
              </property>
             </widget>
            </item>
-           <item row="2" column="1">
+           <item row="4" column="1">
+            <widget class="QLabel" name="label_5">
+             <property name="minimumSize">
+              <size>
+               <width>30</width>
+               <height>0</height>
+              </size>
+             </property>
+             <property name="text">
+              <string>ry</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="1">
             <widget class="QLabel" name="label_4">
              <property name="text">
               <string>ty</string>
@@ -591,70 +750,8 @@
              </property>
             </widget>
            </item>
-           <item row="2" column="3">
-            <widget class="QLabel" name="label_37">
-             <property name="text">
-              <string>mm</string>
-             </property>
-            </widget>
-           </item>
-           <item row="4" column="2">
-            <widget class="QDoubleSpinBox" name="inpNewRx">
-             <property name="buttonSymbols">
-              <enum>QAbstractSpinBox::NoButtons</enum>
-             </property>
-             <property name="decimals">
-              <number>2</number>
-             </property>
-             <property name="minimum">
-              <double>-200.000000000000000</double>
-             </property>
-             <property name="maximum">
-              <double>200.000000000000000</double>
-             </property>
-            </widget>
-           </item>
-           <item row="3" column="2">
-            <widget class="QDoubleSpinBox" name="inpNewTz">
-             <property name="buttonSymbols">
-              <enum>QAbstractSpinBox::NoButtons</enum>
-             </property>
-             <property name="decimals">
-              <number>2</number>
-             </property>
-             <property name="minimum">
-              <double>-200.000000000000000</double>
-             </property>
-             <property name="maximum">
-              <double>200.000000000000000</double>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="3">
-            <widget class="QLabel" name="label_36">
-             <property name="text">
-              <string>mm</string>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="2">
-            <widget class="QDoubleSpinBox" name="inpNewTy">
-             <property name="buttonSymbols">
-              <enum>QAbstractSpinBox::NoButtons</enum>
-             </property>
-             <property name="decimals">
-              <number>2</number>
-             </property>
-             <property name="minimum">
-              <double>-200.000000000000000</double>
-             </property>
-             <property name="maximum">
-              <double>200.000000000000000</double>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="2">
-            <widget class="QDoubleSpinBox" name="inpNewTx">
+           <item row="0" column="2">
+            <widget class="QDoubleSpinBox" name="newTx">
              <property name="buttonSymbols">
               <enum>QAbstractSpinBox::NoButtons</enum>
              </property>
@@ -675,41 +772,18 @@
              </property>
             </widget>
            </item>
-           <item row="8" column="4">
-            <widget class="QPushButton" name="butStop">
+           <item row="2" column="1">
+            <widget class="QLabel" name="label_3">
              <property name="text">
-              <string>Stop</string>
-             </property>
-            </widget>
-           </item>
-           <item row="6" column="1">
-            <widget class="QLabel" name="label_6">
-             <property name="minimumSize">
-              <size>
-               <width>30</width>
-               <height>0</height>
-              </size>
-             </property>
-             <property name="text">
-              <string>rz</string>
+              <string>tz</string>
              </property>
              <property name="alignment">
               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
              </property>
             </widget>
            </item>
-           <item row="1" column="1">
-            <widget class="QLabel" name="label_2">
-             <property name="text">
-              <string>tx</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-             </property>
-            </widget>
-           </item>
-           <item row="6" column="2">
-            <widget class="QDoubleSpinBox" name="inpNewRz">
+           <item row="1" column="2">
+            <widget class="QDoubleSpinBox" name="newTy">
              <property name="buttonSymbols">
               <enum>QAbstractSpinBox::NoButtons</enum>
              </property>
@@ -724,79 +798,20 @@
              </property>
             </widget>
            </item>
-           <item row="5" column="1">
-            <widget class="QLabel" name="label_5">
-             <property name="minimumSize">
-              <size>
-               <width>30</width>
-               <height>0</height>
-              </size>
-             </property>
+           <item row="0" column="1">
+            <widget class="QLabel" name="label_2">
              <property name="text">
-              <string>ry</string>
+              <string>tx</string>
              </property>
              <property name="alignment">
               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
              </property>
             </widget>
            </item>
-           <item row="4" column="1">
-            <widget class="QLabel" name="label_43">
-             <property name="minimumSize">
-              <size>
-               <width>30</width>
-               <height>0</height>
-              </size>
-             </property>
-             <property name="text">
-              <string>rx</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-             </property>
-            </widget>
-           </item>
-           <item row="3" column="3">
+           <item row="2" column="3">
             <widget class="QLabel" name="label_39">
              <property name="text">
               <string>mm</string>
-             </property>
-            </widget>
-           </item>
-           <item row="8" column="0">
-            <widget class="QPushButton" name="butStart">
-             <property name="text">
-              <string>Start</string>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="2">
-            <spacer name="verticalSpacer_2">
-             <property name="orientation">
-              <enum>Qt::Vertical</enum>
-             </property>
-             <property name="sizeHint" stdset="0">
-              <size>
-               <width>20</width>
-               <height>40</height>
-              </size>
-             </property>
-            </spacer>
-           </item>
-           <item row="5" column="3">
-            <widget class="QLabel" name="label_42">
-             <property name="text">
-              <string>deg</string>
-             </property>
-            </widget>
-           </item>
-           <item row="3" column="1">
-            <widget class="QLabel" name="label_3">
-             <property name="text">
-              <string>tz</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
              </property>
             </widget>
            </item>
@@ -807,46 +822,24 @@
       </item>
       <item>
        <layout class="QVBoxLayout" name="verticalLayout_3">
+        <property name="sizeConstraint">
+         <enum>QLayout::SetMinimumSize</enum>
+        </property>
+        <property name="topMargin">
+         <number>17</number>
+        </property>
         <item>
-         <widget class="QGroupBox" name="groupBox">
-          <property name="title">
-           <string>Preset Movements</string>
+         <spacer name="verticalSpacer_4">
+          <property name="orientation">
+           <enum>Qt::Vertical</enum>
           </property>
-          <layout class="QGridLayout" name="gridLayout_2">
-           <item row="0" column="0">
-            <widget class="QComboBox" name="presetOption">
-             <item>
-              <property name="text">
-               <string>USER_ZERO</string>
-              </property>
-             </item>
-             <item>
-              <property name="text">
-               <string>MACHINE_ZERO</string>
-              </property>
-             </item>
-             <item>
-              <property name="text">
-               <string>RETRACTED</string>
-              </property>
-             </item>
-            </widget>
-           </item>
-           <item row="0" column="1">
-            <widget class="QPushButton" name="presetStart">
-             <property name="text">
-              <string>Start</string>
-             </property>
-             <property name="default">
-              <bool>false</bool>
-             </property>
-             <property name="flat">
-              <bool>false</bool>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </widget>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>20</width>
+            <height>40</height>
+           </size>
+          </property>
+         </spacer>
         </item>
        </layout>
       </item>
@@ -854,11 +847,14 @@
     </item>
     <item>
      <layout class="QVBoxLayout" name="verticalLayout_4">
+      <property name="spacing">
+       <number>6</number>
+      </property>
       <item>
-       <widget class="QGroupBox" name="grpVelocities_2">
+       <widget class="QGroupBox" name="grpSpd">
         <property name="font">
          <font>
-          <pointsize>8</pointsize>
+          <pointsize>11</pointsize>
          </font>
         </property>
         <property name="title">
@@ -866,13 +862,16 @@
         </property>
         <layout class="QGridLayout" name="gridLayout_6">
          <property name="topMargin">
-          <number>5</number>
+          <number>15</number>
          </property>
          <property name="bottomMargin">
-          <number>7</number>
+          <number>20</number>
+         </property>
+         <property name="horizontalSpacing">
+          <number>0</number>
          </property>
          <property name="verticalSpacing">
-          <number>4</number>
+          <number>2</number>
          </property>
          <item row="6" column="0" colspan="3">
           <widget class="QSlider" name="rSlider">
@@ -888,6 +887,9 @@
           <widget class="QDoubleSpinBox" name="aSpinBox">
            <property name="buttonSymbols">
             <enum>QAbstractSpinBox::NoButtons</enum>
+           </property>
+           <property name="decimals">
+            <number>3</number>
            </property>
           </widget>
          </item>
@@ -960,14 +962,14 @@
          <item row="5" column="0">
           <widget class="QLabel" name="rLabel">
            <property name="text">
-            <string>Rotational Speed (deg/s)</string>
+            <string>Rotational Speed </string>
            </property>
           </widget>
          </item>
          <item row="0" column="0">
           <widget class="QLabel" name="tLabel">
            <property name="text">
-            <string>Translation Speed (mm/s)</string>
+            <string>Translation Speed</string>
            </property>
           </widget>
          </item>
@@ -975,6 +977,9 @@
           <widget class="QDoubleSpinBox" name="rSpinBox">
            <property name="buttonSymbols">
             <enum>QAbstractSpinBox::NoButtons</enum>
+           </property>
+           <property name="decimals">
+            <number>3</number>
            </property>
           </widget>
          </item>
@@ -1059,6 +1064,50 @@
       <item>
        <layout class="QVBoxLayout" name="verticalLayout_11">
         <item>
+         <widget class="QGroupBox" name="presets">
+          <property name="title">
+           <string>Preset Movements</string>
+          </property>
+          <layout class="QGridLayout" name="gridLayout_2" columnstretch="1,0">
+           <property name="topMargin">
+            <number>19</number>
+           </property>
+           <item row="0" column="0">
+            <widget class="QComboBox" name="presetOption">
+             <item>
+              <property name="text">
+               <string>USER_ZERO</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>MACHINE_ZERO</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>RETRACTED</string>
+              </property>
+             </item>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="QPushButton" name="presetStart">
+             <property name="text">
+              <string>Start</string>
+             </property>
+             <property name="default">
+              <bool>false</bool>
+             </property>
+             <property name="flat">
+              <bool>false</bool>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item>
          <spacer name="verticalSpacer_3">
           <property name="orientation">
            <enum>Qt::Vertical</enum>
@@ -1095,13 +1144,23 @@
     <rect>
      <x>10</x>
      <y>10</y>
-     <width>851</width>
-     <height>41</height>
+     <width>891</width>
+     <height>53</height>
     </rect>
    </property>
-   <layout class="QVBoxLayout" name="verticalLayout_6">
+   <layout class="QVBoxLayout" name="verticalLayout_6" stretch="1,0">
     <item>
-     <widget class="QLabel" name="label">
+     <widget class="QLabel" name="panelLabel">
+      <property name="font">
+       <font>
+        <pointsize>12</pointsize>
+        <weight>75</weight>
+        <bold>true</bold>
+       </font>
+      </property>
+      <property name="lineWidth">
+       <number>5</number>
+      </property>
       <property name="text">
        <string>Hexapod Controls</string>
       </property>

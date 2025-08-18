@@ -1,7 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>Hexapod</class>
- <widget class="QWidget" name="Hexapod">
+ <class>hexControl</class>
+ <widget class="QWidget" name="hexControl">
+  <property name="enabled">
+   <bool>true</bool>
+  </property>
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -16,55 +19,28 @@
   <widget class="QWidget" name="horizontalLayoutWidget">
    <property name="geometry">
     <rect>
-     <x>9</x>
-     <y>49</y>
+     <x>10</x>
+     <y>60</y>
      <width>891</width>
      <height>593</height>
     </rect>
    </property>
-   <layout class="QHBoxLayout" name="hexapodControls" stretch="1,1,1">
+   <layout class="QHBoxLayout" name="hexapodControls" stretch="0,1,1">
     <property name="spacing">
      <number>0</number>
     </property>
     <item>
-     <layout class="QVBoxLayout" name="verticalLayout">
+     <layout class="QVBoxLayout" name="layout0" stretch="0,0">
+      <property name="sizeConstraint">
+       <enum>QLayout::SetFixedSize</enum>
+      </property>
       <item>
-       <layout class="QVBoxLayout" name="verticalLayout_7">
-        <item>
-         <widget class="QWidget" name="grpCurrentPos" native="true">
-          <property name="minimumSize">
-           <size>
-            <width>126</width>
-            <height>0</height>
-           </size>
-          </property>
-          <layout class="QGridLayout" name="gridLayout_3" columnstretch="0">
-           <property name="leftMargin">
-            <number>0</number>
-           </property>
-           <property name="topMargin">
-            <number>3</number>
-           </property>
-           <property name="rightMargin">
-            <number>0</number>
-           </property>
-           <property name="bottomMargin">
-            <number>0</number>
-           </property>
-           <property name="spacing">
-            <number>0</number>
-           </property>
-           <item row="0" column="0">
-            <widget class="QGroupBox" name="curPos">
-             <property name="title">
-              <string>Current Position</string>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </widget>
-        </item>
-       </layout>
+       <widget class="QGroupBox" name="curPos">
+        <property name="title">
+         <string>Current Position</string>
+        </property>
+        <layout class="QGridLayout" name="gridLayout_7" columnstretch="0"/>
+       </widget>
       </item>
       <item>
        <widget class="QGroupBox" name="grpStatus">
@@ -77,6 +53,9 @@
          <string>Status</string>
         </property>
         <layout class="QGridLayout" name="gridLayout_5" rowstretch="0,0,0,0,0,0" columnstretch="0,0">
+         <property name="sizeConstraint">
+          <enum>QLayout::SetDefaultConstraint</enum>
+         </property>
          <property name="topMargin">
           <number>5</number>
          </property>
@@ -349,7 +328,7 @@
        <number>9</number>
       </property>
       <property name="rightMargin">
-       <number>6</number>
+       <number>9</number>
       </property>
       <property name="bottomMargin">
        <number>9</number>
@@ -364,7 +343,7 @@
           <property name="title">
            <string>New Position</string>
           </property>
-          <layout class="QGridLayout" name="gridLayout" rowstretch="0,0,0,0,0,0,0" columnstretch="0,0,0,0,0">
+          <layout class="QGridLayout" name="gridLayout" rowstretch="0" columnstretch="0,0">
            <property name="leftMargin">
             <number>9</number>
            </property>
@@ -380,239 +359,17 @@
            <property name="spacing">
             <number>6</number>
            </property>
-           <item row="1" column="2">
-            <widget class="QDoubleSpinBox" name="inpNewTy">
-             <property name="buttonSymbols">
-              <enum>QAbstractSpinBox::NoButtons</enum>
-             </property>
-             <property name="decimals">
-              <number>2</number>
-             </property>
-             <property name="minimum">
-              <double>-200.000000000000000</double>
-             </property>
-             <property name="maximum">
-              <double>200.000000000000000</double>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="3">
-            <widget class="QLabel" name="label_39">
-             <property name="text">
-              <string>mm</string>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="1">
-            <widget class="QLabel" name="label_3">
-             <property name="text">
-              <string>tz</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-             </property>
-            </widget>
-           </item>
-           <item row="5" column="3">
-            <widget class="QLabel" name="label_38">
-             <property name="text">
-              <string>deg</string>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="2">
-            <widget class="QDoubleSpinBox" name="inpNewTz">
-             <property name="buttonSymbols">
-              <enum>QAbstractSpinBox::NoButtons</enum>
-             </property>
-             <property name="decimals">
-              <number>2</number>
-             </property>
-             <property name="minimum">
-              <double>-200.000000000000000</double>
-             </property>
-             <property name="maximum">
-              <double>200.000000000000000</double>
-             </property>
-            </widget>
-           </item>
-           <item row="5" column="1">
-            <widget class="QLabel" name="label_6">
-             <property name="minimumSize">
-              <size>
-               <width>30</width>
-               <height>0</height>
-              </size>
-             </property>
-             <property name="text">
-              <string>rz</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-             </property>
-            </widget>
-           </item>
-           <item row="6" column="0">
+           <item row="0" column="0">
             <widget class="QPushButton" name="butStart">
              <property name="text">
               <string>Start</string>
              </property>
             </widget>
            </item>
-           <item row="5" column="2">
-            <widget class="QDoubleSpinBox" name="inpNewRz">
-             <property name="buttonSymbols">
-              <enum>QAbstractSpinBox::NoButtons</enum>
-             </property>
-             <property name="decimals">
-              <number>2</number>
-             </property>
-             <property name="minimum">
-              <double>-200.000000000000000</double>
-             </property>
-             <property name="maximum">
-              <double>200.000000000000000</double>
-             </property>
-            </widget>
-           </item>
-           <item row="4" column="3">
-            <widget class="QLabel" name="label_42">
-             <property name="text">
-              <string>deg</string>
-             </property>
-            </widget>
-           </item>
-           <item row="3" column="3">
-            <widget class="QLabel" name="label_40">
-             <property name="text">
-              <string>deg</string>
-             </property>
-            </widget>
-           </item>
            <item row="0" column="1">
-            <widget class="QLabel" name="label_2">
-             <property name="text">
-              <string>tx</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-             </property>
-            </widget>
-           </item>
-           <item row="4" column="2">
-            <widget class="QDoubleSpinBox" name="inpNewRy">
-             <property name="buttonSymbols">
-              <enum>QAbstractSpinBox::NoButtons</enum>
-             </property>
-             <property name="decimals">
-              <number>2</number>
-             </property>
-             <property name="minimum">
-              <double>-200.000000000000000</double>
-             </property>
-             <property name="maximum">
-              <double>200.000000000000000</double>
-             </property>
-            </widget>
-           </item>
-           <item row="6" column="4">
             <widget class="QPushButton" name="butStop">
              <property name="text">
               <string>Stop</string>
-             </property>
-            </widget>
-           </item>
-           <item row="3" column="2">
-            <widget class="QDoubleSpinBox" name="inpNewRx">
-             <property name="buttonSymbols">
-              <enum>QAbstractSpinBox::NoButtons</enum>
-             </property>
-             <property name="decimals">
-              <number>2</number>
-             </property>
-             <property name="minimum">
-              <double>-200.000000000000000</double>
-             </property>
-             <property name="maximum">
-              <double>200.000000000000000</double>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="1">
-            <widget class="QLabel" name="label_4">
-             <property name="text">
-              <string>ty</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-             </property>
-            </widget>
-           </item>
-           <item row="4" column="1">
-            <widget class="QLabel" name="label_5">
-             <property name="minimumSize">
-              <size>
-               <width>30</width>
-               <height>0</height>
-              </size>
-             </property>
-             <property name="text">
-              <string>ry</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="3">
-            <widget class="QLabel" name="label_36">
-             <property name="text">
-              <string>mm</string>
-             </property>
-            </widget>
-           </item>
-           <item row="3" column="1">
-            <widget class="QLabel" name="label_43">
-             <property name="minimumSize">
-              <size>
-               <width>30</width>
-               <height>0</height>
-              </size>
-             </property>
-             <property name="text">
-              <string>rx</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="3">
-            <widget class="QLabel" name="label_37">
-             <property name="text">
-              <string>mm</string>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="2">
-            <widget class="QDoubleSpinBox" name="inpNewTx">
-             <property name="buttonSymbols">
-              <enum>QAbstractSpinBox::NoButtons</enum>
-             </property>
-             <property name="decimals">
-              <number>2</number>
-             </property>
-             <property name="minimum">
-              <double>-200.000000000000000</double>
-             </property>
-             <property name="maximum">
-              <double>200.000000000000000</double>
-             </property>
-             <property name="singleStep">
-              <double>1.000000000000000</double>
-             </property>
-             <property name="stepType">
-              <enum>QAbstractSpinBox::DefaultStepType</enum>
              </property>
             </widget>
            </item>
@@ -649,7 +406,7 @@
     <item>
      <layout class="QVBoxLayout" name="verticalLayout_4">
       <property name="spacing">
-       <number>0</number>
+       <number>6</number>
       </property>
       <item>
        <widget class="QGroupBox" name="grpSpd">
@@ -940,12 +697,22 @@
      <x>10</x>
      <y>10</y>
      <width>891</width>
-     <height>41</height>
+     <height>53</height>
     </rect>
    </property>
-   <layout class="QVBoxLayout" name="verticalLayout_6">
+   <layout class="QVBoxLayout" name="verticalLayout_6" stretch="1,0">
     <item>
-     <widget class="QLabel" name="label">
+     <widget class="QLabel" name="panelLabel">
+      <property name="font">
+       <font>
+        <pointsize>12</pointsize>
+        <weight>75</weight>
+        <bold>true</bold>
+       </font>
+      </property>
+      <property name="lineWidth">
+       <number>5</number>
+      </property>
       <property name="text">
        <string>Hexapod Controls</string>
       </property>
@@ -957,6 +724,31 @@
        <enum>Qt::Horizontal</enum>
       </property>
      </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QWidget" name="verticalLayoutWidget">
+   <property name="geometry">
+    <rect>
+     <x>11</x>
+     <y>651</y>
+     <width>891</width>
+     <height>41</height>
+    </rect>
+   </property>
+   <layout class="QVBoxLayout" name="verticalLayout">
+    <item>
+     <spacer name="verticalSpacer">
+      <property name="orientation">
+       <enum>Qt::Vertical</enum>
+      </property>
+      <property name="sizeHint" stdset="0">
+       <size>
+        <width>20</width>
+        <height>40</height>
+       </size>
+      </property>
+     </spacer>
     </item>
    </layout>
   </widget>
