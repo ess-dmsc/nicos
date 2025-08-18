@@ -259,12 +259,6 @@ class EpicsAnalogMoveable(EpicsParameters, HasPrecision, HasLimits, Moveable):
             mandatory=False,
             userparam=False,
         ),
-        "can_stop": Param(
-            "If True, the device can be stopped by writing the current value to the write PV",
-            type=bool,
-            default=False,
-            userparam=False,
-        ),
     }
 
     parameter_overrides = {
@@ -376,10 +370,6 @@ class EpicsAnalogMoveable(EpicsParameters, HasPrecision, HasLimits, Moveable):
     def doStart(self, value):
         self._epics_wrapper.put_pv_value(self.writepv, value)
 
-    def doStop(self):
-        if self.can_stop:
-            self.start(self.doRead())
-
     def _value_change_callback(
         self, name, param, value, units, limits, severity, message, **kwargs
     ):
@@ -452,12 +442,6 @@ class EpicsStringMoveable(EpicsParameters, Moveable):
             "Optional target readback PV.",
             type=none_or(pvname),
             mandatory=False,
-            userparam=False,
-        ),
-        "can_stop": Param(
-            "If True, the device can be stopped by writing the current value to the write PV",
-            type=bool,
-            default=False,
             userparam=False,
         ),
     }
@@ -537,10 +521,6 @@ class EpicsStringMoveable(EpicsParameters, Moveable):
 
     def doStart(self, value):
         self._epics_wrapper.put_pv_value(self.writepv, value)
-
-    def doStop(self):
-        if self.can_stop:
-            self.start(self.doRead())
 
     def _value_change_callback(
         self, name, param, value, units, limits, severity, message, **kwargs
@@ -738,10 +718,6 @@ class EpicsMappedMoveable(EpicsParameters, MappedMoveable):
 
     def doStart(self, value):
         self._epics_wrapper.put_pv_value(self.writepv, self.mapping[value])
-
-    def doStop(self):
-        # Does nothing
-        pass
 
     def _value_change_callback(
         self, name, param, value, units, limits, severity, message, **kwargs
