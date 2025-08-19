@@ -7,7 +7,6 @@ from nicos.core import ADMIN
 from nicos.core.status import BUSY, DISABLED, ERROR, NOTREACHED, OK, UNKNOWN, WARN
 from nicos.guisupport.colors import colors
 from nicos.guisupport.qt import (
-    pyqtSignal,
     pyqtSlot,
     sip,
 )
@@ -30,6 +29,11 @@ class HexapodPanel(Panel):
         self.devname = ""
         self.paraminfo = {}
 
+        self._current_status = "idle"
+        self._exec_reqid = None
+        self._error_window = None
+        self._control_dialogs = {}
+
         self.setup_connections(client)
         self._hideAcceleration()
         self.setup_hexapod()
@@ -40,17 +44,22 @@ class HexapodPanel(Panel):
         client.connected.connect(self.on_client_connected)
         client.disconnected.connect(self.on_client_disconnected)
 
+        client.message.connect(self.on_client_message)
         client.device.connect(self.on_client_device)
 
     def setup_hexapod(self):
         self._get_hexapod_name()
-        self._show_controls()
         if self.devname:
             self.get_params()
             self.setupSliders()
+        self._show_controls()
 
-    def exec_command(self, command):
-        self.client.tell("exec", command)
+    def exec_command(self, command, immediate=False):
+        if immediate:
+            self.client.tell("exec", command)
+            self._exec_requid = None
+        else:
+            self._exec_reqid = self.client.run(command)
 
     def on_client_setup(self):
         self.setup_hexapod()
@@ -61,8 +70,30 @@ class HexapodPanel(Panel):
     def on_client_disconnected(self):
         self.setup_hexapod()
 
+    def on_client_message(self, message):
+        # show warnings and errors emitted by the current command in a window
+        if message[5] != self._exec_reqid or message[2] < WARNING:
+            return
+        msg = "%s: %s" % (message[0], message[3].strip())
+        if self._error_window is None:
+
+            def reset_errorwindow():
+                self._error_window = None
+
+            self._error_window = ErrorDialog(self)
+            self._error_window.accepted.connect(reset_errorwindow)
+            self._error_window.addMessage(msg)
+            self._error_window.show()
+        else:
+            self._error_window.addMessage(msg)
+            self._error_window.activateWindow()
+
     def on_client_device(self, data):
-        return
+        (action, device) = data
+        if action == "create":
+            if self.devname in device:
+                adevs = len(device) - 1
+                self.paraminfo.update({"adev_num": adevs})
 
     def on_client_cache(self, data):
         (time, key, op, value) = data
@@ -74,7 +105,8 @@ class HexapodPanel(Panel):
             fvalue = cache_load(value)
             self.update_current_pos(fvalue)
 
-    def _get_hexapod_name(self):  # hardcoded to virtual hexapod
+    # hardcoded to virtual hexapod atm. Create catch for >1 pod in device setup?
+    def _get_hexapod_name(self):
         name = self.client.getDeviceList(
             needs_class="nicos_ess.devices.virtual.hexapod.VirtualHexapod"
         )
@@ -103,9 +135,7 @@ class HexapodPanel(Panel):
             sub_param_info.update({"curvalue": paramval[param]})
             self.paraminfo.update({f"{param}": sub_param_info})
 
-        # self.showError(f"{self.paraminfo}")
-
-    # create value formatter?
+    # create value formatter
     def update_current_pos(self, values):
         self.curTx.setText("%.3f" % values[0])
         self.curTy.setText("%.3f" % values[1])
@@ -137,6 +167,7 @@ class HexapodPanel(Panel):
     # button is also being used to look at device data structures currently
     @pyqtSlot()
     def on_butStart_pressed(self):
+        # figure out how to iterate through widgets
         target = [
             self.newTx.value(),
             self.newTy.value(),
@@ -150,14 +181,13 @@ class HexapodPanel(Panel):
 
     @pyqtSlot()
     def on_butStop_pressed(self):
-        self.exec_command(f"stop({self.devname})")
+        self.exec_command(f"stop({self.devname})", immediate=True)
 
     @pyqtSlot()
-    def on_butPreset_pressed(
-        self,
-    ):  # used to look at data structures atm. no functionality
+    def on_butPreset_pressed(self):
+        # used to look at data structures atm. no functionality
         deviceParams = self.client.eval("session.getSetupInfo()", {})
-        self.showError(f"{deviceParams['devices']}")
+        self.showError(f"{self.paraminfo}")
 
     @pyqtSlot()
     def on_applySpeedSettings_clicked(self):
