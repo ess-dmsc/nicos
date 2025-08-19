@@ -26,79 +26,13 @@ class HexapodPanel(Panel):
     def __init__(self, parent, client, options):
         Panel.__init__(self, parent, client, options)
         loadUi(self, findResource("nicos_ess/gui/panels/ui_files/hexapod.ui"))
-        self.setup_connections(client)
-
         # hexapod information
         self.devname = ""
-        self.devclass = ""
-        self.t_unit = ""
-        self.r_unit = ""
-        self.t_range = ()
-        self.r_range = ()
+        self.paraminfo = {}
 
-        # daemon request ID of last command executed from this panel
-        # (used to display messages from this command)
-        self._current_status = "idle"
-        self._exec_reqid = None
-        self._error_window = None
-
-    # button is also being used to look at device data structures currently
-    def on_butStart_pressed(self):
-        # self._move()
-        self.set_speed_limits()
-
-    def on_butStop_pressed(self):
-        self.exec_command(f"stop({self.devname})")
-
-    def _move(self, immediate=False):
-        # collect positions from spinboxes and run move command
-        # does not pop up error panel if declared command is out of bounds
-        # there is probably a better way...
-        target = [
-            self.newTx.value(),
-            self.newTy.value(),
-            self.newTz.value(),
-            self.newRx.value(),
-            self.newRy.value(),
-            self.newRz.value(),
-        ]
-
-        self.exec_command(f"move({self.devname}, ({target}))")
-
-    def set_speed_limits(self):
-        self.paraminfo = self.client.getDeviceParamInfo(
-            self.devname
-        )  # details of the parameters
-        self.pvals = self.client.getDeviceParams(self.devname)
-        t_typ = self.paraminfo["t_speed"]["type"]  # location of the limits
-        r_typ = self.paraminfo["r_speed"]["type"]
-        self.t_unit = self.paraminfo["t_speed"]["unit"]
-        self.r_unit = self.paraminfo["r_speed"]["unit"]
-        self.t_range = (t_typ.fr, t_typ.to)
-        self.r_range = (r_typ.fr, r_typ.to)
-
-        self.tLabel.setText(f"Translation Speed ({self.t_unit})")
-        self.tmin.setText(f"{self.t_range[0]}")
-        self.tmax.setText(f"{self.t_range[1]}")
-
-        self.rLabel.setText(f"Rotational Speed ({self.r_unit})")
-        self.rmin.setText(f"{self.r_range[0]}")
-        self.rmax.setText(f"{self.r_range[1]}")
-        self.showError(f"{self.pvals}")
-        self.setupSliders()
-
-        # self.showError(f"{r_range}: {r_unit}")
-
-    def update_current_pos(self, values):
-        self.curTx.setText("%.3f" % values[0])
-        self.curTy.setText("%.3f" % values[1])
-        self.curTz.setText("%.3f" % values[2])
-        self.curRx.setText("%.3f" % values[3])
-        self.curRy.setText("%.3f" % values[4])
-        self.curRz.setText("%.3f" % values[5])
-
-    def exec_command(self, command):
-        self.client.tell("exec", command)
+        self.setup_connections(client)
+        self._hideAcceleration()
+        self.setup_hexapod()
 
     def setup_connections(self, client):
         client.setup.connect(self.on_client_setup)
@@ -106,9 +40,29 @@ class HexapodPanel(Panel):
         client.connected.connect(self.on_client_connected)
         client.disconnected.connect(self.on_client_disconnected)
 
-    def on_client_setup(self):
-        self._get_hexapod_name(self.devname)
+        client.device.connect(self.on_client_device)
+
+    def setup_hexapod(self):
+        self._get_hexapod_name()
         self._show_controls()
+        if self.devname:
+            self.get_params()
+            self.setupSliders()
+
+    def exec_command(self, command):
+        self.client.tell("exec", command)
+
+    def on_client_setup(self):
+        self.setup_hexapod()
+
+    def on_client_connected(self):
+        self.setup_hexapod()
+
+    def on_client_disconnected(self):
+        self.setup_hexapod()
+
+    def on_client_device(self, data):
+        return
 
     def on_client_cache(self, data):
         (time, key, op, value) = data
@@ -120,72 +74,131 @@ class HexapodPanel(Panel):
             fvalue = cache_load(value)
             self.update_current_pos(fvalue)
 
-    def on_client_connected(self):
-        self._get_hexapod_name(self.devname)
-        self._show_controls()
-
-    def on_client_disconnected(self):
-        self.devname == ""
-        self._show_controls()
-
-    def on_applySpeedSettings_clicked(self):
-        self.exec_command(f"{self.devname}.t_speed = {self.tSpinBox.value()}")
-        self.exec_command(f"{self.devname}.r_speed = {self.rSpinBox.value()}")
-
-    # should show controls if hexapod is within selected devices. Otherwise nothing
-    # on load check for hexapod data if exists
-    def _show_controls(self):
-        devices = self.client.eval("session.devices", {})
-        for devname in devices:
-            if "hexapod" in devices[devname].lower():
-                self.panelLabel.setText(f"Hexapod Controls - {self.devname}")
-                self.curPos.show()
-                self.grpStatus.show()
-                self.newPos.show()
-
-                # to add later
-                self.grpSpd.show()
-                self.presets.show()
-                self.set_speed_limits()
-                return
-            else:
-                continue
-        self.panelLabel.setText("Hexapod Controls")
-        self.curPos.hide()
-        self.grpStatus.hide()
-        self.newPos.hide()
-
-        # to add later
-        self.grpSpd.hide()
-        self.presets.hide()
-
-    def _get_hexapod_name(self, devname):  # hardcoded to virtual hexapod
-        if devname != "":
-            return
-
+    def _get_hexapod_name(self):  # hardcoded to virtual hexapod
         name = self.client.getDeviceList(
             needs_class="nicos_ess.devices.virtual.hexapod.VirtualHexapod"
         )
         if name:
             self.devname = name[0]
+        else:
+            self.devname = ""
 
-    ####### Spinbox and Slider Conversions
+    def get_params(self):
+        if self.devname == "":
+            return
+
+        params = self.client.getDeviceParamInfo(self.devname)  # parameter details
+        paramval = self.client.getDeviceParams(self.devname)  # parameter values
+
+        for param in ["t_speed", "r_speed"]:
+            sub_param_info = {}
+            for units in ["type", "unit"]:
+                if units == "type":  # split limit range
+                    sub_param_info.update({"min": params[f"{param}"][f"{units}"].fr})
+                    sub_param_info.update({"max": params[f"{param}"][f"{units}"].to})
+
+                else:
+                    sub_param_info.update({f"{units}": params[f"{param}"][f"{units}"]})
+
+            sub_param_info.update({"curvalue": paramval[param]})
+            self.paraminfo.update({f"{param}": sub_param_info})
+
+        # self.showError(f"{self.paraminfo}")
+
+    # create value formatter?
+    def update_current_pos(self, values):
+        self.curTx.setText("%.3f" % values[0])
+        self.curTy.setText("%.3f" % values[1])
+        self.curTz.setText("%.3f" % values[2])
+        self.curRx.setText("%.3f" % values[3])
+        self.curRy.setText("%.3f" % values[4])
+        self.curRz.setText("%.3f" % values[5])
+
+    def _show_controls(self):
+        if self.devname:
+            self.panelLabel.setText(f"{self.devname.capitalize()}")
+            self.curPos.show()
+            self.grpStatus.show()
+            self.newPos.show()
+            self.grpSpd.show()
+
+            # to add
+            self.presets.show()
+        else:
+            self.panelLabel.clear()
+            self.curPos.hide()
+            self.grpStatus.hide()
+            self.newPos.hide()
+            self.grpSpd.hide()
+
+            # to add
+            self.presets.hide()
+
+    # button is also being used to look at device data structures currently
+    @pyqtSlot()
+    def on_butStart_pressed(self):
+        target = [
+            self.newTx.value(),
+            self.newTy.value(),
+            self.newTz.value(),
+            self.newRx.value(),
+            self.newRy.value(),
+            self.newRz.value(),
+        ]
+
+        self.exec_command(f"move({self.devname}, ({target}))")
+
+    @pyqtSlot()
+    def on_butStop_pressed(self):
+        self.exec_command(f"stop({self.devname})")
+
+    @pyqtSlot()
+    def on_butPreset_pressed(
+        self,
+    ):  # used to look at data structures atm. no functionality
+        deviceParams = self.client.eval("session.getSetupInfo()", {})
+        self.showError(f"{deviceParams['devices']}")
+
+    @pyqtSlot()
+    def on_applySpeedSettings_clicked(self):
+        self.exec_command(f"{self.devname}.t_speed = {self.tSpinBox.value()}")
+        self.exec_command(f"{self.devname}.r_speed = {self.rSpinBox.value()}")
+
+    # ----------Spinbox and Slider UI Functionality----------#
+
     def setupSliders(self):
-        # only need to convert sliders since they work in whole steps
-        self.tSlider.setMinimum(self._step_convert(self.t_range[0], "SLIDER"))
-        self.tSlider.setMaximum(self._step_convert(self.t_range[1], "SLIDER"))
-        self.tSpinBox.setMinimum(self.t_range[0])
-        self.tSpinBox.setMaximum(self.t_range[1])
+        self.tLabel.setText(f"Translation Speed ({self.paraminfo['t_speed']['unit']})")
+        self.tmin.setText(f"{self.paraminfo['t_speed']['min']}")
+        self.tmax.setText(f"{self.paraminfo['t_speed']['max']}")
 
-        self.rSlider.setMinimum(self._step_convert(self.r_range[0], "SLIDER"))
-        self.rSlider.setMaximum(self._step_convert(self.r_range[1], "SLIDER"))
-        self.rSpinBox.setMinimum(self.r_range[0])
-        self.rSpinBox.setMaximum(self.r_range[1])
+        self.rLabel.setText(f"Rotational Speed ({self.paraminfo['r_speed']['unit']})")
+        self.rmin.setText(f"{self.paraminfo['r_speed']['min']}")
+        self.rmax.setText(f"{self.paraminfo['r_speed']['max']}")
+
+        # only need to convert sliders since they work in whole steps
+        self.tSlider.setMinimum(
+            self._step_convert(self.paraminfo["t_speed"]["min"], "SLIDER")
+        )
+        self.tSlider.setMaximum(
+            self._step_convert(self.paraminfo["t_speed"]["max"], "SLIDER")
+        )
+        self.tSpinBox.setMinimum(self.paraminfo["t_speed"]["min"])
+        self.tSpinBox.setMaximum(self.paraminfo["t_speed"]["max"])
+
+        self.rSlider.setMinimum(
+            self._step_convert(self.paraminfo["r_speed"]["min"], "SLIDER")
+        )
+        self.rSlider.setMaximum(
+            self._step_convert(self.paraminfo["r_speed"]["max"], "SLIDER")
+        )
+        self.rSpinBox.setMinimum(self.paraminfo["r_speed"]["min"])
+        self.rSpinBox.setMaximum(self.paraminfo["r_speed"]["max"])
 
         # add inital speed values to the spin boxes as well
-        # self.tSpinbox.value(self.)
+        self.tSpinBox.setValue(self.paraminfo["t_speed"]["curvalue"])
+        self.rSpinBox.setValue(self.paraminfo["r_speed"]["curvalue"])
 
-    # values for sliders must be converted into int from the min and max but need float for real values in spin box
+    # sliders only work in int steps
     def on_tSlider_valueChanged(self):
         self.tSpinBox.setValue(self._step_convert(self.tSlider.value(), "SPINNER"))
 
@@ -203,3 +216,16 @@ class HexapodPanel(Panel):
             return int(value * 100)
         if type == "SPINNER":
             return float(value / 100)
+
+    def _hideAcceleration(self):  # available in .ui but not currently used
+        name = [
+            self.aLabel,
+            self.amin,
+            self.amax,
+            self.aSlider,
+            self.aSpinBox,
+            self.aLine,
+        ]
+
+        for label in name:
+            label.setVisible(False)
