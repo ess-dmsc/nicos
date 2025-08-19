@@ -1074,6 +1074,9 @@
           <property name="title">
            <string>Preset Movements</string>
           </property>
+          <property name="checkable">
+           <bool>true</bool>
+          </property>
           <layout class="QGridLayout" name="gridLayout_2" columnstretch="1,0">
            <property name="topMargin">
             <number>9</number>
