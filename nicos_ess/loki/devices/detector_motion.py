@@ -1,12 +1,8 @@
 from time import sleep
 
 from nicos.core import (
-    Override,
     Param,
     status,
-)
-from nicos.core.utils import (
-    usermethod,
 )
 from nicos_ess.devices.epics.pva.motor import EpicsMotor
 from nicos import session
