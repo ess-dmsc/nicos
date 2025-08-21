@@ -74,14 +74,14 @@
             </widget>
            </item>
            <item row="2" column="2">
-            <widget class="QLabel" name="label_49">
+            <widget class="QLabel" name="curTzUnit">
              <property name="text">
               <string>mm</string>
              </property>
             </widget>
            </item>
            <item row="3" column="2">
-            <widget class="QLabel" name="label_48">
+            <widget class="QLabel" name="curRxUnit">
              <property name="text">
               <string>deg</string>
              </property>
@@ -133,21 +133,21 @@
             </widget>
            </item>
            <item row="1" column="2">
-            <widget class="QLabel" name="label_52">
+            <widget class="QLabel" name="curTyUnit">
              <property name="text">
               <string>mm</string>
              </property>
             </widget>
            </item>
            <item row="5" column="2">
-            <widget class="QLabel" name="label_41">
+            <widget class="QLabel" name="curRzUnit">
              <property name="text">
               <string>deg</string>
              </property>
             </widget>
            </item>
            <item row="4" column="2">
-            <widget class="QLabel" name="label_32">
+            <widget class="QLabel" name="curRyUnit">
              <property name="text">
               <string>deg</string>
              </property>
@@ -186,7 +186,7 @@
             </widget>
            </item>
            <item row="0" column="2">
-            <widget class="QLabel" name="label_33">
+            <widget class="QLabel" name="curTxUnit">
              <property name="text">
               <string>mm</string>
              </property>
@@ -598,7 +598,7 @@
      </layout>
     </item>
     <item>
-     <layout class="QVBoxLayout" name="verticalLayout_2" stretch="0,1">
+     <layout class="QVBoxLayout" name="verticalLayout_2" stretch="1,1">
       <property name="spacing">
        <number>3</number>
       </property>
@@ -668,7 +668,7 @@
               </widget>
              </item>
              <item row="1" column="3">
-              <widget class="QLabel" name="label_37">
+              <widget class="QLabel" name="newTyUnit">
                <property name="text">
                 <string>mm</string>
                </property>
@@ -733,7 +733,7 @@
               </widget>
              </item>
              <item row="3" column="3">
-              <widget class="QLabel" name="label_40">
+              <widget class="QLabel" name="newRxUnit">
                <property name="text">
                 <string>deg</string>
                </property>
@@ -772,14 +772,14 @@
               </widget>
              </item>
              <item row="4" column="3">
-              <widget class="QLabel" name="label_42">
+              <widget class="QLabel" name="newRyUnit">
                <property name="text">
                 <string>deg</string>
                </property>
               </widget>
              </item>
              <item row="2" column="3">
-              <widget class="QLabel" name="label_39">
+              <widget class="QLabel" name="newTzUnit">
                <property name="text">
                 <string>mm</string>
                </property>
@@ -808,7 +808,7 @@
               </widget>
              </item>
              <item row="0" column="3">
-              <widget class="QLabel" name="label_36">
+              <widget class="QLabel" name="newTxUnit">
                <property name="text">
                 <string>mm</string>
                </property>
@@ -890,7 +890,7 @@
               </widget>
              </item>
              <item row="5" column="3">
-              <widget class="QLabel" name="label_38">
+              <widget class="QLabel" name="newRzUnit">
                <property name="text">
                 <string>deg</string>
                </property>
