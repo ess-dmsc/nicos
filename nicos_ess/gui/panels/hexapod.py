@@ -85,7 +85,6 @@ class HexapodPanel(Panel):
 
     def on_client_disconnected(self):
         self.setup_hexapod()
-        # self.clear()
 
     def on_client_message(self, message):
         # show warnings and errors emitted by the current command in a window
@@ -128,8 +127,7 @@ class HexapodPanel(Panel):
                 self.paraminfo.update({"total_adev": 6})
             if len(name) > 1:
                 self.showError("Error: 2 Hexapods Found. Panel can only control one!")
-                self.devname = ""
-                self._show_controls()
+                # clear whole panel and only show Control with Error on top
             self.devname = name[0]
         else:
             self.devname = ""
