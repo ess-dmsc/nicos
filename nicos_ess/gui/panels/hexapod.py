@@ -1,34 +1,11 @@
 from logging import WARNING
 
 from nicos.clients.gui.dialogs.error import ErrorDialog
-from nicos.clients.gui.panels import Panel, showPanel
-from nicos.clients.gui.utils import ScriptExecQuestion, dialogFromUi, loadUi
-from nicos.core.status import BUSY, DISABLED, ERROR, NOTREACHED, OK, UNKNOWN, WARN
+from nicos.clients.gui.panels import Panel
+from nicos.clients.gui.utils import loadUi
 from nicos.guisupport.colors import colors
-from nicos.guisupport.qt import (
-    QBrush,
-    QByteArray,
-    QComboBox,
-    QCursor,
-    QDialog,
-    QDialogButtonBox,
-    QDoubleSpinBox,
-    QFont,
-    QIcon,
-    QInputDialog,
-    QLabel,
-    QMenu,
-    QMessageBox,
-    QPalette,
-    QPushButton,
-    Qt,
-    QTreeWidgetItem,
-    pyqtSignal,
-    pyqtSlot,
-    sip,
-)
-from nicos.guisupport.typedvalue import ComboWidget, DeviceParamEdit, DeviceValueEdit
-from nicos.protocols.cache import OP_TELL, cache_dump, cache_load
+from nicos.guisupport.qt import pyqtSlot
+from nicos.protocols.cache import cache_load
 from nicos.utils import AttrDict, findResource
 from nicos_ess.gui.utils import get_icon
 
@@ -46,7 +23,6 @@ class HexapodPanel(Panel):
         self.paraminfo = {}
         self.qtObj = {}
 
-        self._current_status = "idle"
         self._exec_reqid = None
         self._error_window = None
         self._control_dialogs = {}
@@ -72,7 +48,7 @@ class HexapodPanel(Panel):
             self.paraminfo.clear()
         self._show_controls()
 
-    def exec_command(self, command, immediate=False):
+    def exec_command(self, command):
         self.client.tell("exec", command)
         self._exec_reqid = self.client.run(command)
 
@@ -155,7 +131,7 @@ class HexapodPanel(Panel):
 
         # find attached devices
 
-    # create value formatter
+    # create value formatter?
     def update_current_pos(self, values):
         curval = 0
         for axis in self.qtObj:
@@ -163,10 +139,10 @@ class HexapodPanel(Panel):
             curval = curval + 1
 
     def get_adevs(self):
-        # number of attached devices, name and name in setup
+        # independent of params currently to figure out the best way to find them
         self.showError(f"{self.device_commands}")
 
-    def create_dof_dict(self):  # based on # of devices. qt objects held in dict
+    def create_dof_dict(self):  # allows for iterating to update Qt widgets
         self.qtObj = {
             "tx": {
                 "curVal": self.curTx,
@@ -205,10 +181,8 @@ class HexapodPanel(Panel):
                 }
             )
 
-    # button is also being used to look at device data structures currently
     @pyqtSlot()
     def on_butStart_pressed(self):
-        # figure out how to iterate through widgets
         target = []
 
         for axis in self.qtObj:
@@ -218,7 +192,7 @@ class HexapodPanel(Panel):
 
     @pyqtSlot()
     def on_butStop_pressed(self):
-        self.exec_command(f"stop({self.devname})", immediate=True)
+        self.exec_command(f"stop({self.devname})")
 
     @pyqtSlot()
     def on_butPreset_pressed(self):
@@ -248,13 +222,11 @@ class HexapodPanel(Panel):
             self.grpStatus.hide()
 
     def on_applySpeedSettings_clicked(self):
-        self.showError("Apply Settings")
-        self.exec_command(
-            f"{self.devname}.t_speed = {self.tSpinBox.value()}", immediate=True
-        )
-        self.exec_command(
-            f"{self.devname}.r_speed = {self.rSpinBox.value()}", immediate=True
-        )
+        self.showError("New Settings Applied")
+        self.exec_command(f"{self.devname}.t_speed = {self.tSpinBox.value()}")
+        self.exec_command(f"{self.devname}.r_speed = {self.rSpinBox.value()}")
+        self.curT.setText(f"[{self.tSpinBox.value()}]")
+        self.curR.setText(f"[{self.rSpinBox.value()}]")
 
     # ----------Spinbox and Slider UI Functionality----------#
 
@@ -289,6 +261,8 @@ class HexapodPanel(Panel):
         # add inital speed values to the spin boxes as well
         self.tSpinBox.setValue(self.paraminfo["t_speed"]["curvalue"])
         self.rSpinBox.setValue(self.paraminfo["r_speed"]["curvalue"])
+        self.curT.setText(f"[{self.paraminfo['t_speed']['curvalue']}]")
+        self.curR.setText(f"[{self.paraminfo['r_speed']['curvalue']}]")
 
     # sliders only work in int steps
     def on_tSlider_valueChanged(self):
