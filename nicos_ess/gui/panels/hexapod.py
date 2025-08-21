@@ -3,17 +3,33 @@ from logging import WARNING
 from nicos.clients.gui.dialogs.error import ErrorDialog
 from nicos.clients.gui.panels import Panel, showPanel
 from nicos.clients.gui.utils import ScriptExecQuestion, dialogFromUi, loadUi
-from nicos.core import ADMIN
 from nicos.core.status import BUSY, DISABLED, ERROR, NOTREACHED, OK, UNKNOWN, WARN
 from nicos.guisupport.colors import colors
 from nicos.guisupport.qt import (
+    QBrush,
+    QByteArray,
+    QComboBox,
+    QCursor,
+    QDialog,
+    QDialogButtonBox,
+    QDoubleSpinBox,
+    QFont,
+    QIcon,
+    QInputDialog,
+    QLabel,
+    QMenu,
+    QMessageBox,
+    QPalette,
+    QPushButton,
+    Qt,
+    QTreeWidgetItem,
+    pyqtSignal,
     pyqtSlot,
     sip,
 )
 from nicos.guisupport.typedvalue import ComboWidget, DeviceParamEdit, DeviceValueEdit
 from nicos.protocols.cache import OP_TELL, cache_dump, cache_load
 from nicos.utils import AttrDict, findResource
-from nicos_ess.gui.panels.panel import Panel
 from nicos_ess.gui.utils import get_icon
 
 
@@ -28,6 +44,7 @@ class HexapodPanel(Panel):
         # hexapod information
         self.devname = ""
         self.paraminfo = {}
+        self.qtObj = {}
 
         self._current_status = "idle"
         self._exec_reqid = None
@@ -43,32 +60,32 @@ class HexapodPanel(Panel):
         client.cache.connect(self.on_client_cache)
         client.connected.connect(self.on_client_connected)
         client.disconnected.connect(self.on_client_disconnected)
-
         client.message.connect(self.on_client_message)
-        client.device.connect(self.on_client_device)
 
     def setup_hexapod(self):
         self._get_hexapod_name()
         if self.devname:
             self.get_params()
+            self.create_dof_dict()
             self.setupSliders()
+        else:
+            self.paraminfo.clear()
         self._show_controls()
 
     def exec_command(self, command, immediate=False):
-        if immediate:
-            self.client.tell("exec", command)
-            self._exec_requid = None
-        else:
-            self._exec_reqid = self.client.run(command)
+        self.client.tell("exec", command)
+        self._exec_reqid = self.client.run(command)
 
     def on_client_setup(self):
         self.setup_hexapod()
 
     def on_client_connected(self):
+        self.devname = ""
         self.setup_hexapod()
 
     def on_client_disconnected(self):
         self.setup_hexapod()
+        # self.clear()
 
     def on_client_message(self, message):
         # show warnings and errors emitted by the current command in a window
@@ -88,13 +105,6 @@ class HexapodPanel(Panel):
             self._error_window.addMessage(msg)
             self._error_window.activateWindow()
 
-    def on_client_device(self, data):
-        (action, device) = data
-        if action == "create":
-            if self.devname in device:
-                adevs = len(device) - 1
-                self.paraminfo.update({"adev_num": adevs})
-
     def on_client_cache(self, data):
         (time, key, op, value) = data
         devname, pname = key.split("/")
@@ -107,10 +117,19 @@ class HexapodPanel(Panel):
 
     # hardcoded to virtual hexapod atm. Create catch for >1 pod in device setup?
     def _get_hexapod_name(self):
-        name = self.client.getDeviceList(
-            needs_class="nicos_ess.devices.virtual.hexapod.VirtualHexapod"
-        )
+        sixdof = "nicos_ess.devices.virtual.hexapod.VirtualHexapod"
+        sevdof = "nicos_ess.devices.virtual.hexapod.TableHexapod"
+
+        name = self.client.getDeviceList(needs_class=sixdof)
         if name:
+            if self.client.getDeviceList(needs_class=sevdof):
+                self.paraminfo.update({"total_adev": 7})
+            else:
+                self.paraminfo.update({"total_adev": 6})
+            if len(name) > 1:
+                self.showError("Error: 2 Hexapods Found. Panel can only control one!")
+                self.devname = ""
+                self._show_controls()
             self.devname = name[0]
         else:
             self.devname = ""
@@ -122,6 +141,7 @@ class HexapodPanel(Panel):
         params = self.client.getDeviceParamInfo(self.devname)  # parameter details
         paramval = self.client.getDeviceParams(self.devname)  # parameter values
 
+        # speed params
         for param in ["t_speed", "r_speed"]:
             sub_param_info = {}
             for units in ["type", "unit"]:
@@ -135,47 +155,66 @@ class HexapodPanel(Panel):
             sub_param_info.update({"curvalue": paramval[param]})
             self.paraminfo.update({f"{param}": sub_param_info})
 
+        # find attached devices
+
     # create value formatter
     def update_current_pos(self, values):
-        self.curTx.setText("%.3f" % values[0])
-        self.curTy.setText("%.3f" % values[1])
-        self.curTz.setText("%.3f" % values[2])
-        self.curRx.setText("%.3f" % values[3])
-        self.curRy.setText("%.3f" % values[4])
-        self.curRz.setText("%.3f" % values[5])
+        curval = 0
+        for axis in self.qtObj:
+            self.qtObj[axis]["curVal"].setText("%.3f" % values[curval])
+            curval = curval + 1
 
-    def _show_controls(self):
-        if self.devname:
-            self.panelLabel.setText(f"{self.devname.capitalize()}")
-            self.curPos.show()
-            self.grpStatus.show()
-            self.newPos.show()
-            self.grpSpd.show()
+    def get_adevs(self):
+        # number of attached devices, name and name in setup
+        self.showError(f"{self.device_commands}")
 
-            # to add
-            self.presets.show()
-        else:
-            self.panelLabel.clear()
-            self.curPos.hide()
-            self.grpStatus.hide()
-            self.newPos.hide()
-            self.grpSpd.hide()
+    def create_dof_dict(self):  # based on # of devices. qt objects held in dict
+        self.qtObj = {
+            "tx": {
+                "curVal": self.curTx,
+                "newVal": self.newTx,
+            },
+            "ty": {
+                "curVal": self.curTy,
+                "newVal": self.newTy,
+            },
+            "tz": {
+                "curVal": self.curTz,
+                "newVal": self.newTz,
+            },
+            "rx": {
+                "curVal": self.curRx,
+                "newVal": self.newRx,
+            },
+            "ry": {
+                "curVal": self.curRy,
+                "newVal": self.newRy,
+            },
+            "rz": {
+                "curVal": self.curRz,
+                "newVal": self.newRz,
+            },
+        }
 
-            # to add
-            self.presets.hide()
+        # There's a better way somewhere...
+        if self.paraminfo["total_adev"] == 7:  # add additional position box
+            self.qtObj.update(
+                {
+                    "table": {
+                        "curVal": self.curTab,
+                        "newVal": self.newTab,
+                    }
+                }
+            )
 
     # button is also being used to look at device data structures currently
     @pyqtSlot()
     def on_butStart_pressed(self):
         # figure out how to iterate through widgets
-        target = [
-            self.newTx.value(),
-            self.newTy.value(),
-            self.newTz.value(),
-            self.newRx.value(),
-            self.newRy.value(),
-            self.newRz.value(),
-        ]
+        target = []
+
+        for axis in self.qtObj:
+            target.append(self.qtObj[axis]["newVal"].value())
 
         self.exec_command(f"move({self.devname}, ({target}))")
 
@@ -185,14 +224,39 @@ class HexapodPanel(Panel):
 
     @pyqtSlot()
     def on_butPreset_pressed(self):
-        # used to look at data structures atm. no functionality
-        deviceParams = self.client.eval("session.getSetupInfo()", {})
-        self.showError(f"{self.paraminfo}")
+        # currently not functional
+        self.get_adevs()
 
-    @pyqtSlot()
+    def _show_controls(self):
+        if self.devname:
+            self.panelLabel.setText(f"{self.devname.capitalize()}")
+            self.curPos.show()
+            self.newPos.show()
+            self.grpSpd.show()
+
+            # to add
+            self.presets.show()
+            self.grpStatus.show()
+            self.show_added_dof()
+
+        else:
+            self.panelLabel.clear()
+            self.curPos.hide()
+            self.newPos.hide()
+            self.grpSpd.hide()
+
+            # to add
+            self.presets.hide()
+            self.grpStatus.hide()
+
     def on_applySpeedSettings_clicked(self):
-        self.exec_command(f"{self.devname}.t_speed = {self.tSpinBox.value()}")
-        self.exec_command(f"{self.devname}.r_speed = {self.rSpinBox.value()}")
+        self.showError("Apply Settings")
+        self.exec_command(
+            f"{self.devname}.t_speed = {self.tSpinBox.value()}", immediate=True
+        )
+        self.exec_command(
+            f"{self.devname}.r_speed = {self.rSpinBox.value()}", immediate=True
+        )
 
     # ----------Spinbox and Slider UI Functionality----------#
 
@@ -246,6 +310,23 @@ class HexapodPanel(Panel):
             return int(value * 100)
         if type == "SPINNER":
             return float(value / 100)
+
+    def show_added_dof(self):
+        name = [
+            self.curTabLabel,
+            self.curTab,
+            self.curTabUnit,
+            self.newTabLabel,
+            self.newTab,
+            self.newTabUnit,
+        ]
+
+        if self.paraminfo["total_adev"] == 7:
+            for label in name:
+                label.setVisible(True)
+        else:
+            for label in name:
+                label.setVisible(False)
 
     def _hideAcceleration(self):  # available in .ui but not currently used
         name = [
