@@ -28,7 +28,7 @@ main_window = docked(
                         ("Scan Plot", panel("nicos_ess.gui.panels.scans.ScansPanel")),
                         (
                             "Detector Image",
-                            panel("nicos_ess.gui.panels.live_gr.MultiLiveDataPanel"),
+                            panel("nicos_ess.gui.panels.live_pyqt.MultiLiveDataPanel"),
                         ),
                         (
                             "Choppers",
