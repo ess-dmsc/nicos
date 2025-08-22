@@ -143,26 +143,50 @@ class HexapodPanel(Panel):
             "tx": {
                 "curVal": self.curTx,
                 "newVal": self.newTx,
+                "curLabel": self.curTxLabel,
+                "curUnit": self.curTxUnit,
+                "newLabel": self.newTxLabel,
+                "newUnit": self.newTxUnit,
             },
             "ty": {
                 "curVal": self.curTy,
                 "newVal": self.newTy,
+                "curLabel": self.curTyLabel,
+                "curUnit": self.curTyUnit,
+                "newLabel": self.newTyLabel,
+                "newUnit": self.newTyUnit,
             },
             "tz": {
                 "curVal": self.curTz,
                 "newVal": self.newTz,
+                "curLabel": self.curTzLabel,
+                "curUnit": self.curTzUnit,
+                "newLabel": self.newTzLabel,
+                "newUnit": self.newTzUnit,
             },
             "rx": {
                 "curVal": self.curRx,
                 "newVal": self.newRx,
+                "curLabel": self.curRxLabel,
+                "curUnit": self.curRxUnit,
+                "newLabel": self.newRxLabel,
+                "newUnit": self.newRxUnit,
             },
             "ry": {
                 "curVal": self.curRy,
                 "newVal": self.newRy,
+                "curLabel": self.curRyLabel,
+                "curUnit": self.curRyUnit,
+                "newLabel": self.newRyLabel,
+                "newUnit": self.newRyUnit,
             },
             "rz": {
                 "curVal": self.curRz,
                 "newVal": self.newRz,
+                "curLabel": self.curRzLabel,
+                "curUnit": self.curRzUnit,
+                "newLabel": self.newRzLabel,
+                "newUnit": self.newRzUnit,
             },
         }
 
@@ -173,6 +197,10 @@ class HexapodPanel(Panel):
                     "table": {
                         "curVal": self.curTab,
                         "newVal": self.newTab,
+                        "curLabel": self.curTabLabel,
+                        "curUnit": self.curTabUnit,
+                        "newLabel": self.newTabLabel,
+                        "newUnit": self.newTabUnit,
                     }
                 }
             )
@@ -335,4 +363,4 @@ class HexapodPanel(Panel):
 
             self._adevs.update({f"{keys}": mini_dict})
 
-        self.showError(f"{adevs}")
+        self.showError(f"{self._adevs}")
