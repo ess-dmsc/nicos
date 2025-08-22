@@ -26,6 +26,9 @@ class LOKIDetectorMotion(EpicsMotor):
     def doInit(self, mode):
         EpicsMotor.doInit(self, mode)
         self._ps_bank = self.get_ps_bank()
+    
+    def get_ps_bank(self):
+        return session.devices[self.ps_bank_name]
 
     def bank_voltage_is_zero(self):
         if self._ps_bank is None:
@@ -69,7 +72,4 @@ class LOKIDetectorMotion(EpicsMotor):
 
         print("Detector motion: Power Supply Bank is OFF and voltages are ZERO. Moving is okay.")
         return True, "Power Supply Bank is OFF. Moving is okay."
-
-    def get_ps_bank(self):
-        return session.devices[self.ps_bank_name]
         
