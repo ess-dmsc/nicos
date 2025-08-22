@@ -166,4 +166,20 @@ devices = dict(
         motorpv="YMIR-DivSl2:MC-SlZg-01:Mtr",
         monitor_deadband=0.01,
     ),
+    cabinet_1_status=device(
+        "nicos_ess.devices.epics.mbbi_direct.MBBIDirectStatus",
+        description="Cabinet 2 status",
+        pv_root="YMIR-MCS2:MC-MCU-02:Cabinet",
+        number_of_bits=24,
+    ),
+    cabinet_1_pressure_1=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description="Cabinet 2 pressure 1",
+        readpv="YMIR-MCS2:MC-MCU-02:Pressure1",
+    ),
+    cabinet_1_pressure_2=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description="Cabinet 2 pressure 2",
+        readpv="YMIR-MCS2:MC-MCU-02:Pressure2",
+    ),
 )
