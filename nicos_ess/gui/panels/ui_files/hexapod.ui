@@ -723,6 +723,9 @@
              </item>
              <item row="1" column="2">
               <widget class="QDoubleSpinBox" name="newTy">
+               <property name="locale">
+                <locale language="English" country="UnitedStates"/>
+               </property>
                <property name="buttonSymbols">
                 <enum>QAbstractSpinBox::NoButtons</enum>
                </property>
@@ -739,6 +742,9 @@
              </item>
              <item row="5" column="2">
               <widget class="QDoubleSpinBox" name="newRz">
+               <property name="locale">
+                <locale language="English" country="UnitedStates"/>
+               </property>
                <property name="buttonSymbols">
                 <enum>QAbstractSpinBox::NoButtons</enum>
                </property>
@@ -765,6 +771,9 @@
              </item>
              <item row="2" column="2">
               <widget class="QDoubleSpinBox" name="newTz">
+               <property name="locale">
+                <locale language="English" country="UnitedStates"/>
+               </property>
                <property name="buttonSymbols">
                 <enum>QAbstractSpinBox::NoButtons</enum>
                </property>
@@ -788,6 +797,9 @@
              </item>
              <item row="3" column="2">
               <widget class="QDoubleSpinBox" name="newRx">
+               <property name="locale">
+                <locale language="English" country="UnitedStates"/>
+               </property>
                <property name="buttonSymbols">
                 <enum>QAbstractSpinBox::NoButtons</enum>
                </property>
@@ -834,6 +846,9 @@
              </item>
              <item row="0" column="2">
               <widget class="QDoubleSpinBox" name="newTx">
+               <property name="locale">
+                <locale language="English" country="UnitedStates"/>
+               </property>
                <property name="buttonSymbols">
                 <enum>QAbstractSpinBox::NoButtons</enum>
                </property>
@@ -906,6 +921,9 @@
              </item>
              <item row="4" column="2">
               <widget class="QDoubleSpinBox" name="newRy">
+               <property name="locale">
+                <locale language="English" country="UnitedStates"/>
+               </property>
                <property name="buttonSymbols">
                 <enum>QAbstractSpinBox::NoButtons</enum>
                </property>
@@ -968,6 +986,9 @@
              </item>
              <item row="6" column="2">
               <widget class="QDoubleSpinBox" name="newTab">
+               <property name="locale">
+                <locale language="English" country="UnitedStates"/>
+               </property>
                <property name="buttonSymbols">
                 <enum>QAbstractSpinBox::NoButtons</enum>
                </property>
@@ -1052,6 +1073,9 @@
           <layout class="QGridLayout" name="tSpeedGrid" columnstretch="1,0,1" rowminimumheight="0,0,0,0">
            <item row="2" column="1">
             <widget class="QDoubleSpinBox" name="tSpinBox">
+             <property name="locale">
+              <locale language="English" country="UnitedStates"/>
+             </property>
              <property name="frame">
               <bool>true</bool>
              </property>
@@ -1139,6 +1163,9 @@
           <layout class="QGridLayout" name="aSpeedGrid" columnstretch="1,0,1">
            <item row="2" column="1">
             <widget class="QDoubleSpinBox" name="aSpinBox">
+             <property name="locale">
+              <locale language="English" country="UnitedStates"/>
+             </property>
              <property name="buttonSymbols">
               <enum>QAbstractSpinBox::NoButtons</enum>
              </property>
@@ -1237,6 +1264,9 @@
            </item>
            <item row="2" column="1">
             <widget class="QDoubleSpinBox" name="rSpinBox">
+             <property name="locale">
+              <locale language="English" country="UnitedStates"/>
+             </property>
              <property name="buttonSymbols">
               <enum>QAbstractSpinBox::NoButtons</enum>
              </property>
@@ -1293,6 +1323,9 @@
            </property>
            <item row="0" column="1">
             <widget class="QPushButton" name="butPreset">
+             <property name="locale">
+              <locale language="English" country="UnitedStates"/>
+             </property>
              <property name="text">
               <string>Start</string>
              </property>
@@ -1415,38 +1448,5 @@
   <include location="../../../../resources/nicos-gui.qrc"/>
   <include location="../../../../../../../../resources/nicos-gui.qrc"/>
  </resources>
- <connections>
-  <connection>
-   <sender>tSpinBox</sender>
-   <signal>valueChanged(double)</signal>
-   <receiver>tSlider</receiver>
-   <slot>update()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>802</x>
-     <y>129</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>920</x>
-     <y>102</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>tSlider</sender>
-   <signal>sliderMoved(int)</signal>
-   <receiver>tSpinBox</receiver>
-   <slot>update()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>668</x>
-     <y>99</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>756</x>
-     <y>126</y>
-    </hint>
-   </hints>
-  </connection>
- </connections>
+ <connections/>
 </ui>
