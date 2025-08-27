@@ -302,8 +302,6 @@ class HexapodPanel(Panel):
     def on_applySpeedSettings_clicked(self):
         self.exec_command(f"{self.devname}.t_speed = {self.tSpinBox.value()}")
         self.exec_command(f"{self.devname}.r_speed = {self.rSpinBox.value()}")
-        self.curT.setText(f"[{self.tSpinBox.value()}]")
-        self.curR.setText(f"[{self.rSpinBox.value()}]")
 
     def setup_sliders(self):
         self.tLabel.setText(f"Translation Speed ({self.paraminfo['t_speed']['unit']})")
