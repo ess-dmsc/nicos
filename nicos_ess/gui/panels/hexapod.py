@@ -3,11 +3,9 @@ from logging import WARNING
 from nicos.clients.gui.dialogs.error import ErrorDialog
 from nicos.clients.gui.panels import Panel
 from nicos.clients.gui.utils import loadUi
-from nicos.guisupport.colors import colors
 from nicos.guisupport.qt import pyqtSlot
-from nicos.protocols.cache import OP_TELL, cache_dump, cache_load
-from nicos.utils import AttrDict, findResource
-from nicos_ess.gui.utils import get_icon
+from nicos.protocols.cache import cache_load
+from nicos.utils import findResource
 
 
 class HexapodPanel(Panel):
@@ -66,13 +64,12 @@ class HexapodPanel(Panel):
             self.update_current_pos(fvalue)
 
     def on_client_message(self, message):
-        # show warnings and errors emitted by the current command in a window
         if message[5] != self._exec_reqid or message[2] < WARNING:
-            if (
-                "t_speed" or "r_speed" in message[3]
-            ):  # updates gui if device panel is used
+            # updates gui if device panel is used
+            if "t_speed" in message[3] or "r_speed" in message[3]:
                 self.update_ui_sliders()
             return
+        # show warnings and errors emitted by the current command in a window
         msg = "%s: %s" % (message[0], message[3].strip())
         if self._error_window is None:
 
@@ -110,6 +107,7 @@ class HexapodPanel(Panel):
             self.curPos.show()
             self.newPos.show()
             self.grpSpd.show()
+            self._show_added_dof()
 
             # to add
             self.presets.show()
@@ -149,7 +147,7 @@ class HexapodPanel(Panel):
         for param in ["t_speed", "r_speed"]:
             sub_param_info = {}
             for units in ["type", "unit"]:
-                if units == "type":  # split limit range
+                if units == "type":
                     sub_param_info.update({"min": params[f"{param}"][f"{units}"].fr})
                     sub_param_info.update({"max": params[f"{param}"][f"{units}"].to})
 
@@ -181,7 +179,10 @@ class HexapodPanel(Panel):
             self.adevs.update({f"{keys}": mini_dict})
 
     def propagate_ui(self):
-        # todo: Clear Qt UI and pull data from Adev info
+        for keys in self.qtObj:
+            self.qtObj[keys]["curUnit"].setText(f"{self.adevs[keys]['unit']}")
+            self.qtObj[keys]["newUnit"].setText(f"{self.adevs[keys]['unit']}")
+
         self.setup_sliders()
         return
 
@@ -236,7 +237,7 @@ class HexapodPanel(Panel):
                 "newUnit": self.newRzUnit,
             },
         }
-        # There's a better way somewhere...
+
         if self.paraminfo["adevs"] == 7:
             self.qtObj.update(
                 {
@@ -251,7 +252,7 @@ class HexapodPanel(Panel):
                 }
             )
 
-    def show_added_dof(self):
+    def _show_added_dof(self):
         name = [
             self.curTabLabel,
             self.curTab,
@@ -341,7 +342,6 @@ class HexapodPanel(Panel):
         self.curT.setText(f"[{paramval['t_speed']}]")
         self.curR.setText(f"[{paramval['r_speed']}]")
 
-    # sliders only work in int steps
     def on_tSlider_valueChanged(self):
         self.tSpinBox.setValue(self._step_convert(self.tSlider.value(), "SPINNER"))
 

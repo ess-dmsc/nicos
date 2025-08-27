@@ -26,6 +26,10 @@ main_window = docked(
                             panel("nicos_ess.gui.panels.hexapod.HexapodPanel"),
                         ),
                         (
+                            "Hexapod",
+                            panel("nicos_ess.gui.panels.hexapod.HexapodPanel"),
+                        ),
+                        (
                             "Detector Image",
                             panel("nicos_ess.gui.panels.live_pyqt.MultiLiveDataPanel"),
                         ),
