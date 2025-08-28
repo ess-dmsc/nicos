@@ -313,6 +313,17 @@ class TimepixDetector(AreaDetector):
         "acquireperiod": Param(
             "Time between exposure starts.", settable=True, volatile=True
         ),
+        "nprocessing": Param(
+            "Number of .tpx files queued for processing.", settable=False, volatile=True
+        ),
+        "min_photons": Param(
+            "Minimum number of photons for a neutron.", settable=True, volatile=True
+        ),
+        "min_psd": Param(
+            "Minimum pulse shape discrimination value for a neutron.",
+            settable=True,
+            volatile=True,
+        ),
     }
 
     def doPreinit(self, mode):
@@ -340,6 +351,9 @@ class TimepixDetector(AreaDetector):
         self._record_fields["num_processing"] = "nProcessing"
         self._record_fields["path_to_add"] = "path_toAdd"
         self._record_fields["path_last_added"] = "path_lastAdded"
+        self._record_fields["min_photons"] = "evFilt:phMin"
+        self._record_fields["min_psd"] = "evFilt:psdMin"
+        self._record_fields["first_trigger"] = "firstTrigger"
 
     def to_str(self, int_list):
         """Convert list of ints to string, ignoring trailing nulls."""
@@ -368,6 +382,14 @@ class TimepixDetector(AreaDetector):
 
         # we then start the acquisition as normal
 
+        # get the ns timestamp, and split it into a second part and a nanosecond part
+        ts = time.time_ns()
+        ts_sec = ts // 1_000_000_000
+        ts_nsec = ts % 1_000_000_000
+        ts_str = f"{ts_sec}.{ts_nsec}"
+
+        self._put_pv("first_trigger", ts_str)
+
         self.doAcquire()
 
         num_retries = 10
@@ -379,6 +401,21 @@ class TimepixDetector(AreaDetector):
         self.log.warning(
             f"Timepix folder {foldername} not added after {num_retries * self._long_loop_delay} seconds"
         )
+
+    def doReadNprocessing(self):
+        return self._get_pv("num_processing")
+
+    def doReadMin_Photons(self):
+        return self._get_pv("min_photons")
+
+    def doWriteMin_Photons(self, value):
+        self._put_pv("min_photons", value)
+
+    def doReadMin_Psd(self):
+        return self._get_pv("min_psd")
+
+    def doWriteMin_Psd(self, value):
+        self._put_pv("min_psd", value)
 
     def doReadAcquiretime(self):
         return self._get_pv("acquire_time_rbv")
