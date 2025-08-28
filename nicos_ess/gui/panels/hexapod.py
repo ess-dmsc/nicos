@@ -130,6 +130,7 @@ class HexapodPanel(Panel):
             if len(name) > 1:
                 self.showError("Error: 2 Hexapods Found. Panel can only control one!")
                 self.clear()
+                return
             self.devname = name[0]
         else:
             self.clear()
