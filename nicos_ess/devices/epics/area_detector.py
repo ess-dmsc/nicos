@@ -368,6 +368,14 @@ class TimepixDetector(AreaDetector):
         path_name = f"file:/data/{foldername}"
         ascii_path_name = self.to_int_list(path_name)
 
+        # get the ns timestamp, and split it into a second part and a nanosecond part
+        ts = time.time_ns()
+        ts_sec = ts // 1_000_000_000
+        ts_nsec = ts % 1_000_000_000
+        ts_str = f"{ts_sec}.{ts_nsec:09d}"
+
+        self._put_pv("first_trigger", ts_str)
+
         # first we need to set the output folder path. use time_ns to make it unique
 
         self._put_pv("folder_path", ascii_path_name)
@@ -381,14 +389,6 @@ class TimepixDetector(AreaDetector):
         self._put_pv("path_to_add", foldername)
 
         # we then start the acquisition as normal
-
-        # get the ns timestamp, and split it into a second part and a nanosecond part
-        ts = time.time_ns()
-        ts_sec = ts // 1_000_000_000
-        ts_nsec = ts % 1_000_000_000
-        ts_str = f"{ts_sec}.{ts_nsec:09d}"
-
-        self._put_pv("first_trigger", ts_str)
 
         self.doAcquire()
 
