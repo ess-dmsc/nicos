@@ -386,7 +386,7 @@ class TimepixDetector(AreaDetector):
         ts = time.time_ns()
         ts_sec = ts // 1_000_000_000
         ts_nsec = ts % 1_000_000_000
-        ts_str = f"{ts_sec}.{ts_nsec}"
+        ts_str = f"{ts_sec}.{ts_nsec:09d}"
 
         self._put_pv("first_trigger", ts_str)
 
