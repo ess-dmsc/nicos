@@ -324,6 +324,7 @@ class TimepixDetector(AreaDetector):
             "acquire_period": "AcquirePeriod",
             "threshold_fine": "CHIP0_Vth_fine",
             "threshold_coarse": "CHIP0_Vth_coarse",
+            "folder_path": "RawFilePath",
         }
         self._record_fields = {
             key + "_rbv": value + "_RBV" for key, value in self._control_pvs.items()
@@ -332,6 +333,52 @@ class TimepixDetector(AreaDetector):
         self._set_custom_record_fields()
         EpicsDevice.doPreinit(self, mode)
         self._image_processing_lock = threading.Lock()
+
+    def _set_custom_record_fields(self):
+        AreaDetector._set_custom_record_fields(self)
+        self._record_fields["write_data"] = "WriteData"
+        self._record_fields["num_processing"] = "nProcessing"
+        self._record_fields["path_to_add"] = "path_toAdd"
+        self._record_fields["path_last_added"] = "path_lastAdded"
+
+    def to_str(self, int_list):
+        """Convert list of ints to string, ignoring trailing nulls."""
+        return bytes(int_list).decode("utf-8", errors="ignore").rstrip("\x00")
+
+    def to_int_list(self, s):
+        """Convert string to list of ints with a trailing null."""
+        return list(s.encode("utf-8")) + [0]
+
+    def doStart(self, **preset):
+        foldername = f"raw_tpx_{time.time_ns()}"
+        path_name = f"file:/data/{foldername}"
+        ascii_path_name = self.to_int_list(path_name)
+
+        # first we need to set the output folder path. use time_ns to make it unique
+
+        self._put_pv("folder_path", ascii_path_name)
+
+        # we then need to set write_data to 1 to actually update the path
+
+        self._put_pv("write_data", 1)
+
+        # we then need to set the path_toAdd to the same filename for empir to look for the new folder
+
+        self._put_pv("path_to_add", foldername)
+
+        # we then start the acquisition as normal
+
+        self.doAcquire()
+
+        num_retries = 10
+        for i in range(num_retries):
+            if self._get_pv("path_last_added", as_string=True) == foldername:
+                return
+            time.sleep(self._long_loop_delay)
+
+        self.log.warning(
+            f"Timepix folder {foldername} not added after {num_retries * self._long_loop_delay} seconds"
+        )
 
     def doReadAcquiretime(self):
         return self._get_pv("acquire_time_rbv")
@@ -710,6 +757,7 @@ class OrcaFlash4(AreaDetector):
 
     def doWriteAcquireperiod(self, value):
         self._put_pv("acquire_period", value)
+
 
 class AreaDetectorCollector(Detector):
     """
