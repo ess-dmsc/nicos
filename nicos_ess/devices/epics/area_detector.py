@@ -384,13 +384,13 @@ class TimepixDetector(AreaDetector):
 
         self._put_pv("write_data", 1)
 
-        # we then need to set the path_toAdd to the same filename for empir to look for the new folder
-
-        self._put_pv("path_to_add", foldername)
-
         # we then start the acquisition as normal
 
         self.doAcquire()
+
+        # we then need to set the path_toAdd to the same filename for empir to look for the new folder
+
+        self._put_pv("path_to_add", foldername)
 
         num_retries = 10
         for i in range(num_retries):
