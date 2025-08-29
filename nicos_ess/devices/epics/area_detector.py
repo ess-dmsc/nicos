@@ -374,7 +374,7 @@ class TimepixDetector(AreaDetector):
         ts_nsec = ts % 1_000_000_000
         ts_str = f"{ts_sec}.{ts_nsec:09d}"
 
-        self._put_pv("first_trigger", ts_str, wait=True)
+        # self._put_pv("first_trigger", ts_str, wait=True)
 
         # first we need to set the output folder path. use time_ns to make it unique
 
