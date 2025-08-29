@@ -12,7 +12,14 @@ devices = dict(
     z_positioner=device(
         "nicos_ess.devices.mapped_controller.MappedController",
         controlled_device="z_stage",
-        mapping={"Park": 1},
+        mapping={
+            "Park": 1,
+            "z position bs1": 1,  # TBD
+            "z position bs2": 2,  # TBD
+            "z position bs3": 3,  # TBD
+            "z position bs4": 4,  # TBD
+            "z position bs5": 5,  # TBD
+        },
     ),
     x_stage=device(  # offset = -32.5
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
@@ -102,7 +109,7 @@ devices = dict(
                 "Park",
             ),
             "Beamstop 1": (
-                "Park",
+                "z position bs1",
                 "In beam",
                 "In beam",
                 "Park",
@@ -111,7 +118,7 @@ devices = dict(
                 "Park",
             ),
             "Beamstop 2": (
-                "Park",
+                "z position bs2",
                 "In beam",
                 "Park",
                 "In beam",
@@ -120,7 +127,7 @@ devices = dict(
                 "Park",
             ),
             "Beamstop 3": (
-                "Park",
+                "z position bs3",
                 "In beam",
                 "Park",
                 "Park",
@@ -129,7 +136,7 @@ devices = dict(
                 "Park",
             ),
             "Beamstop 4": (
-                "Park",
+                "z position bs4",
                 "In beam",
                 "Park",
                 "Park",
@@ -138,7 +145,7 @@ devices = dict(
                 "Park",
             ),
             "Beamstop 5": (
-                "Park",
+                "z position bs5",
                 "In beam",
                 "Park",
                 "Park",
@@ -147,5 +154,6 @@ devices = dict(
                 "In beam",
             ),
         },
+        default_target="Park all beamstops",
     ),
 )
