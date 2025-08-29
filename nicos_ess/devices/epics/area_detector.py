@@ -388,6 +388,10 @@ class TimepixDetector(AreaDetector):
 
         self.doAcquire()
 
+        time.sleep(
+            5
+        )  # small delay to ensure the acquire command is processed before adding the path
+
         # we then need to set the path_toAdd to the same filename for empir to look for the new folder
 
         self._put_pv("path_to_add", foldername)
