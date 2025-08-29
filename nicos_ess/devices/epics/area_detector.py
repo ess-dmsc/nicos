@@ -354,6 +354,7 @@ class TimepixDetector(AreaDetector):
         self._record_fields["min_photons"] = "evFilt:phMin"
         self._record_fields["min_psd"] = "evFilt:psdMin"
         self._record_fields["first_trigger"] = "firstTrigger"
+        self._record_fields["ts_ready"] = "TSReady"
 
     def to_str(self, int_list):
         """Convert list of ints to string, ignoring trailing nulls."""
@@ -388,15 +389,17 @@ class TimepixDetector(AreaDetector):
 
         self.doAcquire()
 
-        time.sleep(
-            5
-        )  # small delay to ensure the acquire command is processed before adding the path
+        num_retries = 10
+        for i in range(num_retries):
+            # check that the ts_ready is set to 1, indicating the timepix is ready for a new folder to be added
+            if self._get_pv("ts_ready") == 1:
+                break
+            time.sleep(self._long_loop_delay)
 
         # we then need to set the path_toAdd to the same filename for empir to look for the new folder
 
         self._put_pv("path_to_add", foldername)
 
-        num_retries = 10
         for i in range(num_retries):
             if self._get_pv("path_last_added", as_string=True) == foldername:
                 return
