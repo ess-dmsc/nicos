@@ -1,8 +1,8 @@
 """
 LOKI script to move the detector carriage, controlling the PS bank (disable/enable).
 
-Example usage in nicos shell:
->> DET_POS=20; run("/path/to/nicos/nicos_ess/loki/testscripts/move_det.py")
+Example usage in NICOS shell:
+>> DET_POS=20; run("/ess/ecdc/nicos-core/nicos_ess/loki/testscripts/move_det.py")
 """
 
 from nicos.core import NicosError
