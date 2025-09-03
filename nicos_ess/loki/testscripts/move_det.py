@@ -7,6 +7,12 @@ Example usage in NICOS shell:
 
 from nicos.core import NicosError
 
+# 0. Variable check 
+try:
+    DET_POS
+except:
+    DET_POS = None # Will raise the next error.
+
 if DET_POS is None:
     raise NicosError("DET_POS variable is not set. Please set a value for it.")
 
@@ -26,7 +32,7 @@ if not detector_carriage.bank_voltage_is_zero():
 
 move(detector_carriage, DET_POS)
 
-# 3. Re-enable PS Bank (OPTIONAL, uncomment if needed)
+# 3. Re-enable PS Bank (OPTIONAL, uncomment if it's needed and safe)
 #print("Re-enabling detector PS bank...")
 #enable(HV_Bank_0)
 
