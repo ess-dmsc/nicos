@@ -65,6 +65,8 @@ class OctopyMotor(EpicsParameters, CanDisable, CanReference, Motor):
             "enable": RecordInfo("", "-enable-s", RecordType.VALUE),
             "home": RecordInfo("", "-home-s", RecordType.VALUE),
             "reset": RecordInfo("", "-reset-s", RecordType.VALUE),
+            "busy": RecordInfo("", "-busy-r", RecordType.VALUE),
+            "move_done": RecordInfo("", "-move_done-r", RecordType.VALUE),
         }
 
         self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
@@ -129,11 +131,12 @@ class OctopyMotor(EpicsParameters, CanDisable, CanReference, Motor):
         self._put_pv("reset", 1)
 
     def doIsAtTarget(self, pos=None, target=None):
-        if pos is None:
-            pos = self.read(0)
-        if target is None:
-            target = self.target
-        return abs(target - pos) <= self.precision
+        # if pos is None:
+        #     pos = self.read(0)
+        # if target is None:
+        #     target = self.target
+        # return abs(target - pos) <= self.precision
+        return self._get_cached_pv_or_ask("move_done") == 1
 
     def doIsCompleted(self):
         return self.doIsAtTarget()
