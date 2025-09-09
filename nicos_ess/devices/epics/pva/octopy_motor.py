@@ -131,15 +131,15 @@ class OctopyMotor(EpicsParameters, CanDisable, CanReference, Motor):
         self._put_pv("reset", 1)
 
     def doIsAtTarget(self, pos=None, target=None):
-        at_target = self._get_cached_pv_or_ask("move_done") == 1
+        if pos is None:
+            pos = self.read(0)
+        if target is None:
+            target = self.target
 
-        if not at_target:
-            if pos is None:
-                pos = self.read(0)
-            if target is None:
-                target = self.target
-            return abs(target - pos) <= self.precision
-        return True
+        if abs(target - pos) > self.precision:
+            return False
+
+        return self._get_cached_pv_or_ask("move_done") == 1
 
     def doIsCompleted(self):
         return self.doIsAtTarget()
