@@ -268,7 +268,8 @@ class JustBinItImage(ImageChannelMixin, PassiveChannel):
 
     def doInit(self, mode):
         self._hist_sum = 0
-        self.event_rate = 0.0
+        if self._mode == MASTER:
+            self.event_rate = 0.0
         self._zero_data()
 
     def _zero_data(self):
@@ -282,7 +283,8 @@ class JustBinItImage(ImageChannelMixin, PassiveChannel):
         self._zero_data()
         self._hist_edges = np.array([])
         self._hist_sum = 0
-        self.event_rate = 0.0
+        if self._mode == MASTER:
+            self.event_rate = 0.0
         try:
             self._kafka_subscriber.subscribe(
                 [self.hist_topic], self.new_messages_callback
@@ -316,7 +318,8 @@ class JustBinItImage(ImageChannelMixin, PassiveChannel):
                 self._update_status(status.OK, "")
                 break
 
-            self.event_rate = info.get("rate", 0.0)
+            if self._mode == MASTER:
+                self.event_rate = info.get("rate", 0.0)
 
             self._hist_data = hist_type_by_name[self.hist_type].transform_data(
                 hist["data"], rotation=self.rotation
@@ -607,7 +610,8 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
 
     def _do_stop(self):
         self._stop_job_threads()
-        self._stop_histogramming()
+        if self._mode == MASTER:
+            self._stop_histogramming()
 
     def _stop_job_threads(self):
         self._exit_thread = True
