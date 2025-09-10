@@ -623,21 +623,26 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
             thread.join()
 
     def doStatus(self, maxage=0):
-        curstatus = self._cache.get(self, "status")
-        if curstatus and curstatus[0] == status.ERROR:
-            return curstatus
+        if self.curstatus and self.curstatus[0] == status.ERROR:
+            return self.curstatus
         return Detector.doStatus(self, maxage)
 
     def _status_update_callback(self, messages):
         # Called on heartbeat received
         if self._mode == MASTER:
-            if self._cache.get(self, "status") == DISCONNECTED_STATE:
-                self._cache.put(self, "status", (status.OK, ""), time.time())
+            if self.curstatus == DISCONNECTED_STATE:
+                # self._cache.put(self, "status", (status.OK, ""), time.time())
+                self._setROParam("curstatus", (status.OK, ""))
+            self.status(0)
 
     def no_messages_callback(self):
         if self._mode == MASTER and not self.is_process_running():
             # No heartbeat
-            self._cache.put(self, "status", DISCONNECTED_STATE, time.time())
+            self._setROParam("curstatus", DISCONNECTED_STATE)
+            # self._cache.put(self, "status", DISCONNECTED_STATE, time.time())
+            self.status(0)
+
+            self.resubscribe()
 
     def duringMeasureHook(self, elapsed):
         if self.liveinterval is not None:

@@ -7,6 +7,8 @@ from nicos.core.errors import ConfigurationError
 from nicos.utils import createThread
 from nicos_ess.devices.kafka.utils import create_sasl_config
 
+MAX_BACKOFF = 5.0
+
 
 class KafkaConsumer:
     """Class for wrapping the Confluent Kafka consumer."""
@@ -144,24 +146,34 @@ class KafkaSubscriber:
     """Continuously listens for messages on the specified topics"""
 
     def __init__(self, brokers):
+        self._brokers = brokers
         self._consumer = KafkaConsumer.create(brokers)
         self._polling_thread = None
         self._stop_requested = False
         self._messages_callback = None
         self._no_messages_callback = None
+        self._error_callback = None
+        self._topics = None
 
-    def subscribe(self, topics, messages_callback, no_messages_callback=None):
+    def subscribe(
+        self, topics, messages_callback, no_messages_callback=None, error_callback=None
+    ):
         self.stop_consuming(True)
 
+        self._topics = list(topics)
         self._consumer.unsubscribe()
-        self._consumer.subscribe(topics)
+        self._consumer.subscribe(self._topics)
 
         self._messages_callback = messages_callback
         self._no_messages_callback = no_messages_callback
+        self._error_callback = error_callback
         self._stop_requested = False
         self._polling_thread = createThread(
             f"polling_thread_{int(time.monotonic())}", self._monitor_topics
         )
+
+    def is_alive(self):
+        return bool(self._polling_thread and self._polling_thread.is_alive())
 
     def stop_consuming(self, wait_for_join=False):
         self._stop_requested = True
@@ -176,17 +188,75 @@ class KafkaSubscriber:
     def consumer(self):
         return self._consumer
 
-    def _monitor_topics(self):
-        while not self._stop_requested:
-            data = self._consumer.poll(timeout_ms=5)
-            messages = []
-            if data:
-                messages.append((data.timestamp(), data.value()))
+    def _reset_consumer(self):
+        try:
+            self._consumer.close()
+        except Exception:
+            pass
+        self._consumer = KafkaConsumer.create(self._brokers)
+        # Re-subscribe to the same topics
+        if self._topics:
+            self._consumer.subscribe(self._topics)
 
-            if messages and self._messages_callback:
-                self._messages_callback(messages)
-            elif self._no_messages_callback:
-                self._no_messages_callback()
-                time.sleep(0.01)
-            else:
-                time.sleep(0.01)
+    def _monitor_topics(self):
+        backoff = 0.1
+        while not self._stop_requested:
+            try:
+                msg = self._consumer.poll(timeout_ms=100)
+                if self._stop_requested:
+                    break
+
+                if msg is None:
+                    if self._no_messages_callback:
+                        self._no_messages_callback()
+                    time.sleep(0.01)
+                    continue
+
+                # Handle Kafka message errors explicitly
+                try:
+                    err = msg.error()
+                except AttributeError:
+                    err = None
+
+                if err:
+                    # Notify upstream; decide whether to reset the consumer
+                    if self._error_callback:
+                        try:
+                            self._error_callback(err)
+                        except Exception:
+                            pass
+
+                    # Treat fatal errors by replacing the consumer (keeps thread alive)
+                    if getattr(err, "fatal", lambda: False)():
+                        self._reset_consumer()
+                        time.sleep(backoff)
+                        backoff = min(backoff * 2, MAX_BACKOFF)
+                    else:
+                        # Retriable / EOF etc.: just keep polling
+                        time.sleep(0.01)
+                    continue
+
+                # Good message: extract a sane timestamp (ms since epoch)
+                try:
+                    ts_type, ts_val = msg.timestamp()
+                    # Some brokers can return 0/None; fall back to now
+                    ts_ms = ts_val if ts_val else int(time.time() * 1000)
+                except Exception:
+                    ts_ms = int(time.time() * 1000)
+
+                if self._messages_callback:
+                    self._messages_callback([(ts_ms, msg.value())])
+
+                # Reset backoff after a healthy message
+                backoff = 0.1
+
+            except Exception as e:
+                # Never let the polling thread die; log & try to recover
+                if self._error_callback:
+                    try:
+                        self._error_callback(e)
+                    except Exception:
+                        pass
+                self._reset_consumer()
+                time.sleep(backoff)
+                backoff = min(backoff * 2, MAX_BACKOFF)

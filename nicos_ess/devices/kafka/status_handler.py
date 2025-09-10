@@ -11,13 +11,12 @@ from nicos.core import (
     Override,
     Param,
     Readable,
+    host,
+    listof,
     status,
     tupleof,
-    listof,
-    host,
 )
 from nicos.core.constants import SIMULATION
-
 from nicos_ess.devices.kafka.consumer import KafkaSubscriber
 
 DISCONNECTED_STATE = (status.ERROR, "Disconnected")
@@ -79,8 +78,9 @@ class KafkaStatusHandler(Readable):
             self._kafka_subscriber = KafkaSubscriber(self.brokers)
             self._kafka_subscriber.subscribe(
                 self.statustopic,
-                self.new_messages_callback,
-                self.no_messages_callback,
+                messages_callback=self.new_messages_callback,
+                no_messages_callback=self.no_messages_callback,
+                error_callback=self._subscriber_error_callback,
             )
 
         # Be pessimistic and assume the process is down, if the process
@@ -96,16 +96,36 @@ class KafkaStatusHandler(Readable):
     def doStatus(self, maxage=0):
         return self.curstatus
 
+    def resubscribe(self):
+        """
+        Force a resubscription to the Kafka topic(s).
+        """
+        try:
+            self._kafka_subscriber.subscribe(
+                self.statustopic,
+                self.new_messages_callback,
+                self.no_messages_callback,
+                error_callback=self._subscriber_error_callback,
+            )
+            self._setROParam(
+                "curstatus",
+                (status.WARN, "Kafka subscription restarted; awaiting status..."),
+            )
+        except Exception as e:
+            self._setROParam(
+                "curstatus", (status.ERROR, f"Kafka subscription restart failed: {e}")
+            )
+
     def new_messages_callback(self, messages):
         json_messages = {}
-        for timestamp, message in messages:
+        for timestamp_ms, message in messages:
             try:
                 if get_schema(message) != "x5f2":
                     continue
                 msg = deserialise_x5f2(message)
                 js = json.loads(msg.status_json) if msg.status_json else {}
                 js["update_interval"] = msg.update_interval
-                json_messages[timestamp] = js
+                json_messages[timestamp_ms] = js
                 self._set_next_update(msg.update_interval)
             except Exception as e:
                 self.log.warning("Could not decode message from status topic: %s", e)
@@ -117,6 +137,12 @@ class KafkaStatusHandler(Readable):
         # Check if the process is still running
         if self._mode == MASTER and not self.is_process_running():
             self._setROParam("curstatus", DISCONNECTED_STATE)
+
+    def _subscriber_error_callback(self, err):
+        # Surface a human-friendly warning when the poller hits an error
+        msg = getattr(err, "str", lambda: str(err))()
+        self._setROParam("curstatus", (status.WARN, f"Kafka subscriber error: {msg}"))
+        # Do not hard ERROR yet; let heartbeats decide. This keeps flapping low.
 
     def is_process_running(self):
         # Allow some leeway in case of message lag.
