@@ -763,3 +763,211 @@ class EpicsMappedMoveable(EpicsParameters, MappedMoveable):
                 (status.ERROR, "communication failure"),
                 time.time(),
             )
+
+
+class EpicsManualMappedAnalogMoveable(
+    EpicsParameters, HasPrecision, HasLimits, MappedMoveable
+):
+    """
+    Acts as a moveable device, which reads and writes to EPICS PVs but it
+    has a configurable mapping. Used for example to map allowed chopper speeds
+    instead of allowing all values in a range.
+    """
+
+    parameters = {
+        "readpv": Param(
+            "PV for reading device value", type=pvname, mandatory=True, userparam=False
+        ),
+        "writepv": Param(
+            "PV for writing device target", type=pvname, mandatory=True, userparam=False
+        ),
+        "targetpv": Param(
+            "Optional target readback PV.", type=none_or(pvname), userparam=False
+        ),
+    }
+
+    parameter_overrides = {
+        "abslimits": Override(mandatory=False, volatile=True),
+        "unit": Override(mandatory=False, settable=False, volatile=True),
+    }
+
+    _record_fields = {
+        "readpv": RecordInfo("value", "", RecordType.BOTH),
+        "writepv": RecordInfo("target", "", RecordType.VALUE),
+        "targetpv": RecordInfo("target", "", RecordType.VALUE),
+    }
+
+    valuetype = anytype
+
+    def doPreinit(self, mode):
+        self._epics_subscriptions = []
+        self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
+        self._epics_wrapper.connect_pv(self.readpv)
+        self._epics_wrapper.connect_pv(self.writepv)
+        if self.targetpv:
+            self._epics_wrapper.connect_pv(self.targetpv)
+
+    def doInit(self, mode):
+        MappedMoveable.doInit(self, mode)
+
+        if session.sessiontype == POLLER and self.monitor:
+            self._epics_subscriptions.append(
+                self._epics_wrapper.subscribe(
+                    self.readpv,
+                    self._record_fields["readpv"].cache_key,
+                    self._value_change_callback,
+                    self._connection_change_callback,
+                )
+            )
+            self._epics_subscriptions.append(
+                self._epics_wrapper.subscribe(
+                    self.readpv,
+                    self._record_fields["readpv"].cache_key,
+                    self._status_change_callback,
+                    self._connection_change_callback,
+                )
+            )
+            self._epics_subscriptions.append(
+                self._epics_wrapper.subscribe(
+                    self.writepv,
+                    self._record_fields["writepv"].cache_key,
+                    self._value_change_callback,
+                    self._connection_change_callback,
+                )
+            )
+            if self.targetpv:
+                self._epics_subscriptions.append(
+                    self._epics_wrapper.subscribe(
+                        self.targetpv,
+                        self._record_fields["targetpv"].cache_key,
+                        self._value_change_callback,
+                        self._connection_change_callback,
+                    )
+                )
+
+    def _readRaw(self, maxage=0):
+        return get_from_cache_or(
+            self,
+            self._record_fields["readpv"].cache_key,
+            lambda: self._epics_wrapper.get_pv_value(self.readpv),
+        )
+
+    def _startRaw(self, raw_value):
+        self._epics_wrapper.put_pv_value(self.writepv, raw_value)
+
+    def doStart(self, value):
+        raw_target = self.mapping.get(value, value)
+        try:
+            raw_now = self.read(0)
+        except Exception:
+            raw_now = None
+
+        if raw_now is not None and abs(raw_now - raw_target) <= self.precision:
+            return
+
+        self._cache.put(
+            self._name, "status", (status.BUSY, f"moving to {value}"), time.time()
+        )
+
+        super().doStart(value)
+
+    def doRead(self, maxage=0):
+        return get_from_cache_or(
+            self,
+            self._record_fields["readpv"].cache_key,
+            lambda: self._epics_wrapper.get_pv_value(self.readpv),
+        )
+
+    def doReadUnit(self):
+        return get_from_cache_or(
+            self, "unit", lambda: self._epics_wrapper.get_units(self.readpv)
+        )
+
+    def doReadAbslimits(self):
+        lo, hi = get_from_cache_or(
+            self, "abslimits", lambda: self._epics_wrapper.get_limits(self.writepv)
+        )
+        return (-1e308, 1e308) if (lo == 0 and hi == 0) else (lo, hi)
+
+    def doReadTarget(self, maxage=0):
+        return get_from_cache_or(
+            self,
+            "target",
+            lambda: self._epics_wrapper.get_pv_value(self.targetpv or self.writepv),
+        )
+
+    def _do_status(self):
+        try:
+            severity, msg = self._epics_wrapper.get_alarm_status(self.readpv)
+        except TimeoutError:
+            return status.ERROR, "timeout reading status"
+        if severity in (status.ERROR, status.WARN):
+            return severity, msg
+
+        try:
+            raw_pos = self._epics_wrapper.get_pv_value(self.readpv)
+            raw_tgt = self._epics_wrapper.get_pv_value(self.targetpv or self.writepv)
+            at_target = HasPrecision.doIsAtTarget(self, raw_pos, raw_tgt)
+        except Exception:
+            at_target = False
+
+        if not at_target:
+            return status.BUSY, f"moving to {self.target}"
+        return status.OK, msg
+
+    def doStatus(self, maxage=0):
+        return get_from_cache_or(self, "status", self._do_status)
+
+    def doIsAtTarget(self, pos=None, target=None):
+        if target is None:
+            target = self.target
+        if pos is None:
+            pos = self.read(0)
+        raw_target = self.mapping.get(target, target)
+        try:
+            return HasPrecision.doIsAtTarget(self, pos, raw_target)
+        except Exception:
+            return False
+
+    def doIsCompleted(self):
+        return self.isAtTarget()
+
+    def _value_change_callback(
+        self, name, param, value, units, limits, severity, message, **kwargs
+    ):
+        if name not in {self.readpv, self.writepv, self.targetpv}:
+            return
+        ts = time.time()
+        if name == self.readpv:
+            self._cache.put(self._name, param, value, ts)
+            self._cache.put(self._name, "unit", units, ts)
+            self._cache.put(self._name, "status", self._do_status(), ts)
+        if name == self.writepv and limits:
+            self._cache.put(self._name, "abslimits", limits, ts)
+        if name == self.writepv and not self.target:
+            self._cache.put(self._name, param, value, ts)
+            self._cache.put(self._name, "status", self._do_status(), ts)
+        if name == self.targetpv:
+            self._cache.put(self._name, param, value, ts)
+            self._cache.put(self._name, "status", self._do_status(), ts)
+
+    def _status_change_callback(
+        self, name, param, value, units, limits, severity, message, **kwargs
+    ):
+        if name != self.readpv:
+            return
+        self._cache.put(self._name, "status", self._do_status(), time.time())
+
+    def _connection_change_callback(self, name, param, is_connected, **kwargs):
+        if param != self._record_fields["readpv"].cache_key:
+            return
+        if is_connected:
+            self.log.debug("%s connected!", name)
+        else:
+            self.log.warning("%s disconnected!", name)
+            self._cache.put(
+                self._name,
+                "status",
+                (status.ERROR, "communication failure"),
+                time.time(),
+            )
