@@ -54,20 +54,22 @@ devices = dict(
         "nicos_ess.devices.epics.pva.EpicsReadable",
         description="Instrument zone tank vacuum pressure",
         readpv="BIFRO-VacInstr:Vac-VGP-031:PrsR",
+        fmtstr="%.2e",
     ),
     be_filter_pressure=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
         description="Instrument zone Be filter vacuum pressure",
         readpv="BIFRO-VacInstr:Vac-VGF-032:PrsR",
+        fmtstr="%.2e",
     ),
     be_filter_pressure_ok=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
-        description="Instrument zone Be filter vacuum pressure OK status. OK is 1",
+        description="Instrument zone Be filter vacuum pressure OK status. set is OK",
         readpv="BIFRO-VacInstr:Vac-VGF-032:Rly2Stat-R",
     ),
     be_filter_valve_interlock=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
-        description="Instrument zone Be filter valve interlock status. OK is 1",
+        description="Instrument zone Be filter valve interlock status. HEALTHY is OK",
         readpv="BIFRO-VacInstr:Vac-VVA-032:ITLckStatR",
     ),
 )
