@@ -9,7 +9,7 @@ devices = dict(
         visiblitity=(),
     ),
     sample_area_vacuum_gate_valve_interlock=device(
-        "nicos_ess.devices.epics.pva.EpicsReadable",
+        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="Vacuum gauge - the status of the gate valve interlock",
         readpv="LOKI-VacInstr:Vac-VVS-400:IntlckLED",
         visiblitity=(),
