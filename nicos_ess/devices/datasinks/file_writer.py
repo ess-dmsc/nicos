@@ -514,7 +514,7 @@ class FileWriterControlSink(Device):
         if device:
             instr_name = f"{device.instrument_name}_"
         else:
-            self._controller.log.warning(
+            self.log.warning(
                 "Could not locate instrument name from NexusStructure device, removing from file name"
             )
         filename = f"{instr_name}{proposal}_{file_num:0>8}.hdf"
