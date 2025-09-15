@@ -19,6 +19,13 @@ class LokiBeamstopController(MultiTargetMapping):
         targets = self.mapping.get(self.default_target, None)
         self._move_to_targets(targets)
 
+    def _extract_beamstop_number(self, value):
+        active_beamstop_match = re.match(r"Beamstop \d", value)
+        if active_beamstop_match:
+            return active_beamstop_match.group()
+        else:
+            return "None"
+
     def _move_beamstops(self, value):
         targets = self.mapping.get(value, None)
         self._move_to_targets(targets)
@@ -27,10 +34,3 @@ class LokiBeamstopController(MultiTargetMapping):
         for device, target in zip(self._attached_controlled_devices, targets):
             device.start(target)
             waitForCompletion(device)
-
-    def _extract_beamstop_number(self, value):
-        active_beamstop_match = re.match(r"Beamstop \d", value)
-        if active_beamstop_match:
-            return active_beamstop_match.group()
-        else:
-            return "None"
