@@ -129,20 +129,22 @@ class ManualSwitch(EpicsParameters, Moveable):
     def _status_change_callback(
         self, name, param, value, units, limits, severity, message, **kwargs
     ):
-        self._cache.put(self._name, "status", (severity, message), time.time())
+        time_stamp = kwargs.get("timestamp", time.time())
+        self._cache.put(self._name, "status", (severity, message), time_stamp)
 
     def _connection_change_callback(self, name, param, is_connected, **kwargs):
         if param != self._record_fields["writepv"].cache_key:
             return
 
+        time_stamp = kwargs.get("timestamp", time.time())
         if is_connected:
             self.log.debug("%s connected!", name)
-            self._cache.put(self._name, "status", (status.OK, ""), time.time())
+            self._cache.put(self._name, "status", (status.OK, ""), time_stamp)
         else:
             self.log.warning("%s disconnected!", name)
             self._cache.put(
                 self._name,
                 "status",
                 (status.ERROR, "communication failure"),
-                time.time(),
+                time_stamp,
             )

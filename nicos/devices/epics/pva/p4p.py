@@ -20,6 +20,7 @@
 #   Matt Clarke <matt.clarke@ess.eu>
 #
 # *****************************************************************************
+import time
 from collections.abc import Iterable
 from functools import partial
 from threading import Lock
@@ -87,7 +88,14 @@ class P4pWrapper:
 
     def get_pv_value(self, pvname, as_string=False):
         result = _CONTEXT.get(pvname, timeout=self._timeout)
+        timestamp = self._extract_timestamp(result)
         return self._convert_value(pvname, result["value"], as_string)
+
+    def _extract_timestamp(self, result):
+        time_info = result.get("timeStamp", {})
+        if "secondsPastEpoch" in time_info and "nanoseconds" in time_info:
+            return time_info["secondsPastEpoch"] + time_info["nanoseconds"] * 1e-9
+        return None
 
     def _convert_value(self, pvname, value, as_string=False):
         try:
@@ -218,15 +226,17 @@ class P4pWrapper:
         if isinstance(result, Exception):
             # Only callback on disconnection if was previously connected
             if connection_callback and pvname not in self.disconnected:
-                connection_callback(pvname, pvparam, False)
+                connection_callback(pvname, pvparam, False, timestamp=time.time())
                 with self.lock:
                     self.disconnected.add(pvname)
             return
 
+        timestamp = self._extract_timestamp(result)
+
         if pvname in self.disconnected:
             # Only callback if it is a new connection
             if connection_callback:
-                connection_callback(pvname, pvparam, True)
+                connection_callback(pvname, pvparam, True, timestamp=timestamp)
             with self.lock:
                 if pvname in self.disconnected:
                     self.disconnected.remove(pvname)
@@ -265,6 +275,7 @@ class P4pWrapper:
                     self._limits.get(pvname, None),
                     severity,
                     msg,
+                    timestamp=timestamp,
                 )
 
     def _extract_alarm_info(self, value):

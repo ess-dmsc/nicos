@@ -115,7 +115,7 @@ class MBBIDirectStatus(EpicsParameters, Readable):
     def _value_change_callback(
         self, name, param, value, units, limits, severity, message, **kwargs
     ):
-        time_stamp = time.time()
+        time_stamp = kwargs.get("timestamp", time.time())
         cache_key = param
         self._cache.put(self._name, cache_key, value, time_stamp)
         self._cache.put(self._name, "status", self._do_status(), time_stamp)
@@ -125,16 +125,17 @@ class MBBIDirectStatus(EpicsParameters, Readable):
         if param != self._record_fields["communication"].cache_key:
             return
 
+        time_stamp = kwargs.get("timestamp", time.time())
         if is_connected:
             self.log.debug("%s connected!", name)
-            self._cache.put(self._name, "status", self._do_status(), time.time())
+            self._cache.put(self._name, "status", self._do_status(), time_stamp)
         else:
             self.log.warning("%s disconnected!", name)
             self._cache.put(
                 self._name,
                 "status",
                 (status.ERROR, "communication failure"),
-                time.time(),
+                time_stamp,
             )
 
     def _get_cached_value_or_ask(self, name):

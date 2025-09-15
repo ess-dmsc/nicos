@@ -103,7 +103,7 @@ class ChopperAlarms(EpicsParameters, Readable):
     def _status_change_callback(
         self, name, param, value, units, limits, severity, message, **kwargs
     ):
-        time_stamp = time.time()
+        time_stamp = kwargs.get("timestamp", time.time())
         cache_key = param
         self._cache.put(self._name, cache_key, (severity, message), time_stamp)
         self._cache.put(self._name, "status", self._do_status(), time_stamp)
@@ -113,6 +113,7 @@ class ChopperAlarms(EpicsParameters, Readable):
         if param != self._record_fields["communication"].cache_key:
             return
 
+        time_stamp = kwargs.get("timestamp", time.time())
         if is_connected:
             self.log.debug("%s connected!", name)
         else:
@@ -121,7 +122,7 @@ class ChopperAlarms(EpicsParameters, Readable):
                 self._name,
                 "status",
                 (status.ERROR, "communication failure"),
-                time.time(),
+                time_stamp,
             )
 
     def _get_cached_status_or_ask(self, name):

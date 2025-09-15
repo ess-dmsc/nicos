@@ -388,7 +388,7 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
     def _value_change_callback(
         self, name, param, value, units, limits, severity, message, **kwargs
     ):
-        time_stamp = time.time()
+        time_stamp = kwargs.get("timestamp", time.time())
         cache_key = self._record_fields[param].cache_key
         cache_key = param if not cache_key else cache_key
         self._cache.put(self._name, cache_key, value, time_stamp)
@@ -396,7 +396,7 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
     def _status_change_callback(
         self, name, param, value, units, limits, severity, message, **kwargs
     ):
-        time_stamp = time.time()
+        time_stamp = kwargs.get("timestamp", time.time())
         cache_key = self._record_fields[param].cache_key
         cache_key = param if not cache_key else cache_key
 
@@ -410,6 +410,7 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         if param != self._record_fields["value"].cache_key:
             return
 
+        time_stamp = kwargs.get("timestamp", time.time())
         if is_connected:
             self.log.debug("%s connected!", name)
         else:
@@ -418,7 +419,7 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
                 self._name,
                 "status",
                 (status.ERROR, "communication failure"),
-                time.time(),
+                time_stamp,
             )
 
     def _get_cached_pv_or_ask(self, param, as_string=False):

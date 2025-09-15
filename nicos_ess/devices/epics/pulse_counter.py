@@ -35,7 +35,7 @@ class PulseCounter(CounterChannelMixin, EpicsReadable, PassiveChannel):
         if name != self.readpv:
             # Unexpected updates ignored
             return
-        time_stamp = time.time()
+        time_stamp = kwargs.get("timestamp", time.time())
         self._cache.put(self._name, "unit", units, time_stamp)
         if self.started:
             self._cache.put(self._name, param, value - self.offset, time_stamp)

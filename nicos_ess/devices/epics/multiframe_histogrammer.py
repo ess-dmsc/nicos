@@ -123,16 +123,18 @@ class MultiFrameHistogrammer(ImageChannelMixin, EpicsReadable, PassiveChannel):
         self, name, param, value, units, limits, severity, message, **kwargs
     ):
         cache_key = self._get_cache_relation(param)
+        time_stamp = kwargs.get("timestamp", time.time())
         if cache_key:
             if param == "readpv":
-                self._cache.put(self._name, cache_key, self.readresult, time.time())
-                self._cache.put(self._name, "unit", units, time.time())
+                self._cache.put(self._name, cache_key, self.readresult, time_stamp)
+                self._cache.put(self._name, "unit", units, time_stamp)
             else:
-                self._cache.put(self._name, cache_key, value, time.time())
+                self._cache.put(self._name, cache_key, value, time_stamp)
 
     def status_change_callback(
         self, name, param, value, units, limits, severity, message, **kwargs
     ):
+        time_stamp = kwargs.get("timestamp", time.time())
         if (
             param == "readpv"
             and time.monotonic() < self._last_update + self._plot_update_delay
@@ -146,7 +148,7 @@ class MultiFrameHistogrammer(ImageChannelMixin, EpicsReadable, PassiveChannel):
             self._last_update = time.monotonic()
 
         current_status = self.doStatus()
-        self._cache.put(self._name, "status", current_status, time.time())
+        self._cache.put(self._name, "status", current_status, time_stamp)
 
     def valueInfo(self):
         return (Value(self.name, unit=self.unit, fmtstr=self.fmtstr),)

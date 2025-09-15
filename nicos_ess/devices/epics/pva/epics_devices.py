@@ -185,7 +185,7 @@ class EpicsReadable(EpicsParameters, Readable):
         if name != self.readpv:
             # Unexpected updates ignored
             return
-        time_stamp = time.time()
+        time_stamp = kwargs.get("timestamp", time.time())
         self._cache.put(self._name, param, value, time_stamp)
         self._cache.put(self._name, "unit", units, time_stamp)
 
@@ -195,12 +195,14 @@ class EpicsReadable(EpicsParameters, Readable):
         if name != self.readpv:
             # Unexpected updates ignored
             return
-        self._cache.put(self._name, "status", (severity, message), time.time())
+        time_stamp = kwargs.get("timestamp", time.time())
+        self._cache.put(self._name, "status", (severity, message), time_stamp)
 
     def _connection_change_callback(self, name, param, is_connected, **kwargs):
         if param != self._record_fields["readpv"].cache_key:
             return
 
+        time_stamp = kwargs.get("timestamp", time.time())
         if is_connected:
             self.log.debug("%s connected!", name)
         else:
@@ -209,7 +211,7 @@ class EpicsReadable(EpicsParameters, Readable):
                 self._name,
                 "status",
                 (status.ERROR, "communication failure"),
-                time.time(),
+                time_stamp,
             )
 
 
@@ -376,7 +378,7 @@ class EpicsAnalogMoveable(EpicsParameters, HasPrecision, HasLimits, Moveable):
         if name not in {self.readpv, self.writepv, self.targetpv}:
             # Unexpected updates ignored
             return
-        time_stamp = time.time()
+        time_stamp = kwargs.get("timestamp", time.time())
         if name == self.readpv:
             self._cache.put(self._name, param, value, time_stamp)
             self._cache.put(self._name, "unit", units, time_stamp)
@@ -393,12 +395,14 @@ class EpicsAnalogMoveable(EpicsParameters, HasPrecision, HasLimits, Moveable):
         if name != self.readpv:
             # Unexpected updates ignored
             return
-        self._cache.put(self._name, "status", (severity, message), time.time())
+        time_stamp = kwargs.get("timestamp", time.time())
+        self._cache.put(self._name, "status", (severity, message), time_stamp)
 
     def _connection_change_callback(self, name, param, is_connected, **kwargs):
         if param != self._record_fields["readpv"].cache_key:
             return
 
+        time_stamp = kwargs.get("timestamp", time.time())
         if is_connected:
             self.log.debug("%s connected!", name)
         else:
@@ -407,7 +411,7 @@ class EpicsAnalogMoveable(EpicsParameters, HasPrecision, HasLimits, Moveable):
                 self._name,
                 "status",
                 (status.ERROR, "communication failure"),
-                time.time(),
+                time_stamp,
             )
 
 
@@ -528,7 +532,7 @@ class EpicsStringMoveable(EpicsParameters, Moveable):
         if name not in {self.readpv, self.writepv, self.targetpv}:
             # Unexpected updates ignored
             return
-        time_stamp = time.time()
+        time_stamp = kwargs.get("timestamp", time.time())
         if name == self.readpv:
             self._cache.put(self._name, param, value, time_stamp)
             self._cache.put(self._name, "unit", units, time_stamp)
@@ -543,12 +547,14 @@ class EpicsStringMoveable(EpicsParameters, Moveable):
         if name != self.readpv:
             # Unexpected updates ignored
             return
-        self._cache.put(self._name, "status", (severity, message), time.time())
+        time_stamp = kwargs.get("timestamp", time.time())
+        self._cache.put(self._name, "status", (severity, message), time_stamp)
 
     def _connection_change_callback(self, name, param, is_connected, **kwargs):
         if param != self._record_fields["readpv"].cache_key:
             return
 
+        time_stamp = kwargs.get("timestamp", time.time())
         if is_connected:
             self.log.debug("%s connected!", name)
         else:
@@ -557,7 +563,7 @@ class EpicsStringMoveable(EpicsParameters, Moveable):
                 self._name,
                 "status",
                 (status.ERROR, "communication failure"),
-                time.time(),
+                time_stamp,
             )
 
 
@@ -604,7 +610,7 @@ class EpicsMappedReadable(EpicsReadable, MappedReadable):
             return
         if not self.mapping:
             _update_mapped_choices(self)
-        time_stamp = time.time()
+        time_stamp = kwargs.get("timestamp", time.time())
         self._cache.put(
             self._name,
             param,
@@ -725,7 +731,7 @@ class EpicsMappedMoveable(EpicsParameters, MappedMoveable):
         if name not in {self.readpv, self.writepv, self.targetpv}:
             # Unexpected updates ignored
             return
-        time_stamp = time.time()
+        time_stamp = kwargs.get("timestamp", time.time())
         if name == self.readpv:
             if not self.mapping:
                 _update_mapped_choices(self)
@@ -747,12 +753,14 @@ class EpicsMappedMoveable(EpicsParameters, MappedMoveable):
         if name != self.readpv:
             # Unexpected updates ignored
             return
-        self._cache.put(self._name, "status", (severity, message), time.time())
+        time_stamp = kwargs.get("timestamp", time.time())
+        self._cache.put(self._name, "status", (severity, message), time_stamp)
 
     def _connection_change_callback(self, name, param, is_connected, **kwargs):
         if param != self._record_fields["readpv"].cache_key:
             return
 
+        time_stamp = kwargs.get("timestamp", time.time())
         if is_connected:
             self.log.debug("%s connected!", name)
         else:
@@ -761,7 +769,7 @@ class EpicsMappedMoveable(EpicsParameters, MappedMoveable):
                 self._name,
                 "status",
                 (status.ERROR, "communication failure"),
-                time.time(),
+                time_stamp,
             )
 
 
