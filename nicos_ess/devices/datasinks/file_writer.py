@@ -517,7 +517,7 @@ class FileWriterControlSink(Device):
             self._controller.log.warning(
                 "Could not locate instrument name from NexusStructure device, removing from file name"
             )
-        filename = f"{instr_name}_{proposal}_{file_num:0>8}.hdf"
+        filename = f"{instr_name}{proposal}_{file_num:0>8}.hdf"
         return path.join(proposal_path, filename)
 
     def _start_job(
