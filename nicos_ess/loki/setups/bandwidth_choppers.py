@@ -5,13 +5,13 @@ pv_root_2 = "LOKI-ChpSy1:Chop-BWC-102:"
 chic_root = "LOKI-ChpSy1:Chop-CHIC-001:"
 
 devices = dict(
-    bwc1_chopper_status=device(
+    bwc1_status=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The chopper status.",
         readpv="{}ChopState_R".format(pv_root_1),
         visibility=(),
     ),
-    bwc1_chopper_control=device(
+    bwc1_control=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="Used to start and stop the chopper.",
         readpv="{}C_Execute".format(pv_root_1),
@@ -19,7 +19,7 @@ devices = dict(
         requires={"level": "admin"},
         visibility=(),
     ),
-    bwc1_chopper_speed=device(
+    bwc1_speed=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
         description="The current speed.",
         readpv="{}Spd_R".format(pv_root_1),
@@ -27,22 +27,22 @@ devices = dict(
         abslimits=(0.0, 0.0),
         precision=0.1,
     ),
-    bwc1_chopper_delay=device(
+    bwc1_delay=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
         description="The current delay.",
         readpv="{}ChopDly-S".format(pv_root_1),
         writepv="{}ChopDly-S".format(pv_root_1),
         abslimits=(0.0, 0.0),
     ),
-    bwc1_chopper_phase=device(
+    bwc1_phase=device(
         "nicos_ess.devices.transformer_device.ChopperPhase",
         description="The phase of the chopper.",
-        phase_ns_dev="bwc1_chopper_delay",
-        speed_dev="bwc1_chopper_speed",
+        phase_ns_dev="bwc1_delay",
+        speed_dev="bwc1_speed",
         offset=0,
         unit="degrees",
     ),
-    bwc1_chopper_delay_errors=device(
+    bwc1_delay_errors=device(
         "nicos_ess.devices.epics.chopper_delay_error.ChopperDelayError",
         description="The current delay.",
         readpv="{}DiffTSSamples".format(pv_root_1),
@@ -52,57 +52,57 @@ devices = dict(
             "namespace",
         ),
     ),
-    bwc1_chopper_phased=device(
+    bwc1_phased=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The chopper is in phase.",
         readpv="{}InPhs_R".format(pv_root_1),
     ),
-    bwc1_chopper_park_angle=device(
+    bwc1_park_angle=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
         description="The chopper's park angle.",
         readpv="{}Pos_R".format(pv_root_1),
         writepv="{}Park_S".format(pv_root_1),
         visibility=(),
     ),
-    bwc1_chopper_park_control=device(
+    bwc1_park_control=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="The park control for the BWC1 chopper.",
         readpv="{}ParkPos_S".format(pv_root_1),
         writepv="{}ParkPos_S".format(pv_root_1),
     ),
-    bwc1_chopper_chic=device(
+    bwc1_chic=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The status of the CHIC connection.",
         readpv="{}ConnectedR".format(chic_root),
         visibility=(),
         pva=True,
     ),
-    bwc1_chopper_alarms=device(
+    bwc1_alarms=device(
         "nicos_ess.devices.epics.chopper.ChopperAlarms",
         description="The chopper alarms",
         pv_root=pv_root_1,
         visibility=(),
     ),
-    bwc1_chopper=device(
+    bwc1=device(
         "nicos_ess.devices.epics.chopper.EssChopperController",
         description="The chopper controller",
         pollinterval=0.5,
         maxage=None,
-        state="bwc1_chopper_status",
-        command="bwc1_chopper_control",
-        speed="bwc1_chopper_speed",
-        chic_conn="bwc1_chopper_chic",
-        alarms="bwc1_chopper_alarms",
+        state="bwc1_status",
+        command="bwc1_control",
+        speed="bwc1_speed",
+        chic_conn="bwc1_chic",
+        alarms="bwc1_alarms",
         slit_edges=[[0, 90]],
         resolver_offset=-105,
     ),
-    bwc2_chopper_status=device(
+    bwc2_status=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The chopper status.",
         readpv="{}ChopState_R".format(pv_root_2),
         visibility=(),
     ),
-    bwc2_chopper_control=device(
+    bwc2_control=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="Used to start and stop the chopper.",
         readpv="{}C_Execute".format(pv_root_2),
@@ -110,7 +110,7 @@ devices = dict(
         requires={"level": "admin"},
         visibility=(),
     ),
-    bwc2_chopper_speed=device(
+    bwc2_speed=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
         description="The current speed.",
         readpv="{}Spd_R".format(pv_root_2),
@@ -118,22 +118,22 @@ devices = dict(
         abslimits=(0.0, 0.0),
         precision=0.1,
     ),
-    bwc2_chopper_delay=device(
+    bwc2_delay=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
         description="The current delay.",
         readpv="{}ChopDly-S".format(pv_root_2),
         writepv="{}ChopDly-S".format(pv_root_2),
         abslimits=(0.0, 0.0),
     ),
-    bwc2_chopper_phase=device(
+    bwc2_phase=device(
         "nicos_ess.devices.transformer_device.ChopperPhase",
         description="The phase of the chopper.",
-        phase_ns_dev="bwc2_chopper_delay",
-        speed_dev="bwc2_chopper_speed",
+        phase_ns_dev="bwc2_delay",
+        speed_dev="bwc2_speed",
         offset=0,
         unit="degrees",
     ),
-    bwc2_chopper_delay_errors=device(
+    bwc2_delay_errors=device(
         "nicos_ess.devices.epics.chopper_delay_error.ChopperDelayError",
         description="The current delay.",
         readpv="{}DiffTSSamples".format(pv_root_2),
@@ -143,46 +143,46 @@ devices = dict(
             "namespace",
         ),
     ),
-    bwc2_chopper_phased=device(
+    bwc2_phased=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The chopper is in phase.",
         readpv="{}InPhs_R".format(pv_root_2),
     ),
-    bwc2_chopper_park_angle=device(
+    bwc2_park_angle=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
         description="The chopper's park angle.",
         readpv="{}Pos_R".format(pv_root_2),
         writepv="{}Park_S".format(pv_root_2),
         visibility=(),
     ),
-    bwc2_chopper_park_control=device(
+    bwc2_park_control=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="The park control for the BWC2 chopper.",
         readpv="{}ParkPos_S".format(pv_root_2),
         writepv="{}ParkPos_S".format(pv_root_2),
     ),
-    bwc2_chopper_chic=device(
+    bwc2_chic=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The status of the CHIC connection.",
         readpv="{}ConnectedR".format(chic_root),
         visibility=(),
     ),
-    bwc2_chopper_alarms=device(
+    bwc2_alarms=device(
         "nicos_ess.devices.epics.chopper.ChopperAlarms",
         description="The chopper alarms",
         pv_root=pv_root_2,
         visibility=(),
     ),
-    bwc2_chopper=device(
+    bwc2=device(
         "nicos_ess.devices.epics.chopper.EssChopperController",
         description="The chopper controller",
         pollinterval=0.5,
         maxage=None,
-        state="bwc2_chopper_status",
-        command="bwc2_chopper_control",
-        speed="bwc2_chopper_speed",
-        chic_conn="bwc2_chopper_chic",
-        alarms="bwc2_chopper_alarms",
+        state="bwc2_status",
+        command="bwc2_control",
+        speed="bwc2_speed",
+        chic_conn="bwc2_chic",
+        alarms="bwc2_alarms",
         slit_edges=[[0, 260]],
         resolver_offset=-20,
     ),
