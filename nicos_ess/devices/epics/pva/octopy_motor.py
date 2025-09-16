@@ -118,7 +118,14 @@ class OctopyMotor(EpicsParameters, CanDisable, CanReference, Motor):
             self._name, self._cache_key_status, (status.BUSY, "Moving"), time.time()
         )
         self._put_pv("target", value)
-        self._put_pv("move_done", 0)
+        # octopy does not update move_done immediately, so we need to wait here
+        # until it is set to 0. Not pretty, but what can you do...
+        sleep_time = 0.05
+        wait_time = 2.0
+        for _ in range(int(wait_time / sleep_time)):
+            if self._get_cached_pv_or_ask("move_done") == 0:
+                break
+            time.sleep(sleep_time)
 
     def doStop(self):
         self._put_pv("stop", 1)
