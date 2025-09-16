@@ -2,7 +2,7 @@ import threading
 import time
 
 from nicos import session
-from nicos.core import POLLER, Override, Param, pvname, status
+from nicos.core import POLLER, MoveError, Override, Param, pvname, status
 from nicos.core.mixins import CanDisable
 from nicos.devices.abstract import CanReference, Motor
 from nicos_ess.devices.epics.pva.epics_devices import (
@@ -110,6 +110,10 @@ class OctopyMotor(EpicsParameters, CanDisable, CanReference, Motor):
     def doStart(self, value):
         if abs(self.read(0) - value) <= self.precision:
             return
+
+        if self._get_cached_pv_or_ask("busy") == 1:
+            raise MoveError("Motor is busy")
+
         self._cache.put(
             self._name, self._cache_key_status, (status.BUSY, "Moving"), time.time()
         )
@@ -131,24 +135,31 @@ class OctopyMotor(EpicsParameters, CanDisable, CanReference, Motor):
         self._put_pv("reset", 1)
 
     def doIsAtTarget(self, pos=None, target=None):
+        """
+        A final check at the end of a move to ensure we are at the target.
+        """
         if pos is None:
             pos = self.read(0)
         if target is None:
             target = self.target
 
-        if abs(target - pos) > self.precision:
-            return False
+        within_target = abs(target - pos) <= self.precision
 
-        return self._get_cached_pv_or_ask("move_done") == 1
+        return within_target and self._get_cached_pv_or_ask("move_done") == 1
 
     def doIsCompleted(self):
-        return self.doIsAtTarget()
+        """
+        Continously check if a movement is completed.
+        """
+        busy = self._get_cached_pv_or_ask("busy") == 1
+        move_done = self._get_cached_pv_or_ask("move_done") == 1
+        return not busy and move_done
 
     def doStatus(self, maxage=0):
         return get_from_cache_or(self, self._cache_key_status, self._do_status)
 
     def _do_status(self):
-        if not self.doIsAtTarget():
+        if not self.doIsCompleted():
             return status.BUSY, f"moving to {self.target}"
 
         # Check if the motor is enabled
