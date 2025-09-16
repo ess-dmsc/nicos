@@ -118,6 +118,7 @@ class OctopyMotor(EpicsParameters, CanDisable, CanReference, Motor):
             self._name, self._cache_key_status, (status.BUSY, "Moving"), time.time()
         )
         self._put_pv("target", value)
+        self._put_pv("move_done", 0)
 
     def doStop(self):
         self._put_pv("stop", 1)
