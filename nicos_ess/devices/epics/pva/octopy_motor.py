@@ -145,6 +145,10 @@ class OctopyMotor(EpicsParameters, CanDisable, CanReference, Motor):
 
         within_target = abs(target - pos) <= self.precision
 
+        self.log.warn(
+            f"doIsAtTarget: pos={pos}, target={target}, within_target={within_target}, move_done={self._get_cached_pv_or_ask('move_done')}"
+        )
+
         return within_target and self._get_cached_pv_or_ask("move_done") == 1
 
     def doIsCompleted(self):
@@ -153,6 +157,7 @@ class OctopyMotor(EpicsParameters, CanDisable, CanReference, Motor):
         """
         busy = self._get_cached_pv_or_ask("busy") == 1
         move_done = self._get_cached_pv_or_ask("move_done") == 1
+        self.log.warn(f"doIsCompleted: busy={busy}, move_done={move_done}")
         return not busy and move_done
 
     def doStatus(self, maxage=0):
