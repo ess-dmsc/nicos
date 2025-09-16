@@ -54,10 +54,10 @@ class EpicsShutter(EpicsMappedMoveable):
         """Reset shutter state by writting on the configured 'resetpv' parameter"""
 
         if self.resetpv:
-            # NOTE writting True resets regardless previous state
+            # NOTE writing True resets regardless previous state
             self._put_pv("resetpv", True)
         else:
-            self.log.warn("Reset isn't available on device or missing resetpv param")
+            self.log.warn("Reset isn't available on device or resetpv is missing")
 
 
 class EpicsHeavyShutter(EpicsMappedReadable):
@@ -81,7 +81,7 @@ class EpicsHeavyShutter(EpicsMappedReadable):
         """Reset shutter state by writting on the configured 'resetpv' parameter"""
 
         if self.resetpv:
-            # NOTE writting True resets regardless of state
+            # NOTE writing True resets regardless of state
             self._put_pv("resetpv", True)
         else:
-            self.log.warn("Reset isn't available on device or missing resetpv param")
+            self.log.warn("Reset isn't available on device or resetpv is missing")
