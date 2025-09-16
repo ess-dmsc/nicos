@@ -265,6 +265,7 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
             )
 
         self._put_pv("speed", speed)
+        return speed
 
     def doWriteMonitor_Deadband(self, value):
         deadband = value
