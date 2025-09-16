@@ -1,13 +1,17 @@
 from nicos import session
 from nicos.core import (
-    SIMULATION,
     POLLER,
-    none_or,
+    SIMULATION,
     Param,
+    none_or,
     pvname,
 )
 from nicos.devices.abstract import MappedMoveable
-from nicos.devices.epics.pva import EpicsMappedMoveable, EpicsDevice
+from nicos.devices.epics.pva import (
+    EpicsDevice,
+    EpicsMappedMoveable,
+    EpicsMappedReadable,
+)
 
 
 class EpicsShutter(EpicsMappedMoveable):
@@ -50,7 +54,34 @@ class EpicsShutter(EpicsMappedMoveable):
         """Reset shutter state by writting on the configured 'resetpv' parameter"""
 
         if self.resetpv:
-            # NOTE writting True resets regardless previous state
+            # NOTE writing True resets regardless previous state
             self._put_pv("resetpv", True)
         else:
-            self.log.warn("Reset isn't available on device or missing resetpv param")
+            self.log.warn("Reset isn't available on device or resetpv is missing")
+
+
+class EpicsHeavyShutter(EpicsMappedReadable):
+    """
+    Readable class for heavy shutters with optional reset capabilities
+    """
+
+    parameters = {
+        "resetpv": Param(
+            "PV for resetting device",
+            type=none_or(pvname),
+            mandatory=False,
+            userparam=False,
+        ),
+    }
+
+    def _get_pv_parameters(self):
+        return {"readpv"} | {"resetpv"} if self.resetpv else {"readpv"}
+
+    def doReset(self):
+        """Reset shutter state by writting on the configured 'resetpv' parameter"""
+
+        if self.resetpv:
+            # NOTE writing True resets regardless of state
+            self._put_pv("resetpv", True)
+        else:
+            self.log.warn("Reset isn't available on device or resetpv is missing")
