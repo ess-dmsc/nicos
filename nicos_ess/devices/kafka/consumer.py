@@ -1,3 +1,4 @@
+import threading
 import time
 import uuid
 
@@ -155,30 +156,59 @@ class KafkaSubscriber:
         self._error_callback = None
         self._topics = None
 
+    # def subscribe(
+    #     self, topics, messages_callback, no_messages_callback=None, error_callback=None
+    # ):
+    #     self.stop_consuming(True)
+    #
+    #     self._topics = list(topics)
+    #     self._consumer.unsubscribe()
+    #     self._consumer.subscribe(self._topics)
+    #
+    #     self._messages_callback = messages_callback
+    #     self._no_messages_callback = no_messages_callback
+    #     self._error_callback = error_callback
+    #     self._stop_requested = False
+    #     self._polling_thread = createThread(
+    #         f"polling_thread_{int(time.monotonic())}", self._monitor_topics
+    #     )
+
     def subscribe(
         self, topics, messages_callback, no_messages_callback=None, error_callback=None
     ):
-        self.stop_consuming(True)
+        def _restart():
+            self.stop_consuming(True)  # this will join from helper thread
+            self._topics = list(topics)
+            self._consumer.unsubscribe()
+            self._consumer.subscribe(self._topics)
 
-        self._topics = list(topics)
-        self._consumer.unsubscribe()
-        self._consumer.subscribe(self._topics)
+            self._messages_callback = messages_callback
+            self._no_messages_callback = no_messages_callback
+            self._error_callback = error_callback
+            self._stop_requested = False
+            self._polling_thread = createThread(
+                f"polling_thread_{int(time.monotonic())}", self._monitor_topics
+            )
 
-        self._messages_callback = messages_callback
-        self._no_messages_callback = no_messages_callback
-        self._error_callback = error_callback
-        self._stop_requested = False
-        self._polling_thread = createThread(
-            f"polling_thread_{int(time.monotonic())}", self._monitor_topics
-        )
+        # If called from inside the polling thread, bounce to a helper thread
+        if threading.current_thread() is self._polling_thread:
+            createThread(f"polling_restart_{int(time.monotonic())}", _restart)
+        else:
+            _restart()
 
     def is_alive(self):
         return bool(self._polling_thread and self._polling_thread.is_alive())
 
+    # def stop_consuming(self, wait_for_join=False):
+    #     self._stop_requested = True
+    #     if wait_for_join and self._polling_thread:
+    #         self._polling_thread.join()
+
     def stop_consuming(self, wait_for_join=False):
         self._stop_requested = True
         if wait_for_join and self._polling_thread:
-            self._polling_thread.join()
+            if threading.current_thread() is not self._polling_thread:
+                self._polling_thread.join()
 
     def close(self):
         self.stop_consuming(True)
