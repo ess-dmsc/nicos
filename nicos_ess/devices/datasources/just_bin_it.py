@@ -642,6 +642,9 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
             # self._cache.put(self, "status", DISCONNECTED_STATE, time.time())
             self.status(0)
 
+            self.log.warn(
+                f"No new messages. Trying to resubscribe to {self.statustopic}"
+            )
             self.resubscribe()
 
     def duringMeasureHook(self, elapsed):

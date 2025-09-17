@@ -141,6 +141,7 @@ class KafkaStatusHandler(Readable):
     def _subscriber_error_callback(self, err):
         # Surface a human-friendly warning when the poller hits an error
         msg = getattr(err, "str", lambda: str(err))()
+        self.log.warn("Kafka subscriber error: %s", msg)
         self._setROParam("curstatus", (status.WARN, f"Kafka subscriber error: {msg}"))
         # Do not hard ERROR yet; let heartbeats decide. This keeps flapping low.
 
