@@ -315,6 +315,7 @@ class NexusStructureJsonFile(NexusStructureProvider):
                             session.log.error(
                                 "Failed!  Error %s at the following node %s", e, node
                             )
+                            raise e
                         if found_path:
                             return found_path
             return None
