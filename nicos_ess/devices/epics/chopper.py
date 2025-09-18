@@ -277,12 +277,15 @@ class OdinChopperController(EpicsParameters, MappedMoveable):
                             self._connection_change_callback,
                         )
                     )
+        MappedMoveable.doInit(self, mode)
 
     def doRead(self, maxage=0):
         return get_from_cache_or(
             self,
             self._record_fields["state"].cache_key,
-            lambda: self._epics_wrapper.get_pv_value(f"{self.pv_root}ChopState_R"),
+            lambda: self._epics_wrapper.get_pv_value(
+                f"{self.pv_root}ChopState_R", as_string=True
+            ),
         )
 
     def doStart(self, target):
