@@ -282,7 +282,7 @@ class OdinChopperController(EpicsParameters, MappedMoveable):
         return get_from_cache_or(
             self,
             self._record_fields["state"].cache_key,
-            lambda: self._epics_wrapper.get_value(f"{self.pv_root}ChopState_R"),
+            lambda: self._epics_wrapper.get_pv_value(f"{self.pv_root}ChopState_R"),
         )
 
     def doStart(self, target):
