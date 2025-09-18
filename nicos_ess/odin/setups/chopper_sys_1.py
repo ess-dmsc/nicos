@@ -48,7 +48,7 @@ devices = dict(
         # visibility=(),
     ),
     bwc1_chopper=device(
-        "nicos_ess.devices.epics.chopper.Chopper",
+        "nicos_ess.devices.epics.chopper.OdinChopperController",
         description="The chopper controller",
         pv_root=pv_root_1,
         monitor=True,
