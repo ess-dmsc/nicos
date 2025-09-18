@@ -309,7 +309,13 @@ class NexusStructureJsonFile(NexusStructureProvider):
                     return path + [node["name"]]
                 if "children" in node:
                     for i, child in enumerate(node["children"]):
-                        found_path = search_node(child, path + [node["name"]])
+                        try:
+                            found_path = search_node(child, path + [node["name"]])
+                        except Exception as e:
+                            session.log.error(
+                                "Failed!  Error %s at the following node %s", e, node
+                            )
+                            raise e
                         if found_path:
                             return found_path
             return None
