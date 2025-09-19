@@ -103,7 +103,7 @@ class MultiTargetMapping(MappedMoveable):
     def doStart(self, value):
         targets = self.mapping.get(value, None)
         for channel, target in zip(self._attached_controlled_devices, targets):
-            channel.doStart(target)
+            channel.start(target)
 
     def doStatus(self, maxage=0):
         if self._adevs:
