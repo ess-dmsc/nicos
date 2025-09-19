@@ -512,11 +512,9 @@ class FileWriterControlSink(Device):
         instr_name = ""
         device = self._controller._check_for_device("NexusStructure")
         if device:
-            instr_name = f"{device.instrument_name}_"
-        else:
-            self.log.warning(
-                "Could not locate instrument name from NexusStructure device, removing from file name"
-            )
+            device_name = device.instrument_name.lower()
+            if device_name != session.instrument.lower():
+                instr_name = f"{device_name}_"
         filename = f"{instr_name}{proposal}_{file_num:0>8}.hdf"
         return path.join(proposal_path, filename)
 
