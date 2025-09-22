@@ -87,19 +87,7 @@ class MultiTargetMapping(MappedMoveable):
     the inputs from float, int to tuple but then the values on the left
     corner of GUI appeared as 'In Between' for a new value added manually
     by the user.
-
-    :param default_target: one of the mapping targets that the motors will move to,
-                           before performing any other movement.
     """
-
-    parameters = {
-        "default_target": Param(
-            mandatory=False,
-            settable=True,
-            description="default motor positions",
-            type=str,
-        )
-    }
 
     parameter_overrides = {
         "mapping": Override(mandatory=True, settable=True, userparam=False),
@@ -113,15 +101,9 @@ class MultiTargetMapping(MappedMoveable):
         MappedMoveable.doInit(self, mode)
 
     def doStart(self, value):
-        if value != self.default_target:
-            targets = self.mapping.get(self.default_target, None)
-            for channel, target in zip(self._attached_controlled_devices, targets):
-                channel.start(target)
-            multiWait(self._attached_controlled_devices)
-
         targets = self.mapping.get(value, None)
         for channel, target in zip(self._attached_controlled_devices, targets):
-            channel.doStart(target)
+            channel.start(target)
 
     def doStatus(self, maxage=0):
         if self._adevs:
