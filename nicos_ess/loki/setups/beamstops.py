@@ -14,11 +14,11 @@ devices = dict(
         controlled_device="beamstop_x",
         mapping={
             "Parked": 1,
-            "x position bs1": 1,  # TBD
-            "x position bs2": 2,  # TBD
-            "x position bs3": 3,  # TBD
-            "x position bs4": 4,  # TBD
-            "x position bs5": 5,  # TBD
+            "Xpos BS1": 171.23,
+            "Xpos BS2": 264.22,
+            "Xpos BS3": 233.82,
+            "Xpos BS4": 202,
+            "Xpos BS5": 171.66,
         },
     ),
     beamstop_y=device(
@@ -114,7 +114,7 @@ devices = dict(
                 "Parked",
                 "Parked",
                 "Parked",
-                "x position bs5",
+                "Xpos BS5",
                 "In beam",
             ),
             "Beamstop 5 + monitor": (
@@ -123,7 +123,7 @@ devices = dict(
                 "Parked",
                 "Parked",
                 "In beam",
-                "x position bs5",
+                "Xpos BS5",
                 "In beam",
             ),
             "Beamstop 4": (
@@ -132,7 +132,7 @@ devices = dict(
                 "Parked",
                 "Parked",
                 "Parked",
-                "x position bs4",
+                "Xpos BS4",
                 "In beam",
             ),
             "Beamstop 4 + monitor": (
@@ -141,7 +141,7 @@ devices = dict(
                 "Parked",
                 "Parked",
                 "In beam",
-                "x position bs4",
+                "Xpos BS4",
                 "In beam",
             ),
             "Beamstop 3": (
@@ -150,7 +150,7 @@ devices = dict(
                 "In beam",
                 "Parked",
                 "Parked",
-                "x position bs3",
+                "Xpos BS3",
                 "In beam",
             ),
             "Beamstop 3 + monitor": (
@@ -159,7 +159,7 @@ devices = dict(
                 "In beam",
                 "Parked",
                 "In beam",
-                "x position bs3",
+                "Xpos BS3",
                 "In beam",
             ),
             "Beamstop 2": (
@@ -168,7 +168,7 @@ devices = dict(
                 "Parked",
                 "In beam",
                 "Parked",
-                "x position bs2",
+                "Xpos BS2",
                 "In beam",
             ),
             "Beamstop 2 + monitor": (
@@ -177,7 +177,7 @@ devices = dict(
                 "Parked",
                 "In beam",
                 "In beam",
-                "x position bs2",
+                "Xpos BS2",
                 "In beam",
             ),
             "Beamstop 1": (
@@ -186,7 +186,7 @@ devices = dict(
                 "Parked",
                 "Parked",
                 "In beam",
-                "x position bs1",
+                "Xpos BS1",
                 "In beam",
             ),
         },
