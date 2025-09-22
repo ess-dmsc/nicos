@@ -34,8 +34,8 @@ devices = dict(
     beamstop_seq=device(
         "nicos_ess.devices.sequencers.BeamStopSequencer",
         description="Sequencer for the four beamstops",
-        inpos=0.0,
-        outpos=15.0,
+        inpos=15.0,
+        outpos=0.0,
         mapping={
             "beamstop 1": "bs1",
             "beamstop 2": "bs2",
