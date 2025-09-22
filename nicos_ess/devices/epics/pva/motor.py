@@ -523,6 +523,203 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         return HasLimits._check_in_range(self, curval, userlimits)
 
 
+class EpicsJogMotor(EpicsMotor):
+    """
+    EPICS motor wrapper that behaves like a speed controller.
+    - start(+v): set JVEL=v and jog forward
+    - start(-v): set JVEL=|v| and jog reverse
+    - start(0): stop and clear jog fields
+    Other behaviour (limits, enable, error handling, readbacks) is the same
+    as EpicsMotor, but this device never issues .VAL moves.
+    """
+
+    def doPreinit(self, mode):
+        super().doPreinit(mode)
+        self._record_fields.update(
+            {
+                "target": RecordInfo(
+                    "", ".VAL", RecordType.VALUE
+                ),  # override cache key
+                "value": RecordInfo("value", ".JVEL", RecordType.BOTH),
+                "jogforward": RecordInfo("", ".JOGF", RecordType.VALUE),
+                "jogreverse": RecordInfo("", ".JOGR", RecordType.VALUE),
+            }
+        )
+        self._jog_dir = 0  # -1 reverse, 0 stopped/unknown, +1 forward
+
+    def doReadSpeed(self):
+        return self._get_cached_pv_or_ask("value")
+
+    def _read_jog_with_sign(self):
+        value = abs(self._get_cached_pv_or_ask("value"))
+        jogging_forward = self._get_cached_pv_or_ask("jogforward")
+        jogging_reverse = self._get_cached_pv_or_ask("jogreverse")
+        if jogging_reverse:
+            return -value
+        elif jogging_forward:
+            return value
+        return 0.0
+
+    def doRead(self, maxage=0):
+        return self._read_jog_with_sign()
+
+    def doReadTarget(self):
+        return self._read_jog_with_sign()
+
+    def doWriteSpeed(self, value):
+        speed = self._get_valid_speed(abs(value))
+        if speed != abs(value):
+            self.log.warning(
+                "Selected jog speed %s is outside limits, using %s instead.",
+                value,
+                speed,
+            )
+        self._put_pv("value", speed)
+        return speed
+
+    def _wait_until(self, pv_name, expected_value, timeout=5.0):
+        """Set up a subscription and wait until the PV reaches the expected value."""
+        event = threading.Event()
+
+        def callback(name, param, value, units, limits, severity, message, **kwargs):
+            if value == expected_value:
+                event.set()
+
+        sub = self._epics_wrapper.subscribe(
+            f"{self.motorpv}{self._record_fields[pv_name].pv_suffix}",
+            pv_name,
+            callback,
+        )
+        try:
+            # already done? exit immediately
+            current_value = self._get_cached_pv_or_ask(pv_name)
+            if current_value == expected_value:
+                return
+            # wait for callback to signal completion
+            if not event.wait(timeout):
+                raise TimeoutError(
+                    f"Timeout waiting for {pv_name} to become {expected_value}"
+                )
+        finally:
+            self._epics_wrapper.close_subscription(sub)
+
+    def doStart(self, value):
+        if value == 0:
+            self._jog_dir = 0
+            self.stop()
+            self._cache.put(self._name, "status", (status.OK, "stopped"), time.time())
+            return
+
+        jog_speed = self._get_valid_speed(abs(value))
+        self._jog_dir = 1 if value > 0 else -1  # <-- set before writing JVEL
+
+        self._put_pv("value", jog_speed)  # writes .JVEL; callback will use _jog_dir
+
+        # existing direction-switch logic...
+        jf = self._get_cached_pv_or_ask("jogforward")
+        jr = self._get_cached_pv_or_ask("jogreverse")
+        if not (jf or jr):
+            self._put_pv("jogforward" if value > 0 else "jogreverse", 1)
+        elif value > 0 and jr:
+            self._put_pv("jogreverse", 0)
+            self._wait_until("donemoving", 1)
+            self._put_pv("jogforward", 1)
+        elif value < 0 and jf:
+            self._put_pv("jogforward", 0)
+            self._wait_until("donemoving", 1)
+            self._put_pv("jogreverse", 1)
+
+        msg = f"moving at {'' if value > 0 else '-'}{jog_speed}"
+        self._cache.put(self._name, "status", (status.BUSY, msg), time.time())
+
+    def doStop(self):
+        self._jog_dir = 0
+        self._put_pv("jogforward", 0)
+        self._put_pv("jogreverse", 0)
+        self._put_pv("stop", 1)
+        self._cache.put(self._name, "value", 0.0, time.time())
+
+    def doIsCompleted(self):
+        moving = self._get_cached_pv_or_ask("moving")
+        return moving == 0
+
+    def _do_status(self):
+        with self._lock:
+            epics_status, message = self._get_alarm_status()
+            self._motor_status = epics_status, message
+        if epics_status == status.ERROR:
+            return status.ERROR, message or "Unknown problem in record"
+        elif epics_status == status.WARN:
+            return status.WARN, message
+
+        done_moving = self._get_cached_pv_or_ask("donemoving")
+        moving = self._get_cached_pv_or_ask("moving")
+        if done_moving == 0 or moving != 0:
+            try:
+                jf = self._get_cached_pv_or_ask("jogforward")
+                jr = self._get_cached_pv_or_ask("jogreverse")
+            except KeyError:
+                jf = jr = 0
+            jvel = self._get_cached_pv_or_ask("value")
+            if jf:
+                return status.BUSY, message or f"moving at {jvel}"
+            if jr:
+                return status.BUSY, message or f"moving at {jvel}"
+            return status.BUSY, message or "moving"
+
+        if self.has_powerauto:
+            powerauto_enabled = self._get_cached_pv_or_ask("powerauto")
+        else:
+            powerauto_enabled = 0
+
+        if not powerauto_enabled and not self._get_cached_pv_or_ask("enable"):
+            return status.WARN, "motor is not enabled"
+
+        high_limitswitch = self._get_cached_pv_or_ask("highlimitswitch")
+        if high_limitswitch != 0:
+            return status.WARN, message or "at high limit switch."
+
+        low_limitswitch = self._get_cached_pv_or_ask("lowlimitswitch")
+        if low_limitswitch != 0:
+            return status.WARN, message or "at low limit switch."
+
+        limit_violation = self._get_cached_pv_or_ask("softlimit")
+        if limit_violation != 0:
+            return status.WARN, message or "soft limit violation."
+
+        return status.OK, message
+
+    def doReadUnit(self):
+        raw_unit = self._get_pv("unit", as_string=True)
+        unit = f"{raw_unit}/s" if raw_unit else "units/s"
+        return unit
+
+    def _value_change_callback(self, name, param, value, *args, **kwargs):
+        time_stamp = time.time()
+        cache_key = self._record_fields[param].cache_key or param
+
+        if param == "value":
+            # apply our intended sign; if not moving, zero it
+            try:
+                moving = self._get_cached_pv_or_ask("moving")
+            except Exception:
+                moving = 1  # be permissive if unknown
+            if self._jog_dir < 0:
+                value = -abs(value)
+            else:
+                value = abs(value)
+            if not moving:
+                value = 0.0
+
+        self._cache.put(self._name, cache_key, value, time_stamp)
+
+    def _status_change_callback(self, name, param, value, *args, **kwargs):
+        super()._status_change_callback(name, param, value, *args, **kwargs)
+        if param == "moving" and value == 0:
+            self._cache.put(self._name, "value", 0.0, time.time())
+            self._jog_dir = 0
+
+
 class SmaractPiezoMotor(EpicsMotor):
     """
     This device is a subclass of EpicsMotor that is used for the piezo motors
