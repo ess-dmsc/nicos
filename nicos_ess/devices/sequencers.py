@@ -6,10 +6,12 @@ from nicos.core import (
     Param,
     anytype,
     none_or,
+    oneof,
     status,
 )
 from nicos.devices.generic import BaseSequencer
 from nicos.devices.generic.sequence import SeqDev, SeqMethod
+from nicos.utils import num_sort
 
 
 class BeamStopSequencer(HasMapping, BaseSequencer):
@@ -44,6 +46,9 @@ class BeamStopSequencer(HasMapping, BaseSequencer):
     parameter_overrides = {
         "unit": Override(mandatory=False, default=""),
     }
+
+    def doInit(self, mode):
+        self.valuetype = oneof(*sorted(self.mapping, key=num_sort))
 
     def _all_beamstops(self):
         return [
