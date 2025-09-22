@@ -92,6 +92,5 @@ devices = dict(
             "beamstop_z4": ("parked", "parked", "in-beam", "parked"),
             "beamstop_z5": ("parked", "parked", "parked", "in-beam"),
         },
-        default_target="no_beamstop",
     ),
 )
