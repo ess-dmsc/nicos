@@ -246,7 +246,7 @@ devices = dict(
     bpc_vacuum=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
         description="The vacuum pressure",
-        readpv="{}103:PrsR".format(vacuum_pv_root),
+        readpv="{}102:PrsR".format(vacuum_pv_root),  # same as foc
         fmtstr="%.2e",
     ),
 )
