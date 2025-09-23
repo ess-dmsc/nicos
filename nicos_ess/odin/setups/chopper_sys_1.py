@@ -5,6 +5,7 @@ wfmc2_pv_root = "ODIN-ChpSy1:Chop-WFMC-102:"
 foc_pv_root = "ODIN-ChpSy1:Chop-FOC-101:"
 bpc_pv_root = "ODIN-ChpSy1:Chop-BPC-102:"
 # chic_root = "TBL-ChpSy1:Chop-CHIC-001:"
+vacuum_pv_root = "ODIN-VacBnkr:Vac-VGP-"
 
 devices = dict(
     wfmc1_chopper_status=device(
@@ -69,6 +70,12 @@ devices = dict(
             "Park": "park",
         },
     ),
+    wfmc1_vacuum=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description="The vacuum pressure",
+        readpv="{}100:PrsR".format(vacuum_pv_root),
+        fmtstr="%.2e",
+    ),
     wfmc2_chopper_status=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The chopper status.",
@@ -122,6 +129,12 @@ devices = dict(
             [324.01, 344.01],
         ],
         mapping={"Start": "start", "AStart": "a_start", "Stop": "stop", "Park": "park"},
+    ),
+    wfmc2_vacuum=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description="The vacuum pressure",
+        readpv="{}101:PrsR".format(vacuum_pv_root),
+        fmtstr="%.2e",
     ),
     foc1_chopper_status=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
@@ -177,6 +190,12 @@ devices = dict(
         ],
         mapping={"Start": "start", "AStart": "a_start", "Stop": "stop", "Park": "park"},
     ),
+    foc1_vacuum=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description="The vacuum pressure",
+        readpv="{}102:PrsR".format(vacuum_pv_root),
+        fmtstr="%.2e",
+    ),
     bpc_chopper_status=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The chopper status.",
@@ -223,5 +242,11 @@ devices = dict(
         monitor=True,
         slit_edges=[[7.375, 54.085]],
         mapping={"Start": "start", "AStart": "a_start", "Stop": "stop", "Park": "park"},
+    ),
+    bpc_vacuum=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description="The vacuum pressure",
+        readpv="{}103:PrsR".format(vacuum_pv_root),
+        fmtstr="%.2e",
     ),
 )
