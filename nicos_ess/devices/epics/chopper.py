@@ -292,20 +292,16 @@ class OdinChopperController(EpicsParameters, MappedMoveable):
         target = target.lower()
         if target == "stop":
             pv = f"{self.pv_root}{self._record_fields['stop'].pv_suffix}"
-            self.log.warn("Sending stop command")
-            # self._epics_wrapper.put_value(pv, 1)
+            self._epics_wrapper.put_value(pv, 1)
         elif target == "start":
             pv = f"{self.pv_root}{self._record_fields['start'].pv_suffix}"
-            self.log.warn("Sending start command")
-            # self._epics_wrapper.put_value(pv, 1)
+            self._epics_wrapper.put_value(pv, 1)
         elif target == "a_start":
             pv = f"{self.pv_root}{self._record_fields['a_start'].pv_suffix}"
-            self.log.warn("Sending async start command")
-            # self._epics_wrapper.put_value(pv, 1)
+            self._epics_wrapper.put_value(pv, 1)
         elif target == "park":
             pv = f"{self.pv_root}{self._record_fields['park'].pv_suffix}"
-            self.log.warn("Sending park command")
-            # self._epics_wrapper.put_value(pv, 1)
+            self._epics_wrapper.put_value(pv, 1)
         else:
             raise ValueError(f"Unknown command '{target}' for ODIN chopper")
 
@@ -360,3 +356,12 @@ class OdinChopperController(EpicsParameters, MappedMoveable):
                 (status.ERROR, "communication failure"),
                 time.time(),
             )
+
+    def doStop(self):
+        # Ignore - stopping the chopper is done via the move command.
+        pass
+
+    def doReset(self):
+        # Ignore - resetting the chopper is done via the move command.
+        # What is the reset command for an ODIN chopper?
+        pass
