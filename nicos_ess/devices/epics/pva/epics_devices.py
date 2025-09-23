@@ -862,8 +862,9 @@ class EpicsManualMappedAnalogMoveable(
         except Exception:
             raw_now = None
 
-        if raw_now is not None and abs(raw_now - raw_target) <= self.precision:
-            return
+        # probably don't need this check
+        # if raw_now is not None and abs(raw_now - raw_target) <= self.precision:
+        #     return
 
         self._cache.put(
             self._name, "status", (status.BUSY, f"moving to {value}"), time.time()
