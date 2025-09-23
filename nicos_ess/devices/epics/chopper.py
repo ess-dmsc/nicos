@@ -292,16 +292,16 @@ class OdinChopperController(EpicsParameters, MappedMoveable):
         target = target.lower()
         if target == "stop":
             pv = f"{self.pv_root}{self._record_fields['stop'].pv_suffix}"
-            self._epics_wrapper.put_value(pv, 1)
+            self._epics_wrapper.put_pv_value(pv, 1)
         elif target == "start":
             pv = f"{self.pv_root}{self._record_fields['start'].pv_suffix}"
-            self._epics_wrapper.put_value(pv, 1)
+            self._epics_wrapper.put_pv_value(pv, 1)
         elif target == "a_start":
             pv = f"{self.pv_root}{self._record_fields['a_start'].pv_suffix}"
-            self._epics_wrapper.put_value(pv, 1)
+            self._epics_wrapper.put_pv_value(pv, 1)
         elif target == "park":
             pv = f"{self.pv_root}{self._record_fields['park'].pv_suffix}"
-            self._epics_wrapper.put_value(pv, 1)
+            self._epics_wrapper.put_pv_value(pv, 1)
         else:
             raise ValueError(f"Unknown command '{target}' for ODIN chopper")
 
