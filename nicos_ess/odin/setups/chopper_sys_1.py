@@ -14,12 +14,12 @@ devices = dict(
         visibility=(),
     ),
     wfmc1_chopper_speed=device(
-        "nicos_ess.devices.epics.pva.EpicsReadable",  # Should be EpicsAnalogMoveable later
+        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",  # Should be EpicsAnalogMoveable later
         description="The current speed.",
         readpv="{}Spd_R".format(wfmc1_pv_root),
-        # writepv="{}Spd_S".format(pv_root_1),
-        # abslimits=(0.0, 0.0),
-        # precision=0.1,
+        writepv="{}Spd_S".format(wfmc1_pv_root),
+        precision=0.1,
+        mapping={"7 Hz": 7, "-7 Hz": -7, "0 Hz": 0},
     ),
     wfmc1_chopper_delay=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
@@ -44,11 +44,10 @@ devices = dict(
         readpv="{}InPhs_R".format(wfmc1_pv_root),
     ),
     wfmc1_chopper_park_angle=device(
-        "nicos_ess.devices.epics.pva.EpicsReadable",  # Should be EpicsAnalogMoveable later
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
         description="The chopper's park angle.",
         readpv="{}Pos_R".format(wfmc1_pv_root),
-        # writepv="{}Park_S".format(pv_root_1),
-        # visibility=(),
+        writepv="{}ParkAngle_S".format(wfmc1_pv_root),
     ),
     wfmc1_chopper=device(
         "nicos_ess.devices.epics.chopper.OdinChopperController",
@@ -77,9 +76,12 @@ devices = dict(
         visibility=(),
     ),
     wfmc2_chopper_speed=device(
-        "nicos_ess.devices.epics.pva.EpicsReadable",
+        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
         description="The current speed.",
         readpv="{}Spd_R".format(wfmc2_pv_root),
+        writepv="{}Spd_S".format(wfmc2_pv_root),
+        precision=0.1,
+        mapping={"7 Hz": 7, "-7 Hz": -7, "0 Hz": 0},
     ),
     wfmc2_chopper_delay=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
@@ -101,9 +103,10 @@ devices = dict(
         readpv="{}InPhs_R".format(wfmc2_pv_root),
     ),
     wfmc2_chopper_park_angle=device(
-        "nicos_ess.devices.epics.pva.EpicsReadable",
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
         description="The chopper's park angle.",
         readpv="{}Pos_R".format(wfmc2_pv_root),
+        writepv="{}ParkAngle_S".format(wfmc2_pv_root),
     ),
     wfmc2_chopper=device(
         "nicos_ess.devices.epics.chopper.OdinChopperController",
@@ -127,9 +130,12 @@ devices = dict(
         visibility=(),
     ),
     foc1_chopper_speed=device(
-        "nicos_ess.devices.epics.pva.EpicsReadable",
+        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
         description="The current speed.",
         readpv="{}Spd_R".format(foc_pv_root),
+        writepv="{}Spd_S".format(foc_pv_root),
+        precision=0.1,
+        mapping={"7 Hz": 7, "-7 Hz": -7, "0 Hz": 0},
     ),
     foc1_chopper_delay=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
@@ -151,9 +157,10 @@ devices = dict(
         readpv="{}InPhs_R".format(foc_pv_root),
     ),
     foc1_chopper_park_angle=device(
-        "nicos_ess.devices.epics.pva.EpicsReadable",
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
         description="The chopper's park angle.",
         readpv="{}Pos_R".format(foc_pv_root),
+        writepv="{}ParkAngle_S".format(foc_pv_root),
     ),
     foc1_chopper=device(
         "nicos_ess.devices.epics.chopper.OdinChopperController",
@@ -177,9 +184,12 @@ devices = dict(
         visibility=(),
     ),
     bpc_chopper_speed=device(
-        "nicos_ess.devices.epics.pva.EpicsReadable",
+        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
         description="The current speed.",
         readpv="{}Spd_R".format(bpc_pv_root),
+        writepv="{}Spd_S".format(bpc_pv_root),
+        precision=0.1,
+        mapping={"7 Hz": 7, "-7 Hz": -7, "0 Hz": 0},
     ),
     bpc_chopper_delay=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
@@ -201,9 +211,10 @@ devices = dict(
         readpv="{}InPhs_R".format(bpc_pv_root),
     ),
     bpc_chopper_park_angle=device(
-        "nicos_ess.devices.epics.pva.EpicsReadable",
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
         description="The chopper's park angle.",
         readpv="{}Pos_R".format(bpc_pv_root),
+        writepv="{}ParkAngle_S".format(bpc_pv_root),
     ),
     bpc_chopper=device(
         "nicos_ess.devices.epics.chopper.OdinChopperController",
