@@ -635,17 +635,20 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
                 self._setROParam("curstatus", (status.OK, ""))
             self.status(0)
 
-    def no_messages_callback(self):
-        if self._mode == MASTER and not self.is_process_running():
-            # No heartbeat
-            self._setROParam("curstatus", DISCONNECTED_STATE)
-            # self._cache.put(self, "status", DISCONNECTED_STATE, time.time())
-            self.status(0)
+    # def no_messages_callback(self):
+    # if self._mode == MASTER and not self.is_process_running():
+    #     # No heartbeat
+    #     self._setROParam("curstatus", DISCONNECTED_STATE)
+    #     # self._cache.put(self, "status", DISCONNECTED_STATE, time.time())
+    #     self.status(0)
 
-            self.log.warn(
-                f"No new messages. Trying to resubscribe to {self.statustopic}"
-            )
-            self.resubscribe()
+    # self.log.warn(
+    #     f"No new messages. Trying to resubscribe to {self.statustopic}"
+    # )
+    # self.resubscribe()
+
+    def no_messages_callback(self):
+        self.log.info(f"Calling overridden no_messages_callback from {self.name}")
 
     def duringMeasureHook(self, elapsed):
         if self.liveinterval is not None:
