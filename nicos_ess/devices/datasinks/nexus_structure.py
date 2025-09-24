@@ -246,7 +246,7 @@ class NexusStructureJsonFile(NexusStructureProvider):
 
         try:
             samples_dict = samples_info[0][0]
-        except Exception as e:
+        except KeyError as e:
             session.log.error("Failed!  Did you forget to set a sample?  %s", e)
 
         samples_list = self._generate_samples_group_list(
