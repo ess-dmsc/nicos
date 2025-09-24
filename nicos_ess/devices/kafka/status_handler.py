@@ -157,10 +157,27 @@ class KafkaStatusHandler(Readable):
         self._last_msg_ts = now
 
         try:
-            # Let subclass/base parse & propagate (includes _set_next_update)
+            # Let subclass/base parse & propagate
             self.new_messages_callback(messages)
         except Exception as e:
             self.log.warn("Error in new_messages_callback: %s", e)
+
+        json_messages = {}
+        for timestamp_ms, message in messages:
+            try:
+                if get_schema(message) != "x5f2":
+                    continue
+                msg = deserialise_x5f2(message)
+                js = json.loads(msg.status_json) if msg.status_json else {}
+                interval = msg.update_interval
+                js["update_interval"] = interval
+                json_messages[timestamp_ms] = js
+                self._set_next_update(interval)
+            except Exception as e:
+                self.log.warn("Could not decode message from status topic: %s", e)
+
+        if json_messages:
+            self._status_update_callback(json_messages)
 
         # Base behavior that must always run after any valid message(s):
         self._idle_notified = False
@@ -209,21 +226,7 @@ class KafkaStatusHandler(Readable):
         and forward parsed content to _status_update_callback(messages_dict).
         Subclasses may override; base logic above will still handle liveness.
         """
-        json_messages = {}
-        for timestamp_ms, message in messages:
-            try:
-                if get_schema(message) != "x5f2":
-                    continue
-                msg = deserialise_x5f2(message)
-                js = json.loads(msg.status_json) if msg.status_json else {}
-                js["update_interval"] = msg.update_interval
-                json_messages[timestamp_ms] = js
-                self._set_next_update(msg.update_interval)
-            except Exception as e:
-                self.log.warn("Could not decode message from status topic: %s", e)
-
-        if json_messages:
-            self._status_update_callback(json_messages)
+        return
 
     def no_messages_callback(self):
         """Hook called *once per idle period* when we transition to DISCONNECTED.
