@@ -247,7 +247,7 @@ class NexusStructureJsonFile(NexusStructureProvider):
         try:
             samples_dict = samples_info[0][0]
         except KeyError as e:
-            session.log.error("Failed!  Did you forget to set a sample?  %s", e)
+            self.log.error("Failed!  Did you forget to set a sample?  %s", e)
 
         samples_list = self._generate_samples_group_list(
             samples_dict, skip_keys=["number_of"]
@@ -260,7 +260,7 @@ class NexusStructureJsonFile(NexusStructureProvider):
             dev_path = self._find_device_path(nxinstrument_structure, value)
 
             if not dev_path:
-                session.log.debug(
+                self.log.debug(
                     f"Sample field '{field_name}' cannot be linked to device "
                     f"'{value}' since device is not in structure. Skipping."
                 )
@@ -316,7 +316,7 @@ class NexusStructureJsonFile(NexusStructureProvider):
                         try:
                             found_path = search_node(child, path + [node["name"]])
                         except Exception as e:
-                            session.log.error(
+                            self.log.error(
                                 "Failed!  Error %s at the following node %s", e, node
                             )
                             raise e

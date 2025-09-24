@@ -198,7 +198,7 @@ class FileWriterStatus(KafkaStatusHandler):
 
     def _job_stopped(self, job_id):
         if self._jobs[job_id].error_msg:
-            session.log.error(
+            self.log.error(
                 "Job #%s failed to write successfully, "
                 "run `list_filewriting_jobs` for more details",
                 self._jobs[job_id].job_number,
@@ -326,7 +326,7 @@ class FileWriterStatus(KafkaStatusHandler):
 def incrementFileCounter():
     exp = session.experiment
     if not path.isfile(path.join(exp.dataroot, exp.counterfile)):
-        session.log.warning(
+        self.log.warning(
             "creating new empty file counter file at %s",
             path.join(exp.dataroot, exp.counterfile),
         )
@@ -627,7 +627,7 @@ class FileWriterControlSink(Device):
         items = []
         for job in self._attached_status._jobs_in_order.values():
             items.append([func(job) for func in funcs])
-        printTable(headers, items, session.log.info)
+        printTable(headers, items, self.log.info)
 
     def replay_job(self, job_number):
         if self._mode == SIMULATION:
