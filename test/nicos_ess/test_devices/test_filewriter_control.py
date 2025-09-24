@@ -24,7 +24,7 @@
 from unittest import TestCase, mock
 
 import pytest
-
+pytest.importorskip("epics")
 from test.utils import ErrorLogged
 
 pytest.importorskip("streaming_data_types")

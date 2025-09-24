@@ -23,4 +23,4 @@
 
 import pytest
 
-pytest.importorskip("epics")
+# pytest.importorskip("epics")
