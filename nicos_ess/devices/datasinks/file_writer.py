@@ -509,7 +509,13 @@ class FileWriterControlSink(Device):
     def _generate_filepath(self, file_num):
         proposal = session.experiment.propinfo.get("proposal")
         proposal_path = session.experiment.proposalpath_of(proposal)
-        filename = f"{proposal}_{file_num:0>8}.hdf"
+        instr_name = ""
+        device = self._controller._check_for_device("NexusStructure")
+        if device:
+            device_name = device.instrument_name.lower()
+            if device_name != session.instrument.lower():
+                instr_name = f"{device_name}_"
+        filename = f"{instr_name}{proposal}_{file_num:0>8}.hdf"
         return path.join(proposal_path, filename)
 
     def _start_job(

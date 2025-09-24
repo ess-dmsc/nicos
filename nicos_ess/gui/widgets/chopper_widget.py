@@ -8,8 +8,10 @@ from nicos.guisupport.qt import (
     QBrush,
     QColor,
     QPainter,
+    QPainterPath,
     QPen,
     QPointF,
+    QPolygonF,
     QRectF,
     Qt,
     QWidget,
@@ -304,6 +306,116 @@ class ChopperWidget(QWidget):
 
         return positions, chopper_radius
 
+    def _normalize_openings(self, slit_edges: list[list[float]]) -> list[list[float]]:
+        """Normalize openings (slits) to merged, unwrapped [start,end] with end>=start.
+        Keeps segments possibly >360 so we can represent wrap cleanly."""
+        if not slit_edges:
+            return []
+        segs = []
+        for s, e in slit_edges:
+            s %= 360.0
+            e %= 360.0
+            if e < s:
+                e += 360.0  # unwrap across 0°
+            segs.append([s, e])
+        segs.sort(key=lambda p: p[0])
+
+        # merge overlaps
+        merged = []
+        for s, e in segs:
+            if not merged:
+                merged.append([s, e])
+            else:
+                ls, le = merged[-1]
+                if s <= le + 1e-9:
+                    merged[-1][1] = max(le, e)
+                else:
+                    merged.append([s, e])
+
+        # If last overlaps first when wrapped (+360), merge them
+        if len(merged) > 1:
+            fs, fe = merged[0]
+            ls, le = merged[-1]
+            if le >= fs + 360.0 - 1e-9:
+                merged[-1][1] = max(le, fe + 360.0)
+                merged.pop(0)
+
+        return merged
+
+    def _sector_polygon(
+        self,
+        center: QPointF,
+        inner_r: float,
+        outer_r: float,
+        start_deg: float,
+        end_deg: float,
+        rotation_deg: float,
+        num_points: int = 72,
+    ) -> QPolygonF:
+        """Ring-sector polygon for [start_deg,end_deg] (math CCW degrees)."""
+        # unwrap so end >= start
+        s = start_deg
+        e = end_deg
+        if e < s:
+            e += 360.0
+        if e - s < 1e-6:
+            return QPolygonF()
+
+        def to_qt(a_deg: float) -> float:
+            return math.radians(-a_deg + rotation_deg)
+
+        step = (e - s) / num_points
+        pts = []
+
+        # outer arc s->e
+        for i in range(num_points + 1):
+            a = s + i * step
+            ar = to_qt(a)
+            pts.append(
+                QPointF(
+                    center.x() + outer_r * math.cos(ar),
+                    center.y() - outer_r * math.sin(ar),
+                )
+            )
+        # inner arc e->s
+        for i in range(num_points + 1):
+            a = e - i * step
+            ar = to_qt(a)
+            pts.append(
+                QPointF(
+                    center.x() + inner_r * math.cos(ar),
+                    center.y() - inner_r * math.sin(ar),
+                )
+            )
+
+        return QPolygonF(pts)
+
+    def _annulus_with_opening_holes(
+        self,
+        center: QPointF,
+        inner_r: float,
+        outer_r: float,
+        slit_edges: list[list[float]],
+        rotation_deg: float,
+    ) -> QPainterPath:
+        """Build one path: full annulus MINUS all openings, using Odd-Even fill."""
+        # Start with full annulus as a 360° sector
+        ring = self._sector_polygon(
+            center, inner_r, outer_r, 0.0, 360.0, rotation_deg, num_points=180
+        )
+        path = QPainterPath()
+        if not ring.isEmpty():
+            path.addPolygon(ring)
+
+        openings = self._normalize_openings(slit_edges)
+        for s, e in openings:
+            hole = self._sector_polygon(center, inner_r, outer_r, s, e, rotation_deg)
+            if not hole.isEmpty():
+                path.addPolygon(hole)
+
+        path.setFillRule(Qt.FillRule.OddEvenFill)
+        return path.simplified()
+
     def draw_chopper(
         self,
         painter,
@@ -315,111 +427,26 @@ class ChopperWidget(QWidget):
         selected=False,
         moving=False,
     ):
-        if moving:
-            painter.setBrush(QBrush(Colors.GREEN.value))
-        else:
-            painter.setBrush(QBrush(Colors.GRAY.value))
-
-        if selected:
-            painter.setPen(QPen(Colors.BLUE.value, 2))
-        else:
-            painter.setPen(QPen(Colors.BLACK.value, 2))
-        painter.drawEllipse(center, radius - slit_height, radius - slit_height)
-
-        painter.setBrush(QBrush(Colors.DARK_GRAY.value))
-        painter.setPen(QPen(Colors.BLACK.value, 0))
-        for slit in slit_edges:
-            start_angle = -slit[0] + rotation_angle
-            end_angle = -slit[1] + rotation_angle
-            self.draw_blade(
-                painter, center, radius, start_angle, end_angle, slit_height
-            )
-
-        painter.setBrush(QBrush(Colors.BLACK.value))
-        painter.setPen(QPen(Colors.BLACK.value, 0))
-        for slit in slit_edges:
-            start_angle = -slit[0] + rotation_angle
-            end_angle = -slit[1] + rotation_angle
-            self.draw_boron_coating(
-                painter, center, radius, start_angle, end_angle, slit_height
-            )
-
-    def draw_blade(self, painter, center, radius, start_angle, end_angle, slit_height):
         reduced_radius = radius - slit_height
+        blades_path = self._annulus_with_opening_holes(
+            center, reduced_radius, radius, slit_edges, rotation_angle
+        )
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.fillPath(blades_path, QBrush(Colors.DARK_GRAY.value))
 
-        num_points = 50
+        inner_coating = reduced_radius + radius * 0.05
+        outer_coating = radius * 0.95
+        coating_path = self._annulus_with_opening_holes(
+            center, inner_coating, outer_coating, slit_edges, rotation_angle
+        )
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.fillPath(coating_path, QBrush(Colors.BLACK.value))
 
-        sweep = end_angle - start_angle
-        if sweep == 0:
-            return
-        if sweep > 0:
-            start_angle, end_angle = end_angle, start_angle + 360
-        else:
-            start_angle, end_angle = end_angle, start_angle - 360
-
-        start_angle_rad = math.radians(start_angle)
-        end_angle_rad = math.radians(end_angle)
-
-        outer_arc_points = []
-        inner_arc_points = []
-
-        angle_step = (end_angle_rad - start_angle_rad) / num_points
-
-        for i in range(num_points + 1):
-            angle = start_angle_rad + i * angle_step
-            x = center.x() + radius * math.cos(angle)
-            y = center.y() - radius * math.sin(angle)
-            outer_arc_points.append(QPointF(x, y))
-
-        for i in range(num_points + 1):
-            angle = end_angle_rad - i * angle_step
-            x = center.x() + reduced_radius * math.cos(angle)
-            y = center.y() - reduced_radius * math.sin(angle)
-            inner_arc_points.append(QPointF(x, y))
-
-        all_points = outer_arc_points + inner_arc_points
-
-        painter.drawPolygon(*all_points)
-
-    def draw_boron_coating(
-        self, painter, center, radius, start_angle, end_angle, slit_height
-    ):
-        inner_radius = radius - slit_height + radius * 0.05
-        outer_radius = radius * 0.95
-
-        num_points = 50
-
-        sweep = end_angle - start_angle
-        if sweep == 0:
-            return
-        if sweep > 0:
-            start_angle, end_angle = end_angle, start_angle + 360
-        else:
-            start_angle, end_angle = end_angle, start_angle - 360
-
-        start_angle_rad = math.radians(start_angle)
-        end_angle_rad = math.radians(end_angle)
-
-        outer_arc_points = []
-        inner_arc_points = []
-
-        angle_step = (end_angle_rad - start_angle_rad) / num_points
-
-        for i in range(num_points + 1):
-            angle = start_angle_rad + i * angle_step
-            x = center.x() + outer_radius * math.cos(angle)
-            y = center.y() - outer_radius * math.sin(angle)
-            outer_arc_points.append(QPointF(x, y))
-
-        for i in range(num_points + 1):
-            angle = end_angle_rad - i * angle_step
-            x = center.x() + inner_radius * math.cos(angle)
-            y = center.y() - inner_radius * math.sin(angle)
-            inner_arc_points.append(QPointF(x, y))
-
-        all_points = outer_arc_points + inner_arc_points
-
-        painter.drawPolygon(*all_points)
+        painter.setBrush(QBrush(Colors.GREEN.value if moving else Colors.GRAY.value))
+        painter.setPen(
+            QPen(Colors.BLUE.value, 2) if selected else QPen(Colors.BLACK.value, 1)
+        )
+        painter.drawEllipse(center, radius - slit_height, radius - slit_height)
 
     def update_chopper_data(self, chopper_data):
         self.chopper_data = chopper_data
