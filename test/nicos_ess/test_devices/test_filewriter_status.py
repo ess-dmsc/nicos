@@ -26,7 +26,7 @@ from datetime import datetime
 from unittest import TestCase, mock
 
 import pytest
-
+pytest.importorskip("epics")
 pytest.importorskip("streaming_data_types")
 pytest.importorskip("confluent_kafka")
 
