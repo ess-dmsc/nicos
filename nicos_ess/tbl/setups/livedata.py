@@ -1,24 +1,24 @@
-description = "The beamlime interface for tbl."
+description = "The livedata interface for tbl."
 
 devices = dict(
     monitor1_current=device(
-        "nicos_ess.devices.datasources.beamlime.DataChannel",
+        "nicos_ess.devices.datasources.livedata.DataChannel",
         description="Sliding time window monitor",
         source_name="monitor1/monitor_data/current",
         type="counter",
     ),
     monitor1_cumulative=device(
-        "nicos_ess.devices.datasources.beamlime.DataChannel",
+        "nicos_ess.devices.datasources.livedata.DataChannel",
         description="Accumulated monitor",
         source_name="monitor1/monitor_data/cumulative",
         type="counter",
     ),
-    beamlime_collector=device(
-        "nicos_ess.devices.datasources.beamlime.BeamLimeCollector",
-        description="The beamlime detector collector",
+    livedata_collector=device(
+        "nicos_ess.devices.datasources.livedata.LiveDataCollector",
+        description="The livedata detector collector",
         brokers=configdata("config.KAFKA_BROKERS"),
-        topic=["tbl_beamlime_data"],
-        command_topic="tbl_beamlime_commands",
+        topic=["tbl_livedata_data"],
+        command_topic="tbl_livedata_commands",
         others=["monitor1_current", "monitor1_cumulative"],
         schema="da00",
     ),
