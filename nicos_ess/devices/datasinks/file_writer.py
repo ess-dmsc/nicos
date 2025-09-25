@@ -198,7 +198,7 @@ class FileWriterStatus(KafkaStatusHandler):
 
     def _job_stopped(self, job_id):
         if self._jobs[job_id].error_msg:
-            session.log.error(
+            self.log.error(
                 "Job #%s failed to write successfully, "
                 "run `list_filewriting_jobs` for more details",
                 self._jobs[job_id].job_number,
@@ -513,7 +513,7 @@ class FileWriterControlSink(Device):
         device = self._controller._check_for_device("NexusStructure")
         if device:
             device_name = device.instrument_name.lower()
-            if device_name != session.instrument.lower():
+            if device_name != session.instrument.instrument.lower():
                 instr_name = f"{device_name}_"
         filename = f"{instr_name}{proposal}_{file_num:0>8}.hdf"
         return path.join(proposal_path, filename)
@@ -627,7 +627,7 @@ class FileWriterControlSink(Device):
         items = []
         for job in self._attached_status._jobs_in_order.values():
             items.append([func(job) for func in funcs])
-        printTable(headers, items, session.log.info)
+        printTable(headers, items, self.log.info)
 
     def replay_job(self, job_number):
         if self._mode == SIMULATION:
