@@ -348,12 +348,12 @@ class TimepixDetector(AreaDetector):
     def _set_custom_record_fields(self):
         AreaDetector._set_custom_record_fields(self)
         self._record_fields["write_data"] = "WriteData"
-        self._record_fields["num_processing"] = "nProcessing"
-        self._record_fields["path_to_add"] = "path_toAdd"
-        self._record_fields["path_last_added"] = "path_lastAdded"
-        self._record_fields["min_photons"] = "evFilt:phMin"
-        self._record_fields["min_psd"] = "evFilt:psdMin"
-        self._record_fields["first_trigger"] = "firstTrigger"
+        self._record_fields["num_processing"] = "N_Processing"
+        self._record_fields["path_to_add"] = "PathToAdd"
+        self._record_fields["path_last_added"] = "PathLastAdded"
+        self._record_fields["min_photons"] = "EvFlit_PhMin"
+        self._record_fields["min_psd"] = "EvFlit_PsdMin"
+        self._record_fields["first_trigger"] = "FirstTrigger"
         self._record_fields["ts_ready"] = "TSReady"
 
     def to_str(self, int_list):
@@ -364,16 +364,50 @@ class TimepixDetector(AreaDetector):
         """Convert string to list of ints with a trailing null."""
         return list(s.encode("utf-8")) + [0]
 
+    def _wait_until(self, pv_name, expected_value, precision=None, timeout=5.0):
+        """Set up a subscription and wait until the PV reaches the expected value."""
+        event = threading.Event()
+
+        def callback(name, param, value, units, limits, severity, message, **kwargs):
+            if value == expected_value:
+                event.set()
+
+        sub = self._epics_wrapper.subscribe(
+            # f"{self.motorpv}{self._record_fields[pv_name].pv_suffix}",
+            f"{self.pv_root}{self._record_fields[pv_name]}",
+            pv_name,
+            callback,
+        )
+        try:
+            # already done? exit immediately
+            current_value = self._get_pv(
+                pv_name,
+                as_string=False if isinstance(expected_value, (int, float)) else True,
+            )
+            if precision is not None and isinstance(current_value, (int, float)):
+                if abs(current_value - expected_value) <= precision:
+                    return
+            else:
+                if current_value == expected_value:
+                    return
+            # wait for callback to signal completion
+            if not event.wait(timeout):
+                raise TimeoutError(
+                    f"Timeout waiting for {pv_name} to become {expected_value}"
+                )
+        finally:
+            self._epics_wrapper.close_subscription(sub)
+
     def doStart(self, **preset):
         foldername = f"raw_tpx_{time.time_ns()}"
         path_name = f"file:/data/{foldername}"
         ascii_path_name = self.to_int_list(path_name)
 
         # get the ns timestamp, and split it into a second part and a nanosecond part
-        ts = time.time_ns()
-        ts_sec = ts // 1_000_000_000
-        ts_nsec = ts % 1_000_000_000
-        ts_str = f"{ts_sec}.{ts_nsec:09d}"
+        # ts = time.time_ns()
+        # ts_sec = ts // 1_000_000_000
+        # ts_nsec = ts % 1_000_000_000
+        # ts_str = f"{ts_sec}.{ts_nsec:09d}"
 
         # self._put_pv("first_trigger", ts_str, wait=True)
 
@@ -389,25 +423,28 @@ class TimepixDetector(AreaDetector):
 
         self.doAcquire()
 
-        num_retries = 10
-        for i in range(num_retries):
-            # check that the ts_ready is set to 1, indicating the timepix is ready for a new folder to be added
-            if self._get_pv("ts_ready") == 1:
-                break
-            time.sleep(self._long_loop_delay)
+        # num_retries = 10
+        # for i in range(num_retries):
+        #     # check that the ts_ready is set to 1, indicating the timepix is ready for a new folder to be added
+        #     if self._get_pv("ts_ready") == 1:
+        #         break
+        #     time.sleep(self._long_loop_delay)
+        self._wait_until("ts_ready", 1, timeout=20.0)
 
         # we then need to set the path_toAdd to the same filename for empir to look for the new folder
 
         self._put_pv("path_to_add", foldername)
 
-        for i in range(num_retries):
-            if self._get_pv("path_last_added", as_string=True) == foldername:
-                return
-            time.sleep(self._long_loop_delay)
+        self._wait_until("path_last_added", foldername, timeout=20.0)
 
-        self.log.warning(
-            f"Timepix folder {foldername} not added after {num_retries * self._long_loop_delay} seconds"
-        )
+        # for i in range(num_retries):
+        #     if self._get_pv("path_last_added", as_string=True) == foldername:
+        #         return
+        #     time.sleep(self._long_loop_delay)
+
+        # self.log.warning(
+        #     f"Timepix folder {foldername} not added after {num_retries * self._long_loop_delay} seconds"
+        # )
 
     def doReadNprocessing(self):
         return self._get_pv("num_processing")

@@ -1,11 +1,11 @@
-description = "The timepix in NIDO"
+description = "The timepix in TBL"
 
 devices = dict(
     timepix=device(
         "nicos_ess.devices.epics.area_detector.TimepixDetector",
         description="TimePix3 detector.",
-        pv_root="TBL-DtTPX:NDet-TPX3-001:cam1:",
-        image_pv="TBL-DtTPX:NDet-TPX3-001:image1:ArrayData",
+        pv_root="TBL-DtTPX:NDet-TPX3-001:Cam1_",
+        image_pv="TBL-DtTPX:NDet-TPX3-001:Img1_ArrayData",
         unit="images",
         pollinterval=None,
         pva=True,
@@ -14,7 +14,7 @@ devices = dict(
     timepix_event_counter=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
         description="TimePix3 photon event counter",
-        readpv="TBL-DtTPX:NDet-TPX3-001:cam1:PelEvtRate_RBV",
+        readpv="TBL-DtTPX:NDet-TPX3-001:Cam1_PelEvtRate_RBV",
     ),
     timepix_area_detector_collector=device(
         "nicos_ess.devices.epics.area_detector.AreaDetectorCollector",
