@@ -326,7 +326,7 @@ class FileWriterStatus(KafkaStatusHandler):
 def incrementFileCounter():
     exp = session.experiment
     if not path.isfile(path.join(exp.dataroot, exp.counterfile)):
-        self.log.warning(
+        session.log.warning(
             "creating new empty file counter file at %s",
             path.join(exp.dataroot, exp.counterfile),
         )
