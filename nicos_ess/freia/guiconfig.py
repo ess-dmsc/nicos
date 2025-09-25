@@ -31,7 +31,7 @@ main_window = docked(
                         ),
                         (
                             "Beamlime Panel",
-                            panel("nicos_ess.gui.panels.beamlime.BeamLimePanel"),
+                            panel("nicos_ess.gui.panels.livedata.LiveDataPanel"),
                         ),
                         (
                             "Chopper",

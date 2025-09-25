@@ -32,7 +32,7 @@ class DataChannel(CounterChannelMixin, PassiveChannel):
     """
     Channel device that stores histogram/image data (1D or 2D)
     and pushes it to NICOS via putResult(). The main (master)
-    BeamLimeCollector receives Kafka da00 data and routes it here.
+    LiveDataCollector receives Kafka da00 data and routes it here.
     """
 
     parameters = {
@@ -133,7 +133,7 @@ class DataChannel(CounterChannelMixin, PassiveChannel):
             return default
 
         for pattern in self._WILDCARD_KEYS:
-            key = "beamlime_cfg/" + pattern.format(src=src, svc=svc, param=param)
+            key = "livedata_cfg/" + pattern.format(src=src, svc=svc, param=param)
             raw = self._collector._cache.get(self._collector, key)
             if raw is None:
                 continue
@@ -369,7 +369,7 @@ class DataChannel(CounterChannelMixin, PassiveChannel):
         self._update_status(status.OK, "")
 
 
-class BeamLimeCollector(Detector):
+class LiveDataCollector(Detector):
     parameters = {
         "brokers": Param(
             "List of kafka brokers to connect to",
@@ -403,7 +403,7 @@ class BeamLimeCollector(Detector):
         "cfg_group_id": Param(
             "Kafka consumer group for cfg topic",
             type=str,
-            default="nicos-beamlime-cfg",
+            default="nicos-livedata-cfg",
             settable=True,
             userparam=False,
         ),
@@ -427,7 +427,7 @@ class BeamLimeCollector(Detector):
             )
 
             self._kafka_producer = KafkaProducer.create(self.brokers)
-            self.cfg_group_id = f"nicos-beamlime-cfg-{uuid4().hex}"
+            self.cfg_group_id = f"nicos-livedata-cfg-{uuid4().hex}"
 
             if self.command_topic:
                 self._cmd_consumer = KafkaConsumer.create(
@@ -439,7 +439,7 @@ class BeamLimeCollector(Detector):
                 self._cfg_thread = createThread("cfg_tail", self._tail_cfg_topic)
 
         self._collectControllers()
-        self._update_status(status.WARN, "Initializing BeamLimeCollector...")
+        self._update_status(status.WARN, "Initializing LiveDataCollector...")
 
     def _tail_cfg_topic(self):
         while True:
@@ -451,7 +451,7 @@ class BeamLimeCollector(Detector):
             key = msg.key().decode() if msg.key() else ""
             value = msg.value()
 
-            cache_key = f"beamlime_cfg/{key}"
+            cache_key = f"livedata_cfg/{key}"
             self._cache.put(self._name, cache_key, value, time.time())
             self._cmd_consumer._consumer.commit(msg, asynchronous=False)
 

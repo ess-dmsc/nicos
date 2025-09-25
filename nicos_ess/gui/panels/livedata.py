@@ -1,4 +1,4 @@
-"""NICOS BeamLime liveview."""
+"""NICOS LiveData liveview."""
 
 from functools import partial
 
@@ -46,7 +46,7 @@ class LayoutDialog(QDialog):
         return self.rows_sb.value(), self.cols_sb.value()
 
 
-class BeamLimePlot(QFrame):
+class LiveDataPlot(QFrame):
     """
     A self-contained widget for one plot, including a data-source combo box,
     a settings button, and a container for the live plot view.
@@ -137,8 +137,8 @@ class BeamLimePlot(QFrame):
         self.source_combo.blockSignals(False)
 
 
-class BeamLimePanel(Panel):
-    panelName = "BeamLime Panel"
+class LiveDataPanel(Panel):
+    panelName = "LiveData Panel"
 
     available_plots = {}
     connected_plots = {}
@@ -191,7 +191,7 @@ class BeamLimePanel(Panel):
             hsplit = QSplitter(Qt.Orientation.Horizontal, root)
             row_splitters.append(hsplit)
             for c in range(cols):
-                plot = BeamLimePlot(self)
+                plot = LiveDataPlot(self)
                 self.plot_widgets.append(plot)
                 hsplit.addWidget(plot)
 
