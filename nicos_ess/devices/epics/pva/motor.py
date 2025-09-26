@@ -533,31 +533,36 @@ class EpicsJogMotor(EpicsMotor):
     as EpicsMotor, but this device never issues .VAL moves.
     """
 
+    parameters = {
+        "jog_dir": Param(
+            "Current jogging direction: -1 reverse, 0 stopped/unknown, +1 forward",
+            type=int,
+            settable=True,
+        )
+    }
+
     def doPreinit(self, mode):
         super().doPreinit(mode)
         self._record_fields.update(
             {
                 "target": RecordInfo(
-                    "", ".VAL", RecordType.VALUE
+                    "", ".JVEL", RecordType.VALUE
                 ),  # override cache key
                 "value": RecordInfo("value", ".JVEL", RecordType.BOTH),
                 "jogforward": RecordInfo("", ".JOGF", RecordType.VALUE),
                 "jogreverse": RecordInfo("", ".JOGR", RecordType.VALUE),
             }
         )
-        self._jog_dir = 0  # -1 reverse, 0 stopped/unknown, +1 forward
 
     def doReadSpeed(self):
         return self._get_cached_pv_or_ask("value")
 
     def _read_jog_with_sign(self):
-        value = abs(self._get_cached_pv_or_ask("value"))
-        jogging_forward = self._get_cached_pv_or_ask("jogforward")
-        jogging_reverse = self._get_cached_pv_or_ask("jogreverse")
-        if jogging_reverse:
-            return -value
-        elif jogging_forward:
-            return value
+        jvel = abs(self._get_cached_pv_or_ask("value"))
+        if self.jog_dir < 0:
+            return -jvel
+        if self.jog_dir > 0:
+            return jvel
         return 0.0
 
     def doRead(self, maxage=0):
@@ -605,13 +610,18 @@ class EpicsJogMotor(EpicsMotor):
 
     def doStart(self, value):
         if value == 0:
-            self._jog_dir = 0
+            self.jog_dir = 0
             self.stop()
             self._cache.put(self._name, "status", (status.OK, "stopped"), time.time())
             return
 
         jog_speed = self._get_valid_speed(abs(value))
-        self._jog_dir = 1 if value > 0 else -1  # <-- set before writing JVEL
+        self.jog_dir = 1 if value > 0 else -1  # <-- set before writing JVEL
+
+        # remove this later when EPICS motor record supports speed changes on the fly
+        # stop any existing motion first
+        self.stop()
+        self._wait_until("donemoving", 1)
 
         self._put_pv("value", jog_speed)  # writes .JVEL; callback will use _jog_dir
 
@@ -629,11 +639,10 @@ class EpicsJogMotor(EpicsMotor):
             self._wait_until("donemoving", 1)
             self._put_pv("jogreverse", 1)
 
-        msg = f"moving at {'' if value > 0 else '-'}{jog_speed}"
-        self._cache.put(self._name, "status", (status.BUSY, msg), time.time())
+        self._cache.put(self._name, "status", (status.BUSY, "moving"), time.time())
 
     def doStop(self):
-        self._jog_dir = 0
+        self.jog_dir = 0
         self._put_pv("jogforward", 0)
         self._put_pv("jogreverse", 0)
         self._put_pv("stop", 1)
@@ -655,17 +664,7 @@ class EpicsJogMotor(EpicsMotor):
         done_moving = self._get_cached_pv_or_ask("donemoving")
         moving = self._get_cached_pv_or_ask("moving")
         if done_moving == 0 or moving != 0:
-            try:
-                jf = self._get_cached_pv_or_ask("jogforward")
-                jr = self._get_cached_pv_or_ask("jogreverse")
-            except KeyError:
-                jf = jr = 0
-            jvel = self._get_cached_pv_or_ask("value")
-            if jf:
-                return status.BUSY, message or f"moving at {jvel}"
-            if jr:
-                return status.BUSY, message or f"moving at {jvel}"
-            return status.BUSY, message or "moving"
+            return status.BUSY, message or f"moving"
 
         if self.has_powerauto:
             powerauto_enabled = self._get_cached_pv_or_ask("powerauto")
@@ -699,25 +698,26 @@ class EpicsJogMotor(EpicsMotor):
         cache_key = self._record_fields[param].cache_key or param
 
         if param == "value":
-            # apply our intended sign; if not moving, zero it
-            try:
-                moving = self._get_cached_pv_or_ask("moving")
-            except Exception:
-                moving = 1  # be permissive if unknown
-            if self._jog_dir < 0:
+            if self.jog_dir < 0:
                 value = -abs(value)
             else:
                 value = abs(value)
-            if not moving:
-                value = 0.0
+            self._cache.put(self._name, cache_key, value, time_stamp)
+            return
+
+        # update value when direction or moving state changes
+        cur_jvel = self._get_cached_pv_or_ask("value")
+        if param == "jogforward" and value == 1:
+            self._cache.put(self._name, "jog_dir", 1, time_stamp)
+            self._cache.put(self._name, "value", abs(cur_jvel), time_stamp)
+        elif param == "jogreverse" and value == 1:
+            self._cache.put(self._name, "jog_dir", -1, time_stamp)
+            self._cache.put(self._name, "value", -abs(cur_jvel), time_stamp)
+        elif param == "moving" and value == 0:
+            self._cache.put(self._name, "jog_dir", 0, time_stamp)
+            self._cache.put(self._name, "value", 0.0, time_stamp)
 
         self._cache.put(self._name, cache_key, value, time_stamp)
-
-    def _status_change_callback(self, name, param, value, *args, **kwargs):
-        super()._status_change_callback(name, param, value, *args, **kwargs)
-        if param == "moving" and value == 0:
-            self._cache.put(self._name, "value", 0.0, time.time())
-            self._jog_dir = 0
 
 
 class SmaractPiezoMotor(EpicsMotor):
