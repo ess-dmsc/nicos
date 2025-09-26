@@ -22,13 +22,13 @@
 # *****************************************************************************
 
 import pytest
+from unittest.mock import Mock
 
 # pytest.importorskip("graypy")
 from nicos.commands.device import adjust
+from nicos.core import status
 
-from nicos_ess.devices.epics.pva.epics_devices import RecordInfo, RecordType
 from nicos_ess.devices.epics.pva.motor import EpicsMotor
-
 
 
 session_setup = "ess_motors"
@@ -52,12 +52,12 @@ class FakeEpicsMotor(EpicsMotor):
         "offset": 0,
         "enable": 1,
         "direction": 0,
-        "unit": 'mm',
+        "unit": "mm",
         "target": 45,
         "position_deadband": 0.1,
         "diallowlimit": -120,
         "dialhighlimit": 120,
-        "dir": "Pos", # what is supposed to be here?
+        "dir": "Pos",
         "description": "motor1 test device",
         "monitor_deadband": 0.2,
         "moving": False,
@@ -66,42 +66,7 @@ class FakeEpicsMotor(EpicsMotor):
         "dialvalue": 0,
     }
 
-    _record_fields = {
-        "value": RecordInfo("value", ".RBV", RecordType.BOTH),
-        "dialvalue": RecordInfo("", ".DRBV", RecordType.VALUE),
-        "target": RecordInfo("target", ".VAL", RecordType.VALUE),
-        "stop": RecordInfo("", ".STOP", RecordType.VALUE),
-        "speed": RecordInfo("", ".VELO", RecordType.VALUE),
-        "offset": RecordInfo("", ".OFF", RecordType.VALUE),
-        "highlimit": RecordInfo("", ".HLM", RecordType.VALUE),
-        "lowlimit": RecordInfo("", ".LLM", RecordType.VALUE),
-        "dialhighlimit": RecordInfo("", ".DHLM", RecordType.VALUE),
-        "diallowlimit": RecordInfo("", ".DLLM", RecordType.VALUE),
-        "enable": RecordInfo("", ".CNEN", RecordType.VALUE),
-        "set": RecordInfo("", ".SET", RecordType.VALUE),
-        "foff": RecordInfo("", ".FOFF", RecordType.VALUE),
-        "dir": RecordInfo("", ".DIR", RecordType.VALUE),
-        "unit": RecordInfo("unit", ".EGU", RecordType.VALUE),
-        "homeforward": RecordInfo("", ".HOMF", RecordType.VALUE),
-        "homereverse": RecordInfo("", ".HOMR", RecordType.VALUE),
-        "position_deadband": RecordInfo("", ".RDBD", RecordType.VALUE),
-        "description": RecordInfo("", ".DESC", RecordType.VALUE),
-        "monitor_deadband": RecordInfo("", ".MDEL", RecordType.VALUE),
-        "maxspeed": RecordInfo("", ".VMAX", RecordType.VALUE),
-        "donemoving": RecordInfo("", ".DMOV", RecordType.STATUS),
-        "moving": RecordInfo("", ".MOVN", RecordType.STATUS),
-        "miss": RecordInfo("", ".MISS", RecordType.STATUS),
-        "alarm_status": RecordInfo("", ".STAT", RecordType.STATUS),
-        "alarm_severity": RecordInfo("", ".SEVR", RecordType.STATUS),
-        "softlimit": RecordInfo("", ".LVIO", RecordType.STATUS),
-        "lowlimitswitch": RecordInfo("", ".LLS", RecordType.STATUS),
-        "highlimitswitch": RecordInfo("", ".HLS", RecordType.STATUS),
-        "errorbit": RecordInfo("", "-Err", RecordType.STATUS),
-        "reseterror": RecordInfo("", "-ErrRst", RecordType.STATUS),
-        "powerauto": RecordInfo("", "-PwrAuto", RecordType.STATUS),
-        "errormsg": RecordInfo("", "-MsgTxt", RecordType.STATUS),
-    }
-
+    _record_fields = {}
 
     def doPreinit(self, mode):
         pass
@@ -109,22 +74,8 @@ class FakeEpicsMotor(EpicsMotor):
     def doInit(self, mode):
         pass
 
-    def _get_pvctrl(self, pvparam, ctrl, default=None, update=False):
-        pass
-
     def _put_pv(self, pvparam, value, wait=False):
         self.values[pvparam] = value
-
-        if pvparam == "offset":
-            self.values["lowlimit"] += value
-            self.values["highlimit"] += value
-
-    def _put_pv_blocking(self, pvparam, value, update_rate=0.1, timeout=60):
-        self.values[pvparam] = value
-
-        if pvparam == "offset":
-            self.values["lowlimit"] += value
-            self.values["highlimit"] += value
 
     def _get_pv(self, pvparam, as_string=False):
         return self.values[pvparam]
@@ -192,7 +143,7 @@ class TestEpicsMotor:
 
         # Check new offset value
         assert new_offset == self.motor.offset
-    
+
     @pytest.mark.skip(reason="I don't think abslimits are supposed to change at all")
     def test_setting_offset_causes_absolute_limits_to_be_updated(self):
         # Get initial limits
@@ -216,6 +167,39 @@ class TestEpicsMotor:
 
         # Check new limits
         assert (low + new_offset, high + new_offset) == self.motor.userlimits
+
+    @pytest.mark.parametrize(
+        "test_alerts_input",
+        [
+            status.OK,
+            status.WARN,
+            status.ERROR,
+            status.UNKNOWN,
+        ],
+    )
+    @pytest.mark.parametrize(
+        "errormsg_return_values",
+        [
+            (status.OK, ""),
+            (status.WARN, ""),
+            (status.ERROR, ""),
+            (status.UNKNOWN, ""),
+        ],
+    )
+    def test_alerts_have_correct_precedence(
+        self, test_alerts_input, errormsg_return_values
+    ):
+        self.motor._get_errormsg = Mock(return_value=errormsg_return_values)
+
+        # ignore the _motor_status check and msg logging
+        self.motor._log_epics_msg_info = Mock(return_value=None)
+        self.motor._motor_status = None, None
+
+        err_stat, _ = self.motor._get_errormsg()
+        stat, _ = self.motor._update_status_with_errormsg(test_alerts_input, "")
+        assert err_stat <= stat
+        if stat == status.ERROR and err_stat == status.ERROR:
+            assert err_stat == stat
 
 
 class TestDerivedEpicsMotor:
