@@ -15,7 +15,7 @@ devices = dict(
     strain_amplitude=device(
         "nicos.devices.epics.pva.EpicsReadable",
         description="The strain amplitude.",
-        readpv="{}Strain1-R".format(pv_root),
+        readpv="{}Strain-R".format(pv_root),
         monitor=True,
         pva=True,
         pollinterval=None,
