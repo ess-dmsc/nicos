@@ -531,6 +531,11 @@ class EpicsJogMotor(EpicsMotor):
     - start(0): stop and clear jog fields
     Other behaviour (limits, enable, error handling, readbacks) is the same
     as EpicsMotor, but this device never issues .VAL moves.
+
+    Notes on readbacks in this subclass:
+    - "jog_velocity" is the raw EPICS .JVEL (usually small and never actually 0).
+    - "value" is a synthetic NICOS-side signal: signed speed based on jog_dir,
+      and set to 0 when stopping, etc.
     """
 
     parameters = {
@@ -547,18 +552,21 @@ class EpicsJogMotor(EpicsMotor):
             {
                 "target": RecordInfo(
                     "", ".JVEL", RecordType.VALUE
-                ),  # override cache key
-                "value": RecordInfo("value", ".JVEL", RecordType.BOTH),
+                ),  # override cache key (unchanged)
+                "jog_velocity": RecordInfo("jog_velocity", ".JVEL", RecordType.VALUE),
+                "value": RecordInfo(
+                    "value", ".JVEL", RecordType.STATUS
+                ),  # STATUS-only on purpose
                 "jogforward": RecordInfo("", ".JOGF", RecordType.VALUE),
                 "jogreverse": RecordInfo("", ".JOGR", RecordType.VALUE),
             }
         )
 
     def doReadSpeed(self):
-        return self._get_cached_pv_or_ask("value")
+        return self._get_cached_pv_or_ask("jog_velocity")
 
     def _read_jog_with_sign(self):
-        jvel = abs(self._get_cached_pv_or_ask("value"))
+        jvel = abs(self._get_cached_pv_or_ask("jog_velocity"))
         if self.jog_dir < 0:
             return -jvel
         if self.jog_dir > 0:
@@ -579,7 +587,8 @@ class EpicsJogMotor(EpicsMotor):
                 value,
                 speed,
             )
-        self._put_pv("value", speed)
+        # Write raw speed to .JVEL via jog_velocity
+        self._put_pv("jog_velocity", speed)
         return speed
 
     def _wait_until(self, pv_name, expected_value, timeout=5.0):
@@ -623,9 +632,9 @@ class EpicsJogMotor(EpicsMotor):
         self.stop()
         self._wait_until("donemoving", 1)
 
-        self._put_pv("value", jog_speed)  # writes .JVEL; callback will use _jog_dir
+        # write .JVEL (raw jog_velocity); callbacks will synthesize "value"
+        self._put_pv("jog_velocity", jog_speed)
 
-        # existing direction-switch logic...
         jf = self._get_cached_pv_or_ask("jogforward")
         jr = self._get_cached_pv_or_ask("jogreverse")
         if not (jf or jr):
@@ -664,7 +673,7 @@ class EpicsJogMotor(EpicsMotor):
         done_moving = self._get_cached_pv_or_ask("donemoving")
         moving = self._get_cached_pv_or_ask("moving")
         if done_moving == 0 or moving != 0:
-            return status.BUSY, message or f"moving"
+            return status.BUSY, message or "moving"
 
         if self.has_powerauto:
             powerauto_enabled = self._get_cached_pv_or_ask("powerauto")
@@ -697,25 +706,34 @@ class EpicsJogMotor(EpicsMotor):
         time_stamp = time.time()
         cache_key = self._record_fields[param].cache_key or param
 
-        if param == "value":
-            if self.jog_dir < 0:
-                value = -abs(value)
-            else:
-                value = abs(value)
-            self._cache.put(self._name, cache_key, value, time_stamp)
+        if param == "jog_velocity":
+            self._cache.put(self._name, "jog_velocity", value, time_stamp)
+            signed = -abs(value) if self.jog_dir < 0 else abs(value)
+            self._cache.put(self._name, "value", signed, time_stamp)
             return
 
-        # update value when direction or moving state changes
-        cur_jvel = self._get_cached_pv_or_ask("value")
-        if param == "jogforward" and value == 1:
-            self._cache.put(self._name, "jog_dir", 1, time_stamp)
-            self._cache.put(self._name, "value", abs(cur_jvel), time_stamp)
-        elif param == "jogreverse" and value == 1:
-            self._cache.put(self._name, "jog_dir", -1, time_stamp)
-            self._cache.put(self._name, "value", -abs(cur_jvel), time_stamp)
-        elif param == "moving" and value == 0:
-            self._cache.put(self._name, "jog_dir", 0, time_stamp)
-            self._cache.put(self._name, "value", 0.0, time_stamp)
+        # Update the signed "value" when direction or moving state changes
+        cur_jvel = abs(self._get_cached_pv_or_ask("jog_velocity"))
+        if param == "jogforward":
+            if value == 1:
+                self._cache.put(self._name, "jog_dir", 1, time_stamp)
+                self._cache.put(self._name, "value", cur_jvel, time_stamp)
+            else:
+                # check if we are still jogging in reverse
+                jog_rev = self._get_cached_pv_or_ask("jogreverse")
+                if not jog_rev:
+                    self._cache.put(self._name, "jog_dir", 0, time_stamp)
+                    self._cache.put(self._name, "value", 0.0, time_stamp)
+        elif param == "jogreverse":
+            if value == 1:
+                self._cache.put(self._name, "jog_dir", -1, time_stamp)
+                self._cache.put(self._name, "value", -cur_jvel, time_stamp)
+            else:
+                # check if we are still jogging forward
+                jog_fwd = self._get_cached_pv_or_ask("jogforward")
+                if not jog_fwd:
+                    self._cache.put(self._name, "jog_dir", 0, time_stamp)
+                    self._cache.put(self._name, "value", 0.0, time_stamp)
 
         self._cache.put(self._name, cache_key, value, time_stamp)
 
