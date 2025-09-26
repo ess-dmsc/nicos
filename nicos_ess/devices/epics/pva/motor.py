@@ -7,6 +7,7 @@ from nicos.core import POLLER, Moveable, Override, Param, oneof, pvname, status
 from nicos.core.errors import ConfigurationError
 from nicos.core.mixins import CanDisable, HasLimits, HasOffset
 from nicos.devices.abstract import CanReference, Motor
+from nicos.devices.epics.status import SEVERITY_TO_STATUS
 from nicos_ess.devices.epics.pva.epics_devices import (
     EpicsParameters,
     RecordInfo,
@@ -158,6 +159,8 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
             "reseterror": RecordInfo("", "-ErrRst", RecordType.STATUS),
             "powerauto": RecordInfo("", "-PwrAuto", RecordType.STATUS),
             "errormsg": RecordInfo("", "-MsgTxt", RecordType.STATUS),
+            "errormsg.STAT": RecordInfo("", "-MsgTxt.STAT", RecordType.STATUS),
+            "errormsg.SEVR": RecordInfo("", "-MsgTxt.SEVR", RecordType.STATUS),
         }
         self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
         # Check PV exists
@@ -454,6 +457,25 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
 
         return valid_speed
 
+    def _get_errormsg(self):
+        err_msg = self._get_cached_pv_or_ask("errormsg", as_string=True)
+
+        err_stat = SEVERITY_TO_STATUS.get(
+            self._get_cached_pv_or_ask("errormsg.SEVR"), status.UNKNOWN
+        )
+        return err_stat, err_msg
+
+    def _update_status_with_errormsg(self, stat, msg):
+        err_stat, err_msg = self._get_errormsg()
+        if stat == status.UNKNOWN:
+            stat = status.ERROR
+        # Increase status "severity" from MsgTxt alert if it's higher than value alert
+        if err_stat > stat:
+            stat = err_stat
+        if self._motor_status != (stat, err_msg):
+            self._log_epics_msg_info(err_msg, stat, msg)
+        return stat, err_msg
+
     def _get_alarm_status(self):
         def _get_value_status():
             pv = f"{self.motorpv}{self._record_fields['value'].pv_suffix}"
@@ -462,12 +484,7 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         stat, msg = get_from_cache_or(self, "value_status", _get_value_status)
 
         if self.has_errormsg:
-            err_msg = self._get_cached_pv_or_ask("errormsg", as_string=True)
-            if stat == status.UNKNOWN:
-                stat = status.ERROR
-            if self._motor_status != (stat, err_msg):
-                self._log_epics_msg_info(err_msg, stat, msg)
-            return stat, err_msg
+            return self._update_status_with_errormsg(stat, msg)
         return stat, msg
 
     def _log_epics_msg_info(self, error_msg, stat, epics_msg):
