@@ -21,6 +21,12 @@ class LOKIDetectorMotion(EpicsMotor):
             type=str,
             mandatory=True,
         ),
+        "ps_check_enabled": Param(
+            "Whether the power supply bank is checked or not before movement",
+            type=bool,
+            default=True,
+            mandatory=False,
+        ),
     }
     
     def doInit(self, mode):
@@ -56,6 +62,11 @@ class LOKIDetectorMotion(EpicsMotor):
         why : str
             Message indicating why movement is or isn't allowed.
         """
+
+        if not self.ps_check_enabled:
+            msg = "Detector motion: Software interlock is disabled."
+            print(msg)
+            return True, msg
 
         if self._ps_bank is None:
             return False, f"Power Supply Bank is None ({self.ps_bank_name})."

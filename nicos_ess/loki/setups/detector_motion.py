@@ -11,5 +11,6 @@ devices = dict(
         motorpv=f"{pv_root}MC-LinX-01:Mtr",
         monitor_deadband=0.01,
         ps_bank_name="HV_Bank_0",
+        ps_check_enabled=False,
     )
 )
