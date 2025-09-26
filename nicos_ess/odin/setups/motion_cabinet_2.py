@@ -65,53 +65,85 @@ devices = dict(
         readpv="ODIN-ExSht:MC-Pne-01:ShtMsgTxt",
     ),
     # --- Motors: Pinhole slit sets 1 & 2 ---
-    pinhole_1_left=device(
+    pinhole_1_yp=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Pinhole Slit 1 left (Y+)",
         motorpv="ODIN-PinSl1:MC-SlYp-01:Mtr",
         monitor_deadband=0.01,
     ),
-    pinhole_1_right=device(
+    pinhole_1_ym=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Pinhole Slit 1 right (Y-)",
         motorpv="ODIN-PinSl1:MC-SlYm-01:Mtr",
         monitor_deadband=0.01,
     ),
-    pinhole_1_upper=device(
+    pinhole_1_zp=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Pinhole Slit 1 upper (Z+)",
         motorpv="ODIN-PinSl1:MC-SlZp-01:Mtr",
         monitor_deadband=0.01,
     ),
-    pinhole_1_lower=device(
+    pinhole_1_zm=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Pinhole Slit 1 lower (Z-)",
         motorpv="ODIN-PinSl1:MC-SlZm-01:Mtr",
         monitor_deadband=0.01,
     ),
-    pinhole_2_left=device(
+    pinhole_1_hori=device(
+        "nicos.devices.generic.slit.HorizontalGap",
+        description="Pinhole Slit 1 horizontal gap abstraction device",
+        opmode="2blades",
+        coordinates="equal",
+        left="pinhole_1_ym",
+        right="pinhole_1_yp",
+    ),
+    pinhole_1_vert=device(
+        "nicos.devices.generic.slit.VerticalGap",
+        description="Pinhole Slit 1 vertical gap abstraction device",
+        opmode="2blades",
+        coordinates="equal",
+        bottom="pinhole_1_zm",
+        top="pinhole_1_zp",
+    ),
+    pinhole_2_yp=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Pinhole Slit 2 left (Y+)",
         motorpv="ODIN-PinSl2:MC-SlYp-01:Mtr",
         monitor_deadband=0.01,
     ),
-    pinhole_2_right=device(
+    pinhole_2_ym=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Pinhole Slit 2 right (Y-)",
         motorpv="ODIN-PinSl2:MC-SlYm-01:Mtr",
         monitor_deadband=0.01,
     ),
-    pinhole_2_upper=device(
+    pinhole_2_zp=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Pinhole Slit 2 upper (Z+)",
         motorpv="ODIN-PinSl2:MC-SlZp-01:Mtr",
         monitor_deadband=0.01,
     ),
-    pinhole_2_lower=device(
+    pinhole_2_zm=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Pinhole Slit 2 lower (Z-)",
         motorpv="ODIN-PinSl2:MC-SlZm-01:Mtr",
         monitor_deadband=0.01,
+    ),
+    pinhole_2_hori=device(
+        "nicos.devices.generic.slit.HorizontalGap",
+        description="Pinhole Slit 2 horizontal gap abstraction device",
+        opmode="2blades",
+        coordinates="equal",
+        left="pinhole_2_ym",
+        right="pinhole_2_yp",
+    ),
+    pinhole_2_vert=device(
+        "nicos.devices.generic.slit.VerticalGap",
+        description="Pinhole Slit 2 vertical gap abstraction device",
+        opmode="2blades",
+        coordinates="equal",
+        bottom="pinhole_2_zm",
+        top="pinhole_2_zp",
     ),
     # --- Cabinet health ---
     cabinet_2_status=device(
