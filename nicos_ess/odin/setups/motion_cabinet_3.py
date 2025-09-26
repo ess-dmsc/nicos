@@ -12,14 +12,4 @@ devices = dict(
         pv_root="ODIN-MCS3:MC-MCU-03:Cabinet",
         number_of_bits=24,
     ),
-    cabinet_3_pressure_1=device(
-        "nicos_ess.devices.epics.pva.EpicsReadable",
-        description="Cabinet 3 pressure 1",
-        readpv="ODIN-MCS3:MC-MCU-03:Pressure1",
-    ),
-    cabinet_3_pressure_2=device(
-        "nicos_ess.devices.epics.pva.EpicsReadable",
-        description="Cabinet 3 pressure 2",
-        readpv="ODIN-MCS3:MC-MCU-03:Pressure2",
-    ),
 )
