@@ -32,10 +32,10 @@ devices = dict(
             "sample_stack_z",
         ],
         mapping={
-            "default_loading_position": (2, 198, 53.75),
-            "default_center_position": (2, 100, 53.75),
-            "default_sample_holder_lower": (120, 100, 198),
-            "default_sample_holder_rotation": (120, 100, 5),
+            "table_loading_position": (2, 198, 53.75),
+            "stack_center": (2, 100, 53.75),
+            "static_holder_bottom": (120, 100, 198),
+            "rotating_holder": (120, 100, 5),
         },
     ),
 )
