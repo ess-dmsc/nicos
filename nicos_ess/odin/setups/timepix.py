@@ -4,7 +4,7 @@ devices = dict(
     timepix=device(
         "nicos_ess.devices.epics.area_detector.TimepixDetector",
         description="TimePix3 detector.",
-        pv_root="ODIN-DtTPX:NDet-TPX3-001:Cam1_",
+        pv_root="ODIN-DtTPX:NDet-TPX3-001:cam1:",
         image_pv="ODIN-DtTPX:NDet-TPX3-001:image1:ArrayData",
         unit="images",
         pollinterval=None,
