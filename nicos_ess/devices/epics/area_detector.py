@@ -369,8 +369,12 @@ class TimepixDetector(AreaDetector):
         event = threading.Event()
 
         def callback(name, param, value, units, limits, severity, message, **kwargs):
-            if value == expected_value:
-                event.set()
+            if precision is not None and isinstance(value, (int, float)):
+                if abs(value - expected_value) <= precision:
+                    event.set()
+            else:
+                if value == expected_value:
+                    event.set()
 
         sub = self._epics_wrapper.subscribe(
             # f"{self.motorpv}{self._record_fields[pv_name].pv_suffix}",
@@ -403,48 +407,24 @@ class TimepixDetector(AreaDetector):
         path_name = f"file:/data/{foldername}"
         ascii_path_name = self.to_int_list(path_name)
 
-        # get the ns timestamp, and split it into a second part and a nanosecond part
-        # ts = time.time_ns()
-        # ts_sec = ts // 1_000_000_000
-        # ts_nsec = ts % 1_000_000_000
-        # ts_str = f"{ts_sec}.{ts_nsec:09d}"
-
-        # self._put_pv("first_trigger", ts_str, wait=True)
-
         # first we need to set the output folder path. use time_ns to make it unique
-
         self._put_pv("folder_path", ascii_path_name)
 
         # we then need to set write_data to 1 to actually update the path
-
         self._put_pv("write_data", 1)
 
+        # force ts_ready to 0 so we can wait for it to become 1 after triggering
+        self._put_pv("ts_ready", 0)
+
         # we then start the acquisition as normal
-
         self.doAcquire()
-
-        # num_retries = 10
-        # for i in range(num_retries):
-        #     # check that the ts_ready is set to 1, indicating the timepix is ready for a new folder to be added
-        #     if self._get_pv("ts_ready") == 1:
-        #         break
-        #     time.sleep(self._long_loop_delay)
-        self._wait_until("ts_ready", 1, timeout=20.0)
+        # wait until the IOC has received a trigger
+        self._wait_until("ts_ready", 1)
 
         # we then need to set the path_toAdd to the same filename for empir to look for the new folder
-
         self._put_pv("path_to_add", foldername)
-
-        self._wait_until("path_last_added", foldername, timeout=20.0)
-
-        # for i in range(num_retries):
-        #     if self._get_pv("path_last_added", as_string=True) == foldername:
-        #         return
-        #     time.sleep(self._long_loop_delay)
-
-        # self.log.warning(
-        #     f"Timepix folder {foldername} not added after {num_retries * self._long_loop_delay} seconds"
-        # )
+        # wait until EMPIR has confirmed it has queued the new folder for processing
+        self._wait_until("path_last_added", foldername)
 
     def doReadNprocessing(self):
         return self._get_pv("num_processing")
