@@ -1,0 +1,113 @@
+description = "Julabo MAGIO-MS-1000F circulator (device 2)"
+
+# TODO: Add Julabo 1
+pv_root = "LOKI-SE:WtrC-TE-002:"
+
+devices = dict(
+    # Online
+    julabo_2_online=device(
+        "nicos_ess.devices.epics.pva.EpicsStringReadable",
+        description="Whether it is responsive",
+        readpv="{}Online-R".format(pv_root),
+        visibility=(),
+    ),
+    # Mode
+    julabo_2_mode=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
+        description="Mode",
+        readpv="{}Mode-R".format(pv_root),
+        writepv="{}Mode-S".format(pv_root),
+        visibility=(),
+    ),
+    # Setpoint (write and readout)
+    julabo_2_setpoint=device(
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="The temperature setpoint",
+        readpv="{}TemperatureSP1-R".format(pv_root),
+        writepv="{}TemperatureSP1-S".format(pv_root),
+        targetpv="{}TemperatureSP1-S".format(pv_root),
+    ),
+    # Internal temperature readout
+    julabo_2_internal_temperature=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description="The internal sensor temperature readout (bath)",
+        readpv="{}Temperature-R".format(pv_root),
+    ),
+    # External temperature readout
+    julabo_2_external_temperature=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description="The external sensor temperature readout (pt100)",
+        readpv="{}TempExtSensor-R".format(pv_root),
+    ),
+    # Use external sensor for regulation
+    # The system actuates to make the selected sensor equals to the setpoint.
+    julabo_2_external_enabled=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
+        description="Use external sensor for regulation instead of internal sensor",
+        readpv="{}ExternalSensor-R".format(pv_root),
+        writepv="{}ExternalSensor-S".format(pv_root),
+    ),
+    # Safety sensor
+    julabo_2_safety=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description="The safety sensor temperature",
+        readpv="{}TempSafetySensor-R".format(pv_root),
+        visibility=(),
+    ),
+    # Temperature limits
+    julabo_2_temperature_high_limit=device(
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="The high temp warning limit",
+        readpv="{}TempHighLimit-R".format(pv_root),
+        writepv="{}TempHighLimit-S".format(pv_root),
+        visibility=(),
+    ),
+    julabo_2_temperature_low_limit=device(
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="The low temp warning limit",
+        readpv="{}TempLowLimit-R".format(pv_root),
+        writepv="{}TempLowLimit-S".format(pv_root),
+        visibility=(),
+    ),
+    # Power and its limits
+    julabo_2_heating_power=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description="The heating power being used %",
+        readpv="{}Power-R".format(pv_root),
+        visibility=(),
+    ),
+    julabo_2_max_cooling=device(
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="The maximum cooling power %",
+        readpv="{}MaxCoolPower-R".format(pv_root),
+        writepv="{}MaxCoolPower-S".format(pv_root),
+        visibility=(),
+    ),
+    julabo_2_max_heating=device(
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="The maximum heating power %",
+        readpv="{}MaxHeatPower-R".format(pv_root),
+        writepv="{}MaxHeatPower-S".format(pv_root),
+        visibility=(),
+    ),
+    # Slope
+    julabo_2_internal_slope=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description="The internal slope",
+        readpv="{}InternalSlope-R".format(pv_root),
+        visibility=(),
+    ),
+    # More, debug
+    julabo_2_status_message=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description="The status message",
+        readpv="{}StatusMsg-R".format(pv_root),
+        visibility=(),
+    ),
+    julabo_2_version=device(
+        "nicos_ess.devices.epics.pva.EpicsStringReadable",
+        description="The software version",
+        readpv="{}Version-R".format(pv_root),
+        visibility=(),
+    ),
+)
