@@ -19,7 +19,7 @@ devices = dict(
         writepv="{}Mode-S".format(pv_root),
     ),
     # 1 and 2 - Internal temperature
-    julabo_002_T=device(
+    julabo_002_internal_temperature=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
         description="The internal temperature (readout and setpoint)",
         readpv="{}Temperature-R".format(pv_root),
@@ -28,7 +28,7 @@ devices = dict(
         abslimits=(-1e308, 1e308),
     ),
     # 3 - External temperature readout
-    julabo_002_external_T=device(
+    julabo_002_external_temperature=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
         description="The external sensor temperature (readout)",
         readpv="{}TempExtSensor-R".format(pv_root),
@@ -48,7 +48,7 @@ devices = dict(
         visibility=(),
     ),
     # Temp limits
-    julabo_002_high_limit=device(
+    julabo_002_temperature_high_limit=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
         description="The high temp warning limit",
         readpv="{}TempHighLimit-R".format(pv_root),
@@ -56,7 +56,7 @@ devices = dict(
         visibility=(),
         abslimits=(-1e308, 1e308),
     ),
-    julabo_002_low_limit=device(
+    julabo_002_temperature_low_limit=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
         description="The low temp warning limit",
         readpv="{}TempLowLimit-R".format(pv_root),
@@ -157,10 +157,11 @@ devices = dict(
         readpv="{}Version-R".format(pv_root),
         visibility=(),
     ),
-    julabo_002_barcode=device(
-        "nicos_ess.devices.epics.pva.EpicsStringReadable",
-        description="The unique model number",
-        readpv="{}Barcode-R".format(pv_root),
-        visibility=(),
-    ),
+    # PV not found.
+    #julabo_002_barcode=device(
+    #    "nicos_ess.devices.epics.pva.EpicsStringReadable",
+    #    description="The unique model number",
+    #    readpv="{}Barcode-R".format(pv_root),
+    #   visibility=(),
+    #),
 )
