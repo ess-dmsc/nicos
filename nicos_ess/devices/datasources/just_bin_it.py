@@ -518,6 +518,7 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
         acknowledged = False
         while not (acknowledged or self._exit_thread):
             message = self._response_consumer.poll(timeout_ms=50)
+            self.log.warn("Polled for message, got: %s", message)
             if message:
                 msg = json.loads(message.value())
                 if "msg_id" in msg and msg["msg_id"] == identifier:
