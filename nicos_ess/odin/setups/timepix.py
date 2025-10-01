@@ -38,4 +38,18 @@ devices = dict(
         writepv="ODIN-DtTPX:NDet-ImgInt-001:AO1Set",
         abslimits=(0, 10),
     ),
+    temp_led_on_dly=device(
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="Timepix LED on delay",
+        readpv="ODIN-DtCmn:Ctrl-EVR-001:DlyGen3Delay-SP",
+        writepv="ODIN-DtCmn:Ctrl-EVR-001:DlyGen3Delay-SP",
+        abslimits=(0, 70000),
+    ),
+    temp_led_off_dly=device(
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="Timepix LED off delay",
+        readpv="ODIN-DtCmn:Ctrl-EVR-001:DlyGen4Delay-SP",
+        writepv="ODIN-DtCmn:Ctrl-EVR-001:DlyGen4Delay-SP",
+        abslimits=(0, 70000),
+    ),
 )
