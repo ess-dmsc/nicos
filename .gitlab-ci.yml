@@ -1,25 +1,31 @@
-default:
-  tags:
-    - docker
-  image: registry.esss.lu.se/ecdc/ess-dmsc/docker-centos7-build-node:latest
-  before_script:
-    - scl enable rh-python38 -- python --version
-    - scl enable rh-python38 -- pip install --user --upgrade pip 
-    - scl enable rh-python38 -- pip install --user -r requirements.txt
-    - scl enable rh-python38 -- pip install --user -r requirements-gui.txt
-    - scl enable rh-python38 -- pip install --user -r requirements-dev.txt
-    - scl enable rh-python38 -- pip install --user pytest pytest-timeout mock lxml Pillow 
-    - scl enable rh-python38 -- pip install --user 'requests<2.30.0'
-
 workflow:
   rules:
     - if: '$CI_PIPELINE_SOURCE == "push"'
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
 
+variables:
+  UV_VERSION: "0.7"
+  PYTHON_VERSION: "3.8"
+  BASE_LAYER: bookworm-slim
+  # GitLab CI creates a separate mountpoint for the build directory,
+  # so we need to copy instead of using hard links.
+  UV_LINK_MODE: copy
+
+default:
+  tags:
+    - docker
+
 stages:
+  - install
   - test
 
-test:
+install_dependencies:
+  stage: install
+  image: registry.esss.lu.se/ecdc/ess-dmsc/docker-centos7-build-node:latest
+  script:
+    - uv sync
+
+run_test:
   stage: test
   script:
     - cd test
@@ -29,3 +35,11 @@ test:
       - test/test-output.xml
     reports:
       junit: test/test-output.xml
+
+    # - scl enable rh-python38 -- python --version
+    # - scl enable rh-python38 -- pip install --user --upgrade pip 
+    # - scl enable rh-python38 -- pip install --user -r requirements.txt
+    # - scl enable rh-python38 -- pip install --user -r requirements-gui.txt
+    # - scl enable rh-python38 -- pip install --user -r requirements-dev.txt
+    # - scl enable rh-python38 -- pip install --user pytest pytest-timeout mock lxml Pillow 
+    # - scl enable rh-python38 -- pip install --user 'requests<2.30.0'
