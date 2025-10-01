@@ -3,33 +3,18 @@ workflow:
     - if: '$CI_PIPELINE_SOURCE == "push"'
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
 
-variables:
-  UV_VERSION: "0.7"
-  PYTHON_VERSION: "3.8"
-  BASE_LAYER: bookworm-slim
-  # GitLab CI creates a separate mountpoint for the build directory,
-  # so we need to copy instead of using hard links.
-  UV_LINK_MODE: copy
-
 default:
   tags:
     - docker
 
 stages:
-  - install
   - test
-
-install_dependencies:
-  stage: install
-  image: registry.esss.lu.se/ecdc/ess-dmsc/docker-centos7-build-node:latest
-  script:
-    - uv sync
 
 run_test:
   stage: test
+  image: registry.esss.lu.se/ecdc/ess-dmsc/docker-almalinux9-conan:latest
   script:
-    - cd test
-    - scl enable rh-python38 -- python -m pytest --junitxml=test-output.xml --ignore=nicos_sinq
+    - uv run pytest --junitxml=/test/test-output.xml --ignore=nicos_sinq
   artifacts:
     paths:
       - test/test-output.xml
