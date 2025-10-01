@@ -3,41 +3,46 @@ name = "nicos"
 version = "0.1.0"
 description = ""
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 dependencies = [
-    "caproto",
+    "caproto>=1.3.0",
     "confluent-kafka==2.4.0",
     "ess-streaming-data-types>=0.26.1",
     "flake8>=5.0.0",
-    "GitPython",
-    "html2text>=3.200.3",
+    "gitpython>=3.1.45",
+    "gr>=1.18.0",
     "h5py>=2.6",
-    "importlib-metadata==8.7.0",
-    "gr==1.27.0",
+    "html2text>=3.200.3",
     "kafka-logging-handler<=0.2.4",
     "keyring==24.3.0",
-    "keyrings.alt==5.0.0",
+    "keyrings-alt==5.0.0",
     "ldap3>=2.0.0",
     "lttb>=0.2.2",
-    "matplotlib==3.10.5",
     "nicos-pyctl>=1.0",
     "numpy>=1.10.0",
-    "requests",
     "p4p>=4.0.0",
     "psutil>=2.0",
     "pycryptodomex>=3.4.7",
-    "PyQt5==5.15.11",
-    "PyQt5-Qt5==5.15.17",
-    "PyQt5_sip==12.17.0",
+    "pyqt5>=5.15.11",
+    "pyqt6>=6.9.1",
     "pyqtgraph>=0.12.4",
     "pyzmq>=13.1.0",
-    "rsa>=3.1.2",
     "redis==5.0.4",
+    "rsa>=3.1.2",
     "scipy>=0.9.0",
     "toml>=0.10",
     "urllib3==1.26.20",
-    "yuos_query @ https://github.com/ess-dmsc/yuos_query/releases/download/v0.1.22/yuos_query-0.1.22-py3-none-any.whl"
+    "yuos-query",
 ]
+
+
+[[tool.uv.index]]
+name = "tum.de"
+url = "https://forge.frm2.tum.de/simple"
+
+[tool.uv.sources]
+yuos-query = { url = "https://github.com/ess-dmsc/yuos_query/releases/download/v0.1.22/yuos_query-0.1.22-py3-none-any.whl" }
+
 
 [dependency-groups]
 dev = [
