@@ -1,5 +1,6 @@
 description = "Julabo MAGIO-MS-1000F circulators"
 
+# TODO: Add Julabo 1
 pv_root = "LOKI-SE:WtrC-TE-002:"
 
 devices = dict(
