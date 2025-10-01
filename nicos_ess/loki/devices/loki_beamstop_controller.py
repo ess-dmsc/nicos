@@ -16,28 +16,42 @@ class LokiBeamstopController(MultiTargetMapping):
     }
 
     def doStart(self, value):
-        active_beamstop = self._extract_beamstop_number(self.read())
-        requested_beamstop = self._extract_beamstop_number(value)
+        active_beamstop = self._get_beamstop_number(self.read())
+        requested_beamstop = self._get_beamstop_number(value)
         if requested_beamstop != active_beamstop:
-            self.park_all_beamstops()
-        self._move_beamstops(value)
+            self._park_beamstops()
+        self._engage_beamstop(value)
 
-    def park_all_beamstops(self):
-        targets = self.mapping.get(self.all_parked_mapping, None)
-        self._move_to_targets(targets)
-
-    def _extract_beamstop_number(self, value):
+    def _get_beamstop_number(self, value):
         active_beamstop_match = re.match(r"Beamstop \d", value)
         if active_beamstop_match:
             return active_beamstop_match.group()
         else:
             return "None"
 
-    def _move_beamstops(self, value):
-        targets = self.mapping.get(value, None)
-        self._move_to_targets(targets)
+    def _park_beamstops(self):
+        devices, targets = self._park_sequence()
+        self._move_to_targets(devices, targets)
 
-    def _move_to_targets(self, targets):
-        for device, target in zip(self._attached_controlled_devices, targets):
+    def _engage_beamstop(self, value):
+        devices, targets = self._beamstop_sequence(value)
+        self._move_to_targets(devices, targets)
+
+    def _move_to_targets(self, devices, targets):
+        for device, target in zip(devices, targets):
             device.start(target)
             waitForCompletion(device)
+
+    def _park_sequence(self):
+        devices_reversed = self._attached_controlled_devices[::-1]
+        targets = self.mapping.get(self.all_parked_mapping, None)
+        if targets:
+            targets_reversed = targets[::-1]
+        else:
+            targets_reversed = targets
+        return devices_reversed, targets_reversed
+
+    def _beamstop_sequence(self, value):
+        devices = self._attached_controlled_devices
+        targets = self.mapping.get(value, None)
+        return devices, targets
