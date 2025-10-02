@@ -43,15 +43,15 @@ class LokiBeamstopController(MultiTargetMapping):
             waitForCompletion(device)
 
     def _park_sequence(self):
-        devices_reversed = self._attached_controlled_devices[::-1]
+        devices = self._attached_controlled_devices
         targets = self.mapping.get(self.all_parked_mapping, None)
+        return devices, targets
+
+    def _beamstop_sequence(self, value):
+        devices_reversed = self._attached_controlled_devices[::-1]
+        targets = self.mapping.get(value, None)
         if targets:
             targets_reversed = targets[::-1]
         else:
             targets_reversed = targets
         return devices_reversed, targets_reversed
-
-    def _beamstop_sequence(self, value):
-        devices = self._attached_controlled_devices
-        targets = self.mapping.get(value, None)
-        return devices, targets
