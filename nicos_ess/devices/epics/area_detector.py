@@ -313,6 +313,17 @@ class TimepixDetector(AreaDetector):
         "acquireperiod": Param(
             "Time between exposure starts.", settable=True, volatile=True
         ),
+        "nprocessing": Param(
+            "Number of .tpx files queued for processing.", settable=False, volatile=True
+        ),
+        "min_photons": Param(
+            "Minimum number of photons for a neutron.", settable=True, volatile=True
+        ),
+        "min_psd": Param(
+            "Minimum pulse shape discrimination value for a neutron.",
+            settable=True,
+            volatile=True,
+        ),
     }
 
     def doPreinit(self, mode):
@@ -324,6 +335,7 @@ class TimepixDetector(AreaDetector):
             "acquire_period": "AcquirePeriod",
             "threshold_fine": "CHIP0_Vth_fine",
             "threshold_coarse": "CHIP0_Vth_coarse",
+            "folder_path": "RawFilePath",
         }
         self._record_fields = {
             key + "_rbv": value + "_RBV" for key, value in self._control_pvs.items()
@@ -332,6 +344,101 @@ class TimepixDetector(AreaDetector):
         self._set_custom_record_fields()
         EpicsDevice.doPreinit(self, mode)
         self._image_processing_lock = threading.Lock()
+
+    def _set_custom_record_fields(self):
+        AreaDetector._set_custom_record_fields(self)
+        self._record_fields["write_data"] = "WriteData"
+        self._record_fields["num_processing"] = "N_Processing"
+        self._record_fields["path_to_add"] = "PathToAdd"
+        self._record_fields["path_last_added"] = "PathLastAdded"
+        self._record_fields["min_photons"] = "EvFlit_PhMin"
+        self._record_fields["min_psd"] = "EvFlit_PsdMin"
+        self._record_fields["first_trigger"] = "FirstTrigger"
+        self._record_fields["ts_ready"] = "TSReady"
+
+    def to_str(self, int_list):
+        """Convert list of ints to string, ignoring trailing nulls."""
+        return bytes(int_list).decode("utf-8", errors="ignore").rstrip("\x00")
+
+    def to_int_list(self, s):
+        """Convert string to list of ints with a trailing null."""
+        return list(s.encode("utf-8")) + [0]
+
+    def _wait_until(self, pv_name, expected_value, precision=None, timeout=5.0):
+        """Set up a subscription and wait until the PV reaches the expected value."""
+        event = threading.Event()
+
+        def callback(name, param, value, units, limits, severity, message, **kwargs):
+            if precision is not None and isinstance(value, (int, float)):
+                if abs(value - expected_value) <= precision:
+                    event.set()
+            else:
+                if value == expected_value:
+                    event.set()
+
+        sub = self._epics_wrapper.subscribe(
+            f"{self.pv_root}{self._record_fields[pv_name]}",
+            pv_name,
+            callback,
+        )
+        try:
+            # already done? exit immediately
+            current_value = self._get_pv(
+                pv_name,
+                as_string=False if isinstance(expected_value, (int, float)) else True,
+            )
+            if precision is not None and isinstance(current_value, (int, float)):
+                if abs(current_value - expected_value) <= precision:
+                    return
+            else:
+                if current_value == expected_value:
+                    return
+            # wait for callback to signal completion
+            if not event.wait(timeout):
+                raise TimeoutError(
+                    f"Timeout waiting for {pv_name} to become {expected_value}"
+                )
+        finally:
+            self._epics_wrapper.close_subscription(sub)
+
+    def doStart(self, **preset):
+        foldername = f"raw_tpx_{time.time_ns()}"
+        path_name = f"file:/data/{foldername}"
+        ascii_path_name = self.to_int_list(path_name)
+
+        # first we need to set the output folder path. use time_ns to make it unique
+        self._put_pv("folder_path", ascii_path_name)
+
+        # we then need to set write_data to 1 to actually update the path
+        self._put_pv("write_data", 1)
+
+        # force ts_ready to 0 so we can wait for it to become 1 after triggering
+        self._put_pv("ts_ready", 0)
+
+        # we then start the acquisition as normal
+        self.doAcquire()
+        # wait until the IOC has received a trigger
+        self._wait_until("ts_ready", 1)
+
+        # we then need to set the path_toAdd to the same filename for empir to look for the new folder
+        self._put_pv("path_to_add", foldername)
+        # wait until EMPIR has confirmed it has queued the new folder for processing
+        self._wait_until("path_last_added", foldername)
+
+    def doReadNprocessing(self):
+        return self._get_pv("num_processing")
+
+    def doReadMin_Photons(self):
+        return self._get_pv("min_photons")
+
+    def doWriteMin_Photons(self, value):
+        self._put_pv("min_photons", value)
+
+    def doReadMin_Psd(self):
+        return self._get_pv("min_psd")
+
+    def doWriteMin_Psd(self, value):
+        self._put_pv("min_psd", value)
 
     def doReadAcquiretime(self):
         return self._get_pv("acquire_time_rbv")
@@ -710,6 +817,7 @@ class OrcaFlash4(AreaDetector):
 
     def doWriteAcquireperiod(self, value):
         self._put_pv("acquire_period", value)
+
 
 class AreaDetectorCollector(Detector):
     """
