@@ -67,9 +67,9 @@ runtime_root = os.environ.get(
 )
 
 # Addresses for services, ports can be allocated by Jenkins.
-cache_addr = "localhost:%s" % os.environ.get("NICOS_CACHE_PORT", 14877)
-alt_cache_addr = "localhost:%s" % os.environ.get("NICOS_CACHE_ALT_PORT", 14878)
-daemon_addr = "localhost:%s" % os.environ.get("NICOS_DAEMON_PORT", 14874)
+cache_addr = "127.0.0.1:%s" % os.environ.get("NICOS_CACHE_PORT", 14877)
+alt_cache_addr = "127.0.0.1:%s" % os.environ.get("NICOS_CACHE_ALT_PORT", 14878)
+daemon_addr = "127.0.0.1:%s" % os.environ.get("NICOS_DAEMON_PORT", 14874)
 
 pythonpath = None
 
