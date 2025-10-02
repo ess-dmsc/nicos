@@ -1,0 +1,253 @@
+description = "The choppers in chopper system 2 for ODIN"
+
+bpc2_pv_root = "ODIN-ChpSy2:Chop-BPC-202:"
+foc2_pv_root = "ODIN-ChpSy2:Chop-FOC-201:"
+foc3_pv_root = "ODIN-ChpSy2:Chop-FOC-301:"
+foc4_pv_root = "ODIN-ChpSy2:Chop-FOC-401:"
+# chic_root = "TBL-ChpSy1:Chop-CHIC-001:"
+vacuum_pv_root = "ODIN-VacBnkr:Vac-VGP-"
+
+
+devices = dict(
+    bpc2_chopper_status=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
+        description="The chopper status.",
+        readpv="{}ChopState_R".format(bpc2_pv_root),
+        visibility=(),
+    ),
+    bpc2_chopper_speed=device(
+        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",  # Should be EpicsAnalogMoveable later
+        description="The current speed.",
+        readpv="{}Spd_R".format(bpc2_pv_root),
+        writepv="{}Spd_S".format(bpc2_pv_root),
+        precision=0.1,
+        mapping={"14 Hz": 14, "7 Hz": 7, "-7 Hz": -7, "0 Hz": 0},
+    ),
+    bpc2_chopper_delay=device(
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="The current delay.",
+        readpv="{}ChopDly-S".format(bpc2_pv_root),
+        writepv="{}ChopDly-S".format(bpc2_pv_root),
+        abslimits=(0.0, 0.0),
+    ),
+    bpc2_chopper_delay_errors=device(
+        "nicos_ess.devices.epics.chopper_delay_error.ChopperDelayError",
+        description="The current delay.",
+        readpv="{}DiffTSSamples".format(bpc2_pv_root),
+        unit="ns",
+        visibility=(
+            "metadata",
+            "namespace",
+        ),
+    ),
+    bpc2_chopper_phased=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
+        description="The chopper is in phase.",
+        readpv="{}InPhs_R".format(bpc2_pv_root),
+    ),
+    bpc2_chopper_park_angle=device(
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="The chopper's park angle.",
+        readpv="{}Pos_R".format(bpc2_pv_root),
+        writepv="{}ParkAngle_S".format(bpc2_pv_root),
+    ),
+    bpc2_chopper=device(
+        "nicos_ess.devices.epics.chopper.OdinChopperController",
+        description="The chopper controller",
+        pv_root=bpc2_pv_root,
+        monitor=True,
+        slit_edges=[[0.0, 67.49]],
+        mapping={
+            "Start": "start",
+            "AStart": "a_start",
+            "Stop": "stop",
+            "Park": "park",
+        },
+    ),
+    bpc2_vacuum=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description="The vacuum pressure",
+        readpv="{}103:PrsR".format(vacuum_pv_root),
+        fmtstr="%.2e",
+    ),
+    foc2_chopper_status=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
+        description="The chopper status.",
+        readpv="{}ChopState_R".format(foc2_pv_root),
+        visibility=(),
+    ),
+    foc2_chopper_speed=device(
+        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
+        description="The current speed.",
+        readpv="{}Spd_R".format(foc2_pv_root),
+        writepv="{}Spd_S".format(foc2_pv_root),
+        precision=0.1,
+        mapping={"14 Hz": 14, "7 Hz": 7, "-7 Hz": -7, "0 Hz": 0},
+    ),
+    foc2_chopper_delay=device(
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="The current delay.",
+        readpv="{}ChopDly-S".format(foc2_pv_root),
+        writepv="{}ChopDly-S".format(foc2_pv_root),
+        abslimits=(0.0, 0.0),
+    ),
+    foc2_chopper_delay_errors=device(
+        "nicos_ess.devices.epics.chopper_delay_error.ChopperDelayError",
+        description="The current delay.",
+        readpv="{}DiffTSSamples".format(foc2_pv_root),
+        unit="ns",
+        visibility=("metadata", "namespace"),
+    ),
+    foc2_chopper_phased=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
+        description="The chopper is in phase.",
+        readpv="{}InPhs_R".format(foc2_pv_root),
+    ),
+    foc2_chopper_park_angle=device(
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="The chopper's park angle.",
+        readpv="{}Pos_R".format(foc2_pv_root),
+        writepv="{}ParkAngle_S".format(foc2_pv_root),
+    ),
+    foc2_chopper=device(
+        "nicos_ess.devices.epics.chopper.OdinChopperController",
+        description="The chopper controller",
+        pv_root=foc2_pv_root,
+        monitor=True,
+        slit_edges=[
+            [0.0, 34.31],
+            [60.625, 93.525],
+            [128.155, 161.695],
+            [191.47, 225.62],
+            [250.85, 285.22],
+            [306.535, 341.435],
+        ],
+        mapping={"Start": "start", "AStart": "a_start", "Stop": "stop", "Park": "park"},
+    ),
+    foc2_vacuum=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description="The vacuum pressure",
+        readpv="{}103:PrsR".format(vacuum_pv_root),
+        fmtstr="%.2e",
+    ),
+    foc3_chopper_status=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
+        description="The chopper status.",
+        readpv="{}ChopState_R".format(foc3_pv_root),
+        visibility=(),
+    ),
+    foc3_chopper_speed=device(
+        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
+        description="The current speed.",
+        readpv="{}Spd_R".format(foc3_pv_root),
+        writepv="{}Spd_S".format(foc3_pv_root),
+        precision=0.1,
+        mapping={"14 Hz": 14, "7 Hz": 7, "-7 Hz": -7, "0 Hz": 0},
+    ),
+    foc3_chopper_delay=device(
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="The current delay.",
+        readpv="{}ChopDly-S".format(foc3_pv_root),
+        writepv="{}ChopDly-S".format(foc3_pv_root),
+        abslimits=(0.0, 0.0),
+    ),
+    foc3_chopper_delay_errors=device(
+        "nicos_ess.devices.epics.chopper_delay_error.ChopperDelayError",
+        description="The current delay.",
+        readpv="{}DiffTSSamples".format(foc3_pv_root),
+        unit="ns",
+        visibility=("metadata", "namespace"),
+    ),
+    foc3_chopper_phased=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
+        description="The chopper is in phase.",
+        readpv="{}InPhs_R".format(foc3_pv_root),
+    ),
+    foc3_chopper_park_angle=device(
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="The chopper's park angle.",
+        readpv="{}Pos_R".format(foc3_pv_root),
+        writepv="{}ParkAngle_S".format(foc3_pv_root),
+    ),
+    foc3_chopper=device(
+        "nicos_ess.devices.epics.chopper.OdinChopperController",
+        description="The chopper controller",
+        pv_root=foc3_pv_root,
+        monitor=True,
+        slit_edges=[
+            [0.0, 40.32],
+            [63.405, 103.015],
+            [122.87, 161.81],
+            [178.625, 216.935],
+            [230.91, 268.63],
+            [281.055, 317.105],
+        ],
+        mapping={"Start": "start", "AStart": "a_start", "Stop": "stop", "Park": "park"},
+    ),
+    foc3_vacuum=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description="The vacuum pressure",
+        readpv="{}105:PrsR".format(vacuum_pv_root),
+        fmtstr="%.2e",
+    ),
+    foc4_chopper_status=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
+        description="The chopper status.",
+        readpv="{}ChopState_R".format(foc4_pv_root),
+        visibility=(),
+    ),
+    foc4_chopper_speed=device(
+        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
+        description="The current speed.",
+        readpv="{}Spd_R".format(foc4_pv_root),
+        writepv="{}Spd_S".format(foc4_pv_root),
+        precision=0.1,
+        mapping={"14 Hz": 14, "7 Hz": 7, "-7 Hz": -7, "0 Hz": 0},
+    ),
+    foc4_chopper_delay=device(
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="The current delay.",
+        readpv="{}ChopDly-S".format(foc4_pv_root),
+        writepv="{}ChopDly-S".format(foc4_pv_root),
+        abslimits=(0.0, 0.0),
+    ),
+    foc4_chopper_delay_errors=device(
+        "nicos_ess.devices.epics.chopper_delay_error.ChopperDelayError",
+        description="The current delay.",
+        readpv="{}DiffTSSamples".format(foc4_pv_root),
+        unit="ns",
+        visibility=("metadata", "namespace"),
+    ),
+    foc4_chopper_phased=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
+        description="The chopper is in phase.",
+        readpv="{}InPhs_R".format(foc4_pv_root),
+    ),
+    foc4_chopper_park_angle=device(
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="The chopper's park angle.",
+        readpv="{}Pos_R".format(foc4_pv_root),
+        writepv="{}ParkAngle_S".format(foc4_pv_root),
+    ),
+    foc4_chopper=device(
+        "nicos_ess.devices.epics.chopper.OdinChopperController",
+        description="The chopper controller",
+        pv_root=foc4_pv_root,
+        monitor=True,
+        slit_edges=[
+            [0.0, 32.98],
+            [44.52, 76.34],
+            [86.27, 117.01],
+            [125.42, 155.14],
+            [162.125, 190.895],
+            [197.66, 224.42],
+        ],
+        mapping={"Start": "start", "AStart": "a_start", "Stop": "stop", "Park": "park"},
+    ),
+    foc4_vacuum=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description="The vacuum pressure",
+        readpv="{}107:PrsR".format(vacuum_pv_root),  # same as foc
+        fmtstr="%.2e",
+    ),
+)
