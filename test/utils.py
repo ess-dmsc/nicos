@@ -596,21 +596,25 @@ def killSubprocess(proc):
 def startCache(hostport, setup="cache", wait=10):
     # start the cache server
     def cache_wait_cb():
+        last_exc = None
         if wait:
             start = monotonic()
             while monotonic() < start + wait:
                 try:
                     s = tcpSocket(hostport, 0)
-                except OSError:
+                except OSError as e:
+                    last_exc = e
                     sleep(0.02)
                 except Exception as e:
-                    sys.stderr.write("%r" % e)
+                    sys.stderr.write("%r\n" % e)
                     raise
                 else:
                     s.close()
                     break
             else:
-                raise Exception("cache failed to start within %s sec" % wait)
+                if last_exc:
+                    raise last_exc
+                raise TimeoutError(f"cache failed to start within {wait} sec")
 
     return startSubprocess("cache", setup, wait_cb=cache_wait_cb)
 
