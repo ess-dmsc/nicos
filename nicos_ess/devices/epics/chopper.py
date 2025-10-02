@@ -209,3 +209,159 @@ class EssChopperController(MappedMoveable):
 
     def doReadMapping(self):
         return self._attached_command.mapping
+
+
+class OdinChopperController(EpicsParameters, MappedMoveable):
+    """Handles the status and hardware control for an ESS ODIN chopper system"""
+
+    parameters = {
+        "slit_edges": Param(
+            "Slit edges of the chopper", type=listof(listof(float)), default=[]
+        ),
+        "resolver_offset": Param(
+            "Offset of the resolver in degrees",
+            type=float,
+            default=0.0,
+            unit="degrees",
+        ),
+        "tdc_offset": Param(
+            "Offset of the TDC in degrees",
+            type=float,
+            default=0.0,
+            unit="degrees",
+        ),
+        "pv_root": Param(
+            "PV root for device", type=str, mandatory=True, userparam=False
+        ),
+    }
+
+    parameter_overrides = {
+        "fmtstr": Override(default="%s"),
+        "unit": Override(mandatory=False),
+    }
+
+    hardware_access = False
+    valuetype = str
+
+    def doPreinit(self, mode):
+        self._record_fields = {
+            "state": RecordInfo("value", "ChopState_R", RecordType.STATUS),
+            "stop": RecordInfo("", "C_Brake", RecordType.VALUE),
+            "start": RecordInfo("", "C_RotateSync", RecordType.VALUE),
+            "a_start": RecordInfo("", "C_RotateAsync", RecordType.VALUE),
+            "park": RecordInfo("", "C_Park", RecordType.VALUE),
+        }
+
+        self._epics_subscriptions = []
+        self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
+        self._epics_wrapper.connect_pv(f"{self.pv_root}ChopState_R")
+
+    def doInit(self, mode):
+        if session.sessiontype == POLLER and self.monitor:
+            for k, v in self._record_fields.items():
+                if v.record_type in [RecordType.VALUE, RecordType.BOTH]:
+                    self._epics_subscriptions.append(
+                        self._epics_wrapper.subscribe(
+                            f"{self.pv_root}{v.pv_suffix}",
+                            k,
+                            self._value_change_callback,
+                            self._connection_change_callback,
+                        )
+                    )
+                if v.record_type in [RecordType.STATUS, RecordType.BOTH]:
+                    self._epics_subscriptions.append(
+                        self._epics_wrapper.subscribe(
+                            f"{self.pv_root}{v.pv_suffix}",
+                            k,
+                            self._status_change_callback,
+                            self._connection_change_callback,
+                        )
+                    )
+        MappedMoveable.doInit(self, mode)
+
+    def doRead(self, maxage=0):
+        return get_from_cache_or(
+            self,
+            self._record_fields["state"].cache_key,
+            lambda: self._epics_wrapper.get_pv_value(
+                f"{self.pv_root}ChopState_R", as_string=True
+            ),
+        )
+
+    def doStart(self, target):
+        target = target.lower()
+        if target == "stop":
+            pv = f"{self.pv_root}{self._record_fields['stop'].pv_suffix}"
+            self._epics_wrapper.put_pv_value(pv, 1)
+        elif target == "start":
+            pv = f"{self.pv_root}{self._record_fields['start'].pv_suffix}"
+            self._epics_wrapper.put_pv_value(pv, 1)
+        elif target == "a_start":
+            pv = f"{self.pv_root}{self._record_fields['a_start'].pv_suffix}"
+            self._epics_wrapper.put_pv_value(pv, 1)
+        elif target == "park":
+            pv = f"{self.pv_root}{self._record_fields['park'].pv_suffix}"
+            self._epics_wrapper.put_pv_value(pv, 1)
+        else:
+            raise ValueError(f"Unknown command '{target}' for ODIN chopper")
+
+    def doStatus(self, maxage=0):
+        def _func():
+            try:
+                severity, msg = self._epics_wrapper.get_alarm_status(
+                    f"{self.pv_root}ChopState_R"
+                )
+            except TimeoutError:
+                return status.ERROR, "timeout reading status"
+            if severity in [status.ERROR, status.WARN]:
+                return severity, msg
+            return status.OK, msg
+
+        return get_from_cache_or(self, "status", _func)
+
+    def _value_change_callback(
+        self, name, param, value, units, limits, severity, message, **kwargs
+    ):
+        if name != f"{self.pv_root}{self._record_fields['state'].pv_suffix}":
+            # Unexpected updates ignored
+            return
+
+        time_stamp = time.time()
+        self._cache.put(
+            self._name,
+            param,
+            self._inverse_mapping.get(value, value),
+            time_stamp,
+        )
+
+    def _status_change_callback(
+        self, name, param, value, units, limits, severity, message, **kwargs
+    ):
+        if name != f"{self.pv_root}{self._record_fields['state'].pv_suffix}":
+            # Unexpected updates ignored
+            return
+        self._cache.put(self._name, "status", (severity, message), time.time())
+
+    def _connection_change_callback(self, name, param, is_connected, **kwargs):
+        if param != self._record_fields["state"].cache_key:
+            return
+
+        if is_connected:
+            self.log.debug("%s connected!", name)
+        else:
+            self.log.warning("%s disconnected!", name)
+            self._cache.put(
+                self._name,
+                "status",
+                (status.ERROR, "communication failure"),
+                time.time(),
+            )
+
+    def doStop(self):
+        # Ignore - stopping the chopper is done via the move command.
+        pass
+
+    def doReset(self):
+        # Ignore - resetting the chopper is done via the move command.
+        # What is the reset command for an ODIN chopper?
+        pass
