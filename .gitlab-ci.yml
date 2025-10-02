@@ -14,12 +14,12 @@ run_test:
   stage: test
   image: registry.esss.lu.se/ecdc/ess-dmsc/docker-almalinux9-conan:1.5.0-rc.1
   script:
-    - uv run pytest --junitxml=/test/test-output.xml --ignore=nicos_sinq
+    - uv run pytest --junitxml=test-output.xml --ignore=nicos_sinq
   artifacts:
     paths:
-      - test/test-output.xml
+      - test-output.xml
     reports:
-      junit: test/test-output.xml
+      junit: test-output.xml
 
     # - scl enable rh-python38 -- python --version
     # - scl enable rh-python38 -- pip install --user --upgrade pip 
