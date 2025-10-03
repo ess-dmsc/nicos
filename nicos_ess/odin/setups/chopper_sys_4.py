@@ -76,6 +76,7 @@ devices = dict(
             "Park": "park",
         },
         speed="foc5_chopper_speed",
+        resolver_offset=8.45,
     ),
     foc5_vacuum=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
