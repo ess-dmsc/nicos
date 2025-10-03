@@ -14,6 +14,7 @@ from nicos.core import (
 )
 from nicos.devices.abstract import MappedMoveable, Moveable
 from nicos_ess.devices.epics.pva.epics_devices import (
+    EpicsManualMappedAnalogMoveable,
     EpicsParameters,
     RecordInfo,
     RecordType,
@@ -240,6 +241,10 @@ class OdinChopperController(EpicsParameters, MappedMoveable):
         "unit": Override(mandatory=False),
     }
 
+    attached_devices = {
+        "speed": Attach("Speed PV of the chopper", EpicsManualMappedAnalogMoveable),
+    }
+
     hardware_access = False
     valuetype = str
 
@@ -293,6 +298,10 @@ class OdinChopperController(EpicsParameters, MappedMoveable):
         if target == "stop":
             pv = f"{self.pv_root}{self._record_fields['stop'].pv_suffix}"
             self._epics_wrapper.put_pv_value(pv, 1)
+            # Set the speed to zero to keep EPICS behaviour consistent.
+            speed_key = self._attached_speed._inverse_mapping.get(0, None)
+            if speed_key is not None:
+                self._attached_speed.move(speed_key)
         elif target == "start":
             pv = f"{self.pv_root}{self._record_fields['start'].pv_suffix}"
             self._epics_wrapper.put_pv_value(pv, 1)
