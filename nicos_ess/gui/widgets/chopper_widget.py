@@ -362,7 +362,7 @@ class ChopperWidget(QWidget):
             return QPolygonF()
 
         def to_qt(a_deg: float) -> float:
-            return math.radians(-a_deg + rotation_deg)
+            return math.radians(a_deg + rotation_deg)
 
         step = (e - s) / num_points
         pts = []
