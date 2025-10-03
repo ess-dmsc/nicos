@@ -27,6 +27,14 @@ devices = dict(
         writepv="{}ChopDly-S".format(foc5_pv_root),
         abslimits=(0.0, 0.0),
     ),
+    foc5_chopper_phase=device(
+        "nicos_ess.devices.transformer_device.ChopperPhase",
+        description="The phase of the chopper.",
+        phase_ns_dev="foc5_chopper_delay",
+        speed_dev="foc5_chopper_speed",
+        offset=0.0,
+        unit="degrees",
+    ),
     foc5_chopper_delay_errors=device(
         "nicos_ess.devices.epics.chopper_delay_error.ChopperDelayError",
         description="The current delay.",
