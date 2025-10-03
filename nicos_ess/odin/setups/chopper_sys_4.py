@@ -18,7 +18,7 @@ devices = dict(
         readpv="{}Spd_R".format(foc5_pv_root),
         writepv="{}Spd_S".format(foc5_pv_root),
         precision=0.1,
-        mapping={"14 Hz": 14, "7 Hz": 7, "-7 Hz": -7, "0 Hz": 0},
+        mapping={"14 Hz": 14, "7 Hz": 7, "0 Hz": 0},
     ),
     foc5_chopper_delay=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
@@ -67,6 +67,7 @@ devices = dict(
             "Stop": "stop",
             "Park": "park",
         },
+        speed="foc5_chopper_speed",
     ),
     foc5_vacuum=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",

@@ -20,7 +20,7 @@ devices = dict(
         readpv="{}Spd_R".format(wfmc1_pv_root),
         writepv="{}Spd_S".format(wfmc1_pv_root),
         precision=0.1,
-        mapping={"14 Hz": 14, "7 Hz": 7, "-7 Hz": -7, "0 Hz": 0},
+        mapping={"14 Hz": 14, "7 Hz": 7, "0 Hz": 0, "28 Hz": 28, "56 Hz": 56},
     ),
     wfmc1_chopper_delay=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
@@ -69,6 +69,7 @@ devices = dict(
             "Stop": "stop",
             "Park": "park",
         },
+        speed="wfmc1_chopper_speed",
     ),
     wfmc1_vacuum=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
@@ -88,7 +89,7 @@ devices = dict(
         readpv="{}Spd_R".format(wfmc2_pv_root),
         writepv="{}Spd_S".format(wfmc2_pv_root),
         precision=0.1,
-        mapping={"14 Hz": 14, "7 Hz": 7, "-7 Hz": -7, "0 Hz": 0},
+        mapping={"14 Hz": 14, "7 Hz": 7, "0 Hz": 0, "28 Hz": 28, "56 Hz": 56},
     ),
     wfmc2_chopper_delay=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
@@ -129,6 +130,7 @@ devices = dict(
             [229.19, 249.19],
         ],
         mapping={"Start": "start", "AStart": "a_start", "Stop": "stop", "Park": "park"},
+        speed="wfmc2_chopper_speed",
     ),
     wfmc2_vacuum=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
@@ -148,7 +150,7 @@ devices = dict(
         readpv="{}Spd_R".format(foc1_pv_root),
         writepv="{}Spd_S".format(foc1_pv_root),
         precision=0.1,
-        mapping={"14 Hz": 14, "7 Hz": 7, "-7 Hz": -7, "0 Hz": 0},
+        mapping={"14 Hz": 14, "7 Hz": 7, "0 Hz": 0, "21 Hz": 21, "42 Hz": 42},
     ),
     foc1_chopper_delay=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
@@ -189,6 +191,7 @@ devices = dict(
             [204.9, 221.62],
         ],
         mapping={"Start": "start", "AStart": "a_start", "Stop": "stop", "Park": "park"},
+        speed="foc1_chopper_speed",
     ),
     foc1_vacuum=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
@@ -208,7 +211,7 @@ devices = dict(
         readpv="{}Spd_R".format(bpc1_pv_root),
         writepv="{}Spd_S".format(bpc1_pv_root),
         precision=0.1,
-        mapping={"14 Hz": 14, "7 Hz": 7, "-7 Hz": -7, "0 Hz": 0},
+        mapping={"14 Hz": 14, "7 Hz": 7, "0 Hz": 0},
     ),
     bpc1_chopper_delay=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
@@ -242,6 +245,7 @@ devices = dict(
         monitor=True,
         slit_edges=[[0.0, 46.71]],
         mapping={"Start": "start", "AStart": "a_start", "Stop": "stop", "Park": "park"},
+        speed="bpc1_chopper_speed",
     ),
     bpc1_vacuum=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
