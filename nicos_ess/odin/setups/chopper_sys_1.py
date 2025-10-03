@@ -78,6 +78,7 @@ devices = dict(
             "Park": "park",
         },
         speed="wfmc1_chopper_speed",
+        resolver_offset=-2.77,
     ),
     wfmc1_vacuum=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
@@ -147,6 +148,7 @@ devices = dict(
         ],
         mapping={"Start": "start", "AStart": "a_start", "Stop": "stop", "Park": "park"},
         speed="wfmc2_chopper_speed",
+        resolver_offset=79.3,
     ),
     wfmc2_vacuum=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
@@ -216,6 +218,7 @@ devices = dict(
         ],
         mapping={"Start": "start", "AStart": "a_start", "Stop": "stop", "Park": "park"},
         speed="foc1_chopper_speed",
+        resolver_offset=152.275,
     ),
     foc1_vacuum=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
@@ -278,6 +281,7 @@ devices = dict(
         slit_edges=[[0.0, 46.71]],
         mapping={"Start": "start", "AStart": "a_start", "Stop": "stop", "Park": "park"},
         speed="bpc1_chopper_speed",
+        resolver_offset=161.15,
     ),
     bpc1_vacuum=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
