@@ -212,14 +212,14 @@ class ChopperPanel(Panel):
     def _handle_delay_update(self, chopper_name, delay_value):
         delay = float(delay_value)
         frequency = self.eval_command(f"{chopper_name}_speed.read()", default=None)
-        if frequency is not None and frequency != 0:
+        if frequency is not None and abs(frequency) >= 2:
             frequency = float(frequency)
             self._update_chopper_angle(chopper_name, delay, frequency)
 
     def _handle_speed_update(self, chopper_name, speed_value):
         frequency = float(speed_value)
         self.chopper_widget.set_chopper_speed(chopper_name, frequency)
-        if frequency != 0:
+        if abs(frequency) >= 2:
             delay = self.eval_command(f"{chopper_name}_delay.read()", default=None)
             if delay is not None:
                 delay = float(delay)
