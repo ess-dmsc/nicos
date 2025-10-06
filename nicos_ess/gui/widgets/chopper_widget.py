@@ -92,10 +92,16 @@ class ChopperWidget(QWidget):
             self.angles[i] += delta
         self.update()
 
+    def _wrap360(self, x: float) -> float:
+        return (x % 360.0 + 360.0) % 360.0
+
     def set_chopper_angle(self, chopper_name, angle):
         for i, chopper in enumerate(self.chopper_data):
             if chopper["chopper"] == chopper_name:
-                self.angles[i] = angle + self._default_rotation_offset
+                spin_direction = chopper.get("spin_direction", "CW").upper()
+                is_ccw = spin_direction == "CCW"
+                a_draw = (-angle if is_ccw else angle) + self._default_rotation_offset
+                self.angles[i] = self._wrap360(a_draw)
         self.update()
 
     def set_chopper_speed(self, chopper_name, speed):

@@ -273,7 +273,12 @@ class ChopperPanel(Panel):
 
         for dev_name in devices.keys():
             disc_info = {"chopper": dev_name}
-            for param in ["slit_edges", "resolver_offset", "tdc_offset"]:
+            for param in [
+                "slit_edges",
+                "resolver_offset",
+                "tdc_offset",
+                "spin_direction",
+            ]:
                 value = self.client.eval(f"{dev_name}.{param}", None)
                 if value is None:
                     continue
