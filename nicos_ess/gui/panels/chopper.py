@@ -231,7 +231,7 @@ class ChopperPanel(Panel):
         frequency = self.eval_command(f"{chopper_name}_speed.read()", default=None)
         if frequency is not None:
             frequency = float(frequency)
-            if frequency == 0:
+            if frequency < 2:
                 self.chopper_widget.set_chopper_angle(chopper_name, park_angle)
 
     def _update_chopper_angle(self, chopper_name, delay, frequency):
