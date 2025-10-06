@@ -77,7 +77,7 @@ devices = dict(
         },
         speed="foc5_chopper_speed",
         resolver_offset=-42.36,
-        tdc_offset=-107.345,
+        tdc_offset=-42.36,
     ),
     foc5_vacuum=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
