@@ -144,8 +144,8 @@ devices = dict(
         ],
         mapping={"Start": "start", "AStart": "a_start", "Stop": "stop", "Park": "park"},
         speed="foc2_chopper_speed",
-        resolver_offset=-84.305,
-        tdc_offset=-84.305,
+        resolver_offset=49.995,
+        tdc_offset=49.995,
         spin_direction="CCW",
     ),
     foc2_vacuum=device(

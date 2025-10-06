@@ -78,8 +78,8 @@ devices = dict(
             "Park": "park",
         },
         speed="wfmc1_chopper_speed",
-        resolver_offset=2.77,
-        tdc_offset=2.77,
+        resolver_offset=-8.47,
+        tdc_offset=-8.47,
         spin_direction="CCW",
     ),
     wfmc1_vacuum=device(
@@ -222,8 +222,8 @@ devices = dict(
         ],
         mapping={"Start": "start", "AStart": "a_start", "Stop": "stop", "Park": "park"},
         speed="foc1_chopper_speed",
-        resolver_offset=-152.275,
-        tdc_offset=-152.275,
+        resolver_offset=141.215,
+        tdc_offset=141.215,
         spin_direction="CCW",
     ),
     foc1_vacuum=device(
