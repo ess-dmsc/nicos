@@ -49,7 +49,12 @@ class ChopperPanel(Panel):
     def __init__(self, parent, client, options):
         Panel.__init__(self, parent, client, options)
 
-        self.chopper_widget = ChopperWidget(parent=self)
+        self._slit_direction = options.get("slit_direction", "CW")  # CW or CCW
+        self._guide_pos = options.get("guide_pos", "UP")  # UP, DOWN
+
+        self.chopper_widget = ChopperWidget(
+            parent=self, slit_direction=self._slit_direction, guide_pos=self._guide_pos
+        )
         self.histogram_widget = HistogramDataViewer(parent=self)
         self.trend_widget = TrendViewer(parent=self)
 

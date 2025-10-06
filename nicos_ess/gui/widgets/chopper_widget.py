@@ -30,13 +30,25 @@ class Colors(Enum):
 class ChopperWidget(QWidget):
     onChopperSelected = pyqtSignal(str)
 
-    def __init__(self, parent=None):
+    GUIDE_DIRS = {"RIGHT": 0.0, "UP": 90.0, "LEFT": 180.0, "DOWN": 270.0}
+
+    def __init__(self, parent=None, slit_direction="CW", guide_pos="UP"):
         super().__init__(parent)
         self.setMinimumSize(100, 100)
         self.chopper_data = []
         self.angles = {}
         self._selected_chopper = None
-        self._default_rotation_offset = 90
+        self._slit_direction = slit_direction
+        self._guide_pos = (
+            guide_pos  # "UP" or "DOWN" for the beam guide line, also needs
+        )
+
+        self._guide_pos = (
+            guide_pos  # can be "UP", "DOWN", "LEFT", "RIGHT" or a number of degrees
+        )
+        self._guide_angle_deg = self._to_guide_deg(guide_pos)
+
+        self._default_rotation_offset = self._guide_angle_deg
 
     def get_selected_chopper(self):
         return self._selected_chopper
@@ -58,6 +70,26 @@ class ChopperWidget(QWidget):
 
         self._selected_chopper = None
         self.onChopperSelected.emit(None)
+        self.update()
+
+    def _to_guide_deg(self, pos) -> float:
+        if isinstance(pos, (int, float)):
+            return float(pos) % 360.0
+        key = str(pos).upper()
+        if key not in self.GUIDE_DIRS:
+            raise ValueError(f"Invalid guide position: {pos!r}")
+        return self.GUIDE_DIRS[key]
+
+    def set_guide_position(self, pos) -> None:
+        new_deg = self._to_guide_deg(pos)
+        delta = new_deg - self._guide_angle_deg
+        self._guide_pos = pos
+        self._guide_angle_deg = new_deg
+        self._default_rotation_offset = new_deg  # keep behavior consistent
+
+        # Shift already-stored angles so visuals remain aligned
+        for i in list(self.angles.keys()):
+            self.angles[i] += delta
         self.update()
 
     def set_chopper_angle(self, chopper_name, angle):
@@ -127,9 +159,16 @@ class ChopperWidget(QWidget):
             )
 
             painter.setPen(QPen(Colors.BLUE.value, 4))
-            line_x = center.x()
-            line_y = center.y() - line_length
+            # line_x = center.x()
+            # line_y = center.y() - line_length
+            theta = math.radians(
+                self._guide_angle_deg
+            )  # 0=right, 90=up, 180=left, 270=down
+            line_x = center.x() + line_length * math.cos(theta)
+            line_y = center.y() - line_length * math.sin(theta)
             painter.drawLine(center, QPointF(line_x, line_y))
+
+            text_direction = -1 if self._guide_angle_deg == 270 else 1
 
             chopper_name = chopper["chopper"]
             if is_selected:
@@ -145,9 +184,9 @@ class ChopperWidget(QWidget):
 
             text_rect = QRectF(
                 center.x() - radius * 1.5,
-                center.y() + radius + 5,
+                center.y() + (radius + 5) * text_direction,
                 radius * 3.0,
-                text_height,
+                text_height * text_direction,
             )
 
             painter.drawText(text_rect, Qt.AlignmentFlag.AlignCenter, chopper_name)
@@ -162,18 +201,18 @@ class ChopperWidget(QWidget):
                 value_text = f"{current_speed:.3f} Hz"
             value_rect = QRectF(
                 center.x() - radius * 1.5,
-                center.y() + text_height,
+                center.y() + text_height * text_direction,
                 radius * 3.0,
-                text_height,
+                text_height * text_direction,
             )
             painter.drawText(value_rect, Qt.AlignmentFlag.AlignCenter, value_text)
 
             status_text = "Rotating" if is_moving else "Parked"
             status_rect = QRectF(
                 center.x() - radius * 1.5,
-                center.y() + 2 * text_height,
+                center.y() + (2 * text_height) * text_direction,
                 radius * 3.0,
-                text_height,
+                text_height * text_direction,
             )
             painter.drawText(status_rect, Qt.AlignmentFlag.AlignCenter, status_text)
 
@@ -362,7 +401,11 @@ class ChopperWidget(QWidget):
             return QPolygonF()
 
         def to_qt(a_deg: float) -> float:
-            return math.radians(a_deg + rotation_deg)
+            if self._slit_direction == "CW":
+                return math.radians(-a_deg + rotation_deg)
+            elif self._slit_direction == "CCW":
+                return math.radians(a_deg + rotation_deg)
+            raise ValueError(f"Invalid slit direction: {self._slit_direction}")
 
         step = (e - s) / num_points
         pts = []
