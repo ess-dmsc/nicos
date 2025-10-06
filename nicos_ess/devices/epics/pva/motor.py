@@ -159,7 +159,6 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
             "reseterror": RecordInfo("", "-ErrRst", RecordType.STATUS),
             "powerauto": RecordInfo("", "-PwrAuto", RecordType.STATUS),
             "errormsg": RecordInfo("", "-MsgTxt", RecordType.STATUS),
-            "errormsg.STAT": RecordInfo("", "-MsgTxt.STAT", RecordType.STATUS),
             "errormsg.SEVR": RecordInfo("", "-MsgTxt.SEVR", RecordType.STATUS),
         }
         self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
