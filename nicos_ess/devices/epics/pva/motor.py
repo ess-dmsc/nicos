@@ -573,12 +573,15 @@ class SmaractPiezoMotor(EpicsMotor):
         self._motor_status = (status.OK, "")
         self._record_fields = {
             "value": RecordInfo("value", ".RBV", RecordType.BOTH),
+            "dialvalue": RecordInfo("", ".DRBV", RecordType.VALUE),
             "target": RecordInfo("target", ".VAL", RecordType.VALUE),
             "stop": RecordInfo("", ".STOP", RecordType.VALUE),
             "speed": RecordInfo("", ".VELO", RecordType.VALUE),
             "offset": RecordInfo("", ".OFF", RecordType.VALUE),
             "highlimit": RecordInfo("", ".HLM", RecordType.VALUE),
             "lowlimit": RecordInfo("", ".LLM", RecordType.VALUE),
+            "dialhighlimit": RecordInfo("", ".DHLM", RecordType.VALUE),
+            "diallowlimit": RecordInfo("", ".DLLM", RecordType.VALUE),
             "enable": RecordInfo("", ".CNEN", RecordType.VALUE),
             "set": RecordInfo("", ".SET", RecordType.VALUE),
             "foff": RecordInfo("", ".FOFF", RecordType.VALUE),
