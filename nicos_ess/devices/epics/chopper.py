@@ -256,7 +256,7 @@ class OdinChopperController(EpicsParameters, MappedMoveable):
         "speed": Attach("Speed PV of the chopper", EpicsManualMappedAnalogMoveable),
     }
 
-    hardware_access = False
+    hardware_access = True
     valuetype = str
 
     def doPreinit(self, mode):
