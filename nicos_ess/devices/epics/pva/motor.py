@@ -159,7 +159,7 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
             "reseterror": RecordInfo("", "-ErrRst", RecordType.STATUS),
             "powerauto": RecordInfo("", "-PwrAuto", RecordType.STATUS),
             "errormsg": RecordInfo("", "-MsgTxt", RecordType.STATUS),
-            "errormsg.SEVR": RecordInfo("", "-MsgTxt.SEVR", RecordType.STATUS),
+            "errormsg_severity": RecordInfo("", "-MsgTxt.SEVR", RecordType.STATUS),
         }
         self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
         # Check PV exists
@@ -173,6 +173,7 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
             del self._record_fields["powerauto"]
         if not self.has_errormsg:
             del self._record_fields["errormsg"]
+            del self._record_fields["errormsg_severity"]
 
     def doInit(self, mode):
         if session.sessiontype == POLLER and self.monitor:
@@ -346,7 +347,7 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
 
     def _do_status(self):
         with self._lock:
-            epics_status, message = self._get_alarm_status()
+            epics_status, message = self._get_alarm_status_and_msg()
             self._motor_status = epics_status, message
         if epics_status == status.ERROR:
             return status.ERROR, message or "Unknown problem in record"
@@ -457,34 +458,41 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         return valid_speed
 
     def _get_errormsg(self):
-        err_msg = self._get_cached_pv_or_ask("errormsg", as_string=True)
+        msg_txt = self._get_cached_pv_or_ask("errormsg", as_string=True)
 
-        err_stat = SEVERITY_TO_STATUS.get(
-            self._get_cached_pv_or_ask("errormsg.SEVR"), status.UNKNOWN
+        msg_stat = SEVERITY_TO_STATUS.get(
+            self._get_cached_pv_or_ask("errormsg_severity"), status.UNKNOWN
         )
-        return err_stat, err_msg
+        return msg_stat, msg_txt
 
-    def _update_status_with_errormsg(self, stat, msg):
-        err_stat, err_msg = self._get_errormsg()
-        if stat == status.UNKNOWN:
-            stat = status.ERROR
-        # Increase status "severity" from MsgTxt alert if it's higher than value alert
-        if err_stat > stat:
-            stat = err_stat
-        if self._motor_status != (stat, err_msg):
-            self._log_epics_msg_info(err_msg, stat, msg)
-        return stat, err_msg
+    def increase_severity_if_msgtxt_severity_higher(self, msg_stat, motor_stat):
+        return max(msg_stat, motor_stat)
 
-    def _get_alarm_status(self):
+    def _update_status_with_errormsg(self, motor_stat, motor_msg):
+        msg_stat, msg_txt = self._get_errormsg()
+        if motor_stat == status.UNKNOWN:
+            motor_stat = status.ERROR
+        motor_stat = self.increase_severity_if_msgtxt_severity_higher(
+            msg_stat, motor_stat
+        )
+        if self._motor_status != (motor_stat, msg_txt):
+            self._log_epics_msg_info(msg_txt, motor_stat, motor_msg)
+        return motor_stat, msg_txt
+
+    def _get_alarm_status_and_msg(self):
         def _get_value_status():
             pv = f"{self.motorpv}{self._record_fields['value'].pv_suffix}"
             return self._epics_wrapper.get_alarm_status(pv)
 
-        stat, msg = get_from_cache_or(self, "value_status", _get_value_status)
+        motor_stat, motor_msg = get_from_cache_or(
+            self, "value_status", _get_value_status
+        )
 
         if self.has_errormsg:
-            return self._update_status_with_errormsg(stat, msg)
-        return stat, msg
+            motor_stat, motor_msg = self._update_status_with_errormsg(
+                motor_stat, motor_msg
+            )
+        return motor_stat, motor_msg
 
     def _log_epics_msg_info(self, error_msg, stat, epics_msg):
         if stat == status.OK or stat == status.UNKNOWN:
