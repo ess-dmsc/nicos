@@ -29,7 +29,7 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
     recover from certain errors. If present, these are used when calling the
     reset()-method.
 
-    Another optional parameter is the has_errormsg, which contains an error message that
+    Another optional parameter is the has_msgtxt, which contains an error message that
     may originate from the motor controller or the IOC. If it is present,
     doStatus uses it for some of the status messages.
     """
@@ -52,7 +52,7 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
             settable=False,
             userparam=False,
         ),
-        "has_errormsg": Param(
+        "has_msgtxt": Param(
             "Optional PV with error message.",
             type=bool,
             default=True,
@@ -158,8 +158,8 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
             "errorbit": RecordInfo("", "-Err", RecordType.STATUS),
             "reseterror": RecordInfo("", "-ErrRst", RecordType.STATUS),
             "powerauto": RecordInfo("", "-PwrAuto", RecordType.STATUS),
-            "errormsg": RecordInfo("", "-MsgTxt", RecordType.STATUS),
-            "errormsg_severity": RecordInfo("", "-MsgTxt.SEVR", RecordType.STATUS),
+            "msgtxt": RecordInfo("", "-MsgTxt", RecordType.STATUS),
+            "msgtxt_severity": RecordInfo("", "-MsgTxt.SEVR", RecordType.STATUS),
         }
         self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
         # Check PV exists
@@ -171,9 +171,9 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
             del self._record_fields["reseterror"]
         if not self.has_powerauto:
             del self._record_fields["powerauto"]
-        if not self.has_errormsg:
-            del self._record_fields["errormsg"]
-            del self._record_fields["errormsg_severity"]
+        if not self.has_msgtxt:
+            del self._record_fields["msgtxt"]
+            del self._record_fields["msgtxt_severity"]
 
     def doInit(self, mode):
         if session.sessiontype == POLLER and self.monitor:
@@ -457,19 +457,19 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
 
         return valid_speed
 
-    def _get_errormsg(self):
-        msg_txt = self._get_cached_pv_or_ask("errormsg", as_string=True)
+    def _get_msgtxt(self):
+        msg_txt = self._get_cached_pv_or_ask("msgtxt", as_string=True)
 
         msg_stat = SEVERITY_TO_STATUS.get(
-            self._get_cached_pv_or_ask("errormsg_severity"), status.UNKNOWN
+            self._get_cached_pv_or_ask("msgtxt_severity"), status.UNKNOWN
         )
         return msg_stat, msg_txt
 
     def increase_severity_if_msgtxt_severity_higher(self, msg_stat, motor_stat):
         return max(msg_stat, motor_stat)
 
-    def _update_status_with_errormsg(self, motor_stat, motor_msg):
-        msg_stat, msg_txt = self._get_errormsg()
+    def _update_status_with_msgtxt(self, motor_stat, motor_msg):
+        msg_stat, msg_txt = self._get_msgtxt()
         if motor_stat == status.UNKNOWN:
             motor_stat = status.ERROR
         motor_stat = self.increase_severity_if_msgtxt_severity_higher(
@@ -488,8 +488,8 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
             self, "value_status", _get_value_status
         )
 
-        if self.has_errormsg:
-            motor_stat, motor_msg = self._update_status_with_errormsg(
+        if self.has_msgtxt:
+            motor_stat, motor_msg = self._update_status_with_msgtxt(
                 motor_stat, motor_msg
             )
         return motor_stat, motor_msg
@@ -843,7 +843,7 @@ class SmaractPiezoMotor(EpicsMotor):
             "errorbit": RecordInfo("", "-Err", RecordType.STATUS),
             "reseterror": RecordInfo("", "-ErrRst", RecordType.STATUS),
             "powerauto": RecordInfo("", "-PwrAuto", RecordType.STATUS),
-            "errormsg": RecordInfo("", "-MsgTxt", RecordType.STATUS),
+            "msgtxt": RecordInfo("", "-MsgTxt", RecordType.STATUS),
             "openloop": RecordInfo("", ".URIP", RecordType.VALUE),
             "openloop_rb": RecordInfo("", "-openLoop", RecordType.VALUE),
             "stepfrequency": RecordInfo("", "-STEPFREQ", RecordType.VALUE),
@@ -862,8 +862,8 @@ class SmaractPiezoMotor(EpicsMotor):
             del self._record_fields["reseterror"]
         if not self.has_powerauto:
             del self._record_fields["powerauto"]
-        if not self.has_errormsg:
-            del self._record_fields["errormsg"]
+        if not self.has_msgtxt:
+            del self._record_fields["msgtxt"]
 
     def doReadOpenloop(self):
         return bool(self._get_cached_pv_or_ask("openloop_rb"))

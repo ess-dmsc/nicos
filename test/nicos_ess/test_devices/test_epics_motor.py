@@ -178,7 +178,7 @@ class TestEpicsMotor:
         ],
     )
     @pytest.mark.parametrize(
-        "errormsg_return_values",
+        "msgtxt_return_values",
         [
             (status.OK, ""),
             (status.WARN, ""),
@@ -187,19 +187,19 @@ class TestEpicsMotor:
         ],
     )
     def test_alerts_have_correct_precedence(
-        self, test_alerts_input, errormsg_return_values
+        self, test_alerts_input, msgtxt_return_values
     ):
-        self.motor._get_errormsg = Mock(return_value=errormsg_return_values)
+        self.motor._get_msgtxt = Mock(return_value=msgtxt_return_values)
 
         # ignore the _motor_status check and msg logging
         self.motor._log_epics_msg_info = Mock(return_value=None)
         self.motor._motor_status = None, None
 
-        err_stat, _ = self.motor._get_errormsg()
-        stat, _ = self.motor._update_status_with_errormsg(test_alerts_input, "")
-        assert err_stat <= stat
-        if stat == status.ERROR and err_stat == status.ERROR:
-            assert err_stat == stat
+        msg_stat, _ = self.motor._get_msgtxt()
+        motor_stat, _ = self.motor._update_status_with_msgtxt(test_alerts_input, "")
+        assert msg_stat <= motor_stat
+        if motor_stat == status.ERROR and msg_stat == status.ERROR:
+            assert msg_stat == motor_stat
 
 
 class TestDerivedEpicsMotor:
