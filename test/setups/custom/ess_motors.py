@@ -20,6 +20,7 @@
 #   Matt Clarke <matt.clarke@ess.eu>
 #
 # *****************************************************************************
+includes = ["stdsystem"]
 
 devices = dict(
     motor1=device(
