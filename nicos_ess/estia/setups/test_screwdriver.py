@@ -60,11 +60,11 @@ devices = dict(
         abslimits=(0, 25),
         userlimits=(0, 25),
     ),
-    # driver1_1_hex_state=device(
-    #     "nicos_ess.devices.epics.pva.EpicsMappedReadable",
-    #     description="Hexscrew state",
-    #     readpv=f"{pvprefix}Mtr8-HexScrew",
-    # ),
+    driver1_1_hex_state=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
+        description="Hexscrew state",
+        readpv="TEST:UNKNOWN-22:Labels",
+    ),
     driver1_2_adjust=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Driver1-2 Adjust",
@@ -93,9 +93,64 @@ devices = dict(
         abslimits=(0, 25),
         userlimits=(0, 25),
     ),
-    # driver1_2_hex_state=device(
-    #     "nicos_ess.devices.epics.pva.EpicsMappedReadable",
-    #     description="Hexscrew state",
-    #     readpv=f"{pvprefix}Mtr9-HexScrew",
-    # ),
+    driver1_2_hex_state=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
+        description="Hexscrew state",
+        readpv="TEST:UNKNOWN-22:Labels",
+    ),
+    sr1=device(
+        "nicos_ess.estia.devices.selene.SeleneRobot",
+        description="Selene robot 1",
+        move_x="robot_pos",
+        move_z="robot_vert",
+        adjust1="driver1_1_adjust",
+        approach1="driver1_1_approach",
+        hex_state1="driver1_1_hex_state",
+        adjust2="driver1_2_adjust",
+        approach2="driver1_2_approach",
+        hex_state2="driver1_2_hex_state",
+        delta12=5,
+        engaged=5,
+        retracted=5,
+        position_data="its not used",
+        positions={
+            1: {
+                1: (50, 234),
+            },
+            2: {
+                2: (50, 64),
+            },
+            3: {
+                3: (50, 30),
+            },
+            4: {
+                4: (445, 234),
+            },
+            5: {
+                5: (445, 128),
+            },
+            6: {
+                6: (445, 64),
+            },
+            # :second guide, not active
+            7: {
+                7: (50, 500 - 128),
+            },
+            8: {
+                8: (50, 500 - 64),
+            },
+            9: {
+                9: (50, 500 - 30),
+            },
+            10: {
+                10: (445, 500 - 234),
+            },
+            11: {
+                11: (445, 500 - 128),
+            },
+            12: {
+                12: (445, 500 - 64),
+            },
+        },
+    ),
 )
