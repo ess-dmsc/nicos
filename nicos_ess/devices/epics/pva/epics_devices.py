@@ -391,12 +391,7 @@ class EpicsAnalogMoveable(EpicsParameters, HasPrecision, HasLimits, Moveable):
         if name != self.readpv:
             # Unexpected updates ignored
             return
-        time_stamp = time.time()
-        if param == "value":
-            self._cache.put(self._name, "value_status", (severity, message), time_stamp)
-        else:
-            self._cache.put(self._name, param, value, time_stamp)
-        self._cache.put(self._name, "status", self._do_status(), time_stamp)
+        self._cache.put(self._name, "status", self._do_status(), time.time())
 
     def _connection_change_callback(self, name, param, is_connected, **kwargs):
         if param != self._record_fields["readpv"].cache_key:
