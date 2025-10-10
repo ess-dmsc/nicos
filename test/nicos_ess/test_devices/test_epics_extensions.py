@@ -23,7 +23,7 @@
 import pytest
 
 from nicos.core.device import Device
-from nicos.devices.epics.pyepics import EpicsDevice
+from nicos.devices.epics.pva.epics_devices import EpicsDevice
 
 from nicos.devices.epics.mixins import HasDisablePv
 
