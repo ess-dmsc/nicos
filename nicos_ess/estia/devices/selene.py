@@ -38,6 +38,7 @@ from nicos.core import (
     Attach,
     ModeError,
     MoveError,
+    Override,
     Param,
     Value,
     dictof,
@@ -46,9 +47,9 @@ from nicos.core import (
     tupleof,
 )
 from nicos.core.device import Moveable
-from nicos.devices.epics.pva.epics_devices import EpicsMappedReadable
 from nicos.devices.generic import BaseSequencer, LockedDevice
 from nicos.devices.generic.sequence import SeqDev, SeqMethod, SeqWait
+from nicos_ess.devices.epics.pva import EpicsMappedReadable
 from nicos_ess.devices.epics.pva.motor import EpicsMotor
 from nicos_ess.estia.devices.multiline import MultilineChannel, MultilineController
 from nicos_ess.estia.devices.selene_calculations import SeleneCalculator
@@ -130,7 +131,7 @@ class SeleneRobot(Moveable):
         "rotations": Param(
             "Internal screw position tracking",
             type=dictof(int, dictof(int, float)),
-            settable=True,
+            settable=False,
             internal=True,
             unit="",
         ),
@@ -176,6 +177,10 @@ class SeleneRobot(Moveable):
         "adjust2": Attach("Device for rotation", EpicsMotor),
         "approach2": Attach("Device for approache", EpicsMotor),
         "hex_state2": Attach("Device reporting the hex status", EpicsMappedReadable),
+    }
+
+    parameter_overrides = {
+        "unit": Override(default="", mandatory=False, settable=True),
     }
 
     def doInit(self, mode):
@@ -353,6 +358,7 @@ class SeleneRobot(Moveable):
             return
         self._disengage()
         self.log.info("Driver retracted")
+        # TODO: Save to yml as the docstring suggests?
 
     def doRead(self, maxage=0):
         xpos = self._attached_move_x.read()
