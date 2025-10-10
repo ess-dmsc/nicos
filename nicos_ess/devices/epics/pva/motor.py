@@ -237,7 +237,8 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         return self._get_cached_pv_or_ask("miss") == 0
 
     def doIsCompleted(self):
-        moving = self._get_cached_pv_or_ask("moving")
+        moving = self._get_cached_pv_or_ask("moving")  # should probably use dmov too
+        donemoving = self._get_cached_pv_or_ask("donemoving")
         pos = self._get_cached_pv_or_ask("value")
         target = self._get_cached_pv_or_ask("target")
         deadband = self._get_cached_pv_or_ask("position_deadband")
@@ -245,7 +246,7 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         if abs(target - pos) > deadband:
             return False
 
-        return moving == 0
+        return moving == 0 and donemoving != 0
 
     def doStart(self, value):
         if abs(self.read(0) - value) <= self.precision:

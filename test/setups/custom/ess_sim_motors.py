@@ -11,5 +11,6 @@ devices = dict(
         has_errormsg=False,
         has_errorbit=False,
         has_reseterror=False,
+        monitor=False,
     ),
 )
