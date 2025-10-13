@@ -1,5 +1,6 @@
 from nicos.core import Attach, Moveable, Param, multiStatus
 from nicos.devices.abstract import TransformedMoveable
+from nicos_ess.devices.epics.pva.motor import EpicsJogMotor
 
 
 class ChopperPhase(TransformedMoveable):
@@ -58,3 +59,36 @@ class ChopperPhase(TransformedMoveable):
 
     def doReadSpeed(self, maxage=0):
         return abs(self._attached_speed_dev.doReadTarget(maxage=maxage))
+
+
+class DegreesPerSecondToRPM(TransformedMoveable):
+    parameters = {
+        "unit": Param(
+            description="Converts unit of attached motor from degrees/sec to RPM",
+            type=str,
+            settable=False,
+            default="rpm",
+        )
+    }
+
+    attached_devices = {
+        "motor": Attach("The attached motor", EpicsJogMotor, optional=False)
+    }
+
+    def _convert_degrees_per_second_to_rpm(self, value):
+        return (value / 360) * 60
+
+    def _convert_rpm_to_degrees_per_second(self, value):
+        return (value / 60) * 360
+
+    def _readRaw(self, maxage=0):
+        return self._attached_motor.read()
+
+    def _startRaw(self, target):
+        self._attached_motor.start(target)
+
+    def _mapReadValue(self, value):
+        return self._convert_degrees_per_second_to_rpm(value)
+
+    def _mapTargetValue(self, target):
+        return self._convert_rpm_to_degrees_per_second(target)
