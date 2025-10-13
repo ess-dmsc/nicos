@@ -34,6 +34,14 @@ devices = dict(
         writepv="{}ChopDly-S".format(pv_root_1),
         abslimits=(0.0, 0.0),
     ),
+    bwc1_chopper_phase=device(
+        "nicos_ess.devices.transformer_devices.ChopperPhase",
+        description="The phase of the chopper.",
+        phase_ns_dev="bwc1_chopper_delay",
+        mapped_speed_dev="bwc1_chopper_speed",
+        offset=0,
+        unit="degrees",
+    ),
     bwc1_chopper_delay_errors=device(
         "nicos_ess.devices.epics.chopper_delay_error.ChopperDelayError",
         description="The current delay.",
@@ -115,6 +123,14 @@ devices = dict(
         readpv="{}ChopDly-S".format(pv_root_2),
         writepv="{}ChopDly-S".format(pv_root_2),
         abslimits=(0.0, 0.0),
+    ),
+    bwc2_chopper_phase=device(
+        "nicos_ess.devices.transformer_devices.ChopperPhase",
+        description="The phase of the chopper.",
+        phase_ns_dev="bwc2_chopper_delay",
+        mapped_speed_dev="bwc2_chopper_speed",
+        offset=0,
+        unit="degrees",
     ),
     bwc2_chopper_delay_errors=device(
         "nicos_ess.devices.epics.chopper_delay_error.ChopperDelayError",
