@@ -35,7 +35,7 @@ devices = dict(
         abslimits=(0.0, 0.0),
     ),
     foc1_phase=device(
-        "nicos_ess.devices.transformer_device.ChopperPhase",
+        "nicos_ess.devices.transformer_devices.ChopperPhase",
         description="The phase of the chopper.",
         phase_ns_dev="foc1_delay",
         speed_dev="foc1_speed",
@@ -126,7 +126,7 @@ devices = dict(
         abslimits=(0.0, 0.0),
     ),
     foc2_phase=device(
-        "nicos_ess.devices.transformer_device.ChopperPhase",
+        "nicos_ess.devices.transformer_devices.ChopperPhase",
         description="The phase of the chopper.",
         phase_ns_dev="foc2_delay",
         speed_dev="foc2_speed",
