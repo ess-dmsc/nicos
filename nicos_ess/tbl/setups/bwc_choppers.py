@@ -20,12 +20,12 @@ devices = dict(
         visibility=(),
     ),
     bwc1_chopper_speed=device(
-        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
         description="The current speed.",
         readpv="{}Spd_R".format(pv_root_1),
         writepv="{}Spd_S".format(pv_root_1),
-        abslimits=(0.0, 0.0),
         precision=0.1,
+        mapping={"-28 Hz": -28, "-14 Hz": -14, "0 Hz": 0, "14 Hz": 14, "28 Hz": 28},
     ),
     bwc1_chopper_delay=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
@@ -55,6 +55,12 @@ devices = dict(
         readpv="{}Pos_R".format(pv_root_1),
         writepv="{}Park_S".format(pv_root_1),
         visibility=(),
+    ),
+    bwc1_chopper_park_control=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
+        description="Control to park the chopper.",
+        readpv="{}ParkPos_S".format(pv_root_1),
+        writepv="{}ParkPos_S".format(pv_root_1),
     ),
     bwc1_chopper_chic=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
@@ -96,12 +102,12 @@ devices = dict(
         visibility=(),
     ),
     bwc2_chopper_speed=device(
-        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
         description="The current speed.",
         readpv="{}Spd_R".format(pv_root_2),
         writepv="{}Spd_S".format(pv_root_2),
-        abslimits=(0.0, 0.0),
         precision=0.1,
+        mapping={"-28 Hz": -28, "-14 Hz": -14, "0 Hz": 0, "14 Hz": 14, "28 Hz": 28},
     ),
     bwc2_chopper_delay=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
@@ -131,6 +137,12 @@ devices = dict(
         readpv="{}Pos_R".format(pv_root_2),
         writepv="{}Park_S".format(pv_root_2),
         visibility=(),
+    ),
+    bwc2_chopper_park_control=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
+        description="Control to park the chopper.",
+        readpv="{}ParkPos_S".format(pv_root_2),
+        writepv="{}ParkPos_S".format(pv_root_2),
     ),
     bwc2_chopper_chic=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
