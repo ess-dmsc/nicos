@@ -25,7 +25,15 @@ devices = dict(
         readpv="{}Spd_R".format(pv_root_1),
         writepv="{}Spd_S".format(pv_root_1),
         precision=0.1,
-        mapping={"-28 Hz": -28, "-14 Hz": -14, "0 Hz": 0, "14 Hz": 14, "28 Hz": 28},
+        mapping={
+            "-28 Hz": -28,
+            "-14 Hz": -14,
+            "-7 Hz": -7,
+            "0 Hz": 0,
+            "7 Hz": 7,
+            "14 Hz": 14,
+            "28 Hz": 28,
+        },
     ),
     bwc1_chopper_delay=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
@@ -117,7 +125,15 @@ devices = dict(
         readpv="{}Spd_R".format(pv_root_2),
         writepv="{}Spd_S".format(pv_root_2),
         precision=0.1,
-        mapping={"-28 Hz": -28, "-14 Hz": -14, "0 Hz": 0, "14 Hz": 14, "28 Hz": 28},
+        mapping={
+            "-28 Hz": -28,
+            "-14 Hz": -14,
+            "-7 Hz": -7,
+            "0 Hz": 0,
+            "7 Hz": 7,
+            "14 Hz": 14,
+            "28 Hz": 28,
+        },
     ),
     bwc2_chopper_delay=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
