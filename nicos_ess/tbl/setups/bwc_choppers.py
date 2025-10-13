@@ -20,12 +20,20 @@ devices = dict(
         visibility=(),
     ),
     bwc1_chopper_speed=device(
-        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
         description="The current speed.",
         readpv="{}Spd_R".format(pv_root_1),
         writepv="{}Spd_S".format(pv_root_1),
-        abslimits=(0.0, 0.0),
         precision=0.1,
+        mapping={
+            "-28 Hz": -28,
+            "-14 Hz": -14,
+            "-7 Hz": -7,
+            "0 Hz": 0,
+            "7 Hz": 7,
+            "14 Hz": 14,
+            "28 Hz": 28,
+        },
     ),
     bwc1_chopper_delay=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
@@ -33,6 +41,14 @@ devices = dict(
         readpv="{}ChopDly-S".format(pv_root_1),
         writepv="{}ChopDly-S".format(pv_root_1),
         abslimits=(0.0, 0.0),
+    ),
+    bwc1_chopper_phase=device(
+        "nicos_ess.devices.transformer_devices.ChopperPhase",
+        description="The phase of the chopper.",
+        phase_ns_dev="bwc1_chopper_delay",
+        mapped_speed_dev="bwc1_chopper_speed",
+        offset=0,
+        unit="degrees",
     ),
     bwc1_chopper_delay_errors=device(
         "nicos_ess.devices.epics.chopper_delay_error.ChopperDelayError",
@@ -55,6 +71,12 @@ devices = dict(
         readpv="{}Pos_R".format(pv_root_1),
         writepv="{}Park_S".format(pv_root_1),
         visibility=(),
+    ),
+    bwc1_chopper_park_control=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
+        description="Control to park the chopper.",
+        readpv="{}ParkPos_S".format(pv_root_1),
+        writepv="{}ParkPos_S".format(pv_root_1),
     ),
     bwc1_chopper_chic=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
@@ -80,6 +102,8 @@ devices = dict(
         chic_conn="bwc1_chopper_chic",
         alarms="bwc1_chopper_alarms",
         slit_edges=[[0.0, 170.0]],
+        resolver_offset=-111.0,
+        tdc_offset=-129.3,
     ),
     bwc2_chopper_status=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
@@ -96,12 +120,20 @@ devices = dict(
         visibility=(),
     ),
     bwc2_chopper_speed=device(
-        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
         description="The current speed.",
         readpv="{}Spd_R".format(pv_root_2),
         writepv="{}Spd_S".format(pv_root_2),
-        abslimits=(0.0, 0.0),
         precision=0.1,
+        mapping={
+            "-28 Hz": -28,
+            "-14 Hz": -14,
+            "-7 Hz": -7,
+            "0 Hz": 0,
+            "7 Hz": 7,
+            "14 Hz": 14,
+            "28 Hz": 28,
+        },
     ),
     bwc2_chopper_delay=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
@@ -109,6 +141,14 @@ devices = dict(
         readpv="{}ChopDly-S".format(pv_root_2),
         writepv="{}ChopDly-S".format(pv_root_2),
         abslimits=(0.0, 0.0),
+    ),
+    bwc2_chopper_phase=device(
+        "nicos_ess.devices.transformer_devices.ChopperPhase",
+        description="The phase of the chopper.",
+        phase_ns_dev="bwc2_chopper_delay",
+        mapped_speed_dev="bwc2_chopper_speed",
+        offset=0,
+        unit="degrees",
     ),
     bwc2_chopper_delay_errors=device(
         "nicos_ess.devices.epics.chopper_delay_error.ChopperDelayError",
@@ -131,6 +171,12 @@ devices = dict(
         readpv="{}Pos_R".format(pv_root_2),
         writepv="{}Park_S".format(pv_root_2),
         visibility=(),
+    ),
+    bwc2_chopper_park_control=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
+        description="Control to park the chopper.",
+        readpv="{}ParkPos_S".format(pv_root_2),
+        writepv="{}ParkPos_S".format(pv_root_2),
     ),
     bwc2_chopper_chic=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
@@ -155,5 +201,7 @@ devices = dict(
         chic_conn="bwc2_chopper_chic",
         alarms="bwc2_chopper_alarms",
         slit_edges=[[0.0, 170.0]],
+        resolver_offset=-109.0,
+        tdc_offset=-63.5,
     ),
 )
