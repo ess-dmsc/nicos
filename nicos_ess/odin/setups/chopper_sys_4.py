@@ -27,6 +27,14 @@ devices = dict(
         writepv="{}ChopDly-S".format(foc5_pv_root),
         abslimits=(0.0, 0.0),
     ),
+    foc5_chopper_phase=device(
+        "nicos_ess.devices.transformer_devices.ChopperPhase",
+        description="The phase of the chopper.",
+        phase_ns_dev="foc5_chopper_delay",
+        mapped_speed_dev="foc5_chopper_speed",
+        offset=0.0,
+        unit="degrees",
+    ),
     foc5_chopper_delay_errors=device(
         "nicos_ess.devices.epics.chopper_delay_error.ChopperDelayError",
         description="The current delay.",
@@ -55,7 +63,7 @@ devices = dict(
         monitor=True,
         slit_edges=[
             [0.0, 50.81],
-            [62.365, 110.905],
+            [62.36, 110.91],
             [120.83, 166.32],
             [176.995, 218.315],
             [229.21, 266.66],
@@ -68,6 +76,9 @@ devices = dict(
             "Park": "park",
         },
         speed="foc5_chopper_speed",
+        resolver_offset=-42.36,
+        tdc_offset=-42.36,
+        spin_direction="CW",
     ),
     foc5_vacuum=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
