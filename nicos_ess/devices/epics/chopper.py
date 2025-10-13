@@ -10,6 +10,7 @@ from nicos.core import (
     Readable,
     Waitable,
     listof,
+    oneof,
     status,
 )
 from nicos.devices.abstract import MappedMoveable, Moveable
@@ -158,6 +159,11 @@ class EssChopperController(MappedMoveable):
             default=0.0,
             unit="degrees",
         ),
+        "spin_direction": Param(
+            "Direction of rotation of the chopper",
+            type=oneof("CW", "CCW"),
+            default="CW",
+        ),
     }
 
     attached_devices = {
@@ -231,6 +237,11 @@ class OdinChopperController(EpicsParameters, MappedMoveable):
             default=0.0,
             unit="degrees",
         ),
+        "spin_direction": Param(
+            "Direction of rotation of the chopper",
+            type=oneof("CW", "CCW"),
+            default="CW",
+        ),
         "pv_root": Param(
             "PV root for device", type=str, mandatory=True, userparam=False
         ),
@@ -245,7 +256,7 @@ class OdinChopperController(EpicsParameters, MappedMoveable):
         "speed": Attach("Speed PV of the chopper", EpicsManualMappedAnalogMoveable),
     }
 
-    hardware_access = False
+    hardware_access = True
     valuetype = str
 
     def doPreinit(self, mode):
