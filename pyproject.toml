@@ -16,7 +16,7 @@ dependencies = [
     "keyrings.alt==5.0.0",
     "ldap3>=2.0.0",
     "lttb>=0.2.2",
-    "nicos-pyctl>=1.0",
+    "nicos-pyctl @ https://forge.frm2.tum.de/packages/nicos-pyctl-1.3.tar.gz#sha256=c171f8bbc4d89fa317c7e80ccf3382e1e02288edefe6bbec50ac6ae1441f2d48",
     "numpy>=1.10.0",
     "p4p>=4.0.0",
     "psutil>=2.0",
@@ -28,7 +28,8 @@ dependencies = [
     "toml>=0.10",
     "redis==5.0.4",
     "GitPython",
-    "yuos_query @ https://github.com/ess-dmsc/yuos_query/releases/download/v0.1.22/yuos_query-0.1.22-py3-none-any.whl"
+    "yuos_query @ https://github.com/ess-dmsc/yuos_query/releases/download/v0.1.22/yuos_query-0.1.22-py3-none-any.whl",
+    "gr @ https://forge.frm2.tum.de/packages/gr-1.18.0-py3-none-any.whl#sha256=dcfc7405ee154115701850a8d92052e2c7b728270065c6459549cf10beac64fd",
 ]
 
 [tool.setuptools]
