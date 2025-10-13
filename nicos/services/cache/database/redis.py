@@ -90,8 +90,6 @@ class RedisCacheDatabase(CacheDatabase):
         finally:
             self._client.close()
 
-    # ---- Redis helpers (signatures retained for compatibility/tests) ----
-
     def _literal_or_str(self, val: str):
         try:
             parsed = cache_load(val)
@@ -126,11 +124,9 @@ class RedisCacheDatabase(CacheDatabase):
         return self._client.execute_command("TS.RANGE", key, fromtime, totime, *args)
 
     def _redis_keys(self) -> Iterable[str]:
-        # Prefer SCAN; keep as iterator for streaming/batching use.
         return self._client.scan_iter(match="*", count=1024)
 
     def _check_get_key_format(self, key: str) -> bool:
-        # Exclude special helper keys and TS keys
         return "###" not in key and not key.endswith("_ts")
 
     def _format_key(self, category: str, subkey: str):
@@ -152,15 +148,12 @@ class RedisCacheDatabase(CacheDatabase):
         return entry
 
     def _flush(self, keys: List[str], raws: List[Dict[str, str]]):
-        # Helper to convert batched HGETALL results
         for k, h in zip(keys, raws):
             entry = self._entry_from_hash(h)
             if not entry:
                 continue
             cat, sub = k.rsplit("/", 1) if "/" in k else ("nocat", k)
             yield (cat, sub), entry
-
-    # ---- Normalization for RAM entries ----
 
     def _normalize_entry(self, entry: CacheEntry) -> CacheEntry:
         """Ensure time/ttl are numeric (not strings) before storing in RAM."""
@@ -174,8 +167,6 @@ class RedisCacheDatabase(CacheDatabase):
         norm = CacheEntry(t_conv, tt_conv, entry.value)
         norm.expired = entry.expired
         return norm
-
-    # ---- Initialization: build in-memory map from Redis once (SCAN + pipeline) ----
 
     def initDatabase(self, batch: int = 512):
         loaded = 0
@@ -214,8 +205,6 @@ class RedisCacheDatabase(CacheDatabase):
                 raws = [{} for _ in buf]
             yield from self._flush(buf, raws)
 
-    # ---- RAM helpers ----
-
     def _ensure_category(self, category: str):
         with self._recent_lock:
             if category not in self._recent:
@@ -236,8 +225,6 @@ class RedisCacheDatabase(CacheDatabase):
         _, lock, db = triple
         with lock:
             db.pop(subkey, None)
-
-    # ---- Public read APIs: serve from RAM ----
 
     def getEntry(self, dbkey: KeyTuple):
         category, subkey = dbkey
@@ -267,8 +254,6 @@ class RedisCacheDatabase(CacheDatabase):
                 for subkey, entry in db.items():
                     yield (cat, subkey), entry
 
-    # ---- History from Redis TS (unchanged behavior) ----
-
     def queryHistory(self, dbkey, fromtime, totime, interval=None):
         _, ts_key = self._format_key(dbkey[0], dbkey[1])
 
@@ -290,8 +275,6 @@ class RedisCacheDatabase(CacheDatabase):
             return CacheEntry(ts / 1000.0, None, cache_load(val))
 
         return list(map(lambda p: _ts_entry(*p), res))
-
-    # ---- Write path: update RAM first, then Redis persistence ----
 
     def updateEntries(
         self, categories: List[str], subkey: str, no_store: bool, entry: CacheEntry
@@ -340,8 +323,6 @@ class RedisCacheDatabase(CacheDatabase):
                 self._del_recent(cat, subkey)
 
         return real_update
-
-    # ---- Private data CRUD against Redis (kept for tests) ----
 
     def _get_data(self, key):
         """Fetch a single entry directly from Redis (used by tests)."""
@@ -404,7 +385,6 @@ class RedisCacheDatabase(CacheDatabase):
         # Update RAM to mirror current value immediately (normalized)
         self._set_recent(category, subkey, entry)
 
-        # Optional TS write for numeric values (like before)
         value = (
             self._literal_or_str(entry.value)
             if isinstance(entry.value, str)
@@ -422,8 +402,6 @@ class RedisCacheDatabase(CacheDatabase):
                 target.execute_command("TS.ADD", ts_key, ts, value)
             except Exception:
                 self.log.exception("TS write failed for %s", ts_key)
-
-    # ---- Cleaner: Redis Lua + RAM flag sync (no Redis writes from RAM pass) ----
 
     def _start_cleaner(self):
         lua_sha = self._client.script_load(CLEANER_LUA)
