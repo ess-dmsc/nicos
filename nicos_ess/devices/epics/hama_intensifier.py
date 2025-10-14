@@ -1,12 +1,7 @@
 from enum import Enum
 
-from nicos.core import status, Attach, Param, oneof
-from nicos.devices.epics.pva import (
-    EpicsMappedMoveable,
-    EpicsReadable,
-    EpicsStringReadable,
-    EpicsDigitalMoveable,
-)
+from nicos.core import Attach, Moveable, Param, Readable, oneof, status
+from nicos.devices.epics.pva import EpicsMappedMoveable
 
 
 class AcqMode(Enum):
@@ -36,13 +31,11 @@ class HamaIntensifierController(EpicsMappedMoveable):
     }
 
     attached_devices = {
-        "gain": Attach("The gain of the intensifier", EpicsDigitalMoveable),
-        "value": Attach("The current value of the intensifier", EpicsReadable),
-        "status": Attach("The status of the intensifier", EpicsStringReadable),
-        "connection": Attach(
-            "The connection status of the intensifier", EpicsStringReadable
-        ),
-        "mode": Attach("The operation mode of the intensifier", EpicsMappedMoveable),
+        "gain": Attach("The gain of the intensifier", Moveable),
+        "value": Attach("The current value of the intensifier", Readable),
+        "status": Attach("The status of the intensifier", Readable),
+        "connection": Attach("The connection status of the intensifier", Readable),
+        "mode": Attach("The operation mode of the intensifier", Moveable),
     }
 
     def doStatus(self, maxage=0):
