@@ -31,7 +31,7 @@ devices = dict(
         visibility=(),
     ),
     hama_pmt=device(
-        "nicos.devices.epics.hama_intensifier.HamaIntensifierController",
+        "nicos_ess.devices.epics.hama_intensifier.HamaIntensifierController",
         description="The control of the intensifier",
         readpv=f"{hama_root}OperationCtrl-R",
         writepv=f"{hama_root}OperationCtrl-S",
