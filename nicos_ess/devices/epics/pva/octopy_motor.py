@@ -98,6 +98,43 @@ class OctopyMotor(EpicsParameters, CanDisable, CanReference, Motor):
             f"{self.motorpv}{self._record_fields[param].pv_suffix}", value
         )
 
+    def _wait_until(self, pv_name, expected_value, precision=None, timeout=5.0):
+        """Set up a subscription and wait until the PV reaches the expected value."""
+        event = threading.Event()
+
+        def callback(name, param, value, units, limits, severity, message, **kwargs):
+            if precision is not None and isinstance(value, (int, float)):
+                if abs(value - expected_value) <= precision:
+                    event.set()
+            else:
+                if value == expected_value:
+                    event.set()
+
+        sub = self._epics_wrapper.subscribe(
+            f"{self.motorpv}{self._record_fields[pv_name].pv_suffix}",
+            pv_name,
+            callback,
+        )
+        try:
+            # already done? exit immediately
+            current_value = self._get_pv(
+                pv_name,
+                as_string=False if isinstance(expected_value, (int, float)) else True,
+            )
+            if precision is not None and isinstance(current_value, (int, float)):
+                if abs(current_value - expected_value) <= precision:
+                    return
+            else:
+                if current_value == expected_value:
+                    return
+            # wait for callback to signal completion
+            if not event.wait(timeout):
+                raise TimeoutError(
+                    f"Timeout waiting for {pv_name} to become {expected_value}"
+                )
+        finally:
+            self._epics_wrapper.close_subscription(sub)
+
     def doRead(self, maxage=0):
         return self._get_cached_pv_or_ask("value")
 
@@ -119,13 +156,8 @@ class OctopyMotor(EpicsParameters, CanDisable, CanReference, Motor):
         )
         self._put_pv("target", value)
         # octopy does not update move_done immediately, so we need to wait here
-        # until it is set to 0. Not pretty, but what can you do...
-        sleep_time = 0.05
-        wait_time = 2.0
-        for _ in range(int(wait_time / sleep_time)):
-            if self._get_cached_pv_or_ask("move_done") == 0:
-                break
-            time.sleep(sleep_time)
+        # until it is set to 0.
+        self._wait_until("move_done", 0, timeout=5.0)
 
     def doStop(self):
         self._put_pv("stop", 1)
