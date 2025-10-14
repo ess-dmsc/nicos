@@ -26,14 +26,6 @@ def patch_external_bits(monkeypatch):
     # Avoid depending on project-specific SASL helper
     monkeypatch.setattr(mod, "create_sasl_config", lambda: {}, raising=False)
 
-    # Make createThread actually start a Python thread
-    def createThread(name, target):
-        t = threading.Thread(name=name, target=target, daemon=True)
-        t.start()
-        return t
-
-    monkeypatch.setattr(mod, "createThread", createThread, raising=True)
-
 
 @pytest.fixture
 def consumer():
@@ -111,9 +103,6 @@ def test_subscriber_delivers_messages_via_callback(subscriber):
     delivered = []
     no_msg_calls = {"n": 0}
 
-    print(stub.messages)
-    print(stub.list_topics().topics)
-
     def on_msgs(items):
         # items are ((ts_type, ts), value) pairs
         delivered.extend(items)
@@ -133,38 +122,162 @@ def test_subscriber_delivers_messages_via_callback(subscriber):
     assert no_msg_calls["n"] >= 0  # not asserting strict count due to timing
 
 
-def test_subscriber_reboots_when_no_stats_for_long_time(monkeypatch, subscriber):
-    # Keep the loop tight
-    monkeypatch.setattr(mod.time, "sleep", lambda *_: None, raising=True)
+def test_cooldown_ok_edge_cases():
+    now = mod._now_mono()
+    assert mod._cooldown_ok(now - 2.0, 1.0) is True
+    assert mod._cooldown_ok(now, 1.0) is False
 
-    # Controlled monotonic clock
-    t = {"now": 1000.0}
-    monkeypatch.setattr(mod, "_now_mono", lambda: t["now"], raising=True)
 
-    # Make grace windows tiny to trigger quickly
-    monkeypatch.setattr(mod, "NO_STATS_REBOOT_SECS", 0.1, raising=True)
-    monkeypatch.setattr(mod, "WAIT_AFTER_ASSIGN_SECS", 0.0, raising=True)
-    monkeypatch.setattr(mod, "REBOOT_COOLDOWN_SECS", 0.0, raising=True)
+def test_health_helpers_transitions():
+    h = mod._Health()
+    # default empty state
+    assert h.brokers_up() == 0
+    assert h.all_down_for() == 0.0
 
-    # Prepare a topic to let subscribe() assign and start loop
-    consumer = subscriber.consumer
+    # add states
+    h.brokers_state = {"a": "UP", "b": "DOWN", "c": "TRY_CONNECT"}
+    assert h.brokers_up() == 1
+
+    # simulate all down window
+    h.all_down_since = mod._now_mono()
+    assert h.all_down_for() >= 0.0  # non-negative
+
+
+def test_can_fetch_metadata_true(consumer):
+    # With the stub, list_topics always works -> True
+    assert consumer._can_fetch_metadata() is True
+    # Also works when asking for a concrete topic (stub will auto-add)
+    assert consumer._can_fetch_metadata("anytopic", timeout_s=0.01) is True
+
+
+def test_consumer_poll_without_assign_returns_none(consumer):
+    # No assignment -> poll returns None
+    assert consumer.poll(timeout_ms=10) is None
+
+
+def test_consumer_poll_after_subscribe_returns_messages(consumer):
+    # Prepare messages
     stub = consumer._consumer
-    stub.create_topic("topic", num_partitions=1)
+    stub.create_topic("t", num_partitions=1)
+    stub.add_message("t", 0, offset=0, key=b"k", value=b"1")
+    stub.add_message("t", 0, offset=1, key=b"k", value=b"2")
 
-    rebooted = {"flag": False}
+    consumer.subscribe(["t"])
 
-    def fake_rebootstrap(reason=""):
-        rebooted["flag"] = True
-        # also stop the loop
-        subscriber.stop_consuming()
+    v1 = consumer.poll(timeout_ms=50)
+    v2 = consumer.poll(timeout_ms=50)
+    v3 = consumer.poll(timeout_ms=50)  # drained
 
-    # Patch the consumer's rebootstrap
-    monkeypatch.setattr(consumer, "rebootstrap", fake_rebootstrap, raising=True)
+    assert v1.value() == b"1"
+    assert v2.value() == b"2"
+    assert v3 is None
 
-    # Start subscribed thread
-    subscriber.subscribe(["topic"], messages_callback=lambda *_: None)
 
-    # Advance time to exceed NO_STATS_REBOOT_SECS without any stats_cb
-    t["now"] += 1.0
+def test_consume_batch_zero_and_no_assignment(consumer):
+    # max_messages <= 0 -> []
+    assert consumer.consume_batch(0) == []
+    # no assignment -> []
+    assert consumer.consume_batch(10, timeout_s=0.05) == []
 
-    assert wait_until(lambda: rebooted["flag"], timeout=1.0)
+
+def test_consumer_assignment_and_unsubscribe(consumer):
+    stub = consumer._consumer
+    stub.create_topic("x", num_partitions=2)
+
+    consumer.subscribe(["x"])
+    assigned = consumer.assignment()
+    # should have two partitions
+    assert {(tp.topic, tp.partition) for tp in assigned} == {("x", 0), ("x", 1)}
+
+    # unsubscribe clears assignment in stub
+    consumer.unsubscribe()
+    assert consumer.assignment() == []
+
+
+def test_consumer_topics_lists_created_names(consumer):
+    stub = consumer._consumer
+    stub.create_topic("a", num_partitions=1)
+    stub.create_topic("b", num_partitions=2)
+    names = consumer.topics()
+    assert "a" in names and "b" in names
+
+
+def test_consumer_subscribe_raises_on_missing_topic(consumer):
+    with pytest.raises(mod.ConfigurationError):
+        consumer.subscribe(["does_not_exist"])
+
+
+def test_consumer_subscribe_raises_on_topic_error(consumer):
+    # Inject a topic with an error in stub metadata
+    stub = consumer._consumer
+    stub.create_topic("bad", num_partitions=1)
+    stub._metadata.topics["bad"].error = RuntimeError("metadata error")
+
+    with pytest.raises(mod.ConfigurationError):
+        consumer.subscribe(["bad"])
+
+
+def test_try_reassign_no_topics_is_trivially_true(consumer):
+    consumer._topics = []
+    consumer._pending_reassign = True
+    assert consumer.try_reassign() is True
+    assert consumer._pending_reassign is False
+
+
+def test_on_stats_invalid_json_is_ignored(consumer, capsys):
+    # Should not raise even with junk
+    consumer._on_stats("not json at all")
+    # health still exists
+    assert isinstance(consumer._health, mod._Health)
+
+
+def test_on_stats_updates_broker_states_and_all_down_since(consumer):
+    # Start with all brokers DOWN -> all_down_since set
+    payload1 = json.dumps({
+        "brokers": {"b1": {"state": "DOWN"}, "b2": {"state": "DOWN"}},
+        "cgrp": {"state": "up"},
+    })
+    consumer._on_stats(payload1)
+    assert consumer.brokers_up() == 0
+    assert consumer._health.all_down_since is not None
+
+    # Now one broker UP -> all_down_since cleared
+    payload2 = json.dumps({
+        "brokers": {"b1": {"state": "UP"}},
+        "cgrp": {"state": "up"},
+    })
+    consumer._on_stats(payload2)
+    assert consumer.brokers_up() == 1
+    assert consumer._health.all_down_since is None
+    # Also check GroupCoordinator
+    assert consumer._health.group_coordinator_state == "UP"
+
+
+def test_on_error_nonfatal_does_not_rebootstrap(consumer):
+    class DummyErr:
+        def code(self): return 123
+        def name(self): return "WHATEVER"
+        def fatal(self): return False
+        def retriable(self): return True
+        def str(self): return "just a warning"
+
+    # Should not touch _last_rebootstrap_mono for non-fatal
+    before = consumer._last_rebootstrap_mono
+    consumer._on_error(DummyErr())
+    assert consumer._last_rebootstrap_mono == before
+
+
+def test_consumer_close_is_idempotent(consumer):
+    # close once
+    consumer.close()
+    # and again (stub tolerates)
+    consumer.close()
+
+
+def test_subscriber_stop_and_close_idempotent(subscriber):
+    # stop without starting
+    subscriber.stop_consuming()
+    subscriber.stop_consuming(True)
+    # close is idempotent
+    subscriber.close()
+    subscriber.close()

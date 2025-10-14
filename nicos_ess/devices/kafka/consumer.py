@@ -43,6 +43,7 @@ class _Health:
     last_stats_mono: float = _now_mono()
     all_down_since: Optional[float] = None
     brokers_state: dict = None  # name -> state string (UP, DOWN, TRY_CONNECT, ...)
+    group_coordinator_state: Optional[str] = None  # e.g. "UP"
 
     def __post_init__(self):
         if self.brokers_state is None:
@@ -50,6 +51,9 @@ class _Health:
 
     def brokers_up(self) -> int:
         return sum(1 for s in self.brokers_state.values() if s == "UP")
+
+    def group_coordinator_up(self) -> bool:
+        return self.group_coordinator_state == "UP"
 
     def last_stats_age(self) -> float:
         return max(0.0, _now_mono() - self.last_stats_mono)
@@ -210,7 +214,7 @@ class KafkaConsumer:
         if isinstance(cgrp, dict):
             cg_state = cgrp.get("state")
             if cg_state:
-                states["GroupCoordinator"] = str(cg_state).upper()
+                self._health.group_coordinator_state = str(cg_state).upper()
 
         if states:
             self._health.brokers_state = states
