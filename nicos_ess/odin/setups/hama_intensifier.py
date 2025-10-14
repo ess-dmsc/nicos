@@ -2,7 +2,7 @@
 
 description = "Hamamatsu light intensifier"
 
-hama_root = "ODIN-DtCMOS:NDet-ImgInt-001:"
+hama_root = "ODIN-DtCMOS:NDet-ImgInt-002:"
 gate_root = "ODIN-DtCmn:Ctrl-EVR-001:"
 
 devices = dict(
