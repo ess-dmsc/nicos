@@ -5,17 +5,17 @@ group = "optional"
 devices = dict(
     measured_sample_position_z=device(
         "nicos.devices.generic.manual.ManualMove",
-        description="Measured position of the sample in axis Z",
+        description="Measured position to the sample from the instrument zero, in axis Z",
         default=0,
         unit="m",
-        abslimits=(-10, 10),
+        abslimits=(-10, 0),
     ),
     measured_slit_set_4_z=device(
         "nicos.devices.generic.manual.ManualMove",
-        description="Measured position of slit set 4 in axis Z",
+        description="Measured position to slit set 4 from the instrument zero, in axis Z",
         default=0,
         unit="m",
-        abslimits=(-10, 10),
+        abslimits=(-10, 0),
     ),
     measured_slit_set_4_left_blade=device(
         "nicos.devices.generic.manual.ManualMove",
