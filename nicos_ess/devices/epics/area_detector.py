@@ -62,6 +62,13 @@ class ImageMode(Enum):
     CONTINUOUS = 2
 
 
+# "Edge", "Level", "Sync Readout"
+class TriggerMode(Enum):
+    EDGE = 0
+    LEVEL = 1
+    SYNC_READOUT = 2
+
+
 class CoolingMode(Enum):
     OFF = 0
     ON = 1
@@ -520,6 +527,15 @@ class OrcaFlash4(AreaDetector):
         "numexposures": Param(
             "Number of exposures per image.", settable=True, volatile=True
         ),
+        "numtriggers": Param(
+            "Number of triggers per image.", settable=True, volatile=True
+        ),
+        "triggermode": Param(
+            "Trigger mode of the camera. While in sync_readout mode, the exposure time is controlled via numtriggers NOT acquiretime and acquireperiod.",
+            type=oneof("edge", "level", "sync_readout"),
+            settable=True,
+            volatile=True,
+        ),
         "chip_coolingmode": Param(
             "Cooling mode of the camera.",
             type=oneof("off", "on", "max"),
@@ -587,6 +603,10 @@ class OrcaFlash4(AreaDetector):
         self._record_fields["chip_temperature"] = "Temperature-R"
         self._record_fields["cooling_mode"] = "SensorCooler-S"
         self._record_fields["cooling_mode_rbv"] = "SensorCooler-RB"
+        self._record_fields["trigger_mode"] = "TriggerActive-S"
+        self._record_fields["trigger_mode_rbv"] = "TriggerActive-RB"
+        self._record_fields["num_triggers"] = "TriggerTimes-S"
+        self._record_fields["num_triggers_rbv"] = "TriggerTimes-RB"
         self._record_fields["topicpv"] = self.topicpv
         self._record_fields["sourcepv"] = self.sourcepv
 
@@ -739,6 +759,18 @@ class OrcaFlash4(AreaDetector):
 
     def doWriteBinning(self, value):
         self._put_pv("binning_factor", value)
+
+    def doReadNumtriggers(self):
+        return self._get_pv("num_triggers_rbv")
+
+    def doWriteNumtriggers(self, value):
+        self._put_pv("num_triggers", value)
+
+    def doReadTriggermode(self):
+        return TriggerMode(self._get_pv("trigger_mode")).name.lower()
+
+    def doWriteTriggermode(self, value):
+        self._put_pv("trigger_mode", TriggerMode[value.upper()].value)
 
     def get_topic_and_source(self):
         return self._get_pv("topicpv", as_string=True), self._get_pv(
