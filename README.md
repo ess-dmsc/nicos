@@ -267,7 +267,7 @@ redis-cli ping
 
 Clone the RedisTimeSeries repository:
 ```bash
-git clone --recursive https://github.com/RedisTimeSeries/RedisTimeSeries.git
+git clone --recursive https://github.com/RedisTimeSeries/RedisTimeSeries.git -b v1.8.10
 cd RedisTimeSeries
 ```
 Set up the environment and build the module:
