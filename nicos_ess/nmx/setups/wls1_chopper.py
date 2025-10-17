@@ -1,7 +1,7 @@
 description = "NMX WLS-1 Chopper (single disc)"
 
 pv_root_1 = "NMX-ChpSy1:Chop-WLS-101:"
-#pv_root_2 = ""
+# pv_root_2 = ""
 chic_root = "NMX-ChpSy1:Chop-CHIC-001:"
 
 devices = dict(
@@ -20,12 +20,12 @@ devices = dict(
         visibility=(),
     ),
     wls1_chopper_speed=device(
-        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
         description="The current speed.",
         readpv="{}Spd_R".format(pv_root_1),
         writepv="{}Spd_S".format(pv_root_1),
-        abslimits=(0.0, 0.0),
         precision=0.1,
+        mapping={"0 Hz": 0, "14 Hz": 14},
     ),
     wls1_chopper_delay=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
@@ -38,7 +38,7 @@ devices = dict(
         "nicos_ess.devices.transformer_device.ChopperPhase",
         description="The phase of the chopper.",
         phase_ns_dev="wls1_chopper_delay",
-        speed_dev="wls1_chopper_speed",
+        mapped_speed_dev="wls1_chopper_speed",
         offset=0,
         unit="degrees",
     ),
@@ -93,7 +93,7 @@ devices = dict(
         speed="wls1_chopper_speed",
         chic_conn="wls1_chopper_chic",
         alarms="wls1_chopper_alarms",
-        slit_edges=[[0, 190]],
-        resolver_offset=-145,
+        slit_edges=[[0, 170]],
+        resolver_offset=-110.0,
     ),
 )
