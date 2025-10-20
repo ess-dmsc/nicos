@@ -191,7 +191,15 @@ class EssChopperController(MappedMoveable):
     def doStart(self, target):
         if target.lower() == "stop":
             # Set the speed to zero to keep EPICS behaviour consistent.
-            self._attached_speed.move(0)
+            # speed can be mapped, so find the mapped value for 0
+            target_speed = 0
+            if isinstance(self._attached_speed, MappedMoveable):
+                speed_key = self._attached_speed._inverse_mapping.get(0, None)
+                if speed_key is not None:
+                    target_speed = speed_key
+                else:
+                    target_speed = "0 Hz"
+            self._attached_speed.move(target_speed)
         self._attached_command.move(target)
 
     def doStop(self):
