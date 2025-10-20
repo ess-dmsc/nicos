@@ -255,6 +255,9 @@ class HPLCPumpController(EpicsParameters, MappedMoveable):
     def doReset(self):
         self._put_pv("reset_error", 1)
 
+    def doReadMapping(self):
+        return {cmd: i for i, cmd in enumerate(self._commands.keys())}
+
     def doReadMax_Pressure(self, maxage=0):
         return self._get_cached_pv_or_ask("pressure_max_rbv")
 
