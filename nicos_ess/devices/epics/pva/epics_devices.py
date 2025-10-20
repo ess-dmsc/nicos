@@ -891,10 +891,14 @@ class EpicsManualMappedAnalogMoveable(
         return (-1e308, 1e308) if (lo == 0 and hi == 0) else (lo, hi)
 
     def doReadTarget(self, maxage=0):
+        def _func():
+            raw_value = self._epics_wrapper.get_pv_value(self.targetpv or self.writepv)
+            return self._inverse_mapping.get(raw_value, None)
+
         return get_from_cache_or(
             self,
             "target",
-            lambda: self._epics_wrapper.get_pv_value(self.targetpv or self.writepv),
+            _func,
         )
 
     def _do_status(self):
