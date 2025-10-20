@@ -797,7 +797,7 @@ class EpicsManualMappedAnalogMoveable(
         "targetpv": RecordInfo("target", "", RecordType.VALUE),
     }
 
-    valuetype = str
+    valuetype = anytype
 
     def doPreinit(self, mode):
         self._epics_subscriptions = []
