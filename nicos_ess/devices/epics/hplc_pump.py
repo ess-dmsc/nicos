@@ -1,22 +1,34 @@
 import time
 
+from nicos import session
 from nicos.core import (
+    POLLER,
+    SIMULATION,
+    Attach,
+    Override,
     Param,
+    oneof,
     pvname,
     status,
-    Attach,
-    SIMULATION,
     usermethod,
-    Override,
-    oneof,
 )
 from nicos.devices.abstract import MappedMoveable
-from nicos.devices.epics.pva import EpicsDevice, EpicsStringReadable
+from nicos_ess.devices.epics.pva.epics_devices import (
+    EpicsParameters,
+    RecordInfo,
+    RecordType,
+    create_wrapper,
+    get_from_cache_or,
+)
 
 
-class HPLCPumpController(EpicsDevice, MappedMoveable):
+class HPLCPumpController(EpicsParameters, MappedMoveable):
     """
-    Device that controls an HPLC pump.
+    Device that controls an HPLC pump (new EpicsParameters-style).
+
+    - Commands are exposed via MappedMoveable mapping (start/stop/volume_start/time_start).
+    - `run_started` is a parameter tracking the initial-start busy transitional state.
+    - Uses poller subscriptions for relevant PVs.
     """
 
     parameters = {
@@ -27,27 +39,65 @@ class HPLCPumpController(EpicsDevice, MappedMoveable):
         "min_pressure": Param(
             "Minimum pressure", type=float, settable=True, volatile=True
         ),
+        "run_started": Param(
+            "True while initial start transition is in progress",
+            type=bool,
+            default=False,
+            settable=True,
+            userparam=False,
+        ),
     }
 
     parameter_overrides = {
         "unit": Override(mandatory=False, settable=False, userparam=False),
         "mapping": Override(
-            mandatory=False, settable=False, userparam=False, volatile=True
+            mandatory=False,
+            settable=False,
+            userparam=False,
+            volatile=True,
+            internal=True,
         ),
     }
 
-    _record_fields = {}
-
     attached_devices = {
-        "status": Attach("Status of device", EpicsStringReadable),
+        "status": Attach(
+            "Status of device", "nicos.devices.epics.pva.EpicsStringReadable"
+        ),
     }
 
-    _commands = {}
-    _run_started = False
-
     def doPreinit(self, mode):
-        self._set_custom_record_fields()
-        EpicsDevice.doPreinit(self, mode)
+        self._record_fields = {
+            "error": RecordInfo("error", "Error-R", RecordType.STATUS),
+            "error_text": RecordInfo("error_text", "ErrorText-R", RecordType.VALUE),
+            "reset_error": RecordInfo("reset_error", "ErrorReset-S", RecordType.VALUE),
+            "set_pressure_max": RecordInfo(
+                "set_pressure_max", "PressureMax-S", RecordType.VALUE
+            ),
+            "pressure_max_rbv": RecordInfo(
+                "pressure_max_rbv", "PressureMax-R", RecordType.VALUE
+            ),
+            "set_pressure_min": RecordInfo(
+                "set_pressure_min", "PressureMin-S", RecordType.VALUE
+            ),
+            "pressure_min_rbv": RecordInfo(
+                "pressure_min_rbv", "PressureMin-R", RecordType.VALUE
+            ),
+            "pump_for_time": RecordInfo(
+                "pump_for_time", "PumpForTime-S", RecordType.VALUE
+            ),
+            "pump_for_volume": RecordInfo(
+                "pump_for_volume", "PumpForVolume-S", RecordType.VALUE
+            ),
+            "start_pump": RecordInfo("start_pump", "Start-S", RecordType.VALUE),
+            "stop_pump": RecordInfo("stop_pump", "Stop-S", RecordType.VALUE),
+        }
+
+        self._epics_subscriptions = []
+        self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
+
+        self._epics_wrapper.connect_pv(
+            f"{self.pv_root}{self._record_fields['error_text'].pv_suffix}"
+        )
 
     def doInit(self, mode):
         self._commands = {
@@ -56,55 +106,115 @@ class HPLCPumpController(EpicsDevice, MappedMoveable):
             "time_start": self.time_start,
             "stop": self.stop_pump,
         }
+        cmd_mapping = {cmd: i for i, cmd in enumerate(self._commands.keys())}
+        self._setROParam("mapping", cmd_mapping)
+
         MappedMoveable.doInit(self, mode)
-        self.valuetype = oneof(*self._commands)
+        self.valuetype = oneof(*self._commands.keys())
+
+        if session.sessiontype == POLLER and self.monitor:
+            for k, info in self._record_fields.items():
+                full_pv = f"{self.pv_root}{info.pv_suffix}"
+                if info.record_type in (RecordType.VALUE, RecordType.BOTH):
+                    self._epics_subscriptions.append(
+                        self._epics_wrapper.subscribe(
+                            full_pv,
+                            info.cache_key,
+                            self._value_change_callback,
+                            self._connection_change_callback,
+                        )
+                    )
+                if info.record_type in (RecordType.STATUS, RecordType.BOTH):
+                    self._epics_subscriptions.append(
+                        self._epics_wrapper.subscribe(
+                            full_pv,
+                            info.cache_key,
+                            self._status_change_callback,
+                            self._connection_change_callback,
+                        )
+                    )
 
     def doPrepare(self):
         self._update_status(status.OK, "")
 
+    def _value_change_callback(
+        self, name, param, value, units, limits, severity, message, **kwargs
+    ):
+        ts = time.time()
+        self._cache.put(self._name, param, value, ts)
+
+        self._cache.put(self._name, "status", self._do_status(), ts)
+
+    def _status_change_callback(
+        self, name, param, value, units, limits, severity, message, **kwargs
+    ):
+        ts = time.time()
+        self._cache.put(self._name, param, value, ts)
+        self._cache.put(self._name, "status", self._do_status(), ts)
+
+    def _connection_change_callback(self, name, param, is_connected, **kwargs):
+        canary = self._record_fields["error_text"].cache_key
+        if param != canary:
+            return
+        if is_connected:
+            self.log.debug("%s connected!", name)
+        else:
+            self.log.warning("%s disconnected!", name)
+            self._cache.put(
+                self._name,
+                "status",
+                (status.ERROR, "communication failure"),
+                time.time(),
+            )
+
+    def _pv(self, key: str) -> str:
+        return f"{self.pv_root}{self._record_fields[key].pv_suffix}"
+
+    def _get_cached_pv_or_ask(self, key: str, as_string: bool = False):
+        return get_from_cache_or(
+            self,
+            self._record_fields[key].cache_key,
+            lambda: self._epics_wrapper.get_pv_value(self._pv(key), as_string),
+        )
+
+    def _get_pv(self, key: str, as_string: bool = False):
+        return self._epics_wrapper.get_pv_value(self._pv(key), as_string)
+
+    def _put_pv(self, key: str, value):
+        self._epics_wrapper.put_pv_value(self._pv(key), value)
+
     def _update_status(self, new_status, message):
-        self._current_status = new_status, message
-        self._cache.put(self._name, "status", self._current_status, time.time())
-
-    def _set_custom_record_fields(self):
-        self._record_fields["error"] = "Error-R"
-        self._record_fields["reset_error"] = "ErrorReset-S"
-        self._record_fields["error_text"] = "ErrorText-R"
-        self._record_fields["set_pressure_max"] = "PressureMax-S"
-        self._record_fields["pressure_max_rbv"] = "PressureMax-R"
-        self._record_fields["set_pressure_min"] = "PressureMin-S"
-        self._record_fields["pressure_min_rbv"] = "PressureMin-R"
-        self._record_fields["pump_for_time"] = "PumpForTime-S"
-        self._record_fields["pump_for_volume"] = "PumpForVolume-S"
-        self._record_fields["start_pump"] = "Start-S"
-        self._record_fields["stop_pump"] = "Stop-S"
-
-    def _get_pv_parameters(self):
-        return set(self._record_fields)
-
-    def _get_pv_name(self, pvparam):
-        pv_name = self._record_fields.get(pvparam)
-        if pv_name:
-            return self.pv_root + pv_name
-        return getattr(self, pvparam)
+        self._cache.put(self._name, "status", (new_status, message), time.time())
 
     def doStatus(self, maxage=0):
+        return get_from_cache_or(self, "status", self._do_status)
+
+    def _do_status(self):
         if self._mode == SIMULATION:
             return status.OK, ""
-        device_msg = self._get_pv("error_text", as_string=True)
-        if device_msg not in ["No error", "[Program is Busy]"]:
+
+        # Check controller-reported error text
+        try:
+            device_msg = self._get_pv("error_text", as_string=True)
+        except TimeoutError:
+            return status.ERROR, "timeout reading status"
+        if device_msg not in ("No error", "[Program is Busy]"):
             return status.ERROR, device_msg
 
-        attached_status, attached_msg = self._attached_status.status(maxage)
-        attached_read = self._attached_status.read(maxage)
+        # Attached status device (string like "Off"/"On"/etc.)
+        attached_status, attached_msg = self._attached_status.status(0)
+        attached_read = self._attached_status.read(0)
 
-        if self._run_started:
+        # Transitional "start" busy phase
+        if self.run_started:
             if attached_read == "Off":
                 return status.BUSY, "Starting pump"
             else:
-                self._run_started = False
+                # done with the transitional flag, now just running
+                self._setROParam("run_started", False)
                 return status.BUSY, attached_msg
 
+        # If not Off, we are busy (running a program)
         if attached_read != "Off":
             return status.BUSY, attached_msg
 
@@ -113,25 +223,26 @@ class HPLCPumpController(EpicsDevice, MappedMoveable):
     def doRead(self, maxage=0):
         return self._attached_status.read(maxage)
 
-    def doReadMapping(self):
-        return {cmd: i for i, cmd in enumerate(self._commands.keys())}
-
     def doIsAtTarget(self, pos, target):
-        if self._run_started:
+        # While transitional-flag is set, we're not "at target"
+        if self.run_started:
             return False
 
-        if target in ["start", "volume_start", "time_start"]:
-            return "Off" == self._attached_status.read(0)
-        elif target == "stop":
-            return "Off" != self._attached_status.read(0)
+        try:
+            current = self._attached_status.read(0)
+        except Exception:
+            return False
 
+        if target in ("start", "volume_start", "time_start"):
+            # target reached when pump has *stopped* (i.e. program finished)
+            return current == "Off"
+        elif target == "stop":
+            # target reached when it's *not* Off (i.e. was running → now stopping?)
+            return current != "Off"
         return False
 
     def doStart(self, target):
         if target in self._commands:
-            # if target is not 'stop':
-            # self._run_started = True
-            # self._update_status(status.BUSY, 'Starting pump')
             self._commands[target]()
 
     def doFinish(self):
@@ -139,19 +250,19 @@ class HPLCPumpController(EpicsDevice, MappedMoveable):
 
     def doStop(self):
         self._put_pv("stop_pump", 1)
-        self._run_started = False
+        self._setROParam("run_started", False)
 
     def doReset(self):
         self._put_pv("reset_error", 1)
 
     def doReadMax_Pressure(self, maxage=0):
-        return self._get_pv("pressure_max_rbv")
+        return self._get_cached_pv_or_ask("pressure_max_rbv")
 
     def doWriteMax_Pressure(self, value):
         self._put_pv("set_pressure_max", value)
 
     def doReadMin_Pressure(self, maxage=0):
-        return self._get_pv("pressure_min_rbv")
+        return self._get_cached_pv_or_ask("pressure_min_rbv")
 
     def doWriteMin_Pressure(self, value):
         self._put_pv("set_pressure_min", value)
@@ -161,11 +272,7 @@ class HPLCPumpController(EpicsDevice, MappedMoveable):
         """Start pumping"""
         if self._mode == SIMULATION:
             return
-        # curr_status = self.status(0)[0]
-        # if curr_status != status.OK:
-        #    raise InvalidValueError('Cannot start from the current state, '
-        #                            'please stop the pump first')
-        self._run_started = True
+        self._setROParam("run_started", True)
         self._update_status(status.BUSY, "Starting pump")
         self._put_pv("start_pump", 1)
 
@@ -174,10 +281,6 @@ class HPLCPumpController(EpicsDevice, MappedMoveable):
         """Stop pumping"""
         if self._mode == SIMULATION:
             return
-        # curr_status = self.status(0)[0]
-        # if curr_status != status.BUSY:
-        #    raise InvalidValueError('Cannot stop from the current state, '
-        #                            'please start the pump first')
         self._put_pv("stop_pump", 1)
 
     @usermethod
@@ -185,11 +288,7 @@ class HPLCPumpController(EpicsDevice, MappedMoveable):
         """Start pumping for a given volume"""
         if self._mode == SIMULATION:
             return
-        # curr_status = self.status(0)[0]
-        # if curr_status != status.OK:
-        #    raise InvalidValueError('Cannot start from the current state, '
-        #                            'please stop the pump first')
-        self._run_started = True
+        self._setROParam("run_started", True)
         self._update_status(status.BUSY, "Starting pump")
         self._put_pv("pump_for_volume", 1)
 
@@ -198,10 +297,6 @@ class HPLCPumpController(EpicsDevice, MappedMoveable):
         """Start pumping for a given time"""
         if self._mode == SIMULATION:
             return
-        # curr_status = self.status(0)[0]
-        # if curr_status != status.OK:
-        #    raise InvalidValueError('Cannot start from the current state, '
-        #                            'please stop the pump first')
-        self._run_started = True
+        self._setROParam("run_started", True)
         self._update_status(status.BUSY, "Starting pump")
         self._put_pv("pump_for_time", 1)
