@@ -95,6 +95,7 @@ devices = dict(
         alarms="wls2a_chopper_alarms",
         slit_edges=[[0, 170]],
         resolver_offset=12.0,
+        tdc_offset=-6.3,
     ),
     wls2b_chopper_status=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
@@ -185,5 +186,6 @@ devices = dict(
         alarms="wls2b_chopper_alarms",
         slit_edges=[[0, 170]],
         resolver_offset=-80.0,
+        tdc_offset=-92.5,
     ),
 )

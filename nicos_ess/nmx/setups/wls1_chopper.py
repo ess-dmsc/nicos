@@ -95,5 +95,6 @@ devices = dict(
         alarms="wls1_chopper_alarms",
         slit_edges=[[0, 170]],
         resolver_offset=-110.0,
+        tdc_offset=-62.5,
     ),
 )
