@@ -35,7 +35,7 @@ devices = dict(
         abslimits=(0.0, 0.0),
     ),
     wls2a_chopper_phase=device(
-        "nicos_ess.devices.transformer_device.ChopperPhase",
+        "nicos_ess.devices.transformer_devices.ChopperPhase",
         description="The phase of the chopper.",
         phase_ns_dev="wls2a_chopper_delay",
         mapped_speed_dev="wls2a_chopper_speed",
@@ -126,7 +126,7 @@ devices = dict(
         abslimits=(0.0, 0.0),
     ),
     wls2b_chopper_phase=device(
-        "nicos_ess.devices.transformer_device.ChopperPhase",
+        "nicos_ess.devices.transformer_devices.ChopperPhase",
         description="The phase of the chopper.",
         phase_ns_dev="wls2b_chopper_delay",
         mapped_speed_dev="wls2b_chopper_speed",
