@@ -7,6 +7,7 @@ from nicos.core import (
     Attach,
     Override,
     Param,
+    Readable,
     oneof,
     pvname,
     status,
@@ -55,14 +56,11 @@ class HPLCPumpController(EpicsParameters, MappedMoveable):
             settable=False,
             userparam=False,
             volatile=True,
-            internal=True,
         ),
     }
 
     attached_devices = {
-        "status": Attach(
-            "Status of device", "nicos.devices.epics.pva.EpicsStringReadable"
-        ),
+        "status": Attach("Status of device", Readable),
     }
 
     def doPreinit(self, mode):
