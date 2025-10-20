@@ -218,9 +218,6 @@ class HPLCPumpController(EpicsParameters, MappedMoveable):
 
         return attached_status, attached_msg
 
-    def doRead(self, maxage=0):
-        return self._attached_status.read(maxage)
-
     def doIsAtTarget(self, pos, target):
         # While transitional-flag is set, we're not "at target"
         if self.run_started:
