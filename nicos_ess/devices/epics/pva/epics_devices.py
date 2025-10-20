@@ -797,7 +797,7 @@ class EpicsManualMappedAnalogMoveable(
         "targetpv": RecordInfo("target", "", RecordType.VALUE),
     }
 
-    valuetype = anytype
+    valuetype = str
 
     def doPreinit(self, mode):
         self._epics_subscriptions = []
@@ -892,8 +892,8 @@ class EpicsManualMappedAnalogMoveable(
 
     def doReadTarget(self, maxage=0):
         def _func():
-            raw_value = self._epics_wrapper.get_pv_value(self.targetpv or self.writepv)
-            return self._inverse_mapping.get(raw_value, None)
+            return self._epics_wrapper.get_pv_value(self.targetpv or self.writepv)
+            # return self._inverse_mapping.get(raw_value, None)
 
         return get_from_cache_or(
             self,
