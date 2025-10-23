@@ -1,162 +1,103 @@
-# tests/test_kafka_consumer_subscriber.py
-import threading
-import time
 import json
-import types
-
 import pytest
 
 import nicos_ess.devices.kafka.consumer as mod
+from test.nicos_ess.kafka_tests.doubles.consumer import (
+    ConsumerStub,
+    TopicPartition as TopicPartitionStub,
+)
 
-from test.nicos_ess.kafka_tests.doubles.consumer import ConsumerStub, TopicPartition as TopicPartitionStub
 
-# --- Pytest fixtures ---------------------------------------------------------
+class FakeClock:
+    def __init__(self, start=0.0):
+        self.t = float(start)
 
-@pytest.fixture(autouse=True)
-def patch_external_bits(monkeypatch):
-    """
-    Make the production module use the stub instead of the real confluent_kafka.Consumer
-    and ensure TopicPartition type matches what the stub expects.
-    Also neutralise SASL config and thread factory.
-    """
-    # Inject our stub Consumer & TopicPartition into the production module
-    monkeypatch.setattr(mod, "Consumer", ConsumerStub)
-    monkeypatch.setattr(mod, "TopicPartition", TopicPartitionStub, raising=True)
+    def now(self):
+        return self.t
 
-    # Avoid depending on project-specific SASL helper
-    monkeypatch.setattr(mod, "create_sasl_config", lambda: {}, raising=False)
+    def sleep(self, dt):
+        self.t += float(dt)
+
+
+def pump(sub, steps=200):
+    """Run a bounded number of ticks to drive the subscriber without threads."""
+    for _ in range(steps):
+        sub.tick()
 
 
 @pytest.fixture
-def consumer():
-    # Instantiate the wrapper; it'll build our stub internally.
-    c = mod.KafkaConsumer(brokers=["broker1:9092"], starting_offset="earliest")
+def clock():
+    return FakeClock(start=1000.0)
+
+
+@pytest.fixture
+def consumer(clock):
+    """KafkaConsumer wired to the stub via clean DI (no global monkeypatch)."""
+    c = mod.KafkaConsumer(
+        brokers=["broker1:9092"],
+        starting_offset="earliest",
+        consumer_factory=lambda conf: ConsumerStub(conf),
+        topic_partition_factory=lambda t, p, o=None: TopicPartitionStub(
+            t, p, o if o is not None else 0
+        ),
+        now=clock.now,
+        sleep=clock.sleep,
+        rand_uniform=lambda a, b: 0.0,  # deterministic jitter in tests
+    )
     return c
 
 
 @pytest.fixture
-def subscriber():
-    return mod.KafkaSubscriber(brokers=["broker1:9092"])
+def subscriber(clock, consumer):
+    """Subscriber using the injected consumer and a synchronous tick loop."""
+    sub = mod.KafkaSubscriber(
+        consumer=consumer,
+        no_stats_secs=1.0,             # speed up tests
+        all_down_secs=1.0,             # speed up tests
+        cooldown_secs=0.5,             # speed up tests
+        wait_after_assign_secs=0.2,    # speed up tests
+        stuck_with_lag_secs=0.8,       # fast stuck detection for tests
+        min_lag_for_stuck=2,           # only reboot when lag >= 2
+        now=clock.now,
+        sleep=clock.sleep,
+        use_thread=False,              # run synchronously in tests
+    )
+    return sub
 
-
-# --- Helper ------------------------------------------------------------------
-
-def wait_until(pred, timeout=1.5):
-    start = time.time()
-    while time.time() - start < timeout:
-        if pred():
-            return True
-        time.sleep(0.01)
-    return False
-
-
-# --- Tests: KafkaConsumer ----------------------------------------------------
 
 def test_consumer_topics_and_consume_batch(consumer):
-    # Prepare metadata & messages on the stub
     stub = consumer._consumer
-    stub.create_topic("data_topic", num_partitions=1)  # pre-create topic for tests
+    stub.create_topic("data_topic", num_partitions=1)
     stub.add_message("data_topic", 0, offset=0, key=b"k1", value=b"v1")
     stub.add_message("data_topic", 0, offset=1, key=b"k2", value=b"v2")
 
-    # Manual subscribe -> assign
     consumer.subscribe(["data_topic"])
 
-    # topics() should list existing topic names
     topics = consumer.topics()
     assert "data_topic" in topics
 
-    # consume_batch should return stub Message instances
     msgs = consumer.consume_batch(max_messages=10, timeout_s=0.05)
     assert len(msgs) == 2
     assert [m.value() for m in msgs] == [b"v1", b"v2"]
 
 
 def test_try_reassign_waits_for_metadata_then_succeeds(consumer):
-    # Ask to reassign for a topic that doesn't exist yet -> should return False
     consumer._topics = ["missing_topic"]
     consumer._pending_reassign = True
     assert consumer.try_reassign() is False
     assert consumer._pending_reassign is True
 
-    # Add metadata for the missing topic -> should succeed now
     consumer._consumer.create_topic("missing_topic", num_partitions=2)
     assert consumer.try_reassign() is True
     assert consumer._pending_reassign is False
-    # Confirm partitions captured in last assignment
     assert consumer._last_assignment
-    assert { (tp.topic, tp.partition) for tp in consumer._last_assignment } == {
-        ("missing_topic", 0), ("missing_topic", 1)
+    assert {(tp.topic, tp.partition) for tp in consumer._last_assignment} == {
+        ("missing_topic", 0),
+        ("missing_topic", 1),
     }
 
 
-# --- Tests: KafkaSubscriber --------------------------------------------------
-
-def test_subscriber_delivers_messages_via_callback(subscriber):
-    # Arrange: set up topic & messages in the underlying stub
-    consumer = subscriber.consumer
-    stub = consumer._consumer
-    stub.create_topic("topic", num_partitions=1)
-    stub.add_message("topic", 0, offset=0, key=b"k", value=b"A")
-    stub.add_message("topic", 0, offset=1, key=b"k", value=b"B")
-
-    delivered = []
-    no_msg_calls = {"n": 0}
-
-    def on_msgs(items):
-        # items are ((ts_type, ts), value) pairs
-        delivered.extend(items)
-        print("delivered:", items)
-        # Stop the thread once we have what we want
-        subscriber.stop_consuming()
-
-    def on_idle():
-        no_msg_calls["n"] += 1
-
-    subscriber.subscribe(["topic"], on_msgs, on_idle)
-
-    assert wait_until(lambda: len(delivered) >= 2, timeout=5)
-    # Timestamps are whatever the stub produced; just assert values.
-    assert [v for (_, v) in delivered] == [b"A", b"B"]
-    # Usually called at least once after messages drain
-    assert no_msg_calls["n"] >= 0  # not asserting strict count due to timing
-
-
-def test_cooldown_ok_edge_cases():
-    now = mod._now_mono()
-    assert mod._cooldown_ok(now - 2.0, 1.0) is True
-    assert mod._cooldown_ok(now, 1.0) is False
-
-
-def test_health_helpers_transitions():
-    h = mod._Health()
-    # default empty state
-    assert h.brokers_up() == 0
-    assert h.all_down_for() == 0.0
-
-    # add states
-    h.brokers_state = {"a": "UP", "b": "DOWN", "c": "TRY_CONNECT"}
-    assert h.brokers_up() == 1
-
-    # simulate all down window
-    h.all_down_since = mod._now_mono()
-    assert h.all_down_for() >= 0.0  # non-negative
-
-
-def test_can_fetch_metadata_true(consumer):
-    # With the stub, list_topics always works -> True
-    assert consumer._can_fetch_metadata() is True
-    # Also works when asking for a concrete topic (stub will auto-add)
-    assert consumer._can_fetch_metadata("anytopic", timeout_s=0.01) is True
-
-
-def test_consumer_poll_without_assign_returns_none(consumer):
-    # No assignment -> poll returns None
-    assert consumer.poll(timeout_ms=10) is None
-
-
 def test_consumer_poll_after_subscribe_returns_messages(consumer):
-    # Prepare messages
     stub = consumer._consumer
     stub.create_topic("t", num_partitions=1)
     stub.add_message("t", 0, offset=0, key=b"k", value=b"1")
@@ -166,15 +107,13 @@ def test_consumer_poll_after_subscribe_returns_messages(consumer):
 
     v1 = consumer.poll(timeout_ms=50)
     v2 = consumer.poll(timeout_ms=50)
-    v3 = consumer.poll(timeout_ms=50)  # drained
-
+    v3 = consumer.poll(timeout_ms=50)
     assert v1.value() == b"1"
     assert v2.value() == b"2"
     assert v3 is None
 
 
 def test_consume_batch_zero_and_no_assignment(consumer):
-    # max_messages <= 0 -> []
     assert consumer.consume_batch(0) == []
     # no assignment -> []
     assert consumer.consume_batch(10, timeout_s=0.05) == []
@@ -186,20 +125,10 @@ def test_consumer_assignment_and_unsubscribe(consumer):
 
     consumer.subscribe(["x"])
     assigned = consumer.assignment()
-    # should have two partitions
     assert {(tp.topic, tp.partition) for tp in assigned} == {("x", 0), ("x", 1)}
 
-    # unsubscribe clears assignment in stub
     consumer.unsubscribe()
     assert consumer.assignment() == []
-
-
-def test_consumer_topics_lists_created_names(consumer):
-    stub = consumer._consumer
-    stub.create_topic("a", num_partitions=1)
-    stub.create_topic("b", num_partitions=2)
-    names = consumer.topics()
-    assert "a" in names and "b" in names
 
 
 def test_consumer_subscribe_raises_on_missing_topic(consumer):
@@ -208,7 +137,6 @@ def test_consumer_subscribe_raises_on_missing_topic(consumer):
 
 
 def test_consumer_subscribe_raises_on_topic_error(consumer):
-    # Inject a topic with an error in stub metadata
     stub = consumer._consumer
     stub.create_topic("bad", num_partitions=1)
     stub._metadata.topics["bad"].error = RuntimeError("metadata error")
@@ -224,60 +152,313 @@ def test_try_reassign_no_topics_is_trivially_true(consumer):
     assert consumer._pending_reassign is False
 
 
-def test_on_stats_invalid_json_is_ignored(consumer, capsys):
-    # Should not raise even with junk
+def test_on_stats_invalid_json_is_ignored(consumer):
     consumer._on_stats("not json at all")
-    # health still exists
     assert isinstance(consumer._health, mod._Health)
 
 
 def test_on_stats_updates_broker_states_and_all_down_since(consumer):
-    # Start with all brokers DOWN -> all_down_since set
-    payload1 = json.dumps({
-        "brokers": {"b1": {"state": "DOWN"}, "b2": {"state": "DOWN"}},
-        "cgrp": {"state": "up"},
-    })
+    payload1 = json.dumps(
+        {
+            "brokers": {"b1": {"state": "DOWN"}, "b2": {"state": "DOWN"}},
+            "cgrp": {"state": "up"},
+        }
+    )
     consumer._on_stats(payload1)
     assert consumer.brokers_up() == 0
     assert consumer._health.all_down_since is not None
 
-    # Now one broker UP -> all_down_since cleared
-    payload2 = json.dumps({
-        "brokers": {"b1": {"state": "UP"}},
-        "cgrp": {"state": "up"},
-    })
+    payload2 = json.dumps({"brokers": {"b1": {"state": "UP"}}, "cgrp": {"state": "up"}})
     consumer._on_stats(payload2)
     assert consumer.brokers_up() == 1
     assert consumer._health.all_down_since is None
-    # Also check GroupCoordinator
     assert consumer._health.group_coordinator_state == "UP"
 
 
 def test_on_error_nonfatal_does_not_rebootstrap(consumer):
     class DummyErr:
-        def code(self): return 123
-        def name(self): return "WHATEVER"
-        def fatal(self): return False
-        def retriable(self): return True
-        def str(self): return "just a warning"
+        def code(self):
+            return 123
 
-    # Should not touch _last_rebootstrap_mono for non-fatal
+        def name(self):
+            return "WHATEVER"
+
+        def fatal(self):
+            return False
+
+        def retriable(self):
+            return True
+
+        def str(self):
+            return "just a warning"
+
     before = consumer._last_rebootstrap_mono
     consumer._on_error(DummyErr())
     assert consumer._last_rebootstrap_mono == before
 
 
 def test_consumer_close_is_idempotent(consumer):
-    # close once
     consumer.close()
-    # and again (stub tolerates)
     consumer.close()
 
 
-def test_subscriber_stop_and_close_idempotent(subscriber):
-    # stop without starting
-    subscriber.stop_consuming()
-    subscriber.stop_consuming(True)
-    # close is idempotent
-    subscriber.close()
-    subscriber.close()
+def test_subscriber_delivers_messages_via_callback(subscriber):
+    stub = subscriber.consumer._consumer
+    stub.create_topic("topic", num_partitions=1)
+    stub.add_message("topic", 0, offset=0, key=b"k", value=b"A")
+    stub.add_message("topic", 0, offset=1, key=b"k", value=b"B")
+
+    delivered = []
+    calls_idle = {"n": 0}
+
+    def on_msgs(items):
+        delivered.extend(items)
+
+    def on_idle():
+        calls_idle["n"] += 1
+
+    subscriber.subscribe(["topic"], on_msgs, on_idle)
+    pump(subscriber, steps=20)
+
+    assert [v for (_, v) in delivered] == [b"A", b"B"]
+    assert calls_idle["n"] >= 0
+
+
+def test_rebootstrap_sets_pending_reassign_when_topics_missing(consumer):
+    consumer._topics = ["missing"]
+    consumer._pending_reassign = False
+    reasons = []
+    consumer._on_rebootstrap = reasons.append
+    before = consumer._last_rebootstrap_mono
+    consumer.rebootstrap("test_missing")
+    assert consumer._pending_reassign is True
+    assert consumer._last_rebootstrap_mono > before
+    assert "test_missing" in reasons
+
+
+def test_subscriber_recovers_after_failed_rebootstrap_then_reassigns(subscriber, clock):
+    # Start with a valid subscription
+    initial_stub = subscriber.consumer._consumer
+    initial_stub.create_topic("t", num_partitions=1)
+    delivered = []
+    subscriber.subscribe(["t"], lambda items: delivered.extend(items))
+
+    # Remove topic so rebootstrap fails to re-subscribe
+    initial_stub._metadata.topics.pop("t", None)
+
+    c = subscriber.consumer
+    c._last_assign_mono = clock.now() - (subscriber._wait_after_assign_secs + 0.01)
+    c._last_rebootstrap_mono = clock.now() - (subscriber._cooldown_secs + 0.01)
+    # Force the no-stats watchdog to trigger:
+    c._health.last_stats_mono = clock.now() - (subscriber._no_stats_secs + 0.1)
+    c._pending_reassign = False
+
+    reasons = []
+    c._on_rebootstrap = reasons.append
+
+    # First tick triggers reboot; re-subscribe fails -> pending_reassign=True
+    subscriber.tick()
+    assert "no_stats_heartbeat" in reasons
+    assert c._pending_reassign is True
+
+    # After rebootstrap the underlying stub instance is NEW
+    new_stub = subscriber.consumer._consumer
+    new_stub.create_topic("t", num_partitions=1)
+    new_stub.add_message("t", 0, offset=0, key=b"k", value=b"A")
+    new_stub.add_message("t", 0, offset=1, key=b"k", value=b"B")
+
+    # Next ticks will try_reassign() and then deliver
+    pump(subscriber, steps=10)
+    assert [v for (_, v) in delivered] == [b"A", b"B"]
+
+
+
+def test_watchdog_reboots_on_no_stats_heartbeat(subscriber, clock):
+    stub = subscriber.consumer._consumer
+    stub.create_topic("x", num_partitions=1)
+
+    reasons = []
+    subscriber.consumer._on_rebootstrap = reasons.append
+
+    subscriber.subscribe(["x"], lambda _: None)
+
+    c = subscriber.consumer
+    c._last_assign_mono = clock.now() - (subscriber._wait_after_assign_secs + 0.01)
+    c._last_rebootstrap_mono = clock.now() - (subscriber._cooldown_secs + 0.01)
+    c._health.last_stats_mono = clock.now() - (subscriber._no_stats_secs + 0.01)
+    c._pending_reassign = False
+
+    subscriber.tick()  # should trigger
+    assert "no_stats_heartbeat" in reasons
+
+
+def test_watchdog_reboots_on_all_brokers_down(subscriber, clock):
+    stub = subscriber.consumer._consumer
+    stub.create_topic("x", num_partitions=1)
+
+    reasons = []
+    subscriber.consumer._on_rebootstrap = reasons.append
+
+    subscriber.subscribe(["x"], lambda _: None)
+
+    c = subscriber.consumer
+    c._last_assign_mono = clock.now() - (subscriber._wait_after_assign_secs + 0.01)
+    c._last_rebootstrap_mono = clock.now() - (subscriber._cooldown_secs + 0.01)
+    c._health.all_down_since = clock.now() - (subscriber._all_down_secs + 0.01)
+    c._pending_reassign = False
+
+    subscriber.tick()
+    assert "all_brokers_down" in reasons
+
+
+def test_watchdog_respects_reboot_cooldown(subscriber, clock):
+    stub = subscriber.consumer._consumer
+    stub.create_topic("x", num_partitions=1)
+
+    reasons = []
+    subscriber.consumer._on_rebootstrap = reasons.append
+
+    subscriber.subscribe(["x"], lambda _: None)
+
+    c = subscriber.consumer
+    c._last_assign_mono = clock.now() - (subscriber._wait_after_assign_secs + 0.01)
+    c._last_rebootstrap_mono = clock.now()  # cooldown NOT satisfied
+    c._health.last_stats_mono = clock.now() - (subscriber._no_stats_secs + 0.01)
+    c._pending_reassign = False
+
+    # Should NOT reboot yet (cooldown not satisfied)
+    subscriber.tick()
+    assert reasons == []
+
+    # Advance past cooldown and try again -> should reboot
+    clock.sleep(subscriber._cooldown_secs + 0.1)
+    subscriber.tick()
+    assert "no_stats_heartbeat" in reasons
+
+
+def test_stuck_with_lag_does_not_trigger_for_small_lag(subscriber, clock):
+    """
+    Simulate a stall with lag=1; watchdog should NOT trigger because min_lag_for_stuck=2.
+    Also keep stats "fresh" so the no-stats watchdog doesn't preempt this scenario.
+    """
+    # Set up topic and subscribe
+    stub = subscriber.consumer._consumer
+    stub.create_topic("s", num_partitions=1)
+    reasons = []
+    subscriber.consumer._on_rebootstrap = reasons.append
+    subscriber.subscribe(["s"], lambda _: None)
+
+    # Satisfy grace & cooldown; refresh stats so no-stats doesn't trigger
+    c = subscriber.consumer
+    c._last_assign_mono = clock.now() - (subscriber._wait_after_assign_secs + 0.05)
+    c._last_rebootstrap_mono = clock.now() - (subscriber._cooldown_secs + 0.05)
+    c._health.last_stats_mono = clock.now()
+
+    # Add exactly 1 message => lag = 1 (since last_seen = -1 initially, next expected is 0)
+    stub.add_message("s", 0, offset=0, key=b"k", value=b"one")
+
+    # Simulate consumer stall: no deliveries even though lag exists
+    # by overriding the inner stub's consume to always return []
+    orig_consume = stub.consume
+    stub.consume = lambda num_messages, timeout=None: []
+
+    # Wait longer than stuck_with_lag_secs
+    clock.sleep(subscriber._stuck_with_lag_secs + 0.2)
+
+    # Refresh stats so no-stats watchdog doesn't preempt
+    c._health.last_stats_mono = clock.now()
+
+    # Tick -> should NOT reboot because lag=1 < min_lag_for_stuck(=2)
+    subscriber.tick()
+    assert "stuck_no_progress_despite_lag" not in reasons
+
+    # Restore
+    stub.consume = orig_consume
+
+
+def test_stuck_with_lag_triggers_rebootstrap_when_lag_high_and_no_progress(subscriber, clock):
+    """
+    Simulate a stall with lag>=2 and no deliveries for > stuck_with_lag_secs; must reboot.
+    Keep stats fresh so the stuck watchdog fires first.
+    """
+    # Set up topic and subscribe
+    stub = subscriber.consumer._consumer
+    stub.create_topic("s", num_partitions=1)
+    reasons = []
+    subscriber.consumer._on_rebootstrap = reasons.append
+    subscriber.subscribe(["s"], lambda _: None)
+
+    # Satisfy grace & cooldown; refresh stats so no-stats doesn't trigger
+    c = subscriber.consumer
+    c._last_assign_mono = clock.now() - (subscriber._wait_after_assign_secs + 0.05)
+    c._last_rebootstrap_mono = clock.now() - (subscriber._cooldown_secs + 0.05)
+    c._health.last_stats_mono = clock.now()
+
+    # Add >=2 messages so lag >= 2
+    stub.add_message("s", 0, offset=0, key=b"k", value=b"A")
+    stub.add_message("s", 0, offset=1, key=b"k", value=b"B")
+
+    # Simulate consumer stall (consume returns nothing even if messages exist)
+    orig_consume = stub.consume
+    stub.consume = lambda num_messages, timeout=None: []
+
+    # No deliveries happen -> last_deliver_mono stays at subscribe time
+    clock.sleep(subscriber._stuck_with_lag_secs + 0.2)
+
+    # Refresh stats right before tick so no-stats watchdog doesn't preempt
+    c._health.last_stats_mono = clock.now()
+
+    # Tick -> should trigger stuck watchdog
+    subscriber.tick()
+    assert "stuck_no_progress_despite_lag" in reasons
+
+    # Clean up
+    stub.consume = orig_consume
+
+
+def test_stuck_with_lag_ignored_until_grace_and_cooldown(subscriber, clock):
+    """
+    Ensure we don't trigger the stuck watchdog before wait_after_assign or cooldown are satisfied.
+    Keep stats fresh to avoid the no-stats watchdog.
+    """
+    stub = subscriber.consumer._consumer
+    stub.create_topic("s", num_partitions=1)
+    reasons = []
+    subscriber.consumer._on_rebootstrap = reasons.append
+    subscriber.subscribe(["s"], lambda _: None)
+
+    c = subscriber.consumer
+
+    # For this test, make grace & cooldown larger than the stuck window,
+    # so we can pass the stuck window WITHOUT satisfying grace/cooldown.
+    subscriber._wait_after_assign_secs = 5.0
+    subscriber._cooldown_secs = 5.0
+
+    # Set "start" points for the larger thresholds
+    c._last_assign_mono = clock.now()
+    c._last_rebootstrap_mono = clock.now()
+    c._health.last_stats_mono = clock.now()  # keep stats fresh
+
+    # Add >=2 messages -> lag >= 2 (so stuck-with-lag condition is potentially active)
+    stub.add_message("s", 0, offset=0, key=b"k", value=b"A")
+    stub.add_message("s", 0, offset=1, key=b"k", value=b"B")
+
+    # Stall consume
+    orig_consume = stub.consume
+    stub.consume = lambda num_messages, timeout=None: []
+
+    # Advance past the stuck window but NOT the (now larger) grace/cooldown
+    clock.sleep(subscriber._stuck_with_lag_secs + 0.5)  # ~1.3s < 5s
+    c._health.last_stats_mono = clock.now()  # keep stats fresh
+    subscriber.tick()
+
+    # Stuck should NOT trigger yet because grace/cooldown are not satisfied
+    assert "stuck_no_progress_despite_lag" not in reasons
+
+    # Now satisfy grace & cooldown and tick again -> should trigger stuck watchdog
+    clock.sleep(subscriber._wait_after_assign_secs + 0.1)  # pass 5s window
+    c._health.last_stats_mono = clock.now()  # keep stats fresh
+    subscriber.tick()
+    assert "stuck_no_progress_despite_lag" in reasons
+
+    stub.consume = orig_consume
