@@ -170,7 +170,7 @@ class EssChopperController(MappedMoveable):
         "state": Attach("Current state of the chopper", Readable),
         "command": Attach("Command PV of the chopper", MappedMoveable),
         "alarms": Attach("Alarms of the chopper", ChopperAlarms, optional=True),
-        "speed": Attach("Speed PV of the chopper", Moveable),
+        "speed": Attach("Speed PV of the chopper", MappedMoveable),
         "chic_conn": Attach("Status of the CHIC connection", Readable),
     }
 
@@ -191,7 +191,14 @@ class EssChopperController(MappedMoveable):
     def doStart(self, target):
         if target.lower() == "stop":
             # Set the speed to zero to keep EPICS behaviour consistent.
-            self._attached_speed.move(0)
+            try:
+                target_speed = self._attached_speed._inverse_mapping.get(0, "0 Hz")
+                self._attached_speed.move(target_speed)
+            except Exception as e:
+                self.log.exception(
+                    "Failed to set speed to 0 when stopping chopper. "
+                    "Will still send stop command."
+                )
         self._attached_command.move(target)
 
     def doStop(self):
