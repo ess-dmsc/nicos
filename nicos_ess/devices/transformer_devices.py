@@ -1,7 +1,7 @@
 from nicos.core import Attach, Moveable, Param, multiStatus
 from nicos.devices.abstract import TransformedMoveable
-from nicos_ess.devices.epics.pva.motor import EpicsJogMotor
 from nicos_ess.devices.epics.pva import EpicsManualMappedAnalogMoveable
+from nicos_ess.devices.epics.pva.motor import EpicsJogMotor
 
 
 class ChopperPhase(TransformedMoveable):
@@ -25,11 +25,9 @@ class ChopperPhase(TransformedMoveable):
         "phase_ns_dev": Attach(
             "The attached phase device (ns)", Moveable, optional=False
         ),
-        "speed_dev": Attach("The attached speed device (hz)", Moveable, optional=True),
         "mapped_speed_dev": Attach(
             "The attached speed device (hz)",
             EpicsManualMappedAnalogMoveable,
-            optional=True,
         ),
     }
 
@@ -49,7 +47,7 @@ class ChopperPhase(TransformedMoveable):
         return multiStatus(
             (
                 ("phase", self._attached_phase_ns_dev),
-                ("speed", self._get_speed_dev()),
+                ("speed", self._attached_mapped_speed_dev),
             ),
             maxage=maxage,
         )
@@ -64,33 +62,8 @@ class ChopperPhase(TransformedMoveable):
         return self._nanoseconds_to_degrees(value) - self.offset
 
     def doReadSpeed(self, maxage=0):
-        if (
-                hasattr(self, "_attached_mapped_speed_dev")
-                and self._attached_mapped_speed_dev is not None
-        ):
-            target_val = self._attached_mapped_speed_dev.doReadTarget(maxage=maxage)
-            return abs(self._attached_mapped_speed_dev.mapping.get(target_val))
-        elif (
-                hasattr(self, "_attached_speed_dev")
-                and self._attached_speed_dev is not None
-        ):
-            return abs(self._attached_speed_dev.doReadTarget(maxage=maxage))
-
-        raise ValueError("No speed device attached")
-
-    def _get_speed_dev(self):
-        if (
-                hasattr(self, "_attached_mapped_speed_dev")
-                and self._attached_mapped_speed_dev is not None
-        ):
-            return self._attached_mapped_speed_dev
-        elif (
-                hasattr(self, "_attached_speed_dev")
-                and self._attached_speed_dev is not None
-        ):
-            return self._attached_speed_dev
-
-        raise ValueError("No speed device attached")
+        target_val = self._attached_mapped_speed_dev.doReadTarget(maxage=maxage)
+        return abs(self._attached_mapped_speed_dev.mapping.get(target_val))
 
 
 class DegreesPerSecondToRPM(TransformedMoveable):

@@ -20,12 +20,12 @@ devices = dict(
         visibility=(),
     ),
     bwc1_chopper_speed=device(
-        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
         description="The current speed.",
         readpv="{}Spd_R".format(pv_root_1),
         writepv="{}Spd_S".format(pv_root_1),
-        abslimits=(0.0, 0.0),
         precision=0.1,
+        mapping={"-14 Hz": -14, "0 Hz": 0, "14 Hz": 14},
     ),
     bwc1_chopper_delay=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
@@ -33,6 +33,14 @@ devices = dict(
         readpv="{}ChopDly-S".format(pv_root_1),
         writepv="{}ChopDly-S".format(pv_root_1),
         abslimits=(0.0, 0.0),
+    ),
+    bwc1_chopper_phase=device(
+        "nicos_ess.devices.transformer_devices.ChopperPhase",
+        description="The phase of the chopper.",
+        phase_ns_dev="bwc1_chopper_delay",
+        mapped_speed_dev="bwc1_chopper_speed",
+        offset=0,
+        unit="degrees",
     ),
     bwc1_chopper_delay_errors=device(
         "nicos_ess.devices.epics.chopper_delay_error.ChopperDelayError",
@@ -96,12 +104,12 @@ devices = dict(
         visibility=(),
     ),
     bwc2_chopper_speed=device(
-        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
         description="The current speed.",
         readpv="{}Spd_R".format(pv_root_2),
         writepv="{}Spd_S".format(pv_root_2),
-        abslimits=(0.0, 0.0),
         precision=0.1,
+        mapping={"-14 Hz": -14, "0 Hz": 0, "14 Hz": 14},
     ),
     bwc2_chopper_delay=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
@@ -109,6 +117,14 @@ devices = dict(
         readpv="{}ChopDly-S".format(pv_root_2),
         writepv="{}ChopDly-S".format(pv_root_2),
         abslimits=(0.0, 0.0),
+    ),
+    bwc2_chopper_phase=device(
+        "nicos_ess.devices.transformer_devices.ChopperPhase",
+        description="The phase of the chopper.",
+        phase_ns_dev="bwc2_chopper_delay",
+        mapped_speed_dev="bwc2_chopper_speed",
+        offset=0,
+        unit="degrees",
     ),
     bwc2_chopper_delay_errors=device(
         "nicos_ess.devices.epics.chopper_delay_error.ChopperDelayError",
