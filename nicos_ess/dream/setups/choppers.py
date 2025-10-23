@@ -22,12 +22,12 @@ devices = dict(
         visibility=(),
     ),
     band_chopper_speed=device(
-        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
         description="The current speed.",
         readpv="{}Spd_R".format(pv_root_band_chopper),
         writepv="{}Spd_S".format(pv_root_band_chopper),
-        abslimits=(0.0, 0.0),
         precision=0.1,
+        mapping={"0 Hz": 0, "7 Hz": 7, "14 Hz": 14},  # check real speeds later
     ),
     band_chopper_delay=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
@@ -35,6 +35,14 @@ devices = dict(
         readpv="{}ChopDly-S".format(pv_root_band_chopper),
         writepv="{}ChopDly-S".format(pv_root_band_chopper),
         abslimits=(0.0, 0.0),
+    ),
+    band_chopper_phase=device(
+        "nicos_ess.devices.transformer_devices.ChopperPhase",
+        description="The phase of the chopper.",
+        phase_ns_dev="band_chopper_delay",
+        mapped_speed_dev="band_chopper_speed",
+        offset=0,
+        unit="degrees",
     ),
     band_chopper_delay_errors=device(
         "nicos_ess.devices.epics.chopper_delay_error.ChopperDelayError",
@@ -101,12 +109,12 @@ devices = dict(
         visibility=(),
     ),
     overlap_chopper_speed=device(
-        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
         description="The current speed.",
         readpv="{}Spd_R".format(pv_root_overlap_chopper),
         writepv="{}Spd_S".format(pv_root_overlap_chopper),
-        abslimits=(0.0, 0.0),
         precision=0.1,
+        mapping={"0 Hz": 0, "7 Hz": 7, "14 Hz": 14},  # check real speeds later
     ),
     overlap_chopper_delay=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
@@ -114,6 +122,14 @@ devices = dict(
         readpv="{}ChopDly-S".format(pv_root_overlap_chopper),
         writepv="{}ChopDly-S".format(pv_root_overlap_chopper),
         abslimits=(0.0, 0.0),
+    ),
+    overlap_chopper_phase=device(
+        "nicos_ess.devices.transformer_devices.ChopperPhase",
+        description="The phase of the chopper.",
+        phase_ns_dev="overlap_chopper_delay",
+        mapped_speed_dev="overlap_chopper_speed",
+        offset=0,
+        unit="degrees",
     ),
     overlap_chopper_delay_errors=device(
         "nicos_ess.devices.epics.chopper_delay_error.ChopperDelayError",
@@ -180,12 +196,12 @@ devices = dict(
         visibility=(),
     ),
     pulse_shaping_chopper_1_speed=device(
-        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
         description="The current speed.",
         readpv="{}Spd_R".format(pv_root_pulse_shaping_chopper_1),
         writepv="{}Spd_S".format(pv_root_pulse_shaping_chopper_1),
-        abslimits=(0.0, 0.0),
         precision=0.1,
+        mapping={"0 Hz": 0, "7 Hz": 7, "14 Hz": 14},  # check real speeds later
     ),
     pulse_shaping_chopper_1_delay=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
@@ -193,6 +209,14 @@ devices = dict(
         readpv="{}ChopDly-S".format(pv_root_pulse_shaping_chopper_1),
         writepv="{}ChopDly-S".format(pv_root_pulse_shaping_chopper_1),
         abslimits=(0.0, 0.0),
+    ),
+    pulse_shaping_chopper_1_phase=device(
+        "nicos_ess.devices.transformer_devices.ChopperPhase",
+        description="The phase of the chopper.",
+        phase_ns_dev="pulse_shaping_chopper_1_delay",
+        mapped_speed_dev="pulse_shaping_chopper_1_speed",
+        offset=0,
+        unit="degrees",
     ),
     pulse_shaping_chopper_1_delay_errors=device(
         "nicos_ess.devices.epics.chopper_delay_error.ChopperDelayError",
@@ -268,12 +292,12 @@ devices = dict(
         visibility=(),
     ),
     pulse_shaping_chopper_2_speed=device(
-        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
         description="The current speed.",
         readpv="{}Spd_R".format(pv_root_pulse_shaping_chopper_2),
         writepv="{}Spd_S".format(pv_root_pulse_shaping_chopper_2),
-        abslimits=(0.0, 0.0),
         precision=0.1,
+        mapping={"0 Hz": 0, "7 Hz": 7, "14 Hz": 14},  # check real speeds later
     ),
     pulse_shaping_chopper_2_delay=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
@@ -281,6 +305,14 @@ devices = dict(
         readpv="{}ChopDly-S".format(pv_root_pulse_shaping_chopper_2),
         writepv="{}ChopDly-S".format(pv_root_pulse_shaping_chopper_2),
         abslimits=(0.0, 0.0),
+    ),
+    pulse_shaping_chopper_2_phase=device(
+        "nicos_ess.devices.transformer_devices.ChopperPhase",
+        description="The phase of the chopper.",
+        phase_ns_dev="pulse_shaping_chopper_2_delay",
+        mapped_speed_dev="pulse_shaping_chopper_2_speed",
+        offset=0,
+        unit="degrees",
     ),
     pulse_shaping_chopper_2_delay_errors=device(
         "nicos_ess.devices.epics.chopper_delay_error.ChopperDelayError",
