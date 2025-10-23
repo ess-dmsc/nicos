@@ -44,4 +44,15 @@ devices = dict(
         unit="deg",
         speed=0.2,
     ),
+    mover=device(
+        "nicos_ess.estia.devices.mover.SeleneMover",
+        description="Selene2 1-Mover",
+        s1="m1_mover_fl_re_us",
+        s2="m2_mover_pr_re_ds",
+        s3="m3_mover_pr_li_ds",
+        s4="m4_mover_pr_li_us1",
+        s5="m5_mover_pr_li_us2",
+        mover_length=3600,
+        beam_height=1098,
+    ),
 )
