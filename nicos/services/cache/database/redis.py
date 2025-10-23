@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import ast
+import math
 import threading
 import time
 from typing import Dict, Iterable, List, Optional, Tuple, Union
@@ -97,8 +97,9 @@ class RedisCacheDatabase(CacheDatabase):
         except Exception:
             return val
 
-    def _hash_set(self, key, time_value, ttl, value, expired):
-        self._client.hset(
+    def _hash_set(self, key, time_value, ttl, value, expired, target=None):
+        t = target or self._client
+        t.hset(
             key,
             mapping={
                 "time": str(time_value),
@@ -108,23 +109,33 @@ class RedisCacheDatabase(CacheDatabase):
             },
         )
 
-    def _hash_getall(self, key):
-        return self._client.hgetall(key)
+    def _hash_getall(self, key, target=None):
+        t = target or self._client
+        return t.hgetall(key)
 
-    def _redis_key_exists(self, key):
-        return self._client.exists(key)
+    def _redis_key_exists(self, key, target=None):
+        # NOTE: usually call without target inside write paths to avoid pipelining EXISTS.
+        t = target or self._client
+        return t.exists(key)
 
-    def _create_timeseries(self, key):
-        self._client.execute_command("TS.CREATE", key, "DUPLICATE_POLICY", "LAST")
+    def _create_timeseries(self, key, target=None):
+        (target or self._client).execute_command(
+            "TS.CREATE", key, "DUPLICATE_POLICY", "LAST"
+        )
 
-    def _add_to_timeseries(self, key, timestamp, value):
-        self._client.execute_command("TS.ADD", key, timestamp, value)
+    def _add_to_timeseries(self, key, timestamp, value, target=None):
+        (target or self._client).execute_command("TS.ADD", key, timestamp, value)
 
-    def _query_timeseries(self, key, fromtime, totime, *args):
-        return self._client.execute_command("TS.RANGE", key, fromtime, totime, *args)
+    def _query_timeseries(self, key, fromtime, totime, *args, target=None):
+        return (target or self._client).execute_command(
+            "TS.RANGE", key, fromtime, totime, *args
+        )
 
-    def _redis_keys(self) -> Iterable[str]:
-        return self._client.scan_iter(match="*", count=1024)
+    def _redis_keys(self, match="*", count=1024) -> Iterable[str]:
+        return self._client.scan_iter(match=match, count=count)
+
+    def _delete(self, key, target=None):
+        (target or self._client).execute_command("DEL", key)
 
     def _check_get_key_format(self, key: str) -> bool:
         return "###" not in key and not key.endswith("_ts")
@@ -179,7 +190,7 @@ class RedisCacheDatabase(CacheDatabase):
     def _iter_entries_stream(self, batch: int = 512):
         buf: List[str] = []
         pipe = None
-        for key in self._client.scan_iter(count=batch):
+        for key in self._redis_keys(count=batch):
             if not isinstance(key, str):
                 try:
                     key = key.decode("utf-8")
@@ -190,7 +201,7 @@ class RedisCacheDatabase(CacheDatabase):
             buf.append(key)
             if pipe is None:
                 pipe = self._client.pipeline(transaction=False)
-            pipe.hgetall(key)
+            self._hash_getall(key, target=pipe)
             if len(buf) == batch:
                 try:
                     raws = pipe.execute()
@@ -268,7 +279,7 @@ class RedisCacheDatabase(CacheDatabase):
             else:
                 res = self._query_timeseries(ts_key, from_ms, to_ms)
         except Exception as e:
-            self.log.warn(f"queryHistory: TS.RANGE failed for {ts_key}: {e}")
+            self.log.warning(f"queryHistory: TS.RANGE failed for {ts_key}: {e}")
             return []
 
         def _ts_entry(ts, val):
@@ -354,9 +365,9 @@ class RedisCacheDatabase(CacheDatabase):
         # Deletion
         if entry.value in ("", None):
             try:
-                target.execute_command("DEL", redis_key)
+                self._delete(redis_key, target=target)
                 if self._redis_key_exists(ts_key):
-                    target.execute_command("DEL", ts_key)
+                    self._delete(ts_key, target=target)
             except Exception:
                 self.log.exception(
                     "Failed to delete keys %s and/or %s", redis_key, ts_key
@@ -367,14 +378,13 @@ class RedisCacheDatabase(CacheDatabase):
 
         # Hash write
         try:
-            target.hset(
+            self._hash_set(
                 redis_key,
-                mapping={
-                    "time": str(entry.time),
-                    "ttl": str(entry.ttl),
-                    "value": str(entry.value),
-                    "expired": str(entry.expired),
-                },
+                entry.time,
+                entry.ttl,
+                entry.value,
+                entry.expired,
+                target=target,
             )
         except Exception:
             self.log.exception("Redis HSET failed for %s", redis_key)
@@ -392,16 +402,22 @@ class RedisCacheDatabase(CacheDatabase):
         )
         if isinstance(value, list) and len(value) == 1:
             value = value[0]
-        if isinstance(value, (float, int)) and not isinstance(value, bool):
+        if self._should_archive(value):
             ts = int(float(entry.time) * 1000)
             try:
                 if not self._redis_key_exists(ts_key):
-                    target.execute_command(
-                        "TS.CREATE", ts_key, "DUPLICATE_POLICY", "LAST"
-                    )
-                target.execute_command("TS.ADD", ts_key, ts, value)
+                    self._create_timeseries(ts_key, target=target)
+                self._add_to_timeseries(ts_key, ts, value, target=target)
             except Exception:
-                self.log.exception("TS write failed for %s", ts_key)
+                self.log.exception(
+                    "TS write failed for %s. Got type %s", ts_key, type(value)
+                )
+
+    def _should_archive(self, value):
+        if isinstance(value, (float, int)) and not isinstance(value, bool):
+            if math.isfinite(value):
+                return True
+        return False
 
     def _start_cleaner(self):
         lua_sha = self._client.script_load(CLEANER_LUA)
@@ -412,7 +428,7 @@ class RedisCacheDatabase(CacheDatabase):
                 try:
                     cleaned = self._client.evalsha(lua_sha, 0, time.time())
                     if cleaned:
-                        self.log.warn("Redis cleaner: marked %s keys expired", cleaned)
+                        self.log.debug("Redis cleaner: marked %s keys expired", cleaned)
                 except Exception:
                     self.log.exception("Redis cleaner failed")
 
