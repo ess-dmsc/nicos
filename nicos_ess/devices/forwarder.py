@@ -95,6 +95,7 @@ class EpicsKafkaForwarder(KafkaStatusHandler):
     def _get_pvs_to_forward(self):
         devices = session.devices.values()
         for dev in devices:
+            print(dev)
             if hasattr(dev, "nexus_config"):
                 print(self._get_forwarder_config(dev))
 
