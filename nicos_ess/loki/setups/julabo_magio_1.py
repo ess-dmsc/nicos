@@ -1,17 +1,14 @@
 description = "Julabo MAGIO-MS-1000F circulator (device 1)"
 
-# TODO: Add Julabo 1
 pv_root = "LOKI-SE:WtrC-TE-001:"
 
 devices = dict(
-    # Online
     julabo_1_online=device(
         "nicos_ess.devices.epics.pva.EpicsStringReadable",
         description="Whether it is responsive",
         readpv="{}Online-R".format(pv_root),
         visibility=(),
     ),
-    # Mode
     julabo_1_mode=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="Mode",
@@ -19,7 +16,6 @@ devices = dict(
         writepv="{}Mode-S".format(pv_root),
         visibility=(),
     ),
-    # Setpoint (write and readout)
     julabo_1_setpoint=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
         description="The temperature setpoint",
@@ -27,34 +23,29 @@ devices = dict(
         writepv="{}TemperatureSP1-S".format(pv_root),
         targetpv="{}TemperatureSP1-S".format(pv_root),
     ),
-    # Internal temperature readout
     julabo_1_internal_temperature=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
         description="The internal sensor temperature readout (bath)",
         readpv="{}Temperature-R".format(pv_root),
     ),
-    # External temperature readout
     julabo_1_external_temperature=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
         description="The external sensor temperature readout (pt100)",
         readpv="{}TempExtSensor-R".format(pv_root),
     ),
-    # Use external sensor for regulation
-    # The system actuates to make the selected sensor equals to the setpoint.
     julabo_1_external_enabled=device(
+        # The system actuates to make the selected sensor equals to the setpoint.
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="Use external sensor for regulation instead of internal sensor",
         readpv="{}ExternalSensor-R".format(pv_root),
         writepv="{}ExternalSensor-S".format(pv_root),
     ),
-    # Safety sensor
     julabo_1_safety=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
         description="The safety sensor temperature",
         readpv="{}TempSafetySensor-R".format(pv_root),
         visibility=(),
     ),
-    # Temperature limits
     julabo_1_temperature_high_limit=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
         description="The high temp warning limit",
@@ -69,7 +60,6 @@ devices = dict(
         writepv="{}TempLowLimit-S".format(pv_root),
         visibility=(),
     ),
-    # Power and its limits
     julabo_1_heating_power=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
         description="The heating power being used %",
@@ -90,14 +80,12 @@ devices = dict(
         writepv="{}MaxHeatPower-S".format(pv_root),
         visibility=(),
     ),
-    # Slope
     julabo_1_internal_slope=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
         description="The internal slope",
         readpv="{}InternalSlope-R".format(pv_root),
         visibility=(),
     ),
-    # More, debug
     julabo_1_status_message=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
         description="The status message",
