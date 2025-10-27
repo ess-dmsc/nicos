@@ -6,6 +6,12 @@ OFFSET_END = -1
 OFFSET_INVALID = -1001  # rd_kafka.h: RD_KAFKA_OFFSET_INVALID
 
 
+class _ClusterState:
+    def __init__(self):
+        self.messages = {}  # {topic: {partition: [Message,...]}}
+        self.metadata = Metadata()
+
+
 class Message:
     def __init__(self, topic, partition, offset, key, value, error=None):
         self._topic = topic
@@ -83,6 +89,8 @@ class Metadata:
 
 
 class ConsumerStub:
+    _clusters = {}  # class-level: {cluster_id: _ClusterState}
+
     def __init__(self, config={"auto.offset.reset": "earliest"}):
         self.config = config
         self.messages = {}  # {topic: {partition: [Message,...]}}
@@ -93,6 +101,21 @@ class ConsumerStub:
         self.poll_index = 0
         self._closed = False
         self._paused = set()
+
+        bs = config.get("bootstrap.servers", "default-cluster")
+        gid = config.get("group.id") or config.get("group_id") or "default-group"
+        cluster_id = f"{bs}|{gid}"
+
+        cluster = ConsumerStub._clusters.setdefault(cluster_id, _ClusterState())
+
+        # Shared across instances of the same cluster_id:
+        self.messages = cluster.messages
+        self._metadata = cluster.metadata
+
+    @classmethod
+    def clear_all_clusters(cls):
+        """Nuke all clusters (useful if you want a global reset)."""
+        cls._clusters.clear()
 
     # ------------ Test helpers ------------
     def add_message(self, topic, partition, offset, key, value, error=None):

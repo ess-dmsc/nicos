@@ -6,6 +6,7 @@ import nicos_ess.devices.kafka.consumer as mod
 
 from test.nicos_ess.kafka_tests.doubles.consumer import (
     ConsumerStub,
+    PartitionMetadata as PartitionMetadataStub,
     TopicPartition as TopicPartitionStub,
 )
 
@@ -46,7 +47,26 @@ def consumer(clock):
         sleep=clock.sleep,
         rand_uniform=lambda a, b: 0.0,  # deterministic jitter in tests
     )
-    return c
+    yield c
+    c._consumer.clear_all_clusters()
+
+
+@pytest.fixture
+def consumer_latest(clock):
+    """KafkaConsumer with starting_offset='latest' wired to the stub via DI."""
+    c = mod.KafkaConsumer(
+        brokers=["broker1:9092"],
+        starting_offset="latest",
+        consumer_factory=lambda conf: ConsumerStub(conf),
+        topic_partition_factory=lambda t, p, o=None: TopicPartitionStub(
+            t, p, o if o is not None else 0
+        ),
+        now=clock.now,
+        sleep=clock.sleep,
+        rand_uniform=lambda a, b: 0.0,
+    )
+    yield c
+    c._consumer.clear_all_clusters()
 
 
 @pytest.fixture
@@ -64,7 +84,8 @@ def subscriber(clock, consumer):
         sleep=clock.sleep,
         use_thread=False,  # run synchronously in tests
     )
-    return sub
+    yield sub
+    sub.consumer._consumer.clear_all_clusters()
 
 
 def test_consumer_topics_and_consume_batch(consumer):
@@ -202,6 +223,97 @@ def test_on_error_nonfatal_does_not_rebootstrap(consumer):
 def test_consumer_close_is_idempotent(consumer):
     consumer.close()
     consumer.close()
+
+
+def test_delete_then_recreate_latest_reads_only_new(consumer_latest):
+    c = consumer_latest
+    stub = c._consumer
+
+    # Create & subscribe
+    stub.create_topic("r", num_partitions=2)
+    c.subscribe(["r"])
+
+    # Simulate topic deletion (metadata disappears)
+    stub._metadata.topics.pop("r", None)
+
+    # Simulate broker error -> pending_reassign + post-assign seek
+    class DummyErr:
+        def code(self):
+            return 3  # UNKNOWN_TOPIC_OR_PART
+
+        def name(self):
+            return "UNKNOWN_TOPIC_OR_PART"
+
+        def fatal(self):
+            return False
+
+        def retriable(self):
+            return True
+
+        def str(self):
+            return "topic does not exist"
+
+    c._on_error(DummyErr())
+    assert c._pending_reassign is True and c._need_seek_after_assign is True
+
+    # Recreate topic and produce some 'old' data before reassignment
+    stub.create_topic("r", num_partitions=2)
+    stub.add_message("r", 0, offset=0, key=b"k", value=b"OLD-A")
+    stub.add_message("r", 1, offset=0, key=b"k", value=b"OLD-B")
+
+    # Reassign now that metadata exists; post-assign seek should go to END
+    assert c.try_reassign() is True
+
+    # Produce 'new' data after reassignment/seek-to-end
+    stub.add_message("r", 0, offset=1, key=b"k", value=b"NEW")
+
+    msgs = c.consume_batch(max_messages=10, timeout_s=0.05)
+    vals = [m.value() for m in msgs]
+    assert b"NEW" in vals
+    assert b"OLD-A" not in vals and b"OLD-B" not in vals
+
+
+def test_delete_then_recreate_earliest_reads_from_beginning(consumer):
+    c = consumer  # earliest
+    stub = c._consumer
+
+    # Create & subscribe
+    stub.create_topic("r", num_partitions=1)
+    c.subscribe(["r"])
+
+    # Simulate topic deletion
+    stub._metadata.topics.pop("r", None)
+
+    # Simulate broker error -> pending_reassign + post-assign seek
+    class DummyErr:
+        def code(self):
+            return 3
+
+        def name(self):
+            return "UNKNOWN_TOPIC_OR_PART"
+
+        def fatal(self):
+            return False
+
+        def retriable(self):
+            return True
+
+        def str(self):
+            return "topic does not exist"
+
+    c._on_error(DummyErr())
+    assert c._pending_reassign is True and c._need_seek_after_assign is True
+
+    # Recreate topic and add 'existing' data before reassignment
+    stub.create_topic("r", num_partitions=1)
+    stub.add_message("r", 0, offset=0, key=b"k", value=b"A")
+    stub.add_message("r", 0, offset=1, key=b"k", value=b"B")
+
+    # Reassign; post-assign seek should go to BEGINNING
+    assert c.try_reassign() is True
+
+    msgs = c.consume_batch(max_messages=10, timeout_s=0.05)
+    assert [m.value() for m in msgs] == [b"A", b"B"]
 
 
 def test_subscriber_delivers_messages_via_callback(subscriber):
@@ -506,3 +618,46 @@ def test_compute_total_lag_uses_position_when_available(subscriber):
     stub.add_message("s", 0, offset=1, key=b"k", value=b"B")
     subscriber.subscribe(["s"], lambda _: None)
     assert subscriber._compute_total_lag() == 2
+
+
+def test_partition_probe_detects_partition_increase_and_reassigns(subscriber, clock):
+    c = subscriber.consumer
+    stub = c._consumer
+
+    stub.create_topic("pp", num_partitions=1)
+    subscriber.subscribe(["pp"], lambda _: None)
+
+    # Simulate broker-side increase to 2 partitions
+    stub._metadata.topics["pp"].partitions[1] = PartitionMetadataStub(1)
+
+    # Force the probe to run on next tick
+    c._last_meta_probe = clock.now() - (mod.PARTITION_PROBE_INTERVAL_SECS + 0.1)
+
+    # In the same tick the probe sets pending_reassign and try_reassign() applies it
+    subscriber.tick()
+
+    assigned = {(tp.topic, tp.partition) for tp in c.assignment()}
+    assert assigned == {("pp", 0), ("pp", 1)}
+
+
+def test_empty_reads_with_stats_lag_triggers_rebootstrap(subscriber, clock):
+    stub = subscriber.consumer._consumer
+    stub.create_topic("laggy", num_partitions=1)
+    reasons = []
+    subscriber.consumer._on_rebootstrap = reasons.append
+    subscriber.subscribe(["laggy"], lambda _: None)
+
+    c = subscriber.consumer
+    c._last_assign_mono = clock.now() - (subscriber._wait_after_assign_secs + 0.05)
+    c._last_rebootstrap_mono = clock.now() - (subscriber._cooldown_secs + 0.05)
+
+    # Pretend stats say there is lag (and keep stats fresh throughout the loop)
+    c._health.stats_total_lag = 2
+
+    for _ in range(50):
+        c._health.last_stats_mono = (
+            clock.now()
+        )  # keep stats fresh so no-stats watchdog does NOT fire
+        subscriber.tick()
+
+    assert "stuck_empty_reads_with_stats_lag" in reasons
