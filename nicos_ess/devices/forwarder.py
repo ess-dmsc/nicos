@@ -255,9 +255,9 @@ class EpicsKafkaForwarder(KafkaStatusHandler):
                     config["value"],
                     config["units"],
                 )
+                print(json_snippet)
             else:
                 continue
 
             groups[group_name]["children"].append(json_snippet)
-
         return build_json(groups)
