@@ -32,6 +32,14 @@ STUCK_WITH_LAG_SECS = 8.0
 MIN_LAG_FOR_STUCK = 1
 PARTITION_PROBE_INTERVAL_SECS = 10.0
 
+# --------------------------
+# Error code constants
+# --------------------------
+ERR_UNKNOWN_TOPIC_OR_PART = getattr(KafkaError, "_UNKNOWN_TOPIC_OR_PART", 3)
+ERR_OFFSET_OUT_OF_RANGE = getattr(KafkaError, "_OFFSET_OUT_OF_RANGE", 1)
+ERR_ALL_BROKERS_DOWN = getattr(KafkaError, "_ALL_BROKERS_DOWN", -187)
+ERR_PARTITION_EOF = getattr(KafkaError, "_PARTITION_EOF", -191)
+
 
 @dataclass
 class _Health:
@@ -197,6 +205,45 @@ class KafkaConsumer:
         self._lock = threading.RLock()
 
     # --------------------------
+    # Error helpers (public, centralized)
+    # --------------------------
+    @staticmethod
+    def is_partition_eof(err: object) -> bool:
+        """Return True if the error is a PARTITION_EOF event."""
+        try:
+            return int(getattr(err, "code")()) == ERR_PARTITION_EOF
+        except Exception:
+            return False
+
+    @staticmethod
+    def is_all_brokers_down(err: object) -> bool:
+        """Return True if the error indicates ALL_BROKERS_DOWN."""
+        try:
+            return int(getattr(err, "code")()) == ERR_ALL_BROKERS_DOWN
+        except Exception:
+            return False
+
+    @staticmethod
+    def is_offset_out_of_range(err: object) -> bool:
+        """Return True if the error indicates OFFSET_OUT_OF_RANGE."""
+        try:
+            return int(getattr(err, "code")()) == ERR_OFFSET_OUT_OF_RANGE
+        except Exception:
+            return False
+
+    @staticmethod
+    def is_unknown_topic_or_partition(err: object) -> bool:
+        """Return True if the error indicates an unknown topic or partition."""
+        try:
+            code = int(getattr(err, "code")())
+            if code == ERR_UNKNOWN_TOPIC_OR_PART:
+                return True
+            name = str(getattr(err, "name")() or "")
+            return name in ("UNKNOWN_TOPIC_OR_PART", "_UNKNOWN_PARTITION")
+        except Exception:
+            return False
+
+    # --------------------------
     # Health helpers
     # --------------------------
     def brokers_up(self) -> int:
@@ -280,6 +327,19 @@ class KafkaConsumer:
                 self._pending_reassign = True
         except Exception as e:
             session.log.debug("[kafka] metadata probe failed: %r", e)
+
+    # Public facade for the periodic probe (keeps subscriber off privates)
+    def refresh_partitions_if_stale(
+        self, interval_s: float = PARTITION_PROBE_INTERVAL_SECS
+    ) -> None:
+        """Trigger a best-effort metadata probe if the last probe is stale.
+
+        Parameters
+        ----------
+        interval_s:
+            Minimum interval between metadata probes (seconds).
+        """
+        self._maybe_refresh_partitions(interval_s)
 
     def try_reassign(self) -> bool:
         """Attempt to (re)assign partitions for the current set of topics.
@@ -402,18 +462,15 @@ class KafkaConsumer:
                 err.str(),
             )
 
-            if name in ("UNKNOWN_TOPIC_OR_PART", "_UNKNOWN_PARTITION") or code in (
-                3,
-                -190,
-            ):
+            if self.is_unknown_topic_or_partition(err):
                 session.log.warning(
                     "[kafka] error-cb: topic/partition missing; scheduling reassign+seek"
                 )
-                self._pending_reassign = True
-                self._need_seek_after_assign = True
+                self.schedule_reassign()
+                self.schedule_seek_after_assign()
 
             if err.fatal():
-                if (self._now() - self._last_rebootstrap_mono) >= REBOOT_COOLDOWN_SECS:
+                if self.reboot_cooldown_passed(REBOOT_COOLDOWN_SECS):
                     self.rebootstrap("fatal_error:%s" % name)
         except Exception:
             session.log.warning("[kafka-error] %r", err)
@@ -760,6 +817,7 @@ class KafkaConsumer:
             except Exception:
                 pass
 
+    # ---------- Public surface added to avoid private reach-through ----------
     def positions(
         self, partitions: Sequence[TopicPartition]
     ) -> Optional[List[TopicPartition]]:
@@ -861,6 +919,52 @@ class KafkaConsumer:
         """
         state = self._health.group_coordinator_state
         return str(state).upper() if state is not None else None
+
+    def schedule_reassign(self) -> None:
+        """Mark that a partition (re)assignment should be attempted soon."""
+        self._pending_reassign = True
+
+    def clear_reassign(self) -> None:
+        """Clear the reassign-pending marker."""
+        self._pending_reassign = False
+
+    def is_reassign_pending(self) -> bool:
+        """Return True if a (re)assignment has been scheduled."""
+        return bool(self._pending_reassign)
+
+    def subscribed_topics(self) -> List[str]:
+        """Return the topics currently subscribed/assigned (manual-assign)."""
+        return list(self._topics)
+
+    def time_since_last_assign(self) -> float:
+        """Return seconds since the last (re)assignment, or ``0.0`` if never."""
+        if self._last_assign_mono <= 0.0:
+            return 0.0
+        return max(0.0, self._now() - self._last_assign_mono)
+
+    def time_since_last_rebootstrap(self) -> float:
+        """Return seconds since the last rebootstrap, or ``inf`` if never."""
+        if self._last_rebootstrap_mono <= 0.0:
+            return float("inf")
+        return max(0.0, self._now() - self._last_rebootstrap_mono)
+
+    def reboot_cooldown_passed(self, cooldown_secs: float) -> bool:
+        """Return True if at least ``cooldown_secs`` have elapsed since reboot."""
+        return self.time_since_last_rebootstrap() >= float(cooldown_secs)
+
+    def schedule_seek_after_assign(self, policy: Optional[str] = None) -> None:
+        """Schedule a one-time post-(re)assignment seek.
+
+        Parameters
+        ----------
+        policy:
+            Optional policy override: e.g. ``"earliest"`` or ``"latest"``.
+            If provided, it temporarily overrides the starting offset policy
+            used by the post-assign seek.
+        """
+        if policy:
+            self._starting_offset = str(policy)
+        self._need_seek_after_assign = True
 
     # --------------------------
     # Debug helpers
@@ -1201,12 +1305,12 @@ class KafkaSubscriber:
     # ---------- Private helpers used by tick() ----------
     def _periodic_partition_probe(self):
         """Occasionally probe metadata to detect partition-count changes."""
-        if not self._consumer._pending_reassign:
-            self._consumer._maybe_refresh_partitions()
+        if not self._consumer.is_reassign_pending():
+            self._consumer.refresh_partitions_if_stale()
 
     def _handle_pending_reassign(self) -> bool:
         """If a reassign is pending, try it and possibly sleep/return early."""
-        if self._consumer._pending_reassign:
+        if self._consumer.is_reassign_pending():
             assigned = self._consumer.try_reassign()
             if not assigned:
                 session.log.debug(
@@ -1219,22 +1323,20 @@ class KafkaSubscriber:
     def _handle_lost_assignment(self, now: float) -> bool:
         """Detect lost assignment after grace and schedule a reassign."""
         if (
-            self._consumer._topics
+            self._consumer.subscribed_topics()
             and not self._consumer.assignment()
-            and (now - self._consumer._last_assign_mono) > self._wait_after_assign_secs
+            and self._consumer.time_since_last_assign() > self._wait_after_assign_secs
         ):
             session.log.warning("[kafka] assignment lost; scheduling reassign")
-            self._consumer._pending_reassign = True
+            self._consumer.schedule_reassign()
             self._sleep(0.01)
             return True
         return False
 
     def _timers(self, now: float) -> Tuple[float, bool]:
         """Compute time since last assign and whether reboot cooldown passed."""
-        since_assign = now - self._consumer._last_assign_mono
-        since_reboot_ok = (
-            now - self._consumer._last_rebootstrap_mono
-        ) >= self._cooldown_secs
+        since_assign = self._consumer.time_since_last_assign()
+        since_reboot_ok = self._consumer.reboot_cooldown_passed(self._cooldown_secs)
         return since_assign, since_reboot_ok
 
     def _watchdog_all_down(self, since_assign: float, since_reboot_ok: bool) -> bool:
@@ -1243,7 +1345,7 @@ class KafkaSubscriber:
             self._consumer.all_brokers_down_for() > self._all_down_secs
             and since_reboot_ok
             and since_assign > self._wait_after_assign_secs
-            and not self._consumer._pending_reassign
+            and not self._consumer.is_reassign_pending()
         ):
             session.log.warning("[kafka] watchdog: all_brokers_down -> rebootstrap")
             self._consumer.rebootstrap("all_brokers_down")
@@ -1257,7 +1359,7 @@ class KafkaSubscriber:
             self._consumer.last_stats_age() > self._no_stats_secs
             and since_reboot_ok
             and since_assign > self._wait_after_assign_secs
-            and not self._consumer._pending_reassign
+            and not self._consumer.is_reassign_pending()
         ):
             session.log.warning(
                 "[kafka] watchdog: no_stats age=%.3fs > %.3fs -> rebootstrap",
@@ -1278,7 +1380,7 @@ class KafkaSubscriber:
             if (
                 total_lag >= self._min_lag_for_stuck
                 and no_progress_for > self._stuck_with_lag_secs
-                and not self._consumer._pending_reassign
+                and not self._consumer.is_reassign_pending()
             ):
                 session.log.warning(
                     "[kafka] watchdog: stuck w/ lag total=%d no_progress_for=%.3fs -> rebootstrap",
@@ -1293,16 +1395,16 @@ class KafkaSubscriber:
     def _handle_message_error(self, err) -> None:
         """Process a per-message error; may seek or schedule reassign."""
         try:
-            code = err.code()
-            name = str(err.name() or "")
-            if code == KafkaError._PARTITION_EOF:
+            if KafkaConsumer.is_partition_eof(err):
                 session.log.debug("[kafka] msg-error: EOF")
                 return
-            elif code == KafkaError._ALL_BROKERS_DOWN:
+            if KafkaConsumer.is_all_brokers_down(err):
                 session.log.warning("[kafka-event] all brokers down (event)")
-            elif code == KafkaError._OFFSET_OUT_OF_RANGE:
+            elif KafkaConsumer.is_offset_out_of_range(err):
                 try:
-                    if self._consumer._starting_offset.lower() in (
+                    if str(
+                        self._consumer._starting_offset
+                    ).lower() in (  # uses configured policy
                         "earliest",
                         "beginning",
                         "smallest",
@@ -1317,24 +1419,26 @@ class KafkaSubscriber:
                     self._last_deliver_mono = self._now()
                 except Exception as e:
                     session.log.warning("[kafka] auto-seek failed: %r", e)
-            elif name in ("UNKNOWN_TOPIC_OR_PART", "_UNKNOWN_PARTITION") or code in (
-                3,
-                -190,
-            ):
+            elif KafkaConsumer.is_unknown_topic_or_partition(err):
                 session.log.warning(
                     "[kafka] msg error: topic/partition missing; scheduling reassign+seek"
                 )
-                self._consumer._pending_reassign = True
-                self._consumer._need_seek_after_assign = True
+                self._consumer.schedule_reassign()
+                self._consumer.schedule_seek_after_assign()
             else:
-                session.log.warning(
-                    "[kafka-msg-error] code=%s name=%s retriable=%s fatal=%s msg=%s",
-                    code,
-                    name,
-                    err.retriable(),
-                    err.fatal(),
-                    err.str(),
-                )
+                try:
+                    code = err.code()
+                    name = str(err.name() or "")
+                    session.log.warning(
+                        "[kafka-msg-error] code=%s name=%s retriable=%s fatal=%s msg=%s",
+                        code,
+                        name,
+                        err.retriable(),
+                        err.fatal(),
+                        err.str(),
+                    )
+                except Exception:
+                    session.log.warning("[kafka-msg-error] %r", err)
         except Exception:
             session.log.warning("[kafka-msg-error] %r", err)
 
@@ -1413,7 +1517,7 @@ class KafkaSubscriber:
                 self._idle_backoff,
                 stats_lag,
                 self._consumer.last_stats_age(),
-                self._consumer._pending_reassign,  # left as-is until a public scheduler is added
+                self._consumer.is_reassign_pending(),
                 self._consumer.brokers_up(),
                 self._consumer.group_coordinator_state(),
             )
@@ -1423,7 +1527,7 @@ class KafkaSubscriber:
                 and self._empty_reads >= 40
                 and since_reboot_ok
                 and since_assign > self._wait_after_assign_secs
-                and not self._consumer._pending_reassign
+                and not self._consumer.is_reassign_pending()
             ):
                 session.log.warning(
                     "[kafka] watchdog: empty reads while stats lag=%d -> rebootstrap",
