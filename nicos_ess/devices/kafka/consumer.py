@@ -100,7 +100,7 @@ class KafkaConsumer:
             "auto.offset.reset": starting_offset,
             "error_cb": self._on_error,
             "stats_cb": self._on_stats,
-            "statistics.interval.ms": 1000,
+            "statistics.interval.ms": 5000,
             "socket.keepalive.enable": True,
             "reconnect.backoff.ms": 100,
             "reconnect.backoff.max.ms": 10_000,
@@ -248,7 +248,7 @@ class KafkaConsumer:
                         topic_partitions.append(self._tp_factory(topic_name, p))
                     self._partitions_known[topic_name] = len(parts)
 
-                session.log.info(
+                session.log.debug(
                     "[kafka] try_reassign: assigning %s",
                     [(tp.topic, tp.partition) for tp in topic_partitions],
                 )
@@ -263,7 +263,7 @@ class KafkaConsumer:
             self._last_assignment = list(topic_partitions)
             self._pending_reassign = False
             self._last_assign_mono = self._now()
-            session.log.info(
+            session.log.debug(
                 "[kafka] (re)assigned partitions: %s",
                 [(tp.topic, tp.partition) for tp in topic_partitions],
             )
@@ -386,7 +386,7 @@ class KafkaConsumer:
             self._partitions_known[topic_name] = len(tmeta.partitions)
 
         with self._lock:
-            session.log.info(
+            session.log.debug(
                 "[kafka] subscribe: assigning %s",
                 [(tp.topic, tp.partition) for tp in topic_partitions],
             )
@@ -396,7 +396,7 @@ class KafkaConsumer:
         self._last_assignment = list(topic_partitions)
         self._pending_reassign = False
         self._last_assign_mono = self._now()
-        session.log.info(
+        session.log.debug(
             "[kafka] assigned partitions: %s",
             [(tp.topic, tp.partition) for tp in topic_partitions],
         )
@@ -434,7 +434,7 @@ class KafkaConsumer:
             try:
                 self.subscribe(self._topics)
                 reassigned_ok = True
-                session.log.info(
+                session.log.debug(
                     "[kafka-rebootstrap] re-subscribed to topics=%s", self._topics
                 )
             except Exception as e:
@@ -447,7 +447,7 @@ class KafkaConsumer:
     def unsubscribe(self):
         with self._lock:
             try:
-                session.log.info("[kafka] unsubscribe()")
+                session.log.debug("[kafka] unsubscribe()")
                 self._consumer.unsubscribe()
             except Exception:
                 pass
@@ -482,7 +482,7 @@ class KafkaConsumer:
     def close(self):
         with self._lock:
             try:
-                session.log.info("[kafka] close()")
+                session.log.debug("[kafka] close()")
                 self._consumer.close()
             except Exception:
                 pass
@@ -613,12 +613,12 @@ class KafkaConsumer:
                 "smallest",
             ):
                 self.seek_to_beginning()
-                session.log.info(
+                session.log.debug(
                     "[kafka] post-assign seek to beginning executed after topic recreation"
                 )
             else:
                 self.seek_to_end()
-                session.log.info(
+                session.log.debug(
                     "[kafka] post-assign seek to end executed after topic recreation"
                 )
             session.log.warning(
@@ -846,9 +846,9 @@ class KafkaSubscriber:
             assigned = self._consumer.try_reassign()
             if not assigned:
                 session.log.debug(
-                    "[kafka] tick: pending_reassign not ready, sleeping 10ms"
+                    "[kafka] tick: pending_reassign not ready, sleeping 1s"
                 )
-                self._sleep(0.01)
+                self._sleep(1.0)
                 return True
         return False
 
