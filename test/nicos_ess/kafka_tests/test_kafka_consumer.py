@@ -57,7 +57,7 @@ def subscriber(clock, consumer):
         cooldown_secs=0.5,             # speed up tests
         wait_after_assign_secs=0.2,    # speed up tests
         stuck_with_lag_secs=0.8,       # fast stuck detection for tests
-        min_lag_for_stuck=2,           # only reboot when lag >= 2
+        min_lag_for_stuck=1,           # only reboot when lag >= 2
         now=clock.now,
         sleep=clock.sleep,
         use_thread=False,              # run synchronously in tests
@@ -338,7 +338,7 @@ def test_watchdog_respects_reboot_cooldown(subscriber, clock):
 
 def test_stuck_with_lag_does_not_trigger_for_small_lag(subscriber, clock):
     """
-    Simulate a stall with lag=1; watchdog should NOT trigger because min_lag_for_stuck=2.
+    Simulate a stall with lag=1; watchdog should NOT trigger because min_lag_for_stuck=0.
     Also keep stats "fresh" so the no-stats watchdog doesn't preempt this scenario.
     """
     # Set up topic and subscribe
@@ -354,8 +354,7 @@ def test_stuck_with_lag_does_not_trigger_for_small_lag(subscriber, clock):
     c._last_rebootstrap_mono = clock.now() - (subscriber._cooldown_secs + 0.05)
     c._health.last_stats_mono = clock.now()
 
-    # Add exactly 1 message => lag = 1 (since last_seen = -1 initially, next expected is 0)
-    stub.add_message("s", 0, offset=0, key=b"k", value=b"one")
+    # add no messages -> lag = 0 < min_lag_for_stuck(=1)
 
     # Simulate consumer stall: no deliveries even though lag exists
     # by overriding the inner stub's consume to always return []
@@ -368,7 +367,7 @@ def test_stuck_with_lag_does_not_trigger_for_small_lag(subscriber, clock):
     # Refresh stats so no-stats watchdog doesn't preempt
     c._health.last_stats_mono = clock.now()
 
-    # Tick -> should NOT reboot because lag=1 < min_lag_for_stuck(=2)
+    # Tick -> should NOT reboot because lag=0 < min_lag_for_stuck(=1)
     subscriber.tick()
     assert "stuck_no_progress_despite_lag" not in reasons
 
@@ -378,7 +377,7 @@ def test_stuck_with_lag_does_not_trigger_for_small_lag(subscriber, clock):
 
 def test_stuck_with_lag_triggers_rebootstrap_when_lag_high_and_no_progress(subscriber, clock):
     """
-    Simulate a stall with lag>=2 and no deliveries for > stuck_with_lag_secs; must reboot.
+    Simulate a stall with lag>=1 and no deliveries for > stuck_with_lag_secs; must reboot.
     Keep stats fresh so the stuck watchdog fires first.
     """
     # Set up topic and subscribe
@@ -394,9 +393,8 @@ def test_stuck_with_lag_triggers_rebootstrap_when_lag_high_and_no_progress(subsc
     c._last_rebootstrap_mono = clock.now() - (subscriber._cooldown_secs + 0.05)
     c._health.last_stats_mono = clock.now()
 
-    # Add >=2 messages so lag >= 2
+    # Add >=1 messages so lag >= 1
     stub.add_message("s", 0, offset=0, key=b"k", value=b"A")
-    stub.add_message("s", 0, offset=1, key=b"k", value=b"B")
 
     # Simulate consumer stall (consume returns nothing even if messages exist)
     orig_consume = stub.consume
@@ -439,9 +437,8 @@ def test_stuck_with_lag_ignored_until_grace_and_cooldown(subscriber, clock):
     c._last_rebootstrap_mono = clock.now()
     c._health.last_stats_mono = clock.now()  # keep stats fresh
 
-    # Add >=2 messages -> lag >= 2 (so stuck-with-lag condition is potentially active)
+    # Add >=1 messages -> lag >= 1 (so stuck-with-lag condition is potentially active)
     stub.add_message("s", 0, offset=0, key=b"k", value=b"A")
-    stub.add_message("s", 0, offset=1, key=b"k", value=b"B")
 
     # Stall consume
     orig_consume = stub.consume

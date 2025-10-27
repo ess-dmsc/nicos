@@ -30,7 +30,7 @@ MAX_BATCH_SIZE = 100
 STUCK_WITH_LAG_SECS = (
     8.0  # no deliveries for this long while lag >= threshold -> reboot
 )
-MIN_LAG_FOR_STUCK = 2  # don't reboot for just 1 offset of lag
+MIN_LAG_FOR_STUCK = 1
 
 
 @dataclass
@@ -460,22 +460,65 @@ class KafkaSubscriber:
         return self._consumer
 
     def _compute_total_lag(self) -> int:
+        """
+        total_lag = Σ (high_watermark - position)
+        where:
+          - high_watermark is the broker's end offset (next produced)
+          - position is the consumer's next-to-fetch offset
+        Fallbacks:
+          - if position unavailable, use last_seen+1 if we have it
+          - else use low watermark (earliest available offset)
+        """
         total_lag = 0
         try:
-            for tp in self._consumer.assignment():
+            assigned = self._consumer.assignment()
+            if not assigned:
+                return 0
+
+            # Get current positions in one call (best-effort)
+            try:
+                with self._consumer._lock:
+                    positions = self._consumer._consumer.position(assigned)
+            except Exception:
+                positions = None
+
+            pos_map: dict[tuple[str, int], int] = {}
+            if positions:
+                for pos_tp in positions:
+                    if pos_tp is None:
+                        continue
+                    try:
+                        pos_map[(pos_tp.topic, pos_tp.partition)] = int(pos_tp.offset)
+                    except Exception:
+                        pass
+
+            for tp in assigned:
                 try:
                     low, high = self._consumer._consumer.get_watermark_offsets(tp)
                 except Exception:
-                    # Cannot fetch watermarks; treat as no signal this tick
+                    # No signal for this partition this tick
                     continue
-                last = self._last_seen.get((tp.topic, tp.partition), OFFSET_END)
-                if last == OFFSET_END:
-                    # Never seen any messages for this partition
-                    last = high - 1
-                total_lag += max(0, int(high) - (int(last) + 1))
+
+                key = (tp.topic, tp.partition)
+                # Prefer true consumer position if available
+                pos = pos_map.get(key, None)
+
+                if pos is None or pos < 0:
+                    # Fall back to our last delivered offset + 1
+                    last = self._last_seen.get(key, OFFSET_END)
+                    if last != OFFSET_END:
+                        pos = int(last) + 1
+                    else:
+                        # Last resort: earliest available offset
+                        pos = int(low)
+
+                lag = max(0, int(high) - int(pos))
+                total_lag += lag
         except Exception:
-            # No assignment or stub issue
+            # Keep watchdogs resilient
             total_lag = 0
+
+        session.log.debug("[kafka] total lag computed: %d", total_lag)
         return total_lag
 
     def tick(self):
