@@ -341,6 +341,7 @@ class KafkaConsumer:
         """
         self._maybe_refresh_partitions(interval_s)
 
+    # ---------- try_reassign refactor ----------
     def try_reassign(self) -> bool:
         """Attempt to (re)assign partitions for the current set of topics.
 
@@ -362,88 +363,113 @@ class KafkaConsumer:
             self._pending_reassign = False
             return True
 
-        # If brokers appear down and we can't even fetch metadata, back off.
-        if self.brokers_up() == 0 and not self._can_fetch_metadata(None, timeout_s=0.5):
-            session.log.debug("[kafka] try_reassign: brokers down & no metadata yet")
+        if self._should_backoff_reassign():
             return False
 
         try:
             with self._lock:
-                # Best-effort unassign to flush any stale fetch state before reassignment.
-                try:
-                    session.log.debug(
-                        "[kafka] try_reassign: unassigning current assignment"
-                    )
-                    self._consumer.unassign()
-                except Exception:
-                    pass
+                self._safe_unassign_current()
+                md = self._fetch_cluster_metadata()
 
-                # Fetch cluster-wide metadata (works with the test stub semantics).
-                md = self._consumer.list_topics(None, timeout=2.0)
+                ok, topic_partitions = self._build_assignment_from_metadata(md)
+                if not ok:
+                    return False
 
-                topic_partitions: List[TopicPartition] = []
-                for topic_name in self._topics:
-                    tmeta = md.topics.get(topic_name)
-                    if tmeta is None:
-                        session.log.debug(
-                            "[kafka] try_reassign: topic %s not in metadata yet",
-                            topic_name,
-                        )
-                        return False
-                    if getattr(tmeta, "error", None) is not None:
-                        session.log.debug(
-                            "[kafka] try_reassign: topic %s metadata error=%r (wait)",
-                            topic_name,
-                            tmeta.error,
-                        )
-                        return False
+                self._apply_assignment_and_maybe_resume(topic_partitions)
 
-                    # IMPORTANT: don't assign until broker reports partitions.
-                    parts = list(getattr(tmeta, "partitions", {}).keys())
-                    if not parts:
-                        session.log.debug(
-                            "[kafka] try_reassign: topic %s has no partitions yet (wait)",
-                            topic_name,
-                        )
-                        return False
-
-                    for p in parts:
-                        topic_partitions.append(self._tp_factory(topic_name, p))
-                    self._partitions_known[topic_name] = len(parts)
-
-                session.log.debug(
-                    "[kafka] try_reassign: assigning %s",
-                    [(tp.topic, tp.partition) for tp in topic_partitions],
-                )
-                self._consumer.assign(topic_partitions)
-
-                # Best-effort resume helps avoid 'offset-query' limbo on some setups.
-                try:
-                    self._consumer.resume(topic_partitions)  # type: ignore[attr-defined]
-                except Exception:
-                    pass
-
-            self._last_assignment = list(topic_partitions)
-            self._pending_reassign = False
-            self._last_assign_mono = self._now()
-            session.log.debug(
-                "[kafka] (re)assigned partitions: %s",
-                [(tp.topic, tp.partition) for tp in topic_partitions],
+            self._post_assignment_housekeeping(
+                topic_partitions, context="post-reassign"
             )
-
-            # Keep your existing behavior: seek according to configuration.
-            self._maybe_post_assign_seek()
-
-            # Nudge fetch sessions to 'active'. Harmless on the stub; useful on real brokers.
-            self.kick(times=6)
-
-            # Extra debug snapshot.
-            self._log_assignment_debug("post-reassign")
             return True
 
         except KafkaException as exc:
             session.log.debug("[kafka] metadata not ready yet during reassign: %r", exc)
             return False
+
+    def _should_backoff_reassign(self) -> bool:
+        """Return True if brokers appear down and metadata fetch also fails."""
+        if self.brokers_up() == 0 and not self._can_fetch_metadata(None, timeout_s=0.5):
+            session.log.debug("[kafka] try_reassign: brokers down & no metadata yet")
+            return True
+        return False
+
+    def _safe_unassign_current(self) -> None:
+        """Best-effort unassign to flush any stale fetch state."""
+        try:
+            session.log.debug("[kafka] try_reassign: unassigning current assignment")
+            self._consumer.unassign()
+        except Exception:
+            pass
+
+    def _fetch_cluster_metadata(self):
+        """Return cluster-wide metadata with a short timeout."""
+        return self._consumer.list_topics(None, timeout=2.0)
+
+    def _build_assignment_from_metadata(self, md) -> Tuple[bool, List[TopicPartition]]:
+        """Collect TopicPartition objects for all subscribed topics.
+
+        Returns
+        -------
+        (ok, partitions)
+            ok=False indicates metadata not yet ready (keep retrying).
+        """
+        topic_partitions: List[TopicPartition] = []
+        for topic_name in self._topics:
+            tmeta = md.topics.get(topic_name)
+            if tmeta is None:
+                session.log.debug(
+                    "[kafka] try_reassign: topic %s not in metadata yet", topic_name
+                )
+                return False, []
+            if getattr(tmeta, "error", None) is not None:
+                session.log.debug(
+                    "[kafka] try_reassign: topic %s metadata error=%r (wait)",
+                    topic_name,
+                    tmeta.error,
+                )
+                return False, []
+
+            parts = list(getattr(tmeta, "partitions", {}).keys())
+            if not parts:
+                session.log.debug(
+                    "[kafka] try_reassign: topic %s has no partitions yet (wait)",
+                    topic_name,
+                )
+                return False, []
+
+            for p in parts:
+                topic_partitions.append(self._tp_factory(topic_name, p))
+            self._partitions_known[topic_name] = len(parts)
+        return True, topic_partitions
+
+    def _apply_assignment_and_maybe_resume(
+        self, partitions: Sequence[TopicPartition]
+    ) -> None:
+        """Assign partitions and best-effort resume."""
+        session.log.debug(
+            "[kafka] try_reassign: assigning %s",
+            [(tp.topic, tp.partition) for tp in partitions],
+        )
+        self._consumer.assign(list(partitions))
+        try:
+            self._consumer.resume(list(partitions))  # type: ignore[attr-defined]
+        except Exception:
+            pass
+
+    def _post_assignment_housekeeping(
+        self, partitions: Sequence[TopicPartition], *, context: str
+    ) -> None:
+        """Finalize internal state and perform post-assign actions."""
+        self._last_assignment = list(partitions)
+        self._pending_reassign = False
+        self._last_assign_mono = self._now()
+        session.log.debug(
+            "[kafka] (re)assigned partitions: %s",
+            [(tp.topic, tp.partition) for tp in partitions],
+        )
+        self._maybe_post_assign_seek()
+        self.kick(times=6 if context == "post-reassign" else 2)
+        self._log_assignment_debug(context)
 
     # --------------------------
     # Callbacks
@@ -669,7 +695,7 @@ class KafkaConsumer:
         times:
             Number of zero-timeout polls to perform (minimum 1).
         """
-        for i in range(max(1, int(times))):
+        for _ in range(max(1, int(times))):
             try:
                 _ = self.poll(0)
             except Exception as e:
@@ -782,13 +808,7 @@ class KafkaConsumer:
             return self._consumer.assignment()
 
     def seek_to_end(self, timeout_s: float = 5):
-        """Seek all assigned partitions to ``OFFSET_END``.
-
-        Parameters
-        ----------
-        timeout_s:
-            Maximum time in seconds to complete the seeks.
-        """
+        """Seek all assigned partitions to ``OFFSET_END``."""
         with self._lock:
             partitions = self._consumer.assignment()
         for tp in partitions:
@@ -796,13 +816,7 @@ class KafkaConsumer:
         self._seek(partitions, timeout_s)
 
     def seek_to_beginning(self, timeout_s: float = 5):
-        """Seek all assigned partitions to ``OFFSET_BEGINNING``.
-
-        Parameters
-        ----------
-        timeout_s:
-            Maximum time in seconds to complete the seeks.
-        """
+        """Seek all assigned partitions to ``OFFSET_BEGINNING``."""
         with self._lock:
             partitions = self._consumer.assignment()
         for tp in partitions:
@@ -843,7 +857,6 @@ class KafkaConsumer:
                 return self._consumer.position(list(partitions))  # type: ignore[attr-defined]
             except Exception:
                 try:
-                    # Some stubs may expose `position` without proper typing.
                     return self._consumer.position(list(partitions))  # type: ignore[no-any-return]
                 except Exception:
                     return None
@@ -878,14 +891,7 @@ class KafkaConsumer:
                     return None, None
 
     def stats_total_lag(self) -> int:
-        """Return the most recent total lag from the stats callback.
-
-        Returns
-        -------
-        int
-            Non-negative integer representing the aggregate lag according to
-            the latest `stats_cb` payload (0 if unavailable).
-        """
+        """Return the most recent total lag from the stats callback."""
         try:
             return int(self._health.stats_total_lag or 0)
         except Exception:
@@ -898,10 +904,9 @@ class KafkaConsumer:
         -------
         dict[tuple[str, int], dict[str, object]]
             Mapping from (topic, partition) to a dictionary containing at least
-            ``{"lag": int}`` and optionally other fields like ``"fetch_state"``.
+            ``{\"lag\": int}`` and optionally other fields like ``\"fetch_state\"``.
         """
         try:
-            # Normalize key typing to (str, int)
             out: Dict[Tuple[str, int], Dict[str, object]] = {}
             for (t, p), info in (self._health.stats_by_tp or {}).items():
                 out[(str(t), int(p))] = dict(info or {})
@@ -910,13 +915,7 @@ class KafkaConsumer:
             return {}
 
     def group_coordinator_state(self) -> Optional[str]:
-        """Return the last known consumer-group coordinator state.
-
-        Returns
-        -------
-        str | None
-            Upper-cased coordinator state (e.g. ``"UP"``) or ``None`` if unknown.
-        """
+        """Return the last known consumer-group coordinator state."""
         state = self._health.group_coordinator_state
         return str(state).upper() if state is not None else None
 
@@ -1200,7 +1199,7 @@ class KafkaSubscriber:
         """Access the underlying :class:`KafkaConsumer` instance."""
         return self._consumer
 
-    # ---------- Lag calculation ----------
+    # ---------- Lag calculation (refactored) ----------
     def _compute_total_lag(self) -> int:
         """Compute total lag across the current assignment.
 
@@ -1212,8 +1211,6 @@ class KafkaSubscriber:
         int
             Aggregate lag (non-negative integer).
         """
-        total_lag = 0
-        progressed = False
         try:
             assigned = self._consumer.assignment()
             if not assigned:
@@ -1221,85 +1218,112 @@ class KafkaSubscriber:
                 session.log.debug("[kafka] lag: no assignment -> 0")
                 return 0
 
-            # Prefer stats-based lag when stats are fresh and cover all assigned partitions.
-            stats_age = self._consumer.last_stats_age()
-            stats_map = self._consumer.stats_by_tp()
-            if stats_age < 3.0 and stats_map:
-                coverage = all((tp.topic, tp.partition) in stats_map for tp in assigned)
-                session.log.debug(
-                    "[kafka] lag: using stats? age=%.3fs coverage=%s",
-                    stats_age,
-                    coverage,
-                )
-                if coverage:
-                    total = 0
-                    for tp in assigned:
-                        info = stats_map.get((tp.topic, tp.partition), {})
-                        lag_val = int(info.get("lag", 0) or 0)  # type: ignore[arg-type]
-                        total += max(0, lag_val)
-                        session.log.debug(
-                            "[kafka] lag(stats) tp=%s[%d] lag=%d fetch_state=%s",
-                            tp.topic,
-                            tp.partition,
-                            lag_val,
-                            info.get("fetch_state"),
-                        )
-                    self._pos_progressed = False
-                    session.log.debug("[kafka] total lag from stats: %d", total)
-                    return int(total)
+            stats_total = self._try_stats_lag(assigned)
+            if stats_total is not None:
+                self._pos_progressed = False
+                session.log.debug("[kafka] total lag from stats: %d", stats_total)
+                return stats_total
 
-            # Fallback: positions + watermarks via the consumer abstraction
-            positions = self._consumer.positions(assigned)
-            pos_map: dict[tuple[str, int], int] = {}
-            if positions:
-                for pos_tp in positions:
-                    if pos_tp is None:
-                        continue
-                    try:
-                        key = (pos_tp.topic, pos_tp.partition)
-                        pos_val = int(pos_tp.offset)
-                        pos_map[key] = pos_val
-                        if pos_val > self._last_pos.get(key, -1):
-                            self._last_pos[key] = pos_val
-                            progressed = True
-                    except Exception:
-                        pass
+            progressed, pos_map = self._build_position_map(assigned)
+            total_from_wm = self._lag_from_watermarks(assigned, pos_map)
+            self._pos_progressed = progressed
+            session.log.debug(
+                "[kafka] total lag computed: %d (progressed=%s)",
+                total_from_wm,
+                progressed,
+            )
+            return total_from_wm
 
-            for tp in assigned:
-                low, high = self._consumer.watermark_offsets(tp)
-                if low is None or high is None:
-                    session.log.debug(
-                        "[kafka] lag: no watermarks for %s[%d] this tick",
-                        tp.topic,
-                        tp.partition,
-                    )
-                    continue
-
-                key = (tp.topic, tp.partition)
-                pos = pos_map.get(key, None)
-                if pos is None or pos < 0:
-                    last = self._last_seen.get(key, OFFSET_END)
-                    pos = (int(last) + 1) if last != OFFSET_END else int(low)
-
-                lag = max(0, int(high) - int(pos))
-                total_lag += lag
-                session.log.debug(
-                    "[kafka] lag(wm) tp=%s[%d] low=%s high=%s pos=%s lag=%s",
-                    tp.topic,
-                    tp.partition,
-                    low,
-                    high,
-                    pos,
-                    lag,
-                )
         except Exception as e:
             session.log.debug("[kafka] lag compute failed: %r -> assuming 0", e)
-            total_lag = 0
+            self._pos_progressed = False
+            return 0
 
-        self._pos_progressed = progressed
+    def _try_stats_lag(self, assigned: Sequence[TopicPartition]) -> Optional[int]:
+        """Return total lag from stats if fresh and fully covering the assignment."""
+        stats_age = self._consumer.last_stats_age()
+        stats_map = self._consumer.stats_by_tp()
+        if not (stats_age < 3.0 and stats_map):
+            return None
+
+        coverage = all((tp.topic, tp.partition) in stats_map for tp in assigned)
         session.log.debug(
-            "[kafka] total lag computed: %d (progressed=%s)", total_lag, progressed
+            "[kafka] lag: using stats? age=%.3fs coverage=%s", stats_age, coverage
         )
+        if not coverage:
+            return None
+
+        total = 0
+        for tp in assigned:
+            info = stats_map.get((tp.topic, tp.partition), {})
+            lag_val = int(info.get("lag", 0) or 0)  # type: ignore[arg-type]
+            total += max(0, lag_val)
+            session.log.debug(
+                "[kafka] lag(stats) tp=%s[%d] lag=%d fetch_state=%s",
+                tp.topic,
+                tp.partition,
+                lag_val,
+                info.get("fetch_state"),
+            )
+        return int(total)
+
+    def _build_position_map(
+        self, assigned: Sequence[TopicPartition]
+    ) -> Tuple[bool, Dict[Tuple[str, int], int]]:
+        """Build a map of current positions and report whether progress occurred."""
+        positions = self._consumer.positions(assigned)
+        pos_map: Dict[Tuple[str, int], int] = {}
+        progressed = False
+
+        if not positions:
+            return progressed, pos_map
+
+        for pos_tp in positions:
+            if pos_tp is None:
+                continue
+            try:
+                key = (pos_tp.topic, pos_tp.partition)
+                pos_val = int(pos_tp.offset)
+                pos_map[key] = pos_val
+                if pos_val > self._last_pos.get(key, -1):
+                    self._last_pos[key] = pos_val
+                    progressed = True
+            except Exception:
+                pass
+        return progressed, pos_map
+
+    def _lag_from_watermarks(
+        self, assigned: Sequence[TopicPartition], pos_map: Dict[Tuple[str, int], int]
+    ) -> int:
+        """Compute lag using watermarks and the provided position map."""
+        total_lag = 0
+        for tp in assigned:
+            low, high = self._consumer.watermark_offsets(tp)
+            if low is None or high is None:
+                session.log.debug(
+                    "[kafka] lag: no watermarks for %s[%d] this tick",
+                    tp.topic,
+                    tp.partition,
+                )
+                continue
+
+            key = (tp.topic, tp.partition)
+            pos = pos_map.get(key, None)
+            if pos is None or pos < 0:
+                last = self._last_seen.get(key, OFFSET_END)
+                pos = (int(last) + 1) if last != OFFSET_END else int(low)
+
+            lag = max(0, int(high) - int(pos))
+            total_lag += lag
+            session.log.debug(
+                "[kafka] lag(wm) tp=%s[%d] low=%s high=%s pos=%s lag=%s",
+                tp.topic,
+                tp.partition,
+                low,
+                high,
+                pos,
+                lag,
+            )
         return total_lag
 
     # ---------- Private helpers used by tick() ----------
@@ -1462,6 +1486,7 @@ class KafkaSubscriber:
         except Exception:
             pass
 
+    # ---------- Consume & dispatch (refactored) ----------
     def _consume_and_dispatch(
         self, now: float, since_assign: float, since_reboot_ok: bool
     ) -> bool:
@@ -1474,6 +1499,18 @@ class KafkaSubscriber:
             should return early; False otherwise.
         """
         msgs = self._consumer.consume_batch(MAX_BATCH_SIZE, timeout_s=0.05)
+        deliver, had_error = self._extract_delivery_batch(msgs)
+
+        if deliver:
+            self._handle_delivery(deliver, now)
+            return False
+
+        return self._handle_idle(had_error, now, since_assign, since_reboot_ok)
+
+    def _extract_delivery_batch(
+        self, msgs: Sequence[object]
+    ) -> Tuple[List[Tuple[Tuple[int, int], bytes]], bool]:
+        """Build the delivery list from raw messages and perform error handling."""
         deliver: List[Tuple[Tuple[int, int], bytes]] = []
         had_error = False
 
@@ -1496,59 +1533,66 @@ class KafkaSubscriber:
             except Exception:
                 continue
 
-        if deliver:
-            self._idle_backoff = 0.01
-            self._last_deliver_mono = now
-            self._empty_reads = 0
-            session.log.debug("[kafka] deliver: n=%d", len(deliver))
-            if self._messages_callback:
-                try:
-                    self._messages_callback(deliver)
-                except Exception:
-                    session.log.error("[kafka] messages_callback raised")
-        else:
-            # No deliveries this cycle
-            self._empty_reads += 1
-            stats_lag = self._consumer.stats_total_lag()
+        return deliver, had_error
 
-            session.log.debug(
-                "[kafka] idle: empty_reads=%d idle_backoff=%.3f stats_lag=%d last_stats_age=%.3f pending_reassign=%s brokers_up=%d cgrp_up=%s",
-                self._empty_reads,
-                self._idle_backoff,
+    def _handle_delivery(
+        self, deliver: List[Tuple[Tuple[int, int], bytes]], now: float
+    ) -> None:
+        """Update state and dispatch a non-empty delivery batch."""
+        self._idle_backoff = 0.01
+        self._last_deliver_mono = now
+        self._empty_reads = 0
+        session.log.debug("[kafka] deliver: n=%d", len(deliver))
+        if self._messages_callback:
+            try:
+                self._messages_callback(deliver)
+            except Exception:
+                session.log.error("[kafka] messages_callback raised")
+
+    def _handle_idle(
+        self, had_error: bool, now: float, since_assign: float, since_reboot_ok: bool
+    ) -> bool:
+        """Handle the idle path (no deliveries); may trigger rebootstrap."""
+        self._empty_reads += 1
+        stats_lag = self._consumer.stats_total_lag()
+
+        session.log.debug(
+            "[kafka] idle: empty_reads=%d idle_backoff=%.3f stats_lag=%d last_stats_age=%.3f pending_reassign=%s brokers_up=%d cgrp_up=%s",
+            self._empty_reads,
+            self._idle_backoff,
+            stats_lag,
+            self._consumer.last_stats_age(),
+            self._consumer.is_reassign_pending(),
+            self._consumer.brokers_up(),
+            self._consumer.group_coordinator_state(),
+        )
+
+        if (
+            stats_lag >= self._min_lag_for_stuck
+            and self._empty_reads >= 40
+            and since_reboot_ok
+            and since_assign > self._wait_after_assign_secs
+            and not self._consumer.is_reassign_pending()
+        ):
+            session.log.warning(
+                "[kafka] watchdog: empty reads while stats lag=%d -> rebootstrap",
                 stats_lag,
-                self._consumer.last_stats_age(),
-                self._consumer.is_reassign_pending(),
-                self._consumer.brokers_up(),
-                self._consumer.group_coordinator_state(),
             )
+            self._consumer.rebootstrap("stuck_empty_reads_with_stats_lag")
+            self._sleep(0.01)
+            return True
 
-            if (
-                stats_lag >= self._min_lag_for_stuck
-                and self._empty_reads >= 40
-                and since_reboot_ok
-                and since_assign > self._wait_after_assign_secs
-                and not self._consumer.is_reassign_pending()
-            ):
-                session.log.warning(
-                    "[kafka] watchdog: empty reads while stats lag=%d -> rebootstrap",
-                    stats_lag,
-                )
-                self._consumer.rebootstrap("stuck_empty_reads_with_stats_lag")
-                self._sleep(0.01)
-                return True
+        if self._no_messages_callback and (now - self._last_no_msg_cb) > 0.1:
+            try:
+                self._no_messages_callback()
+            except Exception:
+                session.log.error("[kafka] no_messages_callback raised")
+            self._last_no_msg_cb = now
 
-            if self._no_messages_callback and (now - self._last_no_msg_cb) > 0.1:
-                try:
-                    self._no_messages_callback()
-                except Exception:
-                    session.log.error("[kafka] no_messages_callback raised")
-                self._last_no_msg_cb = now
-
-            self._idle_backoff = min(
-                0.2, self._idle_backoff * (1.5 if not had_error else 1.0)
-            )
-            self._sleep(self._idle_backoff)
-
+        self._idle_backoff = min(
+            0.2, self._idle_backoff * (1.5 if not had_error else 1.0)
+        )
+        self._sleep(self._idle_backoff)
         return False
 
     # ---------- Main loop ----------
