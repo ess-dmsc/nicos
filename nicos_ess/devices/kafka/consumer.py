@@ -32,9 +32,6 @@ STUCK_WITH_LAG_SECS = 8.0
 MIN_LAG_FOR_STUCK = 1
 PARTITION_PROBE_INTERVAL_SECS = 10.0
 
-# --------------------------
-# Error code constants
-# --------------------------
 ERR_UNKNOWN_TOPIC_OR_PART = getattr(KafkaError, "_UNKNOWN_TOPIC_OR_PART", 3)
 ERR_OFFSET_OUT_OF_RANGE = getattr(KafkaError, "_OFFSET_OUT_OF_RANGE", 1)
 ERR_ALL_BROKERS_DOWN = getattr(KafkaError, "_ALL_BROKERS_DOWN", -187)
@@ -204,9 +201,6 @@ class KafkaConsumer:
 
         self._lock = threading.RLock()
 
-    # --------------------------
-    # Error helpers (public, centralized)
-    # --------------------------
     @staticmethod
     def is_partition_eof(err: object) -> bool:
         """Return True if the error is a PARTITION_EOF event."""
@@ -243,9 +237,6 @@ class KafkaConsumer:
         except Exception:
             return False
 
-    # --------------------------
-    # Health helpers
-    # --------------------------
     def brokers_up(self) -> int:
         """Return the number of brokers that are currently reported as UP.
 
@@ -278,9 +269,6 @@ class KafkaConsumer:
         """
         return max(0.0, self._now() - self._health.last_stats_mono)
 
-    # --------------------------
-    # Metadata helpers
-    # --------------------------
     def _can_fetch_metadata(
         self, topic: Optional[str] = None, timeout_s: float = 1.0
     ) -> bool:
@@ -471,9 +459,6 @@ class KafkaConsumer:
         self.kick(times=6 if context == "post-reassign" else 2)
         self._log_assignment_debug(context)
 
-    # --------------------------
-    # Callbacks
-    # --------------------------
     def _on_error(self, err):
         """Internal error callback: logs details and may trigger rebootstrap."""
         try:
@@ -550,9 +535,6 @@ class KafkaConsumer:
         self._health.stats_by_tp = by_tp
         self._health.stats_total_lag = max(0, int(total))
 
-    # --------------------------
-    # Control plane
-    # --------------------------
     def subscribe(self, topics: Sequence[str]):
         """Assign all partitions of the given topics.
 
@@ -667,9 +649,6 @@ class KafkaConsumer:
             except Exception:
                 pass
 
-    # --------------------------
-    # Data plane
-    # --------------------------
     def poll(self, timeout_ms: int = 5):
         """Poll a single message.
 
@@ -831,7 +810,6 @@ class KafkaConsumer:
             except Exception:
                 pass
 
-    # ---------- Public surface added to avoid private reach-through ----------
     def positions(
         self, partitions: Sequence[TopicPartition]
     ) -> Optional[List[TopicPartition]]:
@@ -965,9 +943,6 @@ class KafkaConsumer:
             self._starting_offset = str(policy)
         self._need_seek_after_assign = True
 
-    # --------------------------
-    # Debug helpers
-    # --------------------------
     def _log_assignment_debug(self, prefix: str):
         """Log useful debug information about the current assignment."""
         try:
@@ -1135,7 +1110,6 @@ class KafkaSubscriber:
 
         self._use_thread = use_thread
 
-    # ---------- Public API ----------
     def subscribe(
         self, topics: Sequence[str], messages_callback, no_messages_callback=None
     ):
@@ -1199,7 +1173,6 @@ class KafkaSubscriber:
         """Access the underlying :class:`KafkaConsumer` instance."""
         return self._consumer
 
-    # ---------- Lag calculation (refactored) ----------
     def _compute_total_lag(self) -> int:
         """Compute total lag across the current assignment.
 
@@ -1326,7 +1299,6 @@ class KafkaSubscriber:
             )
         return total_lag
 
-    # ---------- Private helpers used by tick() ----------
     def _periodic_partition_probe(self):
         """Occasionally probe metadata to detect partition-count changes."""
         if not self._consumer.is_reassign_pending():
@@ -1486,7 +1458,6 @@ class KafkaSubscriber:
         except Exception:
             pass
 
-    # ---------- Consume & dispatch (refactored) ----------
     def _consume_and_dispatch(
         self, now: float, since_assign: float, since_reboot_ok: bool
     ) -> bool:
