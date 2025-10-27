@@ -760,6 +760,108 @@ class KafkaConsumer:
             except Exception:
                 pass
 
+    def positions(
+        self, partitions: Sequence[TopicPartition]
+    ) -> Optional[List[TopicPartition]]:
+        """Return the current positions for the given partitions.
+
+        This is a thread-safe wrapper around the underlying consumer's
+        `position()` call. On platforms or test doubles that do not implement
+        `position()`, this method returns ``None`` rather than raising.
+
+        Parameters
+        ----------
+        partitions:
+            Sequence of topic/partitions for which to query positions.
+
+        Returns
+        -------
+        list[TopicPartition] | None
+            The position-bearing `TopicPartition` instances corresponding to
+            ``partitions`` when supported; otherwise ``None``.
+        """
+        with self._lock:
+            try:
+                return self._consumer.position(list(partitions))  # type: ignore[attr-defined]
+            except Exception:
+                try:
+                    # Some stubs may expose `position` without proper typing.
+                    return self._consumer.position(list(partitions))  # type: ignore[no-any-return]
+                except Exception:
+                    return None
+
+    def watermark_offsets(
+        self, tp: TopicPartition, timeout_s: float = 5.0
+    ) -> Tuple[Optional[int], Optional[int]]:
+        """Return low/high watermark offsets for a partition.
+
+        Parameters
+        ----------
+        tp:
+            Topic/partition to inspect.
+        timeout_s:
+            Maximum time in seconds to wait (best effort).
+
+        Returns
+        -------
+        tuple[int | None, int | None]
+            A tuple of ``(low, high)`` offsets, or ``(None, None)`` if the call
+            is not supported or fails.
+        """
+        with self._lock:
+            try:
+                low, high = self._consumer.get_watermark_offsets(tp, timeout=timeout_s)  # type: ignore[attr-defined]
+                return int(low), int(high)
+            except Exception:
+                try:
+                    low, high = self._consumer.get_watermark_offsets(tp)  # type: ignore[no-any-return]
+                    return int(low), int(high)
+                except Exception:
+                    return None, None
+
+    def stats_total_lag(self) -> int:
+        """Return the most recent total lag from the stats callback.
+
+        Returns
+        -------
+        int
+            Non-negative integer representing the aggregate lag according to
+            the latest `stats_cb` payload (0 if unavailable).
+        """
+        try:
+            return int(self._health.stats_total_lag or 0)
+        except Exception:
+            return 0
+
+    def stats_by_tp(self) -> Dict[Tuple[str, int], Dict[str, object]]:
+        """Return a shallow copy of per-partition stats from the stats callback.
+
+        Returns
+        -------
+        dict[tuple[str, int], dict[str, object]]
+            Mapping from (topic, partition) to a dictionary containing at least
+            ``{"lag": int}`` and optionally other fields like ``"fetch_state"``.
+        """
+        try:
+            # Normalize key typing to (str, int)
+            out: Dict[Tuple[str, int], Dict[str, object]] = {}
+            for (t, p), info in (self._health.stats_by_tp or {}).items():
+                out[(str(t), int(p))] = dict(info or {})
+            return out
+        except Exception:
+            return {}
+
+    def group_coordinator_state(self) -> Optional[str]:
+        """Return the last known consumer-group coordinator state.
+
+        Returns
+        -------
+        str | None
+            Upper-cased coordinator state (e.g. ``"UP"``) or ``None`` if unknown.
+        """
+        state = self._health.group_coordinator_state
+        return str(state).upper() if state is not None else None
+
     # --------------------------
     # Debug helpers
     # --------------------------
@@ -999,7 +1101,7 @@ class KafkaSubscriber:
         """Compute total lag across the current assignment.
 
         Prefers stats-based lag if recent and complete; otherwise falls back to
-        watermark- and position-based estimation.
+        watermark- and position-based estimation via the consumer abstraction.
 
         Returns
         -------
@@ -1015,46 +1117,35 @@ class KafkaSubscriber:
                 session.log.debug("[kafka] lag: no assignment -> 0")
                 return 0
 
-            # Prefer stats lag if stats are fresh AND cover the current assignment
-            if (
-                self._consumer.last_stats_age() < 3.0
-                and self._consumer._health.stats_by_tp
-            ):
-                stats_keys = set(self._consumer._health.stats_by_tp.keys())
-                coverage = all(
-                    (tp.topic, tp.partition) in stats_keys for tp in assigned
-                )
+            # Prefer stats-based lag when stats are fresh and cover all assigned partitions.
+            stats_age = self._consumer.last_stats_age()
+            stats_map = self._consumer.stats_by_tp()
+            if stats_age < 3.0 and stats_map:
+                coverage = all((tp.topic, tp.partition) in stats_map for tp in assigned)
                 session.log.debug(
                     "[kafka] lag: using stats? age=%.3fs coverage=%s",
-                    self._consumer.last_stats_age(),
+                    stats_age,
                     coverage,
                 )
                 if coverage:
                     total = 0
                     for tp in assigned:
-                        info = self._consumer._health.stats_by_tp.get(
-                            (tp.topic, tp.partition), {}
-                        )
-                        lag = int(info.get("lag", 0) or 0)
-                        total += max(0, lag)
+                        info = stats_map.get((tp.topic, tp.partition), {})
+                        lag_val = int(info.get("lag", 0) or 0)  # type: ignore[arg-type]
+                        total += max(0, lag_val)
                         session.log.debug(
                             "[kafka] lag(stats) tp=%s[%d] lag=%d fetch_state=%s",
                             tp.topic,
                             tp.partition,
-                            lag,
+                            lag_val,
                             info.get("fetch_state"),
                         )
                     self._pos_progressed = False
                     session.log.debug("[kafka] total lag from stats: %d", total)
                     return int(total)
 
-            # Get current positions
-            try:
-                with self._consumer._lock:
-                    positions = self._consumer._consumer.position(assigned)
-            except Exception:
-                positions = None
-
+            # Fallback: positions + watermarks via the consumer abstraction
+            positions = self._consumer.positions(assigned)
             pos_map: dict[tuple[str, int], int] = {}
             if positions:
                 for pos_tp in positions:
@@ -1071,9 +1162,8 @@ class KafkaSubscriber:
                         pass
 
             for tp in assigned:
-                try:
-                    low, high = self._consumer._consumer.get_watermark_offsets(tp)
-                except Exception:
+                low, high = self._consumer.watermark_offsets(tp)
+                if low is None or high is None:
                     session.log.debug(
                         "[kafka] lag: no watermarks for %s[%d] this tick",
                         tp.topic,
@@ -1083,13 +1173,9 @@ class KafkaSubscriber:
 
                 key = (tp.topic, tp.partition)
                 pos = pos_map.get(key, None)
-
                 if pos is None or pos < 0:
                     last = self._last_seen.get(key, OFFSET_END)
-                    if last != OFFSET_END:
-                        pos = int(last) + 1
-                    else:
-                        pos = int(low)
+                    pos = (int(last) + 1) if last != OFFSET_END else int(low)
 
                 lag = max(0, int(high) - int(pos))
                 total_lag += lag
@@ -1319,7 +1405,7 @@ class KafkaSubscriber:
         else:
             # No deliveries this cycle
             self._empty_reads += 1
-            stats_lag = self._consumer._health.stats_total_lag
+            stats_lag = self._consumer.stats_total_lag()
 
             session.log.debug(
                 "[kafka] idle: empty_reads=%d idle_backoff=%.3f stats_lag=%d last_stats_age=%.3f pending_reassign=%s brokers_up=%d cgrp_up=%s",
@@ -1327,9 +1413,9 @@ class KafkaSubscriber:
                 self._idle_backoff,
                 stats_lag,
                 self._consumer.last_stats_age(),
-                self._consumer._pending_reassign,
+                self._consumer._pending_reassign,  # left as-is until a public scheduler is added
                 self._consumer.brokers_up(),
-                self._consumer._health.group_coordinator_state,
+                self._consumer.group_coordinator_state(),
             )
 
             if (
