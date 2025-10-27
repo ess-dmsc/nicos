@@ -113,7 +113,9 @@ class EpicsKafkaForwarder(KafkaStatusHandler):
         while not self._stop_requested:
             try:
                 to_forward = self._get_pvs_to_forward()
+                print("1", to_forward)
                 if to_forward != self._to_be_forwarded:
+                    print("2", to_forward)
                     self._to_be_forwarded = to_forward
                     buffer = self._generate_forwarder_config(to_forward)
                     self._producer.produce(self.config_topic, buffer)
