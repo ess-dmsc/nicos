@@ -459,3 +459,45 @@ def test_stuck_with_lag_ignored_until_grace_and_cooldown(subscriber, clock):
     assert "stuck_no_progress_despite_lag" in reasons
 
     stub.consume = orig_consume
+
+
+def test_tick_returns_early_when_pending_reassign(subscriber, clock, monkeypatch):
+    """
+    If _pending_reassign is True and try_reassign() returns False,
+    tick() should sleep briefly and return early (no callbacks, no reboot).
+    """
+    calls = {"msgs": 0, "idle": 0}
+
+    # Create the topic before subscribing
+    stub = subscriber.consumer._consumer
+    stub.create_topic("dummy", num_partitions=1)
+
+    subscriber.subscribe(["dummy"], lambda _: calls.__setitem__("msgs", calls["msgs"] + 1))
+    # Set pending reassign and force try_reassign to fail
+    subscriber.consumer._pending_reassign = True
+    monkeypatch.setattr(subscriber.consumer, "try_reassign", lambda: False)
+
+    t0 = clock.now()
+    subscriber.tick()
+    # Slept at least 0.01s
+    assert clock.now() >= t0 + 0.01
+    assert calls["msgs"] == 0  # no messages delivered
+
+
+def test_poll_without_assignment_returns_none(consumer):
+    # Poll with no assignment should be harmless and return None
+    assert consumer.assignment() == []
+    assert consumer.poll(timeout_ms=10) is None
+
+
+def test_compute_total_lag_uses_position_when_available(subscriber):
+    """
+    With starting_offset='earliest', position should behave as low watermark when never delivered.
+    Add two messages => high=2; expected total lag = 2 - 0 = 2.
+    """
+    stub = subscriber.consumer._consumer
+    stub.create_topic("s", num_partitions=1)
+    stub.add_message("s", 0, offset=0, key=b"k", value=b"A")
+    stub.add_message("s", 0, offset=1, key=b"k", value=b"B")
+    subscriber.subscribe(["s"], lambda _: None)
+    assert subscriber._compute_total_lag() == 2
