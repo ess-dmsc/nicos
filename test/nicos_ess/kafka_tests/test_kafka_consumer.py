@@ -1,7 +1,9 @@
 import json
+
 import pytest
 
 import nicos_ess.devices.kafka.consumer as mod
+
 from test.nicos_ess.kafka_tests.doubles.consumer import (
     ConsumerStub,
     TopicPartition as TopicPartitionStub,
@@ -52,15 +54,15 @@ def subscriber(clock, consumer):
     """Subscriber using the injected consumer and a synchronous tick loop."""
     sub = mod.KafkaSubscriber(
         consumer=consumer,
-        no_stats_secs=1.0,             # speed up tests
-        all_down_secs=1.0,             # speed up tests
-        cooldown_secs=0.5,             # speed up tests
-        wait_after_assign_secs=0.2,    # speed up tests
-        stuck_with_lag_secs=0.8,       # fast stuck detection for tests
-        min_lag_for_stuck=1,           # only reboot when lag >= 2
+        no_stats_secs=1.0,  # speed up tests
+        all_down_secs=1.0,  # speed up tests
+        cooldown_secs=0.5,  # speed up tests
+        wait_after_assign_secs=0.2,  # speed up tests
+        stuck_with_lag_secs=0.8,  # fast stuck detection for tests
+        min_lag_for_stuck=1,  # only reboot when lag >= 2
         now=clock.now,
         sleep=clock.sleep,
-        use_thread=False,              # run synchronously in tests
+        use_thread=False,  # run synchronously in tests
     )
     return sub
 
@@ -272,7 +274,6 @@ def test_subscriber_recovers_after_failed_rebootstrap_then_reassigns(subscriber,
     assert [v for (_, v) in delivered] == [b"A", b"B"]
 
 
-
 def test_watchdog_reboots_on_no_stats_heartbeat(subscriber, clock):
     stub = subscriber.consumer._consumer
     stub.create_topic("x", num_partitions=1)
@@ -375,7 +376,9 @@ def test_stuck_with_lag_does_not_trigger_for_small_lag(subscriber, clock):
     stub.consume = orig_consume
 
 
-def test_stuck_with_lag_triggers_rebootstrap_when_lag_high_and_no_progress(subscriber, clock):
+def test_stuck_with_lag_triggers_rebootstrap_when_lag_high_and_no_progress(
+    subscriber, clock
+):
     """
     Simulate a stall with lag>=1 and no deliveries for > stuck_with_lag_secs; must reboot.
     Keep stats fresh so the stuck watchdog fires first.
@@ -472,7 +475,9 @@ def test_tick_returns_early_when_pending_reassign(subscriber, clock, monkeypatch
     stub = subscriber.consumer._consumer
     stub.create_topic("dummy", num_partitions=1)
 
-    subscriber.subscribe(["dummy"], lambda _: calls.__setitem__("msgs", calls["msgs"] + 1))
+    subscriber.subscribe(
+        ["dummy"], lambda _: calls.__setitem__("msgs", calls["msgs"] + 1)
+    )
     # Set pending reassign and force try_reassign to fail
     subscriber.consumer._pending_reassign = True
     monkeypatch.setattr(subscriber.consumer, "try_reassign", lambda: False)

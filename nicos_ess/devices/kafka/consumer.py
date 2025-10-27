@@ -28,11 +28,9 @@ REBOOT_COOLDOWN_SECS = 15
 REBOOT_JITTER_SECS = 3
 WAIT_AFTER_ASSIGN_SECS = 12
 MAX_BATCH_SIZE = 100
-STUCK_WITH_LAG_SECS = (
-    8.0  # no deliveries for this long while lag >= threshold -> reboot
-)
+STUCK_WITH_LAG_SECS = 8.0
 MIN_LAG_FOR_STUCK = 1
-PARTITION_PROBE_INTERVAL_SECS = 10.0  # how often to check for partition count changes
+PARTITION_PROBE_INTERVAL_SECS = 10.0
 
 
 @dataclass
@@ -41,10 +39,9 @@ class _Health:
     all_down_since: Optional[float] = None
     brokers_state: dict = None
     group_coordinator_state: Optional[str] = None
-    # Stats-derived lag view (more resilient than watermarks when RPCs fail)
     stats_total_lag: int = 0
     stats_by_tp: Dict[tuple, dict] = (
-        None  # (topic,part) -> {'lag': int, 'fetch_state': str}
+        None  # (topic, part) -> {'lag': int, 'fetch_state': str}
     )
 
     def __post_init__(self):
@@ -129,6 +126,9 @@ class KafkaConsumer:
         self._last_meta_probe: float = 0.0
         self._partitions_known: Dict[str, int] = {}
 
+        # After delete+recreate we may need to "prime" fetch with an explicit seek
+        self._need_seek_after_assign: bool = False
+
         self._lock = threading.RLock()
 
     # --------------------------
@@ -178,6 +178,12 @@ class KafkaConsumer:
                     continue
                 count = len(tmeta.partitions)
                 if self._partitions_known.get(t) != count:
+                    session.log.warning(
+                        "[kafka] meta probe: %s partitions changed %s -> %s",
+                        t,
+                        self._partitions_known.get(t),
+                        count,
+                    )
                     self._partitions_known[t] = count
                     changed = True
             if changed:
@@ -193,23 +199,66 @@ class KafkaConsumer:
             self._pending_reassign = False
             return True
 
+        # If brokers appear down and we can't even fetch metadata, back off.
         if self.brokers_up() == 0 and not self._can_fetch_metadata(None, timeout_s=0.5):
+            session.log.debug("[kafka] try_reassign: brokers down & no metadata yet")
             return False
 
         try:
             with self._lock:
+                # Best-effort unassign to flush any stale fetch state before reassignment.
+                try:
+                    session.log.debug(
+                        "[kafka] try_reassign: unassigning current assignment"
+                    )
+                    self._consumer.unassign()
+                except Exception:
+                    pass
+
+                # Fetch cluster-wide metadata (works with the test stub semantics).
                 md = self._consumer.list_topics(None, timeout=2.0)
+
                 topic_partitions: List[TopicPartition] = []
                 for topic_name in self._topics:
                     tmeta = md.topics.get(topic_name)
-                    if tmeta is None or tmeta.error is not None:
+                    if tmeta is None:
+                        session.log.debug(
+                            "[kafka] try_reassign: topic %s not in metadata yet",
+                            topic_name,
+                        )
                         return False
-                    # Build partitions (offset honoring is left to seek-on-error and explicit seeks)
-                    for p in tmeta.partitions:
+                    if getattr(tmeta, "error", None) is not None:
+                        session.log.debug(
+                            "[kafka] try_reassign: topic %s metadata error=%r (wait)",
+                            topic_name,
+                            tmeta.error,
+                        )
+                        return False
+
+                    # IMPORTANT: don't assign until broker reports partitions.
+                    parts = list(getattr(tmeta, "partitions", {}).keys())
+                    if not parts:
+                        session.log.debug(
+                            "[kafka] try_reassign: topic %s has no partitions yet (wait)",
+                            topic_name,
+                        )
+                        return False
+
+                    for p in parts:
                         topic_partitions.append(self._tp_factory(topic_name, p))
-                    # Update known counts
-                    self._partitions_known[topic_name] = len(tmeta.partitions)
+                    self._partitions_known[topic_name] = len(parts)
+
+                session.log.info(
+                    "[kafka] try_reassign: assigning %s",
+                    [(tp.topic, tp.partition) for tp in topic_partitions],
+                )
                 self._consumer.assign(topic_partitions)
+
+                # Best-effort resume helps avoid 'offset-query' limbo on some setups.
+                try:
+                    self._consumer.resume(topic_partitions)  # type: ignore[attr-defined]
+                except Exception:
+                    pass
 
             self._last_assignment = list(topic_partitions)
             self._pending_reassign = False
@@ -218,7 +267,17 @@ class KafkaConsumer:
                 "[kafka] (re)assigned partitions: %s",
                 [(tp.topic, tp.partition) for tp in topic_partitions],
             )
+
+            # Keep your existing behavior: seek according to configuration.
+            self._maybe_post_assign_seek()
+
+            # Nudge fetch sessions to 'active'. Harmless on the stub; useful on real brokers.
+            self.kick(times=6)
+
+            # Extra debug snapshot.
+            self._log_assignment_debug("post-reassign")
             return True
+
         except KafkaException as exc:
             session.log.debug("[kafka] metadata not ready yet during reassign: %r", exc)
             return False
@@ -228,17 +287,30 @@ class KafkaConsumer:
     # --------------------------
     def _on_error(self, err):
         try:
+            code = err.code()
+            name = str(err.name() or "")
             session.log.warning(
                 "[kafka-error] code=%s name=%s fatal=%s retriable=%s msg=%s",
-                err.code(),
-                err.name(),
+                code,
+                name,
                 err.fatal(),
                 err.retriable(),
                 err.str(),
             )
+
+            if name in ("UNKNOWN_TOPIC_OR_PART", "_UNKNOWN_PARTITION") or code in (
+                3,
+                -190,
+            ):
+                session.log.warning(
+                    "[kafka] error-cb: topic/partition missing; scheduling reassign+seek"
+                )
+                self._pending_reassign = True
+                self._need_seek_after_assign = True
+
             if err.fatal():
                 if (self._now() - self._last_rebootstrap_mono) >= REBOOT_COOLDOWN_SECS:
-                    self.rebootstrap("fatal_error:%s" % err.name())
+                    self.rebootstrap("fatal_error:%s" % name)
         except Exception:
             session.log.warning("[kafka-error] %r", err)
 
@@ -272,7 +344,6 @@ class KafkaConsumer:
             else:
                 self._health.all_down_since = None
 
-        # Parse per-topic/partition lag from stats to avoid silent 0s
         topics = data.get("topics") or {}
         total = 0
         by_tp: Dict[tuple, dict] = {}
@@ -315,6 +386,10 @@ class KafkaConsumer:
             self._partitions_known[topic_name] = len(tmeta.partitions)
 
         with self._lock:
+            session.log.info(
+                "[kafka] subscribe: assigning %s",
+                [(tp.topic, tp.partition) for tp in topic_partitions],
+            )
             self._consumer.assign(topic_partitions)
 
         self._topics = list(topics)
@@ -325,6 +400,10 @@ class KafkaConsumer:
             "[kafka] assigned partitions: %s",
             [(tp.topic, tp.partition) for tp in topic_partitions],
         )
+
+        self._maybe_post_assign_seek()
+        self.kick(times=2)
+        self._log_assignment_debug("post-subscribe")
 
     def rebootstrap(self, reason: str = ""):
         if self._on_rebootstrap:
@@ -341,11 +420,13 @@ class KafkaConsumer:
 
         try:
             with self._lock:
+                session.log.debug("[kafka-rebootstrap] closing consumer")
                 self._consumer.close()
         except Exception as e:
             session.log.debug("[kafka-rebootstrap] close() error ignored: %r", e)
 
         with self._lock:
+            session.log.debug("[kafka-rebootstrap] creating new consumer")
             self._consumer = self._consumer_factory(self._conf_effective)
 
         reassigned_ok = False
@@ -366,6 +447,7 @@ class KafkaConsumer:
     def unsubscribe(self):
         with self._lock:
             try:
+                session.log.info("[kafka] unsubscribe()")
                 self._consumer.unsubscribe()
             except Exception:
                 pass
@@ -376,6 +458,14 @@ class KafkaConsumer:
     def poll(self, timeout_ms: int = 5):
         with self._lock:
             return self._consumer.poll(timeout_ms / 1000.0)
+
+    def kick(self, times: int = 1):
+        """Poll(0) a few times to nudge librdkafka to establish fetch sessions."""
+        for i in range(max(1, int(times))):
+            try:
+                _ = self.poll(0)
+            except Exception as e:
+                session.log.debug("[kafka] kick poll(0) failed: %r", e)
 
     def consume_batch(self, max_messages: int = MAX_BATCH_SIZE, timeout_s: float = 0.2):
         if max_messages <= 0:
@@ -392,6 +482,7 @@ class KafkaConsumer:
     def close(self):
         with self._lock:
             try:
+                session.log.info("[kafka] close()")
                 self._consumer.close()
             except Exception:
                 pass
@@ -415,9 +506,13 @@ class KafkaConsumer:
                 try:
                     with self._lock:
                         self._consumer.seek(tp)
+                    session.log.debug(
+                        "[kafka] seek() ok topic=%s part=%d off=%s", topic, part, off
+                    )
                     done_now.append((topic, part, off))
                 except KafkaException as e:
                     last_err = e
+                    session.log.debug("[kafka] seek() retry due to: %r", e)
                     self._sleep(0.1)
             for item in done_now:
                 remaining.discard(item)
@@ -444,6 +539,96 @@ class KafkaConsumer:
             tp.offset = OFFSET_BEGINNING
         self._seek(partitions, timeout_s)
 
+    def unassign(self):
+        """Expose unassign for testing/manual flows (best-effort)."""
+        with self._lock:
+            try:
+                self._consumer.unassign()
+            except Exception:
+                pass
+
+    # --------------------------
+    # Debug helpers
+    # --------------------------
+    def _log_assignment_debug(self, prefix: str):
+        try:
+            with self._lock:
+                assigned = self._consumer.assignment()
+                if not assigned:
+                    session.log.debug("[kafka][%s] no assignment", prefix)
+                    return
+                positions = None
+                try:
+                    positions = self._consumer.position(assigned)  # type: ignore[attr-defined]
+                except Exception:
+                    try:
+                        positions = self._consumer.position(
+                            assigned
+                        )  # may not exist on stub
+                    except Exception:
+                        positions = None
+
+                pos_map = {}
+                if positions:
+                    for pt in positions:
+                        try:
+                            pos_map[(pt.topic, pt.partition)] = int(pt.offset)
+                        except Exception:
+                            pass
+
+                for tp in assigned:
+                    try:
+                        low, high = self._consumer.get_watermark_offsets(tp)  # type: ignore[attr-defined]
+                    except Exception:
+                        try:
+                            low, high = self._consumer.get_watermark_offsets(
+                                tp
+                            )  # may not exist on stub
+                        except Exception:
+                            low, high = (None, None)
+                    pos = pos_map.get((tp.topic, tp.partition))
+                    stats = self._health.stats_by_tp.get((tp.topic, tp.partition), {})
+                    session.log.debug(
+                        "[kafka][%s] tp=%s[%d] pos=%s low=%s high=%s statsLag=%s fetch=%s",
+                        prefix,
+                        tp.topic,
+                        tp.partition,
+                        pos,
+                        low,
+                        high,
+                        stats.get("lag"),
+                        stats.get("fetch_state"),
+                    )
+        except Exception as e:
+            session.log.debug("[kafka] _log_assignment_debug failed: %r", e)
+
+    def _maybe_post_assign_seek(self):
+        """If we flagged a seek after reassign/subscribe (e.g., topic recreation), do it once."""
+        if not self._need_seek_after_assign:
+            return
+        try:
+            if str(self._starting_offset).lower() in (
+                "earliest",
+                "beginning",
+                "smallest",
+            ):
+                self.seek_to_beginning()
+                session.log.info(
+                    "[kafka] post-assign seek to beginning executed after topic recreation"
+                )
+            else:
+                self.seek_to_end()
+                session.log.info(
+                    "[kafka] post-assign seek to end executed after topic recreation"
+                )
+            session.log.warning(
+                "[kafka] post-assign seek executed after topic recreation"
+            )
+        except Exception as e:
+            session.log.warning("[kafka] post-assign seek failed: %r", e)
+        finally:
+            self._need_seek_after_assign = False
+
 
 class KafkaSubscriber:
     """
@@ -466,10 +651,8 @@ class KafkaSubscriber:
         all_down_secs: float = ALL_DOWN_REBOOT_SECS,
         cooldown_secs: float = REBOOT_COOLDOWN_SECS,
         wait_after_assign_secs: float = WAIT_AFTER_ASSIGN_SECS,
-        # Stuck-with-lag controls
         stuck_with_lag_secs: float = STUCK_WITH_LAG_SECS,
         min_lag_for_stuck: int = MIN_LAG_FOR_STUCK,
-        # DI time/sleep
         now: Callable[[], float] = time.monotonic,
         sleep: Callable[[float], None] = time.sleep,
         use_thread: bool = True,
@@ -486,7 +669,6 @@ class KafkaSubscriber:
         self._messages_callback = None
         self._no_messages_callback = None
 
-        # thresholds
         self._no_stats_secs = float(no_stats_secs)
         self._all_down_secs = float(all_down_secs)
         self._cooldown_secs = float(cooldown_secs)
@@ -494,20 +676,14 @@ class KafkaSubscriber:
         self._stuck_with_lag_secs = float(stuck_with_lag_secs)
         self._min_lag_for_stuck = int(min_lag_for_stuck)
 
-        # time functions
         self._now = now
         self._sleep = sleep
 
-        # polling state
         self._last_no_msg_cb = 0.0
         self._idle_backoff = 0.01
         self._last_deliver_mono = self._now()
-        self._last_seen: dict[
-            tuple[str, int], int
-        ] = {}  # (topic,partition) -> last offset seen
-        self._last_pos: dict[
-            tuple[str, int], int
-        ] = {}  # track positions to detect progress
+        self._last_seen: dict[tuple[str, int], int] = {}
+        self._last_pos: dict[tuple[str, int], int] = {}
         self._pos_progressed: bool = False
         self._empty_reads: int = 0
 
@@ -517,9 +693,6 @@ class KafkaSubscriber:
     def subscribe(
         self, topics: Sequence[str], messages_callback, no_messages_callback=None
     ):
-        """
-        API-compatibility: name is 'subscribe', but it performs manual assign.
-        """
         self.stop_consuming(True)
 
         self._consumer.unsubscribe()
@@ -528,7 +701,6 @@ class KafkaSubscriber:
         self._messages_callback = messages_callback
         self._no_messages_callback = no_messages_callback
 
-        # reset poller state
         self._last_no_msg_cb = 0.0
         self._idle_backoff = 0.01
         self._last_deliver_mono = self._now()
@@ -558,33 +730,49 @@ class KafkaSubscriber:
 
     # ---------- Lag calculation ----------
     def _compute_total_lag(self) -> int:
-        """
-        total_lag = Σ (high_watermark - position)
-        Side-effect:
-          - sets self._pos_progressed when positions advance
-        """
         total_lag = 0
         progressed = False
         try:
             assigned = self._consumer.assignment()
             if not assigned:
                 self._pos_progressed = False
+                session.log.debug("[kafka] lag: no assignment -> 0")
                 return 0
 
-            # Prefer stats lag if stats are fresh and populated
+            # Prefer stats lag if stats are fresh AND cover the current assignment
             if (
                 self._consumer.last_stats_age() < 3.0
                 and self._consumer._health.stats_by_tp
             ):
-                total = 0
-                for (t, p), info in self._consumer._health.stats_by_tp.items():
-                    lag = int(info.get("lag", 0) or 0)
-                    total += max(0, lag)
-                self._pos_progressed = False  # no position insight from stats
-                session.log.debug("[kafka] total lag from stats: %d", total)
-                return int(total)
+                stats_keys = set(self._consumer._health.stats_by_tp.keys())
+                coverage = all(
+                    (tp.topic, tp.partition) in stats_keys for tp in assigned
+                )
+                session.log.debug(
+                    "[kafka] lag: using stats? age=%.3fs coverage=%s",
+                    self._consumer.last_stats_age(),
+                    coverage,
+                )
+                if coverage:
+                    total = 0
+                    for tp in assigned:
+                        info = self._consumer._health.stats_by_tp.get(
+                            (tp.topic, tp.partition), {}
+                        )
+                        lag = int(info.get("lag", 0) or 0)
+                        total += max(0, lag)
+                        session.log.debug(
+                            "[kafka] lag(stats) tp=%s[%d] lag=%d fetch_state=%s",
+                            tp.topic,
+                            tp.partition,
+                            lag,
+                            info.get("fetch_state"),
+                        )
+                    self._pos_progressed = False
+                    session.log.debug("[kafka] total lag from stats: %d", total)
+                    return int(total)
 
-            # Get current positions in one call (best-effort)
+            # Get current positions
             try:
                 with self._consumer._lock:
                     positions = self._consumer._consumer.position(assigned)
@@ -600,7 +788,6 @@ class KafkaSubscriber:
                         key = (pos_tp.topic, pos_tp.partition)
                         pos_val = int(pos_tp.offset)
                         pos_map[key] = pos_val
-                        # progress detection
                         if pos_val > self._last_pos.get(key, -1):
                             self._last_pos[key] = pos_val
                             progressed = True
@@ -611,30 +798,42 @@ class KafkaSubscriber:
                 try:
                     low, high = self._consumer._consumer.get_watermark_offsets(tp)
                 except Exception:
-                    # No signal for this partition this tick
+                    session.log.debug(
+                        "[kafka] lag: no watermarks for %s[%d] this tick",
+                        tp.topic,
+                        tp.partition,
+                    )
                     continue
 
                 key = (tp.topic, tp.partition)
-                # Prefer true consumer position if available
                 pos = pos_map.get(key, None)
 
                 if pos is None or pos < 0:
-                    # Fall back to our last delivered offset + 1
                     last = self._last_seen.get(key, OFFSET_END)
                     if last != OFFSET_END:
                         pos = int(last) + 1
                     else:
-                        # Last resort: earliest available offset
                         pos = int(low)
 
                 lag = max(0, int(high) - int(pos))
                 total_lag += lag
-        except Exception:
-            # Keep watchdogs resilient
+                session.log.debug(
+                    "[kafka] lag(wm) tp=%s[%d] low=%s high=%s pos=%s lag=%s",
+                    tp.topic,
+                    tp.partition,
+                    low,
+                    high,
+                    pos,
+                    lag,
+                )
+        except Exception as e:
+            session.log.debug("[kafka] lag compute failed: %r -> assuming 0", e)
             total_lag = 0
 
         self._pos_progressed = progressed
-        session.log.debug("[kafka] total lag computed: %d", total_lag)
+        session.log.debug(
+            "[kafka] total lag computed: %d (progressed=%s)", total_lag, progressed
+        )
         return total_lag
 
     # ---------- Private helpers used by tick() ----------
@@ -643,16 +842,17 @@ class KafkaSubscriber:
             self._consumer._maybe_refresh_partitions()
 
     def _handle_pending_reassign(self) -> bool:
-        """Attempt pending reassign; return True if tick should return early."""
         if self._consumer._pending_reassign:
             assigned = self._consumer.try_reassign()
             if not assigned:
+                session.log.debug(
+                    "[kafka] tick: pending_reassign not ready, sleeping 10ms"
+                )
                 self._sleep(0.01)
                 return True
         return False
 
     def _handle_lost_assignment(self, now: float) -> bool:
-        """Detect lost assignment; return True if we scheduled reassign and should return early."""
         if (
             self._consumer._topics
             and not self._consumer.assignment()
@@ -678,6 +878,7 @@ class KafkaSubscriber:
             and since_assign > self._wait_after_assign_secs
             and not self._consumer._pending_reassign
         ):
+            session.log.warning("[kafka] watchdog: all_brokers_down -> rebootstrap")
             self._consumer.rebootstrap("all_brokers_down")
             self._sleep(0.01)
             return True
@@ -690,6 +891,11 @@ class KafkaSubscriber:
             and since_assign > self._wait_after_assign_secs
             and not self._consumer._pending_reassign
         ):
+            session.log.warning(
+                "[kafka] watchdog: no_stats age=%.3fs > %.3fs -> rebootstrap",
+                self._consumer.last_stats_age(),
+                self._no_stats_secs,
+            )
             self._consumer.rebootstrap("no_stats_heartbeat")
             self._sleep(0.01)
             return True
@@ -705,16 +911,22 @@ class KafkaSubscriber:
                 and no_progress_for > self._stuck_with_lag_secs
                 and not self._consumer._pending_reassign
             ):
+                session.log.warning(
+                    "[kafka] watchdog: stuck w/ lag total=%d no_progress_for=%.3fs -> rebootstrap",
+                    total_lag,
+                    no_progress_for,
+                )
                 self._consumer.rebootstrap("stuck_no_progress_despite_lag")
                 self._sleep(0.01)
                 return True
         return False
 
     def _handle_message_error(self, err) -> None:
-        """Mirror original per-message error handling (including auto-seek)."""
         try:
             code = err.code()
+            name = str(err.name() or "")
             if code == KafkaError._PARTITION_EOF:
+                session.log.debug("[kafka] msg-error: EOF")
                 return
             elif code == KafkaError._ALL_BROKERS_DOWN:
                 session.log.warning("[kafka-event] all brokers down (event)")
@@ -731,15 +943,24 @@ class KafkaSubscriber:
                     session.log.warning(
                         "[kafka] OFFSET_OUT_OF_RANGE: auto-seek executed"
                     )
-                    # Treat this as progress to avoid immediate reboot
+                    self._consumer.kick(times=2)
                     self._last_deliver_mono = self._now()
                 except Exception as e:
                     session.log.warning("[kafka] auto-seek failed: %r", e)
+            elif name in ("UNKNOWN_TOPIC_OR_PART", "_UNKNOWN_PARTITION") or code in (
+                3,
+                -190,
+            ):
+                session.log.warning(
+                    "[kafka] msg error: topic/partition missing; scheduling reassign+seek"
+                )
+                self._consumer._pending_reassign = True
+                self._consumer._need_seek_after_assign = True
             else:
                 session.log.warning(
                     "[kafka-msg-error] code=%s name=%s retriable=%s fatal=%s msg=%s",
                     code,
-                    err.name(),
+                    name,
                     err.retriable(),
                     err.fatal(),
                     err.str(),
@@ -748,7 +969,6 @@ class KafkaSubscriber:
             session.log.warning("[kafka-msg-error] %r", err)
 
     def _track_last_seen(self, msg) -> None:
-        """Update last-seen offsets for lag computation."""
         try:
             t = msg.topic()
             p = msg.partition()
@@ -757,16 +977,19 @@ class KafkaSubscriber:
             prev = self._last_seen.get(key, -1)
             if o is not None:
                 self._last_seen[key] = max(prev, int(o))
+            session.log.debug(
+                "[kafka] track: last_seen[%s,%d]=%s (prev=%s)",
+                t,
+                p,
+                self._last_seen.get(key),
+                prev,
+            )
         except Exception:
             pass
 
     def _consume_and_dispatch(
         self, now: float, since_assign: float, since_reboot_ok: bool
     ) -> bool:
-        """
-        Consume, handle errors, dispatch messages, manage idle backoff.
-        Return True if we triggered a reboot (and already slept/returned), else False.
-        """
         msgs = self._consumer.consume_batch(MAX_BATCH_SIZE, timeout_s=0.05)
         deliver: List[Tuple[Tuple[int, int], bytes]] = []
         had_error = False
@@ -794,6 +1017,7 @@ class KafkaSubscriber:
             self._idle_backoff = 0.01
             self._last_deliver_mono = now
             self._empty_reads = 0
+            session.log.debug("[kafka] deliver: n=%d", len(deliver))
             if self._messages_callback:
                 try:
                     self._messages_callback(deliver)
@@ -802,16 +1026,30 @@ class KafkaSubscriber:
         else:
             # No deliveries this cycle
             self._empty_reads += 1
-
-            # Escalate on repeated empty reads while stats say we have lag
             stats_lag = self._consumer._health.stats_total_lag
+
+            session.log.debug(
+                "[kafka] idle: empty_reads=%d idle_backoff=%.3f stats_lag=%d last_stats_age=%.3f pending_reassign=%s brokers_up=%d cgrp_up=%s",
+                self._empty_reads,
+                self._idle_backoff,
+                stats_lag,
+                self._consumer.last_stats_age(),
+                self._consumer._pending_reassign,
+                self._consumer.brokers_up(),
+                self._consumer._health.group_coordinator_state,
+            )
+
             if (
                 stats_lag >= self._min_lag_for_stuck
-                and self._empty_reads >= 40  # ~2–8s depending on backoff
+                and self._empty_reads >= 40
                 and since_reboot_ok
                 and since_assign > self._wait_after_assign_secs
                 and not self._consumer._pending_reassign
             ):
+                session.log.warning(
+                    "[kafka] watchdog: empty reads while stats lag=%d -> rebootstrap",
+                    stats_lag,
+                )
                 self._consumer.rebootstrap("stuck_empty_reads_with_stats_lag")
                 self._sleep(0.01)
                 return True
@@ -834,18 +1072,14 @@ class KafkaSubscriber:
     def tick(self):
         now = self._now()
 
-        # 0) Periodic metadata probe for partition changes
         self._periodic_partition_probe()
 
-        # 1) Deferred reassign
         if self._handle_pending_reassign():
             return
 
-        # 1.5) Detect lost assignment and request reassign
         if self._handle_lost_assignment(now):
             return
 
-        # 2) Watchdogs (cooldown via injected clock)
         since_assign, since_reboot_ok = self._timers(now)
 
         if self._watchdog_all_down(since_assign, since_reboot_ok):
@@ -854,16 +1088,13 @@ class KafkaSubscriber:
         if self._watchdog_no_stats(since_assign, since_reboot_ok):
             return
 
-        # 2.5) Lag watchdog (includes position-progress-as-progress)
         total_lag = self._compute_total_lag()
         if self._pos_progressed:
-            # treat forward movement as progress (even if we dropped messages)
             self._last_deliver_mono = now
 
         if self._watchdog_stuck_with_lag(total_lag, now, since_assign, since_reboot_ok):
             return
 
-        # 3) Consume
         if self._consume_and_dispatch(now, since_assign, since_reboot_ok):
             return
 
@@ -878,7 +1109,6 @@ class KafkaSubscriber:
 
 if __name__ == "__main__":
     # Simple test / demo
-    # make sure you have a local Kafka broker running with topic "data_topic"
     def print_messages(msgs):
         for ts, val in msgs:
             ttype, tval = ts
