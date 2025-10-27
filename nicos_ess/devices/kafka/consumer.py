@@ -513,6 +513,7 @@ class KafkaSubscriber:
 
         self._use_thread = use_thread
 
+    # ---------- Public API ----------
     def subscribe(
         self, topics: Sequence[str], messages_callback, no_messages_callback=None
     ):
@@ -555,18 +556,10 @@ class KafkaSubscriber:
     def consumer(self) -> KafkaConsumer:
         return self._consumer
 
-    # --------------------------
-    # Lag calculation
-    # --------------------------
+    # ---------- Lag calculation ----------
     def _compute_total_lag(self) -> int:
         """
         total_lag = Σ (high_watermark - position)
-        where:
-          - high_watermark is the broker's end offset (next produced)
-          - position is the consumer's next-to-fetch offset
-        Fallbacks:
-          - if position unavailable, use last_seen+1 if we have it
-          - else use low watermark (earliest available offset)
         Side-effect:
           - sets self._pos_progressed when positions advance
         """
@@ -644,24 +637,22 @@ class KafkaSubscriber:
         session.log.debug("[kafka] total lag computed: %d", total_lag)
         return total_lag
 
-    # --------------------------
-    # Main loop
-    # --------------------------
-    def tick(self):
-        now = self._now()
-
-        # 0) Periodic metadata probe for partition changes
+    # ---------- Private helpers used by tick() ----------
+    def _periodic_partition_probe(self):
         if not self._consumer._pending_reassign:
             self._consumer._maybe_refresh_partitions()
 
-        # 1) Deferred reassign
+    def _handle_pending_reassign(self) -> bool:
+        """Attempt pending reassign; return True if tick should return early."""
         if self._consumer._pending_reassign:
             assigned = self._consumer.try_reassign()
             if not assigned:
                 self._sleep(0.01)
-                return
+                return True
+        return False
 
-        # 1.5) Detect lost assignment and request reassign
+    def _handle_lost_assignment(self, now: float) -> bool:
+        """Detect lost assignment; return True if we scheduled reassign and should return early."""
         if (
             self._consumer._topics
             and not self._consumer.assignment()
@@ -670,14 +661,17 @@ class KafkaSubscriber:
             session.log.warning("[kafka] assignment lost; scheduling reassign")
             self._consumer._pending_reassign = True
             self._sleep(0.01)
-            return
+            return True
+        return False
 
-        # 2) Watchdogs (cooldown via injected clock)
+    def _timers(self, now: float) -> Tuple[float, bool]:
         since_assign = now - self._consumer._last_assign_mono
         since_reboot_ok = (
             now - self._consumer._last_rebootstrap_mono
         ) >= self._cooldown_secs
+        return since_assign, since_reboot_ok
 
+    def _watchdog_all_down(self, since_assign: float, since_reboot_ok: bool) -> bool:
         if (
             self._consumer.all_brokers_down_for() > self._all_down_secs
             and since_reboot_ok
@@ -686,8 +680,10 @@ class KafkaSubscriber:
         ):
             self._consumer.rebootstrap("all_brokers_down")
             self._sleep(0.01)
-            return
+            return True
+        return False
 
+    def _watchdog_no_stats(self, since_assign: float, since_reboot_ok: bool) -> bool:
         if (
             self._consumer.last_stats_age() > self._no_stats_secs
             and since_reboot_ok
@@ -696,16 +692,14 @@ class KafkaSubscriber:
         ):
             self._consumer.rebootstrap("no_stats_heartbeat")
             self._sleep(0.01)
-            return
+            return True
+        return False
 
-        # 2.5) Lag watchdog (includes position-progress-as-progress)
-        total_lag = self._compute_total_lag()
-        if self._pos_progressed:
-            # treat forward movement as progress (even if we dropped messages)
-            self._last_deliver_mono = now
-
-        no_progress_for = now - self._last_deliver_mono
+    def _watchdog_stuck_with_lag(
+        self, total_lag: int, now: float, since_assign: float, since_reboot_ok: bool
+    ) -> bool:
         if since_reboot_ok and since_assign > self._wait_after_assign_secs:
+            no_progress_for = now - self._last_deliver_mono
             if (
                 total_lag >= self._min_lag_for_stuck
                 and no_progress_for > self._stuck_with_lag_secs
@@ -713,12 +707,70 @@ class KafkaSubscriber:
             ):
                 self._consumer.rebootstrap("stuck_no_progress_despite_lag")
                 self._sleep(0.01)
-                return
+                return True
+        return False
 
-        # 3) Consume
+    def _handle_message_error(self, err) -> None:
+        """Mirror original per-message error handling (including auto-seek)."""
+        try:
+            code = err.code()
+            if code == KafkaError._PARTITION_EOF:
+                return
+            elif code == KafkaError._ALL_BROKERS_DOWN:
+                session.log.warning("[kafka-event] all brokers down (event)")
+            elif code == KafkaError._OFFSET_OUT_OF_RANGE:
+                try:
+                    if self._consumer._starting_offset.lower() in (
+                        "earliest",
+                        "beginning",
+                        "smallest",
+                    ):
+                        self._consumer.seek_to_beginning()
+                    else:
+                        self._consumer.seek_to_end()
+                    session.log.warning(
+                        "[kafka] OFFSET_OUT_OF_RANGE: auto-seek executed"
+                    )
+                    # Treat this as progress to avoid immediate reboot
+                    self._last_deliver_mono = self._now()
+                except Exception as e:
+                    session.log.warning("[kafka] auto-seek failed: %r", e)
+            else:
+                session.log.warning(
+                    "[kafka-msg-error] code=%s name=%s retriable=%s fatal=%s msg=%s",
+                    code,
+                    err.name(),
+                    err.retriable(),
+                    err.fatal(),
+                    err.str(),
+                )
+        except Exception:
+            session.log.warning("[kafka-msg-error] %r", err)
+
+    def _track_last_seen(self, msg) -> None:
+        """Update last-seen offsets for lag computation."""
+        try:
+            t = msg.topic()
+            p = msg.partition()
+            o = msg.offset()
+            key = (t, p)
+            prev = self._last_seen.get(key, -1)
+            if o is not None:
+                self._last_seen[key] = max(prev, int(o))
+        except Exception:
+            pass
+
+    def _consume_and_dispatch(
+        self, now: float, since_assign: float, since_reboot_ok: bool
+    ) -> bool:
+        """
+        Consume, handle errors, dispatch messages, manage idle backoff.
+        Return True if we triggered a reboot (and already slept/returned), else False.
+        """
         msgs = self._consumer.consume_batch(MAX_BATCH_SIZE, timeout_s=0.05)
         deliver: List[Tuple[Tuple[int, int], bytes]] = []
         had_error = False
+
         for m in msgs:
             if m is None:
                 continue
@@ -726,56 +778,14 @@ class KafkaSubscriber:
                 err = m.error()
             except Exception:
                 err = None
+
             if err:
                 had_error = True
-                try:
-                    code = err.code()
-                    if code == KafkaError._PARTITION_EOF:
-                        pass
-                    elif code == KafkaError._ALL_BROKERS_DOWN:
-                        session.log.warning("[kafka-event] all brokers down (event)")
-                    elif code == KafkaError._OFFSET_OUT_OF_RANGE:
-                        # Auto-recover per starting_offset policy
-                        try:
-                            if self._consumer._starting_offset.lower() in (
-                                "earliest",
-                                "beginning",
-                                "smallest",
-                            ):
-                                self._consumer.seek_to_beginning()
-                            else:
-                                self._consumer.seek_to_end()
-                            session.log.warning(
-                                "[kafka] OFFSET_OUT_OF_RANGE: auto-seek executed"
-                            )
-                            # Treat this as progress to avoid immediate reboot
-                            self._last_deliver_mono = self._now()
-                        except Exception as e:
-                            session.log.warning("[kafka] auto-seek failed: %r", e)
-                    else:
-                        session.log.warning(
-                            "[kafka-msg-error] code=%s name=%s retriable=%s fatal=%s msg=%s",
-                            code,
-                            err.name(),
-                            err.retriable(),
-                            err.fatal(),
-                            err.str(),
-                        )
-                except Exception:
-                    session.log.warning("[kafka-msg-error] %r", err)
+                self._handle_message_error(err)
                 continue
+
             try:
-                # Track last seen offsets for lag computation
-                try:
-                    t = m.topic()
-                    p = m.partition()
-                    o = m.offset()
-                    key = (t, p)
-                    prev = self._last_seen.get(key, -1)
-                    if o is not None:
-                        self._last_seen[key] = max(prev, int(o))
-                except Exception:
-                    pass
+                self._track_last_seen(m)
                 deliver.append((m.timestamp(), m.value()))
             except Exception:
                 continue
@@ -804,7 +814,7 @@ class KafkaSubscriber:
             ):
                 self._consumer.rebootstrap("stuck_empty_reads_with_stats_lag")
                 self._sleep(0.01)
-                return
+                return True
 
             if self._no_messages_callback and (now - self._last_no_msg_cb) > 0.1:
                 try:
@@ -817,6 +827,45 @@ class KafkaSubscriber:
                 0.2, self._idle_backoff * (1.5 if not had_error else 1.0)
             )
             self._sleep(self._idle_backoff)
+
+        return False
+
+    # ---------- Main loop ----------
+    def tick(self):
+        now = self._now()
+
+        # 0) Periodic metadata probe for partition changes
+        self._periodic_partition_probe()
+
+        # 1) Deferred reassign
+        if self._handle_pending_reassign():
+            return
+
+        # 1.5) Detect lost assignment and request reassign
+        if self._handle_lost_assignment(now):
+            return
+
+        # 2) Watchdogs (cooldown via injected clock)
+        since_assign, since_reboot_ok = self._timers(now)
+
+        if self._watchdog_all_down(since_assign, since_reboot_ok):
+            return
+
+        if self._watchdog_no_stats(since_assign, since_reboot_ok):
+            return
+
+        # 2.5) Lag watchdog (includes position-progress-as-progress)
+        total_lag = self._compute_total_lag()
+        if self._pos_progressed:
+            # treat forward movement as progress (even if we dropped messages)
+            self._last_deliver_mono = now
+
+        if self._watchdog_stuck_with_lag(total_lag, now, since_assign, since_reboot_ok):
+            return
+
+        # 3) Consume
+        if self._consume_and_dispatch(now, since_assign, since_reboot_ok):
+            return
 
     def _monitor_topics(self):
         while not self._stop_event.is_set():
