@@ -65,6 +65,12 @@ class ThermoStatedCellHolder(MultiSwitcher):
             userparam=False,
             settable=False,
         ),
+        "nexus_config": Param(
+            "Nexus structure group definition",
+            type=listof(dictof(str, anytype)),
+            default=[],
+            userparam=False,
+        ),
     }
 
     parameter_overrides = {
