@@ -8,7 +8,7 @@ OFFSET_INVALID = -1001  # rd_kafka.h: RD_KAFKA_OFFSET_INVALID
 
 class _ClusterState:
     def __init__(self):
-        self.messages = {}  # {topic: {partition: [Message,...]}}
+        self.messages = {}
         self.metadata = Metadata()
 
 
@@ -89,14 +89,14 @@ class Metadata:
 
 
 class ConsumerStub:
-    _clusters = {}  # class-level: {cluster_id: _ClusterState}
+    _clusters = {}
 
     def __init__(self, config={"auto.offset.reset": "earliest"}):
         self.config = config
-        self.messages = {}  # {topic: {partition: [Message,...]}}
-        self.current_offsets = {}  # {topic: {partition: int}}
-        self._pos_known = {}  # {topic: {partition: bool}}
-        self.assigned_partitions = []  # [TopicPartition,...]
+        self.messages = {}
+        self.current_offsets = {}
+        self._pos_known = {}
+        self.assigned_partitions = []
         self._metadata = Metadata()
         self.poll_index = 0
         self._closed = False
@@ -117,7 +117,6 @@ class ConsumerStub:
         """Nuke all clusters (useful if you want a global reset)."""
         cls._clusters.clear()
 
-    # ------------ Test helpers ------------
     def add_message(self, topic, partition, offset, key, value, error=None):
         self.messages.setdefault(topic, {}).setdefault(partition, []).append(
             Message(topic, partition, offset, key, value, error)
@@ -137,7 +136,6 @@ class ConsumerStub:
             self.current_offsets[topic_name].setdefault(p, 0)
             self._pos_known[topic_name].setdefault(p, False)
 
-    # ---------- core API ----------
     def poll(self, timeout=None):
         if self._closed:
             raise RuntimeError("Consumer is closed")

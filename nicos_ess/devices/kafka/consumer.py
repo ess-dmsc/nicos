@@ -35,6 +35,25 @@ PARTITION_PROBE_INTERVAL_SECS = 10.0
 
 @dataclass
 class _Health:
+    """Internal container for health/telemetry derived from librdkafka `stats_cb`.
+
+    Attributes
+    ----------
+    last_stats_mono:
+        Monotonic timestamp (seconds) of the last received stats payload.
+    all_down_since:
+        Monotonic timestamp when all brokers first appeared DOWN, or None.
+    brokers_state:
+        Mapping of broker-id/host to string state (e.g. "UP", "DOWN").
+    group_coordinator_state:
+        Consumer group coordinator state, normalized to upper-case (e.g. "UP").
+    stats_total_lag:
+        Sum of per-partition lags as reported by stats.
+    stats_by_tp:
+        Per-topic/partition dictionary with keys like ('topic', part) and
+        values including `lag` and optional `fetch_state`.
+    """
+
     last_stats_mono: float = time.monotonic()
     all_down_since: Optional[float] = None
     brokers_state: dict = None
@@ -45,15 +64,18 @@ class _Health:
     )
 
     def __post_init__(self):
+        """Initialize default mutable fields."""
         if self.brokers_state is None:
             self.brokers_state = {}
         if self.stats_by_tp is None:
             self.stats_by_tp = {}
 
     def brokers_up(self) -> int:
+        """Return the number of brokers currently reported as UP."""
         return sum(1 for s in self.brokers_state.values() if s == "UP")
 
     def group_coordinator_up(self) -> bool:
+        """Return True if the consumer group coordinator is reported as UP."""
         return self.group_coordinator_state == "UP"
 
 
@@ -64,6 +86,23 @@ class KafkaConsumer:
     def create(
         brokers: Sequence[str], starting_offset: str = "latest", **options
     ) -> "KafkaConsumer":
+        """Factory for :class:`KafkaConsumer` with SASL options injected.
+
+        Parameters
+        ----------
+        brokers:
+            Iterable of broker addresses (e.g. ``["host:9092"]``).
+        starting_offset:
+            Initial offset policy for new assignments; typically
+            ``"earliest"`` or ``"latest"``.
+        **options:
+            Additional librdkafka configuration entries.
+
+        Returns
+        -------
+        KafkaConsumer
+            A configured consumer wrapper instance.
+        """
         options = {**options, **create_sasl_config()}
         return KafkaConsumer(brokers, starting_offset, **options)
 
@@ -82,6 +121,32 @@ class KafkaConsumer:
         on_rebootstrap: Optional[Callable[[str], None]] = None,
         **options,
     ):
+        """Create a consumer wrapper.
+
+        Parameters
+        ----------
+        brokers:
+            Iterable of bootstrap broker endpoints.
+        starting_offset:
+            Initial offset policy for assignments (``"earliest"``/``"latest"``).
+        consumer_factory:
+            Callable that receives the merged config dict and returns a
+            confluent-kafka Consumer-like object. Used for DI/testing.
+        topic_partition_factory:
+            Callable used to construct ``TopicPartition`` objects.
+        now:
+            Monotonic clock function (seconds); used for timers.
+        sleep:
+            Sleep function; used for backoffs and jitter.
+        rand_uniform:
+            RNG function taking ``(low, high)`` and returning a float; used for jitter.
+        on_rebootstrap:
+            Optional callback invoked with a string reason whenever a reboot
+            is performed.
+        **options:
+            Additional librdkafka configuration entries merged into the base
+            configuration.
+        """
         self._brokers = list(brokers)
         self._starting_offset = starting_offset
         self._user_options = dict(options)
@@ -135,14 +200,35 @@ class KafkaConsumer:
     # Health helpers
     # --------------------------
     def brokers_up(self) -> int:
+        """Return the number of brokers that are currently reported as UP.
+
+        Returns
+        -------
+        int
+            Count of brokers in ``"UP"`` state according to last stats.
+        """
         return self._health.brokers_up()
 
     def all_brokers_down_for(self) -> float:
+        """Return the duration (seconds) that all brokers have been DOWN.
+
+        Returns
+        -------
+        float
+            Seconds since all brokers down, or ``0.0`` if not currently all DOWN.
+        """
         if self._health.all_down_since is None:
             return 0.0
         return max(0.0, self._now() - self._health.all_down_since)
 
     def last_stats_age(self) -> float:
+        """Return the age (seconds) of the last received statistics payload.
+
+        Returns
+        -------
+        float
+            Age in seconds (monotonic), ``0.0`` if called at the same instant.
+        """
         return max(0.0, self._now() - self._health.last_stats_mono)
 
     # --------------------------
@@ -151,6 +237,7 @@ class KafkaConsumer:
     def _can_fetch_metadata(
         self, topic: Optional[str] = None, timeout_s: float = 1.0
     ) -> bool:
+        """Best-effort probe to see if metadata is retrievable."""
         try:
             with self._lock:
                 _ = self._consumer.list_topics(
@@ -195,6 +282,22 @@ class KafkaConsumer:
             session.log.debug("[kafka] metadata probe failed: %r", e)
 
     def try_reassign(self) -> bool:
+        """Attempt to (re)assign partitions for the current set of topics.
+
+        This method:
+        - Fetches cluster metadata,
+        - Verifies each subscribed topic exists with at least one partition,
+        - Assigns all discovered topic/partition pairs,
+        - Optionally resumes the assignment (best-effort),
+        - Performs a post-assign seek when flagged,
+        - "Kicks" the consumer to establish fetch sessions.
+
+        Returns
+        -------
+        bool
+            ``True`` if a new assignment was applied (or there are no topics);
+            ``False`` if metadata isn't ready yet or assignment was deferred.
+        """
         if not self._topics:
             self._pending_reassign = False
             return True
@@ -286,6 +389,7 @@ class KafkaConsumer:
     # Callbacks
     # --------------------------
     def _on_error(self, err):
+        """Internal error callback: logs details and may trigger rebootstrap."""
         try:
             code = err.code()
             name = str(err.name() or "")
@@ -315,6 +419,7 @@ class KafkaConsumer:
             session.log.warning("[kafka-error] %r", err)
 
     def _on_stats(self, stats_json: str):
+        """Internal stats callback: parse JSON and update health metrics."""
         self._health.last_stats_mono = self._now()
         try:
             data = json.loads(stats_json)
@@ -366,6 +471,18 @@ class KafkaConsumer:
     # Control plane
     # --------------------------
     def subscribe(self, topics: Sequence[str]):
+        """Assign all partitions of the given topics.
+
+        Parameters
+        ----------
+        topics:
+            Sequence of topic names to consume (manual assignment).
+
+        Raises
+        ------
+        ConfigurationError
+            If metadata cannot be obtained or a provided topic is missing/errored.
+        """
         with self._lock:
             try:
                 md = self._consumer.list_topics(None, timeout=5)
@@ -406,6 +523,20 @@ class KafkaConsumer:
         self._log_assignment_debug("post-subscribe")
 
     def rebootstrap(self, reason: str = ""):
+        """Close and recreate the underlying consumer and (re)subscribe.
+
+        Parameters
+        ----------
+        reason:
+            A short string describing why the reboot is happening; forwarded
+            to the optional `on_rebootstrap` callback.
+
+        Notes
+        -----
+        - Applies a short random jitter before re-creating the consumer.
+        - If re-subscription fails, sets a pending reassign flag to be handled
+          by the higher-level subscriber.
+        """
         if self._on_rebootstrap:
             try:
                 self._on_rebootstrap(reason)
@@ -445,6 +576,7 @@ class KafkaConsumer:
         self._last_rebootstrap_mono = self._now()
 
     def unsubscribe(self):
+        """Best-effort unsubscribe from all assignments."""
         with self._lock:
             try:
                 session.log.debug("[kafka] unsubscribe()")
@@ -456,11 +588,30 @@ class KafkaConsumer:
     # Data plane
     # --------------------------
     def poll(self, timeout_ms: int = 5):
+        """Poll a single message.
+
+        Parameters
+        ----------
+        timeout_ms:
+            Maximum time to block waiting for a message, milliseconds.
+
+        Returns
+        -------
+        object | None
+            A message-like object from the underlying consumer, or ``None`` if
+            no message is available.
+        """
         with self._lock:
             return self._consumer.poll(timeout_ms / 1000.0)
 
     def kick(self, times: int = 1):
-        """Poll(0) a few times to nudge librdkafka to establish fetch sessions."""
+        """Poll(0) a few times to nudge librdkafka to establish fetch sessions.
+
+        Parameters
+        ----------
+        times:
+            Number of zero-timeout polls to perform (minimum 1).
+        """
         for i in range(max(1, int(times))):
             try:
                 _ = self.poll(0)
@@ -468,6 +619,20 @@ class KafkaConsumer:
                 session.log.debug("[kafka] kick poll(0) failed: %r", e)
 
     def consume_batch(self, max_messages: int = MAX_BATCH_SIZE, timeout_s: float = 0.2):
+        """Consume up to ``max_messages`` messages.
+
+        Parameters
+        ----------
+        max_messages:
+            Maximum number of messages to return. ``<=0`` returns an empty list.
+        timeout_s:
+            Per-call timeout in seconds for the underlying consumer.
+
+        Returns
+        -------
+        list
+            List of message-like objects (possibly empty).
+        """
         if max_messages <= 0:
             return []
         with self._lock:
@@ -480,6 +645,7 @@ class KafkaConsumer:
                 return []
 
     def close(self):
+        """Close the underlying consumer (idempotent)."""
         with self._lock:
             try:
                 session.log.debug("[kafka] close()")
@@ -488,14 +654,40 @@ class KafkaConsumer:
                 pass
 
     def topics(self, timeout_s: float = 5) -> List[str]:
+        """Return the list of known topic names.
+
+        Parameters
+        ----------
+        timeout_s:
+            Metadata request timeout in seconds.
+
+        Returns
+        -------
+        list[str]
+            Topic names from the broker metadata.
+        """
         with self._lock:
             return list(self._consumer.list_topics(timeout=timeout_s).topics)
 
     def seek(self, topic_name: str, partition: int, offset: int, timeout_s: float = 5):
+        """Seek a single topic/partition to a specific offset.
+
+        Parameters
+        ----------
+        topic_name:
+            Topic to seek.
+        partition:
+            Partition id to seek.
+        offset:
+            Target offset (or ``OFFSET_BEGINNING``/``OFFSET_END``).
+        timeout_s:
+            Maximum time in seconds to complete the seek (with retries).
+        """
         tp = self._tp_factory(topic_name, partition, offset)
         self._seek([tp], timeout_s)
 
     def _seek(self, partitions: Sequence[TopicPartition], timeout_s: float):
+        """Internal multi-partition seek with retries until the deadline."""
         deadline = self._now() + max(0.0, timeout_s)
         remaining = set((tp.topic, tp.partition, tp.offset) for tp in partitions)
         last_err: Optional[Exception] = None
@@ -522,10 +714,24 @@ class KafkaConsumer:
             )
 
     def assignment(self) -> List[TopicPartition]:
+        """Return the current partition assignment.
+
+        Returns
+        -------
+        list[TopicPartition]
+            A list of assigned topic/partitions (possibly empty).
+        """
         with self._lock:
             return self._consumer.assignment()
 
     def seek_to_end(self, timeout_s: float = 5):
+        """Seek all assigned partitions to ``OFFSET_END``.
+
+        Parameters
+        ----------
+        timeout_s:
+            Maximum time in seconds to complete the seeks.
+        """
         with self._lock:
             partitions = self._consumer.assignment()
         for tp in partitions:
@@ -533,6 +739,13 @@ class KafkaConsumer:
         self._seek(partitions, timeout_s)
 
     def seek_to_beginning(self, timeout_s: float = 5):
+        """Seek all assigned partitions to ``OFFSET_BEGINNING``.
+
+        Parameters
+        ----------
+        timeout_s:
+            Maximum time in seconds to complete the seeks.
+        """
         with self._lock:
             partitions = self._consumer.assignment()
         for tp in partitions:
@@ -551,6 +764,7 @@ class KafkaConsumer:
     # Debug helpers
     # --------------------------
     def _log_assignment_debug(self, prefix: str):
+        """Log useful debug information about the current assignment."""
         try:
             with self._lock:
                 assigned = self._consumer.assignment()
@@ -603,7 +817,7 @@ class KafkaConsumer:
             session.log.debug("[kafka] _log_assignment_debug failed: %r", e)
 
     def _maybe_post_assign_seek(self):
-        """If we flagged a seek after reassign/subscribe (e.g., topic recreation), do it once."""
+        """If flagged, perform a one-time seek after (re)assignment."""
         if not self._need_seek_after_assign:
             return
         try:
@@ -657,6 +871,33 @@ class KafkaSubscriber:
         sleep: Callable[[float], None] = time.sleep,
         use_thread: bool = True,
     ):
+        """Create a :class:`KafkaSubscriber`.
+
+        Parameters
+        ----------
+        brokers:
+            Optional list of broker addresses; used if `consumer` is not provided.
+        consumer:
+            Pre-built :class:`KafkaConsumer` instance for dependency injection.
+        no_stats_secs:
+            Threshold (seconds) after which missing stats triggers a reboot.
+        all_down_secs:
+            Threshold (seconds) after which brokers DOWN triggers a reboot.
+        cooldown_secs:
+            Minimum time between reboots.
+        wait_after_assign_secs:
+            Grace period after assignment before watchdogs can trigger.
+        stuck_with_lag_secs:
+            Time without deliveries (with lag present) that triggers a reboot.
+        min_lag_for_stuck:
+            Minimum lag required to consider the consumer "stuck".
+        now:
+            Monotonic clock function (seconds).
+        sleep:
+            Sleep function.
+        use_thread:
+            If True, start a background thread; otherwise call :meth:`tick` manually.
+        """
         if consumer is not None:
             self._consumer = consumer
         elif brokers is not None:
@@ -693,6 +934,22 @@ class KafkaSubscriber:
     def subscribe(
         self, topics: Sequence[str], messages_callback, no_messages_callback=None
     ):
+        """Subscribe to topics and start (or prepare) the polling loop.
+
+        Parameters
+        ----------
+        topics:
+            Sequence of topic names to consume from.
+        messages_callback:
+            Callable that receives a list of ``((ts_type, ts_val), value_bytes)`` tuples.
+        no_messages_callback:
+            Optional callable invoked periodically while idle.
+
+        Notes
+        -----
+        If ``use_thread`` was True during construction, this also spawns the
+        background polling thread. Otherwise, call :meth:`tick` repeatedly.
+        """
         self.stop_consuming(True)
 
         self._consumer.unsubscribe()
@@ -716,20 +973,39 @@ class KafkaSubscriber:
             )
 
     def stop_consuming(self, wait_for_join: bool = False):
+        """Signal the polling loop to stop; optionally wait for thread join.
+
+        Parameters
+        ----------
+        wait_for_join:
+            If True, block until the background thread exits (if running).
+        """
         self._stop_event.set()
         if wait_for_join and self._polling_thread:
             self._polling_thread.join()
 
     def close(self):
+        """Stop consuming and close the underlying consumer."""
         self.stop_consuming(True)
         self._consumer.close()
 
     @property
     def consumer(self) -> KafkaConsumer:
+        """Access the underlying :class:`KafkaConsumer` instance."""
         return self._consumer
 
     # ---------- Lag calculation ----------
     def _compute_total_lag(self) -> int:
+        """Compute total lag across the current assignment.
+
+        Prefers stats-based lag if recent and complete; otherwise falls back to
+        watermark- and position-based estimation.
+
+        Returns
+        -------
+        int
+            Aggregate lag (non-negative integer).
+        """
         total_lag = 0
         progressed = False
         try:
@@ -838,10 +1114,12 @@ class KafkaSubscriber:
 
     # ---------- Private helpers used by tick() ----------
     def _periodic_partition_probe(self):
+        """Occasionally probe metadata to detect partition-count changes."""
         if not self._consumer._pending_reassign:
             self._consumer._maybe_refresh_partitions()
 
     def _handle_pending_reassign(self) -> bool:
+        """If a reassign is pending, try it and possibly sleep/return early."""
         if self._consumer._pending_reassign:
             assigned = self._consumer.try_reassign()
             if not assigned:
@@ -853,6 +1131,7 @@ class KafkaSubscriber:
         return False
 
     def _handle_lost_assignment(self, now: float) -> bool:
+        """Detect lost assignment after grace and schedule a reassign."""
         if (
             self._consumer._topics
             and not self._consumer.assignment()
@@ -865,6 +1144,7 @@ class KafkaSubscriber:
         return False
 
     def _timers(self, now: float) -> Tuple[float, bool]:
+        """Compute time since last assign and whether reboot cooldown passed."""
         since_assign = now - self._consumer._last_assign_mono
         since_reboot_ok = (
             now - self._consumer._last_rebootstrap_mono
@@ -872,6 +1152,7 @@ class KafkaSubscriber:
         return since_assign, since_reboot_ok
 
     def _watchdog_all_down(self, since_assign: float, since_reboot_ok: bool) -> bool:
+        """Rebootstrap if all brokers have been DOWN for too long."""
         if (
             self._consumer.all_brokers_down_for() > self._all_down_secs
             and since_reboot_ok
@@ -885,6 +1166,7 @@ class KafkaSubscriber:
         return False
 
     def _watchdog_no_stats(self, since_assign: float, since_reboot_ok: bool) -> bool:
+        """Rebootstrap if stats have not arrived within the configured window."""
         if (
             self._consumer.last_stats_age() > self._no_stats_secs
             and since_reboot_ok
@@ -904,6 +1186,7 @@ class KafkaSubscriber:
     def _watchdog_stuck_with_lag(
         self, total_lag: int, now: float, since_assign: float, since_reboot_ok: bool
     ) -> bool:
+        """Rebootstrap if there is lag and no progress for a sustained period."""
         if since_reboot_ok and since_assign > self._wait_after_assign_secs:
             no_progress_for = now - self._last_deliver_mono
             if (
@@ -922,6 +1205,7 @@ class KafkaSubscriber:
         return False
 
     def _handle_message_error(self, err) -> None:
+        """Process a per-message error; may seek or schedule reassign."""
         try:
             code = err.code()
             name = str(err.name() or "")
@@ -969,6 +1253,7 @@ class KafkaSubscriber:
             session.log.warning("[kafka-msg-error] %r", err)
 
     def _track_last_seen(self, msg) -> None:
+        """Update the 'last seen' offset for the message's topic/partition."""
         try:
             t = msg.topic()
             p = msg.partition()
@@ -990,6 +1275,14 @@ class KafkaSubscriber:
     def _consume_and_dispatch(
         self, now: float, since_assign: float, since_reboot_ok: bool
     ) -> bool:
+        """Consume a batch and dispatch to callbacks; handle idle behavior.
+
+        Returns
+        -------
+        bool
+            True if a watchdog action (rebootstrap) was taken and the caller
+            should return early; False otherwise.
+        """
         msgs = self._consumer.consume_batch(MAX_BATCH_SIZE, timeout_s=0.05)
         deliver: List[Tuple[Tuple[int, int], bytes]] = []
         had_error = False
@@ -1070,6 +1363,7 @@ class KafkaSubscriber:
 
     # ---------- Main loop ----------
     def tick(self):
+        """Execute a single iteration of the subscriber state machine."""
         now = self._now()
 
         self._periodic_partition_probe()
@@ -1099,6 +1393,7 @@ class KafkaSubscriber:
             return
 
     def _monitor_topics(self):
+        """Background thread target that repeatedly calls :meth:`tick`."""
         while not self._stop_event.is_set():
             try:
                 self.tick()
@@ -1108,22 +1403,28 @@ class KafkaSubscriber:
 
 
 if __name__ == "__main__":
-    # Simple test / demo
+    # Simple test / demo, make sure you have a local Kafka broker running
+    # with a topic "data_topic" producing some data.
     def print_messages(msgs):
+        """Demo callback that prints message timestamps and lengths."""
         for ts, val in msgs:
             ttype, tval = ts
             print(f"msg ts={ttype}:{tval} len={len(val) if val is not None else 0}")
 
     def print_no_messages():
+        """Demo no-messages callback (no-op)."""
         pass
 
     def create_sasl_config():
+        """Demo SASL config provider (no-op)."""
         return {}
 
     # override logging for local testing
     import logging
 
     class session:
+        """Demo session logger shim."""
+
         log = logging.getLogger("kafka_consumer_demo")
         log.setLevel(logging.DEBUG)
         ch = logging.StreamHandler()
