@@ -4,6 +4,10 @@ main_window = docked(
     tabbed(
         ("Experiment", panel("nicos_ess.gui.panels.exp_panel.ExpPanel")),
         ("Setup", panel("nicos_ess.gui.panels.setups.SetupsPanel")),
+        (
+            "Sample Configuration",
+            panel("nicos_ess.loki.gui.sample_holder_config.LokiSampleHolderPanel"),
+        ),
         ("  ", panel("nicos_ess.gui.panels.empty.EmptyPanel")),
         (
             "Instrument interaction",
