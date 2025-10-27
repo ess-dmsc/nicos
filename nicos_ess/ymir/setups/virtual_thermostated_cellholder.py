@@ -12,7 +12,7 @@ devices = dict(
         curvalue=0,
         unit="mm",
         speed=5.0,
-        visibility=(),
+        # visibility=(),
     ),
     cellholder_x_motor=device(
         "nicos.devices.generic.virtual.VirtualMotor",
@@ -23,7 +23,7 @@ devices = dict(
         curvalue=0,
         unit="mm",
         speed=5.0,
-        visibility=(),
+        # visibility=(),
     ),
     thermostated_cellholder=device(
         "nicos_ess.loki.devices.thermostated_cellholder.ThermoStatedCellHolder",
