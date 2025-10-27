@@ -12,7 +12,7 @@ devices = dict(
         curvalue=0,
         unit="mm",
         speed=5.0,
-        visibility=(),
+        # visibility=(),
     ),
     cellholder_x_motor=device(
         "nicos.devices.generic.virtual.VirtualMotor",
@@ -23,7 +23,7 @@ devices = dict(
         curvalue=0,
         unit="mm",
         speed=5.0,
-        visibility=(),
+        # visibility=(),
     ),
     thermostated_cellholder=device(
         "nicos_ess.loki.devices.thermostated_cellholder.ThermoStatedCellHolder",
@@ -31,5 +31,16 @@ devices = dict(
         xmotor="cellholder_x_motor",
         ymotor="cellholder_y_motor",
         precision=[0.05, 0.05],
+        nexus_config=[
+            {
+                "group_name": "thermostated_sample_holder",
+                "nx_class": "NXcollection",
+                "units": "",
+                "suffix": "readback",
+                "schema": "f144",
+                "topic": "ymir_motion",
+                "dataset_type": "static_read",
+            },
+        ],
     ),
 )
