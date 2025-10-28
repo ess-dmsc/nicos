@@ -67,7 +67,7 @@ devices = dict(
         readpv="{}VolumeRemaining-R".format(pv_root),
     ),
     pump_status=device(
-        "nicos_ess.devices.epics.pva.EpicsStringReadable",
+        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The current operational state of the device",
         readpv="{}Status-R".format(pv_root),
     ),
