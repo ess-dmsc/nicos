@@ -78,6 +78,5 @@ devices = dict(
         pollinterval=None,
         monitor=True,
         pva=True,
-        status="pump_status",
     ),
 )
