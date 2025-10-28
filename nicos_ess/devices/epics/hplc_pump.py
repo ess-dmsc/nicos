@@ -27,10 +27,10 @@ class HPLCPumpController(EpicsParameters, MappedMoveable):
     """
     HPLC pump controller (EPICS PVA).
 
-    - Commands via MappedMoveable values: start / volume_start / time_start / stop
-    - `run_started` tracks transitional 'starting' phase
-    - No attached status device; we derive everything from PVs
-    - `Status-R` is an mbbi; we cache/operate on its **string** choice
+    - Commands via MappedMoveable values: start / volume_start / time_start / stop.
+    - `run_started` tracks the transitional 'starting' phase until IOC leaves "Off".
+    - No attached status device: derive state from EPICS PVs directly.
+    - Normalize mbbi records (Status-R, Error-R) to **strings** in the cache.
     """
 
     parameters = {
@@ -58,14 +58,16 @@ class HPLCPumpController(EpicsParameters, MappedMoveable):
     }
 
     _STATE_OFF = "Off"
-    _STATE_PUMPING = "Pumping"  # expected 'running' state from the IOC
+    _STATE_PUMPING = "Pumping"  # for the guard waiter; BUSY is any != "Off"
 
     def doPreinit(self, mode):
         self._record_fields = {
-            "error": RecordInfo("error", "Error-R", RecordType.STATUS),
+            # Use BOTH for Error-R so we can read its enum value (not only alarm)
+            "error": RecordInfo("error", "Error-R", RecordType.BOTH),
             "error_text": RecordInfo("error_text", "ErrorText-R", RecordType.VALUE),
             "reset_error": RecordInfo("reset_error", "ErrorReset-S", RecordType.VALUE),
-            "run_status": RecordInfo("run_status", "Status-R", RecordType.BOTH),  # mbbi
+            # mbbi with human-readable choices
+            "run_status": RecordInfo("run_status", "Status-R", RecordType.BOTH),
             "set_pressure_max": RecordInfo(
                 "set_pressure_max", "PressureMax-S", RecordType.VALUE
             ),
@@ -91,18 +93,16 @@ class HPLCPumpController(EpicsParameters, MappedMoveable):
         self._epics_subscriptions = []
         self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
 
-        # connect canary for connection-state messages
-        self._epics_wrapper.connect_pv(
-            f"{self.pv_root}{self._record_fields['error_text'].pv_suffix}"
-        )
-        # we will read choices from this mbbi PV, so connect early
+        # Connect PVs we rely on for connection messages and choices
+        self._epics_wrapper.connect_pv(self._pv("error_text"))
         self._epics_wrapper.connect_pv(self._pv("run_status"))
+        self._epics_wrapper.connect_pv(self._pv("error"))
 
-        # mbbi choice list (index -> str)
-        self._run_status_choices = None  # list[str] or None
+        # enum choice caches
+        self._run_status_choices = []
+        self._error_choices = []
 
     def doInit(self, mode):
-        # Commands exposed to MappedMoveable
         self._commands = {
             "start": self.start_pump,
             "volume_start": self.volume_start,
@@ -113,15 +113,15 @@ class HPLCPumpController(EpicsParameters, MappedMoveable):
             "mapping", {cmd: i for i, cmd in enumerate(self._commands.keys())}
         )
 
-        # load mbbi choices once
-        self._refresh_run_status_choices()
+        # Load enum choices once
+        self._refresh_choices()
 
         MappedMoveable.doInit(self, mode)
         self.valuetype = oneof(*self._commands.keys())
 
         if session.sessiontype == POLLER and self.monitor:
             for k, info in self._record_fields.items():
-                full_pv = f"{self.pv_root}{info.pv_suffix}"
+                full_pv = self._pv(k)
                 if info.record_type in (RecordType.VALUE, RecordType.BOTH):
                     self._epics_subscriptions.append(
                         self._epics_wrapper.subscribe(
@@ -144,7 +144,7 @@ class HPLCPumpController(EpicsParameters, MappedMoveable):
     def doPrepare(self):
         self._update_status(status.OK, "")
 
-    # ---------------- EPICS helpers
+    # ---------------- helpers
 
     def _pv(self, key: str) -> str:
         return f"{self.pv_root}{self._record_fields[key].pv_suffix}"
@@ -165,61 +165,66 @@ class HPLCPumpController(EpicsParameters, MappedMoveable):
     def _update_status(self, new_status, message):
         self._cache.put(self._name, "status", (new_status, message), time.time())
 
-    # ---------------- mbbi handling
-
-    def _refresh_run_status_choices(self):
+    def _refresh_choices(self):
         try:
             self._run_status_choices = (
                 self._epics_wrapper.get_value_choices(self._pv("run_status")) or []
             )
         except Exception:
             self._run_status_choices = []
+        try:
+            self._error_choices = (
+                self._epics_wrapper.get_value_choices(self._pv("error")) or []
+            )
+        except Exception:
+            self._error_choices = []
 
-    def _map_run_status(self, value):
-        """Normalize run_status to a string, using mbbi choices if value is int."""
-        if isinstance(value, int) and self._run_status_choices:
+    def _map_enum(self, idx_or_str, choices):
+        if isinstance(idx_or_str, int) and choices:
             try:
-                return self._run_status_choices[value]
+                return choices[idx_or_str]
             except Exception:
-                pass
-        # already a string (some backends do that) or unknown -> stringify
-        return value if isinstance(value, str) else str(value)
+                return str(idx_or_str)
+        return idx_or_str if isinstance(idx_or_str, str) else str(idx_or_str)
 
     def _read_run_status_str(self):
-        """Read current run_status as **string**, using cache if possible."""
+        """Return run status as string from cache (normalized in value callback)."""
 
         def _ask():
-            # ask raw int to be safe across backends, then map
             raw = self._epics_wrapper.get_pv_value(
                 self._pv("run_status"), as_string=False
             )
-            # choices might not be loaded yet (early startup), try again on demand
             if not self._run_status_choices:
-                self._refresh_run_status_choices()
-            return self._map_run_status(raw)
+                self._refresh_choices()
+            return self._map_enum(raw, self._run_status_choices)
 
         return get_from_cache_or(self, "run_status", _ask)
 
-    # ---------------- wait-until utility (with mapping)
+    def _read_error_str(self):
+        """Return error enum as string (from Error-R)."""
+
+        def _ask():
+            raw = self._epics_wrapper.get_pv_value(self._pv("error"), as_string=False)
+            if not self._error_choices:
+                self._refresh_choices()
+            return self._map_enum(raw, self._error_choices)
+
+        return get_from_cache_or(self, "error", _ask)
 
     def _wait_until(self, pv_name, expected_string, timeout=5.0):
-        """Wait until the mbbi-backed PV equals the given **string** choice."""
+        """Wait until mbbi PV equals given **string**."""
         event = threading.Event()
 
         def callback(name, param, value, units, limits, severity, message, **kwargs):
-            # ensure we have choices available and map to string
-            if not self._run_status_choices and param == "run_status":
-                self._refresh_run_status_choices()
-            if self._map_run_status(value) == expected_string:
+            if param == "run_status" and not self._run_status_choices:
+                self._refresh_choices()
+            if self._map_enum(value, self._run_status_choices) == expected_string:
                 event.set()
 
         sub = self._epics_wrapper.subscribe(self._pv(pv_name), pv_name, callback)
         try:
-            # short-circuit if already there
-            current_val = self._epics_wrapper.get_pv_value(
-                self._pv(pv_name), as_string=False
-            )
-            if self._map_run_status(current_val) == expected_string:
+            cur = self._epics_wrapper.get_pv_value(self._pv(pv_name), as_string=False)
+            if self._map_enum(cur, self._run_status_choices) == expected_string:
                 return
             if not event.wait(timeout):
                 raise TimeoutError(
@@ -228,7 +233,7 @@ class HPLCPumpController(EpicsParameters, MappedMoveable):
         finally:
             self._epics_wrapper.close_subscription(sub)
 
-    # ---------------- Status / completion
+    # ---------------- NICOS status API
 
     def doStatus(self, maxage=0):
         return get_from_cache_or(self, "status", self._do_status)
@@ -237,22 +242,22 @@ class HPLCPumpController(EpicsParameters, MappedMoveable):
         if self._mode == SIMULATION:
             return status.OK, ""
 
-        # 1) controller-reported error
+        # Use Error-R (enum) as authoritative error indicator
         try:
-            device_msg = self._get_pv("error_text", as_string=True)
+            err = self._read_error_str()
         except TimeoutError:
-            return status.ERROR, "timeout reading status"
-        if device_msg not in ("No error", "[Program is Busy]"):
-            return status.ERROR, device_msg
+            return status.ERROR, "timeout reading error state"
 
-        # 2) derive from run_status (mbbi -> string)
+        if err and err != "No error":
+            # Don't block on ErrorText-R, it might lag/never clear
+            return status.ERROR, err
+
+        # No current error → derive state from Status-R
         try:
             run_state = self._read_run_status_str()
         except TimeoutError:
             return status.ERROR, "timeout reading run status"
 
-        # transitional phase: we set run_started in the usermethod/doStart.
-        # clear as soon as IOC leaves "Off"; otherwise show 'Starting pump'.
         if self.run_started:
             if run_state == self._STATE_OFF:
                 return status.BUSY, "Starting pump"
@@ -260,40 +265,30 @@ class HPLCPumpController(EpicsParameters, MappedMoveable):
                 self._setROParam("run_started", False)
                 return status.BUSY, run_state
 
-        # running if not Off
         if run_state != self._STATE_OFF:
             return status.BUSY, run_state
 
-        # idle
         return status.OK, run_state
 
     def doIsAtTarget(self, pos, target):
         if self.run_started:
             return False
-
         try:
             current = self._read_run_status_str()
         except Exception:
             return False
 
-        if target in ("start", "volume_start", "time_start"):
-            # done when program finished -> back to Off
-            return current == self._STATE_OFF
-        elif target == "stop":
-            # done when Off
+        if target in ("start", "volume_start", "time_start", "stop"):
+            # finish when pump is Off
             return current == self._STATE_OFF
         return False
 
-    # ---------------- NICOS start/stop entry points
+    # ---------------- NICOS move lifecycle
 
     def doStart(self, target):
-        # execute mapped command
         if target in self._commands:
             self._commands[target]()
 
-            # kick a guard thread that waits for **Pumping** explicitly.
-            # we ALSO clear run_started in the subscription as soon as we see != Off,
-            # so this is just a fallback to avoid getting stuck forever.
             if target in ("start", "volume_start", "time_start"):
 
                 def monitor_run_start():
@@ -307,7 +302,7 @@ class HPLCPumpController(EpicsParameters, MappedMoveable):
                         )
                     finally:
                         # ensure the flag cannot stick
-                        self.run_started = False
+                        self._setROParam("run_started", False)
 
                 createThread(
                     f"hplc_pump_run_start_monitor_{self._name}", monitor_run_start
@@ -321,6 +316,7 @@ class HPLCPumpController(EpicsParameters, MappedMoveable):
         self._setROParam("run_started", False)
 
     def doReset(self):
+        # Acknowledge/reset; ErrorText-R may still show old text, but doStatus uses Error-R.
         self._put_pv("reset_error", 1)
 
     def doRead(self, maxage=0):
@@ -347,7 +343,6 @@ class HPLCPumpController(EpicsParameters, MappedMoveable):
 
     @usermethod
     def start_pump(self):
-        """Start pumping"""
         if self._mode == SIMULATION:
             return
         self._setROParam("run_started", True)
@@ -356,14 +351,12 @@ class HPLCPumpController(EpicsParameters, MappedMoveable):
 
     @usermethod
     def stop_pump(self):
-        """Stop pumping"""
         if self._mode == SIMULATION:
             return
         self._put_pv("stop_pump", 1)
 
     @usermethod
     def volume_start(self):
-        """Start pumping for a given volume"""
         if self._mode == SIMULATION:
             return
         self._setROParam("run_started", True)
@@ -372,7 +365,6 @@ class HPLCPumpController(EpicsParameters, MappedMoveable):
 
     @usermethod
     def time_start(self):
-        """Start pumping for a given time"""
         if self._mode == SIMULATION:
             return
         self._setROParam("run_started", True)
@@ -386,16 +378,22 @@ class HPLCPumpController(EpicsParameters, MappedMoveable):
     ):
         ts = time.time()
 
-        # normalize run_status to string (mbbi) before caching
         if param == "run_status":
             if not self._run_status_choices:
-                self._refresh_run_status_choices()
-            vstr = self._map_run_status(value)
+                self._refresh_choices()
+            vstr = self._map_enum(value, self._run_status_choices)
             self._cache.put(self._name, param, vstr, ts)
 
-            # clear transitional flag as soon as IOC leaves Off
+            # Fast-path: clear transitional flag as soon as IOC leaves Off
             if self.run_started and vstr != self._STATE_OFF:
                 self._setROParam("run_started", False)
+
+        elif param == "error":
+            if not self._error_choices:
+                self._refresh_choices()
+            estr = self._map_enum(value, self._error_choices)
+            self._cache.put(self._name, param, estr, ts)
+
         else:
             self._cache.put(self._name, param, value, ts)
 
@@ -405,8 +403,9 @@ class HPLCPumpController(EpicsParameters, MappedMoveable):
         self, name, param, value, units, limits, severity, message, **kwargs
     ):
         ts = time.time()
-        # keep raw status updates (we only normalize VALUE stream for run_status)
-        self._cache.put(self._name, param, value, ts)
+        # IMPORTANT: do NOT clobber the normalized enum cache for mbbi fields.
+        if param not in ("run_status", "error"):
+            self._cache.put(self._name, param, value, ts)
         self._cache.put(self._name, "status", self._do_status(), ts)
 
     def _connection_change_callback(self, name, param, is_connected, **kwargs):
