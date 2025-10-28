@@ -1591,10 +1591,10 @@ class KafkaSubscriber:
         if self._pos_progressed:
             self._last_deliver_mono = now
 
-        if self._watchdog_stuck_with_lag(total_lag, now, since_assign, since_reboot_ok):
+        if self._consume_and_dispatch(now, since_assign, since_reboot_ok):
             return
 
-        if self._consume_and_dispatch(now, since_assign, since_reboot_ok):
+        if self._watchdog_stuck_with_lag(total_lag, now, since_assign, since_reboot_ok):
             return
 
     def _monitor_topics(self):

@@ -661,3 +661,101 @@ def test_empty_reads_with_stats_lag_triggers_rebootstrap(subscriber, clock):
         subscriber.tick()
 
     assert "stuck_empty_reads_with_stats_lag" in reasons
+
+
+def test_first_message_after_long_idle_is_consumed_instead_of_stuck_rebootstrap_wm(
+    subscriber, clock
+):
+    """
+    long idle at end-of-log (no lag), then exactly one new record arrives.
+    Expectation: we should consume the record rather than triggering the
+    stuck-with-lag watchdog (which would use a huge no_progress_for).
+    This test exercises the WATERMARK-based lag path (no stats coverage).
+    """
+    stub = subscriber.consumer._consumer
+    stub.create_topic("idle", num_partitions=1)
+
+    delivered = []
+    reasons = []
+    subscriber.consumer._on_rebootstrap = reasons.append
+
+    # Subscribe and satisfy grace + cooldown
+    subscriber.subscribe(["idle"], lambda items: delivered.extend(items))
+    c = subscriber.consumer
+    c._pending_reassign = False
+    c._last_assign_mono = clock.now() - (subscriber._wait_after_assign_secs + 0.05)
+    c._last_rebootstrap_mono = clock.now() - (subscriber._cooldown_secs + 0.05)
+
+    # Keep stats fresh so the no-stats watchdog never fires,
+    # but don't provide stats lag (force WATERMARK path).
+    c._health.last_stats_mono = clock.now()
+    c._health.stats_by_tp = {}
+    c._health.stats_total_lag = 0
+
+    # Simulate long idle (no messages yet) -> no_progress_for grows large.
+    clock.sleep(900.0)  # large idle interval
+    c._health.last_stats_mono = clock.now()  # keep stats fresh
+
+    # Now exactly one new message shows up (lag becomes 1)
+    stub.add_message("idle", 0, offset=0, key=b"k", value=b"FIRST")
+
+    # On this tick, we should deliver instead of rebooting as "stuck".
+    subscriber.tick()
+
+    # Validate: no stuck reboot reason, message delivered
+    assert b"FIRST" in [v for (_, v) in delivered]
+    assert "stuck_no_progress_despite_lag" not in reasons
+
+
+def test_first_message_after_long_idle_is_consumed_instead_of_stuck_rebootstrap_stats(
+    subscriber, clock
+):
+    """
+    Same scenario as above but exercising the STATS-based lag path.
+    When stats claim lag=1 right after a long idle, we should still consume
+    rather than rebooting as stuck.
+    """
+    stub = subscriber.consumer._consumer
+    stub.create_topic("idle_stats", num_partitions=1)
+
+    delivered = []
+    reasons = []
+    subscriber.consumer._on_rebootstrap = reasons.append
+
+    # Subscribe and satisfy grace + cooldown
+    subscriber.subscribe(["idle_stats"], lambda items: delivered.extend(items))
+    c = subscriber.consumer
+    c._pending_reassign = False
+    c._last_assign_mono = clock.now() - (subscriber._wait_after_assign_secs + 0.05)
+    c._last_rebootstrap_mono = clock.now() - (subscriber._cooldown_secs + 0.05)
+
+    # Long idle with no messages; keep stats fresh but with zero lag
+    c._health.stats_by_tp = {}
+    c._health.stats_total_lag = 0
+    c._health.last_stats_mono = clock.now()
+    clock.sleep(600.0)
+    c._health.last_stats_mono = clock.now()
+
+    # One new message appears
+    stub.add_message("idle_stats", 0, offset=0, key=b"k", value=b"FIRST-S")
+
+    # Make stats report lag=1 and cover the assignment
+    assigned = c.assignment()
+    assert assigned, "expected an assignment"
+    # Build full coverage map for stats path
+    stats_map = {}
+    for tp in assigned:
+        stats_map[(tp.topic, tp.partition)] = {
+            "lag": 1 if (tp.topic, tp.partition) == ("idle_stats", 0) else 0,
+            "fetch_state": "active",
+        }
+    c._health.stats_by_tp = stats_map
+    c._health.stats_total_lag = 1
+    c._health.last_stats_mono = clock.now()  # fresh stats so stats path is used
+
+    # On this tick, we should consume rather than rebooting as stuck.
+    subscriber.tick()
+
+    # Validate: delivered and no stuck reboot
+    assert b"FIRST-S" in [v for (_, v) in delivered]
+    assert "stuck_no_progress_despite_lag" not in reasons
