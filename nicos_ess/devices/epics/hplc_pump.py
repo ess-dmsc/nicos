@@ -285,6 +285,9 @@ class HPLCPumpController(EpicsParameters, MappedMoveable):
             self._commands[target]()
 
             if target in ("start", "volume_start", "time_start"):
+                # It takes a few seconds before the pump actually starts pumping.
+                # Start a monitor thread to clear the 'run_started' flag when that happens.
+                # 'run_started' is used to indicate that the pump is in the transitional starting phase.
 
                 def monitor_run_start():
                     try:
