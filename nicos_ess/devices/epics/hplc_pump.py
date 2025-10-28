@@ -145,8 +145,6 @@ class HPLCPumpController(EpicsParameters, MappedMoveable):
     def doPrepare(self):
         self._update_status(status.OK, "")
 
-    # ---------------- helpers
-
     def _pv(self, key: str) -> str:
         return f"{self.pv_root}{self._record_fields[key].pv_suffix}"
 
@@ -234,8 +232,6 @@ class HPLCPumpController(EpicsParameters, MappedMoveable):
         finally:
             self._epics_wrapper.close_subscription(sub)
 
-    # ---------------- NICOS status API
-
     def doStatus(self, maxage=0):
         return get_from_cache_or(self, "status", self._do_status)
 
@@ -284,8 +280,6 @@ class HPLCPumpController(EpicsParameters, MappedMoveable):
             return current == self._STATE_OFF
         return False
 
-    # ---------------- NICOS move lifecycle
-
     def doStart(self, target):
         if target in self._commands:
             self._commands[target]()
@@ -326,8 +320,6 @@ class HPLCPumpController(EpicsParameters, MappedMoveable):
     def doReadMapping(self):
         return {cmd: i for i, cmd in enumerate(self._commands.keys())}
 
-    # ---------------- Pressure parameters
-
     def doReadMax_Pressure(self, maxage=0):
         return self._get_cached_pv_or_ask("pressure_max_rbv")
 
@@ -339,8 +331,6 @@ class HPLCPumpController(EpicsParameters, MappedMoveable):
 
     def doWriteMin_Pressure(self, value):
         self._put_pv("set_pressure_min", value)
-
-    # ---------------- User methods (set transitional flag & trigger EPICS)
 
     @usermethod
     def start_pump(self):
@@ -371,8 +361,6 @@ class HPLCPumpController(EpicsParameters, MappedMoveable):
         self._setROParam("run_started", True)
         self._update_status(status.BUSY, "Starting pump")
         self._put_pv("pump_for_time", 1)
-
-    # ---------------- Callbacks
 
     def _value_change_callback(
         self, name, param, value, units, limits, severity, message, **kwargs
