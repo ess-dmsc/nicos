@@ -93,6 +93,13 @@ class HPLCPumpController(EpicsParameters, MappedMoveable):
         self._epics_subscriptions = []
         self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
 
+        self._commands = {
+            "start": self.start_pump,
+            "volume_start": self.volume_start,
+            "time_start": self.time_start,
+            "stop": self.stop_pump,
+        }
+
         # Connect PVs we rely on for connection messages and choices
         self._epics_wrapper.connect_pv(self._pv("error_text"))
         self._epics_wrapper.connect_pv(self._pv("run_status"))
@@ -103,12 +110,6 @@ class HPLCPumpController(EpicsParameters, MappedMoveable):
         self._error_choices = []
 
     def doInit(self, mode):
-        self._commands = {
-            "start": self.start_pump,
-            "volume_start": self.volume_start,
-            "time_start": self.time_start,
-            "stop": self.stop_pump,
-        }
         self._setROParam(
             "mapping", {cmd: i for i, cmd in enumerate(self._commands.keys())}
         )
