@@ -213,13 +213,13 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         return self._get_cached_pv_or_ask("target")
 
     def doReadAbslimits(self):
-        absmin = self._get_cached_pv_or_ask("diallowlimit")
-        absmax = self._get_cached_pv_or_ask("dialhighlimit")
+        absmin = self._get_cached_pv_or_ask("diallowlimit", force_refresh=True)
+        absmax = self._get_cached_pv_or_ask("dialhighlimit", force_refresh=True)
         return absmin, absmax
 
     def doReadUserlimits(self):
-        umin = self._get_cached_pv_or_ask("lowlimit")
-        umax = self._get_cached_pv_or_ask("highlimit")
+        umin = self._get_cached_pv_or_ask("lowlimit", force_refresh=True)
+        umax = self._get_cached_pv_or_ask("highlimit", force_refresh=True)
         limits = (umin, umax)
         self._checkLimits(limits)
         return umin, umax
@@ -425,10 +425,12 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
                 time.time(),
             )
 
-    def _get_cached_pv_or_ask(self, param, as_string=False):
+    def _get_cached_pv_or_ask(self, param, as_string=False, force_refresh=False):
         """
         Gets the PV value from the cache if possible, else get it from the device.
         """
+        if force_refresh:
+            return self._get_pv(param, as_string)
         return get_from_cache_or(
             self,
             param,
