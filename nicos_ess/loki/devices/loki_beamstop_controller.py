@@ -23,7 +23,7 @@ class LokiBeamstopController(MultiTargetMapping):
         self._engage_beamstop(value)
 
     def _get_beamstop_number(self, value):
-        active_beamstop_match = re.match(r"Beamstop \d", value)
+        active_beamstop_match = re.match(r"(Beamstop \d|Park)", value)
         if active_beamstop_match:
             return active_beamstop_match.group()
         else:
