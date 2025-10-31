@@ -76,12 +76,6 @@ class EpicsParameters(HasNexusConfig):
         ),
         "monitor": Param("Use a PV monitor", type=bool, default=True),
         "pva": Param("Use pva", type=bool, default=True),
-        "to_forward": Param(
-            "Associated PVs that should be forward by the forwarder",
-            type=listof(tupleof(str, str, str, str, int)),
-            default=[],
-            userparam=False,
-        ),
     }
     parameter_overrides = {
         "pollinterval": Override(default=None),
