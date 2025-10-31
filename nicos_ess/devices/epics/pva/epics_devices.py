@@ -51,6 +51,7 @@ from nicos.core import (
     tupleof,
 )
 from nicos.devices.abstract import MappedMoveable, MappedReadable
+from nicos_ess.devices.epics.mixins import HasNexusConfig
 
 DEFAULT_EPICS_PROTOCOL = os.environ.get("DEFAULT_EPICS_PROTOCOL", "ca")
 
@@ -64,7 +65,7 @@ class RecordType(Enum):
     BOTH = 3
 
 
-class EpicsParameters:
+class EpicsParameters(HasNexusConfig):
     parameters = {
         "epicstimeout": Param(
             "Timeout for getting EPICS PVs",
@@ -80,13 +81,6 @@ class EpicsParameters:
             type=listof(tupleof(str, str, str, str, int)),
             default=[],
             userparam=False,
-        ),
-        "nexus_config": Param(
-            "Nexus structure group definition",
-            type=listof(dictof(str, anytype)),
-            default=[],
-            userparam=False,
-            settable=True,
         ),
     }
     parameter_overrides = {
