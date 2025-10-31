@@ -32,8 +32,9 @@ import pytest
 
 from streaming_data_types.logdata_f142 import serialise_f142
 from streaming_data_types.status_x5f2 import serialise_x5f2
+from streaming_data_types.forwarder_config_update_fc00 import deserialise_fc00
 
-from nicos.core import status, SIMULATION, POLLER
+from nicos.core import status, POLLER
 from nicos.utils import createThread
 
 from nicos_ess.devices.forwarder import EpicsKafkaForwarder
@@ -121,7 +122,6 @@ class TestEpicsKafkaForwarderStatus(TestCase):
     @pytest.fixture(autouse=True)
     def prepare(self, session):
         self.session = session
-        #self.session.setMode(SIMULATION)
         self.session.sessiontype = POLLER
         self.mock = self.create_patch("nicos_ess.devices.kafka.consumer.KafkaConsumer")
         self.mock.return_value.topics.return_value = "TEST_forwarderStatus"
@@ -188,82 +188,37 @@ class TestEpicsKafkaForwarderStatus(TestCase):
             assert self.device.statusinterval == update_interval // 1000
 
     def test_forwarded_pv(self):
-        # self.session.loadSetup("ess_motors", {})
-        # self.motor = self.session.getDevice("motor1")
-        # self.motor.nexus_config = [
-        #     {
-        #         "group_name": "motor1",
-        #         "nx_class": "NXcollection",
-        #         "units": "mm",
-        #         "suffix": "readback",
-        #         "source_name": "readpv",
-        #         "schema": "f144",
-        #         "topic": "ymir_motion",
-        #         "protocol": "pva",
-        #         "periodic": 1,
-        #         "dataset_type": "nx_log",
-        #     },
-        # ]
-
-        #print(self.device._get_pvs_to_forward())
-
-        # self.device._producer = mock.Mock()
-        # #print(self.device._producer.produce("hello"))
-        # self._updater_thread = createThread(
-        #     "forwarder_updater", self.device._update_forwarded_pvs
-        # )
-        # self._updater_thread.join()
-        # # self.device._update_forwarded_pvs()
-        # self.device._producer.produce.assert_called()
-
-
-        # with mock.patch.object(
-        #     type(self.device._producer), "produce"
-        # ) as mock_method:
-        #     self._updater_thread = createThread(
-        #         "forwarder_updater", self.device._update_forwarded_pvs
-        #     )
-        #     mock_method.assert_called_once()
-            #messages = mock_method.call_args[0]
-
-        # self.device._producer = self.create_patch("nicos_ess.devices.kafka.producer.KafkaProducer")
-
-
-        # with mock.patch.object(self.device._producer, "produce") as mock_method:
-        #     self._updater_thread = createThread(
-        #         "forwarder_updater", self.device._update_forwarded_pvs
-        #     )
-        # mock_method.assert_called()
-
-        # with mock.patch.object(EpicsKafkaForwarder, "_get_pvs_to_forward") as mock_method:
-        #     self._updater_thread = createThread(
-        #         "forwarder_updater", self.device._update_forwarded_pvs
-        #     )
-        # mock_method.assert_called()
-
-        # self.device._get_pvs_to_forward = mock.MagicMock()
-        # self._updater_thread = createThread(
-        #     "forwarder_updater", self.device._update_forwarded_pvs
-        # )
-        # self.device._get_pvs_to_forward.assert_called()
-
-
-        #
-        # self.device._producer.produce.assert_called_once()
-
-        #self.device._stop_requested = True
-
-
-            #messages = mock_method.call_args[0]
-
-        # message_json.update({"update_interval": update_interval})
-        # assert messages == ({123456: message_json},)
-
-
-
-
-
-
+        nx_conf = {
+            "group_name": "motor1",
+            "nx_class": "NXcollection",
+            "units": "mm",
+            "suffix": "readback",
+            "source_name": "readpv",
+            "schema": "f144",
+            "topic": "ymir_motion",
+            "protocol": "pva",
+            "periodic": 1,
+            "dataset_type": "nx_log",
+        }
+        self.session.loadSetup("ess_motors", {})
+        self.motor = self.session.getDevice("motor1")
+        self.motor.nexus_config = [nx_conf]
+        self.device._producer = mock.Mock()
+        self.device._stop_requested = False
+        thread = createThread(
+            "forwarder_updater",
+            self.device._update_forwarded_pvs
+        )
+        for _ in range(10):
+            if self.device._producer.produce.called:
+                break
+            time.sleep(0.1)
+        assert self.device._producer.produce.called
+        config_topic, buffer = self.device._producer.produce.call_args[0]
+        fc = deserialise_fc00(buffer)
+        assert fc.streams[0].channel == nx_conf["source_name"]
+        assert fc.streams[0].schema == nx_conf["schema"]
+        assert fc.streams[0].topic == nx_conf["topic"]
 
 
     def test_static_value_to_nexus(self):
