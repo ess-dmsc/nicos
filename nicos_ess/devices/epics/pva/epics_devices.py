@@ -86,6 +86,7 @@ class EpicsParameters:
             type=listof(dictof(str, anytype)),
             default=[],
             userparam=False,
+            settable=True,
         ),
     }
     parameter_overrides = {
