@@ -26,6 +26,7 @@ devices = dict(
         "nicos_ess.devices.forwarder.EpicsKafkaForwarder",
         description="Monitors and controls forward-epics-to-kafka",
         statustopic=["TEST_forwarderStatus"],
+        config_topic="TEST_forwarderConfig",
         brokers=[
             "localhost:9092",
         ],

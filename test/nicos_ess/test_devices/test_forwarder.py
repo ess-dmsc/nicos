@@ -30,13 +30,11 @@ from string import ascii_lowercase
 
 import pytest
 
-pytest.importorskip("streaming_data_types")
-pytest.importorskip("confluent_kafka")
-
 from streaming_data_types.logdata_f142 import serialise_f142
 from streaming_data_types.status_x5f2 import serialise_x5f2
 
-from nicos.core import status
+from nicos.core import status, SIMULATION, POLLER
+from nicos.utils import createThread
 
 from nicos_ess.devices.forwarder import EpicsKafkaForwarder
 
@@ -45,8 +43,6 @@ try:
 except ImportError:
     pytestmark = pytest.mark.skip("all tests still WIP")
 
-pytest.importorskip("kafka")
-pytest.importorskip("graypy")
 
 # Set to None because we load the setup after the mocks are in place.
 session_setup = None
@@ -125,6 +121,8 @@ class TestEpicsKafkaForwarderStatus(TestCase):
     @pytest.fixture(autouse=True)
     def prepare(self, session):
         self.session = session
+        #self.session.setMode(SIMULATION)
+        self.session.sessiontype = POLLER
         self.mock = self.create_patch("nicos_ess.devices.kafka.consumer.KafkaConsumer")
         self.mock.return_value.topics.return_value = "TEST_forwarderStatus"
         self.session.unloadSetup()
@@ -188,3 +186,124 @@ class TestEpicsKafkaForwarderStatus(TestCase):
             message_fb = create_x5f2_buffer(message_json, update_interval)
             self.device.new_messages_callback([(123456, message_fb)])
             assert self.device.statusinterval == update_interval // 1000
+
+    def test_forwarded_pv(self):
+        # self.session.loadSetup("ess_motors", {})
+        # self.motor = self.session.getDevice("motor1")
+        # self.motor.nexus_config = [
+        #     {
+        #         "group_name": "motor1",
+        #         "nx_class": "NXcollection",
+        #         "units": "mm",
+        #         "suffix": "readback",
+        #         "source_name": "readpv",
+        #         "schema": "f144",
+        #         "topic": "ymir_motion",
+        #         "protocol": "pva",
+        #         "periodic": 1,
+        #         "dataset_type": "nx_log",
+        #     },
+        # ]
+
+        #print(self.device._get_pvs_to_forward())
+
+        # self.device._producer = mock.Mock()
+        # #print(self.device._producer.produce("hello"))
+        # self._updater_thread = createThread(
+        #     "forwarder_updater", self.device._update_forwarded_pvs
+        # )
+        # self._updater_thread.join()
+        # # self.device._update_forwarded_pvs()
+        # self.device._producer.produce.assert_called()
+
+
+        # with mock.patch.object(
+        #     type(self.device._producer), "produce"
+        # ) as mock_method:
+        #     self._updater_thread = createThread(
+        #         "forwarder_updater", self.device._update_forwarded_pvs
+        #     )
+        #     mock_method.assert_called_once()
+            #messages = mock_method.call_args[0]
+
+        # self.device._producer = self.create_patch("nicos_ess.devices.kafka.producer.KafkaProducer")
+
+
+        # with mock.patch.object(self.device._producer, "produce") as mock_method:
+        #     self._updater_thread = createThread(
+        #         "forwarder_updater", self.device._update_forwarded_pvs
+        #     )
+        # mock_method.assert_called()
+
+        # with mock.patch.object(EpicsKafkaForwarder, "_get_pvs_to_forward") as mock_method:
+        #     self._updater_thread = createThread(
+        #         "forwarder_updater", self.device._update_forwarded_pvs
+        #     )
+        # mock_method.assert_called()
+
+        # self.device._get_pvs_to_forward = mock.MagicMock()
+        # self._updater_thread = createThread(
+        #     "forwarder_updater", self.device._update_forwarded_pvs
+        # )
+        # self.device._get_pvs_to_forward.assert_called()
+
+
+        #
+        # self.device._producer.produce.assert_called_once()
+
+        #self.device._stop_requested = True
+
+
+            #messages = mock_method.call_args[0]
+
+        # message_json.update({"update_interval": update_interval})
+        # assert messages == ({123456: message_json},)
+
+
+
+
+
+
+
+
+    def test_static_value_to_nexus(self):
+        self.session.loadSetup("ess_motors", {})
+        self.motor = self.session.getDevice("motor1")
+        self.motor.nexus_config = [
+            {
+                "group_name": "motor1",
+                "nx_class": "NXcollection",
+                "units": "",
+                "suffix": "info",
+                "value": "some_value_in_nexus",
+                "dataset_type": "static_value",
+            },
+        ]
+        json = self.device.get_nexus_json()
+        assert json[0]["name"] == "motor1"
+        assert json[0]["children"][0]["config"] == {
+            "name": "motor1_info",
+            "values": "some_value_in_nexus",
+            "dtype": "string"
+        }
+
+    def test_static_read_to_nexus(self):
+        self.session.loadSetup("ess_motors", {})
+        self.motor = self.session.getDevice("motor1")
+        self.motor.nexus_config=[
+            {
+                "group_name": "motor1",
+                "nx_class": "NXcollection",
+                "units": "mm",
+                "suffix": "readback",
+                "dataset_type": "static_read",
+            },
+        ]
+        self.motor.values["position"] = "some_read_string"
+        json = self.device.get_nexus_json()
+        assert json[0]["name"] == "motor1"
+        assert json[0]["children"][0]["config"] == {
+            "name": "motor1_readback",
+            "values": "some_read_string",
+            "dtype": "string"
+        }
