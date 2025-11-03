@@ -129,6 +129,12 @@ class TestEpicsKafkaForwarderStatus(TestCase):
         self.session.loadSetup("ess_forwarder", {})
         self.device = self.session.getDevice("KafkaForwarder")
         self.device._setROParam("curstatus", (0, ""))
+        self.session.loadSetup("ess_motors", {})
+        self.motor = self.session.getDevice("motor1")
+        yield
+        self.motor.values["position"] = 0
+        self.motor.values["nexus_config"] = []
+        self.session.unloadSetup()
 
     def test_update_forwarded_pv(self):
         pvname = "mypv"
@@ -200,8 +206,6 @@ class TestEpicsKafkaForwarderStatus(TestCase):
             "periodic": 1,
             "dataset_type": "nx_log",
         }
-        self.session.loadSetup("ess_motors", {})
-        self.motor = self.session.getDevice("motor1")
         self.motor.nexus_config = [nx_conf]
         self.device._producer = mock.Mock()
         self.device._stop_requested = False
@@ -222,8 +226,6 @@ class TestEpicsKafkaForwarderStatus(TestCase):
 
 
     def test_static_value_to_nexus(self):
-        self.session.loadSetup("ess_motors", {})
-        self.motor = self.session.getDevice("motor1")
         self.motor.nexus_config = [
             {
                 "group_name": "motor1",
@@ -243,8 +245,6 @@ class TestEpicsKafkaForwarderStatus(TestCase):
         }
 
     def test_static_read_to_nexus(self):
-        self.session.loadSetup("ess_motors", {})
-        self.motor = self.session.getDevice("motor1")
         self.motor.nexus_config=[
             {
                 "group_name": "motor1",
