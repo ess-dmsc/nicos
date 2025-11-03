@@ -10,6 +10,7 @@ from nicos.core import (
     Readable,
     Waitable,
     listof,
+    oneof,
     status,
 )
 from nicos.devices.abstract import MappedMoveable, Moveable
@@ -158,13 +159,18 @@ class EssChopperController(MappedMoveable):
             default=0.0,
             unit="degrees",
         ),
+        "spin_direction": Param(
+            "Direction of rotation of the chopper",
+            type=oneof("CW", "CCW"),
+            default="CW",
+        ),
     }
 
     attached_devices = {
         "state": Attach("Current state of the chopper", Readable),
         "command": Attach("Command PV of the chopper", MappedMoveable),
         "alarms": Attach("Alarms of the chopper", ChopperAlarms, optional=True),
-        "speed": Attach("Speed PV of the chopper", Moveable),
+        "speed": Attach("Speed PV of the chopper", MappedMoveable),
         "chic_conn": Attach("Status of the CHIC connection", Readable),
     }
 
@@ -185,7 +191,14 @@ class EssChopperController(MappedMoveable):
     def doStart(self, target):
         if target.lower() == "stop":
             # Set the speed to zero to keep EPICS behaviour consistent.
-            self._attached_speed.move(0)
+            try:
+                target_speed = self._attached_speed._inverse_mapping.get(0, "0 Hz")
+                self._attached_speed.move(target_speed)
+            except Exception as e:
+                self.log.exception(
+                    "Failed to set speed to 0 when stopping chopper. "
+                    "Will still send stop command."
+                )
         self._attached_command.move(target)
 
     def doStop(self):
@@ -231,6 +244,11 @@ class OdinChopperController(EpicsParameters, MappedMoveable):
             default=0.0,
             unit="degrees",
         ),
+        "spin_direction": Param(
+            "Direction of rotation of the chopper",
+            type=oneof("CW", "CCW"),
+            default="CW",
+        ),
         "pv_root": Param(
             "PV root for device", type=str, mandatory=True, userparam=False
         ),
@@ -245,7 +263,7 @@ class OdinChopperController(EpicsParameters, MappedMoveable):
         "speed": Attach("Speed PV of the chopper", EpicsManualMappedAnalogMoveable),
     }
 
-    hardware_access = False
+    hardware_access = True
     valuetype = str
 
     def doPreinit(self, mode):

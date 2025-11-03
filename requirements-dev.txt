@@ -1,4 +1,5 @@
 -r requirements.txt
+-r requirements-gui.txt
 
 memory_profiler
 mock>=1.0

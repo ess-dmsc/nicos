@@ -2,7 +2,7 @@ description = "LoKI window guard"
 
 devices = dict(
     window_guard=device(
-        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
+        "nicos_ess.devices.epics.pva.shutter.EpicsShutter",
         description="Window guard - pneumatic axis 1 in motion cabinet 3",
         readpv="LOKI-WinGd1:MC-Pne-01:ShtAuxBits07",
         writepv="LOKI-WinGd1:MC-Pne-01:ShtOpen",

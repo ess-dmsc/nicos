@@ -1,5 +1,6 @@
 from nicos.core import Attach, Moveable, Param, multiStatus
 from nicos.devices.abstract import TransformedMoveable
+from nicos_ess.devices.epics.pva import EpicsManualMappedAnalogMoveable
 from nicos_ess.devices.epics.pva.motor import EpicsJogMotor
 
 
@@ -24,7 +25,10 @@ class ChopperPhase(TransformedMoveable):
         "phase_ns_dev": Attach(
             "The attached phase device (ns)", Moveable, optional=False
         ),
-        "speed_dev": Attach("The attached speed device (hz)", Moveable, optional=False),
+        "mapped_speed_dev": Attach(
+            "The attached speed device (hz)",
+            EpicsManualMappedAnalogMoveable,
+        ),
     }
 
     def _readRaw(self, maxage=0):
@@ -43,7 +47,7 @@ class ChopperPhase(TransformedMoveable):
         return multiStatus(
             (
                 ("phase", self._attached_phase_ns_dev),
-                ("speed", self._attached_speed_dev),
+                ("speed", self._attached_mapped_speed_dev),
             ),
             maxage=maxage,
         )
@@ -58,7 +62,8 @@ class ChopperPhase(TransformedMoveable):
         return self._nanoseconds_to_degrees(value) - self.offset
 
     def doReadSpeed(self, maxage=0):
-        return abs(self._attached_speed_dev.doReadTarget(maxage=maxage))
+        target_val = self._attached_mapped_speed_dev.doReadTarget(maxage=maxage)
+        return abs(self._attached_mapped_speed_dev.mapping.get(target_val))
 
 
 class DegreesPerSecondToRPM(TransformedMoveable):

@@ -31,7 +31,10 @@ main_window = docked(
                         ),
                         (
                             "Chopper",
-                            panel("nicos_ess.gui.panels.chopper.ChopperPanel"),
+                            panel(
+                                "nicos_ess.gui.panels.chopper.ChopperPanel",
+                                guide_pos="DOWN",
+                            ),
                         ),
                         (
                             "Script Status",

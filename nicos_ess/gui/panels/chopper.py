@@ -49,7 +49,12 @@ class ChopperPanel(Panel):
     def __init__(self, parent, client, options):
         Panel.__init__(self, parent, client, options)
 
-        self.chopper_widget = ChopperWidget(parent=self)
+        self._slit_direction = options.get("slit_direction", "CW")  # CW or CCW
+        self._guide_pos = options.get("guide_pos", "UP")  # UP, DOWN
+
+        self.chopper_widget = ChopperWidget(
+            parent=self, slit_direction=self._slit_direction, guide_pos=self._guide_pos
+        )
         self.histogram_widget = HistogramDataViewer(parent=self)
         self.trend_widget = TrendViewer(parent=self)
 
@@ -207,14 +212,14 @@ class ChopperPanel(Panel):
     def _handle_delay_update(self, chopper_name, delay_value):
         delay = float(delay_value)
         frequency = self.eval_command(f"{chopper_name}_speed.read()", default=None)
-        if frequency is not None and frequency != 0:
+        if frequency is not None and abs(frequency) >= 2:
             frequency = float(frequency)
             self._update_chopper_angle(chopper_name, delay, frequency)
 
     def _handle_speed_update(self, chopper_name, speed_value):
         frequency = float(speed_value)
         self.chopper_widget.set_chopper_speed(chopper_name, frequency)
-        if frequency != 0:
+        if abs(frequency) >= 2:
             delay = self.eval_command(f"{chopper_name}_delay.read()", default=None)
             if delay is not None:
                 delay = float(delay)
@@ -226,7 +231,7 @@ class ChopperPanel(Panel):
         frequency = self.eval_command(f"{chopper_name}_speed.read()", default=None)
         if frequency is not None:
             frequency = float(frequency)
-            if frequency == 0:
+            if frequency < 2:
                 self.chopper_widget.set_chopper_angle(chopper_name, park_angle)
 
     def _update_chopper_angle(self, chopper_name, delay, frequency):
@@ -268,7 +273,12 @@ class ChopperPanel(Panel):
 
         for dev_name in devices.keys():
             disc_info = {"chopper": dev_name}
-            for param in ["slit_edges", "resolver_offset", "tdc_offset"]:
+            for param in [
+                "slit_edges",
+                "resolver_offset",
+                "tdc_offset",
+                "spin_direction",
+            ]:
                 value = self.client.eval(f"{dev_name}.{param}", None)
                 if value is None:
                     continue
