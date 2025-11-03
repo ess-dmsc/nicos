@@ -9,9 +9,9 @@ devices = dict(
         readpv="{}Online-R".format(pv_root),
         visibility=(),
     ),
-    julabo_2_mode=device(
+    julabo_2_remote_mode=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
-        description="Mode",
+        description="Remote mode",
         readpv="{}Mode-R".format(pv_root),
         writepv="{}Mode-S".format(pv_root),
         visibility=(),
