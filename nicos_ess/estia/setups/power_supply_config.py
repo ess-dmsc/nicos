@@ -26,7 +26,7 @@ for board in HV_INFO["boards"]:
         }
         hv_channels[key] = channel_info
 
-ALL_CHANNELS = {hv_channels}
+ALL_CHANNELS = {**hv_channels}
 
 
 def validate_channel_key(key):
