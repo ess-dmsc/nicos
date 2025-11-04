@@ -687,7 +687,7 @@ class EpicsJogMotor(EpicsMotor):
 
     def _do_status(self):
         with self._lock:
-            epics_status, message = self._get_alarm_status()
+            epics_status, message = self._get_alarm_status_and_msg()
             self._motor_status = epics_status, message
         if epics_status == status.ERROR:
             return status.ERROR, message or "Unknown problem in record"
