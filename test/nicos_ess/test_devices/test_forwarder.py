@@ -34,7 +34,7 @@ from streaming_data_types.logdata_f142 import serialise_f142
 from streaming_data_types.status_x5f2 import serialise_x5f2
 from streaming_data_types.forwarder_config_update_fc00 import deserialise_fc00
 
-from nicos.core import status, POLLER
+from nicos.core import status, POLLER, MAIN
 from nicos.utils import createThread
 
 from nicos_ess.devices.forwarder import EpicsKafkaForwarder
@@ -135,6 +135,7 @@ class TestEpicsKafkaForwarderStatus(TestCase):
         self.motor.values["position"] = 0
         self.motor.values["nexus_config"] = []
         self.session.unloadSetup()
+        self.session.sessiontype = MAIN
 
     def test_update_forwarded_pv(self):
         pvname = "mypv"
