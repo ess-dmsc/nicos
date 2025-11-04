@@ -147,6 +147,7 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
             "description": RecordInfo("", ".DESC", RecordType.VALUE),
             "monitor_deadband": RecordInfo("", ".MDEL", RecordType.VALUE),
             "maxspeed": RecordInfo("", ".VMAX", RecordType.VALUE),
+            "minspeed": RecordInfo("", ".VBAS", RecordType.VALUE),
             "donemoving": RecordInfo("", ".DMOV", RecordType.STATUS),
             "moving": RecordInfo("", ".MOVN", RecordType.STATUS),
             "miss": RecordInfo("", ".MISS", RecordType.STATUS),
@@ -447,9 +448,10 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
 
     def _get_valid_speed(self, value):
         max_speed = self._get_cached_pv_or_ask("maxspeed")
+        min_speed = self._get_cached_pv_or_ask("minspeed")
 
-        # Cannot be negative
-        valid_speed = max(0.0, value)
+        # Cannot be less than min speed
+        valid_speed = max(min_speed, value)
 
         # In EPICS if max speed is 0 then there is no limit
         if max_speed > 0.0:
@@ -603,6 +605,19 @@ class EpicsJogMotor(EpicsMotor):
     def doReadTarget(self):
         return self._read_jog_with_sign()
 
+    def doReadAbslimits(self):
+        max_speed = self._get_cached_pv_or_ask("maxspeed")
+        return -max_speed, max_speed
+
+    def doWriteUserlimits(self, value):
+        self.log.warning(
+            "Userlimits changes on jog motors are not supported yet and will be ignored."
+        )
+
+    def doReadUserlimits(self):
+        max_speed = self._get_cached_pv_or_ask("maxspeed")
+        return -max_speed, max_speed
+
     def doWriteSpeed(self, value):
         speed = self._get_valid_speed(abs(value))
         if speed != abs(value):
@@ -649,6 +664,14 @@ class EpicsJogMotor(EpicsMotor):
             return
 
         jog_speed = self._get_valid_speed(abs(value))
+
+        if jog_speed > abs(value) != 0:
+            self.log.warning(
+                "Selected jog speed %s is below hardware minimum, using %s instead.",
+                abs(value),
+                jog_speed,
+            )
+
         self.jog_dir = 1 if value > 0 else -1  # <-- set before writing JVEL
 
         # remove this later when EPICS motor record supports speed changes on the fly
@@ -687,7 +710,7 @@ class EpicsJogMotor(EpicsMotor):
 
     def _do_status(self):
         with self._lock:
-            epics_status, message = self._get_alarm_status()
+            epics_status, message = self._get_alarm_status_and_msg()
             self._motor_status = epics_status, message
         if epics_status == status.ERROR:
             return status.ERROR, message or "Unknown problem in record"
@@ -832,6 +855,7 @@ class SmaractPiezoMotor(EpicsMotor):
             "description": RecordInfo("", ".DESC", RecordType.VALUE),
             "monitor_deadband": RecordInfo("", ".MDEL", RecordType.VALUE),
             "maxspeed": RecordInfo("", ".VMAX", RecordType.VALUE),
+            "minspeed": RecordInfo("", ".VBAS", RecordType.VALUE),
             "donemoving": RecordInfo("", ".DMOV", RecordType.STATUS),
             "moving": RecordInfo("", ".MOVN", RecordType.STATUS),
             "miss": RecordInfo("", ".MISS", RecordType.STATUS),
