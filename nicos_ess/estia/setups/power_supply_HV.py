@@ -1,4 +1,4 @@
-from nicos_ess.loki.setups.power_supply_config import ALL_CHANNELS, get_channel_keys
+from nicos_ess.estia.setups.power_supply_config import ALL_CHANNELS, get_channel_keys
 
 description = "Power Supplies Bank 0 for the detector carriage (HV)."
 
