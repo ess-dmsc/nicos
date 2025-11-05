@@ -227,39 +227,38 @@ class TestEpicsKafkaForwarderStatus(TestCase):
 
 
     def test_static_value_to_nexus(self):
-        self.motor.nexus_config = [
-            {
-                "group_name": "motor1",
-                "nx_class": "NXcollection",
-                "units": "",
-                "suffix": "info",
-                "value": "some_value_in_nexus",
-                "dataset_type": "static_value",
-            },
-        ]
+        nx_conf = {
+            "group_name": "motor1",
+            "nx_class": "NXcollection",
+            "units": "",
+            "suffix": "info",
+            "value": "some_value_in_nexus",
+            "dataset_type": "static_value",
+        }
+        self.motor.nexus_config = [nx_conf]
         json = self.device.get_nexus_json()
-        assert json[0]["name"] == "motor1"
+        assert json[0]["name"] == nx_conf["group_name"]
         assert json[0]["children"][0]["config"] == {
-            "name": "motor1_info",
-            "values": "some_value_in_nexus",
+            "name": f'{nx_conf["group_name"]}_{nx_conf["suffix"]}',
+            "values": nx_conf["value"],
             "dtype": "string"
         }
 
     def test_static_read_to_nexus(self):
-        self.motor.nexus_config=[
-            {
-                "group_name": "motor1",
-                "nx_class": "NXcollection",
-                "units": "mm",
-                "suffix": "readback",
-                "dataset_type": "static_read",
-            },
-        ]
-        self.motor.values["position"] = "some_read_string"
+        nx_conf = {
+            "group_name": "motor1",
+            "nx_class": "NXcollection",
+            "units": "mm",
+            "suffix": "readback",
+            "dataset_type": "static_read",
+        }
+        position = "some_read_string"
+        self.motor.nexus_config=[nx_conf]
+        self.motor.values["position"] = position
         json = self.device.get_nexus_json()
-        assert json[0]["name"] == "motor1"
+        assert json[0]["name"] == nx_conf["group_name"]
         assert json[0]["children"][0]["config"] == {
-            "name": "motor1_readback",
-            "values": "some_read_string",
+            "name": f'{nx_conf["group_name"]}_{nx_conf["suffix"]}',
+            "values": position,
             "dtype": "string"
         }
