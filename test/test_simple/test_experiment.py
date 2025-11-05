@@ -37,8 +37,6 @@ from nicos.utils import enableDirectory, ensureDirectory, readFileCounter
 
 from test.utils import runtime_root
 
-year = time.strftime("%Y")
-
 session_setup = "asciisink"
 
 
@@ -55,7 +53,7 @@ def cleanup(session):
 
 def datapath(*parts, **kwds):
     extra = kwds.get("extra", "data")
-    return path.join(runtime_root, extra, year, *parts)
+    return path.join(runtime_root, extra, *parts)
 
 
 def test_experiment(session, cleanup):
@@ -68,8 +66,11 @@ def test_experiment(session, cleanup):
     # if there is no exp.new, we need to adjust proposalpath ourselfs!
     exp.proposalpath = exp.proposalpath_of(exp.proposal)
 
+    # we check data path later, this checks the proposal is in the right place
+    assert exp.proposalpath == path.join(runtime_root, "data", "service")
+
     # create the needed script file
-    spath = path.join(runtime_root, "data", year, "service", "scripts")
+    spath = path.join(runtime_root, "data", "service", "scripts")
 
     assert exp.scriptpath == spath
     ensureDirectory(spath)
@@ -89,7 +90,7 @@ def test_experiment(session, cleanup):
 
     # check correct operation of sampledir
     exp.sampledir = "sample"
-    assert exp.datapath == path.join(exp.dataroot, year, "service", "sample", "data")
+    assert exp.datapath == path.join(exp.dataroot, "service", "sample", "data")
     exp.sampledir = ""
 
     # for this proposal, remove access rights after switching back
