@@ -613,6 +613,7 @@ class EpicsJogMotor(EpicsMotor):
         self.log.warning(
             "Userlimits changes on jog motors are not supported yet and will be ignored."
         )
+        return self.userlimits
 
     def doReadUserlimits(self):
         max_speed = self._get_cached_pv_or_ask("maxspeed")
