@@ -244,6 +244,7 @@ class EssExperiment(Device):
         self._pollParam("localcontact")
 
     def proposalpath_of(self, proposal):
+        """deviate from default of <dataroot>/<year>/<proposal>"""
         if self.fixed_proposal_path is not None:
             return self.fixed_proposal_path
         return path.join(
