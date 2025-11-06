@@ -2,7 +2,7 @@ import threading
 import time
 
 from nicos import session
-from nicos.core import POLLER, Override, Param, pvname, status
+from nicos.core import POLLER, MoveError, Override, Param, pvname, status
 from nicos.core.mixins import CanDisable
 from nicos.devices.abstract import CanReference, Motor
 from nicos_ess.devices.epics.pva.epics_devices import (
@@ -65,6 +65,8 @@ class OctopyMotor(EpicsParameters, CanDisable, CanReference, Motor):
             "enable": RecordInfo("", "-enable-s", RecordType.VALUE),
             "home": RecordInfo("", "-home-s", RecordType.VALUE),
             "reset": RecordInfo("", "-reset-s", RecordType.VALUE),
+            "busy": RecordInfo("", "-busy-r", RecordType.VALUE),
+            "move_done": RecordInfo("", "-move_done-r", RecordType.VALUE),
         }
 
         self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
@@ -96,6 +98,43 @@ class OctopyMotor(EpicsParameters, CanDisable, CanReference, Motor):
             f"{self.motorpv}{self._record_fields[param].pv_suffix}", value
         )
 
+    def _wait_until(self, pv_name, expected_value, precision=None, timeout=5.0):
+        """Set up a subscription and wait until the PV reaches the expected value."""
+        event = threading.Event()
+
+        def callback(name, param, value, units, limits, severity, message, **kwargs):
+            if precision is not None and isinstance(value, (int, float)):
+                if abs(value - expected_value) <= precision:
+                    event.set()
+            else:
+                if value == expected_value:
+                    event.set()
+
+        sub = self._epics_wrapper.subscribe(
+            f"{self.motorpv}{self._record_fields[pv_name].pv_suffix}",
+            pv_name,
+            callback,
+        )
+        try:
+            # already done? exit immediately
+            current_value = self._get_pv(
+                pv_name,
+                as_string=False if isinstance(expected_value, (int, float)) else True,
+            )
+            if precision is not None and isinstance(current_value, (int, float)):
+                if abs(current_value - expected_value) <= precision:
+                    return
+            else:
+                if current_value == expected_value:
+                    return
+            # wait for callback to signal completion
+            if not event.wait(timeout):
+                raise TimeoutError(
+                    f"Timeout waiting for {pv_name} to become {expected_value}"
+                )
+        finally:
+            self._epics_wrapper.close_subscription(sub)
+
     def doRead(self, maxage=0):
         return self._get_cached_pv_or_ask("value")
 
@@ -108,10 +147,17 @@ class OctopyMotor(EpicsParameters, CanDisable, CanReference, Motor):
     def doStart(self, value):
         if abs(self.read(0) - value) <= self.precision:
             return
+
+        if self._get_cached_pv_or_ask("busy") == 1:
+            raise MoveError("Motor is busy")
+
         self._cache.put(
             self._name, self._cache_key_status, (status.BUSY, "Moving"), time.time()
         )
         self._put_pv("target", value)
+        # octopy does not update move_done immediately, so we need to wait here
+        # until it is set to 0.
+        self._wait_until("move_done", 0, timeout=5.0)
 
     def doStop(self):
         self._put_pv("stop", 1)
@@ -129,20 +175,31 @@ class OctopyMotor(EpicsParameters, CanDisable, CanReference, Motor):
         self._put_pv("reset", 1)
 
     def doIsAtTarget(self, pos=None, target=None):
+        """
+        A final check at the end of a move to ensure we are at the target.
+        """
         if pos is None:
             pos = self.read(0)
         if target is None:
             target = self.target
-        return abs(target - pos) <= self.precision
+
+        within_target = abs(target - pos) <= self.precision
+
+        return within_target and self._get_cached_pv_or_ask("move_done") == 1
 
     def doIsCompleted(self):
-        return self.doIsAtTarget()
+        """
+        Continously check if a movement is completed.
+        """
+        busy = self._get_cached_pv_or_ask("busy") == 1
+        move_done = self._get_cached_pv_or_ask("move_done") == 1
+        return not busy and move_done
 
     def doStatus(self, maxage=0):
         return get_from_cache_or(self, self._cache_key_status, self._do_status)
 
     def _do_status(self):
-        if not self.doIsAtTarget():
+        if not self.doIsCompleted():
             return status.BUSY, f"moving to {self.target}"
 
         # Check if the motor is enabled
