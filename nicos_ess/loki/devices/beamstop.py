@@ -1,8 +1,29 @@
 import re
+from selectors import SelectSelector
 
-from nicos.core import Param
+from nicos.core import HasPrecision, Param
 from nicos.core.utils import waitForCompletion
-from nicos_ess.devices.mapped_controller import MultiTargetMapping
+from nicos_ess.devices.mapped_controller import MappedController, MultiTargetMapping
+
+
+class LokiBeamstopArmPositioner(MappedController):
+    def _mapReadValue(self, value):
+        if isinstance(self._attached_controlled_device, HasPrecision):
+            for k, v in self.mapping.items():
+                if abs(v - value) < self._attached_controlled_device.precision:
+                    return k
+        inverse_mapping = {v: k for k, v in self.mapping.items()}
+
+        mapped_value = inverse_mapping.get(value, None)
+        if mapped_value:
+            return mapped_value
+        else:
+            if value > self.mapping["Parked"]:
+                return "Outside park position"
+            elif value < self.mapping["In beam"]:
+                return "Outside in-beam position"
+            else:
+                return "In between"
 
 
 class LokiBeamstopController(MultiTargetMapping):

@@ -88,7 +88,7 @@ devices = dict(
         mapping={"Parked": 989.891, "In beam": 54.6},
     ),
     beamstop_selector=device(
-        "nicos_ess.loki.devices.loki_beamstop_controller.LokiBeamstopController",
+        "nicos_ess.loki.devices.beamstop.LokiBeamstopController",
         controlled_devices=[
             "beamstop_x_positioner",
             "beamstop_y_positioner",
