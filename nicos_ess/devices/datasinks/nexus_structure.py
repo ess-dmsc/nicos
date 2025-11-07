@@ -311,6 +311,8 @@ class NexusStructureJsonFile(NexusStructureProvider):
             nxinstrument_structure = self._find_nxinstrument(structure)
 
         for field_name, field_metainfo in link_info.items():
+            if not field_metainfo:
+                continue
             value = field_metainfo[0]
             dev_path = self._find_device_path(nxinstrument_structure, value)
 
