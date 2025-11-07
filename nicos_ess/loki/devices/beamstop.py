@@ -1,12 +1,40 @@
 import re
-from selectors import SelectSelector
 
-from nicos.core import HasPrecision, Param
+from nicos.core import ConfigurationError, HasPrecision, Override, Param
 from nicos.core.utils import waitForCompletion
 from nicos_ess.devices.mapped_controller import MappedController, MultiTargetMapping
 
 
 class LokiBeamstopArmPositioner(MappedController):
+    parameters = {
+        "parked": Param(
+            mandatory=True,
+            settable=True,
+            description="The mapped value that corresponds to the parked position",
+            type=float,
+        ),
+        "in_beam": Param(
+            mandatory=True,
+            settable=True,
+            description="The mapped value that corresponds to the in beam position",
+            type=float,
+        ),
+    }
+
+    parameter_overrides = {
+        "mapping": Override(mandatory=False),
+    }
+
+    def doInit(self, mode):
+        MappedController.doInit(self, mode)
+        self.doWriteMapping({"Parked": self.parked, "In beam": self.in_beam})
+
+    def doWriteMapping(self, mapping):
+        if sorted(mapping.keys()) != ["In beam", "Parked"]:
+            raise ConfigurationError(
+                "Only 'In beam' and 'Parked' are allowed as mapped positions"
+            )
+
     def _mapReadValue(self, value):
         if isinstance(self._attached_controlled_device, HasPrecision):
             for k, v in self.mapping.items():
@@ -19,9 +47,9 @@ class LokiBeamstopArmPositioner(MappedController):
             return mapped_value
         else:
             if value > self.mapping["Parked"]:
-                return "Outside park position"
+                return "Above park position"
             elif value < self.mapping["In beam"]:
-                return "Outside in-beam position"
+                return "Below in-beam position"
             else:
                 return "In between"
 
