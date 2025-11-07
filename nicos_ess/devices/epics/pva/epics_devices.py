@@ -42,16 +42,13 @@ from nicos.core import (
     Param,
     Readable,
     anytype,
-    dictof,
     floatrange,
-    listof,
     none_or,
     pvname,
     status,
-    tupleof,
 )
 from nicos.devices.abstract import MappedMoveable, MappedReadable
-from nicos_ess.devices.epics.mixins import HasNexusConfig
+from nicos_ess.devices.mixins import HasNexusConfig
 
 DEFAULT_EPICS_PROTOCOL = os.environ.get("DEFAULT_EPICS_PROTOCOL", "ca")
 
