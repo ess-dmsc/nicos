@@ -331,23 +331,21 @@ class EpicsAnalogMoveable(EpicsParameters, HasPrecision, HasLimits, Moveable):
             self, "unit", lambda: self._epics_wrapper.get_units(self.readpv)
         )
 
+    def _do_status(self):
+        try:
+            severity, msg = self._epics_wrapper.get_alarm_status(self.readpv)
+        except TimeoutError:
+            return status.ERROR, "timeout reading status"
+        if severity in [status.ERROR, status.WARN]:
+            return severity, msg
+
+        at_target = HasPrecision.doIsAtTarget(self, self.doRead(), self.doReadTarget())
+        if not at_target:
+            return status.BUSY, f"moving to {self.target}"
+        return status.OK, msg
+
     def doStatus(self, maxage=0):
-        def _func():
-            try:
-                severity, msg = self._epics_wrapper.get_alarm_status(self.readpv)
-            except TimeoutError:
-                return status.ERROR, "timeout reading status"
-            if severity in [status.ERROR, status.WARN]:
-                return severity, msg
-
-            at_target = HasPrecision.doIsAtTarget(
-                self, self.doRead(), self.doReadTarget()
-            )
-            if not at_target:
-                return status.BUSY, f"moving to {self.target}"
-            return status.OK, msg
-
-        return get_from_cache_or(self, "status", _func)
+        return get_from_cache_or(self, "status", self._do_status)
 
     def doReadAbslimits(self):
         low, high = get_from_cache_or(
@@ -393,7 +391,7 @@ class EpicsAnalogMoveable(EpicsParameters, HasPrecision, HasLimits, Moveable):
         if name != self.readpv:
             # Unexpected updates ignored
             return
-        self._cache.put(self._name, "status", (severity, message), time.time())
+        self._cache.put(self._name, "status", self._do_status(), time.time())
 
     def _connection_change_callback(self, name, param, is_connected, **kwargs):
         if param != self._record_fields["readpv"].cache_key:
