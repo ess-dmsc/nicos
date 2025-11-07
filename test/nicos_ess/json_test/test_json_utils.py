@@ -1,7 +1,7 @@
 import copy
 import json
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import pytest
 
@@ -133,7 +133,7 @@ def test_index_path_to_expr_roundtrip_tokens() -> None:
 
 def test_mapping_includes_at_least_one_dataset(structure: Dict[str, Any]) -> None:
     """Find any dataset in the raw tree and assert mapping exposes it."""
-    def walk(node: Any, names: List[str]) -> str | None:
+    def walk(node: Any, names: List[str]) -> Optional[str]:
         if isinstance(node, dict):
             if node.get("type") == "group" and isinstance(node.get("name"), str):
                 names = names + [node["name"]]
