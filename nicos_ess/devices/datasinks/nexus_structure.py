@@ -12,6 +12,10 @@ from nicos.core import (
     relative_path,
 )
 from nicos_ess.nexus.converter import NexusTemplateConverter
+from nicos_ess.utilities.json_utils import (
+    build_named_index_map,
+    get_by_named_path,
+)
 
 ALLOWED_INSTRUMENT_NAMES = [
     "dream",
@@ -61,6 +65,8 @@ class NexusStructureJsonFile(NexusStructureProvider):
         ),
     }
 
+    _path_map = None
+
     def get_structure(self, metainfo, counter):
         structure = self._load_structure()
         structure = self._insert_extra_devices(structure)
@@ -72,7 +78,24 @@ class NexusStructureJsonFile(NexusStructureProvider):
     def _load_structure(self):
         with open(self.nexus_config_path, "r", encoding="utf-8") as file:
             structure = file.read()
-        return json.loads(structure)
+        json_struct = json.loads(structure)
+        # Build the initial name→index map (groups only)
+        self._path_map = build_named_index_map(json_struct, include_datasets=False)
+        return json_struct
+
+    def _refresh_map(self, structure):
+        """Rebuild the name→index map after structural mutations."""
+        self._path_map = build_named_index_map(structure, include_datasets=False)
+
+    def _get_node(self, structure, named_path, *, refresh_on_miss=True):
+        """Fetch a node via named path using the current map. Optionally refresh map on miss."""
+        try:
+            return get_by_named_path(structure, self._path_map, named_path)  # type: ignore[arg-type]
+        except KeyError:
+            if refresh_on_miss:
+                self._refresh_map(structure)
+                return get_by_named_path(structure, self._path_map, named_path)  # type: ignore[arg-type]
+            raise
 
     def _check_for_device(self, name):
         try:
@@ -90,6 +113,7 @@ class NexusStructureJsonFile(NexusStructureProvider):
             self._filter_items(
                 structure, self._is_tracking_valid, device.valid_components
             )
+        self._refresh_map(structure)
         return structure
 
     def _filter_items(self, data, condition_func, condition_arg):
@@ -131,8 +155,12 @@ class NexusStructureJsonFile(NexusStructureProvider):
             self._create_dataset("entry_identifier", str(counter)),
             self._create_dataset("entry_identifier_uuid", metainfo[("Exp", "job_id")]),
         ]
-        structure["children"][0]["children"].extend(datasets)
-        structure["children"][0]["children"].append(self._create_mdat())
+        entry_group = self._get_node(structure, "/entry")
+        entry_group["children"].extend(datasets)
+        entry_group["children"].append(self._create_mdat())
+
+        self._refresh_map(structure)
+
         structure = self._insert_users(structure, metainfo)
         structure = self._insert_samples(structure, metainfo)
         return structure
@@ -147,12 +175,16 @@ class NexusStructureJsonFile(NexusStructureProvider):
                 session.getDevice("KafkaForwarder").get_component_nexus_json()
             )
 
-        for item in structure["children"][0]["children"]:  # Entry children
-            if item.get("name", "") == "instrument":
-                item["children"].extend(extra_devices)
-                return structure
+        try:
+            instrument_group = self._get_node(
+                structure, "/entry/instrument", refresh_on_miss=False
+            )
+        except KeyError:
+            self.log.warning("Could not find the instrument group in the NeXus")
+            return structure
 
-        self.log.warning("Could not find the instrument group in the NeXus")
+        instrument_group["children"].extend(extra_devices)
+        self._refresh_map(structure)
         return structure
 
     def _insert_array_size(self, structure):
@@ -253,7 +285,13 @@ class NexusStructureJsonFile(NexusStructureProvider):
             samples_dict, skip_keys=["number_of"]
         )
 
-        nxinstrument_structure = self._find_nxinstrument(structure)
+        nxinstrument_structure = None
+        try:
+            nxinstrument_structure = self._get_node(
+                structure, "/entry/instrument", refresh_on_miss=False
+            )
+        except KeyError:
+            nxinstrument_structure = self._find_nxinstrument(structure)
 
         for field_name, field_metainfo in link_info.items():
             value = field_metainfo[0]
@@ -277,7 +315,8 @@ class NexusStructureJsonFile(NexusStructureProvider):
         if not samples_list:
             return structure
 
-        for child in structure["children"][0]["children"]:
+        entry_group = self._get_node(structure, "/entry")
+        for child in entry_group.get("children", []):
             if not isinstance(child, dict) or "attributes" not in child:
                 continue
 
@@ -286,6 +325,7 @@ class NexusStructureJsonFile(NexusStructureProvider):
                 for attr in child["attributes"]
             ):
                 child.setdefault("children", []).extend(samples_list)
+                self._refresh_map(structure)
                 return structure
 
         self.log.warning(
@@ -294,7 +334,18 @@ class NexusStructureJsonFile(NexusStructureProvider):
         return structure
 
     def _find_nxinstrument(self, structure):
-        for child in structure["children"][0]["children"]:
+        try:
+            return self._get_node(structure, "/entry/instrument", refresh_on_miss=False)
+        except KeyError:
+            pass
+
+        # Fallback: scan children of /entry
+        try:
+            entry_group = self._get_node(structure, "/entry")
+        except KeyError:
+            return None
+
+        for child in entry_group.get("children", []):
             if not isinstance(child, dict) or "attributes" not in child:
                 continue
 
@@ -333,7 +384,9 @@ class NexusStructureJsonFile(NexusStructureProvider):
             metainfo[("Exp", "users")][0],
         )
         if users:
-            structure["children"][0]["children"].extend(users)
+            entry_group = self._get_node(structure, "/entry")
+            entry_group["children"].extend(users)
+            self._refresh_map(structure)
         return structure
 
     def _create_dataset(self, name, values):
