@@ -365,7 +365,7 @@ def _resolve_named_path(
     mapping: Dict[str, Union[IndexPath, List[IndexPath]]],
     named_path: str,
     which: Which = "first",
-    index: int | None = None,
+    index: Optional[int] = None,
 ) -> List[IndexPath]:
     """Resolve a named path into one or more index paths."""
     if named_path not in mapping:
@@ -412,7 +412,7 @@ def append_group_under(
     parent_named_path: str,
     group_node: Dict[str, Any],
     *,
-    insert_at: int | None = None,
+    insert_at: Optional[int] = None,
     refresh_map: bool = True,
 ) -> Tuple[IndexPath, Dict[str, Union[IndexPath, List[IndexPath]]]]:
     """Append (or insert) a group under the parent's ``children`` list.
@@ -464,7 +464,7 @@ def remove_by_named_path(
     named_path: str,
     *,
     which: Which = "first",
-    index: int | None = None,
+    index: Optional[int] = None,
     refresh_map: bool = True,
 ) -> Tuple[int, Dict[str, Union[IndexPath, List[IndexPath]]]]:
     """Remove a dataset or group addressed by its named path.
@@ -512,7 +512,7 @@ def remove_dataset_under(
     dataset_name: str,
     *,
     which: Which = "first",
-    index: int | None = None,
+    index: Optional[int] = None,
     refresh_map: bool = True,
 ) -> Tuple[int, Dict[str, Union[IndexPath, List[IndexPath]]]]:
     """Remove dataset(s) by name under a parent group.
@@ -533,9 +533,9 @@ def remove_dataset_under(
 def make_group(
     name: str,
     *,
-    nx_class: str | None = None,
-    attributes: List[Dict[str, Any]] | None = None,
-    children: List[Dict[str, Any]] | None = None,
+    nx_class: Optional[str] = None,
+    attributes: Optional[List[Dict[str, Any]]] = None,
+    children: Optional[List[Dict[str, Any]]] = None,
 ) -> Dict[str, Any]:
     """Construct a minimal group node compatible with these utilities."""
     node: Dict[str, Any] = {"type": "group", "name": name}
