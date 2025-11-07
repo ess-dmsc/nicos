@@ -2,6 +2,7 @@ from nicos.core import (
     Attach,
     HasPrecision,
     InvalidValueError,
+    LimitError,
     Moveable,
     Override,
     Param,
@@ -58,7 +59,8 @@ class MappedController(MappedMoveable):
         return self._mapReadValue(self._readRaw(maxage))
 
     def doWriteMapping(self, mapping):
-        self.valuetype = oneof(*sorted(mapping, key=num_sort))
+        for position in mapping.values():
+            self._check_limits(position)
 
     def _readRaw(self, maxage=0):
         return self._attached_controlled_device.read(maxage)
@@ -73,6 +75,14 @@ class MappedController(MappedMoveable):
         if not mapped_value:
             return "In Between"
         return mapped_value
+
+    def _check_limits(self, position):
+        limits = self._attached_controlled_device.userlimits
+        is_allowed, reason = self._attached_controlled_device.isAllowed(position)
+        if not is_allowed:
+            raise LimitError(
+                f"Mapped position ({position}) outside user limits {limits}"
+            )
 
 
 class MultiTargetMapping(MappedMoveable):
