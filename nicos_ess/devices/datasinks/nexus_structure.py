@@ -13,6 +13,7 @@ from nicos.core import (
 )
 from nicos_ess.nexus.converter import NexusTemplateConverter
 from nicos_ess.utilities.json_utils import (
+    append_group_under,
     build_named_index_map,
     get_by_named_path,
 )
@@ -168,23 +169,39 @@ class NexusStructureJsonFile(NexusStructureProvider):
     def _insert_extra_devices(self, structure):
         if not self._check_for_device("KafkaForwarder"):
             return structure
-        extra_devices = session.getDevice("KafkaForwarder").get_nexus_json()
+
+        fwd = session.getDevice("KafkaForwarder")
+        by_path = fwd.get_nexus_json()  # { '/entry/...': [group-node, ...] }
+
+        for path, group_nodes in by_path.items():
+            for node in group_nodes:
+                try:
+                    _, self._path_map = append_group_under(
+                        structure,
+                        self._path_map,
+                        parent_named_path=path,
+                        group_node=node,
+                        refresh_map=True,  # rebuilds map for subsequent insertions
+                    )
+                except KeyError:
+                    self.log.warning(
+                        "NeXus path '%s' not found in template; skipping.", path
+                    )
 
         if self._check_for_device("component_tracking"):
-            extra_devices.append(
-                session.getDevice("KafkaForwarder").get_component_nexus_json()
-            )
+            try:
+                _, self._path_map = append_group_under(
+                    structure,
+                    self._path_map,
+                    "/entry/instrument",
+                    session.getDevice("KafkaForwarder").get_component_nexus_json(),
+                    refresh_map=True,
+                )
+            except KeyError:
+                self.log.warning(
+                    "Could not find '/entry/instrument' for component tracking."
+                )
 
-        try:
-            instrument_group = self._get_node(
-                structure, "/entry/instrument", refresh_on_miss=False
-            )
-        except KeyError:
-            self.log.warning("Could not find the instrument group in the NeXus")
-            return structure
-
-        instrument_group["children"].extend(extra_devices)
-        self._refresh_map(structure)
         return structure
 
     def _insert_array_size(self, structure):

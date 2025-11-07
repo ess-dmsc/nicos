@@ -236,7 +236,7 @@ class TestEpicsKafkaForwarderStatus(TestCase):
             "dataset_type": "static_value",
         }
         self.motor.nexus_config = [nx_conf]
-        json = self.device.get_nexus_json()
+        json = self.device.get_nexus_json()["/entry/instrument"]
         assert json[0]["name"] == nx_conf["group_name"]
         assert json[0]["children"][0]["config"] == {
             "name": f'{nx_conf["group_name"]}_{nx_conf["suffix"]}',
@@ -255,10 +255,48 @@ class TestEpicsKafkaForwarderStatus(TestCase):
         position = "some_read_string"
         self.motor.nexus_config=[nx_conf]
         self.motor.values["position"] = position
-        json = self.device.get_nexus_json()
+        json = self.device.get_nexus_json()["/entry/instrument"]
         assert json[0]["name"] == nx_conf["group_name"]
         assert json[0]["children"][0]["config"] == {
             "name": f'{nx_conf["group_name"]}_{nx_conf["suffix"]}',
             "values": position,
+            "dtype": "string"
+        }
+
+    def test_multiple_nexus_config_with_different_paths(self):
+        nx_conf1 = {
+            "group_name": "motor1",
+            "nx_class": "NXcollection",
+            "units": "mm",
+            "suffix": "readback",
+            "dataset_type": "static_read",
+            "nexus_path": "/entry/instrument",
+        }
+        nx_conf2 = {
+            "group_name": "motor1",
+            "nx_class": "NXcollection",
+            "units": "",
+            "suffix": "info",
+            "value": "some_value_in_nexus",
+            "dataset_type": "static_value",
+            "nexus_path": "/entry/sample",
+        }
+        position = 123
+        self.motor.nexus_config=[nx_conf1, nx_conf2]
+        self.motor.values["position"] = position
+        json_by_path = self.device.get_nexus_json()
+        assert len(json_by_path) == 2
+        json_1 = json_by_path["/entry/instrument"]
+        assert json_1[0]["name"] == nx_conf1["group_name"]
+        assert json_1[0]["children"][0]["config"] == {
+            "name": f'{nx_conf1["group_name"]}_{nx_conf1["suffix"]}',
+            "values": position,
+            "dtype": "int"
+        }
+        json_2 = json_by_path["/entry/sample"]
+        assert json_2[0]["name"] == nx_conf2["group_name"]
+        assert json_2[0]["children"][0]["config"] == {
+            "name": f'{nx_conf2["group_name"]}_{nx_conf2["suffix"]}',
+            "values": nx_conf2["value"],
             "dtype": "string"
         }

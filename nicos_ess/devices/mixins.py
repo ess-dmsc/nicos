@@ -22,6 +22,7 @@ class HasNexusConfig(DeviceMixinBase):
         protocol (str, optional): Protocol used when forwarding data to Kafka. One of ["pva" (default), "ca"].
         periodic (int, optional): Whether data is forwarded periodically (0 or 1).
         dataset_type (str): Dataset type, one of ["nx_log" (default), "static_read", "static_value"].
+        nexus_path (str, optional): Absolute NeXus path to place the group, e.g. "/entry/instrument" (default) or "/entry/sample".
     """
 
     parameters = {
