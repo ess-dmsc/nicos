@@ -236,9 +236,9 @@ class TestEpicsKafkaForwarderStatus(TestCase):
             "dataset_type": "static_value",
         }
         self.motor.nexus_config = [nx_conf]
-        json = self.device.get_nexus_json()["/entry/instrument"]
-        assert json[0]["name"] == nx_conf["group_name"]
-        assert json[0]["children"][0]["config"] == {
+        json_obj = self.device.get_nexus_json()["/entry/instrument"]
+        assert json_obj[0]["name"] == nx_conf["group_name"]
+        assert json_obj[0]["children"][0]["config"] == {
             "name": f'{nx_conf["group_name"]}_{nx_conf["suffix"]}',
             "values": nx_conf["value"],
             "dtype": "string"
@@ -255,9 +255,9 @@ class TestEpicsKafkaForwarderStatus(TestCase):
         position = "some_read_string"
         self.motor.nexus_config=[nx_conf]
         self.motor.values["position"] = position
-        json = self.device.get_nexus_json()["/entry/instrument"]
-        assert json[0]["name"] == nx_conf["group_name"]
-        assert json[0]["children"][0]["config"] == {
+        json_obj = self.device.get_nexus_json()["/entry/instrument"]
+        assert json_obj[0]["name"] == nx_conf["group_name"]
+        assert json_obj[0]["children"][0]["config"] == {
             "name": f'{nx_conf["group_name"]}_{nx_conf["suffix"]}',
             "values": position,
             "dtype": "string"
