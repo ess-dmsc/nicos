@@ -25,8 +25,20 @@ def _minimal_metainfo(counter: int = 1) -> dict:
         ("Exp", "title"): ["Beamtime Title"],
         ("Exp", "scripts"): ["import foo\nrun()"],
         ("Exp", "job_id"): "uuid-123",
-        ("Exp", "users"): [[]],
-        # No ("Sample", "samples") -> _insert_samples is a no-op
+        ("Exp", "users"): (
+            [
+                {
+                    "name": "John Doe",
+                    "email": "",
+                    "affiliation": "European Spallation Source ERIC (ESS)",
+                    "facility_user_id": "johndoe",
+                }
+            ],
+            "({'name': 'John Doe', 'email': '', 'affiliation': 'European Spallation Source ERIC (ESS)', 'facility_user_id': 'johndoe'})",
+            "",
+            "experiment",
+        ),
+        ("Sample", "samples"): [[{"name": "SampleA", "description": "A test sample"}]],
     }
 
 
