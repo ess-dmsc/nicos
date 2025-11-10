@@ -34,7 +34,7 @@ from streaming_data_types.logdata_f142 import serialise_f142
 from streaming_data_types.status_x5f2 import serialise_x5f2
 from streaming_data_types.forwarder_config_update_fc00 import deserialise_fc00
 
-from nicos.core import status, POLLER, MAIN
+from nicos.core import status, POLLER, MAIN, ConfigurationError
 from nicos.utils import createThread
 
 from nicos_ess.devices.forwarder import EpicsKafkaForwarder
@@ -300,3 +300,228 @@ class TestEpicsKafkaForwarderStatus(TestCase):
             "values": nx_conf2["value"],
             "dtype": "string"
         }
+
+    def test_nexus_config_must_be_list(self):
+        bad = {
+            "group_name": "motor1",
+            "nx_class": "NXcollection",
+            "dataset_type": "static_value",
+            "value": "ok",
+        }  # dict instead of list
+        with pytest.raises(ConfigurationError):
+            self.motor.nexus_config = bad
+
+    def test_nexus_config_items_must_be_dicts(self):
+        with pytest.raises(ConfigurationError):
+            self.motor.nexus_config = ["not-a-dict"]
+        with pytest.raises(ConfigurationError):
+            self.motor.nexus_config = [None]
+
+    def test_missing_required_group_name_raises(self):
+        bad = {
+            "nx_class": "NXcollection",
+            "dataset_type": "static_value",
+            "value": "X",
+        }
+        with pytest.raises(ConfigurationError):
+            self.motor.nexus_config = [bad]
+
+    def test_missing_required_nx_class_raises(self):
+        bad = {
+            "group_name": "g",
+            "dataset_type": "static_value",
+            "value": "X",
+        }
+        with pytest.raises(ConfigurationError):
+            self.motor.nexus_config = [bad]
+
+    def test_missing_required_dataset_type_raises(self):
+        bad = {
+            "group_name": "g",
+            "nx_class": "NXcollection",
+            "value": "X",
+        }
+        with pytest.raises(ConfigurationError):
+            self.motor.nexus_config = [bad]
+
+    def test_group_name_and_nx_class_cannot_be_empty(self):
+        bad = {"group_name": "", "nx_class": "", "dataset_type": "static_value", "value": "X"}
+        with pytest.raises(ConfigurationError):
+            self.motor.nexus_config = [bad]
+
+    def test_unknown_keys_rejected(self):
+        bad = {
+            "group_name": "g",
+            "nx_class": "NXcollection",
+            "dataset_type": "static_value",
+            "value": "X",
+            "unexpected": 123,
+        }
+        with pytest.raises(ConfigurationError):
+            self.motor.nexus_config = [bad]
+
+    def test_invalid_dataset_type_raises(self):
+        bad = {"group_name": "g", "nx_class": "NXcollection", "dataset_type": "stream"}
+        with pytest.raises(ConfigurationError):
+            self.motor.nexus_config = [bad]
+
+    def test_static_value_without_value_key_raises(self):
+        bad = {"group_name": "g", "nx_class": "NXcollection", "dataset_type": "static_value"}
+        with pytest.raises(ConfigurationError):
+            self.motor.nexus_config = [bad]
+
+    def test_forwarder_keys_present_but_not_nx_log_raises(self):
+        bad = {
+            "group_name": "g",
+            "nx_class": "NXdetector",
+            "dataset_type": "static_read",
+            "schema": "f144",
+            "topic": "T",
+            "source_name": "PV:NAME",
+            # protocol/periodic intentionally omitted; still illegal on non-nx_log
+        }
+        with pytest.raises(ConfigurationError):
+            self.motor.nexus_config = [bad]
+
+    def test_single_forwarder_key_on_non_nx_log_raises(self):
+        bad = {
+            "group_name": "g",
+            "nx_class": "NXdetector",
+            "dataset_type": "static_read",
+            "source_name": "PV:NAME",  # even one key is forbidden unless nx_log
+        }
+        with pytest.raises(ConfigurationError):
+            self.motor.nexus_config = [bad]
+
+    def test_forwarder_keys_missing_when_nx_log_raises(self):
+        base_missing_topic = {
+            "group_name": "g",
+            "nx_class": "NXdetector",
+            "dataset_type": "nx_log",
+            "schema": "f144",
+            # topic missing -> error
+            "source_name": "PV:NAME",
+        }
+        with pytest.raises(ConfigurationError):
+            self.motor.nexus_config = [base_missing_topic]
+
+        # missing any of the triad must raise
+        for missing in ("schema", "topic", "source_name"):
+            cfg = {
+                "group_name": "g",
+                "nx_class": "NXdetector",
+                "dataset_type": "nx_log",
+                "schema": "f144",
+                "topic": "topic",
+                "source_name": "PV:NAME",
+            }
+            cfg.pop(missing)
+            with pytest.raises(ConfigurationError):
+                self.motor.nexus_config = [cfg]
+
+    def test_forwarder_keys_present_but_empty_raises(self):
+        bad = {
+            "group_name": "g",
+            "nx_class": "NXdetector",
+            "dataset_type": "nx_log",
+            "schema": "",
+            "topic": "",
+            "source_name": "",
+        }
+        with pytest.raises(ConfigurationError):
+            self.motor.nexus_config = [bad]
+
+    def test_invalid_protocol_raises_if_provided(self):
+        bad = {
+            "group_name": "g",
+            "nx_class": "NXdetector",
+            "dataset_type": "nx_log",
+            "schema": "f144",
+            "topic": "topic",
+            "source_name": "PV:NAME",
+            "protocol": "kafka",  # invalid, must be 'pva' or 'ca'
+        }
+        with pytest.raises(ConfigurationError):
+            self.motor.nexus_config = [bad]
+
+    def test_invalid_periodic_raises_if_provided(self):
+        bad = {
+            "group_name": "g",
+            "nx_class": "NXdetector",
+            "dataset_type": "nx_log",
+            "schema": "f144",
+            "topic": "topic",
+            "source_name": "PV:NAME",
+            "periodic": 2,  # must be 0 or 1 if provided
+        }
+        with pytest.raises(ConfigurationError):
+            self.motor.nexus_config = [bad]
+
+        bad2 = {
+            "group_name": "g",
+            "nx_class": "NXdetector",
+            "dataset_type": "nx_log",
+            "schema": "f144",
+            "topic": "topic",
+            "source_name": "PV:NAME",
+            "periodic": "maybe",
+        }
+        with pytest.raises(ConfigurationError):
+            self.motor.nexus_config = [bad2]
+
+    def test_valid_periodic_variants_are_accepted(self):
+        ok1 = {
+            "group_name": "g",
+            "nx_class": "NXdetector",
+            "dataset_type": "nx_log",
+            "schema": "f144",
+            "topic": "topic",
+            "source_name": "PV:NAME",
+            "periodic": 0,
+        }
+        ok2 = dict(ok1, periodic=1)
+        ok3 = dict(ok1, periodic=True)  # coerces to 1 in validator, but not defaulted if missing
+        ok4 = dict(ok1, periodic=False)  # coerces to 0
+        self.motor.nexus_config = [ok1, ok2, ok3, ok4]
+
+    def test_invalid_nexus_path_raises_if_provided(self):
+        bad_rel = {
+            "group_name": "g",
+            "nx_class": "NXcollection",
+            "dataset_type": "static_value",
+            "value": "X",
+            "nexus_path": "entry/instrument",  # not absolute
+        }
+        with pytest.raises(ConfigurationError):
+            self.motor.nexus_config = [bad_rel]
+
+        bad_root = {
+            "group_name": "g",
+            "nx_class": "NXcollection",
+            "dataset_type": "static_value",
+            "value": "X",
+            "nexus_path": "/instrument",  # must start with /entry
+        }
+        with pytest.raises(ConfigurationError):
+            self.motor.nexus_config = [bad_root]
+
+    def test_valid_nx_log_config_minimal_is_accepted(self):
+        # protocol/periodic are optional; defaults applied later by forwarder code
+        good = {
+            "group_name": "det",
+            "nx_class": "NXdetector",
+            "dataset_type": "nx_log",
+            "schema": "f144",
+            "topic": "detector-events",
+            "source_name": "PV:COUNTS",
+        }
+        self.motor.nexus_config = [good]
+
+    def test_valid_static_value_minimal_is_accepted(self):
+        good = {
+            "group_name": "sample",
+            "nx_class": "NXsample",
+            "dataset_type": "static_value",
+            "value": "Ni powder",
+        }
+        self.motor.nexus_config = [good]
