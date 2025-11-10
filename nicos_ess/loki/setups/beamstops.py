@@ -41,8 +41,7 @@ devices = dict(
     beamstop1_positioner=device(
         "nicos_ess.loki.devices.beamstop.LokiBeamstopArmPositioner",
         controlled_device="beamstop1",
-        parked=987.5,
-        in_beam=54.630,
+        mapping={"Parked": 987.5, "In beam": 54.630},
     ),
     beamstop2=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
@@ -53,8 +52,7 @@ devices = dict(
     beamstop2_positioner=device(
         "nicos_ess.loki.devices.beamstop.LokiBeamstopArmPositioner",
         controlled_device="beamstop2",
-        parked=977.998,
-        in_beam=59.320,
+        mapping={"Parked": 977.998, "In beam": 59.320},
     ),
     beamstop3=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
@@ -65,8 +63,7 @@ devices = dict(
     beamstop3_positioner=device(
         "nicos_ess.loki.devices.beamstop.LokiBeamstopArmPositioner",
         controlled_device="beamstop3",
-        parked=987.5,
-        in_beam=55.6,
+        mapping={"Parked": 987.5, "In beam": 55.6},
     ),
     beamstop4=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
@@ -77,8 +74,7 @@ devices = dict(
     beamstop4_positioner=device(
         "nicos_ess.loki.devices.beamstop.LokiBeamstopArmPositioner",
         controlled_device="beamstop4",
-        parked=987,
-        in_beam=57.3,
+        mapping={"Parked": 987, "In beam": 57.3},
     ),
     beamstop5=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
@@ -89,8 +85,7 @@ devices = dict(
     beamstop5_positioner=device(
         "nicos_ess.loki.devices.beamstop.LokiBeamstopArmPositioner",
         controlled_device="beamstop5",
-        parked=989.891,
-        in_beam=54.6,
+        mapping={"Parked": 989.891, "In beam": 54.6},
     ),
     beamstop_selector=device(
         "nicos_ess.loki.devices.beamstop.LokiBeamstopController",

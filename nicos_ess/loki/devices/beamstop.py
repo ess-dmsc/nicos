@@ -1,25 +1,13 @@
 import re
 
-from nicos.core import ConfigurationError, HasPrecision, Override, Param
+from nicos.core import ConfigurationError, HasPrecision, Override, Param, oneof
 from nicos.core.utils import waitForCompletion
 from nicos_ess.devices.mapped_controller import MappedController, MultiTargetMapping
 
+from nicos.utils import num_sort
+
 
 class LokiBeamstopArmPositioner(MappedController):
-    parameters = {
-        "parked": Param(
-            mandatory=True,
-            settable=True,
-            description="The mapped value that corresponds to the parked position",
-            type=float,
-        ),
-        "in_beam": Param(
-            mandatory=True,
-            settable=True,
-            description="The mapped value that corresponds to the in beam position",
-            type=float,
-        ),
-    }
 
     parameter_overrides = {
         "mapping": Override(mandatory=False),
@@ -27,13 +15,13 @@ class LokiBeamstopArmPositioner(MappedController):
 
     def doInit(self, mode):
         MappedController.doInit(self, mode)
-        self.doWriteMapping({"Parked": self.parked, "In beam": self.in_beam})
 
     def doWriteMapping(self, mapping):
         if sorted(mapping.keys()) != ["In beam", "Parked"]:
             raise ConfigurationError(
                 "Only 'In beam' and 'Parked' are allowed as mapped positions"
             )
+        self.valuetype = oneof(*sorted(mapping, key=num_sort))
 
     def _mapReadValue(self, value):
         if isinstance(self._attached_controlled_device, HasPrecision):
