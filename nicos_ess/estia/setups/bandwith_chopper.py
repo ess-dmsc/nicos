@@ -1,7 +1,7 @@
 description = "The choppers in chopper system 1 for LOKI"
 
 pv_root = "ESTIA-ChpSy1:Chop-BWC-101:"
-chic_root = "LOKI-ChpSy1:Chop-CHIC-001:"
+chic_root = "ESTIA-ChpSy1:Chop-CHIC-001:"
 
 devices = dict(
     bwc_status=device(
