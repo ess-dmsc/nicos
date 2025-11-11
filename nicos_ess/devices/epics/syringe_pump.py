@@ -23,6 +23,19 @@ from nicos_ess.devices.epics.pva.epics_devices import (
     get_from_cache_or,
 )
 
+# [Infusing, Withdrawing, Stopped, Paused, "Pause phase", "Trigger wait", Purging, Unknown]
+
+CHOICES_STATUS_MAP = {
+    "Infusing": status.BUSY,
+    "Withdrawing": status.BUSY,
+    "Stopped": status.OK,
+    "Paused": status.OK,
+    "Pause phase": status.BUSY,
+    "Trigger wait": status.BUSY,
+    "Purging": status.BUSY,
+    "Unknown": status.UNKNOWN,
+}
+
 
 class SyringePumpController(EpicsParameters, MappedMoveable):
     """
@@ -189,7 +202,10 @@ class SyringePumpController(EpicsParameters, MappedMoveable):
             return status.ERROR, device_msg
 
         try:
-            return self._attached_status.status(0)
+            attached_message = self._attached_status.read(0)
+            if attached_message not in CHOICES_STATUS_MAP:
+                return status.UNKNOWN, f"unknown device state: {attached_message}"
+            return CHOICES_STATUS_MAP[attached_message], attached_message
         except Exception:
             return status.ERROR, "communication failure (reading status device)"
 
