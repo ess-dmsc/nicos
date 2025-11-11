@@ -6,19 +6,19 @@ devices = dict(
     component_a=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
         description="The percentage of component A",
-        readpv="{}ComponentA-R".format(pv_root),
+        readpv="{}ComponentA-S".format(pv_root),
         writepv="{}ComponentA-S".format(pv_root),
     ),
     component_b=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
         description="The percentage of component B",
-        readpv="{}ComponentB-R".format(pv_root),
+        readpv="{}ComponentB-S".format(pv_root),
         writepv="{}ComponentB-S".format(pv_root),
     ),
     component_c=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
         description="The percentage of component C",
-        readpv="{}ComponentC-R".format(pv_root),
+        readpv="{}ComponentC-S".format(pv_root),
         writepv="{}ComponentC-S".format(pv_root),
     ),
     component_d=device(
@@ -66,11 +66,6 @@ devices = dict(
         description="The volume remaining.",
         readpv="{}VolumeRemaining-R".format(pv_root),
     ),
-    pump_status=device(
-        "nicos_ess.devices.epics.pva.EpicsStringReadable",
-        description="The current operational state of the device",
-        readpv="{}Status-R".format(pv_root),
-    ),
     hplc_pump=device(
         "nicos_ess.devices.epics.hplc_pump.HPLCPumpController",
         description="The current operational state of the device",
@@ -78,6 +73,5 @@ devices = dict(
         pollinterval=None,
         monitor=True,
         pva=True,
-        status="pump_status",
     ),
 )
