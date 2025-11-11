@@ -1,5 +1,5 @@
-from nicos.core import Moveable, Attach, Override
-from nicos.devices.epics.pva import EpicsReadable, EpicsMappedMoveable
+from nicos.core import Attach, Moveable, Override, Readable
+from nicos.devices.abstract import MappedMoveable
 
 
 class SolidLiquidCell(Moveable):
@@ -8,13 +8,13 @@ class SolidLiquidCell(Moveable):
     """
 
     attached_devices = {
-        "top_s1": Attach("Top side solenoid 1", EpicsMappedMoveable),
-        "top_s2": Attach("Top side solenoid 2", EpicsMappedMoveable),
-        "top_s3": Attach("Top side solenoid 3", EpicsMappedMoveable),
-        "bottom_s1": Attach("Bottom side solenoid 1", EpicsMappedMoveable),
-        "bottom_s2": Attach("Bottom side solenoid 2", EpicsMappedMoveable),
-        "bottom_s3": Attach("Bottom side solenoid 3", EpicsMappedMoveable),
-        "temperature": Attach("Temperature sensor", EpicsReadable),
+        "top_s1": Attach("Top side solenoid 1", MappedMoveable),
+        "top_s2": Attach("Top side solenoid 2", MappedMoveable),
+        "top_s3": Attach("Top side solenoid 3", MappedMoveable),
+        "bottom_s1": Attach("Bottom side solenoid 1", MappedMoveable),
+        "bottom_s2": Attach("Bottom side solenoid 2", MappedMoveable),
+        "bottom_s3": Attach("Bottom side solenoid 3", MappedMoveable),
+        "temperature": Attach("Temperature sensor", Readable),
     }
 
     parameter_overrides = {
