@@ -1,4 +1,4 @@
-description = "The choppers in chopper system 1 for LOKI"
+description = "ESTIA Bandwith Chopper"
 
 pv_root = "ESTIA-ChpSy1:Chop-BWC-101:"
 chic_root = "ESTIA-ChpSy1:Chop-CHIC-001:"
