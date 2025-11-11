@@ -1,23 +1,45 @@
+"""
+NICOS data source devices for consuming ESSLivedata and sending light commands.
+
+- LiveDataCollector:
+    * Subscribes to DA00 data topics
+    * Tails X5F2 status/heartbeat topics
+    * (optional) Tails responses topics
+    * Maintains a JobRegistry and publishes it into NICOS cache
+    * Routes DA00 to DataChannel(s) by Selector
+    * Provides job_command helpers (reset/stop/remove)
+
+- DataChannel:
+    * User selects a "selector" string of the form:
+      "<instr>/<ns>/<name>/<version>@<source>#<job_number>/<output>"
+    * Receives matched DA00 messages and pushes to NICOS live plots
+    * Offers convenience methods reset()/stop()/remove() that send JobCommand
+"""
+
+from __future__ import annotations
+
 import json
 import time
+from typing import List, Optional, Tuple
 from uuid import uuid4
 
 import numpy as np
 from streaming_data_types import deserialise_da00
+from streaming_data_types.status_x5f2 import deserialise_x5f2
 from streaming_data_types.utils import get_schema
 
 from nicos import session
 from nicos.core import (
     LIVE,
+    MASTER,
     POLLER,
     SIMULATION,
     ArrayDesc,
     Override,
     Param,
-    dictof,
+    Readable,
     host,
     listof,
-    multiStatus,
     status,
     tupleof,
 )
@@ -26,63 +48,34 @@ from nicos.utils import byteBuffer, createThread
 from nicos_ess.devices.kafka.consumer import KafkaConsumer, KafkaSubscriber
 from nicos_ess.devices.kafka.producer import KafkaProducer
 
+from .livedata_utils import (
+    JobInfo,
+    JobRegistry,
+    Selector,
+    WorkflowId,
+    parse_result_key,
+    parse_selector,
+    selector_matches,
+)
+
+DISCONNECTED_STATE = (status.ERROR, "Disconnected")
+INIT_MESSAGE = "Initializing LiveDataCollector…"
+
 
 class DataChannel(CounterChannelMixin, PassiveChannel):
-    # class DataChannel(Readable, PassiveChannel):
     """
-    Channel device that stores histogram/image data (1D or 2D)
-    and pushes it to NICOS via putResult(). The main (master)
-    LiveDataCollector receives Kafka da00 data and routes it here.
+    Channel that subscribes (via the collector) to a particular workflow/source/job/output
+    and forwards DA00 'signal' arrays to NICOS live data. Supports 1D, 2D, and N-D in a
+    minimal/robust way.
     """
 
     parameters = {
-        "source_name": Param(
-            "Identifier source on multiplexed topics",
+        "selector": Param(
+            "Selector '<instr>/<ns>/<name>/<ver>@<source>#<job>[/<output>]'",
             type=str,
             default="",
             userparam=True,
             settable=True,
-        ),
-        "toa_range": Param(
-            "Time-of-arrival range in microseconds",
-            type=tupleof(int, int),
-            default=(0, 100_000),
-            unit="us",
-            userparam=True,
-            settable=True,
-            volatile=True,
-        ),
-        "num_bins": Param(
-            "Number of time-of-arrival bins",
-            type=int,
-            default=1000,
-            userparam=True,
-            settable=True,
-            volatile=True,
-        ),
-        "roi_rectangle": Param(
-            "ROI rectangle with low/high bounds per axis",
-            type=dict,
-            default={"x": {"low": 0, "high": 100}, "y": {"low": 0, "high": 100}},
-            userparam=True,
-            settable=True,
-            volatile=True,
-        ),
-        "last_clear": Param(
-            "Last clear time",
-            type=int,
-            default=0,
-            unit="ns",
-            userparam=True,
-            settable=True,
-        ),
-        "update_period": Param(
-            "Time interval for data updates (ms)",
-            type=int,
-            unit="ms",
-            userparam=True,
-            settable=True,
-            volatile=True,
         ),
         "curstatus": Param(
             "Store the current device status",
@@ -91,7 +84,7 @@ class DataChannel(CounterChannelMixin, PassiveChannel):
             settable=True,
         ),
         "curvalue": Param(
-            "Store the current device value",
+            "Store the current device value (sum of signal)",
             internal=True,
             type=int,
             settable=True,
@@ -104,272 +97,158 @@ class DataChannel(CounterChannelMixin, PassiveChannel):
         "pollinterval": Override(default=None, userparam=False, settable=False),
     }
 
-    _WILDCARD_KEYS = (
-        "{src}/{svc}/{param}",
-        "*/{svc}/{param}",
-        "{src}/*/{param}",
-        "*/*/{param}",
-    )
-
     def doPreinit(self, mode):
-        self._data_structure = {}
-        self._signal_data = np.array([])
-        self._signal_data_sum = 0
-        self._collector = None
-        self._current_status = (status.OK, "")
-        self._source_prefix = self.source_name.rsplit("/", 1)[0]
-        if mode == SIMULATION:
-            return
-        self._update_status(status.OK, "")
-
-    def _cfg(self, param, default=None, parse_json=True):
-        """Resolve param with wildcard precedence via NICOS cache."""
-        if not self._collector:
-            return default
-
-        try:
-            src, svc = self._source_prefix.split("/", 1)
-        except ValueError:
-            return default
-
-        for pattern in self._WILDCARD_KEYS:
-            key = "livedata_cfg/" + pattern.format(src=src, svc=svc, param=param)
-            raw = self._collector._cache.get(self._collector, key)
-            if raw is None:
-                continue
-            if not parse_json:
-                return raw
-            try:
-                return json.loads(
-                    raw.decode() if isinstance(raw, (bytes, bytearray)) else raw
-                )
-            except Exception:
-                return raw
-        return default
-
-    def _update_status(self, new_status, message):
-        self._current_status = (new_status, message)
-        self._cache.put(self._name, "status", self._current_status, time.time())
+        self._collector = None  # set by LiveDataCollector
+        self._selector_obj: Optional[Selector] = (
+            parse_selector(self.selector) if self.selector else None
+        )
+        self._cache.put(self._name, "curstatus", (status.OK, ""), time.time())
+        self._signal: Optional[np.ndarray] = None
+        self._array_desc = ArrayDesc(self.name, shape=(), dtype=np.int32)
+        if mode != SIMULATION:
+            self._update_status(status.OK, "")
 
     def doRead(self, maxage=0):
         return self.curvalue
 
     def doReadArray(self, quality):
-        return self._signal_data
+        return self._signal
 
     def arrayInfo(self):
-        return self.update_arraydesc()
-
-    def update_arraydesc(self):
-        if self._data_structure:
-            return ArrayDesc(
-                self.name, shape=self._data_structure["signal_shape"], dtype=np.int32
-            )
-        else:
-            return ArrayDesc(self.name, shape=(), dtype=np.int32)
+        return self._array_desc
 
     def doStatus(self, maxage=0):
-        return self._current_status
+        return self.curstatus
 
-    def update_data(self, message, timestamp):
+    def doWriteSelector(self, value):
+        self._selector_obj = parse_selector(value)
+
+    def _update_status(self, new_status, message):
+        self.curstatus = (new_status, message)
+        self._cache.put(self._name, "status", self.curstatus, time.time())
+
+    # Called by collector when a matching DA00 arrives
+    def update_data_from_da00(self, da00_msg, timestamp_ns: int):
         try:
-            if message.source_name != self.source_name:
-                self.log.warn(
-                    f"Source name mismatch for device {self.name}, "
-                    f"message from {message.source_name} instead "
-                    f"of {self.source_name}"
-                )
-                return
-
-            self._data_structure.clear()
-            variables = message.data
-            self._parse_new_data(variables)
-            self.update_arraydesc()
-            self._signal_data = self._data_structure["signal"]
-            self._signal_data_sum = (
-                int(self._signal_data.sum()) if self._signal_data.size else 0
+            # Find the 'signal' Variable
+            variables = list(da00_msg.data)
+            sig = next(
+                (v for v in variables if getattr(v, "name", None) == "signal"), None
             )
-            self.curvalue = self._signal_data_sum
-
-            self.poll()
-
-            if len(self.arrayInfo().shape) == 1:
-                plot_type = "hist-1d"
-            elif len(self.arrayInfo().shape) == 2:
-                plot_type = "hist-2d"
-            else:
-                self.log.warn(f"Unknown plot type for device {self.name}")
+            if sig is None:
                 return
 
-            if self._data_structure:
-                self.putResult(
-                    1,
-                    self.get_plot_data(),
-                    timestamp,
-                    message.source_name,
-                    plot_type,
-                    # self.data_structure["plot_type"],
-                )
-        except Exception as e:
-            self._update_status(status.ERROR, str(e))
+            arr = np.asarray(sig.data)
+            self._signal = np.ascontiguousarray(arr, dtype=arr.dtype)
+            self.curvalue = int(self._signal.sum()) if self._signal.size else 0
 
-    def _parse_new_data(self, variables):
-        if not variables:
+            # Update NICOS array desc
+            self._array_desc = ArrayDesc(
+                self.name, shape=self._signal.shape, dtype=self._signal.dtype
+            )
+
+            # Heuristic plot type
+            if self._signal.ndim == 1:
+                plot_type = "hist-1d"
+                labels = [np.arange(self._signal.shape[0])]
+            elif self._signal.ndim == 2:
+                plot_type = "hist-2d"
+                # NICOS expects x first, y second for label buffers; keep conventional ordering
+                labels = [
+                    np.arange(self._signal.shape[1]),
+                    np.arange(self._signal.shape[0]),
+                ]
+            else:
+                plot_type = "hist-nd"
+                labels = [np.arange(self._signal.size)]
+
+            self.poll()  # trigger NICOS data update pipeline
+            self._push_to_nicos(plot_type, labels, timestamp_ns)
+
+        except Exception as exc:
+            self._update_status(status.ERROR, str(exc))
+
+    def _push_to_nicos(
+        self, plot_type: str, label_arrays: List[np.ndarray], timestamp: int
+    ):
+        if self._signal is None:
             return
 
-        for var in variables:
-            if var.name == "signal":
-                self._data_structure["signal"] = var.data
-                self._data_structure["signal_axes"] = var.axes
-                self._data_structure["signal_shape"] = var.shape
-                self._data_structure["plot_type"] = var.label
-                variables.remove(var)
-
-        for var in variables:
-            var_axes = var.axes
-            if not any([ax in var_axes for ax in self._data_structure["signal_axes"]]):
-                continue
-            if len(var_axes) != 1:
-                continue
-
-            var_axis = str(var_axes[0])
-
-            self._data_structure[var_axis] = var.data
-            self._data_structure[var_axis + "_axes"] = var.axes
-            self._data_structure[var_axis + "_shape"] = var.shape
-
-        if len(self._data_structure["signal_axes"]):
-            # create signal axes based on the shape of the signal with arange
-            for i, axis_name in enumerate(self._data_structure["signal_axes"]):
-                exists = self._data_structure.get(axis_name, None)
-                if exists is not None:
-                    continue
-                arr = np.arange(self._data_structure["signal_shape"][i])
-                # store the numeric array in the data_structure under the string key
-                self._data_structure[axis_name] = arr
-                self._data_structure[axis_name + "_shape"] = arr.shape
-
-    def get_plot_data(self):
-        """
-        Returns data in the order [x, y, z] for plotting. Like [axes_1, axes_2, signal].
-        """
-        try:
-            axes_to_plot_against = self._data_structure["signal_axes"]
-            plot_data = [self._data_structure[axis] for axis in axes_to_plot_against]
-            plot_data.append(self._data_structure["signal"])
-            return plot_data
-        except KeyError:
-            return None
-
-    def putResult(self, quality, data, timestamp, source_name, plot_type=None):
-        signal_data = data.pop(-1)
-        databuffer = [byteBuffer(np.ascontiguousarray(signal_data))]
+        databuffer = [byteBuffer(np.ascontiguousarray(self._signal))]
         datadesc = [
             dict(
-                dtype=signal_data.dtype.str,
-                shape=signal_data.shape,
-                labels={
-                    "x": {"define": "classic"},
-                    "y": {"define": "classic"},
-                },
+                dtype=self._signal.dtype.str,
+                shape=self._signal.shape,
+                labels={"x": {"define": "classic"}, "y": {"define": "classic"}},
                 plotcount=1,
                 plot_type=plot_type,
-                label_shape=tuple([len(label_data) for label_data in data]),
-                label_dtypes=tuple([label_data.dtype.str for label_data in data]),
+                label_shape=tuple(len(l) for l in label_arrays),
+                label_dtypes=tuple(l.dtype.str for l in label_arrays),
             )
         ]
-        if databuffer:
-            parameters = dict(
-                uid=0,
-                time=timestamp,
-                det=source_name,
-                tag=LIVE,
-                datadescs=datadesc,
-            )
-            data = np.ascontiguousarray(np.concatenate(data), dtype=np.float64)
-            labelbuffers = [byteBuffer(data)]
-            session.updateLiveData(parameters, databuffer, labelbuffers)
+        flat_labels = np.ascontiguousarray(
+            np.concatenate(label_arrays), dtype=np.float64
+        )
+        labelbuffers = [byteBuffer(flat_labels)]
 
-    def _send_command_to_collector(self, param_name, value):
-        full_key = f"{self._source_prefix}/{param_name}"
-        if self._collector:
-            self._collector.send_command(full_key, value)
-
-    def doStart(self):
-        self._update_status(status.BUSY, "Counting")
-        self.last_clear = time.time_ns()
-        message = json.dumps({"value": self.last_clear, "unit": "ns"}).encode("utf-8")
-        self._send_command_to_collector("start_time", message)
-
-    def doStop(self):
-        self._update_status(status.OK, "")
-
-    def doFinish(self):
-        self._update_status(status.OK, "")
-
-    def doWriteNum_Bins(self, value):
-        message = str(value).encode("utf-8")
-        self._send_command_to_collector("time_of_arrival_bins", message)
-
-    def doReadNum_Bins(self):
-        val = self._cfg("time_of_arrival_bins", parse_json=False)
-        try:
-            return int(val)
-        except Exception:
-            return self._params.get("num_bins", 1000)
-
-    def doWriteToa_Range(self, value):
-        enabled = False if value[0] == 0 and value[1] == 0 else True
-        data = {"enabled": enabled, "low": value[0], "high": value[1], "unit": "us"}
-        message = json.dumps(data).encode("utf-8")
-        self._send_command_to_collector("toa_range", message)
-
-    def doReadToa_Range(self, maxage=0):
-        cfg = self._cfg("toa_range")
-        if isinstance(cfg, dict):
-            return (cfg.get("low", 0), cfg.get("high", 100_000))
-        return self._params.get("toa_range", (0, 100_000))
-
-    def doWriteRoi_Rectangle(self, value):
-        if isinstance(value, dict):
-            if not all(key in value for key in ["x", "y"]):
-                raise ValueError("Invalid ROI rectangle value")
-            message = json.dumps(value).encode("utf-8")
-            self._send_command_to_collector("roi_rectangle", message)
-
-    def doReadRoi_Rectangle(self, maxage=0):
-        cfg = self._cfg("roi_rectangle")
-        if isinstance(cfg, dict):
-            return {
-                "x": {
-                    "low": cfg.get("x", {}).get("low", 0),
-                    "high": cfg.get("x", {}).get("high", 100),
-                },
-                "y": {
-                    "low": cfg.get("y", {}).get("low", 0),
-                    "high": cfg.get("y", {}).get("high", 100),
-                },
-            }
-        return self._params.get(
-            "roi_rectangle",
-            {"x": {"low": 0, "high": 100}, "y": {"low": 0, "high": 100}},
+        session.updateLiveData(
+            dict(uid=0, time=timestamp, det=self.name, tag=LIVE, datadescs=datadesc),
+            databuffer,
+            labelbuffers,
         )
 
-    def doWriteUpdate_Period(self, value):
-        message = json.dumps({"value": value, "unit": "ms"}).encode("utf-8")
-        self._send_command_to_collector("update_every", message)
+    def _resolve_job(self) -> Optional[JobInfo]:
+        if not self._collector or not self._selector_obj:
+            return None
+        sel = self._selector_obj
+        reg = self._collector._registry
+        if sel.job_number:
+            for j in reg.list_jobs():
+                if (
+                    j.workflow_path == sel.workflow_path
+                    and j.source_name == sel.source_name
+                    and j.job_number == sel.job_number
+                ):
+                    return j
+            return None
+        return reg.resolve_latest(sel.workflow_path, sel.source_name)
 
-    def doReadUpdate_Period(self, maxage=0):
-        cfg = self._cfg("update_every")
-        if isinstance(cfg, dict):
-            return cfg.get("value", self._params["update_period"])
-        return self._params.get("update_period", 1000)
+    def doReset(self):
+        job = self._resolve_job()
+        if job:
+            self._collector.send_job_command(
+                job_id={"source_name": job.source_name, "job_number": job.job_number},
+                action="reset",
+            )
 
-    def doShutdown(self):
-        self._update_status(status.OK, "")
+    def doStop(self):
+        job = self._resolve_job()
+        if job:
+            self._collector.send_job_command(
+                job_id={"source_name": job.source_name, "job_number": job.job_number},
+                action="stop",
+            )
+
+    def remove(self):
+        job = self._resolve_job()
+        if job:
+            self._collector.send_job_command(
+                job_id={"source_name": job.source_name, "job_number": job.job_number},
+                action="remove",
+            )
 
 
 class LiveDataCollector(Detector):
+    """
+    One device to:
+      * consume DA00 data (KafkaSubscriber with callbacks)
+      * tail X5F2 status/heartbeat topics (KafkaConsumer in a small thread)
+      * optionally tail responses topic
+      * maintain JobRegistry and mirror it into the NICOS cache
+      * route DA00 to DataChannel(s) whose 'selector' matches the ResultKey
+      * publish JobCommand JSON to commands topic
+    """
+
     parameters = {
         "brokers": Param(
             "List of kafka brokers to connect to",
@@ -378,125 +257,399 @@ class LiveDataCollector(Detector):
             preinit=True,
             userparam=False,
         ),
-        "topic": Param(
-            "Kafka topic(s) where messages are written",
+        "data_topics": Param(
+            "Kafka topic(s) where DA00 messages are written",
             type=listof(str),
-            settable=False,
             preinit=True,
             mandatory=True,
             userparam=False,
         ),
-        "command_topic": Param(
-            "Kafka topic to which we may send config commands",
+        "status_topics": Param(
+            "Kafka topic(s) where X5F2 status/heartbeat is written",
+            type=listof(str),
+            default=[],
+            preinit=True,
+            userparam=False,
+        ),
+        "responses_topics": Param(
+            "Kafka topic(s) where responses/acks are written (optional)",
+            type=listof(str),
+            default=[],
+            preinit=True,
+            userparam=False,
+        ),
+        "commands_topic": Param(
+            "Kafka topic to which we send job_command/workflow_config",
             type=str,
             default="",
+            preinit=True,
             userparam=False,
-            settable=False,
         ),
-        "schema": Param(
-            "Schema we expect for the incoming data (e.g. da00)",
+        "service_name": Param(
+            "Service name part for command keys (e.g. 'data_reduction')",
             type=str,
-            default="da00",
+            default="data_reduction",
+            preinit=True,
             userparam=False,
-            settable=False,
         ),
         "cfg_group_id": Param(
-            "Kafka consumer group for cfg topic",
+            "Kafka consumer group base for status/responses",
             type=str,
-            default="nicos-livedata-cfg",
+            default="nicos-livedata",
+            settable=True,
+            userparam=False,
+        ),
+        "status_timeout": Param(
+            "Consider disconnected if no heartbeat within N seconds beyond interval",
+            type=int,
+            default=5,
             settable=True,
             userparam=False,
         ),
     }
 
+    parameter_overrides = {
+        "pollinterval": Override(default=None, userparam=False, settable=False),
+    }
+
+    # internals
+    _data_subscriber: Optional[KafkaSubscriber] = None
+    _status_consumer: Optional[KafkaConsumer] = None
+    _resp_consumer: Optional[KafkaConsumer] = None
+    _producer: Optional[KafkaProducer] = None
+
     def doPreinit(self, mode):
         Detector.doPreinit(self, mode)
-        self._kafka_subscriber = None
-        if mode == SIMULATION:
+        self._registry = JobRegistry()
+        self._last_expected_status_time = time.time()
+        self._data_subscriber = None
+
+        # Attach collector reference to channels
+        for ch in self._channels:
+            ch._collector = self
+
+        if mode == SIMULATION or session.sessiontype == POLLER:
             return
 
-        for channel in self._channels:
-            channel._collector = self
+        # Data subscriber (callbacks)
+        self._data_subscriber = KafkaSubscriber(self.brokers)
+        self._data_subscriber.subscribe(
+            self.data_topics,
+            self._on_data_messages,
+            self._on_no_data,
+        )
 
-        if session.sessiontype != POLLER:
-            self._kafka_subscriber = KafkaSubscriber(self.brokers)
-            self._kafka_subscriber.subscribe(
-                self.topic,
-                self.new_messages_callback,
-                self.no_messages_callback,
+        # Status/heartbeat consumer (simple tail thread)
+        if self.status_topics:
+            self._status_consumer = KafkaConsumer.create(
+                self.brokers,
+                starting_offset="latest",
+                group_id=self._unique_group("status"),
+            )
+            self._status_consumer.subscribe(self.status_topics)
+            self._status_thread = createThread(
+                "livedata_status_tail", self._tail_status_topic
             )
 
-            self._kafka_producer = KafkaProducer.create(self.brokers)
-            self.cfg_group_id = f"nicos-livedata-cfg-{uuid4().hex}"
-
-            if self.command_topic:
-                self._cmd_consumer = KafkaConsumer.create(
-                    self.brokers,
-                    starting_offset="earliest",
-                    group_id=self.cfg_group_id,
-                )
-                self._cmd_consumer.subscribe([self.command_topic])
-                self._cfg_thread = createThread("cfg_tail", self._tail_cfg_topic)
-
-        self._collectControllers()
-        self._update_status(status.WARN, "Initializing LiveDataCollector...")
-
-    def _tail_cfg_topic(self):
-        while True:
-            msg = self._cmd_consumer.poll(timeout_ms=100)
-            if not msg:
-                time.sleep(0.1)
-                continue
-
-            key = msg.key().decode() if msg.key() else ""
-            value = msg.value()
-
-            cache_key = f"livedata_cfg/{key}"
-            self._cache.put(self._name, cache_key, value, time.time())
-            self._cmd_consumer._consumer.commit(msg, asynchronous=False)
-
-    def _update_status(self, new_status, msg=""):
-        self._cache.put(self, "status", (new_status, msg), time.time())
-
-    def send_command(self, param_name, message):
-        def cb(err, msg):
-            if err:
-                self.log.warn(f"Error sending command: {err}")
-            else:
-                self.log.debug(f"Command sent: {msg}")
-
-        if self._kafka_producer:
-            self._kafka_producer.produce(
-                self.command_topic,
-                message=message,
-                key=param_name,
-                on_delivery_callback=cb,
+        # Responses consumer (optional)
+        if self.responses_topics:
+            self._resp_consumer = KafkaConsumer.create(
+                self.brokers,
+                starting_offset="latest",
+                group_id=self._unique_group("resp"),
             )
-        else:
-            self.log.warn("No producer available to send command")
+            self._resp_consumer.subscribe(self.responses_topics)
+            self._resp_thread = createThread(
+                "livedata_responses_tail", self._tail_responses_topic
+            )
 
-    def new_messages_callback(self, messages):
-        for timestamp, message in messages:
+        # Commands producer
+        if self.commands_topic:
+            self._producer = KafkaProducer.create(self.brokers)
+
+        self._cache.put(self, "status", (status.WARN, INIT_MESSAGE), time.time())
+
+    def _unique_group(self, label: str) -> str:
+        base = self.cfg_group_id or "nicos-livedata"
+        return f"{base}-{label}-{uuid4().hex}"
+
+    def _on_data_messages(self, messages: List[Tuple[int, bytes]]):
+        for timestamp_ns, raw in messages:
             try:
-                if get_schema(message) != self.schema:
+                if get_schema(raw) != "da00":
                     continue
-                da00_msg = deserialise_da00(message)
-                src = da00_msg.source_name
+                da = deserialise_da00(raw)
+                rk = parse_result_key(da.source_name)
+                # Update job registry with observed output
+                self._registry.note_output(rk.workflow_id, rk.job_id, rk.output_name)
+                # Route to matching channels
+                self._dispatch_to_channels(timestamp_ns, rk, da)
+            except Exception as exc:
+                self.log.warn(f"Could not decode/route DA00: {exc}")
 
-                matched_channel = None
-                for ch in self._channels:
-                    if getattr(ch, "source_name", "") == src:
-                        matched_channel = ch
-                        break
+        # Mirror registry snapshot for UI/clients
+        try:
+            self._cache.put(
+                self, "livedata/jobs", self._registry.list_jobs(), time.time()
+            )
+        except Exception:
+            pass
 
-                if matched_channel:
-                    matched_channel.update_data(da00_msg, timestamp)
-
-            except Exception as e:
-                self.log.warn(f"Could not decode or route da00 message: {e}")
-
-    def no_messages_callback(self):
+    def _on_no_data(self):
+        # Nothing special; do not spam cache.
         pass
 
+    def _tail_status_topic(self):
+        """
+        Tail X5F2 heartbeat/status messages. We expect msg.status_json containing:
+        {
+          "status": ...,
+          "message": {
+            "state": "...",
+            "job_id": {"source_name": "...", "job_number": "..."},
+            "workflow_id": "instr/ns/name/version",
+            "start_time": <ns>, "end_time": <ns>,
+            ... (warning/error)
+          }
+          "update_interval": <ms>
+        }
+        """
+        while True:
+            msg = self._status_consumer.poll(timeout_ms=200)
+            if not msg:
+                time.sleep(0.05)
+                self._check_disconnect()
+                continue
+            try:
+                if get_schema(msg.value()) != "x5f2":
+                    self._status_consumer._consumer.commit(msg, asynchronous=False)
+                    continue
+                st = deserialise_x5f2(msg.value())
+                js = json.loads(st.status_json) if st.status_json else {}
+                payload = js.get("message", js)
+                wf_str = payload.get("workflow_id", "")
+                # parse "instr/ns/name/version" into a minimal WorkflowId
+                wf_parts = wf_str.split("/") if wf_str else []
+                if len(wf_parts) == 4:
+                    wf = WorkflowId(
+                        instrument=wf_parts[0],
+                        namespace=wf_parts[1],
+                        name=wf_parts[2],
+                        version=int(wf_parts[3]),
+                    )
+                    job = payload.get("job_id", {})
+                    self._registry.upsert_from_status(
+                        wf,
+                        job_source_name=job.get("source_name", ""),
+                        job_number=job.get("job_number", ""),
+                        state=payload.get("state", "unknown"),
+                        start_time_ns=payload.get("start_time"),
+                        end_time_ns=payload.get("end_time"),
+                    )
+
+                # update next expected heartbeat
+                self._bump_expected_status(st.update_interval)
+
+                # check if we are in the initializing phase, if we are, set to OK
+                if self.status(0) == (status.WARN, INIT_MESSAGE):
+                    self._cache.put(self, "status", (status.OK, ""), time.time())
+
+                # mirror into cache
+                try:
+                    self._cache.put(
+                        self, "livedata/jobs", self._registry.list_jobs(), time.time()
+                    )
+                    self._cache.put(
+                        self,
+                        "livedata/last_status_json",
+                        st.status_json or "",
+                        time.time(),
+                    )
+                except Exception:
+                    pass
+
+            except Exception as exc:
+                self.log.warn(f"Bad status message: {exc}")
+            finally:
+                self._status_consumer._consumer.commit(msg, asynchronous=False)
+
+    def _tail_responses_topic(self):
+        while True:
+            msg = self._resp_consumer.poll(timeout_ms=200)
+            if not msg:
+                time.sleep(0.05)
+                continue
+            try:
+                # Store last response blob (opaque to NICOS UI unless you parse it further)
+                self._cache.put(
+                    self, "livedata/last_response", msg.value(), time.time()
+                )
+            except Exception as exc:
+                self.log.warn(f"Bad response message: {exc}")
+            finally:
+                self._resp_consumer._consumer.commit(msg, asynchronous=False)
+
+    def _dispatch_to_channels(self, timestamp_ns: int, rk, da):
+        for ch in self._channels:
+            sel: Optional[Selector] = getattr(ch, "_selector_obj", None)
+            if not sel:
+                continue
+            if selector_matches(sel, rk):
+                ch.update_data_from_da00(da, timestamp_ns)
+
+    def send_job_command(
+        self,
+        *,
+        job_id: dict | None = None,
+        workflow_id: dict | None = None,
+        action: str,
+    ):
+        """
+        Publish a JobCommand value JSON to the commands topic.
+        Only 'reset' | 'stop' | 'remove' are supported by the backend today.
+        """
+        if not self._producer or not self.commands_topic:
+            self.log.warn("No producer or commands_topic configured")
+            return
+        payload = {"job_id": job_id, "workflow_id": workflow_id, "action": action}
+        # Build a key the backend expects: "<service>/<source|*>/job_command"
+        # If we know a job_id with source_name we include it; else '*'.
+        src = job_id.get("source_name") if job_id else "*"
+        key = f"{self.service_name}/{src}/job_command"
+        try:
+            self._producer.produce(
+                self.commands_topic,
+                message=json.dumps(payload).encode("utf-8"),
+                key=key,
+            )
+        except Exception as exc:
+            self.log.warn(f"Error sending job_command: {exc}")
+
+    # Optionally expose workflow_config sender for rare cases
+    def send_workflow_config(self, *, key_source: str, config_json: dict):
+        """
+        Send a workflow_config message (rare; the expert UI usually does this).
+        key_source is the Kafka 'key' source_name part used by the backend.
+        """
+        if not self._producer or not self.commands_topic:
+            self.log.warn("No producer or commands_topic configured")
+            return
+        key = f"{self.service_name}/{key_source}/workflow_config"
+        try:
+            self._producer.produce(
+                self.commands_topic,
+                message=json.dumps(config_json).encode("utf-8"),
+                key=key,
+            )
+        except Exception as exc:
+            self.log.warn(f"Error sending workflow_config: {exc}")
+
+    def list_plot_selection_items(self) -> list[dict]:
+        """Return a list of simple, user-friendly plot selections discovered so far.
+
+        Each item looks like:
+            {
+                "label": "panel_0_xy/current",     # simple for users
+                "workflow_name": "panel_0_xy",
+                "output": "current",
+                "source_name": "panel_0",
+                "workflow_path": "dummy/detector_data/panel_0_xy/1",
+                "job_number": "<uuid>",
+                "selector": "dummy/detector_data/panel_0_xy/1@panel_0#<uuid>/current"
+            }
+
+        Also mirrors results into the NICOS cache under:
+            - "livedata/plot_selection_items" (list of dicts)
+            - "livedata/plot_selections"      (list of simple labels)
+        """
+
+        def split_workflow_path(path: str) -> tuple[str, str, str, int]:
+            i, ns, n, v = path.split("/")
+            return i, ns, n, int(v)
+
+        # Preferred output ordering first
+        prefer = ("current", "cumulative")
+
+        def out_sort_key(o: str) -> tuple[int, str]:
+            try:
+                idx = prefer.index(o)
+            except ValueError:
+                idx = len(prefer)
+            return (idx, o)
+
+        items: list[dict] = []
+        labels_seen: set[str] = set()
+
+        for ji in sorted(
+            self._registry.list_jobs(),
+            key=lambda j: (j.workflow_path, j.source_name, j.job_number),
+        ):
+            # If we haven't seen any DA00 yet for this job, we won't know outputs.
+            outputs = sorted(ji.outputs, key=out_sort_key)
+            if not outputs:
+                continue
+
+            _, _, wf_name, _ = split_workflow_path(ji.workflow_path)
+            for out in outputs:
+                # Simple label: "<workflow_name>/<output>"
+                label = f"{wf_name}/{out}"
+
+                # If duplicate label occurs (e.g. multiple sources), disambiguate minimally.
+                if label in labels_seen:
+                    label = f"{wf_name}@{ji.source_name}/{out}"
+                labels_seen.add(label)
+
+                selector = f"{ji.workflow_path}@{ji.source_name}#{ji.job_number}/{out}"
+                items.append(
+                    {
+                        "label": label,
+                        "workflow_name": wf_name,
+                        "output": out,
+                        "source_name": ji.source_name,
+                        "workflow_path": ji.workflow_path,
+                        "job_number": ji.job_number,
+                        "selector": selector,
+                    }
+                )
+
+        # Mirror to NICOS cache for poller/daemon sharing
+        try:
+            now = time.time()
+            self._cache.put(self, "livedata/plot_selection_items", items, now)
+            self._cache.put(
+                self, "livedata/plot_selections", [i["label"] for i in items], now
+            )
+        except Exception:
+            pass
+
+        return items
+
+    def list_plot_selections(self) -> list[str]:
+        """Return a flat list of simple labels like 'panel_0_xy/current'.
+
+        This is a convenience wrapper around list_plot_selection_items() and also
+        refreshes the cache keys.
+        """
+        items = self.list_plot_selection_items()
+        return [i["label"] for i in items]
+
+    def _bump_expected_status(self, update_interval_ms: int):
+        interval_s = max(1, int(update_interval_ms // 1000))
+        next_due = time.time() + interval_s
+        if next_due > self._last_expected_status_time:
+            self._last_expected_status_time = next_due
+
+    def _check_disconnect(self):
+        if time.time() > (self._last_expected_status_time + self.status_timeout):
+            try:
+                self._cache.put(self, "status", DISCONNECTED_STATE, time.time())
+            except Exception:
+                pass
+
     def doShutdown(self):
-        self._kafka_subscriber.close()
+        # Best-effort cleanup; Kafka wrappers usually are resilient to late close.
+        try:
+            if self._data_subscriber:
+                self._data_subscriber.close()
+        except Exception:
+            pass
