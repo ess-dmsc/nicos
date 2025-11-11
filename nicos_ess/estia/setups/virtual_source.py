@@ -29,8 +29,9 @@ devices = dict(
         description="VS - Rotation around z axis",
         motorpv="ESTIA-VSRot:MC-RotZ-01:Mtr",
     ),
-    virtual_source_controller=device(
+    vs_controller=device(
         "nicos.devices.generic.slit.Slit",
+        opmode="centered",
         description="Virtual Source Slit Controller",
         left="left_bottom_blade_horizontal",
         right="right_top_blade_horizontal",
