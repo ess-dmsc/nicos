@@ -14,7 +14,7 @@ from nicos.core import (
     usermethod,
 )
 from nicos.devices.abstract import MappedMoveable
-from nicos_ess.devices.epics.pva import EpicsStringReadable
+from nicos_ess.devices.epics.pva import EpicsMappedReadable
 from nicos_ess.devices.epics.pva.epics_devices import (
     EpicsParameters,
     RecordInfo,
@@ -69,7 +69,7 @@ class SyringePumpController(EpicsParameters, MappedMoveable):
     }
 
     attached_devices = {
-        "status": Attach("Status of device", EpicsStringReadable),
+        "status": Attach("Status of device", EpicsMappedReadable),
     }
 
     def doPreinit(self, mode):
