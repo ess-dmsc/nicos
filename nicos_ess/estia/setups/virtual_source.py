@@ -1,40 +1,40 @@
 description = "The Virtual Source Slit Set"
 
-pv_root_1 = "ESTIA-VSSlN:MC-"
-pv_root_2 = "ESTIA-VSSlP:MC-"
+pv_root_1 = "ESTIA-VSSlP:MC-"
+pv_root_2 = "ESTIA-VSSlN:MC-"
 
 devices = dict(
-    vss_n_x=device(
+    right_top_blade_horizontal=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
-        description="Slit Motion Negative X",
+        description="VS - Blade 1 (right-top) / Horizontal",
         motorpv=f"{pv_root_1}LinX-01:Mtr",
     ),
-    vss_n_z=device(
+    right_top_blade_vertical=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
-        description="Slit Motion Negative Z",
+        description="VS - Blade 1 (right-top) / Vertical",
         motorpv=f"{pv_root_1}LinZ-01:Mtr",
     ),
-    vss_p_x=device(
+    left_bottom_blade_horizontal=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
-        description="Slit Motion Positive X",
+        description="VS - Blade 2 (lef-bottom)/ Horizontal",
         motorpv=f"{pv_root_2}LinX-01:Mtr",
     ),
-    vss_p_z=device(
+    left_bottom_blade_vertical=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
-        description="Slit Motion Positive Z",
+        description="VS - Blade 2 (left-bottom) / Vertical",
         motorpv=f"{pv_root_2}LinZ-01:Mtr",
     ),
-    vss_rot_z=device(
+    vs_slit_rotation=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
-        description="Slit Motion Rotary Z",
+        description="VS - Rotation around z axis",
         motorpv="ESTIA-VSRot:MC-RotZ-01:Mtr",
     ),
-    virtual_source_slit=device(
+    virtual_source_controller=device(
         "nicos.devices.generic.slit.Slit",
-        description="Slit 1 with left, right, bottom and top motors",
-        left="vss_p_x",
-        right="vss_n_x",
-        top="vss_p_z",
-        bottom="vss_n_z",
+        description="Virtual Source Slit Controller",
+        left="left_bottom_blade_horizontal",
+        right="right_top_blade_horizontal",
+        top="right_top_blade_vertical",
+        bottom="left_bottom_blade_vertical",
     ),
 )
