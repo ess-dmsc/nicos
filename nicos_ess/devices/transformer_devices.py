@@ -86,19 +86,19 @@ class DegreesPerSecondToRPM(HasLimits, TransformedMoveable):
     }
 
     def doReadAbslimits(self):
-        raw_absmin, raw_absmax = self._attached_motor.doReadAbslimits()
+        raw_absmin, raw_absmax = self._attached_motor.abslimits
         absmin = self._convert_degrees_per_second_to_rpm(raw_absmin)
         absmax = self._convert_degrees_per_second_to_rpm(raw_absmax)
         return absmin, absmax
 
     def doReadUserlimits(self):
-        raw_umin, raw_umax = self._attached_motor.doReadUserlimits()
+        raw_umin, raw_umax = self._attached_motor.userlimits
         umin = self._convert_degrees_per_second_to_rpm(raw_umin)
         umax = self._convert_degrees_per_second_to_rpm(raw_umax)
         return umin, umax
 
     def doWriteUserlimits(self, value):
-        self._attached_motor.doWriteUserlimits(value)
+        self._attached_motor.userlimits = value
         return self.userlimits
 
     def _convert_degrees_per_second_to_rpm(self, value):
