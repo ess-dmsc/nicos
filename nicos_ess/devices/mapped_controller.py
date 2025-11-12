@@ -61,6 +61,7 @@ class MappedController(MappedMoveable):
     def doWriteMapping(self, mapping):
         for position in mapping.values():
             self._check_limits(position)
+        self.valuetype = oneof(*sorted(mapping, key=num_sort))
 
     def _readRaw(self, maxage=0):
         return self._attached_controlled_device.read(maxage)
