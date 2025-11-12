@@ -9,6 +9,7 @@ Lightweight helpers for the NICOS ↔ ESSLivedata integration.
 from __future__ import annotations
 
 import json
+import time
 from dataclasses import dataclass, field
 from typing import Dict, Iterable, List, Optional, Set, Tuple
 
@@ -123,6 +124,8 @@ class JobInfo:
     start_time_ns: Optional[int] = None
     end_time_ns: Optional[int] = None
     outputs: Set[str] = field(default_factory=set)
+    last_seen_s: float = field(default_factory=lambda: time.time())
+    heartbeat_ms: int = 1000
 
 
 class JobRegistry:
@@ -146,6 +149,7 @@ class JobRegistry:
         state: str,
         start_time_ns: Optional[int] = None,
         end_time_ns: Optional[int] = None,
+        heartbeat_ms: Optional[int] = None,
     ) -> None:
         if isinstance(wf, str):
             wf_path = wf
@@ -170,6 +174,10 @@ class JobRegistry:
                 ji.start_time_ns = start_time_ns
             if end_time_ns is not None:
                 ji.end_time_ns = end_time_ns
+
+        ji.last_seen_s = time.time()
+        if heartbeat_ms and heartbeat_ms > 0:
+            ji.heartbeat_ms = int(heartbeat_ms)
 
     def note_output(
         self, wf: WorkflowId, job: JobId, output_name: Optional[str]
@@ -216,3 +224,29 @@ class JobRegistry:
         return sorted(
             candidates, key=lambda j: (order.get(j.state, 99), -(j.start_time_ns or 0))
         )[0]
+
+    def mark_seen(self, job_source_name: str, job_number: str) -> None:
+        """Touch a job when we observe DA00 for it."""
+        ji = self._jobs.get(self._key(job_source_name, job_number))
+        if ji:
+            ji.last_seen_s = time.time()
+
+    def remove_job(self, job_source_name: str, job_number: str) -> None:
+        """Explicitly remove a job (e.g. when a response says 'removed')."""
+        self._jobs.pop(self._key(job_source_name, job_number), None)
+
+    def expire_stale(self, now: Optional[float] = None, grace_mult: float = 3.0) -> int:
+        """
+        Remove jobs that missed several heartbeats.
+        A job is stale if (now - last_seen) > grace_mult * heartbeat interval.
+        Returns how many jobs were removed.
+        """
+        now = now or time.time()
+        todel = []
+        for key, ji in self._jobs.items():
+            hb_s = max(ji.heartbeat_ms / 1000.0, 1.0)
+            if (now - (ji.last_seen_s or 0)) > (grace_mult * hb_s):
+                todel.append(key)
+        for key in todel:
+            del self._jobs[key]
+        return len(todel)
