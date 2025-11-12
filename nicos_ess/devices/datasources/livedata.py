@@ -35,16 +35,21 @@ from nicos.core import (
     POLLER,
     SIMULATION,
     ArrayDesc,
+    HasMapping,
+    Moveable,
     Override,
     Param,
     Readable,
+    anytype,
+    dictof,
     host,
     listof,
+    oneof,
     status,
     tupleof,
 )
 from nicos.devices.generic import CounterChannelMixin, Detector, PassiveChannel
-from nicos.utils import byteBuffer, createThread
+from nicos.utils import byteBuffer, createThread, num_sort
 from nicos_ess.devices.kafka.consumer import KafkaConsumer, KafkaSubscriber
 from nicos_ess.devices.kafka.producer import KafkaProducer
 
@@ -62,7 +67,7 @@ DISCONNECTED_STATE = (status.ERROR, "Disconnected")
 INIT_MESSAGE = "Initializing LiveDataCollector…"
 
 
-class DataChannel(CounterChannelMixin, PassiveChannel):
+class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
     """
     Channel that subscribes (via the collector) to a particular workflow/source/job/output
     and forwards DA00 'signal' arrays to NICOS live data. Supports 1D, 2D, and N-D in a
@@ -95,6 +100,9 @@ class DataChannel(CounterChannelMixin, PassiveChannel):
         "unit": Override(default="events", settable=False, mandatory=False),
         "fmtstr": Override(default="%d"),
         "pollinterval": Override(default=None, userparam=False, settable=False),
+        "mapping": Override(
+            volatile=True, internal=True, mandatory=False, settable=True
+        ),
     }
 
     def doPreinit(self, mode):
@@ -122,6 +130,20 @@ class DataChannel(CounterChannelMixin, PassiveChannel):
 
     def doWriteSelector(self, value):
         self._selector_obj = parse_selector(value)
+
+    def doWriteMapping(self, mapping):
+        self.valuetype = oneof(*sorted(mapping, key=num_sort))
+
+    def doReadMapping(self):
+        if not self._collector:
+            return {}
+        return self._collector.get_current_mapping()
+
+    def doStart(self, target):
+        target_value = self.mapping.get(target, "")
+        if not target_value:
+            raise ValueError(f"Unknown selection '{target}' in mapping")
+        self.selector = target_value
 
     def _update_status(self, new_status, message):
         self.curstatus = (new_status, message)
@@ -384,6 +406,7 @@ class LiveDataCollector(Detector):
                 self._registry.note_output(rk.workflow_id, rk.job_id, rk.output_name)
                 # Route to matching channels
                 self._dispatch_to_channels(timestamp_ns, rk, da)
+                self._push_mapping_to_channels()
             except Exception as exc:
                 self.log.warn(f"Could not decode/route DA00: {exc}")
 
@@ -453,6 +476,8 @@ class LiveDataCollector(Detector):
                 # check if we are in the initializing phase, if we are, set to OK
                 if self.status(0) == (status.WARN, INIT_MESSAGE):
                     self._cache.put(self, "status", (status.OK, ""), time.time())
+
+                self._push_mapping_to_channels()
 
                 # mirror into cache
                 try:
@@ -578,7 +603,6 @@ class LiveDataCollector(Detector):
             return (idx, o)
 
         items: list[dict] = []
-        labels_seen: set[str] = set()
 
         for ji in sorted(
             self._registry.list_jobs(),
@@ -591,13 +615,7 @@ class LiveDataCollector(Detector):
 
             _, _, wf_name, _ = split_workflow_path(ji.workflow_path)
             for out in outputs:
-                # Simple label: "<workflow_name>/<output>"
-                label = f"{wf_name}/{out}"
-
-                # If duplicate label occurs (e.g. multiple sources), disambiguate minimally.
-                if label in labels_seen:
-                    label = f"{wf_name}@{ji.source_name}/{out}"
-                labels_seen.add(label)
+                label = f"{ji.source_name} ({ji.job_number.split('-')[0]}) {out}"
 
                 selector = f"{ji.workflow_path}@{ji.source_name}#{ji.job_number}/{out}"
                 items.append(
@@ -638,6 +656,22 @@ class LiveDataCollector(Detector):
         next_due = time.time() + interval_s
         if next_due > self._last_expected_status_time:
             self._last_expected_status_time = next_due
+
+    def _push_mapping_to_channels(self):
+        """Build a label->selector mapping and write it to every channel's 'mapping'."""
+        # reuse your existing discovery and keep labels minimal
+        mapping = self.get_current_mapping()
+        for ch in self._channels:
+            if isinstance(ch, DataChannel):
+                try:
+                    ch.mapping = mapping
+                except Exception:
+                    self.log.warn(f"Could not update mapping for channel {ch.name}")
+
+    def get_current_mapping(self) -> dict:
+        """Return the current label->selector mapping as built for channels."""
+        items = self.list_plot_selection_items()
+        return {it["label"]: it["selector"] for it in items}
 
     def _check_disconnect(self):
         if time.time() > (self._last_expected_status_time + self.status_timeout):
