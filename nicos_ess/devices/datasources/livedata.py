@@ -139,7 +139,16 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
             return {}
         return self._collector.get_current_mapping()
 
-    def doStart(self, target):
+    def doStart(self, target=None):
+        # if no target is given, it's a start command from the Detector class
+        # treat it as begining a count/scan instead of changing selector
+
+        # passivechannel path
+        if target is None:
+            self.reset()
+            return
+
+        # moveable path
         target_value = self.mapping.get(target, "")
         if not target_value:
             raise ValueError(f"Unknown selection '{target}' in mapping")
@@ -402,13 +411,25 @@ class LiveDataCollector(Detector):
                     continue
                 da = deserialise_da00(raw)
                 rk = parse_result_key(da.source_name)
-                # Update job registry with observed output
                 self._registry.note_output(rk.workflow_id, rk.job_id, rk.output_name)
+
+                try:
+                    self._registry.mark_seen(
+                        rk.job_id.source_name, rk.job_id.job_number
+                    )
+                except Exception:
+                    pass
+
                 # Route to matching channels
                 self._dispatch_to_channels(timestamp_ns, rk, da)
-                self._push_mapping_to_channels()
             except Exception as exc:
                 self.log.warn(f"Could not decode/route DA00: {exc}")
+
+        try:
+            self._registry.expire_stale()
+            self._push_mapping_to_channels()
+        except Exception as e:
+            self.log.warn(f"Error expiring stale jobs: {e}")
 
     def _on_no_data(self):
         # Nothing special; do not spam cache.
@@ -443,7 +464,6 @@ class LiveDataCollector(Detector):
                 js = json.loads(st.status_json) if st.status_json else {}
                 payload = js.get("message", js)
                 wf_str = payload.get("workflow_id", "")
-                # parse "instr/ns/name/version" into a minimal WorkflowId
                 wf_parts = wf_str.split("/") if wf_str else []
                 if len(wf_parts) == 4:
                     wf = WorkflowId(
@@ -460,6 +480,7 @@ class LiveDataCollector(Detector):
                         state=payload.get("state", "unknown"),
                         start_time_ns=payload.get("start_time"),
                         end_time_ns=payload.get("end_time"),
+                        heartbeat_ms=st.update_interval,  # NEW
                     )
 
                 # update next expected heartbeat
@@ -469,6 +490,8 @@ class LiveDataCollector(Detector):
                 if self.status(0) == (status.WARN, INIT_MESSAGE):
                     self._cache.put(self, "status", (status.OK, ""), time.time())
 
+                self._registry.expire_stale()
+
                 self._push_mapping_to_channels()
 
             except Exception as exc:
@@ -477,12 +500,47 @@ class LiveDataCollector(Detector):
                 self._status_consumer._consumer.commit(msg, asynchronous=False)
 
     def _tail_responses_topic(self):
+        """
+        Examples of a start and stop and reset command response:
+
+        Start:
+        {"identifier":{"instrument":"dummy","namespace":"data_reduction","name":"total_counts","version":1},"job_number":"51d0d89b-d05f-4509-8761-392af404919b","schedule":{"start_time":null,"end_time":null},"aux_source_names":{},"params":{}}
+        Stop:
+        {"job_id":{"source_name":"panel_0","job_number":"51d0d89b-d05f-4509-8761-392af404919b"},"workflow_id":null,"action":"stop"}
+        Reset:
+        {"job_id":{"source_name":"panel_0","job_number":"86598705-c030-42b2-8bb4-5a80a7c375aa"},"workflow_id":null,"action":"reset"}
+
+        """
+
         while True:
             msg = self._resp_consumer.poll(timeout_ms=200)
             if not msg:
                 time.sleep(0.05)
                 continue
-            self._resp_consumer._consumer.commit(msg, asynchronous=False)
+            try:
+                raw = msg.value()
+                try:
+                    js = json.loads(raw.decode("utf-8"))
+                except Exception:
+                    js = None
+
+                if isinstance(js, dict):
+                    # Accept either an ACK of our command or a terminal status
+                    action = (js.get("action") or "").lower()
+                    job = js.get("job_id") or {}
+                    src = job.get("source_name") or js.get("source_name") or ""
+                    jn = job.get("job_number") or ""
+
+                    remove_hint = action == "remove"
+
+                    if remove_hint and src and jn:
+                        self._registry.remove_job(src, jn)
+                        self._push_mapping_to_channels()
+
+            except Exception:
+                pass
+            finally:
+                self._resp_consumer._consumer.commit(msg, asynchronous=False)
 
     def _dispatch_to_channels(self, timestamp_ns: int, rk, da):
         for ch in self._channels:
