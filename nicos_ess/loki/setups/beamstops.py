@@ -39,7 +39,7 @@ devices = dict(
         monitor_deadband=0.01,
     ),
     beamstop1_positioner=device(
-        "nicos_ess.devices.mapped_controller.MappedController",
+        "nicos_ess.loki.devices.beamstop.LokiBeamstopArmPositioner",
         controlled_device="beamstop1",
         mapping={"Parked": 987.5, "In beam": 54.630},
     ),
@@ -50,7 +50,7 @@ devices = dict(
         monitor_deadband=0.01,
     ),
     beamstop2_positioner=device(
-        "nicos_ess.devices.mapped_controller.MappedController",
+        "nicos_ess.loki.devices.beamstop.LokiBeamstopArmPositioner",
         controlled_device="beamstop2",
         mapping={"Parked": 977.998, "In beam": 59.320},
     ),
@@ -61,7 +61,7 @@ devices = dict(
         monitor_deadband=0.01,
     ),
     beamstop3_positioner=device(
-        "nicos_ess.devices.mapped_controller.MappedController",
+        "nicos_ess.loki.devices.beamstop.LokiBeamstopArmPositioner",
         controlled_device="beamstop3",
         mapping={"Parked": 987.5, "In beam": 55.6},
     ),
@@ -72,7 +72,7 @@ devices = dict(
         monitor_deadband=0.01,
     ),
     beamstop4_positioner=device(
-        "nicos_ess.devices.mapped_controller.MappedController",
+        "nicos_ess.loki.devices.beamstop.LokiBeamstopArmPositioner",
         controlled_device="beamstop4",
         mapping={"Parked": 987, "In beam": 57.3},
     ),
@@ -83,12 +83,12 @@ devices = dict(
         monitor_deadband=0.01,
     ),
     beamstop5_positioner=device(
-        "nicos_ess.devices.mapped_controller.MappedController",
+        "nicos_ess.loki.devices.beamstop.LokiBeamstopArmPositioner",
         controlled_device="beamstop5",
         mapping={"Parked": 989.891, "In beam": 54.6},
     ),
     beamstop_selector=device(
-        "nicos_ess.loki.devices.loki_beamstop_controller.LokiBeamstopController",
+        "nicos_ess.loki.devices.beamstop.LokiBeamstopController",
         controlled_devices=[
             "beamstop_x_positioner",
             "beamstop_y_positioner",
