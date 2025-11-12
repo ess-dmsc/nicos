@@ -259,6 +259,7 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         self._put_pv("target", value)
 
     def doWriteSpeed(self, value):
+        print("from doWriteSpeed in motor")
         speed = self._get_valid_speed(value)
 
         if speed != value:
@@ -572,6 +573,8 @@ class EpicsJogMotor(EpicsMotor):
         )
     }
 
+    parameter_overrides = {"speed": Override(userparam=False)}
+
     def doPreinit(self, mode):
         super().doPreinit(mode)
         self._record_fields.update(
@@ -619,17 +622,23 @@ class EpicsJogMotor(EpicsMotor):
         max_speed = self._get_cached_pv_or_ask("maxspeed")
         return -max_speed, max_speed
 
-    def doWriteSpeed(self, value):
-        speed = self._get_valid_speed(abs(value))
-        if speed != abs(value):
+    def _get_valid_speed(self, value):
+        max_speed = self._get_cached_pv_or_ask("maxspeed")
+        min_speed = self._get_cached_pv_or_ask("minspeed")
+
+        # Cannot be less than min speed
+        valid_speed = max(min_speed, value)
+
+        # In EPICS if max speed is 0 then there is no limit
+        if max_speed > 0.0:
+            valid_speed = min(max_speed, valid_speed)
+
+        if valid_speed > abs(value):
             self.log.warning(
-                "Selected jog speed %s is outside limits, using %s instead.",
-                value,
-                speed,
+                f"Selected jog speed {abs(value)} is below hardware minimum, using {valid_speed} {self.unit} instead.",
             )
-        # Write raw speed to .JVEL via jog_velocity
-        self._put_pv("jog_velocity", speed)
-        return speed
+
+        return valid_speed
 
     def _wait_until(self, pv_name, expected_value, timeout=5.0):
         """Set up a subscription and wait until the PV reaches the expected value."""
@@ -665,13 +674,6 @@ class EpicsJogMotor(EpicsMotor):
             return
 
         jog_speed = self._get_valid_speed(abs(value))
-
-        if jog_speed > abs(value) != 0:
-            self.log.warning(
-                "Selected jog speed %s is below hardware minimum, using %s instead.",
-                abs(value),
-                jog_speed,
-            )
 
         self.jog_dir = 1 if value > 0 else -1  # <-- set before writing JVEL
 
