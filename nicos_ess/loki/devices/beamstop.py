@@ -1,18 +1,19 @@
 import re
 
-from nicos.core import ConfigurationError, HasPrecision, Override, Param, oneof
+from nicos.core import (
+    ConfigurationError,
+    HasPrecision,
+    LimitError,
+    Override,
+    Param,
+    oneof,
+)
 from nicos.core.utils import waitForCompletion
-from nicos_ess.devices.mapped_controller import MappedController, MultiTargetMapping
-
 from nicos.utils import num_sort
+from nicos_ess.devices.mapped_controller import MappedController, MultiTargetMapping
 
 
 class LokiBeamstopArmPositioner(MappedController):
-
-    parameter_overrides = {
-        "mapping": Override(mandatory=False),
-    }
-
     def doInit(self, mode):
         MappedController.doInit(self, mode)
 
@@ -21,6 +22,8 @@ class LokiBeamstopArmPositioner(MappedController):
             raise ConfigurationError(
                 "Only 'In beam' and 'Parked' are allowed as mapped positions"
             )
+        for position in mapping.values():
+            self._check_limits(position)
         self.valuetype = oneof(*sorted(mapping, key=num_sort))
 
     def _mapReadValue(self, value):
@@ -40,6 +43,14 @@ class LokiBeamstopArmPositioner(MappedController):
                 return "Below in-beam position"
             else:
                 return "In between"
+
+    def _check_limits(self, position):
+        limits = self._attached_controlled_device.userlimits
+        is_allowed, reason = self._attached_controlled_device.isAllowed(position)
+        if not is_allowed:
+            raise LimitError(
+                f"Mapped position ({position}) outside user limits {limits}"
+            )
 
 
 class LokiBeamstopController(MultiTargetMapping):
