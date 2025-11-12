@@ -79,7 +79,6 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
         "selector": Param(
             "Selector '<instr>/<ns>/<name>/<ver>@<source>#<job>[/<output>]'",
             type=str,
-            default="",
             userparam=True,
             settable=True,
         ),
@@ -95,6 +94,13 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
             type=int,
             settable=True,
         ),
+        "running": Param(
+            "Indicates if the channel is actively counting",
+            internal=True,
+            type=bool,
+            default=False,
+            settable=True,
+        ),
     }
 
     parameter_overrides = {
@@ -108,13 +114,15 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
 
     def doPreinit(self, mode):
         self._collector = None  # set by LiveDataCollector
+        self._signal: Optional[np.ndarray] = None
+        self._array_desc = ArrayDesc(self.name, shape=(), dtype=np.int32)
+        if session.sessiontype != POLLER:
+            self._update_status(status.OK, "")
+
+    def doInit(self, mode):
         self._selector_obj: Optional[Selector] = (
             parse_selector(self.selector) if self.selector else None
         )
-        self._signal: Optional[np.ndarray] = None
-        self._array_desc = ArrayDesc(self.name, shape=(), dtype=np.int32)
-        if mode != SIMULATION and session.sessiontype != POLLER:
-            self._update_status(status.OK, "")
 
     def doRead(self, maxage=0):
         return self.curvalue
@@ -139,13 +147,44 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
             return {}
         return self._collector.get_current_mapping()
 
+    def doPrepare(self):
+        self._update_status(status.BUSY, "Preparing")
+
+        # check if a valid selector is set
+        self.curvalue = 0
+        self._signal = None
+        if not self._selector_obj:
+            self.log.warning(
+                f"No workflow channel selected for {self.name}. Will not prepare channel."
+            )
+            self._update_status(status.WARN, "No workflow channel selected")
+            return
+
+        self.reset()
+        self._update_status(status.OK, "")
+
+    def doStop(self):
+        self.running = False
+        self._update_status(status.OK, "")
+
+    def doFinish(self):
+        self.running = False
+        self._update_status(status.OK, "")
+
     def doStart(self, target=None):
         # if no target is given, it's a start command from the Detector class
         # treat it as begining a count/scan instead of changing selector
 
         # passivechannel path
         if target is None:
-            self.reset()
+            if not self._selector_obj:
+                self.log.warning(
+                    f"No workflow channel selected for {self.name}. Will not start counting."
+                )
+                self._update_status(status.OK, "")
+                return
+            self.running = True
+            self._update_status(status.BUSY, "Counting started")
             return
 
         # moveable path
@@ -160,6 +199,8 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
 
     # Called by collector when a matching DA00 arrives
     def update_data_from_da00(self, da00_msg, timestamp_ns: int):
+        if not self.running:
+            return
         try:
             # Find the 'signal' Variable
             variables = list(da00_msg.data)
@@ -195,6 +236,7 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
 
             self.poll()  # trigger NICOS data update pipeline
             self._push_to_nicos(plot_type, labels, timestamp_ns)
+            self._update_status(status.BUSY, "Counting")
 
         except Exception as exc:
             self._update_status(status.ERROR, str(exc))
@@ -252,7 +294,7 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
                 action="reset",
             )
 
-    def doStop(self):
+    def stop_job(self):
         job = self._resolve_job()
         if job:
             self._collector.send_job_command(
@@ -260,7 +302,7 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
                 action="stop",
             )
 
-    def remove(self):
+    def remove_job(self):
         job = self._resolve_job()
         if job:
             self._collector.send_job_command(
