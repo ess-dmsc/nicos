@@ -91,6 +91,16 @@ def parse_selector(s: str) -> Selector:
     )
 
 
+def selector_to_string(sel: Selector) -> str:
+    """Convert a Selector back to its string representation."""
+    s = f"{sel.workflow_path}@{sel.source_name}"
+    if sel.job_number:
+        s += f"#{sel.job_number}"
+    if sel.output_name:
+        s += f"/{sel.output_name}"
+    return s
+
+
 def selector_matches(sel: Selector, rk: ResultKey) -> bool:
     """Check if a DA00 ResultKey matches a channel selector."""
     if workflow_path(rk.workflow_id) != sel.workflow_path:
