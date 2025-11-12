@@ -61,6 +61,7 @@ from .livedata_utils import (
     parse_result_key,
     parse_selector,
     selector_matches,
+    selector_to_string,
 )
 
 DISCONNECTED_STATE = (status.ERROR, "Disconnected")
@@ -110,10 +111,9 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
         self._selector_obj: Optional[Selector] = (
             parse_selector(self.selector) if self.selector else None
         )
-        self._cache.put(self._name, "curstatus", (status.OK, ""), time.time())
         self._signal: Optional[np.ndarray] = None
         self._array_desc = ArrayDesc(self.name, shape=(), dtype=np.int32)
-        if mode != SIMULATION:
+        if mode != SIMULATION and session.sessiontype != POLLER:
             self._update_status(status.OK, "")
 
     def doRead(self, maxage=0):
@@ -410,14 +410,6 @@ class LiveDataCollector(Detector):
             except Exception as exc:
                 self.log.warn(f"Could not decode/route DA00: {exc}")
 
-        # Mirror registry snapshot for UI/clients
-        try:
-            self._cache.put(
-                self, "livedata/jobs", self._registry.list_jobs(), time.time()
-            )
-        except Exception:
-            pass
-
     def _on_no_data(self):
         # Nothing special; do not spam cache.
         pass
@@ -479,20 +471,6 @@ class LiveDataCollector(Detector):
 
                 self._push_mapping_to_channels()
 
-                # mirror into cache
-                try:
-                    self._cache.put(
-                        self, "livedata/jobs", self._registry.list_jobs(), time.time()
-                    )
-                    self._cache.put(
-                        self,
-                        "livedata/last_status_json",
-                        st.status_json or "",
-                        time.time(),
-                    )
-                except Exception:
-                    pass
-
             except Exception as exc:
                 self.log.warn(f"Bad status message: {exc}")
             finally:
@@ -504,15 +482,7 @@ class LiveDataCollector(Detector):
             if not msg:
                 time.sleep(0.05)
                 continue
-            try:
-                # Store last response blob (opaque to NICOS UI unless you parse it further)
-                self._cache.put(
-                    self, "livedata/last_response", msg.value(), time.time()
-                )
-            except Exception as exc:
-                self.log.warn(f"Bad response message: {exc}")
-            finally:
-                self._resp_consumer._consumer.commit(msg, asynchronous=False)
+            self._resp_consumer._consumer.commit(msg, asynchronous=False)
 
     def _dispatch_to_channels(self, timestamp_ns: int, rk, da):
         for ch in self._channels:
@@ -582,10 +552,6 @@ class LiveDataCollector(Detector):
                 "job_number": "<uuid>",
                 "selector": "dummy/detector_data/panel_0_xy/1@panel_0#<uuid>/current"
             }
-
-        Also mirrors results into the NICOS cache under:
-            - "livedata/plot_selection_items" (list of dicts)
-            - "livedata/plot_selections"      (list of simple labels)
         """
 
         def split_workflow_path(path: str) -> tuple[str, str, str, int]:
@@ -629,16 +595,6 @@ class LiveDataCollector(Detector):
                         "selector": selector,
                     }
                 )
-
-        # Mirror to NICOS cache for poller/daemon sharing
-        try:
-            now = time.time()
-            self._cache.put(self, "livedata/plot_selection_items", items, now)
-            self._cache.put(
-                self, "livedata/plot_selections", [i["label"] for i in items], now
-            )
-        except Exception:
-            pass
 
         return items
 
