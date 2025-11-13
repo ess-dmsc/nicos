@@ -22,7 +22,7 @@ from nicos.guisupport.qt import (
     pyqtSlot,
 )
 from nicos_ess.gui.widgets.pyqtgraph.image_view import ImageView
-from nicos_ess.gui.widgets.pyqtgraph.line_view import LineView
+from nicos_ess.gui.widgets.pyqtgraph.line_view import LineView, TimeAxisItem
 
 
 class LayoutDialog(QDialog):
@@ -109,7 +109,10 @@ class LiveDataPlot(QFrame):
             view.log_checkbox.hide()
         elif len(shape) == 2:
             view = ImageView(parent=self.parent, histogram_orientation="vertical")
+            view.aspectLockedAction.setChecked(False)
             view.set_aspect_locked(False)
+            # invert Y compared to default
+            view.image_plot.invertY()
             view.add_image_axes()
             view.splitter_vert_1.hide()
             view.bottom_plot.hide()
@@ -223,29 +226,82 @@ class LiveDataPanel(Panel):
 
     def _on_plot_livedata(self, plot_widget, params, blobs):
         name = params["det"]
-
         if name not in self.connected_plots:
             return
 
         datadesc = params["datadescs"][0]
         data_shape = datadesc["shape"]
-        label_shape = datadesc.get("label_shape", [])
         data_dtype = datadesc["dtype"]
-        label_dtypes = datadesc.get("label_dtypes")
         plot_type = datadesc.get("plot_type")
 
-        data = np.frombuffer(blobs[0], dtype=data_dtype).reshape(data_shape)
+        # ---- decode data buffer ----
+        data = np.frombuffer(blobs[0], dtype=data_dtype).reshape(tuple(data_shape))
+
+        # ---- decode label buffer(s) ----
+        label_shape = datadesc.get("label_shape", [])
+        label_dtypes = datadesc.get("label_dtypes") or [np.dtype(np.float64).str] * len(
+            label_shape
+        )
         labels = []
-        for i, (shape, dtype) in enumerate(zip(label_shape, label_dtypes)):
-            label = np.frombuffer(
-                blobs[1][i * shape * 8 : (i + 1) * shape * 8], dtype=np.float64
-            ).astype(dtype)
-            labels.append(label)
+        if label_shape:
+            raw = blobs[1]  # single concatenated float64 buffer
+            offset = 0
+            for shape, dtype in zip(label_shape, label_dtypes):
+                nbytes = shape * 8  # float64
+                arr = np.frombuffer(
+                    raw[offset : offset + nbytes], dtype=np.float64
+                ).astype(dtype)
+                labels.append(arr)
+                offset += nbytes
+        else:
+            # robust fallback: synthetic indices
+            if len(data_shape) >= 1:
+                labels = [np.arange(data_shape[-1], dtype=np.float64)]
+            if len(data_shape) >= 2:
+                labels = [
+                    np.arange(data_shape[1], dtype=np.float64),
+                    np.arange(data_shape[0], dtype=np.float64),
+                ]
+
+        # ---- titles & axis labels (from datadesc metadata) ----
+        axis_names = datadesc.get("axis_names", [])
+        axis_units = datadesc.get("axis_units", [])
+        title = datadesc.get("title") or params["det"]
+        signal_unit = datadesc.get("signal_unit") or ""
+        x_is_time = bool(datadesc.get("x_is_time", False))
 
         if plot_type == "hist-1d" and isinstance(plot_widget, LineView):
+            # Apply axis/title formatting BEFORE plotting
+            x_name = (
+                axis_names[0] if len(axis_names) >= 1 else "Time" if x_is_time else "X"
+            )
+            y_name = "Counts"
+            y_unit = signal_unit
+
+            plot_widget.set_axis_format(
+                title=title,
+                x_label=x_name,
+                y_label=y_name,
+                y_units=y_unit,
+                x_is_time=x_is_time,
+            )
+
             plot_widget.set_data([data], {"x": labels[0]})
+
         elif plot_type == "hist-2d" and isinstance(plot_widget, ImageView):
-            plot_widget.set_data([data], {"x": labels[0], "y": labels[1]})
+            # data is 2D → labels[0]=x, labels[1]=y
+            plot_widget.set_data(
+                [data], {"x": labels[0], "y": labels[1]}, autoLevels=True
+            )
+
+            x_name = axis_names[0] if len(axis_names) >= 1 else "X"
+            y_name = axis_names[1] if len(axis_names) >= 2 else "Y"
+            x_unit = axis_units[0] if len(axis_units) >= 1 else ""
+            y_unit = axis_units[1] if len(axis_units) >= 2 else ""
+
+            plot_widget.image_plot.setTitle(title)
+            plot_widget.image_plot.setLabel("bottom", x_name, units=x_unit)
+            plot_widget.image_plot.setLabel("left", y_name, units=y_unit)
         else:
             return
 
