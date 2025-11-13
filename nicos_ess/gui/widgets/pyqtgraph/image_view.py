@@ -770,10 +770,10 @@ class ImageView(QWidget):
         if self.saved_cm is not None:
             self.settings_histogram.item.gradient.setColorMap(self.saved_cm)
 
-    def set_data(self, arrays, labels):
+    def set_data(self, arrays, labels, autoLevels=False):
         self.set_image(
             np.array(arrays[0]).T.astype(np.float64),
-            autoLevels=False,
+            autoLevels=autoLevels,
         )
 
         if labels:
