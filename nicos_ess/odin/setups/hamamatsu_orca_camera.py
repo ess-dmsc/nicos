@@ -6,6 +6,7 @@ camera_system_pv_root = "ODIN-DtCMOS:"
 camera_device_pv_root = "NDet-OrcF43:"
 camera_ndplugin_pv_root = "image1:"
 camera_kafkaplugin_pv_root = "Kfk1:"
+camera_schemasplugin_pv_root = "Schema:"
 water_cooler_pv_root = "ODIN-DtCMOS:NDet-FTCtrl-001:"
 
 devices = dict(
@@ -31,7 +32,7 @@ devices = dict(
         image_pv=f"{camera_system_pv_root}{camera_ndplugin_pv_root}ArrayData",
         ad_kafka_plugin="orca_kafka_plugin",
         topicpv=f"{camera_system_pv_root}{camera_kafkaplugin_pv_root}KafkaTopic_RBV",
-        sourcepv=f"{camera_system_pv_root}{camera_kafkaplugin_pv_root}SourceName_RBV",
+        sourcepv=f"{camera_system_pv_root}{camera_schemasplugin_pv_root}SourceName_RBV",
         unit="images",
         pva=True,
         monitor=True,
