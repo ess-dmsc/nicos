@@ -63,7 +63,7 @@ class ImageMode(Enum):
 
 
 # "Edge", "Level", "Sync Readout"
-class TriggerMode(Enum):
+class TriggerActive(Enum):
     EDGE = 0
     LEVEL = 1
     SYNC_READOUT = 2
@@ -530,8 +530,8 @@ class OrcaFlash4(AreaDetector):
         "numtriggers": Param(
             "Number of triggers per image.", settable=True, volatile=True
         ),
-        "triggermode": Param(
-            "Trigger mode of the camera. While in sync_readout mode, the exposure time is controlled via numtriggers NOT acquiretime and acquireperiod.",
+        "triggeractive": Param(
+            "Trigger active of the camera. While in sync_readout mode, the exposure time is controlled via numtriggers NOT acquiretime and acquireperiod.",
             type=oneof("edge", "level", "sync_readout"),
             settable=True,
             volatile=True,
@@ -603,10 +603,24 @@ class OrcaFlash4(AreaDetector):
         self._record_fields["chip_temperature"] = "Temperature-R"
         self._record_fields["cooling_mode"] = "SensorCooler-S"
         self._record_fields["cooling_mode_rbv"] = "SensorCooler-RB"
-        self._record_fields["trigger_mode"] = "TriggerActive-S"
-        self._record_fields["trigger_mode_rbv"] = "TriggerActive-RB"
+        self._record_fields["trigger_source"] = "TriggerSource-S"
+        self._record_fields["trigger_source_rbv"] = "TriggerSource-RB"
+        self._record_fields["trigger_mode"] = "TriggerMode-S"
+        self._record_fields["trigger_mode_rbv"] = "TriggerMode-RB"
+        self._record_fields["trigger_active"] = "TriggerActive-S"
+        self._record_fields["trigger_active_rbv"] = "TriggerActive-RB"
+        self._record_fields["trigger_global_exposure"] = "TriggerGlobalExposure-S"
+        self._record_fields["trigger_global_exposure_rbv"] = "TriggerGlobalExposure-RB"
+        self._record_fields["trigger_polarity"] = "TriggerPolarity-S"
+        self._record_fields["trigger_polarity_rbv"] = "TriggerPolarity-RB"
+        self._record_fields["trigger_connector"] = "TriggerConnector-S"
+        self._record_fields["trigger_connector_rbv"] = "TriggerConnector-RB"
         self._record_fields["num_triggers"] = "TriggerTimes-S"
         self._record_fields["num_triggers_rbv"] = "TriggerTimes-RB"
+        self._record_fields["trigger_delay"] = "TriggerDelay-S"
+        self._record_fields["trigger_delay_rbv"] = "TriggerDelay-RB"
+        self._record_fields["internal_trigger_handling"] = "InternalTriggerHandling-S"
+        self._record_fields["internal_trigger_handling_rbv"] = "InternalTriggerHandling-RB"
         self._record_fields["topicpv"] = self.topicpv
         self._record_fields["sourcepv"] = self.sourcepv
 
@@ -766,11 +780,11 @@ class OrcaFlash4(AreaDetector):
     def doWriteNumtriggers(self, value):
         self._put_pv("num_triggers", value)
 
-    def doReadTriggermode(self):
-        return TriggerMode(self._get_pv("trigger_mode")).name.lower()
+    def doReadTriggeractive(self):
+        return TriggerActive(self._get_pv("trigger_active_rbv")).name.lower()
 
-    def doWriteTriggermode(self, value):
-        self._put_pv("trigger_mode", TriggerMode[value.upper()].value)
+    def doWriteTriggeractive(self, value):
+        self._put_pv("trigger_active", TriggerActive[value.upper()].value)
 
     def get_topic_and_source(self):
         return self._get_pv("topicpv", as_string=True), self._get_pv(
