@@ -15,7 +15,6 @@ from nicos.guisupport.qt import (
     pyqtSignal,
     pyqtSlot,
 )
-
 from nicos_ess.gui.widgets.pyqtgraph.roi import CROSS_COLOR, CROSS_HOOVER_COLOR
 
 pg.setConfigOption("background", "w")
@@ -41,6 +40,7 @@ class LineView(QWidget):
         self.name = name
         self.preview_mode = preview_mode
         self.data = []
+        self._time_axis_enabled = False
 
         self.init_ui()
 
@@ -121,6 +121,36 @@ class LineView(QWidget):
             y_vals.append(y_data[idx])
             x_vals.append(data["timestamp"].timestamp())
         self.plot_sliced.setData(y=y_vals, x=x_vals)
+
+    def set_axis_format(
+        self,
+        *,
+        title=None,
+        x_label=None,
+        y_label=None,
+        y_units=None,
+        x_is_time=False,
+    ):
+        # Install a custom time axis ONCE if we are plotting timestamps
+        if x_is_time and not self._time_axis_enabled:
+            bottom = TimeAxisItem(orientation="bottom")
+            bottom.enableAutoSIPrefix(False)  # avoid 'Gs' etc.
+            self.plot_widget.setAxisItems({"bottom": bottom})
+            self._time_axis_enabled = True
+        elif not x_is_time and self._time_axis_enabled:
+            # Optional: restore default axis if needed in your app
+            self.plot_widget.setAxisItems({"bottom": pg.AxisItem(orientation="bottom")})
+            self._time_axis_enabled = False
+
+        # For time axes do NOT pass 'units' (prevents '(Gs)' in the label)
+        if x_is_time:
+            self.plot_widget.setLabel("bottom", x_label or "Time")
+        else:
+            self.plot_widget.setLabel("bottom", x_label or "X")
+
+        self.plot_widget.setLabel("left", y_label or "Counts", units=y_units or None)
+        if title:
+            self.plot_widget.setTitle(title)
 
     def toggle_mode(self, state):
         if state == Qt.Checked:
