@@ -19,6 +19,7 @@ NICOS data source devices for consuming ESSLivedata and sending light commands.
 from __future__ import annotations
 
 import json
+import threading
 import time
 from typing import List, Optional, Tuple
 from uuid import uuid4
@@ -49,7 +50,7 @@ from nicos.core import (
     tupleof,
 )
 from nicos.devices.generic import CounterChannelMixin, Detector, PassiveChannel
-from nicos.utils import byteBuffer, createThread, num_sort
+from nicos.utils import byteBuffer, createThread, num_sort, sleep
 from nicos_ess.devices.kafka.consumer import KafkaConsumer, KafkaSubscriber
 from nicos_ess.devices.kafka.producer import KafkaProducer
 
@@ -160,7 +161,8 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
             self._update_status(status.WARN, "No workflow channel selected")
             return
 
-        self.reset()
+        self.reset_job()
+        sleep(0.5)  # give backend time to process reset
         self._update_status(status.OK, "")
 
     def doStop(self):
@@ -197,52 +199,237 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
         self.curstatus = (new_status, message)
         self._cache.put(self._name, "status", self.curstatus, time.time())
 
-    # Called by collector when a matching DA00 arrives
+    # # Called by collector when a matching DA00 arrives
+    # def update_data_from_da00(self, da00_msg, timestamp_ns: int):
+    #     if not self.running:
+    #         return
+    #     try:
+    #         # Find the 'signal' Variable
+    #         variables = list(da00_msg.data)
+    #         sig = next(
+    #             (v for v in variables if getattr(v, "name", None) == "signal"), None
+    #         )
+    #         if sig is None:
+    #             return
+    #
+    #         arr = np.asarray(sig.data)
+    #         self._signal = np.ascontiguousarray(arr, dtype=arr.dtype)
+    #         self.curvalue = int(self._signal.sum()) if self._signal.size else 0
+    #
+    #         # Update NICOS array desc
+    #         self._array_desc = ArrayDesc(
+    #             self.name, shape=self._signal.shape, dtype=self._signal.dtype
+    #         )
+    #
+    #         # Heuristic plot type
+    #         if self._signal.ndim == 1:
+    #             plot_type = "hist-1d"
+    #             labels = [np.arange(self._signal.shape[0])]
+    #         elif self._signal.ndim == 2:
+    #             plot_type = "hist-2d"
+    #             # NICOS expects x first, y second for label buffers; keep conventional ordering
+    #             labels = [
+    #                 np.arange(self._signal.shape[1]),
+    #                 np.arange(self._signal.shape[0]),
+    #             ]
+    #         else:
+    #             plot_type = "hist-nd"
+    #             labels = [np.arange(self._signal.size)]
+    #
+    #         self.poll()  # trigger NICOS data update pipeline
+    #         self._push_to_nicos(plot_type, labels, timestamp_ns)
+    #         self._update_status(status.BUSY, "Counting")
+    #
+    #     except Exception as exc:
+    #         self._update_status(status.ERROR, str(exc))
+    #
+    # def _push_to_nicos(
+    #     self, plot_type: str, label_arrays: List[np.ndarray], timestamp: int
+    # ):
+    #     if self._signal is None:
+    #         return
+    #
+    #     databuffer = [byteBuffer(np.ascontiguousarray(self._signal))]
+    #     datadesc = [
+    #         dict(
+    #             dtype=self._signal.dtype.str,
+    #             shape=self._signal.shape,
+    #             labels={"x": {"define": "classic"}, "y": {"define": "classic"}},
+    #             plotcount=1,
+    #             plot_type=plot_type,
+    #             label_shape=tuple(len(l) for l in label_arrays),
+    #             label_dtypes=tuple(l.dtype.str for l in label_arrays),
+    #         )
+    #     ]
+    #     flat_labels = np.ascontiguousarray(
+    #         np.concatenate(label_arrays), dtype=np.float64
+    #     )
+    #     labelbuffers = [byteBuffer(flat_labels)]
+    #
+    #     session.updateLiveData(
+    #         dict(uid=0, time=timestamp, det=self.name, tag=LIVE, datadescs=datadesc),
+    #         databuffer,
+    #         labelbuffers,
+    #     )
+
     def update_data_from_da00(self, da00_msg, timestamp_ns: int):
-        if not self.running:
+        if not getattr(self, "running", True):
             return
         try:
-            # Find the 'signal' Variable
             variables = list(da00_msg.data)
-            sig = next(
-                (v for v in variables if getattr(v, "name", None) == "signal"), None
-            )
+            by_name = {
+                getattr(v, "name", None): v
+                for v in variables
+                if getattr(v, "name", None)
+            }
+            sig = by_name.get("signal")
             if sig is None:
                 return
 
             arr = np.asarray(sig.data)
-            self._signal = np.ascontiguousarray(arr, dtype=arr.dtype)
-            self.curvalue = int(self._signal.sum()) if self._signal.size else 0
+            arr = np.nan_to_num(arr, nan=0.0, posinf=0.0, neginf=0.0)
+            sig_axes = list(getattr(sig, "axes", [])) or [
+                f"dim{i}" for i in range(arr.ndim)
+            ]
 
-            # Update NICOS array desc
+            def _coord_for(ax_name: str):
+                v = by_name.get(ax_name)
+                if v is not None and getattr(v, "axes", None) in (
+                    [ax_name],
+                    (ax_name,),
+                ):
+                    return v
+                if "/" in ax_name:  # tolerate 'arc/tube' etc.
+                    token = ax_name.split("/")[0]
+                    v = by_name.get(token)
+                    if v is not None and getattr(v, "axes", None) in (
+                        [token],
+                        (token,),
+                    ):
+                        return v
+                return None
+
+            def _labels_from_coord(var, dim_len):
+                if var is None:
+                    return np.arange(dim_len, dtype=np.float64), "", False
+                vals = np.asarray(var.data)
+                unit = getattr(var, "unit", None) or ""
+                is_time = False
+                if isinstance(unit, str) and unit.startswith("datetime64["):
+                    u = unit[len("datetime64[") : -1]
+                    scale = {
+                        "ns": 1e-9,
+                        "us": 1e-6,
+                        "ms": 1e-3,
+                        "s": 1.0,
+                        "m": 60.0,
+                        "h": 3600.0,
+                    }.get(u, 1.0)
+                    vals = vals.astype(np.float64) * scale
+                    unit = "s"
+                    is_time = True
+                else:
+                    vals = vals.astype(np.float64, copy=False)
+
+                if vals.shape[-1] == dim_len:
+                    return np.ascontiguousarray(vals), unit, is_time
+                if vals.shape[-1] == dim_len + 1:
+                    mids = 0.5 * (vals[:-1] + vals[1:])
+                    return np.ascontiguousarray(mids), unit, is_time
+                return np.arange(dim_len, dtype=np.float64), unit, is_time
+
+            # 1D/2D view selection (unchanged from your working version)
+            if arr.ndim == 1:
+                x_idx = 0
+                self._signal = np.ascontiguousarray(arr)
+                x_labels, x_unit, x_is_time = _labels_from_coord(
+                    _coord_for(sig_axes[x_idx]), arr.shape[0]
+                )
+                labels = [x_labels]
+                plot_type = "hist-1d"
+                axis_names = [sig_axes[x_idx], "Counts"]
+                axis_units = [x_unit, (getattr(sig, "unit", None) or "")]
+                x_is_time_flag = x_is_time
+
+            else:
+                # choose two axes and reduce others (your existing logic)
+                def _pick_2d_axes(ax_names):
+                    dim_lens = [arr.shape[i] for i in range(arr.ndim)]
+                    idx_with_coords = []
+                    for i, name in enumerate(ax_names):
+                        cv = _coord_for(name)
+                        if cv is None:
+                            continue
+                        clen = np.asarray(cv.data).shape[-1]
+                        if clen in (dim_lens[i], dim_lens[i] + 1):
+                            idx_with_coords.append(i)
+                    if len(idx_with_coords) >= 2:
+                        y_idx, x_idx = idx_with_coords[-2], idx_with_coords[-1]
+                    else:
+                        y_idx, x_idx = max(0, arr.ndim - 2), max(0, arr.ndim - 1)
+                    reduce_idxs = [
+                        i for i in range(arr.ndim) if i not in (y_idx, x_idx)
+                    ]
+                    return y_idx, x_idx, reduce_idxs
+
+                y_idx, x_idx, reduce_idxs = _pick_2d_axes(sig_axes)
+                view = arr
+                for ax in sorted(reduce_idxs, reverse=True):
+                    view = view.sum(axis=ax, dtype=view.dtype)
+                self._signal = np.ascontiguousarray(view)
+
+                x_labels, x_unit, x_is_time = _labels_from_coord(
+                    _coord_for(sig_axes[x_idx]), self._signal.shape[1]
+                )
+                y_labels, y_unit, _ = _labels_from_coord(
+                    _coord_for(sig_axes[y_idx]), self._signal.shape[0]
+                )
+                labels = [x_labels, y_labels]
+                plot_type = "hist-2d"
+                axis_names = [sig_axes[x_idx], sig_axes[y_idx]]
+                axis_units = [x_unit, y_unit]
+                x_is_time_flag = x_is_time
+
+            # Title from signal label or DA00 result key
+            try:
+                rk = parse_result_key(da00_msg.source_name)
+                fallback_title = rk.output_name or self.name
+            except Exception:
+                fallback_title = self.name
+            title = (getattr(sig, "label", None) or "").strip() or fallback_title
+            signal_unit = getattr(sig, "unit", None) or ""
+
+            self.curvalue = int(self._signal.sum()) if self._signal.size else 0
             self._array_desc = ArrayDesc(
                 self.name, shape=self._signal.shape, dtype=self._signal.dtype
             )
 
-            # Heuristic plot type
-            if self._signal.ndim == 1:
-                plot_type = "hist-1d"
-                labels = [np.arange(self._signal.shape[0])]
-            elif self._signal.ndim == 2:
-                plot_type = "hist-2d"
-                # NICOS expects x first, y second for label buffers; keep conventional ordering
-                labels = [
-                    np.arange(self._signal.shape[1]),
-                    np.arange(self._signal.shape[0]),
-                ]
-            else:
-                plot_type = "hist-nd"
-                labels = [np.arange(self._signal.size)]
-
-            self.poll()  # trigger NICOS data update pipeline
-            self._push_to_nicos(plot_type, labels, timestamp_ns)
+            self.poll()
+            self._push_to_nicos(
+                plot_type,
+                labels,
+                timestamp_ns,
+                axis_names=axis_names,
+                axis_units=axis_units,
+                title=title,
+                signal_unit=signal_unit,
+                x_is_time=x_is_time_flag,
+            )
             self._update_status(status.BUSY, "Counting")
-
         except Exception as exc:
             self._update_status(status.ERROR, str(exc))
 
     def _push_to_nicos(
-        self, plot_type: str, label_arrays: List[np.ndarray], timestamp: int
+        self,
+        plot_type: str,
+        label_arrays: List[np.ndarray],
+        timestamp: int,
+        *,
+        axis_names: Optional[List[str]] = None,
+        axis_units: Optional[List[str]] = None,
+        title: Optional[str] = None,
+        signal_unit: Optional[str] = None,
+        x_is_time: bool = False,
     ):
         if self._signal is None:
             return
@@ -256,9 +443,15 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
                 plotcount=1,
                 plot_type=plot_type,
                 label_shape=tuple(len(l) for l in label_arrays),
-                label_dtypes=tuple(l.dtype.str for l in label_arrays),
+                label_dtypes=tuple(np.dtype(np.float64).str for _ in label_arrays),
+                axis_names=axis_names or [],
+                axis_units=axis_units or [],
+                title=title or "",
+                signal_unit=signal_unit or "",
+                x_is_time=bool(x_is_time),
             )
         ]
+
         flat_labels = np.ascontiguousarray(
             np.concatenate(label_arrays), dtype=np.float64
         )
@@ -286,13 +479,15 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
             return None
         return reg.resolve_latest(sel.workflow_path, sel.source_name)
 
-    def doReset(self):
+    def reset_job(self):
         job = self._resolve_job()
         if job:
             self._collector.send_job_command(
                 job_id={"source_name": job.source_name, "job_number": job.job_number},
                 action="reset",
             )
+        else:
+            self.log.warn("Could not resolve job to reset")
 
     def stop_job(self):
         job = self._resolve_job()
@@ -301,6 +496,8 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
                 job_id={"source_name": job.source_name, "job_number": job.job_number},
                 action="stop",
             )
+        else:
+            self.log.warn("Could not resolve job to stop")
 
     def remove_job(self):
         job = self._resolve_job()
@@ -309,6 +506,8 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
                 job_id={"source_name": job.source_name, "job_number": job.job_number},
                 action="remove",
             )
+        else:
+            self.log.warn("Could not resolve job to remove")
 
 
 class LiveDataCollector(Detector):
@@ -611,12 +810,24 @@ class LiveDataCollector(Detector):
         # If we know a job_id with source_name we include it; else '*'.
         src = job_id.get("source_name") if job_id else "*"
         key = f"{self.service_name}/{src}/job_command"
+        wait_for_delivery_event = threading.Event()
+
+        def _on_delivery(err, msg):
+            if err:
+                self.log.warn(f"Job command delivery failed: {err}.")
+            wait_for_delivery_event.set()
+
         try:
+            self.log.info(f"Sending job_command: {payload}")
             self._producer.produce(
                 self.commands_topic,
                 message=json.dumps(payload).encode("utf-8"),
                 key=key,
+                on_delivery_callback=_on_delivery,
             )
+            # Wait for delivery confirmation or timeout
+            if not wait_for_delivery_event.wait(timeout=5.0):
+                self.log.warn("Job command delivery timed out")
         except Exception as exc:
             self.log.warn(f"Error sending job_command: {exc}")
 
