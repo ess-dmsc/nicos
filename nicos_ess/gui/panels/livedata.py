@@ -113,6 +113,7 @@ class LiveDataPlot(QFrame):
             view.set_aspect_locked(False)
             # invert Y compared to default
             view.image_plot.invertY()
+            view.left_plot.plotItem.invertY()
             view.add_image_axes()
             view.splitter_vert_1.hide()
             view.bottom_plot.hide()
