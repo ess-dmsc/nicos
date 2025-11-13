@@ -17,9 +17,10 @@ from nicos.core import (
 from nicos.devices.abstract import MappedMoveable
 from nicos.devices.generic import MultiSwitcher
 from nicos.utils import num_sort
+from nicos_ess.devices.mixins import HasNexusConfig
 
 
-class ThermoStatedCellHolder(MultiSwitcher):
+class ThermoStatedCellHolder(MultiSwitcher, HasNexusConfig):
     """The thermostated cell-holder device."""
 
     parameters = {

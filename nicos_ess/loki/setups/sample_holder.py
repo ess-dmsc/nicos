@@ -27,5 +27,13 @@ devices = dict(
         xmotor="linear_sample_changer",
         ymotor="sample_stack_z",
         precision=[0.05, 0.05],
+        nexus_config=[
+            {
+                "group_name": "thermostated_sample_holder",
+                "nx_class": "NXcollection",
+                "suffix": "readback",
+                "dataset_type": "static_read",
+            }
+        ],
     ),
 )
