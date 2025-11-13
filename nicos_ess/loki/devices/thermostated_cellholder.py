@@ -20,7 +20,7 @@ from nicos.utils import num_sort
 from nicos_ess.devices.mixins import HasNexusConfig
 
 
-class ThermoStatedCellHolder(MultiSwitcher, HasNexusConfig):
+class ThermoStatedCellHolder(HasNexusConfig, MultiSwitcher):
     """The thermostated cell-holder device."""
 
     parameters = {
