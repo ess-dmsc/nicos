@@ -1,4 +1,5 @@
 import time
+from collections import defaultdict
 
 from streaming_data_types.fbschemas.forwarder_config_update_fc00.UpdateType import (
     UpdateType,
@@ -11,20 +12,22 @@ from streaming_data_types.forwarder_config_update_fc00 import (
 
 from nicos import session
 from nicos.core import (
-    status,
     POLLER,
     SIMULATION,
     Param,
-)
-
-from nicos_ess.utilities.json_utils import (
-    generate_nxlog_json,
-    build_json,
-    generate_group_json,
+    status,
 )
 from nicos.utils import createThread
 from nicos_ess.devices.kafka.producer import KafkaProducer
 from nicos_ess.devices.kafka.status_handler import KafkaStatusHandler
+from nicos_ess.utilities.json_utils import (
+    build_json,
+    generate_dataset_json,
+    generate_group_json,
+    generate_nxlog_json,
+)
+
+DEFAULT_NEXUS_PATH = "/entry/instrument"
 
 
 class EpicsKafkaForwarder(KafkaStatusHandler):
@@ -72,7 +75,7 @@ class EpicsKafkaForwarder(KafkaStatusHandler):
         """
         Get the Nexus JSON configuration.
 
-        :return: A list of JSON configurations to be treated as a "children" list.
+        :return: Mapping { '/entry/...': [group-node, ...] }.
         """
         return self._generate_json_configs()
 
@@ -149,22 +152,76 @@ class EpicsKafkaForwarder(KafkaStatusHandler):
         for nexus_config_dict in dev.nexus_config:
             group_name = nexus_config_dict.get("group_name", "")
             nx_class = nexus_config_dict.get("nx_class", "")
+            dataset_type = nexus_config_dict.get(
+                "dataset_type", "nxlog"
+            )  # default nxlog to keep backwards compatibility for now
             if group_name and nx_class:
-                dev_name = dev.name
-                suffix = nexus_config_dict.get("suffix", "")
-                if suffix:
-                    dev_name = f"{dev_name}_{suffix}"
-                yield (
-                    dev_name,
-                    {
-                        "group_name": group_name,
-                        "nx_class": nx_class,
-                        "units": nexus_config_dict.get("units", ""),
-                        "pv": nexus_config_dict.get("source_name", ""),
-                        "schema": nexus_config_dict.get("schema", ""),
-                        "topic": nexus_config_dict.get("topic", ""),
-                    },
-                )
+                if dataset_type == "nxlog":
+                    yield self._handle_nxlog(
+                        nexus_config_dict, dev, group_name, nx_class
+                    )
+                elif dataset_type == "static_read":
+                    yield self._handle_static_read(
+                        nexus_config_dict, dev, group_name, nx_class
+                    )
+                elif dataset_type == "static_value":
+                    yield self._handle_static_value(
+                        nexus_config_dict, dev, group_name, nx_class
+                    )
+
+    def _handle_nxlog(self, config, dev, group_name, nx_class):
+        dev_name = dev.name
+        suffix = config.get("suffix", "")
+        if suffix:
+            dev_name = f"{dev_name}_{suffix}"
+        return (
+            dev_name,
+            {
+                "group_name": group_name,
+                "nx_class": nx_class,
+                "units": config.get("units", ""),
+                "pv": config.get("source_name", ""),
+                "schema": config.get("schema", ""),
+                "topic": config.get("topic", ""),
+                "dataset_type": config.get("dataset_type", "nxlog"),
+                "nexus_path": config.get("nexus_path", DEFAULT_NEXUS_PATH),
+            },
+        )
+
+    def _handle_static_read(self, config, dev, group_name, nx_class):
+        dev_name = dev.name
+        current_value = dev.read(0)
+        suffix = config.get("suffix", "")
+        if suffix:
+            dev_name = f"{dev_name}_{suffix}"
+        return (
+            dev_name,
+            {
+                "group_name": group_name,
+                "nx_class": nx_class,
+                "units": config.get("units", ""),
+                "value": current_value,
+                "dataset_type": config.get("dataset_type", "static_read"),
+                "nexus_path": config.get("nexus_path", DEFAULT_NEXUS_PATH),
+            },
+        )
+
+    def _handle_static_value(self, config, dev, group_name, nx_class):
+        dev_name = dev.name
+        suffix = config.get("suffix", "")
+        if suffix:
+            dev_name = f"{dev_name}_{suffix}"
+        return (
+            dev_name,
+            {
+                "group_name": group_name,
+                "nx_class": nx_class,
+                "units": config.get("units", ""),
+                "value": config.get("value", ""),
+                "dataset_type": config.get("dataset_type", "static_value"),
+                "nexus_path": config.get("nexus_path", DEFAULT_NEXUS_PATH),
+            },
+        )
 
     def _get_configs_for_json(self):
         return {
@@ -176,20 +233,28 @@ class EpicsKafkaForwarder(KafkaStatusHandler):
 
     def _generate_json_configs(self):
         dev_configs = self._get_configs_for_json()
-        groups = {}
 
-        for dev_name, config in dev_configs.items():
-            group_name = config["group_name"]
-            if group_name not in groups:
-                groups[group_name] = {"nx_class": config["nx_class"], "children": []}
+        grouped = defaultdict(
+            lambda: defaultdict(lambda: {"nx_class": None, "children": []})
+        )
 
-            nxlog_json = generate_nxlog_json(
-                dev_name,
-                config["schema"],
-                config["pv"],
-                config["topic"],
-                config["units"],
-            )
-            groups[group_name]["children"].append(nxlog_json)
+        for dev_name, cfg in dev_configs.items():
+            path = cfg.get("nexus_path", DEFAULT_NEXUS_PATH)
+            gname = cfg["group_name"]
 
-        return build_json(groups)
+            if grouped[path][gname]["nx_class"] is None:
+                grouped[path][gname]["nx_class"] = cfg["nx_class"]
+
+            if cfg["dataset_type"] == "nxlog":
+                snippet = generate_nxlog_json(
+                    dev_name, cfg["schema"], cfg["pv"], cfg["topic"], cfg["units"]
+                )
+            elif cfg["dataset_type"] in ("static_read", "static_value"):
+                snippet = generate_dataset_json(dev_name, cfg["value"], cfg["units"])
+            else:
+                continue
+
+            grouped[path][gname]["children"].append(snippet)
+
+        # Convert each path’s groups-dict into a list of group nodes
+        return {path: build_json(groups) for path, groups in grouped.items()}

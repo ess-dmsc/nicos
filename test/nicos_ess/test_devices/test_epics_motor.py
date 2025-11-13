@@ -74,6 +74,9 @@ class FakeEpicsMotor(EpicsMotor):
     def doInit(self, mode):
         pass
 
+    def doRead(self, maxage=None):
+        return self._get_pv("position")
+
     def _put_pv(self, pvparam, value, wait=False):
         self.values[pvparam] = value
 
