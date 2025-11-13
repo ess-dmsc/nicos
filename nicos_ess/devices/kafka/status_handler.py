@@ -11,13 +11,12 @@ from nicos.core import (
     Override,
     Param,
     Readable,
+    host,
+    listof,
     status,
     tupleof,
-    listof,
-    host,
 )
 from nicos.core.constants import SIMULATION
-
 from nicos_ess.devices.kafka.consumer import KafkaSubscriber
 
 DISCONNECTED_STATE = (status.ERROR, "Disconnected")
@@ -140,4 +139,5 @@ class KafkaStatusHandler(Readable):
             self._next_update = next_update
 
     def doShutdown(self):
-        self._kafka_subscriber.close()
+        if self._kafka_subscriber:
+            self._kafka_subscriber.close()

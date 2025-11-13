@@ -1,0 +1,4289 @@
+{
+  "children": [
+    {
+      "name": "entry",
+      "type": "group",
+      "attributes": [
+        {
+          "name": "NX_class",
+          "dtype": "string",
+          "values": "NXentry"
+        }
+      ],
+      "children": [
+        {
+          "module": "dataset",
+          "config": {
+            "name": "features",
+            "values": [
+              10138143369737381149,
+              12705204561359454523
+            ],
+            "dtype": "uint64"
+          }
+        },
+        {
+          "name": "instrument",
+          "type": "group",
+          "attributes": [
+            {
+              "name": "NX_class",
+              "dtype": "string",
+              "values": "NXinstrument"
+            }
+          ],
+          "children": [
+            {
+              "name": "multiblade_detector",
+              "type": "group",
+              "attributes": [
+                {
+                  "name": "NX_class",
+                  "dtype": "string",
+                  "values": "NXdetector"
+                }
+              ],
+              "children": [
+                {
+                  "attributes": [
+                    {
+                      "dtype": "string",
+                      "name": "NX_class",
+                      "values": "NXcite"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "config": {
+                        "name": "description",
+                        "values": "The data here was produced using the ESS EFU (European Spallation Source Event Formation Unit) system",
+                        "dtype": "string"
+                      },
+                      "module": "dataset"
+                    },
+                    {
+                      "config": {
+                        "name": "doi",
+                        "values": "https://doi.org/10.1088/1748-0221/13/10/T10001",
+                        "dtype": "string"
+                      },
+                      "module": "dataset"
+                    },
+                    {
+                      "config": {
+                        "name": "bibtex",
+                        "values": "@article{Christensen_2018,\r\ndoi = {10.1088/1748-0221/13/11/T11002},\r\nurl = {https://dx.doi.org/10.1088/1748-0221/13/11/T11002},\r\nyear = {2018},\r\nmonth = {nov},\r\npublisher = {},\r\nvolume = {13},\r\nnumber = {11},\r\npages = {T11002},\r\nauthor = {M.J. Christensen and M. Shetty and J. Nilsson and A. Mukai and R. Al Jebali and A. Khaplanov and M. Lupberger and F. Messi and D. Pfeiffer and F. Piscitelli and T. Blum and C. S\u00f8gaard and S. Skelboe and R. Hall-Wilton and T. Richter},\r\ntitle = {Software-based data acquisition and processing for neutron detectors at European Spallation Source\u2014early experience from four detector designs},\r\njournal = {Journal of Instrumentation},\r\nabstract = {European Spallation Source (ESS) will deliver neutrons at high flux for use in diverse neutron scattering techniques. The neutron source facility and the scientific instruments will be located in Lund, and the Data Management and Software Centre (DMSC), in Copenhagen.   A number of detector prototypes are being developed at ESS together with its European in-kind partners, for example: SoNDe, Multi-Grid, Multi-Blade and Gd-GEM. These are all position sensitive detectors but use different techniques for the detection of neutrons.   Except for digitization of electronics readout, all neutron data is anticipated to be processed in software. This provides maximum flexibility and adaptability and allows deep inspection of the raw data for commissioning which will reduce the risk of starting up new detector technologies. But it also requires development of high performance software processing pipelines and optimized and scalable processing algorithms.   This report provides a description of the ESS system architecture for the neutron data path. Special focus is on the interface between the detectors and DMSC which is based on UDP over Ethernet links.   The report also describes the software architecture for detector data processing and the tools we have developed, which have proven very useful for efficient early experimentation, and can be run on a single laptop.   Processing requirements for the SoNDe, Multi-Grid, Multi-Blade and Ge-GEM   detectors are presented and compared to event processing rates archived so far.}\r\n}",
+                        "dtype": "string"
+                      },
+                      "module": "dataset"
+                    },
+                    {
+                      "config": {
+                        "name": "endnote",
+                        "values": "%0 Journal Article\n%T Software-based data acquisition and processing for neutron detectors at European Spallation Source\u201a\u00c4\u00eeearly experience from four detector designs\n%A Christensen, M. J.\n%A Shetty, M.\n%A Nilsson, J.\n%A Mukai, A.\n%A Jebali, R. Al\n%A Khaplanov, A.\n%A Lupberger, M.\n%A Messi, F.\n%A Pfeiffer, D.\n%A Piscitelli, F.\n%A Blum, T.\n%A S\u221a?gaard, C.\n%A Skelboe, S.\n%A Hall-Wilton, R.\n%A Richter, T.\n%J Journal of Instrumentation\n%D 2018\n%8 nov\n%V 13\n%N 11\n%F Christensen_2018\n%X European Spallation Source (ESS) will deliver neutrons at high flux for use in diverse neutron scattering techniques. The neutron source facility and the scientific instruments will be located in Lund, and the Data Management and Software Centre (DMSC), in Copenhagen. A number of detector prototypes are being developed at ESS together with its European in-kind partners, for example: SoNDe, Multi-Grid, Multi-Blade and Gd-GEM. These are all position sensitive detectors but use different techniques for the detection of neutrons. Except for digitization of electronics readout, all neutron data is anticipated to be processed in software. This provides maximum flexibility and adaptability and allows deep inspection of the raw data for commissioning which will reduce the risk of starting up new detector technologies. But it also requires development of high performance software processing pipelines and optimized and scalable processing algorithms. This report provides a description of the ESS system architecture for the neutron data path. Special focus is on the interface between the detectors and DMSC which is based on UDP over Ethernet links. The report also describes the software architecture for detector data processing and the tools we have developed, which have proven very useful for efficient early experimentation, and can be run on a single laptop. Processing requirements for the SoNDe, Multi-Grid, Multi-Blade and Ge-GEM detectors are presented and compared to event processing rates archived so far.\n%U https://dx.doi.org/10.1088/1748-0221/13/11/T11002\n%U http://dx.doi.org/10.1088/1748-0221/13/11/T11002\n%P 11002",
+                        "dtype": "string"
+                      },
+                      "module": "dataset"
+                    }
+                  ],
+                  "name": "efu_publication",
+                  "type": "group"
+                },
+                {
+                  "name": "data",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXevent_data"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "ev44",
+                      "config": {
+                        "source": "multiblade",
+                        "topic": "tbl_detector_mb"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "group",
+                  "name": "transformations",
+                  "children": [
+                    {
+                      "module": "dataset",
+                      "config": {
+                        "name": "translation",
+                        "values": 1.0,
+                        "dtype": "double"
+                      },
+                      "attributes": [
+                        {
+                          "name": "transformation_type",
+                          "dtype": "string",
+                          "values": "translation"
+                        },
+                        {
+                          "name": "vector",
+                          "dtype": "float",
+                          "values": [
+                            0.0,
+                            0.0,
+                            1.0
+                          ]
+                        },
+                        {
+                          "name": "depends_on",
+                          "values": ".",
+                          "dtype": "string"
+                        },
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "m"
+                        }
+                      ]
+                    }
+                  ],
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "values": "NXtransformations"
+                    }
+                  ]
+                },
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "depends_on",
+                    "dtype": "string",
+                    "values": "/entry/instrument/multiblade_detector/transformations/translation"
+                  }
+                },
+                {
+                  "name": "mb_hvps_board100_ch00_voltage",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXlog"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "source": "TBL-DtCmn:PwrC-HVM-100:Ch00-VMon",
+                        "topic": "tbl_misc_devices",
+                        "dtype": "double",
+                        "value_units": "V"
+                      },
+                      "attributes": [
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "V"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "mb_hvps_board100_ch00_current",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXlog"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "source": "TBL-DtCmn:PwrC-HVM-100:Ch00-IMon",
+                        "topic": "tbl_misc_devices",
+                        "dtype": "double",
+                        "value_units": "V"
+                      },
+                      "attributes": [
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "V"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "mb_hvps_board100_ch01_voltage",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXlog"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "source": "TBL-DtCmn:PwrC-HVM-100:Ch01-VMon",
+                        "topic": "tbl_misc_devices",
+                        "dtype": "double",
+                        "value_units": "V"
+                      },
+                      "attributes": [
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "V"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "mb_hvps_board100_ch01_current",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXlog"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "source": "TBL-DtCmn:PwrC-HVM-100:Ch01-IMon",
+                        "topic": "tbl_misc_devices",
+                        "dtype": "double",
+                        "value_units": "V"
+                      },
+                      "attributes": [
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "V"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "mb_hvps_board100_ch02_voltage",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXlog"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "source": "TBL-DtCmn:PwrC-HVM-100:Ch02-VMon",
+                        "topic": "tbl_misc_devices",
+                        "dtype": "double",
+                        "value_units": "V"
+                      },
+                      "attributes": [
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "V"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "mb_hvps_board100_ch02_current",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXlog"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "source": "TBL-DtCmn:PwrC-HVM-100:Ch02-IMon",
+                        "topic": "tbl_misc_devices",
+                        "dtype": "double",
+                        "value_units": "V"
+                      },
+                      "attributes": [
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "V"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "mb_hvps_board100_ch03_voltage",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXlog"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "source": "TBL-DtCmn:PwrC-HVM-100:Ch03-VMon",
+                        "topic": "tbl_misc_devices",
+                        "dtype": "double",
+                        "value_units": "V"
+                      },
+                      "attributes": [
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "V"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "mb_hvps_board100_ch03_current",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXlog"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "source": "TBL-DtCmn:PwrC-HVM-100:Ch03-IMon",
+                        "topic": "tbl_misc_devices",
+                        "dtype": "double",
+                        "value_units": "V"
+                      },
+                      "attributes": [
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "V"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "module": "dataset",
+              "config": {
+                "name": "name",
+                "values": "TBL",
+                "dtype": "string"
+              },
+              "attributes": [
+                {
+                  "name": "short_name",
+                  "dtype": "string",
+                  "values": "tblmultiblade"
+                }
+              ]
+            },
+            {
+              "name": "source",
+              "type": "group",
+              "attributes": [
+                {
+                  "name": "NX_class",
+                  "dtype": "string",
+                  "values": "NXsource"
+                }
+              ],
+              "children": [
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "name",
+                    "values": "virtual_source",
+                    "dtype": "string"
+                  }
+                },
+                {
+                  "type": "group",
+                  "name": "transformations",
+                  "children": [
+                    {
+                      "module": "dataset",
+                      "config": {
+                        "name": "location",
+                        "values": 30.0,
+                        "dtype": "double"
+                      },
+                      "attributes": [
+                        {
+                          "name": "transformation_type",
+                          "dtype": "string",
+                          "values": "translation"
+                        },
+                        {
+                          "name": "vector",
+                          "dtype": "float",
+                          "values": [
+                            0.0,
+                            0.0,
+                            1.0
+                          ]
+                        },
+                        {
+                          "name": "depends_on",
+                          "values": ".",
+                          "dtype": "string"
+                        },
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "m"
+                        }
+                      ]
+                    }
+                  ],
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "values": "NXtransformations"
+                    }
+                  ]
+                },
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "depends_on",
+                    "dtype": "string",
+                    "values": "/entry/instrument/source/transformations/location"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "bwc_1",
+              "type": "group",
+              "attributes": [
+                {
+                  "name": "NX_class",
+                  "dtype": "string",
+                  "values": "NXdisk_chopper"
+                }
+              ],
+              "children": [
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "slits",
+                    "values": 1,
+                    "dtype": "int64"
+                  }
+                },
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "slit_edges",
+                    "values": [
+                      0.0,
+                      170.0
+                    ],
+                    "dtype": "double"
+                  },
+                  "attributes": [
+                    {
+                      "name": "units",
+                      "dtype": "string",
+                      "values": "deg"
+                    }
+                  ]
+                },
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "slit_height",
+                    "values": 0.06,
+                    "dtype": "double"
+                  },
+                  "attributes": [
+                    {
+                      "name": "units",
+                      "dtype": "string",
+                      "values": "m"
+                    }
+                  ]
+                },
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "radius",
+                    "values": 0.35,
+                    "dtype": "double"
+                  },
+                  "attributes": [
+                    {
+                      "name": "units",
+                      "dtype": "string",
+                      "values": "m"
+                    }
+                  ]
+                },
+                {
+                  "name": "delay",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXlog"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "source": "TBL-ChpSy1:Chop-BWC-101:TotDly",
+                        "topic": "tbl_choppers",
+                        "dtype": "double",
+                        "value_units": "ns"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "group",
+                  "name": "transformations",
+                  "children": [
+                    {
+                      "module": "dataset",
+                      "config": {
+                        "name": "translation",
+                        "values": -14.5,
+                        "dtype": "double"
+                      },
+                      "attributes": [
+                        {
+                          "name": "transformation_type",
+                          "dtype": "string",
+                          "values": "translation"
+                        },
+                        {
+                          "name": "vector",
+                          "dtype": "float",
+                          "values": [
+                            0.0,
+                            0.0,
+                            1.0
+                          ]
+                        },
+                        {
+                          "name": "depends_on",
+                          "values": ".",
+                          "dtype": "string"
+                        },
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "m"
+                        }
+                      ]
+                    }
+                  ],
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "values": "NXtransformations"
+                    }
+                  ]
+                },
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "depends_on",
+                    "dtype": "string",
+                    "values": "/entry/instrument/bwc_1/transformations/translation"
+                  }
+                },
+                {
+                  "name": "top_dead_center",
+                  "type": "group",
+                  "children": [
+                    {
+                      "module": "tdct",
+                      "config": {
+                        "topic": "tbl_choppers",
+                        "source": "TBL-ChpSy1:Chop-BWC-101:00-TS-I"
+                      }
+                    }
+                  ],
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "values": "NXlog"
+                    },
+                    {
+                      "name": "default",
+                      "values": "time"
+                    }
+                  ]
+                },
+                {
+                  "name": "rotation_speed",
+                  "type": "group",
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "topic": "tbl_choppers",
+                        "source": "TBL-ChpSy1:Chop-BWC-101:Spd_R",
+                        "dtype": "double",
+                        "value_units": "Hz"
+                      }
+                    }
+                  ],
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "values": "NXlog"
+                    }
+                  ]
+                },
+                {
+                  "name": "rotation_speed_setpoint",
+                  "type": "group",
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "topic": "tbl_choppers",
+                        "source": "TBL-ChpSy1:Chop-BWC-101:Spd_S",
+                        "dtype": "double",
+                        "value_units": "Hz"
+                      }
+                    }
+                  ],
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "values": "NXlog"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "bwc_2",
+              "type": "group",
+              "attributes": [
+                {
+                  "name": "NX_class",
+                  "dtype": "string",
+                  "values": "NXdisk_chopper"
+                }
+              ],
+              "children": [
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "slits",
+                    "values": 1,
+                    "dtype": "int64"
+                  }
+                },
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "slit_edges",
+                    "values": [
+                      0.0,
+                      170.0
+                    ],
+                    "dtype": "double"
+                  },
+                  "attributes": [
+                    {
+                      "name": "units",
+                      "dtype": "string",
+                      "values": "deg"
+                    }
+                  ]
+                },
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "slit_height",
+                    "values": 0.06,
+                    "dtype": "double"
+                  },
+                  "attributes": [
+                    {
+                      "name": "units",
+                      "dtype": "string",
+                      "values": "m"
+                    }
+                  ]
+                },
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "radius",
+                    "values": 0.35,
+                    "dtype": "double"
+                  },
+                  "attributes": [
+                    {
+                      "name": "units",
+                      "dtype": "string",
+                      "values": "m"
+                    }
+                  ]
+                },
+                {
+                  "name": "top_dead_center",
+                  "type": "group",
+                  "children": [
+                    {
+                      "module": "tdct",
+                      "config": {
+                        "topic": "tbl_choppers",
+                        "source": "TBL-ChpSy1:Chop-BWC-102:01-TS-I"
+                      }
+                    }
+                  ],
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "values": "NXlog"
+                    },
+                    {
+                      "name": "default",
+                      "values": "time"
+                    }
+                  ]
+                },
+                {
+                  "name": "rotation_speed",
+                  "type": "group",
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "topic": "tbl_choppers",
+                        "source": "TBL-ChpSy1:Chop-BWC-102:Spd_R",
+                        "dtype": "double",
+                        "value_units": "Hz"
+                      }
+                    }
+                  ],
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "values": "NXlog"
+                    }
+                  ]
+                },
+                {
+                  "name": "rotation_speed_setpoint",
+                  "type": "group",
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "topic": "tbl_choppers",
+                        "source": "TBL-ChpSy1:Chop-BWC-102:Spd_S",
+                        "dtype": "double",
+                        "value_units": "Hz"
+                      }
+                    }
+                  ],
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "values": "NXlog"
+                    }
+                  ]
+                },
+                {
+                  "name": "delay",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXlog"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "source": "TBL-ChpSy1:Chop-BWC-102:TotDly",
+                        "topic": "tbl_choppers",
+                        "dtype": "double",
+                        "value_units": "ns"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "group",
+                  "name": "transformations",
+                  "children": [
+                    {
+                      "module": "dataset",
+                      "config": {
+                        "name": "translation",
+                        "values": -15.5,
+                        "dtype": "double"
+                      },
+                      "attributes": [
+                        {
+                          "name": "transformation_type",
+                          "dtype": "string",
+                          "values": "translation"
+                        },
+                        {
+                          "name": "vector",
+                          "dtype": "float",
+                          "values": [
+                            0.0,
+                            0.0,
+                            1.0
+                          ]
+                        },
+                        {
+                          "name": "depends_on",
+                          "values": ".",
+                          "dtype": "string"
+                        },
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "m"
+                        }
+                      ]
+                    }
+                  ],
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "values": "NXtransformations"
+                    }
+                  ]
+                },
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "depends_on",
+                    "dtype": "string",
+                    "values": "/entry/instrument/bwc_2/transformations/translation"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "monitor_1",
+              "type": "group",
+              "attributes": [
+                {
+                  "name": "NX_class",
+                  "dtype": "string",
+                  "values": "NXmonitor"
+                }
+              ],
+              "children": [
+                {
+                  "name": "geometry",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXoff_geometry"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "dataset",
+                      "config": {
+                        "name": "vertices",
+                        "values": [
+                          [
+                            -0.075,
+                            -0.075,
+                            -0.025
+                          ],
+                          [
+                            0.075,
+                            -0.075,
+                            -0.025
+                          ],
+                          [
+                            0.075,
+                            0.075,
+                            -0.025
+                          ],
+                          [
+                            -0.075,
+                            0.075,
+                            -0.025
+                          ],
+                          [
+                            -0.075,
+                            -0.075,
+                            0.025
+                          ],
+                          [
+                            0.075,
+                            -0.075,
+                            0.025
+                          ],
+                          [
+                            0.075,
+                            0.075,
+                            0.025
+                          ],
+                          [
+                            -0.075,
+                            0.075,
+                            0.025
+                          ]
+                        ],
+                        "dtype": "double"
+                      },
+                      "attributes": [
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "m"
+                        }
+                      ]
+                    },
+                    {
+                      "module": "dataset",
+                      "config": {
+                        "name": "faces",
+                        "values": [
+                          0,
+                          4,
+                          8,
+                          12,
+                          16,
+                          20
+                        ],
+                        "dtype": "int"
+                      }
+                    },
+                    {
+                      "module": "dataset",
+                      "config": {
+                        "name": "winding_order",
+                        "values": [
+                          0,
+                          1,
+                          2,
+                          3,
+                          4,
+                          5,
+                          6,
+                          7,
+                          0,
+                          3,
+                          7,
+                          4,
+                          1,
+                          5,
+                          6,
+                          2,
+                          0,
+                          4,
+                          5,
+                          1,
+                          3,
+                          2,
+                          6,
+                          7
+                        ],
+                        "dtype": "int"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "event_data_1",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXdata"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "da00",
+                      "config": {
+                        "source": "cbm1",
+                        "topic": "tbl_beam_monitor",
+                        "attributes": [
+                          {
+                            "name": "axes",
+                            "data": [
+                              "frame_time"
+                            ]
+                          },
+                          {
+                            "name": "title",
+                            "data": "TBL Beam Monitor 1"
+                          }
+                        ],
+                        "variables": [
+                          {
+                            "name": "signal",
+                            "data_type": "int32",
+                            "axes": [
+                              "frame_time"
+                            ],
+                            "shape": [
+                              714
+                            ],
+                            "unit": "a.u."
+                          }
+                        ],
+                        "constants": [
+                          {
+                            "name": "frame_time",
+                            "data_type": "int32",
+                            "axes": [
+                              "frame_time"
+                            ],
+                            "shape": [
+                              714
+                            ],
+                            "unit": "ns"
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "group",
+                  "name": "transformations",
+                  "children": [
+                    {
+                      "module": "dataset",
+                      "config": {
+                        "name": "translation",
+                        "values": -14.8,
+                        "dtype": "double"
+                      },
+                      "attributes": [
+                        {
+                          "name": "transformation_type",
+                          "dtype": "string",
+                          "values": "translation"
+                        },
+                        {
+                          "name": "vector",
+                          "dtype": "float",
+                          "values": [
+                            0.0,
+                            0.0,
+                            1.0
+                          ]
+                        },
+                        {
+                          "name": "depends_on",
+                          "values": ".",
+                          "dtype": "string"
+                        },
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "m"
+                        }
+                      ]
+                    }
+                  ],
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "values": "NXtransformations"
+                    }
+                  ]
+                },
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "depends_on",
+                    "dtype": "string",
+                    "values": "/entry/instrument/monitor_1/transformations/translation"
+                  }
+                },
+                {
+                  "name": "hvps_voltage",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXlog"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "source": "TBL-BM:NDet-CDTIBM-001:HighVoltage-R",
+                        "topic": "tbl_misc_devices",
+                        "dtype": "double",
+                        "value_units": "V"
+                      },
+                      "attributes": [
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "V"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "collimator_vertical",
+              "type": "group",
+              "attributes": [
+                {
+                  "name": "NX_class",
+                  "dtype": "string",
+                  "values": "NXaperture"
+                }
+              ],
+              "children": [
+                {
+                  "type": "group",
+                  "name": "transformations",
+                  "children": [
+                    {
+                      "module": "dataset",
+                      "config": {
+                        "name": "translation",
+                        "values": -10.0,
+                        "dtype": "double"
+                      },
+                      "attributes": [
+                        {
+                          "name": "transformation_type",
+                          "dtype": "string",
+                          "values": "translation"
+                        },
+                        {
+                          "name": "vector",
+                          "dtype": "float",
+                          "values": [
+                            0.0,
+                            0.0,
+                            1.0
+                          ]
+                        },
+                        {
+                          "name": "depends_on",
+                          "values": ".",
+                          "dtype": "string"
+                        },
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "m"
+                        }
+                      ]
+                    }
+                  ],
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "values": "NXtransformations"
+                    }
+                  ]
+                },
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "depends_on",
+                    "dtype": "string",
+                    "values": "/entry/instrument/collimator_vertical/transformations/translation"
+                  }
+                },
+                {
+                  "name": "position_readback",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXlog"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "source": "TBL-PinLif:MC-LinZ-01:Mtr.RBV",
+                        "topic": "tbl_motion",
+                        "dtype": "double",
+                        "value_units": "mm"
+                      },
+                      "attributes": [
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "mm"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "position_setpoint",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXlog"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "source": "TBL-PinLif:MC-LinZ-01:Mtr.VAL",
+                        "topic": "tbl_motion",
+                        "dtype": "double",
+                        "value_units": "mm"
+                      },
+                      "attributes": [
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "mm"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "collimator_horizontal",
+              "type": "group",
+              "attributes": [
+                {
+                  "name": "NX_class",
+                  "dtype": "string",
+                  "values": "NXaperture"
+                }
+              ],
+              "children": [
+                {
+                  "type": "group",
+                  "name": "transformations",
+                  "children": [
+                    {
+                      "module": "dataset",
+                      "config": {
+                        "name": "translation",
+                        "values": -10.0,
+                        "dtype": "double"
+                      },
+                      "attributes": [
+                        {
+                          "name": "transformation_type",
+                          "dtype": "string",
+                          "values": "translation"
+                        },
+                        {
+                          "name": "vector",
+                          "dtype": "float",
+                          "values": [
+                            0.0,
+                            0.0,
+                            1.0
+                          ]
+                        },
+                        {
+                          "name": "depends_on",
+                          "values": ".",
+                          "dtype": "string"
+                        },
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "m"
+                        }
+                      ]
+                    }
+                  ],
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "values": "NXtransformations"
+                    }
+                  ]
+                },
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "depends_on",
+                    "dtype": "string",
+                    "values": "/entry/instrument/collimator_horizontal/transformations/translation"
+                  }
+                },
+                {
+                  "name": "position_readback",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXlog"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "source": "TBL-PinLin:MC-LinY-01:Mtr.RBV",
+                        "topic": "tbl_motion",
+                        "dtype": "double",
+                        "value_units": "mm"
+                      },
+                      "attributes": [
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "mm"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "position_setpoint",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXlog"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "source": "TBL-PinLin:MC-LinY-01:Mtr.VAL",
+                        "topic": "tbl_motion",
+                        "dtype": "double",
+                        "value_units": "mm"
+                      },
+                      "attributes": [
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "mm"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "filter_1",
+              "type": "group",
+              "attributes": [
+                {
+                  "name": "NX_class",
+                  "dtype": "string",
+                  "values": "NXaperture"
+                }
+              ],
+              "children": [
+                {
+                  "type": "group",
+                  "name": "transformations",
+                  "children": [
+                    {
+                      "module": "dataset",
+                      "config": {
+                        "name": "translation",
+                        "values": -9.0,
+                        "dtype": "double"
+                      },
+                      "attributes": [
+                        {
+                          "name": "transformation_type",
+                          "dtype": "string",
+                          "values": "translation"
+                        },
+                        {
+                          "name": "vector",
+                          "dtype": "float",
+                          "values": [
+                            0.0,
+                            0.0,
+                            1.0
+                          ]
+                        },
+                        {
+                          "name": "depends_on",
+                          "values": ".",
+                          "dtype": "string"
+                        },
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "m"
+                        }
+                      ]
+                    }
+                  ],
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "values": "NXtransformations"
+                    }
+                  ]
+                },
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "depends_on",
+                    "dtype": "string",
+                    "values": "/entry/instrument/filter_1/transformations/translation"
+                  }
+                },
+                {
+                  "name": "position_readback",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXlog"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "source": "TBL-FilChg:MC-LinY-01:Mtr.RBV",
+                        "topic": "tbl_motion",
+                        "dtype": "double",
+                        "value_units": "mm"
+                      },
+                      "attributes": [
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "mm"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "position_setpoint",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXlog"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "source": "TBL-FilChg:MC-LinY-01:Mtr.VAL",
+                        "topic": "tbl_motion",
+                        "dtype": "double",
+                        "value_units": "mm"
+                      },
+                      "attributes": [
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "mm"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "filter_2",
+              "type": "group",
+              "attributes": [
+                {
+                  "name": "NX_class",
+                  "dtype": "string",
+                  "values": "NXaperture"
+                }
+              ],
+              "children": [
+                {
+                  "type": "group",
+                  "name": "transformations",
+                  "children": [
+                    {
+                      "module": "dataset",
+                      "config": {
+                        "name": "translation",
+                        "values": -9.1,
+                        "dtype": "double"
+                      },
+                      "attributes": [
+                        {
+                          "name": "transformation_type",
+                          "dtype": "string",
+                          "values": "translation"
+                        },
+                        {
+                          "name": "vector",
+                          "dtype": "float",
+                          "values": [
+                            0.0,
+                            0.0,
+                            1.0
+                          ]
+                        },
+                        {
+                          "name": "depends_on",
+                          "values": ".",
+                          "dtype": "string"
+                        },
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "m"
+                        }
+                      ]
+                    }
+                  ],
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "values": "NXtransformations"
+                    }
+                  ]
+                },
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "depends_on",
+                    "dtype": "string",
+                    "values": "/entry/instrument/filter_2/transformations/translation"
+                  }
+                },
+                {
+                  "name": "position_readback",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXlog"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "source": "TBL-FilChg:MC-LinY-02:Mtr.RBV",
+                        "topic": "tbl_motion",
+                        "dtype": "double",
+                        "value_units": "mm"
+                      },
+                      "attributes": [
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "mm"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "position_setpoint",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXlog"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "source": "TBL-FilChg:MC-LinY-02:Mtr.VAL",
+                        "topic": "tbl_motion",
+                        "dtype": "double",
+                        "value_units": "mm"
+                      },
+                      "attributes": [
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "mm"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "filter_3",
+              "type": "group",
+              "attributes": [
+                {
+                  "name": "NX_class",
+                  "dtype": "string",
+                  "values": "NXaperture"
+                }
+              ],
+              "children": [
+                {
+                  "type": "group",
+                  "name": "transformations",
+                  "children": [
+                    {
+                      "module": "dataset",
+                      "config": {
+                        "name": "translation",
+                        "values": -9.2,
+                        "dtype": "double"
+                      },
+                      "attributes": [
+                        {
+                          "name": "transformation_type",
+                          "dtype": "string",
+                          "values": "translation"
+                        },
+                        {
+                          "name": "vector",
+                          "dtype": "float",
+                          "values": [
+                            0.0,
+                            0.0,
+                            1.0
+                          ]
+                        },
+                        {
+                          "name": "depends_on",
+                          "values": ".",
+                          "dtype": "string"
+                        },
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "m"
+                        }
+                      ]
+                    }
+                  ],
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "values": "NXtransformations"
+                    }
+                  ]
+                },
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "depends_on",
+                    "dtype": "string",
+                    "values": "/entry/instrument/filter_3/transformations/translation"
+                  }
+                },
+                {
+                  "name": "position_readback",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXlog"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "source": "TBL-FilChg:MC-LinY-03:Mtr.RBV",
+                        "topic": "tbl_motion",
+                        "dtype": "double",
+                        "value_units": "mm"
+                      },
+                      "attributes": [
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "mm"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "position_setpoint",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXlog"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "source": "TBL-FilChg:MC-LinY-03:Mtr.VAL",
+                        "topic": "tbl_motion",
+                        "dtype": "double",
+                        "value_units": "mm"
+                      },
+                      "attributes": [
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "mm"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "polarizer",
+              "type": "group",
+              "attributes": [
+                {
+                  "name": "NX_class",
+                  "dtype": "string",
+                  "values": "NXpolarizer"
+                }
+              ],
+              "children": [
+                {
+                  "type": "group",
+                  "name": "transformations",
+                  "children": [
+                    {
+                      "module": "dataset",
+                      "config": {
+                        "name": "translation",
+                        "values": -15.7,
+                        "dtype": "double"
+                      },
+                      "attributes": [
+                        {
+                          "name": "transformation_type",
+                          "dtype": "string",
+                          "values": "translation"
+                        },
+                        {
+                          "name": "vector",
+                          "dtype": "float",
+                          "values": [
+                            0.0,
+                            0.0,
+                            1.0
+                          ]
+                        },
+                        {
+                          "name": "depends_on",
+                          "values": "/entry/instrument/polarizer/transformations/translation1",
+                          "dtype": "string"
+                        },
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "m"
+                        }
+                      ]
+                    },
+                    {
+                      "name": "translation1",
+                      "type": "group",
+                      "attributes": [
+                        {
+                          "name": "NX_class",
+                          "dtype": "string",
+                          "values": "NXlog"
+                        },
+                        {
+                          "name": "transformation_type",
+                          "dtype": "string",
+                          "values": "translation"
+                        },
+                        {
+                          "name": "vector",
+                          "dtype": "float",
+                          "values": [
+                            0.0,
+                            0.0,
+                            1.0
+                          ]
+                        },
+                        {
+                          "name": "depends_on",
+                          "values": ".",
+                          "dtype": "string"
+                        }
+                      ],
+                      "children": [
+                        {
+                          "module": "f144",
+                          "config": {
+                            "source": "SIM_tbl:polarizer:transformations:translation1",
+                            "topic": "tbl_sample_env",
+                            "dtype": "double",
+                            "value_units": "m"
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "values": "NXtransformations"
+                    }
+                  ]
+                },
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "depends_on",
+                    "dtype": "string",
+                    "values": "/entry/instrument/polarizer/transformations/translation"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "spin_flipper",
+              "type": "group",
+              "attributes": [
+                {
+                  "name": "NX_class",
+                  "dtype": "string",
+                  "values": "NXflipper"
+                }
+              ],
+              "children": [
+                {
+                  "type": "group",
+                  "name": "transformations",
+                  "children": [
+                    {
+                      "module": "dataset",
+                      "config": {
+                        "name": "translation",
+                        "values": -16.0,
+                        "dtype": "double"
+                      },
+                      "attributes": [
+                        {
+                          "name": "transformation_type",
+                          "dtype": "string",
+                          "values": "translation"
+                        },
+                        {
+                          "name": "vector",
+                          "dtype": "float",
+                          "values": [
+                            0.0,
+                            0.0,
+                            1.0
+                          ]
+                        },
+                        {
+                          "name": "depends_on",
+                          "values": ".",
+                          "dtype": "string"
+                        },
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "m"
+                        }
+                      ]
+                    }
+                  ],
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "values": "NXtransformations"
+                    }
+                  ]
+                },
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "depends_on",
+                    "dtype": "string",
+                    "values": "/entry/instrument/spin_flipper/transformations/translation"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "he3_detector_bank0",
+              "type": "group",
+              "children": [
+                {
+                  "name": "data",
+                  "type": "group",
+                  "children": [
+                    {
+                      "module": "ev44",
+                      "config": {
+                        "source": "bank0",
+                        "topic": "tbl_detector_3he"
+                      }
+                    }
+                  ],
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXevent_data"
+                    }
+                  ]
+                },
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "x_pixel_size",
+                    "values": 0.0127,
+                    "type": "double"
+                  },
+                  "attributes": [
+                    {
+                      "name": "units",
+                      "dtype": "string",
+                      "values": "m"
+                    }
+                  ]
+                },
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "y_pixel_size",
+                    "values": 0.00321,
+                    "type": "double"
+                  },
+                  "attributes": [
+                    {
+                      "name": "units",
+                      "dtype": "string",
+                      "values": "m"
+                    }
+                  ]
+                },
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "diameter",
+                    "values": 0.0127,
+                    "type": "double"
+                  },
+                  "attributes": [
+                    {
+                      "name": "units",
+                      "dtype": "string",
+                      "values": "m"
+                    }
+                  ]
+                },
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "type",
+                    "values": "4 He3 tubes in series",
+                    "type": "string"
+                  }
+                },
+                {
+                  "name": "geometry",
+                  "type": "group",
+                  "children": [
+                    {
+                      "module": "dataset",
+                      "config": {
+                        "name": "vertices",
+                        "values": [
+                          [
+                            0.0,
+                            -0.00321,
+                            0.0
+                          ],
+                          [
+                            0.00635,
+                            -0.00321,
+                            0.0
+                          ],
+                          [
+                            0.0,
+                            0.00321,
+                            0.0
+                          ]
+                        ],
+                        "type": "double"
+                      },
+                      "attributes": [
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "m"
+                        }
+                      ]
+                    },
+                    {
+                      "module": "dataset",
+                      "config": {
+                        "name": "cylinders",
+                        "values": [
+                          [
+                            0,
+                            1,
+                            2
+                          ]
+                        ],
+                        "type": "int32"
+                      }
+                    }
+                  ],
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXcylindrical_geometry"
+                    }
+                  ]
+                },
+                {
+                  "name": "transformations",
+                  "type": "group",
+                  "children": [
+                    {
+                      "module": "dataset",
+                      "config": {
+                        "name": "he3_bank_0_translation",
+                        "values": 1.0,
+                        "type": "double"
+                      },
+                      "attributes": [
+                        {
+                          "name": "vector",
+                          "dtype": "double",
+                          "values": [
+                            0.0,
+                            0.0,
+                            1.0
+                          ]
+                        },
+                        {
+                          "name": "depends_on",
+                          "dtype": "string",
+                          "values": "."
+                        },
+                        {
+                          "name": "transformation_type",
+                          "dtype": "string",
+                          "values": "translation"
+                        },
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "m"
+                        }
+                      ]
+                    }
+                  ],
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXtransformations"
+                    }
+                  ]
+                },
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "depends_on",
+                    "values": "/entry/instrument/he3_detector_bank0/transformations/he3_bank_0_translation",
+                    "type": "string"
+                  }
+                },
+                {
+                  "attributes": [
+                    {
+                      "dtype": "string",
+                      "name": "NX_class",
+                      "values": "NXcite"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "config": {
+                        "name": "description",
+                        "values": "The data here was produced using the ESS EFU (European Spallation Source Event Formation Unit) system",
+                        "dtype": "string"
+                      },
+                      "module": "dataset"
+                    },
+                    {
+                      "config": {
+                        "name": "doi",
+                        "values": "https://doi.org/10.1088/1748-0221/13/10/T10001",
+                        "dtype": "string"
+                      },
+                      "module": "dataset"
+                    },
+                    {
+                      "config": {
+                        "name": "bibtex",
+                        "values": "@article{Christensen_2018,\r\ndoi = {10.1088/1748-0221/13/11/T11002},\r\nurl = {https://dx.doi.org/10.1088/1748-0221/13/11/T11002},\r\nyear = {2018},\r\nmonth = {nov},\r\npublisher = {},\r\nvolume = {13},\r\nnumber = {11},\r\npages = {T11002},\r\nauthor = {M.J. Christensen and M. Shetty and J. Nilsson and A. Mukai and R. Al Jebali and A. Khaplanov and M. Lupberger and F. Messi and D. Pfeiffer and F. Piscitelli and T. Blum and C. S\u00f8gaard and S. Skelboe and R. Hall-Wilton and T. Richter},\r\ntitle = {Software-based data acquisition and processing for neutron detectors at European Spallation Source\u2014early experience from four detector designs},\r\njournal = {Journal of Instrumentation},\r\nabstract = {European Spallation Source (ESS) will deliver neutrons at high flux for use in diverse neutron scattering techniques. The neutron source facility and the scientific instruments will be located in Lund, and the Data Management and Software Centre (DMSC), in Copenhagen.   A number of detector prototypes are being developed at ESS together with its European in-kind partners, for example: SoNDe, Multi-Grid, Multi-Blade and Gd-GEM. These are all position sensitive detectors but use different techniques for the detection of neutrons.   Except for digitization of electronics readout, all neutron data is anticipated to be processed in software. This provides maximum flexibility and adaptability and allows deep inspection of the raw data for commissioning which will reduce the risk of starting up new detector technologies. But it also requires development of high performance software processing pipelines and optimized and scalable processing algorithms.   This report provides a description of the ESS system architecture for the neutron data path. Special focus is on the interface between the detectors and DMSC which is based on UDP over Ethernet links.   The report also describes the software architecture for detector data processing and the tools we have developed, which have proven very useful for efficient early experimentation, and can be run on a single laptop.   Processing requirements for the SoNDe, Multi-Grid, Multi-Blade and Ge-GEM   detectors are presented and compared to event processing rates archived so far.}\r\n}",
+                        "dtype": "string"
+                      },
+                      "module": "dataset"
+                    },
+                    {
+                      "config": {
+                        "name": "endnote",
+                        "values": "%0 Journal Article\n%T Software-based data acquisition and processing for neutron detectors at European Spallation Source\u201a\u00c4\u00eeearly experience from four detector designs\n%A Christensen, M. J.\n%A Shetty, M.\n%A Nilsson, J.\n%A Mukai, A.\n%A Jebali, R. Al\n%A Khaplanov, A.\n%A Lupberger, M.\n%A Messi, F.\n%A Pfeiffer, D.\n%A Piscitelli, F.\n%A Blum, T.\n%A S\u221a?gaard, C.\n%A Skelboe, S.\n%A Hall-Wilton, R.\n%A Richter, T.\n%J Journal of Instrumentation\n%D 2018\n%8 nov\n%V 13\n%N 11\n%F Christensen_2018\n%X European Spallation Source (ESS) will deliver neutrons at high flux for use in diverse neutron scattering techniques. The neutron source facility and the scientific instruments will be located in Lund, and the Data Management and Software Centre (DMSC), in Copenhagen. A number of detector prototypes are being developed at ESS together with its European in-kind partners, for example: SoNDe, Multi-Grid, Multi-Blade and Gd-GEM. These are all position sensitive detectors but use different techniques for the detection of neutrons. Except for digitization of electronics readout, all neutron data is anticipated to be processed in software. This provides maximum flexibility and adaptability and allows deep inspection of the raw data for commissioning which will reduce the risk of starting up new detector technologies. But it also requires development of high performance software processing pipelines and optimized and scalable processing algorithms. This report provides a description of the ESS system architecture for the neutron data path. Special focus is on the interface between the detectors and DMSC which is based on UDP over Ethernet links. The report also describes the software architecture for detector data processing and the tools we have developed, which have proven very useful for efficient early experimentation, and can be run on a single laptop. Processing requirements for the SoNDe, Multi-Grid, Multi-Blade and Ge-GEM detectors are presented and compared to event processing rates archived so far.\n%U https://dx.doi.org/10.1088/1748-0221/13/11/T11002\n%U http://dx.doi.org/10.1088/1748-0221/13/11/T11002\n%P 11002",
+                        "dtype": "string"
+                      },
+                      "module": "dataset"
+                    }
+                  ],
+                  "name": "efu_publication",
+                  "type": "group"
+                },
+                {
+                  "name": "he3_bank0_hvps_board101_ch00_voltage",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXlog"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "source": "TBL-DtCmn:PwrC-HVM-101:Ch00-VMon",
+                        "topic": "tbl_misc_devices",
+                        "dtype": "double",
+                        "value_units": "V"
+                      },
+                      "attributes": [
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "V"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "he3_bank0_hvps_board101_ch00_current",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXlog"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "source": "TBL-DtCmn:PwrC-HVM-101:Ch00-IMon",
+                        "topic": "tbl_misc_devices",
+                        "dtype": "double",
+                        "value_units": "V"
+                      },
+                      "attributes": [
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "V"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "he3_bank0_hvps_board101_ch01_voltage",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXlog"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "source": "TBL-DtCmn:PwrC-HVM-101:Ch01-VMon",
+                        "topic": "tbl_misc_devices",
+                        "dtype": "double",
+                        "value_units": "V"
+                      },
+                      "attributes": [
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "V"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "he3_bank0_hvps_board101_ch01_current",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXlog"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "source": "TBL-DtCmn:PwrC-HVM-101:Ch01-IMon",
+                        "topic": "tbl_misc_devices",
+                        "dtype": "double",
+                        "value_units": "V"
+                      },
+                      "attributes": [
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "V"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "he3_bank0_hvps_board101_ch02_voltage",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXlog"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "source": "TBL-DtCmn:PwrC-HVM-101:Ch02-VMon",
+                        "topic": "tbl_misc_devices",
+                        "dtype": "double",
+                        "value_units": "V"
+                      },
+                      "attributes": [
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "V"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "he3_bank0_hvps_board101_ch02_current",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXlog"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "source": "TBL-DtCmn:PwrC-HVM-101:Ch02-IMon",
+                        "topic": "tbl_misc_devices",
+                        "dtype": "double",
+                        "value_units": "V"
+                      },
+                      "attributes": [
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "V"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "he3_bank0_hvps_board101_ch03_voltage",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXlog"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "source": "TBL-DtCmn:PwrC-HVM-101:Ch03-VMon",
+                        "topic": "tbl_misc_devices",
+                        "dtype": "double",
+                        "value_units": "V"
+                      },
+                      "attributes": [
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "V"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "he3_bank0_hvps_board101_ch03_current",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXlog"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "source": "TBL-DtCmn:PwrC-HVM-101:Ch03-IMon",
+                        "topic": "tbl_misc_devices",
+                        "dtype": "double",
+                        "value_units": "V"
+                      },
+                      "attributes": [
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "V"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "attributes": [
+                {
+                  "name": "NX_class",
+                  "dtype": "string",
+                  "values": "NXdetector"
+                }
+              ]
+            },
+            {
+              "name": "he3_detector_bank1",
+              "type": "group",
+              "children": [
+                {
+                  "name": "data",
+                  "type": "group",
+                  "children": [
+                    {
+                      "module": "ev44",
+                      "config": {
+                        "source": "bank1",
+                        "topic": "tbl_detector_3he"
+                      }
+                    }
+                  ],
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXevent_data"
+                    }
+                  ]
+                },
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "x_pixel_size",
+                    "values": 0.0127,
+                    "type": "double"
+                  },
+                  "attributes": [
+                    {
+                      "name": "units",
+                      "dtype": "string",
+                      "values": "m"
+                    }
+                  ]
+                },
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "y_pixel_size",
+                    "values": 0.00321,
+                    "type": "double"
+                  },
+                  "attributes": [
+                    {
+                      "name": "units",
+                      "dtype": "string",
+                      "values": "m"
+                    }
+                  ]
+                },
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "diameter",
+                    "values": 0.0127,
+                    "type": "double"
+                  },
+                  "attributes": [
+                    {
+                      "name": "units",
+                      "dtype": "string",
+                      "values": "m"
+                    }
+                  ]
+                },
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "type",
+                    "values": "4 He3 tubes in series",
+                    "type": "string"
+                  }
+                },
+                {
+                  "name": "geometry",
+                  "type": "group",
+                  "children": [
+                    {
+                      "module": "dataset",
+                      "config": {
+                        "name": "vertices",
+                        "values": [
+                          [
+                            0.0,
+                            -0.00321,
+                            0.0
+                          ],
+                          [
+                            0.00635,
+                            -0.00321,
+                            0.0
+                          ],
+                          [
+                            0.0,
+                            0.00321,
+                            0.0
+                          ]
+                        ],
+                        "type": "double"
+                      },
+                      "attributes": [
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "m"
+                        }
+                      ]
+                    },
+                    {
+                      "module": "dataset",
+                      "config": {
+                        "name": "cylinders",
+                        "values": [
+                          [
+                            0,
+                            1,
+                            2
+                          ]
+                        ],
+                        "type": "int32"
+                      }
+                    }
+                  ],
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXcylindrical_geometry"
+                    }
+                  ]
+                },
+                {
+                  "name": "transformations",
+                  "type": "group",
+                  "children": [
+                    {
+                      "module": "dataset",
+                      "config": {
+                        "name": "he3_bank_1_translation",
+                        "values": 2.0,
+                        "type": "double"
+                      },
+                      "attributes": [
+                        {
+                          "name": "vector",
+                          "dtype": "double",
+                          "values": [
+                            0.0,
+                            0.0,
+                            1.0
+                          ]
+                        },
+                        {
+                          "name": "depends_on",
+                          "dtype": "string",
+                          "values": "."
+                        },
+                        {
+                          "name": "transformation_type",
+                          "dtype": "string",
+                          "values": "translation"
+                        },
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "m"
+                        }
+                      ]
+                    }
+                  ],
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXtransformations"
+                    }
+                  ]
+                },
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "depends_on",
+                    "values": "/entry/instrument/he3_detector_bank1/transformations/he3_bank_1_translation",
+                    "type": "string"
+                  }
+                },
+                {
+                  "attributes": [
+                    {
+                      "dtype": "string",
+                      "name": "NX_class",
+                      "values": "NXcite"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "config": {
+                        "name": "description",
+                        "values": "The data here was produced using the ESS EFU (European Spallation Source Event Formation Unit) system",
+                        "dtype": "string"
+                      },
+                      "module": "dataset"
+                    },
+                    {
+                      "config": {
+                        "name": "doi",
+                        "values": "https://doi.org/10.1088/1748-0221/13/10/T10001",
+                        "dtype": "string"
+                      },
+                      "module": "dataset"
+                    },
+                    {
+                      "config": {
+                        "name": "bibtex",
+                        "values": "@article{Christensen_2018,\r\ndoi = {10.1088/1748-0221/13/11/T11002},\r\nurl = {https://dx.doi.org/10.1088/1748-0221/13/11/T11002},\r\nyear = {2018},\r\nmonth = {nov},\r\npublisher = {},\r\nvolume = {13},\r\nnumber = {11},\r\npages = {T11002},\r\nauthor = {M.J. Christensen and M. Shetty and J. Nilsson and A. Mukai and R. Al Jebali and A. Khaplanov and M. Lupberger and F. Messi and D. Pfeiffer and F. Piscitelli and T. Blum and C. S\u00f8gaard and S. Skelboe and R. Hall-Wilton and T. Richter},\r\ntitle = {Software-based data acquisition and processing for neutron detectors at European Spallation Source\u2014early experience from four detector designs},\r\njournal = {Journal of Instrumentation},\r\nabstract = {European Spallation Source (ESS) will deliver neutrons at high flux for use in diverse neutron scattering techniques. The neutron source facility and the scientific instruments will be located in Lund, and the Data Management and Software Centre (DMSC), in Copenhagen.   A number of detector prototypes are being developed at ESS together with its European in-kind partners, for example: SoNDe, Multi-Grid, Multi-Blade and Gd-GEM. These are all position sensitive detectors but use different techniques for the detection of neutrons.   Except for digitization of electronics readout, all neutron data is anticipated to be processed in software. This provides maximum flexibility and adaptability and allows deep inspection of the raw data for commissioning which will reduce the risk of starting up new detector technologies. But it also requires development of high performance software processing pipelines and optimized and scalable processing algorithms.   This report provides a description of the ESS system architecture for the neutron data path. Special focus is on the interface between the detectors and DMSC which is based on UDP over Ethernet links.   The report also describes the software architecture for detector data processing and the tools we have developed, which have proven very useful for efficient early experimentation, and can be run on a single laptop.   Processing requirements for the SoNDe, Multi-Grid, Multi-Blade and Ge-GEM   detectors are presented and compared to event processing rates archived so far.}\r\n}",
+                        "dtype": "string"
+                      },
+                      "module": "dataset"
+                    },
+                    {
+                      "config": {
+                        "name": "endnote",
+                        "values": "%0 Journal Article\n%T Software-based data acquisition and processing for neutron detectors at European Spallation Source\u201a\u00c4\u00eeearly experience from four detector designs\n%A Christensen, M. J.\n%A Shetty, M.\n%A Nilsson, J.\n%A Mukai, A.\n%A Jebali, R. Al\n%A Khaplanov, A.\n%A Lupberger, M.\n%A Messi, F.\n%A Pfeiffer, D.\n%A Piscitelli, F.\n%A Blum, T.\n%A S\u221a?gaard, C.\n%A Skelboe, S.\n%A Hall-Wilton, R.\n%A Richter, T.\n%J Journal of Instrumentation\n%D 2018\n%8 nov\n%V 13\n%N 11\n%F Christensen_2018\n%X European Spallation Source (ESS) will deliver neutrons at high flux for use in diverse neutron scattering techniques. The neutron source facility and the scientific instruments will be located in Lund, and the Data Management and Software Centre (DMSC), in Copenhagen. A number of detector prototypes are being developed at ESS together with its European in-kind partners, for example: SoNDe, Multi-Grid, Multi-Blade and Gd-GEM. These are all position sensitive detectors but use different techniques for the detection of neutrons. Except for digitization of electronics readout, all neutron data is anticipated to be processed in software. This provides maximum flexibility and adaptability and allows deep inspection of the raw data for commissioning which will reduce the risk of starting up new detector technologies. But it also requires development of high performance software processing pipelines and optimized and scalable processing algorithms. This report provides a description of the ESS system architecture for the neutron data path. Special focus is on the interface between the detectors and DMSC which is based on UDP over Ethernet links. The report also describes the software architecture for detector data processing and the tools we have developed, which have proven very useful for efficient early experimentation, and can be run on a single laptop. Processing requirements for the SoNDe, Multi-Grid, Multi-Blade and Ge-GEM detectors are presented and compared to event processing rates archived so far.\n%U https://dx.doi.org/10.1088/1748-0221/13/11/T11002\n%U http://dx.doi.org/10.1088/1748-0221/13/11/T11002\n%P 11002",
+                        "dtype": "string"
+                      },
+                      "module": "dataset"
+                    }
+                  ],
+                  "name": "efu_publication",
+                  "type": "group"
+                },
+                {
+                  "name": "he3_bank1_hvps_board102_ch00_voltage",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXlog"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "source": "TBL-DtCmn:PwrC-HVM-102:Ch00-VMon",
+                        "topic": "tbl_misc_devices",
+                        "dtype": "double",
+                        "value_units": "V"
+                      },
+                      "attributes": [
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "V"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "he3_bank1_hvps_board102_ch00_current",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXlog"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "source": "TBL-DtCmn:PwrC-HVM-102:Ch00-IMon",
+                        "topic": "tbl_misc_devices",
+                        "dtype": "double",
+                        "value_units": "V"
+                      },
+                      "attributes": [
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "V"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "he3_bank1_hvps_board102_ch01_voltage",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXlog"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "source": "TBL-DtCmn:PwrC-HVM-102:Ch01-VMon",
+                        "topic": "tbl_misc_devices",
+                        "dtype": "double",
+                        "value_units": "V"
+                      },
+                      "attributes": [
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "V"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "he3_bank1_hvps_board102_ch01_current",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXlog"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "source": "TBL-DtCmn:PwrC-HVM-102:Ch01-IMon",
+                        "topic": "tbl_misc_devices",
+                        "dtype": "double",
+                        "value_units": "V"
+                      },
+                      "attributes": [
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "V"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "he3_bank1_hvps_board102_ch02_voltage",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXlog"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "source": "TBL-DtCmn:PwrC-HVM-102:Ch02-VMon",
+                        "topic": "tbl_misc_devices",
+                        "dtype": "double",
+                        "value_units": "V"
+                      },
+                      "attributes": [
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "V"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "he3_bank1_hvps_board102_ch02_current",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXlog"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "source": "TBL-DtCmn:PwrC-HVM-102:Ch02-IMon",
+                        "topic": "tbl_misc_devices",
+                        "dtype": "double",
+                        "value_units": "V"
+                      },
+                      "attributes": [
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "V"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "he3_bank1_hvps_board102_ch03_voltage",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXlog"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "source": "TBL-DtCmn:PwrC-HVM-102:Ch03-VMon",
+                        "topic": "tbl_misc_devices",
+                        "dtype": "double",
+                        "value_units": "V"
+                      },
+                      "attributes": [
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "V"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "he3_bank1_hvps_board102_ch03_current",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXlog"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "source": "TBL-DtCmn:PwrC-HVM-102:Ch03-IMon",
+                        "topic": "tbl_misc_devices",
+                        "dtype": "double",
+                        "value_units": "V"
+                      },
+                      "attributes": [
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "V"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "attributes": [
+                {
+                  "name": "NX_class",
+                  "dtype": "string",
+                  "values": "NXdetector"
+                }
+              ]
+            },
+            {
+              "name": "ngem_detector",
+              "type": "group",
+              "children": [
+                {
+                  "name": "data",
+                  "type": "group",
+                  "children": [
+                    {
+                      "module": "ev44",
+                      "config": {
+                        "source": "tbl-ngem",
+                        "topic": "tbl_detector_ngem"
+                      }
+                    }
+                  ],
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXevent_data"
+                    }
+                  ]
+                },
+                {
+                  "name": "transformations",
+                  "type": "group",
+                  "children": [
+                    {
+                      "module": "dataset",
+                      "config": {
+                        "name": "ngem_translation",
+                        "values": -1.0,
+                        "type": "double"
+                      },
+                      "attributes": [
+                        {
+                          "name": "vector",
+                          "dtype": "double",
+                          "values": [
+                            0.0,
+                            0.0,
+                            1.0
+                          ]
+                        },
+                        {
+                          "name": "depends_on",
+                          "dtype": "string",
+                          "values": "."
+                        },
+                        {
+                          "name": "transformation_type",
+                          "dtype": "string",
+                          "values": "translation"
+                        },
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "m"
+                        }
+                      ]
+                    }
+                  ],
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXtransformations"
+                    }
+                  ]
+                },
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "depends_on",
+                    "values": "/entry/instrument/ngem_detector/transformations/ngem_translation",
+                    "type": "string"
+                  }
+                },
+                {
+                  "name": "ngem_hvps_board103_ch00_voltage",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXlog"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "source": "TBL-DtCmn:PwrC-HVM-103:Ch00-VMon",
+                        "topic": "tbl_misc_devices",
+                        "dtype": "double",
+                        "value_units": "V"
+                      },
+                      "attributes": [
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "V"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "ngem_hvps_board103_ch00_current",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXlog"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "source": "TBL-DtCmn:PwrC-HVM-103:Ch00-IMon",
+                        "topic": "tbl_misc_devices",
+                        "dtype": "double",
+                        "value_units": "V"
+                      },
+                      "attributes": [
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "V"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "ngem_lvps_board105_ch00_voltage",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXlog"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "source": "TBL-DtCmn:PwrC-LVM-105:Ch00-VMon",
+                        "topic": "tbl_misc_devices",
+                        "dtype": "double",
+                        "value_units": "V"
+                      },
+                      "attributes": [
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "V"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "ngem_lvps_board105_ch00_current",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXlog"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "source": "TBL-DtCmn:PwrC-LVM-105:Ch00-IMon",
+                        "topic": "tbl_misc_devices",
+                        "dtype": "double",
+                        "value_units": "V"
+                      },
+                      "attributes": [
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "V"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "attributes": [
+                {
+                  "name": "NX_class",
+                  "dtype": "string",
+                  "values": "NXdetector"
+                }
+              ]
+            },
+            {
+              "name": "orca_detector",
+              "type": "group",
+              "attributes": [
+                {
+                  "name": "NX_class",
+                  "dtype": "string",
+                  "values": "NXdetector"
+                }
+              ],
+              "children": [
+                {
+                  "name": "image_key",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXlog"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "source": "orca_image_type",
+                        "topic": "tbl_nicos_devices",
+                        "dtype": "int16",
+                        "value_units": ""
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "data",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXlog"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "ad00",
+                      "config": {
+                        "source": "hama_kfk1",
+                        "topic": "tbl_area_detector_orca",
+                        "array_size": [
+                          2048,
+                          2048
+                        ],
+                        "dtype": "int16"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "depends_on",
+                    "values": ".",
+                    "dtype": "string"
+                  }
+                },
+                {
+                  "name": "intensifier",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXlog"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "source": "TBL-DtCMOS:NDet-ImgInt-001:IntensifierGain-R",
+                        "topic": "tbl_misc_devices",
+                        "dtype": "double",
+                        "value_units": ""
+                      },
+                      "attributes": [
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": ""
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "intensifier_gate_delay",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXlog"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "source": "TBL-DtCmn:Ctrl-EVR-001:DlyGen1Delay-RB",
+                        "topic": "tbl_misc_devices",
+                        "dtype": "double",
+                        "value_units": "us"
+                      },
+                      "attributes": [
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "us"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "intensifier_gate_width",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXlog"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "source": "TBL-DtCmn:Ctrl-EVR-001:DlyGen1Width-RB",
+                        "topic": "tbl_misc_devices",
+                        "dtype": "double",
+                        "value_units": "us"
+                      },
+                      "attributes": [
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "us"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "timepix3_detector",
+              "type": "group",
+              "attributes": [
+                {
+                  "name": "NX_class",
+                  "dtype": "string",
+                  "values": "NXdetector"
+                }
+              ],
+              "children": [
+                {
+                  "name": "data",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXevent_data"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "ev44",
+                      "config": {
+                        "source": "timepix3",
+                        "topic": "tbl_detector_tpx3"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "depends_on",
+                    "values": "/entry/instrument/timepix3_detector/transformations/translation",
+                    "dtype": "string"
+                  }
+                },
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "x_pixel_size",
+                    "values": 3.4375,
+                    "dtype": "double"
+                  },
+                  "attributes": [
+                    {
+                      "name": "units",
+                      "dtype": "string",
+                      "values": "um"
+                    }
+                  ]
+                },
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "y_pixel_size",
+                    "values": 3.4375,
+                    "dtype": "double"
+                  },
+                  "attributes": [
+                    {
+                      "name": "units",
+                      "dtype": "string",
+                      "values": "um"
+                    }
+                  ]
+                },
+                {
+                  "name": "intensifier",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXlog"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "source": "TBL-DtTPX:NDet-ImgInt-001:AO0",
+                        "topic": "tbl_misc_devices",
+                        "dtype": "double",
+                        "value_units": "V"
+                      },
+                      "attributes": [
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "V"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "group",
+                  "name": "transformations",
+                  "children": [
+                    {
+                      "module": "dataset",
+                      "config": {
+                        "name": "translation",
+                        "values": 0.0,
+                        "dtype": "double"
+                      },
+                      "attributes": [
+                        {
+                          "name": "transformation_type",
+                          "dtype": "string",
+                          "values": "translation"
+                        },
+                        {
+                          "name": "vector",
+                          "dtype": "float",
+                          "values": [
+                            0.0,
+                            0.0,
+                            1.0
+                          ]
+                        },
+                        {
+                          "name": "offset",
+                          "dtype": "float",
+                          "values": [
+                            2.0,
+                            0.0,
+                            0.0
+                          ]
+                        },
+                        {
+                          "name": "depends_on",
+                          "values": ".",
+                          "dtype": "string"
+                        },
+                        {
+                          "name": "offset_units",
+                          "dtype": "string",
+                          "values": "m"
+                        },
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "m"
+                        }
+                      ]
+                    }
+                  ],
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "values": "NXtransformations"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "attentuator",
+              "type": "group",
+              "attributes": [
+                {
+                  "name": "NX_class",
+                  "dtype": "string",
+                  "values": "NXaperture"
+                }
+              ],
+              "children": [
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "depends_on",
+                    "dtype": "string",
+                    "values": "/entry/instrument/attentuator/transformations/translation"
+                  }
+                },
+                {
+                  "type": "group",
+                  "name": "transformations",
+                  "children": [
+                    {
+                      "module": "dataset",
+                      "config": {
+                        "name": "translation",
+                        "values": -9.9,
+                        "dtype": "double"
+                      },
+                      "attributes": [
+                        {
+                          "name": "transformation_type",
+                          "dtype": "string",
+                          "values": "translation"
+                        },
+                        {
+                          "name": "vector",
+                          "dtype": "float",
+                          "values": [
+                            0.0,
+                            0.0,
+                            1.0
+                          ]
+                        },
+                        {
+                          "name": "depends_on",
+                          "values": ".",
+                          "dtype": "string"
+                        },
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "m"
+                        }
+                      ]
+                    }
+                  ],
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "values": "NXtransformations"
+                    }
+                  ]
+                },
+                {
+                  "name": "position_readback",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXlog"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "source": "TBL-AttChg:MC-LinY-01:Mtr.RBV",
+                        "topic": "tbl_motion",
+                        "dtype": "double",
+                        "value_units": "mm"
+                      },
+                      "attributes": [
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "mm"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "position_setpoint",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXlog"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "source": "TBL-AttChg:MC-LinY-01:Mtr.VAL",
+                        "topic": "tbl_motion",
+                        "dtype": "double",
+                        "value_units": "mm"
+                      },
+                      "attributes": [
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "mm"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "pinhole",
+              "type": "group",
+              "attributes": [
+                {
+                  "name": "NX_class",
+                  "dtype": "string",
+                  "values": "NXaperture"
+                }
+              ],
+              "children": [
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "depends_on",
+                    "dtype": "string",
+                    "values": "/entry/instrument/pinhole/transformations/translation"
+                  }
+                },
+                {
+                  "type": "group",
+                  "name": "transformations",
+                  "children": [
+                    {
+                      "module": "dataset",
+                      "config": {
+                        "name": "translation",
+                        "values": -9.5,
+                        "dtype": "double"
+                      },
+                      "attributes": [
+                        {
+                          "name": "transformation_type",
+                          "dtype": "string",
+                          "values": "translation"
+                        },
+                        {
+                          "name": "vector",
+                          "dtype": "float",
+                          "values": [
+                            0.0,
+                            0.0,
+                            1.0
+                          ]
+                        },
+                        {
+                          "name": "depends_on",
+                          "values": ".",
+                          "dtype": "string"
+                        },
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "m"
+                        }
+                      ]
+                    }
+                  ],
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "values": "NXtransformations"
+                    }
+                  ]
+                },
+                {
+                  "name": "position_readback",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXlog"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "source": "TBL-PinChg:MC-LinY-01:Mtr.RBV",
+                        "topic": "tbl_motion",
+                        "dtype": "double",
+                        "value_units": "mm"
+                      },
+                      "attributes": [
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "mm"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "position_setpoint",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXlog"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "source": "TBL-PinChg:MC-LinY-01:Mtr.VAL",
+                        "topic": "tbl_motion",
+                        "dtype": "double",
+                        "value_units": "mm"
+                      },
+                      "attributes": [
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "mm"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "camera_stage",
+              "type": "group",
+              "attributes": [
+                {
+                  "name": "NX_class",
+                  "dtype": "string",
+                  "values": "NXpositioner"
+                }
+              ],
+              "children": [
+                {
+                  "type": "group",
+                  "name": "transformations",
+                  "children": [
+                    {
+                      "module": "dataset",
+                      "config": {
+                        "name": "translation",
+                        "values": 0.5,
+                        "dtype": "double"
+                      },
+                      "attributes": [
+                        {
+                          "name": "transformation_type",
+                          "dtype": "string",
+                          "values": "translation"
+                        },
+                        {
+                          "name": "vector",
+                          "dtype": "float",
+                          "values": [
+                            0.0,
+                            0.0,
+                            1.0
+                          ]
+                        },
+                        {
+                          "name": "depends_on",
+                          "values": ".",
+                          "dtype": "string"
+                        },
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "m"
+                        }
+                      ]
+                    }
+                  ],
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "values": "NXtransformations"
+                    }
+                  ]
+                },
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "depends_on",
+                    "dtype": "string",
+                    "values": "/entry/instrument/camera_stage/transformations/translation"
+                  }
+                },
+                {
+                  "name": "position_readback",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXlog"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "source": "TBL-TBL:MC-Pos-303:Mtr.RBV",
+                        "topic": "tbl_motion",
+                        "dtype": "double",
+                        "value_units": "mm"
+                      },
+                      "attributes": [
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "mm"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "position_setpoint",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXlog"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "source": "TBL-TBL:MC-Pos-303:Mtr.VAL",
+                        "topic": "tbl_motion",
+                        "dtype": "double",
+                        "value_units": "mm"
+                      },
+                      "attributes": [
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "mm"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "neutron_prod_info",
+          "type": "group",
+          "attributes": [
+            {
+              "dtype": "string",
+              "name": "NX_class",
+              "values": "NXsource"
+            }
+          ],
+          "children": [
+            {
+              "config": {
+                "name": "name",
+                "values": "accelerator",
+                "dtype": "string"
+              },
+              "module": "dataset"
+            },
+            {
+              "config": {
+                "name": "type",
+                "values": "Spallation Neutron Source",
+                "dtype": "string"
+              },
+              "module": "dataset"
+            },
+            {
+              "config": {
+                "name": "probe",
+                "values": "proton",
+                "dtype": "string"
+              },
+              "module": "dataset"
+            },
+            {
+              "name": "pulse_charge",
+              "type": "group",
+              "attributes": [
+                {
+                  "name": "NX_class",
+                  "dtype": "string",
+                  "values": "NXlog"
+                }
+              ],
+              "children": [
+                {
+                  "module": "f144",
+                  "config": {
+                    "source": "A2T-130LWU:PBI-BCM-001:PulseChargeR",
+                    "topic": "tn_data_general",
+                    "dtype": "double",
+                    "value_units": "uC"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "flat_top_current",
+              "type": "group",
+              "attributes": [
+                {
+                  "name": "NX_class",
+                  "dtype": "string",
+                  "values": "NXlog"
+                }
+              ],
+              "children": [
+                {
+                  "module": "f144",
+                  "config": {
+                    "source": "A2T-130LWU:PBI-BCM-001:FlatTopCurrentR",
+                    "topic": "tn_data_general",
+                    "dtype": "double",
+                    "value_units": "mA"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "fsm_machine_active",
+              "type": "group",
+              "attributes": [
+                {
+                  "name": "NX_class",
+                  "dtype": "string",
+                  "values": "NXlog"
+                }
+              ],
+              "children": [
+                {
+                  "module": "f144",
+                  "config": {
+                    "source": "CrS-CMS:SC-FSM-007x:STS_Active",
+                    "topic": "tn_data_general",
+                    "dtype": "double",
+                    "value_units": ""
+                  }
+                }
+              ]
+            },
+            {
+              "name": "pulse_width",
+              "type": "group",
+              "attributes": [
+                {
+                  "name": "NX_class",
+                  "dtype": "string",
+                  "values": "NXlog"
+                }
+              ],
+              "children": [
+                {
+                  "module": "f144",
+                  "config": {
+                    "source": "A2T-130LWU:PBI-BCM-001:PulseWidthR",
+                    "topic": "tn_data_general",
+                    "dtype": "double",
+                    "value_units": "ms"
+                  }
+                }
+              ]
+            },
+            {
+              "config": {
+                "name": "target_material",
+                "values": "W",
+                "dtype": "string"
+              },
+              "module": "dataset"
+            },
+            {
+              "name": "cryo_tt_82025_temperature",
+              "type": "group",
+              "attributes": [
+                {
+                  "name": "NX_class",
+                  "dtype": "string",
+                  "values": "NXlog"
+                }
+              ],
+              "children": [
+                {
+                  "module": "f144",
+                  "config": {
+                    "source": "CrS-CMS:Cryo-TT-82025:MeasValue",
+                    "topic": "tn_data_general",
+                    "dtype": "double",
+                    "value_units": "K"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "cryo_tt_82027_temperature",
+              "type": "group",
+              "attributes": [
+                {
+                  "name": "NX_class",
+                  "dtype": "string",
+                  "values": "NXlog"
+                }
+              ],
+              "children": [
+                {
+                  "module": "f144",
+                  "config": {
+                    "source": "CrS-CMS:Cryo-TT-82027:MeasValue",
+                    "topic": "tn_data_general",
+                    "dtype": "double",
+                    "value_units": "K"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "cryo_tt_82029_temperature",
+              "type": "group",
+              "attributes": [
+                {
+                  "name": "NX_class",
+                  "dtype": "string",
+                  "values": "NXlog"
+                }
+              ],
+              "children": [
+                {
+                  "module": "f144",
+                  "config": {
+                    "source": "CrS-CMS:Cryo-TT-82029:MeasValue",
+                    "topic": "tn_data_general",
+                    "dtype": "double",
+                    "value_units": "K"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "cryo_tt_82031_temperature",
+              "type": "group",
+              "attributes": [
+                {
+                  "name": "NX_class",
+                  "dtype": "string",
+                  "values": "NXlog"
+                }
+              ],
+              "children": [
+                {
+                  "module": "f144",
+                  "config": {
+                    "source": "CrS-CMS:Cryo-TT-82031:MeasValue",
+                    "topic": "tn_data_general",
+                    "dtype": "double",
+                    "value_units": "K"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "cryo_tt_82033_temperature",
+              "type": "group",
+              "attributes": [
+                {
+                  "name": "NX_class",
+                  "dtype": "string",
+                  "values": "NXlog"
+                }
+              ],
+              "children": [
+                {
+                  "module": "f144",
+                  "config": {
+                    "source": "CrS-CMS:Cryo-TT-82033:MeasValue",
+                    "topic": "tn_data_general",
+                    "dtype": "double",
+                    "value_units": "K"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "transformations",
+              "type": "group",
+              "children": [
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "z_offset",
+                    "values": -100.0,
+                    "dtype": "float"
+                  },
+                  "attributes": [
+                    {
+                      "name": "transformation_type",
+                      "values": "translation"
+                    },
+                    {
+                      "name": "depends_on",
+                      "values": ".",
+                      "dtype": "string"
+                    },
+                    {
+                      "name": "vector",
+                      "dtype": "float",
+                      "values": [
+                        0,
+                        0,
+                        1
+                      ]
+                    },
+                    {
+                      "name": "units",
+                      "dtype": "string",
+                      "values": "m"
+                    }
+                  ]
+                }
+              ],
+              "attributes": [
+                {
+                  "name": "NX_class",
+                  "values": "NXtransformations"
+                }
+              ]
+            },
+            {
+              "module": "dataset",
+              "config": {
+                "name": "depends_on",
+                "values": ".",
+                "dtype": "string"
+              }
+            }
+          ]
+        },
+        {
+          "name": "sample",
+          "type": "group",
+          "attributes": [
+            {
+              "name": "NX_class",
+              "dtype": "string",
+              "values": "NXsample"
+            }
+          ],
+          "children": [
+            {
+              "type": "group",
+              "name": "transformations",
+              "children": [
+                {
+                  "name": "SOM",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXlog"
+                    },
+                    {
+                      "name": "transformation_type",
+                      "dtype": "string",
+                      "values": "rotation"
+                    },
+                    {
+                      "name": "vector",
+                      "dtype": "float",
+                      "values": [
+                        1.0,
+                        0.0,
+                        0.0
+                      ]
+                    },
+                    {
+                      "name": "depends_on",
+                      "values": "/entry/sample/transformations/SOZ",
+                      "dtype": "string"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "source": "SIM_tbl:sample:transformations:SOM",
+                        "topic": "tbl_motion",
+                        "dtype": "double",
+                        "value_units": "degrees"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "SOZ",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXlog"
+                    },
+                    {
+                      "name": "transformation_type",
+                      "dtype": "string",
+                      "values": "translation"
+                    },
+                    {
+                      "name": "vector",
+                      "dtype": "float",
+                      "values": [
+                        0.0,
+                        -1.0,
+                        0.0
+                      ]
+                    },
+                    {
+                      "name": "depends_on",
+                      "values": ".",
+                      "dtype": "string"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "source": "SIM_tbl:sample:transformations:SOZ",
+                        "topic": "tbl_motion",
+                        "dtype": "double",
+                        "value_units": "m"
+                      }
+                    }
+                  ]
+                }
+              ],
+              "attributes": [
+                {
+                  "name": "NX_class",
+                  "values": "NXtransformations"
+                }
+              ]
+            },
+            {
+              "module": "dataset",
+              "config": {
+                "name": "depends_on",
+                "dtype": "string",
+                "values": "/entry/sample/transformations/SOM"
+              }
+            }
+          ]
+        },
+        {
+          "attributes": [
+            {
+              "dtype": "string",
+              "name": "NX_class",
+              "values": "NXcite"
+            }
+          ],
+          "children": [
+            {
+              "config": {
+                "name": "description",
+                "values": "Neutron events were stored in NeXus files via the ESS DAQ (European Spallation Source Data AcQuisition) system",
+                "dtype": "string"
+              },
+              "module": "dataset"
+            },
+            {
+              "config": {
+                "name": "doi",
+                "values": "https://doi.org/10.1088/1748-0221/13/11/T11002",
+                "dtype": "string"
+              },
+              "module": "dataset"
+            },
+            {
+              "config": {
+                "name": "bibtex",
+                "values": "@article{Mukai_2018,\r\ndoi = {10.1088/1748-0221/13/10/T10001},\r\nurl = {https://dx.doi.org/10.1088/1748-0221/13/10/T10001},\r\nyear = {2018},\r\nmonth = {oct},\r\npublisher = {},\r\nvolume = {13},\r\nnumber = {10},\r\npages = {T10001},\r\nauthor = {A.H.C. Mukai and M.J. Clarke and M.J. Christensen and J.M.C. Nilsson and M.G. Shetty and M. Brambilla and D. Werder and M. K\u00f6nnecke and J. Harper and M.D. Jones and F.A. Akeroyd and C. Reis and G. Kourousias and T.S. Richter},\r\ntitle = {Architecture of the data aggregation and streaming system for the European Spallation Source neutron instrument suite},\r\njournal = {Journal of Instrumentation},\r\nabstract = {The European Spallation Source (ESS) will provide long   neutron pulses for experiments on a suite of different   instruments. Most of these will perform neutron data acquisition in   event mode, i.e. each detected neutron will be characterised by one   absolute timestamp and pixel identifier pair. Slow controls metadata   from EPICS, such as sample environment measurements and motor   positions, will also be timestamped at their source, so that all   data and metadata are streamed as a list of events instead of   histograms. A flexible data aggregation and streaming system is   being developed combining both open source third-party software and   in-house development. This is to be used at ESS and other neutron   scattering facilities like ISIS and SINQ, replacing legacy solutions   by a shared software collection maintained by a cross-facility   effort. The architecture of the Apache Kafka-based system, its   metadata forwarding and NeXus file writing components are presented,   along with test results demonstrating their integration and the   scalability in terms of performance.}\r\n}\r\n",
+                "dtype": "string"
+              },
+              "module": "dataset"
+            },
+            {
+              "config": {
+                "name": "endnote",
+                "values": "%0 Journal Article\n%T Architecture of the data aggregation and streaming system for the European Spallation Source neutron instrument suite\n%A Mukai, A. H. C.\n%A Clarke, M. J.\n%A Christensen, M. J.\n%A Nilsson, J. M. C.\n%A Shetty, M. G.\n%A Brambilla, M.\n%A Werder, D.\n%A K\u00f6nnecke, M.\n%A Harper, J.\n%A Jones, M. D.\n%A Akeroyd, F. A.\n%A Reis, C.\n%A Kourousias, G.\n%A Richter, T. S.\n%J Journal of Instrumentation\n%D 2018\n%8 oct\n%V 13\n%N 10\n%F Mukai_2018\n%X The European Spallation Source (ESS) will provide long neutron pulses for experiments on a suite of different instruments. Most of these will perform neutron data acquisition in event mode, i.e. each detected neutron will be characterised by one absolute timestamp and pixel identifier pair. Slow controls metadata from EPICS, such as sample environment measurements and motor positions, will also be timestamped at their source, so that all data and metadata are streamed as a list of events instead of histograms. A flexible data aggregation and streaming system is being developed combining both open source third-party software and in-house development. This is to be used at ESS and other neutron scattering facilities like ISIS and SINQ, replacing legacy solutions by a shared software collection maintained by a cross-facility effort. The architecture of the Apache Kafka-based system, its metadata forwarding and NeXus file writing components are presented, along with test results demonstrating their integration and the scalability in terms of performance.\n%U https://dx.doi.org/10.1088/1748-0221/13/10/T10001\n%U http://dx.doi.org/10.1088/1748-0221/13/10/T10001\n%P 10001",
+                "dtype": "string"
+              },
+              "module": "dataset"
+            }
+          ],
+          "name": "daq_publication",
+          "type": "group"
+        }
+      ]
+    }
+  ],
+  "dynamic_version": "7.0.2"
+}

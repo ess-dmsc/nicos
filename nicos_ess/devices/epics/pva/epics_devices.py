@@ -42,15 +42,13 @@ from nicos.core import (
     Param,
     Readable,
     anytype,
-    dictof,
     floatrange,
-    listof,
     none_or,
     pvname,
     status,
-    tupleof,
 )
 from nicos.devices.abstract import MappedMoveable, MappedReadable
+from nicos_ess.devices.mixins import HasNexusConfig
 
 DEFAULT_EPICS_PROTOCOL = os.environ.get("DEFAULT_EPICS_PROTOCOL", "ca")
 
@@ -64,7 +62,7 @@ class RecordType(Enum):
     BOTH = 3
 
 
-class EpicsParameters:
+class EpicsParameters(HasNexusConfig):
     parameters = {
         "epicstimeout": Param(
             "Timeout for getting EPICS PVs",
@@ -75,18 +73,6 @@ class EpicsParameters:
         ),
         "monitor": Param("Use a PV monitor", type=bool, default=True),
         "pva": Param("Use pva", type=bool, default=True),
-        "to_forward": Param(
-            "Associated PVs that should be forward by the forwarder",
-            type=listof(tupleof(str, str, str, str, int)),
-            default=[],
-            userparam=False,
-        ),
-        "nexus_config": Param(
-            "Nexus structure group definition",
-            type=listof(dictof(str, anytype)),
-            default=[],
-            userparam=False,
-        ),
     }
     parameter_overrides = {
         "pollinterval": Override(default=None),
