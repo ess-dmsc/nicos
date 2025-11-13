@@ -838,17 +838,49 @@ class OrcaFlash4(AreaDetector):
         if self._attached_watercooler_temperature is not None:
             self._attached_watercooler_temperature.start(value)
 
+    def time2pulses(self, time):
+        return round(14*time)
+        
+    def pulses2time(self, pulses):
+        return pulses/14
+
     def doReadAcquiretime(self):
-        return self._get_pv("acquire_time_rbv")
+        """
+        doReadAcquireperiod and doReadAcquiretime were chosen to be the same 
+        for Orca in NICOS because at ESS only this mode of operation is required
+        (for now at least)
+        """
+        return self.pulses2time(
+            self._get_pv("num_triggers_rbv")
+        )
 
     def doWriteAcquiretime(self, value):
-        self._put_pv("acquire_time", value)
+        """
+        doWriteAcquiretime and doWriteAcquireperiod were chosen to be the same 
+        for Orca in NICOS because at ESS only this mode of operation is required
+        (for now at least)
+        """
+        self._put_pv("num_triggers", 
+                     self.time2pulses(value))
 
     def doReadAcquireperiod(self):
-        return self._get_pv("acquire_period_rbv")
+        """
+        doReadAcquireperiod and doReadAcquiretime were chosen to be the same 
+        for Orca in NICOS because at ESS only this mode of operation is required
+        (for now at least)
+        """
+        return self.pulses2time(
+            self._get_pv("num_triggers_rbv")
+        )
 
     def doWriteAcquireperiod(self, value):
-        self._put_pv("acquire_period", value)
+        """
+        doWriteAcquiretime and doWriteAcquireperiod were chosen to be the same 
+        for Orca in NICOS because at ESS only this mode of operation is required
+        (for now at least)
+        """
+        self._put_pv("num_triggers", 
+                     self.time2pulses(value))
 
 
 class AreaDetectorCollector(Detector):
