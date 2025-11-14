@@ -21,6 +21,8 @@ class CustomImageItem(ImageItem):
         self._defining_roi = False
         self._use_metric_length = False
         self._pix_to_mm_ratio = None
+        self.x_axis_coords = None
+        self.y_axis_coords = None
         self.last_clicked = None
 
     def set_define_roi_mode(self, state):
@@ -89,13 +91,19 @@ class CustomImageItem(ImageItem):
 
     def hoverEvent(self, event):
         if event.isExit():
-            self.hoverData.emit("")  # Clear any previous title
+            self.hoverData.emit("")
+            return
+
+        i, j = self.get_pos(event)
+        value = self.image[i, j]
+
+        if self._use_metric_length:
+            xw = self._pix_to_mm(i)
+            yw = self._pix_to_mm(j)
+        elif self.x_axis_coords is not None and self.y_axis_coords is not None:
+            xw = self.x_axis_coords[i]
+            yw = self.y_axis_coords[j]
         else:
-            i, j = self.get_pos(event)
-            value = self.image[i, j]
-            if self._use_metric_length:
-                self.hoverData.emit(
-                    f"Coordinates: ({self._pix_to_mm(i):.2f} mm, {self._pix_to_mm(j):.2f} mm), Value: {value:.2f}"
-                )
-            else:
-                self.hoverData.emit(f"Coordinates: ({i}, {j}), Value: {value:.2f}")
+            xw, yw = i, j
+
+        self.hoverData.emit(f"Coordinates: ({xw:.4g}, {yw:.4g}), Value: {value:.4g}")
