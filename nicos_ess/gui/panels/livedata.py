@@ -111,6 +111,9 @@ class LiveDataPlot(QFrame):
         self.current_view.splitter_vert_1.show()
         self.current_view.bottom_plot.show()
         self.current_view.image_view_controller.show()
+        # set trace checkbox to checked when showing expert modes
+        self.current_view.image_view_controller.profile_cb.setChecked(True)
+        self.current_view.set_image_axes_visible(False)
 
     def hide_imageview_expert_modes(self):
         if not isinstance(self.current_view, ImageView):
@@ -118,6 +121,8 @@ class LiveDataPlot(QFrame):
         self.current_view.splitter_vert_1.hide()
         self.current_view.bottom_plot.hide()
         self.current_view.image_view_controller.hide()
+        self.current_view.image_view_controller.profile_cb.setChecked(False)
+        self.current_view.set_image_axes_visible(True)
 
     @pyqtSlot()
     def on_plot_changed(self):
@@ -347,6 +352,8 @@ class LiveDataPanel(Panel):
             plot_widget.image_plot.setTitle(title)
             plot_widget.image_plot.setLabel("bottom", x_name, units=x_unit)
             plot_widget.image_plot.setLabel("left", y_name, units=y_unit)
+
+            plot_widget.set_axis_labels(x_name, x_unit, y_name, y_unit)
 
             # Keep axes hidden if any ROI/profile is active so side plots line up
             ctrl = getattr(plot_widget, "image_view_controller", None)
