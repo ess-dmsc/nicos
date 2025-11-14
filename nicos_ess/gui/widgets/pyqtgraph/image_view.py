@@ -845,6 +845,9 @@ class ImageView(QWidget):
         if y_labels is not None:
             self.custom_left_axis.setLabelsArray(y_labels)
 
+        self.image_item.x_axis_coords = self.x_axis_coords
+        self.image_item.y_axis_coords = self.y_axis_coords
+
     def set_image_axes_visible(self, visible: bool):
         """Show or hide the axes and tick labels on the main image plot."""
         self.image_plot.showAxis("bottom", visible)
