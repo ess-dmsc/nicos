@@ -113,6 +113,7 @@ class ImageView(QWidget):
         self._use_metric_length = False
         self._line_roi_drag_active = False
         self._roi_drag_active = False
+        self.autolevel_on_update = False
         self.axes = {"t": None, "x": 0, "y": 1, "c": None}
 
         self.initialize_ui()
@@ -139,6 +140,16 @@ class ImageView(QWidget):
         self.aspectLockedAction.triggered.connect(self.set_aspect_locked)
         self.view.menu.addAction(self.aspectLockedAction)
 
+        self.autoLevelsAction = QAction("Auto Levels Now", self)
+        self.autoLevelsAction.triggered.connect(lambda: self.autolevel_now())
+        self.view.menu.addAction(self.autoLevelsAction)
+
+        self.logScaleAction = QAction("Logarithmic colormap", self)
+        self.logScaleAction.setCheckable(True)
+        self.logScaleAction.setChecked(False)
+        self.logScaleAction.toggled.connect(self.toggle_log_mode)
+        self.view.menu.addAction(self.logScaleAction)
+
         for child in self.view.menu.actions():
             if child.text() == "View All":
                 child.triggered.connect(self.set_auto_scale_axis)
@@ -146,8 +157,20 @@ class ImageView(QWidget):
     def set_auto_scale_axis(self):
         self.view.enableAutoRange(x=True, y=True)
 
-    def set_aspect_locked(self):
-        self.image_plot.setAspectLocked(self.aspectLockedAction.isChecked())
+    def set_aspect_locked(self, state=None):
+        if state is None:
+            state = self.aspectLockedAction.isChecked()
+        self.image_plot.setAspectLocked(bool(state))
+
+    def set_autolevel_on_update(self, enabled: bool):
+        self.autolevel_on_update = bool(enabled)
+
+    def autolevel_now(self):
+        # recompute and apply levels immediately
+        self.autolevel_complete = False
+        self.update_image(
+            self.image_item.image if self.image_item.image is not None else None
+        )
 
     def calculate_statistics(self):
         image_stats = {
@@ -360,9 +383,6 @@ class ImageView(QWidget):
         self.splitter_vert_2.splitterMoved.connect(
             lambda x: self.splitter_moved(self.splitter_vert_2)
         )
-
-    def set_aspect_locked(self, state):
-        self.image_plot.setAspectLocked(state)
 
     def add_image_axes(self):
         self.custom_bottom_axis = CustomAxisItem(orientation="bottom")
@@ -1078,8 +1098,8 @@ class ImageView(QWidget):
         if raw_update:
             self.raw_image = np.copy(image)
 
-        if not self.autolevel_complete:
-            flat_im = np.sort(image.flatten())
+        if (self.autolevel_on_update or not self.autolevel_complete) and image.size:
+            flat_im = np.sort(image.ravel())
             ll, hl = int(len(flat_im) * 0.05), int(len(flat_im) * 0.95)
             use_min, use_max = flat_im[[ll, hl]]
             self.image_item.setLevels([use_min, use_max])
