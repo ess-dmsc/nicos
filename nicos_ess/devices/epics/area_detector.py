@@ -62,11 +62,43 @@ class ImageMode(Enum):
     CONTINUOUS = 2
 
 
+class TriggerSource(Enum):
+    INTERNAL = 0
+    EXTERNAL = 1
+    SOFTWARE = 2
+    MASTER_PULSE = 3
+
+
+class TriggerMode(Enum):
+    NORMAL = 0
+    START = 1
+
+
 # "Edge", "Level", "Sync Readout"
 class TriggerActive(Enum):
     EDGE = 0
     LEVEL = 1
     SYNC_READOUT = 2
+
+
+class TriggerGlobalExposure(Enum):
+    DELAYED = 0
+    GLOBAL_RESET = 1
+
+
+class TriggerPolarity(Enum):
+    NEGATIVE = 0
+    POSITIVE = 1
+
+
+class TriggerConnector(Enum):
+    INTERFACE = 0
+    BNC = 1
+
+
+class TriggerInternalHandling(Enum):
+    SHORT_EXPOSURE = 0
+    INDIVIDUAL = 1
 
 
 class CoolingMode(Enum):
@@ -593,6 +625,18 @@ class OrcaFlash4(AreaDetector):
         self._set_custom_record_fields()
         EpicsDevice.doPreinit(self, mode)
         self._image_processing_lock = threading.Lock()
+
+    def doPrepare(self):
+        AreaDetector.doPrepare(self)
+        
+        # Set up external trigger
+        self._put_pv("trigger_source", TriggerSource.EXTERNAL.value)
+        self._put_pv("trigger_mode", TriggerMode.NORMAL.value)
+        self._put_pv("trigger_active", TriggerActive.SYNC_READOUT.value)
+        self._put_pv("trigger_global_exposure", TriggerGlobalExposure.DELAYED.value)
+        self._put_pv("trigger_polarity", TriggerPolarity.POSITIVE.value)
+        self._put_pv("trigger_connector", TriggerConnector.BNC.value)
+        self._put_pv("internal_trigger_handling", TriggerInternalHandling.SHORT_EXPOSURE.value)
 
     def _set_custom_record_fields(self):
         AreaDetector._set_custom_record_fields(self)
