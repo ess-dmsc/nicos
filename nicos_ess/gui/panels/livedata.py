@@ -110,12 +110,14 @@ class LiveDataPlot(QFrame):
             return
         self.current_view.splitter_vert_1.show()
         self.current_view.bottom_plot.show()
+        self.current_view.image_view_controller.show()
 
     def hide_imageview_expert_modes(self):
         if not isinstance(self.current_view, ImageView):
             return
         self.current_view.splitter_vert_1.hide()
         self.current_view.bottom_plot.hide()
+        self.current_view.image_view_controller.hide()
 
     @pyqtSlot()
     def on_plot_changed(self):
@@ -147,16 +149,20 @@ class LiveDataPlot(QFrame):
             view.clear_button.hide()
             view.log_checkbox.hide()
         elif len(shape) == 2:
-            view = ImageView(parent=self.parent, histogram_orientation="horizontal")
+            view = ImageView(
+                parent=self.parent,
+                histogram_orientation="horizontal",
+                use_internal_image_view_controller=True,
+                invert_y=False,
+            )
             view.aspectLockedAction.setChecked(False)
             view.set_aspect_locked(False)
-            # invert Y compared to default
-            view.image_plot.invertY()
-            view.left_plot.plotItem.invertY()
             view.add_image_axes()
+
             if not self._expert_mode:
                 view.splitter_vert_1.hide()
                 view.bottom_plot.hide()
+                view.image_view_controller.hide()
         else:
             return
 
@@ -341,6 +347,18 @@ class LiveDataPanel(Panel):
             plot_widget.image_plot.setTitle(title)
             plot_widget.image_plot.setLabel("bottom", x_name, units=x_unit)
             plot_widget.image_plot.setLabel("left", y_name, units=y_unit)
+
+            # Keep axes hidden if any ROI/profile is active so side plots line up
+            ctrl = getattr(plot_widget, "image_view_controller", None)
+            if ctrl is not None:
+                any_active = (
+                    ctrl.roi_cb.isChecked()
+                    or ctrl.roi_crosshair_cb.isChecked()
+                    or ctrl.line_roi_cb.isChecked()
+                    or ctrl.profile_cb.isChecked()
+                )
+                plot_widget.set_image_axes_visible(not any_active)
+
         else:
             return
 
