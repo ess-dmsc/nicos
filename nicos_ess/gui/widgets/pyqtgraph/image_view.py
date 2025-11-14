@@ -125,6 +125,7 @@ class ImageView(QWidget):
         self._roi_drag_active = False
         self.autolevel_on_update = False
         self.axes = {"t": None, "x": 0, "y": 1, "c": None}
+        self._axis_world_extents = None  # (x_min, x_max, y_min, y_max)
 
         self.initialize_ui()
         self.build_image_controller_tab()
@@ -579,6 +580,45 @@ class ImageView(QWidget):
         if pos is not None and pos not in self.selected_pixels and self.select_pixels:
             self.selected_pixels.append(pos)
 
+    def _drag_pos_to_world(self, x, y):
+        """
+        Convert drag coordinates (from CustomImageItem.dragData) into
+        the world coordinate system used by the image and ROIs.
+
+        Cases:
+        - If metric length scaling is active (_use_metric_length), the
+          CustomImageItem already emits metric units → return as-is.
+        - If we have no axis-world extents (no labels), keep pixel coords.
+        - If labels define world extents, map pixel indices 0..N-1 linearly
+          into [x_min..x_max], [y_min..y_max].
+        """
+        img = self.image_item.image
+        if img is None:
+            return x, y
+
+        # Camera/metric panel: CustomImageItem already converted to mm
+        if self._use_metric_length:
+            return x, y
+
+        # No axis labels → remain in pixel coordinates, as before
+        if self._axis_world_extents is None:
+            return x, y
+
+        nx, ny = img.shape[:2]
+        if nx <= 0 or ny <= 0:
+            return x, y
+
+        x_min, x_max, y_min, y_max = self._axis_world_extents
+
+        sx = (x_max - x_min) / float(nx)
+        sy = (y_max - y_min) / float(ny)
+
+        # Use bin centres; edges vs centres is a small offset only
+        wx = x_min + (float(x) + 0.5) * sx
+        wy = y_min + (float(y) + 0.5) * sy
+
+        return wx, wy
+
     def enter_roi_drag_mode(self):
         if self._line_roi_drag_active:
             self.exit_line_roi_drag_mode()
@@ -588,6 +628,8 @@ class ImageView(QWidget):
             self.image_view_controller.roi_cb.click()
         QApplication.setOverrideCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self.view.setMouseEnabled(False, False)
+        self.roi.setPos(self.view.viewRect().center())
+        self.roi.setSize((0, 0))
         self.image_item.set_define_roi_mode(True)
         self.image_item.dragData.connect(self.define_roi)
         self._roi_drag_active = True
@@ -608,6 +650,9 @@ class ImageView(QWidget):
             self.image_view_controller.line_roi_cb.click()
         QApplication.setOverrideCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self.view.setMouseEnabled(False, False)
+        center_ = self.view.viewRect().center()
+        center_point = (center_.x(), center_.y())
+        self.line_roi.set_pos(center_point, center_point, width=0)
         self.image_item.set_define_roi_mode(True)
         self.image_item.dragData.connect(self.define_line_roi)
         self._line_roi_drag_active = True
@@ -622,27 +667,40 @@ class ImageView(QWidget):
     @pyqtSlot(tuple)
     def define_roi(self, data):
         dragging, start_coord, end_coord = data
-        if dragging:
-            x0, y0 = start_coord
-            x1, y1 = end_coord
-
-            left = min(x0, x1)
-            top = min(y0, y1)
-            width = abs(x1 - x0)
-            height = abs(y1 - y0)
-
-            self.roi.setPos(left, top)
-            self.roi.setSize((width, height))
-        else:
+        if not dragging:
             self.exit_roi_drag_mode()
+            return
+
+        x0_pix, y0_pix = start_coord
+        x1_pix, y1_pix = end_coord
+
+        # Convert drag (pixel) coordinates to world coordinates
+        x0, y0 = self._drag_pos_to_world(x0_pix, y0_pix)
+        x1, y1 = self._drag_pos_to_world(x1_pix, y1_pix)
+
+        left = min(x0, x1)
+        top = min(y0, y1)
+        width = abs(x1 - x0)
+        height = abs(y1 - y0)
+
+        self.roi.setPos(left, top)
+        self.roi.setSize((width, height))
 
     @pyqtSlot(tuple)
     def define_line_roi(self, data):
         dragging, start_coord, end_coord = data
-        if dragging:
-            self.line_roi.set_pos(start_coord, end_coord)
-        else:
+        if not dragging:
             self.exit_line_roi_drag_mode()
+            return
+
+        x0_pix, y0_pix = start_coord
+        x1_pix, y1_pix = end_coord
+
+        # Convert drag (pixel) coordinates to world coordinates
+        p1 = self._drag_pos_to_world(x0_pix, y0_pix)
+        p2 = self._drag_pos_to_world(x1_pix, y1_pix)
+
+        self.line_roi.set_pos(p1, p2)
 
     def toggle_log_mode(self, log_mode):
         enabled = bool(log_mode)
@@ -754,6 +812,13 @@ class ImageView(QWidget):
 
         x_min, x_max = compute_min_max(x_labels, nx)
         y_min, y_max = compute_min_max(y_labels, ny)
+
+        self._axis_world_extents = (
+            float(x_min),
+            float(x_max),
+            float(y_min),
+            float(y_max),
+        )
 
         # Set the image rect in world coordinates (Å, ΔE, etc.)
         self.image_item.setRect(x_min, y_min, x_max - x_min, y_max - y_min)
@@ -921,8 +986,8 @@ class ImageView(QWidget):
             self.bottom_plot.setLabel("bottom", x_label, units=x_unit)
         if hasattr(self, "left_plot"):
             self.left_plot.setLabel("left", y_label, units=y_unit)
-        if hasattr(self, "line_plot"):
-            self.line_plot.setLabel("bottom", x_label, units=x_unit)
+        # if hasattr(self, "line_plot"): # we probably don't want to change this because it's a profile along arbitrary line
+        #     self.line_plot.setLabel("bottom", x_label, units=x_unit)
 
     def save_state(self):
         return {
