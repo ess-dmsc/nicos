@@ -1,7 +1,7 @@
 description = "The monitor detector."
 
 devices = dict(
-    monitor_1=device(
+    monitor_2=device(
         "nicos_ess.devices.epics.multiframe_histogrammer.MultiFrameHistogrammer",
         description="Multi-frame histogrammer",
         pv_root="ODIN:MFHist-002:",
@@ -10,7 +10,7 @@ devices = dict(
         monitor=True,
         pollinterval=None,
     ),
-    monitor_1_high_voltage=device(
+    monitor_2_high_voltage=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
         description="The high voltage of the monitor detector",
         readpv="ODIN-BM:NDet-CDTIBM-002:HighVoltage-R",
@@ -18,12 +18,12 @@ devices = dict(
         unit="V",
         abslimits=(0, 800),
     ),
-    monitor_1_high_voltage_status=device(
+    monitor_2_high_voltage_status=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The high voltage status of the monitor detector",
         readpv="ODIN-BM:NDet-CDTIBM-002:HighVoltageStatus-R",
     ),
-    monitor_1_high_voltage_start_ramp=device(
+    monitor_2_high_voltage_start_ramp=device(
         "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
         description="Start ramping the high voltage of the monitor",
         readpv="ODIN-BM:NDet-CDTIBM-002:HighVoltTask-S",
