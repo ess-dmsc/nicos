@@ -350,6 +350,7 @@ class LiveDataPanel(Panel):
             y_unit = axis_units[1] if len(axis_units) >= 2 else ""
 
             plot_widget.image_plot.setTitle(title)
+            plot_widget.left_plot.setTitle("-")  # Needed for layout alignment
             plot_widget.image_plot.setLabel("bottom", x_name, units=x_unit)
             plot_widget.image_plot.setLabel("left", y_name, units=y_unit)
 
