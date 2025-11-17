@@ -38,9 +38,9 @@ devices = dict(
     liveview=device(
         "nicos.devices.datasinks.LiveViewSink",
     ),
-    KafkaForwarderStatus=device(
+    KafkaForwarder=device(
         "nicos_ess.devices.forwarder.EpicsKafkaForwarder",
-        description="Monitors the status of the Forwarder",
+        description="Monitors and configures the Forwarder",
         statustopic=["loki_forwarder_dynamic_status"],
         config_topic="loki_forwarder_dynamic_config",
         brokers=configdata("config.KAFKA_BROKERS"),
