@@ -888,6 +888,12 @@ class SmaractPiezoMotor(EpicsMotor):
         ),
     }
 
+    parameter_overrides = {
+        "has_errorbit": Override(default=False),
+        "has_reseterror": Override(default=False),
+        "has_powerauto": Override(default=False),
+    }
+
     def doPreinit(self, mode):
         self._lock = threading.Lock()
         self._epics_subscriptions = []
