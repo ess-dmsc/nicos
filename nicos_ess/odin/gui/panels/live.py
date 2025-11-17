@@ -71,16 +71,11 @@ class ADControl(QWidget):
             ("Acquisition Mode:", self.create_acq_mode_combo, 1),
             ("Number of Images:", self.create_num_images_field, 2),
             ("Acquisition Time [s]:", self.create_acquisition_time_field, 3),
-            (
-                "Acquisition Period [s]:",
-                self.create_acquisition_period_field,
-                4,
-            ),
-            ("Start index X:", self.create_start_x_field, 5),
-            ("Start index Y:", self.create_start_y_field, 6),
-            ("Size X:", self.create_size_x_field, 7),
-            ("Size Y:", self.create_size_y_field, 8),
-            ("Binning Factor:", self.create_binning_field, 9),
+            ("Start index X:", self.create_start_x_field, 4),
+            ("Start index Y:", self.create_start_y_field, 5),
+            ("Size X:", self.create_size_x_field, 6),
+            ("Size Y:", self.create_size_y_field, 7),
+            ("Binning Factor:", self.create_binning_field, 8),
         ]
 
         for label_text, field_method, row in disp_fields:
@@ -204,12 +199,6 @@ class ADControl(QWidget):
             "Set Value", self.on_acquisition_time_changed
         )
         return self.acquisition_time
-
-    def create_acquisition_period_field(self):
-        self.acquisition_period = self.create_line_edit(
-            "Set Value", self.on_acquisition_period_changed
-        )
-        return self.acquisition_period
 
     def create_start_x_field(self):
         self.start_x = self.create_line_edit("Set Value", self.on_start_x_changed)
@@ -373,9 +362,6 @@ class ADControl(QWidget):
         if "acquiretime" in param_info:
             self.acquisition_time.setEnabled(True)
             self.acquisition_time.readback.setEnabled(True)
-        if "acquireperiod" in param_info:
-            self.acquisition_period.setEnabled(True)
-            self.acquisition_period.readback.setEnabled(True)
         if "startx" in param_info:
             self.start_x.setEnabled(True)
             self.start_x.readback.setEnabled(True)
@@ -430,7 +416,6 @@ class ADControl(QWidget):
         self.acquisition_time.readback.setText(
             str(round(param_info.get("acquiretime"), 3))
         )
-        self.acquisition_period.readback.setText(str(param_info.get("acquireperiod")))
         self.start_x.readback.setText(str(param_info.get("startx")))
         self.start_y.readback.setText(str(param_info.get("starty")))
         self.size_x.readback.setText(str(param_info.get("sizex")))
@@ -512,18 +497,6 @@ class ADControl(QWidget):
             self.selected_device,
             "acquiretime",
             acquisition_time,
-        )
-
-    def on_acquisition_period_changed(self):
-        acquisition_period = float(self.acquisition_period.text())
-        self._eval_command_if_device_selected(
-            "%s.doWriteAcquireperiod(%f)", acquisition_period
-        )
-        self._eval_command_if_device_selected(
-            '%s._cache.put(%s, "%s", %f)',
-            self.selected_device,
-            "acquireperiod",
-            acquisition_period,
         )
 
     def on_start_x_changed(self):
