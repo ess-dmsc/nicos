@@ -7,6 +7,8 @@ import pytest
 from mock.mock import MagicMock
 import fnmatch
 
+from numpy.core.defchararray import isnumeric
+
 from nicos.services.cache.endpoints.redis_client import RedisClient, RedisError
 from nicos.services.cache.database import RedisCacheDatabase
 from nicos.services.cache.entry import CacheEntry
@@ -55,23 +57,36 @@ class RedisStub:
         self._cleaner_sha = None
 
     def hset(self, name, key=None, value=None, mapping=None, items=None):
-        if mapping:
-            self._fake_db[name] = {k: v for k, v in mapping.items()}
+        # Emulate Redis HSET behaviour: merge into existing hash instead of replacing it.
+        if mapping is not None:
+            if name not in self._fake_db or not isinstance(self._fake_db[name], dict):
+                self._fake_db[name] = {}
+            for k, v in mapping.items():
+                self._fake_db[name][k] = v
             return len(mapping)
-        elif items:
-            self._fake_db[name] = {k: v for k, v in items}
-            return len(items)
-        elif key and value:
-            if name not in self._fake_db:
+
+        if items is not None:
+            if name not in self._fake_db or not isinstance(self._fake_db[name], dict):
+                self._fake_db[name] = {}
+            count = 0
+            for k, v in items:
+                self._fake_db[name][k] = v
+                count += 1
+            return count
+
+        if key is not None and value is not None:
+            if name not in self._fake_db or not isinstance(self._fake_db[name], dict):
                 self._fake_db[name] = {}
             self._fake_db[name][key] = value
             return 1
+
         return 0
 
     def hgetall(self, key):
         raw = self._fake_db.get(key, {})
         if not isinstance(raw, dict):
             raise RedisError("Corrupted data")
+        # Redis returns strings (decoded), so we stringify here as well.
         return {k: str(v) for k, v in raw.items()}
 
     def exists(self, *names):
@@ -79,21 +94,93 @@ class RedisStub:
 
     def execute_command(self, command, *args):
         if command == "TS.CREATE":
-            self._fake_db[args[0]] = {}
+            key = args[0]
+            if key not in self._fake_db or not isinstance(self._fake_db[key], dict):
+                self._fake_db[key] = {}
+            return 1
+
         elif command == "TS.ADD":
-            self._fake_db[args[0]].update({int(args[1]): str(args[2])})
+            key = args[0]
+            ts = int(args[1])
+            value = args[2]
+
+            # Rough numeric check (similar enough for tests)
+            if isinstance(value, str):
+                try:
+                    float(value)
+                except ValueError:
+                    raise RedisError("TSDB: invalid value")
+            elif not isinstance(value, (int, float)):
+                raise RedisError("TSDB: invalid value")
+
+            if key not in self._fake_db or not isinstance(self._fake_db[key], dict):
+                self._fake_db[key] = {}
+
+            # RedisTimeSeries stores numeric values, but the client gives us strings;
+            # we store stringified value so TS.RANGE looks like real Redis.
+            self._fake_db[key][ts] = str(value)
+            return ts
+
         elif command == "TS.RANGE":
-            fromtime, totime = int(args[1]), int(args[2])
-            timeseries = self._fake_db.get(args[0], {})
-            return [
-                [k, v]
-                for k, v in timeseries.items()
-                if float(fromtime) <= float(k) <= float(totime)
-            ]
+            key = args[0]
+            fromtime = int(args[1])
+            totime = int(args[2])
+            timeseries = self._fake_db.get(key, {})
+
+            # Check for aggregation syntax: TS.RANGE key from to AGGREGATION avg bucket
+            aggregation = None
+            bucket_size = None
+            if len(args) >= 6 and args[3] == "AGGREGATION":
+                aggregation = args[4]
+                bucket_size = int(args[5])
+
+            # No aggregation: just filter by time and return sorted list.
+            if aggregation is None:
+                return [
+                    [ts, val]
+                    for ts, val in sorted(timeseries.items())
+                    if fromtime <= ts <= totime
+                ]
+
+            # Only 'avg' is currently needed by tests.
+            if aggregation.lower() != "avg":
+                raise RedisError(f"Unsupported aggregation: {aggregation}")
+
+            # Bucketed aggregation.
+            buckets = {}  # bucket_start -> (sum, count)
+            for ts, val in timeseries.items():
+                if ts < fromtime or ts > totime:
+                    continue
+                # Convert stored string back to float for averaging.
+                num_val = float(val)
+                bucket_idx = (ts - fromtime) // bucket_size
+                bucket_start = fromtime + bucket_idx * bucket_size
+                cur_sum, cur_count = buckets.get(bucket_start, (0.0, 0))
+                buckets[bucket_start] = (cur_sum + num_val, cur_count + 1)
+
+            result = []
+            for bucket_start in sorted(buckets.keys()):
+                s, c = buckets[bucket_start]
+                avg = s / c
+                # Match Redis’ stringified numeric representation:
+                # ints as '15', floats as '15.5', etc.
+                if float(avg).is_integer():
+                    avg_str = str(int(avg))
+                else:
+                    avg_str = str(avg)
+                result.append([bucket_start, avg_str])
+
+            return result
+
         elif command == "DEL":
+            # Delete all given keys and return number of keys actually removed.
+            deleted = 0
             for key in args:
-                self._fake_db.pop(key, None)
-                return len(args)
+                if key in self._fake_db:
+                    self._fake_db.pop(key, None)
+                    deleted += 1
+            return deleted
+
         return 0
 
     def keys(self, pattern="*"):
@@ -288,6 +375,72 @@ def test_set_float_generates_hash_and_timeseries(db):
     history_query = db.queryHistory(("test/key", "value"), 122, 124)
     history_query = [entry.asDict() for entry in history_query]
     assert history_query == [CacheEntry(123.0, None, 3.14).asDict()]
+
+
+def test_set_list_generates_hash_and_timeseries(db):
+    db._set_data("test/key", "value", CacheEntry("123", "456", [10, 20]))
+    assert db._client.keys() == ["test/key/value", "test/key/value_l_0_ts", "test/key/value_l_1_ts"]
+    assert db._client.hgetall("test/key/value") == {
+        "time": "123",
+        "ttl": "456",
+        "value": "[10, 20]",
+        "expired": "False",
+        "ts_encoding": "list",
+        "ts_children": "0,1",
+    }
+    history_query = db.queryHistory(("test/key", "value"), 122, 124)
+    history_query = [entry.asDict() for entry in history_query]
+    assert history_query == [CacheEntry(123.0, None, [10, 20]).asDict()]
+
+
+def test_set_dict_generates_hash_and_timeseries(db):
+    db._set_data("test/key", "value", CacheEntry("123", "456", {"a": 1, "b": 2}))
+    assert db._client.keys() == ["test/key/value", "test/key/value_d_a_ts", "test/key/value_d_b_ts"]
+    assert db._client.hgetall("test/key/value") == {
+        "time": "123",
+        "ttl": "456",
+        "value": "{'a': 1, 'b': 2}",
+        "expired": "False",
+        "ts_encoding": "dict",
+        "ts_children": "a,b",
+    }
+    history_query = db.queryHistory(("test/key", "value"), 122, 124)
+    history_query = [entry.asDict() for entry in history_query]
+    assert history_query == [CacheEntry(123.0, None, {"a": 1, "b": 2}).asDict()]
+
+
+def test_set_list_still_works_with_interval_aggregation(db):
+    db._set_data("test/key", "value", CacheEntry("123", "456", [10, 20]))
+    db._set_data("test/key", "value", CacheEntry("124", "456", [20, 40]))
+    assert db._client.keys() == ["test/key/value", "test/key/value_l_0_ts", "test/key/value_l_1_ts"]
+    assert db._client.hgetall("test/key/value") == {
+        "time": "124",
+        "ttl": "456",
+        "value": "[20, 40]",
+        "expired": "False",
+        "ts_encoding": "list",
+        "ts_children": "0,1",
+    }
+    history_query = db.queryHistory(("test/key", "value"), 122, 125, interval=10)
+    history_query = [entry.asDict() for entry in history_query]
+    assert history_query == [CacheEntry(122.0, None, [15.0, 30.0]).asDict()] # average of [10,20] and [20,40] starting at t=122 + 10
+
+
+def test_set_dict_still_works_with_interval_aggregation(db):
+    db._set_data("test/key", "value", CacheEntry("123", "456", {"a": 1, "b": 2}))
+    db._set_data("test/key", "value", CacheEntry("124", "456", {"a": 3, "b": 4}))
+    assert db._client.keys() == ["test/key/value", "test/key/value_d_a_ts", "test/key/value_d_b_ts"]
+    assert db._client.hgetall("test/key/value") == {
+        "time": "124",
+        "ttl": "456",
+        "value": "{'a': 3, 'b': 4}",
+        "expired": "False",
+        "ts_encoding": "dict",
+        "ts_children": "a,b",
+    }
+    history_query = db.queryHistory(("test/key", "value"), 122, 125, interval=10)
+    history_query = [entry.asDict() for entry in history_query]
+    assert history_query == [CacheEntry(122.0, None, {"a": 2.0, "b": 3.0}).asDict()] # average of {'a':1,'b':2} and {'a':3,'b':4} starting at t=122 + 10
 
 
 def test_can_get_data(db):
