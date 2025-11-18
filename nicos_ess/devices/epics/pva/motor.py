@@ -674,7 +674,9 @@ class EpicsJogMotor(EpicsMotor):
 
     def doStart(self, value):
         if value == 0:
+            self.jog_dir = 0
             self.stop()
+            self._cache.put(self._name, "status", (status.OK, "stopped"), time.time())
             return
 
         jog_speed = self._get_valid_speed(abs(value))
@@ -689,18 +691,18 @@ class EpicsJogMotor(EpicsMotor):
         # write .JVEL (raw jog_velocity); callbacks will synthesize "value"
         self._put_pv("jog_velocity", jog_speed)
 
-        # jf = self._get_cached_pv_or_ask("jogforward")
-        # jr = self._get_cached_pv_or_ask("jogreverse")
-        # if not (jf or jr):
-        self._put_pv("jogforward" if value > 0 else "jogreverse", 1)
-        # elif value > 0 and jr:
-        #     self._put_pv("jogreverse", 0)
-        #     self._wait_until("donemoving", 1)
-        #     self._put_pv("jogforward", 1)
-        # elif value < 0 and jf:
-        #     self._put_pv("jogforward", 0)
-        #     self._wait_until("donemoving", 1)
-        #     self._put_pv("jogreverse", 1)
+        jf = self._get_cached_pv_or_ask("jogforward")
+        jr = self._get_cached_pv_or_ask("jogreverse")
+        if not (jf or jr):
+            self._put_pv("jogforward" if value > 0 else "jogreverse", 1)
+        elif value > 0 and jr:
+            self._put_pv("jogreverse", 0)
+            self._wait_until("donemoving", 1)
+            self._put_pv("jogforward", 1)
+        elif value < 0 and jf:
+            self._put_pv("jogforward", 0)
+            self._wait_until("donemoving", 1)
+            self._put_pv("jogreverse", 1)
 
         self._cache.put(self._name, "status", (status.BUSY, "moving"), time.time())
 
