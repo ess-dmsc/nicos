@@ -160,8 +160,6 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
             "powerauto": RecordInfo("", "-PwrAuto", RecordType.STATUS),
             "msgtxt": RecordInfo("", "-MsgTxt", RecordType.STATUS),
             "msgtxt_severity": RecordInfo("", "-MsgTxt.SEVR", RecordType.STATUS),
-            "interlocked_fwd": RecordInfo("", "-NamAuxBit18", RecordType.STATUS),
-            "interlocked_bwd": RecordInfo("", "-NamAuxBit17", RecordType.STATUS),
         }
         self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
         # Check PV exists
@@ -339,8 +337,9 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         self._put_pv("foff", 0)
 
     def isAllowed(self, pos):
-        if self.interlocked_fwd or self.interlock_bwd:
-            return False, "Motor interlocked"
+        status_code, status_msg = self.status()
+        if status_code == status.ERROR:
+            return False, status_msg
         if self.userlimits == (0, 0) and self.abslimits == (0, 0):
             # No limits defined
             return True, ""
