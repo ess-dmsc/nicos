@@ -358,7 +358,7 @@ class SeleneRobot(Moveable):
             return
         self._disengage()
         self.log.info("Driver retracted")
-        # TODO: Save to yml as the docstring suggests?
+        # TODO: Save to yml as the docstring suggests? Basically save them in the self.rotations
 
     def doRead(self, maxage=0):
         xpos = self._attached_move_x.read()
@@ -750,7 +750,7 @@ class SeleneRobot(Moveable):
             self.log.debug(f"Moving vertical mirror by {delta:.3f}")
             newpos = self._adjust() + delta * self.vertical_ratio
         else:
-            self.log.debug(f"Moving vertical mirror by {delta:.3f}")
+            self.log.debug(f"Moving horizontal mirror by {delta:.3f}")
             newpos = self._adjust() + delta * self.horizontal_ratio
         self.adjust(newpos)
 
