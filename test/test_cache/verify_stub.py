@@ -7,7 +7,7 @@ from nicos.services.cache.endpoints.redis_client import RedisClient
 from test.test_cache.test_redis import RedisClientStub
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="function")
 def real_redis_client():
     client = RedisClient(host="localhost", port=6379, db=0)
     client.execute_command("FLUSHALL")
@@ -15,7 +15,7 @@ def real_redis_client():
     client.close()
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="function")
 def stub_redis_client():
     client = RedisClientStub()
     yield client
@@ -105,3 +105,59 @@ def test_pipeline(real_redis_client, stub_redis_client):
         stub_results = pipe.execute()
 
     assert real_results == stub_results
+
+
+def test_hset_mapping_merges_fields(real_redis_client, stub_redis_client):
+    key = "hash_merge_key"
+
+    # Initial mapping
+    mapping1 = {"field1": "value1", "field2": "value2"}
+    real_redis_client.hset(key, mapping1)
+    stub_redis_client.hset(key, mapping1)
+
+    # Second mapping updates field2 and adds field3
+    mapping2 = {"field2": "new_value2", "field3": "value3"}
+    real_redis_client.hset(key, mapping2)
+    stub_redis_client.hset(key, mapping2)
+
+    real_data = real_redis_client.hgetall(key)
+    stub_data = stub_redis_client.hgetall(key)
+
+    assert real_data == stub_data
+    assert real_data == {
+        "field1": "value1",
+        "field2": "new_value2",
+        "field3": "value3",
+    }
+
+
+def test_execute_command_ts_range_aggregation(real_redis_client, stub_redis_client):
+    key = "agg_ts_key"
+    real_redis_client.execute_command("TS.CREATE", key)
+    stub_redis_client.execute_command("TS.CREATE", key)
+
+    # Timestamps in ms; two buckets of 50ms: [0,49], [50,99]
+    points = [
+        (10, 10),
+        (40, 20),
+        (60, 30),
+        (90, 50),
+    ]
+
+    for ts, val in points:
+        real_redis_client.execute_command("TS.ADD", key, ts, val)
+        stub_redis_client.execute_command("TS.ADD", key, ts, val)
+
+    # Aggregate over [0, 100] with bucket size 50ms
+    real_range = real_redis_client.execute_command(
+        "TS.RANGE", key, 0, 100, "AGGREGATION", "avg", 50
+    )
+    stub_range = stub_redis_client.execute_command(
+        "TS.RANGE", key, 0, 100, "AGGREGATION", "avg", 50
+    )
+
+    # Ensure timestamps match
+    assert [r[0] for r in real_range] == [s[0] for s in stub_range]
+    # Ensure values match exactly (string representations too)
+    assert real_range == stub_range
+
