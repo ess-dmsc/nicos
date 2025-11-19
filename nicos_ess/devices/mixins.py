@@ -170,8 +170,9 @@ class HasNexusConfig(DeviceMixinBase):
     - `"static_value"`: Add a static string value to the Nexus file.
 
     Dictionary keys:
-        group_name (str): Name of the entry in Nexus.
+        group_name (str): Name of the nicos device and entry in Nexus.
         nx_class (str): Nexus class.
+        dataset_type (str): Dataset type, one of ["nx_log", "static_read", "static_value"].
         units (str, optional): Units of the value.
         source_name (str, optional): PV name or NICOS device name.
         suffix (str, optional): String appended to the group name.
@@ -180,7 +181,6 @@ class HasNexusConfig(DeviceMixinBase):
         topic (str, optional): Kafka topic to forward data to.
         protocol (str, optional): Protocol used when forwarding data to Kafka. One of ["pva" (default), "ca"].
         periodic (int, optional): Whether data is forwarded periodically (0 or 1).
-        dataset_type (str): Dataset type, one of ["nx_log" (default), "static_read", "static_value"].
         nexus_path (str, optional): Absolute NeXus path to place the group, e.g. "/entry/instrument" (default) or "/entry/sample".
     """
 
