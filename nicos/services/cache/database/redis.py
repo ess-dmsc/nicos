@@ -367,6 +367,91 @@ class RedisCacheDatabase(CacheDatabase):
 
             return entries
 
+        if encoding == "hash_series":
+            hs_hash_key = f"{redis_key}_hs"
+            hs_index_key = f"{redis_key}_hs_idx"
+            try:
+                # 1) Get all timestamps in range, sorted by time
+                ts_fields = self._client.zrangebyscore(hs_index_key, from_ms, to_ms)
+            except Exception as e:
+                self.log.warning(
+                    "queryHistory: failed to read hash_series index %s: %s",
+                    hs_index_key,
+                    e,
+                )
+                return []
+
+            if not ts_fields:
+                return []
+
+            try:
+                # 2) Bulk fetch values for those timestamps
+                values = self._client.hmget(hs_hash_key, *ts_fields)
+            except Exception as e:
+                self.log.warning(
+                    "queryHistory: failed to HMGET hash_series %s: %s",
+                    hs_hash_key,
+                    e,
+                )
+                return []
+
+            entries: List[CacheEntry] = []
+            append = entries.append
+            load = cache_load
+
+            for ts_str, val_str in zip(ts_fields, values):
+                if val_str is None:
+                    # hash and zset out of sync; skip this sample
+                    continue
+                try:
+                    ts_int = int(ts_str)
+                except (TypeError, ValueError):
+                    continue
+
+                if isinstance(val_str, str):
+                    try:
+                        # Try full PyON decode first
+                        val = load(val_str)
+                    except Exception as e:
+                        # Not valid PyON; fall back to raw string
+                        self.log.warning(
+                            "queryHistory: failed to load hash_series value %r (%s) "
+                            "for %s at %s: %s",
+                            val_str,
+                            type(val_str),
+                            hs_hash_key,
+                            ts_str,
+                            e,
+                        )
+                        val = val_str
+                else:
+                    val = val_str
+
+                append(CacheEntry(ts_int / 1000.0, None, val))
+
+            # Optionally handle `interval` by downsampling client-side if you want.
+            # For non-numeric data, "avg" doesn't make sense, so you can just
+            # decimate: e.g. one sample per bucket.
+            if interval:
+                bucket_ms = int(interval * 1000)
+                if bucket_ms > 0 and len(entries) > 1:
+                    bucketed: List[CacheEntry] = []
+                    next_boundary = int(entries[0].time * 1000) + bucket_ms
+                    bucketed_append = bucketed.append
+                    bucketed_append(entries.pop(0))  # always include first entry
+                    for e in entries:
+                        print(e.time, next_boundary)
+                        t_ms = int(e.time * 1000)
+                        print(
+                            f"In order for the entry {e} to be added, its timestamp in ms {t_ms} must be >= next_boundary {next_boundary}"
+                        )
+                        if t_ms >= next_boundary:
+                            bucketed_append(e)
+                            next_boundary = t_ms + bucket_ms
+                    return bucketed
+
+            return entries
+
         res = _range(base_ts_key)
 
         def _ts_entry(ts, val):
@@ -447,6 +532,8 @@ class RedisCacheDatabase(CacheDatabase):
             return
 
         redis_key, base_ts_key = self._format_key(category, subkey)
+        hs_hash_key = f"{redis_key}_hs"
+        hs_index_key = f"{redis_key}_hs_idx"
         target = pipe or self._client
 
         # Deletion
@@ -455,11 +542,16 @@ class RedisCacheDatabase(CacheDatabase):
                 self._delete(redis_key, target=target)
                 if self._redis_key_exists(base_ts_key):
                     self._delete(base_ts_key, target=target)
+                if self._redis_key_exists(hs_hash_key):
+                    self._delete(hs_hash_key, target=target)
+                if self._redis_key_exists(hs_index_key):
+                    self._delete(hs_index_key, target=target)
             except Exception:
                 self.log.exception(
-                    "Failed to delete keys %s and/or %s", redis_key, base_ts_key
+                    "Failed to delete keys %s/%s (and hash_series)",
+                    redis_key,
+                    base_ts_key,
                 )
-            # Keep RAM in sync
             self._del_recent(category, subkey)
             return
 
@@ -477,6 +569,8 @@ class RedisCacheDatabase(CacheDatabase):
         ts_keys: List[str] = []
         ts_encoding: Optional[str] = None  # "list" or "dict" only
         ts_children: Optional[str] = None  # comma-separated indices or keys
+        hs_hash_key: Optional[str] = None
+        hs_index_key: Optional[str] = None
 
         if self._native_archiving(value):
             # Simple scalar numeric value — no metadata needed
@@ -485,7 +579,11 @@ class RedisCacheDatabase(CacheDatabase):
 
         else:
             # Complex type: try list-of-numbers or dict-of-numbers
-            if isinstance(value, (list, tuple)) and value:
+            if (
+                isinstance(value, (list, tuple))
+                and value
+                and all(self._native_archiving(v) for v in value)
+            ):
                 ts_encoding = "list"
                 indices = [i for i, v in enumerate(value) if self._native_archiving(v)]
                 ts_children = ",".join(str(i) for i in indices)
@@ -495,7 +593,11 @@ class RedisCacheDatabase(CacheDatabase):
                     ts_keys.append(f"{redis_key}_l_{idx}_ts")
                     ts_values.append(val)
 
-            elif isinstance(value, dict) and value:
+            elif (
+                isinstance(value, dict)
+                and value
+                and all(self._native_archiving(v) for v in value.values())
+            ):
                 ts_encoding = "dict"
                 # make sure only keys for values that can be archived are included
                 keys = [k for k, v in value.items() if self._native_archiving(v)]
@@ -506,8 +608,12 @@ class RedisCacheDatabase(CacheDatabase):
                     ts_keys.append(f"{redis_key}_d_{subk}_ts")
                     ts_values.append(val)
             else:
+                ts_encoding = "hash_series"
+                ts_children = None
                 ts_values = []
                 ts_keys = []
+                hs_hash_key = f"{redis_key}_hs"
+                hs_index_key = f"{redis_key}_hs_idx"
 
         hash_mapping = {
             "time": str(entry.time),
@@ -539,6 +645,21 @@ class RedisCacheDatabase(CacheDatabase):
             except Exception:
                 self.log.exception(
                     "TS write failed for %s. Got type %s", series_key, type(sample)
+                )
+
+        if ts_encoding == "hash_series":
+            ts_str = str(ts)
+            try:
+                # payload in HASH
+                target.hset(hs_hash_key, ts_str, str(value))
+                # index in ZSET
+                # member is the ts_str; score is ts (ms)
+                target.zadd(hs_index_key, {ts_str: ts})
+            except Exception:
+                self.log.exception(
+                    "Redis write failed for hash_series %s/%s",
+                    hs_hash_key,
+                    hs_index_key,
                 )
 
     def _native_archiving(self, value):
