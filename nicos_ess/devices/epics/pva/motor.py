@@ -259,7 +259,6 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         self._put_pv("target", value)
 
     def doWriteSpeed(self, value):
-        print("from doWriteSpeed in motor")
         speed = self._get_valid_speed(value)
 
         if speed != value:
