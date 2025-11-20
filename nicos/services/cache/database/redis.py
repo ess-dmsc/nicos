@@ -436,7 +436,7 @@ class RedisCacheDatabase(CacheDatabase):
     def _set_data(self, category, subkey, entry: CacheEntry, pipe=None):
         """Write a single entry to Redis (and update RAM) — signature unchanged for tests."""
         # Type checks (compat with old test expectations)
-        if type(entry.value) not in (int, float, str, list, dict, type(None)):
+        if type(entry.value) not in (int, float, str, list, tuple, dict, type(None)):
             self.log.warning("Unsupported value type: %s", type(entry.value))
             return
         if not isinstance(self._literal_or_str(entry.time), (float, int)):
@@ -485,27 +485,20 @@ class RedisCacheDatabase(CacheDatabase):
 
         else:
             # Complex type: try list-of-numbers or dict-of-numbers
-            if (
-                isinstance(value, list)
-                and value
-                and all(self._native_archiving(v) for v in value)
-            ):
+            if isinstance(value, (list, tuple)) and value:
                 ts_encoding = "list"
-                indices = list(range(len(value)))
+                indices = [i for i, v in enumerate(value) if self._native_archiving(v)]
                 ts_children = ",".join(str(i) for i in indices)
 
-                for idx, val in enumerate(value):
+                for idx in indices:
+                    val = value[idx]
                     ts_keys.append(f"{redis_key}_l_{idx}_ts")
                     ts_values.append(val)
 
-            elif (
-                isinstance(value, dict)
-                and value
-                and all(self._native_archiving(v) for v in value.values())
-            ):
+            elif isinstance(value, dict) and value:
                 ts_encoding = "dict"
-                # Keep keys in stable order
-                keys = list(value.keys())
+                # make sure only keys for values that can be archived are included
+                keys = [k for k, v in value.items() if self._native_archiving(v)]
                 ts_children = ",".join(str(k) for k in keys)
 
                 for subk in keys:

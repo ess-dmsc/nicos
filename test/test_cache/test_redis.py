@@ -409,6 +409,54 @@ def test_set_dict_generates_hash_and_timeseries(db):
     assert history_query == [CacheEntry(123.0, None, {"a": 1, "b": 2}).asDict()]
 
 
+def test_set_tuple_generates_hash_and_timeseries(db):
+    db._set_data("test/key", "value", CacheEntry("123", "456", (10, 20)))
+    assert db._client.keys() == ["test/key/value", "test/key/value_l_0_ts", "test/key/value_l_1_ts"]
+    assert db._client.hgetall("test/key/value") == {
+        "time": "123",
+        "ttl": "456",
+        "value": "(10, 20)",
+        "expired": "False",
+        "ts_encoding": "list",
+        "ts_children": "0,1",
+    }
+    history_query = db.queryHistory(("test/key", "value"), 122, 124)
+    history_query = [entry.asDict() for entry in history_query]
+    assert history_query == [CacheEntry(123.0, None, [10, 20]).asDict()]
+
+
+def test_status_tuple_generates_hash_and_timeseries(db):
+    db._set_data("test/key", "value", CacheEntry("123", "456", (200, "idle")))
+    assert db._client.keys() == ["test/key/value", "test/key/value_l_0_ts"]
+    assert db._client.hgetall("test/key/value") == {
+        "time": "123",
+        "ttl": "456",
+        "value": "(200, 'idle')",
+        "expired": "False",
+        "ts_encoding": "list",
+        "ts_children": "0",
+    }
+    history_query = db.queryHistory(("test/key", "value"), 122, 124)
+    history_query = [entry.asDict() for entry in history_query]
+    assert history_query == [CacheEntry(123.0, None, [200]).asDict()] # only numeric part stored in TS and plottable return
+
+
+def test_mixed_dict_generates_hash_and_timeseries(db):
+    db._set_data("test/key", "value", CacheEntry("123", "456", {"a": 1, "b": "idle", "c": 3.5}))
+    assert db._client.keys() == ["test/key/value", "test/key/value_d_a_ts", "test/key/value_d_c_ts"]
+    assert db._client.hgetall("test/key/value") == {
+        "time": "123",
+        "ttl": "456",
+        "value": "{'a': 1, 'b': 'idle', 'c': 3.5}",
+        "expired": "False",
+        "ts_encoding": "dict",
+        "ts_children": "a,c",
+    }
+    history_query = db.queryHistory(("test/key", "value"), 122, 124)
+    history_query = [entry.asDict() for entry in history_query]
+    assert history_query == [CacheEntry(123.0, None, {"a": 1, "c": 3.5}).asDict()] # only numeric parts stored in TS and plottable return
+
+
 def test_set_list_still_works_with_interval_aggregation(db):
     db._set_data("test/key", "value", CacheEntry("123", "456", [10, 20]))
     db._set_data("test/key", "value", CacheEntry("124", "456", [20, 40]))
@@ -441,6 +489,40 @@ def test_set_dict_still_works_with_interval_aggregation(db):
     history_query = db.queryHistory(("test/key", "value"), 122, 125, interval=10)
     history_query = [entry.asDict() for entry in history_query]
     assert history_query == [CacheEntry(122.0, None, {"a": 2.0, "b": 3.0}).asDict()] # average of {'a':1,'b':2} and {'a':3,'b':4} starting at t=122 + 10
+
+
+def test_set_status_tuple_still_works_with_interval_aggregation(db):
+    db._set_data("test/key", "value", CacheEntry("123", "456", (200, "idle")))
+    db._set_data("test/key", "value", CacheEntry("124", "456", (400, "busy")))
+    assert db._client.keys() == ["test/key/value", "test/key/value_l_0_ts"]
+    assert db._client.hgetall("test/key/value") == {
+        "time": "124",
+        "ttl": "456",
+        "value": "(400, 'busy')",
+        "expired": "False",
+        "ts_encoding": "list",
+        "ts_children": "0",
+    }
+    history_query = db.queryHistory(("test/key", "value"), 122, 125, interval=10)
+    history_query = [entry.asDict() for entry in history_query]
+    assert history_query == [CacheEntry(122.0, None, [300.0]).asDict()] # average of [200] and [400] starting at t=122 + 10
+
+
+def test_set_mixed_dict_still_works_with_interval_aggregation(db):
+    db._set_data("test/key", "value", CacheEntry("123", "456", {"a": 1, "b": "idle", "c": 3.5}))
+    db._set_data("test/key", "value", CacheEntry("124", "456", {"a": 3, "b": "busy", "c": 4.5}))
+    assert db._client.keys() == ["test/key/value", "test/key/value_d_a_ts", "test/key/value_d_c_ts"]
+    assert db._client.hgetall("test/key/value") == {
+        "time": "124",
+        "ttl": "456",
+        "value": "{'a': 3, 'b': 'busy', 'c': 4.5}",
+        "expired": "False",
+        "ts_encoding": "dict",
+        "ts_children": "a,c",
+    }
+    history_query = db.queryHistory(("test/key", "value"), 122, 125, interval=10)
+    history_query = [entry.asDict() for entry in history_query]
+    assert history_query == [CacheEntry(122.0, None, {"a": 2.0, "c": 4.0}).asDict()] # average of {'a':1,'c':3.5} and {'a':3,'c':4.5} starting at t=122 + 10
 
 
 def test_can_get_data(db):
