@@ -374,8 +374,10 @@ def test_format_key(db):
     assert db._format_key("category", "subkey") == (
         "category/subkey",
         "category/subkey_ts",
+        "category/subkey_hs",
+        "category/subkey_hs_idx",
     )
-    assert db._format_key("nocat", "subkey") == ("subkey", "subkey_ts")
+    assert db._format_key("nocat", "subkey") == ("subkey", "subkey_ts", "subkey_hs", "subkey_hs_idx")
 
 
 def test_literal_or_str(db):
@@ -632,6 +634,54 @@ def test_list_of_strings_generates_hash_timeseries(db):
     history_query = db.queryHistory(("test/key", "value"), 122, 124)
     history_query = [entry.asDict() for entry in history_query]
     assert history_query == [CacheEntry(123.0, None, ["val1", "val2"]).asDict()]
+
+
+def test_hash_series_mapped_moveable_history(db, caplog):
+    """
+    Simulate the 'mapped moveable' that jumps between string positions
+    ('0', '5', '-5') and an 'In Between' state, using PyON strings as
+    they appear in real Redis: "'0'", "'In Between'", "'5'", "'-5'".
+    """
+
+    base_t = 1000.0
+    events = [
+        (base_t + 0.0,   "'0'"),
+        (base_t + 0.5,   "'In Between'"),
+        (base_t + 1.0,   "'0'"),
+        (base_t + 1.5,   "'In Between'"),
+        (base_t + 2.0,   "'5'"),
+        (base_t + 3.0,   "'0'"),
+        (base_t + 3.5,   "'In Between'"),
+        (base_t + 4.0,   "'-5'"),
+        (base_t + 4.5,   "'In Between'"),
+        (base_t + 5.0,   "'0'"),
+        (base_t + 5.5,   "'In Between'"),
+        (base_t + 6.0,   "'5'"),
+    ]
+
+    # Store as hash_series via _set_data. entry.value is the PyON string,
+    # exactly like the real cache layer would see from cache_dump().
+    for t, raw_value in events:
+        db._set_data("nicos/mapped_values", "value", CacheEntry(str(t), "456", raw_value))
+
+    # Query a time range that covers all events
+    with caplog.at_level(logging.WARNING):
+        history = db.queryHistory(("nicos/mapped_values", "value"),
+                                  base_t - 1.0, base_t + 10.0)
+
+    # We should get all events in order, with PyON decoded to Python objects.
+    # cache_load("'0'") -> "0", cache_load("'In Between'") -> "In Between", etc.
+    values = [e.value for e in history]
+    assert values == [
+        "0", "In Between", "0", "In Between",
+        "5", "0", "In Between", "-5",
+        "In Between", "0", "In Between", "5",
+    ]
+
+    # And there should be no "corrupt cache entry" / malformed literal warnings
+    msgs = [rec.getMessage() for rec in caplog.records]
+    assert not any("corrupt cache entry" in m for m in msgs)
+    assert not any("failed to load hash_series value" in m for m in msgs)
 
 
 def test_can_get_data(db):
