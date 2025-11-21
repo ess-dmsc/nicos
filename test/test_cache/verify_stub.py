@@ -3,7 +3,9 @@
 # For now, we can manually run this file to verify the stub implementation.
 
 import pytest
+
 from nicos.services.cache.endpoints.redis_client import RedisClient
+
 from test.test_cache.test_redis import RedisClientStub
 
 
@@ -160,4 +162,3 @@ def test_execute_command_ts_range_aggregation(real_redis_client, stub_redis_clie
     assert [r[0] for r in real_range] == [s[0] for s in stub_range]
     # Ensure values match exactly (string representations too)
     assert real_range == stub_range
-
