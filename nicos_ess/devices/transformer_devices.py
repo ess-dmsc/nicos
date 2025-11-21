@@ -1,4 +1,4 @@
-from nicos.core import Attach, HasLimits, Moveable, Override, Param, multiStatus
+from nicos.core import Attach, HasLimits, Moveable, Override, Param, multiStatus, status
 from nicos.devices.abstract import TransformedMoveable
 from nicos_ess.devices.epics.pva import EpicsManualMappedAnalogMoveable
 from nicos_ess.devices.epics.pva.motor import EpicsJogMotor
@@ -100,6 +100,9 @@ class DegreesPerSecondToRPM(HasLimits, TransformedMoveable):
     def doWriteUserlimits(self, value):
         self._attached_motor.userlimits = value
         return self.userlimits
+
+    def isAllowed(self, pos):
+        return self._attached_motor.isAllowed(pos)
 
     def _convert_degrees_per_second_to_rpm(self, value):
         return (value / 360) * 60
