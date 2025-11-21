@@ -1,3 +1,4 @@
+import fnmatch
 import logging
 import threading
 import time
@@ -5,12 +6,9 @@ from typing import Union
 
 import pytest
 from mock.mock import MagicMock
-import fnmatch
 
-from numpy.core.defchararray import isnumeric
-
-from nicos.services.cache.endpoints.redis_client import RedisClient, RedisError
 from nicos.services.cache.database import RedisCacheDatabase
+from nicos.services.cache.endpoints.redis_client import RedisClient, RedisError
 from nicos.services.cache.entry import CacheEntry
 
 
@@ -48,11 +46,12 @@ class RedisStubPipeline:
         results, self._results = self._results, []
         return results
 
-    def __enter__(self): return self
+    def __enter__(self):
+        return self
+
     def __exit__(self, exc_type, exc, tb):
         if exc_type is None:
             self.execute()
-
 
 
 class RedisStub:
@@ -269,8 +268,11 @@ class RedisStub:
         min_score = float(min)
         max_score = float(max)
 
-        items = [(member, score) for member, score in raw.items()
-                 if min_score <= score <= max_score]
+        items = [
+            (member, score)
+            for member, score in raw.items()
+            if min_score <= score <= max_score
+        ]
 
         # Sort by score, then lexicographically by member
         items.sort(key=lambda ms: (ms[1], ms[0]))
@@ -279,7 +281,7 @@ class RedisStub:
         if start is not None or num is not None:
             s = start or 0
             if num is not None:
-                items = items[s:s + num]
+                items = items[s : s + num]
             else:
                 items = items[s:]
 
@@ -300,14 +302,14 @@ class RedisStub:
             if not isinstance(mapping, dict):
                 continue
 
-            ttl_str   = mapping.get("ttl")
-            time_str  = mapping.get("time")
-            expired   = mapping.get("expired", "False")
+            ttl_str = mapping.get("ttl")
+            time_str = mapping.get("time")
+            expired = mapping.get("expired", "False")
 
             if ttl_str and ttl_str != "None" and expired == "False":
                 try:
                     ttl = float(ttl_str)
-                    t0  = float(time_str)
+                    t0 = float(time_str)
                 except (TypeError, ValueError):
                     continue
                 if (t0 + ttl) < now:
@@ -340,8 +342,9 @@ class TestableRedisCacheDatabase(RedisCacheDatabase):
         object.__setattr__(self, name, value)
 
 
-def _store_ttl_entry(db, category: str, subkey: str,
-                     *, ttl: Union[float, None], value="some_value") -> CacheEntry:
+def _store_ttl_entry(
+    db, category: str, subkey: str, *, ttl: Union[float, None], value="some_value"
+) -> CacheEntry:
     entry = CacheEntry(time.time(), ttl, value)
     db._set_data(category, subkey, entry)
     return entry
@@ -365,8 +368,8 @@ def db(redis_client):
 def _isolate_redis_snapshot():
     yield
     RedisCacheDatabase._snapshot_ready = threading.Event()
-    RedisCacheDatabase._snapshot_data  = []
-    RedisCacheDatabase._snapshot_time  = 0.0
+    RedisCacheDatabase._snapshot_data = []
+    RedisCacheDatabase._snapshot_time = 0.0
     RedisCacheDatabase._snapshot_building = False
 
 
@@ -377,7 +380,12 @@ def test_format_key(db):
         "category/subkey_hs",
         "category/subkey_hs_idx",
     )
-    assert db._format_key("nocat", "subkey") == ("subkey", "subkey_ts", "subkey_hs", "subkey_hs_idx")
+    assert db._format_key("nocat", "subkey") == (
+        "subkey",
+        "subkey_ts",
+        "subkey_hs",
+        "subkey_hs_idx",
+    )
 
 
 def test_literal_or_str(db):
@@ -458,7 +466,11 @@ def test_set_float_generates_hash_and_timeseries(db):
 
 def test_set_list_generates_hash_and_timeseries(db):
     db._set_data("test/key", "value", CacheEntry("123", "456", [10, 20]))
-    assert db._client.keys() == ["test/key/value", "test/key/value_l_0_ts", "test/key/value_l_1_ts"]
+    assert db._client.keys() == [
+        "test/key/value",
+        "test/key/value_l_0_ts",
+        "test/key/value_l_1_ts",
+    ]
     assert db._client.hgetall("test/key/value") == {
         "time": "123",
         "ttl": "456",
@@ -474,7 +486,11 @@ def test_set_list_generates_hash_and_timeseries(db):
 
 def test_set_dict_generates_hash_and_timeseries(db):
     db._set_data("test/key", "value", CacheEntry("123", "456", {"a": 1, "b": 2}))
-    assert db._client.keys() == ["test/key/value", "test/key/value_d_a_ts", "test/key/value_d_b_ts"]
+    assert db._client.keys() == [
+        "test/key/value",
+        "test/key/value_d_a_ts",
+        "test/key/value_d_b_ts",
+    ]
     assert db._client.hgetall("test/key/value") == {
         "time": "123",
         "ttl": "456",
@@ -490,7 +506,11 @@ def test_set_dict_generates_hash_and_timeseries(db):
 
 def test_set_tuple_generates_hash_and_timeseries(db):
     db._set_data("test/key", "value", CacheEntry("123", "456", (10, 20)))
-    assert db._client.keys() == ["test/key/value", "test/key/value_l_0_ts", "test/key/value_l_1_ts"]
+    assert db._client.keys() == [
+        "test/key/value",
+        "test/key/value_l_0_ts",
+        "test/key/value_l_1_ts",
+    ]
     assert db._client.hgetall("test/key/value") == {
         "time": "123",
         "ttl": "456",
@@ -506,7 +526,11 @@ def test_set_tuple_generates_hash_and_timeseries(db):
 
 def test_status_tuple_generates_hash_and_timeseries(db):
     db._set_data("test/key", "value", CacheEntry("123", "456", (200, "idle")))
-    assert db._client.keys() == ["test/key/value", "test/key/value_hs", "test/key/value_hs_idx"]
+    assert db._client.keys() == [
+        "test/key/value",
+        "test/key/value_hs",
+        "test/key/value_hs_idx",
+    ]
     assert db._client.hgetall("test/key/value") == {
         "time": "123",
         "ttl": "456",
@@ -516,12 +540,20 @@ def test_status_tuple_generates_hash_and_timeseries(db):
     }
     history_query = db.queryHistory(("test/key", "value"), 122, 124)
     history_query = [entry.asDict() for entry in history_query]
-    assert history_query == [CacheEntry(123.0, None, (200, "idle")).asDict()] # only numeric part stored in TS and plottable return
+    assert history_query == [
+        CacheEntry(123.0, None, (200, "idle")).asDict()
+    ]  # only numeric part stored in TS and plottable return
 
 
 def test_mixed_dict_generates_hash_and_timeseries(db):
-    db._set_data("test/key", "value", CacheEntry("123", "456", {"a": 1, "b": "idle", "c": 3.5}))
-    assert db._client.keys() == ["test/key/value", "test/key/value_hs", "test/key/value_hs_idx"]
+    db._set_data(
+        "test/key", "value", CacheEntry("123", "456", {"a": 1, "b": "idle", "c": 3.5})
+    )
+    assert db._client.keys() == [
+        "test/key/value",
+        "test/key/value_hs",
+        "test/key/value_hs_idx",
+    ]
     assert db._client.hgetall("test/key/value") == {
         "time": "123",
         "ttl": "456",
@@ -531,13 +563,19 @@ def test_mixed_dict_generates_hash_and_timeseries(db):
     }
     history_query = db.queryHistory(("test/key", "value"), 122, 124)
     history_query = [entry.asDict() for entry in history_query]
-    assert history_query == [CacheEntry(123.0, None, {"a": 1, "b": "idle", "c": 3.5}).asDict()]
+    assert history_query == [
+        CacheEntry(123.0, None, {"a": 1, "b": "idle", "c": 3.5}).asDict()
+    ]
 
 
 def test_set_list_still_works_with_interval_aggregation(db):
     db._set_data("test/key", "value", CacheEntry("123", "456", [10, 20]))
     db._set_data("test/key", "value", CacheEntry("124", "456", [20, 40]))
-    assert db._client.keys() == ["test/key/value", "test/key/value_l_0_ts", "test/key/value_l_1_ts"]
+    assert db._client.keys() == [
+        "test/key/value",
+        "test/key/value_l_0_ts",
+        "test/key/value_l_1_ts",
+    ]
     assert db._client.hgetall("test/key/value") == {
         "time": "124",
         "ttl": "456",
@@ -548,13 +586,19 @@ def test_set_list_still_works_with_interval_aggregation(db):
     }
     history_query = db.queryHistory(("test/key", "value"), 122, 125, interval=10)
     history_query = [entry.asDict() for entry in history_query]
-    assert history_query == [CacheEntry(122.0, None, [15.0, 30.0]).asDict()] # average of [10,20] and [20,40] starting at t=122 + 10
+    assert history_query == [
+        CacheEntry(122.0, None, [15.0, 30.0]).asDict()
+    ]  # average of [10,20] and [20,40] starting at t=122 + 10
 
 
 def test_set_dict_still_works_with_interval_aggregation(db):
     db._set_data("test/key", "value", CacheEntry("123", "456", {"a": 1, "b": 2}))
     db._set_data("test/key", "value", CacheEntry("124", "456", {"a": 3, "b": 4}))
-    assert db._client.keys() == ["test/key/value", "test/key/value_d_a_ts", "test/key/value_d_b_ts"]
+    assert db._client.keys() == [
+        "test/key/value",
+        "test/key/value_d_a_ts",
+        "test/key/value_d_b_ts",
+    ]
     assert db._client.hgetall("test/key/value") == {
         "time": "124",
         "ttl": "456",
@@ -565,13 +609,19 @@ def test_set_dict_still_works_with_interval_aggregation(db):
     }
     history_query = db.queryHistory(("test/key", "value"), 122, 125, interval=10)
     history_query = [entry.asDict() for entry in history_query]
-    assert history_query == [CacheEntry(122.0, None, {"a": 2.0, "b": 3.0}).asDict()] # average of {'a':1,'b':2} and {'a':3,'b':4} starting at t=122 + 10
+    assert history_query == [
+        CacheEntry(122.0, None, {"a": 2.0, "b": 3.0}).asDict()
+    ]  # average of {'a':1,'b':2} and {'a':3,'b':4} starting at t=122 + 10
 
 
 def test_set_status_tuple_still_works_with_interval_aggregation(db):
     db._set_data("test/key", "value", CacheEntry("123", "456", (200, "idle")))
     db._set_data("test/key", "value", CacheEntry("124", "456", (400, "busy")))
-    assert db._client.keys() == ["test/key/value", "test/key/value_hs", "test/key/value_hs_idx"]
+    assert db._client.keys() == [
+        "test/key/value",
+        "test/key/value_hs",
+        "test/key/value_hs_idx",
+    ]
     assert db._client.hgetall("test/key/value") == {
         "time": "124",
         "ttl": "456",
@@ -581,13 +631,23 @@ def test_set_status_tuple_still_works_with_interval_aggregation(db):
     }
     history_query = db.queryHistory(("test/key", "value"), 122, 125, interval=10)
     history_query = [entry.asDict() for entry in history_query]
-    assert history_query == [CacheEntry(123.0, None, (200, "idle")).asDict()] # decimated
+    assert history_query == [
+        CacheEntry(123.0, None, (200, "idle")).asDict()
+    ]  # decimated
 
 
 def test_set_mixed_dict_still_works_with_interval_aggregation(db):
-    db._set_data("test/key", "value", CacheEntry("123", "456", {"a": 1, "b": "idle", "c": 3.5}))
-    db._set_data("test/key", "value", CacheEntry("124", "456", {"a": 3, "b": "busy", "c": 4.5}))
-    assert db._client.keys() == ["test/key/value", "test/key/value_hs", "test/key/value_hs_idx"]
+    db._set_data(
+        "test/key", "value", CacheEntry("123", "456", {"a": 1, "b": "idle", "c": 3.5})
+    )
+    db._set_data(
+        "test/key", "value", CacheEntry("124", "456", {"a": 3, "b": "busy", "c": 4.5})
+    )
+    assert db._client.keys() == [
+        "test/key/value",
+        "test/key/value_hs",
+        "test/key/value_hs_idx",
+    ]
     assert db._client.hgetall("test/key/value") == {
         "time": "124",
         "ttl": "456",
@@ -597,12 +657,18 @@ def test_set_mixed_dict_still_works_with_interval_aggregation(db):
     }
     history_query = db.queryHistory(("test/key", "value"), 122, 125, interval=10)
     history_query = [entry.asDict() for entry in history_query]
-    assert history_query == [CacheEntry(123.0, None, {"a": 1, "b": "idle", "c": 3.5}).asDict()] # decimated to first
+    assert history_query == [
+        CacheEntry(123.0, None, {"a": 1, "b": "idle", "c": 3.5}).asDict()
+    ]  # decimated to first
 
 
 def test_set_string_generates_hash_timeseries(db):
     db._set_data("test/key", "value", CacheEntry("123", "456", "some_value"))
-    assert db._client.keys() == ["test/key/value", "test/key/value_hs", "test/key/value_hs_idx"] # hs = hash series
+    assert db._client.keys() == [
+        "test/key/value",
+        "test/key/value_hs",
+        "test/key/value_hs_idx",
+    ]  # hs = hash series
     assert db._client.hgetall("test/key/value") == {
         "time": "123",
         "ttl": "456",
@@ -620,7 +686,11 @@ def test_set_string_generates_hash_timeseries(db):
 
 def test_list_of_strings_generates_hash_timeseries(db):
     db._set_data("test/key", "value", CacheEntry("123", "456", ["val1", "val2"]))
-    assert db._client.keys() == ["test/key/value", "test/key/value_hs", "test/key/value_hs_idx"] # hs = hash series
+    assert db._client.keys() == [
+        "test/key/value",
+        "test/key/value_hs",
+        "test/key/value_hs_idx",
+    ]  # hs = hash series
     assert db._client.hgetall("test/key/value") == {
         "time": "123",
         "ttl": "456",
@@ -645,37 +715,49 @@ def test_hash_series_mapped_moveable_history(db, caplog):
 
     base_t = 1000.0
     events = [
-        (base_t + 0.0,   "'0'"),
-        (base_t + 0.5,   "'In Between'"),
-        (base_t + 1.0,   "'0'"),
-        (base_t + 1.5,   "'In Between'"),
-        (base_t + 2.0,   "'5'"),
-        (base_t + 3.0,   "'0'"),
-        (base_t + 3.5,   "'In Between'"),
-        (base_t + 4.0,   "'-5'"),
-        (base_t + 4.5,   "'In Between'"),
-        (base_t + 5.0,   "'0'"),
-        (base_t + 5.5,   "'In Between'"),
-        (base_t + 6.0,   "'5'"),
+        (base_t + 0.0, "'0'"),
+        (base_t + 0.5, "'In Between'"),
+        (base_t + 1.0, "'0'"),
+        (base_t + 1.5, "'In Between'"),
+        (base_t + 2.0, "'5'"),
+        (base_t + 3.0, "'0'"),
+        (base_t + 3.5, "'In Between'"),
+        (base_t + 4.0, "'-5'"),
+        (base_t + 4.5, "'In Between'"),
+        (base_t + 5.0, "'0'"),
+        (base_t + 5.5, "'In Between'"),
+        (base_t + 6.0, "'5'"),
     ]
 
     # Store as hash_series via _set_data. entry.value is the PyON string,
     # exactly like the real cache layer would see from cache_dump().
     for t, raw_value in events:
-        db._set_data("nicos/mapped_values", "value", CacheEntry(str(t), "456", raw_value))
+        db._set_data(
+            "nicos/mapped_values", "value", CacheEntry(str(t), "456", raw_value)
+        )
 
     # Query a time range that covers all events
     with caplog.at_level(logging.WARNING):
-        history = db.queryHistory(("nicos/mapped_values", "value"),
-                                  base_t - 1.0, base_t + 10.0)
+        history = db.queryHistory(
+            ("nicos/mapped_values", "value"), base_t - 1.0, base_t + 10.0
+        )
 
     # We should get all events in order, with PyON decoded to Python objects.
     # cache_load("'0'") -> "0", cache_load("'In Between'") -> "In Between", etc.
     values = [e.value for e in history]
     assert values == [
-        "0", "In Between", "0", "In Between",
-        "5", "0", "In Between", "-5",
-        "In Between", "0", "In Between", "5",
+        "0",
+        "In Between",
+        "0",
+        "In Between",
+        "5",
+        "0",
+        "In Between",
+        "-5",
+        "In Between",
+        "0",
+        "In Between",
+        "5",
     ]
 
     # And there should be no "corrupt cache entry" / malformed literal warnings
@@ -878,10 +960,10 @@ def test_iterentries_reports_expired_flag(db):
 
     entries = {(cat + "/" + sub): entry for (cat, sub), entry in db.iterEntries()}
 
-    assert "iter/key/v"  in entries
+    assert "iter/key/v" in entries
     assert "iter/key/v2" in entries
 
-    assert entries["iter/key/v" ].expired is True
+    assert entries["iter/key/v"].expired is True
     assert entries["iter/key/v2"].expired is False
 
 
