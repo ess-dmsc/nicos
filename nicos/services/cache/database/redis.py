@@ -25,8 +25,8 @@ repeat
   local res = redis.call('SCAN', cursor, 'COUNT', 512)
   cursor = tonumber(res[1])
   for _, key in ipairs(res[2]) do
-    -- skip time-series and snapshot helper keys
-    if not key:match('_ts$') and not key:match('_snapshot$') then
+    local key_type = redis.call('TYPE', key)
+    if key_type == 'hash' then
       local ttl_str  = redis.call('HGET', key, 'ttl')
       local time_str = redis.call('HGET', key, 'time')
       local expired  = redis.call('HGET', key, 'expired')
@@ -138,11 +138,20 @@ class RedisCacheDatabase(CacheDatabase):
         (target or self._client).execute_command("DEL", key)
 
     def _check_get_key_format(self, key: str) -> bool:
-        return "###" not in key and not key.endswith("_ts")
+        return (
+            "###" not in key
+            and not key.endswith("_ts")
+            and not key.endswith("_hs")
+            and not key.endswith("_hs_idx")
+        )
 
     def _format_key(self, category: str, subkey: str):
+        """
+        Return Redis keys for main hash and associated TS structures.
+        Returns: (main_key, ts_key, hs_key, hs_idx_key)
+        """
         key = subkey if category == "nocat" else f"{category}/{subkey}"
-        return key, f"{key}_ts"
+        return key, f"{key}_ts", f"{key}_hs", f"{key}_hs_idx"
 
     def _entry_from_hash(self, h: Union[Dict[str, str], None]) -> Optional[CacheEntry]:
         if not h or not {"time", "ttl", "value"}.issubset(h):
@@ -249,7 +258,7 @@ class RedisCacheDatabase(CacheDatabase):
                     return entry
 
         # Lazy fallback: if not in RAM (e.g., external writer), read once and cache.
-        redis_key, _ = self._format_key(category, subkey)
+        redis_key, _, _, _ = self._format_key(category, subkey)
         try:
             entry = self._get_data(redis_key)
         except Exception:
@@ -267,7 +276,9 @@ class RedisCacheDatabase(CacheDatabase):
 
     def queryHistory(self, dbkey, fromtime, totime, interval=None):
         category, subkey = dbkey
-        redis_key, base_ts_key = self._format_key(category, subkey)
+        redis_key, base_ts_key, hs_hash_key, hs_idx_key = self._format_key(
+            category, subkey
+        )
 
         from_ms = int(fromtime * 1000)
         to_ms = int(totime * 1000)
@@ -368,15 +379,13 @@ class RedisCacheDatabase(CacheDatabase):
             return entries
 
         if encoding == "hash_series":
-            hs_hash_key = f"{redis_key}_hs"
-            hs_index_key = f"{redis_key}_hs_idx"
             try:
                 # 1) Get all timestamps in range, sorted by time
-                ts_fields = self._client.zrangebyscore(hs_index_key, from_ms, to_ms)
+                ts_fields = self._client.zrangebyscore(hs_idx_key, from_ms, to_ms)
             except Exception as e:
                 self.log.warning(
                     "queryHistory: failed to read hash_series index %s: %s",
-                    hs_index_key,
+                    hs_idx_key,
                     e,
                 )
                 return []
@@ -440,11 +449,7 @@ class RedisCacheDatabase(CacheDatabase):
                     bucketed_append = bucketed.append
                     bucketed_append(entries.pop(0))  # always include first entry
                     for e in entries:
-                        print(e.time, next_boundary)
                         t_ms = int(e.time * 1000)
-                        print(
-                            f"In order for the entry {e} to be added, its timestamp in ms {t_ms} must be >= next_boundary {next_boundary}"
-                        )
                         if t_ms >= next_boundary:
                             bucketed_append(e)
                             next_boundary = t_ms + bucket_ms
@@ -531,9 +536,9 @@ class RedisCacheDatabase(CacheDatabase):
             self.log.debug("Subkey ignored contains: %s", subkey)
             return
 
-        redis_key, base_ts_key = self._format_key(category, subkey)
-        hs_hash_key = f"{redis_key}_hs"
-        hs_index_key = f"{redis_key}_hs_idx"
+        redis_key, base_ts_key, hs_hash_key, hs_idx_key = self._format_key(
+            category, subkey
+        )
         target = pipe or self._client
 
         # Deletion
@@ -544,8 +549,8 @@ class RedisCacheDatabase(CacheDatabase):
                     self._delete(base_ts_key, target=target)
                 if self._redis_key_exists(hs_hash_key):
                     self._delete(hs_hash_key, target=target)
-                if self._redis_key_exists(hs_index_key):
-                    self._delete(hs_index_key, target=target)
+                if self._redis_key_exists(hs_idx_key):
+                    self._delete(hs_idx_key, target=target)
             except Exception:
                 self.log.exception(
                     "Failed to delete keys %s/%s (and hash_series)",
@@ -569,8 +574,6 @@ class RedisCacheDatabase(CacheDatabase):
         ts_keys: List[str] = []
         ts_encoding: Optional[str] = None  # "list" or "dict" only
         ts_children: Optional[str] = None  # comma-separated indices or keys
-        hs_hash_key: Optional[str] = None
-        hs_index_key: Optional[str] = None
 
         if self._native_archiving(value):
             # Simple scalar numeric value — no metadata needed
@@ -612,8 +615,6 @@ class RedisCacheDatabase(CacheDatabase):
                 ts_children = None
                 ts_values = []
                 ts_keys = []
-                hs_hash_key = f"{redis_key}_hs"
-                hs_index_key = f"{redis_key}_hs_idx"
 
         hash_mapping = {
             "time": str(entry.time),
@@ -654,12 +655,12 @@ class RedisCacheDatabase(CacheDatabase):
                 target.hset(hs_hash_key, ts_str, str(value))
                 # index in ZSET
                 # member is the ts_str; score is ts (ms)
-                target.zadd(hs_index_key, {ts_str: ts})
+                target.zadd(hs_idx_key, {ts_str: ts})
             except Exception:
                 self.log.exception(
                     "Redis write failed for hash_series %s/%s",
                     hs_hash_key,
-                    hs_index_key,
+                    hs_idx_key,
                 )
 
     def _native_archiving(self, value):
