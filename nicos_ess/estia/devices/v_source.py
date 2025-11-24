@@ -73,12 +73,17 @@ class VirtualSlit(Moveable):
         rad = np.deg2rad(degree)
         return 2 * gap * np.sin(rad)
 
+    def _calculateAngle(self, width, gap):
+        angle = np.arcsin(width / (2 * gap))
+        return np.rad2deg(angle)
+
     def _doReadPositions(self, maxage):
         # [0] = "gap between the blades in x-direction" [1] = slit height
         gap, height = self._adevs["slit"].read(maxage)
         degree = self._adevs["rot"].read(maxage)
         width = self._calculateWidth(gap, degree)
-        return width, height, degree
+        angle = self._calculateAngle(width, gap)
+        return width, height, angle
 
     def doRead(self, maxage=0):
         return self._doReadPositions(maxage)
