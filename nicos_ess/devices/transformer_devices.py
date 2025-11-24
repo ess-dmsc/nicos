@@ -1,4 +1,4 @@
-from nicos.core import Attach, Moveable, Param, multiStatus
+from nicos.core import Attach, HasLimits, Moveable, Override, Param, multiStatus, status
 from nicos.devices.abstract import TransformedMoveable
 from nicos_ess.devices.epics.pva import EpicsManualMappedAnalogMoveable
 from nicos_ess.devices.epics.pva.motor import EpicsJogMotor
@@ -66,7 +66,7 @@ class ChopperPhase(TransformedMoveable):
         return abs(self._attached_mapped_speed_dev.mapping.get(target_val))
 
 
-class DegreesPerSecondToRPM(TransformedMoveable):
+class DegreesPerSecondToRPM(HasLimits, TransformedMoveable):
     parameters = {
         "unit": Param(
             description="Converts unit of attached motor from degrees/sec to RPM",
@@ -76,9 +76,33 @@ class DegreesPerSecondToRPM(TransformedMoveable):
         )
     }
 
+    parameter_overrides = {
+        "abslimits": Override(volatile=True, mandatory=False),
+        "userlimits": Override(volatile=True, chatty=False),
+    }
+
     attached_devices = {
         "motor": Attach("The attached motor", EpicsJogMotor, optional=False)
     }
+
+    def doReadAbslimits(self):
+        raw_absmin, raw_absmax = self._attached_motor.abslimits
+        absmin = self._convert_degrees_per_second_to_rpm(raw_absmin)
+        absmax = self._convert_degrees_per_second_to_rpm(raw_absmax)
+        return absmin, absmax
+
+    def doReadUserlimits(self):
+        raw_umin, raw_umax = self._attached_motor.userlimits
+        umin = self._convert_degrees_per_second_to_rpm(raw_umin)
+        umax = self._convert_degrees_per_second_to_rpm(raw_umax)
+        return umin, umax
+
+    def doWriteUserlimits(self, value):
+        self._attached_motor.userlimits = value
+        return self.userlimits
+
+    def isAllowed(self, pos):
+        return self._attached_motor.isAllowed(pos)
 
     def _convert_degrees_per_second_to_rpm(self, value):
         return (value / 360) * 60
