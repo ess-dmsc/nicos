@@ -406,7 +406,6 @@ class RedisCacheDatabase(CacheDatabase):
 
             entries: List[CacheEntry] = []
             append = entries.append
-            load = cache_load
 
             for ts_str, val_str in zip(ts_fields, values):
                 if val_str is None:
@@ -417,30 +416,15 @@ class RedisCacheDatabase(CacheDatabase):
                 except (TypeError, ValueError):
                     continue
 
-                if isinstance(val_str, str):
+                if not isinstance(val_str, str):
                     try:
-                        # Try full PyON decode first
-                        val = load(val_str)
-                    except Exception as e:
-                        # Not valid PyON; fall back to raw string
-                        self.log.warning(
-                            "queryHistory: failed to load hash_series value %r (%s) "
-                            "for %s at %s: %s",
-                            val_str,
-                            type(val_str),
-                            hs_hash_key,
-                            ts_str,
-                            e,
-                        )
-                        val = val_str
-                else:
-                    val = val_str
+                        val_str = val_str.decode("utf-8")
+                    except Exception:
+                        val_str = str(val_str)
 
-                append(CacheEntry(ts_int / 1000.0, None, val))
+                append(CacheEntry(ts_int / 1000.0, None, val_str))
 
-            # Optionally handle `interval` by downsampling client-side if you want.
-            # For non-numeric data, "avg" doesn't make sense, so you can just
-            # decimate: e.g. one sample per bucket.
+            # Optional interval decimation – unchanged, we just decimate whole entries.
             if interval:
                 bucket_ms = int(interval * 1000)
                 if bucket_ms > 0 and len(entries) > 1:
