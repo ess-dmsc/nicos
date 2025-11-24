@@ -691,14 +691,29 @@ class EpicsMappedMoveable(EpicsParameters, MappedMoveable):
             lambda: self._epics_wrapper.get_pv_value(self.readpv, as_string=True),
         )
 
-    def doStatus(self, maxage=0):
+    def doReadTarget(self, maxage=0):
         def _func():
-            try:
-                return self._epics_wrapper.get_alarm_status(self.readpv)
-            except TimeoutError:
-                return status.ERROR, "timeout reading status"
+            raw_value = self._epics_wrapper.get_pv_value(self.targetpv or self.writepv)
 
-        return get_from_cache_or(self, "status", _func)
+        return get_from_cache_or(
+            self,
+            "target",
+            _func,
+        )
+
+    def _do_status(self):
+        try:
+            severity, msg = self._epics_wrapper.get_alarm_status(self.readpv)
+        except TimeoutError:
+            return status.ERROR, "timeout reading status"
+        if severity in [status.ERROR, status.WARN]:
+            return severity, msg
+        if self.doReadTarget() in [1, 2]:
+            return status.BUSY, "Moving"
+        return status.OK, msg
+
+    def doStatus(self, maxage=0):
+        return get_from_cache_or(self, "status", self._do_status)
 
     def doStart(self, value):
         self._epics_wrapper.put_pv_value(self.writepv, self.mapping[value])
@@ -731,7 +746,7 @@ class EpicsMappedMoveable(EpicsParameters, MappedMoveable):
         if name != self.readpv:
             # Unexpected updates ignored
             return
-        self._cache.put(self._name, "status", (severity, message), time.time())
+        self._cache.put(self._name, "status", self._do_status(), time.time())
 
     def _connection_change_callback(self, name, param, is_connected, **kwargs):
         if param != self._record_fields["readpv"].cache_key:
