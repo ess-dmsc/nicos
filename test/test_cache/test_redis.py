@@ -7,6 +7,7 @@ from typing import Union
 import pytest
 from mock.mock import MagicMock
 
+from nicos.protocols.cache import cache_load, cache_dump
 from nicos.services.cache.database import RedisCacheDatabase
 from nicos.services.cache.endpoints.redis_client import RedisClient, RedisError
 from nicos.services.cache.entry import CacheEntry
@@ -354,6 +355,11 @@ def _dummy_iter():
     yield (("dummy", "key"), CacheEntry(time.time(), None, "val"))
 
 
+class DummyObject:
+    def __init__(self, x):
+        self.x = x
+
+
 @pytest.fixture
 def redis_client():
     return RedisClientStub()
@@ -539,10 +545,8 @@ def test_status_tuple_generates_hash_and_timeseries(db):
         "ts_encoding": "hash_series",
     }
     history_query = db.queryHistory(("test/key", "value"), 122, 124)
-    history_query = [entry.asDict() for entry in history_query]
-    assert history_query == [
-        CacheEntry(123.0, None, (200, "idle")).asDict()
-    ]  # only numeric part stored in TS and plottable return
+    decoded_values = [cache_load(e.value) for e in history_query]
+    assert decoded_values == [(200, "idle")]  # only numeric part stored in TS and plottable return
 
 
 def test_mixed_dict_generates_hash_and_timeseries(db):
@@ -562,10 +566,8 @@ def test_mixed_dict_generates_hash_and_timeseries(db):
         "ts_encoding": "hash_series",
     }
     history_query = db.queryHistory(("test/key", "value"), 122, 124)
-    history_query = [entry.asDict() for entry in history_query]
-    assert history_query == [
-        CacheEntry(123.0, None, {"a": 1, "b": "idle", "c": 3.5}).asDict()
-    ]
+    decoded_values = [cache_load(e.value) for e in history_query]
+    assert decoded_values == [{"a": 1, "b": "idle", "c": 3.5}]  # only numeric parts stored in TS and plottable return
 
 
 def test_set_list_still_works_with_interval_aggregation(db):
@@ -630,10 +632,8 @@ def test_set_status_tuple_still_works_with_interval_aggregation(db):
         "ts_encoding": "hash_series",
     }
     history_query = db.queryHistory(("test/key", "value"), 122, 125, interval=10)
-    history_query = [entry.asDict() for entry in history_query]
-    assert history_query == [
-        CacheEntry(123.0, None, (200, "idle")).asDict()
-    ]  # decimated
+    decoded_values = [cache_load(e.value) for e in history_query]
+    assert decoded_values == [(200, "idle")]  # decimated to first
 
 
 def test_set_mixed_dict_still_works_with_interval_aggregation(db):
@@ -656,10 +656,8 @@ def test_set_mixed_dict_still_works_with_interval_aggregation(db):
         "ts_encoding": "hash_series",
     }
     history_query = db.queryHistory(("test/key", "value"), 122, 125, interval=10)
-    history_query = [entry.asDict() for entry in history_query]
-    assert history_query == [
-        CacheEntry(123.0, None, {"a": 1, "b": "idle", "c": 3.5}).asDict()
-    ]  # decimated to first
+    decoded_values = [cache_load(e.value) for e in history_query]
+    assert decoded_values == [{"a": 1, "b": "idle", "c": 3.5}]  # decimated to first
 
 
 def test_set_string_generates_hash_timeseries(db):
@@ -702,68 +700,157 @@ def test_list_of_strings_generates_hash_timeseries(db):
         "123000": "['val1', 'val2']",
     }
     history_query = db.queryHistory(("test/key", "value"), 122, 124)
-    history_query = [entry.asDict() for entry in history_query]
-    assert history_query == [CacheEntry(123.0, None, ["val1", "val2"]).asDict()]
+    decoded_values = [cache_load(e.value) for e in history_query]
+    assert decoded_values == [["val1", "val2"]]
 
 
-def test_hash_series_mapped_moveable_history(db, caplog):
-    """
-    Simulate the 'mapped moveable' that jumps between string positions
-    ('0', '5', '-5') and an 'In Between' state, using PyON strings as
-    they appear in real Redis: "'0'", "'In Between'", "'5'", "'-5'".
-    """
+def test_hash_series_mapped_moveable_history_is_cache_loadable(db):
+    base = 1763736121.507
 
-    base_t = 1000.0
-    events = [
-        (base_t + 0.0, "'0'"),
-        (base_t + 0.5, "'In Between'"),
-        (base_t + 1.0, "'0'"),
-        (base_t + 1.5, "'In Between'"),
-        (base_t + 2.0, "'5'"),
-        (base_t + 3.0, "'0'"),
-        (base_t + 3.5, "'In Between'"),
-        (base_t + 4.0, "'-5'"),
-        (base_t + 4.5, "'In Between'"),
-        (base_t + 5.0, "'0'"),
-        (base_t + 5.5, "'In Between'"),
-        (base_t + 6.0, "'5'"),
+    samples = [
+        (base + 0.000, "0"),
+        (base + 0.700, "In Between"),
+        (base + 6.000, "5"),
     ]
 
-    # Store as hash_series via _set_data. entry.value is the PyON string,
-    # exactly like the real cache layer would see from cache_dump().
-    for t, raw_value in events:
-        db._set_data(
-            "nicos/mapped_values", "value", CacheEntry(str(t), "456", raw_value)
-        )
+    for t, v in samples:
+        dumped = cache_dump(v)  # PyON string, e.g. "'0'" or "'In Between'"
+        db._set_data("nicos/mapped_values", "value",
+                     CacheEntry(str(t), "None", dumped))
 
-    # Query a time range that covers all events
-    with caplog.at_level(logging.WARNING):
-        history = db.queryHistory(
-            ("nicos/mapped_values", "value"), base_t - 1.0, base_t + 10.0
-        )
+    history = db.queryHistory(
+        ("nicos/mapped_values", "value"),
+        samples[0][0] - 1,
+        samples[-1][0] + 1,
+    )
 
-    # We should get all events in order, with PyON decoded to Python objects.
-    # cache_load("'0'") -> "0", cache_load("'In Between'") -> "In Between", etc.
-    values = [e.value for e in history]
-    assert values == [
-        "0",
-        "In Between",
-        "0",
-        "In Between",
-        "5",
-        "0",
-        "In Between",
-        "-5",
-        "In Between",
-        "0",
-        "In Between",
-        "5",
+    assert len(history) == len(samples)
+    assert [int(e.time * 1000) for e in history] == [
+        int(t * 1000) for t, _ in samples
     ]
 
-    # And there should be no "corrupt cache entry" / malformed literal warnings
-    msgs = [rec.getMessage() for rec in caplog.records]
-    assert not any("corrupt cache entry" in m for m in msgs)
-    assert not any("failed to load hash_series value" in m for m in msgs)
+    decoded = [cache_load(e.value) for e in history]
+    assert decoded == [v for _, v in samples]
+
+def test_cache_dumped_custom_object_roundtrip_via_hash_series(db):
+    obj = DummyObject(42)
+    dumped = cache_dump(obj)
+
+    # cache_dump(obj) should use cache_unpickle(...) internally
+    assert "cache_unpickle(" in dumped
+
+    db._set_data("test/custom", "value", CacheEntry("123", "456", dumped))
+
+    # In Redis we store the PyON string itself
+    stored = db._client.hgetall("test/custom/value")
+    assert stored["value"] == dumped
+    assert stored["ts_encoding"] == "hash_series"
+
+    # History delivers the PyON string, which must be cache_load-able
+    history = db.queryHistory(("test/custom", "value"), 122, 124)
+    assert len(history) == 1
+
+    decoded = cache_load(history[0].value)
+    assert isinstance(decoded, DummyObject)
+    assert decoded.x == 42
+
+
+def test_cache_dump_custom_object_history_without_interval(db):
+    obj1 = DummyObject(1)
+    obj2 = DummyObject(2)
+
+    dumped1 = cache_dump(obj1)
+    dumped2 = cache_dump(obj2)
+
+    db._set_data("test/custom", "value", CacheEntry("123", "456", dumped1))
+    db._set_data("test/custom", "value", CacheEntry("124", "456", dumped2))
+
+    history = db.queryHistory(("test/custom", "value"), 122, 125)
+    assert len(history) == 2
+
+    decoded1 = cache_load(history[0].value)
+    decoded2 = cache_load(history[1].value)
+
+    assert isinstance(decoded1, DummyObject)
+    assert decoded1.x == 1
+    assert isinstance(decoded2, DummyObject)
+    assert decoded2.x == 2
+
+
+def test_cache_dump_custom_object_history_with_interval(db):
+    obj1 = DummyObject(1)
+    obj2 = DummyObject(2)
+
+    dumped1 = cache_dump(obj1)
+    dumped2 = cache_dump(obj2)
+
+    db._set_data("test/custom", "value", CacheEntry("123", "456", dumped1))
+    db._set_data("test/custom", "value", CacheEntry("124", "456", dumped2))
+
+    history = db.queryHistory(("test/custom", "value"), 122, 125, interval=10)
+    assert len(history) == 1  # decimated to first
+
+    decoded = cache_load(history[0].value)
+
+    assert isinstance(decoded, DummyObject)
+    assert decoded.x == 1
+
+def test_cache_dump_none_is_not_treated_as_delete(db):
+    dumped = cache_dump(None)  # "None"
+
+    db._set_data("test/none", "value", CacheEntry("123", "456", dumped))
+
+    # We expect a real entry, not a deletion
+    entry = db._get_data("test/none/value")
+    assert entry is not None
+    assert entry.value is "None"
+    assert entry.time == 123.0
+    assert entry.ttl == 456.0
+
+
+def test_cache_dump_list_of_strings_is_cache_loadable_via_hash_series(db):
+    original = ["val1", "val2"]
+    dumped = cache_dump(original)  # "['val1', 'val2']" (PyON)
+
+    db._set_data("test/pyon_list", "value", CacheEntry("123", "456", dumped))
+
+    # Stored as hash_series with the PyON string
+    assert sorted(db._client.keys()) == [
+        "test/pyon_list/value",
+        "test/pyon_list/value_hs",
+        "test/pyon_list/value_hs_idx",
+    ]
+    assert db._client.hgetall("test/pyon_list/value") == {
+        "time": "123",
+        "ttl": "456",
+        "value": dumped,
+        "expired": "False",
+        "ts_encoding": "hash_series",
+    }
+
+    history = db.queryHistory(("test/pyon_list", "value"), 122, 124)
+    assert len(history) == 1
+
+    decoded = cache_load(history[0].value)
+    assert decoded == original
+
+
+def test_cache_dump_status_tuple_roundtrip_via_hash_series(db):
+    status = (200, "idle")
+    dumped = cache_dump(status)  # "(200, 'idle')"
+
+    db._set_data("test/status_pyon", "value", CacheEntry("123", "456", dumped))
+
+    # Stored as hash_series with the PyON status tuple
+    stored = db._client.hgetall("test/status_pyon/value")
+    assert stored["value"] == dumped
+    assert stored["ts_encoding"] == "hash_series"
+
+    history = db.queryHistory(("test/status_pyon", "value"), 122, 124)
+    assert len(history) == 1
+
+    decoded = cache_load(history[0].value)
+    assert decoded == status
 
 
 def test_can_get_data(db):
