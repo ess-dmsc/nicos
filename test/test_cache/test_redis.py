@@ -7,7 +7,7 @@ from typing import Union
 import pytest
 from mock.mock import MagicMock
 
-from nicos.protocols.cache import cache_load, cache_dump
+from nicos.protocols.cache import cache_dump, cache_load
 from nicos.services.cache.database import RedisCacheDatabase
 from nicos.services.cache.endpoints.redis_client import RedisClient, RedisError
 from nicos.services.cache.entry import CacheEntry
@@ -546,7 +546,9 @@ def test_status_tuple_generates_hash_and_timeseries(db):
     }
     history_query = db.queryHistory(("test/key", "value"), 122, 124)
     decoded_values = [cache_load(e.value) for e in history_query]
-    assert decoded_values == [(200, "idle")]  # only numeric part stored in TS and plottable return
+    assert decoded_values == [
+        (200, "idle")
+    ]  # only numeric part stored in TS and plottable return
 
 
 def test_mixed_dict_generates_hash_and_timeseries(db):
@@ -567,7 +569,9 @@ def test_mixed_dict_generates_hash_and_timeseries(db):
     }
     history_query = db.queryHistory(("test/key", "value"), 122, 124)
     decoded_values = [cache_load(e.value) for e in history_query]
-    assert decoded_values == [{"a": 1, "b": "idle", "c": 3.5}]  # only numeric parts stored in TS and plottable return
+    assert decoded_values == [
+        {"a": 1, "b": "idle", "c": 3.5}
+    ]  # only numeric parts stored in TS and plottable return
 
 
 def test_set_list_still_works_with_interval_aggregation(db):
@@ -715,8 +719,7 @@ def test_hash_series_mapped_moveable_history_is_cache_loadable(db):
 
     for t, v in samples:
         dumped = cache_dump(v)  # PyON string, e.g. "'0'" or "'In Between'"
-        db._set_data("nicos/mapped_values", "value",
-                     CacheEntry(str(t), "None", dumped))
+        db._set_data("nicos/mapped_values", "value", CacheEntry(str(t), "None", dumped))
 
     history = db.queryHistory(
         ("nicos/mapped_values", "value"),
@@ -725,12 +728,11 @@ def test_hash_series_mapped_moveable_history_is_cache_loadable(db):
     )
 
     assert len(history) == len(samples)
-    assert [int(e.time * 1000) for e in history] == [
-        int(t * 1000) for t, _ in samples
-    ]
+    assert [int(e.time * 1000) for e in history] == [int(t * 1000) for t, _ in samples]
 
     decoded = [cache_load(e.value) for e in history]
     assert decoded == [v for _, v in samples]
+
 
 def test_cache_dumped_custom_object_roundtrip_via_hash_series(db):
     obj = DummyObject(42)
@@ -795,6 +797,7 @@ def test_cache_dump_custom_object_history_with_interval(db):
     assert isinstance(decoded, DummyObject)
     assert decoded.x == 1
 
+
 def test_cache_dump_none_is_not_treated_as_delete(db):
     dumped = cache_dump(None)  # "None"
 
@@ -858,15 +861,7 @@ def test_can_get_data(db):
     db._set_data("test/key", "value", original_cache_entry)
     assert db._get_data("test/key/value").time == 123.0
     assert db._get_data("test/key/value").ttl == 456.0
-    assert db._get_data("test/key/value").value == 3.14
-
-
-def test_get_data_returns_non_strings_if_possible(db):
-    original_cache_entry = CacheEntry("123", "456", "3.14")
-    db._set_data("test/key", "value", original_cache_entry)
-    assert db._get_data("test/key/value").time == 123.0
-    assert db._get_data("test/key/value").ttl == 456.0
-    assert db._get_data("test/key/value").value == 3.14
+    assert db._get_data("test/key/value").value == "3.14"
 
 
 def test_get_data_handle_non_numeric_values(db):
@@ -877,22 +872,22 @@ def test_get_data_handle_non_numeric_values(db):
     assert db._get_data("test/key/value").value == "not_a_number"
 
 
-def test_int_preserved_as_int(db):
+def test_int_saved_as_string_int(db):
     original_cache_entry = CacheEntry("123", "456", 42)
     db._set_data("test/key", "value", original_cache_entry)
     assert db._get_data("test/key/value").time == 123.0
     assert db._get_data("test/key/value").ttl == 456.0
-    assert db._get_data("test/key/value").value == 42
-    assert isinstance(db._get_data("test/key/value").value, int)
+    assert db._get_data("test/key/value").value == "42"
+    assert isinstance(db._get_data("test/key/value").value, str)
 
 
-def test_float_preserved_as_float(db):
+def test_float_saved_as_string_float(db):
     original_cache_entry = CacheEntry("123", "456", 3.14)
     db._set_data("test/key", "value", original_cache_entry)
     assert db._get_data("test/key/value").time == 123.0
     assert db._get_data("test/key/value").ttl == 456.0
-    assert db._get_data("test/key/value").value == 3.14
-    assert isinstance(db._get_data("test/key/value").value, float)
+    assert db._get_data("test/key/value").value == "3.14"
+    assert isinstance(db._get_data("test/key/value").value, str)
 
 
 def test_query_history(db):
