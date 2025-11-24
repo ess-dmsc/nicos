@@ -5,7 +5,7 @@ bnkr_root = "ESTIA-VacBnkr:Vac-"
 
 
 devices = dict(
-    # Gate Valve Status
+    # Gate Valve
     gate_valve_1=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="Vacuum gauge - the status of the gate valve interlock",
@@ -51,7 +51,7 @@ devices = dict(
         description="Vacuum valve - PLC",
         readpv=f"{inst_root}VVS-300:ClosedR",
     ),
-    ##Vacuum
+    # Vacuum
     vacuum_11_status=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="Vacuum valve - PLC",
@@ -72,7 +72,7 @@ devices = dict(
         description="Vacuum valve - PLC",
         readpv=f"{inst_root}VPDP-031:StatR",
     ),
-    # Pirani Pressure
+    # Pirani
     pirani_100=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="Vacuum valve - PLC",
