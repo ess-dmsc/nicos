@@ -1,61 +1,91 @@
-description = "ESTIA vacuum readouts (gauges and valves)"
+description = "ESTIA vacuum readouts"
 
 inst_root = "ESTIA-VacInstr:Vac-"
+bnkr_root = "ESTIA-VacBnkr:Vac-"
 
 
 devices = dict(
+    # Gate Valve Status
     gate_valve_1=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="Vacuum gauge - the status of the gate valve interlock",
-        readpv=f"{inst_root}VVS-100:IntlckLED",
-        visiblitity=(),
+        readpv=f"{inst_root}VVS-100:StatR",
     ),
     gate_valve_1_open=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="Vacuum valve - PLC",
         readpv=f"{inst_root}VVS-100:OpenR",
-        visiblitity=(),
     ),
     gate_valve_1_closed=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="Vacuum valve - PLC",
         readpv=f"{inst_root}VVS-100:ClosedR",
-        visiblitity=(),
     ),
     gate_valve_2=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="Vacuum gauge - the status of the gate valve interlock",
-        readpv=f"{inst_root}VVS-200:IntlckLED",
-        visiblitity=(),
+        readpv=f"{inst_root}VVS-200:StatR",
     ),
     gate_valve_2_open=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="Vacuum valve - PLC",
         readpv=f"{inst_root}VVS-200:OpenR",
-        visiblitity=(),
     ),
     gate_valve_2_closed=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="Vacuum valve - PLC",
         readpv=f"{inst_root}VVS-200:ClosedR",
-        visiblitity=(),
     ),
     gate_valve_3=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="Vacuum gauge - the status of the gate valve interlock",
-        readpv=f"{inst_root}VVS-300:IntlckLED",
-        visiblitity=(),
+        readpv=f"{inst_root}VVS-300:StatR",
     ),
     gate_valve_3_open=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="Vacuum valve - PLC",
         readpv=f"{inst_root}VVS-300:OpenR",
-        visiblitity=(),
     ),
     gate_valve_3_closed=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="Vacuum valve - PLC",
         readpv=f"{inst_root}VVS-300:ClosedR",
-        visiblitity=(),
+    ),
+    ##Vacuum
+    vacuum_11_status=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
+        description="Vacuum valve - PLC",
+        readpv=f"{inst_root}VPDP-011:StatR",
+    ),
+    vacuum_12_status=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
+        description="Vacuum valve - PLC",
+        readpv=f"{inst_root}VPDP-012:StatR",
+    ),
+    vacuum_21_status=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
+        description="Vacuum valve - PLC",
+        readpv=f"{inst_root}VPDP-021:StatR",
+    ),
+    vacuum_31_status=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
+        description="Vacuum valve - PLC",
+        readpv=f"{inst_root}VPDP-031:StatR",
+    ),
+    # Pirani Pressure
+    pirani_100=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
+        description="Vacuum valve - PLC",
+        readpv=f"{inst_root}VGP-100:PrsR",
+    ),
+    pirani_200=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
+        description="Vacuum valve - PLC",
+        readpv=f"{inst_root}VGP-200:PrsR",
+    ),
+    pirani_300=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
+        description="Vacuum valve - PLC",
+        readpv=f"{inst_root}VGP-300:PrsR",
     ),
 )
