@@ -444,7 +444,7 @@ class RedisCacheDatabase(CacheDatabase):
         def _ts_entry(ts, val):
             return CacheEntry(ts / 1000.0, None, cache_load(val))
 
-        return [_ts_entry(ts, val) for ts, val in res]
+        return list(map(lambda p: _ts_entry(*p), res))
 
     def updateEntries(
         self, categories: List[str], subkey: str, no_store: bool, entry: CacheEntry
