@@ -161,9 +161,7 @@ class RedisCacheDatabase(CacheDatabase):
 
         ttl = None if h["ttl"] == "None" else self._literal_or_str(h["ttl"])
         expired = True if h.get("expired", "False") == "True" else False
-        entry = CacheEntry(
-            self._literal_or_str(h["time"]), ttl, self._literal_or_str(h["value"])
-        )
+        entry = CacheEntry(self._literal_or_str(h["time"]), ttl, h["value"])
         entry.expired = expired
         return entry
 
