@@ -4,7 +4,7 @@ pv_root_1 = "IOC:"
 
 
 devices = dict(
-    right_top_blade_horizontal=device(
+    right_blade_horizontal=device(
         # "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         "nicos.devices.generic.virtual.VirtualMotor",
         description="VS - Blade 1 (right-top) / Horizontal",
@@ -14,7 +14,7 @@ devices = dict(
         unit="mm",
         visibility=(),
     ),
-    right_top_blade_vertical=device(
+    right_blade_vertical=device(
         # "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         "nicos.devices.generic.virtual.VirtualMotor",
         description="VS - Blade 1 (right-top) / Vertical",
@@ -24,7 +24,7 @@ devices = dict(
         unit="mm",
         visibility=(),
     ),
-    left_bottom_blade_horizontal=device(
+    left_blade_horizontal=device(
         # "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         "nicos.devices.generic.virtual.VirtualMotor",
         description="VS - Blade 2 (lef-bottom)/ Horizontal",
@@ -34,7 +34,7 @@ devices = dict(
         unit="mm",
         visibility=(),
     ),
-    left_bottom_blade_vertical=device(
+    left_blade_vertical=device(
         # "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         "nicos.devices.generic.virtual.VirtualMotor",
         description="VS - Blade 2 (left-bottom) / Vertical",
@@ -66,7 +66,7 @@ devices = dict(
     ####Readout Devices
     vs_readout=device(
         "nicos_ess.estia.devices.virtual_source.VSCalculator",
-        description="readout for the slit dimensions using 4 blade slit controls",
+        description="readout for the slit dimensions using virtual source slit controls",
         slit="four_blade_slit",
         rot="slit_rotation",
         unit="mm",
