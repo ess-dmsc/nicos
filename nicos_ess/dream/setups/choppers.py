@@ -4,9 +4,108 @@ pv_root_band_chopper = "DREAM-ChpSy1:Chop-BC-201:"
 pv_root_overlap_chopper = "DREAM-ChpSy1:Chop-OC-103:"
 pv_root_pulse_shaping_chopper_1 = "DREAM-ChpSy1:Chop-PSC-101:"
 pv_root_pulse_shaping_chopper_2 = "DREAM-ChpSy1:Chop-PSC-102:"
-chic_root = "DREAM-ChpSy1:Chop-CHIC-001:"
+pv_root_t0_chopper = "DREAM-ChpSy2:Chop-T0-101:"
+chic_root_1 = "DREAM-ChpSy1:Chop-CHIC-001:"
+chic_root_2 = "DREAM-ChpSy2:Chop-CHIC-001:"
 
 devices = dict(
+    # t0 chopper
+    t0_chopper_status=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
+        description="The chopper status.",
+        readpv="{}ChopState_R".format(pv_root_t0_chopper),
+        visibility=(),
+    ),
+    t0_chopper_control=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
+        description="Used to start and stop the chopper.",
+        readpv="{}C_Execute".format(pv_root_t0_chopper),
+        writepv="{}C_Execute".format(pv_root_t0_chopper),
+        requires={"level": "admin"},
+        visibility=(),
+    ),
+    t0_chopper_speed=device(
+        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
+        description="The current speed.",
+        readpv="{}Spd_R".format(pv_root_t0_chopper),
+        writepv="{}Spd_S".format(pv_root_t0_chopper),
+        precision=0.1,
+        mapping={"0 Hz": 0, "7 Hz": 7, "14 Hz": 14},  # check real speeds later
+    ),
+    t0_chopper_delay=device(
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="The current delay.",
+        readpv="{}ChopDly-S".format(pv_root_t0_chopper),
+        writepv="{}ChopDly-S".format(pv_root_t0_chopper),
+        abslimits=(0.0, 0.0),
+    ),
+    t0_chopper_total_delay=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description="The total delay (MechDly-S + BeamPosDly-S + ChopDly-S). The full delay that is applied on proton on target event for the driving signal of the chopper.",
+        readpv="{}TotDly".format(pv_root_t0_chopper),
+        visibility=(
+            "metadata",
+            "namespace",
+        ),
+    ),
+    t0_chopper_phase=device(
+        "nicos_ess.devices.transformer_devices.ChopperPhase",
+        description="The phase of the chopper.",
+        phase_ns_dev="t0_chopper_delay",
+        mapped_speed_dev="t0_chopper_speed",
+        offset=0,
+        unit="degrees",
+    ),
+    t0_chopper_delay_errors=device(
+        "nicos_ess.devices.epics.chopper_delay_error.ChopperDelayError",
+        description="The current delay.",
+        readpv="{}DiffTSSamples".format(pv_root_t0_chopper),
+        unit="ns",
+        visibility=(
+            "metadata",
+            "namespace",
+        ),
+    ),
+    t0_chopper_phased=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
+        description="The chopper is in phase.",
+        readpv="{}InPhs_R".format(pv_root_t0_chopper),
+    ),
+    t0_chopper_park_angle=device(
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="The chopper's park angle.",
+        readpv="{}Pos_R".format(pv_root_t0_chopper),
+        writepv="{}Park_S".format(pv_root_t0_chopper),
+        visibility=(),
+    ),
+    t0_chopper_chic=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
+        description="The status of the CHIC connection.",
+        readpv="{}ConnectedR".format(chic_root_2),
+        visibility=(),
+    ),
+    t0_chopper_alarms=device(
+        "nicos_ess.devices.epics.chopper.ChopperAlarms",
+        description="The chopper alarms",
+        pv_root=pv_root_t0_chopper,
+        visibility=(),
+        pva=True,
+        monitor=True,
+        pollinterval=None,
+        maxage=None,
+    ),
+    t0_chopper=device(
+        "nicos_ess.devices.epics.chopper.EssChopperController",
+        description="The chopper controller",
+        pollinterval=0.5,
+        maxage=None,
+        state="t0_chopper_status",
+        command="t0_chopper_control",
+        speed="t0_chopper_speed",
+        chic_conn="t0_chopper_chic",
+        alarms="t0_chopper_alarms",
+        slit_edges=[[0.0, 314.9]],
+    ),
     band_chopper_status=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The chopper status.",
@@ -78,7 +177,7 @@ devices = dict(
     band_chopper_chic=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The status of the CHIC connection.",
-        readpv="{}ConnectedR".format(chic_root),
+        readpv="{}ConnectedR".format(chic_root_1),
         visibility=(),
     ),
     band_chopper_alarms=device(
@@ -174,7 +273,7 @@ devices = dict(
     overlap_chopper_chic=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The status of the CHIC connection.",
-        readpv="{}ConnectedR".format(chic_root),
+        readpv="{}ConnectedR".format(chic_root_1),
         visibility=(),
     ),
     overlap_chopper_alarms=device(
@@ -270,7 +369,7 @@ devices = dict(
     pulse_shaping_chopper_1_chic=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The status of the CHIC connection.",
-        readpv="{}ConnectedR".format(chic_root),
+        readpv="{}ConnectedR".format(chic_root_1),
         visibility=(),
     ),
     pulse_shaping_chopper_1_alarms=device(
@@ -375,7 +474,7 @@ devices = dict(
     pulse_shaping_chopper_2_chic=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The status of the CHIC connection.",
-        readpv="{}ConnectedR".format(chic_root),
+        readpv="{}ConnectedR".format(chic_root_1),
         visibility=(),
     ),
     pulse_shaping_chopper_2_alarms=device(
