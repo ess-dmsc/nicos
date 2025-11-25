@@ -3,7 +3,7 @@ import threading
 import time
 
 from nicos import session
-from nicos.core import POLLER, Moveable, Override, Param, oneof, pvname, status
+from nicos.core import POLLER, Moveable, Override, Param, limits, oneof, pvname, status
 from nicos.core.errors import ConfigurationError
 from nicos.core.mixins import CanDisable, HasLimits, HasOffset
 from nicos.devices.abstract import CanReference, Motor
@@ -107,6 +107,27 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
             volatile=True,
             userparam=True,
             mandatory=False,
+        ),
+        "hwuserlimits": Param(
+            "Unchangable hardware user limits, diallimits with applied offset and direction.",
+            type=limits,
+            settable=False,
+            volatile=True,
+            userparam=False,
+            mandatory=False,
+            category="limits",
+            fmtstr="main",
+            unit="main",
+        ),
+        "limitoffsets": Param(
+            "Offsets to be applied to the hardware user limits.",
+            type=tuple,
+            default=(0.0, 0.0),
+            settable=True,
+            userparam=False,
+            mandatory=False,
+            fmtstr="main",
+            unit="main",
         ),
     }
 
@@ -218,11 +239,52 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         absmax = self._get_cached_pv_or_ask("dialhighlimit")
         return absmin, absmax
 
-    def doReadUserlimits(self):
+    def doReadHwuserlimits(self):
         umin = self._get_cached_pv_or_ask("lowlimit")
         umax = self._get_cached_pv_or_ask("highlimit")
         limits = (umin, umax)
         self._checkLimits(limits)
+        return umin, umax
+
+    def doReadUserlimits(self):
+        hw_umin, hw_umax = self.hwuserlimits
+        omin, omax = self.limitoffsets
+
+        umin = hw_umin + omin
+        umax = hw_umax + omax
+
+        # The hwuserlimits are volatile and may change in hardware, so after
+        # applying the offsets the interval could be inverted. Fix that first.
+        if umax < umin:
+            umin, umax = umax, umin
+
+        # Clip the limits so they never extend beyond the hardware user limits.
+        if umin < hw_umin:
+            umin = hw_umin
+        elif umin > hw_umax:
+            umin = hw_umax
+
+        if umax < hw_umin:
+            umax = hw_umin
+        elif umax > hw_umax:
+            umax = hw_umax
+
+        # Numerical edge-case guard: after clipping we still insist on low ≤ high.
+        if umax < umin:
+            mid = (umin + umax) / 2.0
+            # Make sure mid itself is inside the hardware window
+            if mid < hw_umin:
+                mid = hw_umin
+            elif mid > hw_umax:
+                mid = hw_umax
+            umin = umax = mid
+
+        new_omin = umin - hw_umin
+        new_omax = umax - hw_umax
+
+        if (new_omin, new_omax) != (omin, omax):
+            self.limitoffsets = (new_omin, new_omax)
+
         return umin, umax
 
     def doReadPosition_Deadband(self):
@@ -301,11 +363,22 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         self._cache.put(self._name, "offset", new_off, time.time())
         self.log.info("Offset changed to %s", new_off)
 
+    # def doWriteHwuserlimits(self, value):
+    #     self._checkLimits(value)
+    #     low, high = value
+    #     self._put_pv("lowlimit", low)
+    #     self._put_pv("highlimit", high)
+
     def doWriteUserlimits(self, value):
+        # the idea is that we work on the offsets to shift the hwuserlimits values into the requested userlimits
         self._checkLimits(value)
-        low, high = value
-        self._put_pv("lowlimit", low)
-        self._put_pv("highlimit", high)
+
+        umin, umax = value  # -1000, 100
+        hwumin, hwumax = self.hwuserlimits  # -1000, 1000
+
+        omin = umin - hwumin  # -1000 - (-1000) = 0
+        omax = umax - hwumax  # 100 - 1000 = -900
+        self.limitoffsets = (omin, omax)
 
     def doAdjust(self, oldvalue, newvalue):
         # For EPICS the offset sign convention differs to that of the base
