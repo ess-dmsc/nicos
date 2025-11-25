@@ -693,7 +693,7 @@ class EpicsMappedMoveable(EpicsParameters, MappedMoveable):
 
     def doReadTarget(self, maxage=0):
         def _func():
-            raw_value = self._epics_wrapper.get_pv_value(self.targetpv or self.writepv)
+            return self._epics_wrapper.get_pv_value(self.targetpv or self.writepv)
 
         return get_from_cache_or(
             self,
@@ -708,7 +708,7 @@ class EpicsMappedMoveable(EpicsParameters, MappedMoveable):
             return status.ERROR, "timeout reading status"
         if severity in [status.ERROR, status.WARN]:
             return severity, msg
-        if self.doReadTarget() in [1, 2]:
+        if self.doRead() != self.doReadTarget():
             return status.BUSY, "Moving"
         return status.OK, msg
 
