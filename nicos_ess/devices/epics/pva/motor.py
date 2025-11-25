@@ -363,21 +363,14 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         self._cache.put(self._name, "offset", new_off, time.time())
         self.log.info("Offset changed to %s", new_off)
 
-    # def doWriteHwuserlimits(self, value):
-    #     self._checkLimits(value)
-    #     low, high = value
-    #     self._put_pv("lowlimit", low)
-    #     self._put_pv("highlimit", high)
-
     def doWriteUserlimits(self, value):
-        # the idea is that we work on the offsets to shift the hwuserlimits values into the requested userlimits
         self._checkLimits(value)
 
-        umin, umax = value  # -1000, 100
-        hwumin, hwumax = self.hwuserlimits  # -1000, 1000
+        umin, umax = value
+        hwumin, hwumax = self.hwuserlimits
 
-        omin = umin - hwumin  # -1000 - (-1000) = 0
-        omax = umax - hwumax  # 100 - 1000 = -900
+        omin = umin - hwumin
+        omax = umax - hwumax
         self.limitoffsets = (omin, omax)
 
     def doAdjust(self, oldvalue, newvalue):
