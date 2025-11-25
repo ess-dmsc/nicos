@@ -4,19 +4,16 @@ from nicos.core import (
     Attach,
     Moveable,
     Override,
-    Param,
     Readable,
     Value,
-    floatrange,
     multiStatus,
-    oneof,
     status,
     tupleof,
 )
 
 
 class VSCalculator(Readable):
-    """Readout of the Virtual Slit Motions to calculate the
+    """Readout of the Virtual Slit Motions to find the
     width and height of the slit opening"""
 
     parameter_overrides = {
@@ -30,21 +27,18 @@ class VSCalculator(Readable):
         "rot": Attach("the rotation stage", Moveable),
     }
 
-    def _calculateWidth(self, gap, degree):
-        rad = np.deg2rad(degree)
+    def _findWidth(self, angle, gap):
+        rad = np.deg2rad(angle)
         return 2 * gap * np.sin(rad)
 
     def _doReadPositions(self, maxage):
-        # [0] = "gap between the blades in x-direction" [1] = slit height
         gap, height = self._adevs["slit"].read(maxage)
-        degree = self._adevs["rot"].read(maxage)
-        width = self._calculateWidth(gap, degree)
+        angle = self._adevs["rot"].read(maxage)
+        width = self._findWidth(angle, gap)
         return width, height
 
     def doRead(self, maxage=0):
-        positions = self._doReadPositions(maxage)
-        width, height = positions
-        return [width, height]
+        return self._doReadPositions(maxage)
 
     def doStatus(self, maxage=0):
         return status.OK, ""
@@ -55,35 +49,54 @@ class VSCalculator(Readable):
 
 class VirtualSlit(Moveable):
     """Device to control the motions of the ESTIA virtual slit to create
-    a slit opening"""
+    a slit opening determined by input of blade gap, and desired width
+    angle readout is in degrees"""
 
     parameter_overrides = {
-        "fmtstr": Override(default="slit: [%.3f x %.3f]mm\nangle: %.3f"),
-        "unit": Override(default="", mandatory=False, settable=True),
+        "fmtstr": Override(
+            default="slit: [%.3f x %.3f]mm | angle: %.3fdeg | gap: %.3fmm"
+        ),
+        "unit": Override(default="", mandatory=False, settable=False),
     }
     valuetype = tupleof(float, float, float)
-    dimensions = ["width", "height", "gap"]
+
+    devices = ["slit", "rot"]
 
     attached_devices = {
         "slit": Attach("the slit blades", Moveable),
         "rot": Attach("the rotation stage", Moveable),
     }
 
-    def _calculateWidth(self, gap, degree):
-        rad = np.deg2rad(degree)
+    def _findWidth(self, angle, gap):
+        rad = np.deg2rad(angle)
         return 2 * gap * np.sin(rad)
 
-    def _calculateAngle(self, width, gap):
+    def _findAngle(self, width, gap):
         angle = np.arcsin(width / (2 * gap))
         return np.rad2deg(angle)
 
+    def _parseTargets(self, target):
+        # target = [slit width(y), blade gap(x), slit height(z)]
+        slit_target = target[1:]
+        angle = self._findAngle(target[0], target[1])
+        return [slit_target, angle]
+
     def _doReadPositions(self, maxage):
-        # [0] = "gap between the blades in x-direction" [1] = slit height
         gap, height = self._adevs["slit"].read(maxage)
-        degree = self._adevs["rot"].read(maxage)
-        width = self._calculateWidth(gap, degree)
-        angle = self._calculateAngle(width, gap)
-        return width, height, angle
+        angle = self._adevs["rot"].read(maxage)
+        width = self._findWidth(angle, gap)
+        return width, height, angle, gap
+
+    def doStart(self, target):
+        for name, pos in zip(self.devices, self._parseTargets(target)):
+            self._adevs[name].start(pos)
+
+    def doIsAllowed(self, target):
+        for name, pos in zip(self.devices, self._parseTargets(target)):
+            ok, why = self._adevs[name].isAllowed(pos)
+            if not ok:
+                return ok, f"{name} {why}"
+        return ok, why
 
     def doRead(self, maxage=0):
         return self._doReadPositions(maxage)
@@ -93,7 +106,7 @@ class VirtualSlit(Moveable):
 
     def valueInfo(self):
         return (
-            Value("Width", unit="mm", fmtstr="%.3f"),
-            Value("Height", unit="mm", fmtstr="%.3f"),
-            Value("Blade Gap", unit="deg", fmtstr="%.3f"),
+            Value("Slit Width", unit="mm", fmtstr="%.3f"),
+            Value("Blade Gap", unit="mm", fmtstr="%.3f"),
+            Value("Slit Height", unit="mm", fmtstr="%.3f"),
         )

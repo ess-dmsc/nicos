@@ -65,7 +65,7 @@ devices = dict(
     ),
     ####Readout Devices
     vs_readout=device(
-        "nicos_ess.estia.devices.v_source.VSCalculator",
+        "nicos_ess.estia.devices.virtual_source.VSCalculator",
         description="readout for the slit dimensions using 4 blade slit controls",
         slit="four_blade_slit",
         rot="slit_rotation",
@@ -73,7 +73,7 @@ devices = dict(
         fmtstr="[%.3f x %.3f]",
     ),
     vs_controller=device(
-        "nicos_ess.estia.devices.v_source.VirtualSlit",
+        "nicos_ess.estia.devices.virtual_source.VirtualSlit",
         description="readout for the slit dimensions using 4 blade slit controls",
         slit="four_blade_slit",
         rot="slit_rotation",
