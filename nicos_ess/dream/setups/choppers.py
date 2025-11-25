@@ -36,6 +36,15 @@ devices = dict(
         writepv="{}ChopDly-S".format(pv_root_band_chopper),
         abslimits=(0.0, 0.0),
     ),
+    band_chopper_total_delay=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description="The total delay (MechDly-S + BeamPosDly-S + ChopDly-S). The full delay that is applied on proton on target event for the driving signal of the chopper.",
+        readpv="{}TotDly".format(pv_root_band_chopper),
+        visibility=(
+            "metadata",
+            "namespace",
+        ),
+    ),
     band_chopper_phase=device(
         "nicos_ess.devices.transformer_devices.ChopperPhase",
         description="The phase of the chopper.",
@@ -123,6 +132,15 @@ devices = dict(
         writepv="{}ChopDly-S".format(pv_root_overlap_chopper),
         abslimits=(0.0, 0.0),
     ),
+    overlap_chopper_total_delay=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description="The total delay (MechDly-S + BeamPosDly-S + ChopDly-S). The full delay that is applied on proton on target event for the driving signal of the chopper.",
+        readpv="{}TotDly".format(pv_root_overlap_chopper),
+        visibility=(
+            "metadata",
+            "namespace",
+        ),
+    ),
     overlap_chopper_phase=device(
         "nicos_ess.devices.transformer_devices.ChopperPhase",
         description="The phase of the chopper.",
@@ -209,6 +227,15 @@ devices = dict(
         readpv="{}ChopDly-S".format(pv_root_pulse_shaping_chopper_1),
         writepv="{}ChopDly-S".format(pv_root_pulse_shaping_chopper_1),
         abslimits=(0.0, 0.0),
+    ),
+    pulse_shaping_chopper_1_total_delay=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description="The total delay (MechDly-S + BeamPosDly-S + ChopDly-S). The full delay that is applied on proton on target event for the driving signal of the chopper.",
+        readpv="{}TotDly".format(pv_root_pulse_shaping_chopper_1),
+        visibility=(
+            "metadata",
+            "namespace",
+        ),
     ),
     pulse_shaping_chopper_1_phase=device(
         "nicos_ess.devices.transformer_devices.ChopperPhase",
@@ -305,6 +332,15 @@ devices = dict(
         readpv="{}ChopDly-S".format(pv_root_pulse_shaping_chopper_2),
         writepv="{}ChopDly-S".format(pv_root_pulse_shaping_chopper_2),
         abslimits=(0.0, 0.0),
+    ),
+    pulse_shaping_chopper_2_total_delay=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description="The total delay (MechDly-S + BeamPosDly-S + ChopDly-S). The full delay that is applied on proton on target event for the driving signal of the chopper.",
+        readpv="{}TotDly".format(pv_root_pulse_shaping_chopper_2),
+        visibility=(
+            "metadata",
+            "namespace",
+        ),
     ),
     pulse_shaping_chopper_2_phase=device(
         "nicos_ess.devices.transformer_devices.ChopperPhase",
