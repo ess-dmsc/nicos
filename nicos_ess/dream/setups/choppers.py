@@ -105,6 +105,8 @@ devices = dict(
         chic_conn="t0_chopper_chic",
         alarms="t0_chopper_alarms",
         slit_edges=[[0.0, 314.9]],
+        spin_direction="CCW",
+        resolver_offset=157.45,
     ),
     band_chopper_status=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
@@ -201,6 +203,8 @@ devices = dict(
         chic_conn="band_chopper_chic",
         alarms="band_chopper_alarms",
         slit_edges=[[0.0, 73.55], [180.0, 253.55]],
+        spin_direction="CCW",
+        resolver_offset=189.775,
     ),
     overlap_chopper_status=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
@@ -297,6 +301,8 @@ devices = dict(
         chic_conn="overlap_chopper_chic",
         alarms="overlap_chopper_alarms",
         slit_edges=[[0.0, 27.6]],
+        spin_direction="CCW",
+        resolver_offset=13.8,
     ),
     pulse_shaping_chopper_1_status=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
@@ -402,6 +408,8 @@ devices = dict(
             [287.265, 291.195],
             [302.4, 304.86],
         ],
+        spin_direction="CCW",
+        resolver_offset=149.93,
     ),
     pulse_shaping_chopper_2_status=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
@@ -507,5 +515,7 @@ devices = dict(
             [258.46, 262.4],
             [316.72, 319.34],
         ],
+        spin_direction="CCW",
+        resolver_offset=151.33,
     ),
 )
