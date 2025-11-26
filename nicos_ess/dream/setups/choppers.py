@@ -78,6 +78,12 @@ devices = dict(
         writepv="{}Park_S".format(pv_root_t0_chopper),
         visibility=(),
     ),
+    t0_chopper_park_control=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
+        description="The park control for the T0 chopper.",
+        readpv="{}ParkPos_S".format(pv_root_t0_chopper),
+        writepv="{}ParkPos_S".format(pv_root_t0_chopper),
+    ),
     t0_chopper_chic=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The status of the CHIC connection.",
@@ -106,7 +112,7 @@ devices = dict(
         alarms="t0_chopper_alarms",
         slit_edges=[[0.0, 314.9]],
         spin_direction="CCW",
-        resolver_offset=157.45,
+        resolver_offset=-157.45,
     ),
     band_chopper_status=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
@@ -176,6 +182,12 @@ devices = dict(
         writepv="{}Park_S".format(pv_root_band_chopper),
         visibility=(),
     ),
+    band_chopper_park_control=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
+        description="The park control for the band chopper.",
+        readpv="{}ParkPos_S".format(pv_root_band_chopper),
+        writepv="{}ParkPos_S".format(pv_root_band_chopper),
+    ),
     band_chopper_chic=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The status of the CHIC connection.",
@@ -204,7 +216,7 @@ devices = dict(
         alarms="band_chopper_alarms",
         slit_edges=[[0.0, 73.55], [180.0, 253.55]],
         spin_direction="CCW",
-        resolver_offset=189.775,
+        resolver_offset=116.225,
     ),
     overlap_chopper_status=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
@@ -274,6 +286,12 @@ devices = dict(
         writepv="{}Park_S".format(pv_root_overlap_chopper),
         visibility=(),
     ),
+    overlap_chopper_park_control=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
+        description="The park control for the overlap chopper.",
+        readpv="{}ParkPos_S".format(pv_root_overlap_chopper),
+        writepv="{}ParkPos_S".format(pv_root_overlap_chopper),
+    ),
     overlap_chopper_chic=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The status of the CHIC connection.",
@@ -302,7 +320,7 @@ devices = dict(
         alarms="overlap_chopper_alarms",
         slit_edges=[[0.0, 27.6]],
         spin_direction="CCW",
-        resolver_offset=13.8,
+        resolver_offset=-13.8,
     ),
     pulse_shaping_chopper_1_status=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
@@ -372,6 +390,12 @@ devices = dict(
         writepv="{}Park_S".format(pv_root_pulse_shaping_chopper_1),
         visibility=(),
     ),
+    pulse_shaping_chopper_1_park_control=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
+        description="The park control for the pulse shaping chopper 1.",
+        readpv="{}ParkPos_S".format(pv_root_pulse_shaping_chopper_1),
+        writepv="{}ParkPos_S".format(pv_root_pulse_shaping_chopper_1),
+    ),
     pulse_shaping_chopper_1_chic=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The status of the CHIC connection.",
@@ -409,7 +433,7 @@ devices = dict(
             [302.4, 304.86],
         ],
         spin_direction="CCW",
-        resolver_offset=149.93,
+        resolver_offset=147.47,
     ),
     pulse_shaping_chopper_2_status=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
@@ -479,6 +503,12 @@ devices = dict(
         writepv="{}Park_S".format(pv_root_pulse_shaping_chopper_2),
         visibility=(),
     ),
+    pulse_shaping_chopper_2_park_control=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
+        description="The park control for the pulse shaping chopper 2.",
+        readpv="{}ParkPos_S".format(pv_root_pulse_shaping_chopper_2),
+        writepv="{}ParkPos_S".format(pv_root_pulse_shaping_chopper_2),
+    ),
     pulse_shaping_chopper_2_chic=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The status of the CHIC connection.",
@@ -516,6 +546,6 @@ devices = dict(
             [316.72, 319.34],
         ],
         spin_direction="CCW",
-        resolver_offset=151.33,
+        resolver_offset=148.87,
     ),
 )
