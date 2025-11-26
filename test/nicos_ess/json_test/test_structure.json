@@ -25,6 +25,11 @@
         {
           "name": "instrument",
           "type": "group",
+          "config": {
+            "name": "name",
+            "values": "LOKI",
+            "dtype": "string"
+          },
           "attributes": [
             {
               "name": "NX_class",
