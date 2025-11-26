@@ -13,8 +13,24 @@ from nicos.core import (
 
 
 class VSCalculator(Readable):
-    """Readout of the Virtual Slit Motions to find the
-    width and height of the slit opening"""
+    """Readout device for the size of the Virtual Source Slit system
+
+    The slit consists of two L-shaped blades controlled by 5 motors:
+    - 2 horizontal motions
+    - 2 vertical motions
+    - 1 rotational motion along a shared axis at zero
+
+    The vertical height of the slit is determined by standard slit motions, however
+    the width is determined by the gap distance between the blades along the beam direction
+    and then a rotation around the shared axis.
+
+    The gap made by the distance between the blades and the angle of rotation can be found
+    with ''2*(blade gap)*sin(angle of rotation)'' since the blades will always be an equal distance
+    from the center point. [The attached slit device should always run in 'centered' mode]
+
+    This device simply reads out the motion of the defined slit and rotation angle to output what
+    the calculated dimensions of the gap will be.
+    """
 
     parameter_overrides = {
         "fmtstr": Override(default="%.3f x %.3f"),
@@ -48,9 +64,25 @@ class VSCalculator(Readable):
 
 
 class VirtualSlit(Moveable):
-    """Device to control the motions of the ESTIA virtual slit to create
-    a slit opening determined by input of blade gap, and desired width
-    angle readout is in degrees"""
+    """Controller for the ESTIA Virtual Source Slit system.
+
+    The slit consists of two L-shaped blades controlled by 5 motors:
+    - 2 horizontal motions
+    - 2 vertical motions
+    - 1 rotational motion along a shared axis at zero
+
+    The vertical height of the slit is determined by standard slit motions, however
+    the width is determined by the gap distance between the blades along the beam direction
+    and then a rotation around the shared axis.
+
+    The gap made by the distance between the blades and the angle of rotation can be found
+    with ''2*(blade gap)*sin(angle of rotation)'' since the blades will always be an equal distance
+    from the center point. [The attached slit device should always run in 'centered' mode]
+
+    The user must define the width of the opening they would like along with how far apart
+    the blades will be. The information will be used to determing the appropriate rotation
+    the system will take to match the desired width.
+    """
 
     parameter_overrides = {
         "fmtstr": Override(
@@ -76,7 +108,7 @@ class VirtualSlit(Moveable):
         return np.rad2deg(angle)
 
     def _parseTargets(self, target):
-        # target = [slit width(y), blade gap(x), slit height(z)]
+        # target = [slit width, blade gap, slit height]
         slit_target = target[1:]
         angle = self._findAngle(target[0], target[1])
         return [slit_target, angle]
@@ -85,7 +117,7 @@ class VirtualSlit(Moveable):
         gap, height = self._adevs["slit"].read(maxage)
         angle = self._adevs["rot"].read(maxage)
         width = self._findWidth(angle, gap)
-        return width, height, angle, gap
+        return [width, height, angle, gap]
 
     def doStart(self, target):
         for name, pos in zip(self.devices, self._parseTargets(target)):
