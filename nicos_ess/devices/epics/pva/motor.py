@@ -259,9 +259,10 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         if abs(self.read(0) - value) <= self.precision:
             return
 
-        print("setting target and status busy")
-        self._cache.put(self._name, "status", (status.BUSY, "Moving abs"), time.time())
+        print("setting target")
         self._put_pv("target", value)
+        print("setting status busy")
+        self._cache.put(self._name, "status", (status.BUSY, "Moving abs"), time.time())
 
         # status_code, status_msg = get_from_cache_or(self, "status", self._do_status)
         # print(status_code, status_msg)
