@@ -252,17 +252,19 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         return moving == 0
 
     def doStart(self, value):
-        status_code, status_msg = get_from_cache_or(self, "status", self._do_status)
-        print(status_code, status_msg)
+        print("doStart called")
+        # status_code, status_msg = get_from_cache_or(self, "status", self._do_status)
+        # print(status_code, status_msg)
 
         if abs(self.read(0) - value) <= self.precision:
             return
 
+        print("setting target and status busy")
         self._cache.put(self._name, "status", (status.BUSY, "Moving abs"), time.time())
         self._put_pv("target", value)
 
-        status_code, status_msg = get_from_cache_or(self, "status", self._do_status)
-        print(status_code, status_msg)
+        # status_code, status_msg = get_from_cache_or(self, "status", self._do_status)
+        # print(status_code, status_msg)
         # if status_code in self.errorstates:
         #     raise self.errorstates[status_code](self, status_msg)
 
@@ -358,6 +360,7 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         return get_from_cache_or(self, "status", self._do_status)
 
     def _do_status(self):
+        print("_do_status called")
         with self._lock:
             epics_status, message = self._get_alarm_status_and_msg()
             self._motor_status = epics_status, message
