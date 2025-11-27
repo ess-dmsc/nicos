@@ -238,20 +238,13 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         return self._get_cached_pv_or_ask("position_deadband")
 
     def doIsAtTarget(self, pos=None, target=None):
-        print("doIsAtTarget called")
         return self._get_cached_pv_or_ask("miss") == 0
 
     def doIsCompleted(self):
-        print("doIsCompleted called")
         moving = self._get_cached_pv_or_ask("moving")
         pos = self._get_cached_pv_or_ask("value")
         target = self._get_cached_pv_or_ask("target")
         deadband = self._get_cached_pv_or_ask("position_deadband")
-        # status_code, status_msg = get_from_cache_or(self, "status", self._do_status)
-        #
-        # print(status_code)
-        # if status_code in self.errorstates:
-        #     raise self.errorstates[status_code](self, status_msg)
 
         if abs(target - pos) > deadband:
             return False
@@ -260,7 +253,8 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
 
     def doStart(self, value):
         status_code, status_msg = get_from_cache_or(self, "status", self._do_status)
-        print(status_code, status_msg)
+        if status_code in self.errorstates:
+            return
 
         if abs(self.read(0) - value) <= self.precision:
             return
@@ -268,10 +262,10 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         self._cache.put(self._name, "status", (status.BUSY, "Moving abs"), time.time())
         self._put_pv("target", value)
 
-        status_code, status_msg = get_from_cache_or(self, "status", self._do_status)
-        print(status_code, status_msg)
-        if status_code in self.errorstates:
-            raise self.errorstates[status_code](self, status_msg)
+        # status_code, status_msg = get_from_cache_or(self, "status", self._do_status)
+        # print(status_code, status_msg)
+        # if status_code in self.errorstates:
+        #     raise self.errorstates[status_code](self, status_msg)
 
     def doWriteSpeed(self, value):
         speed = self._get_valid_speed(value)
