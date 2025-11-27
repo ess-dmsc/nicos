@@ -247,6 +247,7 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         deadband = self._get_cached_pv_or_ask("position_deadband")
         status_code, status_msg = get_from_cache_or(self, "status", self._do_status)
 
+        print(status_code)
         if status_code in self.errorstates:
             raise self.errorstates[status_code](self, status_msg)
 
