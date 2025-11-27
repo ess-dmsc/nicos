@@ -72,7 +72,7 @@ devices = dict(
         description="Instrument Vacuum 31 status",
         readpv=f"{inst_root}VPDP-031:StatR",
     ),
-    bnkr_vacuum_11_status=device(
+    bnkr_vacuum_status=device(
         "nicos_ess.devices.epics.pva.EpicsStringReadable",
         description="Bunker Vacuum status",
         readpv=f"{bnkr_root}VPDP-011:StatR",
@@ -80,17 +80,17 @@ devices = dict(
     # Pirani
     pirani_100=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
-        description="Pirani 100 pressure",
+        description="Instrument Pirani 100 pressure",
         readpv=f"{inst_root}VGP-100:PrsR",
     ),
     pirani_200=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
-        description="Pirani 200 pressure",
+        description="Instrument Pirani 200 pressure",
         readpv=f"{inst_root}VGP-200:PrsR",
     ),
     pirani_300=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
-        description="Pirani 300 pressure",
+        description="Instrument Pirani 300 pressure",
         readpv=f"{inst_root}VGP-300:PrsR",
     ),
     bnkr_pirani_100=device(
