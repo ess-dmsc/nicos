@@ -264,6 +264,8 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
 
         status_code, status_msg = get_from_cache_or(self, "status", self._do_status)
         print(status_code, status_msg)
+        if status_code in self.errorstates:
+            raise self.errorstates[status_code](self, status_msg)
 
         print("setting status busy")
         self._cache.put(self._name, "status", (status.BUSY, "Moving abs"), time.time())
