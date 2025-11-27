@@ -245,6 +245,10 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         pos = self._get_cached_pv_or_ask("value")
         target = self._get_cached_pv_or_ask("target")
         deadband = self._get_cached_pv_or_ask("position_deadband")
+        status_code, status_msg = get_from_cache_or(self, "status", self._do_status)
+
+        if status_code in self.errorstates:
+            raise self.errorstates[status_code](self, status_msg)
 
         if abs(target - pos) > deadband:
             return False
@@ -338,9 +342,9 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         self._put_pv("foff", 0)
 
     def isAllowed(self, pos):
-        status_code, status_msg = self.status()
-        if status_code == status.ERROR:
-            return False, status_msg
+        # status_code, status_msg = self.status()
+        # if status_code == status.ERROR:
+        #     return False, status_msg
         if self.userlimits == (0, 0) and self.abslimits == (0, 0):
             # No limits defined
             return True, ""
