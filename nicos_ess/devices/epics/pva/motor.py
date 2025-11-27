@@ -253,8 +253,8 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
 
     def doStart(self, value):
         status_code, status_msg = get_from_cache_or(self, "status", self._do_status)
-        if status_code in self.errorstates:
-            return
+        # if status_code in self.errorstates:
+        #     return
 
         if abs(self.read(0) - value) <= self.precision:
             return
