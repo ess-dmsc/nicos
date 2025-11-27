@@ -151,7 +151,7 @@ class ChopperWidget(QWidget):
             )  # resolver is active under 2hz
 
             angle = self.angles[i]
-            angle += tdc_offset if is_moving else resolver_offset
+            angle -= tdc_offset if is_moving else resolver_offset
 
             self.draw_chopper(
                 painter,

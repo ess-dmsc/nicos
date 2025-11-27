@@ -236,7 +236,9 @@ class ChopperPanel(Panel):
 
     def _update_chopper_angle(self, chopper_name, delay, frequency):
         angle = nanoseconds_to_degrees(delay, frequency)
-        self.chopper_widget.set_chopper_angle(chopper_name, angle)
+        self.chopper_widget.set_chopper_angle(
+            chopper_name, -angle
+        )  # phase delay is always opposite to rotation
 
     def _update_delay_errors(self, device_name):
         array = self.eval_command(f"{device_name}.raw_errors", default=None)
