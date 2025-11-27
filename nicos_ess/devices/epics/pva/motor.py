@@ -253,38 +253,23 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         umin = hw_umin + omin
         umax = hw_umax + omax
 
-        # The hwuserlimits are volatile and may change in hardware, so after
-        # applying the offsets the interval could be inverted. Fix that first.
         if umax < umin:
-            umin, umax = umax, umin
+            # Old offsets are no longer consistent with the current hardware window.
+            # Fall back to the EPICS hardware user limits.
+            umin, umax = hw_umin, hw_umax
+            new_omin, new_omax = 0.0, 0.0
+        else:
+            # normal clipping logic
+            umin = max(min(umin, hw_umax), hw_umin)
+            umax = max(min(umax, hw_umax), hw_umin)
 
-        # Clip the limits so they never extend beyond the hardware user limits.
-        if umin < hw_umin:
-            umin = hw_umin
-        elif umin > hw_umax:
-            umin = hw_umax
+            new_omin = umin - hw_umin
+            new_omax = umax - hw_umax
 
-        if umax < hw_umin:
-            umax = hw_umin
-        elif umax > hw_umax:
-            umax = hw_umax
-
-        # Numerical edge-case guard: after clipping we still insist on low ≤ high.
-        if umax < umin:
-            mid = (umin + umax) / 2.0
-            # Make sure mid itself is inside the hardware window
-            if mid < hw_umin:
-                mid = hw_umin
-            elif mid > hw_umax:
-                mid = hw_umax
-            umin = umax = mid
-
-        new_omin = umin - hw_umin
-        new_omax = umax - hw_umax
-
-        if (new_omin, new_omax) != (omin, omax):
-            self.limitoffsets = (new_omin, new_omax)
-
+        self._setROParam(
+            "limitoffsets",
+            (new_omin, new_omax),
+        )
         return umin, umax
 
     def doReadPosition_Deadband(self):
