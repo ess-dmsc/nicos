@@ -252,19 +252,11 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         return moving == 0
 
     def doStart(self, value):
-        print("status 1 dostart")
-        status_code, status_msg = get_from_cache_or(self, "status", self._do_status)
-        print(status_code, status_msg)
-
         if abs(self.read(0) - value) <= self.precision:
             return
 
         self._cache.put(self._name, "status", (status.BUSY, "Moving abs"), time.time())
         self._put_pv("target", value)
-
-        print("status 2 dostart")
-        status_code, status_msg = get_from_cache_or(self, "status", self._do_status)
-        print(status_code, status_msg)
 
     def doWriteSpeed(self, value):
         speed = self._get_valid_speed(value)
