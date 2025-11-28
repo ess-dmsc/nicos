@@ -131,19 +131,14 @@ class RedisCacheDatabase(CacheDatabase):
             "TS.RANGE", key, fromtime, totime, *args
         )
 
-    def _redis_keys(self, match="*", count=1024) -> Iterable[str]:
-        return self._client.scan_iter(match=match, count=count)
+    def _redis_keys(self, match="*", count=1024, _type=None) -> Iterable[str]:
+        return self._client.scan_iter(match=match, count=count, _type=_type)
 
     def _delete(self, key, target=None):
         (target or self._client).execute_command("DEL", key)
 
     def _check_get_key_format(self, key: str) -> bool:
-        return (
-            "###" not in key
-            and not key.endswith("_ts")
-            and not key.endswith("_hs")
-            and not key.endswith("_hs_idx")
-        )
+        return "###" not in key
 
     def _format_key(self, category: str, subkey: str):
         """
@@ -197,7 +192,7 @@ class RedisCacheDatabase(CacheDatabase):
     def _iter_entries_stream(self, batch: int = 512):
         buf: List[str] = []
         pipe = None
-        for key in self._redis_keys(count=batch):
+        for key in self._redis_keys(count=batch, _type="hash"):
             if not isinstance(key, str):
                 try:
                     key = key.decode("utf-8")

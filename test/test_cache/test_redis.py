@@ -205,10 +205,15 @@ class RedisStub:
     def pubsub(self):
         return None
 
-    def scan_iter(self, match="*", count=None):
+    def scan_iter(self, match="*", count=None, _type=None):
         for key in self._fake_db.keys():
-            if fnmatch.fnmatch(key, match):
-                yield key
+            if not fnmatch.fnmatch(key, match):
+                continue
+
+            if _type is not None:
+                if _type == "hash" and not isinstance(self._fake_db[key], dict):
+                    continue
+            yield key
 
     def pipeline(self, *args, **kwargs):
         return RedisStubPipeline(self)
