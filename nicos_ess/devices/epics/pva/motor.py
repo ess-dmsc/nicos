@@ -252,28 +252,19 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         return moving == 0
 
     def doStart(self, value):
-        print("doStart called")
-        # status_code, status_msg = get_from_cache_or(self, "status", self._do_status)
-        # print(status_code, status_msg)
+        print("status 1 dostart")
+        status_code, status_msg = get_from_cache_or(self, "status", self._do_status)
+        print(status_code, status_msg)
 
         if abs(self.read(0) - value) <= self.precision:
             return
 
-        print("setting target")
+        self._cache.put(self._name, "status", (status.BUSY, "Moving abs"), time.time())
         self._put_pv("target", value)
 
+        print("status 2 dostart")
         status_code, status_msg = get_from_cache_or(self, "status", self._do_status)
         print(status_code, status_msg)
-        if status_code in self.errorstates:
-            raise self.errorstates[status_code](self, status_msg)
-
-        print("setting status busy")
-        self._cache.put(self._name, "status", (status.BUSY, "Moving abs"), time.time())
-
-        # status_code, status_msg = get_from_cache_or(self, "status", self._do_status)
-        # print(status_code, status_msg)
-        # if status_code in self.errorstates:
-        #     raise self.errorstates[status_code](self, status_msg)
 
     def doWriteSpeed(self, value):
         speed = self._get_valid_speed(value)
@@ -371,13 +362,16 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         with self._lock:
             epics_status, message = self._get_alarm_status_and_msg()
             self._motor_status = epics_status, message
+        print("epics status", epics_status, message)
         if epics_status == status.ERROR:
             return status.ERROR, message or "Unknown problem in record"
         elif epics_status == status.WARN:
             return status.WARN, message
 
         done_moving = self._get_cached_pv_or_ask("donemoving")
+        print("done_moving", done_moving)
         moving = self._get_cached_pv_or_ask("moving")
+        print("moving", moving)
         if done_moving == 0 or moving != 0:
             if self._get_cached_pv_or_ask("homeforward") or self._get_cached_pv_or_ask(
                 "homereverse"
@@ -394,6 +388,7 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
             return status.WARN, "motor is not enabled"
 
         miss = self._get_cached_pv_or_ask("miss")
+        print("miss", miss)
         if miss != 0:
             return (status.NOTREACHED, message or "did not reach target position.")
 
