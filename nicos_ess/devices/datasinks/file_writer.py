@@ -366,7 +366,7 @@ class FileWriterController:
         self, filename, structure, start_time, stop_time=None, job_id=None
     ):
         if not job_id:
-            job_id = str(uuid.uuid1())
+            job_id = "ffffffff" + str(uuid.uuid1())[8:]  # this should look weird
 
         if not stop_time:
             stop_time = start_time + timedelta(days=365.25 * 10)
@@ -415,7 +415,7 @@ class FileWriterController:
     def request_stop(self, job_id, stop_time, service_id):
         message = serialise_6s4t(
             job_id=job_id,
-            command_id=str(uuid.uuid1()),
+            command_id=f"{job_id.split('-')[0]}-0000-0000-0000-{str(uuid.uuid1())[-12:]}",
             service_id=service_id,
             stop_time=stop_time,
             run_name="",
@@ -487,7 +487,7 @@ class FileWriterControlSink(Device):
         else:
             file_num = incrementFileCounter()
             file_path = self._generate_filepath(file_num)
-            job_id = str(uuid.uuid1())
+            job_id = f"{file_num:0>8}" + str(uuid.uuid1())[8:]
             metainfo = generateMetainfo()
             metainfo[("Exp", "job_id")] = job_id
             start_time = datetime.now()
@@ -518,6 +518,31 @@ class FileWriterControlSink(Device):
             instr_name += f"{device_name}_"
         filename = f"{instr_name}{proposal}_{file_num:0>8}.hdf"
         return path.join(proposal_path, filename)
+
+    def _generate_uuid(self, file_num, command_str):
+        proposal = session.experiment.propinfo.get("proposal")
+        file_num_str = f"{file_num:0>8}"
+        prefix = f"{proposal:0>8}{file_num_str[:4]}{file_num_str[4:]}"
+        command_str = "".join(
+            c for c in command_str.lower() if c in "0123456789abcdef"
+        )[
+            :12
+        ]  # truncate command_str to leave 4 random bytes
+        random_uuid = uuid.uuid1().hex
+        random_part_len = len(random_uuid) - len(prefix) - len(command_str)
+        generated_uuid = prefix + command_str + random_uuid[-random_part_len:]
+
+        return (
+            generated_uuid[:8]
+            + "-"
+            + generated_uuid[8:12]
+            + "-"
+            + generated_uuid[12:16]
+            + "-"
+            + generated_uuid[16:20]
+            + "-"
+            + generated_uuid[20:]
+        )
 
     def _start_job(
         self,
