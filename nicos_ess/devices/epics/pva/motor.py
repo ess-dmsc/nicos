@@ -359,7 +359,8 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
             self._motor_status = epics_status, message
         print("epics status", epics_status, message)
         if epics_status == status.ERROR:
-            return status.ERROR, message or "Unknown problem in record"
+            # return status.ERROR, message or "Unknown problem in record"
+            raise self.errorstates[epics_status](self, message)
         elif epics_status == status.WARN:
             return status.WARN, message
 
