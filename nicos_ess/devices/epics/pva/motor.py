@@ -338,6 +338,7 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         self._put_pv("foff", 0)
 
     def isAllowed(self, pos):
+        print("isAllowed")
         # status_code, status_msg = self.status()
         # if status_code == status.ERROR:
         #     return False, status_msg
