@@ -404,10 +404,7 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
     def _value_change_callback(
         self, name, param, value, units, limits, severity, message, **kwargs
     ):
-        # print(
-        #     f"_value_change_callback name:{name}, param:{param}, value:{value}, severity:{severity}, message:{message}"
-        # )
-        self.log(
+        print(
             f"_value_change_callback name:{name}, param:{param}, value:{value}, severity:{severity}, message:{message}"
         )
         time_stamp = time.time()
@@ -418,10 +415,7 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
     def _status_change_callback(
         self, name, param, value, units, limits, severity, message, **kwargs
     ):
-        # print(
-        #     f"_status_change_callback name:{name}, param:{param}, value:{value}, severity:{severity}, message:{message}"
-        # )
-        self.log(
+        print(
             f"_status_change_callback name:{name}, param:{param}, value:{value}, severity:{severity}, message:{message}"
         )
         time_stamp = time.time()
