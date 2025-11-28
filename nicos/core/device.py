@@ -1751,6 +1751,7 @@ class Moveable(Waitable):
         Returns new, potentially type-converted pos, or Ellipsis if move
         should not be started.
         """
+        print("_check_start called")
         if self._mode == SLAVE:
             raise ModeError(self, "start not possible in slave mode")
         if self.fixed:
@@ -1780,6 +1781,7 @@ class Moveable(Waitable):
                 self, "%r is an invalid value for this device: %s" % (pos, err)
             ) from None
         ok, why = self.isAllowed(pos)
+        print("from _checkstart, ok, why", ok, why)
         if not ok:
             raise LimitError(
                 self,
