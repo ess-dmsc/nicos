@@ -366,7 +366,7 @@ class FileWriterController:
         self, filename, structure, start_time, stop_time=None, job_id=None
     ):
         if not job_id:
-            job_id = "ffffffff-ffff-ffff" +  )[18:]  # this should look weird
+            job_id = self._generate_uuid("ffffffff")  # this should look weird
 
         if not stop_time:
             stop_time = start_time + timedelta(days=365.25 * 10)
@@ -412,7 +412,7 @@ class FileWriterController:
         except ConfigurationError:
             return None
 
-    def _generate_uuid(self, file_num, command_str):
+    def _generate_uuid(self, file_num="", command_str=""):
         proposal = session.experiment.propinfo.get("proposal")
         file_num_str = f"{file_num:0>8}"
         prefix = f"{proposal:0>8}{file_num_str[:4]}{file_num_str[4:]}"
