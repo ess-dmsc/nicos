@@ -514,7 +514,8 @@ class FileWriterControlSink(Device):
         if device:
             device_name = device.instrument_name.lower()
             if device_name != session.instrument.instrument.lower():
-                instr_name = f"{device_name}_"
+                instr_name = f"{session.instrument.instrument.lower()}_"
+            instr_name += f"{device_name}_"
         filename = f"{instr_name}{proposal}_{file_num:0>8}.hdf"
         return path.join(proposal_path, filename)
 
