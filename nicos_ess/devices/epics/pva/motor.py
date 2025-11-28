@@ -3,7 +3,7 @@ import threading
 import time
 
 from nicos import session
-from nicos.core import POLLER, Moveable, Override, Param, oneof, pvname, status
+from nicos.core import POLLER, Moveable, Override, Param, limits, oneof, pvname, status
 from nicos.core.errors import ConfigurationError
 from nicos.core.mixins import CanDisable, HasLimits, HasOffset
 from nicos.devices.abstract import CanReference, Motor
@@ -107,6 +107,27 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
             volatile=True,
             userparam=True,
             mandatory=False,
+        ),
+        "hwuserlimits": Param(
+            "Unchangable hardware user limits, diallimits with applied offset and direction.",
+            type=limits,
+            settable=False,
+            volatile=True,
+            userparam=False,
+            mandatory=False,
+            category="limits",
+            fmtstr="main",
+            unit="main",
+        ),
+        "limitoffsets": Param(
+            "Offsets to be applied to the hardware user limits.",
+            type=tuple,
+            default=(0.0, 0.0),
+            settable=True,
+            userparam=False,
+            mandatory=False,
+            fmtstr="main",
+            unit="main",
         ),
     }
 
@@ -218,11 +239,37 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         absmax = self._get_cached_pv_or_ask("dialhighlimit")
         return absmin, absmax
 
-    def doReadUserlimits(self):
+    def doReadHwuserlimits(self):
         umin = self._get_cached_pv_or_ask("lowlimit")
         umax = self._get_cached_pv_or_ask("highlimit")
         limits = (umin, umax)
         self._checkLimits(limits)
+        return umin, umax
+
+    def doReadUserlimits(self):
+        hw_umin, hw_umax = self.hwuserlimits
+        omin, omax = self.limitoffsets
+
+        umin = hw_umin + omin
+        umax = hw_umax + omax
+
+        if umax < umin:
+            # Old offsets are no longer consistent with the current hardware window.
+            # Fall back to the EPICS hardware user limits.
+            umin, umax = hw_umin, hw_umax
+            new_omin, new_omax = 0.0, 0.0
+        else:
+            # normal clipping logic
+            umin = max(min(umin, hw_umax), hw_umin)
+            umax = max(min(umax, hw_umax), hw_umin)
+
+            new_omin = umin - hw_umin
+            new_omax = umax - hw_umax
+
+        self._setROParam(
+            "limitoffsets",
+            (new_omin, new_omax),
+        )
         return umin, umax
 
     def doReadPosition_Deadband(self):
@@ -303,9 +350,13 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
 
     def doWriteUserlimits(self, value):
         self._checkLimits(value)
-        low, high = value
-        self._put_pv("lowlimit", low)
-        self._put_pv("highlimit", high)
+
+        umin, umax = value
+        hwumin, hwumax = self.hwuserlimits
+
+        omin = umin - hwumin
+        omax = umax - hwumax
+        self.limitoffsets = (omin, omax)
 
     def doAdjust(self, oldvalue, newvalue):
         # For EPICS the offset sign convention differs to that of the base
