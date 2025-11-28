@@ -347,6 +347,7 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         return Moveable.isAllowed(self, pos)
 
     def doStatus(self, maxage=0):
+        print("doStatus")
         return get_from_cache_or(self, "status", self._do_status)
 
     def _do_status(self):
