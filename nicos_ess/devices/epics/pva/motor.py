@@ -252,6 +252,7 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         return moving == 0
 
     def doStart(self, value):
+        print("doStart called")
         if abs(self.read(0) - value) <= self.precision:
             return
 
@@ -338,7 +339,7 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         self._put_pv("foff", 0)
 
     def isAllowed(self, pos):
-        print("isAllowed")
+        print("motor isAllowed called")
         # status_code, status_msg = self.status()
         # if status_code == status.ERROR:
         #     return False, status_msg

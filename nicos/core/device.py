@@ -1702,6 +1702,7 @@ class Moveable(Waitable):
            For complex state-dependent limit use a controller device
            with :class:`IsController` implementing :meth:`isADevTargetAllowed`.
         """
+        print("device isAllowed called")
         for controller in self._controllers:
             print("controller", controller)
             cdev = session.getDevice(controller)

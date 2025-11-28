@@ -117,7 +117,7 @@ def _basemove(dev_pos_list, waithook=None, poshook=None):
     """
     movelist = []
     errors = []
-
+    print("_basemove called")
     for dev, pos in _devposlist(dev_pos_list, Moveable):
         print("_basemove try to move:", dev, pos)
         try:
