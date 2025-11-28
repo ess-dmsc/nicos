@@ -113,6 +113,7 @@ devices = dict(
         slit_edges=[[0.0, 314.9]],
         spin_direction="CCW",
         resolver_offset=-20.55,
+        tdc_offset=67.45,
     ),
     band_chopper_status=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
@@ -322,7 +323,7 @@ devices = dict(
         slit_edges=[[0.0, 27.6]],
         spin_direction="CCW",
         resolver_offset=13.8,
-        tdc_offset=-13.8,
+        tdc_offset=13.8,
     ),
     pulse_shaping_chopper_1_status=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
