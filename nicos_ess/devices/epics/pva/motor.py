@@ -302,8 +302,7 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         if abs(self.read(0) - value) <= self.precision:
             return
 
-        # self._cache.put(self._name, "status", (status.BUSY, "Moving abs"), time.time())
-        print("setting new target")
+        self._cache.put(self._name, "status", (status.BUSY, "Moving abs"), time.time())
         self._put_pv("target", value)
 
     def doWriteSpeed(self, value):
@@ -392,7 +391,8 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
     def isAllowed(self, pos):
         status_code, status_msg = self.status()
         if status_code in self.errorstates:
-            raise self.errorstates[status_code](self, status_msg)
+            # raise self.errorstates[status_code](self, status_msg)
+            return False, status_msg
         if self.userlimits == (0, 0) and self.abslimits == (0, 0):
             # No limits defined
             return True, ""
