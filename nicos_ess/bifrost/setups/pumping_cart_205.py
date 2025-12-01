@@ -134,7 +134,7 @@ devices = dict(
             {
                 "group_name": "pumping_cart_205",
                 "nx_class": "NXcollection",
-                "units": "%",
+                "units": "",
                 "suffix": "",
                 "source_name": f"{pv_root}LN2-r",
                 "schema": "f144",
@@ -170,6 +170,28 @@ devices = dict(
         "nicos_ess.devices.epics.pva.EpicsStringReadable",
         description="LN2 filling in progress",
         readpv=f"{pv_root}LN2F-r",
+    ),
+    # ------------------------------------------------------------------
+    # Helium level
+    # ------------------------------------------------------------------
+    pc205_he_level=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description="Helium level",
+        readpv=f"{pv_root}HE-r",
+        nexus_config=[
+            {
+                "group_name": "pumping_cart_205",
+                "nx_class": "NXcollection",
+                "units": "",
+                "suffix": "",
+                "source_name": f"{pv_root}HE-r",
+                "schema": "f144",
+                "topic": "bifrost_sample_env",
+                "protocol": "pva",
+                "periodic": 1,
+                "dataset_type": "nx_log",
+            },
+        ],
     ),
     # ------------------------------------------------------------------
     # Flush cycle
