@@ -296,6 +296,11 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         if abs(target - pos) > deadband:
             return False
 
+        status_code, status_msg = self.status()
+        if status_code in self.busystates:
+            return False
+        elif status_code in self.errorstates:
+            raise self.errorstates[status_code](self, status_msg)
         return moving == 0
 
     def doStart(self, value):
