@@ -545,7 +545,7 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
             motor_stat, motor_msg = self._update_status_with_msgtxt(
                 motor_stat, motor_msg
             )
-        return motor_stat, motor_msg
+        return motor_stat, motor_msg.strip()
 
     def _log_epics_msg_info(self, error_msg, stat, epics_msg):
         if stat == status.OK or stat == status.UNKNOWN:
