@@ -302,7 +302,8 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         if abs(self.read(0) - value) <= self.precision:
             return
 
-        self._cache.put(self._name, "status", (status.BUSY, "Moving abs"), time.time())
+        # self._cache.put(self._name, "status", (status.BUSY, "Moving abs"), time.time())
+        print("setting new target")
         self._put_pv("target", value)
 
     def doWriteSpeed(self, value):
