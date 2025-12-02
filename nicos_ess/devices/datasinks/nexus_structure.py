@@ -172,7 +172,6 @@ class NexusStructureJsonFile(NexusStructureProvider):
 
         fwd = session.getDevice("KafkaForwarder")
         by_path = fwd.get_nexus_json()  # { '/entry/...': [group-node, ...] }
-        # print(by_path)
 
         for path, group_nodes in by_path.items():
             for node in group_nodes:
@@ -202,7 +201,6 @@ class NexusStructureJsonFile(NexusStructureProvider):
                 self.log.warning(
                     "Could not find '/entry/instrument' for component tracking."
                 )
-
         return structure
 
     def _insert_array_size(self, structure):
@@ -373,8 +371,6 @@ class NexusStructureJsonFile(NexusStructureProvider):
             if sample["name"] == sample_name:
                 sample_info = sample.copy()
                 break
-        if not sample_info:
-            sample_info = {"name": sample_name}
         if "position" in sample_info:
             del sample_info["position"]
         return sample_info
