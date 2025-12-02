@@ -25,13 +25,13 @@ session_setup = None
 
 
 def _minimal_metainfo(counter: int = 1) -> dict:
-    """Matches the access pattern in _insert_metadata/_insert_samples."""
+    """Matches the access pattern from generateMetainfo to _insert_metadata/_insert_samples."""
     return {
-        ("Exp", "run_title"): ["Test run"],
-        ("Exp", "proposal"): ["P-001"],
-        ("Exp", "title"): ["Beamtime Title"],
-        ("Exp", "scripts"): ["import foo\nrun()"],
-        ("Exp", "job_id"): "uuid-123",
+        ("Exp", "run_title"): ("Test run", "Test run", "", "experiment"),
+        ("Exp", "proposal"): ("123456", "123456", "", "experiment"),
+        ("Exp", "title"): ("Beamtime Title", "Beamtime Title", "", "experiment"),
+        ("Exp", "scripts"): ("import foo\nrun()", "import foo\nrun()", "", "experiment"),
+        ("Exp", "job_id"): ("uuid-123", "uuid-123", "", "experiment"),
         ("Exp", "users"): (
             [
                 {
@@ -238,28 +238,41 @@ class TestDynamicNexusBuilding(TestCase):
         assert john_doe_id_ds in john_doe_group["children"]
 
     def test_no_sample(self):
-        self.sample: EssSample = self.session.getDevice("Sample")
-        self.sample.set_samples({})
+        samples = {}
+        samplename = ""
         counter = 5
-        metainfo = generateMetainfo()
-        metainfo[("Exp", "job_id")] = "unique_uuid"
-
+        metainfo = _minimal_metainfo(counter)
+        metainfo[("Sample", "samples")] = (samples, str(samples), "", "sample")
+        metainfo[("Sample", "samplename")] = (samplename, str(samplename), "", "sample")
         with pytest.raises(Exception):
             structure = self.nexus.get_structure(metainfo, counter)
 
     def test_empty_sample(self):
-        self.sample: EssSample = self.session.getDevice("Sample")
-        self.sample.set_samples({0: {"name": ""}})
+        samples = {0: {"name": ""}}
+        samplename = ""
         counter = 5
-        metainfo = generateMetainfo()
-        metainfo[("Exp", "job_id")] = "unique_uuid"
-
+        metainfo = _minimal_metainfo(counter)
+        metainfo[("Sample", "samples")] = (samples, str(samples), "", "sample")
+        metainfo[("Sample", "samplename")] = (samplename, str(samplename), "", "sample")
         with pytest.raises(Exception):
             structure = self.nexus.get_structure(metainfo, counter)
 
     def test_add_sample_name_from_thermostated_cell_holder(self):
+        self.nexus.nexus_config_path = "test/nicos_ess/json_test/test_structure_loki.json"
+        samples = {
+            0: {"name": "SampleA", "position": "T1"},
+            1: {"name": "SampleB", "position": "T2"},
+            2: {"name": "SampleC", "position": "T3"},
+            3: {"name": "SampleD", "position": "T4"},
+            4: {"name": "SampleE", "position": "T5"},
+            5: {"name": "SampleF", "position": "T6"},
+            6: {"name": "SampleG", "position": "T7"},
+            7: {"name": "SampleH", "position": "T8"},
+        }
+        samplename = ""
+        counter = 5
+
         self.session.loadSetup("ess_loki_cellholder", {})
-        self.sample: EssSample = self.session.getDevice("Sample")
         self.cellholder: ThermoStatedCellHolder = self.session.getDevice(
             "thermostated_sample_holder"
         )
@@ -284,23 +297,11 @@ class TestDynamicNexusBuilding(TestCase):
             {"type": "blank", "positions": [], "labels": []},
             {"type": "blank", "positions": [], "labels": []},
         ]
-        self.sample.set_samples(
-            {
-                0: {"name": "SampleA", "position": "T1"},
-                1: {"name": "SampleB", "position": "T2"},
-                2: {"name": "SampleC", "position": "T3"},
-                3: {"name": "SampleD", "position": "T4"},
-                4: {"name": "SampleE", "position": "T5"},
-                5: {"name": "SampleF", "position": "T6"},
-                6: {"name": "SampleG", "position": "T7"},
-                7: {"name": "SampleH", "position": "T8"},
-            }
-        )
+        metainfo = _minimal_metainfo(counter)
+        metainfo[("Sample", "samples")] = (samples, str(samples), "", "sample")
+        metainfo[("Sample", "samplename")] = (samplename, str(samplename), "", "sample")
+        metainfo[("thermostated_sample_holder", "value")] = ('T5', 'T5', '', 'general')
         self.cellholder.move("T5")
-        counter = 5
-        metainfo = generateMetainfo()
-        metainfo[("Exp", "job_id")] = "unique_uuid"
-
         structure = self.nexus.get_structure(metainfo, counter)
         doc = json.loads(structure)
         path_map = build_named_index_map(doc, include_datasets=True)
@@ -314,8 +315,14 @@ class TestDynamicNexusBuilding(TestCase):
 
 
     def test_thermostated_cell_holder_loaded_but_no_sample(self):
+        self.nexus.nexus_config_path = "test/nicos_ess/json_test/test_structure_loki.json"
+        samples = {}
+        samplename = ""
+        counter = 5
+        metainfo = _minimal_metainfo(counter)
+        metainfo[("Sample", "samples")] = (samples, str(samples), "", "sample")
+        metainfo[("Sample", "samplename")] = (samplename, str(samplename), "", "sample")
         self.session.loadSetup("ess_loki_cellholder", {})
-        self.sample: EssSample = self.session.getDevice("Sample")
         self.cellholder: ThermoStatedCellHolder = self.session.getDevice(
             "thermostated_sample_holder"
         )
@@ -340,9 +347,6 @@ class TestDynamicNexusBuilding(TestCase):
             {"type": "blank", "positions": [], "labels": []},
             {"type": "blank", "positions": [], "labels": []},
         ]
-        counter = 5
-        metainfo = generateMetainfo()
-        metainfo[("Exp", "job_id")] = "unique_uuid"
 
         with pytest.raises(Exception):
             structure = self.nexus.get_structure(metainfo, counter)
