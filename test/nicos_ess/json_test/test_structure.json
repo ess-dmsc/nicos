@@ -27,7 +27,7 @@
           "type": "group",
           "config": {
             "name": "name",
-            "values": "LOKI",
+            "values": "YMIR",
             "dtype": "string"
           },
           "attributes": [
