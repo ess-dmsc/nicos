@@ -153,10 +153,10 @@ class EpicsKafkaForwarder(KafkaStatusHandler):
             group_name = nexus_config_dict.get("group_name", "")
             nx_class = nexus_config_dict.get("nx_class", "")
             dataset_type = nexus_config_dict.get(
-                "dataset_type", "nxlog"
+                "dataset_type", "nx_log"
             )  # default nxlog to keep backwards compatibility for now
             if group_name and nx_class:
-                if dataset_type == "nxlog":
+                if dataset_type == "nx_log":
                     yield self._handle_nxlog(
                         nexus_config_dict, dev, group_name, nx_class
                     )
