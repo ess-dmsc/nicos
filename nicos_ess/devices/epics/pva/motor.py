@@ -391,7 +391,6 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
     def isAllowed(self, pos):
         status_code, status_msg = self.status()
         if status_code in self.errorstates:
-            # raise self.errorstates[status_code](self, status_msg)
             return False, status_msg
         if self.userlimits == (0, 0) and self.abslimits == (0, 0):
             # No limits defined
