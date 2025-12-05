@@ -70,8 +70,7 @@ devices = dict(
         monitor_deadband=0.01,
     ),
     rotation_stage=device(
-        # "nicos_ess.devices.epics.pva.motor.EpicsMotor",
-        "nicos_ess.devices.epics.pva.motor.EpicsJogMotor",
+        "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Rotation stage",
         motorpv="YMIR-SpRot:MC-RotZ-01:Mtr",
         nexus_config=[
