@@ -100,7 +100,7 @@ class ChopperWidget(QWidget):
             if chopper["chopper"] == chopper_name:
                 spin_direction = chopper.get("spin_direction", "CW").upper()
                 is_ccw = spin_direction == "CCW"
-                a_draw = (-angle if is_ccw else angle) + self._default_rotation_offset
+                a_draw = (angle if is_ccw else -angle) + self._default_rotation_offset
                 self.angles[i] = self._wrap360(a_draw)
         self.update()
 
@@ -143,6 +143,7 @@ class ChopperWidget(QWidget):
             tdc_offset = chopper.get("tdc_offset", 0.0)
             current_speed = chopper.get("speed", 0.0)
             parking_angle = chopper.get("parking_angle", None)
+            mounting_direction = chopper.get("mounting_direction", "downstream").lower()
             center = positions[i]
 
             is_selected = self._selected_chopper == chopper["chopper"]
@@ -160,6 +161,7 @@ class ChopperWidget(QWidget):
                 slit_edges,
                 slit_height,
                 angle,
+                mounting_direction,
                 is_selected,
                 is_moving,
             )
@@ -395,9 +397,11 @@ class ChopperWidget(QWidget):
         start_deg: float,
         end_deg: float,
         rotation_deg: float,
+        mounting_direction: str,
         num_points: int = 72,
     ) -> QPolygonF:
         """Ring-sector polygon for [start_deg,end_deg] (math CCW degrees)."""
+
         # unwrap so end >= start
         s = start_deg
         e = end_deg
@@ -406,30 +410,39 @@ class ChopperWidget(QWidget):
         if e - s < 1e-6:
             return QPolygonF()
 
-        def to_qt(a_deg: float) -> float:
-            if self._slit_direction == "CW":
-                return math.radians(-a_deg + rotation_deg)
-            elif self._slit_direction == "CCW":
-                return math.radians(a_deg + rotation_deg)
+        # base sign from slit direction (your old logic)
+        if self._slit_direction == "CW":
+            base_sign = -1.0
+        elif self._slit_direction == "CCW":
+            base_sign = 1.0
+        else:
             raise ValueError(f"Invalid slit direction: {self._slit_direction}")
+
+        # mirror for downstream: φ_down = 180° − φ_up
+        if mounting_direction.lower() == "downstream":
+            sign = -base_sign
+            rot = 180.0 - rotation_deg
+        else:
+            sign = base_sign
+            rot = rotation_deg
 
         step = (e - s) / num_points
         pts = []
 
-        # outer arc s->e
+        # outer arc s -> e
         for i in range(num_points + 1):
             a = s + i * step
-            ar = to_qt(a)
+            ar = math.radians(sign * a + rot)
             pts.append(
                 QPointF(
                     center.x() + outer_r * math.cos(ar),
                     center.y() - outer_r * math.sin(ar),
                 )
             )
-        # inner arc e->s
+        # inner arc e -> s
         for i in range(num_points + 1):
             a = e - i * step
-            ar = to_qt(a)
+            ar = math.radians(sign * a + rot)
             pts.append(
                 QPointF(
                     center.x() + inner_r * math.cos(ar),
@@ -446,11 +459,18 @@ class ChopperWidget(QWidget):
         outer_r: float,
         slit_edges: list[list[float]],
         rotation_deg: float,
+        mounting_direction: str,
     ) -> QPainterPath:
-        """Build one path: full annulus MINUS all openings, using Odd-Even fill."""
         # Start with full annulus as a 360° sector
         ring = self._sector_polygon(
-            center, inner_r, outer_r, 0.0, 360.0, rotation_deg, num_points=180
+            center,
+            inner_r,
+            outer_r,
+            0.0,
+            360.0,
+            rotation_deg,
+            mounting_direction,
+            num_points=180,
         )
         path = QPainterPath()
         if not ring.isEmpty():
@@ -458,7 +478,15 @@ class ChopperWidget(QWidget):
 
         openings = self._normalize_openings(slit_edges)
         for s, e in openings:
-            hole = self._sector_polygon(center, inner_r, outer_r, s, e, rotation_deg)
+            hole = self._sector_polygon(
+                center,
+                inner_r,
+                outer_r,
+                s,
+                e,
+                rotation_deg,
+                mounting_direction,
+            )
             if not hole.isEmpty():
                 path.addPolygon(hole)
 
@@ -473,12 +501,18 @@ class ChopperWidget(QWidget):
         slit_edges,
         slit_height,
         rotation_angle,
+        mounting_direction,
         selected=False,
         moving=False,
     ):
         reduced_radius = radius - slit_height
         blades_path = self._annulus_with_opening_holes(
-            center, reduced_radius, radius, slit_edges, rotation_angle
+            center,
+            reduced_radius,
+            radius,
+            slit_edges,
+            rotation_angle,
+            mounting_direction,
         )
         painter.setPen(Qt.PenStyle.NoPen)
         painter.fillPath(blades_path, QBrush(Colors.DARK_GRAY.value))
@@ -486,7 +520,12 @@ class ChopperWidget(QWidget):
         inner_coating = reduced_radius + radius * 0.05
         outer_coating = radius * 0.95
         coating_path = self._annulus_with_opening_holes(
-            center, inner_coating, outer_coating, slit_edges, rotation_angle
+            center,
+            inner_coating,
+            outer_coating,
+            slit_edges,
+            rotation_angle,
+            mounting_direction,
         )
         painter.setPen(Qt.PenStyle.NoPen)
         painter.fillPath(coating_path, QBrush(Colors.BLACK.value))

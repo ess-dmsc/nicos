@@ -280,6 +280,7 @@ class ChopperPanel(Panel):
                 "resolver_offset",
                 "tdc_offset",
                 "spin_direction",
+                "mounting_direction",
             ]:
                 value = self.client.eval(f"{dev_name}.{param}", None)
                 if value is None:

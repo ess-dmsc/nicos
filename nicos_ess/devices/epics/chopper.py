@@ -164,6 +164,11 @@ class EssChopperController(MappedMoveable):
             type=oneof("CW", "CCW"),
             default="CW",
         ),
+        "mounting_direction": Param(
+            "Mounting direction of the chopper",
+            type=oneof("upstream", "downstream"),
+            default="downstream",
+        ),
     }
 
     attached_devices = {
@@ -248,6 +253,11 @@ class OdinChopperController(EpicsParameters, MappedMoveable):
             "Direction of rotation of the chopper",
             type=oneof("CW", "CCW"),
             default="CW",
+        ),
+        "mounting_direction": Param(
+            "Mounting direction of the chopper",
+            type=oneof("upstream", "downstream"),
+            default="downstream",
         ),
         "pv_root": Param(
             "PV root for device", type=str, mandatory=True, userparam=False
