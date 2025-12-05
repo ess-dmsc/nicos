@@ -49,9 +49,9 @@ def _spin_sign(spin_direction):
     to the physical rotation direction in the GUI.
     """
     if spin_direction.upper() == "CW":
-        return -1.0
-    if spin_direction.upper() == "CCW":
         return 1.0
+    if spin_direction.upper() == "CCW":
+        return -1.0
     raise ValueError(f"Unknown spin direction: {spin_direction!r}")
 
 
