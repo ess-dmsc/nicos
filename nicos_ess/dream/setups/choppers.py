@@ -8,6 +8,129 @@ pv_root_t0_chopper = "DREAM-ChpSy2:Chop-T0-101:"
 chic_root_1 = "DREAM-ChpSy1:Chop-CHIC-001:"
 chic_root_2 = "DREAM-ChpSy2:Chop-CHIC-001:"
 
+
+def _normalize_angle(angle):
+    """Normalize angle to [0, 360)."""
+    return angle % 360.0
+
+
+def calculate_spin_direction(hw_direction, mounting_direction):
+    """
+    Return the spin direction as seen from the beam (source -> sample).
+
+    hw_direction: "CW"/"CCW" as seen from motor side.
+    mounting_direction: "upstream" or "downstream".
+    """
+    hw_direction = hw_direction.upper()
+    mounting_direction = mounting_direction.lower()
+
+    if mounting_direction == "upstream":
+        # Looking from the opposite side flips CW/CCW.
+        if hw_direction == "CW":
+            return "CCW"
+        if hw_direction == "CCW":
+            return "CW"
+    elif mounting_direction == "downstream":
+        # Same face as the motor drawing.
+        if hw_direction in ("CW", "CCW"):
+            return hw_direction
+
+    raise ValueError(
+        f"Unsupported direction/mounting combination: "
+        f"direction={hw_direction!r}, mounting={mounting_direction!r}"
+    )
+
+
+def _spin_sign(spin_direction):
+    """
+    Internal helper: map spin_direction -> sign.
+
+    We choose:
+      spin_direction == "CW"   -> sign = -1
+      spin_direction == "CCW"  -> sign = +1
+
+    This makes "positive phase" always move the window opposite
+    to the physical rotation direction in the GUI.
+    """
+    if spin_direction.upper() == "CW":
+        return -1.0
+    if spin_direction.upper() == "CCW":
+        return 1.0
+    raise ValueError(f"Unknown spin direction: {spin_direction!r}")
+
+
+def calculate_resolver_offset(park_open_angle, disc_opening, spin_direction):
+    """
+    Choose resolver_offset so that when the disc is parked at `park_open_angle`,
+    the *center* of the park window lies exactly on the beam guide line.
+
+    All angles are in the engineering coordinate system (motor angles),
+    but spin_direction encodes how the disc is seen from the beam side.
+    """
+    slit_center = disc_opening / 2.0  # one opening [0, disc_opening] -> center
+    sign = _spin_sign(spin_direction)
+    # Condition: center_gui(park) == guide_angle
+    # -> resolver_offset = slit_center + sign * park_open_angle
+    return _normalize_angle(slit_center + sign * park_open_angle)
+
+
+def calculate_tdc_offset(center_window_delay, disc_opening, spin_direction):
+    """
+    Choose tdc_offset so that when the chopper *phase* is set to
+    `center_window_delay` (in degrees), the center of the park window
+    lies exactly on the beam guide line while spinning.
+
+    This is exactly your requirement:
+      "if we set the phase to wls2b_hw_center_window_delay, then the center
+       of the park window should be exactly at the beam guide line."
+    """
+    slit_center = disc_opening / 2.0
+    sign = _spin_sign(spin_direction)
+    # Condition at phase = center_window_delay:
+    #   center_gui(phase=center_window_delay) == guide_angle
+    # -> tdc_offset = slit_center - sign * center_window_delay
+    return _normalize_angle(slit_center - sign * center_window_delay)
+
+
+bc_hw_direction = "CW"
+bc_hw_mounting_direction = "upstream"
+bc_hw_disc_opening = 73.55
+bc_hw_park_open_angle = 153.0
+bc_hw_tdc_angle = 342.0
+bc_hw_center_window_delay = 171.0
+
+psc1_hw_direction = "CW"
+psc1_hw_mounting_direction = "downstream"
+psc1_hw_disc_opening = 2.46
+psc1_hw_park_open_angle = 148.7
+# psc1_hw_tdc_angle = 13.8
+psc1_hw_center_window_delay = 193.3
+
+psc2_hw_direction = "CW"
+psc2_hw_mounting_direction = "downstream"
+psc2_hw_disc_opening = 2.46
+psc2_hw_park_open_angle = 150.1
+# psc2_hw_tdc_angle = 13.8
+psc2_hw_center_window_delay = 191.9
+
+oc_hw_direction = "CW"
+oc_hw_mounting_direction = "downstream"
+oc_hw_disc_opening = 27.6
+oc_hw_park_open_angle = 0.0
+oc_hw_tdc_angle = 0.0
+oc_hw_center_window_delay = 0.0
+
+
+bc_spin_direction = calculate_spin_direction(bc_hw_direction, bc_hw_mounting_direction)
+psc1_spin_direction = calculate_spin_direction(
+    psc1_hw_direction, psc1_hw_mounting_direction
+)
+psc2_spin_direction = calculate_spin_direction(
+    psc2_hw_direction, psc2_hw_mounting_direction
+)
+oc_spin_direction = calculate_spin_direction(oc_hw_direction, oc_hw_mounting_direction)
+
+
 devices = dict(
     # t0 chopper
     t0_chopper_status=device(
@@ -216,9 +339,18 @@ devices = dict(
         chic_conn="band_chopper_chic",
         alarms="band_chopper_alarms",
         slit_edges=[[0.0, 73.55], [180.0, 253.55]],
-        spin_direction="CCW",
-        resolver_offset=-116.225,
-        tdc_offset=207.775,
+        resolver_offset=calculate_resolver_offset(
+            bc_hw_park_open_angle,
+            bc_hw_disc_opening,
+            bc_spin_direction,
+        ),
+        tdc_offset=calculate_tdc_offset(
+            bc_hw_center_window_delay,
+            bc_hw_disc_opening,
+            bc_spin_direction,
+        ),
+        spin_direction=bc_spin_direction,
+        mounting_direction=bc_hw_mounting_direction,
     ),
     overlap_chopper_status=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
@@ -321,9 +453,18 @@ devices = dict(
         chic_conn="overlap_chopper_chic",
         alarms="overlap_chopper_alarms",
         slit_edges=[[0.0, 27.6]],
-        spin_direction="CCW",
-        resolver_offset=13.8,
-        tdc_offset=13.8,
+        resolver_offset=calculate_resolver_offset(
+            oc_hw_park_open_angle,
+            oc_hw_disc_opening,
+            oc_spin_direction,
+        ),
+        tdc_offset=calculate_tdc_offset(
+            oc_hw_center_window_delay,
+            oc_hw_disc_opening,
+            oc_spin_direction,
+        ),
+        spin_direction=oc_spin_direction,
+        mounting_direction=oc_hw_mounting_direction,
     ),
     pulse_shaping_chopper_1_status=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
@@ -435,9 +576,18 @@ devices = dict(
             [287.265, 291.195],
             [302.4, 304.86],
         ],
-        spin_direction="CCW",
-        resolver_offset=-147.47,
-        tdc_offset=194.53,
+        resolver_offset=calculate_resolver_offset(
+            psc1_hw_park_open_angle,
+            psc1_hw_disc_opening,
+            psc1_spin_direction,
+        ),
+        tdc_offset=calculate_tdc_offset(
+            psc1_hw_center_window_delay,
+            psc1_hw_disc_opening,
+            psc1_spin_direction,
+        ),
+        spin_direction=psc1_spin_direction,
+        mounting_direction=psc1_hw_mounting_direction,
     ),
     pulse_shaping_chopper_2_status=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
@@ -549,8 +699,17 @@ devices = dict(
             [258.46, 262.4],
             [316.72, 319.34],
         ],
-        spin_direction="CCW",
-        resolver_offset=-148.87,
-        tdc_offset=193.13,
+        resolver_offset=calculate_resolver_offset(
+            psc2_hw_park_open_angle,
+            psc2_hw_disc_opening,
+            psc2_spin_direction,
+        ),
+        tdc_offset=calculate_tdc_offset(
+            psc2_hw_center_window_delay,
+            psc2_hw_disc_opening,
+            psc2_spin_direction,
+        ),
+        spin_direction=psc2_spin_direction,
+        mounting_direction=psc2_hw_mounting_direction,
     ),
 )
