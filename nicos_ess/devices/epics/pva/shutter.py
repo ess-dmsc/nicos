@@ -5,6 +5,7 @@ from nicos.core import (
     Param,
     none_or,
     pvname,
+    status,
 )
 from nicos.devices.abstract import MappedMoveable
 from nicos.devices.epics.pva import (
@@ -21,8 +22,26 @@ class EpicsShutter(EpicsMappedMoveable):
     """
 
     parameters = {
+        "openingpv": Param(
+            "PV for the opening bit",
+            type=none_or(pvname),
+            mandatory=False,
+            userparam=False,
+        ),
+        "closingpv": Param(
+            "PV for the closing bit",
+            type=none_or(pvname),
+            mandatory=False,
+            userparam=False,
+        ),
         "resetpv": Param(
             "PV for resetting device",
+            type=none_or(pvname),
+            mandatory=False,
+            userparam=False,
+        ),
+        "msgtxt": Param(
+            "PV of the message text",
             type=none_or(pvname),
             mandatory=False,
             userparam=False,
@@ -57,6 +76,17 @@ class EpicsShutter(EpicsMappedMoveable):
             self._put_pv("resetpv", True)
         else:
             self.log.warn("Reset isn't available on device or the resetpv is missing")
+
+    def doStatus(self):
+        try:
+            severity, msg = self._epics_wrapper.get_alarm_status(self.readpv)
+        except TimeoutError:
+            return status.ERROR, "timeout reading status"
+        if severity in (status.ERROR, status.WARN):
+            return severity, msg
+        if self.closingpv or self.closingpv:
+            return status.BUSY, self.msgtxt
+        return status.OK, ""
 
 
 class EpicsHeavyShutter(EpicsMappedReadable):
