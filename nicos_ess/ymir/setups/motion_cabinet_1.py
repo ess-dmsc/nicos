@@ -22,6 +22,9 @@ devices = dict(
         readpv="YMIR-Fil:MC-Pne-01:ShtAuxBits07",
         writepv="YMIR-Fil:MC-Pne-01:ShtOpen",
         resetpv="YMIR-Fil:MC-Pne-01:ShtErrRst",
+        closingpv="YMIR-Fil:MC-Pne-01:ShtNamAuxBit1",
+        openingpv="YMIR-Fil:MC-Pne-01:ShtNamAuxBit2",
+        msgtxt="YMIR-Fil:MC-Pne-01:ShtMsgTxt",
     ),
     filter_1_status=device(
         "nicos_ess.devices.epics.pva.EpicsStringReadable",
