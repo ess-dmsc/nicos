@@ -22,13 +22,13 @@ class EpicsShutter(EpicsMappedMoveable):
     """
 
     parameters = {
-        "openingpv": Param(
+        "openingbit": Param(
             "PV for the opening bit",
             type=none_or(pvname),
             mandatory=False,
             userparam=False,
         ),
-        "closingpv": Param(
+        "closingbit": Param(
             "PV for the closing bit",
             type=none_or(pvname),
             mandatory=False,
@@ -77,15 +77,24 @@ class EpicsShutter(EpicsMappedMoveable):
         else:
             self.log.warn("Reset isn't available on device or the resetpv is missing")
 
-    def doStatus(self):
+    def doReadClosingbit(self):
+        return self._epics_wrapper.get_pv_value(self.closingbit, as_string=False)
+
+    def doReadOpeningbit(self):
+        return self._epics_wrapper.get_pv_value(self.openingbit, as_string=False)
+
+    def doReadMsgTxt(self):
+        return self._epics_wrapper.get_pv_value(self.msgtxt, as_string=True)
+
+    def doStatus(self, maxage=0):
         try:
             severity, msg = self._epics_wrapper.get_alarm_status(self.readpv)
         except TimeoutError:
             return status.ERROR, "timeout reading status"
         if severity in (status.ERROR, status.WARN):
             return severity, msg
-        if self.closingpv or self.closingpv:
-            return status.BUSY, self.msgtxt
+        if self.doReadClosingbit() == 1 or self.doReadOpeningbit() == 1:
+            return status.BUSY, self.doReadMsgTxt()
         return status.OK, ""
 
 
