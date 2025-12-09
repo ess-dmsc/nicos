@@ -129,17 +129,17 @@ class EpicsShutter(EpicsMappedMoveable):
         if self.doReadClosingbit() or self.doReadOpeningbit():
             return True
 
-    def doStatus(self, maxage=0):
-        def _func():
-            try:
-                severity, msg = self._epics_wrapper.get_alarm_status(self.readpv)
-            except TimeoutError:
-                return status.ERROR, "timeout reading status"
-            if self.doIsMoving():
-                return status.BUSY, self.doReadMsgTxt()
-            return severity, msg
+    def _do_status(self):
+        try:
+            severity, msg = self._epics_wrapper.get_alarm_status(self.readpv)
+        except TimeoutError:
+            return status.ERROR, "timeout reading status"
+        if self.doIsMoving():
+            return status.BUSY, self.doReadMsgTxt()
+        return severity, msg
 
-        return get_from_cache_or(self, "status", _func)
+    def doStatus(self, maxage=0):
+        return get_from_cache_or(self, "status", self._do_status)
 
     def _value_change_callback(
         self, name, param, value, units, limits, severity, message, **kwargs
@@ -162,6 +162,14 @@ class EpicsShutter(EpicsMappedMoveable):
             self._cache.put(self._name, param, value, time_stamp)
         if name == self.targetpv:
             self._cache.put(self._name, param, value, time_stamp)
+
+    def _status_change_callback(
+        self, name, param, value, units, limits, severity, message, **kwargs
+    ):
+        if name != self.readpv:
+            # Unexpected updates ignored
+            return
+        self._cache.put(self._name, "status", self._do_status(), time.time())
 
 
 class EpicsHeavyShutter(EpicsMappedReadable):
