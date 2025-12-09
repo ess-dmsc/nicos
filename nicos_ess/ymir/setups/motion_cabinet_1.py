@@ -22,8 +22,8 @@ devices = dict(
         readpv="YMIR-Fil:MC-Pne-01:ShtAuxBits07",
         writepv="YMIR-Fil:MC-Pne-01:ShtOpen",
         resetpv="YMIR-Fil:MC-Pne-01:ShtErrRst",
-        closingbit="YMIR-Fil:MC-Pne-01:ShtNamAuxBit1",
-        openingbit="YMIR-Fil:MC-Pne-01:ShtNamAuxBit2",
+        closingbit="YMIR-Fil:MC-Pne-01:ShtStatusBits.B1",
+        openingbit="YMIR-Fil:MC-Pne-01:ShtStatusBits.B2",
         msgtxt="YMIR-Fil:MC-Pne-01:ShtMsgTxt",
     ),
     filter_1_status=device(
