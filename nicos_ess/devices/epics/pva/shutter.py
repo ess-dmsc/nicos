@@ -61,6 +61,46 @@ class EpicsShutter(EpicsMappedMoveable):
         ),
     }
 
+    def doInit(self, mode):
+        if session.sessiontype == POLLER and self.monitor:
+            self._epics_subscriptions.append(
+                self._epics_wrapper.subscribe(
+                    self.readpv,
+                    self._record_fields["readpv"].cache_key,
+                    self._value_change_callback,
+                    self._connection_change_callback,
+                )
+            )
+            self._epics_subscriptions.append(
+                self._epics_wrapper.subscribe(
+                    self.readpv,
+                    self._record_fields["readpv"].cache_key,
+                    self._status_change_callback,
+                    self._connection_change_callback,
+                )
+            )
+            self._epics_subscriptions.append(
+                self._epics_wrapper.subscribe(
+                    self.writepv,
+                    self._record_fields["writepv"].cache_key,
+                    self._value_change_callback,
+                    self._connection_change_callback,
+                )
+            )
+            if self.targetpv:
+                self._epics_subscriptions.append(
+                    self._epics_wrapper.subscribe(
+                        self.targetpv,
+                        self._record_fields["targetpv"].cache_key,
+                        self._value_change_callback,
+                        self._connection_change_callback,
+                    )
+                )
+
+        if session.sessiontype != POLLER and not self.monitor:
+            _update_mapped_choices_from_writepv(self)
+        MappedMoveable.doInit(self, mode)
+
     def _value_change_callback(
         self, name, param, value, units, limits, severity, message, **kwargs
     ):
