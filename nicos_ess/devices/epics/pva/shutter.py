@@ -14,7 +14,10 @@ from nicos.devices.epics.pva import (
     EpicsDevice,
     EpicsMappedReadable,
 )
-from nicos_ess.devices.epics.pva.epics_devices import EpicsMappedMoveable
+from nicos_ess.devices.epics.pva.epics_devices import (
+    EpicsMappedMoveable,
+    get_from_cache_or,
+)
 
 
 def _update_mapped_choices_from_writepv(mapped_device):
@@ -100,6 +103,43 @@ class EpicsShutter(EpicsMappedMoveable):
         if session.sessiontype != POLLER and not self.monitor:
             _update_mapped_choices_from_writepv(self)
         MappedMoveable.doInit(self, mode)
+
+    def doReadClosingbit(self, maxage=0):
+        return get_from_cache_or(
+            self,
+            "value",
+            lambda: self._epics_wrapper.get_pv_value(self.closingbit, as_string=False),
+        )
+
+    def doReadOpeningbit(self, maxage=0):
+        return get_from_cache_or(
+            self,
+            "value",
+            lambda: self._epics_wrapper.get_pv_value(self.openingbit, as_string=False),
+        )
+
+    def doReadMsgTxt(self, maxage=0):
+        return get_from_cache_or(
+            self,
+            "status",
+            lambda: self._epics_wrapper.get_pv_value(self.msgtxt, as_string=True),
+        )
+
+    def doIsMoving(self):
+        if self.doReadClosingbit() or self.doReadOpeningbit():
+            return True
+
+    def doStatus(self, maxage=0):
+        def _func():
+            try:
+                severity, msg = self._epics_wrapper.get_alarm_status(self.readpv)
+            except TimeoutError:
+                return status.ERROR, "timeout reading status"
+            if self.doIsMoving():
+                return status.BUSY, self.doReadMsgTxt()
+            return severity, msg
+
+        return get_from_cache_or(self, "status", _func)
 
     def _value_change_callback(
         self, name, param, value, units, limits, severity, message, **kwargs
