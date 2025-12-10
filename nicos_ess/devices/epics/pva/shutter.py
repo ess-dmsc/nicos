@@ -20,6 +20,17 @@ from nicos_ess.devices.epics.pva.epics_devices import (
 )
 
 
+def _update_mapped_choices_from_readpv(mapped_device):
+    choices = mapped_device._epics_wrapper.get_value_choices(mapped_device.readpv)
+    new_mapping = {}
+    for i, choice in enumerate(choices):
+        new_mapping[choice] = i
+    mapped_device._setROParam("mapping", new_mapping)
+    mapped_device._inverse_mapping = {}
+    for k, v in mapped_device.mapping.items():
+        mapped_device._inverse_mapping[v] = k
+
+
 def _update_mapped_choices_from_writepv(mapped_device):
     choices = mapped_device._epics_wrapper.get_value_choices(mapped_device.writepv)
     new_mapping = {}
@@ -66,6 +77,8 @@ class EpicsShutter(EpicsMappedMoveable):
 
     def doInit(self, mode):
         if session.sessiontype == POLLER and self.monitor:
+            _update_mapped_choices_from_readpv(self)
+
             self._epics_subscriptions.append(
                 self._epics_wrapper.subscribe(
                     self.readpv,
@@ -100,33 +113,21 @@ class EpicsShutter(EpicsMappedMoveable):
                     )
                 )
 
-        if session.sessiontype != POLLER and not self.monitor:
+        if session.sessiontype != POLLER:
             _update_mapped_choices_from_writepv(self)
         MappedMoveable.doInit(self, mode)
 
-    def doReadClosingbit(self, maxage=0):
-        return get_from_cache_or(
-            self,
-            "value",
-            lambda: self._epics_wrapper.get_pv_value(self.closingbit, as_string=False),
-        )
+    def _is_closing(self):
+        return self._epics_wrapper.get_pv_value(self.closingbit, as_string=False)
 
-    def doReadOpeningbit(self, maxage=0):
-        return get_from_cache_or(
-            self,
-            "value",
-            lambda: self._epics_wrapper.get_pv_value(self.openingbit, as_string=False),
-        )
+    def _is_opening(self):
+        return self._epics_wrapper.get_pv_value(self.openingbit, as_string=False)
 
-    def doReadMsgTxt(self, maxage=0):
-        return get_from_cache_or(
-            self,
-            "status",
-            lambda: self._epics_wrapper.get_pv_value(self.msgtxt, as_string=True),
-        )
+    def _read_msgtxt(self):
+        return self._epics_wrapper.get_pv_value(self.msgtxt, as_string=True)
 
-    def doIsMoving(self):
-        if self.doReadClosingbit() or self.doReadOpeningbit():
+    def _is_moving(self):
+        if self._is_closing() or self._is_opening():
             return True
 
     def _do_status(self):
@@ -134,8 +135,8 @@ class EpicsShutter(EpicsMappedMoveable):
             severity, msg = self._epics_wrapper.get_alarm_status(self.readpv)
         except TimeoutError:
             return status.ERROR, "timeout reading status"
-        if self.doIsMoving():
-            return status.BUSY, self.doReadMsgTxt()
+        if self._is_moving():
+            return status.BUSY, self._read_msgtxt()
         return severity, msg
 
     def doStatus(self, maxage=0):
