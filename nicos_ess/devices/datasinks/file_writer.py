@@ -423,19 +423,9 @@ class FileWriterController:
         prefix = f"{proposal}{file_num_str}{command_str}"
         random_uuid = uuid.uuid1().hex
         random_part_len = len(random_uuid) - len(prefix)
-        generated_uuid = prefix + random_uuid[:random_part_len]
+        generated_uuid = uuid.UUID(prefix + random_uuid[:random_part_len])
 
-        return (
-            generated_uuid[:8]
-            + "-"
-            + generated_uuid[8:12]
-            + "-"
-            + generated_uuid[12:16]
-            + "-"
-            + generated_uuid[16:20]
-            + "-"
-            + generated_uuid[20:]
-        )
+        return generated_uuid
 
     def request_stop(self, job_id, stop_time, service_id):
         message = serialise_6s4t(
