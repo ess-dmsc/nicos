@@ -31,12 +31,14 @@ devices = dict(
         writepv="{}Spd_S".format(pv_root_t0_chopper),
         precision=0.1,
         mapping={
+            "-28 Hz": -28,
             "-14 Hz": -14,
             "-7 Hz": -7,
             "0 Hz": 0,
             "7 Hz": 7,
-            "14 Hz": 14
-        },  # check real speeds later
+            "14 Hz": 14,
+            "28 Hz": 28,
+        },
     ),
     t0_chopper_delay=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
