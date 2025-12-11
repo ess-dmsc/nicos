@@ -420,7 +420,7 @@ class FileWriterController:
         )[
             :12
         ]  # truncate command_str to leave 4 random bytes
-        prefix = f"{proposal}{file_num_str[:4]}{file_num_str[4:]}{command_str}"
+        prefix = f"{proposal}{file_num_str}{command_str}"
         random_uuid = uuid.uuid1().hex
         random_part_len = len(random_uuid) - len(prefix)
         generated_uuid = prefix + random_uuid[:random_part_len]
