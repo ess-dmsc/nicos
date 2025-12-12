@@ -366,7 +366,7 @@ class FileWriterController:
         self, filename, structure, start_time, stop_time=None, job_id=None
     ):
         if not job_id:
-            job_id = str(uuid.uuid1())
+            job_id = self._generate_uuid("ffffffff")  # this should look weird
 
         if not stop_time:
             stop_time = start_time + timedelta(days=365.25 * 10)
@@ -412,10 +412,25 @@ class FileWriterController:
         except ConfigurationError:
             return None
 
+    def _generate_uuid(self, file_num="", command_str=""):
+        proposal = f"{int(session.experiment.propinfo.get('proposal')):0>8x}"
+        file_num_str = f"{int(file_num):0>8x}"
+        command_str = "".join(
+            c for c in command_str.lower() if c in "0123456789abcdef"
+        )[
+            :12
+        ]  # truncate command_str to leave 4 random bytes
+        prefix = f"{proposal}{file_num_str}{command_str}"
+        random_uuid = uuid.uuid1().hex
+        random_part_len = len(random_uuid) - len(prefix)
+        generated_uuid = uuid.UUID(prefix + random_uuid[:random_part_len])
+
+        return generated_uuid
+
     def request_stop(self, job_id, stop_time, service_id):
         message = serialise_6s4t(
             job_id=job_id,
-            command_id=str(uuid.uuid1()),
+            command_id=self._generate_uuid(f"{job_id[9:13]}{job_id[14:18]}", "0000000000000000"),
             service_id=service_id,
             stop_time=stop_time,
             run_name="",
@@ -487,7 +502,7 @@ class FileWriterControlSink(Device):
         else:
             file_num = incrementFileCounter()
             file_path = self._generate_filepath(file_num)
-            job_id = str(uuid.uuid1())
+            job_id = self._controller._generate_uuid(file_num)
             metainfo = generateMetainfo()
             metainfo[("Exp", "job_id")] = job_id
             start_time = datetime.now()
@@ -514,7 +529,8 @@ class FileWriterControlSink(Device):
         if device:
             device_name = device.instrument_name.lower()
             if device_name != session.instrument.instrument.lower():
-                instr_name = f"{device_name}_"
+                instr_name = f"{session.instrument.instrument.lower()}_"
+            instr_name += f"{device_name}_"
         filename = f"{instr_name}{proposal}_{file_num:0>8}.hdf"
         return path.join(proposal_path, filename)
 
