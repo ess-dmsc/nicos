@@ -198,7 +198,7 @@ class AreaDetector(EpicsDevice, ImageChannelMixin, Measurable):
     def doPrepare(self):
         self._update_status(status.BUSY, "Preparing")
         self._update_status(status.OK, "")
-        self.arraydesc = self.arrayInfo()
+        self.arraydesc = self.arrayInfo()[0]
 
     def _update_status(self, new_status, message):
         self._current_status = new_status, message
@@ -233,7 +233,7 @@ class AreaDetector(EpicsDevice, ImageChannelMixin, Measurable):
 
     def arrayInfo(self):
         self.update_arraydesc()
-        return self.arraydesc
+        return tuple([self.arraydesc])
 
     def update_arraydesc(self):
         shape = self._get_pv("max_size_y"), self._get_pv("max_size_x")
@@ -257,7 +257,7 @@ class AreaDetector(EpicsDevice, ImageChannelMixin, Measurable):
 
     def get_image(self):
         dataarray = self._get_pv("image_pv")
-        shape = self.arrayInfo().shape
+        shape = self.arrayInfo()[0].shape
         dataarray = dataarray.reshape(shape)
         self.putResult(LIVE, dataarray, time.time())
         self._last_update = time.monotonic()
@@ -971,7 +971,7 @@ class AreaDetectorCollector(Detector):
     def get_array_size(self, topic, source):
         for area_detector in self._attached_images:
             if (topic, source) == area_detector.get_topic_and_source():
-                return area_detector.arrayInfo().shape
+                return area_detector.arrayInfo()[0].shape
         self.log.error(
             "No array size was found for area detector with topic %s and source %s.",
             topic,
@@ -1011,7 +1011,7 @@ class AreaDetectorCollector(Detector):
         return None
 
     def arrayInfo(self):
-        return tuple(ch.arrayInfo() for ch in self._attached_images)
+        return tuple(ch.arrayInfo()[0] for ch in self._attached_images)
 
     def doTime(self, preset):
         return 0
