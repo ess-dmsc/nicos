@@ -332,9 +332,6 @@ class AreaDetector(ImageChannelMixin, Measurable):
         data_type = np.uint16
         self.arraydesc = ArrayDesc(self.name, shape=shape, dtype=data_type)
 
-    def doIsCompleted(self):
-        _thread = createThread(f"get_image_{time.time_ns()}", self.get_image)
-
     def on_image_callback(self):
         status, message = self._ad_simulator._status
         self._update_status(status, message)

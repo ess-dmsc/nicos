@@ -252,9 +252,6 @@ class AreaDetector(EpicsDevice, ImageChannelMixin, Measurable):
             self, name, param, value, units, limits, severity, message, **kwargs
         )
 
-    def doIsCompleted(self):
-        _thread = createThread(f"get_image_{time.time_ns()}", self.get_image)
-
     def get_image(self):
         dataarray = self._get_pv("image_pv")
         shape = self.arrayInfo()[0].shape
