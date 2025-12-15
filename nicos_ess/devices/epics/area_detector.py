@@ -628,7 +628,7 @@ class OrcaFlash4(AreaDetector):
 
     def doPrepare(self):
         AreaDetector.doPrepare(self)
-        
+
         # Set up external trigger
         self._put_pv("trigger_source", TriggerSource.EXTERNAL.value)
         self._put_pv("trigger_mode", TriggerMode.NORMAL.value)
@@ -636,7 +636,9 @@ class OrcaFlash4(AreaDetector):
         self._put_pv("trigger_global_exposure", TriggerGlobalExposure.DELAYED.value)
         self._put_pv("trigger_polarity", TriggerPolarity.POSITIVE.value)
         self._put_pv("trigger_connector", TriggerConnector.BNC.value)
-        self._put_pv("internal_trigger_handling", TriggerInternalHandling.SHORT_EXPOSURE.value)
+        self._put_pv(
+            "internal_trigger_handling", TriggerInternalHandling.SHORT_EXPOSURE.value
+        )
 
     def _set_custom_record_fields(self):
         AreaDetector._set_custom_record_fields(self)
@@ -664,7 +666,9 @@ class OrcaFlash4(AreaDetector):
         self._record_fields["trigger_delay"] = "TriggerDelay-S"
         self._record_fields["trigger_delay_rbv"] = "TriggerDelay-RB"
         self._record_fields["internal_trigger_handling"] = "InternalTriggerHandling-S"
-        self._record_fields["internal_trigger_handling_rbv"] = "InternalTriggerHandling-RB"
+        self._record_fields["internal_trigger_handling_rbv"] = (
+            "InternalTriggerHandling-RB"
+        )
         self._record_fields["topicpv"] = self.topicpv
         self._record_fields["sourcepv"] = self.sourcepv
 
@@ -897,48 +901,42 @@ class OrcaFlash4(AreaDetector):
             self._attached_watercooler_temperature.start(value)
 
     def time2pulses(self, time):
-        return round(14*time)
-        
+        return round(14 * time)
+
     def pulses2time(self, pulses):
-        return pulses/14
+        return pulses / 14
 
     def doReadAcquiretime(self):
         """
-        doReadAcquireperiod and doReadAcquiretime were chosen to be the same 
+        doReadAcquireperiod and doReadAcquiretime were chosen to be the same
         for Orca in NICOS because at ESS only this mode of operation is required
         (for now at least)
         """
-        return self.pulses2time(
-            self._get_pv("num_triggers_rbv")
-        )
+        return self.pulses2time(self._get_pv("num_triggers_rbv"))
 
     def doWriteAcquiretime(self, value):
         """
-        doWriteAcquiretime and doWriteAcquireperiod were chosen to be the same 
+        doWriteAcquiretime and doWriteAcquireperiod were chosen to be the same
         for Orca in NICOS because at ESS only this mode of operation is required
         (for now at least)
         """
-        self._put_pv("num_triggers", 
-                     self.time2pulses(value))
+        self._put_pv("num_triggers", self.time2pulses(value))
 
     def doReadAcquireperiod(self):
         """
-        doReadAcquireperiod and doReadAcquiretime were chosen to be the same 
+        doReadAcquireperiod and doReadAcquiretime were chosen to be the same
         for Orca in NICOS because at ESS only this mode of operation is required
         (for now at least)
         """
-        return self.pulses2time(
-            self._get_pv("num_triggers_rbv")
-        )
+        return self.pulses2time(self._get_pv("num_triggers_rbv"))
 
     def doWriteAcquireperiod(self, value):
         """
-        doWriteAcquiretime and doWriteAcquireperiod were chosen to be the same 
+        doWriteAcquiretime and doWriteAcquireperiod were chosen to be the same
         for Orca in NICOS because at ESS only this mode of operation is required
         (for now at least)
         """
-        self._put_pv("num_triggers", 
-                     self.time2pulses(value))
+        self._put_pv("num_triggers", self.time2pulses(value))
 
 
 class AreaDetectorCollector(Detector):
