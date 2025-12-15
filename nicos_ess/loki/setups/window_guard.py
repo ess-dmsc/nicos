@@ -7,6 +7,9 @@ devices = dict(
         readpv="LOKI-WinGd1:MC-Pne-01:ShtAuxBits07",
         writepv="LOKI-WinGd1:MC-Pne-01:ShtOpen",
         resetpv="LOKI-WinGd1:MC-Pne-01:ShtErrRst",
+        closingpv="LOKI-WinGd1:MC-Pne-01:ShtStatusBits.B1",
+        openingpv="LOKI-WinGd1:MC-Pne-01:ShtStatusBits.B2",
+        msgtxt="LOKI-WinGd1:MC-Pne-01:ShtMsgTxt",
     ),
     window_guard_status=device(
         "nicos_ess.devices.epics.pva.EpicsStringReadable",
