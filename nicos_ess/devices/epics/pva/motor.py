@@ -888,6 +888,12 @@ class SmaractPiezoMotor(EpicsMotor):
         ),
     }
 
+    parameter_overrides = {
+        "has_errorbit": Override(default=False),
+        "has_reseterror": Override(default=False),
+        "has_powerauto": Override(default=False),
+    }
+
     def doPreinit(self, mode):
         self._lock = threading.Lock()
         self._epics_subscriptions = []
@@ -923,28 +929,19 @@ class SmaractPiezoMotor(EpicsMotor):
             "softlimit": RecordInfo("", ".LVIO", RecordType.STATUS),
             "lowlimitswitch": RecordInfo("", ".LLS", RecordType.STATUS),
             "highlimitswitch": RecordInfo("", ".HLS", RecordType.STATUS),
-            "errorbit": RecordInfo("", "-Err", RecordType.STATUS),
-            "reseterror": RecordInfo("", "-ErrRst", RecordType.STATUS),
-            "powerauto": RecordInfo("", "-PwrAuto", RecordType.STATUS),
             "msgtxt": RecordInfo("", "-MsgTxt", RecordType.STATUS),
-            "openloop": RecordInfo("", ".URIP", RecordType.VALUE),
-            "openloop_rb": RecordInfo("", "-openLoop", RecordType.VALUE),
-            "stepfrequency": RecordInfo("", "-STEPFREQ", RecordType.VALUE),
-            "stepsizeforward": RecordInfo("", "-STEPSIZEF", RecordType.VALUE),
-            "stepsizereverse": RecordInfo("", "-STEPSIZER", RecordType.VALUE),
-            "mclfrequency": RecordInfo("", "-setMclFreq", RecordType.VALUE),
-            "mclfrequency_rb": RecordInfo("", "-Freq-MCL-RB", RecordType.VALUE),
+            "openloop": RecordInfo("", "OpenLoop-Cmd", RecordType.VALUE),
+            "openloop_rb": RecordInfo("", "OpenLoop-RB", RecordType.VALUE),
+            "stepfrequency": RecordInfo("", "StepFreq-SP", RecordType.VALUE),
+            "stepsizeforward": RecordInfo("", "StepSizeFwd-SP", RecordType.VALUE),
+            "stepsizereverse": RecordInfo("", "StepSizeRev-SP", RecordType.VALUE),
+            "mclfrequency": RecordInfo("", "MaxCtrlLFreq-SP", RecordType.VALUE),
+            "mclfrequency_rb": RecordInfo("", "MaxCtrlLFreq-RB", RecordType.VALUE),
         }
         self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
         # Check PV exists
         self._epics_wrapper.connect_pv(self.motorpv)
 
-        if not self.has_errorbit:
-            del self._record_fields["errorbit"]
-        if not self.has_reseterror:
-            del self._record_fields["reseterror"]
-        if not self.has_powerauto:
-            del self._record_fields["powerauto"]
         if not self.has_msgtxt:
             del self._record_fields["msgtxt"]
 
