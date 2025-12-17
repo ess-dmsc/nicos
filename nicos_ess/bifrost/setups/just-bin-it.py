@@ -26,6 +26,16 @@ devices = dict(
         det_range=(1, 13500),
         tof_range=(0, 10000000),
     ),
+    bm1_image=device(
+        "nicos_ess.devices.datasources.just_bin_it.JustBinItImage",
+        description="A just-bin-it image channel",
+        hist_topic="bifrost_visualisation",
+        data_topic="bifrost_beam_monitor",
+        source="cbm1",
+        brokers=configdata("config.KAFKA_BROKERS"),
+        unit="evts",
+        hist_type="1-D TOF",
+    ),
     jbi_detector=device(
         "nicos_ess.devices.datasources.just_bin_it.JustBinItDetector",
         description="The just-bin-it histogrammer",
@@ -36,7 +46,7 @@ devices = dict(
         command_topic="bifrost_jbi_commands",
         response_topic="bifrost_jbi_responses",
         statustopic=["bifrost_jbi_heartbeat"],
-        images=["det_image1", "det_image2"],
+        images=["det_image1", "det_image2", "bm1_image"],
         timers=["timer"],
     ),
     timer=device(
