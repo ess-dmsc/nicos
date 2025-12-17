@@ -25,18 +25,6 @@ class EpicsShutter(EpicsMappedMoveable):
     """
 
     parameters = {
-        "openingbit": Param(
-            "PV for the opening bit",
-            type=none_or(pvname),
-            mandatory=False,
-            userparam=False,
-        ),
-        "closingbit": Param(
-            "PV for the closing bit",
-            type=none_or(pvname),
-            mandatory=False,
-            userparam=False,
-        ),
         "resetpv": Param(
             "PV for resetting device",
             type=none_or(pvname),
@@ -93,17 +81,13 @@ class EpicsShutter(EpicsMappedMoveable):
             _update_mapped_choices(self, pvReadOrWrite.writepv)
         MappedMoveable.doInit(self, mode)
 
-    def _is_closing(self):
-        return self._epics_wrapper.get_pv_value(self.closingbit, as_string=False)
-
-    def _is_opening(self):
-        return self._epics_wrapper.get_pv_value(self.openingbit, as_string=False)
-
     def _read_msgtxt(self):
         return self._epics_wrapper.get_pv_value(self.msgtxt, as_string=True)
 
     def _is_moving(self):
-        if self._is_closing() or self._is_opening():
+        choices = self._epics_wrapper.get_value_choices(self.readpv)
+        choice_mapping = {choice: i for i, choice in enumerate(choices)}
+        if choice_mapping[self.doRead()] in (1, 2):
             return True
 
     def _do_status(self):
