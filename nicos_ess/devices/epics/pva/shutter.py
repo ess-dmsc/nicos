@@ -33,7 +33,7 @@ class EpicsShutter(EpicsMappedMoveable):
         ),
         "msgtxt": Param(
             "PV of the message text",
-            type=none_or(pvname),
+            type=pvname,
             mandatory=False,
             userparam=False,
         ),
@@ -99,7 +99,7 @@ class EpicsShutter(EpicsMappedMoveable):
             return severity, self._read_msgtxt()
         if self._is_moving():
             return status.BUSY, self._read_msgtxt()
-        return severity, msg
+        return severity, self._read_msgtxt()
 
     def doStatus(self, maxage=0):
         return get_from_cache_or(self, "status", self._do_status)
