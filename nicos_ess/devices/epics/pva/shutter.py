@@ -95,6 +95,8 @@ class EpicsShutter(EpicsMappedMoveable):
             severity, msg = self._epics_wrapper.get_alarm_status(self.readpv)
         except TimeoutError:
             return status.ERROR, "timeout reading status"
+        if severity in [status.ERROR, status.WARN]:
+            return severity, self._read_msgtxt()
         if self._is_moving():
             return status.BUSY, self._read_msgtxt()
         return severity, msg
