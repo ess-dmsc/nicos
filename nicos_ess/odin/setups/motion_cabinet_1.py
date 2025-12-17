@@ -10,8 +10,6 @@ devices = dict(
         writepv="ODIN-HvSht:MC-Pne-01:ShtOpen",
         readpv="ODIN-HvSht:MC-Pne-01:ShtAuxBits07",
         resetpv="ODIN-HvSht:MC-Pne-01:ShtErrRst",
-        closingpv="ODIN-HvSht:MC-Pne-01:ShtStatusBits.B1",
-        openingpv="ODIN-HvSht:MC-Pne-01:ShtStatusBits.B2",
         msgtxt="ODIN-HvSht:MC-Pne-01:ShtMsgTxt",
     ),
     heavy_shutter_status=device(

@@ -7,8 +7,6 @@ devices = dict(
         writepv="TBL-HvSht:MC-Pne-01:ShtOpen",
         readpv="TBL-HvSht:MC-Pne-01:ShtAuxBits07",
         resetpv="TBL-HvSht:MC-Pne-01:ShtErrRst",
-        closingpv="TBL-HvSht:MC-Pne-01:ShtStatusBits.B1",
-        openingpv="TBL-HvSht:MC-Pne-01:ShtStatusBits.B2",
         msgtxt="TBL-HvSht:MC-Pne-01:ShtMsgTxt",
     ),
     heavy_shutter_status=device(
