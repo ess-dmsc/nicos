@@ -389,6 +389,9 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         self._put_pv("foff", 0)
 
     def isAllowed(self, pos):
+        status_code, status_msg = self.status()
+        if status_code in self.errorstates:
+            return False, status_msg
         if self.userlimits == (0, 0) and self.abslimits == (0, 0):
             # No limits defined
             return True, ""
