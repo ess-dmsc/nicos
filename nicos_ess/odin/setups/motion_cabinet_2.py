@@ -10,8 +10,6 @@ devices = dict(
         writepv="ODIN-PinDif:MC-Pne-01:ShtOpen",
         readpv="ODIN-PinDif:MC-Pne-01:ShtAuxBits07",
         resetpv="ODIN-PinDif:MC-Pne-01:ShtErrRst",
-        closingpv="ODIN-PinDif:MC-Pne-01:ShtStatusBits.B1",
-        openingpv="ODIN-PinDif:MC-Pne-01:ShtStatusBits.B2",
         msgtxt="ODIN-PinDif:MC-Pne-01:ShtMsgTxt",
     ),
     pinhole_diffuser_status=device(
@@ -25,8 +23,6 @@ devices = dict(
         writepv="ODIN-PinFil:MC-Pne-01:ShtOpen",
         readpv="ODIN-PinFil:MC-Pne-01:ShtAuxBits07",
         resetpv="ODIN-PinFil:MC-Pne-01:ShtErrRst",
-        closingpv="ODIN-PinFil:MC-Pne-01:ShtStatusBits.B1",
-        openingpv="ODIN-PinFil:MC-Pne-01:ShtStatusBits.B2",
         msgtxt="ODIN-PinFil:MC-Pne-01:ShtMsgTxt",
     ),
     pinhole_filter_1_status=device(
@@ -40,8 +36,6 @@ devices = dict(
         writepv="ODIN-PinFil:MC-Pne-02:ShtOpen",
         readpv="ODIN-PinFil:MC-Pne-02:ShtAuxBits07",
         resetpv="ODIN-PinFil:MC-Pne-02:ShtErrRst",
-        closingpv="ODIN-PinFil:MC-Pne-02:ShtStatusBits.B1",
-        openingpv="ODIN-PinFil:MC-Pne-02:ShtStatusBits.B2",
         msgtxt="ODIN-PinFil:MC-Pne-02:ShtMsgTxt",
     ),
     pinhole_filter_2_status=device(
@@ -55,8 +49,6 @@ devices = dict(
         writepv="ODIN-PinFil:MC-Pne-03:ShtOpen",
         readpv="ODIN-PinFil:MC-Pne-03:ShtAuxBits07",
         resetpv="ODIN-PinFil:MC-Pne-03:ShtErrRst",
-        closingpv="ODIN-PinFil:MC-Pne-03:ShtStatusBits.B1",
-        openingpv="ODIN-PinFil:MC-Pne-03:ShtStatusBits.B2",
         msgtxt="ODIN-PinFil:MC-Pne-03:ShtMsgTxt",
     ),
     pinhole_filter_3_status=device(
@@ -70,8 +62,6 @@ devices = dict(
         writepv="ODIN-ExSht:MC-Pne-01:ShtOpen",
         readpv="ODIN-ExSht:MC-Pne-01:ShtAuxBits07",
         resetpv="ODIN-ExSht:MC-Pne-01:ShtErrRst",
-        closingpv="ODIN-ExSht:MC-Pne-01:ShtStatusBits.B1",
-        openingpv="ODIN-ExSht:MC-Pne-01:ShtStatusBits.B2",
         msgtxt="ODIN-ExSht:MC-Pne-01:ShtMsgTxt",
     ),
     experiment_shutter_status=device(
