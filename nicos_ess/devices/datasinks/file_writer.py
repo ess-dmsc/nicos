@@ -412,7 +412,7 @@ class FileWriterController:
         except ConfigurationError:
             return None
 
-    def _generate_uuid(self, file_num="", command_str=""):
+    def _generate_uuid(self, file_num="", command_str="a"):
         proposal_str = f"{int(session.experiment.propinfo.get('proposal')):0>6}"
         file_num_str = f"{int(file_num):0>6}"
         command_str = "".join(
@@ -421,7 +421,7 @@ class FileWriterController:
             :12
         ]  # truncate command_str to leave 4 random bytes
         if command_str[0] == "0":
-            command_str.replace("0", "f", 1)
+            command_str.replace("0", "a", 1)
         prefix = f"{proposal_str}{file_num_str}{command_str}"
         random_uuid = uuid.uuid1().hex
         random_part_len = len(random_uuid) - len(prefix)
