@@ -18,7 +18,9 @@ workflow:
 
 stages:
   - test
-
+  - lint
+  - format
+  
 test:
   stage: test
   script:
@@ -29,3 +31,57 @@ test:
       - test/test-output.xml
     reports:
       junit: test/test-output.xml
+
+
+# lint stage
+
+.lint:
+  stage: lint
+  needs: []
+
+lint:coverage-py:
+  extends:
+    - .lint
+  needs:
+    - job: test
+      artifacts: false
+      optional: true
+  script:
+    - cd test
+    - scl enable rh-python38 -- python -m pytest --cov --cov-report term --cov-report xml:coverage.xml --ignore=nicos_sinq
+  coverage: '/(?i)total.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/'
+  artifacts:
+    expire_in: 1 week
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml
+
+lint:ruff:
+  extends:
+    - .lint
+  script:
+    - scl enable rh-python38 -- python -m ruff check --output-format=gitlab | tee code-quality-report.json
+  artifacts:
+    reports:
+      codequality: code-quality-report.json
+
+
+# format stage
+
+.format:
+  stage: format
+  needs: []
+
+format:ruff:
+  extends:
+    - .format
+  script:
+    - scl enable rh-python38 -- python -m ruff format --diff
+
+format:codespell:
+  extends:
+    - .format
+  script:
+    - scl enable rh-python38 -- python -m pip install codespell
+    - scl enable rh-python38 -- codespell

@@ -1,0 +1,3 @@
+[codespell]
+skip = .git,.ci,subprojects,AUTHORS.md,*.svg,*venv
+quiet-level = 2
