@@ -33,7 +33,11 @@ import weakref
 from nicos.protocols.daemon import (
     CloseConnection,
     ProtocolError,
+)
+from nicos.protocols.daemon import (
     Server as BaseServer,
+)
+from nicos.protocols.daemon import (
     ServerTransport as BaseServerTransport,
 )
 from nicos.protocols.daemon.classic import (
@@ -84,7 +88,7 @@ class Server(BaseServer, socketserver.TCPServer):
                 # close event socket to let the connection get
                 # closed by the handler
                 self.daemon.log.warning(
-                    "handler %s: queue full, " "closing socket", hdlr.ident
+                    "handler %s: queue full, closing socket", hdlr.ident
                 )
                 closeSocket(hdlr.event_sock)
                 closeSocket(hdlr.sock)
@@ -258,7 +262,7 @@ class ServerTransport(
             except Exception as err:
                 self.send_error_reply("invalid command or garbled data")
                 raise ProtocolError(
-                    "recv_command: invalid command or " "garbled data"
+                    "recv_command: invalid command or garbled data"
                 ) from err
         except OSError as err:
             raise ProtocolError("recv_command: connection broken (%s)" % err) from err

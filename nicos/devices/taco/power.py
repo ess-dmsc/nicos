@@ -25,8 +25,8 @@
 
 import DEVERRORS  # pylint: disable=import-error
 from PowerSupply import CurrentControl, VoltageControl
-# pylint: disable=import-error
 
+# pylint: disable=import-error
 from nicos import session
 from nicos.core import HasLimits, HasOffset, Moveable, MoveError, NicosError, Param
 from nicos.devices.taco.core import TacoDevice

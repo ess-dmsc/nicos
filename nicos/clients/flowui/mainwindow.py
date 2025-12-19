@@ -109,7 +109,7 @@ class MainWindow(DefaultMainWindow):
         self.experiment_label.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred
         )
-        self.experiment_label.setStyleSheet("font-size: 17pt; " "font-weight: bold")
+        self.experiment_label.setStyleSheet("font-size: 17pt; font-weight: bold")
         self.toolBarMain.addWidget(self.experiment_label)
 
         self.experiment_text = QLabel()
@@ -124,7 +124,7 @@ class MainWindow(DefaultMainWindow):
         self.instrument_label.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred
         )
-        self.instrument_label.setStyleSheet("font-size: 17pt; " "font-weight: bold")
+        self.instrument_label.setStyleSheet("font-size: 17pt; font-weight: bold")
         self.toolBarMain.addWidget(self.instrument_label)
 
         self.instrument_text = QLabel()

@@ -32,7 +32,8 @@ import traceback
 from nicos.protocols.daemon import STATUS_INBREAK, STATUS_RUNNING
 
 try:
-    from nicospyctl.pyctl import Controller as _Controller, ControlStop
+    from nicospyctl.pyctl import Controller as _Controller
+    from nicospyctl.pyctl import ControlStop
 except ImportError:
     ControlStop = BaseException
 

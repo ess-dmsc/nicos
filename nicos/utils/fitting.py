@@ -156,8 +156,7 @@ class Fit(metaclass=FitterMeta):
                 dyn,
                 None,
                 None,
-                msg="need at least as many valid data points "
-                "as there are parameters",
+                msg="need at least as many valid data points as there are parameters",
             )
 
         if not len(self.parstart):  # pylint: disable=len-as-condition

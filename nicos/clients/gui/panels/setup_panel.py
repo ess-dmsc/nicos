@@ -102,8 +102,8 @@ class ProposalDelegate(QStyledItemDelegate):
             else:
                 dates = ""
             html = f"""<img src=":/appicon-16" width="16">&nbsp;
-            <big><b>{prop['proposal']}</b></big> - {prop['title']}<br>
-            {prop['users'][0]['name']}{dates}
+            <big><b>{prop["proposal"]}</b></big> - {prop["title"]}<br>
+            {prop["users"][0]["name"]}{dates}
             """
             index.model().setData(index, html, Qt.ItemDataRole.UserRole + 1)
         palette = self.parent().palette()
@@ -270,7 +270,7 @@ class ExpPanel(Panel):
             )
             dlg.exec()
         if self.client.run("FinishExperiment()", noqueue=True) is None:
-            self.showError("Could not finish experiment, a script " "is still running.")
+            self.showError("Could not finish experiment, a script is still running.")
 
     @pyqtSlot()
     def on_queryDBButton_clicked(self):
@@ -398,7 +398,7 @@ class ExpPanel(Panel):
             code = "NewExperiment(%s)" % ", ".join("%s=%r" % i for i in args.items())
             if self.client.run(code, noqueue=True) is None:
                 self.showError(
-                    "Could not start new experiment, a script is " "still running."
+                    "Could not start new experiment, a script is still running."
                 )
                 return
             done.append("New experiment started.")
@@ -435,8 +435,7 @@ class ExpPanel(Panel):
             if script_running:
                 done.append("")
                 done.append(
-                    "The changes have been queued since a script "
-                    "is currently running."
+                    "The changes have been queued since a script is currently running."
                 )
             self.showInfo("\n".join(done))
         self._update_proposal_info()
@@ -745,7 +744,7 @@ class SetupsPanel(Panel):
         return self._run_setup_command("AddSetup", to_add, noqueue)
 
     def _run_setup_command(self, cmd, setups, noqueue):
-        cmd_str = f'{cmd}({", ".join(map(repr, setups))})'
+        cmd_str = f"{cmd}({', '.join(map(repr, setups))})"
         return self.client.run(cmd_str, noqueue=noqueue) is not None
 
 

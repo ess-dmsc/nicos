@@ -41,7 +41,7 @@ def check_acc_bragg(instr, h, k, l, ny, sc=None, verbose=False):
         )
     elif (abs(hkl[0]) % 1) + (abs(hkl[1]) % 1) + (abs(hkl[2]) % 1) < 0.01:
         ret.append(
-            "possible type M spurion with scattering vector " "[%.3f, %.3f, %.3f]" % hkl
+            "possible type M spurion with scattering vector [%.3f, %.3f, %.3f]" % hkl
         )
     # type A spurion given if falls on lattice vector
     hkl = tuple(instr._calhkl([res[0], res[0], res[2], res[3]]))
@@ -52,7 +52,7 @@ def check_acc_bragg(instr, h, k, l, ny, sc=None, verbose=False):
         )
     elif (abs(hkl[0]) % 1) + (abs(hkl[1]) % 1) + (abs(hkl[2]) % 1) < 0.01:
         ret.append(
-            "possible type A spurion with scattering vector " "[%.3f, %.3f, %.3f]" % hkl
+            "possible type A spurion with scattering vector [%.3f, %.3f, %.3f]" % hkl
         )
     if verbose:
         ret.append(

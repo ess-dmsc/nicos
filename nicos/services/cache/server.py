@@ -38,7 +38,8 @@ import queue
 import select
 import socket
 import threading
-from time import sleep, time as currenttime
+from time import sleep
+from time import time as currenttime
 
 from nicos import config, session
 from nicos.core import Attach, Device, Param, host

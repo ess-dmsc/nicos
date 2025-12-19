@@ -164,7 +164,7 @@ class DeviceMeta(DeviceMixinMeta):
                 )
             if not isinstance(entry, Attach):
                 raise ProgrammingError(
-                    "Please use 'Attach' to define an " "attached device."
+                    "Please use 'Attach' to define an attached device."
                 )
 
         # create parameter properties
@@ -172,8 +172,7 @@ class DeviceMeta(DeviceMixinMeta):
             # parameter names are always lowercased (enforce this)
             if param != param.lower():
                 raise ProgrammingError(
-                    "%r device: parameter name %r is not "
-                    "all-lowercase" % (name, param)
+                    "%r device: parameter name %r is not all-lowercase" % (name, param)
                 )
             if not isinstance(info, Param):
                 raise ProgrammingError(
@@ -255,7 +254,7 @@ class DeviceMeta(DeviceMixinMeta):
                             ) from None
                     if self._mode == SLAVE:
                         raise ModeError(
-                            "setting parameter %s not possible in " "slave mode" % param
+                            "setting parameter %s not possible in slave mode" % param
                         )
                     elif self._mode == SIMULATION:
                         if wmethod and not self._sim_intercept:
@@ -358,7 +357,7 @@ class Device(metaclass=DeviceMeta):
         ),
         "description": Param("A description of the device", type=str, settable=False),
         "visibility": Param(
-            "Selects in which context the device should be " "shown/included",
+            "Selects in which context the device should be shown/included",
             type=setof("metadata", "namespace", "devlist"),
             default=["metadata", "namespace", "devlist"],
             settable=False,
@@ -455,7 +454,7 @@ class Device(metaclass=DeviceMeta):
                 )
             elif inspect.isroutine(obj):
                 raise UsageError(
-                    self, "%s cannot be assigned; it is a device " "method" % name
+                    self, "%s cannot be assigned; it is a device method" % name
                 )
             elif not isinstance(obj, property):
                 # this should also be forbidden at some point, but for now just
@@ -604,7 +603,7 @@ class Device(metaclass=DeviceMeta):
             # mandatory parameters must be in config, regardless of cache
             if paraminfo.mandatory and param not in self._config:
                 raise ConfigurationError(
-                    self, "missing configuration " "parameter %r" % param
+                    self, "missing configuration parameter %r" % param
                 )
             # Ellipsis representing "no value" since None is a valid value for
             # some parameters
@@ -793,7 +792,7 @@ class Device(metaclass=DeviceMeta):
                 value = rmethod()
             except NicosError:
                 self.log.warning(
-                    "could not read initial value for parameter " "%s from device",
+                    "could not read initial value for parameter %s from device",
                     param,
                 )
             else:
@@ -1129,7 +1128,7 @@ class Readable(Device):
             type=none_or(floatrange(0, 24 * 3600)),
         ),
         "pollinterval": Param(
-            "Polling interval for value and status (or None " "to disable polling)",
+            "Polling interval for value and status (or None to disable polling)",
             unit="s",
             fmtstr="%.1f",
             default=5,
@@ -1594,7 +1593,7 @@ class Moveable(Waitable):
             default=None,
         ),
         "fixed": Param(
-            "None if the device is not fixed, else a string " "describing why",
+            "None if the device is not fixed, else a string describing why",
             settable=False,
             userparam=False,
             type=str,
@@ -1774,7 +1773,7 @@ class Moveable(Waitable):
             pos = self.valuetype(pos)
         except (ValueError, TypeError) as err:
             raise InvalidValueError(
-                self, "%r is an invalid value for this " "device: %s" % (pos, err)
+                self, "%r is an invalid value for this device: %s" % (pos, err)
             ) from None
         ok, why = self.isAllowed(pos)
         if not ok:
@@ -2008,7 +2007,7 @@ class Moveable(Waitable):
         if self.fixedby and not session.checkUserLevel(self.fixedby[1], eu):
             # fixed and not enough rights
             self.log.error(
-                "device was fixed by %r and you are not allowed " "to release it",
+                "device was fixed by %r and you are not allowed to release it",
                 self.fixedby[0],
             )
             return False
@@ -2463,7 +2462,7 @@ class DeviceAlias(Device):
             "Device to alias", type=none_or(nicosdev), settable=True, chatty=True
         ),
         "devclass": Param(
-            "Class name that the aliased device must be an " "instance of",
+            "Class name that the aliased device must be an instance of",
             type=str,
             default="nicos.core.device.Device",
         ),
@@ -2483,7 +2482,7 @@ class DeviceAlias(Device):
             self._cls = session._nicos_import(modname, clsname)
         except Exception:
             self.log.warning(
-                "could not import class %r; using Device as the " "alias devclass",
+                "could not import class %r; using Device as the alias devclass",
                 devclass,
                 exc=1,
             )
@@ -2567,7 +2566,7 @@ class DeviceAlias(Device):
         for target, _ in session.alias_config.get(self._name, []):
             if target != devname and target in session.configured_devices:
                 self.log.warning(
-                    "could not find aliased device %s, " "pointing to %s instead",
+                    "could not find aliased device %s, pointing to %s instead",
                     devname,
                     target,
                 )
@@ -2590,7 +2589,7 @@ class DeviceAlias(Device):
             except Exception:
                 # all hope is lost!
                 self.log.warning(
-                    "could not find %s either, pointing to " "nothing", new_target
+                    "could not find %s either, pointing to nothing", new_target
                 )
                 new_target = ""
         # now make the new choice of alias permanent, including in the cache

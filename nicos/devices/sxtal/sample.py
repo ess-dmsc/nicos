@@ -94,14 +94,14 @@ class SXTalSample(Sample):
             try:
                 parameters["a"], parameters["b"], parameters["c"] = lattice
             except Exception:
-                self.log.warning("invalid lattice spec ignored, should be " "[a, b, c]")
+                self.log.warning("invalid lattice spec ignored, should be [a, b, c]")
         angles = parameters.pop("angles", None)
         if angles is not None:
             try:
                 parameters["alpha"], parameters["beta"], parameters["gamma"] = angles
             except Exception:
                 self.log.warning(
-                    "invalid angles spec ignored, should be " "[alpha, beta, gamma]"
+                    "invalid angles spec ignored, should be [alpha, beta, gamma]"
                 )
         a = parameters.pop("a", None)
         if a is None:

@@ -29,7 +29,11 @@ from nicos.clients.flowui import uipath
 from nicos.clients.gui.panels import Panel, PanelDialog
 from nicos.clients.gui.panels.setup_panel import (
     ExpPanel as DefaultExpPanel,
+)
+from nicos.clients.gui.panels.setup_panel import (
     SetupsPanel as DefaultSetupsPanel,
+)
+from nicos.clients.gui.panels.setup_panel import (
     combineUsers,
     splitUsers,
 )
@@ -117,13 +121,13 @@ class ExpPanel(DefaultExpPanel):
         try:
             users = splitUsers(self.users.text())
         except ValueError:
-            QMessageBox.warning(self, "Error", "Invalid email address in " "users list")
+            QMessageBox.warning(self, "Error", "Invalid email address in users list")
             raise ConfigurationError from None
         try:
             local = splitUsers(self.localContacts.text())
         except ValueError:
             QMessageBox.warning(
-                self, "Error", "Invalid email address in " "local contacts list"
+                self, "Error", "Invalid email address in local contacts list"
             )
             raise ConfigurationError from None
         sample = self.sampleName.text().strip()
@@ -321,7 +325,7 @@ class FinishPanel(Panel):
             )
             dlg.exec()
         if self.client.run("FinishExperiment()", noqueue=True) is None:
-            self.showError("Could not finish experiment, a script " "is still running.")
+            self.showError("Could not finish experiment, a script is still running.")
         else:
             self.show_finish_message()
 

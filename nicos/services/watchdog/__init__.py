@@ -28,7 +28,8 @@ import os
 import sys
 from collections import OrderedDict
 from os import path
-from time import strftime, time as currenttime
+from time import strftime
+from time import time as currenttime
 
 from nicos import config, session
 from nicos.core import Override, Param, anytype, dictof, listof, status
@@ -42,9 +43,9 @@ from nicos.protocols.cache import (
     cache_load,
 )
 from nicos.services.watchdog.conditions import (
+    ConditionWithPrecondition,
     DelayedTrigger,
     Expression,
-    ConditionWithPrecondition,
 )
 from nicos.utils import LCDict, createSubprocess, createThread, watchFileContent
 
@@ -209,7 +210,7 @@ class Watchdog(BaseCacheClient):
             return
 
         if entry.type and entry.type not in self._notifiers:
-            log_msg = "%s: the condition type %r is not valid, must be " "one of %r" % (
+            log_msg = "%s: the condition type %r is not valid, must be one of %r" % (
                 logprefix,
                 entry.type,
                 ", ".join(map(repr, self._notifiers)),
@@ -238,7 +239,7 @@ class Watchdog(BaseCacheClient):
 
         except Exception:
             self.log.error(
-                "%s: could not construct condition, ignoring " "this condition",
+                "%s: could not construct condition, ignoring this condition",
                 logprefix,
             )
             return

@@ -27,7 +27,8 @@
 
 from collections import namedtuple
 from functools import wraps
-from time import localtime, time as currenttime
+from time import localtime
+from time import time as currenttime
 
 from nicos import nicos_version, session
 from nicos.core import status
@@ -188,7 +189,7 @@ def multiStatus(devices, maxage=None):
     else:
         return (
             status.UNKNOWN,
-            "no status could be determined (no doStatus " "implemented?)",
+            "no status could be determined (no doStatus implemented?)",
         )
 
 
@@ -576,7 +577,7 @@ class DeviceValueDict:
                         dev = dev[sub]
                     else:
                         session.log.warning(
-                            "invalid key %r requested, " "returning %r", key, res, exc=1
+                            "invalid key %r requested, returning %r", key, res, exc=1
                         )
                         break
                 else:

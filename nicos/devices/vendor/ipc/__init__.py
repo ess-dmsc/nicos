@@ -44,7 +44,8 @@ from nicos.core import (
     status,
     usermethod,
 )
-from nicos.devices.abstract import Coder as NicosCoder, Motor as NicosMotor
+from nicos.devices.abstract import Coder as NicosCoder
+from nicos.devices.abstract import Motor as NicosMotor
 from nicos.utils import lazy_property
 
 from .bus.base import (
@@ -94,7 +95,7 @@ class Coder(NicosCoder):
             default=None,
         ),
         "readings": Param(
-            "Number of readings to average over " "when determining current position",
+            "Number of readings to average over when determining current position",
             type=int,
             default=1,
             settable=True,
@@ -304,7 +305,7 @@ class Resolver(Coder):
                 self.log.warning("Resetting failed!", exc=1)
         else:
             self.log.warning(
-                "Reset not supported by this firmware, please " "upgrade your HW!"
+                "Reset not supported by this firmware, please upgrade your HW!"
             )
 
     def doStatus(self, maxage=0):
@@ -417,7 +418,7 @@ class Motor(HasTimeout, NicosMotor):
             if self.steps != self.doReadSteps():
                 self.doWriteSteps(self.steps)
                 self.log.warning(
-                    "Resetting stepper position to last known " "good value %d",
+                    "Resetting stepper position to last known good value %d",
                     self.steps,
                 )
             self._type = "stepper motor, " + self._hwtype
@@ -480,11 +481,11 @@ class Motor(HasTimeout, NicosMotor):
     def doWriteAccel(self, value):
         if self._hwtype != "single" and value > 31:
             raise ValueError(
-                self, "acceleration value %d too big for " "non-single cards" % value
+                self, "acceleration value %d too big for non-single cards" % value
             )
         self._attached_bus.send(self.addr, 42, value, 3)
         self.log.info(
-            "parameter change not permanent, use _store() " "method to write to EEPROM"
+            "parameter change not permanent, use _store() method to write to EEPROM"
         )
 
     def doReadRamptype(self):
@@ -499,7 +500,7 @@ class Motor(HasTimeout, NicosMotor):
         except InvalidCommandError as err:
             raise InvalidValueError(self, "ramp type not supported by card") from err
         self.log.info(
-            "parameter change not permanent, use _store() " "method to write to EEPROM"
+            "parameter change not permanent, use _store() method to write to EEPROM"
         )
 
     def doReadDivider(self):
@@ -516,7 +517,7 @@ class Motor(HasTimeout, NicosMotor):
         except InvalidCommandError as err:
             raise InvalidValueError(self, "divider not supported by card") from err
         self.log.info(
-            "parameter change not permanent, use _store() " "method to write to EEPROM"
+            "parameter change not permanent, use _store() method to write to EEPROM"
         )
 
     def doReadMicrostep(self):
@@ -538,7 +539,7 @@ class Motor(HasTimeout, NicosMotor):
         else:
             self._attached_bus.send(self.addr, 57, [1, 2, 4, 8, 16].index(value), 3)
         self.log.info(
-            "parameter change not permanent, use _store() " "method to write to EEPROM"
+            "parameter change not permanent, use _store() method to write to EEPROM"
         )
 
     def doReadMax(self):
@@ -568,7 +569,7 @@ class Motor(HasTimeout, NicosMotor):
         else:
             raise InvalidValueError(self, "confbyte not supported by card")
         self.log.info(
-            "parameter change not permanent, use _store() " "method to write to EEPROM"
+            "parameter change not permanent, use _store() method to write to EEPROM"
         )
 
     def doReadStartdelay(self):
@@ -586,7 +587,7 @@ class Motor(HasTimeout, NicosMotor):
         else:
             raise InvalidValueError(self, "startdelay not supported by card")
         self.log.info(
-            "parameter change not permanent, use _store() " "method to write to EEPROM"
+            "parameter change not permanent, use _store() method to write to EEPROM"
         )
 
     def doReadStopdelay(self):
@@ -604,7 +605,7 @@ class Motor(HasTimeout, NicosMotor):
         else:
             raise InvalidValueError(self, "stopdelay not supported by card")
         self.log.info(
-            "parameter change not permanent, use _store() " "method to write to EEPROM"
+            "parameter change not permanent, use _store() method to write to EEPROM"
         )
 
     def doReadFirmware(self):
@@ -748,7 +749,7 @@ class Motor(HasTimeout, NicosMotor):
             st = status.ERROR
             msg = msg.replace(
                 "limit switch - active, limit switch + active",
-                "EMERGENCY STOP pressed or both limit switches " "broken",
+                "EMERGENCY STOP pressed or both limit switches broken",
             )
         if state & 0x400:
             st = status.ERROR
@@ -1050,7 +1051,7 @@ class SlitMotor(HasTimeout, NicosMotor):
         ):
             return
         self.log.info(
-            "blade is blocked or not initialized, moving to reset " "position %s",
+            "blade is blocked or not initialized, moving to reset position %s",
             self.format(self.resetpos, unit=True),
         )
         self._setROParam("target", self.resetpos)

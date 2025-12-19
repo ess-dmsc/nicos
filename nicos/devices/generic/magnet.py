@@ -209,9 +209,7 @@ class CalibratedMagnet(HasLimits, Moveable):
             elif yunit == "kG":
                 factor = 1e-1
             else:
-                raise NicosError(
-                    self, "unknown unit for B field " "readout: %r" % yunit
-                )
+                raise NicosError(self, "unknown unit for B field readout: %r" % yunit)
             for xr, yr in zip(scan.xresults, scan.yresults):
                 Is.append(xr[xindex])
                 Bs.append(yr[yindex] * factor)
@@ -261,7 +259,7 @@ class BipolarSwitchingMagnet(BaseSequencer, CalibratedMagnet):
         Note: need to be defined in derived classes.
         """
         raise NotImplementedError(
-            "please use a proper derived class and " "implement this there!"
+            "please use a proper derived class and implement this there!"
         )
 
     def _generateSequence(self, target):

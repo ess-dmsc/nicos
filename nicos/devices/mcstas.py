@@ -57,9 +57,11 @@ from nicos.core import (
 from nicos.core.constants import FINAL, LIVE
 from nicos.devices.generic import (
     ActiveChannel,
-    Detector as BaseDetector,
     ImageChannelMixin,
     PassiveChannel,
+)
+from nicos.devices.generic import (
+    Detector as BaseDetector,
 )
 from nicos.utils import createThread
 
@@ -93,7 +95,7 @@ class McStasSimulation(Readable):
         "mcstasdir": Param(
             "Directory where McStas stores results",
             type=str,
-            default="%(session.experiment.dataroot)s" "/singlecount",
+            default="%(session.experiment.dataroot)s/singlecount",
             settable=False,
         ),
         "mcsiminfo": Param(
@@ -121,7 +123,7 @@ class McStasSimulation(Readable):
             default=1,
         ),
         "preselection": Param(
-            "Simulation preset value (should be set by " "the timer device)",
+            "Simulation preset value (should be set by the timer device)",
             type=float,
             settable=True,
             default=1.0,
@@ -475,7 +477,7 @@ class McStasCounter(PassiveChannel, Waitable):
         "type": Param("Counter type", type=oneof("monitor", "counter"), mandatory=True),
         "mcstasfile": Param("Name of the McStas data file", type=str, mandatory=True),
         "intensityfactor": Param(
-            "Factor to attenuate simulated counts, e.g. " "for beam monitors",
+            "Factor to attenuate simulated counts, e.g. for beam monitors",
             settable=True,
             type=floatrange(1e-10),
             default=1,

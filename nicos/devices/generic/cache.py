@@ -87,8 +87,7 @@ class CacheReader(Readable):
                 # Note: this will only be reached if self.maxage is expired
                 # as well
                 self.log.warning(
-                    "value timed out in cache, this should be "
-                    "considered as an error!"
+                    "value timed out in cache, this should be considered as an error!"
                 )
             return val
         raise CommunicationError(self, "no cache found")

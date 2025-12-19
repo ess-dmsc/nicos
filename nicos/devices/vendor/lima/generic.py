@@ -208,14 +208,14 @@ class GenericLimaCCD(PyTangoDevice, ImageChannelMixin, PassiveChannel):
             internal=True,
         ),
         "_curshutteropentime": Param(
-            "Cached shutter open time for current" " acquisition",
+            "Cached shutter open time for current acquisition",
             type=float,
             default=0,
             settable=False,
             internal=True,
         ),
         "_curshutterclosetime": Param(
-            "Cached shutter close time for current" " acquisition",
+            "Cached shutter close time for current acquisition",
             type=float,
             default=0,
             settable=False,

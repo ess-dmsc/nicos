@@ -76,7 +76,7 @@ def UserLevelAuthEntry(val=None):
     """
     if len(val) != 2:
         raise ValueError(
-            "UserLevelAuthEntry entry needs to be a 2-tuple " "(name, accesslevel)"
+            "UserLevelAuthEntry entry needs to be a 2-tuple (name, accesslevel)"
         )
     # pylint: disable=unbalanced-tuple-unpacking
     user, _p, level = UserPassLevelAuthEntry((val[0], "", val[1]))

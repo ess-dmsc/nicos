@@ -30,7 +30,8 @@ import sys
 import threading
 import traceback
 from os import path
-from time import sleep, time as currenttime
+from time import sleep
+from time import time as currenttime
 
 from nicos import config, session
 from nicos.core import (
@@ -76,7 +77,7 @@ class Poller(Device):
             mandatory=True,
         ),
         "neverpoll": Param(
-            "Setups that should never be polled, even if in " "master setup",
+            "Setups that should never be polled, even if in master setup",
             type=listof(str),
         ),
         "blacklist": Param("Devices that should never be polled", type=listof(str)),
@@ -309,14 +310,14 @@ class Poller(Device):
                 # only warn 5 times in a row, and later occasionally
                 if dev is None:
                     self.log.warning(
-                        "%-10s: error creating device, " "retrying in %d sec",
+                        "%-10s: error creating device, retrying in %d sec",
                         devname,
                         errstate[1],
                         exc=True,
                     )
                 else:
                     self.log.warning(
-                        "%-10s: error polling, retrying in " "%d sec",
+                        "%-10s: error polling, retrying in %d sec",
                         dev,
                         errstate[1],
                         exc=True,
@@ -363,8 +364,7 @@ class Poller(Device):
                     cls, _ = session.importDevice(devname)
                 except Exception:
                     self.log.warning(
-                        "%-10s: error importing device class, "
-                        "not retrying this device",
+                        "%-10s: error importing device class, not retrying this device",
                         devname,
                         exc=True,
                     )
@@ -374,7 +374,7 @@ class Poller(Device):
                     continue
                 if issubclass(cls, (DeviceAlias, CacheReader)):
                     self.log.info(
-                        "%s is a DeviceAlias or a CacheReader, " "not polling", devname
+                        "%s is a DeviceAlias or a CacheReader, not polling", devname
                     )
                     continue
 
@@ -571,7 +571,7 @@ class Poller(Device):
                 del self._children[setup]
                 if setup in self._setups and not self._stoprequest:
                     session.log.warning(
-                        "%s poller terminated with %s, " "restarting",
+                        "%s poller terminated with %s, restarting",
                         setup,
                         whyExited(ret),
                     )
@@ -597,7 +597,7 @@ class Poller(Device):
                     del self._children[setup]
                     if setup in self._setups and not self._stoprequest:
                         session.log.warning(
-                            "%s poller terminated with %s, " "restarting", setup, ret
+                            "%s poller terminated with %s, restarting", setup, ret
                         )
                         self._start_child(setup)
                         break

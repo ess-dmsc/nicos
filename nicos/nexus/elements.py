@@ -706,4 +706,4 @@ class CalcData(NexusElementBase):
         raise NotImplementedError("Derived class must implement _shape(dset)")
 
     def _calcData(self, dataset):
-        raise NotImplementedError("Derived class must implement " "_calcData(dset)")
+        raise NotImplementedError("Derived class must implement _calcData(dset)")

@@ -107,8 +107,7 @@ class WatchdogPanel(Panel):
         cf = self.client.eval('session.cache.get_raw("watchdog/configured")', Ellipsis)
         if cf is Ellipsis:
             self.showError(
-                "Could not query watchdog configuration; "
-                "are you connected to a daemon?"
+                "Could not query watchdog configuration; are you connected to a daemon?"
             )
             return
         cf = sorted(cf, key=lambda entry: entry["id"])

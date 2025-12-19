@@ -262,7 +262,7 @@ def NewSetup(*setupnames):
             session.endMultiCreate()
     except Exception:
         session.log.warning(
-            "could not load new setup, falling back to " "startup setup", exc=1
+            "could not load new setup, falling back to startup setup", exc=1
         )
         session.unloadSetup()
         session.loadSetup("startup")
@@ -472,7 +472,7 @@ def CreateAllDevices(**kwargs):
     lowlevel = kwargs.get("lowlevel", False)
     if lowlevel and not session.checkUserLevel(ADMIN):
         session.log.error(
-            "Creating all lowlevel devices is only allowed " "for admin users"
+            "Creating all lowlevel devices is only allowed for admin users"
         )
         lowlevel = False
 
@@ -896,9 +896,7 @@ def sim(what, *devices, **kwargs):
         try:
             compile(what + "\n", "exec", "exec")
         except Exception as e:
-            raise NicosError(
-                "Argument is neither a script file nor valid " "code"
-            ) from e
+            raise NicosError("Argument is neither a script file nor valid code") from e
         session.runSimulation("_RunCode(%r, %s)" % (what, debug))
         return
     if session.mode == SIMULATION:
@@ -960,7 +958,7 @@ def SetMailReceivers(*emails):
             notifier.receivers = emails
     if not ok:
         session.log.warning(
-            "general email notification is not configured " "in this setup"
+            "general email notification is not configured in this setup"
         )
     else:
         ListMailReceivers()
@@ -1020,7 +1018,7 @@ def SetDataReceivers(*emails):
     exp = session.experiment
     if not exp.mailserver or not exp.mailsender:
         session.log.warning(
-            "experimental data retrieval has not been " "configured in this setup"
+            "experimental data retrieval has not been configured in this setup"
         )
     else:
         propinfo = dict(exp.propinfo)

@@ -57,7 +57,7 @@ class DevicesPanel(DefaultDevicesPanel):
 
         self.errorOnly = QCheckBox("show only the errors", self)
         self.errorOnly.setStyleSheet(
-            "QCheckBox { " "background: #f5e042;" "border-radius: 5px" "}"
+            "QCheckBox { background: #f5e042;border-radius: 5px}"
         )
 
         self.errorOnly.setAutoFillBackground(True)

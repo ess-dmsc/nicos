@@ -23,7 +23,8 @@
 
 import zmq
 
-from nicos.protocols.daemon import ClientTransport as BaseClientTransport, ProtocolError
+from nicos.protocols.daemon import ClientTransport as BaseClientTransport
+from nicos.protocols.daemon import ProtocolError
 
 
 class ClientTransport(BaseClientTransport):

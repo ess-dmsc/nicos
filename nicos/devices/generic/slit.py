@@ -75,7 +75,7 @@ class Gap(HasAutoDevices, CanReference, Moveable):
             },
         ),
         "parallel_ref": Param(
-            "Set to True if the blades' reference drive can be done in " "parallel.",
+            "Set to True if the blades' reference drive can be done in parallel.",
             type=bool,
             default=False,
         ),
@@ -112,22 +112,20 @@ class Gap(HasAutoDevices, CanReference, Moveable):
         if self.opmode.endswith("blades"):
             if len(target) != 2:
                 raise InvalidValueError(
-                    self, "arguments required for " f"2-blades mode: {self._axnames}"
+                    self, f"arguments required for 2-blades mode: {self._axnames}"
                 )
             positions = list(target)
         elif self.opmode.endswith("blades_opposite"):
             if len(target) != 2:
                 raise InvalidValueError(
-                    self, "arguments required for " f"2-blades mode: {self._axnames}"
+                    self, f"arguments required for 2-blades mode: {self._axnames}"
                 )
             positions = [-target[0], target[1]]
         elif self.opmode == "centered":
             if len(target) != 1:
                 raise InvalidValueError(
                     self,
-                    "arguments required for "
-                    "centered mode: "
-                    f"[{self._autodevs[1][0]}]",
+                    f"arguments required for centered mode: [{self._autodevs[1][0]}]",
                 )
             positions = [-target[0] / 2, target[0] / 2]
         else:
@@ -208,7 +206,7 @@ class Gap(HasAutoDevices, CanReference, Moveable):
         if self.opmode == "centered":
             if abs((lb + rt) / 2) > self._axes[0].precision:
                 self.log.warning(
-                    "slit seems to be off-centered, but is " 'set to "centered" mode'
+                    'slit seems to be off-centered, but is set to "centered" mode'
                 )
             return [rt - lb]
         elif self.opmode == "offcentered":
@@ -412,7 +410,7 @@ class Slit(HorizontalGap, VerticalGap):
             default="4blades",
         ),
         "coordinates": Override(
-            description="Coordinate convention for left/right and top/bottom " "blades",
+            description="Coordinate convention for left/right and top/bottom blades",
         ),
         "fmtstr_map": Override(
             default={
@@ -445,7 +443,7 @@ class Slit(HorizontalGap, VerticalGap):
         if self.opmode.startswith("4blades"):
             if len(target) != 4:
                 raise InvalidValueError(
-                    self, "arguments required for " f"4-blades mode: {self._axnames}"
+                    self, f"arguments required for 4-blades mode: {self._axnames}"
                 )
             positions = HorizontalGap._getPositions(
                 self, target[:2]
@@ -453,7 +451,7 @@ class Slit(HorizontalGap, VerticalGap):
         elif self.opmode == "centered":
             if len(target) != 2:
                 raise InvalidValueError(
-                    self, "arguments required for " "centered mode: [width, height]"
+                    self, "arguments required for centered mode: [width, height]"
                 )
             positions = HorizontalGap._getPositions(
                 self, target[:1]
@@ -499,7 +497,7 @@ class Slit(HorizontalGap, VerticalGap):
                 or abs((t + b) / 2) > self._attached_top.precision
             ):
                 self.log.warning(
-                    "slit seems to be off-centered, but is " 'set to "centered" mode'
+                    'slit seems to be off-centered, but is set to "centered" mode'
                 )
             return [r - l, t - b]
         elif self.opmode == "offcentered":
@@ -624,7 +622,7 @@ class TwoAxisSlit(CanReference, Moveable):
 
     parameters = {
         "parallel_ref": Param(
-            "Set to True if the blades' reference drive " "can be done in parallel.",
+            "Set to True if the blades' reference drive can be done in parallel.",
             type=bool,
             default=False,
         ),
@@ -651,7 +649,7 @@ class TwoAxisSlit(CanReference, Moveable):
     def doIsAllowed(self, target):
         if len(target) != 2:
             raise InvalidValueError(
-                self, "arguments required for centered " "mode: [width, height]"
+                self, "arguments required for centered mode: [width, height]"
             )
         for slit, slitname, pos in zip(self._slits, self._slitnames, target):
             ok, why = slit.isAllowed(pos)

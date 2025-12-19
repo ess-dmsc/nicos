@@ -54,7 +54,7 @@ class GenericPanel(Panel):
         self._error_window = None
         if "uifile" not in options:
             raise ConfigurationError(
-                "GenericPanels require at least an" " `uifile` option."
+                "GenericPanels require at least an `uifile` option."
             )
         loadUi(self, findResource(options["uifile"]))
         if options.get("showmsg"):

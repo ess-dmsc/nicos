@@ -35,10 +35,12 @@ import numpy.ma
 from gr.pygr import (
     Coords2D,
     Coords2DList,
-    Plot as OrigPlot,
     PlotAxes,
     Point,
     RegionOfInterest,
+)
+from gr.pygr import (
+    Plot as OrigPlot,
 )
 from gr.pygr.base import GRMeta, GRVisibility
 

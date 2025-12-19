@@ -26,7 +26,8 @@
 from nicos import session
 from nicos.core import POLLER, Attach, HasOffset, Override, Param, status
 from nicos.core.errors import NicosError
-from nicos.devices.abstract import Motor as AbstractMotor, TransformedMoveable
+from nicos.devices.abstract import Motor as AbstractMotor
+from nicos.devices.abstract import TransformedMoveable
 from nicos.devices.generic.sequence import SeqCall, SeqSleep, SequencerMixin
 from nicos.devices.vendor.caress.base import Driveable
 from nicos.devices.vendor.caress.core import CARESS, INIT_REINIT, OFF_LINE, STOP_ACTION

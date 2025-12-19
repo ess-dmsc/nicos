@@ -85,7 +85,7 @@ def lower(s):
 class HelpGenerator:
     def __init__(self):
         self.header = (
-            '<html><head><style type="text/css">%s</style>' "</head>\n<body>" % STYLE
+            '<html><head><style type="text/css">%s</style></head>\n<body>' % STYLE
         )
         self.footer = "</body></html>"
         self.strin = StringIO()
@@ -123,7 +123,7 @@ class HelpGenerator:
         if session.help_topics:
             ret.append(
                 self.gen_heading(
-                    "List of additional help topics for " "currently loaded setup",
+                    "List of additional help topics for currently loaded setup",
                     "help_topics",
                 )
             )
@@ -157,7 +157,7 @@ class HelpGenerator:
         ret.append(self.gen_heading("NICOS commands", "commands"))
         ret.append("<p>These commands are currently available.</p>")
         ret.append(
-            '<table width="100%">' "<tr><th>Name</th><th>Short description</th></tr>"
+            '<table width="100%"><tr><th>Name</th><th>Short description</th></tr>'
         )
         ret.extend(cmds)
         ret.append("</table>")

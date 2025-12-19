@@ -59,7 +59,7 @@ from nicos.utils import natural_sort
 
 
 class DeviceValueEdit(NicosWidget, QWidget):
-    designer_description = "Editor for a device value with the right kind " "of widget"
+    designer_description = "Editor for a device value with the right kind of widget"
 
     valueModified = pyqtSignal()
     valueChosen = pyqtSignal(object)
@@ -164,9 +164,7 @@ class DeviceValueEdit(NicosWidget, QWidget):
 
 
 class DeviceParamEdit(DeviceValueEdit):
-    designer_description = (
-        "Editor for a device parameter with the right " "kind of widget"
-    )
+    designer_description = "Editor for a device parameter with the right kind of widget"
 
     param = PropDef("param", str, "", "Parameter name")
 

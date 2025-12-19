@@ -132,8 +132,7 @@ def readSetups(paths, logger):
         for include in info["includes"]:
             if not infodict.get(include):
                 logger.error(
-                    'Setup "%s" includes setup "%s" which does not '
-                    "exist or has errors",
+                    'Setup "%s" includes setup "%s" which does not exist or has errors',
                     name,
                     include,
                 )
@@ -171,7 +170,7 @@ def make_configdata(filepath, all_setups, dep_files):
             setupname, element = name.split(".")
         except ValueError:
             raise ConfigurationError(
-                "configdata() argument must be in the " "form 'module.valuename'"
+                "configdata() argument must be in the form 'module.valuename'"
             ) from None
         if setupname not in all_setups:
             raise ConfigurationError('config setup "%s" not found' % setupname)
@@ -185,8 +184,7 @@ def make_configdata(filepath, all_setups, dep_files):
             return ns[element]
         except KeyError:
             raise ConfigurationError(
-                "value named %s not found in config setup"
-                ' "%s"' % (element, setupname)
+                'value named %s not found in config setup "%s"' % (element, setupname)
             ) from None
 
     return configdata
@@ -245,14 +243,14 @@ def readSetup(infodict, modname, filepath, all_setups, logger):
         with open(filepath, "rb") as modfile:
             code = modfile.read()
     except OSError as err:
-        logger.exception("Could not read setup " "module %r: %s", filepath, err)
+        logger.exception("Could not read setup module %r: %s", filepath, err)
         return
     ns = prepareNamespace(modname, filepath, all_setups)
     try:
         exec(code, ns)
     except Exception as err:
         logger.exception(
-            "An error occurred while processing " "setup %r: %s", filepath, err
+            "An error occurred while processing setup %r: %s", filepath, err
         )
         return
     devices = fixup_stacked_devices(logger, ns.get("devices", {}))
@@ -286,7 +284,7 @@ def readSetup(infodict, modname, filepath, all_setups, logger):
     }
     if info["group"] not in SETUP_GROUPS:
         logger.warning(
-            "Setup %s has an invalid group (valid groups " "are: %s)",
+            "Setup %s has an invalid group (valid groups are: %s)",
             modname,
             ", ".join(SETUP_GROUPS),
         )
@@ -314,7 +312,7 @@ def readSetup(infodict, modname, filepath, all_setups, logger):
         oldinfo["help_topics"].update(info["help_topics"])
         oldinfo["_filenames_"].extend(info["_filenames_"])
         logger.debug(
-            "%r setup partially merged with version " "from parent directory", modname
+            "%r setup partially merged with version from parent directory", modname
         )
     else:
         infodict[modname] = info

@@ -146,7 +146,7 @@ class CellBase:
             raise
         except Exception as err:
             raise ComputationError(
-                "%s when calculating reciprocal space cell " "volume" % err
+                "%s when calculating reciprocal space cell volume" % err
             ) from None
 
     def cal_zone(self):
@@ -181,7 +181,7 @@ class CellBase:
             raise
         except Exception as err:
             raise ComputationError(
-                "%s when calculating d value in " "reciprocal space" % err
+                "%s when calculating d value in reciprocal space" % err
             ) from None
 
     def matrix_crystal2lab(self):
@@ -408,7 +408,7 @@ class CellBase:
             if -1 <= temp <= 1:
                 return degrees(arctan2(sqrt(1 - temp**2), temp)) * sense
             raise ComputationError(
-                "scattering triangle not closed when " "calculating phi angle"
+                "scattering triangle not closed when calculating phi angle"
             )
         except ComputationError:
             raise
@@ -423,7 +423,7 @@ class CellBase:
         if kf > 0.000001:
             return sqrt(kf)
         raise ComputationError(
-            "energy transfer of %s THz not possible " "with k_i = %s" % (ny, ki)
+            "energy transfer of %s THz not possible with k_i = %s" % (ny, ki)
         )
 
     def cal_ki1(self, ny, kf):
@@ -434,7 +434,7 @@ class CellBase:
         if ki > 0.000001:
             return sqrt(ki)
         raise ComputationError(
-            "energy transfer of %s THz not possible " "with k_f = %s" % (ny, kf)
+            "energy transfer of %s THz not possible with k_f = %s" % (ny, kf)
         )
 
     def cal_ki2(self, Qlab, ny, phi):
@@ -455,7 +455,7 @@ class CellBase:
             if ki > 0.000001:
                 return sqrt(ki)
             raise ComputationError(
-                "energy transfer of %s THz not possible " "with phi = %s" % (ny, phi)
+                "energy transfer of %s THz not possible with phi = %s" % (ny, phi)
             )
         except ComputationError:
             raise

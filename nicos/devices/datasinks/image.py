@@ -36,7 +36,7 @@ class ImageSink(FileSink):
 
     parameter_overrides = {
         "subdir": Override(
-            description="Filetype specific subdirectory name " "for the image files"
+            description="Filetype specific subdirectory name for the image files"
         ),
         "settypes": Override(default=[POINT]),
     }

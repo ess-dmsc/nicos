@@ -42,7 +42,8 @@ from nicos.core import (
     tupleof,
     usermethod,
 )
-from nicos.devices.abstract import Axis as AbstractAxis, CanReference
+from nicos.devices.abstract import Axis as AbstractAxis
+from nicos.devices.abstract import CanReference
 from nicos.devices.generic.sequence import SeqCall, SeqDev, SeqSleep, SequencerMixin
 from nicos.devices.taco.core import TacoDevice
 
@@ -67,7 +68,7 @@ class Axis(CanReference, TacoDevice, AbstractAxis):
         "refpos": Param("Position of the reference switch", unit="main", settable=True),
         # do not call deviceReset by default as it does a reference drive
         "resetcall": Param(
-            "What TACO method to call on reset (deviceInit or " "deviceReset)",
+            "What TACO method to call on reset (deviceInit or deviceReset)",
             settable=True,
             default="deviceInit",
             type=oneof("deviceInit", "deviceReset"),
@@ -100,7 +101,7 @@ class Axis(CanReference, TacoDevice, AbstractAxis):
         virtually in simulation mode.
         """
         if self._mode == SLAVE:
-            raise ModeError(self, "setting new position not possible in " "slave mode")
+            raise ModeError(self, "setting new position not possible in slave mode")
         elif self._sim_intercept:
             self._sim_setValue(pos)
             return

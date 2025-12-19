@@ -26,7 +26,8 @@ import os
 import shutil
 import threading
 from os import path
-from time import localtime, mktime, sleep, time as currenttime
+from time import localtime, mktime, sleep
+from time import time as currenttime
 
 from nicos import config
 from nicos.core import Param, oneof
@@ -146,7 +147,7 @@ class FlatfileCacheDatabase(CacheDatabase):
                     db[subkey].expired = True
             except Exception:
                 self.log.warning(
-                    "could not interpret line from " "cache file %s: %r",
+                    "could not interpret line from cache file %s: %r",
                     filename,
                     line,
                     exc=1,
@@ -170,7 +171,7 @@ class FlatfileCacheDatabase(CacheDatabase):
         if not path.isdir(curdir):
             # ... but at least set the symlink correctly for today
             self.log.info(
-                'no previous values found, setting "lastday" link ' "to %s/%s",
+                'no previous values found, setting "lastday" link to %s/%s',
                 self._year,
                 self._currday,
             )
@@ -304,7 +305,7 @@ class FlatfileCacheDatabase(CacheDatabase):
                         time = float(fields[1])
                     except Exception:
                         self.log.exception(
-                            "Error converting timestamp in " "cache file %s/%s/%s-%s",
+                            "Error converting timestamp in cache file %s/%s/%s-%s",
                             year,
                             monthday,
                             category,
@@ -410,8 +411,7 @@ class FlatfileCacheDatabase(CacheDatabase):
                             self._cat[cat][0] = fd
                         ttlcol = entry.ttl and "-" or (entry.value and "+" or "-")
                         fd.write(
-                            f'{subkey}\t{entry.time}\t{ttlcol}'
-                            f'\t{entry.value or "-"}\n'
+                            f"{subkey}\t{entry.time}\t{ttlcol}\t{entry.value or '-'}\n"
                         )
                         fd.flush()
 

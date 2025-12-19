@@ -21,16 +21,16 @@
 #
 # *****************************************************************************
 import io
-from PIL import Image
+from datetime import datetime
 from html import escape
 from logging import ERROR
-from datetime import datetime
+
+from PIL import Image
 
 from nicos.core import Param
 from nicos.services.elog.handler import Handler as BaseHandler
-from nicos.services.elog.utils import formatMessage
-
 from nicos.services.elog.handler.eworkbench.rabbit_producer import RabbitProducer
+from nicos.services.elog.utils import formatMessage
 
 
 class RabbitWriter:
@@ -128,7 +128,7 @@ class Handler(BaseHandler):
 
         headers = rb_headers_note(
             proposal=self._out.proposal,
-            subject=f"Directory  " f"{wb_timestring_1(time)}",
+            subject=f"Directory  {wb_timestring_1(time)}",
             line_count=3,
         )
 
@@ -142,7 +142,7 @@ class Handler(BaseHandler):
 
         headers = rb_headers_note(
             proposal=self._out.proposal,
-            subject="NewExperiment  " f"{wb_timestring_1(time)}",
+            subject=f"NewExperiment  {wb_timestring_1(time)}",
             line_count=1,
         )
 
@@ -153,10 +153,10 @@ class Handler(BaseHandler):
     def handle_setup(self, time, setupnames):
         self.log.info("workbench_writer: handle setup")
 
-        wb_text = wb_format(f'Setup Components:  {escape(", ".join(setupnames))}')
+        wb_text = wb_format(f"Setup Components:  {escape(', '.join(setupnames))}")
         headers = rb_headers_note(
             proposal=self._out.proposal,
-            subject=f"Setup  " f"{wb_timestring_1(time)}",
+            subject=f"Setup  {wb_timestring_1(time)}",
             line_count=1,
         )
 
@@ -167,7 +167,7 @@ class Handler(BaseHandler):
 
         headers = rb_headers_note(
             proposal=self._out.proposal,
-            subject=f"Entry  " f"{wb_timestring_1(time)}",
+            subject=f"Entry  {wb_timestring_1(time)}",
             line_count=1,
         )
 
@@ -180,7 +180,7 @@ class Handler(BaseHandler):
 
         headers = rb_headers_note(
             proposal=self._out.proposal,
-            subject=f"Remark  " f"{wb_timestring_1(time)}",
+            subject=f"Remark  {wb_timestring_1(time)}",
             line_count=1,
         )
 
@@ -193,7 +193,7 @@ class Handler(BaseHandler):
 
         headers = rb_headers_note(
             proposal=self._out.proposal,
-            subject=f"Scriptend  " f"{wb_timestring_1(time)}",
+            subject=f"Scriptend  {wb_timestring_1(time)}",
             line_count=1,
         )
 
@@ -206,7 +206,7 @@ class Handler(BaseHandler):
 
         headers = rb_headers_note(
             proposal=self._out.proposal,
-            subject=f"Scriptbegin  " f"{wb_timestring_1(time)}",
+            subject=f"Scriptbegin  {wb_timestring_1(time)}",
             line_count=1,
         )
 
@@ -219,7 +219,7 @@ class Handler(BaseHandler):
 
         headers = rb_headers_note(
             proposal=self._out.proposal,
-            subject=f"Sample  " f"{wb_timestring_1(time)}",
+            subject=f"Sample  {wb_timestring_1(time)}",
             line_count=1,
         )
 
@@ -232,13 +232,13 @@ class Handler(BaseHandler):
 
         headers = rb_headers_note(
             proposal=self._out.proposal,
-            subject=f"Detectors  " f"{wb_timestring_1(time)}",
+            subject=f"Detectors  {wb_timestring_1(time)}",
             line_count=1,
         )
 
         self._out.rabbit_producer.produce(
             headers=headers,
-            message=wb_format(f'Detectors:   ' f'{escape(", ".join(dlist))}'),
+            message=wb_format(f"Detectors:   {escape(', '.join(dlist))}"),
         )
 
     def handle_environment(self, time, elist):
@@ -246,13 +246,13 @@ class Handler(BaseHandler):
 
         headers = rb_headers_note(
             proposal=self._out.proposal,
-            subject=f"Environment  " f"{wb_timestring_1(time)}",
+            subject=f"Environment  {wb_timestring_1(time)}",
             line_count=1,
         )
 
         self._out.rabbit_producer.produce(
             headers=headers,
-            message=wb_format(f'Environment:   ' f'{escape(", ".join(elist))}'),
+            message=wb_format(f"Environment:   {escape(', '.join(elist))}"),
         )
 
     def handle_offset(self, time, data):
@@ -263,7 +263,7 @@ class Handler(BaseHandler):
 
         headers = rb_headers_note(
             proposal=self._out.proposal,
-            subject=f"Offset  " f"{wb_timestring_1(time)}",
+            subject=f"Offset  {wb_timestring_1(time)}",
             line_count=1,
         )
 
@@ -352,7 +352,7 @@ class Handler(BaseHandler):
             self.log.info("workbench_writer: handle error message")
             headers = rb_headers_note(
                 proposal=self._out.proposal,
-                subject=f"ERROR   " f"{wb_timestring_1(time)}",
+                subject=f"ERROR   {wb_timestring_1(time)}",
                 line_count=1,
             )
 
@@ -366,12 +366,12 @@ class Handler(BaseHandler):
         self.log.info("workbench_writer: handle scanbegin")
 
         wb_text = wb_format(f"Starting scan:   {dataset.info}") + wb_format(
-            f"Started at:   " f"{wb_timestring_2(dataset.started)}"
+            f"Started at:   {wb_timestring_2(dataset.started)}"
         )
 
         headers = rb_headers_note(
             proposal=self._out.proposal,
-            subject=f"Scanbegin  " f"{wb_timestring_1(time)}",
+            subject=f"Scanbegin  {wb_timestring_1(time)}",
             line_count=4,
         )
 
@@ -387,7 +387,7 @@ class Handler(BaseHandler):
         scan_end_results += wb_format(
             f"Started  at:   {datetime(*dataset.started[:6])}"
         )
-        scan_end_results += wb_format(f"Finished at:   " f"{wb_timestring_2(time)}")
+        scan_end_results += wb_format(f"Finished at:   {wb_timestring_2(time)}")
         for file_name in dataset.filepaths:
             scan_end_results += wb_format(f"Filename:   {file_name}")
 
@@ -425,10 +425,10 @@ class Handler(BaseHandler):
             )
             scan_end_results += "<tr>"
             scan_end_results += (
-                f'<td style="width: {cell_width} ;">' f'{wb_format("SCAN")}</td>'
+                f'<td style="width: {cell_width} ;">{wb_format("SCAN")}</td>'
             )
             scan_end_results += (
-                f'<td style="width: {cell_width} ;">' f'{wb_format("POINTS")}</td></td>'
+                f'<td style="width: {cell_width} ;">{wb_format("POINTS")}</td></td>'
             )
             for i in range(len(dataset_names)):
                 scan_end_results += (
@@ -438,10 +438,10 @@ class Handler(BaseHandler):
             scan_end_results += "</tr>"
             scan_end_results += "<tr>"
             scan_end_results += (
-                f'<td style="width: {cell_width} ;">' f"{wb_format(scannumber)}</td>"
+                f'<td style="width: {cell_width} ;">{wb_format(scannumber)}</td>'
             )
             scan_end_results += (
-                f'<td style="width: {cell_width} ;">' f"{wb_format(npoints)}</td>"
+                f'<td style="width: {cell_width} ;">{wb_format(npoints)}</td>'
             )
 
             for i in range(len(dateset_range_vals)):
@@ -455,7 +455,7 @@ class Handler(BaseHandler):
 
         headers = rb_headers_note(
             proposal=self._out.proposal,
-            subject=f"Scanresults {scannumber}   " f"{wb_timestring_1(time)}",
+            subject=f"Scanresults {scannumber}   {wb_timestring_1(time)}",
             line_count=15,
         )
 

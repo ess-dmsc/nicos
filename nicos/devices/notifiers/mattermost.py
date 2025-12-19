@@ -65,7 +65,7 @@ class Mattermost(Notifier):
             "URL of an image to show next to notifications", type=str, default=""
         ),
         "credid": Param(
-            "Credential ID in the NICOS keystore " "for the hook ID",
+            "Credential ID in the NICOS keystore for the hook ID",
             type=str,
             default="mattermost",
         ),
@@ -103,5 +103,5 @@ class Mattermost(Notifier):
                     raise ValueError(response.json()["message"])
             except Exception as err:
                 self.log.warning(
-                    "Could not send Mattermost " "message to %s: %s", entry, err, exc=1
+                    "Could not send Mattermost message to %s: %s", entry, err, exc=1
                 )

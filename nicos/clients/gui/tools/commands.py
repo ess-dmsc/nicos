@@ -99,7 +99,7 @@ class AsyncCommandsTool(CommandsTool):
     def execute(self, cmd):
         if self.proc and self.proc.poll() is None:
             self.outputBox.appendPlainText(
-                "Tool is already running," " not starting a new one."
+                "Tool is already running, not starting a new one."
             )
         self.outputBox.setPlainText(
             "[%s] Executing %s...\n" % (time.strftime("%H:%M:%S"), cmd)

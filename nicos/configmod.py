@@ -29,7 +29,8 @@ import importlib
 import os
 import sys
 from os import path
-from re import compile as regexcompile, escape as regexescape
+from re import compile as regexcompile
+from re import escape as regexescape
 
 import toml
 

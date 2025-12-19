@@ -156,7 +156,7 @@ class ValueLabel(SqueezedLabel):
     # designer_icon = ':/'     # XXX add appropriate icons
 
     dev = PropDef(
-        "dev", str, "", "NICOS device name, if set, display " "value of this device"
+        "dev", str, "", "NICOS device name, if set, display value of this device"
     )
     key = PropDef("key", str, "", "Cache key to display")
     format = PropDef(
@@ -202,7 +202,7 @@ class ValueLabel(SqueezedLabel):
 
 class TimeValueLabel(ValueLabel):
     designer_description = (
-        "Value Label which displays a time in a human " "readable format"
+        "Value Label which displays a time in a human readable format"
     )
 
     def __init__(self, parent, designMode=False, **kwds):
@@ -222,13 +222,13 @@ class ValueDisplay(NicosWidget, QWidget):
     widgetInfo = pyqtSignal(str)
 
     dev = PropDef(
-        "dev", str, "", "NICOS device name, if set, display " "value of this device"
+        "dev", str, "", "NICOS device name, if set, display value of this device"
     )
     key = PropDef(
         "key",
         str,
         "",
-        'Cache key to display (without "nicos/"' ' prefix), set either "dev" or this',
+        'Cache key to display (without "nicos/" prefix), set either "dev" or this',
     )
     statuskey = PropDef(
         "statuskey",
@@ -266,10 +266,10 @@ class ValueDisplay(NicosWidget, QWidget):
         "maxlen",
         int,
         -1,
-        "Maximum length of the value string to " "allow; defaults to no limit",
+        "Maximum length of the value string to allow; defaults to no limit",
     )
     width = PropDef(
-        "width", int, 8, "Width of the widget in units of the " "width of one character"
+        "width", int, 8, "Width of the widget in units of the width of one character"
     )
     istext = PropDef(
         "istext",
@@ -283,25 +283,25 @@ class ValueDisplay(NicosWidget, QWidget):
         "showName",
         bool,
         True,
-        "If false, do not display the " "label for the value name",
+        "If false, do not display the label for the value name",
     )
     showStatus = PropDef(
         "showStatus",
         bool,
         True,
-        "If false, do not display " "the device status as a color of the value text",
+        "If false, do not display the device status as a color of the value text",
     )
     showExpiration = PropDef(
         "showExpiration",
         bool,
         True,
-        "If true, display " 'expired cache values as "n/a"',
+        'If true, display expired cache values as "n/a"',
     )
     horizontal = PropDef(
         "horizontal",
         bool,
         False,
-        "If true, display name " "label left of the value instead of above it",
+        "If true, display name label left of the value instead of above it",
     )
 
     def __init__(self, parent, designMode=False, colorScheme=None, **kwds):
@@ -519,12 +519,10 @@ class PictureDisplay(NicosWidget, QWidget):
     designer_description = "Widget to display a picture file"
 
     filepath = PropDef(
-        "filepath", str, "", "Path to the picture that should " "be displayed"
+        "filepath", str, "", "Path to the picture that should be displayed"
     )
-    name = PropDef(
-        "name", str, "", "Name (caption) to be displayed above " "the picture"
-    )
-    refresh = PropDef("refresh", int, 0, "Interval to check for updates " "in seconds")
+    name = PropDef("name", str, "", "Name (caption) to be displayed above the picture")
+    refresh = PropDef("refresh", int, 0, "Interval to check for updates in seconds")
     height = PropDef("height", int, 0)
     width = PropDef("width", int, 0)
 

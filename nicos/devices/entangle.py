@@ -59,7 +59,8 @@ from nicos.core import (
 )
 from nicos.core.constants import FINAL, INTERRUPTED, LIVE, SLAVE
 from nicos.core.mixins import HasOffset, HasWindowTimeout
-from nicos.devices.abstract import CanReference, Coder, Motor as NicosMotor
+from nicos.devices.abstract import CanReference, Coder
+from nicos.devices.abstract import Motor as NicosMotor
 from nicos.devices.generic.detector import (
     ActiveChannel,
     CounterChannelMixin,

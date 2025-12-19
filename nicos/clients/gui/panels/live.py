@@ -702,9 +702,7 @@ class LiveDataPanel(PlotPanel):
         try:
             descriptions = params["datadescs"]
         except KeyError:
-            self.log.warning(
-                'Livedata with tag "Live" without ' '"datadescs" provided.'
-            )
+            self.log.warning('Livedata with tag "Live" without "datadescs" provided.')
             return
 
         # pylint: disable=len-as-condition

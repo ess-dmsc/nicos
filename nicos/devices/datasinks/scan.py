@@ -398,6 +398,4 @@ class AsciiScanfileSink(FileSink):
 
     def doUpdateCommentchar(self, value):
         if len(value) > 1:
-            raise ConfigurationError(
-                "comment character should only be " "one character"
-            )
+            raise ConfigurationError("comment character should only be one character")

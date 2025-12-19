@@ -886,8 +886,7 @@ class QScan(Scan):
         inst = session.instrument
         if not isinstance(inst, TAS):
             raise NicosError(
-                "cannot do a Q scan, your instrument device "
-                "is not a triple axis device"
+                "cannot do a Q scan, your instrument device is not a triple axis device"
             )
         self._xindex = 0
         Scan.__init__(

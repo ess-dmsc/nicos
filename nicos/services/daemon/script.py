@@ -30,7 +30,8 @@ import traceback
 import weakref
 from bdb import BdbQuit
 from os import path
-from threading import Event, Lock, current_thread, local as thread_local
+from threading import Event, Lock, current_thread
+from threading import local as thread_local
 from uuid import uuid1
 
 from nicos import config, session
@@ -48,7 +49,7 @@ from nicos.protocols.daemon import (
     STATUS_STOPPING,
 )
 from nicos.services.daemon.debugger import Rpdb
-from nicos.services.daemon.errors import ScriptError, RequestError
+from nicos.services.daemon.errors import RequestError, ScriptError
 from nicos.services.daemon.pyctl import Controller, ControlStop
 from nicos.services.daemon.utils import (
     ScriptQueue,
@@ -232,7 +233,7 @@ class ScriptRequest(Request):
             for i in range(curblock + 1):
                 if not self._compare(self.blocks[i], newblocks[i]):
                     raise ScriptError(
-                        "new script differs in already executed " "part of the code"
+                        "new script differs in already executed part of the code"
                     )
             # everything is ok, replace the script and the remaining blocks
             self.text = text
@@ -604,7 +605,7 @@ class ExecutionController(Controller):
                     temp = client_idset - queued_idset
                     if set(client_ids[: len(temp)]) ^ temp:
                         raise RequestError(
-                            "Inconsistency between clients " "script IDs and queued IDs"
+                            "Inconsistency between clients script IDs and queued IDs"
                         )
 
                     # remove already executed scripts from clients id sequence
@@ -614,7 +615,7 @@ class ExecutionController(Controller):
                     temp = queued_idset - client_idset
                     if set(queued_ids[: -len(temp)]) ^ temp:
                         raise RequestError(
-                            "Inconsistency between clients " "script IDs and queued IDs"
+                            "Inconsistency between clients script IDs and queued IDs"
                         )
 
         with self.queue as qop:

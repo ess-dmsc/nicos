@@ -27,7 +27,8 @@
 from Motor import Motor as TACOMotor  # pylint: disable=import-error
 
 from nicos.core import Override, Param, oneof
-from nicos.devices.abstract import CanReference, Motor as AbstractMotor
+from nicos.devices.abstract import CanReference
+from nicos.devices.abstract import Motor as AbstractMotor
 from nicos.devices.taco.core import TacoDevice
 
 
@@ -39,7 +40,7 @@ class Motor(CanReference, TacoDevice, AbstractMotor):
     parameters = {
         # do not call deviceReset by default as it does a reference drive
         "resetcall": Param(
-            "What TACO method to call on reset (deviceInit or " "deviceReset)",
+            "What TACO method to call on reset (deviceInit or deviceReset)",
             settable=True,
             default="deviceInit",
             type=oneof("deviceInit", "deviceReset"),

@@ -58,7 +58,7 @@ class CacheKeyFilter(DeviceMixinBase):
 
     parameters = {
         "keyfilters": Param(
-            "Filter keys to send (regexps); if empty, all " "keys are accepted",
+            "Filter keys to send (regexps); if empty, all keys are accepted",
             type=listof(str),
         ),
     }

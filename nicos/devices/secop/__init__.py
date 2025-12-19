@@ -26,9 +26,9 @@ try:
     from .devices import (
         SecNodeDevice,
         SecopDevice,
+        SecopMoveable,
         SecopReadable,
         SecopWritable,
-        SecopMoveable,
     )
 except ImportError:
     pass

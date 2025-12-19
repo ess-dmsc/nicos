@@ -111,7 +111,7 @@ class CacheDatabase(Device):
         # check for nonexisting or deleted keys
         if entry is None or entry.value is None:
             if ts:
-                return [f'{entry.time if entry else ""}@{key}{OP_TELLOLD}\n']
+                return [f"{entry.time if entry else ''}@{key}{OP_TELLOLD}\n"]
             return [f"{key}{OP_TELLOLD}\n"]
 
         # handle expired keys with different operator
@@ -144,7 +144,7 @@ class CacheDatabase(Device):
             op = entry.expired and OP_TELLOLD or OP_TELL
             if entry.ttl:
                 if ts:
-                    ret.add(f"{entry.time}+{entry.ttl}@{key}" f"{op}{entry.value}\n")
+                    ret.add(f"{entry.time}+{entry.ttl}@{key}{op}{entry.value}\n")
                 else:
                     ret.add(f"{key}{op}{entry.value}\n")
             elif ts:

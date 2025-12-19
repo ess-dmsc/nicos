@@ -116,7 +116,7 @@ def _handleQScanArgs(args, kwargs, Q, dQ, scaninfo):
             if isinstance(value, list):
                 if multistep and len(value) != len(multistep[-1][1]):
                     raise UsageError(
-                        "all multi-step arguments must have the " "same length"
+                        "all multi-step arguments must have the same length"
                     )
                 multistep.append((session.devices[key], value))
             else:
@@ -752,7 +752,7 @@ def checkalign(hkl, step, numpoints, *args, **kwargs):
         session.log.warning("Gaussian fit failed, psi0 unchanged")
     elif not minvalue <= params[0] <= maxvalue:
         session.log.warning(
-            "Gaussian fit resulted in center outside scanning " "area, offset unchanged"
+            "Gaussian fit resulted in center outside scanning area, offset unchanged"
         )
     else:
         # NOTE: this is the other way around compared to checkoffset
@@ -762,7 +762,7 @@ def checkalign(hkl, step, numpoints, *args, **kwargs):
             accuracy = min(params[2] * 0.05, 0.1)
         if abs(diff) < accuracy:
             session.log.info(
-                "alignment ok within %.3f degrees, not " "changing psi0", accuracy
+                "alignment ok within %.3f degrees, not changing psi0", accuracy
             )
         else:
             sample = tas._attached_cell

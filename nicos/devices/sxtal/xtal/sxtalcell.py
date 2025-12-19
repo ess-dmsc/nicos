@@ -251,7 +251,7 @@ class SXTalCell:
         """
         if wavelength is None:
             raise RuntimeError(
-                "Cannot calculate theta without knowing " "hardware or wavelength"
+                "Cannot calculate theta without knowing hardware or wavelength"
             )
         invd = np.linalg.norm(self.CVector(hkl))
         sintheta = invd * wavelength / 2.0

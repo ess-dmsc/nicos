@@ -605,7 +605,7 @@ class ScansPanel(PlotPanel):
     def on_actionDeletePlot_triggered(self):
         if self.currentPlot.dataset.scaninfo != "combined set":
             if not self.askQuestion(
-                "This is not a combined set: still " "delete it from the list?"
+                "This is not a combined set: still delete it from the list?"
             ):
                 return
         current_set = self.setUidStack.pop()

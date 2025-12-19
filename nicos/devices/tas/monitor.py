@@ -27,7 +27,6 @@ from scipy.interpolate import interp1d
 
 from nicos.core import Attach, Param, Value, dictof
 from nicos.devices.generic import PostprocessPassiveChannel
-
 from nicos.devices.tas import Wavevector
 
 
@@ -42,7 +41,7 @@ class OrderCorrectedMonitor(PostprocessPassiveChannel):
 
     parameters = {
         "mapping": Param(
-            "Interpolation mapping between ki and correction " "factor",
+            "Interpolation mapping between ki and correction factor",
             type=dictof(float, float),
             mandatory=False,
         ),

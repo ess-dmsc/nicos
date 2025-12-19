@@ -333,7 +333,7 @@ class DataSink(Device):
         """
         if self.handlerclass is None:
             raise NotImplementedError(
-                'Must set an "handlerclass" attribute ' "on %s" % self.__class__
+                'Must set an "handlerclass" attribute on %s' % self.__class__
             )
         # pylint: disable=not-callable
         if dataset.settype == POINT:

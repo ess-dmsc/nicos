@@ -82,7 +82,7 @@ def _getData(columns=None, dataset=None):
     elif len(columns) == 2:
         xcol, ycol = columns[0], columns[1]
     else:
-        raise UsageError("you can give none, one or two columns names or " "numbers")
+        raise UsageError("you can give none, one or two columns names or numbers")
 
     if isinstance(xcol, str):
         try:
@@ -376,7 +376,7 @@ def center(dev, center, step, numpoints, *args, **kwargs):
     elif not minvalue <= newcenter <= maxvalue:
         # do not allow moving outside of the scanned region
         session.log.warning(
-            "Fit resulted in center outside scanning " "area, no centering done"
+            "Fit resulted in center outside scanning area, no centering done"
         )
     else:
         session.log.info("centered peak for %s", dev)
@@ -409,7 +409,7 @@ def checkoffset(dev, center, step, numpoints, *args, **kwargs):
     elif not minvalue <= newcenter <= maxvalue:
         # do not allow moving outside of the scanned region
         session.log.warning(
-            "Fit resulted in center outside scanning " "area, offset unchanged"
+            "Fit resulted in center outside scanning area, offset unchanged"
         )
     else:
         diff = newcenter - center

@@ -27,6 +27,8 @@ import hashlib
 from nicos.core import GUEST, USER, Param, User, listof, oneof
 from nicos.services.daemon.auth import (
     AuthenticationError,
+)
+from nicos.services.daemon.auth import (
     Authenticator as BaseAuthenticator,
 )
 from nicos.services.daemon.auth.params import UserPassLevelAuthEntry

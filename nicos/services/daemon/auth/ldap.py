@@ -31,6 +31,8 @@ from nicos.core import ACCESS_LEVELS, Param, User, dictof, listof, oneof
 from nicos.core.params import string
 from nicos.services.daemon.auth import (
     AuthenticationError,
+)
+from nicos.services.daemon.auth import (
     Authenticator as BaseAuthenticator,
 )
 
@@ -72,27 +74,27 @@ class Authenticator(BaseAuthenticator):
         "bindmethod": Param("LDAP port", type=oneof(*BIND_METHODS), default="no_tls"),
         "userbasedn": Param("Base dn to query users.", type=str, mandatory=True),
         "userfilter": Param(
-            "Filter for querying users. Must contain " '"%(username)s"',
+            'Filter for querying users. Must contain "%(username)s"',
             type=str,
-            default="(&(uid=%(username)s)" "(objectClass=posixAccount))",
+            default="(&(uid=%(username)s)(objectClass=posixAccount))",
         ),
         "groupbasedn": Param("Base dn to query groups", type=str, mandatory=True),
         "groupfilter": Param(
-            "Filter for querying groups. " 'Must contain "%(gidnumber)s"',
+            'Filter for querying groups. Must contain "%(gidnumber)s"',
             type=str,
-            default="(&(gidNumber=%(gidnumber)s)" "(objectClass=posixGroup))",
+            default="(&(gidNumber=%(gidnumber)s)(objectClass=posixGroup))",
         ),
         "usergroupfilter": Param(
-            "Filter groups of a specific user. " 'Must contain "%(username)s"',
+            'Filter groups of a specific user. Must contain "%(username)s"',
             type=str,
-            default="(&(memberUid=%(username)s)" "(objectClass=posixGroup))",
+            default="(&(memberUid=%(username)s)(objectClass=posixGroup))",
         ),
         "userroles": Param(
-            "Dictionary of allowed users with their " "associated role",
+            "Dictionary of allowed users with their associated role",
             type=dictof(str, oneof(*ACCESS_LEVELS.values())),
         ),
         "grouproles": Param(
-            "Dictionary of allowed groups with their " "associated role",
+            "Dictionary of allowed groups with their associated role",
             type=dictof(str, oneof(*ACCESS_LEVELS.values())),
         ),
     }

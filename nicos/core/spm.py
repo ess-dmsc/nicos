@@ -500,7 +500,7 @@ class SPMHandler:
         cmdopts = {}
         if len(args) % 2:
             return self.error(
-                "too many arguments at %r, expected end of " "command" % args[-1]
+                "too many arguments at %r, expected end of command" % args[-1]
             )
         while args:
             opt, val = args[:2]

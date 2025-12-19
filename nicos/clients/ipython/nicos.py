@@ -210,8 +210,7 @@ class Nicos(Magics):
             return self.doHelp()
         if not self.cli.isconnected:
             print(
-                "Connect with /connect host port user pwd before I do "
-                "anything for you"
+                "Connect with /connect host port user pwd before I do anything for you"
             )
             return
         else:

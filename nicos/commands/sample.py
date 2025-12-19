@@ -261,7 +261,7 @@ def activation(
         return None
     if data["ecode"] == "unknown instrument" and flux is None:
         session.log.warning(
-            "Instrument %s unknown to calculator, " "specify flux manually", instrument
+            "Instrument %s unknown to calculator, specify flux manually", instrument
         )
         session.log.info("Known instruments")
         printTable(
@@ -342,7 +342,7 @@ def _extract_powder_data(num, dataset):
             ][0]
         except IndexError:
             session.log.warning(
-                'dataset %d has no column of type "monitor" ' 'or "time"', num
+                'dataset %d has no column of type "monitor" or "time"', num
             )
             return
     ms = [float(subset.detvaluelist[mcol]) for subset in dataset.subsets]
@@ -415,7 +415,7 @@ def powderfit(powder, scans=None, peaks=None, ki=None, dmono=3.355, spacegroup=1
     else:
         if not isinstance(powder, float):
             raise UsageError(
-                'first argument must be either "YIG" or a ' "lattice constant"
+                'first argument must be either "YIG" or a lattice constant'
             )
         a = powder
 

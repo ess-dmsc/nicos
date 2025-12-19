@@ -309,9 +309,7 @@ class ConsoleSession(Session):
         if "passcode" in required:
             code = required["passcode"]
             if (
-                input(
-                    'Please enter "%s" to proceed, or press Enter to ' "cancel: " % code
-                )
+                input('Please enter "%s" to proceed, or press Enter to cancel: ' % code)
                 != code
             ):
                 raise AccessError("passcode not correct")

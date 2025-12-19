@@ -29,7 +29,8 @@ import os
 import pickle
 import sys
 from collections import OrderedDict
-from time import localtime, mktime, time as currenttime
+from time import localtime, mktime
+from time import time as currenttime
 
 from nicos.clients.gui.panels.plot import PlotPanel
 from nicos.clients.gui.utils import DlgUtils, enumerateWithProgress, loadUi, split_query
@@ -84,7 +85,7 @@ from nicos.guisupport.timeseries import TimeSeries
 from nicos.guisupport.trees import BaseDeviceParamTree
 from nicos.guisupport.utils import scaledFont
 from nicos.protocols.cache import cache_load
-from nicos.utils import parseKeyExpression, number_types, parseDuration, safeName
+from nicos.utils import number_types, parseDuration, parseKeyExpression, safeName
 
 
 class NoEditDelegate(QStyledItemDelegate):
@@ -176,7 +177,9 @@ class View(QObject):
                         from nicos.clients.gui.main import log
 
                         if log is None:
-                            from __main__ import log  # pylint: disable=no-name-in-module
+                            from __main__ import (
+                                log,  # pylint: disable=no-name-in-module
+                            )
                         log.error("Error getting history for %s.", key)
                         QMessageBox.warning(
                             widget,

@@ -28,7 +28,8 @@ import builtins
 import sys
 import time
 
-from nicos import __version__ as nicos_revision, nicos_version, session
+from nicos import __version__ as nicos_revision
+from nicos import nicos_version, session
 from nicos.commands import helparglist, hiddenusercommand, parallel_safe, usercommand
 from nicos.commands.basic import sleep
 from nicos.core import (
@@ -1068,14 +1069,14 @@ def resetlimits(*devlist):
         if dev.userlimits != newlim:
             dev.userlimits = newlim
             dev.log.info(
-                "limits reset to absolute limits, new range: " "%8s --- %8s %s",
+                "limits reset to absolute limits, new range: %8s --- %8s %s",
                 dev.format(dev.userlimits[0]),
                 dev.format(dev.userlimits[1]),
                 dev.unit,
             )
         else:
             dev.log.info(
-                "limits kept at: " "%8s --- %8s %s",
+                "limits kept at: %8s --- %8s %s",
                 dev.format(dev.userlimits[0]),
                 dev.format(dev.userlimits[1]),
                 dev.unit,

@@ -379,7 +379,7 @@ class Attach:
             if check_count(self.multiple, self.optional, len(args)):
                 return args or [None]
             raise ConfigurationError(
-                dev, "device misses device %r in " "configuration" % aname
+                dev, "device misses device %r in configuration" % aname
             )
 
         # Don't change it to more pythonic style since we want to check for
@@ -697,13 +697,13 @@ class intrange:
     def __init__(self, fr, to):
         if isinstance(fr, bool) or isinstance(to, bool):
             raise ValueError(
-                "intrange works with integer numbers! " "A boolean was given!"
+                "intrange works with integer numbers! A boolean was given!"
             )
         fr = int(fr)
         to = int(to)
         if fr > to:
             raise ValueError(
-                "intrange must fulfill from <= to, given was " "[%f, %f]" % (fr, to)
+                "intrange must fulfill from <= to, given was [%f, %f]" % (fr, to)
             )
         self.__doc__ = "an integer in the range [%d, %d]" % (fr, to)
         self.fr = fr
@@ -729,8 +729,7 @@ class floatrange:
             to = float(to)
             if fr > to:
                 raise ValueError(
-                    "floatrange must fulfill from <= to, given "
-                    "was [%f, %f]" % (fr, to)
+                    "floatrange must fulfill from <= to, given was [%f, %f]" % (fr, to)
                 )
             self.__doc__ = "a float in the range [%f, %f]" % (fr, to)
         else:
@@ -1023,7 +1022,7 @@ class host:
             if self.defaulthost:
                 return self._addDefaults(None)
             else:
-                raise ValueError("A None host is not allowed " "without defaulthost")
+                raise ValueError("A None host is not allowed without defaulthost")
         if not isinstance(val, (str, tuple, list)):
             raise ValueError("must be a string or tuple/list (host, port)!")
         if not val:

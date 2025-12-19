@@ -115,7 +115,7 @@ class KFlipper(BaseFlipper):
             unit="A",
         ),
         "flipcurrent": Param(
-            "Polynomial in wavevector to calculate the " "correct flipping current",
+            "Polynomial in wavevector to calculate the correct flipping current",
             settable=True,
             type=nonemptylistof(float),
             unit="A",

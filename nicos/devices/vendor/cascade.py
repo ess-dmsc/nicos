@@ -46,7 +46,6 @@ from nicos.devices.datasinks.raw import (
 )
 from nicos.devices.entangle import ImageChannel
 from nicos.protocols.cache import FLAG_NO_STORE
-
 from nicos_mlz.reseda.utils import MiezeFit
 
 
@@ -97,7 +96,7 @@ class CascadeDetector(ImageChannel):
             default=8,
         ),
         "fitfoil": Param(
-            "Foil for contrast fitting (number BEFORE " "resorting)",
+            "Foil for contrast fitting (number BEFORE resorting)",
             type=int,
             default=0,
             settable=True,
@@ -146,7 +145,7 @@ class CascadeDetector(ImageChannel):
         if mode != SIMULATION:
             if self._getProperty("compact_readout") != "True":
                 raise ConfigurationError(
-                    self, "server must be set to " "compact readout mode"
+                    self, "server must be set to compact readout mode"
                 )
             if len(eval(self._getProperty("compact_foil_start"))) != len(
                 self.foilsorder
@@ -300,7 +299,7 @@ class CascadeDetector(ImageChannel):
             self.log.warning(tres._message)
         else:
             self.log.debug(
-                "total result is %s +/- %r for [avg, contrast, " "freq, phase]",
+                "total result is %s +/- %r for [avg, contrast, freq, phase]",
                 tres,
                 tres._pars[2],
             )
@@ -309,7 +308,7 @@ class CascadeDetector(ImageChannel):
         if rres._failed:
             self.log.warning(rres._message)
         self.log.debug(
-            "ROI result is %r +/- %r for [avg, contrast, freq, " "phase]",
+            "ROI result is %r +/- %r for [avg, contrast, freq, phase]",
             rres,
             rres._pars[2],
         )

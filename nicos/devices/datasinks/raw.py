@@ -63,7 +63,7 @@ class SingleTextImageSink(ImageSink):
             userparam=False,
             default=[
                 "%(proposal)s_%(pointcounter)s.raw",
-                "%(proposal)s_%(scancounter)s" "_%(pointnumber)s.raw",
+                "%(proposal)s_%(scancounter)s_%(pointnumber)s.raw",
             ],
         ),
     }
@@ -93,7 +93,7 @@ class SingleRawImageSink(ImageSink):
             userparam=False,
             default=[
                 "%(proposal)s_%(pointcounter)s.raw",
-                "%(proposal)s_%(scancounter)s" "_%(pointnumber)s.raw",
+                "%(proposal)s_%(scancounter)s_%(pointnumber)s.raw",
             ],
         ),
     }
@@ -200,7 +200,7 @@ class RawImageSink(ImageSink):
             userparam=False,
             default=[
                 "%(proposal)s_%(pointcounter)s.raw",
-                "%(proposal)s_%(scancounter)s" "_%(pointnumber)s.raw",
+                "%(proposal)s_%(scancounter)s_%(pointnumber)s.raw",
             ],
         ),
     }

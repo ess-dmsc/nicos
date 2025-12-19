@@ -237,8 +237,7 @@ class TearOffTabWidget(QTabWidget):
         self.tabIdx = {}
         # don't draw a frame around the tab contents
         self.setStyleSheet(
-            "QTabWidget:tab:disabled{width:0;height:0;"
-            "margin:0;padding:0;border:none}"
+            "QTabWidget:tab:disabled{width:0;height:0;margin:0;padding:0;border:none}"
         )
         self.setDocumentMode(True)
         # default: only keep margin at the top (below the tabs)

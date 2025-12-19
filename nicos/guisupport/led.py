@@ -40,14 +40,12 @@ class BaseLed(QLabel, NicosWidget):
     _ledPatternName = ":/leds/{color}_{status}"
 
     ledStatus = PropDef(
-        "ledStatus", bool, True, "Status to display the " '"On color" (bright)'
+        "ledStatus", bool, True, 'Status to display the "On color" (bright)'
     )
     ledInverted = PropDef(
-        "ledInverted", bool, False, "Status to display the " '"Off color" (dark)'
+        "ledInverted", bool, False, 'Status to display the "Off color" (dark)'
     )
-    ledColor = PropDef(
-        "ledColor", str, "green", "Color of the LED (default " "is green)"
-    )
+    ledColor = PropDef("ledColor", str, "green", "Color of the LED (default is green)")
 
     def __init__(self, parent=None, designMode=False):
         QLabel.__init__(self, parent)
@@ -99,7 +97,7 @@ class ValueLed(BaseLed):
         "goal",
         str,
         "",
-        "Comparison value (by default the LED is " "green if value is true/nonzero)",
+        "Comparison value (by default the LED is green if value is true/nonzero)",
     )
 
     _goalval = None
@@ -167,10 +165,10 @@ class ClickableOutputLed(ValueLed):
 
     ledColor = PropDef("ledColor", str, "orange", "Default led color")
     stateActive = PropDef(
-        "stateActive", str, "1", "Target for active LED " "state (green)"
+        "stateActive", str, "1", "Target for active LED state (green)"
     )
     stateInactive = PropDef(
-        "stateInactive", str, "0", "Target for inactive " "LED state (red)"
+        "stateInactive", str, "0", "Target for inactive LED state (red)"
     )
 
     def __init__(self, parent=None, designMode=False):

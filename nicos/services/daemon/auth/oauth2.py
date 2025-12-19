@@ -27,6 +27,8 @@ from requests_oauthlib import OAuth2Session
 from nicos.core import USER, Param, User
 from nicos.services.daemon.auth import (
     AuthenticationError,
+)
+from nicos.services.daemon.auth import (
     Authenticator as BaseAuthenticator,
 )
 from nicos.utils.credentials.keystore import nicoskeystore
@@ -39,7 +41,7 @@ class Authenticator(BaseAuthenticator):
         "tokenurl": Param("OAuth server token url to authenticate", type=str),
         "clientid": Param("OAuth client id", type=str),
         "keystoretoken": Param(
-            "Id used in the keystore for the OAuth client " "secret",
+            "Id used in the keystore for the OAuth client secret",
             type=str,
             default="oauth2server",
         ),

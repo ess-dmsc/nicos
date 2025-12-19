@@ -95,8 +95,7 @@ class TAS(HasAutoDevices, Instrument, Moveable):
             category="instrument",
         ),
         "psi360": Param(
-            "Whether the range of psi is 0-360 deg "
-            "(otherwise -180-180 deg is assumed)",
+            "Whether the range of psi is 0-360 deg (otherwise -180-180 deg is assumed)",
             type=bool,
             default=True,
             settable=True,

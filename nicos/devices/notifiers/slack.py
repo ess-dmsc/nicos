@@ -49,9 +49,7 @@ class Slacker(Notifier):
     }
 
     parameter_overrides = {
-        "receivers": Override(
-            description="Slack receiver channels " "(format: #channel)"
-        ),
+        "receivers": Override(description="Slack receiver channels (format: #channel)"),
     }
 
     def doInit(self, mode):

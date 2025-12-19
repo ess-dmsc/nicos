@@ -28,6 +28,7 @@ import sys
 import time
 import traceback
 from logging import (
+    CRITICAL,
     DEBUG,
     ERROR,
     INFO,
@@ -37,7 +38,6 @@ from logging import (
     Logger,
     LogRecord,
     addLevelName,
-    CRITICAL,
 )
 from logging.handlers import SysLogHandler
 from os import path

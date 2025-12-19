@@ -35,14 +35,14 @@ class Image(ImageChannelMixin, PassiveChannel):
 
     parameters = {
         "listmodefile": Param(
-            "List mode data file name (if it is empty, no " "file will be written)",
+            "List mode data file name (if it is empty, no file will be written)",
             type=str,
             settable=True,
             default="",
             category="instrument",
         ),
         "histogramfile": Param(
-            "Histogram data file name (if it is empty, no " "file will be written)",
+            "Histogram data file name (if it is empty, no file will be written)",
             type=str,
             settable=True,
             default="",

@@ -22,7 +22,8 @@
 # *****************************************************************************
 
 from collections import OrderedDict
-from time import localtime, strftime, time as currenttime
+from time import localtime, strftime
+from time import time as currenttime
 
 import numpy
 

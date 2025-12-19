@@ -440,7 +440,7 @@ class VirtualGauss(PassiveChannel):
             "Moveables on which the count depends", Moveable, multiple=True
         ),
         "timer": Attach(
-            "Timer device to use as elapsed time instead of " "real time",
+            "Timer device to use as elapsed time instead of real time",
             PassiveChannel,
             optional=True,
         ),
@@ -805,7 +805,7 @@ class VirtualRealTemperature(HasWindowTimeout, HasLimits, Moveable):
                 lastD = D
 
                 self.log.debug(
-                    "PID: P = %.2f, I = %.2f, D = %.2f, " "heater = %.2f",
+                    "PID: P = %.2f, I = %.2f, D = %.2f, heater = %.2f",
                     P,
                     I,
                     D,

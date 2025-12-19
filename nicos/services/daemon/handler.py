@@ -70,7 +70,7 @@ def command(needcontrol=False, needscript=None, name=None):
                 return
             if needcontrol:
                 if not self.check_control():
-                    self.send_error_reply("you do not have control " "of the session")
+                    self.send_error_reply("you do not have control of the session")
                     return
             if needscript is True:
                 if self.controller.status in (STATUS_IDLE, STATUS_IDLEEXC):
@@ -271,7 +271,7 @@ class ConnectionHandler:
                 break
             except Exception:
                 self.log.exception(
-                    "exception in event sender; event: %s, " "data: %s",
+                    "exception in event sender; event: %s, data: %s",
                     event,
                     repr(data)[:1000],
                 )
@@ -754,7 +754,7 @@ class ConnectionHandler:
         else:
             if code:
                 self.send_error_reply(
-                    "code to debug given, but a " "script is already running"
+                    "code to debug given, but a script is already running"
                 )
                 return
             self.controller.debug_running()

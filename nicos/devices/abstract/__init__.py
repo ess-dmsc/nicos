@@ -61,7 +61,7 @@ class Coder(HasPrecision, Readable):
            This is called to actually set the new position in the hardware.
         """
         if self._mode == SLAVE:
-            raise ModeError(self, "setting new position not possible in " "slave mode")
+            raise ModeError(self, "setting new position not possible in slave mode")
         elif self._sim_intercept:
             self._sim_setValue(pos)
             return
@@ -177,7 +177,7 @@ class TransformedReadable(Readable):
         should map the raw value to the transformed value.
         """
         raise ProgrammingError(
-            self, "Somebody please implement a proper " "_readMapValue method!"
+            self, "Somebody please implement a proper _readMapValue method!"
         )
 
     def _readRaw(self, maxage=0):
@@ -186,7 +186,7 @@ class TransformedReadable(Readable):
         Must be implemented in derived classes!
         """
         raise ProgrammingError(
-            self, "Somebody please implement a proper " "_readRaw or doRead method!"
+            self, "Somebody please implement a proper _readRaw or doRead method!"
         )
 
 
@@ -216,7 +216,7 @@ class TransformedMoveable(TransformedReadable, Moveable):
         should map the target value to a raw value.
         """
         raise ProgrammingError(
-            self, "Somebody please implement a proper " "_mapTargetValue method!"
+            self, "Somebody please implement a proper _mapTargetValue method!"
         )
 
     def _startRaw(self, target):
@@ -225,7 +225,7 @@ class TransformedMoveable(TransformedReadable, Moveable):
         Must be implemented in derived classes!
         """
         raise ProgrammingError(
-            self, "Somebody please implement a proper " "_startRaw or doStart method!"
+            self, "Somebody please implement a proper _startRaw or doStart method!"
         )
 
 
@@ -257,7 +257,7 @@ class MappedReadable(HasMapping, TransformedReadable):
         if self.fallback in self.mapping:
             raise ConfigurationError(
                 self,
-                "Value of fallback parameter is " "not allowed to be in the mapping!",
+                "Value of fallback parameter is not allowed to be in the mapping!",
             )
         self._inverse_mapping = {}
         for k, v in self.mapping.items():

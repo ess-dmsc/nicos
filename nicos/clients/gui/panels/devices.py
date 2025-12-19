@@ -418,7 +418,7 @@ class DevicesPanel(Panel):
         self._dev2setup = {}
         self._setupinfo = self.client.eval("session.getSetupInfo()", {})
         if self._setupinfo is None:
-            self.log.warning("session.getSetupInfo() returned None instead " "of {}")
+            self.log.warning("session.getSetupInfo() returned None instead of {}")
             return
         for setupname, info in self._setupinfo.items():
             if info is None:
@@ -749,8 +749,7 @@ class DevicesPanel(Panel):
                 self.on_client_device(("destroy", [self._menu_dev]))
                 return
             if self.askQuestion(
-                "This will unload the device until the setup "
-                "is loaded again. Proceed?"
+                "This will unload the device until the setup is loaded again. Proceed?"
             ):
                 self.exec_command("RemoveDevice(%r)" % self._menu_dev, ask_queue=False)
 
@@ -1143,8 +1142,7 @@ class ControlDialog(QDialog):
             QMessageBox.warning(
                 self,
                 "Error",
-                "The entered limits are not "
-                "within the absolute limits for the device.",
+                "The entered limits are not within the absolute limits for the device.",
             )
             # retry
             self.on_actionSetLimits_triggered()
@@ -1263,7 +1261,7 @@ class ControlDialog(QDialog):
             # shouldn't happen, but if it does, at least give an indication that
             # something went wrong
             QMessageBox.warning(
-                self, "Error", "The entered value is invalid " "for this parameter."
+                self, "Error", "The entered value is invalid for this parameter."
             )
             return
         if self.devrepr == self.devname:

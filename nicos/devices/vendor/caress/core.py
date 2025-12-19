@@ -51,8 +51,10 @@ try:
     import omniORB
     from omniORB import CORBA
 
-    from . import _GlobalIDL  # pylint: disable=unused-import
-    from . import CARESS
+    from . import (
+        CARESS,
+        _GlobalIDL,  # pylint: disable=unused-import
+    )
 
     sys.modules["CARESS"] = sys.modules["nicos.devices.vendor.caress.CARESS"]
     sys.modules["ABSDEV"] = sys.modules["nicos.devices.vendor.caress._GlobalIDL"]
@@ -225,9 +227,7 @@ class CARESSDevice(HasCommunication):
         _root_context = obj._narrow(CosNaming.NamingContext)
 
         if not _root_context:
-            raise CommunicationError(
-                self, "Failed to narrow the root naming" " context"
-            )
+            raise CommunicationError(self, "Failed to narrow the root naming context")
         if self._is_corba_device():
             try:
                 tmp = (
@@ -285,13 +285,13 @@ class CARESSDevice(HasCommunication):
             if session.sessiontype != POLLER:
                 if hasattr(self._caressObject, "init_system_orb"):
                     if not CARESSDevice._caress_initialized:
-                        self.log.debug("initialize the CARESS absdev " "container")
+                        self.log.debug("initialize the CARESS absdev container")
                         if self._caressObject.init_system_orb(0)[0] in (0, CARESS.OK):
                             CARESSDevice._caress_initialized = True
                         else:
                             raise CommunicationError(
                                 self,
-                                "could not " "initialize CARESS absdev" " container",
+                                "could not initialize CARESS absdev container",
                             )
 
             _config = self._normalized_config()

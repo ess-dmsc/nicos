@@ -41,7 +41,8 @@ from nicos.core import (
     waitForCompletion,
 )
 from nicos.core.constants import MASTER, SIMULATION
-from nicos.devices.abstract import Axis as AbstractAxis, CanReference, Coder, Motor
+from nicos.devices.abstract import Axis as AbstractAxis
+from nicos.devices.abstract import CanReference, Coder, Motor
 from nicos.utils import createThread
 
 
@@ -108,7 +109,7 @@ class Axis(CanReference, AbstractAxis):
         for ob in self._attached_obs:
             if self._attached_motor.unit != ob.unit:
                 raise ConfigurationError(
-                    self, "different units for motor " "and observer %s" % ob
+                    self, "different units for motor and observer %s" % ob
                 )
 
         # Check for userlimits in configuration
@@ -171,12 +172,12 @@ class Axis(CanReference, AbstractAxis):
             if amin < mot_amin - abs(mot_amin * 1e-12):
                 raise ConfigurationError(
                     self,
-                    "abslimits: min (%s) below " "motor's min (%s)" % (amin, mot_amin),
+                    "abslimits: min (%s) below motor's min (%s)" % (amin, mot_amin),
                 )
             if amax > mot_amax + abs(mot_amax * 1e-12):
                 raise ConfigurationError(
                     self,
-                    "abslimits: max (%s) above " "motor's max (%s)" % (amax, mot_amax),
+                    "abslimits: max (%s) above motor's max (%s)" % (amax, mot_amax),
                 )
         else:
             amin, amax = mot_amin, mot_amax
@@ -303,13 +304,13 @@ class Axis(CanReference, AbstractAxis):
         self._attached_motor.setPosition(self._getReading())
         if not self._hascoder:
             self.log.info(
-                "reset done; use %s.reference() to do a reference " "drive", self
+                "reset done; use %s.reference() to do a reference drive", self
             )
 
     def doReference(self):
         """Do a reference drive, if the motor supports it."""
         if self._hascoder:
-            self.log.error("this is an encoded axis, " "referencing makes no sense")
+            self.log.error("this is an encoded axis, referencing makes no sense")
             return
         motor = self._attached_motor
         if isinstance(motor, CanReference):
@@ -359,7 +360,7 @@ class Axis(CanReference, AbstractAxis):
         if self.status(0)[0] == status.BUSY:
             raise NicosError(
                 self,
-                "axis is moving now, please issue a stop " "command and try it again",
+                "axis is moving now, please issue a stop command and try it again",
             )
         if self._errorstate:
             raise self._errorstate  # pylint: disable=raising-bad-type
@@ -568,7 +569,7 @@ class Axis(CanReference, AbstractAxis):
                     moving = False
                 elif not precise and not self._errorstate:
                     self.log.debug(
-                        "motor stopped and precise positioning " "not requested"
+                        "motor stopped and precise positioning not requested"
                     )
                     moving = False
                 elif self._checkTargetPosition(target, pos, error=not self._errorstate):
@@ -585,7 +586,7 @@ class Axis(CanReference, AbstractAxis):
                     if newstatus[0] == status.ERROR:
                         moving = False
                         self._setErrorState(
-                            MoveError, "motor in error state: " "%s" % newstatus[1]
+                            MoveError, "motor in error state: %s" % newstatus[1]
                         )
                 elif tries > 0:
                     if tries == 1:
@@ -622,7 +623,7 @@ class Axis(CanReference, AbstractAxis):
                     self._duringMoveAction(pos)
                 except Exception as err:
                     self._setErrorState(
-                        MoveError, "error in during-move " "action: %s" % err
+                        MoveError, "error in during-move action: %s" % err
                     )
                     self._stoprequest = 1
             elif self._stoprequest == 2:
@@ -630,7 +631,7 @@ class Axis(CanReference, AbstractAxis):
                 stoptries -= 1
                 if stoptries < 0:
                     self._setErrorState(
-                        MoveError, "motor did not stop after " "stop request, aborting"
+                        MoveError, "motor did not stop after stop request, aborting"
                     )
                     moving = False
         self.log.debug("inner positioning loop finshed")

@@ -102,7 +102,7 @@ class TemperatureController(TacoDevice, HasWindowTimeout, HasLimits, Moveable):
         ),
         "heaterpower": Param("Current heater power", unit="W", category="general"),
         "controlchannel": Param(
-            "Control channel, possible values depend " "on the type of device",
+            "Control channel, possible values depend on the type of device",
             type=str,
             category="general",
             settable=True,
@@ -232,7 +232,7 @@ class TemperatureController(TacoDevice, HasWindowTimeout, HasLimits, Moveable):
         # helper for all resources which need to stop the devices first.
         # do it, but give a warning
         self.log.warning(
-            "Stopping device to set %r, you may need to " "start/move it again.",
+            "Stopping device to set %r, you may need to start/move it again.",
             resource,
         )
         self._taco_guard(self._dev.stop)

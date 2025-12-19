@@ -39,7 +39,8 @@ import time
 from collections import OrderedDict
 from logging import DEBUG, ERROR, FATAL, INFO, WARNING
 from os import path
-from time import localtime, strftime, time as currenttime
+from time import localtime, strftime
+from time import time as currenttime
 from uuid import uuid1
 
 from html2text import HTML2Text
@@ -510,8 +511,7 @@ class NicosCmdClient(NicosClient):
                 ]
                 if removed:
                     self.put_client(
-                        "%d script(s) or command(s) removed from "
-                        "queue." % len(removed)
+                        "%d script(s) or command(s) removed from queue." % len(removed)
                     )
                     self.show_pending()
                 self.set_status(self.status)
@@ -528,7 +528,7 @@ class NicosCmdClient(NicosClient):
                 self.initial_update()
             elif name == "disconnected":
                 self.put_client(
-                    "Disconnected from server, use /reconnect to " "try reconnecting."
+                    "Disconnected from server, use /reconnect to try reconnecting."
                 )
                 self.current_mode = MASTER
                 self.debug_mode = False
@@ -745,8 +745,7 @@ class NicosCmdClient(NicosClient):
             self.put_client("No scripts or commands are pending.")
             return
         self.put_client(
-            "Showing pending scripts or commands. "
-            'Use "/cancel" to remove one or more.'
+            'Showing pending scripts or commands. Use "/cancel" to remove one or more.'
         )
         for _reqid, short in self._iter_pending():
             self.put("#   %s" % short)
@@ -843,7 +842,7 @@ class NicosCmdClient(NicosClient):
             # this is not usually entered as "/cmd foo", but only "foo"
             if self.status in ("running", "paused"):
                 reply = self.ask_question(
-                    "A script is already running, " "queue or execute anyway?",
+                    "A script is already running, queue or execute anyway?",
                     chars="qxn",
                 )
                 if reply == "x":
@@ -881,7 +880,7 @@ class NicosCmdClient(NicosClient):
             if self.status in ("running", "paused") and cmd != "run!":
                 if (
                     self.ask_question(
-                        "A script is already running, " "queue script?",
+                        "A script is already running, queue script?",
                         chars="yn",
                         default="y",
                     )

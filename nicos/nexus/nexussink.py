@@ -212,7 +212,7 @@ class NexusSinkHandler(DataSinkHandler):
                 self.resultValues(self.template, h5obj, results)
         except BlockingIOError:
             session.log.warning(
-                "Other process is accessing NeXus file " "while saving results"
+                "Other process is accessing NeXus file while saving results"
             )
 
     def addSubset(self, subset):
@@ -290,7 +290,7 @@ class NexusSink(FileSink):
 
     parameters = {
         "templateclass": Param(
-            "Python class implementing " "NexusTemplateProvider",
+            "Python class implementing NexusTemplateProvider",
             type=str,
             mandatory=True,
         ),

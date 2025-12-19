@@ -241,8 +241,7 @@ class TacoDevice(HasCommunication):
         if "unit" in self._config:
             if self._config["unit"] != value:
                 self.log.warning(
-                    "configured unit %r in configuration differs "
-                    "from current unit %r",
+                    "configured unit %r in configuration differs from current unit %r",
                     self._config["unit"],
                     value,
                 )
@@ -251,7 +250,7 @@ class TacoDevice(HasCommunication):
         if not self._sim_intercept and self._dev:
             if value != 3.0:
                 self.log.warning(
-                    "%r: client network timeout changed to: " "%.2f s",
+                    "%r: client network timeout changed to: %.2f s",
                     self.tacodevice,
                     value,
                 )
@@ -304,12 +303,12 @@ class TacoDevice(HasCommunication):
             if timeout != 0:
                 if timeout != 3.0:
                     self.log.warning(
-                        "client network timeout changed to: " "%.2f s", timeout
+                        "client network timeout changed to: %.2f s", timeout
                     )
                 dev.setClientNetworkTimeout(timeout)
         except TACOError as err:
             self.log.warning(
-                "Setting TACO network timeout failed: " "[TACO %d] %s", err.errcode, err
+                "Setting TACO network timeout failed: [TACO %d] %s", err.errcode, err
             )
 
         try:
@@ -317,7 +316,7 @@ class TacoDevice(HasCommunication):
                 dev.deviceOn()
         except TACOError as err:
             self.log.warning(
-                "Switching TACO device %r on failed: " "[TACO %d] %s",
+                "Switching TACO device %r on failed: [TACO %d] %s",
                 devname,
                 err.errcode,
                 err,
@@ -329,7 +328,7 @@ class TacoDevice(HasCommunication):
                 dev.deviceOn()
             except TACOError as err:
                 self._raise_taco(
-                    err, "Switching device %r on after " "reset failed" % devname
+                    err, "Switching device %r on after reset failed" % devname
                 )
 
         return dev

@@ -27,7 +27,8 @@
 import queue
 import select
 import threading
-from time import sleep, time as currenttime
+from time import sleep
+from time import time as currenttime
 
 from nicos import session
 from nicos.core import CacheError, CacheLockError, Device, Param, host
@@ -228,8 +229,7 @@ class BaseCacheClient(Device):
                 self._worker_inner()
             except Exception:
                 self.log.exception(
-                    "exception in cache worker thread; "
-                    "restarting (please report a bug)"
+                    "exception in cache worker thread; restarting (please report a bug)"
                 )
                 if self._stoprequest:
                     break  # ensure we do not restart during shutdown
@@ -362,7 +362,7 @@ class BaseCacheClient(Device):
                     self._secsocket = tcpSocket(self.cache, DEFAULT_CACHE_PORT)
                 except Exception as err:
                     self.log.warning(
-                        "unable to connect secondary socket " "to %s: %s",
+                        "unable to connect secondary socket to %s: %s",
                         self.cache,
                         err,
                     )
@@ -475,7 +475,7 @@ class BaseCacheClient(Device):
                 raise CacheLockError(msgmatch.group("value"))
             return
         # no response received; let's assume standalone mode
-        self.log.warning("allowing lock/unlock operation without cache " "connection")
+        self.log.warning("allowing lock/unlock operation without cache connection")
 
     def unlock(self, key, sessionid=None):
         return self.lock(key, ttl=None, unlock=True, sessionid=sessionid)

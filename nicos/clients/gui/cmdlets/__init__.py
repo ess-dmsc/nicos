@@ -329,18 +329,18 @@ class CommonScan(PresetHelper, Cmdlet):
         if values["scancont"]:
             start, end, speed, delta = self._getContParams(values)
             if mode == "simple":
-                return f'contscan {values["dev"]} {start} {end} {speed} {delta}'
+                return f"contscan {values['dev']} {start} {end} {speed} {delta}"
             return f"contscan({devrepr}, {start}, {end}, {speed}, {delta})"
 
         preset = self._getPreset(values)
         if mode == "simple":
             return (
-                f'{self.cmdname}{values["dev"]} {values["scanstart"]} '
-                f'{values["scanstep"]} {values["scanpoints"]} {preset}'
+                f"{self.cmdname}{values['dev']} {values['scanstart']} "
+                f"{values['scanstep']} {values['scanpoints']} {preset}"
             )
         return (
-            f'{self.cmdname}({devrepr}, {values["scanstart"]}, '
-            f'{values["scanstep"]}, {values["scanpoints"]}, {preset})'
+            f"{self.cmdname}({devrepr}, {values['scanstart']}, "
+            f"{values['scanstep']}, {values['scanpoints']}, {preset})"
         )
 
 

@@ -72,15 +72,14 @@ class NicosNamespace(dict):
     def __setitem__(self, name, value):
         if name in self.__forbidden:
             raise UsageError(
-                "%s cannot be assigned; it is a builtin, "
-                "a command or a device" % name
+                "%s cannot be assigned; it is a builtin, a command or a device" % name
             )
         dict.__setitem__(self, name, value)
 
     def __delitem__(self, name):
         if name in self.__forbidden:
             raise UsageError(
-                "%s cannot be deleted; it is a builtin, " "a command or a device" % name
+                "%s cannot be deleted; it is a builtin, a command or a device" % name
             )
         dict.__delitem__(self, name)
 
@@ -438,7 +437,7 @@ def guessCorrectCommand(source, attribute=False):
             if poi in session.configured_devices and poi not in session.namespace:
                 if poi in session.devices:
                     session.log.info(
-                        "Use CreateDevice('%s') to export the " "device of this name",
+                        "Use CreateDevice('%s') to export the device of this name",
                         str(poi),
                     )
                 else:

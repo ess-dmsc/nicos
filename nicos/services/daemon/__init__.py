@@ -43,7 +43,7 @@ class NicosDaemon(Device):
 
     attached_devices = {
         "authenticators": Attach(
-            "The authenticator devices to use for " "validating users and passwords",
+            "The authenticator devices to use for validating users and passwords",
             Authenticator,
             multiple=True,
         ),
@@ -57,20 +57,20 @@ class NicosDaemon(Device):
             ext_desc="The default port is ``1301``.",
         ),
         "servercls": Param(
-            "Server class used for creating transports " "to each client",
+            "Server class used for creating transports to each client",
             type=str,
             mandatory=False,
-            default="nicos.services.daemon.proto.classic." "Server",
+            default="nicos.services.daemon.proto.classic.Server",
         ),
         "serializercls": Param(
             "Serializer class used for serializing "
             "messages transported from/to the server",
             type=str,
             mandatory=False,
-            default="nicos.protocols.daemon.classic." "ClassicSerializer",
+            default="nicos.protocols.daemon.classic.ClassicSerializer",
         ),
         "maxlogins": Param(
-            "Maximum number of simultaneous clients " "served", type=int, default=10
+            "Maximum number of simultaneous clients served", type=int, default=10
         ),
         "updateinterval": Param(
             "Interval for watch expressions checking and"
@@ -82,7 +82,7 @@ class NicosDaemon(Device):
         "trustedhosts": Param(
             "A list of trusted hosts allowed to log in",
             type=listof(str),
-            ext_desc="An empty list means all hosts are " "allowed.",
+            ext_desc="An empty list means all hosts are allowed.",
         ),
         "simmode": Param("Whether to always start in dry run mode", type=bool),
         "autosimulate": Param(
@@ -99,7 +99,7 @@ class NicosDaemon(Device):
         # the controller represents the internal script execution machinery
         if self.autosimulate and not config.sandbox_simulation:
             raise ConfigurationError(
-                "autosimulation configured but sandbox" " deactivated"
+                "autosimulation configured but sandbox deactivated"
             )
 
         self._controller = ExecutionController(

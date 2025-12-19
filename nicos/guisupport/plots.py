@@ -26,7 +26,8 @@ NICOS value plot widget.
 """
 
 import itertools
-from time import localtime, strftime, time as currenttime
+from time import localtime, strftime
+from time import time as currenttime
 
 import gr
 import numpy.ma
@@ -278,32 +279,32 @@ To access items of a sequence, use subscript notation, e.g. T.userlimits[0]
         "names",
         "QStringList",
         [],
-        "Names for the plot curves, " "defaults to the device names/keys.",
+        "Names for the plot curves, defaults to the device names/keys.",
     )
     legend = PropDef("legend", bool, False, "If a legend should be shown.")
     plotwindow = PropDef(
         "plotwindow",
         int,
         3600,
-        "The range of time in " "seconds that should be represented by the plot.",
+        "The range of time in seconds that should be represented by the plot.",
     )
     plotinterval = PropDef(
         "plotinterval",
         float,
         2,
-        "The minimum time in " "seconds between two points that should be " "plotted.",
+        "The minimum time in seconds between two points that should be plotted.",
     )
     height = PropDef(
         "height",
         int,
         10,
-        "Height of the plot widget in units " "of app font character width.",
+        "Height of the plot widget in units of app font character width.",
     )
     width = PropDef(
         "width",
         int,
         30,
-        "Width of the plot widget in units " "of app font character width.",
+        "Width of the plot widget in units of app font character width.",
     )
 
     def __init__(self, parent, designMode=False):

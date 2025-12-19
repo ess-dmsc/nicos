@@ -74,7 +74,7 @@ class PassiveChannel(Measurable):
             "If this channel is an active controller", type=bool, settable=True
         ),
         "presetaliases": Param(
-            "Aliases for setting a preset for the first " "scalar on this channel",
+            "Aliases for setting a preset for the first scalar on this channel",
             type=listof(str),
         ),
     }
@@ -502,7 +502,7 @@ class Detector(Measurable):
 
     parameters = {
         "liveinterval": Param(
-            "Interval to read out live images (None " "to disable live readout)",
+            "Interval to read out live images (None to disable live readout)",
             type=none_or(float),
             unit="s",
             settable=True,
@@ -555,7 +555,7 @@ class Detector(Measurable):
             postdev = session.getDevice(tup[0])
             if not isinstance(postdev, PostprocessPassiveChannel):
                 raise ConfigurationError(
-                    "Device '%s' is not a " "PostprocessPassiveChannel" % postdev.name
+                    "Device '%s' is not a PostprocessPassiveChannel" % postdev.name
                 )
             if postdev not in self._channels:
                 raise ConfigurationError(
@@ -921,8 +921,7 @@ class ScanningDetector(SubscanMeasurable):
     parameters = {
         "positions": Param("Positions to scan over", type=listof(anytype)),
         "readresult": Param(
-            "Storage for processed results from detector, to"
-            "be returned from doRead()",
+            "Storage for processed results from detector, tobe returned from doRead()",
             type=listof(anytype),
             settable=True,
             internal=True,
@@ -948,7 +947,7 @@ class ScanningDetector(SubscanMeasurable):
     def valueInfo(self):
         if self.readresult:
             raise NotImplementedError(
-                "Result processing implemented, but " "valueInfo missing"
+                "Result processing implemented, but valueInfo missing"
             )
         return ()
 

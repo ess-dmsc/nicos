@@ -690,7 +690,7 @@ class NicosPlot(DlgUtils):
             self.fitter.cancel()
         fitcurve = self.selectCurve()
         if not fitcurve:
-            return self.showError("Plot must have a visible curve " "to be fitted.")
+            return self.showError("Plot must have a visible curve to be fitted.")
         self.fitter = fitterclass(
             self, self.parent_window, fitteraction, fitcurve, pickmode
         )

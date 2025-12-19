@@ -26,7 +26,8 @@
 
 import sys
 import traceback
-from time import strftime, time as currenttime
+from time import strftime
+from time import time as currenttime
 
 import gr
 
@@ -747,7 +748,7 @@ class MainWindow(DlgUtils, QMainWindow):
             return
         if not self.client.isconnected:
             self.showError(
-                "Cannot open online help: you are not connected " "to a daemon."
+                "Cannot open online help: you are not connected to a daemon."
             )
             return
         self.client.eval('session.showHelp("index")')

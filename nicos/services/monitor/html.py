@@ -29,7 +29,8 @@ import tempfile
 import time
 from base64 import b64encode
 from threading import RLock
-from time import sleep, time as currenttime
+from time import sleep
+from time import time as currenttime
 
 import numpy
 from lttb import lttb
@@ -39,7 +40,7 @@ from nicos.core.constants import NOT_AVAILABLE
 from nicos.core.status import BUSY, DISABLED, ERROR, NOTREACHED, OK, WARN
 from nicos.services.monitor import Monitor as BaseMonitor
 from nicos.services.monitor.icon import nicos_icon
-from nicos.utils import checkSetupSpec, parseKeyExpression, safeWriteFile, KEYEXPR_NS
+from nicos.utils import KEYEXPR_NS, checkSetupSpec, parseKeyExpression, safeWriteFile
 
 try:
     import gr
@@ -398,8 +399,7 @@ class Monitor(BaseMonitor):
         def _create_field(blk, config):
             if "widget" in config or "gui" in config:
                 self.log.warning(
-                    'ignoring "widget" or "gui" element in HTML '
-                    "monitor configuration"
+                    'ignoring "widget" or "gui" element in HTML monitor configuration'
                 )
                 return None
             field = Field(self._prefix, config)
@@ -551,7 +551,7 @@ class Monitor(BaseMonitor):
     def _labelunittext(self, text, unit, fixed):
         return html.escape(
             text
-        ) + ' <span class="unit">%s</span><span ' 'class="fixed">%s</span> ' % (
+        ) + ' <span class="unit">%s</span><span class="fixed">%s</span> ' % (
             html.escape(unit),
             fixed,
         )

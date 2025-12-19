@@ -45,10 +45,10 @@ from nicos.core import (
     anytype,
     dictof,
     floatrange,
+    listof,
     none_or,
     pvname,
     status,
-    listof,
     tupleof,
 )
 from nicos.devices.abstract import MappedMoveable, MappedReadable
@@ -124,7 +124,7 @@ class EpicsDevice(DeviceMixinBase):
                 pvname = self._get_pv_name(pvparam)
                 if not pvname:
                     raise ConfigurationError(
-                        self, "PV for parameter " f"{pvparam} was not found!"
+                        self, f"PV for parameter {pvparam} was not found!"
                     )
                 # Check pv exists - throws if cannot connect
                 self._epics_wrapper.connect_pv(pvname)
@@ -381,18 +381,18 @@ class EpicsMoveable(EpicsDevice, Moveable):
         out_type = self._epics_wrapper.get_pv_type(self._param_to_pv["writepv"])
         if in_type != self.valuetype:
             raise ConfigurationError(
-                self, f"Input PV {self.readpv} does not " "have the correct data type"
+                self, f"Input PV {self.readpv} does not have the correct data type"
             )
         if out_type != self.valuetype:
             raise ConfigurationError(
-                self, f"Output PV {self.writepv} does not " "have the correct data type"
+                self, f"Output PV {self.writepv} does not have the correct data type"
             )
         if self.targetpv:
             target_type = self._epics_wrapper.get_pv_type(self._param_to_pv["targetpv"])
             if target_type != self.valuetype:
                 raise ConfigurationError(
                     self,
-                    f"Target PV {self.targetpv} does not have the " "correct data type",
+                    f"Target PV {self.targetpv} does not have the correct data type",
                 )
 
     def doReadTarget(self):
@@ -501,7 +501,7 @@ class EpicsMappedReadable(MappedReadable, EpicsReadable):
         # MBBI, BI, etc. do not have units
         "unit": Override(mandatory=False, settable=False, volatile=False),
         # Mapping values are read from EPICS
-        'mapping': Override(internal=True, mandatory=False)
+        "mapping": Override(internal=True, mandatory=False),
     }
 
     def _get_pv_parameters(self):
@@ -562,7 +562,7 @@ class EpicsMappedMoveable(MappedMoveable, EpicsMoveable):
         # MBBI, BI, etc. do not have units
         "unit": Override(mandatory=False, settable=False, volatile=False),
         # Mapping values are read from EPICS
-        'mapping': Override(internal=True, mandatory=False)
+        "mapping": Override(internal=True, mandatory=False),
     }
 
     def _get_pv_parameters(self):

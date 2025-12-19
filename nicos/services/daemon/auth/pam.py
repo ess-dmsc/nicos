@@ -30,6 +30,8 @@ import pamela as pam
 from nicos.core import ADMIN, GUEST, USER, Param, User, oneof
 from nicos.services.daemon.auth import (
     AuthenticationError,
+)
+from nicos.services.daemon.auth import (
     Authenticator as BaseAuthenticator,
 )
 

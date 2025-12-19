@@ -63,7 +63,7 @@ class VirtualGonio(Moveable):
 
     parameters = {
         "axis": Param(
-            "Virtual axis for this gonio (along orient1 " "or orient2)",
+            "Virtual axis for this gonio (along orient1 or orient2)",
             type=oneof(1, 2),
         ),
     }

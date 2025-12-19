@@ -70,7 +70,7 @@ def ftpUpload(filename, logger=None):
     except Exception:
         if logger:
             logger.error(
-                "Uploading ftp-file failed! Please check config and " "log files", exc=1
+                "Uploading ftp-file failed! Please check config and log files", exc=1
             )
         raise
 

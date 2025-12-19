@@ -65,7 +65,7 @@ def _tomo(title, angles, moveables, imgsperangle, *detlist, **preset):
                             if not i:
                                 raise
                             session.log.warning(
-                                "Count failed, try it again." "%d remaining tries", i
+                                "Count failed, try it again.%d remaining tries", i
                             )
                             if detlist:
                                 reset(*detlist)

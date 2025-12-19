@@ -23,8 +23,8 @@
 
 """NICOS notification classes."""
 
-import subprocess
 import socket
+import subprocess
 from time import time as currenttime
 
 from nicos import session
@@ -37,11 +37,11 @@ from nicos.core import (
     floatrange,
     listof,
     mailaddress,
+    none_or,
+    nonemptystring,
     oneof,
     tupleof,
     usermethod,
-    none_or,
-    nonemptystring,
 )
 from nicos.utils import createSubprocess, createThread
 from nicos.utils.emails import sendMail
@@ -59,8 +59,7 @@ class Notifier(Device):
 
     parameters = {
         "minruntime": Param(
-            "Minimum runtime of a command before a failure "
-            "is sent over the notifier",
+            "Minimum runtime of a command before a failure is sent over the notifier",
             type=float,
             unit="s",
             default=300,
@@ -74,7 +73,7 @@ class Notifier(Device):
             settable=True,
         ),
         "private": Param(
-            "True if notifier receivers are private, " "not user-settable",
+            "True if notifier receivers are private, not user-settable",
             type=bool,
             default=False,
         ),
@@ -123,14 +122,14 @@ class Notifier(Device):
     def doWriteReceivers(self, value):
         if self.private and not session.checkAccess(ADMIN):
             raise AccessError(
-                self, "Only admins can change the receiver list " "for this notifier"
+                self, "Only admins can change the receiver list for this notifier"
             )
         return value
 
     def doWriteCopies(self, value):
         if self.private and not session.checkAccess(ADMIN):
             raise AccessError(
-                self, "Only admins can change the receiver list " "for this notifier"
+                self, "Only admins can change the receiver list for this notifier"
             )
         return value
 

@@ -140,7 +140,7 @@ class Oscillator(Moveable):
         if not self.stoppable:
             if self._osc_thread:
                 self.log.error(
-                    "Please use: 'move(%s, %r)' to stop the moving " "device",
+                    "Please use: 'move(%s, %r)' to stop the moving device",
                     self,
                     self._targets[0],
                 )
@@ -182,11 +182,11 @@ class Oscillator(Moveable):
                 mmin, mmax = self._attached_moveable.userlimits
                 if amin < mmin:
                     raise ConfigurationError(
-                        self, "min (%s) below the " "moveable min (%s)" % (amin, mmin)
+                        self, "min (%s) below the moveable min (%s)" % (amin, mmin)
                     )
                 if amax > mmax:
                     raise ConfigurationError(
-                        self, "max (%s) above the " "moveable max (%s)" % (amax, mmax)
+                        self, "max (%s) above the moveable max (%s)" % (amax, mmax)
                     )
         elif isinstance(self._attached_moveable, HasLimits):
             amin, amax = self._attached_moveable.userlimits
@@ -201,12 +201,12 @@ class Oscillator(Moveable):
             if rmin < umin:
                 raise ConfigurationError(
                     self,
-                    "minimum (%s) below the " "moveable minimum (%s)" % (rmin, umin),
+                    "minimum (%s) below the moveable minimum (%s)" % (rmin, umin),
                 )
             if rmax > umax:
                 raise ConfigurationError(
                     self,
-                    "maximum (%s) above the " "moveable maximum (%s)" % (rmax, umax),
+                    "maximum (%s) above the moveable maximum (%s)" % (rmax, umax),
                 )
         return rmin, rmax
 

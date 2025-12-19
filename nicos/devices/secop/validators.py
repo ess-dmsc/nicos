@@ -39,7 +39,6 @@ from nicos.core.params import (
 )
 from nicos.utils import readonlydict
 
-
 # map SECoP types to NICOS types:
 # all types must either be vanilla NICOS types or inherit from them
 # as we want to avoid pickling

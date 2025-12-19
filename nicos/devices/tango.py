@@ -83,9 +83,7 @@ FATAL_REASONS = {
 }
 
 if not getattr(tango.constants, "NUMPY_SUPPORT", True):
-    raise NicosError(
-        "Tango does not have numpy support, but it is required " "by NICOS"
-    )
+    raise NicosError("Tango does not have numpy support, but it is required by NICOS")
 
 
 def describe_dev_error(exc):
@@ -136,14 +134,13 @@ def describe_dev_error(exc):
         m = re.search(r"Device ([\w/]+) is not", fulldesc)
         if m:
             fulldesc = (
-                "Tango device %s is not exported, is the server "
-                "running?" % m.group(1)
+                "Tango device %s is not exported, is the server running?" % m.group(1)
             )
     elif reason == "API_CorbaException":
         if "TRANSIENT_CallTimedout" in fulldesc:
             fulldesc = "Tango client-server call timed out"
         elif "TRANSIENT_ConnectFailed" in fulldesc:
-            fulldesc = "connection to Tango server failed, is the server " "running?"
+            fulldesc = "connection to Tango server failed, is the server running?"
     elif reason == "API_CantConnectToDevice":
         m = re.search(r"connect to device ([\w/-]+)", fulldesc)
         if m:
@@ -291,7 +288,7 @@ class PyTangoDevice(HasCommunication):
             device.State
         except AttributeError:
             raise NicosError(
-                self, "connection to Tango server failed, " "is the server running?"
+                self, "connection to Tango server failed, is the server running?"
             ) from None
         return self._applyGuardsToPyTangoDevice(device)
 

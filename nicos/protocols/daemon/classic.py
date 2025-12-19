@@ -31,6 +31,8 @@ import struct
 from nicos.protocols.daemon import (
     DAEMON_COMMANDS,
     DAEMON_EVENTS,
+)
+from nicos.protocols.daemon import (
     Serializer as BaseSerializer,
 )
 

@@ -247,7 +247,7 @@ class MultiDigitalOutput(Moveable):
 
     attached_devices = {
         "outputs": Attach(
-            "A list of digital outputs to switch " "simultaneously",
+            "A list of digital outputs to switch simultaneously",
             DigitalOutput,
             multiple=True,
         ),

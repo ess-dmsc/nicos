@@ -38,7 +38,8 @@ import stat
 import sys
 from os import path
 from shutil import which
-from time import sleep, time as currenttime
+from time import sleep
+from time import time as currenttime
 
 import numpy
 
@@ -74,16 +75,16 @@ from nicos.core.utils import system_user
 from nicos.devices.cacheclient import CacheClient, CacheLockError, SyncCacheClient
 from nicos.devices.instrument import Instrument
 from nicos.devices.notifiers import Notifier
-from nicos_ess.devices.sample import EssSample
 from nicos.protocols.cache import FLAG_NO_STORE
 from nicos.utils import fixupScript, formatArgs, formatDocstring, formatScriptError
 from nicos.utils.loggers import (
     NicosLogfileHandler,
     NicosLogger,
+    NicosSysLogHandler,
     get_facility_log_handlers,
     initLoggers,
-    NicosSysLogHandler,
 )
+from nicos_ess.devices.sample import EssSample
 
 
 class Session:
@@ -660,7 +661,7 @@ class Session:
                 if key == "datasinks":
                     if not isinstance(value, list):
                         raise ConfigurationError(
-                            "sysconfig entry '%s' must be" " a list" % key
+                            "sysconfig entry '%s' must be a list" % key
                         )
                     old.setdefault("datasinks", set()).update(value)
                 elif key == "notifiers":
@@ -819,13 +820,13 @@ class Session:
                         # no local_namespace here
                         exec(code, self.namespace)
                     except Exception:
-                        self.log.exception("error running startup code, " "ignoring")
+                        self.log.exception("error running startup code, ignoring")
 
         if failed_devs:
             self.log.error("the following devices could not be created:")
             self.log.error(", ".join(failed_devs))
             self.log.info(
-                "use CreateDevice('device') or CreateAllDevices() " "later to retry"
+                "use CreateDevice('device') or CreateAllDevices() later to retry"
             )
 
         for setupname in setupnames:
@@ -952,13 +953,13 @@ class Session:
                 # complain about this; setups should make sure that the device
                 # exists when configuring it
                 self.log.warning(
-                    "alias device '%s' does not exist, cannot set" " its target",
+                    "alias device '%s' does not exist, cannot set its target",
                     aliasname,
                 )
                 continue
             if targets == prev_config.get(aliasname):
                 self.log.debug(
-                    "not changing alias for '%s', selections have " "not changed",
+                    "not changing alias for '%s', selections have not changed",
                     aliasname,
                 )
                 continue
@@ -973,7 +974,7 @@ class Session:
                     break
             else:
                 self.log.warning(
-                    "none of the desired targets for alias '%s' " "actually exist",
+                    "none of the desired targets for alias '%s' actually exist",
                     aliasname,
                 )
 
@@ -1021,7 +1022,7 @@ class Session:
                     self.endMultiCreate()
             except NicosError:
                 self.log.warning(
-                    "could not load previous setups, falling " "back to startup setup",
+                    "could not load previous setups, falling back to startup setup",
                     exc=1,
                 )
                 self.unloadSetup()
@@ -1155,7 +1156,7 @@ class Session:
                 dev = self.devices[dev]
             elif dev in self.configured_devices:
                 if self.checkParallel():
-                    raise NicosError("cannot create devices in parallel " "threads")
+                    raise NicosError("cannot create devices in parallel threads")
                 dev = self.createDevice(dev, replace_classes=replace_classes)
             else:
                 dev = self._deviceNotFound(dev, source)
@@ -1192,7 +1193,7 @@ class Session:
         be overridden in subclasses to extend behavior.
         """
         raise ConfigurationError(
-            source, "device '%s' not found in " "configuration" % devname
+            source, "device '%s' not found in configuration" % devname
         )
 
     def importDevice(self, devname, replace_classes=None):

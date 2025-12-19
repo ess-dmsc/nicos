@@ -33,10 +33,10 @@ from nicos.guisupport.qt import (
     QDoubleValidator,
     QFileDialog,
     QFont,
+    QLocale,
     QPalette,
     Qt,
     QValidator,
-    QLocale,
 )
 
 

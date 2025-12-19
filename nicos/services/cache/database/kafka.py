@@ -21,7 +21,8 @@
 #
 # *****************************************************************************
 
-from time import sleep, time as currenttime
+from time import sleep
+from time import time as currenttime
 
 from kafka import KafkaConsumer, KafkaProducer, TopicPartition
 

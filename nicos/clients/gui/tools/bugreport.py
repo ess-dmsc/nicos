@@ -150,8 +150,7 @@ class BugreportTool(DlgUtils, QDialog):
                 self.showError(str(err))
                 return False
             self.showInfo(
-                "Login successful.  Your API key has been stored "
-                "for further reports."
+                "Login successful.  Your API key has been stored for further reports."
             )
             settings = QSettings("nicos", "secrets")
             settings.beginGroup("Redmine")

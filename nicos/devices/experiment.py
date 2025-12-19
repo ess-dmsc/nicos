@@ -140,12 +140,12 @@ class Experiment(Device):
             category="experiment",
         ),
         "dataroot": Param(
-            "Root data path under which all proposal " "specific paths are created",
+            "Root data path under which all proposal specific paths are created",
             mandatory=True,
             type=expanded_path,
         ),
         "forcescandata": Param(
-            "If true, force scan datasets to be created " "also for single counts",
+            "If true, force scan datasets to be created also for single counts",
             type=bool,
             default=False,
         ),
@@ -156,13 +156,13 @@ class Experiment(Device):
             internal=True,
         ),
         "envlist": Param(
-            "List of default environment device names to " "read at every scan point",
+            "List of default environment device names to read at every scan point",
             type=listof(str),
             settable=True,
             internal=True,
         ),
         "elog": Param(
-            "True if the electronic logbook should be " "enabled",
+            "True if the electronic logbook should be enabled",
             type=bool,
             default=True,
         ),
@@ -174,7 +174,7 @@ class Experiment(Device):
             no_sim_restore=True,
         ),
         "templates": Param(
-            "Name of the directory with script templates " "(relative to dataroot)",
+            "Name of the directory with script templates (relative to dataroot)",
             type=str,
         ),
         "managerights": Param(
@@ -201,12 +201,12 @@ class Experiment(Device):
             userparam=False,
         ),
         "zipdata": Param(
-            "Whether to zip up experiment data after " "experiment finishes",
+            "Whether to zip up experiment data after experiment finishes",
             type=bool,
             default=True,
         ),
         "sendmail": Param(
-            "Whether to send proposal data via email after " "experiment finishes",
+            "Whether to send proposal data via email after experiment finishes",
             type=bool,
             default=False,
         ),
@@ -232,7 +232,7 @@ class Experiment(Device):
             settable=True,
         ),
         "serviceexp": Param(
-            "Name of proposal to switch to after user " "experiment",
+            "Name of proposal to switch to after user experiment",
             type=nonemptystring,
             default="service",
         ),
@@ -240,7 +240,7 @@ class Experiment(Device):
             "Script to run for service time", type=str, default="", settable=True
         ),
         "strictservice": Param(
-            "Only the configured service experiment is " 'considered "service"',
+            'Only the configured service experiment is considered "service"',
             type=bool,
             default=False,
             settable=False,
@@ -272,7 +272,7 @@ class Experiment(Device):
             settable=True,
         ),
         "counterfile": Param(
-            "Name of the file with data counters in " "dataroot and datapath",
+            "Name of the file with data counters in dataroot and datapath",
             default="counters",
             userparam=False,
             type=subdir,
@@ -284,12 +284,12 @@ class Experiment(Device):
             default="report",
         ),
         "lastscan": Param(
-            "Last used value of the scan counter - " "ONLY for display purposes",
+            "Last used value of the scan counter - ONLY for display purposes",
             type=int,
             internal=True,
         ),
         "lastpoint": Param(
-            "Last used value of the point counter - " "ONLY for display purposes",
+            "Last used value of the point counter - ONLY for display purposes",
             type=int,
             internal=True,
         ),
@@ -631,7 +631,7 @@ class Experiment(Device):
         if self.elog and mode != SIMULATION:
             if not self.proposalpath:
                 self.log.warning(
-                    "Proposalpath was not set, initiating a " "service experiment."
+                    "Proposalpath was not set, initiating a service experiment."
                 )
                 self._setROParam("proposalpath", self.proposalpath_of(self.serviceexp))
                 self._setROParam("proptype", "service")
@@ -690,7 +690,7 @@ class Experiment(Device):
                         lookup(value)
                     except Exception as e:
                         self.log.warning(
-                            "managerights: illegal value for key " "%r: %r (%s)",
+                            "managerights: illegal value for key %r: %r (%s)",
                             key,
                             value,
                             e,
@@ -705,7 +705,7 @@ class Experiment(Device):
             if value is not None and not isinstance(value, int):
                 raise ConfigurationError(
                     self,
-                    "managerights: illegal value for key " "%r: not an integer" % key,
+                    "managerights: illegal value for key %r: not an integer" % key,
                     exc=1,
                 )
 
@@ -741,7 +741,7 @@ class Experiment(Device):
             if not thd.is_alive():
                 del self._proposal_thds[iproposal]
                 self.log.debug(
-                    "delete reference on closed thread for " "proposal %s", iproposal
+                    "delete reference on closed thread for proposal %s", iproposal
                 )
 
     def hasProposalFinishThreads(self):
@@ -756,7 +756,7 @@ class Experiment(Device):
     def new(self, proposal, title=None, localcontact=None, user=None, **kwds):
         """Called by `.NewExperiment`."""
         if self._mode == SIMULATION:
-            raise UsageError("Simulating switching experiments is not " "supported!")
+            raise UsageError("Simulating switching experiments is not supported!")
 
         try:
             # if proposal can be converted to a number, use the canonical form
@@ -804,8 +804,7 @@ class Experiment(Device):
         # check whether or not this proposal is finished - a thread is alive
         if self.isProposalFinishThreadAlive(proposal):
             raise NicosError(
-                "cannot switch to proposal %s as this is "
-                "currently closing." % proposal
+                "cannot switch to proposal %s as this is currently closing." % proposal
             )
 
         # clean up
@@ -956,7 +955,7 @@ class Experiment(Device):
                     stats = self.propinfo.copy()
                 # start separate thread for zipping and disabling old proposal
                 self.log.debug(
-                    "starting separate thread for zipping and " "disabling proposal"
+                    "starting separate thread for zipping and disabling proposal"
                 )
                 if self.isProposalFinishThreadAlive(self.proposal):
                     self.log.error(
@@ -984,7 +983,7 @@ class Experiment(Device):
                 thd.join(5)
                 if thd.is_alive():
                     self.log.info(
-                        "continuing finishing of proposal %s in " "background",
+                        "continuing finishing of proposal %s in background",
                         self.proposal,
                     )
                     self._proposal_thds[self.proposal] = thd
@@ -1212,7 +1211,7 @@ class Experiment(Device):
                     )
                 except Exception:
                     self.log.warning(
-                        "moving compressed file into proposal " "dir failed", exc=1
+                        "moving compressed file into proposal dir failed", exc=1
                     )
                     # at least withdraw the access rights
                     os.chmod(pzipfile, self.managerights.get("disableFileMode", 0o400))
@@ -1241,7 +1240,7 @@ class Experiment(Device):
             os.symlink(os.path.basename(self.proposalpath), self.customproposalsymlink)
         except OSError:
             self.log.warning(
-                "creation of custom proposal symlink failed, " "already existing?"
+                "creation of custom proposal symlink failed, already existing?"
             )
 
     @usermethod
@@ -1342,7 +1341,7 @@ class Experiment(Device):
             else:
                 if not isinstance(det, Measurable):
                     self.log.warning(
-                        "cannot use device %r as a " "detector: it is not a Measurable",
+                        "cannot use device %r as a detector: it is not a Measurable",
                         det,
                     )
                     all_created = False
@@ -1392,7 +1391,7 @@ class Experiment(Device):
             else:
                 if not isinstance(dev, (Readable, DevStatistics)):
                     self.log.warning(
-                        "cannot use device %r as " "environment: it is not a Readable",
+                        "cannot use device %r as environment: it is not a Readable",
                         dev,
                     )
                     all_created = False

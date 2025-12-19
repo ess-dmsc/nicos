@@ -25,7 +25,8 @@
 
 from math import sqrt
 from threading import Lock
-from time import localtime, time as currenttime
+from time import localtime
+from time import time as currenttime
 from uuid import uuid4
 
 from nicos.core.acquire import DevStatistics

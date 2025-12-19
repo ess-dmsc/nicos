@@ -45,9 +45,11 @@ from nicos.core import (
 from nicos.devices.generic.mono import (
     ANG2MEV,
     THZ2MEV,
-    Monochromator as BaseMonochromator,
     from_k,
     to_k,
+)
+from nicos.devices.generic.mono import (
+    Monochromator as BaseMonochromator,
 )
 
 
@@ -298,7 +300,7 @@ class Monochromator(HasLimits, HasPrecision, BaseMonochromator):
         tt, th = self._get_angles(0)
         if abs(tt - 2.0 * th) > self._axisprecision:
             self.log.warning(
-                "two theta and 2*theta axis mismatch: %s <-> " "%s = 2 * %s",
+                "two theta and 2*theta axis mismatch: %s <-> %s = 2 * %s",
                 tt,
                 2.0 * th,
                 th,

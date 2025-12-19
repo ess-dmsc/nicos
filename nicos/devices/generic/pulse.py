@@ -38,14 +38,14 @@ class Pulse(BaseSequencer):
 
     parameters = {
         "onvalue": Param(
-            "Value of the attached 'switch' considered to be as " "'on'",
+            "Value of the attached 'switch' considered to be as 'on'",
             type=anytype,
             settable=False,
             userparam=False,
             mandatory=True,
         ),
         "offvalue": Param(
-            "Value of the attached 'switch' considered to be as " "'off'",
+            "Value of the attached 'switch' considered to be as 'off'",
             type=anytype,
             settable=False,
             userparam=False,

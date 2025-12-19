@@ -231,12 +231,12 @@ class MultiSwitcher(MappedMoveable):
 
     attached_devices = {
         "moveables": Attach(
-            "The N (continuous) devices which are" " controlled",
+            "The N (continuous) devices which are controlled",
             Moveable,
             multiple=True,
         ),
         "readables": Attach(
-            "0 to N (continuous) devices which are" " used for read back only",
+            "0 to N (continuous) devices which are used for read back only",
             Readable,
             optional=True,
             multiple=True,
@@ -261,8 +261,7 @@ class MultiSwitcher(MappedMoveable):
 
     parameter_overrides = {
         "mapping": Override(
-            description="Mapping of state names to N values "
-            "to move the moveables to",
+            description="Mapping of state names to N values to move the moveables to",
             type=dictof(anytype, listof(anytype)),
         ),
         "fallback": Override(userparam=False, type=none_or(anytype), mandatory=False),
@@ -307,7 +306,7 @@ class MultiSwitcher(MappedMoveable):
         for d, t in zip(moveables, target):
             if not d.isAllowed(t):
                 raise InvalidValueError(
-                    self, "target value %r not accepted " "by device %s" % (t, d.name)
+                    self, "target value %r not accepted by device %s" % (t, d.name)
                 )
         for d, t in zip(moveables, target):
             self.log.debug("moving %r to %r", d, t)

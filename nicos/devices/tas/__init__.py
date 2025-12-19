@@ -25,6 +25,7 @@
 
 from nicos.devices.tas.cell import Cell, TASSample
 from nicos.devices.tas.ecradle import EulerianCradle
+from nicos.devices.tas.monitor import OrderCorrectedMonitor
 from nicos.devices.tas.mono import Monochromator
 from nicos.devices.tas.spectro import (
     TAS,
@@ -35,4 +36,3 @@ from nicos.devices.tas.spectro import (
     Wavevector,
 )
 from nicos.devices.tas.vgonio import VirtualGonio
-from nicos.devices.tas.monitor import OrderCorrectedMonitor

@@ -25,7 +25,8 @@
 """Base class for instrument monitors."""
 
 import re
-from time import sleep, strftime, time as currenttime
+from time import sleep, strftime
+from time import time as currenttime
 
 from nicos import session
 from nicos.core import ConfigurationError, Override, Param, none_or, oneof
@@ -66,18 +67,18 @@ class Monitor(BaseCacheClient):
             "Geometry for status window",
             type=str,
             settable=True,
-            ext_desc="For the  allowed settings see " ":option:`--geometry`.",
+            ext_desc="For the  allowed settings see :option:`--geometry`.",
         ),
         "resizable": Param("Whether the window is resizable", type=bool, default=True),
         "colors": Param(
-            "Color scheme for value displays (dark or light " "background)",
+            "Color scheme for value displays (dark or light background)",
             type=oneof("dark", "light"),
         ),
         "showwatchdog": Param(
             "Whether to show watchdog warnings", type=bool, default=True
         ),
         "expectmaster": Param(
-            "Whether a message should indicate that no " "NICOS master is active",
+            "Whether a message should indicate that no NICOS master is active",
             type=bool,
             default=True,
         ),
@@ -279,7 +280,7 @@ class Monitor(BaseCacheClient):
         setupinfo = session.getSetupInfo()
         if setup not in setupinfo:
             raise ConfigurationError(
-                self, 'Setup "%s" required by ' "SetupBlock() does not exist" % setup
+                self, 'Setup "%s" required by SetupBlock() does not exist' % setup
             )
         blocks = setupinfo[setup]["monitor_blocks"]
         if bname not in blocks:

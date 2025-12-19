@@ -125,7 +125,7 @@ def parseScript(script, name=None, format=None, compilecode=True):
         time_sleep = find_function(pycode, "sleep", "time")
     if time_sleep:
         raise ScriptError(
-            "Please use the NICOS command 'sleep' instead of " "'time.sleep'!"
+            "Please use the NICOS command 'sleep' instead of 'time.sleep'!"
         )
 
     return code, blocks

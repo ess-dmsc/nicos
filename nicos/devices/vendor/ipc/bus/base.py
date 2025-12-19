@@ -192,8 +192,7 @@ class IPCModBusRS232(HasCommunication, IPCModBus):
 
     parameters = {
         "bustimeout": Param(
-            "Maximum time to wait for an answer, set "
-            "this high to slow down everything",
+            "Maximum time to wait for an answer, set this high to slow down everything",
             unit="s",
             type=float,
             default=0.1,
@@ -246,7 +245,7 @@ class IPCModBusRS232(HasCommunication, IPCModBus):
             )
         elif response == DC3:
             raise CommunicationError(
-                self, "command failed, e.g. limit " "switch reached or hardware error"
+                self, "command failed, e.g. limit switch reached or hardware error"
             )
         elif len(response) < 3:
             raise CommunicationError(self, "response too short")
@@ -291,7 +290,7 @@ class IPCModBusRS232(HasCommunication, IPCModBus):
                 )
         elif length or param:
             raise ProgrammingError(
-                self, "Sending parameters is not allowed " "for cmd %s" % cmdname
+                self, "Sending parameters is not allowed for cmd %s" % cmdname
             )
         s = chr(addr) + chr(cmd)
         if length > 0:

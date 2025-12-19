@@ -69,7 +69,7 @@ from nicos.core import (
     usermethod,
 )
 from nicos.core.device import Device, DeviceMeta, Moveable, Readable
-from nicos.core.errors import ConfigurationError, CommunicationError
+from nicos.core.errors import CommunicationError, ConfigurationError
 from nicos.core.params import anytype, dictof, floatrange, intrange, listof
 from nicos.core.utils import formatStatus
 from nicos.devices.secop.validators import get_validator
@@ -221,7 +221,7 @@ class SecNodeDevice(Readable):
             userparam=False,
         ),
         "async_only": Param(
-            "True: inhibit SECoP reads on created devices, " "use events only",
+            "True: inhibit SECoP reads on created devices, use events only",
             type=bool,
             prefercache=False,
             default=False,
@@ -513,8 +513,7 @@ class SecNodeDevice(Readable):
             # If the module should not be created, skip it
             if self.allow_list and module not in self.allow_list:
                 self.log.debug(
-                    "skipping module %s, as it is not in the list"
-                    " of allowed modules",
+                    "skipping module %s, as it is not in the list of allowed modules",
                     module,
                 )
                 continue

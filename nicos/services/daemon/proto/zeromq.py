@@ -32,7 +32,11 @@ import zmq
 from nicos.protocols.daemon import (
     CloseConnection,
     ProtocolError,
+)
+from nicos.protocols.daemon import (
     Server as BaseServer,
+)
+from nicos.protocols.daemon import (
     ServerTransport as BaseServerTransport,
 )
 from nicos.protocols.daemon.classic import PROTO_VERSION

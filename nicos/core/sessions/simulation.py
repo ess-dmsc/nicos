@@ -316,7 +316,7 @@ class SimulationSupervisor(Thread):
                             request.setSimstate("failed")
                             request.emitETA(emitter._controller)
                     if not quiet:
-                        session.log.warning("Dry run has terminated " "prematurely")
+                        session.log.warning("Dry run has terminated prematurely")
                     return
                 continue
             msgtype, msg = unserialize(socket.recv())

@@ -26,7 +26,8 @@ import uuid
 
 import numpy as np
 
-from nicos.protocols.daemon import ClientTransport as BaseClientTransport, ProtocolError
+from nicos.protocols.daemon import ClientTransport as BaseClientTransport
+from nicos.protocols.daemon import ProtocolError
 from nicos.protocols.daemon.classic import (
     ACK,
     ENQ,

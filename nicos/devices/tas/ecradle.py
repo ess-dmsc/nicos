@@ -413,7 +413,7 @@ class EulerianCradle(Moveable):
                 return array([ec_p, ec_cc, ec_om, phi])
 
         raise ComputationError(
-            "could not find a Eulerian cradle position for " "q = %s" % (target_q,)
+            "could not find a Eulerian cradle position for q = %s" % (target_q,)
         )
 
     def calc_rotmat(self, a_vector, an_angle):
