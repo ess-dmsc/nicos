@@ -418,11 +418,9 @@ class FileWriterController:
         command_str = "".join(
             c for c in command_str.lower() if c in "0123456789abcdef"
         )[
-            :12
+            :11
         ]  # truncate command_str to leave 4 random bytes
-        if command_str[0] == "0":
-            command_str.replace("0", "a", 1)
-        prefix = f"{proposal_str}{file_num_str}{command_str}"
+        prefix = f"{proposal_str}{file_num_str}1{command_str}"
         random_uuid = uuid.uuid1().hex
         random_part_len = len(random_uuid) - len(prefix)
         generated_str = prefix + random_uuid[:random_part_len]
