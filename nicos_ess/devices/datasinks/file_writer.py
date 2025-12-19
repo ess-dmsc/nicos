@@ -413,14 +413,14 @@ class FileWriterController:
             return None
 
     def _generate_uuid(self, file_num="", command_str=""):
-        proposal = f"{int(session.experiment.propinfo.get('proposal')):0>8x}"
-        file_num_str = f"{int(file_num):0>8x}"
+        proposal_str = f"{int(session.experiment.propinfo.get('proposal')):0>8}"
+        file_num_str = f"{int(file_num):0>8}"
         command_str = "".join(
             c for c in command_str.lower() if c in "0123456789abcdef"
         )[
             :12
         ]  # truncate command_str to leave 4 random bytes
-        prefix = f"{proposal}{file_num_str}{command_str}"
+        prefix = f"{proposal_str}{file_num_str}{command_str}"
         random_uuid = uuid.uuid1().hex
         random_part_len = len(random_uuid) - len(prefix)
         generated_uuid = uuid.UUID(prefix + random_uuid[:random_part_len])
