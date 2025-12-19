@@ -1,4 +1,12 @@
 default:
+  interruptible: true
+  retry:
+    max: 2
+    when:
+      - stuck_or_timeout_failure
+      - runner_system_failure
+
+.python-docker:
   tags:
     - docker
   image: registry.esss.lu.se/ecdc/ess-dmsc/docker-centos7-build-node:latest
@@ -23,6 +31,8 @@ stages:
   
 test:
   stage: test
+  extends:
+    - .python-docker
   script:
     - cd test
     - scl enable rh-python38 -- python -m pytest --junitxml=test-output.xml --ignore=nicos_sinq
@@ -42,6 +52,7 @@ test:
 lint:coverage-py:
   extends:
     - .lint
+    - .python-docker    
   needs:
     - job: test
       artifacts: false
@@ -60,6 +71,7 @@ lint:coverage-py:
 lint:ruff:
   extends:
     - .lint
+    - .python-docker    
   script:
     - scl enable rh-python38 -- python -m ruff check --output-format=gitlab | tee code-quality-report.json
   artifacts:
@@ -76,12 +88,14 @@ lint:ruff:
 format:ruff:
   extends:
     - .format
+    - .python-docker    
   script:
     - scl enable rh-python38 -- python -m ruff format --diff
 
 format:codespell:
   extends:
     - .format
+    - .python-docker    
   script:
     - scl enable rh-python38 -- python -m pip install codespell
     - scl enable rh-python38 -- codespell
