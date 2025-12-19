@@ -425,7 +425,7 @@ class FileWriterController:
         random_part_len = len(random_uuid) - len(prefix)
         generated_uuid = uuid.UUID(prefix + random_uuid[:random_part_len])
 
-        return generated_uuid
+        return str(generated_uuid)
 
     def request_stop(self, job_id, stop_time, service_id):
         message = serialise_6s4t(
