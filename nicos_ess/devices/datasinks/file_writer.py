@@ -413,8 +413,8 @@ class FileWriterController:
             return None
 
     def _generate_uuid(self, file_num="", command_str="a"):
-        proposal_str = f"{int(session.experiment.propinfo.get('proposal')):0>6}"
-        file_num_str = f"{int(file_num):0>6}"
+        proposal_str = f"{session.experiment.propinfo.get('proposal'):0>6}"
+        file_num_str = f"{file_num:0>6}"
         command_str = "".join(
             c for c in command_str.lower() if c in "0123456789abcdef"
         )[
