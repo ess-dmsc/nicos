@@ -97,5 +97,5 @@ format:codespell:
     - .format
     - .python-docker    
   script:
-    - scl enable rh-python38 -- python -m pip install codespell
-    - scl enable rh-python38 -- codespell
+    - scl enable rh-python38 -- python -m pip install --user codespell
+    - scl enable rh-python38 -- python -m codespell_lib
