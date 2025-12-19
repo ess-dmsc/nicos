@@ -11,8 +11,24 @@ exclude = [
     "bin/",
 ]
 
-# Configure globally applicable rules
-select = ["E", "F", "W"]
+[tool.ruff.lint]
+# Configure global rules to apply; see https://docs.astral.sh/ruff/rules/ for details.
+# Default value: ["E4", "E7", "E9", "F"]
+select = [
+    # pycodestyle
+    "E",
+    "W",
+    # Pyflakes
+    "F",
+    # pyupgrade
+    "UP",
+    # flake8-bugbear
+    "B",
+    # flake8-simplify
+    "SIM",
+    # isort
+    "I",
+]
 
 # Per-file ignores
 [tool.ruff.per-file-ignores]
