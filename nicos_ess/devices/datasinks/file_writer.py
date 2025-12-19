@@ -427,14 +427,14 @@ class FileWriterController:
         random_part_len = len(random_uuid) - len(prefix)
         generated_str = prefix + random_uuid[:random_part_len]
         # set variant to RFC 4122
-        generated_uuid = uuid.UUID(generated_str[:15] + "8" + generated_str[16:])
+        generated_uuid = uuid.UUID(generated_str[:16] + "8" + generated_str[17:])
 
         return str(generated_uuid)
 
     def request_stop(self, job_id, stop_time, service_id):
         message = serialise_6s4t(
             job_id=job_id,
-            command_id=self._generate_uuid(f"{job_id[9:13]}{job_id[14:18]}", "0000000000000000"),
+            command_id=self._generate_uuid(f"{job_id[6:8]}{job_id[9:13]}", "0000000000000000"),
             service_id=service_id,
             stop_time=stop_time,
             run_name="",
