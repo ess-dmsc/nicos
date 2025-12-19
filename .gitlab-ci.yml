@@ -12,10 +12,10 @@ default:
   image: registry.esss.lu.se/ecdc/ess-dmsc/docker-centos7-build-node:latest
   before_script:
     - scl enable rh-python38 -- python --version
-    - scl enable rh-python38 -- pip install --user --upgrade pip 
-    - scl enable rh-python38 -- pip install --user -r requirements.txt
-    - scl enable rh-python38 -- pip install --user -r requirements-gui.txt
-    - scl enable rh-python38 -- pip install --user -r requirements-dev.txt
+    - scl enable rh-python38 -- python -m pip install --user --upgrade pip 
+    - scl enable rh-python38 -- python -m pip install --user -r requirements.txt
+    - scl enable rh-python38 -- python -m pip install --user -r requirements-gui.txt
+    - scl enable rh-python38 -- python -m pip install --user -r requirements-dev.txt
 
 workflow:
   rules:
