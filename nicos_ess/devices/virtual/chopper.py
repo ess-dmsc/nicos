@@ -5,17 +5,17 @@ import numpy as np
 from numpy import exp
 
 from nicos.core import (
-    Param,
-    Override,
-    status,
-    HasOffset,
-    CanDisable,
-    floatrange,
-    tupleof,
     MASTER,
-    MoveError,
+    CanDisable,
+    HasOffset,
     InvalidValueError,
+    MoveError,
+    Override,
+    Param,
+    floatrange,
     listof,
+    status,
+    tupleof,
 )
 from nicos.devices.abstract import Motor
 from nicos.utils import createThread

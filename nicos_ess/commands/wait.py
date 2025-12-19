@@ -39,7 +39,7 @@ def waitfor_stable(device, target, accuracy, time_stable, timeout=3600):
 
         if curr_time > start_time + timeout:
             session.log.warning(
-                "stablilisation timed out - %s might not be " "stable", device
+                "stablilisation timed out - %s might not be stable", device
             )
             break
 
@@ -48,7 +48,7 @@ def waitfor_stable(device, target, accuracy, time_stable, timeout=3600):
                 in_range = True
                 start_in_range = curr_time
                 session.log.warning(
-                    "%s is within range, waiting %s seconds " "for it to stabilise",
+                    "%s is within range, waiting %s seconds for it to stabilise",
                     device,
                     time_stable,
                 )

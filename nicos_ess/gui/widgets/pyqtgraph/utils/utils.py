@@ -44,9 +44,9 @@ def interpolate_to_common_timestamps(*args):
     ts_data_pairs = list(zip(*[iter(args)] * 2))
 
     for pair in ts_data_pairs:
-        assert len(pair[0]) == len(
-            pair[1]
-        ), "Data and timestamps must be the same length"
+        assert len(pair[0]) == len(pair[1]), (
+            "Data and timestamps must be the same length"
+        )
         assert len(pair[0]) == len(np.unique(pair[0])), "Timestamps must be unique"
         assert len(pair[0]) > 1, "Must have more than one timestamp"
         assert np.min(pair[0]) >= 0, "Timestamps must be positive"

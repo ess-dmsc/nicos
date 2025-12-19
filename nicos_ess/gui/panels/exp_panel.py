@@ -16,7 +16,6 @@ from nicos.guisupport.qt import (
 )
 from nicos.guisupport.tablemodel import TableModel
 from nicos.utils import decodeAny, findResource
-
 from nicos_ess.gui.panels.panel import PanelBase
 
 USER_FIELDS = ["name", "email", "affiliation"]

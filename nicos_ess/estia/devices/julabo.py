@@ -4,9 +4,8 @@ controller using EPICS.
 """
 
 from nicos.core import ConfigurationError, HasPrecision, Override, Param, pvname, status
-
-from nicos.devices.epics.pva import EpicsAnalogMoveable
 from nicos.devices.epics.mixins import HasDisablePv
+from nicos.devices.epics.pva import EpicsAnalogMoveable
 
 
 class TemperatureController(HasDisablePv, HasPrecision, EpicsAnalogMoveable):

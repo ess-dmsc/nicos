@@ -60,7 +60,7 @@ class KnauerValve(EpicsDevice, CanReference, Moveable):
         if error:
             return status.ERROR, error
 
-        severity = self._read_pv(f'{self._get_pv_name("status")}.SEVR')
+        severity = self._read_pv(f"{self._get_pv_name('status')}.SEVR")
         msg = self._read_pv(self._get_pv_name("status"), as_string=True)
 
         return SEVERITY_TO_STATUS[severity], "" if msg == "Idle" else msg

@@ -15,7 +15,6 @@ from nicos.guisupport.qt import (
     pyqtSignal,
     pyqtSlot,
 )
-
 from nicos_ess.gui.widgets.pyqtgraph.roi import CROSS_COLOR, CROSS_HOOVER_COLOR
 
 pg.setConfigOption("background", "w")

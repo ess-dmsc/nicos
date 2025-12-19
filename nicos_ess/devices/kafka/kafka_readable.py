@@ -1,24 +1,24 @@
 from time import sleep
 
 import numpy as np
-from streaming_data_types import deserialise_f144, deserialise_da00
+from streaming_data_types import deserialise_da00, deserialise_f144
 from streaming_data_types.dataarray_da00 import Variable, serialise_da00
 from streaming_data_types.utils import get_schema
 
 from nicos import session
 from nicos.core import (
-    Readable,
-    Param,
-    listof,
-    host,
-    tupleof,
+    LIVE,
+    MASTER,
     POLLER,
     SIMULATION,
-    MASTER,
-    status,
-    LIVE,
     ArrayDesc,
     Override,
+    Param,
+    Readable,
+    host,
+    listof,
+    status,
+    tupleof,
 )
 from nicos.utils import byteBuffer
 from nicos_ess.devices.kafka.consumer import KafkaSubscriber

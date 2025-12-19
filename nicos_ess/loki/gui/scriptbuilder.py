@@ -22,14 +22,13 @@ from nicos.guisupport.qt import (
     pyqtSlot,
 )
 from nicos.utils import findResource
-
 from nicos_ess.gui.panels.panel import PanelBase
+from nicos_ess.gui.tables.table_delegates import ComboBoxDelegate, LimitsDelegate
+from nicos_ess.gui.tables.table_helper import Clipboard, TableHelper
 from nicos_ess.gui.utils import get_icon
 from nicos_ess.loki.gui.sample_holder_config import ReadOnlyDelegate
 from nicos_ess.loki.gui.script_generator import ScriptFactory, TransOrder
 from nicos_ess.loki.gui.scriptbuilder_model import LokiScriptModel
-from nicos_ess.gui.tables.table_delegates import ComboBoxDelegate, LimitsDelegate
-from nicos_ess.gui.tables.table_helper import Clipboard, TableHelper
 from nicos_ess.utilities.csv_utils import (
     export_table_to_csv_stream,
     import_table_from_csv_stream,
@@ -336,7 +335,7 @@ class LokiScriptBuilderPanel(PanelBase):
                 if name in self.columns and self.columns[name].optional:
                     self.optional_columns_to_checkbox[name].setChecked(True)
         except Exception as error:
-            self.showError("There was a problem loading the selected file: " f"{error}")
+            self.showError(f"There was a problem loading the selected file: {error}")
 
     def _quick_fill(self):
         self.model.clear()
@@ -359,8 +358,7 @@ class LokiScriptBuilderPanel(PanelBase):
     def _save_table(self):
         if self.is_data_in_hidden_columns():
             self.showError(
-                "Cannot save because there is data in a non-visible "
-                "optional column(s)."
+                "Cannot save because there is data in a non-visible optional column(s)."
             )
             return
 
@@ -553,9 +551,7 @@ class LokiScriptBuilderPanel(PanelBase):
                 invalid_rows.append(str(row_num + 1))
         if invalid_rows:
             raise InvalidValueError(
-                'The following rows have invalid '
-                'positions: '
-                f'{", ".join(invalid_rows)}.'
+                f"The following rows have invalid positions: {', '.join(invalid_rows)}."
             )
 
     def _check_durations(self, row_numbers, script_data, trans_setting):
@@ -573,8 +569,8 @@ class LokiScriptBuilderPanel(PanelBase):
                     break
         if invalid_rows:
             raise InvalidValueError(
-                'The following rows have missing '
-                f'duration(s): {", ".join(invalid_rows)}.'
+                "The following rows have missing "
+                f"duration(s): {', '.join(invalid_rows)}."
             )
 
     def _on_optional_column_toggled(self, column_name, state):
@@ -594,7 +590,7 @@ class LokiScriptBuilderPanel(PanelBase):
     def _on_duration_type_changed(self, column_name, value):
         column_number = self.columns_headers.index(column_name)
         self._set_column_title(
-            column_number, f"{self.columns[column_name].header}" f"\n({value})"
+            column_number, f"{self.columns[column_name].header}\n({value})"
         )
 
     def _set_column_title(self, index, title):

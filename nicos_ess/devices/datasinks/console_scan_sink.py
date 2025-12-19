@@ -2,6 +2,8 @@ from nicos import session
 from nicos.core import SIMULATION
 from nicos.devices.datasinks.scan import (
     ConsoleScanSink as BaseConsoleScanSink,
+)
+from nicos.devices.datasinks.scan import (
     ConsoleScanSinkHandler as BaseConsoleScanSinkHandler,
 )
 

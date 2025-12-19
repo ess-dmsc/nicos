@@ -293,5 +293,5 @@ class SetupsPanel(Panel):
         return self._run_setup_command("AddSetup", to_add, noqueue)
 
     def _run_setup_command(self, cmd, setups, noqueue):
-        cmd_str = f'{cmd}({", ".join(map(repr, setups))})'
+        cmd_str = f"{cmd}({', '.join(map(repr, setups))})"
         return self.client.run(cmd_str, noqueue=noqueue) is not None

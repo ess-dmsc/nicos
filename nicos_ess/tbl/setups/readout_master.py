@@ -84,5 +84,4 @@ devices = dict(
         description="The sync timing mode",
         readpv="{}TimingModeSync-R".format(pv_root_2),
     ),
-    
 )

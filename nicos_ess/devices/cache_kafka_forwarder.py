@@ -9,7 +9,6 @@ from nicos.core import Device, Override, Param, host, listof, status
 from nicos.protocols.cache import OP_TELL, cache_load
 from nicos.services.collector import ForwarderBase
 from nicos.utils import createThread
-
 from nicos_ess.devices.kafka.producer import KafkaProducer
 
 nicos_status_to_al00 = {
@@ -60,7 +59,7 @@ class CacheKafkaForwarder(ForwarderBase, Device):
             mandatory=True,
         ),
         "dev_ignore": Param(
-            "Devices to ignore; if empty, all devices are " "accepted",
+            "Devices to ignore; if empty, all devices are accepted",
             default=[],
             type=listof(str),
         ),

@@ -267,7 +267,7 @@ devices = dict(
         writepv="{}Spd_S".format(pv_root_overlap_chopper),
         precision=0.1,
         mapping={
-            "-14 Hz": -14, 
+            "-14 Hz": -14,
             "-7 Hz": -7,
             "0 Hz": 0,
             "7 Hz": 7,

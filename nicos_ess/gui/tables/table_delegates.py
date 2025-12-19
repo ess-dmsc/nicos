@@ -2,16 +2,16 @@
 
 from nicos.guisupport.qt import (
     QAbstractSpinBox,
+    QApplication,
     QComboBox,
     QDoubleSpinBox,
     QItemDelegate,
-    Qt,
-    QStyledItemDelegate,
-    QStyleOptionButton,
-    QStyle,
-    QApplication,
     QPoint,
     QRect,
+    QStyle,
+    QStyledItemDelegate,
+    QStyleOptionButton,
+    Qt,
 )
 
 

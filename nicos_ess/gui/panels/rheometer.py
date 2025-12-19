@@ -4,22 +4,21 @@ import numpy as np
 
 from nicos.clients.gui.panels import Panel
 from nicos.guisupport.qt import (
+    QComboBox,
     QFrame,
+    QGridLayout,
     QHBoxLayout,
     QLabel,
     QLineEdit,
     QPushButton,
     QSplitter,
-    Qt,
-    QVBoxLayout,
-    QComboBox,
-    QGridLayout,
-    QTableView,
-    QStandardItemModel,
     QStandardItem,
+    QStandardItemModel,
+    Qt,
+    QTableView,
     QTimer,
+    QVBoxLayout,
 )
-
 
 #########################################################
 #  Some refactoring to be done, but this works for now  #

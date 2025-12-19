@@ -1,22 +1,20 @@
-from datetime import datetime
 import time
+from datetime import datetime
 
+import numpy as np
 import pyqtgraph as pg
 from pyqtgraph import mkPen
 
 from nicos.guisupport.qt import (
-    QWidget,
-    QVBoxLayout,
-    QHBoxLayout,
     QCheckBox,
+    QHBoxLayout,
     QLabel,
     QSpinBox,
     QTimer,
     QToolTip,
+    QVBoxLayout,
+    QWidget,
 )
-
-import numpy as np
-
 
 pg.setConfigOption("background", "w")
 pg.setConfigOption("foreground", "k")
@@ -379,6 +377,7 @@ class TrendViewer(QWidget):
 
 if __name__ == "__main__":
     import sys
+
     from PyQt5 import QtWidgets
 
     app = QtWidgets.QApplication(sys.argv)

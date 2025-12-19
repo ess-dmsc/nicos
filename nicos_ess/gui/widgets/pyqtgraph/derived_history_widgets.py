@@ -1,7 +1,6 @@
 import itertools
 
 import numpy as np
-
 import pyqtgraph as pg
 from qtgr import QWidget
 
@@ -12,10 +11,10 @@ from nicos.guisupport.qt import (
 )
 from nicos_ess.gui.widgets.pyqtgraph.utils.fitter import Fitter1D, FitType
 from nicos_ess.gui.widgets.pyqtgraph.utils.utils import (
-    interpolate_to_common_timestamps,
     COLORS,
-    PlotTypes,
     HISTOGRAM_COLORS,
+    PlotTypes,
+    interpolate_to_common_timestamps,
 )
 
 pg.setConfigOption("background", "w")

@@ -1,6 +1,8 @@
 from nicos.guisupport.qt import (
     QCheckBox,
+    QDialog,
     QFrame,
+    QGridLayout,
     QHBoxLayout,
     QIcon,
     QLabel,
@@ -8,15 +10,12 @@ from nicos.guisupport.qt import (
     QPushButton,
     QSize,
     Qt,
+    QTimer,
     QToolButton,
     QVBoxLayout,
     QWidget,
-    QGridLayout,
-    QDialog,
-    QTimer,
 )
 from nicos_ess.gui.widgets.pyqtgraph.pixel_display_dialog import PixelDialog
-
 
 CONTROLLER_REFRESH_INTERVAL = 1000
 

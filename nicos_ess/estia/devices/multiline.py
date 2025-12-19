@@ -12,9 +12,8 @@ from nicos.core import (
     pvname,
     status,
 )
-
-from nicos.devices.epics.pva import EpicsReadable
 from nicos.devices.epics.mixins import HasDisablePv
+from nicos.devices.epics.pva import EpicsReadable
 
 
 class PilotLaser(HasDisablePv, EpicsReadable):
@@ -211,7 +210,7 @@ class MultilineController(EpicsReadable):
             "Start of a continuous measurement.", type=str, settable=True, internal=True
         ),
         "alignment_process": Param(
-            "Start/stop the process to align the " "channels.",
+            "Start/stop the process to align the channels.",
             type=str,
             settable=True,
             internal=True,

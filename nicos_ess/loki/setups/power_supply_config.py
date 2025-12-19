@@ -9,12 +9,12 @@ PV_ROOT = "LOKI-DtCmn:PwrC"
 HV_INFO = {
     "id": "HVM",
     "boards": [
-        "100", 
-        "101", 
-        #"102", 
-        #"105", 
-        #"106",
-        ],
+        "100",
+        "101",
+        # "102",
+        # "105",
+        # "106",
+    ],
     "channels": [f"{ch:>02}" for ch in range(0, 12)],
 }
 
@@ -23,12 +23,12 @@ LV_INFO = {
     "boards": [
         "106",
         "107",
-        #"110",
-        #"111",
-        #"112",
-        #"113",
-        #"114",
-        #"115",
+        # "110",
+        # "111",
+        # "112",
+        # "113",
+        # "114",
+        # "115",
     ],
     "channels": [f"{ch:>02}" for ch in range(0, 8)],
 }
@@ -59,12 +59,14 @@ for board in LV_INFO["boards"]:
 
 ALL_CHANNELS = {**hv_channels, **lv_channels}
 
+
 def validate_channel_key(key):
     return bool(ALL_CHANNELS.get(key))
 
+
 def get_channel_keys(bank_channels):
-    """ Receive a list of channels sets, and return a list of keys.
-    
+    """Receive a list of channels sets, and return a list of keys.
+
     A key is a string (e.g., "HV_101_Ch02") used as an index for the ALL_CHANNELS
     dict (where the complete information of channel is stored).
     """
@@ -74,8 +76,8 @@ def get_channel_keys(bank_channels):
         ps_type = bank_channels[i]["ps_type"]
         board = bank_channels[i]["board"]
         channels = bank_channels[i]["channels"]
-        
-        for channel in channels: 
+
+        for channel in channels:
             key = f"{ps_type}_{board}_Ch{channel}"
             if not validate_channel_key(key):
                 raise ConfigurationError(f"PS config: channel key not found ({key}).")

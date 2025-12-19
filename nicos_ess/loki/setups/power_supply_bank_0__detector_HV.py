@@ -1,7 +1,4 @@
-from nicos_ess.loki.setups.power_supply_config import (
-    ALL_CHANNELS, 
-    get_channel_keys
-)
+from nicos_ess.loki.setups.power_supply_config import ALL_CHANNELS, get_channel_keys
 
 description = "Power Supplies Bank 0 for the detector carriage (HV)."
 
@@ -33,7 +30,7 @@ for key in keys:
         maxage=None,
         ps_pv=pv_root,
         mapping={"OFF": 0, "ON": 1},
-        visibility={}
+        visibility={},
     )
     devices[f"M{module_num:02d}_{key}"] = power_supply_channel
     module_num += 1
@@ -42,12 +39,12 @@ channel_keys = list(devices.keys())
 
 # Bank device
 power_supply_module = device(
-        "nicos_ess.devices.epics.power_supply_channel.PowerSupplyBank",
-        description="Bank 0 HV Power Supplies (Detector Carriage)",
-        pollinterval=1.0,
-        maxage=None,
-        ps_channels=channel_keys,
-        mapping={"OFF": 0, "ON": 1},
-    )
+    "nicos_ess.devices.epics.power_supply_channel.PowerSupplyBank",
+    description="Bank 0 HV Power Supplies (Detector Carriage)",
+    pollinterval=1.0,
+    maxage=None,
+    ps_channels=channel_keys,
+    mapping={"OFF": 0, "ON": 1},
+)
 
 devices[BANK_NAME] = power_supply_module

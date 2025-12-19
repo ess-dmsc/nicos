@@ -5,7 +5,6 @@ from uuid import uuid4
 
 import numpy as np
 
-from nicos_ess.gui.utils import get_icon
 from nicos.clients.gui.panels.live import FILENAME, FILETAG, FILEUID, LiveDataPanel
 from nicos.core.constants import LIVE
 from nicos.guisupport.qt import (
@@ -21,12 +20,12 @@ from nicos.guisupport.qt import (
     pyqtSlot,
 )
 from nicos.utils import BoundedOrderedDict
-
 from nicos_ess.dream.gui.comparison_plot_widgets import (
     ComparisonPlot1D,
     ComparisonPlot2D,
 )
 from nicos_ess.dream.gui.normalisers import NormaliserFactory, NormaliserType
+from nicos_ess.gui.utils import get_icon
 
 SNAP = "snap"
 

@@ -2,9 +2,7 @@ from confluent_kafka import Producer
 
 from nicos.core import DeviceMixinBase, Param, host, listof
 from nicos.core.constants import SIMULATION
-
 from nicos_ess.devices.kafka.utils import create_sasl_config
-
 
 MAX_MESSAGE_SIZE = 209_715_200
 

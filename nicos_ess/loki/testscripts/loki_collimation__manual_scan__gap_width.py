@@ -1,16 +1,16 @@
-#***********************************************
+# ***********************************************
 # COLLIMATION SYSTEM INTEGREATED TEST
 # 26 JUNE 2025
 # SCRIPT FOR SCAN TEST
-#***********************************************
+# ***********************************************
 
 # Test 3.5
 BLADE_1 = slit_set_1_left_blade
 BLADE_2 = slit_set_1_right_blade
 
 # Test 3.6
-#BLADE_1 = slit_set_1_upper_blade
-#BLADE_2 = slit_set_1_bottom_blade
+# BLADE_1 = slit_set_1_upper_blade
+# BLADE_2 = slit_set_1_bottom_blade
 
 START_1 = 1  # Starts open
 START_2 = 41
@@ -22,7 +22,7 @@ pos1 = START_1  # BLADE_1 position
 pos2 = START_2  # BLADE_2 position
 
 loop_num = 1
-while(pos2 >= LIMIT):
+while pos2 >= LIMIT:
     print("Loop " + str(loop_num))
 
     move(BLADE_1, pos1)

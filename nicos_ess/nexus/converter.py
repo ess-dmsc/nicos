@@ -1,6 +1,5 @@
 from nicos import session
 from nicos.core.errors import NicosError
-
 from nicos_ess.nexus.elements import (
     KafkaStream,
     NXAttribute,

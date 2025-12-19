@@ -2,31 +2,29 @@ import time
 from datetime import datetime
 
 import numpy as np
-
 import pyqtgraph as pg
-from pyqtgraph import mkPen, mkBrush
+from pyqtgraph import mkBrush, mkPen
 from qtgr import QWidget
 
 from nicos.guisupport.qt import (
-    QVBoxLayout,
-    pyqtSignal,
-    QHBoxLayout,
     QColor,
+    QFrame,
+    QHBoxLayout,
     QSplitter,
     Qt,
+    QVBoxLayout,
+    pyqtSignal,
     pyqtSlot,
-    QFrame,
 )
 from nicos_ess.gui.widgets.pyqtgraph.derived_history_widgets import (
     HistogramPlot,
     XYPlot,
 )
-
 from nicos_ess.gui.widgets.pyqtgraph.utils.utils import (
-    TimeAxisItem,
     ClickableLabel,
-    clear_layout,
     PlotTypes,
+    TimeAxisItem,
+    clear_layout,
 )
 
 pg.setConfigOption("background", "w")

@@ -32,9 +32,9 @@ class Script:
         return f'do_simultaneous({sans_duration}, "{sans_duration_type}")\n'
 
     def _start_sample(self, row_values):
-        script = f'# Sample = {row_values["sample"]["name"]}\n'
+        script = f"# Sample = {row_values['sample']['name']}\n"
         script += self._get_command(row_values.get("pre-command"))
-        script += f'set_sample(\'{row_values["sample"]["name"]}\')\n'
+        script += f"set_sample('{row_values['sample']['name']}')\n"
         script += f'move(positioner, "{row_values["position"]}")\n'
         script += self._get_temperature(row_values.get("temperature"))
         return script

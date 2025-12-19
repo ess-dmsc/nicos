@@ -50,7 +50,6 @@ from nicos.guisupport.qt import (
 )
 from nicos.guisupport.utils import setBackgroundColor
 from nicos.utils import LOCALE_ENCODING, findResource, formatDuration, formatEndtime
-
 from nicos_ess.gui.utils import get_icon
 
 has_scintilla = QsciScintilla is not None
@@ -900,7 +899,7 @@ class EditorPanel(Panel):
             return
         if self.current_status != "idle":
             if not self.askQuestion(
-                "A script is currently running, do you " "want to queue this script?",
+                "A script is currently running, do you want to queue this script?",
                 True,
             ):
                 return
@@ -948,7 +947,7 @@ class EditorPanel(Panel):
         reason, ok = QInputDialog.getText(
             self,
             "Update reason",
-            "For the logbook, you can enter a reason " "for the update here:",
+            "For the logbook, you can enter a reason for the update here:",
             text="no reason specified",
         )
         if not ok:

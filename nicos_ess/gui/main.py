@@ -129,7 +129,7 @@ def main(argv):
     gui_conf.stylefile = ""
 
     if gui_conf.options.get("facility") in ["ess", "sinq"]:
-        gui_conf.stylefile = f"{config.nicos_root}" f"/nicos_ess/gui/guiconfig.qss"
+        gui_conf.stylefile = f"{config.nicos_root}/nicos_ess/gui/guiconfig.qss"
 
     stylefiles = [
         path.join(userpath, "style-%s.qss" % sys.platform),

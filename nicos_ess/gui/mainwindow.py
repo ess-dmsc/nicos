@@ -3,7 +3,8 @@
 import sys
 import traceback
 from os import path
-from time import strftime, time as current_time
+from time import strftime
+from time import time as current_time
 
 import gr
 
@@ -66,7 +67,6 @@ from nicos.utils import (
     importString,
     parseConnectionString,
 )
-
 from nicos_ess.gui.dialogs.auth import ConnectionDialog
 from nicos_ess.gui.dialogs.settings import SettingsDialog
 from nicos_ess.gui.panels.setups import SetupsPanel
@@ -427,12 +427,12 @@ class MainWindow(DlgUtils, QMainWindow):
                 QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.Preferred
             )
             if location == "row_1":
-                label.setStyleSheet("font-size: 17pt; " "font-weight: bold")
+                label.setStyleSheet("font-size: 17pt; font-weight: bold")
                 text.setStyleSheet("font-size: 17pt")
                 row_1_layout.addWidget(label)
                 row_1_layout.addWidget(text)
             elif location == "row_2":
-                label.setStyleSheet("font-size: 14pt; " "font-weight: bold")
+                label.setStyleSheet("font-size: 14pt; font-weight: bold")
                 text.setStyleSheet("font-size: 14pt")
                 row_2_layout.addWidget(label)
                 row_2_layout.addWidget(text)
@@ -1008,7 +1008,7 @@ class MainWindow(DlgUtils, QMainWindow):
             return
         if not self.client.isconnected:
             self.showError(
-                "Cannot open online help: you are not connected " "to a daemon."
+                "Cannot open online help: you are not connected to a daemon."
             )
             return
         self.client.eval('session.showHelp("index")')
