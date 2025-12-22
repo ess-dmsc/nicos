@@ -1,1 +1,0 @@
-from nicos_ess.devices.loggers.kafka import create_kafka_logging_handler
