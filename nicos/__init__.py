@@ -32,9 +32,17 @@ from logging import getLogger
 from nicos.configmod import config
 
 # Determine our version(s).
-from nicos._vendor.gitversion import get_git_version, get_nicos_version  # isort:skip
+import importlib.metadata  # isort:skip
 
-__version__ = nicos_version = get_nicos_version()
+try:
+    __version__ = nicos_version = importlib.metadata.version(__name__)
+except importlib.metadata.PackageNotFoundError:
+    from nicos._vendor.gitversion import get_git_version, get_nicos_version
+
+    __version__ = nicos_version = get_nicos_version()
+except Exception:
+    __version__ = nicos_version = "0.0.0"  # Fallback for development mode
+
 
 # Check for Python version 3.6+.
 if sys.version_info[:2] < (3, 6):
@@ -53,7 +61,7 @@ session = Session()
 def get_custom_version():
     try:
         return get_git_version(cwd=config.setup_package_path)
-    except RuntimeError:
+    except (NameError, RuntimeError):
         return None
 
 
