@@ -183,7 +183,7 @@ class EpicsKafkaForwarder(KafkaStatusHandler):
                 "pv": config.get("source_name", ""),
                 "schema": config.get("schema", ""),
                 "topic": config.get("topic", ""),
-                "dataset_type": config.get("dataset_type", "nxlog"),
+                "dataset_type": config.get("dataset_type", "nx_log"),
                 "nexus_path": config.get("nexus_path", DEFAULT_NEXUS_PATH),
             },
         )
@@ -245,7 +245,7 @@ class EpicsKafkaForwarder(KafkaStatusHandler):
             if grouped[path][gname]["nx_class"] is None:
                 grouped[path][gname]["nx_class"] = cfg["nx_class"]
 
-            if cfg["dataset_type"] == "nxlog":
+            if cfg["dataset_type"] == "nx_log":
                 snippet = generate_nxlog_json(
                     dev_name, cfg["schema"], cfg["pv"], cfg["topic"], cfg["units"]
                 )

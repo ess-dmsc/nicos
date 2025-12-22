@@ -40,6 +40,7 @@ devices = dict(
                 "topic": "ymir_motion",
                 "protocol": "pva",
                 "periodic": 1,
+                "dataset_type": "nx_log",
             },
             {
                 "group_name": "motion_cabinet_2",
@@ -51,6 +52,7 @@ devices = dict(
                 "topic": "ymir_motion",
                 "protocol": "pva",
                 "periodic": 1,
+                "dataset_type": "nx_log",
             },
             {
                 "group_name": "motion_cabinet_2",
@@ -62,6 +64,7 @@ devices = dict(
                 "topic": "ymir_motion",
                 "protocol": "pva",
                 "periodic": 1,
+                "dataset_type": "nx_log",
             },
         ],
         monitor_deadband=0.01,
@@ -81,6 +84,7 @@ devices = dict(
                 "topic": "ymir_motion",
                 "protocol": "pva",
                 "periodic": 1,
+                "dataset_type": "nx_log",
             },
             {
                 "group_name": "motion_cabinet_2",
@@ -92,6 +96,7 @@ devices = dict(
                 "topic": "ymir_motion",
                 "protocol": "pva",
                 "periodic": 1,
+                "dataset_type": "nx_log",
             },
             {
                 "group_name": "motion_cabinet_2",
@@ -103,6 +108,7 @@ devices = dict(
                 "topic": "ymir_motion",
                 "protocol": "pva",
                 "periodic": 1,
+                "dataset_type": "nx_log",
             },
         ],
         monitor_deadband=0.01,

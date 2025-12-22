@@ -3,7 +3,7 @@ import threading
 import time
 
 from nicos import session
-from nicos.core import POLLER, Moveable, Override, Param, oneof, pvname, status
+from nicos.core import POLLER, Moveable, Override, Param, limits, oneof, pvname, status
 from nicos.core.errors import ConfigurationError
 from nicos.core.mixins import CanDisable, HasLimits, HasOffset
 from nicos.devices.abstract import CanReference, Motor
@@ -108,6 +108,27 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
             userparam=True,
             mandatory=False,
         ),
+        "hwuserlimits": Param(
+            "Unchangable hardware user limits, diallimits with applied offset and direction.",
+            type=limits,
+            settable=False,
+            volatile=True,
+            userparam=False,
+            mandatory=False,
+            category="limits",
+            fmtstr="main",
+            unit="main",
+        ),
+        "limitoffsets": Param(
+            "Offsets to be applied to the hardware user limits.",
+            type=tuple,
+            default=(0.0, 0.0),
+            settable=True,
+            userparam=False,
+            mandatory=False,
+            fmtstr="main",
+            unit="main",
+        ),
     }
 
     parameter_overrides = {
@@ -147,6 +168,7 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
             "description": RecordInfo("", ".DESC", RecordType.VALUE),
             "monitor_deadband": RecordInfo("", ".MDEL", RecordType.VALUE),
             "maxspeed": RecordInfo("", ".VMAX", RecordType.VALUE),
+            "minspeed": RecordInfo("", ".VBAS", RecordType.VALUE),
             "donemoving": RecordInfo("", ".DMOV", RecordType.STATUS),
             "moving": RecordInfo("", ".MOVN", RecordType.STATUS),
             "miss": RecordInfo("", ".MISS", RecordType.STATUS),
@@ -217,11 +239,37 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         absmax = self._get_cached_pv_or_ask("dialhighlimit")
         return absmin, absmax
 
-    def doReadUserlimits(self):
+    def doReadHwuserlimits(self):
         umin = self._get_cached_pv_or_ask("lowlimit")
         umax = self._get_cached_pv_or_ask("highlimit")
         limits = (umin, umax)
         self._checkLimits(limits)
+        return umin, umax
+
+    def doReadUserlimits(self):
+        hw_umin, hw_umax = self.hwuserlimits
+        omin, omax = self.limitoffsets
+
+        umin = hw_umin + omin
+        umax = hw_umax + omax
+
+        if umax < umin:
+            # Old offsets are no longer consistent with the current hardware window.
+            # Fall back to the EPICS hardware user limits.
+            umin, umax = hw_umin, hw_umax
+            new_omin, new_omax = 0.0, 0.0
+        else:
+            # normal clipping logic
+            umin = max(min(umin, hw_umax), hw_umin)
+            umax = max(min(umax, hw_umax), hw_umin)
+
+            new_omin = umin - hw_umin
+            new_omax = umax - hw_umax
+
+        self._setROParam(
+            "limitoffsets",
+            (new_omin, new_omax),
+        )
         return umin, umax
 
     def doReadPosition_Deadband(self):
@@ -302,9 +350,13 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
 
     def doWriteUserlimits(self, value):
         self._checkLimits(value)
-        low, high = value
-        self._put_pv("lowlimit", low)
-        self._put_pv("highlimit", high)
+
+        umin, umax = value
+        hwumin, hwumax = self.hwuserlimits
+
+        omin = umin - hwumin
+        omax = umax - hwumax
+        self.limitoffsets = (omin, omax)
 
     def doAdjust(self, oldvalue, newvalue):
         # For EPICS the offset sign convention differs to that of the base
@@ -447,9 +499,10 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
 
     def _get_valid_speed(self, value):
         max_speed = self._get_cached_pv_or_ask("maxspeed")
+        min_speed = self._get_cached_pv_or_ask("minspeed")
 
-        # Cannot be negative
-        valid_speed = max(0.0, value)
+        # Cannot be less than min speed
+        valid_speed = max(min_speed, value)
 
         # In EPICS if max speed is 0 then there is no limit
         if max_speed > 0.0:
@@ -492,7 +545,7 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
             motor_stat, motor_msg = self._update_status_with_msgtxt(
                 motor_stat, motor_msg
             )
-        return motor_stat, motor_msg
+        return motor_stat, motor_msg.strip()
 
     def _log_epics_msg_info(self, error_msg, stat, epics_msg):
         if stat == status.OK or stat == status.UNKNOWN:
@@ -570,6 +623,8 @@ class EpicsJogMotor(EpicsMotor):
         )
     }
 
+    parameter_overrides = {"speed": Override(userparam=False)}
+
     def doPreinit(self, mode):
         super().doPreinit(mode)
         self._record_fields.update(
@@ -603,17 +658,43 @@ class EpicsJogMotor(EpicsMotor):
     def doReadTarget(self):
         return self._read_jog_with_sign()
 
+    def doReadAbslimits(self):
+        max_speed = self._get_cached_pv_or_ask("maxspeed")
+        return -max_speed, max_speed
+
+    def doWriteUserlimits(self, value):
+        self.log.warning(
+            "Userlimits changes on jog motors are not supported yet and will be ignored."
+        )
+        return self.userlimits
+
+    def doReadUserlimits(self):
+        max_speed = self._get_cached_pv_or_ask("maxspeed")
+        return -max_speed, max_speed
+
     def doWriteSpeed(self, value):
-        speed = self._get_valid_speed(abs(value))
-        if speed != abs(value):
+        self.log.warning(
+            "Speed parameter is not used for changing speed, use target value instead."
+        )
+        return self.speed
+
+    def _get_valid_speed(self, value):
+        max_speed = self._get_cached_pv_or_ask("maxspeed")
+        min_speed = self._get_cached_pv_or_ask("minspeed")
+
+        # Cannot be less than min speed
+        valid_speed = max(min_speed, value)
+
+        # In EPICS if max speed is 0 then there is no limit
+        if max_speed > 0.0:
+            valid_speed = min(max_speed, valid_speed)
+
+        if valid_speed > abs(value):
             self.log.warning(
-                "Selected jog speed %s is outside limits, using %s instead.",
-                value,
-                speed,
+                f"Selected jog speed {abs(value)} is below hardware minimum, using {valid_speed} {self.unit} instead.",
             )
-        # Write raw speed to .JVEL via jog_velocity
-        self._put_pv("jog_velocity", speed)
-        return speed
+
+        return valid_speed
 
     def _wait_until(self, pv_name, expected_value, timeout=5.0):
         """Set up a subscription and wait until the PV reaches the expected value."""
@@ -649,6 +730,7 @@ class EpicsJogMotor(EpicsMotor):
             return
 
         jog_speed = self._get_valid_speed(abs(value))
+
         self.jog_dir = 1 if value > 0 else -1  # <-- set before writing JVEL
 
         # remove this later when EPICS motor record supports speed changes on the fly
@@ -832,6 +914,7 @@ class SmaractPiezoMotor(EpicsMotor):
             "description": RecordInfo("", ".DESC", RecordType.VALUE),
             "monitor_deadband": RecordInfo("", ".MDEL", RecordType.VALUE),
             "maxspeed": RecordInfo("", ".VMAX", RecordType.VALUE),
+            "minspeed": RecordInfo("", ".VBAS", RecordType.VALUE),
             "donemoving": RecordInfo("", ".DMOV", RecordType.STATUS),
             "moving": RecordInfo("", ".MOVN", RecordType.STATUS),
             "miss": RecordInfo("", ".MISS", RecordType.STATUS),
