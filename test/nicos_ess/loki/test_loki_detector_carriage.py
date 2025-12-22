@@ -1,5 +1,6 @@
 import pytest
 
+from nicos.core import LimitError
 from nicos_ess.loki.devices.detector_motion import LOKIDetectorMotion
 
 session_setup = None
@@ -37,7 +38,7 @@ class FakeLokiDetectorMotion(LOKIDetectorMotion):
         pass
 
     def doInit(self, mode):
-        self._ps_bank = self.get_ps_bank()
+        self._ps_bank = self._get_ps_bank()
 
     def _put_pv(self, pvparam, value, wait=False):
         self._record_fields[pvparam] = value
@@ -60,32 +61,43 @@ class TestLokiDetectorCarriage:
         yield
         self.session.unloadSetup()
 
-    def test_move_ok_if_channel_off_and_voltage_zero(self):
+    def test_movement_allowed_if_channel_off_and_voltage_zero(self):
         voltage = 0.0
-        self.ps_bank.doEnable(False)
-        self.ps_channel._record_fields["voltage_monitor"] = voltage
+        self.ps_bank.enable()
+        self.ps_bank.disable()
+        self.ps_channel._put_pv("voltage_monitor", voltage)
         self.motor.move(20)
 
-    def test_move_ok_if_channel_off_and_voltage_below_threshold(self):
-        voltage = 5.0
-        self.ps_bank.doEnable(False)
-        self.ps_channel._record_fields["voltage_monitor"] = voltage
+    def test_movement_allowed_if_channel_off_and_voltage_below_threshold(self):
+        voltage = self.motor.voltage_off_threshold - 0.1
+        self.ps_bank.enable()
+        self.ps_bank.disable()
+        self.ps_channel._put_pv("voltage_monitor", voltage)
         self.motor.move(20)
 
-    def test_move_blocked_if_bank_on(self):
-        self.ps_bank.doEnable(True)
-        with pytest.raises(Exception):
+    def test_movement_blocked_if_bank_is_on(self):
+        self.ps_bank.disable()
+        self.ps_bank.enable()
+        with pytest.raises(LimitError):
             self.motor.move(20)
 
-    def test_move_blocked_if_channel_on(self):
-        self.ps_channel.doEnable(True)
-        with pytest.raises(Exception):
+    def test_movement_blocked_if_channel_is_on(self):
+        self.ps_channel.disable()
+        self.ps_channel.enable()
+        with pytest.raises(LimitError):
             self.motor.move(20)
 
-    def test_move_blocked_if_voltage_above_threshold(self):
-        voltage = 5.1
-        self.ps_bank.doEnable(False)
-        self.ps_channel._record_fields["voltage_monitor"] = voltage
-        with pytest.raises(Exception):
+    def test_movement_blocked_if_voltage_above_threshold(self):
+        voltage = self.motor.voltage_off_threshold + 0.1
+        self.ps_bank.enable()
+        self.ps_bank.disable()
+        self.ps_channel._put_pv("voltage_monitor", voltage)
+        with pytest.raises(LimitError):
             self.motor.move(20)
 
+    def test_movement_block_if_status_not_ok(self):
+        self.ps_channel._put_pv("voltage_monitor", None)  # raises to status.WARN
+        self.ps_bank.enable()
+        self.ps_bank.disable()
+        with pytest.raises(LimitError):
+            self.motor.move(20)
