@@ -239,3 +239,40 @@ class DaemonSession(NoninteractiveSession):
 
     def abortScript(self):
         raise ControlStop("", "", "abort()")
+
+
+def main():
+    """CLI for executing a DaemonSession"""
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "-d",
+        "--daemon",
+        dest="daemon",
+        action="store_true",
+        help="daemonize the daemon process",
+    )
+    parser.add_argument(
+        "-D",
+        "--systemd",
+        dest="daemon",
+        action="store_const",
+        const="systemd",
+        help="run in systemd service mode",
+    )
+    parser.add_argument(
+        "-S",
+        "--setup",
+        action="store",
+        dest="setupname",
+        default="daemon",
+        help="name of the setup, default is 'daemon'",
+    )
+    opts = parser.parse_args()
+
+    DaemonSession.run(opts.setupname, "Daemon", daemon=opts.daemon)
+
+
+if __name__ == "__main__":
+    main()
