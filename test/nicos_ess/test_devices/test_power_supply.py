@@ -19,7 +19,9 @@ class FakePowerSupplyChannel(PowerSupplyChannel):
         pass
 
     def doInit(self, mode):
-        pass
+        self._inverse_mapping = {}
+        for k, v in self.mapping.items():
+            self._inverse_mapping[v] = k
 
     def _put_pv(self, pvparam, value, wait=False):
         self._record_fields[pvparam] = value
@@ -30,14 +32,11 @@ class FakePowerSupplyChannel(PowerSupplyChannel):
         return self._record_fields[pvparam]
 
     def _simulate_power_on_or_off(self, value):
-        self._record_fields["power_rb"] = value
-        self._record_fields["status_on"] = bool(value)
+        self._put_pv("power_rb", value)
+        self._put_pv("status_on", bool(value))
 
-    def doReadVoltage_Monitor(self, as_string=False):
+    def doReadVoltage_Monitor(self):
         return self._get_pv("voltage_monitor")
-
-    def doReadCurrent_Monitor(self, as_string=False):
-        return self._get_pv("current_monitor")
 
 
 class FakePowerSupplyBank(PowerSupplyBank):
@@ -45,7 +44,9 @@ class FakePowerSupplyBank(PowerSupplyBank):
         pass
 
     def doInit(self, mode):
-        pass
+        self._inverse_mapping = {}
+        for k, v in self.mapping.items():
+            self._inverse_mapping[v] = k
 
 
 class TestPowerSupply:
@@ -57,19 +58,19 @@ class TestPowerSupply:
         self.ps_bank = self.session.getDevice("ps_bank_hv")
 
     def test_enable_ps_channel(self):
-        self.ps_channel.doEnable(True)
-        assert self.ps_channel._record_fields["power"] == 1
+        self.ps_channel.enable()
+        assert self.ps_channel._get_pv("power") == 1
 
     def test_disable_ps_channel(self):
-        self.ps_channel.doEnable(False)
-        assert self.ps_channel._record_fields["power"] == 0
+        self.ps_channel.disable()
+        assert self.ps_channel._get_pv("power") == 0
 
     def test_enable_ps_bank(self):
-        self.ps_bank.doEnable(True)
-        assert self.ps_channel._record_fields["power"] == 1
+        self.ps_bank.enable()
+        assert self.ps_channel._get_pv("power") == 1
         assert self.ps_bank.status_on() == (True, 1)
 
     def test_disable_ps_bank(self):
-        self.ps_bank.doEnable(False)
-        assert self.ps_channel._record_fields["power"] == 0
+        self.ps_bank.disable()
+        assert self.ps_channel._get_pv("power") == 0
         assert self.ps_bank.status_on() == (False, 0)
