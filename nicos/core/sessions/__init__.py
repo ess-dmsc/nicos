@@ -74,7 +74,10 @@ from nicos.core.utils import system_user
 from nicos.devices.cacheclient import CacheClient, CacheLockError, SyncCacheClient
 from nicos.devices.instrument import Instrument
 from nicos.devices.notifiers import Notifier
-from nicos_ess.devices.sample import EssSample
+try:
+    from nicos_ess.devices.sample import EssSample
+except ImportError:
+    pass
 from nicos.protocols.cache import FLAG_NO_STORE
 from nicos.utils import fixupScript, formatArgs, formatDocstring, formatScriptError
 from nicos.utils.loggers import (
