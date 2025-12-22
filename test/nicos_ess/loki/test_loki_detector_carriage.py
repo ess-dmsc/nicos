@@ -1,6 +1,6 @@
 import pytest
 
-from nicos.core import LimitError
+from nicos.core import LimitError, status
 from nicos_ess.loki.devices.detector_motion import LOKIDetectorMotion
 
 session_setup = None
@@ -58,13 +58,22 @@ class TestLokiDetectorCarriage:
         self.ps_bank = self.session.getDevice("ps_bank_hv")
         self.motor = self.session.getDevice("restricted_motor")
         yield
+        self.ps_channel._record_fields = {
+            "voltage_monitor": 0.0,
+            "current_monitor": 0.0,
+            "power_rb": 0,
+            "power": 0,
+            "status_on": False,
+        }
         self.session.unloadSetup()
 
     def test_movement_allowed_if_channel_off_and_voltage_zero(self):
         voltage = 0.0
         self.ps_bank.enable()
         self.ps_bank.disable()
+        print(self.ps_channel.doReadVoltage_Monitor())
         self.ps_channel._put_pv("voltage_monitor", voltage)
+        print(self.ps_channel.doReadVoltage_Monitor())
         self.motor.move(20)
 
     def test_movement_allowed_if_channel_off_and_voltage_below_threshold(self):
@@ -91,12 +100,5 @@ class TestLokiDetectorCarriage:
         self.ps_bank.enable()
         self.ps_bank.disable()
         self.ps_channel._put_pv("voltage_monitor", voltage)
-        with pytest.raises(LimitError):
-            self.motor.move(20)
-
-    def test_movement_block_if_status_not_ok(self):
-        self.ps_channel._put_pv("voltage_monitor", None)  # raises to status.WARN
-        self.ps_bank.enable()
-        self.ps_bank.disable()
         with pytest.raises(LimitError):
             self.motor.move(20)

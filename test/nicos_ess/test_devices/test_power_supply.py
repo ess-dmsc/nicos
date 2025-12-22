@@ -1,9 +1,7 @@
 import pytest
-
-
 from nicos_ess.devices.epics.power_supply_channel import PowerSupplyChannel, PowerSupplyBank
 
-session_setup = "ess_power_supply"
+session_setup = None
 
 class FakePowerSupplyChannel(PowerSupplyChannel):
 
@@ -40,6 +38,7 @@ class FakePowerSupplyChannel(PowerSupplyChannel):
 
 
 class FakePowerSupplyBank(PowerSupplyBank):
+
     def doPreinit(self, mode):
         pass
 
@@ -54,8 +53,11 @@ class TestPowerSupply:
     @pytest.fixture(autouse=True)
     def prepare(self, session):
         self.session = session
+        self.session.loadSetup("ess_power_supply", {})
         self.ps_channel = self.session.getDevice("ps_channel_1")
         self.ps_bank = self.session.getDevice("ps_bank_hv")
+        yield
+        self.session.unloadSetup()
 
     def test_enable_ps_channel(self):
         self.ps_channel.enable()
