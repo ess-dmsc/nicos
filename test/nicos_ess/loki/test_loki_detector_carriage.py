@@ -47,7 +47,6 @@ class FakeLokiDetectorMotion(LOKIDetectorMotion):
         return self._record_fields[pvparam]
 
 
-
 class TestLokiDetectorCarriage:
 
     @pytest.fixture(autouse=True)
