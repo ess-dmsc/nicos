@@ -29,9 +29,14 @@ import importlib
 import os
 import sys
 from os import path
-from re import compile as regexcompile, escape as regexescape
+from pathlib import Path
+from re import compile as regexcompile
+from re import escape as regexescape
 
 import toml
+from platformdirs import user_config_dir
+
+import nicos
 
 
 class config:
@@ -45,7 +50,19 @@ class config:
     group = None
     umask = None  # as a string!
 
-    nicos_root = path.normpath(path.dirname(path.dirname(__file__)))
+    p = Path(nicos.__file__).resolve().parent
+    if not Path(p, "resources").exists():
+        # likely running in repository where 'resources' directory is located
+        # adjacent to the 'nicos' directory
+        p = p.parent
+    if not Path(p, "resources").exists():
+        print(
+            "Error: could not locate the 'resources' directory in {p}. Wrong NICOS root directory?"
+        )
+    nicos_root = str(p)
+    nicos_cfg_root = user_config_dir(
+        appname="nicos", appauthor="nicos", ensure_exists=True
+    )
 
     setup_package = None  # the root package to find setups in
     setup_subdirs = []  # setup groups to be used, as a list
@@ -91,7 +108,7 @@ class config:
         cls._applied = True
 
 
-def findSetupPackageAndInstrument(nicos_root, global_cfg):
+def findSetupPackageAndInstrument(global_cfg):
     """Get the setup package and instrument of the NICOS install.
 
     The setup package and instrument can be specified by:
@@ -146,15 +163,15 @@ def readConfig():
     """
     # Read the local config from the standard path.
     # Get the root path of the NICOS install.
-    nicos_root = config.nicos_root
-    global_cfg = readToml(path.join(nicos_root, "nicos.conf"))
+    nicos_cfg_root = config.nicos_cfg_root
+    global_cfg = readToml(path.join(nicos_cfg_root, "nicos.conf"))
 
     # Apply global PYTHONPATH, so that we can find the setup package in it.
     if "PYTHONPATH" in global_cfg.get("environment", {}):
         sys.path[:0] = global_cfg["environment"]["PYTHONPATH"].split(":")
 
     # Find setup package and its path.
-    setup_package, instr = findSetupPackageAndInstrument(nicos_root, global_cfg)
+    setup_package, instr = findSetupPackageAndInstrument(global_cfg)
     try:
         setup_package_mod = importlib.import_module(setup_package)
     except ImportError:
@@ -197,7 +214,8 @@ def readConfig():
         environment.update(cfg.get("environment", {}))
     values.update({"instrument": instr})
 
-    values["nicos_root"] = nicos_root
+    values["nicos_root"] = config.nicos_root
+    values["nicos_cfg_root"] = nicos_cfg_root
     values["setup_package"] = setup_package
     values["setup_package_path"] = setup_package_path
     return values, environment
