@@ -376,12 +376,12 @@ class NexusStructureJsonFile(NexusStructureProvider):
         return sample_info
 
     def _get_instrument_name(self, structure):
-        children = structure["children"][0]["children"]
-        for child in children:
-            if "name" in child and child["name"] == "instrument":
-                instrument = child["config"]["values"]
-                return instrument
-        return "UNKNOWN"
+        mapping = build_named_index_map(structure)
+        try:
+            node = get_by_named_path(structure, mapping, "/entry/instrument/name")
+            return node["config"]["values"]
+        except KeyError:
+            return "UNKNOWN"
 
     def _find_nxinstrument(self, structure):
         try:

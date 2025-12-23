@@ -3,600 +3,222 @@
     {
       "name": "entry",
       "type": "group",
-      "attributes": [
-        {
-          "name": "NX_class",
-          "dtype": "string",
-          "values": "NXentry"
-        }
-      ],
       "children": [
-        {
-          "module": "dataset",
-          "config": {
-            "name": "features",
-            "values": [
-              10138143369737381149,
-              12705204561359454523
-            ],
-            "dtype": "uint64"
-          }
-        },
         {
           "name": "instrument",
           "type": "group",
-          "config": {
-            "name": "name",
-            "values": "LOKI",
-            "dtype": "string"
-          },
-          "attributes": [
-            {
-              "name": "NX_class",
-              "dtype": "string",
-              "values": "NXinstrument"
-            }
-          ],
           "children": [
             {
-              "name": "multiblade_detector",
-              "type": "group",
+              "config": {
+                "name": "name",
+                "values": "LOKI",
+                "dtype": "string"
+              },
+              "module": "dataset"
+            },
+            {
               "attributes": [
                 {
-                  "name": "NX_class",
                   "dtype": "string",
-                  "values": "NXdetector"
+                  "name": "NX_class",
+                  "values": "NXcite"
                 }
               ],
               "children": [
                 {
-                  "attributes": [
-                    {
-                      "dtype": "string",
-                      "name": "NX_class",
-                      "values": "NXcite"
-                    }
-                  ],
-                  "children": [
-                    {
-                      "config": {
-                        "name": "description",
-                        "values": "The data here was produced using the ESS EFU (European Spallation Source Event Formation Unit) system",
-                        "dtype": "string"
-                      },
-                      "module": "dataset"
-                    },
-                    {
-                      "config": {
-                        "name": "doi",
-                        "values": "https://doi.org/10.1088/1748-0221/13/10/T10001",
-                        "dtype": "string"
-                      },
-                      "module": "dataset"
-                    },
-                    {
-                      "config": {
-                        "name": "bibtex",
-                        "values": "@article{Christensen_2018,\r\ndoi = {10.1088/1748-0221/13/11/T11002},\r\nurl = {https://dx.doi.org/10.1088/1748-0221/13/11/T11002},\r\nyear = {2018},\r\nmonth = {nov},\r\npublisher = {},\r\nvolume = {13},\r\nnumber = {11},\r\npages = {T11002},\r\nauthor = {M.J. Christensen and M. Shetty and J. Nilsson and A. Mukai and R. Al Jebali and A. Khaplanov and M. Lupberger and F. Messi and D. Pfeiffer and F. Piscitelli and T. Blum and C. S\u00f8gaard and S. Skelboe and R. Hall-Wilton and T. Richter},\r\ntitle = {Software-based data acquisition and processing for neutron detectors at European Spallation Source\u2014early experience from four detector designs},\r\njournal = {Journal of Instrumentation},\r\nabstract = {European Spallation Source (ESS) will deliver neutrons at high flux for use in diverse neutron scattering techniques. The neutron source facility and the scientific instruments will be located in Lund, and the Data Management and Software Centre (DMSC), in Copenhagen.   A number of detector prototypes are being developed at ESS together with its European in-kind partners, for example: SoNDe, Multi-Grid, Multi-Blade and Gd-GEM. These are all position sensitive detectors but use different techniques for the detection of neutrons.   Except for digitization of electronics readout, all neutron data is anticipated to be processed in software. This provides maximum flexibility and adaptability and allows deep inspection of the raw data for commissioning which will reduce the risk of starting up new detector technologies. But it also requires development of high performance software processing pipelines and optimized and scalable processing algorithms.   This report provides a description of the ESS system architecture for the neutron data path. Special focus is on the interface between the detectors and DMSC which is based on UDP over Ethernet links.   The report also describes the software architecture for detector data processing and the tools we have developed, which have proven very useful for efficient early experimentation, and can be run on a single laptop.   Processing requirements for the SoNDe, Multi-Grid, Multi-Blade and Ge-GEM   detectors are presented and compared to event processing rates archived so far.}\r\n}",
-                        "dtype": "string"
-                      },
-                      "module": "dataset"
-                    },
-                    {
-                      "config": {
-                        "name": "endnote",
-                        "values": "%0 Journal Article\n%T Software-based data acquisition and processing for neutron detectors at European Spallation Source\u201a\u00c4\u00eeearly experience from four detector designs\n%A Christensen, M. J.\n%A Shetty, M.\n%A Nilsson, J.\n%A Mukai, A.\n%A Jebali, R. Al\n%A Khaplanov, A.\n%A Lupberger, M.\n%A Messi, F.\n%A Pfeiffer, D.\n%A Piscitelli, F.\n%A Blum, T.\n%A S\u221a?gaard, C.\n%A Skelboe, S.\n%A Hall-Wilton, R.\n%A Richter, T.\n%J Journal of Instrumentation\n%D 2018\n%8 nov\n%V 13\n%N 11\n%F Christensen_2018\n%X European Spallation Source (ESS) will deliver neutrons at high flux for use in diverse neutron scattering techniques. The neutron source facility and the scientific instruments will be located in Lund, and the Data Management and Software Centre (DMSC), in Copenhagen. A number of detector prototypes are being developed at ESS together with its European in-kind partners, for example: SoNDe, Multi-Grid, Multi-Blade and Gd-GEM. These are all position sensitive detectors but use different techniques for the detection of neutrons. Except for digitization of electronics readout, all neutron data is anticipated to be processed in software. This provides maximum flexibility and adaptability and allows deep inspection of the raw data for commissioning which will reduce the risk of starting up new detector technologies. But it also requires development of high performance software processing pipelines and optimized and scalable processing algorithms. This report provides a description of the ESS system architecture for the neutron data path. Special focus is on the interface between the detectors and DMSC which is based on UDP over Ethernet links. The report also describes the software architecture for detector data processing and the tools we have developed, which have proven very useful for efficient early experimentation, and can be run on a single laptop. Processing requirements for the SoNDe, Multi-Grid, Multi-Blade and Ge-GEM detectors are presented and compared to event processing rates archived so far.\n%U https://dx.doi.org/10.1088/1748-0221/13/11/T11002\n%U http://dx.doi.org/10.1088/1748-0221/13/11/T11002\n%P 11002",
-                        "dtype": "string"
-                      },
-                      "module": "dataset"
-                    }
-                  ],
-                  "name": "efu_publication",
-                  "type": "group"
-                },
-                {
-                  "name": "data",
-                  "type": "group",
-                  "attributes": [
-                    {
-                      "name": "NX_class",
-                      "dtype": "string",
-                      "values": "NXevent_data"
-                    }
-                  ],
-                  "children": [
-                    {
-                      "module": "ev44",
-                      "config": {
-                        "source": "multiblade",
-                        "topic": "tbl_detector_mb"
-                      }
-                    }
-                  ]
-                },
-                {
-                  "type": "group",
-                  "name": "transformations",
-                  "children": [
-                    {
-                      "module": "dataset",
-                      "config": {
-                        "name": "translation",
-                        "values": 1.0,
-                        "dtype": "double"
-                      },
-                      "attributes": [
-                        {
-                          "name": "transformation_type",
-                          "dtype": "string",
-                          "values": "translation"
-                        },
-                        {
-                          "name": "vector",
-                          "dtype": "float",
-                          "values": [
-                            0.0,
-                            0.0,
-                            1.0
-                          ]
-                        },
-                        {
-                          "name": "depends_on",
-                          "values": ".",
-                          "dtype": "string"
-                        },
-                        {
-                          "name": "units",
-                          "dtype": "string",
-                          "values": "m"
-                        }
-                      ]
-                    }
-                  ],
-                  "attributes": [
-                    {
-                      "name": "NX_class",
-                      "values": "NXtransformations"
-                    }
-                  ]
-                },
-                {
-                  "module": "dataset",
                   "config": {
-                    "name": "depends_on",
-                    "dtype": "string",
-                    "values": "/entry/instrument/multiblade_detector/transformations/translation"
-                  }
+                    "name": "description",
+                    "values": "This experiment took place on this instrument at the ESS (European Spallation Source)",
+                    "dtype": "string"
+                  },
+                  "module": "dataset"
                 },
                 {
-                  "name": "mb_hvps_board100_ch00_voltage",
-                  "type": "group",
-                  "attributes": [
-                    {
-                      "name": "NX_class",
-                      "dtype": "string",
-                      "values": "NXlog"
-                    }
-                  ],
-                  "children": [
-                    {
-                      "module": "f144",
-                      "config": {
-                        "source": "TBL-DtCmn:PwrC-HVM-100:Ch00-VMon",
-                        "topic": "tbl_misc_devices",
-                        "dtype": "double",
-                        "value_units": "V"
-                      },
-                      "attributes": [
-                        {
-                          "name": "units",
-                          "dtype": "string",
-                          "values": "V"
-                        }
-                      ]
-                    }
-                  ]
+                  "config": {
+                    "name": "doi",
+                    "values": "https://doi.org/10.1016/j.nima.2020.163402",
+                    "dtype": "string"
+                  },
+                  "module": "dataset"
                 },
                 {
-                  "name": "mb_hvps_board100_ch00_current",
-                  "type": "group",
-                  "attributes": [
-                    {
-                      "name": "NX_class",
-                      "dtype": "string",
-                      "values": "NXlog"
-                    }
-                  ],
-                  "children": [
-                    {
-                      "module": "f144",
-                      "config": {
-                        "source": "TBL-DtCmn:PwrC-HVM-100:Ch00-IMon",
-                        "topic": "tbl_misc_devices",
-                        "dtype": "double",
-                        "value_units": "V"
-                      },
-                      "attributes": [
-                        {
-                          "name": "units",
-                          "dtype": "string",
-                          "values": "V"
-                        }
-                      ]
-                    }
-                  ]
+                  "config": {
+                    "name": "bibtex",
+                    "values": "@article{ANDERSEN2020163402,\ntitle = {The instrument suite of the European Spallation Source},\njournal = {Nuclear Instruments and Methods in Physics Research Section A: Accelerators, Spectrometers, Detectors and Associated Equipment},\nvolume = {957},\npages = {163402},\nyear = {2020},\nissn = {0168-9002},\ndoi = {https://doi.org/10.1016/j.nima.2020.163402},\nurl = {https://www.sciencedirect.com/science/article/pii/S0168900220300097},\nauthor = {K.H. Andersen and D.N Argyriou and A.J. Jackson and J. Houston and P.F. Henry and P.P. Deen and R. Toft-Petersen and P. Beran and M. Strobl and T. Arnold and H. Wacklin-Knecht and N. Tsapatsaris and E. Oksanen and R. Woracek and W. Schweika and D. Mannix and A. Hiess and S. Kennedy and O. Kirstein and S. {Petersson \u00c5rsk\u00f6ld} and J. Taylor and M.E. Hagen and G. Laszlo and K. Kanaki and F. Piscitelli and A. Khaplanov and I. Stefanescu and Th. Kittelmann and D. Pfeiffer and R. Hall-Wilton and C.I. Lopez and G. Aprigliano and L. Whitelegg and F.Y. Moreira and M. Olsson and H.N. Bordallo and D. Mart\u00edn-Rodr\u00edguez and H. Schneider and M. Sharp and M. Hartl and G. Nagy and S. Ansell and S. Pullen and A. Vickery and A. Fedrigo and F. Mezei and M. Arai and R.K. Heenan and W. Halcrow and D. Turner and D. Raspino and A. Orszulik and J. Cooper and N. Webb and P. Galsworthy and J. Nightingale and S. Langridge and J. Elmer and H. Frielinghaus and R. Hanslik and A. Gussen and S. Jaksch and R. Engels and T. Kozielewski and S. Butterweck and M. Feygenson and P. Harbott and A. Poqu\u00e9 and A. Schwaab and K. Lieutenant and N. Violini and J. Voigt and T. Br\u00fcckel and M. Koenen and H. K\u00e4mmerling and E. Babcock and Z. Salhi and A. Wischnewski and A. Heynen and S. D\u00e9sert and J. Jestin and F. Porcher and X. Fabr\u00e8ges and G. Fabr\u00e8ges and B. Annigh\u00f6fer and S. Klimko and Th. Dupont and Th. Robillard and A. Goukassov and S. Longeville and Ch. Alba-Simionesco and Ph. Bourges and J. {Guyon Le Bouffy} and P. Lavie and S. Rodrigues and E. Calzada and M. Lerche and B. Schillinger and Ph. Schmakat and M. Schulz and M. Seifert and W. Lohstroh and W. Petry and J. Neuhaus and L. Loaiza and A. Tartaglione and A. Glavic and S. Sch\u00fctz and J. Stahn and E. Lehmann and M. Morgano and J. Schefer and U. Filges and Ch. Klauser and Ch. Niedermayer and J. Fenske and G. Nowak and M. Rouijaa and D.J. Siemers and R. Kiehn and M. M\u00fcller and H. Carlsen and L. Udby and K. Lefmann and J.O. Birk and S. Holm-Dahlin and M. Bertelsen and U. Bengaard Hansen and M.A. Olsen and M. Christensen and K. Iversen and N.B. Christensen and H.M. R\u00f8nnow and P.G. Freeman and B.C. Hauback and R. Kolevatov and I. Llamas-Jansa and A. Orecchini and F. Sacchetti and C. Petrillo and A. Paciaroni and P. Tozzi and M. Zanatta and P. Luna and I. Herranz and O.G. {del Moral} and M. Huerta and M. Mag\u00e1n and M. Mosconi and E. Abad and J. Aguilar and S. Stepanyan and G. Bakedano and R. Vivanco and I. Bustinduy and F. Sordo and J.L. Mart\u00ednez and R.E. Lechner and F.J. Villacorta and J. \u0160aroun and P. Luk\u00e1\u0161 and M. Mark\u00f3 and M. Zanetti and S. Bellissima and L. {del Rosso} and F. Masi and C. Bovo and M. Chowdhury and A. {De Bonis} and L. {Di Fresco} and C. Scatigno and S.F. Parker and F. Fernandez-Alonso and D. Colognesi and R. Senesi and C. Andreani and G. Gorini and G. Scionti and A. Schreyer},\nkeywords = {Slow neutron scattering, Pulsed neutron instrumentation, Accelerator-based neutron facilities, ESS instrument suite},\nabstract = {An overview is provided of the 15 neutron beam instruments making up the initial instrument suite of the European Spallation Source (ESS), and being made available to the neutron user community. The ESS neutron source consists of a high-power accelerator and target station, providing a unique long-pulse time structure of slow neutrons. The design considerations behind the time structure, moderator geometry and instrument layout are presented. The 15-instrument suite consists of two small-angle instruments, two reflectometers, an imaging beamline, two single-crystal diffractometers; one for macromolecular crystallography and one for magnetism, two powder diffractometers, and an engineering diffractometer, as well as an array of five inelastic instruments comprising two chopper spectrometers, an inverse-geometry single-crystal excitations spectrometer, an instrument for vibrational spectroscopy and a high-resolution backscattering spectrometer. The conceptual design, performance and scientific drivers of each of these instruments are described. All of the instruments are designed to provide breakthrough new scientific capability, not currently available at existing facilities, building on the inherent strengths of the ESS long-pulse neutron source of high flux, flexible resolution and large bandwidth. Each of them is predicted to provide world-leading performance at an accelerator power of 2 MW. This technical capability translates into a very broad range of scientific capabilities. The composition of the instrument suite has been chosen to maximise the breadth and depth of the scientific impact of the early years of the ESS, and provide a solid base for completion and further expansion of the facility.}\n}",
+                    "dtype": "string"
+                  },
+                  "module": "dataset"
                 },
                 {
-                  "name": "mb_hvps_board100_ch01_voltage",
-                  "type": "group",
-                  "attributes": [
-                    {
-                      "name": "NX_class",
-                      "dtype": "string",
-                      "values": "NXlog"
-                    }
-                  ],
-                  "children": [
-                    {
-                      "module": "f144",
-                      "config": {
-                        "source": "TBL-DtCmn:PwrC-HVM-100:Ch01-VMon",
-                        "topic": "tbl_misc_devices",
-                        "dtype": "double",
-                        "value_units": "V"
-                      },
-                      "attributes": [
-                        {
-                          "name": "units",
-                          "dtype": "string",
-                          "values": "V"
-                        }
-                      ]
-                    }
-                  ]
-                },
-                {
-                  "name": "mb_hvps_board100_ch01_current",
-                  "type": "group",
-                  "attributes": [
-                    {
-                      "name": "NX_class",
-                      "dtype": "string",
-                      "values": "NXlog"
-                    }
-                  ],
-                  "children": [
-                    {
-                      "module": "f144",
-                      "config": {
-                        "source": "TBL-DtCmn:PwrC-HVM-100:Ch01-IMon",
-                        "topic": "tbl_misc_devices",
-                        "dtype": "double",
-                        "value_units": "V"
-                      },
-                      "attributes": [
-                        {
-                          "name": "units",
-                          "dtype": "string",
-                          "values": "V"
-                        }
-                      ]
-                    }
-                  ]
-                },
-                {
-                  "name": "mb_hvps_board100_ch02_voltage",
-                  "type": "group",
-                  "attributes": [
-                    {
-                      "name": "NX_class",
-                      "dtype": "string",
-                      "values": "NXlog"
-                    }
-                  ],
-                  "children": [
-                    {
-                      "module": "f144",
-                      "config": {
-                        "source": "TBL-DtCmn:PwrC-HVM-100:Ch02-VMon",
-                        "topic": "tbl_misc_devices",
-                        "dtype": "double",
-                        "value_units": "V"
-                      },
-                      "attributes": [
-                        {
-                          "name": "units",
-                          "dtype": "string",
-                          "values": "V"
-                        }
-                      ]
-                    }
-                  ]
-                },
-                {
-                  "name": "mb_hvps_board100_ch02_current",
-                  "type": "group",
-                  "attributes": [
-                    {
-                      "name": "NX_class",
-                      "dtype": "string",
-                      "values": "NXlog"
-                    }
-                  ],
-                  "children": [
-                    {
-                      "module": "f144",
-                      "config": {
-                        "source": "TBL-DtCmn:PwrC-HVM-100:Ch02-IMon",
-                        "topic": "tbl_misc_devices",
-                        "dtype": "double",
-                        "value_units": "V"
-                      },
-                      "attributes": [
-                        {
-                          "name": "units",
-                          "dtype": "string",
-                          "values": "V"
-                        }
-                      ]
-                    }
-                  ]
-                },
-                {
-                  "name": "mb_hvps_board100_ch03_voltage",
-                  "type": "group",
-                  "attributes": [
-                    {
-                      "name": "NX_class",
-                      "dtype": "string",
-                      "values": "NXlog"
-                    }
-                  ],
-                  "children": [
-                    {
-                      "module": "f144",
-                      "config": {
-                        "source": "TBL-DtCmn:PwrC-HVM-100:Ch03-VMon",
-                        "topic": "tbl_misc_devices",
-                        "dtype": "double",
-                        "value_units": "V"
-                      },
-                      "attributes": [
-                        {
-                          "name": "units",
-                          "dtype": "string",
-                          "values": "V"
-                        }
-                      ]
-                    }
-                  ]
-                },
-                {
-                  "name": "mb_hvps_board100_ch03_current",
-                  "type": "group",
-                  "attributes": [
-                    {
-                      "name": "NX_class",
-                      "dtype": "string",
-                      "values": "NXlog"
-                    }
-                  ],
-                  "children": [
-                    {
-                      "module": "f144",
-                      "config": {
-                        "source": "TBL-DtCmn:PwrC-HVM-100:Ch03-IMon",
-                        "topic": "tbl_misc_devices",
-                        "dtype": "double",
-                        "value_units": "V"
-                      },
-                      "attributes": [
-                        {
-                          "name": "units",
-                          "dtype": "string",
-                          "values": "V"
-                        }
-                      ]
-                    }
-                  ]
+                  "config": {
+                    "name": "endnote",
+                    "values": "%0 Journal Article\n%T The instrument suite of the European Spallation Source\n%A Andersen, K. H.\n%A Argyriou, D. N.\n%A Jackson, A. J.\n%A Houston, J.\n%A Henry, P. F.\n%A Deen, P. P.\n%A Toft-Petersen, R.\n%A Beran, P.\n%A Strobl, M.\n%A Arnold, T.\n%A Wacklin-Knecht, H.\n%A Tsapatsaris, N.\n%A Oksanen, E.\n%A Woracek, R.\n%A Schweika, W.\n%A Mannix, D.\n%A Hiess, A.\n%A Kennedy, S.\n%A Kirstein, O.\n%A \u221a\u00d6rsk\u221a\u2202ld, S. Petersson\n%A Taylor, J.\n%A Hagen, M. E.\n%A Laszlo, G.\n%A Kanaki, K.\n%A Piscitelli, F.\n%A Khaplanov, A.\n%A Stefanescu, I.\n%A Kittelmann, Th\n%A Pfeiffer, D.\n%A Hall-Wilton, R.\n%A Lopez, C. I.\n%A Aprigliano, G.\n%A Whitelegg, L.\n%A Moreira, F. Y.\n%A Olsson, M.\n%A Bordallo, H. N.\n%A Mart\u221a\u2260n-Rodr\u221a\u2260guez, D.\n%A Schneider, H.\n%A Sharp, M.\n%A Hartl, M.\n%A Nagy, G.\n%A Ansell, S.\n%A Pullen, S.\n%A Vickery, A.\n%A Fedrigo, A.\n%A Mezei, F.\n%A Arai, M.\n%A Heenan, R. K.\n%A Halcrow, W.\n%A Turner, D.\n%A Raspino, D.\n%A Orszulik, A.\n%A Cooper, J.\n%A Webb, N.\n%A Galsworthy, P.\n%A Nightingale, J.\n%A Langridge, S.\n%A Elmer, J.\n%A Frielinghaus, H.\n%A Hanslik, R.\n%A Gussen, A.\n%A Jaksch, S.\n%A Engels, R.\n%A Kozielewski, T.\n%A Butterweck, S.\n%A Feygenson, M.\n%A Harbott, P.\n%A Poqu\u221a\u00a9, A.\n%A Schwaab, A.\n%A Lieutenant, K.\n%A Violini, N.\n%A Voigt, J.\n%A Br\u221a?ckel, T.\n%A Koenen, M.\n%A K\u221a?mmerling, H.\n%A Babcock, E.\n%A Salhi, Z.\n%A Wischnewski, A.\n%A Heynen, A.\n%A D\u221a\u00a9sert, S.\n%A Jestin, J.\n%A Porcher, F.\n%A Fabr\u221a?ges, X.\n%A Fabr\u221a?ges, G.\n%A Annigh\u221a\u2202fer, B.\n%A Klimko, S.\n%A Dupont, Th\n%A Robillard, Th\n%A Goukassov, A.\n%A Longeville, S.\n%A Alba-Simionesco, Ch\n%A Bourges, Ph\n%A Bouffy, J. Guyon Le\n%A Lavie, P.\n%A Rodrigues, S.\n%A Calzada, E.\n%A Lerche, M.\n%A Schillinger, B.\n%A Schmakat, Ph\n%A Schulz, M.\n%A Seifert, M.\n%A Lohstroh, W.\n%A Petry, W.\n%A Neuhaus, J.\n%A Loaiza, L.\n%A Tartaglione, A.\n%A Glavic, A.\n%A Sch\u221a?tz, S.\n%A Stahn, J.\n%A Lehmann, E.\n%A Morgano, M.\n%A Schefer, J.\n%A Filges, U.\n%A Klauser, Ch\n%A Niedermayer, Ch\n%A Fenske, J.\n%A Nowak, G.\n%A Rouijaa, M.\n%A Siemers, D. J.\n%A Kiehn, R.\n%A M\u221a?ller, M.\n%A Carlsen, H.\n%A Udby, L.\n%A Lefmann, K.\n%A Birk, J. O.\n%A Holm-Dahlin, S.\n%A Bertelsen, M.\n%A Hansen, U. Bengaard\n%A Olsen, M. A.\n%A Christensen, M.\n%A Iversen, K.\n%A Christensen, N. B.\n%A R\u221a?nnow, H. M.\n%A Freeman, P. G.\n%A Hauback, B. C.\n%A Kolevatov, R.\n%A Llamas-Jansa, I.\n%A Orecchini, A.\n%A Sacchetti, F.\n%A Petrillo, C.\n%A Paciaroni, A.\n%A Tozzi, P.\n%A Zanatta, M.\n%A Luna, P.\n%A Herranz, I.\n%A Moral, O. G. del\n%A Huerta, M.\n%A Mag\u221a\u00b0n, M.\n%A Mosconi, M.\n%A Abad, E.\n%A Aguilar, J.\n%A Stepanyan, S.\n%A Bakedano, G.\n%A Vivanco, R.\n%A Bustinduy, I.\n%A Sordo, F.\n%A Mart\u221a\u2260nez, J. L.\n%A Lechner, R. E.\n%A Villacorta, F. J.\n%A \u2248\u2020aroun, J.\n%A Luk\u221a\u00b0\u2248\u00b0, P.\n%A Mark\u221a\u2265, M.\n%A Zanetti, M.\n%A Bellissima, S.\n%A Rosso, L. del\n%A Masi, F.\n%A Bovo, C.\n%A Chowdhury, M.\n%A Bonis, A. De\n%A Fresco, L. Di\n%A Scatigno, C.\n%A Parker, S. F.\n%A Fernandez-Alonso, F.\n%A Colognesi, D.\n%A Senesi, R.\n%A Andreani, C.\n%A Gorini, G.\n%A Scionti, G.\n%A Schreyer, A.\n%J Nuclear Instruments and Methods in Physics Research Section A: Accelerators, Spectrometers, Detectors and Associated Equipment\n%D 2020\n%V 957\n%@ 0168-9002\n%F ANDERSEN2020163402\n%X An overview is provided of the 15 neutron beam instruments making up the initial instrument suite of the European Spallation Source (ESS), and being made available to the neutron user community. The ESS neutron source consists of a high-power accelerator and target station, providing a unique long-pulse time structure of slow neutrons. The design considerations behind the time structure, moderator geometry and instrument layout are presented. The 15-instrument suite consists of two small-angle instruments, two reflectometers, an imaging beamline, two single-crystal diffractometers; one for macromolecular crystallography and one for magnetism, two powder diffractometers, and an engineering diffractometer, as well as an array of five inelastic instruments comprising two chopper spectrometers, an inverse-geometry single-crystal excitations spectrometer, an instrument for vibrational spectroscopy and a high-resolution backscattering spectrometer. The conceptual design, performance and scientific drivers of each of these instruments are described. All of the instruments are designed to provide breakthrough new scientific capability, not currently available at existing facilities, building on the inherent strengths of the ESS long-pulse neutron source of high flux, flexible resolution and large bandwidth. Each of them is predicted to provide world-leading performance at an accelerator power of 2 MW. This technical capability translates into a very broad range of scientific capabilities. The composition of the instrument suite has been chosen to maximise the breadth and depth of the scientific impact of the early years of the ESS, and provide a solid base for completion and further expansion of the facility.\n%K Slow neutron scattering, Pulsed neutron instrumentation, Accelerator-based neutron facilities, ESS instrument suite\n%U https://www.sciencedirect.com/science/article/pii/S0168900220300097\n%U http://dx.doi.org/https://doi.org/10.1016/j.nima.2020.163402\n%P 163402",
+                    "dtype": "string"
+                  },
+                  "module": "dataset"
                 }
-              ]
+              ],
+              "name": "loki_publication",
+              "type": "group"
             },
             {
-              "module": "dataset",
-              "config": {
-                "name": "name",
-                "values": "TBL",
-                "dtype": "string"
-              },
               "attributes": [
                 {
-                  "name": "short_name",
                   "dtype": "string",
-                  "values": "tblmultiblade"
+                  "name": "NX_class",
+                  "values": "NXcite"
                 }
-              ]
+              ],
+              "children": [
+                {
+                  "config": {
+                    "name": "description",
+                    "values": "The data here was produced using the ESS EFU (European Spallation Source Event Formation Unit) system",
+                    "dtype": "string"
+                  },
+                  "module": "dataset"
+                },
+                {
+                  "config": {
+                    "name": "doi",
+                    "values": "https://doi.org/10.1088/1748-0221/13/10/T10001",
+                    "dtype": "string"
+                  },
+                  "module": "dataset"
+                },
+                {
+                  "config": {
+                    "name": "bibtex",
+                    "values": "@article{Christensen_2018,\r\ndoi = {10.1088/1748-0221/13/11/T11002},\r\nurl = {https://dx.doi.org/10.1088/1748-0221/13/11/T11002},\r\nyear = {2018},\r\nmonth = {nov},\r\npublisher = {},\r\nvolume = {13},\r\nnumber = {11},\r\npages = {T11002},\r\nauthor = {M.J. Christensen and M. Shetty and J. Nilsson and A. Mukai and R. Al Jebali and A. Khaplanov and M. Lupberger and F. Messi and D. Pfeiffer and F. Piscitelli and T. Blum and C. S\u00f8gaard and S. Skelboe and R. Hall-Wilton and T. Richter},\r\ntitle = {Software-based data acquisition and processing for neutron detectors at European Spallation Source\u2014early experience from four detector designs},\r\njournal = {Journal of Instrumentation},\r\nabstract = {European Spallation Source (ESS) will deliver neutrons at high flux for use in diverse neutron scattering techniques. The neutron source facility and the scientific instruments will be located in Lund, and the Data Management and Software Centre (DMSC), in Copenhagen.   A number of detector prototypes are being developed at ESS together with its European in-kind partners, for example: SoNDe, Multi-Grid, Multi-Blade and Gd-GEM. These are all position sensitive detectors but use different techniques for the detection of neutrons.   Except for digitization of electronics readout, all neutron data is anticipated to be processed in software. This provides maximum flexibility and adaptability and allows deep inspection of the raw data for commissioning which will reduce the risk of starting up new detector technologies. But it also requires development of high performance software processing pipelines and optimized and scalable processing algorithms.   This report provides a description of the ESS system architecture for the neutron data path. Special focus is on the interface between the detectors and DMSC which is based on UDP over Ethernet links.   The report also describes the software architecture for detector data processing and the tools we have developed, which have proven very useful for efficient early experimentation, and can be run on a single laptop.   Processing requirements for the SoNDe, Multi-Grid, Multi-Blade and Ge-GEM   detectors are presented and compared to event processing rates archived so far.}\r\n}",
+                    "dtype": "string"
+                  },
+                  "module": "dataset"
+                },
+                {
+                  "config": {
+                    "name": "endnote",
+                    "values": "%0 Journal Article\n%T Software-based data acquisition and processing for neutron detectors at European Spallation Source\u201a\u00c4\u00eeearly experience from four detector designs\n%A Christensen, M. J.\n%A Shetty, M.\n%A Nilsson, J.\n%A Mukai, A.\n%A Jebali, R. Al\n%A Khaplanov, A.\n%A Lupberger, M.\n%A Messi, F.\n%A Pfeiffer, D.\n%A Piscitelli, F.\n%A Blum, T.\n%A S\u221a?gaard, C.\n%A Skelboe, S.\n%A Hall-Wilton, R.\n%A Richter, T.\n%J Journal of Instrumentation\n%D 2018\n%8 nov\n%V 13\n%N 11\n%F Christensen_2018\n%X European Spallation Source (ESS) will deliver neutrons at high flux for use in diverse neutron scattering techniques. The neutron source facility and the scientific instruments will be located in Lund, and the Data Management and Software Centre (DMSC), in Copenhagen. A number of detector prototypes are being developed at ESS together with its European in-kind partners, for example: SoNDe, Multi-Grid, Multi-Blade and Gd-GEM. These are all position sensitive detectors but use different techniques for the detection of neutrons. Except for digitization of electronics readout, all neutron data is anticipated to be processed in software. This provides maximum flexibility and adaptability and allows deep inspection of the raw data for commissioning which will reduce the risk of starting up new detector technologies. But it also requires development of high performance software processing pipelines and optimized and scalable processing algorithms. This report provides a description of the ESS system architecture for the neutron data path. Special focus is on the interface between the detectors and DMSC which is based on UDP over Ethernet links. The report also describes the software architecture for detector data processing and the tools we have developed, which have proven very useful for efficient early experimentation, and can be run on a single laptop. Processing requirements for the SoNDe, Multi-Grid, Multi-Blade and Ge-GEM detectors are presented and compared to event processing rates archived so far.\n%U https://dx.doi.org/10.1088/1748-0221/13/11/T11002\n%U http://dx.doi.org/10.1088/1748-0221/13/11/T11002\n%P 11002",
+                    "dtype": "string"
+                  },
+                  "module": "dataset"
+                }
+              ],
+              "name": "efu_publication",
+              "type": "group"
             },
             {
               "name": "source",
               "type": "group",
-              "attributes": [
-                {
-                  "name": "NX_class",
-                  "dtype": "string",
-                  "values": "NXsource"
-                }
-              ],
               "children": [
+                {
+                  "name": "transformations",
+                  "type": "group",
+                  "children": [
+                    {
+                      "module": "dataset",
+                      "config": {
+                        "name": "trans_10",
+                        "values": 23.6,
+                        "dtype": "float"
+                      },
+                      "attributes": [
+                        {
+                          "name": "transformation_type",
+                          "values": "translation"
+                        },
+                        {
+                          "name": "depends_on",
+                          "values": ".",
+                          "dtype": "string"
+                        },
+                        {
+                          "name": "vector",
+                          "dtype": "float",
+                          "values": [
+                            0.0,
+                            0.0,
+                            -1.0
+                          ]
+                        },
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "m"
+                        }
+                      ]
+                    }
+                  ],
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "values": "NXtransformations"
+                    }
+                  ]
+                },
                 {
                   "module": "dataset",
                   "config": {
-                    "name": "name",
-                    "values": "virtual_source",
+                    "name": "depends_on",
+                    "values": "/entry/instrument/source/transformations/trans_10",
                     "dtype": "string"
                   }
                 },
                 {
-                  "type": "group",
-                  "name": "transformations",
-                  "children": [
-                    {
-                      "module": "dataset",
-                      "config": {
-                        "name": "location",
-                        "values": 30.0,
-                        "dtype": "double"
-                      },
-                      "attributes": [
-                        {
-                          "name": "transformation_type",
-                          "dtype": "string",
-                          "values": "translation"
-                        },
-                        {
-                          "name": "vector",
-                          "dtype": "float",
-                          "values": [
-                            0.0,
-                            0.0,
-                            1.0
-                          ]
-                        },
-                        {
-                          "name": "depends_on",
-                          "values": ".",
-                          "dtype": "string"
-                        },
-                        {
-                          "name": "units",
-                          "dtype": "string",
-                          "values": "m"
-                        }
-                      ]
-                    }
-                  ],
-                  "attributes": [
-                    {
-                      "name": "NX_class",
-                      "values": "NXtransformations"
-                    }
-                  ]
+                  "module": "dataset",
+                  "config": {
+                    "name": "name",
+                    "values": "moderator",
+                    "dtype": "string"
+                  }
                 },
                 {
                   "module": "dataset",
                   "config": {
-                    "name": "depends_on",
-                    "dtype": "string",
-                    "values": "/entry/instrument/source/transformations/location"
+                    "name": "type",
+                    "values": "Spallation Neutron Source",
+                    "dtype": "string"
                   }
+                },
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "probe",
+                    "values": "neutron",
+                    "dtype": "string"
+                  }
+                }
+              ],
+              "attributes": [
+                {
+                  "name": "NX_class",
+                  "values": "NXsource"
                 }
               ]
             },
             {
-              "name": "bwc_1",
+              "name": "bw_chopper1",
               "type": "group",
-              "attributes": [
-                {
-                  "name": "NX_class",
-                  "dtype": "string",
-                  "values": "NXdisk_chopper"
-                }
-              ],
               "children": [
                 {
-                  "module": "dataset",
-                  "config": {
-                    "name": "slits",
-                    "values": 1,
-                    "dtype": "int64"
-                  }
-                },
-                {
-                  "module": "dataset",
-                  "config": {
-                    "name": "slit_edges",
-                    "values": [
-                      0.0,
-                      170.0
-                    ],
-                    "dtype": "double"
-                  },
-                  "attributes": [
-                    {
-                      "name": "units",
-                      "dtype": "string",
-                      "values": "deg"
-                    }
-                  ]
-                },
-                {
-                  "module": "dataset",
-                  "config": {
-                    "name": "slit_height",
-                    "values": 0.06,
-                    "dtype": "double"
-                  },
-                  "attributes": [
-                    {
-                      "name": "units",
-                      "dtype": "string",
-                      "values": "m"
-                    }
-                  ]
-                },
-                {
-                  "module": "dataset",
-                  "config": {
-                    "name": "radius",
-                    "values": 0.35,
-                    "dtype": "double"
-                  },
-                  "attributes": [
-                    {
-                      "name": "units",
-                      "dtype": "string",
-                      "values": "m"
-                    }
-                  ]
-                },
-                {
-                  "name": "delay",
-                  "type": "group",
-                  "attributes": [
-                    {
-                      "name": "NX_class",
-                      "dtype": "string",
-                      "values": "NXlog"
-                    }
-                  ],
-                  "children": [
-                    {
-                      "module": "f144",
-                      "config": {
-                        "source": "TBL-ChpSy1:Chop-BWC-101:TotDly",
-                        "topic": "tbl_choppers",
-                        "dtype": "double",
-                        "value_units": "ns"
-                      }
-                    }
-                  ]
-                },
-                {
-                  "type": "group",
                   "name": "transformations",
+                  "type": "group",
                   "children": [
                     {
                       "module": "dataset",
                       "config": {
-                        "name": "translation",
-                        "values": -14.5,
-                        "dtype": "double"
+                        "name": "trans_12",
+                        "values": 17.1,
+                        "dtype": "float"
                       },
                       "attributes": [
                         {
                           "name": "transformation_type",
-                          "dtype": "string",
                           "values": "translation"
+                        },
+                        {
+                          "name": "depends_on",
+                          "values": ".",
+                          "dtype": "string"
                         },
                         {
                           "name": "vector",
@@ -604,13 +226,8 @@
                           "values": [
                             0.0,
                             0.0,
-                            1.0
+                            -1.0
                           ]
-                        },
-                        {
-                          "name": "depends_on",
-                          "values": ".",
-                          "dtype": "string"
                         },
                         {
                           "name": "units",
@@ -631,32 +248,9 @@
                   "module": "dataset",
                   "config": {
                     "name": "depends_on",
-                    "dtype": "string",
-                    "values": "/entry/instrument/bwc_1/transformations/translation"
+                    "values": "/entry/instrument/bw_chopper1/transformations/trans_12",
+                    "dtype": "string"
                   }
-                },
-                {
-                  "name": "top_dead_center",
-                  "type": "group",
-                  "children": [
-                    {
-                      "module": "tdct",
-                      "config": {
-                        "topic": "tbl_choppers",
-                        "source": "TBL-ChpSy1:Chop-BWC-101:00-TS-I"
-                      }
-                    }
-                  ],
-                  "attributes": [
-                    {
-                      "name": "NX_class",
-                      "values": "NXlog"
-                    },
-                    {
-                      "name": "default",
-                      "values": "time"
-                    }
-                  ]
                 },
                 {
                   "name": "rotation_speed",
@@ -665,8 +259,8 @@
                     {
                       "module": "f144",
                       "config": {
-                        "topic": "tbl_choppers",
-                        "source": "TBL-ChpSy1:Chop-BWC-101:Spd_R",
+                        "topic": "loki_choppers",
+                        "source": "LOKI-ChpSy1:Chop-BWC-101:Spd_R",
                         "dtype": "double",
                         "value_units": "Hz"
                       }
@@ -686,8 +280,8 @@
                     {
                       "module": "f144",
                       "config": {
-                        "topic": "tbl_choppers",
-                        "source": "TBL-ChpSy1:Chop-BWC-101:Spd_S",
+                        "topic": "loki_choppers",
+                        "source": "LOKI-ChpSy1:Chop-BWC-101:Spd_S",
                         "dtype": "double",
                         "value_units": "Hz"
                       }
@@ -699,8 +293,2599 @@
                       "values": "NXlog"
                     }
                   ]
+                },
+                {
+                  "name": "top_dead_center",
+                  "type": "group",
+                  "children": [
+                    {
+                      "module": "tdct",
+                      "config": {
+                        "topic": "loki_choppers",
+                        "source": "LOKI-ChpSy1:Chop-BWC-101:00-TS-I"
+                      }
+                    }
+                  ],
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "values": "NXlog"
+                    },
+                    {
+                      "name": "default",
+                      "values": "time"
+                    }
+                  ]
+                },
+                {
+                  "name": "delay",
+                  "type": "group",
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "topic": "loki_choppers",
+                        "source": "LOKI-ChpSy1:Chop-BWC-101:TotDly",
+                        "dtype": "double",
+                        "value_units": "ns"
+                      }
+                    }
+                  ],
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "values": "NXlog"
+                    }
+                  ]
+                },
+                {
+                  "name": "experiment_delay",
+                  "type": "group",
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "topic": "loki_choppers",
+                        "source": "LOKI-ChpSy1:Chop-BWC-101:ChopDly-S",
+                        "dtype": "double",
+                        "value_units": "ns"
+                      }
+                    }
+                  ],
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "values": "NXlog"
+                    }
+                  ]
+                },
+                {
+                  "name": "pulse_delay",
+                  "type": "group",
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "topic": "loki_choppers",
+                        "source": "LOKI-ChpSy1:Chop-BWC-101:BeamPosDly-S",
+                        "dtype": "double",
+                        "value_units": "ns"
+                      }
+                    }
+                  ],
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "values": "NXlog"
+                    }
+                  ]
+                },
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "radius",
+                    "values": 0.35000000000000003,
+                    "dtype": "float"
+                  },
+                  "attributes": [
+                    {
+                      "name": "units",
+                      "dtype": "string",
+                      "values": "m"
+                    }
+                  ]
+                },
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "slits",
+                    "values": 1,
+                    "dtype": "int32"
+                  }
+                },
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "slit_edges",
+                    "values": [
+                      0,
+                      90
+                    ],
+                    "dtype": "double"
+                  },
+                  "attributes": [
+                    {
+                      "name": "units",
+                      "dtype": "string",
+                      "values": "degrees"
+                    }
+                  ]
+                }
+              ],
+              "attributes": [
+                {
+                  "name": "NX_class",
+                  "values": "NXdisk_chopper"
                 }
               ]
+            },
+            {
+              "name": "fo_chopper1",
+              "type": "group",
+              "children": [
+                {
+                  "name": "transformations",
+                  "type": "group",
+                  "children": [
+                    {
+                      "module": "dataset",
+                      "config": {
+                        "name": "trans_13",
+                        "values": 8.57,
+                        "dtype": "float"
+                      },
+                      "attributes": [
+                        {
+                          "name": "transformation_type",
+                          "values": "translation"
+                        },
+                        {
+                          "name": "depends_on",
+                          "values": ".",
+                          "dtype": "string"
+                        },
+                        {
+                          "name": "vector",
+                          "dtype": "float",
+                          "values": [
+                            0.0,
+                            0.0,
+                            -1.0
+                          ]
+                        },
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "m"
+                        }
+                      ]
+                    }
+                  ],
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "values": "NXtransformations"
+                    }
+                  ]
+                },
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "depends_on",
+                    "values": "/entry/instrument/fo_chopper1/transformations/trans_13",
+                    "dtype": "string"
+                  }
+                },
+                {
+                  "name": "rotation_speed",
+                  "type": "group",
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "topic": "loki_choppers",
+                        "source": "LOKI-ChpSy3:Chop-SFOC-101:Spd_R",
+                        "dtype": "double",
+                        "value_units": "Hz"
+                      }
+                    }
+                  ],
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "values": "NXlog"
+                    }
+                  ]
+                },
+                {
+                  "name": "rotation_speed_setpoint",
+                  "type": "group",
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "topic": "loki_choppers",
+                        "source": "LOKI-ChpSy3:Chop-SFOC-101:Spd_S",
+                        "dtype": "double",
+                        "value_units": "Hz"
+                      }
+                    }
+                  ],
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "values": "NXlog"
+                    }
+                  ]
+                },
+                {
+                  "name": "top_dead_center",
+                  "type": "group",
+                  "children": [
+                    {
+                      "module": "tdct",
+                      "config": {
+                        "topic": "loki_choppers",
+                        "source": "LOKI-ChpSy3:Chop-SFOC-101:00-TS-I"
+                      }
+                    }
+                  ],
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "values": "NXlog"
+                    },
+                    {
+                      "name": "default",
+                      "values": "time"
+                    }
+                  ]
+                },
+                {
+                  "name": "delay",
+                  "type": "group",
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "topic": "loki_choppers",
+                        "source": "LOKI-ChpSy3:Chop-SFOC-101:TotDly",
+                        "dtype": "double",
+                        "value_units": "ns"
+                      }
+                    }
+                  ],
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "values": "NXlog"
+                    }
+                  ]
+                },
+                {
+                  "name": "experiment_delay",
+                  "type": "group",
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "topic": "loki_choppers",
+                        "source": "LOKI-ChpSy3:Chop-SFOC-101:ChopDly-S",
+                        "dtype": "double",
+                        "value_units": "ns"
+                      }
+                    }
+                  ],
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "values": "NXlog"
+                    }
+                  ]
+                },
+                {
+                  "name": "pulse_delay",
+                  "type": "group",
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "topic": "loki_choppers",
+                        "source": "LOKI-ChpSy3:Chop-SFOC-101:BeamPosDly-S",
+                        "dtype": "double",
+                        "value_units": "ns"
+                      }
+                    }
+                  ],
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "values": "NXlog"
+                    }
+                  ]
+                },
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "radius",
+                    "values": 0.35000000000000003,
+                    "dtype": "float"
+                  },
+                  "attributes": [
+                    {
+                      "name": "units",
+                      "dtype": "string",
+                      "values": "m"
+                    }
+                  ]
+                },
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "slits",
+                    "values": 1,
+                    "dtype": "int32"
+                  }
+                },
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "slit_edges",
+                    "values": [
+                      0,
+                      190
+                    ],
+                    "dtype": "double"
+                  },
+                  "attributes": [
+                    {
+                      "name": "units",
+                      "dtype": "string",
+                      "values": "degrees"
+                    }
+                  ]
+                }
+              ],
+              "attributes": [
+                {
+                  "name": "NX_class",
+                  "values": "NXdisk_chopper"
+                }
+              ]
+            },
+            {
+              "name": "bw_chopper2",
+              "type": "group",
+              "children": [
+                {
+                  "name": "transformations",
+                  "type": "group",
+                  "children": [
+                    {
+                      "module": "dataset",
+                      "config": {
+                        "name": "trans_14",
+                        "values": 17.1,
+                        "dtype": "float"
+                      },
+                      "attributes": [
+                        {
+                          "name": "transformation_type",
+                          "values": "translation"
+                        },
+                        {
+                          "name": "depends_on",
+                          "values": ".",
+                          "dtype": "string"
+                        },
+                        {
+                          "name": "vector",
+                          "dtype": "float",
+                          "values": [
+                            0.0,
+                            0.0,
+                            -1.0
+                          ]
+                        },
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "m"
+                        }
+                      ]
+                    }
+                  ],
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "values": "NXtransformations"
+                    }
+                  ]
+                },
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "depends_on",
+                    "values": "/entry/instrument/bw_chopper2/transformations/trans_14",
+                    "dtype": "string"
+                  }
+                },
+                {
+                  "name": "rotation_speed",
+                  "type": "group",
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "topic": "loki_choppers",
+                        "source": "LOKI-ChpSy1:Chop-BWC-102:Spd_R",
+                        "dtype": "double",
+                        "value_units": "Hz"
+                      }
+                    }
+                  ],
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "values": "NXlog"
+                    }
+                  ]
+                },
+                {
+                  "name": "rotation_speed_setpoint",
+                  "type": "group",
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "topic": "loki_choppers",
+                        "source": "LOKI-ChpSy1:Chop-BWC-102:Spd_S",
+                        "dtype": "double",
+                        "value_units": "Hz"
+                      }
+                    }
+                  ],
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "values": "NXlog"
+                    }
+                  ]
+                },
+                {
+                  "name": "top_dead_center",
+                  "type": "group",
+                  "children": [
+                    {
+                      "module": "tdct",
+                      "config": {
+                        "topic": "loki_choppers",
+                        "source": "LOKI-ChpSy1:Chop-BWC-102:01-TS-I"
+                      }
+                    }
+                  ],
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "values": "NXlog"
+                    },
+                    {
+                      "name": "default",
+                      "values": "time"
+                    }
+                  ]
+                },
+                {
+                  "name": "delay",
+                  "type": "group",
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "topic": "loki_choppers",
+                        "source": "LOKI-ChpSy1:Chop-BWC-102:TotDly",
+                        "dtype": "double",
+                        "value_units": "ns"
+                      }
+                    }
+                  ],
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "values": "NXlog"
+                    }
+                  ]
+                },
+                {
+                  "name": "experiment_delay",
+                  "type": "group",
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "topic": "loki_choppers",
+                        "source": "LOKI-ChpSy1:Chop-BWC-102:ChopDly-S",
+                        "dtype": "double",
+                        "value_units": "ns"
+                      }
+                    }
+                  ],
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "values": "NXlog"
+                    }
+                  ]
+                },
+                {
+                  "name": "pulse_delay",
+                  "type": "group",
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "topic": "loki_choppers",
+                        "source": "LOKI-ChpSy1:Chop-BWC-102:BeamPosDly-S",
+                        "dtype": "double",
+                        "value_units": "ns"
+                      }
+                    }
+                  ],
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "values": "NXlog"
+                    }
+                  ]
+                },
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "radius",
+                    "values": 0.35000000000000003,
+                    "dtype": "float"
+                  },
+                  "attributes": [
+                    {
+                      "name": "units",
+                      "dtype": "string",
+                      "values": "m"
+                    }
+                  ]
+                },
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "slits",
+                    "values": 1,
+                    "dtype": "int32"
+                  }
+                },
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "slit_edges",
+                    "values": [
+                      0,
+                      260
+                    ],
+                    "dtype": "double"
+                  },
+                  "attributes": [
+                    {
+                      "name": "units",
+                      "dtype": "string",
+                      "values": "degrees"
+                    }
+                  ]
+                }
+              ],
+              "attributes": [
+                {
+                  "name": "NX_class",
+                  "values": "NXdisk_chopper"
+                }
+              ]
+            },
+            {
+              "name": "fo_chopper2",
+              "type": "group",
+              "children": [
+                {
+                  "name": "transformations",
+                  "type": "group",
+                  "children": [
+                    {
+                      "module": "dataset",
+                      "config": {
+                        "name": "trans_15",
+                        "values": 8.57,
+                        "dtype": "float"
+                      },
+                      "attributes": [
+                        {
+                          "name": "transformation_type",
+                          "values": "translation"
+                        },
+                        {
+                          "name": "depends_on",
+                          "values": ".",
+                          "dtype": "string"
+                        },
+                        {
+                          "name": "vector",
+                          "dtype": "float",
+                          "values": [
+                            0.0,
+                            0.0,
+                            -1.0
+                          ]
+                        },
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "m"
+                        }
+                      ]
+                    }
+                  ],
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "values": "NXtransformations"
+                    }
+                  ]
+                },
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "depends_on",
+                    "values": "/entry/instrument/fo_chopper2/transformations/trans_15",
+                    "dtype": "string"
+                  }
+                },
+                {
+                  "name": "rotation_speed",
+                  "type": "group",
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "topic": "loki_choppers",
+                        "source": "LOKI-ChpSy3:Chop-SFOC-102:Spd_R",
+                        "dtype": "double",
+                        "value_units": "Hz"
+                      }
+                    }
+                  ],
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "values": "NXlog"
+                    }
+                  ]
+                },
+                {
+                  "name": "rotation_speed_setpoint",
+                  "type": "group",
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "topic": "loki_choppers",
+                        "source": "LOKI-ChpSy3:Chop-SFOC-102:Spd_S",
+                        "dtype": "double",
+                        "value_units": "Hz"
+                      }
+                    }
+                  ],
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "values": "NXlog"
+                    }
+                  ]
+                },
+                {
+                  "name": "top_dead_center",
+                  "type": "group",
+                  "children": [
+                    {
+                      "module": "tdct",
+                      "config": {
+                        "topic": "loki_choppers",
+                        "source": "LOKI-ChpSy3:Chop-SFOC-102:01-TS-I"
+                      }
+                    }
+                  ],
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "values": "NXlog"
+                    },
+                    {
+                      "name": "default",
+                      "values": "time"
+                    }
+                  ]
+                },
+                {
+                  "name": "delay",
+                  "type": "group",
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "topic": "loki_choppers",
+                        "source": "LOKI-ChpSy3:Chop-SFOC-102:TotDly",
+                        "dtype": "double",
+                        "value_units": "ns"
+                      }
+                    }
+                  ],
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "values": "NXlog"
+                    }
+                  ]
+                },
+                {
+                  "name": "experiment_delay",
+                  "type": "group",
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "topic": "loki_choppers",
+                        "source": "LOKI-ChpSy3:Chop-SFOC-102:ChopDly-S",
+                        "dtype": "double",
+                        "value_units": "ns"
+                      }
+                    }
+                  ],
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "values": "NXlog"
+                    }
+                  ]
+                },
+                {
+                  "name": "pulse_delay",
+                  "type": "group",
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "topic": "loki_choppers",
+                        "source": "LOKI-ChpSy3:Chop-SFOC-102:BeamPosDly-S",
+                        "dtype": "double",
+                        "value_units": "ns"
+                      }
+                    }
+                  ],
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "values": "NXlog"
+                    }
+                  ]
+                },
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "radius",
+                    "values": 0.35000000000000003,
+                    "dtype": "float"
+                  },
+                  "attributes": [
+                    {
+                      "name": "units",
+                      "dtype": "string",
+                      "values": "m"
+                    }
+                  ]
+                },
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "slits",
+                    "values": 1,
+                    "dtype": "int32"
+                  }
+                },
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "slit_edges",
+                    "values": [
+                      0,
+                      190
+                    ],
+                    "dtype": "double"
+                  },
+                  "attributes": [
+                    {
+                      "name": "units",
+                      "dtype": "string",
+                      "values": "degrees"
+                    }
+                  ]
+                }
+              ],
+              "attributes": [
+                {
+                  "name": "NX_class",
+                  "values": "NXdisk_chopper"
+                }
+              ]
+            },
+            {
+              "name": "beam_monitor_0",
+              "type": "group",
+              "children": [
+                {
+                  "name": "transformations",
+                  "type": "group",
+                  "children": [
+                    {
+                      "module": "dataset",
+                      "config": {
+                        "name": "trans_16",
+                        "values": 16.8,
+                        "dtype": "float"
+                      },
+                      "attributes": [
+                        {
+                          "name": "transformation_type",
+                          "values": "translation"
+                        },
+                        {
+                          "name": "depends_on",
+                          "values": ".",
+                          "dtype": "string"
+                        },
+                        {
+                          "name": "vector",
+                          "dtype": "float",
+                          "values": [
+                            0.0,
+                            0.0,
+                            -1.0
+                          ]
+                        },
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "m"
+                        }
+                      ]
+                    }
+                  ],
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "values": "NXtransformations"
+                    }
+                  ]
+                },
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "depends_on",
+                    "values": "/entry/instrument/beam_monitor_0/transformations/trans_16",
+                    "dtype": "string"
+                  }
+                },
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "name",
+                    "values": "monitor_0",
+                    "dtype": "string"
+                  }
+                },
+                {
+                  "name": "monitor_events",
+                  "type": "group",
+                  "children": [
+                    {
+                      "module": "ev44",
+                      "config": {
+                        "topic": "loki_beam_monitor",
+                        "source": "ttlmon"
+                      }
+                    }
+                  ],
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "values": "NXevent_data"
+                    }
+                  ]
+                }
+              ],
+              "attributes": [
+                {
+                  "name": "NX_class",
+                  "values": "NXmonitor"
+                }
+              ]
+            },
+            {
+              "name": "beam_monitor_1",
+              "type": "group",
+              "children": [
+                {
+                  "name": "transformations",
+                  "type": "group",
+                  "children": [
+                    {
+                      "module": "dataset",
+                      "config": {
+                        "name": "trans_17",
+                        "values": 8.4,
+                        "dtype": "float"
+                      },
+                      "attributes": [
+                        {
+                          "name": "transformation_type",
+                          "values": "translation"
+                        },
+                        {
+                          "name": "depends_on",
+                          "values": ".",
+                          "dtype": "string"
+                        },
+                        {
+                          "name": "vector",
+                          "dtype": "float",
+                          "values": [
+                            0.0,
+                            0.0,
+                            -1.0
+                          ]
+                        },
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "m"
+                        }
+                      ]
+                    }
+                  ],
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "values": "NXtransformations"
+                    }
+                  ]
+                },
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "depends_on",
+                    "values": "/entry/instrument/beam_monitor_1/transformations/trans_17",
+                    "dtype": "string"
+                  }
+                },
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "name",
+                    "values": "monitor_1",
+                    "dtype": "string"
+                  }
+                },
+                {
+                  "name": "monitor_events",
+                  "type": "group",
+                  "children": [
+                    {
+                      "module": "ev44",
+                      "config": {
+                        "topic": "loki_beam_monitor",
+                        "source": "ttlmon1"
+                      }
+                    }
+                  ],
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "values": "NXevent_data"
+                    }
+                  ]
+                }
+              ],
+              "attributes": [
+                {
+                  "name": "NX_class",
+                  "values": "NXmonitor"
+                }
+              ]
+            },
+            {
+              "name": "slit_set_1",
+              "type": "group",
+              "attributes": [
+                {
+                  "name": "NX_class",
+                  "values": "NXslit"
+                }
+              ],
+              "children": [
+                {
+                  "name": "transformations",
+                  "type": "group",
+                  "children": [
+                    {
+                      "module": "dataset",
+                      "config": {
+                        "name": "translation",
+                        "values": -15.5,
+                        "dtype": "float"
+                      },
+                      "attributes": [
+                        {
+                          "name": "transformation_type",
+                          "values": "translation"
+                        },
+                        {
+                          "name": "depends_on",
+                          "values": ".",
+                          "dtype": "string"
+                        },
+                        {
+                          "name": "vector",
+                          "dtype": "float",
+                          "values": [
+                            0.0,
+                            0.0,
+                            1.0
+                          ]
+                        },
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "m"
+                        }
+                      ]
+                    }
+                  ],
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "values": "NXtransformations"
+                    }
+                  ]
+                },
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "depends_on",
+                    "values": "/entry/instrument/slit_set_1/transformations/translation",
+                    "dtype": "string"
+                  }
+                },
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "name",
+                    "values": "slit_set_1",
+                    "dtype": "string"
+                  }
+                },
+                {
+                  "name": "blade_left",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "values": "NXpositioner"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "name": "value",
+                      "type": "group",
+                      "attributes": [
+                        {
+                          "name": "NX_class",
+                          "dtype": "string",
+                          "values": "NXlog"
+                        }
+                      ],
+                      "children": [
+                        {
+                          "module": "f144",
+                          "config": {
+                            "source": "LOKI-ColSl1:MC-SlYp-01:Mtr.RBV",
+                            "topic": "loki_motion",
+                            "dtype": "double",
+                            "value_units": "mm"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "name": "target_value",
+                      "type": "group",
+                      "attributes": [
+                        {
+                          "name": "NX_class",
+                          "dtype": "string",
+                          "values": "NXlog"
+                        }
+                      ],
+                      "children": [
+                        {
+                          "module": "f144",
+                          "config": {
+                            "source": "LOKI-ColSl1:MC-SlYp-01:Mtr.VAL",
+                            "topic": "loki_motion",
+                            "dtype": "double",
+                            "value_units": "mm"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "name": "idle_flag",
+                      "type": "group",
+                      "attributes": [
+                        {
+                          "name": "NX_class",
+                          "dtype": "string",
+                          "values": "NXlog"
+                        }
+                      ],
+                      "children": [
+                        {
+                          "module": "f144",
+                          "config": {
+                            "source": "LOKI-ColSl1:MC-SlYp-01:Mtr.DMOV",
+                            "topic": "loki_motion",
+                            "dtype": "int",
+                            "value_units": ""
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "name": "transformations",
+                      "type": "group",
+                      "children": [
+                        {
+                          "module": "dataset",
+                          "config": {
+                            "name": "translation",
+                            "values": 0,
+                            "dtype": "float"
+                          },
+                          "attributes": [
+                            {
+                              "name": "transformation_type",
+                              "values": "translation"
+                            },
+                            {
+                              "name": "depends_on",
+                              "values": "/entry/instrument/slit_set_1/transformations/translation",
+                              "dtype": "string"
+                            },
+                            {
+                              "name": "vector",
+                              "dtype": "float",
+                              "values": [
+                                0.0,
+                                0.0,
+                                1.0
+                              ]
+                            },
+                            {
+                              "name": "units",
+                              "dtype": "string",
+                              "values": "m"
+                            }
+                          ]
+                        }
+                      ],
+                      "attributes": [
+                        {
+                          "name": "NX_class",
+                          "values": "NXtransformations"
+                        }
+                      ]
+                    },
+                    {
+                      "module": "dataset",
+                      "config": {
+                        "name": "depends_on",
+                        "values": "/entry/instrument/slit_set_1/blade_left/transformations/translation",
+                        "dtype": "string"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "blade_right",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "values": "NXpositioner"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "name": "value",
+                      "type": "group",
+                      "attributes": [
+                        {
+                          "name": "NX_class",
+                          "dtype": "string",
+                          "values": "NXlog"
+                        }
+                      ],
+                      "children": [
+                        {
+                          "module": "f144",
+                          "config": {
+                            "source": "LOKI-ColSl1:MC-SlYm-01:Mtr.RBV",
+                            "topic": "loki_motion",
+                            "dtype": "double",
+                            "value_units": "mm"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "name": "target_value",
+                      "type": "group",
+                      "attributes": [
+                        {
+                          "name": "NX_class",
+                          "dtype": "string",
+                          "values": "NXlog"
+                        }
+                      ],
+                      "children": [
+                        {
+                          "module": "f144",
+                          "config": {
+                            "source": "LOKI-ColSl1:MC-SlYm-01:Mtr.VAL",
+                            "topic": "loki_motion",
+                            "dtype": "double",
+                            "value_units": "mm"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "name": "idle_flag",
+                      "type": "group",
+                      "attributes": [
+                        {
+                          "name": "NX_class",
+                          "dtype": "string",
+                          "values": "NXlog"
+                        }
+                      ],
+                      "children": [
+                        {
+                          "module": "f144",
+                          "config": {
+                            "source": "LOKI-ColSl1:MC-SlYm-01:Mtr.DMOV",
+                            "topic": "loki_motion",
+                            "dtype": "int",
+                            "value_units": ""
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "name": "transformations",
+                      "type": "group",
+                      "children": [
+                        {
+                          "module": "dataset",
+                          "config": {
+                            "name": "translation",
+                            "values": 0,
+                            "dtype": "float"
+                          },
+                          "attributes": [
+                            {
+                              "name": "transformation_type",
+                              "values": "translation"
+                            },
+                            {
+                              "name": "depends_on",
+                              "values": "/entry/instrument/slit_set_1/transformations/translation",
+                              "dtype": "string"
+                            },
+                            {
+                              "name": "vector",
+                              "dtype": "float",
+                              "values": [
+                                0.0,
+                                0.0,
+                                1.0
+                              ]
+                            },
+                            {
+                              "name": "units",
+                              "dtype": "string",
+                              "values": "m"
+                            }
+                          ]
+                        }
+                      ],
+                      "attributes": [
+                        {
+                          "name": "NX_class",
+                          "values": "NXtransformations"
+                        }
+                      ]
+                    },
+                    {
+                      "module": "dataset",
+                      "config": {
+                        "name": "depends_on",
+                        "values": "/entry/instrument/slit_set_1/blade_right/transformations/translation",
+                        "dtype": "string"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "blade_top",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "values": "NXpositioner"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "name": "value",
+                      "type": "group",
+                      "attributes": [
+                        {
+                          "name": "NX_class",
+                          "dtype": "string",
+                          "values": "NXlog"
+                        }
+                      ],
+                      "children": [
+                        {
+                          "module": "f144",
+                          "config": {
+                            "source": "LOKI-ColSl1:MC-SlZp-01:Mtr.RBV",
+                            "topic": "loki_motion",
+                            "dtype": "double",
+                            "value_units": "mm"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "name": "target_value",
+                      "type": "group",
+                      "attributes": [
+                        {
+                          "name": "NX_class",
+                          "dtype": "string",
+                          "values": "NXlog"
+                        }
+                      ],
+                      "children": [
+                        {
+                          "module": "f144",
+                          "config": {
+                            "source": "LOKI-ColSl1:MC-SlZp-01:Mtr.VAL",
+                            "topic": "loki_motion",
+                            "dtype": "double",
+                            "value_units": "mm"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "name": "idle_flag",
+                      "type": "group",
+                      "attributes": [
+                        {
+                          "name": "NX_class",
+                          "dtype": "string",
+                          "values": "NXlog"
+                        }
+                      ],
+                      "children": [
+                        {
+                          "module": "f144",
+                          "config": {
+                            "source": "LOKI-ColSl1:MC-SlZp-01:Mtr.DMOV",
+                            "topic": "loki_motion",
+                            "dtype": "int",
+                            "value_units": ""
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "name": "transformations",
+                      "type": "group",
+                      "children": [
+                        {
+                          "module": "dataset",
+                          "config": {
+                            "name": "translation",
+                            "values": 0,
+                            "dtype": "float"
+                          },
+                          "attributes": [
+                            {
+                              "name": "transformation_type",
+                              "values": "translation"
+                            },
+                            {
+                              "name": "depends_on",
+                              "values": "/entry/instrument/slit_set_1/transformations/translation",
+                              "dtype": "string"
+                            },
+                            {
+                              "name": "vector",
+                              "dtype": "float",
+                              "values": [
+                                0.0,
+                                0.0,
+                                1.0
+                              ]
+                            },
+                            {
+                              "name": "units",
+                              "dtype": "string",
+                              "values": "m"
+                            }
+                          ]
+                        }
+                      ],
+                      "attributes": [
+                        {
+                          "name": "NX_class",
+                          "values": "NXtransformations"
+                        }
+                      ]
+                    },
+                    {
+                      "module": "dataset",
+                      "config": {
+                        "name": "depends_on",
+                        "values": "/entry/instrument/slit_set_1/blade_top/transformations/translation",
+                        "dtype": "string"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "blade_bottom",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "values": "NXpositioner"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "name": "value",
+                      "type": "group",
+                      "attributes": [
+                        {
+                          "name": "NX_class",
+                          "dtype": "string",
+                          "values": "NXlog"
+                        }
+                      ],
+                      "children": [
+                        {
+                          "module": "f144",
+                          "config": {
+                            "source": "LOKI-ColSl1:MC-SlZm-01:Mtr.RBV",
+                            "topic": "loki_motion",
+                            "dtype": "double",
+                            "value_units": "mm"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "name": "target_value",
+                      "type": "group",
+                      "attributes": [
+                        {
+                          "name": "NX_class",
+                          "dtype": "string",
+                          "values": "NXlog"
+                        }
+                      ],
+                      "children": [
+                        {
+                          "module": "f144",
+                          "config": {
+                            "source": "LOKI-ColSl1:MC-SlZm-01:Mtr.VAL",
+                            "topic": "loki_motion",
+                            "dtype": "double",
+                            "value_units": "mm"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "name": "idle_flag",
+                      "type": "group",
+                      "attributes": [
+                        {
+                          "name": "NX_class",
+                          "dtype": "string",
+                          "values": "NXlog"
+                        }
+                      ],
+                      "children": [
+                        {
+                          "module": "f144",
+                          "config": {
+                            "source": "LOKI-ColSl1:MC-SlZm-01:Mtr.DMOV",
+                            "topic": "loki_motion",
+                            "dtype": "int",
+                            "value_units": ""
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "name": "transformations",
+                      "type": "group",
+                      "children": [
+                        {
+                          "module": "dataset",
+                          "config": {
+                            "name": "translation",
+                            "values": 0,
+                            "dtype": "float"
+                          },
+                          "attributes": [
+                            {
+                              "name": "transformation_type",
+                              "values": "translation"
+                            },
+                            {
+                              "name": "depends_on",
+                              "values": "/entry/instrument/slit_set_1/transformations/translation",
+                              "dtype": "string"
+                            },
+                            {
+                              "name": "vector",
+                              "dtype": "float",
+                              "values": [
+                                0.0,
+                                0.0,
+                                1.0
+                              ]
+                            },
+                            {
+                              "name": "units",
+                              "dtype": "string",
+                              "values": "m"
+                            }
+                          ]
+                        }
+                      ],
+                      "attributes": [
+                        {
+                          "name": "NX_class",
+                          "values": "NXtransformations"
+                        }
+                      ]
+                    },
+                    {
+                      "module": "dataset",
+                      "config": {
+                        "name": "depends_on",
+                        "values": "/entry/instrument/slit_set_1/blade_bottom/transformations/translation",
+                        "dtype": "string"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "laser_mirror",
+              "type": "group",
+              "attributes": [
+                {
+                  "name": "NX_class",
+                  "values": "NXpositioner"
+                }
+              ],
+              "children": [
+                {
+                  "name": "transformations",
+                  "type": "group",
+                  "children": [
+                    {
+                      "module": "dataset",
+                      "config": {
+                        "name": "translation",
+                        "values": -999,
+                        "dtype": "float"
+                      },
+                      "attributes": [
+                        {
+                          "name": "transformation_type",
+                          "values": "translation"
+                        },
+                        {
+                          "name": "depends_on",
+                          "values": ".",
+                          "dtype": "string"
+                        },
+                        {
+                          "name": "vector",
+                          "dtype": "float",
+                          "values": [
+                            0.0,
+                            0.0,
+                            1.0
+                          ]
+                        },
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "m"
+                        }
+                      ]
+                    }
+                  ],
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "values": "NXtransformations"
+                    }
+                  ]
+                },
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "depends_on",
+                    "values": "/entry/instrument/laser_mirror/transformations/translation",
+                    "dtype": "string"
+                  }
+                },
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "name",
+                    "values": "laser_mirror",
+                    "dtype": "string"
+                  }
+                },
+                {
+                  "name": "value",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXlog"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "source": "LOKI-InBmLM:MC-LinZ-01:Mtr.RBV",
+                        "topic": "loki_motion",
+                        "dtype": "double",
+                        "value_units": "mm"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "target_value",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXlog"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "source": "LOKI-InBmLM:MC-LinZ-01:Mtr.VAL",
+                        "topic": "loki_motion",
+                        "dtype": "double",
+                        "value_units": "mm"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "idle_flag",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXlog"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "source": "LOKI-InBmLM:MC-LinZ-01:Mtr.DMOV",
+                        "topic": "loki_motion",
+                        "dtype": "int",
+                        "value_units": ""
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "sample_stack_y",
+              "type": "group",
+              "attributes": [
+                {
+                  "name": "NX_class",
+                  "values": "NXpositioner"
+                }
+              ],
+              "children": [
+                {
+                  "name": "value",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXlog"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "source": "LOKI-SpSt1:MC-LinY-01:Mtr.RBV",
+                        "topic": "loki_motion",
+                        "dtype": "double",
+                        "value_units": "mm"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "target_value",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXlog"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "source": "LOKI-SpSt1:MC-LinY-01:Mtr.VAL",
+                        "topic": "loki_motion",
+                        "dtype": "double",
+                        "value_units": "mm"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "idle_flag",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXlog"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "source": "LOKI-SpSt1:MC-LinY-01:Mtr.DMOV",
+                        "topic": "loki_motion",
+                        "dtype": "int",
+                        "value_units": ""
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "transformations",
+                  "type": "group",
+                  "children": [
+                    {
+                      "module": "dataset",
+                      "config": {
+                        "name": "translation",
+                        "values": 0,
+                        "dtype": "float"
+                      },
+                      "attributes": [
+                        {
+                          "name": "transformation_type",
+                          "values": "translation"
+                        },
+                        {
+                          "name": "depends_on",
+                          "values": ".",
+                          "dtype": "string"
+                        },
+                        {
+                          "name": "vector",
+                          "dtype": "float",
+                          "values": [
+                            0.0,
+                            0.0,
+                            1.0
+                          ]
+                        },
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "m"
+                        }
+                      ]
+                    }
+                  ],
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "values": "NXtransformations"
+                    }
+                  ]
+                },
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "depends_on",
+                    "values": "/entry/instrument/sample_stack_y/transformations/translation",
+                    "dtype": "string"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "sample_stack_z",
+              "type": "group",
+              "attributes": [
+                {
+                  "name": "NX_class",
+                  "values": "NXpositioner"
+                }
+              ],
+              "children": [
+                {
+                  "name": "value",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXlog"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "source": "LOKI-SpSt1:MC-LinZ-01:Mtr.RBV",
+                        "topic": "loki_motion",
+                        "dtype": "double",
+                        "value_units": "mm"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "target_value",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXlog"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "source": "LOKI-SpSt1:MC-LinZ-01:Mtr.VAL",
+                        "topic": "loki_motion",
+                        "dtype": "double",
+                        "value_units": "mm"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "idle_flag",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXlog"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "source": "LOKI-SpSt1:MC-LinZ-01:Mtr.DMOV",
+                        "topic": "loki_motion",
+                        "dtype": "int",
+                        "value_units": ""
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "transformations",
+                  "type": "group",
+                  "children": [
+                    {
+                      "module": "dataset",
+                      "config": {
+                        "name": "translation",
+                        "values": 0,
+                        "dtype": "float"
+                      },
+                      "attributes": [
+                        {
+                          "name": "transformation_type",
+                          "values": "translation"
+                        },
+                        {
+                          "name": "depends_on",
+                          "values": ".",
+                          "dtype": "string"
+                        },
+                        {
+                          "name": "vector",
+                          "dtype": "float",
+                          "values": [
+                            0.0,
+                            0.0,
+                            1.0
+                          ]
+                        },
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "m"
+                        }
+                      ]
+                    }
+                  ],
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "values": "NXtransformations"
+                    }
+                  ]
+                },
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "depends_on",
+                    "values": "/entry/instrument/sample_stack_z/transformations/translation",
+                    "dtype": "string"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "sample_rotation",
+              "type": "group",
+              "attributes": [
+                {
+                  "name": "NX_class",
+                  "values": "NXpositioner"
+                }
+              ],
+              "children": [
+                {
+                  "name": "value",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXlog"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "source": "LOKI-SpCel1:MC-RotX-01:Mtr.RBV",
+                        "topic": "loki_motion",
+                        "dtype": "double",
+                        "value_units": "mm"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "target_value",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXlog"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "source": "LOKI-SpCel1:MC-RotX-01:Mtr.VAL",
+                        "topic": "loki_motion",
+                        "dtype": "double",
+                        "value_units": "mm"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "idle_flag",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXlog"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "source": "LOKI-SpCel1:MC-RotX-01:Mtr.DMOV",
+                        "topic": "loki_motion",
+                        "dtype": "int",
+                        "value_units": ""
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "transformations",
+                  "type": "group",
+                  "children": [
+                    {
+                      "module": "dataset",
+                      "config": {
+                        "name": "translation",
+                        "values": 0,
+                        "dtype": "float"
+                      },
+                      "attributes": [
+                        {
+                          "name": "transformation_type",
+                          "values": "translation"
+                        },
+                        {
+                          "name": "depends_on",
+                          "values": ".",
+                          "dtype": "string"
+                        },
+                        {
+                          "name": "vector",
+                          "dtype": "float",
+                          "values": [
+                            0.0,
+                            0.0,
+                            1.0
+                          ]
+                        },
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "m"
+                        }
+                      ]
+                    }
+                  ],
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "values": "NXtransformations"
+                    }
+                  ]
+                },
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "depends_on",
+                    "values": "/entry/instrument/sample_rotation/transformations/translation",
+                    "dtype": "string"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "linear_sample_changer",
+              "type": "group",
+              "attributes": [
+                {
+                  "name": "NX_class",
+                  "values": "NXpositioner"
+                }
+              ],
+              "children": [
+                {
+                  "name": "value",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXlog"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "source": "LOKI-SpChg1:MC-LinY-01:Mtr.RBV",
+                        "topic": "loki_motion",
+                        "dtype": "double",
+                        "value_units": "mm"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "target_value",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXlog"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "source": "LOKI-SpChg1:MC-LinY-01:Mtr.VAL",
+                        "topic": "loki_motion",
+                        "dtype": "double",
+                        "value_units": "mm"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "idle_flag",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXlog"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "source": "LOKI-SpChg1:MC-LinY-01:Mtr.DMOV",
+                        "topic": "loki_motion",
+                        "dtype": "int",
+                        "value_units": ""
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "transformations",
+                  "type": "group",
+                  "children": [
+                    {
+                      "module": "dataset",
+                      "config": {
+                        "name": "translation",
+                        "values": 0,
+                        "dtype": "float"
+                      },
+                      "attributes": [
+                        {
+                          "name": "transformation_type",
+                          "values": "translation"
+                        },
+                        {
+                          "name": "depends_on",
+                          "values": ".",
+                          "dtype": "string"
+                        },
+                        {
+                          "name": "vector",
+                          "dtype": "float",
+                          "values": [
+                            0.0,
+                            0.0,
+                            1.0
+                          ]
+                        },
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "m"
+                        }
+                      ]
+                    }
+                  ],
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "values": "NXtransformations"
+                    }
+                  ]
+                },
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "depends_on",
+                    "values": "/entry/instrument/linear_sample_changer/transformations/translation",
+                    "dtype": "string"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "experiment_shutter",
+              "type": "group",
+              "attributes": [
+                {
+                  "name": "NX_class",
+                  "dtype": "string",
+                  "values": "NXlog"
+                }
+              ],
+              "children": [
+                {
+                  "name": "value",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXlog"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "source": "LOKI-ExSh:MC-Pne-01:ShtAuxBits07",
+                        "topic": "loki_motion",
+                        "dtype": "double",
+                        "value_units": ""
+                      }
+                    }
+                  ]
+                },
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "mapping",
+                    "values": [
+                      "out-of-beam",
+                      "moving-out",
+                      "moving-in",
+                      "in-beam",
+                      "in-the-middle"
+                    ],
+                    "type": "string"
+                  }
+                },
+                {
+                  "name": "transformations",
+                  "type": "group",
+                  "children": [
+                    {
+                      "module": "dataset",
+                      "config": {
+                        "name": "translation",
+                        "values": 0,
+                        "dtype": "float"
+                      },
+                      "attributes": [
+                        {
+                          "name": "transformation_type",
+                          "values": "translation"
+                        },
+                        {
+                          "name": "depends_on",
+                          "values": ".",
+                          "dtype": "string"
+                        },
+                        {
+                          "name": "vector",
+                          "dtype": "float",
+                          "values": [
+                            0.0,
+                            0.0,
+                            1.0
+                          ]
+                        },
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "m"
+                        }
+                      ]
+                    }
+                  ],
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "values": "NXtransformations"
+                    }
+                  ]
+                },
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "depends_on",
+                    "values": "/entry/instrument/experiment_shutter/transformations/translation",
+                    "dtype": "string"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "heavy_shutter",
+              "type": "group",
+              "attributes": [
+                {
+                  "name": "NX_class",
+                  "dtype": "string",
+                  "values": "NXlog"
+                }
+              ],
+              "children": [
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "mapping",
+                    "values": [
+                      "Closed",
+                      "Closing",
+                      "Opening",
+                      "Opened",
+                      "InTheMiddle"
+                    ],
+                    "type": "string"
+                  }
+                },
+                {
+                  "name": "value",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXlog"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "source": "LOKI-HvSht:MC-Pne-01:ShtAuxBits07",
+                        "topic": "loki_motion",
+                        "dtype": "double",
+                        "value_units": ""
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "transformations",
+                  "type": "group",
+                  "children": [
+                    {
+                      "module": "dataset",
+                      "config": {
+                        "name": "translation",
+                        "values": 0,
+                        "dtype": "float"
+                      },
+                      "attributes": [
+                        {
+                          "name": "transformation_type",
+                          "values": "translation"
+                        },
+                        {
+                          "name": "depends_on",
+                          "values": ".",
+                          "dtype": "string"
+                        },
+                        {
+                          "name": "vector",
+                          "dtype": "float",
+                          "values": [
+                            0.0,
+                            0.0,
+                            1.0
+                          ]
+                        },
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "m"
+                        }
+                      ]
+                    }
+                  ],
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "values": "NXtransformations"
+                    }
+                  ]
+                },
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "depends_on",
+                    "values": "/entry/instrument/heavy_shutter/transformations/translation",
+                    "dtype": "string"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "window_guard",
+              "type": "group",
+              "attributes": [
+                {
+                  "name": "NX_class",
+                  "dtype": "string",
+                  "values": "NXlog"
+                }
+              ],
+              "children": [
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "mapping",
+                    "values": [
+                      "Closed",
+                      "Closing",
+                      "Opening",
+                      "Opened",
+                      "InTheMiddle"
+                    ],
+                    "type": "string"
+                  }
+                },
+                {
+                  "name": "value",
+                  "type": "group",
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "dtype": "string",
+                      "values": "NXlog"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "module": "f144",
+                      "config": {
+                        "source": "LOKI-WinGd1:MC-Pne-01:ShtAuxBits07",
+                        "topic": "loki_motion",
+                        "dtype": "double",
+                        "value_units": ""
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "transformations",
+                  "type": "group",
+                  "children": [
+                    {
+                      "module": "dataset",
+                      "config": {
+                        "name": "translation",
+                        "values": 0,
+                        "dtype": "float"
+                      },
+                      "attributes": [
+                        {
+                          "name": "transformation_type",
+                          "values": "translation"
+                        },
+                        {
+                          "name": "depends_on",
+                          "values": ".",
+                          "dtype": "string"
+                        },
+                        {
+                          "name": "vector",
+                          "dtype": "float",
+                          "values": [
+                            0.0,
+                            0.0,
+                            1.0
+                          ]
+                        },
+                        {
+                          "name": "units",
+                          "dtype": "string",
+                          "values": "m"
+                        }
+                      ]
+                    }
+                  ],
+                  "attributes": [
+                    {
+                      "name": "NX_class",
+                      "values": "NXtransformations"
+                    }
+                  ]
+                },
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "depends_on",
+                    "values": "/entry/instrument/window_guard/transformations/translation",
+                    "dtype": "string"
+                  }
+                }
+              ]
+            }
+          ],
+          "attributes": [
+            {
+              "name": "NX_class",
+              "values": "NXinstrument"
             }
           ]
         },
@@ -1001,121 +3186,6 @@
           ]
         },
         {
-          "name": "sample",
-          "type": "group",
-          "attributes": [
-            {
-              "name": "NX_class",
-              "dtype": "string",
-              "values": "NXsample"
-            }
-          ],
-          "children": [
-            {
-              "type": "group",
-              "name": "transformations",
-              "children": [
-                {
-                  "name": "SOM",
-                  "type": "group",
-                  "attributes": [
-                    {
-                      "name": "NX_class",
-                      "dtype": "string",
-                      "values": "NXlog"
-                    },
-                    {
-                      "name": "transformation_type",
-                      "dtype": "string",
-                      "values": "rotation"
-                    },
-                    {
-                      "name": "vector",
-                      "dtype": "float",
-                      "values": [
-                        1.0,
-                        0.0,
-                        0.0
-                      ]
-                    },
-                    {
-                      "name": "depends_on",
-                      "values": "/entry/sample/transformations/SOZ",
-                      "dtype": "string"
-                    }
-                  ],
-                  "children": [
-                    {
-                      "module": "f144",
-                      "config": {
-                        "source": "SIM_tbl:sample:transformations:SOM",
-                        "topic": "tbl_motion",
-                        "dtype": "double",
-                        "value_units": "degrees"
-                      }
-                    }
-                  ]
-                },
-                {
-                  "name": "SOZ",
-                  "type": "group",
-                  "attributes": [
-                    {
-                      "name": "NX_class",
-                      "dtype": "string",
-                      "values": "NXlog"
-                    },
-                    {
-                      "name": "transformation_type",
-                      "dtype": "string",
-                      "values": "translation"
-                    },
-                    {
-                      "name": "vector",
-                      "dtype": "float",
-                      "values": [
-                        0.0,
-                        -1.0,
-                        0.0
-                      ]
-                    },
-                    {
-                      "name": "depends_on",
-                      "values": ".",
-                      "dtype": "string"
-                    }
-                  ],
-                  "children": [
-                    {
-                      "module": "f144",
-                      "config": {
-                        "source": "SIM_tbl:sample:transformations:SOZ",
-                        "topic": "tbl_motion",
-                        "dtype": "double",
-                        "value_units": "m"
-                      }
-                    }
-                  ]
-                }
-              ],
-              "attributes": [
-                {
-                  "name": "NX_class",
-                  "values": "NXtransformations"
-                }
-              ]
-            },
-            {
-              "module": "dataset",
-              "config": {
-                "name": "depends_on",
-                "dtype": "string",
-                "values": "/entry/sample/transformations/SOM"
-              }
-            }
-          ]
-        },
-        {
           "attributes": [
             {
               "dtype": "string",
@@ -1159,9 +3229,89 @@
           ],
           "name": "daq_publication",
           "type": "group"
+        },
+        {
+          "module": "dataset",
+          "config": {
+            "name": "experiment_description",
+            "values": "this is an experiment",
+            "dtype": "string"
+          }
+        },
+        {
+          "name": "sample",
+          "type": "group",
+          "children": [
+            {
+              "name": "transformations",
+              "type": "group",
+              "children": [
+                {
+                  "module": "dataset",
+                  "config": {
+                    "name": "trans_11",
+                    "values": 0.0,
+                    "dtype": "float"
+                  },
+                  "attributes": [
+                    {
+                      "name": "transformation_type",
+                      "values": "translation"
+                    },
+                    {
+                      "name": "depends_on",
+                      "values": ".",
+                      "dtype": "string"
+                    },
+                    {
+                      "name": "vector",
+                      "dtype": "float",
+                      "values": [
+                        0.0,
+                        0.0,
+                        1.0
+                      ]
+                    },
+                    {
+                      "name": "units",
+                      "dtype": "string",
+                      "values": "m"
+                    }
+                  ]
+                }
+              ],
+              "attributes": [
+                {
+                  "name": "NX_class",
+                  "values": "NXtransformations"
+                }
+              ]
+            },
+            {
+              "module": "dataset",
+              "config": {
+                "name": "depends_on",
+                "values": "/entry/sample/transformations/trans_11",
+                "dtype": "string"
+              }
+            }
+          ],
+          "attributes": [
+            {
+              "name": "NX_class",
+              "values": "NXsample"
+            }
+          ]
+        }
+      ],
+      "attributes": [
+        {
+          "name": "NX_class",
+          "values": "NXentry"
         }
       ]
     }
   ],
-  "dynamic_version": "7.0.2"
+  "template_version": "2.4.1",
+  "dynamic_version": "2.4.1"
 }
