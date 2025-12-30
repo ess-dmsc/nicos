@@ -371,7 +371,7 @@ class NexusStructureJsonFile(NexusStructureProvider):
             if sample["name"] == sample_name:
                 sample_info = sample.copy()
                 break
-        if "position" in sample_info:
+        if sample_info and "position" in sample_info:
             del sample_info["position"]
         return sample_info
 
