@@ -260,26 +260,28 @@ class NexusStructureJsonFile(NexusStructureProvider):
 
     def _generate_samples_group_list(self, entities, skip_keys=None):
         children = []
-        for n, v in entities.items():
-            if skip_keys and n in skip_keys:
-                continue
-            children.append(
-                {
-                    "module": "dataset",
-                    "config": {"name": n, "values": v, "dtype": "string"},
-                }
-            )
+        if entities:
+            for n, v in entities.items():
+              if skip_keys and n in skip_keys:
+                  continue
+              children.append(
+                  {
+                      "module": "dataset",
+                      "config": {"name": n, "values": v, "dtype": "string"},
+                  }
+              )
         return children
 
     def _generate_samples_link_list(self, entities):
         children = []
-        for n, p in entities.items():
-            children.append(
-                {
-                    "module": "link",
-                    "config": {"name": n, "type": "NXlink", "source": p},
-                }
-            )
+        if entities:
+          for n, p in entities.items():
+              children.append(
+                  {
+                      "module": "link",
+                      "config": {"name": n, "type": "NXlink", "source": p},
+                  }
+              )
         return children
 
     def _insert_samples(self, structure, metainfo):
