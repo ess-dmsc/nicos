@@ -30,7 +30,15 @@ devices = dict(
         readpv="{}Spd_R".format(pv_root_t0_chopper),
         writepv="{}Spd_S".format(pv_root_t0_chopper),
         precision=0.1,
-        mapping={"0 Hz": 0, "7 Hz": 7, "14 Hz": 14},  # check real speeds later
+        mapping={
+            "-28 Hz": -28,
+            "-14 Hz": -14,
+            "-7 Hz": -7,
+            "0 Hz": 0,
+            "7 Hz": 7,
+            "14 Hz": 14,
+            "28 Hz": 28,
+        },
     ),
     t0_chopper_delay=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
@@ -136,6 +144,14 @@ devices = dict(
         writepv="{}Spd_S".format(pv_root_band_chopper),
         precision=0.1,
         mapping={
+            "-112 Hz": -112,
+            "-98 Hz": -98,
+            "-84 Hz": -84,
+            "-70 Hz": -70,
+            "-56 Hz": -56,
+            "-42 Hz": -42,
+            "-28 Hz": -28,
+            "-14 Hz": -14,
             "0 Hz": 0,
             "14 Hz": 14,
             "28 Hz": 28,
@@ -250,7 +266,13 @@ devices = dict(
         readpv="{}Spd_R".format(pv_root_overlap_chopper),
         writepv="{}Spd_S".format(pv_root_overlap_chopper),
         precision=0.1,
-        mapping={"0 Hz": 0, "7 Hz": 7, "14 Hz": 14},  # check real speeds later
+        mapping={
+            "-14 Hz": -14, 
+            "-7 Hz": -7,
+            "0 Hz": 0,
+            "7 Hz": 7,
+            "14 Hz": 14,
+        },  # check real speeds later
     ),
     overlap_chopper_delay=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
