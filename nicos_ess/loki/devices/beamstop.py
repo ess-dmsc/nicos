@@ -1,16 +1,18 @@
 import re
 
 from nicos.core import (
+    SIMULATION,
+    Attach,
     ConfigurationError,
     HasPrecision,
     LimitError,
-    Override,
-    Param,
+    MoveError,
     oneof,
 )
-from nicos.core.utils import waitForCompletion
+from nicos.devices.abstract import MappedMoveable
+from nicos.devices.generic.sequence import SeqDev, SequencerMixin
 from nicos.utils import num_sort
-from nicos_ess.devices.mapped_controller import MappedController, MultiTargetMapping
+from nicos_ess.devices.mapped_controller import MappedController
 
 
 class LokiBeamstopArmPositioner(MappedController):
@@ -53,22 +55,67 @@ class LokiBeamstopArmPositioner(MappedController):
             )
 
 
-class LokiBeamstopController(MultiTargetMapping):
-    parameters = {
-        "all_parked_mapping": Param(
-            mandatory=True,
-            settable=True,
-            description="The mapped value that corresponds to all motors parked",
-            type=str,
-        )
+class LokiBeamstopController(SequencerMixin, MappedMoveable):
+    attached_devices = {
+        "bsx_positioner": Attach("Positioner for beamstop x", MappedController),
+        "bsy_positioner": Attach("Positioner for beamstop y", MappedController),
+        "bs1_positioner": Attach("Positioner for beamstop z1", MappedController),
+        "bs2_positioner": Attach("Positioner for beamstop z2", MappedController),
+        "bs3_positioner": Attach("Positioner for beamstop z3", MappedController),
+        "bs4_positioner": Attach("Positioner for beamstop z4", MappedController),
+        "bs5_positioner": Attach("Positioner for beamstop z5", MappedController),
     }
 
-    def doStart(self, value):
+    def doPreinit(self, mode):
+        self._all_attached = [
+            self._attached_bsx_positioner,
+            self._attached_bsy_positioner,
+            self._attached_bs1_positioner,
+            self._attached_bs2_positioner,
+            self._attached_bs3_positioner,
+            self._attached_bs4_positioner,
+            self._attached_bs5_positioner,
+        ]
+        self._full_mapping = self._get_mapped_positions()
+
+    def doRead(self, maxage=0):
+        return self._mapReadValue(self._readRaw(maxage))
+
+    def _readRaw(self, maxage=0):
+        return tuple(channel.read(maxage) for channel in self._all_attached)
+
+    def _mapReadValue(self, value):
+        inverse_mapping = {v: k for k, v in self._full_mapping.items()}
+        mapped_value = inverse_mapping.get(value, None)
+        if not mapped_value:
+            return "In Between"
+        return mapped_value
+
+    def doStart(self, target):
+        """
+        Generate and start a sequence if non is running.
+        Just calls ``self._startSequence(self._generateSequence(target))``
+        """
+        if self._seq_is_running():
+            if self._mode == SIMULATION:
+                self._seq_thread.join()
+                self._seq_thread = None
+            else:
+                raise MoveError(
+                    self,
+                    "Cannot start device, sequence is still "
+                    "running (at %s)!" % self._seq_status[1],
+                )
+        self._startSequence(self._generateSequence(target))
+
+    def _generateSequence(self, target):
         active_beamstop = self._get_beamstop_number(self.read())
-        requested_beamstop = self._get_beamstop_number(value)
+        requested_beamstop = self._get_beamstop_number(target)
+        seq = []
         if requested_beamstop != active_beamstop:
-            self._park_beamstops()
-        self._engage_beamstop(value)
+            seq.extend(self._park_sequence())
+        seq.extend(self._beamstop_sequence(target))
+        return seq
 
     def _get_beamstop_number(self, value):
         active_beamstop_match = re.match(r"(Beamstop \d|Park)", value)
@@ -77,29 +124,129 @@ class LokiBeamstopController(MultiTargetMapping):
         else:
             return "None"
 
-    def _park_beamstops(self):
-        devices, targets = self._park_sequence()
-        self._move_to_targets(devices, targets)
-
-    def _engage_beamstop(self, value):
-        devices, targets = self._beamstop_sequence(value)
-        self._move_to_targets(devices, targets)
-
-    def _move_to_targets(self, devices, targets):
-        for device, target in zip(devices, targets):
-            device.start(target)
-            waitForCompletion(device)
-
     def _park_sequence(self):
-        devices = self._attached_controlled_devices
-        targets = self.mapping.get(self.all_parked_mapping, None)
-        return devices, targets
+        """
+        Parking sequence: x to park, y to in-beam, z-arms to park
+        """
+        targets = self._full_mapping.get("Park all beamstops", None)
+        seq = []
+        seq.append(SeqDev(self._all_attached[0], targets[0]))
+        seq.append(SeqDev(self._all_attached[1], targets[1]))
+        seq.append(
+            tuple(
+                SeqDev(dev, tar)
+                for dev, tar in zip(self._all_attached[2:], targets[2:])
+            )
+        )
+        return seq
 
-    def _beamstop_sequence(self, value):
-        devices_reversed = self._attached_controlled_devices[::-1]
-        targets = self.mapping.get(value, None)
-        if targets:
-            targets_reversed = targets[::-1]
-        else:
-            targets_reversed = targets
-        return devices_reversed, targets_reversed
+    def _beamstop_sequence(self, target):
+        """
+        Engage beamstop sequence: z-arms to in-beam, y to in-beam, x to specified beamstop position
+        """
+        targets = self._full_mapping.get(target, None)
+        seq = []
+        seq.append(
+            tuple(
+                SeqDev(dev, tar)
+                for dev, tar in zip(self._all_attached[2:], targets[2:])
+            )
+        )
+        seq.append(SeqDev(self._all_attached[1], targets[1]))
+        seq.append(SeqDev(self._all_attached[0], targets[0]))
+        return seq
+
+    def _get_mapped_positions(self):
+        full_mapping = {
+            "Park all beamstops": (
+                "Parked",
+                "In beam",
+                "Parked",
+                "Parked",
+                "Parked",
+                "Parked",
+                "Parked",
+            ),
+            "Beamstop 1": (
+                "Xpos BS1",
+                "In beam",
+                "In beam",
+                "Parked",
+                "Parked",
+                "Parked",
+                "Parked",
+            ),
+            "Beamstop 2": (
+                "Xpos BS2",
+                "In beam",
+                "Parked",
+                "In beam",
+                "Parked",
+                "Parked",
+                "Parked",
+            ),
+            "Beamstop 2 + monitor": (
+                "Xpos BS2",
+                "In beam",
+                "In beam",
+                "In beam",
+                "Parked",
+                "Parked",
+                "Parked",
+            ),
+            "Beamstop 3": (
+                "Xpos BS3",
+                "In beam",
+                "Parked",
+                "Parked",
+                "In beam",
+                "Parked",
+                "Parked",
+            ),
+            "Beamstop 3 + monitor": (
+                "Xpos BS3",
+                "In beam",
+                "In beam",
+                "Parked",
+                "In beam",
+                "Parked",
+                "Parked",
+            ),
+            "Beamstop 4": (
+                "Xpos BS4",
+                "In beam",
+                "Parked",
+                "Parked",
+                "Parked",
+                "In beam",
+                "Parked",
+            ),
+            "Beamstop 4 + monitor": (
+                "Xpos BS4",
+                "In beam",
+                "In beam",
+                "Parked",
+                "Parked",
+                "In beam",
+                "Parked",
+            ),
+            "Beamstop 5": (
+                "Xpos BS5",
+                "In beam",
+                "Parked",
+                "Parked",
+                "Parked",
+                "Parked",
+                "In beam",
+            ),
+            "Beamstop 5 + monitor": (
+                "Xpos BS5",
+                "In beam",
+                "In beam",
+                "Parked",
+                "Parked",
+                "Parked",
+                "In beam",
+            ),
+        }
+        return full_mapping
