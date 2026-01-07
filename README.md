@@ -36,6 +36,11 @@ In case `yuos_query` is not found automatically, you can install it manually:
 uv pip install https://github.com/ess-dmsc/yuos_query/releases/download/v0.1.22/yuos_query-0.1.22-py3-none-any.whl
 ```
 
+### Configure NICOS
+
+Place the NICOS configuration file (`nicos.conf`) of your choice into the `nicos` directory in your standard user configuration path.
+This particular path differs between platforms: on GNU/Linux systems, this would be `~/.config/nicos/nicos.cfg`.
+
 ### Run the NICOS components
 
 After the installation, `nicos-deamon`, `nicos-poller` and `nicos-collector` commands are available once the virtual environment has been activated.
