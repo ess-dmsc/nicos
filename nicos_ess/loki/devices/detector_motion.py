@@ -1,73 +1,48 @@
 from time import sleep
 
-from nicos import session
 from nicos.core import (
     Param,
     status,
 )
 from nicos_ess.devices.epics.pva.motor import EpicsMotor
+from nicos import session
 
 
 class LOKIDetectorMotion(EpicsMotor):
-    """Control detector bank motion.
+    """Control detector motion, ensuring power bank safety.
 
-    This class restricts movement unless the detector bank's power supply is OFF.
+    This class ensures that the detector's power supply bank is OFF
+    before allowing any movement.
     """
-
+    
     parameters = {
         "ps_bank_name": Param(
-            "Detector bank power supply name in setup",
+            "Detector power supply bank name in setup",
             type=str,
             mandatory=True,
         ),
-        "voltage_off_threshold": Param(
-            "The voltage threshold for when the power supply channel is considered off",
-            type=float,
-            default=0.0,
-        ),
     }
-
+    
     def doInit(self, mode):
         EpicsMotor.doInit(self, mode)
-        self._ps_bank = self._get_ps_bank()
+        self._ps_bank = self.get_ps_bank()
+    
+    def get_ps_bank(self):
+        return session.devices[self.ps_bank_name]
 
-    def _get_ps_bank(self):
-        ps_bank = session.devices[self.ps_bank_name]
-        if not ps_bank:
-            self.log.error("Power supply instance does not exist")
-        return ps_bank
+    def bank_voltage_is_zero(self):
+        if self._ps_bank is None:
+            print("Power Supply Bank: bank instance provided for the voltage check is NONE.")
+            return False # Return false to make check fail
 
-    def _bank_status_is_ok(self):
-        # TODO: Move check to power supply class
-        bank_status, status_msg = self._ps_bank.status()
-        if bank_status != status.OK:
-            self.log.warning(status_msg)
-            return False
-        return True
-
-    def _bank_is_powered_off(self):
-        # TODO: Move check to power supply class
-        bank_on, n_channels_on = self._ps_bank.status_on()
-        if bank_on:
-            self.log.warning("Power supply bank is still ON, all channels must be OFF.")
-            return False
-        return True
-
-    def _bank_voltage_is_below_threshold(self):
-        # TODO: Move check to power supply class
         for channel in self._ps_bank._attached_ps_channels:
-            if channel.doReadVoltage_Monitor() > self.voltage_off_threshold:
-                self.log.warning(
-                    "Power supply bank voltages are above threshold, "
-                    "all channels must be less than "
-                    f"{self.voltage_off_threshold} {self._ps_bank._get_voltage_unit()}"
-                )
+            if channel.doReadVoltage_Monitor() > 0:
                 return False
         return True
 
     def doIsAllowed(self, pos):
-        """Hook method from the Device class to check if movement is allowed,
-        by verifying if power supply is OFF.
+        """ Hook method from the Device class to check if movement is allowed,
+        by verifying if Power Supply Bank is OFF.
 
         Parameters
         ----------
@@ -82,18 +57,19 @@ class LOKIDetectorMotion(EpicsMotor):
             Message indicating why movement is or isn't allowed.
         """
 
-        if (
-            self._bank_status_is_ok()
-            and self._bank_is_powered_off()
-            and self._bank_voltage_is_below_threshold()
-        ):
-            self.log.info(
-                "Detector bank motion: Power supply is OFF and voltage is below or equal to threshold. "
-                "Movement is permitted."
-            )
-            return (
-                True,
-                "Power supply is OFF and voltage is below or equal to threshold.",
-            )
-        else:
-            return False, ""
+        if self._ps_bank is None:
+            return False, f"Power Supply Bank is None ({self.ps_bank_name})."
+
+        bank_stat, _ = self._ps_bank.status()
+        bank_on, _ = self._ps_bank.status_on()
+        
+        if bank_stat != status.OK:
+            return False, "Power Supply Bank is in a NOT OK state."
+        if bank_on:
+            return False, "Power Supply Bank is still ON (its channels should be OFF)."
+        if not self.bank_voltage_is_zero():
+            return False, "Power Supply Bank voltages are still > 0 (all voltages should be ZERO)."
+
+        print("Detector motion: Power Supply Bank is OFF and voltages are ZERO. Moving is okay.")
+        return True, "Power Supply Bank is OFF. Moving is okay."
+        

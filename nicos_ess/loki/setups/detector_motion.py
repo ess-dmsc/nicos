@@ -1,6 +1,6 @@
 description = "Detector carriage motor"
 
-includes = ["power_supply_bank_0__detector_HV"]
+includes = ['power_supply_bank_0__detector_HV']
 
 pv_root = "LOKI-DtCar1:"
 
@@ -11,6 +11,5 @@ devices = dict(
         motorpv=f"{pv_root}MC-LinX-01:Mtr",
         monitor_deadband=0.01,
         ps_bank_name="HV_Bank_0",
-        voltage_off_threshold=5.0,
     )
 )
