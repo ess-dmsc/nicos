@@ -9,11 +9,6 @@ devices = dict(
         resetpv="TBL-HvSht:MC-Pne-01:ShtErrRst",
         msgtxt="TBL-HvSht:MC-Pne-01:ShtMsgTxt",
     ),
-    heavy_shutter_status=device(
-        "nicos_ess.devices.epics.pva.EpicsStringReadable",
-        description="Status of the heavy shutter",
-        readpv="TBL-HvSht:MC-Pne-01:ShtMsgTxt",
-    ),
     cabinet_1_status=device(
         "nicos_ess.devices.epics.mbbi_direct.MBBIDirectStatus",
         description="Cabinet 1 status",

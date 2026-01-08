@@ -19,11 +19,6 @@ devices = dict(
         pollinterval=0.5,
         maxage=None,
     ),
-    get_lost_tube_status=device(
-        "nicos_ess.devices.epics.pva.EpicsStringReadable",
-        description="Status of the the Get-Lost-Tube In-Beam Positioner",
-        readpv="BIFRO-InBm:MC-Pne-01:ShtMsgTxt",
-    ),
     cabinet_3_pressure_1=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
         description="Cabinet 3 pressure 1",

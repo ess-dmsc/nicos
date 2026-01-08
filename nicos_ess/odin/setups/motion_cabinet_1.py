@@ -12,11 +12,6 @@ devices = dict(
         resetpv="ODIN-HvSht:MC-Pne-01:ShtErrRst",
         msgtxt="ODIN-HvSht:MC-Pne-01:ShtMsgTxt",
     ),
-    heavy_shutter_status=device(
-        "nicos_ess.devices.epics.pva.EpicsStringReadable",
-        description="Status of the heavy shutter",
-        readpv="ODIN-HvSht:MC-Pne-01:ShtMsgTxt",
-    ),
     # --- Motor: WFMC translation stage ---
     wfmc_translation=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",

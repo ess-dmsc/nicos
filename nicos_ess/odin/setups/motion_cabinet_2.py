@@ -12,11 +12,6 @@ devices = dict(
         resetpv="ODIN-PinDif:MC-Pne-01:ShtErrRst",
         msgtxt="ODIN-PinDif:MC-Pne-01:ShtMsgTxt",
     ),
-    pinhole_diffuser_status=device(
-        "nicos_ess.devices.epics.pva.EpicsStringReadable",
-        description="Status of the pinhole graphite diffuser",
-        readpv="ODIN-PinDif:MC-Pne-01:ShtMsgTxt",
-    ),
     pinhole_filter_1=device(
         "nicos_ess.devices.epics.pva.shutter.EpicsShutter",
         description="Pinhole: Filter 1",
@@ -24,11 +19,6 @@ devices = dict(
         readpv="ODIN-PinFil:MC-Pne-01:ShtAuxBits07",
         resetpv="ODIN-PinFil:MC-Pne-01:ShtErrRst",
         msgtxt="ODIN-PinFil:MC-Pne-01:ShtMsgTxt",
-    ),
-    pinhole_filter_1_status=device(
-        "nicos_ess.devices.epics.pva.EpicsStringReadable",
-        description="Status of pinhole filter 1",
-        readpv="ODIN-PinFil:MC-Pne-01:ShtMsgTxt",
     ),
     pinhole_filter_2=device(
         "nicos_ess.devices.epics.pva.shutter.EpicsShutter",
@@ -38,11 +28,6 @@ devices = dict(
         resetpv="ODIN-PinFil:MC-Pne-02:ShtErrRst",
         msgtxt="ODIN-PinFil:MC-Pne-02:ShtMsgTxt",
     ),
-    pinhole_filter_2_status=device(
-        "nicos_ess.devices.epics.pva.EpicsStringReadable",
-        description="Status of pinhole filter 2",
-        readpv="ODIN-PinFil:MC-Pne-02:ShtMsgTxt",
-    ),
     pinhole_filter_3=device(
         "nicos_ess.devices.epics.pva.shutter.EpicsShutter",
         description="Pinhole: Filter 3",
@@ -51,11 +36,6 @@ devices = dict(
         resetpv="ODIN-PinFil:MC-Pne-03:ShtErrRst",
         msgtxt="ODIN-PinFil:MC-Pne-03:ShtMsgTxt",
     ),
-    pinhole_filter_3_status=device(
-        "nicos_ess.devices.epics.pva.EpicsStringReadable",
-        description="Status of pinhole filter 3",
-        readpv="ODIN-PinFil:MC-Pne-03:ShtMsgTxt",
-    ),
     experiment_shutter=device(
         "nicos_ess.devices.epics.pva.shutter.EpicsShutter",
         description="Experiment Shutter",
@@ -63,11 +43,6 @@ devices = dict(
         readpv="ODIN-ExSht:MC-Pne-01:ShtAuxBits07",
         resetpv="ODIN-ExSht:MC-Pne-01:ShtErrRst",
         msgtxt="ODIN-ExSht:MC-Pne-01:ShtMsgTxt",
-    ),
-    experiment_shutter_status=device(
-        "nicos_ess.devices.epics.pva.EpicsStringReadable",
-        description="Status of the experiment shutter",
-        readpv="ODIN-ExSht:MC-Pne-01:ShtMsgTxt",
     ),
     # --- Motors: Pinhole slit set 1 (blades + centre & gap) ---
     pinhole_1_yp=device(
