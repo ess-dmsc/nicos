@@ -35,10 +35,10 @@ class FakeLokiDetectorMotion(LOKIDetectorMotion):
     }
 
     def doPreinit(self, mode):
-        pass
+        self._ps_bank = self._get_ps_bank()
 
     def doInit(self, mode):
-        self._ps_bank = self._get_ps_bank()
+        pass
 
     def _put_pv(self, pvparam, value, wait=False):
         self._record_fields[pvparam] = value
