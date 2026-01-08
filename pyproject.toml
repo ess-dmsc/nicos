@@ -30,7 +30,8 @@ dependencies = [
     "urllib3==1.26.20",
     "yuos-query",
     "platformdirs",
-    "resources"  # package is part of this workspace
+    "resources",  # package is part of this workspace
+    "importlib_metadata>=4.6;python_version<'3.10' and python_version>='3.6'",  # 3.10 brings recent-enough importlib.metadata    
 ]
 
 [build-system]
