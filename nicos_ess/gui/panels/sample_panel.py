@@ -32,18 +32,20 @@ class SamplePanel(PanelBase):
         self.parent = parent
         self.options = options
 
-        self.sample_table = self.build_sample_table()
+        self.sample_table = self.create_table_data()
         self.build_ui()
 
-    def build_sample_table(self):
+    def create_table_data(self):
         samples = {key: "" for key in SAMPLE_FIELDS}
         return samples
 
     def build_ui(self):
-        self.layout = QHBoxLayout(self)
+        layout = QVBoxLayout(self)
+
+        top_layout = QHBoxLayout()
         self.label = QLabel("Sample information")
 
-        self.table_layout = QVBoxLayout()
+        table_layout = QVBoxLayout()
         self.table = QTableWidget()
         for i, key in enumerate(self.sample_table.keys()):
             self.table.insertRow(i)
@@ -53,8 +55,8 @@ class SamplePanel(PanelBase):
         self.table.setSizeAdjustPolicy(QtWidgets.QAbstractScrollArea.AdjustToContents)
         self.table.horizontalHeader().setStretchLastSection(True)
         self.table.verticalHeader().setStretchLastSection(False)
-        self.table_layout.addWidget(self.table)
-        self.table_layout.addStretch(2)
+        table_layout.addWidget(self.table)
+        table_layout.addStretch(2)
 
         button_layout = QVBoxLayout()
         self.button_add = QPushButton("Add")
@@ -63,10 +65,28 @@ class SamplePanel(PanelBase):
         button_layout.addWidget(self.button_delete)
         button_layout.addStretch()
 
-        self.layout.addWidget(self.label, alignment=QtCore.Qt.AlignTop)
-        self.layout.addLayout(self.table_layout)
-        self.layout.addLayout(button_layout)
-        self.setLayout(self.layout)
+        top_layout.addWidget(self.label, alignment=QtCore.Qt.AlignTop)
+        top_layout.addLayout(table_layout)
+        top_layout.addLayout(button_layout)
+
+        bottom_layout = QHBoxLayout()
+        self.button_apply = QPushButton("Apply")
+        self.button_discard = QPushButton("Discard changes")
+        self.edits_warning = QLabel(
+            "Changes to the experiment proposal have not been applied!"
+        )
+
+        right_layout = QVBoxLayout()
+        right_layout.addWidget(self.edits_warning)
+        right_layout.addWidget(self.button_discard)
+        bottom_layout.addWidget(self.button_apply)
+        bottom_layout.addStretch()
+        bottom_layout.addLayout(right_layout)
+
+        layout.addLayout(top_layout)
+        layout.addLayout(bottom_layout)
+
+        self.setLayout(layout)
 
 
 #
