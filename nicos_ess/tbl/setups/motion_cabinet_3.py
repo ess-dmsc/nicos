@@ -29,11 +29,6 @@ devices = dict(
         pollinterval=0.5,
         maxage=None,
     ),
-    mc_pne_315_status=device(
-        "nicos_ess.devices.epics.pva.EpicsStringReadable",
-        description="Status of the motion control pneumatic axis #315",
-        readpv="TBL-TBL:MC-Pne-315:ShtMsgTxt",
-    ),
     mc_pne_316=device(
         "nicos_ess.devices.epics.pva.shutter.EpicsShutter",
         description="Motion control pneumatic axis #316",
@@ -45,11 +40,6 @@ devices = dict(
         monitor=True,
         pollinterval=0.5,
         maxage=None,
-    ),
-    mc_pne_316_status=device(
-        "nicos_ess.devices.epics.pva.EpicsStringReadable",
-        description="Status of the motion control pneumatic axis #316",
-        readpv="TBL-TBL:MC-Pne-316:ShtMsgTxt",
     ),
     mc_mtr_301=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",

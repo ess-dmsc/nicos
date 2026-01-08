@@ -19,11 +19,6 @@ devices = dict(
         pollinterval=0.5,
         maxage=None,
     ),
-    attenuator_1_status=device(
-        "nicos_ess.devices.epics.pva.EpicsStringReadable",
-        description="Status of the Attenuator Changer 1",
-        readpv="BIFRO-AttChg:MC-Pne-01:ShtMsgTxt",
-    ),
     attenuator_2=device(
         "nicos_ess.devices.epics.pva.shutter.EpicsShutter",
         description="Attenuator Changer 2",
@@ -35,11 +30,6 @@ devices = dict(
         pollinterval=0.5,
         maxage=None,
     ),
-    attenuator_2_status=device(
-        "nicos_ess.devices.epics.pva.EpicsStringReadable",
-        description="Status of the Attenuator Changer 2",
-        readpv="BIFRO-AttChg:MC-Pne-02:ShtMsgTxt",
-    ),
     attenuator_3=device(
         "nicos_ess.devices.epics.pva.shutter.EpicsShutter",
         description="Attenuator Changer 3",
@@ -50,11 +40,6 @@ devices = dict(
         monitor=True,
         pollinterval=0.5,
         maxage=None,
-    ),
-    attenuator_3_status=device(
-        "nicos_ess.devices.epics.pva.EpicsStringReadable",
-        description="Status of the Attenuator Changer 3",
-        readpv="BIFRO-AttChg:MC-Pne-03:ShtMsgTxt",
     ),
     cabinet_2_pressure_1=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",

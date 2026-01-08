@@ -9,9 +9,4 @@ devices = dict(
         resetpv="LOKI-WinGd1:MC-Pne-01:ShtErrRst",
         msgtxt="LOKI-WinGd1:MC-Pne-01:ShtMsgTxt",
     ),
-    window_guard_status=device(
-        "nicos_ess.devices.epics.pva.EpicsStringReadable",
-        description="Status of the window guard",
-        readpv="LOKI-WinGd1:MC-Pne-01:ShtMsgTxt",
-    ),
 )

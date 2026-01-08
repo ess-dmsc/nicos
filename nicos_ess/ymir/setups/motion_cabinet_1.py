@@ -11,11 +11,6 @@ devices = dict(
         pollinterval=0.5,
         maxage=None,
     ),
-    heavy_shutter_status=device(
-        "nicos_ess.devices.epics.pva.EpicsStringReadable",
-        description="Status of the heavy shutter",
-        readpv="YMIR-HvSht:MC-Pne-01:ShtMsgTxt",
-    ),
     filter_1=device(
         "nicos_ess.devices.epics.pva.shutter.EpicsShutter",
         description="Filter 1",
@@ -28,11 +23,6 @@ devices = dict(
         monitor=True,
         pva=True,
     ),
-    filter_1_status=device(
-        "nicos_ess.devices.epics.pva.EpicsStringReadable",
-        description="Status of the filter 1",
-        readpv="YMIR-Fil:MC-Pne-01:ShtMsgTxt",
-    ),
     filter_2=device(
         "nicos_ess.devices.epics.pva.shutter.EpicsShutter",
         description="Filter 2",
@@ -44,11 +34,6 @@ devices = dict(
         msgtxt="YMIR-Fil:MC-Pne-02:ShtMsgTxt",
         monitor=True,
         pva=True,
-    ),
-    filter_2_status=device(
-        "nicos_ess.devices.epics.pva.EpicsStringReadable",
-        description="Status of the filter 2",
-        readpv="YMIR-Fil:MC-Pne-02:ShtMsgTxt",
     ),
     cabinet_1_status=device(
         "nicos_ess.devices.epics.mbbi_direct.MBBIDirectStatus",
