@@ -58,7 +58,6 @@ nicos-daemon = "nicos.services.daemon.session:main"
 nicos-cache = "nicos.scripts.start_helper:main"
 nicos-poller = "nicos.scripts.start_helper:main"
 nicos-collector = "nicos.scripts.start_helper:main"
-nicos-gui = "nicos.scripts.start_helper:main"
 
 [project.optional-dependencies]
 gui = [
