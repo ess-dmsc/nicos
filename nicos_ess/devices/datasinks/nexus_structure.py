@@ -27,6 +27,7 @@ ALLOWED_INSTRUMENT_NAMES = [
     "nmx",
     "bifrost",
     "estia",
+    "beer",
     "freia",
     "",  # Empty string is necessary for non-instrument instances
 ]
