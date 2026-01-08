@@ -53,7 +53,7 @@ packages = ["nicos"]
 # the daemon can be called via a main function defined in the module:
 nicos-daemon = "nicos.services.daemon.session:main"
 # alternatively, one can call the old NICOS scripts via a helper tool that calls
-# the script corresponding to the name of the executable
+# the script corresponding to the name of the entry point
 nicos-cache = "nicos.scripts.start_helper:main"
 nicos-poller = "nicos.scripts.start_helper:main"
 nicos-collector = "nicos.scripts.start_helper:main"
