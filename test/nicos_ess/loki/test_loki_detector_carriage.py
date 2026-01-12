@@ -1,5 +1,4 @@
 from unittest.mock import MagicMock
-
 import pytest
 
 from nicos.core import LimitError, status
@@ -7,8 +6,8 @@ from nicos_ess.loki.devices.detector_motion import LOKIDetectorMotion
 
 session_setup = None
 
-class FakeLokiDetectorMotion(LOKIDetectorMotion):
 
+class FakeLokiDetectorMotion(LOKIDetectorMotion):
     position = 10
 
     _record_fields = {
@@ -36,7 +35,7 @@ class FakeLokiDetectorMotion(LOKIDetectorMotion):
         "dialvalue": 0,
         "miss": 0,
         "lowlimitswitch": 0,
-        "highlimitswitch": 100
+        "highlimitswitch": 100,
     }
 
     def doPreinit(self, mode):

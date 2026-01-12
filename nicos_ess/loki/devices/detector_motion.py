@@ -1,5 +1,3 @@
-from time import sleep
-
 from nicos import session
 from nicos.core import (
     Param,
@@ -66,7 +64,8 @@ class LOKIDetectorMotion(EpicsMotor):
         return True
 
     def doIsAllowed(self, pos):
-        """Hook method from the Device class to check if movement is allowed,
+        """
+        Hook method from the Device class to check if movement is allowed,
         by verifying if power supply is OFF.
 
         Parameters
