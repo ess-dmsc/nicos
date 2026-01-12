@@ -198,7 +198,7 @@ class AreaDetector(EpicsDevice, ImageChannelMixin, Measurable):
     def doPrepare(self):
         self._update_status(status.BUSY, "Preparing")
         self._update_status(status.OK, "")
-        self.arraydesc = self.arrayInfo()
+        self.arraydesc = self.arrayInfo()[0]
 
     def _update_status(self, new_status, message):
         self._current_status = new_status, message
@@ -233,7 +233,7 @@ class AreaDetector(EpicsDevice, ImageChannelMixin, Measurable):
 
     def arrayInfo(self):
         self.update_arraydesc()
-        return self.arraydesc
+        return tuple([self.arraydesc])
 
     def update_arraydesc(self):
         shape = self._get_pv("max_size_y"), self._get_pv("max_size_x")
@@ -252,12 +252,9 @@ class AreaDetector(EpicsDevice, ImageChannelMixin, Measurable):
             self, name, param, value, units, limits, severity, message, **kwargs
         )
 
-    def doIsCompleted(self):
-        _thread = createThread(f"get_image_{time.time_ns()}", self.get_image)
-
     def get_image(self):
         dataarray = self._get_pv("image_pv")
-        shape = self.arrayInfo().shape
+        shape = self.arrayInfo()[0].shape
         dataarray = dataarray.reshape(shape)
         self.putResult(LIVE, dataarray, time.time())
         self._last_update = time.monotonic()
@@ -628,7 +625,7 @@ class OrcaFlash4(AreaDetector):
 
     def doPrepare(self):
         AreaDetector.doPrepare(self)
-        
+
         # Set up external trigger
         self._put_pv("trigger_source", TriggerSource.EXTERNAL.value)
         self._put_pv("trigger_mode", TriggerMode.NORMAL.value)
@@ -636,7 +633,9 @@ class OrcaFlash4(AreaDetector):
         self._put_pv("trigger_global_exposure", TriggerGlobalExposure.DELAYED.value)
         self._put_pv("trigger_polarity", TriggerPolarity.POSITIVE.value)
         self._put_pv("trigger_connector", TriggerConnector.BNC.value)
-        self._put_pv("internal_trigger_handling", TriggerInternalHandling.SHORT_EXPOSURE.value)
+        self._put_pv(
+            "internal_trigger_handling", TriggerInternalHandling.SHORT_EXPOSURE.value
+        )
 
     def _set_custom_record_fields(self):
         AreaDetector._set_custom_record_fields(self)
@@ -664,7 +663,9 @@ class OrcaFlash4(AreaDetector):
         self._record_fields["trigger_delay"] = "TriggerDelay-S"
         self._record_fields["trigger_delay_rbv"] = "TriggerDelay-RB"
         self._record_fields["internal_trigger_handling"] = "InternalTriggerHandling-S"
-        self._record_fields["internal_trigger_handling_rbv"] = "InternalTriggerHandling-RB"
+        self._record_fields["internal_trigger_handling_rbv"] = (
+            "InternalTriggerHandling-RB"
+        )
         self._record_fields["topicpv"] = self.topicpv
         self._record_fields["sourcepv"] = self.sourcepv
 
@@ -897,48 +898,42 @@ class OrcaFlash4(AreaDetector):
             self._attached_watercooler_temperature.start(value)
 
     def time2pulses(self, time):
-        return round(14*time)
-        
+        return round(14 * time)
+
     def pulses2time(self, pulses):
-        return pulses/14
+        return pulses / 14
 
     def doReadAcquiretime(self):
         """
-        doReadAcquireperiod and doReadAcquiretime were chosen to be the same 
+        doReadAcquireperiod and doReadAcquiretime were chosen to be the same
         for Orca in NICOS because at ESS only this mode of operation is required
         (for now at least)
         """
-        return self.pulses2time(
-            self._get_pv("num_triggers_rbv")
-        )
+        return self.pulses2time(self._get_pv("num_triggers_rbv"))
 
     def doWriteAcquiretime(self, value):
         """
-        doWriteAcquiretime and doWriteAcquireperiod were chosen to be the same 
+        doWriteAcquiretime and doWriteAcquireperiod were chosen to be the same
         for Orca in NICOS because at ESS only this mode of operation is required
         (for now at least)
         """
-        self._put_pv("num_triggers", 
-                     self.time2pulses(value))
+        self._put_pv("num_triggers", self.time2pulses(value))
 
     def doReadAcquireperiod(self):
         """
-        doReadAcquireperiod and doReadAcquiretime were chosen to be the same 
+        doReadAcquireperiod and doReadAcquiretime were chosen to be the same
         for Orca in NICOS because at ESS only this mode of operation is required
         (for now at least)
         """
-        return self.pulses2time(
-            self._get_pv("num_triggers_rbv")
-        )
+        return self.pulses2time(self._get_pv("num_triggers_rbv"))
 
     def doWriteAcquireperiod(self, value):
         """
-        doWriteAcquiretime and doWriteAcquireperiod were chosen to be the same 
+        doWriteAcquiretime and doWriteAcquireperiod were chosen to be the same
         for Orca in NICOS because at ESS only this mode of operation is required
         (for now at least)
         """
-        self._put_pv("num_triggers", 
-                     self.time2pulses(value))
+        self._put_pv("num_triggers", self.time2pulses(value))
 
 
 class AreaDetectorCollector(Detector):
@@ -971,7 +966,7 @@ class AreaDetectorCollector(Detector):
     def get_array_size(self, topic, source):
         for area_detector in self._attached_images:
             if (topic, source) == area_detector.get_topic_and_source():
-                return area_detector.arrayInfo().shape
+                return area_detector.arrayInfo()[0].shape
         self.log.error(
             "No array size was found for area detector with topic %s and source %s.",
             topic,
@@ -1011,7 +1006,7 @@ class AreaDetectorCollector(Detector):
         return None
 
     def arrayInfo(self):
-        return tuple(ch.arrayInfo() for ch in self._attached_images)
+        return tuple(ch.arrayInfo()[0] for ch in self._attached_images)
 
     def doTime(self, preset):
         return 0
