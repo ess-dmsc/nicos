@@ -8,6 +8,7 @@ import numpy as np
 from nicos import session
 from nicos.core import (
     LIVE,
+    POLLER,
     SIMULATION,
     ArrayDesc,
     CacheError,
@@ -19,9 +20,8 @@ from nicos.core import (
     multiStatus,
     oneof,
     status,
-    usermethod,
     tupleof,
-    POLLER,
+    usermethod,
 )
 from nicos.devices.generic import Detector, ImageChannelMixin, ManualSwitch
 from nicos.utils import byteBuffer, createThread
@@ -304,7 +304,7 @@ class AreaDetector(ImageChannelMixin, Measurable):
     def doPrepare(self):
         self._update_status(status.BUSY, "Preparing")
         self._update_status(status.OK, "")
-        self.arraydesc = self.arrayInfo()
+        self.arraydesc = self.arrayInfo()[0]
 
     def _update_status(self, new_status, message):
         self._cache.put(self._name, "status", self.curstatus, time.time())
@@ -322,7 +322,7 @@ class AreaDetector(ImageChannelMixin, Measurable):
 
     def arrayInfo(self):
         self.update_arraydesc()
-        return self.arraydesc
+        return tuple([self.arraydesc])
 
     def update_arraydesc(self):
         shape = self.sizey, self.sizex
@@ -331,9 +331,6 @@ class AreaDetector(ImageChannelMixin, Measurable):
         self._plot_update_delay = (shape[0] * shape[1]) / 2097152.0
         data_type = np.uint16
         self.arraydesc = ArrayDesc(self.name, shape=shape, dtype=data_type)
-
-    def doIsCompleted(self):
-        _thread = createThread(f"get_image_{time.time_ns()}", self.get_image)
 
     def on_image_callback(self):
         status, message = self._ad_simulator._status
@@ -344,7 +341,7 @@ class AreaDetector(ImageChannelMixin, Measurable):
 
     def get_image(self):
         dataarray = self._ad_simulator._image
-        shape = self.arrayInfo().shape
+        shape = self.arrayInfo()[0].shape
         dataarray = dataarray.reshape(shape)
         self.putResult(LIVE, dataarray, time.time())
         self._last_update = time.monotonic()
@@ -397,7 +394,6 @@ class AreaDetector(ImageChannelMixin, Measurable):
 
     def doStart(self, **preset):
         num_images = self._lastpreset.get("n", None)
-
         if num_images == 0:
             return
         elif not num_images or num_images < 0:
@@ -407,7 +403,6 @@ class AreaDetector(ImageChannelMixin, Measurable):
         elif num_images > 1:
             self.imagemode = "multiple"
             self.numimages = num_images
-
         self.doAcquire()
 
     def doAcquire(self):
@@ -517,9 +512,9 @@ class AreaDetectorCollector(Detector):
     def get_array_size(self, topic, source):
         for area_detector in self._attached_images:
             if (topic, source) == area_detector.get_topic_and_source():
-                return area_detector.arrayInfo().shape
+                return area_detector.arrayInfo()[0].shape
         self.log.error(
-            "No array size was found for area detector " "with topic %s and source %s.",
+            "No array size was found for area detector with topic %s and source %s.",
             topic,
             source,
         )
@@ -557,7 +552,7 @@ class AreaDetectorCollector(Detector):
         return None
 
     def arrayInfo(self):
-        return tuple(ch.arrayInfo() for ch in self._attached_images)
+        return tuple(ch.arrayInfo()[0] for ch in self._attached_images)
 
     def doTime(self, preset):
         return 0
