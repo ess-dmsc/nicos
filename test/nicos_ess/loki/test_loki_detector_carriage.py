@@ -1,3 +1,5 @@
+from unittest.mock import MagicMock
+
 import pytest
 
 from nicos.core import LimitError, status
@@ -32,6 +34,9 @@ class FakeLokiDetectorMotion(LOKIDetectorMotion):
         "donemoving": True,
         "value": 0,
         "dialvalue": 0,
+        "miss": 0,
+        "lowlimitswitch": 0,
+        "highlimitswitch": 100
     }
 
     def doPreinit(self, mode):
@@ -46,17 +51,28 @@ class FakeLokiDetectorMotion(LOKIDetectorMotion):
     def _get_pv(self, pvparam, as_string=False):
         return self._record_fields[pvparam]
 
+    def _get_cached_pv_or_ask(self, param, as_string=False):
+        return self._get_pv(param, as_string)
+
 
 class TestLokiDetectorCarriage:
+    @staticmethod
+    def prepare_stubbing_motor(motor, monkeypatch):
+        motor._lock = MagicMock()
+        motor._lock.__enter__.return_value = None
+        motor._lock.__exit__.return_value = False
+        ok_status = status.OK, ""
+        monkeypatch.setattr(motor, "_get_alarm_status_and_msg", lambda: ok_status)
 
     @pytest.fixture(autouse=True)
-    def prepare(self, session):
+    def prepare(self, session, monkeypatch):
         self.session = session
         self.session.loadSetup("ess_power_supply", {})
         self.session.loadSetup("ess_loki_detector_carriage", {})
         self.ps_channel = self.session.getDevice("ps_channel_1")
         self.ps_bank = self.session.getDevice("ps_bank_hv")
         self.motor = self.session.getDevice("restricted_motor")
+        self.prepare_stubbing_motor(self.motor, monkeypatch)
         yield
         self.ps_channel._record_fields = {
             "voltage_monitor": 0.0,
@@ -71,9 +87,7 @@ class TestLokiDetectorCarriage:
         voltage = 0.0
         self.ps_bank.enable()
         self.ps_bank.disable()
-        print(self.ps_channel.doReadVoltage_Monitor())
         self.ps_channel._put_pv("voltage_monitor", voltage)
-        print(self.ps_channel.doReadVoltage_Monitor())
         self.motor.move(20)
 
     def test_movement_allowed_if_channel_off_and_voltage_below_threshold(self):
@@ -97,6 +111,16 @@ class TestLokiDetectorCarriage:
 
     def test_movement_blocked_if_voltage_above_threshold(self):
         voltage = self.motor.voltage_off_threshold + 0.1
+        self.ps_bank.enable()
+        self.ps_bank.disable()
+        self.ps_channel._put_pv("voltage_monitor", voltage)
+        with pytest.raises(LimitError):
+            self.motor.move(20)
+
+    def test_movement_blocked_if_status_not_ok(self, monkeypatch):
+        voltage = self.motor.voltage_off_threshold - 0.1
+        error_status = status.ERROR, "some error message"
+        monkeypatch.setattr(type(self.ps_bank), "doStatus", lambda: error_status)
         self.ps_bank.enable()
         self.ps_bank.disable()
         self.ps_channel._put_pv("voltage_monitor", voltage)
