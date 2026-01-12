@@ -6,5 +6,9 @@ devices = dict(
         motorpv="IOC:m1",
         ps_bank_name="ps_bank_hv",
         voltage_off_threshold=5.0,
+        has_powerauto=False,
+        has_msgtxt=False,
+        has_errorbit=False,
+        has_reseterror=False,
     ),
 )
