@@ -302,3 +302,27 @@ Check that the RedisTimeSeries module is loaded correctly:
 redis-cli MODULE LIST
 ```
 ---
+
+## NICOS SVG SYNOPTIC
+
+### set up
+
+in your guiconfig.py, add a nicos panel as below:
+
+```python
+        (
+            "Synoptic",
+            vsplit(
+                panel("nicos_ess.gui.panels.svgsynoptic.SynopticPanel",
+                      html="/home/alice/projects/nicos-svgsynoptic/examples/nicos_example/example.html",
+                      models="/home/alice/projects/nicos-svgsynoptic/examples/nicos_example/models.json"),
+                setups="sans",
+            ),
+        ),
+```
+
+The options "html" is mandatory to locate the web page that includes the svg and the css. At this moment, an absolute path is required.
+
+The "models" option allows to associate alias with the real NICOS device which can be useful to change the device name without to go inside the svg file. At this moment, an absolute path is required.
+
+

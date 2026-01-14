@@ -26,9 +26,11 @@ main_window = docked(
             ),
         ),
         (
-            "Synoptic",
+            "SynopticWidget",
             vsplit(
-                panel("nicos_ess.gui.panels.svgsynoptic.SynopticPanel"),
+                panel("nicossynoptic.nicossynopticwidget.NicosSynopticPanel",
+                      modelFile="/Users/vincenthardion/projects/nicos-svgsynoptic/examples/nicos_example/example.html",
+                      configFile="/Users/vincenthardion/projects/nicos-svgsynoptic/examples/nicos_example/models.json"),
                 setups="sans",
             ),
         ),
@@ -152,3 +154,8 @@ tools = [
         runatstartup=False,
     ),
 ]
+
+options = {
+    # "facility": "ess",
+    # "mainwindow_class": "nicos_ess.gui.mainwindow.MainWindow",
+}

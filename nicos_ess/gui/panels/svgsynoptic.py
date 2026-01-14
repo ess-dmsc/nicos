@@ -63,8 +63,12 @@ class SynopticPanel(Panel):
         # svgsynoptic library's path, not from the module's path.
         #path = os.path.dirname(__file__)
         path = "/Users/vincenthardion/projects/nicos-svgsynoptic/examples/nicos_example/"
-        self.synoptic_widget.setConfig(os.path.join(path, "models.json"))
-        self.synoptic_widget.setModel(os.path.join(path, "example.html"))
+        
+        if "models" in options:
+            self.synoptic_widget.setConfig(options.get("models",""))
+
+        if "html" in options:
+            self.synoptic_widget.setModel(options.get("html",""))
 
         self.initialize_ui()
         self.build_ui()

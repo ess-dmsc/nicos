@@ -131,7 +131,7 @@ class MainWindow(DlgUtils, QMainWindow):
     ui = "main.ui"
     default_facility_logo = None
 
-    def __init__(self, log, gui_conf, viewonly=False, tunnel=""):
+    def __init__(self, log, gui_conf, viewonly=False, tunnel="", user="" ):
         QMainWindow.__init__(self)
         DlgUtils.__init__(self, "NICOS")
         colors.init_palette(self.palette())

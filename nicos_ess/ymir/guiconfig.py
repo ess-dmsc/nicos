@@ -35,7 +35,7 @@ main_window = docked(
                         ),
                         (
                             "Synoptic",
-                            panel("nicos_ess.gui.panels.synoptic.SynopticPanel"),
+                            panel("nicos_ess.gui.panels.svgsynoptic.SynopticPanel"),
                         ),
                         (
                             "Script Status",
