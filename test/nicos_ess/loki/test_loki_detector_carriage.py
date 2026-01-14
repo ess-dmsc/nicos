@@ -1,5 +1,5 @@
-from unittest.mock import MagicMock
 import pytest
+import threading
 
 from nicos.core import LimitError, status
 from nicos_ess.loki.devices.detector_motion import LOKIDetectorMotion
@@ -39,6 +39,7 @@ class FakeLokiDetectorMotion(LOKIDetectorMotion):
     }
 
     def doPreinit(self, mode):
+        self._lock = threading.Lock()
         self._ps_bank = self._get_ps_bank()
 
     def doInit(self, mode):
@@ -55,14 +56,6 @@ class FakeLokiDetectorMotion(LOKIDetectorMotion):
 
 
 class TestLokiDetectorCarriage:
-    @staticmethod
-    def prepare_stubbing_motor(motor, monkeypatch):
-        motor._lock = MagicMock()
-        motor._lock.__enter__.return_value = None
-        motor._lock.__exit__.return_value = False
-        ok_status = status.OK, ""
-        monkeypatch.setattr(motor, "_get_alarm_status_and_msg", lambda: ok_status)
-
     @pytest.fixture(autouse=True)
     def prepare(self, session, monkeypatch):
         self.session = session
@@ -71,7 +64,9 @@ class TestLokiDetectorCarriage:
         self.ps_channel = self.session.getDevice("ps_channel_1")
         self.ps_bank = self.session.getDevice("ps_bank_hv")
         self.motor = self.session.getDevice("restricted_motor")
-        self.prepare_stubbing_motor(self.motor, monkeypatch)
+        monkeypatch.setattr(
+            self.motor, "_get_alarm_status_and_msg", lambda: (status.OK, "")
+        )
         yield
         self.ps_channel._record_fields = {
             "voltage_monitor": 0.0,
@@ -118,7 +113,7 @@ class TestLokiDetectorCarriage:
 
     def test_movement_blocked_if_status_not_ok(self, monkeypatch):
         voltage = self.motor.voltage_off_threshold - 0.1
-        error_status = status.ERROR, "some error message"
+        error_status = (status.ERROR, "some error message")
         monkeypatch.setattr(type(self.ps_bank), "doStatus", lambda: error_status)
         self.ps_bank.enable()
         self.ps_bank.disable()
