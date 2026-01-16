@@ -1,18 +1,42 @@
-# ruff: noqa: F821
-description = "Live data reduction."
-
-KAFKA_BROKERS_YMIR = [
-    "10.100.4.15:8093",
-    "10.100.4.17:8093",
-    "10.100.5.29:8093",
-]
+description = "The livedata interface for dream."
 
 devices = dict(
-    livedata=device(
-        "nicos_ess.devices.kafka.kafka_readable.Da00Readable",
-        description="The DRAM live data reduction.",
-        brokers=KAFKA_BROKERS_YMIR,  # configdata("config.KAFKA_BROKERS"),
+    monitor1_current=device(
+        "nicos_ess.devices.datasources.livedata.DataChannel",
+        description="Sliding time window monitor",
+        source_name="monitor1/monitor_data/current",
+        type="counter",
+    ),
+    monitor1_cumulative=device(
+        "nicos_ess.devices.datasources.livedata.DataChannel",
+        description="Accumulated monitor",
+        source_name="monitor1/monitor_data/cumulative",
+        type="counter",
+    ),
+    monitor2_current=device(
+        "nicos_ess.devices.datasources.livedata.DataChannel",
+        description="Sliding time window monitor",
+        source_name="monitor2/monitor_data/current",
+        type="counter",
+    ),
+    monitor2_cumulative=device(
+        "nicos_ess.devices.datasources.livedata.DataChannel",
+        description="Accumulated monitor",
+        source_name="monitor2/monitor_data/cumulative",
+        type="counter",
+    ),
+    livedata_collector=device(
+        "nicos_ess.devices.datasources.livedata.LiveDataCollector",
+        description="The livedata detector collector",
+        brokers=configdata("config.KAFKA_BROKERS"),
         topic=["dream_livedata_data"],
-        source_name="some_source",
+        command_topic="dream_livedata_commands",
+        others=[
+            "monitor1_current",
+            "monitor1_cumulative",
+            "monitor2_current",
+            "monitor2_cumulative"
+            ],
+        schema="da00",
     ),
 )
