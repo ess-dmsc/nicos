@@ -1,22 +1,22 @@
 description = "The livedata interface for dream."
 
 devices = dict(
-    monitor1_current=device(
+    channel_1=device(
         "nicos_ess.devices.datasources.livedata.DataChannel",
         description="Sliding time window monitor",
         type="counter",
     ),
-    monitor1_cumulative=device(
+    channel_2=device(
         "nicos_ess.devices.datasources.livedata.DataChannel",
         description="Accumulated monitor",
         type="counter",
     ),
-    monitor2_current=device(
+    channel_3=device(
         "nicos_ess.devices.datasources.livedata.DataChannel",
         description="Sliding time window monitor",
         type="counter",
     ),
-    monitor2_cumulative=device(
+    channel_4=device(
         "nicos_ess.devices.datasources.livedata.DataChannel",
         description="Accumulated monitor",
         type="counter",
@@ -30,10 +30,10 @@ devices = dict(
         responses_topics=["dream_livedata_responses"],
         commands_topic="dream_livedata_commands",
         others=[
-            "monitor1_current",
-            "monitor1_cumulative",
-            "monitor2_current",
-            "monitor2_cumulative"
+            "channel_1",
+            "channel_2",
+            "channel_3",
+            "channel_4"
             ],
     ),
 )
