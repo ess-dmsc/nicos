@@ -4,39 +4,36 @@ devices = dict(
     monitor1_current=device(
         "nicos_ess.devices.datasources.livedata.DataChannel",
         description="Sliding time window monitor",
-        source_name="monitor1/monitor_data/current",
         type="counter",
     ),
     monitor1_cumulative=device(
         "nicos_ess.devices.datasources.livedata.DataChannel",
         description="Accumulated monitor",
-        source_name="monitor1/monitor_data/cumulative",
         type="counter",
     ),
     monitor2_current=device(
         "nicos_ess.devices.datasources.livedata.DataChannel",
         description="Sliding time window monitor",
-        source_name="monitor2/monitor_data/current",
         type="counter",
     ),
     monitor2_cumulative=device(
         "nicos_ess.devices.datasources.livedata.DataChannel",
         description="Accumulated monitor",
-        source_name="monitor2/monitor_data/cumulative",
         type="counter",
     ),
     livedata_collector=device(
         "nicos_ess.devices.datasources.livedata.LiveDataCollector",
         description="The livedata detector collector",
         brokers=configdata("config.KAFKA_BROKERS"),
-        topic=["dream_livedata_data"],
-        command_topic="dream_livedata_commands",
+        data_topics=["dream_livedata_data"],
+        status_topics=["dream_livedata_heartbeat"],
+        responses_topics=["dream_livedata_responses"],
+        commands_topic="dream_livedata_commands",
         others=[
             "monitor1_current",
             "monitor1_cumulative",
             "monitor2_current",
             "monitor2_cumulative"
             ],
-        schema="da00",
     ),
 )
