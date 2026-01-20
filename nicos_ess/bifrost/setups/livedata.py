@@ -37,7 +37,7 @@ devices = dict(
     ),
     livedata_collector=device(
         "nicos_ess.devices.datasources.livedata.LiveDataCollector",
-        brokers=configdata["config.KAFKA_BROKERS"],
+        brokers=configdata("config.KAFKA_BROKERS"),
         data_topics=["bifrost_livedata_data"],
         status_topics=["bifrost_livedata_heartbeat"],
         responses_topics=["bifrost_livedata_responses"],
