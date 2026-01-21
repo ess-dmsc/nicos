@@ -1,19 +1,9 @@
-from nicos.core import SIMULATION, Moveable, Override, Param, pvname, status, usermethod
+from nicos.core import SIMULATION, Moveable, Override, Param, status, usermethod
 from nicos.devices.abstract import CanReference
-from nicos_ess.devices.epics.pva.epics_devices import EpicsParameters
+from nicos.devices.epics.pva import EpicsDevice
 
 
-class CetoniPumpController(EpicsParameters, CanReference, Moveable):
-    """
-    A device for controlling a Cetoni syringe pump
-
-     The device:
-      - exposes the mapped commands: start / stop / purge / pause / resume
-      - reads the current textual *state* from the attached `status` device
-      - reads error text from `message_pv` (non-empty => ERROR)
-      - writes to start/stop/purge/pause PVs as before
-    """
-
+class CetoniPump(EpicsDevice, CanReference, Moveable):
     parameters = {
         "pvroot": Param(
             "The root of the PV.",
@@ -46,6 +36,7 @@ class CetoniPumpController(EpicsParameters, CanReference, Moveable):
         "writepv": Override(mandatory=False, userparam=False, settable=False),
         "unit": Override(mandatory=False, settable=False, default=""),
         "fmtstr": Override(default="%d"),
+        "mapping": Override(mandatory=False, settable=False, userparam=False),
     }
 
     def doPreinit(self, mode):
@@ -74,7 +65,7 @@ class CetoniPumpController(EpicsParameters, CanReference, Moveable):
     def doInit(self, mode):
         if mode == SIMULATION:
             return
-        Moveable.doInit(self, mode)
+        EpicsDevice.doInit(self, mode)
 
     def _get_pv_name(self, pvparam):
         return f"{self.pvroot}{self._record_fields[pvparam]}"
