@@ -1,4 +1,4 @@
-from nicos.core import SIMULATION, Moveable, Override, Param, status, usermethod
+from nicos.core import SIMULATION, Moveable, Override, Param, pvname, status, usermethod
 from nicos.devices.abstract import CanReference
 from nicos.devices.epics.pva import EpicsDevice
 
