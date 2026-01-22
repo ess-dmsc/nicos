@@ -25,6 +25,10 @@ dev = [
 # `nicos_ess` depends on `nicos`, which should be installed from this workspace:
 nicos = { workspace = true }
 
+# Define an entry point that allows to register this module as NICOS plugin.
+[project.entry-points."nicos.plugins"]
+ESS = "nicos_ess"
+
 [project.scripts]
 # Define package's entry points for command-line interfaces. Requires a function
 # to call which will be wrapped into a script.
