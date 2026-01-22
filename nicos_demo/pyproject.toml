@@ -1,9 +1,8 @@
 [project]
 name = "nicos_demo"
-version = "4.5.6"
 description = "NICOS Demonstration"
 requires-python = ">=3.9"
-# dynamic = ["version"]
+dynamic = ["version"]
 
 [project.optional-dependencies]
 gui = [
@@ -33,3 +32,5 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["nicos_demo"]
 
+[tool.hatch.version]
+source = "uv-dynamic-versioning"

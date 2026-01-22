@@ -1,9 +1,8 @@
 [project]
 name = "nicos_ess"
-version = "4.5.6"
 description = "NICOS Customizations and Extensions for the European Spallation Source (ESS)"
 requires-python = ">=3.9"
-# dynamic = ["version"]
+dynamic = ["version"]
 dependencies = [
     "confluent-kafka==2.4.0",
     "ess-streaming-data-types>=0.26.1",
@@ -49,3 +48,5 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["nicos_ess"]
 
+[tool.hatch.version]
+source = "uv-dynamic-versioning"
