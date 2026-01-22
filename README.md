@@ -1,5 +1,50 @@
 # NICOS
 
+## Building the NICOS core and plug-in packages
+
+- Install `uv` ([see the uv installation instructions](https://docs.astral.sh/uv/getting-started/installation/)
+)
+- run `uv build` from the package root directory to build (only) the core package.
+- run `uv build --package <name>` to build a specific package, e.g. `nicos_demo`.
+- run `uv build --all-packages` to build all available packages.
+
+The resulting source tarball and wheel files will be located in the `dist` directory.
+
+## Package installation
+
+### Create and activate a virtual environment
+
+This can be done most conveniently via `uv`:
+
+``` bash
+uv venv --python 3.9 [venv_dir]
+```
+
+Choose the Python version according to your needs.
+
+Then activate the environment: `source [venv_dir]/bin/activate`.
+
+### Install NICOS core and its dependencies
+
+Run `uv pip install` and specify the wheel created when building NICOS core:
+
+``` bash
+uv pip install [path-to-the-whl] 
+```
+
+### Configure NICOS
+
+Place the NICOS configuration file (`nicos.conf`) of your choice into the `nicos` directory in your standard user configuration path.
+This particular path differs between platforms: on GNU/Linux systems, this would be `~/.config/nicos/nicos.cfg`.
+
+### Run the NICOS components
+
+After the installation, `nicos-deamon`, `nicos-poller` and `nicos-collector` commands are available once the virtual environment has been activated.
+
+The configuration file is expected to be found in the user's configuration directory, e.g. `~/.config/nicos` on GNU/Linux systems.
+
+`nicos-gui` will be available but will require the installation of the `nicos-ess` package to function properly.
+
 ## Installing the Server Locally
 
 To set up the NICOS server on your local machine, follow these steps.
