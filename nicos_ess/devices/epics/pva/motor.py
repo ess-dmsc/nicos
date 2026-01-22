@@ -889,6 +889,25 @@ class SmaractPiezoMotor(EpicsMotor):
             volatile=True,
             userparam=True,
         ),
+        "has_extrefsrc": Param(
+            "Position feedback can be given by both " \
+            "External and Internal if true, Internal only otherwise.",
+            type=bool,
+            default=True,
+            mandatory=True,
+            settable=False,
+            userparam=False,
+        ),
+        "positionrefsrc": Param(
+            "Source of position feedback." \
+            "Only available when has_extrefsrc=True",
+            type=oneof("Internal", "External"),
+            default="Internal",
+            mandatory=False,
+            settable=True,
+            userparam=True,
+            volatile=True,
+        ),
     }
 
     parameter_overrides = {
@@ -923,7 +942,6 @@ class SmaractPiezoMotor(EpicsMotor):
             "description": RecordInfo("", ".DESC", RecordType.VALUE),
             "monitor_deadband": RecordInfo("", ".MDEL", RecordType.VALUE),
             "maxspeed": RecordInfo("", ".VMAX", RecordType.VALUE),
-            "minspeed": RecordInfo("", ".VBAS", RecordType.VALUE),
             "donemoving": RecordInfo("", ".DMOV", RecordType.STATUS),
             "moving": RecordInfo("", ".MOVN", RecordType.STATUS),
             "miss": RecordInfo("", ".MISS", RecordType.STATUS),
@@ -933,13 +951,14 @@ class SmaractPiezoMotor(EpicsMotor):
             "lowlimitswitch": RecordInfo("", ".LLS", RecordType.STATUS),
             "highlimitswitch": RecordInfo("", ".HLS", RecordType.STATUS),
             "msgtxt": RecordInfo("", "-MsgTxt", RecordType.STATUS),
-            "openloop": RecordInfo("", "OpenLoop-Cmd", RecordType.VALUE),
-            "openloop_rb": RecordInfo("", "OpenLoop-RB", RecordType.VALUE),
-            "stepfrequency": RecordInfo("", "StepFreq-SP", RecordType.VALUE),
-            "stepsizeforward": RecordInfo("", "StepSizeFwd-SP", RecordType.VALUE),
-            "stepsizereverse": RecordInfo("", "StepSizeRev-SP", RecordType.VALUE),
-            "mclfrequency": RecordInfo("", "MaxCtrlLFreq-SP", RecordType.VALUE),
-            "mclfrequency_rb": RecordInfo("", "MaxCtrlLFreq-RB", RecordType.VALUE),
+            "openloop": RecordInfo("", "OpenLoop", RecordType.VALUE),
+            "openloop_rb": RecordInfo("", "OpenLoop", RecordType.VALUE),
+            "stepfrequency": RecordInfo("", "StepFreq", RecordType.VALUE),
+            "stepsizeforward": RecordInfo("", "StepSizeFwd", RecordType.VALUE),
+            "stepsizereverse": RecordInfo("", "StepSizeRev", RecordType.VALUE),
+            "mclfrequency": RecordInfo("", "MaxCtrlLFreq", RecordType.VALUE),
+            "mclfrequency_rb": RecordInfo("", "MaxCtrlLFreq", RecordType.VALUE),
+            "positionrefsrc": RecordInfo("", "PositionRefSrc", RecordType.VALUE),
         }
         self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
         # Check PV exists
@@ -947,6 +966,9 @@ class SmaractPiezoMotor(EpicsMotor):
 
         if not self.has_msgtxt:
             del self._record_fields["msgtxt"]
+
+        if not self.has_extrefsrc:
+            del self._record_fields["positionrefsrc"]
 
     def doReadOpenloop(self):
         return bool(self._get_cached_pv_or_ask("openloop_rb"))
@@ -985,3 +1007,17 @@ class SmaractPiezoMotor(EpicsMotor):
         if value < 0:
             raise ValueError("MCL frequency must be non-negative.")
         self._put_pv("mclfrequency", value)
+
+    def doReadPositionrefsrc(self):
+        external = (
+            self.has_extrefsrc
+            and self._get_cached_pv_or_ask("positionrefsrc")
+        )
+        return "External" if external else "Internal"
+
+    def doWritePositionrefsrc(self, value):
+        if not self.has_extrefsrc:
+            raise IndexError("There is only one feedback source" \
+            " (Internal) set for this system (has_extrefsrc=False)")
+
+        self._put_pv("positionrefsrc", value)
