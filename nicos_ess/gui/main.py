@@ -6,13 +6,20 @@ import os
 import sys
 import traceback
 from os import path
+from pathlib import Path
 
 from nicos import config
 from nicos.clients.base import ConnectionData
 from nicos.clients.gui.config import processGuiConfig
 from nicos.clients.gui.dialogs.instr_select import InstrSelectDialog
 from nicos.clients.gui.utils import DebugHandler
-from nicos.guisupport.qt import QApplication
+
+try:
+    from nicos.guisupport.qt import QApplication
+except ImportError:
+    print(f"Please install 'nicos_ess[gui]' to use this command.")
+    sys.exit(0)
+import nicos_ess
 from nicos.protocols.daemon.classic import DEFAULT_PORT
 from nicos.utils import importString, parseConnectionString
 from nicos.utils.loggers import (
@@ -74,7 +81,7 @@ def parseargs():
     return parser.parse_args()
 
 
-def main(argv):
+def main(_argv):
     global log  # pylint: disable=global-statement
 
     userpath = path.join(path.expanduser("~"), ".config", "nicos")
@@ -96,7 +103,7 @@ def main(argv):
 
     sys.excepthook = log_unhandled
 
-    app = QApplication(argv, organizationName="nicos", applicationName="gui")
+    app = QApplication(sys.argv, organizationName="nicos", applicationName="gui")
 
     opts = parseargs()
 
@@ -129,7 +136,7 @@ def main(argv):
     gui_conf.stylefile = ""
 
     if gui_conf.options.get("facility") in ["ess", "sinq"]:
-        gui_conf.stylefile = f"{config.nicos_root}" f"/nicos_ess/gui/guiconfig.qss"
+        gui_conf.stylefile = Path(Path(nicos_ess.__file__).parent, f"gui/guiconfig.qss")
 
     stylefiles = [
         path.join(userpath, "style-%s.qss" % sys.platform),
