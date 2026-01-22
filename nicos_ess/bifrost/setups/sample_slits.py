@@ -10,6 +10,7 @@ devices = dict(
         has_msgtxt=False,
         has_errorbit=False,
         has_reseterror=False,
+        has_extrefsrc=True,
         monitor_deadband=0.01,
     ),
     sample_slit_y_p_pot=device(
@@ -25,6 +26,7 @@ devices = dict(
         has_msgtxt=False,
         has_errorbit=False,
         has_reseterror=False,
+        has_extrefsrc=True,
         monitor_deadband=0.01,
     ),
     sample_slit_y_m_pot=device(
@@ -48,6 +50,7 @@ devices = dict(
         has_msgtxt=False,
         has_errorbit=False,
         has_reseterror=False,
+        has_extrefsrc=True,
         monitor_deadband=0.01,
     ),
     sample_slit_z_p_pot=device(
@@ -63,6 +66,7 @@ devices = dict(
         has_msgtxt=False,
         has_errorbit=False,
         has_reseterror=False,
+        has_extrefsrc=True,
         monitor_deadband=0.01,
     ),
     sample_slit_z_m_pot=device(
