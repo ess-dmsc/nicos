@@ -25,7 +25,7 @@ devices = dict(
     ),
     rmm1_ref_clock_freq_ok=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
-        description="The reference clock frequency status",
+        description="The status of the frequency of the reference clock",
         readpv="{}RefClkFreqOk-R".format(pv_root_1),
     ),
     rmm1_mrf_message=device(
@@ -35,7 +35,7 @@ devices = dict(
     ),
     rmm1_timing_mode_source=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
-        description="The source timing mode",
+        description="The mode of timing source (local/external/mrf)",
         readpv="{}TimingModeSrc-R".format(pv_root_1),
     ),
     rmm1_timing_mode_sync=device(
