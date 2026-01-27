@@ -28,7 +28,7 @@ devices = dict(
     ),
     monitor1_high_voltage=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
-        description="The high voltage of the monitor detector",
+        description="The value of the high voltage applied to the monitor detector",
         readpv="DREAM-BM:NDet-CDTIBM-001:HighVoltage-R",
         writepv="DREAM-BM:NDet-CDTIBM-001:HighVoltage-S",
         unit="V",
@@ -36,7 +36,7 @@ devices = dict(
     ),
     monitor1_high_voltage_status=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
-        description="The high voltage status of the monitor detector",
+        description="The status of the high voltage of the monitor detector",
         readpv="DREAM-BM:NDet-CDTIBM-001:HighVoltageStatus-R",
     ),
     monitor1_high_voltage_start_ramp=device(
