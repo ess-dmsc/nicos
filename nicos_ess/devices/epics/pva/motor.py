@@ -893,7 +893,7 @@ class SmaractPiezoMotor(EpicsMotor):
             "Position feedback can be given by both " \
             "External and Internal if true, Internal only otherwise.",
             type=bool,
-            default=True,
+            default=False,
             mandatory=True,
             settable=False,
             userparam=False,
