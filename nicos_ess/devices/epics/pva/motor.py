@@ -889,18 +889,8 @@ class SmaractPiezoMotor(EpicsMotor):
             volatile=True,
             userparam=True,
         ),
-        "has_extrefsrc": Param(
-            "Position feedback can be given by both " \
-            "External and Internal if true, Internal only otherwise.",
-            type=bool,
-            default=False,
-            mandatory=True,
-            settable=False,
-            userparam=False,
-        ),
         "positionrefsrc": Param(
-            "Source of position feedback." \
-            "Only available when has_extrefsrc=True",
+            "Source of position feedback.",
             type=oneof("Internal", "External"),
             default="Internal",
             mandatory=False,
@@ -966,9 +956,6 @@ class SmaractPiezoMotor(EpicsMotor):
         if not self.has_msgtxt:
             del self._record_fields["msgtxt"]
 
-        if not self.has_extrefsrc:
-            del self._record_fields["positionrefsrc"]
-
     def doReadOpenloop(self):
         return bool(self._get_cached_pv_or_ask("openloop_rb"))
 
@@ -1005,15 +992,13 @@ class SmaractPiezoMotor(EpicsMotor):
         self._put_pv("mclfrequency", value)
 
     def doReadPositionrefsrc(self):
-        external = (
-            self.has_extrefsrc
-            and self._get_cached_pv_or_ask("positionrefsrc")
-        )
-        return "External" if external else "Internal"
+        try:
+            return "External" if self._get_pv("positionrefsrc") else "Internal"
+        except Exception as ex:
+            return "Internal"
 
     def doWritePositionrefsrc(self, value):
-        if not self.has_extrefsrc:
-            raise IndexError("There is only one feedback source" \
-            " (Internal) set for this system (has_extrefsrc=False)")
-
-        self._put_pv("positionrefsrc", value)
+        try:
+            self._put_pv("positionrefsrc", value)
+        except:
+            raise IndexError("External feedback sensor does not exist for this system.")
