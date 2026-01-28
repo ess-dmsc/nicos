@@ -392,18 +392,19 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
 
             # Estia detector view
             # TODO: If another instrument also has 3 dimentions but
-            # reshapes the array differently, the data should't be handled
-            # based on array dimensions but instrument name
+            # reshapes the array differently (than multiply 1st and 2nd
+            # dimensions and instead for ex. multiply 0th and 1st), the
+            # data should't be handled based on array dimensions but
+            # instrument name
             elif arr.ndim == 3:
                 y_idx, x_idx = 0, 1
-                view = arr
                 dimension_lengths = [arr.shape[i] for i in range(arr.ndim)]
-                view = view.reshape(
+                view = arr.reshape(
                     dimension_lengths[0], dimension_lengths[1] * dimension_lengths[2]
                 )
                 self._signal = np.ascontiguousarray(view)
 
-                x_labels, x_unit, x_is_time = _labels_from_coord(
+                x_labels, x_unit, x_is_time_flag = _labels_from_coord(
                     _coord_for(sig_axes[x_idx]), self._signal.shape[1]
                 )
                 y_labels, y_unit, _ = _labels_from_coord(
@@ -416,7 +417,6 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
                     sig_axes[y_idx],
                 ]  # ["blade/wire", "strip"]
                 axis_units = [x_unit, y_unit]
-                x_is_time_flag = x_is_time
 
             # Title from signal label or DA00 result key
             try:
