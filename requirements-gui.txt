@@ -23,7 +23,7 @@ ess-streaming-data-types
 flake8
 gr>=1.23.2
 html2text
-lttb
+lttbc
 keyring==24.3.0
 keyrings.alt==5.0.0
 matplotlib
