@@ -23,6 +23,10 @@ main_window = docked(
                         ),
                         ("Scan Plot", panel("nicos_ess.gui.panels.scans.ScansPanel")),
                         (
+                            "Live Data Panel",
+                            panel("nicos_ess.gui.panels.livedata.LiveDataPanel"),
+                        ),
+                        (
                             "Detector Image",
                             panel("nicos_ess.gui.panels.live_gr.MultiLiveDataPanel"),
                         ),
