@@ -12,9 +12,9 @@ from nicos.devices.abstract import MappedMoveable
 from nicos.devices.epics.pva import EpicsMappedReadable
 from nicos_ess.devices.epics.pva.epics_devices import (
     EpicsMappedMoveable,
+    PvReadOrWrite,
     _update_mapped_choices,
     get_from_cache_or,
-    pvReadOrWrite,
 )
 
 
@@ -41,7 +41,7 @@ class EpicsShutter(EpicsMappedMoveable):
 
     def doInit(self, mode):
         if session.sessiontype == POLLER and self.monitor:
-            _update_mapped_choices(self, pvReadOrWrite.readpv)
+            _update_mapped_choices(self, PvReadOrWrite.readpv)
 
             self._epics_subscriptions.append(
                 self._epics_wrapper.subscribe(
@@ -78,7 +78,7 @@ class EpicsShutter(EpicsMappedMoveable):
                 )
 
         if session.sessiontype != POLLER:
-            _update_mapped_choices(self, pvReadOrWrite.writepv)
+            _update_mapped_choices(self, PvReadOrWrite.writepv)
         MappedMoveable.doInit(self, mode)
 
     def _read_msgtxt(self):
@@ -87,7 +87,9 @@ class EpicsShutter(EpicsMappedMoveable):
     def _is_moving(self):
         choices = self._epics_wrapper.get_value_choices(self.readpv)
         choice_mapping = {choice: i for i, choice in enumerate(choices)}
-        if choice_mapping[self.doRead()] in (1, 2):
+        CLOSINGBIT = 1
+        OPENINGBIT = 2
+        if choice_mapping[self.read()] in (CLOSINGBIT, OPENINGBIT):
             return True
 
     def _do_status(self):
