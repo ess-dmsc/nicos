@@ -340,8 +340,8 @@ class LiveDataPanel(Panel):
 
             plot_widget.set_data([data], {"x": labels[0]})
 
-        elif plot_type == "hist-2d" and isinstance(plot_widget, ImageView):
-            # data is 2D → labels[0]=x, labels[1]=y
+        elif plot_type in ("hist-2d", "hist-3d") and isinstance(plot_widget, ImageView):
+            # data is 2D → labels[0]=x, labels[1]=y (or reshaped 3D)
             plot_widget.set_data([data], {"x": labels[0], "y": labels[1]})
 
             x_name = axis_names[0] if len(axis_names) >= 1 else "X"
