@@ -34,7 +34,7 @@ devices = dict(
         brokers=configdata("config.KAFKA_BROKERS"),
         unit="evts",
         hist_type="1-D TOF",
-        hist_topic="loki_visualisation",
+        hist_topic="ymir_visualisation",
     ),
     timer=device(
         "nicos_ess.devices.timer.TimerChannel",
