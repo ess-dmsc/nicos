@@ -88,11 +88,13 @@ packages = ["nicos"]
 [tool.uv.sources]
 nicos_ess = { workspace = true }
 resources = { workspace = true }
-yuos-query = { git = "https://github.com/ess-dmsc/yuos_query", tag="v0.1.22"}
-
-[tool.uv.extra-build-dependencies]
-# These seem to be missing from the build dep declaration in `yuos-query`
-yuos-query = ["gql", "requests", "requests_toolbelt"]
+# `yuos-query` is not published on pypi, so retrieve it from github.
+# 
+# FIXME: uses `build-deps` branch for now as the main branch does not specify
+# the dependencies needed at build time that the build backend seems to
+# understand.
+# Alternatively: replace with our own index.
+yuos-query = { git = "https://github.com/ess-dmsc/yuos_query", branch="build-deps"}
 
 [tool.uv.workspace]
 members = ["nicos_ess", "nicos_demo", "resources"]
