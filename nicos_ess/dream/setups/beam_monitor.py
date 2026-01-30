@@ -20,7 +20,7 @@ devices = dict(
     ),
     monitor1_n_summation=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
-        description="The number of summation for the monitor detector",
+        description="Number of ADC samples to integrate",
         readpv="DREAM-BM:NDet-CDTIBM-001:AdcSummation-R",
         writepv="DREAM-BM:NDet-CDTIBM-001:AdcSummation-S",
         unit="",
@@ -57,7 +57,7 @@ devices = dict(
     ),
     monitor2_n_summation=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
-        description="The number of summation for the monitor detector",
+        description="Number of ADC samples to integrate",
         readpv="DREAM-BM:NDet-CDTIBM-002:AdcSummation-R",
         writepv="DREAM-BM:NDet-CDTIBM-002:AdcSummation-S",
         unit="",
