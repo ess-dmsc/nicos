@@ -3,22 +3,22 @@ description = "The livedata interface for dream."
 devices = dict(
     channel_1=device(
         "nicos_ess.devices.datasources.livedata.DataChannel",
-        description="Sliding time window monitor",
+        description="Livedata channel 1",
         type="counter",
     ),
     channel_2=device(
         "nicos_ess.devices.datasources.livedata.DataChannel",
-        description="Accumulated monitor",
+        description="Livedata channel 2",
         type="counter",
     ),
     channel_3=device(
         "nicos_ess.devices.datasources.livedata.DataChannel",
-        description="Sliding time window monitor",
+        description="Livedata channel 3",
         type="counter",
     ),
     channel_4=device(
         "nicos_ess.devices.datasources.livedata.DataChannel",
-        description="Accumulated monitor",
+        description="Livedata channel 4",
         type="counter",
     ),
     livedata_collector=device(
