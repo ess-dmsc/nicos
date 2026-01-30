@@ -148,6 +148,11 @@ class OctopyMotor(EpicsParameters, CanDisable, CanReference, Motor):
         if abs(self.read(0) - value) <= self.precision:
             return
 
+        if self._cache:
+            # ensure that we are not retrieving old values
+            self._cache.invalidate(self, "busy")
+            self._cache.invalidate(self, "move_done")
+
         if self._get_cached_pv_or_ask("busy") == 1:
             raise MoveError("Motor is busy")
 
