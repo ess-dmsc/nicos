@@ -21,6 +21,26 @@ devices = dict(
         description="Livedata channel 4",
         type="counter",
     ),
+    channel_5=device(
+        "nicos_ess.devices.datasources.livedata.DataChannel",
+        description="Livedata channel 5",
+        type="counter",
+    ),
+    channel_6=device(
+        "nicos_ess.devices.datasources.livedata.DataChannel",
+        description="Livedata channel 6",
+        type="counter",
+    ),
+    channel_7=device(
+        "nicos_ess.devices.datasources.livedata.DataChannel",
+        description="Livedata channel 7",
+        type="counter",
+    ),
+    channel_8=device(
+        "nicos_ess.devices.datasources.livedata.DataChannel",
+        description="Livedata channel 8",
+        type="counter",
+    ),
     livedata_collector=device(
         "nicos_ess.devices.datasources.livedata.LiveDataCollector",
         description="The livedata detector collector",
@@ -33,7 +53,11 @@ devices = dict(
             "channel_1",
             "channel_2",
             "channel_3",
-            "channel_4"
+            "channel_4",
+            "channel_5",
+            "channel_6",
+            "channel_7",
+            "channel_8",
             ],
     ),
 )
