@@ -46,6 +46,7 @@ devices = dict(
         hist_type="2-D TOF",
         det_width=32,
         det_height=32,
+        det_range=(1, 1024),
         hist_topic="ymir_visualisation",
     ),
     bifrost_bm5_image=device(
