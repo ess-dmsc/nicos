@@ -34,17 +34,14 @@ class LokiBeamstopArmPositioner(MappedController):
                 if abs(v - value) < self._attached_controlled_device.precision:
                     return k
         inverse_mapping = {v: k for k, v in self.mapping.items()}
-
         mapped_value = inverse_mapping.get(value, None)
         if mapped_value:
             return mapped_value
-        else:
-            if value > self.mapping["Parked"]:
-                return "Above park position"
-            elif value < self.mapping["In beam"]:
-                return "Below in-beam position"
-            else:
-                return "In between"
+        if value > self.mapping["Parked"]:
+            return "Above park position"
+        if value < self.mapping["In beam"]:
+            return "Below in-beam position"
+        return "In between"
 
     def _check_limits(self, position):
         limits = self._attached_controlled_device.userlimits
