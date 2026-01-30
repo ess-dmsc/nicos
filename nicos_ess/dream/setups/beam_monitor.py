@@ -1,4 +1,4 @@
-description = "The monitor detector."
+description = "The beam monitors setup file"
 
 devices = dict(
     monitor_1=device(
@@ -12,7 +12,7 @@ devices = dict(
     ),
     monitor1_sampling_period=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
-        description="The sampling period of the monitor detector",
+        description="The sampling period of the monitor 1",
         readpv="DREAM-BM:NDet-CDTIBM-001:SamplingPeriod-R",
         writepv="DREAM-BM:NDet-CDTIBM-001:SamplingPeriod-S",
         unit="us",
@@ -28,7 +28,7 @@ devices = dict(
     ),
     monitor1_high_voltage=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
-        description="The value of the high voltage applied to the monitor detector",
+        description="The value of the high voltage applied to the monitor 1",
         readpv="DREAM-BM:NDet-CDTIBM-001:HighVoltage-R",
         writepv="DREAM-BM:NDet-CDTIBM-001:HighVoltage-S",
         unit="V",
@@ -36,12 +36,12 @@ devices = dict(
     ),
     monitor1_high_voltage_status=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
-        description="The status of the high voltage of the monitor detector",
+        description="The status of the high voltage of the monitor 1",
         readpv="DREAM-BM:NDet-CDTIBM-001:HighVoltageStatus-R",
     ),
     monitor1_high_voltage_start_ramp=device(
         "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
-        description="Start ramping the high voltage of the monitor",
+        description="Start ramping the high voltage of the monitor 1",
         readpv="DREAM-BM:NDet-CDTIBM-001:HighVoltTask-S",
         writepv="DREAM-BM:NDet-CDTIBM-001:HighVoltTask-S",
         mapping={"StartRamp": 1, "StopRamp": 0},
@@ -49,7 +49,7 @@ devices = dict(
     ),
     monitor2_sampling_period=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
-        description="The sampling period of the monitor detector",
+        description="The sampling period of the monitor 2",
         readpv="DREAM-BM:NDet-CDTIBM-002:SamplingPeriod-R",
         writepv="DREAM-BM:NDet-CDTIBM-002:SamplingPeriod-S",
         unit="us",
@@ -65,7 +65,7 @@ devices = dict(
     ),
     monitor2_high_voltage=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
-        description="The high voltage of the monitor detector",
+        description="The high voltage of the monitor 2",
         readpv="DREAM-BM:NDet-CDTIBM-002:HighVoltage-R",
         writepv="DREAM-BM:NDet-CDTIBM-002:HighVoltage-S",
         unit="V",
@@ -73,12 +73,12 @@ devices = dict(
     ),
     monitor2_high_voltage_status=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
-        description="The high voltage status of the monitor detector",
+        description="The high voltage status of the monitor 2",
         readpv="DREAM-BM:NDet-CDTIBM-002:HighVoltageStatus-R",
     ),
     monitor2_high_voltage_start_ramp=device(
         "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
-        description="Start ramping the high voltage of the monitor",
+        description="Start ramping the high voltage of the monitor 2",
         readpv="DREAM-BM:NDet-CDTIBM-002:HighVoltTask-S",
         writepv="DREAM-BM:NDet-CDTIBM-002:HighVoltTask-S",
         mapping={"StartRamp": 1, "StopRamp": 0},
