@@ -3,7 +3,7 @@ description = "The monitor detector."
 devices = dict(
     monitor_1=device(
         "nicos_ess.devices.epics.multiframe_histogrammer.MultiFrameHistogrammer",
-        description="Multi-frame histogrammer",
+        description="Consumes histograms from event-to-histogram converter",
         pv_root="DREAM:MFHist:",
         readpv="DREAM:MFHist:signal",
         pva=True,
