@@ -551,10 +551,10 @@ class PvReadOrWrite(str, Enum):
 
 
 def _update_mapped_choices(mapped_device, pv=PvReadOrWrite.readpv):
-    if pv == PvReadOrWrite.readpv:
-        selected_pv = mapped_device.readpv
-    else:
+    if pv == PvReadOrWrite.writepv:
         selected_pv = mapped_device.writepv
+    else:
+        selected_pv = mapped_device.readpv
     choices = mapped_device._epics_wrapper.get_value_choices(selected_pv)
 
     new_mapping = {}
