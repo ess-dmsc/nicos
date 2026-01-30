@@ -58,6 +58,6 @@ devices = dict(
             "channel_6",
             "channel_7",
             "channel_8",
-            ],
+        ],
     ),
 )
