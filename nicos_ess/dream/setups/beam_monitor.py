@@ -1,87 +1,22 @@
-description = "The beam monitors setup file"
+description = "Instrument shutter"
+prefix = "IOC"
 
 devices = dict(
-    monitor_1=device(
-        "nicos_ess.devices.epics.multiframe_histogrammer.MultiFrameHistogrammer",
-        description="Consumes histograms from event-to-histogram converter",
-        pv_root="DREAM:MFHist:",
-        readpv="DREAM:MFHist:signal",
-        pva=True,
-        monitor=True,
-        pollinterval=None,
+    beam_monitor_1=device(
+        "nicos_ess.devices.epics.pva.motor.EpicsMotor",
+        description="Beam monitor continuous position feedback",
+        motorpv=f"{prefix}:m8",
+        abslimits=(-10, 10),
+        unit="mm",
     ),
-    monitor1_sampling_period=device(
-        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
-        description="The sampling period of the monitor 1",
-        readpv="DREAM-BM:NDet-CDTIBM-001:SamplingPeriod-R",
-        writepv="DREAM-BM:NDet-CDTIBM-001:SamplingPeriod-S",
-        unit="us",
-        abslimits=(1.2, 132.3),
-    ),
-    monitor1_n_summation=device(
-        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
-        description="Number of ADC samples to integrate",
-        readpv="DREAM-BM:NDet-CDTIBM-001:AdcSummation-R",
-        writepv="DREAM-BM:NDet-CDTIBM-001:AdcSummation-S",
-        unit="",
-        abslimits=(1, 100),
-    ),
-    monitor1_high_voltage=device(
-        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
-        description="The value of the high voltage applied to the monitor 1",
-        readpv="DREAM-BM:NDet-CDTIBM-001:HighVoltage-R",
-        writepv="DREAM-BM:NDet-CDTIBM-001:HighVoltage-S",
-        unit="V",
-        abslimits=(0, 800),
-    ),
-    monitor1_high_voltage_status=device(
-        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
-        description="The status of the high voltage of the monitor 1",
-        readpv="DREAM-BM:NDet-CDTIBM-001:HighVoltageStatus-R",
-    ),
-    monitor1_high_voltage_ramp=device(
-        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
-        description="Ramp the high voltage of the monitor 1",
-        readpv="DREAM-BM:NDet-CDTIBM-001:HighVoltTask-S",
-        writepv="DREAM-BM:NDet-CDTIBM-001:HighVoltTask-S",
-        mapping={"StartRamp": 1, "StopRamp": 0},
-        unit="",
-    ),
-    monitor2_sampling_period=device(
-        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
-        description="The sampling period of the monitor 2",
-        readpv="DREAM-BM:NDet-CDTIBM-002:SamplingPeriod-R",
-        writepv="DREAM-BM:NDet-CDTIBM-002:SamplingPeriod-S",
-        unit="us",
-        abslimits=(1.2, 132.3),
-    ),
-    monitor2_n_summation=device(
-        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
-        description="Number of ADC samples to integrate",
-        readpv="DREAM-BM:NDet-CDTIBM-002:AdcSummation-R",
-        writepv="DREAM-BM:NDet-CDTIBM-002:AdcSummation-S",
-        unit="",
-        abslimits=(1, 100),
-    ),
-    monitor2_high_voltage=device(
-        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
-        description="The high voltage of the monitor 2",
-        readpv="DREAM-BM:NDet-CDTIBM-002:HighVoltage-R",
-        writepv="DREAM-BM:NDet-CDTIBM-002:HighVoltage-S",
-        unit="V",
-        abslimits=(0, 800),
-    ),
-    monitor2_high_voltage_status=device(
-        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
-        description="The high voltage status of the monitor 2",
-        readpv="DREAM-BM:NDet-CDTIBM-002:HighVoltageStatus-R",
-    ),
-    monitor2_high_voltage_ramp=device(
-        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
-        description="Ramp the high voltage value of the monitor 2",
-        readpv="DREAM-BM:NDet-CDTIBM-002:HighVoltTask-S",
-        writepv="DREAM-BM:NDet-CDTIBM-002:HighVoltTask-S",
-        mapping={"StartRamp": 1, "StopRamp": 0},
-        unit="",
+    beam_monitor_switch=device(
+        "nicos.devices.generic.Switcher",
+        description="Toggles between in and out of the beam",
+        moveable="beam_monitor_1",
+        mapping={
+            "IN": 0,
+            "OUT": 5,
+        },
+        precision=0.01,
     ),
 )
