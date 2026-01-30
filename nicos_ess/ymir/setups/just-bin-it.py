@@ -43,7 +43,9 @@ devices = dict(
         source="cbm4",
         brokers=configdata("config.KAFKA_BROKERS"),
         unit="evts",
-        hist_type="1-D TOF",
+        hist_type="2-D TOF",
+        det_width=32,
+        det_height=32,
         hist_topic="ymir_visualisation",
     ),
     bifrost_bm5_image=device(
