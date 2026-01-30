@@ -39,9 +39,9 @@ devices = dict(
         description="The status of the high voltage of the monitor 1",
         readpv="DREAM-BM:NDet-CDTIBM-001:HighVoltageStatus-R",
     ),
-    monitor1_high_voltage_start_ramp=device(
+    monitor1_high_voltage_ramp=device(
         "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
-        description="Start ramping the high voltage of the monitor 1",
+        description="Ramp the high voltage of the monitor 1",
         readpv="DREAM-BM:NDet-CDTIBM-001:HighVoltTask-S",
         writepv="DREAM-BM:NDet-CDTIBM-001:HighVoltTask-S",
         mapping={"StartRamp": 1, "StopRamp": 0},
@@ -76,9 +76,9 @@ devices = dict(
         description="The high voltage status of the monitor 2",
         readpv="DREAM-BM:NDet-CDTIBM-002:HighVoltageStatus-R",
     ),
-    monitor2_high_voltage_start_ramp=device(
+    monitor2_high_voltage_ramp=device(
         "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
-        description="Start ramping the high voltage of the monitor 2",
+        description="Ramp the high voltage value of the monitor 2",
         readpv="DREAM-BM:NDet-CDTIBM-002:HighVoltTask-S",
         writepv="DREAM-BM:NDet-CDTIBM-002:HighVoltTask-S",
         mapping={"StartRamp": 1, "StopRamp": 0},
