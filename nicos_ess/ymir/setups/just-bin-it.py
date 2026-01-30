@@ -30,7 +30,7 @@ devices = dict(
         "nicos_ess.devices.datasources.just_bin_it.JustBinItImage",
         description="A just-bin-it image channel",
         data_topic="loki_beam_monitor",
-        source="cmb0",
+        source="cbm0",
         brokers=configdata("config.KAFKA_BROKERS"),
         unit="evts",
         hist_type="1-D TOF",
