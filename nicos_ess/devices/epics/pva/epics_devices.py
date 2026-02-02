@@ -184,6 +184,7 @@ class EpicsReadable(EpicsParameters, Readable):
         self._cache.put(self._name, "status", (severity, message), time.time())
 
     def _connection_change_callback(self, name, param, is_connected, **kwargs):
+        time.sleep(0.5)
         if param != self._record_fields["readpv"].cache_key:
             return
 
@@ -194,7 +195,10 @@ class EpicsReadable(EpicsParameters, Readable):
             self._cache.put(
                 self._name,
                 "status",
-                (status.ERROR, "communication failure"),
+                (
+                    status.ERROR,
+                    "NICOS lost connection to EPICS. Try Reset; if error/timeout persists check IOC/network",
+                ),
                 time.time(),
             )
 
@@ -390,7 +394,10 @@ class EpicsAnalogMoveable(EpicsParameters, HasPrecision, HasLimits, Moveable):
             self._cache.put(
                 self._name,
                 "status",
-                (status.ERROR, "communication failure"),
+                (
+                    status.ERROR,
+                    "NICOS lost connection to EPICS. Try Reset; if error/timeout persists check IOC/network",
+                ),
                 time.time(),
             )
 
@@ -540,7 +547,10 @@ class EpicsStringMoveable(EpicsParameters, Moveable):
             self._cache.put(
                 self._name,
                 "status",
-                (status.ERROR, "communication failure"),
+                (
+                    status.ERROR,
+                    "NICOS lost connection to EPICS. Try Reset; if error/timeout persists check IOC/network",
+                ),
                 time.time(),
             )
 
@@ -744,7 +754,10 @@ class EpicsMappedMoveable(EpicsParameters, MappedMoveable):
             self._cache.put(
                 self._name,
                 "status",
-                (status.ERROR, "communication failure"),
+                (
+                    status.ERROR,
+                    "NICOS lost connection to EPICS. Try Reset; if error/timeout persists check IOC/network",
+                ),
                 time.time(),
             )
 
@@ -963,6 +976,9 @@ class EpicsManualMappedAnalogMoveable(
             self._cache.put(
                 self._name,
                 "status",
-                (status.ERROR, "communication failure"),
+                (
+                    status.ERROR,
+                    "NICOS lost connection to EPICS. Try Reset; if error/timeout persists check IOC/network",
+                ),
                 time.time(),
             )
