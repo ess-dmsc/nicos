@@ -20,12 +20,13 @@
 #   Matt Clarke <matt.clarke@ess.eu>
 #
 # *****************************************************************************
+from collections import defaultdict
 from collections.abc import Iterable
 from functools import partial
 from threading import Lock
 
 import numpy as np
-from p4p.client.thread import Context
+from p4p.client.thread import Cancelled, Context
 
 from nicos.commands import helparglist, hiddenusercommand
 from nicos.core import CommunicationError, status
@@ -70,6 +71,10 @@ class P4pWrapper:
 
     def __init__(self, timeout=3.0):
         self.disconnected = set()
+        # We can have multiple monitors per PV; disconnect/initial-Disconnected events can arrive out of order.
+        # Keep a per-(pv,param) refcount so we only mark comms down when *all* subscriptions are disconnected.
+        self._conn_refcnt = defaultdict(int)
+
         self.lock = Lock()
         self._timeout = timeout
         self._units = {}
@@ -194,15 +199,21 @@ class P4pWrapper:
         :param as_string: Whether to return the value as a string.
         :return: the subscription object.
         """
-        with self.lock:
-            self.disconnected.add(pvname)
-
         request = "field(value,timeStamp,alarm,control,display)"
+        subkey = (
+            pvname,
+            pvparam,
+            id(change_callback),
+        )  # Unique key for this subscription
+
+        with self.lock:
+            self.disconnected.add(subkey)
 
         callback = partial(
             self._callback,
             pvname,
             pvparam,
+            subkey,
             change_callback,
             connection_callback,
             as_string,
@@ -213,27 +224,55 @@ class P4pWrapper:
         return subscription
 
     def _callback(
-        self, pvname, pvparam, change_callback, connection_callback, as_string, result
+        self,
+        pvname,
+        pvparam,
+        subkey,
+        change_callback,
+        connection_callback,
+        as_string,
+        result,
     ):
+        conn_key = (pvname, pvparam)
+
+        # disconnected
         if isinstance(result, Exception):
-            # Only callback on disconnection if was previously connected
-            if connection_callback and pvname not in self.disconnected:
-                connection_callback(pvname, pvparam, False)
-                with self.lock:
-                    self.disconnected.add(pvname)
+            # ignore cancelled
+            if isinstance(result, Cancelled):
+                return
+
+            do_down = False
+            with self.lock:
+                # only act if this subscription was previously connected
+                if subkey not in self.disconnected:
+                    self.disconnected.add(subkey)
+                    if self._conn_refcnt[conn_key] > 0:
+                        self._conn_refcnt[conn_key] -= 1
+                    do_down = self._conn_refcnt[conn_key] == 0
+
+            if do_down and connection_callback:
+                connection_callback(
+                    pvname, pvparam, False, reason=type(result).__name__
+                )
             return
 
-        if pvname in self.disconnected:
-            # Only callback if it is a new connection
-            if connection_callback:
-                connection_callback(pvname, pvparam, True)
-            with self.lock:
-                if pvname in self.disconnected:
-                    self.disconnected.remove(pvname)
-                    if pvname in self._values:
-                        del self._values[pvname]
-                    if pvname in self._choices:
-                        del self._choices[pvname]
+        # connected
+        do_up = False
+        with self.lock:
+            if subkey in self.disconnected:
+                self.disconnected.remove(subkey)
+                self._conn_refcnt[conn_key] += 1
+                do_up = self._conn_refcnt[conn_key] == 1
+
+        if do_up and connection_callback:
+            connection_callback(pvname, pvparam, True)
+
+        # ensure we have some value cached so status callbacks can run
+        # even if changedSet does not include "value" next time
+        if pvname not in self._values and "value" in result:
+            self._values[pvname] = self._convert_value(
+                pvname, result["value"], as_string
+            )
 
         if change_callback:
             # PVA only sends a delta of what has changed
