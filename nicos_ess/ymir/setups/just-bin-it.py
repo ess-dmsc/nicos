@@ -144,6 +144,7 @@ devices = dict(
         timers=["timer"],
         # counters=["pulse_counter"],
         hist_schema="hs01",
+        event_schema="ev44",
     ),
 )
 
