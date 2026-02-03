@@ -1,5 +1,5 @@
 [project]
-name = "resources"
+name = "nicos-resources"
 dynamic = ["version"]
 description = "NICOS Resource Package"
 
