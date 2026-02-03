@@ -40,10 +40,37 @@ ESS = "nicos_ess"
 requires = ["hatchling", "uv-dynamic-versioning", "uv_build>=0.9.18,<0.10.0"]
 build-backend = "hatchling.build"
 
+[tool.hatch.build.targets.sdist.sources]
+# Rewrite the path of included directories and root-level files to create a path
+# leading with the module's name. This results in the directory layout the wheel
+# format expects.
+"beer" = "nicos_ess/beer"
+"bifrost" = "nicos_ess/bifrost"
+"coda" = "nicos_ess/coda"
+"commands" = "nicos_ess/commands"
+"cspec" = "nicos_ess/cspec"
+"devices" = "nicos_ess/devices"
+"dream" = "nicos_ess/dream"
+"estia" = "nicos_ess/estia"
+"freia" = "nicos_ess/freia"
+"gui" = "nicos_ess/gui"
+"labs" = "nicos_ess/labs"
+"loki" = "nicos_ess/loki"
+"miracles" = "nicos_ess/miracles"
+"nexus" = "nicos_ess/nexus"
+"nido" = "nicos_ess/nido"
+"nmx" = "nicos_ess/nmx"
+"odin" = "nicos_ess/odin"
+"tbl" = "nicos_ess/tbl"
+"utilities" = "nicos_ess/utilities"
+"ymir" = "nicos_ess/ymir"
 
 [tool.hatch.build.targets.sdist.force-include]
-# Explicitly include files at module root and rewrite their path
-"." = "nicos_ess"
+"guiconfig.py" = "nicos_ess/guiconfig.py"
+"__init__.py" = "nicos_ess/__init__.py"
+
+
+# [tool.hatch.build.targets.sdist.hooks.custom]
 
 [tool.hatch.build.targets.wheel]
 packages = ["nicos_ess"]
