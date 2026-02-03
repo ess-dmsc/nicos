@@ -349,6 +349,12 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         self.log.info("Offset changed to %s", new_off)
 
     def doWriteUserlimits(self, value):
+        umin, umax = value
+        amin, amax = self.abslimits
+        offset = self.offset
+        if umin == amin - offset and umax == amax - offset:
+            value = (umin + offset * 2, umax + offset * 2)
+
         self._checkLimits(value)
 
         umin, umax = value
