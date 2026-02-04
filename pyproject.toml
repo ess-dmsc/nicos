@@ -95,6 +95,9 @@ nicos-resources = { workspace = true }
 # understand.
 # Alternatively: replace with our own index.
 yuos-query = { git = "https://github.com/ess-dmsc/yuos_query", branch="build-deps"}
+# synoptic dependencies are not packaged in their working versions yet
+svgsynoptic2 = { git = "https://gitlab.com/hperrey/lib-maxiv-svgsynoptic", branch="qtpy" }
+nicossynoptic = { git = "https://gitlab.com/hperrey/nicos-svgsynoptic", branch="hp" }
 
 [tool.uv.workspace]
 members = ["nicos_ess", "nicos_demo", "resources"]
@@ -125,6 +128,13 @@ gui = [
     "qscintilla>=2.12 ; sys_platform == 'win32'",
     "toml>=0.10.2",
     "urllib3==1.26.20",
+]
+
+synoptic = [
+    "svgsynoptic2",
+    "nicossynoptic",
+    "pytango", #  drop when no longer required by svgsynoptic2
+    "lxml",
 ]
 
 [dependency-groups]
