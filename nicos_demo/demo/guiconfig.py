@@ -18,6 +18,10 @@ main_window = docked(
             ),
         ),
         (
+            "Synoptic",
+            panel("nicossynoptic.panel.SynopticPanel", module="ess_synoptic_demo"),
+        ),
+        (
             "SANS",
             vsplit(
                 panel("nicos_demo.demo.gui.sanspanel.SANSPanel"),
@@ -145,3 +149,8 @@ tools = [
         runatstartup=False,
     ),
 ]
+
+options = {
+    "facility": "ess",
+    "mainwindow_class": "nicos_ess.gui.mainwindow.MainWindow",
+}
