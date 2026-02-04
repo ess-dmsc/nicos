@@ -1,10 +1,10 @@
 description = "Collimation slits"
 
 blades = {
-    "left": "Ym",
-    "right": "Yp",
-    "bottom": "Zm",
-    "top": "Zp",
+    "left": "Yp",
+    "right": "Ym",
+    "lower": "Zm",
+    "upper": "Zp",
 }
 
 devices=dict()
@@ -28,6 +28,6 @@ for slit_set in range(1,4):
         opmode="centered",
         left=f"slit_set_{slit_set}_left",
         right=f"slit_set_{slit_set}_right",
-        top=f"slit_set_{slit_set}_top",
-        bottom=f"slit_set_{slit_set}_bottom",
+        top=f"slit_set_{slit_set}_upper",
+        bottom=f"slit_set_{slit_set}_lower",
     )
