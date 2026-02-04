@@ -1,5 +1,5 @@
 description = "The slit arrangement with 4 motors"
-prefix = "SpSl:MC-Sl"
+prefix = "ESTIA-SpSl:MC-Sl"
 
 devices = dict(
     blade_l=device(
