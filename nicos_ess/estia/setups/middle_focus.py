@@ -1,4 +1,4 @@
-description = "Middle focus"
+description = "Middle focus mask changer"
 prefix = "ESTIA-Chg:MC-"
 
 devices = dict(
