@@ -27,6 +27,17 @@ main_window = docked(
                             panel("nicos_ess.gui.panels.live_gr.MultiLiveDataPanel"),
                         ),
                         (
+                            "Live Data Panel",
+                            panel("nicos_ess.gui.panels.livedata.LiveDataPanel"),
+                        ),
+                        (
+                            "Choppers",
+                            panel(
+                                "nicos_ess.gui.panels.chopper.ChopperPanel",
+                                guide_pos="DOWN",
+                            ),
+                        ),
+                        (
                             "Script Status",
                             panel(
                                 "nicos_ess.gui.panels.status.ScriptStatusPanel",

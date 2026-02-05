@@ -93,6 +93,7 @@ devices = dict(
         chic_conn="bwc_chic",
         alarms="bwc_alarms",
         slit_edges=[[0, 98]],
-        resolver_offset=0,
+        resolver_offset=-301,
+        tdc_offset=0,
     ),
 )
