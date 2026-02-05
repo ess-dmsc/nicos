@@ -23,7 +23,7 @@ devices = dict(
         hist_type="1-D TOF",
         hist_topic="estia_visualisation",
     ),
-    det=device(
+    jbi_device=device(
         "nicos_ess.devices.datasources.just_bin_it.JustBinItDetector",
         description="Just Bin it histogrammer",
         brokers=configdata("config.KAFKA_BROKERS"),
@@ -32,7 +32,7 @@ devices = dict(
         command_topic="estia_jbi_commands",
         response_topic="estia_jbi_responses",
         statustopic=["estia_jbi_heartbeat"],
-        images=["beam_monitor_image"],
+        images=["det_image", "beam_monitor_image"],
         hist_schema="hs01",
         timers=["timer"],
     ),
@@ -45,5 +45,5 @@ devices = dict(
 )
 
 startupcode = """
-SetDetectors(det)
+SetDetectors(jbi_device)
 """
