@@ -9,7 +9,6 @@ from nicos.core import Device, Override, Param, host, listof, status
 from nicos.protocols.cache import OP_TELL, cache_load
 from nicos.services.collector import ForwarderBase
 from nicos.utils import createThread
-
 from nicos_ess.devices.kafka.producer import KafkaProducer
 
 nicos_status_to_al00 = {
@@ -60,13 +59,31 @@ class CacheKafkaForwarder(ForwarderBase, Device):
             mandatory=True,
         ),
         "dev_ignore": Param(
-            "Devices to ignore; if empty, all devices are " "accepted",
+            "Devices to ignore; if empty, all devices are accepted",
             default=[],
             type=listof(str),
         ),
         "update_interval": Param(
             "Time interval (in secs.) to send regular updates",
             default=10.0,
+            type=float,
+            settable=False,
+        ),
+        "kafka_backoff_initial": Param(
+            "Initial backoff (in secs.) when kafka delivery fails",
+            default=1.0,
+            type=float,
+            settable=False,
+        ),
+        "max_kafka_backoff": Param(
+            "Maximum backoff (in secs.) when kafka delivery keeps failing",
+            default=60.0,
+            type=float,
+            settable=False,
+        ),
+        "kafka_log_throttle": Param(
+            "Minimum time (in secs.) between repeated kafka/queue error logs",
+            default=60.0,
             type=float,
             settable=False,
         ),
@@ -81,6 +98,16 @@ class CacheKafkaForwarder(ForwarderBase, Device):
         self._dev_to_status_cache = {}
         self._producer = None
         self._lock = Lock()
+        self._producer_lock = Lock()
+
+        now = time.monotonic()
+        self._last_delivered_ts = now
+        self._kafka_down_until = 0.0
+        self._kafka_backoff = self.kafka_backoff_initial
+
+        self._queue_full_dropped = 0
+        self._queue_full_next_log = 0.0
+        self._kafka_err_next_log = 0.0
 
         self._initFilters()
         self._queue = queue.Queue(1000)
@@ -144,19 +171,78 @@ class CacheKafkaForwarder(ForwarderBase, Device):
                     dev_name, *self._dev_to_status_cache[dev_name], False
                 )
 
+    def _maybe_log_queue_full(self, now):
+        if now < self._queue_full_next_log:
+            return
+        if self._queue_full_dropped:
+            self.log.warning(
+                "Kafka queue full; dropped %d message(s) in the last %.0f seconds",
+                self._queue_full_dropped,
+                self.kafka_log_throttle,
+            )
+            self._queue_full_dropped = 0
+        self._queue_full_next_log = now + self.kafka_log_throttle
+
+    def _set_kafka_down(self, now, error):
+        if now >= self._kafka_err_next_log:
+            self.log.error(
+                "Kafka send failed; dropping for %.1fs (backoff). Last error: %s",
+                self._kafka_backoff,
+                error,
+            )
+            self._kafka_err_next_log = now + self.kafka_log_throttle
+
+        self._kafka_down_until = now + self._kafka_backoff
+        self._kafka_backoff = min(self._kafka_backoff * 2.0, self.max_kafka_backoff)
+
+    def _kafka_is_down(self, now):
+        return now < self._kafka_down_until
+
     def _push_to_queue(self, dev_name, value, timestamp, is_value):
+        now = time.monotonic()
+        if self._kafka_is_down(now):
+            # Kafka is unhealthy; don't enqueue. Caches keep latest values.
+            return
+
+        try:
+            self._queue.put_nowait((dev_name, value, timestamp, is_value))
+            return
+        except queue.Full:
+            pass
+
+        if not self._worker.is_alive():
+            self.log.error("Kafka forwarding worker thread has stopped!")
+            return
+
+        # Drop oldest and attempt once more (non-blocking, readable, race-safe enough).
+        try:
+            self._queue.get_nowait()
+        except queue.Empty:
+            self._queue_full_dropped += 1
+            self._maybe_log_queue_full(now)
+            return
+        else:
+            self._queue.task_done()
+
         try:
             self._queue.put_nowait((dev_name, value, timestamp, is_value))
         except queue.Full:
-            self.log.error("Queue full, so discarding older value(s)")
-            self._queue.get()
-            self._queue.put((dev_name, value, timestamp, is_value))
-            self._queue.task_done()
+            # Still full: drop this update too.
+            self._queue_full_dropped += 2
+        else:
+            self._queue_full_dropped += 1
+
+        self._maybe_log_queue_full(now)
 
     def _processQueue(self):
         while True:
             name, value, timestamp, is_value = self._queue.get()
             try:
+                now = time.monotonic()
+                if self._kafka_is_down(now):
+                    # Discard backlog while Kafka is down to prevent permanent queue-full.
+                    continue
+
                 if is_value:
                     # Convert value from string representation to correct type
                     value = cache_load(value)
@@ -170,9 +256,30 @@ class CacheKafkaForwarder(ForwarderBase, Device):
                 else:
                     buffer = serialise_al00(name, timestamp, value[0], value[1])
                     self._send_to_kafka(buffer, name)
+
             except Exception as error:
-                self.log.error("Could not forward data: %s", error)
-            self._queue.task_done()
+                self._set_kafka_down(time.monotonic(), error)
+            finally:
+                self._queue.task_done()
 
     def _send_to_kafka(self, buffer, name):
-        self._producer.produce(self.output_topic, buffer, key=name.encode("utf-8"))
+        def on_delivery(err, msg):
+            now = time.monotonic()
+            if err:
+                if now >= self._kafka_err_next_log:
+                    self.log.error("Failed to deliver message for %s: %s", name, err)
+                    self._kafka_err_next_log = now + self.kafka_log_throttle
+            else:
+                self._last_delivered_ts = now
+                self._kafka_backoff = self.kafka_backoff_initial
+                self._kafka_down_until = 0.0
+
+        with self._producer_lock:
+            producer = self._producer
+
+        producer.produce(
+            self.output_topic,
+            buffer,
+            key=name.encode("utf-8"),
+            on_delivery_callback=on_delivery,
+        )

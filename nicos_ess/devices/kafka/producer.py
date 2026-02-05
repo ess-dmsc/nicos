@@ -2,9 +2,7 @@ from confluent_kafka import Producer
 
 from nicos.core import DeviceMixinBase, Param, host, listof
 from nicos.core.constants import SIMULATION
-
 from nicos_ess.devices.kafka.utils import create_sasl_config
-
 
 MAX_MESSAGE_SIZE = 209_715_200
 
@@ -56,7 +54,11 @@ class KafkaProducer:
             key=key,
             on_delivery=on_delivery_callback,
         )
-        self._producer.flush()
+        remaining = self._producer.flush(timeout=10)
+        if remaining:
+            raise TimeoutError(
+                "Kafka flush timed out; %d message(s) still queued" % remaining
+            )
 
 
 class ProducesKafkaMessages(DeviceMixinBase):
