@@ -349,6 +349,12 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         self.log.info("Offset changed to %s", new_off)
 
     def doWriteUserlimits(self, value):
+        umin, umax = value
+        amin, amax = self.abslimits
+        offset = self.offset
+        if umin == amin - offset and umax == amax - offset:
+            value = (umin + offset * 2, umax + offset * 2)
+
         self._checkLimits(value)
 
         umin, umax = value
@@ -857,9 +863,9 @@ class SmaractPiezoMotor(EpicsMotor):
         "openloop": Param(
             "Open-loop control mode of the piezo motor.",
             type=bool,
-            settable=True,
+            settable=False,
             volatile=True,
-            userparam=True,
+            userparam=False,
         ),
         "stepfrequency": Param(
             "Step frequency of the piezo motor.",
@@ -888,6 +894,15 @@ class SmaractPiezoMotor(EpicsMotor):
             settable=True,
             volatile=True,
             userparam=True,
+        ),
+        "positionrefsrc": Param(
+            "Source of position feedback.",
+            type=oneof("Internal", "External"),
+            default="Internal",
+            mandatory=False,
+            settable=True,
+            userparam=True,
+            volatile=True,
         ),
     }
 
@@ -923,7 +938,6 @@ class SmaractPiezoMotor(EpicsMotor):
             "description": RecordInfo("", ".DESC", RecordType.VALUE),
             "monitor_deadband": RecordInfo("", ".MDEL", RecordType.VALUE),
             "maxspeed": RecordInfo("", ".VMAX", RecordType.VALUE),
-            "minspeed": RecordInfo("", ".VBAS", RecordType.VALUE),
             "donemoving": RecordInfo("", ".DMOV", RecordType.STATUS),
             "moving": RecordInfo("", ".MOVN", RecordType.STATUS),
             "miss": RecordInfo("", ".MISS", RecordType.STATUS),
@@ -933,13 +947,13 @@ class SmaractPiezoMotor(EpicsMotor):
             "lowlimitswitch": RecordInfo("", ".LLS", RecordType.STATUS),
             "highlimitswitch": RecordInfo("", ".HLS", RecordType.STATUS),
             "msgtxt": RecordInfo("", "-MsgTxt", RecordType.STATUS),
-            "openloop": RecordInfo("", "OpenLoop-Cmd", RecordType.VALUE),
-            "openloop_rb": RecordInfo("", "OpenLoop-RB", RecordType.VALUE),
-            "stepfrequency": RecordInfo("", "StepFreq-SP", RecordType.VALUE),
-            "stepsizeforward": RecordInfo("", "StepSizeFwd-SP", RecordType.VALUE),
-            "stepsizereverse": RecordInfo("", "StepSizeRev-SP", RecordType.VALUE),
-            "mclfrequency": RecordInfo("", "MaxCtrlLFreq-SP", RecordType.VALUE),
-            "mclfrequency_rb": RecordInfo("", "MaxCtrlLFreq-RB", RecordType.VALUE),
+            "openloop_rb": RecordInfo("", "OpenLoop", RecordType.VALUE),
+            "stepfrequency": RecordInfo("", "StepFreq", RecordType.VALUE),
+            "stepsizeforward": RecordInfo("", "StepSizeFwd", RecordType.VALUE),
+            "stepsizereverse": RecordInfo("", "StepSizeRev", RecordType.VALUE),
+            "mclfrequency": RecordInfo("", "MaxCtrlLFreq", RecordType.VALUE),
+            "mclfrequency_rb": RecordInfo("", "MaxCtrlLFreq", RecordType.VALUE),
+            "positionrefsrc": RecordInfo("", "PositionRefSrc", RecordType.VALUE),
         }
         self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
         # Check PV exists
@@ -950,9 +964,6 @@ class SmaractPiezoMotor(EpicsMotor):
 
     def doReadOpenloop(self):
         return bool(self._get_cached_pv_or_ask("openloop_rb"))
-
-    def doWriteOpenloop(self, value):
-        self._put_pv("openloop", int(value))
 
     def doReadStepfrequency(self):
         return self._get_cached_pv_or_ask("stepfrequency")
@@ -985,3 +996,15 @@ class SmaractPiezoMotor(EpicsMotor):
         if value < 0:
             raise ValueError("MCL frequency must be non-negative.")
         self._put_pv("mclfrequency", value)
+
+    def doReadPositionrefsrc(self):
+        try:
+            return "External" if self._get_pv("positionrefsrc") else "Internal"
+        except Exception as ex:
+            return "Internal"
+
+    def doWritePositionrefsrc(self, value):
+        try:
+            self._put_pv("positionrefsrc", value)
+        except:
+            raise IndexError("External feedback sensor does not exist for this system.")
