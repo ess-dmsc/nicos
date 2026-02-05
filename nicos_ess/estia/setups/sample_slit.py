@@ -6,21 +6,25 @@ devices = dict(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Left blade",
         motorpv=f"{prefix}Yp:Mtr",
+        visibility=(),
     ),
     blade_r=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Right blade",
         motorpv=f"{prefix}Ym:Mtr",
+        visibility=(),
     ),
     blade_t=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Top blade",
         motorpv=f"{prefix}Zp:Mtr",
+        visibility=(),
     ),
     blade_b=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Bottom blade",
         motorpv=f"{prefix}Zm:Mtr",
+        visibility=(),
     ),
     slit_1=device(
         "nicos.devices.generic.slit.Slit",
