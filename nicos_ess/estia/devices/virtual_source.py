@@ -27,7 +27,7 @@ class VSCalculator(Readable):
 
     The vertical height of the slit is determined by standard slit motions, however
     the width is determined by the gap distance between the blades along the x-axis
-    and then a shared rotation around the z-axis.
+    and a shared rotation around the z-axis.
     """
 
     parameters = {
@@ -91,6 +91,10 @@ class VSCalculator(Readable):
     def doSetPosition(self, pos):
         pass
 
+    # The code below makes less sense now since the reader will always use the
+    # actual motor values instead of the readout from the slit. But it is still
+    # useful to keep it here until the controllable device is setup
+
     def doWriteFmtstr(self, value):
         # since self.fmtstr_map is a readonly dict a temp. copy is created
         # to update the dict and then put to cache back
@@ -112,6 +116,7 @@ class VSCalculator(Readable):
         self._adevs["slit"]._setROParam("opmode", vs_mode)
 
 
+# Does not entirely work (yet) | TODO: Update with knowledge from the VSCalculator
 class VirtualSlit(Moveable):
     parameter_overrides = {
         "fmtstr": Override(

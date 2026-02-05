@@ -44,7 +44,7 @@ devices = dict(
     ),
     virtual_source=device(
         "nicos_ess.estia.devices.virtual_source.VSCalculator",
-        description="Virtual Source Reader",
+        description="Reads the virtual source slit's width and height",
         slit="slit",
         rot="vs_slit_rotation",
     ),
