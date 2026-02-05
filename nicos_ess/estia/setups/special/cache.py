@@ -3,8 +3,9 @@ group = "special"
 
 devices = dict(
     DB=device(
-        "nicos.services.cache.server.FlatfileCacheDatabase",
-        storepath="/opt/nicos-data/cache",
+        # "nicos.services.cache.server.FlatfileCacheDatabase",
+        # storepath="/opt/nicos-data/cache",
+        "nicos.services.cache.server.RedisCacheDatabase",
         loglevel="info",
     ),
     Server=device(
