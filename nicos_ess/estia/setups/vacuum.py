@@ -95,17 +95,17 @@ devices = dict(
     ),
     bnkr_pirani_100=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
-        description="Bunker Pirani 300 pressure",
-        readpv=f"{bnkr_root}VGP-300:PrsR",
+        description="Bunker Pirani 100 pressure",
+        readpv=f"{bnkr_root}VGP-100:PrsR",
     ),
     bnkr_pirani_101=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
-        description="Bunker Pirani 300 pressure",
-        readpv=f"{bnkr_root}VGP-300:PrsR",
+        description="Bunker Pirani 101 pressure",
+        readpv=f"{bnkr_root}VGP-101:PrsR",
     ),
     bnkr_pirani_200=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
-        description="Bunker Pirani 300 pressure",
-        readpv=f"{bnkr_root}VGP-300:PrsR",
+        description="Bunker Pirani 200 pressure",
+        readpv=f"{bnkr_root}VGP-200:PrsR",
     ),
 )
