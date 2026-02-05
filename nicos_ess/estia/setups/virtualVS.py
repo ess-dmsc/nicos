@@ -56,7 +56,6 @@ devices = dict(
     ####Controller Device 4-blade Slit
     four_blade_slit=device(
         "nicos.devices.generic.slit.Slit",
-        opmode="centered",
         description="4-blade slit controller",
         top="right_blade_vertical",
         bottom="left_blade_vertical",
@@ -69,13 +68,11 @@ devices = dict(
         description="read-only device for the slit dimensions using virtual source slit controls",
         slit="four_blade_slit",
         rot="slit_rotation",
-        unit="mm",
-        fmtstr="[%.3f x %.3f]",
     ),
-    vs_controller=device(
-        "nicos_ess.estia.devices.virtual_source.VirtualSlit",
-        description="controller for the slit dimensions using 4 blade slit controls",
-        slit="four_blade_slit",
-        rot="slit_rotation",
-    ),
+    # vs_controller=device(
+    #    "nicos_ess.estia.devices.virtual_source.VirtualSlit",
+    #    description="controller for the slit dimensions using 4 blade slit controls",
+    #    slit="four_blade_slit",
+    #    rot="slit_rotation",
+    # ),
 )

@@ -38,16 +38,15 @@ class VSCalculator(Readable):
             mandatory=False,
             userparam=False,
             default={
-                "4blades": "%.2f %.2f %.2f %.2f %.2f",
-                # "4blades_opposite": "",
-                "centered": "(%.2fmm x %.2fmm) %.2fdeg",
-                # "offcentered": "",
+                "4blades": "(%.3f mm x %.3f mm) %.3f deg",
+                "centered": "(%.3f mm x %.3f mm) %.3f deg",
             },
         ),
         "opmode": Param(
             "Mode of operation",
-            type=oneof("4blades", "4blades_opposite", "centered", "offcentered"),
+            type=oneof("4blades", "centered"),
             settable=True,
+            default="4blades",
         ),
     }
 
@@ -57,37 +56,37 @@ class VSCalculator(Readable):
     valuetype = tupleof(float, float)
 
     attached_devices = {
-        "slit": Attach("the slit blades", Moveable),  # left, right, bottom, top
+        "slit": Attach("the slit blades", Moveable),
         "rot": Attach("the rotation stage", Moveable),
     }
 
-    def _findWidth(self, angle, gap):  # update equation
-        if self.opmode == "centered":
-            rad = np.deg2rad(angle)
-            return 2 * gap * np.sin(rad)
+    def _findGap(self, pos, angle):
+        # [-left, +right, -bottom, +top]
+        l, r, b, t = pos
+        height = t - b
 
-    def _doReadPositions(self, maxage):  # where to do the conversion? here?
+        rad = np.deg2rad(angle)
+
+        left_gap = float(-(l * np.sin(rad)))
+        right_gap = float(r * np.sin(rad))
+        width = left_gap + right_gap
+
+        return [width, height]
+
+    def _doReadPositions(self, maxage):
+        positions = self._adevs["slit"]._doReadPositions(maxage)
         angle = self._adevs["rot"].read(maxage)
 
-        if self._adevs["slit"].opmode.endswith("opposite"):
-            return "Currently Unsupported"
-
-        if self._adevs["slit"].opmode.endswith("centered"):
-            if self._adevs["slit"].opmode.startswith("off"):
-                return "Currently Unsupported"
-
-            gap, height = self._adevs["slit"].read(maxage)
-            return self._findWidth(angle, gap), height
-
-        l, r, b, t = self._adevs["slit"].read(maxage)
-        return l, r, b, t, angle
+        width, height = self._findGap(positions, angle)
+        return [width, height, angle]
 
     def doRead(self, maxage=0):
-        self._syncOpmode(self.opmode)
+        # reader opmode should take prioriy over slit opmode
+        self._syncOpmode(self._adevs["slit"].opmode, self.opmode)
         return self._doReadPositions(maxage)
 
     def doStatus(self, maxage=0):
-        return status.OK, ""
+        return status.OK, f"{self.opmode} mode"
 
     def doSetPosition(self, pos):
         pass
@@ -107,37 +106,13 @@ class VSCalculator(Readable):
             self._cache.invalidate(self, "value")
             self._cache.put(self, "fmtstr", self.fmtstr_map[value])
 
-    def _syncOpmode(self, vs_value):
-        if self._adevs["slit"].opmode == vs_value:
+    def _syncOpmode(self, slit_mode, vs_mode):
+        if slit_mode == vs_mode:
             return
-        self._adevs["slit"]._setROParam("opmode", vs_value)
+        self._adevs["slit"]._setROParam("opmode", vs_mode)
 
 
 class VirtualSlit(Moveable):
-    """Slit Controller for the ESTIA Virtual Source Slit system.
-
-    The slit consists of two L-shaped blades controlled by 5 motors:
-    - 2 motions along the x-axis
-    - 2 motions along the y-axis
-    - 1 shared rotational motion along the z-axis
-
-    Axis stated are defined via the right-hand rule with +x heading down the beamline towards the sample
-
-    The vertical height of the slit is determined by standard slit motions, however
-    the width is determined by the gap distance between the blades along the x-axis
-    and then a shared rotation around the z-axis.
-
-    The gap made by the distance between the blades and the angle of rotation can be found
-    with ''2*(blade gap)*sin(angle of rotation)'' when centered since the blades will always be an equal distance
-    from the center point. [The attached slit device should always run in 'centered' mode]
-
-    The user must define the width of the opening they would like along with how far apart
-    the blades will be. The information will be used to determing the appropriate rotation
-    the system will take to match the desired width.
-
-    Currently setup to work if the slit is in "centered" mode
-    """
-
     parameter_overrides = {
         "fmtstr": Override(
             default={
