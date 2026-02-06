@@ -1,6 +1,6 @@
 description = "ARINAX sample motors (from the mockup software)"
 
-group = "basic"
+group = "optional"
 
 devices = dict(
     phi=device(
@@ -41,6 +41,7 @@ devices = dict(
         maxage=None,
     ),
     dpu_config_map_move=device(
+        # This class seems to be the best for read/write the DPU PV.
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="ARINAX DPU Configuration (mockup)",
         readpv="NMX:DPUConfiguration",
@@ -49,6 +50,8 @@ devices = dict(
         monitor=True,
         pollinterval=0.5,
         maxage=None,
+        # Add mapping here to override the one from readpv (ENUM), as the writepv is a STRING.
+        mapping={'CONFIG1':'CONFIG1', 'CONFIG2':'CONFIG2', 'CONFIG3':'CONFIG3', 'CONFIG4':'CONFIG4', 'CONFIG5':'CONFIG5'}
     ),
     dpu_config_dig_move=device(
         "nicos_ess.devices.epics.pva.EpicsDigitalMoveable",
