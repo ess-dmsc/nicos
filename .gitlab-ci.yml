@@ -15,7 +15,7 @@ variables:
 default:
   tags:
     - docker
-  image: ghcr.io/astral-sh/uv:$UV_VERSION-python$PYTHON_VERSION-$BASE_LAYER
+  image: registry.esss.lu.se/ecdc/ess-dmsc/docker-almalinux9-conan:1.5.0-rc.1
 
 stages:
   - test
