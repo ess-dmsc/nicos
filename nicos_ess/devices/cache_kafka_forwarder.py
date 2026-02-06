@@ -236,7 +236,9 @@ class CacheKafkaForwarder(ForwarderBase, Device):
             name, value, timestamp, is_value = item
 
             try:
-                if is_value:
+                if (
+                    is_value and value != ""
+                ):  # empty strings are corrupted data, skip them
                     value = cache_load(value)
                     if isinstance(value, bool):
                         value = int(value)
