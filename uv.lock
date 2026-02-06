@@ -2297,7 +2297,7 @@ requires-dist = [
     { name = "toml", marker = "extra == 'gui'", specifier = ">=0.10.2" },
     { name = "urllib3", specifier = "==1.26.20" },
     { name = "urllib3", marker = "extra == 'gui'", specifier = "==1.26.20" },
-    { name = "yuos-query" },
+    { name = "yuos-query", specifier = ">=0.1.23.dev1" },
 ]
 provides-extras = ["gui"]
 

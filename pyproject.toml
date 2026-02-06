@@ -28,7 +28,7 @@ dependencies = [
     "scipy>=0.9.0",
     "toml>=0.10",
     "urllib3==1.26.20",
-    "yuos-query",
+    "yuos-query>=0.1.23.dev1",
     "platformdirs",
     "nicos-resources",  # package is part of this workspace
     "importlib_metadata>=4.6;python_version<'3.10' and python_version>='3.6'",  # 3.10 brings recent-enough importlib.metadata
