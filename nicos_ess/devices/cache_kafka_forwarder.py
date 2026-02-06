@@ -191,74 +191,110 @@ class CacheKafkaForwarder(ForwarderBase, Device):
         last_flush = time.monotonic()
 
         while True:
-            # Wait until there is something to do (or wake periodically for flush)
-            self._has_data.wait(timeout=0.1)
+            self._wait_for_work(timeout=0.1)
 
-            # Pop one item fairly (round-robin across device/type)
-            with self._buf_lock:
-                if not self._active:
-                    self._has_data.clear()
-                    item = None
-                else:
-                    key = self._active.popleft()
-                    dq = self._buffers.get(key)
-
-                    if not dq:
-                        # should be rare, but keep structures consistent
-                        self._active_set.discard(key)
-                        item = None
-                    else:
-                        value, timestamp = dq.popleft()
-                        name, is_value = key
-
-                        # If more pending for this key, re-append to end (fairness)
-                        if dq:
-                            self._active.append(key)
-                        else:
-                            self._active_set.discard(key)
-                            # optional: free empty deque to avoid unbounded dict growth
-                            del self._buffers[key]
-
-                        item = (name, value, timestamp, is_value)
-
+            item = self._pop_next_item()
             if item is None:
-                # still do periodic flush
-                now = time.monotonic()
-                if now - last_flush >= 1.0:
-                    remaining = self._producer.flush(0.2)
-                    if remaining:
-                        self.log.warning(
-                            "Kafka flush timeout; %d msgs still pending", remaining
-                        )
-                    last_flush = now
+                last_flush = self._maybe_flush(last_flush)
                 continue
 
-            name, value, timestamp, is_value = item
+            self._handle_item(item)
+            last_flush = self._maybe_flush(last_flush)
 
-            try:
-                if (
-                    is_value and value != ""
-                ):  # empty strings are corrupted data, skip them
-                    value = cache_load(value)
-                    if isinstance(value, bool):
-                        value = int(value)
-                    if not isinstance(value, str):
-                        buffer = to_f144(name, value, timestamp)
-                        self._send_to_kafka(buffer, name)
-                else:
-                    buffer = serialise_al00(name, timestamp, value[0], value[1])
-                    self._send_to_kafka(buffer, name)
-            except Exception as error:
-                self.log.error("Could not forward data: %s", error)
+    def _wait_for_work(self, timeout: float) -> None:
+        """Block briefly until there is likely work to do."""
+        self._has_data.wait(timeout=timeout)
 
-            now = time.monotonic()
-            if now - last_flush >= 1.0:
-                remaining = self._producer.flush(0.2)
-                if remaining:
-                    self.log.warning(
-                        "Kafka flush timeout; %d msgs still pending", remaining
-                    )
-                last_flush = now
+    def _pop_next_item(self):
+        """
+        Pop exactly one pending update in a fair round-robin fashion across
+        (device, is_value) keys.
+
+        Returns:
+            (name, value, timestamp, is_value) or None if no work.
+        """
+        with self._buf_lock:
+            if not self._active:
+                self._has_data.clear()
+                return None
+
+            key = self._active.popleft()
+            dq = self._buffers.get(key)
+
+            if not dq:
+                # Key got scheduled but no buffer exists (rare race/cleanup).
+                self._active_set.discard(key)
+                if not self._active:
+                    self._has_data.clear()
+                return None
+
+            value, timestamp = dq.popleft()
+            name, is_value = key
+
+            # If more pending for this key, re-append for fairness, otherwise clean up.
+            if dq:
+                self._active.append(key)
+            else:
+                self._active_set.discard(key)
+                del self._buffers[key]
+
+            if not self._active:
+                # We just consumed the last currently scheduled key.
+                self._has_data.clear()
+
+            return (name, value, timestamp, is_value)
+
+    def _handle_item(self, item) -> None:
+        """Serialize and send one update."""
+        name, value, timestamp, is_value = item
+
+        try:
+            if is_value:
+                self._handle_value_update(name, value, timestamp)
+            else:
+                self._handle_status_update(name, value, timestamp)
+        except Exception as error:
+            self.log.error("Could not forward data: %s", error)
+
+    def _handle_value_update(self, name: str, value, timestamp: int) -> None:
+        """
+        Handle a /value update:
+          - skip empty strings (corrupted)
+          - cache_load and normalize bools
+          - send only non-string values via f144
+        """
+        if value == "":
+            return  # corrupted data, skip
+
+        value = cache_load(value)
+
+        if isinstance(value, bool):
+            value = int(value)
+
+        if isinstance(value, str):
+            return  # policy: don't send strings via f144
+
+        buffer = to_f144(name, value, timestamp)
+        self._send_to_kafka(buffer, name)
+
+    def _handle_status_update(self, name: str, value, timestamp: int) -> None:
+        """
+        Handle a /status update. `value` is expected to be (severity, message).
+        """
+        buffer = serialise_al00(name, timestamp, value[0], value[1])
+        self._send_to_kafka(buffer, name)
+
+    def _maybe_flush(self, last_flush: float) -> float:
+        """Flush Kafka periodically, but never block too long."""
+        now = time.monotonic()
+        if now - last_flush < 1.0:
+            return last_flush
+
+        remaining = self._producer.flush(0.2)
+        if remaining:
+            self.log.warning("Kafka flush timeout; %d msgs still pending", remaining)
+
+        return now
 
     def _send_to_kafka(self, buffer, name):
         try:
