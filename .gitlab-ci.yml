@@ -1,31 +1,49 @@
+workflow:
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_TAG
+
 default:
   tags:
     - docker
-  image: registry.esss.lu.se/ecdc/ess-dmsc/docker-centos7-build-node:latest
-  before_script:
-    - scl enable rh-python38 -- python --version
-    - scl enable rh-python38 -- pip install --user --upgrade pip 
-    - scl enable rh-python38 -- pip install --user -r requirements.txt
-    - scl enable rh-python38 -- pip install --user -r requirements-gui.txt
-    - scl enable rh-python38 -- pip install --user -r requirements-dev.txt
-    - scl enable rh-python38 -- pip install --user pytest pytest-timeout mock lxml Pillow 
-    - scl enable rh-python38 -- pip install --user 'requests<2.30.0'
 
-workflow:
-  rules:
-    - if: '$CI_PIPELINE_SOURCE == "push"'
-    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+variables:
+  UV_LINK_MODE: copy
 
 stages:
   - test
 
-test:
+tests_py312:
   stage: test
+  image: registry.esss.lu.se/ecdc/ess-dmsc/docker-almalinux9-conan:1.6.0
+  before_script:
+    - git config --global --add safe.directory "$CI_PROJECT_DIR"
+    - uv sync --extra gui --all-packages
   script:
-    - cd test
-    - scl enable rh-python38 -- python -m pytest --junitxml=test-output.xml --ignore=nicos_sinq
+    - uv run pytest test/ --cov=nicos --cov=nicos_ess --cov-report term --cov-report xml:coverage.xml --junitxml=test-output.xml
+  coverage: /TOTAL.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/
   artifacts:
     paths:
-      - test/test-output.xml
+      - test-output.xml
+      - coverage.xml
     reports:
-      junit: test/test-output.xml
+      junit: test-output.xml
+  variables:
+    UV_PYTHON: 3.12
+
+tests_py313:
+  stage: test
+  image: registry.esss.lu.se/ecdc/ess-dmsc/docker-almalinux9-conan:1.6.0
+  before_script:
+    - git config --global --add safe.directory "$CI_PROJECT_DIR"
+    - uv sync --extra gui --all-packages
+  script:
+    - uv run pytest test/ --junitxml=test-output.xml
+  artifacts:
+    paths:
+      - test-output.xml
+    reports:
+      junit: test-output.xml
+  variables:
+    UV_PYTHON: 3.13
