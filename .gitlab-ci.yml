@@ -1,31 +1,34 @@
+workflow:
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_TAG
+
+variables:
+  UV_VERSION: "0.10"
+  PYTHON_VERSION: "3.14"
+  BASE_LAYER: trixie-slim
+  # GitLab CI creates a separate mountpoint for the build directory,
+  # so we need to copy instead of using hard links.
+  UV_LINK_MODE: copy
+
 default:
   tags:
     - docker
-  image: registry.esss.lu.se/ecdc/ess-dmsc/docker-centos7-build-node:latest
-  before_script:
-    - scl enable rh-python38 -- python --version
-    - scl enable rh-python38 -- pip install --user --upgrade pip 
-    - scl enable rh-python38 -- pip install --user -r requirements.txt
-    - scl enable rh-python38 -- pip install --user -r requirements-gui.txt
-    - scl enable rh-python38 -- pip install --user -r requirements-dev.txt
-    - scl enable rh-python38 -- pip install --user pytest pytest-timeout mock lxml Pillow 
-    - scl enable rh-python38 -- pip install --user 'requests<2.30.0'
-
-workflow:
-  rules:
-    - if: '$CI_PIPELINE_SOURCE == "push"'
-    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+  image: ghcr.io/astral-sh/uv:$UV_VERSION-python$PYTHON_VERSION-$BASE_LAYER
 
 stages:
   - test
 
-test:
+unit-tests:
   stage: test
+  before_script:
+    - git config --global --add safe.directory "$CI_PROJECT_DIR"
+    - uv sync --extra gui
   script:
-    - cd test
-    - scl enable rh-python38 -- python -m pytest --junitxml=test-output.xml --ignore=nicos_sinq
+    - uv run pytest test/ --junitxml=test-output.xml
   artifacts:
     paths:
-      - test/test-output.xml
+      - test-output.xml
     reports:
-      junit: test/test-output.xml
+      junit: test-output.xml
