@@ -4,10 +4,11 @@ description = "NICOS Customizations and Extensions for the European Spallation S
 requires-python = ">=3.12"
 dynamic = ["version"]
 dependencies = [
-    "confluent-kafka==2.4.0",
+    "confluent-kafka>=2.13.0",
     "ess-streaming-data-types>=0.26.1",
     "kafka-logging-handler<=0.2.4",
     "nicos",
+    "yuos-query>=0.2.0",
 ]
 
 [project.optional-dependencies]

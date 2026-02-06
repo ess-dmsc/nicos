@@ -6,7 +6,6 @@ requires-python = ">=3.9"
 dynamic = ["version"]  # determine the version from git tags
 dependencies = [
     "caproto>=1.3.0",
-    "confluent-kafka==2.4.0",
     "ess-streaming-data-types>=0.27.0",
     "gitpython>=3.1.45",
     "h5py>=2.6",
@@ -28,10 +27,9 @@ dependencies = [
     "scipy>=0.9.0",
     "toml>=0.10",
     "urllib3==1.26.20",
-    "yuos-query",
     "platformdirs",
     "nicos-resources",  # package is part of this workspace
-    "importlib_metadata>=4.6;python_version<'3.10' and python_version>='3.6'",  # 3.10 brings recent-enough importlib.metadata    
+    "importlib_metadata>=4.6;python_version<'3.10' and python_version>='3.6'",  # 3.10 brings recent-enough importlib.metadata
 ]
 
 [build-system]
@@ -88,13 +86,6 @@ packages = ["nicos"]
 [tool.uv.sources]
 nicos_ess = { workspace = true }
 nicos-resources = { workspace = true }
-# `yuos-query` is not published on pypi, so retrieve it from github.
-# 
-# FIXME: uses `build-deps` branch for now as the main branch does not specify
-# the dependencies needed at build time that the build backend seems to
-# understand.
-# Alternatively: replace with our own index.
-yuos-query = { git = "https://github.com/ess-dmsc/yuos_query", branch="build-deps"}
 
 [tool.uv.workspace]
 members = ["nicos_ess", "nicos_demo", "resources"]
@@ -232,3 +223,9 @@ exclude = [
     "F841", # Local variable is assigned to but never used
     "F405"  # Name may be undefined, or defined from star imports
 ]
+
+[[tool.uv.index]]
+name = "ecdc-pypi"
+url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/simple"
+publish-url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi"
+default = true
