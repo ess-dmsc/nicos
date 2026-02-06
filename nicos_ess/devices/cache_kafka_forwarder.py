@@ -1,5 +1,7 @@
 import queue
+import threading
 import time
+from collections import deque
 from threading import Lock
 
 from streaming_data_types.alarm_al00 import Severity, serialise_al00
@@ -69,24 +71,6 @@ class CacheKafkaForwarder(ForwarderBase, Device):
             type=float,
             settable=False,
         ),
-        "kafka_backoff_initial": Param(
-            "Initial backoff (in secs.) when kafka delivery fails",
-            default=1.0,
-            type=float,
-            settable=False,
-        ),
-        "max_kafka_backoff": Param(
-            "Maximum backoff (in secs.) when kafka delivery keeps failing",
-            default=60.0,
-            type=float,
-            settable=False,
-        ),
-        "kafka_log_throttle": Param(
-            "Minimum time (in secs.) between repeated kafka/queue error logs",
-            default=60.0,
-            type=float,
-            settable=False,
-        ),
     }
     parameter_overrides = {
         # Key filters are irrelevant for this collector
@@ -98,19 +82,21 @@ class CacheKafkaForwarder(ForwarderBase, Device):
         self._dev_to_status_cache = {}
         self._producer = None
         self._lock = Lock()
-        self._producer_lock = Lock()
 
-        now = time.monotonic()
-        self._last_delivered_ts = now
-        self._kafka_down_until = 0.0
-        self._kafka_backoff = self.kafka_backoff_initial
+        self._per_dev_max = 100  #  per-device backlog cap
 
-        self._queue_full_dropped = 0
-        self._queue_full_next_log = 0.0
-        self._kafka_err_next_log = 0.0
+        self._buffers = {}  # (name, is_value) -> deque[(value, timestamp)]
+        self._active = deque()  # round-robin of keys that currently have buffered items
+        self._active_set = (
+            set()
+        )  # membership guard so we don't enqueue same key many times
+        self._buf_lock = Lock()
+        self._has_data = threading.Event()
+
+        self._dropped_total = 0
+        self._last_drop_log = 0.0
 
         self._initFilters()
-        self._queue = queue.Queue(1000)
         self._worker = createThread("cache_to_kafka", self._processQueue, start=False)
         self._regular_update_worker = createThread(
             "send_regular_updates", self._poll_updates, start=False
@@ -171,115 +157,116 @@ class CacheKafkaForwarder(ForwarderBase, Device):
                     dev_name, *self._dev_to_status_cache[dev_name], False
                 )
 
-    def _maybe_log_queue_full(self, now):
-        if now < self._queue_full_next_log:
-            return
-        if self._queue_full_dropped:
-            self.log.warning(
-                "Kafka queue full; dropped %d message(s) in the last %.0f seconds",
-                self._queue_full_dropped,
-                self.kafka_log_throttle,
-            )
-            self._queue_full_dropped = 0
-        self._queue_full_next_log = now + self.kafka_log_throttle
-
-    def _set_kafka_down(self, now, error):
-        if now >= self._kafka_err_next_log:
-            self.log.error(
-                "Kafka send failed; dropping for %.1fs (backoff). Last error: %s",
-                self._kafka_backoff,
-                error,
-            )
-            self._kafka_err_next_log = now + self.kafka_log_throttle
-
-        self._kafka_down_until = now + self._kafka_backoff
-        self._kafka_backoff = min(self._kafka_backoff * 2.0, self.max_kafka_backoff)
-
-    def _kafka_is_down(self, now):
-        return now < self._kafka_down_until
-
     def _push_to_queue(self, dev_name, value, timestamp, is_value):
-        now = time.monotonic()
-        if self._kafka_is_down(now):
-            # Kafka is unhealthy; don't enqueue. Caches keep latest values.
-            return
+        key = (dev_name, is_value)
 
-        try:
-            self._queue.put_nowait((dev_name, value, timestamp, is_value))
-            return
-        except queue.Full:
-            pass
+        with self._buf_lock:
+            dq = self._buffers.get(key)
+            if dq is None:
+                dq = deque(maxlen=self._per_dev_max)
+                self._buffers[key] = dq
 
-        if not self._worker.is_alive():
-            self.log.error("Kafka forwarding worker thread has stopped!")
-            return
+            # detect per-device drop (deque(maxlen) auto-drops from the left)
+            if len(dq) == dq.maxlen:
+                self._dropped_total += 1
+                now = time.monotonic()
+                if now - self._last_drop_log > 1.0:
+                    # rate-limit log spam
+                    self.log.error(
+                        "Per-device backlog full; dropping oldest updates (total dropped so far=%d)",
+                        self._dropped_total,
+                    )
+                    self._last_drop_log = now
 
-        # Drop oldest and attempt once more (non-blocking, readable, race-safe enough).
-        try:
-            self._queue.get_nowait()
-        except queue.Empty:
-            self._queue_full_dropped += 1
-            self._maybe_log_queue_full(now)
-            return
-        else:
-            self._queue.task_done()
+            dq.append((value, timestamp))
 
-        try:
-            self._queue.put_nowait((dev_name, value, timestamp, is_value))
-        except queue.Full:
-            # Still full: drop this update too.
-            self._queue_full_dropped += 2
-        else:
-            self._queue_full_dropped += 1
+            # schedule this device/type for draining (only once)
+            if key not in self._active_set:
+                self._active.append(key)
+                self._active_set.add(key)
 
-        self._maybe_log_queue_full(now)
+        self._has_data.set()
 
     def _processQueue(self):
-        while True:
-            name, value, timestamp, is_value = self._queue.get()
-            try:
-                now = time.monotonic()
-                if self._kafka_is_down(now):
-                    # Discard backlog while Kafka is down to prevent permanent queue-full.
-                    continue
+        last_flush = time.monotonic()
 
+        while True:
+            # Wait until there is something to do (or wake periodically for flush)
+            self._has_data.wait(timeout=0.1)
+
+            # Pop one item fairly (round-robin across device/type)
+            with self._buf_lock:
+                if not self._active:
+                    self._has_data.clear()
+                    item = None
+                else:
+                    key = self._active.popleft()
+                    dq = self._buffers.get(key)
+
+                    if not dq:
+                        # should be rare, but keep structures consistent
+                        self._active_set.discard(key)
+                        item = None
+                    else:
+                        value, timestamp = dq.popleft()
+                        name, is_value = key
+
+                        # If more pending for this key, re-append to end (fairness)
+                        if dq:
+                            self._active.append(key)
+                        else:
+                            self._active_set.discard(key)
+                            # optional: free empty deque to avoid unbounded dict growth
+                            del self._buffers[key]
+
+                        item = (name, value, timestamp, is_value)
+
+            if item is None:
+                # still do periodic flush
+                now = time.monotonic()
+                if now - last_flush >= 1.0:
+                    remaining = self._producer.flush(0.2)
+                    if remaining:
+                        self.log.warning(
+                            "Kafka flush timeout; %d msgs still pending", remaining
+                        )
+                    last_flush = now
+                continue
+
+            name, value, timestamp, is_value = item
+
+            try:
                 if is_value:
-                    # Convert value from string representation to correct type
                     value = cache_load(value)
                     if isinstance(value, bool):
-                        # Convert to 1 or 0
                         value = int(value)
                     if not isinstance(value, str):
-                        # Policy decision: don't send strings via f144
                         buffer = to_f144(name, value, timestamp)
                         self._send_to_kafka(buffer, name)
                 else:
                     buffer = serialise_al00(name, timestamp, value[0], value[1])
                     self._send_to_kafka(buffer, name)
-
             except Exception as error:
-                self._set_kafka_down(time.monotonic(), error)
-            finally:
-                self._queue.task_done()
+                self.log.error("Could not forward data: %s", error)
+
+            now = time.monotonic()
+            if now - last_flush >= 1.0:
+                remaining = self._producer.flush(0.2)
+                if remaining:
+                    self.log.warning(
+                        "Kafka flush timeout; %d msgs still pending", remaining
+                    )
+                last_flush = now
 
     def _send_to_kafka(self, buffer, name):
-        def on_delivery(err, msg):
-            now = time.monotonic()
-            if err:
-                if now >= self._kafka_err_next_log:
-                    self.log.error("Failed to deliver message for %s: %s", name, err)
-                    self._kafka_err_next_log = now + self.kafka_log_throttle
-            else:
-                self._last_delivered_ts = now
-                self._kafka_backoff = self.kafka_backoff_initial
-                self._kafka_down_until = 0.0
-
-        with self._producer_lock:
-            producer = self._producer
-
-        producer.produce(
-            self.output_topic,
-            buffer,
-            key=name.encode("utf-8"),
-            on_delivery_callback=on_delivery,
-        )
+        try:
+            self._producer.produce(
+                self.output_topic,
+                buffer,
+                key=name.encode("utf-8"),
+                auto_flush=False,
+            )
+        except BufferError:
+            # Internal librdkafka queue is full: we are overloaded or Kafka is slow/unavailable.
+            # Since the policy is "latest wins", dropping here is acceptable and avoids wedging.
+            self.log.warning("Kafka internal queue full; dropping message for %s", name)

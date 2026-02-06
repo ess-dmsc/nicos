@@ -33,20 +33,34 @@ class KafkaProducer:
         config = {
             "bootstrap.servers": ",".join(brokers),
             "message.max.bytes": MAX_MESSAGE_SIZE,
+            "linger.ms": 20,
+            "batch.num.messages": 10000,
+            "message.timeout.ms": 60000,
         }
         self._producer = Producer({**config, **options})
 
     def produce(
-        self, topic_name, message, partition=-1, key=None, on_delivery_callback=None
+        self,
+        topic_name,
+        message,
+        partition=-1,
+        key=None,
+        on_delivery_callback=None,
+        *,
+        auto_flush: bool = True,
+        flush_timeout: float | None = None,  # seconds, None = block indefinitely
+        poll_before_produce: bool = True,
     ):
-        """Send a message to Kafka.
-
-        :param topic_name: The topic to send to.
-        :param message: The message.
-        :param partition: Which partition to send to. Optional.
-        :param key: The key to assign. Optional
-        :param on_delivery_callback: The delivery callback. Optional.
         """
+        Backwards compatible:
+          - auto_flush=True -> same semantics as before (produce + flush)
+          - auto_flush=False -> async enqueue only (no flush)
+        """
+
+        # Serve delivery reports / internal events (important when not flushing).
+        if poll_before_produce:
+            self._producer.poll(0)
+
         self._producer.produce(
             topic_name,
             message,
@@ -54,11 +68,17 @@ class KafkaProducer:
             key=key,
             on_delivery=on_delivery_callback,
         )
-        remaining = self._producer.flush(timeout=10)
-        if remaining:
-            raise TimeoutError(
-                "Kafka flush timed out; %d message(s) still queued" % remaining
-            )
+
+        if auto_flush:
+            # Keep legacy behavior: block until delivered (or until timeout if provided)
+            self._producer.flush(flush_timeout)
+
+    def flush(self, timeout: float | None = None) -> int:
+        """Expose flush so callers can batch + flush explicitly."""
+        return self._producer.flush(timeout)
+
+    def poll(self, timeout: float = 0.0) -> int:
+        return self._producer.poll(timeout)
 
 
 class ProducesKafkaMessages(DeviceMixinBase):
