@@ -78,7 +78,14 @@ Run `uv pip install` and specify the wheel created when building NICOS core:
 uv pip install [path-to-the-whl] 
 ```
 
-You can install optional dependencies such as the GUI ones by appending `[gui]` to the filename of the wheel. 
+You can install optional dependencies such as the GUI ones by appending `[gui]` to the filename of the wheel.
+
+However, `yuos_query` is not available from any public index and might have to be installed manually first:
+
+``` bash
+uv pip install https://github.com/ess-dmsc/yuos_query/releases/download/v0.1.22/yuos_query-0.1.22-py3-none-any.whl
+```
+
 
 #### Run the NICOS components
 
