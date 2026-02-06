@@ -24,7 +24,7 @@ Some useful uv commands:
 
 Inside the repository, you can first use uv sync to create a local virtual environment with the specific packages and extras you want:
 
-    uv sync uv sync --all-packages --extra gui
+    uv sync --all-packages --extra gui
 
 This will build all packages (use --package <name> for specific packages or leave out for only the core) and install all dependencies including the `gui` optional ones.
 
