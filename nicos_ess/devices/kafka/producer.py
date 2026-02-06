@@ -1,3 +1,5 @@
+from typing import Optional
+
 from confluent_kafka import Producer
 
 from nicos.core import DeviceMixinBase, Param, host, listof
@@ -48,7 +50,7 @@ class KafkaProducer:
         on_delivery_callback=None,
         *,
         auto_flush: bool = True,
-        flush_timeout: float | None = None,  # seconds, None = block indefinitely
+        flush_timeout: Optional[float] = None,  # seconds, None = block indefinitely
         poll_before_produce: bool = True,
     ):
         """
@@ -73,7 +75,7 @@ class KafkaProducer:
             # Keep legacy behavior: block until delivered (or until timeout if provided)
             self._producer.flush(flush_timeout)
 
-    def flush(self, timeout: float | None = None) -> int:
+    def flush(self, timeout: Optional[float] = None) -> int:
         """Expose flush so callers can batch + flush explicitly."""
         return self._producer.flush(timeout)
 
