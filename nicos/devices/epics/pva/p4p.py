@@ -75,6 +75,7 @@ class P4pWrapper:
         # Track per-sub connected state + per-(pv,param) refcount.
         self._sub_connected = {}
         self._conn_refcnt = defaultdict(int)
+        self._sub_to_key = {}
 
         self._context = context or _CONTEXT
 
@@ -239,11 +240,7 @@ class P4pWrapper:
             pvname, callback, request=request, notify_disconnect=True
         )
 
-        # Best-effort: lets close_subscription() clean up our bookkeeping.
-        try:
-            sub._nicos_subkey = subkey  # noqa: SLF001
-        except Exception:
-            pass
+        self._sub_to_key[id(sub)] = subkey
 
         return sub
 
@@ -359,7 +356,7 @@ class P4pWrapper:
             return status.UNKNOWN, "alarm information unavailable"
 
     def close_subscription(self, subscription):
-        subkey = getattr(subscription, "_nicos_subkey", None)
+        subkey = self._sub_to_key.pop(id(subscription), None)
 
         if subkey is not None:
             conn_key = subkey[:2]

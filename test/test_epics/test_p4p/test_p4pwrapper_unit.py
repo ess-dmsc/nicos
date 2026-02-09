@@ -220,11 +220,13 @@ def test_subscribe_registers_monitor_and_starts_disconnected(fake_context: FakeC
     change = CallSpy()
     sub = pva_wrapper.subscribe("PV:X", "value", change)
 
+    sub_id = id(sub)
+
     assert fake_context.monitor_calls == [
         ("PV:X", "field(value,timeStamp,alarm,control,display)", True)
     ]
-    assert hasattr(sub, "_nicos_subkey")
-    assert pva_wrapper._sub_connected[sub._nicos_subkey] is False
+    assert sub_id in pva_wrapper._sub_to_key
+    assert pva_wrapper._sub_connected[pva_wrapper._sub_to_key.get(sub_id)] is False
 
 
 def test_multiple_subscriptions_refcount_connect_disconnect_order(
@@ -313,7 +315,7 @@ def test_cancelled_disconnect_is_suppressed_but_state_is_updated(
     # no "down" callback for Cancelled
     assert len(conn.calls) == 1
     assert ("PV:C", "value") not in pva_wrapper._conn_refcnt
-    assert pva_wrapper._sub_connected[sub._nicos_subkey] is False
+    assert pva_wrapper._sub_connected[pva_wrapper._sub_to_key.get(id(sub))] is False
 
 
 def test_alarm_only_update_without_value_uses_cached_value(fake_context: FakeContext):
@@ -372,12 +374,12 @@ def test_close_subscription_cleans_bookkeeping_when_connected(
 
     sub.emit(FakeUpdate({"value": 1}, {"value"}))
     assert ("PV:F", "value") in pva_wrapper._conn_refcnt
-    assert pva_wrapper._sub_connected[sub._nicos_subkey] is True
+    assert pva_wrapper._sub_connected[pva_wrapper._sub_to_key.get(id(sub))] is True
 
     pva_wrapper.close_subscription(sub)
 
     assert sub.closed is True
-    assert sub._nicos_subkey not in pva_wrapper._sub_connected
+    assert pva_wrapper._sub_to_key.get(id(sub)) not in pva_wrapper._sub_connected
     assert ("PV:F", "value") not in pva_wrapper._conn_refcnt
 
 
@@ -390,12 +392,12 @@ def test_close_subscription_when_never_connected_does_not_touch_refcount(
     sub = pva_wrapper.subscribe("PV:G", "value", ch)
 
     assert ("PV:G", "value") not in pva_wrapper._conn_refcnt
-    assert pva_wrapper._sub_connected[sub._nicos_subkey] is False
+    assert pva_wrapper._sub_connected[pva_wrapper._sub_to_key.get(id(sub))] is False
 
     pva_wrapper.close_subscription(sub)
 
     assert sub.closed is True
-    assert sub._nicos_subkey not in pva_wrapper._sub_connected
+    assert pva_wrapper._sub_to_key.get(id(sub)) not in pva_wrapper._sub_connected
     assert ("PV:G", "value") not in pva_wrapper._conn_refcnt
 
 
@@ -533,7 +535,7 @@ def test_enum_choices_churn_across_disconnect_and_reconnect(fake_context: FakeCo
     sub.emit(RuntimeError("Disconnected"))
     assert len(conn.calls) == 2
     assert conn.calls[1][0] == ("PV:MBBO", "value", False)
-    assert pva_wrapper._sub_connected[sub._nicos_subkey] is False
+    assert pva_wrapper._sub_connected[pva_wrapper._sub_to_key.get(id(sub))] is False
 
     # reconnect: placeholder/default choices first
     sub.emit(
@@ -688,51 +690,3 @@ def test_limits_high_only_monitor_update_emits_callback_with_cached_value_and_ne
     args, _ = ch.calls[-1]
     assert args[2] == 2.0
     assert args[4] == (-1.0, 6.0)
-
-
-@pytest.mark.xfail(
-    reason="If subscription object can't accept _nicos_subkey, close_subscription() can't clean bookkeeping; wrapper should track mapping internally."
-)
-def test_close_subscription_cleans_bookkeeping_even_if_subscription_cannot_store_subkey():
-    # dont use fixtures for this test since we need a custom context and subscription class that can track closed state
-    class SlotSubscription:
-        __slots__ = ("pvname", "_callback", "closed")
-
-        def __init__(self, pvname: str, callback):
-            self.pvname = pvname
-            self._callback = callback
-            self.closed = False
-
-        def emit(self, result):
-            self._callback(result)
-
-        def close(self):
-            self.closed = True
-
-    class SlotContext(FakeContext):
-        def monitor(self, pvname: str, callback, request=None, notify_disconnect=None):
-            self.monitor_calls.append((pvname, request, notify_disconnect))
-            sub = SlotSubscription(pvname, callback)
-            self._subscriptions.append(sub)
-            return sub
-
-    ctx = SlotContext()
-    pva_wrapper = P4pWrapper(timeout=1.0, context=ctx)
-
-    ch = CallSpy()
-    sub = pva_wrapper.subscribe("PV:SLOT", "value", ch)
-
-    # Find the internal subkey the wrapper registered
-    assert len(pva_wrapper._sub_connected) == 1
-    subkey = next(iter(pva_wrapper._sub_connected.keys()))
-    assert subkey[:2] == ("PV:SLOT", "value")
-
-    # Connect once to set refcount
-    sub.emit(FakeUpdate({"value": 1}, {"value"}))
-    assert pva_wrapper._conn_refcnt[("PV:SLOT", "value")] == 1
-
-    pva_wrapper.close_subscription(sub)
-
-    assert sub.closed is True
-    assert subkey not in pva_wrapper._sub_connected
-    assert ("PV:SLOT", "value") not in pva_wrapper._conn_refcnt

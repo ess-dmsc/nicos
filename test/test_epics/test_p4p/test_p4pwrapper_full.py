@@ -376,8 +376,8 @@ def test_restart_two_subscriptions_finally_connected_even_with_slow_conn_cb(
         lambda: pva_wrapper._conn_refcnt.get((pvname, "value"), 0) == 2,
         timeout=_TIMEOUT,
     )
-    assert pva_wrapper._sub_connected[sub1._nicos_subkey] is True
-    assert pva_wrapper._sub_connected[sub2._nicos_subkey] is True
+    assert pva_wrapper._sub_connected[pva_wrapper._sub_to_key.get(id(sub1))] is True
+    assert pva_wrapper._sub_connected[pva_wrapper._sub_to_key.get(id(sub2))] is True
 
     # Restart server (simulate IOC restart)
     pva_rig.server.restart()
@@ -388,8 +388,8 @@ def test_restart_two_subscriptions_finally_connected_even_with_slow_conn_cb(
         lambda: pva_wrapper._conn_refcnt.get((pvname, "value"), 0) == 0,
         timeout=_TIMEOUT,
     )
-    assert pva_wrapper._sub_connected[sub1._nicos_subkey] is False
-    assert pva_wrapper._sub_connected[sub2._nicos_subkey] is False
+    assert pva_wrapper._sub_connected[pva_wrapper._sub_to_key.get(id(sub1))] is False
+    assert pva_wrapper._sub_connected[pva_wrapper._sub_to_key.get(id(sub2))] is False
 
     # Now make the restarted server emit an update so monitors reconnect and deliver.
     pv.post(1.27, timestamp=time.time())
@@ -398,8 +398,8 @@ def test_restart_two_subscriptions_finally_connected_even_with_slow_conn_cb(
         lambda: pva_wrapper._conn_refcnt.get((pvname, "value"), 0) == 2,
         timeout=_TIMEOUT,
     )
-    assert pva_wrapper._sub_connected[sub1._nicos_subkey] is True
-    assert pva_wrapper._sub_connected[sub2._nicos_subkey] is True
+    assert pva_wrapper._sub_connected[pva_wrapper._sub_to_key.get(id(sub1))] is True
+    assert pva_wrapper._sub_connected[pva_wrapper._sub_to_key.get(id(sub2))] is True
 
     # Connection callback should end in connected state.
     # We *expect* at least two "up" events: one initial, one after restart.
