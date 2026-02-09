@@ -25,7 +25,8 @@ from test.test_epics.test_p4p.utils.pva_server import (
 )
 
 _ENUM_CHOICES = ["Alpha", "Beta", "Gamma", "Delta"]
-_TIMEOUT = 5.0 # seconds
+_TIMEOUT = 5.0  # seconds
+
 
 def _any_non_ok_alarm_severity() -> tuple[int, int]:
     # Return (epics_sev_int, nicos_status_int)
@@ -372,7 +373,8 @@ def test_restart_two_subscriptions_finally_connected_even_with_slow_conn_cb(
 
     # Both subs should be connected in wrapper bookkeeping
     wait_for(
-        lambda: pva_wrapper._conn_refcnt.get((pvname, "value"), 0) == 2, timeout=_TIMEOUT
+        lambda: pva_wrapper._conn_refcnt.get((pvname, "value"), 0) == 2,
+        timeout=_TIMEOUT,
     )
     assert pva_wrapper._sub_connected[sub1._nicos_subkey] is True
     assert pva_wrapper._sub_connected[sub2._nicos_subkey] is True
@@ -383,7 +385,8 @@ def test_restart_two_subscriptions_finally_connected_even_with_slow_conn_cb(
     # After stop/start, p4p may deliver Cancelled or other Exception to monitors.
     # Your wrapper updates bookkeeping either way; rely on that.
     wait_for(
-        lambda: pva_wrapper._conn_refcnt.get((pvname, "value"), 0) == 0, timeout=_TIMEOUT
+        lambda: pva_wrapper._conn_refcnt.get((pvname, "value"), 0) == 0,
+        timeout=_TIMEOUT,
     )
     assert pva_wrapper._sub_connected[sub1._nicos_subkey] is False
     assert pva_wrapper._sub_connected[sub2._nicos_subkey] is False
@@ -392,14 +395,17 @@ def test_restart_two_subscriptions_finally_connected_even_with_slow_conn_cb(
     pv.post(1.27, timestamp=time.time())
 
     wait_for(
-        lambda: pva_wrapper._conn_refcnt.get((pvname, "value"), 0) == 2, timeout=_TIMEOUT
+        lambda: pva_wrapper._conn_refcnt.get((pvname, "value"), 0) == 2,
+        timeout=_TIMEOUT,
     )
     assert pva_wrapper._sub_connected[sub1._nicos_subkey] is True
     assert pva_wrapper._sub_connected[sub2._nicos_subkey] is True
 
     # Connection callback should end in connected state.
     # We *expect* at least two "up" events: one initial, one after restart.
-    wait_for(lambda: sum(1 for c in conn.calls if c[0][2] is True) >= 2, timeout=_TIMEOUT)
+    wait_for(
+        lambda: sum(1 for c in conn.calls if c[0][2] is True) >= 2, timeout=_TIMEOUT
+    )
 
     # no "down" after the last "up"
     last_up_idx = max(i for i, c in enumerate(conn.calls) if c[0][2] is True)

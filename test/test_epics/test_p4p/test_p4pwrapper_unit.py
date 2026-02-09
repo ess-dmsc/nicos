@@ -343,7 +343,9 @@ def test_alarm_only_update_without_value_uses_cached_value(fake_context: FakeCon
     assert args[6] == "BOOM"
 
 
-def test_alarm_only_update_without_cached_value_emits_nothing(fake_context: FakeContext):
+def test_alarm_only_update_without_cached_value_emits_nothing(
+    fake_context: FakeContext,
+):
     pva_wrapper = P4pWrapper(timeout=1.0, context=fake_context)
 
     ch = CallSpy()
@@ -359,7 +361,9 @@ def test_alarm_only_update_without_cached_value_emits_nothing(fake_context: Fake
     assert ch.calls == []
 
 
-def test_close_subscription_cleans_bookkeeping_when_connected(fake_context: FakeContext):
+def test_close_subscription_cleans_bookkeeping_when_connected(
+    fake_context: FakeContext,
+):
     pva_wrapper = P4pWrapper(timeout=1.0, context=fake_context)
 
     conn = CallSpy()
