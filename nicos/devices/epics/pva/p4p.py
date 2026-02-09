@@ -69,12 +69,14 @@ class P4pWrapper:
     support.
     """
 
-    def __init__(self, timeout=3.0):
+    def __init__(self, timeout=3.0, context=None):
         # We can have multiple monitors per PV (value/status/etc). p4p can inject
         # an initial Disconnected and deliver connect/disconnect out-of-order.
         # Track per-sub connected state + per-(pv,param) refcount.
         self._sub_connected = {}
         self._conn_refcnt = defaultdict(int)
+
+        self._context = context or _CONTEXT
 
         self.lock = Lock()
         self._timeout = timeout
@@ -87,12 +89,12 @@ class P4pWrapper:
     def connect_pv(self, pvname):
         # Check pv is available
         try:
-            _CONTEXT.get(pvname, timeout=self._timeout)
+            self._context.get(pvname, timeout=self._timeout)
         except TimeoutError:
             raise CommunicationError(f"could not connect to PV {pvname}") from None
 
     def get_pv_value(self, pvname, as_string=False):
-        result = _CONTEXT.get(pvname, timeout=self._timeout)
+        result = self._context.get(pvname, timeout=self._timeout)
         return self._convert_value(pvname, result["value"], as_string)
 
     def _convert_value(self, pvname, value, as_string=False):
@@ -119,13 +121,17 @@ class P4pWrapper:
         return value
 
     def put_pv_value(self, pvname, value, wait=False):
-        pvput(pvname, value, timeout=self._timeout, wait=wait)
+        self._context.put(
+            pvname, value, timeout=self._timeout, wait=wait, process="true"
+        )
 
     def put_pv_value_blocking(self, pvname, value, block_timeout=60):
-        pvput(pvname, value, timeout=block_timeout, wait=True)
+        self._context.put(
+            pvname, value, timeout=block_timeout, wait=True, process="true"
+        )
 
     def get_pv_type(self, pvname):
-        result = _CONTEXT.get(pvname, timeout=self._timeout)
+        result = self._context.get(pvname, timeout=self._timeout)
         try:
             if result["value"].getID() == "enum_t":
                 # Treat enums as ints
@@ -138,11 +144,11 @@ class P4pWrapper:
         return type(result["value"])
 
     def get_alarm_status(self, pvname):
-        result = _CONTEXT.get(pvname, timeout=self._timeout)
+        result = self._context.get(pvname, timeout=self._timeout)
         return self._extract_alarm_info(result)
 
     def get_units(self, pvname, default=""):
-        result = _CONTEXT.get(pvname, timeout=self._timeout)
+        result = self._context.get(pvname, timeout=self._timeout)
         return self._get_units(result, default)
 
     def _get_units(self, result, default):
@@ -152,7 +158,7 @@ class P4pWrapper:
             return default
 
     def get_limits(self, pvname, default_low=-1e308, default_high=1e308):
-        result = _CONTEXT.get(pvname, timeout=self._timeout)
+        result = self._context.get(pvname, timeout=self._timeout)
         return self._extract_limits(result, default_low, default_high)
 
     def _extract_limits(self, result, default_low=-1e308, default_high=1e308):
@@ -164,13 +170,13 @@ class P4pWrapper:
         return default_low, default_high
 
     def get_control_values(self, pvname):
-        raw_result = _CONTEXT.get(pvname, timeout=self._timeout)
+        raw_result = self._context.get(pvname, timeout=self._timeout)
         if "display" in raw_result:
             return raw_result["display"]
         return raw_result["control"] if "control" in raw_result else {}
 
     def get_value_choices(self, pvname):
-        value = _CONTEXT.get(pvname, timeout=self._timeout)["value"]
+        value = self._context.get(pvname, timeout=self._timeout)["value"]
         if isinstance(value, bool):
             return [False, True]
         if not isinstance(value, Iterable):
@@ -229,7 +235,7 @@ class P4pWrapper:
             connection_callback,
             as_string,
         )
-        sub = _CONTEXT.monitor(
+        sub = self._context.monitor(
             pvname, callback, request=request, notify_disconnect=True
         )
 
