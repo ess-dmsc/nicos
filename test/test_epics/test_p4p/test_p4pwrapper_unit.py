@@ -582,6 +582,74 @@ def test_get_enum_as_string_uses_latest_choices_from_monitor_cache(
 
 
 @pytest.mark.xfail(
+    reason=(
+        "Monitor updates can deliver 'value.index' together with a refreshed choices list "
+        "(eg during reconnect). Wrapper currently converts using stale cached choices before "
+        "updating the cache from the incoming value, producing wrong enum string."
+    )
+)
+def test_enum_monitor_as_string_uses_new_choices_when_choices_and_index_change_together(
+    fake_context: FakeContext,
+):
+    pva_wrapper = P4pWrapper(timeout=1.0, context=fake_context)
+
+    # Simulate stale choices cache from a previous connection:
+    # index=1 used to mean "Gamma" (['Beta','Gamma'] -> 1 == 'Gamma')
+    pva_wrapper._choices["PV:ENUM"] = ["Beta", "Gamma"]
+    pva_wrapper._values["PV:ENUM"] = 1
+
+    ch = CallSpy()
+    # Important: as_string=True means _convert_value() will map index->string.
+    sub = pva_wrapper.subscribe("PV:ENUM", "value", ch, as_string=True)
+
+    # Reconnect/update delivers a refreshed choices list and an index in the same delta:
+    # new mapping: ['Alpha','Beta','Gamma'] -> index 1 == 'Beta'
+    sub.emit(
+        FakeUpdate(
+            {"value": FakeEnumValue(index=1, choices=["Alpha", "Beta", "Gamma"])},
+            {"value.index"},
+        )
+    )
+
+    # Desired behavior: callback uses *new* choices from this update, not stale cache.
+    assert len(ch.calls) == 1
+    args, _ = ch.calls[0]
+    assert args[0] == "PV:ENUM"
+    assert args[1] == "value"
+    assert args[2] == "Beta"
+
+    # Cache should be updated to the new choices as well.
+    assert pva_wrapper._choices["PV:ENUM"] == ["Alpha", "Beta", "Gamma"]
+
+
+@pytest.mark.xfail(
+    reason=(
+        "Gets can deliver 'value.index' together with a refreshed choices list. "
+        "Wrapper currently converts using stale cached choices before "
+        "updating the cache from the incoming value, producing wrong enum string."
+    )
+)
+def test_get_enum_as_string_uses_new_choices_when_choices_and_index_change_together(
+    fake_context: FakeContext,
+):
+    pva_wrapper = P4pWrapper(timeout=1.0, context=fake_context)
+
+    # Simulate stale choices cache from a previous connection:
+    # index=1 used to mean "Gamma" (['Beta','Gamma'] -> 1 == 'Gamma')
+    pva_wrapper._choices["PV:ENUM"] = ["Beta", "Gamma"]
+    pva_wrapper._values["PV:ENUM"] = 1
+
+    # Simulate get() returning an index with a refreshed choices list:
+    # new mapping: ['Alpha','Beta','Gamma'] -> index 1 == 'Beta'
+    fake_context.set_get_result(
+        "PV:ENUM", {"value": FakeEnumValue(index=1, choices=["Alpha", "Beta", "Gamma"])}
+    )
+
+    assert pva_wrapper.get_pv_value("PV:ENUM", as_string=True) == "Beta"
+    assert pva_wrapper._choices["PV:ENUM"] == ["Alpha", "Beta", "Gamma"]
+
+
+@pytest.mark.xfail(
     reason="Wrapper only refreshes limits on 'display.limitLow' delta; should also handle 'display.limitHigh'."
 )
 def test_limits_high_only_monitor_update_emits_callback_with_cached_value_and_new_limits(
