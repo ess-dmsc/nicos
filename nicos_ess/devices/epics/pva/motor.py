@@ -889,7 +889,7 @@ class SmaractPiezoMotor(EpicsMotor):
             volatile=True,
             userparam=True,
         ),
-        "positionrefsrc": Param(
+        "feedbacksrc": Param(
             "Source of position feedback.",
             type=oneof("Internal", "External"),
             default="Internal",
@@ -991,13 +991,13 @@ class SmaractPiezoMotor(EpicsMotor):
             raise ValueError("MCL frequency must be non-negative.")
         self._put_pv("mclfrequency", value)
 
-    def doReadPositionrefsrc(self):
+    def doReadFeedbacksrc(self):
         try:
             return "External" if self._get_pv("positionrefsrc") else "Internal"
         except Exception as ex:
             return "Internal"
 
-    def doWritePositionrefsrc(self, value):
+    def doWriteFeedbacksrc(self, value):
         try:
             self._put_pv("positionrefsrc", value)
         except:
