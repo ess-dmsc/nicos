@@ -993,9 +993,10 @@ class SmaractPiezoMotor(EpicsMotor):
 
     def doReadFeedbacksrc(self):
         try:
-            return "External" if self._get_pv("positionrefsrc") else "Internal"
-        except Exception as ex:
+            position_feedback_source = self._get_pv("positionrefsrc")
+        except TimeoutError as ex:
             return "Internal"
+        return "External" if position_feedback_source else "Internal"
 
     def doWriteFeedbacksrc(self, value):
         try:
