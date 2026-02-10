@@ -80,17 +80,15 @@ devices = dict(
         readpv="{}InPhs_R".format(pv_root_t0_chopper),
     ),
     t0_chopper_park_angle=device(
-        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
         description="The chopper's park angle.",
         readpv="{}Pos_R".format(pv_root_t0_chopper),
         writepv="{}Park_S".format(pv_root_t0_chopper),
-        visibility=(),
-    ),
-    t0_chopper_park_control=device(
-        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
-        description="The park control for the T0 chopper.",
-        readpv="{}ParkPos_S".format(pv_root_t0_chopper),
-        writepv="{}ParkPos_S".format(pv_root_t0_chopper),
+        mapping={
+            "window 1": 60,
+            "window 2": 90,
+            "window 3": 120,
+        }
     ),
     t0_chopper_chic=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
@@ -203,17 +201,15 @@ devices = dict(
         readpv="{}InPhs_R".format(pv_root_band_chopper),
     ),
     band_chopper_park_angle=device(
-        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
         description="The chopper's park angle.",
         readpv="{}Pos_R".format(pv_root_band_chopper),
         writepv="{}Park_S".format(pv_root_band_chopper),
-        visibility=(),
-    ),
-    band_chopper_park_control=device(
-        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
-        description="The park control for the band chopper.",
-        readpv="{}ParkPos_S".format(pv_root_band_chopper),
-        writepv="{}ParkPos_S".format(pv_root_band_chopper),
+        mapping={
+            "window 1": 60,
+            "window 2": 90,
+            "window 3": 120,
+        }
     ),
     band_chopper_chic=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
@@ -314,17 +310,15 @@ devices = dict(
         readpv="{}InPhs_R".format(pv_root_overlap_chopper),
     ),
     overlap_chopper_park_angle=device(
-        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
         description="The chopper's park angle.",
         readpv="{}Pos_R".format(pv_root_overlap_chopper),
         writepv="{}Park_S".format(pv_root_overlap_chopper),
-        visibility=(),
-    ),
-    overlap_chopper_park_control=device(
-        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
-        description="The park control for the overlap chopper.",
-        readpv="{}ParkPos_S".format(pv_root_overlap_chopper),
-        writepv="{}ParkPos_S".format(pv_root_overlap_chopper),
+        mapping={
+            "window 1": 60,
+            "window 2": 90,
+            "window 3": 120,
+        }
     ),
     overlap_chopper_chic=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
@@ -443,17 +437,15 @@ devices = dict(
         readpv="{}InPhs_R".format(pv_root_pulse_shaping_chopper_1),
     ),
     pulse_shaping_chopper_1_park_angle=device(
-        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
         description="The chopper's park angle.",
         readpv="{}Pos_R".format(pv_root_pulse_shaping_chopper_1),
         writepv="{}Park_S".format(pv_root_pulse_shaping_chopper_1),
-        visibility=(),
-    ),
-    pulse_shaping_chopper_1_park_control=device(
-        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
-        description="The park control for the pulse shaping chopper 1.",
-        readpv="{}ParkPos_S".format(pv_root_pulse_shaping_chopper_1),
-        writepv="{}ParkPos_S".format(pv_root_pulse_shaping_chopper_1),
+        mapping={
+            "window 1": 60,
+            "window 2": 90,
+            "window 3": 120,
+        }
     ),
     pulse_shaping_chopper_1_chic=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
@@ -581,17 +573,16 @@ devices = dict(
         readpv="{}InPhs_R".format(pv_root_pulse_shaping_chopper_2),
     ),
     pulse_shaping_chopper_2_park_angle=device(
-        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
         description="The chopper's park angle.",
         readpv="{}Pos_R".format(pv_root_pulse_shaping_chopper_2),
         writepv="{}Park_S".format(pv_root_pulse_shaping_chopper_2),
-        visibility=(),
-    ),
-    pulse_shaping_chopper_2_park_control=device(
-        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
-        description="The park control for the pulse shaping chopper 2.",
-        readpv="{}ParkPos_S".format(pv_root_pulse_shaping_chopper_2),
-        writepv="{}ParkPos_S".format(pv_root_pulse_shaping_chopper_2),
+        mapping={
+            "window 1": 60,
+            "window 2": 90,
+            "window 3": 120,
+            "window 4": 150,
+        }
     ),
     pulse_shaping_chopper_2_chic=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
