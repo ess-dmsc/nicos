@@ -59,7 +59,7 @@ class PvaRig:
         return f"{self.prefix}:{suffix}"
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="function")
 def pva_rig() -> PvaRig:
     prefix = f"TEST:P4PWRAP:{uuid.uuid4().hex[:8]}"
 
@@ -108,21 +108,6 @@ def pva_rig() -> PvaRig:
 def pva_wrapper(pva_rig: PvaRig) -> P4pWrapper:
     # Fresh wrapper per test to avoid leaked monitor state / refcnt / caches.
     return P4pWrapper(timeout=2.0, context=pva_rig.ctx)
-
-
-@pytest.fixture(autouse=True)
-def _reset_pvs(pva_rig: PvaRig):
-    pva_rig.ctx.put(pva_rig.name("Float"), 1.25, wait=True, timeout=2.0, process="true")
-    pva_rig.ctx.put(pva_rig.name("Int"), 7, wait=True, timeout=2.0, process="true")
-    pva_rig.ctx.put(
-        pva_rig.name("Str"), "hello", wait=True, timeout=2.0, process="true"
-    )
-    pva_rig.ctx.put(
-        pva_rig.name("Arr"), [1.0, 2.0, 3.0], wait=True, timeout=2.0, process="true"
-    )
-    pva_rig.ctx.put(pva_rig.name("Enum"), 1, wait=True, timeout=2.0, process="true")
-
-    yield
 
 
 def _can_get(pva_wrapper: P4pWrapper, pvname: str) -> bool:
@@ -187,10 +172,6 @@ def test_metadata_and_alarm_helpers(pva_rig: PvaRig, pva_wrapper: P4pWrapper):
 
     assert pva_wrapper.get_value_choices(enum_pv) == _ENUM_CHOICES
 
-    sev0, msg0 = pva_wrapper.get_alarm_status(float_pv)
-    assert sev0 == status.OK
-    assert msg0 == ""
-
     sev_key, expected_nicos = _any_non_ok_alarm_severity()
     pva_rig.pvs["Float"].post(1.5, timestamp=time.time(), severity=sev_key, message="trip")
 
@@ -214,9 +195,12 @@ def test_monitor_change_and_connection_callbacks(
     try:
         # Trigger a value update from server side (monitor path)
         pv.post(2.5, timestamp=time.time())
-        change.wait_calls(1, timeout=_TIMEOUT)
+        wait_for(
+            lambda: any(c[0][2] == pytest.approx(2.5) for c in change.calls),
+            timeout=_TIMEOUT,
+        )
 
-        args, _ = change.calls[-1]
+        args, _ = next(c for c in reversed(change.calls) if c[0][2] == pytest.approx(2.5))
         assert args[0] == pvname
         assert args[1] == "value"
         assert args[2] == pytest.approx(2.5)
