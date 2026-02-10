@@ -291,6 +291,7 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
             sig_axes = list(getattr(sig, "axes", [])) or [
                 f"dim{i}" for i in range(arr.ndim)
             ]
+            estia_labels = ["blade", "wire", "strip"]
 
             def _coord_for(ax_name: str):
                 v = by_name.get(ax_name)
@@ -351,6 +352,29 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
                 axis_units = [x_unit, (getattr(sig, "unit", None) or "")]
                 x_is_time_flag = x_is_time
 
+            # special way to handle estia without breaking bifrost and other instuments
+            elif arr.ndim == 3 and all(label in sig_axes for label in estia_labels):
+                y_idx, x_idx = 0, 1
+                dimension_lengths = [arr.shape[i] for i in range(arr.ndim)]
+                view = arr.reshape(
+                    dimension_lengths[0], dimension_lengths[1] * dimension_lengths[2]
+                )
+                self._signal = np.ascontiguousarray(view)
+
+                x_labels, x_unit, x_is_time_flag = _labels_from_coord(
+                    _coord_for(sig_axes[x_idx]), self._signal.shape[1]
+                )
+                y_labels, y_unit, _ = _labels_from_coord(
+                    _coord_for(sig_axes[y_idx]), self._signal.shape[0]
+                )
+                labels = [x_labels, y_labels]
+                plot_type = "hist-3d"
+                axis_names = [
+                    f"{sig_axes[x_idx]}/{sig_axes[x_idx + 1]}",
+                    sig_axes[y_idx],
+                ]  # ["blade/wire", "strip"]
+                axis_units = [x_unit, y_unit]
+
             elif arr.ndim == 2 or arr.ndim >= 4:
                 # choose two axes and reduce others (your existing logic)
                 def _pick_2d_axes(ax_names):
@@ -389,34 +413,6 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
                 axis_names = [sig_axes[x_idx], sig_axes[y_idx]]
                 axis_units = [x_unit, y_unit]
                 x_is_time_flag = x_is_time
-
-            # Estia detector view
-            # TODO: If another instrument also has 3 dimentions but
-            # reshapes the array differently (than multiply 1st and 2nd
-            # dimensions and instead for ex. multiply 0th and 1st), the
-            # data should't be handled based on array dimensions but
-            # instrument name
-            elif arr.ndim == 3:
-                y_idx, x_idx = 0, 1
-                dimension_lengths = [arr.shape[i] for i in range(arr.ndim)]
-                view = arr.reshape(
-                    dimension_lengths[0], dimension_lengths[1] * dimension_lengths[2]
-                )
-                self._signal = np.ascontiguousarray(view)
-
-                x_labels, x_unit, x_is_time_flag = _labels_from_coord(
-                    _coord_for(sig_axes[x_idx]), self._signal.shape[1]
-                )
-                y_labels, y_unit, _ = _labels_from_coord(
-                    _coord_for(sig_axes[y_idx]), self._signal.shape[0]
-                )
-                labels = [x_labels, y_labels]
-                plot_type = "hist-3d"
-                axis_names = [
-                    f"{sig_axes[x_idx]}/{sig_axes[x_idx + 1]}",
-                    sig_axes[y_idx],
-                ]  # ["blade/wire", "strip"]
-                axis_units = [x_unit, y_unit]
 
             # Title from signal label or DA00 result key
             try:
