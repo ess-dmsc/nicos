@@ -167,6 +167,39 @@ def test_put_roundtrip_smoke_using_wrapper_put(
     assert pva_wrapper.get_pv_value(pva_rig.name("Enum"), as_string=True) == "Delta"
 
 
+def test_metadata_and_alarm_helpers(pva_rig: PvaRig, pva_wrapper: P4pWrapper):
+    float_pv = pva_rig.name("Float")
+    enum_pv = pva_rig.name("Enum")
+
+    pva_wrapper.connect_pv(float_pv)
+    pva_wrapper.connect_pv(enum_pv)
+
+    float_type = pva_wrapper.get_pv_type(float_pv)
+    assert float_type in (float, np.float64)
+    assert pva_wrapper.get_pv_type(enum_pv) is int
+
+    assert pva_wrapper.get_units(float_pv) == "mm"
+    assert pva_wrapper.get_limits(enum_pv) == (0, len(_ENUM_CHOICES) - 1)
+
+    control_or_display = pva_wrapper.get_control_values(float_pv)
+    assert "units" in control_or_display
+    assert control_or_display["units"] == "mm"
+
+    assert pva_wrapper.get_value_choices(enum_pv) == _ENUM_CHOICES
+
+    sev0, msg0 = pva_wrapper.get_alarm_status(float_pv)
+    assert sev0 == status.OK
+    assert msg0 == ""
+
+    sev_key, expected_nicos = _any_non_ok_alarm_severity()
+    pva_rig.pvs["Float"].post(1.5, timestamp=time.time(), severity=sev_key, message="trip")
+
+    wait_for(
+        lambda: pva_wrapper.get_alarm_status(float_pv) == (expected_nicos, "trip"),
+        timeout=_TIMEOUT,
+    )
+
+
 def test_monitor_change_and_connection_callbacks(
     pva_rig: PvaRig, pva_wrapper: P4pWrapper
 ):
@@ -201,6 +234,21 @@ def test_monitor_change_and_connection_callbacks(
         assert args[2] == pytest.approx(2.5)
         assert args[5] == expected_nicos
         assert args[6] == "test alarm"
+    finally:
+        pva_wrapper.close_subscription(sub)
+
+
+def test_monitor_connection_only_subscription(pva_rig: PvaRig, pva_wrapper: P4pWrapper):
+    pvname = pva_rig.name("Int")
+    pv = pva_rig.pvs["Int"]
+
+    conn = EventSink()
+    sub = pva_wrapper.subscribe(pvname, "status", None, conn)
+
+    try:
+        pv.post(101, timestamp=time.time())
+        conn.wait_calls(1, timeout=_TIMEOUT)
+        assert conn.calls[0][0] == (pvname, "status", True)
     finally:
         pva_wrapper.close_subscription(sub)
 

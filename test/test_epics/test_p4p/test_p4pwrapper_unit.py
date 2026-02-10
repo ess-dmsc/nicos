@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 
 from nicos.core import CommunicationError, status
-from nicos.devices.epics.pva.p4p import P4pWrapper
+from nicos.devices.epics.pva.p4p import P4pWrapper, pvget, pvput
 from nicos.devices.epics.status import SEVERITY_TO_STATUS
 
 from test.test_epics.test_p4p.utils.p4p_doubles import (
@@ -23,6 +23,29 @@ def _any_severity_key() -> int:
 @pytest.fixture()
 def fake_context():
     return FakeContext()
+
+
+def test_pvget_uses_global_context_and_returns_value(monkeypatch):
+    fake_context = FakeContext()
+    fake_context.set_get_result("PV:GLOBAL", {"value": 123})
+
+    from nicos.devices.epics.pva import p4p as p4p_mod
+
+    monkeypatch.setattr(p4p_mod, "_CONTEXT", fake_context)
+
+    assert pvget("PV:GLOBAL", timeout=4.2) == 123
+    assert fake_context.get_calls == [("PV:GLOBAL", 4.2)]
+
+
+def test_pvput_uses_global_context_with_expected_flags(monkeypatch):
+    fake_context = FakeContext()
+
+    from nicos.devices.epics.pva import p4p as p4p_mod
+
+    monkeypatch.setattr(p4p_mod, "_CONTEXT", fake_context)
+
+    pvput("PV:GLOBAL:PUT", 11, wait=True, timeout=2.5)
+    assert fake_context.put_calls == [("PV:GLOBAL:PUT", 11, 2.5, True, "true")]
 
 
 def test_connect_pv_ok_calls_get_with_timeout(fake_context: FakeContext):
@@ -214,6 +237,31 @@ def test_extract_alarm_info_missing_fields_returns_unknown(fake_context: FakeCon
     assert msg == "alarm information unavailable"
 
 
+def test_extract_alarm_info_unknown_severity_returns_unknown(fake_context: FakeContext):
+    pva_wrapper = P4pWrapper(timeout=1.0, context=fake_context)
+    severity, msg = pva_wrapper._extract_alarm_info(
+        {"alarm": {"severity": 99999, "message": "weird"}}
+    )
+    assert severity == status.UNKNOWN
+    assert msg == "alarm information unavailable"
+
+
+def test_get_alarm_status_uses_context_get_and_extracts_alarm(
+    fake_context: FakeContext,
+):
+    sev_key = _any_severity_key()
+    fake_context.set_get_result(
+        "PV:ALARM", {"alarm": {"severity": sev_key, "message": "boom"}}
+    )
+    pva_wrapper = P4pWrapper(timeout=3.0, context=fake_context)
+
+    severity, msg = pva_wrapper.get_alarm_status("PV:ALARM")
+
+    assert fake_context.get_calls == [("PV:ALARM", 3.0)]
+    assert severity == SEVERITY_TO_STATUS[sev_key]
+    assert msg == "boom"
+
+
 def test_subscribe_registers_monitor_and_starts_disconnected(fake_context: FakeContext):
     pva_wrapper = P4pWrapper(timeout=1.0, context=fake_context)
 
@@ -318,6 +366,25 @@ def test_cancelled_disconnect_is_suppressed_but_state_is_updated(
     assert pva_wrapper._sub_connected[pva_wrapper._sub_to_key.get(id(sub))] is False
 
 
+def test_subscribe_with_no_change_callback_still_tracks_connection_state(
+    fake_context: FakeContext,
+):
+    pva_wrapper = P4pWrapper(timeout=1.0, context=fake_context)
+
+    conn = CallSpy()
+    sub = pva_wrapper.subscribe("PV:NOCB", "value", None, conn)
+
+    sub.emit(FakeUpdate({"value": 7}, {"value"}))
+    assert len(conn.calls) == 1
+    assert conn.calls[0][0] == ("PV:NOCB", "value", True)
+    assert pva_wrapper._conn_refcnt[("PV:NOCB", "value")] == 1
+
+    sub.emit(RuntimeError("drop"))
+    assert len(conn.calls) == 2
+    assert conn.calls[1][0] == ("PV:NOCB", "value", False)
+    assert ("PV:NOCB", "value") not in pva_wrapper._conn_refcnt
+
+
 def test_alarm_only_update_without_value_uses_cached_value(fake_context: FakeContext):
     pva_wrapper = P4pWrapper(timeout=1.0, context=fake_context)
 
@@ -381,6 +448,27 @@ def test_close_subscription_cleans_bookkeeping_when_connected(
     assert sub.closed is True
     assert pva_wrapper._sub_to_key.get(id(sub)) not in pva_wrapper._sub_connected
     assert ("PV:F", "value") not in pva_wrapper._conn_refcnt
+
+
+def test_close_one_of_two_connected_subscriptions_decrements_but_keeps_connection(
+    fake_context: FakeContext,
+):
+    pva_wrapper = P4pWrapper(timeout=1.0, context=fake_context)
+
+    conn = CallSpy()
+    ch1 = CallSpy()
+    ch2 = CallSpy()
+    sub1 = pva_wrapper.subscribe("PV:F2", "value", ch1, conn)
+    sub2 = pva_wrapper.subscribe("PV:F2", "value", ch2, conn)
+
+    sub1.emit(FakeUpdate({"value": 1}, {"value"}))
+    sub2.emit(FakeUpdate({"value": 2}, {"value"}))
+    assert pva_wrapper._conn_refcnt[("PV:F2", "value")] == 2
+
+    pva_wrapper.close_subscription(sub1)
+    assert sub1.closed is True
+    assert pva_wrapper._conn_refcnt[("PV:F2", "value")] == 1
+    assert pva_wrapper._sub_connected[pva_wrapper._sub_to_key.get(id(sub2))] is True
 
 
 def test_close_subscription_when_never_connected_does_not_touch_refcount(
