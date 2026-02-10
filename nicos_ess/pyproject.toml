@@ -1,7 +1,7 @@
 [project]
 name = "nicos_ess"
 description = "NICOS Customizations and Extensions for the European Spallation Source (ESS)"
-requires-python = ">=3.9"
+requires-python = ">=3.12"
 dynamic = ["version"]
 dependencies = [
     "confluent-kafka==2.4.0",
