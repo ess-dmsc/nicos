@@ -69,10 +69,10 @@ devices = dict(
         slit="four_blade_slit",
         rot="slit_rotation",
     ),
-    # vs_controller=device(
-    #    "nicos_ess.estia.devices.virtual_source.VirtualSlit",
-    #    description="controller for the slit dimensions using 4 blade slit controls",
-    #    slit="four_blade_slit",
-    #    rot="slit_rotation",
-    # ),
+    vs_controller=device(
+        "nicos_ess.estia.devices.virtual_source.VirtualSlit",
+        description="controller for the slit dimensions using 4 blade slit controls",
+        slit="four_blade_slit",
+        rot="slit_rotation",
+    ),
 )
