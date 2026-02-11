@@ -32,7 +32,6 @@ from streaming_data_types.utils import get_schema
 from nicos import session
 from nicos.core import (
     LIVE,
-    MASTER,
     POLLER,
     SIMULATION,
     ArrayDesc,
@@ -40,9 +39,6 @@ from nicos.core import (
     Moveable,
     Override,
     Param,
-    Readable,
-    anytype,
-    dictof,
     host,
     listof,
     oneof,
@@ -196,79 +192,7 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
         self.curstatus = (new_status, message)
         self._cache.put(self._name, "status", self.curstatus, time.time())
 
-    # # Called by collector when a matching DA00 arrives
-    # def update_data_from_da00(self, da00_msg, timestamp_ns: int):
-    #     if not self.running:
-    #         return
-    #     try:
-    #         # Find the 'signal' Variable
-    #         variables = list(da00_msg.data)
-    #         sig = next(
-    #             (v for v in variables if getattr(v, "name", None) == "signal"), None
-    #         )
-    #         if sig is None:
-    #             return
-    #
-    #         arr = np.asarray(sig.data)
-    #         self._signal = np.ascontiguousarray(arr, dtype=arr.dtype)
-    #         self.curvalue = int(self._signal.sum()) if self._signal.size else 0
-    #
-    #         # Update NICOS array desc
-    #         self._array_desc = ArrayDesc(
-    #             self.name, shape=self._signal.shape, dtype=self._signal.dtype
-    #         )
-    #
-    #         # Heuristic plot type
-    #         if self._signal.ndim == 1:
-    #             plot_type = "hist-1d"
-    #             labels = [np.arange(self._signal.shape[0])]
-    #         elif self._signal.ndim == 2:
-    #             plot_type = "hist-2d"
-    #             # NICOS expects x first, y second for label buffers; keep conventional ordering
-    #             labels = [
-    #                 np.arange(self._signal.shape[1]),
-    #                 np.arange(self._signal.shape[0]),
-    #             ]
-    #         else:
-    #             plot_type = "hist-nd"
-    #             labels = [np.arange(self._signal.size)]
-    #
-    #         self.poll()  # trigger NICOS data update pipeline
-    #         self._push_to_nicos(plot_type, labels, timestamp_ns)
-    #         self._update_status(status.BUSY, "Counting")
-    #
-    #     except Exception as exc:
-    #         self._update_status(status.ERROR, str(exc))
-    #
-    # def _push_to_nicos(
-    #     self, plot_type: str, label_arrays: List[np.ndarray], timestamp: int
-    # ):
-    #     if self._signal is None:
-    #         return
-    #
-    #     databuffer = [byteBuffer(np.ascontiguousarray(self._signal))]
-    #     datadesc = [
-    #         dict(
-    #             dtype=self._signal.dtype.str,
-    #             shape=self._signal.shape,
-    #             labels={"x": {"define": "classic"}, "y": {"define": "classic"}},
-    #             plotcount=1,
-    #             plot_type=plot_type,
-    #             label_shape=tuple(len(l) for l in label_arrays),
-    #             label_dtypes=tuple(l.dtype.str for l in label_arrays),
-    #         )
-    #     ]
-    #     flat_labels = np.ascontiguousarray(
-    #         np.concatenate(label_arrays), dtype=np.float64
-    #     )
-    #     labelbuffers = [byteBuffer(flat_labels)]
-    #
-    #     session.updateLiveData(
-    #         dict(uid=0, time=timestamp, det=self.name, tag=LIVE, datadescs=datadesc),
-    #         databuffer,
-    #         labelbuffers,
-    #     )
-
+    # Called by collector when a matching DA00 arrives
     def update_data_from_da00(self, da00_msg, timestamp_ns: int):
         if not getattr(self, "running", True):
             return
@@ -507,26 +431,6 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
             )
         else:
             self.log.warn("Could not resolve job to reset")
-
-    def stop_job(self):
-        job = self._resolve_job()
-        if job:
-            self._collector.send_job_command(
-                job_id={"source_name": job.source_name, "job_number": job.job_number},
-                action="stop",
-            )
-        else:
-            self.log.warn("Could not resolve job to stop")
-
-    def remove_job(self):
-        job = self._resolve_job()
-        if job:
-            self._collector.send_job_command(
-                job_id={"source_name": job.source_name, "job_number": job.job_number},
-                action="remove",
-            )
-        else:
-            self.log.warn("Could not resolve job to remove")
 
 
 class LiveDataCollector(Detector):
