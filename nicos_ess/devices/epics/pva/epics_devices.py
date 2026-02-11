@@ -545,8 +545,18 @@ class EpicsStringMoveable(EpicsParameters, Moveable):
             )
 
 
-def _update_mapped_choices(mapped_device):
-    choices = mapped_device._epics_wrapper.get_value_choices(mapped_device.readpv)
+class PvReadOrWrite(str, Enum):
+    readpv = "readpv"
+    writepv = "writepv"
+
+
+def _update_mapped_choices(mapped_device, pv=PvReadOrWrite.readpv):
+    if pv == PvReadOrWrite.writepv:
+        selected_pv = mapped_device.writepv
+    else:
+        selected_pv = mapped_device.readpv
+    choices = mapped_device._epics_wrapper.get_value_choices(selected_pv)
+
     new_mapping = {}
     for i, choice in enumerate(choices):
         new_mapping[choice] = i
