@@ -6,6 +6,7 @@ import numpy as np
 
 from nicos.clients.gui.panels import Panel
 from nicos.guisupport.qt import (
+    QCheckBox,
     QComboBox,
     QDialog,
     QDialogButtonBox,
@@ -56,8 +57,10 @@ class LiveDataPlot(QFrame):
         super().__init__(parent)
         self.parent = parent
         self.current_view = None
+        self._expert_mode = False
         self.build_ui()
         self.source_combo.currentIndexChanged.connect(self.on_plot_changed)
+        self.settings_btn.clicked.connect(self.open_settings)
 
     def build_ui(self):
         self.setFrameStyle(QFrame.Shape.Box)
@@ -77,6 +80,49 @@ class LiveDataPlot(QFrame):
         self.plot_container_layout = QVBoxLayout(self.plot_container)
         self.plot_container.setLayout(self.plot_container_layout)
         self.main_layout.addWidget(self.plot_container)
+
+    def open_settings(self):
+        if self.current_view is None:
+            return
+        dlg = PlotSettingsDialog(self, self.current_view)
+        # initialise dialog from current state
+        if isinstance(self.current_view, ImageView):
+            dlg.expert_cb.setChecked(self._expert_mode)
+            dlg.log_cb.setChecked(self.current_view.log_mode)
+            dlg.autolevel_cb.setChecked(
+                getattr(self.current_view, "autolevel_on_update", False)
+            )
+            dlg.aspect_cb.setChecked(self.current_view.aspectLockedAction.isChecked())
+        else:
+            dlg.log_line_cb.setChecked(self.current_view.plot_widget.logY)
+
+        if dlg.open() == QDialog.Accepted:
+            # persist choices
+            if isinstance(self.current_view, ImageView):
+                self._expert_mode = dlg.expert_cb.isChecked()
+                if self._expert_mode:
+                    self.show_imageview_expert_modes()
+                else:
+                    self.hide_imageview_expert_modes()
+
+    def show_imageview_expert_modes(self):
+        if not isinstance(self.current_view, ImageView):
+            return
+        self.current_view.splitter_vert_1.show()
+        self.current_view.bottom_plot.show()
+        self.current_view.image_view_controller.show()
+        # set trace checkbox to checked when showing expert modes
+        self.current_view.image_view_controller.profile_cb.setChecked(True)
+        self.current_view.set_image_axes_visible(False)
+
+    def hide_imageview_expert_modes(self):
+        if not isinstance(self.current_view, ImageView):
+            return
+        self.current_view.splitter_vert_1.hide()
+        self.current_view.bottom_plot.hide()
+        self.current_view.image_view_controller.hide()
+        self.current_view.image_view_controller.profile_cb.setChecked(False)
+        self.current_view.set_image_axes_visible(True)
 
     @pyqtSlot()
     def on_plot_changed(self):
@@ -108,11 +154,20 @@ class LiveDataPlot(QFrame):
             view.clear_button.hide()
             view.log_checkbox.hide()
         elif len(shape) == 2:
-            view = ImageView(parent=self.parent, histogram_orientation="vertical")
+            view = ImageView(
+                parent=self.parent,
+                histogram_orientation="horizontal",
+                use_internal_image_view_controller=True,
+                invert_y=False,
+            )
+            view.aspectLockedAction.setChecked(False)
             view.set_aspect_locked(False)
             view.add_image_axes()
-            view.splitter_vert_1.hide()
-            view.bottom_plot.hide()
+
+            if not self._expert_mode:
+                view.splitter_vert_1.hide()
+                view.bottom_plot.hide()
+                view.image_view_controller.hide()
         else:
             return
 
@@ -223,29 +278,95 @@ class LiveDataPanel(Panel):
 
     def _on_plot_livedata(self, plot_widget, params, blobs):
         name = params["det"]
-
         if name not in self.connected_plots:
             return
 
         datadesc = params["datadescs"][0]
         data_shape = datadesc["shape"]
-        label_shape = datadesc.get("label_shape", [])
         data_dtype = datadesc["dtype"]
-        label_dtypes = datadesc.get("label_dtypes")
         plot_type = datadesc.get("plot_type")
 
-        data = np.frombuffer(blobs[0], dtype=data_dtype).reshape(data_shape)
+        # ---- decode data buffer ----
+        data = np.frombuffer(blobs[0], dtype=data_dtype).reshape(tuple(data_shape))
+
+        # ---- decode label buffer(s) ----
+        label_shape = datadesc.get("label_shape", [])
+        label_dtypes = datadesc.get("label_dtypes") or [np.dtype(np.float64).str] * len(
+            label_shape
+        )
         labels = []
-        for i, (shape, dtype) in enumerate(zip(label_shape, label_dtypes)):
-            label = np.frombuffer(
-                blobs[1][i * shape * 8 : (i + 1) * shape * 8], dtype=np.float64
-            ).astype(dtype)
-            labels.append(label)
+        if label_shape:
+            raw = blobs[1]  # single concatenated float64 buffer
+            offset = 0
+            for shape, dtype in zip(label_shape, label_dtypes):
+                nbytes = shape * 8  # float64
+                arr = np.frombuffer(
+                    raw[offset : offset + nbytes], dtype=np.float64
+                ).astype(dtype)
+                labels.append(arr)
+                offset += nbytes
+        else:
+            # robust fallback: synthetic indices
+            if len(data_shape) >= 1:
+                labels = [np.arange(data_shape[-1], dtype=np.float64)]
+            if len(data_shape) >= 2:
+                labels = [
+                    np.arange(data_shape[1], dtype=np.float64),
+                    np.arange(data_shape[0], dtype=np.float64),
+                ]
+
+        # ---- titles & axis labels (from datadesc metadata) ----
+        axis_names = datadesc.get("axis_names", [])
+        axis_units = datadesc.get("axis_units", [])
+        title = datadesc.get("title") or params["det"]
+        signal_unit = datadesc.get("signal_unit") or ""
+        x_is_time = bool(datadesc.get("x_is_time", False))
 
         if plot_type == "hist-1d" and isinstance(plot_widget, LineView):
+            # Apply axis/title formatting BEFORE plotting
+            x_name = (
+                axis_names[0] if len(axis_names) >= 1 else "Time" if x_is_time else "X"
+            )
+            y_name = "Counts"
+            y_unit = signal_unit
+
+            plot_widget.set_axis_format(
+                title=title,
+                x_label=x_name,
+                y_label=y_name,
+                y_units=y_unit,
+                x_is_time=x_is_time,
+            )
+
             plot_widget.set_data([data], {"x": labels[0]})
-        elif plot_type == "hist-2d" and isinstance(plot_widget, ImageView):
+
+        elif plot_type in ("hist-2d", "hist-3d") and isinstance(plot_widget, ImageView):
+            # data is 2D → labels[0]=x, labels[1]=y (or reshaped 3D)
             plot_widget.set_data([data], {"x": labels[0], "y": labels[1]})
+
+            x_name = axis_names[0] if len(axis_names) >= 1 else "X"
+            y_name = axis_names[1] if len(axis_names) >= 2 else "Y"
+            x_unit = axis_units[0] if len(axis_units) >= 1 else ""
+            y_unit = axis_units[1] if len(axis_units) >= 2 else ""
+
+            plot_widget.image_plot.setTitle(title)
+            plot_widget.left_plot.setTitle("-")  # Needed for layout alignment
+            plot_widget.image_plot.setLabel("bottom", x_name, units=x_unit)
+            plot_widget.image_plot.setLabel("left", y_name, units=y_unit)
+
+            plot_widget.set_axis_labels(x_name, x_unit, y_name, y_unit)
+
+            # Keep axes hidden if any ROI/profile is active so side plots line up
+            ctrl = getattr(plot_widget, "image_view_controller", None)
+            if ctrl is not None:
+                any_active = (
+                    ctrl.roi_cb.isChecked()
+                    or ctrl.roi_crosshair_cb.isChecked()
+                    or ctrl.line_roi_cb.isChecked()
+                    or ctrl.profile_cb.isChecked()
+                )
+                plot_widget.set_image_axes_visible(not any_active)
+
         else:
             return
 
@@ -275,3 +396,53 @@ class LiveDataPanel(Panel):
 
     def eval_command(self, command, *args, **kwargs):
         return self.client.eval(command, *args, **kwargs)
+
+
+class PlotSettingsDialog(QDialog):
+    """Context-aware settings for the current plot."""
+
+    def __init__(self, host: LiveDataPlot, view: QWidget):
+        super().__init__(host)
+        self.setWindowTitle("Plot Settings")
+        self.setModal(True)
+        self.view = view
+        vbox = QVBoxLayout(self)
+
+        # ImageView controls
+        self.expert_cb = QCheckBox("Expert mode (profiles, ROIs, traces)")
+        self.log_cb = QCheckBox("Logarithmic colormap")
+        self.autolevel_cb = QCheckBox("Auto-levels on each update")
+        self.autolevel_now_btn = QPushButton("Auto-level now")
+        self.aspect_cb = QCheckBox("Lock aspect ratio")
+
+        # LineView controls
+        self.log_line_cb = QCheckBox("Log Y (1D)")
+
+        # Wire up according to view type
+        if isinstance(view, ImageView):
+            vbox.addWidget(self.expert_cb)
+            vbox.addWidget(self.log_cb)
+            vbox.addWidget(self.autolevel_cb)
+            vbox.addWidget(self.autolevel_now_btn)
+            vbox.addWidget(self.aspect_cb)
+
+            self.log_cb.toggled.connect(view.toggle_log_mode)
+            self.autolevel_cb.toggled.connect(view.set_autolevel_on_update)
+            self.autolevel_now_btn.clicked.connect(view.autolevel_now)
+            self.aspect_cb.toggled.connect(
+                lambda state: (
+                    view.aspectLockedAction.setChecked(state),
+                    view.set_aspect_locked(state),
+                )
+            )
+
+        elif isinstance(view, LineView):
+            vbox.addWidget(self.log_line_cb)
+            self.log_line_cb.toggled.connect(lambda s: view.plot_widget.setLogMode(y=s))
+
+        btns = QDialogButtonBox(
+            QDialogButtonBox.Ok | QDialogButtonBox.Cancel, parent=self
+        )
+        btns.accepted.connect(self.accept)
+        btns.rejected.connect(self.reject)
+        vbox.addWidget(btns)
