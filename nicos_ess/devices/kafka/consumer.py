@@ -168,9 +168,10 @@ class KafkaConsumer:
             "bootstrap.servers": ",".join(brokers),
             "group.id": group_id,
             "auto.offset.reset": starting_offset,
-            "error_cb": self._on_error,
-            "stats_cb": self._on_stats,
-            "statistics.interval.ms": 5000,
+            # temporarily disable callbacks to avoid issues with memory leak in our version of confluent-kafka; we'll re-enable error_cb when we can update to a version with the fix
+            # "error_cb": self._on_error,
+            # "stats_cbstats_cb": self._on_stats,
+            # "statistics.interval.ms": 5000,
             "socket.keepalive.enable": True,
             "reconnect.backoff.ms": 100,
             "reconnect.backoff.max.ms": 10_000,
@@ -1351,20 +1352,20 @@ class KafkaSubscriber:
 
     def _watchdog_no_stats(self, since_assign: float, since_reboot_ok: bool) -> bool:
         """Rebootstrap if stats have not arrived within the configured window."""
-        if (
-            self._consumer.last_stats_age() > self._no_stats_secs
-            and since_reboot_ok
-            and since_assign > self._wait_after_assign_secs
-            and not self._consumer.is_reassign_pending()
-        ):
-            session.log.warning(
-                "[kafka] watchdog: no_stats age=%.3fs > %.3fs -> rebootstrap",
-                self._consumer.last_stats_age(),
-                self._no_stats_secs,
-            )
-            self._consumer.rebootstrap("no_stats_heartbeat")
-            self._sleep(0.01)
-            return True
+        # if (
+        #     self._consumer.last_stats_age() > self._no_stats_secs
+        #     and since_reboot_ok
+        #     and since_assign > self._wait_after_assign_secs
+        #     and not self._consumer.is_reassign_pending()
+        # ):
+        #     session.log.warning(
+        #         "[kafka] watchdog: no_stats age=%.3fs > %.3fs -> rebootstrap",
+        #         self._consumer.last_stats_age(),
+        #         self._no_stats_secs,
+        #     )
+        #     self._consumer.rebootstrap("no_stats_heartbeat")
+        #     self._sleep(0.01)
+        #     return True
         return False
 
     def _watchdog_stuck_with_lag(
