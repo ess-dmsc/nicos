@@ -60,9 +60,6 @@ from .livedata_utils import (
     Selector,
     WorkflowId,
     parse_result_key,
-    parse_selector,
-    selector_matches,
-    selector_to_string,
 )
 
 DISCONNECTED_STATE = (status.ERROR, "Disconnected")
@@ -122,7 +119,7 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
 
     def doInit(self, mode):
         self._selector_obj: Optional[Selector] = (
-            parse_selector(self.selector) if self.selector else None
+            Selector.parse_selector_str(self.selector) if self.selector else None
         )
 
     def doRead(self, maxage=0):
@@ -138,7 +135,7 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
         return self.curstatus
 
     def doWriteSelector(self, value):
-        self._selector_obj = parse_selector(value)
+        self._selector_obj = Selector.parse_selector_str(value)
 
     def doWriteMapping(self, mapping):
         self.valuetype = oneof(*sorted(mapping, key=num_sort))
@@ -343,14 +340,13 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
             if arr.ndim == 1:
                 x_idx = 0
                 self._signal = np.ascontiguousarray(arr)
-                x_labels, x_unit, x_is_time = _labels_from_coord(
+                x_labels, x_unit, x_is_time_flag = _labels_from_coord(
                     _coord_for(sig_axes[x_idx]), arr.shape[0]
                 )
                 labels = [x_labels]
                 plot_type = "hist-1d"
                 axis_names = [sig_axes[x_idx], "Counts"]
                 axis_units = [x_unit, (getattr(sig, "unit", None) or "")]
-                x_is_time_flag = x_is_time
 
             # special way to handle estia without breaking bifrost and other instuments
             elif arr.ndim == 3 and all(label in sig_axes for label in estia_labels):
@@ -402,7 +398,7 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
                     view = view.sum(axis=ax, dtype=view.dtype)
                 self._signal = np.ascontiguousarray(view)
 
-                x_labels, x_unit, x_is_time = _labels_from_coord(
+                x_labels, x_unit, x_is_time_flag = _labels_from_coord(
                     _coord_for(sig_axes[x_idx]), self._signal.shape[1]
                 )
                 y_labels, y_unit, _ = _labels_from_coord(
@@ -412,7 +408,6 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
                 plot_type = "hist-2d"
                 axis_names = [sig_axes[x_idx], sig_axes[y_idx]]
                 axis_units = [x_unit, y_unit]
-                x_is_time_flag = x_is_time
 
             # Title from signal label or DA00 result key
             try:
@@ -738,7 +733,7 @@ class LiveDataCollector(Detector):
                         version=int(wf_parts[3]),
                     )
                     job = payload.get("job_id", {})
-                    self._registry.upsert_from_status(
+                    self._registry.jobinfo_from_status(
                         wf,
                         job_source_name=job.get("source_name", ""),
                         job_number=job.get("job_number", ""),
@@ -812,7 +807,7 @@ class LiveDataCollector(Detector):
             sel: Optional[Selector] = getattr(ch, "_selector_obj", None)
             if not sel:
                 continue
-            if selector_matches(sel, rk):
+            if sel.selector_matches(rk):
                 ch.update_data_from_da00(da, timestamp_ns)
 
     def send_job_command(

@@ -96,7 +96,7 @@ class LiveDataPlot(QFrame):
         else:
             dlg.log_line_cb.setChecked(self.current_view.plot_widget.logY)
 
-        if dlg.exec_() == QDialog.Accepted:
+        if dlg.open() == QDialog.Accepted:
             # persist choices
             if isinstance(self.current_view, ImageView):
                 self._expert_mode = dlg.expert_cb.isChecked()
