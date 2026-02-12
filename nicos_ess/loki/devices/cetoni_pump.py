@@ -202,6 +202,7 @@ class CetoniPumpController(EpicsParameters, CanReference, HasLimits, Moveable):
     def _value_change_callback(
         self, name, param, value, units, limits, severity, message, **kwargs
     ):
+        print(f"name: {name}, param: {param}, value: {value})")
         if name != self._get_pv_name("readpv"):
             # Unexpected updates ignored
             return
