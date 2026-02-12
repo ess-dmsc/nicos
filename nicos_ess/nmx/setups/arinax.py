@@ -41,7 +41,7 @@ devices = dict(
         maxage=None,
     ),
     dpu_config_map_move=device(
-        # This class seems to be the best for read/write the DPU PV.
+        # This class seems to be the best for read/write the DPU config PV.
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="ARINAX DPU Configuration (mockup)",
         readpv="NMX:DPUConfiguration",
@@ -51,7 +51,22 @@ devices = dict(
         pollinterval=0.5,
         maxage=None,
         # Add mapping here to override the one from readpv (ENUM), as the writepv is a STRING.
-        mapping={'CONFIG1':'CONFIG1', 'CONFIG2':'CONFIG2', 'CONFIG3':'CONFIG3', 'CONFIG4':'CONFIG4', 'CONFIG5':'CONFIG5'}
+        mapping={
+            'PARK': "PARK",
+            'CALIBRATION': "CALIBRATION",
+            'MAINTENANCE': "MAINTENANCE",
+            'CONFIG1':"CONFIG1",
+            'CONFIG2':"CONFIG2", 
+            'CONFIG3':"CONFIG3", 
+            'CONFIG4':"CONFIG4", 
+            'CONFIG5':"CONFIG5",
+            'CONFIG6':"CONFIG6",
+            'CONFIG7':"CONFIG7",
+            'CONFIG8':"CONFIG8",
+            'CONFIG9':"CONFIG9",
+            'CONFIG10':"CONFIG10",
+            'CONFIG11':"CONFIG11",
+            }
     ),
     dpu_config_dig_move=device(
         "nicos_ess.devices.epics.pva.EpicsDigitalMoveable",
