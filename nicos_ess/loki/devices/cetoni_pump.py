@@ -108,6 +108,13 @@ class CetoniPumpController(EpicsParameters, CanReference, Moveable):
             )
             self._epics_subscriptions = [value_subscription, status_subscription]
 
+    def _get_cached_pv_or_ask(self, key: str, as_string: bool = False):
+        return get_from_cache_or(
+            self,
+            self._record_fields[key].cache_key,
+            lambda: self._epics_wrapper.get_pv_value(self._pv(key), as_string),
+        )
+
     def _get_pv_name(self, pvparam):
         return f"{self.pvroot}{self._record_fields[pvparam]}"
 
@@ -118,7 +125,8 @@ class CetoniPumpController(EpicsParameters, CanReference, Moveable):
         self._epics_wrapper.put_pv_value(name, value)
 
     def doRead(self, maxage=0):
-        return self._epics_wrapper.get_pv_value(self._get_pv_name("readpv"))
+        # return self._epics_wrapper.get_pv_value(self._get_pv_name("readpv"))
+        return self._get_cached_pv_or_ask("readpv")
 
     def doStart(self, value):
         self._set_pv(self._get_pv_name("writepv"), value)
