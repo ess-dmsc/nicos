@@ -1,4 +1,16 @@
-from nicos.core import SIMULATION, Moveable, Override, Param, pvname, status, usermethod
+import time
+
+from nicos import session
+from nicos.core import (
+    POLLER,
+    SIMULATION,
+    Moveable,
+    Override,
+    Param,
+    pvname,
+    status,
+    usermethod,
+)
 from nicos.devices.abstract import CanReference
 from nicos_ess.devices.epics.pva.epics_devices import (
     EpicsParameters,
@@ -73,8 +85,28 @@ class CetoniPumpController(EpicsParameters, CanReference, Moveable):
             "stepsize_sp": "StepSize-SP",
             "home": " InitPosition",
         }
+
+    def doInit(self, mode):
+        self.set_up_subscriptions()
+
+    def set_up_subscriptions(self):
         self._epics_subscriptions = []
         self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
+
+        if session.sessiontype == POLLER and self.monitor:
+            value_subscription = self._epics_wrapper.subscribe(
+                pvname=self._get_pv_name("readpv"),
+                pvparam=self._record_fields["readpv"].cache_key,
+                change_callback=self._value_change_callback,
+                connection_callback=self._connection_change_callback,
+            )
+            status_subscription = self._epics_wrapper.subscribe(
+                pvname=self._get_pv_name("readpv"),
+                pvparam=self._record_fields["readpv"].cache_key,
+                change_callback=self._status_change_callback,
+                connection_callback=self._connection_change_callback,
+            )
+            self._epics_subscriptions = [value_subscription, status_subscription]
 
     def _get_pv_name(self, pvparam):
         return f"{self.pvroot}{self._record_fields[pvparam]}"
@@ -132,3 +164,21 @@ class CetoniPumpController(EpicsParameters, CanReference, Moveable):
     @usermethod
     def dispense_step(self):
         self._set_pv(self._get_pv_name("dispensestep"), 1)
+
+    def _value_change_callback(
+        self, name, param, value, units, limits, severity, message, **kwargs
+    ):
+        if name != self._get_pv_name("readpv"):
+            # Unexpected updates ignored
+            return
+        time_stamp = time.time()
+        self._cache.put(self._name, param, value, time_stamp)
+        self._cache.put(self._name, "unit", units, time_stamp)
+
+    def _status_change_callback(
+        self, name, param, value, units, limits, severity, message, **kwargs
+    ):
+        if name != self._get_pv_name("readpv"):
+            # Unexpected updates ignored
+            return
+        self._cache.put(self._name, "status", (severity, message), time.time())
