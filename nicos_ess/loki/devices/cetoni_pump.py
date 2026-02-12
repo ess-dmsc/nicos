@@ -71,11 +71,6 @@ class CetoniPumpController(EpicsParameters, CanReference, Moveable):
             "home": " InitPosition",
         }
 
-    def doInit(self, mode):
-        if mode == SIMULATION:
-            return
-        Moveable.doInit(self, mode)
-
     def _get_pv_name(self, pvparam):
         return f"{self.pvroot}{self._record_fields[pvparam]}"
 
