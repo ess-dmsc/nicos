@@ -122,11 +122,11 @@ class CetoniPumpController(EpicsParameters, CanReference, Moveable):
         return get_from_cache_or(
             self,
             self._record_fields[key].cache_key,
-            lambda: self._epics_wrapper.get_pv_value(self._pv(key), as_string),
+            lambda: self._epics_wrapper.get_pv_value(self._get_pv_name(key), as_string),
         )
 
     def _get_pv_name(self, pvparam):
-        return f"{self.pvroot}{self._record_fields[pvparam]}"
+        return f"{self.pvroot}{self._record_fields[pvparam].pv_suffix}"
 
     def _read_pv(self, name, as_string=False):
         return self._epics_wrapper.get_pv_value(name, as_string=as_string)
