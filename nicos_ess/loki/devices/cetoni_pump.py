@@ -49,7 +49,6 @@ class CetoniPumpController(EpicsParameters, CanReference, Moveable):
         "readpv": Override(mandatory=False, userparam=False, settable=False),
         "writepv": Override(mandatory=False, userparam=False, settable=False),
         "unit": Override(mandatory=False, settable=False, default=""),
-        "fmtstr": Override(default="%d"),
     }
 
     def doPreinit(self, mode):
