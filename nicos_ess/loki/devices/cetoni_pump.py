@@ -95,13 +95,14 @@ class CetoniPumpController(EpicsParameters, CanReference, Moveable):
             # "stepsize_sp": RecordInfo(cache_key="filled_volume", pv_suffix="StepSize-SP",
             # "home": RecordInfo(cache_key="filled_volume", pv_suffix=" InitPosition",
         }
+        self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
+        self._epics_wrapper.connect_pv(self._get_pv_name("readpv"))
 
     def doInit(self, mode):
         self.set_up_subscriptions()
 
     def set_up_subscriptions(self):
         self._epics_subscriptions = []
-        self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
 
         if session.sessiontype == POLLER and self.monitor:
             value_subscription = self._epics_wrapper.subscribe(
