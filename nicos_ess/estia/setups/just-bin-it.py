@@ -14,7 +14,16 @@ devices = dict(
         det_height=128,
         det_range=(98305, 196608),
     ),
-    det=device(
+    beam_monitor_image=device(
+        "nicos_ess.devices.datasources.just_bin_it.JustBinItImage",
+        description="A just-bin-it image channel",
+        data_topic="estia_beam_monitor",
+        brokers=configdata("config.KAFKA_BROKERS"),
+        unit="evts",
+        hist_type="1-D TOF",
+        hist_topic="estia_visualisation",
+    ),
+    jbi_device=device(
         "nicos_ess.devices.datasources.just_bin_it.JustBinItDetector",
         description="Just Bin it histogrammer",
         brokers=configdata("config.KAFKA_BROKERS"),
@@ -23,7 +32,7 @@ devices = dict(
         command_topic="estia_jbi_commands",
         response_topic="estia_jbi_responses",
         statustopic=["estia_jbi_heartbeat"],
-        images=["det_image"],
+        images=["det_image", "beam_monitor_image"],
         hist_schema="hs01",
         timers=["timer"],
     ),
@@ -36,5 +45,5 @@ devices = dict(
 )
 
 startupcode = """
-SetDetectors(det)
+SetDetectors(jbi_device)
 """
