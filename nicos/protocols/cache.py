@@ -353,8 +353,6 @@ def ast_eval(node):
         elif isinstance(node, Name):
             if node.id in _safe_names:
                 return _safe_names[node.id]
-        elif isinstance(node, NameConstant):
-            return node.value
         elif (
             isinstance(node, UnaryOp)
             and isinstance(node.op, USub)
