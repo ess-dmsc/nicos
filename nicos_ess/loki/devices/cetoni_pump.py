@@ -59,9 +59,21 @@ class CetoniPumpController(EpicsParameters, CanReference, Moveable):
                 record_type=RecordType.VALUE,
             ),
             # "pressure": RecordInfo(cache_key="filled_volume", pv_suffix="Pressure",
-            # "ispumping": RecordInfo(cache_key="filled_volume", pv_suffix="IsPumping",
-            # "isfault": RecordInfo(cache_key="filled_volume", pv_suffix="FaultState",
-            # "ishomed": RecordInfo(cache_key="filled_volume", pv_suffix="RefPosInitd",
+            "ispumping": RecordInfo(
+                cache_key="ispumping",
+                pv_suffix="IsPumping",
+                record_type=RecordType.STATUS,
+            ),
+            "isfault": RecordInfo(
+                cache_key="isfault",
+                pv_suffix="FaultState",
+                record_type=RecordType.STATUS,
+            ),
+            "ishomed": RecordInfo(
+                cache_key="ishomed",
+                pv_suffix="RefPosInitd",
+                record_type=RecordType.STATUS,
+            ),
             # "flowrate_rb": RecordInfo(cache_key="filled_volume", pv_suffix="FlowRate-RB",
             # "flowrate_sp": RecordInfo(cache_key="filled_volume", pv_suffix="FlowRate-RB",
             # "aspiratestep": RecordInfo(cache_key="filled_volume", pv_suffix="C_AspirateStep",
@@ -126,18 +138,18 @@ class CetoniPumpController(EpicsParameters, CanReference, Moveable):
         self._set_pv(self._get_pv_name("writepv"), value)
 
     def doStatus(self, maxage=0):
-        fault = self._read_pv(self._get_pv_name("isfault"))
+        return get_from_cache_or(self, "status", self._do_status)
+
+    def _do_status(self, maxage=0):
+        fault = self._get_cached_pv_or_ask("isfault")
         if fault:
             return status.ERROR, fault
-
-        homed = self._read_pv(self._get_pv_name("ishomed"))
+        homed = self._get_cached_pv_or_ask("ishomed")
         if not homed:
             return status.ERROR, "Not homed"
-
-        busy = self._read_pv(self._get_pv_name("ispumping"))
+        busy = self._get_cached_pv_or_ask("ispumping")
         if busy:
             return status.BUSY, "Pumping"
-
         return status.OK
 
     def doReference(self):
