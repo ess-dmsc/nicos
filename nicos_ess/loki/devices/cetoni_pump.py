@@ -142,12 +142,15 @@ class CetoniPumpController(EpicsParameters, CanReference, Moveable):
 
     def _do_status(self, maxage=0):
         fault = self._get_cached_pv_or_ask("isfault")
+        print(f"fault: {fault}")
         if fault:
             return status.ERROR, fault
         homed = self._get_cached_pv_or_ask("ishomed")
+        print(f"homed: {homed}")
         if not homed:
             return status.ERROR, "Not homed"
         busy = self._get_cached_pv_or_ask("ispumping")
+        print(f"busy: {busy}")
         if busy:
             return status.BUSY, "Pumping"
         return status.OK
