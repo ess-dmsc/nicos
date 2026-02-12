@@ -4,7 +4,6 @@ from nicos import session
 from nicos.core import (
     POLLER,
     SIMULATION,
-    HasLimits,
     Moveable,
     Override,
     Param,
@@ -22,7 +21,7 @@ from nicos_ess.devices.epics.pva.epics_devices import (
 )
 
 
-class CetoniPumpController(EpicsParameters, CanReference, HasLimits, Moveable):
+class CetoniPumpController(EpicsParameters, CanReference, Moveable):
     """
     A device for controlling a Cetoni syringe pump
 
@@ -41,46 +40,47 @@ class CetoniPumpController(EpicsParameters, CanReference, HasLimits, Moveable):
             settable=False,
             userparam=False,
         ),
+        # "innerdiameter": Param(
+        #     "The inner diameter of the syringe",
+        #     type=float,
+        # ),
+        # "maxstroke": Param(
+        #     "The maximum stroke length of the piston",
+        #     type=float,
+        # ),
+        # "maxpressure": Param(
+        #     "The maximum allowed pressure",
+        #     type=float,
+        # ),
+        # "stepsize": Param(
+        #     "Define step size for quick aspiration/dispensing of defined volume",
+        #     type=float,
+        # ),
     }
 
     parameter_overrides = {
+        # readpv and writepv are determined automatically from the base PV
+        "readpv": Override(mandatory=False, userparam=False, settable=False),
+        "writepv": Override(mandatory=False, userparam=False, settable=False),
         "unit": Override(mandatory=False, settable=False, default=""),
-        "abslimits": Override(volatile=True, mandatory=False),
     }
 
     def doPreinit(self, mode):
         self._record_fields = {
             "readpv": RecordInfo(
-                cache_key="value",
+                cache_key="filled_volume_rbv",
                 pv_suffix="FilledVolume",
-                record_type=RecordType.BOTH,
+                record_type=RecordType.VALUE,
             ),
             "writepv": RecordInfo(
-                cache_key="target",
+                cache_key="filled_volume_sp",
                 pv_suffix="C_SetFillVol",
                 record_type=RecordType.VALUE,
             ),
             # "pressure": RecordInfo(cache_key="filled_volume", pv_suffix="Pressure",
-            "ispumping": RecordInfo(
-                cache_key="",
-                pv_suffix="IsPumping",
-                record_type=RecordType.STATUS,
-            ),
-            "isfault": RecordInfo(
-                cache_key="",
-                pv_suffix="FaultState",
-                record_type=RecordType.STATUS,
-            ),
-            "ishomed": RecordInfo(
-                cache_key="",
-                pv_suffix="RefPosInitd",
-                record_type=RecordType.STATUS,
-            ),
-            "maxvol": RecordInfo(
-                cache_key="",
-                pv_suffix="MaxVol",
-                record_type=RecordType.VALUE,
-            ),
+            # "ispumping": RecordInfo(cache_key="filled_volume", pv_suffix="IsPumping",
+            # "isfault": RecordInfo(cache_key="filled_volume", pv_suffix="FaultState",
+            # "ishomed": RecordInfo(cache_key="filled_volume", pv_suffix="RefPosInitd",
             # "flowrate_rb": RecordInfo(cache_key="filled_volume", pv_suffix="FlowRate-RB",
             # "flowrate_sp": RecordInfo(cache_key="filled_volume", pv_suffix="FlowRate-RB",
             # "aspiratestep": RecordInfo(cache_key="filled_volume", pv_suffix="C_AspirateStep",
@@ -96,35 +96,28 @@ class CetoniPumpController(EpicsParameters, CanReference, HasLimits, Moveable):
             # "home": RecordInfo(cache_key="filled_volume", pv_suffix=" InitPosition",
         }
         self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
-        self.check_connection_to_pvs()
+        self._epics_wrapper.connect_pv(self._get_pv_name("readpv"))
 
     def doInit(self, mode):
         self.set_up_subscriptions()
 
-    def check_connection_to_pvs(self):
-        self._epics_wrapper.connect_pv(self._get_pv_name("readpv"))
-        self._epics_wrapper.connect_pv(self._get_pv_name("writepv"))
-
     def set_up_subscriptions(self):
         self._epics_subscriptions = []
-        # if session.sessiontype == POLLER and self.monitor:
-        for key, record_info in self._record_fields.items():
-            if record_info.record_type in [RecordType.VALUE, RecordType.BOTH]:
-                value_subscription = self._epics_wrapper.subscribe(
-                    pvname=self._get_pv_name(key),
-                    pvparam=record_info.cache_key,
-                    change_callback=self._value_change_callback,
-                    connection_callback=self._connection_change_callback,
-                )
-                self._epics_subscriptions.append(value_subscription)
-            if record_info.record_type in [RecordType.STATUS, RecordType.BOTH]:
-                status_subscription = self._epics_wrapper.subscribe(
-                    pvname=self._get_pv_name(key),
-                    pvparam=record_info.cache_key,
-                    change_callback=self._status_change_callback,
-                    connection_callback=self._connection_change_callback,
-                )
-                self._epics_subscriptions.append(status_subscription)
+
+        if session.sessiontype == POLLER and self.monitor:
+            value_subscription = self._epics_wrapper.subscribe(
+                pvname=self._get_pv_name("readpv"),
+                pvparam=self._record_fields["readpv"].cache_key,
+                change_callback=self._value_change_callback,
+                connection_callback=self._connection_change_callback,
+            )
+            status_subscription = self._epics_wrapper.subscribe(
+                pvname=self._get_pv_name("readpv"),
+                pvparam=self._record_fields["readpv"].cache_key,
+                change_callback=self._status_change_callback,
+                connection_callback=self._connection_change_callback,
+            )
+            self._epics_subscriptions = [value_subscription, status_subscription]
 
     def _get_cached_pv_or_ask(self, key: str, as_string: bool = False):
         return get_from_cache_or(
@@ -146,34 +139,25 @@ class CetoniPumpController(EpicsParameters, CanReference, HasLimits, Moveable):
         return self._get_cached_pv_or_ask("readpv")
 
     def doStart(self, value):
-        self._cache.put(self, "status", (status.BUSY, "Moving"), time.time())
         self._set_pv(self._get_pv_name("writepv"), value)
 
     def doStatus(self, maxage=0):
-        # return get_from_cache_or(self, "status", self._do_status)
-        return self._do_status(maxage=0)
-
-    def _do_status(self, maxage=0):
-        fault = self._get_cached_pv_or_ask("isfault")
-        print(f"fault: {fault}")
+        fault = self._read_pv(self._get_pv_name("isfault"))
         if fault:
             return status.ERROR, fault
-        homed = self._get_cached_pv_or_ask("ishomed")
-        print(f"homed: {homed}")
+
+        homed = self._read_pv(self._get_pv_name("ishomed"))
         if not homed:
             return status.ERROR, "Not homed"
-        busy = self._get_cached_pv_or_ask("ispumping")
-        print(f"busy: {busy}")
+
+        busy = self._read_pv(self._get_pv_name("ispumping"))
         if busy:
             return status.BUSY, "Pumping"
+
         return status.OK
 
     def doReference(self):
         self._set_pv(self._get_pv_name("reference"), 1)
-
-    def doReadAbslimits(self):
-        max_volume = self._get_cached_pv_or_ask("maxvol")
-        return 0, max_volume
 
     def doWriteInnerdiameter(self, value):
         self._set_pv(self._get_pv_name("innerdiameter_sp"), value)
