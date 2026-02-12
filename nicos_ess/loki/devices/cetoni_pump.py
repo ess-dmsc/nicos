@@ -135,7 +135,6 @@ class CetoniPumpController(EpicsParameters, CanReference, Moveable):
         self._epics_wrapper.put_pv_value(name, value)
 
     def doRead(self, maxage=0):
-        # return self._epics_wrapper.get_pv_value(self._get_pv_name("readpv"))
         return self._get_cached_pv_or_ask("readpv")
 
     def doStart(self, value):
@@ -200,3 +199,18 @@ class CetoniPumpController(EpicsParameters, CanReference, Moveable):
             # Unexpected updates ignored
             return
         self._cache.put(self._name, "status", (severity, message), time.time())
+
+    def _connection_change_callback(self, name, param, is_connected, **kwargs):
+        if param != self._record_fields["readpv"].cache_key:
+            return
+
+        if is_connected:
+            self.log.debug("%s connected!", name)
+        else:
+            self.log.warning("%s disconnected!", name)
+            self._cache.put(
+                self._name,
+                "status",
+                (status.ERROR, "communication failure"),
+                time.time(),
+            )
