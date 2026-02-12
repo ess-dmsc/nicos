@@ -11,9 +11,11 @@ from nicos.core import (
     status,
     usermethod,
 )
-from nicos.devices.abstract import CanReference
+from nicos.devices.abstract import CanReference, MappedMoveable
 from nicos_ess.devices.epics.pva.epics_devices import (
     EpicsParameters,
+    RecordInfo,
+    RecordType,
     create_wrapper,
     get_from_cache_or,
 )
@@ -38,22 +40,22 @@ class CetoniPumpController(EpicsParameters, CanReference, Moveable):
             settable=False,
             userparam=False,
         ),
-        "innerdiameter": Param(
-            "The inner diameter of the syringe",
-            type=float,
-        ),
-        "maxstroke": Param(
-            "The maximum stroke length of the piston",
-            type=float,
-        ),
-        "maxpressure": Param(
-            "The maximum allowed pressure",
-            type=float,
-        ),
-        "stepsize": Param(
-            "Define step size for quick aspiration/dispensing of defined volume",
-            type=float,
-        ),
+        # "innerdiameter": Param(
+        #     "The inner diameter of the syringe",
+        #     type=float,
+        # ),
+        # "maxstroke": Param(
+        #     "The maximum stroke length of the piston",
+        #     type=float,
+        # ),
+        # "maxpressure": Param(
+        #     "The maximum allowed pressure",
+        #     type=float,
+        # ),
+        # "stepsize": Param(
+        #     "Define step size for quick aspiration/dispensing of defined volume",
+        #     type=float,
+        # ),
     }
 
     parameter_overrides = {
@@ -65,25 +67,33 @@ class CetoniPumpController(EpicsParameters, CanReference, Moveable):
 
     def doPreinit(self, mode):
         self._record_fields = {
-            "readpv": "FilledVolume",
-            "writepv": "C_SetFillVol",
-            "pressure": "Pressure",
-            "ispumping": "IsPumping",
-            "isfault": "FaultState",
-            "ishomed": "RefPosInitd",
-            "flowrate_rb": "FlowRate-RB",
-            "flowrate_sp": "FlowRate-RB",
-            "aspiratestep": "C_AspirateStep",
-            "dispensestep": "C_DispenseStep",
-            "innerdiameter_rb": "SyrInnerDiam-RB",
-            "innerdiameter_sp": "SyrInnerDiam-SP",
-            "maxstroke_rb": "SyrMaxPstStrk-RB",
-            "maxstroke_sp": "SyrMaxPstStrk-SP",
-            "maxpressure_rb": "MaxPressure-RB",
-            "maxpressure_sp": "MaxPressure-SP",
-            "stepsize_rb": "StepSize-RB",
-            "stepsize_sp": "StepSize-SP",
-            "home": " InitPosition",
+            "readpv": RecordInfo(
+                cache_key="filled_volume_rbv",
+                pv_suffix="FilledVolume",
+                record_type=RecordType.VALUE,
+            ),
+            "writepv": RecordInfo(
+                cache_key="filled_volume_sp",
+                pv_suffix="C_SetFillVol",
+                record_type=RecordType.VALUE,
+            ),
+            # "pressure": RecordInfo(cache_key="filled_volume", pv_suffix="Pressure",
+            # "ispumping": RecordInfo(cache_key="filled_volume", pv_suffix="IsPumping",
+            # "isfault": RecordInfo(cache_key="filled_volume", pv_suffix="FaultState",
+            # "ishomed": RecordInfo(cache_key="filled_volume", pv_suffix="RefPosInitd",
+            # "flowrate_rb": RecordInfo(cache_key="filled_volume", pv_suffix="FlowRate-RB",
+            # "flowrate_sp": RecordInfo(cache_key="filled_volume", pv_suffix="FlowRate-RB",
+            # "aspiratestep": RecordInfo(cache_key="filled_volume", pv_suffix="C_AspirateStep",
+            # "dispensestep": RecordInfo(cache_key="filled_volume", pv_suffix="C_DispenseStep",
+            # "innerdiameter_rb": RecordInfo(cache_key="filled_volume", pv_suffix="SyrInnerDiam-RB",
+            # "innerdiameter_sp": RecordInfo(cache_key="filled_volume", pv_suffix="SyrInnerDiam-SP",
+            # "maxstroke_rb": RecordInfo(cache_key="filled_volume", pv_suffix="SyrMaxPstStrk-RB",
+            # "maxstroke_sp": RecordInfo(cache_key="filled_volume", pv_suffix="SyrMaxPstStrk-SP",
+            # "maxpressure_rb": RecordInfo(cache_key="filled_volume", pv_suffix="MaxPressure-RB",
+            # "maxpressure_sp": RecordInfo(cache_key="filled_volume", pv_suffix="MaxPressure-SP",
+            # "stepsize_rb": RecordInfo(cache_key="filled_volume", pv_suffix="StepSize-RB",
+            # "stepsize_sp": RecordInfo(cache_key="filled_volume", pv_suffix="StepSize-SP",
+            # "home": RecordInfo(cache_key="filled_volume", pv_suffix=" InitPosition",
         }
 
     def doInit(self, mode):
