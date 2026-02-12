@@ -1,6 +1,10 @@
 from nicos.core import SIMULATION, Moveable, Override, Param, pvname, status, usermethod
 from nicos.devices.abstract import CanReference
-from nicos_ess.devices.epics.pva.epics_devices import EpicsParameters
+from nicos_ess.devices.epics.pva.epics_devices import (
+    EpicsParameters,
+    create_wrapper,
+    get_from_cache_or,
+)
 
 
 class CetoniPumpController(EpicsParameters, CanReference, Moveable):
@@ -70,6 +74,8 @@ class CetoniPumpController(EpicsParameters, CanReference, Moveable):
             "stepsize_sp": "StepSize-SP",
             "home": " InitPosition",
         }
+        self._epics_subscriptions = []
+        self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
 
     def _get_pv_name(self, pvparam):
         return f"{self.pvroot}{self._record_fields[pvparam]}"
