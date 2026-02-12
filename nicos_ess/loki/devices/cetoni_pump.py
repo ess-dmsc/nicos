@@ -49,12 +49,12 @@ class CetoniPumpController(EpicsParameters, CanReference, Moveable):
     def doPreinit(self, mode):
         self._record_fields = {
             "readpv": RecordInfo(
-                cache_key="filled_volume_rbv",
+                cache_key="value",
                 pv_suffix="FilledVolume",
                 record_type=RecordType.VALUE,
             ),
             "writepv": RecordInfo(
-                cache_key="filled_volume_sp",
+                cache_key="target",
                 pv_suffix="C_SetFillVol",
                 record_type=RecordType.VALUE,
             ),
@@ -77,9 +77,9 @@ class CetoniPumpController(EpicsParameters, CanReference, Moveable):
             # "home": RecordInfo(cache_key="filled_volume", pv_suffix=" InitPosition",
         }
         self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
+        self.check_connection_to_pvs()
 
     def doInit(self, mode):
-        self.check_connection_to_pvs()
         self.set_up_subscriptions()
 
     def check_connection_to_pvs(self):
