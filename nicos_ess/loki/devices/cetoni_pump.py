@@ -104,20 +104,20 @@ class CetoniPumpController(EpicsParameters, CanReference, Moveable):
     def set_up_subscriptions(self):
         self._epics_subscriptions = []
 
-        if session.sessiontype == POLLER and self.monitor:
-            value_subscription = self._epics_wrapper.subscribe(
-                pvname=self._get_pv_name("readpv"),
-                pvparam=self._record_fields["readpv"].cache_key,
-                change_callback=self._value_change_callback,
-                connection_callback=self._connection_change_callback,
-            )
-            status_subscription = self._epics_wrapper.subscribe(
-                pvname=self._get_pv_name("readpv"),
-                pvparam=self._record_fields["readpv"].cache_key,
-                change_callback=self._status_change_callback,
-                connection_callback=self._connection_change_callback,
-            )
-            self._epics_subscriptions = [value_subscription, status_subscription]
+        # if session.sessiontype == POLLER and self.monitor:
+        value_subscription = self._epics_wrapper.subscribe(
+            pvname=self._get_pv_name("readpv"),
+            pvparam=self._record_fields["readpv"].cache_key,
+            change_callback=self._value_change_callback,
+            connection_callback=self._connection_change_callback,
+        )
+        status_subscription = self._epics_wrapper.subscribe(
+            pvname=self._get_pv_name("readpv"),
+            pvparam=self._record_fields["readpv"].cache_key,
+            change_callback=self._status_change_callback,
+            connection_callback=self._connection_change_callback,
+        )
+        self._epics_subscriptions = [value_subscription, status_subscription]
 
     def _get_cached_pv_or_ask(self, key: str, as_string: bool = False):
         return get_from_cache_or(
