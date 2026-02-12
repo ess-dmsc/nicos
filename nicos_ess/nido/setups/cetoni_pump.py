@@ -5,6 +5,5 @@ devices = dict(
         "nicos_ess.loki.devices.cetoni_pump.CetoniPumpController",
         description="Description",
         pvroot="B02-CSLab:SE-Pumps:SP1",
-        innerdiameter="TBD",
     ),
 )
