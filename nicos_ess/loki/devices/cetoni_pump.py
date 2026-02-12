@@ -42,6 +42,10 @@ class CetoniPumpController(EpicsParameters, CanReference, Moveable):
         ),
     }
 
+    parameter_overrides = {
+        "unit": Override(mandatory=False, settable=False, default=""),
+    }
+
     def doPreinit(self, mode):
         self._record_fields = {
             "readpv": RecordInfo(
