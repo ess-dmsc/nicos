@@ -101,19 +101,23 @@ class CetoniPumpController(EpicsParameters, CanReference, Moveable):
     def set_up_subscriptions(self):
         self._epics_subscriptions = []
         # if session.sessiontype == POLLER and self.monitor:
-        value_subscription = self._epics_wrapper.subscribe(
-            pvname=self._get_pv_name("readpv"),
-            pvparam=self._record_fields["readpv"].cache_key,
-            change_callback=self._value_change_callback,
-            connection_callback=self._connection_change_callback,
-        )
-        status_subscription = self._epics_wrapper.subscribe(
-            pvname=self._get_pv_name("readpv"),
-            pvparam=self._record_fields["readpv"].cache_key,
-            change_callback=self._status_change_callback,
-            connection_callback=self._connection_change_callback,
-        )
-        self._epics_subscriptions = [value_subscription, status_subscription]
+        for key, record_info in self._record_fields.items():
+            if record_info.record_type in [RecordType.VALUE, RecordType.BOTH]:
+                value_subscription = self._epics_wrapper.subscribe(
+                    pvname=self._get_pv_name(record_info.pv_suffix),
+                    pvparam=record_info.cache_key,
+                    change_callback=self._value_change_callback,
+                    connection_callback=self._connection_change_callback,
+                )
+                self._epics_subscriptions.append(value_subscription)
+            if record_info.record_type in [RecordType.STATUS, RecordType.BOTH]:
+                status_subscription = self._epics_wrapper.subscribe(
+                    pvname=self._get_pv_name(record_info.pv_suffix),
+                    pvparam=record_info.cache_key,
+                    change_callback=self._status_change_callback,
+                    connection_callback=self._connection_change_callback,
+                )
+                self._epics_subscriptions.append(status_subscription)
 
     def _get_cached_pv_or_ask(self, key: str, as_string: bool = False):
         return get_from_cache_or(
