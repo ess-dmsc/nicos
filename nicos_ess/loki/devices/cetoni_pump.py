@@ -40,28 +40,9 @@ class CetoniPumpController(EpicsParameters, CanReference, Moveable):
             settable=False,
             userparam=False,
         ),
-        # "innerdiameter": Param(
-        #     "The inner diameter of the syringe",
-        #     type=float,
-        # ),
-        # "maxstroke": Param(
-        #     "The maximum stroke length of the piston",
-        #     type=float,
-        # ),
-        # "maxpressure": Param(
-        #     "The maximum allowed pressure",
-        #     type=float,
-        # ),
-        # "stepsize": Param(
-        #     "Define step size for quick aspiration/dispensing of defined volume",
-        #     type=float,
-        # ),
     }
 
     parameter_overrides = {
-        # readpv and writepv are determined automatically from the base PV
-        "readpv": Override(mandatory=False, userparam=False, settable=False),
-        "writepv": Override(mandatory=False, userparam=False, settable=False),
         "unit": Override(mandatory=False, settable=False, default=""),
     }
 
@@ -96,14 +77,17 @@ class CetoniPumpController(EpicsParameters, CanReference, Moveable):
             # "home": RecordInfo(cache_key="filled_volume", pv_suffix=" InitPosition",
         }
         self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
-        self._epics_wrapper.connect_pv(self._get_pv_name("readpv"))
 
     def doInit(self, mode):
+        self.check_connection_to_pvs()
         self.set_up_subscriptions()
+
+    def check_connection_to_pvs(self):
+        self._epics_wrapper.connect_pv(self._get_pv_name("readpv"))
+        self._epics_wrapper.connect_pv(self._get_pv_name("writepv"))
 
     def set_up_subscriptions(self):
         self._epics_subscriptions = []
-
         # if session.sessiontype == POLLER and self.monitor:
         value_subscription = self._epics_wrapper.subscribe(
             pvname=self._get_pv_name("readpv"),
