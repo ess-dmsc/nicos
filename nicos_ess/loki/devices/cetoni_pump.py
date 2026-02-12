@@ -60,17 +60,17 @@ class CetoniPumpController(EpicsParameters, CanReference, Moveable):
             ),
             # "pressure": RecordInfo(cache_key="filled_volume", pv_suffix="Pressure",
             "ispumping": RecordInfo(
-                cache_key="ispumping",
+                cache_key="",
                 pv_suffix="IsPumping",
                 record_type=RecordType.STATUS,
             ),
             "isfault": RecordInfo(
-                cache_key="isfault",
+                cache_key="",
                 pv_suffix="FaultState",
                 record_type=RecordType.STATUS,
             ),
             "ishomed": RecordInfo(
-                cache_key="ishomed",
+                cache_key="",
                 pv_suffix="RefPosInitd",
                 record_type=RecordType.STATUS,
             ),
@@ -104,7 +104,7 @@ class CetoniPumpController(EpicsParameters, CanReference, Moveable):
         for key, record_info in self._record_fields.items():
             if record_info.record_type in [RecordType.VALUE, RecordType.BOTH]:
                 value_subscription = self._epics_wrapper.subscribe(
-                    pvname=self._get_pv_name(record_info.pv_suffix),
+                    pvname=self._get_pv_name(key),
                     pvparam=record_info.cache_key,
                     change_callback=self._value_change_callback,
                     connection_callback=self._connection_change_callback,
@@ -112,7 +112,7 @@ class CetoniPumpController(EpicsParameters, CanReference, Moveable):
                 self._epics_subscriptions.append(value_subscription)
             if record_info.record_type in [RecordType.STATUS, RecordType.BOTH]:
                 status_subscription = self._epics_wrapper.subscribe(
-                    pvname=self._get_pv_name(record_info.pv_suffix),
+                    pvname=self._get_pv_name(key),
                     pvparam=record_info.cache_key,
                     change_callback=self._status_change_callback,
                     connection_callback=self._connection_change_callback,
