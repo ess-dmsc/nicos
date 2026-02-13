@@ -1,10 +1,10 @@
+from typing import Optional
+
 from confluent_kafka import Producer
 
 from nicos.core import DeviceMixinBase, Param, host, listof
 from nicos.core.constants import SIMULATION
-
 from nicos_ess.devices.kafka.utils import create_sasl_config
-
 
 MAX_MESSAGE_SIZE = 209_715_200
 
@@ -35,11 +35,23 @@ class KafkaProducer:
         config = {
             "bootstrap.servers": ",".join(brokers),
             "message.max.bytes": MAX_MESSAGE_SIZE,
+            "linger.ms": 20,
+            "batch.num.messages": 10000,
+            "message.timeout.ms": 60000,
         }
         self._producer = Producer({**config, **options})
 
     def produce(
-        self, topic_name, message, partition=-1, key=None, on_delivery_callback=None
+        self,
+        topic_name,
+        message,
+        partition=-1,
+        key=None,
+        on_delivery_callback=None,
+        *,
+        auto_flush: bool = True,
+        flush_timeout: Optional[float] = None,  # seconds, None = block indefinitely
+        poll_before_produce: bool = True,
     ):
         """Send a message to Kafka.
 
@@ -48,7 +60,19 @@ class KafkaProducer:
         :param partition: Which partition to send to. Optional.
         :param key: The key to assign. Optional
         :param on_delivery_callback: The delivery callback. Optional.
+        :param auto_flush: Whether to flush after producing. If False, the caller is responsible for calling flush() to ensure messages are sent.
+        :param flush_timeout: If auto_flush is True, how long to block for the flush (in seconds). None means block indefinitely until all messages are flushed.
+        :param poll_before_produce: Whether to call poll() before producing to serve delivery reports and internal events. This is important to do if auto_flush is False, otherwise delivery callbacks may not be called.
+
+        Backwards compatible:
+          - auto_flush=True -> same semantics as before (produce + flush)
+          - auto_flush=False -> async enqueue only (no flush)
         """
+
+        # Serve delivery reports / internal events (important when not flushing).
+        if poll_before_produce:
+            self._producer.poll(0)
+
         self._producer.produce(
             topic_name,
             message,
@@ -56,7 +80,17 @@ class KafkaProducer:
             key=key,
             on_delivery=on_delivery_callback,
         )
-        self._producer.flush()
+
+        if auto_flush:
+            # Keep legacy behavior: block until delivered (or until timeout if provided)
+            self._producer.flush(flush_timeout)
+
+    def flush(self, timeout: Optional[float] = None) -> int:
+        """Expose flush so callers can batch + flush explicitly."""
+        return self._producer.flush(timeout)
+
+    def poll(self, timeout: float = 0.0) -> int:
+        return self._producer.poll(timeout)
 
 
 class ProducesKafkaMessages(DeviceMixinBase):
