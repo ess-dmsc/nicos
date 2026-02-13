@@ -130,6 +130,25 @@ gui = [
     "urllib3==1.26.20",
 ]
 
+gui_qt6 = [
+    "gr>=1.23.2",
+    "html2text>=2025.4.15",
+    "keyring==24.3.0",
+    "keyrings-alt==5.0.0",
+    "lttb>=0.3.2",
+    "matplotlib>=3.9.4",
+    "pycryptodomex>=3.4.7",
+    "pyqt6>=6.6.1",
+    "pyqt6-qscintilla>=2.13",
+    "pyqt6-qt6>=6.6.2",
+    "pyqt6-webengine>=6.6.0",
+    "pyqt6-webengine-qt6>=6.6.0",
+    "pyqtgraph>=0.12.4",
+    "python-redmine>=2.0.0",
+    "toml>=0.10.2",
+    "urllib3==1.26.20",
+]
+
 synoptic = [
     "svgsynoptic2",
     "nicossynoptic",
