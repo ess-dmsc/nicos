@@ -20,12 +20,13 @@
 #   Matt Clarke <matt.clarke@ess.eu>
 #
 # *****************************************************************************
+from collections import defaultdict
 from collections.abc import Iterable
 from functools import partial
 from threading import Lock
 
 import numpy as np
-from p4p.client.thread import Context
+from p4p.client.thread import Cancelled, Context
 
 from nicos.commands import helparglist, hiddenusercommand
 from nicos.core import CommunicationError, status
@@ -68,8 +69,16 @@ class P4pWrapper:
     support.
     """
 
-    def __init__(self, timeout=3.0):
-        self.disconnected = set()
+    def __init__(self, timeout=3.0, context=None):
+        # We can have multiple monitors per PV (value/status/etc). p4p can inject
+        # an initial Disconnected and deliver connect/disconnect out-of-order.
+        # Track per-sub connected state + per-(pv,param) refcount.
+        self._sub_connected = {}
+        self._conn_refcnt = defaultdict(int)
+        self._sub_to_key = {}
+
+        self._context = context or _CONTEXT
+
         self.lock = Lock()
         self._timeout = timeout
         self._units = {}
@@ -81,12 +90,12 @@ class P4pWrapper:
     def connect_pv(self, pvname):
         # Check pv is available
         try:
-            _CONTEXT.get(pvname, timeout=self._timeout)
+            self._context.get(pvname, timeout=self._timeout)
         except TimeoutError:
             raise CommunicationError(f"could not connect to PV {pvname}") from None
 
     def get_pv_value(self, pvname, as_string=False):
-        result = _CONTEXT.get(pvname, timeout=self._timeout)
+        result = self._context.get(pvname, timeout=self._timeout)
         return self._convert_value(pvname, result["value"], as_string)
 
     def _convert_value(self, pvname, value, as_string=False):
@@ -113,13 +122,17 @@ class P4pWrapper:
         return value
 
     def put_pv_value(self, pvname, value, wait=False):
-        pvput(pvname, value, timeout=self._timeout, wait=wait)
+        self._context.put(
+            pvname, value, timeout=self._timeout, wait=wait, process="true"
+        )
 
     def put_pv_value_blocking(self, pvname, value, block_timeout=60):
-        pvput(pvname, value, timeout=block_timeout, wait=True)
+        self._context.put(
+            pvname, value, timeout=block_timeout, wait=True, process="true"
+        )
 
     def get_pv_type(self, pvname):
-        result = _CONTEXT.get(pvname, timeout=self._timeout)
+        result = self._context.get(pvname, timeout=self._timeout)
         try:
             if result["value"].getID() == "enum_t":
                 # Treat enums as ints
@@ -132,11 +145,11 @@ class P4pWrapper:
         return type(result["value"])
 
     def get_alarm_status(self, pvname):
-        result = _CONTEXT.get(pvname, timeout=self._timeout)
+        result = self._context.get(pvname, timeout=self._timeout)
         return self._extract_alarm_info(result)
 
     def get_units(self, pvname, default=""):
-        result = _CONTEXT.get(pvname, timeout=self._timeout)
+        result = self._context.get(pvname, timeout=self._timeout)
         return self._get_units(result, default)
 
     def _get_units(self, result, default):
@@ -146,7 +159,7 @@ class P4pWrapper:
             return default
 
     def get_limits(self, pvname, default_low=-1e308, default_high=1e308):
-        result = _CONTEXT.get(pvname, timeout=self._timeout)
+        result = self._context.get(pvname, timeout=self._timeout)
         return self._extract_limits(result, default_low, default_high)
 
     def _extract_limits(self, result, default_low=-1e308, default_high=1e308):
@@ -158,13 +171,13 @@ class P4pWrapper:
         return default_low, default_high
 
     def get_control_values(self, pvname):
-        raw_result = _CONTEXT.get(pvname, timeout=self._timeout)
+        raw_result = self._context.get(pvname, timeout=self._timeout)
         if "display" in raw_result:
             return raw_result["display"]
         return raw_result["control"] if "control" in raw_result else {}
 
     def get_value_choices(self, pvname):
-        value = _CONTEXT.get(pvname, timeout=self._timeout)["value"]
+        value = self._context.get(pvname, timeout=self._timeout)["value"]
         if isinstance(value, bool):
             return [False, True]
         if not isinstance(value, Iterable):
@@ -185,87 +198,152 @@ class P4pWrapper:
         """
         Create a monitor subscription to the specified PV.
 
-        :param pvname: The PV name.
-        :param pvparam: The associated NICOS parameter
-            (e.g. readpv, writepv, etc.).
-        :param change_callback: The function to call when the value changes.
-        :param connection_callback: The function to call when the connection
-            status changes.
-        :param as_string: Whether to return the value as a string.
-        :return: the subscription object.
-        """
-        with self.lock:
-            self.disconnected.add(pvname)
+        Callback signatures:
 
+          change_callback(
+              pvname,
+              pvparam,
+              value,
+              units,
+              limits,
+              severity,
+              message,
+              **kwargs,
+          )
+
+          connection_callback(
+              pvname,
+              pvparam,
+              is_connected,
+              **kwargs,
+          )
+
+        Notes:
+          - On disconnect, connection_callback may receive reason=<str> in kwargs.
+        """
         request = "field(value,timeStamp,alarm,control,display)"
+
+        token = object()
+        subkey = (pvname, pvparam, token)
+
+        with self.lock:
+            self._sub_connected[subkey] = False
 
         callback = partial(
             self._callback,
-            pvname,
-            pvparam,
+            subkey,
             change_callback,
             connection_callback,
             as_string,
         )
-        subscription = _CONTEXT.monitor(
+        sub = self._context.monitor(
             pvname, callback, request=request, notify_disconnect=True
         )
-        return subscription
+
+        self._sub_to_key[id(sub)] = subkey
+
+        return sub
 
     def _callback(
-        self, pvname, pvparam, change_callback, connection_callback, as_string, result
+        self,
+        subkey,
+        change_callback,
+        connection_callback,
+        as_string,
+        result,
     ):
+        pvname, pvparam, _ = subkey
+        conn_key = subkey[:2]
+
         if isinstance(result, Exception):
-            # Only callback on disconnection if was previously connected
-            if connection_callback and pvname not in self.disconnected:
-                connection_callback(pvname, pvparam, False)
-                with self.lock:
-                    self.disconnected.add(pvname)
+            with self.lock:
+                was_connected = self._sub_connected.get(subkey, False)
+                if was_connected:
+                    self._sub_connected[subkey] = False
+                    if self._conn_refcnt[conn_key] > 0:
+                        self._conn_refcnt[conn_key] -= 1
+                    last_sub_went_down = self._conn_refcnt[conn_key] == 0
+                    if last_sub_went_down:
+                        self._conn_refcnt.pop(conn_key, None)
+                else:
+                    last_sub_went_down = False
+
+            # Cancelled is usually shutdown/reconfigure; not a comms failure.
+            if isinstance(result, Cancelled):
+                return
+
+            if last_sub_went_down and connection_callback:
+                connection_callback(pvname, pvparam, False, reason=repr(result))
             return
 
-        if pvname in self.disconnected:
-            # Only callback if it is a new connection
-            if connection_callback:
-                connection_callback(pvname, pvparam, True)
-            with self.lock:
-                if pvname in self.disconnected:
-                    self.disconnected.remove(pvname)
-                    if pvname in self._values:
-                        del self._values[pvname]
-                    if pvname in self._choices:
-                        del self._choices[pvname]
+        with self.lock:
+            first_sub_came_up = False
+            if not self._sub_connected.get(subkey, False):
+                self._sub_connected[subkey] = True
+                self._conn_refcnt[conn_key] += 1
+                first_sub_came_up = self._conn_refcnt[conn_key] == 1
 
-        if change_callback:
-            # PVA only sends a delta of what has changed
-            change_set = result.changedSet()
+        if first_sub_came_up and connection_callback:
+            connection_callback(pvname, pvparam, True)
+
+        if not change_callback:
+            return
+
+        # Monitor updates are deltas; alarm/status can change without "value".
+        # Keep last value so we can still emit status updates.
+        change_set = result.changedSet()
+
+        with self.lock:
+            if pvname not in self._values:
+                try:
+                    raw_value = result["value"]
+                except KeyError:
+                    raw_value = None
+                if raw_value is not None:
+                    self._values[pvname] = self._convert_value(
+                        pvname,
+                        raw_value,
+                        as_string,
+                    )
 
             if "value" in change_set or "value.index" in change_set:
                 self._values[pvname] = self._convert_value(
-                    pvname, result["value"], as_string
+                    pvname,
+                    result["value"],
+                    as_string,
                 )
+
             if "value.index" in change_set:
-                # Extract the enum's possible values
                 choices = result["value"].get("choices", [])
                 if choices:
                     self._choices[pvname] = choices
+
             if "display.units" in change_set:
                 self._units[pvname] = self._get_units(result, "")
+
             if "alarm.status" in change_set or "alarm.severity" in change_set:
                 self._alarms[pvname] = self._extract_alarm_info(result)
+
             if "display.limitLow" in change_set:
                 self._limits[pvname] = self._extract_limits(result)
 
-            if pvname in self._values:
-                severity, msg = self._alarms.get(pvname, (status.UNKNOWN, ""))
-                change_callback(
-                    pvname,
-                    pvparam,
-                    self._values[pvname],
-                    self._units.get(pvname, ""),
-                    self._limits.get(pvname, None),
-                    severity,
-                    msg,
-                )
+            value = self._values.get(pvname)
+            if value is None:
+                return
+
+            units = self._units.get(pvname, "")
+            limits = self._limits.get(pvname, None)
+            severity, msg = self._alarms.get(pvname, (status.UNKNOWN, ""))
+
+        change_callback(
+            pvname,
+            pvparam,
+            value,
+            units,
+            limits,
+            severity,
+            msg,
+        )
 
     def _extract_alarm_info(self, value):
         # The EPICS 'severity' matches to the NICOS `status` and the message has
@@ -278,4 +356,15 @@ class P4pWrapper:
             return status.UNKNOWN, "alarm information unavailable"
 
     def close_subscription(self, subscription):
+        subkey = self._sub_to_key.pop(id(subscription), None)
+
+        if subkey is not None:
+            conn_key = subkey[:2]
+            with self.lock:
+                was_connected = self._sub_connected.pop(subkey, False)
+                if was_connected and self._conn_refcnt[conn_key] > 0:
+                    self._conn_refcnt[conn_key] -= 1
+                if self._conn_refcnt.get(conn_key) == 0:
+                    self._conn_refcnt.pop(conn_key, None)
+
         subscription.close()
