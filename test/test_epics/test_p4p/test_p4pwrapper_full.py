@@ -60,7 +60,7 @@ class PvaRig:
 
 
 @pytest.fixture(scope="function")
-def pva_rig() -> PvaRig:
+def pva_rig() -> Generator[PvaRig]:
     prefix = f"TEST:P4PWRAP:{uuid.uuid4().hex[:8]}"
 
     pvs: dict[str, SharedPV] = {
