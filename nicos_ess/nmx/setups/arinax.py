@@ -48,7 +48,13 @@ devices = dict(
             'CONFIG9':"CONFIG9",
             'CONFIG10':"CONFIG10",
             'CONFIG11':"CONFIG11",
-            }
+            },
+        _inverse_mapping={
+            'PARK': 1,
+            'CALIBRATION': 2,
+            'MAINTENANCE': 3,
+            'CONFIG1': 4,
+            },
     ),
 
 )
