@@ -1,5 +1,5 @@
 [project]
-name = "NICOS"
+name = "nicos"
 description = "Networked Instrument COntrol System"
 requires-python = ">=3.9"
 # version = "1.2.3"
