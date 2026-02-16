@@ -14,7 +14,7 @@ variables:
 stages:
   - test
 
-tests_py312:
+tests_py312_cov:
   stage: test
   image: registry.esss.lu.se/ecdc/ess-dmsc/docker-almalinux9-conan:1.6.0
   before_script:
@@ -32,7 +32,7 @@ tests_py312:
   variables:
     UV_PYTHON: 3.12
 
-tests_py313:
+tests_py3xx:
   stage: test
   image: registry.esss.lu.se/ecdc/ess-dmsc/docker-almalinux9-conan:1.6.0
   before_script:
@@ -40,10 +40,13 @@ tests_py313:
     - uv sync --extra gui --all-packages
   script:
     - uv run pytest test/ --junitxml=test-output.xml
+  parallel:
+    matrix:
+      - PYTHON_VERSION: ["3.13", "3.14"]
   artifacts:
     paths:
       - test-output.xml
     reports:
       junit: test-output.xml
   variables:
-    UV_PYTHON: 3.13
+    UV_PYTHON: $PYTHON_VERSION
