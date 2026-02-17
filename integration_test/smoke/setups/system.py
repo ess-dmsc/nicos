@@ -82,21 +82,4 @@ devices = dict(
         brokers=configdata("config.KAFKA_BROKERS"),
         scichat_topic=configdata("config.SCICHAT_TOPIC"),
     ),
-    SmokeReadable=device(
-        "nicos_ess.devices.epics.pva.epics_devices.EpicsReadable",
-        description="Smoke EPICS readable",
-        readpv="TEST:SMOKE:READ.RBV",
-        monitor=True,
-        pva=True,
-    ),
-    SmokeMoveable=device(
-        "nicos_ess.devices.epics.pva.epics_devices.EpicsAnalogMoveable",
-        description="Smoke EPICS analog moveable",
-        readpv="TEST:SMOKE:MOVE.RBV",
-        writepv="TEST:SMOKE:MOVE.VAL",
-        monitor=True,
-        pva=True,
-        unit="Hz",
-        precision=0.01,
-    ),
 )

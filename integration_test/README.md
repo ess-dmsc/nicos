@@ -42,17 +42,17 @@ The runner enforces this order:
 From repository root:
 
 ```bash
-conda run -n nicos-qt5 python integration_test/smoke/run_smoke_stack.py
+python integration_test/smoke/run_smoke_stack.py
 ```
 
 Useful options:
 
 ```bash
 # keep Kafka container running after smoke
-conda run -n nicos-qt5 python integration_test/smoke/run_smoke_stack.py --keep-kafka
+python integration_test/smoke/run_smoke_stack.py --keep-kafka
 
 # keep previous runtime logs/data in integration_test/runtime/
-conda run -n nicos-qt5 python integration_test/smoke/run_smoke_stack.py --no-clean-runtime
+python integration_test/smoke/run_smoke_stack.py --no-clean-runtime
 ```
 
 ## Pytest Smoke Fixture
@@ -62,12 +62,17 @@ down the full stack automatically after `yield`:
 
 - fixture: `smoke_client` (module scope)
 - location: `integration_test/smoke/conftest.py`
-- helper for command execution: `SmokeClient.execute(...)`
+- native command-style calls via client methods:
+  - `smoke_client.NewSetup(...)`
+  - `smoke_client.maw(...)`
+  - `smoke_client.count(...)`
+  - `smoke_client.read(...)` and `smoke_client.status(...)`
+  - `smoke_client.dev("DeviceName")` for script-style device references
 
 Run the EPICS basic smoke tests with:
 
 ```bash
-NICOS_RUN_SMOKE_INTEGRATION=1 conda run -n nicos-qt5 pytest -q integration_test/smoke/test_epics_basic_smoke.py
+NICOS_RUN_SMOKE_INTEGRATION=1 pytest -q integration_test/smoke/test_smoke.py
 ```
 
 ## Notes

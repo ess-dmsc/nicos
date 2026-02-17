@@ -12,6 +12,7 @@ MANIFEST
 nicos/RELEASE-VERSION
 
 log/
+integration_test/runtime/
 
 /data/
 

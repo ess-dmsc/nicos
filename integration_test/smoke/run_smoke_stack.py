@@ -19,11 +19,12 @@ import signal
 import socket
 import subprocess
 import sys
+import threading
 import time
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Iterator
+from typing import Callable, Iterator, TextIO
 
 from confluent_kafka import KafkaException
 from confluent_kafka.admin import AdminClient, NewTopic
@@ -65,15 +66,24 @@ SMOKE_TOPICS = [
 class ManagedProcess:
     name: str
     process: subprocess.Popen
-    logfile_handle: object
+    logfile_handle: TextIO
     logfile_path: Path
 
 
+@dataclass(frozen=True)
+class SmokeDevice:
+    """Reference to a device variable in daemon script namespace."""
+
+    name: str
+
+
 class SmokeClient(NicosClient):
-    """Small daemon client with strict error handling for smoke runs."""
+    """Daemon client with command-style helpers for smoke tests."""
 
     def __init__(self):
         self._disconnecting = False
+        self._done_results = {}
+        self._done_lock = threading.Lock()
         super().__init__(print)
 
     def signal(self, name, data=None, data2=None):
@@ -83,6 +93,86 @@ class SmokeClient(NicosClient):
             raise RuntimeError(f"daemon connection broken: {data}")
         if name == "disconnected" and not self._disconnecting:
             raise RuntimeError("daemon disconnected unexpectedly")
+        if name == "done" and isinstance(data, dict) and "reqid" in data:
+            with self._done_lock:
+                self._done_results[data["reqid"]] = bool(data.get("success", False))
+
+    def dev(self, name: str) -> SmokeDevice:
+        """Return a device reference for command calls (e.g. maw(dev('m'), 5))."""
+        return SmokeDevice(name=name)
+
+    def read(self, device: SmokeDevice | str, maxage=0):
+        """Read a device value using direct device API in daemon namespace."""
+        return self.eval(f"{self._device_expr(device)}.read({maxage!r})")
+
+    def status(self, device: SmokeDevice | str, maxage=0):
+        """Read a device status using direct device API in daemon namespace."""
+        return self.eval(f"{self._device_expr(device)}.status({maxage!r})")
+
+    def run_command(self, command_name: str, *args, timeout: float = 60.0, **kwargs):
+        """Execute one NICOS command by name, for example `NewSetup(...)`."""
+        rendered_args = [self._format_arg(arg) for arg in args]
+        rendered_args.extend(
+            f"{key}={self._format_arg(value)}" for key, value in kwargs.items()
+        )
+        source = f"{command_name}({', '.join(rendered_args)})"
+        return self.execute(source, timeout=timeout)
+
+    def __getattr__(self, name):
+        if name.startswith("_"):
+            raise AttributeError(name)
+
+        def _command(*args, timeout: float = 60.0, **kwargs):
+            return self.run_command(name, *args, timeout=timeout, **kwargs)
+
+        return _command
+
+    def _format_arg(self, value) -> str:
+        if isinstance(value, SmokeDevice):
+            # Script execution namespace resolves device variables by name.
+            return value.name
+        return repr(value)
+
+    def _device_expr(self, device: SmokeDevice | str) -> str:
+        if isinstance(device, SmokeDevice):
+            return f"session.getDevice({device.name!r})"
+        if isinstance(device, str):
+            return f"session.getDevice({device!r})"
+        return f"session.getDevice({device!r})"
+
+    def _consume_done_result(self, reqid: str):
+        with self._done_lock:
+            return self._done_results.pop(reqid, None)
+
+    def _request_error_text(self, reqid: str) -> str:
+        messages = self.ask("getmessages", "300", quiet=True, default=[]) or []
+        related_errors = []
+        for message in messages:
+            if not isinstance(message, (list, tuple)) or len(message) < 6:
+                continue
+            logger_name, _timestamp, levelno, text, exc_text, message_reqid = message[
+                :6
+            ]
+            if message_reqid != reqid or levelno < 40:
+                continue
+            prefix = f"{logger_name}: " if logger_name else ""
+            related_errors.append(f"{prefix}{text}".strip())
+            if exc_text:
+                related_errors.append(str(exc_text).strip())
+        return "\n".join(related_errors[-12:]).strip()
+
+    def _raise_script_failure(self, reqid: str, code: str) -> None:
+        req_errors = self._request_error_text(reqid)
+        if req_errors:
+            raise RuntimeError(
+                f"script failed (reqid={reqid}) for code {code!r}\n{req_errors}"
+            )
+        trace = self.ask("gettrace", quiet=True, default="")
+        if trace:
+            raise RuntimeError(
+                f"script failed (reqid={reqid}) for code {code!r}\n{trace}"
+            )
+        raise RuntimeError(f"script failed (reqid={reqid}) for code {code!r}")
 
     def wait_idle(self, timeout: float = 60.0) -> None:
         deadline = time.monotonic() + timeout
@@ -90,62 +180,61 @@ class SmokeClient(NicosClient):
             reply = self.ask("getstatus", quiet=True, default=None)
             if reply and reply["status"][0] in (STATUS_IDLE, STATUS_IDLEEXC):
                 if reply["status"][0] == STATUS_IDLEEXC:
+                    trace = self.ask("gettrace", quiet=True, default="")
+                    if trace:
+                        raise RuntimeError(
+                            f"daemon idle with exception: {reply['status']}\n{trace}"
+                        )
                     raise RuntimeError(f"daemon idle with exception: {reply['status']}")
                 return
             time.sleep(0.1)
         raise TimeoutError("timed out waiting for daemon idle status")
 
     def execute(self, code: str, *, timeout: float = 60.0) -> int:
-        """Execute command/script text and wait for this request to complete."""
+        """Execute command/script text and wait for this request to complete.
+
+        Behavior matches CLI usage:
+        - try immediate `start` first
+        - if daemon is busy, fall back to queued execution
+        """
         reqid = self.run(code, filename="<smoke-test>", noqueue=True)
+        if reqid is None:
+            reqid = self.run(code, filename="<smoke-test>", noqueue=False)
         if reqid is None:
             raise RuntimeError(f"failed to execute command: {code!r}")
 
         deadline = time.monotonic() + timeout
-        sync_deadline = min(deadline, time.monotonic() + 5.0)
-        seen_activity = False
-
-        # Synchronize on the submitted request to avoid idle-race false returns.
-        while time.monotonic() < sync_deadline:
-            reply = self.ask("getstatus", quiet=True, default=None)
-            if not reply:
-                time.sleep(0.05)
-                continue
-            status_code = reply["status"][0]
-            queued = {
-                item.get("reqid")
-                for item in reply.get("requests", [])
-                if isinstance(item, dict)
-            }
-            if reqid in queued or status_code not in (STATUS_IDLE, STATUS_IDLEEXC):
-                seen_activity = True
-                break
-            time.sleep(0.05)
-
-        if not seen_activity:
-            # Request was either very short-lived or not observable in queue/status.
-            self.wait_idle(timeout=max(0.1, deadline - time.monotonic()))
-            return reqid
-
+        saw_activity = False
         while time.monotonic() < deadline:
+            done_result = self._consume_done_result(reqid)
+            if done_result is True:
+                return reqid
+            if done_result is False:
+                self._raise_script_failure(reqid, code)
             reply = self.ask("getstatus", quiet=True, default=None)
             if not reply:
                 time.sleep(0.05)
                 continue
             status_code = reply["status"][0]
-            if status_code == STATUS_IDLEEXC:
-                raise RuntimeError(f"daemon idle with exception: {reply['status']}")
             queued = {
                 item.get("reqid")
                 for item in reply.get("requests", [])
                 if isinstance(item, dict)
             }
-            if reqid not in queued and status_code == STATUS_IDLE:
-                return reqid
+            if reqid in queued:
+                saw_activity = True
+            elif status_code not in (STATUS_IDLE, STATUS_IDLEEXC):
+                # start(noqueue) may run before request list catches up.
+                saw_activity = True
+
+            if saw_activity and reqid not in queued:
+                if status_code == STATUS_IDLE:
+                    return reqid
+                if status_code == STATUS_IDLEEXC:
+                    self._raise_script_failure(reqid, code)
             time.sleep(0.05)
 
         raise TimeoutError(f"timed out waiting for request completion: {reqid}")
-        return reqid
 
 
 SmokeAssertion = Callable[[SmokeClient], None]
@@ -227,9 +316,9 @@ def _ensure_runtime_files(clean: bool) -> None:
     if clean or not cached_proposals.exists():
         cached_proposals.write_text("{}", encoding="utf-8")
 
-    counters_file = RUNTIME_ROOT / "counters"
+    counters_file = RUNTIME_ROOT / "data" / "counters"
     if clean or not counters_file.exists():
-        counters_file.write_text("scan 1\nfile 1", encoding="utf-8")
+        counters_file.write_text("scan 0\nfile 0", encoding="utf-8")
 
 
 def _wait_for_port(host: str, port: int, timeout: float) -> None:
@@ -387,8 +476,6 @@ def _smoke_assertions(client: SmokeClient) -> None:
     client.wait_idle(timeout=60)
 
     expected = {
-        "SmokeReadable",
-        "SmokeMoveable",
         "FileWriterStatus",
         "FileWriterControl",
         "KafkaForwarder",
@@ -398,19 +485,9 @@ def _smoke_assertions(client: SmokeClient) -> None:
     if missing:
         raise AssertionError(f"missing expected devices after setup load: {missing}")
 
-    readable_value = client.eval("session.getDevice('SmokeReadable').read(0)")
-    if abs(float(readable_value) - 1.23) > 1e-6:
-        raise AssertionError(f"unexpected SmokeReadable value: {readable_value}")
-
     # Verify Kafka-backed status devices are reachable.
     client.eval("session.getDevice('FileWriterStatus').status(0)")
     client.eval("session.getDevice('KafkaForwarder').status(0)")
-
-    # End-to-end move and wait over daemon/poller/cache/PVA stack.
-    client.eval("session.getDevice('SmokeMoveable').maw(5.0)")
-    moved = client.eval("session.getDevice('SmokeMoveable').read(0)")
-    if abs(float(moved) - 5.0) > 0.05:
-        raise AssertionError(f"SmokeMoveable did not reach target: {moved}")
 
 
 @contextmanager
