@@ -18,6 +18,7 @@ workflow:
 
 stages:
   - test
+  - integration
 
 test:
   stage: test
@@ -32,7 +33,7 @@ test:
       junit: test/test-output.xml
 
 integration-smoke:
-  stage: test
+  stage: integration
   image: docker:27.5.1-cli
   services:
     - name: docker:27.5.1-dind
