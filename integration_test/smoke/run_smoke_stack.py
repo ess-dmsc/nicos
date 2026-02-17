@@ -44,6 +44,7 @@ SMOKE_ROOT = Path(__file__).resolve().parent
 COMPOSE_FILE = SMOKE_ROOT / "docker-compose.kafka.yml"
 RUNTIME_ROOT = REPO_ROOT / "integration_test" / "runtime"
 LOG_ROOT = RUNTIME_ROOT / "log"
+ROOT_NICOS_CONF = REPO_ROOT / "nicos.conf"
 
 CACHE_HOST = "localhost"
 CACHE_PORT = 24869
@@ -238,6 +239,23 @@ class SmokeClient(NicosClient):
 
 
 SmokeAssertion = Callable[[SmokeClient], None]
+
+
+def _assert_root_nicos_conf_not_symlink() -> None:
+    """Fail fast when repo-root nicos.conf is a symlink.
+
+    The smoke stack must use the smoke instrument config. A root-level symlinked
+    nicos.conf can override that and make the run use an unrelated config.
+    """
+    if not ROOT_NICOS_CONF.is_symlink():
+        return
+    target = os.readlink(ROOT_NICOS_CONF)
+    raise RuntimeError(
+        "Smoke integration tests cannot run: "
+        f"repo-root nicos.conf is a symlink ({ROOT_NICOS_CONF} -> {target}). "
+        "This overrides the smoke configuration and leads to invalid test runs. "
+        "Remove the symlinked nicos.conf from the repository root and rerun."
+    )
 
 
 def _env_flag(name: str, *, default: bool) -> bool:
@@ -530,6 +548,7 @@ def smoke_client_session(
     clean_runtime: bool = True,
 ) -> Iterator[SmokeClient]:
     """Start the full smoke stack and yield a connected daemon client."""
+    _assert_root_nicos_conf_not_symlink()
     manage_kafka = _env_flag("NICOS_SMOKE_MANAGE_KAFKA", default=True)
     kafka_bootstrap = _kafka_bootstrap()
     compose_base = _compose_base_cmd() if manage_kafka else None
