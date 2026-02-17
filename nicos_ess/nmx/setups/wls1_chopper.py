@@ -67,8 +67,8 @@ devices = dict(
     wls1_chopper_park_control=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="The park control for the WLS1 chopper.",
-        readpv="{}ParkPos_S".format(pv_root_1),
-        writepv="{}ParkPos_S".format(pv_root_1),
+        readpv="{}C_Park".format(pv_root_1),
+        writepv="{}C_Park".format(pv_root_1),
     ),
     wls1_chopper_chic=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
