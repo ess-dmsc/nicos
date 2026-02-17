@@ -27,8 +27,17 @@ def _wait_for_moveable_readback(
         if abs(value - target) <= 0.05:
             return value
         time.sleep(0.1)
+    pv_val = smoke_client.eval(
+        "SmokeBasicMoveable._epics_wrapper.get_pv_value('TEST:SMOKE:MOVE.VAL')",
+        default=None,
+    )
+    pv_rbv = smoke_client.eval(
+        "SmokeBasicMoveable._epics_wrapper.get_pv_value('TEST:SMOKE:MOVE.RBV')",
+        default=None,
+    )
     raise AssertionError(
-        f"readback did not reach target in time: final={value} target={target}"
+        "readback did not reach target in time: "
+        f"final={value} target={target} pv_val={pv_val} pv_rbv={pv_rbv}"
     )
 
 
