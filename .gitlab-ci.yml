@@ -4,11 +4,11 @@ default:
   image: registry.esss.lu.se/ecdc/ess-dmsc/docker-centos7-build-node:latest
   before_script:
     - scl enable rh-python38 -- python --version
-    - scl enable rh-python38 -- pip install --user --upgrade pip 
+    - scl enable rh-python38 -- pip install --user --upgrade pip
     - scl enable rh-python38 -- pip install --user -r requirements.txt
     - scl enable rh-python38 -- pip install --user -r requirements-gui.txt
     - scl enable rh-python38 -- pip install --user -r requirements-dev.txt
-    - scl enable rh-python38 -- pip install --user pytest pytest-timeout mock lxml Pillow 
+    - scl enable rh-python38 -- pip install --user pytest pytest-timeout mock lxml Pillow
     - scl enable rh-python38 -- pip install --user 'requests<2.30.0'
 
 workflow:
@@ -18,14 +18,35 @@ workflow:
 
 stages:
   - test
+  - integration
 
-test:
+unit_tests:
   stage: test
   script:
     - cd test
     - scl enable rh-python38 -- python -m pytest --junitxml=test-output.xml --ignore=nicos_sinq
   artifacts:
+    when: always
     paths:
       - test/test-output.xml
     reports:
       junit: test/test-output.xml
+
+integration_smoke:
+  stage: integration
+  needs: ["unit_tests"]
+  script:
+    - docker info
+    - docker compose version || docker-compose --version
+    - export NICOS_RUN_SMOKE_INTEGRATION=1
+    - scl enable rh-python38 -- python -m pytest -q --maxfail=1 integration_test/smoke/test_smoke.py --junitxml=integration_test/smoke-output.xml
+  after_script:
+    - docker compose -f integration_test/smoke/docker-compose.kafka.yml down -v || docker-compose -f integration_test/smoke/docker-compose.kafka.yml down -v || true
+  artifacts:
+    when: always
+    paths:
+      - integration_test/smoke-output.xml
+      - integration_test/runtime/log/
+    reports:
+      junit: integration_test/smoke-output.xml
+  timeout: 20m
