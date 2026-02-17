@@ -83,10 +83,14 @@ class KafkaProducer:
 
         if auto_flush:
             # Keep legacy behavior: block until delivered (or until timeout if provided)
-            self._producer.flush(flush_timeout)
+            self.flush(flush_timeout)
 
     def flush(self, timeout: Optional[float] = None) -> int:
         """Expose flush so callers can batch + flush explicitly."""
+        # apparently None is not accepted by the underlying library, so we need to handle it ourselves
+        # def flush(self, timeout=None): # real signature unknown; restored from __doc__
+        if timeout is None:
+            return self._producer.flush()
         return self._producer.flush(timeout)
 
     def poll(self, timeout: float = 0.0) -> int:
