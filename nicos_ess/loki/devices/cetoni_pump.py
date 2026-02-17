@@ -45,6 +45,7 @@ class CetoniPumpController(EpicsParameters, CanReference, HasLimits, Moveable):
 
     parameter_overrides = {
         "unit": Override(mandatory=False, settable=False, default=""),
+        "abslimits": Override(volatile=True, mandatory=False),
     }
 
     def doPreinit(self, mode):
