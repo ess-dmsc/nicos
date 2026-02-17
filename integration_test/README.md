@@ -26,6 +26,11 @@ All Kafka topics are prefixed with `test_smoke_`.
 - `smoke/Dockerfile`: image used by CI smoke tests
 - `smoke/run_smoke_stack.py`: orchestrator script
 
+In CI, image sources are overridable via environment variables:
+
+- `NICOS_SMOKE_KAFKA_IMAGE` (defaults to `confluentinc/cp-kafka:7.6.1`)
+- `NICOS_SMOKE_PYTHON_BASE_IMAGE` (defaults to `python:3.8-slim-bullseye`)
+
 ## Startup Order
 
 The runner enforces this order:
