@@ -1,8 +1,6 @@
-version: "3.8"
-
 services:
   kafka:
-    image: confluentinc/cp-kafka:7.6.1
+    image: ${NICOS_SMOKE_KAFKA_IMAGE:-confluentinc/cp-kafka:7.6.1}
     environment:
       - CLUSTER_ID=MkU3OEVBNTcwNTJENDM2Qk
       - KAFKA_NODE_ID=1
@@ -33,6 +31,14 @@ services:
     build:
       context: ../..
       dockerfile: integration_test/smoke/Dockerfile
+      args:
+        PYTHON_BASE_IMAGE: ${NICOS_SMOKE_PYTHON_BASE_IMAGE:-python:3.8-slim-bullseye}
+        HTTP_PROXY: ${HTTP_PROXY:-}
+        HTTPS_PROXY: ${HTTPS_PROXY:-}
+        NO_PROXY: ${NO_PROXY:-}
+        http_proxy: ${http_proxy:-}
+        https_proxy: ${https_proxy:-}
+        no_proxy: ${no_proxy:-}
     depends_on:
       kafka:
         condition: service_healthy

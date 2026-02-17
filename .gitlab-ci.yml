@@ -34,23 +34,25 @@ test:
 
 integration-smoke:
   stage: integration
-  image: docker:27.5.1-cli
-  services:
-    - name: docker:27.5.1-dind
-      alias: docker
+  image: docker:28-cli
   variables:
-    DOCKER_HOST: tcp://docker:2375
-    DOCKER_TLS_CERTDIR: ""
-    DOCKER_DRIVER: overlay2
+    HTTP_PROXY: $ESS_HTTP_PROXY
+    HTTPS_PROXY: $ESS_HTTP_PROXY
+    http_proxy: $ESS_HTTP_PROXY
+    https_proxy: $ESS_HTTP_PROXY
+    NO_PROXY: "localhost,127.0.0.1,docker,kafka"
+    no_proxy: "localhost,127.0.0.1,docker,kafka"
   before_script: []
   script:
     - mkdir -p integration_test/runtime
+    - docker info
     - set +e
     - docker compose -f integration_test/smoke/docker-compose.ci.yml up --build --abort-on-container-exit --exit-code-from nicos-integration
     - test_exit=$?
     - docker compose -f integration_test/smoke/docker-compose.ci.yml cp nicos-integration:/workspace/integration_test/runtime/smoke-junit.xml integration_test/runtime/smoke-junit.xml || true
     - docker compose -f integration_test/smoke/docker-compose.ci.yml cp nicos-integration:/workspace/integration_test/runtime/log integration_test/runtime/log || true
     - docker compose -f integration_test/smoke/docker-compose.ci.yml down -v --remove-orphans || true
+    - if [ ! -f integration_test/runtime/smoke-junit.xml ]; then echo "smoke-junit.xml was not produced"; if [ "$test_exit" -eq 0 ]; then test_exit=1; fi; fi
     - exit "$test_exit"
   artifacts:
     when: always
