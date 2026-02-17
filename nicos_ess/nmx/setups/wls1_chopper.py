@@ -1,16 +1,17 @@
 description = "NMX WLS-1 Chopper (single disc)"
 
 pv_root_1 = "NMX-ChpSy1:Chop-WLS-101:"
+# pv_root_2 = ""
 chic_root = "NMX-ChpSy1:Chop-CHIC-001:"
 
 devices = dict(
-    status=device(
+    wls1_status=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The chopper status.",
         readpv="{}ChopState_R".format(pv_root_1),
         visibility=(),
     ),
-    control=device(
+    wls1_control=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="Used to start and stop the chopper.",
         readpv="{}C_Execute".format(pv_root_1),
@@ -18,7 +19,7 @@ devices = dict(
         requires={"level": "admin"},
         visibility=(),
     ),
-    speed=device(
+    wls1_speed=device(
         "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
         description="The current speed.",
         readpv="{}Spd_R".format(pv_root_1),
@@ -26,22 +27,22 @@ devices = dict(
         precision=0.1,
         mapping={"0 Hz": 0, "14 Hz": 14},
     ),
-    delay=device(
+    wls1_delay=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
         description="The current delay.",
         readpv="{}ChopDly-S".format(pv_root_1),
         writepv="{}ChopDly-S".format(pv_root_1),
         abslimits=(0.0, 0.0),
     ),
-    phase=device(
+    wls1_phase=device(
         "nicos_ess.devices.transformer_devices.ChopperPhase",
         description="The phase of the chopper.",
-        phase_ns_dev="delay",
-        mapped_speed_dev="speed",
+        phase_ns_dev="wls1_delay",
+        mapped_speed_dev="wls1_speed",
         offset=0,
         unit="degrees",
     ),
-    delay_errors=device(
+    wls1_delay_errors=device(
         "nicos_ess.devices.epics.chopper_delay_error.ChopperDelayError",
         description="The current delay.",
         readpv="{}DiffTSSamples".format(pv_root_1),
@@ -51,12 +52,12 @@ devices = dict(
             "namespace",
         ),
     ),
-    phased=device(
+    wls1_phased=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The chopper is in phase.",
         readpv="{}InPhs_R".format(pv_root_1),
     ),
-    park_angle=device(
+    wls1_park_angle=device(
         "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
         description="The chopper's park angle.",
         readpv="{}Pos_R".format(pv_root_1),
@@ -69,35 +70,35 @@ devices = dict(
             "park pos 3": 270,
         },
     ),
-    park_control=device(
+    wls1_park_control=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="The park control for the WLS1 chopper.",
         readpv="{}C_Park".format(pv_root_1),
         writepv="{}C_Park".format(pv_root_1),
     ),
-    chic=device(
+    wls1_chic=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The status of the CHIC connection.",
         readpv="{}ConnectedR".format(chic_root),
         visibility=(),
         pva=True,
     ),
-    alarms=device(
+    wls1_alarms=device(
         "nicos_ess.devices.epics.chopper.ChopperAlarms",
         description="The chopper alarms",
         pv_root=pv_root_1,
         visibility=(),
     ),
-    chopper=device(
+    wls1_chopper=device(
         "nicos_ess.devices.epics.chopper.EssChopperController",
         description="The chopper controller",
         pollinterval=0.5,
         maxage=None,
-        state="status",
-        command="control",
-        speed="speed",
-        chic_conn="chic",
-        alarms="alarms",
+        state="wls1_status",
+        command="wls1_control",
+        speed="wls1_speed",
+        chic_conn="wls1_chic",
+        alarms="wls1_alarms",
         slit_edges=[[0, 170]],
         resolver_offset=280.0,
         tdc_offset=232.5,
