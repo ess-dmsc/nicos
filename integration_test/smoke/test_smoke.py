@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import time
 from pathlib import Path
+from textwrap import dedent
 
 COUNTERS_FILE = Path(__file__).resolve().parents[1] / "runtime" / "data" / "counters"
 
@@ -65,6 +66,27 @@ def _wait_for_moveable_readback(
     )
 
 
+def _run_scan_with_filewriter_context(
+    smoke_client, *, title: str, timeout: float = 180.0
+):
+    smoke_client.execute(
+        dedent(
+            f"""
+            __smoke_jobs_before = FileWriterControl.get_active_jobs()
+            with nexusfile_open({title!r}):
+                __smoke_jobs_during = FileWriterControl.get_active_jobs()
+                scan(SmokeBasicMoveable, [0, 5, 10], timer=2.0)
+            __smoke_jobs_after = FileWriterControl.get_active_jobs()
+            """
+        ),
+        timeout=timeout,
+    )
+    jobs_before = smoke_client.eval("__smoke_jobs_before", default=[])
+    jobs_during = smoke_client.eval("__smoke_jobs_during", default=[])
+    jobs_after = smoke_client.eval("__smoke_jobs_after", default=[])
+    return jobs_before, jobs_during, jobs_after
+
+
 def test_full_experiment_workflow_with_filewriter_scan(smoke_client) -> None:
     """Run one end-to-end experiment workflow with checks at each stage."""
     NewSetup = smoke_client.NewSetup
@@ -108,22 +130,10 @@ def test_full_experiment_workflow_with_filewriter_scan(smoke_client) -> None:
     assert "det" in smoke_client.eval("session.experiment.detlist", default=[])
 
     # 3) Real daemon-side filewriter context + scan command.
-    # we have to send the "script" instead of executing the commands line by line
-    # so the context manager works.
-    smoke_client.execute(
-        """
-__smoke_jobs_before = FileWriterControl.get_active_jobs()
-with nexusfile_open('Scan title'):
-    __smoke_jobs_during = FileWriterControl.get_active_jobs()
-    scan(SmokeBasicMoveable, [0, 5, 10], timer=2.0)
-__smoke_jobs_after = FileWriterControl.get_active_jobs()
-""",
-        timeout=180,
+    jobs_before, jobs_during, jobs_after = _run_scan_with_filewriter_context(
+        smoke_client,
+        title="Scan title",
     )
-
-    jobs_before = smoke_client.eval("__smoke_jobs_before", default=[])
-    jobs_during = smoke_client.eval("__smoke_jobs_during", default=[])
-    jobs_after = smoke_client.eval("__smoke_jobs_after", default=[])
 
     assert not jobs_before
     assert jobs_during
