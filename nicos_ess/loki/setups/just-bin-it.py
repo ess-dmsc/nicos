@@ -22,11 +22,11 @@ devices = dict(
             "bank6_data",
             "bank7_data",
             "bank8_data",
-            "monitor0_data",
-            "monitor1_data",
-            "monitor2_data",
-            "monitor3_data",
-            "monitor4_data",
+            "beam_monitor_m0_data",
+            "beam_monitor_m1_data",
+            "beam_monitor_m2_data",
+            "beam_monitor_m3_data",
+            "beam_monitor_m4_data",
         ],
         timers=["timer"],
     ),
@@ -144,17 +144,7 @@ devices = dict(
         det_height=896,
         det_range=(2752513, 3211264),
     ),
-    monitor0_data=device(
-        "nicos_ess.devices.datasources.just_bin_it.JustBinItImage",
-        description="A just-bin-it image channel",
-        data_topic="loki_beam_monitor",
-        source="cbm0",
-        brokers=configdata("config.KAFKA_BROKERS"),
-        unit="evts",
-        hist_type="1-D TOF",
-        hist_topic="loki_visualisation",
-    ),
-    monitor1_data=device(
+    beam_monitor_m0_data=device(
         "nicos_ess.devices.datasources.just_bin_it.JustBinItImage",
         description="A just-bin-it image channel",
         data_topic="loki_beam_monitor",
@@ -164,7 +154,7 @@ devices = dict(
         hist_type="1-D TOF",
         hist_topic="loki_visualisation",
     ),
-    monitor2_data=device(
+    beam_monitor_m1_data=device(
         "nicos_ess.devices.datasources.just_bin_it.JustBinItImage",
         description="A just-bin-it image channel",
         data_topic="loki_beam_monitor",
@@ -174,7 +164,7 @@ devices = dict(
         hist_type="1-D TOF",
         hist_topic="loki_visualisation",
     ),
-    monitor3_data=device(
+    beam_monitor_m2_data=device(
         "nicos_ess.devices.datasources.just_bin_it.JustBinItImage",
         description="A just-bin-it image channel",
         data_topic="loki_beam_monitor",
@@ -184,11 +174,21 @@ devices = dict(
         hist_type="1-D TOF",
         hist_topic="loki_visualisation",
     ),
-    monitor4_data=device(
+    beam_monitor_m3_data=device(
         "nicos_ess.devices.datasources.just_bin_it.JustBinItImage",
         description="A just-bin-it image channel",
         data_topic="loki_beam_monitor",
         source="cbm4",
+        brokers=configdata("config.KAFKA_BROKERS"),
+        unit="evts",
+        hist_type="1-D TOF",
+        hist_topic="loki_visualisation",
+    ),
+    beam_monitor_m4_data=device(
+        "nicos_ess.devices.datasources.just_bin_it.JustBinItImage",
+        description="A just-bin-it image channel",
+        data_topic="loki_beam_monitor",
+        source="cbm5",
         brokers=configdata("config.KAFKA_BROKERS"),
         unit="evts",
         hist_type="1-D TOF",
