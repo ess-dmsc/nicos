@@ -146,11 +146,12 @@ class CetoniPumpController(EpicsParameters, CanReference, HasLimits, Moveable):
         return self._get_cached_pv_or_ask("readpv")
 
     def doStart(self, value):
-        self._cache.put(self, "status", (status.BUSY, "Moving"), time.time())
+        # self._cache.put(self, "status", (status.BUSY, "Moving"), time.time())
         self._set_pv(self._get_pv_name("writepv"), value)
 
     def doStatus(self, maxage=0):
-        return get_from_cache_or(self, "status", self._do_status)
+        # return get_from_cache_or(self, "status", self._do_status)
+        return self._do_status(maxage=0)
 
     def _do_status(self, maxage=0):
         fault = self._get_cached_pv_or_ask("isfault")
