@@ -1,6 +1,6 @@
-description = "NMX WLS-1 Chopper (single disc)"
+description = "NMX WLS-2 Chopper disc 1 (double disc)"
 
-pv_root_1 = "NMX-ChpSy1:Chop-WLS-101:"
+pv_root_1 = "NMX-ChpSy1:Chop-WLS-201:"
 chic_root = "NMX-ChpSy1:Chop-CHIC-001:"
 
 devices = dict(
@@ -71,7 +71,7 @@ devices = dict(
     ),
     park_control=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
-        description="The park control for the WLS1 chopper.",
+        description="The park control for the WLS-2A chopper.",
         readpv="{}C_Park".format(pv_root_1),
         writepv="{}C_Park".format(pv_root_1),
     ),
@@ -99,8 +99,8 @@ devices = dict(
         chic_conn="chic",
         alarms="alarms",
         slit_edges=[[0, 170]],
-        resolver_offset=280.0,
-        tdc_offset=232.5,
+        resolver_offset=158.0,
+        tdc_offset=176.3,
         spin_direction="CCW",
     ),
 )
