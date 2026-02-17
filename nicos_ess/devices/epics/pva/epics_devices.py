@@ -783,6 +783,7 @@ class EpicsManualMappedAnalogMoveable(
     parameter_overrides = {
         "abslimits": Override(mandatory=False, volatile=True),
         "unit": Override(mandatory=False, settable=False, volatile=True),
+        "mapping": Override(settable=True),
     }
 
     _record_fields = {
