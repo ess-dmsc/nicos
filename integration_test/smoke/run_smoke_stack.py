@@ -27,6 +27,7 @@ from typing import Callable, Iterator
 
 from confluent_kafka import KafkaException
 from confluent_kafka.admin import AdminClient, NewTopic
+from p4p.client.thread import Context as PvaContext
 
 # Allow running as a plain script: `python integration_test/smoke/run_smoke_stack.py`
 if __package__ in (None, ""):
@@ -95,11 +96,55 @@ class SmokeClient(NicosClient):
         raise TimeoutError("timed out waiting for daemon idle status")
 
     def execute(self, code: str, *, timeout: float = 60.0) -> int:
-        """Execute command/script text and wait until daemon is idle again."""
+        """Execute command/script text and wait for this request to complete."""
         reqid = self.run(code, filename="<smoke-test>", noqueue=True)
         if reqid is None:
             raise RuntimeError(f"failed to execute command: {code!r}")
-        self.wait_idle(timeout=timeout)
+
+        deadline = time.monotonic() + timeout
+        sync_deadline = min(deadline, time.monotonic() + 5.0)
+        seen_activity = False
+
+        # Synchronize on the submitted request to avoid idle-race false returns.
+        while time.monotonic() < sync_deadline:
+            reply = self.ask("getstatus", quiet=True, default=None)
+            if not reply:
+                time.sleep(0.05)
+                continue
+            status_code = reply["status"][0]
+            queued = {
+                item.get("reqid")
+                for item in reply.get("requests", [])
+                if isinstance(item, dict)
+            }
+            if reqid in queued or status_code not in (STATUS_IDLE, STATUS_IDLEEXC):
+                seen_activity = True
+                break
+            time.sleep(0.05)
+
+        if not seen_activity:
+            # Request was either very short-lived or not observable in queue/status.
+            self.wait_idle(timeout=max(0.1, deadline - time.monotonic()))
+            return reqid
+
+        while time.monotonic() < deadline:
+            reply = self.ask("getstatus", quiet=True, default=None)
+            if not reply:
+                time.sleep(0.05)
+                continue
+            status_code = reply["status"][0]
+            if status_code == STATUS_IDLEEXC:
+                raise RuntimeError(f"daemon idle with exception: {reply['status']}")
+            queued = {
+                item.get("reqid")
+                for item in reply.get("requests", [])
+                if isinstance(item, dict)
+            }
+            if reqid not in queued and status_code == STATUS_IDLE:
+                return reqid
+            time.sleep(0.05)
+
+        raise TimeoutError(f"timed out waiting for request completion: {reqid}")
         return reqid
 
 
@@ -172,6 +217,21 @@ def _ensure_runtime_dirs(clean: bool) -> None:
         directory.mkdir(parents=True, exist_ok=True)
 
 
+def _ensure_runtime_files(clean: bool) -> None:
+    """
+    Ensure any files expected by the smoke stack exist, creating or cleaning as needed.
+        - cached_proposals.json: Used by the experiment device, should be a valid JSON object.
+        - counters: Used by the file writer pool device, should be a text file with lines of the form `counter_name number`.
+    """
+    cached_proposals = RUNTIME_ROOT / "cached_proposals.json"
+    if clean or not cached_proposals.exists():
+        cached_proposals.write_text("{}", encoding="utf-8")
+
+    counters_file = RUNTIME_ROOT / "counters"
+    if clean or not counters_file.exists():
+        counters_file.write_text("scan 1\nfile 1", encoding="utf-8")
+
+
 def _wait_for_port(host: str, port: int, timeout: float) -> None:
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
@@ -234,6 +294,46 @@ def _ensure_topics(compose_base: list[str], topics: list[str]) -> None:
         raise RuntimeError(
             f"failed to create Kafka topics:\n{failures}\n\n{diagnostics}"
         )
+
+
+def _pva_to_float(value) -> float:
+    try:
+        return float(value["value"])
+    except Exception:
+        return float(value)
+
+
+def _wait_for_pva_ready(pva_server: SmokePvaServer, timeout: float = 15.0) -> None:
+    names = pva_server.names
+    ctx = PvaContext("pva", nt=False)
+    deadline = time.monotonic() + timeout
+    last_error = ""
+    probe_target = 0.25
+    try:
+        while time.monotonic() < deadline:
+            try:
+                _pva_to_float(ctx.get(names.readable, timeout=1.0))
+                _pva_to_float(ctx.get(names.move_read, timeout=1.0))
+                _pva_to_float(ctx.get(names.move_write, timeout=1.0))
+
+                ctx.put(names.move_write, probe_target, wait=True, timeout=1.0)
+                rbv_deadline = time.monotonic() + 3.0
+                while time.monotonic() < rbv_deadline:
+                    rbv = _pva_to_float(ctx.get(names.move_read, timeout=0.5))
+                    if abs(rbv - probe_target) <= 1e-6:
+                        return
+                    time.sleep(0.05)
+                last_error = "write acknowledged but readback did not update"
+            except Exception as err:
+                last_error = str(err)
+            time.sleep(0.1)
+    finally:
+        try:
+            ctx.close()
+        except Exception:
+            pass
+
+    raise TimeoutError(f"timed out waiting for PVA server readiness: {last_error}")
 
 
 def _tail(path: Path, lines: int = 80) -> str:
@@ -322,6 +422,7 @@ def smoke_client_session(
     """Start the full smoke stack and yield a connected daemon client."""
     compose_base = _compose_base_cmd()
     _ensure_runtime_dirs(clean_runtime)
+    _ensure_runtime_files(clean_runtime)
 
     pva_server = None
     managed: list[ManagedProcess] = []
@@ -361,6 +462,7 @@ def smoke_client_session(
         print("[smoke] starting local PVA server", flush=True)
         pva_server = SmokePvaServer()
         pva_server.start()
+        _wait_for_pva_ready(pva_server)
 
         print("[smoke] starting nicos-cache", flush=True)
         cache = _start_service(
