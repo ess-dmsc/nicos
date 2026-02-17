@@ -37,7 +37,7 @@ from nicos.core import MAIN, POLLER
 from nicos.devices.cacheclient import CacheClient
 from nicos.core.sessions import Session
 from test.nicos_ess.device_harness import InMemoryCache, UnitTestSession
-from test.nicos_ess.test_devices.doubles import HarnessLinearAxis, RaceAwareMotor
+from test.nicos_ess.test_devices.doubles import HarnessLinearAxis
 
 
 CACHE_METHODS = [
@@ -107,8 +107,8 @@ def test_device_harness_create_pair_and_role_helpers(device_harness):
     # Setup
     transport = SimpleNamespace(value=1.0, target=1.0, moving=False)
     daemon, poller = device_harness.create_pair(
-        RaceAwareMotor,
-        name="race_motor",
+        HarnessLinearAxis,
+        name="linear_axis",
         shared={"transport": transport},
     )
 
