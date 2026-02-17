@@ -58,11 +58,17 @@ devices = dict(
         readpv="{}InPhs_R".format(pv_root_1),
     ),
     wls2a_chopper_park_angle=device(
-        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
         description="The chopper's park angle.",
         readpv="{}Pos_R".format(pv_root_1),
         writepv="{}Park_S".format(pv_root_1),
         visibility=(),
+        mapping={
+            "park pos 0": 0,
+            "park pos 1": 90,
+            "park pos 2": 180,
+            "park pos 3": 270,
+        },
     ),
     wls2a_chopper_park_control=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
@@ -151,11 +157,17 @@ devices = dict(
         readpv="{}InPhs_R".format(pv_root_2),
     ),
     wls2b_chopper_park_angle=device(
-        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        "nicos_ess.devices.epics.pva.EpicsManualMappedAnalogMoveable",
         description="The chopper's park angle.",
         readpv="{}Pos_R".format(pv_root_2),
         writepv="{}Park_S".format(pv_root_2),
         visibility=(),
+        mapping={
+            "park pos 0": 0,
+            "park pos 1": 90,
+            "park pos 2": 180,
+            "park pos 3": 270,
+        },
     ),
     wls2b_chopper_park_control=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
