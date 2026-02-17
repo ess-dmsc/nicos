@@ -49,7 +49,7 @@ CACHE_HOST = "localhost"
 CACHE_PORT = 24869
 DAEMON_HOST = "localhost"
 DAEMON_PORT = 21301
-KAFKA_BOOTSTRAP = "localhost:19092"
+DEFAULT_KAFKA_BOOTSTRAP = "localhost:19092"
 
 SMOKE_TOPICS = [
     "test_smoke_forwarder_dynamic_status",
@@ -240,6 +240,27 @@ class SmokeClient(NicosClient):
 SmokeAssertion = Callable[[SmokeClient], None]
 
 
+def _env_flag(name: str, *, default: bool) -> bool:
+    raw_value = os.environ.get(name)
+    if raw_value is None:
+        return default
+    return raw_value.strip().lower() not in {"0", "false", "no", "off"}
+
+
+def _kafka_bootstrap() -> str:
+    value = os.environ.get("NICOS_SMOKE_KAFKA_BOOTSTRAP", DEFAULT_KAFKA_BOOTSTRAP)
+    endpoints = [entry.strip() for entry in value.split(",") if entry.strip()]
+    if not endpoints:
+        return DEFAULT_KAFKA_BOOTSTRAP
+    return ",".join(endpoints)
+
+
+def _first_bootstrap_endpoint(bootstrap_servers: str) -> tuple[str, int]:
+    endpoint = bootstrap_servers.split(",", 1)[0].strip()
+    host, port_str = endpoint.rsplit(":", 1)
+    return host.strip(), int(port_str)
+
+
 def _compose_base_cmd() -> list[str]:
     for candidate in (["docker", "compose"], ["docker-compose"]):
         try:
@@ -342,12 +363,18 @@ def _compose_diagnostics(compose_base: list[str]) -> str:
     )
 
 
-def _wait_for_kafka_ready(compose_base: list[str], timeout: float = 120.0) -> None:
-    _wait_for_port("localhost", 19092, timeout=timeout)
+def _wait_for_kafka_ready(
+    bootstrap_servers: str,
+    *,
+    timeout: float = 120.0,
+    compose_base: list[str] | None = None,
+) -> None:
+    host, port = _first_bootstrap_endpoint(bootstrap_servers)
+    _wait_for_port(host, port, timeout=timeout)
 
     deadline = time.monotonic() + timeout
     last_error = ""
-    admin = AdminClient({"bootstrap.servers": KAFKA_BOOTSTRAP})
+    admin = AdminClient({"bootstrap.servers": bootstrap_servers})
     while time.monotonic() < deadline:
         try:
             metadata = admin.list_topics(timeout=5)
@@ -357,15 +384,19 @@ def _wait_for_kafka_ready(compose_base: list[str], timeout: float = 120.0) -> No
         except KafkaException as exc:
             last_error = str(exc)
         time.sleep(1.0)
-    diagnostics = _compose_diagnostics(compose_base)
+    diagnostics = (
+        _compose_diagnostics(compose_base) if compose_base is not None else "<none>"
+    )
     raise TimeoutError(
         "timed out waiting for Kafka broker readiness\n"
         f"last probe error:\n{last_error or '<none>'}\n\n{diagnostics}"
     )
 
 
-def _ensure_topics(compose_base: list[str], topics: list[str]) -> None:
-    admin = AdminClient({"bootstrap.servers": KAFKA_BOOTSTRAP})
+def _ensure_topics(
+    bootstrap_servers: str, topics: list[str], compose_base: list[str] | None = None
+) -> None:
+    admin = AdminClient({"bootstrap.servers": bootstrap_servers})
     futures = admin.create_topics(
         [NewTopic(topic, num_partitions=1, replication_factor=1) for topic in topics]
     )
@@ -378,7 +409,9 @@ def _ensure_topics(compose_base: list[str], topics: list[str]) -> None:
             if "TOPIC_ALREADY_EXISTS" not in str(exc):
                 topic_failures.append(f"{topic}: {exc}")
     if topic_failures:
-        diagnostics = _compose_diagnostics(compose_base)
+        diagnostics = (
+            _compose_diagnostics(compose_base) if compose_base is not None else "<none>"
+        )
         failures = "\n".join(topic_failures)
         raise RuntimeError(
             f"failed to create Kafka topics:\n{failures}\n\n{diagnostics}"
@@ -497,7 +530,9 @@ def smoke_client_session(
     clean_runtime: bool = True,
 ) -> Iterator[SmokeClient]:
     """Start the full smoke stack and yield a connected daemon client."""
-    compose_base = _compose_base_cmd()
+    manage_kafka = _env_flag("NICOS_SMOKE_MANAGE_KAFKA", default=True)
+    kafka_bootstrap = _kafka_bootstrap()
+    compose_base = _compose_base_cmd() if manage_kafka else None
     _ensure_runtime_dirs(clean_runtime)
     _ensure_runtime_files(clean_runtime)
 
@@ -511,6 +546,7 @@ def smoke_client_session(
     base_env["EPICS_CA_ADDR_LIST"] = "127.0.0.1"
     base_env["EPICS_PVA_AUTO_ADDR_LIST"] = "NO"
     base_env["EPICS_PVA_ADDR_LIST"] = "127.0.0.1"
+    base_env["NICOS_SMOKE_KAFKA_BOOTSTRAP"] = kafka_bootstrap
     base_env["PYTHONPATH"] = (
         f"{REPO_ROOT}:{base_env['PYTHONPATH']}"
         if base_env.get("PYTHONPATH")
@@ -529,12 +565,20 @@ def smoke_client_session(
     client = SmokeClient()
 
     try:
-        print("[smoke] starting Kafka (docker compose)", flush=True)
-        _compose(compose_base, "up", "-d", "kafka", check=True)
-        _wait_for_kafka_ready(compose_base)
+        if manage_kafka:
+            assert compose_base is not None
+            print("[smoke] starting Kafka (docker compose)", flush=True)
+            _compose(compose_base, "up", "-d", "kafka", check=True)
+            _wait_for_kafka_ready(kafka_bootstrap, compose_base=compose_base)
+        else:
+            print(
+                f"[smoke] using externally managed Kafka at {kafka_bootstrap}",
+                flush=True,
+            )
+            _wait_for_kafka_ready(kafka_bootstrap)
 
         print("[smoke] creating Kafka topics", flush=True)
-        _ensure_topics(compose_base, SMOKE_TOPICS)
+        _ensure_topics(kafka_bootstrap, SMOKE_TOPICS, compose_base=compose_base)
 
         print("[smoke] starting local PVA server", flush=True)
         pva_server = SmokePvaServer()
@@ -599,7 +643,8 @@ def smoke_client_session(
         if pva_server is not None:
             pva_server.stop()
 
-        if not keep_kafka:
+        if manage_kafka and not keep_kafka:
+            assert compose_base is not None
             _compose(compose_base, "down", "-v", check=False)
 
 

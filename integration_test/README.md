@@ -22,6 +22,8 @@ All Kafka topics are prefixed with `test_smoke_`.
 - `smoke/setups/system.py`: loaded by daemon during smoke checks
 - `smoke/pva_server.py`: in-process PVA server for EPICS PVs
 - `smoke/docker-compose.kafka.yml`: single-node KRaft Kafka for smoke runs
+- `smoke/docker-compose.ci.yml`: CI compose stack (`kafka` + `nicos-integration`)
+- `smoke/Dockerfile`: image used by CI smoke tests
 - `smoke/run_smoke_stack.py`: orchestrator script
 
 ## Startup Order
@@ -73,6 +75,16 @@ Run the EPICS basic smoke tests with:
 
 ```bash
 NICOS_RUN_SMOKE_INTEGRATION=1 pytest -q integration_test/smoke/test_smoke.py
+```
+
+Run against an externally managed Kafka broker (no local docker compose inside
+the smoke runner):
+
+```bash
+NICOS_RUN_SMOKE_INTEGRATION=1 \
+NICOS_SMOKE_MANAGE_KAFKA=0 \
+NICOS_SMOKE_KAFKA_BOOTSTRAP=kafka:9092 \
+pytest -q integration_test/smoke/test_smoke.py
 ```
 
 ## Notes

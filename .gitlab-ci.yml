@@ -25,7 +25,36 @@ test:
     - cd test
     - scl enable rh-python38 -- python -m pytest --junitxml=test-output.xml --ignore=nicos_sinq
   artifacts:
+    when: always
     paths:
       - test/test-output.xml
     reports:
       junit: test/test-output.xml
+
+integration-smoke:
+  stage: test
+  image: docker:27.5.1-cli
+  services:
+    - name: docker:27.5.1-dind
+      alias: docker
+  variables:
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_TLS_CERTDIR: ""
+    DOCKER_DRIVER: overlay2
+  before_script: []
+  script:
+    - mkdir -p integration_test/runtime
+    - set +e
+    - docker compose -f integration_test/smoke/docker-compose.ci.yml up --build --abort-on-container-exit --exit-code-from nicos-integration
+    - test_exit=$?
+    - docker compose -f integration_test/smoke/docker-compose.ci.yml cp nicos-integration:/workspace/integration_test/runtime/smoke-junit.xml integration_test/runtime/smoke-junit.xml || true
+    - docker compose -f integration_test/smoke/docker-compose.ci.yml cp nicos-integration:/workspace/integration_test/runtime/log integration_test/runtime/log || true
+    - docker compose -f integration_test/smoke/docker-compose.ci.yml down -v --remove-orphans || true
+    - exit "$test_exit"
+  artifacts:
+    when: always
+    paths:
+      - integration_test/runtime/smoke-junit.xml
+      - integration_test/runtime/log/
+    reports:
+      junit: integration_test/runtime/smoke-junit.xml
