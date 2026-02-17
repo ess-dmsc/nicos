@@ -4,6 +4,7 @@ from nicos import session
 from nicos.core import (
     POLLER,
     SIMULATION,
+    HasLimits,
     Moveable,
     Override,
     Param,
@@ -21,7 +22,7 @@ from nicos_ess.devices.epics.pva.epics_devices import (
 )
 
 
-class CetoniPumpController(EpicsParameters, CanReference, Moveable):
+class CetoniPumpController(EpicsParameters, CanReference, HasLimits, Moveable):
     """
     A device for controlling a Cetoni syringe pump
 
@@ -73,6 +74,11 @@ class CetoniPumpController(EpicsParameters, CanReference, Moveable):
                 cache_key="",
                 pv_suffix="RefPosInitd",
                 record_type=RecordType.STATUS,
+            ),
+            "maxvol": RecordInfo(
+                cache_key="",
+                pv_suffix="MaxVol",
+                record_type=RecordType.VALUE,
             ),
             # "flowrate_rb": RecordInfo(cache_key="filled_volume", pv_suffix="FlowRate-RB",
             # "flowrate_sp": RecordInfo(cache_key="filled_volume", pv_suffix="FlowRate-RB",
@@ -161,6 +167,10 @@ class CetoniPumpController(EpicsParameters, CanReference, Moveable):
 
     def doReference(self):
         self._set_pv(self._get_pv_name("reference"), 1)
+
+    def doReadAbslimits(self):
+        max_volume = self._get_cached_pv_or_ask("maxvol")
+        return 0, max_volume
 
     def doWriteInnerdiameter(self, value):
         self._set_pv(self._get_pv_name("innerdiameter_sp"), value)
