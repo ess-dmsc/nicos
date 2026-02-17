@@ -35,13 +35,20 @@ unit_tests:
 integration_smoke:
   stage: integration
   needs: ["unit_tests"]
+  before_script:
+    - scl enable rh-python38 -- python --version
+    - export PATH="$HOME/.local/bin:$PATH"
+    - scl enable rh-python38 -- python -m pip install --user --upgrade pip
+    - scl enable rh-python38 -- python -m pip install --user -r requirements.txt
+    - scl enable rh-python38 -- python -m pip install --user pytest pytest-timeout mock lxml Pillow docker-compose
   script:
-    - docker info
-    - docker compose version || docker-compose --version
+    - export PATH="$HOME/.local/bin:$PATH"
+    - docker-compose --version
     - export NICOS_RUN_SMOKE_INTEGRATION=1
     - scl enable rh-python38 -- python -m pytest -q --maxfail=1 integration_test/smoke/test_smoke.py --junitxml=integration_test/smoke-output.xml
   after_script:
-    - docker compose -f integration_test/smoke/docker-compose.kafka.yml down -v || docker-compose -f integration_test/smoke/docker-compose.kafka.yml down -v || true
+    - export PATH="$HOME/.local/bin:$PATH"
+    - docker-compose -f integration_test/smoke/docker-compose.kafka.yml down -v || true
   artifacts:
     when: always
     paths:
