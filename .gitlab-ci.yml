@@ -38,17 +38,31 @@ integration_smoke:
   before_script:
     - scl enable rh-python38 -- python --version
     - export PATH="$HOME/.local/bin:$PATH"
+    - mkdir -p "$HOME/.local/bin" "$HOME/.docker/cli-plugins"
+    - |
+      if ! command -v docker >/dev/null 2>&1; then
+        curl -fsSL "https://download.docker.com/linux/static/stable/x86_64/docker-26.1.4.tgz" -o /tmp/docker.tgz
+        tar -xzf /tmp/docker.tgz -C /tmp
+        cp /tmp/docker/docker "$HOME/.local/bin/docker"
+        chmod +x "$HOME/.local/bin/docker"
+      fi
+    - |
+      if ! docker compose version >/dev/null 2>&1; then
+        curl -fsSL "https://github.com/docker/compose/releases/download/v2.27.1/docker-compose-linux-x86_64" -o "$HOME/.docker/cli-plugins/docker-compose"
+        chmod +x "$HOME/.docker/cli-plugins/docker-compose"
+      fi
     - scl enable rh-python38 -- python -m pip install --user --upgrade pip
     - scl enable rh-python38 -- python -m pip install --user -r requirements.txt
-    - scl enable rh-python38 -- python -m pip install --user pytest pytest-timeout mock lxml Pillow docker-compose
+    - scl enable rh-python38 -- python -m pip install --user pytest pytest-timeout mock lxml Pillow
   script:
     - export PATH="$HOME/.local/bin:$PATH"
-    - docker-compose --version
+    - docker --version
+    - docker compose version
+    - docker info
     - export NICOS_RUN_SMOKE_INTEGRATION=1
-    - scl enable rh-python38 -- python -m pytest -q --maxfail=1 integration_test/smoke/test_smoke.py --junitxml=integration_test/smoke-output.xml
+    - scl enable rh-python38 -- python -m pytest -q -rs --maxfail=1 integration_test/smoke/test_smoke.py --junitxml=integration_test/smoke-output.xml
   after_script:
-    - export PATH="$HOME/.local/bin:$PATH"
-    - docker-compose -f integration_test/smoke/docker-compose.kafka.yml down -v || true
+    - docker compose -f integration_test/smoke/docker-compose.kafka.yml down -v || true
   artifacts:
     when: always
     paths:
