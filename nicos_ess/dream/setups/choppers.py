@@ -268,11 +268,9 @@ devices = dict(
         precision=0.1,
         mapping={
             "-14 Hz": -14, 
-            "-7 Hz": -7,
             "0 Hz": 0,
-            "7 Hz": 7,
             "14 Hz": 14,
-        },  # check real speeds later
+        },
     ),
     overlap_chopper_delay=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
