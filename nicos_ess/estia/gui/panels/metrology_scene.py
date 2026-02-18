@@ -52,12 +52,12 @@ STATUS_COLORS = {
 
 
 class MetrologyScene(QGraphicsScene):
-    def __init__(self, parent, client, options):
+    def __init__(self, parent, client, options, channels):
         QGraphicsScene.__init__(self, parent)
         self.client = client
-        self.channels = list(options.get("channels"))
         self.positions = list(options.get("positions"))
         self.selene = int(options.get("selene", 1))
+        self.channels = channels[0] if self.selene == 1 else channels[1]
         self.cart_position = str(options.get("cart_position"))
         self.offsetx = float(options.get("offsetx", 0))
         self._currentSelection = None
