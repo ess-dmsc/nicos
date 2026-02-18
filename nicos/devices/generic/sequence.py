@@ -26,7 +26,8 @@
 
 import sys
 from datetime import timedelta
-from time import monotonic, time as currenttime
+from time import monotonic
+from time import time as currenttime
 
 from nicos import session
 from nicos.core import (
@@ -120,7 +121,11 @@ class SeqDev(SequenceItem):
     def check(self):
         res = self.dev.isAllowed(self.target)
         if not res[0]:
-            raise LimitError(self.dev, res[1])
+            if isinstance(res[1], str):
+                reason = res[1]
+            else:
+                reason = res[1][0]
+            raise LimitError(self.dev, reason)
 
     def run(self):
         self.dev.start(self.target)
@@ -296,7 +301,7 @@ class SequencerMixin(DeviceMixinBase):
 
     parameters = {
         "_seq_status": Param(
-            "Status of the currently executed sequence, " "or (status.OK, idle)",
+            "Status of the currently executed sequence, or (status.OK, idle)",
             settable=True,
             mandatory=False,
             internal=True,
@@ -403,7 +408,7 @@ class SequencerMixin(DeviceMixinBase):
                             try:
                                 action.retry(nretries)
                             except Exception as e:
-                                self.log.debug("action.retry failed with " "%r", e)
+                                self.log.debug("action.retry failed with %r", e)
                                 ret = self._retryFailed(
                                     i, action, nretries, sys.exc_info()
                                 )
@@ -422,7 +427,7 @@ class SequencerMixin(DeviceMixinBase):
                                 # wait finished
                                 waiters.remove(action)
                         except Exception as e:
-                            self.log.debug("action.isCompleted failed with " "%r", e)
+                            self.log.debug("action.isCompleted failed with %r", e)
                             # if this raises, abort the sequence...
                             code = self._waitFailed(i, action, sys.exc_info())
                             self.log.debug("_waitFailed returned %r", code)
@@ -455,7 +460,7 @@ class SequencerMixin(DeviceMixinBase):
                             try:
                                 action.stop()
                             except Exception as e:
-                                self.log.debug("action.stop failed with " "%r", e)
+                                self.log.debug("action.stop failed with %r", e)
                                 failed.append((action, e))
                             # signal those errors, captured earlier
                             for ac, e in failed:
@@ -508,7 +513,7 @@ class SequencerMixin(DeviceMixinBase):
     def doReset(self):
         if self._seq_is_running():
             self.log.error(
-                "cannot reset the device because it is busy, " "please stop it first."
+                "cannot reset the device because it is busy, please stop it first."
             )
             return
         self._seq_was_stopped = False
@@ -628,9 +633,7 @@ class BaseSequencer(SequencerMixin, Moveable):
 
         Default is to raise an `NotImplementedError`
         """
-        raise NotImplementedError(
-            "put a proper _generateSequence " "implementation here!"
-        )
+        raise NotImplementedError("put a proper _generateSequence implementation here!")
 
 
 class LockedDevice(BaseSequencer):
@@ -663,7 +666,7 @@ class LockedDevice(BaseSequencer):
             "Whether to fix lock device if not moving", default=False, type=bool
         ),
         "lockvalue": Param(
-            "Value for the lock after movement, default None" " goes to previous value",
+            "Value for the lock after movement, default None goes to previous value",
             default=None,
             type=none_or(anytype),
         ),
@@ -745,7 +748,7 @@ class MeasureSequencer(SequencerMixin, Measurable):
                 self._seq_thread.join()
                 self._seq_thread = None
             else:
-                raise NicosError(self, "Cannot prepare device, it is still " "busy")
+                raise NicosError(self, "Cannot prepare device, it is still busy")
 
         if self._seq_status[0] > status.OK and not self._seq_was_stopped:
             self.log.warning(
@@ -784,6 +787,4 @@ class MeasureSequencer(SequencerMixin, Measurable):
 
         Default is to raise an `NotImplementedError`
         """
-        raise NotImplementedError(
-            "put a proper _generateSequence " "implementation here!"
-        )
+        raise NotImplementedError("put a proper _generateSequence implementation here!")
