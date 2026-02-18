@@ -16,7 +16,7 @@ devices = dict(
     DPU_config_readback=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="ARINAX DPU Configuration readback (mockup)",
-        readpv="NMX:DPUConfiguration",
+        readpv="NMX:getDPUConfiguration",
         pva=False,
         monitor=True,
         pollinterval=0.5,
@@ -26,8 +26,8 @@ devices = dict(
         # This class seems to be the best for read/write the DPU config PV.
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="ARINAX DPU Configuration control (mockup)",
-        readpv="NMX:DPUConfiguration",
-        writepv="NMX:putDPUConfiguration",
+        readpv="NMX:getDPUConfiguration",
+        writepv="NMX:goDPUConfiguration",
         pva=False,
         monitor=True,
         pollinterval=0.5,
