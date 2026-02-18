@@ -131,7 +131,7 @@ class SeleneRobot(Moveable):
         "rotations": Param(
             "Internal screw position tracking",
             type=dictof(int, dictof(int, float)),
-            settable=False,
+            settable=True,
             internal=True,
             unit="",
         ),
@@ -188,6 +188,7 @@ class SeleneRobot(Moveable):
         self._xpos_zero2 = 0.0
         self._item_zpos = {}
         self._confirmed = {}
+        self.load_data()
         self.calculate_zeros()
         if mode == MASTER:
             self.read(maxage=0)
@@ -1034,7 +1035,9 @@ class SeleneMetrology(SeleneCalculator, BaseSequencer):
         return [self._attached_m_cart, self._attached_interferometer]
 
     def doInit(self, dummy=None):
-        self._sa = np.sqrt(self._sc**2 + self._sb**2)
+        self._sa = np.sqrt(
+            self._sc**2 + self._sb**2
+        )  # This is already in the SeleneCalculator
         self._cache.addCallback(
             self._attached_m_cart, "value", self._on_status_change_external
         )

@@ -14,9 +14,9 @@ devices = dict(
         # errorbitpv=f"{pvprefix}-LinY-01:Mtr-Err",
         # reseterrorpv=f"{pvprefix}-LinY-01:Mtr-ErrRst",
         # temppv=f"{pvprefix}-LinY-01:Mtr-Temp",
-        unit="mm",
-        abslimits=(0, 25),
-        userlimits=(0, 25),
+        # unit="mm",
+        # abslimits=(0, 25),
+        # userlimits=(0, 25),
     ),
     robot_vert=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
@@ -28,9 +28,9 @@ devices = dict(
         # errorbitpv=f"{pvprefix}-LinY-01:Mtr-Err",
         # reseterrorpv=f"{pvprefix}-LinY-01:Mtr-ErrRst",
         # temppv=f"{pvprefix}-LinY-01:Mtr-Temp",
-        unit="mm",
-        abslimits=(0, 25),
-        userlimits=(0, 25),
+        # unit="mm",
+        # abslimits=(0, 25),
+        # userlimits=(0, 25),
     ),
     driver1_1_adjust=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
@@ -42,9 +42,9 @@ devices = dict(
         # errorbitpv=f"{pvprefix}-RotY-01:Mtr-Err",
         # reseterrorpv=f"{pvprefix}-RotY-01:Mtr-ErrRst",
         # temppv=f"{pvprefix}-RotY-01:Mtr-Temp",
-        unit="mm",
-        abslimits=(0, 360),
-        userlimits=(0, 360),
+        # unit="mm",
+        # abslimits=(0, 360),
+        # userlimits=(0, 360),
     ),
     driver1_1_approach=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
@@ -56,9 +56,9 @@ devices = dict(
         # errorbitpv=f"{pvprefix}-LinY-01:Mtr-Err",
         # reseterrorpv=f"{pvprefix}-LinY-01:Mtr-ErrRst",
         # temppv=f"{pvprefix}-LinY-01:Mtr-Temp",
-        unit="mm",
-        abslimits=(0, 25),
-        userlimits=(0, 25),
+        # unit="mm",
+        # abslimits=(0, 25),
+        # userlimits=(0, 25),
     ),
     driver1_1_hex_state=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
@@ -75,9 +75,9 @@ devices = dict(
         # errorbitpv=f"{pvprefix}-RotY-01:Mtr-Err",
         # reseterrorpv=f"{pvprefix}-RotY-01:Mtr-ErrRst",
         # temppv=f"{pvprefix}-RotY-01:Mtr-Temp",
-        unit="mm",
-        abslimits=(0, 360),
-        userlimits=(0, 360),
+        # unit="mm",
+        # abslimits=(0, 360),
+        # userlimits=(0, 360),
     ),
     driver1_2_approach=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
@@ -89,9 +89,9 @@ devices = dict(
         # errorbitpv=f"{pvprefix}-LinY-02:Mtr-Err",
         # reseterrorpv=f"{pvprefix}-LinY-02:Mtr-ErrRst",
         # temppv=f"{pvprefix}-LinY-02:Mtr-Temp",
-        unit="mm",
-        abslimits=(0, 25),
-        userlimits=(0, 25),
+        # unit="mm",
+        # abslimits=(0, 25),
+        # userlimits=(0, 25),
     ),
     driver1_2_hex_state=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
@@ -112,45 +112,6 @@ devices = dict(
         delta12=5,
         engaged=5,
         retracted=5,
-        position_data="its not used",
-        positions={
-            1: {
-                1: (50, 234),
-            },
-            2: {
-                2: (50, 64),
-            },
-            3: {
-                3: (50, 30),
-            },
-            4: {
-                4: (445, 234),
-            },
-            5: {
-                5: (445, 128),
-            },
-            6: {
-                6: (445, 64),
-            },
-            # :second guide, not active
-            7: {
-                7: (50, 500 - 128),
-            },
-            8: {
-                8: (50, 500 - 64),
-            },
-            9: {
-                9: (50, 500 - 30),
-            },
-            10: {
-                10: (445, 500 - 234),
-            },
-            11: {
-                11: (445, 500 - 128),
-            },
-            12: {
-                12: (445, 500 - 64),
-            },
-        },
+        position_data="/ess/ecdc/nicos-core/nicos_ess/estia/devices/selene1_data.yml",
     ),
 )

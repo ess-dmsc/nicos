@@ -40,7 +40,7 @@ from nicos_ess.estia.gui.panels.custom_controls import (
 
 
 class RobotScene(QGraphicsScene):
-    def __init__(self, parent, client, options):
+    def __init__(self, parent, client, options, screw_groups):
         QGraphicsScene.__init__(self, parent)
         self.client = client
         self._currentSelection = None
@@ -54,7 +54,7 @@ class RobotScene(QGraphicsScene):
         self.robot = options.get("robot", None)
         self.offsetx = float(options.get("offsetx"))
         self.offsetz = float(options.get("offsetz"))
-        self.screw_group = options.get("screw_group")
+        self.screw_group = screw_groups[0] if self.selene == 1 else screw_groups[1]
 
         self.build_background()
         self.build_cart()
