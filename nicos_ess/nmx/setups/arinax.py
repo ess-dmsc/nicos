@@ -3,12 +3,28 @@ description = "ARINAX sample motors (from the mockup software)"
 group = "optional"
 
 devices = dict(
-    # Sample motion
-    phi=device(
+    # Sample centring motion
+    centring_phi=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
         description="ARINAX sample motor Phi (mockup)",
         readpv="NMX:PhiPosition",
         writepv="NMX:PhiPosition",
+        unit="mm",
+        pva=False,
+    ),
+    centring_chi=device(
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="ARINAX sample motor Chi (mockup)",
+        readpv="NMX:ChiPosition",
+        writepv="NMX:ChiPosition",
+        unit="mm",
+        pva=False,
+    ),
+    centring_theta=device(
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="ARINAX sample motor Theta (mockup)",
+        readpv="NMX:ThetaPosition",
+        writepv="NMX:ThetaPosition",
         unit="mm",
         pva=False,
     ),
@@ -49,6 +65,49 @@ devices = dict(
             'CONFIG10':"CONFIG10",
             'CONFIG11':"CONFIG11",
             }
+    ),
+    # Sample tool
+    sample_transfer_load_tool=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
+        description="ARINAX SPU desired tool loading control (mockup)",
+        readpv="NMX:LoadTool",
+        writepv="NMX:LoadTool",
+        pva=False,
+        monitor=True,
+        pollinterval=0.5,
+        maxage=None,
+        mapping={
+            'Goniometer empty tool': "GoniometerEmpty",
+            'Custom empty tool': "CustomToolEmpty",
+            'Touch probe tool': "TouchProbe",
+            'Unload mounted tool': "None",
+            },
+    ),
+    sample_transfer_gonio_in_rack=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
+        description="ARINAX SPU goniometer empty tool in rack readback (mockup)",
+        readpv="NMX:getIsGonioToolInRack",
+        pva=False,
+        monitor=True,
+        pollinterval=0.5,
+        maxage=None,
+        mapping={
+            'No': 0,
+            'Yes': 1,
+            },
+    ),
+    sample_transfer_custom_tool_in_rack=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
+        description="ARINAX SPU custom empty tool in rack readback (mockup)",
+        readpv="NMX:getIsCustomToolInRack",
+        pva=False,
+        monitor=True,
+        pollinterval=0.5,
+        maxage=None,
+        mapping={
+            'No': 0,
+            'Yes': 1,
+            },
     ),
 
 )
