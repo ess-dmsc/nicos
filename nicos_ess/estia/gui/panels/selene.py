@@ -35,14 +35,80 @@ class SelenePanel(Panel):
         PanelBase.__init__(self, parent, client, options)
         loadUi(self, findResource("nicos_ess/estia/gui/panels/selene.ui"))
 
+        screw_group_1 = [
+            # relative location of screws in each mirror group
+            # (x, z, active, item-1)
+            (50, 234, True, 3),
+            (50, 64, True, 4),
+            (50, 30, True, 5),
+            (445, 234, True, 0),
+            (445, 128, True, 1),
+            (445, 64, True, 2),
+            # second guide, not active
+            (50, 500 - 128, False, -2),
+            (50, 500 - 64, False, -2),
+            (50, 500 - 30, False, -2),
+            (445, 500 - 234, False, -2),
+            (445, 500 - 128, False, -2),
+            (445, 500 - 64, False, -2),
+        ]
+
+        screw_group_2 = [
+            # relative location of screws in each mirror group
+            # (x, z, active, item-1)
+            (50, 234, False, -2),
+            (50, 128, False, -2),
+            (50, 64, False, -2),
+            (445, 128, False, -2),
+            (445, 64, False, -2),
+            (445, 30, False, -2),
+            # second guide, active
+            (50, 500 - 234, True, 5),
+            (50, 500 - 128, True, 4),
+            (50, 500 - 64, True, 3),
+            (445, 500 - 128, True, 2),
+            (445, 500 - 64, True, 1),
+            (445, 500 - 30, True, 0),
+        ]
+
+        screw_groups = (screw_group_1, screw_group_2)
+
+        channels_1 = [
+            # (CHi, pos, diagonal)
+            ("ch21", (-45, 80), False),
+            ("ch22", (-45, 35), False),
+            ("ch23", (-46, -144), True),
+            ("ch24", (-46, -202), True),
+            ("ch17", (45, 80), False),
+            ("ch18", (45, 35), False),
+            ("ch19", (46, -144), True),
+            ("ch20", (46, -202), True),
+        ]
+
+        channels_2 = [
+            # (CHi, pos, diagonal)
+            ("ch21", (-45, 80), False),
+            ("ch22", (-45, 35), False),
+            ("ch23", (-46, -144), True),
+            ("ch24", (-46, -202), True),
+            ("ch17", (45, 80), False),
+            ("ch18", (45, 35), False),
+            ("ch19", (46, -144), True),
+            ("ch20", (46, -202), True),
+        ]
+
+        channels = (channels_1, channels_2)
+
         metrology_options = options["metrology_options"]
         self.lblMetrologyTitle.setText(metrology_options.get("title", ""))
-        self._metrology_scene = MetrologyScene(self, client, metrology_options)
+        self._metrology_scene = MetrologyScene(
+            self, client, metrology_options, channels
+        )
         self.metrologyView.setScene(self._metrology_scene)
         self.metrologyView.scale(0.5, 0.5)
 
         robot_options = options["robot_options"]
         self.lblRobotTitle.setText(robot_options.get("title", ""))
-        self._robot_scene = RobotScene(self, client, robot_options)
+        self._robot_scene = RobotScene(self, client, robot_options, screw_groups)
         self.robotView.setScene(self._robot_scene)
         self.robotView.scale(0.5, 0.5)
