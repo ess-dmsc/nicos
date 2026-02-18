@@ -122,10 +122,10 @@ class SeqDev(SequenceItem):
         res = self.dev.isAllowed(self.target)
         if not res[0]:
             if isinstance(res[1], str):
-                reason = res[1]
+                msg = res[1]
             else:
-                reason = res[1][0]
-            raise LimitError(self.dev, reason)
+                msg = res[1][0]
+            raise LimitError(self.dev, msg)
 
     def run(self):
         self.dev.start(self.target)
