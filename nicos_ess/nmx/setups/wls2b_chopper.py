@@ -4,6 +4,24 @@ pv_root_2 = "NMX-ChpSy1:Chop-WLS-202:"
 chic_root = "NMX-ChpSy1:Chop-CHIC-001:"
 
 devices = dict(
+    wls2b_log=device(
+        "nicos_ess.devices.epics.pva.EpicsStringReadable",
+        description="The logs from chopper controller",
+        readpv="{}Log_R".format(pv_root_2),
+        visibility=(),
+    ),
+    wls2b_levitation_status=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
+        description="The chopper status.",
+        readpv="{}LeviStatus_R".format(pv_root_2),
+        visibility=(),
+    ),
+    wls2b_motor_temperature=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description="The temperature of the motor of the chopper",
+        readpv="{}MtrTemp_R".format(pv_root_2),
+        visibility=(),
+    ),
     wls2b_status=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="The chopper status.",
