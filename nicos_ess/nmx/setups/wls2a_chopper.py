@@ -69,6 +69,11 @@ devices = dict(
             "park pos 3": 270,
         },
     ),
+    wls2a_park_status=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
+        description="The park status for the WLS-2A chopper.",
+        readpv="{}ParkStatus_R".format(pv_root_1),
+    ),
     wls2a_park_control=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="The park control for the WLS-2A chopper.",
