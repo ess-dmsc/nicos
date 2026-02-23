@@ -4,11 +4,11 @@ default:
   image: registry.esss.lu.se/ecdc/ess-dmsc/docker-centos7-build-node:latest
   before_script:
     - scl enable rh-python38 -- python --version
-    - scl enable rh-python38 -- pip install --user --upgrade pip 
+    - scl enable rh-python38 -- pip install --user --upgrade pip
     - scl enable rh-python38 -- pip install --user -r requirements.txt
     - scl enable rh-python38 -- pip install --user -r requirements-gui.txt
     - scl enable rh-python38 -- pip install --user -r requirements-dev.txt
-    - scl enable rh-python38 -- pip install --user pytest pytest-timeout mock lxml Pillow 
+    - scl enable rh-python38 -- pip install --user pytest pytest-timeout mock lxml Pillow
     - scl enable rh-python38 -- pip install --user 'requests<2.30.0'
 
 workflow:
@@ -18,6 +18,7 @@ workflow:
 
 stages:
   - test
+  - integration
 
 test:
   stage: test
@@ -25,7 +26,38 @@ test:
     - cd test
     - scl enable rh-python38 -- python -m pytest --junitxml=test-output.xml --ignore=nicos_sinq
   artifacts:
+    when: always
     paths:
       - test/test-output.xml
     reports:
       junit: test/test-output.xml
+
+integration-smoke:
+  stage: integration
+  image: docker:28-cli
+  variables:
+    HTTP_PROXY: $ESS_HTTP_PROXY
+    HTTPS_PROXY: $ESS_HTTP_PROXY
+    http_proxy: $ESS_HTTP_PROXY
+    https_proxy: $ESS_HTTP_PROXY
+    NO_PROXY: "localhost,127.0.0.1,docker,kafka"
+    no_proxy: "localhost,127.0.0.1,docker,kafka"
+  before_script: []
+  script:
+    - mkdir -p integration_test/runtime
+    - docker info
+    - set +e
+    - docker compose -f integration_test/smoke/docker-compose.ci.yml up --build --abort-on-container-exit --exit-code-from nicos-integration
+    - test_exit=$?
+    - docker compose -f integration_test/smoke/docker-compose.ci.yml cp nicos-integration:/workspace/integration_test/runtime/smoke-junit.xml integration_test/runtime/smoke-junit.xml || true
+    - docker compose -f integration_test/smoke/docker-compose.ci.yml cp nicos-integration:/workspace/integration_test/runtime/log integration_test/runtime/log || true
+    - docker compose -f integration_test/smoke/docker-compose.ci.yml down -v --remove-orphans || true
+    - if [ ! -f integration_test/runtime/smoke-junit.xml ]; then echo "smoke-junit.xml was not produced"; if [ "$test_exit" -eq 0 ]; then test_exit=1; fi; fi
+    - exit "$test_exit"
+  artifacts:
+    when: always
+    paths:
+      - integration_test/runtime/smoke-junit.xml
+      - integration_test/runtime/log/
+    reports:
+      junit: integration_test/runtime/smoke-junit.xml
