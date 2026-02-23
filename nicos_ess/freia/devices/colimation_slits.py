@@ -4,9 +4,12 @@ from nicos.core import (
     Attach,
     Moveable,
     Override,
+    Param,
     Readable,
     Value,
+    dictof,
     multiStatus,
+    oneof,
     status,
     tupleof,
 )
@@ -16,56 +19,84 @@ from nicos.core import (
 DISTRIBUTION = np.sqrt((2 * np.log(2)) / 3)
 
 
-class ColimationCalculator(Readable):
+class ColimationCalculator:
     """Functions for calculating the resolution and gap for colimation slits"""
 
     def resolution_to_slit(self, l2, l12, ia, res, footprint):
         sinTheta = (footprint / 1000) * (np.sin(np.radians(ia)))
         slitDeltaTheta = np.radians(ia * res)
 
-        slit2 = (sinTheta - (2 * l2 * np.tan(slitDeltaTheta))) * 1000
-        slit1 = ((2 * l12 * np.tan(slitDeltaTheta)) - slit2) * 1000
+        slit2 = sinTheta - (2 * l2 * np.tan(slitDeltaTheta))
+        slit1 = (2 * l12 * np.tan(slitDeltaTheta)) - slit2
+        slit2 = float(slit2 * 1000)
+        slit1 = float(slit1 * 1000)
 
         return [slit1, slit2]
 
     def slit_to_resoultion(self, l2, l12, ia, slit1, slit2):
-        slit1 = slit1 / 1000  # mm to m
+        slit1 = slit1 / 1000
         slit2 = slit2 / 1000
-        sinTheta = (
-            DISTRIBUTION / (l12 * np.radians(ia)) * np.sqrt((slit1 ^ 2) + (slit2 ^ 2))
+        dist_ratio = l2 / l12
+        beam_height = slit2 + (dist_ratio) * (slit1 + slit2)
+
+        penumbra = float((beam_height / np.sin(np.deg2rad(ia))) * 1000)
+        umbra = float((slit2 * 1000) / (np.sin(np.radians(ia))))
+
+        slitDeltaTheta = (
+            float(np.rad2deg(np.arctan((slit1 + slit2) / (2 * l12))) / ia) * 100
         )
-        slitDeltaTheta = np.rad2deg(np.arctan((slit1 + slit2) / (2 * l12))) / ia
+        sinTheta = (
+            float(
+                DISTRIBUTION / (l12 * np.radians(ia)) * np.sqrt((slit1**2) + (slit2**2))
+            )
+            * 100
+        )
 
-        beam_height = ((slit2 + (l2 / l12)) * (slit1 + slit2)) * 1000
-        penumbra = (beam_height / np.sin(np.deg2rad(ia))) * 1000
-        umbra = 0
-        return [penumbra, umbra, beam_height]
+        return penumbra, umbra, slitDeltaTheta, sinTheta
 
 
-class ColimationSlits(ColimationCalculator, Moveable):
+class ColimationSlits(Moveable):
+    parameters = {
+        "opmode": Param(
+            "Mode of operation",
+            type=oneof("res_to_slit", "slit_to_res"),
+            settable=True,
+            default="res_to_slit",
+        )
+    }
     valuetype = tupleof(float, float, float, float, float)
 
     def resolution_to_slit(self, l2, l12, ia, res, footprint):
         sinTheta = (footprint / 1000) * (np.sin(np.radians(ia)))
         slitDeltaTheta = np.radians(ia * res)
 
-        slit2 = (sinTheta - (2 * l2 * np.tan(slitDeltaTheta))) * 1000
-        slit1 = ((2 * l12 * np.tan(slitDeltaTheta)) - slit2) * 1000
+        slit2 = sinTheta - (2 * l2 * np.tan(slitDeltaTheta))
+        slit1 = (2 * l12 * np.tan(slitDeltaTheta)) - slit2
+        slit2 = float(slit2 * 1000)
+        slit1 = float(slit1 * 1000)
 
         return [slit1, slit2]
 
     def slit_to_resoultion(self, l2, l12, ia, slit1, slit2):
-        slit1 = slit1 / 1000  # mm to m
+        slit1 = slit1 / 1000
         slit2 = slit2 / 1000
-        sinTheta = (
-            DISTRIBUTION / (l12 * np.radians(ia)) * np.sqrt((slit1 ^ 2) + (slit2 ^ 2))
-        )
-        slitDeltaTheta = np.rad2deg(np.arctan((slit1 + slit2) / (2 * l12))) / ia
+        dist_ratio = l2 / l12
+        beam_height = slit2 + (dist_ratio) * (slit1 + slit2)
 
-        beam_height = ((slit2 + (l2 / l12)) * (slit1 + slit2)) * 1000
-        penumbra = (beam_height / np.sin(np.deg2rad(ia))) * 1000
-        umbra = 0
-        return [penumbra, umbra, beam_height]
+        penumbra = float((beam_height / np.sin(np.deg2rad(ia))) * 1000)
+        umbra = float((slit2 * 1000) / (np.sin(np.radians(ia))))
+
+        slitDeltaTheta = (
+            float(np.rad2deg(np.arctan((slit1 + slit2) / (2 * l12))) / ia) * 100
+        )
+        sinTheta = (
+            float(
+                DISTRIBUTION / (l12 * np.radians(ia)) * np.sqrt((slit1**2) + (slit2**2))
+            )
+            * 100
+        )
+
+        return penumbra, umbra, slitDeltaTheta, sinTheta
 
     def _doReadPositions(self, maxage):
         pass
@@ -78,3 +109,21 @@ class ColimationSlits(ColimationCalculator, Moveable):
 
     def doSetPosition(self, pos):
         pass
+
+    def valueInfo(self):
+        if self.opmode == "res_to_slit":
+            return (
+                Value("L2s", unit="m", fmtstr="%.3f"),
+                Value("L12", unit="m", fmtstr="%.3f"),
+                Value("Incident Angle", unit="deg", fmtstr="%.3f"),
+                Value("Slit Delta Theta", unit="mm", fmtstr="%.3f"),
+                Value("Footprint", unit="deg", fmtstr="%.3f"),
+            )
+        else:
+            return (
+                Value("L2s", unit="m", fmtstr="%.3f"),
+                Value("L12", unit="m", fmtstr="%.3f"),
+                Value("Incident Angle", unit="deg", fmtstr="%.3f"),
+                Value("Slit 1", unit="mm", fmtstr="%.3f"),
+                Value("Slit 2", unit="mm", fmtstr="%.3f"),
+            )
