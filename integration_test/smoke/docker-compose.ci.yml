@@ -1,0 +1,54 @@
+services:
+  kafka:
+    image: ${NICOS_SMOKE_KAFKA_IMAGE:-confluentinc/cp-kafka:7.6.1}
+    environment:
+      - CLUSTER_ID=MkU3OEVBNTcwNTJENDM2Qk
+      - KAFKA_NODE_ID=1
+      - KAFKA_PROCESS_ROLES=broker,controller
+      - KAFKA_CONTROLLER_QUORUM_VOTERS=1@kafka:9093
+      - KAFKA_LISTENERS=PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092
+      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      - KAFKA_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - KAFKA_INTER_BROKER_LISTENER_NAME=PLAINTEXT
+      - KAFKA_AUTO_CREATE_TOPICS_ENABLE=false
+      - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
+      - KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=1
+      - KAFKA_TRANSACTION_STATE_LOG_MIN_ISR=1
+      - KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS=0
+      - KAFKA_LOG_DIRS=/tmp/kraft-combined-logs
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "kafka-topics --bootstrap-server localhost:9092 --list >/dev/null 2>&1",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  nicos-integration:
+    build:
+      context: ../..
+      dockerfile: integration_test/smoke/Dockerfile
+      args:
+        PYTHON_BASE_IMAGE: ${NICOS_SMOKE_PYTHON_BASE_IMAGE:-python:3.8-slim-bullseye}
+        HTTP_PROXY: ${HTTP_PROXY:-}
+        HTTPS_PROXY: ${HTTPS_PROXY:-}
+        NO_PROXY: ${NO_PROXY:-}
+        http_proxy: ${http_proxy:-}
+        https_proxy: ${https_proxy:-}
+        no_proxy: ${no_proxy:-}
+    depends_on:
+      kafka:
+        condition: service_healthy
+    environment:
+      - NICOS_RUN_SMOKE_INTEGRATION=1
+      - NICOS_SMOKE_MANAGE_KAFKA=0
+      - NICOS_SMOKE_KAFKA_BOOTSTRAP=kafka:9092
+      - PYTHONUNBUFFERED=1
+    command:
+      - pytest
+      - -q
+      - integration_test/smoke/test_smoke.py
+      - --junitxml=integration_test/runtime/smoke-junit.xml
