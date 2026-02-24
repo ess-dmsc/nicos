@@ -29,6 +29,12 @@ main_window = docked(
                             ),
                         ),
                         (
+                            "Colimation",
+                            panel(
+                                "nicos_ess.freia.gui.colimation_calculator.ColimationPanel"
+                            ),
+                        ),
+                        (
                             "Detector Image",
                             panel("nicos_ess.gui.panels.live_pyqt.MultiLiveDataPanel"),
                         ),
