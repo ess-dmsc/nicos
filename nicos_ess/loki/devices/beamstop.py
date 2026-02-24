@@ -117,8 +117,12 @@ class LokiBeamstopController(SequencerMixin, MappedMoveable):
 
     def _generateSequence2(self, target):
         if "park" in target.lower():
-            print("parking")
-            return self._park_sequence()
+            motors_not_parked = {
+                key: device
+                for key, device in self._all_attached.items()
+                if device.read() != "Parked"
+            }
+            return self._park_sequence(motors_not_parked)
 
         motor_arms = {
             key: val
@@ -160,7 +164,9 @@ class LokiBeamstopController(SequencerMixin, MappedMoveable):
         else:
             return "None"
 
-    def _park_sequence(self, motors: dict[str, MappedController]):
+    def _park_sequence(
+        self, motors: dict[str, MappedController]
+    ) -> list[tuple[SeqDev, ...]]:
         """
         Build the parking sequence.
 
@@ -168,24 +174,27 @@ class LokiBeamstopController(SequencerMixin, MappedMoveable):
         then raises the arms to their parked positions.
 
         Args:
-            motors (dict[str, MappedController]):
-                Mapping of motor names to their corresponding
-                ``MappedController`` instances.
+        motors (dict[str, MappedController]):
+            Mapping of motor names to their corresponding
+            ``MappedController`` instances.
 
         Returns:
-            list[SeqDev]:
-                Ordered sequence of ``SeqDev`` commands.
+            list[tuple[SeqDev, ...]]:
+                Ordered execution steps. Each list element represents
+                one execution stage:
+                    - A single-element tuple → sequential step
+                    - A multi-element tuple → parallel step
         """
-        targets = self._full_mapping.get("Park all beamstops", None)
         seq = []
-        seq.append(SeqDev(self._all_attached[0], targets[0]))
-        seq.append(SeqDev(self._all_attached[1], targets[1]))
-        seq.append(
-            tuple(
-                SeqDev(dev, tar)
-                for dev, tar in zip(self._all_attached[2:], targets[2:])
-            )
+        if "x" in motors.keys():
+            seq_obj = SeqDev(motors["x"], "Parked")
+            seq.append(seq_obj)
+        seq_obj = tuple(
+            SeqDev(device, "Parked")
+            for name, device in motors.items()
+            if "beamstop" in name or "monitor" in name
         )
+        seq.append(seq_obj)
         return seq
 
     def _beamstop_sequence(self, target):
