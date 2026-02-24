@@ -27,8 +27,8 @@ def test_hset_hgetall(real_redis_client, stub_redis_client):
     key = "test_key"
     mapping = {"field1": "value1", "field2": "value2"}
 
-    real_redis_client.hset(key, mapping)
-    stub_redis_client.hset(key, mapping)
+    real_redis_client.hset(key, mapping=mapping)
+    stub_redis_client.hset(key, mapping=mapping)
 
     real_data = real_redis_client.hgetall(key)
     stub_data = stub_redis_client.hgetall(key)
@@ -40,8 +40,8 @@ def test_exists(real_redis_client, stub_redis_client):
     key = "test_exists_key"
     mapping = {"field1": "value1"}
 
-    real_redis_client.hset(key, mapping)
-    stub_redis_client.hset(key, mapping)
+    real_redis_client.hset(key, mapping=mapping)
+    stub_redis_client.hset(key, mapping=mapping)
 
     real_exists = real_redis_client.exists(key)
     stub_exists = stub_redis_client.exists(key)
@@ -86,8 +86,8 @@ def test_scan_iter(real_redis_client, stub_redis_client):
     mapping = {"field1": "value1", "field2": "value2"}
 
     for key in keys:
-        real_redis_client.hset(key, mapping)
-        stub_redis_client.hset(key, mapping)
+        real_redis_client.hset(key, mapping=mapping)
+        stub_redis_client.hset(key, mapping=mapping)
 
     real_keys = list(real_redis_client.scan_iter())
     stub_keys = list(stub_redis_client.scan_iter())
@@ -114,13 +114,13 @@ def test_hset_mapping_merges_fields(real_redis_client, stub_redis_client):
 
     # Initial mapping
     mapping1 = {"field1": "value1", "field2": "value2"}
-    real_redis_client.hset(key, mapping1)
-    stub_redis_client.hset(key, mapping1)
+    real_redis_client.hset(key, mapping=mapping1)
+    stub_redis_client.hset(key, mapping=mapping1)
 
     # Second mapping updates field2 and adds field3
     mapping2 = {"field2": "new_value2", "field3": "value3"}
-    real_redis_client.hset(key, mapping2)
-    stub_redis_client.hset(key, mapping2)
+    real_redis_client.hset(key, mapping=mapping2)
+    stub_redis_client.hset(key, mapping=mapping2)
 
     real_data = real_redis_client.hgetall(key)
     stub_data = stub_redis_client.hgetall(key)
@@ -162,3 +162,74 @@ def test_execute_command_ts_range_aggregation(real_redis_client, stub_redis_clie
     assert [r[0] for r in real_range] == [s[0] for s in stub_range]
     # Ensure values match exactly (string representations too)
     assert real_range == stub_range
+
+
+def test_execute_command_hdel(real_redis_client, stub_redis_client):
+    key = "hdel_key"
+    mapping = {"a": "1", "b": "2", "c": "3"}
+    real_redis_client.hset(key, mapping=mapping)
+    stub_redis_client.hset(key, mapping=mapping)
+
+    real_removed = real_redis_client.execute_command("HDEL", key, "b", "c")
+    stub_removed = stub_redis_client.execute_command("HDEL", key, "b", "c")
+    assert real_removed == stub_removed
+    assert real_redis_client.hgetall(key) == stub_redis_client.hgetall(key) == {"a": "1"}
+
+
+def test_execute_command_zremrangebyscore(real_redis_client, stub_redis_client):
+    key = "zrem_key"
+    mapping = {"m1": 1.0, "m2": 2.0, "m3": 3.0}
+    real_redis_client.zadd(key, mapping)
+    stub_redis_client.zadd(key, mapping)
+
+    real_removed = real_redis_client.execute_command(
+        "ZREMRANGEBYSCORE", key, float("-inf"), 2.0
+    )
+    stub_removed = stub_redis_client.execute_command(
+        "ZREMRANGEBYSCORE", key, float("-inf"), 2.0
+    )
+    assert real_removed == stub_removed
+
+    real_remaining = real_redis_client.zrangebyscore(
+        key, float("-inf"), float("inf"), withscores=True
+    )
+    stub_remaining = stub_redis_client.zrangebyscore(
+        key, float("-inf"), float("inf"), withscores=True
+    )
+    assert real_remaining == stub_remaining == [("m3", 3.0)]
+
+
+def test_execute_command_ts_del(real_redis_client, stub_redis_client):
+    key = "ts_del_key"
+    real_redis_client.execute_command("TS.CREATE", key)
+    stub_redis_client.execute_command("TS.CREATE", key)
+
+    for ts, val in [(10, 1), (20, 2), (30, 3)]:
+        real_redis_client.execute_command("TS.ADD", key, ts, val)
+        stub_redis_client.execute_command("TS.ADD", key, ts, val)
+
+    real_deleted = real_redis_client.execute_command("TS.DEL", key, 0, 20)
+    stub_deleted = stub_redis_client.execute_command("TS.DEL", key, 0, 20)
+    assert real_deleted == stub_deleted
+
+    real_range = real_redis_client.execute_command("TS.RANGE", key, 0, 100)
+    stub_range = stub_redis_client.execute_command("TS.RANGE", key, 0, 100)
+    assert real_range == stub_range == [[30, "3"]]
+
+
+def test_execute_command_ts_create_with_retention(real_redis_client, stub_redis_client):
+    key = "ts_retention_key"
+    real_redis_client.execute_command(
+        "TS.CREATE", key, "RETENTION", 50, "DUPLICATE_POLICY", "LAST"
+    )
+    stub_redis_client.execute_command(
+        "TS.CREATE", key, "RETENTION", 50, "DUPLICATE_POLICY", "LAST"
+    )
+
+    for ts, val in [(10, 1), (40, 2), (70, 3)]:
+        real_redis_client.execute_command("TS.ADD", key, ts, val)
+        stub_redis_client.execute_command("TS.ADD", key, ts, val)
+
+    real_range = real_redis_client.execute_command("TS.RANGE", key, 0, 100)
+    stub_range = stub_redis_client.execute_command("TS.RANGE", key, 0, 100)
+    assert real_range == stub_range == [[40, "2"], [70, "3"]]

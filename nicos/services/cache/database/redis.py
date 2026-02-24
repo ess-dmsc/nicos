@@ -59,6 +59,12 @@ class RedisCacheDatabase(CacheDatabase):
         "host": Param("Redis host", type=str, default="localhost"),
         "port": Param("Redis port", type=int, default=6379),
         "db": Param("Redis DB", type=int, default=0),
+        "historydays": Param(
+            "Maximum history retention in days for TS/hash_series "
+            "(0 disables history pruning)",
+            type=float,
+            default=14.0,
+        ),
     }
 
     def doInit(self, mode: str, injected_client: Union[RedisClient, None] = None):
@@ -119,9 +125,12 @@ class RedisCacheDatabase(CacheDatabase):
         return t.exists(key)
 
     def _create_timeseries(self, key, target=None):
-        (target or self._client).execute_command(
-            "TS.CREATE", key, "DUPLICATE_POLICY", "LAST"
-        )
+        cmd = ["TS.CREATE", key]
+        retention_ms = self._history_retention_ms()
+        if retention_ms is not None:
+            cmd.extend(["RETENTION", retention_ms])
+        cmd.extend(["DUPLICATE_POLICY", "LAST"])
+        (target or self._client).execute_command(*cmd)
 
     def _add_to_timeseries(self, key, timestamp, value, target=None):
         (target or self._client).execute_command("TS.ADD", key, timestamp, value)
@@ -136,6 +145,74 @@ class RedisCacheDatabase(CacheDatabase):
 
     def _delete(self, key, target=None):
         (target or self._client).execute_command("DEL", key)
+
+    def _history_retention_ms(self) -> Optional[int]:
+        try:
+            days = float(
+                getattr(
+                    self,
+                    "_historydays_override",
+                    getattr(self, "historydays", 0.0),
+                )
+            )
+        except Exception:
+            return None
+        if days <= 0:
+            return None
+        ms = int(days * 86400 * 1000)
+        return ms if ms > 0 else None
+
+    def _history_cutoff_ms(self, newest_ts_ms: int) -> Optional[int]:
+        retention_ms = self._history_retention_ms()
+        if retention_ms is None:
+            return None
+        return int(newest_ts_ms - retention_ms)
+
+    def _prune_timeseries(self, ts_key: str, newest_ts_ms: int, target=None):
+        cutoff = self._history_cutoff_ms(newest_ts_ms)
+        if cutoff is None:
+            return
+        try:
+            (target or self._client).execute_command("TS.DEL", ts_key, 0, cutoff)
+        except Exception:
+            self.log.exception("TS prune failed for %s", ts_key)
+
+    def _prune_hash_series(
+        self, hs_hash_key: str, hs_idx_key: str, newest_ts_ms: int, target=None
+    ):
+        cutoff = self._history_cutoff_ms(newest_ts_ms)
+        if cutoff is None:
+            return
+
+        try:
+            stale_fields = self._client.zrangebyscore(hs_idx_key, float("-inf"), cutoff)
+        except Exception:
+            self.log.exception(
+                "hash_series prune index lookup failed for %s", hs_idx_key
+            )
+            return
+
+        if not stale_fields:
+            return
+
+        normalized = []
+        for f in stale_fields:
+            if isinstance(f, str):
+                normalized.append(f)
+            else:
+                try:
+                    normalized.append(f.decode("utf-8"))
+                except Exception:
+                    normalized.append(str(f))
+
+        t = target or self._client
+        try:
+            t.execute_command("HDEL", hs_hash_key, *normalized)
+            t.execute_command("ZREMRANGEBYSCORE", hs_idx_key, float("-inf"), cutoff)
+        except Exception:
+            self.log.exception(
+                "hash_series prune failed for %s/%s", hs_hash_key, hs_idx_key
+            )
 
     def _check_get_key_format(self, key: str) -> bool:
         return "###" not in key
@@ -454,6 +531,7 @@ class RedisCacheDatabase(CacheDatabase):
             _, lock, db = self._ensure_category(cat)
 
             update_needed = True
+            refresh_only = False
             with lock:
                 if subkey in db:
                     curentry = db[subkey]
@@ -462,6 +540,7 @@ class RedisCacheDatabase(CacheDatabase):
                         curentry.time = ne.time
                         curentry.ttl = ne.ttl
                         update_needed = False
+                        refresh_only = True
                         real_update = False
                     # delete (value None) but already expired: skip
                     elif ne.value is None and curentry.expired:
@@ -471,17 +550,24 @@ class RedisCacheDatabase(CacheDatabase):
                 if update_needed:
                     db[subkey] = ne
 
-            if update_needed and not no_store:
+            if (update_needed or refresh_only) and not no_store:
                 # Persist to Redis (batched via pipeline per updateEntries call)
                 with self._write_lock:
                     pipe = self._client.pipeline(transaction=False)
-                    self._set_data(cat, subkey, ne, pipe=pipe)
-                    try:
-                        pipe.execute()
-                    except Exception:
-                        self.log.exception(
-                            "Redis pipeline execute failed for %s/%s", cat, subkey
-                        )
+                    self._set_data(
+                        cat,
+                        subkey,
+                        ne,
+                        pipe=pipe,
+                        archive_history=update_needed,
+                    )
+                    if pipe is not None:
+                        try:
+                            pipe.execute()
+                        except Exception:
+                            self.log.exception(
+                                "Redis pipeline execute failed for %s/%s", cat, subkey
+                            )
 
             if ne.value in ("", None) and update_needed:
                 # Also remove from RAM if deletion
@@ -500,7 +586,9 @@ class RedisCacheDatabase(CacheDatabase):
             # Guard against Redis errors / corrupted data
             return None
 
-    def _set_data(self, category, subkey, entry: CacheEntry, pipe=None):
+    def _set_data(
+        self, category, subkey, entry: CacheEntry, pipe=None, archive_history=True
+    ):
         """Write a single entry to Redis (and update RAM) — signature unchanged for tests."""
         # Type checks (compat with old test expectations)
         if type(entry.value) not in (int, float, str, list, tuple, dict, type(None)):
@@ -612,14 +700,31 @@ class RedisCacheDatabase(CacheDatabase):
             self._set_recent(category, subkey, entry)
             return
 
+        stale_meta_fields = []
+        if ts_encoding is None:
+            stale_meta_fields.append("ts_encoding")
+        if ts_children is None:
+            stale_meta_fields.append("ts_children")
+        if stale_meta_fields:
+            try:
+                target.execute_command("HDEL", redis_key, *stale_meta_fields)
+            except Exception:
+                self.log.exception(
+                    "Redis HDEL failed for metadata cleanup on %s", redis_key
+                )
+
         # Update RAM to mirror current value immediately (normalized)
         self._set_recent(category, subkey, entry)
+
+        if not archive_history:
+            return
 
         for series_key, sample in zip(ts_keys, ts_values):
             try:
                 if not self._redis_key_exists(series_key):
                     self._create_timeseries(series_key, target=target)
                 self._add_to_timeseries(series_key, ts, sample, target=target)
+                self._prune_timeseries(series_key, ts, target=target)
             except Exception:
                 self.log.exception(
                     "TS write failed for %s. Got type %s", series_key, type(sample)
@@ -633,6 +738,7 @@ class RedisCacheDatabase(CacheDatabase):
                 # index in ZSET
                 # member is the ts_str; score is ts (ms)
                 target.zadd(hs_idx_key, {ts_str: ts})
+                self._prune_hash_series(hs_hash_key, hs_idx_key, ts, target=target)
             except Exception:
                 self.log.exception(
                     "Redis write failed for hash_series %s/%s",
