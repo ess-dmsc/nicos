@@ -2,6 +2,18 @@ description = "ARINAX sample motors (from the mockup software)"
 
 group = "optional"
 
+SAMPLE_STORAGE = {
+    f'Sample Storage {s} - SS{i}': (f"Sample_Storage_{s}", f"SS{i}")  
+    for s in range(1,4)
+    for i in range(1,11)
+}
+
+UNIPUCKS = {
+    f'UniPuck {s} - UP{i}': (f"UniPuck{s}", f"UP{i}")  
+    for s in range(1,3)
+    for i in range(1,17)
+}
+
 devices = dict(
     # DPU Config
     DPU_config_readback=device(
@@ -109,4 +121,54 @@ devices = dict(
             'Yes': 1,
             },
     ),
+    # Sample load
+    sample_load__sample_is_loaded=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedReadable",
+        description="ARINAX SPU sample is mounted, readback (mockup)",
+        readpv="NMX:getIsSampleLoaded",
+        pva=False,
+        monitor=True,
+        pollinterval=0.5,
+        maxage=None,
+        mapping={
+            'No': 0,
+            'Yes': 1,
+            },
+    ),
+    sample_load__load_ss_sample=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
+        description="ARINAX SPU load sample from storage, control (mockup)",
+        readpv="NMX:LoadSSSample",
+        writepv="NMX:LoadSSSample",
+        pva=False,
+        monitor=True,
+        pollinterval=0.5,
+        maxage=None,
+        mapping=SAMPLE_STORAGE,
+    ),
+    sample_load__load_up_sample=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
+        description="ARINAX SPU load sample from unipucks, control (mockup)",
+        readpv="NMX:LoadUPSample",
+        writepv="NMX:LoadUPSample",
+        pva=False,
+        monitor=True,
+        pollinterval=0.5,
+        maxage=None,
+        mapping=UNIPUCKS,
+    ),
+    sample_load__unload_sample=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
+        description="ARINAX SPU unload sample, control (mockup)",
+        readpv="NMX:UnLoadSample",
+        writepv="NMX:UnLoadSample",
+        pva=False,
+        monitor=True,
+        pollinterval=0.5,
+        maxage=None,
+        mapping={
+            'Unload sample': "1", # Any string should be okay.
+            },
+    ),
+
 )
