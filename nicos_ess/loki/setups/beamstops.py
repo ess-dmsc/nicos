@@ -100,7 +100,7 @@ devices = dict(
         # TODO: remove the mapping argument from this setup file and use the mapping defined in the class
         mapping={
             "Park all beamstops": (),
-            "Beamstop 1": (),
+            "Monitor": (),
             "Beamstop 2": (),
             "Beamstop 2 + monitor": (),
             "Beamstop 3": (),

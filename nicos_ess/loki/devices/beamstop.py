@@ -64,15 +64,15 @@ class LokiBeamstopController(SequencerMixin, MappedMoveable):
     }
 
     def doPreinit(self, mode):
-        self._all_attached = [
-            self._attached_bsx_positioner,
-            self._attached_bsy_positioner,
-            self._attached_bs1_positioner,
-            self._attached_bs2_positioner,
-            self._attached_bs3_positioner,
-            self._attached_bs4_positioner,
-            self._attached_bs5_positioner,
-        ]
+        self._all_attached = {
+            "x": self._attached_bsx_positioner,
+            "y": self._attached_bsy_positioner,
+            "monitor": self._attached_bs1_positioner,
+            "beamstop 2": self._attached_bs2_positioner,
+            "beamstop 3": self._attached_bs3_positioner,
+            "beamstop 4": self._attached_bs4_positioner,
+            "beamstop 5": self._attached_bs5_positioner,
+        }
         self._full_mapping = self._get_mapped_positions()
 
     def doRead(self, maxage=0):
@@ -103,7 +103,8 @@ class LokiBeamstopController(SequencerMixin, MappedMoveable):
                     "Cannot start device, sequence is still "
                     "running (at %s)!" % self._seq_status[1],
                 )
-        self._startSequence(self._generateSequence(target))
+        self._generateSequence2(target)
+        # self._startSequence(self._generateSequence(target))
 
     def _generateSequence(self, target):
         active_beamstop = self._get_beamstop_number(self.read())
@@ -114,6 +115,44 @@ class LokiBeamstopController(SequencerMixin, MappedMoveable):
         seq.extend(self._beamstop_sequence(target))
         return seq
 
+    def _generateSequence2(self, target):
+        if "park" in target.lower():
+            print("parking")
+            return self._park_sequence()
+
+        motor_arms = {
+            key: val
+            for key, val in self._all_attached.items()
+            if "beamstop" in key or "monitor" in key
+        }
+        arms_in_beam = {
+            key: True if motor.read() == "In beam" else False
+            for key, motor in motor_arms.items()
+        }
+        request_in_beam = [arm.strip().lower() for arm in target.split("+")]
+
+        move_to_in_beam = [arm for arm in request_in_beam if not arms_in_beam[arm]]
+        move_to_park = [
+            arm
+            for arm in arms_in_beam.keys()
+            if arms_in_beam[arm] and arm not in request_in_beam
+        ]
+
+        print("motors in beam:", arms_in_beam)
+        print("move in:", move_to_in_beam)
+        print("move out:", move_to_park)
+
+        # beamstop_arms = {key: val for key, val in self._all_attached.items() if "beamstop" in key}
+        # monitor_arm = {key: val for key, val in self._all_attached.items() if "monitor" in key}
+        #
+        # monitor_inbeam = self._all_attached["monitor"].read() == "In beam"
+        # beamstop_inbeam = [key for key, axis in self._all_attached.items() if axis.read() == "In beam"]
+        #
+        # print(beamstop_arms)
+
+        seq = []
+        return seq
+
     def _get_beamstop_number(self, value):
         active_beamstop_match = re.match(r"(Beamstop \d|Park)", value)
         if active_beamstop_match:
@@ -121,9 +160,21 @@ class LokiBeamstopController(SequencerMixin, MappedMoveable):
         else:
             return "None"
 
-    def _park_sequence(self):
+    def _park_sequence(self, motors: dict[str, MappedController]):
         """
-        Parking sequence: x to park, y to in-beam, z-arms to park
+        Build the parking sequence.
+
+        The sequence first moves the beamstops away from the detector,
+        then raises the arms to their parked positions.
+
+        Args:
+            motors (dict[str, MappedController]):
+                Mapping of motor names to their corresponding
+                ``MappedController`` instances.
+
+        Returns:
+            list[SeqDev]:
+                Ordered sequence of ``SeqDev`` commands.
         """
         targets = self._full_mapping.get("Park all beamstops", None)
         seq = []
@@ -164,7 +215,7 @@ class LokiBeamstopController(SequencerMixin, MappedMoveable):
                 "Parked",
                 "Parked",
             ),
-            "Beamstop 1": (
+            "Monitor": (
                 "Xpos BS1",
                 "In beam",
                 "In beam",
