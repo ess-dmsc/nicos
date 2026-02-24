@@ -58,7 +58,7 @@ devices = dict(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
         description="ARINAX sample motor Phi (mockup)",
         readpv="NMX:PhiPosition",
-        writepv="NMX:PhiPosition",
+        writepv="NMX:putPhiPosition",
         unit="mm",
         pva=False,
     ),
