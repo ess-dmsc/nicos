@@ -16,19 +16,19 @@ UNIPUCKS = {
 
 devices = dict(
     # DPU Config
-    DPU_config_readback=device(
+    detector_config_readback=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
-        description="ARINAX DPU Configuration readback (mockup)",
+        description="ARINAX DPU Configuration, readback (mockup)",
         readpv="NMX:getDPUConfiguration",
         pva=False,
         monitor=True,
         pollinterval=0.5,
         maxage=None,
     ),
-    DPU_config_control=device(
+    detector_config_control=device(
         # This class seems to be the best for read/write the DPU config PV.
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
-        description="ARINAX DPU Configuration control (mockup)",
+        description="ARINAX DPU Configuration, control (mockup)",
         readpv="NMX:getDPUConfiguration",
         writepv="NMX:goDPUConfiguration",
         pva=False,
@@ -54,7 +54,7 @@ devices = dict(
             }
     ),
     # Sample centring motion
-    centring_phi=device(
+    sample_centring_phi=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
         description="ARINAX sample motor Phi (mockup)",
         readpv="NMX:PhiPosition",
@@ -62,7 +62,7 @@ devices = dict(
         unit="mm",
         pva=False,
     ),
-    centring_chi=device(
+    sample_centring_chi=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
         description="ARINAX sample motor Chi (mockup)",
         readpv="NMX:ChiPosition",
@@ -70,7 +70,7 @@ devices = dict(
         unit="mm",
         pva=False,
     ),
-    centring_theta=device(
+    sample_centring_theta=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
         description="ARINAX sample motor Theta (mockup)",
         readpv="NMX:ThetaPosition",
@@ -79,9 +79,9 @@ devices = dict(
         pva=False,
     ),
     # Sample tool
-    sample_transfer_load_tool=device(
+    sample_tool__load_tool=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
-        description="ARINAX SPU desired tool loading control (mockup)",
+        description="ARINAX SPU desired tool loading, control (mockup)",
         readpv="NMX:LoadTool",
         writepv="NMX:LoadTool",
         pva=False,
@@ -95,9 +95,9 @@ devices = dict(
             'Unload mounted tool': "None",
             },
     ),
-    sample_transfer_gonio_in_rack=device(
+    sample_tool__gonio_in_rack=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
-        description="ARINAX SPU goniometer empty tool in rack readback (mockup)",
+        description="ARINAX SPU goniometer empty tool in rack, readback (mockup)",
         readpv="NMX:getIsGonioToolInRack",
         pva=False,
         monitor=True,
@@ -108,9 +108,9 @@ devices = dict(
             'Yes': 1,
             },
     ),
-    sample_transfer_custom_tool_in_rack=device(
+    sample_tool__custom_tool_in_rack=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
-        description="ARINAX SPU custom empty tool in rack readback (mockup)",
+        description="ARINAX SPU custom empty tool in rack, readback (mockup)",
         readpv="NMX:getIsCustomToolInRack",
         pva=False,
         monitor=True,
@@ -135,7 +135,7 @@ devices = dict(
             'Yes': 1,
             },
     ),
-    sample_load__load_ss_sample=device(
+    sample_load__load_SS_sample=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="ARINAX SPU load sample from storage, control (mockup)",
         readpv="NMX:LoadSSSample",
@@ -146,7 +146,7 @@ devices = dict(
         maxage=None,
         mapping=SAMPLE_STORAGE,
     ),
-    sample_load__load_up_sample=device(
+    sample_load__load_UP_sample=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="ARINAX SPU load sample from unipucks, control (mockup)",
         readpv="NMX:LoadUPSample",
