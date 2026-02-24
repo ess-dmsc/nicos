@@ -3,31 +3,6 @@ description = "ARINAX sample motors (from the mockup software)"
 group = "optional"
 
 devices = dict(
-    # Sample centring motion
-    centring_phi=device(
-        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
-        description="ARINAX sample motor Phi (mockup)",
-        readpv="NMX:PhiPosition",
-        writepv="NMX:PhiPosition",
-        unit="mm",
-        pva=False,
-    ),
-    centring_chi=device(
-        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
-        description="ARINAX sample motor Chi (mockup)",
-        readpv="NMX:ChiPosition",
-        writepv="NMX:ChiPosition",
-        unit="mm",
-        pva=False,
-    ),
-    centring_theta=device(
-        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
-        description="ARINAX sample motor Theta (mockup)",
-        readpv="NMX:ThetaPosition",
-        writepv="NMX:ThetaPosition",
-        unit="mm",
-        pva=False,
-    ),
     # DPU Config
     DPU_config_readback=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
@@ -65,6 +40,31 @@ devices = dict(
             'CONFIG10':"CONFIG10",
             'CONFIG11':"CONFIG11",
             }
+    ),
+    # Sample centring motion
+    centring_phi=device(
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="ARINAX sample motor Phi (mockup)",
+        readpv="NMX:PhiPosition",
+        writepv="NMX:PhiPosition",
+        unit="mm",
+        pva=False,
+    ),
+    centring_chi=device(
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="ARINAX sample motor Chi (mockup)",
+        readpv="NMX:ChiPosition",
+        writepv="NMX:ChiPosition",
+        unit="mm",
+        pva=False,
+    ),
+    centring_theta=device(
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        description="ARINAX sample motor Theta (mockup)",
+        readpv="NMX:ThetaPosition",
+        writepv="NMX:ThetaPosition",
+        unit="mm",
+        pva=False,
     ),
     # Sample tool
     sample_transfer_load_tool=device(
@@ -109,5 +109,4 @@ devices = dict(
             'Yes': 1,
             },
     ),
-
 )
