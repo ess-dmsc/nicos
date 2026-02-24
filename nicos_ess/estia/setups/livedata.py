@@ -6,13 +6,13 @@ devices = dict(
         description="An estia livedata channel",
         type="counter",
     ),
-    det=device(
+    channel_collector=device(
         "nicos_ess.devices.datasources.livedata.LiveDataCollector",
         description="The livedata histogrammer",
         brokers=configdata("config.KAFKA_BROKERS"),
-        data_topics=["livedata_data"],
-        command_topic="livedata_commands",
-        status_topics=["livedata_status"],
+        data_topics=["estia_livedata_data"],
+        command_topic="estia_livedata_commands",
+        status_topics=["estia_livedata_status"],
         others=["channel_1"],
     ),
 )
