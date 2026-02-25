@@ -653,7 +653,7 @@ class RedisCacheDatabase(CacheDatabase):
                 and all(self._native_archiving(v) for v in value)
             ):
                 ts_encoding = "list"
-                indices = [i for i, v in enumerate(value) if self._native_archiving(v)]
+                indices = list(range(len(value)))
                 ts_children = ",".join(str(i) for i in indices)
 
                 for idx in indices:
@@ -667,8 +667,7 @@ class RedisCacheDatabase(CacheDatabase):
                 and all(self._native_archiving(v) for v in value.values())
             ):
                 ts_encoding = "dict"
-                # make sure only keys for values that can be archived are included
-                keys = [k for k, v in value.items() if self._native_archiving(v)]
+                keys = list(value.keys())
                 ts_children = ",".join(str(k) for k in keys)
 
                 for subk in keys:
