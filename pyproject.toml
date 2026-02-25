@@ -16,7 +16,7 @@ dependencies = [
     "ldap3>=2.0.0",
     "lttbc",
     "nicos-pyctl>=1.0",
-    "numpy>=1.10.0",
+    "numpy>1.26.0",
     "p4p>=4.0.0",
     "psutil>=2.0",
     "pycryptodomex>=3.4.7",
