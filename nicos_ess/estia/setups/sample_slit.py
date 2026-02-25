@@ -1,34 +1,30 @@
-description = "The split arrangement with 4 motors"
-prefix = "IOC"
+description = "The slit arrangement with 4 motors"
+prefix = "ESTIA-SpSl:MC-Sl"
 
 devices = dict(
     blade_l=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
-        unit="mm",
-        precision=0.1,
-        description="X axis alignment",
-        motorpv=f"{prefix}:m4",
+        description="Left blade",
+        motorpv=f"{prefix}Yp:Mtr",
+        visibility=(),
     ),
     blade_r=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
-        unit="mm",
-        precision=0.1,
-        description="Y axis alignment",
-        motorpv=f"{prefix}:m5",
+        description="Right blade",
+        motorpv=f"{prefix}Ym:Mtr",
+        visibility=(),
     ),
     blade_t=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
-        unit="mm",
-        precision=0.1,
-        description="Z axis alignment",
-        motorpv=f"{prefix}:m6",
+        description="Top blade",
+        motorpv=f"{prefix}Zp:Mtr",
+        visibility=(),
     ),
     blade_b=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
-        unit="mm",
-        precision=0.1,
-        description="Z axis alignment",
-        motorpv=f"{prefix}:m7",
+        description="Bottom blade",
+        motorpv=f"{prefix}Zm:Mtr",
+        visibility=(),
     ),
     slit_1=device(
         "nicos.devices.generic.slit.Slit",

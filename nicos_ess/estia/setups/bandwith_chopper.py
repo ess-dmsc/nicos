@@ -24,7 +24,7 @@ devices = dict(
         readpv=f"{pv_root}Spd_R",
         writepv=f"{pv_root}Spd_S",
         precision=0.1,
-        mapping={"14 Hz": 14, "7 Hz": 7, "4⅔ Hz": 4.667, "0 Hz": 0},
+        mapping={"14 Hz": 14, "7 Hz": 7, "4⅔ Hz": 4.666666667, "0 Hz": 0},
     ),
     bwc_delay=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
@@ -93,6 +93,7 @@ devices = dict(
         chic_conn="bwc_chic",
         alarms="bwc_alarms",
         slit_edges=[[0, 98]],
-        resolver_offset=0,
+        resolver_offset=-301,
+        tdc_offset=0,
     ),
 )

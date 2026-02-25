@@ -14,7 +14,7 @@ dependencies = [
     "keyring==24.3.0",
     "keyrings-alt==5.0.0",
     "ldap3>=2.0.0",
-    "lttb>=0.2.2",
+    "lttbc",
     "nicos-pyctl>=1.0",
     "numpy>=1.10.0",
     "p4p>=4.0.0",
