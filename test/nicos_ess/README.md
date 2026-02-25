@@ -88,9 +88,11 @@ Why:
 
 Limitations:
 
-- heavier and stateful
-- slower and harder to debug
-- timing/race scenarios are harder to make deterministic
+- stateful
+- more boilerplate code
+- slower to execute 
+- harder to debug
+- timing-sensitive behaviors can result in rare failure modes
 
 ### 4. Smoke/Integration Tests (Full Stack)
 
@@ -120,7 +122,7 @@ Start at the lowest layer that can prove the requirement:
    fixture/setup tests.
 4. If behavior depends on real processes/network startup order, add smoke tests.
 
-Use higher layers only to cover risks not covered below.
+Use higher layers only to test against components not present on lower layers.
 
 ## Recommended Split For New Device Work
 
@@ -186,13 +188,14 @@ This keeps most tests fast and stable, and still validates real NICOS paths.
 
 ## Keeping Harness Honest
 
-Harnesses are intentionally lightweight models. Protect against drift using
+Harnesses are intentionally lightweight models. 
+They are protected against divergence from their real counterparts using
 contract tests:
 
 - `test/nicos_ess/test_devices/test_device_harness_contract.py`
 - `test/nicos_ess/test_devices/test_epics_pva_backend_contract.py`
 
-Contract tests should fail quickly when NICOS session/cache or backend wrapper
+Contract tests should fail the moment when NICOS session/cache or backend wrapper
 interfaces change.
 
 ## Device Test Minimum Checklist
