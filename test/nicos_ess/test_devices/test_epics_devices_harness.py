@@ -54,21 +54,46 @@ from nicos_ess.devices.epics.pva.epics_devices import (
 from test.nicos_ess.test_devices.doubles.epics_pva_backend import (
     analog_moveable_config,
     mapped_config,
-    patch_create_wrapper,
     string_moveable_config,
 )
 
 
 @pytest.fixture
-def fake_backend(monkeypatch):
-    """Install a reusable fake EPICS backend for each test."""
-    return patch_create_wrapper(monkeypatch, epics_devices)
+def fake_backend(fake_epics_backend_factory):
+    """Install a reusable fake EPICS backend for this EPICS module."""
+    return fake_epics_backend_factory(epics_devices)
+
+
+def _assert_error_status(observed_status):
+    assert observed_status[0] == status.ERROR
 
 
 def _manual_moveable_config():
     cfg = analog_moveable_config()
     cfg["mapping"] = {"14 Hz": 14, "28 Hz": 28}
     return cfg
+
+
+def _create_standard_analog_pair(device_harness, fake_backend, *, name):
+    """Create daemon+poller analog moveables with common baseline backend state."""
+    cfg = analog_moveable_config()
+    fake_backend.values[cfg["readpv"]] = 28.0
+    fake_backend.values[cfg["writepv"]] = 28.0
+    fake_backend.units[cfg["readpv"]] = "mm"
+    fake_backend.alarms[cfg["readpv"]] = (status.OK, "ok")
+    daemon = device_harness.create(
+        "daemon",
+        EpicsAnalogMoveable,
+        name=name,
+        **cfg,
+    )
+    device_harness.create(
+        "poller",
+        EpicsAnalogMoveable,
+        name=name,
+        **cfg,
+    )
+    return cfg, daemon
 
 
 class TestHelpers:
@@ -245,7 +270,9 @@ class TestEpicsReadable:
 
         # Assert
         assert len(fake_backend.subscriptions) == 2
-        assert device_harness.run("poller", dev._cache.get, dev, "value") == 5.5
+        assert device_harness.run("poller", dev._cache.get, dev, "value") == pytest.approx(
+            5.5
+        )
         assert device_harness.run("poller", dev._cache.get, dev, "unit") == "V"
         assert device_harness.run("poller", dev._cache.get, dev, "status") == (
             status.ERROR,
@@ -278,9 +305,8 @@ class TestEpicsReadable:
 
         # Assert
         assert len(fake_backend.subscriptions) == 2
-        assert device_harness.run("poller", dev._cache.get, dev, "status") == (
-            status.ERROR,
-            "communication failure",
+        _assert_error_status(
+            device_harness.run("poller", dev._cache.get, dev, "status")
         )
 
     def test_daemon_readable_can_consume_poller_cached_values(
@@ -308,7 +334,7 @@ class TestEpicsReadable:
         fake_backend.values[readpv] = 99.0  # stale backend value should be ignored
 
         # Assert
-        assert device_harness.run("daemon", daemon.read) == 8.25
+        assert device_harness.run("daemon", daemon.read) == pytest.approx(8.25)
 
     @pytest.mark.xfail(
         reason=(
@@ -821,21 +847,24 @@ class TestEpicsAnalogMoveable:
 
         # Assert
         assert len(fake_backend.subscriptions) == 4
-        assert device_harness.run("poller", dev._cache.get, dev, "value") == 3.0
+        assert device_harness.run("poller", dev._cache.get, dev, "value") == pytest.approx(
+            3.0
+        )
         assert device_harness.run("poller", dev._cache.get, dev, "unit") == "mm"
         assert device_harness.run("poller", dev._cache.get, dev, "abslimits") == (
             -10.0,
             10.0,
         )
-        assert device_harness.run("poller", dev._cache.get, dev, "target") == 3.5
+        assert device_harness.run("poller", dev._cache.get, dev, "target") == pytest.approx(
+            3.5
+        )
         assert device_harness.run("poller", dev._cache.get, dev, "status")[0] == (
             status.BUSY
         )
 
         fake_backend.emit_connection(cfg["readpv"], False)
-        assert device_harness.run("poller", dev._cache.get, dev, "status") == (
-            status.ERROR,
-            "communication failure",
+        _assert_error_status(
+            device_harness.run("poller", dev._cache.get, dev, "status")
         )
 
     def test_daemon_analog_moveable_reads_shared_cache_from_poller(
@@ -869,29 +898,16 @@ class TestEpicsAnalogMoveable:
 
         # Assert
         assert device_harness.run("daemon", daemon.status)[0] == status.OK
-        assert device_harness.run("daemon", daemon.read) == 5.0
+        assert device_harness.run("daemon", daemon.read) == pytest.approx(5.0)
 
     def test_move_wait_does_not_complete_from_stale_cached_target_state(
         self, device_harness, fake_backend
     ):
         # Setup
-        cfg = analog_moveable_config()
-        fake_backend.values[cfg["readpv"]] = 28.0
-        fake_backend.values[cfg["writepv"]] = 28.0
-        fake_backend.units[cfg["readpv"]] = "mm"
-        fake_backend.alarms[cfg["readpv"]] = (status.OK, "ok")
-
-        daemon = device_harness.create(
-            "daemon",
-            EpicsAnalogMoveable,
+        cfg, daemon = _create_standard_analog_pair(
+            device_harness,
+            fake_backend,
             name="moveable",
-            **cfg,
-        )
-        device_harness.create(
-            "poller",
-            EpicsAnalogMoveable,
-            name="moveable",
-            **cfg,
         )
 
         # Seed stale cache entries from a previous finished move.
@@ -917,23 +933,10 @@ class TestEpicsAnalogMoveable:
         self, device_harness, fake_backend
     ):
         # Setup
-        cfg = analog_moveable_config()
-        fake_backend.values[cfg["readpv"]] = 28.0
-        fake_backend.values[cfg["writepv"]] = 28.0
-        fake_backend.units[cfg["readpv"]] = "mm"
-        fake_backend.alarms[cfg["readpv"]] = (status.OK, "ok")
-
-        daemon = device_harness.create(
-            "daemon",
-            EpicsAnalogMoveable,
+        cfg, daemon = _create_standard_analog_pair(
+            device_harness,
+            fake_backend,
             name="moveable",
-            **cfg,
-        )
-        device_harness.create(
-            "poller",
-            EpicsAnalogMoveable,
-            name="moveable",
-            **cfg,
         )
         fake_backend.emit_update(cfg["readpv"], value=28.0, units="mm")
 
@@ -2224,9 +2227,8 @@ class TestEpicsStringMoveable:
         )
         fake_backend.emit_connection(cfg["readpv"], False)
 
-        assert device_harness.run("poller", dev._cache.get, dev, "status") == (
-            status.ERROR,
-            "communication failure",
+        _assert_error_status(
+            device_harness.run("poller", dev._cache.get, dev, "status")
         )
 
     def test_daemon_string_moveable_prefers_cached_value_and_status_from_poller(

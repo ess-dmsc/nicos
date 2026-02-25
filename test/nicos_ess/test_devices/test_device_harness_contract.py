@@ -34,7 +34,7 @@ from types import SimpleNamespace
 import pytest
 
 from nicos import session as nicos_session
-from nicos.core import MAIN, POLLER
+from nicos.core import MAIN, MASTER, POLLER
 from nicos.devices.cacheclient import CacheClient
 from nicos.core.sessions import Session
 from test.nicos_ess.device_harness import InMemoryCache, UnitTestSession
@@ -66,6 +66,15 @@ SESSION_METHODS = [
     "endActionScope",
     "action",
 ]
+
+
+class HarnessSessionProbe(HarnessLinearAxis):
+    """Test double that captures mode/sessiontype seen during device init."""
+
+    def doInit(self, mode):
+        self._init_mode = mode
+        self._init_sessiontype = nicos_session.sessiontype
+        super().doInit(mode)
 
 
 @pytest.mark.parametrize("method_name", CACHE_METHODS)
@@ -104,6 +113,33 @@ def test_daemon_device_harness_create_master_helper(daemon_device_harness):
     assert axis.read() == 0.0
 
 
+def test_daemon_device_harness_create_master_uses_master_mode_and_main_sessiontype(
+    daemon_device_harness,
+):
+    # Setup + Act
+    axis = daemon_device_harness.create_master(HarnessSessionProbe, name="axis")
+
+    # Assert
+    assert axis._mode == MASTER
+    assert axis._init_mode == MASTER
+    assert axis._init_sessiontype == MAIN
+
+
+def test_daemon_device_harness_create_master_allows_sessiontype_override(
+    daemon_device_harness,
+):
+    # Setup + Act
+    axis = daemon_device_harness.create_master(
+        HarnessSessionProbe,
+        name="axis",
+        sessiontype=POLLER,
+    )
+
+    # Assert
+    assert axis._init_mode == MASTER
+    assert axis._init_sessiontype == POLLER
+
+
 def test_device_harness_create_pair_and_role_helpers(device_harness):
     # Setup
     transport = SimpleNamespace(value=1.0, target=1.0, moving=False)
@@ -121,3 +157,23 @@ def test_device_harness_create_pair_and_role_helpers(device_harness):
     assert moving is True
     assert device_harness.run_daemon(lambda: nicos_session.sessiontype) == MAIN
     assert device_harness.run_poller(lambda: nicos_session.sessiontype) == POLLER
+
+
+def test_device_harness_create_master_uses_role_specific_sessiontypes(device_harness):
+    # Setup + Act
+    daemon_axis = device_harness.create_master(
+        "daemon",
+        HarnessSessionProbe,
+        name="probe",
+    )
+    poller_axis = device_harness.create_master(
+        "poller",
+        HarnessSessionProbe,
+        name="probe",
+    )
+
+    # Assert
+    assert daemon_axis._init_mode == MASTER
+    assert poller_axis._init_mode == MASTER
+    assert daemon_axis._init_sessiontype == MAIN
+    assert poller_axis._init_sessiontype == POLLER

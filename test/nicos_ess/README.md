@@ -22,6 +22,23 @@ NICOS device code sits between:
 No single test style gives strong coverage across all three without tradeoffs.
 Use the smallest style that can validate the behavior you care about.
 
+## Device Test Minimum Checklist
+
+For each device class, cover at least:
+
+- construction/default parameters
+- validation and error behavior
+- read/status behavior for fresh and stale paths (`maxage`)
+- move behavior and completion semantics (for moveables)
+- poller callback behavior (where applicable)
+- daemon/poller interaction for race-sensitive logic (where applicable)
+
+For critical moveables, include:
+
+- completion uses fresh readback when required
+- stale cache does not produce false completion
+- move-and-wait relevant timing paths
+
 ## Test Layers
 
 ### 1. Pure Unit Tests (No NICOS Session)
@@ -41,19 +58,34 @@ Why:
 - least flaky
 - easiest to reason about failures
 
-Example:
+Example scenario:
 
-- in Kafka-related code, separate payload conversion or stream-selection logic
-  into plain functions/classes and test those directly
-- keep device tests focused on device wiring (calls, cache/status side effects)
+- implement payload-to-topic selection in a plain function/class
+- test that logic directly with representative payload variants
+- keep device tests focused on NICOS wrapper wiring (backend calls, cache/status
+  side effects)
 
-### 2. Harness-Based Device Tests (Recommended Default For Device Behavior)
+### 2. Harness-Based Device Tests
+
+Recommended default for testing device behavior.
 
 Use `test/nicos_ess/device_harness.py` fixtures from
 `test/nicos_ess/conftest.py`:
 
 - `daemon_device_harness`: single-session daemon-style tests
 - `device_harness`: dual-session daemon+poller tests with shared in-memory cache
+
+Harnesses include:
+
+- lightweight in-memory session/cache behavior
+- explicit daemon/poller role switching
+- deterministic callback triggering and cache inspection
+
+Harnesses do not include:
+
+- setup loading via `session.loadSetup(...)`
+- setup-file import/alias wiring behavior
+- external processes or real network services
 
 Good fit:
 
@@ -69,7 +101,9 @@ Why:
 - explicitly supports daemon and poller role interaction
 - no external process or network dependency
 
-### 3. Full Fixture/Setup Tests (Old Session Fixture Style)
+### 3. Full Fixture/Setup Tests
+
+Session fixture style (`test/conftest.py` global `session` fixture).
 
 Use the global `session` fixture (`test/conftest.py`) and setup loading via
 `session.loadSetup(...)` as seen in tests like `test_forwarder.py`.
@@ -84,13 +118,13 @@ Good fit:
 Why:
 
 - closer to real NICOS session/setup behavior
-- catches integration issues that harness tests intentionally abstract
+- catches integration issues that harness tests intentionally simplify
 
 Limitations:
 
 - stateful
 - more boilerplate code
-- slower to execute 
+- slower to execute
 - harder to debug
 - timing-sensitive behaviors can result in rare failure modes
 
@@ -122,6 +156,9 @@ Start at the lowest layer that can prove the requirement:
    fixture/setup tests.
 4. If behavior depends on real processes/network startup order, add smoke tests.
 
+Smoke tests are optional. Add them only when real process/network behavior is a
+requirement for confidence.
+
 Use higher layers only to test against components not present on lower layers.
 
 ## Recommended Split For New Device Work
@@ -130,8 +167,8 @@ For most new ESS device behavior:
 
 - mostly pure unit tests for isolated logic
 - then harness tests for NICOS device behavior
-- then a small number of full fixture/setup checks
-- then a minimal smoke test path for critical production flows
+- then a small number of full fixture/setup checks when setup wiring matters
+- then smoke/integration tests only for critical end-to-end production risks
 
 As a practical rule, prefer writing most tests in unit+harness layers and keep
 full-stack tests targeted.
@@ -160,22 +197,22 @@ and race windows around move-and-wait behavior.
 
 ## Full Fixture/Setup Guidance
 
-Use old fixture style for setup-level behavior, not as first choice for all
-device logic.
+Use session fixture style for setup-level behavior, not as first choice for all
+device behavior.
 
 Checklist for this style:
 
 - keep setup scope as small as possible
-- mock external systems aggressively
+- mock external systems explicitly (EPICS/Kafka/network/filesystem)
 - avoid broad setup trees unless needed for the assertion
 - isolate teardown clearly (`unloadSetup`, session type reset)
 
 ## Pattern: Separate Core Logic From Device Wrapper
 
-For complex devices (for example Kafka-forwarder-like behavior), split code into:
+For complex devices (for example devices using kafka consumer or p4pwrapper), split code into:
 
 - pure logic module: transformations, selection, validation, state updates
-- device wrapper: NICOS params, session interactions, cache/status calls,
+- device: NICOS params, session interactions, cache/status calls,
   backend I/O
 
 Test strategy:
@@ -188,7 +225,7 @@ This keeps most tests fast and stable, and still validates real NICOS paths.
 
 ## Keeping Harness Honest
 
-Harnesses are intentionally lightweight models. 
+Harnesses are intentionally lightweight models.
 They are protected against divergence from their real counterparts using
 contract tests:
 
@@ -197,23 +234,6 @@ contract tests:
 
 Contract tests should fail the moment when NICOS session/cache or backend wrapper
 interfaces change.
-
-## Device Test Minimum Checklist
-
-For each device class, cover at least:
-
-- construction/default parameters
-- validation and error behavior
-- read/status behavior for fresh and stale paths (`maxage`)
-- move behavior and completion semantics (for moveables)
-- poller callback behavior (where applicable)
-- daemon/poller interaction for race-sensitive logic (where applicable)
-
-For critical moveables, include:
-
-- completion uses fresh readback when required
-- stale cache does not produce false completion
-- move-and-wait relevant timing paths
 
 ## Running Tests
 
@@ -229,3 +249,5 @@ Targeted runs:
 pytest -q test/nicos_ess/test_devices/test_epics_devices_harness.py
 pytest -q test/nicos_ess/test_devices/test_forwarder.py
 ```
+
+Use `--confcutdir=test/nicos_ess/` option make pytest ignore conftest files outside of nicos_ess.

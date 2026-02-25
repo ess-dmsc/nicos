@@ -22,7 +22,12 @@
 #
 # *****************************************************************************
 
-"""Helpers for fast, isolated unit tests of NICOS devices."""
+"""Helpers for fast, isolated unit tests of NICOS devices.
+
+The harnesses in this module deliberately monkeypatch the module-level
+``nicos.session`` singleton used by NICOS devices. The patching is scoped to
+context managers and always restored before control returns to the caller.
+"""
 
 from collections import defaultdict
 from contextlib import contextmanager
@@ -55,7 +60,11 @@ class _UnitClock:
 
 
 class InMemoryCache:
-    """Subset of CacheClient API used by NICOS devices in unit tests."""
+    """Subset of CacheClient API used by NICOS devices in unit tests.
+
+    Method signatures intentionally mirror ``CacheClient`` even when some
+    arguments are unused in this in-memory implementation.
+    """
 
     def __init__(self):
         self._data = {}
@@ -154,7 +163,11 @@ class InMemoryCache:
 
 
 class UnitTestSession:
-    """Minimal session implementation for direct device unit tests."""
+    """Minimal session implementation for direct device unit tests.
+
+    Method signatures intentionally mirror ``Session`` so NICOS device code can
+    run unchanged inside harness tests.
+    """
 
     sessiontype = MAIN
 
@@ -235,6 +248,8 @@ class UnitTestSession:
         user = user or self.getExecutingUser()
         return user.level >= level
 
+    # No-op hooks required by device code paths; keep full Session-compatible
+    # signatures and explicitly discard unused parameters.
     def elogEvent(self, eventtype, data):
         del eventtype, data
 
@@ -291,6 +306,11 @@ def _auto_value(param_name, param_info):
 
 
 def _capture_current_state():
+    """Snapshot the current ``nicos.session`` object state.
+
+    We capture both ``__class__`` and ``__dict__`` because the harness swaps the
+    concrete session class (``Session`` vs ``UnitTestSession``), not just fields.
+    """
     return {
         "class": nicos_session.__class__,
         "dict": dict(nicos_session.__dict__),
@@ -298,6 +318,7 @@ def _capture_current_state():
 
 
 def _restore_state(state):
+    """Restore ``nicos.session`` from a snapshot created by ``_capture_current_state``."""
     nicos_session.__class__ = state["class"]
     nicos_session.__dict__.clear()
     nicos_session.__dict__.update(state["dict"])
@@ -387,9 +408,14 @@ class DaemonDeviceHarness:
 
 @contextmanager
 def isolated_daemon_device_harness():
-    """Temporarily replace ``nicos.session`` with a lightweight daemon session."""
+    """Yield a daemon-style harness backed by a temporary ``UnitTestSession``.
+
+    The global ``nicos.session`` object is replaced in-place for the duration of
+    the context and fully restored afterwards, even on exceptions.
+    """
     old_class = nicos_session.__class__
     old_dict = dict(nicos_session.__dict__)
+    # Swap the singleton to a unit-test session object without changing import sites.
     nicos_session.__class__ = UnitTestSession
     UnitTestSession.__init__(nicos_session)
     harness = DaemonDeviceHarness(nicos_session)
@@ -403,7 +429,12 @@ def isolated_daemon_device_harness():
 
 
 class DeviceHarness:
-    """Two-session harness: daemon and poller sharing one in-memory cache."""
+    """Two-session harness with explicit daemon/poller role activation.
+
+    Each role stores an independent snapshot of a ``UnitTestSession`` state.
+    ``activate(role)`` swaps that snapshot into ``nicos.session`` so device code
+    sees the expected role-specific session while keeping tests single-process.
+    """
 
     DAEMON_ROLE = "daemon"
     POLLER_ROLE = "poller"
@@ -418,13 +449,16 @@ class DeviceHarness:
 
     @contextmanager
     def activate(self, role):
+        """Temporarily expose one role state as the active ``nicos.session``."""
         if role not in self._role_states:
             raise KeyError(f"unknown role {role!r}")
+        # Preserve whatever session state is currently active for nested usage.
         old = _capture_current_state()
         _restore_state(self._role_states[role])
         try:
             yield nicos_session
         finally:
+            # Persist role-side mutations, then restore the previously active state.
             self._role_states[role] = _capture_current_state()
             _restore_state(old)
 
@@ -449,6 +483,12 @@ class DeviceHarness:
         sessiontype=None,
         **config,
     ):
+        """Create a device under a specific role context.
+
+        ``mode`` and ``sessiontype`` are temporary constructor-time overrides:
+        they are applied while the device is instantiated and then reset on the
+        active role session to avoid leaking settings into later calls.
+        """
         if auto_params:
             merged = self.mandatory_config(devcls)
             merged.update(config)
@@ -473,6 +513,7 @@ class DeviceHarness:
                 active_session.sessiontype = old_sessiontype
 
     def run(self, role, func, *args, **kwargs):
+        """Run ``func`` while a specific role snapshot is active."""
         with self.activate(role):
             return func(*args, **kwargs)
 
@@ -530,6 +571,12 @@ class DeviceHarness:
 
 @contextmanager
 def isolated_device_harness():
+    """Yield a daemon+poller harness that shares one in-memory cache.
+
+    The daemon and poller sessions are initialized once, then stored as role
+    snapshots inside ``DeviceHarness``. The caller interacts through role-aware
+    create/run helpers while this context keeps global session state isolated.
+    """
     old = _capture_current_state()
     shared_cache = InMemoryCache()
 

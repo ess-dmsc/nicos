@@ -28,6 +28,7 @@ from test.nicos_ess.device_harness import (
     isolated_daemon_device_harness,
     isolated_device_harness,
 )
+from test.nicos_ess.test_devices.doubles.epics_pva_backend import patch_create_wrapper
 
 
 @pytest.fixture
@@ -42,3 +43,13 @@ def daemon_device_harness():
     """Single-session daemon-style harness fixture."""
     with isolated_daemon_device_harness() as harness:
         yield harness
+
+
+@pytest.fixture
+def fake_epics_backend_factory(monkeypatch):
+    """Factory fixture to patch EPICS wrapper creation for a specific module."""
+
+    def _install(epics_devices_module):
+        return patch_create_wrapper(monkeypatch, epics_devices_module)
+
+    return _install
