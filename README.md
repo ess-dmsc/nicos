@@ -10,8 +10,6 @@ This particular path differs between platforms: on GNU/Linux systems, this would
 Prerequisites: Install `uv` ([see the uv installation instructions](https://docs.astral.sh/uv/getting-started/installation/)
 )
 
-After that, either install a local development environment, build the package into wheels or install into a separate virtual environment. Follow the steps in the corresponding section below.
-
 Some useful uv commands:
 
     uv python list: show available Python versions (both system-wide and those managed by uv).
@@ -20,9 +18,9 @@ Some useful uv commands:
     uv venv: create a virtual environment.
 
 
-### Development environment using `uv`
+### Local development environment
 
-Inside the repository, you can first use uv sync to create a local virtual environment with the specific packages and extras you want:
+Inside the repository, first use `uv sync` to create a local virtual environment with the specific packages and extras you want:
 
     uv sync --all-packages --extra gui
 
@@ -56,37 +54,6 @@ You can also install NICOS into the uv managed tools to have its commands availa
 
 The resulting source tarball and wheel files will be located in the `dist` directory.
 
-### Package installation into separate virtual environment
-
-#### Create and activate a virtual environment
-
-This can be done most conveniently via `uv`:
-
-``` bash
-uv venv --python 3.9 [venv_dir]
-```
-
-Choose the Python version according to your needs.
-
-Then activate the environment: `source [venv_dir]/bin/activate`.
-
-#### Install NICOS core and its dependencies
-
-Run `uv pip install` and specify the wheel created when building NICOS core:
-
-``` bash
-uv pip install [path-to-the-whl] 
-```
-
-You can install optional dependencies such as the GUI ones by appending `[gui]` to the filename of the wheel.
-
-#### Run the NICOS components
-
-After the installation, `nicos-deamon`, `nicos-poller` and `nicos-collector` commands are available once the virtual environment has been activated.
-
-The configuration file is expected to be found in the user's configuration directory, e.g. `~/.config/nicos` on GNU/Linux systems.
-
-`nicos-gui` will be available but will require the installation of the `nicos-ess` package to function properly.
 
 ## Installing the Server Locally
 
