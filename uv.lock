@@ -1133,12 +1133,12 @@ requires-dist = [
     { name = "keyrings-alt", specifier = "==5.0.0" },
     { name = "keyrings-alt", marker = "extra == 'gui'", specifier = "==5.0.0" },
     { name = "ldap3", specifier = ">=2.0.0" },
-    { name = "lttb", specifier = ">=0.2.2" },
+    { name = "lttb" },
     { name = "lttb", marker = "extra == 'gui'", specifier = ">=0.3.2" },
     { name = "matplotlib", marker = "extra == 'gui'", specifier = ">=3.9.4" },
     { name = "nicos-pyctl", specifier = ">=1.0" },
     { name = "nicos-resources", editable = "resources" },
-    { name = "numpy", specifier = ">=1.10.0" },
+    { name = "numpy", specifier = ">1.26.0" },
     { name = "p4p", specifier = ">=4.0.0" },
     { name = "platformdirs" },
     { name = "psutil", specifier = ">=2.0" },
@@ -1249,6 +1249,7 @@ source = { registry = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-
 sdist = { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/nicos-pyctl/1.4/nicos_pyctl-1.4.tar.gz", hash = "sha256:51fc1dc2b714e38a350fd11940c0b133067d3176b12031f22301770753c29cca" }
 wheels = [
     { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/nicos-pyctl/1.4/nicos_pyctl-1.4-cp312-cp312-linux_x86_64.whl", hash = "sha256:7df3fcf044dc866bd66df589a7b1e37a3c8e31ec8bff1d72c111779159eeb12e" },
+    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/nicos-pyctl/1.4/nicos_pyctl-1.4-cp313-cp313-linux_x86_64.whl", hash = "sha256:aef39a8bc8fc9a6c75d7dbe5afe953739d2d729100e8102d1ea291999d179d71" },
     { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/nicos-pyctl/1.4/nicos_pyctl-1.4-cp314-cp314-linux_x86_64.whl", hash = "sha256:ddbf46fcce5e05d0e570a45dead37c1d266d4a752c195f37cd409c1172b7178e" },
 ]
 
