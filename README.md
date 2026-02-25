@@ -82,7 +82,7 @@ You can install optional dependencies such as the GUI ones by appending `[gui]` 
 
 #### Run the NICOS components
 
-After the installation, `nicos-deamon`, `nicos-poller` and `nicos-collector` commands are available once the virtual environment has been activated.
+After the installation, `nicos-daemon`, `nicos-poller` and `nicos-collector` commands are available once the virtual environment has been activated.
 
 The configuration file is expected to be found in the user's configuration directory, e.g. `~/.config/nicos` on GNU/Linux systems.
 
