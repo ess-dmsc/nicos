@@ -222,8 +222,8 @@ except ImportError:
     from ast import Constant
 
     NameConstant = Constant  # removed in Python 3.14
-    Num = Constant  # removed in Python 3.14
-    Str = Constant  # removed in Python 3.14
+    Num = (int, float)  # removed in Python 3.14
+    Str = str  # removed in Python 3.14
 
 
 from base64 import b64decode, b64encode
