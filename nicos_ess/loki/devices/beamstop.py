@@ -1,3 +1,5 @@
+from typing import List, Tuple
+
 from nicos.core import (
     SIMULATION,
     Attach,
@@ -145,7 +147,7 @@ class LokiBeamstopController(SequencerMixin, MappedMoveable):
         seq.extend(self._in_beam_sequence(move_to_in_beam))
         return seq
 
-    def _park_sequence(self, devices: list[str]) -> list[tuple[SeqDev, ...]]:
+    def _park_sequence(self, devices: List[str]) -> List[Tuple[SeqDev, ...]]:
         """
         Build the parking sequence.
 
@@ -176,7 +178,7 @@ class LokiBeamstopController(SequencerMixin, MappedMoveable):
             seq.append(seq_obj)
         return seq
 
-    def _in_beam_sequence(self, devices: list[str]) -> list[tuple[SeqDev, ...]]:
+    def _in_beam_sequence(self, devices: List[str]) -> List[Tuple[SeqDev, ...]]:
         """
         Build the sequence for adding a beamstop to the beam.
 
