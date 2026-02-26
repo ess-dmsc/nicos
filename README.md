@@ -11,6 +11,8 @@ Install the necessary Python packages (it's recommended to use a virtual environ
 pip install -r requirements.txt
 ```
 
+Note that `confluent-kafka` requires `librdkafka`, which may result in this step failing if the wheel needs to be built in your environment
+
 ### Step 2: Create a Data Directory
 
 Create a directory for storing NICOS data:
