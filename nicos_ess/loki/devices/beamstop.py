@@ -124,37 +124,25 @@ class LokiBeamstopController(SequencerMixin, MappedMoveable):
             for key, device in self._all_attached.items()
             if device.read() == "Parked"
         ]
-        print("devices_in_park:", devices_in_park)
-
         devices_in_beam = [
             key
             for key, device in self._all_attached.items()
             if device.read() == "In beam"
         ]
-        print("devices_in_beam:", devices_in_beam)
-
         if "park" in target.lower():
-            devices_not_parked = set(self._all_attached.keys()) - set(devices_in_park)
-            print("devices_not_parked:", devices_not_parked)
+            devices_not_parked = list(
+                set(self._all_attached.keys()) - set(devices_in_park)
+            )
             seq = self._park_sequence(devices_not_parked)
-            print(seq)
             return seq
-
         request_in_beam = [arm.strip().lower() for arm in target.split("+")]
-        print("request_in_beam", request_in_beam)
-
-        move_to_in_beam = set(request_in_beam) - set(devices_in_beam)
-        print("move_to_in_beam:", move_to_in_beam)
-
-        move_to_park = (
+        move_to_in_beam = list(set(request_in_beam) - set(devices_in_beam))
+        move_to_park = list(
             set(self._all_attached.keys()) - set(devices_in_park) - set(request_in_beam)
         )
-        print("move_to_park:", move_to_park)
-
         seq = []
         seq.extend(self._park_sequence(move_to_park))
         seq.extend(self._in_beam_sequence(move_to_in_beam))
-        print(seq)
         return seq
 
     def _park_sequence(self, devices: list[str]) -> list[tuple[SeqDev, ...]]:
