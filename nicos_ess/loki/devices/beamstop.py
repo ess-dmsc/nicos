@@ -5,6 +5,7 @@ from nicos.core import (
     HasPrecision,
     LimitError,
     MoveError,
+    Override,
     oneof,
 )
 from nicos.devices.abstract import MappedMoveable
@@ -61,6 +62,12 @@ class LokiBeamstopController(SequencerMixin, MappedMoveable):
         "bs5_positioner": Attach("Positioner for beamstop z5", MappedController),
     }
 
+    parameter_overrides = {
+        "mapping": Override(
+            mandatory=False, settable=False, userparam=False, volatile=True
+        ),
+    }
+
     def doPreinit(self, mode):
         self._all_attached = {
             "x": self._attached_bsx_positioner,
@@ -72,6 +79,11 @@ class LokiBeamstopController(SequencerMixin, MappedMoveable):
             "beamstop 5": self._attached_bs5_positioner,
         }
         self._full_mapping = self._get_mapped_positions()
+
+    def doInit(self, mode):
+        self._setROParam("mapping", self._get_mapped_positions())
+        MappedMoveable.doInit(self, mode)
+        self.valuetype = oneof(*self._get_mapped_positions().keys())
 
     def doRead(self, maxage=0):
         return self._mapReadValue(self._readRaw(maxage))
@@ -86,10 +98,12 @@ class LokiBeamstopController(SequencerMixin, MappedMoveable):
             return "In Between"
         return mapped_value
 
+    def doReadMapping(self):
+        return self._get_mapped_positions()
+
     def doStart(self, target):
         """
         Generate and start a sequence if non is running.
-        Just calls ``self._startSequence(self._generateSequence(target))``
         """
         if self._seq_is_running():
             if self._mode == SIMULATION:
@@ -101,7 +115,8 @@ class LokiBeamstopController(SequencerMixin, MappedMoveable):
                     "Cannot start device, sequence is still "
                     "running (at %s)!" % self._seq_status[1],
                 )
-        self._startSequence(self._generateSequence(target))
+        sequence = self._generateSequence(target)
+        self._startSequence(sequence)
 
     def _generateSequence(self, target):
         devices_in_park = [
