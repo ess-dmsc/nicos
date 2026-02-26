@@ -200,21 +200,32 @@ import re
 from ast import (
     Add,
     BinOp,
-    Bytes,
     Call,
     Dict,
     List,
     Name,
-    NameConstant,
-    Num,
     Set,
-    Str,
     Sub,
     Tuple,
     UnaryOp,
     USub,
     parse,
 )
+
+try:
+    from ast import Bytes
+except ImportError:
+    Bytes = bytes  # removed in Python 3.9
+try:
+    from ast import NameConstant, Num, Str
+except ImportError:
+    from ast import Constant
+
+    NameConstant = Constant  # removed in Python 3.14
+    Num = Constant  # removed in Python 3.14
+    Str = Constant  # removed in Python 3.14
+
+
 from base64 import b64decode, b64encode
 
 from nicos.utils import number_types, readonlydict, readonlylist
