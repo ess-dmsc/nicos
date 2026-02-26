@@ -153,15 +153,14 @@ class LokiBeamstopController(SequencerMixin, MappedMoveable):
         then raises the arms to their parked positions.
 
         Args:
-        devices (list[str]):
-            Key of devices corresponding to the dict of attached devices
+            devices
+                Key of devices corresponding to the dict of attached devices
 
         Returns:
-            list[tuple[SeqDev, ...]]:
-                Ordered execution steps. Each list element represents
-                one execution stage:
-                    - A single-element tuple → sequential step
-                    - A multi-element tuple → parallel step
+            Ordered execution steps. Each list element represents
+            one execution stage:
+                - A single-element tuple → sequential step
+                - A multi-element tuple → parallel step
         """
         seq = []
         if "x" in devices:
@@ -185,15 +184,14 @@ class LokiBeamstopController(SequencerMixin, MappedMoveable):
         then moves the beamstops towards the detector.
 
         Args:
-        devices (list[str]):
-            Key of devices corresponding to the dict of attached devices
+            devices
+                Key of devices corresponding to the dict of attached devices
 
         Returns:
-            list[tuple[SeqDev, ...]]:
-                Ordered execution steps. Each list element represents
-                one execution stage:
-                    - A single-element tuple → sequential step
-                    - A multi-element tuple → parallel step
+            Ordered execution steps. Each list element represents
+            one execution stage:
+                - A single-element tuple → sequential step
+                - A multi-element tuple → parallel step
         """
         seq = []
         move_beamstop = [key for key in devices if "beamstop" in key]
