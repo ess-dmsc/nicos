@@ -11,7 +11,7 @@ from nicos.core import (
     oneof,
 )
 from nicos.devices.abstract import MappedMoveable
-from nicos.devices.generic.sequence import SeqCall, SeqDev, SeqSleep, SequencerMixin
+from nicos.devices.generic.sequence import SeqDev, SeqSleep, SequencerMixin
 from nicos.utils import num_sort
 from nicos_ess.devices.mapped_controller import MappedController
 
