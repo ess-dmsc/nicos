@@ -88,11 +88,21 @@ class ImageView(QWidget):
     sigProcessingChanged = pyqtSignal(object)
     clicked = pyqtSignal(str)
 
-    def __init__(self, parent=None, name="", histogram_orientation="horizontal", *args):
+    def __init__(
+        self,
+        parent=None,
+        name="",
+        histogram_orientation="horizontal",
+        use_internal_image_view_controller=False,
+        invert_y=True,
+        *args,
+    ):
         QWidget.__init__(self, parent, *args)
         self.parent = parent
         self.name = name
         self.histogram_orientation = histogram_orientation
+        self._internal_image_view_controller = use_internal_image_view_controller
+        self._invert_y = invert_y
 
         self.log = NicosLogger("ImageView")
         self.log.parent = parent.log.parent
@@ -113,7 +123,9 @@ class ImageView(QWidget):
         self._use_metric_length = False
         self._line_roi_drag_active = False
         self._roi_drag_active = False
+        self.autolevel_on_update = False
         self.axes = {"t": None, "x": 0, "y": 1, "c": None}
+        self._axis_world_extents = None  # (x_min, x_max, y_min, y_max)
 
         self.initialize_ui()
         self.build_image_controller_tab()
@@ -139,6 +151,16 @@ class ImageView(QWidget):
         self.aspectLockedAction.triggered.connect(self.set_aspect_locked)
         self.view.menu.addAction(self.aspectLockedAction)
 
+        self.autoLevelsAction = QAction("Auto Levels Now", self)
+        self.autoLevelsAction.triggered.connect(lambda: self.autolevel_now())
+        self.view.menu.addAction(self.autoLevelsAction)
+
+        self.logScaleAction = QAction("Logarithmic colormap", self)
+        self.logScaleAction.setCheckable(True)
+        self.logScaleAction.setChecked(False)
+        self.logScaleAction.toggled.connect(self.toggle_log_mode)
+        self.view.menu.addAction(self.logScaleAction)
+
         for child in self.view.menu.actions():
             if child.text() == "View All":
                 child.triggered.connect(self.set_auto_scale_axis)
@@ -146,8 +168,20 @@ class ImageView(QWidget):
     def set_auto_scale_axis(self):
         self.view.enableAutoRange(x=True, y=True)
 
-    def set_aspect_locked(self):
-        self.image_plot.setAspectLocked(self.aspectLockedAction.isChecked())
+    def set_aspect_locked(self, state=None):
+        if state is None:
+            state = self.aspectLockedAction.isChecked()
+        self.image_plot.setAspectLocked(bool(state))
+
+    def set_autolevel_on_update(self, enabled: bool):
+        self.autolevel_on_update = bool(enabled)
+
+    def autolevel_now(self):
+        # recompute and apply levels immediately
+        self.autolevel_complete = False
+        self.update_image(
+            self.image_item.image if self.image_item.image is not None else None
+        )
 
     def calculate_statistics(self):
         image_stats = {
@@ -193,7 +227,8 @@ class ImageView(QWidget):
         self.graphics_view = GraphicsView()
         self.scene = self.graphics_view.scene()
         self.image_plot = pg.PlotItem()
-        self.image_plot.invertY()
+        if self._invert_y:
+            self.image_plot.invertY()
         self.image_plot.setAspectLocked(True)
         self.view = self.image_plot.vb
         self.graphics_view.setCentralItem(self.image_plot)
@@ -279,7 +314,8 @@ class ImageView(QWidget):
         self.left_roi_trace = self.left_plot.plot(pen=mkPen(ROI_HOOVER_COLOR, width=1))
         self.left_crosshair_roi_hline.setVisible(False)
         self.left_plot.addItem(self.left_crosshair_roi_hline)
-        self.left_plot.plotItem.invertY()
+        if self._invert_y:
+            self.left_plot.invertY()
         self.left_plot.showGrid(x=True, y=True, alpha=0.2)
         self.left_plot.setLabel("left", "Pixels")
 
@@ -334,9 +370,10 @@ class ImageView(QWidget):
         self.splitter_hori_1.addWidget(self.splitter_vert_2)
         if self.histogram_orientation == "vertical":
             self.splitter_hori_1.addWidget(self.settings_histogram)
+        if self._internal_image_view_controller:
+            self.splitter_hori_1.addWidget(self.image_view_controller)
 
         self.splitter_vert_3 = QSplitter(Qt.Orientation.Vertical)
-        # self.splitter_vert_3.addWidget(self.image_view_controller)
         self.splitter_vert_3.addWidget(self.splitter_hori_1)
 
         self.splitter_hori_1.setSizes(HORI_SPLITTER_SIZES_1)
@@ -360,9 +397,6 @@ class ImageView(QWidget):
         self.splitter_vert_2.splitterMoved.connect(
             lambda x: self.splitter_moved(self.splitter_vert_2)
         )
-
-    def set_aspect_locked(self, state):
-        self.image_plot.setAspectLocked(state)
 
     def add_image_axes(self):
         self.custom_bottom_axis = CustomAxisItem(orientation="bottom")
@@ -546,6 +580,45 @@ class ImageView(QWidget):
         if pos is not None and pos not in self.selected_pixels and self.select_pixels:
             self.selected_pixels.append(pos)
 
+    def _drag_pos_to_world(self, x, y):
+        """
+        Convert drag coordinates (from CustomImageItem.dragData) into
+        the world coordinate system used by the image and ROIs.
+
+        Cases:
+        - If metric length scaling is active (_use_metric_length), the
+          CustomImageItem already emits metric units → return as-is.
+        - If we have no axis-world extents (no labels), keep pixel coords.
+        - If labels define world extents, map pixel indices 0..N-1 linearly
+          into [x_min..x_max], [y_min..y_max].
+        """
+        img = self.image_item.image
+        if img is None:
+            return x, y
+
+        # Camera/metric panel: CustomImageItem already converted to mm
+        if self._use_metric_length:
+            return x, y
+
+        # No axis labels → remain in pixel coordinates, as before
+        if self._axis_world_extents is None:
+            return x, y
+
+        nx, ny = img.shape[:2]
+        if nx <= 0 or ny <= 0:
+            return x, y
+
+        x_min, x_max, y_min, y_max = self._axis_world_extents
+
+        sx = (x_max - x_min) / float(nx)
+        sy = (y_max - y_min) / float(ny)
+
+        # Use bin centres; edges vs centres is a small offset only
+        wx = x_min + (float(x) + 0.5) * sx
+        wy = y_min + (float(y) + 0.5) * sy
+
+        return wx, wy
+
     def enter_roi_drag_mode(self):
         if self._line_roi_drag_active:
             self.exit_line_roi_drag_mode()
@@ -555,6 +628,8 @@ class ImageView(QWidget):
             self.image_view_controller.roi_cb.click()
         QApplication.setOverrideCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self.view.setMouseEnabled(False, False)
+        self.roi.setPos(self.view.viewRect().center())
+        self.roi.setSize((0, 0))
         self.image_item.set_define_roi_mode(True)
         self.image_item.dragData.connect(self.define_roi)
         self._roi_drag_active = True
@@ -575,6 +650,9 @@ class ImageView(QWidget):
             self.image_view_controller.line_roi_cb.click()
         QApplication.setOverrideCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self.view.setMouseEnabled(False, False)
+        center_ = self.view.viewRect().center()
+        center_point = (center_.x(), center_.y())
+        self.line_roi.set_pos(center_point, center_point, width=0)
         self.image_item.set_define_roi_mode(True)
         self.image_item.dragData.connect(self.define_line_roi)
         self._line_roi_drag_active = True
@@ -589,36 +667,70 @@ class ImageView(QWidget):
     @pyqtSlot(tuple)
     def define_roi(self, data):
         dragging, start_coord, end_coord = data
-        if dragging:
-            self.roi.setPos(*start_coord)
-            raw_size = (
-                end_coord[0] - start_coord[0],
-                end_coord[1] - start_coord[1],
-            )
-            size = tuple(map(lambda x: max(x, 0), raw_size))
-            self.roi.setSize(size=size)
-        else:
+        if not dragging:
             self.exit_roi_drag_mode()
+            return
+
+        x0_pix, y0_pix = start_coord
+        x1_pix, y1_pix = end_coord
+
+        # Convert drag (pixel) coordinates to world coordinates
+        x0, y0 = self._drag_pos_to_world(x0_pix, y0_pix)
+        x1, y1 = self._drag_pos_to_world(x1_pix, y1_pix)
+
+        left = min(x0, x1)
+        top = min(y0, y1)
+        width = abs(x1 - x0)
+        height = abs(y1 - y0)
+
+        self.roi.setPos(left, top)
+        self.roi.setSize((width, height))
 
     @pyqtSlot(tuple)
     def define_line_roi(self, data):
         dragging, start_coord, end_coord = data
-        if dragging:
-            self.line_roi.set_pos(start_coord, end_coord)
-        else:
+        if not dragging:
             self.exit_line_roi_drag_mode()
+            return
+
+        x0_pix, y0_pix = start_coord
+        x1_pix, y1_pix = end_coord
+
+        # Convert drag (pixel) coordinates to world coordinates
+        p1 = self._drag_pos_to_world(x0_pix, y0_pix)
+        p2 = self._drag_pos_to_world(x1_pix, y1_pix)
+
+        self.line_roi.set_pos(p1, p2)
 
     def toggle_log_mode(self, log_mode):
-        self.log_mode = log_mode
+        enabled = bool(log_mode)
+        self.log_mode = enabled
 
+        if hasattr(self, "logScaleAction"):
+            self.logScaleAction.blockSignals(True)
+            self.logScaleAction.setChecked(enabled)
+            self.logScaleAction.blockSignals(False)
+
+        ctrl = getattr(self, "image_view_controller", None)
+        if ctrl is not None and hasattr(ctrl, "log_cb"):
+            ctrl.log_cb.blockSignals(True)
+            ctrl.log_cb.setChecked(enabled)
+            ctrl.log_cb.blockSignals(False)
+
+        # colormap
         current_cm = self.settings_histogram.item.gradient.colorMap()
-
-        if log_mode:
+        if enabled:
             self.saved_cm = current_cm
             new_cm = self._create_log_colormap(current_cm)
             self.settings_histogram.item.gradient.setColorMap(new_cm)
         else:
             self._restore_original_colormap()
+
+        # side traces axes
+        if hasattr(self, "left_plot"):
+            self.left_plot.setLogMode(x=enabled, y=False)
+        if hasattr(self, "bottom_plot"):
+            self.bottom_plot.setLogMode(x=False, y=enabled)
 
     def update_scale(self, state):
         self._use_metric_length = state
@@ -648,6 +760,98 @@ class ImageView(QWidget):
             self.left_plot.setLabel("left", "Pixels")
             self.bottom_plot.setLabel("bottom", "Pixels")
             self.line_plot.setLabel("bottom", "Pixels")
+
+    def _handle_image_labels(self, labels):
+        image = self.image_item.image
+        if image is None:
+            self.log.warning("No image data available when handling labels.")
+            return
+
+        if not (
+            hasattr(self, "custom_bottom_axis") and hasattr(self, "custom_left_axis")
+        ):
+            self.log.warning("No custom axes available when handling labels.")
+            return
+
+        # image is stored as (nx, ny) after the transpose in set_data()
+        nx, ny = image.shape[:2]
+
+        def to_array(key):
+            arr = labels.get(key)
+            if arr is None:
+                return None
+            try:
+                return np.asarray(arr, dtype=float)
+            except Exception as e:
+                self.log.error("Error converting %r labels: %s", key, e)
+                return None
+
+        x_labels = to_array("x")
+        y_labels = to_array("y")
+
+        def compute_min_max(label_arr, n_samples):
+            if label_arr is None:
+                return 0.0, float(n_samples)
+            size = label_arr.size
+            if size == n_samples + 1:
+                # bin edges
+                return float(label_arr[0]), float(label_arr[-1])
+            elif size == n_samples:
+                # bin centers, build edges by assuming constant spacing
+                if size > 1:
+                    step = float(label_arr[1] - label_arr[0])
+                else:
+                    step = 1.0
+                return (
+                    float(label_arr[0] - step / 2.0),
+                    float(label_arr[-1] + step / 2.0),
+                )
+            else:
+                # fallback
+                return float(label_arr.min()), float(label_arr.max())
+
+        x_min, x_max = compute_min_max(x_labels, nx)
+        y_min, y_max = compute_min_max(y_labels, ny)
+
+        self._axis_world_extents = (
+            float(x_min),
+            float(x_max),
+            float(y_min),
+            float(y_max),
+        )
+
+        # Set the image rect in world coordinates (Å, ΔE, etc.)
+        self.image_item.setRect(x_min, y_min, x_max - x_min, y_max - y_min)
+
+        # Precompute per-pixel world coordinates (centers) for each axis.
+        # These are used by the full profiles and crosshair projections.
+        if x_max != x_min:
+            self.x_axis_coords = x_min + (np.arange(nx, dtype=float) + 0.5) * (
+                (x_max - x_min) / nx
+            )
+        else:
+            self.x_axis_coords = np.zeros(nx, dtype=float)
+
+        if y_max != y_min:
+            self.y_axis_coords = y_min + (np.arange(ny, dtype=float) + 0.5) * (
+                (y_max - y_min) / ny
+            )
+        else:
+            self.y_axis_coords = np.zeros(ny, dtype=float)
+
+        # Feed original label arrays to the custom axes for tick text
+        if x_labels is not None:
+            self.custom_bottom_axis.setLabelsArray(x_labels)
+        if y_labels is not None:
+            self.custom_left_axis.setLabelsArray(y_labels)
+
+        self.image_item.x_axis_coords = self.x_axis_coords
+        self.image_item.y_axis_coords = self.y_axis_coords
+
+    def set_image_axes_visible(self, visible: bool):
+        """Show or hide the axes and tick labels on the main image plot."""
+        self.image_plot.showAxis("bottom", visible)
+        self.image_plot.showAxis("left", visible)
 
     def _pix_to_mm(self, pix):
         return pix * self._pix_to_mm_ratio
@@ -770,72 +974,23 @@ class ImageView(QWidget):
         if self.saved_cm is not None:
             self.settings_histogram.item.gradient.setColorMap(self.saved_cm)
 
-    def set_data(self, arrays, labels):
+    def set_data(self, arrays, labels, autoLevels=False):
         self.set_image(
             np.array(arrays[0]).T.astype(np.float64),
-            autoLevels=False,
+            autoLevels=autoLevels,
         )
 
         if labels:
             self._handle_image_labels(labels)
 
-    def _handle_image_labels(self, labels):
-        image = self.image_item.image
-        if image is None:
-            self.log.warning("No image data available when handling labels.")
-            return
-
-        if not (
-            hasattr(self, "custom_bottom_axis") or hasattr(self, "custom_left_axis")
-        ):
-            self.log.warning("No custom axes available when handling labels.")
-            return
-
-        x_pixels, y_pixels = image.shape[0], image.shape[1]
-
-        try:
-            x_labels = np.asarray(labels.get("x"), dtype=float)
-            y_labels = np.asarray(labels.get("y"), dtype=float)
-        except Exception as e:
-            self.log.error("Error converting labels: %s", e)
-            return
-
-        if x_labels is None or y_labels is None:
-            self.log.warning("Missing 'x' or 'y' labels in _handle_image_labels.")
-            return
-
-        if x_labels.size == x_pixels + 1:
-            x_min, x_max = x_labels[0], x_labels[-1]
-        elif x_labels.size == x_pixels:
-            dx = x_labels[1] - x_labels[0] if x_pixels > 1 else 1.0
-            x_min, x_max = x_labels[0] - dx / 2.0, x_labels[-1] + dx / 2.0
-        else:
-            self.log.warning(
-                "Unexpected number of x labels; defaulting to min/max from labels."
-            )
-            x_min, x_max = float(x_labels.min()), float(x_labels.max())
-
-        if y_labels.size == y_pixels + 1:
-            y_min, y_max = y_labels[0], y_labels[-1]
-        elif y_labels.size == y_pixels:
-            dy = y_labels[1] - y_labels[0] if y_pixels > 1 else 1.0
-            y_min, y_max = y_labels[0] - dy / 2.0, y_labels[-1] + dy / 2.0
-        else:
-            self.log.warning(
-                "Unexpected number of y labels; defaulting to min/max from labels."
-            )
-            y_min, y_max = float(y_labels.min()), float(y_labels.max())
-
-        if self._use_metric_length:
-            x_min, x_max = self._pix_to_mm(x_min), self._pix_to_mm(x_max)
-            y_min, y_max = self._pix_to_mm(y_min), self._pix_to_mm(y_max)
-            x_labels = self._pix_to_mm(x_labels)
-            y_labels = self._pix_to_mm(y_labels)
-
-        self.image_item.setRect(x_min, y_min, x_max - x_min, y_max - y_min)
-
-        self.custom_bottom_axis.setLabelsArray(x_labels)
-        self.custom_left_axis.setLabelsArray(y_labels)
+    def set_axis_labels(self, x_label, x_unit, y_label, y_unit):
+        """Apply image axis labels/units to side plots."""
+        if hasattr(self, "bottom_plot"):
+            self.bottom_plot.setLabel("bottom", x_label, units=x_unit)
+        if hasattr(self, "left_plot"):
+            self.left_plot.setLabel("left", y_label, units=y_unit)
+        # if hasattr(self, "line_plot"): # we probably don't want to change this because it's a profile along arbitrary line
+        #     self.line_plot.setLabel("bottom", x_label, units=x_unit)
 
     def save_state(self):
         return {
@@ -863,15 +1018,36 @@ class ImageView(QWidget):
 
     @pyqtSlot()
     def update_trace(self):
-        hori_y = self.image_item.image.mean(axis=1)
-        vert_y = self.image_item.image.mean(axis=0)
-        hori_x_axis = np.arange(0, len(hori_y))
-        vert_x_axis = np.arange(0, len(vert_y))
-        if self._use_metric_length:
-            hori_x_axis = self._pix_to_mm(hori_x_axis)
-            vert_x_axis = self._pix_to_mm(vert_x_axis)
-        self.full_hori_trace.setData(y=hori_y, x=hori_x_axis)
-        self.full_vert_trace.setData(x=vert_y, y=vert_x_axis)
+        if self.image_item.image is None:
+            return
+
+        image = self.image_item.image
+        nx, ny = image.shape[:2]
+
+        # Full horizontal trace (bottom plot): mean over y → function of x
+        hori_y = image.mean(axis=1)  # length nx
+
+        # Full vertical trace (left plot): mean over x → function of y
+        vert_y = image.mean(axis=0)  # length ny
+
+        x_coords = getattr(self, "x_axis_coords", None)
+        y_coords = getattr(self, "y_axis_coords", None)
+
+        if x_coords is not None and x_coords.size == hori_y.size:
+            hori_x_axis = x_coords
+        else:
+            hori_x_axis = np.arange(hori_y.size, dtype=float)
+
+        if y_coords is not None and y_coords.size == vert_y.size:
+            vert_axis = y_coords
+        else:
+            vert_axis = np.arange(vert_y.size, dtype=float)
+
+        # bottom plot: intensity vs x
+        self.full_hori_trace.setData(x=hori_x_axis, y=hori_y)
+
+        # left plot: intensity vs y
+        self.full_vert_trace.setData(x=vert_y, y=vert_axis)
 
     @pyqtSlot()
     def splitter_moved(self, sender):
@@ -898,27 +1074,44 @@ class ImageView(QWidget):
 
     @pyqtSlot()
     def crosshair_roi_changed(self):
-        # Extract image data from ROI
         if self.image_item.image is None:
             return
 
-        max_x, max_y = self.image_item.image.shape
-        if self._use_metric_length:
-            h_val = int(
-                np.floor(self._mm_to_pix(self.crosshair_roi.horizontal_line.value()))
-            )
-            v_val = int(
-                np.floor(self._mm_to_pix(self.crosshair_roi.vertical_line.value()))
-            )
-        else:
-            h_val = int(np.floor(self.crosshair_roi.horizontal_line.value()))
-            v_val = int(np.floor(self.crosshair_roi.vertical_line.value()))
+        image = self.image_item.image
+        nx, ny = image.shape[:2]
 
-        slice_point_y = min(max_y - 1, max(0, h_val))
-        slice_point_x = min(max_x - 1, max(0, v_val))
+        x_coords = getattr(self, "x_axis_coords", None)
+        y_coords = getattr(self, "y_axis_coords", None)
 
-        slice_x = self.image_item.image[slice_point_x, :]
-        slice_y = self.image_item.image[:, slice_point_y]
+        def coord_to_index(coord, axis_coords, max_index):
+            if axis_coords is None or axis_coords.size == 0:
+                idx = int(np.floor(coord))
+            else:
+                idx = int(np.searchsorted(axis_coords, coord))
+                if idx <= 0:
+                    idx = 0
+                elif idx >= axis_coords.size:
+                    idx = axis_coords.size - 1
+                else:
+                    # snap to nearest bin center
+                    if abs(coord - axis_coords[idx - 1]) < abs(
+                        coord - axis_coords[idx]
+                    ):
+                        idx = idx - 1
+            return max(0, min(max_index - 1, idx))
+
+        # vertical_line is x, horizontal_line is y in world coordinates
+        x_pos = self.crosshair_roi.vertical_line.value()
+        y_pos = self.crosshair_roi.horizontal_line.value()
+
+        x_index = coord_to_index(x_pos, x_coords, nx)
+        y_index = coord_to_index(y_pos, y_coords, ny)
+
+        # Profile along y at fixed x (vertical crosshair → left plot)
+        slice_x = image[x_index, :]  # length ny
+
+        # Profile along x at fixed y (horizontal crosshair → bottom plot)
+        slice_y = image[:, y_index]  # length nx
 
         self.v_mean = np.mean(slice_x)
         self.v_std = np.std(slice_x)
@@ -930,22 +1123,34 @@ class ImageView(QWidget):
         self.h_min = np.min(slice_y)
         self.h_max = np.max(slice_y)
 
-        left_y = np.arange(0, len(slice_x))
-        bottom_x = np.arange(0, len(slice_y))
-        if self._use_metric_length:
-            left_y = self._pix_to_mm(left_y)
-            bottom_x = self._pix_to_mm(bottom_x)
+        # Axes for the projections
+        if y_coords is not None and y_coords.size == slice_x.size:
+            left_y = y_coords
+        else:
+            left_y = np.arange(slice_x.size, dtype=float)
 
+        if x_coords is not None and x_coords.size == slice_y.size:
+            bottom_x = x_coords
+        else:
+            bottom_x = np.arange(slice_y.size, dtype=float)
+
+        # left plot: intensity vs y
         self.left_crosshair_roi.setData(y=left_y, x=slice_x)
+
+        # bottom plot: intensity vs x
         self.bottom_crosshair_roi.setData(x=bottom_x, y=slice_y)
+
+        # Show world coordinates in controller
         self.image_view_controller.crosshair_roi_pos_x_le.setText(
-            self._format_float(v_val)
+            self._format_float(x_pos)
         )
         self.image_view_controller.crosshair_roi_pos_y_le.setText(
-            self._format_float(h_val)
+            self._format_float(y_pos)
         )
-        self.left_crosshair_roi_hline.setPos(self.crosshair_roi.horizontal_line.value())
-        self.bottom_crosshair_roi_vline.setPos(self.crosshair_roi.vertical_line.value())
+
+        # Linked guide lines in side plots use the same world coordinates
+        self.left_crosshair_roi_hline.setPos(y_pos)
+        self.bottom_crosshair_roi_vline.setPos(x_pos)
 
     @pyqtSlot()
     def roi_changed(self):
@@ -956,47 +1161,83 @@ class ImageView(QWidget):
         if self.roi.size()[0] == 0 or self.roi.size()[1] == 0:
             return
 
-        if self.image_item.axisOrder == "col-major":
-            axes = (self.axes["x"], self.axes["y"])
-        else:
-            axes = (self.axes["y"], self.axes["x"])
+        image = self.image_item.image
+        nx, ny = image.shape[:2]
 
-        data, coords = self.roi.getArrayRegion(
-            self.image_item.image.view(np.ndarray),
-            img=self.image_item,
-            axes=axes,
-            returnMappedCoords=True,
-        )
+        x_coords = getattr(self, "x_axis_coords", None)
+        y_coords = getattr(self, "y_axis_coords", None)
 
-        if data is None:
+        # ROI bounds in world coordinates (same coordinate system as the image)
+        pos = self.roi.pos()
+        size = self.roi.size()
+
+        x0 = float(pos.x())
+        y0 = float(pos.y())
+        x1 = x0 + float(size.x())
+        y1 = y0 + float(size.y())
+
+        def coord_range_to_indices(c0, c1, coords, n):
+            lo, hi = sorted([c0, c1])
+            if coords is None or len(coords) == 0:
+                # fall back to pixel indices
+                i0 = int(np.floor(lo))
+                i1 = int(np.ceil(hi))
+            else:
+                i0 = int(np.searchsorted(coords, lo, side="left"))
+                i1 = int(np.searchsorted(coords, hi, side="right"))
+
+            i0 = max(0, min(n - 1, i0))
+            i1 = max(i0 + 1, min(n, i1))
+            return i0, i1
+
+        # x is first axis, y is second axis in the internal image
+        ix0, ix1 = coord_range_to_indices(x0, x1, x_coords, nx)
+        iy0, iy1 = coord_range_to_indices(y0, y1, y_coords, ny)
+
+        roi_data = image[ix0:ix1, iy0:iy1]
+        if roi_data.size == 0:
             return
 
-        self.histogram_image_item.setImage(data, autoLevels=False)
+        # Histogram on ROI
+        self.histogram_image_item.setImage(roi_data, autoLevels=False)
         self.roi_histogram.item.imageChanged(bins=100)
 
-        data_x = data.mean(axis=self.axes["y"])
-        data_y = data.mean(axis=self.axes["x"])
-        self.roi_mean = data.mean()
-        self.roi_std = data.std()
-        self.roi_max = data.max()
-        self.roi_min = data.min()
+        # Projections over ROI
+        data_x = roi_data.mean(axis=1)  # vs x
+        data_y = roi_data.mean(axis=0)  # vs y
 
-        x_ref, y_ref = np.floor(coords[0][0][0]), np.floor(coords[1][0][0])
+        if x_coords is not None and x_coords.size >= ix1:
+            xvals = x_coords[ix0:ix1]
+        else:
+            xvals = np.arange(ix0, ix1, dtype=float)
 
-        coords_x = coords[:, :, 0] - coords[:, 0:1, 0]
-        coords_y = coords[:, 0, :] - coords[:, 0, 0:1]
-        xvals = (coords_x**2).sum(axis=0) ** 0.5 + x_ref
-        yvals = (coords_y**2).sum(axis=0) ** 0.5 + y_ref
+        if y_coords is not None and y_coords.size >= iy1:
+            yvals = y_coords[iy0:iy1]
+        else:
+            yvals = np.arange(iy0, iy1, dtype=float)
 
+        # bottom plot: intensity vs x (linked to image X axis)
         self.bottom_roi_trace.setData(x=xvals, y=data_x)
+
+        # left plot: intensity vs y (linked to image Y axis)
         self.left_roi_trace.setData(y=yvals, x=data_y)
 
-        pos_i, pos_j = map(self._format_float, self.roi.pos())
-        size_i, size_j = map(self._format_float, self.roi.size())
-        self.image_view_controller.roi_start_x_le.setText(pos_i)
-        self.image_view_controller.roi_start_y_le.setText(pos_j)
-        self.image_view_controller.roi_size_x_le.setText(size_i)
-        self.image_view_controller.roi_size_y_le.setText(size_j)
+        # ROI statistics
+        self.roi_mean = roi_data.mean()
+        self.roi_std = roi_data.std()
+        self.roi_max = roi_data.max()
+        self.roi_min = roi_data.min()
+
+        # Update controller fields with world coordinates
+        start_x = self._format_float(min(x0, x1))
+        start_y = self._format_float(min(y0, y1))
+        size_x = self._format_float(abs(x1 - x0))
+        size_y = self._format_float(abs(y1 - y0))
+
+        self.image_view_controller.roi_start_x_le.setText(start_x)
+        self.image_view_controller.roi_start_y_le.setText(start_y)
+        self.image_view_controller.roi_size_x_le.setText(size_x)
+        self.image_view_controller.roi_size_y_le.setText(size_y)
 
     @pyqtSlot()
     def line_roi_changed(self):
@@ -1078,8 +1319,8 @@ class ImageView(QWidget):
         if raw_update:
             self.raw_image = np.copy(image)
 
-        if not self.autolevel_complete:
-            flat_im = np.sort(image.flatten())
+        if (self.autolevel_on_update or not self.autolevel_complete) and image.size:
+            flat_im = np.sort(image.ravel())
             ll, hl = int(len(flat_im) * 0.05), int(len(flat_im) * 0.95)
             use_min, use_max = flat_im[[ll, hl]]
             self.image_item.setLevels([use_min, use_max])

@@ -1,0 +1,241 @@
+"""
+Lightweight helpers for the NICOS ↔ ESSLivedata integration.
+
+- ResultKey parsing (from DA00 source_name JSON)
+- Selector parsing (channel "what to follow")
+- In-memory JobRegistry (kept up-to-date from status + data)
+"""
+
+from __future__ import annotations
+
+import json
+import time
+from dataclasses import dataclass, field
+from typing import Dict, List, Optional, Set, Tuple
+
+
+@dataclass(frozen=True)
+class WorkflowId:
+    def __str__(self):
+        """Compact path form used by selectors and UI menus."""
+        return f"{self.instrument}/{self.namespace}/{self.name}/{self.version}"
+
+    instrument: str
+    namespace: str
+    name: str
+    version: int
+
+
+@dataclass(frozen=True)
+class JobId:
+    source_name: str
+    job_number: str  # uuid string
+
+
+@dataclass(frozen=True)
+class ResultKey:
+    workflow_id: WorkflowId
+    job_id: JobId
+    output_name: Optional[str]
+
+
+def parse_result_key(source_name_json: str) -> ResultKey:
+    """Parse DA00 source_name JSON => ResultKey."""
+    raw = json.loads(source_name_json)
+    wf = raw["workflow_id"]
+    job = raw["job_id"]
+    return ResultKey(
+        workflow_id=WorkflowId(
+            instrument=wf["instrument"],
+            namespace=wf["namespace"],
+            name=wf["name"],
+            version=int(wf["version"]),
+        ),
+        job_id=JobId(
+            source_name=job["source_name"],
+            job_number=job["job_number"],
+        ),
+        output_name=raw.get("output_name"),
+    )
+
+
+@dataclass(frozen=True)
+class Selector:
+    """
+    A concrete binding to a workflow/source (and optionally a specific job/output).
+
+    Format (string):
+        "<instrument>/<namespace>/<name>/<version>@<source_name>#<job_number>/<output_name>"
+
+    - '#<job_number>' is optional => will bind to the latest active job.
+    - '/<output_name>' is optional => channel may choose a default (e.g. "current").
+    """
+
+    workflow_path: str
+    source_name: str
+    job_number: Optional[str] = None
+    output_name: Optional[str] = None
+
+    @classmethod
+    def parse_selector_str(cls, s: str) -> Selector:
+        """
+        Parse the selector string. Minimal validation; keeps things permissive for UIs.
+        """
+        wf_part, rest = s.split("@", 1)
+        job_part, slash, out = rest.partition("/")
+        src, hashmark, job = job_part.partition("#")
+        job_num = job if hashmark else None
+        out_name = out if slash else None
+        return cls(
+            workflow_path=wf_part,
+            source_name=src,
+            job_number=job_num,
+            output_name=out_name,
+        )
+
+    def selector_matches(self, rk: ResultKey) -> bool:
+        """Check if a DA00 ResultKey matches a channel selector."""
+        if str(rk.workflow_id) != self.workflow_path:
+            return False
+        if rk.job_id.source_name != self.source_name:
+            return False
+        if self.job_number and rk.job_id.job_number != self.job_number:
+            return False
+        if self.output_name and rk.output_name != self.output_name:
+            return False
+        return True
+
+
+@dataclass
+class JobInfo:
+    workflow_path: str
+    job_number: str
+    source_name: str
+    state: str
+    start_time_ns: Optional[int] = None
+    end_time_ns: Optional[int] = None
+    outputs: Set[str] = field(default_factory=set)
+    last_seen_s: float = field(default_factory=lambda: time.time())
+    heartbeat_ms: int = 1000
+
+
+class JobRegistry:
+    """
+    Keeps an always-up-to-date view of jobs seen via status/data streams.
+    Keyed by (source_name, job_number).
+    """
+
+    def __init__(self) -> None:
+        self._jobs: Dict[Tuple[str, str], JobInfo] = {}
+
+    @staticmethod
+    def _key(source_name: str, job_number: str) -> Tuple[str, str]:
+        return (source_name, job_number)
+
+    def jobinfo_from_status(
+        self,
+        wf: WorkflowId | str,
+        job_source_name: str,
+        job_number: str,
+        state: str,
+        start_time_ns: Optional[int] = None,
+        end_time_ns: Optional[int] = None,
+        heartbeat_ms: Optional[int] = None,
+    ) -> None:
+        if isinstance(wf, str):
+            wf_path = wf
+        else:
+            wf_path = str(wf)
+
+        key = self._key(job_source_name, job_number)
+        ji = self._jobs.get(key)
+        if ji is None:
+            ji = JobInfo(
+                workflow_path=wf_path,
+                job_number=job_number,
+                source_name=job_source_name,
+                state=state,
+                start_time_ns=start_time_ns,
+                end_time_ns=end_time_ns,
+            )
+            self._jobs[key] = ji
+        else:
+            ji.state = state
+            if start_time_ns is not None:
+                ji.start_time_ns = start_time_ns
+            if end_time_ns is not None:
+                ji.end_time_ns = end_time_ns
+
+        ji.last_seen_s = time.time()
+        if heartbeat_ms and heartbeat_ms > 0:
+            ji.heartbeat_ms = int(heartbeat_ms)
+
+    def note_output(
+        self, wf: WorkflowId, job: JobId, output_name: Optional[str]
+    ) -> None:
+        if not output_name:
+            return
+        key = self._key(job.source_name, job.job_number)
+        ji = self._jobs.get(key)
+        if ji is None:
+            ji = JobInfo(
+                workflow_path=str(wf),
+                job_number=job.job_number,
+                source_name=job.source_name,
+                state="active",
+            )
+            self._jobs[key] = ji
+        ji.outputs.add(output_name)
+
+    def list_jobs(self) -> List[JobInfo]:
+        return list(self._jobs.values())
+
+    def resolve_latest(self, workflow_path: str, source_name: str) -> Optional[JobInfo]:
+        """
+        Pick the most relevant job: prefer active, then scheduled, then finishing,
+        then newest start time.
+        """
+        candidates = [
+            j
+            for j in self._jobs.values()
+            if j.workflow_path == workflow_path and j.source_name == source_name
+        ]
+        if not candidates:
+            return None
+        order = {
+            "active": 0,
+            "scheduled": 1,
+            "finishing": 2,
+            "stopped": 3,
+            "warning": 4,
+            "error": 5,
+        }
+        return sorted(
+            candidates, key=lambda j: (order.get(j.state, 99), -(j.start_time_ns or 0))
+        )[0]
+
+    def mark_seen(self, job_source_name: str, job_number: str) -> None:
+        """Touch a job when we observe DA00 for it."""
+        ji = self._jobs.get(self._key(job_source_name, job_number))
+        if ji:
+            ji.last_seen_s = time.time()
+
+    def remove_job(self, job_source_name: str, job_number: str) -> None:
+        """Explicitly remove a job (e.g. when a response says 'removed')."""
+        self._jobs.pop(self._key(job_source_name, job_number), None)
+
+    def expire_stale(self, now: Optional[float] = None, grace_mult: float = 3.0) -> int:
+        """
+        Remove jobs that missed several heartbeats.
+        A job is stale if (now - last_seen) > grace_mult * heartbeat interval.
+        Returns how many jobs were removed.
+        """
+        now = now or time.time()
+        todel = []
+        for key, ji in self._jobs.items():
+            hb_s = max(ji.heartbeat_ms / 1000.0, 1.0)
+            if (now - (ji.last_seen_s or 0)) > (grace_mult * hb_s):
+                todel.append(key)
+        for key in todel:
+            del self._jobs[key]
+        return len(todel)
