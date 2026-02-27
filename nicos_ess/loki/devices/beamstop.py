@@ -119,28 +119,25 @@ class LokiBeamstopController(SequencerMixin, MappedMoveable):
 
     def _generateSequence(self, target: str) -> List[Tuple[SeqDev, ...]]:
         normalized_target = target.strip().lower()
-        devices_in_park = self._get_keys_matching_device_read_value("Parked")
+        all_device_keys = set(self._all_attached.keys())
 
-        if "park" in target.lower():
-            devices_not_parked = list(
-                set(self._all_attached.keys()) - set(devices_in_park)
-            )
-            seq = self._park_sequence(devices_not_parked)
+        device_keys_in_park = set(self._get_keys_matching_device_read_value("Parked"))
+        if "park" in normalized_target:
+            device_keys_not_parked = all_device_keys - device_keys_in_park
+            seq = self._park_sequence(list(device_keys_not_parked))
             return seq
 
-        request_in_beam = [arm for arm in normalized_target.split("+")]
-        devices_in_beam = self._get_keys_matching_device_read_value("In beam")
-        move_to_in_beam = list(set(request_in_beam) - set(devices_in_beam))
-        move_to_park = list(
-            set(self._all_attached.keys()) - set(devices_in_park) - set(request_in_beam)
-        )
+        request_in_beam = {arm.strip() for arm in normalized_target.split("+")}
+        device_keys_in_beam = set(self._get_keys_matching_device_read_value("In beam"))
+        move_to_in_beam = request_in_beam - device_keys_in_beam
+        move_to_park = all_device_keys - device_keys_in_park - request_in_beam
         x_pos = self._get_x_pos(normalized_target)
 
         seq = []
         if len(move_to_park) > 0:
-            seq.extend(self._park_sequence(move_to_park))
+            seq.extend(self._park_sequence(list(move_to_park)))
         if len(move_to_in_beam) > 0:
-            seq.extend(self._in_beam_sequence(move_to_in_beam))
+            seq.extend(self._in_beam_sequence(list(move_to_in_beam)))
         if self._all_attached["y"].read != "In beam":
             seq.append((SeqDev(self._all_attached["y"], "In beam"),))
         if self._all_attached["x"].read != x_pos:
