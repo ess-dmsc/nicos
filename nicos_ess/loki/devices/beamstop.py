@@ -118,6 +118,7 @@ class LokiBeamstopController(SequencerMixin, MappedMoveable):
         self._startSequence(sequence)
 
     def _generateSequence(self, target: str) -> List[Tuple[SeqDev, ...]]:
+        normalized_target = target.strip().lower()
         devices_in_park = self._get_keys_matching_device_read_value("Parked")
 
         if "park" in target.lower():
@@ -127,13 +128,13 @@ class LokiBeamstopController(SequencerMixin, MappedMoveable):
             seq = self._park_sequence(devices_not_parked)
             return seq
 
-        request_in_beam = [arm.strip().lower() for arm in target.split("+")]
+        request_in_beam = [arm for arm in normalized_target.split("+")]
         devices_in_beam = self._get_keys_matching_device_read_value("In beam")
         move_to_in_beam = list(set(request_in_beam) - set(devices_in_beam))
         move_to_park = list(
             set(self._all_attached.keys()) - set(devices_in_park) - set(request_in_beam)
         )
-        x_pos = self._get_x_pos(target)
+        x_pos = self._get_x_pos(normalized_target)
 
         seq = []
         if len(move_to_park) > 0:
