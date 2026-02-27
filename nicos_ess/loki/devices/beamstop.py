@@ -134,9 +134,9 @@ class LokiBeamstopController(SequencerMixin, MappedMoveable):
         x_pos = self._get_x_pos(normalized_target)
 
         seq = []
-        if len(move_to_park) > 0:
+        if move_to_park:
             seq.extend(self._park_sequence(list(move_to_park)))
-        if len(move_to_in_beam) > 0:
+        if move_to_in_beam:
             seq.extend(self._in_beam_sequence(list(move_to_in_beam)))
         if self._all_attached["y"].read != "In beam":
             seq.append((SeqDev(self._all_attached["y"], "In beam"),))
