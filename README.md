@@ -5,6 +5,8 @@
 Place the NICOS configuration file (`nicos.conf`) of your choice into the `nicos` directory in your standard user configuration path.
 This particular path differs between platforms: on GNU/Linux systems, this would be `~/.config/nicos/nicos.conf`.
 
+Alternatively, you can also placed the configuration file in the site-wide directory, i.e. `/etc/xdg/nicos/nicos.conf`, or set the `XDG_CONFIG_HOME` environment variable to point to a different location altogether.
+
 ## Installation
 
 Prerequisites: Install `uv` ([see the uv installation instructions](https://docs.astral.sh/uv/getting-started/installation/)
