@@ -23,7 +23,7 @@ class ColimationPanel(Panel):
         self.opmode = ""
         self.on_calcMode_currentTextChanged()  # refresh to update view
 
-    def resolution_to_slit(l2, l12, ia, res, footprint):
+    def resolution_to_slit(self, l2, l12, ia, res, footprint):
         res_percent = res / 100
         footprint_m = footprint / 1000
 
@@ -39,7 +39,7 @@ class ColimationPanel(Panel):
 
         return [slit1_mm, slit2_mm]
 
-    def slit_to_resoultion(l2, l12, ia, slit1_mm, slit2_mm):
+    def slit_to_resoultion(self, l2, l12, ia, slit1_mm, slit2_mm):
         slit1_m = slit1_mm / 1000
         slit2_m = slit2_mm / 1000
         dist_ratio = l2 / l12
