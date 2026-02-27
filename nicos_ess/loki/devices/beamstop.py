@@ -204,7 +204,6 @@ class LokiBeamstopController(SequencerMixin, MappedMoveable):
         monitor = self._get_device_matching_substring(devices, "monitor")
 
         if monitor and beamstop:
-            print("in if block")
             # beamstop needs to lower slightly first for twincat to update limits
             seq.extend(
                 [
