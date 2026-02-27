@@ -117,7 +117,7 @@ class LokiBeamstopController(SequencerMixin, MappedMoveable):
         sequence = self._generateSequence(target)
         self._startSequence(sequence)
 
-    def _generateSequence(self, target):
+    def _generateSequence(self, target: str) -> List[Tuple[SeqDev, ...]]:
         devices_in_park = self._get_keys_matching_device_read_value("Parked")
 
         if "park" in target.lower():
@@ -141,9 +141,9 @@ class LokiBeamstopController(SequencerMixin, MappedMoveable):
         if len(move_to_in_beam) > 0:
             seq.extend(self._in_beam_sequence(move_to_in_beam))
         if self._all_attached["y"].read != "In beam":
-            seq.append(SeqDev(self._all_attached["y"], "In beam"))
+            seq.append((SeqDev(self._all_attached["y"], "In beam"),))
         if self._all_attached["x"].read != x_pos:
-            seq.append(SeqDev(self._all_attached["x"], x_pos))
+            seq.append((SeqDev(self._all_attached["x"], x_pos),))
         return seq
 
     def _get_x_pos(self, target):
@@ -169,7 +169,7 @@ class LokiBeamstopController(SequencerMixin, MappedMoveable):
         """
         seq = []
         if "x" in devices:
-            seq.append(SeqDev(self._all_attached["x"], "Parked"))
+            seq.append((SeqDev(self._all_attached["x"], "Parked"),))
         arms_devices = [key for key in devices if "beamstop" in key or "monitor" in key]
         if arms_devices:
             seq.append(
@@ -207,8 +207,8 @@ class LokiBeamstopController(SequencerMixin, MappedMoveable):
             # beamstop needs to lower slightly first for twincat to update limits
             seq.extend(
                 [
-                    SeqDev(beamstop, "Intermediate"),
-                    SeqSleep(10),
+                    (SeqDev(beamstop, "Intermediate"),),
+                    (SeqSleep(10),),
                 ]
             )
 
