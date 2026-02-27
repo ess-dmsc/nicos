@@ -104,9 +104,6 @@ class LokiBeamstopController(SequencerMixin, MappedMoveable):
         return self._get_mapped_positions()
 
     def doStart(self, target):
-        """
-        Generate and start a sequence if non is running.
-        """
         if self._seq_is_running():
             if self._mode == SIMULATION:
                 self._seq_thread.join()
@@ -196,16 +193,11 @@ class LokiBeamstopController(SequencerMixin, MappedMoveable):
                 - A multi-element tuple → parallel step
         """
         seq = []
-        move_beamstop = [key for key in devices if "beamstop" in key]
-        move_monitor = [key for key in devices if "monitor" in key]
+        beamstop = self._get_device_matching_substring("beamstop")
+        monitor = self._get_device_matching_substring("monitor")
 
-        if move_beamstop:
-            beamstop = self._all_attached[move_beamstop[0]]
-
-        if move_monitor:
-            monitor = self._all_attached[move_monitor[0]]
-
-        if move_monitor and move_beamstop:
+        if monitor and beamstop:
+            # beamstop needs to lower slightly first for twincat to update limits
             seq.extend(
                 [
                     SeqDev(beamstop, "Intermediate"),
@@ -213,20 +205,22 @@ class LokiBeamstopController(SequencerMixin, MappedMoveable):
                 ]
             )
 
-        parallel_seq = list()
-        if move_beamstop:
-            parallel_seq.append(SeqDev(beamstop, "In beam"))
-        if move_monitor:
-            parallel_seq.append(SeqDev(monitor, "In beam"))
-        parallel_seq = tuple(parallel_seq)
-        seq.append(parallel_seq)
+        seq.append(
+            tuple(SeqDev(device, "In beam") for device in (beamstop, monitor) if device)
+        )
 
-        seq_obj = SeqDev(self._all_attached["y"], "In beam")
-        seq.append(seq_obj)
+        seq.append(SeqDev(self._all_attached["y"], "In beam"))
+
         return seq
 
+    def _get_device_matching_substring(self, search_key):
+        for key, device in self._all_attached.items():
+            if search_key in key:
+                return device
+        return None
+
     def _get_mapped_positions(self):
-        full_mapping = {
+        return {
             "Park all beamstops": (
                 "Parked",
                 "In beam",
@@ -318,4 +312,3 @@ class LokiBeamstopController(SequencerMixin, MappedMoveable):
                 "In beam",
             ),
         }
-        return full_mapping
