@@ -146,7 +146,7 @@ class LokiBeamstopController(SequencerMixin, MappedMoveable):
 
     def _get_x_pos(self, target):
         mapping = self._get_mapped_positions()
-        return mapping[target][0]
+        return mapping[target.capitalize()][0]
 
     def _park_sequence(self, devices: List[str]) -> List[Tuple[SeqDev, ...]]:
         """
