@@ -9,6 +9,9 @@ from nicos.guisupport.qt import pyqtSlot
 from nicos.protocols.cache import cache_load
 from nicos.utils import findResource
 
+# https://www.sciencedirect.com/science/article/pii/S0921452604011792?pes=vor&utm_source=scopus&getft_integrator=scopus
+# Distribution Full-Width Half-Maximum Delta with rectangular distribution at Full-Width
+# Simplified from (2*np.sqrt(2*np.log(2))) * (1/(2*np.sqrt(3)))
 DISTRIBUTION = np.sqrt((2 * np.log(2)) / 3)
 
 
@@ -49,7 +52,7 @@ class ColimationPanel(Panel):
         penumbra = float((beam_height / sinIa) * 1000)
         umbra = float((slit2_mm / sinIa))
 
-        # needs to be reformatted for clarity
+        # return percentage for slitDeltaTheta and resolution
         slitDeltaTheta = float(
             (np.rad2deg(np.arctan((slit1_m + slit2_m) / (2 * l12))) / ia) * 100
         )
