@@ -38,9 +38,9 @@ class LokiBeamstopArmPositioner(MappedController):
         mapped_value = inverse_mapping.get(value, None)
         if mapped_value:
             return mapped_value
-        if value > self.mapping["Parked"]:
+        if "Parked" in self.mapping.keys() and value > self.mapping["Parked"]:
             return "Above park position"
-        if value < self.mapping["In beam"]:
+        if "in beam" in self.mapping.keys() and value < self.mapping["In beam"]:
             return "Below in-beam position"
         return "In between"
 
@@ -118,31 +118,37 @@ class LokiBeamstopController(SequencerMixin, MappedMoveable):
         self._startSequence(sequence)
 
     def _generateSequence(self, target):
-        devices_in_park = [
-            key
-            for key, device in self._all_attached.items()
-            if device.read() == "Parked"
-        ]
-        devices_in_beam = [
-            key
-            for key, device in self._all_attached.items()
-            if device.read() == "In beam"
-        ]
+        devices_in_park = self._get_keys_matching_device_read_value("Parked")
+
         if "park" in target.lower():
             devices_not_parked = list(
                 set(self._all_attached.keys()) - set(devices_in_park)
             )
             seq = self._park_sequence(devices_not_parked)
             return seq
+
         request_in_beam = [arm.strip().lower() for arm in target.split("+")]
+        devices_in_beam = self._get_keys_matching_device_read_value("In beam")
         move_to_in_beam = list(set(request_in_beam) - set(devices_in_beam))
         move_to_park = list(
             set(self._all_attached.keys()) - set(devices_in_park) - set(request_in_beam)
         )
+        x_pos = self._get_x_pos(target)
+
         seq = []
-        seq.extend(self._park_sequence(move_to_park))
-        seq.extend(self._in_beam_sequence(move_to_in_beam))
+        if len(move_to_park) > 0:
+            seq.extend(self._park_sequence(move_to_park))
+        if len(move_to_in_beam) > 0:
+            seq.extend(self._in_beam_sequence(move_to_in_beam))
+        if self._all_attached["y"].read != "In beam":
+            seq.append(SeqDev(self._all_attached["y"], "In beam"))
+        if self._all_attached["x"].read != x_pos:
+            seq.append(SeqDev(self._all_attached["x"], x_pos))
         return seq
+
+    def _get_x_pos(self, target):
+        mapping = self._get_mapped_positions()
+        return mapping[target][0]
 
     def _park_sequence(self, devices: List[str]) -> List[Tuple[SeqDev, ...]]:
         """
@@ -163,16 +169,16 @@ class LokiBeamstopController(SequencerMixin, MappedMoveable):
         """
         seq = []
         if "x" in devices:
-            seq_obj = SeqDev(self._all_attached["x"], "Parked")
-            seq.append(seq_obj)
+            seq.append(SeqDev(self._all_attached["x"], "Parked"))
         arms_devices = [key for key in devices if "beamstop" in key or "monitor" in key]
         if arms_devices:
-            seq_obj = tuple(
-                SeqDev(device, "Parked")
-                for key, device in self._all_attached.items()
-                if key in arms_devices
+            seq.append(
+                tuple(
+                    SeqDev(device, "Parked")
+                    for key, device in self._all_attached.items()
+                    if key in arms_devices
+                )
             )
-            seq.append(seq_obj)
         return seq
 
     def _in_beam_sequence(self, devices: List[str]) -> List[Tuple[SeqDev, ...]]:
@@ -194,10 +200,11 @@ class LokiBeamstopController(SequencerMixin, MappedMoveable):
                 - A multi-element tuple → parallel step
         """
         seq = []
-        beamstop = self._get_device_matching_substring("beamstop")
-        monitor = self._get_device_matching_substring("monitor")
+        beamstop = self._get_device_matching_substring(devices, "beamstop")
+        monitor = self._get_device_matching_substring(devices, "monitor")
 
         if monitor and beamstop:
+            print("in if block")
             # beamstop needs to lower slightly first for twincat to update limits
             seq.extend(
                 [
@@ -209,16 +216,19 @@ class LokiBeamstopController(SequencerMixin, MappedMoveable):
         seq.append(
             tuple(SeqDev(device, "In beam") for device in (beamstop, monitor) if device)
         )
-
-        seq.append(SeqDev(self._all_attached["y"], "In beam"))
-
         return seq
 
-    def _get_device_matching_substring(self, search_key):
-        for key, device in self._all_attached.items():
+    def _get_device_matching_substring(self, devices, search_key):
+        for key in devices:
             if search_key in key:
-                return device
+                return self._all_attached[key]
         return None
+
+    def _get_keys_matching_device_read_value(self, value):
+        keys = [
+            key for key, device in self._all_attached.items() if device.read() == value
+        ]
+        return keys
 
     def _get_mapped_positions(self):
         return {
