@@ -1,6 +1,8 @@
 from nicos.guisupport.qt import (
     QCheckBox,
+    QDialog,
     QFrame,
+    QGridLayout,
     QHBoxLayout,
     QIcon,
     QLabel,
@@ -8,15 +10,12 @@ from nicos.guisupport.qt import (
     QPushButton,
     QSize,
     Qt,
+    QTimer,
     QToolButton,
     QVBoxLayout,
     QWidget,
-    QGridLayout,
-    QDialog,
-    QTimer,
 )
 from nicos_ess.gui.widgets.pyqtgraph.pixel_display_dialog import PixelDialog
-
 
 CONTROLLER_REFRESH_INTERVAL = 1000
 
@@ -465,8 +464,6 @@ class ImageViewController(QWidget):
 
     def toggle_log_mode(self, state):
         log_mode = state == Qt.Checked
-        self.plotwidget.left_plot.setLogMode(x=log_mode)
-        self.plotwidget.bottom_plot.setLogMode(y=log_mode)
         self.plotwidget.toggle_log_mode(log_mode)
         if self.disp_image is not None:
             self.plotwidget.update_image(force_image=self.disp_image)
@@ -537,12 +534,18 @@ class ImageViewController(QWidget):
         self.update_roi_view()
 
     def update_roi_view(self):
-        if (
+        any_active = (
             self.plotwidget.image_view_controller.roi_cb.isChecked()
             or self.plotwidget.image_view_controller.roi_crosshair_cb.isChecked()
             or self.plotwidget.image_view_controller.line_roi_cb.isChecked()
             or self.plotwidget.image_view_controller.profile_cb.isChecked()
-        ):
+        )
+
+        if any_active:
             self.plotwidget.show_roi_plotwidgets()
+            # hide image axes so the linked side plots line up cleanly
+            self.plotwidget.set_image_axes_visible(False)
         else:
             self.plotwidget.hide_roi_plotwidgets()
+            # show image axes again when side plots are hidden
+            self.plotwidget.set_image_axes_visible(True)

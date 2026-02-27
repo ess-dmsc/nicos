@@ -26,6 +26,10 @@ main_window = docked(
                             panel("nicos_ess.gui.panels.live_pyqt.MultiLiveDataPanel"),
                         ),
                         (
+                            "Live Data Panel",
+                            panel("nicos_ess.gui.panels.livedata.LiveDataPanel"),
+                        ),
+                        (
                             "Choppers",
                             panel(
                                 "nicos_ess.gui.panels.chopper.ChopperPanel",
