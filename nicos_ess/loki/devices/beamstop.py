@@ -180,7 +180,8 @@ class LokiBeamstopController(SequencerMixin, MappedMoveable):
         Build the sequence for adding a beamstop to the beam.
 
         The sequence first moves the beamstops down into the beam,
-        then moves the beamstops towards the detector.
+        then moves the beamstop into the center of the beam and
+        finally moves the beamstops towards the detector.
 
         Args:
             devices
