@@ -17,7 +17,9 @@ from nicos.clients.gui.utils import DebugHandler
 try:
     from nicos.guisupport.qt import QApplication
 except ImportError:
-    print(f"Please install 'nicos_ess[gui]' to use this command.")
+    print(
+        f"Please install the optional 'gui' dependencies of NICOS to use this command. Refer to the README for details."
+    )
     sys.exit(0)
 import nicos_ess
 from nicos.protocols.daemon.classic import DEFAULT_PORT
