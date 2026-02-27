@@ -11,22 +11,15 @@ devices = dict(
         pollinterval=0.5,
         maxage=None,
     ),
-    heavy_shutter_status=device(
-        "nicos_ess.devices.epics.pva.EpicsStringReadable",
-        description="Status of the heavy shutter",
-        readpv="YMIR-HvSht:MC-Pne-01:ShtMsgTxt",
-    ),
     filter_1=device(
         "nicos_ess.devices.epics.pva.shutter.EpicsShutter",
         description="Filter 1",
         readpv="YMIR-Fil:MC-Pne-01:ShtAuxBits07",
         writepv="YMIR-Fil:MC-Pne-01:ShtOpen",
         resetpv="YMIR-Fil:MC-Pne-01:ShtErrRst",
-    ),
-    filter_1_status=device(
-        "nicos_ess.devices.epics.pva.EpicsStringReadable",
-        description="Status of the filter 1",
-        readpv="YMIR-Fil:MC-Pne-01:ShtMsgTxt",
+        msgtxt="YMIR-Fil:MC-Pne-01:ShtMsgTxt",
+        monitor=True,
+        pva=True,
     ),
     filter_2=device(
         "nicos_ess.devices.epics.pva.shutter.EpicsShutter",
@@ -34,11 +27,9 @@ devices = dict(
         readpv="YMIR-Fil:MC-Pne-02:ShtAuxBits07",
         writepv="YMIR-Fil:MC-Pne-02:ShtOpen",
         resetpv="YMIR-Fil:MC-Pne-02:ShtErrRst",
-    ),
-    filter_2_status=device(
-        "nicos_ess.devices.epics.pva.EpicsStringReadable",
-        description="Status of the filter 2",
-        readpv="YMIR-Fil:MC-Pne-02:ShtMsgTxt",
+        msgtxt="YMIR-Fil:MC-Pne-02:ShtMsgTxt",
+        monitor=True,
+        pva=True,
     ),
     cabinet_1_status=device(
         "nicos_ess.devices.epics.mbbi_direct.MBBIDirectStatus",

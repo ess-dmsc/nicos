@@ -1,5 +1,6 @@
-import queue
+import threading
 import time
+from collections import deque
 from threading import Lock
 
 from streaming_data_types.alarm_al00 import Severity, serialise_al00
@@ -9,7 +10,6 @@ from nicos.core import Device, Override, Param, host, listof, status
 from nicos.protocols.cache import OP_TELL, cache_load
 from nicos.services.collector import ForwarderBase
 from nicos.utils import createThread
-
 from nicos_ess.devices.kafka.producer import KafkaProducer
 
 nicos_status_to_al00 = {
@@ -60,7 +60,7 @@ class CacheKafkaForwarder(ForwarderBase, Device):
             mandatory=True,
         ),
         "dev_ignore": Param(
-            "Devices to ignore; if empty, all devices are " "accepted",
+            "Devices to ignore; if empty, all devices are accepted",
             default=[],
             type=listof(str),
         ),
@@ -82,8 +82,20 @@ class CacheKafkaForwarder(ForwarderBase, Device):
         self._producer = None
         self._lock = Lock()
 
+        self._per_dev_max = 100  #  per-device backlog cap
+
+        self._buffers = {}  # (name, is_value) -> deque[(value, timestamp)]
+        self._active = deque()  # round-robin of keys that currently have buffered items
+        self._active_set = (
+            set()
+        )  # membership guard so we don't enqueue same key many times
+        self._buf_lock = Lock()
+        self._has_data = threading.Event()
+
+        self._dropped_total = 0
+        self._last_drop_log = 0.0
+
         self._initFilters()
-        self._queue = queue.Queue(1000)
         self._worker = createThread("cache_to_kafka", self._processQueue, start=False)
         self._regular_update_worker = createThread(
             "send_regular_updates", self._poll_updates, start=False
@@ -145,34 +157,153 @@ class CacheKafkaForwarder(ForwarderBase, Device):
                 )
 
     def _push_to_queue(self, dev_name, value, timestamp, is_value):
-        try:
-            self._queue.put_nowait((dev_name, value, timestamp, is_value))
-        except queue.Full:
-            self.log.error("Queue full, so discarding older value(s)")
-            self._queue.get()
-            self._queue.put((dev_name, value, timestamp, is_value))
-            self._queue.task_done()
+        key = (dev_name, is_value)
+
+        with self._buf_lock:
+            dq = self._buffers.get(key)
+            if dq is None:
+                dq = deque(maxlen=self._per_dev_max)
+                self._buffers[key] = dq
+
+            # detect per-device drop (deque(maxlen) auto-drops from the left)
+            if len(dq) == dq.maxlen:
+                self._dropped_total += 1
+                now = time.monotonic()
+                if now - self._last_drop_log > 1.0:
+                    # rate-limit log spam
+                    self.log.error(
+                        "Per-device backlog full; dropping oldest updates (total dropped so far=%d)",
+                        self._dropped_total,
+                    )
+                    self._last_drop_log = now
+
+            dq.append((value, timestamp))
+
+            # schedule this device/type for draining (only once)
+            if key not in self._active_set:
+                self._active.append(key)
+                self._active_set.add(key)
+
+        self._has_data.set()
 
     def _processQueue(self):
+        last_flush = time.monotonic()
+
         while True:
-            name, value, timestamp, is_value = self._queue.get()
-            try:
-                if is_value:
-                    # Convert value from string representation to correct type
-                    value = cache_load(value)
-                    if isinstance(value, bool):
-                        # Convert to 1 or 0
-                        value = int(value)
-                    if not isinstance(value, str):
-                        # Policy decision: don't send strings via f144
-                        buffer = to_f144(name, value, timestamp)
-                        self._send_to_kafka(buffer, name)
-                else:
-                    buffer = serialise_al00(name, timestamp, value[0], value[1])
-                    self._send_to_kafka(buffer, name)
-            except Exception as error:
-                self.log.error("Could not forward data: %s", error)
-            self._queue.task_done()
+            self._wait_for_work(timeout=0.1)
+
+            item = self._pop_next_item()
+            if item is None:
+                last_flush = self._maybe_flush(last_flush)
+                continue
+
+            self._handle_item(item)
+            last_flush = self._maybe_flush(last_flush)
+
+    def _wait_for_work(self, timeout: float) -> None:
+        """Block briefly until there is likely work to do."""
+        self._has_data.wait(timeout=timeout)
+
+    def _pop_next_item(self):
+        """
+        Pop exactly one pending update in a fair round-robin fashion across
+        (device, is_value) keys.
+
+        Returns:
+            (name, value, timestamp, is_value) or None if no work.
+        """
+        with self._buf_lock:
+            if not self._active:
+                self._has_data.clear()
+                return None
+
+            key = self._active.popleft()
+            dq = self._buffers.get(key)
+
+            if not dq:
+                # Key got scheduled but no buffer exists (rare race/cleanup).
+                self._active_set.discard(key)
+                if not self._active:
+                    self._has_data.clear()
+                return None
+
+            value, timestamp = dq.popleft()
+            name, is_value = key
+
+            # If more pending for this key, re-append for fairness, otherwise clean up.
+            if dq:
+                self._active.append(key)
+            else:
+                self._active_set.discard(key)
+                del self._buffers[key]
+
+            if not self._active:
+                # We just consumed the last currently scheduled key.
+                self._has_data.clear()
+
+            return (name, value, timestamp, is_value)
+
+    def _handle_item(self, item) -> None:
+        """Serialize and send one update."""
+        name, value, timestamp, is_value = item
+
+        try:
+            if is_value:
+                self._handle_value_update(name, value, timestamp)
+            else:
+                self._handle_status_update(name, value, timestamp)
+        except Exception as error:
+            self.log.error("Could not forward data: %s", error)
+
+    def _handle_value_update(self, name: str, value, timestamp: int) -> None:
+        """
+        Handle a /value update:
+          - skip empty strings (corrupted)
+          - cache_load and normalize bools
+          - send only non-string values via f144
+        """
+        if value == "":
+            return  # corrupted data, skip
+
+        value = cache_load(value)
+
+        if isinstance(value, bool):
+            value = int(value)
+
+        if isinstance(value, str):
+            return  # policy: don't send strings via f144
+
+        buffer = to_f144(name, value, timestamp)
+        self._send_to_kafka(buffer, name)
+
+    def _handle_status_update(self, name: str, value, timestamp: int) -> None:
+        """
+        Handle a /status update. `value` is expected to be (severity, message).
+        """
+        buffer = serialise_al00(name, timestamp, value[0], value[1])
+        self._send_to_kafka(buffer, name)
+
+    def _maybe_flush(self, last_flush: float) -> float:
+        """Flush Kafka periodically, but never block too long."""
+        now = time.monotonic()
+        if now - last_flush < 1.0:
+            return last_flush
+
+        remaining = self._producer.flush(0.2)
+        if remaining:
+            self.log.warning("Kafka flush timeout; %d msgs still pending", remaining)
+
+        return now
 
     def _send_to_kafka(self, buffer, name):
-        self._producer.produce(self.output_topic, buffer, key=name.encode("utf-8"))
+        try:
+            self._producer.produce(
+                self.output_topic,
+                buffer,
+                key=name.encode("utf-8"),
+                auto_flush=False,
+            )
+        except BufferError:
+            # Internal librdkafka queue is full: we are overloaded or Kafka is slow/unavailable.
+            # Since the policy is "latest wins", dropping here is acceptable and avoids wedging.
+            self.log.warning("Kafka internal queue full; dropping message for %s", name)

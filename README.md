@@ -63,6 +63,8 @@ To set up the NICOS server on your local machine, follow these steps.
 
 Follow one of the described methods above to install NICOS locally.
 
+Note that `confluent-kafka` requires `librdkafka`, which may result in this step failing if the wheel needs to be built in your environment
+
 ### Step 2: Create a Data Directory
 
 Create a directory for storing NICOS data:

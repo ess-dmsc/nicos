@@ -4,37 +4,54 @@ from nicos.core import (
     Attach,
     Moveable,
     Override,
+    Param,
     Readable,
     Value,
+    dictof,
     multiStatus,
+    oneof,
     status,
     tupleof,
 )
 
 
 class VSCalculator(Readable):
-    """Readout device for the size of the Virtual Source Slit system
+    """Readout Calculator for the Virtual Source Slit System
 
     The slit consists of two L-shaped blades controlled by 5 motors:
-    - 2 horizontal motions
-    - 2 vertical motions
-    - 1 rotational motion along a shared axis at zero
+    - 2 motions along the x-axis
+    - 2 motions along the y-axis
+    - 1 shared rotational motion along the z-axis
+
+    Axis stated are defined via the right-hand rule with +x heading down the beamline towards the sample
 
     The vertical height of the slit is determined by standard slit motions, however
-    the width is determined by the gap distance between the blades along the beam direction
-    and then a rotation around the shared axis.
-
-    The gap made by the distance between the blades and the angle of rotation can be found
-    with ''2*(blade gap)*sin(angle of rotation)'' since the blades will always be an equal distance
-    from the center point. [The attached slit device should always run in 'centered' mode]
-
-    This device simply reads out the motion of the defined slit and rotation angle to output what
-    the calculated dimensions of the gap will be.
+    the width is determined by the gap distance between the blades along the x-axis
+    and a shared rotation around the z-axis.
     """
 
+    parameters = {
+        "fmtstr_map": Param(
+            "A dictionary mapping operation modes to format strings (used for internal management).",
+            type=dictof(str, str),
+            settable=False,
+            mandatory=False,
+            userparam=False,
+            default={
+                "4blades": "(%.3f mm x %.3f mm) %.3f deg",
+                "centered": "(%.3f mm x %.3f mm) %.3f deg",
+            },
+        ),
+        "opmode": Param(
+            "Mode of operation",
+            type=oneof("4blades", "centered"),
+            settable=True,
+            default="4blades",
+        ),
+    }
+
     parameter_overrides = {
-        "fmtstr": Override(default="%.3f x %.3f"),
-        "unit": Override(default="mm", mandatory=False, settable=True),
+        "unit": Override(default="", mandatory=False, settable=True),
     }
     valuetype = tupleof(float, float)
 
@@ -43,55 +60,95 @@ class VSCalculator(Readable):
         "rot": Attach("the rotation stage", Moveable),
     }
 
-    def _findWidth(self, angle, gap):
+    def _findGap(self, pos, angle):
+        # [-left, +right, -bottom, +top]
+        l, r, b, t = pos
+        height = t - b
+
         rad = np.deg2rad(angle)
-        return 2 * gap * np.sin(rad)
+
+        left_gap = float(-(l * np.sin(rad)))
+        right_gap = float(r * np.sin(rad))
+        width = left_gap + right_gap
+
+        return [width, height]
 
     def _doReadPositions(self, maxage):
-        gap, height = self._adevs["slit"].read(maxage)
+        positions = self._adevs["slit"]._doReadPositions(maxage)
         angle = self._adevs["rot"].read(maxage)
-        width = self._findWidth(angle, gap)
-        return width, height
+
+        width, height = self._findGap(positions, angle)
+        return [width, height, angle]
 
     def doRead(self, maxage=0):
+        # reader opmode should take prioriy over slit opmode
+        self._syncOpmode(self._adevs["slit"].opmode, self.opmode)
         return self._doReadPositions(maxage)
 
     def doStatus(self, maxage=0):
-        return status.OK, ""
+        return status.OK, f"{self.opmode} mode"
 
     def doSetPosition(self, pos):
         pass
 
+    def doWriteFmtstr(self, value):
+        # since self.fmtstr_map is a readonly dict a temp. copy is created
+        # to update the dict and then put to cache back
+        tmp = dict(self.fmtstr_map)
+        tmp[self.opmode] = value
+        self._setROParam("fmtstr_map", tmp)
+
+    def doReadFmtstr(self):
+        return self.fmtstr_map[self.opmode]
+
+    def doWriteOpmode(self, value):
+        if self._cache:
+            self._cache.invalidate(self, "value")
+            self._cache.put(self, "fmtstr", self.fmtstr_map[value])
+
+    def _syncOpmode(self, slit_mode, vs_mode):
+        if slit_mode == vs_mode:
+            return
+        self._adevs["slit"]._setROParam("opmode", vs_mode)
+
 
 class VirtualSlit(Moveable):
-    """Controller for the ESTIA Virtual Source Slit system.
+    """Controller for the Virtual Source Slit System
 
     The slit consists of two L-shaped blades controlled by 5 motors:
-    - 2 horizontal motions
-    - 2 vertical motions
-    - 1 rotational motion along a shared axis at zero
+    - 2 motions along the x-axis
+    - 2 motions along the y-axis
+    - 1 shared rotational motion along the z-axis
+
+    Axis stated are defined via the right-hand rule with +x heading down the beamline towards the sample
 
     The vertical height of the slit is determined by standard slit motions, however
-    the width is determined by the gap distance between the blades along the beam direction
-    and then a rotation around the shared axis.
-
-    The gap made by the distance between the blades and the angle of rotation can be found
-    with ''2*(blade gap)*sin(angle of rotation)'' since the blades will always be an equal distance
-    from the center point. [The attached slit device should always run in 'centered' mode]
-
-    The user must define the width of the opening they would like along with how far apart
-    the blades will be. The information will be used to determing the appropriate rotation
-    the system will take to match the desired width.
+    the width is determined by the gap distance between the blades along the x-axis
+    and a shared rotation around the z-axis.
     """
 
-    parameter_overrides = {
-        "fmtstr": Override(
-            default="slit: [%.3f x %.3f]mm | angle: %.3fdeg | gap: %.3fmm"
+    parameters = {
+        "opmode": Param(
+            "Mode of operation",
+            type=oneof("4blades", "centered"),
+            settable=True,
         ),
-        "unit": Override(default="", mandatory=False, settable=False),
+        "fmtstr_map": Param(
+            "A dictionary mapping operation modes to format strings (used for "
+            "internal management).",
+            type=dictof(str, str),
+            settable=False,
+            mandatory=False,
+            userparam=False,
+            default={
+                "4blades": "(%.3f mm x %.3f mm) %.3f deg",
+                "centered": "(%.3f mm x %.3f mm) %.3f deg",
+            },
+        ),
     }
-    valuetype = tupleof(float, float, float)
-
+    parameter_overrides = {
+        "unit": Override(default="", mandatory=False, settable=True),
+    }
     devices = ["slit", "rot"]
 
     attached_devices = {
@@ -99,25 +156,38 @@ class VirtualSlit(Moveable):
         "rot": Attach("the rotation stage", Moveable),
     }
 
-    def _findWidth(self, angle, gap):
-        rad = np.deg2rad(angle)
-        return 2 * gap * np.sin(rad)
-
     def _findAngle(self, width, gap):
         angle = np.arcsin(width / (2 * gap))
         return np.rad2deg(angle)
 
+    def _findGap(self, pos, angle):
+        # [-left, +right, -bottom, +top]
+        l, r, b, t = pos
+        height = t - b
+
+        rad = np.deg2rad(angle)
+
+        left_gap = float(-(l * np.sin(rad)))
+        right_gap = float(r * np.sin(rad))
+        width = left_gap + right_gap
+
+        return [width, height]
+
     def _parseTargets(self, target):
         # target = [slit width, blade gap, slit height]
-        slit_target = target[1:]
-        angle = self._findAngle(target[0], target[1])
-        return [slit_target, angle]
+        if self.opmode == "centered":
+            slit_target = target[1:]
+            angle = self._findAngle(target[0], target[1])
+            return [slit_target, angle]
+        else:
+            return [target[:-1], target[4]]
 
     def _doReadPositions(self, maxage):
-        gap, height = self._adevs["slit"].read(maxage)
+        positions = self._adevs["slit"]._doReadPositions(maxage)
         angle = self._adevs["rot"].read(maxage)
-        width = self._findWidth(angle, gap)
-        return [width, height, angle, gap]
+
+        width, height = self._findGap(positions, angle)
+        return [width, height, angle]
 
     def doStart(self, target):
         for name, pos in zip(self.devices, self._parseTargets(target)):
@@ -127,18 +197,54 @@ class VirtualSlit(Moveable):
         for name, pos in zip(self.devices, self._parseTargets(target)):
             ok, why = self._adevs[name].isAllowed(pos)
             if not ok:
-                return ok, f"{name} {why}"
+                return ok, f"{name} {why}. Commanded to {pos}"
         return ok, why
 
     def doRead(self, maxage=0):
+        self._syncOpmode(self._adevs["slit"].opmode, self.opmode)
         return self._doReadPositions(maxage)
 
     def doStatus(self, maxage=0):
         return multiStatus(self._adevs, maxage=maxage)
 
     def valueInfo(self):
-        return (
-            Value("Slit Width", unit="mm", fmtstr="%.3f"),
-            Value("Blade Gap", unit="mm", fmtstr="%.3f"),
-            Value("Slit Height", unit="mm", fmtstr="%.3f"),
-        )
+        if self.opmode == "centered":
+            return (
+                Value("Slit Width", unit="mm", fmtstr="%.3f"),
+                Value("Blade Gap", unit="mm", fmtstr="%.3f"),
+                Value("Slit Height", unit="mm", fmtstr="%.3f"),
+            )
+        else:
+            return (
+                Value("Left", unit="mm", fmtstr="%.3f"),
+                Value("Right", unit="mm", fmtstr="%.3f"),
+                Value("Bottom", unit="mm", fmtstr="%.3f"),
+                Value("Top", unit="mm", fmtstr="%.3f"),
+                Value("Angle", unit="deg", fmtstr="%.3f"),
+            )
+
+    def doUpdateOpmode(self, value):
+        if value == "centered":
+            self.valuetype = tupleof(float, float, float)
+        else:
+            self.valuetype = tupleof(float, float, float, float, float)
+
+    def doWriteFmtstr(self, value):
+        # since self.fmtstr_map is a readonly dict a temp. copy is created
+        # to update the dict and then put to cache back
+        tmp = dict(self.fmtstr_map)
+        tmp[self.opmode] = value
+        self._setROParam("fmtstr_map", tmp)
+
+    def doReadFmtstr(self):
+        return self.fmtstr_map[self.opmode]
+
+    def doWriteOpmode(self, value):
+        if self._cache:
+            self._cache.invalidate(self, "value")
+            self._cache.put(self, "fmtstr", self.fmtstr_map[value])
+
+    def _syncOpmode(self, slit_mode, vs_mode):
+        if slit_mode == vs_mode:
+            return
+        self._adevs["slit"]._setROParam("opmode", vs_mode)
