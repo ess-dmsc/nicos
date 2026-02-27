@@ -1,15 +1,67 @@
 # NICOS
 
+## Configure NICOS
+
+Place the NICOS configuration file (`nicos.conf`) of your choice into the `nicos` directory in your standard user configuration path.
+This particular path differs between platforms: on GNU/Linux systems, this would be `~/.config/nicos/nicos.conf`.
+
+## Installation
+
+Prerequisites: Install `uv` ([see the uv installation instructions](https://docs.astral.sh/uv/getting-started/installation/)
+)
+
+Some useful uv commands:
+
+    uv python list: show available Python versions (both system-wide and those managed by uv).
+    uv tree: print a dependency tree of the current project.
+    uv run: execute a command from the current project.
+    uv venv: create a virtual environment.
+
+
+### Local development environment
+
+Inside the repository, first use `uv sync` to create a local virtual environment with the specific packages and extras you want:
+
+    uv sync --all-packages --extra gui
+
+This will build all packages (use --package <name> for specific packages or leave out for only the core) and install all dependencies including the `gui` optional ones.
+
+After this, run:
+
+    % uv run | grep nicos
+    - designer-nicos
+    - nicos-aio
+    - nicos-cache
+    - nicos-client
+    - nicos-collector
+    - nicos-daemon
+    - nicos-demo
+    ...
+    
+    % uv run nicos-gui
+    
+to start any of the scripts directly. Note that you will have to prefix these commands when mentioned in the sections below with `uv run`. 
+
+You can also install NICOS into the uv managed tools to have its commands available inside your `PATH`:
+
+    uv tool install nicos
+
+### Building the NICOS core and plug-in packages
+
+- run `uv build` from the package root directory to build (only) the core package.
+- run `uv build --package <name>` to build a specific package, e.g. `nicos_demo`.
+- run `uv build --all-packages` to build all available packages.
+
+The resulting source tarball and wheel files will be located in the `dist` directory.
+
+
 ## Installing the Server Locally
 
 To set up the NICOS server on your local machine, follow these steps.
 
-### Step 1: Install the Required Python Packages
+### Step 1: Install NICOS
 
-Install the necessary Python packages (it's recommended to use a virtual environment):
-```bash
-pip install -r requirements.txt
-```
+Follow one of the described methods above to install NICOS locally.
 
 Note that `confluent-kafka` requires `librdkafka`, which may result in this step failing if the wheel needs to be built in your environment
 
@@ -34,7 +86,7 @@ A good starting instrument is `ymir`, which is a test instrument.
 
 Start the NICOS cache server:
 ```bash
-./bin/nicos-cache
+nicos-cache
 ```
 
 To configure what cache database to use, see section [Configure Cache Database](#configure-cache-database).
@@ -43,37 +95,34 @@ To configure what cache database to use, see section [Configure Cache Database](
 
 In a separate terminal, start the NICOS poller:
 ```bash
-./bin/nicos-poller
+nicos-poller
 ```
 
 ### Step 6: Start the Collector (Optional)
 
 If required, start the NICOS collector in another terminal:
 ```bash
-./bin/nicos-collector
+nicos-collector
 ```
 
 ### Step 7: Start the Daemon
 
 Finally, in another terminal, start the NICOS daemon:
 ```bash
-./bin/nicos-daemon
+nicos-daemon
 ```
 
 ## Install Client
 
 ### Step 1: Install GUI Requirements
 
-Install the necessary packages for the NICOS GUI:
-```bash
-pip install -r requirements-gui.txt
-```
+Install the necessary packages for the NICOS GUI by following the installation instructions above.
 
 ### Step 2: Start the Client
 
 Start the NICOS client with your selected instrument's configuration:
 ```bash
-./bin/nicos-gui -c nicos_ess/<instrument>/guiconfig.py
+nicos-gui -c nicos_ess/<instrument>/guiconfig.py
 ```
 
 ### Step 3: Run with QT6 (For Mac Silicon)

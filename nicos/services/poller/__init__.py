@@ -25,12 +25,14 @@
 
 import os
 import queue
+import shutil
 import signal
 import sys
 import threading
 import traceback
 from os import path
-from time import sleep, time as currenttime
+from time import sleep
+from time import time as currenttime
 
 from nicos import config, session
 from nicos.core import (
@@ -541,7 +543,11 @@ class Poller(Device):
             self._start_child(setup)
 
     def _start_child(self, setup):
-        poller_script = path.join(config.nicos_root, "bin", "nicos-poller")
+        # try to find executable:
+        poller_script = shutil.which("nicos-poller")
+        if not poller_script:
+            # likely running from within the repository:
+            poller_script = path.join(config.nicos_root, "bin", "nicos-poller")
         additional_args = []
         if session._daemon_mode == "systemd":
             additional_args.append("-D")

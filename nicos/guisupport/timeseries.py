@@ -30,9 +30,9 @@ NICOS value plot widget.
 from time import time as currenttime
 
 import numpy as np
-import lttbc
+from lttb import lttb
 
-from nicos.utils import number_types, KEYEXPR_NS
+from nicos.utils import KEYEXPR_NS, number_types
 
 
 def buildTickDistAndSubTicks(mintime, maxtime, minticks=3):
@@ -269,7 +269,7 @@ class TimeSeries:
             if arrsize >= self.maxsize:
                 # don't add more points, make existing ones more sparse
                 data = self.data[:real_n]
-                new_data = lttbc.downsample(
+                new_data = lttb.downsample(
                     data[data[:, 0].argsort()], n_out=arrsize // 2
                 )
                 n = self.n = self.real_n = new_data.shape[0]

@@ -10,7 +10,7 @@ kafka-logging-handler<=0.2.4
 keyring==24.3.0
 keyrings.alt==5.0.0
 ldap3>=2.0.0
-lttbc
+lttb
 nicos-pyctl>=1.0
 numpy>=1.10.0
 p4p>=4.0.0

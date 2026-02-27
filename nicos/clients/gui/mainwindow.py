@@ -26,7 +26,15 @@
 
 import sys
 import traceback
-from time import strftime, time as currenttime
+from time import strftime
+from time import time as currenttime
+
+if sys.version_info < (3, 10):
+    # included importlib does not have right entry_points function, use
+    # backported:
+    from importlib_metadata import PackageNotFoundError, entry_points, version
+else:
+    from importlib.metadata import PackageNotFoundError, entry_points, version
 
 import gr
 
@@ -747,7 +755,7 @@ class MainWindow(DlgUtils, QMainWindow):
             return
         if not self.client.isconnected:
             self.showError(
-                "Cannot open online help: you are not connected " "to a daemon."
+                "Cannot open online help: you are not connected to a daemon."
             )
             return
         self.client.eval('session.showHelp("index")')
@@ -803,6 +811,16 @@ class MainWindow(DlgUtils, QMainWindow):
         dlg.customPath.setText(dinfo.get("custom_path", ""))
         dlg.customVersion.setText(dinfo.get("custom_version", ""))
         dlg.contributors.setPlainText(nicos.authors.authors_list)
+        # assemble all installed plugins defined via their entry points in the 'nicos.plugin' group:
+        plugins = entry_points(group="nicos.plugins")
+        plugin_summary = []
+        for p in plugins:
+            try:
+                ver = version(p.dist.name)
+            except PackageNotFoundError:
+                ver = "0.0.0"
+            plugin_summary.append(f"{p.name} ({p.dist.name}: {ver})")
+        dlg.plugins.setText(", ".join(plugin_summary))
         dlg.adjustSize()
         dlg.exec()
 

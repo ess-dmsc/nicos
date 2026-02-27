@@ -1,0 +1,36 @@
+[project]
+name = "nicos_demo"
+description = "NICOS Demonstration"
+requires-python = ">=3.9"
+dynamic = ["version"]
+
+[project.optional-dependencies]
+gui = [
+    "nicos[gui]"
+]
+
+[dependency-groups]
+dev = [
+    "nicos[dev]"
+]
+
+[tool.uv.sources]
+# `nicos_demo` depends on `nicos`, which should be installed from this workspace:
+nicos = { workspace = true }
+
+# Use the `hatchling` backend for building the package. `uv` backend does not
+# work without a `src/module_name` or `module_name` subdirectory.
+[build-system]
+requires = ["hatchling", "uv-dynamic-versioning", "uv_build>=0.9.18,<0.10.0"]
+build-backend = "hatchling.build"
+
+
+[tool.hatch.build.targets.sdist.force-include]
+# Explicitly include files at module root and rewrite their path
+"." = "nicos_demo"
+
+[tool.hatch.build.targets.wheel]
+packages = ["nicos_demo"]
+
+[tool.hatch.version]
+source = "uv-dynamic-versioning"
