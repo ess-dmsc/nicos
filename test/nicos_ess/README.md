@@ -6,7 +6,8 @@ style:
 - pure unit tests
 - harness-based device tests
 - full fixture/setup tests
-- smoke/integration tests
+- smoke tests (Not yet implemented)
+- integration tests (Not yet implemented)
 
 The goal is to keep tests fast and reliable while still covering real NICOS
 behavior where it matters.
@@ -16,11 +17,11 @@ behavior where it matters.
 NICOS device code sits between:
 
 - NICOS session/cache/daemon/poller behavior
-- facility setup wiring (`loadSetup`, attached devices, aliases)
+- facility setup loading (`loadSetup`, attached devices, aliases)
 - external systems (EPICS, Kafka, filewriter, network)
 
 No single test style gives strong coverage across all three without tradeoffs.
-Use the smallest style that can validate the behavior you care about.
+Use the smallest style that can validate the behavior.
 
 ## Device Test Minimum Checklist
 
@@ -62,7 +63,7 @@ Example scenario:
 
 - implement payload-to-topic selection in a plain function/class
 - test that logic directly with representative payload variants
-- keep device tests focused on NICOS wrapper wiring (backend calls, cache/status
+- keep device tests focused on NICOS wrapper behavior (backend calls, cache/status
   side effects)
 
 ### 2. Harness-Based Device Tests
@@ -110,7 +111,7 @@ Use the global `session` fixture (`test/conftest.py`) and setup loading via
 
 Good fit:
 
-- verifying real setup wiring and attached device chains
+- verifying real setup loading and attached device chains
 - setup import/load behavior
 - configuration-level behavior that depends on setup files
 - compatibility checks for long-standing setup conventions
@@ -126,24 +127,41 @@ Limitations:
 - more boilerplate code
 - slower to execute
 - harder to debug
-- timing-sensitive behaviors can result in rare failure modes
+- timing-sensitive behaviors (such as races between session, logger, and cache
+  startup) can result in rare, hard-to-reproduce failure modes
 
-### 4. Smoke/Integration Tests (Full Stack)
+### 4. Smoke Tests
 
-Use when validating end-to-end behavior across real services/processes:
+Use when validating that services start and basic paths work:
 
-- cache + poller + collector + daemon
-- Kafka broker and topics
-- EPICS PVA server
+- cache + poller + collector + daemon startup
+- basic EPICS PVA connectivity
+- service health checks
 
 Good fit:
 
 - startup/order assumptions
+- verifying that services come up correctly
+- basic end-to-end path checks
+
+### 5. Integration Tests (Full Stack)
+
+Use when validating cross-service behavior across real services/processes:
+
+- cache + poller + collector + daemon interaction
+- Kafka broker and topics
+- EPICS PVA server round-trips
+
+Good fit:
+
 - cross-process communication
 - environment and deployment parity checks
+- end-to-end data flow verification
 
 These are high-value but should be a small, focused set because they are the
-most expensive and the most failure-prone.
+most expensive and the most failure-prone due to dependency on external
+processes, network variability, and environment differences between developer
+machines and CI.
 
 ## Decision Rule For New Tests
 
@@ -194,6 +212,19 @@ Typical pattern:
 
 This is the right level for issues like stale cache, fresh readback completion,
 and race windows around move-and-wait behavior.
+
+### What Harness Classes Provide
+
+The harness API (`test/nicos_ess/device_harness.py`) exposes:
+
+- `create(role, devcls, name=..., **config)`: create a device under a specific
+  role (`"daemon"` or `"poller"`)
+- `create_pair(devcls, name=..., shared=..., daemon=..., poller=...)`: create
+  daemon+poller copies with shared defaults and per-role overrides
+- `run(role, callable, *args)`: execute a callable in a specific role context
+- `fake_epics_backend_factory` (fixture): patches EPICS wrapper creation for a
+  module, returning a controllable fake backend with `emit_update`,
+  `emit_connection`, and inspectable `values`, `alarms`, `put_calls`, etc.
 
 ## Full Fixture/Setup Guidance
 
@@ -246,7 +277,7 @@ pytest -q test/nicos_ess
 Targeted runs:
 
 ```bash
-pytest -q test/nicos_ess/test_devices/test_epics_devices_harness.py
+pytest -q test/nicos_ess/test_devices/epics_devices/
 pytest -q test/nicos_ess/test_devices/test_forwarder.py
 ```
 
