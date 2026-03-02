@@ -1,3 +1,7 @@
+description = "Detector bank power supply configuration"
+
+group = "configdata"
+
 hv_channels = {
     "bank0": {
         "100": [f"Ch{channel:>02}" for channel in range(0, 12)],
