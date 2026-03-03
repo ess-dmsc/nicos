@@ -840,7 +840,7 @@ class ControlDialog(QDialog):
             self.target.setFocus()
 
     def _reinit(self):
-        classes = self.devinfo.classes
+        classes = set(self.devinfo.classes or ())
 
         if sip.isdeleted(self.devitem):
             # The item we're controlling has been removed from the list (e.g.
@@ -867,6 +867,20 @@ class ControlDialog(QDialog):
         params = self.client.getDeviceParams(self.devname)
         self.paraminfo = self.client.getDeviceParamInfo(self.devname)
         self.paramvalues = dict(params)
+        # Cache updates for "classes" may lag behind the dialog opening.
+        # Use cache value if present, otherwise query the live device classes
+        # so Moveable/Readable controls are initialized reliably.
+        param_classes = params.get("classes")
+        if isinstance(param_classes, str):
+            classes = {param_classes}
+        elif param_classes:
+            classes = set(param_classes)
+        elif not classes:
+            live_classes = self.client.eval(
+                "session.getDevice(%r).classes" % self.devname, []
+            )
+            classes = set(live_classes or ())
+        self.devinfo.classes = classes
 
         # put parameter values in the list widget
         self.paramItems.clear()
@@ -927,10 +941,10 @@ class ControlDialog(QDialog):
             self.buttonBox.removeButton(historyBtn)
         else:
             self.valuelabel.setText(self.devitem.text(1))
-            self.statuslabel.setText(self.devitem.text(2))
+            self.statuslabel.setText(self.devitem.text(3))
             self.statusimage.setPixmap(self.devitem.icon(0).pixmap(16, 16))
-            setForegroundBrush(self.statuslabel, self.devitem.foreground(2))
-            setBackgroundBrush(self.statuslabel, self.devitem.background(2))
+            setForegroundBrush(self.statuslabel, self.devitem.foreground(3))
+            setBackgroundBrush(self.statuslabel, self.devitem.background(3))
 
             # modify history button: add icon and set text
             historyBtn.setIcon(QIcon(":/find"))
