@@ -88,6 +88,16 @@ class TestEpicsMotor:
         assert daemon_device.abslimits == (-120.0, 120.0)
         assert daemon_device.userlimits == (-120.0, 120.0)
 
+    def test_motor_limits_are_read_when_motorrecord_offset_is_nonzero(self, device_harness, fake_backend):
+        fake_backend.values["SIM:M1.OFF"] = 10.0
+        daemon_device, _poller_device = device_harness.create_pair(
+            EpicsMotor,
+            name="motor",
+            shared={**default_motor_cfg(), "motorpv": "SIM:M1", "has_foff": True},
+        )
+        assert daemon_device.abslimits == (-120.0, 120.0)
+        assert daemon_device.userlimits == (-110.0, 130.0)
+
     def test_motor_limits_are_read_when_motorrecord_offset_is_larger_than_limits(self, device_harness, fake_backend):
         fake_backend.values["SIM:M1.OFF"] = 150.0
         daemon_device, _poller_device = device_harness.create_pair(
