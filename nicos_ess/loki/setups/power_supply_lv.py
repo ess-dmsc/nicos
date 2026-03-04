@@ -12,7 +12,7 @@ for bank, boards in lv_channels.items():
                 "nicos_ess.devices.epics.power_supply_channel.PowerSupplyChannel",
                 description="A power supply channel",
                 board=board,
-                channel=channel,
+                channel=int(channel.replace("Ch", "")),
                 pollinterval=0.5,
                 maxage=None,
                 ps_pv=f"{pv_root}-LVM-{board}:{channel}",
