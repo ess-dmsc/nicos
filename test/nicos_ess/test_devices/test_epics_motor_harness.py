@@ -13,7 +13,6 @@ def fake_backend(monkeypatch):
 
 def default_motor_cfg():
     return {
-        "name": "test motor",
         "motorpv": "SIM:M1",
         "has_powerauto": True,
         "has_msgtxt": True,
@@ -66,11 +65,12 @@ def default_motor_pvs(fake_backend):
 
 
 class TestEpicsMotor:
-    def test_can_move_when_miss_is_set(self, device_harness, fake_backend):
+    def test_motor_can_move_when_miss_is_set(self, device_harness, fake_backend):
         # Setup
         dev = device_harness.create(
             "daemon",
             EpicsMotor,
+            name="motor",
             **default_motor_cfg(),
         )
         fake_backend.emit_update("SIM:M1.MISS", value=1)
@@ -79,18 +79,36 @@ class TestEpicsMotor:
         assert fake_backend.values["SIM:M1.VAL"] == 5.0
 
 
-    def test_motor_is_created_with_given_parameters(self, device_harness, fake_backend):
-        # Setup/Act
-        dev = device_harness.create(
-            "daemon",
+    def test_motor_limits_are_read_when_starting(self, device_harness, fake_backend):
+        daemon_device, _poller_device = device_harness.create_pair(
             EpicsMotor,
-            **default_motor_cfg(),
+            name="motor",
+            shared=default_motor_cfg(),
         )
+        assert daemon_device.abslimits == (-120.0, 120.0)
+        assert daemon_device.userlimits == (-120.0, 120.0)
 
-        # Assert: values come from EpicsParameters and are inherited by subclasses.
-        assert dev.epicstimeout == 3.0
-        assert dev.monitor is False
-        assert dev.pva is True
-        assert dev.pollinterval is None
-        assert dev.maxage is None
+    def test_motor_limits_are_read_when_motorrecord_offset_is_larger_than_limits(self, device_harness, fake_backend):
+        fake_backend.values["SIM:M1.OFF"] = 150.0
+        daemon_device, _poller_device = device_harness.create_pair(
+            EpicsMotor,
+            name="motor",
+            shared={**default_motor_cfg(), "motorpv": "SIM:M1", "has_foff": True},
+        )
+        assert daemon_device.abslimits == (-120.0, 120.0)
+        assert daemon_device.userlimits == (30.0, 270.0)
+
+    def test_motor_userlimits_does_not_change_abslimits(self, device_harness, fake_backend):
+        daemon_device, _poller_device = device_harness.create_pair(
+            EpicsMotor,
+            name="motor",
+            shared=default_motor_cfg(),
+        )
+        assert daemon_device.abslimits == (-120.0, 120.0)
+        assert daemon_device.userlimits == (-120.0, 120.0)
+
+        device_harness.run_daemon(daemon_device.doWriteUserlimits, (-100.0, 100.0))
+
+        assert daemon_device.abslimits == (-120.0, 120.0)
+        assert daemon_device.userlimits == (-100.0, 100.0)
 
