@@ -1,4 +1,4 @@
-from nicos_ess.loki.setups.power_supply_config2 import lv_channels
+from nicos_ess.loki.setups.power_supply_config import lv_channels
 
 pv_root = "LOKI-DtCmn:PwrC"
 
