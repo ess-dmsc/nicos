@@ -87,26 +87,3 @@ class SamplePanel(PanelBase):
         layout.addLayout(bottom_layout)
 
         self.setLayout(layout)
-
-
-#
-# from nicos_ess.gui.panels.panel import PanelBase
-# from nicos.guisupport.qt import QVBoxLayout, QLabel, QPushButton
-#
-# class SamplePanel(PanelBase):
-#
-#     def __init__(self, parent, client, options):
-#         PanelBase.__init__(self, parent, client, options)
-#
-#         self._buildUI()
-#
-#     def _buildUI(self):
-#         layout = QVBoxLayout(self)
-#
-#         self.label = QLabel('Hello NICOS', self)
-#         self.button = QPushButton('Click me', self)
-#
-#         layout.addWidget(self.label)
-#         layout.addWidget(self.button)
-#
-#         self.setLayout(layout)
