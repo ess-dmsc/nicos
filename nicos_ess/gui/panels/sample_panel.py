@@ -39,7 +39,6 @@ class SamplePanel(PanelBase):
 
     def __init__(self, parent, client, options):
         PanelBase.__init__(self, parent, client, options)
-        self.parent = parent
         self.options = options
 
         self.old_settings = []
@@ -79,9 +78,6 @@ class SamplePanel(PanelBase):
         table_layout.addWidget(self.table)
         table_layout.addStretch(2)
 
-        self.table.horizontalHeader().setSectionResizeMode(
-            QHeaderView.ResizeMode.Interactive
-        )
         self.table.setSizeAdjustPolicy(QAbstractScrollArea.AdjustToContents)
         self.table.horizontalHeader().setSectionResizeMode(
             QHeaderView.ResizeMode.Stretch
@@ -119,8 +115,8 @@ class SamplePanel(PanelBase):
     def initialise_connection_status_listeners(self):
         PanelBase.initialise_connection_status_listeners(self)
         self.client.setup.connect(self.on_client_setup)
-        for monitor in self.to_monitor:
-            self.client.register(self, monitor)
+        for cache_key in self.to_monitor:
+            self.client.register(self, cache_key)
 
     def on_client_setup(self, data):
         if "system" in data[0]:
@@ -174,7 +170,6 @@ class SamplePanel(PanelBase):
     @pyqtSlot()
     def on_button_add_clicked(self):
         self.model.insert_row(self.model.num_entries)
-        self._format_table()
 
     @pyqtSlot()
     def on_button_delete_clicked(self):
@@ -184,7 +179,6 @@ class SamplePanel(PanelBase):
             if index.isValid() and index.column() < self.model.num_entries
         }
         self.model.remove_rows(to_remove)
-        self._format_table()
 
     def on_button_box_clicked(self, button):
         role = self.button_box.buttonRole(button)
@@ -192,12 +186,6 @@ class SamplePanel(PanelBase):
             self.apply_changes()
         elif role == QDialogButtonBox.ButtonRole.ResetRole:
             self.discard_changes()
-
-    def _format_table(self):
-        width = self.table.width() - self.table.verticalHeader().width()
-        num_cols = self.model.columnCount(0)
-        for i in range(num_cols):
-            self.table.setColumnWidth(i, width // num_cols)
 
     def apply_changes(self):
         print("apply clicked")
@@ -239,4 +227,3 @@ class SamplePanel(PanelBase):
 
     def _update_panel(self):
         self._update_model(self.old_settings)
-        self._format_table()
