@@ -146,6 +146,13 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         self._lock = threading.Lock()
         self._epics_subscriptions = []
         self._motor_status = (status.OK, "")
+        # Moveable.init() reads userlimits at least once after parameter init.
+        # If userlimits are not in cache yet, there is one additional read while
+        # the parameter itself is initialized.
+        cached_userlimits = (
+            self._cache.get(self, "userlimits", Ellipsis) if self._cache else Ellipsis
+        )
+        self._startup_userlimit_reads_left = 2 if cached_userlimits is Ellipsis else 1
         self._record_fields = {
             "value": RecordInfo("value", ".RBV", RecordType.BOTH),
             "dialvalue": RecordInfo("", ".DRBV", RecordType.VALUE),
@@ -240,13 +247,56 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         return absmin, absmax
 
     def doReadHwuserlimits(self):
+        amin = self._get_cached_pv_or_ask("diallowlimit")
+        amax = self._get_cached_pv_or_ask("dialhighlimit")
+        if amin > amax:
+            raise ConfigurationError(
+                self,
+                f"dial lowlimit ({amin}) above dial highlimit ({amax})",
+            )
+        offset = self.offset
         umin = self._get_cached_pv_or_ask("lowlimit")
         umax = self._get_cached_pv_or_ask("highlimit")
-        limits = (umin, umax)
-        self._checkLimits(limits)
+        if umin > umax:
+            raise ConfigurationError(
+                self,
+                f"record lowlimit ({umin}) above record highlimit ({umax})",
+            )
+        if not self._user_limits_fit_dial_window(umin, umax, amin, amax, offset):
+            raise ConfigurationError(
+                self,
+                "record user limits (%s, %s) are inconsistent with dial limits "
+                "(%s, %s), offset (%s) and direction (%s)"
+                % (
+                    umin,
+                    umax,
+                    amin,
+                    amax,
+                    offset,
+                    self._get_pv("dir", as_string=True),
+                ),
+            )
         return umin, umax
 
     def doReadUserlimits(self):
+        # During startup with default limitoffsets we return limits in the
+        # convention expected by Moveable.init(). doWriteUserlimits() converts
+        # this boundary case back to EPICS user coordinates.
+        if (
+            self._startup_userlimit_reads_left > 0
+            and "userlimits" not in self._config
+            and "limitoffsets" not in self._config
+            and self.limitoffsets in ((0.0, 0.0), (0, 0))
+        ):
+            # Validate that EPICS record limits are internally consistent even
+            # when we return startup boundary-form limits for Moveable.init().
+            self.hwuserlimits
+            self._startup_userlimit_reads_left -= 1
+            amin, amax = self.abslimits
+            off = self.offset
+            return amin - off, amax - off
+        self._startup_userlimit_reads_left = 0
+
         hw_umin, hw_umax = self.hwuserlimits
         omin, omax = self.limitoffsets
 
@@ -353,7 +403,7 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         amin, amax = self.abslimits
         offset = self.offset
         if umin == amin - offset and umax == amax - offset:
-            value = (umin + offset * 2, umax + offset * 2)
+            value = self._dial_limits_to_user_limits(amin, amax, offset)
 
         self._checkLimits(value)
 
@@ -561,14 +611,41 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         elif stat == status.ERROR:
             self.log.error("%s (%s)", error_msg, epics_msg)
 
-    def _user_to_dial(self, val):
+    def _get_dir_sign(self):
+        return 1 if self._get_pv("dir", as_string=True) == "Pos" else -1
+
+    def _dial_limits_to_user_limits(self, dial_min, dial_max, offset):
+        if dial_min > dial_max:
+            raise ConfigurationError(
+                self,
+                f"dial lowlimit ({dial_min}) above dial highlimit ({dial_max})",
+            )
+        if self._get_dir_sign() > 0:
+            return dial_min + offset, dial_max + offset
+        return -dial_max + offset, -dial_min + offset
+
+    def _user_limits_fit_dial_window(self, umin, umax, amin, amax, offset):
+        dir_sign = self._get_dir_sign()
+        dial_from_user_low = self._user_to_dial(umin, offset)
+        dial_from_user_high = self._user_to_dial(umax, offset)
+        if dir_sign > 0:
+            dial_min = dial_from_user_low
+            dial_max = dial_from_user_high
+        else:
+            dial_min = dial_from_user_high
+            dial_max = dial_from_user_low
+        tol = max(abs(amin), abs(amax), 1.0) * 1e-12
+        return amin - tol <= dial_min and dial_max <= amax + tol
+
+    def _user_to_dial(self, val, offset=None):
         """
         Convert a user-coordinate value to dial (hardware) units.
 
         user = dial * DIR + OFF      ⇒     dial = (user - OFF) / DIR
         """
-        dir_sign = 1 if self._get_pv("dir", as_string=True) == "Pos" else -1
-        return (val - self.offset) / dir_sign
+        if offset is None:
+            offset = self.offset
+        return (val - offset) / self._get_dir_sign()
 
     def _checkLimits(self, limits):
         """
@@ -579,14 +656,22 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         umin, umax = limits
         amin, amax = self.abslimits  # dial / hardware numbers
 
-        umin_hw = self._user_to_dial(umin)  # convert to dial units
-        umax_hw = self._user_to_dial(umax)
-
-        if umin_hw > umax_hw:
+        if umin > umax:
             raise ConfigurationError(
                 self,
                 f"user minimum ({umin}) above user maximum ({umax})",
             )
+
+        dir_sign = self._get_dir_sign()
+        dial_from_user_low = self._user_to_dial(umin)
+        dial_from_user_high = self._user_to_dial(umax)
+        if dir_sign > 0:
+            umin_hw = dial_from_user_low
+            umax_hw = dial_from_user_high
+        else:
+            umin_hw = dial_from_user_high
+            umax_hw = dial_from_user_low
+
         if umin_hw < amin - abs(amin * 1e-12):
             raise ConfigurationError(
                 self,
