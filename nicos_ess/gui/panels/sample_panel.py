@@ -1,4 +1,5 @@
 from PyQt5 import QtCore, QtWidgets
+from PyQt5.QtWidgets import QDialogButtonBox
 
 from nicos.guisupport.qt import (
     QHBoxLayout,
@@ -58,10 +59,12 @@ class SamplePanel(PanelBase):
         self.label = QLabel("Sample information")
         self.button_add = QPushButton("Add")
         self.button_delete = QPushButton("Delete")
-        self.button_apply = QPushButton("Apply")
-        self.button_discard = QPushButton("Discard changes")
-        self.edits_warning = QLabel(
+        self.label_warning = QLabel(
             "Changes to the experiment proposal have not been applied!"
+        )
+        self.button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Apply)
+        self.button_box.addButton(
+            "Discard Changes", QDialogButtonBox.ButtonRole.ResetRole
         )
 
     def _set_layout(self):
@@ -79,19 +82,18 @@ class SamplePanel(PanelBase):
         button_layout.addWidget(self.button_delete)
         button_layout.addStretch()
 
+        self.button_box.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+        self.label_warning.setStyleSheet("color: red; font-weight: bold")
+        # self.label_warning.setVisible(False)
+
         top_layout = QHBoxLayout()
-        top_layout.addWidget(self.label, alignment=QtCore.Qt.AlignTop)
+        top_layout.addWidget(self.label, alignment=Qt.AlignTop)
         top_layout.addLayout(table_layout)
         top_layout.addLayout(button_layout)
 
-        right_layout = QVBoxLayout()
-        right_layout.addWidget(self.edits_warning)
-        right_layout.addWidget(self.button_discard, alignment=Qt.AlignRight)
-
-        bottom_layout = QHBoxLayout()
-        bottom_layout.addWidget(self.button_apply)
-        bottom_layout.addStretch()
-        bottom_layout.addLayout(right_layout)
+        bottom_layout = QVBoxLayout()
+        bottom_layout.addWidget(self.label_warning, alignment=Qt.AlignRight)
+        bottom_layout.addWidget(self.button_box)
 
         layout = QVBoxLayout(self)
         layout.addLayout(top_layout)
