@@ -12,6 +12,7 @@ from nicos.guisupport.qt import (
     pyqtSlot,
 )
 from nicos.guisupport.tablemodel import TableModel
+from nicos_ess.gui.panels.exp_panel import ProposalSettings
 from nicos_ess.gui.panels.panel import PanelBase
 
 SAMPLE_FIELDS = [
@@ -39,6 +40,9 @@ class SamplePanel(PanelBase):
         PanelBase.__init__(self, parent, client, options)
         self.parent = parent
         self.options = options
+
+        self.old_settings = ProposalSettings()
+        self.new_settings = ProposalSettings()
 
         self.create_table()
         self._build_ui()
@@ -104,6 +108,7 @@ class SamplePanel(PanelBase):
     def _connect_signals(self):
         self.button_add.clicked.connect(self.on_button_add_clicked)
         self.button_delete.clicked.connect(self.on_button_delete_clicked)
+        self.button_box.clicked.connect(self.on_button_box_clicked)
 
     @pyqtSlot()
     def on_button_add_clicked(self):
@@ -120,8 +125,36 @@ class SamplePanel(PanelBase):
         self.model.remove_rows(to_remove)
         self._format_table()
 
+    def on_button_box_clicked(self, button):
+        role = self.button_box.buttonRole(button)
+        if role == QDialogButtonBox.ButtonRole.ApplyRole:
+            self.apply_changes()
+        elif role == QDialogButtonBox.ButtonRole.ResetRole:
+            self.discard_changes()
+
     def _format_table(self):
         width = self.table.width() - self.table.verticalHeader().width()
         num_cols = self.model.columnCount(0)
         for i in range(num_cols):
             self.table.setColumnWidth(i, width // num_cols)
+
+    def apply_changes(self):
+        print("apply clicked")
+        if self.mainwindow.current_status != "idle":
+            self.showInfo("Cannot change settings while a script is running!")
+            return
+        try:
+            self._set_samples()
+        except Exception as error:
+            self.showError(str(error))
+
+    def discard_changes(self):
+        print("discard clicked")
+        self._update_sample_info()
+        self._check_for_changes()
+
+    def _set_samples(self):
+        print("setting samples")
+
+    def _update_sample_info(self):
+        samples = self.client.eval("session.experiment.get_samples()", {})
