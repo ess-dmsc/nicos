@@ -1,15 +1,15 @@
 from PyQt5 import QtCore, QtWidgets
-from PyQt5.QtWidgets import QSizePolicy
 
 from nicos.guisupport.qt import (
     QHBoxLayout,
     QLabel,
     QPushButton,
+    QSizePolicy,
     Qt,
-    QTableWidget,
-    QTableWidgetItem,
+    QTableView,
     QVBoxLayout,
 )
+from nicos.guisupport.tablemodel import TableModel
 from nicos_ess.gui.panels.panel import PanelBase
 
 SAMPLE_FIELDS = [
@@ -22,6 +22,12 @@ SAMPLE_FIELDS = [
     "electric field",
     "magnetic field",
 ]
+SAMPLE_MAPPINGS = {
+    "number of": "number_of",
+    "mass/volume": "mass_volume",
+    "electric field": "electric_field",
+    "magnetic field": "magnetic_field",
+}
 
 
 class SamplePanel(PanelBase):
@@ -32,12 +38,15 @@ class SamplePanel(PanelBase):
         self.parent = parent
         self.options = options
 
-        self.sample_table = self.create_table_data()
+        self.create_table()
         self._build_ui()
 
-    def create_table_data(self):
-        samples = {key: "" for key in SAMPLE_FIELDS}
-        return samples
+    def create_table(self):
+        self.model = TableModel(
+            headings=SAMPLE_FIELDS, mappings=SAMPLE_MAPPINGS, transposed=True
+        )
+        self.table = QTableView()
+        self.table.setModel(self.model)
 
     def _build_ui(self):
         self._create_widgets()
@@ -46,7 +55,6 @@ class SamplePanel(PanelBase):
 
     def _create_widgets(self):
         self.label = QLabel("Sample information")
-        self.table = QTableWidget()
         self.button_add = QPushButton("Add")
         self.button_delete = QPushButton("Delete")
         self.button_apply = QPushButton("Apply")
@@ -59,6 +67,11 @@ class SamplePanel(PanelBase):
         table_layout = QVBoxLayout()
         table_layout.addWidget(self.table)
         table_layout.addStretch(2)
+
+        self.table.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.table.setSizeAdjustPolicy(QtWidgets.QAbstractScrollArea.AdjustToContents)
+        self.table.horizontalHeader().setStretchLastSection(True)
+        self.table.verticalHeader().setStretchLastSection(False)
 
         button_layout = QVBoxLayout()
         button_layout.addWidget(self.button_add)
@@ -84,13 +97,3 @@ class SamplePanel(PanelBase):
         layout.addLayout(bottom_layout)
 
         self.setLayout(layout)
-
-    def _prepare_table(self):
-        for i, key in enumerate(self.sample_table.keys()):
-            self.table.insertRow(i)
-            self.table.setVerticalHeaderItem(i, QTableWidgetItem(key))
-        # self.table.setColumnCount(1)
-        self.table.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self.table.setSizeAdjustPolicy(QtWidgets.QAbstractScrollArea.AdjustToContents)
-        self.table.horizontalHeader().setStretchLastSection(True)
-        self.table.verticalHeader().setStretchLastSection(False)
