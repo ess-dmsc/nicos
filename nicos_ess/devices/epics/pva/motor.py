@@ -1,10 +1,9 @@
-import copy
 import threading
 import time
 
 from nicos import session
 from nicos.core import POLLER, Moveable, Override, Param, limits, oneof, pvname, status
-from nicos.core.errors import ConfigurationError
+from nicos.core.errors import ConfigurationError, PositionError
 from nicos.core.mixins import CanDisable, HasLimits, HasOffset
 from nicos.devices.abstract import CanReference, Motor
 from nicos.devices.epics.status import SEVERITY_TO_STATUS
@@ -164,7 +163,7 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
             "lowlimit": RecordInfo("", ".LLM", RecordType.VALUE),
             "dialhighlimit": RecordInfo("", ".DHLM", RecordType.VALUE),
             "diallowlimit": RecordInfo("", ".DLLM", RecordType.VALUE),
-            "enable": RecordInfo("", ".CNEN", RecordType.VALUE),
+            "enable": RecordInfo("", ".CNEN", RecordType.BOTH),
             "set": RecordInfo("", ".SET", RecordType.VALUE),
             "foff": RecordInfo("", ".FOFF", RecordType.VALUE),
             "dir": RecordInfo("", ".DIR", RecordType.VALUE),
@@ -345,8 +344,11 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
 
         if abs(target - pos) > deadband:
             return False
-
-        return moving == 0
+        if moving != 0:
+            return False
+        if self._get_cached_pv_or_ask("miss") != 0:
+            raise PositionError(self, "did not reach target position.")
+        return True
 
     def doStart(self, value):
         if abs(self.read(0) - value) <= self.precision:
