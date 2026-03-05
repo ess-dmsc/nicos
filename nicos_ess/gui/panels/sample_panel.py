@@ -8,6 +8,7 @@ from nicos.guisupport.qt import (
     Qt,
     QTableView,
     QVBoxLayout,
+    pyqtSlot,
 )
 from nicos.guisupport.tablemodel import TableModel
 from nicos_ess.gui.panels.panel import PanelBase
@@ -40,6 +41,7 @@ class SamplePanel(PanelBase):
 
         self.create_table()
         self._build_ui()
+        self._connect_signals()
 
     def create_table(self):
         self.model = TableModel(
@@ -96,3 +98,28 @@ class SamplePanel(PanelBase):
         layout.addLayout(bottom_layout)
 
         self.setLayout(layout)
+
+    def _connect_signals(self):
+        self.button_add.clicked.connect(self.on_button_add_clicked)
+        self.button_delete.clicked.connect(self.on_button_delete_clicked)
+
+    @pyqtSlot()
+    def on_button_add_clicked(self):
+        self.model.insert_row(self.model.num_entries)
+        self._format_table()
+
+    @pyqtSlot()
+    def on_button_delete_clicked(self):
+        to_remove = {
+            index.column()
+            for index in self.table.selectedIndexes()
+            if index.isValid() and index.column() < self.model.num_entries
+        }
+        self.model.remove_rows(to_remove)
+        self._format_table()
+
+    def _format_table(self):
+        width = self.table.width() - self.table.verticalHeader().width()
+        num_cols = self.model.columnCount(0)
+        for i in range(num_cols):
+            self.table.setColumnWidth(i, width // num_cols)
