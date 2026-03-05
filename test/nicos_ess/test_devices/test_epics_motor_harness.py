@@ -65,47 +65,20 @@ def default_motor_pvs(fake_backend):
     fake_backend.values[f"{motorpv}-MsgTxt.SEVR"] = 0
 
 
-
-"""
-LIMITS examples from an actual EPICS motor record with offset and direction set:
-
-Positive direction:
-IOC:m1.DIR 2026-03-05 09:20:07.116  (0) Pos
-IOC:m1.OFF 2026-03-05 09:20:07.116  10 
-IOC:m1.DLLM 2026-03-05 09:20:07.116  -100 
-IOC:m1.DHLM 2026-03-05 09:20:07.116  150 
-IOC:m1.LLM 2026-03-05 09:20:07.116  -90 
-IOC:m1.HLM 2026-03-05 09:20:07.116  160 
+ASYMM_DIAL_LIMITS = (-100.0, 150.0)
+OFFSET_CASES = [
+    pytest.param(-200.0, id="large_negative_offset"),
+    pytest.param(-10.0, id="small_negative_offset"),
+    pytest.param(0.0, id="zero_offset"),
+    pytest.param(10.0, id="small_positive_offset"),
+    pytest.param(200.0, id="large_positive_offset"),
+]
 
 
-Negative direction:
-IOC:m1.DIR 2026-03-05 09:22:11.352  (1) Neg
-IOC:m1.OFF 2026-03-05 09:22:11.352  10 
-IOC:m1.DLLM 2026-03-05 09:22:11.352  -100 
-IOC:m1.DHLM 2026-03-05 09:22:11.352  150 
-IOC:m1.LLM 2026-03-05 09:22:11.352  -140 
-IOC:m1.HLM 2026-03-05 09:22:11.352  110 
-
-"""
-
-DIR_CONFIGS = {
-    "Pos": {
-        "DIR": "Pos",
-        "OFF": 10.0,
-        "DLLM": -100.0,
-        "DHLM": 150.0,
-        "LLM": -90.0,
-        "HLM": 160.0,
-    },
-    "Neg": {
-        "DIR": "Neg",
-        "OFF": 10.0,
-        "DLLM": -100.0,
-        "DHLM": 150.0,
-        "LLM": -140.0,
-        "HLM": 110.0,
-    },
-}
+def user_limits_from_dial_limits(direction, offset, dial_min, dial_max):
+    if direction == "Pos":
+        return dial_min + offset, dial_max + offset
+    return -dial_max + offset, -dial_min + offset
 
 
 class TestEpicsMotor:
@@ -122,70 +95,27 @@ class TestEpicsMotor:
         dev.move(5.0)
         assert fake_backend.values["SIM:M1.VAL"] == 5.0
 
-
-    def test_motor_limits_are_read_when_starting(self, device_harness, fake_backend):
-        daemon_device, _poller_device = device_harness.create_pair(
-            EpicsMotor,
-            name="motor",
-            shared=default_motor_cfg(),
-        )
-        assert daemon_device.abslimits == (-120.0, 120.0)
-        assert daemon_device.userlimits == (-120.0, 120.0)
-
-    def test_motor_limits_are_read_when_motorrecord_offset_is_nonzero(self, device_harness, fake_backend):
-        fake_backend.values["SIM:M1.OFF"] = 10.0
-        fake_backend.values["SIM:M1.LLM"] = -110.0
-        fake_backend.values["SIM:M1.HLM"] = 130.0
-        daemon_device, _poller_device = device_harness.create_pair(
-            EpicsMotor,
-            name="motor",
-            shared=default_motor_cfg(),
-        )
-        assert daemon_device.abslimits == (-120.0, 120.0)
-        assert daemon_device.userlimits == (-110.0, 130.0)
-
-    def test_motor_limits_are_read_when_motorrecord_offset_is_larger_than_limits(self, device_harness, fake_backend):
-        fake_backend.values["SIM:M1.OFF"] = 150.0
-        fake_backend.values["SIM:M1.LLM"] = 30.0
-        fake_backend.values["SIM:M1.HLM"] = 270.0
-        daemon_device, _poller_device = device_harness.create_pair(
-            EpicsMotor,
-            name="motor",
-            shared=default_motor_cfg(),
-        )
-        assert daemon_device.abslimits == (-120.0, 120.0)
-        assert daemon_device.userlimits == (30.0, 270.0)
-
-    def test_motor_limits_are_read_when_direction_is_negative(self, device_harness, fake_backend):
-        fake_backend.values["SIM:M1.OFF"] = 10.0
-        fake_backend.values["SIM:M1.DIR"] = "Neg"
-        fake_backend.values["SIM:M1.LLM"] = -110.0
-        fake_backend.values["SIM:M1.HLM"] = 130.0
-        daemon_device, _poller_device = device_harness.create_pair(
-            EpicsMotor,
-            name="motor",
-            shared=default_motor_cfg(),
-        )
-        assert daemon_device.abslimits == (-120.0, 120.0)
-        assert daemon_device.userlimits == (-110.0, 130.0)
-
-    def test_motor_limits_are_read_when_direction_is_negative_and_dial_limits_are_asymmetric(
-        self, device_harness, fake_backend
+    @pytest.mark.parametrize("offset", OFFSET_CASES)
+    @pytest.mark.parametrize("direction", ["Pos", "Neg"], ids=["dir_pos", "dir_neg"])
+    def test_motor_limits_are_read_for_all_direction_and_offset_cases_with_asymmetric_dial_limits(
+        self, device_harness, fake_backend, direction, offset
     ):
-        fake_backend.values["SIM:M1.DLLM"] = -100.0
-        fake_backend.values["SIM:M1.DHLM"] = 150.0
-        fake_backend.values["SIM:M1.OFF"] = 10.0
-        fake_backend.values["SIM:M1.DIR"] = "Neg"
-        fake_backend.values["SIM:M1.LLM"] = -140.0 # 150 -> -140 because direction is negative (swap limits) and offset is 10
-        fake_backend.values["SIM:M1.HLM"] = 110.0
+        dial_min, dial_max = ASYMM_DIAL_LIMITS
+        umin, umax = user_limits_from_dial_limits(direction, offset, dial_min, dial_max)
+        fake_backend.values["SIM:M1.DLLM"] = dial_min
+        fake_backend.values["SIM:M1.DHLM"] = dial_max
+        fake_backend.values["SIM:M1.OFF"] = offset
+        fake_backend.values["SIM:M1.DIR"] = direction
+        fake_backend.values["SIM:M1.LLM"] = umin
+        fake_backend.values["SIM:M1.HLM"] = umax
         daemon_device, _poller_device = device_harness.create_pair(
             EpicsMotor,
             name="motor",
             shared=default_motor_cfg(),
         )
-        assert daemon_device.abslimits == (-100.0, 150.0)
-        assert daemon_device.hwuserlimits == (-140.0, 110.0)
-        assert daemon_device.userlimits == (-140.0, 110.0)
+        assert daemon_device.abslimits == (dial_min, dial_max)
+        assert daemon_device.hwuserlimits == (umin, umax)
+        assert daemon_device.userlimits == (umin, umax)
 
     def test_motor_userlimits_can_be_written_when_direction_is_negative(
         self, device_harness, fake_backend
