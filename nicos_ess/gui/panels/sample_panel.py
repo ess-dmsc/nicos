@@ -50,7 +50,7 @@ class SamplePanel(PanelBase):
 
     def _build_ui(self):
         self._create_widgets()
-        self._set_up_layout()
+        self._set_layout()
         self._prepare_table()
 
     def _create_widgets(self):
@@ -63,7 +63,7 @@ class SamplePanel(PanelBase):
             "Changes to the experiment proposal have not been applied!"
         )
 
-    def _set_up_layout(self):
+    def _set_layout(self):
         table_layout = QVBoxLayout()
         table_layout.addWidget(self.table)
         table_layout.addStretch(2)
