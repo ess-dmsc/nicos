@@ -51,7 +51,6 @@ class SamplePanel(PanelBase):
     def _build_ui(self):
         self._create_widgets()
         self._set_layout()
-        self._prepare_table()
 
     def _create_widgets(self):
         self.label = QLabel("Sample information")
