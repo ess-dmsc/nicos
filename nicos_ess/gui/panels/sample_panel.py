@@ -5,10 +5,10 @@ from nicos.guisupport.qt import (
     QHBoxLayout,
     QLabel,
     QPushButton,
+    Qt,
     QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
-    QWidget,
 )
 from nicos_ess.gui.panels.panel import PanelBase
 
@@ -78,7 +78,7 @@ class SamplePanel(PanelBase):
 
         right_layout = QVBoxLayout()
         right_layout.addWidget(self.edits_warning)
-        right_layout.addWidget(self.button_discard)
+        right_layout.addWidget(self.button_discard, alignment=Qt.AlignRight)
         bottom_layout.addWidget(self.button_apply)
         bottom_layout.addStretch()
         bottom_layout.addLayout(right_layout)
