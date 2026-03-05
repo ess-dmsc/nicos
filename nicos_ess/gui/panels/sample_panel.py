@@ -1,18 +1,19 @@
-from PyQt5 import QtCore, QtWidgets
-from PyQt5.QtWidgets import QDialogButtonBox
+from copy import deepcopy
 
 from nicos.guisupport.qt import (
+    QAbstractItemView,
+    QAbstractScrollArea,
+    QDialogButtonBox,
     QHBoxLayout,
+    QHeaderView,
     QLabel,
     QPushButton,
-    QSizePolicy,
     Qt,
     QTableView,
     QVBoxLayout,
     pyqtSlot,
 )
 from nicos.guisupport.tablemodel import TableModel
-from nicos_ess.gui.panels.exp_panel import ProposalSettings
 from nicos_ess.gui.panels.panel import PanelBase
 
 SAMPLE_FIELDS = [
@@ -41,14 +42,16 @@ class SamplePanel(PanelBase):
         self.parent = parent
         self.options = options
 
-        self.old_settings = ProposalSettings()
-        self.new_settings = ProposalSettings()
+        self.old_settings = []
+        self.new_settings = []
+        self.to_monitor = ["sample/samples"]
 
-        self.create_table()
+        self._create_table()
         self._build_ui()
         self._connect_signals()
+        self.initialise_connection_status_listeners()
 
-    def create_table(self):
+    def _create_table(self):
         self.model = TableModel(
             headings=SAMPLE_FIELDS, mappings=SAMPLE_MAPPINGS, transposed=True
         )
@@ -76,10 +79,13 @@ class SamplePanel(PanelBase):
         table_layout.addWidget(self.table)
         table_layout.addStretch(2)
 
-        self.table.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self.table.setSizeAdjustPolicy(QtWidgets.QAbstractScrollArea.AdjustToContents)
-        self.table.horizontalHeader().setStretchLastSection(True)
-        self.table.verticalHeader().setStretchLastSection(False)
+        self.table.horizontalHeader().setSectionResizeMode(
+            QHeaderView.ResizeMode.Interactive
+        )
+        self.table.setSizeAdjustPolicy(QAbstractScrollArea.AdjustToContents)
+        self.table.horizontalHeader().setSectionResizeMode(
+            QHeaderView.ResizeMode.Stretch
+        )
 
         button_layout = QVBoxLayout()
         button_layout.addWidget(self.button_add)
@@ -88,7 +94,6 @@ class SamplePanel(PanelBase):
 
         self.button_box.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         self.label_warning.setStyleSheet("color: red; font-weight: bold")
-        # self.label_warning.setVisible(False)
 
         top_layout = QHBoxLayout()
         top_layout.addWidget(self.label, alignment=Qt.AlignTop)
@@ -109,6 +114,62 @@ class SamplePanel(PanelBase):
         self.button_add.clicked.connect(self.on_button_add_clicked)
         self.button_delete.clicked.connect(self.on_button_delete_clicked)
         self.button_box.clicked.connect(self.on_button_box_clicked)
+        self.model.data_updated.connect(self._check_for_changes)
+
+    def initialise_connection_status_listeners(self):
+        PanelBase.initialise_connection_status_listeners(self)
+        self.client.setup.connect(self.on_client_setup)
+        for monitor in self.to_monitor:
+            self.client.register(self, monitor)
+
+    def on_client_setup(self, data):
+        if "system" in data[0]:
+            self._update_sample_info()
+
+    def on_client_connected(self):
+        PanelBase.on_client_connected(self)
+        self._update_sample_info()
+
+    def on_client_disconnected(self):
+        self._update_model([])
+        self.old_settings = []
+        self.new_settings = []
+        PanelBase.on_client_disconnected(self)
+
+    def setViewOnly(self, viewonly):
+        self.set_table_read_only(self.table, viewonly)
+        self.button_add.setEnabled(not viewonly)
+        self.button_delete.setEnabled(not viewonly)
+        if viewonly:
+            self._set_buttons_and_warning_behaviour(False)
+        else:
+            self._check_for_changes()
+
+    def set_table_read_only(self, table, read_only):
+        if read_only:
+            table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        else:
+            table.setEditTriggers(
+                QAbstractItemView.EditTrigger.AnyKeyPressed
+                | QAbstractItemView.EditTrigger.EditKeyPressed
+                | QAbstractItemView.EditTrigger.DoubleClicked
+            )
+
+    def _set_buttons_and_warning_behaviour(self, value):
+        for button in self.button_box.buttons():
+            role = self.button_box.buttonRole(button)
+            button.setEnabled(value)
+            if role == QDialogButtonBox.ButtonRole.ResetRole:
+                button.setVisible(value)
+        self.label_warning.setVisible(value)
+
+    def _check_for_changes(self):
+        has_changed = self.model.raw_data != self.old_settings
+        self._set_buttons_and_warning_behaviour(has_changed)
+
+    def on_keyChange(self, key, value, time, expired):
+        if key in self.to_monitor:
+            self._update_sample_info()
 
     @pyqtSlot()
     def on_button_add_clicked(self):
@@ -145,16 +206,37 @@ class SamplePanel(PanelBase):
             return
         try:
             self._set_samples()
+            self._update_sample_info()
         except Exception as error:
             self.showError(str(error))
+        print(self.model.raw_data)
 
     def discard_changes(self):
         print("discard clicked")
         self._update_sample_info()
         self._check_for_changes()
 
+    def _update_model(self, samples):
+        self.model.raw_data = deepcopy(samples)
+
     def _set_samples(self):
         print("setting samples")
+        if self.model.raw_data == self.old_settings:
+            return
+
+        samples = {}
+        for index, sample in enumerate(self.model.raw_data):
+            if not sample.get("name", ""):
+                sample["name"] = f"sample {index + 1}"
+            samples[index] = sample
+        self.client.run(f"Exp.sample.set_samples({dict(samples)})")
 
     def _update_sample_info(self):
         samples = self.client.eval("session.experiment.get_samples()", {})
+        self.old_settings = samples
+        self.new_settings = deepcopy(self.old_settings)
+        self._update_panel()
+
+    def _update_panel(self):
+        self._update_model(self.old_settings)
+        self._format_table()
