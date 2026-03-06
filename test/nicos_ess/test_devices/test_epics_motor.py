@@ -69,6 +69,8 @@ class FakeEpicsMotor(EpicsMotor):
     _record_fields = {}
 
     def doPreinit(self, mode):
+        # Needed to prevent NICOS from raising limit errors due to NICOS offset rules being opposite to EPICS
+        self._startup_userlimit_reads_left = 2
         pass
 
     def doInit(self, mode):
