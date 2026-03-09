@@ -44,6 +44,17 @@ from test.utils import (
 )
 
 
+def _safe_kill(proc):
+    if not proc:
+        return
+    try:
+        killSubprocess(proc)
+    except Exception as err:
+        name = getattr(proc, "nicos_name", "<unknown>")
+        pid = getattr(proc, "pid", "<unknown>")
+        sys.stderr.write("Failed to terminate %s process %s: %s\n" % (name, pid, err))
+
+
 # This fixture will run during the entire test suite.  Therefore, the special
 # cache stresstests must use a different port.
 @pytest.fixture(scope="session", autouse=True)
@@ -61,10 +72,18 @@ def setup_test_suite():
         sys.stderr.write("=" * 80)
         raise
     cache = startCache(cache_addr)
-    elog = startElog()
-    yield
-    killSubprocess(elog)
-    killSubprocess(cache)
+    elog = None
+    try:
+        # Elog startup can take >2s on current Python/uv environments.
+        elog = startElog(wait=8)
+    except Exception:
+        _safe_kill(cache)
+        raise
+    try:
+        yield
+    finally:
+        _safe_kill(elog)
+        _safe_kill(cache)
 
 
 @pytest.fixture(scope="class")

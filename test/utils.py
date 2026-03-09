@@ -566,7 +566,10 @@ def startSubprocess(filename, *args, **kwds):
         try:
             kwds["wait_cb"]()
         except Exception as err:
-            sys.stderr.write("%s failed]" % proc.pid)
+            sys.stderr.write("%s failed" % proc.pid)
+            if proc.poll() is not None:
+                sys.stderr.write(" rc=%s" % proc.returncode)
+            sys.stderr.write("]")
             try:
                 proc.kill()
             except Exception:
@@ -615,6 +618,17 @@ def startCache(hostport, setup="cache", wait=10):
     return startSubprocess("cache", setup, wait_cb=cache_wait_cb)
 
 
+def tailLogfile(filename, lines=20):
+    if not path.isfile(filename):
+        return "<missing>"
+    try:
+        with open(filename, encoding="utf-8", errors="replace") as fp:
+            tail = fp.readlines()[-lines:]
+    except OSError as err:
+        return "<unreadable: %s>" % err
+    return "".join(tail).strip() or "<empty>"
+
+
 def startElog(wait=2):
     def elog_wait_cb():
         start = monotonic()
@@ -627,7 +641,14 @@ def startElog(wait=2):
                         break
             sleep(0.02)
         else:
-            raise Exception("elog failed to start within %s sec" % wait)
+            cache_tail = tailLogfile(path.join(runtime_root, "cacheserver.log"))
+            elog_tail = tailLogfile(path.join(runtime_root, "elog.log"))
+            raise Exception(
+                "elog failed to start within %s sec\n"
+                "----- tail of cacheserver.log -----\n%s\n"
+                "----- tail of elog.log -----\n%s"
+                % (wait, cache_tail, elog_tail)
+            )
 
     return startSubprocess("elog", wait_cb=elog_wait_cb)
 
