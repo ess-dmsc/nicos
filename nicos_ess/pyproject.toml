@@ -78,3 +78,6 @@ packages = ["nicos_ess"]
 
 [tool.hatch.version]
 source = "uv-dynamic-versioning"
+
+[tool.uv-dynamic-versioning]
+pattern = "default-unprefixed"
