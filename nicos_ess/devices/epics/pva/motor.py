@@ -299,6 +299,8 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         return self._get_cached_pv_or_ask("miss") == 0
 
     def doIsCompleted(self):
+        if self._sim_intercept:
+            return True
         moving = self._get_cached_pv_or_ask("moving")
         pos = self._get_cached_pv_or_ask("value")
         target = self._get_cached_pv_or_ask("target")
@@ -784,6 +786,8 @@ class EpicsJogMotor(EpicsMotor):
         self._cache.put(self._name, "value", 0.0, time.time())
 
     def doIsCompleted(self):
+        if self._sim_intercept:
+            return True
         moving = self._get_cached_pv_or_ask("moving")
         return moving == 0
 
