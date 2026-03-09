@@ -4,6 +4,7 @@ import time
 from nicos import session
 from nicos.core import (
     POLLER,
+    SIMULATION,
     Attach,
     CanDisable,
     Override,
@@ -62,7 +63,7 @@ class PowerSupplyChannel(EpicsParameters, CanDisable, MappedReadable):
         ),
     }
 
-    hardware_access = False
+    hardware_access = True
     valuetype = int
 
     def doPreinit(self, mode):
@@ -79,11 +80,12 @@ class PowerSupplyChannel(EpicsParameters, CanDisable, MappedReadable):
         }
         self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
         # Check if PV exists
-        self._epics_wrapper.connect_pv(self.ps_pv + "-VMon")
+        if mode != SIMULATION:
+            self._epics_wrapper.connect_pv(self.ps_pv + "-VMon")
 
     def doInit(self, mode):
         """From EpicsMotor class."""
-        if session.sessiontype == POLLER and self.monitor:
+        if mode != SIMULATION and session.sessiontype == POLLER and self.monitor:
             for k, v in self._record_fields.items():
                 if v.record_type in [RecordType.VALUE, RecordType.BOTH]:
                     self._epics_subscriptions.append(

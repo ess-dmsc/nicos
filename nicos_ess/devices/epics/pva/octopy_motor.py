@@ -2,7 +2,7 @@ import threading
 import time
 
 from nicos import session
-from nicos.core import POLLER, MoveError, Override, Param, pvname, status
+from nicos.core import POLLER, SIMULATION, MoveError, Override, Param, pvname, status
 from nicos.core.mixins import CanDisable
 from nicos.devices.abstract import CanReference, Motor
 from nicos_ess.devices.epics.pva.epics_devices import (
@@ -70,10 +70,11 @@ class OctopyMotor(EpicsParameters, CanDisable, CanReference, Motor):
         }
 
         self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
-        self._epics_wrapper.connect_pv(f"{self.motorpv}-s")
+        if mode != SIMULATION:
+            self._epics_wrapper.connect_pv(f"{self.motorpv}-s")
 
     def doInit(self, mode):
-        if session.sessiontype == POLLER and self.monitor:
+        if mode != SIMULATION and session.sessiontype == POLLER and self.monitor:
             for key, info in self._record_fields.items():
                 if info.record_type in (RecordType.VALUE, RecordType.BOTH):
                     self._epics_subscriptions.append(

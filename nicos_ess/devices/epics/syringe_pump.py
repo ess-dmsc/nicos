@@ -117,7 +117,8 @@ class SyringePumpController(EpicsParameters, MappedMoveable):
         }
 
         # Establish connection to message PV early so we get connection-status logs
-        self._epics_wrapper.connect_pv(self._pv("message"))
+        if mode != SIMULATION:
+            self._epics_wrapper.connect_pv(self._pv("message"))
 
     def doInit(self, mode):
         # Expose mapping on init (volatile, RO)
@@ -126,7 +127,7 @@ class SyringePumpController(EpicsParameters, MappedMoveable):
         )
 
         # Subscribe to message PV updates for cache + status recomputation
-        if session.sessiontype == POLLER and self.monitor:
+        if mode != SIMULATION and session.sessiontype == POLLER and self.monitor:
             info = self._record_fields["message"]
             full_pv = self._pv("message")
             # value updates

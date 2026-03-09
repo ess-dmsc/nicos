@@ -3,6 +3,7 @@ import time
 from nicos import session
 from nicos.core import (
     POLLER,
+    SIMULATION,
     Override,
     Param,
     PositionError,
@@ -58,7 +59,8 @@ class ManualSwitch(EpicsParameters, Moveable):
         self._epics_subscriptions = []
         self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
 
-        self._epics_wrapper.connect_pv(self.writepv)
+        if mode != SIMULATION:
+            self._epics_wrapper.connect_pv(self.writepv)
 
         if not self.mapping:
             self.mapping = {state: state for state in self.states}
@@ -67,7 +69,7 @@ class ManualSwitch(EpicsParameters, Moveable):
     def doInit(self, mode):
         self.valuetype = oneof(*self.states)
 
-        if session.sessiontype == POLLER and self.monitor:
+        if mode != SIMULATION and session.sessiontype == POLLER and self.monitor:
             self._epics_subscriptions.append(
                 self._epics_wrapper.subscribe(
                     self.writepv,
