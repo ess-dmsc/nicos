@@ -4,6 +4,7 @@ import time
 from nicos import session
 from nicos.core import (
     POLLER,
+    SIMULATION,
     Attach,
     Override,
     Param,
@@ -59,12 +60,14 @@ class ChopperAlarms(EpicsParameters, Readable):
         self._alarm_state = {name: (status.OK, "") for name in self._record_fields}
         self._epics_subscriptions = []
         self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
+        if mode == SIMULATION:
+            return
         # Check one of the PVs exists
         pv = f"{self.pv_root}{self._record_fields['communication'].pv_suffix}"
         self._epics_wrapper.connect_pv(pv)
 
     def doInit(self, mode):
-        if session.sessiontype == POLLER and self.monitor:
+        if mode != SIMULATION and session.sessiontype == POLLER and self.monitor:
             for k, v in self._record_fields.items():
                 self._epics_subscriptions.append(
                     self._epics_wrapper.subscribe(
@@ -277,10 +280,11 @@ class OdinChopperController(EpicsParameters, MappedMoveable):
 
         self._epics_subscriptions = []
         self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
-        self._epics_wrapper.connect_pv(f"{self.pv_root}ChopState_R")
+        if mode != SIMULATION:
+            self._epics_wrapper.connect_pv(f"{self.pv_root}ChopState_R")
 
     def doInit(self, mode):
-        if session.sessiontype == POLLER and self.monitor:
+        if mode != SIMULATION and session.sessiontype == POLLER and self.monitor:
             for k, v in self._record_fields.items():
                 if v.record_type in [RecordType.VALUE, RecordType.BOTH]:
                     self._epics_subscriptions.append(
