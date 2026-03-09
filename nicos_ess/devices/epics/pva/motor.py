@@ -34,6 +34,7 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
     """
 
     valuetype = float
+    _startup_moveable_limits_pending = False
 
     parameters = {
         "motorpv": Param(
@@ -145,13 +146,6 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         self._lock = threading.Lock()
         self._epics_subscriptions = []
         self._motor_status = (status.OK, "")
-        # Moveable.init() reads userlimits at least once after parameter init.
-        # If userlimits are not in cache yet, there is one additional read while
-        # the parameter itself is initialized.
-        cached_userlimits = (
-            self._cache.get(self, "userlimits", Ellipsis) if self._cache else Ellipsis
-        )
-        self._startup_userlimit_reads_left = 2 if cached_userlimits is Ellipsis else 1
         self._record_fields = {
             "value": RecordInfo("value", ".RBV", RecordType.BOTH),
             "dialvalue": RecordInfo("", ".DRBV", RecordType.VALUE),
@@ -224,6 +218,9 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
                             self._connection_change_callback,
                         )
                     )
+        self._startup_moveable_limits_pending = (
+            self._uses_moveable_startup_limit_compat()
+        )
 
     def doRead(self, maxage=0):
         return self._get_cached_pv_or_ask("value")
@@ -241,60 +238,57 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         return self._get_cached_pv_or_ask("target")
 
     def doReadAbslimits(self):
-        absmin = self._get_cached_pv_or_ask("diallowlimit")
-        absmax = self._get_cached_pv_or_ask("dialhighlimit")
-        return absmin, absmax
+        dial_min = self._get_cached_pv_or_ask("diallowlimit")
+        dial_max = self._get_cached_pv_or_ask("dialhighlimit")
+        return dial_min, dial_max
 
     def doReadHwuserlimits(self):
-        amin = self._get_cached_pv_or_ask("diallowlimit")
-        amax = self._get_cached_pv_or_ask("dialhighlimit")
-        if amin > amax:
+        dial_min = self._get_cached_pv_or_ask("diallowlimit")
+        dial_max = self._get_cached_pv_or_ask("dialhighlimit")
+        if dial_min > dial_max:
             raise ConfigurationError(
                 self,
-                f"dial lowlimit ({amin}) above dial highlimit ({amax})",
+                f"dial lowlimit ({dial_min}) above dial highlimit ({dial_max})",
             )
         offset = self.offset
-        umin = self._get_cached_pv_or_ask("lowlimit")
-        umax = self._get_cached_pv_or_ask("highlimit")
-        if umin > umax:
+        hw_user_min = self._get_cached_pv_or_ask("lowlimit")
+        hw_user_max = self._get_cached_pv_or_ask("highlimit")
+        if hw_user_min > hw_user_max:
             raise ConfigurationError(
                 self,
-                f"record lowlimit ({umin}) above record highlimit ({umax})",
+                f"hardware user lowlimit ({hw_user_min}) above hardware user highlimit ({hw_user_max})",
             )
-        if not self._user_limits_fit_dial_window(umin, umax, amin, amax, offset):
+        if not self._user_limits_fit_dial_window(
+            hw_user_min, hw_user_max, dial_min, dial_max, offset
+        ):
             raise ConfigurationError(
                 self,
-                "record user limits (%s, %s) are inconsistent with dial limits "
+                "hardware userlimits (%s, %s) are inconsistent with dial limits "
                 "(%s, %s), offset (%s) and direction (%s)"
                 % (
-                    umin,
-                    umax,
-                    amin,
-                    amax,
+                    hw_user_min,
+                    hw_user_max,
+                    dial_min,
+                    dial_max,
                     offset,
                     self._get_pv("dir", as_string=True),
                 ),
             )
-        return umin, umax
+        return hw_user_min, hw_user_max
 
     def doReadUserlimits(self):
-        # During startup with default limitoffsets we return limits in the
-        # convention expected by Moveable.init(). doWriteUserlimits() converts
-        # this boundary case back to EPICS user coordinates.
-        if (
-            self._startup_userlimit_reads_left > 0
-            and "userlimits" not in self._config
-            and "limitoffsets" not in self._config
-            and self.limitoffsets in ((0.0, 0.0), (0, 0))
-        ):
+        # Moveable.init() compares userlimits against (abslimits - offset) using
+        # the NICOS HasOffset convention. EPICS uses the opposite sign
+        # convention, so expose the same boundary-form limits once during init
+        # and switch back to the regular EPICS user coordinates afterwards.
+        if self._startup_moveable_limits_pending:
             # Validate that EPICS record limits are internally consistent even
-            # when we return startup boundary-form limits for Moveable.init().
+            # when we return the NICOS-compatible startup boundary values.
             self.hwuserlimits
-            self._startup_userlimit_reads_left -= 1
-            amin, amax = self.abslimits
-            off = self.offset
-            return amin - off, amax - off
-        self._startup_userlimit_reads_left = 0
+            self._startup_moveable_limits_pending = False
+            dial_min, dial_max = self.abslimits
+            offset = self.offset
+            return dial_min - offset, dial_max - offset
 
         hw_umin, hw_umax = self.hwuserlimits
         omin, omax = self.limitoffsets
@@ -341,12 +335,13 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         pos = self._get_cached_pv_or_ask("value")
         target = self._get_cached_pv_or_ask("target")
         deadband = self._get_cached_pv_or_ask("position_deadband")
+        miss = self._get_cached_pv_or_ask("miss")
 
         if abs(target - pos) > deadband:
             return False
         if moving != 0:
             return False
-        if self._get_cached_pv_or_ask("miss") != 0:
+        if miss != 0:
             raise PositionError(self, "did not reach target position.")
         return True
 
@@ -401,12 +396,6 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         self.log.info("Offset changed to %s", new_off)
 
     def doWriteUserlimits(self, value):
-        umin, umax = value
-        amin, amax = self.abslimits
-        offset = self.offset
-        if umin == amin - offset and umax == amax - offset:
-            value = self._dial_limits_to_user_limits(amin, amax, offset)
-
         self._checkLimits(value)
 
         umin, umax = value
@@ -626,18 +615,19 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
             return dial_min + offset, dial_max + offset
         return -dial_max + offset, -dial_min + offset
 
-    def _user_limits_fit_dial_window(self, umin, umax, amin, amax, offset):
+    def _user_limits_fit_dial_window(
+        self, hw_user_min, hw_user_max, dial_window_min, dial_window_max, offset
+    ):
         dir_sign = self._get_dir_sign()
-        dial_from_user_low = self._user_to_dial(umin, offset)
-        dial_from_user_high = self._user_to_dial(umax, offset)
+        dial_from_user_low = self._user_to_dial(hw_user_min, offset)
+        dial_from_user_high = self._user_to_dial(hw_user_max, offset)
         if dir_sign > 0:
             dial_min = dial_from_user_low
             dial_max = dial_from_user_high
         else:
             dial_min = dial_from_user_high
             dial_max = dial_from_user_low
-        tol = max(abs(amin), abs(amax), 1.0) * 1e-12
-        return amin - tol <= dial_min and dial_max <= amax + tol
+        return dial_window_min <= dial_min and dial_max <= dial_window_max
 
     def _user_to_dial(self, val, offset=None):
         """
@@ -656,7 +646,7 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         NICOS base version adds the offset; for EPICS we have to subtract it.
         """
         umin, umax = limits
-        amin, amax = self.abslimits  # dial / hardware numbers
+        dial_window_min, dial_window_max = self.abslimits
 
         if umin > umax:
             raise ConfigurationError(
@@ -674,15 +664,15 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
             umin_hw = dial_from_user_high
             umax_hw = dial_from_user_low
 
-        if umin_hw < amin - abs(amin * 1e-12):
+        if umin_hw < dial_window_min:
             raise ConfigurationError(
                 self,
-                f"user minimum ({umin}) below absolute minimum ({amin})",
+                f"user minimum ({umin}) below absolute minimum ({dial_window_min})",
             )
-        if umax_hw > amax + abs(amax * 1e-12):
+        if umax_hw > dial_window_max:
             raise ConfigurationError(
                 self,
-                f"user maximum ({umax}) above absolute maximum ({amax})",
+                f"user maximum ({umax}) above absolute maximum ({dial_window_max})",
             )
 
     def _check_in_range(self, curval, userlimits):
@@ -691,6 +681,13 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
             return status.OK, ""
 
         return HasLimits._check_in_range(self, curval, userlimits)
+
+    def _uses_moveable_startup_limit_compat(self):
+        return (
+            "userlimits" not in self._config
+            and "limitoffsets" not in self._config
+            and self.limitoffsets in ((0.0, 0.0), (0, 0))
+        )
 
 
 class EpicsJogMotor(EpicsMotor):

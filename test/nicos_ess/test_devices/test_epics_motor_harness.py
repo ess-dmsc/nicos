@@ -434,17 +434,17 @@ class TestEpicsMotorLimits:
             assert daemon_device.limitoffsets == pytest.approx((0.0, 0.0))
 
     @pytest.mark.parametrize(
-        "startup_userlimit_reads_left, expected_userlimits",
+        "startup_moveable_limits_pending, expected_userlimits",
         [
-            pytest.param(1, (-110.0, 140.0), id="startup_boundary_path"),
-            pytest.param(0, (-90.0, 160.0), id="normal_userlimits_path"),
+            pytest.param(True, (-110.0, 140.0), id="startup_boundary_path"),
+            pytest.param(False, (-90.0, 160.0), id="normal_userlimits_path"),
         ],
     )
     def test_motor_readuserlimits_startup_and_normal_paths(
         self,
         device_harness,
         fake_backend,
-        startup_userlimit_reads_left,
+        startup_moveable_limits_pending,
         expected_userlimits,
     ):
         seed_limits(
@@ -457,8 +457,8 @@ class TestEpicsMotorLimits:
         device_harness.run_daemon(
             lambda: setattr(
                 daemon_device,
-                "_startup_userlimit_reads_left",
-                startup_userlimit_reads_left,
+                "_startup_moveable_limits_pending",
+                startup_moveable_limits_pending,
             )
         )
 
@@ -466,6 +466,7 @@ class TestEpicsMotorLimits:
             device_harness.run_daemon(daemon_device.doReadUserlimits)
             == expected_userlimits
         )
+        assert daemon_device._startup_moveable_limits_pending is False
 
     @pytest.mark.parametrize(
         "pv_updates,error_match",
@@ -477,13 +478,13 @@ class TestEpicsMotorLimits:
             ),
             pytest.param(
                 {".LLM": 10.0, ".HLM": -10.0},
-                "record lowlimit",
-                id="record_limits_inverted",
+                "hardware user lowlimit",
+                id="hardware_limits_inverted",
             ),
             pytest.param(
                 {".OFF": 10.0},
-                "record user limits",
-                id="record_limits_inconsistent_with_offset",
+                "hardware userlimits",
+                id="hardware_limits_inconsistent_with_offset",
             ),
         ],
     )

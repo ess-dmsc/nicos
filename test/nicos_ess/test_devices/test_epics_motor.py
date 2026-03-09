@@ -69,8 +69,6 @@ class FakeEpicsMotor(EpicsMotor):
     _record_fields = {}
 
     def doPreinit(self, mode):
-        # Needed to prevent NICOS from raising limit errors due to NICOS offset rules being opposite to EPICS
-        self._startup_userlimit_reads_left = 2
         pass
 
     def doInit(self, mode):
@@ -88,8 +86,6 @@ class FakeEpicsMotor(EpicsMotor):
 
 class DerivedEpicsMotor(FakeEpicsMotor):
     def doPreinit(self, mode):
-        # Needed to prevent NICOS from raising limit errors due to NICOS offset rules being opposite to EPICS
-        self._startup_userlimit_reads_left = 2
         self._record_fields = dict(FakeEpicsMotor._record_fields)
         self._record_fields.update({"extra_field": "XTR"})
 

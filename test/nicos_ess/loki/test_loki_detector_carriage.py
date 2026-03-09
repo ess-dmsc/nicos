@@ -39,8 +39,6 @@ class FakeLokiDetectorMotion(LOKIDetectorMotion):
     }
 
     def doPreinit(self, mode):
-        # Needed to prevent NICOS from raising limit errors due to NICOS offset rules being opposite to EPICS
-        self._startup_userlimit_reads_left = 2
         self._lock = threading.Lock()
         self._ps_bank = self._get_ps_bank()
 
