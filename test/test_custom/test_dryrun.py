@@ -38,6 +38,8 @@ from nicos.core.utils import system_user
 
 from test.utils import module_root
 
+FACILITY_BLACKLIST = {"nicos_demo", "nicos_mlz", "nicos_sinq"}
+
 session_setup = None
 
 
@@ -96,7 +98,7 @@ def find_scripts():
     for custom_dir in [
         d
         for d in Path(module_root).glob("nicos_*")
-        if d.is_dir() and d.name != "nicos_demo"
+        if d.is_dir() and d.name not in FACILITY_BLACKLIST
     ]:
         facility = custom_dir.name
         for testdir in Path(custom_dir).rglob("testscripts"):
@@ -122,7 +124,6 @@ def find_scripts():
                     )
 
 
-# @pytest.mark.skip(reason="why doesn't this work on ESS jenkins")
 @pytest.mark.parametrize('facility, instr, script', find_scripts())
 def test_dryrun(session, facility, instr, script):
     setups = ["system"]
