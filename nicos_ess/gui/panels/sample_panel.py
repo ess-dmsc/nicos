@@ -19,19 +19,30 @@ from nicos_ess.gui.panels.panel import PanelBase
 SAMPLE_FIELDS = [
     "name",
     "formula",
-    "number of",
-    "mass/volume",
+    "number_of",
+    "mass_or_vol",
     "density",
     "temperature",
-    "electric field",
-    "magnetic field",
+    "electric_field",
+    "magnetic_field",
 ]
+
 SAMPLE_MAPPINGS = {
-    "number of": "number_of",
-    "mass/volume": "mass_volume",
-    "electric field": "electric_field",
-    "magnetic field": "magnetic_field",
+    "mass_or_vol": "mass_volume",
 }
+
+
+class SampleData:
+    def __init__(self, data=None):
+        self.data = data if data else []
+        self.headers = SAMPLE_FIELDS
+        self.mapping = SAMPLE_MAPPINGS
+
+    def _set_samples(self, samples):
+        self.data = deepcopy(samples)
+
+    def __eq__(self, other):
+        return self.data == other
 
 
 class SamplePanel(PanelBase):
@@ -41,18 +52,18 @@ class SamplePanel(PanelBase):
         PanelBase.__init__(self, parent, client, options)
         self.options = options
 
-        self.old_settings = []
-        self.new_settings = []
+        self.old_settings = SampleData()
         self.to_monitor = ["sample/samples"]
 
-        self._create_table()
+        self.samples = SampleData()
+        self._create_table(self.samples)
         self._build_ui()
         self._connect_signals()
         self.initialise_connection_status_listeners()
 
-    def _create_table(self):
+    def _create_table(self, sample_data):
         self.model = TableModel(
-            headings=SAMPLE_FIELDS, mappings=SAMPLE_MAPPINGS, transposed=True
+            headings=sample_data.headers, mappings=sample_data.mapping, transposed=True
         )
         self.table = QTableView()
         self.table.setModel(self.model)
@@ -127,9 +138,9 @@ class SamplePanel(PanelBase):
         self._update_sample_info()
 
     def on_client_disconnected(self):
-        self._update_model([])
-        self.old_settings = []
-        self.new_settings = []
+        self.old_settings = SampleData()
+        self.samples = SampleData()
+        self._update_model(self.samples.data)
         PanelBase.on_client_disconnected(self)
 
     def setViewOnly(self, viewonly):
@@ -160,7 +171,7 @@ class SamplePanel(PanelBase):
         self.label_warning.setVisible(value)
 
     def _check_for_changes(self):
-        has_changed = self.model.raw_data != self.old_settings
+        has_changed = self.samples != self.model.raw_data
         self._set_buttons_and_warning_behaviour(has_changed)
 
     def on_keyChange(self, key, value, time, expired):
@@ -188,7 +199,6 @@ class SamplePanel(PanelBase):
             self.discard_changes()
 
     def apply_changes(self):
-        print("apply clicked")
         if self.mainwindow.current_status != "idle":
             self.showInfo("Cannot change settings while a script is running!")
             return
@@ -200,7 +210,6 @@ class SamplePanel(PanelBase):
         print(self.model.raw_data)
 
     def discard_changes(self):
-        print("discard clicked")
         self._update_sample_info()
         self._check_for_changes()
 
@@ -208,8 +217,7 @@ class SamplePanel(PanelBase):
         self.model.raw_data = deepcopy(samples)
 
     def _set_samples(self):
-        print("setting samples")
-        if self.model.raw_data == self.old_settings:
+        if self.samples == self.model.raw_data:
             return
 
         samples = {}
@@ -221,9 +229,9 @@ class SamplePanel(PanelBase):
 
     def _update_sample_info(self):
         samples = self.client.eval("session.experiment.get_samples()", {})
-        self.old_settings = samples
-        self.new_settings = deepcopy(self.old_settings)
+        self.old_settings = SampleData(samples)
+        self.samples = deepcopy(self.old_settings)
         self._update_panel()
 
     def _update_panel(self):
-        self._update_model(self.old_settings)
+        self._update_model(self.old_settings.data)
