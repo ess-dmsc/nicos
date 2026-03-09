@@ -63,6 +63,7 @@ build-backend = "hatchling.build"
 "nmx" = "nicos_ess/nmx"
 "odin" = "nicos_ess/odin"
 "tbl" = "nicos_ess/tbl"
+"telemetry" = "nicos_ess/telemetry"
 "utilities" = "nicos_ess/utilities"
 "ymir" = "nicos_ess/ymir"
 
