@@ -9,9 +9,9 @@ resolution-markers = [
 
 [manifest]
 members = [
-    "nicos",
     "nicos-demo",
     "nicos-ess",
+    "nicos-fork",
     "nicos-resources",
 ]
 
@@ -1048,7 +1048,47 @@ wheels = [
 ]
 
 [[package]]
-name = "nicos"
+name = "nicos-demo"
+source = { editable = "nicos_demo" }
+
+[package.optional-dependencies]
+gui = [
+    { name = "nicos-fork", extra = ["gui"] },
+]
+
+[package.metadata]
+requires-dist = [{ name = "nicos-fork", extras = ["gui"], marker = "extra == 'gui'", editable = "." }]
+provides-extras = ["gui"]
+
+[[package]]
+name = "nicos-ess"
+source = { editable = "nicos_ess" }
+dependencies = [
+    { name = "confluent-kafka" },
+    { name = "ess-streaming-data-types" },
+    { name = "kafka-logging-handler" },
+    { name = "nicos-fork" },
+    { name = "yuos-query" },
+]
+
+[package.optional-dependencies]
+gui = [
+    { name = "nicos-fork", extra = ["gui"] },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "confluent-kafka", specifier = ">=2.13.0" },
+    { name = "ess-streaming-data-types", specifier = ">=0.26.1" },
+    { name = "kafka-logging-handler", specifier = "<=0.2.4" },
+    { name = "nicos-fork", editable = "." },
+    { name = "nicos-fork", extras = ["gui"], marker = "extra == 'gui'", editable = "." },
+    { name = "yuos-query", specifier = ">=0.2.0" },
+]
+provides-extras = ["gui"]
+
+[[package]]
+name = "nicos-fork"
 source = { editable = "." }
 dependencies = [
     { name = "caproto" },
@@ -1185,46 +1225,6 @@ dev = [
     { name = "pyyaml", specifier = ">=3.0" },
     { name = "ruff", specifier = "==0.9.2" },
 ]
-
-[[package]]
-name = "nicos-demo"
-source = { editable = "nicos_demo" }
-
-[package.optional-dependencies]
-gui = [
-    { name = "nicos", extra = ["gui"] },
-]
-
-[package.metadata]
-requires-dist = [{ name = "nicos", extras = ["gui"], marker = "extra == 'gui'", editable = "." }]
-provides-extras = ["gui"]
-
-[[package]]
-name = "nicos-ess"
-source = { editable = "nicos_ess" }
-dependencies = [
-    { name = "confluent-kafka" },
-    { name = "ess-streaming-data-types" },
-    { name = "kafka-logging-handler" },
-    { name = "nicos" },
-    { name = "yuos-query" },
-]
-
-[package.optional-dependencies]
-gui = [
-    { name = "nicos", extra = ["gui"] },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "confluent-kafka", specifier = ">=2.13.0" },
-    { name = "ess-streaming-data-types", specifier = ">=0.26.1" },
-    { name = "kafka-logging-handler", specifier = "<=0.2.4" },
-    { name = "nicos", editable = "." },
-    { name = "nicos", extras = ["gui"], marker = "extra == 'gui'", editable = "." },
-    { name = "yuos-query", specifier = ">=0.2.0" },
-]
-provides-extras = ["gui"]
 
 [[package]]
 name = "nicos-pyctl"
