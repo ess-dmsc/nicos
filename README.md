@@ -1,12 +1,5 @@
 # NICOS
 
-## Configure NICOS
-
-Place the NICOS configuration file (`nicos.conf`) of your choice into the `nicos` directory in your standard user configuration path.
-This particular path differs between platforms: on GNU/Linux systems, this would be `~/.config/nicos/nicos.conf`.
-
-Alternatively, you can also placed the configuration file in the site-wide directory, i.e. `/etc/xdg/nicos/nicos.conf`, or set the `XDG_CONFIG_HOME` environment variable to point to a different location altogether.
-
 ## Installation
 
 Prerequisites: Install `uv` ([see the uv installation instructions](https://docs.astral.sh/uv/getting-started/installation/)
@@ -56,6 +49,14 @@ You can also install NICOS into the uv managed tools to have its commands availa
 
 The resulting source tarball and wheel files will be located in the `dist` directory.
 
+## Configure NICOS
+
+Place the NICOS configuration file (`nicos.conf`) for your choice of instrument into one of the following locations:
+
+- in the site-wide directory, i.e. `/etc/xdg/nicos/nicos.conf` on GNU/Linux, 
+- the `nicos` directory in your standard user configuration path, i.e. on GNU/Linux systems, this would be `~/.config/nicos/nicos.conf`, or
+- set either the `XDG_CONFIG_HOME` or `XDG_CONFIG_DIRS` environment variable to point to a different location altogether.
+
 
 ## Installing the Server Locally
 
@@ -77,9 +78,9 @@ mkdir /opt/nicos-data
 
 ### Step 3: Select an Instrument Configuration
 
-Link the configuration file for your chosen instrument:
+Link the configuration file for your chosen instrument or copy it at the location described in the section "Configure NICOS" above:
 ```bash
-ln -s nicos_ess/<instrument>/nicos.conf .
+ln -s nicos_ess/<instrument>/nicos.conf ~/.config/nicos/nicos.conf
 ```
 
 A good starting instrument is `ymir`, which is a test instrument.
