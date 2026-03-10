@@ -6,12 +6,12 @@ dynamic = ["version"]
 
 [project.optional-dependencies]
 gui = [
-    "nicos[gui]"
+    "nicos-fork[gui]"
 ]
 
 [tool.uv.sources]
 # `nicos_demo` depends on `nicos`, which should be installed from this workspace:
-nicos = { workspace = true }
+nicos-fork = { workspace = true }
 
 # Use the `hatchling` backend for building the package. `uv` backend does not
 # work without a `src/module_name` or `module_name` subdirectory.
