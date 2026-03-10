@@ -16,11 +16,6 @@ gui = [
     "nicos[gui]"
 ]
 
-[dependency-groups]
-dev = [
-    "nicos[dev]"
-]
-
 [tool.uv.sources]
 # `nicos_ess` depends on `nicos`, which should be installed from this workspace:
 nicos = { workspace = true }
