@@ -32,6 +32,7 @@ devices = dict(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="VS - Rotation around z axis",
         motorpv="ESTIA-VSRot:MC-RotZ-01:Mtr",
+        visibility=(),
     ),
     slit=device(
         "nicos.devices.generic.slit.Slit",
@@ -41,11 +42,23 @@ devices = dict(
         right="right_top_blade_horizontal",
         bottom="right_top_blade_vertical",
         top="left_bottom_blade_vertical",
+        visibility=(),
     ),
     virtual_source=device(
-        "nicos_ess.estia.devices.virtual_source.VSCalculator",
-        description="Reads the virtual source slit's width and height",
+        "nicos_ess.estia.devices.virtual_source.VirtualSource",
+        description="Reads the virtual source slit gaps and current angle",
         slit="slit",
         rot="vs_slit_rotation",
+    ),
+    laser=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
+        description="device to turn on and off the VS laser",
+        readpv="ESTIA-SES:Ctrl-IM-100:LaserEnable",
+        writepv="ESTIA-SES:Ctrl-IM-100:LaserEnable",
+    ),
+    laser_readback=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description="readback value of the VS laser",
+        readpv="ESTIA-SES:Ctrl-IM-100:LaserEnabled",
     ),
 )
