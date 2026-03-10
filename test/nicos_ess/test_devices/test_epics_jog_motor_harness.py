@@ -22,46 +22,41 @@
 #
 # *****************************************************************************
 
-"""Reusable doubles for ESS device tests."""
+import pytest
 
-from test.nicos_ess.test_devices.doubles.epics_pva_backend import (
-    FakeEpicsBackend,
-    analog_moveable_config,
-    mapped_config,
+from nicos_ess.devices.epics.pva import motor
+from nicos_ess.devices.epics.pva.motor import EpicsJogMotor
+from test.nicos_ess.test_devices.doubles import (
     patch_create_wrapper,
-    string_moveable_config,
-)
-from test.nicos_ess.test_devices.doubles.epics_seed import (
     seed_epics_jog_motor_defaults,
 )
-from test.nicos_ess.test_devices.doubles.harness_devices import (
-    HarnessMappedMoveable,
-    HarnessMoveable,
-    HarnessReadable,
-)
-from test.nicos_ess.test_devices.doubles.kafka_stubs import (
-    StubKafkaConsumer,
-    StubKafkaProducer,
-    StubKafkaSubscriber,
-)
-from test.nicos_ess.test_devices.doubles.mapped_controller_devices import (
-    HarnessLinearAxis,
-    HarnessMoveableNoPrecision,
-)
 
-__all__ = [
-    "FakeEpicsBackend",
-    "HarnessLinearAxis",
-    "HarnessMoveableNoPrecision",
-    "HarnessMappedMoveable",
-    "HarnessMoveable",
-    "HarnessReadable",
-    "StubKafkaConsumer",
-    "StubKafkaProducer",
-    "StubKafkaSubscriber",
-    "analog_moveable_config",
-    "mapped_config",
-    "patch_create_wrapper",
-    "seed_epics_jog_motor_defaults",
-    "string_moveable_config",
-]
+
+MOTOR_PV = "SIM:M1"
+ROLES = ("daemon", "poller")
+
+
+@pytest.fixture
+def fake_backend(monkeypatch):
+    backend = patch_create_wrapper(monkeypatch, motor)
+
+    def close_subscription(token):
+        if token in backend.subscriptions:
+            backend.subscriptions.remove(token)
+
+    backend.close_subscription = close_subscription
+    seed_epics_jog_motor_defaults(backend, motor_pv=MOTOR_PV)
+    return backend
+
+
+@pytest.mark.parametrize("role", ROLES)
+def test_epics_jog_motor_initializes(role, device_harness, fake_backend):
+    del fake_backend
+    dev = device_harness.create_master(
+        role,
+        EpicsJogMotor,
+        name=f"epics_jog_motor_{role}",
+        motorpv=MOTOR_PV,
+        monitor=False,
+    )
+    assert dev is not None
