@@ -1,7 +1,7 @@
 description = "Polarizer"
 
 devices = dict(
-    in_beam_changer=device(
+    polarizer_lin_stage=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Polarizer in-beam changer",
         motorpv="ESTIA-PolChg:MC-LinY01:Mtr",
