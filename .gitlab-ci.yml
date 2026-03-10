@@ -13,6 +13,8 @@ variables:
 
 stages:
   - test
+  - lint
+  - format
 
 tests_py312_cov:
   stage: test
@@ -50,3 +52,56 @@ tests_py3xx:
       junit: test-output.xml
   variables:
     UV_PYTHON: $PYTHON_VERSION
+
+
+.lint:
+  stage: lint
+  image: registry.esss.lu.se/ecdc/ess-dmsc/docker-almalinux9-conan:1.6.0
+  before_script:
+    - git config --global --add safe.directory "$CI_PROJECT_DIR"
+    - uv sync --extra gui --all-packages
+    - uv pip install ruff
+    - uv pip install codespell
+  variables:
+    UV_PYTHON: 3.12
+
+
+lint:check_setups:
+  extends:
+    - .lint
+  script:
+    - find ./nicos_ess -type d -name setups -exec uv run tools/check-setups \{\} \;
+
+lint:ruff:
+  extends:
+    - .lint
+  script:
+    - uv run ruff check --output-format=gitlab | tee code-quality-report.json
+  artifacts:
+    reports:
+      codequality: code-quality-report.json
+
+
+lint:codespell:
+  extends:
+    - .lint
+  script:
+    - uv run python -m codespell_lib
+
+
+.format:
+  stage: format
+  image: registry.esss.lu.se/ecdc/ess-dmsc/docker-almalinux9-conan:1.6.0
+  before_script:
+    - git config --global --add safe.directory "$CI_PROJECT_DIR"
+    - uv sync --extra gui --all-packages
+    - uv pip install ruff
+  variables:
+    UV_PYTHON: 3.12
+
+
+format:ruff:
+  extends:
+    - .format
+  script:
+    - uv run ruff format --diff
