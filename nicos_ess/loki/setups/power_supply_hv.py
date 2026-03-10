@@ -1,5 +1,7 @@
 from nicos_ess.loki.setups.power_supply_config import hv_channels
 
+description = "High voltage power supply channels for detector banks"
+
 pv_root = "LOKI-DtCmn:PwrC"
 
 devices = {}
