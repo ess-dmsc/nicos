@@ -464,8 +464,8 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
             if self._get_cached_pv_or_ask("homeforward") or self._get_cached_pv_or_ask(
                 "homereverse"
             ):
-                return status.BUSY, "homing"
-            return status.BUSY, f"moving to {self.target}"
+                return status.BUSY, message or "homing"
+            return status.BUSY, message or f"moving to {self.target}"
 
         if self.has_powerauto:
             powerauto_enabled = self._get_cached_pv_or_ask("powerauto")
@@ -477,21 +477,20 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
 
         miss = self._get_cached_pv_or_ask("miss")
         if miss != 0:
-            return status.NOTREACHED, "did not reach target position."
+            return status.NOTREACHED, message or "did not reach target position."
 
         high_limitswitch = self._get_cached_pv_or_ask("highlimitswitch")
         if high_limitswitch != 0:
-            return status.WARN, "at high limit switch."
+            return status.WARN, message or "at high limit switch."
 
         low_limitswitch = self._get_cached_pv_or_ask("lowlimitswitch")
         if low_limitswitch != 0:
-            return status.WARN, "at low limit switch."
+            return status.WARN, message or "at low limit switch."
 
         limit_violation = self._get_cached_pv_or_ask("softlimit")
         if limit_violation != 0:
-            return status.WARN, "soft limit violation."
-
-        return status.OK, ""
+            return status.WARN, message or "soft limit violation."
+        return status.OK, message
 
     def _value_change_callback(
         self, name, param, value, units, limits, severity, message, **kwargs
