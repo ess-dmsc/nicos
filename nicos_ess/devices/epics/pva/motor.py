@@ -34,6 +34,7 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
     """
 
     valuetype = float
+    limit_rel_tolerance = 1e-12
     errorstates = {**Motor.errorstates, status.UNKNOWN: MoveError}
     _startup_moveable_limits_pending = False
 
@@ -619,15 +620,8 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
     def _get_dir_sign(self):
         return 1 if self._get_pv("dir", as_string=True) == "Pos" else -1
 
-    def _dial_limits_to_user_limits(self, dial_min, dial_max, offset):
-        if dial_min > dial_max:
-            raise ConfigurationError(
-                self,
-                f"dial lowlimit ({dial_min}) above dial highlimit ({dial_max})",
-            )
-        if self._get_dir_sign() > 0:
-            return dial_min + offset, dial_max + offset
-        return -dial_max + offset, -dial_min + offset
+    def _limit_margin(self, boundary_value):
+        return abs(boundary_value) * self.limit_rel_tolerance
 
     def _user_limits_fit_dial_window(
         self, hw_user_min, hw_user_max, dial_window_min, dial_window_max, offset
@@ -641,7 +635,12 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         else:
             dial_min = dial_from_user_high
             dial_max = dial_from_user_low
-        return dial_window_min <= dial_min and dial_max <= dial_window_max
+        min_margin = self._limit_margin(dial_window_min)
+        max_margin = self._limit_margin(dial_window_max)
+        return (
+            dial_window_min - min_margin <= dial_min
+            and dial_max <= dial_window_max + max_margin
+        )
 
     def _user_to_dial(self, val, offset=None):
         """
@@ -678,12 +677,15 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
             umin_hw = dial_from_user_high
             umax_hw = dial_from_user_low
 
-        if umin_hw < dial_window_min:
+        min_margin = self._limit_margin(dial_window_min)
+        max_margin = self._limit_margin(dial_window_max)
+
+        if umin_hw < dial_window_min - min_margin:
             raise ConfigurationError(
                 self,
                 f"user minimum ({umin}) below absolute minimum ({dial_window_min})",
             )
-        if umax_hw > dial_window_max:
+        if umax_hw > dial_window_max + max_margin:
             raise ConfigurationError(
                 self,
                 f"user maximum ({umax}) above absolute maximum ({dial_window_max})",
