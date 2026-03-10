@@ -171,10 +171,10 @@ def readConfig():
         # Iterate from least specific (site) to most specific (user) until a
         # configuration file is found
         dirs = PlatformDirs("nicos")
-        for config_dir in reversed(list(dirs.iter_config_paths())):
+        for config_dir in [dirs.site_config_path, dirs.user_config_path]:
             config_file = config_dir / nicos_cfg_fn
-            print(f"Looking for configuration file in {config_file}")
             if config_file.exists():
+                print(f"Found configuration file in {config_file}")
                 global_cfg = readToml(config_file)
                 # update the configuration to use
                 config.nicos_cfg_root = str(config_dir)
