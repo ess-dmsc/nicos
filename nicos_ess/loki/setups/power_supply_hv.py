@@ -9,15 +9,15 @@ for bank, boards in hv_channels.items():
     bank_channels = []
     for board, channels in boards.items():
         for channel in channels:
-            ch_name = f"hv_{bank}_{board}_{channel}"
+            ch_name = f"hv_{bank}_{board}_ch{channel}"
             ch_device = device(
                 "nicos_ess.devices.epics.power_supply_channel.PowerSupplyChannel",
                 description="A power supply channel",
                 board=board,
-                channel=int(channel.replace("Ch", "")),
+                channel=int(channel),
                 pollinterval=0.5,
                 maxage=None,
-                ps_pv=f"{pv_root}-HVM-{board}:{channel}",
+                ps_pv=f"{pv_root}-HVM-{board}:Ch{channel}",
                 mapping={"OFF": 0, "ON": 1},
                 visibility={},
             )
