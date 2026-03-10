@@ -3,7 +3,7 @@ import time
 
 from nicos import session
 from nicos.core import POLLER, Moveable, Override, Param, limits, oneof, pvname, status
-from nicos.core.errors import ConfigurationError, PositionError
+from nicos.core.errors import ConfigurationError, MoveError, PositionError
 from nicos.core.mixins import CanDisable, HasLimits, HasOffset
 from nicos.devices.abstract import CanReference, Motor
 from nicos.devices.epics.status import SEVERITY_TO_STATUS
@@ -34,6 +34,7 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
     """
 
     valuetype = float
+    errorstates = {**Motor.errorstates, status.UNKNOWN: MoveError}
     _startup_moveable_limits_pending = False
 
     parameters = {
@@ -331,18 +332,21 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         return self._get_cached_pv_or_ask("miss") == 0
 
     def doIsCompleted(self):
+        cur_status, cur_message = self.status(0)
+        if cur_status in self.busystates:
+            return False
+        if cur_status in self.errorstates:
+            raise self.errorstates[cur_status](self, cur_message)
+
         moving = self._get_cached_pv_or_ask("moving")
         pos = self._get_cached_pv_or_ask("value")
         target = self._get_cached_pv_or_ask("target")
         deadband = self._get_cached_pv_or_ask("position_deadband")
-        miss = self._get_cached_pv_or_ask("miss")
 
         if abs(target - pos) > deadband:
             return False
         if moving != 0:
             return False
-        if miss != 0:
-            raise PositionError(self, "did not reach target position.")
         return True
 
     def doStart(self, value):
@@ -448,8 +452,8 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         with self._lock:
             epics_status, message = self._get_alarm_status_and_msg()
             self._motor_status = epics_status, message
-        if epics_status == status.ERROR:
-            return status.ERROR, message or "Unknown problem in record"
+        if epics_status in (status.ERROR, status.UNKNOWN):
+            return epics_status, message or "Unknown problem in record"
         elif epics_status == status.WARN:
             return status.WARN, message
 
@@ -459,8 +463,8 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
             if self._get_cached_pv_or_ask("homeforward") or self._get_cached_pv_or_ask(
                 "homereverse"
             ):
-                return status.BUSY, message or "homing"
-            return status.BUSY, message or f"moving to {self.target}"
+                return status.BUSY, "homing"
+            return status.BUSY, f"moving to {self.target}"
 
         if self.has_powerauto:
             powerauto_enabled = self._get_cached_pv_or_ask("powerauto")
@@ -472,21 +476,21 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
 
         miss = self._get_cached_pv_or_ask("miss")
         if miss != 0:
-            return (status.NOTREACHED, message or "did not reach target position.")
+            return status.NOTREACHED, "did not reach target position."
 
         high_limitswitch = self._get_cached_pv_or_ask("highlimitswitch")
         if high_limitswitch != 0:
-            return status.WARN, message or "at high limit switch."
+            return status.WARN, "at high limit switch."
 
         low_limitswitch = self._get_cached_pv_or_ask("lowlimitswitch")
         if low_limitswitch != 0:
-            return status.WARN, message or "at low limit switch."
+            return status.WARN, "at low limit switch."
 
         limit_violation = self._get_cached_pv_or_ask("softlimit")
         if limit_violation != 0:
-            return status.WARN, message or "soft limit violation."
+            return status.WARN, "soft limit violation."
 
-        return status.OK, message
+        return status.OK, ""
 
     def _value_change_callback(
         self, name, param, value, units, limits, severity, message, **kwargs
@@ -558,7 +562,7 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         return valid_speed
 
     def _get_msgtxt(self):
-        msg_txt = self._get_cached_pv_or_ask("msgtxt", as_string=True)
+        msg_txt = self._get_cached_pv_or_ask("msgtxt", as_string=True).strip()
 
         msg_stat = SEVERITY_TO_STATUS.get(
             self._get_cached_pv_or_ask("msgtxt_severity"), status.UNKNOWN
@@ -569,15 +573,22 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         return max(msg_stat, motor_stat)
 
     def _update_status_with_msgtxt(self, motor_stat, motor_msg):
+        motor_msg = (motor_msg or "").strip()
         msg_stat, msg_txt = self._get_msgtxt()
-        if motor_stat == status.UNKNOWN:
-            motor_stat = status.ERROR
-        motor_stat = self.increase_severity_if_msgtxt_severity_higher(
+        merged_stat = self.increase_severity_if_msgtxt_severity_higher(
             msg_stat, motor_stat
         )
-        if self._motor_status != (motor_stat, msg_txt):
-            self._log_epics_msg_info(msg_txt, motor_stat, motor_msg)
-        return motor_stat, msg_txt
+
+        if merged_stat == status.OK:
+            merged_msg = ""
+        elif msg_stat > motor_stat:
+            merged_msg = msg_txt or motor_msg
+        else:
+            merged_msg = motor_msg or msg_txt
+
+        if self._motor_status != (merged_stat, merged_msg):
+            self._log_epics_msg_info(merged_msg, merged_stat, motor_msg)
+        return merged_stat, merged_msg
 
     def _get_alarm_status_and_msg(self):
         def _get_value_status():
@@ -587,12 +598,15 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         motor_stat, motor_msg = get_from_cache_or(
             self, "value_status", _get_value_status
         )
+        motor_msg = (motor_msg or "").strip()
 
         if self.has_msgtxt:
             motor_stat, motor_msg = self._update_status_with_msgtxt(
                 motor_stat, motor_msg
             )
-        return motor_stat, motor_msg.strip()
+        elif motor_stat == status.OK:
+            motor_msg = ""
+        return motor_stat, motor_msg
 
     def _log_epics_msg_info(self, error_msg, stat, epics_msg):
         if stat == status.OK or stat == status.UNKNOWN:
@@ -861,8 +875,8 @@ class EpicsJogMotor(EpicsMotor):
         with self._lock:
             epics_status, message = self._get_alarm_status_and_msg()
             self._motor_status = epics_status, message
-        if epics_status == status.ERROR:
-            return status.ERROR, message or "Unknown problem in record"
+        if epics_status in (status.ERROR, status.UNKNOWN):
+            return epics_status, message or "Unknown problem in record"
         elif epics_status == status.WARN:
             return status.WARN, message
 
@@ -886,7 +900,6 @@ class EpicsJogMotor(EpicsMotor):
         low_limitswitch = self._get_cached_pv_or_ask("lowlimitswitch")
         if low_limitswitch != 0:
             return status.WARN, message or "at low limit switch."
-
         limit_violation = self._get_cached_pv_or_ask("softlimit")
         if limit_violation != 0:
             return status.WARN, message or "soft limit violation."

@@ -25,7 +25,7 @@
 import pytest
 
 from nicos.core import status
-from nicos.core.errors import ConfigurationError, PositionError
+from nicos.core.errors import ConfigurationError, MoveError, PositionError
 
 from nicos_ess.devices.epics.pva import motor
 from nicos_ess.devices.epics.pva.epics_devices import RecordInfo, RecordType
@@ -192,6 +192,119 @@ STATUS_CASES = [
         "high limit switch",
         False,
         id="high_limit_switch",
+    ),
+]
+
+STATUS_SEVERITY_AND_MESSAGE_PRECEDENCE_CASES = [
+    pytest.param(
+        (status.OK, ""),
+        0,
+        "hello",
+        [],
+        status.OK,
+        "",
+        True,
+        id="ok_status_returns_empty_message_even_when_msgtxt_has_text",
+    ),
+    pytest.param(
+        (status.OK, ""),
+        0,
+        "hello",
+        [(pv(".LVIO"), 1)],
+        status.WARN,
+        "soft limit violation",
+        False,
+        id="softlimit_message_overrides_ok_msgtxt_text",
+    ),
+    pytest.param(
+        (status.OK, ""),
+        0,
+        "hello",
+        [(pv(".LLS"), 1)],
+        status.WARN,
+        "low limit switch",
+        False,
+        id="low_limit_message_overrides_ok_msgtxt_text",
+    ),
+    pytest.param(
+        (status.OK, ""),
+        0,
+        "hello",
+        [(pv(".HLS"), 1)],
+        status.WARN,
+        "high limit switch",
+        False,
+        id="high_limit_message_overrides_ok_msgtxt_text",
+    ),
+    pytest.param(
+        (status.OK, ""),
+        0,
+        "hello",
+        [(pv(".MISS"), 1)],
+        status.NOTREACHED,
+        "did not reach target",
+        False,
+        id="miss_message_overrides_ok_msgtxt_text",
+    ),
+    pytest.param(
+        (status.OK, ""),
+        0,
+        "hello",
+        [(pv(".DMOV"), 0), (pv(".MOVN"), 1)],
+        status.BUSY,
+        "moving to",
+        False,
+        id="moving_message_overrides_ok_msgtxt_text",
+    ),
+    pytest.param(
+        (status.OK, ""),
+        0,
+        "hello",
+        [(pv("-PwrAuto"), 0), (pv(".CNEN"), 0)],
+        status.WARN,
+        "motor is not enabled",
+        False,
+        id="disabled_message_overrides_ok_msgtxt_text",
+    ),
+    pytest.param(
+        (status.WARN, "record alarm"),
+        0,
+        "hello",
+        [],
+        status.WARN,
+        "record alarm",
+        False,
+        id="record_alarm_message_overrides_ok_msgtxt_text",
+    ),
+    pytest.param(
+        (status.OK, ""),
+        1,
+        "minor issue",
+        [],
+        status.WARN,
+        "minor issue",
+        False,
+        id="msgtxt_minor_sets_warn_with_msgtxt_message",
+    ),
+    pytest.param(
+        (status.OK, ""),
+        2,
+        "major issue",
+        [],
+        status.ERROR,
+        "major issue",
+        False,
+        id="msgtxt_major_sets_error_with_msgtxt_message",
+    ),
+    pytest.param(
+        (status.OK, ""),
+        3,
+        "invalid issue",
+        [],
+        status.UNKNOWN,
+        "invalid issue",
+        False,
+        id="msgtxt_invalid_sets_unknown_with_msgtxt_message",
     ),
 ]
 
@@ -625,17 +738,62 @@ class TestEpicsMotorStatus:
 
         assert dev.status(0) == (status.ERROR, "record alarm")
 
-    def test_motor_status_msgtxt_severity_can_raise_record_alarm_severity(
-        self, device_harness, fake_backend
+    @pytest.mark.parametrize(
+        "rbv_alarm,msgtxt_severity,msgtxt,state_pvs,expected_status,expected_message,expect_empty_message",
+        STATUS_SEVERITY_AND_MESSAGE_PRECEDENCE_CASES,
+    )
+    def test_motor_status_selects_correct_severity_and_message_source(
+        self,
+        device_harness,
+        fake_backend,
+        rbv_alarm,
+        msgtxt_severity,
+        msgtxt,
+        state_pvs,
+        expected_status,
+        expected_message,
+        expect_empty_message,
     ):
-        fake_backend.alarms[pv(".RBV")] = (status.WARN, "record alarm")
-        fake_backend.values[pv("-MsgTxt")] = "controller fault"
-        fake_backend.values[pv("-MsgTxt.SEVR")] = 2
+        fake_backend.alarms[pv(".RBV")] = rbv_alarm
+        fake_backend.values[pv("-MsgTxt")] = msgtxt
+        fake_backend.values[pv("-MsgTxt.SEVR")] = msgtxt_severity
+        set_state_pvs(fake_backend, state_pvs)
         dev = create_motor(device_harness, has_msgtxt=True)
 
         st, msg = dev.status(0)
-        assert st == status.ERROR
-        assert "controller fault" in msg
+        assert_status_result(
+            st, msg, expected_status, expected_message, expect_empty_message
+        )
+
+    @pytest.mark.parametrize(
+        "rbv_alarm,msgtxt_severity,msgtxt,state_pvs,expected_status,expected_message,expect_empty_message",
+        STATUS_SEVERITY_AND_MESSAGE_PRECEDENCE_CASES,
+    )
+    def test_motor_status_updates_correct_severity_and_message_source(
+        self,
+        device_harness,
+        fake_backend,
+        rbv_alarm,
+        msgtxt_severity,
+        msgtxt,
+        state_pvs,
+        expected_status,
+        expected_message,
+        expect_empty_message,
+    ):
+        daemon_device, _poller_device = create_monitored_motor_pair(
+            device_harness, has_msgtxt=True
+        )
+
+        fake_backend.alarms[pv(".RBV")] = rbv_alarm
+        fake_backend.values[pv("-MsgTxt")] = msgtxt
+        fake_backend.values[pv("-MsgTxt.SEVR")] = msgtxt_severity
+        set_state_pvs(fake_backend, state_pvs)
+
+        st, msg = device_harness.run_daemon(daemon_device.status, 0)
+        assert_status_result(
+            st, msg, expected_status, expected_message, expect_empty_message
+        )
 
     def test_motor_status_from_existing_epics_alarm_state_when_pair_is_created(
         self, device_harness, fake_backend
@@ -832,8 +990,36 @@ class TestEpicsMotorCommandsAndMotion:
 
         assert fake_backend.values[pv("-ErrRst")] == 0
 
-    def test_motor_wait_raises_when_status_is_notreached(
-        self, device_harness, fake_backend
+    @pytest.mark.parametrize(
+        "rbv_alarm,pv_updates,expected_exception",
+        [
+            pytest.param(
+                None,
+                {".MISS": 1},
+                PositionError,
+                id="notreached_raises_positionerror",
+            ),
+            pytest.param(
+                (status.ERROR, "record alarm"),
+                {},
+                MoveError,
+                id="error_raises_moveerror",
+            ),
+            pytest.param(
+                None,
+                {"-MsgTxt": "invalid issue", "-MsgTxt.SEVR": 3},
+                MoveError,
+                id="unknown_raises_moveerror",
+            ),
+        ],
+    )
+    def test_motor_wait_raises_for_error_states(
+        self,
+        device_harness,
+        fake_backend,
+        rbv_alarm,
+        pv_updates,
+        expected_exception,
     ):
         start_pos = 2.5
         target = 3.5
@@ -841,14 +1027,17 @@ class TestEpicsMotorCommandsAndMotion:
         fake_backend.values[pv(".VAL")] = start_pos
         fake_backend.values[pv(".MOVN")] = 0
         fake_backend.values[pv(".DMOV")] = 1
-        fake_backend.values[pv(".MISS")] = 1
+        if rbv_alarm is not None:
+            fake_backend.alarms[pv(".RBV")] = rbv_alarm
+        for suffix, value in pv_updates.items():
+            fake_backend.values[pv(suffix)] = value
         daemon_device, _poller_device = create_motor_pair(device_harness, monitor=False)
 
         device_harness.run_daemon(daemon_device.start, target)
         fake_backend.values[pv(".RBV")] = target
         fake_backend.values[pv(".VAL")] = target
 
-        with pytest.raises(PositionError):
+        with pytest.raises(expected_exception):
             device_harness.run_daemon(daemon_device.wait)
 
     def test_motor_wait_returns_current_value_when_move_is_completed_and_reached(
