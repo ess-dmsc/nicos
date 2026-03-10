@@ -40,8 +40,7 @@ build-backend = "hatchling.build"  # uv does not yet support dynamic metadata
 source = "uv-dynamic-versioning"
 
 [tool.uv-dynamic-versioning]
-pattern = "(?P<base>\\d+\\.\\d+\\.\\d+)-(?P<tagged_metadata>ess\\.\\d+)"
-format = "{base}+{tagged_metadata}"
+pattern = "default-unprefixed"
 
 [tool.hatch.build.targets.sdist]
 only-include = ["nicos"]
