@@ -33,9 +33,6 @@ from test.nicos_ess.test_devices.doubles import (
 )
 
 
-ROLES = ("daemon", "poller")
-
-
 @pytest.fixture
 def kafka_stubs(monkeypatch):
     monkeypatch.setattr(just_bin_it, "KafkaSubscriber", StubKafkaSubscriber)
@@ -48,34 +45,36 @@ def kafka_stubs(monkeypatch):
     monkeypatch.setattr(status_handler, "KafkaSubscriber", StubKafkaSubscriber)
 
 
-@pytest.mark.parametrize("role", ROLES)
-def test_just_bin_it_image_initializes(role, device_harness, kafka_stubs):
-    del kafka_stubs
-    dev = device_harness.create_master(
-        role,
-        just_bin_it.JustBinItImage,
-        name=f"just_bin_it_image_{role}",
-        brokers=["localhost:9092"],
-        hist_topic="jbi_hist",
-        data_topic="jbi_data",
-    )
-    assert dev is not None
+class TestJustBinItImageHarness:
+    def test_initializes(self, device_harness, kafka_stubs):
+        del kafka_stubs
+        daemon_device, poller_device = device_harness.create_pair(
+            just_bin_it.JustBinItImage,
+            name="just_bin_it_image",
+            shared={
+                "brokers": ["localhost:9092"],
+                "hist_topic": "jbi_hist",
+                "data_topic": "jbi_data",
+            },
+        )
+
+        assert daemon_device is not None
+        assert poller_device is not None
 
 
-@pytest.mark.parametrize("role", ROLES)
-def test_just_bin_it_detector_initializes(
-    role,
-    device_harness,
-    kafka_stubs,
-):
-    del kafka_stubs
-    dev = device_harness.create_master(
-        role,
-        just_bin_it.JustBinItDetector,
-        name=f"just_bin_it_detector_{role}",
-        brokers=["localhost:9092"],
-        command_topic="jbi_command",
-        response_topic="jbi_response",
-        statustopic=[],
-    )
-    assert dev is not None
+class TestJustBinItDetectorHarness:
+    def test_initializes(self, device_harness, kafka_stubs):
+        del kafka_stubs
+        daemon_device, poller_device = device_harness.create_pair(
+            just_bin_it.JustBinItDetector,
+            name="just_bin_it_detector",
+            shared={
+                "brokers": ["localhost:9092"],
+                "command_topic": "jbi_command",
+                "response_topic": "jbi_response",
+                "statustopic": [],
+            },
+        )
+
+        assert daemon_device is not None
+        assert poller_device is not None

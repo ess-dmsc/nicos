@@ -35,7 +35,6 @@ from test.nicos_ess.test_devices.doubles import (
 )
 
 
-ROLES = ("daemon", "poller")
 MOTOR_PV = "SIM:M1"
 
 
@@ -56,63 +55,62 @@ def fake_backend(monkeypatch):
 @pytest.fixture
 def attached_transformer_devices(device_harness, fake_backend):
     del fake_backend
-    for role in ROLES:
-        device_harness.create_master(
-            role,
-            HarnessMoveable,
-            name="phase_ns_dev",
-            initial=0.0,
-        )
-        device_harness.create_master(
-            role,
-            EpicsManualMappedAnalogMoveable,
-            name="mapped_speed_dev",
-            readpv="SIM:CHOP:SPD.RBV",
-            writepv="SIM:CHOP:SPD.VAL",
-            mapping={"0 Hz": 0.0, "14 Hz": 14.0},
-            monitor=False,
-        )
-        device_harness.create_master(
-            role,
-            motor.EpicsJogMotor,
-            name="jog_motor",
-            motorpv=MOTOR_PV,
-            monitor=False,
-        )
 
-
-@pytest.mark.parametrize("role", ROLES)
-def test_chopper_phase_initializes(
-    role,
-    device_harness,
-    fake_backend,
-    attached_transformer_devices,
-):
-    del fake_backend, attached_transformer_devices
-    dev = device_harness.create_master(
-        role,
-        transformer_devices.ChopperPhase,
-        name=f"chopper_phase_{role}",
-        unit="deg",
-        offset=0.0,
-        phase_ns_dev="phase_ns_dev",
-        mapped_speed_dev="mapped_speed_dev",
+    device_harness.create_pair(
+        HarnessMoveable,
+        name="phase_ns_dev",
+        shared={"initial": 0.0},
     )
-    assert dev is not None
-
-
-@pytest.mark.parametrize("role", ROLES)
-def test_degrees_per_second_to_rpm_initializes(
-    role,
-    device_harness,
-    fake_backend,
-    attached_transformer_devices,
-):
-    del fake_backend, attached_transformer_devices
-    dev = device_harness.create_master(
-        role,
-        transformer_devices.DegreesPerSecondToRPM,
-        name=f"degrees_per_second_to_rpm_{role}",
-        motor="jog_motor",
+    device_harness.create_pair(
+        EpicsManualMappedAnalogMoveable,
+        name="mapped_speed_dev",
+        shared={
+            "readpv": "SIM:CHOP:SPD.RBV",
+            "writepv": "SIM:CHOP:SPD.VAL",
+            "mapping": {"0 Hz": 0.0, "14 Hz": 14.0},
+            "monitor": True,
+            "pva": True,
+        },
     )
-    assert dev is not None
+    device_harness.create_pair(
+        motor.EpicsJogMotor,
+        name="jog_motor",
+        shared={
+            "motorpv": MOTOR_PV,
+            "monitor": True,
+            "pva": True,
+        },
+    )
+
+
+class TestChopperPhaseHarness:
+    def test_initializes(self, device_harness, fake_backend, attached_transformer_devices):
+        del fake_backend, attached_transformer_devices
+        daemon_device, poller_device = device_harness.create_pair(
+            transformer_devices.ChopperPhase,
+            name="chopper_phase",
+            shared={
+                "unit": "deg",
+                "offset": 0.0,
+                "phase_ns_dev": "phase_ns_dev",
+                "mapped_speed_dev": "mapped_speed_dev",
+            },
+        )
+
+        assert daemon_device is not None
+        assert poller_device is not None
+
+
+class TestDegreesPerSecondToRPMHarness:
+    def test_initializes(self, device_harness, fake_backend, attached_transformer_devices):
+        del fake_backend, attached_transformer_devices
+        daemon_device, poller_device = device_harness.create_pair(
+            transformer_devices.DegreesPerSecondToRPM,
+            name="degrees_per_second_to_rpm",
+            shared={
+                "motor": "jog_motor",
+            },
+        )
+
+        assert daemon_device is not None
+        assert poller_device is not None

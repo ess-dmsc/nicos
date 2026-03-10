@@ -34,9 +34,6 @@ from test.nicos_ess.test_devices.doubles import (
 )
 
 
-ROLES = ("daemon", "poller")
-
-
 @pytest.fixture
 def fake_backend(monkeypatch):
     backend = FakeEpicsBackend()
@@ -63,89 +60,95 @@ def fake_backend(monkeypatch):
 @pytest.fixture
 def attached_chopper_devices(device_harness, fake_backend):
     del fake_backend
-    for role in ROLES:
-        device_harness.create_master(
-            role,
-            HarnessReadable,
-            name="ess_state",
-            initial="stop",
-        )
-        device_harness.create_master(
-            role,
-            HarnessMappedMoveable,
-            name="ess_command",
-            mapping={"stop": 0, "start": 1},
-        )
-        device_harness.create_master(
-            role,
-            HarnessMappedMoveable,
-            name="ess_speed",
-            mapping={"0 Hz": 0, "14 Hz": 14},
-        )
-        device_harness.create_master(
-            role,
-            HarnessReadable,
-            name="ess_chic_conn",
-            initial="Connected",
-        )
-        device_harness.create_master(
-            role,
-            EpicsManualMappedAnalogMoveable,
-            name="odin_speed",
-            readpv="SIM:ODIN:SPD.RBV",
-            writepv="SIM:ODIN:SPD.VAL",
-            mapping={"0 Hz": 0.0, "14 Hz": 14.0},
-            monitor=False,
-        )
 
-
-@pytest.mark.parametrize("role", ROLES)
-def test_chopper_alarms_initializes(role, device_harness, fake_backend):
-    del fake_backend
-    dev = device_harness.create_master(
-        role,
-        chopper_mod.ChopperAlarms,
-        name=f"chopper_alarms_{role}",
-        pv_root="SIM:CHOP:",
+    device_harness.create_pair(
+        HarnessReadable,
+        name="ess_state",
+        shared={"initial": "stop"},
     )
-    assert dev is not None
-
-
-@pytest.mark.parametrize("role", ROLES)
-def test_ess_chopper_controller_initializes(
-    role,
-    device_harness,
-    fake_backend,
-    attached_chopper_devices,
-):
-    del fake_backend, attached_chopper_devices
-    dev = device_harness.create_master(
-        role,
-        chopper_mod.EssChopperController,
-        name=f"ess_chopper_{role}",
-        state="ess_state",
-        command="ess_command",
-        speed="ess_speed",
-        chic_conn="ess_chic_conn",
-        mapping={"stop": "stop", "start": "start"},
+    device_harness.create_pair(
+        HarnessMappedMoveable,
+        name="ess_command",
+        shared={"mapping": {"stop": 0, "start": 1}},
     )
-    assert dev is not None
-
-
-@pytest.mark.parametrize("role", ROLES)
-def test_odin_chopper_controller_initializes(
-    role,
-    device_harness,
-    fake_backend,
-    attached_chopper_devices,
-):
-    del fake_backend, attached_chopper_devices
-    dev = device_harness.create_master(
-        role,
-        chopper_mod.OdinChopperController,
-        name=f"odin_chopper_{role}",
-        pv_root="SIM:CHOP:",
-        speed="odin_speed",
-        mapping={"stop": "stop", "start": "start", "a_start": "a_start", "park": "park"},
+    device_harness.create_pair(
+        HarnessMappedMoveable,
+        name="ess_speed",
+        shared={"mapping": {"0 Hz": 0, "14 Hz": 14}},
     )
-    assert dev is not None
+    device_harness.create_pair(
+        HarnessReadable,
+        name="ess_chic_conn",
+        shared={"initial": "Connected"},
+    )
+    device_harness.create_pair(
+        EpicsManualMappedAnalogMoveable,
+        name="odin_speed",
+        shared={
+            "readpv": "SIM:ODIN:SPD.RBV",
+            "writepv": "SIM:ODIN:SPD.VAL",
+            "mapping": {"0 Hz": 0.0, "14 Hz": 14.0},
+            "monitor": True,
+            "pva": True,
+        },
+    )
+
+
+class TestChopperAlarmsHarness:
+    def test_initializes(self, device_harness, fake_backend):
+        del fake_backend
+        daemon_device, poller_device = device_harness.create_pair(
+            chopper_mod.ChopperAlarms,
+            name="chopper_alarms",
+            shared={
+                "pv_root": "SIM:CHOP:",
+                "monitor": True,
+                "pva": True,
+            },
+        )
+
+        assert daemon_device is not None
+        assert poller_device is not None
+
+
+class TestEssChopperControllerHarness:
+    def test_initializes(self, device_harness, fake_backend, attached_chopper_devices):
+        del fake_backend, attached_chopper_devices
+        daemon_device, poller_device = device_harness.create_pair(
+            chopper_mod.EssChopperController,
+            name="ess_chopper",
+            shared={
+                "state": "ess_state",
+                "command": "ess_command",
+                "speed": "ess_speed",
+                "chic_conn": "ess_chic_conn",
+                "mapping": {"stop": "stop", "start": "start"},
+            },
+        )
+
+        assert daemon_device is not None
+        assert poller_device is not None
+
+
+class TestOdinChopperControllerHarness:
+    def test_initializes(self, device_harness, fake_backend, attached_chopper_devices):
+        del fake_backend, attached_chopper_devices
+        daemon_device, poller_device = device_harness.create_pair(
+            chopper_mod.OdinChopperController,
+            name="odin_chopper",
+            shared={
+                "pv_root": "SIM:CHOP:",
+                "speed": "odin_speed",
+                "mapping": {
+                    "stop": "stop",
+                    "start": "start",
+                    "a_start": "a_start",
+                    "park": "park",
+                },
+                "monitor": True,
+                "pva": True,
+            },
+        )
+
+        assert daemon_device is not None
+        assert poller_device is not None

@@ -29,9 +29,6 @@ from nicos_ess.devices.epics.pva import shutter
 from test.nicos_ess.test_devices.doubles import FakeEpicsBackend
 
 
-ROLES = ("daemon", "poller")
-
-
 @pytest.fixture
 def fake_backend(monkeypatch):
     backend = FakeEpicsBackend()
@@ -54,17 +51,21 @@ def fake_backend(monkeypatch):
     return backend
 
 
-@pytest.mark.parametrize("role", ROLES)
-def test_epics_shutter_initializes(role, device_harness, fake_backend):
-    del fake_backend
-    dev = device_harness.create_master(
-        role,
-        shutter.EpicsShutter,
-        name=f"epics_shutter_{role}",
-        readpv="SIM:SHUTTER:READ",
-        writepv="SIM:SHUTTER:WRITE",
-        msgtxt="SIM:SHUTTER:MSGTXT",
-        mapping={"Close": "Close", "Open": "Open"},
-        monitor=False,
-    )
-    assert dev is not None
+class TestEpicsShutterHarness:
+    def test_initializes(self, device_harness, fake_backend):
+        del fake_backend
+        daemon_device, poller_device = device_harness.create_pair(
+            shutter.EpicsShutter,
+            name="epics_shutter",
+            shared={
+                "readpv": "SIM:SHUTTER:READ",
+                "writepv": "SIM:SHUTTER:WRITE",
+                "msgtxt": "SIM:SHUTTER:MSGTXT",
+                "mapping": {"Close": "Close", "Open": "Open"},
+                "monitor": True,
+                "pva": True,
+            },
+        )
+
+        assert daemon_device is not None
+        assert poller_device is not None

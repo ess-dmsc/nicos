@@ -33,7 +33,6 @@ from test.nicos_ess.test_devices.doubles import (
 
 
 MOTOR_PV = "SIM:M1"
-ROLES = ("daemon", "poller")
 
 
 @pytest.fixture
@@ -49,14 +48,18 @@ def fake_backend(monkeypatch):
     return backend
 
 
-@pytest.mark.parametrize("role", ROLES)
-def test_epics_jog_motor_initializes(role, device_harness, fake_backend):
-    del fake_backend
-    dev = device_harness.create_master(
-        role,
-        EpicsJogMotor,
-        name=f"epics_jog_motor_{role}",
-        motorpv=MOTOR_PV,
-        monitor=False,
-    )
-    assert dev is not None
+class TestEpicsJogMotorHarness:
+    def test_initializes(self, device_harness, fake_backend):
+        del fake_backend
+        daemon_device, poller_device = device_harness.create_pair(
+            EpicsJogMotor,
+            name="epics_jog_motor",
+            shared={
+                "motorpv": MOTOR_PV,
+                "monitor": True,
+                "pva": True,
+            },
+        )
+
+        assert daemon_device is not None
+        assert poller_device is not None

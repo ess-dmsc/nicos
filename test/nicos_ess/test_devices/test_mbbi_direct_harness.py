@@ -28,9 +28,6 @@ from nicos_ess.devices.epics import mbbi_direct
 from test.nicos_ess.test_devices.doubles import FakeEpicsBackend
 
 
-ROLES = ("daemon", "poller")
-
-
 @pytest.fixture
 def fake_backend(monkeypatch):
     backend = FakeEpicsBackend()
@@ -44,18 +41,19 @@ def fake_backend(monkeypatch):
     return backend
 
 
-@pytest.mark.parametrize("role", ROLES)
-def test_mbbi_direct_status_initializes(
-    role,
-    device_harness,
-    fake_backend,
-):
-    del fake_backend
-    dev = device_harness.create_master(
-        role,
-        mbbi_direct.MBBIDirectStatus,
-        name=f"mbbi_direct_{role}",
-        pv_root="SIM:MBBI",
-        number_of_bits=2,
-    )
-    assert dev is not None
+class TestMBBIDirectStatusHarness:
+    def test_initializes(self, device_harness, fake_backend):
+        del fake_backend
+        daemon_device, poller_device = device_harness.create_pair(
+            mbbi_direct.MBBIDirectStatus,
+            name="mbbi_direct",
+            shared={
+                "pv_root": "SIM:MBBI",
+                "number_of_bits": 2,
+                "monitor": True,
+                "pva": True,
+            },
+        )
+
+        assert daemon_device is not None
+        assert poller_device is not None

@@ -29,9 +29,6 @@ from nicos_ess.devices.epics.pva import epics_devices
 from test.nicos_ess.test_devices.doubles import FakeEpicsBackend
 
 
-ROLES = ("daemon", "poller")
-
-
 @pytest.fixture
 def fake_backend(monkeypatch):
     backend = FakeEpicsBackend()
@@ -42,17 +39,18 @@ def fake_backend(monkeypatch):
     return backend
 
 
-@pytest.mark.parametrize("role", ROLES)
-def test_chopper_delay_error_initializes(
-    role,
-    device_harness,
-    fake_backend,
-):
-    del fake_backend
-    dev = device_harness.create_master(
-        role,
-        chopper_delay_error.ChopperDelayError,
-        name=f"chopper_delay_error_{role}",
-        readpv="SIM:CHOP:DELAY",
-    )
-    assert dev is not None
+class TestChopperDelayErrorHarness:
+    def test_initializes(self, device_harness, fake_backend):
+        del fake_backend
+        daemon_device, poller_device = device_harness.create_pair(
+            chopper_delay_error.ChopperDelayError,
+            name="chopper_delay_error",
+            shared={
+                "readpv": "SIM:CHOP:DELAY",
+                "monitor": True,
+                "pva": True,
+            },
+        )
+
+        assert daemon_device is not None
+        assert poller_device is not None

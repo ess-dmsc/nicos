@@ -28,9 +28,6 @@ from nicos_ess.devices.epics import manual_switch
 from test.nicos_ess.test_devices.doubles import FakeEpicsBackend
 
 
-ROLES = ("daemon", "poller")
-
-
 @pytest.fixture
 def fake_backend(monkeypatch):
     backend = FakeEpicsBackend()
@@ -41,15 +38,20 @@ def fake_backend(monkeypatch):
     return backend
 
 
-@pytest.mark.parametrize("role", ROLES)
-def test_manual_switch_initializes(role, device_harness, fake_backend):
-    del fake_backend
-    dev = device_harness.create_master(
-        role,
-        manual_switch.ManualSwitch,
-        name=f"manual_switch_{role}",
-        writepv="SIM:SWITCH:WRITE",
-        states=["ON", "OFF"],
-        mapping={"ON": "ON", "OFF": "OFF"},
-    )
-    assert dev is not None
+class TestManualSwitchHarness:
+    def test_initializes(self, device_harness, fake_backend):
+        del fake_backend
+        daemon_device, poller_device = device_harness.create_pair(
+            manual_switch.ManualSwitch,
+            name="manual_switch",
+            shared={
+                "writepv": "SIM:SWITCH:WRITE",
+                "states": ["ON", "OFF"],
+                "mapping": {"ON": "ON", "OFF": "OFF"},
+                "monitor": True,
+                "pva": True,
+            },
+        )
+
+        assert daemon_device is not None
+        assert poller_device is not None

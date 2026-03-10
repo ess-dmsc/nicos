@@ -34,9 +34,6 @@ from test.nicos_ess.test_devices.doubles import (
 )
 
 
-ROLES = ("daemon", "poller")
-
-
 class HarnessNexusStructureProvider(NexusStructureProvider):
     def get_structure(self, metainfo, counter):
         del metainfo, counter
@@ -57,54 +54,50 @@ def kafka_stubs(monkeypatch):
 @pytest.fixture
 def attached_file_writer_devices(device_harness, kafka_stubs):
     del kafka_stubs
-    for role in ROLES:
-        device_harness.create_master(
-            role,
-            file_writer.FileWriterStatus,
-            name="file_writer_status_dev",
-            brokers=["localhost:9092"],
-            statustopic=["file_writer_status"],
-        )
-        device_harness.create_master(
-            role,
-            HarnessNexusStructureProvider,
-            name="nexus_structure_dev",
-        )
-
-
-@pytest.mark.parametrize("role", ROLES)
-def test_file_writer_status_initializes(
-    role,
-    device_harness,
-    kafka_stubs,
-):
-    del kafka_stubs
-    dev = device_harness.create_master(
-        role,
+    device_harness.create_pair(
         file_writer.FileWriterStatus,
-        name=f"file_writer_status_{role}",
-        brokers=["localhost:9092"],
-        statustopic=["file_writer_status"],
+        name="file_writer_status_dev",
+        shared={
+            "brokers": ["localhost:9092"],
+            "statustopic": ["file_writer_status"],
+        },
     )
-    assert dev is not None
+    device_harness.create_pair(
+        HarnessNexusStructureProvider,
+        name="nexus_structure_dev",
+    )
 
 
-@pytest.mark.parametrize("role", ROLES)
-def test_file_writer_control_sink_initializes(
-    role,
-    device_harness,
-    kafka_stubs,
-    attached_file_writer_devices,
-):
-    del kafka_stubs, attached_file_writer_devices
-    dev = device_harness.create_master(
-        role,
-        file_writer.FileWriterControlSink,
-        name=f"file_writer_control_sink_{role}",
-        brokers=["localhost:9092"],
-        pool_topic="file_writer_pool",
-        instrument_topic="file_writer_instrument",
-        status="file_writer_status_dev",
-        nexus="nexus_structure_dev",
-    )
-    assert dev is not None
+class TestFileWriterStatusHarness:
+    def test_initializes(self, device_harness, kafka_stubs):
+        del kafka_stubs
+        daemon_device, poller_device = device_harness.create_pair(
+            file_writer.FileWriterStatus,
+            name="file_writer_status",
+            shared={
+                "brokers": ["localhost:9092"],
+                "statustopic": ["file_writer_status"],
+            },
+        )
+
+        assert daemon_device is not None
+        assert poller_device is not None
+
+
+class TestFileWriterControlSinkHarness:
+    def test_initializes(self, device_harness, kafka_stubs, attached_file_writer_devices):
+        del kafka_stubs, attached_file_writer_devices
+        daemon_device, poller_device = device_harness.create_pair(
+            file_writer.FileWriterControlSink,
+            name="file_writer_control_sink",
+            shared={
+                "brokers": ["localhost:9092"],
+                "pool_topic": "file_writer_pool",
+                "instrument_topic": "file_writer_instrument",
+                "status": "file_writer_status_dev",
+                "nexus": "nexus_structure_dev",
+            },
+        )
+
+        assert daemon_device is not None
+        assert poller_device is not None
