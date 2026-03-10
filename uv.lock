@@ -1195,17 +1195,9 @@ gui = [
     { name = "nicos", extra = ["gui"] },
 ]
 
-[package.dev-dependencies]
-dev = [
-    { name = "nicos" },
-]
-
 [package.metadata]
 requires-dist = [{ name = "nicos", extras = ["gui"], marker = "extra == 'gui'", editable = "." }]
 provides-extras = ["gui"]
-
-[package.metadata.requires-dev]
-dev = [{ name = "nicos", extras = ["dev"], editable = "." }]
 
 [[package]]
 name = "nicos-ess"
@@ -1223,11 +1215,6 @@ gui = [
     { name = "nicos", extra = ["gui"] },
 ]
 
-[package.dev-dependencies]
-dev = [
-    { name = "nicos" },
-]
-
 [package.metadata]
 requires-dist = [
     { name = "confluent-kafka", specifier = ">=2.13.0" },
@@ -1238,9 +1225,6 @@ requires-dist = [
     { name = "yuos-query", specifier = ">=0.2.0" },
 ]
 provides-extras = ["gui"]
-
-[package.metadata.requires-dev]
-dev = [{ name = "nicos", extras = ["dev"], editable = "." }]
 
 [[package]]
 name = "nicos-pyctl"
