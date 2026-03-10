@@ -170,7 +170,7 @@ def readConfig():
     if not global_cfg:
         # Iterate from least specific (site) to most specific (user) until a
         # configuration file is found
-        dirs = PlatformDirs("nicos", "nicos")
+        dirs = PlatformDirs("nicos")
         for config_dir in reversed(list(dirs.iter_config_paths())):
             config_file = config_dir / nicos_cfg_fn
             print(f"Looking for configuration file in {config_file}")
