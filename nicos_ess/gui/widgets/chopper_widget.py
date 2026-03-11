@@ -2,6 +2,7 @@ import json
 import math
 import sys
 from enum import Enum
+from typing import Optional
 
 from nicos.guisupport.qt import (
     QApplication,
@@ -16,6 +17,13 @@ from nicos.guisupport.qt import (
     Qt,
     QWidget,
     pyqtSignal,
+)
+from nicos_ess.gui.widgets.chopper_math import (
+    build_rotation_model,
+    has_canonical_inputs,
+    parked_rotation_deg,
+    spinning_rotation_deg,
+    wrap360,
 )
 
 
@@ -32,20 +40,13 @@ class ChopperWidget(QWidget):
 
     GUIDE_DIRS = {"RIGHT": 0.0, "UP": 90.0, "LEFT": 180.0, "DOWN": 270.0}
 
-    def __init__(self, parent=None, slit_direction="CW", guide_pos="UP"):
+    def __init__(self, parent=None, guide_pos="UP"):
         super().__init__(parent)
         self.setMinimumSize(100, 100)
         self.chopper_data = []
         self.angles = {}
         self._selected_chopper = None
-        self._slit_direction = slit_direction
-        self._guide_pos = (
-            guide_pos  # "UP" or "DOWN" for the beam guide line, also needs
-        )
-
-        self._guide_pos = (
-            guide_pos  # can be "UP", "DOWN", "LEFT", "RIGHT" or a number of degrees
-        )
+        self._guide_pos = guide_pos
         self._guide_angle_deg = self._to_guide_deg(guide_pos)
 
         self._default_rotation_offset = self._guide_angle_deg
@@ -82,26 +83,20 @@ class ChopperWidget(QWidget):
 
     def set_guide_position(self, pos) -> None:
         new_deg = self._to_guide_deg(pos)
-        delta = new_deg - self._guide_angle_deg
         self._guide_pos = pos
         self._guide_angle_deg = new_deg
-        self._default_rotation_offset = new_deg  # keep behavior consistent
-
-        # Shift already-stored angles so visuals remain aligned
-        for i in list(self.angles.keys()):
-            self.angles[i] += delta
+        self._default_rotation_offset = new_deg
         self.update()
 
     def _wrap360(self, x: float) -> float:
-        return (x % 360.0 + 360.0) % 360.0
+        return wrap360(x)
 
     def set_chopper_angle(self, chopper_name, angle):
+        # Store raw device angle; mode-specific direction/offset handling happens
+        # in paint-time bookkeeping based on speed and canonical metadata.
         for i, chopper in enumerate(self.chopper_data):
             if chopper["chopper"] == chopper_name:
-                spin_direction = chopper.get("spin_direction", "CW").upper()
-                is_ccw = spin_direction == "CCW"
-                a_draw = (-angle if is_ccw else angle) + self._default_rotation_offset
-                self.angles[i] = self._wrap360(a_draw)
+                self.angles[i] = self._wrap360(float(angle))
         self.update()
 
     def set_chopper_speed(self, chopper_name, speed):
@@ -124,6 +119,57 @@ class ChopperWidget(QWidget):
         except KeyError:
             pass
 
+    def _canonical_rotation_base(
+        self, chopper: dict, raw_angle: float, speed_hz: Optional[float], moving: bool
+    ) -> float:
+        if not has_canonical_inputs(chopper):
+            raise ValueError(
+                f"Chopper {chopper.get('chopper')!r} missing canonical bookkeeping inputs"
+            )
+        model = build_rotation_model(chopper)
+        if moving:
+            return spinning_rotation_deg(
+                raw_angle,
+                speed_hz,
+                model.spin_offset_deg,
+                model.base_spin_direction,
+                model.phase_reference_sign,
+            )
+        return parked_rotation_deg(
+            raw_angle, model.resolver_offset_deg, model.base_spin_direction
+        )
+
+    def _rotation_base_deg(
+        self, chopper: dict, raw_angle: float, speed_hz: Optional[float], moving: bool
+    ) -> float:
+        return self._canonical_rotation_base(chopper, raw_angle, speed_hz, moving)
+
+    def get_rotation_angle_for_chopper(
+        self, chopper_name: str, include_guide: bool = False
+    ) -> Optional[float]:
+        """Return current computed draw rotation for one chopper.
+
+        This keeps tests focused on the widget's own bookkeeping without
+        requiring panel/client setup.
+        """
+        for i, chopper in enumerate(self.chopper_data):
+            if chopper["chopper"] != chopper_name:
+                continue
+            speed_hz = chopper.get("speed", 0.0)
+            moving = speed_hz is not None and abs(float(speed_hz)) >= 2
+            raw_angle = float(self.angles.get(i, 0.0))
+            try:
+                base_rotation = self._rotation_base_deg(
+                    chopper, raw_angle, speed_hz, moving
+                )
+            except ValueError:
+                return None
+            if include_guide:
+                # Geometry conversion from engineering CW+ to Qt math-CCW.
+                return self._wrap360(-base_rotation + self._default_rotation_offset)
+            return self._wrap360(base_rotation)
+        return None
+
     def resizeEvent(self, event):
         self.update()
 
@@ -139,19 +185,21 @@ class ChopperWidget(QWidget):
         for i, chopper in enumerate(self.chopper_data):
             radius = chopper_radius
             slit_edges = chopper["slit_edges"]
-            resolver_offset = chopper.get("resolver_offset", 0.0)
-            tdc_offset = chopper.get("tdc_offset", 0.0)
             current_speed = chopper.get("speed", 0.0)
             parking_angle = chopper.get("parking_angle", None)
             center = positions[i]
 
             is_selected = self._selected_chopper == chopper["chopper"]
-            is_moving = (
-                current_speed is not None and abs(current_speed) > 2
-            )  # resolver is active under 2hz
-
-            angle = self.angles[i]
-            angle += tdc_offset if is_moving else resolver_offset
+            is_moving = current_speed is not None and abs(float(current_speed)) >= 2
+            raw_angle = float(self.angles.get(i, 0.0))
+            try:
+                base_rotation = self._rotation_base_deg(
+                    chopper, raw_angle, current_speed, is_moving
+                )
+            except ValueError:
+                continue
+            # Convert canonical engineering CW+ rotation to Qt math-CCW.
+            angle = self._wrap360(-base_rotation + self._default_rotation_offset)
 
             self.draw_chopper(
                 painter,
@@ -407,11 +455,8 @@ class ChopperWidget(QWidget):
             return QPolygonF()
 
         def to_qt(a_deg: float) -> float:
-            if self._slit_direction == "CW":
-                return math.radians(-a_deg + rotation_deg)
-            elif self._slit_direction == "CCW":
-                return math.radians(a_deg + rotation_deg)
-            raise ValueError(f"Invalid slit direction: {self._slit_direction}")
+            # Geometry is expressed in engineering CW+ angles.
+            return math.radians(-a_deg + rotation_deg)
 
         step = (e - s) / num_points
         pts = []

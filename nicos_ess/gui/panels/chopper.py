@@ -10,6 +10,7 @@ from nicos.guisupport.qt import (
     Qt,
     QVBoxLayout,
 )
+from nicos_ess.gui.widgets.chopper_math import has_canonical_inputs
 from nicos_ess.gui.widgets.chopper_widget import (
     ChopperWidget,
 )
@@ -22,7 +23,9 @@ BIN_WIDTH = 100
 
 
 def nanoseconds_to_degrees(timedelta, frequency):
-    return timedelta * frequency * 360 / 1e9
+    # Delay-to-phase conversion uses frequency magnitude; spin direction
+    # bookkeeping is handled from chopper metadata and speed sign.
+    return timedelta * abs(frequency) * 360 / 1e9
 
 
 class MiniDB:
@@ -49,12 +52,9 @@ class ChopperPanel(Panel):
     def __init__(self, parent, client, options):
         Panel.__init__(self, parent, client, options)
 
-        self._slit_direction = options.get("slit_direction", "CW")  # CW or CCW
         self._guide_pos = options.get("guide_pos", "UP")  # UP, DOWN
 
-        self.chopper_widget = ChopperWidget(
-            parent=self, slit_direction=self._slit_direction, guide_pos=self._guide_pos
-        )
+        self.chopper_widget = ChopperWidget(parent=self, guide_pos=self._guide_pos)
         self.histogram_widget = HistogramDataViewer(parent=self)
         self.trend_widget = TrendViewer(parent=self)
 
@@ -234,7 +234,7 @@ class ChopperPanel(Panel):
         frequency = self.eval_command(f"{chopper_name}_speed.read()", default=None)
         if frequency is not None:
             frequency = float(frequency)
-            if frequency < 2:
+            if abs(frequency) < 2:
                 self.chopper_widget.set_chopper_angle(chopper_name, park_angle)
 
     def _update_chopper_angle(self, chopper_name, delay, frequency):
@@ -278,9 +278,12 @@ class ChopperPanel(Panel):
             disc_info = {"chopper": dev_name}
             for param in [
                 "slit_edges",
-                "resolver_offset",
-                "tdc_offset",
-                "spin_direction",
+                "motor_position",
+                "disk_rotation_direction",
+                "parked_opening_index",
+                "tdc_resolver_position",
+                "park_open_angle",
+                "phase_tdc_center_window_delay",
             ]:
                 value = self.client.eval(f"{dev_name}.{param}", None)
                 if value is None:
@@ -288,7 +291,7 @@ class ChopperPanel(Panel):
 
                 disc_info[param] = value
 
-            if "slit_edges" in disc_info:
+            if has_canonical_inputs(disc_info):
                 chopper_info.append(disc_info)
 
         self.chopper_widget.update_chopper_data(chopper_info)
