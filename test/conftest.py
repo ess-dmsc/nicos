@@ -61,7 +61,7 @@ def setup_test_suite():
         sys.stderr.write("=" * 80)
         raise
     cache = startCache(cache_addr)
-    elog = startElog()
+    elog = startElog(wait=5)
     yield
     killSubprocess(elog)
     killSubprocess(cache)
