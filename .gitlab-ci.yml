@@ -91,8 +91,23 @@ lint:ruff:
 lint:codespell:
   extends:
     - .lint
+  variables:
+    GIT_DEPTH: 1
+  before_script:
+    # Fetching only up to the closest merge-base to save time
+    - git fetch --depth 1 origin $CI_MERGE_REQUEST_DIFF_BASE_SHA
+    - git config --global --add safe.directory "$CI_PROJECT_DIR"
+    # Diff only changed files within MR
+    - export CHANGES=$(git diff-tree --name-only -r $CI_MERGE_REQUEST_DIFF_BASE_SHA $CI_COMMIT_SHA)
   script:
-    - uv run python -m codespell_lib
+    - |
+      if [ -n "$CHANGES" ]; then
+        echo "Running codespell on changed files:"
+        echo "$CHANGES"
+        uv run python -m codespell_lib --config .codespellrc $CHANGES
+      else
+        echo "No modified files to check with codespell."
+      fi
 
 
 .format:
