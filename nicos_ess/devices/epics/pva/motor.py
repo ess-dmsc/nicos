@@ -610,6 +610,8 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
             merged_msg = ""
         elif msg_stat > motor_stat:
             merged_msg = msg_txt or motor_msg
+        elif msg_stat == motor_stat and msg_stat != status.OK:
+            merged_msg = msg_txt or motor_msg
         else:
             merged_msg = motor_msg or msg_txt
 
