@@ -1,5 +1,3 @@
-import numpy as np
-
 from nicos.core import (
     Attach,
     Moveable,
@@ -7,13 +5,14 @@ from nicos.core import (
     Param,
     Value,
     dictof,
+    listof,
     multiStatus,
     oneof,
     tupleof,
 )
 
 
-class VirtualSlit(Moveable):
+class VirtualSource(Moveable):
     """Controller for the Virtual Source Slit System
 
     The slit consists of two L-shaped blades controlled by 5 motors:
@@ -40,8 +39,8 @@ class VirtualSlit(Moveable):
             mandatory=False,
             userparam=False,
             default={
-                "4blades": "L:%.3f, R:%.3f, B:%.3f, T:%.3f, Rot:%.3f deg",
-                "centered": "(%.3f mm x %.3f mm) %.3f deg",
+                "4blades": "%.2f %.2f %.2f %.2f %.2f",
+                "centered": "(%.2f mm x %.2f mm) %.2f deg",
             },
         ),
     }
@@ -55,39 +54,19 @@ class VirtualSlit(Moveable):
         "rot": Attach("the rotation stage", Moveable),
     }
 
-    def _findAngle(self, width, gap):
-        angle = np.arcsin(width / (2 * gap))
-        return np.rad2deg(angle)
-
-    def _findGap(self, pos, angle):
+    def _returnGap(self, pos):
         # [-left, +right, -bottom, +top]
         l, r, b, t = pos
+        width = r - l
         height = t - b
-        width = l - r
-
-        # rad = np.deg2rad(angle)
-
-        # left_gap = float(-(l * np.sin(rad)))
-        # right_gap = float(r * np.sin(rad))
-        # width = left_gap + right_gap
-
         return [width, height]
 
     def _parseTargets(self, target):
-        # target = [slit width, blade gap, slit height]
+        # angle target must be split from slit target since it is an independent attachment
         if self.opmode == "centered":
-            slit_target = target[1:]
-            angle = self._findAngle(target[0], target[1])
-            return [slit_target, angle]
+            return [target[:-1], target[2]]
         else:
             return [target[:-1], target[4]]
-
-    def _doReadPositions(self, maxage):
-        positions = self._adevs["slit"]._doReadPositions(maxage)
-        angle = self._adevs["rot"].read(maxage)
-
-        width, height = self._findGap(positions, angle)
-        return [width, height, angle]
 
     def doStart(self, target):
         for name, pos in zip(self.devices, self._parseTargets(target)):
@@ -102,7 +81,14 @@ class VirtualSlit(Moveable):
 
     def doRead(self, maxage=0):
         self._syncOpmode(self._adevs["slit"].opmode, self.opmode)
-        return self._doReadPositions(maxage)
+        positions = self._adevs["slit"]._doReadPositions(maxage)
+        angle = self._adevs["rot"].read(maxage)
+
+        if self.opmode == "centered":
+            width, height = self._returnGap(positions)
+            return [width, height, angle]
+        l, r, t, b = positions
+        return [l, r, t, b, angle]
 
     def doStatus(self, maxage=0):
         return multiStatus(self._adevs, maxage=maxage)
@@ -111,8 +97,8 @@ class VirtualSlit(Moveable):
         if self.opmode == "centered":
             return (
                 Value("Slit Width", unit="mm", fmtstr="%.3f"),
-                Value("Blade Gap", unit="mm", fmtstr="%.3f"),
                 Value("Slit Height", unit="mm", fmtstr="%.3f"),
+                Value("Angle", unit="deg", fmtstr="%.3f"),
             )
         else:
             return (

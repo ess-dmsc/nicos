@@ -49,6 +49,7 @@ devices = dict(
         description="Reads the virtual source slit gaps and current angle",
         slit="slit",
         rot="vs_slit_rotation",
+        opmode="centered",
     ),
     laser=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
