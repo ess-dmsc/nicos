@@ -109,6 +109,14 @@ STATUS_CASES = [
         id="miss",
     ),
     pytest.param(
+        [(f"{MOTOR_PV}.DMOV", 0), (f"{MOTOR_PV}.MOVN", 1), (f"{MOTOR_PV}.MISS", 1)],
+        {},
+        status.NOTREACHED,
+        "did not reach target",
+        False,
+        id="miss_takes_precedence_over_busy",
+    ),
+    pytest.param(
         [(f"{MOTOR_PV}.DMOV", 1), (f"{MOTOR_PV}.MOVN", 0), (f"{MOTOR_PV}.LVIO", 1)],
         {},
         status.WARN,
@@ -244,6 +252,68 @@ STATUS_SEVERITY_AND_MESSAGE_PRECEDENCE_CASES = [
         "invalid issue",
         False,
         id="msgtxt_invalid_sets_unknown_with_msgtxt_message",
+    ),
+    pytest.param(
+        (status.OK, ""),
+        3,
+        "invalid issue",
+        [(f"{MOTOR_PV}.DMOV", 0), (f"{MOTOR_PV}.MOVN", 1), (f"{MOTOR_PV}.MISS", 1)],
+        status.UNKNOWN,
+        "invalid issue",
+        False,
+        id="unknown_takes_precedence_over_busy_and_notreached",
+    ),
+    pytest.param(
+        (status.WARN, "record alarm"),
+        0,
+        "",
+        [(f"{MOTOR_PV}.DMOV", 0), (f"{MOTOR_PV}.MOVN", 1)],
+        status.BUSY,
+        "record alarm",
+        False,
+        id="busy_takes_precedence_over_warn",
+    ),
+]
+
+
+START_STATUS_TRANSITION_CASES = [
+    pytest.param(
+        # state before start
+        [(f"{MOTOR_PV}.DMOV", 0), (f"{MOTOR_PV}.MOVN", 0), (f"{MOTOR_PV}.MISS", 0)],
+        # alarm and message context
+        (status.OK, ""),
+        3,
+        "invalid issue",
+        # updates after start
+        [],
+        status.UNKNOWN,
+        "invalid issue",
+        False,
+        status.UNKNOWN,
+        "invalid issue",
+        False,
+        id="start_does_not_mask_unknown_with_busy",
+    ),
+    pytest.param(
+        # state before start
+        [(f"{MOTOR_PV}.DMOV", 1), (f"{MOTOR_PV}.MOVN", 0), (f"{MOTOR_PV}.MISS", 1)],
+        # alarm and message context
+        (status.OK, ""),
+        0,
+        "",
+        # updates after start
+        [
+            (f"{MOTOR_PV}.MISS", 0),
+            (f"{MOTOR_PV}.DMOV", 0),
+            (f"{MOTOR_PV}.MOVN", 1),
+        ],
+        status.NOTREACHED,
+        "did not reach target",
+        False,
+        status.BUSY,
+        "moving to",
+        False,
+        id="status_switches_to_busy_when_miss_clears_during_move",
     ),
 ]
 

@@ -27,6 +27,7 @@ import pytest
 from nicos.core import status
 
 from test.nicos_ess.test_devices.epics_motor.helpers import (
+    START_STATUS_TRANSITION_CASES,
     STATUS_CASES,
     STATUS_SEVERITY_AND_MESSAGE_PRECEDENCE_CASES,
     assert_status_result,
@@ -235,6 +236,63 @@ class TestEpicsMotorStatus:
         assert device_harness.run_daemon(daemon_device.status, 0) == (
             status.ERROR,
             "record alarm",
+        )
+
+    @pytest.mark.parametrize(
+        (
+            "initial_state_pvs,rbv_alarm,msgtxt_severity,msgtxt,post_start_updates,"
+            "expected_status_after_start,expected_message_after_start,"
+            "expect_empty_message_after_start,expected_status_after_updates,"
+            "expected_message_after_updates,expect_empty_message_after_updates"
+        ),
+        START_STATUS_TRANSITION_CASES,
+    )
+    def test_motor_status_transitions_after_start_respect_numeric_priority(
+        self,
+        device_harness,
+        fake_backend,
+        initial_state_pvs,
+        rbv_alarm,
+        msgtxt_severity,
+        msgtxt,
+        post_start_updates,
+        expected_status_after_start,
+        expected_message_after_start,
+        expect_empty_message_after_start,
+        expected_status_after_updates,
+        expected_message_after_updates,
+        expect_empty_message_after_updates,
+    ):
+        daemon_device, _poller_device = create_monitored_motor_pair(
+            device_harness, has_msgtxt=True
+        )
+        fake_backend.alarms[pv(".RBV")] = rbv_alarm
+        fake_backend.values[pv("-MsgTxt")] = msgtxt
+        fake_backend.values[pv("-MsgTxt.SEVR")] = msgtxt_severity
+
+        for key, value in initial_state_pvs:
+            fake_backend.emit_update(key, value=value)
+
+        device_harness.run_daemon(daemon_device.start, 5.0)
+        st, msg = device_harness.run_daemon(daemon_device.status, 0)
+        assert_status_result(
+            st,
+            msg,
+            expected_status_after_start,
+            expected_message_after_start,
+            expect_empty_message_after_start,
+        )
+
+        for key, value in post_start_updates:
+            fake_backend.emit_update(key, value=value)
+
+        st, msg = device_harness.run_daemon(daemon_device.status, 0)
+        assert_status_result(
+            st,
+            msg,
+            expected_status_after_updates,
+            expected_message_after_updates,
+            expect_empty_message_after_updates,
         )
 
     def test_motor_connection_loss_sets_communication_failure_status_in_monitor_mode(

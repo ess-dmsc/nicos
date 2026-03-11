@@ -354,7 +354,7 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         if abs(self.read(0) - value) <= self.precision:
             return
 
-        self._cache.put(self._name, "status", (status.BUSY, "Moving abs"), time.time())
+        self._cache_status_if_higher((status.BUSY, "Moving abs"))
         self._put_pv("target", value)
 
     def doWriteSpeed(self, value):
@@ -453,10 +453,8 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         with self._lock:
             epics_status, message = self._get_alarm_status_and_msg()
             self._motor_status = epics_status, message
-        if epics_status in (status.ERROR, status.UNKNOWN):
-            return epics_status, message or "Unknown problem in record"
-        elif epics_status == status.WARN:
-            return status.WARN, message
+        message = (message or "").strip()
+        status_candidates = [self._alarm_status_candidate(epics_status, message)]
 
         done_moving = self._get_cached_pv_or_ask("donemoving")
         moving = self._get_cached_pv_or_ask("moving")
@@ -464,8 +462,11 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
             if self._get_cached_pv_or_ask("homeforward") or self._get_cached_pv_or_ask(
                 "homereverse"
             ):
-                return status.BUSY, message or "homing"
-            return status.BUSY, message or f"moving to {self.target}"
+                status_candidates.append((status.BUSY, message or "homing"))
+            else:
+                status_candidates.append(
+                    (status.BUSY, message or f"moving to {self.target}")
+                )
 
         if self.has_powerauto:
             powerauto_enabled = self._get_cached_pv_or_ask("powerauto")
@@ -473,24 +474,26 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
             powerauto_enabled = 0
 
         if not powerauto_enabled and not self._get_cached_pv_or_ask("enable"):
-            return status.WARN, "motor is not enabled"
+            status_candidates.append((status.WARN, "motor is not enabled"))
 
         miss = self._get_cached_pv_or_ask("miss")
         if miss != 0:
-            return status.NOTREACHED, message or "did not reach target position."
+            status_candidates.append(
+                (status.NOTREACHED, message or "did not reach target position.")
+            )
 
         high_limitswitch = self._get_cached_pv_or_ask("highlimitswitch")
         if high_limitswitch != 0:
-            return status.WARN, message or "at high limit switch."
+            status_candidates.append((status.WARN, message or "at high limit switch."))
 
         low_limitswitch = self._get_cached_pv_or_ask("lowlimitswitch")
         if low_limitswitch != 0:
-            return status.WARN, message or "at low limit switch."
+            status_candidates.append((status.WARN, message or "at low limit switch."))
 
         limit_violation = self._get_cached_pv_or_ask("softlimit")
         if limit_violation != 0:
-            return status.WARN, message or "soft limit violation."
-        return status.OK, message
+            status_candidates.append((status.WARN, message or "soft limit violation."))
+        return self._select_highest_status(status_candidates)
 
     def _value_change_callback(
         self, name, param, value, units, limits, severity, message, **kwargs
@@ -560,6 +563,30 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
             valid_speed = min(max_speed, valid_speed)
 
         return valid_speed
+
+    @staticmethod
+    def _select_highest_status(status_candidates):
+        return max(status_candidates, key=lambda status_candidate: status_candidate[0])
+
+    @staticmethod
+    def _alarm_status_candidate(epics_status, message):
+        if epics_status in (status.ERROR, status.UNKNOWN):
+            return epics_status, message or "Unknown problem in record"
+        if epics_status == status.WARN:
+            return status.WARN, message
+        return status.OK, message
+
+    def _cache_status_if_higher(self, candidate_status):
+        if self._cache is None:
+            return
+        try:
+            current_status = self._do_status()
+        except Exception:
+            # Keep the current cached state if status cannot be determined
+            # reliably at this point.
+            return
+        if candidate_status[0] > current_status[0]:
+            self._cache.put(self._name, "status", candidate_status, time.time())
 
     def _get_msgtxt(self):
         msg_txt = self._get_cached_pv_or_ask("msgtxt", as_string=True).strip()
