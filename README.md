@@ -51,12 +51,17 @@ The resulting source tarball and wheel files will be located in the `dist` direc
 
 ## Configure NICOS
 
-Place the NICOS configuration file (`nicos.conf`) for your choice of instrument into one of the following locations:
+Place the NICOS configuration file (`nicos.conf`) for your choice of instrument into one of the following locations, searched in order:
 
-- in the site-wide directory, i.e. `/etc/xdg/nicos/nicos.conf` on GNU/Linux, 
-- the `nicos` directory in your standard user configuration path, i.e. on GNU/Linux systems, this would be `~/.config/nicos/nicos.conf`, or
-- set either the `XDG_CONFIG_HOME` or `XDG_CONFIG_DIRS` environment variable to point to a different location altogether.
+- in the site-wide directory, i.e. `/etc/xdg/nicos/nicos.conf` on GNU/Linux, or 
+- the `nicos` directory in your standard user configuration path, i.e. on GNU/Linux systems, this would be `~/.config/nicos/nicos.conf`.
 
+Both these paths can be modified by setting the `XDG_CONFIG_DIRS` or `XDG_CONFIG_HOME` environment variable, respectively, to point to a different location.
+See [the corresponding XDG variable documentation](https://platformdirs.readthedocs.io/en/latest/parameters.html#xdg-env-vars) for reference.
+
+For backwards compatibility, the `nicos_root` folder (i.e. the root of the repository) will be searched first.
+When NICOS has been deployed as package, this path would most likely not point to a suitable location.
+Therefore, prefer the XDG standard directories as place for `nicos.conf`
 
 ## Installing the Server Locally
 
