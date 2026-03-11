@@ -8,6 +8,7 @@ from nicos.core import (
     Moveable,
     Override,
     Param,
+    oneof,
     pvname,
     status,
     usermethod,
@@ -22,15 +23,17 @@ from nicos_ess.devices.epics.pva.epics_devices import (
 )
 
 
-class CetoniPumpController(EpicsParameters, CanReference, HasLimits, Moveable):
+class CetoniPumpController(EpicsParameters, CanReference, HasLimits, MappedMoveable):
     """
     A device for controlling a Cetoni syringe pump
 
      The device:
-      - exposes the mapped commands: start / stop / purge / pause / resume
-      - reads the current textual *state* from the attached `status` device
-      - reads error text from `message_pv` (non-empty => ERROR)
-      - writes to start/stop/purge/pause PVs as before
+        - can show the current filled volume in the syringe
+        - can control the absolute filled volume (aspirate or dispense to target vol)
+        - can control a relative volume (aspirate or dispense a specific vol)
+        - can control stepwise aspirating or dispensing a set volume
+        - can home the syringe
+        - can select the type of syringe
     """
 
     parameters = {
@@ -60,27 +63,11 @@ class CetoniPumpController(EpicsParameters, CanReference, HasLimits, Moveable):
                 pv_suffix="C_SetFillVol",
                 record_type=RecordType.VALUE,
             ),
-            # "pressure": RecordInfo(cache_key="filled_volume", pv_suffix="Pressure",
-            "ispumping": RecordInfo(
-                cache_key="",
-                pv_suffix="IsPumping",
-                record_type=RecordType.STATUS,
-            ),
-            "isfault": RecordInfo(
-                cache_key="",
-                pv_suffix="FaultState",
-                record_type=RecordType.STATUS,
-            ),
-            "ishomed": RecordInfo(
-                cache_key="",
-                pv_suffix="RefPosInitd",
-                record_type=RecordType.STATUS,
-            ),
-            "maxvol": RecordInfo(
-                cache_key="",
-                pv_suffix="MaxVol",
-                record_type=RecordType.VALUE,
-            ),
+            # "pressure": RecordInfo(cache_key="filled_volume", pv_suffix="Pressure")
+            # "ispumping": RecordInfo(cache_key="", pv_suffix="IsPumping", record_type=RecordType.STATUS),
+            # "isfault": RecordInfo(cache_key="", pv_suffix="FaultState", record_type=RecordType.STATUS),
+            # "ishomed": RecordInfo(cache_key="", pv_suffix="RefPosInitd", record_type=RecordType.STATUS),
+            # "maxvol": RecordInfo(cache_key="", pv_suffix="MaxVol", record_type=RecordType.VALUE),
             # "flowrate_rb": RecordInfo(cache_key="filled_volume", pv_suffix="FlowRate-RB",
             # "flowrate_sp": RecordInfo(cache_key="filled_volume", pv_suffix="FlowRate-RB",
             # "aspiratestep": RecordInfo(cache_key="filled_volume", pv_suffix="C_AspirateStep",
@@ -96,12 +83,24 @@ class CetoniPumpController(EpicsParameters, CanReference, HasLimits, Moveable):
             # "home": RecordInfo(cache_key="filled_volume", pv_suffix=" InitPosition",
         }
         self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
-        self.check_connection_to_pvs()
+        self.connect_pvs()
+
+        self._commands = {
+            "set_volume": self.set_volume,
+            "set_relative_volume": self.set_relative_volume,
+            "aspirate_step": self.aspirate_step,
+            "dispense_step": self.dispense_step,
+        }
 
     def doInit(self, mode):
+        self._setROParam(
+            "mapping", {cmd: i for i, cmd in enumerate(self._commands.keys())}
+        )
+        MappedMoveable.doInit(self, mode)
+        self.valuetype = oneof(*self._commands.keys())
         self.set_up_subscriptions()
 
-    def check_connection_to_pvs(self):
+    def connect_pvs(self):
         self._epics_wrapper.connect_pv(self._get_pv_name("readpv"))
         self._epics_wrapper.connect_pv(self._get_pv_name("writepv"))
 
