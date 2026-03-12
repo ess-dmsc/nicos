@@ -75,12 +75,16 @@ publish:
   image: registry.esss.lu.se/ecdc/ess-dmsc/docker-almalinux9-conan:1.6.0
   before_script:
     - git config --global --add safe.directory "$CI_PROJECT_DIR"
+    # Fetching only up to the closest merge-base to save time
+    - git fetch --depth 1 origin $CI_MERGE_REQUEST_DIFF_BASE_SHA
+    # Diff only changed files within MR
+    - export CHANGES=$(git diff-tree --name-only -r $CI_MERGE_REQUEST_DIFF_BASE_SHA $CI_COMMIT_SHA)
+    - echo "Changed files (to be linted): $CHANGES"
     - uv sync --extra gui --all-packages
     - uv pip install ruff
     - uv pip install codespell
   variables:
     UV_PYTHON: 3.12
-
 
 lint:check_setups:
   extends:
@@ -107,14 +111,6 @@ lint:ruff:
 lint:codespell:
   extends:
     - .lint
-  variables:
-    GIT_DEPTH: 1
-  before_script:
-    # Fetching only up to the closest merge-base to save time
-    - git fetch --depth 1 origin $CI_MERGE_REQUEST_DIFF_BASE_SHA
-    - git config --global --add safe.directory "$CI_PROJECT_DIR"
-    # Diff only changed files within MR
-    - export CHANGES=$(git diff-tree --name-only -r $CI_MERGE_REQUEST_DIFF_BASE_SHA $CI_COMMIT_SHA)
   script:
     - |
       if [ -n "$CHANGES" ]; then
