@@ -10,9 +10,9 @@ QApplication = qt.QApplication
 QPainter = qt.QPainter
 QPointF = qt.QPointF
 QPixmap = qt.QPixmap
+Qt = qt.Qt
 from nicos_ess.gui.widgets.chopper_math import (
     build_rotation_model,
-    apply_motor_side_transform,
     direction_to_sign,
     opening_center_deg,
     runtime_phase_sign,
@@ -55,40 +55,93 @@ def _ymir_psc(name, **overrides):
     return _canonical(name, **overrides)
 
 
-def _resolver_angles_for_all_openings(chopper):
-    """Compute parked resolver angle for each opening from one known reference."""
-    centers = [opening_center_deg(edges) for edges in chopper["slit_edges"]]
+def _first_guide_hits_by_opening(
+    widget, chopper, speed_hz, resolution_deg=0.1
+) -> dict[int, tuple[float, float] | None]:
+    """Find best-centered scan angle where each opening covers the beam guide.
+
+    This is intentionally widget-driven (scan over user-set angle) instead of
+    inverting the same math used for rendering, to avoid tautological tests.
+    """
+    chopper_name = chopper["chopper"]
+    hits = {idx: None for idx in range(len(chopper["slit_edges"]))}
+    best_margins = {idx: -1.0 for idx in range(len(chopper["slit_edges"]))}
+
+    def _interval_margin(angle, interval):
+        if not _interval_contains(angle, interval):
+            return -1.0
+        start, end = interval
+        ang = angle
+        if end < start:
+            end += 360.0
+            if ang < start:
+                ang += 360.0
+        return min(ang - start, end - ang)
+
+    widget.update_chopper_data([chopper])
+    widget.set_chopper_speed(chopper_name, speed_hz)
+
+    nsteps = int(round(360.0 / resolution_deg))
+    for step in range(nsteps):
+        user_angle = (step * resolution_deg) % 360.0
+        widget.set_chopper_angle(chopper_name, user_angle)
+        draw_rotation = widget.get_rotation_angle_for_chopper(
+            chopper_name, include_guide=True
+        )
+        assert draw_rotation is not None
+
+        opening_intervals = _opening_intervals_qt(chopper, draw_rotation)
+        for opening_index, interval in enumerate(opening_intervals):
+            margin = _interval_margin(widget._guide_angle_deg, interval)
+            if margin < 0.0:
+                continue
+            if _coating_covers_guide(widget, chopper, draw_rotation):
+                continue
+            if margin > best_margins[opening_index]:
+                best_margins[opening_index] = margin
+                hits[opening_index] = (user_angle, draw_rotation)
+
+    return hits
+
+
+def _opening_centers(chopper: dict) -> list[float]:
+    return [opening_center_deg(edges) for edges in chopper["slit_edges"]]
+
+
+def _resolver_angles_for_all_openings_from_reference(chopper: dict) -> dict[int, float]:
+    """Resolver setpoints derived from park reference and opening centers."""
+    centers = _opening_centers(chopper)
     ref_idx = int(chopper["parked_opening_index"])
     ref_center = centers[ref_idx]
     ref_resolver = float(chopper["park_open_angle"])
-
-    base_direction = apply_motor_side_transform(
-        chopper["disk_rotation_direction"], chopper["motor_position"]
+    model = build_rotation_model(chopper)
+    resolver_sign = -direction_to_sign(model.base_spin_direction) * int(
+        model.phase_reference_sign
     )
-    resolver_sign = direction_to_sign(base_direction)
+    return {
+        opening_index: wrap360(
+            ref_resolver + resolver_sign * wrap180(center - ref_center)
+        )
+        for opening_index, center in enumerate(centers)
+    }
 
-    return [
-        wrap360(ref_resolver + resolver_sign * (ref_center - center))
-        for center in centers
-    ]
 
-
-def _phase_angles_for_all_openings(chopper, speed_hz):
-    """Compute spinning phase setpoint per opening from configured phase reference."""
-    centers = [opening_center_deg(edges) for edges in chopper["slit_edges"]]
+def _phase_angles_for_all_openings_from_reference(
+    chopper: dict, speed_hz: float
+) -> dict[int, float]:
+    """Phase setpoints derived from phase-delay reference and opening centers."""
+    centers = _opening_centers(chopper)
     ref_idx = int(chopper["parked_opening_index"])
     ref_center = centers[ref_idx]
     ref_phase = float(chopper["phase_tdc_center_window_delay"])
-
     model = build_rotation_model(chopper)
     spin_sign = runtime_phase_sign(
         speed_hz, model.base_spin_direction, model.phase_reference_sign
     )
-
-    return [
-        wrap360(ref_phase + spin_sign * (center - ref_center))
-        for center in centers
-    ]
+    return {
+        opening_index: wrap360(ref_phase - spin_sign * wrap180(center - ref_center))
+        for opening_index, center in enumerate(centers)
+    }
 
 
 def _coating_covers_guide(widget, chopper, rotation_angle):
@@ -115,6 +168,107 @@ def _coating_covers_guide(widget, chopper, rotation_angle):
         center.y() - guide_probe_radius * sin(guide_theta),
     )
     return coating_path.contains(probe_point)
+
+
+def _rendered_guide_probe_is_dark(widget, qapp) -> bool:
+    """Render widget and check whether the guide probe pixel is dark/coated."""
+    widget.resize(420, 420)
+    qapp.processEvents()
+
+    pixmap = QPixmap(widget.size())
+    pixmap.fill(Qt.GlobalColor.white)
+    widget.render(pixmap)
+    image = pixmap.toImage()
+
+    positions, chopper_radius = widget.calculate_positions(len(widget.chopper_data))
+    assert positions
+    center = positions[0]
+
+    slit_height = chopper_radius * 0.3
+    reduced_radius = chopper_radius - slit_height
+    inner_coating = reduced_radius + chopper_radius * 0.05
+    outer_coating = chopper_radius * 0.95
+    guide_probe_radius = (inner_coating + outer_coating) / 2.0
+
+    guide_theta = radians(widget._guide_angle_deg)
+    probe_x = int(round(center.x() + guide_probe_radius * cos(guide_theta)))
+    probe_y = int(round(center.y() - guide_probe_radius * sin(guide_theta)))
+
+    dark_samples = 0
+    for dx in (-1, 0, 1):
+        for dy in (-1, 0, 1):
+            sx = min(max(probe_x + dx, 0), image.width() - 1)
+            sy = min(max(probe_y + dy, 0), image.height() - 1)
+            color = image.pixelColor(sx, sy)
+            if color.red() < 50 and color.green() < 50 and color.blue() < 50:
+                dark_samples += 1
+
+    return dark_samples >= 5
+
+
+def _rendered_probe_is_dark(widget, qapp, probe_angle_deg: float) -> bool:
+    """Render widget and check whether one ring probe angle is dark/coated."""
+    widget.resize(420, 420)
+    qapp.processEvents()
+
+    pixmap = QPixmap(widget.size())
+    pixmap.fill(Qt.GlobalColor.white)
+    widget.render(pixmap)
+    image = pixmap.toImage()
+
+    positions, chopper_radius = widget.calculate_positions(len(widget.chopper_data))
+    assert positions
+    center = positions[0]
+
+    slit_height = chopper_radius * 0.3
+    reduced_radius = chopper_radius - slit_height
+    inner_coating = reduced_radius + chopper_radius * 0.05
+    outer_coating = chopper_radius * 0.95
+    probe_radius = (inner_coating + outer_coating) / 2.0
+
+    theta = radians(float(probe_angle_deg))
+    probe_x = int(round(center.x() + probe_radius * cos(theta)))
+    probe_y = int(round(center.y() - probe_radius * sin(theta)))
+
+    dark_samples = 0
+    for dx in (-1, 0, 1):
+        for dy in (-1, 0, 1):
+            sx = min(max(probe_x + dx, 0), image.width() - 1)
+            sy = min(max(probe_y + dy, 0), image.height() - 1)
+            color = image.pixelColor(sx, sy)
+            if color.red() < 50 and color.green() < 50 and color.blue() < 50:
+                dark_samples += 1
+
+    return dark_samples >= 5
+
+
+def _rendered_has_opening_near_angle(
+    widget, qapp, target_angle_deg: float, half_window_deg: float = 12.0
+) -> bool:
+    """True when at least one probe near target angle is non-dark/open."""
+    probe_angle = target_angle_deg - half_window_deg
+    while probe_angle <= target_angle_deg + half_window_deg + 1e-9:
+        if not _rendered_probe_is_dark(widget, qapp, probe_angle):
+            return True
+        probe_angle += 1.0
+    return False
+
+
+def _rendered_opening_centered_at_guide(
+    widget, qapp, inside_offset_deg: float = 70.0, outside_offset_deg: float = 100.0
+) -> bool:
+    guide = float(widget._guide_angle_deg)
+    # For 170° WLS openings centered on guide, +/-70° should be open and
+    # +/-100° should be coated.
+    inside_open = (
+        not _rendered_probe_is_dark(widget, qapp, guide + inside_offset_deg)
+        and not _rendered_probe_is_dark(widget, qapp, guide - inside_offset_deg)
+    )
+    outside_dark = (
+        _rendered_probe_is_dark(widget, qapp, guide + outside_offset_deg)
+        and _rendered_probe_is_dark(widget, qapp, guide - outside_offset_deg)
+    )
+    return inside_open and outside_dark
 
 
 def _opening_intervals_qt(chopper, rotation_angle):
@@ -177,7 +331,8 @@ def _dream_psc_cases():
 
 
 def _nmx_wls2_pair():
-    # Values taken from `nicos_ess/ymir/setups/choppers_nmx.py`.
+    # Values taken from `nicos_ess/nmx/setups/wls2a_chopper.py` and
+    # `nicos_ess/nmx/setups/wls2b_chopper.py`.
     wls2a = _canonical(
         "wls2a",
         slit_edges=[[0.0, 170.0]],
@@ -199,6 +354,21 @@ def _nmx_wls2_pair():
         phase_tdc_center_window_delay=177.5,
     )
     return wls2a, wls2b
+
+
+def _nmx_wls_cases():
+    wls1 = _canonical(
+        "wls1",
+        slit_edges=[[0.0, 170.0]],
+        motor_position="downstream",
+        disk_rotation_direction="CCW",
+        parked_opening_index=0,
+        tdc_resolver_position=342.5,
+        park_open_angle=5.0,
+        phase_tdc_center_window_delay=-47.5,
+    )
+    wls2a, wls2b = _nmx_wls2_pair()
+    return [wls1, wls2a, wls2b]
 
 
 def test_widget_returns_none_for_missing_canonical(qapp):
@@ -241,13 +411,13 @@ def test_widget_spin_direction_sign_tracks_runtime_phase_sign(qapp):
 
     widget.set_chopper_speed("downstream", 10.0)
     widget.set_chopper_speed("upstream", 10.0)
-    assert widget.get_spin_direction_sign_for_chopper("downstream") == -1
-    assert widget.get_spin_direction_sign_for_chopper("upstream") == -1
+    assert widget.get_spin_direction_sign_for_chopper("downstream") == 1
+    assert widget.get_spin_direction_sign_for_chopper("upstream") == 1
 
     widget.set_chopper_speed("downstream", -10.0)
     widget.set_chopper_speed("upstream", -10.0)
-    assert widget.get_spin_direction_sign_for_chopper("downstream") == 1
-    assert widget.get_spin_direction_sign_for_chopper("upstream") == 1
+    assert widget.get_spin_direction_sign_for_chopper("downstream") == -1
+    assert widget.get_spin_direction_sign_for_chopper("upstream") == -1
 
 
 def test_widget_spin_indicator_arc_moves_with_guide_position(qapp):
@@ -330,8 +500,8 @@ def test_widget_phase_perturbation_moves_opposite_displayed_spin_arrow(qapp, cho
     assert rot1 is not None
 
     # arrow_sign uses CW-positive convention; include_guide angle increases in
-    # Qt's CCW-positive sense. Opposite motion therefore maps to +arrow_sign.
-    assert wrap180(rot1 - rot0) == pytest.approx(arrow_sign * eps)
+    # Qt's CCW-positive sense. Same visual motion therefore maps to -arrow_sign.
+    assert wrap180(rot1 - rot0) == pytest.approx(-arrow_sign * eps)
 
 
 @pytest.mark.parametrize(
@@ -358,7 +528,11 @@ def test_widget_resolver_perturbation_moves_with_base_spin_direction(qapp, chopp
     assert rot1 is not None
 
     model = build_rotation_model(chopper)
-    expected_delta = direction_to_sign(model.base_spin_direction) * eps
+    expected_delta = (
+        -direction_to_sign(model.base_spin_direction)
+        * int(model.phase_reference_sign)
+        * eps
+    )
     assert wrap180(rot1 - rot0) == pytest.approx(expected_delta)
 
 
@@ -383,8 +557,18 @@ def test_widget_spinning_phase_direction_follows_motor_side(qapp):
     down_10 = widget.get_rotation_angle_for_chopper("downstream")
     up_10 = widget.get_rotation_angle_for_chopper("upstream")
 
-    assert _delta(down_10, down_0) == pytest.approx(10.0)
-    assert _delta(up_10, up_0) == pytest.approx(10.0)
+    down_model = build_rotation_model(choppers[0])
+    up_model = build_rotation_model(choppers[1])
+
+    expected_down = -runtime_phase_sign(
+        10.0, down_model.base_spin_direction, down_model.phase_reference_sign
+    ) * 10.0
+    expected_up = -runtime_phase_sign(
+        10.0, up_model.base_spin_direction, up_model.phase_reference_sign
+    ) * 10.0
+
+    assert _delta(down_10, down_0) == pytest.approx(expected_down)
+    assert _delta(up_10, up_0) == pytest.approx(expected_up)
 
 
 def test_widget_parked_resolver_direction_follows_motor_side(qapp):
@@ -408,8 +592,22 @@ def test_widget_parked_resolver_direction_follows_motor_side(qapp):
     down_10 = widget.get_rotation_angle_for_chopper("downstream")
     up_10 = widget.get_rotation_angle_for_chopper("upstream")
 
-    assert _delta(down_10, down_0) == pytest.approx(-10.0)
-    assert _delta(up_10, up_0) == pytest.approx(10.0)
+    down_model = build_rotation_model(choppers[0])
+    up_model = build_rotation_model(choppers[1])
+
+    expected_down = (
+        -direction_to_sign(down_model.base_spin_direction)
+        * int(down_model.phase_reference_sign)
+        * 10.0
+    )
+    expected_up = (
+        -direction_to_sign(up_model.base_spin_direction)
+        * int(up_model.phase_reference_sign)
+        * 10.0
+    )
+
+    assert _delta(down_10, down_0) == pytest.approx(expected_down)
+    assert _delta(up_10, up_0) == pytest.approx(expected_up)
 
 
 def test_widget_include_guide_uses_qt_rotation_mapping(qapp):
@@ -421,7 +619,7 @@ def test_widget_include_guide_uses_qt_rotation_mapping(qapp):
     base_rotation = widget.get_rotation_angle_for_chopper("c1", include_guide=False)
     qt_rotation = widget.get_rotation_angle_for_chopper("c1", include_guide=True)
 
-    assert qt_rotation == pytest.approx(wrap360(-base_rotation + 270.0))
+    assert qt_rotation == pytest.approx(wrap360(base_rotation + 270.0))
 
 
 def test_widget_uses_absolute_speed_threshold_for_motion_state(qapp):
@@ -459,31 +657,29 @@ def test_widget_ymir_overlap_parked_reference_centers_opening_on_guide(qapp):
         "overlap_chopper", include_guide=False
     )
     opening_center = (overlap["slit_edges"][0][0] + overlap["slit_edges"][0][1]) / 2.0
-    expected = wrap360(-opening_center)
+    expected = wrap360(opening_center)
     assert base == pytest.approx(expected)
 
 
 @pytest.mark.parametrize("psc", _dream_psc_cases(), ids=lambda p: p["chopper"])
-def test_widget_ymir_psc_resolver_alignment_keeps_guide_uncoated_for_each_opening(
+def test_widget_choppers_dream_psc_resolver_alignment_keeps_guide_uncoated_for_each_opening(
     qapp, psc
 ):
-    widget = ChopperWidget()
+    widget = ChopperWidget(guide_pos="DOWN")
     chopper_name = psc["chopper"]
-    resolver_angles = _resolver_angles_for_all_openings(psc)
+    guide_hits = _first_guide_hits_by_opening(widget, psc, speed_hz=0.0)
+    missing_indices = [
+        opening_index
+        for opening_index, hit in guide_hits.items()
+        if hit is None
+    ]
+    assert not missing_indices, (
+        f"{chopper_name}: parked scan could not place guide in openings "
+        f"{missing_indices}; widget rendering/angle mapping is inconsistent"
+    )
 
-    if chopper_name == "pulse_shaping_chopper_1":
-        # Known DREAM reference point: opening index 4 is 321.5° on resolver.
-        assert resolver_angles[4] == pytest.approx(321.5)
-
-    widget.update_chopper_data([psc])
-    widget.set_chopper_speed(chopper_name, 0.0)
-
-    for opening_index, resolver_angle in enumerate(resolver_angles):
-        widget.set_chopper_angle(chopper_name, resolver_angle)
-        draw_rotation = widget.get_rotation_angle_for_chopper(
-            chopper_name, include_guide=True
-        )
-        assert draw_rotation is not None
+    for opening_index, hit in guide_hits.items():
+        resolver_angle, draw_rotation = hit
         assert not _coating_covers_guide(widget, psc, draw_rotation), (
             f"{chopper_name}: opening index {opening_index} should be centered "
             f"on guide at resolver {resolver_angle:.3f}°, but coating still covers guide"
@@ -491,35 +687,118 @@ def test_widget_ymir_psc_resolver_alignment_keeps_guide_uncoated_for_each_openin
 
 
 @pytest.mark.parametrize("psc", _dream_psc_cases(), ids=lambda p: p["chopper"])
-def test_widget_ymir_psc_spinning_phase_alignment_keeps_guide_uncoated_for_each_opening(
+def test_widget_choppers_dream_psc_spinning_phase_alignment_keeps_guide_uncoated_for_each_opening(
     qapp, psc
 ):
-    widget = ChopperWidget()
+    widget = ChopperWidget(guide_pos="DOWN")
     chopper_name = psc["chopper"]
-    speed_hz = 14.0
-    phase_angles = _phase_angles_for_all_openings(psc, speed_hz=speed_hz)
-    ref_idx = int(psc["parked_opening_index"])
+    guide_hits = _first_guide_hits_by_opening(widget, psc, speed_hz=14.0)
+    missing_indices = [
+        opening_index
+        for opening_index, hit in guide_hits.items()
+        if hit is None
+    ]
+    assert not missing_indices, (
+        f"{chopper_name}: spinning scan could not place guide in openings "
+        f"{missing_indices}; widget rendering/phase mapping is inconsistent"
+    )
 
-    # Contract: configured phase_tdc_center_window_delay is the spinning
-    # reference for the parked opening index.
-    assert phase_angles[ref_idx] == pytest.approx(psc["phase_tdc_center_window_delay"])
-
-    widget.update_chopper_data([psc])
-    widget.set_chopper_speed(chopper_name, speed_hz)
-
-    for opening_index, phase_angle in enumerate(phase_angles):
-        widget.set_chopper_angle(chopper_name, phase_angle)
-        draw_rotation = widget.get_rotation_angle_for_chopper(
-            chopper_name, include_guide=True
-        )
-        assert draw_rotation is not None
+    for opening_index, hit in guide_hits.items():
+        phase_angle, draw_rotation = hit
         assert not _coating_covers_guide(widget, psc, draw_rotation), (
             f"{chopper_name}: opening index {opening_index} should be centered "
             f"on guide at phase {phase_angle:.3f}°, but coating still covers guide"
         )
 
 
-def test_widget_nmx_wls2_pair_keeps_right_side_open_with_top_bottom_split(qapp):
+@pytest.mark.parametrize("psc", _dream_psc_cases(), ids=lambda p: p["chopper"])
+def test_widget_choppers_dream_psc_park_open_reference_renders_open_at_down_guide(
+    qapp, psc
+):
+    widget = ChopperWidget(guide_pos="DOWN")
+    widget.set_show_guide_line(False)
+    chopper_name = psc["chopper"]
+    widget.update_chopper_data([psc])
+    widget.set_chopper_speed(chopper_name, 0.0)
+    widget.set_chopper_angle(chopper_name, float(psc["park_open_angle"]))
+    assert not _rendered_guide_probe_is_dark(widget, qapp), (
+        f"{chopper_name}: expected an opening at park_open_angle="
+        f"{float(psc['park_open_angle']):.3f}°, but rendered blade/coating at guide"
+    )
+
+
+@pytest.mark.parametrize("psc", _dream_psc_cases(), ids=lambda p: p["chopper"])
+def test_widget_choppers_dream_psc_phase_reference_renders_open_at_down_guide(
+    qapp, psc
+):
+    widget = ChopperWidget(guide_pos="DOWN")
+    widget.set_show_guide_line(False)
+    chopper_name = psc["chopper"]
+    widget.update_chopper_data([psc])
+    widget.set_chopper_speed(chopper_name, 14.0)
+    widget.set_chopper_angle(chopper_name, float(psc["phase_tdc_center_window_delay"]))
+    assert not _rendered_guide_probe_is_dark(widget, qapp), (
+        f"{chopper_name}: expected an opening at phase_tdc_center_window_delay="
+        f"{float(psc['phase_tdc_center_window_delay']):.3f}°, "
+        "but rendered blade/coating at guide"
+    )
+
+
+def test_widget_choppers_dream_psc1_spinning_phase_20_5_renders_open_at_down_guide(
+    qapp,
+):
+    psc1 = _dream_psc_cases()[0]
+    widget = ChopperWidget(guide_pos="DOWN")
+    widget.set_show_guide_line(False)
+    chopper_name = psc1["chopper"]
+    widget.update_chopper_data([psc1])
+    widget.set_chopper_speed(chopper_name, 14.0)
+    widget.set_chopper_angle(chopper_name, 20.5)
+    assert not _rendered_guide_probe_is_dark(widget, qapp), (
+        f"{chopper_name}: expected opening at spinning phase 20.5°, "
+        "but rendered blade/coating at DOWN guide"
+    )
+
+
+@pytest.mark.parametrize("psc", _dream_psc_cases(), ids=lambda p: p["chopper"])
+def test_widget_choppers_dream_psc_all_openings_render_open_at_down_guide_parked(
+    qapp, psc
+):
+    widget = ChopperWidget(guide_pos="DOWN")
+    widget.set_show_guide_line(False)
+    chopper_name = psc["chopper"]
+    resolver_angles = _resolver_angles_for_all_openings_from_reference(psc)
+
+    for opening_index, resolver_angle in resolver_angles.items():
+        widget.update_chopper_data([psc])
+        widget.set_chopper_speed(chopper_name, 0.0)
+        widget.set_chopper_angle(chopper_name, resolver_angle)
+        assert not _rendered_guide_probe_is_dark(widget, qapp), (
+            f"{chopper_name}: opening index {opening_index} at parked angle "
+            f"{resolver_angle:.3f}° renders coated at DOWN guide"
+        )
+
+
+@pytest.mark.parametrize("psc", _dream_psc_cases(), ids=lambda p: p["chopper"])
+def test_widget_choppers_dream_psc_all_openings_render_open_at_down_guide_spinning(
+    qapp, psc
+):
+    widget = ChopperWidget(guide_pos="DOWN")
+    widget.set_show_guide_line(False)
+    chopper_name = psc["chopper"]
+    phase_angles = _phase_angles_for_all_openings_from_reference(psc, speed_hz=14.0)
+
+    for opening_index, phase_angle in phase_angles.items():
+        widget.update_chopper_data([psc])
+        widget.set_chopper_speed(chopper_name, 14.0)
+        widget.set_chopper_angle(chopper_name, phase_angle)
+        assert not _rendered_guide_probe_is_dark(widget, qapp), (
+            f"{chopper_name}: opening index {opening_index} at spinning phase "
+            f"{phase_angle:.3f}° renders coated at DOWN guide"
+        )
+
+
+def test_widget_nmx_wls2_pair_shows_small_right_side_transmission_opening(qapp):
     # Physical reference (stroboscope): with WLS2A=82.0 and WLS2B=0.0 at 14 Hz
     # both discs are open on the right side, with opposite top/bottom coverage.
     wls2a, wls2b = _nmx_wls2_pair()
@@ -539,10 +818,110 @@ def test_widget_nmx_wls2_pair_keeps_right_side_open_with_top_bottom_split(qapp):
     open_a = _opening_intervals_qt(wls2a, rot_a)[0]
     open_b = _opening_intervals_qt(wls2b, rot_b)[0]
 
-    # WLS2A: opening on the lower-right side (blade mostly on top).
-    assert _interval_contains(300.0, open_a)
-    assert not _interval_contains(60.0, open_a)
+    # Right-side opening edge should be close to 0° on each disc.
+    assert min(abs(wrap180(open_a[0])), abs(wrap180(open_a[1]))) <= 8.0
+    assert min(abs(wrap180(open_b[0])), abs(wrap180(open_b[1]))) <= 8.0
 
-    # WLS2B: opening on the upper-right side (blade mostly on bottom).
-    assert _interval_contains(60.0, open_b)
-    assert not _interval_contains(300.0, open_b)
+    # Pair contract: combined transmitted opening is a small window on right.
+    a_start, a_end = open_a
+    b_start, b_end = open_b
+
+    def _unwrap(interval):
+        start, end = interval
+        if end < start:
+            return [(start, 360.0), (0.0, end)]
+        return [(start, end)]
+
+    transmitted_opening = []
+    for s1, e1 in _unwrap((a_start, a_end)):
+        for s2, e2 in _unwrap((b_start, b_end)):
+            lo = max(s1, s2)
+            hi = min(e1, e2)
+            if hi > lo:
+                transmitted_opening.append((lo, hi))
+
+    assert transmitted_opening
+    total_opening = sum(hi - lo for lo, hi in transmitted_opening)
+    assert total_opening <= 8.0
+    assert any(lo <= 10.0 or hi >= 350.0 for lo, hi in transmitted_opening)
+
+
+def test_widget_nmx_wls2_pair_direction_contract(qapp):
+    wls2a, wls2b = _nmx_wls2_pair()
+    widget = ChopperWidget(guide_pos="DOWN")
+    widget.update_chopper_data([wls2a, wls2b])
+
+    for name, phase0 in (("wls2a", 82.0), ("wls2b", 0.0)):
+        eps = 0.2
+        widget.set_chopper_speed(name, 14.0)
+        assert widget.get_spin_direction_sign_for_chopper(name) == 1
+
+        widget.set_chopper_angle(name, phase0)
+        rot0 = widget.get_rotation_angle_for_chopper(name, include_guide=True)
+        widget.set_chopper_angle(name, phase0 + eps)
+        rot1 = widget.get_rotation_angle_for_chopper(name, include_guide=True)
+        assert rot0 is not None
+        assert rot1 is not None
+        chopper = wls2a if name == "wls2a" else wls2b
+        model = build_rotation_model(chopper)
+        expected_delta = -runtime_phase_sign(
+            14.0, model.base_spin_direction, model.phase_reference_sign
+        ) * eps
+        assert wrap180(rot1 - rot0) == pytest.approx(expected_delta)
+
+        widget.set_chopper_speed(name, 0.0)
+        widget.set_chopper_angle(name, 10.0)
+        park0 = widget.get_rotation_angle_for_chopper(name, include_guide=True)
+        widget.set_chopper_angle(name, 10.0 + eps)
+        park1 = widget.get_rotation_angle_for_chopper(name, include_guide=True)
+        assert park0 is not None
+        assert park1 is not None
+        # Resolver perturbation direction is canonical-bookkeeping dependent.
+        assert abs(wrap180(park1 - park0)) == pytest.approx(eps)
+
+
+@pytest.mark.parametrize(
+    ("chopper_name", "phase_deg"),
+    [("wls2a", 82.0), ("wls2b", 0.0)],
+)
+def test_widget_nmx_wls2_disc_renders_opening_near_furthest_right(
+    qapp, chopper_name, phase_deg
+):
+    wls2a, wls2b = _nmx_wls2_pair()
+    chopper = wls2a if chopper_name == "wls2a" else wls2b
+
+    widget = ChopperWidget(guide_pos="DOWN")
+    widget.set_show_guide_line(False)
+    widget.update_chopper_data([chopper])
+    widget.set_chopper_speed(chopper_name, 14.0)
+    widget.set_chopper_angle(chopper_name, phase_deg)
+
+    # Physical contract: at WLS2A/WLS2B phases 82°/0°, each disc has an opening
+    # edge close to the furthest right side (0° in widget angle convention).
+    assert _rendered_has_opening_near_angle(widget, qapp, target_angle_deg=0.0), (
+        f"{chopper_name}: expected rendered opening near right side at phase "
+        f"{phase_deg:.1f}°, but found only blade/coating there"
+    )
+
+
+@pytest.mark.parametrize("wls", _nmx_wls_cases(), ids=lambda c: c["chopper"])
+def test_widget_nmx_wls_phase_reference_renders_centered_opening_at_down_guide(
+    qapp, wls
+):
+    widget = ChopperWidget(guide_pos="DOWN")
+    widget.set_show_guide_line(False)
+    name = wls["chopper"]
+    phase_ref = float(wls["phase_tdc_center_window_delay"])
+
+    widget.update_chopper_data([wls])
+    widget.set_chopper_speed(name, 14.0)
+    widget.set_chopper_angle(name, phase_ref)
+
+    assert not _rendered_guide_probe_is_dark(widget, qapp), (
+        f"{name}: expected rendered opening at guide for spinning phase reference "
+        f"{phase_ref:.3f}°, but guide probe is coated"
+    )
+    assert _rendered_opening_centered_at_guide(widget, qapp), (
+        f"{name}: expected opening centered around DOWN guide at phase "
+        f"{phase_ref:.3f}° (inside probes open, outside probes coated)"
+    )

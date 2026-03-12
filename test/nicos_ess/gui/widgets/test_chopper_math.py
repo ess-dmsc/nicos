@@ -13,6 +13,7 @@ from nicos_ess.gui.widgets.chopper_math import (
     runtime_spin_sign,
     spinning_rotation_deg,
     wrap180,
+    wrap360,
 )
 
 
@@ -52,11 +53,11 @@ def test_build_rotation_model_user_example_values():
 
     assert isinstance(model, ChopperRotationModel)
     assert model.base_spin_direction == CCW
-    assert model.phase_reference_sign == 1
+    assert model.phase_reference_sign == -1
     assert model.parked_opening_center_deg == pytest.approx(43.0)
     assert model.parked_opening_width_deg == pytest.approx(86.0)
-    assert model.resolver_offset_deg == pytest.approx(152.0)
-    assert model.spin_offset_deg == pytest.approx(169.5)
+    assert model.resolver_offset_deg == pytest.approx(-122.0)
+    assert model.spin_offset_deg == pytest.approx(-169.5)
     assert model.expected_phase_delay_deg == pytest.approx(147.5)
     assert model.phase_delay_error_deg == pytest.approx(0.0)
 
@@ -91,8 +92,8 @@ def test_spinning_rotation_positive_phase_opposite_spin():
 
 
 def test_parked_rotation_resolver_follows_base_direction():
-    assert parked_rotation_deg(10.0, 5.0, CW) == pytest.approx(15.0)
-    assert parked_rotation_deg(10.0, 5.0, CCW) == pytest.approx(355.0)
+    assert parked_rotation_deg(10.0, 5.0, CW) == pytest.approx(355.0)
+    assert parked_rotation_deg(10.0, 5.0, CCW) == pytest.approx(15.0)
 
 
 def test_phase_delay_wrap_error():
@@ -118,7 +119,7 @@ def test_phase_delay_reference_uses_motor_side_sign():
     )
     assert model.expected_phase_delay_deg == pytest.approx(91.3)
     assert model.phase_delay_error_deg == pytest.approx(0.0)
-    assert model.phase_reference_sign == -1
+    assert model.phase_reference_sign == 1
 
 
 def test_build_rotation_model_requires_parked_opening_start_at_zero():
@@ -142,8 +143,9 @@ def test_park_open_angle_aligns_opening_center_with_beam_guide():
         resolver_angle_deg=0.0,
         resolver_offset_deg=model.resolver_offset_deg,
         base_spin_direction=model.base_spin_direction,
+        phase_reference_sign=model.phase_reference_sign,
     )
-    assert parked_at_reference == pytest.approx((360.0 - center) % 360.0)
+    assert parked_at_reference == pytest.approx(center)
 
 
 def test_nonzero_parked_opening_index_is_allowed():
@@ -176,8 +178,10 @@ def test_phase_delay_reference_aligns_parked_opening_while_spinning():
         speed_hz=14.0,
         spin_offset_deg=model.spin_offset_deg,
         base_spin_direction=model.base_spin_direction,
+        phase_reference_sign=model.phase_reference_sign,
     )
-    assert spinning_at_phase_reference == pytest.approx((360.0 - opening_center) % 360.0)
+    expected_base = opening_center
+    assert spinning_at_phase_reference == pytest.approx(expected_base)
 
 
 @pytest.mark.parametrize(
@@ -235,10 +239,78 @@ def test_resolver_perturbation_moves_with_base_spin_direction(chopper):
     eps = 0.2
     resolver0 = float(chopper["park_open_angle"])
     rot0 = parked_rotation_deg(
-        resolver0, model.resolver_offset_deg, model.base_spin_direction
+        resolver0,
+        model.resolver_offset_deg,
+        model.base_spin_direction,
+        model.phase_reference_sign,
     )
     rot1 = parked_rotation_deg(
-        resolver0 + eps, model.resolver_offset_deg, model.base_spin_direction
+        resolver0 + eps,
+        model.resolver_offset_deg,
+        model.base_spin_direction,
+        model.phase_reference_sign,
     )
-    expected_delta = direction_to_sign(model.base_spin_direction) * eps
+    expected_delta = (
+        -direction_to_sign(model.base_spin_direction)
+        * int(model.phase_reference_sign)
+        * eps
+    )
     assert wrap180(rot1 - rot0) == pytest.approx(expected_delta)
+
+
+def test_nmx_wls2_pair_has_small_transmitted_opening_on_right_at_82_and_0():
+    # Physical reference: standing at target and looking towards sample,
+    # WLS2A/WLS2B at 14 Hz with phases 82°/0° shows a small opening on right.
+    wls2a = {
+        "slit_edges": [[0.0, 170.0]],
+        "motor_position": "upstream",
+        "disk_rotation_direction": "CW",
+        "parked_opening_index": 0,
+        "tdc_resolver_position": 341.7,
+        "park_open_angle": 73.0,
+        "phase_tdc_center_window_delay": 91.3,
+    }
+    wls2b = {
+        "slit_edges": [[0.0, 170.0]],
+        "motor_position": "downstream",
+        "disk_rotation_direction": "CW",
+        "parked_opening_index": 0,
+        "tdc_resolver_position": 342.5,
+        "park_open_angle": 165.0,
+        "phase_tdc_center_window_delay": 177.5,
+    }
+
+    def opening_interval_qt(chopper, phase_deg):
+        model = build_rotation_model(chopper)
+        base_rotation = spinning_rotation_deg(
+            phase_deg,
+            14.0,
+            model.spin_offset_deg,
+            model.base_spin_direction,
+            model.phase_reference_sign,
+        )
+        qt_rotation = wrap360(base_rotation + 270.0)
+        start, end = chopper["slit_edges"][0]
+        return wrap360(-float(end) + qt_rotation), wrap360(-float(start) + qt_rotation)
+
+    def unwrap(interval):
+        start, end = interval
+        if end < start:
+            return [(start, 360.0), (0.0, end)]
+        return [(start, end)]
+
+    open_a = opening_interval_qt(wls2a, 82.0)
+    open_b = opening_interval_qt(wls2b, 0.0)
+
+    transmitted_opening = []
+    for s1, e1 in unwrap(open_a):
+        for s2, e2 in unwrap(open_b):
+            lo = max(s1, s2)
+            hi = min(e1, e2)
+            if hi > lo:
+                transmitted_opening.append((lo, hi))
+
+    assert transmitted_opening
+    total_width = sum(hi - lo for lo, hi in transmitted_opening)
+    assert total_width <= 8.0
+    assert any(lo <= 10.0 or hi >= 350.0 for lo, hi in transmitted_opening)

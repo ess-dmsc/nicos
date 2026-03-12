@@ -137,19 +137,23 @@ def build_rotation_model(chopper: dict, tol_deg: float = 1e-6) -> ChopperRotatio
         chopper["disk_rotation_direction"], chopper["motor_position"]
     )
     base_sign = direction_to_sign(base_spin_direction)
-    phase_sign = base_sign * phase_delay_sign
+    # Runtime phase-motion sign is defined opposite to the legacy
+    # motor-side phase-delay sign so configured phase references align
+    # opening centers with the beam guide for both single/multi-opening discs.
+    phase_reference_sign = -phase_delay_sign
+    phase_sign = base_sign * phase_reference_sign
 
-    # Parked reference: when resolver == park_open_angle, opening center must
-    # align with beam guide (base rotation = -opening_center).
-    resolver_offset = wrap180(-opening_center - base_sign * park_open_angle)
-    # Spinning reference:
-    # when phase equals phase_tdc_center_window_delay (for nominal spin
-    # direction), the parked opening center should align with the beam guide.
-    spin_offset = wrap180(phase_delay * phase_sign - opening_center)
+    resolver_sign = -phase_sign
+    # Parked reference: when resolver == park_open_angle, parked opening center
+    # aligns with the beam guide in widget space.
+    resolver_offset = wrap180(opening_center - resolver_sign * park_open_angle)
+    # Spinning reference: when phase equals phase_tdc_center_window_delay (for
+    # nominal spin direction), parked opening center aligns with beam guide.
+    spin_offset = wrap180(opening_center + phase_delay * phase_sign)
 
     return ChopperRotationModel(
         base_spin_direction=base_spin_direction,
-        phase_reference_sign=phase_delay_sign,
+        phase_reference_sign=phase_reference_sign,
         parked_opening_index=parked_opening_index,
         parked_opening_center_deg=opening_center,
         parked_opening_width_deg=opening_width,
@@ -179,9 +183,12 @@ def runtime_phase_sign(
 
 
 def parked_rotation_deg(
-    resolver_angle_deg: float, resolver_offset_deg: float, base_spin_direction: str
+    resolver_angle_deg: float,
+    resolver_offset_deg: float,
+    base_spin_direction: str,
+    phase_reference_sign: int = 1,
 ) -> float:
-    resolver_sign = direction_to_sign(base_spin_direction)
+    resolver_sign = -direction_to_sign(base_spin_direction) * int(phase_reference_sign)
     return wrap360(
         resolver_sign * float(resolver_angle_deg) + float(resolver_offset_deg)
     )

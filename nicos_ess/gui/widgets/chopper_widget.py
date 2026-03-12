@@ -50,6 +50,7 @@ class ChopperWidget(QWidget):
         self._guide_pos = guide_pos
         self._guide_angle_deg = self._to_guide_deg(guide_pos)
         self._detailed_view = False
+        self._show_guide_line = True
 
         self._default_rotation_offset = self._guide_angle_deg
 
@@ -96,6 +97,10 @@ class ChopperWidget(QWidget):
 
     def is_detailed_view_enabled(self) -> bool:
         return self._detailed_view
+
+    def set_show_guide_line(self, enabled: bool) -> None:
+        self._show_guide_line = bool(enabled)
+        self.update()
 
     def _wrap360(self, x: float) -> float:
         return wrap360(x)
@@ -145,7 +150,10 @@ class ChopperWidget(QWidget):
                 model.phase_reference_sign,
             )
         return parked_rotation_deg(
-            raw_angle, model.resolver_offset_deg, model.base_spin_direction
+            raw_angle,
+            model.resolver_offset_deg,
+            model.base_spin_direction,
+            model.phase_reference_sign,
         )
 
     def _rotation_base_deg(
@@ -175,7 +183,7 @@ class ChopperWidget(QWidget):
                 return None
             if include_guide:
                 # Geometry conversion from engineering CW+ to Qt math-CCW.
-                return self._wrap360(-base_rotation + self._default_rotation_offset)
+                return self._wrap360(base_rotation + self._default_rotation_offset)
             return self._wrap360(base_rotation)
         return None
 
@@ -188,10 +196,13 @@ class ChopperWidget(QWidget):
             return None
         tdc_resolver = float(chopper["tdc_resolver_position"])
         tdc_base_rotation = parked_rotation_deg(
-            tdc_resolver, model.resolver_offset_deg, model.base_spin_direction
+            tdc_resolver,
+            model.resolver_offset_deg,
+            model.base_spin_direction,
+            model.phase_reference_sign,
         )
         tdc_qt_rotation = self._wrap360(
-            -tdc_base_rotation + self._default_rotation_offset
+            tdc_base_rotation + self._default_rotation_offset
         )
         # Opening-center world angle at TDC reference.
         return self._wrap360(-model.parked_opening_center_deg + tdc_qt_rotation)
@@ -211,6 +222,8 @@ class ChopperWidget(QWidget):
             model = build_rotation_model(chopper)
         except ValueError:
             return None
+        # runtime_phase_sign is defined so positive speed is rendered as
+        # clockwise in the UI across motor-side conventions.
         return runtime_phase_sign(
             speed_hz, model.base_spin_direction, model.phase_reference_sign
         )
@@ -335,7 +348,7 @@ class ChopperWidget(QWidget):
             except ValueError:
                 continue
             # Convert canonical engineering CW+ rotation to Qt math-CCW.
-            angle = self._wrap360(-base_rotation + self._default_rotation_offset)
+            angle = self._wrap360(base_rotation + self._default_rotation_offset)
 
             self.draw_chopper(
                 painter,
@@ -350,15 +363,16 @@ class ChopperWidget(QWidget):
             if self._detailed_view:
                 self._draw_chopper_details(painter, center, radius, chopper)
 
-            painter.setPen(QPen(Colors.BLUE.value, 4))
-            # line_x = center.x()
-            # line_y = center.y() - line_length
-            theta = math.radians(
-                self._guide_angle_deg
-            )  # 0=right, 90=up, 180=left, 270=down
-            line_x = center.x() + line_length * math.cos(theta)
-            line_y = center.y() - line_length * math.sin(theta)
-            painter.drawLine(center, QPointF(line_x, line_y))
+            if self._show_guide_line:
+                painter.setPen(QPen(Colors.BLUE.value, 4))
+                # line_x = center.x()
+                # line_y = center.y() - line_length
+                theta = math.radians(
+                    self._guide_angle_deg
+                )  # 0=right, 90=up, 180=left, 270=down
+                line_x = center.x() + line_length * math.cos(theta)
+                line_y = center.y() - line_length * math.sin(theta)
+                painter.drawLine(center, QPointF(line_x, line_y))
             if is_moving:
                 spin_sign = self._spin_direction_sign(chopper, current_speed)
                 if spin_sign is not None:
