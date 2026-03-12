@@ -107,29 +107,26 @@ class VirtualSpectrometer(Detector, PassiveChannel):
         ),
     }
 
-    def doPreinit(self, mode):
-        self._spec_simulator = VirtualGauss()
-
     def doStart(self):
         self.doAcquire()
 
     def doAcquire(self):
-        self._spec_simulator.doStart()
+        self._attached_virtualgauss.doStart()
 
     def doFinish(self):
         self.doStop()
 
     def doStop(self):
-        self._spec_simulator.doStop()
+        self._attached_virtualgauss.doStop()
 
-    def doReadIntegrationtime(self):
-        return self.integrationtime
-
-    def doReadBoxcarwidth(self):
-        return self.boxcarwidth
+    attached_devices = {
+        "virtualgauss": Attach(
+            "Virtual Gauss giving distributed virtual counts", VirtualGauss
+        ),
+    }
 
     def doReadAverages(self):
-        self._spec_simulator.doRead()
+        return self._attached_virtualgauss.doRead()
 
     def _get_current_settings(self):
         return {
