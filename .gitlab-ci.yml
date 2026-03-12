@@ -100,7 +100,7 @@ lint:codespell:
       if [ -n "$CHANGES" ]; then
         echo "Running codespell on changed files:"
         echo "$CHANGES"
-        uv run python -m codespell_lib --config .codespellrc $CHANGES
+        uv run python -m codespell_lib $CHANGES
       else
         echo "No modified files to check with codespell."
       fi
