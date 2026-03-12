@@ -72,10 +72,10 @@ packages = ["nicos"]
 # # nicos core is located at the root of the repository:
 # module-root = ""
 # # Install extra includes for the wheel:
-# # 
+# #
 # # - data: Installed over the virtualenv environment root. Warning: This may
 # #   override existing files!
-# #   
+# #
 # # - scripts: Installed to the directory for executables. Consider using
 # #   `project.scripts` instead for Python entrypoints.
 # #
@@ -148,8 +148,23 @@ exclude = [
     "bin/",
 ]
 
-# Configure globally applicable rules
-lint.select = ["E", "F", "W"]
+# Configure global rules to apply; see https://docs.astral.sh/ruff/rules/ for details.
+# Default value: ["E4", "E7", "E9", "F"]
+lint.select = [
+    # pycodestyle
+    "E",
+    "W",
+    # Pyflakes
+    "F",
+    # pyupgrade
+    "UP",
+    # flake8-bugbear
+    "B",
+    # flake8-simplify
+    "SIM",
+    # isort
+    "I",
+]
 
 # Per-file ignores
 [tool.ruff.lint.per-file-ignores]
