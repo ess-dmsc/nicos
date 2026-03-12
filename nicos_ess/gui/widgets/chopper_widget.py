@@ -22,6 +22,7 @@ from nicos_ess.gui.widgets.chopper_math import (
     build_rotation_model,
     has_canonical_inputs,
     parked_rotation_deg,
+    runtime_phase_sign,
     spinning_rotation_deg,
     wrap360,
 )
@@ -48,6 +49,7 @@ class ChopperWidget(QWidget):
         self._selected_chopper = None
         self._guide_pos = guide_pos
         self._guide_angle_deg = self._to_guide_deg(guide_pos)
+        self._detailed_view = False
 
         self._default_rotation_offset = self._guide_angle_deg
 
@@ -87,6 +89,13 @@ class ChopperWidget(QWidget):
         self._guide_angle_deg = new_deg
         self._default_rotation_offset = new_deg
         self.update()
+
+    def set_detailed_view(self, enabled: bool) -> None:
+        self._detailed_view = bool(enabled)
+        self.update()
+
+    def is_detailed_view_enabled(self) -> bool:
+        return self._detailed_view
 
     def _wrap360(self, x: float) -> float:
         return wrap360(x)
@@ -170,6 +179,133 @@ class ChopperWidget(QWidget):
             return self._wrap360(base_rotation)
         return None
 
+    def _tdc_marker_angle_for_chopper(self, chopper: dict) -> Optional[float]:
+        if not has_canonical_inputs(chopper):
+            return None
+        try:
+            model = build_rotation_model(chopper)
+        except ValueError:
+            return None
+        tdc_resolver = float(chopper["tdc_resolver_position"])
+        tdc_base_rotation = parked_rotation_deg(
+            tdc_resolver, model.resolver_offset_deg, model.base_spin_direction
+        )
+        tdc_qt_rotation = self._wrap360(
+            -tdc_base_rotation + self._default_rotation_offset
+        )
+        # Opening-center world angle at TDC reference.
+        return self._wrap360(-model.parked_opening_center_deg + tdc_qt_rotation)
+
+    def get_tdc_marker_angle_for_chopper(self, chopper_name: str) -> Optional[float]:
+        for chopper in self.chopper_data:
+            if chopper["chopper"] == chopper_name:
+                return self._tdc_marker_angle_for_chopper(chopper)
+        return None
+
+    def _spin_direction_sign(
+        self, chopper: dict, speed_hz: Optional[float]
+    ) -> Optional[int]:
+        if not has_canonical_inputs(chopper):
+            return None
+        try:
+            model = build_rotation_model(chopper)
+        except ValueError:
+            return None
+        return runtime_phase_sign(
+            speed_hz, model.base_spin_direction, model.phase_reference_sign
+        )
+
+    def get_spin_direction_sign_for_chopper(self, chopper_name: str) -> Optional[int]:
+        for chopper in self.chopper_data:
+            if chopper["chopper"] != chopper_name:
+                continue
+            speed_hz = chopper.get("speed", 0.0)
+            return self._spin_direction_sign(chopper, speed_hz)
+        return None
+
+    def _spin_indicator_arc_angles(
+        self, spin_sign: int, span_deg: float = 72.0
+    ) -> tuple[float, float]:
+        half_span = span_deg / 2.0
+        if spin_sign >= 0:
+            start = self._guide_angle_deg + half_span
+            end = self._guide_angle_deg - half_span
+        else:
+            start = self._guide_angle_deg - half_span
+            end = self._guide_angle_deg + half_span
+        return self._wrap360(start), self._wrap360(end)
+
+    def _point_on_circle(
+        self, center: QPointF, radius: float, angle_deg: float
+    ) -> QPointF:
+        theta = math.radians(angle_deg)
+        return QPointF(
+            center.x() + radius * math.cos(theta),
+            center.y() - radius * math.sin(theta),
+        )
+
+    def _draw_arrow_head(
+        self, painter: QPainter, prev_point: QPointF, tip_point: QPointF, size: float
+    ) -> None:
+        vx = tip_point.x() - prev_point.x()
+        vy = tip_point.y() - prev_point.y()
+        norm = math.hypot(vx, vy)
+        if norm < 1e-9:
+            return
+        ux, uy = vx / norm, vy / norm
+        bx, by = -ux, -uy
+
+        alpha = math.radians(28.0)
+        cos_a = math.cos(alpha)
+        sin_a = math.sin(alpha)
+
+        ldx = bx * cos_a - by * sin_a
+        ldy = bx * sin_a + by * cos_a
+        rdx = bx * cos_a + by * sin_a
+        rdy = -bx * sin_a + by * cos_a
+
+        left = QPointF(tip_point.x() + size * ldx, tip_point.y() + size * ldy)
+        right = QPointF(tip_point.x() + size * rdx, tip_point.y() + size * rdy)
+        painter.drawLine(tip_point, left)
+        painter.drawLine(tip_point, right)
+
+    def _draw_spin_direction_indicator(
+        self, painter: QPainter, center: QPointF, radius: float, spin_sign: int
+    ) -> None:
+        start_deg, end_deg = self._spin_indicator_arc_angles(spin_sign)
+        # Avoid wrap discontinuity during interpolation.
+        if end_deg - start_deg > 180.0:
+            end_deg -= 360.0
+        elif start_deg - end_deg > 180.0:
+            end_deg += 360.0
+
+        nsteps = 22
+        points = []
+        for i in range(nsteps + 1):
+            t = i / nsteps
+            angle = start_deg + t * (end_deg - start_deg)
+            points.append(self._point_on_circle(center, radius, angle))
+
+        painter.save()
+        pen = QPen(QColor(15, 15, 15, 210), 2.0)
+        pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+        pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
+        painter.setPen(pen)
+        painter.setBrush(Qt.BrushStyle.NoBrush)
+
+        path = QPainterPath(points[0])
+        for point in points[1:]:
+            path.lineTo(point)
+        painter.drawPath(path)
+
+        self._draw_arrow_head(
+            painter,
+            points[-2],
+            points[-1],
+            size=max(6.0, radius * 0.14),
+        )
+        painter.restore()
+
     def resizeEvent(self, event):
         self.update()
 
@@ -211,6 +347,8 @@ class ChopperWidget(QWidget):
                 is_selected,
                 is_moving,
             )
+            if self._detailed_view:
+                self._draw_chopper_details(painter, center, radius, chopper)
 
             painter.setPen(QPen(Colors.BLUE.value, 4))
             # line_x = center.x()
@@ -221,6 +359,12 @@ class ChopperWidget(QWidget):
             line_x = center.x() + line_length * math.cos(theta)
             line_y = center.y() - line_length * math.sin(theta)
             painter.drawLine(center, QPointF(line_x, line_y))
+            if is_moving:
+                spin_sign = self._spin_direction_sign(chopper, current_speed)
+                if spin_sign is not None:
+                    self._draw_spin_direction_indicator(
+                        painter, center, line_length * 0.5, spin_sign
+                    )
 
             text_direction = -1 if self._guide_angle_deg == 270 else 1
 
@@ -271,6 +415,45 @@ class ChopperWidget(QWidget):
             painter.drawText(status_rect, Qt.AlignmentFlag.AlignCenter, status_text)
 
         self.draw_legend(painter, chopper_radius)
+
+    def _draw_chopper_details(
+        self, painter: QPainter, center: QPointF, radius: float, chopper: dict
+    ) -> None:
+        motor_position = str(chopper.get("motor_position", "")).strip().lower()
+        motor_alpha = 220 if motor_position == "upstream" else 95
+
+        hub_radius = radius * 0.24
+        spindle_radius = radius * 0.08
+        housing_color = QColor(90, 90, 90, motor_alpha)
+        spindle_color = QColor(40, 40, 40, 220)
+
+        painter.save()
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(QBrush(housing_color))
+        painter.drawEllipse(center, hub_radius, hub_radius)
+        painter.setBrush(QBrush(spindle_color))
+        painter.drawEllipse(center, spindle_radius, spindle_radius)
+
+        tdc_angle = self._tdc_marker_angle_for_chopper(chopper)
+        if tdc_angle is not None:
+            theta = math.radians(tdc_angle)
+            p_inner = QPointF(
+                center.x() + (radius * 0.74) * math.cos(theta),
+                center.y() - (radius * 0.74) * math.sin(theta),
+            )
+            p_outer = QPointF(
+                center.x() + (radius * 1.02) * math.cos(theta),
+                center.y() - (radius * 1.02) * math.sin(theta),
+            )
+            painter.setPen(QPen(QColor(210, 45, 45, 210), 2, Qt.PenStyle.DashLine))
+            painter.drawLine(p_inner, p_outer)
+            painter.setPen(QPen(QColor(210, 45, 45, 210), 1))
+            label_pos = QPointF(
+                center.x() + (radius * 1.08) * math.cos(theta),
+                center.y() - (radius * 1.08) * math.sin(theta),
+            )
+            painter.drawText(label_pos, "TDC")
+        painter.restore()
 
     def draw_legend(self, painter: QPainter, ref_radius: float) -> None:
         painter.save()

@@ -7,7 +7,9 @@ qt = pytest.importorskip(
     "nicos.guisupport.qt", reason="PyQt is required for standalone ChopperWidget tests"
 )
 QApplication = qt.QApplication
+QPainter = qt.QPainter
 QPointF = qt.QPointF
+QPixmap = qt.QPixmap
 from nicos_ess.gui.widgets.chopper_math import (
     build_rotation_model,
     apply_motor_side_transform,
@@ -205,6 +207,159 @@ def test_widget_returns_none_for_missing_canonical(qapp):
     widget.set_chopper_speed("c1", 10.0)
     widget.set_chopper_angle("c1", 5.0)
     assert widget.get_rotation_angle_for_chopper("c1") is None
+
+
+def test_widget_detailed_view_toggle_state(qapp):
+    widget = ChopperWidget()
+    assert not widget.is_detailed_view_enabled()
+    widget.set_detailed_view(True)
+    assert widget.is_detailed_view_enabled()
+    widget.set_detailed_view(False)
+    assert not widget.is_detailed_view_enabled()
+
+
+def test_widget_tdc_marker_angle_available_for_canonical_inputs(qapp):
+    widget = ChopperWidget(guide_pos="DOWN")
+    canonical = _canonical("c1")
+    widget.update_chopper_data([canonical])
+    angle = widget.get_tdc_marker_angle_for_chopper("c1")
+    assert angle is not None
+    assert 0.0 <= angle < 360.0
+
+
+def test_widget_tdc_marker_angle_missing_for_noncanonical_inputs(qapp):
+    widget = ChopperWidget()
+    widget.update_chopper_data([{"chopper": "c1", "slit_edges": [[0.0, 90.0]]}])
+    assert widget.get_tdc_marker_angle_for_chopper("c1") is None
+
+
+def test_widget_spin_direction_sign_tracks_runtime_phase_sign(qapp):
+    down = _canonical("downstream", motor_position="downstream")
+    up = _canonical("upstream", motor_position="upstream")
+    widget = ChopperWidget()
+    widget.update_chopper_data([down, up])
+
+    widget.set_chopper_speed("downstream", 10.0)
+    widget.set_chopper_speed("upstream", 10.0)
+    assert widget.get_spin_direction_sign_for_chopper("downstream") == -1
+    assert widget.get_spin_direction_sign_for_chopper("upstream") == -1
+
+    widget.set_chopper_speed("downstream", -10.0)
+    widget.set_chopper_speed("upstream", -10.0)
+    assert widget.get_spin_direction_sign_for_chopper("downstream") == 1
+    assert widget.get_spin_direction_sign_for_chopper("upstream") == 1
+
+
+def test_widget_spin_indicator_arc_moves_with_guide_position(qapp):
+    widget = ChopperWidget(guide_pos="DOWN")
+    assert widget._spin_indicator_arc_angles(1) == pytest.approx((306.0, 234.0))
+    assert widget._spin_indicator_arc_angles(-1) == pytest.approx((234.0, 306.0))
+
+    widget.set_guide_position("RIGHT")
+    assert widget._spin_indicator_arc_angles(1) == pytest.approx((36.0, 324.0))
+    assert widget._spin_indicator_arc_angles(-1) == pytest.approx((324.0, 36.0))
+
+
+def test_widget_spin_indicator_drawing_executes(qapp):
+    widget = ChopperWidget(guide_pos="DOWN")
+    pixmap = QPixmap(320, 320)
+    painter = QPainter(pixmap)
+    try:
+        widget._draw_spin_direction_indicator(painter, QPointF(160.0, 160.0), 90.0, 1)
+        widget._draw_spin_direction_indicator(painter, QPointF(160.0, 160.0), 90.0, -1)
+    finally:
+        painter.end()
+
+
+@pytest.mark.parametrize(
+    "chopper",
+    [
+        _canonical("downstream", motor_position="downstream"),
+        _canonical("upstream", motor_position="upstream"),
+    ],
+    ids=lambda c: c["chopper"],
+)
+def test_widget_phase_perturbation_moves_opposite_runtime_phase_direction(qapp, chopper):
+    widget = ChopperWidget()
+    widget.update_chopper_data([chopper])
+    name = chopper["chopper"]
+    speed_hz = 14.0
+    eps = 0.2
+    phase0 = float(chopper["phase_tdc_center_window_delay"])
+
+    widget.set_chopper_speed(name, speed_hz)
+    widget.set_chopper_angle(name, phase0)
+    rot0 = widget.get_rotation_angle_for_chopper(name, include_guide=False)
+    widget.set_chopper_angle(name, phase0 + eps)
+    rot1 = widget.get_rotation_angle_for_chopper(name, include_guide=False)
+    assert rot0 is not None
+    assert rot1 is not None
+
+    model = build_rotation_model(chopper)
+    expected_delta = -runtime_phase_sign(
+        speed_hz, model.base_spin_direction, model.phase_reference_sign
+    ) * eps
+    assert wrap180(rot1 - rot0) == pytest.approx(expected_delta)
+
+
+@pytest.mark.parametrize(
+    "chopper",
+    [
+        _canonical("downstream", motor_position="downstream"),
+        _canonical("upstream", motor_position="upstream"),
+    ],
+    ids=lambda c: c["chopper"],
+)
+def test_widget_phase_perturbation_moves_opposite_displayed_spin_arrow(qapp, chopper):
+    widget = ChopperWidget()
+    widget.update_chopper_data([chopper])
+    name = chopper["chopper"]
+    speed_hz = 14.0
+    eps = 0.2
+    phase0 = float(chopper["phase_tdc_center_window_delay"])
+
+    widget.set_chopper_speed(name, speed_hz)
+    arrow_sign = widget.get_spin_direction_sign_for_chopper(name)
+    assert arrow_sign is not None
+
+    widget.set_chopper_angle(name, phase0)
+    rot0 = widget.get_rotation_angle_for_chopper(name, include_guide=True)
+    widget.set_chopper_angle(name, phase0 + eps)
+    rot1 = widget.get_rotation_angle_for_chopper(name, include_guide=True)
+    assert rot0 is not None
+    assert rot1 is not None
+
+    # arrow_sign uses CW-positive convention; include_guide angle increases in
+    # Qt's CCW-positive sense. Opposite motion therefore maps to +arrow_sign.
+    assert wrap180(rot1 - rot0) == pytest.approx(arrow_sign * eps)
+
+
+@pytest.mark.parametrize(
+    "chopper",
+    [
+        _canonical("downstream", motor_position="downstream"),
+        _canonical("upstream", motor_position="upstream"),
+    ],
+    ids=lambda c: c["chopper"],
+)
+def test_widget_resolver_perturbation_moves_with_base_spin_direction(qapp, chopper):
+    widget = ChopperWidget()
+    widget.update_chopper_data([chopper])
+    name = chopper["chopper"]
+    eps = 0.2
+    resolver0 = float(chopper["park_open_angle"])
+
+    widget.set_chopper_speed(name, 0.0)
+    widget.set_chopper_angle(name, resolver0)
+    rot0 = widget.get_rotation_angle_for_chopper(name, include_guide=False)
+    widget.set_chopper_angle(name, resolver0 + eps)
+    rot1 = widget.get_rotation_angle_for_chopper(name, include_guide=False)
+    assert rot0 is not None
+    assert rot1 is not None
+
+    model = build_rotation_model(chopper)
+    expected_delta = direction_to_sign(model.base_spin_direction) * eps
+    assert wrap180(rot1 - rot0) == pytest.approx(expected_delta)
 
 
 def test_widget_spinning_phase_direction_follows_motor_side(qapp):

@@ -6,6 +6,7 @@ from nicos_ess.gui.widgets.chopper_math import (
     ChopperRotationModel,
     apply_motor_side_transform,
     build_rotation_model,
+    direction_to_sign,
     has_canonical_inputs,
     parked_rotation_deg,
     runtime_phase_sign,
@@ -177,3 +178,67 @@ def test_phase_delay_reference_aligns_parked_opening_while_spinning():
         base_spin_direction=model.base_spin_direction,
     )
     assert spinning_at_phase_reference == pytest.approx((360.0 - opening_center) % 360.0)
+
+
+@pytest.mark.parametrize(
+    "chopper",
+    [
+        _canonical(),
+        _canonical(
+            motor_position="upstream",
+            tdc_resolver_position=341.7,
+            park_open_angle=73.0,
+            phase_tdc_center_window_delay=91.3,
+        ),
+    ],
+    ids=["downstream", "upstream"],
+)
+def test_phase_perturbation_moves_opposite_runtime_phase_direction(chopper):
+    model = build_rotation_model(chopper)
+    eps = 0.2
+    phase0 = float(chopper["phase_tdc_center_window_delay"])
+    rot0 = spinning_rotation_deg(
+        phase0,
+        14.0,
+        model.spin_offset_deg,
+        model.base_spin_direction,
+        model.phase_reference_sign,
+    )
+    rot1 = spinning_rotation_deg(
+        phase0 + eps,
+        14.0,
+        model.spin_offset_deg,
+        model.base_spin_direction,
+        model.phase_reference_sign,
+    )
+    expected_delta = -runtime_phase_sign(
+        14.0, model.base_spin_direction, model.phase_reference_sign
+    ) * eps
+    assert wrap180(rot1 - rot0) == pytest.approx(expected_delta)
+
+
+@pytest.mark.parametrize(
+    "chopper",
+    [
+        _canonical(),
+        _canonical(
+            motor_position="upstream",
+            tdc_resolver_position=341.7,
+            park_open_angle=73.0,
+            phase_tdc_center_window_delay=91.3,
+        ),
+    ],
+    ids=["downstream", "upstream"],
+)
+def test_resolver_perturbation_moves_with_base_spin_direction(chopper):
+    model = build_rotation_model(chopper)
+    eps = 0.2
+    resolver0 = float(chopper["park_open_angle"])
+    rot0 = parked_rotation_deg(
+        resolver0, model.resolver_offset_deg, model.base_spin_direction
+    )
+    rot1 = parked_rotation_deg(
+        resolver0 + eps, model.resolver_offset_deg, model.base_spin_direction
+    )
+    expected_delta = direction_to_sign(model.base_spin_direction) * eps
+    assert wrap180(rot1 - rot0) == pytest.approx(expected_delta)

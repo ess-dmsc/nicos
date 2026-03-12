@@ -6,6 +6,8 @@ import numpy as np
 
 from nicos.clients.gui.panels import Panel
 from nicos.guisupport.qt import (
+    QCheckBox,
+    QHBoxLayout,
     QSplitter,
     Qt,
     QVBoxLayout,
@@ -66,6 +68,15 @@ class ChopperPanel(Panel):
 
     def initialize_ui(self):
         layout = QVBoxLayout()
+        controls = QHBoxLayout()
+        self._detail_checkbox = QCheckBox("Detailed view")
+        self._detail_checkbox.setToolTip(
+            "Show motor-housing opacity and TDC reference marker."
+        )
+        self._detail_checkbox.toggled.connect(self.chopper_widget.set_detailed_view)
+        controls.addWidget(self._detail_checkbox)
+        controls.addStretch(1)
+        layout.addLayout(controls)
         self.setLayout(layout)
 
     def build_ui(self):
