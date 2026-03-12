@@ -557,8 +557,13 @@ class SpectrometerPanel(Panel):
         return normalized_type
 
     def _get_spectrometer_names(self):
-        # TODO: get the names from the server
-        return ["hr4", "qepro"]
+        devices = self.client.getDeviceList(
+            "nicos_ess.devices.epics.spectrometer.OceanInsightSpectrometer"
+        )
+        virt_devices = self.client.getDeviceList(
+            "nicos_ess.devices.virtual.spectrometer.VirtualSpectrometer"
+        )
+        return devices + virt_devices
 
     def start_acquisition(self):
         # Needed?
