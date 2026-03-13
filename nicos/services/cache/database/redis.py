@@ -25,8 +25,8 @@ repeat
   local res = redis.call('SCAN', cursor, 'COUNT', 512)
   cursor = tonumber(res[1])
   for _, key in ipairs(res[2]) do
-    -- skip time-series and snapshot helper keys
-    if not key:match('_ts$') and not key:match('_snapshot$') then
+    local key_type = redis.call('TYPE', key)
+    if key_type == 'hash' then
       local ttl_str  = redis.call('HGET', key, 'ttl')
       local time_str = redis.call('HGET', key, 'time')
       local expired  = redis.call('HGET', key, 'expired')
@@ -59,6 +59,12 @@ class RedisCacheDatabase(CacheDatabase):
         "host": Param("Redis host", type=str, default="localhost"),
         "port": Param("Redis port", type=int, default=6379),
         "db": Param("Redis DB", type=int, default=0),
+        "historydays": Param(
+            "Maximum history retention in days for TS/hash_series "
+            "(0 disables history pruning)",
+            type=float,
+            default=14.0,
+        ),
     }
 
     def doInit(self, mode: str, injected_client: Union[RedisClient, None] = None):
@@ -119,9 +125,12 @@ class RedisCacheDatabase(CacheDatabase):
         return t.exists(key)
 
     def _create_timeseries(self, key, target=None):
-        (target or self._client).execute_command(
-            "TS.CREATE", key, "DUPLICATE_POLICY", "LAST"
-        )
+        cmd = ["TS.CREATE", key]
+        retention_ms = self._history_retention_ms()
+        if retention_ms is not None:
+            cmd.extend(["RETENTION", retention_ms])
+        cmd.extend(["DUPLICATE_POLICY", "LAST"])
+        (target or self._client).execute_command(*cmd)
 
     def _add_to_timeseries(self, key, timestamp, value, target=None):
         (target or self._client).execute_command("TS.ADD", key, timestamp, value)
@@ -131,18 +140,90 @@ class RedisCacheDatabase(CacheDatabase):
             "TS.RANGE", key, fromtime, totime, *args
         )
 
-    def _redis_keys(self, match="*", count=1024) -> Iterable[str]:
-        return self._client.scan_iter(match=match, count=count)
+    def _redis_keys(self, match="*", count=1024, _type=None) -> Iterable[str]:
+        return self._client.scan_iter(match=match, count=count, _type=_type)
 
     def _delete(self, key, target=None):
         (target or self._client).execute_command("DEL", key)
 
+    def _history_retention_ms(self) -> Optional[int]:
+        try:
+            days = float(
+                getattr(
+                    self,
+                    "_historydays_override",
+                    getattr(self, "historydays", 0.0),
+                )
+            )
+        except Exception:
+            return None
+        if days <= 0:
+            return None
+        ms = int(days * 86400 * 1000)
+        return ms if ms > 0 else None
+
+    def _history_cutoff_ms(self, newest_ts_ms: int) -> Optional[int]:
+        retention_ms = self._history_retention_ms()
+        if retention_ms is None:
+            return None
+        return int(newest_ts_ms - retention_ms)
+
+    def _prune_timeseries(self, ts_key: str, newest_ts_ms: int, target=None):
+        cutoff = self._history_cutoff_ms(newest_ts_ms)
+        if cutoff is None:
+            return
+        try:
+            (target or self._client).execute_command("TS.DEL", ts_key, 0, cutoff)
+        except Exception:
+            self.log.exception("TS prune failed for %s", ts_key)
+
+    def _prune_hash_series(
+        self, hs_hash_key: str, hs_idx_key: str, newest_ts_ms: int, target=None
+    ):
+        cutoff = self._history_cutoff_ms(newest_ts_ms)
+        if cutoff is None:
+            return
+
+        try:
+            stale_fields = self._client.zrangebyscore(hs_idx_key, float("-inf"), cutoff)
+        except Exception:
+            self.log.exception(
+                "hash_series prune index lookup failed for %s", hs_idx_key
+            )
+            return
+
+        if not stale_fields:
+            return
+
+        normalized = []
+        for f in stale_fields:
+            if isinstance(f, str):
+                normalized.append(f)
+            else:
+                try:
+                    normalized.append(f.decode("utf-8"))
+                except Exception:
+                    normalized.append(str(f))
+
+        t = target or self._client
+        try:
+            t.execute_command("HDEL", hs_hash_key, *normalized)
+            t.execute_command("ZREMRANGEBYSCORE", hs_idx_key, float("-inf"), cutoff)
+        except Exception:
+            self.log.exception(
+                "hash_series prune failed for %s/%s", hs_hash_key, hs_idx_key
+            )
+
     def _check_get_key_format(self, key: str) -> bool:
-        return "###" not in key and not key.endswith("_ts")
+        return "###" not in key
 
     def _format_key(self, category: str, subkey: str):
+        """
+        Return Redis keys for main hash and associated TS structures.
+        Returns: (main_key, ts_key, hs_key, hs_idx_key)
+        """
         key = subkey if category == "nocat" else f"{category}/{subkey}"
-        return key, f"{key}_ts"
+        return key, f"{key}_ts", f"{key}_hs", f"{key}_hs_idx"
 
     def _entry_from_hash(self, h: Union[Dict[str, str], None]) -> Optional[CacheEntry]:
         if not h or not {"time", "ttl", "value"}.issubset(h):
@@ -152,9 +233,7 @@ class RedisCacheDatabase(CacheDatabase):
 
         ttl = None if h["ttl"] == "None" else self._literal_or_str(h["ttl"])
         expired = True if h.get("expired", "False") == "True" else False
-        entry = CacheEntry(
-            self._literal_or_str(h["time"]), ttl, self._literal_or_str(h["value"])
-        )
+        entry = CacheEntry(self._literal_or_str(h["time"]), ttl, h["value"])
         entry.expired = expired
         return entry
 
@@ -190,7 +269,7 @@ class RedisCacheDatabase(CacheDatabase):
     def _iter_entries_stream(self, batch: int = 512):
         buf: List[str] = []
         pipe = None
-        for key in self._redis_keys(count=batch):
+        for key in self._redis_keys(count=batch, _type="hash"):
             if not isinstance(key, str):
                 try:
                     key = key.decode("utf-8")
@@ -249,7 +328,7 @@ class RedisCacheDatabase(CacheDatabase):
                     return entry
 
         # Lazy fallback: if not in RAM (e.g., external writer), read once and cache.
-        redis_key, _ = self._format_key(category, subkey)
+        redis_key, _, _, _ = self._format_key(category, subkey)
         try:
             entry = self._get_data(redis_key)
         except Exception:
@@ -266,21 +345,173 @@ class RedisCacheDatabase(CacheDatabase):
                     yield (cat, subkey), entry
 
     def queryHistory(self, dbkey, fromtime, totime, interval=None):
-        _, ts_key = self._format_key(dbkey[0], dbkey[1])
+        category, subkey = dbkey
+        redis_key, base_ts_key, hs_hash_key, hs_idx_key = self._format_key(
+            category, subkey
+        )
 
         from_ms = int(fromtime * 1000)
         to_ms = int(totime * 1000)
 
+        # Read metadata describing how this value is archived in TS
         try:
-            if interval:
-                res = self._query_timeseries(
-                    ts_key, from_ms, to_ms, "AGGREGATION", "avg", int(interval * 1000)
-                )
-            else:
-                res = self._query_timeseries(ts_key, from_ms, to_ms)
+            meta = self._hash_getall(redis_key)
         except Exception as e:
-            self.log.warning(f"queryHistory: TS.RANGE failed for {ts_key}: {e}")
-            return []
+            self.log.warning(
+                "queryHistory: failed to read metadata hash for %s: %s",
+                redis_key,
+                e,
+            )
+            meta = {}
+
+        encoding = meta.get("ts_encoding")  # "scalar", "list", "dict", or None
+        children_raw = meta.get("ts_children", "")
+        children = [c for c in children_raw.split(",") if c] if children_raw else []
+
+        def _range(ts_key: str):
+            """Wrapper around TS.RANGE with optional aggregation."""
+            try:
+                if interval:
+                    return self._query_timeseries(
+                        ts_key,
+                        from_ms,
+                        to_ms,
+                        "AGGREGATION",
+                        "avg",
+                        int(interval * 1000),
+                    )
+                else:
+                    return self._query_timeseries(ts_key, from_ms, to_ms)
+            except Exception as e:
+                self.log.warning(
+                    "queryHistory: TS.RANGE failed for %s: %s",
+                    ts_key,
+                    e,
+                )
+                return []
+
+        if encoding == "list" and children:
+            # children are indices for list positions
+            try:
+                indices = [int(c) for c in children]
+            except ValueError:
+                # corrupt metadata, fall back to scalar behaviour
+                indices = []
+
+            if not indices:
+                res = _range(base_ts_key)
+                return [
+                    CacheEntry(ts / 1000.0, None, cache_load(val)) for ts, val in res
+                ]
+
+            ts_map: Dict[int, Dict[int, float]] = {}
+
+            for idx in indices:
+                ts_key = f"{redis_key}_l_{idx}_ts"
+                samples = _range(ts_key)
+                for ts, val in samples:
+                    ts_int = int(ts)
+                    # val may already be numeric in real RedisTimeSeries.
+                    numeric = cache_load(val) if isinstance(val, str) else val
+                    per_ts = ts_map.setdefault(ts_int, {})
+                    per_ts[idx] = numeric
+
+            entries: List[CacheEntry] = []
+            for ts_int in sorted(ts_map.keys()):
+                per_ts = ts_map[ts_int]
+                # Reconstruct list in the original order of indices, padding missing with None
+                reconstructed = [per_ts.get(idx, None) for idx in indices]
+                entries.append(CacheEntry(ts_int / 1000.0, None, reconstructed))
+
+            return entries
+
+        if encoding == "dict" and children:
+            keys = children[:]  # dict keys as strings
+
+            ts_map: Dict[int, Dict[str, float]] = {}
+
+            for key_name in keys:
+                ts_key = f"{redis_key}_d_{key_name}_ts"
+                samples = _range(ts_key)
+                for ts, val in samples:
+                    ts_int = int(ts)
+                    numeric = cache_load(val) if isinstance(val, str) else val
+                    per_ts = ts_map.setdefault(ts_int, {})
+                    per_ts[key_name] = numeric
+
+            entries: List[CacheEntry] = []
+            for ts_int in sorted(ts_map.keys()):
+                per_ts = ts_map[ts_int]
+                # Only include keys that actually have values at this timestamp
+                reconstructed = {k: per_ts[k] for k in keys if k in per_ts}
+                entries.append(CacheEntry(ts_int / 1000.0, None, reconstructed))
+
+            return entries
+
+        if encoding == "hash_series":
+            try:
+                # 1) Get all timestamps in range, sorted by time
+                ts_fields = self._client.zrangebyscore(hs_idx_key, from_ms, to_ms)
+            except Exception as e:
+                self.log.warning(
+                    "queryHistory: failed to read hash_series index %s: %s",
+                    hs_idx_key,
+                    e,
+                )
+                return []
+
+            if not ts_fields:
+                return []
+
+            try:
+                # 2) Bulk fetch values for those timestamps
+                values = self._client.hmget(hs_hash_key, *ts_fields)
+            except Exception as e:
+                self.log.warning(
+                    "queryHistory: failed to HMGET hash_series %s: %s",
+                    hs_hash_key,
+                    e,
+                )
+                return []
+
+            entries: List[CacheEntry] = []
+            append = entries.append
+
+            for ts_str, val_str in zip(ts_fields, values):
+                if val_str is None:
+                    # hash and zset out of sync; skip this sample
+                    continue
+                try:
+                    ts_int = int(ts_str)
+                except (TypeError, ValueError):
+                    continue
+
+                if not isinstance(val_str, str):
+                    try:
+                        val_str = val_str.decode("utf-8")
+                    except Exception:
+                        val_str = str(val_str)
+
+                append(CacheEntry(ts_int / 1000.0, None, val_str))
+
+            # Optional interval decimation – unchanged, we just decimate whole entries.
+            if interval:
+                bucket_ms = int(interval * 1000)
+                if bucket_ms > 0 and len(entries) > 1:
+                    bucketed: List[CacheEntry] = []
+                    next_boundary = int(entries[0].time * 1000) + bucket_ms
+                    bucketed_append = bucketed.append
+                    bucketed_append(entries.pop(0))  # always include first entry
+                    for e in entries:
+                        t_ms = int(e.time * 1000)
+                        if t_ms >= next_boundary:
+                            bucketed_append(e)
+                            next_boundary = t_ms + bucket_ms
+                    return bucketed
+
+            return entries
+
+        res = _range(base_ts_key)
 
         def _ts_entry(ts, val):
             return CacheEntry(ts / 1000.0, None, cache_load(val))
@@ -300,6 +531,7 @@ class RedisCacheDatabase(CacheDatabase):
             _, lock, db = self._ensure_category(cat)
 
             update_needed = True
+            refresh_only = False
             with lock:
                 if subkey in db:
                     curentry = db[subkey]
@@ -308,6 +540,7 @@ class RedisCacheDatabase(CacheDatabase):
                         curentry.time = ne.time
                         curentry.ttl = ne.ttl
                         update_needed = False
+                        refresh_only = True
                         real_update = False
                     # delete (value None) but already expired: skip
                     elif ne.value is None and curentry.expired:
@@ -317,17 +550,24 @@ class RedisCacheDatabase(CacheDatabase):
                 if update_needed:
                     db[subkey] = ne
 
-            if update_needed and not no_store:
+            if (update_needed or refresh_only) and not no_store:
                 # Persist to Redis (batched via pipeline per updateEntries call)
                 with self._write_lock:
                     pipe = self._client.pipeline(transaction=False)
-                    self._set_data(cat, subkey, ne, pipe=pipe)
-                    try:
-                        pipe.execute()
-                    except Exception:
-                        self.log.exception(
-                            "Redis pipeline execute failed for %s/%s", cat, subkey
-                        )
+                    self._set_data(
+                        cat,
+                        subkey,
+                        ne,
+                        pipe=pipe,
+                        archive_history=update_needed,
+                    )
+                    if pipe is not None:
+                        try:
+                            pipe.execute()
+                        except Exception:
+                            self.log.exception(
+                                "Redis pipeline execute failed for %s/%s", cat, subkey
+                            )
 
             if ne.value in ("", None) and update_needed:
                 # Also remove from RAM if deletion
@@ -346,10 +586,12 @@ class RedisCacheDatabase(CacheDatabase):
             # Guard against Redis errors / corrupted data
             return None
 
-    def _set_data(self, category, subkey, entry: CacheEntry, pipe=None):
+    def _set_data(
+        self, category, subkey, entry: CacheEntry, pipe=None, archive_history=True
+    ):
         """Write a single entry to Redis (and update RAM) — signature unchanged for tests."""
         # Type checks (compat with old test expectations)
-        if type(entry.value) not in (int, float, str, list, dict, type(None)):
+        if type(entry.value) not in (int, float, str, list, tuple, dict, type(None)):
             self.log.warning("Unsupported value type: %s", type(entry.value))
             return
         if not isinstance(self._literal_or_str(entry.time), (float, int)):
@@ -359,61 +601,151 @@ class RedisCacheDatabase(CacheDatabase):
             self.log.debug("Subkey ignored contains: %s", subkey)
             return
 
-        redis_key, ts_key = self._format_key(category, subkey)
+        redis_key, base_ts_key, hs_hash_key, hs_idx_key = self._format_key(
+            category, subkey
+        )
         target = pipe or self._client
 
         # Deletion
         if entry.value in ("", None):
             try:
                 self._delete(redis_key, target=target)
-                if self._redis_key_exists(ts_key):
-                    self._delete(ts_key, target=target)
+                if self._redis_key_exists(base_ts_key):
+                    self._delete(base_ts_key, target=target)
+                if self._redis_key_exists(hs_hash_key):
+                    self._delete(hs_hash_key, target=target)
+                if self._redis_key_exists(hs_idx_key):
+                    self._delete(hs_idx_key, target=target)
             except Exception:
                 self.log.exception(
-                    "Failed to delete keys %s and/or %s", redis_key, ts_key
+                    "Failed to delete keys %s/%s (and hash_series)",
+                    redis_key,
+                    base_ts_key,
                 )
-            # Keep RAM in sync
             self._del_recent(category, subkey)
             return
 
-        # Hash write
+        # --- Decide how to archive the value in TS ---------------------------------
+        # Normalize value just for archiving decisions (hash always stores str(value))
+        value = (
+            self._literal_or_str(entry.value)
+            if isinstance(entry.value, str)
+            else entry.value
+        )
+
+        ts = int(float(entry.time) * 1000)
+
+        ts_values: List[float] = []
+        ts_keys: List[str] = []
+        ts_encoding: Optional[str] = None  # "list" or "dict" only
+        ts_children: Optional[str] = None  # comma-separated indices or keys
+
+        if self._native_archiving(value):
+            # Simple scalar numeric value — no metadata needed
+            ts_values.append(value)
+            ts_keys.append(base_ts_key)
+
+        else:
+            # Complex type: try list-of-numbers or dict-of-numbers
+            if (
+                isinstance(value, (list, tuple))
+                and value
+                and all(self._native_archiving(v) for v in value)
+            ):
+                ts_encoding = "list"
+                indices = list(range(len(value)))
+                ts_children = ",".join(str(i) for i in indices)
+
+                for idx in indices:
+                    val = value[idx]
+                    ts_keys.append(f"{redis_key}_l_{idx}_ts")
+                    ts_values.append(val)
+
+            elif (
+                isinstance(value, dict)
+                and value
+                and all(self._native_archiving(v) for v in value.values())
+            ):
+                ts_encoding = "dict"
+                keys = list(value.keys())
+                ts_children = ",".join(str(k) for k in keys)
+
+                for subk in keys:
+                    val = value[subk]
+                    ts_keys.append(f"{redis_key}_d_{subk}_ts")
+                    ts_values.append(val)
+            else:
+                ts_encoding = "hash_series"
+                ts_children = None
+                ts_values = []
+                ts_keys = []
+
+        hash_mapping = {
+            "time": str(entry.time),
+            "ttl": str(entry.ttl),
+            "value": str(entry.value),
+            "expired": str(entry.expired),
+        }
+        if ts_encoding is not None:
+            hash_mapping["ts_encoding"] = ts_encoding
+        if ts_children is not None:
+            hash_mapping["ts_children"] = ts_children
+
         try:
-            self._hash_set(
-                redis_key,
-                entry.time,
-                entry.ttl,
-                entry.value,
-                entry.expired,
-                target=target,
-            )
+            target.hset(redis_key, mapping=hash_mapping)
         except Exception:
             self.log.exception("Redis HSET failed for %s", redis_key)
             # Still update RAM so reads are immediate
             self._set_recent(category, subkey, entry)
             return
 
+        stale_meta_fields = []
+        if ts_encoding is None:
+            stale_meta_fields.append("ts_encoding")
+        if ts_children is None:
+            stale_meta_fields.append("ts_children")
+        if stale_meta_fields:
+            try:
+                target.execute_command("HDEL", redis_key, *stale_meta_fields)
+            except Exception:
+                self.log.exception(
+                    "Redis HDEL failed for metadata cleanup on %s", redis_key
+                )
+
         # Update RAM to mirror current value immediately (normalized)
         self._set_recent(category, subkey, entry)
 
-        value = (
-            self._literal_or_str(entry.value)
-            if isinstance(entry.value, str)
-            else entry.value
-        )
-        if isinstance(value, list) and len(value) == 1:
-            value = value[0]
-        if self._should_archive(value):
-            ts = int(float(entry.time) * 1000)
+        if not archive_history:
+            return
+
+        for series_key, sample in zip(ts_keys, ts_values):
             try:
-                if not self._redis_key_exists(ts_key):
-                    self._create_timeseries(ts_key, target=target)
-                self._add_to_timeseries(ts_key, ts, value, target=target)
+                if not self._redis_key_exists(series_key):
+                    self._create_timeseries(series_key, target=target)
+                self._add_to_timeseries(series_key, ts, sample, target=target)
+                self._prune_timeseries(series_key, ts, target=target)
             except Exception:
                 self.log.exception(
-                    "TS write failed for %s. Got type %s", ts_key, type(value)
+                    "TS write failed for %s. Got type %s", series_key, type(sample)
                 )
 
-    def _should_archive(self, value):
+        if ts_encoding == "hash_series":
+            ts_str = str(ts)
+            try:
+                # payload in HASH
+                target.hset(hs_hash_key, ts_str, str(value))
+                # index in ZSET
+                # member is the ts_str; score is ts (ms)
+                target.zadd(hs_idx_key, {ts_str: ts})
+                self._prune_hash_series(hs_hash_key, hs_idx_key, ts, target=target)
+            except Exception:
+                self.log.exception(
+                    "Redis write failed for hash_series %s/%s",
+                    hs_hash_key,
+                    hs_idx_key,
+                )
+
+    def _native_archiving(self, value):
         if isinstance(value, (float, int)) and not isinstance(value, bool):
             if math.isfinite(value):
                 return True

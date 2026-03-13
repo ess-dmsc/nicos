@@ -218,8 +218,15 @@ class DevicesPanel(Panel):
             value = [value] if isinstance(value, str) else list(value)
             self.param_display[key.lower()] = value
 
+        self.col_index = {
+            "NAME": 0,
+            "VALUE": 1,
+            "TARGET": 2,
+            "STATUS": 3,
+        }
+
         if not bool(options.get("show_target")):
-            self.tree.header().hideSection(2)
+            self.tree.header().hideSection(self.col_index["TARGET"])
 
         self.tree.header().restoreState(self._headerstate)
         self.clear()
@@ -285,7 +292,10 @@ class DevicesPanel(Panel):
         with self.sgroup as settings:
             for i in range(self.tree.topLevelItemCount()):
                 v = settings.value(
-                    "%s/expanded" % self.tree.topLevelItem(i).text(0), True, bool
+                    "%s/expanded"
+                    % self.tree.topLevelItem(i).text(self.col_index["NAME"]),
+                    True,
+                    bool,
                 )
                 self.tree.topLevelItem(i).setExpanded(v)
 
@@ -293,7 +303,8 @@ class DevicesPanel(Panel):
         with self.sgroup as settings:
             for i in range(self.tree.topLevelItemCount()):
                 settings.setValue(
-                    "%s/expanded" % self.tree.topLevelItem(i).text(0),
+                    "%s/expanded"
+                    % self.tree.topLevelItem(i).text(self.col_index["NAME"]),
                     self.tree.topLevelItem(i).isExpanded(),
                 )
 
@@ -421,11 +432,13 @@ class DevicesPanel(Panel):
                 .lower()
             )
             catitem = SetupTreeWidgetItem(cat, display_order, representative)
-            catitem.setToolTip(0, self._setupinfo[cat].get("description", ""))
+            catitem.setToolTip(
+                self.col_index["NAME"], self._setupinfo[cat].get("description", "")
+            )
             f = catitem.font(0)
             f.setBold(True)
-            catitem.setFont(0, f)
-            catitem.setIcon(0, self.groupIcon)
+            catitem.setFont(self.col_index["NAME"], f)
+            catitem.setIcon(self.col_index["NAME"], self.groupIcon)
             self._catitems[cat] = catitem
             if add_cat:
                 self.tree.addTopLevelItem(catitem)
@@ -436,19 +449,23 @@ class DevicesPanel(Panel):
         # create a tree node for the device
         devitem = QTreeWidgetItem(catitem, [devname, "", "", ""], DEVICE_TYPE)
 
-        devitem.setForeground(0, self.lowlevelBrush[lowlevel_device])
-        devitem.setFont(0, self.lowlevelFont[lowlevel_device])
+        devitem.setForeground(
+            self.col_index["NAME"], self.lowlevelBrush[lowlevel_device]
+        )
+        devitem.setFont(self.col_index["NAME"], self.lowlevelFont[lowlevel_device])
 
         if failure:
             short_failure = failure.split("\n")[0]
-            devitem.setText(3, "creating device failed: %s" % short_failure)
+            devitem.setText(
+                self.col_index["STATUS"], "creating device failed: %s" % short_failure
+            )
             if self.useicons:
-                devitem.setIcon(0, self.statusIcon[ERROR])
+                devitem.setIcon(self.col_index["NAME"], self.statusIcon[ERROR])
         else:
             if self.useicons:
-                devitem.setIcon(0, self.statusIcon[OK])
+                devitem.setIcon(self.col_index["NAME"], self.statusIcon[OK])
 
-        devitem.setToolTip(0, params.get("description", ""))
+        devitem.setToolTip(self.col_index["NAME"], params.get("description", ""))
         self._devitems[ldevname] = devitem
         # fill the device info with dummy values, will be populated below
         self._devinfo[ldevname] = DevInfo(devname, failure=failure)
@@ -462,8 +479,10 @@ class DevicesPanel(Panel):
         self._read_setup_info(setuplists)
         for i in range(self.tree.topLevelItemCount()):
             catitem = self.tree.topLevelItem(i)
-            cat = catitem.text(0)
-            catitem.setToolTip(0, self._setupinfo[cat].get("description", ""))
+            cat = catitem.text(self.col_index["NAME"])
+            catitem.setToolTip(
+                self.col_index["NAME"], self._setupinfo[cat].get("description", "")
+            )
         self._clear_sample_fields()
 
     def on_client_device(self, data):
@@ -473,12 +492,12 @@ class DevicesPanel(Panel):
         if action == "create":
             for devname in devlist:
                 self._create_device_item(devname, add_cat=True)
-            self.tree.sortItems(0, Qt.SortOrder.AscendingOrder)
+            self.tree.sortItems(self.col_index["NAME"], Qt.SortOrder.AscendingOrder)
             self._update_view()
         elif action == "failed":
             for devname, error in devlist.items():
                 self._create_device_item(devname, add_cat=True, failure=error)
-            self.tree.sortItems(0, Qt.SortOrder.AscendingOrder)
+            self.tree.sortItems(self.col_index["NAME"], Qt.SortOrder.AscendingOrder)
             self._update_view()
         elif action == "destroy":
             self._store_view()
@@ -535,10 +554,12 @@ class DevicesPanel(Panel):
             devitem.setText(1, fmted)
             if ldevname in self._control_dialogs:
                 self._control_dialogs[ldevname].valuelabel.setText(fmted)
-            devitem.setForeground(1, self.valueBrush[devinfo.expired, devinfo.fixed])
+            devitem.setForeground(
+                self.col_index["VALUE"], self.valueBrush[devinfo.expired, devinfo.fixed]
+            )
             if not devitem.parent().isExpanded():
                 if ldevname == devitem.parent().representative:
-                    devitem.parent().setText(1, fmted)
+                    devitem.parent().setText(self.col_index["VALUE"], fmted)
         elif subkey == "target":
             if time < devinfo.valtime:
                 return
@@ -550,7 +571,7 @@ class DevicesPanel(Panel):
                     fvalue = tuple(fvalue)
             devinfo.target = fvalue
             fmted = devinfo.fmtTargetUnit()
-            devitem.setText(2, fmted)
+            devitem.setText(self.col_index["TARGET"], fmted)
         elif subkey == "status":
             if time < devinfo.stattime:
                 return
@@ -586,19 +607,21 @@ class DevicesPanel(Panel):
             if not value:
                 return
             devinfo.fmtstr = cache_load(value)
-            devitem.setText(1, devinfo.fmtValUnit())
-            devitem.setText(2, devinfo.fmtTargetUnit())
+            devitem.setText(self.col_index["VALUE"], devinfo.fmtValUnit())
+            devitem.setText(self.col_index["TARGET"], devinfo.fmtTargetUnit())
         elif subkey == "unit":
             if not value:
                 value = "''"
             devinfo.unit = cache_load(value)
-            devitem.setText(1, devinfo.fmtValUnit())
-            devitem.setText(2, devinfo.fmtTargetUnit())
+            devitem.setText(self.col_index["VALUE"], devinfo.fmtValUnit())
+            devitem.setText(self.col_index["TARGET"], devinfo.fmtTargetUnit())
         elif subkey == "fixed":
             if not value:
                 value = "''"
             devinfo.fixed = bool(cache_load(value))
-            devitem.setForeground(1, self.valueBrush[devinfo.expired, devinfo.fixed])
+            devitem.setForeground(
+                self.col_index["VALUE"], self.valueBrush[devinfo.expired, devinfo.fixed]
+            )
             if ldevname in self._control_dialogs:
                 dlg = self._control_dialogs[ldevname]
                 if dlg.moveBtn:
@@ -625,7 +648,7 @@ class DevicesPanel(Panel):
                 dlg = self._control_dialogs[ldevname]
                 dlg._reinit()
         elif subkey == "description":
-            devitem.setToolTip(0, cache_load(value or "''"))
+            devitem.setToolTip(self.col_index["NAME"], cache_load(value or "''"))
         if subkey in self.param_display.get(ldevname, ()):
             if not devinfo.params:
                 devinfo.params = self.client.getDeviceParamInfo(devinfo.name)
@@ -637,32 +660,41 @@ class DevicesPanel(Panel):
                 )
                 devitem.setExpanded(True)
             else:
-                self._devparamitems[ldevname][subkey].setText(1, value)
+                self._devparamitems[ldevname][subkey].setText(
+                    self.col_index["VALUE"], value
+                )
 
     def on_tree_itemExpanded(self, item):
         if item.type() == SETUP_TYPE:
-            item.setText(1, "")
-        item.setBackground(0, self.bgBrush[OK])
+            item.setText(self.col_index["VALUE"], "")
+        item.setBackground(self.col_index["NAME"], self.bgBrush[OK])
 
     def _getHighestStatus(self, item):
         retval = OK
         for i in range(item.childCount()):
-            lstatus = self._devinfo[item.child(i).text(0).lower()].status[0]
+            lstatus = self._devinfo[
+                item.child(i).text(self.col_index["NAME"]).lower()
+            ].status[0]
             retval = max(retval, lstatus)
         return retval
 
     def on_tree_itemCollapsed(self, item):
         if item.type() == SETUP_TYPE:
-            item.setBackground(0, self.bgBrush[self._getHighestStatus(item)])
+            item.setBackground(
+                self.col_index["NAME"], self.bgBrush[self._getHighestStatus(item)]
+            )
             if item.representative:
-                item.setText(1, self._devitems[item.representative].text(1))
+                item.setText(
+                    self.col_index["VALUE"],
+                    self._devitems[item.representative].text(self.col_index["VALUE"]),
+                )
 
     def on_tree_customContextMenuRequested(self, point):
         item = self.tree.itemAt(point)
         if item is None:
             return
         if item.type() == DEVICE_TYPE:
-            self._menu_dev = item.text(0)
+            self._menu_dev = item.text(self.col_index["NAME"])
             ldevname = self._menu_dev.lower()
             devinfo = self._devinfo[ldevname]
             point = self.tree.viewport().mapToGlobal(point)
@@ -735,7 +767,7 @@ class DevicesPanel(Panel):
 
     def on_tree_itemActivated(self, item, column):
         if item.type() == DEVICE_TYPE:
-            devname = item.text(0)
+            devname = item.text(self.col_index["NAME"])
             failure = self._devinfo[devname.lower()].failure
             if failure:
                 if self.askQuestion(
@@ -747,9 +779,9 @@ class DevicesPanel(Panel):
             else:
                 self._open_control_dialog(devname)
         elif item.type() == PARAM_TYPE:
-            devname = item.parent().text(0)
+            devname = item.parent().text(self.col_index["NAME"])
             dlg = self._open_control_dialog(devname)
-            dlg.editParam(item.text(0))
+            dlg.editParam(item.text(self.col_index["NAME"]))
 
     def _open_control_dialog(self, devname):
         ldevname = devname.lower()
@@ -824,6 +856,13 @@ class ControlDialog(QDialog):
         loadUi(self, findResource("nicos_ess/gui/panels/ui_files/devices_one.ui"))
         self.log = log
 
+        self.col_index = {
+            "NAME": 0,
+            "VALUE": 1,
+            "TARGET": 2,
+            "STATUS": 3,
+        }
+
         self.device_panel = parent
         self.client = parent.client
         self.devname = devname
@@ -840,7 +879,7 @@ class ControlDialog(QDialog):
             self.target.setFocus()
 
     def _reinit(self):
-        classes = self.devinfo.classes
+        classes = set(self.devinfo.classes or ())
 
         if sip.isdeleted(self.devitem):
             # The item we're controlling has been removed from the list (e.g.
@@ -867,6 +906,20 @@ class ControlDialog(QDialog):
         params = self.client.getDeviceParams(self.devname)
         self.paraminfo = self.client.getDeviceParamInfo(self.devname)
         self.paramvalues = dict(params)
+        # Cache updates for "classes" may lag behind the dialog opening.
+        # Use cache value if present, otherwise query the live device classes
+        # so Moveable/Readable controls are initialized reliably.
+        param_classes = params.get("classes")
+        if isinstance(param_classes, str):
+            classes = {param_classes}
+        elif param_classes:
+            classes = set(param_classes)
+        elif not classes:
+            live_classes = self.client.eval(
+                "session.getDevice(%r).classes" % self.devname, []
+            )
+            classes = set(live_classes or ())
+        self.devinfo.classes = classes
 
         # put parameter values in the list widget
         self.paramItems.clear()
@@ -882,8 +935,13 @@ class ControlDialog(QDialog):
                     # display non-userparams in grey italics, like lowlevel
                     # devices in the device list
                     if not is_userparam:
-                        item.setFont(0, self.device_panel.lowlevelFont[True])
-                        item.setForeground(0, self.device_panel.lowlevelBrush[True])
+                        item.setFont(
+                            self.col_index["NAME"], self.device_panel.lowlevelFont[True]
+                        )
+                        item.setForeground(
+                            self.col_index["NAME"],
+                            self.device_panel.lowlevelBrush[True],
+                        )
 
         # set description label
         if params.get("description"):
@@ -926,11 +984,15 @@ class ControlDialog(QDialog):
             self.valueFrame.setVisible(False)
             self.buttonBox.removeButton(historyBtn)
         else:
-            self.valuelabel.setText(self.devitem.text(1))
-            self.statuslabel.setText(self.devitem.text(2))
+            self.valuelabel.setText(self.devitem.text(self.col_index["VALUE"]))
+            self.statuslabel.setText(self.devitem.text(self.col_index["STATUS"]))
             self.statusimage.setPixmap(self.devitem.icon(0).pixmap(16, 16))
-            setForegroundBrush(self.statuslabel, self.devitem.foreground(2))
-            setBackgroundBrush(self.statuslabel, self.devitem.background(2))
+            setForegroundBrush(
+                self.statuslabel, self.devitem.foreground(self.col_index["STATUS"])
+            )
+            setBackgroundBrush(
+                self.statuslabel, self.devitem.background(self.col_index["STATUS"])
+            )
 
             # modify history button: add icon and set text
             historyBtn.setIcon(QIcon(":/find"))
@@ -1188,10 +1250,10 @@ class ControlDialog(QDialog):
             return
         value = cache_load(value)
         self.paramvalues[subkey] = value
-        self.paramItems[subkey].setText(1, str(value))
+        self.paramItems[subkey].setText(self.col_index["VALUE"], str(value))
 
     def on_paramList_itemClicked(self, item):
-        pname = item.text(0)
+        pname = item.text(self.col_index["NAME"])
         self.editParam(pname)
 
     def editParam(self, pname):

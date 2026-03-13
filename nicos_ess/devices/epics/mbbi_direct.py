@@ -4,6 +4,7 @@ import time
 from nicos import session
 from nicos.core import (
     POLLER,
+    SIMULATION,
     Attach,
     Override,
     Param,
@@ -70,11 +71,12 @@ class MBBIDirectStatus(EpicsParameters, Readable):
 
         self._epics_subscriptions = []
         self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
-        # Check one of the PVs exists
-        self._epics_wrapper.connect_pv(self.pv_root)
+        if mode != SIMULATION:
+            # Check one of the PVs exists
+            self._epics_wrapper.connect_pv(self.pv_root)
 
     def doInit(self, mode):
-        if session.sessiontype == POLLER and self.monitor:
+        if mode != SIMULATION and session.sessiontype == POLLER and self.monitor:
             for k, v in self._record_fields.items():
                 self._epics_subscriptions.append(
                     self._epics_wrapper.subscribe(

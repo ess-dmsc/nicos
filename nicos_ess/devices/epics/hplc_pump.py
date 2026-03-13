@@ -101,9 +101,10 @@ class HPLCPumpController(EpicsParameters, MappedMoveable):
         }
 
         # Connect PVs we rely on for connection messages and choices
-        self._epics_wrapper.connect_pv(self._pv("error_text"))
-        self._epics_wrapper.connect_pv(self._pv("run_status"))
-        self._epics_wrapper.connect_pv(self._pv("error"))
+        if mode != SIMULATION:
+            self._epics_wrapper.connect_pv(self._pv("error_text"))
+            self._epics_wrapper.connect_pv(self._pv("run_status"))
+            self._epics_wrapper.connect_pv(self._pv("error"))
 
         # enum choice caches
         self._run_status_choices = []
@@ -114,13 +115,14 @@ class HPLCPumpController(EpicsParameters, MappedMoveable):
             "mapping", {cmd: i for i, cmd in enumerate(self._commands.keys())}
         )
 
-        # Load enum choices once
-        self._refresh_choices()
+        if mode != SIMULATION:
+            # Load enum choices once
+            self._refresh_choices()
 
         MappedMoveable.doInit(self, mode)
         self.valuetype = oneof(*self._commands.keys())
 
-        if session.sessiontype == POLLER and self.monitor:
+        if mode != SIMULATION and session.sessiontype == POLLER and self.monitor:
             for k, info in self._record_fields.items():
                 full_pv = self._pv(k)
                 if info.record_type in (RecordType.VALUE, RecordType.BOTH):

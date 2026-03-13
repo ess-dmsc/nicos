@@ -2,7 +2,8 @@ import threading
 import time
 
 from nicos import session
-from nicos.core import POLLER, Moveable, Override, Param, limits, oneof, pvname, status
+<<<<<<< nicos_ess/devices/epics/pva/motor.py
+from nicos.core import POLLER, SIMULATION, Moveable, Override, Param, limits, oneof, pvname, status
 from nicos.core.errors import ConfigurationError, MoveError, PositionError
 from nicos.core.mixins import CanDisable, HasLimits, HasOffset
 from nicos.devices.abstract import CanReference, Motor
@@ -186,8 +187,9 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
             "msgtxt_severity": RecordInfo("", "-MsgTxt.SEVR", RecordType.STATUS),
         }
         self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
-        # Check PV exists
-        self._epics_wrapper.connect_pv(self.motorpv)
+        if mode != SIMULATION:
+            # Check PV exists
+            self._epics_wrapper.connect_pv(self.motorpv)
 
         if not self.has_errorbit:
             del self._record_fields["errorbit"]
@@ -200,7 +202,7 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
             del self._record_fields["msgtxt_severity"]
 
     def doInit(self, mode):
-        if session.sessiontype == POLLER and self.monitor:
+        if mode != SIMULATION and session.sessiontype == POLLER and self.monitor:
             for k, v in self._record_fields.items():
                 if v.record_type in [RecordType.VALUE, RecordType.BOTH]:
                     self._epics_subscriptions.append(
@@ -333,6 +335,9 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         return self._get_cached_pv_or_ask("miss") == 0
 
     def doIsCompleted(self):
+        if self._sim_intercept:
+            return True
+
         cur_status, cur_message = self.status(0)
         if cur_status in self.busystates:
             return False
@@ -898,6 +903,8 @@ class EpicsJogMotor(EpicsMotor):
         self._cache.put(self._name, "value", 0.0, time.time())
 
     def doIsCompleted(self):
+        if self._sim_intercept:
+            return True
         moving = self._get_cached_pv_or_ask("moving")
         return moving == 0
 
@@ -1080,8 +1087,9 @@ class SmaractPiezoMotor(EpicsMotor):
             "positionrefsrc": RecordInfo("", "PositionRefSrc", RecordType.VALUE),
         }
         self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
-        # Check PV exists
-        self._epics_wrapper.connect_pv(self.motorpv)
+        if mode != SIMULATION:
+            # Check PV exists
+            self._epics_wrapper.connect_pv(self.motorpv)
 
         if not self.has_msgtxt:
             del self._record_fields["msgtxt"]
