@@ -1,10 +1,5 @@
 # NICOS
 
-## Configure NICOS
-
-Place the NICOS configuration file (`nicos.conf`) of your choice into the `nicos` directory in your standard user configuration path.
-This particular path differs between platforms: on GNU/Linux systems, this would be `~/.config/nicos/nicos.conf`.
-
 ## Installation
 
 Prerequisites: Install `uv` ([see the uv installation instructions](https://docs.astral.sh/uv/getting-started/installation/)
@@ -54,6 +49,19 @@ You can also install NICOS into the uv managed tools to have its commands availa
 
 The resulting source tarball and wheel files will be located in the `dist` directory.
 
+## Configure NICOS
+
+Place the NICOS configuration file (`nicos.conf`) for your choice of instrument into one of the following locations, searched in order:
+
+- in the site-wide directory, i.e. `/etc/xdg/nicos/nicos.conf` on GNU/Linux, or 
+- the `nicos` directory in your standard user configuration path, i.e. on GNU/Linux systems, this would be `~/.config/nicos/nicos.conf`.
+
+Both these paths can be modified by setting the `XDG_CONFIG_DIRS` or `XDG_CONFIG_HOME` environment variable, respectively, to point to a different location.
+See [the corresponding XDG variable documentation](https://platformdirs.readthedocs.io/en/latest/parameters.html#xdg-env-vars) for reference.
+
+For backwards compatibility, the `nicos_root` folder (i.e. the root of the repository) will be searched first.
+When NICOS has been deployed as package, this path would most likely not point to a suitable location.
+Therefore, prefer the XDG standard directories as place for `nicos.conf`
 
 ## Installing the Server Locally
 
@@ -75,9 +83,9 @@ mkdir /opt/nicos-data
 
 ### Step 3: Select an Instrument Configuration
 
-Link the configuration file for your chosen instrument:
+Link the configuration file for your chosen instrument or copy it at the location described in the section "Configure NICOS" above:
 ```bash
-ln -s nicos_ess/<instrument>/nicos.conf .
+ln -s nicos_ess/<instrument>/nicos.conf ~/.config/nicos/nicos.conf
 ```
 
 A good starting instrument is `ymir`, which is a test instrument.

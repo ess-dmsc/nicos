@@ -39,9 +39,50 @@ class RedisClient:
     def hgetall(self, key):
         return self._redis.hgetall(key)
 
+    @handle_redis_errors(
+        default_return=[],
+        custom_message="Failed to get multiple hash fields from Redis",
+    )
+    def hmget(self, key, *fields):
+        if len(fields) == 1 and isinstance(fields[0], (list, tuple)):
+            return self._redis.hmget(key, fields[0])
+        return self._redis.hmget(key, *fields)
+
     @handle_redis_errors(custom_message="Failed to set data in Redis")
-    def hset(self, key, mapping):
-        self._redis.hset(key, mapping=mapping)
+    def hset(self, name, key=None, value=None, mapping=None, items=None):
+        return self._redis.hset(
+            name, key=key, value=value, mapping=mapping, items=items
+        )
+
+    @handle_redis_errors(
+        default_return=0, custom_message="Failed to add members to sorted set in Redis"
+    )
+    def zadd(self, name, mapping, *args, **kwargs):
+        return self._redis.zadd(name, mapping, *args, **kwargs)
+
+    @handle_redis_errors(
+        default_return=[],
+        custom_message="Failed to retrieve zrange by score from Redis",
+    )
+    def zrangebyscore(
+        self,
+        name,
+        min,
+        max,
+        start=None,
+        num=None,
+        withscores=False,
+        score_cast_func=float,
+    ):
+        return self._redis.zrangebyscore(
+            name,
+            min,
+            max,
+            start=start,
+            num=num,
+            withscores=withscores,
+            score_cast_func=score_cast_func,
+        )
 
     @handle_redis_errors(
         default_return=0, custom_message="Failed to check existence of key in Redis"

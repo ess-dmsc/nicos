@@ -1,3 +1,4 @@
+import fnmatch
 import logging
 import threading
 import time
@@ -5,10 +6,10 @@ from typing import Union
 
 import pytest
 from mock.mock import MagicMock
-import fnmatch
 
-from nicos.services.cache.endpoints.redis_client import RedisClient, RedisError
+from nicos.protocols.cache import cache_dump, cache_load
 from nicos.services.cache.database import RedisCacheDatabase
+from nicos.services.cache.endpoints.redis_client import RedisClient, RedisError
 from nicos.services.cache.entry import CacheEntry
 
 
@@ -38,11 +39,17 @@ class RedisStubPipeline:
         self._results.append(self._redis.execute_command(command, *args))
         return self
 
+    def zadd(self, *args, **kwargs):
+        self._results.append(self._redis.zadd(*args, **kwargs))
+        return self
+
     def execute(self):
         results, self._results = self._results, []
         return results
 
-    def __enter__(self): return self
+    def __enter__(self):
+        return self
+
     def __exit__(self, exc_type, exc, tb):
         if exc_type is None:
             self.execute()
@@ -53,25 +60,50 @@ class RedisStub:
         self._fake_db = {}
         self._scripts = {}
         self._cleaner_sha = None
+        self._ts_retention = {}
 
     def hset(self, name, key=None, value=None, mapping=None, items=None):
-        if mapping:
-            self._fake_db[name] = {k: v for k, v in mapping.items()}
+        if mapping is not None:
+            if name not in self._fake_db or not isinstance(self._fake_db[name], dict):
+                self._fake_db[name] = {}
+            for k, v in mapping.items():
+                self._fake_db[name][k] = v
             return len(mapping)
-        elif items:
-            self._fake_db[name] = {k: v for k, v in items}
-            return len(items)
-        elif key and value:
-            if name not in self._fake_db:
+
+        if items is not None:
+            if name not in self._fake_db or not isinstance(self._fake_db[name], dict):
+                self._fake_db[name] = {}
+            count = 0
+            for k, v in items:
+                self._fake_db[name][k] = v
+                count += 1
+            return count
+
+        if key is not None and value is not None:
+            if name not in self._fake_db or not isinstance(self._fake_db[name], dict):
                 self._fake_db[name] = {}
             self._fake_db[name][key] = value
             return 1
+
         return 0
+
+    def hmget(self, name, keys, *args):
+        if isinstance(keys, (list, tuple)):
+            fields = list(keys) + list(args)
+        else:
+            fields = [keys] + list(args)
+
+        raw = self._fake_db.get(name, {})
+        if not isinstance(raw, dict):
+            raise RedisError("Corrupted data")
+
+        return [str(raw.get(f)) if f in raw else None for f in fields]
 
     def hgetall(self, key):
         raw = self._fake_db.get(key, {})
         if not isinstance(raw, dict):
             raise RedisError("Corrupted data")
+        # Redis returns strings (decoded), so we stringify here as well.
         return {k: str(v) for k, v in raw.items()}
 
     def exists(self, *names):
@@ -79,21 +111,145 @@ class RedisStub:
 
     def execute_command(self, command, *args):
         if command == "TS.CREATE":
-            self._fake_db[args[0]] = {}
+            key = args[0]
+            retention_ms = None
+            i = 1
+            while i < len(args):
+                if args[i] == "RETENTION" and i + 1 < len(args):
+                    retention_ms = int(args[i + 1])
+                    i += 2
+                    continue
+                i += 1
+            self._ts_retention[key] = retention_ms
+            if key not in self._fake_db or not isinstance(self._fake_db[key], dict):
+                self._fake_db[key] = {}
+            return 1
+
         elif command == "TS.ADD":
-            self._fake_db[args[0]].update({int(args[1]): str(args[2])})
+            key = args[0]
+            ts = int(args[1])
+            value = args[2]
+
+            # Rough numeric check (similar enough for tests)
+            if isinstance(value, str):
+                try:
+                    float(value)
+                except ValueError:
+                    raise RedisError("TSDB: invalid value")
+            elif not isinstance(value, (int, float)):
+                raise RedisError("TSDB: invalid value")
+
+            if key not in self._fake_db or not isinstance(self._fake_db[key], dict):
+                self._fake_db[key] = {}
+
+            # RedisTimeSeries stores numeric values, but the client gives us strings;
+            # we store stringified value so TS.RANGE looks like real Redis.
+            self._fake_db[key][ts] = str(value)
+
+            retention_ms = self._ts_retention.get(key)
+            if retention_ms is not None:
+                cutoff = ts - retention_ms
+                for old_ts in [k for k in list(self._fake_db[key]) if int(k) <= cutoff]:
+                    self._fake_db[key].pop(old_ts, None)
+            return ts
+
         elif command == "TS.RANGE":
-            fromtime, totime = int(args[1]), int(args[2])
-            timeseries = self._fake_db.get(args[0], {})
-            return [
-                [k, v]
-                for k, v in timeseries.items()
-                if float(fromtime) <= float(k) <= float(totime)
-            ]
+            key = args[0]
+            fromtime = int(args[1])
+            totime = int(args[2])
+            timeseries = self._fake_db.get(key, {})
+
+            # Check for aggregation syntax: TS.RANGE key from to AGGREGATION avg bucket
+            aggregation = None
+            bucket_size = None
+            if len(args) >= 6 and args[3] == "AGGREGATION":
+                aggregation = args[4]
+                bucket_size = int(args[5])
+
+            # No aggregation: just filter by time and return sorted list.
+            if aggregation is None:
+                return [
+                    [ts, val]
+                    for ts, val in sorted(timeseries.items())
+                    if fromtime <= ts <= totime
+                ]
+
+            # Only 'avg' is currently needed by tests.
+            if aggregation.lower() != "avg":
+                raise RedisError(f"Unsupported aggregation: {aggregation}")
+
+            # Bucketed aggregation.
+            buckets = {}  # bucket_start -> (sum, count)
+            for ts, val in timeseries.items():
+                if ts < fromtime or ts > totime:
+                    continue
+                # Convert stored string back to float for averaging.
+                num_val = float(val)
+                bucket_idx = (ts - fromtime) // bucket_size
+                bucket_start = fromtime + bucket_idx * bucket_size
+                cur_sum, cur_count = buckets.get(bucket_start, (0.0, 0))
+                buckets[bucket_start] = (cur_sum + num_val, cur_count + 1)
+
+            result = []
+            for bucket_start in sorted(buckets.keys()):
+                s, c = buckets[bucket_start]
+                avg = s / c
+                # Match Redis’ stringified numeric representation:
+                # ints as '15', floats as '15.5', etc.
+                if float(avg).is_integer():
+                    avg_str = str(int(avg))
+                else:
+                    avg_str = str(avg)
+                result.append([bucket_start, avg_str])
+
+            return result
+
+        elif command == "TS.DEL":
+            key = args[0]
+            fromtime = float(args[1])
+            totime = float(args[2])
+            timeseries = self._fake_db.get(key, {})
+            if not isinstance(timeseries, dict):
+                return 0
+            to_remove = [ts for ts in list(timeseries.keys()) if fromtime <= ts <= totime]
+            for ts in to_remove:
+                timeseries.pop(ts, None)
+            return len(to_remove)
+
+        elif command == "HDEL":
+            key = args[0]
+            fields = args[1:]
+            mapping = self._fake_db.get(key, {})
+            if not isinstance(mapping, dict):
+                return 0
+            removed = 0
+            for f in fields:
+                if f in mapping:
+                    mapping.pop(f, None)
+                    removed += 1
+            return removed
+
+        elif command == "ZREMRANGEBYSCORE":
+            key = args[0]
+            min_score = float(args[1])
+            max_score = float(args[2])
+            z = self._fake_db.get(key, {})
+            if not isinstance(z, dict):
+                return 0
+            to_remove = [m for m, score in z.items() if min_score <= score <= max_score]
+            for m in to_remove:
+                z.pop(m, None)
+            return len(to_remove)
+
         elif command == "DEL":
+            # Delete all given keys and return number of keys actually removed.
+            deleted = 0
             for key in args:
-                self._fake_db.pop(key, None)
-                return len(args)
+                if key in self._fake_db:
+                    self._fake_db.pop(key, None)
+                    deleted += 1
+            return deleted
+
         return 0
 
     def keys(self, pattern="*"):
@@ -102,10 +258,15 @@ class RedisStub:
     def pubsub(self):
         return None
 
-    def scan_iter(self, match="*", count=None):
+    def scan_iter(self, match="*", count=None, _type=None):
         for key in self._fake_db.keys():
-            if fnmatch.fnmatch(key, match):
-                yield key
+            if not fnmatch.fnmatch(key, match):
+                continue
+
+            if _type is not None:
+                if _type == "hash" and not isinstance(self._fake_db[key], dict):
+                    continue
+            yield key
 
     def pipeline(self, *args, **kwargs):
         return RedisStubPipeline(self)
@@ -124,6 +285,70 @@ class RedisStub:
         now = float(args[0]) if args else time.time()
         return self.clean_expired(now)
 
+    def zadd(self, name, mapping, *args, **kwargs):
+        """
+        Very simple ZADD implementation: store as dict member -> score.
+        We ignore NX/XX/CH/INCR flags for tests.
+        """
+        z = self._fake_db.get(name)
+        if not isinstance(z, dict):
+            z = {}
+            self._fake_db[name] = z
+
+        added = 0
+        for member, score in mapping.items():
+            member_str = str(member)
+            if member_str not in z:
+                added += 1
+            z[member_str] = float(score)
+
+        return added
+
+    def zrangebyscore(
+        self,
+        name,
+        min,
+        max,
+        start=None,
+        num=None,
+        withscores=False,
+        score_cast_func=float,
+    ):
+        """
+        Minimal ZRANGEBYSCORE for tests.
+
+        Returns members with score in [min, max], ordered by score then member.
+        """
+        raw = self._fake_db.get(name, {})
+        if not isinstance(raw, dict):
+            return []
+
+        # Redis allows '-inf', '+inf', numbers, etc. For tests we only need numbers.
+        min_score = float(min)
+        max_score = float(max)
+
+        items = [
+            (member, score)
+            for member, score in raw.items()
+            if min_score <= score <= max_score
+        ]
+
+        # Sort by score, then lexicographically by member
+        items.sort(key=lambda ms: (ms[1], ms[0]))
+
+        # Apply offset/limit if provided
+        if start is not None or num is not None:
+            s = start or 0
+            if num is not None:
+                items = items[s : s + num]
+            else:
+                items = items[s:]
+
+        if withscores:
+            return [(member, score_cast_func(score)) for member, score in items]
+        else:
+            return [member for member, score in items]
+
     def clean_expired(self, now: Union[float, None] = None) -> int:
         if now is None:
             now = time.time()
@@ -136,14 +361,14 @@ class RedisStub:
             if not isinstance(mapping, dict):
                 continue
 
-            ttl_str   = mapping.get("ttl")
-            time_str  = mapping.get("time")
-            expired   = mapping.get("expired", "False")
+            ttl_str = mapping.get("ttl")
+            time_str = mapping.get("time")
+            expired = mapping.get("expired", "False")
 
             if ttl_str and ttl_str != "None" and expired == "False":
                 try:
                     ttl = float(ttl_str)
-                    t0  = float(time_str)
+                    t0 = float(time_str)
                 except (TypeError, ValueError):
                     continue
                 if (t0 + ttl) < now:
@@ -176,8 +401,9 @@ class TestableRedisCacheDatabase(RedisCacheDatabase):
         object.__setattr__(self, name, value)
 
 
-def _store_ttl_entry(db, category: str, subkey: str,
-                     *, ttl: Union[float, None], value="some_value") -> CacheEntry:
+def _store_ttl_entry(
+    db, category: str, subkey: str, *, ttl: Union[float, None], value="some_value"
+) -> CacheEntry:
     entry = CacheEntry(time.time(), ttl, value)
     db._set_data(category, subkey, entry)
     return entry
@@ -185,6 +411,15 @@ def _store_ttl_entry(db, category: str, subkey: str,
 
 def _dummy_iter():
     yield (("dummy", "key"), CacheEntry(time.time(), None, "val"))
+
+
+class DummyObject:
+    def __init__(self, x):
+        self.x = x
+
+
+def _set_historydays(db, days):
+    object.__setattr__(db, "_historydays_override", days)
 
 
 @pytest.fixture
@@ -201,8 +436,8 @@ def db(redis_client):
 def _isolate_redis_snapshot():
     yield
     RedisCacheDatabase._snapshot_ready = threading.Event()
-    RedisCacheDatabase._snapshot_data  = []
-    RedisCacheDatabase._snapshot_time  = 0.0
+    RedisCacheDatabase._snapshot_data = []
+    RedisCacheDatabase._snapshot_time = 0.0
     RedisCacheDatabase._snapshot_building = False
 
 
@@ -210,8 +445,15 @@ def test_format_key(db):
     assert db._format_key("category", "subkey") == (
         "category/subkey",
         "category/subkey_ts",
+        "category/subkey_hs",
+        "category/subkey_hs_idx",
     )
-    assert db._format_key("nocat", "subkey") == ("subkey", "subkey_ts")
+    assert db._format_key("nocat", "subkey") == (
+        "subkey",
+        "subkey_ts",
+        "subkey_hs",
+        "subkey_hs_idx",
+    )
 
 
 def test_literal_or_str(db):
@@ -290,20 +532,398 @@ def test_set_float_generates_hash_and_timeseries(db):
     assert history_query == [CacheEntry(123.0, None, 3.14).asDict()]
 
 
+def test_set_list_generates_hash_and_timeseries(db):
+    db._set_data("test/key", "value", CacheEntry("123", "456", [10, 20]))
+    assert db._client.keys() == [
+        "test/key/value",
+        "test/key/value_l_0_ts",
+        "test/key/value_l_1_ts",
+    ]
+    assert db._client.hgetall("test/key/value") == {
+        "time": "123",
+        "ttl": "456",
+        "value": "[10, 20]",
+        "expired": "False",
+        "ts_encoding": "list",
+        "ts_children": "0,1",
+    }
+    history_query = db.queryHistory(("test/key", "value"), 122, 124)
+    history_query = [entry.asDict() for entry in history_query]
+    assert history_query == [CacheEntry(123.0, None, [10, 20]).asDict()]
+
+
+def test_set_dict_generates_hash_and_timeseries(db):
+    db._set_data("test/key", "value", CacheEntry("123", "456", {"a": 1, "b": 2}))
+    assert db._client.keys() == [
+        "test/key/value",
+        "test/key/value_d_a_ts",
+        "test/key/value_d_b_ts",
+    ]
+    assert db._client.hgetall("test/key/value") == {
+        "time": "123",
+        "ttl": "456",
+        "value": "{'a': 1, 'b': 2}",
+        "expired": "False",
+        "ts_encoding": "dict",
+        "ts_children": "a,b",
+    }
+    history_query = db.queryHistory(("test/key", "value"), 122, 124)
+    history_query = [entry.asDict() for entry in history_query]
+    assert history_query == [CacheEntry(123.0, None, {"a": 1, "b": 2}).asDict()]
+
+
+def test_set_tuple_generates_hash_and_timeseries(db):
+    db._set_data("test/key", "value", CacheEntry("123", "456", (10, 20)))
+    assert db._client.keys() == [
+        "test/key/value",
+        "test/key/value_l_0_ts",
+        "test/key/value_l_1_ts",
+    ]
+    assert db._client.hgetall("test/key/value") == {
+        "time": "123",
+        "ttl": "456",
+        "value": "(10, 20)",
+        "expired": "False",
+        "ts_encoding": "list",
+        "ts_children": "0,1",
+    }
+    history_query = db.queryHistory(("test/key", "value"), 122, 124)
+    history_query = [entry.asDict() for entry in history_query]
+    assert history_query == [CacheEntry(123.0, None, [10, 20]).asDict()]
+
+
+def test_status_tuple_generates_hash_and_timeseries(db):
+    db._set_data("test/key", "value", CacheEntry("123", "456", (200, "idle")))
+    assert db._client.keys() == [
+        "test/key/value",
+        "test/key/value_hs",
+        "test/key/value_hs_idx",
+    ]
+    assert db._client.hgetall("test/key/value") == {
+        "time": "123",
+        "ttl": "456",
+        "value": "(200, 'idle')",
+        "expired": "False",
+        "ts_encoding": "hash_series",
+    }
+    history_query = db.queryHistory(("test/key", "value"), 122, 124)
+    decoded_values = [cache_load(e.value) for e in history_query]
+    assert decoded_values == [
+        (200, "idle")
+    ]  # only numeric part stored in TS and plottable return
+
+
+def test_mixed_dict_generates_hash_and_timeseries(db):
+    db._set_data(
+        "test/key", "value", CacheEntry("123", "456", {"a": 1, "b": "idle", "c": 3.5})
+    )
+    assert db._client.keys() == [
+        "test/key/value",
+        "test/key/value_hs",
+        "test/key/value_hs_idx",
+    ]
+    assert db._client.hgetall("test/key/value") == {
+        "time": "123",
+        "ttl": "456",
+        "value": "{'a': 1, 'b': 'idle', 'c': 3.5}",
+        "expired": "False",
+        "ts_encoding": "hash_series",
+    }
+    history_query = db.queryHistory(("test/key", "value"), 122, 124)
+    decoded_values = [cache_load(e.value) for e in history_query]
+    assert decoded_values == [
+        {"a": 1, "b": "idle", "c": 3.5}
+    ]  # only numeric parts stored in TS and plottable return
+
+
+def test_set_list_still_works_with_interval_aggregation(db):
+    db._set_data("test/key", "value", CacheEntry("123", "456", [10, 20]))
+    db._set_data("test/key", "value", CacheEntry("124", "456", [20, 40]))
+    assert db._client.keys() == [
+        "test/key/value",
+        "test/key/value_l_0_ts",
+        "test/key/value_l_1_ts",
+    ]
+    assert db._client.hgetall("test/key/value") == {
+        "time": "124",
+        "ttl": "456",
+        "value": "[20, 40]",
+        "expired": "False",
+        "ts_encoding": "list",
+        "ts_children": "0,1",
+    }
+    history_query = db.queryHistory(("test/key", "value"), 122, 125, interval=10)
+    history_query = [entry.asDict() for entry in history_query]
+    assert history_query == [
+        CacheEntry(122.0, None, [15.0, 30.0]).asDict()
+    ]  # average of [10,20] and [20,40] starting at t=122 + 10
+
+
+def test_set_dict_still_works_with_interval_aggregation(db):
+    db._set_data("test/key", "value", CacheEntry("123", "456", {"a": 1, "b": 2}))
+    db._set_data("test/key", "value", CacheEntry("124", "456", {"a": 3, "b": 4}))
+    assert db._client.keys() == [
+        "test/key/value",
+        "test/key/value_d_a_ts",
+        "test/key/value_d_b_ts",
+    ]
+    assert db._client.hgetall("test/key/value") == {
+        "time": "124",
+        "ttl": "456",
+        "value": "{'a': 3, 'b': 4}",
+        "expired": "False",
+        "ts_encoding": "dict",
+        "ts_children": "a,b",
+    }
+    history_query = db.queryHistory(("test/key", "value"), 122, 125, interval=10)
+    history_query = [entry.asDict() for entry in history_query]
+    assert history_query == [
+        CacheEntry(122.0, None, {"a": 2.0, "b": 3.0}).asDict()
+    ]  # average of {'a':1,'b':2} and {'a':3,'b':4} starting at t=122 + 10
+
+
+def test_set_status_tuple_still_works_with_interval_aggregation(db):
+    db._set_data("test/key", "value", CacheEntry("123", "456", (200, "idle")))
+    db._set_data("test/key", "value", CacheEntry("124", "456", (400, "busy")))
+    assert db._client.keys() == [
+        "test/key/value",
+        "test/key/value_hs",
+        "test/key/value_hs_idx",
+    ]
+    assert db._client.hgetall("test/key/value") == {
+        "time": "124",
+        "ttl": "456",
+        "value": "(400, 'busy')",
+        "expired": "False",
+        "ts_encoding": "hash_series",
+    }
+    history_query = db.queryHistory(("test/key", "value"), 122, 125, interval=10)
+    decoded_values = [cache_load(e.value) for e in history_query]
+    assert decoded_values == [(200, "idle")]  # decimated to first
+
+
+def test_set_mixed_dict_still_works_with_interval_aggregation(db):
+    db._set_data(
+        "test/key", "value", CacheEntry("123", "456", {"a": 1, "b": "idle", "c": 3.5})
+    )
+    db._set_data(
+        "test/key", "value", CacheEntry("124", "456", {"a": 3, "b": "busy", "c": 4.5})
+    )
+    assert db._client.keys() == [
+        "test/key/value",
+        "test/key/value_hs",
+        "test/key/value_hs_idx",
+    ]
+    assert db._client.hgetall("test/key/value") == {
+        "time": "124",
+        "ttl": "456",
+        "value": "{'a': 3, 'b': 'busy', 'c': 4.5}",
+        "expired": "False",
+        "ts_encoding": "hash_series",
+    }
+    history_query = db.queryHistory(("test/key", "value"), 122, 125, interval=10)
+    decoded_values = [cache_load(e.value) for e in history_query]
+    assert decoded_values == [{"a": 1, "b": "idle", "c": 3.5}]  # decimated to first
+
+
+def test_set_string_generates_hash_timeseries(db):
+    db._set_data("test/key", "value", CacheEntry("123", "456", "some_value"))
+    assert db._client.keys() == [
+        "test/key/value",
+        "test/key/value_hs",
+        "test/key/value_hs_idx",
+    ]  # hs = hash series
+    assert db._client.hgetall("test/key/value") == {
+        "time": "123",
+        "ttl": "456",
+        "value": "some_value",
+        "expired": "False",
+        "ts_encoding": "hash_series",
+    }
+    assert db._client.hgetall("test/key/value_hs") == {
+        "123000": "some_value",
+    }
+    history_query = db.queryHistory(("test/key", "value"), 122, 124)
+    history_query = [entry.asDict() for entry in history_query]
+    assert history_query == [CacheEntry(123.0, None, "some_value").asDict()]
+
+
+def test_list_of_strings_generates_hash_timeseries(db):
+    db._set_data("test/key", "value", CacheEntry("123", "456", ["val1", "val2"]))
+    assert db._client.keys() == [
+        "test/key/value",
+        "test/key/value_hs",
+        "test/key/value_hs_idx",
+    ]  # hs = hash series
+    assert db._client.hgetall("test/key/value") == {
+        "time": "123",
+        "ttl": "456",
+        "value": "['val1', 'val2']",
+        "expired": "False",
+        "ts_encoding": "hash_series",
+    }
+    assert db._client.hgetall("test/key/value_hs") == {
+        "123000": "['val1', 'val2']",
+    }
+    history_query = db.queryHistory(("test/key", "value"), 122, 124)
+    decoded_values = [cache_load(e.value) for e in history_query]
+    assert decoded_values == [["val1", "val2"]]
+
+
+def test_hash_series_mapped_moveable_history_is_cache_loadable(db):
+    base = 1763736121.507
+
+    samples = [
+        (base + 0.000, "0"),
+        (base + 0.700, "In Between"),
+        (base + 6.000, "5"),
+    ]
+
+    for t, v in samples:
+        dumped = cache_dump(v)  # PyON string, e.g. "'0'" or "'In Between'"
+        db._set_data("nicos/mapped_values", "value", CacheEntry(str(t), "None", dumped))
+
+    history = db.queryHistory(
+        ("nicos/mapped_values", "value"),
+        samples[0][0] - 1,
+        samples[-1][0] + 1,
+    )
+
+    assert len(history) == len(samples)
+    assert [int(e.time * 1000) for e in history] == [int(t * 1000) for t, _ in samples]
+
+    decoded = [cache_load(e.value) for e in history]
+    assert decoded == [v for _, v in samples]
+
+
+def test_cache_dumped_custom_object_roundtrip_via_hash_series(db):
+    obj = DummyObject(42)
+    dumped = cache_dump(obj)
+
+    # cache_dump(obj) should use cache_unpickle(...) internally
+    assert "cache_unpickle(" in dumped
+
+    db._set_data("test/custom", "value", CacheEntry("123", "456", dumped))
+
+    # In Redis we store the PyON string itself
+    stored = db._client.hgetall("test/custom/value")
+    assert stored["value"] == dumped
+    assert stored["ts_encoding"] == "hash_series"
+
+    # History delivers the PyON string, which must be cache_load-able
+    history = db.queryHistory(("test/custom", "value"), 122, 124)
+    assert len(history) == 1
+
+    decoded = cache_load(history[0].value)
+    assert isinstance(decoded, DummyObject)
+    assert decoded.x == 42
+
+
+def test_cache_dump_custom_object_history_without_interval(db):
+    obj1 = DummyObject(1)
+    obj2 = DummyObject(2)
+
+    dumped1 = cache_dump(obj1)
+    dumped2 = cache_dump(obj2)
+
+    db._set_data("test/custom", "value", CacheEntry("123", "456", dumped1))
+    db._set_data("test/custom", "value", CacheEntry("124", "456", dumped2))
+
+    history = db.queryHistory(("test/custom", "value"), 122, 125)
+    assert len(history) == 2
+
+    decoded1 = cache_load(history[0].value)
+    decoded2 = cache_load(history[1].value)
+
+    assert isinstance(decoded1, DummyObject)
+    assert decoded1.x == 1
+    assert isinstance(decoded2, DummyObject)
+    assert decoded2.x == 2
+
+
+def test_cache_dump_custom_object_history_with_interval(db):
+    obj1 = DummyObject(1)
+    obj2 = DummyObject(2)
+
+    dumped1 = cache_dump(obj1)
+    dumped2 = cache_dump(obj2)
+
+    db._set_data("test/custom", "value", CacheEntry("123", "456", dumped1))
+    db._set_data("test/custom", "value", CacheEntry("124", "456", dumped2))
+
+    history = db.queryHistory(("test/custom", "value"), 122, 125, interval=10)
+    assert len(history) == 1  # decimated to first
+
+    decoded = cache_load(history[0].value)
+
+    assert isinstance(decoded, DummyObject)
+    assert decoded.x == 1
+
+
+def test_cache_dump_none_is_not_treated_as_delete(db):
+    dumped = cache_dump(None)  # "None"
+
+    db._set_data("test/none", "value", CacheEntry("123", "456", dumped))
+
+    # We expect a real entry, not a deletion
+    entry = db._get_data("test/none/value")
+    assert entry is not None
+    assert entry.value is "None"
+    assert entry.time == 123.0
+    assert entry.ttl == 456.0
+
+
+def test_cache_dump_list_of_strings_is_cache_loadable_via_hash_series(db):
+    original = ["val1", "val2"]
+    dumped = cache_dump(original)  # "['val1', 'val2']" (PyON)
+
+    db._set_data("test/pyon_list", "value", CacheEntry("123", "456", dumped))
+
+    # Stored as hash_series with the PyON string
+    assert sorted(db._client.keys()) == [
+        "test/pyon_list/value",
+        "test/pyon_list/value_hs",
+        "test/pyon_list/value_hs_idx",
+    ]
+    assert db._client.hgetall("test/pyon_list/value") == {
+        "time": "123",
+        "ttl": "456",
+        "value": dumped,
+        "expired": "False",
+        "ts_encoding": "hash_series",
+    }
+
+    history = db.queryHistory(("test/pyon_list", "value"), 122, 124)
+    assert len(history) == 1
+
+    decoded = cache_load(history[0].value)
+    assert decoded == original
+
+
+def test_cache_dump_status_tuple_roundtrip_via_hash_series(db):
+    status = (200, "idle")
+    dumped = cache_dump(status)  # "(200, 'idle')"
+
+    db._set_data("test/status_pyon", "value", CacheEntry("123", "456", dumped))
+
+    # Stored as hash_series with the PyON status tuple
+    stored = db._client.hgetall("test/status_pyon/value")
+    assert stored["value"] == dumped
+    assert stored["ts_encoding"] == "hash_series"
+
+    history = db.queryHistory(("test/status_pyon", "value"), 122, 124)
+    assert len(history) == 1
+
+    decoded = cache_load(history[0].value)
+    assert decoded == status
+
+
 def test_can_get_data(db):
     original_cache_entry = CacheEntry(123, 456, 3.14)
     db._set_data("test/key", "value", original_cache_entry)
     assert db._get_data("test/key/value").time == 123.0
     assert db._get_data("test/key/value").ttl == 456.0
-    assert db._get_data("test/key/value").value == 3.14
-
-
-def test_get_data_returns_non_strings_if_possible(db):
-    original_cache_entry = CacheEntry("123", "456", "3.14")
-    db._set_data("test/key", "value", original_cache_entry)
-    assert db._get_data("test/key/value").time == 123.0
-    assert db._get_data("test/key/value").ttl == 456.0
-    assert db._get_data("test/key/value").value == 3.14
+    assert db._get_data("test/key/value").value == "3.14"
 
 
 def test_get_data_handle_non_numeric_values(db):
@@ -314,22 +934,22 @@ def test_get_data_handle_non_numeric_values(db):
     assert db._get_data("test/key/value").value == "not_a_number"
 
 
-def test_int_preserved_as_int(db):
+def test_int_saved_as_string_int(db):
     original_cache_entry = CacheEntry("123", "456", 42)
     db._set_data("test/key", "value", original_cache_entry)
     assert db._get_data("test/key/value").time == 123.0
     assert db._get_data("test/key/value").ttl == 456.0
-    assert db._get_data("test/key/value").value == 42
-    assert isinstance(db._get_data("test/key/value").value, int)
+    assert db._get_data("test/key/value").value == "42"
+    assert isinstance(db._get_data("test/key/value").value, str)
 
 
-def test_float_preserved_as_float(db):
+def test_float_saved_as_string_float(db):
     original_cache_entry = CacheEntry("123", "456", 3.14)
     db._set_data("test/key", "value", original_cache_entry)
     assert db._get_data("test/key/value").time == 123.0
     assert db._get_data("test/key/value").ttl == 456.0
-    assert db._get_data("test/key/value").value == 3.14
-    assert isinstance(db._get_data("test/key/value").value, float)
+    assert db._get_data("test/key/value").value == "3.14"
+    assert isinstance(db._get_data("test/key/value").value, str)
 
 
 def test_query_history(db):
@@ -387,6 +1007,133 @@ def test_can_handle_redis_exception_get_data(db):
     )
     db._set_data("test/key", "value", CacheEntry("123", "456", 3.14))
     assert db._get_data("test/key/value") is None
+
+
+def test_init_database_prefills_recent_from_redis_hashes(db):
+    db._client._redis._fake_db["seed/key/value"] = {
+        "time": "123.0",
+        "ttl": "None",
+        "value": "10",
+        "expired": "False",
+    }
+    db._client._redis._fake_db["seed/key/text"] = {
+        "time": "124.0",
+        "ttl": "15.0",
+        "value": "abc",
+        "expired": "True",
+    }
+
+    db.initDatabase()
+
+    numeric = db.getEntry(("seed/key", "value"))
+    assert numeric is not None
+    assert numeric.time == 123.0
+    assert numeric.ttl is None
+    assert numeric.value == "10"
+    assert numeric.expired is False
+
+    text = db.getEntry(("seed/key", "text"))
+    assert text is not None
+    assert text.time == 124.0
+    assert text.ttl == 15.0
+    assert text.value == "abc"
+    assert text.expired is True
+
+
+def test_get_entry_lazy_loads_from_redis_and_caches(db):
+    db._client._redis._fake_db["lazy/key/value"] = {
+        "time": "123.0",
+        "ttl": "None",
+        "value": "from_redis",
+        "expired": "False",
+    }
+
+    first = db.getEntry(("lazy/key", "value"))
+    assert first is not None
+    assert first.value == "from_redis"
+
+    db._client._redis.hgetall = MagicMock(
+        side_effect=RedisError("Mocked RedisError after cache warmup")
+    )
+
+    second = db.getEntry(("lazy/key", "value"))
+    assert second is not None
+    assert second.value == "from_redis"
+
+
+def test_update_entries_no_store_updates_ram_only(db):
+    entry = CacheEntry(123.0, None, 42)
+
+    changed = db.updateEntries(["nostore/key"], "value", True, entry)
+    assert changed is True
+
+    assert db._client.hgetall("nostore/key/value") == {}
+    stored = db.getEntry(("nostore/key", "value"))
+    assert stored is not None
+    assert stored.value == 42
+    assert stored.time == 123.0
+
+
+def test_update_entries_noop_on_same_value_returns_false(db):
+    initial = CacheEntry(100.0, None, "same")
+    repeat = CacheEntry(200.0, None, "same")
+
+    first = db.updateEntries(["noop/key"], "value", False, initial)
+    second = db.updateEntries(["noop/key"], "value", False, repeat)
+
+    assert first is True
+    assert second is False
+
+
+def test_update_entries_refreshes_ttl_and_time_even_when_value_unchanged(db):
+    first = CacheEntry(100.0, 10.0, "same")
+    second = CacheEntry(120.0, 30.0, "same")
+
+    db.updateEntries(["ttlrefresh/key"], "value", False, first)
+    changed = db.updateEntries(["ttlrefresh/key"], "value", False, second)
+
+    assert changed is False
+    stored_hash = db._client.hgetall("ttlrefresh/key/value")
+    assert stored_hash["time"] == "120.0"
+    assert stored_hash["ttl"] == "30.0"
+
+
+def test_update_entries_pipeline_none_falls_back_without_exception(db):
+    db._client.pipeline = MagicMock(return_value=None)
+
+    changed = db.updateEntries(
+        ["pipeline/key"], "value", False, CacheEntry(123.0, None, 3.14)
+    )
+
+    assert changed is True
+    stored_hash = db._client.hgetall("pipeline/key/value")
+    assert stored_hash["value"] == "3.14"
+    assert stored_hash["time"] == "123.0"
+
+
+def test_update_entries_uses_pipeline_for_persisted_updates(db):
+    pipe = db._client._redis.pipeline()
+    pipe.execute = MagicMock(wraps=pipe.execute)
+    db._client.pipeline = MagicMock(return_value=pipe)
+
+    changed = db.updateEntries(
+        ["pipeline/used"], "value", False, CacheEntry(321.0, None, 6.28)
+    )
+
+    assert changed is True
+    pipe.execute.assert_called_once()
+
+
+def test_switching_from_list_to_scalar_clears_ts_metadata(db):
+    db._set_data("transition/key", "value", CacheEntry("123", "None", [10, 20]))
+    db._set_data("transition/key", "value", CacheEntry("124", "None", 3.5))
+
+    stored = db._client.hgetall("transition/key/value")
+    assert "ts_encoding" not in stored
+    assert "ts_children" not in stored
+
+    history = db.queryHistory(("transition/key", "value"), 122, 125)
+    assert any(e.time == 124.0 and e.value == 3.5 for e in history)
 
 
 def test_set_invalid_type_value(db):
@@ -484,10 +1231,10 @@ def test_iterentries_reports_expired_flag(db):
 
     entries = {(cat + "/" + sub): entry for (cat, sub), entry in db.iterEntries()}
 
-    assert "iter/key/v"  in entries
+    assert "iter/key/v" in entries
     assert "iter/key/v2" in entries
 
-    assert entries["iter/key/v" ].expired is True
+    assert entries["iter/key/v"].expired is True
     assert entries["iter/key/v2"].expired is False
 
 
@@ -497,6 +1244,52 @@ def test_entry_without_ttl_never_expires(db):
     result = db.getEntry(("notimeout/key", "value"))
     assert result is not None
     assert result.expired is False
+
+
+def test_scalar_timeseries_rollover_trims_old_samples_but_keeps_current_key(db):
+    _set_historydays(db, 1)
+    t_old = 100.0
+    t_new = t_old + 2 * 86400
+
+    db._set_data("roll/scalar", "value", CacheEntry(t_old, None, 1.0))
+    db._set_data("roll/scalar", "value", CacheEntry(t_new, None, 2.0))
+
+    ts_store = db._client._redis._fake_db["roll/scalar/value_ts"]
+    assert ts_store == {int(t_new * 1000): "2.0"}
+
+    history = db.queryHistory(("roll/scalar", "value"), t_old - 1, t_new + 1)
+    assert [entry.asDict() for entry in history] == [
+        CacheEntry(t_new, None, 2.0).asDict()
+    ]
+
+    latest = db._get_data("roll/scalar/value")
+    assert latest is not None
+    assert latest.value == "2.0"
+    assert latest.time == t_new
+
+
+def test_hash_series_rollover_trims_old_samples_but_keeps_current_key(db):
+    _set_historydays(db, 1)
+    t_old = 200.0
+    t_new = t_old + 2 * 86400
+    old_dumped = cache_dump({"state": "old"})
+    new_dumped = cache_dump({"state": "new"})
+
+    db._set_data("roll/custom", "value", CacheEntry(t_old, None, old_dumped))
+    db._set_data("roll/custom", "value", CacheEntry(t_new, None, new_dumped))
+
+    hs_hash = db._client._redis._fake_db["roll/custom/value_hs"]
+    hs_idx = db._client._redis._fake_db["roll/custom/value_hs_idx"]
+    expected_ts = str(int(t_new * 1000))
+    assert hs_hash == {expected_ts: new_dumped}
+    assert hs_idx == {expected_ts: float(expected_ts)}
+
+    history = db.queryHistory(("roll/custom", "value"), t_old - 1, t_new + 1)
+    assert [cache_load(entry.value) for entry in history] == [{"state": "new"}]
+
+    latest = db.getEntry(("roll/custom", "value"))
+    assert latest is not None
+    assert cache_load(latest.value) == {"state": "new"}
 
 
 def test_explicitly_stored_expired_flag_is_preserved(db):
