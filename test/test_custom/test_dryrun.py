@@ -38,7 +38,10 @@ from nicos.core.utils import system_user
 
 from test.utils import module_root
 
+# Keep this test focused on ESS-owned facilities for now.
+# MLZ/SINQ scripts are maintained in their package-specific test suites.
 FACILITY_BLACKLIST = {"nicos_demo", "nicos_mlz", "nicos_sinq"}
+TESTSCRIPT_DOC = "doc/source/howtos/testscripts.rst"
 
 session_setup = None
 
@@ -95,6 +98,10 @@ custom_subdirs = {}
 
 
 def find_scripts():
+    """Yield ``(facility, instrument, script)`` tuples for ``testscripts``.
+
+    Directive syntax is documented in ``doc/source/howtos/testscripts.rst``.
+    """
     for custom_dir in [
         d
         for d in Path(module_root).glob("nicos_*")
@@ -124,6 +131,7 @@ def find_scripts():
                     )
 
 
+# Discover scripts dynamically so new testscripts are automatically covered.
 @pytest.mark.parametrize('facility, instr, script', find_scripts())
 def test_dryrun(session, facility, instr, script):
     setups = ["system"]
@@ -155,7 +163,10 @@ def test_dryrun(session, facility, instr, script):
                 elif parts[2] == "timing":
                     timing_condition = parts[4].strip()
                 else:
-                    assert False, "invalid test directive in file: %r" % line
+                    assert False, (
+                        "invalid test directive in file: %r (see %s)"
+                        % (line, TESTSCRIPT_DOC)
+                    )
             code.append(line)
     code[0:0] = setupcode
     code = "".join(code)

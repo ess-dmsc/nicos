@@ -619,6 +619,7 @@ def startCache(hostport, setup="cache", wait=10):
 
 
 def tailLogfile(filename, lines=20):
+    """Return the last *lines* lines of *filename* for debug output."""
     if not path.isfile(filename):
         return "<missing>"
     try:

@@ -45,6 +45,11 @@ from test.utils import (
 
 
 def _safe_kill(proc):
+    """Best-effort subprocess cleanup used during fixture teardown.
+
+    We intentionally do not re-raise here so teardown errors do not hide the
+    original test failure. Startup failures are still raised directly.
+    """
     if not proc:
         return
     try:
@@ -75,13 +80,18 @@ def setup_test_suite():
     elog = None
     try:
         # Elog startup can take >2s on current Python/uv environments.
-        elog = startElog(wait=8)
+        # Any startup failure should fail the whole session fixture, but we
+        # first try to stop the already-running cache process.
+        elog = startElog(wait=5)
     except Exception:
+        # Deliberately broad: startElog/startSubprocess may fail with different
+        # exception types depending on whether startup or wait-callback failed.
         _safe_kill(cache)
         raise
     try:
         yield
     finally:
+        # Always attempt process teardown, also if setup/tests raised.
         _safe_kill(elog)
         _safe_kill(cache)
 
