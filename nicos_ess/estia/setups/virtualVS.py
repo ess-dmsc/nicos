@@ -59,8 +59,8 @@ devices = dict(
         description="4-blade slit controller",
         top="right_blade_vertical",
         bottom="left_blade_vertical",
-        right="left_blade_horizontal",
-        left="right_blade_horizontal",
+        left="left_blade_horizontal",
+        right="right_blade_horizontal",
     ),
     ####Readout Devices
     vs_controller=device(

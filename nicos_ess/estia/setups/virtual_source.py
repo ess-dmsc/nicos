@@ -50,6 +50,7 @@ devices = dict(
         slit="slit",
         rot="vs_slit_rotation",
         opmode="centered",
+        offsets=(0.0, 0.0, 0.0, 0.0, 0.0),
     ),
     laser=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
