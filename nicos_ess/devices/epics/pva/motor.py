@@ -2,8 +2,17 @@ import threading
 import time
 
 from nicos import session
-<<<<<<< nicos_ess/devices/epics/pva/motor.py
-from nicos.core import POLLER, SIMULATION, Moveable, Override, Param, limits, oneof, pvname, status
+from nicos.core import (
+    POLLER,
+    SIMULATION,
+    Moveable,
+    Override,
+    Param,
+    limits,
+    oneof,
+    pvname,
+    status,
+)
 from nicos.core.errors import ConfigurationError, MoveError, PositionError
 from nicos.core.mixins import CanDisable, HasLimits, HasOffset
 from nicos.devices.abstract import CanReference, Motor
