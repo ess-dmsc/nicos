@@ -59,7 +59,6 @@ tests_py3xx:
   before_script:
     - git config --global --add safe.directory "$CI_PROJECT_DIR"
     - uv sync --extra gui --all-packages
-    - uv pip install ruff codespell
     - git fetch --depth 1 origin $CI_MERGE_REQUEST_DIFF_BASE_SHA  # Fetching only up to the closest merge-base to save time
     - export CHANGES=$(git diff-tree --name-only -r $CI_MERGE_REQUEST_DIFF_BASE_SHA $CI_COMMIT_SHA)  # Diff only changed files within MR
     - export PY_CHANGES=$(git diff-tree --name-only -r $CI_MERGE_REQUEST_DIFF_BASE_SHA $CI_COMMIT_SHA | grep -e '\.py$')
