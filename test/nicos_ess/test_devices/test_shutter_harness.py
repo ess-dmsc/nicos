@@ -1,0 +1,71 @@
+# *****************************************************************************
+# NICOS, the Networked Instrument Control System of the MLZ
+# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+#
+# This program is free software; you can redistribute it and/or modify it under
+# the terms of the GNU General Public License as published by the Free Software
+# Foundation; either version 2 of the License, or (at your option) any later
+# version.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+# FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+# details.
+#
+# You should have received a copy of the GNU General Public License along with
+# this program; if not, write to the Free Software Foundation, Inc.,
+# 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+#
+# Module authors:
+#
+#   Jonas Petersson <jonas.petersson@ess.eu>
+#
+# *****************************************************************************
+
+import pytest
+
+from nicos_ess.devices.epics.pva import epics_devices
+from nicos_ess.devices.epics.pva import shutter
+from test.nicos_ess.test_devices.doubles import FakeEpicsBackend
+
+
+@pytest.fixture
+def fake_backend(monkeypatch):
+    backend = FakeEpicsBackend()
+    monkeypatch.setattr(
+        epics_devices, "create_wrapper", lambda timeout, use_pva: backend
+    )
+    backend.values["SIM:SHUTTER:READ"] = "Closed"
+    backend.values["SIM:SHUTTER:WRITE"] = "Close"
+    backend.values["SIM:SHUTTER:MSGTXT"] = ""
+    backend.value_choices["SIM:SHUTTER:READ"] = [
+        "Closed",
+        "Closing",
+        "Opening",
+        "Opened",
+    ]
+    backend.value_choices["SIM:SHUTTER:WRITE"] = [
+        "Close",
+        "Open",
+    ]
+    return backend
+
+
+class TestEpicsShutterHarness:
+    def test_initializes(self, device_harness, fake_backend):
+        del fake_backend
+        daemon_device, poller_device = device_harness.create_pair(
+            shutter.EpicsShutter,
+            name="epics_shutter",
+            shared={
+                "readpv": "SIM:SHUTTER:READ",
+                "writepv": "SIM:SHUTTER:WRITE",
+                "msgtxt": "SIM:SHUTTER:MSGTXT",
+                "mapping": {"Close": "Close", "Open": "Open"},
+                "monitor": True,
+                "pva": True,
+            },
+        )
+
+        assert daemon_device is not None
+        assert poller_device is not None
