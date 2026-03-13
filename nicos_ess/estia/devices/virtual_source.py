@@ -5,7 +5,6 @@ from nicos.core import (
     Param,
     Value,
     dictof,
-    listof,
     multiStatus,
     oneof,
     tupleof,
