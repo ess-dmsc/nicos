@@ -35,6 +35,7 @@ import numpy
 from nicos import session
 from nicos.core import (
     POLLER,
+    SIMULATION,
     HasLimits,
     HasPrecision,
     Moveable,
@@ -78,6 +79,7 @@ class EpicsParameters(HasNexusConfig):
         "pollinterval": Override(default=None),
         "maxage": Override(default=None),
     }
+    hardware_access = True
 
 
 def create_wrapper(timeout, use_pva):
@@ -120,10 +122,12 @@ class EpicsReadable(EpicsParameters, Readable):
     def doPreinit(self, mode):
         self._epics_subscriptions = []
         self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
+        if mode == SIMULATION:
+            return
         self._epics_wrapper.connect_pv(self.readpv)
 
     def doInit(self, mode):
-        if session.sessiontype == POLLER and self.monitor:
+        if mode != SIMULATION and session.sessiontype == POLLER and self.monitor:
             self._epics_subscriptions.append(
                 self._epics_wrapper.subscribe(
                     self.readpv,
@@ -264,13 +268,15 @@ class EpicsAnalogMoveable(EpicsParameters, HasPrecision, HasLimits, Moveable):
     def doPreinit(self, mode):
         self._epics_subscriptions = []
         self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
+        if mode == SIMULATION:
+            return
         self._epics_wrapper.connect_pv(self.readpv)
         self._epics_wrapper.connect_pv(self.writepv)
         if self.targetpv:
             self._epics_wrapper.connect_pv(self.targetpv)
 
     def doInit(self, mode):
-        if session.sessiontype == POLLER and self.monitor:
+        if mode != SIMULATION and session.sessiontype == POLLER and self.monitor:
             self._epics_subscriptions.append(
                 self._epics_wrapper.subscribe(
                     self.readpv,
@@ -446,13 +452,15 @@ class EpicsStringMoveable(EpicsParameters, Moveable):
     def doPreinit(self, mode):
         self._epics_subscriptions = []
         self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
+        if mode == SIMULATION:
+            return
         self._epics_wrapper.connect_pv(self.readpv)
         self._epics_wrapper.connect_pv(self.writepv)
         if self.targetpv:
             self._epics_wrapper.connect_pv(self.targetpv)
 
     def doInit(self, mode):
-        if session.sessiontype == POLLER and self.monitor:
+        if mode != SIMULATION and session.sessiontype == POLLER and self.monitor:
             self._epics_subscriptions.append(
                 self._epics_wrapper.subscribe(
                     self.readpv,
@@ -579,7 +587,7 @@ class EpicsMappedReadable(EpicsReadable, MappedReadable):
     def doInit(self, mode):
         EpicsReadable.doInit(self, mode)
 
-        if session.sessiontype != POLLER and not self.monitor:
+        if mode != SIMULATION and session.sessiontype != POLLER and not self.monitor:
             _update_mapped_choices(self)
         MappedReadable.doInit(self, mode)
 
@@ -649,13 +657,15 @@ class EpicsMappedMoveable(EpicsParameters, MappedMoveable):
     def doPreinit(self, mode):
         self._epics_subscriptions = []
         self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
+        if mode == SIMULATION:
+            return
         self._epics_wrapper.connect_pv(self.readpv)
         self._epics_wrapper.connect_pv(self.writepv)
         if self.targetpv:
             self._epics_wrapper.connect_pv(self.targetpv)
 
     def doInit(self, mode):
-        if session.sessiontype == POLLER and self.monitor:
+        if mode != SIMULATION and session.sessiontype == POLLER and self.monitor:
             self._epics_subscriptions.append(
                 self._epics_wrapper.subscribe(
                     self.readpv,
@@ -690,7 +700,7 @@ class EpicsMappedMoveable(EpicsParameters, MappedMoveable):
                     )
                 )
 
-        if session.sessiontype != POLLER and not self.monitor:
+        if mode != SIMULATION and session.sessiontype != POLLER and not self.monitor:
             _update_mapped_choices(self)
         MappedMoveable.doInit(self, mode)
 
@@ -797,6 +807,8 @@ class EpicsManualMappedAnalogMoveable(
     def doPreinit(self, mode):
         self._epics_subscriptions = []
         self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
+        if mode == SIMULATION:
+            return
         self._epics_wrapper.connect_pv(self.readpv)
         self._epics_wrapper.connect_pv(self.writepv)
         if self.targetpv:
@@ -805,7 +817,7 @@ class EpicsManualMappedAnalogMoveable(
     def doInit(self, mode):
         MappedMoveable.doInit(self, mode)
 
-        if session.sessiontype == POLLER and self.monitor:
+        if mode != SIMULATION and session.sessiontype == POLLER and self.monitor:
             self._epics_subscriptions.append(
                 self._epics_wrapper.subscribe(
                     self.readpv,

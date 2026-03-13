@@ -44,6 +44,22 @@ from test.utils import (
 )
 
 
+def _safe_kill(proc):
+    """Best-effort subprocess cleanup used during fixture teardown.
+
+    We intentionally do not re-raise here so teardown errors do not hide the
+    original test failure. Startup failures are still raised directly.
+    """
+    if not proc:
+        return
+    try:
+        killSubprocess(proc)
+    except Exception as err:
+        name = getattr(proc, "nicos_name", "<unknown>")
+        pid = getattr(proc, "pid", "<unknown>")
+        sys.stderr.write("Failed to terminate %s process %s: %s\n" % (name, pid, err))
+
+
 # This fixture will run during the entire test suite.  Therefore, the special
 # cache stresstests must use a different port.
 @pytest.fixture(scope="session", autouse=True)
@@ -61,10 +77,23 @@ def setup_test_suite():
         sys.stderr.write("=" * 80)
         raise
     cache = startCache(cache_addr)
-    elog = startElog(wait=5)
-    yield
-    killSubprocess(elog)
-    killSubprocess(cache)
+    elog = None
+    try:
+        # Elog startup can take >2s on current Python/uv environments.
+        # Any startup failure should fail the whole session fixture, but we
+        # first try to stop the already-running cache process.
+        elog = startElog(wait=5)
+    except Exception:
+        # Deliberately broad: startElog/startSubprocess may fail with different
+        # exception types depending on whether startup or wait-callback failed.
+        _safe_kill(cache)
+        raise
+    try:
+        yield
+    finally:
+        # Always attempt process teardown, also if setup/tests raised.
+        _safe_kill(elog)
+        _safe_kill(cache)
 
 
 @pytest.fixture(scope="class")

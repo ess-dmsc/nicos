@@ -3,6 +3,7 @@ import time
 from nicos import session
 from nicos.core import (
     POLLER,
+    SIMULATION,
     Param,
     none_or,
     pvname,
@@ -40,7 +41,7 @@ class EpicsShutter(EpicsMappedMoveable):
     }
 
     def doInit(self, mode):
-        if session.sessiontype == POLLER and self.monitor:
+        if mode != SIMULATION and session.sessiontype == POLLER and self.monitor:
             _update_mapped_choices(self, PvReadOrWrite.readpv)
 
             self._epics_subscriptions.append(
@@ -77,7 +78,7 @@ class EpicsShutter(EpicsMappedMoveable):
                     )
                 )
 
-        if session.sessiontype != POLLER:
+        if mode != SIMULATION and session.sessiontype != POLLER:
             _update_mapped_choices(self, PvReadOrWrite.writepv)
         MappedMoveable.doInit(self, mode)
 
