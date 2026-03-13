@@ -48,8 +48,7 @@ class MappedController(MappedMoveable):
             return False, why
         return True, ""
 
-    def doStart(self, value):
-        target = self.mapping.get(value, None)
+    def _startRaw(self, target):
         self._attached_controlled_device.start(target)
 
     def doStatus(self, maxage=0):
