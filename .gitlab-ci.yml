@@ -13,6 +13,8 @@ variables:
 
 stages:
   - test
+  - lint
+  - format
   - publish
 
 tests_py312_cov:
@@ -52,6 +54,7 @@ tests_py3xx:
   variables:
     UV_PYTHON: $PYTHON_VERSION
 
+
 publish:
   stage: publish
   image: registry.esss.lu.se/ecdc/ess-dmsc/docker-almalinux9-conan:1.6.0
@@ -65,3 +68,56 @@ publish:
   variables:
     UV_PUBLISH_USERNAME: "ecdc"
     UV_PUBLISH_PASSWORD: "$ESS_ARTIFACTORY_ECDC_PYPI_TOKEN"
+
+
+.lint:
+  stage: lint
+  image: registry.esss.lu.se/ecdc/ess-dmsc/docker-almalinux9-conan:1.6.0
+  before_script:
+    - git config --global --add safe.directory "$CI_PROJECT_DIR"
+    - uv sync --extra gui --all-packages
+    - uv pip install ruff
+    - uv pip install codespell
+  variables:
+    UV_PYTHON: 3.12
+
+
+lint:check_setups:
+  extends:
+    - .lint
+  script:
+    - find ./nicos_ess -type d -name setups -exec uv run tools/check-setups \{\} \;
+
+lint:ruff:
+  extends:
+    - .lint
+  script:
+    - uv run ruff check --output-format=gitlab | tee code-quality-report.json
+  artifacts:
+    reports:
+      codequality: code-quality-report.json
+
+
+lint:codespell:
+  extends:
+    - .lint
+  script:
+    - uv run python -m codespell_lib
+
+
+.format:
+  stage: format
+  image: registry.esss.lu.se/ecdc/ess-dmsc/docker-almalinux9-conan:1.6.0
+  before_script:
+    - git config --global --add safe.directory "$CI_PROJECT_DIR"
+    - uv sync --extra gui --all-packages
+    - uv pip install ruff
+  variables:
+    UV_PYTHON: 3.12
+
+
+format:ruff:
+  extends:
+    - .format
+  script:
+    - uv run ruff format --diff
