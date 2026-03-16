@@ -1,29 +1,30 @@
-description = "Motors for the metrology cart"
+description = "Prototype interferometer measurement"
 
-pv_root = "ESTIA-SG1Ct:MC-"
+etalon_prefix = "ESTIA-Sel1:Mech-GU-001"
+
+group = "lowlevel"
 
 devices = dict(
-    approach=device(
-        "nicos_ess.devices.epics.pva.motor.EpicsMotor",
-        description="Metrology Cart Rotation",
-        motorpv=f"{pv_root}LinX-01:Mtr",
-        has_powerauto=False,
-        fmtstr="%.1f",
-    ),
-    position=device(
-        "nicos_ess.devices.epics.pva.motor.EpicsMotor",
-        description="Metrology Cart Position",
-        motorpv=f"{pv_root}RotZ-01:Mtr",
-        has_powerauto=False,
-    ),
-    # copying this from the old setup until more details are given
-    metrology_cart=device(
-        "nicos.devices.generic.sequence.LockedDevice",
-        description="Metrology Cart Device",
-        device="position",
-        lock="approach",
-        unlockvalue=60.0,
-        lockvalue=180.0,
-        visibility=(),  # hide under admin for now
+    multiline=device(
+        "nicos_ess.estia.devices.multiline.MultilineController",
+        description="Multiline interferometer controller",
+        pvprefix=etalon_prefix,
+        readpv=f"{etalon_prefix}:MeasState-R",
+        epicstimeout=30.0,
+        # pilot_laser='pilot_laser',
+        # temperature='env_temperature',
+        # pressure='env_pressure',
+        # humidity='env_humidity'
     ),
 )
+
+channels = [17, 18, 19, 20, 21, 22, 23, 24, 27, 28]
+
+for ch in channels:
+    devices[f"ch{ch:02}"] = device(
+        "nicos_ess.estia.devices.multiline.MultilineChannel",
+        description=f"Value of channel {ch}",
+        channel=ch,
+        controller="multiline",
+        unit="mm",
+    )
