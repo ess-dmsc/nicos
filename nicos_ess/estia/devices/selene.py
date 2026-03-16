@@ -1035,9 +1035,6 @@ class SeleneMetrology(SeleneCalculator, BaseSequencer):
         return [self._attached_m_cart, self._attached_interferometer]
 
     def doInit(self, dummy=None):
-        self._sa = np.sqrt(
-            self._sc**2 + self._sb**2
-        )  # This is already in the SeleneCalculator
         self._cache.addCallback(
             self._attached_m_cart, "value", self._on_status_change_external
         )
@@ -1070,16 +1067,16 @@ class SeleneMetrology(SeleneCalculator, BaseSequencer):
         """
         pos = self._attached_m_cart() - self.cart_center
         if abs(pos) > 50:
-            pos = self._x_for_cart(pos)
+            pos = self._laser_pos_from_cart(pos)
         mirror = int(
-            (pos + self._mw / 2) // self._mw + 8
+            (pos + self._mirror_width / 2) // self._mirror_width + 8
         )  # mirrors are 480 wide and 8 is the central one
         rpos = (
-            pos + self._mw / 2
-        ) % self._mw - self._mw / 2  # relative position on mirror
+            pos + self._mirror_width / 2
+        ) % self._mirror_width - self._mirror_width / 2  # relative position on mirror
         if abs(rpos) < 10:
             return (0, mirror)
-        elif (abs(rpos) + self._sx - self._mw / 2) < 10:
+        elif (abs(rpos) + self._screw_mirror_dist - self._mirror_width / 2) < 10:
             if rpos < 0:
                 return (-1, mirror)
             else:
@@ -1102,8 +1099,10 @@ class SeleneMetrology(SeleneCalculator, BaseSequencer):
             raise ValueError(
                 "Position should be tuple (rel. location, mirror) w/ rel. location in [-1,0,1]"
             )
-        calc_pos = self._mw * (mirror - 8) + rel_pos * (self._mw / 2 - self._sx)
-        dest_pos = self.cart_center + self._cart_for_x(calc_pos)
+        calc_pos = self._mirror_width * (mirror - 8) + rel_pos * (
+            self._mirror_width / 2 - self._screw_mirror_dist
+        )
+        dest_pos = self.cart_center + self._cart_pos_correction(calc_pos)
 
         # reset last values before starting to move, so any value but nan should be for the current location
         self.last_raw = (np.nan, np.nan, np.nan, np.nan)
@@ -1163,7 +1162,7 @@ class SeleneMetrology(SeleneCalculator, BaseSequencer):
         self.last_delta = (np.nan, np.nan, np.nan, np.nan)
 
         cpos = self._attached_m_cart()
-        xpos = self._x_for_cart(cpos - self.cart_center)
+        xpos = self._laser_pos_from_cart(cpos - self.cart_center)
         if abs(xpos) < 300:
             measure_channels = [
                 self._attached_ch_d_v1.channel,
@@ -1202,7 +1201,7 @@ class SeleneMetrology(SeleneCalculator, BaseSequencer):
         # run after a measurement is complete to get the screw deviations
         self.log.debug("Measurement done, store raw lengths and deviations")
         cpos = self._attached_m_cart()
-        xpos = self._x_for_cart(cpos - self.cart_center)
+        xpos = self._laser_pos_from_cart(cpos - self.cart_center)
 
         # nominal lengths at current location
         nv, nh1, nh2 = self._nominal_path_lengths(cpos - self.cart_center)
