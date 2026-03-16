@@ -63,3 +63,6 @@ mprofile_*.dat
 #Common venv names
 .venv
 venv
+
+# Symlink to NeXus JSON templates
+nexus-json-templates
