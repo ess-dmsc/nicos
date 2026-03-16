@@ -12,9 +12,9 @@ variables:
   UV_LINK_MODE: copy
 
 stages:
-  - test
-  - lint
   - publish
+  - lint
+  - test
 
 tests_py312_cov:
   stage: test
@@ -78,10 +78,12 @@ publish:
     - uv pip install ruff codespell
     - git fetch --depth 1 origin $CI_MERGE_REQUEST_DIFF_BASE_SHA  # Fetching only up to the closest merge-base to save time
     - export CHANGES=$(git diff-tree --name-only -r $CI_MERGE_REQUEST_DIFF_BASE_SHA $CI_COMMIT_SHA)  # Diff only changed files within MR
-    - echo 'Changed files (to be linted):'
-    - echo "$CHANGES"
+    - export PY_CHANGES=$(git diff-tree --name-only -r $CI_MERGE_REQUEST_DIFF_BASE_SHA $CI_COMMIT_SHA | grep -e '\.py$')
   variables:
     UV_PYTHON: 3.12
+  allow_failure:
+    exit_codes: # User defined exit code
+      - 100
 
 lint:check_setups:
   extends:
@@ -91,15 +93,15 @@ lint:check_setups:
     - test -z "$(cat check_setups_stdout.log | grep ERROR)" || exit 1 # errors found
     - test ! -f check_setups_stderr.log || exit 1  # failure on check
     - test ! -f check_setups_stdout.log || exit 100 # warnings found
-  allow_failure:
-    exit_codes: # User defined exit code
-      - 100
 
 lint:ruff_check:
   extends:
     - .lint
   script:
-    - uv run ruff check --output-format=gitlab $CHANGES | tee code-quality-report.json
+    - echo 'Changed files (to be linted):'
+    - echo "$PY_CHANGES"
+    - if [ -z "$PY_CHANGES" ]; then echo "No modified Python files to be checked"; exit 100; fi;
+    - uv run ruff check --output-format=gitlab $(echo $PY_CHANGES) | tee code-quality-report.json
   artifacts:
     reports:
       codequality: code-quality-report.json
@@ -108,10 +110,15 @@ lint:codespell:
   extends:
     - .lint
   script:
-    - uv run python -m codespell_lib $CHANGES
+    - echo 'Changed files (to be linted):'
+    - echo "$CHANGES"
+    - uv run python -m codespell_lib --count $CHANGES
 
 lint:ruff_format:
   extends:
     - .lint
   script:
-    - uv run ruff format --diff $CHANGES
+    - echo 'Changed files (to be linted):'
+    - echo "$PY_CHANGES"
+    - if [ -z "$PY_CHANGES" ]; then echo "No modified Python files to be checked"; exit 100; fi;
+    - uv run ruff format --diff $(echo $PY_CHANGES)
