@@ -47,6 +47,40 @@ def wait_for(predicate, *, timeout: float = _TIMEOUT, interval: float = 0.02) ->
     raise AssertionError("timeout waiting for condition")
 
 
+def _prime_monitor_path(rig: PvaRig) -> None:
+    """Ensure PVA monitor callbacks are flowing before tests run."""
+    pvname = rig.name("Float")
+    pv = rig.pvs["Float"]
+    wrapper = P4pWrapper(timeout=2.0, context=rig.ctx)
+    change = EventSink()
+    conn = EventSink()
+    sub = wrapper.subscribe(pvname, "__probe__", change, conn)
+    try:
+        # Warm monitor delivery with unique probe values; this handles startup
+        # jitter where initial monitor callbacks can race with first posts.
+        conn.wait_calls(1, timeout=_TIMEOUT)
+        for i in range(5):
+            probe_value = 1.234567 + i * 0.01
+            before = len(change.calls)
+            pv.post(probe_value, timestamp=time.time())
+            try:
+                wait_for(
+                    lambda: any(
+                        abs(call[0][2] - probe_value) < 1e-12
+                        for call in change.calls[before:]
+                    ),
+                    timeout=1.0,
+                )
+            except AssertionError:
+                continue
+            break
+        else:
+            raise AssertionError("failed to prime PVA monitor callback delivery")
+    finally:
+        wrapper.close_subscription(sub)
+        pv.post(1.25, timestamp=time.time())
+
+
 @dataclass(frozen=True)
 class PvaRig:
     prefix: str
@@ -107,6 +141,7 @@ def pva_rig() -> Generator[PvaRig]:
 @pytest.fixture()
 def pva_wrapper(pva_rig: PvaRig) -> P4pWrapper:
     # Fresh wrapper per test to avoid leaked monitor state / refcnt / caches.
+    _prime_monitor_path(pva_rig)
     return P4pWrapper(timeout=2.0, context=pva_rig.ctx)
 
 
@@ -173,7 +208,9 @@ def test_metadata_and_alarm_helpers(pva_rig: PvaRig, pva_wrapper: P4pWrapper):
     assert pva_wrapper.get_value_choices(enum_pv) == _ENUM_CHOICES
 
     sev_key, expected_nicos = _any_non_ok_alarm_severity()
-    pva_rig.pvs["Float"].post(1.5, timestamp=time.time(), severity=sev_key, message="trip")
+    pva_rig.pvs["Float"].post(
+        1.5, timestamp=time.time(), severity=sev_key, message="trip"
+    )
 
     wait_for(
         lambda: pva_wrapper.get_alarm_status(float_pv) == (expected_nicos, "trip"),
@@ -193,31 +230,41 @@ def test_monitor_change_and_connection_callbacks(
     sub = pva_wrapper.subscribe(pvname, "value", change, conn)
 
     try:
-        # Trigger a value update from server side (monitor path)
-        pv.post(2.5, timestamp=time.time())
-        wait_for(
-            lambda: any(c[0][2] == pytest.approx(2.5) for c in change.calls),
-            timeout=_TIMEOUT,
-        )
-
-        args, _ = next(c for c in reversed(change.calls) if c[0][2] == pytest.approx(2.5))
-        assert args[0] == pvname
-        assert args[1] == "value"
-        assert args[2] == pytest.approx(2.5)
-
-        # Connection should have come up at least once, but only once for this pv/param.
+        # Wait for connection notification before asserting monitor updates.
         conn.wait_calls(1, timeout=_TIMEOUT)
         assert conn.calls[0][0] == (pvname, "value", True)
 
-        # Alarm-only-ish update: post same value but with alarm severity/message.
-        sev_key, expected_nicos = _any_non_ok_alarm_severity()
-        pv.post(2.5, timestamp=time.time(), severity=sev_key, message="test alarm")
-        change.wait_calls(2, timeout=_TIMEOUT)
+        # Trigger a value update from server side (monitor path).
+        update_value = 2.5
+        before_change_calls = len(change.calls)
+        pv.post(update_value, timestamp=time.time())
+        wait_for(
+            lambda: len(change.calls) > before_change_calls
+            and change.calls[-1][0][2] == pytest.approx(update_value),
+            timeout=_TIMEOUT,
+        )
 
         args, _ = change.calls[-1]
-        assert args[2] == pytest.approx(2.5)
-        assert args[5] == expected_nicos
-        assert args[6] == "test alarm"
+        assert args[0] == pvname
+        assert args[1] == "value"
+        assert args[2] == pytest.approx(update_value)
+
+        # Alarm-only-ish update: post same value but with alarm severity/message.
+        sev_key, expected_nicos = _any_non_ok_alarm_severity()
+        before_alarm_calls = len(change.calls)
+        pv.post(
+            update_value,
+            timestamp=time.time(),
+            severity=sev_key,
+            message="test alarm",
+        )
+        wait_for(
+            lambda: len(change.calls) > before_alarm_calls
+            and change.calls[-1][0][2] == pytest.approx(update_value)
+            and change.calls[-1][0][5] == expected_nicos
+            and change.calls[-1][0][6] == "test alarm",
+            timeout=_TIMEOUT,
+        )
     finally:
         pva_wrapper.close_subscription(sub)
 
@@ -290,6 +337,9 @@ def test_two_subscriptions_slow_connection_callback_ends_connected(
         with conn_calls_lock:
             return any(call[1] is True for call in conn_calls)
 
+    def is_connected_refcnt_positive():
+        return pva_wrapper._conn_refcnt.get((pvname, pvparam), 0) > 0
+
     sub1 = pva_wrapper.subscribe(pvname, pvparam, ch1, slow_conn_cb)
     sub2 = pva_wrapper.subscribe(pvname, pvparam, ch2, slow_conn_cb)
 
@@ -311,10 +361,22 @@ def test_two_subscriptions_slow_connection_callback_ends_connected(
             assert not any(c[1] is False for c in conn_calls[first_up_idx + 1 :])
 
         wait_for(
-            lambda: pva_wrapper._conn_refcnt.get((pvname, pvparam), 0) > 0,
+            is_connected_refcnt_positive,
             timeout=_TIMEOUT,
             interval=0.02,
         )
+
+        # Let callback queue settle before asserting event ordering.
+        time.sleep(0.1)
+        wait_for(
+            is_connected_refcnt_positive,
+            timeout=_TIMEOUT,
+            interval=0.02,
+        )
+
+        with conn_calls_lock:
+            first_up_idx = next(i for i, c in enumerate(conn_calls) if c[1] is True)
+            assert not any(c[1] is False for c in conn_calls[first_up_idx + 1 :])
     finally:
         pva_wrapper.close_subscription(sub1)
         pva_wrapper.close_subscription(sub2)
@@ -345,6 +407,9 @@ def test_two_subscriptions_fast_connection_callback_ends_connected(
         with conn_calls_lock:
             return any(call[1] is True for call in conn_calls)
 
+    def is_connected_refcnt_positive():
+        return pva_wrapper._conn_refcnt.get((pvname, pvparam), 0) > 0
+
     sub1 = pva_wrapper.subscribe(pvname, pvparam, ch1, fast_conn_cb)
     sub2 = pva_wrapper.subscribe(pvname, pvparam, ch2, fast_conn_cb)
 
@@ -369,12 +434,23 @@ def test_two_subscriptions_fast_connection_callback_ends_connected(
             first_up_idx = next(i for i, c in enumerate(conn_calls) if c[1] is True)
             assert not any(c[1] is False for c in conn_calls[first_up_idx + 1 :])
 
-        # Group should end connected.
+        # Group should end connected and stay that way after queue settles.
         wait_for(
-            lambda: pva_wrapper._conn_refcnt.get((pvname, pvparam), 0) > 0,
+            is_connected_refcnt_positive,
             timeout=_TIMEOUT,
             interval=0.02,
         )
+
+        time.sleep(0.1)
+        wait_for(
+            is_connected_refcnt_positive,
+            timeout=_TIMEOUT,
+            interval=0.02,
+        )
+
+        with conn_calls_lock:
+            first_up_idx = next(i for i, c in enumerate(conn_calls) if c[1] is True)
+            assert not any(c[1] is False for c in conn_calls[first_up_idx + 1 :])
     finally:
         pva_wrapper.close_subscription(sub1)
         pva_wrapper.close_subscription(sub2)
