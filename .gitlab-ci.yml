@@ -14,7 +14,6 @@ variables:
 stages:
   - test
   - lint
-  - format
   - publish
 
 tests_py312_cov:
@@ -75,14 +74,12 @@ publish:
   image: registry.esss.lu.se/ecdc/ess-dmsc/docker-almalinux9-conan:1.6.0
   before_script:
     - git config --global --add safe.directory "$CI_PROJECT_DIR"
-    # Fetching only up to the closest merge-base to save time
-    - git fetch --depth 1 origin $CI_MERGE_REQUEST_DIFF_BASE_SHA
-    # Diff only changed files within MR
-    - export CHANGES=$(git diff-tree --name-only -r $CI_MERGE_REQUEST_DIFF_BASE_SHA $CI_COMMIT_SHA)
-    - echo "Changed files (to be linted): $CHANGES"
     - uv sync --extra gui --all-packages
-    - uv pip install ruff
-    - uv pip install codespell
+    - uv pip install ruff codespell
+    - git fetch --depth 1 origin $CI_MERGE_REQUEST_DIFF_BASE_SHA  # Fetching only up to the closest merge-base to save time
+    - export CHANGES=$(git diff-tree --name-only -r $CI_MERGE_REQUEST_DIFF_BASE_SHA $CI_COMMIT_SHA)  # Diff only changed files within MR
+    - echo 'Changed files (to be linted):'
+    - echo "$CHANGES"
   variables:
     UV_PYTHON: 3.12
 
@@ -98,43 +95,23 @@ lint:check_setups:
     exit_codes: # User defined exit code
       - 100
 
-lint:ruff:
+lint:ruff_check:
   extends:
     - .lint
   script:
-    - uv run ruff check --output-format=gitlab | tee code-quality-report.json
+    - uv run ruff check --output-format=gitlab $CHANGES | tee code-quality-report.json
   artifacts:
     reports:
       codequality: code-quality-report.json
-
 
 lint:codespell:
   extends:
     - .lint
   script:
-    - |
-      if [ -n "$CHANGES" ]; then
-        echo "Running codespell on changed files:"
-        echo "$CHANGES"
-        uv run python -m codespell_lib $CHANGES
-      else
-        echo "No modified files to check with codespell."
-      fi
+    - uv run python -m codespell_lib $CHANGES
 
-
-.format:
-  stage: format
-  image: registry.esss.lu.se/ecdc/ess-dmsc/docker-almalinux9-conan:1.6.0
-  before_script:
-    - git config --global --add safe.directory "$CI_PROJECT_DIR"
-    - uv sync --extra gui --all-packages
-    - uv pip install ruff
-  variables:
-    UV_PYTHON: 3.12
-
-
-format:ruff:
+lint:ruff_format:
   extends:
-    - .format
+    - .lint
   script:
-    - uv run ruff format --diff
+    - uv run ruff format --diff $CHANGES
