@@ -20,7 +20,7 @@ devices = dict(
     ),
     r1_approach_y=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
-        description="Selene 1 Robot Screw 2 Approach Y",
+        description="Selene 1 Robot Screw 1 Approach Y",
         motorpv=f"{pv_root}LinY-01:Mtr",
     ),
     r1_adjust_ry=device(
