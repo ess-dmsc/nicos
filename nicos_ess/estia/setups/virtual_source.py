@@ -37,7 +37,7 @@ devices = dict(
     slit=device(
         "nicos.devices.generic.slit.Slit",
         opmode="4blades",
-        description="Slit device to control the vs slit pair",
+        description="Slit device to control the VS slit pair",
         left="left_bottom_blade_horizontal",
         right="right_top_blade_horizontal",
         bottom="right_top_blade_vertical",
