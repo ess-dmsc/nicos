@@ -70,8 +70,8 @@ main_window = docked(
                 ),
                 robot_options=dict(
                     title="Robot Selene 1 (view inverted)",
-                    posx="robot_pos",
-                    posz="robot_vert",
+                    posx="robot1_pos",
+                    posz="robot1_vert",
                     approach1="driver1_1_approach",
                     rotation1="driver1_1_adjust",
                     approach2="driver1_2_approach",

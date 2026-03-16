@@ -1,14 +1,14 @@
-description = "Motors for Driver1"
+description = "Motors for Screwdriver2"
 
-pvprefix = "ESTIA-SG1Rb:MC"
+pvprefix = "ESTIA-SG2Rb:MC-"
 
 devices = dict(
-    robot1_pos=device(
+    robot2_pos=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Robot horizontal positioning",
         motorpv=f"{pvprefix}LinX-01:Mtr",
     ),
-    robot1_vert=device(
+    robot2_vert=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Robot vertical positioning",
         motorpv=f"{pvprefix}LinZ-01:Mtr",
@@ -46,8 +46,8 @@ devices = dict(
     sr1=device(
         "nicos_ess.estia.devices.selene.SeleneRobot",
         description="Selene robot 1",
-        move_x="robot1_pos",
-        move_z="robot1_vert",
+        move_x="robot2_pos",
+        move_z="robot2_vert",
         adjust1="driver1_1_adjust",
         approach1="driver1_1_approach",
         hex_state1="driver1_1_hex_state",
@@ -57,6 +57,6 @@ devices = dict(
         delta12=5,
         engaged=5,
         retracted=5,
-        position_data="/ess/ecdc/nicos-core/nicos_ess/estia/devices/selene1_data.yml",
+        position_data="/ess/ecdc/nicos-core/nicos_ess/estia/devices/selene2_data.yml",
     ),
 )
