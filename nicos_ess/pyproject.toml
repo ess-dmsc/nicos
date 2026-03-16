@@ -7,23 +7,17 @@ dependencies = [
     "confluent-kafka>=2.13.0",
     "ess-streaming-data-types>=0.26.1",
     "kafka-logging-handler<=0.2.4",
-    "nicos",
+    "nicos-fork",
     "yuos-query>=0.2.0",
 ]
 
 [project.optional-dependencies]
 gui = [
-    "nicos[gui]"
-]
-
-[dependency-groups]
-dev = [
-    "nicos[dev]"
+    "nicos-fork[gui]"
 ]
 
 [tool.uv.sources]
-# `nicos_ess` depends on `nicos`, which should be installed from this workspace:
-nicos = { workspace = true }
+nicos-fork = { workspace = true }
 
 # Define an entry point that allows to register this module as NICOS plugin.
 [project.entry-points."nicos.plugins"]
@@ -78,3 +72,6 @@ packages = ["nicos_ess"]
 
 [tool.hatch.version]
 source = "uv-dynamic-versioning"
+
+[tool.uv-dynamic-versioning]
+pattern = "default-unprefixed"
