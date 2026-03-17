@@ -10,9 +10,9 @@ from threading import Lock
 from typing import Callable
 
 from nicos import session
-from nicos.core import ConfigurationError
 from nicos.utils.loggers import ACTION, INPUT
 from nicos_ess.telemetry.carbon import CarbonTcpClient, sanitize_path, sanitize_segment
+from nicos_ess.telemetry.config import create_carbon_client, read_carbon_config
 
 _LOG_LEVEL_BUCKETS = {
     logging.DEBUG: "debug",
@@ -23,36 +23,6 @@ _LOG_LEVEL_BUCKETS = {
     logging.ERROR: "error",
     logging.CRITICAL: "critical",
 }
-
-
-def _parse_bool(value, default=False):
-    if value is None:
-        return default
-    if isinstance(value, bool):
-        return value
-    if isinstance(value, (int, float)):
-        return bool(value)
-    if isinstance(value, str):
-        normalized = value.strip().lower()
-        if normalized in {"1", "true", "yes", "on"}:
-            return True
-        if normalized in {"0", "false", "no", "off"}:
-            return False
-    return default
-
-
-def _parse_int(value, default):
-    try:
-        return int(value)
-    except (TypeError, ValueError):
-        return default
-
-
-def _parse_float(value, default):
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return default
 
 
 def _normalize_level(levelno: int, levelname: str) -> str:
@@ -168,51 +138,22 @@ class LogLevelCounterHandler(logging.Handler):
             super().close()
 
 
-def create_log_handlers(config):
+def create_log_handlers(nicos_config):
     """Create facility-local log handlers based on ESS config keys."""
-    if not _parse_bool(getattr(config, "telemetry_enabled", False)):
+    cfg = read_carbon_config(nicos_config)
+    if cfg is None:
         return []
 
-    host = getattr(config, "telemetry_carbon_host", None)
-    if not host:
-        raise ConfigurationError(
-            "telemetry_enabled=true requires telemetry_carbon_host"
-        )
-
-    port = _parse_int(getattr(config, "telemetry_carbon_port", 2003), 2003)
-    prefix = str(getattr(config, "telemetry_prefix", "nicos"))
-    instrument = str(getattr(config, "instrument", "unknown"))
     service_name = str(getattr(session, "appname", "unknown"))
-    flush_interval_s = _parse_float(
-        getattr(config, "telemetry_flush_interval_s", 10), 10
-    )
-    heartbeat_interval_s = _parse_float(
-        getattr(config, "telemetry_heartbeat_interval_s", 10), 10
-    )
-    reconnect_delay_s = _parse_float(
-        getattr(config, "telemetry_reconnect_delay_s", 2), 2
-    )
-    queue_max = _parse_int(getattr(config, "telemetry_queue_max", 10000), 10000)
-    connect_timeout_s = _parse_float(
-        getattr(config, "telemetry_connect_timeout_s", 1), 1
-    )
-    send_timeout_s = _parse_float(getattr(config, "telemetry_send_timeout_s", 1), 1)
+    client = create_carbon_client(cfg)
 
-    client = CarbonTcpClient(
-        host=host,
-        port=port,
-        reconnect_delay_s=reconnect_delay_s,
-        queue_max=queue_max,
-        connect_timeout_s=connect_timeout_s,
-        send_timeout_s=send_timeout_s,
-    )
     return [
         LogLevelCounterHandler(
-            instrument=instrument,
-            prefix=prefix,
+            instrument=cfg.instrument,
+            prefix=cfg.prefix,
             client=client,
             service_name=service_name,
-            flush_interval_s=flush_interval_s,
-            heartbeat_interval_s=heartbeat_interval_s,
+            flush_interval_s=cfg.flush_interval_s,
+            heartbeat_interval_s=cfg.heartbeat_interval_s,
         )
     ]
