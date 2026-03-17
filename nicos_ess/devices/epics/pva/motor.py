@@ -1,4 +1,3 @@
-import copy
 import threading
 import time
 
@@ -14,7 +13,7 @@ from nicos.core import (
     pvname,
     status,
 )
-from nicos.core.errors import ConfigurationError
+from nicos.core.errors import ConfigurationError, MoveError, PositionError
 from nicos.core.mixins import CanDisable, HasLimits, HasOffset
 from nicos.devices.abstract import CanReference, Motor
 from nicos.devices.epics.status import SEVERITY_TO_STATUS
@@ -45,6 +44,9 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
     """
 
     valuetype = float
+    limit_rel_tolerance = 1e-12
+    errorstates = {**Motor.errorstates, status.UNKNOWN: MoveError}
+    _startup_moveable_limits_pending = False
 
     parameters = {
         "motorpv": Param(
@@ -167,7 +169,7 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
             "lowlimit": RecordInfo("", ".LLM", RecordType.VALUE),
             "dialhighlimit": RecordInfo("", ".DHLM", RecordType.VALUE),
             "diallowlimit": RecordInfo("", ".DLLM", RecordType.VALUE),
-            "enable": RecordInfo("", ".CNEN", RecordType.VALUE),
+            "enable": RecordInfo("", ".CNEN", RecordType.BOTH),
             "set": RecordInfo("", ".SET", RecordType.VALUE),
             "foff": RecordInfo("", ".FOFF", RecordType.VALUE),
             "dir": RecordInfo("", ".DIR", RecordType.VALUE),
@@ -229,6 +231,9 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
                             self._connection_change_callback,
                         )
                     )
+        self._startup_moveable_limits_pending = (
+            self._uses_moveable_startup_limit_compat()
+        )
 
     def doRead(self, maxage=0):
         return self._get_cached_pv_or_ask("value")
@@ -246,18 +251,58 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         return self._get_cached_pv_or_ask("target")
 
     def doReadAbslimits(self):
-        absmin = self._get_cached_pv_or_ask("diallowlimit")
-        absmax = self._get_cached_pv_or_ask("dialhighlimit")
-        return absmin, absmax
+        dial_min = self._get_cached_pv_or_ask("diallowlimit")
+        dial_max = self._get_cached_pv_or_ask("dialhighlimit")
+        return dial_min, dial_max
 
     def doReadHwuserlimits(self):
-        umin = self._get_cached_pv_or_ask("lowlimit")
-        umax = self._get_cached_pv_or_ask("highlimit")
-        limits = (umin, umax)
-        self._checkLimits(limits)
-        return umin, umax
+        dial_min = self._get_cached_pv_or_ask("diallowlimit")
+        dial_max = self._get_cached_pv_or_ask("dialhighlimit")
+        if dial_min > dial_max:
+            raise ConfigurationError(
+                self,
+                f"dial lowlimit ({dial_min}) above dial highlimit ({dial_max})",
+            )
+        offset = self.offset
+        hw_user_min = self._get_cached_pv_or_ask("lowlimit")
+        hw_user_max = self._get_cached_pv_or_ask("highlimit")
+        if hw_user_min > hw_user_max:
+            raise ConfigurationError(
+                self,
+                f"hardware user lowlimit ({hw_user_min}) above hardware user highlimit ({hw_user_max})",
+            )
+        if not self._user_limits_fit_dial_window(
+            hw_user_min, hw_user_max, dial_min, dial_max, offset
+        ):
+            raise ConfigurationError(
+                self,
+                "hardware userlimits (%s, %s) are inconsistent with dial limits "
+                "(%s, %s), offset (%s) and direction (%s)"
+                % (
+                    hw_user_min,
+                    hw_user_max,
+                    dial_min,
+                    dial_max,
+                    offset,
+                    self._get_pv("dir", as_string=True),
+                ),
+            )
+        return hw_user_min, hw_user_max
 
     def doReadUserlimits(self):
+        # Moveable.init() compares userlimits against (abslimits - offset) using
+        # the NICOS HasOffset convention. EPICS uses the opposite sign
+        # convention, so expose the same boundary-form limits once during init
+        # and switch back to the regular EPICS user coordinates afterwards.
+        if self._startup_moveable_limits_pending:
+            # Validate that EPICS record limits are internally consistent even
+            # when we return the NICOS-compatible startup boundary values.
+            self.hwuserlimits
+            self._startup_moveable_limits_pending = False
+            dial_min, dial_max = self.abslimits
+            offset = self.offset
+            return dial_min - offset, dial_max - offset
+
         hw_umin, hw_umax = self.hwuserlimits
         omin, omax = self.limitoffsets
 
@@ -301,6 +346,13 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
     def doIsCompleted(self):
         if self._sim_intercept:
             return True
+
+        cur_status, cur_message = self.status(0)
+        if cur_status in self.busystates:
+            return False
+        if cur_status in self.errorstates:
+            raise self.errorstates[cur_status](self, cur_message)
+
         moving = self._get_cached_pv_or_ask("moving")
         pos = self._get_cached_pv_or_ask("value")
         target = self._get_cached_pv_or_ask("target")
@@ -308,14 +360,15 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
 
         if abs(target - pos) > deadband:
             return False
-
-        return moving == 0
+        if moving != 0:
+            return False
+        return True
 
     def doStart(self, value):
         if abs(self.read(0) - value) <= self.precision:
             return
 
-        self._cache.put(self._name, "status", (status.BUSY, "Moving abs"), time.time())
+        self._cache_status_if_higher((status.BUSY, "Moving abs"))
         self._put_pv("target", value)
 
     def doWriteSpeed(self, value):
@@ -362,12 +415,6 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         self.log.info("Offset changed to %s", new_off)
 
     def doWriteUserlimits(self, value):
-        umin, umax = value
-        amin, amax = self.abslimits
-        offset = self.offset
-        if umin == amin - offset and umax == amax - offset:
-            value = (umin + offset * 2, umax + offset * 2)
-
         self._checkLimits(value)
 
         umin, umax = value
@@ -408,9 +455,6 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         self._put_pv("foff", 0)
 
     def isAllowed(self, pos):
-        status_code, status_msg = self.status()
-        if status_code in self.errorstates:
-            return False, status_msg
         if self.userlimits == (0, 0) and self.abslimits == (0, 0):
             # No limits defined
             return True, ""
@@ -423,10 +467,8 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         with self._lock:
             epics_status, message = self._get_alarm_status_and_msg()
             self._motor_status = epics_status, message
-        if epics_status == status.ERROR:
-            return status.ERROR, message or "Unknown problem in record"
-        elif epics_status == status.WARN:
-            return status.WARN, message
+        message = (message or "").strip()
+        status_candidates = [self._alarm_status_candidate(epics_status, message)]
 
         done_moving = self._get_cached_pv_or_ask("donemoving")
         moving = self._get_cached_pv_or_ask("moving")
@@ -434,8 +476,11 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
             if self._get_cached_pv_or_ask("homeforward") or self._get_cached_pv_or_ask(
                 "homereverse"
             ):
-                return status.BUSY, message or "homing"
-            return status.BUSY, message or f"moving to {self.target}"
+                status_candidates.append((status.BUSY, message or "homing"))
+            else:
+                status_candidates.append(
+                    (status.BUSY, message or f"moving to {self.target}")
+                )
 
         if self.has_powerauto:
             powerauto_enabled = self._get_cached_pv_or_ask("powerauto")
@@ -443,25 +488,26 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
             powerauto_enabled = 0
 
         if not powerauto_enabled and not self._get_cached_pv_or_ask("enable"):
-            return status.WARN, "motor is not enabled"
+            status_candidates.append((status.WARN, "motor is not enabled"))
 
         miss = self._get_cached_pv_or_ask("miss")
         if miss != 0:
-            return (status.NOTREACHED, message or "did not reach target position.")
+            status_candidates.append(
+                (status.NOTREACHED, message or "did not reach target position.")
+            )
 
         high_limitswitch = self._get_cached_pv_or_ask("highlimitswitch")
         if high_limitswitch != 0:
-            return status.WARN, message or "at high limit switch."
+            status_candidates.append((status.WARN, message or "at high limit switch."))
 
         low_limitswitch = self._get_cached_pv_or_ask("lowlimitswitch")
         if low_limitswitch != 0:
-            return status.WARN, message or "at low limit switch."
+            status_candidates.append((status.WARN, message or "at low limit switch."))
 
         limit_violation = self._get_cached_pv_or_ask("softlimit")
         if limit_violation != 0:
-            return status.WARN, message or "soft limit violation."
-
-        return status.OK, message
+            status_candidates.append((status.WARN, message or "soft limit violation."))
+        return self._select_highest_status(status_candidates)
 
     def _value_change_callback(
         self, name, param, value, units, limits, severity, message, **kwargs
@@ -532,8 +578,32 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
 
         return valid_speed
 
+    @staticmethod
+    def _select_highest_status(status_candidates):
+        return max(status_candidates, key=lambda status_candidate: status_candidate[0])
+
+    @staticmethod
+    def _alarm_status_candidate(epics_status, message):
+        if epics_status in (status.ERROR, status.UNKNOWN):
+            return epics_status, message or "Unknown problem in record"
+        if epics_status == status.WARN:
+            return status.WARN, message
+        return status.OK, message
+
+    def _cache_status_if_higher(self, candidate_status):
+        if self._cache is None:
+            return
+        try:
+            current_status = self._do_status()
+        except Exception:
+            # Keep the current cached state if status cannot be determined
+            # reliably at this point.
+            return
+        if candidate_status[0] > current_status[0]:
+            self._cache.put(self._name, "status", candidate_status, time.time())
+
     def _get_msgtxt(self):
-        msg_txt = self._get_cached_pv_or_ask("msgtxt", as_string=True)
+        msg_txt = self._get_cached_pv_or_ask("msgtxt", as_string=True).strip()
 
         msg_stat = SEVERITY_TO_STATUS.get(
             self._get_cached_pv_or_ask("msgtxt_severity"), status.UNKNOWN
@@ -544,15 +614,24 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         return max(msg_stat, motor_stat)
 
     def _update_status_with_msgtxt(self, motor_stat, motor_msg):
+        motor_msg = (motor_msg or "").strip()
         msg_stat, msg_txt = self._get_msgtxt()
-        if motor_stat == status.UNKNOWN:
-            motor_stat = status.ERROR
-        motor_stat = self.increase_severity_if_msgtxt_severity_higher(
+        merged_stat = self.increase_severity_if_msgtxt_severity_higher(
             msg_stat, motor_stat
         )
-        if self._motor_status != (motor_stat, msg_txt):
-            self._log_epics_msg_info(msg_txt, motor_stat, motor_msg)
-        return motor_stat, msg_txt
+
+        if merged_stat == status.OK:
+            merged_msg = ""
+        elif msg_stat > motor_stat:
+            merged_msg = msg_txt or motor_msg
+        elif msg_stat == motor_stat and msg_stat != status.OK:
+            merged_msg = msg_txt or motor_msg
+        else:
+            merged_msg = motor_msg or msg_txt
+
+        if self._motor_status != (merged_stat, merged_msg):
+            self._log_epics_msg_info(merged_msg, merged_stat, motor_msg)
+        return merged_stat, merged_msg
 
     def _get_alarm_status_and_msg(self):
         def _get_value_status():
@@ -562,12 +641,15 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         motor_stat, motor_msg = get_from_cache_or(
             self, "value_status", _get_value_status
         )
+        motor_msg = (motor_msg or "").strip()
 
         if self.has_msgtxt:
             motor_stat, motor_msg = self._update_status_with_msgtxt(
                 motor_stat, motor_msg
             )
-        return motor_stat, motor_msg.strip()
+        elif motor_stat == status.OK:
+            motor_msg = ""
+        return motor_stat, motor_msg
 
     def _log_epics_msg_info(self, error_msg, stat, epics_msg):
         if stat == status.OK or stat == status.UNKNOWN:
@@ -577,14 +659,40 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         elif stat == status.ERROR:
             self.log.error("%s (%s)", error_msg, epics_msg)
 
-    def _user_to_dial(self, val):
+    def _get_dir_sign(self):
+        return 1 if self._get_pv("dir", as_string=True) == "Pos" else -1
+
+    def _limit_margin(self, boundary_value):
+        return abs(boundary_value) * self.limit_rel_tolerance
+
+    def _user_limits_fit_dial_window(
+        self, hw_user_min, hw_user_max, dial_window_min, dial_window_max, offset
+    ):
+        dir_sign = self._get_dir_sign()
+        dial_from_user_low = self._user_to_dial(hw_user_min, offset)
+        dial_from_user_high = self._user_to_dial(hw_user_max, offset)
+        if dir_sign > 0:
+            dial_min = dial_from_user_low
+            dial_max = dial_from_user_high
+        else:
+            dial_min = dial_from_user_high
+            dial_max = dial_from_user_low
+        min_margin = self._limit_margin(dial_window_min)
+        max_margin = self._limit_margin(dial_window_max)
+        return (
+            dial_window_min - min_margin <= dial_min
+            and dial_max <= dial_window_max + max_margin
+        )
+
+    def _user_to_dial(self, val, offset=None):
         """
         Convert a user-coordinate value to dial (hardware) units.
 
         user = dial * DIR + OFF      ⇒     dial = (user - OFF) / DIR
         """
-        dir_sign = 1 if self._get_pv("dir", as_string=True) == "Pos" else -1
-        return (val - self.offset) / dir_sign
+        if offset is None:
+            offset = self.offset
+        return (val - offset) / self._get_dir_sign()
 
     def _checkLimits(self, limits):
         """
@@ -593,25 +701,36 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         NICOS base version adds the offset; for EPICS we have to subtract it.
         """
         umin, umax = limits
-        amin, amax = self.abslimits  # dial / hardware numbers
+        dial_window_min, dial_window_max = self.abslimits
 
-        umin_hw = self._user_to_dial(umin)  # convert to dial units
-        umax_hw = self._user_to_dial(umax)
-
-        if umin_hw > umax_hw:
+        if umin > umax:
             raise ConfigurationError(
                 self,
                 f"user minimum ({umin}) above user maximum ({umax})",
             )
-        if umin_hw < amin - abs(amin * 1e-12):
+
+        dir_sign = self._get_dir_sign()
+        dial_from_user_low = self._user_to_dial(umin)
+        dial_from_user_high = self._user_to_dial(umax)
+        if dir_sign > 0:
+            umin_hw = dial_from_user_low
+            umax_hw = dial_from_user_high
+        else:
+            umin_hw = dial_from_user_high
+            umax_hw = dial_from_user_low
+
+        min_margin = self._limit_margin(dial_window_min)
+        max_margin = self._limit_margin(dial_window_max)
+
+        if umin_hw < dial_window_min - min_margin:
             raise ConfigurationError(
                 self,
-                f"user minimum ({umin}) below absolute minimum ({amin})",
+                f"user minimum ({umin}) below absolute minimum ({dial_window_min})",
             )
-        if umax_hw > amax + abs(amax * 1e-12):
+        if umax_hw > dial_window_max + max_margin:
             raise ConfigurationError(
                 self,
-                f"user maximum ({umax}) above absolute maximum ({amax})",
+                f"user maximum ({umax}) above absolute maximum ({dial_window_max})",
             )
 
     def _check_in_range(self, curval, userlimits):
@@ -620,6 +739,13 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
             return status.OK, ""
 
         return HasLimits._check_in_range(self, curval, userlimits)
+
+    def _uses_moveable_startup_limit_compat(self):
+        return (
+            "userlimits" not in self._config
+            and "limitoffsets" not in self._config
+            and self.limitoffsets in ((0.0, 0.0), (0, 0))
+        )
 
 
 class EpicsJogMotor(EpicsMotor):
@@ -795,8 +921,8 @@ class EpicsJogMotor(EpicsMotor):
         with self._lock:
             epics_status, message = self._get_alarm_status_and_msg()
             self._motor_status = epics_status, message
-        if epics_status == status.ERROR:
-            return status.ERROR, message or "Unknown problem in record"
+        if epics_status in (status.ERROR, status.UNKNOWN):
+            return epics_status, message or "Unknown problem in record"
         elif epics_status == status.WARN:
             return status.WARN, message
 
@@ -820,7 +946,6 @@ class EpicsJogMotor(EpicsMotor):
         low_limitswitch = self._get_cached_pv_or_ask("lowlimitswitch")
         if low_limitswitch != 0:
             return status.WARN, message or "at low limit switch."
-
         limit_violation = self._get_cached_pv_or_ask("softlimit")
         if limit_violation != 0:
             return status.WARN, message or "soft limit violation."
