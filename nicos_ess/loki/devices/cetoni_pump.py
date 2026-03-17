@@ -230,3 +230,33 @@ class CetoniPumpController(EpicsParameters, CanReference, HasLimits, MappedMovea
                 (status.ERROR, "communication failure"),
                 time.time(),
             )
+
+
+class CetoniPumpStepper(EpicsParameters, MappedMoveable):
+    parameters = {
+        "aspiratepv": Param(
+            "pv to aspirate stepwise volume",
+            type=pvname,
+            mandatory=True,
+            settable=False,
+            userparam=False,
+        ),
+        "dispensepv": Param(
+            "pv to dispense stepwise volume",
+            type=pvname,
+            mandatory=True,
+            settable=False,
+            userparam=False,
+        ),
+    }
+
+    def doInit(self, mode):
+        self._setROParam("mapping", {"Dispense step": 0, "Aspirate step": 1})
+        MappedMoveable.doInit(self, mode)
+        self.valuetype = oneof(*self.mapping.keys())
+
+    def doStart(self, value):
+        if value == "Dispense step":
+            self._epics_wrapper.put_pv_value(self.dispensepv, 1)
+        elif value == "Aspirate step":
+            self._epics_wrapper.put_pv_value(self.aspiratepv, 1)
