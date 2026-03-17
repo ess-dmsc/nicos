@@ -55,7 +55,7 @@ devices = dict(
     ),
     # Sample centring motion
     sample_centring_phi=device(
-        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        "nicos.devices.epics.pva.EpicsAnalogMoveable",
         description="ARINAX sample motor Phi (mockup)",
         readpv="NMX-mockup:PhiPosition",
         writepv="NMX-mockup:PhiPosition",
@@ -63,7 +63,7 @@ devices = dict(
         pva=False,
     ),
     sample_centring_chi=device(
-        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        "nicos.devices.epics.pva.EpicsAnalogMoveable",
         description="ARINAX sample motor Chi (mockup)",
         readpv="NMX-mockup:ChiPosition",
         writepv="NMX-mockup:ChiPosition",
@@ -71,7 +71,7 @@ devices = dict(
         pva=False,
     ),
     sample_centring_theta=device(
-        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
+        "nicos.devices.epics.pva.EpicsAnalogMoveable",
         description="ARINAX sample motor Theta (mockup)",
         readpv="NMX-mockup:ThetaPosition",
         writepv="NMX-mockup:ThetaPosition",
