@@ -97,8 +97,8 @@ class LogLevelCounterHandler(logging.Handler):
     ):
         super().__init__(level=logging.DEBUG)
         self.client = client
-        self.flush_interval_s = max(float(flush_interval_s), 0.0)
-        self.heartbeat_interval_s = max(float(heartbeat_interval_s), 0.0)
+        self.flush_interval_s = flush_interval_s
+        self.heartbeat_interval_s = heartbeat_interval_s
         self._time_fn = time_fn
         self._monotonic_fn = monotonic_fn
         self._metric_root = f"{sanitize_path(prefix)}.{sanitize_segment(instrument)}"
@@ -157,8 +157,9 @@ class LogLevelCounterHandler(logging.Handler):
             try:
                 self.emit_heartbeat()
             except Exception:
-                # Never let telemetry background work destabilize NICOS logging.
-                pass
+                logging.getLogger(__name__).debug(
+                    "Heartbeat emission failed", exc_info=True
+                )
 
     def close(self):
         try:

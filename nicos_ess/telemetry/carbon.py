@@ -73,11 +73,9 @@ class CarbonTcpClient:
     ):
         self.host = str(host).strip()
         self.port = int(port)
-        self.reconnect_delay_s = max(float(reconnect_delay_s), 0.0)
-        self.connect_timeout_s = max(float(connect_timeout_s), 0.0)
-        self.send_timeout_s = (
-            None if send_timeout_s is None else max(float(send_timeout_s), 0.0)
-        )
+        self.reconnect_delay_s = reconnect_delay_s
+        self.connect_timeout_s = connect_timeout_s
+        self.send_timeout_s = send_timeout_s
         self._socket_factory = socket_factory
         self._monotonic_fn = monotonic_fn
         self._socket: socket.socket | None = None
@@ -111,8 +109,9 @@ class CarbonTcpClient:
             return False
 
         payload = "".join(self._pending).encode("utf-8")
+        if self._socket is None:
+            return False
         try:
-            assert self._socket is not None
             self._socket.sendall(payload)
             self._pending.clear()
             return True

@@ -30,10 +30,21 @@ import time
 from collections import defaultdict
 from threading import Lock
 
+from nicos.protocols.cache import cache_load
 from nicos_ess.telemetry.carbon import sanitize_path, sanitize_segment
 from nicos_ess.telemetry.sender import TelemetrySender
 
 SCRIPTS_KEY = "exp/scripts"
+
+_STATUS_CODE_TO_ORDINAL = {
+    200: 0,  # ok
+    210: 1,  # warn
+    220: 2,  # busy
+    230: 3,  # notreached
+    235: 4,  # disabled
+    240: 5,  # error
+    999: 6,  # unknown
+}
 
 
 def _parse_metric_timestamp(timestamp: str) -> int | None:
@@ -81,7 +92,7 @@ class CacheMetricsEmitter:
     ):
         self._client = client
         self._metric_root = f"{sanitize_path(prefix)}.{sanitize_segment(instrument)}"
-        self.flush_interval_s = max(float(flush_interval_s), 0.0)
+        self.flush_interval_s = flush_interval_s
         self._time_fn = time_fn
         self._monotonic_fn = monotonic_fn
         self._last_flush_at = monotonic_fn()
@@ -100,6 +111,8 @@ class CacheMetricsEmitter:
         emitted = []
         if key == SCRIPTS_KEY:
             emitted.extend(self._emit_session_busy(timestamp, value))
+        elif key.endswith("/status"):
+            emitted.extend(self._emit_device_status(timestamp, key, value))
         elif value is not None and key.endswith("/value"):
             self._record_value_update(key)
 
@@ -143,6 +156,28 @@ class CacheMetricsEmitter:
 
         busy = int(_is_scripts_value_busy(value))
         lines = [f"{self._metric_root}.session.busy {busy} {ts}\n"]
+        self._client.send_lines(lines)
+        return lines
+
+    def _emit_device_status(
+        self, timestamp: str, key: str, value: object | None
+    ) -> list[str]:
+        ts = _parse_metric_timestamp(timestamp)
+        if ts is None:
+            return []
+        if value is None:
+            return []
+        try:
+            loaded = cache_load(str(value))
+            code = int(loaded[0])
+        except Exception:
+            return []
+        ordinal = _STATUS_CODE_TO_ORDINAL.get(code, 6)
+        device_name = key.partition("/")[0]
+        if not device_name:
+            return []
+        device_segment = sanitize_segment(device_name)
+        lines = [f"{self._metric_root}.device.{device_segment}.status {ordinal} {ts}\n"]
         self._client.send_lines(lines)
         return lines
 

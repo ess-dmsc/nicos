@@ -169,13 +169,3 @@ class TestCreateCarbonClient:
         assert client.port == 2004
         assert client.reconnect_delay_s == 3.0
         assert client.connect_timeout_s == 2.0
-
-    def test_clamps_negative_timeouts(self):
-        cfg = CarbonConfig(
-            host="carbon.local",
-            connect_timeout_s=-2.0,
-            send_timeout_s=-0.5,
-        )
-        client = create_carbon_client(cfg)
-        assert client.connect_timeout_s == 0.0
-        assert client.send_timeout_s == 0.0

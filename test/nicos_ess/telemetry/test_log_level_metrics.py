@@ -32,6 +32,8 @@ from nicos.utils.loggers import ACTION, INPUT
 from nicos_ess.telemetry.carbon import CarbonTcpClient, sanitize_path, sanitize_segment
 from nicos_ess.telemetry.handlers import LogLevelCounterHandler, create_log_handlers
 
+FIXED_TIMESTAMP = 1773070701
+
 
 class FakeClock:
     def __init__(self, value=0.0):
@@ -229,7 +231,7 @@ def test_log_level_counter_handler_emits_service_specific_metrics():
         flush_interval_s=999,
         heartbeat_interval_s=0,
         start_heartbeat_thread=False,
-        time_fn=lambda: 1773070701,
+        time_fn=lambda: FIXED_TIMESTAMP,
     )
     handler.emit(_make_record(logging.INFO))
     handler.flush()
@@ -237,11 +239,11 @@ def test_log_level_counter_handler_emits_service_specific_metrics():
     metrics = _parse_metrics(client.sent_batches[0])
     assert metrics["nicosserver.ymir.service.daemon.logs.level.info.count"] == (
         1,
-        1773070701,
+        FIXED_TIMESTAMP,
     )
     assert metrics["nicosserver.ymir.service.daemon.logs.total.count"] == (
         1,
-        1773070701,
+        FIXED_TIMESTAMP,
     )
     handler.close()
 
@@ -256,14 +258,14 @@ def test_emit_heartbeat_uses_service_metric_root():
         flush_interval_s=999,
         heartbeat_interval_s=0,
         start_heartbeat_thread=False,
-        time_fn=lambda: 1773070711,
+        time_fn=lambda: FIXED_TIMESTAMP + 10,
     )
     handler.emit_heartbeat()
     assert len(client.sent_batches) == 1
     metrics = _parse_metrics(client.sent_batches[0])
     assert metrics["nicosserver.ymir.service.cache.telemetry.heartbeat"] == (
         1,
-        1773070711,
+        FIXED_TIMESTAMP + 10,
     )
     handler.close()
 

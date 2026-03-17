@@ -45,7 +45,7 @@ class CarbonForwarder(ForwarderBase, Device):
 
     parameter_overrides = {
         "keyfilters": Override(
-            default=[rf"^{SCRIPTS_KEY}$", r".+/value$"],
+            default=[rf"^{SCRIPTS_KEY}$", r".+/value$", r".+/status$"],
             mandatory=False,
         ),
     }

@@ -26,6 +26,7 @@
 
 import pytest
 
+from nicos.protocols.cache import cache_dump
 from nicos_ess.telemetry.metrics import SCRIPTS_KEY, CacheMetricsEmitter
 
 
@@ -214,6 +215,44 @@ class TestCacheMetricsEmitter:
         lines = emitter.process_cache_update("100", "motor1/value", None)
         assert lines == []
         assert emitter.flush() == []
+
+    def test_status_update_emits_correct_ordinal(self, client, emitter):
+        status_value = cache_dump((200, "idle"))
+        lines = emitter.process_cache_update("1710000000", "motor1/status", status_value)
+        assert len(lines) == 1
+        metrics = _parse_metrics(lines)
+        assert metrics["nicos.bifrost.device.motor1.status"] == (0, 1710000000)
+
+    def test_status_unknown_code_maps_to_6(self, client, emitter):
+        status_value = cache_dump((777, "custom"))
+        lines = emitter.process_cache_update("1710000000", "motor1/status", status_value)
+        metrics = _parse_metrics(lines)
+        assert metrics["nicos.bifrost.device.motor1.status"] == (6, 1710000000)
+
+    def test_status_transitions(self, client, emitter):
+        for code, expected_ordinal in [(200, 0), (220, 2), (240, 5), (200, 0)]:
+            status_value = cache_dump((code, "text"))
+            emitter.process_cache_update(
+                "1710000000", "motor1/status", status_value
+            )
+
+        status_values = [
+            _parse_metrics(batch)["nicos.bifrost.device.motor1.status"][0]
+            for batch in client.sent_batches
+        ]
+        assert status_values == [0, 2, 5, 0]
+
+    def test_status_bad_value_is_dropped(self, client, emitter):
+        lines = emitter.process_cache_update(
+            "1710000000", "motor1/status", "not-a-tuple"
+        )
+        assert lines == []
+        assert client.sent_batches == []
+
+    def test_status_none_value_is_dropped(self, client, emitter):
+        lines = emitter.process_cache_update("1710000000", "motor1/status", None)
+        assert lines == []
+        assert client.sent_batches == []
 
     def test_close_flushes_pending_value_update_counts(self, client):
         emitter = CacheMetricsEmitter(
