@@ -1,6 +1,6 @@
 description = "High-level interface to the Selene Guide 2 components"
 
-includes = ["sg2_cart", "sg2-screwdriver", "sg2-interferometer"]
+includes = ["sg2-cart", "sg2-screwdriver"]
 
 display_order = 40  # sort before default devices
 
@@ -28,7 +28,7 @@ devices = dict(
         description="Selene 2 Metrology",
         unit="Item/Group",
         m_cart="mcart2",
-        interferometer="multiline",
+        interferometer="multiline2",
         cart_center=3453.0,
         ch_u_h1="ch23",
         ch_u_h2="ch24",

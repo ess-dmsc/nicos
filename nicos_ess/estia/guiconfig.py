@@ -65,7 +65,7 @@ main_window = docked(
                     title="Metrology Selene 1",
                     positions=["ch27", "ch28"],
                     selene=1,
-                    cart_position="mpos",
+                    cart_position="mpos1",
                     offsetx=0,
                 ),
                 robot_options=dict(
