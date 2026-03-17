@@ -4,7 +4,7 @@ pv_root_1 = "IOC:"
 
 
 devices = dict(
-    right_blade_horizontal=device(
+    right_blade_horizontal_v=device(
         # "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         "nicos.devices.generic.virtual.VirtualMotor",
         description="VS - Blade 1 (right-top) / Horizontal",
@@ -14,7 +14,7 @@ devices = dict(
         unit="mm",
         visibility=(),
     ),
-    right_blade_vertical=device(
+    right_blade_vertical_v=device(
         # "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         "nicos.devices.generic.virtual.VirtualMotor",
         description="VS - Blade 1 (right-top) / Vertical",
@@ -24,7 +24,7 @@ devices = dict(
         unit="mm",
         visibility=(),
     ),
-    left_blade_horizontal=device(
+    left_blade_horizontal_v=device(
         # "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         "nicos.devices.generic.virtual.VirtualMotor",
         description="VS - Blade 2 (lef-bottom)/ Horizontal",
@@ -34,7 +34,7 @@ devices = dict(
         unit="mm",
         visibility=(),
     ),
-    left_blade_vertical=device(
+    left_blade_vertical_v=device(
         # "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         "nicos.devices.generic.virtual.VirtualMotor",
         description="VS - Blade 2 (left-bottom) / Vertical",
@@ -44,7 +44,7 @@ devices = dict(
         unit="mm",
         visibility=(),
     ),
-    slit_rotation=device(
+    slit_rotation_v=device(
         # "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         "nicos.devices.generic.virtual.VirtualMotor",
         description="VS - Rotation around z axis",
@@ -54,19 +54,19 @@ devices = dict(
         unit="deg",
     ),
     ####Controller Device 4-blade Slit
-    four_blade_slit=device(
+    four_blade_slit_v=device(
         "nicos.devices.generic.slit.Slit",
         description="4-blade slit controller",
-        top="right_blade_vertical",
-        bottom="left_blade_vertical",
-        left="left_blade_horizontal",
-        right="right_blade_horizontal",
+        top="right_blade_vertical_v",
+        bottom="left_blade_vertical_v",
+        left="left_blade_horizontal_v",
+        right="right_blade_horizontal_v",
     ),
     ####Readout Devices
-    vs_controller=device(
+    vs_controller_v=device(
         "nicos_ess.estia.devices.virtual_source.VirtualSource",
         description="controller for the slit dimensions using 4 blade slit controls",
-        slit="four_blade_slit",
-        rot="slit_rotation",
+        slit="four_blade_slit_v",
+        rot="slit_rotation_v",
     ),
 )
