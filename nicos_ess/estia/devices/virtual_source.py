@@ -72,9 +72,9 @@ class VirtualSource(Moveable):
 
     def _returnGap(self, pos):
         # [-left, +right, -bottom, +top]
-        l, r, b, t = pos
-        width = r - l
-        height = t - b
+        left, right, bottom, top = pos
+        width = right - left
+        height = top - bottom
         return [width, height]
 
     def _parseTargets(self, target):
@@ -103,8 +103,8 @@ class VirtualSource(Moveable):
         if self.opmode == "centered":
             width, height = self._returnGap(positions)
             return [width, height, angle]
-        l, r, t, b = positions
-        return [l, r, t, b, angle]
+        left, right, bottom, top = positions
+        return [left, right, bottom, top, angle]
 
     def doStatus(self, maxage=0):
         return multiStatus(self._adevs, maxage=maxage)
