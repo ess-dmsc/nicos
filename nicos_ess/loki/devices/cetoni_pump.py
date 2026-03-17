@@ -250,6 +250,8 @@ class CetoniPumpStepper(EpicsParameters, MappedMoveable):
         ),
     }
 
+    parameter_overrides = {"mapping": Override(mandatory=False, internal=True)}
+
     def doInit(self, mode):
         self._setROParam("mapping", {"Dispense step": 0, "Aspirate step": 1})
         MappedMoveable.doInit(self, mode)
