@@ -1,4 +1,4 @@
-description = "ARINAX controls"
+description = "ARINAX controls - The PVs here are available only in production! To be tested."
 
 group = "optional"
 
