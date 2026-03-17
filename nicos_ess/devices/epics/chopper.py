@@ -41,15 +41,15 @@ class ChopperAlarms(EpicsParameters, Readable):
 
     _alarm_state = {}
     _record_fields = {
-        "communication": RecordInfo("value", "Comm_Alrm", RecordType.STATUS),
-        "hardware": RecordInfo("", "HW_Alrm", RecordType.STATUS),
-        "interlock": RecordInfo("", "IntLock_Alrm", RecordType.STATUS),
+        "communication": RecordInfo("value", "Comm_Alrms", RecordType.STATUS),
+        "hardware": RecordInfo("", "HW_Alrms", RecordType.STATUS),
+        "interlock": RecordInfo("", "IntLock_Alrms", RecordType.STATUS),
         "level": RecordInfo("", "Lvl_Alrm", RecordType.STATUS),
-        "position": RecordInfo("", "Pos_Alrm", RecordType.STATUS),
-        "power": RecordInfo("", "Pwr_Alrm", RecordType.STATUS),
-        "reference": RecordInfo("", "Ref_Alrm", RecordType.STATUS),
-        "software": RecordInfo("", "SW_Alrm", RecordType.STATUS),
-        "voltage": RecordInfo("", "Volt_Alrm", RecordType.STATUS),
+        "position": RecordInfo("", "Pos_Alrms", RecordType.STATUS),
+        "power": RecordInfo("", "Pwr_Alrms", RecordType.STATUS),
+        "reference": RecordInfo("", "Ref_Alrms", RecordType.STATUS),
+        "software": RecordInfo("", "SW_Alrms", RecordType.STATUS),
+        "voltage": RecordInfo("", "Volt_Alrms", RecordType.STATUS),
     }
 
     _epics_wrapper = None
