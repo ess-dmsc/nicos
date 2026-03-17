@@ -705,11 +705,12 @@ class EpicsMappedMoveable(EpicsParameters, MappedMoveable):
         MappedMoveable.doInit(self, mode)
 
     def doRead(self, maxage=0):
-        return get_from_cache_or(
+        value = get_from_cache_or(
             self,
             self._record_fields["readpv"].cache_key,
             lambda: self._epics_wrapper.get_pv_value(self.readpv, as_string=True),
         )
+        return self._inverse_mapping[value]
 
     def doStatus(self, maxage=0):
         def _func():
