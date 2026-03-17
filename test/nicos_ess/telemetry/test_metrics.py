@@ -29,20 +29,26 @@ import pytest
 from nicos_ess.telemetry.metrics import SCRIPTS_KEY, CacheMetricsEmitter
 
 
+class FakeClock:
+    def __init__(self, value=0.0):
+        self.value = float(value)
+
+    def __call__(self):
+        return self.value
+
+    def advance(self, delta):
+        self.value += float(delta)
+
+
 class CapturingClient:
     """Minimal CarbonTcpClient stand-in that captures sent lines."""
 
     def __init__(self):
         self.sent_batches = []
         self.closed = False
-        self.flush_calls = 0
 
     def send_lines(self, lines):
         self.sent_batches.append(list(lines))
-        return True
-
-    def flush(self):
-        self.flush_calls += 1
         return True
 
     def close(self):
@@ -68,6 +74,7 @@ class TestCacheMetricsEmitter:
             client=client,
             prefix="nicos",
             instrument="BIFROST",
+            flush_interval_s=10.0,
         )
 
     def test_scripts_empty_emits_idle(self, client, emitter):
@@ -95,7 +102,7 @@ class TestCacheMetricsEmitter:
 
     def test_unrelated_key_produces_no_metrics(self, client, emitter):
         lines = emitter.process_cache_update(
-            "1710000000", "motor1/value", "42.0"
+            "1710000000", "motor1/target", "42.0"
         )
         assert lines == []
         assert client.sent_batches == []
@@ -120,7 +127,10 @@ class TestCacheMetricsEmitter:
 
     def test_custom_prefix_and_instrument(self, client):
         emitter = CacheMetricsEmitter(
-            client=client, prefix="ess.prod", instrument="YMIR"
+            client=client,
+            prefix="ess.prod",
+            instrument="YMIR",
+            flush_interval_s=10.0,
         )
         lines = emitter.process_cache_update("1710000000", SCRIPTS_KEY, "[]")
         metrics = _parse_metrics(lines)
@@ -140,3 +150,87 @@ class TestCacheMetricsEmitter:
             for batch in client.sent_batches
         ]
         assert busy_values == [0, 1, 0]
+
+    def test_value_updates_are_counted_per_device_on_flush(self, client):
+        monotonic_clock = FakeClock(100)
+        emitter = CacheMetricsEmitter(
+            client=client,
+            prefix="nicos",
+            instrument="BIFROST",
+            flush_interval_s=10.0,
+            time_fn=lambda: 1710000010,
+            monotonic_fn=monotonic_clock,
+        )
+
+        emitter.process_cache_update("100", "motor1/value", "1")
+        emitter.process_cache_update("101", "motor1/value", "2")
+        emitter.process_cache_update("102", "detector/value", "3")
+
+        lines = emitter.flush()
+        metrics = _parse_metrics(lines)
+        assert metrics["nicos.bifrost.cache.value_updates.total.count"] == (
+            3,
+            1710000010,
+        )
+        assert metrics["nicos.bifrost.device.motor1.cache.value_updates.count"] == (
+            2,
+            1710000010,
+        )
+        assert metrics["nicos.bifrost.device.detector.cache.value_updates.count"] == (
+            1,
+            1710000010,
+        )
+
+    def test_value_updates_flush_automatically_after_interval(self, client):
+        monotonic_clock = FakeClock(10)
+        emitter = CacheMetricsEmitter(
+            client=client,
+            prefix="nicos",
+            instrument="BIFROST",
+            flush_interval_s=5.0,
+            time_fn=lambda: 1710000020,
+            monotonic_fn=monotonic_clock,
+        )
+
+        emitter.process_cache_update("100", "motor1/value", "1")
+        monotonic_clock.advance(5)
+        lines = emitter.process_cache_update("101", "motor2/value", "2")
+
+        metrics = _parse_metrics(lines)
+        assert metrics["nicos.bifrost.cache.value_updates.total.count"] == (
+            2,
+            1710000020,
+        )
+        assert metrics["nicos.bifrost.device.motor1.cache.value_updates.count"] == (
+            1,
+            1710000020,
+        )
+        assert metrics["nicos.bifrost.device.motor2.cache.value_updates.count"] == (
+            1,
+            1710000020,
+        )
+
+    def test_value_updates_with_none_do_not_count(self, client, emitter):
+        lines = emitter.process_cache_update("100", "motor1/value", None)
+        assert lines == []
+        assert emitter.flush() == []
+
+    def test_close_flushes_pending_value_update_counts(self, client):
+        emitter = CacheMetricsEmitter(
+            client=client,
+            prefix="nicos",
+            instrument="BIFROST",
+            flush_interval_s=10.0,
+            time_fn=lambda: 1710000030,
+        )
+
+        emitter.process_cache_update("100", "motor1/value", "1")
+        emitter.close()
+
+        assert client.closed is True
+        assert len(client.sent_batches) == 1
+        metrics = _parse_metrics(client.sent_batches[0])
+        assert metrics["nicos.bifrost.cache.value_updates.total.count"] == (
+            1,
+            1710000030,
+        )

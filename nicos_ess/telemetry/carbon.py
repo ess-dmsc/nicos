@@ -90,11 +90,6 @@ class CarbonTcpClient:
         with self._lock:
             return len(self._pending)
 
-    def enqueue_lines(self, lines: Iterable[str]) -> None:
-        with self._lock:
-            for line in lines:
-                self._pending.append(line)
-
     def send_lines(self, lines: Iterable[str]) -> bool:
         with self._lock:
             for line in lines:

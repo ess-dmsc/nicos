@@ -44,10 +44,13 @@ class CarbonForwarder(ForwarderBase, Device):
     """
 
     parameter_overrides = {
-        "keyfilters": Override(default=[rf"^{SCRIPTS_KEY}$"], mandatory=False),
+        "keyfilters": Override(
+            default=[rf"^{SCRIPTS_KEY}$", r".+/value$"],
+            mandatory=False,
+        ),
     }
 
-    def doInit(self, mode):
+    def doInit(self, _mode):
         self._emitter = None
         self._initFilters()
 
@@ -58,10 +61,15 @@ class CarbonForwarder(ForwarderBase, Device):
             self.log.info("Telemetry disabled, CarbonForwarder inactive")
             return
         client = create_carbon_client(cfg)
-        self._emitter = CacheMetricsEmitter(client, cfg.prefix, cfg.instrument)
+        self._emitter = CacheMetricsEmitter(
+            client,
+            cfg.prefix,
+            cfg.instrument,
+            flush_interval_s=cfg.flush_interval_s,
+        )
         self.log.info("CarbonForwarder sending to %s:%d", cfg.host, cfg.port)
 
-    def _putChange(self, timestamp, ttl, key, op, value):
+    def _putChange(self, timestamp, _ttl, key, _op, value):
         if self._emitter is None or not self._checkKey(key):
             return
         try:

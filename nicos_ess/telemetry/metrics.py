@@ -26,6 +26,10 @@
 
 from __future__ import annotations
 
+import time
+from collections import defaultdict
+from threading import Lock
+
 from nicos_ess.telemetry.carbon import sanitize_path, sanitize_segment
 from nicos_ess.telemetry.sender import TelemetrySender
 
@@ -57,6 +61,13 @@ class CacheMetricsEmitter:
     :meth:`process_cache_update`; unsupported keys return no metric lines and
     cause no side effects. The emitter does not own retry logic or scheduling;
     those responsibilities stay in the caller and the configured sender.
+
+    Two metric families are emitted:
+
+    - immediate gauge updates derived from specific cache keys such as
+      ``exp/scripts``
+    - flush-windowed counters derived from noisy cache traffic, currently
+      ``*/value`` updates
     """
 
     def __init__(
@@ -64,9 +75,18 @@ class CacheMetricsEmitter:
         client: TelemetrySender,
         prefix: str,
         instrument: str,
+        flush_interval_s: float,
+        time_fn=time.time,
+        monotonic_fn=time.monotonic,
     ):
         self._client = client
         self._metric_root = f"{sanitize_path(prefix)}.{sanitize_segment(instrument)}"
+        self.flush_interval_s = max(float(flush_interval_s), 0.0)
+        self._time_fn = time_fn
+        self._monotonic_fn = monotonic_fn
+        self._last_flush_at = monotonic_fn()
+        self._value_update_counts = defaultdict(int)
+        self._counter_lock = Lock()
 
     def process_cache_update(
         self, timestamp: str, key: str, value: object | None
@@ -77,9 +97,44 @@ class CacheMetricsEmitter:
         timestamps are treated as a dropped telemetry sample rather than a hard
         failure because collector telemetry must never destabilize NICOS.
         """
+        emitted = []
         if key == SCRIPTS_KEY:
-            return self._emit_session_busy(timestamp, value)
-        return []
+            emitted.extend(self._emit_session_busy(timestamp, value))
+        elif value is not None and key.endswith("/value"):
+            self._record_value_update(key)
+
+        if self._should_flush():
+            emitted.extend(self.flush())
+        return emitted
+
+    def flush(self) -> list[str]:
+        """Flush the current `/value` update window and return emitted lines."""
+        with self._counter_lock:
+            if not self._value_update_counts:
+                self._last_flush_at = self._monotonic_fn()
+                return []
+            snapshot = dict(self._value_update_counts)
+            self._value_update_counts.clear()
+            self._last_flush_at = self._monotonic_fn()
+
+        timestamp = int(self._time_fn())
+        total = sum(snapshot.values())
+        lines = [
+            (
+                f"{self._metric_root}.cache.value_updates.total.count "
+                f"{int(total)} {timestamp}\n"
+            )
+        ]
+        for device_name, count in sorted(snapshot.items()):
+            device_segment = sanitize_segment(device_name)
+            lines.append(
+                (
+                    f"{self._metric_root}.device.{device_segment}."
+                    f"cache.value_updates.count {int(count)} {timestamp}\n"
+                )
+            )
+        self._client.send_lines(lines)
+        return lines
 
     def _emit_session_busy(self, timestamp: str, value: object | None) -> list[str]:
         ts = _parse_metric_timestamp(timestamp)
@@ -91,5 +146,18 @@ class CacheMetricsEmitter:
         self._client.send_lines(lines)
         return lines
 
+    def _record_value_update(self, key: str) -> None:
+        device_name, _slash, _param = key.partition("/")
+        if not device_name:
+            return
+        with self._counter_lock:
+            self._value_update_counts[device_name] += 1
+
+    def _should_flush(self) -> bool:
+        if self.flush_interval_s == 0:
+            return True
+        return self._monotonic_fn() - self._last_flush_at >= self.flush_interval_s
+
     def close(self):
+        self.flush()
         self._client.close()

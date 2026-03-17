@@ -35,10 +35,17 @@ from nicos_ess.telemetry.metrics import SCRIPTS_KEY
 
 
 class RecordingEmitter:
-    def __init__(self, client=None, prefix=None, instrument=None):
+    def __init__(
+        self,
+        client=None,
+        prefix=None,
+        instrument=None,
+        flush_interval_s=None,
+    ):
         self.client = client
         self.prefix = prefix
         self.instrument = instrument
+        self.flush_interval_s = flush_interval_s
         self.calls = []
         self.close_calls = 0
 
@@ -51,17 +58,24 @@ class RecordingEmitter:
 
 
 class TestCarbonForwarderHarness:
-    def test_do_init_sets_default_filter_and_empty_emitter(self, daemon_device_harness):
+    def test_do_init_sets_default_filter_and_empty_emitter(
+        self, daemon_device_harness
+    ):
         device = daemon_device_harness.create_master(CarbonForwarder)
 
         assert device._emitter is None
         assert device._checkKey(SCRIPTS_KEY)
-        assert not device._checkKey("motor/value")
+        assert device._checkKey("motor/value")
+        assert not device._checkKey("motor/target")
 
-    def test_start_worker_disabled_resets_emitter(self, daemon_device_harness, monkeypatch):
+    def test_start_worker_disabled_resets_emitter(
+        self, daemon_device_harness, monkeypatch
+    ):
         device = daemon_device_harness.create_master(CarbonForwarder)
         device._emitter = RecordingEmitter()
-        monkeypatch.setattr(metrics_forwarder, "read_carbon_config", lambda _cfg: None)
+        monkeypatch.setattr(
+            metrics_forwarder, "read_carbon_config", lambda _cfg: None
+        )
 
         device._startWorker()
 
@@ -80,13 +94,22 @@ class TestCarbonForwarderHarness:
         created = {}
         device = daemon_device_harness.create_master(CarbonForwarder)
 
-        monkeypatch.setattr(metrics_forwarder, "read_carbon_config", lambda _cfg: cfg)
+        monkeypatch.setattr(
+            metrics_forwarder, "read_carbon_config", lambda _cfg: cfg
+        )
         monkeypatch.setattr(
             metrics_forwarder, "create_carbon_client", lambda _cfg: client
         )
 
-        def make_emitter(client_arg, prefix_arg, instrument_arg):
-            emitter = RecordingEmitter(client_arg, prefix_arg, instrument_arg)
+        def make_emitter(
+            client_arg, prefix_arg, instrument_arg, *, flush_interval_s=None
+        ):
+            emitter = RecordingEmitter(
+                client_arg,
+                prefix_arg,
+                instrument_arg,
+                flush_interval_s=flush_interval_s,
+            )
             created["emitter"] = emitter
             return emitter
 
@@ -98,6 +121,7 @@ class TestCarbonForwarderHarness:
         assert created["emitter"].client is client
         assert created["emitter"].prefix == "nicos"
         assert created["emitter"].instrument == "ymir"
+        assert created["emitter"].flush_interval_s == cfg.flush_interval_s
 
     def test_start_worker_propagates_config_errors(
         self, daemon_device_harness, monkeypatch
@@ -107,7 +131,9 @@ class TestCarbonForwarderHarness:
         def raise_config_error(_cfg):
             raise ConfigurationError("bad telemetry config")
 
-        monkeypatch.setattr(metrics_forwarder, "read_carbon_config", raise_config_error)
+        monkeypatch.setattr(
+            metrics_forwarder, "read_carbon_config", raise_config_error
+        )
 
         with pytest.raises(ConfigurationError):
             device._startWorker()
@@ -126,9 +152,18 @@ class TestCarbonForwarderHarness:
         emitter = RecordingEmitter()
         device._emitter = emitter
 
-        device._putChange("1710000000", "", "motor/value", "=", "42")
+        device._putChange("1710000000", "", "motor/target", "=", "42")
 
         assert emitter.calls == []
+
+    def test_put_change_delegates_value_updates(self, daemon_device_harness):
+        device = daemon_device_harness.create_master(CarbonForwarder)
+        emitter = RecordingEmitter()
+        device._emitter = emitter
+
+        device._putChange("1710000000", "", "motor/value", "=", "42")
+
+        assert emitter.calls == [("1710000000", "motor/value", "42")]
 
     def test_put_change_logs_and_swallows_emitter_errors(
         self, daemon_device_harness, monkeypatch
@@ -142,7 +177,9 @@ class TestCarbonForwarderHarness:
 
         device._emitter = FailingEmitter()
         monkeypatch.setattr(
-            device.log, "warning", lambda *args, **kwargs: warnings.append((args, kwargs))
+            device.log,
+            "warning",
+            lambda *args, **kwargs: warnings.append((args, kwargs)),
         )
 
         device._putChange("1710000000", "", SCRIPTS_KEY, "=", "[]")
