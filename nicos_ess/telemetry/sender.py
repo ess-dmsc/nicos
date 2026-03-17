@@ -22,11 +22,28 @@
 #
 # *****************************************************************************
 
-"""ESS-specific NICOS package hooks."""
+"""Common sender contract for ESS telemetry emitters."""
+
+from __future__ import annotations
+
+from typing import Iterable, Protocol
 
 
-def get_log_handlers(config):
-    """Return optional ESS-specific log handlers configured for this session."""
-    from nicos_ess.telemetry import create_log_handlers
+class TelemetrySender(Protocol):
+    """Line-oriented output contract used by telemetry code.
 
-    return create_log_handlers(config)
+    Implementations receive complete metric lines, usually already formatted for
+    the target backend. They are expected to buffer or transmit those lines,
+    report success through the boolean return value, and clean up any resources
+    in :meth:`close`. Network outages should be handled internally so callers do
+    not need backend-specific retry logic.
+    """
+
+    def send_lines(self, lines: Iterable[str]) -> bool:
+        """Queue and send metric lines."""
+
+    def flush(self) -> bool:
+        """Flush any pending metric lines."""
+
+    def close(self) -> None:
+        """Release sender resources."""

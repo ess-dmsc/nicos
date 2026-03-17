@@ -1,3 +1,27 @@
+# *****************************************************************************
+# NICOS, the Networked Instrument Control System of the MLZ
+# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+#
+# This program is free software; you can redistribute it and/or modify it under
+# the terms of the GNU General Public License as published by the Free Software
+# Foundation; either version 2 of the License, or (at your option) any later
+# version.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+# FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+# details.
+#
+# You should have received a copy of the GNU General Public License along with
+# this program; if not, write to the Free Software Foundation, Inc.,
+# 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+#
+# Module authors:
+#
+#   Jonas Petersson <jonas.petersson@ess.eu>
+#
+# *****************************************************************************
+
 """Tests for nicos_ess.telemetry.config."""
 
 from types import SimpleNamespace
@@ -69,6 +93,14 @@ class TestReadCarbonConfig:
         with pytest.raises(ConfigurationError):
             read_carbon_config(cfg)
 
+    def test_raises_when_enabled_with_blank_host(self):
+        cfg = SimpleNamespace(
+            telemetry_enabled=True,
+            telemetry_carbon_host="   ",
+        )
+        with pytest.raises(ConfigurationError):
+            read_carbon_config(cfg)
+
     def test_returns_config_with_defaults(self):
         cfg = SimpleNamespace(
             telemetry_enabled=True,
@@ -137,3 +169,13 @@ class TestCreateCarbonClient:
         assert client.port == 2004
         assert client.reconnect_delay_s == 3.0
         assert client.connect_timeout_s == 2.0
+
+    def test_clamps_negative_timeouts(self):
+        cfg = CarbonConfig(
+            host="carbon.local",
+            connect_timeout_s=-2.0,
+            send_timeout_s=-0.5,
+        )
+        client = create_carbon_client(cfg)
+        assert client.connect_timeout_s == 0.0
+        assert client.send_timeout_s == 0.0

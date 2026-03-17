@@ -1,3 +1,27 @@
+# *****************************************************************************
+# NICOS, the Networked Instrument Control System of the MLZ
+# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+#
+# This program is free software; you can redistribute it and/or modify it under
+# the terms of the GNU General Public License as published by the Free Software
+# Foundation; either version 2 of the License, or (at your option) any later
+# version.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+# FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+# details.
+#
+# You should have received a copy of the GNU General Public License along with
+# this program; if not, write to the Free Software Foundation, Inc.,
+# 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+#
+# Module authors:
+#
+#   Jonas Petersson <jonas.petersson@ess.eu>
+#
+# *****************************************************************************
+
 """Shared Carbon/Graphite telemetry configuration."""
 
 from __future__ import annotations
@@ -39,7 +63,12 @@ def _parse_float(value, default):
 
 @dataclass(frozen=True)
 class CarbonConfig:
-    """All Carbon/Graphite telemetry settings from nicos.conf."""
+    """Resolved Carbon/Graphite settings read from ``nicos.conf``.
+
+    The dataclass contains only the values needed by the telemetry code after
+    parsing and defaulting. Callers can treat an instance as ready to hand to
+    :func:`create_carbon_client`.
+    """
 
     host: str
     port: int = 2003
@@ -63,6 +92,7 @@ def read_carbon_config(nicos_config) -> CarbonConfig | None:
         return None
 
     host = getattr(nicos_config, "telemetry_carbon_host", None)
+    host = "" if host is None else str(host).strip()
     if not host:
         from nicos.core import ConfigurationError
 
@@ -71,7 +101,7 @@ def read_carbon_config(nicos_config) -> CarbonConfig | None:
         )
 
     return CarbonConfig(
-        host=str(host),
+        host=host,
         port=_parse_int(getattr(nicos_config, "telemetry_carbon_port", 2003), 2003),
         prefix=str(getattr(nicos_config, "telemetry_prefix", "nicos")),
         instrument=str(getattr(nicos_config, "instrument", "unknown")),

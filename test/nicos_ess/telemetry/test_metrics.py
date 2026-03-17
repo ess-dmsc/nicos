@@ -1,3 +1,27 @@
+# *****************************************************************************
+# NICOS, the Networked Instrument Control System of the MLZ
+# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+#
+# This program is free software; you can redistribute it and/or modify it under
+# the terms of the GNU General Public License as published by the Free Software
+# Foundation; either version 2 of the License, or (at your option) any later
+# version.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+# FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+# details.
+#
+# You should have received a copy of the GNU General Public License along with
+# this program; if not, write to the Free Software Foundation, Inc.,
+# 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+#
+# Module authors:
+#
+#   Jonas Petersson <jonas.petersson@ess.eu>
+#
+# *****************************************************************************
+
 """Tests for nicos_ess.telemetry.metrics (CacheMetricsEmitter)."""
 
 import pytest
@@ -11,9 +35,14 @@ class CapturingClient:
     def __init__(self):
         self.sent_batches = []
         self.closed = False
+        self.flush_calls = 0
 
     def send_lines(self, lines):
         self.sent_batches.append(list(lines))
+        return True
+
+    def flush(self):
+        self.flush_calls += 1
         return True
 
     def close(self):
@@ -26,12 +55,6 @@ def _parse_metrics(lines):
         metric, value, timestamp = line.strip().split(" ")
         parsed[metric] = (int(value), int(timestamp))
     return parsed
-
-
-def _all_metrics(client):
-    """Flatten all sent batches into a single parsed dict."""
-    all_lines = [line for batch in client.sent_batches for line in batch]
-    return _parse_metrics(all_lines)
 
 
 class TestCacheMetricsEmitter:
@@ -65,6 +88,11 @@ class TestCacheMetricsEmitter:
         metrics = _parse_metrics(lines)
         assert metrics["nicos.bifrost.session.busy"] == (0, 1710000000)
 
+    def test_scripts_whitespace_only_list_is_treated_as_idle(self, client, emitter):
+        lines = emitter.process_cache_update("1710000000", SCRIPTS_KEY, "[   ]")
+        metrics = _parse_metrics(lines)
+        assert metrics["nicos.bifrost.session.busy"] == (0, 1710000000)
+
     def test_unrelated_key_produces_no_metrics(self, client, emitter):
         lines = emitter.process_cache_update(
             "1710000000", "motor1/value", "42.0"
@@ -85,6 +113,11 @@ class TestCacheMetricsEmitter:
         metrics = _parse_metrics(lines)
         assert metrics["nicos.bifrost.session.busy"] == (0, 1710000000)
 
+    def test_bad_timestamp_drops_sample(self, client, emitter):
+        lines = emitter.process_cache_update("not-a-timestamp", SCRIPTS_KEY, "[]")
+        assert lines == []
+        assert client.sent_batches == []
+
     def test_custom_prefix_and_instrument(self, client):
         emitter = CacheMetricsEmitter(
             client=client, prefix="ess.prod", instrument="YMIR"
@@ -102,7 +135,8 @@ class TestCacheMetricsEmitter:
         emitter.process_cache_update("200", SCRIPTS_KEY, "['scan()']")
         emitter.process_cache_update("300", SCRIPTS_KEY, "[]")
 
-        metrics = _all_metrics(client)
-        # Last value for the metric key wins in our flat parse, but we
-        # verify all three sends happened.
-        assert len(client.sent_batches) == 3
+        busy_values = [
+            _parse_metrics(batch)["nicos.bifrost.session.busy"][0]
+            for batch in client.sent_batches
+        ]
+        assert busy_values == [0, 1, 0]

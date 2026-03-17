@@ -147,9 +147,15 @@ def test_carbon_tcp_client_retries_after_delay_and_flushes_pending():
 
 def test_carbon_tcp_client_queue_max_keeps_latest_entries():
     clock = FakeClock()
+    connect_calls = 0
+    sock = FakeSocket()
 
     def socket_factory(*_args, **_kwargs):
-        raise OSError("offline")
+        nonlocal connect_calls
+        connect_calls += 1
+        if connect_calls <= 3:
+            raise OSError("offline")
+        return sock
 
     client = CarbonTcpClient(
         host="carbon.local",
@@ -163,7 +169,9 @@ def test_carbon_tcp_client_queue_max_keeps_latest_entries():
     client.send_lines(["m.two 2 2\n"])
     client.send_lines(["m.three 3 3\n"])
 
-    assert list(client._pending) == ["m.two 2 2\n", "m.three 3 3\n"]
+    assert client.pending_count == 2
+    assert client.flush()
+    assert sock.sent_payloads == [b"m.two 2 2\nm.three 3 3\n"]
 
 
 def test_log_level_counter_handler_emits_expected_metrics():

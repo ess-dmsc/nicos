@@ -1,3 +1,27 @@
+# *****************************************************************************
+# NICOS, the Networked Instrument Control System of the MLZ
+# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+#
+# This program is free software; you can redistribute it and/or modify it under
+# the terms of the GNU General Public License as published by the Free Software
+# Foundation; either version 2 of the License, or (at your option) any later
+# version.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+# FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+# details.
+#
+# You should have received a copy of the GNU General Public License along with
+# this program; if not, write to the Free Software Foundation, Inc.,
+# 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+#
+# Module authors:
+#
+#   Jonas Petersson <jonas.petersson@ess.eu>
+#
+# *****************************************************************************
+
 """Facility-local log-to-metrics handlers."""
 
 from __future__ import annotations
@@ -11,8 +35,9 @@ from typing import Callable
 
 from nicos import session
 from nicos.utils.loggers import ACTION, INPUT
-from nicos_ess.telemetry.carbon import CarbonTcpClient, sanitize_path, sanitize_segment
+from nicos_ess.telemetry.carbon import sanitize_path, sanitize_segment
 from nicos_ess.telemetry.config import create_carbon_client, read_carbon_config
+from nicos_ess.telemetry.sender import TelemetrySender
 
 _LOG_LEVEL_BUCKETS = {
     logging.DEBUG: "debug",
@@ -47,13 +72,22 @@ def _normalize_level(levelno: int, levelname: str) -> str:
 
 
 class LogLevelCounterHandler(logging.Handler):
-    """Aggregate NICOS log-level counters and flush them to Carbon."""
+    """Aggregate NICOS log records into counter metrics.
+
+    The handler accepts ordinary NICOS log records, groups them by normalized
+    level name, and periodically emits Graphite-style counter samples through
+    the provided sender. The sender is expected to be non-throwing during normal
+    outages: network failures should be handled inside the sender so logging
+    itself stays stable. The handler owns an optional heartbeat thread, so
+    callers must call :meth:`close` during shutdown to flush counters and stop
+    that background work cleanly.
+    """
 
     def __init__(
         self,
         instrument: str,
         prefix: str,
-        client: CarbonTcpClient,
+        client: TelemetrySender,
         flush_interval_s: float = 10.0,
         service_name: str | None = None,
         heartbeat_interval_s: float = 10.0,

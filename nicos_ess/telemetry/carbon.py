@@ -1,3 +1,27 @@
+# *****************************************************************************
+# NICOS, the Networked Instrument Control System of the MLZ
+# Copyright (c) 2009-2024 by the NICOS contributors (see AUTHORS)
+#
+# This program is free software; you can redistribute it and/or modify it under
+# the terms of the GNU General Public License as published by the Free Software
+# Foundation; either version 2 of the License, or (at your option) any later
+# version.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+# FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+# details.
+#
+# You should have received a copy of the GNU General Public License along with
+# this program; if not, write to the Free Software Foundation, Inc.,
+# 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+#
+# Module authors:
+#
+#   Jonas Petersson <jonas.petersson@ess.eu>
+#
+# *****************************************************************************
+
 """Carbon plaintext telemetry helpers."""
 
 from __future__ import annotations
@@ -27,7 +51,14 @@ def sanitize_path(path: str) -> str:
 
 
 class CarbonTcpClient:
-    """Minimal Carbon plaintext sender with reconnect and bounded queue."""
+    """Send Graphite plaintext metrics over TCP with bounded buffering.
+
+    Callers hand this client complete metric lines ending in ``\\n`` via
+    :meth:`send_lines`. The client keeps a bounded in-memory queue, retries
+    connections after a cooldown, and drops the oldest pending lines when the
+    queue is full. It does not raise on network failures; it keeps unsent lines
+    queued and reports success through the boolean return value.
+    """
 
     def __init__(
         self,
@@ -40,11 +71,13 @@ class CarbonTcpClient:
         socket_factory: Callable[..., socket.socket] = socket.create_connection,
         monotonic_fn: Callable[[], float] = time.monotonic,
     ):
-        self.host = host
+        self.host = str(host).strip()
         self.port = int(port)
         self.reconnect_delay_s = max(float(reconnect_delay_s), 0.0)
         self.connect_timeout_s = max(float(connect_timeout_s), 0.0)
-        self.send_timeout_s = send_timeout_s
+        self.send_timeout_s = (
+            None if send_timeout_s is None else max(float(send_timeout_s), 0.0)
+        )
         self._socket_factory = socket_factory
         self._monotonic_fn = monotonic_fn
         self._socket: socket.socket | None = None
