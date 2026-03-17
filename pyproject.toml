@@ -43,11 +43,11 @@ source = "uv-dynamic-versioning"
 pattern = "default-unprefixed"
 
 [tool.hatch.build.targets.sdist]
-only-include = ["nicos-fork"]
+only-include = ["nicos"]
 
 # Configure wheel options. See https://hatch.pypa.io/latest/plugins/builder/wheel/#options
 [tool.hatch.build.targets.wheel]
-packages = ["nicos-fork"]
+packages = ["nicos"]
 
 # to install into the top level of the venv:
 # could be used to load via `sys.prefix` + path
