@@ -14,4 +14,10 @@ devices = dict(
         readpv=f"{pump1_pvroot}SyrType-SP",
         writepv=f"{pump1_pvroot}SyrType-SP",
     ),
+    pump1_stepwise=device(
+        "nicos_ess.loki.devices.cetoni_pump.CetoniPumpStepper",
+        description="Description",
+        aspiratepv=f"{pump1_pvroot}C_AspirateStep",
+        dispensepv=f"{pump1_pvroot}C_DispenseStep",
+    ),
 )
