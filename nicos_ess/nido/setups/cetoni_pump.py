@@ -26,7 +26,7 @@ devices = dict(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
         description="Description",
         readpv=f"{pump1_pvroot}FlowRate",
-        writepv=f"{pump1_pvroot}FlowRate-SP",
+        targetpv=f"{pump1_pvroot}FlowRate-SP",
     ),
     pump1_syringetype=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
