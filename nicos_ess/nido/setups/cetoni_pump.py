@@ -33,7 +33,7 @@ devices = dict(
         writepv=f"{pump1_pvroot}SyrType-SP",
     ),
     pump1_stepsize=device(
-        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
         description="Description",
         readpv=f"{pump1_pvroot}StepSize-SP",
         writepv=f"{pump1_pvroot}StepSize-SP",
