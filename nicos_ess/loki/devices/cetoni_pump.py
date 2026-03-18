@@ -56,6 +56,7 @@ class CetoniPumpController(EpicsParameters, CanReference, MappedMoveable):
     attached_devices = {
         "abs_vol": Attach("Target volume", Moveable),
         "rel_vol": Attach("Target relative volume", Moveable),
+        "flowrate": Attach("Flowrate", Moveable),
     }
 
     def doPreinit(self, mode):
@@ -94,9 +95,14 @@ class CetoniPumpController(EpicsParameters, CanReference, MappedMoveable):
             # "ispumping": RecordInfo(cache_key="", pv_suffix="IsPumping", record_type=RecordType.STATUS),
             # "isfault": RecordInfo(cache_key="", pv_suffix="FaultState", record_type=RecordType.STATUS),
             # "ishomed": RecordInfo(cache_key="", pv_suffix="RefPosInitd", record_type=RecordType.STATUS),
-            "maxvol": RecordInfo(
-                cache_key="maxvol",
+            "max_vol": RecordInfo(
+                cache_key="max_vol",
                 pv_suffix="MaxVol",
+                record_type=RecordType.VALUE,
+            ),
+            "max_flowrate": RecordInfo(
+                cache_key="max_flowrate",
+                pv_suffix="MaxFlowRate",
                 record_type=RecordType.VALUE,
             ),
             # "innerdiameter_rb": RecordInfo(cache_key="filled_volume", pv_suffix="SyrInnerDiam-RB",
@@ -118,9 +124,11 @@ class CetoniPumpController(EpicsParameters, CanReference, MappedMoveable):
         }
 
     def set_limits_on_attached_devices(self):
-        total_vol = self._read_pv("maxvol")
-        print(total_vol)
-        self._attached_abs_vol.userlimits = 0, total_vol
+        max_vol = self._read_pv("max_vol")
+        self._attached_abs_vol.userlimits = 0, max_vol
+
+        max_flowrate = self._read_pv("max_flowrate")
+        self._attached_flowrate.userlimits = 0, max_flowrate
 
     def doInit(self, mode):
         self._setROParam(
