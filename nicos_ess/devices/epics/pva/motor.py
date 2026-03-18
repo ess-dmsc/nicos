@@ -1000,13 +1000,6 @@ class SmaractPiezoMotor(EpicsMotor):
     """
 
     parameters = {
-        "openloop": Param(
-            "Open-loop control mode of the piezo motor.",
-            type=bool,
-            settable=False,
-            volatile=True,
-            userparam=False,
-        ),
         "stepfrequency": Param(
             "Step frequency of the piezo motor.",
             type=float,
@@ -1087,7 +1080,6 @@ class SmaractPiezoMotor(EpicsMotor):
             "lowlimitswitch": RecordInfo("", ".LLS", RecordType.STATUS),
             "highlimitswitch": RecordInfo("", ".HLS", RecordType.STATUS),
             "msgtxt": RecordInfo("", "-MsgTxt", RecordType.STATUS),
-            "openloop_rb": RecordInfo("", "OpenLoop", RecordType.VALUE),
             "stepfrequency": RecordInfo("", "StepFreq", RecordType.VALUE),
             "stepsizeforward": RecordInfo("", "StepSizeFwd", RecordType.VALUE),
             "stepsizereverse": RecordInfo("", "StepSizeRev", RecordType.VALUE),
@@ -1102,9 +1094,6 @@ class SmaractPiezoMotor(EpicsMotor):
 
         if not self.has_msgtxt:
             del self._record_fields["msgtxt"]
-
-    def doReadOpenloop(self):
-        return bool(self._get_cached_pv_or_ask("openloop_rb"))
 
     def doReadStepfrequency(self):
         return self._get_cached_pv_or_ask("stepfrequency")
