@@ -4,6 +4,7 @@ from nicos import session
 from nicos.core import (
     POLLER,
     SIMULATION,
+    Attach,
     HasLimits,
     Moveable,
     Override,
@@ -31,14 +32,15 @@ class CetoniPumpController(EpicsParameters, CanReference, HasLimits, MappedMovea
         - can show the current filled volume in the syringe
         - can control the absolute filled volume (aspirate or dispense to target vol)
         - can control a relative volume (aspirate or dispense a specific vol)
-        - can control stepwise aspirating or dispensing a set volume
+        - can fill the syringe
+        - can empty the syringe
+        - can stop pumping
         - can home the syringe
-        - can select the type of syringe
     """
 
     parameters = {
         "pvroot": Param(
-            "The root of the PV.",
+            "The root of the pv",
             type=pvname,
             mandatory=True,
             settable=False,
@@ -51,6 +53,11 @@ class CetoniPumpController(EpicsParameters, CanReference, HasLimits, MappedMovea
         "abslimits": Override(volatile=True, mandatory=False),
     }
 
+    attached_devices = {
+        "abs_vol": Attach("Target volume", Moveable),
+        "rel_vol": Attach("Target relative volume", Moveable),
+    }
+
     def doPreinit(self, mode):
         self._record_fields = {
             "readpv": RecordInfo(
@@ -58,38 +65,52 @@ class CetoniPumpController(EpicsParameters, CanReference, HasLimits, MappedMovea
                 pv_suffix="FilledVolume",
                 record_type=RecordType.BOTH,
             ),
-            "writepv": RecordInfo(
-                cache_key="target",
+            "absvol_sp": RecordInfo(
+                cache_key="absvol_sp",
                 pv_suffix="C_SetFillVol",
                 record_type=RecordType.VALUE,
+            ),
+            "fill_syringe": RecordInfo(
+                cache_key="fill_syringe",
+                pv_suffix="C_FillSyringe",
+                record_type=RecordType.VALUE,
+            ),
+            "empty_syringe": RecordInfo(
+                cache_key="empty_syringe",
+                pv_suffix="C_EmptySyringe",
+                record_type=RecordType.VALUE,
+            ),
+            "stop_pump": RecordInfo(
+                cache_key="stop_pump",
+                pv_suffix="C_Stop",
+                record_type=RecordType.VALUE,
+            ),
+            "home": RecordInfo(
+                cache_key="home",
+                pv_suffix="C_InitPosition",
+                record_type=RecordType.BOTH,
             ),
             # "pressure": RecordInfo(cache_key="filled_volume", pv_suffix="Pressure")
             # "ispumping": RecordInfo(cache_key="", pv_suffix="IsPumping", record_type=RecordType.STATUS),
             # "isfault": RecordInfo(cache_key="", pv_suffix="FaultState", record_type=RecordType.STATUS),
             # "ishomed": RecordInfo(cache_key="", pv_suffix="RefPosInitd", record_type=RecordType.STATUS),
             # "maxvol": RecordInfo(cache_key="", pv_suffix="MaxVol", record_type=RecordType.VALUE),
-            # "flowrate_rb": RecordInfo(cache_key="filled_volume", pv_suffix="FlowRate-RB",
-            # "flowrate_sp": RecordInfo(cache_key="filled_volume", pv_suffix="FlowRate-RB",
-            # "aspiratestep": RecordInfo(cache_key="filled_volume", pv_suffix="C_AspirateStep",
-            # "dispensestep": RecordInfo(cache_key="filled_volume", pv_suffix="C_DispenseStep",
             # "innerdiameter_rb": RecordInfo(cache_key="filled_volume", pv_suffix="SyrInnerDiam-RB",
             # "innerdiameter_sp": RecordInfo(cache_key="filled_volume", pv_suffix="SyrInnerDiam-SP",
             # "maxstroke_rb": RecordInfo(cache_key="filled_volume", pv_suffix="SyrMaxPstStrk-RB",
             # "maxstroke_sp": RecordInfo(cache_key="filled_volume", pv_suffix="SyrMaxPstStrk-SP",
             # "maxpressure_rb": RecordInfo(cache_key="filled_volume", pv_suffix="MaxPressure-RB",
             # "maxpressure_sp": RecordInfo(cache_key="filled_volume", pv_suffix="MaxPressure-SP",
-            # "stepsize_rb": RecordInfo(cache_key="filled_volume", pv_suffix="StepSize-RB",
-            # "stepsize_sp": RecordInfo(cache_key="filled_volume", pv_suffix="StepSize-SP",
-            # "home": RecordInfo(cache_key="filled_volume", pv_suffix=" InitPosition",
         }
         self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
         self.connect_pvs()
 
         self._commands = {
-            "set_volume": self.set_volume,
-            "set_relative_volume": self.set_relative_volume,
-            "aspirate_step": self.aspirate_step,
-            "dispense_step": self.dispense_step,
+            "pump_to_abs_volume": self.pump_to_abs_volume,
+            "pump_relative_volume": self.pump_relative_volume,
+            "fill_syringe": self.fill_syringe,
+            "empty_syringe": self.empty_syringe,
+            "stop": self.stop_pump,
         }
 
     def doInit(self, mode):
@@ -102,7 +123,6 @@ class CetoniPumpController(EpicsParameters, CanReference, HasLimits, MappedMovea
 
     def connect_pvs(self):
         self._epics_wrapper.connect_pv(self._get_pv_name("readpv"))
-        self._epics_wrapper.connect_pv(self._get_pv_name("writepv"))
 
     def set_up_subscriptions(self):
         self._epics_subscriptions = []
@@ -141,12 +161,53 @@ class CetoniPumpController(EpicsParameters, CanReference, HasLimits, MappedMovea
     def _set_pv(self, name, value):
         self._epics_wrapper.put_pv_value(name, value)
 
+    @usermethod
+    def pump_abs_volume(self, volume=None):
+        if self._mode == SIMULATION:
+            return
+        if not volume:
+            volume = self._attached_abs_vol.read()
+        self._set_pv("absvol_sp", volume)
+
+    @usermethod
+    def pump_relative_volume(self, volume=None):
+        if self._mode == SIMULATION:
+            return
+        if not volume:
+            volume = self._attached_rel_vol.read()
+        ### TODO
+
+    @usermethod
+    def fill_syringe(self):
+        if self._mode == SIMULATION:
+            return
+        self._set_pv("fill_syringe", 1)
+
+    @usermethod
+    def empty_syringe(self):
+        if self._mode == SIMULATION:
+            return
+        self._set_pv("empty_syringe", 1)
+
+    @usermethod
+    def stop_pump(self):
+        if self._mode == SIMULATION:
+            return
+        self._set_pv("stop_pump", 1)
+
     def doRead(self, maxage=0):
         return self._get_cached_pv_or_ask("readpv")
 
-    def doStart(self, value):
-        self._cache.put(self, "status", (status.BUSY, "Moving"), time.time())
-        self._set_pv(self._get_pv_name("writepv"), value)
+    def doStart(self, target):
+        self._cache.put(self, "status", (status.BUSY, "Pumping"), time.time())
+        if target in self._commands:
+            self._commands[target]()
+
+    def doReference(self):
+        self._set_pv(self._get_pv_name("home"), 1)
+
+    def doStop(self):
+        self.stop_pump()
 
     def doStatus(self, maxage=0):
         # return get_from_cache_or(self, "status", self._do_status)
@@ -166,37 +227,6 @@ class CetoniPumpController(EpicsParameters, CanReference, HasLimits, MappedMovea
         if busy:
             return status.BUSY, "Pumping"
         return status.OK
-
-    def doReference(self):
-        self._set_pv(self._get_pv_name("reference"), 1)
-
-    def doReadAbslimits(self):
-        max_volume = self._get_cached_pv_or_ask("maxvol")
-        return 0, max_volume
-
-    def doWriteInnerdiameter(self, value):
-        self._set_pv(self._get_pv_name("innerdiameter_sp"), value)
-        return value
-
-    def doWriteMaxStroke(self, value):
-        self._set_pv(self._get_pv_name("maxstroke_sp"), value)
-        return value
-
-    def doWritemaxpressure(self, value):
-        self._set_pv(self._get_pv_name("maxpressure_sp"), value)
-        return value
-
-    def doWriteStepsize(self, value):
-        self._set_pv(self._get_pv_name("stepsize_sp"), value)
-        return value
-
-    @usermethod
-    def aspirate_step(self):
-        self._set_pv(self._get_pv_name("aspiratestep"), 1)
-
-    @usermethod
-    def dispense_step(self):
-        self._set_pv(self._get_pv_name("dispensestep"), 1)
 
     def _value_change_callback(
         self, name, param, value, units, limits, severity, message, **kwargs
@@ -233,6 +263,14 @@ class CetoniPumpController(EpicsParameters, CanReference, HasLimits, MappedMovea
 
 
 class CetoniPumpStepper(EpicsParameters, MappedMoveable):
+    """
+    A device for controlling a Cetoni syringe pump in a stepwise manner
+
+     The device:
+        - can control stepwise aspirating or dispensing a set volume
+
+    """
+
     parameters = {
         "aspiratepv": Param(
             "pv to aspirate stepwise volume",
