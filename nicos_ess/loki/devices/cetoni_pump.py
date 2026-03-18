@@ -94,7 +94,9 @@ class CetoniPumpController(EpicsParameters, CanReference, MappedMoveable):
             # "ispumping": RecordInfo(cache_key="", pv_suffix="IsPumping", record_type=RecordType.STATUS),
             # "isfault": RecordInfo(cache_key="", pv_suffix="FaultState", record_type=RecordType.STATUS),
             # "ishomed": RecordInfo(cache_key="", pv_suffix="RefPosInitd", record_type=RecordType.STATUS),
-            # "maxvol": RecordInfo(cache_key="", pv_suffix="MaxVol", record_type=RecordType.VALUE),
+            "maxvol": RecordInfo(
+                cache_key="maxvol", pv_suffix="MaxVol", record_type=RecordType.VALUE
+            ),
             # "innerdiameter_rb": RecordInfo(cache_key="filled_volume", pv_suffix="SyrInnerDiam-RB",
             # "innerdiameter_sp": RecordInfo(cache_key="filled_volume", pv_suffix="SyrInnerDiam-SP",
             # "maxstroke_rb": RecordInfo(cache_key="filled_volume", pv_suffix="SyrMaxPstStrk-RB",
@@ -112,6 +114,12 @@ class CetoniPumpController(EpicsParameters, CanReference, MappedMoveable):
             "empty_syringe": self.empty_syringe,
             "stop": self.stop_pump,
         }
+
+        self.set_limits_on_attached_devices()
+
+    def set_limits_on_attached_devices(self):
+        total_vol = self._read_pv("maxvol")
+        self._attached_abs_vol.userlimits = (0, total_vol)
 
     def doInit(self, mode):
         self._setROParam(
