@@ -47,12 +47,12 @@ from nicos.devices.generic.detector import (
     PassiveChannel,
     TimerChannelMixin,
 )
-from nicos.devices.tango import PyTangoDevice
+from nicos.devices.tango import PyTangoDevice, PyTangoMixin
 
 from .optional import LimaShutter
 
 
-class HwDevice(PyTangoDevice, AutoDevice, Device):
+class HwDevice(PyTangoMixin, AutoDevice, Device):
     pass
 
 
