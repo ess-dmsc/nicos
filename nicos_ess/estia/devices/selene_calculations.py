@@ -5,14 +5,96 @@ this allows off-line and unit testing.
 
 import numpy as np
 
+from nicos.core import DeviceMixinBase, Param
 
-class SeleneCalculator:
+
+class SeleneCalculator(DeviceMixinBase):
     """
     Calculations for moving the metronomy cart and correcting the mirror positions.
     All angles are in degrees, all distances are in mm.
     """
 
-    def __init__(self):
+    parameters = {
+        "inter_to_retro_horiz_angle": Param(
+            "Nominal reflection angle from interferometer head to retroreflector",
+            mandatory=False,
+            userparam=True,
+            default=14.81,
+            unit="deg",
+        ),
+        "xz_to_retro_horiz_dist": Param(
+            "Nominal distance between XZ plane and retroreflector",
+            mandatory=False,
+            userparam=True,
+            default=120.0,
+            unit="mm",
+        ),
+        "inter_to_retro_1_angle": Param(
+            "Nominal reflection angle from interferometer head to retroreflector",
+            mandatory=False,
+            userparam=True,
+            default=16.39,
+            unit="deg",
+        ),
+        "xz_to_retro_1_dist": Param(
+            "Nominal distance between XZ plane and retroreflector",
+            mandatory=False,
+            userparam=True,
+            default=70.0,
+            unit="mm",
+        ),
+        "xy_to_retro_1_dist": Param(
+            "Nominal distance between XY plane and retroreflector",
+            mandatory=False,
+            userparam=True,
+            default=50.0,
+            unit="mm",
+        ),
+        "xy_to_col_1_dist": Param(
+            "Nominal distance between XY plane and collimator",
+            mandatory=False,
+            userparam=True,
+            default=120.0,
+            unit="mm",
+        ),
+        "inter_to_retro_2_angle": Param(
+            "Nominal reflection angle from interferometer head to retroreflector",
+            mandatory=False,
+            userparam=True,
+            default=15.47,
+            unit="deg",
+        ),
+        "xz_to_retro_2_dist": Param(
+            "Nominal distance between XZ plane and retroreflector",
+            mandatory=False,
+            userparam=True,
+            default=80.0,
+            unit="mm",
+        ),
+        "xy_to_retro_2_dist": Param(
+            "Nominal distance between XY plane and retroreflector",
+            mandatory=False,
+            userparam=True,
+            default=10.0,
+            unit="mm",
+        ),
+        "xy_to_col_2_dist": Param(
+            "Nominal distance between XY plane and collimator",
+            mandatory=False,
+            userparam=True,
+            default=160.0,
+            unit="mm",
+        ),
+        "x_dist_to_cart_centre": Param(
+            "Nominal x-distance of retroreflector and cart center",
+            mandatory=False,
+            userparam=True,
+            default=-15.0,
+            unit="mm",
+        ),
+    }
+
+    def doInit(self):
         self._ellipse_semi_minor_axis = 104.7
         self._ellipse_linear_eccentricity = 6000.0
         self._ellipse_semi_major_axis = np.sqrt(
