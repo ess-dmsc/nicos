@@ -115,8 +115,6 @@ class CetoniPumpController(EpicsParameters, CanReference, MappedMoveable):
             "stop": self.stop_pump,
         }
 
-        self.set_limits_on_attached_devices()
-
     def set_limits_on_attached_devices(self):
         total_vol = self._read_pv("maxvol")
         print(total_vol)
@@ -129,6 +127,8 @@ class CetoniPumpController(EpicsParameters, CanReference, MappedMoveable):
         MappedMoveable.doInit(self, mode)
         self.valuetype = oneof(*self._commands.keys())
         self.set_up_subscriptions()
+
+        self.set_limits_on_attached_devices()
 
     def connect_pvs(self):
         self._epics_wrapper.connect_pv(self._get_pv_name("readpv"))
