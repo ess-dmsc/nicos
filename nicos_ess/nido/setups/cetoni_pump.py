@@ -9,6 +9,7 @@ devices = dict(
         pvroot=pump1_pvroot,
         abs_vol="pump1_vol_to_pump_absolute",
         rel_vol="pump1_vol_to_pump_relative",
+        flowrate="pump1_flowrate",
     ),
     pump1_vol_to_pump_absolute=device(
         "nicos.devices.generic.manual.ManualMove",
