@@ -124,9 +124,9 @@ class CetoniPumpController(EpicsParameters, CanReference, MappedMoveable):
         }
 
     def set_limits_on_attached_devices(self):
+        # TODO: This needs to update when syringe type is updated
         max_vol = self._read_pv("max_vol")
         self._attached_abs_vol.userlimits = 0, max_vol
-
         max_flowrate = self._read_pv("max_flowrate")
         self._attached_flowrate.userlimits = 0, max_flowrate
 
