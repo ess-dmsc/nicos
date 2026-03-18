@@ -2,7 +2,7 @@ description = "Prototype interferometer measurement"
 
 etalon_prefix = "ESTIA-Sel1:Mech-GU-001"
 
-group = "lowlevel"
+# group = "lowlevel"
 
 devices = dict(
     multiline1=device(

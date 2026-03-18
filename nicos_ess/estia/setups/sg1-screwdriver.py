@@ -1,6 +1,6 @@
 description = "Motors for Driver1"
 
-pvprefix = "ESTIA-SG1Rb:MC"
+pvprefix = "ESTIA-SG1Rb:MC-"
 
 devices = dict(
     robot1_pos=device(
@@ -26,7 +26,7 @@ devices = dict(
     driver1_1_hex_state=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="Hexscrew state",
-        readpv="TEST:UNKNOWN-22:Labels",  # to be updated with correct PV
+        readpv=f"{pvprefix}LinY-01:Mtr-MsgTxt",
     ),
     driver1_2_adjust=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
@@ -41,7 +41,7 @@ devices = dict(
     driver1_2_hex_state=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="Hexscrew state",
-        readpv="TEST:UNKNOWN-22:Labels",  # to be updated with correct PV
+        readpv=f"{pvprefix}LinY-02:Mtr-MsgTxt",
     ),
     sr1=device(
         "nicos_ess.estia.devices.selene.SeleneRobot",
