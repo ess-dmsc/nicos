@@ -32,7 +32,7 @@ from nicos.utils.loggers import ACTION, INPUT
 from nicos_ess.telemetry.carbon import CarbonTcpClient, sanitize_path, sanitize_segment
 from nicos_ess.telemetry.handlers import LogLevelCounterHandler, create_log_handlers
 
-FIXED_TIMESTAMP = 1773070701
+FIXED_TIMESTAMP = 1773070701 # Arbitrary fixed timestamp
 
 
 class FakeClock:
@@ -184,7 +184,7 @@ def test_log_level_counter_handler_emits_expected_metrics():
         prefix="nicos",
         client=client,
         flush_interval_s=999,
-        time_fn=lambda: 1710000000,
+        time_fn=lambda: FIXED_TIMESTAMP,
         monotonic_fn=clock,
     )
 
@@ -214,7 +214,7 @@ def test_log_level_counter_handler_emits_expected_metrics():
         "nicos.bifrost.service.unknown.logs.level.critical.count": 1,
     }
     for metric, count in expected_counts.items():
-        assert metrics[metric] == (count, 1710000000)
+        assert metrics[metric] == (count, FIXED_TIMESTAMP)
 
     handler.close()
     assert client.flush_calls == 1
