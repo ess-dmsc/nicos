@@ -162,7 +162,7 @@ class CetoniPumpController(EpicsParameters, CanReference, MappedMoveable):
         self._epics_wrapper.put_pv_value(name, value)
 
     @usermethod
-    def pump_abs_volume(self, volume=None):
+    def pump_to_abs_volume(self, volume=None):
         if self._mode == SIMULATION:
             return
         if not volume:
