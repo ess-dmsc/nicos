@@ -95,7 +95,9 @@ class CetoniPumpController(EpicsParameters, CanReference, MappedMoveable):
             # "isfault": RecordInfo(cache_key="", pv_suffix="FaultState", record_type=RecordType.STATUS),
             # "ishomed": RecordInfo(cache_key="", pv_suffix="RefPosInitd", record_type=RecordType.STATUS),
             "maxvol": RecordInfo(
-                cache_key="maxvol", pv_suffix="MaxVol", record_type=RecordType.VALUE
+                cache_key="maxvol",
+                pv_suffix="MaxVol",
+                record_type=RecordType.VALUE,
             ),
             # "innerdiameter_rb": RecordInfo(cache_key="filled_volume", pv_suffix="SyrInnerDiam-RB",
             # "innerdiameter_sp": RecordInfo(cache_key="filled_volume", pv_suffix="SyrInnerDiam-SP",
@@ -164,8 +166,10 @@ class CetoniPumpController(EpicsParameters, CanReference, MappedMoveable):
     def _get_pv_name(self, pvparam):
         return f"{self.pvroot}{self._record_fields[pvparam].pv_suffix}"
 
-    def _read_pv(self, name, as_string=False):
-        return self._epics_wrapper.get_pv_value(name, as_string=as_string)
+    def _read_pv(self, key, as_string=False):
+        return self._epics_wrapper.get_pv_value(
+            self._get_pv_name(key), as_string=as_string
+        )
 
     def _set_pv(self, name, value):
         self._epics_wrapper.put_pv_value(name, value)
