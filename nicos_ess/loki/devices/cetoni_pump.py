@@ -119,7 +119,8 @@ class CetoniPumpController(EpicsParameters, CanReference, MappedMoveable):
 
     def set_limits_on_attached_devices(self):
         total_vol = self._read_pv("maxvol")
-        self._attached_abs_vol.userlimits = (0, total_vol)
+        print(total_vol)
+        self._attached_abs_vol.userlimits = 0, total_vol
 
     def doInit(self, mode):
         self._setROParam(
