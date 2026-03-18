@@ -14,11 +14,13 @@ devices = dict(
         "nicos.devices.generic.manual.ManualMove",
         description="Description",
         unit="mL",
+        abslimits=(0, 100),
     ),
     pump1_vol_to_pump_relative=device(
         "nicos.devices.generic.manual.ManualMove",
         description="Description",
         unit="mL",
+        abslimits=(-100, 100),
     ),
     pump1_flowrate=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
