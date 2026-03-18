@@ -5,7 +5,7 @@ etalon_prefix = "ESTIA-Sel1:Mech-GU-001"
 # group = "lowlevel"
 
 devices = dict(
-    multiline1=device(
+    multiline2=device(
         "nicos_ess.estia.devices.multiline.MultilineController",
         description="Multiline interferometer controller",
         pvprefix=etalon_prefix,
@@ -18,13 +18,13 @@ devices = dict(
     ),
 )
 
-channels = [1, 2, 3, 4, 5, 6, 7, 8, 11, 12]
+channels = [17, 18, 19, 20, 21, 22, 23, 24, 27, 28]
 
 for ch in channels:
     devices[f"ch{ch:02}"] = device(
         "nicos_ess.estia.devices.multiline.MultilineChannel",
         description=f"Value of channel {ch}",
         channel=ch,
-        controller="multiline1",
+        controller="multiline2",
         unit="mm",
     )
