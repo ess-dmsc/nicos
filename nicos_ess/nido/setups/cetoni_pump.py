@@ -11,13 +11,17 @@ devices = dict(
         rel_vol="pump1_vol_to_pump_relative",
     ),
     pump1_vol_to_pump_absolute=device(
-        "nicos.devices.generic.manual.ManualMove", description="Description"
+        "nicos.devices.generic.manual.ManualMove",
+        description="Description",
+        unit="mL",
     ),
     pump1_vol_to_pump_relative=device(
-        "nicos.devices.generic.manual.ManualMove", description="Description"
+        "nicos.devices.generic.manual.ManualMove",
+        description="Description",
+        unit="mL",
     ),
     pump1_flowrate=device(
-        "nicos_ess.devices.epics.pva.EpicsMoveable",
+        "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
         description="Description",
         readpv=f"{pump1_pvroot}FlowRate",
         writepv=f"{pump1_pvroot}FlowRate-SP",
