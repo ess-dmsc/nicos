@@ -1028,15 +1028,6 @@ class SmaractPiezoMotor(EpicsMotor):
             volatile=True,
             userparam=True,
         ),
-        "feedbacksrc": Param(
-            "Source of position feedback.",
-            type=oneof("Internal", "External"),
-            default="Internal",
-            mandatory=False,
-            settable=True,
-            userparam=True,
-            volatile=True,
-        ),
     }
 
     parameter_overrides = {
@@ -1085,7 +1076,6 @@ class SmaractPiezoMotor(EpicsMotor):
             "stepsizereverse": RecordInfo("", "StepSizeRev", RecordType.VALUE),
             "mclfrequency": RecordInfo("", "MaxCtrlLFreq", RecordType.VALUE),
             "mclfrequency_rb": RecordInfo("", "MaxCtrlLFreq", RecordType.VALUE),
-            "positionrefsrc": RecordInfo("", "PositionRefSrc", RecordType.VALUE),
         }
         self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
         if mode != SIMULATION:
@@ -1126,16 +1116,3 @@ class SmaractPiezoMotor(EpicsMotor):
         if value < 0:
             raise ValueError("MCL frequency must be non-negative.")
         self._put_pv("mclfrequency", value)
-
-    def doReadFeedbacksrc(self):
-        try:
-            position_feedback_source = self._get_pv("positionrefsrc")
-        except TimeoutError as ex:
-            return "Internal"
-        return "External" if position_feedback_source else "Internal"
-
-    def doWriteFeedbacksrc(self, value):
-        try:
-            self._put_pv("positionrefsrc", value)
-        except:
-            raise IndexError("External feedback sensor does not exist for this system.")
