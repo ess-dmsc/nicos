@@ -24,7 +24,7 @@ from nicos_ess.devices.epics.pva.epics_devices import (
 )
 
 
-class CetoniPumpController(EpicsParameters, CanReference, HasLimits, MappedMoveable):
+class CetoniPumpController(EpicsParameters, CanReference, MappedMoveable):
     """
     A device for controlling a Cetoni syringe pump
 
