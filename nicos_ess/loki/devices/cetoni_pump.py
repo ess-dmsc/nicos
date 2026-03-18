@@ -50,7 +50,7 @@ class CetoniPumpController(EpicsParameters, CanReference, MappedMoveable):
 
     parameter_overrides = {
         "unit": Override(mandatory=False, settable=False, default=""),
-        "mapping": Override(internal=True),
+        "mapping": Override(mandatory=False, internal=True),
     }
 
     attached_devices = {
