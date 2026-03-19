@@ -1,6 +1,3 @@
-import pytest
-
-from nicos.core import InvalidValueError
 from nicos.core.constants import FINAL
 from nicos_ess.devices.virtual.area_detector import AreaDetector, AreaDetectorCollector
 from test.nicos_ess.test_devices.doubles import wait_until_complete
@@ -29,7 +26,7 @@ def create_virtual_area_detector(daemon_device_harness):
     return image, collector
 
 
-def test_virtual_area_detector_accepts_only_image_count_presets(
+def test_virtual_area_detector_tracks_image_count_presets_and_ignores_unrelated_keys(
     daemon_device_harness,
 ):
     image, _collector = create_virtual_area_detector(daemon_device_harness)
@@ -37,11 +34,9 @@ def test_virtual_area_detector_accepts_only_image_count_presets(
     assert set(image.presetInfo()) == {"n"}
 
     image.setPreset(n=2)
+    image.setPreset(t=1)
     image.setPreset()
     assert image.preset() == {"n": 2}
-
-    with pytest.raises(InvalidValueError):
-        image.setPreset(t=1)
 
 
 def test_virtual_area_detector_channel_preset_uses_image_counter_progress(
@@ -84,13 +79,16 @@ def test_virtual_area_detector_collector_reuses_previous_image_preset(
     assert image.preset() == {"n": 2}
 
 
-def test_virtual_area_detector_collector_rejects_non_image_presets(
+def test_virtual_area_detector_collector_ignores_non_image_presets(
     daemon_device_harness,
 ):
-    _image, collector = create_virtual_area_detector(daemon_device_harness)
+    image, collector = create_virtual_area_detector(daemon_device_harness)
 
-    with pytest.raises(InvalidValueError):
-        collector.setPreset(t=1)
+    collector.setPreset(virtual_camera=2)
+    collector.setPreset(t=1)
+
+    assert collector.preset() == {"virtual_camera": 2}
+    assert image.preset() == {"n": 2}
 
 
 def test_virtual_area_detector_collector_does_not_persist_live_as_previous_preset(
