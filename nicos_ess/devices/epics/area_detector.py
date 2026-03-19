@@ -291,13 +291,7 @@ class AreaDetector(EpicsDevice, ImageChannelMixin, Measurable):
     def doSetPreset(self, **preset):
         if not preset:
             preset = self._lastpreset or {}
-        invalid = set(preset) - {"n"}
-        if invalid:
-            raise InvalidValueError(
-                self,
-                f"unrecognised preset {sorted(invalid)[0]}, should be one of n",
-            )
-        if preset:
+        if "n" in preset:
             self._lastpreset = {"n": int(preset["n"])}
 
     def setChannelPreset(self, name, value):
@@ -334,6 +328,8 @@ class AreaDetector(EpicsDevice, ImageChannelMixin, Measurable):
             self.log.warning(msg_format, pv_value, stat)
 
     def doStart(self, **preset):
+        if (self._lastpreset or {}).get("n") == 0:
+            return
         self._update_status(status.BUSY, "Acquiring")
         self.doAcquire()
 
@@ -348,6 +344,17 @@ class AreaDetector(EpicsDevice, ImageChannelMixin, Measurable):
 
     def doRead(self, maxage=0):
         return self._get_pv("readpv")
+
+    def doIsCompleted(self):
+        target = (self._lastpreset or {}).get("n")
+        if target is not None and self.read(0)[0] >= target:
+            return True
+        st = self.status(0)
+        if st[0] in self.busystates:
+            return False
+        if st[0] in self.errorstates:
+            raise self.errorstates[st[0]](self, st[1])
+        return True
 
     def doReadArray(self, quality):
         return self._image_array
@@ -997,14 +1004,12 @@ class AreaDetectorCollector(Detector):
         return []
 
     def doSetPreset(self, **preset):
-        invalid = set(preset) - {"info"} - set(self._presetkeys)
-        if invalid:
-            valid = ", ".join(sorted({"info"} | set(self._presetkeys)))
-            raise InvalidValueError(
-                self,
-                f"unrecognised preset {sorted(invalid)[0]}, should be one of {valid}",
-            )
-        Detector.doSetPreset(self, **preset)
+        filtered = {
+            name: value
+            for name, value in preset.items()
+            if name == "info" or name in self._presetkeys
+        }
+        Detector.doSetPreset(self, **filtered)
 
     def doRead(self, maxage=0):
         return []

@@ -24,6 +24,8 @@
 
 """Kafka test doubles for fast harness-based device tests."""
 
+from collections import deque
+
 
 class StubKafkaSubscriber:
     def __init__(self, *args, **kwargs):
@@ -40,6 +42,12 @@ class StubKafkaSubscriber:
 
 
 class StubKafkaConsumer:
+    def __init__(self, messages=None):
+        self._messages = deque()
+        self._consumer = self
+        for message in messages or ():
+            self.push_message(message)
+
     @staticmethod
     def create(*args, **kwargs):
         del args, kwargs
@@ -50,13 +58,36 @@ class StubKafkaConsumer:
 
     def poll(self, *args, **kwargs):
         del args, kwargs
+        if self._messages:
+            return self._messages.popleft()
         return None
+
+    def push_message(self, message):
+        if hasattr(message, "value"):
+            self._messages.append(message)
+        else:
+            self._messages.append(_StubKafkaMessage(message))
 
     def seek(self, *args, **kwargs):
         del args, kwargs
 
+    def commit(self, *args, **kwargs):
+        del args, kwargs
+
     def close(self):
         pass
+
+
+class _StubKafkaMessage:
+    def __init__(self, value, key=None):
+        self._value = value
+        self._key = key
+
+    def value(self):
+        return self._value
+
+    def key(self):
+        return self._key
 
 
 class _DeliveredMessage:
@@ -108,6 +139,7 @@ def patch_kafka_stubs(
     *,
     producer=None,
     consumer_factory=StubKafkaConsumer,
+    consumer_messages=None,
     subscriber=StubKafkaSubscriber,
     status_module=None,
 ):
@@ -118,6 +150,8 @@ def patch_kafka_stubs(
 
     def create_consumer(*args, **kwargs):
         del args, kwargs
+        if consumer_messages is not None and consumer_factory is StubKafkaConsumer:
+            return StubKafkaConsumer(messages=consumer_messages)
         return consumer_factory()
 
     def create_producer(*args, **kwargs):

@@ -378,13 +378,7 @@ class AreaDetector(ImageChannelMixin, Measurable):
     def doSetPreset(self, **preset):
         if not preset:
             preset = self._lastpreset or {}
-        invalid = set(preset) - {"n"}
-        if invalid:
-            raise InvalidValueError(
-                self,
-                f"unrecognised preset {sorted(invalid)[0]}, should be one of n",
-            )
-        if preset:
+        if "n" in preset:
             self._lastpreset = {"n": int(preset["n"])}
 
     def setChannelPreset(self, name, value):
@@ -543,14 +537,12 @@ class AreaDetectorCollector(Detector):
         return []
 
     def doSetPreset(self, **preset):
-        invalid = set(preset) - {"info"} - set(self._presetkeys)
-        if invalid:
-            valid = ", ".join(sorted({"info"} | set(self._presetkeys)))
-            raise InvalidValueError(
-                self,
-                f"unrecognised preset {sorted(invalid)[0]}, should be one of {valid}",
-            )
-        Detector.doSetPreset(self, **preset)
+        filtered = {
+            name: value
+            for name, value in preset.items()
+            if name == "info" or name in self._presetkeys
+        }
+        Detector.doSetPreset(self, **filtered)
 
     def doRead(self, maxage=0):
         return []

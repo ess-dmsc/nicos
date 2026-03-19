@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from nicos.core import ArrayDesc, InvalidValueError, status
+from nicos.core import ArrayDesc, status
 from nicos.devices.epics.pva import caproto, p4p
 from nicos_ess.devices.epics.area_detector import AreaDetector, AreaDetectorCollector
 from test.nicos_ess.test_devices.doubles import FakeEpicsBackend
@@ -71,7 +71,7 @@ def test_area_detector_completed_reflects_acquire_status(
     assert detector.isCompleted() is False
 
 
-def test_area_detector_accepts_only_image_count_presets(
+def test_area_detector_tracks_image_count_presets_and_ignores_unrelated_keys(
     daemon_device_harness, fake_backend
 ):
     del fake_backend
@@ -80,11 +80,9 @@ def test_area_detector_accepts_only_image_count_presets(
     assert set(detector.presetInfo()) == {"n"}
 
     detector.setPreset(n=3)
+    detector.setPreset(t=1)
     detector.setPreset()
     assert detector.preset() == {"n": 3}
-
-    with pytest.raises(InvalidValueError):
-        detector.setPreset(t=1)
 
 
 def test_area_detector_channel_preset_uses_image_counter_progress(
@@ -111,7 +109,21 @@ def test_area_detector_start_marks_device_busy(daemon_device_harness, fake_backe
     assert fake_backend.values[f"{PV_ROOT}Acquire"] == 1
 
 
-def test_area_detector_collector_uses_only_image_presets_and_reuses_previous_value(
+def test_area_detector_completes_on_image_count_preset_before_backend_status(
+    daemon_device_harness, fake_backend
+):
+    detector = create_area_detector(daemon_device_harness)
+
+    fake_backend.values[f"{PV_ROOT}AcquireBusy"] = "Busybusybusy"
+    detector.start(n=2)
+    fake_backend.values[f"{PV_ROOT}NumImagesCounter_RBV"] = 1
+    assert detector.isCompleted() is False
+
+    fake_backend.values[f"{PV_ROOT}NumImagesCounter_RBV"] = 2
+    assert detector.isCompleted() is True
+
+
+def test_area_detector_collector_uses_image_presets_and_ignores_unrelated_ones(
     daemon_device_harness, fake_backend
 ):
     del fake_backend
@@ -135,12 +147,10 @@ def test_area_detector_collector_uses_only_image_presets_and_reuses_previous_val
     assert image.preset() == {"n": 4}
 
     collector.prepare()
+    collector.setPreset(t=1)
     collector.setPreset()
     assert collector.preset() == {"camera": 4}
     assert image.preset() == {"n": 4}
-
-    with pytest.raises(InvalidValueError):
-        collector.setPreset(t=1)
 
 
 def test_area_detector_collector_does_not_persist_live_as_previous_preset(
