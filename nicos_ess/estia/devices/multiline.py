@@ -12,7 +12,7 @@ from nicos.core import (
     pvname,
     status,
 )
-from nicos_ess.devices.epics.pva.epics_devices import EpicsStringReadable
+from nicos.devices.epics.pva.epics_devices import EpicsStringReadable
 
 STAT_TO_STATUS = {
     0: "",  # NO_ALARM
