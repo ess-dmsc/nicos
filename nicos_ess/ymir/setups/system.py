@@ -13,15 +13,15 @@ sysconfig = dict(
 alias_config = {
     "NexusStructure": {
         "NexusStructure_Basic": 101,
-        "NexusStructure_loki": 100,
-        "NexusStructure_dream": 99,
-        "NexusStructure_bifrost": 98,
-        "NexusStructure_nmx": 97,
-        "NexusStructure_odin": 96,
-        "NexusStructure_tbl": 95,
-        "NexusStructure_estia": 94,
-        "NexusStructure_beer": 93,
-        "NexusStructure_magic": 92,
+        "NexusStructure_beer": 100,
+        "NexusStructure_bifrost": 99,
+        "NexusStructure_dream": 98,
+        "NexusStructure_estia": 97,
+        "NexusStructure_magic": 96,
+        "NexusStructure_loki": 95,
+        "NexusStructure_nmx": 94,
+        "NexusStructure_odin": 93,
+        "NexusStructure_tbl": 92,
     },
 }
 modules = ["nicos.commands.standard", "nicos_ess.commands"]
