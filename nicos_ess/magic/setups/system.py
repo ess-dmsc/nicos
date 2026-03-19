@@ -49,7 +49,7 @@ devices = dict(
         "nicos_ess.devices.datasinks.nexus_structure.NexusStructureJsonFile",
         description="Provides the NeXus structure",
         nexus_config_path="nexus-json-templates/magic/magic-dynamic.json",
-        instrument_name="magic",
+        instrument_name="",
         visibility=(),
     ),
     NexusStructure=device(
