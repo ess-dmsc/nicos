@@ -20,6 +20,8 @@ alias_config = {
         "NexusStructure_odin": 96,
         "NexusStructure_tbl": 95,
         "NexusStructure_estia": 94,
+        "NexusStructure_beer": 93,
+        "NexusStructure_magic": 92,
     },
 }
 modules = ["nicos.commands.standard", "nicos_ess.commands"]
@@ -110,6 +112,20 @@ devices = dict(
         description="Provides the NeXus structure",
         nexus_config_path="nexus-json-templates/estia/estia-dynamic.json",
         instrument_name="estia",
+        visibility=(),
+    ),
+    NexusStructure_beer=device(
+        "nicos_ess.devices.datasinks.nexus_structure.NexusStructureJsonFile",
+        description="Provides the NeXus structure",
+        nexus_config_path="nexus-json-templates/beer/beer-dynamic.json",
+        instrument_name="beer",
+        visibility=(),
+    ),
+    NexusStructure_magic=device(
+        "nicos_ess.devices.datasinks.nexus_structure.NexusStructureJsonFile",
+        description="Provides the NeXus structure",
+        nexus_config_path="nexus-json-templates/magic/magic-dynamic.json",
+        instrument_name="magic",
         visibility=(),
     ),
     NexusStructure_Basic=device(
