@@ -101,6 +101,7 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
         "unit": Override(default="events", settable=False, mandatory=False),
         "fmtstr": Override(default="%d"),
         "pollinterval": Override(default=None, userparam=False, settable=False),
+        "presetaliases": Override(default=["n"], mandatory=False),
         "mapping": Override(
             volatile=True, internal=True, mandatory=False, settable=True
         ),
@@ -125,7 +126,10 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
         return self._signal
 
     def arrayInfo(self):
-        return self._array_desc
+        return (self._array_desc,)
+
+    def doReadArrays(self, quality):
+        return [self.doReadArray(quality)]
 
     def doStatus(self, maxage=0):
         return self.curstatus
@@ -430,7 +434,7 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
                 action="reset",
             )
         else:
-            self.log.warn("Could not resolve job to reset")
+            self.log.warning("Could not resolve job to reset")
 
 
 class LiveDataCollector(Detector):
@@ -587,13 +591,13 @@ class LiveDataCollector(Detector):
                 # Route to matching channels
                 self._dispatch_to_channels(timestamp_ns, rk, da)
             except Exception as exc:
-                self.log.warn(f"Could not decode/route DA00: {exc}")
+                self.log.warning(f"Could not decode/route DA00: {exc}")
 
         try:
             self._registry.expire_stale()
             self._push_mapping_to_channels()
         except Exception as e:
-            self.log.warn(f"Error expiring stale jobs: {e}")
+            self.log.warning(f"Error expiring stale jobs: {e}")
 
     def _on_no_data(self):
         # Nothing special; do not spam cache.
@@ -659,7 +663,7 @@ class LiveDataCollector(Detector):
                 self._push_mapping_to_channels()
 
             except Exception as exc:
-                self.log.warn(f"Bad status message: {exc}")
+                self.log.warning(f"Bad status message: {exc}")
             finally:
                 self._status_consumer._consumer.commit(msg, asynchronous=False)
 
@@ -726,7 +730,7 @@ class LiveDataCollector(Detector):
         Only 'reset' | 'stop' | 'remove' are supported by the backend today.
         """
         if not self._producer or not self.commands_topic:
-            self.log.warn("No producer or commands_topic configured")
+            self.log.warning("No producer or commands_topic configured")
             return
         payload = {"job_id": job_id, "workflow_id": workflow_id, "action": action}
         # Build a key the backend expects: "<service>/<source|*>/job_command"
@@ -737,7 +741,7 @@ class LiveDataCollector(Detector):
 
         def _on_delivery(err, msg):
             if err:
-                self.log.warn(f"Job command delivery failed: {err}.")
+                self.log.warning(f"Job command delivery failed: {err}.")
             wait_for_delivery_event.set()
 
         try:
@@ -750,9 +754,9 @@ class LiveDataCollector(Detector):
             )
             # Wait for delivery confirmation or timeout
             if not wait_for_delivery_event.wait(timeout=5.0):
-                self.log.warn("Job command delivery timed out")
+                self.log.warning("Job command delivery timed out")
         except Exception as exc:
-            self.log.warn(f"Error sending job_command: {exc}")
+            self.log.warning(f"Error sending job_command: {exc}")
 
     # Optionally expose workflow_config sender for rare cases
     def send_workflow_config(self, *, key_source: str, config_json: dict):
@@ -761,7 +765,7 @@ class LiveDataCollector(Detector):
         key_source is the Kafka 'key' source_name part used by the backend.
         """
         if not self._producer or not self.commands_topic:
-            self.log.warn("No producer or commands_topic configured")
+            self.log.warning("No producer or commands_topic configured")
             return
         key = f"{self.service_name}/{key_source}/workflow_config"
         try:
@@ -771,7 +775,7 @@ class LiveDataCollector(Detector):
                 key=key,
             )
         except Exception as exc:
-            self.log.warn(f"Error sending workflow_config: {exc}")
+            self.log.warning(f"Error sending workflow_config: {exc}")
 
     def list_plot_selection_items(self) -> list[dict]:
         """Return a list of simple, user-friendly plot selections discovered so far.
@@ -856,7 +860,7 @@ class LiveDataCollector(Detector):
                 try:
                     ch.mapping = mapping
                 except Exception:
-                    self.log.warn(f"Could not update mapping for channel {ch.name}")
+                    self.log.warning(f"Could not update mapping for channel {ch.name}")
 
     def get_current_mapping(self) -> dict:
         """Return the current label->selector mapping as built for channels."""

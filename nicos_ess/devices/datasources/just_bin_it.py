@@ -275,7 +275,9 @@ class JustBinItImage(ImageChannelMixin, PassiveChannel):
         self._hist_data = hist_type_by_name[self.hist_type].get_zeroes(**self._params)
 
     def arrayInfo(self):
-        return hist_type_by_name[self.hist_type].get_array_description(**self._params)
+        return (
+            hist_type_by_name[self.hist_type].get_array_description(**self._params),
+        )
 
     def doPrepare(self):
         self._update_status(status.BUSY, "Preparing")
@@ -643,7 +645,7 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
         return None
 
     def arrayInfo(self):
-        return tuple(image.arrayInfo() for image in self._attached_images)
+        return tuple(image.arrayInfo()[0] for image in self._attached_images)
 
     def doTime(self, preset):
         return 0

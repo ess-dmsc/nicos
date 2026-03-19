@@ -68,13 +68,68 @@ class _DeliveredMessage:
 
 
 class StubKafkaProducer:
+    def __init__(self):
+        self.messages = []
+
     @staticmethod
     def create(*args, **kwargs):
         del args, kwargs
         return StubKafkaProducer()
 
-    def produce(self, *args, **kwargs):
-        del args
-        callback = kwargs.get("on_delivery_callback")
-        if callback:
-            callback(None, _DeliveredMessage())
+    def produce(
+        self,
+        topic_name,
+        message=None,
+        partition=-1,
+        key=None,
+        on_delivery_callback=None,
+        *,
+        auto_flush=True,
+        flush_timeout=None,
+        poll_before_produce=True,
+    ):
+        del partition, auto_flush, flush_timeout, poll_before_produce
+        self.messages.append({"topic": topic_name, "message": message, "key": key})
+        if on_delivery_callback:
+            on_delivery_callback(None, _DeliveredMessage())
+
+    def flush(self, timeout=None):
+        del timeout
+        return 0
+
+    def poll(self, timeout=0.0):
+        del timeout
+        return 0
+
+
+def patch_kafka_stubs(
+    monkeypatch,
+    module,
+    *,
+    producer=None,
+    consumer_factory=StubKafkaConsumer,
+    subscriber=StubKafkaSubscriber,
+    status_module=None,
+):
+    """Patch a module to use the shared Kafka harness doubles."""
+
+    if producer is None:
+        producer = StubKafkaProducer()
+
+    def create_consumer(*args, **kwargs):
+        del args, kwargs
+        return consumer_factory()
+
+    def create_producer(*args, **kwargs):
+        del args, kwargs
+        return producer
+
+    if hasattr(module, "KafkaSubscriber"):
+        monkeypatch.setattr(module, "KafkaSubscriber", subscriber)
+    if hasattr(module, "KafkaConsumer"):
+        monkeypatch.setattr(module.KafkaConsumer, "create", create_consumer)
+    if hasattr(module, "KafkaProducer"):
+        monkeypatch.setattr(module.KafkaProducer, "create", create_producer)
+    if status_module is not None:
+        monkeypatch.setattr(status_module, "KafkaSubscriber", subscriber)
+    return producer
