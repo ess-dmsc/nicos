@@ -28,9 +28,7 @@ from nicos_ess.devices.datasinks import file_writer
 from nicos_ess.devices.datasinks.nexus_structure import NexusStructureProvider
 from nicos_ess.devices.kafka import status_handler
 from test.nicos_ess.test_devices.doubles import (
-    StubKafkaConsumer,
-    StubKafkaProducer,
-    StubKafkaSubscriber,
+    patch_kafka_stubs,
 )
 
 
@@ -42,13 +40,7 @@ class HarnessNexusStructureProvider(NexusStructureProvider):
 
 @pytest.fixture
 def kafka_stubs(monkeypatch):
-    monkeypatch.setattr(status_handler, "KafkaSubscriber", StubKafkaSubscriber)
-    monkeypatch.setattr(
-        file_writer.KafkaConsumer, "create", lambda *args, **kwargs: StubKafkaConsumer()
-    )
-    monkeypatch.setattr(
-        file_writer.KafkaProducer, "create", lambda *args, **kwargs: StubKafkaProducer()
-    )
+    patch_kafka_stubs(monkeypatch, file_writer, status_module=status_handler)
 
 
 @pytest.fixture

@@ -24,6 +24,7 @@ class EpicsCounter(CounterChannelMixin, EpicsReadable, PassiveChannel):
     parameter_overrides = {
         # Must run in monitor mode
         "monitor": Override(default=True, settable=False, type=oneof(True)),
+        "presetaliases": Override(default=["n"], mandatory=False),
         "type": Override(default="counter", settable=False, mandatory=False),
     }
 

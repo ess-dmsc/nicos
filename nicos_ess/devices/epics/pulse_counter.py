@@ -26,6 +26,7 @@ class PulseCounter(CounterChannelMixin, EpicsReadable, PassiveChannel):
 
     parameter_overrides = {
         "monitor": Override(default=True, settable=False, type=oneof(True)),
+        "presetaliases": Override(default=["n"], mandatory=False),
         "type": Override(default="counter", settable=False, mandatory=False),
     }
 

@@ -12,12 +12,12 @@ from nicos.core import (
     ArrayDesc,
     Attach,
     CacheError,
+    InvalidValueError,
     Measurable,
     Override,
     Param,
     Value,
     floatrange,
-    multiStatus,
     oneof,
     pvname,
     status,
@@ -285,11 +285,33 @@ class AreaDetector(EpicsDevice, ImageChannelMixin, Measurable):
             with self._image_processing_lock:
                 session.updateLiveData(parameters, databuffer, labelbuffers)
 
+    def presetInfo(self):
+        return ("n",)
+
     def doSetPreset(self, **preset):
         if not preset:
-            # keep old settings
-            return
-        self._lastpreset = preset.copy()
+            preset = self._lastpreset or {}
+        invalid = set(preset) - {"n"}
+        if invalid:
+            raise InvalidValueError(
+                self,
+                f"unrecognised preset {sorted(invalid)[0]}, should be one of n",
+            )
+        if preset:
+            self._lastpreset = {"n": int(preset["n"])}
+
+    def setChannelPreset(self, name, value):
+        if name not in {"n", self.name}:
+            raise InvalidValueError(
+                self,
+                f"unrecognised preset {name}, should be one of n or {self.name}",
+            )
+        self.iscontroller = True
+        self.doSetPreset(n=value)
+
+    def presetReached(self, name, value, maxage):
+        del name
+        return self.read(maxage)[0] >= value
 
     def doStatus(self, maxage=0):
         detector_state = self._get_pv("acquire_status", True)
@@ -312,6 +334,7 @@ class AreaDetector(EpicsDevice, ImageChannelMixin, Measurable):
             self.log.warning(msg_format, pv_value, stat)
 
     def doStart(self, **preset):
+        self._update_status(status.BUSY, "Acquiring")
         self.doAcquire()
 
     def doAcquire(self):
@@ -949,18 +972,17 @@ class AreaDetectorCollector(Detector):
         "pollinterval": Override(default=1, userparam=True, settable=False),
     }
 
-    _presetkeys = set()
     _hardware_access = False
 
     def doPreinit(self, mode):
         for image_channel in self._attached_images:
             image_channel._detector_collector_name = self.name
-            self._presetkeys.add(image_channel.name)
-        self._channels = self._attached_images
-        self._collectControllers()
+        super().doPreinit(mode)
 
-    def _collectControllers(self):
-        self._controlchannels, self._followchannels = self._attached_images, []
+    def _presetiter(self):
+        for image_channel in self._attached_images:
+            yield (image_channel.name, image_channel, "counts")
+        yield ("live", None, "other")
 
     def get_array_size(self, topic, source):
         for area_detector in self._attached_images:
@@ -974,22 +996,20 @@ class AreaDetectorCollector(Detector):
         return []
 
     def doSetPreset(self, **preset):
-        if not preset:
-            # keep old settings
-            return
-
-        for controller in self._controlchannels:
-            sub_preset = preset.get(controller.name, None)
-            if sub_preset:
-                controller.doSetPreset(**{"n": sub_preset})
-
-        self._lastpreset = preset.copy()
-
-    def doStatus(self, maxage=0):
-        return multiStatus(self._attached_images, maxage)
+        invalid = set(preset) - {"info"} - set(self._presetkeys)
+        if invalid:
+            valid = ", ".join(sorted({"info"} | set(self._presetkeys)))
+            raise InvalidValueError(
+                self,
+                f"unrecognised preset {sorted(invalid)[0]}, should be one of {valid}",
+            )
+        Detector.doSetPreset(self, **preset)
 
     def doRead(self, maxage=0):
         return []
+
+    def valueInfo(self):
+        return ()
 
     def doReadArrays(self, quality):
         return [image.readArray(quality) for image in self._attached_images]

@@ -1,0 +1,138 @@
+import json
+from dataclasses import asdict
+from types import SimpleNamespace
+
+import numpy as np
+import pytest
+
+from nicos.core import ArrayDesc
+from nicos.core.constants import FINAL
+
+from nicos_ess.devices.datasources import livedata
+from nicos_ess.devices.datasources.livedata_utils import JobId, ResultKey, WorkflowId
+from test.nicos_ess.test_devices.doubles import (
+    patch_kafka_stubs,
+)
+
+
+WORKFLOW_ID = WorkflowId(
+    instrument="dummy",
+    namespace="detector_data",
+    name="panel_0_xy",
+    version=1,
+)
+JOB_ID = JobId(source_name="panel_0", job_number="job-1")
+OUTPUT_NAME = "current"
+SELECTOR = f"{WORKFLOW_ID}@{JOB_ID.source_name}#{JOB_ID.job_number}/{OUTPUT_NAME}"
+RESULT_KEY = ResultKey(
+    workflow_id=WORKFLOW_ID,
+    job_id=JOB_ID,
+    output_name=OUTPUT_NAME,
+)
+TIMESTAMP_NS = 123456789
+
+
+@pytest.fixture
+def kafka_stubs(monkeypatch):
+    patch_kafka_stubs(monkeypatch, livedata)
+    monkeypatch.setattr(livedata, "sleep", lambda *_args, **_kwargs: None)
+
+
+@pytest.fixture
+def live_data_updates(daemon_device_harness):
+    updates = []
+    daemon_device_harness.session.updateLiveData = (
+        lambda parameters, databuffer, labelbuffers: updates.append(
+            {
+                "parameters": parameters,
+                "databuffer": databuffer,
+                "labelbuffers": labelbuffers,
+            }
+        )
+    )
+    return updates
+
+
+def create_channel(daemon_device_harness):
+    return daemon_device_harness.create_master(
+        livedata.DataChannel,
+        name="livedata_channel",
+        selector=SELECTOR,
+        type="counter",
+    )
+
+
+def da00_message():
+    return SimpleNamespace(
+        source_name=json.dumps(
+            {
+                "workflow_id": asdict(WORKFLOW_ID),
+                "job_id": asdict(JOB_ID),
+                "output_name": OUTPUT_NAME,
+            }
+        ),
+        data=[
+            SimpleNamespace(
+                name="signal",
+                data=np.array([1, 2, 3], dtype=np.int32),
+                axes=["tof"],
+                unit="counts",
+                label="Detector signal",
+            ),
+            SimpleNamespace(
+                name="tof",
+                data=np.array([0.0, 1.0, 2.0], dtype=np.float64),
+                axes=["tof"],
+                unit="ms",
+                label="TOF",
+            ),
+        ],
+    )
+
+
+def test_datachannel_array_info_returns_tuple_and_read_results_include_array(
+    daemon_device_harness, kafka_stubs, live_data_updates
+):
+    del kafka_stubs
+    channel = create_channel(daemon_device_harness)
+
+    channel.start()
+    channel.update_data_from_da00(da00_message(), TIMESTAMP_NS)
+    info = channel.arrayInfo()
+    scalars, arrays = channel.readResults(FINAL)
+
+    assert isinstance(info, tuple)
+    assert len(info) == 1
+    assert isinstance(info[0], ArrayDesc)
+    assert scalars == [6]
+    assert len(arrays) == 1
+    assert arrays[0].shape == info[0].shape
+    assert live_data_updates[0]["parameters"]["det"] == "livedata_channel"
+
+
+def test_livedata_collector_routes_da00_and_completes_on_scalar_preset(
+    daemon_device_harness, kafka_stubs, live_data_updates
+):
+    del kafka_stubs
+    channel = create_channel(daemon_device_harness)
+    collector = daemon_device_harness.create_master(
+        livedata.LiveDataCollector,
+        name="livedata_collector",
+        brokers=["localhost:9092"],
+        data_topics=["livedata"],
+        status_topics=[],
+        responses_topics=[],
+        commands_topic="",
+        counters=["livedata_channel"],
+    )
+
+    collector.setPreset(n=6)
+    collector.prepare()
+    collector.start()
+    collector._dispatch_to_channels(TIMESTAMP_NS, RESULT_KEY, da00_message())
+    scalars, arrays = collector.readResults(FINAL)
+
+    assert collector.isCompleted() is True
+    assert scalars == [6]
+    assert arrays == []
+    assert live_data_updates[0]["parameters"]["det"] == "livedata_channel"
