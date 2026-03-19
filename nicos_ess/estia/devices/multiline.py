@@ -8,7 +8,7 @@ from nicos.core import (
     Param,
     Readable,
     Waitable,
-    nonemptylistof,
+    listof,
     pvname,
     status,
 )
@@ -86,40 +86,36 @@ class MultilineController(EpicsStringReadable, Waitable):
         ),
         "measurement_lengths": Param(
             "Last measurement length array",
-            type=nonemptylistof(float),
+            type=listof(float),
             settable=False,
             internal=True,
         ),
-        "align_min": Param(
-            "", type=nonemptylistof(float), settable=False, internal=True
-        ),
-        "align_max": Param(
-            "", type=nonemptylistof(float), settable=False, internal=True
-        ),
+        "align_min": Param("", type=listof(float), settable=False, internal=True),
+        "align_max": Param("", type=listof(float), settable=False, internal=True),
         "measurement_errors": Param(
             "Last measurement errors",
-            type=nonemptylistof(int),
+            type=listof(int),
             settable=False,
             internal=True,
         ),
         "measurement_counter": Param(
             "Last measurement errors",
-            type=nonemptylistof(int),
+            type=listof(int),
             settable=False,
             internal=True,
         ),
         "measurement_gains": Param(
-            "Gain of channels", type=nonemptylistof(int), settable=True, internal=True
+            "Gain of channels", type=listof(int), settable=True, internal=True
         ),
         "measurement_channels": Param(
             "Channels selected for measurement",
-            type=nonemptylistof(int),
+            type=listof(int),
             settable=True,
             internal=True,
         ),
         "selected_channels": Param(
             "List of selected channel flags",
-            type=nonemptylistof(int),
+            type=listof(int),
             settable=False,
             internal=True,
         ),
@@ -243,7 +239,7 @@ class MultilineController(EpicsStringReadable, Waitable):
         return [int(chi) for chi in available_channels if chi > 0]
 
     def doReadSelected_Channels(self, maxage=0):
-        return self._epics_wrapper.get_pv_value("available_channels")
+        return self._epics_wrapper.get_pv_value(self._get_pv_name("available_channels"))
 
     def measure(self, channels=None):
         if channels is None:
@@ -254,39 +250,49 @@ class MultilineController(EpicsStringReadable, Waitable):
             if hasattr(chi, "channel"):
                 channels[i] = chi.channel
 
-        all_channels = self._epics_wrapper.get_pv_value("available_channels")
+        all_channels = self._epics_wrapper.get_pv_value(
+            self._get_pv_name("available_channels")
+        )
         selected_channels = [1 if chi in channels else 0 for chi in all_channels]
         self.measurement_channels = selected_channels
-        last_preshot = self._epics_wrapper.get_pv_value("measurement_preshots")
-        last_lengths = self._epics_wrapper.get_pv_value("measurement_lengths")
+        last_preshot = self._epics_wrapper.get_pv_value(
+            self._get_pv_name("measurement_preshots")
+        )
+        last_lengths = self._epics_wrapper.get_pv_value(
+            self._get_pv_name("measurement_lengths")
+        )
         new_preshot = [
             max(last_lengths[i], 50.0) if selected_channels[i] else max(lpi, 50.0)
             for i, lpi in enumerate(last_preshot)
         ]
-        self._epics_wrapper.put_pv_value("measurement_preshots", new_preshot, wait=True)
-        self._epics_wrapper.put_pv_value("start_measurement", 1, wait=True)
+        self._epics_wrapper.put_pv_value(
+            self._get_pv_name("measurement_preshots"), new_preshot
+        )
+        self._epics_wrapper.put_pv_value(self._get_pv_name("start_measurement"), 1)
 
     def doReadMeasurement_Lengths(self):
-        return self._epics_wrapper.get_pv_value("measurement_lengths")
+        return self._epics_wrapper.get_pv_value(
+            self._get_pv_name("measurement_lengths")
+        )
 
     def doReadAlign_Min(self):
-        return self._epics_wrapper.get_pv_value("align_min")
+        return self._epics_wrapper.get_pv_value(self._get_pv_name("align_min"))
 
     def doReadAlign_Max(self):
-        return self._epics_wrapper.get_pv_value("align_max")
+        return self._epics_wrapper.get_pv_value(self._get_pv_name("align_max"))
 
     def doReadMeasurement_Gains(self):
-        return self._epics_wrapper.get_pv_value("measurement_gains")
+        return self._epics_wrapper.get_pv_value(self._get_pv_name("measurement_gains"))
 
     def doReadMeasurement_Errors(self):
         output = np.array([0 for i in self.measurement_lengths])
         for i, error in enumerate(self._error_flag_list):
             # create bit-flag for each error
-            output += 2**i * self._epics_wrapper.get_pv_value(error)
+            output += 2**i * self._epics_wrapper.get_pv_value(self._get_pv_name(error))
         return output
 
     def doReadPolling_Counter(self):
-        return self._epics_wrapper.get_pv_value("polling_counter")
+        return self._epics_wrapper.get_pv_value(self._get_pv_name("polling_counter"))
 
     _task_codes = {
         0: "Idle",
@@ -297,51 +303,67 @@ class MultilineController(EpicsStringReadable, Waitable):
     }
 
     def doReadCurrent_Task(self):
-        value = self._epics_wrapper.get_pv_value("current_task", as_string=True)
+        value = self._epics_wrapper.get_pv_value(
+            self._get_pv_name("current_task"), as_string=True
+        )
         if isinstance(value, str):
             return value
         else:
             return self._task_codes[int(value)]
 
     def doReadFront_End_Splitter(self):
-        return self._epics_wrapper.get_pv_value("front_end_splitter", as_string=True)
+        return self._epics_wrapper.get_pv_value(
+            self._get_pv_name("front_end_splitter"), as_string=True
+        )
 
     def doWriteFront_End_Splitter(self, value):
-        self._epics_wrapper.put_pv_value("front_end_splitter", value, wait=True)
+        self._epics_wrapper.put_pv_value(self._get_pv_name("front_end_splitter"), value)
 
     def doReadMeasurement_Counter(self):
-        return self._epics_wrapper.get_pv_value("measurement_counter")
+        return self._epics_wrapper.get_pv_value(
+            self._get_pv_name("measurement_counter")
+        )
 
     def doReadFes_Option(self):
-        return self._epics_wrapper.get_pv_value("fes_option", as_string=True)
+        return self._epics_wrapper.get_pv_value(
+            self._get_pv_name("fes_option"), as_string=True
+        )
 
     def doWriteFes_Option(self, value):
-        self._epics_wrapper.put_pv_value("fes_option", value, wait=True)
+        self._epics_wrapper.put_pv_value(self._get_pv_name("fes_option"), value)
 
     def doReadStart_Measurement(self):
-        return self._epics_wrapper.get_pv_value("start_measurement", as_string=True)
+        return self._epics_wrapper.get_pv_value(
+            self._get_pv_name("start_measurement"), as_string=True
+        )
 
     def doWriteStart_Measurement(self, value):
-        self._epics_wrapper.put_pv_value("start_measurement", value, wait=True)
+        self._epics_wrapper.put_pv_value(self._get_pv_name("start_measurement"), value)
 
     def doReadMeasurement_Channels(self):
-        return self._epics_wrapper.get_pv_value("measurement_channels")
+        return self._epics_wrapper.get_pv_value(
+            self._get_pv_name("measurement_channels")
+        )
 
     def doWriteMeasurement_Channels(self, value):
-        self._epics_wrapper.put_pv_value("measurement_channels", value, wait=True)
+        self._epics_wrapper.put_pv_value(
+            self._get_pv_name("measurement_channels"), value
+        )
 
     def doReadAlignment_Process(self):
-        return self._epics_wrapper.get_pv_value("alignment_process")
+        return self._epics_wrapper.get_pv_value(self._get_pv_name("alignment_process"))
 
     def doWriteAlignment_Process(self, value):
-        self._epics_wrapper.put_pv_value("alignment_process", value, wait=True)
+        self._epics_wrapper.put_pv_value(self._get_pv_name("alignment_process"), value)
         self._cache.invalidate(self, "status")
 
     def doReadIs_Grouped(self):
-        return self._epics_wrapper.get_pv_value("is_grouped", as_string=True)
+        return self._epics_wrapper.get_pv_value(
+            self._get_pv_name("is_grouped"), as_string=True
+        )
 
     def doReadNum_Channels(self):
-        return self._epics_wrapper.get_pv_value("num_channels")
+        return self._epics_wrapper.get_pv_value(self._get_pv_name("num_channels"))
 
 
 ML_ERROR_MESSAGES = {
