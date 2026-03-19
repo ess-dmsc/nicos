@@ -1,13 +1,23 @@
 from unittest import TestCase
+import pytest
 import numpy as np
 from numpy import testing
 from nicos_ess.estia.devices.selene_calculations import SeleneCalculator
+from nicos.devices.generic import BaseSequencer
 
-class CalcTester(TestCase):
-    calc: SeleneCalculator
+session_setup = "estia_selene_calculations"
 
-    def setUp(self):
-        self.calc = SeleneCalculator()
+class FakeSeleneCalculator(SeleneCalculator, BaseSequencer):
+    pass
+
+
+
+class TestCalculator(TestCase):
+
+    @pytest.fixture(autouse=True)
+    def prepare(self, session):
+        self.session = session
+        self.calc = self.session.getDevice("selene_calculator")
 
     def test_ellipse(self):
         y = self.calc._ellipse(0.0)
@@ -32,11 +42,6 @@ class CalcTester(TestCase):
         testing.assert_array_almost_equal(x, np.array(xr), decimal=2)
 
     def test_lengths(self):
-        class Bla:
-            debug = print
-
-        log = Bla()
-        self.calc.log = log
         length_0 = self.calc._nominal_path_lengths(0.0)
         testing.assert_allclose(
             length_0, np.array([453.23630804, 592.47373481, 604.18396285])

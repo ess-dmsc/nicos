@@ -19,7 +19,7 @@ class SeleneCalculator(DeviceMixinBase):
             "Nominal reflection angle from interferometer head to retroreflector",
             mandatory=False,
             userparam=True,
-            default=14.81,
+            default=14.92,
             unit="deg",
         ),
         "xz_to_retro_horiz_dist": Param(
@@ -94,37 +94,20 @@ class SeleneCalculator(DeviceMixinBase):
         ),
     }
 
-    def doInit(self):
-        self._ellipse_semi_minor_axis = 104.7
-        self._ellipse_linear_eccentricity = 6000.0
-        self._ellipse_semi_major_axis = np.sqrt(
-            self._ellipse_linear_eccentricity**2 + self._ellipse_semi_minor_axis**2
-        )
-        self._ellipse_eccentricity = (
-            self._ellipse_semi_minor_axis / self._ellipse_semi_major_axis
-        )
+    _ellipse_semi_minor_axis = 104.7
+    _ellipse_linear_eccentricity = 6000.0
+    _ellipse_semi_major_axis = np.sqrt(
+        _ellipse_linear_eccentricity**2 + _ellipse_semi_minor_axis**2
+    )
+    _ellipse_eccentricity = _ellipse_semi_minor_axis / _ellipse_semi_major_axis
 
-        self._mirror_width = 480.0
-        self._screw_mirror_dist = 42.5
+    _mirror_width = 480.0
+    _screw_mirror_dist = 42.5
 
-        # these attributes will be overwritten in device
-        self.inter_to_retro_horiz_angle = 14.92
-        self.xz_to_retro_horiz_dist = 120.0
-        self.x_dist_to_cart_centre = -15.0
-
-        self.inter_to_retro_1_angle = 16.39
-        self.xz_to_retro_1_dist = 70.0
-        self.xy_to_retro_1_dist = 50.0
-        self.xy_to_col_1_dist = 120.0
-        self.inter_to_retro_2_angle = 15.47
-        self.xz_to_retro_2_dist = 80.0
-        self.xy_to_retro_2_dist = 10.0
-        self.xy_to_col_2_dist = 160.0
-
-        self.collimator_1_pos = (46.0, -135.0, 143.5)
-        self.retro_1_pos = (-15.0, -70.0, 62.5)
-        self.collimator_2_pos = (44.5, -132.4, 201.5)
-        self.retro_2_pos = (-15.0, -80.0, 17)
+    collimator_1_pos = (46.0, -135.0, 143.5)
+    retro_1_pos = (-15.0, -70.0, 62.5)
+    collimator_2_pos = (44.5, -132.4, 201.5)
+    retro_2_pos = (-15.0, -80.0, 17)
 
     def _ellipse(self, x_pos):
         """
