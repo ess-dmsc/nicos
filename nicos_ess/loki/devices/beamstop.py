@@ -1,4 +1,4 @@
-import re
+from typing import List, Tuple
 
 from nicos.core import (
     SIMULATION,
@@ -7,10 +7,11 @@ from nicos.core import (
     HasPrecision,
     LimitError,
     MoveError,
+    Override,
     oneof,
 )
 from nicos.devices.abstract import MappedMoveable
-from nicos.devices.generic.sequence import SeqDev, SequencerMixin
+from nicos.devices.generic.sequence import SeqDev, SeqSleep, SequencerMixin
 from nicos.utils import num_sort
 from nicos_ess.devices.mapped_controller import MappedController
 
@@ -20,9 +21,9 @@ class LokiBeamstopArmPositioner(MappedController):
         MappedController.doInit(self, mode)
 
     def doWriteMapping(self, mapping):
-        if sorted(mapping.keys()) != ["In beam", "Parked"]:
+        if sorted(mapping.keys()) != ["In beam", "Parked", "Intermediate"]:
             raise ConfigurationError(
-                "Only 'In beam' and 'Parked' are allowed as mapped positions"
+                "Only 'In beam', 'Parked' and 'Intermediate' are allowed as mapped positions"
             )
         for position in mapping.values():
             self._check_limits(position)
@@ -37,9 +38,9 @@ class LokiBeamstopArmPositioner(MappedController):
         mapped_value = inverse_mapping.get(value, None)
         if mapped_value:
             return mapped_value
-        if value > self.mapping["Parked"]:
+        if "Parked" in self.mapping.keys() and value > self.mapping["Parked"]:
             return "Above park position"
-        if value < self.mapping["In beam"]:
+        if "in beam" in self.mapping.keys() and value < self.mapping["In beam"]:
             return "Below in-beam position"
         return "In between"
 
@@ -63,23 +64,34 @@ class LokiBeamstopController(SequencerMixin, MappedMoveable):
         "bs5_positioner": Attach("Positioner for beamstop z5", MappedController),
     }
 
+    parameter_overrides = {
+        "mapping": Override(
+            mandatory=False, settable=False, userparam=False, volatile=True
+        ),
+    }
+
     def doPreinit(self, mode):
-        self._all_attached = [
-            self._attached_bsx_positioner,
-            self._attached_bsy_positioner,
-            self._attached_bs1_positioner,
-            self._attached_bs2_positioner,
-            self._attached_bs3_positioner,
-            self._attached_bs4_positioner,
-            self._attached_bs5_positioner,
-        ]
+        self._all_attached = {
+            "x": self._attached_bsx_positioner,
+            "y": self._attached_bsy_positioner,
+            "monitor": self._attached_bs1_positioner,
+            "beamstop 2": self._attached_bs2_positioner,
+            "beamstop 3": self._attached_bs3_positioner,
+            "beamstop 4": self._attached_bs4_positioner,
+            "beamstop 5": self._attached_bs5_positioner,
+        }
         self._full_mapping = self._get_mapped_positions()
+
+    def doInit(self, mode):
+        self._setROParam("mapping", self._get_mapped_positions())
+        MappedMoveable.doInit(self, mode)
+        self.valuetype = oneof(*self._get_mapped_positions().keys())
 
     def doRead(self, maxage=0):
         return self._mapReadValue(self._readRaw(maxage))
 
     def _readRaw(self, maxage=0):
-        return tuple(channel.read(maxage) for channel in self._all_attached)
+        return tuple(channel.read(maxage) for channel in self._all_attached.values())
 
     def _mapReadValue(self, value):
         inverse_mapping = {v: k for k, v in self._full_mapping.items()}
@@ -88,11 +100,10 @@ class LokiBeamstopController(SequencerMixin, MappedMoveable):
             return "In Between"
         return mapped_value
 
+    def doReadMapping(self):
+        return self._get_mapped_positions()
+
     def doStart(self, target):
-        """
-        Generate and start a sequence if non is running.
-        Just calls ``self._startSequence(self._generateSequence(target))``
-        """
         if self._seq_is_running():
             if self._mode == SIMULATION:
                 self._seq_thread.join()
@@ -103,58 +114,121 @@ class LokiBeamstopController(SequencerMixin, MappedMoveable):
                     "Cannot start device, sequence is still "
                     "running (at %s)!" % self._seq_status[1],
                 )
-        self._startSequence(self._generateSequence(target))
+        sequence = self._generateSequence(target)
+        self._startSequence(sequence)
 
-    def _generateSequence(self, target):
-        active_beamstop = self._get_beamstop_number(self.read())
-        requested_beamstop = self._get_beamstop_number(target)
+    def _generateSequence(self, target: str) -> List[Tuple[SeqDev, ...]]:
+        normalized_target = target.strip().lower()
+        all_device_keys = set(self._all_attached.keys())
+
+        device_keys_in_park = set(self._get_keys_matching_device_read_value("Parked"))
+        if "park" in normalized_target:
+            device_keys_not_parked = all_device_keys - device_keys_in_park
+            seq = self._park_sequence(list(device_keys_not_parked))
+            return seq
+
+        request_in_beam = {arm.strip() for arm in normalized_target.split("+")}
+        device_keys_in_beam = set(self._get_keys_matching_device_read_value("In beam"))
+        move_to_in_beam = request_in_beam - device_keys_in_beam
+        move_to_park = all_device_keys - device_keys_in_park - request_in_beam
+        x_pos = self._get_x_pos(normalized_target)
+
         seq = []
-        if requested_beamstop != active_beamstop:
-            seq.extend(self._park_sequence())
-        seq.extend(self._beamstop_sequence(target))
+        if move_to_park:
+            seq.extend(self._park_sequence(list(move_to_park)))
+        if move_to_in_beam:
+            seq.extend(self._in_beam_sequence(list(move_to_in_beam)))
+        if self._all_attached["y"].read != "In beam":
+            seq.append((SeqDev(self._all_attached["y"], "In beam"),))
+        if self._all_attached["x"].read != x_pos:
+            seq.append((SeqDev(self._all_attached["x"], x_pos),))
         return seq
 
-    def _get_beamstop_number(self, value):
-        active_beamstop_match = re.match(r"(Beamstop \d|Park)", value)
-        if active_beamstop_match:
-            return active_beamstop_match.group()
-        else:
-            return "None"
+    def _get_x_pos(self, target):
+        mapping = self._get_mapped_positions()
+        return mapping[target.capitalize()][0]
 
-    def _park_sequence(self):
+    def _park_sequence(self, devices: List[str]) -> List[Tuple[SeqDev, ...]]:
         """
-        Parking sequence: x to park, y to in-beam, z-arms to park
+        Build the parking sequence.
+
+        The sequence first moves the beamstops away from the detector,
+        then raises the arms to their parked positions.
+
+        Args:
+            devices
+                Key of devices corresponding to the dict of attached devices
+
+        Returns:
+            Ordered execution steps. Each list element represents
+            one execution stage:
+                - A single-element tuple → sequential step
+                - A multi-element tuple → parallel step
         """
-        targets = self._full_mapping.get("Park all beamstops", None)
         seq = []
-        seq.append(SeqDev(self._all_attached[0], targets[0]))
-        seq.append(SeqDev(self._all_attached[1], targets[1]))
-        seq.append(
-            tuple(
-                SeqDev(dev, tar)
-                for dev, tar in zip(self._all_attached[2:], targets[2:])
+        if "x" in devices:
+            seq.append((SeqDev(self._all_attached["x"], "Parked"),))
+        arms_devices = [key for key in devices if "beamstop" in key or "monitor" in key]
+        if arms_devices:
+            seq.append(
+                tuple(
+                    SeqDev(device, "Parked")
+                    for key, device in self._all_attached.items()
+                    if key in arms_devices
+                )
             )
+        return seq
+
+    def _in_beam_sequence(self, devices: List[str]) -> List[Tuple[SeqDev, ...]]:
+        """
+        Build the sequence for adding a beamstop to the beam.
+
+        The sequence first moves the beamstops down into the beam,
+        then moves the beamstop into the center of the beam and
+        finally moves the beamstops towards the detector.
+
+        Args:
+            devices
+                Key of devices corresponding to the dict of attached devices
+
+        Returns:
+            Ordered execution steps. Each list element represents
+            one execution stage:
+                - A single-element tuple → sequential step
+                - A multi-element tuple → parallel step
+        """
+        seq = []
+        beamstop = self._get_device_matching_substring(devices, "beamstop")
+        monitor = self._get_device_matching_substring(devices, "monitor")
+
+        if monitor and beamstop:
+            # beamstop needs to lower slightly first for twincat to update limits
+            seq.extend(
+                [
+                    (SeqDev(beamstop, "Intermediate"),),
+                    (SeqSleep(10),),
+                ]
+            )
+
+        seq.append(
+            tuple(SeqDev(device, "In beam") for device in (beamstop, monitor) if device)
         )
         return seq
 
-    def _beamstop_sequence(self, target):
-        """
-        Engage beamstop sequence: z-arms to in-beam, y to in-beam, x to specified beamstop position
-        """
-        targets = self._full_mapping.get(target, None)
-        seq = []
-        seq.append(
-            tuple(
-                SeqDev(dev, tar)
-                for dev, tar in zip(self._all_attached[2:], targets[2:])
-            )
-        )
-        seq.append(SeqDev(self._all_attached[1], targets[1]))
-        seq.append(SeqDev(self._all_attached[0], targets[0]))
-        return seq
+    def _get_device_matching_substring(self, devices, search_key):
+        for key in devices:
+            if search_key in key:
+                return self._all_attached[key]
+        return None
+
+    def _get_keys_matching_device_read_value(self, value):
+        keys = [
+            key for key, device in self._all_attached.items() if device.read() == value
+        ]
+        return keys
 
     def _get_mapped_positions(self):
-        full_mapping = {
+        return {
             "Park all beamstops": (
                 "Parked",
                 "In beam",
@@ -164,7 +238,7 @@ class LokiBeamstopController(SequencerMixin, MappedMoveable):
                 "Parked",
                 "Parked",
             ),
-            "Beamstop 1": (
+            "Monitor": (
                 "Xpos BS1",
                 "In beam",
                 "In beam",
@@ -246,4 +320,3 @@ class LokiBeamstopController(SequencerMixin, MappedMoveable):
                 "In beam",
             ),
         }
-        return full_mapping
