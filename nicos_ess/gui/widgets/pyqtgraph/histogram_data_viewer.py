@@ -328,8 +328,7 @@ class TrendViewer(QWidget):
 
     def align_right_axis(self):
         """Align the ticks of the right y-axis with those of the left y-axis"""
-        print(self.plot_widget.isVisible())
-        if not self.plot_widget.isVisible():
+        if self.plot_widget.geometry().height() == 0:
             return
 
         left_axis = self.plot_widget.getAxis("left")
