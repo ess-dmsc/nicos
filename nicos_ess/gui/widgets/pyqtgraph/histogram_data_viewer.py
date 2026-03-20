@@ -1,22 +1,20 @@
-from datetime import datetime
 import time
+from datetime import datetime
 
+import numpy as np
 import pyqtgraph as pg
 from pyqtgraph import mkPen
 
 from nicos.guisupport.qt import (
-    QWidget,
-    QVBoxLayout,
-    QHBoxLayout,
     QCheckBox,
+    QHBoxLayout,
     QLabel,
     QSpinBox,
     QTimer,
     QToolTip,
+    QVBoxLayout,
+    QWidget,
 )
-
-import numpy as np
-
 
 pg.setConfigOption("background", "w")
 pg.setConfigOption("foreground", "k")
@@ -330,6 +328,10 @@ class TrendViewer(QWidget):
 
     def align_right_axis(self):
         """Align the ticks of the right y-axis with those of the left y-axis"""
+        print(self.plot_widget.isVisible())
+        if not self.plot_widget.isVisible():
+            return
+
         left_axis = self.plot_widget.getAxis("left")
 
         left_y_range = self.plot_widget.getViewBox().viewRange()[1]
@@ -379,6 +381,7 @@ class TrendViewer(QWidget):
 
 if __name__ == "__main__":
     import sys
+
     from PyQt5 import QtWidgets
 
     app = QtWidgets.QApplication(sys.argv)
