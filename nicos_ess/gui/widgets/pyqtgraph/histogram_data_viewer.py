@@ -102,25 +102,6 @@ class HistogramDataViewer(QWidget):
         else:
             self.plot_widget.setLogMode(y=False)
 
-    def _calc_fwhm(self, bin_edges, hist):
-        half_max = max(hist) / 2
-        max_idx = np.argmax(hist)
-
-        left_indices = np.where(hist[:max_idx] < half_max)[0]
-        if len(left_indices) > 0:
-            left_idx = left_indices[-1]
-        else:
-            left_idx = 0
-
-        right_indices = np.where(hist[max_idx:] < half_max)[0]
-        if len(right_indices) > 0:
-            right_idx = right_indices[0] + max_idx
-        else:
-            right_idx = len(hist) - 1
-
-        fwhm = bin_edges[right_idx] - bin_edges[left_idx]
-        return fwhm, left_idx, right_idx
-
     def receive_data(self, x, y, mean, stddev, fwhm, left_bin_edge, right_bin_edge):
         self.mean = mean
         self.stddev = stddev
