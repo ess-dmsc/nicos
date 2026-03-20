@@ -28,7 +28,7 @@ main_window = docked(
                         ),
                         (
                             "Detector Image",
-                            panel("nicos_ess.gui.panels.live_gr.MultiLiveDataPanel"),
+                            panel("nicos_ess.gui.panels.live_pyqt.MultiLiveDataPanel"),
                         ),
                         (
                             "Choppers",
@@ -56,6 +56,59 @@ main_window = docked(
         (
             "Scripting",
             panel("nicos_ess.gui.panels.editor.EditorPanel", tools=None),
+        ),
+        (
+            "Selene 1",
+            panel(
+                "nicos_ess.estia.gui.panels.selene.SelenePanel",
+                metrology_options=dict(
+                    title="Metrology Selene 1",
+                    positions=["ch27", "ch28"],
+                    selene=1,
+                    cart_position="mpos1",
+                    offsetx=0,
+                ),
+                robot_options=dict(
+                    title="Robot Selene 1 (view inverted)",
+                    posx="robot1_pos",
+                    posz="robot1_vert",
+                    approach1="driver1_1_approach",
+                    rotation1="driver1_1_adjust",
+                    approach2="driver1_2_approach",
+                    rotation2="driver1_2_adjust",
+                    robot="sr1",
+                    offsetx=165.0,
+                    offsetz=65.0,
+                    deckpos="right",
+                ),
+            ),
+        ),
+        (
+            "Selene 2",
+            panel(
+                "nicos_ess.estia.gui.panels.selene.SelenePanel",
+                metrology_options=dict(
+                    title="Metrology Selene 2 (view inverted)",
+                    positions=["ch27", "ch28"],
+                    selene=2,
+                    cart_position="mpos2",
+                    offsetx=0,
+                ),
+                robot_options=dict(
+                    title="Robot Selene 2",
+                    selene=2,
+                    posx="robot2_pos",
+                    posz="robot2_vert",
+                    approach1="driver2_2_approach",
+                    rotation1="driver2_2_adjust",
+                    approach2="driver2_1_approach",
+                    rotation2="driver2_1_adjust",
+                    robot="sr2",
+                    offsetx=-40.0,
+                    offsetz=65.0,
+                    deckpos="right",
+                ),
+            ),
         ),
         (
             "History",
