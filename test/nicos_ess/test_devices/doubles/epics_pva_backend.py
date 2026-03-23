@@ -85,6 +85,10 @@ class FakeEpicsBackend:
         self.subscriptions.append(token)
         return token
 
+    def close_subscription(self, token):
+        if token in self.subscriptions:
+            self.subscriptions.remove(token)
+
     def emit_update(
         self,
         pv,
