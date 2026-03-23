@@ -96,6 +96,9 @@ class ChopperPanel(Panel):
 
     def handle_delay_errors(self, data):
         timestamp, key, value = data
+        if value.size == 0:
+            return
+
         dev_name = key.split("/")[0]
         dev_name = dev_name.replace("_delay_errors", "")
 
