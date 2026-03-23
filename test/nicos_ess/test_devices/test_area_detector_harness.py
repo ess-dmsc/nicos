@@ -126,182 +126,7 @@ def create_orca_flash_detector(daemon_device_harness):
     )
 
 
-def test_area_detector_array_info_returns_tuple_of_arraydesc(
-    daemon_device_harness, fake_backend
-):
-    del fake_backend
-    detector = create_area_detector(daemon_device_harness)
-
-    info = detector.arrayInfo()
-
-    assert isinstance(info, tuple)
-    assert isinstance(info[0], ArrayDesc)
-
-
-def test_area_detector_completed_reflects_acquire_status(
-    daemon_device_harness, fake_backend
-):
-    detector = create_area_detector(daemon_device_harness)
-
-    fake_backend.values[f"{PV_ROOT}AcquireBusy"] = "Done"
-    assert detector.isCompleted() is True
-
-    fake_backend.values[f"{PV_ROOT}AcquireBusy"] = "Busybusybusy"
-    assert detector.isCompleted() is False
-
-
-def test_area_detector_tracks_image_count_presets_and_ignores_unrelated_keys(
-    daemon_device_harness, fake_backend
-):
-    del fake_backend
-    detector = create_area_detector(daemon_device_harness)
-
-    assert set(detector.presetInfo()) == {"n"}
-
-    detector.setPreset(n=3)
-    detector.setPreset(t=1)
-    detector.setPreset()
-    assert detector.preset() == {"n": 3}
-
-
-def test_area_detector_channel_preset_uses_image_counter_progress(
-    daemon_device_harness, fake_backend
-):
-    detector = create_area_detector(daemon_device_harness)
-
-    detector.setChannelPreset("n", 2)
-
-    fake_backend.values[f"{PV_ROOT}NumImagesCounter_RBV"] = 1
-    assert detector.iscontroller is True
-    assert detector.presetReached("n", 2, 0) is False
-
-    fake_backend.values[f"{PV_ROOT}NumImagesCounter_RBV"] = 2
-    assert detector.presetReached("n", 2, 0) is True
-
-
-def test_area_detector_start_marks_device_busy(daemon_device_harness, fake_backend):
-    detector = create_area_detector(daemon_device_harness)
-
-    detector.start(n=1)
-
-    assert detector._current_status == (status.BUSY, "Acquiring")
-    assert fake_backend.values[f"{PV_ROOT}Acquire"] == 1
-
-
-def test_area_detector_completes_on_image_count_preset_before_backend_status(
-    daemon_device_harness, fake_backend
-):
-    detector = create_area_detector(daemon_device_harness)
-
-    fake_backend.values[f"{PV_ROOT}AcquireBusy"] = "Busybusybusy"
-    detector.start(n=2)
-    fake_backend.values[f"{PV_ROOT}NumImagesCounter_RBV"] = 1
-    assert detector.isCompleted() is False
-
-    fake_backend.values[f"{PV_ROOT}NumImagesCounter_RBV"] = 2
-    assert detector.isCompleted() is True
-
-
-def test_area_detector_error_takes_precedence_over_reached_image_count(
-    daemon_device_harness, fake_backend
-):
-    detector = create_area_detector(daemon_device_harness)
-
-    detector.start(n=2)
-    fake_backend.values[f"{PV_ROOT}NumImagesCounter_RBV"] = 2
-    fake_backend.values[f"{PV_ROOT}AcquireBusy"] = "DetectorError"
-    fake_backend.values[f"{PV_ROOT}DetectorState_RBV.SEVR"] = 2
-
-    with pytest.raises(NicosError):
-        detector.isCompleted()
-
-
-def test_timepix_zero_image_preset_does_not_start_acquisition(
-    daemon_device_harness, fake_backend, monkeypatch
-):
-    seed_timepix_defaults(fake_backend)
-    detector = create_timepix_detector(daemon_device_harness)
-    wait_calls = []
-    monkeypatch.setattr(
-        detector,
-        "_wait_until",
-        lambda *args, **kwargs: wait_calls.append((args, kwargs)),
-    )
-
-    detector.start(n=0)
-
-    assert fake_backend.values[f"{TIMEPIX_PV_ROOT}Acquire"] == 0
-    assert wait_calls == []
-
-
-def test_timepix_start_marks_device_busy_and_waits_for_ioc_handshake(
-    daemon_device_harness, fake_backend, monkeypatch
-):
-    seed_timepix_defaults(fake_backend)
-    detector = create_timepix_detector(daemon_device_harness)
-    wait_calls = []
-
-    def record_wait(pv_name, expected_value, precision=None, timeout=5.0):
-        del precision, timeout
-        wait_calls.append((pv_name, expected_value))
-
-    monkeypatch.setattr(detector, "_wait_until", record_wait)
-
-    detector.start(n=1)
-
-    assert detector._current_status == (status.BUSY, "Acquiring")
-    assert fake_backend.values[f"{TIMEPIX_PV_ROOT}Acquire"] == 1
-    assert fake_backend.values[f"{TIMEPIX_PV_ROOT}WriteData"] == 1
-    assert wait_calls[0] == ("ts_ready", 1)
-    assert wait_calls[1][0] == "path_last_added"
-
-
-def test_orca_flash_start_without_preset_defaults_to_continuous_mode(
-    daemon_device_harness, fake_backend
-):
-    seed_orca_defaults(fake_backend)
-    detector = create_orca_flash_detector(daemon_device_harness)
-
-    detector.start()
-
-    assert detector._current_status == (status.BUSY, "Acquiring")
-    assert fake_backend.values[f"{ORCA_PV_ROOT}Acquire"] == 1
-    assert fake_backend.values[f"{ORCA_PV_ROOT}ImageMode"] == 2
-
-
-def test_orca_flash_start_applies_image_count_preset_in_multiple_mode(
-    daemon_device_harness, fake_backend
-):
-    seed_orca_defaults(fake_backend)
-    detector = create_orca_flash_detector(daemon_device_harness)
-
-    detector.start(n=3)
-
-    assert detector._current_status == (status.BUSY, "Acquiring")
-    assert fake_backend.values[f"{ORCA_PV_ROOT}Acquire"] == 1
-    assert fake_backend.values[f"{ORCA_PV_ROOT}ImageMode"] == 1
-    assert fake_backend.values[f"{ORCA_PV_ROOT}NumImages"] == 3
-
-
-def test_orca_flash_error_takes_precedence_over_reached_image_count(
-    daemon_device_harness, fake_backend
-):
-    seed_orca_defaults(fake_backend)
-    detector = create_orca_flash_detector(daemon_device_harness)
-
-    detector.start(n=2)
-    fake_backend.values[f"{ORCA_PV_ROOT}NumImagesCounter_RBV"] = 2
-    fake_backend.values[f"{ORCA_PV_ROOT}AcquireBusy"] = "DetectorError"
-    fake_backend.values[f"{ORCA_PV_ROOT}DetectorState_RBV.SEVR"] = 2
-
-    with pytest.raises(NicosError):
-        detector.isCompleted()
-
-
-def test_area_detector_collector_uses_image_presets_and_ignores_unrelated_ones(
-    daemon_device_harness, fake_backend
-):
-    del fake_backend
+def create_area_detector_collector(daemon_device_harness):
     image = daemon_device_harness.create_master(
         AreaDetector,
         name="camera",
@@ -313,40 +138,204 @@ def test_area_detector_collector_uses_image_presets_and_ignores_unrelated_ones(
         name="collector",
         images=["camera"],
     )
-
-    assert collector.valueInfo() == ()
-    assert "camera" in collector.presetInfo()
-    assert "t" not in collector.presetInfo()
-
-    collector.setPreset(camera=4)
-    assert image.preset() == {"n": 4}
-
-    collector.prepare()
-    collector.setPreset(t=1)
-    collector.setPreset()
-    assert collector.preset() == {"camera": 4}
-    assert image.preset() == {"n": 4}
+    return image, collector
 
 
-def test_area_detector_collector_does_not_persist_live_as_previous_preset(
-    daemon_device_harness, fake_backend
-):
-    del fake_backend
-    image = daemon_device_harness.create_master(
-        AreaDetector,
-        name="camera",
-        pv_root=PV_ROOT,
-        image_pv=IMAGE_PV,
-    )
-    collector = daemon_device_harness.create_master(
-        AreaDetectorCollector,
-        name="collector",
-        images=["camera"],
-    )
+class TestAreaDetectorHarness:
+    def test_array_info_returns_tuple_of_arraydesc(
+        self, daemon_device_harness, fake_backend
+    ):
+        del fake_backend
+        detector = create_area_detector(daemon_device_harness)
 
-    collector.setPreset(camera=4)
-    collector.setPreset(live=True)
-    collector.setPreset()
+        info = detector.arrayInfo()
 
-    assert collector.preset() == {"camera": 4}
-    assert image.preset() == {"n": 4}
+        assert isinstance(info, tuple)
+        assert isinstance(info[0], ArrayDesc)
+
+    def test_completed_reflects_acquire_status(
+        self, daemon_device_harness, fake_backend
+    ):
+        detector = create_area_detector(daemon_device_harness)
+
+        fake_backend.values[f"{PV_ROOT}AcquireBusy"] = "Done"
+        assert detector.isCompleted() is True
+
+        fake_backend.values[f"{PV_ROOT}AcquireBusy"] = "Busybusybusy"
+        assert detector.isCompleted() is False
+
+    def test_tracks_image_count_presets_and_ignores_unrelated_keys(
+        self, daemon_device_harness, fake_backend
+    ):
+        del fake_backend
+        detector = create_area_detector(daemon_device_harness)
+
+        assert set(detector.presetInfo()) == {"n"}
+
+        detector.setPreset(n=3)
+        detector.setPreset(t=1)
+        detector.setPreset()
+        assert detector.preset() == {"n": 3}
+
+    def test_channel_preset_uses_image_counter_progress(
+        self, daemon_device_harness, fake_backend
+    ):
+        detector = create_area_detector(daemon_device_harness)
+
+        detector.setChannelPreset("n", 2)
+
+        fake_backend.values[f"{PV_ROOT}NumImagesCounter_RBV"] = 1
+        assert detector.iscontroller is True
+        assert detector.presetReached("n", 2, 0) is False
+
+        fake_backend.values[f"{PV_ROOT}NumImagesCounter_RBV"] = 2
+        assert detector.presetReached("n", 2, 0) is True
+
+    def test_start_marks_device_busy(self, daemon_device_harness, fake_backend):
+        detector = create_area_detector(daemon_device_harness)
+
+        detector.start(n=1)
+
+        assert detector._current_status == (status.BUSY, "Acquiring")
+        assert fake_backend.values[f"{PV_ROOT}Acquire"] == 1
+
+    def test_completes_on_image_count_preset_before_backend_status(
+        self, daemon_device_harness, fake_backend
+    ):
+        detector = create_area_detector(daemon_device_harness)
+
+        fake_backend.values[f"{PV_ROOT}AcquireBusy"] = "Busybusybusy"
+        detector.start(n=2)
+        fake_backend.values[f"{PV_ROOT}NumImagesCounter_RBV"] = 1
+        assert detector.isCompleted() is False
+
+        fake_backend.values[f"{PV_ROOT}NumImagesCounter_RBV"] = 2
+        assert detector.isCompleted() is True
+
+    def test_error_takes_precedence_over_reached_image_count(
+        self, daemon_device_harness, fake_backend
+    ):
+        detector = create_area_detector(daemon_device_harness)
+
+        detector.start(n=2)
+        fake_backend.values[f"{PV_ROOT}NumImagesCounter_RBV"] = 2
+        fake_backend.values[f"{PV_ROOT}AcquireBusy"] = "DetectorError"
+        fake_backend.values[f"{PV_ROOT}DetectorState_RBV.SEVR"] = 2
+
+        with pytest.raises(NicosError):
+            detector.isCompleted()
+
+
+class TestTimepixDetectorHarness:
+    def test_zero_image_preset_does_not_start_acquisition(
+        self, daemon_device_harness, fake_backend, monkeypatch
+    ):
+        seed_timepix_defaults(fake_backend)
+        detector = create_timepix_detector(daemon_device_harness)
+        wait_calls = []
+        monkeypatch.setattr(
+            detector,
+            "_wait_until",
+            lambda *args, **kwargs: wait_calls.append((args, kwargs)),
+        )
+
+        detector.start(n=0)
+
+        assert fake_backend.values[f"{TIMEPIX_PV_ROOT}Acquire"] == 0
+        assert wait_calls == []
+
+    def test_start_marks_device_busy_and_waits_for_ioc_handshake(
+        self, daemon_device_harness, fake_backend, monkeypatch
+    ):
+        seed_timepix_defaults(fake_backend)
+        detector = create_timepix_detector(daemon_device_harness)
+        wait_calls = []
+
+        def record_wait(pv_name, expected_value, precision=None, timeout=5.0):
+            del precision, timeout
+            wait_calls.append((pv_name, expected_value))
+
+        monkeypatch.setattr(detector, "_wait_until", record_wait)
+
+        detector.start(n=1)
+
+        assert detector._current_status == (status.BUSY, "Acquiring")
+        assert fake_backend.values[f"{TIMEPIX_PV_ROOT}Acquire"] == 1
+        assert fake_backend.values[f"{TIMEPIX_PV_ROOT}WriteData"] == 1
+        assert wait_calls[0] == ("ts_ready", 1)
+        assert wait_calls[1][0] == "path_last_added"
+
+
+class TestOrcaFlash4Harness:
+    def test_start_without_preset_defaults_to_continuous_mode(
+        self, daemon_device_harness, fake_backend
+    ):
+        seed_orca_defaults(fake_backend)
+        detector = create_orca_flash_detector(daemon_device_harness)
+
+        detector.start()
+
+        assert detector._current_status == (status.BUSY, "Acquiring")
+        assert fake_backend.values[f"{ORCA_PV_ROOT}Acquire"] == 1
+        assert fake_backend.values[f"{ORCA_PV_ROOT}ImageMode"] == 2
+
+    def test_start_applies_image_count_preset_in_multiple_mode(
+        self, daemon_device_harness, fake_backend
+    ):
+        seed_orca_defaults(fake_backend)
+        detector = create_orca_flash_detector(daemon_device_harness)
+
+        detector.start(n=3)
+
+        assert detector._current_status == (status.BUSY, "Acquiring")
+        assert fake_backend.values[f"{ORCA_PV_ROOT}Acquire"] == 1
+        assert fake_backend.values[f"{ORCA_PV_ROOT}ImageMode"] == 1
+        assert fake_backend.values[f"{ORCA_PV_ROOT}NumImages"] == 3
+
+    def test_error_takes_precedence_over_reached_image_count(
+        self, daemon_device_harness, fake_backend
+    ):
+        seed_orca_defaults(fake_backend)
+        detector = create_orca_flash_detector(daemon_device_harness)
+
+        detector.start(n=2)
+        fake_backend.values[f"{ORCA_PV_ROOT}NumImagesCounter_RBV"] = 2
+        fake_backend.values[f"{ORCA_PV_ROOT}AcquireBusy"] = "DetectorError"
+        fake_backend.values[f"{ORCA_PV_ROOT}DetectorState_RBV.SEVR"] = 2
+
+        with pytest.raises(NicosError):
+            detector.isCompleted()
+
+
+class TestAreaDetectorCollectorHarness:
+    def test_uses_image_presets_and_ignores_unrelated_ones(
+        self, daemon_device_harness, fake_backend
+    ):
+        del fake_backend
+        image, collector = create_area_detector_collector(daemon_device_harness)
+
+        assert collector.valueInfo() == ()
+        assert "camera" in collector.presetInfo()
+        assert "t" not in collector.presetInfo()
+
+        collector.setPreset(camera=4)
+        assert image.preset() == {"n": 4}
+
+        collector.prepare()
+        collector.setPreset(t=1)
+        collector.setPreset()
+        assert collector.preset() == {"camera": 4}
+        assert image.preset() == {"n": 4}
+
+    def test_does_not_persist_live_as_previous_preset(
+        self, daemon_device_harness, fake_backend
+    ):
+        del fake_backend
+        image, collector = create_area_detector_collector(daemon_device_harness)
+
+        collector.setPreset(camera=4)
+        collector.setPreset(live=True)
+        collector.setPreset()
+
+        assert collector.preset() == {"camera": 4}
+        assert image.preset() == {"n": 4}
