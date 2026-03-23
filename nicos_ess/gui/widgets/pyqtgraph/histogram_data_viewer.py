@@ -1,22 +1,20 @@
-from datetime import datetime
 import time
+from datetime import datetime
 
+import numpy as np
 import pyqtgraph as pg
 from pyqtgraph import mkPen
 
 from nicos.guisupport.qt import (
-    QWidget,
-    QVBoxLayout,
-    QHBoxLayout,
     QCheckBox,
+    QHBoxLayout,
     QLabel,
     QSpinBox,
     QTimer,
     QToolTip,
+    QVBoxLayout,
+    QWidget,
 )
-
-import numpy as np
-
 
 pg.setConfigOption("background", "w")
 pg.setConfigOption("foreground", "k")
@@ -103,25 +101,6 @@ class HistogramDataViewer(QWidget):
             self.plot_widget.setLogMode(y=True)
         else:
             self.plot_widget.setLogMode(y=False)
-
-    def _calc_fwhm(self, bin_edges, hist):
-        half_max = max(hist) / 2
-        max_idx = np.argmax(hist)
-
-        left_indices = np.where(hist[:max_idx] < half_max)[0]
-        if len(left_indices) > 0:
-            left_idx = left_indices[-1]
-        else:
-            left_idx = 0
-
-        right_indices = np.where(hist[max_idx:] < half_max)[0]
-        if len(right_indices) > 0:
-            right_idx = right_indices[0] + max_idx
-        else:
-            right_idx = len(hist) - 1
-
-        fwhm = bin_edges[right_idx] - bin_edges[left_idx]
-        return fwhm, left_idx, right_idx
 
     def receive_data(self, x, y, mean, stddev, fwhm, left_bin_edge, right_bin_edge):
         self.mean = mean
@@ -330,6 +309,9 @@ class TrendViewer(QWidget):
 
     def align_right_axis(self):
         """Align the ticks of the right y-axis with those of the left y-axis"""
+        if self.plot_widget.geometry().height() == 0:
+            return
+
         left_axis = self.plot_widget.getAxis("left")
 
         left_y_range = self.plot_widget.getViewBox().viewRange()[1]
@@ -379,6 +361,7 @@ class TrendViewer(QWidget):
 
 if __name__ == "__main__":
     import sys
+
     from PyQt5 import QtWidgets
 
     app = QtWidgets.QApplication(sys.argv)
