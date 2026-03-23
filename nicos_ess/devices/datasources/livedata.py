@@ -522,6 +522,7 @@ class LiveDataCollector(Detector):
         self._registry = JobRegistry()
         self._last_expected_status_time = time.time()
         self._data_subscriber = None
+        self._dispatch_lock = threading.RLock()
 
         # Attach collector reference to channels
         for ch in self._channels:
@@ -711,12 +712,33 @@ class LiveDataCollector(Detector):
                 self._resp_consumer._consumer.commit(msg, asynchronous=False)
 
     def _dispatch_to_channels(self, timestamp_ns: int, rk, da):
-        for ch in self._channels:
-            sel: Optional[Selector] = getattr(ch, "_selector_obj", None)
-            if not sel:
-                continue
-            if sel.selector_matches(rk):
-                ch.update_data_from_da00(da, timestamp_ns)
+        with self._dispatch_lock:
+            for ch in self._channels:
+                sel: Optional[Selector] = getattr(ch, "_selector_obj", None)
+                if not sel:
+                    continue
+                if sel.selector_matches(rk):
+                    ch.update_data_from_da00(da, timestamp_ns)
+
+    def doStatus(self, maxage=0):
+        with self._dispatch_lock:
+            return Detector.doStatus(self, maxage)
+
+    def doRead(self, maxage=0):
+        with self._dispatch_lock:
+            return Detector.doRead(self, maxage)
+
+    def doReadArrays(self, quality):
+        with self._dispatch_lock:
+            return Detector.doReadArrays(self, quality)
+
+    def doFinish(self):
+        with self._dispatch_lock:
+            Detector.doFinish(self)
+
+    def doStop(self):
+        with self._dispatch_lock:
+            Detector.doStop(self)
 
     def send_job_command(
         self,
