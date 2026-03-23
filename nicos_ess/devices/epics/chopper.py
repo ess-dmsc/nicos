@@ -47,7 +47,7 @@ class ChopperAlarms(EpicsParameters, Readable):
         "level": RecordInfo("", "Lvl_Alrm", RecordType.STATUS),
         "position": RecordInfo("", "Pos_Alrms", RecordType.STATUS),
         "power": RecordInfo("", "Pwr_Alrms", RecordType.STATUS),
-        "reference": RecordInfo("", "Ref_Alrms", RecordType.STATUS),
+        "reference": RecordInfo("", "Comm_Ref_Warn", RecordType.STATUS),
         "software": RecordInfo("", "SW_Alrms", RecordType.STATUS),
         "voltage": RecordInfo("", "Volt_Alrms", RecordType.STATUS),
     }
