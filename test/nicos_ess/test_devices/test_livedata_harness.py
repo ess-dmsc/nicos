@@ -1,4 +1,6 @@
 import json
+import threading
+import time
 from dataclasses import asdict
 from types import SimpleNamespace
 
@@ -185,3 +187,55 @@ class TestLiveDataCollectorHarness:
             "livedata_secondary",
         )
         assert collector._channel_presets == {secondary: [("livedata_secondary", 4)]}
+
+    def test_completion_waits_for_full_da00_dispatch_before_reading_results(
+        self, daemon_device_harness, kafka_stubs, monkeypatch
+    ):
+        del kafka_stubs
+        channels, collector = create_multi_channel_collector(daemon_device_harness)
+        primary, _secondary, _roi = channels
+        collector.setPreset(n=6)
+        collector.prepare()
+        collector.start()
+
+        controller_updated = threading.Event()
+        release_controller = threading.Event()
+        original_update = livedata.DataChannel.update_data_from_da00
+
+        def delayed_primary_update(channel, da00_msg, timestamp_ns):
+            original_update(channel, da00_msg, timestamp_ns)
+            if channel is primary:
+                controller_updated.set()
+                release_controller.wait(timeout=1.0)
+
+        monkeypatch.setattr(
+            livedata.DataChannel,
+            "update_data_from_da00",
+            delayed_primary_update,
+        )
+
+        dispatch_thread = threading.Thread(
+            target=collector._dispatch_to_channels,
+            args=(TIMESTAMP_NS, RESULT_KEY, make_da00_message()),
+            daemon=True,
+        )
+        dispatch_thread.start()
+        assert controller_updated.wait(timeout=1.0)
+
+        completion_result = []
+
+        def check_completion():
+            completion_result.append(collector.isCompleted())
+
+        completion_thread = threading.Thread(target=check_completion, daemon=True)
+        completion_thread.start()
+        time.sleep(0.05)
+
+        assert completion_thread.is_alive()
+
+        release_controller.set()
+        dispatch_thread.join(timeout=1.0)
+        completion_thread.join(timeout=1.0)
+
+        assert completion_result == [True]
+        assert collector.read() == [6, 6, 6]
