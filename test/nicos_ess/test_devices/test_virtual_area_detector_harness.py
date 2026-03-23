@@ -26,107 +26,91 @@ def create_virtual_area_detector(daemon_device_harness):
     return image, collector
 
 
-def test_virtual_area_detector_tracks_image_count_presets_and_ignores_unrelated_keys(
-    daemon_device_harness,
-):
-    image, _collector = create_virtual_area_detector(daemon_device_harness)
+class TestVirtualAreaDetectorHarness:
+    def test_tracks_image_count_presets_and_ignores_unrelated_keys(
+        self, daemon_device_harness
+    ):
+        image, _collector = create_virtual_area_detector(daemon_device_harness)
 
-    assert set(image.presetInfo()) == {"n"}
+        assert set(image.presetInfo()) == {"n"}
 
-    image.setPreset(n=2)
-    image.setPreset(t=1)
-    image.setPreset()
-    assert image.preset() == {"n": 2}
+        image.setPreset(n=2)
+        image.setPreset(t=1)
+        image.setPreset()
+        assert image.preset() == {"n": 2}
 
+    def test_channel_preset_uses_image_counter_progress(self, daemon_device_harness):
+        image, _collector = create_virtual_area_detector(daemon_device_harness)
 
-def test_virtual_area_detector_channel_preset_uses_image_counter_progress(
-    daemon_device_harness,
-):
-    image, _collector = create_virtual_area_detector(daemon_device_harness)
+        image.setChannelPreset("n", 2)
 
-    image.setChannelPreset("n", 2)
+        assert image.iscontroller is True
+        assert image.presetReached("n", 2, 0) is False
 
-    assert image.iscontroller is True
-    assert image.presetReached("n", 2, 0) is False
-
-    image._ad_simulator._image_counter = 2
-    assert image.presetReached("n", 2, 0) is True
+        image._ad_simulator._image_counter = 2
+        assert image.presetReached("n", 2, 0) is True
 
 
-def test_virtual_area_detector_collector_applies_image_preset_before_prepare(
-    daemon_device_harness,
-):
-    image, collector = create_virtual_area_detector(daemon_device_harness)
+class TestVirtualAreaDetectorCollectorHarness:
+    def test_applies_image_preset_before_prepare(self, daemon_device_harness):
+        image, collector = create_virtual_area_detector(daemon_device_harness)
 
-    collector.setPreset(virtual_camera=2)
+        collector.setPreset(virtual_camera=2)
 
-    assert image.preset() == {"n": 2}
+        assert image.preset() == {"n": 2}
 
-    collector.prepare()
-    assert image.preset() == {"n": 2}
+        collector.prepare()
+        assert image.preset() == {"n": 2}
 
+    def test_reuses_previous_image_preset(self, daemon_device_harness):
+        image, collector = create_virtual_area_detector(daemon_device_harness)
 
-def test_virtual_area_detector_collector_reuses_previous_image_preset(
-    daemon_device_harness,
-):
-    image, collector = create_virtual_area_detector(daemon_device_harness)
+        collector.setPreset(virtual_camera=2)
+        collector.prepare()
+        collector.setPreset()
 
-    collector.setPreset(virtual_camera=2)
-    collector.prepare()
-    collector.setPreset()
+        assert collector.preset() == {"virtual_camera": 2}
+        assert image.preset() == {"n": 2}
 
-    assert collector.preset() == {"virtual_camera": 2}
-    assert image.preset() == {"n": 2}
+    def test_ignores_non_image_presets(self, daemon_device_harness):
+        image, collector = create_virtual_area_detector(daemon_device_harness)
 
+        collector.setPreset(virtual_camera=2)
+        collector.setPreset(t=1)
 
-def test_virtual_area_detector_collector_ignores_non_image_presets(
-    daemon_device_harness,
-):
-    image, collector = create_virtual_area_detector(daemon_device_harness)
+        assert collector.preset() == {"virtual_camera": 2}
+        assert image.preset() == {"n": 2}
 
-    collector.setPreset(virtual_camera=2)
-    collector.setPreset(t=1)
+    def test_does_not_persist_live_as_previous_preset(self, daemon_device_harness):
+        image, collector = create_virtual_area_detector(daemon_device_harness)
 
-    assert collector.preset() == {"virtual_camera": 2}
-    assert image.preset() == {"n": 2}
+        collector.setPreset(virtual_camera=2)
+        collector.setPreset(live=True)
+        collector.setPreset()
 
+        assert collector.preset() == {"virtual_camera": 2}
+        assert image.preset() == {"n": 2}
 
-def test_virtual_area_detector_collector_does_not_persist_live_as_previous_preset(
-    daemon_device_harness,
-):
-    image, collector = create_virtual_area_detector(daemon_device_harness)
+    def test_finishes_when_requested_image_count_is_reached(
+        self, daemon_device_harness
+    ):
+        image, collector = create_virtual_area_detector(daemon_device_harness)
 
-    collector.setPreset(virtual_camera=2)
-    collector.setPreset(live=True)
-    collector.setPreset()
+        collector.setPreset(virtual_camera=2)
+        collector.prepare()
+        collector.start()
+        wait_until_complete(collector, timeout=3.0)
+        collector.finish()
 
-    assert collector.preset() == {"virtual_camera": 2}
-    assert image.preset() == {"n": 2}
+        scalars, arrays = collector.readResults(FINAL)
 
+        assert scalars == []
+        assert image.read()[0] == 2
+        assert len(arrays) == 1
+        assert arrays[0].shape == image.arrayInfo()[0].shape
 
-def test_virtual_area_detector_collector_finishes_when_requested_image_count_is_reached(
-    daemon_device_harness,
-):
-    image, collector = create_virtual_area_detector(daemon_device_harness)
+    def test_preset_namespace_stays_image_only(self, daemon_device_harness):
+        _image, collector = create_virtual_area_detector(daemon_device_harness)
 
-    collector.setPreset(virtual_camera=2)
-    collector.prepare()
-    collector.start()
-    wait_until_complete(collector, timeout=3.0)
-    collector.finish()
-
-    scalars, arrays = collector.readResults(FINAL)
-
-    assert scalars == []
-    assert image.read()[0] == 2
-    assert len(arrays) == 1
-    assert arrays[0].shape == image.arrayInfo()[0].shape
-
-
-def test_virtual_area_detector_collector_preset_namespace_stays_image_only(
-    daemon_device_harness,
-):
-    _image, collector = create_virtual_area_detector(daemon_device_harness)
-
-    assert "virtual_camera" in collector.presetInfo()
-    assert "t" not in collector.presetInfo()
+        assert "virtual_camera" in collector.presetInfo()
+        assert "t" not in collector.presetInfo()

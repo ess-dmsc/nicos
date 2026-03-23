@@ -62,6 +62,19 @@ def create_channel(daemon_device_harness):
     )
 
 
+def create_collector(daemon_device_harness, name, counters):
+    return daemon_device_harness.create_master(
+        livedata.LiveDataCollector,
+        name=name,
+        brokers=["localhost:9092"],
+        data_topics=["livedata"],
+        status_topics=[],
+        responses_topics=[],
+        commands_topic="",
+        counters=counters,
+    )
+
+
 def create_multi_channel_collector(daemon_device_harness):
     channels = [
         daemon_device_harness.create_master(
@@ -72,20 +85,15 @@ def create_multi_channel_collector(daemon_device_harness):
         )
         for name in ("livedata_primary", "livedata_secondary", "livedata_roi")
     ]
-    collector = daemon_device_harness.create_master(
-        livedata.LiveDataCollector,
+    collector = create_collector(
+        daemon_device_harness,
         name="livedata_collector",
-        brokers=["localhost:9092"],
-        data_topics=["livedata"],
-        status_topics=[],
-        responses_topics=[],
-        commands_topic="",
         counters=[channel.name for channel in channels],
     )
     return channels, collector
 
 
-def da00_message():
+def make_da00_message():
     return SimpleNamespace(
         source_name=json.dumps(
             {
@@ -113,69 +121,67 @@ def da00_message():
     )
 
 
-def test_datachannel_array_info_returns_tuple_and_read_results_include_array(
-    daemon_device_harness, kafka_stubs, live_data_updates
-):
-    del kafka_stubs
-    channel = create_channel(daemon_device_harness)
+class TestDataChannelHarness:
+    def test_array_info_returns_tuple_and_read_results_include_array(
+        self, daemon_device_harness, kafka_stubs, live_data_updates
+    ):
+        del kafka_stubs
+        channel = create_channel(daemon_device_harness)
 
-    channel.start()
-    channel.update_data_from_da00(da00_message(), TIMESTAMP_NS)
-    info = channel.arrayInfo()
-    scalars, arrays = channel.readResults(FINAL)
+        channel.start()
+        channel.update_data_from_da00(make_da00_message(), TIMESTAMP_NS)
+        info = channel.arrayInfo()
+        scalars, arrays = channel.readResults(FINAL)
 
-    assert isinstance(info, tuple)
-    assert len(info) == 1
-    assert isinstance(info[0], ArrayDesc)
-    assert scalars == [6]
-    assert len(arrays) == 1
-    assert arrays[0].shape == info[0].shape
-    assert live_data_updates[0]["parameters"]["det"] == "livedata_channel"
-
-
-def test_livedata_collector_routes_da00_and_completes_on_scalar_preset(
-    daemon_device_harness, kafka_stubs, live_data_updates
-):
-    del kafka_stubs
-    channel = create_channel(daemon_device_harness)
-    collector = daemon_device_harness.create_master(
-        livedata.LiveDataCollector,
-        name="livedata_collector",
-        brokers=["localhost:9092"],
-        data_topics=["livedata"],
-        status_topics=[],
-        responses_topics=[],
-        commands_topic="",
-        counters=["livedata_channel"],
-    )
-
-    collector.setPreset(n=6)
-    collector.prepare()
-    collector.start()
-    collector._dispatch_to_channels(TIMESTAMP_NS, RESULT_KEY, da00_message())
-    scalars, arrays = collector.readResults(FINAL)
-
-    assert collector.isCompleted() is True
-    assert scalars == [6]
-    assert arrays == []
-    assert live_data_updates[0]["parameters"]["det"] == "livedata_channel"
+        assert isinstance(info, tuple)
+        assert len(info) == 1
+        assert isinstance(info[0], ArrayDesc)
+        assert scalars == [6]
+        assert len(arrays) == 1
+        assert arrays[0].shape == info[0].shape
+        assert live_data_updates[0]["parameters"]["det"] == "livedata_channel"
 
 
-def test_livedata_collector_uses_first_counter_for_n_and_named_channel_explicitly(
-    daemon_device_harness, kafka_stubs
-):
-    del kafka_stubs
-    channels, collector = create_multi_channel_collector(daemon_device_harness)
-    primary, secondary, _roi = channels
+class TestLiveDataCollectorHarness:
+    def test_routes_da00_and_completes_on_scalar_preset(
+        self, daemon_device_harness, kafka_stubs, live_data_updates
+    ):
+        del kafka_stubs
+        channel = create_channel(daemon_device_harness)
+        collector = create_collector(
+            daemon_device_harness,
+            name="livedata_collector",
+            counters=[channel.name],
+        )
 
-    collector.setPreset(n=6)
+        collector.setPreset(n=6)
+        collector.prepare()
+        collector.start()
+        collector._dispatch_to_channels(TIMESTAMP_NS, RESULT_KEY, make_da00_message())
+        scalars, arrays = collector.readResults(FINAL)
 
-    assert tuple(ch.name for ch in collector._controlchannels) == ("livedata_primary",)
-    assert collector._channel_presets == {primary: [("n", 6)]}
+        assert collector.isCompleted() is True
+        assert scalars == [6]
+        assert arrays == []
+        assert live_data_updates[0]["parameters"]["det"] == "livedata_channel"
 
-    collector.setPreset(livedata_secondary=4)
+    def test_uses_first_counter_for_n_and_named_channel_explicitly(
+        self, daemon_device_harness, kafka_stubs
+    ):
+        del kafka_stubs
+        channels, collector = create_multi_channel_collector(daemon_device_harness)
+        primary, secondary, _roi = channels
 
-    assert tuple(ch.name for ch in collector._controlchannels) == (
-        "livedata_secondary",
-    )
-    assert collector._channel_presets == {secondary: [("livedata_secondary", 4)]}
+        collector.setPreset(n=6)
+
+        assert tuple(ch.name for ch in collector._controlchannels) == (
+            "livedata_primary",
+        )
+        assert collector._channel_presets == {primary: [("n", 6)]}
+
+        collector.setPreset(livedata_secondary=4)
+
+        assert tuple(ch.name for ch in collector._controlchannels) == (
+            "livedata_secondary",
+        )
+        assert collector._channel_presets == {secondary: [("livedata_secondary", 4)]}
