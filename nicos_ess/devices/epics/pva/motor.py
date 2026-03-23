@@ -319,6 +319,10 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
             umin = max(min(umin, hw_umax), hw_umin)
             umax = max(min(umax, hw_umax), hw_umin)
 
+            # round it to precision
+            umin = round(umin, 3)
+            umax = round(umax, 3)
+
             new_omin = umin - hw_umin
             new_omax = umax - hw_umax
 
