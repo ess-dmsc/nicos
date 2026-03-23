@@ -29,6 +29,7 @@ from tango import DevState
 
 from nicos.core import (
     Attach,
+    HasLimits,
     HasPrecision,
     InvalidValueError,
     Moveable,
@@ -156,7 +157,7 @@ class VoltageSupply(PowerSupply):
         return 3
 
 
-class HV(BaseSequencer):
+class HV(HasLimits, BaseSequencer):
     valuetype = float
     attached_devices = {
         "supply": Attach("NICOS Device for the highvoltage supply", Moveable),

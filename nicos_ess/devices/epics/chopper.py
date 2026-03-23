@@ -36,7 +36,7 @@ class ChopperAlarms(EpicsParameters, Readable):
         ),
     }
     parameter_overrides = {
-        "unit": Override(mandatory=False, settable=False, volatile=False),
+        "unit": Override(mandatory=False, settable=False),
     }
 
     _alarm_state = {}
@@ -180,9 +180,7 @@ class EssChopperController(MappedMoveable):
     parameter_overrides = {
         "fmtstr": Override(default="%s"),
         "unit": Override(mandatory=False),
-        "mapping": Override(
-            mandatory=False, settable=False, userparam=False, volatile=True
-        ),
+        "mapping": Override(mandatory=False, userparam=False, volatile=True),
     }
 
     hardware_access = False

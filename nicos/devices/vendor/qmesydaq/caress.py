@@ -28,7 +28,7 @@ from os import path
 import numpy
 
 from nicos import session
-from nicos.core import MASTER, SIMULATION, ArrayDesc, Param
+from nicos.core import MASTER, SIMULATION, ArrayDesc, Override, Param
 from nicos.core.errors import (
     CommunicationError,
     ConfigurationError,
@@ -226,6 +226,10 @@ class Channel(QMesydaqCaressDevice, ActiveChannel):
 
 class Timer(TimerChannelMixin, Channel):
     """Timer for CARESS."""
+
+    parameter_overrides = {
+        "preselection": Override(type=float),
+    }
 
 
 class Counter(CounterChannelMixin, Channel):
