@@ -1,6 +1,6 @@
 description = "The Read-out Master Module (RMM)."
 
-pv_root_1 = "DREAM-DtCmn:NDet-RMM-001:"
+pv_root_1 = "DREAM:NDet-RMM-001:"
 
 devices = dict(
     rmm1_temperature=device(
