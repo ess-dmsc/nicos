@@ -149,7 +149,6 @@ class IDS3010Control(EpicsAnalogMoveable):
     parameter_overrides = {
         "unit": Override(default="", mandatory=False, settable=False, userparam=False),
         "target": Override(userparam=False),
-        "statuspv": Override(mandatory=False),
     }
 
     valuetype = int
@@ -166,7 +165,7 @@ class IDS3010Control(EpicsAnalogMoveable):
     def doRead(self, maxage=0):
         return (
             "on"
-            if EpicsAnalogMoveable.doRead(self, maxage) == "measurement " "running"
+            if EpicsAnalogMoveable.doRead(self, maxage) == "measurement running"
             else "off"
         )
 
