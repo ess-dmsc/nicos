@@ -1,7 +1,17 @@
 includes = ["axis"]
 
 devices = dict(
-    livedata_channel=device(
+    livedata_primary=device(
+        "nicos_ess.devices.datasources.livedata.DataChannel",
+        selector="",
+        type="counter",
+    ),
+    livedata_secondary=device(
+        "nicos_ess.devices.datasources.livedata.DataChannel",
+        selector="",
+        type="counter",
+    ),
+    livedata_roi=device(
         "nicos_ess.devices.datasources.livedata.DataChannel",
         selector="",
         type="counter",
@@ -13,6 +23,6 @@ devices = dict(
         status_topics=[],
         responses_topics=[],
         commands_topic="",
-        others=["livedata_channel"],
+        counters=["livedata_primary", "livedata_secondary", "livedata_roi"],
     ),
 )

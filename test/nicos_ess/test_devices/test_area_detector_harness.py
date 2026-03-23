@@ -1,14 +1,25 @@
 import numpy as np
 import pytest
 
-from nicos.core import ArrayDesc, status
+from nicos.core import ArrayDesc, NicosError, status
 from nicos.devices.epics.pva import caproto, p4p
-from nicos_ess.devices.epics.area_detector import AreaDetector, AreaDetectorCollector
+from nicos_ess.devices.epics.area_detector import (
+    AreaDetector,
+    AreaDetectorCollector,
+    OrcaFlash4,
+    TimepixDetector,
+)
 from test.nicos_ess.test_devices.doubles import FakeEpicsBackend
 
 
 PV_ROOT = "SIM:AD:"
 IMAGE_PV = "SIM:AD:IMAGE"
+TIMEPIX_PV_ROOT = "SIM:TPX:"
+TIMEPIX_IMAGE_PV = "SIM:TPX:IMAGE"
+ORCA_PV_ROOT = "SIM:ORCA:"
+ORCA_IMAGE_PV = "SIM:ORCA:IMAGE"
+ORCA_TOPIC_PV = "SIM:ORCA:TOPIC"
+ORCA_SOURCE_PV = "SIM:ORCA:SOURCE"
 
 
 def seed_area_detector_defaults(fake_backend, pv_root=PV_ROOT, image_pv=IMAGE_PV):
@@ -29,6 +40,54 @@ def seed_area_detector_defaults(fake_backend, pv_root=PV_ROOT, image_pv=IMAGE_PV
     )
 
 
+def seed_timepix_defaults(fake_backend):
+    seed_area_detector_defaults(
+        fake_backend,
+        pv_root=TIMEPIX_PV_ROOT,
+        image_pv=TIMEPIX_IMAGE_PV,
+    )
+    fake_backend.values.update(
+        {
+            f"{TIMEPIX_PV_ROOT}AcquireTime_RBV": 0.1,
+            f"{TIMEPIX_PV_ROOT}AcquirePeriod_RBV": 0.2,
+            f"{TIMEPIX_PV_ROOT}CHIP0_Vth_fine_RBV": 0,
+            f"{TIMEPIX_PV_ROOT}CHIP0_Vth_coarse_RBV": 0,
+            f"{TIMEPIX_PV_ROOT}N_Processing": 0,
+            f"{TIMEPIX_PV_ROOT}EvFlit_PhMin": 0,
+            f"{TIMEPIX_PV_ROOT}EvFlit_PsdMin": 0,
+        }
+    )
+
+
+def seed_orca_defaults(fake_backend):
+    seed_area_detector_defaults(
+        fake_backend,
+        pv_root=ORCA_PV_ROOT,
+        image_pv=ORCA_IMAGE_PV,
+    )
+    fake_backend.values.update(
+        {
+            ORCA_TOPIC_PV: "orca-topic",
+            ORCA_SOURCE_PV: "orca-source",
+            f"{ORCA_PV_ROOT}SizeX_RBV": 1024,
+            f"{ORCA_PV_ROOT}SizeY_RBV": 2048,
+            f"{ORCA_PV_ROOT}MinX_RBV": 0,
+            f"{ORCA_PV_ROOT}MinY_RBV": 0,
+            f"{ORCA_PV_ROOT}BinX_RBV": 1,
+            f"{ORCA_PV_ROOT}BinY_RBV": 1,
+            f"{ORCA_PV_ROOT}NumImages_RBV": 1,
+            f"{ORCA_PV_ROOT}NumExposures_RBV": 1,
+            f"{ORCA_PV_ROOT}ImageMode": 2,
+            f"{ORCA_PV_ROOT}SubarrayMode-RB": False,
+            f"{ORCA_PV_ROOT}Binning-RB": 0,
+            f"{ORCA_PV_ROOT}TriggerTimes-RB": 14,
+            f"{ORCA_PV_ROOT}TriggerActive-RB": 2,
+            f"{ORCA_PV_ROOT}SensorCooler-RB": 0,
+            f"{ORCA_PV_ROOT}Temperature-R": 20.0,
+        }
+    )
+
+
 @pytest.fixture
 def fake_backend(monkeypatch):
     backend = FakeEpicsBackend()
@@ -44,6 +103,26 @@ def create_area_detector(daemon_device_harness):
         name="ad_1",
         pv_root=PV_ROOT,
         image_pv=IMAGE_PV,
+    )
+
+
+def create_timepix_detector(daemon_device_harness):
+    return daemon_device_harness.create_master(
+        TimepixDetector,
+        name="timepix",
+        pv_root=TIMEPIX_PV_ROOT,
+        image_pv=TIMEPIX_IMAGE_PV,
+    )
+
+
+def create_orca_flash_detector(daemon_device_harness):
+    return daemon_device_harness.create_master(
+        OrcaFlash4,
+        name="orca_camera",
+        pv_root=ORCA_PV_ROOT,
+        image_pv=ORCA_IMAGE_PV,
+        topicpv=ORCA_TOPIC_PV,
+        sourcepv=ORCA_SOURCE_PV,
     )
 
 
@@ -121,6 +200,102 @@ def test_area_detector_completes_on_image_count_preset_before_backend_status(
 
     fake_backend.values[f"{PV_ROOT}NumImagesCounter_RBV"] = 2
     assert detector.isCompleted() is True
+
+
+def test_area_detector_error_takes_precedence_over_reached_image_count(
+    daemon_device_harness, fake_backend
+):
+    detector = create_area_detector(daemon_device_harness)
+
+    detector.start(n=2)
+    fake_backend.values[f"{PV_ROOT}NumImagesCounter_RBV"] = 2
+    fake_backend.values[f"{PV_ROOT}AcquireBusy"] = "DetectorError"
+    fake_backend.values[f"{PV_ROOT}DetectorState_RBV.SEVR"] = 2
+
+    with pytest.raises(NicosError):
+        detector.isCompleted()
+
+
+def test_timepix_zero_image_preset_does_not_start_acquisition(
+    daemon_device_harness, fake_backend, monkeypatch
+):
+    seed_timepix_defaults(fake_backend)
+    detector = create_timepix_detector(daemon_device_harness)
+    wait_calls = []
+    monkeypatch.setattr(
+        detector,
+        "_wait_until",
+        lambda *args, **kwargs: wait_calls.append((args, kwargs)),
+    )
+
+    detector.start(n=0)
+
+    assert fake_backend.values[f"{TIMEPIX_PV_ROOT}Acquire"] == 0
+    assert wait_calls == []
+
+
+def test_timepix_start_marks_device_busy_and_waits_for_ioc_handshake(
+    daemon_device_harness, fake_backend, monkeypatch
+):
+    seed_timepix_defaults(fake_backend)
+    detector = create_timepix_detector(daemon_device_harness)
+    wait_calls = []
+
+    def record_wait(pv_name, expected_value, precision=None, timeout=5.0):
+        del precision, timeout
+        wait_calls.append((pv_name, expected_value))
+
+    monkeypatch.setattr(detector, "_wait_until", record_wait)
+
+    detector.start(n=1)
+
+    assert detector._current_status == (status.BUSY, "Acquiring")
+    assert fake_backend.values[f"{TIMEPIX_PV_ROOT}Acquire"] == 1
+    assert fake_backend.values[f"{TIMEPIX_PV_ROOT}WriteData"] == 1
+    assert wait_calls[0] == ("ts_ready", 1)
+    assert wait_calls[1][0] == "path_last_added"
+
+
+def test_orca_flash_start_without_preset_defaults_to_continuous_mode(
+    daemon_device_harness, fake_backend
+):
+    seed_orca_defaults(fake_backend)
+    detector = create_orca_flash_detector(daemon_device_harness)
+
+    detector.start()
+
+    assert detector._current_status == (status.BUSY, "Acquiring")
+    assert fake_backend.values[f"{ORCA_PV_ROOT}Acquire"] == 1
+    assert fake_backend.values[f"{ORCA_PV_ROOT}ImageMode"] == 2
+
+
+def test_orca_flash_start_applies_image_count_preset_in_multiple_mode(
+    daemon_device_harness, fake_backend
+):
+    seed_orca_defaults(fake_backend)
+    detector = create_orca_flash_detector(daemon_device_harness)
+
+    detector.start(n=3)
+
+    assert detector._current_status == (status.BUSY, "Acquiring")
+    assert fake_backend.values[f"{ORCA_PV_ROOT}Acquire"] == 1
+    assert fake_backend.values[f"{ORCA_PV_ROOT}ImageMode"] == 1
+    assert fake_backend.values[f"{ORCA_PV_ROOT}NumImages"] == 3
+
+
+def test_orca_flash_error_takes_precedence_over_reached_image_count(
+    daemon_device_harness, fake_backend
+):
+    seed_orca_defaults(fake_backend)
+    detector = create_orca_flash_detector(daemon_device_harness)
+
+    detector.start(n=2)
+    fake_backend.values[f"{ORCA_PV_ROOT}NumImagesCounter_RBV"] = 2
+    fake_backend.values[f"{ORCA_PV_ROOT}AcquireBusy"] = "DetectorError"
+    fake_backend.values[f"{ORCA_PV_ROOT}DetectorState_RBV.SEVR"] = 2
+
+    with pytest.raises(NicosError):
+        detector.isCompleted()
 
 
 def test_area_detector_collector_uses_image_presets_and_ignores_unrelated_ones(

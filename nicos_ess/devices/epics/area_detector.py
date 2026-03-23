@@ -346,14 +346,14 @@ class AreaDetector(EpicsDevice, ImageChannelMixin, Measurable):
         return self._get_pv("readpv")
 
     def doIsCompleted(self):
+        st = self.status(0)
+        if st[0] in self.errorstates:
+            raise self.errorstates[st[0]](self, st[1])
         target = (self._lastpreset or {}).get("n")
         if target is not None and self.read(0)[0] >= target:
             return True
-        st = self.status(0)
         if st[0] in self.busystates:
             return False
-        if st[0] in self.errorstates:
-            raise self.errorstates[st[0]](self, st[1])
         return True
 
     def doReadArray(self, quality):
@@ -468,6 +468,9 @@ class TimepixDetector(AreaDetector):
             self._epics_wrapper.close_subscription(sub)
 
     def doStart(self, **preset):
+        if (self._lastpreset or {}).get("n") == 0:
+            return
+        self._update_status(status.BUSY, "Acquiring")
         foldername = f"raw_tpx_{time.time_ns()}"
         path_name = f"file:/data/{foldername}"
         ascii_path_name = self.to_int_list(path_name)
@@ -767,7 +770,7 @@ class OrcaFlash4(AreaDetector):
             self.subarraymode = False
 
     def doStart(self, **preset):
-        num_images = self._lastpreset.get("n", None)
+        num_images = (self._lastpreset or {}).get("n", None)
 
         if num_images == 0:
             return
@@ -779,6 +782,7 @@ class OrcaFlash4(AreaDetector):
             self.imagemode = "multiple"
             self.numimages = num_images
 
+        self._update_status(status.BUSY, "Acquiring")
         self.doAcquire()
 
     def doReadSizex(self):

@@ -15,6 +15,7 @@ from nicos.devices.epics.pva import caproto, p4p
 from nicos_ess.devices.datasources import just_bin_it, livedata
 from nicos_ess.devices.datasources.livedata_utils import JobId, WorkflowId
 from nicos_ess.devices.epics import area_detector as epics_area_detector
+from nicos_ess.devices.epics.pva import epics_devices as ess_epics_devices
 from nicos_ess.devices.kafka import status_handler
 from test.nicos_ess.test_devices.doubles import (
     FakeEpicsBackend,
@@ -185,11 +186,18 @@ class TestAreaDetectorCountScan:
 class TestJustBinItCountScan:
     @pytest.fixture(autouse=True)
     def prepare(self, session, monkeypatch):
-        self.image_controller_targets = []
+        backend = FakeEpicsBackend()
+        backend.values["SIM:PULSE"] = 0
+        self.controller_names = []
         producer = patch_kafka_stubs(
             monkeypatch,
             just_bin_it,
             status_module=status_handler,
+        )
+        monkeypatch.setattr(
+            ess_epics_devices,
+            "create_wrapper",
+            lambda timeout, use_pva: backend,
         )
 
         original_do_start = just_bin_it.JustBinItDetector.doStart
@@ -202,20 +210,29 @@ class TestJustBinItCountScan:
                     {"msg_id": config["msg_id"], "response": "ACK"}
                 ).encode()
             )
+            self.controller_names.append(tuple(ch.name for ch in device._controlchannels))
             image = device._attached_images[0]
-            target = None
+            counter = device._attached_counters[0]
+            image_target = None
+            counter_target = None
             if image in device._channel_presets:
-                target = device._channel_presets[image][0][1]
-            self.image_controller_targets.append(target)
+                image_target = device._channel_presets[image][0][1]
+            if counter in device._channel_presets:
+                counter_target = device._channel_presets[counter][0][1]
+
+            def publish_counter():
+                time.sleep(0.02)
+                counter.total = counter.offset + counter_target
 
             def publish_histogram():
-                if target is None:
-                    return
                 time.sleep(0.02)
-                message = make_jbi_histogram(image, total=target)
+                message = make_jbi_histogram(image, total=image_target)
                 image.new_messages_callback([(123456789, message)])
 
-            start_daemon(publish_histogram)
+            if counter_target is not None:
+                start_daemon(publish_counter)
+            if image_target is not None:
+                start_daemon(publish_histogram)
 
         monkeypatch.setattr(just_bin_it.JustBinItDetector, "doStart", simulate_start)
 
@@ -228,13 +245,14 @@ class TestJustBinItCountScan:
         session.experiment.envlist = []
         session.unloadSetup()
 
-    def test_count_runs_against_just_bin_it_with_hs01_payloads(self, session):
-        result = count(jbi_image=5)
+    def test_count_runs_against_just_bin_it_with_counter_preset(self, session):
+        result = count(n=7)
 
         config = json.loads(self.producer.messages[0]["message"])
-        assert len(result) == 2
-        assert result[1] == 5
-        assert session.getDevice("jbi_image").read()[0] == 5
+        assert len(result) == 3
+        assert result[1] == 7
+        assert result[2] == 0
+        assert session.getDevice("pulse_counter").read()[0] == 7
         assert config["input_schema"] == "ev44"
         assert config["output_schema"] == "hs01"
 
@@ -245,26 +263,36 @@ class TestJustBinItCountScan:
         dataset = session.experiment.data.getLastScans()[-1]
 
         assert dataset.devvaluelists == [[0.0], [1.0]]
-        assert [value.name for value in dataset.detvalueinfo] == ["timer", "jbi_image"]
+        assert [value.name for value in dataset.detvalueinfo] == [
+            "timer",
+            "pulse_counter",
+            "jbi_image",
+        ]
         assert session.getDevice("jbi_image").read()[0] == 5
 
-    def test_count_switches_between_image_and_timer_presets(self, session):
-        result_1 = count(jbi_image=5)
+    def test_count_switches_between_counter_timer_and_image_presets(self, session):
+        result_1 = count(n=7)
         result_2 = count(t=0.05)
         result_3 = count(jbi_image=3)
         result_4 = count()
 
-        assert result_1[1] == 5
-        assert result_2[1] == 0
-        assert result_3[1] == 3
-        assert result_4[1] == 3
-        assert self.image_controller_targets == [5, None, 3, 3]
+        assert result_1[1:] == [7, 0]
+        assert result_2[1:] == [0, 0]
+        assert result_3[1:] == [0, 3]
+        assert result_4[1:] == [0, 3]
+        assert self.controller_names == [
+            ("pulse_counter",),
+            ("timer",),
+            ("jbi_image",),
+            ("jbi_image",),
+        ]
 
 
 class TestLiveDataCountScan:
     @pytest.fixture(autouse=True)
     def prepare(self, session, monkeypatch):
         self.published_totals = []
+        self.controller_names = []
         patch_kafka_stubs(monkeypatch, livedata)
         monkeypatch.setattr(livedata, "sleep", lambda *_args, **_kwargs: None)
 
@@ -272,7 +300,14 @@ class TestLiveDataCountScan:
 
         def simulate_start(device):
             original_do_start(device)
-            total = (device._lastpreset or {}).get("n", 6)
+            self.controller_names.append(tuple(ch.name for ch in device._controlchannels))
+            total = None
+            for channel_presets in device._channel_presets.values():
+                if channel_presets:
+                    total = channel_presets[0][1]
+                    break
+            if total is None:
+                total = (device._lastpreset or {}).get("n", 6)
             self.published_totals.append(total)
 
             def publish_da00():
@@ -286,8 +321,8 @@ class TestLiveDataCountScan:
         session.unloadSetup()
         session.loadSetup("ess_count_scan_livedata", {})
         session.updateLiveData = lambda *args, **kwargs: None
-        channel = session.getDevice("livedata_channel")
-        channel.selector = SELECTOR
+        for channel_name in ("livedata_primary", "livedata_secondary", "livedata_roi"):
+            session.getDevice(channel_name).selector = SELECTOR
         session.experiment.setDetectors([session.getDevice("livedata_detector")])
         yield
         session.experiment.detlist = []
@@ -296,9 +331,14 @@ class TestLiveDataCountScan:
 
     def test_count_runs_against_livedata_with_da00_payloads(self, session):
         result = count(n=6)
+        detector = session.getDevice("livedata_detector")
 
-        assert len(result) == 1
-        assert session.getDevice("livedata_channel").read()[0] == 6
+        assert len(result) == 3
+        assert result == [6, 6, 6]
+        assert tuple(ch.name for ch in detector._controlchannels) == ("livedata_primary",)
+        assert session.getDevice("livedata_primary").read()[0] == 6
+        assert session.getDevice("livedata_secondary").read()[0] == 6
+        assert session.getDevice("livedata_roi").read()[0] == 6
 
     def test_scan_runs_against_livedata_with_da00_payloads(self, session):
         motor = session.getDevice("motor")
@@ -307,15 +347,24 @@ class TestLiveDataCountScan:
         dataset = session.experiment.data.getLastScans()[-1]
 
         assert dataset.devvaluelists == [[0.0], [1.0]]
-        assert [value.name for value in dataset.detvalueinfo] == ["livedata_channel"]
-        assert session.getDevice("livedata_channel").read()[0] == 6
+        assert [value.name for value in dataset.detvalueinfo] == [
+            "livedata_primary",
+            "livedata_secondary",
+            "livedata_roi",
+        ]
+        assert session.getDevice("livedata_primary").read()[0] == 6
 
     def test_count_reuses_latest_livedata_preset_across_multiple_calls(self, session):
         result_1 = count(n=6)
-        result_2 = count(n=4)
+        result_2 = count(livedata_secondary=4)
         result_3 = count()
 
-        assert result_1[0] == 6
-        assert result_2[0] == 4
-        assert result_3[0] == 4
+        assert result_1 == [6, 6, 6]
+        assert result_2 == [4, 4, 4]
+        assert result_3 == [4, 4, 4]
+        assert self.controller_names == [
+            ("livedata_primary",),
+            ("livedata_secondary",),
+            ("livedata_secondary",),
+        ]
         assert self.published_totals == [6, 4, 4]

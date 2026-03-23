@@ -6,6 +6,11 @@ devices = dict(
         fmtstr="%.2f",
         unit="s",
     ),
+    pulse_counter=device(
+        "nicos_ess.devices.epics.pulse_counter.PulseCounter",
+        readpv="SIM:PULSE",
+        fmtstr="%d",
+    ),
     jbi_image=device(
         "nicos_ess.devices.datasources.just_bin_it.JustBinItImage",
         brokers=["localhost:9092"],
@@ -22,6 +27,7 @@ devices = dict(
         statustopic=[],
         images=["jbi_image"],
         timers=["timer"],
+        counters=["pulse_counter"],
         event_schema="ev44",
         hist_schema="hs01",
         liveinterval=1,
