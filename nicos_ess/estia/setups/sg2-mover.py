@@ -46,10 +46,9 @@ devices = dict(
         s1="m1_mover_fl_re_us_2",
         s2="m2_mover_pr_re_ds_2",
         s3="m3_mover_pr_li_ds_2",
-        s4="m4_mover_pr_li_us1_2",
-        s5="m5_mover_pr_li_us2_2",
+        s4="m5_mover_pr_li_us2_2",  # this swap between s4 and s5 is intentional
+        s5="m4_mover_pr_li_us1_2",
         mover_length=3600,
         beam_height=1098,
-        visibility=(),
     ),
 )

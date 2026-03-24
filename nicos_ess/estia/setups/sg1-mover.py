@@ -44,6 +44,5 @@ devices = dict(
         s5="m5_mover_pr_li_us2_1",
         mover_length=2750,
         beam_height=1088,
-        visibility=(),
     ),
 )
