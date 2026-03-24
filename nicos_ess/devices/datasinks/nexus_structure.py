@@ -19,17 +19,18 @@ from nicos_ess.utilities.json_utils import (
 )
 
 ALLOWED_INSTRUMENT_NAMES = [
-    "dream",
-    "loki",
-    "tbl",
-    "odin",
-    "ymir",
-    "nmx",
-    "bifrost",
-    "estia",
+    "", # Empty string is necessary for non-instrument instances
     "beer",
+    "bifrost",
+    "dream",
+    "estia",
     "freia",
-    "",  # Empty string is necessary for non-instrument instances
+    "loki",
+    "magic",
+    "nmx",
+    "odin",
+    "tbl",
+    "ymir",
 ]
 
 
