@@ -21,7 +21,7 @@ class LokiBeamstopArmPositioner(MappedController):
         MappedController.doInit(self, mode)
 
     def doWriteMapping(self, mapping):
-        if sorted(mapping.keys()) != ["In beam", "Parked", "Intermediate"]:
+        if sorted(mapping.keys()) != ["In beam", "Intermediate", "Parked"]:
             raise ConfigurationError(
                 "Only 'In beam', 'Parked' and 'Intermediate' are allowed as mapped positions"
             )
