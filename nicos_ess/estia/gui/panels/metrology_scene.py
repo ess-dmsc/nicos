@@ -243,11 +243,11 @@ class MetrologyScene(QGraphicsScene):
                 qt_polygon, brush=QColor(255, 255, 255, 200)
             )
             if self.selene == 2:
-                text = self.addText("E02-06-%02i-VU" % (group + 1))
-                textH = self.addText("E02-06-%02i-HU" % (group + 1))
+                text = self.addText("E02-12-%02i-VU" % (group + 1))
+                textH = self.addText("E02-12-%02i-HU" % (group + 1))
             else:
-                text = self.addText("E02-02-%02i-VD" % (group + 1))
-                textH = self.addText("E02-02-%02i-HD" % (group + 1))
+                text = self.addText("E02-06-%02i-VD" % (group + 1))
+                textH = self.addText("E02-06-%02i-HD" % (group + 1))
             text.setFont(QFont("sans", 30))
             text.setPos(center_x - text.boundingRect().width() / 2, zpre * 80 - 15)
             text.setDefaultTextColor(QColor(160, 160, 160))
@@ -321,9 +321,14 @@ class MetrologyScene(QGraphicsScene):
                     self.parent().lblSeleneSelection.setText(f"{ldevname}: {value}")
         elif ldevname == self.cart_position and subkey == "value":
             value = cache_load(value) + self.offsetx
-            self.cart.setPos(value + 150, 0)
-            self.collimator_lines[0].setLine(value + 300, -220, 7210, -220)
-            self.collimator_lines[1].setLine(value + 300, 220, 7210, 220)
+            if self.selene == 1:
+                self.cart.setPos(value + 150, 0)
+                self.collimator_lines[0].setLine(value + 300, -220, 7210, -220)
+                self.collimator_lines[1].setLine(value + 300, 220, 7210, 220)
+            else:
+                self.cart.setPos(-value - 150, 0)
+                self.collimator_lines[0].setLine(-value, -220, 7210, -220)
+                self.collimator_lines[1].setLine(-value, 220, 7210, 220)
 
     def childSelected(self, name, control):
         self._currentSelection = name
