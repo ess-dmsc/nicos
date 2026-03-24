@@ -19,4 +19,15 @@ devices = dict(
         description="In-Beam changer",
         motorpv=f"{prefix}RotX01:Mtr",
     ),
+    laser=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
+        description="device to turn on and off the VS laser",
+        readpv="ESTIA-SES:Ctrl-IM-100:LaserEnable",
+        writepv="ESTIA-SES:Ctrl-IM-100:LaserEnable",
+    ),
+    laser_readback=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description="readback value of the VS laser",
+        readpv="ESTIA-SES:Ctrl-IM-100:LaserEnabled",
+    ),
 )
