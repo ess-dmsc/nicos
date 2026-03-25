@@ -203,11 +203,8 @@ class LokiBeamstopController(SequencerMixin, MappedMoveable):
 
         if monitor and beamstop:
             # beamstop needs to lower slightly first for twincat to update limits
-            seq.extend(
-                [
-                    (SeqDev(beamstop, "Intermediate"),),
-                    (SeqSleep(10),),
-                ]
+            seq.append(
+                SeqDev(beamstop, "Intermediate"),
             )
 
         seq.append(
