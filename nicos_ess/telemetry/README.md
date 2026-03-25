@@ -16,6 +16,25 @@ telemetry_carbon_host = carbon.example.org
 instrument = bifrost
 ```
 
+These settings enable the Carbon backend itself. Log metrics start flowing through
+the `nicos_ess.get_log_handlers()` package hook. Cache-derived metrics need one
+more step: attach `CarbonForwarder` to the NICOS collector setup.
+
+Minimal collector setup for cache metrics:
+
+```python
+devices = dict(
+    CarbonTelemetry=device(
+        "nicos_ess.devices.carbon_forwarder.CarbonForwarder",
+    ),
+    Collector=device(
+        "nicos.services.collector.Collector",
+        cache="localhost:14869",
+        forwarders=["CarbonTelemetry"],
+    ),
+)
+```
+
 Optional settings with defaults:
 
 - `telemetry_carbon_port = 2003`
@@ -29,6 +48,9 @@ Optional settings with defaults:
 
 Invalid explicit values fail fast with `ConfigurationError`. The telemetry code
 does not silently repair malformed config.
+
+`telemetry_flush_interval_s` applies only once there is buffered counter data.
+Idle periods do not emit empty windows.
 
 ## Runtime Flow
 
@@ -98,9 +120,9 @@ Current metric families:
 If you add another cache-derived metric:
 
 1. Update `carbon/cache_metrics.py`.
-2. Keep the cache-key classification and the metric translation in that module.
-3. Update `CACHE_METRIC_KEY_FILTERS` in the same module so the forwarder and
-   emitter stay in sync.
+2. Keep the shared cache-key rule table and the metric translation in that
+   module.
+3. Reuse that rule table for any new classifier or filter logic.
 4. Add tests beside the existing Carbon telemetry tests.
 
 If you add another telemetry backend, add it as a sibling package under

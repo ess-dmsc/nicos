@@ -81,7 +81,15 @@ def _parse_float(setting_name, value, default, *, minimum=None):
 
 
 def _parse_text(setting_name, value, default):
-    text = default if value is None else str(value).strip()
+    if value is None:
+        text = default
+    elif isinstance(value, str):
+        text = value
+    else:
+        raise ConfigurationError(
+            f"{setting_name} must be a non-blank string, got {value!r}"
+        )
+    text = text.strip()
     if not text:
         raise ConfigurationError(f"{setting_name} must not be blank")
     return text

@@ -29,8 +29,8 @@ from __future__ import annotations
 import socket
 import time
 from collections import deque
+from collections.abc import Callable, Iterable
 from threading import Lock
-from typing import Callable, Iterable
 
 
 class CarbonTcpClient:

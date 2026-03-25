@@ -34,6 +34,7 @@ from nicos_ess.telemetry.carbon.config import (
     _parse_bool,
     _parse_float,
     _parse_int,
+    _parse_text,
 )
 
 
@@ -104,6 +105,17 @@ class TestParseNumeric:
             _parse_float("telemetry_flush_interval_s", "-1", 10, minimum=0)
 
 
+class TestParseText:
+    def test_parse_text(self):
+        assert _parse_text("telemetry_prefix", " ess ", "nicosserver") == "ess"
+        assert _parse_text("telemetry_prefix", None, "nicosserver") == "nicosserver"
+
+    @pytest.mark.parametrize("value", [[], 1, object()])
+    def test_parse_text_raises_on_invalid_values(self, value):
+        with pytest.raises(ConfigurationError):
+            _parse_text("telemetry_prefix", value, "nicosserver")
+
+
 class TestCarbonConfigFromNicosConfig:
     def test_returns_none_when_disabled(self):
         assert CarbonConfig.from_nicos_config(SimpleNamespace()) is None
@@ -130,8 +142,11 @@ class TestCarbonConfigFromNicosConfig:
         [
             {"telemetry_carbon_port": "not-a-port"},
             {"telemetry_carbon_port": "70000"},
+            {"telemetry_carbon_host": []},
             {"telemetry_prefix": "   "},
+            {"telemetry_prefix": 1},
             {"instrument": "   "},
+            {"instrument": object()},
             {"telemetry_queue_max": "0"},
             {"telemetry_flush_interval_s": "-1"},
             {"telemetry_heartbeat_interval_s": "-1"},

@@ -30,8 +30,7 @@ import logging
 import threading
 import time
 from collections import defaultdict
-from threading import Lock
-from typing import Callable
+from collections.abc import Callable
 
 from nicos import session
 from nicos.utils.loggers import ACTION, INPUT
@@ -102,12 +101,21 @@ class CarbonLogLevelCounterHandler(logging.Handler):
         self._service_root = service_metric_root(
             self._metric_root, service_name or "unknown"
         )
-        self._last_flush_at = monotonic_fn()
         self._level_counts = defaultdict(int)
         self._total_count = 0
-        self._counter_lock = Lock()
+        self._pending_condition = threading.Condition()
+        self._pending_since: float | None = None
+        self._stop_flush_worker = False
+        self._flush_thread = None
         self._heartbeat_stop = threading.Event()
         self._heartbeat_thread = None
+        if self.flush_interval_s > 0:
+            self._flush_thread = threading.Thread(
+                target=self._flush_loop,
+                name="ess-telemetry-log-flush",
+                daemon=True,
+            )
+            self._flush_thread.start()
         if self.heartbeat_interval_s > 0 and start_heartbeat_thread:
             self._heartbeat_thread = threading.Thread(
                 target=self._heartbeat_loop,
@@ -118,26 +126,33 @@ class CarbonLogLevelCounterHandler(logging.Handler):
 
     def emit(self, record):
         try:
-            now = self._monotonic_fn()
             bucket = _normalize_level(record.levelno, record.levelname)
-            with self._counter_lock:
+            should_flush = False
+            with self._pending_condition:
+                was_empty = self._total_count == 0 and not self._level_counts
                 self._total_count += 1
                 self._level_counts[bucket] += 1
-                should_flush = now - self._last_flush_at >= self.flush_interval_s
+                if self.flush_interval_s == 0:
+                    should_flush = True
+                elif was_empty:
+                    self._pending_since = self._monotonic_fn()
+                    self._pending_condition.notify_all()
             if should_flush:
                 self.flush()
         except Exception:
             self.handleError(record)
 
     def flush(self):
-        with self._counter_lock:
+        with self._pending_condition:
             if self._total_count == 0 and not self._level_counts:
+                self._pending_since = None
                 return
             total_count = self._total_count
             level_snapshot = dict(self._level_counts)
             self._total_count = 0
             self._level_counts.clear()
-            self._last_flush_at = self._monotonic_fn()
+            self._pending_since = None
+            self._pending_condition.notify_all()
 
         timestamp = int(self._time_fn())
         lines = [
@@ -168,11 +183,41 @@ class CarbonLogLevelCounterHandler(logging.Handler):
                     "Heartbeat emission failed", exc_info=True
                 )
 
+    def _flush_loop(self) -> None:
+        logger = logging.getLogger(__name__)
+        while True:
+            with self._pending_condition:
+                while (
+                    not self._stop_flush_worker
+                    and self._total_count == 0
+                    and not self._level_counts
+                ):
+                    self._pending_condition.wait()
+                if self._stop_flush_worker:
+                    return
+                if self._pending_since is None:
+                    self._pending_since = self._monotonic_fn()
+                deadline = self._pending_since + self.flush_interval_s
+                remaining = deadline - self._monotonic_fn()
+                if remaining > 0:
+                    self._pending_condition.wait(timeout=remaining)
+                    continue
+            try:
+                self.flush()
+            except Exception:
+                logger.debug("Log metric flush failed", exc_info=True)
+
     def close(self):
         try:
             self._heartbeat_stop.set()
             if self._heartbeat_thread:
                 self._heartbeat_thread.join(timeout=1.0)
+            if self._flush_thread is not None:
+                with self._pending_condition:
+                    self._stop_flush_worker = True
+                    self._pending_condition.notify_all()
+                self._flush_thread.join(timeout=1.0)
+                self._flush_thread = None
             self.flush()
             self.client.flush()
         finally:
