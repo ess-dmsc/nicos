@@ -1,5 +1,3 @@
-from typing import List, Tuple
-
 from nicos.core import (
     SIMULATION,
     Attach,
@@ -11,7 +9,7 @@ from nicos.core import (
     oneof,
 )
 from nicos.devices.abstract import MappedMoveable
-from nicos.devices.generic.sequence import SeqDev, SeqSleep, SequencerMixin
+from nicos.devices.generic.sequence import SeqDev, SequencerMixin
 from nicos.utils import num_sort
 from nicos_ess.devices.mapped_controller import MappedController
 
