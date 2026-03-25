@@ -142,6 +142,7 @@ class LokiBeamstopController(SequencerMixin, MappedMoveable):
             seq.append((SeqDev(self._all_attached["y"], "In beam"),))
         if self._all_attached["x"].read != x_pos:
             seq.append((SeqDev(self._all_attached["x"], x_pos),))
+        self.log.info(f"Full sequence: {seq}")
         return seq
 
     def _get_x_pos(self, target):
