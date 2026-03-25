@@ -199,21 +199,23 @@ class LokiBeamstopController(SequencerMixin, MappedMoveable):
         return SeqDev(device, x_pos)
 
     def _all_devices_to_park(self):
-        all_device_names = set(self._all_attached.keys())
-        device_names_in_park = set(self._get_keys_matching_read_value("Parked"))
-        device_names_not_parked = list(all_device_names - device_names_in_park)
-
+        device_names_not_parked = self._get_non_parked_device_names()
+        seq = []
+        if "x" in device_names_not_parked:
+            seq.append(self._device_to_park("x"))
         arms = [
             key
             for key in device_names_not_parked
             if "beamstop" in key or "monitor" in key
         ]
-        seq = []
-        if "x" in device_names_not_parked:
-            seq.append(self._device_to_park("x"))
         if len(arms) > 0:
             seq.append(self._devices_to_park(arms))
         return seq
+
+    def _get_non_parked_device_names(self):
+        all_device_names = set(self._all_attached.keys())
+        device_names_in_park = set(self._get_keys_matching_read_value("Parked"))
+        return list(all_device_names - device_names_in_park)
 
     def normalize(self, string):
         return string.strip().lower()
