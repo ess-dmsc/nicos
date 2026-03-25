@@ -28,8 +28,11 @@ from nicos import config
 from nicos.core import Override
 from nicos.core.device import Device
 from nicos.services.collector import ForwarderBase
-from nicos_ess.telemetry.config import create_carbon_client, read_carbon_config
-from nicos_ess.telemetry.metrics import SCRIPTS_KEY, CacheMetricsEmitter
+from nicos_ess.telemetry.carbon import (
+    CarbonConfig,
+    CacheMetricsEmitter,
+    SCRIPTS_KEY,
+)
 
 
 class CarbonForwarder(ForwarderBase, Device):
@@ -55,12 +58,12 @@ class CarbonForwarder(ForwarderBase, Device):
         self._initFilters()
 
     def _startWorker(self):
-        cfg = read_carbon_config(config)
+        cfg = CarbonConfig.from_nicos_config(config)
         if cfg is None:
             self._emitter = None
             self.log.info("Telemetry disabled, CarbonForwarder inactive")
             return
-        client = create_carbon_client(cfg)
+        client = cfg.create_client()
         self._emitter = CacheMetricsEmitter(
             client,
             cfg.prefix,

@@ -22,7 +22,7 @@
 #
 # *****************************************************************************
 
-"""Facility-local log-to-metrics handlers."""
+"""Translate NICOS log records into Carbon counter metrics."""
 
 from __future__ import annotations
 
@@ -35,9 +35,8 @@ from typing import Callable
 
 from nicos import session
 from nicos.utils.loggers import ACTION, INPUT
-from nicos_ess.telemetry.carbon import sanitize_path, sanitize_segment
-from nicos_ess.telemetry.config import create_carbon_client, read_carbon_config
-from nicos_ess.telemetry.sender import TelemetrySender
+from nicos_ess.telemetry.carbon.config import CarbonConfig
+from nicos_ess.telemetry.carbon.paths import sanitize_path, sanitize_segment
 
 _LOG_LEVEL_BUCKETS = {
     logging.DEBUG: "debug",
@@ -71,7 +70,7 @@ def _normalize_level(levelno: int, levelname: str) -> str:
     return "other"
 
 
-class LogLevelCounterHandler(logging.Handler):
+class CarbonLogLevelCounterHandler(logging.Handler):
     """Aggregate NICOS log records into counter metrics.
 
     The handler accepts ordinary NICOS log records, groups them by normalized
@@ -87,7 +86,7 @@ class LogLevelCounterHandler(logging.Handler):
         self,
         instrument: str,
         prefix: str,
-        client: TelemetrySender,
+        client,
         flush_interval_s: float = 10.0,
         service_name: str | None = None,
         heartbeat_interval_s: float = 10.0,
@@ -173,17 +172,22 @@ class LogLevelCounterHandler(logging.Handler):
             super().close()
 
 
-def create_log_handlers(nicos_config):
+def create_carbon_log_handlers(nicos_config):
     """Create facility-local log handlers based on ESS config keys."""
-    cfg = read_carbon_config(nicos_config)
+    cfg = CarbonConfig.from_nicos_config(nicos_config)
     if cfg is None:
         return []
 
     service_name = str(getattr(session, "appname", "unknown"))
-    client = create_carbon_client(cfg)
+    return build_carbon_log_handlers(cfg, service_name=service_name)
+
+
+def build_carbon_log_handlers(cfg: CarbonConfig, service_name: str):
+    """Build Carbon log metric handlers for one resolved config."""
+    client = cfg.create_client()
 
     return [
-        LogLevelCounterHandler(
+        CarbonLogLevelCounterHandler(
             instrument=cfg.instrument,
             prefix=cfg.prefix,
             client=client,

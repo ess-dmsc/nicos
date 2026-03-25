@@ -21,6 +21,8 @@
 #
 # *****************************************************************************
 
+"""Tests for Carbon-backed log metric handlers."""
+
 import logging
 from types import SimpleNamespace
 
@@ -29,8 +31,11 @@ import pytest
 import nicos_ess
 from nicos.core import ConfigurationError
 from nicos.utils.loggers import ACTION, INPUT
-from nicos_ess.telemetry.carbon import CarbonTcpClient, sanitize_path, sanitize_segment
-from nicos_ess.telemetry.handlers import LogLevelCounterHandler, create_log_handlers
+from nicos_ess.telemetry.carbon.log_metrics import (
+    CarbonLogLevelCounterHandler,
+    build_carbon_log_handlers,
+    create_carbon_log_handlers,
+)
 
 FIXED_TIMESTAMP = 1773070701 # Arbitrary fixed timestamp
 
@@ -44,25 +49,6 @@ class FakeClock:
 
     def advance(self, delta):
         self.value += float(delta)
-
-
-class FakeSocket:
-    def __init__(self, fail_send=False):
-        self.fail_send = fail_send
-        self.timeout = None
-        self.closed = False
-        self.sent_payloads = []
-
-    def settimeout(self, timeout):
-        self.timeout = timeout
-
-    def sendall(self, payload):
-        if self.fail_send:
-            raise OSError("send failed")
-        self.sent_payloads.append(payload)
-
-    def close(self):
-        self.closed = True
 
 
 class CapturingClient:
@@ -103,83 +89,10 @@ def _parse_metrics(lines):
     return parsed
 
 
-def test_sanitize_path_keeps_dot_hierarchy():
-    assert sanitize_segment("BIFROST!") == "bifrost"
-    assert sanitize_path("nicos.ESS BIFROST.logs") == "nicos.ess_bifrost.logs"
-    assert sanitize_path("...") == "unknown"
-
-
-def test_carbon_tcp_client_retries_after_delay_and_flushes_pending():
-    clock = FakeClock(10)
-    connect_calls = []
-    sockets = []
-
-    def socket_factory(address, timeout):
-        connect_calls.append((address, timeout))
-        if len(connect_calls) == 1:
-            raise OSError("unreachable")
-        sock = FakeSocket()
-        sockets.append(sock)
-        return sock
-
-    client = CarbonTcpClient(
-        host="carbon.local",
-        port=2003,
-        reconnect_delay_s=5,
-        socket_factory=socket_factory,
-        monotonic_fn=clock,
-    )
-
-    client.send_lines(["a.b 1 111\n"])
-    assert client.pending_count == 1
-    assert len(connect_calls) == 1
-
-    # Still in reconnect cooldown -> no second connect attempt.
-    client.flush()
-    assert len(connect_calls) == 1
-    assert client.pending_count == 1
-
-    # Cooldown elapsed -> reconnect and flush.
-    clock.advance(5)
-    assert client.flush()
-    assert len(connect_calls) == 2
-    assert client.pending_count == 0
-    assert sockets[0].sent_payloads == [b"a.b 1 111\n"]
-
-
-def test_carbon_tcp_client_queue_max_keeps_latest_entries():
-    clock = FakeClock()
-    connect_calls = 0
-    sock = FakeSocket()
-
-    def socket_factory(*_args, **_kwargs):
-        nonlocal connect_calls
-        connect_calls += 1
-        if connect_calls <= 3:
-            raise OSError("offline")
-        return sock
-
-    client = CarbonTcpClient(
-        host="carbon.local",
-        reconnect_delay_s=0,
-        queue_max=2,
-        socket_factory=socket_factory,
-        monotonic_fn=clock,
-    )
-
-    client.send_lines(["m.one 1 1\n"])
-    client.send_lines(["m.two 2 2\n"])
-    client.send_lines(["m.three 3 3\n"])
-
-    assert client.pending_count == 2
-    assert client.flush()
-    assert sock.sent_payloads == [b"m.two 2 2\nm.three 3 3\n"]
-
-
-def test_log_level_counter_handler_emits_expected_metrics():
+def test_carbon_log_level_counter_handler_emits_expected_metrics():
     clock = FakeClock(100)
     client = CapturingClient()
-    handler = LogLevelCounterHandler(
+    handler = CarbonLogLevelCounterHandler(
         instrument="BIFROST",
         prefix="nicos",
         client=client,
@@ -221,9 +134,9 @@ def test_log_level_counter_handler_emits_expected_metrics():
     assert client.closed
 
 
-def test_log_level_counter_handler_emits_service_specific_metrics():
+def test_carbon_log_level_counter_handler_emits_service_specific_metrics():
     client = CapturingClient()
-    handler = LogLevelCounterHandler(
+    handler = CarbonLogLevelCounterHandler(
         instrument="YMIR",
         prefix="nicosserver",
         service_name="daemon",
@@ -250,7 +163,7 @@ def test_log_level_counter_handler_emits_service_specific_metrics():
 
 def test_emit_heartbeat_uses_service_metric_root():
     client = CapturingClient()
-    handler = LogLevelCounterHandler(
+    handler = CarbonLogLevelCounterHandler(
         instrument="YMIR",
         prefix="nicosserver",
         service_name="cache",
@@ -270,18 +183,18 @@ def test_emit_heartbeat_uses_service_metric_root():
     handler.close()
 
 
-def test_create_log_handlers_disabled_by_default():
-    handlers = create_log_handlers(SimpleNamespace())
+def test_create_carbon_log_handlers_disabled_by_default():
+    handlers = create_carbon_log_handlers(SimpleNamespace())
     assert handlers == []
 
 
-def test_create_log_handlers_requires_host_when_enabled():
+def test_create_carbon_log_handlers_requires_host_when_enabled():
     cfg = SimpleNamespace(telemetry_enabled=True, instrument="bifrost")
     with pytest.raises(ConfigurationError):
-        create_log_handlers(cfg)
+        create_carbon_log_handlers(cfg)
 
 
-def test_create_log_handlers_enabled():
+def test_create_carbon_log_handlers_enabled():
     cfg = SimpleNamespace(
         telemetry_enabled="true",
         telemetry_carbon_host="127.0.0.1",
@@ -290,16 +203,33 @@ def test_create_log_handlers_enabled():
         instrument="bifrost",
         telemetry_flush_interval_s="5",
     )
-    handlers = create_log_handlers(cfg)
+    handlers = create_carbon_log_handlers(cfg)
     assert len(handlers) == 1
-    assert isinstance(handlers[0], LogLevelCounterHandler)
+    assert isinstance(handlers[0], CarbonLogLevelCounterHandler)
     handlers[0].close()
 
 
-def test_package_get_log_handlers_hook(monkeypatch):
-    from nicos_ess.telemetry import handlers as telemetry_handlers
+def test_build_carbon_log_handlers_uses_explicit_service_name():
+    cfg = SimpleNamespace(
+        create_client=lambda: CapturingClient(),
+        instrument="bifrost",
+        prefix="nicos",
+        flush_interval_s=5.0,
+        heartbeat_interval_s=0.0,
+    )
+    handlers = build_carbon_log_handlers(cfg, service_name="poller")
+    assert len(handlers) == 1
 
-    monkeypatch.setattr(telemetry_handlers.session, "appname", "poller", raising=False)
+    handler = handlers[0]
+    handler.emit(_make_record(logging.INFO))
+    handler.flush()
+
+    metrics = _parse_metrics(handler.client.sent_batches[0])
+    assert metrics["nicos.bifrost.service.poller.logs.level.info.count"][0] == 1
+    handler.close()
+
+
+def test_package_get_log_handlers_hook_returns_handlers():
     cfg = SimpleNamespace(
         telemetry_enabled=True,
         telemetry_carbon_host="127.0.0.1",
@@ -307,5 +237,5 @@ def test_package_get_log_handlers_hook(monkeypatch):
     )
     handlers = nicos_ess.get_log_handlers(cfg)
     assert len(handlers) == 1
-    assert isinstance(handlers[0], LogLevelCounterHandler)
+    assert isinstance(handlers[0], CarbonLogLevelCounterHandler)
     handlers[0].close()

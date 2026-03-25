@@ -22,28 +22,21 @@
 #
 # *****************************************************************************
 
-"""Common sender contract for ESS telemetry emitters."""
+"""Carbon/Graphite telemetry backend."""
 
-from __future__ import annotations
+from nicos_ess.telemetry.carbon.cache_metrics import CacheMetricsEmitter, SCRIPTS_KEY
+from nicos_ess.telemetry.carbon.client import CarbonTcpClient
+from nicos_ess.telemetry.carbon.config import CarbonConfig
+from nicos_ess.telemetry.carbon.log_metrics import (
+    CarbonLogLevelCounterHandler,
+    create_carbon_log_handlers,
+)
 
-from typing import Iterable, Protocol
-
-
-class TelemetrySender(Protocol):
-    """Line-oriented output contract used by telemetry code.
-
-    Implementations receive complete metric lines, usually already formatted for
-    the target backend. They are expected to buffer or transmit those lines,
-    report success through the boolean return value, and clean up any resources
-    in :meth:`close`. Network outages should be handled internally so callers do
-    not need backend-specific retry logic.
-    """
-
-    def send_lines(self, lines: Iterable[str]) -> bool:
-        """Queue and send metric lines."""
-
-    def flush(self) -> bool:
-        """Flush any pending metric lines."""
-
-    def close(self) -> None:
-        """Release sender resources."""
+__all__ = [
+    "CarbonConfig",
+    "CarbonTcpClient",
+    "CacheMetricsEmitter",
+    "CarbonLogLevelCounterHandler",
+    "SCRIPTS_KEY",
+    "create_carbon_log_handlers",
+]

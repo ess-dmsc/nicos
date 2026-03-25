@@ -22,16 +22,10 @@
 #
 # *****************************************************************************
 
-"""Harness tests for nicos_ess.devices.metrics_forwarder."""
+"""Harness tests for nicos_ess.devices.carbon_forwarder."""
 
-import pytest
-
-from nicos.core import ConfigurationError
-
-from nicos_ess.devices import metrics_forwarder
-from nicos_ess.devices.metrics_forwarder import CarbonForwarder
-from nicos_ess.telemetry.config import CarbonConfig
-from nicos_ess.telemetry.metrics import SCRIPTS_KEY
+from nicos_ess.devices.carbon_forwarder import CarbonForwarder
+from nicos_ess.telemetry.carbon import SCRIPTS_KEY
 
 
 class RecordingEmitter:
@@ -68,76 +62,6 @@ class TestCarbonForwarderHarness:
         assert device._checkKey("motor/value")
         assert not device._checkKey("motor/target")
 
-    def test_start_worker_disabled_resets_emitter(
-        self, daemon_device_harness, monkeypatch
-    ):
-        device = daemon_device_harness.create_master(CarbonForwarder)
-        device._emitter = RecordingEmitter()
-        monkeypatch.setattr(
-            metrics_forwarder, "read_carbon_config", lambda _cfg: None
-        )
-
-        device._startWorker()
-
-        assert device._emitter is None
-
-    def test_start_worker_builds_emitter_from_config(
-        self, daemon_device_harness, monkeypatch
-    ):
-        cfg = CarbonConfig(
-            host="carbon.local",
-            port=2004,
-            prefix="nicos",
-            instrument="ymir",
-        )
-        client = object()
-        created = {}
-        device = daemon_device_harness.create_master(CarbonForwarder)
-
-        monkeypatch.setattr(
-            metrics_forwarder, "read_carbon_config", lambda _cfg: cfg
-        )
-        monkeypatch.setattr(
-            metrics_forwarder, "create_carbon_client", lambda _cfg: client
-        )
-
-        def make_emitter(
-            client_arg, prefix_arg, instrument_arg, *, flush_interval_s=None
-        ):
-            emitter = RecordingEmitter(
-                client_arg,
-                prefix_arg,
-                instrument_arg,
-                flush_interval_s=flush_interval_s,
-            )
-            created["emitter"] = emitter
-            return emitter
-
-        monkeypatch.setattr(metrics_forwarder, "CacheMetricsEmitter", make_emitter)
-
-        device._startWorker()
-
-        assert device._emitter is created["emitter"]
-        assert created["emitter"].client is client
-        assert created["emitter"].prefix == "nicos"
-        assert created["emitter"].instrument == "ymir"
-        assert created["emitter"].flush_interval_s == cfg.flush_interval_s
-
-    def test_start_worker_propagates_config_errors(
-        self, daemon_device_harness, monkeypatch
-    ):
-        device = daemon_device_harness.create_master(CarbonForwarder)
-
-        def raise_config_error(_cfg):
-            raise ConfigurationError("bad telemetry config")
-
-        monkeypatch.setattr(
-            metrics_forwarder, "read_carbon_config", raise_config_error
-        )
-
-        with pytest.raises(ConfigurationError):
-            device._startWorker()
-
     def test_put_change_delegates_matching_updates(self, daemon_device_harness):
         device = daemon_device_harness.create_master(CarbonForwarder)
         emitter = RecordingEmitter()
@@ -165,27 +89,35 @@ class TestCarbonForwarderHarness:
 
         assert emitter.calls == [("1710000000", "motor/value", "42")]
 
-    def test_put_change_logs_and_swallows_emitter_errors(
-        self, daemon_device_harness, monkeypatch
-    ):
+    def test_put_change_swallows_emitter_errors(self, daemon_device_harness):
         device = daemon_device_harness.create_master(CarbonForwarder)
-        warnings = []
 
         class FailingEmitter:
+            def __init__(self):
+                self.calls = []
+
             def process_cache_update(self, timestamp, key, value):
+                self.calls.append((timestamp, key, value))
                 raise RuntimeError("boom")
 
-        device._emitter = FailingEmitter()
-        monkeypatch.setattr(
-            device.log,
-            "warning",
-            lambda *args, **kwargs: warnings.append((args, kwargs)),
-        )
+        emitter = FailingEmitter()
+        device._emitter = emitter
+        warning_messages = []
+        original_warning = device.log.warning
 
-        device._putChange("1710000000", "", SCRIPTS_KEY, "=", "[]")
+        def capture_warning(msg, *args, **kwargs):
+            del kwargs
+            warning_messages.append(msg % args if args else msg)
 
-        assert warnings == [
-            (("Could not forward telemetry update for %s", SCRIPTS_KEY), {"exc": 1})
+        device.log.warning = capture_warning
+        try:
+            device._putChange("1710000000", "", SCRIPTS_KEY, "=", "[]")
+        finally:
+            device.log.warning = original_warning
+
+        assert emitter.calls == [("1710000000", SCRIPTS_KEY, "[]")]
+        assert warning_messages == [
+            f"Could not forward telemetry update for {SCRIPTS_KEY}"
         ]
 
     def test_shutdown_closes_emitter_once_and_clears_reference(

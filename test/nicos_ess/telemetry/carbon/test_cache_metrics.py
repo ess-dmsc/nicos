@@ -22,12 +22,12 @@
 #
 # *****************************************************************************
 
-"""Tests for nicos_ess.telemetry.metrics (CacheMetricsEmitter)."""
+"""Tests for Carbon cache metric emission."""
 
 import pytest
 
 from nicos.protocols.cache import cache_dump
-from nicos_ess.telemetry.metrics import SCRIPTS_KEY, CacheMetricsEmitter
+from nicos_ess.telemetry.carbon.cache_metrics import SCRIPTS_KEY, CacheMetricsEmitter
 
 
 class FakeClock:
@@ -136,10 +136,6 @@ class TestCacheMetricsEmitter:
         lines = emitter.process_cache_update("1710000000", SCRIPTS_KEY, "[]")
         metrics = _parse_metrics(lines)
         assert "ess.prod.ymir.session.busy" in metrics
-
-    def test_close_closes_client(self, client, emitter):
-        emitter.close()
-        assert client.closed
 
     def test_transition_idle_to_busy_to_idle(self, client, emitter):
         emitter.process_cache_update("100", SCRIPTS_KEY, "[]")

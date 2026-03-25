@@ -22,21 +22,18 @@
 #
 # *****************************************************************************
 
-"""Tests for nicos_ess.telemetry.config."""
+"""Tests for CarbonConfig parsing and client creation."""
 
 from types import SimpleNamespace
 
 import pytest
 
 from nicos.core import ConfigurationError
-from nicos_ess.telemetry.carbon import CarbonTcpClient
-from nicos_ess.telemetry.config import (
+from nicos_ess.telemetry.carbon.config import (
     CarbonConfig,
     _parse_bool,
     _parse_float,
     _parse_int,
-    create_carbon_client,
-    read_carbon_config,
 )
 
 
@@ -80,18 +77,18 @@ class TestParseNumeric:
         assert _parse_float(None, 2.0) == pytest.approx(2.0)
 
 
-class TestReadCarbonConfig:
+class TestCarbonConfigFromNicosConfig:
     def test_returns_none_when_disabled(self):
-        assert read_carbon_config(SimpleNamespace()) is None
+        assert CarbonConfig.from_nicos_config(SimpleNamespace()) is None
 
     def test_returns_none_when_explicitly_disabled(self):
         cfg = SimpleNamespace(telemetry_enabled=False)
-        assert read_carbon_config(cfg) is None
+        assert CarbonConfig.from_nicos_config(cfg) is None
 
     def test_raises_when_enabled_without_host(self):
         cfg = SimpleNamespace(telemetry_enabled=True)
         with pytest.raises(ConfigurationError):
-            read_carbon_config(cfg)
+            CarbonConfig.from_nicos_config(cfg)
 
     def test_raises_when_enabled_with_blank_host(self):
         cfg = SimpleNamespace(
@@ -99,7 +96,7 @@ class TestReadCarbonConfig:
             telemetry_carbon_host="   ",
         )
         with pytest.raises(ConfigurationError):
-            read_carbon_config(cfg)
+            CarbonConfig.from_nicos_config(cfg)
 
     def test_returns_config_with_defaults(self):
         cfg = SimpleNamespace(
@@ -107,7 +104,7 @@ class TestReadCarbonConfig:
             telemetry_carbon_host="carbon.local",
             instrument="bifrost",
         )
-        result = read_carbon_config(cfg)
+        result = CarbonConfig.from_nicos_config(cfg)
         assert isinstance(result, CarbonConfig)
         assert result.host == "carbon.local"
         assert result.port == 2003
@@ -131,7 +128,7 @@ class TestReadCarbonConfig:
             telemetry_send_timeout_s="0.5",
             telemetry_heartbeat_interval_s="15",
         )
-        result = read_carbon_config(cfg)
+        result = CarbonConfig.from_nicos_config(cfg)
         assert result.host == "10.0.0.1"
         assert result.port == 2004
         assert result.prefix == "ess"
@@ -148,24 +145,6 @@ class TestReadCarbonConfig:
             telemetry_enabled=True,
             telemetry_carbon_host="carbon.local",
         )
-        result = read_carbon_config(cfg)
+        result = CarbonConfig.from_nicos_config(cfg)
         with pytest.raises(AttributeError):
             result.host = "other"
-
-
-class TestCreateCarbonClient:
-    def test_creates_client_with_config_values(self):
-        cfg = CarbonConfig(
-            host="carbon.local",
-            port=2004,
-            reconnect_delay_s=3.0,
-            queue_max=500,
-            connect_timeout_s=2.0,
-            send_timeout_s=0.5,
-        )
-        client = create_carbon_client(cfg)
-        assert isinstance(client, CarbonTcpClient)
-        assert client.host == "carbon.local"
-        assert client.port == 2004
-        assert client.reconnect_delay_s == 3.0
-        assert client.connect_timeout_s == 2.0

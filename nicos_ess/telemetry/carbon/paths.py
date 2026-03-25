@@ -22,11 +22,24 @@
 #
 # *****************************************************************************
 
-"""ESS-specific NICOS package hooks."""
+"""Graphite-safe metric path helpers."""
+
+from __future__ import annotations
+
+import re
+
+_VALID_SEGMENT_RE = re.compile(r"[^A-Za-z0-9_-]+")
+_MULTI_UNDERSCORE_RE = re.compile(r"_+")
 
 
-def get_log_handlers(config):
-    """Return optional ESS-specific log handlers configured for this session."""
-    from nicos_ess.telemetry.carbon import create_carbon_log_handlers
+def sanitize_segment(segment: str) -> str:
+    """Convert one metric path segment to a Graphite-safe token."""
+    text = _VALID_SEGMENT_RE.sub("_", str(segment).strip().lower())
+    text = _MULTI_UNDERSCORE_RE.sub("_", text).strip("_")
+    return text or "unknown"
 
-    return create_carbon_log_handlers(config)
+
+def sanitize_path(path: str) -> str:
+    """Sanitize a dot-delimited metric path."""
+    parts = [sanitize_segment(part) for part in str(path).split(".") if part]
+    return ".".join(parts) if parts else "unknown"

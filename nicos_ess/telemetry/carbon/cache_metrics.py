@@ -22,7 +22,7 @@
 #
 # *****************************************************************************
 
-"""Cache-derived metrics for Carbon/Graphite."""
+"""Translate NICOS cache updates into Carbon metric lines."""
 
 from __future__ import annotations
 
@@ -31,8 +31,7 @@ from collections import defaultdict
 from threading import Lock
 
 from nicos.protocols.cache import cache_load
-from nicos_ess.telemetry.carbon import sanitize_path, sanitize_segment
-from nicos_ess.telemetry.sender import TelemetrySender
+from nicos_ess.telemetry.carbon.paths import sanitize_path, sanitize_segment
 
 SCRIPTS_KEY = "exp/scripts"
 
@@ -83,7 +82,7 @@ class CacheMetricsEmitter:
 
     def __init__(
         self,
-        client: TelemetrySender,
+        client,
         prefix: str,
         instrument: str,
         flush_interval_s: float,

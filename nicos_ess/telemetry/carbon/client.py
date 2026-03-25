@@ -22,32 +22,15 @@
 #
 # *****************************************************************************
 
-"""Carbon plaintext telemetry helpers."""
+"""Buffered TCP sender for Carbon plaintext metrics."""
 
 from __future__ import annotations
 
-import re
 import socket
 import time
 from collections import deque
 from threading import Lock
 from typing import Callable, Iterable
-
-_VALID_SEGMENT_RE = re.compile(r"[^A-Za-z0-9_-]+")
-_MULTI_UNDERSCORE_RE = re.compile(r"_+")
-
-
-def sanitize_segment(segment: str) -> str:
-    """Convert one metric path segment to a Graphite-safe token."""
-    text = _VALID_SEGMENT_RE.sub("_", str(segment).strip().lower())
-    text = _MULTI_UNDERSCORE_RE.sub("_", text).strip("_")
-    return text or "unknown"
-
-
-def sanitize_path(path: str) -> str:
-    """Sanitize a dot-delimited metric path."""
-    parts = [sanitize_segment(part) for part in str(path).split(".") if part]
-    return ".".join(parts) if parts else "unknown"
 
 
 class CarbonTcpClient:
