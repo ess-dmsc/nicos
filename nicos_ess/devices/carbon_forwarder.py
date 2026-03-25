@@ -27,11 +27,11 @@
 from nicos import config
 from nicos.core import Override
 from nicos.core.device import Device
+from nicos.protocols.cache import OP_TELL
 from nicos.services.collector import ForwarderBase
 from nicos_ess.telemetry.carbon import (
+    CACHE_METRIC_KEY_FILTERS,
     CarbonConfig,
-    CacheMetricsEmitter,
-    SCRIPTS_KEY,
 )
 
 
@@ -47,10 +47,7 @@ class CarbonForwarder(ForwarderBase, Device):
     """
 
     parameter_overrides = {
-        "keyfilters": Override(
-            default=[rf"^{SCRIPTS_KEY}$", r".+/value$", r".+/status$"],
-            mandatory=False,
-        ),
+        "keyfilters": Override(default=list(CACHE_METRIC_KEY_FILTERS), mandatory=False),
     }
 
     def doInit(self, _mode):
@@ -63,17 +60,11 @@ class CarbonForwarder(ForwarderBase, Device):
             self._emitter = None
             self.log.info("Telemetry disabled, CarbonForwarder inactive")
             return
-        client = cfg.create_client()
-        self._emitter = CacheMetricsEmitter(
-            client,
-            cfg.prefix,
-            cfg.instrument,
-            flush_interval_s=cfg.flush_interval_s,
-        )
+        self._emitter = cfg.create_cache_metrics_emitter()
         self.log.info("CarbonForwarder sending to %s:%d", cfg.host, cfg.port)
 
-    def _putChange(self, timestamp, _ttl, key, _op, value):
-        if self._emitter is None or not self._checkKey(key):
+    def _putChange(self, timestamp, _ttl, key, op, value):
+        if self._emitter is None or op != OP_TELL or not self._checkKey(key):
             return
         try:
             self._emitter.process_cache_update(timestamp, key, value)

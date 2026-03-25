@@ -24,8 +24,9 @@
 
 """Harness tests for nicos_ess.devices.carbon_forwarder."""
 
+from nicos.protocols.cache import OP_TELL, OP_TELLOLD
 from nicos_ess.devices.carbon_forwarder import CarbonForwarder
-from nicos_ess.telemetry.carbon import SCRIPTS_KEY
+from nicos_ess.telemetry.carbon import CACHE_VALUE_KEY_SUFFIX, SCRIPTS_KEY
 
 
 class RecordingEmitter:
@@ -59,7 +60,7 @@ class TestCarbonForwarderHarness:
 
         assert device._emitter is None
         assert device._checkKey(SCRIPTS_KEY)
-        assert device._checkKey("motor/value")
+        assert device._checkKey(f"motor{CACHE_VALUE_KEY_SUFFIX}")
         assert not device._checkKey("motor/target")
 
     def test_put_change_delegates_matching_updates(self, daemon_device_harness):
@@ -67,7 +68,7 @@ class TestCarbonForwarderHarness:
         emitter = RecordingEmitter()
         device._emitter = emitter
 
-        device._putChange("1710000000", "", SCRIPTS_KEY, "=", "[]")
+        device._putChange("1710000000", "", SCRIPTS_KEY, OP_TELL, "[]")
 
         assert emitter.calls == [("1710000000", SCRIPTS_KEY, "[]")]
 
@@ -76,7 +77,7 @@ class TestCarbonForwarderHarness:
         emitter = RecordingEmitter()
         device._emitter = emitter
 
-        device._putChange("1710000000", "", "motor/target", "=", "42")
+        device._putChange("1710000000", "", "motor/target", OP_TELL, "42")
 
         assert emitter.calls == []
 
@@ -85,9 +86,20 @@ class TestCarbonForwarderHarness:
         emitter = RecordingEmitter()
         device._emitter = emitter
 
-        device._putChange("1710000000", "", "motor/value", "=", "42")
+        device._putChange(
+            "1710000000", "", f"motor{CACHE_VALUE_KEY_SUFFIX}", OP_TELL, "42"
+        )
 
-        assert emitter.calls == [("1710000000", "motor/value", "42")]
+        assert emitter.calls == [("1710000000", f"motor{CACHE_VALUE_KEY_SUFFIX}", "42")]
+
+    def test_put_change_ignores_non_tell_updates(self, daemon_device_harness):
+        device = daemon_device_harness.create_master(CarbonForwarder)
+        emitter = RecordingEmitter()
+        device._emitter = emitter
+
+        device._putChange("1710000000", "", SCRIPTS_KEY, OP_TELLOLD, "[]")
+
+        assert emitter.calls == []
 
     def test_put_change_swallows_emitter_errors(self, daemon_device_harness):
         device = daemon_device_harness.create_master(CarbonForwarder)
@@ -111,7 +123,7 @@ class TestCarbonForwarderHarness:
 
         device.log.warning = capture_warning
         try:
-            device._putChange("1710000000", "", SCRIPTS_KEY, "=", "[]")
+            device._putChange("1710000000", "", SCRIPTS_KEY, OP_TELL, "[]")
         finally:
             device.log.warning = original_warning
 

@@ -34,13 +34,16 @@ from typing import Callable, Iterable
 
 
 class CarbonTcpClient:
-    """Send Graphite plaintext metrics over TCP with bounded buffering.
+    """Send Carbon plaintext lines with bounded buffering and simple retry.
 
-    Callers hand this client complete metric lines ending in ``\\n`` via
-    :meth:`send_lines`. The client keeps a bounded in-memory queue, retries
-    connections after a cooldown, and drops the oldest pending lines when the
-    queue is full. It does not raise on network failures; it keeps unsent lines
-    queued and reports success through the boolean return value.
+    The client accepts complete metric lines ending in ``\\n``. It keeps a
+    bounded in-memory queue, retries connections after a cooldown, and drops the
+    oldest queued lines when the queue is full.
+
+    Delivery is intentionally conservative: lines are sent one by one. If a
+    socket write fails, the line that was in flight is dropped rather than
+    retried. This avoids duplicating counters after a partial TCP write, which
+    would be worse than losing a single sample.
     """
 
     def __init__(
@@ -83,31 +86,37 @@ class CarbonTcpClient:
 
     def close(self) -> None:
         with self._lock:
+            self._flush_locked(force=True)
             self._close_socket()
 
-    def _flush_locked(self) -> bool:
+    def _flush_locked(self, *, force: bool = False) -> bool:
         if not self._pending:
             return True
-        if not self._ensure_connected():
+        if not self._ensure_connected(force=force):
             return False
 
-        payload = "".join(self._pending).encode("utf-8")
-        if self._socket is None:
-            return False
-        try:
-            self._socket.sendall(payload)
-            self._pending.clear()
-            return True
-        except OSError:
-            self._close_socket()
-            return False
+        while self._pending:
+            if self._socket is None:
+                return False
+            line = self._pending[0]
+            try:
+                self._socket.sendall(line.encode("utf-8"))
+            except OSError:
+                # The current line may have been partially delivered already.
+                # Drop it to avoid retrying an unknown prefix and duplicating
+                # the metric after reconnect.
+                self._pending.popleft()
+                self._close_socket()
+                return False
+            self._pending.popleft()
+        return True
 
-    def _ensure_connected(self) -> bool:
+    def _ensure_connected(self, *, force: bool = False) -> bool:
         if self._socket is not None:
             return True
 
         now = self._monotonic_fn()
-        if now - self._last_connect_attempt < self.reconnect_delay_s:
+        if not force and now - self._last_connect_attempt < self.reconnect_delay_s:
             return False
 
         self._last_connect_attempt = now

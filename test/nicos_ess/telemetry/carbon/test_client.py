@@ -21,10 +21,22 @@
 #
 # *****************************************************************************
 
-"""Tests for the Carbon client and metric path helpers."""
+"""Tests for the Carbon client and metric-name helpers."""
 
 from nicos_ess.telemetry.carbon.client import CarbonTcpClient
-from nicos_ess.telemetry.carbon.paths import sanitize_path, sanitize_segment
+from nicos_ess.telemetry.carbon.paths import (
+    cache_value_updates_total_metric,
+    device_status_metric,
+    device_value_updates_metric,
+    metric_root,
+    sanitize_path,
+    sanitize_segment,
+    service_heartbeat_metric,
+    service_log_level_metric,
+    service_logs_total_metric,
+    service_metric_root,
+    session_busy_metric,
+)
 
 
 class FakeClock:
@@ -39,17 +51,19 @@ class FakeClock:
 
 
 class FakeSocket:
-    def __init__(self, fail_send=False):
-        self.fail_send = fail_send
+    def __init__(self, fail_send_calls=None):
+        self.fail_send_calls = set(fail_send_calls or ())
         self.timeout = None
         self.closed = False
         self.sent_payloads = []
+        self.send_calls = 0
 
     def settimeout(self, timeout):
         self.timeout = timeout
 
     def sendall(self, payload):
-        if self.fail_send:
+        self.send_calls += 1
+        if self.send_calls in self.fail_send_calls:
             raise OSError("send failed")
         self.sent_payloads.append(payload)
 
@@ -61,6 +75,35 @@ def test_sanitize_path_keeps_dot_hierarchy():
     assert sanitize_segment("BIFROST!") == "bifrost"
     assert sanitize_path("nicos.ESS BIFROST.logs") == "nicos.ess_bifrost.logs"
     assert sanitize_path("...") == "unknown"
+
+
+def test_metric_name_helpers_define_the_schema_in_one_place():
+    root = metric_root("nicos.ESS", "BIFROST")
+    service_root = service_metric_root(root, "daemon")
+
+    assert root == "nicos.ess.bifrost"
+    assert session_busy_metric(root) == "nicos.ess.bifrost.session.busy"
+    assert (
+        cache_value_updates_total_metric(root)
+        == "nicos.ess.bifrost.cache.value_updates.total.count"
+    )
+    assert (
+        device_value_updates_metric(root, "Motor 1")
+        == "nicos.ess.bifrost.device.motor_1.cache.value_updates.count"
+    )
+    assert (
+        device_status_metric(root, "Motor 1")
+        == "nicos.ess.bifrost.device.motor_1.status"
+    )
+    assert service_logs_total_metric(service_root) == (
+        "nicos.ess.bifrost.service.daemon.logs.total.count"
+    )
+    assert service_log_level_metric(service_root, "INFO") == (
+        "nicos.ess.bifrost.service.daemon.logs.level.info.count"
+    )
+    assert service_heartbeat_metric(service_root) == (
+        "nicos.ess.bifrost.service.daemon.telemetry.heartbeat"
+    )
 
 
 def test_carbon_tcp_client_retries_after_delay_and_flushes_pending():
@@ -125,4 +168,57 @@ def test_carbon_tcp_client_queue_max_keeps_latest_entries():
 
     assert client.pending_count == 2
     assert client.flush()
-    assert sock.sent_payloads == [b"m.two 2 2\nm.three 3 3\n"]
+    assert sock.sent_payloads == [b"m.two 2 2\n", b"m.three 3 3\n"]
+
+
+def test_carbon_tcp_client_drops_inflight_line_after_send_failure():
+    first_socket = FakeSocket(fail_send_calls={1})
+    second_socket = FakeSocket()
+    connect_calls = 0
+
+    def socket_factory(*_args, **_kwargs):
+        nonlocal connect_calls
+        connect_calls += 1
+        if connect_calls == 1:
+            return first_socket
+        return second_socket
+
+    client = CarbonTcpClient(
+        host="carbon.local",
+        reconnect_delay_s=0,
+        socket_factory=socket_factory,
+    )
+
+    assert not client.send_lines(["m.one 1 1\n", "m.two 2 2\n"])
+    assert client.pending_count == 1
+    assert client.flush()
+    assert second_socket.sent_payloads == [b"m.two 2 2\n"]
+
+
+def test_carbon_tcp_client_close_forces_final_flush_attempt():
+    clock = FakeClock(10)
+    connect_calls = 0
+    socket = FakeSocket()
+
+    def socket_factory(*_args, **_kwargs):
+        nonlocal connect_calls
+        connect_calls += 1
+        if connect_calls == 1:
+            raise OSError("offline")
+        return socket
+
+    client = CarbonTcpClient(
+        host="carbon.local",
+        reconnect_delay_s=60,
+        socket_factory=socket_factory,
+        monotonic_fn=clock,
+    )
+
+    assert not client.send_lines(["m.one 1 1\n"])
+    assert client.pending_count == 1
+
+    client.close()
+
+    assert connect_calls == 2
+    assert socket.sent_payloads == [b"m.one 1 1\n"]
+    assert socket.closed is True

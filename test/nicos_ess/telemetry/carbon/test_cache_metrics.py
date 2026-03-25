@@ -27,7 +27,14 @@
 import pytest
 
 from nicos.protocols.cache import cache_dump
-from nicos_ess.telemetry.carbon.cache_metrics import SCRIPTS_KEY, CacheMetricsEmitter
+from nicos_ess.telemetry.carbon.cache_metrics import (
+    CACHE_METRIC_KEY_FILTERS,
+    CACHE_STATUS_KEY_SUFFIX,
+    CACHE_VALUE_KEY_SUFFIX,
+    SCRIPTS_KEY,
+    CacheMetricsEmitter,
+    classify_cache_metric_key,
+)
 
 
 class FakeClock:
@@ -62,6 +69,24 @@ def _parse_metrics(lines):
         metric, value, timestamp = line.strip().split(" ")
         parsed[metric] = (int(value), int(timestamp))
     return parsed
+
+
+def test_classify_cache_metric_key_covers_the_supported_metric_families():
+    assert tuple(CACHE_METRIC_KEY_FILTERS) == (
+        rf"^{SCRIPTS_KEY}$",
+        rf".+{CACHE_VALUE_KEY_SUFFIX}$",
+        rf".+{CACHE_STATUS_KEY_SUFFIX}$",
+    )
+    assert classify_cache_metric_key(SCRIPTS_KEY) == "session_busy"
+    assert (
+        classify_cache_metric_key(f"motor1{CACHE_VALUE_KEY_SUFFIX}")
+        == "device_value_updates"
+    )
+    assert (
+        classify_cache_metric_key(f"motor1{CACHE_STATUS_KEY_SUFFIX}")
+        == "device_status"
+    )
+    assert classify_cache_metric_key("motor1/target") is None
 
 
 class TestCacheMetricsEmitter:
@@ -107,6 +132,30 @@ class TestCacheMetricsEmitter:
         )
         assert lines == []
         assert client.sent_batches == []
+
+    def test_unrelated_key_does_not_trigger_pending_flush(self, client):
+        monotonic_clock = FakeClock(10)
+        emitter = CacheMetricsEmitter(
+            client=client,
+            prefix="nicos",
+            instrument="BIFROST",
+            flush_interval_s=5.0,
+            time_fn=lambda: 1710000020,
+            monotonic_fn=monotonic_clock,
+        )
+
+        emitter.process_cache_update("100", "motor1/value", "1")
+        monotonic_clock.advance(5)
+
+        assert emitter.process_cache_update("101", "motor1/target", "2") == []
+        assert client.sent_batches == []
+
+        lines = emitter.flush()
+        metrics = _parse_metrics(lines)
+        assert metrics["nicos.bifrost.cache.value_updates.total.count"] == (
+            1,
+            1710000020,
+        )
 
     def test_metrics_sent_to_client(self, client, emitter):
         emitter.process_cache_update("1710000000", SCRIPTS_KEY, "[]")

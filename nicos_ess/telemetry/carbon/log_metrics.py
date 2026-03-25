@@ -36,7 +36,14 @@ from typing import Callable
 from nicos import session
 from nicos.utils.loggers import ACTION, INPUT
 from nicos_ess.telemetry.carbon.config import CarbonConfig
-from nicos_ess.telemetry.carbon.paths import sanitize_path, sanitize_segment
+from nicos_ess.telemetry.carbon.paths import (
+    metric_root,
+    sanitize_segment,
+    service_heartbeat_metric,
+    service_log_level_metric,
+    service_logs_total_metric,
+    service_metric_root,
+)
 
 _LOG_LEVEL_BUCKETS = {
     logging.DEBUG: "debug",
@@ -71,16 +78,7 @@ def _normalize_level(levelno: int, levelname: str) -> str:
 
 
 class CarbonLogLevelCounterHandler(logging.Handler):
-    """Aggregate NICOS log records into counter metrics.
-
-    The handler accepts ordinary NICOS log records, groups them by normalized
-    level name, and periodically emits Graphite-style counter samples through
-    the provided sender. The sender is expected to be non-throwing during normal
-    outages: network failures should be handled inside the sender so logging
-    itself stays stable. The handler owns an optional heartbeat thread, so
-    callers must call :meth:`close` during shutdown to flush counters and stop
-    that background work cleanly.
-    """
+    """Count NICOS log records and emit them below one service metric root."""
 
     def __init__(
         self,
@@ -100,11 +98,13 @@ class CarbonLogLevelCounterHandler(logging.Handler):
         self.heartbeat_interval_s = heartbeat_interval_s
         self._time_fn = time_fn
         self._monotonic_fn = monotonic_fn
-        self._metric_root = f"{sanitize_path(prefix)}.{sanitize_segment(instrument)}"
-        service_segment = sanitize_segment(service_name or "unknown")
-        self._service_root = f"{self._metric_root}.service.{service_segment}"
+        self._metric_root = metric_root(prefix, instrument)
+        self._service_root = service_metric_root(
+            self._metric_root, service_name or "unknown"
+        )
         self._last_flush_at = monotonic_fn()
-        self._counters = defaultdict(int)
+        self._level_counts = defaultdict(int)
+        self._total_count = 0
         self._counter_lock = Lock()
         self._heartbeat_stop = threading.Event()
         self._heartbeat_thread = None
@@ -121,8 +121,8 @@ class CarbonLogLevelCounterHandler(logging.Handler):
             now = self._monotonic_fn()
             bucket = _normalize_level(record.levelno, record.levelname)
             with self._counter_lock:
-                self._counters["logs.total.count"] += 1
-                self._counters[f"logs.level.{bucket}.count"] += 1
+                self._total_count += 1
+                self._level_counts[bucket] += 1
                 should_flush = now - self._last_flush_at >= self.flush_interval_s
             if should_flush:
                 self.flush()
@@ -131,16 +131,24 @@ class CarbonLogLevelCounterHandler(logging.Handler):
 
     def flush(self):
         with self._counter_lock:
-            if not self._counters:
+            if self._total_count == 0 and not self._level_counts:
                 return
-            snapshot = dict(self._counters)
-            self._counters.clear()
+            total_count = self._total_count
+            level_snapshot = dict(self._level_counts)
+            self._total_count = 0
+            self._level_counts.clear()
             self._last_flush_at = self._monotonic_fn()
 
         timestamp = int(self._time_fn())
-        lines = []
-        for suffix, value in sorted(snapshot.items()):
-            lines.append(f"{self._service_root}.{suffix} {int(value)} {timestamp}\n")
+        lines = [
+            f"{service_logs_total_metric(self._service_root)} "
+            f"{total_count} {timestamp}\n"
+        ]
+        for bucket, value in sorted(level_snapshot.items()):
+            lines.append(
+                f"{service_log_level_metric(self._service_root, bucket)} "
+                f"{int(value)} {timestamp}\n"
+            )
 
         self.client.send_lines(lines)
 
@@ -148,7 +156,7 @@ class CarbonLogLevelCounterHandler(logging.Handler):
         """Emit a heartbeat sample for liveness dashboards."""
         timestamp = int(self._time_fn())
         self.client.send_lines(
-            [f"{self._service_root}.telemetry.heartbeat 1 {timestamp}\n"]
+            [f"{service_heartbeat_metric(self._service_root)} 1 {timestamp}\n"]
         )
 
     def _heartbeat_loop(self):
@@ -184,15 +192,4 @@ def create_carbon_log_handlers(nicos_config):
 
 def build_carbon_log_handlers(cfg: CarbonConfig, service_name: str):
     """Build Carbon log metric handlers for one resolved config."""
-    client = cfg.create_client()
-
-    return [
-        CarbonLogLevelCounterHandler(
-            instrument=cfg.instrument,
-            prefix=cfg.prefix,
-            client=client,
-            service_name=service_name,
-            flush_interval_s=cfg.flush_interval_s,
-            heartbeat_interval_s=cfg.heartbeat_interval_s,
-        )
-    ]
+    return [cfg.create_log_handler(service_name=service_name)]

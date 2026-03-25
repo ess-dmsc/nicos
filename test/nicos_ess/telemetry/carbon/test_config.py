@@ -58,23 +58,50 @@ class TestParseBool:
         ],
     )
     def test_parse_bool(self, value, expected):
-        assert _parse_bool(value) == expected
+        assert _parse_bool("telemetry_enabled", value) == expected
 
     def test_parse_bool_default(self):
-        assert _parse_bool(None, default=True) is True
-        assert _parse_bool("garbage", default=True) is True
+        assert _parse_bool("telemetry_enabled", None, default=True) is True
+
+    @pytest.mark.parametrize("value", ["garbage", 2, 1.5])
+    def test_parse_bool_raises_on_invalid_values(self, value):
+        with pytest.raises(ConfigurationError):
+            _parse_bool("telemetry_enabled", value)
 
 
 class TestParseNumeric:
     def test_parse_int(self):
-        assert _parse_int("42", 0) == 42
-        assert _parse_int("not_a_number", 99) == 99
-        assert _parse_int(None, 7) == 7
+        assert _parse_int("telemetry_queue_max", "42", 0) == 42
+        assert _parse_int("telemetry_queue_max", None, 7) == 7
 
     def test_parse_float(self):
-        assert _parse_float("3.14", 0.0) == pytest.approx(3.14)
-        assert _parse_float("bad", 1.5) == pytest.approx(1.5)
-        assert _parse_float(None, 2.0) == pytest.approx(2.0)
+        assert _parse_float("telemetry_flush_interval_s", "3.14", 0.0) == pytest.approx(
+            3.14
+        )
+        assert _parse_float("telemetry_flush_interval_s", None, 2.0) == pytest.approx(
+            2.0
+        )
+
+    @pytest.mark.parametrize(
+        "parser, setting_name, value",
+        [
+            (_parse_int, "telemetry_queue_max", "not_a_number"),
+            (_parse_int, "telemetry_queue_max", True),
+            (_parse_float, "telemetry_flush_interval_s", "bad"),
+            (_parse_float, "telemetry_flush_interval_s", False),
+        ],
+    )
+    def test_numeric_parsers_raise_on_invalid_values(self, parser, setting_name, value):
+        with pytest.raises(ConfigurationError):
+            parser(setting_name, value, 1)
+
+    def test_parse_int_enforces_range(self):
+        with pytest.raises(ConfigurationError):
+            _parse_int("telemetry_carbon_port", "0", 2003, minimum=1)
+
+    def test_parse_float_enforces_range(self):
+        with pytest.raises(ConfigurationError):
+            _parse_float("telemetry_flush_interval_s", "-1", 10, minimum=0)
 
 
 class TestCarbonConfigFromNicosConfig:
@@ -98,6 +125,31 @@ class TestCarbonConfigFromNicosConfig:
         with pytest.raises(ConfigurationError):
             CarbonConfig.from_nicos_config(cfg)
 
+    @pytest.mark.parametrize(
+        "extra_config",
+        [
+            {"telemetry_carbon_port": "not-a-port"},
+            {"telemetry_carbon_port": "70000"},
+            {"telemetry_prefix": "   "},
+            {"instrument": "   "},
+            {"telemetry_queue_max": "0"},
+            {"telemetry_flush_interval_s": "-1"},
+            {"telemetry_heartbeat_interval_s": "-1"},
+            {"telemetry_connect_timeout_s": "-1"},
+            {"telemetry_send_timeout_s": "-1"},
+        ],
+    )
+    def test_raises_on_invalid_explicit_values(self, extra_config):
+        config_values = {
+            "telemetry_enabled": True,
+            "telemetry_carbon_host": "carbon.local",
+            "instrument": "bifrost",
+        }
+        config_values.update(extra_config)
+        cfg = SimpleNamespace(**config_values)
+        with pytest.raises(ConfigurationError):
+            CarbonConfig.from_nicos_config(cfg)
+
     def test_returns_config_with_defaults(self):
         cfg = SimpleNamespace(
             telemetry_enabled=True,
@@ -108,7 +160,7 @@ class TestCarbonConfigFromNicosConfig:
         assert isinstance(result, CarbonConfig)
         assert result.host == "carbon.local"
         assert result.port == 2003
-        assert result.prefix == "nicos"
+        assert result.prefix == "nicosserver"
         assert result.instrument == "bifrost"
         assert result.flush_interval_s == 10.0
         assert result.reconnect_delay_s == 2.0
@@ -148,3 +200,11 @@ class TestCarbonConfigFromNicosConfig:
         result = CarbonConfig.from_nicos_config(cfg)
         with pytest.raises(AttributeError):
             result.host = "other"
+
+
+def test_direct_carbon_config_defaults_match_nicos_config_defaults():
+    cfg = CarbonConfig(host="carbon.local")
+
+    assert cfg.port == 2003
+    assert cfg.prefix == "nicosserver"
+    assert cfg.instrument == "unknown"

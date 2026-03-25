@@ -1,117 +1,107 @@
 # Telemetry
 
-`nicos_ess.telemetry` contains ESS-specific telemetry implementations for
-NICOS.
+`nicos_ess.telemetry` contains ESS-specific telemetry backends for NICOS.
 
-Today the package contains one metrics backend, Carbon/Graphite. The package is
-structured so that each telemetry implementation can carry its own config
-parsing, transport code, and data translation logic without mixing those
-concerns into unrelated backends.
+Today there is one backend: Carbon/Graphite in `nicos_ess.telemetry.carbon`.
 
-## What This Package Is For
+## Quick Start
 
-Telemetry code in ESS NICOS has two jobs:
+Telemetry is disabled unless `telemetry_enabled` is truthy.
 
-- translate NICOS state into telemetry data
-- deliver that data to an external backend
+Minimal `nicos.conf` settings:
 
-Those jobs are separate from the rest of NICOS:
+```ini
+telemetry_enabled = true
+telemetry_carbon_host = carbon.example.org
+instrument = bifrost
+```
 
-- NICOS devices, sessions, and cache updates provide the input
-- telemetry code decides what to emit and how to send it
+Optional settings with defaults:
 
-The integration points back into NICOS are intentionally small:
+- `telemetry_carbon_port = 2003`
+- `telemetry_prefix = nicosserver`
+- `telemetry_flush_interval_s = 10`
+- `telemetry_heartbeat_interval_s = 10`
+- `telemetry_reconnect_delay_s = 2`
+- `telemetry_queue_max = 10000`
+- `telemetry_connect_timeout_s = 1`
+- `telemetry_send_timeout_s = 1`
 
-- `nicos_ess.devices.carbon_forwarder.CarbonForwarder` forwards selected
-  collector cache updates into the Carbon backend
-- `nicos_ess.get_log_handlers()` installs telemetry log handlers for the current
-  session
-
-## Current Carbon Backend
-
-The Carbon backend lives in `nicos_ess/telemetry/carbon/`:
-
-- `config.py`
-  Parses NICOS config into `CarbonConfig`. The config object is also
-  responsible for creating the Carbon client used by the backend.
-- `client.py`
-  Buffered TCP sender for Carbon plaintext metrics.
-- `paths.py`
-  Helpers for Graphite-safe metric names.
-- `cache_metrics.py`
-  Translates selected collector cache updates into Carbon metric lines.
-- `log_metrics.py`
-  Aggregates NICOS log records into Carbon counter metrics and exposes the
-  Carbon log-handler factory used by `nicos_ess.get_log_handlers()`.
+Invalid explicit values fail fast with `ConfigurationError`. The telemetry code
+does not silently repair malformed config.
 
 ## Runtime Flow
 
+There are two integration points back into NICOS.
+
 ### Collector cache updates
 
-1. The collector forwards cache updates to
+1. The collector forwards matching cache keys to
    `nicos_ess.devices.carbon_forwarder.CarbonForwarder`.
-2. The forwarder reads `CarbonConfig` from NICOS config.
-3. The forwarder creates a `CarbonTcpClient` from that config.
-4. `CacheMetricsEmitter` translates relevant cache updates into Carbon metric
-   lines.
-5. `CarbonTcpClient` buffers and sends those lines to Carbon.
+2. `CarbonForwarder` reads `CarbonConfig` and builds one
+   `CacheMetricsEmitter`.
+3. `CacheMetricsEmitter` translates supported keys into Carbon metric lines.
+4. `CarbonTcpClient` buffers and sends those lines.
 
-### NICOS log records
+### Log records
 
-1. `nicos_ess.get_log_handlers()` asks the Carbon backend for log handlers.
-2. `log_metrics.create_carbon_log_handlers()` reads `CarbonConfig`.
-3. `CarbonLogLevelCounterHandler` aggregates log records into Carbon counter
-   metrics.
-4. The handler sends metric lines through `CarbonTcpClient`.
+1. NICOS calls `nicos_ess.get_log_handlers()`.
+2. `CarbonConfig.from_nicos_config()` resolves telemetry settings.
+3. `CarbonConfig.create_log_handler()` builds one
+   `CarbonLogLevelCounterHandler`.
+4. The handler counts log records and sends metric lines through
+   `CarbonTcpClient`.
 
-## Separation Of Concerns
+## File Map
 
-When adding code here, keep these boundaries clear:
+- `carbon/config.py`
+  Strict config parsing and object construction.
+- `carbon/client.py`
+  Buffered Carbon TCP sender.
+- `carbon/paths.py`
+  Metric-name and sanitizing helpers. This is the single place that defines the
+  Carbon metric schema.
+- `carbon/cache_metrics.py`
+  Cache-key ownership and cache-to-metric translation.
+- `carbon/log_metrics.py`
+  Log-to-metric translation and the NICOS log-handler factory.
+- `devices/carbon_forwarder.py`
+  Thin NICOS collector wrapper for cache metrics.
 
-- Backend formatting and transport belong in the backend package.
-- NICOS-specific wrapper code belongs at the integration edge, not inside the
-  transport code.
-- Translation code should work on ordinary Python values wherever possible.
+## Metrics Emitted Today
 
-For the current Carbon backend that means:
+All metrics live below:
 
-- metric naming, line formatting, and TCP delivery stay in
-  `nicos_ess.telemetry.carbon`
-- collector-device wiring stays in `nicos_ess.devices.carbon_forwarder`
-- session hook wiring stays in `nicos_ess.get_log_handlers()`
+```text
+<telemetry_prefix>.<instrument>
+```
 
-## Adding More Carbon Metrics
+Current metric families:
 
-If you want to report more data to Carbon:
+- `<root>.session.busy`
+  `exp/scripts` translated to `0` or `1`
+- `<root>.device.<device>.status`
+  `<device>/status` translated to a small ordinal
+- `<root>.cache.value_updates.total.count`
+  Total `<device>/value` updates seen in one flush window
+- `<root>.device.<device>.cache.value_updates.count`
+  Per-device `<device>/value` counts in the same flush window
+- `<root>.service.<service>.logs.total.count`
+  Total log records in one flush window
+- `<root>.service.<service>.logs.level.<level>.count`
+  Per-level log counts in one flush window
+- `<root>.service.<service>.telemetry.heartbeat`
+  Liveness heartbeat
 
-1. Decide where the input comes from:
-   collector cache, log records, device code, or another NICOS subsystem.
-2. Add the translation logic under `nicos_ess.telemetry.carbon`.
-3. Keep the NICOS hook thin and let the backend module own the metric naming
-   and delivery.
+## Where To Extend
 
-If a new metric family grows large enough to deserve its own module, add a new
-module under `nicos_ess.telemetry.carbon/` rather than overloading the existing
-ones.
+If you add another cache-derived metric:
 
-## Adding Another Telemetry Implementation
+1. Update `carbon/cache_metrics.py`.
+2. Keep the cache-key classification and the metric translation in that module.
+3. Update `CACHE_METRIC_KEY_FILTERS` in the same module so the forwarder and
+   emitter stay in sync.
+4. Add tests beside the existing Carbon telemetry tests.
 
-If we later add another backend or another telemetry type, add it as a sibling
-package under `nicos_ess.telemetry`.
-
-Examples:
-
-- another metrics backend
-- tracing
-- structured event export
-
-That implementation should carry its own:
-
-- config parsing
-- client/transport code
-- translation logic
-- NICOS-facing factory functions, if needed
-
-Only move code to the `nicos_ess.telemetry` package root when multiple
-implementations genuinely share the same concept and the shared abstraction is
-clear from real usage.
+If you add another telemetry backend, add it as a sibling package under
+`nicos_ess.telemetry`.

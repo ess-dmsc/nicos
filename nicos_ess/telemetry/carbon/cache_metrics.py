@@ -22,7 +22,7 @@
 #
 # *****************************************************************************
 
-"""Translate NICOS cache updates into Carbon metric lines."""
+"""Translate selected collector cache updates into Carbon metrics."""
 
 from __future__ import annotations
 
@@ -31,9 +31,22 @@ from collections import defaultdict
 from threading import Lock
 
 from nicos.protocols.cache import cache_load
-from nicos_ess.telemetry.carbon.paths import sanitize_path, sanitize_segment
+from nicos_ess.telemetry.carbon.paths import (
+    cache_value_updates_total_metric,
+    device_status_metric,
+    device_value_updates_metric,
+    metric_root,
+    session_busy_metric,
+)
 
 SCRIPTS_KEY = "exp/scripts"
+CACHE_VALUE_KEY_SUFFIX = "/value"
+CACHE_STATUS_KEY_SUFFIX = "/status"
+CACHE_METRIC_KEY_FILTERS = (
+    rf"^{SCRIPTS_KEY}$",
+    rf".+{CACHE_VALUE_KEY_SUFFIX}$",
+    rf".+{CACHE_STATUS_KEY_SUFFIX}$",
+)
 
 _STATUS_CODE_TO_ORDINAL = {
     200: 0,  # ok
@@ -62,22 +75,30 @@ def _is_scripts_value_busy(value: object | None) -> bool:
     return bool(value)
 
 
+def classify_cache_metric_key(key: str) -> str | None:
+    """Return the metric family handled for one collector cache key."""
+    if key == SCRIPTS_KEY:
+        return "session_busy"
+    if key.endswith(CACHE_STATUS_KEY_SUFFIX):
+        return "device_status"
+    if key.endswith(CACHE_VALUE_KEY_SUFFIX):
+        return "device_value_updates"
+    return None
+
+
+def _device_name_from_cache_key(key: str) -> str:
+    return key.partition("/")[0]
+
+
 class CacheMetricsEmitter:
-    """Turn selected NICOS cache updates into metric lines.
+    """Emit Carbon metrics for the small set of cache keys this backend owns.
 
-    The emitter is intentionally narrow for the first telemetry iteration: it
-    only watches a small set of well-defined cache keys and ignores everything
-    else. Callers may hand every collector update to
-    :meth:`process_cache_update`; unsupported keys return no metric lines and
-    cause no side effects. The emitter does not own retry logic or scheduling;
-    those responsibilities stay in the caller and the configured sender.
+    Supported keys are classified in one place by :func:`classify_cache_metric_key`.
+    The current backend emits:
 
-    Two metric families are emitted:
-
-    - immediate gauge updates derived from specific cache keys such as
-      ``exp/scripts``
-    - flush-windowed counters derived from noisy cache traffic, currently
-      ``*/value`` updates
+    - ``<root>.session.busy`` from ``exp/scripts``
+    - ``<root>.device.<name>.status`` from ``<device>/status``
+    - flush-windowed ``/value`` update counters
     """
 
     def __init__(
@@ -90,7 +111,7 @@ class CacheMetricsEmitter:
         monotonic_fn=time.monotonic,
     ):
         self._client = client
-        self._metric_root = f"{sanitize_path(prefix)}.{sanitize_segment(instrument)}"
+        self._metric_root = metric_root(prefix, instrument)
         self.flush_interval_s = flush_interval_s
         self._time_fn = time_fn
         self._monotonic_fn = monotonic_fn
@@ -107,12 +128,16 @@ class CacheMetricsEmitter:
         timestamps are treated as a dropped telemetry sample rather than a hard
         failure because collector telemetry must never destabilize NICOS.
         """
+        metric_family = classify_cache_metric_key(key)
+        if metric_family is None:
+            return []
+
         emitted = []
-        if key == SCRIPTS_KEY:
+        if metric_family == "session_busy":
             emitted.extend(self._emit_session_busy(timestamp, value))
-        elif key.endswith("/status"):
+        elif metric_family == "device_status":
             emitted.extend(self._emit_device_status(timestamp, key, value))
-        elif value is not None and key.endswith("/value"):
+        elif value is not None:
             self._record_value_update(key)
 
         if self._should_flush():
@@ -133,17 +158,14 @@ class CacheMetricsEmitter:
         total = sum(snapshot.values())
         lines = [
             (
-                f"{self._metric_root}.cache.value_updates.total.count "
+                f"{cache_value_updates_total_metric(self._metric_root)} "
                 f"{int(total)} {timestamp}\n"
             )
         ]
         for device_name, count in sorted(snapshot.items()):
-            device_segment = sanitize_segment(device_name)
             lines.append(
-                (
-                    f"{self._metric_root}.device.{device_segment}."
-                    f"cache.value_updates.count {int(count)} {timestamp}\n"
-                )
+                f"{device_value_updates_metric(self._metric_root, device_name)} "
+                f"{int(count)} {timestamp}\n"
             )
         self._client.send_lines(lines)
         return lines
@@ -154,7 +176,7 @@ class CacheMetricsEmitter:
             return []
 
         busy = int(_is_scripts_value_busy(value))
-        lines = [f"{self._metric_root}.session.busy {busy} {ts}\n"]
+        lines = [f"{session_busy_metric(self._metric_root)} {busy} {ts}\n"]
         self._client.send_lines(lines)
         return lines
 
@@ -172,16 +194,15 @@ class CacheMetricsEmitter:
         except Exception:
             return []
         ordinal = _STATUS_CODE_TO_ORDINAL.get(code, 6)
-        device_name = key.partition("/")[0]
+        device_name = _device_name_from_cache_key(key)
         if not device_name:
             return []
-        device_segment = sanitize_segment(device_name)
-        lines = [f"{self._metric_root}.device.{device_segment}.status {ordinal} {ts}\n"]
+        lines = [f"{device_status_metric(self._metric_root, device_name)} {ordinal} {ts}\n"]
         self._client.send_lines(lines)
         return lines
 
     def _record_value_update(self, key: str) -> None:
-        device_name, _slash, _param = key.partition("/")
+        device_name = _device_name_from_cache_key(key)
         if not device_name:
             return
         with self._counter_lock:

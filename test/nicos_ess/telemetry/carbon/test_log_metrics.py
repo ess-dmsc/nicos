@@ -31,13 +31,14 @@ import pytest
 import nicos_ess
 from nicos.core import ConfigurationError
 from nicos.utils.loggers import ACTION, INPUT
+from nicos_ess.telemetry.carbon.config import CarbonConfig
 from nicos_ess.telemetry.carbon.log_metrics import (
     CarbonLogLevelCounterHandler,
     build_carbon_log_handlers,
     create_carbon_log_handlers,
 )
 
-FIXED_TIMESTAMP = 1773070701 # Arbitrary fixed timestamp
+FIXED_TIMESTAMP = 1773070701
 
 
 class FakeClock:
@@ -97,6 +98,8 @@ def test_carbon_log_level_counter_handler_emits_expected_metrics():
         prefix="nicos",
         client=client,
         flush_interval_s=999,
+        heartbeat_interval_s=0,
+        start_heartbeat_thread=False,
         time_fn=lambda: FIXED_TIMESTAMP,
         monotonic_fn=clock,
     )
@@ -209,9 +212,11 @@ def test_create_carbon_log_handlers_enabled():
     handlers[0].close()
 
 
-def test_build_carbon_log_handlers_uses_explicit_service_name():
-    cfg = SimpleNamespace(
-        create_client=lambda: CapturingClient(),
+def test_build_carbon_log_handlers_uses_explicit_service_name(monkeypatch):
+    client = CapturingClient()
+    monkeypatch.setattr(CarbonConfig, "create_client", lambda self: client)
+    cfg = CarbonConfig(
+        host="carbon.local",
         instrument="bifrost",
         prefix="nicos",
         flush_interval_s=5.0,
@@ -224,7 +229,7 @@ def test_build_carbon_log_handlers_uses_explicit_service_name():
     handler.emit(_make_record(logging.INFO))
     handler.flush()
 
-    metrics = _parse_metrics(handler.client.sent_batches[0])
+    metrics = _parse_metrics(client.sent_batches[0])
     assert metrics["nicos.bifrost.service.poller.logs.level.info.count"][0] == 1
     handler.close()
 
