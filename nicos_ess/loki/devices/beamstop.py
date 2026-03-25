@@ -104,6 +104,9 @@ class LokiBeamstopController(SequencerMixin, MappedMoveable):
         return self._get_mapped_positions()
 
     def doStart(self, target):
+        if target == self.read():
+            return
+
         if self._seq_is_running():
             if self._mode == SIMULATION:
                 self._seq_thread.join()
@@ -114,112 +117,114 @@ class LokiBeamstopController(SequencerMixin, MappedMoveable):
                     "Cannot start device, sequence is still "
                     "running (at %s)!" % self._seq_status[1],
                 )
+
         sequence = self._generateSequence(target)
+        self.log.debug(f"Full sequence: {sequence}")
         self._startSequence(sequence)
 
-    def _generateSequence(self, target: str) -> List[Tuple[SeqDev, ...]]:
-        normalized_target = target.strip().lower()
-        all_device_keys = set(self._all_attached.keys())
+    def _generateSequence(self, target: str):
+        """
+        Sequence when parking:
+            The sequence first moves the beamstop arms away from the detector,
+            then raises the arms to their parked positions.
+        Sequence when moving arms to in beam position:
+            The sequence first moves the beamstop arms down into the beam,
+            then moves the arms into the center of the beam and
+            finally moves the arms towards the detector.
 
-        device_keys_in_park = set(self._get_keys_matching_device_read_value("Parked"))
+        """
+        normalized_target = self.normalize(target)
+        normalized_value = self.normalize(self.read())
+
         if "park" in normalized_target:
-            device_keys_not_parked = all_device_keys - device_keys_in_park
-            seq = self._park_sequence(list(device_keys_not_parked))
-            return seq
+            return self._all_devices_to_park()
 
-        request_in_beam = {arm.strip() for arm in normalized_target.split("+")}
-        device_keys_in_beam = set(self._get_keys_matching_device_read_value("In beam"))
-        move_to_in_beam = request_in_beam - device_keys_in_beam
-        move_to_park = all_device_keys - device_keys_in_park - request_in_beam
-        x_pos = self._get_x_pos(normalized_target)
+        request = self._extract_arms(normalized_target)
+        current = self._extract_arms(normalized_value)
+
+        if request["beamstop"] and request["beamstop"] == current["beamstop"]:
+            if request["monitor"]:
+                return [self._device_to_in_beam("monitor")]
+            else:
+                return [self._device_to_park("monitor")]
 
         seq = []
-        if move_to_park:
-            seq.extend(self._park_sequence(list(move_to_park)))
-        if move_to_in_beam:
-            seq.extend(self._in_beam_sequence(list(move_to_in_beam)))
-        if self._all_attached["y"].read != "In beam":
-            seq.append((SeqDev(self._all_attached["y"], "In beam"),))
-        if self._all_attached["x"].read != x_pos:
-            seq.append((SeqDev(self._all_attached["x"], x_pos),))
-        self.log.info(f"Full sequence: {seq}")
+        seq.extend(self._all_devices_to_park())
+
+        if request["monitor"] and request["beamstop"]:
+            # beamstop needs to lower slightly first for twincat to update limits
+            seq.append((self._device_to_intermediate(request["beamstop"])))
+            seq.append(
+                (self._devices_to_in_beam([request["beamstop"], request["monitor"]]))
+            )
+
+        elif request["beamstop"]:
+            seq.append((self._device_to_in_beam(request["beamstop"])))
+        elif request["monitor"]:
+            seq.append((self._device_to_in_beam("monitor")))
+
+        seq.append((self._device_to_in_beam("y")))
+        seq.append((self._x_device_to_x_pos(target)))
+
         return seq
+
+    def _extract_arms(self, string):
+        arms = [arm.strip() for arm in string.split("+")]
+        beamstop = next((arm for arm in arms if arm.startswith("beamstop")), False)
+        monitor = "monitor" if "monitor" in arms else False
+        return {
+            "beamstop": beamstop,
+            "monitor": monitor,
+        }
+
+    def _device_to_park(self, device_name):
+        device = self._all_attached[device_name]
+        return SeqDev(device, "Parked")
+
+    def _devices_to_park(self, device_names):
+        return tuple(self._device_to_park(name) for name in device_names)
+
+    def _device_to_in_beam(self, device_name):
+        device = self._all_attached[device_name]
+        return SeqDev(device, "In beam")
+
+    def _devices_to_in_beam(self, device_names):
+        return tuple(self._device_to_in_beam(name) for name in device_names)
+
+    def _device_to_intermediate(self, device_name):
+        device = self._all_attached[device_name]
+        return SeqDev(device, "Intermediate")
+
+    def _x_device_to_x_pos(self, target):
+        x_pos = self._get_x_pos(target)
+        device = self._all_attached["x"]
+        return SeqDev(device, x_pos)
+
+    def _all_devices_to_park(self):
+        all_device_names = set(self._all_attached.keys())
+        device_names_in_park = set(self._get_keys_matching_read_value("Parked"))
+        device_names_not_parked = list(all_device_names - device_names_in_park)
+
+        arms = [
+            key
+            for key in device_names_not_parked
+            if "beamstop" in key or "monitor" in key
+        ]
+        seq = []
+        if "x" in device_names_not_parked:
+            seq.append(self._device_to_park("x"))
+        if len(arms) > 0:
+            seq.append(self._devices_to_park(arms))
+        return seq
+
+    def normalize(self, string):
+        return string.strip().lower()
 
     def _get_x_pos(self, target):
         mapping = self._get_mapped_positions()
         return mapping[target.capitalize()][0]
 
-    def _park_sequence(self, devices: List[str]) -> List[Tuple[SeqDev, ...]]:
-        """
-        Build the parking sequence.
-
-        The sequence first moves the beamstops away from the detector,
-        then raises the arms to their parked positions.
-
-        Args:
-            devices
-                Key of devices corresponding to the dict of attached devices
-
-        Returns:
-            Ordered execution steps. Each list element represents
-            one execution stage:
-                - A single-element tuple → sequential step
-                - A multi-element tuple → parallel step
-        """
-        seq = []
-        if "x" in devices:
-            seq.append((SeqDev(self._all_attached["x"], "Parked"),))
-        arms_devices = [key for key in devices if "beamstop" in key or "monitor" in key]
-        if arms_devices:
-            seq.append(
-                tuple(
-                    SeqDev(device, "Parked")
-                    for key, device in self._all_attached.items()
-                    if key in arms_devices
-                )
-            )
-        return seq
-
-    def _in_beam_sequence(self, devices: List[str]) -> List[Tuple[SeqDev, ...]]:
-        """
-        Build the sequence for adding a beamstop to the beam.
-
-        The sequence first moves the beamstops down into the beam,
-        then moves the beamstop into the center of the beam and
-        finally moves the beamstops towards the detector.
-
-        Args:
-            devices
-                Key of devices corresponding to the dict of attached devices
-
-        Returns:
-            Ordered execution steps. Each list element represents
-            one execution stage:
-                - A single-element tuple → sequential step
-                - A multi-element tuple → parallel step
-        """
-        seq = []
-        beamstop = self._get_device_matching_substring(devices, "beamstop")
-        monitor = self._get_device_matching_substring(devices, "monitor")
-
-        if monitor and beamstop:
-            # beamstop needs to lower slightly first for twincat to update limits
-            seq.append(
-                SeqDev(beamstop, "Intermediate"),
-            )
-
-        seq.append(
-            tuple(SeqDev(device, "In beam") for device in (beamstop, monitor) if device)
-        )
-        return seq
-
-    def _get_device_matching_substring(self, devices, search_key):
-        for key in devices:
-            if search_key in key:
-                return self._all_attached[key]
-        return None
-
-    def _get_keys_matching_device_read_value(self, value):
+    def _get_keys_matching_read_value(self, value):
         keys = [
             key for key, device in self._all_attached.items() if device.read() == value
         ]
