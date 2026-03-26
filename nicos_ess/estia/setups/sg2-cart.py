@@ -32,4 +32,10 @@ devices = dict(
         unlockvalue=60.0,
         lockvalue=180.0,
     ),
+    mclutch2=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
+        description="Metrology Cart 2 clutch",
+        readpv=f"{pv_position}-OpenClutch",
+        writepv=f"{pv_position}-OpenClutch",
+    ),
 )

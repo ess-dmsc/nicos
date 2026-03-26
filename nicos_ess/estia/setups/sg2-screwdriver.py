@@ -43,4 +43,10 @@ devices = dict(
         description="Hexscrew state",
         readpv=f"{pvprefix}LinY-02:Mtr-MsgTxt",
     ),
+    rclutch2=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
+        description="Robot 2 clutch",
+        readpv=f"{pvprefix}LinX-01:Mtr-OpenClutch",
+        writepv=f"{pvprefix}LinX-01:Mtr-OpenClutch",
+    ),
 )
