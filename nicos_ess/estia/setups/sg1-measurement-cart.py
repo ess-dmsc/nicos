@@ -4,7 +4,7 @@ pv_approach = "ESTIA-SG1Ct:MC-RotZ-01:Mtr"
 pv_position = "ESTIA-SG1Ct:MC-LinX-01:Mtr"
 
 devices = dict(
-    mapproach1=device(
+    meas_cart_approach1=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Rotator for approach",
         motorpv=pv_approach,
@@ -14,7 +14,7 @@ devices = dict(
         reseterrorpv=f"{pv_approach}-ErrRst",
         temppv=f"{pv_approach}-Temp",
     ),
-    mpos1=device(
+    meas_cart_position1=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Cart positioning",
         motorpv=pv_position,
@@ -27,12 +27,12 @@ devices = dict(
     mcart1=device(
         "nicos.devices.generic.sequence.LockedDevice",
         description="Metrology Cart device",
-        device="mpos1",
-        lock="mapproach1",
+        device="meas_cart_position1",
+        lock="meas_cart_approach1",
         unlockvalue=60.0,
         lockvalue=180.0,
     ),
-    mclutch1=device(
+    measurement_clutch1=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="Metrology Cart 1 clutch",
         readpv=f"{pv_position}-OpenClutch",

@@ -11,4 +11,4 @@ status()
 
 SetDetectors(jbi_device)
 with nexusfile_open("test title"):
-    scan(mpos1, 0, 10, 11)
+    scan(meas_cart_position1, 0, 10, 11)
