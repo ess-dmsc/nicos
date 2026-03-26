@@ -321,14 +321,9 @@ class MetrologyScene(QGraphicsScene):
                     self.parent().lblSeleneSelection.setText(f"{ldevname}: {value}")
         elif ldevname == self.cart_position and subkey == "value":
             value = cache_load(value) + self.offsetx
-            if self.selene == 1:
-                self.cart.setPos(value + 150, 0)
-                self.collimator_lines[0].setLine(value + 300, -220, 7210, -220)
-                self.collimator_lines[1].setLine(value + 300, 220, 7210, 220)
-            else:
-                self.cart.setPos(-value - 150, 0)
-                self.collimator_lines[0].setLine(-value, -220, 7210, -220)
-                self.collimator_lines[1].setLine(-value, 220, 7210, 220)
+            self.cart.setPos(value + 150, 0)
+            self.collimator_lines[0].setLine(value + 300, -220, 7210, -220)
+            self.collimator_lines[1].setLine(value + 300, 220, 7210, 220)
 
     def childSelected(self, name, control):
         self._currentSelection = name
