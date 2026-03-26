@@ -1,6 +1,6 @@
 description = "High-level interface to the Selene Guide 1 components"
 
-includes = ["sg1-cart", "sg1-screwdriver", "sg1-interferometer"]
+includes = ["sg1-measurement-cart", "sg1-screwdriver", "sg1-interferometer"]
 
 display_order = 40  # sort before default devices
 
