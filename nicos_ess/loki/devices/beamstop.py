@@ -126,7 +126,7 @@ class LokiBeamstopController(SequencerMixin, MappedMoveable):
         inverse_mapping = {v: k for k, v in self._full_mapping.items()}
         mapped_value = inverse_mapping.get(value, None)
         if not mapped_value:
-            return "In Between"
+            return "In between"
         return mapped_value
 
     def doReadMapping(self):
