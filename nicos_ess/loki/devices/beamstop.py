@@ -16,7 +16,7 @@ from nicos_ess.devices.mapped_controller import MappedController
 
 class LokiBeamstopArmPositioner(MappedController):
     def doInit(self, mode):
-        MappedController.doInit(self, mode)
+        super(MappedController).doInit(mode)
 
     def doWriteMapping(self, mapping):
         if sorted(mapping.keys()) != ["In beam", "Intermediate", "Parked"]:
@@ -82,7 +82,7 @@ class LokiBeamstopController(SequencerMixin, MappedMoveable):
 
     def doInit(self, mode):
         self._setROParam("mapping", self._get_mapped_positions())
-        MappedMoveable.doInit(self, mode)
+        super(MappedMoveable).doInit(mode)
         self.valuetype = oneof(*self._get_mapped_positions().keys())
 
     def doRead(self, maxage=0):
