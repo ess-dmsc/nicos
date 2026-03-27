@@ -117,8 +117,16 @@ class LokiBeamstopController(SequencerMixin, MappedMoveable):
                 )
 
         sequence = self._generateSequence(target)
-        self.log.debug(f"Full sequence: {sequence}")
-        self._startSequence(sequence)
+        print("target sequence:", sequence)
+        if any(isinstance(i, list) for i in sequence):
+            # true if nested list, move in two seqs
+            for sub_sequence in sequence:
+                print("moving sub seq:", sub_sequence)
+                self._startSequence(sub_sequence)
+                # TODO: wait for sequence thread to finish before starting new iteration
+        else:
+            print("moving full seq:", sequence)
+            self._startSequence(sequence)
 
     def _generateSequence(self, target: str):
         """
@@ -130,41 +138,47 @@ class LokiBeamstopController(SequencerMixin, MappedMoveable):
             then moves the arms into the center of the beam and
             finally moves the arms towards the detector.
 
+        Returns:
+            List of SeqDevs or tuples of multiple parallel SeqDevs
         """
         normalized_target = self.normalize(target)
         normalized_value = self.normalize(self.read())
 
         if "park" in normalized_target:
-            return self._all_devices_to_park()
+            return self._all_devices_to_park()  # list
 
         request = self._extract_arms(normalized_target)
         current = self._extract_arms(normalized_value)
 
         if request["beamstop"] and request["beamstop"] == current["beamstop"]:
             if request["monitor"]:
-                return [self._device_to_in_beam("monitor")]
+                return [self._device_to_in_beam("monitor")]  # list of single SeqDev
             else:
-                return [self._device_to_park("monitor")]
+                return [self._device_to_park("monitor")]  # list of single SeqDev
 
+        park_seq = (
+            self._all_devices_to_park()
+        )  # returns list, empty if all are already parked
         seq = []
-        seq.extend(self._all_devices_to_park())
-
         if request["monitor"] and request["beamstop"]:
             # beamstop needs to lower slightly first for twincat to update limits
-            seq.append((self._device_to_intermediate(request["beamstop"])))
+            seq.append(self._device_to_intermediate(request["beamstop"]))
             seq.append(
-                (self._devices_to_in_beam([request["beamstop"], request["monitor"]]))
+                self._devices_to_in_beam([request["beamstop"], request["monitor"]])
             )
 
         elif request["beamstop"]:
-            seq.append((self._device_to_in_beam(request["beamstop"])))
+            seq.append(self._device_to_in_beam(request["beamstop"]))
         elif request["monitor"]:
-            seq.append((self._device_to_in_beam("monitor")))
+            seq.append(self._device_to_in_beam("monitor"))
 
-        seq.append((self._device_to_in_beam("y")))
-        seq.append((self._x_device_to_x_pos(target)))
+        seq.append(self._device_to_in_beam("y"))
+        seq.append(self._x_device_to_x_pos(target))
 
-        return seq
+        if park_seq:
+            return [park_seq, seq]  # return nested list with two sequences
+        else:
+            return seq  # return list of single sequence
 
     def _extract_arms(self, string):
         arms = [arm.strip() for arm in string.split("+")]
