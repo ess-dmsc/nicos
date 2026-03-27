@@ -188,6 +188,24 @@ class TestLiveDataCollectorHarness:
         )
         assert collector._channel_presets == {secondary: [("livedata_secondary", 4)]}
 
+    def test_pause_reports_unsupported_and_resume_is_noop(
+        self, daemon_device_harness, kafka_stubs
+    ):
+        del kafka_stubs
+        channel = create_channel(daemon_device_harness)
+        collector = create_collector(
+            daemon_device_harness,
+            name="livedata_collector",
+            counters=[channel.name],
+        )
+
+        collector.setPreset(n=6)
+        collector.prepare()
+        collector.start()
+
+        assert collector.pause() is False
+        collector.resume()
+
     def test_completion_waits_for_full_da00_dispatch_before_reading_results(
         self, daemon_device_harness, kafka_stubs, monkeypatch
     ):

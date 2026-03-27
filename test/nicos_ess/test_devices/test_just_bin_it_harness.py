@@ -29,7 +29,7 @@ import numpy as np
 import pytest
 
 from nicos.core import ArrayDesc, status
-from nicos.core.constants import FINAL, LIVE
+from nicos.core.constants import FINAL, INTERMEDIATE, LIVE
 
 from nicos_ess.devices.datasources import just_bin_it
 from nicos_ess.devices.kafka import status_handler
@@ -78,7 +78,7 @@ def create_image(daemon_device_harness):
     )
 
 
-def create_detector(daemon_device_harness, include_timer):
+def create_detector(daemon_device_harness, include_timer, **detector_overrides):
     image = create_image(daemon_device_harness)
     detector_kwargs = {
         "brokers": ["localhost:9092"],
@@ -88,6 +88,7 @@ def create_detector(daemon_device_harness, include_timer):
         "images": ["jbi_image"],
         "liveinterval": 0.5,
     }
+    detector_kwargs.update(detector_overrides)
     if include_timer:
         timer = daemon_device_harness.create_master(
             TimerChannel,
@@ -199,3 +200,36 @@ class TestJustBinItDetectorHarness:
         assert image.read()[0] == 5
         assert timer.read()[0] < 0.5
         assert len(stop_messages(kafka_stubs)) == 1
+
+    def test_during_measure_hook_supports_intermediate_saveintervals(
+        self, daemon_device_harness, kafka_stubs
+    ):
+        _image, _timer, detector = create_detector(
+            daemon_device_harness,
+            False,
+            liveinterval=1.0,
+            saveintervals=[0.2],
+        )
+
+        detector.prepare()
+        detector.start()
+
+        assert detector.duringMeasureHook(0.05) == LIVE
+        assert detector.duringMeasureHook(0.25) == INTERMEDIATE
+        assert detector.duringMeasureHook(1.1) == LIVE
+
+        detector.finish()
+
+    def test_pause_reports_unsupported_and_resume_is_noop(
+        self, daemon_device_harness, kafka_stubs
+    ):
+        _image, _timer, detector = create_detector(daemon_device_harness, False)
+
+        detector.setPreset(jbi_image=5)
+        detector.prepare()
+        detector.start()
+
+        assert detector.pause() is False
+        detector.resume()
+
+        detector.finish()

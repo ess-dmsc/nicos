@@ -77,7 +77,9 @@ class TestFileWriterStatusHarness:
 
 
 class TestFileWriterControlSinkHarness:
-    def test_initializes(self, device_harness, kafka_stubs, attached_file_writer_devices):
+    def test_initializes(
+        self, device_harness, kafka_stubs, attached_file_writer_devices
+    ):
         del kafka_stubs, attached_file_writer_devices
         daemon_device, poller_device = device_harness.create_pair(
             file_writer.FileWriterControlSink,

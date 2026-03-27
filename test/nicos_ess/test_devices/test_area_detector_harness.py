@@ -2,6 +2,7 @@ import numpy as np
 import pytest
 
 from nicos.core import ArrayDesc, NicosError, status
+from nicos.core.constants import FINAL, INTERMEDIATE, LIVE
 from nicos.devices.epics.pva import caproto, p4p
 from nicos_ess.devices.epics.area_detector import (
     AreaDetector,
@@ -14,6 +15,8 @@ from test.nicos_ess.test_devices.doubles import FakeEpicsBackend
 
 PV_ROOT = "SIM:AD:"
 IMAGE_PV = "SIM:AD:IMAGE"
+SECOND_PV_ROOT = "SIM:AD2:"
+SECOND_IMAGE_PV = "SIM:AD2:IMAGE"
 TIMEPIX_PV_ROOT = "SIM:TPX:"
 TIMEPIX_IMAGE_PV = "SIM:TPX:IMAGE"
 ORCA_PV_ROOT = "SIM:ORCA:"
@@ -126,7 +129,7 @@ def create_orca_flash_detector(daemon_device_harness):
     )
 
 
-def create_area_detector_collector(daemon_device_harness):
+def create_area_detector_collector(daemon_device_harness, **collector_kwargs):
     image = daemon_device_harness.create_master(
         AreaDetector,
         name="camera",
@@ -137,8 +140,35 @@ def create_area_detector_collector(daemon_device_harness):
         AreaDetectorCollector,
         name="collector",
         images=["camera"],
+        **collector_kwargs,
     )
     return image, collector
+
+
+def create_dual_area_detector_collector(daemon_device_harness, fake_backend):
+    seed_area_detector_defaults(
+        fake_backend,
+        pv_root=SECOND_PV_ROOT,
+        image_pv=SECOND_IMAGE_PV,
+    )
+    primary = daemon_device_harness.create_master(
+        AreaDetector,
+        name="camera_primary",
+        pv_root=PV_ROOT,
+        image_pv=IMAGE_PV,
+    )
+    secondary = daemon_device_harness.create_master(
+        AreaDetector,
+        name="camera_secondary",
+        pv_root=SECOND_PV_ROOT,
+        image_pv=SECOND_IMAGE_PV,
+    )
+    collector = daemon_device_harness.create_master(
+        AreaDetectorCollector,
+        name="collector",
+        images=["camera_primary", "camera_secondary"],
+    )
+    return primary, secondary, collector
 
 
 class TestAreaDetectorHarness:
@@ -210,7 +240,28 @@ class TestAreaDetectorHarness:
         assert detector.isCompleted() is False
 
         fake_backend.values[f"{PV_ROOT}NumImagesCounter_RBV"] = 2
+        assert detector.isCompleted() is False
+
+        fake_backend.values[f"{PV_ROOT}AcquireBusy"] = "Done"
         assert detector.isCompleted() is True
+
+    def test_completion_syncs_final_image_before_reporting_done(
+        self, daemon_device_harness, fake_backend
+    ):
+        detector = create_area_detector(daemon_device_harness)
+        final_image = np.arange(2048 * 1024, dtype=np.uint32).reshape(2048, 1024)
+
+        detector.start(n=1)
+        fake_backend.values[IMAGE_PV] = final_image.ravel()
+        fake_backend.values[f"{PV_ROOT}NumImagesCounter_RBV"] = 1
+        fake_backend.values[f"{PV_ROOT}AcquireBusy"] = "Busybusybusy"
+
+        assert not np.array_equal(detector.readArray(FINAL), final_image)
+        assert detector.isCompleted() is False
+
+        fake_backend.values[f"{PV_ROOT}AcquireBusy"] = "Done"
+        assert detector.isCompleted() is True
+        assert np.array_equal(detector.readArray(FINAL), final_image)
 
     def test_error_takes_precedence_over_reached_image_count(
         self, daemon_device_harness, fake_backend
@@ -339,3 +390,93 @@ class TestAreaDetectorCollectorHarness:
 
         assert collector.preset() == {"camera": 4}
         assert image.preset() == {"n": 4}
+
+    def test_prepare_leaves_collector_ready_until_start(
+        self, daemon_device_harness, fake_backend
+    ):
+        del fake_backend
+        _image, collector = create_area_detector_collector(daemon_device_harness)
+
+        collector.setPreset(camera=1)
+        collector.prepare()
+
+        assert collector.isCompleted() is True
+
+    def test_during_measure_hook_supports_intermediate_saveintervals(
+        self, daemon_device_harness, fake_backend
+    ):
+        del fake_backend
+        _image, collector = create_area_detector_collector(
+            daemon_device_harness,
+            liveinterval=1.0,
+            saveintervals=[0.2],
+        )
+
+        collector.prepare()
+        collector.start()
+
+        assert collector.duringMeasureHook(0.05) == LIVE
+        assert collector.duringMeasureHook(0.25) == INTERMEDIATE
+        assert collector.duringMeasureHook(1.1) == LIVE
+
+        collector.finish()
+
+    def test_pause_reports_unsupported_and_resume_is_noop(
+        self, daemon_device_harness, fake_backend
+    ):
+        del fake_backend
+        _image, collector = create_area_detector_collector(daemon_device_harness)
+
+        collector.setPreset(camera=1)
+        collector.prepare()
+        collector.start()
+
+        assert collector.pause() is False
+        collector.resume()
+
+        collector.finish()
+
+    def test_completion_reads_final_image_before_collector_finishes(
+        self, daemon_device_harness, fake_backend
+    ):
+        image, collector = create_area_detector_collector(daemon_device_harness)
+        final_image = np.arange(2048 * 1024, dtype=np.uint32).reshape(2048, 1024)
+
+        collector.setPreset(camera=1)
+        collector.prepare()
+        collector.start()
+        fake_backend.values[IMAGE_PV] = final_image.ravel()
+        fake_backend.values[f"{PV_ROOT}NumImagesCounter_RBV"] = 1
+        fake_backend.values[f"{PV_ROOT}AcquireBusy"] = "Busybusybusy"
+
+        assert not np.array_equal(image.readArray(FINAL), final_image)
+        assert collector.isCompleted() is False
+
+        fake_backend.values[f"{PV_ROOT}AcquireBusy"] = "Done"
+        assert collector.isCompleted() is True
+
+        scalars, arrays = collector.readResults(FINAL)
+
+        assert scalars == []
+        assert len(arrays) == 1
+        assert np.array_equal(arrays[0], final_image)
+
+    def test_completion_matches_generic_detector_or_semantics(
+        self, daemon_device_harness, fake_backend
+    ):
+        primary, _secondary, collector = create_dual_area_detector_collector(
+            daemon_device_harness, fake_backend
+        )
+        final_image = np.arange(2048 * 1024, dtype=np.uint32).reshape(2048, 1024)
+
+        collector.setPreset(camera_primary=1, camera_secondary=3)
+        collector.prepare()
+        collector.start()
+        fake_backend.values[IMAGE_PV] = final_image.ravel()
+        fake_backend.values[f"{PV_ROOT}NumImagesCounter_RBV"] = 1
+        fake_backend.values[f"{PV_ROOT}AcquireBusy"] = "Done"
+        fake_backend.values[f"{SECOND_PV_ROOT}AcquireBusy"] = "Busybusybusy"
+        fake_backend.values[f"{SECOND_PV_ROOT}NumImagesCounter_RBV"] = 0
+
+        assert collector.isCompleted() is True
+        assert np.array_equal(primary.readArray(FINAL), final_image)
