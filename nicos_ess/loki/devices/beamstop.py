@@ -23,6 +23,7 @@ class ArmPositions(StrEnum):
 
 
 class XPositions(StrEnum):
+    Parked = "Parked"
     Pos1 = "Xpos BS1"
     Pos2 = "Xpos BS2"
     Pos3 = "Xpos BS3"
@@ -273,7 +274,7 @@ class LokiBeamstopController(SequencerMixin, MappedMoveable):
     def _get_mapped_positions(self):
         return {
             "Park all beamstops": (
-                ArmPositions.Parked,
+                XPositions.Parked,
                 ArmPositions.InBeam,
                 ArmPositions.Parked,
                 ArmPositions.Parked,
