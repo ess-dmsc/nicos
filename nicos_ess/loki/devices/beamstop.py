@@ -1,3 +1,5 @@
+from enum import StrEnum
+
 from nicos.core import (
     SIMULATION,
     Attach,
@@ -14,17 +16,39 @@ from nicos.utils import num_sort
 from nicos_ess.devices.mapped_controller import MappedController
 
 
+class ArmPositions(StrEnum):
+    InBeam = "In beam"
+    Parked = "Parked"
+    Intermediate = "Intermediate"
+
+
 class LokiBeamstopArmPositioner(MappedController):
     def doInit(self, mode):
-        super(MappedController).doInit(mode)
+        super().doInit(mode)
 
-    def doWriteMapping(self, mapping):
-        if sorted(mapping.keys()) != ["In beam", "Intermediate", "Parked"]:
+    def _check_mapped_keys(self, mapping):
+        expected = {p.value for p in ArmPositions}
+        if set(mapping.keys()) != expected:
             raise ConfigurationError(
-                "Only 'In beam', 'Parked' and 'Intermediate' are allowed as mapped positions"
+                f"Only {list(expected)} are allowed as mapped positions"
             )
+
+    def _check_mapped_values(self, mapping):
         for position in mapping.values():
             self._check_limits(position)
+
+    def _check_limits(self, position):
+        device = self._attached_controlled_device
+        limits = device.userlimits
+        is_allowed, reason = device.isAllowed(position)
+        if not is_allowed:
+            raise LimitError(
+                f"Mapped position {position} for {device._name} is outside user limits {limits}"
+            )
+
+    def doWriteMapping(self, mapping):
+        self._check_mapped_keys(mapping)
+        self._check_mapped_values(mapping)
         self.valuetype = oneof(*sorted(mapping, key=num_sort))
 
     def _mapReadValue(self, value):
@@ -36,19 +60,17 @@ class LokiBeamstopArmPositioner(MappedController):
         mapped_value = inverse_mapping.get(value, None)
         if mapped_value:
             return mapped_value
-        if "Parked" in self.mapping.keys() and value > self.mapping["Parked"]:
+        if (
+            ArmPositions.Parked in self.mapping.keys()
+            and value > self.mapping[ArmPositions.Parked]
+        ):
             return "Above park position"
-        if "in beam" in self.mapping.keys() and value < self.mapping["In beam"]:
+        if (
+            ArmPositions.InBeam in self.mapping.keys()
+            and value < self.mapping[ArmPositions.InBeam]
+        ):
             return "Below in-beam position"
         return "In between"
-
-    def _check_limits(self, position):
-        limits = self._attached_controlled_device.userlimits
-        is_allowed, reason = self._attached_controlled_device.isAllowed(position)
-        if not is_allowed:
-            raise LimitError(
-                f"Mapped position ({position}) outside user limits {limits}"
-            )
 
 
 class LokiBeamstopController(SequencerMixin, MappedMoveable):
@@ -82,7 +104,7 @@ class LokiBeamstopController(SequencerMixin, MappedMoveable):
 
     def doInit(self, mode):
         self._setROParam("mapping", self._get_mapped_positions())
-        super(MappedMoveable).doInit(mode)
+        super().doInit(mode)
         self.valuetype = oneof(*self._get_mapped_positions().keys())
 
     def doRead(self, maxage=0):
