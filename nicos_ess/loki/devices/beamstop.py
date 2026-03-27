@@ -101,6 +101,12 @@ class LokiBeamstopController(SequencerMixin, MappedMoveable):
     def doReadMapping(self):
         return self._get_mapped_positions()
 
+    def _checkFailed(self, step, action, exc_info):
+        if isinstance(exc_info[0], LimitError):
+            pass
+        else:
+            return exc_info[1]
+
     def doStart(self, target):
         if target == self.read():
             return
@@ -118,21 +124,7 @@ class LokiBeamstopController(SequencerMixin, MappedMoveable):
 
         sequence = self._generateSequence(target)
         print("target sequence:", sequence)
-        if any(isinstance(i, list) for i in sequence):
-            # true if nested list, move in two seqs
-            for sub_sequence in sequence:
-                print("moving sub seq:", sub_sequence)
-                self._startSequence(sub_sequence)
-                # TODO: wait for sequence thread to finish before starting new iteration
-        else:
-            print("moving full seq:", sequence)
-            self._startSequence(sequence)
-
-    def _checkFailed(self, step, action, exc_info):
-        if isinstance(exc_info[0], LimitError):
-            pass
-        else:
-            return exc_info[1]
+        self._startSequence(sequence)
 
     def _generateSequence(self, target: str):
         """
@@ -158,14 +150,13 @@ class LokiBeamstopController(SequencerMixin, MappedMoveable):
 
         if request["beamstop"] and request["beamstop"] == current["beamstop"]:
             if request["monitor"]:
-                return [self._device_to_in_beam("monitor")]  # list of single SeqDev
+                return [self._device_to_in_beam("monitor")]
             else:
-                return [self._device_to_park("monitor")]  # list of single SeqDev
+                return [self._device_to_park("monitor")]
 
-        park_seq = (
-            self._all_devices_to_park()
-        )  # returns list, empty if all are already parked
         seq = []
+        seq.extend(self._all_devices_to_park())
+
         if request["monitor"] and request["beamstop"]:
             # beamstop needs to lower slightly first for twincat to update limits
             seq.append(self._device_to_intermediate(request["beamstop"]))
@@ -181,10 +172,7 @@ class LokiBeamstopController(SequencerMixin, MappedMoveable):
         seq.append(self._device_to_in_beam("y"))
         seq.append(self._x_device_to_x_pos(target))
 
-        if park_seq:
-            return [park_seq, seq]  # return nested list with two sequences
-        else:
-            return seq  # return list of single sequence
+        return seq
 
     def _extract_arms(self, string):
         arms = [arm.strip() for arm in string.split("+")]
