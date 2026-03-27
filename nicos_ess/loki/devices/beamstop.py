@@ -215,21 +215,21 @@ class LokiBeamstopController(SequencerMixin, MappedMoveable):
 
     def _device_to_park(self, device_name):
         device = self._all_attached[device_name]
-        return SeqDev(device, "Parked")
-
-    def _devices_to_park(self, device_names):
-        return tuple(self._device_to_park(name) for name in device_names)
+        return SeqDev(device, ArmPositions.Parked)
 
     def _device_to_in_beam(self, device_name):
         device = self._all_attached[device_name]
-        return SeqDev(device, "In beam")
+        return SeqDev(device, ArmPositions.InBeam)
+
+    def _device_to_intermediate(self, device_name):
+        device = self._all_attached[device_name]
+        return SeqDev(device, ArmPositions.Intermediate)
 
     def _devices_to_in_beam(self, device_names):
         return tuple(self._device_to_in_beam(name) for name in device_names)
 
-    def _device_to_intermediate(self, device_name):
-        device = self._all_attached[device_name]
-        return SeqDev(device, "Intermediate")
+    def _devices_to_park(self, device_names):
+        return tuple(self._device_to_park(name) for name in device_names)
 
     def _x_device_to_x_pos(self, target):
         x_pos = self._get_x_pos(target)
@@ -252,7 +252,9 @@ class LokiBeamstopController(SequencerMixin, MappedMoveable):
 
     def _get_non_parked_device_names(self):
         all_device_names = set(self._all_attached.keys())
-        device_names_in_park = set(self._get_keys_matching_read_value("Parked"))
+        device_names_in_park = set(
+            self._get_keys_matching_read_value(ArmPositions.Parked)
+        )
         return list(all_device_names - device_names_in_park)
 
     def normalize(self, string):
