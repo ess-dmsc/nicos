@@ -128,6 +128,12 @@ class LokiBeamstopController(SequencerMixin, MappedMoveable):
             print("moving full seq:", sequence)
             self._startSequence(sequence)
 
+    def _checkFailed(self, step, action, exc_info):
+        if isinstance(exc_info[0], LimitError):
+            pass
+        else:
+            return exc_info[1]
+
     def _generateSequence(self, target: str):
         """
         Sequence when parking:
