@@ -6,14 +6,15 @@ Today there is one backend: Carbon/Graphite in `nicos_ess.telemetry.carbon`.
 
 ## Quick Start
 
-Telemetry is disabled unless `telemetry_enabled` is truthy.
+Telemetry is disabled unless it is explicitly enabled via the
+`telemetry_enabled` setting in `nicos.conf`.
 
 Minimal `nicos.conf` settings:
 
 ```ini
-telemetry_enabled = true
-telemetry_carbon_host = carbon.example.org
-instrument = bifrost
+telemetry_enabled = "True"
+telemetry_carbon_host = "blue-graphite.daq.esss.dk"
+instrument = ymir
 ```
 
 These settings enable the Carbon backend itself. Log metrics start flowing through
@@ -51,6 +52,7 @@ does not silently repair malformed config.
 
 `telemetry_flush_interval_s` applies only once there is buffered counter data.
 Idle periods do not emit empty windows.
+These metrics can be consumed in Grafana dashboards.
 
 ## Runtime Flow
 

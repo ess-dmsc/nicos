@@ -59,6 +59,12 @@ class TestParseNumeric:
             2.0
         )
 
+    def test_numeric_parsers_require_explicit_default_for_missing_value(self):
+        with pytest.raises(ConfigurationError):
+            _parse_int("telemetry_queue_max", None)
+        with pytest.raises(ConfigurationError):
+            _parse_float("telemetry_flush_interval_s", None)
+
     @pytest.mark.parametrize(
         "parser, setting_name, value",
         [
@@ -85,6 +91,10 @@ class TestParseText:
     def test_parse_text(self):
         assert _parse_text("telemetry_prefix", " ess ", "nicosserver") == "ess"
         assert _parse_text("telemetry_prefix", None, "nicosserver") == "nicosserver"
+
+    def test_parse_text_requires_explicit_default_for_missing_value(self):
+        with pytest.raises(ConfigurationError):
+            _parse_text("telemetry_carbon_host", None)
 
     @pytest.mark.parametrize("value", [[], 1, object()])
     def test_parse_text_raises_on_invalid_values(self, value):
@@ -199,3 +209,9 @@ def test_direct_carbon_config_defaults_match_nicos_config_defaults():
     assert cfg.port == 2003
     assert cfg.prefix == "nicosserver"
     assert cfg.instrument == "unknown"
+    assert cfg.flush_interval_s == 10.0
+    assert cfg.heartbeat_interval_s == 10.0
+    assert cfg.reconnect_delay_s == 2.0
+    assert cfg.queue_max == 10000
+    assert cfg.connect_timeout_s == 1.0
+    assert cfg.send_timeout_s == 1.0

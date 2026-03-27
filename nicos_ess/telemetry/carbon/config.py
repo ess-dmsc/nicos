@@ -26,7 +26,7 @@ def _parse_bool(setting_name, value, default=False):
     )
 
 
-def _parse_int(setting_name, value, default, *, minimum=None, maximum=None):
+def _parse_int(setting_name, value, default=None, *, minimum=None, maximum=None):
     if isinstance(value, bool):
         raise ConfigurationError(f"{setting_name} must be an integer, got {value!r}")
     try:
@@ -35,6 +35,8 @@ def _parse_int(setting_name, value, default, *, minimum=None, maximum=None):
         raise ConfigurationError(
             f"{setting_name} must be an integer, got {value!r}"
         ) from err
+    if parsed is None:
+        raise ConfigurationError(f"{setting_name} must be an integer, got {value!r}")
     if minimum is not None and parsed < minimum:
         raise ConfigurationError(f"{setting_name} must be >= {minimum}, got {parsed}")
     if maximum is not None and parsed > maximum:
@@ -42,7 +44,7 @@ def _parse_int(setting_name, value, default, *, minimum=None, maximum=None):
     return parsed
 
 
-def _parse_float(setting_name, value, default, *, minimum=None):
+def _parse_float(setting_name, value, default=None, *, minimum=None):
     if isinstance(value, bool):
         raise ConfigurationError(f"{setting_name} must be a number, got {value!r}")
     try:
@@ -51,17 +53,23 @@ def _parse_float(setting_name, value, default, *, minimum=None):
         raise ConfigurationError(
             f"{setting_name} must be a number, got {value!r}"
         ) from err
+    if parsed is None:
+        raise ConfigurationError(f"{setting_name} must be a number, got {value!r}")
     if minimum is not None and parsed < minimum:
         raise ConfigurationError(f"{setting_name} must be >= {minimum}, got {parsed}")
     return parsed
 
 
-def _parse_text(setting_name, value, default):
+def _parse_text(setting_name, value, default=None):
     if value is None:
         text = default
     elif isinstance(value, str):
         text = value
     else:
+        raise ConfigurationError(
+            f"{setting_name} must be a non-blank string, got {value!r}"
+        )
+    if text is None:
         raise ConfigurationError(
             f"{setting_name} must be a non-blank string, got {value!r}"
         )
@@ -98,59 +106,63 @@ class CarbonConfig:
             host=_parse_text(
                 "telemetry_carbon_host",
                 getattr(nicos_config, "telemetry_carbon_host", None),
-                default="",
             ),
             port=_parse_int(
                 "telemetry_carbon_port",
-                getattr(nicos_config, "telemetry_carbon_port", 2003),
-                2003,
+                getattr(nicos_config, "telemetry_carbon_port", cls.port),
                 minimum=1,
                 maximum=65535,
             ),
             prefix=_parse_text(
                 "telemetry_prefix",
-                getattr(nicos_config, "telemetry_prefix", "nicosserver"),
-                default="nicosserver",
+                getattr(nicos_config, "telemetry_prefix", cls.prefix),
             ),
             instrument=_parse_text(
                 "instrument",
-                getattr(nicos_config, "instrument", "unknown"),
-                default="unknown",
+                getattr(nicos_config, "instrument", cls.instrument),
             ),
             flush_interval_s=_parse_float(
                 "telemetry_flush_interval_s",
-                getattr(nicos_config, "telemetry_flush_interval_s", 10),
-                10,
+                getattr(
+                    nicos_config, "telemetry_flush_interval_s", cls.flush_interval_s
+                ),
                 minimum=0,
             ),
             heartbeat_interval_s=_parse_float(
                 "telemetry_heartbeat_interval_s",
-                getattr(nicos_config, "telemetry_heartbeat_interval_s", 10),
-                10,
+                getattr(
+                    nicos_config,
+                    "telemetry_heartbeat_interval_s",
+                    cls.heartbeat_interval_s,
+                ),
                 minimum=0,
             ),
             reconnect_delay_s=_parse_float(
                 "telemetry_reconnect_delay_s",
-                getattr(nicos_config, "telemetry_reconnect_delay_s", 2),
-                2,
+                getattr(
+                    nicos_config,
+                    "telemetry_reconnect_delay_s",
+                    cls.reconnect_delay_s,
+                ),
                 minimum=0,
             ),
             queue_max=_parse_int(
                 "telemetry_queue_max",
-                getattr(nicos_config, "telemetry_queue_max", 10000),
-                10000,
+                getattr(nicos_config, "telemetry_queue_max", cls.queue_max),
                 minimum=1,
             ),
             connect_timeout_s=_parse_float(
                 "telemetry_connect_timeout_s",
-                getattr(nicos_config, "telemetry_connect_timeout_s", 1),
-                1,
+                getattr(
+                    nicos_config,
+                    "telemetry_connect_timeout_s",
+                    cls.connect_timeout_s,
+                ),
                 minimum=0,
             ),
             send_timeout_s=_parse_float(
                 "telemetry_send_timeout_s",
-                getattr(nicos_config, "telemetry_send_timeout_s", 1),
-                1,
+                getattr(nicos_config, "telemetry_send_timeout_s", cls.send_timeout_s),
                 minimum=0,
             ),
         )
