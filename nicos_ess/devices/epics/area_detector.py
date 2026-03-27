@@ -186,6 +186,8 @@ class AreaDetector(EpicsDevice, ImageChannelMixin, Measurable):
     _detector_collector_name = ""
     _last_update = 0
     _plot_update_delay = 2.0
+    _cached_image_count = 0
+    _completed_image_count = 0
 
     def doPreinit(self, mode):
         if mode == SIMULATION:
@@ -193,12 +195,18 @@ class AreaDetector(EpicsDevice, ImageChannelMixin, Measurable):
 
         self._set_custom_record_fields()
         EpicsDevice.doPreinit(self, mode)
-        self._image_processing_lock = threading.Lock()
+        self._image_processing_lock = threading.RLock()
 
     def doPrepare(self):
         self._update_status(status.BUSY, "Preparing")
+        self._begin_acquisition_cycle()
         self._update_status(status.OK, "")
         self.arraydesc = self.arrayInfo()[0]
+
+    def _begin_acquisition_cycle(self):
+        self._cached_image_count = 0
+        self._completed_image_count = 0
+        self._last_update = 0
 
     def _update_status(self, new_status, message):
         self._current_status = new_status, message
@@ -245,6 +253,9 @@ class AreaDetector(EpicsDevice, ImageChannelMixin, Measurable):
         self, name, param, value, units, limits, severity, message, **kwargs
     ):
         if param == "readpv" and value != 0:
+            # We intentionally sample the latest frame only occasionally.
+            # High-rate detectors can produce data much faster than we can
+            # afford to fetch over EPICS, so middle frames are dropped here.
             if time.monotonic() >= self._last_update + self._plot_update_delay:
                 _thread = createThread(f"get_image_{time.time_ns()}", self.get_image)
 
@@ -253,13 +264,62 @@ class AreaDetector(EpicsDevice, ImageChannelMixin, Measurable):
         )
 
     def get_image(self):
+        with self._image_processing_lock:
+            self._refresh_image(
+                image_count=self.read(0)[0],
+                emit_live=True,
+                completed=self.status(0)[0] not in self.busystates,
+            )
+
+    def _refresh_image(self, *, image_count, emit_live, completed):
         dataarray = self._get_pv("image_pv")
         shape = self.arrayInfo()[0].shape
         dataarray = dataarray.reshape(shape)
-        self.putResult(LIVE, dataarray, time.time())
+        self._image_array = dataarray
+        self._cached_image_count = image_count
+        if completed:
+            self._completed_image_count = image_count
         self._last_update = time.monotonic()
+        if emit_live:
+            self.putResult(LIVE, dataarray, time.time())
+        return dataarray
+
+    def sync_cached_image(
+        self, required_count, *, emit_live=True, after_completion=False
+    ):
+        """Ensure the cached image has caught up to at least `required_count`.
+
+        This does not try to replay every intermediate frame. It pulls one
+        snapshot from `image_pv`, records which image counter that snapshot
+        corresponds to, and relies on the detector's image counter plus busy
+        state to decide whether the final frame has been seen yet.
+        """
+        if required_count <= 0:
+            return True
+        with self._image_processing_lock:
+            synced_count = (
+                self._completed_image_count
+                if after_completion
+                else self._cached_image_count
+            )
+            if synced_count >= required_count:
+                return True
+            captured_count = self.read(0)[0]
+            completed = self.status(0)[0] not in self.busystates
+            self._refresh_image(
+                image_count=captured_count,
+                emit_live=emit_live,
+                completed=completed,
+            )
+            synced_count = (
+                self._completed_image_count
+                if after_completion
+                else self._cached_image_count
+            )
+            return synced_count >= required_count
 
     def putResult(self, quality, data, timestamp):
+        del quality
         self._image_array = data
         databuffer = [byteBuffer(numpy.ascontiguousarray(data))]
         datadesc = [
@@ -305,7 +365,23 @@ class AreaDetector(EpicsDevice, ImageChannelMixin, Measurable):
 
     def presetReached(self, name, value, maxage):
         del name
-        return self.read(maxage)[0] >= value
+        current_count = self.read(maxage)[0]
+        if current_count < value:
+            return False
+        st = self.status(0)
+        if st[0] in self.errorstates:
+            raise self.errorstates[st[0]](self, st[1])
+        if st[0] in self.busystates:
+            # The requested image count may already be reached while the IOC is
+            # still acquiring. In that state we may refresh a live snapshot,
+            # but NICOS must not finish yet because the final frame is not
+            # guaranteed to be readable.
+            self.sync_cached_image(current_count, after_completion=False)
+            return False
+        # Only once the detector reports done do we force one last catch-up
+        # read, guaranteeing that the final cached image matches the completed
+        # acquisition before NICOS treats the preset as reached.
+        return self.sync_cached_image(current_count, after_completion=True)
 
     def doStatus(self, maxage=0):
         detector_state = self._get_pv("acquire_status", True)
@@ -330,6 +406,7 @@ class AreaDetector(EpicsDevice, ImageChannelMixin, Measurable):
     def doStart(self, **preset):
         if (self._lastpreset or {}).get("n") == 0:
             return
+        self._begin_acquisition_cycle()
         self._update_status(status.BUSY, "Acquiring")
         self.doAcquire()
 
@@ -349,12 +426,20 @@ class AreaDetector(EpicsDevice, ImageChannelMixin, Measurable):
         st = self.status(0)
         if st[0] in self.errorstates:
             raise self.errorstates[st[0]](self, st[1])
+        current_count = self.read(0)[0]
         target = (self._lastpreset or {}).get("n")
-        if target is not None and self.read(0)[0] >= target:
-            return True
+        if target is not None:
+            if current_count < target:
+                return False
         if st[0] in self.busystates:
+            if current_count > self._cached_image_count:
+                # While still busy we are allowed to refresh sparse livedata,
+                # but not to declare completion.
+                self.sync_cached_image(current_count, after_completion=False)
             return False
-        return True
+        # Completion is only reported once the detector is no longer busy and
+        # the cached image has been synchronized to the final completed frame.
+        return self.sync_cached_image(current_count, after_completion=True)
 
     def doReadArray(self, quality):
         return self._image_array
@@ -409,7 +494,7 @@ class TimepixDetector(AreaDetector):
         self._record_fields.update(self._control_pvs)
         self._set_custom_record_fields()
         EpicsDevice.doPreinit(self, mode)
-        self._image_processing_lock = threading.Lock()
+        self._image_processing_lock = threading.RLock()
 
     def _set_custom_record_fields(self):
         AreaDetector._set_custom_record_fields(self)
@@ -470,6 +555,7 @@ class TimepixDetector(AreaDetector):
     def doStart(self, **preset):
         if (self._lastpreset or {}).get("n") == 0:
             return
+        self._begin_acquisition_cycle()
         self._update_status(status.BUSY, "Acquiring")
         foldername = f"raw_tpx_{time.time_ns()}"
         path_name = f"file:/data/{foldername}"
@@ -489,7 +575,7 @@ class TimepixDetector(AreaDetector):
         # wait until the IOC has received a trigger
         self._wait_until("ts_ready", 1)
 
-        # we then need to set the path_toAdd to the same filename for empir to look for the new folder
+        # Point EMPIR at the folder we just asked the IOC to create.
         self._put_pv("path_to_add", foldername)
         # wait until EMPIR has confirmed it has queued the new folder for processing
         self._wait_until("path_last_added", foldername)
@@ -593,7 +679,9 @@ class OrcaFlash4(AreaDetector):
             "Number of triggers per image.", settable=True, volatile=True
         ),
         "triggeractive": Param(
-            "Trigger active of the camera. While in sync_readout mode, the exposure time is controlled via numtriggers NOT acquiretime and acquireperiod.",
+            "Trigger active of the camera. While in sync_readout mode, "
+            "the exposure time is controlled via numtriggers, not "
+            "acquiretime and acquireperiod.",
             type=oneof("edge", "level", "sync_readout"),
             settable=True,
             volatile=True,
@@ -654,7 +742,7 @@ class OrcaFlash4(AreaDetector):
         self._record_fields.update(self._control_pvs)
         self._set_custom_record_fields()
         EpicsDevice.doPreinit(self, mode)
-        self._image_processing_lock = threading.Lock()
+        self._image_processing_lock = threading.RLock()
 
     def doPrepare(self):
         AreaDetector.doPrepare(self)
@@ -782,6 +870,7 @@ class OrcaFlash4(AreaDetector):
             self.imagemode = "multiple"
             self.numimages = num_images
 
+        self._begin_acquisition_cycle()
         self._update_status(status.BUSY, "Acquiring")
         self.doAcquire()
 
@@ -984,11 +1073,32 @@ class AreaDetectorCollector(Detector):
     }
 
     _hardware_access = False
+    _measurement_started = False
 
     def doPreinit(self, mode):
         for image_channel in self._attached_images:
             image_channel._detector_collector_name = self.name
         super().doPreinit(mode)
+
+    def doPrepare(self):
+        self._measurement_started = False
+        Detector.doPrepare(self)
+
+    def doStart(self):
+        self._measurement_started = True
+        Detector.doStart(self)
+
+    def doFinish(self):
+        try:
+            Detector.doFinish(self)
+        finally:
+            self._measurement_started = False
+
+    def doStop(self):
+        try:
+            Detector.doStop(self)
+        finally:
+            self._measurement_started = False
 
     def _presetiter(self):
         for image_channel in self._attached_images:
@@ -1020,21 +1130,44 @@ class AreaDetectorCollector(Detector):
     def valueInfo(self):
         return ()
 
-    def doReadArrays(self, quality):
-        return [image.readArray(quality) for image in self._attached_images]
+    def doIsCompleted(self):
+        any_busy = False
+        for ch in self._channels:
+            st = ch.status(0)
+            if st[0] in ch.errorstates:
+                raise ch.errorstates[st[0]](ch, st[1])
+            if st[0] in ch.busystates:
+                any_busy = True
+
+        if not self._measurement_started:
+            return not any_busy
+
+        controller_reached = False
+        for controller in self._controlchannels:
+            for name, value in self._channel_presets.get(controller, ()):
+                if controller.presetReached(name, value, 0):
+                    controller_reached = True
+                    break
+            if controller_reached:
+                break
+        if controller_reached:
+            if not any_busy:
+                # If the controller has reached its target and all image
+                # channels report done, force every attached image to perform
+                # its post-completion sync before we let NICOS read FINAL data.
+                for image in self._attached_images:
+                    image.sync_cached_image(image.read(0)[0], after_completion=True)
+            return True
+        if any_busy:
+            return False
+        # No channel is busy anymore, so make one final synchronization pass
+        # even if completion came from the non-busy status rather than a preset.
+        for image in self._attached_images:
+            image.sync_cached_image(image.read(0)[0], after_completion=True)
+        return True
 
     def doReset(self):
         pass
 
-    def duringMeasureHook(self, elapsed):
-        if self.liveinterval is not None:
-            if elapsed > self._last_live + self.liveinterval:
-                self._last_live = elapsed
-                return LIVE
-        return None
-
     def arrayInfo(self):
         return tuple(ch.arrayInfo()[0] for ch in self._attached_images)
-
-    def doTime(self, preset):
-        return 0

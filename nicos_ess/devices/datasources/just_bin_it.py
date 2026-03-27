@@ -7,21 +7,19 @@ from streaming_data_types.utils import get_schema
 
 from nicos.core import (
     ArrayDesc,
-    InvalidValueError,
     Override,
     Param,
     Value,
     floatrange,
     host,
     listof,
-    multiStatus,
     oneof,
     status,
     tupleof,
 )
-from nicos.core.constants import LIVE, MASTER, SIMULATION
+from nicos.core.constants import MASTER, SIMULATION
 from nicos.devices.generic import Detector, ImageChannelMixin, PassiveChannel
-from nicos.utils import createThread, uniq
+from nicos.utils import createThread
 from nicos_ess.devices.kafka.consumer import KafkaConsumer, KafkaSubscriber
 from nicos_ess.devices.kafka.producer import KafkaProducer
 from nicos_ess.devices.kafka.status_handler import (
@@ -446,21 +444,7 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
     hardware_access = True
 
     def doPreinit(self, mode):
-        presetkeys = {}
-        for name, dev, typ in self._presetiter():
-            # later mentioned presetnames dont overwrite earlier ones
-            presetkeys.setdefault(name, (dev, typ))
-        for channel in self._attached_images:
-            presetkeys.setdefault(channel.name, (channel, "counts"))
-        self._channels = uniq(
-            self._attached_timers
-            + self._attached_monitors
-            + self._attached_counters
-            + self._attached_images
-            + self._attached_others
-        )
-        self._presetkeys = presetkeys
-        self._collectControllers()
+        Detector.doPreinit(self, mode)
 
         if mode == SIMULATION:
             return
@@ -479,8 +463,7 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
         Detector.doPrepare(self)
 
     def doStart(self, **preset):
-        self._last_live = -(self.liveinterval or 0)
-
+        del preset
         # Generate a unique-ish id
         unique_id = "nicos-{}-{}".format(self.name, int(time.time()))
         self.log.debug("set unique id = %s", unique_id)
@@ -504,11 +487,7 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
             self.log.debug("Requesting just-bin-it to start counting")
 
         self._send_command(self.command_topic, json.dumps(config).encode())
-
-        for follower in self._followchannels:
-            follower.start()
-        for controller in self._controlchannels:
-            controller.start()
+        Detector.doStart(self)
 
         # Check for acknowledgement of the command being received
         self._ack_thread = createThread(
@@ -589,9 +568,6 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
             config_base["start"] = int(time.time()) * 1000
         return config_base
 
-    def doReadArrays(self, quality):
-        return [image.readArray(quality) for image in self._attached_images]
-
     def _stop_histogramming(self):
         self._send_command(self.command_topic, b'{"cmd": "stop"}')
 
@@ -637,18 +613,5 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
             # No heartbeat
             self._cache.put(self, "status", DISCONNECTED_STATE, time.time())
 
-    def duringMeasureHook(self, elapsed):
-        if self.liveinterval is not None:
-            if elapsed > self._last_live + self.liveinterval:
-                self._last_live = elapsed
-                return LIVE
-        return None
-
     def arrayInfo(self):
         return tuple(image.arrayInfo()[0] for image in self._attached_images)
-
-    def doTime(self, preset):
-        return 0
-
-    def presetInfo(self):
-        return tuple(self._presetkeys)

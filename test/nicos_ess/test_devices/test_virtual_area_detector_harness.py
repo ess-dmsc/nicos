@@ -1,9 +1,12 @@
-from nicos.core.constants import FINAL
+import numpy as np
+
+from nicos.core import status
+from nicos.core.constants import FINAL, INTERMEDIATE, LIVE
 from nicos_ess.devices.virtual.area_detector import AreaDetector, AreaDetectorCollector
 from test.nicos_ess.test_devices.doubles import wait_until_complete
 
 
-def create_virtual_area_detector(daemon_device_harness):
+def create_virtual_area_detector(daemon_device_harness, **collector_kwargs):
     daemon_device_harness.session.updateLiveData = lambda *args, **kwargs: None
     image = daemon_device_harness.create_master(
         AreaDetector,
@@ -22,8 +25,45 @@ def create_virtual_area_detector(daemon_device_harness):
         AreaDetectorCollector,
         name="virtual_collector",
         images=["virtual_camera"],
+        **collector_kwargs,
     )
     return image, collector
+
+
+def create_dual_virtual_area_detector_collector(daemon_device_harness):
+    daemon_device_harness.session.updateLiveData = lambda *args, **kwargs: None
+    primary = daemon_device_harness.create_master(
+        AreaDetector,
+        name="virtual_camera_primary",
+        sizex=8,
+        sizey=6,
+        startx=0,
+        starty=0,
+        acquiretime=0.001,
+        acquireperiod=0.01,
+        numimages=1,
+        imagemode="continuous",
+        binning="1x1",
+    )
+    secondary = daemon_device_harness.create_master(
+        AreaDetector,
+        name="virtual_camera_secondary",
+        sizex=8,
+        sizey=6,
+        startx=0,
+        starty=0,
+        acquiretime=0.001,
+        acquireperiod=0.01,
+        numimages=1,
+        imagemode="continuous",
+        binning="1x1",
+    )
+    collector = daemon_device_harness.create_master(
+        AreaDetectorCollector,
+        name="virtual_collector",
+        images=["virtual_camera_primary", "virtual_camera_secondary"],
+    )
+    return primary, secondary, collector
 
 
 class TestVirtualAreaDetectorHarness:
@@ -91,6 +131,46 @@ class TestVirtualAreaDetectorCollectorHarness:
         assert collector.preset() == {"virtual_camera": 2}
         assert image.preset() == {"n": 2}
 
+    def test_prepare_leaves_collector_ready_until_start(self, daemon_device_harness):
+        _image, collector = create_virtual_area_detector(daemon_device_harness)
+
+        collector.setPreset(virtual_camera=1)
+        collector.prepare()
+
+        assert collector.isCompleted() is True
+
+    def test_during_measure_hook_supports_intermediate_saveintervals(
+        self, daemon_device_harness
+    ):
+        _image, collector = create_virtual_area_detector(
+            daemon_device_harness,
+            liveinterval=1.0,
+            saveintervals=[0.2],
+        )
+
+        collector.prepare()
+        collector.start()
+
+        assert collector.duringMeasureHook(0.05) == LIVE
+        assert collector.duringMeasureHook(0.25) == INTERMEDIATE
+        assert collector.duringMeasureHook(1.1) == LIVE
+
+        collector.finish()
+
+    def test_pause_reports_unsupported_and_resume_is_noop(
+        self, daemon_device_harness
+    ):
+        _image, collector = create_virtual_area_detector(daemon_device_harness)
+
+        collector.setPreset(virtual_camera=1)
+        collector.prepare()
+        collector.start()
+
+        assert collector.pause() is False
+        collector.resume()
+
+        collector.finish()
+
     def test_finishes_when_requested_image_count_is_reached(
         self, daemon_device_harness
     ):
@@ -108,6 +188,56 @@ class TestVirtualAreaDetectorCollectorHarness:
         assert image.read()[0] == 2
         assert len(arrays) == 1
         assert arrays[0].shape == image.arrayInfo()[0].shape
+
+    def test_completion_syncs_final_image_before_collector_reports_done(
+        self, daemon_device_harness
+    ):
+        image, collector = create_virtual_area_detector(daemon_device_harness)
+        final_shape = image.arrayInfo()[0].shape
+        final_image = np.arange(np.prod(final_shape), dtype=np.uint16).reshape(
+            final_shape
+        )
+
+        collector.setPreset(virtual_camera=2)
+        collector.prepare()
+        collector._measurement_started = True
+        image._setROParam("curstatus", (status.BUSY, "Acquiring"))
+        image._ad_simulator._image = final_image.ravel()
+        image._ad_simulator._image_counter = 2
+
+        assert not np.array_equal(image.readArray(FINAL), final_image)
+        assert collector.isCompleted() is False
+
+        image._setROParam("curstatus", (status.OK, "Done"))
+        assert collector.isCompleted() is True
+
+        _scalars, arrays = collector.readResults(FINAL)
+
+        assert len(arrays) == 1
+        assert np.array_equal(arrays[0], final_image)
+
+    def test_completion_matches_generic_detector_or_semantics(
+        self, daemon_device_harness
+    ):
+        primary, secondary, collector = create_dual_virtual_area_detector_collector(
+            daemon_device_harness
+        )
+        final_shape = primary.arrayInfo()[0].shape
+        final_image = np.arange(np.prod(final_shape), dtype=np.uint16).reshape(
+            final_shape
+        )
+
+        collector.setPreset(virtual_camera_primary=1, virtual_camera_secondary=3)
+        collector.prepare()
+        collector._measurement_started = True
+        primary._setROParam("curstatus", (status.OK, "Done"))
+        primary._ad_simulator._image = final_image.ravel()
+        primary._ad_simulator._image_counter = 1
+        secondary._setROParam("curstatus", (status.BUSY, "Acquiring"))
+        secondary._ad_simulator._image_counter = 0
+
+        assert collector.isCompleted() is True
+        assert np.array_equal(primary.readArray(FINAL), final_image)
 
     def test_preset_namespace_stays_image_only(self, daemon_device_harness):
         _image, collector = create_virtual_area_detector(daemon_device_harness)

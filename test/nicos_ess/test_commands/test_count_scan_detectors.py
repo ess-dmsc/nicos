@@ -60,7 +60,9 @@ def make_jbi_histogram(image, total):
                     "label": "tof",
                 }
             ],
-            "data": np.full((image.num_bins,), total / image.num_bins, dtype=np.float64),
+            "data": np.full(
+                (image.num_bins,), total / image.num_bins, dtype=np.float64
+            ),
             "info": json.dumps(
                 {
                     "id": image._unique_id,
@@ -169,7 +171,9 @@ class TestAreaDetectorCountScan:
         assert [value.name for value in dataset.detvalueinfo] == ["timer"]
         assert session.getDevice("camera").read()[0] == 1
 
-    def test_count_reuses_area_detector_preset_when_only_timer_key_changes(self, session):
+    def test_count_reuses_area_detector_preset_when_only_timer_key_changes(
+        self, session
+    ):
         result_1 = count(t=0.05, camera=2)
         result_2 = count(t=0.02)
         result_3 = count(t=0.03, camera=1)
@@ -210,7 +214,9 @@ class TestJustBinItCountScan:
                     {"msg_id": config["msg_id"], "response": "ACK"}
                 ).encode()
             )
-            self.controller_names.append(tuple(ch.name for ch in device._controlchannels))
+            self.controller_names.append(
+                tuple(ch.name for ch in device._controlchannels)
+            )
             image = device._attached_images[0]
             counter = device._attached_counters[0]
             image_target = None
@@ -300,7 +306,9 @@ class TestLiveDataCountScan:
 
         def simulate_start(device):
             original_do_start(device)
-            self.controller_names.append(tuple(ch.name for ch in device._controlchannels))
+            self.controller_names.append(
+                tuple(ch.name for ch in device._controlchannels)
+            )
             total = None
             for channel_presets in device._channel_presets.values():
                 if channel_presets:
@@ -335,7 +343,9 @@ class TestLiveDataCountScan:
 
         assert len(result) == 3
         assert result == [6, 6, 6]
-        assert tuple(ch.name for ch in detector._controlchannels) == ("livedata_primary",)
+        assert tuple(ch.name for ch in detector._controlchannels) == (
+            "livedata_primary",
+        )
         assert session.getDevice("livedata_primary").read()[0] == 6
         assert session.getDevice("livedata_secondary").read()[0] == 6
         assert session.getDevice("livedata_roi").read()[0] == 6
