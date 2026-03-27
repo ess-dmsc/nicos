@@ -174,7 +174,7 @@ class LokiBeamstopController(SequencerMixin, MappedMoveable):
         normalized_value = self.normalize(self.read())
 
         if "park" in normalized_target:
-            return self._all_devices_to_park()  # list
+            return self._all_devices_to_park()
 
         request = self._extract_arms(normalized_target)
         current = self._extract_arms(normalized_value)
