@@ -467,7 +467,6 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
         Detector.doPrepare(self)
 
     def doStart(self, **preset):
-        del preset
         # Generate a unique-ish id
         unique_id = "nicos-{}-{}".format(self.name, int(time.time()))
         self.log.debug("set unique id = %s", unique_id)

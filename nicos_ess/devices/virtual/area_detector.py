@@ -44,10 +44,11 @@ class FakeAreaDetector:
         self._image_counter = 0
         self._callback = None
         self._status_callback = None
-        self._run_thread = threading.Thread(target=self._run, daemon=True)
-        self._status_thread = threading.Thread(target=self._update_status, daemon=True)
+        self._stop_event = threading.Event()
         self._running_flag = threading.Event()
         self._running_flag.clear()
+        self._run_thread = threading.Thread(target=self._run, daemon=True)
+        self._status_thread = threading.Thread(target=self._update_status, daemon=True)
         self._run_thread.start()
         self._status_thread.start()
         self._status = (status.OK, "Done")
@@ -63,14 +64,18 @@ class FakeAreaDetector:
         if self._status_callback is not None:
             self._status_callback()
 
+    def shutdown(self):
+        self._stop_event.set()
+        self._running_flag.clear()
+
     def _update_status(self):
-        while True:
+        while not self._stop_event.is_set():
             if self._running_flag.is_set():
                 self._status = (status.BUSY, "Acquiring")
             else:
                 self._status = (status.OK, "Done")
             self._emit_status()
-            time.sleep(1.0)
+            self._stop_event.wait(1.0)
 
     def acquire(self):
         self._running_flag.set()
@@ -84,11 +89,13 @@ class FakeAreaDetector:
         self._emit_status()
 
     def _run(self):
-        while True:
+        while not self._stop_event.is_set():
             if self._running_flag.is_set():
                 self._status = (status.BUSY, "Acquiring")
                 self._emit_status()
-                time.sleep(self._acquireperiod)
+                self._stop_event.wait(self._acquireperiod)
+                if self._stop_event.is_set():
+                    break
                 self._gen_image()
                 self._emit_status()
 
@@ -104,7 +111,7 @@ class FakeAreaDetector:
             else:
                 self._status = (status.OK, "Done")
 
-            time.sleep(0.01)
+            self._stop_event.wait(0.01)
 
     def _gen_image(self):
         y = np.linspace(0, self._max_sizey - 1, self._max_sizey)
@@ -217,11 +224,10 @@ class AreaDetector(epics_area_detector.AreaDetector):
         ),
     }
 
-    parameter_overrides = dict(
-        epics_area_detector.AreaDetector.parameter_overrides,
-        pv_root=Override(default="SIM:AD:", mandatory=False, userparam=False),
-        image_pv=Override(default="SIM:AD:IMAGE", mandatory=False, userparam=False),
-    )
+    parameter_overrides = {
+        "pv_root": Override(default="SIM:AD:", mandatory=False, userparam=False),
+        "image_pv": Override(default="SIM:AD:IMAGE", mandatory=False, userparam=False),
+    }
 
     hardware_access = False
 
@@ -238,7 +244,6 @@ class AreaDetector(epics_area_detector.AreaDetector):
             self._ad_simulator.register_status_callback(self.on_status_callback)
 
     def doInit(self, mode):
-        del mode
         self.update_arraydesc()
         self._image_array = np.zeros(self.arraydesc.shape, dtype=self.arraydesc.dtype)
         self._setROParam("curarray", self._image_array.copy())
@@ -312,7 +317,6 @@ class AreaDetector(epics_area_detector.AreaDetector):
         return message or "Error"
 
     def _get_pv(self, pvparam, as_string=False):
-        del as_string
         if pvparam == "max_size_x":
             return self._ad_simulator._max_sizex
         if pvparam == "max_size_y":
@@ -336,7 +340,6 @@ class AreaDetector(epics_area_detector.AreaDetector):
         raise KeyError(pvparam)
 
     def _put_pv(self, pvparam, value, wait=False):
-        del wait
         if pvparam != "acquire":
             raise KeyError(pvparam)
         if value:
@@ -352,7 +355,6 @@ class AreaDetector(epics_area_detector.AreaDetector):
         self.arraydesc = ArrayDesc(self.name, shape=shape, dtype=np.uint16)
 
     def doStart(self, **preset):
-        del preset
         num_images = self._requested_image_count()
         if num_images == 0:
             return
@@ -436,3 +438,6 @@ class AreaDetector(epics_area_detector.AreaDetector):
 
     def get_topic_and_source(self):
         return "some_topic", "some_source"
+
+    def doShutdown(self):
+        self._ad_simulator.shutdown()

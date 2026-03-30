@@ -3,7 +3,7 @@ import numpy as np
 from nicos.core import status
 from nicos.core.constants import FINAL, INTERMEDIATE, LIVE
 from nicos_ess.devices.virtual.area_detector import AreaDetector, AreaDetectorCollector
-from test.nicos_ess.test_devices.doubles import wait_until_complete
+from test.nicos_ess.test_devices.doubles import wait_for, wait_until_complete
 
 
 def create_virtual_area_detector(daemon_device_harness, **collector_kwargs):
@@ -98,18 +98,9 @@ class TestVirtualAreaDetectorHarness:
         device_harness.run_daemon(daemon_collector.finish)
 
         daemon_count = device_harness.run_daemon(lambda: daemon_image.read()[0])
-        wait_until_complete(
-            type(
-                "PollerProbe",
-                (),
-                {
-                    "name": "poller_virtual_camera",
-                    "isCompleted": lambda _self: device_harness.run_poller(
-                        lambda: poller_image.read()[0]
-                    )
-                    == daemon_count,
-                },
-            )(),
+        wait_for(
+            lambda: device_harness.run_poller(lambda: poller_image.read()[0])
+            == daemon_count,
             timeout=2.0,
         )
 

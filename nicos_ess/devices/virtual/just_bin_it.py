@@ -271,29 +271,28 @@ class _SimulatedJustBinItRun:
 
 
 class JustBinItImage(jbi.JustBinItImage):
-    parameters = dict(
-        jbi.JustBinItImage.parameters,
-        curstatus=Param(
+    parameters = {
+        "curstatus": Param(
             "Store the current device status",
             internal=True,
             type=tupleof(int, str),
             settable=True,
         ),
-        curvalue=Param(
+        "curvalue": Param(
             "Store the current histogram sum",
             internal=True,
             type=int,
             default=0,
             settable=True,
         ),
-        curarray=Param(
+        "curarray": Param(
             "Store the current histogram data",
             internal=True,
             type=anytype,
             default=None,
             settable=True,
         ),
-    )
+    }
 
     def doPreinit(self, mode):
         self._unique_id = None
@@ -343,15 +342,12 @@ class JustBinItImage(jbi.JustBinItImage):
         self._setROParam("curstatus", self._current_status)
 
     def doRead(self, maxage=0):
-        del maxage
         return [self.curvalue]
 
     def doReadArray(self, quality):
-        del quality
         return self.curarray
 
     def doStatus(self, maxage=0):
-        del maxage
         return self.curstatus
 
     def doShutdown(self):
@@ -379,7 +375,6 @@ class JustBinItDetector(jbi.JustBinItDetector):
         Detector.doPrepare(self)
 
     def doStart(self, **preset):
-        del preset
         unique_id = f"nicos-{self.name}-{int(time.time())}"
         self._create_config(unique_id)
         Detector.doStart(self)
@@ -396,4 +391,4 @@ class JustBinItDetector(jbi.JustBinItDetector):
         self._do_stop()
 
     def _send_command(self, topic, message):
-        del topic, message
+        pass

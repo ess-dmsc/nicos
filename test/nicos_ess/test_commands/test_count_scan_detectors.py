@@ -498,7 +498,6 @@ class TestVirtualJustBinItCountScan:
 
         assert len(result) == 2
         assert result[0] >= 5
-        assert result[1] >= 0
         assert session.getDevice("jbi_image_fast").read()[0] >= 5
 
     def test_scan_runs_against_virtual_just_bin_it_multi_image(self, session):

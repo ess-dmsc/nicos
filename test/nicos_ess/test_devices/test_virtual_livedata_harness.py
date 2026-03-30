@@ -1,21 +1,10 @@
-import time
-
 from nicos.core.constants import FINAL
 from nicos_ess.devices.virtual import livedata
-from test.nicos_ess.test_devices.doubles import wait_until_complete
+from test.nicos_ess.test_devices.doubles import wait_for, wait_until_complete
 
 
 TOF_WORKFLOW = "dummy/detector_data/panel_0_tof/1@panel_0"
 XY_WORKFLOW = "dummy/detector_data/panel_0_xy/1@panel_0"
-
-
-def wait_for(predicate, timeout=2.0, poll_interval=0.01):
-    deadline = time.monotonic() + timeout
-    while time.monotonic() < deadline:
-        if predicate():
-            return
-        time.sleep(poll_interval)
-    raise AssertionError("Condition not met within timeout")
 
 
 def create_channel(daemon_device_harness, name, selector):
@@ -41,7 +30,7 @@ def create_collector(daemon_device_harness, counters):
     )
 
 
-class TestVirtualLiveDataHarness:
+class TestVirtualDataChannelHarness:
     def test_daemon_and_poller_share_channel_state_via_cache(self, device_harness):
         daemon_channel, poller_channel = device_harness.create_pair(
             livedata.DataChannel,
@@ -86,6 +75,8 @@ class TestVirtualLiveDataHarness:
             lambda: poller_channel.arrayInfo()[0].shape
         ) == device_harness.run_daemon(lambda: daemon_channel.arrayInfo()[0].shape)
 
+
+class TestVirtualLiveDataCollectorHarness:
     def test_seeded_mapping_exposes_current_and_cumulative_outputs(
         self, daemon_device_harness
     ):

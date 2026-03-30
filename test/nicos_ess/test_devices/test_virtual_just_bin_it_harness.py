@@ -1,20 +1,9 @@
-import time
-
 import numpy as np
 
 from nicos.core.constants import FINAL
 from nicos_ess.devices.virtual import just_bin_it
 from nicos_ess.devices.timer import TimerChannel
-from test.nicos_ess.test_devices.doubles import wait_until_complete
-
-
-def wait_for(predicate, timeout=2.0, poll_interval=0.01):
-    deadline = time.monotonic() + timeout
-    while time.monotonic() < deadline:
-        if predicate():
-            return
-        time.sleep(poll_interval)
-    raise AssertionError("Condition not met within timeout")
+from test.nicos_ess.test_devices.doubles import wait_for, wait_until_complete
 
 
 def create_image(daemon_device_harness, name, **overrides):
@@ -68,7 +57,7 @@ def create_detector(
     return images, timer, detector
 
 
-class TestVirtualJustBinItHarness:
+class TestVirtualJustBinItImageHarness:
     def test_daemon_and_poller_share_histogram_state_via_cache(self, device_harness):
         daemon_image, poller_image = device_harness.create_pair(
             just_bin_it.JustBinItImage,
@@ -118,6 +107,8 @@ class TestVirtualJustBinItHarness:
         assert device_harness.run_poller(lambda: poller_image.read()[0]) == daemon_total
         assert np.array_equal(poller_array, daemon_array)
 
+
+class TestVirtualJustBinItDetectorHarness:
     def test_timer_preset_counts_locally_and_returns_arrays(
         self, daemon_device_harness
     ):

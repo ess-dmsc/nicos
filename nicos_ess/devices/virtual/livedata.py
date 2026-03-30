@@ -21,6 +21,11 @@ from nicos_ess.devices.datasources.livedata_utils import (
 )
 
 
+def _stable_seed(*parts):
+    digest = hashlib.sha256("::".join(map(str, parts)).encode("utf-8")).digest()
+    return int.from_bytes(digest[:8], "big", signed=False)
+
+
 def _workflow_id_from_path(workflow_path):
     instrument, namespace, name, version = workflow_path.split("/")
     return WorkflowId(
@@ -29,11 +34,6 @@ def _workflow_id_from_path(workflow_path):
         name=name,
         version=int(version),
     )
-
-
-def _stable_seed(*parts):
-    digest = hashlib.sha256("::".join(map(str, parts)).encode("utf-8")).digest()
-    return int.from_bytes(digest[:8], "big", signed=False)
 
 
 def _infer_template(workflow_path, channel_name=""):
@@ -421,29 +421,28 @@ class _SimulatedLiveBackend:
                     due_messages.extend(
                         (now_ns, raw) for raw in job.serialised_outputs(now_ns)
                     )
-            for timestamp_ns, raw in due_messages:
-                self.collector._on_data_messages([(timestamp_ns, raw)])
+            if due_messages:
+                self.collector._on_data_messages(due_messages)
             self._stop_event.wait(next_wait)
 
 
 class DataChannel(livedata.DataChannel):
-    parameters = dict(
-        livedata.DataChannel.parameters,
-        curarray=Param(
+    parameters = {
+        "curarray": Param(
             "Store the current signal array",
             internal=True,
             type=anytype,
             default=None,
             settable=True,
         ),
-        curarraydesc=Param(
+        "curarraydesc": Param(
             "Store the current signal array description",
             internal=True,
             type=anytype,
             default=None,
             settable=True,
         ),
-    )
+    }
 
     def doPreinit(self, mode):
         super().doPreinit(mode)
@@ -474,23 +473,22 @@ class DataChannel(livedata.DataChannel):
 
 
 class LiveDataCollector(livedata.LiveDataCollector):
-    parameters = dict(
-        livedata.LiveDataCollector.parameters,
-        virtual_items=Param(
+    parameters = {
+        "virtual_items": Param(
             "Store simulated plot selection items",
             internal=True,
             type=anytype,
             default=None,
             settable=True,
         ),
-        virtual_mapping=Param(
+        "virtual_mapping": Param(
             "Store simulated plot selection mapping",
             internal=True,
             type=anytype,
             default=None,
             settable=True,
         ),
-    )
+    }
 
     hardware_access = False
 
