@@ -67,6 +67,63 @@ def create_dual_virtual_area_detector_collector(daemon_device_harness):
 
 
 class TestVirtualAreaDetectorHarness:
+    def test_daemon_and_poller_share_counter_and_final_image_via_cache(
+        self, device_harness
+    ):
+        daemon_image, poller_image = device_harness.create_pair(
+            AreaDetector,
+            name="virtual_camera",
+            shared={
+                "sizex": 8,
+                "sizey": 6,
+                "startx": 0,
+                "starty": 0,
+                "acquiretime": 0.001,
+                "acquireperiod": 0.01,
+                "numimages": 1,
+                "imagemode": "continuous",
+                "binning": "1x1",
+            },
+        )
+        daemon_collector, _poller_collector = device_harness.create_pair(
+            AreaDetectorCollector,
+            name="virtual_collector",
+            shared={"images": ["virtual_camera"]},
+        )
+
+        device_harness.run_daemon(daemon_collector.setPreset, virtual_camera=2)
+        device_harness.run_daemon(daemon_collector.prepare)
+        device_harness.run_daemon(daemon_collector.start)
+        device_harness.run_daemon(wait_until_complete, daemon_collector, timeout=3.0)
+        device_harness.run_daemon(daemon_collector.finish)
+
+        daemon_count = device_harness.run_daemon(lambda: daemon_image.read()[0])
+        wait_until_complete(
+            type(
+                "PollerProbe",
+                (),
+                {
+                    "name": "poller_virtual_camera",
+                    "isCompleted": lambda _self: device_harness.run_poller(
+                        lambda: poller_image.read()[0]
+                    )
+                    == daemon_count,
+                },
+            )(),
+            timeout=2.0,
+        )
+
+        daemon_array = device_harness.run_daemon(
+            lambda: np.array(daemon_image.readArray(FINAL), copy=True)
+        )
+        poller_array = device_harness.run_poller(
+            lambda: np.array(poller_image.readArray(FINAL), copy=True)
+        )
+
+        assert daemon_count == 2
+        assert device_harness.run_poller(lambda: poller_image.read()[0]) == 2
+        assert np.array_equal(poller_array, daemon_array)
+
     def test_tracks_image_count_presets_and_ignores_unrelated_keys(
         self, daemon_device_harness
     ):
@@ -123,14 +180,16 @@ class TestVirtualAreaDetectorCollectorHarness:
         assert collector.preset() == {"virtual_camera": 2}
         assert image.preset() == {"n": 2}
 
-    def test_ignores_non_image_presets(self, daemon_device_harness):
+    def test_unknown_preset_keys_do_not_reconfigure_image_channel(
+        self, daemon_device_harness
+    ):
         image, collector = create_virtual_area_detector(daemon_device_harness)
 
         collector.setPreset(virtual_camera=2)
         collector.setPreset(t=1)
 
-        assert collector.preset() == {"virtual_camera": 2}
         assert image.preset() == {"n": 2}
+        assert collector.preset() == {"t": 1}
 
     def test_does_not_persist_live_as_previous_preset(self, daemon_device_harness):
         image, collector = create_virtual_area_detector(daemon_device_harness)

@@ -479,3 +479,75 @@ class TestLiveDataCountScan:
             ("livedata_secondary",),
         ]
         assert self.published_totals == [6, 4, 4]
+
+
+class TestVirtualJustBinItCountScan:
+    @pytest.fixture(autouse=True)
+    def prepare(self, session):
+        session.unloadSetup()
+        session.loadSetup("ess_count_scan_virtual_just_bin_it", {})
+        session.updateLiveData = lambda *args, **kwargs: None
+        session.experiment.setDetectors([session.getDevice("jbi_detector")])
+        yield
+        session.experiment.detlist = []
+        session.experiment.envlist = []
+        session.unloadSetup()
+
+    def test_count_runs_against_virtual_just_bin_it(self, session):
+        result = count(jbi_image_fast=5)
+
+        assert len(result) == 2
+        assert result[0] >= 5
+        assert result[1] >= 0
+        assert session.getDevice("jbi_image_fast").read()[0] >= 5
+
+    def test_scan_runs_against_virtual_just_bin_it_multi_image(self, session):
+        motor = session.getDevice("motor")
+
+        scan(motor, [0, 1], jbi_image_fast=5, jbi_image_slow=1_000_000)
+        dataset = session.experiment.data.getLastScans()[-1]
+
+        assert dataset.devvaluelists == [[0.0], [1.0]]
+        assert [value.name for value in dataset.detvalueinfo] == [
+            "jbi_image_fast",
+            "jbi_image_slow",
+        ]
+        assert session.getDevice("jbi_image_fast").read()[0] >= 5
+        assert session.getDevice("jbi_image_slow").read()[0] < 1_000_000
+
+
+class TestVirtualLiveDataCountScan:
+    @pytest.fixture(autouse=True)
+    def prepare(self, session):
+        session.unloadSetup()
+        session.loadSetup("ess_count_scan_virtual_livedata", {})
+        session.updateLiveData = lambda *args, **kwargs: None
+        session.experiment.setDetectors([session.getDevice("livedata_detector")])
+        yield
+        session.experiment.detlist = []
+        session.experiment.envlist = []
+        session.unloadSetup()
+
+    def test_count_runs_against_virtual_livedata(self, session):
+        result = count(n=1)
+        detector = session.getDevice("livedata_detector")
+
+        assert len(result) == 2
+        assert result[0] >= 1
+        assert result[1] >= result[0]
+        assert tuple(ch.name for ch in detector._controlchannels) == (
+            "livedata_current",
+        )
+
+    def test_scan_runs_against_virtual_livedata(self, session):
+        motor = session.getDevice("motor")
+
+        scan(motor, [0, 1], n=1)
+        dataset = session.experiment.data.getLastScans()[-1]
+
+        assert dataset.devvaluelists == [[0.0], [1.0]]
+        assert [value.name for value in dataset.detvalueinfo] == [
+            "livedata_current",
+            "livedata_cumulative",
+        ]
+        assert session.getDevice("livedata_current").read()[0] >= 1
