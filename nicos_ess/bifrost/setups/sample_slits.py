@@ -12,11 +12,6 @@ devices = dict(
         has_reseterror=False,
         monitor_deadband=0.01,
     ),
-    sample_slit_y_p_pot=device(
-        "nicos_ess.devices.epics.pva.EpicsReadable",
-        description="Sample slit Y+ potentiometer readback",
-        readpv="BIFRO-SpSl1:MC-SlYp-01:PzMtr-PosReadback",
-    ),
     sample_slit_y_m=device(
         "nicos_ess.devices.epics.pva.motor.SmaractPiezoMotor",
         description="Sample slit Y-",
@@ -26,11 +21,6 @@ devices = dict(
         has_errorbit=False,
         has_reseterror=False,
         monitor_deadband=0.01,
-    ),
-    sample_slit_y_m_pot=device(
-        "nicos_ess.devices.epics.pva.EpicsReadable",
-        description="Sample slit Y- potentiometer readback",
-        readpv="BIFRO-SpSl1:MC-SlYm-01:PzMtr-PosReadback",
     ),
     sample_slit_width=device(
         "nicos.devices.generic.slit.HorizontalGap",
@@ -50,11 +40,6 @@ devices = dict(
         has_reseterror=False,
         monitor_deadband=0.01,
     ),
-    sample_slit_z_p_pot=device(
-        "nicos_ess.devices.epics.pva.EpicsReadable",
-        description="Sample slit Z+ potentiometer readback",
-        readpv="BIFRO-SpSl1:MC-SlZp-01:PzMtr-PosReadback",
-    ),
     sample_slit_z_m=device(
         "nicos_ess.devices.epics.pva.motor.SmaractPiezoMotor",
         description="Sample slit Z-",
@@ -64,11 +49,6 @@ devices = dict(
         has_errorbit=False,
         has_reseterror=False,
         monitor_deadband=0.01,
-    ),
-    sample_slit_z_m_pot=device(
-        "nicos_ess.devices.epics.pva.EpicsReadable",
-        description="Sample slit Z- potentiometer readback",
-        readpv="BIFRO-SpSl1:MC-SlZm-01:PzMtr-PosReadback",
     ),
     sample_slit_height=device(
         "nicos.devices.generic.slit.VerticalGap",
