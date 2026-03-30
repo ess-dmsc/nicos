@@ -74,6 +74,14 @@ def make_jbi_histogram(image, total):
     )
 
 
+def jbi_stop_messages(producer):
+    return [
+        message
+        for message in producer.messages
+        if message["message"] == b'{"cmd": "stop"}'
+    ]
+
+
 def make_da00_message(total):
     source_name = json.dumps(
         {
@@ -158,7 +166,13 @@ class TestAreaDetectorCountScan:
     def test_count_accepts_area_detector_preset_alongside_timer(self, session):
         result = count(t=0.05, camera=2)
 
-        assert len(result) == 1
+        assert result == [0.05, 2]
+        assert session.getDevice("camera").read()[0] == 2
+
+    def test_count_accepts_area_detector_image_count_alias(self, session):
+        result = count(t=0.05, n=2)
+
+        assert result == [0.05, 2]
         assert session.getDevice("camera").read()[0] == 2
 
     def test_scan_accepts_area_detector_preset_alongside_timer(self, session):
@@ -168,21 +182,25 @@ class TestAreaDetectorCountScan:
         dataset = session.experiment.data.getLastScans()[-1]
 
         assert dataset.devvaluelists == [[0.0], [1.0]]
-        assert [value.name for value in dataset.detvalueinfo] == ["timer"]
+        assert [value.name for value in dataset.detvalueinfo] == ["timer", "camera"]
         assert session.getDevice("camera").read()[0] == 1
 
-    def test_count_reuses_area_detector_preset_when_only_timer_key_changes(
+    def test_count_keeps_image_channel_state_when_only_timer_key_changes(
         self, session
     ):
         result_1 = count(t=0.05, camera=2)
         result_2 = count(t=0.02)
+        area_detector_after_timer_only = session.getDevice("area_detector").preset()
+        camera_after_timer_only = session.getDevice("camera").preset()
         result_3 = count(t=0.03, camera=1)
         result_4 = count()
 
-        assert len(result_1) == 1
-        assert len(result_2) == 1
-        assert len(result_3) == 1
-        assert len(result_4) == 1
+        assert result_1 == [0.05, 2]
+        assert result_2 == [0.02, 2]
+        assert result_3 == [0.03, 1]
+        assert result_4 == [0.03, 1]
+        assert area_detector_after_timer_only == {"t": 0.02}
+        assert camera_after_timer_only == {"n": 2}
         assert self.acquire_targets == [2, 2, 1, 1]
         assert session.getDevice("camera").read()[0] == 1
 
@@ -261,6 +279,8 @@ class TestJustBinItCountScan:
         assert session.getDevice("pulse_counter").read()[0] == 7
         assert config["input_schema"] == "ev44"
         assert config["output_schema"] == "hs01"
+        assert "start" in config
+        assert "interval" not in config
 
     def test_scan_runs_against_just_bin_it_with_hs01_payloads(self, session):
         motor = session.getDevice("motor")
@@ -292,6 +312,87 @@ class TestJustBinItCountScan:
             ("jbi_image",),
             ("jbi_image",),
         ]
+
+
+class TestJustBinItMultiImageCountScan:
+    @pytest.fixture(autouse=True)
+    def prepare(self, session, monkeypatch):
+        self.controller_names = []
+        producer = patch_kafka_stubs(
+            monkeypatch,
+            just_bin_it,
+            status_module=status_handler,
+        )
+
+        original_do_start = just_bin_it.JustBinItDetector.doStart
+
+        def simulate_start(device, **preset):
+            original_do_start(device, **preset)
+            config = json.loads(producer.messages[-1]["message"])
+            device._response_consumer.push_message(
+                json.dumps(
+                    {"msg_id": config["msg_id"], "response": "ACK"}
+                ).encode()
+            )
+            self.controller_names.append(
+                tuple(ch.name for ch in device._controlchannels)
+            )
+            image_by_name = {image.name: image for image in device._attached_images}
+            fast_target = device._channel_presets[
+                image_by_name["jbi_image_fast"]
+            ][0][1]
+
+            def publish_fast_histogram():
+                time.sleep(0.02)
+                fast_image = image_by_name["jbi_image_fast"]
+                message = make_jbi_histogram(fast_image, total=fast_target)
+                fast_image.new_messages_callback([(123456789, message)])
+
+            start_daemon(publish_fast_histogram)
+
+        monkeypatch.setattr(just_bin_it.JustBinItDetector, "doStart", simulate_start)
+
+        session.unloadSetup()
+        session.loadSetup("ess_count_scan_just_bin_it_multi_image", {})
+        session.experiment.setDetectors([session.getDevice("jbi_detector")])
+        self.producer = producer
+        yield
+        session.experiment.detlist = []
+        session.experiment.envlist = []
+        session.unloadSetup()
+
+    def test_count_completes_when_first_image_preset_reaches_target(self, session):
+        result = count(jbi_image_fast=5, jbi_image_slow=9)
+
+        config = json.loads(self.producer.messages[0]["message"])
+        assert result == [5, 0]
+        assert self.controller_names == [("jbi_image_fast", "jbi_image_slow")]
+        assert session.getDevice("jbi_image_fast").read()[0] == 5
+        assert session.getDevice("jbi_image_slow").read()[0] == 0
+        assert "start" in config
+        assert "interval" not in config
+        assert len(jbi_stop_messages(self.producer)) == 1
+
+    def test_scan_completes_each_point_when_first_image_preset_reaches_target(
+        self, session
+    ):
+        motor = session.getDevice("motor")
+
+        scan(motor, [0, 1], jbi_image_fast=5, jbi_image_slow=9)
+        dataset = session.experiment.data.getLastScans()[-1]
+
+        assert dataset.devvaluelists == [[0.0], [1.0]]
+        assert [value.name for value in dataset.detvalueinfo] == [
+            "jbi_image_fast",
+            "jbi_image_slow",
+        ]
+        assert self.controller_names == [
+            ("jbi_image_fast", "jbi_image_slow"),
+            ("jbi_image_fast", "jbi_image_slow"),
+        ]
+        assert session.getDevice("jbi_image_fast").read()[0] == 5
+        assert session.getDevice("jbi_image_slow").read()[0] == 0
+        assert len(jbi_stop_messages(self.producer)) == 2
 
 
 class TestLiveDataCountScan:

@@ -200,7 +200,7 @@ class TestAreaDetectorHarness:
         del fake_backend
         detector = create_area_detector(daemon_device_harness)
 
-        assert set(detector.presetInfo()) == {"n"}
+        assert set(detector.presetInfo()) == {"n", "ad_1"}
 
         detector.setPreset(n=3)
         detector.setPreset(t=1)
@@ -216,6 +216,7 @@ class TestAreaDetectorHarness:
 
         fake_backend.values[f"{PV_ROOT}NumImagesCounter_RBV"] = 1
         assert detector.iscontroller is True
+        assert detector.preselection == 2
         assert detector.presetReached("n", 2, 0) is False
 
         fake_backend.values[f"{PV_ROOT}NumImagesCounter_RBV"] = 2
@@ -359,13 +360,14 @@ class TestOrcaFlash4Harness:
 
 
 class TestAreaDetectorCollectorHarness:
-    def test_uses_image_presets_and_ignores_unrelated_ones(
+    def test_replaces_collector_preset_but_keeps_image_channel_state(
         self, daemon_device_harness, fake_backend
     ):
         del fake_backend
         image, collector = create_area_detector_collector(daemon_device_harness)
 
-        assert collector.valueInfo() == ()
+        assert [value.name for value in collector.valueInfo()] == ["camera"]
+        assert "n" in collector.presetInfo()
         assert "camera" in collector.presetInfo()
         assert "t" not in collector.presetInfo()
 
@@ -375,8 +377,19 @@ class TestAreaDetectorCollectorHarness:
         collector.prepare()
         collector.setPreset(t=1)
         collector.setPreset()
-        assert collector.preset() == {"camera": 4}
+        assert collector.preset() == {"t": 1}
         assert image.preset() == {"n": 4}
+
+    def test_accepts_image_count_alias_from_underlying_channel(
+        self, daemon_device_harness, fake_backend
+    ):
+        del fake_backend
+        image, collector = create_area_detector_collector(daemon_device_harness)
+
+        collector.setPreset(n=3)
+
+        assert collector.preset() == {"n": 3}
+        assert image.preset() == {"n": 3}
 
     def test_does_not_persist_live_as_previous_preset(
         self, daemon_device_harness, fake_backend
@@ -457,7 +470,7 @@ class TestAreaDetectorCollectorHarness:
 
         scalars, arrays = collector.readResults(FINAL)
 
-        assert scalars == []
+        assert scalars == [1]
         assert len(arrays) == 1
         assert np.array_equal(arrays[0], final_image)
 

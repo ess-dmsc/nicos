@@ -72,7 +72,7 @@ class TestVirtualAreaDetectorHarness:
     ):
         image, _collector = create_virtual_area_detector(daemon_device_harness)
 
-        assert set(image.presetInfo()) == {"n"}
+        assert set(image.presetInfo()) == {"n", "virtual_camera"}
 
         image.setPreset(n=2)
         image.setPreset(t=1)
@@ -85,6 +85,7 @@ class TestVirtualAreaDetectorHarness:
         image.setChannelPreset("n", 2)
 
         assert image.iscontroller is True
+        assert image.preselection == 2
         assert image.presetReached("n", 2, 0) is False
 
         image._ad_simulator._image_counter = 2
@@ -97,6 +98,16 @@ class TestVirtualAreaDetectorCollectorHarness:
 
         collector.setPreset(virtual_camera=2)
 
+        assert image.preset() == {"n": 2}
+
+    def test_accepts_image_count_alias_from_underlying_channel(
+        self, daemon_device_harness
+    ):
+        image, collector = create_virtual_area_detector(daemon_device_harness)
+
+        collector.setPreset(n=2)
+
+        assert collector.preset() == {"n": 2}
         assert image.preset() == {"n": 2}
 
         collector.prepare()
@@ -184,7 +195,7 @@ class TestVirtualAreaDetectorCollectorHarness:
 
         scalars, arrays = collector.readResults(FINAL)
 
-        assert scalars == []
+        assert scalars == [2]
         assert image.read()[0] == 2
         assert len(arrays) == 1
         assert arrays[0].shape == image.arrayInfo()[0].shape
@@ -200,7 +211,6 @@ class TestVirtualAreaDetectorCollectorHarness:
 
         collector.setPreset(virtual_camera=2)
         collector.prepare()
-        collector._measurement_started = True
         image._setROParam("curstatus", (status.BUSY, "Acquiring"))
         image._ad_simulator._image = final_image.ravel()
         image._ad_simulator._image_counter = 2
@@ -229,7 +239,6 @@ class TestVirtualAreaDetectorCollectorHarness:
 
         collector.setPreset(virtual_camera_primary=1, virtual_camera_secondary=3)
         collector.prepare()
-        collector._measurement_started = True
         primary._setROParam("curstatus", (status.OK, "Done"))
         primary._ad_simulator._image = final_image.ravel()
         primary._ad_simulator._image_counter = 1
@@ -242,5 +251,6 @@ class TestVirtualAreaDetectorCollectorHarness:
     def test_preset_namespace_stays_image_only(self, daemon_device_harness):
         _image, collector = create_virtual_area_detector(daemon_device_harness)
 
+        assert "n" in collector.presetInfo()
         assert "virtual_camera" in collector.presetInfo()
         assert "t" not in collector.presetInfo()

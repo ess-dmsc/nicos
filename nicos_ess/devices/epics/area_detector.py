@@ -12,8 +12,6 @@ from nicos.core import (
     ArrayDesc,
     Attach,
     CacheError,
-    InvalidValueError,
-    Measurable,
     Override,
     Param,
     Value,
@@ -23,9 +21,15 @@ from nicos.core import (
     status,
     usermethod,
 )
+from nicos.core.constants import FINAL, INTERRUPTED
 from nicos.devices.epics.pva import EpicsDevice
 from nicos.devices.epics.status import SEVERITY_TO_STATUS, STAT_TO_STATUS
-from nicos.devices.generic import Detector, ImageChannelMixin, ManualSwitch
+from nicos.devices.generic import (
+    ActiveChannel,
+    Detector,
+    ImageChannelMixin,
+    ManualSwitch,
+)
 from nicos.utils import byteBuffer, createThread
 from nicos_ess.devices.epics.pva import EpicsAnalogMoveable, EpicsMappedMoveable
 
@@ -170,16 +174,14 @@ class ImageType(ManualSwitch):
         self.move(INVALID)
 
 
-class AreaDetector(EpicsDevice, ImageChannelMixin, Measurable):
+class AreaDetector(EpicsDevice, ImageChannelMixin, ActiveChannel):
     parameters = {
         "pv_root": Param("Area detector EPICS prefix", type=pvname, mandatory=True),
         "image_pv": Param("Image PV name", type=pvname, mandatory=True),
-        "iscontroller": Param(
-            "If this channel is an active controller",
-            type=bool,
-            settable=True,
-            default=True,
-        ),
+    }
+
+    parameter_overrides = {
+        "presetaliases": Override(default=["n"], mandatory=False),
     }
 
     _image_array = numpy.zeros((10, 10))
@@ -237,11 +239,18 @@ class AreaDetector(EpicsDevice, ImageChannelMixin, Measurable):
         return getattr(self, pvparam)
 
     def valueInfo(self):
-        return (Value(self.name, fmtstr="%d"),)
+        return (
+            Value(
+                self.name,
+                unit=self.unit,
+                type="counter",
+                fmtstr=self.fmtstr,
+            ),
+        )
 
     def arrayInfo(self):
         self.update_arraydesc()
-        return tuple([self.arraydesc])
+        return (self.arraydesc,)
 
     def update_arraydesc(self):
         shape = self._get_pv("max_size_y"), self._get_pv("max_size_x")
@@ -345,23 +354,35 @@ class AreaDetector(EpicsDevice, ImageChannelMixin, Measurable):
             with self._image_processing_lock:
                 session.updateLiveData(parameters, databuffer, labelbuffers)
 
-    def presetInfo(self):
-        return ("n",)
-
-    def doSetPreset(self, **preset):
+    def _extract_requested_image_count(self, preset):
         if not preset:
             preset = self._lastpreset or {}
-        if "n" in preset:
-            self._lastpreset = {"n": int(preset["n"])}
+        for name in ("n", self.name):
+            if name in preset:
+                return int(preset[name])
+        return None
+
+    def _requested_image_count(self):
+        if self.iscontroller:
+            try:
+                return int(self.preselection)
+            except (TypeError, ValueError):
+                pass
+        if not self._detector_collector_name:
+            return (self._lastpreset or {}).get("n")
+        return None
+
+    def doSetPreset(self, **preset):
+        target = self._extract_requested_image_count(preset)
+        if target is None:
+            return
+        self._lastpreset = {"n": target}
+        self.preselection = target
+        self.iscontroller = True
 
     def setChannelPreset(self, name, value):
-        if name not in {"n", self.name}:
-            raise InvalidValueError(
-                self,
-                f"unrecognised preset {name}, should be one of n or {self.name}",
-            )
-        self.iscontroller = True
-        self.doSetPreset(n=value)
+        ActiveChannel.setChannelPreset(self, name, value)
+        self._lastpreset = {"n": int(value)}
 
     def presetReached(self, name, value, maxage):
         del name
@@ -404,7 +425,7 @@ class AreaDetector(EpicsDevice, ImageChannelMixin, Measurable):
             self.log.warning(msg_format, pv_value, stat)
 
     def doStart(self, **preset):
-        if (self._lastpreset or {}).get("n") == 0:
+        if self._requested_image_count() == 0:
             return
         self._begin_acquisition_cycle()
         self._update_status(status.BUSY, "Acquiring")
@@ -427,7 +448,7 @@ class AreaDetector(EpicsDevice, ImageChannelMixin, Measurable):
         if st[0] in self.errorstates:
             raise self.errorstates[st[0]](self, st[1])
         current_count = self.read(0)[0]
-        target = (self._lastpreset or {}).get("n")
+        target = self._requested_image_count()
         if target is not None:
             if current_count < target:
                 return False
@@ -442,6 +463,14 @@ class AreaDetector(EpicsDevice, ImageChannelMixin, Measurable):
         return self.sync_cached_image(current_count, after_completion=True)
 
     def doReadArray(self, quality):
+        if quality in (FINAL, INTERRUPTED) and self.status(0)[0] not in self.busystates:
+            # FINAL/INTERRUPTED reads may happen after an explicit finish/stop
+            # path where presetReached() was not the last code path to run.
+            # Force one last catch-up read so data sinks always see the latest
+            # completed frame.
+            self.sync_cached_image(
+                self.read(0)[0], emit_live=False, after_completion=True
+            )
         return self._image_array
 
     def get_topic_and_source(self):
@@ -553,7 +582,7 @@ class TimepixDetector(AreaDetector):
             self._epics_wrapper.close_subscription(sub)
 
     def doStart(self, **preset):
-        if (self._lastpreset or {}).get("n") == 0:
+        if self._requested_image_count() == 0:
             return
         self._begin_acquisition_cycle()
         self._update_status(status.BUSY, "Acquiring")
@@ -858,7 +887,7 @@ class OrcaFlash4(AreaDetector):
             self.subarraymode = False
 
     def doStart(self, **preset):
-        num_images = (self._lastpreset or {}).get("n", None)
+        num_images = self._requested_image_count()
 
         if num_images == 0:
             return
@@ -1066,44 +1095,13 @@ class AreaDetectorCollector(Detector):
     """
 
     parameter_overrides = {
-        "unit": Override(default="images", settable=False, mandatory=False),
-        "fmtstr": Override(default="%d"),
-        "liveinterval": Override(type=floatrange(0.5), default=1, userparam=True),
-        "pollinterval": Override(default=1, userparam=True, settable=False),
+        "statustopic": Override(default="", mandatory=False),
     }
-
-    _hardware_access = False
-    _measurement_started = False
 
     def doPreinit(self, mode):
         for image_channel in self._attached_images:
             image_channel._detector_collector_name = self.name
         super().doPreinit(mode)
-
-    def doPrepare(self):
-        self._measurement_started = False
-        Detector.doPrepare(self)
-
-    def doStart(self):
-        self._measurement_started = True
-        Detector.doStart(self)
-
-    def doFinish(self):
-        try:
-            Detector.doFinish(self)
-        finally:
-            self._measurement_started = False
-
-    def doStop(self):
-        try:
-            Detector.doStop(self)
-        finally:
-            self._measurement_started = False
-
-    def _presetiter(self):
-        for image_channel in self._attached_images:
-            yield (image_channel.name, image_channel, "counts")
-        yield ("live", None, "other")
 
     def get_array_size(self, topic, source):
         for area_detector in self._attached_images:
@@ -1115,59 +1113,3 @@ class AreaDetectorCollector(Detector):
             source,
         )
         return []
-
-    def doSetPreset(self, **preset):
-        filtered = {
-            name: value
-            for name, value in preset.items()
-            if name == "info" or name in self._presetkeys
-        }
-        Detector.doSetPreset(self, **filtered)
-
-    def doRead(self, maxage=0):
-        return []
-
-    def valueInfo(self):
-        return ()
-
-    def doIsCompleted(self):
-        any_busy = False
-        for ch in self._channels:
-            st = ch.status(0)
-            if st[0] in ch.errorstates:
-                raise ch.errorstates[st[0]](ch, st[1])
-            if st[0] in ch.busystates:
-                any_busy = True
-
-        if not self._measurement_started:
-            return not any_busy
-
-        controller_reached = False
-        for controller in self._controlchannels:
-            for name, value in self._channel_presets.get(controller, ()):
-                if controller.presetReached(name, value, 0):
-                    controller_reached = True
-                    break
-            if controller_reached:
-                break
-        if controller_reached:
-            if not any_busy:
-                # If the controller has reached its target and all image
-                # channels report done, force every attached image to perform
-                # its post-completion sync before we let NICOS read FINAL data.
-                for image in self._attached_images:
-                    image.sync_cached_image(image.read(0)[0], after_completion=True)
-            return True
-        if any_busy:
-            return False
-        # No channel is busy anymore, so make one final synchronization pass
-        # even if completion came from the non-busy status rather than a preset.
-        for image in self._attached_images:
-            image.sync_cached_image(image.read(0)[0], after_completion=True)
-        return True
-
-    def doReset(self):
-        pass
-
-    def arrayInfo(self):
-        return tuple(ch.arrayInfo()[0] for ch in self._attached_images)

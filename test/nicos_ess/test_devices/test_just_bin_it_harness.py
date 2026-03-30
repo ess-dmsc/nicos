@@ -46,13 +46,7 @@ def kafka_stubs(monkeypatch):
     producer = StubKafkaProducer()
 
     def immediate_ack(self, identifier, timeout_duration):
-        del identifier, timeout_duration
-        if self._conditions:
-            self._conditions_thread = just_bin_it.createThread(
-                "jbi-conditions",
-                self._check_conditions,
-                (self._conditions.copy(),),
-            )
+        del self, identifier, timeout_duration
 
     patch_kafka_stubs(
         monkeypatch,
@@ -75,6 +69,16 @@ def create_image(daemon_device_harness):
         brokers=["localhost:9092"],
         hist_topic="jbi_hist",
         data_topic="jbi_data",
+    )
+
+
+def create_named_image(daemon_device_harness, name):
+    return daemon_device_harness.create_master(
+        just_bin_it.JustBinItImage,
+        name=name,
+        brokers=["localhost:9092"],
+        hist_topic=f"{name}_hist",
+        data_topic=f"{name}_data",
     )
 
 
@@ -104,6 +108,36 @@ def create_detector(daemon_device_harness, include_timer, **detector_overrides):
         **detector_kwargs,
     )
     return image, timer, detector
+
+
+def create_multi_image_detector(
+    daemon_device_harness, image_names, include_timer=False, **detector_overrides
+):
+    images = [create_named_image(daemon_device_harness, name) for name in image_names]
+    detector_kwargs = {
+        "brokers": ["localhost:9092"],
+        "command_topic": "jbi_command",
+        "response_topic": "jbi_response",
+        "statustopic": [],
+        "images": [image.name for image in images],
+        "liveinterval": 0.5,
+    }
+    detector_kwargs.update(detector_overrides)
+    if include_timer:
+        timer = daemon_device_harness.create_master(
+            TimerChannel,
+            name="timer",
+            update_interval=0.01,
+        )
+        detector_kwargs["timers"] = ["timer"]
+    else:
+        timer = None
+    detector = daemon_device_harness.create_master(
+        just_bin_it.JustBinItDetector,
+        name="jbi_detector",
+        **detector_kwargs,
+    )
+    return images, timer, detector
 
 
 def push_image_sum(image, total, delay=0.05):
@@ -164,6 +198,9 @@ class TestJustBinItDetectorHarness:
         detector.start()
         assert detector.duringMeasureHook(0.6) == LIVE
         wait_until_complete(detector)
+
+        assert len(stop_messages(kafka_stubs)) == 0
+
         getattr(detector, terminator)()
         _scalars, arrays = detector.readResults(FINAL)
 
@@ -180,6 +217,9 @@ class TestJustBinItDetectorHarness:
         detector.start()
         push_image_sum(image, 5)
         wait_until_complete(detector)
+
+        assert len(stop_messages(kafka_stubs)) == 0
+
         detector.finish()
 
         assert image.read()[0] == 5
@@ -199,6 +239,35 @@ class TestJustBinItDetectorHarness:
 
         assert image.read()[0] == 5
         assert timer.read()[0] < 0.5
+        assert len(stop_messages(kafka_stubs)) == 1
+
+    def test_multiple_image_presets_complete_on_first_reached_image_controller(
+        self, daemon_device_harness, kafka_stubs
+    ):
+        images, _timer, detector = create_multi_image_detector(
+            daemon_device_harness,
+            ["jbi_image_fast", "jbi_image_slow"],
+        )
+        fast_image, slow_image = images
+
+        detector.setPreset(jbi_image_fast=5, jbi_image_slow=9)
+        detector.prepare()
+        detector.start()
+        push_image_sum(fast_image, 5)
+        wait_until_complete(detector)
+
+        assert tuple(ch.name for ch in detector._controlchannels) == (
+            "jbi_image_fast",
+            "jbi_image_slow",
+        )
+        assert fast_image.read()[0] == 5
+        assert slow_image.read()[0] == 0
+        assert len(stop_messages(kafka_stubs)) == 0
+
+        detector.finish()
+        _scalars, arrays = detector.readResults(FINAL)
+
+        assert len(arrays) == 2
         assert len(stop_messages(kafka_stubs)) == 1
 
     def test_during_measure_hook_supports_intermediate_saveintervals(

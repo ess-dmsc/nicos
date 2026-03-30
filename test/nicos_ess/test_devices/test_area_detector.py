@@ -54,7 +54,7 @@ class TestAreaDetector:
         """Test that doIsCompleted() returns correct value."""
         self.area_detector.fake_values["acquire_status"] = "Done"
         ret = self.area_detector.isCompleted()
-        assert ret == True
+        assert ret
         self.area_detector.fake_values["acquire_status"] = "Busybusybusy"
         ret = self.area_detector.isCompleted()
-        assert ret == False
+        assert not ret

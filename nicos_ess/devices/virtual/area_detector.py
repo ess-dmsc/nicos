@@ -12,8 +12,6 @@ from nicos.core import (
     SIMULATION,
     ArrayDesc,
     CacheError,
-    InvalidValueError,
-    Measurable,
     Override,
     Param,
     Value,
@@ -23,7 +21,13 @@ from nicos.core import (
     tupleof,
     usermethod,
 )
-from nicos.devices.generic import Detector, ImageChannelMixin, ManualSwitch
+from nicos.core.constants import FINAL, INTERRUPTED
+from nicos.devices.generic import (
+    ActiveChannel,
+    Detector,
+    ImageChannelMixin,
+    ManualSwitch,
+)
 from nicos.utils import byteBuffer, createThread
 
 binning_factor_map = {
@@ -222,7 +226,7 @@ class FakeAreaDetector:
             self._callback()
 
 
-class AreaDetector(ImageChannelMixin, Measurable):
+class AreaDetector(ImageChannelMixin, ActiveChannel):
     """
     Device that controls and acquires data from an area detector.
     """
@@ -230,12 +234,6 @@ class AreaDetector(ImageChannelMixin, Measurable):
     _hardware_access = False
 
     parameters = {
-        "iscontroller": Param(
-            "If this channel is an active controller",
-            type=bool,
-            settable=True,
-            default=True,
-        ),
         "imagemode": Param(
             "Mode to acquire images.",
             type=oneof("single", "multiple", "continuous"),
@@ -274,6 +272,10 @@ class AreaDetector(ImageChannelMixin, Measurable):
             type=tupleof(int, str),
             settable=True,
         ),
+    }
+
+    parameter_overrides = {
+        "presetaliases": Override(default=["n"], mandatory=False),
     }
 
     _image_array = numpy.zeros((10, 10))
@@ -328,11 +330,18 @@ class AreaDetector(ImageChannelMixin, Measurable):
         )
 
     def valueInfo(self):
-        return (Value(self.name, fmtstr="%d"),)
+        return (
+            Value(
+                self.name,
+                unit=self.unit,
+                type="counter",
+                fmtstr=self.fmtstr,
+            ),
+        )
 
     def arrayInfo(self):
         self.update_arraydesc()
-        return tuple([self.arraydesc])
+        return (self.arraydesc,)
 
     def update_arraydesc(self):
         shape = self.sizey, self.sizex
@@ -432,23 +441,35 @@ class AreaDetector(ImageChannelMixin, Measurable):
             with self._image_processing_lock:
                 session.updateLiveData(parameters, databuffer, labelbuffers)
 
-    def presetInfo(self):
-        return ("n",)
-
-    def doSetPreset(self, **preset):
+    def _extract_requested_image_count(self, preset):
         if not preset:
             preset = self._lastpreset or {}
-        if "n" in preset:
-            self._lastpreset = {"n": int(preset["n"])}
+        for name in ("n", self.name):
+            if name in preset:
+                return int(preset[name])
+        return None
+
+    def _requested_image_count(self):
+        if self.iscontroller:
+            try:
+                return int(self.preselection)
+            except (TypeError, ValueError):
+                pass
+        if not self._detector_collector_name:
+            return (self._lastpreset or {}).get("n")
+        return None
+
+    def doSetPreset(self, **preset):
+        target = self._extract_requested_image_count(preset)
+        if target is None:
+            return
+        self._lastpreset = {"n": target}
+        self.preselection = target
+        self.iscontroller = True
 
     def setChannelPreset(self, name, value):
-        if name not in {"n", self.name}:
-            raise InvalidValueError(
-                self,
-                f"unrecognised preset {name}, should be one of n or {self.name}",
-            )
-        self.iscontroller = True
-        self.doSetPreset(n=value)
+        ActiveChannel.setChannelPreset(self, name, value)
+        self._lastpreset = {"n": int(value)}
 
     def presetReached(self, name, value, maxage):
         del name
@@ -473,7 +494,7 @@ class AreaDetector(ImageChannelMixin, Measurable):
         if st[0] in self.errorstates:
             raise self.errorstates[st[0]](self, st[1])
         current_count = self.read(0)[0]
-        target = (self._lastpreset or {}).get("n")
+        target = self._requested_image_count()
         if target is not None:
             if current_count < target:
                 return False
@@ -502,7 +523,7 @@ class AreaDetector(ImageChannelMixin, Measurable):
         return int(value)
 
     def doStart(self, **preset):
-        num_images = (self._lastpreset or {}).get("n", None)
+        num_images = self._requested_image_count()
         if num_images == 0:
             return
         elif not num_images or num_images < 0:
@@ -529,6 +550,10 @@ class AreaDetector(ImageChannelMixin, Measurable):
         return self._ad_simulator._image_counter
 
     def doReadArray(self, quality):
+        if quality in (FINAL, INTERRUPTED) and self.status(0)[0] not in self.busystates:
+            self.sync_cached_image(
+                self.read(0)[0], emit_live=False, after_completion=True
+            )
         return self._image_array
 
     def doReadSizex(self):
@@ -608,37 +633,11 @@ class AreaDetectorCollector(Detector):
     }
 
     _hardware_access = False
-    _measurement_started = False
 
     def doPreinit(self, mode):
         for image_channel in self._attached_images:
             image_channel._detector_collector_name = self.name
         super().doPreinit(mode)
-
-    def doPrepare(self):
-        self._measurement_started = False
-        Detector.doPrepare(self)
-
-    def doStart(self):
-        self._measurement_started = True
-        Detector.doStart(self)
-
-    def doFinish(self):
-        try:
-            Detector.doFinish(self)
-        finally:
-            self._measurement_started = False
-
-    def doStop(self):
-        try:
-            Detector.doStop(self)
-        finally:
-            self._measurement_started = False
-
-    def _presetiter(self):
-        for image_channel in self._attached_images:
-            yield (image_channel.name, image_channel, "counts")
-        yield ("live", None, "other")
 
     def get_array_size(self, topic, source):
         for area_detector in self._attached_images:
@@ -658,50 +657,6 @@ class AreaDetectorCollector(Detector):
             if name == "info" or name in self._presetkeys
         }
         Detector.doSetPreset(self, **filtered)
-
-    def doRead(self, maxage=0):
-        return []
-
-    def valueInfo(self):
-        return ()
-
-    def doIsCompleted(self):
-        any_busy = False
-        for ch in self._channels:
-            st = ch.status(0)
-            if st[0] in ch.errorstates:
-                raise ch.errorstates[st[0]](ch, st[1])
-            if st[0] in ch.busystates:
-                any_busy = True
-
-        if not self._measurement_started:
-            return not any_busy
-
-        controller_reached = False
-        for controller in self._controlchannels:
-            for name, value in self._channel_presets.get(controller, ()):
-                if controller.presetReached(name, value, 0):
-                    controller_reached = True
-                    break
-            if controller_reached:
-                break
-        if controller_reached:
-            if not any_busy:
-                # Match the real collector: before FINAL readout, make sure the
-                # attached images have performed their post-completion sync.
-                for image in self._attached_images:
-                    image.sync_cached_image(image.read(0)[0], after_completion=True)
-            return True
-        if any_busy:
-            return False
-        # If nothing is busy anymore, still perform one final sync pass so
-        # readResults(FINAL) sees the last completed frame.
-        for image in self._attached_images:
-            image.sync_cached_image(image.read(0)[0], after_completion=True)
-        return True
-
-    def doReset(self):
-        pass
 
     def arrayInfo(self):
         return tuple(ch.arrayInfo()[0] for ch in self._attached_images)
