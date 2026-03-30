@@ -73,13 +73,13 @@ class LokiBeamstopArmPositioner(MappedController):
         if mapped_value:
             return mapped_value
         if (
-            ArmPositions.Parked in self.mapping.keys()
-            and value > self.mapping[ArmPositions.Parked]
+            ArmPositions.Parked.value in self.mapping.keys()
+            and value > self.mapping[str(ArmPositions.Parked)]
         ):
             return "Above park position"
         if (
-            ArmPositions.InBeam in self.mapping.keys()
-            and value < self.mapping[ArmPositions.InBeam]
+            ArmPositions.InBeam.value in self.mapping.keys()
+            and value < self.mapping[str(ArmPositions.InBeam)]
         ):
             return "Below in-beam position"
         return "In between"
@@ -219,15 +219,15 @@ class LokiBeamstopController(SequencerMixin, MappedMoveable):
 
     def _device_to_park(self, device_name):
         device = self._all_attached[device_name]
-        return SeqDev(device, ArmPositions.Parked)
+        return SeqDev(device, str(ArmPositions.Parked))
 
     def _device_to_in_beam(self, device_name):
         device = self._all_attached[device_name]
-        return SeqDev(device, ArmPositions.InBeam)
+        return SeqDev(device, str(ArmPositions.InBeam))
 
     def _device_to_intermediate(self, device_name):
         device = self._all_attached[device_name]
-        return SeqDev(device, ArmPositions.Intermediate)
+        return SeqDev(device, str(ArmPositions.Intermediate))
 
     def _devices_to_in_beam(self, device_names):
         return tuple(self._device_to_in_beam(name) for name in device_names)
@@ -257,7 +257,7 @@ class LokiBeamstopController(SequencerMixin, MappedMoveable):
     def _get_non_parked_device_names(self):
         all_device_names = set(self._all_attached.keys())
         device_names_in_park = set(
-            self._get_keys_matching_read_value(ArmPositions.Parked)
+            self._get_keys_matching_read_value(str(ArmPositions.Parked))
         )
         return list(all_device_names - device_names_in_park)
 
@@ -277,93 +277,93 @@ class LokiBeamstopController(SequencerMixin, MappedMoveable):
     def _get_mapped_positions(self):
         return {
             "Park all beamstops": (
-                XPositions.Parked,
-                ArmPositions.InBeam,
-                ArmPositions.Parked,
-                ArmPositions.Parked,
-                ArmPositions.Parked,
-                ArmPositions.Parked,
-                ArmPositions.Parked,
+                XPositions.Parked.value,
+                ArmPositions.InBeam.value,
+                ArmPositions.Parked.value,
+                ArmPositions.Parked.value,
+                ArmPositions.Parked.value,
+                ArmPositions.Parked.value,
+                ArmPositions.Parked.value,
             ),
             "Monitor": (
-                XPositions.Pos1,
-                ArmPositions.InBeam,
-                ArmPositions.InBeam,
-                ArmPositions.Parked,
-                ArmPositions.Parked,
-                ArmPositions.Parked,
-                ArmPositions.Parked,
+                XPositions.Pos1.value,
+                ArmPositions.InBeam.value,
+                ArmPositions.InBeam.value,
+                ArmPositions.Parked.value,
+                ArmPositions.Parked.value,
+                ArmPositions.Parked.value,
+                ArmPositions.Parked.value,
             ),
             "Beamstop 2": (
-                XPositions.Pos2,
-                ArmPositions.InBeam,
-                ArmPositions.Parked,
-                ArmPositions.InBeam,
-                ArmPositions.Parked,
-                ArmPositions.Parked,
-                ArmPositions.Parked,
+                XPositions.Pos2.value,
+                ArmPositions.InBeam.value,
+                ArmPositions.Parked.value,
+                ArmPositions.InBeam.value,
+                ArmPositions.Parked.value,
+                ArmPositions.Parked.value,
+                ArmPositions.Parked.value,
             ),
             "Beamstop 2 + monitor": (
-                XPositions.Pos2,
-                ArmPositions.InBeam,
-                ArmPositions.InBeam,
-                ArmPositions.InBeam,
-                ArmPositions.Parked,
-                ArmPositions.Parked,
-                ArmPositions.Parked,
+                XPositions.Pos2.value,
+                ArmPositions.InBeam.value,
+                ArmPositions.InBeam.value,
+                ArmPositions.InBeam.value,
+                ArmPositions.Parked.value,
+                ArmPositions.Parked.value,
+                ArmPositions.Parked.value,
             ),
             "Beamstop 3": (
-                XPositions.Pos3,
-                ArmPositions.InBeam,
-                ArmPositions.Parked,
-                ArmPositions.Parked,
-                ArmPositions.InBeam,
-                ArmPositions.Parked,
-                ArmPositions.Parked,
+                XPositions.Pos3.value,
+                ArmPositions.InBeam.value,
+                ArmPositions.Parked.value,
+                ArmPositions.Parked.value,
+                ArmPositions.InBeam.value,
+                ArmPositions.Parked.value,
+                ArmPositions.Parked.value,
             ),
             "Beamstop 3 + monitor": (
-                XPositions.Pos3,
-                ArmPositions.InBeam,
-                ArmPositions.InBeam,
-                ArmPositions.Parked,
-                ArmPositions.InBeam,
-                ArmPositions.Parked,
-                ArmPositions.Parked,
+                XPositions.Pos3.value,
+                ArmPositions.InBeam.value,
+                ArmPositions.InBeam.value,
+                ArmPositions.Parked.value,
+                ArmPositions.InBeam.value,
+                ArmPositions.Parked.value,
+                ArmPositions.Parked.value,
             ),
             "Beamstop 4": (
-                XPositions.Pos4,
-                ArmPositions.InBeam,
-                ArmPositions.Parked,
-                ArmPositions.Parked,
-                ArmPositions.Parked,
-                ArmPositions.InBeam,
-                ArmPositions.Parked,
+                XPositions.Pos4.value,
+                ArmPositions.InBeam.value,
+                ArmPositions.Parked.value,
+                ArmPositions.Parked.value,
+                ArmPositions.Parked.value,
+                ArmPositions.InBeam.value,
+                ArmPositions.Parked.value,
             ),
             "Beamstop 4 + monitor": (
-                XPositions.Pos4,
-                ArmPositions.InBeam,
-                ArmPositions.InBeam,
-                ArmPositions.Parked,
-                ArmPositions.Parked,
-                ArmPositions.InBeam,
-                ArmPositions.Parked,
+                XPositions.Pos4.value,
+                ArmPositions.InBeam.value,
+                ArmPositions.InBeam.value,
+                ArmPositions.Parked.value,
+                ArmPositions.Parked.value,
+                ArmPositions.InBeam.value,
+                ArmPositions.Parked.value,
             ),
             "Beamstop 5": (
-                XPositions.Pos5,
-                ArmPositions.InBeam,
-                ArmPositions.Parked,
-                ArmPositions.Parked,
-                ArmPositions.Parked,
-                ArmPositions.Parked,
-                ArmPositions.InBeam,
+                XPositions.Pos5.value,
+                ArmPositions.InBeam.value,
+                ArmPositions.Parked.value,
+                ArmPositions.Parked.value,
+                ArmPositions.Parked.value,
+                ArmPositions.Parked.value,
+                ArmPositions.InBeam.value,
             ),
             "Beamstop 5 + monitor": (
-                XPositions.Pos5,
-                ArmPositions.InBeam,
-                ArmPositions.InBeam,
-                ArmPositions.Parked,
-                ArmPositions.Parked,
-                ArmPositions.Parked,
-                ArmPositions.InBeam,
+                XPositions.Pos5.value,
+                ArmPositions.InBeam.value,
+                ArmPositions.InBeam.value,
+                ArmPositions.Parked.value,
+                ArmPositions.Parked.value,
+                ArmPositions.Parked.value,
+                ArmPositions.InBeam.value,
             ),
         }
