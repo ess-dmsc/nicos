@@ -139,11 +139,9 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
         )
 
     def doRead(self, maxage=0):
-        del maxage
         return self._get_snapshot().curvalue
 
     def doReadArray(self, quality):
-        del quality
         return self._get_snapshot().signal
 
     def arrayInfo(self):
@@ -153,7 +151,6 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
         return [self.doReadArray(quality)]
 
     def doStatus(self, maxage=0):
-        del maxage
         return self._get_snapshot().curstatus
 
     def doWriteSelector(self, value):

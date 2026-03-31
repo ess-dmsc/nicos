@@ -509,7 +509,6 @@ class LiveDataCollector(livedata.LiveDataCollector):
         workflow_id: dict | None = None,
         action: str,
     ):
-        del workflow_id
         if not job_id:
             return
         source_name = job_id.get("source_name")

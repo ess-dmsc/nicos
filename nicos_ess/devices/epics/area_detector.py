@@ -540,11 +540,9 @@ class AreaDetector(
         )
 
     def _read_image_counter(self, maxage=0):
-        del maxage
         return int(self._get_pv("readpv"))
 
     def _read_backend_status(self, maxage=0):
-        del maxage
         detector_state = self._get_pv("acquire_status", True)
         alarm_status = STAT_TO_STATUS.get(
             self._get_pv("detector_state.STAT"), status.UNKNOWN
@@ -573,8 +571,7 @@ class AreaDetector(
         elif severity == status.WARN:
             self.log.warning(msg_format, pv_value, stat)
 
-    def doStart(self, **preset):
-        del preset
+    def doStart(self):
         if not self._start_acquisition_cycle():
             return
         self.doAcquire()
@@ -693,7 +690,7 @@ class TimepixDetector(AreaDetector):
         finally:
             self._epics_wrapper.close_subscription(sub)
 
-    def doStart(self, **preset):
+    def doStart(self):
         if self._requested_image_count() == 0:
             return
         self._begin_acquisition_cycle()
@@ -998,7 +995,7 @@ class OrcaFlash4(AreaDetector):
         ):
             self.subarraymode = False
 
-    def doStart(self, **preset):
+    def doStart(self):
         num_images = self._requested_image_count()
 
         if num_images == 0:

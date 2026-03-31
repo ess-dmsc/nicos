@@ -355,7 +355,6 @@ class AreaDetector(AreaDetectorAcquisitionMixin, ImageChannelMixin, ActiveChanne
                 self._ad_simulator.register_status_callback(self.on_status_callback)
 
     def doInit(self, mode):
-        del mode
         self.update_arraydesc()
         self._image_array = np.zeros(self.arraydesc.shape, dtype=self.arraydesc.dtype)
 
@@ -407,14 +406,12 @@ class AreaDetector(AreaDetectorAcquisitionMixin, ImageChannelMixin, ActiveChanne
             createThread(f"get_image_{time.time_ns()}", self.get_image)
 
     def _read_image_counter(self, maxage=0):
-        del maxage
         snapshot = self._simulator_snapshot()
         if snapshot is not None:
             return snapshot.image_counter
         return int(self.curvalue)
 
     def _read_detector_status(self, maxage=0):
-        del maxage
         snapshot = self._simulator_snapshot()
         if snapshot is not None:
             return snapshot.status
@@ -434,11 +431,9 @@ class AreaDetector(AreaDetectorAcquisitionMixin, ImageChannelMixin, ActiveChanne
         self.arraydesc = ArrayDesc(self.name, shape=shape, dtype=np.uint16)
 
     def doStatus(self, maxage=0):
-        del maxage
         return self._read_detector_status()
 
-    def doStart(self, **preset):
-        del preset
+    def doStart(self):
         num_images = self._requested_image_count()
         if num_images == 0:
             return
