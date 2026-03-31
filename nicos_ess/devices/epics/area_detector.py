@@ -1094,10 +1094,6 @@ class AreaDetectorCollector(Detector):
     setup.
     """
 
-    parameter_overrides = {
-        "statustopic": Override(default="", mandatory=False),
-    }
-
     def doPreinit(self, mode):
         for image_channel in self._attached_images:
             image_channel._detector_collector_name = self.name

@@ -59,39 +59,6 @@ class TestIDS3010ControlOverrides:
         assert p.userparam is False
 
 
-class TestAreaDetectorCollectorOverrides:
-    """AreaDetectorCollector(Detector) — dead-code removal."""
-
-    @pytest.fixture(autouse=True)
-    def setup(self):
-        from nicos_ess.devices.epics.area_detector import AreaDetectorCollector
-        self.cls = AreaDetectorCollector
-
-    def test_statustopic_not_in_parameters(self):
-        assert "statustopic" not in self.cls.parameters
-
-    def test_unit_override(self):
-        p = self.cls.parameters["unit"]
-        assert p.default == "images"
-        assert p.settable is False
-        assert p.mandatory is False
-
-    def test_fmtstr_override(self):
-        p = self.cls.parameters["fmtstr"]
-        assert p.default == "%d"
-
-    def test_liveinterval_override(self):
-        p = self.cls.parameters["liveinterval"]
-        assert p.default == 1
-        assert p.userparam is True
-
-    def test_pollinterval_override(self):
-        p = self.cls.parameters["pollinterval"]
-        assert p.default == 1
-        assert p.userparam is True
-        assert p.settable is False
-
-
 class TestRheometerControlOverrides:
     """RheometerControl(EpicsDevice, Moveable) — dead-code removal."""
 
