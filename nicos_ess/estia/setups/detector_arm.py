@@ -16,4 +16,10 @@ devices = dict(
         resetpv=f"{det_arm_root}:ShtErrRst",
         msgtxt=f"{det_arm_root}:ShtMsgTxt",
     ),
+    detector_arm_clutch=device(
+        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
+        description="Detector arm clutch",
+        readpv="ESTIA-DtRot:MC-RotZ01:Mtr-OpenClutch",
+        writepv="ESTIA-DtRot:MC-RotZ01:Mtr-OpenClutch",
+    ),
 )

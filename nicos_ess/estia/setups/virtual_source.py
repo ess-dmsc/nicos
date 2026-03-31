@@ -52,15 +52,4 @@ devices = dict(
         opmode="centered",
         offsets=(0.0, 0.0, 0.0, 0.0, 0.0),
     ),
-    laser=device(
-        "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
-        description="device to turn on and off the VS laser",
-        readpv="ESTIA-SES:Ctrl-IM-100:LaserEnable",
-        writepv="ESTIA-SES:Ctrl-IM-100:LaserEnable",
-    ),
-    laser_readback=device(
-        "nicos_ess.devices.epics.pva.EpicsReadable",
-        description="readback value of the VS laser",
-        readpv="ESTIA-SES:Ctrl-IM-100:LaserEnabled",
-    ),
 )

@@ -243,11 +243,11 @@ class MetrologyScene(QGraphicsScene):
                 qt_polygon, brush=QColor(255, 255, 255, 200)
             )
             if self.selene == 2:
-                text = self.addText("E02-06-%02i-VU" % (group + 1))
-                textH = self.addText("E02-06-%02i-HU" % (group + 1))
+                text = self.addText("E02-12-%02i-VU" % (group + 1))
+                textH = self.addText("E02-12-%02i-HU" % (group + 1))
             else:
-                text = self.addText("E02-02-%02i-VD" % (group + 1))
-                textH = self.addText("E02-02-%02i-HD" % (group + 1))
+                text = self.addText("E02-06-%02i-VD" % (group + 1))
+                textH = self.addText("E02-06-%02i-HD" % (group + 1))
             text.setFont(QFont("sans", 30))
             text.setPos(center_x - text.boundingRect().width() / 2, zpre * 80 - 15)
             text.setDefaultTextColor(QColor(160, 160, 160))
