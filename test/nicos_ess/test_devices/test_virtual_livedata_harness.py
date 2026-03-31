@@ -71,9 +71,6 @@ class TestVirtualDataChannelHarness:
         )
 
         assert device_harness.run_poller(lambda: poller_channel.read()[0]) == daemon_total
-        assert device_harness.run_poller(
-            lambda: poller_channel.arrayInfo()[0].shape
-        ) == device_harness.run_daemon(lambda: daemon_channel.arrayInfo()[0].shape)
 
 
 class TestVirtualLiveDataCollectorHarness:

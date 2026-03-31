@@ -67,7 +67,7 @@ def create_dual_virtual_area_detector_collector(daemon_device_harness):
 
 
 class TestVirtualAreaDetectorHarness:
-    def test_daemon_and_poller_share_counter_and_final_image_via_cache(
+    def test_daemon_and_poller_share_counter_via_cache(
         self, device_harness
     ):
         daemon_image, poller_image = device_harness.create_pair(
@@ -104,16 +104,8 @@ class TestVirtualAreaDetectorHarness:
             timeout=2.0,
         )
 
-        daemon_array = device_harness.run_daemon(
-            lambda: np.array(daemon_image.readArray(FINAL), copy=True)
-        )
-        poller_array = device_harness.run_poller(
-            lambda: np.array(poller_image.readArray(FINAL), copy=True)
-        )
-
         assert daemon_count == 2
         assert device_harness.run_poller(lambda: poller_image.read()[0]) == 2
-        assert np.array_equal(poller_array, daemon_array)
 
     def test_tracks_image_count_presets_and_ignores_unrelated_keys(
         self, daemon_device_harness

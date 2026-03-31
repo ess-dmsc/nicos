@@ -10,7 +10,6 @@ from nicos.core import (
     ArrayDesc,
     Override,
     Param,
-    anytype,
     oneof,
     status,
     tupleof,
@@ -215,13 +214,6 @@ class AreaDetector(epics_area_detector.AreaDetector):
             default=0,
             settable=True,
         ),
-        "curarray": Param(
-            "Store the current detector image",
-            internal=True,
-            type=anytype,
-            default=None,
-            settable=True,
-        ),
     }
 
     parameter_overrides = {
@@ -246,7 +238,6 @@ class AreaDetector(epics_area_detector.AreaDetector):
     def doInit(self, mode):
         self.update_arraydesc()
         self._image_array = np.zeros(self.arraydesc.shape, dtype=self.arraydesc.dtype)
-        self._setROParam("curarray", self._image_array.copy())
 
     def _initialize_ad_simulator(self):
         self._ad_simulator._sizex = int(self.sizex)
@@ -279,10 +270,6 @@ class AreaDetector(epics_area_detector.AreaDetector):
             image_count=image_count,
             emit_live=emit_live,
             completed=completed,
-        )
-        self._setROParam(
-            "curarray",
-            np.array(dataarray, copy=True, order="C"),
         )
         self._setROParam("curvalue", int(image_count))
         return dataarray
@@ -335,7 +322,7 @@ class AreaDetector(epics_area_detector.AreaDetector):
             return self._acquire_status()
         if pvparam == "image_pv":
             if session.sessiontype == POLLER:
-                return self.curarray
+                return self._image_array
             return self._ad_simulator._image
         raise KeyError(pvparam)
 

@@ -7,7 +7,7 @@ from dataclasses import dataclass
 import numpy as np
 from streaming_data_types import serialise_hs00, serialise_hs01
 
-from nicos.core import ArrayDesc, Param, anytype, status, tupleof
+from nicos.core import ArrayDesc, Param, status, tupleof
 from nicos.devices.generic import Detector
 from nicos_ess.devices.datasources import just_bin_it as jbi
 
@@ -285,13 +285,6 @@ class JustBinItImage(jbi.JustBinItImage):
             default=0,
             settable=True,
         ),
-        "curarray": Param(
-            "Store the current histogram data",
-            internal=True,
-            type=anytype,
-            default=None,
-            settable=True,
-        ),
     }
 
     def doPreinit(self, mode):
@@ -306,7 +299,6 @@ class JustBinItImage(jbi.JustBinItImage):
     def doInit(self, mode):
         self._hist_sum = 0
         self._zero_data()
-        self._publish_histogram_state()
 
     @property
     def arraydesc(self):
@@ -322,20 +314,12 @@ class JustBinItImage(jbi.JustBinItImage):
         self._hist_sum = 0
         self._setROParam("curvalue", 0)
         self._setROParam("event_rate", 0.0)
-        self._publish_histogram_state()
         self._update_status(status.OK, "")
 
     def new_messages_callback(self, messages):
         super().new_messages_callback(messages)
         self._setROParam("curvalue", int(self._hist_sum))
         self._setROParam("event_rate", float(self.event_rate))
-        self._publish_histogram_state()
-
-    def _publish_histogram_state(self):
-        self._setROParam(
-            "curarray",
-            np.array(self._hist_data, copy=True, order="C"),
-        )
 
     def _update_status(self, new_status, message):
         self._current_status = (new_status, message)
@@ -345,7 +329,7 @@ class JustBinItImage(jbi.JustBinItImage):
         return [self.curvalue]
 
     def doReadArray(self, quality):
-        return self.curarray
+        return self._hist_data
 
     def doStatus(self, maxage=0):
         return self.curstatus

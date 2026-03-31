@@ -427,49 +427,14 @@ class _SimulatedLiveBackend:
 
 
 class DataChannel(livedata.DataChannel):
-    parameters = {
-        "curarray": Param(
-            "Store the current signal array",
-            internal=True,
-            type=anytype,
-            default=None,
-            settable=True,
-        ),
-        "curarraydesc": Param(
-            "Store the current signal array description",
-            internal=True,
-            type=anytype,
-            default=None,
-            settable=True,
-        ),
-    }
-
     def doPreinit(self, mode):
         super().doPreinit(mode)
         self._setROParam("curstatus", (status.OK, ""))
         self._setROParam("curvalue", 0)
-        self._setROParam("curarray", None)
-        self._setROParam("curarraydesc", self._array_desc.copy())
 
     def doPrepare(self):
         self._array_desc = ArrayDesc(self.name, shape=(), dtype=np.int32)
-        self._setROParam("curarray", None)
-        self._setROParam("curarraydesc", self._array_desc.copy())
         super().doPrepare()
-
-    def update_data_from_da00(self, da00_msg, timestamp_ns):
-        super().update_data_from_da00(da00_msg, timestamp_ns)
-        if self._signal is None:
-            return
-        self._setROParam("curarray", np.array(self._signal, copy=True, order="C"))
-        self._setROParam("curarraydesc", self._array_desc.copy())
-
-    def doReadArray(self, quality):
-        del quality
-        return self.curarray
-
-    def arrayInfo(self):
-        return (self.curarraydesc or self._array_desc,)
 
 
 class LiveDataCollector(livedata.LiveDataCollector):

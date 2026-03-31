@@ -58,7 +58,7 @@ def create_detector(
 
 
 class TestVirtualJustBinItImageHarness:
-    def test_daemon_and_poller_share_histogram_state_via_cache(self, device_harness):
+    def test_daemon_and_poller_share_counter_via_cache(self, device_harness):
         daemon_image, poller_image = device_harness.create_pair(
             just_bin_it.JustBinItImage,
             name="jbi_image",
@@ -96,16 +96,8 @@ class TestVirtualJustBinItImageHarness:
             timeout=2.0,
         )
 
-        daemon_array = device_harness.run_daemon(
-            lambda: np.array(daemon_image.readArray(FINAL), copy=True)
-        )
-        poller_array = device_harness.run_poller(
-            lambda: np.array(poller_image.readArray(FINAL), copy=True)
-        )
-
         assert daemon_total >= 5
         assert device_harness.run_poller(lambda: poller_image.read()[0]) == daemon_total
-        assert np.array_equal(poller_array, daemon_array)
 
 
 class TestVirtualJustBinItDetectorHarness:
