@@ -2,15 +2,15 @@ description = "The slit arrangement with 4 motors"
 prefix = "ESTIA-SpSl:MC-Sl"
 
 devices = dict(
-    blade_l=device(
-        "nicos_ess.devices.epics.pva.motor.EpicsMotor",
-        description="Left blade",
-        motorpv=f"{prefix}Yp:Mtr",
-        visibility=(),
-    ),
     blade_r=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Right blade",
+        motorpv=f"{prefix}Yp:Mtr",
+        visibility=(),
+    ),
+    blade_l=device(
+        "nicos_ess.devices.epics.pva.motor.EpicsMotor",
+        description="Left blade",
         motorpv=f"{prefix}Ym:Mtr",
         visibility=(),
     ),

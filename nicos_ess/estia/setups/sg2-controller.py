@@ -1,6 +1,6 @@
 description = "High-level interface to the Selene Guide 2 components"
 
-includes = ["sg2-cart", "sg2-screwdriver", "sg2-interferometer"]
+includes = ["sg2-measurement-cart", "sg2-screwdriver", "sg2-interferometer"]
 
 display_order = 40  # sort before default devices
 
@@ -12,14 +12,14 @@ devices = dict(
         engaged=-0.02,
         retracted=-27.98,
         delta12=358.7,
-        move_x="robot2_pos",
-        move_z="robot2_vert",
-        adjust1="driver2_2_adjust",
-        approach1="driver2_2_approach",
-        hex_state1="driver2_2_hex_state",
-        adjust2="driver2_1_adjust",
-        approach2="driver2_1_approach",
-        hex_state2="driver2_1_hex_state",
+        move_x="sg2_robot_pos",
+        move_z="sg2_robot_vert",
+        adjust1="sg2_screwdriver_adjust_2",
+        approach1="sg2_screwdriver_approach_2",
+        hex_state1="sg2_screwdriver_hex_state_2",
+        adjust2="sg2_screwdriver_adjust_1",
+        approach2="sg2_screwdriver_approach_1",
+        hex_state2="sg2_screwdriver_hex_state_1",
         vertical_screws=(3, 5, 6),
         unit="Item/Group",
     ),

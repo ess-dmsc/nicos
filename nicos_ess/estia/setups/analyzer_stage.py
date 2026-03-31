@@ -9,7 +9,7 @@ devices = dict(
         has_powerauto=False,
         fmtstr="%.2f",
     ),
-    analyzer_adjustment=device(
+    analyzer_angular_adjustment=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="analyzer angular adjustment",
         motorpv="ESTIA-AnRot:MC-RotY01:Mtr",

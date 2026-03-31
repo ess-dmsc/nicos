@@ -8,28 +8,33 @@ devices = dict(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="M1 Selene1 1-Mover FL-RE-US",
         motorpv=f"{pvprefix_1}01:Mtr",
+        visibility=(),
     ),
     m2_mover_pr_re_ds_1=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="M2 Selene1 1-Mover PR-RE-DS",
         motorpv=f"{pvprefix_1}02:Mtr",
+        visibility=(),
     ),
     m3_mover_pr_li_ds_1=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="M3 Selene1 1-Mover PR-LI-DS",
         motorpv=f"{pvprefix_1}03:Mtr",
+        visibility=(),
     ),
     m4_mover_pr_li_us1_1=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="M4 Selene1 2-Mover PR-LI-US-1",
         motorpv=f"{pvprefix_2}01:Mtr",
+        visibility=(),
     ),
     m5_mover_pr_li_us2_1=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="M5 Selene1 2-Mover PR-LI-US-2",
         motorpv=f"{pvprefix_2}02:Mtr",
+        visibility=(),
     ),
-    mover=device(
+    mover1=device(
         "nicos_ess.estia.devices.mover.SeleneMover",
         description="Selene1 1-Mover",
         s1="m1_mover_fl_re_us_1",

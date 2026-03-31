@@ -73,8 +73,8 @@ class VirtualSource(Moveable):
     def _returnGap(self, pos):
         # [-left, +right, -bottom, +top]
         left, right, bottom, top = pos
-        width = right - left
-        height = top - bottom
+        width = abs((left + right) / 2)
+        height = abs((top + bottom) / 2)
         return [width, height]
 
     def _parseTargets(self, target):
