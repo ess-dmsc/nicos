@@ -1,4 +1,5 @@
 import json
+import threading
 import time
 
 import numpy as np
@@ -447,6 +448,10 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
 
     def doPreinit(self, mode):
         Detector.doPreinit(self, mode)
+        self._ack_thread = None
+        self._response_consumer = None
+        self._command_sender = None
+        self._histogramming_lock = threading.RLock()
 
         if mode == SIMULATION:
             return
@@ -462,8 +467,9 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
     def doPrepare(self):
         self._exit_thread = False
         self._ack_thread = None
-        self._histogramming_started = False
-        self._stop_requested = False
+        with self._histogramming_lock:
+            self._histogramming_started = False
+            self._stop_requested = False
         Detector.doPrepare(self)
 
     def doStart(self, **preset):
@@ -474,8 +480,10 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
         self.log.debug("Requesting just-bin-it to start counting")
 
         self._send_command(self.command_topic, json.dumps(config).encode())
-        self._histogramming_started = True
-        Detector.doStart(self)
+        with self._histogramming_lock:
+            self._histogramming_started = True
+            self._stop_requested = False
+        Detector.doStart(self, **preset)
 
         # Check for acknowledgement of the command being received
         self._ack_thread = createThread(
@@ -505,7 +513,7 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
             # Couldn't start histogramming, so stop the channels etc.
             self._request_histogram_stop()
             for image_channel in self._attached_images:
-                image_channel.doStop()
+                image_channel.stop()
 
     def _handle_message(self, msg):
         if "response" in msg and msg["response"] == "ACK":
@@ -532,18 +540,19 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
             "histograms": histograms,
             # JBI is always started open-ended; NICOS completion decides when
             # to finish the measurement and send the stop command.
-            "start": int(time.time()) * 1000,
+            "start": int(time.time() * 1000),
         }
 
     def _request_histogram_stop(self):
-        if not self._histogramming_started or self._stop_requested:
-            return
-        self._stop_requested = True
+        with self._histogramming_lock:
+            if not self._histogramming_started or self._stop_requested:
+                return
+            self._stop_requested = True
         self._send_command(self.command_topic, b'{"cmd": "stop"}')
 
     def doShutdown(self):
         self._do_stop()
-        if hasattr(self, "_response_consumer"):
+        if self._response_consumer is not None:
             self._response_consumer.close()
 
     def doStop(self):

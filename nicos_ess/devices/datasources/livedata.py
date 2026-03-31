@@ -21,6 +21,7 @@ from __future__ import annotations
 import json
 import threading
 import time
+from dataclasses import dataclass
 from typing import List, Optional, Tuple
 from uuid import uuid4
 
@@ -60,6 +61,15 @@ from .livedata_utils import (
 
 DISCONNECTED_STATE = (status.ERROR, "Disconnected")
 INIT_MESSAGE = "Initializing LiveDataCollector…"
+_UNSET = object()
+
+
+@dataclass(frozen=True)
+class _ChannelSnapshot:
+    signal: Optional[np.ndarray]
+    array_desc: ArrayDesc
+    curvalue: int
+    curstatus: Tuple[int, str]
 
 
 class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
@@ -109,8 +119,17 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
 
     def doPreinit(self, mode):
         self._collector = None  # set by LiveDataCollector
+        self._snapshot_lock = threading.RLock()
         self._signal: Optional[np.ndarray] = None
         self._array_desc = ArrayDesc(self.name, shape=(), dtype=np.int32)
+        self._snapshot = _ChannelSnapshot(
+            signal=None,
+            array_desc=self._array_desc,
+            curvalue=0,
+            curstatus=(status.OK, ""),
+        )
+        self.curvalue = 0
+        self.curstatus = (status.OK, "")
         if session.sessiontype != POLLER:
             self._update_status(status.OK, "")
 
@@ -120,19 +139,22 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
         )
 
     def doRead(self, maxage=0):
-        return self.curvalue
+        del maxage
+        return self._get_snapshot().curvalue
 
     def doReadArray(self, quality):
-        return self._signal
+        del quality
+        return self._get_snapshot().signal
 
     def arrayInfo(self):
-        return (self._array_desc,)
+        return (self._get_snapshot().array_desc,)
 
     def doReadArrays(self, quality):
         return [self.doReadArray(quality)]
 
     def doStatus(self, maxage=0):
-        return self.curstatus
+        del maxage
+        return self._get_snapshot().curstatus
 
     def doWriteSelector(self, value):
         self._selector_obj = Selector.parse_selector_str(value)
@@ -149,8 +171,11 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
         self._update_status(status.BUSY, "Preparing")
 
         # check if a valid selector is set
-        self.curvalue = 0
-        self._signal = None
+        self._store_snapshot(
+            signal=None,
+            array_desc=ArrayDesc(self.name, shape=(), dtype=np.int32),
+            curvalue=0,
+        )
         if not self._selector_obj:
             self.log.warning(
                 "No workflow channel selected for %s. Will not prepare channel.",
@@ -195,8 +220,50 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
         self.selector = target_value
 
     def _update_status(self, new_status, message):
-        self.curstatus = (new_status, message)
-        self._cache.put(self._name, "status", self.curstatus, time.time())
+        snapshot = self._store_snapshot(curstatus=(new_status, message))
+        self._publish_snapshot(snapshot)
+
+    def _get_snapshot(self):
+        if session.sessiontype == POLLER:
+            return _ChannelSnapshot(
+                signal=self._signal,
+                array_desc=self._array_desc,
+                curvalue=self.curvalue,
+                curstatus=self.curstatus,
+            )
+        with self._snapshot_lock:
+            return self._snapshot
+
+    def _store_snapshot(
+        self,
+        *,
+        signal=_UNSET,
+        array_desc=_UNSET,
+        curvalue=_UNSET,
+        curstatus=_UNSET,
+    ):
+        with self._snapshot_lock:
+            current = self._snapshot
+            snapshot = _ChannelSnapshot(
+                signal=current.signal if signal is _UNSET else signal,
+                array_desc=current.array_desc if array_desc is _UNSET else array_desc,
+                curvalue=current.curvalue if curvalue is _UNSET else curvalue,
+                curstatus=current.curstatus if curstatus is _UNSET else curstatus,
+            )
+            self._snapshot = snapshot
+            self._signal = snapshot.signal
+            self._array_desc = snapshot.array_desc
+            self.curvalue = snapshot.curvalue
+            self.curstatus = snapshot.curstatus
+            return snapshot
+
+    def _publish_snapshot(self, snapshot):
+        if session.sessiontype == POLLER or self._cache is None:
+            return
+        timestamp = time.time()
+        for cache_target in (self, self._name):
+            self._cache.put(cache_target, "value", snapshot.curvalue, timestamp)
+            self._cache.put(cache_target, "status", snapshot.curstatus, timestamp)
 
     # Called by collector when a matching DA00 arrives
     def update_data_from_da00(self, da00_msg, timestamp_ns: int):
@@ -269,9 +336,9 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
             # 1D/2D view selection (unchanged from your working version)
             if arr.ndim == 1:
                 x_idx = 0
-                self._signal = np.ascontiguousarray(arr)
+                signal = np.ascontiguousarray(arr)
                 x_labels, x_unit, x_is_time_flag = _labels_from_coord(
-                    _coord_for(sig_axes[x_idx]), arr.shape[0]
+                    _coord_for(sig_axes[x_idx]), signal.shape[0]
                 )
                 labels = [x_labels]
                 plot_type = "hist-1d"
@@ -285,13 +352,13 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
                 view = arr.reshape(
                     dimension_lengths[0], dimension_lengths[1] * dimension_lengths[2]
                 )
-                self._signal = np.ascontiguousarray(view)
+                signal = np.ascontiguousarray(view)
 
                 x_labels, x_unit, x_is_time_flag = _labels_from_coord(
-                    _coord_for(sig_axes[x_idx]), self._signal.shape[1]
+                    _coord_for(sig_axes[x_idx]), signal.shape[1]
                 )
                 y_labels, y_unit, _ = _labels_from_coord(
-                    _coord_for(sig_axes[y_idx]), self._signal.shape[0]
+                    _coord_for(sig_axes[y_idx]), signal.shape[0]
                 )
                 labels = [x_labels, y_labels]
                 plot_type = "hist-3d"
@@ -326,13 +393,13 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
                 view = arr
                 for ax in sorted(reduce_idxs, reverse=True):
                     view = view.sum(axis=ax, dtype=view.dtype)
-                self._signal = np.ascontiguousarray(view)
+                signal = np.ascontiguousarray(view)
 
                 x_labels, x_unit, x_is_time_flag = _labels_from_coord(
-                    _coord_for(sig_axes[x_idx]), self._signal.shape[1]
+                    _coord_for(sig_axes[x_idx]), signal.shape[1]
                 )
                 y_labels, y_unit, _ = _labels_from_coord(
-                    _coord_for(sig_axes[y_idx]), self._signal.shape[0]
+                    _coord_for(sig_axes[y_idx]), signal.shape[0]
                 )
                 labels = [x_labels, y_labels]
                 plot_type = "hist-2d"
@@ -348,13 +415,17 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
             title = (getattr(sig, "label", None) or "").strip() or fallback_title
             signal_unit = getattr(sig, "unit", None) or ""
 
-            self.curvalue = int(self._signal.sum()) if self._signal.size else 0
-            self._array_desc = ArrayDesc(
-                self.name, shape=self._signal.shape, dtype=self._signal.dtype
+            curvalue = int(signal.sum()) if signal.size else 0
+            array_desc = ArrayDesc(self.name, shape=signal.shape, dtype=signal.dtype)
+            snapshot = self._store_snapshot(
+                signal=signal,
+                array_desc=array_desc,
+                curvalue=curvalue,
+                curstatus=(status.BUSY, "Counting"),
             )
-
-            self.poll()
+            self._publish_snapshot(snapshot)
             self._push_to_nicos(
+                signal,
                 plot_type,
                 labels,
                 timestamp_ns,
@@ -364,12 +435,12 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
                 signal_unit=signal_unit,
                 x_is_time=x_is_time_flag,
             )
-            self._update_status(status.BUSY, "Counting")
         except Exception as exc:
             self._update_status(status.ERROR, str(exc))
 
     def _push_to_nicos(
         self,
+        signal: np.ndarray,
         plot_type: str,
         label_arrays: List[np.ndarray],
         timestamp: int,
@@ -380,14 +451,14 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
         signal_unit: Optional[str] = None,
         x_is_time: bool = False,
     ):
-        if self._signal is None:
+        if signal is None:
             return
 
-        databuffer = [byteBuffer(np.ascontiguousarray(self._signal))]
+        databuffer = [byteBuffer(np.ascontiguousarray(signal))]
         datadesc = [
             dict(
-                dtype=self._signal.dtype.str,
-                shape=self._signal.shape,
+                dtype=signal.dtype.str,
+                shape=signal.shape,
                 labels={"x": {"define": "classic"}, "y": {"define": "classic"}},
                 plotcount=1,
                 plot_type=plot_type,
@@ -594,13 +665,13 @@ class LiveDataCollector(Detector):
                 # Route to matching channels
                 self._dispatch_to_channels(timestamp_ns, rk, da)
             except Exception as exc:
-                self.log.warning(f"Could not decode/route DA00: {exc}")
+                self.log.warning("Could not decode/route DA00: %s", exc)
 
         try:
             self._registry.expire_stale()
             self._push_mapping_to_channels()
         except Exception as e:
-            self.log.warning(f"Error expiring stale jobs: {e}")
+            self.log.warning("Error expiring stale jobs: %s", e)
 
     def _on_no_data(self):
         # Nothing special; do not spam cache.
@@ -666,7 +737,7 @@ class LiveDataCollector(Detector):
                 self._push_mapping_to_channels()
 
             except Exception as exc:
-                self.log.warning(f"Bad status message: {exc}")
+                self.log.warning("Bad status message: %s", exc)
             finally:
                 self._status_consumer._consumer.commit(msg, asynchronous=False)
 
@@ -722,25 +793,14 @@ class LiveDataCollector(Detector):
                 if sel.selector_matches(rk):
                     ch.update_data_from_da00(da, timestamp_ns)
 
-    def doStatus(self, maxage=0):
+    def doIsCompleted(self):
         with self._dispatch_lock:
-            return Detector.doStatus(self, maxage)
-
-    def doRead(self, maxage=0):
-        with self._dispatch_lock:
-            return Detector.doRead(self, maxage)
-
-    def doReadArrays(self, quality):
-        with self._dispatch_lock:
-            return Detector.doReadArrays(self, quality)
-
-    def doFinish(self):
-        with self._dispatch_lock:
-            Detector.doFinish(self)
-
-    def doStop(self):
-        with self._dispatch_lock:
-            Detector.doStop(self)
+            st = Detector.status(self, 0)
+            if st[0] in self.busystates:
+                return False
+            if st[0] in self.errorstates:
+                raise self.errorstates[st[0]](self, st[1])
+            return True
 
     def send_job_command(
         self,
@@ -764,12 +824,13 @@ class LiveDataCollector(Detector):
         wait_for_delivery_event = threading.Event()
 
         def _on_delivery(err, msg):
+            del msg
             if err:
-                self.log.warning(f"Job command delivery failed: {err}.")
+                self.log.warning("Job command delivery failed: %s.", err)
             wait_for_delivery_event.set()
 
         try:
-            self.log.info(f"Sending job_command: {payload}")
+            self.log.info("Sending job_command: %s", payload)
             self._producer.produce(
                 self.commands_topic,
                 message=json.dumps(payload).encode("utf-8"),
@@ -780,7 +841,7 @@ class LiveDataCollector(Detector):
             if not wait_for_delivery_event.wait(timeout=5.0):
                 self.log.warning("Job command delivery timed out")
         except Exception as exc:
-            self.log.warning(f"Error sending job_command: {exc}")
+            self.log.warning("Error sending job_command: %s", exc)
 
     # Optionally expose workflow_config sender for rare cases
     def send_workflow_config(self, *, key_source: str, config_json: dict):
@@ -799,7 +860,7 @@ class LiveDataCollector(Detector):
                 key=key,
             )
         except Exception as exc:
-            self.log.warning(f"Error sending workflow_config: {exc}")
+            self.log.warning("Error sending workflow_config: %s", exc)
 
     def list_plot_selection_items(self) -> list[dict]:
         """Return a list of simple, user-friendly plot selections discovered so far.
@@ -884,7 +945,7 @@ class LiveDataCollector(Detector):
                 try:
                     ch.mapping = mapping
                 except Exception:
-                    self.log.warning(f"Could not update mapping for channel {ch.name}")
+                    self.log.warning("Could not update mapping for channel %s", ch.name)
 
     def get_current_mapping(self) -> dict:
         """Return the current label->selector mapping as built for channels."""

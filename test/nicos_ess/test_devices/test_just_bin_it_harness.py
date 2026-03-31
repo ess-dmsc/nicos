@@ -13,6 +13,7 @@ from nicos_ess.devices.timer import TimerChannel
 from test.nicos_ess.test_devices.doubles import (
     StubKafkaProducer,
     patch_kafka_stubs,
+    stop_messages,
     wait_until_complete,
 )
 
@@ -126,15 +127,6 @@ def push_image_sum(image, total, delay=0.05):
     thread = threading.Thread(target=_update, daemon=True)
     thread.start()
     return thread
-
-
-def stop_messages(producer):
-    return [
-        message
-        for message in producer.messages
-        if message["message"] == b'{"cmd": "stop"}'
-    ]
-
 
 class TestJustBinItImageHarness:
     def test_array_info_returns_tuple_of_arraydescs(
@@ -278,3 +270,25 @@ class TestJustBinItDetectorHarness:
         detector.resume()
 
         detector.finish()
+
+    def test_ack_timeout_requests_stop_and_stops_images(
+        self, daemon_device_harness, monkeypatch
+    ):
+        producer = StubKafkaProducer()
+        patch_kafka_stubs(
+            monkeypatch,
+            just_bin_it,
+            producer=producer,
+            status_module=status_handler,
+        )
+        image, _timer, detector = create_detector(daemon_device_harness, False)
+
+        image.doStart()
+        with detector._histogramming_lock:
+            detector._histogramming_started = True
+            detector._stop_requested = False
+
+        detector._check_for_ack("missing", -1)
+
+        assert image.status()[0] == status.OK
+        assert len(stop_messages(producer)) == 1

@@ -29,8 +29,18 @@ from test.nicos_ess.test_devices.doubles.mapped_controller_devices import (
     HarnessLinearAxis,
     HarnessMoveableNoPrecision,
 )
+from test.nicos_ess.test_devices.doubles.streaming_messages import (
+    DEFAULT_JOB_ID,
+    DEFAULT_WORKFLOW_ID,
+    make_da00_message,
+    make_jbi_histogram,
+    start_daemon,
+    stop_messages,
+)
 
 __all__ = [
+    "DEFAULT_JOB_ID",
+    "DEFAULT_WORKFLOW_ID",
     "FakeEpicsBackend",
     "HarnessLinearAxis",
     "HarnessMoveableNoPrecision",
@@ -42,9 +52,13 @@ __all__ = [
     "StubKafkaSubscriber",
     "analog_moveable_config",
     "mapped_config",
+    "make_da00_message",
+    "make_jbi_histogram",
     "patch_kafka_stubs",
     "patch_create_wrapper",
     "seed_epics_jog_motor_defaults",
+    "start_daemon",
+    "stop_messages",
     "string_moveable_config",
     "wait_for",
     "wait_until_complete",

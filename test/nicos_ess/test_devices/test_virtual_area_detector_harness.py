@@ -1,6 +1,8 @@
 import numpy as np
 
-from nicos.core import status
+import pytest
+
+from nicos.core import InvalidValueError, status
 from nicos.core.constants import FINAL, INTERMEDIATE, LIVE
 from nicos_ess.devices.virtual.area_detector import AreaDetector, AreaDetectorCollector
 from test.nicos_ess.test_devices.doubles import wait_for, wait_until_complete
@@ -119,6 +121,12 @@ class TestVirtualAreaDetectorHarness:
         image.setPreset()
         assert image.preset() == {"n": 2}
 
+    def test_rejects_negative_image_count_presets(self, daemon_device_harness):
+        image, _collector = create_virtual_area_detector(daemon_device_harness)
+
+        with pytest.raises(InvalidValueError):
+            image.setPreset(n=-1)
+
     def test_channel_preset_uses_image_counter_progress(self, daemon_device_harness):
         image, _collector = create_virtual_area_detector(daemon_device_harness)
 
@@ -128,7 +136,7 @@ class TestVirtualAreaDetectorHarness:
         assert image.preselection == 2
         assert image.presetReached("n", 2, 0) is False
 
-        image._ad_simulator._image_counter = 2
+        image._ad_simulator.set_test_state(image_counter=2)
         assert image.presetReached("n", 2, 0) is True
 
 
@@ -163,7 +171,7 @@ class TestVirtualAreaDetectorCollectorHarness:
         assert collector.preset() == {"virtual_camera": 2}
         assert image.preset() == {"n": 2}
 
-    def test_unknown_preset_keys_do_not_reconfigure_image_channel(
+    def test_timer_only_preset_demotes_image_channel_to_follower(
         self, daemon_device_harness
     ):
         image, collector = create_virtual_area_detector(daemon_device_harness)
@@ -172,6 +180,7 @@ class TestVirtualAreaDetectorCollectorHarness:
         collector.setPreset(t=1)
 
         assert image.preset() == {"n": 2}
+        assert not image.iscontroller
         assert collector.preset() == {"t": 1}
 
     def test_does_not_persist_live_as_previous_preset(self, daemon_device_harness):
@@ -253,14 +262,16 @@ class TestVirtualAreaDetectorCollectorHarness:
 
         collector.setPreset(virtual_camera=2)
         collector.prepare()
-        image._setROParam("curstatus", (status.BUSY, "Acquiring"))
-        image._ad_simulator._image = final_image.ravel()
-        image._ad_simulator._image_counter = 2
+        image._ad_simulator.set_test_state(
+            image=final_image.ravel(),
+            image_counter=2,
+            detector_status=(status.BUSY, "Acquiring"),
+        )
 
         assert not np.array_equal(image.readArray(FINAL), final_image)
         assert collector.isCompleted() is False
 
-        image._setROParam("curstatus", (status.OK, "Done"))
+        image._ad_simulator.set_test_state(detector_status=(status.OK, "Done"))
         assert collector.isCompleted() is True
 
         _scalars, arrays = collector.readResults(FINAL)
@@ -281,14 +292,35 @@ class TestVirtualAreaDetectorCollectorHarness:
 
         collector.setPreset(virtual_camera_primary=1, virtual_camera_secondary=3)
         collector.prepare()
-        primary._setROParam("curstatus", (status.OK, "Done"))
-        primary._ad_simulator._image = final_image.ravel()
-        primary._ad_simulator._image_counter = 1
-        secondary._setROParam("curstatus", (status.BUSY, "Acquiring"))
-        secondary._ad_simulator._image_counter = 0
+        primary._ad_simulator.set_test_state(
+            image=final_image.ravel(),
+            image_counter=1,
+            detector_status=(status.OK, "Done"),
+        )
+        secondary._ad_simulator.set_test_state(
+            image_counter=0,
+            detector_status=(status.BUSY, "Acquiring"),
+        )
 
         assert collector.isCompleted() is True
         assert np.array_equal(primary.readArray(FINAL), final_image)
+
+    def test_reset_clears_cached_completion_state(self, daemon_device_harness):
+        image, collector = create_virtual_area_detector(daemon_device_harness)
+
+        collector.setPreset(virtual_camera=1)
+        collector.prepare()
+        collector.start()
+        wait_until_complete(collector, timeout=3.0)
+
+        assert collector.isCompleted() is True
+
+        image.reset()
+        image._ad_simulator.set_test_state(
+            image_counter=0, detector_status=(status.BUSY, "Acquiring")
+        )
+
+        assert image.isCompleted() is False
 
     def test_preset_namespace_stays_image_only(self, daemon_device_harness):
         _image, collector = create_virtual_area_detector(daemon_device_harness)

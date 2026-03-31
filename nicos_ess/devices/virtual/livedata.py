@@ -433,7 +433,7 @@ class DataChannel(livedata.DataChannel):
         self._setROParam("curvalue", 0)
 
     def doPrepare(self):
-        self._array_desc = ArrayDesc(self.name, shape=(), dtype=np.int32)
+        self._store_snapshot(array_desc=ArrayDesc(self.name, shape=(), dtype=np.int32))
         super().doPrepare()
 
 

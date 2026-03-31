@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from nicos.core import ArrayDesc, NicosError, status
+from nicos.core import ArrayDesc, InvalidValueError, NicosError, status
 from nicos.core.constants import FINAL, INTERMEDIATE, LIVE
 from nicos.devices.epics.pva import caproto, p4p
 from nicos_ess.devices.epics.area_detector import (
@@ -207,6 +207,15 @@ class TestAreaDetectorHarness:
         detector.setPreset()
         assert detector.preset() == {"n": 3}
 
+    def test_rejects_negative_image_count_presets(
+        self, daemon_device_harness, fake_backend
+    ):
+        del fake_backend
+        detector = create_area_detector(daemon_device_harness)
+
+        with pytest.raises(InvalidValueError):
+            detector.setPreset(n=-1)
+
     def test_channel_preset_uses_image_counter_progress(
         self, daemon_device_harness, fake_backend
     ):
@@ -276,6 +285,34 @@ class TestAreaDetectorHarness:
 
         with pytest.raises(NicosError):
             detector.isCompleted()
+
+    def test_reset_clears_cached_completion_state(
+        self, daemon_device_harness, fake_backend
+    ):
+        detector = create_area_detector(daemon_device_harness)
+
+        detector.start(n=1)
+        fake_backend.values[f"{PV_ROOT}NumImagesCounter_RBV"] = 1
+        fake_backend.values[f"{PV_ROOT}AcquireBusy"] = "Done"
+
+        assert detector.isCompleted() is True
+
+        detector.reset()
+        fake_backend.values[f"{PV_ROOT}NumImagesCounter_RBV"] = 0
+        fake_backend.values[f"{PV_ROOT}AcquireBusy"] = "Busybusybusy"
+
+        assert detector.isCompleted() is False
+
+    def test_zero_size_image_keeps_positive_plot_update_delay(
+        self, daemon_device_harness, fake_backend
+    ):
+        detector = create_area_detector(daemon_device_harness)
+        fake_backend.values[f"{PV_ROOT}MaxSizeX_RBV"] = 0
+
+        detector.update_arraydesc()
+
+        assert detector.arrayInfo()[0].shape == (2048, 0)
+        assert detector._plot_update_delay > 0
 
 
 class TestTimepixDetectorHarness:
@@ -360,7 +397,7 @@ class TestOrcaFlash4Harness:
 
 
 class TestAreaDetectorCollectorHarness:
-    def test_replaces_collector_preset_but_keeps_image_channel_state(
+    def test_replaces_collector_preset_and_demotes_image_channel(
         self, daemon_device_harness, fake_backend
     ):
         del fake_backend
@@ -379,6 +416,7 @@ class TestAreaDetectorCollectorHarness:
         collector.setPreset()
         assert collector.preset() == {"t": 1}
         assert image.preset() == {"n": 4}
+        assert not image.iscontroller
 
     def test_accepts_image_count_alias_from_underlying_channel(
         self, daemon_device_harness, fake_backend

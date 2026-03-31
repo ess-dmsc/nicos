@@ -16,6 +16,10 @@ serialiser_by_schema = {
     "hs01": serialise_hs01,
 }
 
+_MIN_EMIT_INTERVAL_S = 0.05
+_MAX_EMIT_INTERVAL_S = 0.2
+_LIVE_INTERVAL_DIVISOR = 4.0
+
 
 def _stable_seed(*parts):
     digest = hashlib.sha256("::".join(map(str, parts)).encode("utf-8")).digest()
@@ -208,7 +212,15 @@ class _SimulatedJustBinItRun:
             return state
 
     def _run(self):
-        interval = max(0.05, min(float(self.detector.liveinterval) / 4.0, 0.2))
+        # Emit more often than Detector.liveinterval so intermediate updates feel
+        # responsive, but clamp the rate to keep the simulator predictable.
+        interval = max(
+            _MIN_EMIT_INTERVAL_S,
+            min(
+                float(self.detector.liveinterval) / _LIVE_INTERVAL_DIVISOR,
+                _MAX_EMIT_INTERVAL_S,
+            ),
+        )
         while not self._stop_event.wait(interval):
             for image in self.detector._attached_images:
                 state = self._state_for(image)
@@ -345,15 +357,18 @@ class JustBinItDetector(jbi.JustBinItDetector):
         Detector.doPreinit(self, mode)
         self._ack_thread = None
         self._exit_thread = False
-        self._histogramming_started = False
-        self._stop_requested = False
+        self._histogramming_lock = threading.RLock()
+        with self._histogramming_lock:
+            self._histogramming_started = False
+            self._stop_requested = False
         self._sim_run = _SimulatedJustBinItRun(self)
 
     def doPrepare(self):
         self._exit_thread = False
         self._ack_thread = None
-        self._histogramming_started = False
-        self._stop_requested = False
+        with self._histogramming_lock:
+            self._histogramming_started = False
+            self._stop_requested = False
         self._sim_run.stop(emit_final=False)
         self._sim_run.reset()
         Detector.doPrepare(self)
@@ -362,13 +377,16 @@ class JustBinItDetector(jbi.JustBinItDetector):
         unique_id = f"nicos-{self.name}-{int(time.time())}"
         self._create_config(unique_id)
         Detector.doStart(self)
-        self._histogramming_started = True
+        with self._histogramming_lock:
+            self._histogramming_started = True
+            self._stop_requested = False
         self._sim_run.start()
 
     def _request_histogram_stop(self):
-        if not self._histogramming_started or self._stop_requested:
-            return
-        self._stop_requested = True
+        with self._histogramming_lock:
+            if not self._histogramming_started or self._stop_requested:
+                return
+            self._stop_requested = True
         self._sim_run.stop(emit_final=True)
 
     def doShutdown(self):

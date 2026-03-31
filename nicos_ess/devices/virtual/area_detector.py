@@ -1,5 +1,7 @@
+import hashlib
 import threading
 import time
+from dataclasses import dataclass
 
 import numpy as np
 
@@ -14,6 +16,7 @@ from nicos.core import (
     status,
     tupleof,
 )
+from nicos.devices.generic import ActiveChannel, ImageChannelMixin
 from nicos.utils import createThread
 from nicos_ess.devices.epics import area_detector as epics_area_detector
 
@@ -25,10 +28,36 @@ FLATFIELD = epics_area_detector.FLATFIELD
 DARKFIELD = epics_area_detector.DARKFIELD
 INVALID = epics_area_detector.INVALID
 AreaDetectorCollector = epics_area_detector.AreaDetectorCollector
+AreaDetectorAcquisitionMixin = epics_area_detector.AreaDetectorAcquisitionMixin
+
+
+def _stable_seed(name):
+    digest = hashlib.sha256(name.encode("utf-8")).digest()
+    return int.from_bytes(digest[:8], "big", signed=False)
+
+
+@dataclass(frozen=True)
+class _SimulatorSnapshot:
+    image_mode: str
+    binning: str
+    max_sizex: int
+    max_sizey: int
+    sizex: int
+    sizey: int
+    startx: int
+    starty: int
+    acquiretime: float
+    acquireperiod: float
+    num_images: int
+    image_counter: int
+    status: tuple[int, str]
+    image: np.ndarray
 
 
 class FakeAreaDetector:
-    def __init__(self):
+    def __init__(self, *, seed):
+        self._state_lock = threading.RLock()
+        self._rng = np.random.default_rng(seed)
         self._image_mode = "single"
         self._binning = "1x1"
         self._max_sizex = 1024
@@ -41,17 +70,16 @@ class FakeAreaDetector:
         self._acquireperiod = 1.0
         self._num_images = 1
         self._image_counter = 0
+        self._status = (status.OK, "Done")
+        self._image = np.zeros((self._max_sizey, self._max_sizex), dtype=np.uint16)
         self._callback = None
         self._status_callback = None
         self._stop_event = threading.Event()
         self._running_flag = threading.Event()
-        self._running_flag.clear()
         self._run_thread = threading.Thread(target=self._run, daemon=True)
         self._status_thread = threading.Thread(target=self._update_status, daemon=True)
         self._run_thread.start()
         self._status_thread.start()
-        self._status = (status.OK, "Done")
-        self._image = np.zeros((self._max_sizey, self._max_sizex), dtype=np.uint16)
 
     def register_callback(self, callback):
         self._callback = callback
@@ -60,67 +88,166 @@ class FakeAreaDetector:
         self._status_callback = callback
 
     def _emit_status(self):
-        if self._status_callback is not None:
-            self._status_callback()
+        callback = self._status_callback
+        if callback is not None:
+            callback()
+
+    def _emit_image(self):
+        callback = self._callback
+        if callback is not None:
+            callback()
+
+    def snapshot(self):
+        with self._state_lock:
+            return _SimulatorSnapshot(
+                image_mode=self._image_mode,
+                binning=self._binning,
+                max_sizex=self._max_sizex,
+                max_sizey=self._max_sizey,
+                sizex=self._sizex,
+                sizey=self._sizey,
+                startx=self._startx,
+                starty=self._starty,
+                acquiretime=self._acquiretime,
+                acquireperiod=self._acquireperiod,
+                num_images=self._num_images,
+                image_counter=self._image_counter,
+                status=self._status,
+                image=self._image,
+            )
+
+    def set_geometry(self, *, sizex=None, sizey=None, startx=None, starty=None):
+        with self._state_lock:
+            if sizex is not None:
+                self._sizex = int(sizex)
+            if sizey is not None:
+                self._sizey = int(sizey)
+            if startx is not None:
+                self._startx = int(startx)
+            if starty is not None:
+                self._starty = int(starty)
+
+    def set_timing(self, *, acquiretime=None, acquireperiod=None):
+        with self._state_lock:
+            if acquiretime is not None:
+                self._acquiretime = float(acquiretime)
+            if acquireperiod is not None:
+                self._acquireperiod = float(acquireperiod)
+
+    def set_mode(self, *, image_mode=None, num_images=None, binning=None):
+        with self._state_lock:
+            if image_mode is not None:
+                self._image_mode = str(image_mode)
+            if num_images is not None:
+                self._num_images = int(num_images)
+            if binning is not None:
+                self._binning = str(binning)
+
+    def set_test_state(self, *, image=None, image_counter=None, detector_status=None):
+        with self._state_lock:
+            if image is not None:
+                self._image = np.ascontiguousarray(image)
+            if image_counter is not None:
+                self._image_counter = int(image_counter)
+            if detector_status is not None:
+                self._status = detector_status
+        if detector_status is not None:
+            self._emit_status()
 
     def shutdown(self):
         self._stop_event.set()
         self._running_flag.clear()
+        self._run_thread.join(timeout=1.0)
+        self._status_thread.join(timeout=1.0)
 
-    def _update_status(self):
-        while not self._stop_event.is_set():
-            if self._running_flag.is_set():
-                self._status = (status.BUSY, "Acquiring")
-            else:
-                self._status = (status.OK, "Done")
-            self._emit_status()
-            self._stop_event.wait(1.0)
+    def _set_status(self, detector_status):
+        with self._state_lock:
+            self._status = detector_status
+        self._emit_status()
 
     def acquire(self):
-        self._running_flag.set()
-        self._image_counter = 0
-        self._status = (status.BUSY, "Acquiring")
+        with self._state_lock:
+            self._running_flag.set()
+            self._image_counter = 0
+            self._status = (status.BUSY, "Acquiring")
         self._emit_status()
 
     def stop(self):
         self._running_flag.clear()
-        self._status = (status.OK, "Done")
-        self._emit_status()
+        self._set_status((status.OK, "Done"))
+
+    def _update_status(self):
+        while not self._stop_event.is_set():
+            snapshot = self.snapshot()
+            if self._running_flag.is_set():
+                if snapshot.status[0] != status.ERROR:
+                    self._set_status((status.BUSY, "Acquiring"))
+                else:
+                    self._emit_status()
+            elif snapshot.status[0] == status.BUSY:
+                self._set_status((status.OK, "Done"))
+            else:
+                self._emit_status()
+            self._stop_event.wait(1.0)
 
     def _run(self):
         while not self._stop_event.is_set():
-            if self._running_flag.is_set():
-                self._status = (status.BUSY, "Acquiring")
-                self._emit_status()
-                self._stop_event.wait(self._acquireperiod)
-                if self._stop_event.is_set():
-                    break
-                self._gen_image()
-                self._emit_status()
+            if not self._running_flag.is_set():
+                self._stop_event.wait(0.01)
+                continue
 
-                if self._image_mode == "single":
-                    self._running_flag.clear()
-                    self._status = (status.OK, "Done")
-                    self._emit_status()
-                elif self._image_mode == "multiple":
-                    if self._image_counter >= self._num_images:
-                        self._running_flag.clear()
-                        self._status = (status.OK, "Done")
-                        self._emit_status()
-            else:
-                self._status = (status.OK, "Done")
+            snapshot = self.snapshot()
+            if self._stop_event.wait(snapshot.acquireperiod):
+                break
 
-            self._stop_event.wait(0.01)
+            try:
+                image = self._generate_image(snapshot)
+            except ValueError as error:
+                self._running_flag.clear()
+                self._set_status((status.ERROR, str(error)))
+                continue
 
-    def _gen_image(self):
-        y = np.linspace(0, self._max_sizey - 1, self._max_sizey)
-        x = np.linspace(0, self._max_sizex - 1, self._max_sizex)
+            with self._state_lock:
+                self._image = np.ascontiguousarray(
+                    image.astype(np.uint16, copy=False).ravel()
+                )
+                self._image_counter += 1
+                image_counter = self._image_counter
+                image_mode = self._image_mode
+                num_images = self._num_images
+            self._emit_image()
+
+            if image_mode == "single":
+                self._running_flag.clear()
+                self._set_status((status.OK, "Done"))
+            elif image_mode == "multiple" and image_counter >= num_images:
+                self._running_flag.clear()
+                self._set_status((status.OK, "Done"))
+
+    def _generate_image(self, snapshot):
+        if snapshot.sizex < 0 or snapshot.sizey < 0:
+            raise ValueError("Image size must be >= 0")
+        if snapshot.startx < 0 or snapshot.starty < 0:
+            raise ValueError("Image start offsets must be >= 0")
+        if snapshot.startx + snapshot.sizex > snapshot.max_sizex:
+            raise ValueError("Image X range exceeds detector bounds")
+        if snapshot.starty + snapshot.sizey > snapshot.max_sizey:
+            raise ValueError("Image Y range exceeds detector bounds")
+
+        binning_factor = int(snapshot.binning[0])
+        if binning_factor > 1 and (
+            snapshot.sizex % binning_factor or snapshot.sizey % binning_factor
+        ):
+            raise ValueError("Image size must be divisible by the binning factor")
+
+        y = np.linspace(0, snapshot.max_sizey - 1, snapshot.max_sizey)
+        x = np.linspace(0, snapshot.max_sizex - 1, snapshot.max_sizex)
         x, y = np.meshgrid(x, y)
 
-        center_x = self._max_sizex / 2
-        center_y = self._max_sizey / 2 + self._max_sizey * 0.1
-        sigma_x = self._max_sizex / 8
-        sigma_y = self._max_sizey / 4
+        center_x = snapshot.max_sizex / 2
+        center_y = snapshot.max_sizey / 2 + snapshot.max_sizey * 0.1
+        sigma_x = snapshot.max_sizex / 8
+        sigma_y = snapshot.max_sizey / 4
 
         image = np.exp(
             -(
@@ -128,37 +255,28 @@ class FakeAreaDetector:
                 + ((y - center_y) ** 2) / (2 * sigma_y**2)
             )
         )
-        image += np.abs(np.random.normal(0, 0.1, image.shape))
-        image *= 100 * self._acquiretime
-        image *= np.random.uniform(0.8, 1.2)
+        image += np.abs(self._rng.normal(0, 0.1, image.shape))
+        image *= 100 * snapshot.acquiretime
+        image *= self._rng.uniform(0.8, 1.2)
 
-        try:
-            image = image[
-                self._starty : self._starty + self._sizey,
-                self._startx : self._startx + self._sizex,
-            ]
-        except Exception:
-            return
-
-        binning_factor = int(self._binning[0])
-        if binning_factor > 1:
+        image = image[
+            snapshot.starty : snapshot.starty + snapshot.sizey,
+            snapshot.startx : snapshot.startx + snapshot.sizex,
+        ]
+        if binning_factor > 1 and image.size:
             image = image.reshape(
-                self._sizey // binning_factor,
+                snapshot.sizey // binning_factor,
                 binning_factor,
-                self._sizex // binning_factor,
+                snapshot.sizex // binning_factor,
                 binning_factor,
             ).mean(axis=(1, 3))
-
-        self._image = image.astype(np.uint16, copy=False).ravel()
-        self._image_counter += 1
-        if self._callback:
-            self._callback()
+        return image
 
 
-class AreaDetector(epics_area_detector.AreaDetector):
+class AreaDetector(AreaDetectorAcquisitionMixin, ImageChannelMixin, ActiveChannel):
     """
-    Virtual area detector that reuses the shared area detector logic while
-    replacing EPICS transport with an in-process simulator.
+    Virtual area detector with an in-process simulator and shared acquisition
+    semantics matching the EPICS-backed area detector implementation.
     """
 
     parameters = {
@@ -217,143 +335,133 @@ class AreaDetector(epics_area_detector.AreaDetector):
     }
 
     parameter_overrides = {
-        "pv_root": Override(default="SIM:AD:", mandatory=False, userparam=False),
-        "image_pv": Override(default="SIM:AD:IMAGE", mandatory=False, userparam=False),
+        "presetaliases": Override(default=["n"], mandatory=False),
     }
 
     hardware_access = False
 
     def doPreinit(self, mode):
-        self._image_processing_lock = threading.RLock()
-        self._ad_simulator = FakeAreaDetector()
-        self._initialize_ad_simulator()
-        self._setROParam("curstatus", (status.OK, ""))
+        self._init_acquisition_state()
+        self._current_status = (status.OK, "")
+        self._setROParam("curstatus", self._current_status)
         self._setROParam("curvalue", 0)
-        if mode == SIMULATION:
-            return
+
+        self._ad_simulator = None
         if session.sessiontype != POLLER:
-            self._ad_simulator.register_callback(self.on_image_callback)
-            self._ad_simulator.register_status_callback(self.on_status_callback)
+            self._ad_simulator = FakeAreaDetector(seed=_stable_seed(self.name))
+            self._configure_simulator_from_params()
+            if mode != SIMULATION:
+                self._ad_simulator.register_callback(self.on_image_callback)
+                self._ad_simulator.register_status_callback(self.on_status_callback)
 
     def doInit(self, mode):
+        del mode
         self.update_arraydesc()
         self._image_array = np.zeros(self.arraydesc.shape, dtype=self.arraydesc.dtype)
 
-    def _initialize_ad_simulator(self):
-        self._ad_simulator._sizex = int(self.sizex)
-        self._ad_simulator._sizey = int(self.sizey)
-        self._ad_simulator._startx = int(self.startx)
-        self._ad_simulator._starty = int(self.starty)
-        self._ad_simulator._acquiretime = self.acquiretime
-        self._ad_simulator._acquireperiod = self.acquireperiod
-        self._ad_simulator._num_images = int(self.numimages)
-        self._ad_simulator._image_mode = self.imagemode
-        self._ad_simulator._binning = self.binning
+    def _configure_simulator_from_params(self):
+        if self._ad_simulator is None:
+            return
+        self._ad_simulator.set_geometry(
+            sizex=int(self.sizex),
+            sizey=int(self.sizey),
+            startx=int(self.startx),
+            starty=int(self.starty),
+        )
+        self._ad_simulator.set_timing(
+            acquiretime=self.acquiretime,
+            acquireperiod=self.acquireperiod,
+        )
+        self._ad_simulator.set_mode(
+            image_mode=self.imagemode,
+            num_images=int(self.numimages),
+            binning=self.binning,
+        )
 
     def _update_status(self, new_status, message):
-        self._setROParam("curstatus", (new_status, message))
+        self._current_status = (new_status, message)
+        self._setROParam("curstatus", self._current_status)
+
+    def _update_counter(self, image_count):
+        self._setROParam("curvalue", int(image_count))
+
+    def _simulator_snapshot(self):
+        if self._ad_simulator is None:
+            return None
+        return self._ad_simulator.snapshot()
 
     def on_status_callback(self):
-        new_status, message = self._ad_simulator._status
-        self._update_status(new_status, message)
-        self._setROParam("curvalue", self._ad_simulator._image_counter)
+        snapshot = self._simulator_snapshot()
+        if snapshot is None:
+            return
+        self._update_status(*snapshot.status)
+        self._update_counter(snapshot.image_counter)
 
     def on_image_callback(self):
-        new_status, message = self._ad_simulator._status
-        self._update_status(new_status, message)
-        self.log.info("Image acquired")
+        snapshot = self._simulator_snapshot()
+        if snapshot is None:
+            return
+        self._update_status(*snapshot.status)
+        self._update_counter(snapshot.image_counter)
         if time.monotonic() >= self._last_update + self._plot_update_delay:
             createThread(f"get_image_{time.time_ns()}", self.get_image)
 
-    def _refresh_image(self, *, image_count, emit_live, completed):
-        dataarray = super()._refresh_image(
-            image_count=image_count,
-            emit_live=emit_live,
-            completed=completed,
-        )
-        self._setROParam("curvalue", int(image_count))
-        return dataarray
+    def _read_image_counter(self, maxage=0):
+        del maxage
+        snapshot = self._simulator_snapshot()
+        if snapshot is not None:
+            return snapshot.image_counter
+        return int(self.curvalue)
 
-    def _epics_status_tuple(self):
+    def _read_detector_status(self, maxage=0):
+        del maxage
+        snapshot = self._simulator_snapshot()
+        if snapshot is not None:
+            return snapshot.status
         return self.curstatus
 
-    def _epics_alarm_status(self):
-        current_status = self._epics_status_tuple()[0]
-        if current_status == status.UNKNOWN:
-            return 17
-        if current_status >= status.ERROR:
-            return 9
-        return 0
-
-    def _epics_alarm_severity(self):
-        current_status = self._epics_status_tuple()[0]
-        if current_status == status.UNKNOWN:
-            return 3
-        if current_status == status.WARN:
-            return 1
-        if current_status >= status.ERROR:
-            return 2
-        return 0
-
-    def _acquire_status(self):
-        current_status, message = self._epics_status_tuple()
-        if current_status == status.BUSY:
-            return message or "Acquiring"
-        if current_status == status.OK:
-            return message or "Done"
-        return message or "Error"
-
-    def _get_pv(self, pvparam, as_string=False):
-        if pvparam == "max_size_x":
-            return self._ad_simulator._max_sizex
-        if pvparam == "max_size_y":
-            return self._ad_simulator._max_sizey
-        if pvparam == "data_type":
-            return "UInt16"
-        if pvparam == "readpv":
-            if session.sessiontype == POLLER:
-                return self.curvalue
-            return self._ad_simulator._image_counter
-        if pvparam == "detector_state.STAT":
-            return self._epics_alarm_status()
-        if pvparam == "detector_state.SEVR":
-            return self._epics_alarm_severity()
-        if pvparam == "acquire_status":
-            return self._acquire_status()
-        if pvparam == "image_pv":
-            if session.sessiontype == POLLER:
-                return self._image_array
-            return self._ad_simulator._image
-        raise KeyError(pvparam)
-
-    def _put_pv(self, pvparam, value, wait=False):
-        if pvparam != "acquire":
-            raise KeyError(pvparam)
-        if value:
-            self._ad_simulator.acquire()
-        else:
-            self._ad_simulator.stop()
+    def _fetch_image_array(self):
+        snapshot = self._simulator_snapshot()
+        if snapshot is not None:
+            return snapshot.image
+        return self._image_array
 
     def update_arraydesc(self):
         shape = (int(self.sizey), int(self.sizex))
         binning_factor = int(self.binning[0])
         shape = (shape[0] // binning_factor, shape[1] // binning_factor)
-        self._plot_update_delay = (shape[0] * shape[1]) / 2097152.0
+        self._update_plot_delay(shape)
         self.arraydesc = ArrayDesc(self.name, shape=shape, dtype=np.uint16)
 
+    def doStatus(self, maxage=0):
+        del maxage
+        return self._read_detector_status()
+
     def doStart(self, **preset):
+        del preset
         num_images = self._requested_image_count()
         if num_images == 0:
             return
-        if not num_images or num_images < 0:
-            self._ad_simulator._image_mode = "continuous"
-        elif num_images == 1:
-            self._ad_simulator._image_mode = "single"
-            self._ad_simulator._num_images = 1
-        else:
-            self._ad_simulator._image_mode = "multiple"
-            self._ad_simulator._num_images = int(num_images)
-        super().doStart()
+
+        if self._ad_simulator is not None:
+            if num_images is None:
+                self._ad_simulator.set_mode(image_mode="continuous")
+            elif num_images == 1:
+                self._ad_simulator.set_mode(image_mode="single", num_images=1)
+            else:
+                self._ad_simulator.set_mode(
+                    image_mode="multiple",
+                    num_images=int(num_images),
+                )
+
+        if not self._start_acquisition_cycle():
+            return
+        if self._ad_simulator is not None:
+            self._ad_simulator.acquire()
+
+    def doStop(self):
+        if self._ad_simulator is not None:
+            self._ad_simulator.stop()
 
     def _limit_size(self, value, max_value):
         if value > max_value:
@@ -366,65 +474,96 @@ class AreaDetector(epics_area_detector.AreaDetector):
         return int(value)
 
     def doReadSizex(self):
-        return self._ad_simulator._sizex
+        snapshot = self._simulator_snapshot()
+        return snapshot.sizex if snapshot is not None else int(self.sizex)
 
     def doWriteSizex(self, value):
-        self._ad_simulator._sizex = self._limit_size(
-            value, self._ad_simulator._max_sizex
-        )
+        value = self._limit_size(value, self.maxsizex)
+        if self._ad_simulator is not None:
+            self._ad_simulator.set_geometry(sizex=value)
 
     def doReadSizey(self):
-        return self._ad_simulator._sizey
+        snapshot = self._simulator_snapshot()
+        return snapshot.sizey if snapshot is not None else int(self.sizey)
 
     def doWriteSizey(self, value):
-        self._ad_simulator._sizey = self._limit_size(
-            value, self._ad_simulator._max_sizey
-        )
+        value = self._limit_size(value, self.maxsizey)
+        if self._ad_simulator is not None:
+            self._ad_simulator.set_geometry(sizey=value)
 
     def doReadStartx(self):
-        return self._ad_simulator._startx
+        snapshot = self._simulator_snapshot()
+        return snapshot.startx if snapshot is not None else int(self.startx)
 
     def doWriteStartx(self, value):
-        self._ad_simulator._startx = self._limit_start(value)
+        value = self._limit_start(value)
+        if self._ad_simulator is not None:
+            self._ad_simulator.set_geometry(startx=value)
 
     def doReadStarty(self):
-        return self._ad_simulator._starty
+        snapshot = self._simulator_snapshot()
+        return snapshot.starty if snapshot is not None else int(self.starty)
 
     def doWriteStarty(self, value):
-        self._ad_simulator._starty = self._limit_start(value)
+        value = self._limit_start(value)
+        if self._ad_simulator is not None:
+            self._ad_simulator.set_geometry(starty=value)
 
     def doReadAcquiretime(self):
-        return self._ad_simulator._acquiretime
+        snapshot = self._simulator_snapshot()
+        return snapshot.acquiretime if snapshot is not None else float(self.acquiretime)
 
     def doWriteAcquiretime(self, value):
-        self._ad_simulator._acquiretime = value
+        if self._ad_simulator is not None:
+            self._ad_simulator.set_timing(acquiretime=value)
 
     def doReadAcquireperiod(self):
-        return self._ad_simulator._acquireperiod
+        snapshot = self._simulator_snapshot()
+        if snapshot is not None:
+            return snapshot.acquireperiod
+        return float(self.acquireperiod)
 
     def doWriteAcquireperiod(self, value):
-        self._ad_simulator._acquireperiod = value
+        if self._ad_simulator is not None:
+            self._ad_simulator.set_timing(acquireperiod=value)
 
     def doReadNumimages(self):
-        return self._ad_simulator._num_images
+        snapshot = self._simulator_snapshot()
+        return snapshot.num_images if snapshot is not None else int(self.numimages)
 
     def doWriteNumimages(self, value):
-        self._ad_simulator._num_images = int(value)
+        if self._ad_simulator is not None:
+            self._ad_simulator.set_mode(num_images=int(value))
 
     def doWriteImagemode(self, value):
-        self._ad_simulator._image_mode = value
+        if self._ad_simulator is not None:
+            self._ad_simulator.set_mode(image_mode=value)
 
     def doReadImagemode(self):
-        return self._ad_simulator._image_mode
+        snapshot = self._simulator_snapshot()
+        return snapshot.image_mode if snapshot is not None else self.imagemode
 
     def doReadBinning(self):
-        return self._ad_simulator._binning
+        snapshot = self._simulator_snapshot()
+        return snapshot.binning if snapshot is not None else self.binning
 
     def doWriteBinning(self, value):
-        self._ad_simulator._binning = value
+        if self._ad_simulator is not None:
+            self._ad_simulator.set_mode(binning=value)
 
     def get_topic_and_source(self):
         return "some_topic", "some_source"
 
+    @property
+    def maxsizex(self):
+        snapshot = self._simulator_snapshot()
+        return snapshot.max_sizex if snapshot is not None else 1024
+
+    @property
+    def maxsizey(self):
+        snapshot = self._simulator_snapshot()
+        return snapshot.max_sizey if snapshot is not None else 1024
+
     def doShutdown(self):
-        self._ad_simulator.shutdown()
+        if self._ad_simulator is not None:
+            self._ad_simulator.shutdown()
