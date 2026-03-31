@@ -333,7 +333,7 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
                     return np.ascontiguousarray(mids), unit, is_time
                 return np.arange(dim_len, dtype=np.float64), unit, is_time
 
-            # 1D/2D view selection (unchanged from your working version)
+            # 1D/2D view selection
             if arr.ndim == 1:
                 x_idx = 0
                 signal = np.ascontiguousarray(arr)
@@ -345,7 +345,7 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
                 axis_names = [sig_axes[x_idx], "Counts"]
                 axis_units = [x_unit, (getattr(sig, "unit", None) or "")]
 
-            # special way to handle estia without breaking bifrost and other instuments
+            # special way to handle estia without breaking bifrost and other instruments
             elif arr.ndim == 3 and all(label in sig_axes for label in estia_labels):
                 y_idx, x_idx = 0, 1
                 dimension_lengths = [arr.shape[i] for i in range(arr.ndim)]

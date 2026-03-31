@@ -376,7 +376,7 @@ class JustBinItDetector(jbi.JustBinItDetector):
     def doStart(self, **preset):
         unique_id = f"nicos-{self.name}-{int(time.time())}"
         self._create_config(unique_id)
-        Detector.doStart(self)
+        Detector.doStart(self, **preset)
         with self._histogramming_lock:
             self._histogramming_started = True
             self._stop_requested = False
