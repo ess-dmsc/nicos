@@ -27,7 +27,7 @@ class VirtualSource(Moveable):
     parameters = {
         "opmode": Param(
             "Mode of operation",
-            type=oneof("4blades", "4blades_opposite", "centered"),
+            type=oneof("4blades", "4blades_opposite", "centered", "offcentered"),
             settable=True,
         ),
         "fmtstr_map": Param(
@@ -38,9 +38,10 @@ class VirtualSource(Moveable):
             mandatory=False,
             userparam=False,
             default={
-                "4blades": "%.2f %.2f %.2f %.2f %.2f",
-                "4blades_opposite": "%.2f %.2f %.2f %.2f %.2f",
+                "4blades": "%.2f, %.2f, %.2f, %.2f, %.2f",
+                "4blades_opposite": "%.2f, %.2f, %.2f, %.2f, %.2f",
                 "centered": "(%.2f mm x %.2f mm) %.2f deg",
+                "offcentered": "(%.2f, %.2f) %.2f mm x %.2f mm, %.2f deg",
             },
         ),
         "offsets": Param(
@@ -72,13 +73,6 @@ class VirtualSource(Moveable):
         for blade, blade_offset in zip(slitBlades, offset[:-1]):
             self._adevs["slit"]._adevs[blade]._setROParam("offset", blade_offset)
 
-    def _returnGap(self, pos):
-        # [-left, +right, -bottom, +top]
-        left, right, bottom, top = pos
-        width = abs((left + right) / 2)
-        height = abs((top + bottom) / 2)
-        return [width, height]
-
     def _parseTargets(self, target):
         # angle target must be split from slit target since it is an independent attachment
         if self.opmode == "centered":
@@ -87,6 +81,7 @@ class VirtualSource(Moveable):
             return [target[:-1], target[4]]
 
     def doStart(self, target):
+        print(f"{self._parseTargets(target)}")
         for name, pos in zip(self.devices, self._parseTargets(target)):
             self._adevs[name].start(pos)
 
@@ -102,11 +97,22 @@ class VirtualSource(Moveable):
         positions = self._adevs["slit"]._doReadPositions(maxage)
         angle = self._adevs["rot"].read(maxage)
 
+        # [-left, +right, -bottom, +top]
+        left, right, bottom, top = positions
+
         if self.opmode == "centered":
-            width, height = self._returnGap(positions)
+            width = right - left
+            height = top - bottom
+
             return [width, height, angle]
+        if self.opmode == "offcentered":
+            centerx = abs((left + right) / 2)
+            centery = abs((top + bottom) / 2)
+            width = right - left
+            height = top - bottom
+
+            return [centerx, centery, width, height, angle]
         else:
-            left, right, bottom, top = positions
             if self.opmode == "4blades_opposite":
                 left *= -1
                 bottom *= -1
@@ -118,6 +124,14 @@ class VirtualSource(Moveable):
     def valueInfo(self):
         if self.opmode == "centered":
             return (
+                Value("Slit Width", unit="mm", fmtstr="%.3f"),
+                Value("Slit Height", unit="mm", fmtstr="%.3f"),
+                Value("Angle", unit="deg", fmtstr="%.3f"),
+            )
+        if self.opmode == "offcentered":
+            return (
+                Value("Center-x", unit="mm", fmtstr="%.3f"),
+                Value("Center-y", unit="mm", fmtstr="%.3f"),
                 Value("Slit Width", unit="mm", fmtstr="%.3f"),
                 Value("Slit Height", unit="mm", fmtstr="%.3f"),
                 Value("Angle", unit="deg", fmtstr="%.3f"),
