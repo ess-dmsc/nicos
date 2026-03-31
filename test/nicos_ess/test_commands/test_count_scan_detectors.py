@@ -32,12 +32,10 @@ session_setup = None
 WORKFLOW_ID = WorkflowId(
     instrument="dummy",
     namespace="detector_data",
-    name="panel_0_xy",
+    name="panel_0_tof",
     version=1,
 )
 JOB_ID = JobId(source_name="panel_0", job_number="job-1")
-OUTPUT_NAME = "current"
-SELECTOR = f"{WORKFLOW_ID}@{JOB_ID.source_name}#{JOB_ID.job_number}/{OUTPUT_NAME}"
 
 
 def start_daemon(target):
@@ -82,15 +80,18 @@ def jbi_stop_messages(producer):
     ]
 
 
-def make_da00_message(total):
+def make_da00_message(output_name, total):
     source_name = json.dumps(
         {
             "workflow_id": asdict(WORKFLOW_ID),
             "job_id": asdict(JOB_ID),
-            "output_name": OUTPUT_NAME,
+            "output_name": output_name,
         }
     )
-    signal = np.array([1, 2, total - 3], dtype=np.int32)
+    first = total // 3
+    second = total // 3
+    third = total - first - second
+    signal = np.array([first, second, third], dtype=np.int32)
     return serialise_da00(
         source_name=source_name,
         timestamp_ns=123456789,
@@ -101,7 +102,7 @@ def make_da00_message(total):
                 shape=signal.shape,
                 axes=["tof"],
                 unit="counts",
-                label="Detector signal",
+                label=f"Detector signal {output_name}",
             ),
             Variable(
                 name="tof",
@@ -155,53 +156,135 @@ class TestAreaDetectorCountScan:
         session.unloadSetup()
         session.loadSetup("ess_count_scan_area_detector", {})
         session.updateLiveData = lambda *args, **kwargs: None
-        session.experiment.setDetectors(
-            [session.getDevice("timedet"), session.getDevice("area_detector")]
-        )
+        session.experiment.setDetectors([session.getDevice("area_detector")])
         yield
         session.experiment.detlist = []
         session.experiment.envlist = []
         session.unloadSetup()
 
-    def test_count_accepts_area_detector_preset_alongside_timer(self, session):
+    def test_count_accepts_timer_and_area_detector_preset(self, session):
         result = count(t=0.05, camera=2)
+        detector = session.getDevice("area_detector")
 
-        assert result == [0.05, 2]
+        assert len(result) == 2
+        assert 0 <= result[0] < 0.05
+        assert result[1] == 2
+        assert tuple(ch.name for ch in detector._controlchannels) == (
+            "area_timer",
+            "camera",
+        )
         assert session.getDevice("camera").read()[0] == 2
 
     def test_count_accepts_area_detector_image_count_alias(self, session):
-        result = count(t=0.05, n=2)
+        result = count(n=2)
+        detector = session.getDevice("area_detector")
 
-        assert result == [0.05, 2]
+        assert len(result) == 2
+        assert result[1] == 2
+        assert tuple(ch.name for ch in detector._controlchannels) == ("camera",)
         assert session.getDevice("camera").read()[0] == 2
 
-    def test_scan_accepts_area_detector_preset_alongside_timer(self, session):
+    def test_scan_runs_against_area_detector_with_timer_and_image(self, session):
         motor = session.getDevice("motor")
 
         scan(motor, [0, 1], t=0.05, camera=1)
         dataset = session.experiment.data.getLastScans()[-1]
 
         assert dataset.devvaluelists == [[0.0], [1.0]]
-        assert [value.name for value in dataset.detvalueinfo] == ["timer", "camera"]
+        assert [value.name for value in dataset.detvalueinfo] == [
+            "area_timer",
+            "camera",
+        ]
         assert session.getDevice("camera").read()[0] == 1
 
     def test_count_keeps_image_channel_state_when_only_timer_key_changes(
         self, session
     ):
-        result_1 = count(t=0.05, camera=2)
+        result_1 = count(camera=2)
         result_2 = count(t=0.02)
         area_detector_after_timer_only = session.getDevice("area_detector").preset()
         camera_after_timer_only = session.getDevice("camera").preset()
-        result_3 = count(t=0.03, camera=1)
+        result_3 = count(camera=1)
         result_4 = count()
 
-        assert result_1 == [0.05, 2]
-        assert result_2 == [0.02, 2]
-        assert result_3 == [0.03, 1]
-        assert result_4 == [0.03, 1]
+        assert result_1[1] == 2
+        assert result_2[1] >= 2
+        assert result_3[1] == 1
+        assert result_4[1] == 1
         assert area_detector_after_timer_only == {"t": 0.02}
         assert camera_after_timer_only == {"n": 2}
         assert self.acquire_targets == [2, 2, 1, 1]
+        assert session.getDevice("camera").read()[0] == 1
+
+
+class TestVirtualAreaDetectorCountScan:
+    @pytest.fixture(autouse=True)
+    def prepare(self, session):
+        session.unloadSetup()
+        session.loadSetup("ess_count_scan_virtual_area_detector", {})
+        session.updateLiveData = lambda *args, **kwargs: None
+        camera = session.getDevice("camera")
+        camera.sizex = 32
+        camera.sizey = 32
+        camera.acquiretime = 0.01
+        camera.acquireperiod = 0.01
+        session.experiment.setDetectors([session.getDevice("area_detector")])
+        yield
+        session.experiment.detlist = []
+        session.experiment.envlist = []
+        session.unloadSetup()
+
+    def test_count_accepts_timer_and_area_detector_preset(self, session):
+        result = count(t=0.5, camera=2)
+        detector = session.getDevice("area_detector")
+
+        assert len(result) == 2
+        assert 0 <= result[0] < 0.5
+        assert result[1] == 2
+        assert tuple(ch.name for ch in detector._controlchannels) == (
+            "area_timer",
+            "camera",
+        )
+        assert session.getDevice("camera").read()[0] == 2
+
+    def test_count_accepts_area_detector_image_count_alias(self, session):
+        result = count(n=2)
+        detector = session.getDevice("area_detector")
+
+        assert len(result) == 2
+        assert result[1] == 2
+        assert tuple(ch.name for ch in detector._controlchannels) == ("camera",)
+        assert session.getDevice("camera").read()[0] == 2
+
+    def test_scan_runs_against_area_detector_with_timer_and_image(self, session):
+        motor = session.getDevice("motor")
+
+        scan(motor, [0, 1], t=0.5, camera=1)
+        dataset = session.experiment.data.getLastScans()[-1]
+
+        assert dataset.devvaluelists == [[0.0], [1.0]]
+        assert [value.name for value in dataset.detvalueinfo] == [
+            "area_timer",
+            "camera",
+        ]
+        assert session.getDevice("camera").read()[0] == 1
+
+    def test_count_keeps_image_channel_state_when_only_timer_key_changes(
+        self, session
+    ):
+        result_1 = count(camera=2)
+        result_2 = count(t=0.2)
+        area_detector_after_timer_only = session.getDevice("area_detector").preset()
+        camera_after_timer_only = session.getDevice("camera").preset()
+        result_3 = count(camera=1)
+        result_4 = count()
+
+        assert result_1[1] == 2
+        assert result_2[1] >= 2
+        assert result_3[1] == 1
+        assert result_4[1] == 1
+        assert area_detector_after_timer_only == {"t": 0.2}
+        assert camera_after_timer_only == {"n": 2}
         assert session.getDevice("camera").read()[0] == 1
 
 
@@ -235,14 +318,19 @@ class TestJustBinItCountScan:
             self.controller_names.append(
                 tuple(ch.name for ch in device._controlchannels)
             )
-            image = device._attached_images[0]
+
             counter = device._attached_counters[0]
-            image_target = None
             counter_target = None
-            if image in device._channel_presets:
-                image_target = device._channel_presets[image][0][1]
             if counter in device._channel_presets:
                 counter_target = device._channel_presets[counter][0][1]
+
+            selected_image = None
+            image_target = None
+            for image in device._attached_images:
+                if image in device._channel_presets:
+                    selected_image = image
+                    image_target = device._channel_presets[image][0][1]
+                    break
 
             def publish_counter():
                 time.sleep(0.02)
@@ -250,12 +338,12 @@ class TestJustBinItCountScan:
 
             def publish_histogram():
                 time.sleep(0.02)
-                message = make_jbi_histogram(image, total=image_target)
-                image.new_messages_callback([(123456789, message)])
+                message = make_jbi_histogram(selected_image, total=image_target)
+                selected_image.new_messages_callback([(123456789, message)])
 
             if counter_target is not None:
                 start_daemon(publish_counter)
-            if image_target is not None:
+            if selected_image is not None:
                 start_daemon(publish_histogram)
 
         monkeypatch.setattr(just_bin_it.JustBinItDetector, "doStart", simulate_start)
@@ -269,108 +357,66 @@ class TestJustBinItCountScan:
         session.experiment.envlist = []
         session.unloadSetup()
 
-    def test_count_runs_against_just_bin_it_with_counter_preset(self, session):
-        result = count(n=7)
-
+    def test_count_accepts_timer_and_image_preset_on_one_detector(self, session):
+        result = count(t=0.05, jbi_image_fast=5)
         config = json.loads(self.producer.messages[0]["message"])
-        assert len(result) == 3
-        assert result[1] == 7
-        assert result[2] == 0
-        assert session.getDevice("pulse_counter").read()[0] == 7
+
+        assert len(result) == 4
+        assert 0 <= result[0] < 0.05
+        assert result[1:] == [0, 5, 0]
+        assert self.controller_names == [("jbi_timer", "jbi_image_fast")]
         assert config["input_schema"] == "ev44"
         assert config["output_schema"] == "hs01"
         assert "start" in config
         assert "interval" not in config
 
+    def test_count_runs_against_just_bin_it_with_counter_preset(self, session):
+        result = count(n=7)
+
+        assert len(result) == 4
+        assert result[1:] == [7, 0, 0]
+        assert self.controller_names == [("pulse_counter",)]
+        assert session.getDevice("pulse_counter").read()[0] == 7
+
     def test_scan_runs_against_just_bin_it_with_hs01_payloads(self, session):
         motor = session.getDevice("motor")
 
-        scan(motor, [0, 1], jbi_image=5)
+        scan(motor, [0, 1], t=0.05, jbi_image_fast=5)
         dataset = session.experiment.data.getLastScans()[-1]
 
         assert dataset.devvaluelists == [[0.0], [1.0]]
         assert [value.name for value in dataset.detvalueinfo] == [
-            "timer",
+            "jbi_timer",
             "pulse_counter",
-            "jbi_image",
+            "jbi_image_fast",
+            "jbi_image_slow",
         ]
-        assert session.getDevice("jbi_image").read()[0] == 5
+        assert session.getDevice("jbi_image_fast").read()[0] == 5
 
     def test_count_switches_between_counter_timer_and_image_presets(self, session):
         result_1 = count(n=7)
         result_2 = count(t=0.05)
-        result_3 = count(jbi_image=3)
+        result_3 = count(jbi_image_fast=3)
         result_4 = count()
 
-        assert result_1[1:] == [7, 0]
-        assert result_2[1:] == [0, 0]
-        assert result_3[1:] == [0, 3]
-        assert result_4[1:] == [0, 3]
+        assert result_1[1:] == [7, 0, 0]
+        assert result_2[1:] == [0, 0, 0]
+        assert result_3[1:] == [0, 3, 0]
+        assert result_4[1:] == [0, 3, 0]
         assert self.controller_names == [
             ("pulse_counter",),
-            ("timer",),
-            ("jbi_image",),
-            ("jbi_image",),
+            ("jbi_timer",),
+            ("jbi_image_fast",),
+            ("jbi_image_fast",),
         ]
-
-
-class TestJustBinItMultiImageCountScan:
-    @pytest.fixture(autouse=True)
-    def prepare(self, session, monkeypatch):
-        self.controller_names = []
-        producer = patch_kafka_stubs(
-            monkeypatch,
-            just_bin_it,
-            status_module=status_handler,
-        )
-
-        original_do_start = just_bin_it.JustBinItDetector.doStart
-
-        def simulate_start(device, **preset):
-            original_do_start(device, **preset)
-            config = json.loads(producer.messages[-1]["message"])
-            device._response_consumer.push_message(
-                json.dumps(
-                    {"msg_id": config["msg_id"], "response": "ACK"}
-                ).encode()
-            )
-            self.controller_names.append(
-                tuple(ch.name for ch in device._controlchannels)
-            )
-            image_by_name = {image.name: image for image in device._attached_images}
-            fast_target = device._channel_presets[
-                image_by_name["jbi_image_fast"]
-            ][0][1]
-
-            def publish_fast_histogram():
-                time.sleep(0.02)
-                fast_image = image_by_name["jbi_image_fast"]
-                message = make_jbi_histogram(fast_image, total=fast_target)
-                fast_image.new_messages_callback([(123456789, message)])
-
-            start_daemon(publish_fast_histogram)
-
-        monkeypatch.setattr(just_bin_it.JustBinItDetector, "doStart", simulate_start)
-
-        session.unloadSetup()
-        session.loadSetup("ess_count_scan_just_bin_it_multi_image", {})
-        session.experiment.setDetectors([session.getDevice("jbi_detector")])
-        self.producer = producer
-        yield
-        session.experiment.detlist = []
-        session.experiment.envlist = []
-        session.unloadSetup()
 
     def test_count_completes_when_first_image_preset_reaches_target(self, session):
         result = count(jbi_image_fast=5, jbi_image_slow=9)
 
-        config = json.loads(self.producer.messages[0]["message"])
-        assert result == [5, 0]
+        assert result[1:] == [0, 5, 0]
         assert self.controller_names == [("jbi_image_fast", "jbi_image_slow")]
         assert session.getDevice("jbi_image_fast").read()[0] == 5
         assert session.getDevice("jbi_image_slow").read()[0] == 0
-        assert "start" in config
-        assert "interval" not in config
         assert len(jbi_stop_messages(self.producer)) == 1
 
     def test_scan_completes_each_point_when_first_image_preset_reaches_target(
@@ -383,6 +429,8 @@ class TestJustBinItMultiImageCountScan:
 
         assert dataset.devvaluelists == [[0.0], [1.0]]
         assert [value.name for value in dataset.detvalueinfo] == [
+            "jbi_timer",
+            "pulse_counter",
             "jbi_image_fast",
             "jbi_image_slow",
         ]
@@ -393,6 +441,66 @@ class TestJustBinItMultiImageCountScan:
         assert session.getDevice("jbi_image_fast").read()[0] == 5
         assert session.getDevice("jbi_image_slow").read()[0] == 0
         assert len(jbi_stop_messages(self.producer)) == 2
+
+
+class TestVirtualJustBinItCountScan:
+    @pytest.fixture(autouse=True)
+    def prepare(self, session):
+        session.unloadSetup()
+        session.loadSetup("ess_count_scan_virtual_just_bin_it", {})
+        session.updateLiveData = lambda *args, **kwargs: None
+        session.experiment.setDetectors([session.getDevice("jbi_detector")])
+        yield
+        session.experiment.detlist = []
+        session.experiment.envlist = []
+        session.unloadSetup()
+
+    def test_count_accepts_timer_and_image_preset_on_one_detector(self, session):
+        result = count(t=1.0, jbi_image_fast=5)
+        detector = session.getDevice("jbi_detector")
+
+        assert len(result) == 4
+        assert 0 <= result[0] < 1.0
+        assert result[2] >= 5
+        assert tuple(ch.name for ch in detector._controlchannels) == (
+            "jbi_timer",
+            "jbi_image_fast",
+        )
+
+    def test_count_runs_against_virtual_just_bin_it_with_counter_preset(self, session):
+        result = count(n=20)
+        detector = session.getDevice("jbi_detector")
+
+        assert len(result) == 4
+        assert result[1] == 20
+        assert tuple(ch.name for ch in detector._controlchannels) == ("pulse_counter",)
+
+    def test_scan_runs_against_virtual_just_bin_it_with_image_presets(self, session):
+        motor = session.getDevice("motor")
+
+        scan(motor, [0, 1], t=1.0, jbi_image_fast=5)
+        dataset = session.experiment.data.getLastScans()[-1]
+
+        assert dataset.devvaluelists == [[0.0], [1.0]]
+        assert [value.name for value in dataset.detvalueinfo] == [
+            "jbi_timer",
+            "pulse_counter",
+            "jbi_image_fast",
+            "jbi_image_slow",
+        ]
+        assert session.getDevice("jbi_image_fast").read()[0] >= 5
+
+    def test_count_completes_when_first_image_preset_reaches_target(self, session):
+        result = count(jbi_image_fast=5, jbi_image_slow=1_000_000)
+        detector = session.getDevice("jbi_detector")
+
+        assert len(result) == 4
+        assert result[2] >= 5
+        assert result[3] < 1_000_000
+        assert tuple(ch.name for ch in detector._controlchannels) == (
+            "jbi_image_fast",
+            "jbi_image_slow",
+        )
 
 
 class TestLiveDataCountScan:
@@ -410,18 +518,33 @@ class TestLiveDataCountScan:
             self.controller_names.append(
                 tuple(ch.name for ch in device._controlchannels)
             )
+
+            current_channel = session.getDevice("livedata_current")
             total = None
-            for channel_presets in device._channel_presets.values():
-                if channel_presets:
-                    total = channel_presets[0][1]
-                    break
+            if current_channel in device._channel_presets:
+                total = int(device._channel_presets[current_channel][0][1])
+            elif "n" in (device._lastpreset or {}):
+                total = int(device._lastpreset["n"])
+            elif "livedata_current" in (device._lastpreset or {}):
+                total = int(device._lastpreset["livedata_current"])
             if total is None:
-                total = (device._lastpreset or {}).get("n", 6)
-            self.published_totals.append(total)
+                total = 6
+            cumulative_total = total + 3
+            self.published_totals.append((total, cumulative_total))
 
             def publish_da00():
                 time.sleep(0.02)
-                device._on_data_messages([(123456789, make_da00_message(total=total))])
+                device._on_data_messages(
+                    [
+                        (123456789, make_da00_message("current", total=total)),
+                        (
+                            123456790,
+                            make_da00_message(
+                                "cumulative", total=cumulative_total
+                            ),
+                        ),
+                    ]
+                )
 
             start_daemon(publish_da00)
 
@@ -430,89 +553,70 @@ class TestLiveDataCountScan:
         session.unloadSetup()
         session.loadSetup("ess_count_scan_livedata", {})
         session.updateLiveData = lambda *args, **kwargs: None
-        for channel_name in ("livedata_primary", "livedata_secondary", "livedata_roi"):
-            session.getDevice(channel_name).selector = SELECTOR
         session.experiment.setDetectors([session.getDevice("livedata_detector")])
         yield
         session.experiment.detlist = []
         session.experiment.envlist = []
         session.unloadSetup()
 
-    def test_count_runs_against_livedata_with_da00_payloads(self, session):
+    def test_count_accepts_timer_and_current_output_preset(self, session):
+        result = count(t=0.05, livedata_current=6)
+        detector = session.getDevice("livedata_detector")
+
+        assert len(result) == 3
+        assert 0 <= result[0] < 0.05
+        assert result[1:] == [6, 9]
+        assert tuple(ch.name for ch in detector._controlchannels) == (
+            "livedata_timer",
+            "livedata_current",
+        )
+        assert session.getDevice("livedata_current").read()[0] == 6
+        assert session.getDevice("livedata_cumulative").read()[0] == 9
+
+    def test_count_runs_against_livedata_with_count_alias(self, session):
         result = count(n=6)
         detector = session.getDevice("livedata_detector")
 
         assert len(result) == 3
-        assert result == [6, 6, 6]
+        assert result[1:] == [6, 9]
         assert tuple(ch.name for ch in detector._controlchannels) == (
-            "livedata_primary",
+            "livedata_current",
         )
-        assert session.getDevice("livedata_primary").read()[0] == 6
-        assert session.getDevice("livedata_secondary").read()[0] == 6
-        assert session.getDevice("livedata_roi").read()[0] == 6
+        assert session.getDevice("livedata_current").read()[0] == 6
+        assert session.getDevice("livedata_cumulative").read()[0] == 9
 
     def test_scan_runs_against_livedata_with_da00_payloads(self, session):
         motor = session.getDevice("motor")
 
-        scan(motor, [0, 1], n=6)
+        scan(motor, [0, 1], t=0.05, n=6)
         dataset = session.experiment.data.getLastScans()[-1]
 
         assert dataset.devvaluelists == [[0.0], [1.0]]
         assert [value.name for value in dataset.detvalueinfo] == [
-            "livedata_primary",
-            "livedata_secondary",
-            "livedata_roi",
+            "livedata_timer",
+            "livedata_current",
+            "livedata_cumulative",
         ]
-        assert session.getDevice("livedata_primary").read()[0] == 6
+        assert session.getDevice("livedata_current").read()[0] == 6
+        assert session.getDevice("livedata_cumulative").read()[0] == 9
 
     def test_count_reuses_latest_livedata_preset_across_multiple_calls(self, session):
         result_1 = count(n=6)
-        result_2 = count(livedata_secondary=4)
-        result_3 = count()
+        result_2 = count(t=0.05)
+        result_3 = count(livedata_current=4)
+        result_4 = count()
 
-        assert result_1 == [6, 6, 6]
-        assert result_2 == [4, 4, 4]
-        assert result_3 == [4, 4, 4]
+        assert result_1[1:] == [6, 9]
+        assert result_2[1:] == [6, 9]
+        assert result_3[1:] == [4, 7]
+        assert result_4[1:] == [4, 7]
         assert self.controller_names == [
-            ("livedata_primary",),
-            ("livedata_secondary",),
-            ("livedata_secondary",),
+            ("livedata_current",),
+            ("livedata_timer",),
+            ("livedata_current",),
+            ("livedata_current",),
         ]
-        assert self.published_totals == [6, 4, 4]
-
-
-class TestVirtualJustBinItCountScan:
-    @pytest.fixture(autouse=True)
-    def prepare(self, session):
-        session.unloadSetup()
-        session.loadSetup("ess_count_scan_virtual_just_bin_it", {})
-        session.updateLiveData = lambda *args, **kwargs: None
-        session.experiment.setDetectors([session.getDevice("jbi_detector")])
-        yield
-        session.experiment.detlist = []
-        session.experiment.envlist = []
-        session.unloadSetup()
-
-    def test_count_runs_against_virtual_just_bin_it(self, session):
-        result = count(jbi_image_fast=5)
-
-        assert len(result) == 2
-        assert result[0] >= 5
-        assert session.getDevice("jbi_image_fast").read()[0] >= 5
-
-    def test_scan_runs_against_virtual_just_bin_it_multi_image(self, session):
-        motor = session.getDevice("motor")
-
-        scan(motor, [0, 1], jbi_image_fast=5, jbi_image_slow=1_000_000)
-        dataset = session.experiment.data.getLastScans()[-1]
-
-        assert dataset.devvaluelists == [[0.0], [1.0]]
-        assert [value.name for value in dataset.detvalueinfo] == [
-            "jbi_image_fast",
-            "jbi_image_slow",
-        ]
-        assert session.getDevice("jbi_image_fast").read()[0] >= 5
-        assert session.getDevice("jbi_image_slow").read()[0] < 1_000_000
+        assert self.published_totals == [(6, 9), (6, 9), (4, 7), (4, 7)]
 
 
 class TestVirtualLiveDataCountScan:
@@ -527,13 +631,26 @@ class TestVirtualLiveDataCountScan:
         session.experiment.envlist = []
         session.unloadSetup()
 
-    def test_count_runs_against_virtual_livedata(self, session):
+    def test_count_accepts_timer_and_current_output_preset(self, session):
+        result = count(t=1.0, livedata_current=1)
+        detector = session.getDevice("livedata_detector")
+
+        assert len(result) == 3
+        assert 0 <= result[0] < 1.0
+        assert result[1] >= 1
+        assert result[2] >= result[1]
+        assert tuple(ch.name for ch in detector._controlchannels) == (
+            "livedata_timer",
+            "livedata_current",
+        )
+
+    def test_count_runs_against_virtual_livedata_with_count_alias(self, session):
         result = count(n=1)
         detector = session.getDevice("livedata_detector")
 
-        assert len(result) == 2
-        assert result[0] >= 1
-        assert result[1] >= result[0]
+        assert len(result) == 3
+        assert result[1] >= 1
+        assert result[2] >= result[1]
         assert tuple(ch.name for ch in detector._controlchannels) == (
             "livedata_current",
         )
@@ -541,12 +658,27 @@ class TestVirtualLiveDataCountScan:
     def test_scan_runs_against_virtual_livedata(self, session):
         motor = session.getDevice("motor")
 
-        scan(motor, [0, 1], n=1)
+        scan(motor, [0, 1], t=1.0, n=1)
         dataset = session.experiment.data.getLastScans()[-1]
 
         assert dataset.devvaluelists == [[0.0], [1.0]]
         assert [value.name for value in dataset.detvalueinfo] == [
+            "livedata_timer",
             "livedata_current",
             "livedata_cumulative",
         ]
-        assert session.getDevice("livedata_current").read()[0] >= 1
+
+    def test_count_reuses_latest_livedata_preset_across_multiple_calls(self, session):
+        result_1 = count(n=1)
+        result_2 = count(t=0.2)
+        result_3 = count(n=2)
+        result_4 = count()
+        detector = session.getDevice("livedata_detector")
+
+        assert result_1[1] >= 1
+        assert result_2[1] >= 0
+        assert result_3[1] >= 2
+        assert result_4[1] >= 2
+        assert tuple(ch.name for ch in detector._controlchannels) == (
+            "livedata_current",
+        )

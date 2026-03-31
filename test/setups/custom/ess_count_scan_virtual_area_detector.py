@@ -8,12 +8,14 @@ devices = dict(
         update_interval=0.01,
     ),
     camera=device(
-        "nicos_ess.devices.epics.area_detector.AreaDetector",
-        pv_root="SIM:AD:",
-        image_pv="SIM:AD:IMAGE",
+        "nicos_ess.devices.virtual.area_detector.AreaDetector",
+        acquiretime=0.01,
+        acquireperiod=0.01,
+        sizex=32,
+        sizey=32,
     ),
     area_detector=device(
-        "nicos_ess.devices.epics.area_detector.AreaDetectorCollector",
+        "nicos_ess.devices.virtual.area_detector.AreaDetectorCollector",
         timers=["area_timer"],
         images=["camera"],
     ),

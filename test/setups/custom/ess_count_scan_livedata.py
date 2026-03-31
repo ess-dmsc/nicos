@@ -1,19 +1,20 @@
 includes = ["axis"]
 
 devices = dict(
-    livedata_primary=device(
+    livedata_timer=device(
+        "nicos_ess.devices.timer.TimerChannel",
+        fmtstr="%.2f",
+        unit="s",
+        update_interval=0.01,
+    ),
+    livedata_current=device(
         "nicos_ess.devices.datasources.livedata.DataChannel",
-        selector="",
+        selector="dummy/detector_data/panel_0_tof/1@panel_0#job-1/current",
         type="counter",
     ),
-    livedata_secondary=device(
+    livedata_cumulative=device(
         "nicos_ess.devices.datasources.livedata.DataChannel",
-        selector="",
-        type="counter",
-    ),
-    livedata_roi=device(
-        "nicos_ess.devices.datasources.livedata.DataChannel",
-        selector="",
+        selector="dummy/detector_data/panel_0_tof/1@panel_0#job-1/cumulative",
         type="counter",
     ),
     livedata_detector=device(
@@ -23,6 +24,7 @@ devices = dict(
         status_topics=[],
         responses_topics=[],
         commands_topic="",
-        counters=["livedata_primary", "livedata_secondary", "livedata_roi"],
+        timers=["livedata_timer"],
+        counters=["livedata_current", "livedata_cumulative"],
     ),
 )
