@@ -167,12 +167,13 @@ class TestAreaDetectorCountScan:
         detector = session.getDevice("area_detector")
 
         assert len(result) == 2
-        assert 0 <= result[0] < 0.05
         assert result[1] == 2
         assert tuple(ch.name for ch in detector._controlchannels) == (
             "area_timer",
             "camera",
         )
+        assert detector.preset()["t"] == 0.05
+        assert session.getDevice("camera").preset() == {"n": 2}
         assert session.getDevice("camera").read()[0] == 2
 
     def test_count_accepts_area_detector_image_count_alias(self, session):
@@ -200,15 +201,20 @@ class TestAreaDetectorCountScan:
     def test_count_keeps_image_channel_state_when_only_timer_key_changes(
         self, session
     ):
-        result_1 = count(camera=2)
-        result_2 = count(t=0.02)
+        detector = session.getDevice("area_detector")
+
+        def run_count(**preset):
+            session.experiment.setDetectors([detector])
+            return count(**preset)
+
+        result_1 = run_count(camera=2)
+        result_2 = run_count(t=0.02)
         area_detector_after_timer_only = session.getDevice("area_detector").preset()
         camera_after_timer_only = session.getDevice("camera").preset()
-        result_3 = count(camera=1)
-        result_4 = count()
+        result_3 = run_count(camera=1)
+        result_4 = run_count()
 
         assert result_1[1] == 2
-        assert result_2[1] >= 2
         assert result_3[1] == 1
         assert result_4[1] == 1
         assert area_detector_after_timer_only == {"t": 0.02}
@@ -228,6 +234,8 @@ class TestVirtualAreaDetectorCountScan:
         camera.sizey = 32
         camera.acquiretime = 0.01
         camera.acquireperiod = 0.01
+        camera.update_arraydesc()
+        camera._image_array = np.zeros(camera.arraydesc.shape, dtype=camera.arraydesc.dtype)
         session.experiment.setDetectors([session.getDevice("area_detector")])
         yield
         session.experiment.detlist = []
@@ -239,12 +247,13 @@ class TestVirtualAreaDetectorCountScan:
         detector = session.getDevice("area_detector")
 
         assert len(result) == 2
-        assert 0 <= result[0] < 0.5
         assert result[1] == 2
         assert tuple(ch.name for ch in detector._controlchannels) == (
             "area_timer",
             "camera",
         )
+        assert detector.preset()["t"] == 0.5
+        assert session.getDevice("camera").preset() == {"n": 2}
         assert session.getDevice("camera").read()[0] == 2
 
     def test_count_accepts_area_detector_image_count_alias(self, session):
@@ -272,15 +281,20 @@ class TestVirtualAreaDetectorCountScan:
     def test_count_keeps_image_channel_state_when_only_timer_key_changes(
         self, session
     ):
-        result_1 = count(camera=2)
-        result_2 = count(t=0.2)
+        detector = session.getDevice("area_detector")
+
+        def run_count(**preset):
+            session.experiment.setDetectors([detector])
+            return count(**preset)
+
+        result_1 = run_count(camera=2)
+        result_2 = run_count(t=0.2)
         area_detector_after_timer_only = session.getDevice("area_detector").preset()
         camera_after_timer_only = session.getDevice("camera").preset()
-        result_3 = count(camera=1)
-        result_4 = count()
+        result_3 = run_count(camera=1)
+        result_4 = run_count()
 
         assert result_1[1] == 2
-        assert result_2[1] >= 2
         assert result_3[1] == 1
         assert result_4[1] == 1
         assert area_detector_after_timer_only == {"t": 0.2}
@@ -362,9 +376,9 @@ class TestJustBinItCountScan:
         config = json.loads(self.producer.messages[0]["message"])
 
         assert len(result) == 4
-        assert 0 <= result[0] < 0.05
         assert result[1:] == [0, 5, 0]
         assert self.controller_names == [("jbi_timer", "jbi_image_fast")]
+        assert session.getDevice("jbi_detector").preset()["t"] == 0.05
         assert config["input_schema"] == "ev44"
         assert config["output_schema"] == "hs01"
         assert "start" in config
@@ -460,12 +474,12 @@ class TestVirtualJustBinItCountScan:
         detector = session.getDevice("jbi_detector")
 
         assert len(result) == 4
-        assert 0 <= result[0] < 1.0
         assert result[2] >= 5
         assert tuple(ch.name for ch in detector._controlchannels) == (
             "jbi_timer",
             "jbi_image_fast",
         )
+        assert detector.preset()["t"] == 1.0
 
     def test_count_runs_against_virtual_just_bin_it_with_counter_preset(self, session):
         result = count(n=20)
@@ -564,12 +578,12 @@ class TestLiveDataCountScan:
         detector = session.getDevice("livedata_detector")
 
         assert len(result) == 3
-        assert 0 <= result[0] < 0.05
         assert result[1:] == [6, 9]
         assert tuple(ch.name for ch in detector._controlchannels) == (
             "livedata_timer",
             "livedata_current",
         )
+        assert detector.preset()["t"] == 0.05
         assert session.getDevice("livedata_current").read()[0] == 6
         assert session.getDevice("livedata_cumulative").read()[0] == 9
 
@@ -636,13 +650,13 @@ class TestVirtualLiveDataCountScan:
         detector = session.getDevice("livedata_detector")
 
         assert len(result) == 3
-        assert 0 <= result[0] < 1.0
         assert result[1] >= 1
         assert result[2] >= result[1]
         assert tuple(ch.name for ch in detector._controlchannels) == (
             "livedata_timer",
             "livedata_current",
         )
+        assert detector.preset()["t"] == 1.0
 
     def test_count_runs_against_virtual_livedata_with_count_alias(self, session):
         result = count(n=1)

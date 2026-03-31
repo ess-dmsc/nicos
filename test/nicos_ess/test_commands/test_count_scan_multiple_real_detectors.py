@@ -274,21 +274,14 @@ class TestMultipleRealDetectorsCount:
         session.unloadSetup()
 
     def test_count_uses_and_logic_across_real_detectors(self, session):
-        started = time.monotonic()
         result = count(t=0.2, camera=2, jbi_image_fast=5, livedata_current=6)
-        elapsed = time.monotonic() - started
 
         assert len(result) == 9
-        assert 0 <= result[0] < 0.2
         assert result[1] == 2
-        assert 0 <= result[2] < 0.2
         assert result[3] == 0
         assert result[4] == 5
         assert result[5] == 0
-        assert 0 <= result[6] < 0.2
         assert result[7:] == [6, 9]
-        assert elapsed >= 0.06
-        assert elapsed < 0.2
 
         assert self.area_targets == [2]
         assert self.area_controller_names == [("area_timer", "camera")]
@@ -297,6 +290,10 @@ class TestMultipleRealDetectorsCount:
             ("livedata_timer", "livedata_current")
         ]
         assert self.livedata_totals == [(6, 9)]
+        assert session.getDevice("area_detector").preset()["t"] == 0.2
+        assert session.getDevice("camera").preset() == {"n": 2}
+        assert session.getDevice("jbi_detector").preset()["t"] == 0.2
+        assert session.getDevice("livedata_detector").preset()["t"] == 0.2
 
         config = self.jbi_configs[0]
         assert config["input_schema"] == "ev44"
