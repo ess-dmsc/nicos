@@ -27,7 +27,7 @@ class VirtualSource(Moveable):
     parameters = {
         "opmode": Param(
             "Mode of operation",
-            type=oneof("4blades", "centered"),
+            type=oneof("4blades", "4blades_opposite", "centered"),
             settable=True,
         ),
         "fmtstr_map": Param(
@@ -39,6 +39,7 @@ class VirtualSource(Moveable):
             userparam=False,
             default={
                 "4blades": "%.2f %.2f %.2f %.2f %.2f",
+                "4blades_opposite": "%.2f %.2f %.2f %.2f %.2f",
                 "centered": "(%.2f mm x %.2f mm) %.2f deg",
             },
         ),
@@ -54,6 +55,7 @@ class VirtualSource(Moveable):
         "unit": Override(default="", mandatory=False, settable=True),
     }
     devices = ["slit", "rot"]
+    valuetype = (float, float, float, float, float)
 
     attached_devices = {
         "slit": Attach("the slit blades", Moveable),
@@ -103,8 +105,12 @@ class VirtualSource(Moveable):
         if self.opmode == "centered":
             width, height = self._returnGap(positions)
             return [width, height, angle]
-        left, right, bottom, top = positions
-        return [left, right, bottom, top, angle]
+        else:
+            left, right, bottom, top = positions
+            if self.opmode == "4blades_opposite":
+                left *= -1
+                bottom *= -1
+            return [left, right, bottom, top, angle]
 
     def doStatus(self, maxage=0):
         return multiStatus(self._adevs, maxage=maxage)
