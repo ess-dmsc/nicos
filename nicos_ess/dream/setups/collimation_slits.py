@@ -20,6 +20,7 @@ for slit_set in range(1,4):
             has_errorbit=False,
             has_reseterror=False,
             monitor_deadband=0.01,
+            visibility=(),
         )
 
     devices[f"slit_set_{slit_set}"] = device(
