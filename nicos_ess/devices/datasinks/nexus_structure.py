@@ -203,7 +203,6 @@ class NexusStructureJsonFile(NexusStructureProvider):
                 self.log.warning(
                     "Could not find '/entry/instrument' for component tracking."
                 )
-
         return structure
 
     def _insert_array_size(self, structure):
@@ -263,45 +262,48 @@ class NexusStructureJsonFile(NexusStructureProvider):
 
     def _generate_samples_group_list(self, entities, skip_keys=None):
         children = []
-        for n, v in entities.items():
-            if skip_keys and n in skip_keys:
-                continue
-            children.append(
-                {
-                    "module": "dataset",
-                    "config": {"name": n, "values": v, "dtype": "string"},
-                }
-            )
+        if entities:
+            for n, v in entities.items():
+              if skip_keys and n in skip_keys:
+                  continue
+              children.append(
+                  {
+                      "module": "dataset",
+                      "config": {"name": n, "values": v, "dtype": "string"},
+                  }
+              )
         return children
 
     def _generate_samples_link_list(self, entities):
         children = []
-        for n, p in entities.items():
-            children.append(
-                {
-                    "module": "link",
-                    "config": {"name": n, "type": "NXlink", "source": p},
-                }
-            )
+        if entities:
+          for n, p in entities.items():
+              children.append(
+                  {
+                      "module": "link",
+                      "config": {"name": n, "type": "NXlink", "source": p},
+                  }
+              )
         return children
 
     def _insert_samples(self, structure, metainfo):
-        samples_info = metainfo.get(("Sample", "samples"))
-        link_info = {
-            "temperature": metainfo.get(("Sample", "temperature")),
-            "electric_field": metainfo.get(("Sample", "electric_field")),
-            "magnetic_field": metainfo.get(("Sample", "magnetic_field")),
-        }
-        if not samples_info:
+        all_samples = metainfo.get(("Sample", "samples"))
+        if not all_samples:
             return structure
 
-        try:
-            samples_dict = samples_info[0][0]
-        except KeyError as e:
-            self.log.error("Failed!  Did you forget to set a sample?  %s", e)
+        instrument = self._get_instrument_name(structure)
+        if instrument == "LOKI" and ("thermostated_sample_holder", "value") in metainfo:
+            sample_name = self._get_sample_name_from_thermostated_sample_holder(
+                all_samples, metainfo
+            )
+        else:
+            sample_name = metainfo.get(("Sample", "samplename"), [None])[0]
+        if sample_name in [None, ""]:
+            self.log.error("Error! Did you forget to set a sample?")
 
+        sample_info = self._get_sample_info(all_samples, sample_name)
         samples_list = self._generate_samples_group_list(
-            samples_dict, skip_keys=["number_of"]
+            sample_info, skip_keys=["number_of"]
         )
 
         nxinstrument_structure = None
@@ -312,6 +314,11 @@ class NexusStructureJsonFile(NexusStructureProvider):
         except KeyError:
             nxinstrument_structure = self._find_nxinstrument(structure)
 
+        link_info = {
+            "temperature": metainfo.get(("Sample", "temperature")),
+            "electric_field": metainfo.get(("Sample", "electric_field")),
+            "magnetic_field": metainfo.get(("Sample", "magnetic_field")),
+        }
         for field_name, field_metainfo in link_info.items():
             if not field_metainfo:
                 continue
@@ -353,6 +360,32 @@ class NexusStructureJsonFile(NexusStructureProvider):
             "Could not find the NXsample group in the NeXus JSON structure"
         )
         return structure
+
+    def _get_sample_name_from_thermostated_sample_holder(self, samples, metainfo):
+        current_position = metainfo.get(("thermostated_sample_holder", "value"))[0]
+        for i, sample in samples[0].items():
+            if sample["position"] == current_position:
+                return sample["name"]
+        else:
+            return None
+
+    def _get_sample_info(self, samples, sample_name):
+        sample_info = None
+        for i, sample in samples[0].items():
+            if sample["name"] == sample_name:
+                sample_info = sample.copy()
+                break
+        if sample_info and "position" in sample_info:
+            del sample_info["position"]
+        return sample_info
+
+    def _get_instrument_name(self, structure):
+        mapping = build_named_index_map(structure)
+        try:
+            node = get_by_named_path(structure, mapping, "/entry/instrument/name")
+            return node["config"]["values"]
+        except KeyError:
+            return "UNKNOWN"
 
     def _find_nxinstrument(self, structure):
         try:

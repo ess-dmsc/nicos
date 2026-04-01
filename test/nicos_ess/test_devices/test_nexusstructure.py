@@ -38,7 +38,13 @@ def _minimal_metainfo(counter: int = 1) -> dict:
             "",
             "experiment",
         ),
-        ("Sample", "samples"): [[{"name": "SampleA", "description": "A test sample"}]],
+        ("Sample", "samples"): (
+            {0: {"name": "SampleA", "description": "A test sample"}},
+            "{0: {'name': 'SampleA', 'description': 'A test sample'}}",
+            "",
+            "sample"
+        ),
+        ("Sample", "samplename"): ("SampleA", "SampleA", "", "sample")
     }
 
 
