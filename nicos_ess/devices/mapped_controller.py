@@ -32,17 +32,17 @@ class MappedController(MappedMoveable):
         MappedMoveable.doInit(self, mode)
 
     def doIsAllowed(self, key):
-        why = []
+        why = ""
         target = self.mapping.get(key, None)
         if target is None:
-            why.append(f"Position '{key}' not in mapping")
+            why = f"Position '{key}' not in mapping"
         else:
             dev = self._attached_controlled_device
-            ok, _why = dev.isAllowed(target)
+            ok, reason = dev.isAllowed(target)
             if ok:
                 self.log.debug(f"{dev}: requested target {target} allowed.")
             else:
-                why.append(f"{dev}: requested target {target} Not allowed; {_why}")
+                why = f"{dev}: requested target {target} Not allowed; {reason}"
 
         if why:
             return False, why
