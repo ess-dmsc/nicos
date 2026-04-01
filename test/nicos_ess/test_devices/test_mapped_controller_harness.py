@@ -100,7 +100,7 @@ class TestMappedControllerHarness:
 
         # Assert
         assert allowed is False
-        assert "not in mapping" in reason[0]
+        assert "not in mapping" in reason
 
     def test_is_allowed_reflects_limits_of_attached_device(self, daemon_device_harness):
         # Setup
@@ -124,7 +124,7 @@ class TestMappedControllerHarness:
 
         # Assert
         assert allowed is False
-        assert "Not allowed" in reason[0]
+        assert "Not allowed" in reason
 
     def test_write_mapping_rejects_targets_outside_controlled_device_limits(
         self, daemon_device_harness
