@@ -25,7 +25,7 @@ for slit_set in range(1,4):
     devices[f"slit_set_{slit_set}"] = device(
         "nicos.devices.generic.slit.Slit",
         description=f"Slit {slit_set} with left, right, bottom and top motors",
-        opmode="centered",
+        opmode="offcentered",
         left=f"slit_set_{slit_set}_right",
         right=f"slit_set_{slit_set}_left",
         top=f"slit_set_{slit_set}_upper",
