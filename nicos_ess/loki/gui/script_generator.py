@@ -34,7 +34,7 @@ class Script:
     def _start_sample(self, row_values):
         script = f"# Sample = {row_values['sample']['name']}\n"
         script += self._get_command(row_values.get("pre-command"))
-        script += f"SelectSample('{row_values['sample']['name']}')\n"
+        script += f'SelectSample("{row_values["sample"]["name"]}")\n'
         script += f'move(positioner, "{row_values["position"]}")\n'
         script += self._get_temperature(row_values.get("temperature"))
         return script
