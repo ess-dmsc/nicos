@@ -85,6 +85,21 @@ class MappedController(MappedMoveable):
             )
 
 
+class MappedControllerPastTense(MappedController):
+    def _mapReadValue(self, value):
+        if isinstance(self._attached_controlled_device, HasPrecision):
+            for k, v in self.mapping.items():
+                if abs(v - value) < self._attached_controlled_device.precision:
+                    return k + "d"  # append the character "d" to the verb, so that
+                    # it's shown in past tense in the value field of the device panel,
+                    # haha.
+        inverse_mapping = {v: k for k, v in self.mapping.items()}
+        mapped_value = inverse_mapping.get(value, None)
+        if not mapped_value:
+            return "In Between"
+        return mapped_value
+
+
 class MultiTargetMapping(MappedMoveable):
     """
     Class for devices that map one key to a set (tuple) of values

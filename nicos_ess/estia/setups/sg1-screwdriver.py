@@ -23,6 +23,15 @@ devices = dict(
         description="Driver1-1 Approach",
         motorpv=f"{pvprefix}LinY-01:Mtr",
     ),
+    sg1_screwdriver_approach_1_controller=device(
+        "nicos_ess.devices.mapped_controller.MappedControllerPastTense",
+        description="Engage/disengage approach",
+        controlled_device="meas_cart_approach2",
+        mapping={
+            "Disengage": 28.0,
+            "Engage": 0.0,
+        },
+    ),
     sg1_screwdriver_hex_state_1=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="Hexscrew state",
@@ -37,6 +46,15 @@ devices = dict(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Driver1-2 Approach",
         motorpv=f"{pvprefix}LinY-02:Mtr",
+    ),
+    sg1_screwdriver_approach_2_controller=device(
+        "nicos_ess.devices.mapped_controller.MappedControllerPastTense",
+        description="Engage/disengage approach",
+        controlled_device="meas_cart_approach2",
+        mapping={
+            "Disengage": 29.0,
+            "Engage": 0.0,
+        },
     ),
     sg1_screwdriver_hex_state_2=device(
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
