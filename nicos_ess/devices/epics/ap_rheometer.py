@@ -1,8 +1,6 @@
 from nicos.commands.basic import sleep
-from nicos.core import SIMULATION, Override, Param, pvname, status, usermethod, Moveable
-
+from nicos.core import SIMULATION, Moveable, Override, Param, pvname, status, usermethod
 from nicos.devices.epics.pva import EpicsDevice
-
 
 #  This device is whatever at the moment. It's more for just having something in order to test
 #  the Rheometer panel and command builder.
@@ -21,9 +19,6 @@ class RheometerControl(EpicsDevice, Moveable):
 
     parameter_overrides = {
         "unit": Override(mandatory=False, settable=False, userparam=False),
-        "mapping": Override(
-            mandatory=False, settable=False, userparam=False, volatile=False
-        ),
     }
 
     _record_fields = {}

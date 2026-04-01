@@ -83,9 +83,7 @@ FATAL_REASONS = {
 }
 
 if not getattr(tango.constants, "NUMPY_SUPPORT", True):
-    raise NicosError(
-        "Tango does not have numpy support, but it is required " "by NICOS"
-    )
+    raise NicosError("Tango does not have numpy support, but it is required by NICOS")
 
 
 def describe_dev_error(exc):
@@ -136,14 +134,13 @@ def describe_dev_error(exc):
         m = re.search(r"Device ([\w/]+) is not", fulldesc)
         if m:
             fulldesc = (
-                "Tango device %s is not exported, is the server "
-                "running?" % m.group(1)
+                "Tango device %s is not exported, is the server running?" % m.group(1)
             )
     elif reason == "API_CorbaException":
         if "TRANSIENT_CallTimedout" in fulldesc:
             fulldesc = "Tango client-server call timed out"
         elif "TRANSIENT_ConnectFailed" in fulldesc:
-            fulldesc = "connection to Tango server failed, is the server " "running?"
+            fulldesc = "connection to Tango server failed, is the server running?"
     elif reason == "API_CantConnectToDevice":
         m = re.search(r"connect to device ([\w/-]+)", fulldesc)
         if m:
@@ -175,11 +172,11 @@ def check_tango_host_connection(address, timeout=3.0):
         raise CommunicationError(str(e)) from None
 
 
-class PyTangoDevice(HasCommunication):
+class PyTangoMixin(HasCommunication):
     """
-    Basic PyTango device.
+    Basic PyTango communication mixin.
 
-    The PyTangoDevice uses an internal tango.DeviceProxy but wraps command
+    The PyTangoMixin uses an internal tango.DeviceProxy but wraps command
     execution and attribute operations with logging and exception mapping.
     """
 
@@ -197,9 +194,6 @@ class PyTangoDevice(HasCommunication):
             settable=True,
             preinit=True,
         ),
-    }
-    parameter_overrides = {
-        "unit": Override(mandatory=False),
     }
 
     tango_status_mapping = {
@@ -237,7 +231,7 @@ class PyTangoDevice(HasCommunication):
 
     def _hw_wait(self):
         """Wait until hardware status is not BUSY."""
-        while PyTangoDevice.doStatus(self, 0)[0] == status.BUSY:
+        while PyTangoMixin.doStatus(self, 0)[0] == status.BUSY:
             session.delay(self._base_loop_delay)
 
     def doVersion(self):
@@ -266,14 +260,6 @@ class PyTangoDevice(HasCommunication):
         propnames = props[::2]
         return props[2 * propnames.index(name) + 1] if name in propnames else None
 
-    def doReadUnit(self):
-        """For devices with a unit attribute."""
-        attrInfo = self._dev.attribute_query("value")
-        # prefer configured unit if nothing is set on the Tango device
-        if attrInfo.unit == "No unit":
-            return self._config.get("unit", "")
-        return attrInfo.unit
-
     def _createPyTangoDevice(self, address):  # pylint: disable=method-hidden
         """
         Creates the Tango DeviceProxy and wraps command execution and
@@ -281,9 +267,9 @@ class PyTangoDevice(HasCommunication):
         """
         check_tango_host_connection(self.tangodevice, self.tangotimeout)
         proxy_key = (self._name, address)
-        if proxy_key not in PyTangoDevice.proxy_cache:
-            PyTangoDevice.proxy_cache[proxy_key] = tango.DeviceProxy(address)
-        device = PyTangoDevice.proxy_cache[proxy_key]
+        if proxy_key not in PyTangoMixin.proxy_cache:
+            PyTangoMixin.proxy_cache[proxy_key] = tango.DeviceProxy(address)
+        device = PyTangoMixin.proxy_cache[proxy_key]
         device.set_timeout_millis(int(self.tangotimeout * 1000))
         # detect not running and not exported devices early, because that
         # otherwise would lead to attribute errors later
@@ -291,7 +277,7 @@ class PyTangoDevice(HasCommunication):
             device.State
         except AttributeError:
             raise NicosError(
-                self, "connection to Tango server failed, " "is the server running?"
+                self, "connection to Tango server failed, is the server running?"
             ) from None
         return self._applyGuardsToPyTangoDevice(device)
 
@@ -399,3 +385,23 @@ class PyTangoDevice(HasCommunication):
         fulldesc = self._tango_exc_desc(err)
         self.log.debug("[Tango] error: %s", fulldesc)
         raise exclass(self, fulldesc)
+
+
+class PyTangoDevice(PyTangoMixin):
+    """
+    Basic PyTango device mixin.
+
+    The PyTangoDevice extends the PyTangoMixin by default unit handling.
+    """
+
+    parameter_overrides = {
+        "unit": Override(mandatory=False),
+    }
+
+    def doReadUnit(self):
+        """For devices with a unit attribute."""
+        attrInfo = self._dev.attribute_query("value")
+        # prefer configured unit if nothing is set on the Tango device
+        if attrInfo.unit == "No unit":
+            return self._config.get("unit", "")
+        return attrInfo.unit

@@ -59,7 +59,8 @@ from nicos.core import (
 )
 from nicos.core.constants import FINAL, INTERRUPTED, LIVE, SLAVE
 from nicos.core.mixins import HasOffset, HasWindowTimeout
-from nicos.devices.abstract import CanReference, Coder, Motor as NicosMotor
+from nicos.devices.abstract import CanReference, Coder
+from nicos.devices.abstract import Motor as NicosMotor
 from nicos.devices.generic.detector import (
     ActiveChannel,
     CounterChannelMixin,
@@ -67,7 +68,7 @@ from nicos.devices.generic.detector import (
     PassiveChannel,
     TimerChannelMixin,
 )
-from nicos.devices.tango import PyTangoDevice
+from nicos.devices.tango import PyTangoDevice, PyTangoMixin
 from nicos.utils import squeeze
 
 # Only export Nicos devices for 'from nicos.device.entangle import *'
@@ -602,7 +603,7 @@ class PartialDigitalOutput(NamedDigitalOutput):
         return True, ""
 
 
-class StringIO(PyTangoDevice, Device):
+class StringIO(PyTangoMixin, Device):
     """
     StringIO abstracts communication over a hardware bus that sends and
     receives strings.
@@ -711,6 +712,10 @@ class TimerChannel(TimerChannelMixin, DetectorChannel):
     """
     Detector channel to measure time.
     """
+
+    parameter_overrides = {
+        "preselection": Override(type=float),
+    }
 
     def doRead(self, maxage=0):
         return self._dev.value

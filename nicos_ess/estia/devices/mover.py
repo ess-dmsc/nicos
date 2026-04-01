@@ -228,9 +228,9 @@ class SeleneMover(Moveable):
     # Nice-looking prompt in *status*:
     def valueInfo(self):
         return (
-            Value("y", unit="mm", fmtstr="%.3f"),
-            Value("z", unit="mm", fmtstr="%.3f"),
-            Value("Rx", unit="mrad", fmtstr="%.3f"),
-            Value("Ry", unit="mrad", fmtstr="%.3f"),
-            Value("Rz", unit="mrad", fmtstr="%.3f"),
+            Value("y (mm)", unit="mm", fmtstr="%.3f"),
+            Value("z (mm)", unit="mm", fmtstr="%.3f"),
+            Value("Rx (mrad)", unit="mrad", fmtstr="%.3f"),
+            Value("Ry (mrad)", unit="mrad", fmtstr="%.3f"),
+            Value("Rz (mrad)", unit="mrad", fmtstr="%.3f"),
         )

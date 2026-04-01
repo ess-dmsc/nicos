@@ -1,0 +1,122 @@
+"""Harness tests for nicos_ess.devices.carbon_forwarder."""
+
+from nicos.protocols.cache import OP_TELL, OP_TELLOLD
+from nicos_ess.devices.carbon_forwarder import CarbonForwarder
+from nicos_ess.telemetry.carbon import CACHE_VALUE_KEY_SUFFIX, SCRIPTS_KEY
+
+
+class RecordingEmitter:
+    def __init__(
+        self,
+        client=None,
+        prefix=None,
+        instrument=None,
+        flush_interval_s=None,
+    ):
+        self.client = client
+        self.prefix = prefix
+        self.instrument = instrument
+        self.flush_interval_s = flush_interval_s
+        self.calls = []
+        self.close_calls = 0
+
+    def process_cache_update(self, timestamp, key, value):
+        self.calls.append((timestamp, key, value))
+        return []
+
+    def close(self):
+        self.close_calls += 1
+
+
+class TestCarbonForwarderHarness:
+    def test_do_init_sets_default_filter_and_empty_emitter(
+        self, daemon_device_harness
+    ):
+        device = daemon_device_harness.create_master(CarbonForwarder)
+
+        assert device._emitter is None
+        assert device._checkKey(SCRIPTS_KEY)
+        assert device._checkKey(f"motor{CACHE_VALUE_KEY_SUFFIX}")
+        assert not device._checkKey("motor/target")
+
+    def test_put_change_delegates_matching_updates(self, daemon_device_harness):
+        device = daemon_device_harness.create_master(CarbonForwarder)
+        emitter = RecordingEmitter()
+        device._emitter = emitter
+
+        device._putChange("1710000000", "", SCRIPTS_KEY, OP_TELL, "[]")
+
+        assert emitter.calls == [("1710000000", SCRIPTS_KEY, "[]")]
+
+    def test_put_change_ignores_unmatched_keys(self, daemon_device_harness):
+        device = daemon_device_harness.create_master(CarbonForwarder)
+        emitter = RecordingEmitter()
+        device._emitter = emitter
+
+        device._putChange("1710000000", "", "motor/target", OP_TELL, "42")
+
+        assert emitter.calls == []
+
+    def test_put_change_delegates_value_updates(self, daemon_device_harness):
+        device = daemon_device_harness.create_master(CarbonForwarder)
+        emitter = RecordingEmitter()
+        device._emitter = emitter
+
+        device._putChange(
+            "1710000000", "", f"motor{CACHE_VALUE_KEY_SUFFIX}", OP_TELL, "42"
+        )
+
+        assert emitter.calls == [("1710000000", f"motor{CACHE_VALUE_KEY_SUFFIX}", "42")]
+
+    def test_put_change_ignores_non_tell_updates(self, daemon_device_harness):
+        device = daemon_device_harness.create_master(CarbonForwarder)
+        emitter = RecordingEmitter()
+        device._emitter = emitter
+
+        device._putChange("1710000000", "", SCRIPTS_KEY, OP_TELLOLD, "[]")
+
+        assert emitter.calls == []
+
+    def test_put_change_swallows_emitter_errors(self, daemon_device_harness):
+        device = daemon_device_harness.create_master(CarbonForwarder)
+
+        class FailingEmitter:
+            def __init__(self):
+                self.calls = []
+
+            def process_cache_update(self, timestamp, key, value):
+                self.calls.append((timestamp, key, value))
+                raise RuntimeError("boom")
+
+        emitter = FailingEmitter()
+        device._emitter = emitter
+        warning_messages = []
+        original_warning = device.log.warning
+
+        def capture_warning(msg, *args, **kwargs):
+            del kwargs
+            warning_messages.append(msg % args if args else msg)
+
+        device.log.warning = capture_warning
+        try:
+            device._putChange("1710000000", "", SCRIPTS_KEY, OP_TELL, "[]")
+        finally:
+            device.log.warning = original_warning
+
+        assert emitter.calls == [("1710000000", SCRIPTS_KEY, "[]")]
+        assert warning_messages == [
+            f"Could not forward telemetry update for {SCRIPTS_KEY}"
+        ]
+
+    def test_shutdown_closes_emitter_once_and_clears_reference(
+        self, daemon_device_harness
+    ):
+        device = daemon_device_harness.create_master(CarbonForwarder)
+        emitter = RecordingEmitter()
+        device._emitter = emitter
+
+        device.doShutdown()
+        device.doShutdown()
+
+        assert emitter.close_calls == 1
+        assert device._emitter is None

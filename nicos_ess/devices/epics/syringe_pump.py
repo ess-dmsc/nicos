@@ -76,9 +76,7 @@ class SyringePumpController(EpicsParameters, MappedMoveable):
 
     parameter_overrides = {
         "unit": Override(mandatory=False, settable=False, userparam=False),
-        "mapping": Override(
-            mandatory=False, settable=False, userparam=False, volatile=True
-        ),
+        "mapping": Override(mandatory=False, userparam=False, volatile=True),
     }
 
     attached_devices = {

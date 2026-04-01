@@ -622,12 +622,15 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
 
         if merged_stat == status.OK:
             merged_msg = ""
-        elif msg_stat > motor_stat:
-            merged_msg = msg_txt or motor_msg
-        elif msg_stat == motor_stat and msg_stat != status.OK:
-            merged_msg = msg_txt or motor_msg
         else:
-            merged_msg = motor_msg or msg_txt
+            motor_alarm_active = motor_stat != status.OK and bool(motor_msg)
+            msgtxt_alarm_active = msg_stat != status.OK and bool(msg_txt)
+            if motor_alarm_active and msgtxt_alarm_active:
+                merged_msg = f"{msg_txt}, motor alarm: {motor_msg}"
+            elif msgtxt_alarm_active:
+                merged_msg = msg_txt
+            else:
+                merged_msg = motor_msg
 
         if self._motor_status != (merged_stat, merged_msg):
             self._log_epics_msg_info(merged_msg, merged_stat, motor_msg)
@@ -1000,13 +1003,6 @@ class SmaractPiezoMotor(EpicsMotor):
     """
 
     parameters = {
-        "openloop": Param(
-            "Open-loop control mode of the piezo motor.",
-            type=bool,
-            settable=False,
-            volatile=True,
-            userparam=False,
-        ),
         "stepfrequency": Param(
             "Step frequency of the piezo motor.",
             type=float,
@@ -1034,15 +1030,6 @@ class SmaractPiezoMotor(EpicsMotor):
             settable=True,
             volatile=True,
             userparam=True,
-        ),
-        "feedbacksrc": Param(
-            "Source of position feedback.",
-            type=oneof("Internal", "External"),
-            default="Internal",
-            mandatory=False,
-            settable=True,
-            userparam=True,
-            volatile=True,
         ),
     }
 
@@ -1087,13 +1074,11 @@ class SmaractPiezoMotor(EpicsMotor):
             "lowlimitswitch": RecordInfo("", ".LLS", RecordType.STATUS),
             "highlimitswitch": RecordInfo("", ".HLS", RecordType.STATUS),
             "msgtxt": RecordInfo("", "-MsgTxt", RecordType.STATUS),
-            "openloop_rb": RecordInfo("", "OpenLoop", RecordType.VALUE),
             "stepfrequency": RecordInfo("", "StepFreq", RecordType.VALUE),
             "stepsizeforward": RecordInfo("", "StepSizeFwd", RecordType.VALUE),
             "stepsizereverse": RecordInfo("", "StepSizeRev", RecordType.VALUE),
             "mclfrequency": RecordInfo("", "MaxCtrlLFreq", RecordType.VALUE),
             "mclfrequency_rb": RecordInfo("", "MaxCtrlLFreq", RecordType.VALUE),
-            "positionrefsrc": RecordInfo("", "PositionRefSrc", RecordType.VALUE),
         }
         self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
         if mode != SIMULATION:
@@ -1102,9 +1087,6 @@ class SmaractPiezoMotor(EpicsMotor):
 
         if not self.has_msgtxt:
             del self._record_fields["msgtxt"]
-
-    def doReadOpenloop(self):
-        return bool(self._get_cached_pv_or_ask("openloop_rb"))
 
     def doReadStepfrequency(self):
         return self._get_cached_pv_or_ask("stepfrequency")
@@ -1137,16 +1119,3 @@ class SmaractPiezoMotor(EpicsMotor):
         if value < 0:
             raise ValueError("MCL frequency must be non-negative.")
         self._put_pv("mclfrequency", value)
-
-    def doReadFeedbacksrc(self):
-        try:
-            position_feedback_source = self._get_pv("positionrefsrc")
-        except TimeoutError as ex:
-            return "Internal"
-        return "External" if position_feedback_source else "Internal"
-
-    def doWriteFeedbacksrc(self, value):
-        try:
-            self._put_pv("positionrefsrc", value)
-        except:
-            raise IndexError("External feedback sensor does not exist for this system.")

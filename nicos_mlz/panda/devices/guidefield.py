@@ -124,7 +124,6 @@ class GuideField(MappedMoveable):
                 "0": (0.0, 0.0, 0.0),
             },
         ),
-        "precision": Override(mandatory=False),
     }
     parameters = {
         "alphaoffset": Param(

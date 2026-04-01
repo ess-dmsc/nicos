@@ -28,7 +28,7 @@ main_window = docked(
                         ),
                         (
                             "Detector Image",
-                            panel("nicos_ess.gui.panels.live_gr.MultiLiveDataPanel"),
+                            panel("nicos_ess.gui.panels.live_pyqt.MultiLiveDataPanel"),
                         ),
                         (
                             "Choppers",
@@ -56,6 +56,59 @@ main_window = docked(
         (
             "Scripting",
             panel("nicos_ess.gui.panels.editor.EditorPanel", tools=None),
+        ),
+        (
+            "Selene 1",
+            panel(
+                "nicos_ess.estia.gui.panels.selene.SelenePanel",
+                metrology_options=dict(
+                    title="Metrology Selene 1",
+                    positions=["ch27", "ch28"],
+                    selene=1,
+                    cart_position="meas_cart_position1",
+                    offsetx=0,
+                ),
+                robot_options=dict(
+                    title="Robot Selene 1 (view inverted)",
+                    posx="sg1_robot_pos",
+                    posz="sg1_robot_vert",
+                    approach1="sg1_screwdriver_approach_1",
+                    rotation1="sg1_screwdriver_adjust_1",
+                    approach2="sg1_screwdriver_approach_2",
+                    rotation2="sg1_screwdriver_adjust_2",
+                    robot="sr1",
+                    offsetx=165.0,
+                    offsetz=65.0,
+                    deckpos="right",
+                ),
+            ),
+        ),
+        (
+            "Selene 2",
+            panel(
+                "nicos_ess.estia.gui.panels.selene.SelenePanel",
+                metrology_options=dict(
+                    title="Metrology Selene 2 (view inverted)",
+                    positions=["ch27", "ch28"],
+                    selene=2,
+                    cart_position="meas_cart_position2",
+                    offsetx=0,
+                ),
+                robot_options=dict(
+                    title="Robot Selene 2",
+                    selene=2,
+                    posx="sg2_robot_pos",
+                    posz="sg2_robot_vert",
+                    approach1="sg2_screwdriver_approach_2",
+                    rotation1="sg2_screwdriver_adjust_2",
+                    approach2="sg2_screwdriver_approach_1",
+                    rotation2="sg2_screwdriver_adjust_1",
+                    robot="sr2",
+                    offsetx=-40.0,
+                    offsetz=65.0,
+                    deckpos="right",
+                ),
+            ),
         ),
         (
             "History",
