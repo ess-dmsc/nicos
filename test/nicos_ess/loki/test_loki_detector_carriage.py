@@ -26,7 +26,6 @@ class FakeLokiDetectorMotion(LOKIDetectorMotion):
         "position_deadband": 0.1,
         "diallowlimit": -120,
         "dialhighlimit": 120,
-        "softlimit": 0,
         "dir": "Pos",
         "description": "motor1 test device",
         "monitor_deadband": 0.2,
