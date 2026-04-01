@@ -46,7 +46,7 @@ devices = dict(
         monitor_deadband=0.01,
     ),
     beamstop_x_positioner=device(
-        "nicos_ess.devices.mapped_controller.MappedController",
+        "nicos_ess.loki.devices.beamstop.LokiBeamstopXPositioner",
         controlled_device="beamstop_x",
         mapping={
             "Parked": 1,
