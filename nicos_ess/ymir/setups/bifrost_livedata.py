@@ -3,29 +3,25 @@ description = "The livedata."
 devices = dict(
     detector_sliding=device(
         "nicos_ess.devices.datasources.livedata.DataChannel",
-        description="A just-bin-it image channel",
-        source_name="unified_detector:sliding",
+        description="A bifrost livedata channel",
         type="counter",
     ),
     detector_cumulative=device(
         "nicos_ess.devices.datasources.livedata.DataChannel",
-        description="A just-bin-it image channel",
-        source_name="unified_detector:cumulative",
+        description="A bifrost livedata channel",
         type="counter",
     ),
     detector_roi=device(
         "nicos_ess.devices.datasources.livedata.DataChannel",
-        description="A just-bin-it image channel",
-        source_name="unified_detector:roi",
+        description="A bifrost livedata channel",
         type="counter",
     ),
     livedata_collector=device(
         "nicos_ess.devices.datasources.livedata.LiveDataCollector",
-        description="The just-bin-it histogrammer",
+        description="The bifrost livedata collector",
         brokers=configdata("config.KAFKA_BROKERS"),
-        topic=["bifrost_livedata_data"],
-        command_topic="bifrost_livedata_data",
+        data_topics=["bifrost_livedata_data"],
+        commands_topic="bifrost_livedata_commands",
         others=["detector_sliding", "detector_cumulative", "detector_roi"],
-        schema="da00",
     ),
 )

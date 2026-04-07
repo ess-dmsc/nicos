@@ -1,4 +1,5 @@
 import json
+import threading
 import time
 
 import numpy as np
@@ -7,21 +8,19 @@ from streaming_data_types.utils import get_schema
 
 from nicos.core import (
     ArrayDesc,
-    InvalidValueError,
     Override,
     Param,
     Value,
     floatrange,
     host,
     listof,
-    multiStatus,
     oneof,
     status,
     tupleof,
 )
-from nicos.core.constants import LIVE, MASTER, SIMULATION
+from nicos.core.constants import MASTER, SIMULATION
 from nicos.devices.generic import Detector, ImageChannelMixin, PassiveChannel
-from nicos.utils import createThread, uniq
+from nicos.utils import createThread
 from nicos_ess.devices.kafka.consumer import KafkaConsumer, KafkaSubscriber
 from nicos_ess.devices.kafka.producer import KafkaProducer
 from nicos_ess.devices.kafka.status_handler import (
@@ -154,6 +153,8 @@ deserialiser_by_schema = {
 
 
 class JustBinItImage(ImageChannelMixin, PassiveChannel):
+    arraydesc = ArrayDesc("", shape=(0,), dtype=np.float64)
+
     parameters = {
         "brokers": Param(
             "List of kafka brokers to connect to",
@@ -272,10 +273,16 @@ class JustBinItImage(ImageChannelMixin, PassiveChannel):
         self._zero_data()
 
     def _zero_data(self):
+        self.arraydesc = hist_type_by_name[self.hist_type].get_array_description(
+            **self._params
+        )
         self._hist_data = hist_type_by_name[self.hist_type].get_zeroes(**self._params)
 
     def arrayInfo(self):
-        return hist_type_by_name[self.hist_type].get_array_description(**self._params)
+        self.arraydesc = hist_type_by_name[self.hist_type].get_array_description(
+            **self._params
+        )
+        return self.arraydesc
 
     def doPrepare(self):
         self._update_status(status.BUSY, "Preparing")
@@ -332,6 +339,7 @@ class JustBinItImage(ImageChannelMixin, PassiveChannel):
         return [self._hist_sum]
 
     def doReadArray(self, quality):
+        self.arrayInfo()
         return self._hist_data
 
     def valueInfo(self):
@@ -379,7 +387,8 @@ class JustBinItImage(ImageChannelMixin, PassiveChannel):
         return result
 
     def doShutdown(self):
-        self._kafka_subscriber.close()
+        if self._kafka_subscriber:
+            self._kafka_subscriber.close()
         self._update_status(status.OK, "")
 
 
@@ -436,29 +445,16 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
         "statustopic": Override(default="", mandatory=False),
     }
     _last_live = 0
-    _presetkeys = {}
     _ack_thread = None
-    _conditions_thread = None
     _exit_thread = False
-    _conditions = {}
+    _stop_sent = False
+    _stop_lock = None
+    _command_sender = None
+    _response_consumer = None
     hardware_access = True
 
     def doPreinit(self, mode):
-        presetkeys = {}
-        for name, dev, typ in self._presetiter():
-            # later mentioned presetnames dont overwrite earlier ones
-            presetkeys.setdefault(name, (dev, typ))
-        for channel in self._attached_images:
-            presetkeys.setdefault(channel.name, (channel, "counts"))
-        self._channels = uniq(
-            self._attached_timers
-            + self._attached_monitors
-            + self._attached_counters
-            + self._attached_images
-            + self._attached_others
-        )
-        self._presetkeys = presetkeys
-        self._collectControllers()
+        Detector.doPreinit(self, mode)
 
         if mode == SIMULATION:
             return
@@ -473,40 +469,24 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
 
     def doPrepare(self):
         self._exit_thread = False
-        self._conditions_thread = None
+        self._ack_thread = None
+        self._stop_sent = False
+        self._stop_lock = threading.Lock()
+        if self._cache:
+            self._cache.put(self, "status", (status.OK, ""), time.time())
         Detector.doPrepare(self)
 
-    def doStart(self, **preset):
-        self._last_live = -(self.liveinterval or 0)
-
+    def doStart(self):
         # Generate a unique-ish id
         unique_id = "nicos-{}-{}".format(self.name, int(time.time()))
         self.log.debug("set unique id = %s", unique_id)
 
-        self._conditions = {}
+        config = self._create_config(unique_id)
 
-        for image_channel in self._attached_images:
-            val = self._lastpreset.get(image_channel.name, 0)
-            if val:
-                self._conditions[image_channel] = val
-
-        count_interval = None
-        config = self._create_config(count_interval, unique_id)
-
-        if count_interval:
-            self.log.debug(
-                "Requesting just-bin-it to start counting for %s seconds",
-                count_interval,
-            )
-        else:
-            self.log.debug("Requesting just-bin-it to start counting")
+        self.log.debug("Requesting just-bin-it to start counting")
 
         self._send_command(self.command_topic, json.dumps(config).encode())
-
-        for follower in self._followchannels:
-            follower.start()
-        for controller in self._controlchannels:
-            controller.start()
+        Detector.doStart(self)
 
         # Check for acknowledgement of the command being received
         self._ack_thread = createThread(
@@ -531,42 +511,31 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
                     f"({timeout_duration} seconds)"
                 )
                 self.log.error(err_msg)
+                self._cache.put(self, "status", (status.ERROR, err_msg), time.time())
                 break
         if not acknowledged:
-            # Couldn't start histogramming, so stop the channels etc.
-            self._stop_histogramming()
-            for image_channel in self._attached_images:
-                image_channel.doStop()
+            self._send_stop_once()
             return
-
-        if self._conditions:
-            self._conditions_thread = createThread(
-                "jbi-conditions", self._check_conditions, (self._conditions.copy(),)
-            )
-
-    def _check_conditions(self, conditions):
-        while not self._exit_thread:
-            if conditions and all(
-                ch.read()[0] >= val for ch, val in conditions.items()
-            ):
-                self._stop_histogramming()
-                break
-            time.sleep(0.1)
 
     def _handle_message(self, msg):
         if "response" in msg and msg["response"] == "ACK":
             self.log.debug("Counting request acknowledged by just-bin-it")
             return True
         elif "response" in msg and msg["response"] == "ERR":
-            self.log.error("just-bin-it could not start counting: %s", msg["message"])
+            err_msg = msg.get("message", "just-bin-it rejected the request")
+            self.log.error("just-bin-it could not start counting: %s", err_msg)
+            self._cache.put(self, "status", (status.ERROR, err_msg), time.time())
         else:
-            self.log.error("Unknown response message received from just-bin-it")
+            err_msg = "Unknown response message received from just-bin-it"
+            self.log.error(err_msg)
+            self._cache.put(self, "status", (status.ERROR, err_msg), time.time())
         return False
 
     def _send_command(self, topic, message):
-        self._command_sender.produce(topic, message)
+        if self._command_sender is not None:
+            self._command_sender.produce(topic, message)
 
-    def _create_config(self, interval, identifier):
+    def _create_config(self, identifier):
         histograms = []
 
         for image_channel in self._attached_images:
@@ -578,24 +547,21 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
             "input_schema": self.event_schema,
             "output_schema": self.hist_schema,
             "histograms": histograms,
+            "start": int(time.time()) * 1000,
         }
-
-        if interval:
-            config_base["interval"] = interval
-        else:
-            # If no interval then start open-ended count
-            config_base["start"] = int(time.time()) * 1000
         return config_base
 
-    def doReadArrays(self, quality):
-        return [image.readArray(quality) for image in self._attached_images]
-
-    def _stop_histogramming(self):
+    def _send_stop_once(self):
+        with self._stop_lock:
+            if self._stop_sent:
+                return
+            self._stop_sent = True
         self._send_command(self.command_topic, b'{"cmd": "stop"}')
 
     def doShutdown(self):
         self._do_stop()
-        self._response_consumer.close()
+        if self._response_consumer is not None:
+            self._response_consumer.close()
 
     def doStop(self):
         self._do_stop()
@@ -607,12 +573,11 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
 
     def _do_stop(self):
         self._stop_job_threads()
-        self._stop_histogramming()
+        self._send_stop_once()
 
     def _stop_job_threads(self):
         self._exit_thread = True
         self.stop_consuming(self._ack_thread)
-        self.stop_consuming(self._conditions_thread)
 
     def stop_consuming(self, thread):
         if thread and thread.is_alive():
@@ -634,19 +599,3 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
         if self._mode == MASTER and not self.is_process_running():
             # No heartbeat
             self._cache.put(self, "status", DISCONNECTED_STATE, time.time())
-
-    def duringMeasureHook(self, elapsed):
-        if self.liveinterval is not None:
-            if elapsed > self._last_live + self.liveinterval:
-                self._last_live = elapsed
-                return LIVE
-        return None
-
-    def arrayInfo(self):
-        return tuple(image.arrayInfo() for image in self._attached_images)
-
-    def doTime(self, preset):
-        return 0
-
-    def presetInfo(self):
-        return tuple(self._presetkeys)
