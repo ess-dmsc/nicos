@@ -11,7 +11,7 @@ devices = dict(
         description="The livedata collector",
         brokers=configdata("config.KAFKA_BROKERS"),
         data_topics=["bifrost_livedata_data"],
-        command_topic="bifrost_livedata_commands",
+        commands_topic="bifrost_livedata_commands",
         status_topics=["bifrost_livedata_heartbeat"],
         others=["channel_1"],
     ),
