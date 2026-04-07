@@ -15,7 +15,7 @@ devices = dict(
         temppv=f"{pv_approach}-Temp",
     ),
     meas_cart_approach_controller_1=device(
-        "nicos_ess.devices.mapped_controller.MappedControllerPastTense",
+        "nicos_ess.devices.mapped_controller.MappedControllerEngageDisengage",
         description="Engage/disengage approach",
         controlled_device="meas_cart_approach2",
         mapping={

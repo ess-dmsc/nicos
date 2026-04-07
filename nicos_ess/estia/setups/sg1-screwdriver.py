@@ -24,7 +24,7 @@ devices = dict(
         motorpv=f"{pvprefix}LinY-01:Mtr",
     ),
     sg1_screwdriver_approach_1_controller=device(
-        "nicos_ess.devices.mapped_controller.MappedControllerPastTense",
+        "nicos_ess.devices.mapped_controller.MappedControllerEngageDisengage",
         description="Engage/disengage approach",
         controlled_device="meas_cart_approach2",
         mapping={
@@ -48,7 +48,7 @@ devices = dict(
         motorpv=f"{pvprefix}LinY-02:Mtr",
     ),
     sg1_screwdriver_approach_2_controller=device(
-        "nicos_ess.devices.mapped_controller.MappedControllerPastTense",
+        "nicos_ess.devices.mapped_controller.MappedControllerEngageDisengage",
         description="Engage/disengage approach",
         controlled_device="meas_cart_approach2",
         mapping={
