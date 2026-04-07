@@ -13,14 +13,15 @@ sysconfig = dict(
 
 alias_config = {
     "NexusStructure": {
-        "NexusStructure_loki": 100,
-        "NexusStructure_dream": 99,
-        "NexusStructure_bifrost": 98,
-        "NexusStructure_nmx": 97,
-        "NexusStructure_odin": 96,
-        "NexusStructure_tbl": 95,
-        "NexusStructure_estia": 94,
-        "NexusStructure_beer": 93,
+        "NexusStructure_beer": 100,
+        "NexusStructure_bifrost": 99,
+        "NexusStructure_dream": 98,
+        "NexusStructure_estia": 97,
+        "NexusStructure_magic": 96,
+        "NexusStructure_loki": 95,
+        "NexusStructure_nmx": 94,
+        "NexusStructure_odin": 93,
+        "NexusStructure_tbl": 92,
     },
 }
 
@@ -107,6 +108,13 @@ devices = dict(
         description="Provides the NeXus structure",
         nexus_config_path="nexus-json-templates/beer/beer-dynamic.json",
         instrument_name="beer",
+        visibility=(),
+    ),
+    NexusStructure_magic=device(
+        "nicos_ess.devices.datasinks.nexus_structure.NexusStructureJsonFile",
+        description="Provides the NeXus structure",
+        nexus_config_path="nexus-json-templates/magic/magic-dynamic.json",
+        instrument_name="magic",
         visibility=(),
     ),
     NexusStructure=device(
