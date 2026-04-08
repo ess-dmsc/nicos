@@ -116,7 +116,7 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
         )
 
     def doRead(self, maxage=0):
-        return self.curvalue
+        return [self.curvalue]
 
     def doReadArray(self, quality):
         return self._signal
@@ -363,7 +363,6 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
                 self.name, shape=self._signal.shape, dtype=self._signal.dtype
             )
 
-            self._cache.put(self, "value", [self.curvalue], time.time())
             self._push_to_nicos(
                 plot_type,
                 labels,
