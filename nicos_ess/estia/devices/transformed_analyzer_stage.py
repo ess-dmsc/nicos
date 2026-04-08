@@ -7,10 +7,10 @@ from nicos_ess.devices.epics.pva.motor import EpicsMotor
 class MmToDegrees(HasLimits, TransformedMoveable):
     parameters = {
         "unit": Param(
-            description="Converts unit of attached motor from degrees/sec to RPM",
+            description="Converts unit of attached motor from mm to degrees",
             type=str,
             settable=False,
-            default="rpm",
+            default="degrees",
         )
     }
 

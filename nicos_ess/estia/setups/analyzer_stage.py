@@ -20,5 +20,6 @@ devices = dict(
     analyzer_angular_adjustment=device(
         "nicos_ess.estia.devices.transformed_analyzer_stage.MmToDegrees",
         description="analyzer angular adjustment",
+        motor="analyzer_angular_adjustment_motor",
     ),
 )
