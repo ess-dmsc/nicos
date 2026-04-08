@@ -205,7 +205,17 @@ class SeleneMover(Moveable):
     def _createPos(self, **kw):
         return np.array([kw[k] for k in ("y", "z", "Rx", "Ry", "Rz")], dtype=float)
 
+    def _adjustSG1(self, target):
+        target = list(target)
+        target[0] = target[0] - (450 * target[4])  # y = y - (450*Rz)
+        target[1] = target[1] + (450 * target[3])  # z = z + (450*Ry)
+        return target
+
     def doStart(self, target):
+        # This adjusts the axis of rotation for Selene Guide 1
+        if self.SG_from_params() == "SG1":
+            target = self._adjustSG1(target)
+
         for name, angle in zip(self.motor_names, self._angles(target)):
             self._adevs[name].start(angle)
 
