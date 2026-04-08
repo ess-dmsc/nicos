@@ -26,7 +26,7 @@ devices = dict(
     sg1_screwdriver_approach_1_controller=device(
         "nicos_ess.devices.mapped_controller.MappedControllerEngageDisengage",
         description="Engage/disengage approach",
-        controlled_device="meas_cart_approach2",
+        controlled_device="sg1_screwdriver_approach_1",
         mapping={
             "Disengage": 28.0,
             "Engage": 0.0,
@@ -50,7 +50,7 @@ devices = dict(
     sg1_screwdriver_approach_2_controller=device(
         "nicos_ess.devices.mapped_controller.MappedControllerEngageDisengage",
         description="Engage/disengage approach",
-        controlled_device="meas_cart_approach2",
+        controlled_device="sg1_screwdriver_approach_2",
         mapping={
             "Disengage": 29.0,
             "Engage": 0.0,

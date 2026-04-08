@@ -17,7 +17,7 @@ devices = dict(
     meas_cart_approach_controller_1=device(
         "nicos_ess.devices.mapped_controller.MappedControllerEngageDisengage",
         description="Engage/disengage approach",
-        controlled_device="meas_cart_approach2",
+        controlled_device="meas_cart_approach1",
         mapping={
             "Disengage": 0.0,
             "Engage": 180.0,
