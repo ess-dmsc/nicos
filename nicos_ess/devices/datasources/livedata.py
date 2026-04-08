@@ -48,10 +48,15 @@ from nicos.core import (
 )
 from nicos.devices.generic import CounterChannelMixin, Detector, PassiveChannel
 from nicos.utils import byteBuffer, createThread, num_sort, sleep
+from nicos_ess.devices.datasources.livedata_utils import (
+    JobInfo,
+    JobRegistry,
+    Selector,
+    WorkflowId,
+    parse_result_key,
+)
 from nicos_ess.devices.kafka.consumer import KafkaConsumer, KafkaSubscriber
 from nicos_ess.devices.kafka.producer import KafkaProducer
-
-from .livedata_utils import JobInfo, JobRegistry, Selector, WorkflowId, parse_result_key
 
 DISCONNECTED_STATE = (status.ERROR, "Disconnected")
 INIT_MESSAGE = "Initializing LiveDataCollector…"
