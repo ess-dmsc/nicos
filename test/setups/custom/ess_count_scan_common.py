@@ -1,3 +1,8 @@
+# Shared test setup for command-level ESS count/scan tests.
+#
+# The custom command-test setups below all reuse the same virtual scan axis and
+# timer channel so each test module only needs to declare the detector graph it
+# wants to exercise.
 includes = ["stdsystem"]
 
 devices = dict(

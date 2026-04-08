@@ -1,3 +1,9 @@
+"""Command-level tests for the livedata collector/data-channel integration.
+
+The tests drive the public `count()` and `scan()` commands while faking the
+minimal DA00 traffic needed to make the collector and channels progress.
+"""
+
 import json
 import threading
 import time
@@ -24,10 +30,20 @@ from test.nicos_ess.test_devices.doubles import (
     StubKafkaSubscriber,
 )
 
+# The command tests load their own explicit setup and should not inherit a
+# preselected detector list from any session setup.
 session_setup = None
+COUNT_TIMER_PRESET_SECONDS = 0.02
+CHANNEL_PRESET_TOTAL = 5
 
 
 def _publish_livedata_when_running(channel, total):
+    """Push one DA00 update directly into a running channel.
+
+    This bypasses Kafka transport on purpose: command tests are about preset
+    routing and count-loop behaviour, while the device harness tests already
+    cover the collector/channel DA00 decoding path in detail.
+    """
     assert wait_until(lambda: channel.running)
     source_name = json.dumps(
         {
@@ -62,6 +78,7 @@ def _publish_livedata_when_running(channel, total):
 
 @pytest.fixture
 def livedata_backend(monkeypatch):
+    """Replace Kafka plumbing with stubs and make prepare-time sleeps instant."""
     producer = StubKafkaProducer()
     monkeypatch.setattr(livedata, "KafkaSubscriber", StubKafkaSubscriber)
     monkeypatch.setattr(livedata.KafkaProducer, "create", lambda *a, **k: producer)
@@ -70,30 +87,39 @@ def livedata_backend(monkeypatch):
 
 
 def test_livedata_count_with_timer_preset(session, livedata_backend):
+    """Timer-controlled counts should leave the channel stopped afterwards."""
     with loaded_setup(session, "ess_livedata_count_scan"):
         set_detectors(session, "livedata_collector")
-        count(t=0.02)
+        count(t=COUNT_TIMER_PRESET_SECONDS)
         assert session.getDevice("channel_1").running is False
 
 
 def test_livedata_count_with_explicit_channel_preset(session, livedata_backend):
+    """A channel preset should turn that channel into the soft controller.
+
+    The injected DA00 message carries a single-bin signal with the target
+    total, so the final readback is easy to understand from the assertion.
+    """
     with loaded_setup(session, "ess_livedata_count_scan"):
         set_detectors(session, "livedata_collector")
         channel = session.getDevice("channel_1")
         publisher = threading.Thread(
-            target=_publish_livedata_when_running, args=(channel, 5), daemon=True
+            target=_publish_livedata_when_running,
+            args=(channel, CHANNEL_PRESET_TOTAL),
+            daemon=True,
         )
         publisher.start()
-        count(channel_1=5)
+        count(channel_1=CHANNEL_PRESET_TOTAL)
         publisher.join(timeout=1)
         assert not publisher.is_alive()
-        assert channel.read()[0] == 5
+        assert channel.read()[0] == CHANNEL_PRESET_TOTAL
 
 
 def test_livedata_scan_across_two_points(session, livedata_backend):
+    """A two-point scan should record exactly the two requested motor positions."""
     with loaded_setup(session, "ess_livedata_count_scan"):
         set_detectors(session, "livedata_collector")
         axis = session.getDevice("axis")
-        scan(axis, 0, 1, 2, t=0.02)
+        scan(axis, 0, 1, 2, t=COUNT_TIMER_PRESET_SECONDS)
         dataset = session.experiment.data.getLastScans()[-1]
         assert scan_positions(dataset) == [0.0, 1.0]

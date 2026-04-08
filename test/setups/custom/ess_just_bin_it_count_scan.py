@@ -1,3 +1,7 @@
+# Minimal just-bin-it setup used by command tests.
+#
+# Two image channels are attached so tests can show the difference between a
+# detector-wide timer preset and a preset targeting one specific image channel.
 includes = ["ess_count_scan_common"]
 
 devices = dict(

@@ -1,3 +1,8 @@
+# Minimal livedata setup used by command tests.
+#
+# The collector owns two channels so the tests can exercise both generic
+# timer-driven counts and counts where one named channel acts as the soft
+# controller.
 includes = ["ess_count_scan_common"]
 
 devices = dict(

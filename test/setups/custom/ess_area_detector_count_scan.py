@@ -1,3 +1,8 @@
+# Minimal area-detector setup used by command tests.
+#
+# One image channel is wrapped in an aggregate detector so the tests can verify
+# how generic NICOS `count()` and `scan()` interact with the simplified ESS
+# area-detector classes.
 includes = ["ess_count_scan_common"]
 
 devices = dict(

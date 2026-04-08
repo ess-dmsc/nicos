@@ -1,3 +1,13 @@
+"""Harness tests for the livedata collector and data channels.
+
+The tests make the protocol boundaries explicit:
+
+- the collector owns job discovery and mapping updates
+- channels own selector changes and array/value updates
+- DA00 payloads are injected directly so each test can show exactly which
+  input produced the asserted result
+"""
+
 import json
 from types import SimpleNamespace
 
@@ -19,6 +29,8 @@ from test.nicos_ess.test_devices.doubles import (
     StubKafkaSubscriber,
 )
 
+# One fixed result-key payload is enough for these tests because they are about
+# selector/mapping behaviour, not about variations in workflow metadata.
 _SOURCE_NAME = json.dumps(
     {
         "workflow_id": {
@@ -35,6 +47,7 @@ _SOURCE_NAME = json.dumps(
 
 @pytest.fixture
 def livedata_stubs(monkeypatch):
+    """Patch livedata Kafka plumbing with explicit in-memory doubles."""
     producer = StubKafkaProducer()
     monkeypatch.setattr(livedata, "KafkaSubscriber", StubKafkaSubscriber)
     monkeypatch.setattr(livedata.KafkaProducer, "create", lambda *a, **k: producer)
@@ -43,6 +56,7 @@ def livedata_stubs(monkeypatch):
 
 
 def _create_channel(daemon_device_harness, name="channel"):
+    """Create one data channel with a selector that matches `_SOURCE_NAME`."""
     return daemon_device_harness.create_master(
         livedata.DataChannel,
         name=name,
@@ -52,6 +66,7 @@ def _create_channel(daemon_device_harness, name="channel"):
 
 
 def _create_collector(daemon_device_harness, channel_names):
+    """Create the collector plus a timer so count/prepare behave like production."""
     daemon_device_harness.create_master(
         TimerChannel,
         name="timer",
@@ -69,10 +84,12 @@ def _create_collector(daemon_device_harness, channel_names):
 
 
 def _make_da00(source_name, variables):
+    """Build the minimal DA00-like object the channel update path expects."""
     return SimpleNamespace(source_name=source_name, data=variables)
 
 
 def _var(name, data, axes=None, unit="", label=None):
+    """Create a small variable object for DA00 shape/axis tests."""
     ns = SimpleNamespace(name=name, data=np.asarray(data), unit=unit)
     if axes is not None:
         ns.axes = axes
@@ -85,6 +102,7 @@ class TestLiveDataHarness:
     def test_selector_move_updates_channel_selector(
         self, daemon_device_harness, livedata_stubs
     ):
+        """Moving the channel via its mapping should rewrite the stored selector."""
         channel = _create_channel(daemon_device_harness)
         collector = _create_collector(daemon_device_harness, ["channel"])
         workflow = WorkflowId("test", "data_reduction", "monitor_data", 1)
@@ -109,10 +127,12 @@ class TestLiveDataHarness:
     def test_prepare_keeps_backend_reset_behavior(
         self, daemon_device_harness, livedata_stubs
     ):
+        """Preparing a channel should still send a backend reset for its resolved job."""
         channel = _create_channel(daemon_device_harness)
         collector = _create_collector(daemon_device_harness, ["channel"])
 
         def _prime_and_prepare():
+            # Preparing only resets known jobs, so populate the registry first.
             collector._registry.jobinfo_from_status(
                 WorkflowId("test", "data_reduction", "monitor_data", 1),
                 job_source_name="monitor",
@@ -135,6 +155,7 @@ class TestLiveDataHarness:
     def test_da00_routing_updates_scalar_value_and_live_payload(
         self, daemon_device_harness, livedata_stubs, monkeypatch
     ):
+        """Collector routing should update both readback and live-data output."""
         captured = []
         channel = _create_channel(daemon_device_harness)
         collector = _create_collector(daemon_device_harness, ["channel"])
@@ -173,6 +194,7 @@ class TestLiveDataHarness:
 
         assert channel.read(0)[0] == 5
         assert captured
+        # Live data should be attributed to the channel name that matched.
         assert captured[0][0]["det"] == "channel"
 
 
@@ -181,6 +203,11 @@ class TestDataChannelDimensionHandling:
 
     @pytest.fixture(autouse=True)
     def setup_channel(self, daemon_device_harness, livedata_stubs, monkeypatch):
+        """Create one started channel and capture each live-data publish.
+
+        The fixture starts the channel once up front so the per-test assertions
+        can stay about signal-shape handling instead of count lifecycle.
+        """
         self.captured = []
         self.channel = _create_channel(daemon_device_harness)
         _create_collector(daemon_device_harness, ["channel"])
@@ -194,16 +221,19 @@ class TestDataChannelDimensionHandling:
         self.channel.start()
 
     def _send(self, variables):
+        """Inject one DA00 payload directly into the channel update path."""
         da00 = _make_da00(_SOURCE_NAME, variables)
         self.channel.update_data_from_da00(da00, 123456789)
 
     def test_scalar_signal(self):
+        """Scalar signals are normalised into a one-element 1-D array."""
         self._send([_var("signal", 42, axes=["dim0"])])
 
         assert self.channel.read(0)[0] == 42
         assert self.channel._signal.shape == (1,)
 
     def test_1d_signal(self):
+        """A 1-D signal should keep its natural shape and summed readback."""
         self._send([
             _var("signal", [10, 20, 30], axes=["x"]),
             _var("x", [0.0, 1.0, 2.0, 3.0], axes=["x"]),
@@ -213,6 +243,7 @@ class TestDataChannelDimensionHandling:
         assert self.channel._signal.shape == (3,)
 
     def test_2d_signal(self):
+        """A 2-D signal should preserve both dimensions."""
         data = np.arange(6, dtype=np.float64).reshape(2, 3)
         self._send([
             _var("signal", data, axes=["y", "x"]),
@@ -224,12 +255,14 @@ class TestDataChannelDimensionHandling:
         assert self.channel._signal.shape == (2, 3)
 
     def test_no_signal_variable_is_ignored(self):
+        """Payloads without a `signal` variable should leave the channel unchanged."""
         self._send([_var("not_signal", [1, 2, 3], axes=["x"])])
 
         assert self.channel.read(0)[0] == 0
         assert self.channel._signal is None
 
     def test_consecutive_updates_replace_value(self):
+        """Later DA00 updates should replace, not accumulate, the cached signal."""
         self._send([_var("signal", [1, 2], axes=["x"])])
         assert self.channel.read(0)[0] == 3
 
@@ -237,6 +270,7 @@ class TestDataChannelDimensionHandling:
         assert self.channel.read(0)[0] == 30
 
     def test_channel_not_running_ignores_data(self):
+        """Stopped channels should ignore incoming DA00 updates."""
         self.channel.running = False
         self._send([_var("signal", [99], axes=["x"])])
 
