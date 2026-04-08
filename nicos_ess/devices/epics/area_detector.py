@@ -200,6 +200,7 @@ class AreaDetector(ImageChannelMixin, EpicsDevice, ActiveChannel):
         EpicsDevice.doPreinit(self, mode)
 
     def doInit(self, mode):
+        EpicsDevice.doInit(self, mode)
         if mode != SIMULATION:
             self._refresh_array_metadata()
 
