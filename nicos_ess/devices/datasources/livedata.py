@@ -485,7 +485,7 @@ class LiveDataCollector(Detector):
             type=str,
             default="data_reduction",
             preinit=True,
-            userparam=False,
+            userparam=True,
         ),
         "cfg_group_id": Param(
             "Kafka consumer group base for status/responses",
