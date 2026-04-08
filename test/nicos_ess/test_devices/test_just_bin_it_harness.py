@@ -32,8 +32,11 @@ from nicos_ess.devices.datasources import just_bin_it
 from nicos_ess.devices.kafka import status_handler
 from nicos_ess.devices.timer import TimerChannel
 
-from test.nicos_ess.test_devices.doubles import StubKafkaConsumer, \
-    StubKafkaProducer, StubKafkaSubscriber
+from test.nicos_ess.test_devices.doubles import (
+    StubKafkaConsumer,
+    StubKafkaProducer,
+    StubKafkaSubscriber,
+)
 
 
 @pytest.fixture
@@ -48,58 +51,30 @@ def kafka_stubs(monkeypatch):
     monkeypatch.setattr(status_handler, "KafkaSubscriber", StubKafkaSubscriber)
 
 
-class RecordingKafkaProducer:
-    def __init__(self):
-        self.messages = []
+@pytest.fixture
+def recording_kafka(monkeypatch):
+    producer = StubKafkaProducer()
+    acked_ids = set()
 
-    def produce(self, topic, message, **kwargs):
-        self.messages.append((topic, message))
-        callback = kwargs.get("on_delivery_callback")
-        if callback:
-            callback(None, object())
-
-
-class _AckMessage:
-    def __init__(self, payload):
-        self._payload = payload
-
-    def value(self):
-        return self._payload
-
-
-class AckingKafkaConsumer:
-    def __init__(self, producer):
-        self._producer = producer
-        self._acked_ids = set()
-
-    def subscribe(self, *_args, **_kwargs):
-        pass
-
-    def poll(self, timeout_ms=0):
-        for _, message in self._producer.messages:
+    def poll_hook(_consumer, timeout_ms=0):
+        del timeout_ms
+        for record in producer.messages:
             try:
-                payload = json.loads(message.decode("utf-8"))
+                payload = json.loads(record["message"].decode("utf-8"))
             except Exception:
                 continue
             if payload.get("cmd") != "config":
                 continue
             msg_id = payload["msg_id"]
-            if msg_id in self._acked_ids:
+            if msg_id in acked_ids:
                 continue
-            self._acked_ids.add(msg_id)
-            return _AckMessage(
-                json.dumps({"msg_id": msg_id, "response": "ACK"}).encode("utf-8")
-            )
+            acked_ids.add(msg_id)
+            return json.dumps(
+                {"msg_id": msg_id, "response": "ACK"}
+            ).encode("utf-8")
         return None
 
-    def close(self):
-        pass
-
-
-@pytest.fixture
-def recording_kafka(monkeypatch):
-    producer = RecordingKafkaProducer()
-    consumer = AckingKafkaConsumer(producer)
+    consumer = StubKafkaConsumer(poll_hook=poll_hook)
     monkeypatch.setattr(just_bin_it, "KafkaSubscriber", StubKafkaSubscriber)
     monkeypatch.setattr(
         just_bin_it.KafkaProducer, "create", lambda *args, **kwargs: producer
@@ -197,7 +172,8 @@ class TestJustBinItDetectorHarness:
 
         commands = [
             json.loads(message.decode("utf-8"))["cmd"]
-            for _, message in recording_kafka.messages
+            for record in recording_kafka.messages
+            for message in [record["message"]]
         ]
         assert commands.count("config") == 1
         assert commands.count("stop") == 1

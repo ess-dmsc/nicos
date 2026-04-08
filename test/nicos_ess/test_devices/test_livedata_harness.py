@@ -14,7 +14,10 @@ from nicos_ess.devices.datasources import livedata
 from nicos_ess.devices.datasources.livedata_utils import JobId, WorkflowId
 from nicos_ess.devices.timer import TimerChannel
 
-from test.nicos_ess.test_devices.doubles import StubKafkaSubscriber
+from test.nicos_ess.test_devices.doubles import (
+    StubKafkaProducer,
+    StubKafkaSubscriber,
+)
 
 _SOURCE_NAME = json.dumps(
     {
@@ -30,26 +33,9 @@ _SOURCE_NAME = json.dumps(
 )
 
 
-class RecordingKafkaProducer:
-    def __init__(self):
-        self.messages = []
-
-    def produce(self, topic, message, **kwargs):
-        self.messages.append(
-            {
-                "topic": topic,
-                "message": message,
-                "key": kwargs.get("key"),
-            }
-        )
-        callback = kwargs.get("on_delivery_callback")
-        if callback:
-            callback(None, object())
-
-
 @pytest.fixture
 def livedata_stubs(monkeypatch):
-    producer = RecordingKafkaProducer()
+    producer = StubKafkaProducer()
     monkeypatch.setattr(livedata, "KafkaSubscriber", StubKafkaSubscriber)
     monkeypatch.setattr(livedata.KafkaProducer, "create", lambda *a, **k: producer)
     monkeypatch.setattr(livedata, "sleep", lambda *_: None)

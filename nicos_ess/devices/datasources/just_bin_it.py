@@ -279,9 +279,6 @@ class JustBinItImage(ImageChannelMixin, PassiveChannel):
         self._hist_data = hist_type_by_name[self.hist_type].get_zeroes(**self._params)
 
     def arrayInfo(self):
-        self.arraydesc = hist_type_by_name[self.hist_type].get_array_description(
-            **self._params
-        )
         return self.arraydesc
 
     def doPrepare(self):
@@ -339,7 +336,6 @@ class JustBinItImage(ImageChannelMixin, PassiveChannel):
         return [self._hist_sum]
 
     def doReadArray(self, quality):
-        self.arrayInfo()
         return self._hist_data
 
     def valueInfo(self):

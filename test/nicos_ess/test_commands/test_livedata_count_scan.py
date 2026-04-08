@@ -13,15 +13,22 @@ from nicos.commands.scan import scan
 
 from nicos_ess.devices.datasources import livedata
 
-from test.nicos_ess.test_commands.conftest import RecordingKafkaProducer, \
-    _set_detectors, _wait_until, loaded_setup
-from test.nicos_ess.test_devices.doubles import StubKafkaSubscriber
+from test.nicos_ess.command_helpers import (
+    loaded_setup,
+    scan_positions,
+    set_detectors,
+    wait_until,
+)
+from test.nicos_ess.test_devices.doubles import (
+    StubKafkaProducer,
+    StubKafkaSubscriber,
+)
 
 session_setup = None
 
 
 def _publish_livedata_when_running(channel, total):
-    assert _wait_until(lambda: channel.running)
+    assert wait_until(lambda: channel.running)
     source_name = json.dumps(
         {
             "workflow_id": {
@@ -55,7 +62,7 @@ def _publish_livedata_when_running(channel, total):
 
 @pytest.fixture
 def livedata_backend(monkeypatch):
-    producer = RecordingKafkaProducer()
+    producer = StubKafkaProducer()
     monkeypatch.setattr(livedata, "KafkaSubscriber", StubKafkaSubscriber)
     monkeypatch.setattr(livedata.KafkaProducer, "create", lambda *a, **k: producer)
     monkeypatch.setattr(livedata, "sleep", lambda *_: None)
@@ -64,14 +71,14 @@ def livedata_backend(monkeypatch):
 
 def test_livedata_count_with_timer_preset(session, livedata_backend):
     with loaded_setup(session, "ess_livedata_count_scan"):
-        _set_detectors(session, "livedata_collector")
+        set_detectors(session, "livedata_collector")
         count(t=0.02)
         assert session.getDevice("channel_1").running is False
 
 
 def test_livedata_count_with_explicit_channel_preset(session, livedata_backend):
     with loaded_setup(session, "ess_livedata_count_scan"):
-        _set_detectors(session, "livedata_collector")
+        set_detectors(session, "livedata_collector")
         channel = session.getDevice("channel_1")
         publisher = threading.Thread(
             target=_publish_livedata_when_running, args=(channel, 5), daemon=True
@@ -85,8 +92,8 @@ def test_livedata_count_with_explicit_channel_preset(session, livedata_backend):
 
 def test_livedata_scan_across_two_points(session, livedata_backend):
     with loaded_setup(session, "ess_livedata_count_scan"):
-        _set_detectors(session, "livedata_collector")
+        set_detectors(session, "livedata_collector")
         axis = session.getDevice("axis")
         scan(axis, 0, 1, 2, t=0.02)
         dataset = session.experiment.data.getLastScans()[-1]
-        assert dataset.devvaluelists == [[0.0], [1.0]]
+        assert scan_positions(dataset) == [0.0, 1.0]

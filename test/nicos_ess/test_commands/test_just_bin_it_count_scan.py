@@ -15,40 +15,14 @@ from nicos.commands.scan import scan
 from nicos_ess.devices.datasources import just_bin_it
 from nicos_ess.devices.kafka import status_handler
 
-from test.nicos_ess.test_commands.conftest import RecordingKafkaProducer, \
-    _KafkaRecord, _set_detectors, _wait_until, loaded_setup
-from test.nicos_ess.test_devices.doubles import StubKafkaSubscriber
+from test.nicos_ess.command_helpers import loaded_setup, set_detectors, wait_until
+from test.nicos_ess.test_devices.doubles import (
+    StubKafkaConsumer,
+    StubKafkaProducer,
+    StubKafkaSubscriber,
+)
 
 session_setup = None
-
-
-class AckingKafkaConsumer:
-    def __init__(self, producer):
-        self._producer = producer
-        self._acked_ids = set()
-
-    def subscribe(self, *_args, **_kwargs):
-        pass
-
-    def poll(self, timeout_ms=0):
-        for record in self._producer.messages:
-            try:
-                payload = json.loads(record["message"].decode("utf-8"))
-            except Exception:
-                continue
-            if payload.get("cmd") != "config":
-                continue
-            msg_id = payload["msg_id"]
-            if msg_id in self._acked_ids:
-                continue
-            self._acked_ids.add(msg_id)
-            return _KafkaRecord(
-                json.dumps({"msg_id": msg_id, "response": "ACK"}).encode("utf-8")
-            )
-        return None
-
-    def close(self):
-        pass
 
 
 def _command_names(producer):
@@ -62,7 +36,7 @@ def _command_names(producer):
 
 
 def _publish_histogram_when_started(image, total):
-    assert _wait_until(lambda: image._unique_id is not None)
+    assert wait_until(lambda: image._unique_id is not None)
     data = np.zeros(image.num_bins, dtype=np.float64)
     data[0] = total
     message = serialise_hs01(
@@ -87,8 +61,28 @@ def _publish_histogram_when_started(image, total):
 
 @pytest.fixture
 def jbi_backend(monkeypatch):
-    producer = RecordingKafkaProducer()
-    consumer = AckingKafkaConsumer(producer)
+    producer = StubKafkaProducer()
+    acked_ids = set()
+
+    def poll_hook(_consumer, timeout_ms=0):
+        del timeout_ms
+        for record in producer.messages:
+            try:
+                payload = json.loads(record["message"].decode("utf-8"))
+            except Exception:
+                continue
+            if payload.get("cmd") != "config":
+                continue
+            msg_id = payload["msg_id"]
+            if msg_id in acked_ids:
+                continue
+            acked_ids.add(msg_id)
+            return json.dumps(
+                {"msg_id": msg_id, "response": "ACK"}
+            ).encode("utf-8")
+        return None
+
+    consumer = StubKafkaConsumer(poll_hook=poll_hook)
     monkeypatch.setattr(just_bin_it, "KafkaSubscriber", StubKafkaSubscriber)
     monkeypatch.setattr(just_bin_it.KafkaProducer, "create", lambda *a, **k: producer)
     monkeypatch.setattr(just_bin_it.KafkaConsumer, "create", lambda *a, **k: consumer)
@@ -98,14 +92,14 @@ def jbi_backend(monkeypatch):
 
 def test_just_bin_it_count_with_timer_preset(session, jbi_backend):
     with loaded_setup(session, "ess_just_bin_it_count_scan"):
-        _set_detectors(session, "jbi_detector")
+        set_detectors(session, "jbi_detector")
         count(t=0.02)
         assert _command_names(jbi_backend) == ["config", "stop"]
 
 
 def test_just_bin_it_count_with_explicit_channel_preset(session, jbi_backend):
     with loaded_setup(session, "ess_just_bin_it_count_scan"):
-        _set_detectors(session, "jbi_detector")
+        set_detectors(session, "jbi_detector")
         image = session.getDevice("image_1")
         publisher = threading.Thread(
             target=_publish_histogram_when_started, args=(image, 2), daemon=True
@@ -120,7 +114,7 @@ def test_just_bin_it_count_with_explicit_channel_preset(session, jbi_backend):
 
 def test_just_bin_it_scan_across_two_points(session, jbi_backend):
     with loaded_setup(session, "ess_just_bin_it_count_scan"):
-        _set_detectors(session, "jbi_detector")
+        set_detectors(session, "jbi_detector")
         axis = session.getDevice("axis")
         scan(axis, 0, 1, 2, t=0.02)
         assert _command_names(jbi_backend).count("config") == 2

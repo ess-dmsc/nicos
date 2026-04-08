@@ -40,23 +40,42 @@ class StubKafkaSubscriber:
 
 
 class StubKafkaConsumer:
+    def __init__(self, records=None, poll_hook=None):
+        self.records = [self._coerce_record(record) for record in records or ()]
+        self.poll_hook = poll_hook
+        self.subscriptions = []
+        self.closed = False
+
     @staticmethod
     def create(*args, **kwargs):
         del args, kwargs
         return StubKafkaConsumer()
 
     def subscribe(self, *args, **kwargs):
-        del args, kwargs
+        self.subscriptions.append((args, kwargs))
 
     def poll(self, *args, **kwargs):
-        del args, kwargs
+        if self.poll_hook is not None:
+            record = self.poll_hook(self, *args, **kwargs)
+            if record is not None:
+                return self._coerce_record(record)
+        if self.records:
+            return self.records.pop(0)
         return None
 
     def seek(self, *args, **kwargs):
         del args, kwargs
 
+    def queue_record(self, payload):
+        self.records.append(self._coerce_record(payload))
+
+    def _coerce_record(self, record):
+        if hasattr(record, "value"):
+            return record
+        return _StubKafkaRecord(record)
+
     def close(self):
-        pass
+        self.closed = True
 
 
 class _DeliveredMessage:
@@ -67,14 +86,31 @@ class _DeliveredMessage:
         return 0
 
 
+class _StubKafkaRecord:
+    def __init__(self, payload):
+        self._payload = payload
+
+    def value(self):
+        return self._payload
+
+
 class StubKafkaProducer:
+    def __init__(self):
+        self.messages = []
+
     @staticmethod
     def create(*args, **kwargs):
         del args, kwargs
         return StubKafkaProducer()
 
-    def produce(self, *args, **kwargs):
-        del args
+    def produce(self, topic, message, **kwargs):
+        self.messages.append(
+            {
+                "topic": topic,
+                "message": message,
+                "key": kwargs.get("key"),
+            }
+        )
         callback = kwargs.get("on_delivery_callback")
         if callback:
             callback(None, _DeliveredMessage())

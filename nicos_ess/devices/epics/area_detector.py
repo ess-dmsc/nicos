@@ -183,15 +183,19 @@ class AreaDetector(ImageChannelMixin, EpicsDevice, ActiveChannel):
     _last_update = 0
     _plot_update_delay = 2.0
 
-    def doPreinit(self, mode):
+    def _init_area_detector_state(self):
         self._image_processing_lock = threading.Lock()
         self._current_status = (status.OK, "")
         self._image_array = numpy.zeros(
             self.arraydesc.shape, dtype=self.arraydesc.dtype
         )
+
+    def doPreinit(self, mode):
+        self._init_area_detector_state()
         if mode == SIMULATION:
             return
 
+        self._record_fields = {}
         self._set_custom_record_fields()
         EpicsDevice.doPreinit(self, mode)
 
@@ -382,7 +386,7 @@ class TimepixDetector(AreaDetector):
     }
 
     def doPreinit(self, mode):
-        AreaDetector.doPreinit(self, mode)
+        self._init_area_detector_state()
         if mode == SIMULATION:
             return
 
@@ -618,7 +622,7 @@ class OrcaFlash4(AreaDetector):
     }
 
     def doPreinit(self, mode):
-        AreaDetector.doPreinit(self, mode)
+        self._init_area_detector_state()
         if mode == SIMULATION:
             return
 
@@ -956,11 +960,7 @@ class OrcaFlash4(AreaDetector):
 
 
 class AreaDetectorCollector(Detector):
-    """Detector that collects area-detector image channels.
-
-    The ``get_array_size`` method is provided for NeXus writer compatibility
-    and will be removed in a future version.
-    """
+    """Detector that collects area-detector image channels."""
 
     def get_array_size(self, topic, source):
         for area_detector in self._attached_images:
