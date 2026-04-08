@@ -156,9 +156,19 @@ class TestJustBinItImageHarness:
 
 
 class TestJustBinItDetectorHarness:
-    def test_initializes(self, device_harness, kafka_stubs):
-        del kafka_stubs
-        daemon_device, poller_device = device_harness.create_pair(
+    def test_full_detector_hierarchy_initializes_in_both_roles(
+        self, device_harness, kafka_stubs
+    ):
+        daemon_im, poller_im = device_harness.create_pair(
+            just_bin_it.JustBinItImage,
+            name="image_1",
+            shared={
+                "brokers": ["localhost:9092"],
+                "hist_topic": "jbi_hist",
+                "data_topic": "jbi_data",
+            },
+        )
+        daemon_det, poller_det = device_harness.create_pair(
             just_bin_it.JustBinItDetector,
             name="just_bin_it_detector",
             shared={
@@ -166,11 +176,14 @@ class TestJustBinItDetectorHarness:
                 "command_topic": "jbi_command",
                 "response_topic": "jbi_response",
                 "statustopic": [],
+                "images": ["image_1"],
             },
         )
 
-        assert daemon_device is not None
-        assert poller_device is not None
+        assert daemon_im is not None
+        assert poller_im is not None
+        assert daemon_det is not None
+        assert poller_det is not None
 
     def test_start_publishes_config_and_finish_sends_one_stop(
         self, daemon_device_harness, recording_kafka
@@ -201,6 +214,8 @@ class TestJustBinItDetectorHarness:
         detector.no_messages_callback()
         assert detector.status(0) == (status.ERROR, "Disconnected")
 
-        detector._cache.put(detector, "status", (status.ERROR, "Disconnected"), time.time())
+        detector._cache.put(
+            detector, "status", (status.ERROR, "Disconnected"), time.time()
+        )
         detector._status_update_callback({})
         assert detector.status(0)[0] != status.ERROR

@@ -39,6 +39,7 @@ from nicos.core import (
     Moveable,
     Override,
     Param,
+    floatrange,
     host,
     listof,
     oneof,
@@ -57,10 +58,10 @@ INIT_MESSAGE = "Initializing LiveDataCollector…"
 
 
 class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
-    """
-    Channel that subscribes (via the collector) to a particular workflow/source/job/output
-    and forwards DA00 'signal' arrays to NICOS live data. Supports 1D, 2D, and N-D in a
-    minimal/robust way.
+    """Channel for a particular workflow/source/job/output.
+
+    Forwards DA00 'signal' arrays to NICOS live data.
+    Supports 1D, 2D, and N-D.
     """
 
     parameters = {
@@ -153,7 +154,8 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
         self._signal = None
         if not self._selector_obj:
             self.log.warning(
-                f"No workflow channel selected for {self.name}. Will not prepare channel."
+                "No workflow channel selected for %s. Will not prepare channel.",
+                self.name,
             )
             self._update_status(status.WARN, "No workflow channel selected")
             return
@@ -178,7 +180,8 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
         if target is None:
             if not self._selector_obj:
                 self.log.warning(
-                    f"No workflow channel selected for {self.name}. Will not start counting."
+                    "No workflow channel selected for %s. Will not start counting.",
+                    self.name,
                 )
                 self._update_status(status.OK, "")
                 return
@@ -360,7 +363,7 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
                 self.name, shape=self._signal.shape, dtype=self._signal.dtype
             )
 
-            self.poll()
+            self._cache.put(self, "value", [self.curvalue], time.time())
             self._push_to_nicos(
                 plot_type,
                 labels,
@@ -398,7 +401,7 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
                 labels={"x": {"define": "classic"}, "y": {"define": "classic"}},
                 plotcount=1,
                 plot_type=plot_type,
-                label_shape=tuple(len(l) for l in label_arrays),
+                label_shape=tuple(len(a) for a in label_arrays),
                 label_dtypes=tuple(np.dtype(np.float64).str for _ in label_arrays),
                 axis_names=axis_names or [],
                 axis_units=axis_units or [],
@@ -517,6 +520,7 @@ class LiveDataCollector(Detector):
     }
 
     parameter_overrides = {
+        "liveinterval": Override(type=floatrange(0.5), default=1),
         "pollinterval": Override(default=None, userparam=False, settable=False),
     }
 

@@ -269,7 +269,7 @@ class JustBinItImage(ImageChannelMixin, PassiveChannel):
 
     def doInit(self, mode):
         self._hist_sum = 0
-        self.event_rate = 0.0
+        self._setROParam("event_rate", 0.0)
         self._zero_data()
 
     def _zero_data(self):
