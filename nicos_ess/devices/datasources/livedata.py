@@ -349,6 +349,12 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
             title = (getattr(sig, "label", None) or "").strip() or fallback_title
             signal_unit = getattr(sig, "unit", None) or ""
 
+            if self._signal is None:
+                self.log.warning(
+                    f"Data could not be extracted from DA00 for {self.name}"
+                )
+                return
+
             self.curvalue = int(self._signal.sum()) if self._signal.size else 0
             self.arraydesc = ArrayDesc(
                 self.name, shape=self._signal.shape, dtype=self._signal.dtype

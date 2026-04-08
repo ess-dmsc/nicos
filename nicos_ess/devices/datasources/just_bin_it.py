@@ -454,6 +454,7 @@ class JustBinItDetector(Detector, KafkaStatusHandler):
     hardware_access = True
 
     def doPreinit(self, mode):
+        self._stop_lock = threading.Lock()
         Detector.doPreinit(self, mode)
 
         if mode == SIMULATION:
