@@ -362,6 +362,7 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
             self.arraydesc = ArrayDesc(
                 self.name, shape=self._signal.shape, dtype=self._signal.dtype
             )
+            self._cache.put(self, "value", self.curvalue, time.time())
 
             self._push_to_nicos(
                 plot_type,
