@@ -264,7 +264,10 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
                     return np.ascontiguousarray(mids), unit, is_time
                 return np.arange(dim_len, dtype=np.float64), unit, is_time
 
-            # 1D/2D view selection (unchanged from your working version)
+            if arr.ndim == 0:
+                arr = arr.reshape(1)
+                sig_axes = ["dim0"]
+
             if arr.ndim == 1:
                 x_idx = 0
                 self._signal = np.ascontiguousarray(arr)
@@ -276,7 +279,7 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
                 axis_names = [sig_axes[x_idx], "Counts"]
                 axis_units = [x_unit, (getattr(sig, "unit", None) or "")]
 
-            # special way to handle estia without breaking bifrost and other instuments
+            # 3D estia layout: collapse last two dims into a 2D view
             elif arr.ndim == 3 and all(label in sig_axes for label in estia_labels):
                 y_idx, x_idx = 0, 1
                 dimension_lengths = [arr.shape[i] for i in range(arr.ndim)]
@@ -300,7 +303,7 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
                 axis_units = [x_unit, y_unit]
 
             elif arr.ndim == 2 or arr.ndim >= 4:
-                # choose two axes and reduce others (your existing logic)
+                # choose two axes and sum over the rest
                 def _pick_2d_axes(ax_names):
                     dim_lens = [arr.shape[i] for i in range(arr.ndim)]
                     idx_with_coords = []
@@ -853,7 +856,7 @@ class LiveDataCollector(Detector):
 
     def _push_mapping_to_channels(self):
         """Build a label->selector mapping and write it to every channel's 'mapping'."""
-        # reuse your existing discovery and keep labels minimal
+        # build label->selector mapping from the registry
         mapping = self.get_current_mapping()
         for ch in self._channels:
             if isinstance(ch, DataChannel):
