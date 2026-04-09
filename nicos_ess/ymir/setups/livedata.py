@@ -13,7 +13,7 @@ devices = dict(
         data_topics=["bifrost_livedata_data"],
         commands_topic="bifrost_livedata_commands",
         status_topics=["bifrost_livedata_heartbeat"],
-        others=["channel_1"],
+        counters=["channel_1"],
         service_name="unified_detector",
     ),
 )
