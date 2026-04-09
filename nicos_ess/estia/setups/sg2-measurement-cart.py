@@ -14,6 +14,15 @@ devices = dict(
         reseterrorpv=f"{pv_approach}-ErrRst",
         temppv=f"{pv_approach}-Temp",
     ),
+    meas_cart_approach_controller_2=device(
+        "nicos_ess.devices.mapped_controller.MappedControllerEngageDisengage",
+        description="Engage/disengage approach",
+        controlled_device="meas_cart_approach2",
+        mapping={
+            "Disengage": 0.0,
+            "Engage": 210.0,
+        },
+    ),
     meas_cart_position2=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Cart positioning",
