@@ -15,5 +15,6 @@ devices = dict(
         status_topics=["bifrost_livedata_heartbeat"],
         counters=["channel_1"],
         service_name="unified_detector",
+        schema="da00",
     ),
 )
