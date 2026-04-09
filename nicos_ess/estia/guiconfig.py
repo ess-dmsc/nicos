@@ -35,7 +35,6 @@ main_window = docked(
                             panel(
                                 "nicos_ess.estia.gui.panels.hexapod.HexapodPanel",
                                 hexapod="estia_hexapod",
-                                goinometer="",
                             ),
                         ),
                         (
