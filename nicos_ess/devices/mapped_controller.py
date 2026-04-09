@@ -85,6 +85,30 @@ class MappedController(MappedMoveable):
             )
 
 
+class MappedControllerEngageDisengage(MappedController):
+    """
+    Append the character "d" to the verbs engage/disengage from mapping.
+
+    So that it's shown in past tense in the value field of the device panel.
+    """
+
+    def _mapReadValue(self, value):
+        if isinstance(self._attached_controlled_device, HasPrecision):
+            for k, v in self.mapping.items():
+                if k not in ("Engage", "Disengage"):
+                    raise ValueError(
+                        'Mapping should only have keys "Engage" and "Disengage"'
+                    )
+                if abs(v - value) < self._attached_controlled_device.precision:
+                    return k + "d"  # here we return it as past tense
+
+        inverse_mapping = {v: k for k, v in self.mapping.items()}
+        mapped_value = inverse_mapping.get(value, None)
+        if not mapped_value:
+            return "In Between"
+        return mapped_value
+
+
 class MultiTargetMapping(MappedMoveable):
     """
     Class for devices that map one key to a set (tuple) of values
