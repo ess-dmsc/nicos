@@ -20,6 +20,8 @@ class HexapodPanel(Panel):
         self.paraminfo = {}
         self.adevs = {}
         self.qtObj = {}
+        # Hexapod Controller Info
+
         # Error Handling
         self._exec_reqid = None
         self._error_window = None
@@ -64,9 +66,6 @@ class HexapodPanel(Panel):
 
     def on_client_message(self, message):
         if message[5] != self._exec_reqid or message[2] < WARNING:
-            # updates gui if device panel is used
-            if "t_speed" in message[3] or "r_speed" in message[3]:
-                self.update_ui_sliders()
             return
         # show warnings and errors emitted by the current command in a window
         msg = "%s: %s" % (message[0], message[3].strip())
@@ -226,6 +225,7 @@ class HexapodPanel(Panel):
         self.exec_command(f"stop({self.devname})")
 
     @pyqtSlot()
-    def on_butPreset_pressed(self):
+    def on_butTest_pressed(self):
         self.showError(f"{self.adevs}")
+        # self.showError("Test")
         return
