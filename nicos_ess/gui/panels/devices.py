@@ -635,8 +635,9 @@ class DevicesPanel(Panel):
             value = cache_load(value)
             if ldevname in self._control_dialogs:
                 dlg = self._control_dialogs[ldevname]
-                dlg.limitMin.setText(str(value[0]))
-                dlg.limitMax.setText(str(value[1]))
+                fmtstr = devinfo.fmtstr
+                dlg.limitMin.setText(fmtstr % value[0])
+                dlg.limitMax.setText(fmtstr % value[1])
         elif subkey == "classes":
             if not value:
                 value = "[]"
@@ -1056,8 +1057,9 @@ class ControlDialog(QDialog):
             if "nicos.core.mixins.HasLimits" not in classes:
                 self.limitFrame.setVisible(False)
             else:
-                self.limitMin.setText(str(params["userlimits"][0]))
-                self.limitMax.setText(str(params["userlimits"][1]))
+                fmtstr = params["fmtstr"]
+                self.limitMin.setText(fmtstr % params["userlimits"][0])
+                self.limitMax.setText(fmtstr % params["userlimits"][1])
 
             # insert a widget to enter a new device value
             # allowEnter=False because we catch pressing Enter ourselves
@@ -1133,14 +1135,18 @@ class ControlDialog(QDialog):
     def on_actionSetLimits_triggered(self):
         dlg = dialogFromUi(self, "panels/devices_limits.ui")
         dlg.descLabel.setText("Adjust user limits of %s:" % self.devname)
-        dlg.limitMin.setText(self.limitMin.text())
-        dlg.limitMax.setText(self.limitMax.text())
+
+        userlimits = self.client.getDeviceParam(self.devname, "userlimits")
+        fmtstr = self.devinfo.fmtstr
+        dlg.limitMin.setText(fmtstr % userlimits[0])
+        dlg.limitMax.setText(fmtstr % userlimits[1])
+        
         abslimits = self.client.getDeviceParam(self.devname, "abslimits")
         offset = self.client.getDeviceParam(self.devname, "offset")
         if offset is not None:
             abslimits = abslimits[0] - offset, abslimits[1] - offset
-        dlg.limitMinAbs.setText(str(abslimits[0]))
-        dlg.limitMaxAbs.setText(str(abslimits[1]))
+        dlg.limitMinAbs.setText(fmtstr % abslimits[0])
+        dlg.limitMaxAbs.setText(fmtstr % abslimits[1])
         target = DeviceParamEdit(dlg, dev=self.devname, param="userlimits")
         target.setClient(self.client)
         btn = dlg.buttonBox.addButton(
