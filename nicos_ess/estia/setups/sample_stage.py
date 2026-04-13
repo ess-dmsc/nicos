@@ -79,5 +79,6 @@ devices = dict(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="Current coordinate system",
         readpv=f"{hex_root}CS",
+        writepv=f"{hex_root}CS",
     ),
 )
