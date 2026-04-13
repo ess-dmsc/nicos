@@ -1271,7 +1271,6 @@
  </widget>
  <layoutdefault spacing="6" margin="11"/>
  <resources>
-  <include location="../../../../resources/nicos-gui.qrc"/>
   <include location="../../../../../../../../resources/nicos-gui.qrc"/>
  </resources>
  <connections/>

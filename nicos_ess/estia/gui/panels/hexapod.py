@@ -20,6 +20,7 @@ class HexapodPanel(Panel):
         self.paraminfo = {}
         self.adevs = {}
         self.qtObj = {}
+        self.status = options.get("status")
         # Hexapod Controller Info
 
         # Error Handling
@@ -58,11 +59,13 @@ class HexapodPanel(Panel):
         (time, key, op, value) = data
         devname, pname = key.split("/")
 
-        if pname != "value":
-            return
-        if devname == self.devname:
+        # if pname != "value":
+        #    return
+        if devname == self.devname and pname == "value":
             fvalue = cache_load(value)
             self.update_current_pos(fvalue)
+        if devname == self.status and pname == "status":
+            return
 
     def on_client_message(self, message):
         if message[5] != self._exec_reqid or message[2] < WARNING:
@@ -226,9 +229,8 @@ class HexapodPanel(Panel):
 
     @pyqtSlot()
     def on_butTest_pressed(self):
-        self.showError(f"{self.adevs}")
-        # self.showError("Test")
-        return
+        # self.showError(f"{self.adevs}")
+        self.showError(f"{self.status}")
 
     # relative motion using rmove in GUI
 

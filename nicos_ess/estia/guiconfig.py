@@ -35,6 +35,8 @@ main_window = docked(
                             panel(
                                 "nicos_ess.estia.gui.panels.hexapod.HexapodPanel",
                                 hexapod="estia_hexapod",
+                                status="hexapod_status",
+                                coord="hexapod_coordinate_state",
                             ),
                         ),
                         (

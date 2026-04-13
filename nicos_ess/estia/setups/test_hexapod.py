@@ -54,4 +54,9 @@ devices = dict(
         rz="rz",
         table="goinometer",
     ),
+    hexapod_status=device(
+        "nicos_ess.devices.epics.pva.EpicsReadable",
+        description="NewPort Status",
+        readpv=f"ESTIA-SES:MC-MCU-001:STATUS",
+    ),
 )
