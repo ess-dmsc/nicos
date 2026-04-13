@@ -206,9 +206,11 @@ class SeleneMover(Moveable):
         return np.array([kw[k] for k in ("y", "z", "Rx", "Ry", "Rz")], dtype=float)
 
     def _adjustSG1(self, target):
+        # adjusts the center of rotation to the center of selene guide 1
         target = list(target)
-        target[0] = target[0] - (450 * target[4])  # y = y - (450*Rz)
-        target[1] = target[1] + (450 * target[3])  # z = z + (450*Ry)
+        target[0] = target[0] - (425 * np.radians(target[4]))  # y = y - (450*Rz)
+        target[1] = target[1] + (425 * np.radians(target[3]))  # z = z + (450*Ry)
+        self.log.info(f"SG1 target modified to: {target}")
         return target
 
     def doStart(self, target):
@@ -240,7 +242,7 @@ class SeleneMover(Moveable):
         return (
             Value("y (mm)", unit="mm", fmtstr="%.3f"),
             Value("z (mm)", unit="mm", fmtstr="%.3f"),
-            Value("Rx (mrad)", unit="mrad", fmtstr="%.3f"),
-            Value("Ry (mrad)", unit="mrad", fmtstr="%.3f"),
-            Value("Rz (mrad)", unit="mrad", fmtstr="%.3f"),
+            Value("Rx (deg)", unit="deg", fmtstr="%.3f"),
+            Value("Ry (deg)", unit="deg", fmtstr="%.3f"),
+            Value("Rz (deg)", unit="deg", fmtstr="%.3f"),
         )
