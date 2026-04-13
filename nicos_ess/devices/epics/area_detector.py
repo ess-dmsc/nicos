@@ -12,12 +12,10 @@ from nicos.core import (
     ArrayDesc,
     Attach,
     CacheError,
-    Measurable,
     Override,
     Param,
+    ProgrammingError,
     Value,
-    floatrange,
-    multiStatus,
     oneof,
     pvname,
     status,
@@ -25,7 +23,12 @@ from nicos.core import (
 )
 from nicos.devices.epics.pva import EpicsDevice
 from nicos.devices.epics.status import SEVERITY_TO_STATUS, STAT_TO_STATUS
-from nicos.devices.generic import Detector, ImageChannelMixin, ManualSwitch
+from nicos.devices.generic import (
+    ActiveChannel,
+    Detector,
+    ImageChannelMixin,
+    ManualSwitch,
+)
 from nicos.utils import byteBuffer, createThread
 from nicos_ess.devices.epics.pva import EpicsAnalogMoveable, EpicsMappedMoveable
 
@@ -170,35 +173,41 @@ class ImageType(ManualSwitch):
         self.move(INVALID)
 
 
-class AreaDetector(EpicsDevice, ImageChannelMixin, Measurable):
+class AreaDetector(ImageChannelMixin, EpicsDevice, ActiveChannel):
     parameters = {
         "pv_root": Param("Area detector EPICS prefix", type=pvname, mandatory=True),
         "image_pv": Param("Image PV name", type=pvname, mandatory=True),
-        "iscontroller": Param(
-            "If this channel is an active controller",
-            type=bool,
-            settable=True,
-            default=True,
-        ),
     }
 
-    _image_array = numpy.zeros((10, 10))
-    _detector_collector_name = ""
+    arraydesc = ArrayDesc("", shape=(10, 10), dtype=numpy.uint32)
     _last_update = 0
     _plot_update_delay = 2.0
 
+    def _init_area_detector_state(self):
+        self._image_processing_lock = threading.Lock()
+        self._current_status = (status.OK, "")
+        self._image_array = numpy.zeros(
+            self.arraydesc.shape, dtype=self.arraydesc.dtype
+        )
+
     def doPreinit(self, mode):
+        self._init_area_detector_state()
         if mode == SIMULATION:
             return
 
+        self._record_fields = {}
         self._set_custom_record_fields()
         EpicsDevice.doPreinit(self, mode)
-        self._image_processing_lock = threading.Lock()
+
+    def doInit(self, mode):
+        EpicsDevice.doInit(self, mode)
+        if mode != SIMULATION:
+            self._refresh_array_metadata()
 
     def doPrepare(self):
         self._update_status(status.BUSY, "Preparing")
+        self._refresh_array_metadata()
         self._update_status(status.OK, "")
-        self.arraydesc = self.arrayInfo()[0]
 
     def _update_status(self, new_status, message):
         self._current_status = new_status, message
@@ -232,14 +241,26 @@ class AreaDetector(EpicsDevice, ImageChannelMixin, Measurable):
         return (Value(self.name, fmtstr="%d"),)
 
     def arrayInfo(self):
-        self.update_arraydesc()
-        return tuple([self.arraydesc])
+        return (self._refresh_array_metadata(),)
 
-    def update_arraydesc(self):
-        shape = self._get_pv("max_size_y"), self._get_pv("max_size_x")
+    def _refresh_array_metadata(self):
+        shape = self._get_array_shape()
+        data_type = self._get_array_dtype()
         self._plot_update_delay = (shape[0] * shape[1]) / 2097152.0
-        data_type = numpy.uint32
-        self.arraydesc = ArrayDesc(self.name, shape=shape, dtype=data_type)
+        if (
+            self.arraydesc.name != self.name
+            or self.arraydesc.shape != shape
+            or self.arraydesc.dtype != data_type
+        ):
+            self.arraydesc = ArrayDesc(self.name, shape=shape, dtype=data_type)
+            self._image_array = numpy.zeros(shape, dtype=data_type)
+        return self.arraydesc
+
+    def _get_array_shape(self):
+        return self._get_pv("max_size_y"), self._get_pv("max_size_x")
+
+    def _get_array_dtype(self):
+        return numpy.uint32
 
     def status_change_callback(
         self, name, param, value, units, limits, severity, message, **kwargs
@@ -253,19 +274,19 @@ class AreaDetector(EpicsDevice, ImageChannelMixin, Measurable):
         )
 
     def get_image(self):
-        dataarray = self._get_pv("image_pv")
-        shape = self.arrayInfo()[0].shape
-        dataarray = dataarray.reshape(shape)
+        arraydesc = self._refresh_array_metadata()
+        dataarray = numpy.asarray(self._get_pv("image_pv")).reshape(arraydesc.shape)
         self.putResult(LIVE, dataarray, time.time())
         self._last_update = time.monotonic()
 
     def putResult(self, quality, data, timestamp):
-        self._image_array = data
-        databuffer = [byteBuffer(numpy.ascontiguousarray(data))]
+        image = numpy.ascontiguousarray(data)
+        self._image_array = image
+        databuffer = [byteBuffer(image)]
         datadesc = [
             dict(
-                dtype=data.dtype.str,
-                shape=data.shape,
+                dtype=image.dtype.str,
+                shape=image.shape,
                 labels={
                     "x": {"define": "classic"},
                     "y": {"define": "classic"},
@@ -277,19 +298,13 @@ class AreaDetector(EpicsDevice, ImageChannelMixin, Measurable):
             parameters = dict(
                 uid=0,
                 time=timestamp,
-                det=self._detector_collector_name,
+                det=self._get_live_detector_name(),
                 tag=LIVE,
                 datadescs=datadesc,
             )
             labelbuffers = []
             with self._image_processing_lock:
                 session.updateLiveData(parameters, databuffer, labelbuffers)
-
-    def doSetPreset(self, **preset):
-        if not preset:
-            # keep old settings
-            return
-        self._lastpreset = preset.copy()
 
     def doStatus(self, maxage=0):
         detector_state = self._get_pv("acquire_status", True)
@@ -311,7 +326,7 @@ class AreaDetector(EpicsDevice, ImageChannelMixin, Measurable):
         elif severity == status.WARN:
             self.log.warning(msg_format, pv_value, stat)
 
-    def doStart(self, **preset):
+    def doStart(self):
         self.doAcquire()
 
     def doAcquire(self):
@@ -327,7 +342,16 @@ class AreaDetector(EpicsDevice, ImageChannelMixin, Measurable):
         return self._get_pv("readpv")
 
     def doReadArray(self, quality):
+        self._refresh_array_metadata()
         return self._image_array
+
+    def _get_live_detector_name(self):
+        if len(self._sdevs) != 1:
+            raise ProgrammingError(
+                f"{self.name} must be attached to exactly one Detector, "
+                f"found: {self._sdevs}"
+            )
+        return next(iter(self._sdevs))
 
     def get_topic_and_source(self):
         return None, None
@@ -363,6 +387,7 @@ class TimepixDetector(AreaDetector):
     }
 
     def doPreinit(self, mode):
+        self._init_area_detector_state()
         if mode == SIMULATION:
             return
 
@@ -379,7 +404,6 @@ class TimepixDetector(AreaDetector):
         self._record_fields.update(self._control_pvs)
         self._set_custom_record_fields()
         EpicsDevice.doPreinit(self, mode)
-        self._image_processing_lock = threading.Lock()
 
     def _set_custom_record_fields(self):
         AreaDetector._set_custom_record_fields(self)
@@ -437,7 +461,7 @@ class TimepixDetector(AreaDetector):
         finally:
             self._epics_wrapper.close_subscription(sub)
 
-    def doStart(self, **preset):
+    def doStart(self):
         foldername = f"raw_tpx_{time.time_ns()}"
         path_name = f"file:/data/{foldername}"
         ascii_path_name = self.to_int_list(path_name)
@@ -599,6 +623,7 @@ class OrcaFlash4(AreaDetector):
     }
 
     def doPreinit(self, mode):
+        self._init_area_detector_state()
         if mode == SIMULATION:
             return
 
@@ -621,7 +646,6 @@ class OrcaFlash4(AreaDetector):
         self._record_fields.update(self._control_pvs)
         self._set_custom_record_fields()
         EpicsDevice.doPreinit(self, mode)
-        self._image_processing_lock = threading.Lock()
 
     def doPrepare(self):
         AreaDetector.doPrepare(self)
@@ -684,13 +708,13 @@ class OrcaFlash4(AreaDetector):
             return self.pv_root + pv_name
         return getattr(self, pvparam)
 
-    def update_arraydesc(self):
+    def _get_array_shape(self):
         shape = self._get_pv("size_y"), self._get_pv("size_x")
         binning_factor = int(self.binning[0])
-        shape = (shape[0] // binning_factor, shape[1] // binning_factor)
-        self._plot_update_delay = (shape[0] * shape[1]) / 2097152.0
-        data_type = data_type_t[self._get_pv("data_type", as_string=True)]
-        self.arraydesc = ArrayDesc(self.name, shape=shape, dtype=data_type)
+        return (shape[0] // binning_factor, shape[1] // binning_factor)
+
+    def _get_array_dtype(self):
+        return data_type_t[self._get_pv("data_type", as_string=True)]
 
     def doStatus(self, maxage=0):
         detector_state = self._get_pv("acquire_status", True)
@@ -736,8 +760,8 @@ class OrcaFlash4(AreaDetector):
         ):
             self.subarraymode = False
 
-    def doStart(self, **preset):
-        num_images = self._lastpreset.get("n", None)
+    def doStart(self):
+        num_images = self.preselection if self.iscontroller else None
 
         if num_images == 0:
             return
@@ -937,30 +961,7 @@ class OrcaFlash4(AreaDetector):
 
 
 class AreaDetectorCollector(Detector):
-    """
-    A device class that collects the area detectors present in the instrument
-    setup.
-    """
-
-    parameter_overrides = {
-        "unit": Override(default="images", settable=False, mandatory=False),
-        "fmtstr": Override(default="%d"),
-        "liveinterval": Override(type=floatrange(0.5), default=1, userparam=True),
-        "pollinterval": Override(default=1, userparam=True, settable=False),
-    }
-
-    _presetkeys = set()
-    _hardware_access = False
-
-    def doPreinit(self, mode):
-        for image_channel in self._attached_images:
-            image_channel._detector_collector_name = self.name
-            self._presetkeys.add(image_channel.name)
-        self._channels = self._attached_images
-        self._collectControllers()
-
-    def _collectControllers(self):
-        self._controlchannels, self._followchannels = self._attached_images, []
+    """Detector that collects area-detector image channels."""
 
     def get_array_size(self, topic, source):
         for area_detector in self._attached_images:
@@ -972,40 +973,3 @@ class AreaDetectorCollector(Detector):
             source,
         )
         return []
-
-    def doSetPreset(self, **preset):
-        if not preset:
-            # keep old settings
-            return
-
-        for controller in self._controlchannels:
-            sub_preset = preset.get(controller.name, None)
-            if sub_preset:
-                controller.doSetPreset(**{"n": sub_preset})
-
-        self._lastpreset = preset.copy()
-
-    def doStatus(self, maxage=0):
-        return multiStatus(self._attached_images, maxage)
-
-    def doRead(self, maxage=0):
-        return []
-
-    def doReadArrays(self, quality):
-        return [image.readArray(quality) for image in self._attached_images]
-
-    def doReset(self):
-        pass
-
-    def duringMeasureHook(self, elapsed):
-        if self.liveinterval is not None:
-            if elapsed > self._last_live + self.liveinterval:
-                self._last_live = elapsed
-                return LIVE
-        return None
-
-    def arrayInfo(self):
-        return tuple(ch.arrayInfo()[0] for ch in self._attached_images)
-
-    def doTime(self, preset):
-        return 0

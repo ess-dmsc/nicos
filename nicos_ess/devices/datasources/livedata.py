@@ -39,6 +39,7 @@ from nicos.core import (
     Moveable,
     Override,
     Param,
+    floatrange,
     host,
     listof,
     oneof,
@@ -47,26 +48,25 @@ from nicos.core import (
 )
 from nicos.devices.generic import CounterChannelMixin, Detector, PassiveChannel
 from nicos.utils import byteBuffer, createThread, num_sort, sleep
-from nicos_ess.devices.kafka.consumer import KafkaConsumer, KafkaSubscriber
-from nicos_ess.devices.kafka.producer import KafkaProducer
-
-from .livedata_utils import (
+from nicos_ess.devices.datasources.livedata_utils import (
     JobInfo,
     JobRegistry,
     Selector,
     WorkflowId,
     parse_result_key,
 )
+from nicos_ess.devices.kafka.consumer import KafkaConsumer, KafkaSubscriber
+from nicos_ess.devices.kafka.producer import KafkaProducer
 
 DISCONNECTED_STATE = (status.ERROR, "Disconnected")
 INIT_MESSAGE = "Initializing LiveDataCollector…"
 
 
 class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
-    """
-    Channel that subscribes (via the collector) to a particular workflow/source/job/output
-    and forwards DA00 'signal' arrays to NICOS live data. Supports 1D, 2D, and N-D in a
-    minimal/robust way.
+    """Channel for a particular workflow/source/job/output.
+
+    Forwards DA00 'signal' arrays to NICOS live data.
+    Supports 1D, 2D, and N-D.
     """
 
     parameters = {
@@ -106,10 +106,12 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
         ),
     }
 
+    arraydesc = ArrayDesc("", shape=(), dtype=np.int32)
+
     def doPreinit(self, mode):
         self._collector = None  # set by LiveDataCollector
         self._signal: Optional[np.ndarray] = None
-        self._array_desc = ArrayDesc(self.name, shape=(), dtype=np.int32)
+        self.arraydesc = ArrayDesc(self.name, shape=(), dtype=np.int32)
         if session.sessiontype != POLLER:
             self._update_status(status.OK, "")
 
@@ -119,13 +121,13 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
         )
 
     def doRead(self, maxage=0):
-        return self.curvalue
+        return [self.curvalue]
 
     def doReadArray(self, quality):
         return self._signal
 
     def arrayInfo(self):
-        return self._array_desc
+        return self.arraydesc
 
     def doStatus(self, maxage=0):
         return self.curstatus
@@ -141,6 +143,14 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
             return {}
         return self._collector.get_current_mapping()
 
+    def start(self, target=None, **preset):
+        # DataChannel is both a Moveable (selector changes) and a PassiveChannel
+        # (detector counting).  The two base classes define incompatible start()
+        # signatures (positional vs keyword-only), so we must dispatch here.
+        if target is not None:
+            return Moveable.start(self, target)
+        return PassiveChannel.start(self, **preset)
+
     def doPrepare(self):
         self._update_status(status.BUSY, "Preparing")
 
@@ -149,7 +159,8 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
         self._signal = None
         if not self._selector_obj:
             self.log.warning(
-                f"No workflow channel selected for {self.name}. Will not prepare channel."
+                "No workflow channel selected for %s. Will not prepare channel.",
+                self.name,
             )
             self._update_status(status.WARN, "No workflow channel selected")
             return
@@ -174,7 +185,8 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
         if target is None:
             if not self._selector_obj:
                 self.log.warning(
-                    f"No workflow channel selected for {self.name}. Will not start counting."
+                    "No workflow channel selected for %s. Will not start counting.",
+                    self.name,
                 )
                 self._update_status(status.OK, "")
                 return
@@ -260,7 +272,10 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
                     return np.ascontiguousarray(mids), unit, is_time
                 return np.arange(dim_len, dtype=np.float64), unit, is_time
 
-            # 1D/2D view selection (unchanged from your working version)
+            if arr.ndim == 0:
+                arr = arr.reshape(1)
+                sig_axes = ["dim0"]
+
             if arr.ndim == 1:
                 x_idx = 0
                 self._signal = np.ascontiguousarray(arr)
@@ -272,7 +287,7 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
                 axis_names = [sig_axes[x_idx], "Counts"]
                 axis_units = [x_unit, (getattr(sig, "unit", None) or "")]
 
-            # special way to handle estia without breaking bifrost and other instuments
+            # 3D estia layout: collapse last two dims into a 2D view
             elif arr.ndim == 3 and all(label in sig_axes for label in estia_labels):
                 y_idx, x_idx = 0, 1
                 dimension_lengths = [arr.shape[i] for i in range(arr.ndim)]
@@ -296,7 +311,7 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
                 axis_units = [x_unit, y_unit]
 
             elif arr.ndim == 2 or arr.ndim >= 4:
-                # choose two axes and reduce others (your existing logic)
+                # choose two axes and sum over the rest
                 def _pick_2d_axes(ax_names):
                     dim_lens = [arr.shape[i] for i in range(arr.ndim)]
                     idx_with_coords = []
@@ -342,12 +357,18 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
             title = (getattr(sig, "label", None) or "").strip() or fallback_title
             signal_unit = getattr(sig, "unit", None) or ""
 
+            if self._signal is None:
+                self.log.warning(
+                    f"Data could not be extracted from DA00 for {self.name}"
+                )
+                return
+
             self.curvalue = int(self._signal.sum()) if self._signal.size else 0
-            self._array_desc = ArrayDesc(
+            self.arraydesc = ArrayDesc(
                 self.name, shape=self._signal.shape, dtype=self._signal.dtype
             )
+            self._cache.put(self, "value", self.curvalue, time.time())
 
-            self.poll()
             self._push_to_nicos(
                 plot_type,
                 labels,
@@ -385,7 +406,7 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
                 labels={"x": {"define": "classic"}, "y": {"define": "classic"}},
                 plotcount=1,
                 plot_type=plot_type,
-                label_shape=tuple(len(l) for l in label_arrays),
+                label_shape=tuple(len(a) for a in label_arrays),
                 label_dtypes=tuple(np.dtype(np.float64).str for _ in label_arrays),
                 axis_names=axis_names or [],
                 axis_units=axis_units or [],
@@ -430,7 +451,7 @@ class DataChannel(HasMapping, CounterChannelMixin, PassiveChannel, Moveable):
                 action="reset",
             )
         else:
-            self.log.warn("Could not resolve job to reset")
+            self.log.warning("Could not resolve job to reset")
 
 
 class LiveDataCollector(Detector):
@@ -504,6 +525,7 @@ class LiveDataCollector(Detector):
     }
 
     parameter_overrides = {
+        "liveinterval": Override(type=floatrange(0.5), default=1),
         "pollinterval": Override(default=None, userparam=False, settable=False),
     }
 
@@ -587,13 +609,13 @@ class LiveDataCollector(Detector):
                 # Route to matching channels
                 self._dispatch_to_channels(timestamp_ns, rk, da)
             except Exception as exc:
-                self.log.warn(f"Could not decode/route DA00: {exc}")
+                self.log.warning(f"Could not decode/route DA00: {exc}")
 
         try:
             self._registry.expire_stale()
             self._push_mapping_to_channels()
         except Exception as e:
-            self.log.warn(f"Error expiring stale jobs: {e}")
+            self.log.warning(f"Error expiring stale jobs: {e}")
 
     def _on_no_data(self):
         # Nothing special; do not spam cache.
@@ -659,7 +681,7 @@ class LiveDataCollector(Detector):
                 self._push_mapping_to_channels()
 
             except Exception as exc:
-                self.log.warn(f"Bad status message: {exc}")
+                self.log.warning(f"Bad status message: {exc}")
             finally:
                 self._status_consumer._consumer.commit(msg, asynchronous=False)
 
@@ -726,7 +748,7 @@ class LiveDataCollector(Detector):
         Only 'reset' | 'stop' | 'remove' are supported by the backend today.
         """
         if not self._producer or not self.commands_topic:
-            self.log.warn("No producer or commands_topic configured")
+            self.log.warning("No producer or commands_topic configured")
             return
         payload = {"job_id": job_id, "workflow_id": workflow_id, "action": action}
         # Build a key the backend expects: "<service>/<source|*>/job_command"
@@ -737,7 +759,7 @@ class LiveDataCollector(Detector):
 
         def _on_delivery(err, msg):
             if err:
-                self.log.warn(f"Job command delivery failed: {err}.")
+                self.log.warning(f"Job command delivery failed: {err}.")
             wait_for_delivery_event.set()
 
         try:
@@ -750,9 +772,9 @@ class LiveDataCollector(Detector):
             )
             # Wait for delivery confirmation or timeout
             if not wait_for_delivery_event.wait(timeout=5.0):
-                self.log.warn("Job command delivery timed out")
+                self.log.warning("Job command delivery timed out")
         except Exception as exc:
-            self.log.warn(f"Error sending job_command: {exc}")
+            self.log.warning(f"Error sending job_command: {exc}")
 
     # Optionally expose workflow_config sender for rare cases
     def send_workflow_config(self, *, key_source: str, config_json: dict):
@@ -761,7 +783,7 @@ class LiveDataCollector(Detector):
         key_source is the Kafka 'key' source_name part used by the backend.
         """
         if not self._producer or not self.commands_topic:
-            self.log.warn("No producer or commands_topic configured")
+            self.log.warning("No producer or commands_topic configured")
             return
         key = f"{self.service_name}/{key_source}/workflow_config"
         try:
@@ -771,7 +793,7 @@ class LiveDataCollector(Detector):
                 key=key,
             )
         except Exception as exc:
-            self.log.warn(f"Error sending workflow_config: {exc}")
+            self.log.warning(f"Error sending workflow_config: {exc}")
 
     def list_plot_selection_items(self) -> list[dict]:
         """Return a list of simple, user-friendly plot selections discovered so far.
@@ -849,14 +871,14 @@ class LiveDataCollector(Detector):
 
     def _push_mapping_to_channels(self):
         """Build a label->selector mapping and write it to every channel's 'mapping'."""
-        # reuse your existing discovery and keep labels minimal
+        # build label->selector mapping from the registry
         mapping = self.get_current_mapping()
         for ch in self._channels:
             if isinstance(ch, DataChannel):
                 try:
                     ch.mapping = mapping
                 except Exception:
-                    self.log.warn(f"Could not update mapping for channel {ch.name}")
+                    self.log.warning(f"Could not update mapping for channel {ch.name}")
 
     def get_current_mapping(self) -> dict:
         """Return the current label->selector mapping as built for channels."""

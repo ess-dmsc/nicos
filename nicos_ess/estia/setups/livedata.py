@@ -11,7 +11,7 @@ devices = dict(
         description="The livedata histogrammer",
         brokers=configdata("config.KAFKA_BROKERS"),
         data_topics=["estia_livedata_data"],
-        command_topic="estia_livedata_commands",
+        commands_topic="estia_livedata_commands",
         status_topics=["estia_livedata_status"],
         others=["channel_1"],
     ),
