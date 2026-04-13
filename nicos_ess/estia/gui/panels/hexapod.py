@@ -229,3 +229,89 @@ class HexapodPanel(Panel):
         self.showError(f"{self.adevs}")
         # self.showError("Test")
         return
+
+    # relative motion using rmove in GUI
+
+    @pyqtSlot()
+    def on_relNeg_tx_pressed(self):
+        target = -1 * self.relTx.value()
+        # self.showError(f"negatige Goinometer Pressed target: {target}")
+        self.exec_command(f"rmove('{self.adevs['tx']['devname']}', {target})")
+
+    @pyqtSlot()
+    def on_relPos_tx_pressed(self):
+        target = self.relTx.value()
+        # self.showError(f"positive Goinometer Pressed target: {target}")
+        self.exec_command(f"rmove('{self.adevs['tx']['devname']}', {target})")
+
+    @pyqtSlot()
+    def on_relNeg_ty_pressed(self):
+        target = -1 * self.relTy.value()
+        # self.showError(f"negatige Goinometer Pressed target: {target}")
+        self.exec_command(f"rmove('{self.adevs['ty']['devname']}', {target})")
+
+    @pyqtSlot()
+    def on_relPos_ty_pressed(self):
+        target = self.relTy.value()
+        # self.showError(f"positive Goinometer Pressed target: {target}")
+        self.exec_command(f"rmove('{self.adevs['ty']['devname']}', {target})")
+
+    @pyqtSlot()
+    def on_relNeg_tz_pressed(self):
+        target = -1 * self.relTz.value()
+        # self.showError(f"negatige Goinometer Pressed target: {target}")
+        self.exec_command(f"rmove('{self.adevs['tz']['devname']}', {target})")
+
+    @pyqtSlot()
+    def on_relPos_tz_pressed(self):
+        target = self.relTz.value()
+        # self.showError(f"positive Goinometer Pressed target: {target}")
+        self.exec_command(f"rmove('{self.adevs['tz']['devname']}', {target})")
+
+    @pyqtSlot()
+    def on_relNeg_rx_pressed(self):
+        target = -1 * self.relRx.value()
+        # self.showError(f"negatige Goinometer Pressed target: {target}")
+        self.exec_command(f"rmove('{self.adevs['rx']['devname']}', {target})")
+
+    @pyqtSlot()
+    def on_relPos_rx_pressed(self):
+        target = self.relRx.value()
+        # self.showError(f"positive Goinometer Pressed target: {target}")
+        self.exec_command(f"rmove('{self.adevs['rx']['devname']}', {target})")
+
+    @pyqtSlot()
+    def on_relNeg_ry_pressed(self):
+        target = -1 * self.relRy.value()
+        # self.showError(f"negatige Goinometer Pressed target: {target}")
+        self.exec_command(f"rmove('{self.adevs['ry']['devname']}', {target})")
+
+    @pyqtSlot()
+    def on_relPos_ry_pressed(self):
+        target = self.relRy.value()
+        # self.showError(f"positive Goinometer Pressed target: {target}")
+        self.exec_command(f"rmove('{self.adevs['ry']['devname']}', {target})")
+
+    @pyqtSlot()
+    def on_relNeg_rz_pressed(self):
+        target = -1 * self.relRz.value()
+        # self.showError(f"negatige Goinometer Pressed target: {target}")
+        self.exec_command(f"rmove('{self.adevs['rz']['devname']}', {target})")
+
+    @pyqtSlot()
+    def on_relPos_rz_pressed(self):
+        target = self.relRz.value()
+        # self.showError(f"positive Goinometer Pressed target: {target}")
+        self.exec_command(f"rmove('{self.adevs['rz']['devname']}', {target})")
+
+    @pyqtSlot()
+    def on_relNeg_gmt_pressed(self):
+        target = -1 * self.relTab.value()
+        # self.showError(f"negatige Goinometer Pressed target: {target}")
+        self.exec_command(f"rmove('{self.adevs['table']['devname']}', {target})")
+
+    @pyqtSlot()
+    def on_relPos_gmt_pressed(self):
+        target = self.relTab.value()
+        # self.showError(f"positive Goinometer Pressed target: {target}")
+        self.exec_command(f"rmove('{self.adevs['table']['devname']}', {target})")
