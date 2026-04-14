@@ -41,6 +41,7 @@ from test.nicos_ess.test_devices.doubles.harness_devices import (
 )
 from test.nicos_ess.test_devices.doubles.kafka_stubs import (
     StubKafkaConsumer,
+    StubKafkaMessage,
     StubKafkaProducer,
     StubKafkaSubscriber,
 )
@@ -57,6 +58,7 @@ __all__ = [
     "HarnessMoveable",
     "HarnessReadable",
     "StubKafkaConsumer",
+    "StubKafkaMessage",
     "StubKafkaProducer",
     "StubKafkaSubscriber",
     "analog_moveable_config",
