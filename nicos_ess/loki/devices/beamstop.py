@@ -232,10 +232,16 @@ class LokiBeamstopController(SequencerMixin, MappedMoveable):
         return SeqDev(device, str(ArmPositions.Intermediate))
 
     def _devices_to_in_beam(self, device_names):
-        return tuple(self._device_to_in_beam(name) for name in device_names)
+        if len(device_names) > 1:
+            return tuple(self._device_to_in_beam(name) for name in device_names)
+        else:
+            return self._device_to_in_beam(device_names[0])
 
     def _devices_to_park(self, device_names):
-        return tuple(self._device_to_park(name) for name in device_names)
+        if len(device_names) > 1:
+            return tuple(self._device_to_park(name) for name in device_names)
+        else:
+            return self._device_to_park(device_names[0])
 
     def _x_device_to_x_pos(self, target):
         x_pos = self._get_x_pos(target)
