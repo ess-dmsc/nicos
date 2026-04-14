@@ -33,8 +33,12 @@ KafkaKey = Tuple[str, str]
 
 @dataclass
 class KafkaReadbackState:
-    topic: str
-    source_name: str
+    """Latest cached readback state for one Kafka topic/source pair.
+
+    Schema handlers only update the fields they own. That lets us mix value,
+    alarm, connection, and future schema-specific updates in one shared record.
+    """
+
     has_value: bool = False
     value: Any = None
     value_timestamp_ns: int = 0
@@ -44,6 +48,17 @@ class KafkaReadbackState:
     connection: Optional[ConnectionInfo] = None
     connection_service: str = ""
     connection_timestamp_ns: int = 0
+
+    def snapshot(self):
+        return replace(self)
+
+
+@dataclass(frozen=True)
+class KafkaReadbackSchemaSpec:
+    """How one schema contributes to the shared readback state."""
+
+    get_source_name: Callable[[Any], str]
+    apply_update: Callable[[KafkaReadbackState, Any], None]
 
 
 class KafkaReadbackConsumer(Device):
@@ -71,7 +86,7 @@ class KafkaReadbackConsumer(Device):
         ),
     }
 
-    _schema_handlers: Dict[str, Callable[[KafkaReadbackState, Any], None]] = {}
+    _schema_specs: Dict[str, KafkaReadbackSchemaSpec] = {}
 
     def doPreinit(self, mode):
         self._kafka_subscribers = {}
@@ -86,26 +101,20 @@ class KafkaReadbackConsumer(Device):
             self._start_topic_subscriber(topic)
 
     def register(self, topic, source_name, callback):
-        topic = str(topic)
-        source_name = str(source_name)
-        if topic not in self.topics:
-            raise ConfigurationError(
-                self,
-                "topic %r is not configured on %s" % (topic, self.name),
-            )
-
-        key = (topic, source_name)
+        key = self._key(topic, source_name)
+        self._require_configured_topic(key[0])
         with self._lock:
             callbacks = self._callbacks.setdefault(key, [])
             if callback not in callbacks:
                 callbacks.append(callback)
-            snapshot = self._snapshot_locked(key)
+            state = self._latest.get(key)
+            snapshot = state.snapshot() if state is not None else None
 
         if snapshot is not None:
             callback(snapshot)
 
     def unregister(self, topic, source_name, callback):
-        key = (str(topic), str(source_name))
+        key = self._key(topic, source_name)
         with self._lock:
             callbacks = self._callbacks.get(key)
             if not callbacks:
@@ -117,11 +126,14 @@ class KafkaReadbackConsumer(Device):
 
     def latest(self, topic, source_name):
         with self._lock:
-            return self._snapshot_locked((str(topic), str(source_name)))
+            state = self._latest.get(self._key(topic, source_name))
+            return state.snapshot() if state is not None else None
 
     def _start_topic_subscriber(self, topic):
         subscriber = KafkaSubscriber(self.brokers)
-        subscriber.subscribe([topic], partial(self._messages_callback, topic))
+        subscriber.subscribe(
+            [topic], messages_callback=partial(self._messages_callback, topic)
+        )
         self._kafka_subscribers[topic] = subscriber
 
     def _messages_callback(self, topic, messages):
@@ -129,30 +141,42 @@ class KafkaReadbackConsumer(Device):
             self._handle_kafka_payload(topic, raw)
 
     def _handle_kafka_payload(self, topic, raw):
+        decoded_payload = self._decode_payload(raw)
+        if decoded_payload is None:
+            return
+
+        source_name, apply_update, decoded = decoded_payload
+        snapshot, callbacks = self._update_state(
+            topic, source_name, apply_update, decoded
+        )
+        self._notify_callbacks(topic, source_name, snapshot, callbacks)
+
+    def _decode_payload(self, raw):
         try:
             schema = get_schema(raw)
+            spec = self._schema_specs.get(schema)
             decoder = DESERIALISERS.get(schema)
-            handler = self._schema_handlers.get(schema)
-            if decoder is None or handler is None:
+            if decoder is None or spec is None:
                 return
             decoded = decoder(raw)
-            source_name = self._source_name(schema, decoded)
+            source_name = spec.get_source_name(decoded)
             if not source_name:
                 return
         except Exception as err:
             self.log.warning("Could not decode Kafka readback message: %s", err)
             return
+        return source_name, spec.apply_update, decoded
 
-        key = (topic, source_name)
+    def _update_state(self, topic, source_name, apply_update, decoded):
+        key = self._key(topic, source_name)
         with self._lock:
-            state = self._latest.get(key)
-            if state is None:
-                state = KafkaReadbackState(topic=topic, source_name=source_name)
-                self._latest[key] = state
-            handler(state, decoded)
-            snapshot = self._snapshot_from_state(state)
+            state = self._latest.setdefault(key, KafkaReadbackState())
+            apply_update(state, decoded)
+            snapshot = state.snapshot()
             callbacks = list(self._callbacks.get(key, ()))
+        return snapshot, callbacks
 
+    def _notify_callbacks(self, topic, source_name, snapshot, callbacks):
         for callback in callbacks:
             try:
                 callback(snapshot)
@@ -164,49 +188,61 @@ class KafkaReadbackConsumer(Device):
                     exc=True,
                 )
 
-    def _snapshot_locked(self, key):
-        state = self._latest.get(key)
-        if state is None:
-            return None
-        return self._snapshot_from_state(state)
+    @staticmethod
+    def _source_name_from_source(decoded):
+        return getattr(decoded, "source", "")
 
     @staticmethod
-    def _snapshot_from_state(state):
-        return replace(state)
-
-    @staticmethod
-    def _source_name(schema, decoded):
-        if schema == "al00":
-            return decoded.source
+    def _source_name_from_source_name(decoded):
         return getattr(decoded, "source_name", "")
 
     @staticmethod
-    def _handle_f144(state, decoded):
+    def _apply_f144(state, decoded):
         state.has_value = True
         state.value = decoded.value
         state.value_timestamp_ns = int(decoded.timestamp_unix_ns or 0)
 
     @staticmethod
-    def _handle_al00(state, decoded):
+    def _apply_al00(state, decoded):
         state.alarm = decoded.severity
         state.alarm_message = decoded.message
         state.alarm_timestamp_ns = int(decoded.timestamp_ns or 0)
 
     @staticmethod
-    def _handle_ep01(state, decoded):
+    def _apply_ep01(state, decoded):
         state.connection = decoded.status
         state.connection_service = decoded.service_id or ""
         state.connection_timestamp_ns = int(decoded.timestamp or 0)
+
+    def _require_configured_topic(self, topic):
+        if topic not in self.topics:
+            raise ConfigurationError(
+                self,
+                "topic %r is not configured on %s" % (topic, self.name),
+            )
+
+    @staticmethod
+    def _key(topic, source_name):
+        return str(topic), str(source_name)
 
     def doShutdown(self):
         for subscriber in self._kafka_subscribers.values():
             subscriber.close()
 
 
-KafkaReadbackConsumer._schema_handlers = {
-    "f144": KafkaReadbackConsumer._handle_f144,
-    "al00": KafkaReadbackConsumer._handle_al00,
-    "ep01": KafkaReadbackConsumer._handle_ep01,
+KafkaReadbackConsumer._schema_specs = {
+    "f144": KafkaReadbackSchemaSpec(
+        get_source_name=KafkaReadbackConsumer._source_name_from_source_name,
+        apply_update=KafkaReadbackConsumer._apply_f144,
+    ),
+    "al00": KafkaReadbackSchemaSpec(
+        get_source_name=KafkaReadbackConsumer._source_name_from_source,
+        apply_update=KafkaReadbackConsumer._apply_al00,
+    ),
+    "ep01": KafkaReadbackSchemaSpec(
+        get_source_name=KafkaReadbackConsumer._source_name_from_source_name,
+        apply_update=KafkaReadbackConsumer._apply_ep01,
+    ),
 }
 
 
@@ -274,7 +310,7 @@ class KafkaReadable(Readable):
 
     def doStatus(self, maxage=None):
         snapshot = self._attached_kafka.latest(self.topic, self.source_name)
-        current_status = self._status_from_snapshot(snapshot) if snapshot else None
+        current_status = self._status_from_snapshot(snapshot)
         if current_status is None:
             return status.UNKNOWN, "No status information"
         return current_status
@@ -295,11 +331,14 @@ class KafkaReadable(Readable):
                 "status",
                 current_status,
                 self._cache_timestamp(
-                    self._status_timestamp_ns_from_snapshot(snapshot)
+                    max(snapshot.alarm_timestamp_ns, snapshot.connection_timestamp_ns)
                 ),
             )
 
     def _status_from_snapshot(self, snapshot):
+        if snapshot is None:
+            return None
+
         parts = []
         if snapshot.alarm is not None:
             parts.append(self._alarm_status(snapshot.alarm, snapshot.alarm_message))
@@ -312,10 +351,6 @@ class KafkaReadable(Readable):
         if not parts:
             return None
         return max(parts, key=lambda item: item[0])
-
-    @staticmethod
-    def _status_timestamp_ns_from_snapshot(snapshot):
-        return max(snapshot.alarm_timestamp_ns, snapshot.connection_timestamp_ns)
 
     @staticmethod
     def _cache_timestamp(timestamp_ns):
