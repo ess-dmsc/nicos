@@ -25,7 +25,7 @@ from nicos.core import (
     nonemptystring,
     status,
 )
-from nicos.core.errors import ConfigurationError
+from nicos.core.errors import CommunicationError, ConfigurationError
 from nicos_ess.devices.kafka.consumer import KafkaSubscriber
 
 KafkaKey = Tuple[str, str]
@@ -265,7 +265,11 @@ class KafkaReadable(Readable):
     def doRead(self, maxage=None):
         snapshot = self._attached_kafka.latest(self.topic, self.source_name)
         if snapshot is None or not snapshot.has_value:
-            return Ellipsis
+            raise CommunicationError(
+                self,
+                "Could not read value from Kafka source %r/%r"
+                % (self.topic, self.source_name),
+            )
         return snapshot.value
 
     def doStatus(self, maxage=None):
@@ -335,5 +339,5 @@ class KafkaReadable(Readable):
         if connection == ConnectionInfo.CONNECTED:
             return status.OK, ""
         if connection in (ConnectionInfo.UNKNOWN, ConnectionInfo.NEVER_CONNECTED):
-            return status.WARN, f"Kafka source {connection.name.lower()}{suffix}"
+            return status.UNKNOWN, f"Kafka source {connection.name.lower()}{suffix}"
         return status.ERROR, f"Kafka source {connection.name.lower()}{suffix}"
