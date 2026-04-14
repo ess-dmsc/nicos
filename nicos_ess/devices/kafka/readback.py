@@ -361,7 +361,7 @@ class KafkaReadable(Readable):
     @staticmethod
     def _alarm_status(severity, message):
         if severity == Severity.OK:
-            return status.OK, message or ""
+            return status.OK, ""
         if severity == Severity.MINOR:
             return status.WARN, message or "Kafka alarm severity MINOR"
         if severity in (Severity.MAJOR, Severity.INVALID):

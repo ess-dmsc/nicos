@@ -313,7 +313,7 @@ class TestKafkaReadbackHarness:
     @pytest.mark.parametrize(
         ("severity", "expected_status", "message"),
         [
-            pytest.param(Severity.OK, status.OK, "all clear", id="ok"),
+            pytest.param(Severity.OK, status.OK, "", id="ok"),
             pytest.param(Severity.MINOR, status.WARN, "drifting", id="minor"),
             pytest.param(Severity.MAJOR, status.ERROR, "out of range", id="major"),
             pytest.param(Severity.INVALID, status.ERROR, "sensor fault", id="invalid"),
