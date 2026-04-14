@@ -8,7 +8,7 @@ devices = dict(
         "nicos_ess.devices.kafka.readback.KafkaReadbackConsumer",
         description="Shared Kafka consumer for smoke tests",
         brokers=["localhost:9092"],
-        topics=["readbacks"],
+        topics=["topic1", "topic2", "topic3"],
         visibility=(),
     ),
 )

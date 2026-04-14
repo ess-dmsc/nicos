@@ -16,9 +16,14 @@ LOW_LEVEL_SETUP = "ess_kafka_readback_lowlevel"
 FIRST_SETUP = "ess_kafka_readback_first"
 SECOND_SETUP = "ess_kafka_readback_second"
 
-READBACK_TOPIC = "readbacks"
-FIRST_SOURCE = "src:first"
-SECOND_SOURCE = "src:second"
+TOPIC_1 = "topic1"
+TOPIC_2 = "topic2"
+TOPIC_3 = "topic3"
+
+FIRST_TOPIC_1_SOURCE = "src:first:topic1"
+FIRST_TOPIC_2_SOURCE = "src:first:topic2"
+SECOND_TOPIC_1_SOURCE = "src:second:topic1"
+SECOND_TOPIC_3_SOURCE = "src:second:topic3"
 
 # Set to None because we load the setup after the mocks are in place.
 session_setup = None
@@ -37,7 +42,7 @@ def kafka_readback_stubs(monkeypatch):
     return subscribers
 
 
-def emit_readback_messages(subscribers, *payloads, topic=READBACK_TOPIC):
+def emit_readback_messages(subscribers, *payloads, topic):
     subscriber = next(
         subscriber
         for subscriber in subscribers
@@ -66,13 +71,22 @@ class TestKafkaReadbackSmoke(TestCase):
         assert FIRST_SETUP in self.session.explicit_setups
         assert LOW_LEVEL_SETUP not in self.session.explicit_setups
 
-        first = self.session.getDevice("FirstKafkaReadable")
+        first_topic_1 = self.session.getDevice("FirstTopic1Readable")
+        first_topic_2 = self.session.getDevice("FirstTopic2Readable")
         consumer = self.session.getDevice("KafkaReadbacks")
 
-        assert first._attached_kafka is consumer
-        assert len(self.kafka_readback_stubs) == 1
-        assert self.kafka_readback_stubs[0].brokers == ["localhost:9092"]
-        assert self.kafka_readback_stubs[0].subscribed == [[READBACK_TOPIC]]
+        assert first_topic_1._attached_kafka is consumer
+        assert first_topic_2._attached_kafka is consumer
+        assert len(self.kafka_readback_stubs) == 3
+        assert all(
+            subscriber.brokers == ["localhost:9092"]
+            for subscriber in self.kafka_readback_stubs
+        )
+        assert [subscriber.subscribed for subscriber in self.kafka_readback_stubs] == [
+            [[TOPIC_1]],
+            [[TOPIC_2]],
+            [[TOPIC_3]],
+        ]
 
         self.session.loadSetup(SECOND_SETUP, {})
 
@@ -81,24 +95,42 @@ class TestKafkaReadbackSmoke(TestCase):
         assert LOW_LEVEL_SETUP in self.session.loaded_setups
         assert LOW_LEVEL_SETUP not in self.session.explicit_setups
 
-        second = self.session.getDevice("SecondKafkaReadable")
+        second_topic_1 = self.session.getDevice("SecondTopic1Readable")
+        second_topic_3 = self.session.getDevice("SecondTopic3Readable")
 
-        assert second._attached_kafka is consumer
-        assert len(self.kafka_readback_stubs) == 1
-
-        emit_readback_messages(
-            self.kafka_readback_stubs,
-            serialise_f144(FIRST_SOURCE, 1.5, 1_000_000_000),
-            serialise_f144(SECOND_SOURCE, 2.5, 2_000_000_000),
-        )
-
-        assert first.read() == pytest.approx(1.5)
-        assert second.read() == pytest.approx(2.5)
+        assert second_topic_1._attached_kafka is consumer
+        assert second_topic_3._attached_kafka is consumer
+        assert len(self.kafka_readback_stubs) == 3
 
         emit_readback_messages(
             self.kafka_readback_stubs,
-            serialise_f144(FIRST_SOURCE, 3.5, 3_000_000_000),
+            serialise_f144(FIRST_TOPIC_1_SOURCE, 1.5, 1_000_000_000),
+            serialise_f144(SECOND_TOPIC_1_SOURCE, 2.5, 2_000_000_000),
+            topic=TOPIC_1,
+        )
+        emit_readback_messages(
+            self.kafka_readback_stubs,
+            serialise_f144(FIRST_TOPIC_2_SOURCE, 3.5, 3_000_000_000),
+            topic=TOPIC_2,
+        )
+        emit_readback_messages(
+            self.kafka_readback_stubs,
+            serialise_f144(SECOND_TOPIC_3_SOURCE, 4.5, 4_000_000_000),
+            topic=TOPIC_3,
         )
 
-        assert first.read() == pytest.approx(3.5)
-        assert second.read() == pytest.approx(2.5)
+        assert first_topic_1.read() == pytest.approx(1.5)
+        assert first_topic_2.read() == pytest.approx(3.5)
+        assert second_topic_1.read() == pytest.approx(2.5)
+        assert second_topic_3.read() == pytest.approx(4.5)
+
+        emit_readback_messages(
+            self.kafka_readback_stubs,
+            serialise_f144(FIRST_TOPIC_1_SOURCE, 5.5, 5_000_000_000),
+            topic=TOPIC_1,
+        )
+
+        assert first_topic_1.read() == pytest.approx(5.5)
+        assert first_topic_2.read() == pytest.approx(3.5)
+        assert second_topic_1.read() == pytest.approx(2.5)
+        assert second_topic_3.read() == pytest.approx(4.5)
