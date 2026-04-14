@@ -1213,50 +1213,110 @@
       </item>
      </layout>
     </widget>
-    <widget class="QLabel" name="hexStatus">
+    <widget class="QGroupBox" name="statusBox">
      <property name="geometry">
       <rect>
        <x>20</x>
-       <y>410</y>
+       <y>380</y>
        <width>191</width>
-       <height>71</height>
+       <height>91</height>
       </rect>
      </property>
-     <property name="frameShape">
-      <enum>QFrame::Panel</enum>
+     <property name="title">
+      <string>Status</string>
      </property>
-     <property name="text">
-      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     <widget class="QLabel" name="hexStatus">
+      <property name="geometry">
+       <rect>
+        <x>0</x>
+        <y>20</y>
+        <width>191</width>
+        <height>71</height>
+       </rect>
+      </property>
+      <property name="frameShape">
+       <enum>QFrame::StyledPanel</enum>
+      </property>
+      <property name="frameShadow">
+       <enum>QFrame::Sunken</enum>
+      </property>
+      <property name="lineWidth">
+       <number>0</number>
+      </property>
+      <property name="text">
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignCenter</set>
+      </property>
+      <property name="wordWrap">
+       <bool>true</bool>
+      </property>
+     </widget>
+    </widget>
+    <widget class="QGroupBox" name="coordBox">
+     <property name="geometry">
+      <rect>
+       <x>20</x>
+       <y>480</y>
+       <width>191</width>
+       <height>91</height>
+      </rect>
      </property>
+     <property name="title">
+      <string>Coordinate System</string>
+     </property>
+     <widget class="QLabel" name="coordSyst">
+      <property name="geometry">
+       <rect>
+        <x>0</x>
+        <y>20</y>
+        <width>191</width>
+        <height>71</height>
+       </rect>
+      </property>
+      <property name="frameShape">
+       <enum>QFrame::StyledPanel</enum>
+      </property>
+      <property name="frameShadow">
+       <enum>QFrame::Sunken</enum>
+      </property>
+      <property name="text">
+       <string/>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignCenter</set>
+      </property>
+     </widget>
     </widget>
    </widget>
    <widget class="QWidget" name="expTab">
     <attribute name="title">
      <string>Expert Control</string>
     </attribute>
+    <widget class="QPushButton" name="butTest">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>20</y>
+       <width>190</width>
+       <height>25</height>
+      </rect>
+     </property>
+     <property name="locale">
+      <locale language="English" country="UnitedStates"/>
+     </property>
+     <property name="text">
+      <string>Testing button</string>
+     </property>
+     <property name="default">
+      <bool>false</bool>
+     </property>
+     <property name="flat">
+      <bool>false</bool>
+     </property>
+    </widget>
    </widget>
-  </widget>
-  <widget class="QPushButton" name="butTest">
-   <property name="geometry">
-    <rect>
-     <x>10</x>
-     <y>700</y>
-     <width>190</width>
-     <height>25</height>
-    </rect>
-   </property>
-   <property name="locale">
-    <locale language="English" country="UnitedStates"/>
-   </property>
-   <property name="text">
-    <string>Testing button</string>
-   </property>
-   <property name="default">
-    <bool>false</bool>
-   </property>
-   <property name="flat">
-    <bool>false</bool>
-   </property>
   </widget>
   <action name="actionReference_drive">
    <property name="text">

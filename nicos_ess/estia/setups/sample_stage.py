@@ -9,7 +9,6 @@ devices = dict(
         motorpv=f"ESTIA-SpRot:MC-RotZ01:Mtr",
         has_powerauto=False,
         fmtstr="%.2f",
-        visibility=(),
     ),
     tx=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",

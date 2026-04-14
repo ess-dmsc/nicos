@@ -21,6 +21,7 @@ class HexapodPanel(Panel):
         self.adevs = {}
         self.qtObj = {}
         self.status = options.get("status")
+        self.coordSys = options.get("coord")
         # Hexapod Controller Info
 
         # Error Handling
@@ -57,15 +58,17 @@ class HexapodPanel(Panel):
 
     def on_client_cache(self, data):
         (time, key, op, value) = data
+        if "/" not in key:
+            return
         devname, pname = key.split("/")
 
-        # if pname != "value":
-        #    return
         if devname == self.devname and pname == "value":
-            fvalue = cache_load(value)
-            self.update_current_pos(fvalue)
-        if devname == self.status and pname == "status":
-            return
+            self.update_current_pos(cache_load(value))
+
+        # can't seem to find it in cache but is popagated into 'value' param just fine...
+        # so grabbing it from there while updating on cache check
+        self.update_status_window(self.client.getDeviceParam(self.status, "value"))
+        self.update_coord_window(self.client.getDeviceParam(self.coordSys, "value"))
 
     def on_client_message(self, message):
         if message[5] != self._exec_reqid or message[2] < WARNING:
@@ -107,11 +110,15 @@ class HexapodPanel(Panel):
             self.panelLabel.setText(f"{self.devname.capitalize()}")
             self.curPos.show()
             self.newPos.show()
+            self.newPos_2.show()
+            self.statusBox.show()
 
         else:
             self.panelLabel.clear()
             self.curPos.hide()
             self.newPos.hide()
+            self.newPos_2.hide()
+            self.statusBox.hide()
 
     def get_hexapod_name(self):
         class_typ = "nicos_ess.devices.virtual.hexapod.VirtualHexapod"
@@ -150,6 +157,30 @@ class HexapodPanel(Panel):
             mini_dict.update({"unit": hexapod_info[adevs[keys]][1]["unit"]})
 
             self.adevs.update({f"{keys}": mini_dict})
+
+    def update_status_window(self, code):
+        # TODO: Add textbox coloring
+        error_val = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 50, 63]
+        ready_val = [10, 11, 12, 13, 15, 16, 17, 70, 77]
+        if code:
+            code = round(code)
+            if code in error_val:
+                self.hexStatus.setStyleSheet("background-color: lightred")
+            elif code in ready_val:
+                self.hexStatus.setStyleSheet("background-color: lightgreen")
+            else:
+                self.hexStatus.setStyleSheet("background-color: None")
+            self.hexStatus.setText(f"{code}")
+
+    def update_coord_window(self, value):
+        # sometimes the mapping is odd for awhile, so checking for int or string and
+        # setting text accordingly
+        if value == "Work" or 0:
+            self.coordSyst.setStyleSheet("background-color: lightorange")
+            self.coordSyst.setText("Work")
+        if value == "Tool" or 1:
+            self.coordSyst.setStyleSheet("background-color: lightgreen")
+            self.coordSyst.setText("Tool")
 
     def propagate_ui(self):
         for keys in self.qtObj:
@@ -229,91 +260,77 @@ class HexapodPanel(Panel):
 
     @pyqtSlot()
     def on_butTest_pressed(self):
-        # self.showError(f"{self.adevs}")
-        self.showError(f"{self.status}")
+        data = self.mainwindow.expertmode
+        self.showError(f"{data}")
 
     # relative motion using rmove in GUI
 
     @pyqtSlot()
     def on_relNeg_tx_pressed(self):
         target = -1 * self.relTx.value()
-        # self.showError(f"negatige Goinometer Pressed target: {target}")
         self.exec_command(f"rmove('{self.adevs['tx']['devname']}', {target})")
 
     @pyqtSlot()
     def on_relPos_tx_pressed(self):
         target = self.relTx.value()
-        # self.showError(f"positive Goinometer Pressed target: {target}")
         self.exec_command(f"rmove('{self.adevs['tx']['devname']}', {target})")
 
     @pyqtSlot()
     def on_relNeg_ty_pressed(self):
         target = -1 * self.relTy.value()
-        # self.showError(f"negatige Goinometer Pressed target: {target}")
         self.exec_command(f"rmove('{self.adevs['ty']['devname']}', {target})")
 
     @pyqtSlot()
     def on_relPos_ty_pressed(self):
         target = self.relTy.value()
-        # self.showError(f"positive Goinometer Pressed target: {target}")
         self.exec_command(f"rmove('{self.adevs['ty']['devname']}', {target})")
 
     @pyqtSlot()
     def on_relNeg_tz_pressed(self):
         target = -1 * self.relTz.value()
-        # self.showError(f"negatige Goinometer Pressed target: {target}")
         self.exec_command(f"rmove('{self.adevs['tz']['devname']}', {target})")
 
     @pyqtSlot()
     def on_relPos_tz_pressed(self):
         target = self.relTz.value()
-        # self.showError(f"positive Goinometer Pressed target: {target}")
         self.exec_command(f"rmove('{self.adevs['tz']['devname']}', {target})")
 
     @pyqtSlot()
     def on_relNeg_rx_pressed(self):
         target = -1 * self.relRx.value()
-        # self.showError(f"negatige Goinometer Pressed target: {target}")
         self.exec_command(f"rmove('{self.adevs['rx']['devname']}', {target})")
 
     @pyqtSlot()
     def on_relPos_rx_pressed(self):
         target = self.relRx.value()
-        # self.showError(f"positive Goinometer Pressed target: {target}")
         self.exec_command(f"rmove('{self.adevs['rx']['devname']}', {target})")
 
     @pyqtSlot()
     def on_relNeg_ry_pressed(self):
         target = -1 * self.relRy.value()
-        # self.showError(f"negatige Goinometer Pressed target: {target}")
         self.exec_command(f"rmove('{self.adevs['ry']['devname']}', {target})")
 
     @pyqtSlot()
     def on_relPos_ry_pressed(self):
         target = self.relRy.value()
-        # self.showError(f"positive Goinometer Pressed target: {target}")
         self.exec_command(f"rmove('{self.adevs['ry']['devname']}', {target})")
 
     @pyqtSlot()
     def on_relNeg_rz_pressed(self):
         target = -1 * self.relRz.value()
-        # self.showError(f"negatige Goinometer Pressed target: {target}")
         self.exec_command(f"rmove('{self.adevs['rz']['devname']}', {target})")
 
     @pyqtSlot()
     def on_relPos_rz_pressed(self):
         target = self.relRz.value()
-        # self.showError(f"positive Goinometer Pressed target: {target}")
         self.exec_command(f"rmove('{self.adevs['rz']['devname']}', {target})")
 
     @pyqtSlot()
     def on_relNeg_gmt_pressed(self):
         target = -1 * self.relTab.value()
-        # self.showError(f"negatige Goinometer Pressed target: {target}")
         self.exec_command(f"rmove('{self.adevs['table']['devname']}', {target})")
 
     @pyqtSlot()
     def on_relPos_gmt_pressed(self):
         target = self.relTab.value()
-        # self.showError(f"positive Goinometer Pressed target: {target}")
         self.exec_command(f"rmove('{self.adevs['table']['devname']}', {target})")
