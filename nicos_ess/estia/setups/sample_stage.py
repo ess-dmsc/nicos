@@ -3,6 +3,15 @@ description = "Sample stage system made up of Newport Hexapod and Goinometer Sam
 hex_root = "ESTIA-SES:MC-MCU-001:"
 
 devices = dict(
+    sample_stage_coupling=device(
+        "nicos_ess.devices.epics.pva.shutter.EpicsShutter",
+        description="Detector Arm Pneumatic Coupling: Support Structure on Air Pads",
+        writepv="ESTIA-SpCpl:MC-Pne-01:ShtOpen",
+        readpv="ESTIA-SpCpl:MC-Pne-01:ShtAuxBits07",
+        resetpv="ESTIA-SpCpl:MC-Pne-01:ShtErrRst",
+        msgtxt="ESTIA-SpCpl:MC-Pne-01:ShtMsgTxt",
+        visibility=(),
+    ),
     goinometer=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Sample Stage Rotation Base",
