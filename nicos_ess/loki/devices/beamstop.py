@@ -35,9 +35,6 @@ class XPositions(StrEnum):
 
 
 class LokiBeamstopXPositioner(MappedController):
-    def doInit(self, mode):
-        super().doInit(mode)
-
     def doIsAllowed(self, key):
         # limits are updated by twincat during the sequence movement,
         # therefore do not raise limit error
@@ -45,9 +42,6 @@ class LokiBeamstopXPositioner(MappedController):
 
 
 class LokiBeamstopArmPositioner(MappedController):
-    def doInit(self, mode):
-        super().doInit(mode)
-
     def _check_mapped_keys(self, mapping):
         expected = {p.value for p in ArmPositions}
         if set(mapping.keys()) != expected:
@@ -145,12 +139,6 @@ class LokiBeamstopController(SequencerMixin, MappedMoveable):
     def doReadMapping(self):
         return self._get_mapped_positions()
 
-    # def _checkFailed(self, step, action, exc_info):
-    #     if isinstance(exc_info[0], LimitError):
-    #         pass
-    #     else:
-    #         return exc_info[1]
-
     def doStart(self, target):
         if target == self.read():
             return
@@ -167,7 +155,6 @@ class LokiBeamstopController(SequencerMixin, MappedMoveable):
                 )
 
         sequence = self._generateSequence(target)
-        print("target sequence:", sequence)
         self._startSequence(sequence)
 
     def _generateSequence(self, target: str):
