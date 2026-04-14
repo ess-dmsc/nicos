@@ -1,3 +1,4 @@
+import math
 import threading
 import time
 
@@ -358,7 +359,8 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         target = self._get_cached_pv_or_ask("target")
         deadband = self._get_cached_pv_or_ask("position_deadband")
 
-        if abs(target - pos) > deadband:
+        # check whether target has been reached within deadband:
+        if not math.isclose(target, pos, abs_tol=deadband):
             return False
         if moving != 0:
             return False
