@@ -18,6 +18,7 @@ devices = dict(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="In-Beam changer",
         motorpv=f"{prefix}RotX01:Mtr",
+        visibility=(),
     ),
     laser=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
@@ -29,5 +30,11 @@ devices = dict(
         "nicos_ess.devices.epics.pva.EpicsReadable",
         description="readback value of the VS laser",
         readpv="ESTIA-SES:Ctrl-IM-100:LaserEnabled",
+    ),
+    beam_changer_macro=device(
+        "nicos_ess.devices.mapped_controller.MappedController",
+        description="Preset controls for in_beam_changer",
+        controlled_device="in_beam_changer",
+        mapping={"Middle": 176.5},
     ),
 )
