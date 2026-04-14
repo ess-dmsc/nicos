@@ -1,3 +1,5 @@
+import math
+
 try:
     from enum import StrEnum
 except ImportError:
@@ -68,9 +70,12 @@ class LokiBeamstopArmPositioner(MappedController):
         self.valuetype = oneof(*sorted(mapping, key=num_sort))
 
     def _mapReadValue(self, value):
+        # check whether a known position has been reached (within the given precision):
         if isinstance(self._attached_controlled_device, HasPrecision):
             for k, v in self.mapping.items():
-                if abs(v - value) < self._attached_controlled_device.precision:
+                if math.isclose(
+                    v, value, abs_tol=self._attached_controlled_device.precision
+                ):
                     return k
         inverse_mapping = {v: k for k, v in self.mapping.items()}
         mapped_value = inverse_mapping.get(value, None)
