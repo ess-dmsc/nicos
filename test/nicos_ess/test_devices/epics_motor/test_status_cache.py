@@ -300,12 +300,18 @@ class TestEpicsMotorStatus:
     ):
         daemon_device, _poller_device = create_monitored_motor_pair(device_harness)
 
-        fake_backend.emit_connection(pv(".RBV"), False)
+        fake_backend.disconnect_backend()
 
-        assert device_harness.run_daemon(daemon_device.status, 0) == (
+        # Cached status should immediately reflect communication failure
+        assert device_harness.run_daemon(daemon_device.status) == (
             status.ERROR,
             "communication failure",
         )
+
+        # if checking status with maxage=0, it will raise timeout error due to direct backend access, even in monitor mode
+        hardware_status = device_harness.run_daemon(daemon_device.status, 0)
+        assert hardware_status[0] == status.ERROR
+        assert "timed out" in hardware_status[1]
 
 
 class TestEpicsMotorCacheAndReadPaths:
