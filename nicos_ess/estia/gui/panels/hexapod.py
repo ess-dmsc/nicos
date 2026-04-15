@@ -112,6 +112,8 @@ class HexapodPanel(Panel):
             self.newPos.show()
             self.newPos_2.show()
             self.statusBox.show()
+            self.coordBox.show()
+            self.butTest.show()
 
         else:
             self.panelLabel.clear()
@@ -119,6 +121,8 @@ class HexapodPanel(Panel):
             self.newPos.hide()
             self.newPos_2.hide()
             self.statusBox.hide()
+            self.coordBox.hide()
+            self.butTest.hide()
 
     def get_hexapod_name(self):
         class_typ = "nicos_ess.devices.virtual.hexapod.VirtualHexapod"
