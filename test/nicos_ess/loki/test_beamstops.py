@@ -9,7 +9,8 @@ from nicos_ess.loki.devices.beamstop import (
 class TestLokiBeamstopControllerHarness:
     def test_park_positions(self, loki_beamstop_setup):
         devices = loki_beamstop_setup
-        devices["controller"].maw("Park all beamstops")
+        devices["controller"].move("Park all beamstops")
+        devices["controller"].wait()
         assert devices["positioner_x"].read(maxage=0) == XPositions.Parked
         assert devices["positioner_1"].read(maxage=0) == ArmPositions.Parked
         assert devices["positioner_2"].read(maxage=0) == ArmPositions.Parked
@@ -19,7 +20,8 @@ class TestLokiBeamstopControllerHarness:
 
     def test_monitor_positions(self, loki_beamstop_setup):
         devices = loki_beamstop_setup
-        devices["controller"].maw("Monitor")
+        devices["controller"].move("Monitor")
+        devices["controller"].wait()
         assert devices["positioner_x"].read(maxage=0) == XPositions.Pos1
         assert devices["positioner_1"].read(maxage=0) == ArmPositions.InBeam
         assert devices["positioner_2"].read(maxage=0) == ArmPositions.Parked
@@ -29,7 +31,8 @@ class TestLokiBeamstopControllerHarness:
 
     def test_beamstop2_positions(self, loki_beamstop_setup):
         devices = loki_beamstop_setup
-        devices["controller"].maw("Beamstop 2")
+        devices["controller"].move("Beamstop 2")
+        devices["controller"].wait()
         assert devices["positioner_x"].read(maxage=0) == XPositions.Pos2
         assert devices["positioner_1"].read(maxage=0) == ArmPositions.Parked
         assert devices["positioner_2"].read(maxage=0) == ArmPositions.InBeam
@@ -39,7 +42,8 @@ class TestLokiBeamstopControllerHarness:
 
     def test_beamstop_and_monitor_positions(self, loki_beamstop_setup):
         devices = loki_beamstop_setup
-        devices["controller"].maw("Beamstop 3 + monitor")
+        devices["controller"].move("Beamstop 3 + monitor")
+        devices["controller"].wait()
         assert devices["positioner_x"].read(maxage=0) == XPositions.Pos3
         assert devices["positioner_1"].read(maxage=0) == ArmPositions.InBeam
         assert devices["positioner_2"].read(maxage=0) == ArmPositions.Parked
@@ -130,7 +134,8 @@ class TestLokiBeamstopControllerHarness:
     ):
         devices = loki_beamstop_setup
         controller_value = "Beamstop 2"
-        devices["controller"].maw(controller_value)
+        devices["controller"].move(controller_value)
+        devices["controller"].wait()
         assert devices["controller"].read(maxage=0) == "Beamstop 2"
 
         controller_target = "Beamstop 2 + monitor"
@@ -141,7 +146,8 @@ class TestLokiBeamstopControllerHarness:
     def test_sequence_change_beamstop(self, loki_beamstop_setup):
         devices = loki_beamstop_setup
         controller_value = "Beamstop 2"
-        devices["controller"].maw(controller_value)
+        devices["controller"].move(controller_value)
+        devices["controller"].wait()
         assert devices["controller"].read(maxage=0) == "Beamstop 2"
 
         controller_target = "Beamstop 3"
