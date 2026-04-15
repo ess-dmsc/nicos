@@ -27,7 +27,7 @@ class VirtualSource(Moveable):
     parameters = {
         "opmode": Param(
             "Mode of operation",
-            type=oneof("4blades", "centered"),
+            type=oneof("4blades", "centered", "offcentered"),
             settable=True,
         ),
         "fmtstr_map": Param(
@@ -38,15 +38,17 @@ class VirtualSource(Moveable):
             mandatory=False,
             userparam=False,
             default={
-                "4blades": "%.2f %.2f %.2f %.2f %.2f",
+                "4blades": "%.2f mm %.2f mm %.2f mm %.2f mm %.2f deg",
                 "centered": "(%.2f mm x %.2f mm) %.2f deg",
+                "offcentered": "(%.2f, %.2f) (%.2f mm x %.2f mm) %.2f deg",
             },
         ),
+        # Issues with offsetting and dial limits so disabling for now.
         "offsets": Param(
             "Change the offset(s) of the virtual source\n"
             "In order of: left, right, bottom, top, rotation",
             type=tupleof(float, float, float, float, float),
-            settable=True,
+            settable=False,
             default=(0.0, 0.0, 0.0, 0.0, 0.0),
         ),
     }
@@ -70,13 +72,6 @@ class VirtualSource(Moveable):
         for blade, blade_offset in zip(slitBlades, offset[:-1]):
             self._adevs["slit"]._adevs[blade]._setROParam("offset", blade_offset)
 
-    def _returnGap(self, pos):
-        # [-left, +right, -bottom, +top]
-        left, right, bottom, top = pos
-        width = abs((left + right) / 2)
-        height = abs((top + bottom) / 2)
-        return [width, height]
-
     def _parseTargets(self, target):
         # angle target must be split from slit target since it is an independent attachment
         if self.opmode == "centered":
@@ -97,14 +92,18 @@ class VirtualSource(Moveable):
 
     def doRead(self, maxage=0):
         self._syncOpmode(self._adevs["slit"].opmode, self.opmode)
-        positions = self._adevs["slit"]._doReadPositions(maxage)
         angle = self._adevs["rot"].read(maxage)
 
+        # slit returns a different # values depending on the mode
         if self.opmode == "centered":
-            width, height = self._returnGap(positions)
+            width, height = self._adevs["slit"].read(maxage)
             return [width, height, angle]
-        left, right, bottom, top = positions
-        return [left, right, bottom, top, angle]
+        if self.opmode == "offcentered":
+            posX, posY, width, height = self._adevs["slit"].read(maxage)
+            return [posX, posY, width, height, angle]
+        if self.opmode == "4blades":
+            left, right, bottom, top = self._adevs["slit"].read(maxage)
+            return [left, right, bottom, top, angle]
 
     def doStatus(self, maxage=0):
         return multiStatus(self._adevs, maxage=maxage)
@@ -114,6 +113,14 @@ class VirtualSource(Moveable):
             return (
                 Value("Slit Width", unit="mm", fmtstr="%.3f"),
                 Value("Slit Height", unit="mm", fmtstr="%.3f"),
+                Value("Angle", unit="deg", fmtstr="%.3f"),
+            )
+        elif self.opmode == "offcentered":
+            return (
+                Value("Center X", unit="mm", fmtstr="%.3f"),
+                Value("Center Y", unit="mm", fmtstr="%.3f"),
+                Value("Width", unit="mm", fmtstr="%.3f"),
+                Value("Height", unit="mm", fmtstr="%.3f"),
                 Value("Angle", unit="deg", fmtstr="%.3f"),
             )
         else:
