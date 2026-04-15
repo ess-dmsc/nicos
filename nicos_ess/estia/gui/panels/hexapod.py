@@ -114,7 +114,7 @@ class HexapodPanel(Panel):
             self.statusBox.show()
             self.coordBox.show()
             self.butTest.show()
-
+        # better way to hide all this using another group box....but will do it later
         else:
             self.panelLabel.clear()
             self.curPos.hide()
@@ -163,15 +163,21 @@ class HexapodPanel(Panel):
             self.adevs.update({f"{keys}": mini_dict})
 
     def update_status_window(self, code):
-        # TODO: Add textbox coloring
+        # A bit messy but works to get some error indication quickly
         error_val = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 50, 63]
         ready_val = [10, 11, 12, 13, 15, 16, 17, 70, 77]
+        ok_val = [40, 41, 43, 44, 45, 47, 48, 49, 64, 68, 69, 73]
+        not_ref = 42
         if code:
             code = round(code)
             if code in error_val:
                 self.hexStatus.setStyleSheet("background-color: lightred")
             elif code in ready_val:
                 self.hexStatus.setStyleSheet("background-color: lightgreen")
+            elif code in ok_val:
+                self.hexStatus.setStyleSheet("background-color: lightblue")
+            elif code == not_ref:
+                self.hexStatus.setStyleSheet("background-color: lightorange")
             else:
                 self.hexStatus.setStyleSheet("background-color: None")
             self.hexStatus.setText(f"{code}")
