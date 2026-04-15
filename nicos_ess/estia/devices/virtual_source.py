@@ -93,17 +93,11 @@ class VirtualSource(Moveable):
     def doRead(self, maxage=0):
         self._syncOpmode(self._adevs["slit"].opmode, self.opmode)
         angle = self._adevs["rot"].read(maxage)
+        values = self._adevs["slit"].read(maxage)
 
-        # slit returns a different # values depending on the mode
         if self.opmode == "centered":
-            width, height = self._adevs["slit"].read(maxage)
-            return [width, height, angle]
-        if self.opmode == "offcentered":
-            posX, posY, width, height = self._adevs["slit"].read(maxage)
-            return [posX, posY, width, height, angle]
-        if self.opmode == "4blades":
-            left, right, bottom, top = self._adevs["slit"].read(maxage)
-            return [left, right, bottom, top, angle]
+            return [values[0], values[1], angle]
+        return [values[0], values[1], values[2], values[3], angle]
 
     def doStatus(self, maxage=0):
         return multiStatus(self._adevs, maxage=maxage)
