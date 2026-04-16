@@ -26,7 +26,8 @@ devices = dict(
         maxage=None,
     ),
     detector_config_control=device(
-        # This class seems to be the best for read/write the DPU config PV.
+        # This class seems to be the best so far for read/write the DPU config PV.
+        # PS: This PV is being fixed. Probably it will be an ENUM too in the future.
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="ARINAX DPU Configuration, control (mockup)",
         readpv="NMX-mockup:getDPUConfiguration",
