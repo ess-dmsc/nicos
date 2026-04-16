@@ -1083,6 +1083,7 @@ class ControlDialog(QDialog):
 
             ALLOWED_RMOVE_CLASSES = [
                 "nicos.devices.generic.slit.Slit",
+                "nicos.devices.generic.virtual.VirtualMotor",
                 "nicos_ess.devices.epics.pva.motor.EpicsMotor",
                 "nicos_ess.estia.devices.mover.SeleneMover",
                 "nicos_ess.estia.devices.virtual_source.VirtualSource",
@@ -1099,11 +1100,11 @@ class ControlDialog(QDialog):
                 )
                 valueinfo_names = tuple([value.name for value in valueinfo])
 
-                self.selectAttachedDevice = QComboBox(self)
+                self.selectDevice = QComboBox(self)
                 for name_index, valueinfo_name in enumerate(valueinfo_names):
-                    self.selectAttachedDevice.insertItem(name_index, valueinfo_name)
+                    self.selectDevice.insertItem(name_index, valueinfo_name)
                 if len(valueinfo) < 2:
-                    self.selectAttachedDevice.setVisible(False)
+                    self.selectDevice.setVisible(False)
                 self.rel_target = EditWidget(
                     self.devname,
                     typ=float,
@@ -1111,7 +1112,7 @@ class ControlDialog(QDialog):
                 )
 
                 self.relMovFrame.layout().takeAt(0).widget().deleteLater()
-                self.relMovFrame.layout().insertWidget(0, self.selectAttachedDevice)
+                self.relMovFrame.layout().insertWidget(0, self.selectDevice)
 
                 self.relMovFrame.layout().takeAt(2).widget().deleteLater()
                 self.relMovFrame.layout().insertWidget(2, self.rel_target)
@@ -1139,21 +1140,17 @@ class ControlDialog(QDialog):
                     self.target.setEnabled(False)
 
     def rmove(self, direction):
-        try:
-            target = self.target.getValue()
-        except ValueError:
-            return
-        which_index = self.selectAttachedDevice.currentIndex()
-        if type(target) is tuple and len(target) > 1:
-            new_target = list(target)
-            new_target[which_index] = (
-                target[which_index] + direction * self.rel_target.getValue()
+        selected_device_index = self.selectDevice.currentIndex()
+        if type(self.devinfo.value) is tuple and len(self.devinfo.value) > 1:
+            target = list(self.devinfo.value)
+            target[selected_device_index] = (
+                self.devinfo.value[selected_device_index]
+                + direction * self.rel_target.getValue()
             )
         else:
-            new_target = target + direction * self.rel_target.getValue()
+            target = self.devinfo.value + direction * self.rel_target.getValue()
 
-        self.device_panel.exec_command("maw(%s, %r)" % (self.devrepr, new_target))
-        self.target.setValue(new_target)
+        self.device_panel.exec_command("maw(%s, %r)" % (self.devrepr, target))
 
     def on_paramList_customContextMenuRequested(self, pos):
         item = self.paramList.itemAt(pos)
