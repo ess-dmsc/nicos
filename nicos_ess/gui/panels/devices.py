@@ -27,7 +27,12 @@ from nicos.guisupport.qt import (
     pyqtSlot,
     sip,
 )
-from nicos.guisupport.typedvalue import ComboWidget, DeviceParamEdit, DeviceValueEdit
+from nicos.guisupport.typedvalue import (
+    ComboWidget,
+    DeviceParamEdit,
+    DeviceValueEdit,
+    EditWidget,
+)
 from nicos.protocols.cache import OP_TELL, cache_dump, cache_load
 from nicos.utils import AttrDict, findResource
 from nicos_ess.gui.utils import get_icon
@@ -872,6 +877,7 @@ class ControlDialog(QDialog):
         self.paramItems = {}
         self.moveBtn = None
         self.target = None
+        self.rel_target = 0
 
         self._reinit()
         self._show_extension(expert)
@@ -1075,6 +1081,41 @@ class ControlDialog(QDialog):
             self.targetFrame.layout().takeAt(1).widget().deleteLater()
             self.targetFrame.layout().insertWidget(1, self.target)
 
+            ALLOWED_RMOVE_CLASSES = [
+                "nicos.devices.generic.slit.Slit",
+                "nicos_ess.devices.epics.pva.motor.EpicsMotor",
+                "nicos_ess.estia.devices.mover.SeleneMover",
+                "nicos_ess.estia.devices.virtual_source.VirtualSource",
+            ]
+
+            if not any(
+                allowed_class in classes for allowed_class in ALLOWED_RMOVE_CLASSES
+            ):
+                self.relMovFrame.setVisible(False)
+                self.relMove.setVisible(False)
+            else:
+                valueinfo = self.client.eval(
+                    "session.getDevice(%r).valueInfo()" % self.devname, None
+                )
+                valueinfo_names = tuple([value.name for value in valueinfo])
+
+                self.selectAttachedDevice = QComboBox(self)
+                for name_index, valueinfo_name in enumerate(valueinfo_names):
+                    self.selectAttachedDevice.insertItem(name_index, valueinfo_name)
+                if len(valueinfo) < 2:
+                    self.selectAttachedDevice.setVisible(False)
+                self.rel_target = EditWidget(
+                    self.devname,
+                    typ=float,
+                    curvalue=0,
+                )
+
+                self.relMovFrame.layout().takeAt(0).widget().deleteLater()
+                self.relMovFrame.layout().insertWidget(0, self.selectAttachedDevice)
+
+                self.relMovFrame.layout().takeAt(2).widget().deleteLater()
+                self.relMovFrame.layout().insertWidget(2, self.rel_target)
+
             def move(checked):
                 try:
                     target = self.target.getValue()
@@ -1096,6 +1137,23 @@ class ControlDialog(QDialog):
                     self.moveBtn.setText("(fixed)")
                 if self.target:
                     self.target.setEnabled(False)
+
+    def rmove(self, direction):
+        try:
+            target = self.target.getValue()
+        except ValueError:
+            return
+        which_index = self.selectAttachedDevice.currentIndex()
+        if type(target) is tuple and len(target) > 1:
+            new_target = list(target)
+            new_target[which_index] = (
+                target[which_index] + direction * self.rel_target.getValue()
+            )
+        else:
+            new_target = target + direction * self.rel_target.getValue()
+
+        self.device_panel.exec_command("maw(%s, %r)" % (self.devrepr, new_target))
+        self.target.setValue(new_target)
 
     def on_paramList_customContextMenuRequested(self, pos):
         item = self.paramList.itemAt(pos)
@@ -1140,7 +1198,7 @@ class ControlDialog(QDialog):
         fmtstr = self.devinfo.fmtstr
         dlg.limitMin.setText(fmtstr % userlimits[0])
         dlg.limitMax.setText(fmtstr % userlimits[1])
-        
+
         abslimits = self.client.getDeviceParam(self.devname, "abslimits")
         offset = self.client.getDeviceParam(self.devname, "offset")
         if offset is not None:
@@ -1244,6 +1302,14 @@ class ControlDialog(QDialog):
         self.device_panel.exec_command(
             'set(%s, "alias", %r)' % (self.devrepr, self.aliasTarget.currentText())
         )
+
+    @pyqtSlot()
+    def on_toolButtonMinus_clicked(self):
+        self.rmove(-1)
+
+    @pyqtSlot()
+    def on_toolButtonPlus_clicked(self):
+        self.rmove(1)
 
     def closeEvent(self, event):
         event.accept()
