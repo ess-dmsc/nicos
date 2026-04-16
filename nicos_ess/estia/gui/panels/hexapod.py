@@ -114,6 +114,7 @@ class HexapodPanel(Panel):
             self.statusBox.show()
             self.coordBox.show()
             self.butTest.show()
+            self.userModes.setTabVisible(1, 0)
         # better way to hide all this using another group box....but will do it later
         else:
             self.panelLabel.clear()
@@ -123,6 +124,7 @@ class HexapodPanel(Panel):
             self.statusBox.hide()
             self.coordBox.hide()
             self.butTest.hide()
+            self.userModes.setTabVisible(1, 0)
 
     def get_hexapod_name(self):
         class_typ = "nicos_ess.devices.virtual.hexapod.VirtualHexapod"
