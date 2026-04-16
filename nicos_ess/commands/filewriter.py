@@ -1,7 +1,7 @@
 from contextlib import contextmanager
 
 from nicos import session
-from nicos.commands import helparglist, usercommand
+from nicos.commands import helparglist, parallel_safe, usercommand
 from nicos.core import ADMIN, SIMULATION, requires
 from nicos_ess.commands.scichat import scichat_send
 
@@ -101,6 +101,7 @@ def stop_filewriting(job_number=None):
 
 
 @usercommand
+@parallel_safe
 def list_filewriting_jobs():
     """List current and recent file-writing jobs."""
     _find_filewriter_dev().list_jobs()
