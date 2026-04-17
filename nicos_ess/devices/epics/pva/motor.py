@@ -469,7 +469,7 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
 
         """
         # force an update of the cached value if requested:
-        if math.isclose(maxage, 0.0):
+        if maxage and math.isclose(maxage, 0.0):
             return self._do_status()
         return get_from_cache_or(self, "status", self._do_status)
 
