@@ -34,21 +34,49 @@ import pytest
 
 from nicos.core import InvalidValueError, LimitError, status
 
+from nicos_ess.devices.epics.pva import motor as epics_motor
 from nicos_ess.devices.mapped_controller import (
     MappedController,
     MultiTargetComposer,
     MultiTargetMapping,
     MultiTargetSelector,
 )
+from test.nicos_ess.test_devices.doubles import patch_create_wrapper
 from test.nicos_ess.test_devices.doubles.mapped_controller_devices import (
     HarnessLinearAxis,
     HarnessMoveableNoPrecision,
+)
+from test.nicos_ess.test_devices.epics_motor.helpers import (
+    create_monitored_motor_pair,
+    pv,
+    seed_default_motor_pvs,
 )
 
 
 def _create_master(daemon_device_harness, devcls, /, *args, **kwargs):
     """Create devices in master mode so doStart/doStatus logic is exercised."""
     return daemon_device_harness.create_master(devcls, *args, **kwargs)
+
+
+def _create_monitored_mapped_controller_pair(device_harness, mapping=None):
+    mapping = {"park": 2.5, "sample": 5.0} if mapping is None else mapping
+    daemon_motor, poller_motor = create_monitored_motor_pair(device_harness)
+    daemon_controller, poller_controller = device_harness.create_pair(
+        MappedController,
+        name="mapped_ctrl",
+        shared={
+            "controlled_device": "motor",
+            "mapping": mapping,
+        },
+    )
+    return daemon_motor, poller_motor, daemon_controller, poller_controller
+
+
+@pytest.fixture
+def fake_backend(monkeypatch):
+    backend = patch_create_wrapper(monkeypatch, epics_motor)
+    seed_default_motor_pvs(backend)
+    return backend
 
 
 class TestMappedControllerHarness:
@@ -197,6 +225,41 @@ class TestMappedControllerHarness:
         # Assert
         assert mapped == "In Between"
 
+    def test_is_completed_delegates_to_attached_device_not_status_alone(
+        self, daemon_device_harness, monkeypatch
+    ):
+        # Setup
+        axis = _create_master(daemon_device_harness,
+            HarnessLinearAxis,
+            name="axis",
+            abslimits=(0.0, 100.0),
+            precision=0.1,
+            initial_value=10.0,
+        )
+        controller = _create_master(daemon_device_harness,
+            MappedController,
+            name="mapped_ctrl",
+            controlled_device="axis",
+            mapping={"park": 10.0, "sample": 25.0},
+        )
+        axis.set_status(status.OK, "idle")
+
+        completion = {"done": False}
+        monkeypatch.setattr(
+            HarnessLinearAxis,
+            "isCompleted",
+            lambda self: completion["done"],
+        )
+
+        # Assert
+        assert controller.status(0) == (status.OK, "idle")
+        assert controller.isCompleted() is False
+
+        # Fake that the attached dev is completed
+        completion["done"] = True
+
+        assert controller.isCompleted() is True
+
     @pytest.mark.xfail(
         reason=(
             "TDD: mapped keys that are falsey values should be returned "
@@ -224,6 +287,79 @@ class TestMappedControllerHarness:
 
         # Assert
         assert mapped == ""
+
+
+class TestMappedControllerWithEpicsMotor:
+    def test_wait_returns_target_when_backend_completes_before_rbv_callback_arrives(
+        self, device_harness, fake_backend
+    ):
+        (
+            _daemon_motor,
+            _poller_motor,
+            daemon_controller,
+            _poller_controller,
+        ) = _create_monitored_mapped_controller_pair(device_harness)
+
+        # Seed the monitored cache with the old readback before starting.
+        fake_backend.emit_update(pv(".RBV"), value=2.5)
+
+        assert device_harness.run_daemon(daemon_controller.read, 0) == "park"
+        assert device_harness.run_daemon(daemon_controller.status, 0) == (
+            status.OK,
+            "",
+        )
+
+        device_harness.run_daemon(daemon_controller.start, "sample")
+
+        # The backend now reports that the motor has finished at the new target,
+        # but no monitored RBV callback has arrived yet.
+        fake_backend.values[pv(".RBV")] = 5.0
+        fake_backend.values[pv(".VAL")] = 5.0
+        fake_backend.values[pv(".DMOV")] = 1
+        fake_backend.values[pv(".MOVN")] = 0
+        fake_backend.values[pv(".MISS")] = 0
+
+        assert device_harness.run_daemon(daemon_controller.status, 0) == (
+            status.OK,
+            "",
+        )
+
+        def _wait_and_capture_warning():
+            from nicos import session as active_session
+
+            original_delay = active_session.delay
+            messages = []
+            original_warning = daemon_controller.log.warning
+            delay_calls = {"count": 0}
+
+            def capture_warning(msg, *args, **kwargs):
+                del kwargs
+                messages.append(msg % args if args else msg)
+
+            def controlled_delay(seconds):
+                delay_calls["count"] += 1
+                if delay_calls["count"] == 1:
+                    # The delayed monitor callback finally updates the readback.
+                    fake_backend.emit_update(pv(".RBV"), value=5.0)
+                if delay_calls["count"] > 20:
+                    raise RuntimeError("test guard: wait did not complete")
+                return original_delay(seconds)
+
+            active_session.delay = controlled_delay
+            daemon_controller.log.warning = capture_warning
+            try:
+                result = daemon_controller.wait()
+            finally:
+                active_session.delay = original_delay
+                daemon_controller.log.warning = original_warning
+            return result, messages
+
+        wait_result, warning_messages = device_harness.run_daemon(
+            _wait_and_capture_warning
+        )
+
+        assert wait_result == "sample"
+        assert not any("did not reach target" in msg for msg in warning_messages)
 
 
 class TestMultiTargetMappingHarness:

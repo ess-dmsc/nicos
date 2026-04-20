@@ -1,3 +1,4 @@
+import math
 import threading
 import time
 
@@ -358,7 +359,8 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         target = self._get_cached_pv_or_ask("target")
         deadband = self._get_cached_pv_or_ask("position_deadband")
 
-        if abs(target - pos) > deadband:
+        # check whether target has been reached within deadband:
+        if not math.isclose(target, pos, abs_tol=deadband):
             return False
         if moving != 0:
             return False
@@ -461,6 +463,14 @@ class EpicsMotor(EpicsParameters, CanDisable, CanReference, HasOffset, Motor):
         return Moveable.isAllowed(self, pos)
 
     def doStatus(self, maxage=0):
+        """Return status.
+
+        A maxage value of 0 forces an update of cached status.
+
+        """
+        # force an update of the cached value if requested:
+        if maxage is not None and math.isclose(maxage, 0.0):
+            return self._do_status()
         return get_from_cache_or(self, "status", self._do_status)
 
     def _do_status(self):

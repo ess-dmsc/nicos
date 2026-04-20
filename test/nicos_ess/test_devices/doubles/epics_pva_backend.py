@@ -24,7 +24,21 @@
 
 """Reusable EPICS backend doubles for pva `epics_devices` harness tests."""
 
+from functools import wraps
+
 from nicos.core import status
+
+
+def _requires_connected_backend(func):
+    """Raise an EPICS-style timeout while the fake backend is disconnected."""
+
+    @wraps(func)
+    def wrapper(self, pvname, *args, **kwargs):
+        if not self._is_connected:
+            raise TimeoutError(f"{pvname} timed out") from None
+        return func(self, pvname, *args, **kwargs)
+
+    return wrapper
 
 
 class FakeEpicsBackend:
@@ -44,33 +58,53 @@ class FakeEpicsBackend:
         self.put_calls = []
         self.get_calls = []
         self.subscriptions = []
+        self._is_connected = True
 
     def connect_pv(self, pvname):
         self.connect_calls.append(pvname)
 
+    @_requires_connected_backend
     def get_pv_value(self, pvname, as_string=False):
         self.get_calls.append(("get_pv_value", pvname, as_string))
         return self.values[pvname]
 
+    @_requires_connected_backend
     def get_units(self, pvname, default=""):
         self.get_calls.append(("get_units", pvname, default))
         return self.units.get(pvname, default)
 
+    @_requires_connected_backend
     def get_alarm_status(self, pvname):
         self.get_calls.append(("get_alarm_status", pvname, None))
         return self.alarms.get(pvname, (status.OK, ""))
 
+    @_requires_connected_backend
     def get_limits(self, pvname, default_low=-1e308, default_high=1e308):
         self.get_calls.append(("get_limits", pvname, (default_low, default_high)))
         return self.limits.get(pvname, (default_low, default_high))
 
+    @_requires_connected_backend
     def get_value_choices(self, pvname):
         self.get_calls.append(("get_value_choices", pvname, None))
         return list(self.value_choices.get(pvname, ()))
 
+    @_requires_connected_backend
     def put_pv_value(self, pvname, value, wait=False):
         self.values[pvname] = value
         self.put_calls.append((pvname, value, wait))
+
+    def disconnect_backend(self):
+        self._is_connected = False
+        self._emit_all_connections(False)
+
+    def connect_backend(self):
+        self._is_connected = True
+        self._emit_all_connections(True)
+
+    def _emit_all_connections(self, is_connected):
+        for sub_pv, pvparam, _, connection_callback in list(self.subscriptions):
+            if connection_callback:
+                connection_callback(sub_pv, pvparam, is_connected)
 
     def subscribe(
         self,

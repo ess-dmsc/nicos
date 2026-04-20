@@ -221,6 +221,71 @@ def test_fake_backend_subscription_callback_shape_matches_wrapper_contract():
     ]
 
 
+def test_fake_backend_backend_disconnect_emits_all_subscription_connections():
+    # Setup
+    backend = FakeEpicsBackend()
+    observed_connections = []
+
+    def on_connection(pvname, pvparam, is_connected):
+        observed_connections.append((pvname, pvparam, is_connected))
+
+    backend.subscribe("SIM:A.RBV", "value", None, on_connection)
+    backend.subscribe("SIM:B.RBV", "status", None, on_connection)
+
+    # Act
+    backend.disconnect_backend()
+    backend.connect_backend()
+
+    # Assert
+    assert observed_connections == [
+        ("SIM:A.RBV", "value", False),
+        ("SIM:B.RBV", "status", False),
+        ("SIM:A.RBV", "value", True),
+        ("SIM:B.RBV", "status", True),
+    ]
+
+
+@pytest.mark.parametrize(
+    "method,args",
+    [
+        ("get_pv_value", ("SIM:READ.RBV",)),
+        ("get_pv_value", ("SIM:READ.RBV", True)),
+        ("get_units", ("SIM:READ.RBV",)),
+        ("get_alarm_status", ("SIM:READ.RBV",)),
+        ("get_limits", ("SIM:READ.RBV",)),
+        ("get_value_choices", ("SIM:READ.RBV",)),
+    ],
+)
+def test_fake_backend_synchronous_reads_timeout_while_backend_disconnected(
+    method, args
+):
+    # Setup
+    backend = FakeEpicsBackend()
+    backend.values["SIM:READ.RBV"] = 3.0
+    backend.units["SIM:READ.RBV"] = "mm"
+    backend.alarms["SIM:READ.RBV"] = (status.OK, "ok")
+    backend.limits["SIM:READ.RBV"] = (-1.0, 1.0)
+    backend.value_choices["SIM:READ.RBV"] = ["OFF", "ON"]
+    backend.disconnect_backend()
+
+    # Act + Assert
+    with pytest.raises(TimeoutError):
+        getattr(backend, method)(*args)
+
+
+def test_fake_backend_reads_recover_after_backend_reconnect():
+    # Setup
+    backend = FakeEpicsBackend()
+    backend.values["SIM:READ.RBV"] = 3.0
+    backend.disconnect_backend()
+
+    # Act
+    backend.connect_backend()
+
+    # Assert
+    assert backend.get_pv_value("SIM:READ.RBV") == 3.0
+
+
 def test_fake_backend_put_records_wait_flag_for_future_wait_paths():
     # Setup
     backend = FakeEpicsBackend()

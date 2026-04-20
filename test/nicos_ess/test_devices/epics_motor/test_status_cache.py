@@ -300,12 +300,35 @@ class TestEpicsMotorStatus:
     ):
         daemon_device, _poller_device = create_monitored_motor_pair(device_harness)
 
-        fake_backend.emit_connection(pv(".RBV"), False)
+        fake_backend.disconnect_backend()
 
-        assert device_harness.run_daemon(daemon_device.status, 0) == (
+        # Cached status should immediately reflect communication failure
+        assert device_harness.run_daemon(daemon_device.status) == (
             status.ERROR,
             "communication failure",
         )
+
+        # With maxage=0, monitor mode still forces a direct backend status read.
+        hardware_status = device_harness.run_daemon(daemon_device.status, 0)
+        assert hardware_status[0] == status.ERROR
+        assert "timed out" in hardware_status[1]
+
+    def test_motor_status0_clears_stale_busy_cache_after_backend_has_completed(
+        self, device_harness, fake_backend
+    ):
+        daemon_device, _poller_device = create_monitored_motor_pair(device_harness)
+
+        device_harness.run_daemon(daemon_device.start, 5.0)
+
+        assert device_harness.run_daemon(daemon_device.status)[0] == status.BUSY
+
+        fake_backend.values[pv(".RBV")] = 5.0
+        fake_backend.values[pv(".VAL")] = 5.0
+        fake_backend.values[pv(".DMOV")] = 1
+        fake_backend.values[pv(".MOVN")] = 0
+        fake_backend.values[pv(".MISS")] = 0
+
+        assert device_harness.run_daemon(daemon_device.status, 0) == (status.OK, "")
 
 
 class TestEpicsMotorCacheAndReadPaths:
