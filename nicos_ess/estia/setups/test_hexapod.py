@@ -1,58 +1,58 @@
 description = "Virtual hexapod with added Translation"
 
 devices = dict(
-    tx=device(
+    mock_tx=device(
         "nicos.devices.generic.virtual.VirtualMotor",
         description="Tx Translation",
         abslimits=(-70, 125),
         unit="mm",
     ),
-    ty=device(
+    mock_ty=device(
         "nicos.devices.generic.virtual.VirtualMotor",
         description="Ty Translation",
         abslimits=(-40, 40),
         unit="mm",
     ),
-    tz=device(
+    mock_tz=device(
         "nicos.devices.generic.virtual.VirtualMotor",
         description="Tz Translation",
         abslimits=(-55, 65),
         unit="mm",
     ),
-    rx=device(
+    mock_rx=device(
         "nicos.devices.generic.virtual.VirtualMotor",
         description="Rx Rotation",
         abslimits=(0, 5),
         unit="deg",
     ),
-    ry=device(
+    mock_ry=device(
         "nicos.devices.generic.virtual.VirtualMotor",
         description="Ry Rotation",
         abslimits=(-12, 2.5),
         unit="deg",
     ),
-    rz=device(
+    mock_rz=device(
         "nicos.devices.generic.virtual.VirtualMotor",
         description="Rz Rotation",
         abslimits=(0, 0.5),
         unit="deg",
     ),
-    goinometer=device(
+    mock_goniometer=device(
         "nicos.devices.generic.virtual.VirtualMotor",
         description="Table Translation",
         abslimits=(0, 360),
         unit="deg",
     ),
-    estia_hexapod=device(
+    mock_estia_hexapod=device(
         "nicos_ess.devices.virtual.hexapod.TableHexapod",
         description="Hexapod Device",
-        tx="tx",
-        ty="ty",
-        tz="tz",
-        rx="rx",
-        ry="ry",
-        rz="rz",
-        table="goinometer",
+        tx="mock_tx",
+        ty="mock_ty",
+        tz="mock_tz",
+        rx="mock_rx",
+        ry="mock_ry",
+        rz="mock_rz",
+        table="mock_goniometer",
     ),
     hexapod_status=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",

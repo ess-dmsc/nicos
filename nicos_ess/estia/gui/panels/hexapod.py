@@ -9,7 +9,7 @@ from nicos.utils import findResource
 
 
 class HexapodPanel(Panel):
-    paelName = "Hexapod Controller"
+    panelName = "Hexapod Controller"
 
     def __init__(self, parent, client, options):
         Panel.__init__(self, parent, client, options)

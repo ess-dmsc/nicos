@@ -12,7 +12,7 @@ devices = dict(
         msgtxt="ESTIA-SpCpl:MC-Pne-01:ShtMsgTxt",
         visibility=(),
     ),
-    goinometer=device(
+    goniometer=device(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Sample Stage Rotation Base",
         motorpv=f"ESTIA-SpRot:MC-RotZ01:Mtr",
@@ -76,7 +76,7 @@ devices = dict(
         rx="rx",
         ry="ry",
         rz="rz",
-        table="goinometer",
+        table="goniometer",
     ),
     hexapod_status=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
