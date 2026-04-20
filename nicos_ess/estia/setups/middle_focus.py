@@ -37,4 +37,11 @@ devices = dict(
         controlled_device="in_beam_changer",
         mapping={"Middle": 176.5},
     ),
+    # Temperature Readouts
+    mask_changer_temp=device(
+        "nicos_ess.devices.epics.pva.EpicsStringReadable",
+        description="Mask Changer Rotation Temp",
+        readpv=f"{prefix}RotX01:Mtr-Temp",
+        visibility=(),
+    ),
 )
