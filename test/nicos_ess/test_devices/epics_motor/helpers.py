@@ -352,6 +352,48 @@ def pv(suffix):
     return f"{MOTOR_PV}{suffix}"
 
 
+def seed_default_motor_pvs(fake_backend):
+    defaults = {
+        ".RBV": 2.5,
+        ".DRBV": 2.5,
+        ".VAL": 2.5,
+        ".STOP": 0,
+        ".VELO": 1.0,
+        ".OFF": 0.0,
+        ".HLM": 120.0,
+        ".LLM": -120.0,
+        ".DHLM": 120.0,
+        ".DLLM": -120.0,
+        ".CNEN": 1,
+        ".SET": 0,
+        ".FOFF": 0,
+        ".DIR": "Pos",
+        ".EGU": "mm",
+        ".HOMF": 0,
+        ".HOMR": 0,
+        ".RDBD": 0.1,
+        ".DESC": "Test Motor",
+        ".MDEL": 0.1,
+        ".VMAX": 10.0,
+        ".VBAS": 0.1,
+        ".DMOV": 1,
+        ".MOVN": 0,
+        ".MISS": 0,
+        ".STAT": 0,
+        ".SEVR": 0,
+        ".LVIO": 0,
+        ".LLS": 0,
+        ".HLS": 0,
+        "-Err": 0,
+        "-ErrRst": 0,
+        "-PwrAuto": 1,
+        "-MsgTxt": "",
+        "-MsgTxt.SEVR": 0,
+    }
+    for suffix, value in defaults.items():
+        fake_backend.values[pv(suffix)] = value
+
+
 def build_motor_cfg(**overrides):
     cfg = {
         "motorpv": MOTOR_PV,

@@ -57,6 +57,10 @@ class MappedController(MappedMoveable):
     def doRead(self, maxage=0):
         return self._mapReadValue(self._readRaw(maxage))
 
+    def doIsCompleted(self):
+        """Return whether attached device has completed movement."""
+        return self._attached_controlled_device.isCompleted()
+
     def doWriteMapping(self, mapping):
         for position in mapping.values():
             self._check_limits(position)
