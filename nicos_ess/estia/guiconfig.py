@@ -31,6 +31,15 @@ main_window = docked(
                             panel("nicos_ess.gui.panels.live_pyqt.MultiLiveDataPanel"),
                         ),
                         (
+                            "Hexapod",
+                            panel(
+                                "nicos_ess.estia.gui.panels.hexapod.HexapodPanel",
+                                hexapod="estia_hexapod",
+                                status="hexapod_status",
+                                coord="hexapod_coordinate_state",
+                            ),
+                        ),
+                        (
                             "Choppers",
                             panel(
                                 "nicos_ess.gui.panels.chopper.ChopperPanel",
