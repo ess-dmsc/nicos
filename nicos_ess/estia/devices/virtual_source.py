@@ -44,13 +44,6 @@ class VirtualSource(Moveable):
                 "offcentered": "(%.2f, %.2f) %.2f mm x %.2f mm, %.2f deg",
             },
         ),
-        "offsets": Param(
-            "Change the offset(s) of the virtual source\n"
-            "In order of: left, right, bottom, top, rotation",
-            type=tupleof(float, float, float, float, float),
-            settable=True,
-            default=(0.0, 0.0, 0.0, 0.0, 0.0),
-        ),
     }
     parameter_overrides = {
         "unit": Override(default="", mandatory=False, settable=True),
@@ -65,13 +58,6 @@ class VirtualSource(Moveable):
 
     def doInit(self, mode):
         self.doWriteOffsets(self.offsets)
-
-    def doWriteOffsets(self, offset):
-        slitBlades = ["left", "right", "bottom", "top"]
-        self._adevs["rot"]._setROParam("offset", offset[4])
-
-        for blade, blade_offset in zip(slitBlades, offset[:-1]):
-            self._adevs["slit"]._adevs[blade]._setROParam("offset", blade_offset)
 
     def _parseTargets(self, target):
         # angle target must be split from slit target since it is an independent attachment
