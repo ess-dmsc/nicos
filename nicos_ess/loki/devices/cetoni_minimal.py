@@ -34,8 +34,8 @@ class CetoniPumpController(EpicsParameters, CanReference, HasLimits, Moveable):
             settable=True,
             volatile=True,
         ),
-        "maxflowrate": Param(
-            description="Syringe flowrate",
+        "flowrate_max": Param(
+            description="Max flowrate",
             volatile=True,
         ),
         "flowrate_unit": Param(
@@ -45,6 +45,10 @@ class CetoniPumpController(EpicsParameters, CanReference, HasLimits, Moveable):
         "pressure": Param(
             description="Syringe pressure",
             volatile=True,
+        ),
+        "pressure_max": Param(
+            description="Syringe max pressure",
+            volatile="True",
         ),
         "pressure_unit": Param(
             description="Pressure unit",
@@ -58,20 +62,12 @@ class CetoniPumpController(EpicsParameters, CanReference, HasLimits, Moveable):
             description="Diameter unit",
             type=str,
         ),
-        "maxstroke": Param(
+        "stroke_max": Param(
             description="Syringe max piston stroke",
             volatile="True",
         ),
-        "maxstroke_unit": Param(
-            description="Max piston stroke unit",
-            type=str,
-        ),
-        "maxpressure": Param(
-            description="Syringe max pressure",
-            volatile="True",
-        ),
-        "maxpressure_unit": Param(
-            description="Max pressure unit",
+        "stroke_unit": Param(
+            description="Piston stroke unit",
             type=str,
         ),
     }
