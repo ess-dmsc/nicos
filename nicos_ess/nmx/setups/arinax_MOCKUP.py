@@ -44,13 +44,24 @@ devices = dict(
         pollinterval=0.5,
         maxage=None,
     ),
+    detector_config_setpoint=device(
+        # Just for testing, coudl be removed later.
+        "nicos_ess.devices.epics.pva.EpicsStringReadable",
+        description="ARINAX DPU Configuration, setpoint readback (mockup)",
+        readpv="NMX-mockup:getDPUConfiguration",
+        pva=False,
+        monitor=True,
+        pollinterval=0.5,
+        maxage=None,
+    ),
     detector_config_control=device(
+        # Showing only the index!
         # This class seems to be the best so far for read/write the DPU config PV.
         # PS: This PV is being fixed. Probably it will be an ENUM too in the future.
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         description="ARINAX DPU Configuration, control (mockup)",
         readpv="NMX-mockup:getDPUConfiguration",
-        writepv="NMX-mockup:goDPUConfiguration",
+        writepv="NMX-mockup:setDPUConfiguration",
         pva=False,
         monitor=True,
         pollinterval=0.5,
