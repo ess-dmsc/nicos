@@ -17,6 +17,7 @@ from nicos.guisupport.qt import (
     QFont,
     QIcon,
     QInputDialog,
+    QLabel,
     QMenu,
     QMessageBox,
     QPalette,
@@ -877,7 +878,7 @@ class ControlDialog(QDialog):
         self.paramItems = {}
         self.moveBtn = None
         self.target = None
-        self.rel_target = 0
+        self.rel_target = None
 
         self._reinit()
         self._show_extension(expert)
@@ -1059,6 +1060,7 @@ class ControlDialog(QDialog):
         if "nicos.core.device.Moveable" not in classes:
             self.limitFrame.setVisible(False)
             self.targetFrame.setVisible(False)
+            self.relMoveGroup.setVisible(False)
         else:
             if "nicos.core.mixins.HasLimits" not in classes:
                 self.limitFrame.setVisible(False)
@@ -1092,19 +1094,20 @@ class ControlDialog(QDialog):
             if not any(
                 allowed_class in classes for allowed_class in ALLOWED_RMOVE_CLASSES
             ):
-                self.relMovFrame.setVisible(False)
-                self.relMove.setVisible(False)
+                self.relMoveGroup.setVisible(False)
             else:
-                valueinfo = self.client.eval(
+                self.valueinfo = self.client.eval(
                     "session.getDevice(%r).valueInfo()" % self.devname, None
                 )
-                valueinfo_names = tuple([value.name for value in valueinfo])
+                self.valueinfo_names = tuple([value.name for value in self.valueinfo])
 
                 self.selectDevice = QComboBox(self)
-                for name_index, valueinfo_name in enumerate(valueinfo_names):
+                for name_index, valueinfo_name in enumerate(self.valueinfo_names):
                     self.selectDevice.insertItem(name_index, valueinfo_name)
-                if len(valueinfo) < 2:
+                if len(self.valueinfo) < 2:
                     self.selectDevice.setVisible(False)
+                self.selectDevice.currentIndexChanged.connect(self.index_changed)
+
                 self.rel_target = EditWidget(
                     self.devname,
                     typ=float,
@@ -1112,10 +1115,20 @@ class ControlDialog(QDialog):
                 )
 
                 self.relMovFrame.layout().takeAt(0).widget().deleteLater()
-                self.relMovFrame.layout().insertWidget(0, self.selectDevice)
+                self.relMovFrame.layout().addWidget(self.selectDevice, 1, 0)
 
-                self.relMovFrame.layout().takeAt(2).widget().deleteLater()
-                self.relMovFrame.layout().insertWidget(2, self.rel_target)
+                minus_button = self.relMovFrame.layout().itemAtPosition(0, 1).widget()
+                self.relMovFrame.layout().addWidget(minus_button, 1, 1)
+
+                self.relMovFrame.layout().takeAt(0).widget().deleteLater()
+                self.relMovFrame.layout().addWidget(self.rel_target, 1, 2)
+
+                self.relMovFrame.layout().addWidget(
+                    QLabel(f"Step ({self.rmove_selected_device_unit()})", self), 0, 2
+                )
+
+                plus_button = self.relMovFrame.layout().itemAtPosition(0, 3).widget()
+                self.relMovFrame.layout().addWidget(plus_button, 1, 3)
 
             def move(checked):
                 try:
@@ -1138,6 +1151,10 @@ class ControlDialog(QDialog):
                     self.moveBtn.setText("(fixed)")
                 if self.target:
                     self.target.setEnabled(False)
+
+    def rmove_selected_device_unit(self):
+        selected_device_index = self.selectDevice.currentIndex()
+        return self.valueinfo[selected_device_index].unit
 
     def rmove(self, direction):
         selected_device_index = self.selectDevice.currentIndex()
@@ -1307,6 +1324,13 @@ class ControlDialog(QDialog):
     @pyqtSlot()
     def on_toolButtonPlus_clicked(self):
         self.rmove(1)
+
+    @pyqtSlot()
+    def index_changed(self):
+        selected_device_unit = self.rmove_selected_device_unit()
+        for child in self.rel_target.children():
+            if isinstance(child, QLabel):
+                child.setText(f"Step ({selected_device_unit})")
 
     def closeEvent(self, event):
         event.accept()
