@@ -109,7 +109,7 @@ class CetoniPumpController(EpicsParameters, CanReference, Moveable):
     def _set_pv(self, name, value):
         self._epics_wrapper.put_pv_value(name, value)
 
-    def doRead(self):
+    def doRead(self, maxage):
         return self._get_cached_pv_or_ask("readpv")
 
     def doReadPressure(self):
