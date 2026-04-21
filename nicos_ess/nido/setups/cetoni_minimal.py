@@ -7,7 +7,7 @@ devices = dict(
         "nicos_ess.loki.devices.cetoni_minimal.CetoniPumpController",
         description="Description",
         pvroot=pump1_pvroot,
-        syringe_config="pump1_syringe_config",
+        # syringe_config="pump1_syringe_config",
     ),
     pump1_syringe_config=device(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",

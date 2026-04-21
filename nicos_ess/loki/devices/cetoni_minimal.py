@@ -69,9 +69,9 @@ class CetoniPumpController(EpicsParameters, CanReference, Moveable):
         "unit": Override(mandatory=False, settable=False, default=""),
     }
 
-    attached_devices = {
-        "syringe_config": Attach("Configuration for syringe", MappedMoveable)
-    }
+    # attached_devices = {
+    #     "syringe_config": Attach("Configuration for syringe", MappedMoveable)
+    # }
 
     def doPreinit(self, mode):
         self._record_fields = {
