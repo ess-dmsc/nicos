@@ -34,6 +34,10 @@ class CetoniPumpController(EpicsParameters, CanReference, HasLimits, Moveable):
             settable=True,
             volatile=True,
         ),
+        "maxflowrate": Param(
+            description="Syringe flowrate",
+            volatile=True,
+        ),
         "flowrate_unit": Param(
             description="Flowrate unit",
             type=str,
@@ -95,6 +99,11 @@ class CetoniPumpController(EpicsParameters, CanReference, HasLimits, Moveable):
                 pv_suffix="FlowRate",
                 record_type=RecordType.VALUE,
             ),
+            "flowrate_max": RecordInfo(
+                cache_key="flowrate_max",
+                pv_suffix="MaxFlowRate",
+                record_type=RecordType.VALUE,
+            ),
             "flowrate_unit": RecordInfo(
                 cache_key="flowrate_unit",
                 pv_suffix="FlowRate.EGU",
@@ -104,6 +113,11 @@ class CetoniPumpController(EpicsParameters, CanReference, HasLimits, Moveable):
                 cache_key="pressure",
                 pv_suffix="Pressure",
                 record_type=RecordType.VALUE,
+            ),
+            "pressure_max": RecordInfo(
+                cache_key="pressure_max",
+                pv_suffix="MaxPressure",
+                record_type=RecordType.BOTH,
             ),
             "pressure_unit": RecordInfo(
                 cache_key="pressure_unit",
@@ -125,24 +139,14 @@ class CetoniPumpController(EpicsParameters, CanReference, HasLimits, Moveable):
                 pv_suffix="SyrInnerDiam.EGU",
                 record_type=RecordType.BOTH,
             ),
-            "maxstroke": RecordInfo(
-                cache_key="maxstroke",
+            "stroke_max": RecordInfo(
+                cache_key="stroke_max",
                 pv_suffix="SyrMaxPstStrk",
                 record_type=RecordType.BOTH,
             ),
-            "maxstroke_unit": RecordInfo(
-                cache_key="maxstroke_unit",
+            "stroke_unit": RecordInfo(
+                cache_key="stroke_unit",
                 pv_suffix="SyrMaxPstStrk.EGU",
-                record_type=RecordType.BOTH,
-            ),
-            "maxpressure": RecordInfo(
-                cache_key="maxpressure",
-                pv_suffix="MaxPressure",
-                record_type=RecordType.BOTH,
-            ),
-            "maxpressure_unit": RecordInfo(
-                cache_key="maxpressure_unit",
-                pv_suffix="MaxPressure.EGU",
                 record_type=RecordType.BOTH,
             ),
             "dialhighlimit": RecordInfo(
@@ -179,14 +183,16 @@ class CetoniPumpController(EpicsParameters, CanReference, HasLimits, Moveable):
         self._epics_wrapper.connect_pv(self._get_pv_name("readpv"))
         self._epics_wrapper.connect_pv(self._get_pv_name("writepv"))
         self._epics_wrapper.connect_pv(self._get_pv_name("flowrate"))
+        self._epics_wrapper.connect_pv(self._get_pv_name("flowrate_max"))
         self._epics_wrapper.connect_pv(self._get_pv_name("pressure"))
         self._epics_wrapper.connect_pv(self._get_pv_name("home"))
         self._epics_wrapper.connect_pv(self._get_pv_name("innerdiameter"))
-        self._epics_wrapper.connect_pv(self._get_pv_name("maxstroke"))
-        self._epics_wrapper.connect_pv(self._get_pv_name("maxpressure"))
+        self._epics_wrapper.connect_pv(self._get_pv_name("stroke_max"))
+        self._epics_wrapper.connect_pv(self._get_pv_name("pressure_max"))
         self._epics_wrapper.connect_pv(self._get_pv_name("stop"))
         self._epics_wrapper.connect_pv(self._get_pv_name("fill_syringe"))
         self._epics_wrapper.connect_pv(self._get_pv_name("empty_syringe"))
+        self._epics_wrapper.connect_pv(self._get_pv_name("generate_flow"))
 
     def set_up_subscriptions(self):
         self._epics_subscriptions = []
@@ -244,11 +250,17 @@ class CetoniPumpController(EpicsParameters, CanReference, HasLimits, Moveable):
     def doReadPressure(self):
         return self._get_cached_pv_or_ask("pressure", maxage=0.0)
 
+    def doReadPressure_Max(self):
+        return self._get_cached_pv_or_ask("pressure_max", maxage=0.0)
+
     def doReadPressure_Unit(self):
         return self._get_cached_pv_or_ask("pressure_unit")
 
     def doReadFlowrate(self):
         return self._get_cached_pv_or_ask("flowrate", maxage=0.0)
+
+    def doReadFlowrate_Max(self):
+        return self._get_cached_pv_or_ask("flowrate_max", maxage=0.0)
 
     def doReadFlowrate_Unit(self):
         return self._get_cached_pv_or_ask("flowrate_unit")
@@ -256,26 +268,20 @@ class CetoniPumpController(EpicsParameters, CanReference, HasLimits, Moveable):
     def doWriteFlowrate(self, target):
         self._set_pv(self._get_pv_name("flowrate"), target)
 
-    def doReference(self):
-        self._set_pv(self._get_pv_name("home"), 1)
-
     def doReadInnerdiameter(self):
         return self._get_cached_pv_or_ask("innerdiameter", maxage=0.0)
 
     def doReadInnerdiameter_Unit(self):
         return self._get_cached_pv_or_ask("innerdiameter_unit")
 
-    def doReadMaxstroke(self):
-        return self._get_cached_pv_or_ask("maxstroke", maxage=0.0)
+    def doReadStroke_Max(self):
+        return self._get_cached_pv_or_ask("stroke_max", maxage=0.0)
 
-    def doReadMaxstroke_Unit(self):
-        return self._get_cached_pv_or_ask("maxstroke_unit")
+    def doReadStroke_Unit(self):
+        return self._get_cached_pv_or_ask("stroke_unit")
 
-    def doReadMaxpressure(self):
-        return self._get_cached_pv_or_ask("maxpressure", maxage=0.0)
-
-    def doReadMaxpressure_Unit(self):
-        return self._get_cached_pv_or_ask("maxpressure_unit")
+    def doReference(self):
+        self._set_pv(self._get_pv_name("home"), 1)
 
     def doStart(self, target):
         self._set_pv(self._get_pv_name("writepv"), target)
@@ -330,6 +336,12 @@ class CetoniPumpController(EpicsParameters, CanReference, HasLimits, Moveable):
 
     @usermethod
     def generate_flow(self, target):
+        """
+        Generate constant flow
+
+        Positive value = dispense
+        Negative value = aspirate
+        """
         if self._mode == SIMULATION:
             return
         self._set_pv(self._get_pv_name("generate_flow"), target)
