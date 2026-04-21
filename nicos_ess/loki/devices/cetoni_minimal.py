@@ -21,8 +21,12 @@ class CetoniPumpController(EpicsParameters, Moveable):
             userparam=False,
         ),
         "flowrate": Param(
-            description="flowrate of pump",
+            description="Pump flowrate",
             settable=True,
+            volatile=True,
+        ),
+        "pressure": Param(
+            description="Pump pressure",
             volatile=True,
         ),
     }
@@ -48,6 +52,11 @@ class CetoniPumpController(EpicsParameters, Moveable):
                 pv_suffix="FlowRate",
                 record_type=RecordType.VALUE,
             ),
+            "pressure": RecordInfo(
+                cache_key="pressure",
+                pv_suffix="Pressure",
+                record_type=RecordType.VALUE,
+            ),
         }
         self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
         self.connect_pvs()
@@ -57,6 +66,7 @@ class CetoniPumpController(EpicsParameters, Moveable):
         self._epics_wrapper.connect_pv(self._get_pv_name("readpv"))
         self._epics_wrapper.connect_pv(self._get_pv_name("writepv"))
         self._epics_wrapper.connect_pv(self._get_pv_name("flowrate"))
+        self._epics_wrapper.connect_pv(self._get_pv_name("pressure"))
 
     def set_up_subscriptions(self):
         self._epics_subscriptions = []
@@ -94,6 +104,9 @@ class CetoniPumpController(EpicsParameters, Moveable):
 
     def doRead(self):
         return self._get_cached_pv_or_ask("readpv")
+
+    def doReadPressure(self):
+        return self._get_cached_pv_or_ask("pressure")
 
     def doReadFlowrate(self):
         return self._get_cached_pv_or_ask("flowrate")
