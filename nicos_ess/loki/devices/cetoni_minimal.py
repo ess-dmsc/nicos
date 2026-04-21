@@ -142,6 +142,11 @@ class CetoniPumpController(EpicsParameters, CanReference, HasLimits, Moveable):
                 pv_suffix="MaxVol",
                 record_type=RecordType.VALUE,
             ),
+            "stop": RecordInfo(
+                cache_key="stop",
+                pv_suffix="C_Stop",
+                record_type=RecordType.VALUE,
+            ),
         }
         self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
         self.connect_pvs()
@@ -156,6 +161,7 @@ class CetoniPumpController(EpicsParameters, CanReference, HasLimits, Moveable):
         self._epics_wrapper.connect_pv(self._get_pv_name("innerdiameter"))
         self._epics_wrapper.connect_pv(self._get_pv_name("maxstroke"))
         self._epics_wrapper.connect_pv(self._get_pv_name("maxpressure"))
+        self._epics_wrapper.connect_pv(self._get_pv_name("stop"))
 
     def set_up_subscriptions(self):
         self._epics_subscriptions = []
@@ -248,6 +254,9 @@ class CetoniPumpController(EpicsParameters, CanReference, HasLimits, Moveable):
 
     def doStart(self, target):
         self._set_pv(self._get_pv_name("writepv"), target)
+
+    def doStop(self, target):
+        self._set_pv(self._get_pv_name("stop"), target)
 
     def _value_change_callback(
         self, name, param, value, units, limits, severity, message, **kwargs
