@@ -40,7 +40,7 @@ class CetoniPumpController(EpicsParameters, Moveable):
             ),
             "writepv": RecordInfo(
                 cache_key="target",
-                pv_suffix="C_SetFillVol",
+                pv_suffix="C_PumpVol",
                 record_type=RecordType.VALUE,
             ),
             # "flowrate": RecordInfo(
