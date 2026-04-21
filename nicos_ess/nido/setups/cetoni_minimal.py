@@ -13,6 +13,5 @@ devices = dict(
         "nicos_ess.devices.epics.pva.EpicsMappedMoveable",
         readpv=f"{pump1_pvroot}SyrType-SP",
         writepv=f"{pump1_pvroot}SyrType-SP",
-        targetpv=f"{pump1_pvroot}SyrType-SP",
     ),
 )
