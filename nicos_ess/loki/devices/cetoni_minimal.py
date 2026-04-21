@@ -2,6 +2,7 @@ import time
 
 from nicos import session
 from nicos.core import POLLER, Moveable, Override, Param, status
+from nicos.devices.abstract import CanReference
 from nicos_ess.devices.epics.pva.epics_devices import (
     EpicsParameters,
     RecordInfo,
@@ -11,7 +12,7 @@ from nicos_ess.devices.epics.pva.epics_devices import (
 )
 
 
-class CetoniPumpController(EpicsParameters, Moveable):
+class CetoniPumpController(EpicsParameters, CanReference, Moveable):
     parameters = {
         "pvroot": Param(
             "The root of the pv",
@@ -57,6 +58,11 @@ class CetoniPumpController(EpicsParameters, Moveable):
                 pv_suffix="Pressure",
                 record_type=RecordType.VALUE,
             ),
+            "home": RecordInfo(
+                cache_key="home",
+                pv_suffix="C_InitPosition",
+                record_type=RecordType.BOTH,
+            ),
         }
         self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
         self.connect_pvs()
@@ -67,6 +73,7 @@ class CetoniPumpController(EpicsParameters, Moveable):
         self._epics_wrapper.connect_pv(self._get_pv_name("writepv"))
         self._epics_wrapper.connect_pv(self._get_pv_name("flowrate"))
         self._epics_wrapper.connect_pv(self._get_pv_name("pressure"))
+        self._epics_wrapper.connect_pv(self._get_pv_name("home"))
 
     def set_up_subscriptions(self):
         self._epics_subscriptions = []
@@ -113,6 +120,9 @@ class CetoniPumpController(EpicsParameters, Moveable):
 
     def doWriteFlowrate(self, target):
         self._set_pv(self._get_pv_name("flowrate"), target)
+
+    def doReference(self):
+        self._set_pv(self._get_pv_name("home"), 1)
 
     def doStart(self, target):
         self._set_pv(self._get_pv_name("writepv"), target)
