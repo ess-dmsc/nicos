@@ -23,23 +23,27 @@ class CetoniPumpController(EpicsParameters, CanReference, Moveable):
             userparam=False,
         ),
         "flowrate": Param(
-            description="Pump flowrate",
+            description="Syringe flowrate",
             settable=True,
             volatile=True,
         ),
         "flowrate_unit": Param(
-            description="Pump flowrate unit",
+            description="Flowrate unit",
             volatile=True,
             type=str,
         ),
         "pressure": Param(
-            description="Pump pressure",
+            description="Syringe pressure",
             volatile=True,
         ),
         "pressure_unit": Param(
-            description="Pump pressure unit",
+            description="Pressure unit",
             volatile=True,
             type=str,
+        ),
+        "inner_diameter": Param(
+            description="Syringe diameter",
+            volatile="True",
         ),
     }
 
@@ -88,6 +92,11 @@ class CetoniPumpController(EpicsParameters, CanReference, Moveable):
                 pv_suffix="C_InitPosition",
                 record_type=RecordType.BOTH,
             ),
+            "innerdiameter": RecordInfo(
+                cache_key="innerdiameter",
+                pv_suffix="SyrInnerDiam",
+                record_type=RecordType.BOTH,
+            ),
         }
         self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
         self.connect_pvs()
@@ -101,6 +110,7 @@ class CetoniPumpController(EpicsParameters, CanReference, Moveable):
         self._epics_wrapper.connect_pv(self._get_pv_name("pressure"))
         self._epics_wrapper.connect_pv(self._get_pv_name("pressure_unit"))
         self._epics_wrapper.connect_pv(self._get_pv_name("home"))
+        self._epics_wrapper.connect_pv(self._get_pv_name("innerdiameter"))
 
     def set_up_subscriptions(self):
         self._epics_subscriptions = []
@@ -168,6 +178,9 @@ class CetoniPumpController(EpicsParameters, CanReference, Moveable):
 
     def doReference(self):
         self._set_pv(self._get_pv_name("home"), 1)
+
+    def doReadInner_Diameter(self):
+        return self._get_cached_pv_or_ask("innerdiameter", max_age=0.0)
 
     def doStart(self, target):
         self._set_pv(self._get_pv_name("writepv"), target)
