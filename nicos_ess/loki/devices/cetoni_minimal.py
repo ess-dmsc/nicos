@@ -41,9 +41,14 @@ class CetoniPumpController(EpicsParameters, CanReference, Moveable):
             volatile=True,
             type=str,
         ),
-        "inner_diameter": Param(
+        "innerdiameter": Param(
             description="Syringe diameter",
             volatile="True",
+        ),
+        "innerdiameter_unit": Param(
+            description="Diameter unit",
+            volatile="True",
+            type=str,
         ),
     }
 
@@ -95,6 +100,11 @@ class CetoniPumpController(EpicsParameters, CanReference, Moveable):
             "innerdiameter": RecordInfo(
                 cache_key="innerdiameter",
                 pv_suffix="SyrInnerDiam",
+                record_type=RecordType.BOTH,
+            ),
+            "innerdiameter_unit": RecordInfo(
+                cache_key="innerdiameter_unit",
+                pv_suffix="SyrInnerDiam.EGU",
                 record_type=RecordType.BOTH,
             ),
         }
@@ -179,8 +189,11 @@ class CetoniPumpController(EpicsParameters, CanReference, Moveable):
     def doReference(self):
         self._set_pv(self._get_pv_name("home"), 1)
 
-    def doReadInner_Diameter(self):
+    def doReadInnerDiameter(self):
         return self._get_cached_pv_or_ask("innerdiameter", maxage=0.0)
+
+    def doReadInnerDiameter_Unit(self):
+        return self._get_cached_pv_or_ask("innerdiameter_unit")
 
     def doStart(self, target):
         self._set_pv(self._get_pv_name("writepv"), target)
