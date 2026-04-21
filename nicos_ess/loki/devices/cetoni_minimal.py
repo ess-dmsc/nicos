@@ -92,8 +92,12 @@ class CetoniPumpController(EpicsParameters, Moveable):
     def _set_pv(self, name, value):
         self._epics_wrapper.put_pv_value(name, value)
 
-    def doRead(self):
-        return self._get_cached_pv_or_ask("readpv")
+    def doRead(self, maxage=0):
+        return get_from_cache_or(
+            self,
+            self._record_fields["readpv"].cache_key,
+            lambda: self._epics_wrapper.get_pv_value(self.readpv),
+        )
 
     def doReadFlowrate(self):
         return self._get_cached_pv_or_ask("flowrate")
