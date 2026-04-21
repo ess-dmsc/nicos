@@ -320,16 +320,16 @@ class CetoniPumpController(EpicsParameters, CanReference, HasLimits, Moveable):
     def fill_syringe(self):
         if self._mode == SIMULATION:
             return
-        self._set_pv("fill_syringe", 1)
+        self._set_pv(self._get_pv_name("fill_syringe"), 1)
 
     @usermethod
     def empty_syringe(self):
         if self._mode == SIMULATION:
             return
-        self._set_pv("empty_syringe", 1)
+        self._set_pv(self._get_pv_name("empty_syringe"), 1)
 
     @usermethod
     def generate_flow(self, target):
         if self._mode == SIMULATION:
             return
-        self._set_pv("generate_flow", target)
+        self._set_pv(self._get_pv_name("generate_flow"), target)
