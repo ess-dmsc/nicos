@@ -67,6 +67,8 @@ class CetoniPumpController(EpicsParameters, CanReference, HasLimits, Moveable):
 
     parameter_overrides = {
         "unit": Override(mandatory=False, settable=False, default=""),
+        "abslimits": Override(volatile=True, mandatory=False),
+        "userlimits": Override(volatile=True, chatty=False),
     }
 
     def doPreinit(self, mode):
@@ -136,6 +138,11 @@ class CetoniPumpController(EpicsParameters, CanReference, HasLimits, Moveable):
                 pv_suffix="MaxPressure.EGU",
                 record_type=RecordType.BOTH,
             ),
+            "dialhighlimit": RecordInfo(
+                cache_key="dialhighlimit",
+                pv_suffix="MaxVol",
+                record_type=RecordType.VALUE,
+            ),
         }
         self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
         self.connect_pvs()
@@ -198,6 +205,10 @@ class CetoniPumpController(EpicsParameters, CanReference, HasLimits, Moveable):
 
     def _set_pv(self, name, value):
         self._epics_wrapper.put_pv_value(name, value)
+
+    def doReadAbslimits(self):
+        dial_max = self._get_cached_pv_or_ask("dialhighlimit")
+        return 0, dial_max
 
     def doRead(self, maxage):
         return self._get_cached_pv_or_ask("readpv")
