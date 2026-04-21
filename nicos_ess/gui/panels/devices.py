@@ -1107,12 +1107,18 @@ class ControlDialog(QDialog):
                 if len(self.valueinfo) < 2:
                     self.selectDevice.setVisible(False)
                 self.selectDevice.currentIndexChanged.connect(self.index_changed)
+                select_device_hint = self.selectDevice.sizeHint()
+                if select_device_hint.isValid():
+                    self.selectDevice.setMinimumSize(select_device_hint)
 
                 self.rel_target = EditWidget(
                     self.devname,
                     typ=float,
                     curvalue=0,
                 )
+                rel_target_hint = self.rel_target.sizeHint()
+                if rel_target_hint.isValid():
+                    self.rel_target.setMinimumSize(rel_target_hint)
 
                 self.relMovFrame.layout().takeAt(0).widget().deleteLater()
                 self.relMovFrame.layout().addWidget(self.selectDevice, 1, 0)
