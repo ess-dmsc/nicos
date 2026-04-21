@@ -189,10 +189,10 @@ class CetoniPumpController(EpicsParameters, CanReference, Moveable):
     def doReference(self):
         self._set_pv(self._get_pv_name("home"), 1)
 
-    def doReadInnerDiameter(self):
+    def doReadInnerdiameter(self):
         return self._get_cached_pv_or_ask("innerdiameter", maxage=0.0)
 
-    def doReadInnerDiameter_Unit(self):
+    def doReadInnerdiameter_Unit(self):
         return self._get_cached_pv_or_ask("innerdiameter_unit")
 
     def doStart(self, target):
