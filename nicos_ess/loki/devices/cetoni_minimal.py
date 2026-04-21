@@ -100,7 +100,9 @@ class CetoniPumpController(EpicsParameters, CanReference, Moveable):
     def _get_pv_name(self, pvparam):
         return f"{self.pvroot}{self._record_fields[pvparam].pv_suffix}"
 
-    def _get_cached_pv_or_ask(self, key: str, maxage: float, as_string: bool = False):
+    def _get_cached_pv_or_ask(
+        self, key: str, maxage: float = 5, as_string: bool = False
+    ):
         if math.isclose(maxage, 0.0):
             return self._read_pv(key, as_string)
         else:
@@ -121,13 +123,13 @@ class CetoniPumpController(EpicsParameters, CanReference, Moveable):
         self._epics_wrapper.put_pv_value(name, value)
 
     def doRead(self, maxage):
-        return self._get_cached_pv_or_ask("readpv", maxage)
+        return self._get_cached_pv_or_ask("readpv")
 
     def doReadPressure(self):
         return self._get_cached_pv_or_ask("pressure", maxage=0)
 
     def doReadFlowrate(self, maxage):
-        return self._get_cached_pv_or_ask("flowrate", maxage)
+        return self._get_cached_pv_or_ask("flowrate")
 
     def doWriteFlowrate(self, target):
         self._set_pv(self._get_pv_name("flowrate"), target)
