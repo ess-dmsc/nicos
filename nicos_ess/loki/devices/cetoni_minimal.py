@@ -1,9 +1,8 @@
 import math
 import time
 
-from nicos import session
-from nicos.core import POLLER, Attach, HasLimits, Moveable, Override, Param, status
-from nicos.devices.abstract import CanReference, MappedMoveable
+from nicos.core import HasLimits, Moveable, Override, Param, status
+from nicos.devices.abstract import CanReference
 from nicos_ess.devices.epics.pva.epics_devices import (
     EpicsParameters,
     RecordInfo,
@@ -152,9 +151,7 @@ class CetoniPumpController(EpicsParameters, CanReference, HasLimits, Moveable):
         self._epics_wrapper.connect_pv(self._get_pv_name("readpv"))
         self._epics_wrapper.connect_pv(self._get_pv_name("writepv"))
         self._epics_wrapper.connect_pv(self._get_pv_name("flowrate"))
-        # self._epics_wrapper.connect_pv(self._get_pv_name("flowrate_unit"))
         self._epics_wrapper.connect_pv(self._get_pv_name("pressure"))
-        # self._epics_wrapper.connect_pv(self._get_pv_name("pressure_unit"))
         self._epics_wrapper.connect_pv(self._get_pv_name("home"))
         self._epics_wrapper.connect_pv(self._get_pv_name("innerdiameter"))
         self._epics_wrapper.connect_pv(self._get_pv_name("maxstroke"))
