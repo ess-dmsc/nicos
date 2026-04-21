@@ -1,3 +1,4 @@
+import math
 import time
 
 from nicos import session
@@ -99,24 +100,34 @@ class CetoniPumpController(EpicsParameters, CanReference, Moveable):
     def _get_pv_name(self, pvparam):
         return f"{self.pvroot}{self._record_fields[pvparam].pv_suffix}"
 
-    def _get_cached_pv_or_ask(self, key: str, as_string: bool = False):
-        return get_from_cache_or(
-            self,
-            self._record_fields[key].cache_key,
-            lambda: self._epics_wrapper.get_pv_value(self._get_pv_name(key), as_string),
+    def _get_cached_pv_or_ask(self, key: str, maxage: float, as_string: bool = False):
+        if math.isclose(maxage, 0.0):
+            return self._read_pv(key, as_string)
+        else:
+            return get_from_cache_or(
+                self,
+                self._record_fields[key].cache_key,
+                lambda: self._epics_wrapper.get_pv_value(
+                    self._get_pv_name(key), as_string
+                ),
+            )
+
+    def _read_pv(self, key, as_string=False):
+        return self._epics_wrapper.get_pv_value(
+            self._get_pv_name(key), as_string=as_string
         )
 
     def _set_pv(self, name, value):
         self._epics_wrapper.put_pv_value(name, value)
 
     def doRead(self, maxage):
-        return self._get_cached_pv_or_ask("readpv")
+        return self._get_cached_pv_or_ask("readpv", maxage)
 
-    def doReadPressure(self):
-        return self._get_cached_pv_or_ask("pressure")
+    def doReadPressure(self, maxage):
+        return self._get_cached_pv_or_ask("pressure", maxage=0)
 
-    def doReadFlowrate(self):
-        return self._get_cached_pv_or_ask("flowrate")
+    def doReadFlowrate(self, maxage):
+        return self._get_cached_pv_or_ask("flowrate", maxage)
 
     def doWriteFlowrate(self, target):
         self._set_pv(self._get_pv_name("flowrate"), target)
