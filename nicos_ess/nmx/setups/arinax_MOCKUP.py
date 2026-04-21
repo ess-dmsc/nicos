@@ -119,15 +119,6 @@ devices = dict(
         monitor=True,
         pollinterval=0.5,
         maxage=None,
-        mapping={
-            "Goniometer Empty": "GoniometerEmpty",
-            "Custom Tool Empty": "CustomToolEmpty",
-            "Touch Probe": "TouchProbe",
-            "Tool Changer": "ToolChanger",
-            "Goniometer Sample": "GoniometerSample",
-            "Custom Tool Sample": "CustomToolSample",
-            "None": "None",
-        },
     ),
     sample_tool__current_tool_readback=device(
         # Only index is showing.
