@@ -255,8 +255,8 @@ class CetoniPumpController(EpicsParameters, CanReference, HasLimits, Moveable):
     def doStart(self, target):
         self._set_pv(self._get_pv_name("writepv"), target)
 
-    def doStop(self, target):
-        self._set_pv(self._get_pv_name("stop"), target)
+    def doStop(self):
+        self._set_pv(self._get_pv_name("stop"), 1)
 
     def _value_change_callback(
         self, name, param, value, units, limits, severity, message, **kwargs
