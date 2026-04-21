@@ -56,9 +56,6 @@ class VirtualSource(Moveable):
         "rot": Attach("the rotation stage", Moveable),
     }
 
-    def doInit(self, mode):
-        self.doWriteOffsets(self.offsets)
-
     def _parseTargets(self, target):
         # angle target must be split from slit target since it is an independent attachment
         if self.opmode == "centered":
