@@ -60,24 +60,24 @@ class CetoniPumpController(EpicsParameters, Moveable):
 
     def set_up_subscriptions(self):
         self._epics_subscriptions = []
-        if session.sessiontype == POLLER and self.monitor:
-            for key, record_info in self._record_fields.items():
-                if record_info.record_type in [RecordType.VALUE, RecordType.BOTH]:
-                    value_subscription = self._epics_wrapper.subscribe(
-                        pvname=self._get_pv_name(key),
-                        pvparam=record_info.cache_key,
-                        change_callback=self._value_change_callback,
-                        connection_callback=self._connection_change_callback,
-                    )
-                    self._epics_subscriptions.append(value_subscription)
-                if record_info.record_type in [RecordType.STATUS, RecordType.BOTH]:
-                    status_subscription = self._epics_wrapper.subscribe(
-                        pvname=self._get_pv_name(key),
-                        pvparam=record_info.cache_key,
-                        change_callback=self._status_change_callback,
-                        connection_callback=self._connection_change_callback,
-                    )
-                    self._epics_subscriptions.append(status_subscription)
+        # if session.sessiontype == POLLER and self.monitor:
+        for key, record_info in self._record_fields.items():
+            if record_info.record_type in [RecordType.VALUE, RecordType.BOTH]:
+                value_subscription = self._epics_wrapper.subscribe(
+                    pvname=self._get_pv_name(key),
+                    pvparam=record_info.cache_key,
+                    change_callback=self._value_change_callback,
+                    connection_callback=self._connection_change_callback,
+                )
+                self._epics_subscriptions.append(value_subscription)
+            if record_info.record_type in [RecordType.STATUS, RecordType.BOTH]:
+                status_subscription = self._epics_wrapper.subscribe(
+                    pvname=self._get_pv_name(key),
+                    pvparam=record_info.cache_key,
+                    change_callback=self._status_change_callback,
+                    connection_callback=self._connection_change_callback,
+                )
+                self._epics_subscriptions.append(status_subscription)
 
     def _get_pv_name(self, pvparam):
         return f"{self.pvroot}{self._record_fields[pvparam].pv_suffix}"
