@@ -45,7 +45,7 @@ class CetoniPumpController(EpicsParameters, Moveable):
             ),
             "flowrate": RecordInfo(
                 cache_key="flowrate",
-                pv_suffix="Flowrate-SP",
+                pv_suffix="FlowRate",
                 record_type=RecordType.VALUE,
             ),
         }
