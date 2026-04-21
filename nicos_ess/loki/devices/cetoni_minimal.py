@@ -2,8 +2,8 @@ import math
 import time
 
 from nicos import session
-from nicos.core import POLLER, Moveable, Override, Param, status
-from nicos.devices.abstract import CanReference
+from nicos.core import POLLER, Attach, Moveable, Override, Param, status
+from nicos.devices.abstract import CanReference, MappedMoveable
 from nicos_ess.devices.epics.pva.epics_devices import (
     EpicsParameters,
     RecordInfo,
@@ -45,6 +45,10 @@ class CetoniPumpController(EpicsParameters, CanReference, Moveable):
 
     parameter_overrides = {
         "unit": Override(mandatory=False, settable=False, default=""),
+    }
+
+    attached_devices = {
+        "syringe_config": Attach("Configuration for syringe", MappedMoveable)
     }
 
     def doPreinit(self, mode):
