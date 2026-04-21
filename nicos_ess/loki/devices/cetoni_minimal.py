@@ -29,7 +29,6 @@ class CetoniPumpController(EpicsParameters, CanReference, Moveable):
         ),
         "flowrate_unit": Param(
             description="Flowrate unit",
-            volatile=True,
             type=str,
         ),
         "pressure": Param(
@@ -38,7 +37,6 @@ class CetoniPumpController(EpicsParameters, CanReference, Moveable):
         ),
         "pressure_unit": Param(
             description="Pressure unit",
-            volatile=True,
             type=str,
         ),
         "innerdiameter": Param(
@@ -47,7 +45,22 @@ class CetoniPumpController(EpicsParameters, CanReference, Moveable):
         ),
         "innerdiameter_unit": Param(
             description="Diameter unit",
+            type=str,
+        ),
+        "maxstroke": Param(
+            description="Syringe max piston stroke",
             volatile="True",
+        ),
+        "maxstroke_unit": Param(
+            description="Max piston stroke unit",
+            type=str,
+        ),
+        "maxpressure": Param(
+            description="Syringe max pressure",
+            volatile="True",
+        ),
+        "maxpressure_unit": Param(
+            description="Max pressure unit",
             type=str,
         ),
     }
@@ -107,6 +120,26 @@ class CetoniPumpController(EpicsParameters, CanReference, Moveable):
                 pv_suffix="SyrInnerDiam.EGU",
                 record_type=RecordType.BOTH,
             ),
+            "maxstroke": RecordInfo(
+                cache_key="maxstroke",
+                pv_suffix="SyrMaxPstStrk",
+                record_type=RecordType.BOTH,
+            ),
+            "maxstroke_unit": RecordInfo(
+                cache_key="maxstroke_unit",
+                pv_suffix="SyrMaxPstStrk.EGU",
+                record_type=RecordType.BOTH,
+            ),
+            "maxpressure": RecordInfo(
+                cache_key="maxpressure",
+                pv_suffix="MaxPressure",
+                record_type=RecordType.BOTH,
+            ),
+            "maxpressure_unit": RecordInfo(
+                cache_key="maxpressure_unit",
+                pv_suffix="MaxPressure.EGU",
+                record_type=RecordType.BOTH,
+            ),
         }
         self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
         self.connect_pvs()
@@ -116,11 +149,13 @@ class CetoniPumpController(EpicsParameters, CanReference, Moveable):
         self._epics_wrapper.connect_pv(self._get_pv_name("readpv"))
         self._epics_wrapper.connect_pv(self._get_pv_name("writepv"))
         self._epics_wrapper.connect_pv(self._get_pv_name("flowrate"))
-        self._epics_wrapper.connect_pv(self._get_pv_name("flowrate_unit"))
+        # self._epics_wrapper.connect_pv(self._get_pv_name("flowrate_unit"))
         self._epics_wrapper.connect_pv(self._get_pv_name("pressure"))
-        self._epics_wrapper.connect_pv(self._get_pv_name("pressure_unit"))
+        # self._epics_wrapper.connect_pv(self._get_pv_name("pressure_unit"))
         self._epics_wrapper.connect_pv(self._get_pv_name("home"))
         self._epics_wrapper.connect_pv(self._get_pv_name("innerdiameter"))
+        self._epics_wrapper.connect_pv(self._get_pv_name("maxstroke"))
+        self._epics_wrapper.connect_pv(self._get_pv_name("maxpressure"))
 
     def set_up_subscriptions(self):
         self._epics_subscriptions = []
@@ -194,6 +229,18 @@ class CetoniPumpController(EpicsParameters, CanReference, Moveable):
 
     def doReadInnerdiameter_Unit(self):
         return self._get_cached_pv_or_ask("innerdiameter_unit")
+
+    def doReadMaxstroke(self):
+        return self._get_cached_pv_or_ask("maxstroke", maxage=0.0)
+
+    def doReadMaxstroke_Unit(self):
+        return self._get_cached_pv_or_ask("maxstroke_unit")
+
+    def doReadMaxpressure(self):
+        return self._get_cached_pv_or_ask("maxpressure", maxage=0.0)
+
+    def doReadMaxpressure_Unit(self):
+        return self._get_cached_pv_or_ask("maxpressure_unit")
 
     def doStart(self, target):
         self._set_pv(self._get_pv_name("writepv"), target)
