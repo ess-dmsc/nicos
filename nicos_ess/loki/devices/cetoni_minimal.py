@@ -66,6 +66,11 @@ class CetoniPumpController(EpicsParameters, CanReference, Moveable):
                 pv_suffix="Pressure",
                 record_type=RecordType.VALUE,
             ),
+            "pressure_unit": RecordInfo(
+                cache_key="pressure_unit",
+                pv_suffix="Pressure.EGU",
+                record_type=RecordType.VALUE,
+            ),
             "home": RecordInfo(
                 cache_key="home",
                 pv_suffix="C_InitPosition",
@@ -82,6 +87,7 @@ class CetoniPumpController(EpicsParameters, CanReference, Moveable):
         self._epics_wrapper.connect_pv(self._get_pv_name("flowrate"))
         self._epics_wrapper.connect_pv(self._get_pv_name("flowrate_unit"))
         self._epics_wrapper.connect_pv(self._get_pv_name("pressure"))
+        self._epics_wrapper.connect_pv(self._get_pv_name("pressure_unit"))
         self._epics_wrapper.connect_pv(self._get_pv_name("home"))
 
     def set_up_subscriptions(self):
@@ -134,7 +140,7 @@ class CetoniPumpController(EpicsParameters, CanReference, Moveable):
         return self._get_cached_pv_or_ask("readpv")
 
     def doReadPressure(self):
-        return self._get_cached_pv_or_ask("pressure", maxage=0, as_string=True)
+        return self._get_cached_pv_or_ask("pressure", maxage=0.0)
 
     def doReadFlowrate(self):
         return self._get_cached_pv_or_ask("flowrate")
