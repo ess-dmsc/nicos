@@ -129,7 +129,7 @@ devices = dict(
             "None": "None",
         },
     ),
-    sample_tool__current_tool=device(
+    sample_tool__current_tool_readback=device(
         # Only index is showing.
         "nicos_ess.devices.epics.pva.EpicsMappedReadable",
         description="ARINAX SPU current mounted tool, readback (mockup)",
@@ -138,10 +138,6 @@ devices = dict(
         monitor=True,
         pollinterval=0.5,
         maxage=None,
-        mapping={
-            'No': 0,
-            'Yes': 1,
-            },
     ),
     # Sample load
     sample_load__sample_is_loaded=device(
