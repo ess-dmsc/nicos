@@ -134,7 +134,7 @@ class CetoniPumpController(EpicsParameters, CanReference, Moveable):
         return self._get_cached_pv_or_ask("readpv")
 
     def doReadPressure(self):
-        return self._get_cached_pv_or_ask("pressure", maxage=0)
+        return self._get_cached_pv_or_ask("pressure", maxage=0, as_string=True)
 
     def doReadFlowrate(self):
         return self._get_cached_pv_or_ask("flowrate")
