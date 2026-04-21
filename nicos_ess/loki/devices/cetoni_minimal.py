@@ -30,6 +30,7 @@ class CetoniPumpController(EpicsParameters, CanReference, Moveable):
         "flowrate_unit": Param(
             description="Pump flowrate unit",
             volatile=True,
+            type=str,
         ),
         "pressure": Param(
             description="Pump pressure",
@@ -38,6 +39,7 @@ class CetoniPumpController(EpicsParameters, CanReference, Moveable):
         "pressure_unit": Param(
             description="Pump pressure unit",
             volatile=True,
+            type=str,
         ),
     }
 
