@@ -1,7 +1,15 @@
 import math
 import time
 
-from nicos.core import HasLimits, Moveable, Override, Param, status
+from nicos.core import (
+    SIMULATION,
+    HasLimits,
+    Moveable,
+    Override,
+    Param,
+    status,
+    usermethod,
+)
 from nicos.devices.abstract import CanReference
 from nicos_ess.devices.epics.pva.epics_devices import (
     EpicsParameters,
@@ -147,6 +155,21 @@ class CetoniPumpController(EpicsParameters, CanReference, HasLimits, Moveable):
                 pv_suffix="C_Stop",
                 record_type=RecordType.VALUE,
             ),
+            "fill_syringe": RecordInfo(
+                cache_key="fill_syringe",
+                pv_suffix="C_FillSyringe",
+                record_type=RecordType.VALUE,
+            ),
+            "empty_syringe": RecordInfo(
+                cache_key="empty_syringe",
+                pv_suffix="C_EmptySyringe",
+                record_type=RecordType.VALUE,
+            ),
+            "generate_flow": RecordInfo(
+                cache_key="generate_flow",
+                pv_suffix="C_GenerateFlow",
+                record_type=RecordType.VALUE,
+            ),
         }
         self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
         self.connect_pvs()
@@ -162,6 +185,8 @@ class CetoniPumpController(EpicsParameters, CanReference, HasLimits, Moveable):
         self._epics_wrapper.connect_pv(self._get_pv_name("maxstroke"))
         self._epics_wrapper.connect_pv(self._get_pv_name("maxpressure"))
         self._epics_wrapper.connect_pv(self._get_pv_name("stop"))
+        self._epics_wrapper.connect_pv(self._get_pv_name("fill_syringe"))
+        self._epics_wrapper.connect_pv(self._get_pv_name("empty_syringe"))
 
     def set_up_subscriptions(self):
         self._epics_subscriptions = []
@@ -290,3 +315,21 @@ class CetoniPumpController(EpicsParameters, CanReference, HasLimits, Moveable):
                 (status.ERROR, "communication failure"),
                 time.time(),
             )
+
+    @usermethod
+    def fill_syringe(self):
+        if self._mode == SIMULATION:
+            return
+        self._set_pv("fill_syringe", 1)
+
+    @usermethod
+    def empty_syringe(self):
+        if self._mode == SIMULATION:
+            return
+        self._set_pv("empty_syringe", 1)
+
+    @usermethod
+    def generate_flow(self, target):
+        if self._mode == SIMULATION:
+            return
+        self._set_pv("generate_flow", target)
