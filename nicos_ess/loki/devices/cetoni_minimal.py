@@ -26,12 +26,18 @@ class CetoniPumpController(EpicsParameters, CanReference, Moveable):
             description="Pump flowrate",
             settable=True,
             volatile=True,
-            type=str,
+        ),
+        "flowrate_unit": Param(
+            description="Pump flowrate unit",
+            volatile=True,
         ),
         "pressure": Param(
             description="Pump pressure",
             volatile=True,
-            type=str,
+        ),
+        "pressure_unit": Param(
+            description="Pump pressure unit",
+            volatile=True,
         ),
     }
 
@@ -142,8 +148,14 @@ class CetoniPumpController(EpicsParameters, CanReference, Moveable):
     def doReadPressure(self):
         return self._get_cached_pv_or_ask("pressure", maxage=0.0)
 
+    def doReadPressure_Unit(self):
+        return self._get_cached_pv_or_ask("pressure_unit")
+
     def doReadFlowrate(self):
         return self._get_cached_pv_or_ask("flowrate")
+
+    def doReadFlowrate_Unit(self):
+        return self._get_cached_pv_or_ask("flowrate_unit")
 
     def doWriteFlowrate(self, target):
         self._set_pv(self._get_pv_name("flowrate"), target)
