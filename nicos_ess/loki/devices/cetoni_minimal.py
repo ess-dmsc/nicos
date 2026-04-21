@@ -38,7 +38,7 @@ class CetoniPumpController(EpicsParameters, Moveable):
                 pv_suffix="FilledVolume",
                 record_type=RecordType.BOTH,
             ),
-            "target": RecordInfo(
+            "writepv": RecordInfo(
                 cache_key="target",
                 pv_suffix="C_SetFillVol",
                 record_type=RecordType.VALUE,
@@ -55,7 +55,7 @@ class CetoniPumpController(EpicsParameters, Moveable):
 
     def connect_pvs(self):
         self._epics_wrapper.connect_pv(self._get_pv_name("readpv"))
-        self._epics_wrapper.connect_pv(self._get_pv_name("target"))
+        self._epics_wrapper.connect_pv(self._get_pv_name("writepv"))
         self._epics_wrapper.connect_pv(self._get_pv_name("flowrate"))
 
     def set_up_subscriptions(self):
@@ -92,6 +92,9 @@ class CetoniPumpController(EpicsParameters, Moveable):
     def _set_pv(self, name, value):
         self._epics_wrapper.put_pv_value(name, value)
 
+    def doRead(self):
+        return self._get_cached_pv_or_ask("readpv")
+
     def doReadFlowrate(self):
         return self._get_cached_pv_or_ask("flowrate")
 
@@ -99,7 +102,7 @@ class CetoniPumpController(EpicsParameters, Moveable):
         self._set_pv(self._get_pv_name("flowrate"), target)
 
     def doStart(self, target):
-        self._set_pv(self._get_pv_name("target"), target)
+        self._set_pv(self._get_pv_name("writepv"), target)
 
     def _value_change_callback(
         self, name, param, value, units, limits, severity, message, **kwargs
