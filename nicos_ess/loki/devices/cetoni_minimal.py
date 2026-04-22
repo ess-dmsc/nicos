@@ -454,10 +454,10 @@ class CetoniPumpLinkedMode(EpicsParameters, CanDisable, MappedMoveable):
         self._epics_stuff._set_pv(self._epics_stuff._get_pv_name("flowrate"), target)
 
     def doReadDosing_Time(self):
-        return self._epics_stuff._get_cached_pv_or_ask("time")
+        return self._epics_stuff._get_cached_pv_or_ask("dosing_time")
 
     def doWriteDosing_Time(self, target):
-        self._epics_stuff._set_pv(self._epics_stuff._get_pv_name("time"), target)
+        self._epics_stuff._set_pv(self._epics_stuff._get_pv_name("dosing_time"), target)
 
     def doEnable(self, on=False):
         if on:
