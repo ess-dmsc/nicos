@@ -278,6 +278,10 @@ class CetoniPumpController(EpicsParameters, CanReference, HasLimits, Moveable):
             self._name,
             self.monitor,
         )
+        # might need these
+        self._value_change_callback = self._epics_stuff._value_change_callback
+        self._status_change_callback = self._epics_stuff._status_change_callback
+        self._connection_change_callback = self._epics_stuff._connection_change_callback
 
     def doReadAbslimits(self):
         dial_max = self._epics_stuff._get_cached_pv_or_ask("dialhighlimit")
