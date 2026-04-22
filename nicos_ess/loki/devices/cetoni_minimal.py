@@ -309,7 +309,7 @@ class CetoniPumpController(EpicsParameters, CanReference, HasLimits, Moveable):
         return self._epics_stuff._get_cached_pv_or_ask("flowrate_unit")
 
     def doWriteFlowrate(self, target):
-        self._set_pv(self._epics_stuff._get_pv_name("flowrate"), target)
+        self._epics_stuff._set_pv(self._epics_stuff._get_pv_name("flowrate"), target)
 
     def doReadInnerdiameter(self):
         return self._epics_stuff._get_cached_pv_or_ask("innerdiameter", maxage=0.0)
@@ -451,13 +451,13 @@ class CetoniPumpLinkedMode(EpicsParameters, CanDisable, MappedMoveable):
         return self._epics_stuff._get_cached_pv_or_ask("flowrate_unit")
 
     def doWriteFlowrate(self, target):
-        self._set_pv(self._epics_stuff._get_pv_name("flowrate"), target)
+        self._epics_stuff._set_pv(self._epics_stuff._get_pv_name("flowrate"), target)
 
     def doReadTime(self):
         return self._epics_stuff._get_cached_pv_or_ask("time")
 
     def doWriteTime(self, target):
-        self._set_pv(self._epics_stuff._get_pv_name("time"), target)
+        self._epics_stuff._set_pv(self._epics_stuff._get_pv_name("time"), target)
 
     def doEnable(self, on=False):
         if on:
