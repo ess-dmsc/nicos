@@ -343,58 +343,58 @@ class CetoniPumpController(EpicsParameters, CanReference, HasLimits, Moveable):
         self._epics_wrapper.put_pv_value(name, value)
 
     def doReadAbslimits(self):
-        dial_max = self._get_cached_pv_or_ask("dialhighlimit")
+        dial_max = self._epics_stuff._get_cached_pv_or_ask("dialhighlimit")
         return 0, dial_max
 
     def doRead(self, maxage):
-        return self._get_cached_pv_or_ask("readpv")
+        return self._epics_stuff._get_cached_pv_or_ask("readpv")
 
     def doReadPressure(self):
-        return self._get_cached_pv_or_ask("pressure", maxage=0.0)
+        return self._epics_stuff._get_cached_pv_or_ask("pressure", maxage=0.0)
 
     def doReadPressure_Max(self):
-        return self._get_cached_pv_or_ask("pressure_max", maxage=0.0)
+        return self._epics_stuff._get_cached_pv_or_ask("pressure_max", maxage=0.0)
 
     def doReadPressure_Unit(self):
-        return self._get_cached_pv_or_ask("pressure_unit")
+        return self._epics_stuff._get_cached_pv_or_ask("pressure_unit")
 
     def doReadFlowrate(self):
-        return self._get_cached_pv_or_ask("flowrate", maxage=0.0)
+        return self._epics_stuff._get_cached_pv_or_ask("flowrate", maxage=0.0)
 
     def doReadFlowrate_Max(self):
-        return self._get_cached_pv_or_ask("flowrate_max", maxage=0.0)
+        return self._epics_stuff._get_cached_pv_or_ask("flowrate_max", maxage=0.0)
 
     def doReadFlowrate_Unit(self):
-        return self._get_cached_pv_or_ask("flowrate_unit")
+        return self._epics_stuff._get_cached_pv_or_ask("flowrate_unit")
 
     def doWriteFlowrate(self, target):
-        self._set_pv(self._get_pv_name("flowrate"), target)
+        self._set_pv(self._epics_stuff._get_pv_name("flowrate"), target)
 
     def doReadInnerdiameter(self):
-        return self._get_cached_pv_or_ask("innerdiameter", maxage=0.0)
+        return self._epics_stuff._get_cached_pv_or_ask("innerdiameter", maxage=0.0)
 
     def doReadInnerdiameter_Unit(self):
-        return self._get_cached_pv_or_ask("innerdiameter_unit")
+        return self._epics_stuff._get_cached_pv_or_ask("innerdiameter_unit")
 
     def doReadStroke_Max(self):
-        return self._get_cached_pv_or_ask("stroke_max", maxage=0.0)
+        return self._epics_stuff._get_cached_pv_or_ask("stroke_max", maxage=0.0)
 
     def doReadStroke_Unit(self):
-        return self._get_cached_pv_or_ask("stroke_unit")
+        return self._epics_stuff._get_cached_pv_or_ask("stroke_unit")
 
     def doReference(self):
-        self._set_pv(self._get_pv_name("home"), 1)
+        self._epics_stuff._set_pv(self._epics_stuff._get_pv_name("home"), 1)
 
     def doStart(self, target):
-        self._set_pv(self._get_pv_name("writepv"), target)
+        self._epics_stuff._set_pv(self._epics_stuff._get_pv_name("writepv"), target)
 
     def doStop(self):
-        self._set_pv(self._get_pv_name("stop"), 1)
+        self._epics_stuff._set_pv(self._epics_stuff._get_pv_name("stop"), 1)
 
     def _value_change_callback(
         self, name, param, value, units, limits, severity, message, **kwargs
     ):
-        if name != self._get_pv_name("readpv"):
+        if name != self._epics_stuff._get_pv_name("readpv"):
             # Unexpected updates ignored
             return
         time_stamp = time.time()
@@ -404,7 +404,7 @@ class CetoniPumpController(EpicsParameters, CanReference, HasLimits, Moveable):
     def _status_change_callback(
         self, name, param, value, units, limits, severity, message, **kwargs
     ):
-        if name != self._get_pv_name("readpv"):
+        if name != self._epics_stuff._get_pv_name("readpv"):
             # Unexpected updates ignored
             return
         self._cache.put(self._name, "status", (severity, message), time.time())
@@ -428,13 +428,13 @@ class CetoniPumpController(EpicsParameters, CanReference, HasLimits, Moveable):
     def fill_syringe(self):
         if self._mode == SIMULATION:
             return
-        self._set_pv(self._get_pv_name("fill_syringe"), 1)
+        self._epics_stuff._set_pv(self._epics_stuff._get_pv_name("fill_syringe"), 1)
 
     @usermethod
     def empty_syringe(self):
         if self._mode == SIMULATION:
             return
-        self._set_pv(self._get_pv_name("empty_syringe"), 1)
+        self._epics_stuff._set_pv(self._epics_stuff._get_pv_name("empty_syringe"), 1)
 
     @usermethod
     def generate_flow(self, target):
@@ -446,7 +446,9 @@ class CetoniPumpController(EpicsParameters, CanReference, HasLimits, Moveable):
         """
         if self._mode == SIMULATION:
             return
-        self._set_pv(self._get_pv_name("generate_flow"), target)
+        self._epics_stuff._set_pv(
+            self._epics_stuff._get_pv_name("generate_flow"), target
+        )
 
 
 # class CetoniPumpLinkedMode(CanDisable, CetoniPumpController):
