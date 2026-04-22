@@ -3,6 +3,7 @@ import time
 
 from nicos.core import (
     SIMULATION,
+    CanDisable,
     HasLimits,
     Moveable,
     Override,
@@ -18,6 +19,79 @@ from nicos_ess.devices.epics.pva.epics_devices import (
     create_wrapper,
     get_from_cache_or,
 )
+
+
+class EpicsStuff:
+    def __init__(self, pvroot, record_fields, config, cache, log, device):
+        self._pvroot = pvroot
+        self._record_fields = record_fields
+        self._epics_wrapper = create_wrapper(config["epicstimeout"], config["pva"])
+        self._cache = cache
+        self.log = log
+        self._device = device
+        self.set_up_subscriptions()
+        self.connect_pvs()
+
+    def set_up_subscriptions(self):
+        self._epics_subscriptions = []
+        # if session.sessiontype == POLLER and self.monitor:
+        for key, record_info in self._record_fields.items():
+            if record_info.record_type in [RecordType.VALUE, RecordType.BOTH]:
+                value_subscription = self._epics_wrapper.subscribe(
+                    pvname=self._get_pv_name(key),
+                    pvparam=record_info.cache_key,
+                    change_callback=self._value_change_callback,
+                    connection_callback=self._connection_change_callback,
+                )
+                self._epics_subscriptions.append(value_subscription)
+            if record_info.record_type in [RecordType.STATUS, RecordType.BOTH]:
+                status_subscription = self._epics_wrapper.subscribe(
+                    pvname=self._get_pv_name(key),
+                    pvparam=record_info.cache_key,
+                    change_callback=self._status_change_callback,
+                    connection_callback=self._connection_change_callback,
+                )
+                self._epics_subscriptions.append(status_subscription)
+
+    def connect_pvs(self):
+        for key in self._record_fields.keys():
+            self._epics_wrapper.connect_pv(self._get_pv_name(key))
+
+    def _get_pv_name(self, pvparam):
+        return f"{self._pvroot}{self._record_fields[pvparam].pv_suffix}"
+
+    def _value_change_callback(
+        self, name, param, value, units, limits, severity, message, **kwargs
+    ):
+        if name != self._get_pv_name("readpv"):
+            # Unexpected updates ignored
+            return
+        time_stamp = time.time()
+        self._cache.put(self._device._name, param, value, time_stamp)
+        self._cache.put(self._device._name, "unit", units, time_stamp)
+
+    def _status_change_callback(
+        self, name, param, value, units, limits, severity, message, **kwargs
+    ):
+        if name != self._get_pv_name("readpv"):
+            # Unexpected updates ignored
+            return
+        self._cache.put(self._device._name, "status", (severity, message), time.time())
+
+    def _connection_change_callback(self, name, param, is_connected, **kwargs):
+        if param != self._record_fields["readpv"].cache_key:
+            return
+
+        if is_connected:
+            self.log.debug("%s connected!", name)
+        else:
+            self.log.warning("%s disconnected!", name)
+            self._cache.put(
+                self._device._name,
+                "status",
+                (status.ERROR, "communication failure"),
+                time.time(),
+            )
 
 
 class CetoniPumpController(EpicsParameters, CanReference, HasLimits, Moveable):
@@ -341,3 +415,31 @@ class CetoniPumpController(EpicsParameters, CanReference, HasLimits, Moveable):
         if self._mode == SIMULATION:
             return
         self._set_pv(self._get_pv_name("generate_flow"), target)
+
+
+# class CetoniPumpLinkedMode(CanDisable, CetoniPumpController):
+#     parameters = {
+#         "pvroot": Param(
+#             "The root of the pv",
+#             type=str,
+#             mandatory=True,
+#             settable=False,
+#             userparam=False,
+#         ),
+#     }
+#
+#     def doPreinit(self, mode):
+#         self._record_fields = {
+#             "enable": RecordInfo(
+#                 cache_key="value",
+#                 pv_suffix="C_LnkdEnable",
+#                 record_type=RecordType.VALUE,
+#             ),
+#         }
+#         super().doPreinit(mode)
+#
+#     def doEnable(self, on=False):
+#         if on:
+#             self._set_pv(self._get_pv_name("enable"), 1)
+#         else:
+#             self._set_pv(self._get_pv_name("enable"), 0)
