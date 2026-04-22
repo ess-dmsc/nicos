@@ -279,71 +279,6 @@ class CetoniPumpController(EpicsParameters, CanReference, HasLimits, Moveable):
             self.monitor,
         )
 
-        self._epics_wrapper = self._epics_stuff._epics_wrapper  # FIXME
-        # self.connect_pvs()
-        # self.set_up_subscriptions()
-
-    # def connect_pvs(self):
-    #     self._epics_wrapper.connect_pv(self._get_pv_name("readpv"))
-    #     self._epics_wrapper.connect_pv(self._get_pv_name("writepv"))
-    #     self._epics_wrapper.connect_pv(self._get_pv_name("flowrate"))
-    #     self._epics_wrapper.connect_pv(self._get_pv_name("flowrate_max"))
-    #     self._epics_wrapper.connect_pv(self._get_pv_name("pressure"))
-    #     self._epics_wrapper.connect_pv(self._get_pv_name("home"))
-    #     self._epics_wrapper.connect_pv(self._get_pv_name("innerdiameter"))
-    #     self._epics_wrapper.connect_pv(self._get_pv_name("stroke_max"))
-    #     self._epics_wrapper.connect_pv(self._get_pv_name("pressure_max"))
-    #     self._epics_wrapper.connect_pv(self._get_pv_name("stop"))
-    #     self._epics_wrapper.connect_pv(self._get_pv_name("fill_syringe"))
-    #     self._epics_wrapper.connect_pv(self._get_pv_name("empty_syringe"))
-    #     self._epics_wrapper.connect_pv(self._get_pv_name("generate_flow"))
-    #
-    # def set_up_subscriptions(self):
-    #     self._epics_subscriptions = []
-    #     # if session.sessiontype == POLLER and self.monitor:
-    #     for key, record_info in self._record_fields.items():
-    #         if record_info.record_type in [RecordType.VALUE, RecordType.BOTH]:
-    #             value_subscription = self._epics_wrapper.subscribe(
-    #                 pvname=self._get_pv_name(key),
-    #                 pvparam=record_info.cache_key,
-    #                 change_callback=self._value_change_callback,
-    #                 connection_callback=self._connection_change_callback,
-    #             )
-    #             self._epics_subscriptions.append(value_subscription)
-    #         if record_info.record_type in [RecordType.STATUS, RecordType.BOTH]:
-    #             status_subscription = self._epics_wrapper.subscribe(
-    #                 pvname=self._get_pv_name(key),
-    #                 pvparam=record_info.cache_key,
-    #                 change_callback=self._status_change_callback,
-    #                 connection_callback=self._connection_change_callback,
-    #             )
-    #             self._epics_subscriptions.append(status_subscription)
-
-    # def _get_pv_name(self, pvparam):
-    #     return f"{self.pvroot}{self._record_fields[pvparam].pv_suffix}"
-    #
-    # def _get_cached_pv_or_ask(
-    #     self, key: str, maxage: float = 5, as_string: bool = False
-    # ):
-    #     if math.isclose(maxage, 0.0):
-    #         return self._read_pv(key, as_string)
-    #     else:
-    #         return get_from_cache_or(
-    #             self,
-    #             self._record_fields[key].cache_key,
-    #             lambda: self._epics_wrapper.get_pv_value(
-    #                 self._get_pv_name(key), as_string
-    #             ),
-    #         )
-    #
-    # def _read_pv(self, key, as_string=False):
-    #     return self._epics_wrapper.get_pv_value(
-    #         self._get_pv_name(key), as_string=as_string
-    #     )
-    #
-    # def _set_pv(self, name, value):
-    #     self._epics_wrapper.put_pv_value(name, value)
-
     def doReadAbslimits(self):
         dial_max = self._epics_stuff._get_cached_pv_or_ask("dialhighlimit")
         return 0, dial_max
@@ -392,39 +327,6 @@ class CetoniPumpController(EpicsParameters, CanReference, HasLimits, Moveable):
 
     def doStop(self):
         self._epics_stuff._set_pv(self._epics_stuff._get_pv_name("stop"), 1)
-
-    # def _value_change_callback(
-    #     self, name, param, value, units, limits, severity, message, **kwargs
-    # ):
-    #     if name != self._epics_stuff._get_pv_name("readpv"):
-    #         # Unexpected updates ignored
-    #         return
-    #     time_stamp = time.time()
-    #     self._cache.put(self._name, param, value, time_stamp)
-    #     self._cache.put(self._name, "unit", units, time_stamp)
-    #
-    # def _status_change_callback(
-    #     self, name, param, value, units, limits, severity, message, **kwargs
-    # ):
-    #     if name != self._epics_stuff._get_pv_name("readpv"):
-    #         # Unexpected updates ignored
-    #         return
-    #     self._cache.put(self._name, "status", (severity, message), time.time())
-    #
-    # def _connection_change_callback(self, name, param, is_connected, **kwargs):
-    #     if param != self._record_fields["readpv"].cache_key:
-    #         return
-    #
-    #     if is_connected:
-    #         self.log.debug("%s connected!", name)
-    #     else:
-    #         self.log.warning("%s disconnected!", name)
-    #         self._cache.put(
-    #             self._name,
-    #             "status",
-    #             (status.ERROR, "communication failure"),
-    #             time.time(),
-    #         )
 
     @usermethod
     def fill_syringe(self):
