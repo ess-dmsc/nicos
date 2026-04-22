@@ -10,7 +10,7 @@ from __future__ import annotations
 import ast
 import queue
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Callable
 
 from nicos.protocols.cache import OP_TELL, cache_dump
 from nicos.protocols.daemon import DAEMON_EVENTS, STATUS_IDLE
