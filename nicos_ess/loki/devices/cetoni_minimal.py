@@ -255,9 +255,9 @@ class CetoniPumpController(EpicsParameters, CanReference, HasLimits, Moveable):
             self._name,
         )
 
-        self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
-        self.connect_pvs()
-        self.set_up_subscriptions()
+        # self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
+        # self.connect_pvs()
+        # self.set_up_subscriptions()
 
     def connect_pvs(self):
         self._epics_wrapper.connect_pv(self._get_pv_name("readpv"))
