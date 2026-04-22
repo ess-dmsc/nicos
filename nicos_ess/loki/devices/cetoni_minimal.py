@@ -385,7 +385,7 @@ class CetoniPumpLinkedMode(EpicsParameters, CanReference, HasLimits, MappedMovea
 
     parameter_overrides = {
         "unit": Override(mandatory=False, settable=False, userparam=False),
-        "mapping": Override(mandatory=False, userparam=False, volatile=True),
+        "mapping": Override(mandatory=False, userparam=False),
     }
 
     def doPreinit(self, mode):
