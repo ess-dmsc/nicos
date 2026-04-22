@@ -1215,14 +1215,20 @@ class ControlDialog(QDialog):
         dlg.descLabel.setText("Adjust user limits of %s:" % self.devname)
 
         userlimits = self.client.getDeviceParam(self.devname, "userlimits")
+        has_hwuserlimits = "hwuserlimits" in self.client.getDeviceParamInfo(
+            self.devname
+        )
         fmtstr = self.devinfo.fmtstr
         dlg.limitMin.setText(fmtstr % userlimits[0])
         dlg.limitMax.setText(fmtstr % userlimits[1])
 
-        abslimits = self.client.getDeviceParam(self.devname, "abslimits")
-        offset = self.client.getDeviceParam(self.devname, "offset")
-        if offset is not None:
-            abslimits = abslimits[0] - offset, abslimits[1] - offset
+        if has_hwuserlimits:
+            abslimits = self.client.getDeviceParam(self.devname, "hwuserlimits")
+        else:
+            abslimits = self.client.getDeviceParam(self.devname, "abslimits")
+            offset = self.client.getDeviceParam(self.devname, "offset")
+            if offset is not None:
+                abslimits = abslimits[0] - offset, abslimits[1] - offset
         dlg.limitMinAbs.setText(fmtstr % abslimits[0])
         dlg.limitMaxAbs.setText(fmtstr % abslimits[1])
         target = DeviceParamEdit(dlg, dev=self.devname, param="userlimits")
@@ -1232,7 +1238,12 @@ class ControlDialog(QDialog):
         )
 
         def callback():
-            self.device_panel.exec_command("resetlimits(%s)" % self.devrepr)
+            if has_hwuserlimits:
+                self.device_panel.exec_command(
+                    "set(%s, 'userlimits', %s)" % (self.devrepr, abslimits)
+                )
+            else:
+                self.device_panel.exec_command("resetlimits(%s)" % self.devrepr)
             dlg.reject()
 
         btn.clicked.connect(callback)
