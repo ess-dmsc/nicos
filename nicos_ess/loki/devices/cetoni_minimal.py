@@ -381,6 +381,12 @@ class CetoniPumpLinkedMode(EpicsParameters, CanDisable, MappedMoveable):
             description="Flowrate unit",
             type=str,
         ),
+        "time": Param(
+            description="Number of seconds to run the linked mode in time limited flow",
+            type=int,
+            unit="s",
+            settable=True,
+        ),
     }
 
     parameter_overrides = {
@@ -403,6 +409,16 @@ class CetoniPumpLinkedMode(EpicsParameters, CanDisable, MappedMoveable):
             "flowrate_unit": RecordInfo(
                 cache_key="flowrate_unit",
                 pv_suffix="B02-CSLab:SE-Pumps:LnkdFlowRate-SP.EGU",
+                record_type=RecordType.VALUE,
+            ),
+            "flowrate_unit": RecordInfo(
+                cache_key="flowrate_unit",
+                pv_suffix="B02-CSLab:SE-Pumps:LnkdFlowRate-SP.EGU",
+                record_type=RecordType.VALUE,
+            ),
+            "dosing_time": RecordInfo(
+                cache_key="dosing_time",
+                pv_suffix="B02-CSLab:SE-Pumps:LnkdMaxDosingTime-SP",
                 record_type=RecordType.VALUE,
             ),
             "enable": RecordInfo(
@@ -436,6 +452,12 @@ class CetoniPumpLinkedMode(EpicsParameters, CanDisable, MappedMoveable):
 
     def doWriteFlowrate(self, target):
         self._set_pv(self._epics_stuff._get_pv_name("flowrate"), target)
+
+    def doReadTime(self):
+        return self._epics_stuff._get_cached_pv_or_ask("time")
+
+    def doWriteTime(self, target):
+        self._set_pv(self._epics_stuff._get_pv_name("time"), target)
 
     def doEnable(self, on=False):
         if on:
