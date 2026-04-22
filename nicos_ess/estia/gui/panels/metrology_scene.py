@@ -27,6 +27,7 @@ from nicos.guisupport.qt import (
     QColor,
     QFont,
     QGraphicsEllipseItem,
+    QGraphicsItem,
     QGraphicsRectItem,
     QGraphicsScene,
     QGraphicsSimpleTextItem,
@@ -36,6 +37,7 @@ from nicos.guisupport.qt import (
 )
 from nicos.protocols.cache import OP_TELL, cache_dump, cache_load
 from nicos_ess.estia.gui.panels.custom_controls import (
+    InteractiveEllipse,
     InteractiveGroup,
     TransmittingGroup,
 )
@@ -248,6 +250,37 @@ class MetrologyScene(QGraphicsScene):
             else:
                 text = self.addText("E02-06-%02i-VD" % (group + 1))
                 textH = self.addText("E02-06-%02i-HD" % (group + 1))
+
+            mp_minus = InteractiveEllipse(
+                "measurement position", x_start + 10, -15, 30, 30
+            )
+            mp_minus.measurement_position_group = group + 1
+            mp_minus.measurement_position_item = -1
+            self.addItem(mp_minus)
+            mp_minus.setZValue(-10.0)
+            mp_minus.setBrush(QColor(100, 25, 25))
+
+            mp_minus.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, True)
+
+            mp = InteractiveEllipse("measurement position", center_x, -15, 30, 30)
+            mp.measurement_position_group = group + 1
+            mp.measurement_position_item = 0
+            self.addItem(mp)
+            mp.setZValue(-10.0)
+            mp.setBrush(QColor(100, 25, 25))
+
+            mp.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, True)
+
+            mp_plus = InteractiveEllipse(
+                "measurement position", x_end - 30, -15, 30, 30
+            )
+            mp_plus.measurement_position_group = group + 1
+            mp_plus.measurement_position_item = 1
+            self.addItem(mp_plus)
+            mp_plus.setZValue(-10.0)
+            mp_plus.setBrush(QColor(100, 25, 25))
+
+            mp_plus.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, True)
             text.setFont(QFont("sans", 30))
             text.setPos(center_x - text.boundingRect().width() / 2, zpre * 80 - 15)
             text.setDefaultTextColor(QColor(160, 160, 160))
@@ -329,5 +362,18 @@ class MetrologyScene(QGraphicsScene):
         self._currentSelection = name
         self.on_client_connected()
 
+        if hasattr(control, "measurement_position_group"):
+            self.parent().lblSeleneSelection.setText(
+                f"item={control.measurement_position_item}, group={control.measurement_position_group}"
+            )
+
     def childActivated(self, name, control):
-        pass
+        if hasattr(
+            item, "measurement_position_group"
+        ) and control.measurement_position_item in [-1, 0, 1]:
+            # move to activated screw location
+            self.client.tell(
+                "queue",
+                f"Moving to Measurement Position ({control.measurement_position_item},{control.measurement_position_group})",
+                f"maw(sm{self.selene}, ({control.measurement_position_item}, {control.measurement_position_group}))",
+            )
