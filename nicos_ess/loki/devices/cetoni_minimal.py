@@ -359,7 +359,7 @@ class CetoniPumpController(EpicsParameters, CanReference, HasLimits, Moveable):
         )
 
 
-class CetoniPumpLinkedMode(EpicsParameters, CanReference, HasLimits, MappedMoveable):
+class CetoniPumpLinkedMode(EpicsParameters, CanDisable, MappedMoveable):
     parameters = {
         "pvroot": Param(
             "The root of the pv",
@@ -384,7 +384,7 @@ class CetoniPumpLinkedMode(EpicsParameters, CanReference, HasLimits, MappedMovea
     }
 
     parameter_overrides = {
-        "unit": Override(mandatory=False, settable=False, userparam=False),
+        # "unit": Override(mandatory=False, settable=False, default=""),
         "mapping": Override(mandatory=False, userparam=False),
     }
 
