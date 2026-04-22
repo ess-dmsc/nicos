@@ -381,7 +381,7 @@ class CetoniPumpLinkedMode(EpicsParameters, CanDisable, MappedMoveable):
             description="Flowrate unit",
             type=str,
         ),
-        "time": Param(
+        "dosing_time": Param(
             description="Number of seconds to run the linked mode in time limited flow",
             type=int,
             unit="s",
@@ -453,10 +453,10 @@ class CetoniPumpLinkedMode(EpicsParameters, CanDisable, MappedMoveable):
     def doWriteFlowrate(self, target):
         self._epics_stuff._set_pv(self._epics_stuff._get_pv_name("flowrate"), target)
 
-    def doReadTime(self):
+    def doReadDosing_Time(self):
         return self._epics_stuff._get_cached_pv_or_ask("time")
 
-    def doWriteTime(self, target):
+    def doWriteDosing_Time(self, target):
         self._epics_stuff._set_pv(self._epics_stuff._get_pv_name("time"), target)
 
     def doEnable(self, on=False):
