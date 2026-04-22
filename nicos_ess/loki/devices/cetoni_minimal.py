@@ -393,38 +393,38 @@ class CetoniPumpController(EpicsParameters, CanReference, HasLimits, Moveable):
     def doStop(self):
         self._epics_stuff._set_pv(self._epics_stuff._get_pv_name("stop"), 1)
 
-    def _value_change_callback(
-        self, name, param, value, units, limits, severity, message, **kwargs
-    ):
-        if name != self._epics_stuff._get_pv_name("readpv"):
-            # Unexpected updates ignored
-            return
-        time_stamp = time.time()
-        self._cache.put(self._name, param, value, time_stamp)
-        self._cache.put(self._name, "unit", units, time_stamp)
-
-    def _status_change_callback(
-        self, name, param, value, units, limits, severity, message, **kwargs
-    ):
-        if name != self._epics_stuff._get_pv_name("readpv"):
-            # Unexpected updates ignored
-            return
-        self._cache.put(self._name, "status", (severity, message), time.time())
-
-    def _connection_change_callback(self, name, param, is_connected, **kwargs):
-        if param != self._record_fields["readpv"].cache_key:
-            return
-
-        if is_connected:
-            self.log.debug("%s connected!", name)
-        else:
-            self.log.warning("%s disconnected!", name)
-            self._cache.put(
-                self._name,
-                "status",
-                (status.ERROR, "communication failure"),
-                time.time(),
-            )
+    # def _value_change_callback(
+    #     self, name, param, value, units, limits, severity, message, **kwargs
+    # ):
+    #     if name != self._epics_stuff._get_pv_name("readpv"):
+    #         # Unexpected updates ignored
+    #         return
+    #     time_stamp = time.time()
+    #     self._cache.put(self._name, param, value, time_stamp)
+    #     self._cache.put(self._name, "unit", units, time_stamp)
+    #
+    # def _status_change_callback(
+    #     self, name, param, value, units, limits, severity, message, **kwargs
+    # ):
+    #     if name != self._epics_stuff._get_pv_name("readpv"):
+    #         # Unexpected updates ignored
+    #         return
+    #     self._cache.put(self._name, "status", (severity, message), time.time())
+    #
+    # def _connection_change_callback(self, name, param, is_connected, **kwargs):
+    #     if param != self._record_fields["readpv"].cache_key:
+    #         return
+    #
+    #     if is_connected:
+    #         self.log.debug("%s connected!", name)
+    #     else:
+    #         self.log.warning("%s disconnected!", name)
+    #         self._cache.put(
+    #             self._name,
+    #             "status",
+    #             (status.ERROR, "communication failure"),
+    #             time.time(),
+    #         )
 
     @usermethod
     def fill_syringe(self):
