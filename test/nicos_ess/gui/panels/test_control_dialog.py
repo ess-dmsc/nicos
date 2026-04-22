@@ -36,7 +36,7 @@ def _capture_limits_dialog(monkeypatch):
 
     def wrapped_dialog_from_ui(parent, uiname):
         dlg = real_dialog_from_ui(parent, uiname)
-        
+
         def exec_and_capture():
             captured["max_range"] = (dlg.limitMinAbs.text(), dlg.limitMaxAbs.text())
             return QDialog.DialogCode.Rejected
@@ -50,40 +50,39 @@ def _capture_limits_dialog(monkeypatch):
 
 def _motor_device_spec(userlimits, hwuserlimits, abslimits, offset):
     return DeviceSpec(
-            name="motor",
-            params={
-                "value": 1.0,
-                "target": 1.0,
-                "status": (200, ""),
-                "visibility": ("namespace", "devlist"),
-                "description": "test motor",
-                "fmtstr": "%.1f",
-                "unit": "mm",
-                "fixed": False,
-                "classes": [
-                    "nicos.core.device.Readable",
-                    "nicos.core.device.Moveable",
-                    "nicos.core.mixins.HasLimits",
-                    "nicos.core.mixins.HasOffset",
-                    "nicos.core.mixins.CanDisable",
-                    "nicos.devices.abstract.CanReference",
-                ],
-                "userlimits": userlimits,
-                "hwuserlimits": hwuserlimits,
-                "limitoffsets": (0.0, 0.0),
-                "abslimits": abslimits,
-                "offset": offset,
-            },
-            param_info={
-                "userlimits": {
-                    "type": params.limits,
-                    "unit": "main",
-                    "userparam": True,
-                }
-            },
-            valuetype=float,
-        )
-
+        name="motor",
+        params={
+            "value": 1.0,
+            "target": 1.0,
+            "status": (200, ""),
+            "visibility": ("namespace", "devlist"),
+            "description": "test motor",
+            "fmtstr": "%.1f",
+            "unit": "mm",
+            "fixed": False,
+            "classes": [
+                "nicos.core.device.Readable",
+                "nicos.core.device.Moveable",
+                "nicos.core.mixins.HasLimits",
+                "nicos.core.mixins.HasOffset",
+                "nicos.core.mixins.CanDisable",
+                "nicos.devices.abstract.CanReference",
+            ],
+            "userlimits": userlimits,
+            "hwuserlimits": hwuserlimits,
+            "limitoffsets": (0.0, 0.0),
+            "abslimits": abslimits,
+            "offset": offset,
+        },
+        param_info={
+            "userlimits": {
+                "type": params.limits,
+                "unit": "main",
+                "userparam": True,
+            }
+        },
+        valuetype=float,
+    )
 
 
 @pytest.mark.parametrize(

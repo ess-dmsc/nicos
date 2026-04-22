@@ -82,6 +82,15 @@ config.pid_path = path.join(runtime_root, "pid")
 config.logging_path = path.join(runtime_root, "log")
 
 
+def _setup_runtime_resources():
+    src = path.join(module_root, "resources")
+    dst = path.join(runtime_root, "resources")
+    try:
+        os.symlink(src, dst, target_is_directory=True)
+    except (AttributeError, NotImplementedError, OSError):
+        shutil.copytree(src, dst)
+
+
 def raises(exc, *args, **kwds):
     pytest.raises(exc, *args, **kwds)
     return True
@@ -437,14 +446,14 @@ class TestController(IsController, Moveable):
             if other < adevtarget:
                 return (
                     False,
-                    "dev1 can only move to values smaller" " than %r" % other,
+                    "dev1 can only move to values smaller than %r" % other,
                 )
         if adev == self._attached_dev2:
             other = self._attached_dev1.read()
             if other > adevtarget:
                 return (
                     False,
-                    "dev2 can only move to values greater" " than %r" % other,
+                    "dev2 can only move to values greater than %r" % other,
                 )
         return (True, "Allowed")
 
@@ -453,7 +462,7 @@ class TestController(IsController, Moveable):
 
     def doIsAllowed(self, target):
         if target[0] > target[1]:
-            return (False, "dev1 can only move to values greater" " than dev2")
+            return (False, "dev1 can only move to values greater than dev2")
         return (True, "Allowed")
 
     def doStart(self, target):
@@ -532,6 +541,7 @@ def cleanup():
     os.mkdir(path.join(runtime_root, "cache"))
     os.mkdir(path.join(runtime_root, "pid"))
     os.mkdir(path.join(runtime_root, "bin"))
+    _setup_runtime_resources()
     shutil.copy(
         path.join(module_root, "test", "bin", "simulate"),
         path.join(runtime_root, "bin", "nicos-simulate"),
@@ -647,8 +657,7 @@ def startElog(wait=2):
             raise Exception(
                 "elog failed to start within %s sec\n"
                 "----- tail of cacheserver.log -----\n%s\n"
-                "----- tail of elog.log -----\n%s"
-                % (wait, cache_tail, elog_tail)
+                "----- tail of elog.log -----\n%s" % (wait, cache_tail, elog_tail)
             )
 
     return startSubprocess("elog", wait_cb=elog_wait_cb)
