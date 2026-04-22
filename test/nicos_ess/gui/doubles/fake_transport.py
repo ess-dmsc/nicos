@@ -10,7 +10,7 @@ from __future__ import annotations
 import ast
 import queue
 from dataclasses import dataclass, field
-from typing import Any, Callable
+from typing import Any
 
 from nicos.protocols.cache import OP_TELL, cache_dump
 from nicos.protocols.daemon import DAEMON_EVENTS, STATUS_IDLE
@@ -19,6 +19,7 @@ from nicos.protocols.daemon.classic import PROTO_VERSION
 
 _EVENT_SENTINEL = object()
 _NO_REPLY = object()
+_UNKNOWN_EVAL = object()
 _DEFAULT_EVALS = {
     "session.instrument": "",
     "session.experiment.title": "",
@@ -32,8 +33,8 @@ _DEFAULT_EVALS = {
 class DeviceSpec:
     name: str
     valuetype: Any
-    params: dict = field(default_factory=dict)
-    param_info: dict = field(default_factory=dict)
+    params: dict[str, Any] = field(default_factory=dict)
+    param_info: dict[str, Any] = field(default_factory=dict)
 
     @property
     def key(self) -> str:
@@ -45,8 +46,16 @@ class SetupSpec:
     name: str
     description: str = ""
     display_order: int = 50
-    devices: list = field(default_factory=list)
-    extended: dict = field(default_factory=dict)
+    devices: list[str] = field(default_factory=list)
+    extended: dict[str, Any] = field(default_factory=dict)
+
+    def as_setup_info(self) -> dict[str, Any]:
+        return {
+            "description": self.description,
+            "devices": list(self.devices),
+            "display_order": self.display_order,
+            "extended": dict(self.extended),
+        }
 
 
 class FakeDaemon:
@@ -70,7 +79,6 @@ class FakeDaemon:
         self.eval_table: dict[str, Any] = {}
         self.command_log: list[tuple[str, tuple]] = []
         self.command_failures: dict[str, tuple[bool, Any] | BaseException] = {}
-        self.eventmask_calls: list[tuple] = []
         self.unknown_evals: list[str] = []
         self._next_request_id = 1
         self._transports: list["FakeClientTransport"] = []
@@ -165,47 +173,36 @@ class FakeDaemon:
 
     def handle(self, cmd: str, args: tuple) -> tuple[bool, Any]:
         self.command_log.append((cmd, args))
+
         failure = self.command_failures.get(cmd)
         if failure is not None:
             if isinstance(failure, BaseException):
                 raise failure
             return failure
-        handler = _COMMAND_HANDLERS.get(cmd)
-        if handler is None:
-            return False, f"unknown command: {cmd}"
-        return handler(self, args)
 
-    # handlers below are registered via the _command decorator
+        if cmd == "authenticate":
+            return True, {"user_level": self.user_level}
+        if cmd in {"eventmask", "keepalive", "quit"}:
+            return True, None
+        if cmd == "getstatus":
+            return True, self._status()
+        if cmd == "getcachekeys":
+            return True, self._cache_keys(args[0])
+        if cmd == "eval":
+            expr, stringify = args
+            value = self._eval(expr)
+            if stringify and value is not None:
+                value = str(value)
+            return True, value
+        if cmd in {"queue", "start"}:
+            return True, self._next_request()
+        return False, f"unknown command: {cmd}"
 
-    def _get_device(self, devname: str) -> DeviceSpec | None:
-        return self.devices.get(devname.lower())
-
-    def _match_eval_device(
-        self, expr: str, prefix: str, suffix: str
-    ) -> DeviceSpec | None:
-        if not expr.startswith(prefix) or not expr.endswith(suffix):
-            return None
-        devname = ast.literal_eval(expr[len(prefix) : -len(suffix)])
-        return self._get_device(devname)
-
-    def _cmd_authenticate(self, args):
-        return True, {"user_level": self.user_level}
-
-    def _cmd_eventmask(self, args):
-        self.eventmask_calls.append(args)
-        return True, None
-
-    def _cmd_getstatus(self, args):
-        devices = []
-        failures: dict = {}
-        for spec in self.devices.values():
-            devices.append(spec.name)
-        loaded = sorted(self.loaded_setups)
-        all_setups = sorted(self.setups.keys())
-        return True, {
-            "devices": devices,
-            "devicefailures": failures,
-            "setups": (loaded, all_setups),
+    def _status(self) -> dict[str, Any]:
+        return {
+            "devices": [spec.name for spec in self.devices.values()],
+            "devicefailures": {},
+            "setups": (sorted(self.loaded_setups), sorted(self.setups)),
             "status": self.status,
             "mode": "master",
             "requests": [],
@@ -214,97 +211,80 @@ class FakeDaemon:
             "eta": (0, None),
         }
 
-    def _cmd_getcachekeys(self, args):
-        (query,) = args
+    def _cache_keys(self, query: str) -> list[tuple[str, Any]]:
         query = query.lower()
+        if "," in query:
+            return [
+                (key, self.cache[key]) for key in query.split(",") if key in self.cache
+            ]
         if query.endswith("/"):
-            return True, sorted(
-                (k, v) for k, v in self.cache.items() if k.startswith(query)
-            )
+            return sorted((k, v) for k, v in self.cache.items() if k.startswith(query))
         if query in self.cache:
-            return True, [(query, self.cache[query])]
-        return True, []
+            return [(query, self.cache[query])]
+        return []
 
-    def _cmd_eval(self, args):
-        expr, stringify = args
-
-        def _result(value):
-            if stringify and value is not None:
-                return True, str(value)
-            return True, value
-
+    def _eval(self, expr: str) -> Any:
         if expr in self.eval_table:
             value = self.eval_table[expr]
-            value = value() if callable(value) else value
-            return _result(value)
+            return value() if callable(value) else value
         if expr in _DEFAULT_EVALS:
-            return _result(_DEFAULT_EVALS[expr])
+            return _DEFAULT_EVALS[expr]
         if expr == "session.getSetupInfo()":
-            return _result(
-                {
-                    name: {
-                        "description": spec.description,
-                        "devices": list(spec.devices),
-                        "display_order": spec.display_order,
-                        "extended": dict(spec.extended),
-                    }
-                    for name, spec in self.setups.items()
-                }
-            )
-        if expr.endswith(".pollParams()"):
-            return _result(None)
-        if expr.startswith(
-            "dict((pn, pi.serialize()) for (pn, pi) in session.getDevice("
-        ):
-            devname = ast.literal_eval(
-                expr[
-                    len(
-                        "dict((pn, pi.serialize()) for (pn, pi) in session.getDevice("
-                    ) : -len(").parameters.items())")
-                ]
-            )
-            device = self._get_device(devname)
-            return _result({} if device is None else dict(device.param_info))
-        device = self._match_eval_device(expr, "session.getDevice(", ").valuetype")
-        if device is not None:
-            return _result(device.valuetype)
-        device = self._match_eval_device(expr, "session.getDevice(", ").classes")
-        if device is not None:
-            return _result(list(device.params.get("classes", [])))
-        device = self._match_eval_device(expr, "session.getDevice(", ").valueInfo()")
-        if device is not None:
-            return _result(None)
-        # Unknown evals still map to the caller's default, but tests assert
-        # that we never rely on this fallback silently.
+            return {name: spec.as_setup_info() for name, spec in self.setups.items()}
+        if ".pollParams(" in expr and expr.endswith(")"):
+            return None
+
+        value = self._eval_param_info(expr)
+        if value is not _UNKNOWN_EVAL:
+            return value
+        value = self._eval_device_expr(expr)
+        if value is not _UNKNOWN_EVAL:
+            return value
+
         self.unknown_evals.append(expr)
-        return _result(None)
+        return None
 
-    def _cmd_quit(self, args):
-        return True, None
+    def _eval_param_info(self, expr: str) -> dict[str, Any] | object:
+        prefix = "dict((pn, pi.serialize()) for (pn, pi) in session.getDevice("
+        suffix = ").parameters.items())"
+        devname = self._expr_arg(expr, prefix, suffix)
+        if devname is _UNKNOWN_EVAL:
+            return _UNKNOWN_EVAL
+        device = self.devices.get(devname.lower())
+        if device is None:
+            return {}
+        return dict(device.param_info)
 
-    def _cmd_keepalive(self, args):
-        return True, None
+    def _eval_device_expr(self, expr: str) -> Any:
+        lookups = {
+            ").classes": lambda device: list(device.params.get("classes", [])),
+            ").read()": lambda device: device.params.get("value"),
+            ").valueInfo()": lambda device: None,
+            ").valuetype": lambda device: device.valuetype,
+        }
+        for suffix, lookup in lookups.items():
+            device = self._device_from_expr(expr, "session.getDevice(", suffix)
+            if device is not None:
+                return lookup(device)
+        return _UNKNOWN_EVAL
 
-    def _cmd_queue(self, args):
+    def _device_from_expr(
+        self, expr: str, prefix: str, suffix: str
+    ) -> DeviceSpec | None:
+        devname = self._expr_arg(expr, prefix, suffix)
+        if devname is _UNKNOWN_EVAL:
+            return None
+        return self.devices.get(devname.lower())
+
+    def _expr_arg(self, expr: str, prefix: str, suffix: str) -> str | object:
+        if not expr.startswith(prefix) or not expr.endswith(suffix):
+            return _UNKNOWN_EVAL
+        return ast.literal_eval(expr[len(prefix) : -len(suffix)])
+
+    def _next_request(self) -> int:
         request_id = self._next_request_id
         self._next_request_id += 1
-        return True, request_id
-
-    def _cmd_start(self, args):
-        return self._cmd_queue(args)
-
-
-_COMMAND_HANDLERS: dict[str, Callable[[FakeDaemon, tuple], tuple[bool, Any]]] = {
-    "authenticate": FakeDaemon._cmd_authenticate,
-    "eventmask": FakeDaemon._cmd_eventmask,
-    "getstatus": FakeDaemon._cmd_getstatus,
-    "getcachekeys": FakeDaemon._cmd_getcachekeys,
-    "eval": FakeDaemon._cmd_eval,
-    "quit": FakeDaemon._cmd_quit,
-    "keepalive": FakeDaemon._cmd_keepalive,
-    "queue": FakeDaemon._cmd_queue,
-    "start": FakeDaemon._cmd_start,
-}
+        return request_id
 
 
 class FakeClientTransport:
@@ -314,14 +294,13 @@ class FakeClientTransport:
         self.daemon = daemon
         self.serializer = None
         self._events: queue.Queue = queue.Queue()
-        self._pending_banner = False
         self._pending_reply: tuple[bool, Any] | object = _NO_REPLY
 
     # -- client-side contract ------------------------------------------------
 
     def connect(self, conndata):
         self.daemon.attach(self)
-        self._pending_banner = True
+        self._pending_reply = (True, self.daemon.banner())
 
     def connect_events(self, conndata):
         # Event queue is already set up; nothing to do.
@@ -337,9 +316,6 @@ class FakeClientTransport:
         self._pending_reply = self.daemon.handle(cmdname, args)
 
     def recv_reply(self):
-        if self._pending_banner:
-            self._pending_banner = False
-            return True, self.daemon.banner()
         reply = self._pending_reply
         self._pending_reply = _NO_REPLY
         if reply is _NO_REPLY:

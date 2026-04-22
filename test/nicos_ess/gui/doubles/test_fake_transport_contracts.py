@@ -1,9 +1,7 @@
-"""Contract tests for GUI test doubles.
+"""Contracts pinned by the ESS GUI fake daemon.
 
-These tests are intentionally small and explicit: they pin the subset of the
-real NICOS client/transport contract that the ESS GUI test doubles emulate.
-If the real client-side contract drifts, these tests should fail close to the
-double rather than later in a panel test with a less obvious error.
+The fake is allowed to be small, but it must stay compatible with the real
+``NicosClient`` and ``ClientTransport`` seams used by the GUI tests.
 """
 
 from __future__ import annotations
@@ -15,17 +13,16 @@ import pytest
 
 from nicos.clients.base import ConnectionData, NicosClient
 from nicos.clients.proto.classic import ClientTransport as ClassicClientTransport
-from nicos.clients.proto.zeromq import ClientTransport as ZeroMQClientTransport
 from nicos.core import params
 from nicos.protocols.cache import OP_TELL, cache_dump
-from nicos.protocols.daemon import ClientTransport as BaseClientTransport
+from nicos.protocols.daemon import ClientTransport as BaseClientTransport, STATUS_IDLE
 from nicos.protocols.daemon.classic import PROTO_VERSION
 
-from test.nicos_ess.gui.doubles import DeviceSpec, FakeClientTransport, FakeDaemon
+from test.nicos_ess.gui.doubles import DeviceSpec, FakeClientTransport
 
 
 class RecordingClient(NicosClient):
-    """Concrete NicosClient used to drive the fake through the real API."""
+    """Concrete ``NicosClient`` driven only through the production API."""
 
     def __init__(self):
         self.events = []
@@ -36,20 +33,19 @@ class RecordingClient(NicosClient):
         self.events.append((name, args))
 
 
-def _connect_client(monkeypatch, fake_daemon):
+def _connect_client(monkeypatch, fake_daemon, *, eventmask=None):
     monkeypatch.setattr(
         "nicos.clients.base.ClientTransport",
         lambda: FakeClientTransport(fake_daemon),
     )
     client = RecordingClient()
-    client.connect(ConnectionData("fake", 0, "test", "test"))
+    client.connect(ConnectionData("fake", 0, "test", "test"), eventmask=eventmask)
     return client
 
 
 def _disconnect_client(client):
-    if not client.isconnected:
-        return
-    client.disconnect()
+    if client.isconnected:
+        client.disconnect()
     thread = getattr(client, "event_thread", None)
     if thread is not None:
         thread.join(timeout=1.0)
@@ -65,29 +61,12 @@ def _wait_until(predicate, timeout=2.0):
     pytest.fail("condition was not met before timeout")
 
 
-def test_fake_client_transport_matches_real_client_transport_surface():
-    required = {
-        name
-        for name, member in inspect.getmembers(BaseClientTransport, inspect.isfunction)
-        if name != "determine_serializer"
-    }
-    assert required == {
-        "connect",
-        "connect_events",
-        "disconnect",
-        "send_command",
-        "recv_reply",
-        "recv_event",
-    }
-
-    for name in sorted(required):
-        fake_sig = inspect.signature(getattr(FakeClientTransport, name))
-        assert fake_sig == inspect.signature(getattr(ClassicClientTransport, name))
-        assert fake_sig == inspect.signature(getattr(ZeroMQClientTransport, name))
+def _event_payloads(client, name):
+    return [args[0] for event_name, args in client.events if event_name == name]
 
 
-def test_fake_daemon_supports_real_nicos_client_helper_api(monkeypatch, fake_daemon):
-    motor = DeviceSpec(
+def _motor_spec():
+    return DeviceSpec(
         name="motor",
         valuetype=float,
         params={
@@ -106,22 +85,85 @@ def test_fake_daemon_supports_real_nicos_client_helper_api(monkeypatch, fake_dae
             }
         },
     )
-    fake_daemon.add_device(motor, setup="instrument")
+
+
+def test_fake_transport_implements_the_client_transport_surface_contract():
+    required = {
+        name
+        for name, member in inspect.getmembers(BaseClientTransport, inspect.isfunction)
+        if name != "determine_serializer"
+    }
+    assert required == {
+        "connect",
+        "connect_events",
+        "disconnect",
+        "send_command",
+        "recv_reply",
+        "recv_event",
+    }
+
+    for name in sorted(required):
+        fake_sig = inspect.signature(getattr(FakeClientTransport, name))
+        assert fake_sig == inspect.signature(getattr(ClassicClientTransport, name))
+
+
+def test_fake_daemon_satisfies_the_real_client_connection_contract(
+    monkeypatch, fake_daemon
+):
+    client = _connect_client(monkeypatch, fake_daemon, eventmask=("cache", "status"))
+    try:
+        assert client.isconnected is True
+        assert client.daemon_info == {
+            "daemon_version": fake_daemon.daemon_version,
+            "protocol_version": PROTO_VERSION,
+            "pw_hashing": "plain",
+        }
+        assert client.user_level == fake_daemon.user_level
+        assert ("connected", ()) in client.events
+        assert fake_daemon.command_log[:2] == [
+            (
+                "authenticate",
+                ({"login": "test", "passwd": "test", "display": ""},),
+            ),
+            ("eventmask", (("cache", "status"),)),
+        ]
+    finally:
+        _disconnect_client(client)
+
+    assert ("disconnected", ()) in client.events
+
+
+def test_fake_daemon_satisfies_the_gui_device_query_contract(
+    monkeypatch, fake_daemon
+):
+    motor = fake_daemon.add_device(_motor_spec(), setup="instrument")
 
     client = _connect_client(monkeypatch, fake_daemon)
     try:
-        assert client.isconnected is True
-        assert client.daemon_info["protocol_version"] == PROTO_VERSION
-        assert client.user_level == fake_daemon.user_level
-
         assert client.getDeviceParams("motor") == motor.params
         assert client.getCacheKey("motor/value") == ("motor/value", 1.5)
+        assert client.ask(
+            "getcachekeys",
+            "motor/value,motor/offset,missing",
+        ) == [
+            ("motor/value", 1.5),
+            ("motor/offset", 0.8),
+        ]
         assert client.getDeviceParam("motor", "offset") == 0.8
         assert client.getDeviceParamInfo("motor") == motor.param_info
         assert client.getDeviceValuetype("motor") is float
+        assert client.getDeviceValue("motor") == 1.5
         assert client.eval("session.getDevice('motor').classes", []) == [
             "nicos.core.device.Moveable"
         ]
+        assert client.eval("session.getDevice('motor').valueInfo()", "fallback") is None
+        assert (
+            client.eval(
+                "session.getDevice('motor').pollParams(volatile_only=False)",
+                "fallback",
+            )
+            is None
+        )
         assert client.eval("session.getSetupInfo()", {}) == {
             "instrument": {
                 "description": "",
@@ -130,48 +172,64 @@ def test_fake_daemon_supports_real_nicos_client_helper_api(monkeypatch, fake_dae
                 "extended": {},
             }
         }
-
-        signals = [name for name, _args in client.events]
-        assert "connected" in signals
-        assert fake_daemon.command_log[0][0] == "authenticate"
     finally:
         _disconnect_client(client)
 
-    assert ("disconnected", ()) in client.events
 
-
-def test_fake_daemon_cache_events_match_real_client_event_loop_contract(
-    monkeypatch, fake_daemon
-):
-    fake_daemon.add_device(
-        DeviceSpec(
-            name="motor",
-            valuetype=float,
-            params={
-                "value": 1.5,
-                "status": (200, ""),
-                "visibility": ("namespace", "devlist"),
-            },
+@pytest.mark.parametrize(
+    ("event_name", "push_event", "expected_payload"),
+    [
+        pytest.param(
+            "cache",
+            lambda daemon: daemon.push_cache("motor/value", 7.5, timestamp=42.0),
+            (42.0, "motor/value", OP_TELL, cache_dump(7.5)),
+            id="cache",
         ),
-        setup="instrument",
-    )
-
+        pytest.param(
+            "device",
+            lambda daemon: daemon.push_device_event("create", ["motor"]),
+            ("create", ["motor"]),
+            id="device",
+        ),
+        pytest.param(
+            "message",
+            lambda daemon: daemon.push_message(("nicos", 0, 30, "hello", None, 1)),
+            ("nicos", 0, 30, "hello", None, 1),
+            id="message",
+        ),
+        pytest.param(
+            "setup",
+            lambda daemon: daemon.push_setup(["instrument"]),
+            (["instrument"], ["instrument"]),
+            id="setup",
+        ),
+        pytest.param(
+            "status",
+            lambda daemon: daemon.push_status((STATUS_IDLE, -1)),
+            (STATUS_IDLE, -1),
+            id="status",
+        ),
+    ],
+)
+def test_fake_daemon_pushes_real_daemon_event_payload_shapes(
+    monkeypatch, fake_daemon, event_name, push_event, expected_payload
+):
+    fake_daemon.add_device(_motor_spec(), setup="instrument")
     client = _connect_client(monkeypatch, fake_daemon)
     try:
-        fake_daemon.push_cache("motor/value", 7.5, timestamp=42.0)
+        event_count = len(_event_payloads(client, event_name))
+        push_event(fake_daemon)
 
-        def saw_cache_event():
-            return any(name == "cache" for name, _args in client.events)
+        _wait_until(lambda: len(_event_payloads(client, event_name)) > event_count)
 
-        _wait_until(saw_cache_event)
-
-        cache_events = [args[0] for name, args in client.events if name == "cache"]
-        assert cache_events[-1] == (42.0, "motor/value", OP_TELL, cache_dump(7.5))
+        assert _event_payloads(client, event_name)[-1] == expected_payload
     finally:
         _disconnect_client(client)
 
 
-def test_fake_daemon_records_unknown_eval_expressions(monkeypatch, fake_daemon):
+def test_fake_daemon_records_unknown_eval_expressions_for_the_fixture_guard(
+    monkeypatch, fake_daemon
+):
     client = _connect_client(monkeypatch, fake_daemon)
     try:
         assert client.eval("session.getDevice('motor').does_not_exist()", None) is None
@@ -182,24 +240,9 @@ def test_fake_daemon_records_unknown_eval_expressions(monkeypatch, fake_daemon):
     fake_daemon.unknown_evals.clear()
 
 
-def test_fake_daemon_records_eventmask_requests(monkeypatch, fake_daemon):
-    monkeypatch.setattr(
-        "nicos.clients.base.ClientTransport",
-        lambda: FakeClientTransport(fake_daemon),
-    )
-    client = RecordingClient()
-    client.connect(
-        ConnectionData("fake", 0, "test", "test"),
-        eventmask=("cache", "status"),
-    )
-    try:
-        assert client.isconnected is True
-        assert fake_daemon.eventmask_calls == [(("cache", "status"),)]
-    finally:
-        _disconnect_client(client)
-
-
-def test_fake_daemon_can_fail_authentication(monkeypatch, fake_daemon):
+def test_fake_daemon_can_drive_real_client_authentication_failure(
+    monkeypatch, fake_daemon
+):
     fake_daemon.command_failures["authenticate"] = (False, "denied")
 
     client = _connect_client(monkeypatch, fake_daemon)
@@ -209,7 +252,7 @@ def test_fake_daemon_can_fail_authentication(monkeypatch, fake_daemon):
     assert ("disconnected", ()) in client.events
 
 
-def test_fake_daemon_can_break_a_live_client_on_command_failure(
+def test_fake_daemon_can_drive_real_client_broken_connection(
     monkeypatch, fake_daemon
 ):
     client = _connect_client(monkeypatch, fake_daemon)
