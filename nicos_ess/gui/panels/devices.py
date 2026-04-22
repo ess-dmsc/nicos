@@ -1140,11 +1140,23 @@ class ControlDialog(QDialog):
         fmtstr = self.devinfo.fmtstr
         dlg.limitMin.setText(fmtstr % userlimits[0])
         dlg.limitMax.setText(fmtstr % userlimits[1])
-        
+
         abslimits = self.client.getDeviceParam(self.devname, "abslimits")
         offset = self.client.getDeviceParam(self.devname, "offset")
-        if offset is not None:
-            abslimits = abslimits[0] - offset, abslimits[1] - offset
+        if offset is None:
+            offset = 0
+        candidates = (
+            (abslimits[0] - offset, abslimits[1] - offset),
+            (abslimits[0] + offset, abslimits[1] + offset),
+            (-abslimits[1] + offset, -abslimits[0] + offset),
+        )
+        abslimits = min(
+            candidates,
+            key=lambda limits: (
+                not (limits[0] <= userlimits[0] <= userlimits[1] <= limits[1]),
+                abs(sum(limits) - sum(userlimits)),
+            ),
+        )
         dlg.limitMinAbs.setText(fmtstr % abslimits[0])
         dlg.limitMaxAbs.setText(fmtstr % abslimits[1])
         target = DeviceParamEdit(dlg, dev=self.devname, param="userlimits")
@@ -1154,7 +1166,9 @@ class ControlDialog(QDialog):
         )
 
         def callback():
-            self.device_panel.exec_command("resetlimits(%s)" % self.devrepr)
+            self.device_panel.exec_command(
+                'set(%s, "userlimits", %s)' % (self.devrepr, abslimits)
+            )
             dlg.reject()
 
         btn.clicked.connect(callback)
