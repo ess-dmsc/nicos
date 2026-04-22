@@ -25,8 +25,8 @@ devices = dict(
         readpv=f"{pump2_pvroot}SyrType-SP",
         writepv=f"{pump2_pvroot}SyrType-SP",
     ),
-    # pump_linked_mode=device(
-    #     "nicos_ess.loki.devices.cetoni_minimal.CetoniPumpLinkedMode",
-    #     pvroot=linked_pvroot,
-    # ),
+    pump_linked_mode=device(
+        "nicos_ess.loki.devices.cetoni_minimal.CetoniPumpLinkedMode",
+        pvroot="",
+    ),
 )

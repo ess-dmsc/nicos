@@ -359,73 +359,86 @@ class CetoniPumpController(EpicsParameters, CanReference, HasLimits, Moveable):
         )
 
 
-# class CetoniPumpLinkedMode(EpicsParameters, CanReference, HasLimits, MappedMoveable):
-#     parameters = {
-#         "pvroot": Param(
-#             "The root of the pv",
-#             type=str,
-#             mandatory=True,
-#             settable=False,
-#             userparam=False,
-#         ),
-#         "flowrate": RecordInfo(
-#             cache_key="flowrate",
-#             pv_suffix="FlowRate-SP",
-#             record_type=RecordType.VALUE,
-#         ),
-#         "flowrate_max": RecordInfo(
-#             cache_key="flowrate_max",
-#             pv_suffix="MaxFlowRate",
-#             record_type=RecordType.VALUE,
-#         ),
-#         "flowrate_unit": RecordInfo(
-#             cache_key="flowrate_unit",
-#             pv_suffix="FlowRate.EGU",
-#             record_type=RecordType.VALUE,
-#         ),
-#     }
-#
-#     parameter_overrides = {
-#         "unit": Override(mandatory=False, settable=False, userparam=False),
-#         "mapping": Override(mandatory=False, userparam=False, volatile=True),
-#     }
-#
-#     def doPreinit(self, mode):
-#         self._record_fields = {
-#             "enable": RecordInfo(
-#                 cache_key="value",
-#                 pv_suffix="C_LnkdEnable",
-#                 record_type=RecordType.VALUE,
-#             ),
-#         }
-#
-#         epics_config = {"epicstimeout": self.epicstimeout, "pva": self.pva}
-#         self._epics_stuff = EpicsStuff(
-#             self.pvroot,
-#             self._record_fields,
-#             epics_config,
-#             self._cache,
-#             self.log,
-#             self._name,
-#             self.monitor,
-#         )
-#
-#         self._setROParam("mapping", {"Continuos flow": 0, "Time limited flow": 1})
-#
-#     def doReadFlowrate(self):
-#         return self._epics_stuff._get_cached_pv_or_ask("flowrate", maxage=0.0)
-#
-#     def doReadFlowrate_Max(self):
-#         return self._epics_stuff._get_cached_pv_or_ask("flowrate_max", maxage=0.0)
-#
-#     def doReadFlowrate_Unit(self):
-#         return self._epics_stuff._get_cached_pv_or_ask("flowrate_unit")
-#
-#     def doWriteFlowrate(self, target):
-#         self._set_pv(self._epics_stuff._get_pv_name("flowrate"), target)
-#
-#     def doEnable(self, on=False):
-#         if on:
-#             self._epics_stuff._set_pv(self._epics_stuff._get_pv_name("enable"), 1)
-#         else:
-#             self._epics_stuff._set_pv(self._epics_stuff._get_pv_name("enable"), 0)
+class CetoniPumpLinkedMode(EpicsParameters, CanReference, HasLimits, MappedMoveable):
+    parameters = {
+        "pvroot": Param(
+            "The root of the pv",
+            type=str,
+            mandatory=True,
+            settable=False,
+            userparam=False,
+        ),
+        "flowrate": Param(
+            description="Linked syringe flowrate",
+            settable=True,
+            volatile=True,
+        ),
+        "flowrate_max": Param(
+            description="Max flowrate",
+            volatile=True,
+        ),
+        "flowrate_unit": Param(
+            description="Flowrate unit",
+            type=str,
+        ),
+    }
+
+    parameter_overrides = {
+        "unit": Override(mandatory=False, settable=False, userparam=False),
+        "mapping": Override(mandatory=False, userparam=False, volatile=True),
+    }
+
+    def doPreinit(self, mode):
+        self._record_fields = {
+            "flowrate": RecordInfo(
+                cache_key="flowrate",
+                pv_suffix="B02-CSLab:SE-Pumps:LnkdFlowRate-SP",
+                record_type=RecordType.VALUE,
+            ),
+            "flowrate_max": RecordInfo(
+                cache_key="flowrate_max",
+                pv_suffix="B02-CSLab:SE-Pumps:LnkdMaxFlowRate",
+                record_type=RecordType.VALUE,
+            ),
+            "flowrate_unit": RecordInfo(
+                cache_key="flowrate_unit",
+                pv_suffix="B02-CSLab:SE-Pumps:LnkdFlowRate-SP.EGU",
+                record_type=RecordType.VALUE,
+            ),
+            "enable": RecordInfo(
+                cache_key="value",
+                pv_suffix="B02-CSLab:SE-Pumps:C_LnkdEnable",
+                record_type=RecordType.VALUE,
+            ),
+        }
+
+        epics_config = {"epicstimeout": self.epicstimeout, "pva": self.pva}
+        self._epics_stuff = EpicsStuff(
+            self.pvroot,
+            self._record_fields,
+            epics_config,
+            self._cache,
+            self.log,
+            self._name,
+            self.monitor,
+        )
+
+        self._setROParam("mapping", {"Continuos flow": 0, "Time limited flow": 1})
+
+    def doReadFlowrate(self):
+        return self._epics_stuff._get_cached_pv_or_ask("flowrate", maxage=0.0)
+
+    def doReadFlowrate_Max(self):
+        return self._epics_stuff._get_cached_pv_or_ask("flowrate_max", maxage=0.0)
+
+    def doReadFlowrate_Unit(self):
+        return self._epics_stuff._get_cached_pv_or_ask("flowrate_unit")
+
+    def doWriteFlowrate(self, target):
+        self._set_pv(self._epics_stuff._get_pv_name("flowrate"), target)
+
+    def doEnable(self, on=False):
+        if on:
+            self._epics_stuff._set_pv(self._epics_stuff._get_pv_name("enable"), 1)
+        else:
+            self._epics_stuff._set_pv(self._epics_stuff._get_pv_name("enable"), 0)
