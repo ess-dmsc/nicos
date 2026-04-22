@@ -246,7 +246,7 @@ class CetoniPumpController(EpicsParameters, CanReference, HasLimits, Moveable):
             ),
         }
         epics_config = {"epicstimeout": self.epicstimeout, "pva": self.pva}
-        self.epics_stuff = EpicsStuff(
+        self._epics_stuff = EpicsStuff(
             self.pvroot,
             self._record_fields,
             epics_config,
