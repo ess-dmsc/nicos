@@ -319,30 +319,30 @@ class CetoniPumpController(EpicsParameters, CanReference, HasLimits, Moveable):
     #             )
     #             self._epics_subscriptions.append(status_subscription)
 
-    def _get_pv_name(self, pvparam):
-        return f"{self.pvroot}{self._record_fields[pvparam].pv_suffix}"
-
-    def _get_cached_pv_or_ask(
-        self, key: str, maxage: float = 5, as_string: bool = False
-    ):
-        if math.isclose(maxage, 0.0):
-            return self._read_pv(key, as_string)
-        else:
-            return get_from_cache_or(
-                self,
-                self._record_fields[key].cache_key,
-                lambda: self._epics_wrapper.get_pv_value(
-                    self._get_pv_name(key), as_string
-                ),
-            )
-
-    def _read_pv(self, key, as_string=False):
-        return self._epics_wrapper.get_pv_value(
-            self._get_pv_name(key), as_string=as_string
-        )
-
-    def _set_pv(self, name, value):
-        self._epics_wrapper.put_pv_value(name, value)
+    # def _get_pv_name(self, pvparam):
+    #     return f"{self.pvroot}{self._record_fields[pvparam].pv_suffix}"
+    #
+    # def _get_cached_pv_or_ask(
+    #     self, key: str, maxage: float = 5, as_string: bool = False
+    # ):
+    #     if math.isclose(maxage, 0.0):
+    #         return self._read_pv(key, as_string)
+    #     else:
+    #         return get_from_cache_or(
+    #             self,
+    #             self._record_fields[key].cache_key,
+    #             lambda: self._epics_wrapper.get_pv_value(
+    #                 self._get_pv_name(key), as_string
+    #             ),
+    #         )
+    #
+    # def _read_pv(self, key, as_string=False):
+    #     return self._epics_wrapper.get_pv_value(
+    #         self._get_pv_name(key), as_string=as_string
+    #     )
+    #
+    # def _set_pv(self, name, value):
+    #     self._epics_wrapper.put_pv_value(name, value)
 
     def doReadAbslimits(self):
         dial_max = self._epics_stuff._get_cached_pv_or_ask("dialhighlimit")
