@@ -52,4 +52,35 @@ devices = dict(
         opmode="centered",
         offsets=(0.0, 0.0, 0.0, 0.0, 0.0),
     ),
+    # Temperature Readouts
+    right_horizontal_temp=device(
+        "nicos_ess.devices.epics.pva.EpicsStringReadable",
+        description="Right Top Horizontal Motor Temp",
+        readpv=f"{pv_root_1}LinX-01:Mtr-Temp",
+        visibility=(),
+    ),
+    right_vertical_temp=device(
+        "nicos_ess.devices.epics.pva.EpicsStringReadable",
+        description="Right Top Vertical Motor Temp",
+        readpv=f"{pv_root_1}LinZ-01:Mtr-Temp",
+        visibility=(),
+    ),
+    left_horizontal_temp=device(
+        "nicos_ess.devices.epics.pva.EpicsStringReadable",
+        description="Left Bottom Horizontal Motor Temp",
+        readpv=f"{pv_root_2}LinX-01:Mtr-Temp",
+        visibility=(),
+    ),
+    left_vertical_temp=device(
+        "nicos_ess.devices.epics.pva.EpicsStringReadable",
+        description="Left Bottom Vertical Motor Temp",
+        readpv=f"{pv_root_2}LinZ-01:Mtr-Temp",
+        visibility=(),
+    ),
+    vs_rotation_temp=device(
+        "nicos_ess.devices.epics.pva.EpicsStringReadable",
+        description="Virtual Source Rotation Motor Temp",
+        readpv="ESTIA-VSRot:MC-RotZ-01:Mtr-Temp",
+        visibility=(),
+    ),
 )
