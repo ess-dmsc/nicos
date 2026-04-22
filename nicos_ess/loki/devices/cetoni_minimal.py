@@ -22,13 +22,14 @@ from nicos_ess.devices.epics.pva.epics_devices import (
 
 
 class EpicsStuff:
-    def __init__(self, pvroot, record_fields, config, cache, log, device_name):
+    def __init__(self, pvroot, record_fields, config, cache, log, device_name, monitor):
         self._pvroot = pvroot
         self._record_fields = record_fields
         self._epics_wrapper = create_wrapper(config["epicstimeout"], config["pva"])
         self._cache = cache
         self.log = log
         self._name = device_name
+        self.monitor = monitor
         self.set_up_subscriptions()
         self.connect_pvs()
 
@@ -275,6 +276,7 @@ class CetoniPumpController(EpicsParameters, CanReference, HasLimits, Moveable):
             self._cache,
             self.log,
             self._name,
+            self.monitor,
         )
 
         self._epics_wrapper = self._epics_stuff._epics_wrapper  # FIXME
