@@ -89,6 +89,7 @@ def test_fake_client_transport_matches_real_client_transport_surface():
 def test_fake_daemon_supports_real_nicos_client_helper_api(monkeypatch, fake_daemon):
     motor = DeviceSpec(
         name="motor",
+        valuetype=float,
         params={
             "value": 1.5,
             "status": (200, ""),
@@ -104,7 +105,6 @@ def test_fake_daemon_supports_real_nicos_client_helper_api(monkeypatch, fake_dae
                 "userparam": True,
             }
         },
-        valuetype=float,
     )
     fake_daemon.add_device(motor, setup="instrument")
 
@@ -146,6 +146,7 @@ def test_fake_daemon_cache_events_match_real_client_event_loop_contract(
     fake_daemon.add_device(
         DeviceSpec(
             name="motor",
+            valuetype=float,
             params={
                 "value": 1.5,
                 "status": (200, ""),
@@ -168,3 +169,56 @@ def test_fake_daemon_cache_events_match_real_client_event_loop_contract(
         assert cache_events[-1] == (42.0, "motor/value", OP_TELL, cache_dump(7.5))
     finally:
         _disconnect_client(client)
+
+
+def test_fake_daemon_records_unknown_eval_expressions(monkeypatch, fake_daemon):
+    client = _connect_client(monkeypatch, fake_daemon)
+    try:
+        assert client.eval("session.getDevice('motor').does_not_exist()", None) is None
+    finally:
+        _disconnect_client(client)
+
+    assert fake_daemon.unknown_evals == ["session.getDevice('motor').does_not_exist()"]
+    fake_daemon.unknown_evals.clear()
+
+
+def test_fake_daemon_records_eventmask_requests(monkeypatch, fake_daemon):
+    monkeypatch.setattr(
+        "nicos.clients.base.ClientTransport",
+        lambda: FakeClientTransport(fake_daemon),
+    )
+    client = RecordingClient()
+    client.connect(
+        ConnectionData("fake", 0, "test", "test"),
+        eventmask=("cache", "status"),
+    )
+    try:
+        assert client.isconnected is True
+        assert fake_daemon.eventmask_calls == [(("cache", "status"),)]
+    finally:
+        _disconnect_client(client)
+
+
+def test_fake_daemon_can_fail_authentication(monkeypatch, fake_daemon):
+    fake_daemon.command_failures["authenticate"] = (False, "denied")
+
+    client = _connect_client(monkeypatch, fake_daemon)
+
+    assert client.isconnected is False
+    assert ("error", ("Error from daemon: denied.",)) in client.events
+    assert ("disconnected", ()) in client.events
+
+
+def test_fake_daemon_can_break_a_live_client_on_command_failure(
+    monkeypatch, fake_daemon
+):
+    client = _connect_client(monkeypatch, fake_daemon)
+    try:
+        fake_daemon.command_failures["getstatus"] = OSError(0, "socket closed")
+        assert client.ask("getstatus") is None
+    finally:
+        _disconnect_client(client)
+
+    assert client.isconnected is False
+    assert ("broken", ("Server connection broken: socket closed.",)) in client.events
+    assert ("disconnected", ()) in client.events

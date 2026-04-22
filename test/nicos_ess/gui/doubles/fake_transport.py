@@ -9,9 +9,8 @@ from __future__ import annotations
 
 import ast
 import queue
-import threading
 from dataclasses import dataclass, field
-from typing import Any, Callable
+from typing import Any
 
 from nicos.protocols.cache import OP_TELL, cache_dump
 from nicos.protocols.daemon import DAEMON_EVENTS, STATUS_IDLE
@@ -19,14 +18,22 @@ from nicos.protocols.daemon.classic import PROTO_VERSION
 
 
 _EVENT_SENTINEL = object()
+_NO_REPLY = object()
+_DEFAULT_EVALS = {
+    "session.instrument": "",
+    "session.experiment.title": "",
+    "session.experiment.proposal": "",
+    "session.experiment.get_current_run_number()": "",
+    "session.experiment.run_title": "",
+}
 
 
 @dataclass
 class DeviceSpec:
     name: str
+    valuetype: Any
     params: dict = field(default_factory=dict)
     param_info: dict = field(default_factory=dict)
-    valuetype: Any = str
 
     @property
     def key(self) -> str:
@@ -45,17 +52,26 @@ class SetupSpec:
 class FakeDaemon:
     """In-memory daemon state + command dispatch."""
 
-    def __init__(self, *, user_level: int = 20, daemon_version: str = "fake-1.0"):
+    def __init__(
+        self,
+        *,
+        user_level: int = 20,
+        daemon_version: str = "fake-1.0",
+        protocol_version: int = PROTO_VERSION,
+    ):
         self.user_level = user_level
         self.daemon_version = daemon_version
+        self.protocol_version = protocol_version
         self.devices: dict[str, DeviceSpec] = {}
         self.setups: dict[str, SetupSpec] = {}
         self.loaded_setups: set[str] = set()
         self.cache: dict[str, Any] = {}
         self.status: tuple = (STATUS_IDLE, -1)
         self.eval_table: dict[str, Any] = {}
-        self.eval_fallback: Callable[[str], Any] | None = None
         self.command_log: list[tuple[str, tuple]] = []
+        self.command_failures: dict[str, tuple[bool, Any] | BaseException] = {}
+        self.eventmask_calls: list[tuple] = []
+        self.unknown_evals: list[str] = []
         self._next_request_id = 1
         self._transports: list["FakeClientTransport"] = []
 
@@ -72,7 +88,7 @@ class FakeDaemon:
     def banner(self) -> dict:
         return {
             "daemon_version": self.daemon_version,
-            "protocol_version": PROTO_VERSION,
+            "protocol_version": self.protocol_version,
             "pw_hashing": "plain",
         }
 
@@ -121,7 +137,8 @@ class FakeDaemon:
         dumped = cache_dump(value) if value is not None else ""
         self._push_event("cache", (timestamp, key.lower(), op, dumped))
 
-    def push_device_event(self, action: str, devnames: list | dict) -> None:
+    def push_device_event(self, action: str, devnames: Any) -> None:
+        """Push a raw daemon-side device event payload into the client."""
         self._push_event("device", (action, devnames))
 
     def push_setup(self, loaded: list[str] | None = None) -> None:
@@ -148,6 +165,11 @@ class FakeDaemon:
 
     def handle(self, cmd: str, args: tuple) -> tuple[bool, Any]:
         self.command_log.append((cmd, args))
+        failure = self.command_failures.get(cmd)
+        if failure is not None:
+            if isinstance(failure, BaseException):
+                raise failure
+            return failure
         handler = _COMMAND_HANDLERS.get(cmd)
         if handler is None:
             return False, f"unknown command: {cmd}"
@@ -170,6 +192,7 @@ class FakeDaemon:
         return True, {"user_level": self.user_level}
 
     def _cmd_eventmask(self, args):
+        self.eventmask_calls.append(args)
         return True, None
 
     def _cmd_getstatus(self, args):
@@ -203,22 +226,33 @@ class FakeDaemon:
         return True, []
 
     def _cmd_eval(self, args):
-        expr, _stringify = args
+        expr, stringify = args
+
+        def _result(value):
+            if stringify and value is not None:
+                return True, str(value)
+            return True, value
+
         if expr in self.eval_table:
             value = self.eval_table[expr]
-            return True, value() if callable(value) else value
+            value = value() if callable(value) else value
+            return _result(value)
+        if expr in _DEFAULT_EVALS:
+            return _result(_DEFAULT_EVALS[expr])
         if expr == "session.getSetupInfo()":
-            return True, {
-                name: {
-                    "description": spec.description,
-                    "devices": list(spec.devices),
-                    "display_order": spec.display_order,
-                    "extended": dict(spec.extended),
+            return _result(
+                {
+                    name: {
+                        "description": spec.description,
+                        "devices": list(spec.devices),
+                        "display_order": spec.display_order,
+                        "extended": dict(spec.extended),
+                    }
+                    for name, spec in self.setups.items()
                 }
-                for name, spec in self.setups.items()
-            }
+            )
         if expr.endswith(".pollParams()"):
-            return True, None
+            return _result(None)
         if expr.startswith(
             "dict((pn, pi.serialize()) for (pn, pi) in session.getDevice("
         ):
@@ -230,21 +264,20 @@ class FakeDaemon:
                 ]
             )
             device = self._get_device(devname)
-            return True, {} if device is None else dict(device.param_info)
+            return _result({} if device is None else dict(device.param_info))
         device = self._match_eval_device(expr, "session.getDevice(", ").valuetype")
         if device is not None:
-            return True, device.valuetype
+            return _result(device.valuetype)
         device = self._match_eval_device(expr, "session.getDevice(", ").classes")
         if device is not None:
-            return True, list(device.params.get("classes", []))
+            return _result(list(device.params.get("classes", [])))
         device = self._match_eval_device(expr, "session.getDevice(", ").valueInfo()")
         if device is not None:
-            return True, None
-        if self.eval_fallback is not None:
-            return True, self.eval_fallback(expr)
-        # Unknown eval: return None; the real client's eval() turns this into
-        # the caller-supplied default without raising.
-        return True, None
+            return _result(None)
+        # Unknown evals still map to the caller's default, but tests assert
+        # that we never rely on this fallback silently.
+        self.unknown_evals.append(expr)
+        return _result(None)
 
     def _cmd_quit(self, args):
         return True, None
@@ -282,8 +315,7 @@ class FakeClientTransport:
         self.serializer = None
         self._events: queue.Queue = queue.Queue()
         self._pending_banner = False
-        self._pending_reply: tuple[bool, Any] | None = None
-        self._lock = threading.Lock()
+        self._pending_reply: tuple[bool, Any] | object = _NO_REPLY
 
     # -- client-side contract ------------------------------------------------
 
@@ -302,17 +334,15 @@ class FakeClientTransport:
         self._events.put(_EVENT_SENTINEL)
 
     def send_command(self, cmdname, args):
-        with self._lock:
-            self._pending_reply = self.daemon.handle(cmdname, args)
+        self._pending_reply = self.daemon.handle(cmdname, args)
 
     def recv_reply(self):
         if self._pending_banner:
             self._pending_banner = False
             return True, self.daemon.banner()
-        with self._lock:
-            reply = self._pending_reply
-            self._pending_reply = None
-        if reply is None:
+        reply = self._pending_reply
+        self._pending_reply = _NO_REPLY
+        if reply is _NO_REPLY:
             raise RuntimeError("recv_reply called with no pending command")
         return reply
 

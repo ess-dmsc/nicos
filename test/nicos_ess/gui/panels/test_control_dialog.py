@@ -4,53 +4,82 @@ from __future__ import annotations
 
 import pytest
 
-pytest.importorskip("pytestqt")
-
-from nicos.clients.gui.utils import dialogFromUi as real_dialog_from_ui
 from nicos.core import params
 from nicos.guisupport.qt import QDialog
-
-import nicos_ess.gui.panels.devices as devices_panel_module
+from nicos_ess.devices.epics.pva.motor import EpicsMotor
 
 from test.nicos_ess.gui.doubles import DeviceSpec
+from test.nicos_ess.test_devices.epics_motor.helpers import (
+    ASYMM_DIAL_LIMITS,
+    OFFSET_CASES,
+    TARGET_DIAL_USERLIMITS,
+    user_limits_from_dial_limits,
+)
 
 
 guiconfig_name = "devices.py"
 
 
-def _open_motor_control_dialog(
-    gui_window_factory,
-    fake_daemon,
-    guiconfig_path,
-    device_spec,
-):
-    fake_daemon.add_device(device_spec, setup="instrument")
-
-    window = gui_window_factory(guiconfig_path=guiconfig_path)
-    panel = window.getPanel("Devices")
-    return panel._open_control_dialog("motor")
+def _device_item(panel, name):
+    for setup_index in range(panel.tree.topLevelItemCount()):
+        setup_item = panel.tree.topLevelItem(setup_index)
+        for device_index in range(setup_item.childCount()):
+            item = setup_item.child(device_index)
+            if item.text(panel.col_index["NAME"]) == name:
+                return item
+    raise AssertionError(f"device item {name!r} not found")
 
 
-def _capture_limits_dialog(monkeypatch):
-    captured = {}
+def _find_visible_dialog(window, title):
+    for dialog in window.findChildren(QDialog):
+        if dialog.windowTitle() == title and dialog.isVisible():
+            return dialog
+    return None
 
-    def wrapped_dialog_from_ui(parent, uiname):
-        dlg = real_dialog_from_ui(parent, uiname)
 
-        def exec_and_capture():
-            captured["max_range"] = (dlg.limitMinAbs.text(), dlg.limitMaxAbs.text())
-            return QDialog.DialogCode.Rejected
+def _open_control_dialog(qtbot, window, panel, devname):
+    item = _device_item(panel, devname)
+    panel.tree.setCurrentItem(item)
+    panel.tree.itemActivated.emit(item, panel.col_index["NAME"])
+    title = f"Control {devname}"
+    qtbot.waitUntil(
+        lambda w=window, wanted=title: _find_visible_dialog(w, wanted) is not None,
+        timeout=2000,
+    )
+    dialog = _find_visible_dialog(window, title)
+    assert dialog is not None
+    return dialog
 
-        dlg.exec = exec_and_capture
-        return dlg
 
-    monkeypatch.setattr(devices_panel_module, "dialogFromUi", wrapped_dialog_from_ui)
+def _capture_limits_dialog(monkeypatch, qtbot):
+    captured = []
+
+    def fake_exec(dialog):
+        qtbot.addWidget(dialog)
+        captured.append(dialog)
+        return QDialog.DialogCode.Rejected
+
+    monkeypatch.setattr(QDialog, "exec", fake_exec)
     return captured
 
 
-def _motor_device_spec(userlimits, hwuserlimits, abslimits, offset):
+def _class_names(cls):
+    return [base.__module__ + "." + base.__name__ for base in cls.__mro__]
+
+
+def _fmt_limits(limits):
+    return tuple(f"{value:.1f}" for value in limits)
+
+
+def _motor_device_spec(userlimits, abslimits, offset, direction):
+    hwuserlimits = user_limits_from_dial_limits(direction, offset, *abslimits)
+    limitoffsets = (
+        userlimits[0] - hwuserlimits[0],
+        userlimits[1] - hwuserlimits[1],
+    )
     return DeviceSpec(
         name="motor",
+        valuetype=float,
         params={
             "value": 1.0,
             "target": 1.0,
@@ -60,17 +89,13 @@ def _motor_device_spec(userlimits, hwuserlimits, abslimits, offset):
             "fmtstr": "%.1f",
             "unit": "mm",
             "fixed": False,
-            "classes": [
-                "nicos.core.device.Readable",
-                "nicos.core.device.Moveable",
-                "nicos.core.mixins.HasLimits",
-                "nicos.core.mixins.HasOffset",
-                "nicos.core.mixins.CanDisable",
-                "nicos.devices.abstract.CanReference",
-            ],
+            "motorpv": "SIM:M1",
+            # Mirror the actual EpicsMotor class hierarchy; the DIR-related
+            # inverted-limits bug only exists for EPICS motor-record devices.
+            "classes": _class_names(EpicsMotor),
             "userlimits": userlimits,
             "hwuserlimits": hwuserlimits,
-            "limitoffsets": (0.0, 0.0),
+            "limitoffsets": limitoffsets,
             "abslimits": abslimits,
             "offset": offset,
         },
@@ -81,53 +106,47 @@ def _motor_device_spec(userlimits, hwuserlimits, abslimits, offset):
                 "userparam": True,
             }
         },
-        valuetype=float,
     )
 
 
-@pytest.mark.parametrize(
-    "userlimits, hwuserlimits, abslimits, offset, expected_max_range",
-    [
-        pytest.param(
-            (0.0, 5.5),
-            (0.0, 5.5),
-            (-4.7, 0.8),
-            0.8,
-            ("0.0", "5.5"),
-            id="inverted_epics_window",
-        ),
-        pytest.param(
-            (0.0, 5.5),
-            (0.0, 5.5),
-            (0.0, 5.5),
-            0.0,
-            ("0.0", "5.5"),
-            id="same_direction_window",
-        ),
-    ],
-)
-def test_epics_motor_limits_dialog_shows_hardware_user_window(
+@pytest.mark.parametrize("offset", OFFSET_CASES)
+@pytest.mark.parametrize("direction", ["Pos", "Neg"], ids=["dir_pos", "dir_neg"])
+def test_limits_dialog_shows_epics_motor_user_space_bounds_for_direction_and_offset_cases(
     gui_window_factory,
     fake_daemon,
     guiconfig_path,
     monkeypatch,
     qtbot,
-    userlimits,
-    hwuserlimits,
-    abslimits,
+    direction,
     offset,
-    expected_max_range,
 ):
-    captured = _capture_limits_dialog(monkeypatch)
-    motor_spec = _motor_device_spec(userlimits, hwuserlimits, abslimits, offset)
-    control_dialog = _open_motor_control_dialog(
-        gui_window_factory,
-        fake_daemon,
-        guiconfig_path,
-        motor_spec,
+    abslimits = ASYMM_DIAL_LIMITS
+    userlimits = user_limits_from_dial_limits(
+        direction, offset, *TARGET_DIAL_USERLIMITS
     )
-    qtbot.waitUntil(control_dialog.isVisible)
+    expected_user_limits = _fmt_limits(userlimits)
+    expected_absolute_limits = _fmt_limits(
+        user_limits_from_dial_limits(direction, offset, *abslimits)
+    )
+    fake_daemon.add_device(
+        _motor_device_spec(userlimits, abslimits, offset, direction),
+        setup="instrument",
+    )
+    window = gui_window_factory(guiconfig_path=guiconfig_path)
+    panel = window.getPanel("Devices")
+    control_dialog = _open_control_dialog(qtbot, window, panel, "motor")
+    captured = _capture_limits_dialog(monkeypatch, qtbot)
 
-    control_dialog.on_actionSetLimits_triggered()
+    control_dialog.actionSetLimits.trigger()
 
-    assert captured["max_range"] == expected_max_range
+    qtbot.waitUntil(lambda: len(captured) == 1, timeout=2000)
+    limits_dialog = captured[0]
+
+    assert (
+        limits_dialog.limitMin.text(),
+        limits_dialog.limitMax.text(),
+    ) == expected_user_limits
+    assert (
+        limits_dialog.limitMinAbs.text(),
+        limits_dialog.limitMaxAbs.text(),
+    ) == expected_absolute_limits
