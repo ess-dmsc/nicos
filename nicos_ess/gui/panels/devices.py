@@ -17,6 +17,7 @@ from nicos.guisupport.qt import (
     QFont,
     QIcon,
     QInputDialog,
+    QLabel,
     QMenu,
     QMessageBox,
     QPalette,
@@ -27,7 +28,12 @@ from nicos.guisupport.qt import (
     pyqtSlot,
     sip,
 )
-from nicos.guisupport.typedvalue import ComboWidget, DeviceParamEdit, DeviceValueEdit
+from nicos.guisupport.typedvalue import (
+    ComboWidget,
+    DeviceParamEdit,
+    DeviceValueEdit,
+    EditWidget,
+)
 from nicos.protocols.cache import OP_TELL, cache_dump, cache_load
 from nicos.utils import AttrDict, findResource
 from nicos_ess.gui.utils import get_icon
@@ -872,6 +878,7 @@ class ControlDialog(QDialog):
         self.paramItems = {}
         self.moveBtn = None
         self.target = None
+        self.rel_target = None
 
         self._reinit()
         self._show_extension(expert)
@@ -1053,6 +1060,7 @@ class ControlDialog(QDialog):
         if "nicos.core.device.Moveable" not in classes:
             self.limitFrame.setVisible(False)
             self.targetFrame.setVisible(False)
+            self.relMoveGroup.setVisible(False)
         else:
             if "nicos.core.mixins.HasLimits" not in classes:
                 self.limitFrame.setVisible(False)
@@ -1075,6 +1083,59 @@ class ControlDialog(QDialog):
             self.targetFrame.layout().takeAt(1).widget().deleteLater()
             self.targetFrame.layout().insertWidget(1, self.target)
 
+            ALLOWED_RMOVE_CLASSES = [
+                "nicos.devices.generic.slit.Slit",
+                "nicos.devices.generic.virtual.VirtualMotor",
+                "nicos_ess.devices.epics.pva.motor.EpicsMotor",
+                "nicos_ess.estia.devices.mover.SeleneMover",
+                "nicos_ess.estia.devices.virtual_source.VirtualSource",
+            ]
+
+            if not any(
+                allowed_class in classes for allowed_class in ALLOWED_RMOVE_CLASSES
+            ):
+                self.relMoveGroup.setVisible(False)
+            else:
+                self.valueinfo = self.client.eval(
+                    "session.getDevice(%r).valueInfo()" % self.devname, None
+                )
+                self.valueinfo_names = tuple([value.name for value in self.valueinfo])
+
+                self.selectDevice = QComboBox(self)
+                for name_index, valueinfo_name in enumerate(self.valueinfo_names):
+                    self.selectDevice.insertItem(name_index, valueinfo_name)
+                if len(self.valueinfo) < 2:
+                    self.selectDevice.setVisible(False)
+                self.selectDevice.currentIndexChanged.connect(self.index_changed)
+                select_device_hint = self.selectDevice.sizeHint()
+                if select_device_hint.isValid():
+                    self.selectDevice.setMinimumSize(select_device_hint)
+
+                self.rel_target = EditWidget(
+                    self.devname,
+                    typ=float,
+                    curvalue=0,
+                )
+                rel_target_hint = self.rel_target.sizeHint()
+                if rel_target_hint.isValid():
+                    self.rel_target.setMinimumSize(rel_target_hint)
+
+                self.relMovFrame.layout().takeAt(0).widget().deleteLater()
+                self.relMovFrame.layout().addWidget(self.selectDevice, 1, 0)
+
+                minus_button = self.relMovFrame.layout().itemAtPosition(0, 1).widget()
+                self.relMovFrame.layout().addWidget(minus_button, 1, 1)
+
+                self.relMovFrame.layout().takeAt(0).widget().deleteLater()
+                self.relMovFrame.layout().addWidget(self.rel_target, 1, 2)
+
+                self.relMovFrame.layout().addWidget(
+                    QLabel(f"Step ({self.rmove_selected_device_unit()})", self), 0, 2
+                )
+
+                plus_button = self.relMovFrame.layout().itemAtPosition(0, 3).widget()
+                self.relMovFrame.layout().addWidget(plus_button, 1, 3)
+
             def move(checked):
                 try:
                     target = self.target.getValue()
@@ -1096,6 +1157,23 @@ class ControlDialog(QDialog):
                     self.moveBtn.setText("(fixed)")
                 if self.target:
                     self.target.setEnabled(False)
+
+    def rmove_selected_device_unit(self):
+        selected_device_index = self.selectDevice.currentIndex()
+        return self.valueinfo[selected_device_index].unit
+
+    def rmove(self, direction):
+        selected_device_index = self.selectDevice.currentIndex()
+        if type(self.devinfo.value) is tuple and len(self.devinfo.value) > 1:
+            target = list(self.devinfo.value)
+            target[selected_device_index] = (
+                self.devinfo.value[selected_device_index]
+                + direction * self.rel_target.getValue()
+            )
+        else:
+            target = self.devinfo.value + direction * self.rel_target.getValue()
+
+        self.device_panel.exec_command("maw(%s, %r)" % (self.devrepr, target))
 
     def on_paramList_customContextMenuRequested(self, pos):
         item = self.paramList.itemAt(pos)
@@ -1140,7 +1218,7 @@ class ControlDialog(QDialog):
         fmtstr = self.devinfo.fmtstr
         dlg.limitMin.setText(fmtstr % userlimits[0])
         dlg.limitMax.setText(fmtstr % userlimits[1])
-        
+
         abslimits = self.client.getDeviceParam(self.devname, "abslimits")
         offset = self.client.getDeviceParam(self.devname, "offset")
         if offset is not None:
@@ -1244,6 +1322,21 @@ class ControlDialog(QDialog):
         self.device_panel.exec_command(
             'set(%s, "alias", %r)' % (self.devrepr, self.aliasTarget.currentText())
         )
+
+    @pyqtSlot()
+    def on_toolButtonMinus_clicked(self):
+        self.rmove(-1)
+
+    @pyqtSlot()
+    def on_toolButtonPlus_clicked(self):
+        self.rmove(1)
+
+    @pyqtSlot()
+    def index_changed(self):
+        selected_device_unit = self.rmove_selected_device_unit()
+        for child in self.rel_target.children():
+            if isinstance(child, QLabel):
+                child.setText(f"Step ({selected_device_unit})")
 
     def closeEvent(self, event):
         event.accept()
