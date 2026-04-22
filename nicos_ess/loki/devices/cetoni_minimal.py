@@ -22,13 +22,13 @@ from nicos_ess.devices.epics.pva.epics_devices import (
 
 
 class EpicsStuff:
-    def __init__(self, pvroot, record_fields, config, cache, log, device):
+    def __init__(self, pvroot, record_fields, config, cache, log, device_name):
         self._pvroot = pvroot
         self._record_fields = record_fields
         self._epics_wrapper = create_wrapper(config["epicstimeout"], config["pva"])
         self._cache = cache
         self.log = log
-        self._device = device
+        self._name = device_name
         self.set_up_subscriptions()
         self.connect_pvs()
 
@@ -67,8 +67,8 @@ class EpicsStuff:
             # Unexpected updates ignored
             return
         time_stamp = time.time()
-        self._cache.put(self._device._name, param, value, time_stamp)
-        self._cache.put(self._device._name, "unit", units, time_stamp)
+        self._cache.put(self._name, param, value, time_stamp)
+        self._cache.put(self._name, "unit", units, time_stamp)
 
     def _status_change_callback(
         self, name, param, value, units, limits, severity, message, **kwargs
@@ -76,7 +76,7 @@ class EpicsStuff:
         if name != self._get_pv_name("readpv"):
             # Unexpected updates ignored
             return
-        self._cache.put(self._device._name, "status", (severity, message), time.time())
+        self._cache.put(self._name, "status", (severity, message), time.time())
 
     def _connection_change_callback(self, name, param, is_connected, **kwargs):
         if param != self._record_fields["readpv"].cache_key:
@@ -87,7 +87,7 @@ class EpicsStuff:
         else:
             self.log.warning("%s disconnected!", name)
             self._cache.put(
-                self._device._name,
+                self._name,
                 "status",
                 (status.ERROR, "communication failure"),
                 time.time(),
@@ -245,6 +245,16 @@ class CetoniPumpController(EpicsParameters, CanReference, HasLimits, Moveable):
                 record_type=RecordType.VALUE,
             ),
         }
+        epics_config = {"epicstimeout": self.epicstimeout, "pva": self.pva}
+        self.epics_stuff = EpicsStuff(
+            self.pvroot,
+            self._record_fields,
+            epics_config,
+            self._cache,
+            self.log,
+            self._name,
+        )
+
         self._epics_wrapper = create_wrapper(self.epicstimeout, self.pva)
         self.connect_pvs()
         self.set_up_subscriptions()
