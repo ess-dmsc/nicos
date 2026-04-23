@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 from test.nicos_ess.gui.doubles.fake_transport import DeviceSpec
-from test.nicos_ess.gui.helpers import assert_panel_starts_clean
+from test.nicos_ess.gui.helpers import (
+    assert_panel_starts_clean,
+    assert_panel_survives_lifecycle_events_cleanly,
+)
 
 
 def seed_spectrometer_devices(fake_daemon):
@@ -34,6 +37,20 @@ def test_spectrometer_panel_starts_without_warnings_or_errors(
     gui_window_from_name, fake_daemon, caplog, qtbot
 ):
     assert_panel_starts_clean(
+        gui_window_from_name=gui_window_from_name,
+        fake_daemon=fake_daemon,
+        caplog=caplog,
+        qtbot=qtbot,
+        guiconfig_name="loki/panels/spectrometer.py",
+        panel_class="nicos_ess.loki.gui.panels.spectrometer.SpectrometerPanel",
+        seed_daemon=seed_spectrometer_devices,
+    )
+
+
+def test_spectrometer_panel_survives_normal_lifecycle_events_without_warnings_or_errors(
+    gui_window_from_name, fake_daemon, caplog, qtbot
+):
+    assert_panel_survives_lifecycle_events_cleanly(
         gui_window_from_name=gui_window_from_name,
         fake_daemon=fake_daemon,
         caplog=caplog,

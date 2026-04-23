@@ -8,6 +8,7 @@ selects a more specific panel or layout config.
 
 from __future__ import annotations
 
+import logging
 import os
 import shutil
 from pathlib import Path
@@ -123,7 +124,11 @@ def gui_window_factory(monkeypatch, qtbot, fake_daemon):
         config.stylefile = ""
 
         mainwindow_cls = importString(config.options["mainwindow_class"])
-        window = mainwindow_cls(NicosLogger("mainwindow"), config)
+        mainwindow_log = NicosLogger("mainwindow")
+        # Route the NICOS GUI logger tree into Python's root logger so pytest's
+        # caplog can observe warnings and errors emitted by panels and the client.
+        mainwindow_log.parent = logging.getLogger()
+        window = mainwindow_cls(mainwindow_log, config)
         window.autoconnect = False
         window.confirmexit = False
 
