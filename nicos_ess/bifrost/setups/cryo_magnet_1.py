@@ -12,8 +12,6 @@ devices = dict(
         "nicos_ess.devices.epics.pva.EpicsReadable",
         description="Sample temperature",
         readpv=f"{pv_root}Sample:Temp-R",
-        abslimits=(0, 1505),
-        userlimits=(0, 1505),
     ),
     sample_setpoint=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
@@ -27,8 +25,6 @@ devices = dict(
         "nicos_ess.devices.epics.pva.EpicsReadable",
         description="Sample heater output",
         readpv=f"{pv_root}Sample:HeaterPower-R",
-        abslimits=(0, 100),
-        userlimits=(0, 100),
     ),
     sample_heater_range=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
@@ -58,8 +54,6 @@ devices = dict(
         "nicos_ess.devices.epics.pva.EpicsReadable",
         description="VTI temperature",
         readpv=f"{pv_root}VTI:Temp-R",
-        abslimits=(0, 1505),
-        userlimits=(0, 1505),
         nexus_config=[
             {
                 "group_name": "cryo_magnet_1",
@@ -78,8 +72,6 @@ devices = dict(
         "nicos_ess.devices.epics.pva.EpicsReadable",
         description="VTI heater output",
         readpv=f"{pv_root}VTI:HeaterPower-R",
-        abslimits=(0, 100),
-        userlimits=(0, 100),
     ),
     vti_heater_range=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
@@ -96,8 +88,6 @@ devices = dict(
         "nicos_ess.devices.epics.pva.EpicsReadable",
         description="VTI pressure",
         readpv=f"{pv_root}VTI:Pressure-R",
-        abslimits=(0, 1100),
-        userlimits=(0, 1100),
     ),
     vti_valve=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
@@ -116,22 +106,16 @@ devices = dict(
         "nicos_ess.devices.epics.pva.EpicsReadable",
         description="Magnet liquid‑nitrogen level",
         readpv=f"{pv_root}Magnet:LN2-R",
-        abslimits=(0, 100),
-        userlimits=(0, 100),
     ),
     lhe_level=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
         description="Magnet liquid‑helium level",
         readpv=f"{pv_root}Magnet:LHe-R",
-        abslimits=(0, 100),
-        userlimits=(0, 100),
     ),
     mag_field=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
         description="Magnet persistent field",
         readpv=f"{pv_root}Magnet:Field-R",
-        abslimits=(-15, 15),
-        userlimits=(-15, 15),
     ),
     mag_target=device(
         "nicos_ess.devices.epics.pva.EpicsAnalogMoveable",
@@ -155,7 +139,6 @@ devices = dict(
     mag_switch_heater=device(
         "nicos_ess.devices.epics.manual_switch.ManualSwitch",
         description="Persistent‑switch heater",
-        readpv=f"{pv_root}Magnet:switchHeater-R",
         writepv=f"{pv_root}Magnet:switchHeater-S",
         states=["OFF", "ON"],
         mapping={"OFF": "OFF", "ON": "ON"},
@@ -166,7 +149,6 @@ devices = dict(
     mag_action=device(
         "nicos_ess.devices.epics.manual_switch.ManualSwitch",
         description="IPS action command",
-        readpv=f"{pv_root}Magnet:action-R",
         writepv=f"{pv_root}Magnet:action-S",
         states=["hold", "ramp_to_set", "ramp_to_zero", "clamp"],
         mapping={
