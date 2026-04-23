@@ -9,6 +9,7 @@ from test.nicos_ess.kafka_tests.doubles.consumer import (
     PartitionMetadata as PartitionMetadataStub,
     TopicPartition as TopicPartitionStub,
 )
+from test.nicos_ess.test_devices.doubles import FakeKafkaError
 
 
 class FakeClock:
@@ -336,6 +337,28 @@ def test_subscriber_delivers_messages_via_callback(subscriber):
 
     assert [v for (_, v) in delivered] == [b"A", b"B"]
     assert calls_idle["n"] >= 0
+
+
+def test_subscriber_forwards_message_errors_to_error_callback(subscriber):
+    stub = subscriber.consumer._consumer
+    stub.create_topic("topic", num_partitions=1)
+    stub.add_message(
+        "topic",
+        0,
+        offset=0,
+        key=b"k",
+        value=b"",
+        error=FakeKafkaError(mod.ERR_ALL_BROKERS_DOWN, "ALL_BROKERS_DOWN"),
+    )
+
+    errors = []
+    subscriber.subscribe(
+        ["topic"], messages_callback=lambda items: None, error_callback=errors.append
+    )
+    pump(subscriber, steps=5)
+
+    assert len(errors) == 1
+    assert errors[0].code() == mod.ERR_ALL_BROKERS_DOWN
 
 
 def test_rebootstrap_sets_pending_reassign_when_topics_missing(consumer):

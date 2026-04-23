@@ -40,7 +40,9 @@ from test.nicos_ess.test_devices.doubles.harness_devices import (
     HarnessReadable,
 )
 from test.nicos_ess.test_devices.doubles.kafka_stubs import (
+    FakeKafkaError,
     StubKafkaConsumer,
+    StubKafkaMessage,
     StubKafkaProducer,
     StubKafkaSubscriber,
 )
@@ -51,12 +53,14 @@ from test.nicos_ess.test_devices.doubles.mapped_controller_devices import (
 
 __all__ = [
     "FakeEpicsBackend",
+    "FakeKafkaError",
     "HarnessLinearAxis",
     "HarnessMoveableNoPrecision",
     "HarnessMappedMoveable",
     "HarnessMoveable",
     "HarnessReadable",
     "StubKafkaConsumer",
+    "StubKafkaMessage",
     "StubKafkaProducer",
     "StubKafkaSubscriber",
     "analog_moveable_config",
