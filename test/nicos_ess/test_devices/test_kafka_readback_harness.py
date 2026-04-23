@@ -10,8 +10,13 @@ from streaming_data_types.logdata_f144 import serialise_f144
 from nicos.core import status
 from nicos.core.errors import ConfigurationError
 from nicos_ess.devices.kafka import readback
+from nicos_ess.devices.kafka.consumer import (
+    ERR_ALL_BROKERS_DOWN,
+    ERR_OFFSET_OUT_OF_RANGE,
+    ERR_UNKNOWN_TOPIC_OR_PART,
+)
 
-from test.nicos_ess.test_devices.doubles import StubKafkaSubscriber
+from test.nicos_ess.test_devices.doubles import FakeKafkaError, StubKafkaSubscriber
 
 READBACK_TOPIC = "readbacks"
 READBACK_SOURCE = "src:first"
@@ -73,6 +78,15 @@ def emit_readback_messages(
     )
     batch = [((0, 0), payload) for payload in payloads]
     device_harness.run_daemon(subscriber.emit_messages, batch)
+
+
+def emit_kafka_error(device_harness, subscribers, err, topic=READBACK_TOPIC):
+    subscriber = next(
+        subscriber
+        for subscriber in subscribers
+        if subscriber.subscribed and subscriber.subscribed[-1] == [topic]
+    )
+    device_harness.run_daemon(subscriber.emit_error, err)
 
 
 class TestKafkaReadbackHarness:
@@ -638,3 +652,106 @@ class TestKafkaReadbackHarness:
         device_harness.run_daemon(daemon_router.shutdown)
 
         assert all(sub.closed for sub in kafka_readback_stubs)
+
+    def test_kafka_error_flips_status_to_error_over_ok_alarm(
+        self, device_harness, kafka_readback_stubs
+    ):
+        """A kafka subscriber error forces status.ERROR even when alarm is OK."""
+        create_router_pair(device_harness)
+        readable, _poller = create_readable_pair(
+            device_harness, "first", "src:first"
+        )
+
+        emit_readback_messages(
+            device_harness,
+            kafka_readback_stubs,
+            serialise_f144("src:first", 1.0, 1_000_000_000),
+            alarm_message(2_000_000_000, Severity.OK, ""),
+            connection_message(3_000_000_000, ConnectionInfo.CONNECTED),
+        )
+        assert readable.status() == (status.OK, "")
+
+        emit_kafka_error(
+            device_harness,
+            kafka_readback_stubs,
+            FakeKafkaError(ERR_ALL_BROKERS_DOWN, "ALL_BROKERS_DOWN", "all down"),
+        )
+
+        result_status, message = readable.status()
+        assert result_status == status.ERROR
+        assert "all down" in message
+
+    def test_kafka_error_auto_clears_on_next_good_message(
+        self, device_harness, kafka_readback_stubs
+    ):
+        """A valid decoded message clears kafka_error for that key."""
+        create_router_pair(device_harness)
+        readable, _poller = create_readable_pair(
+            device_harness, "first", "src:first"
+        )
+
+        emit_readback_messages(
+            device_harness,
+            kafka_readback_stubs,
+            alarm_message(1_000_000_000, Severity.OK, ""),
+        )
+        emit_kafka_error(
+            device_harness,
+            kafka_readback_stubs,
+            FakeKafkaError(ERR_ALL_BROKERS_DOWN, "ALL_BROKERS_DOWN", "all down"),
+        )
+        assert readable.status()[0] == status.ERROR
+
+        emit_readback_messages(
+            device_harness,
+            kafka_readback_stubs,
+            alarm_message(2_000_000_000, Severity.OK, ""),
+        )
+        assert readable.status() == (status.OK, "")
+
+    def test_kafka_error_fans_out_to_all_readables_on_topic(
+        self, device_harness, kafka_readback_stubs
+    ):
+        """A single error reaches every readable on the topic, even ones
+        that have never received a message yet."""
+        create_router_pair(device_harness)
+        first, _p1 = create_readable_pair(device_harness, "first", "src:first")
+        second, _p2 = create_readable_pair(device_harness, "second", "src:second")
+
+        emit_readback_messages(
+            device_harness,
+            kafka_readback_stubs,
+            serialise_f144("src:first", 1.0, 1_000_000_000),
+        )
+
+        emit_kafka_error(
+            device_harness,
+            kafka_readback_stubs,
+            FakeKafkaError(ERR_ALL_BROKERS_DOWN, "ALL_BROKERS_DOWN", "all down"),
+        )
+
+        assert first.status()[0] == status.ERROR
+        assert second.status()[0] == status.ERROR
+
+    def test_kafka_error_categorization(
+        self, device_harness, kafka_readback_stubs
+    ):
+        daemon_router, _poller_router = create_router_pair(device_harness)
+        _readable, _poller = create_readable_pair(
+            device_harness, "first", "src:first"
+        )
+
+        cases = [
+            (ERR_ALL_BROKERS_DOWN, readback.KafkaReadbackError.BROKERS_DOWN),
+            (ERR_OFFSET_OUT_OF_RANGE, readback.KafkaReadbackError.OFFSET_OUT_OF_RANGE),
+            (ERR_UNKNOWN_TOPIC_OR_PART, readback.KafkaReadbackError.UNKNOWN_TOPIC),
+            (-12345, readback.KafkaReadbackError.OTHER),
+        ]
+        for code, expected in cases:
+            emit_kafka_error(
+                device_harness,
+                kafka_readback_stubs,
+                FakeKafkaError(code, "X", "msg"),
+            )
+            snapshot = daemon_router.latest(READBACK_TOPIC, "src:first")
+            assert snapshot.kafka_error == expected

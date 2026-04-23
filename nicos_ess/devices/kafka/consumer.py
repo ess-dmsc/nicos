@@ -1090,6 +1090,7 @@ class KafkaSubscriber:
         self._stop_event = threading.Event()
         self._messages_callback = None
         self._no_messages_callback = None
+        self._error_callback = None
 
         self._no_stats_secs = float(no_stats_secs)
         self._all_down_secs = float(all_down_secs)
@@ -1112,7 +1113,11 @@ class KafkaSubscriber:
         self._use_thread = use_thread
 
     def subscribe(
-        self, topics: Sequence[str], messages_callback, no_messages_callback=None
+        self,
+        topics: Sequence[str],
+        messages_callback,
+        no_messages_callback=None,
+        error_callback=None,
     ):
         """Subscribe to topics and start (or prepare) the polling loop.
 
@@ -1124,6 +1129,9 @@ class KafkaSubscriber:
             Callable that receives a list of ``((ts_type, ts_val), value_bytes)`` tuples.
         no_messages_callback:
             Optional callable invoked periodically while idle.
+        error_callback:
+            Optional callable invoked with the raw ``KafkaError`` whenever a
+            per-message error is handled.
 
         Notes
         -----
@@ -1137,6 +1145,7 @@ class KafkaSubscriber:
 
         self._messages_callback = messages_callback
         self._no_messages_callback = no_messages_callback
+        self._error_callback = error_callback
 
         self._last_no_msg_cb = 0.0
         self._idle_backoff = 0.01
@@ -1438,6 +1447,12 @@ class KafkaSubscriber:
                     session.log.warning("[kafka-msg-error] %r", err)
         except Exception:
             session.log.warning("[kafka-msg-error] %r", err)
+
+        if self._error_callback is not None:
+            try:
+                self._error_callback(err)
+            except Exception:
+                session.log.error("[kafka] error_callback raised")
 
     def _track_last_seen(self, msg) -> None:
         """Update the 'last seen' offset for the message's topic/partition."""

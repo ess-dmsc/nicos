@@ -45,13 +45,21 @@ class StubKafkaSubscriber:
         self.subscribed = []
         self.messages_callback = None
         self.no_messages_callback = None
+        self.error_callback = None
         self.closed = False
         self.stop_called = False
 
-    def subscribe(self, topics, messages_callback=None, no_messages_callback=None):
+    def subscribe(
+        self,
+        topics,
+        messages_callback=None,
+        no_messages_callback=None,
+        error_callback=None,
+    ):
         self.subscribed.append(list(topics))
         self.messages_callback = messages_callback
         self.no_messages_callback = no_messages_callback
+        self.error_callback = error_callback
 
     def emit_messages(self, messages):
         if self.messages_callback:
@@ -60,6 +68,10 @@ class StubKafkaSubscriber:
     def emit_idle(self):
         if self.no_messages_callback:
             self.no_messages_callback()
+
+    def emit_error(self, err):
+        if self.error_callback:
+            self.error_callback(err)
 
     def stop_consuming(self):
         self.stop_called = True
@@ -166,6 +178,33 @@ class StubKafkaMessage:
 
     def offset(self):
         return self._offset
+
+
+class FakeKafkaError:
+    """Minimal ``confluent_kafka.KafkaError`` stand-in for driving error paths."""
+
+    def __init__(self, code, name="FAKE", message="fake error",
+                 fatal=False, retriable=True):
+        self._code = code
+        self._name = name
+        self._message = message
+        self._fatal = fatal
+        self._retriable = retriable
+
+    def code(self):
+        return self._code
+
+    def name(self):
+        return self._name
+
+    def str(self):
+        return self._message
+
+    def fatal(self):
+        return self._fatal
+
+    def retriable(self):
+        return self._retriable
 
 
 class StubKafkaProducer:

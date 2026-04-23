@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import threading
 from dataclasses import dataclass, replace
+from enum import Enum
 from functools import partial
 from time import time as currenttime
 from typing import Any, Callable, Dict, List, Optional, Tuple
@@ -26,9 +27,18 @@ from nicos.core import (
     status,
 )
 from nicos.core.errors import CommunicationError, ConfigurationError
-from nicos_ess.devices.kafka.consumer import KafkaSubscriber
+from nicos_ess.devices.kafka.consumer import KafkaConsumer, KafkaSubscriber
 
 KafkaKey = Tuple[str, str]
+
+
+class KafkaReadbackError(Enum):
+    """Kafka subscriber error categories surfaced to readables."""
+
+    BROKERS_DOWN = "brokers_down"
+    OFFSET_OUT_OF_RANGE = "offset_out_of_range"
+    UNKNOWN_TOPIC = "unknown_topic"
+    OTHER = "other"
 
 
 @dataclass
@@ -48,6 +58,9 @@ class KafkaReadbackState:
     connection: Optional[ConnectionInfo] = None
     connection_service: str = ""
     connection_timestamp_ns: int = 0
+    kafka_error: Optional[KafkaReadbackError] = None
+    kafka_error_message: str = ""
+    kafka_error_timestamp_ns: int = 0
 
     def snapshot(self):
         return replace(self)
@@ -132,13 +145,57 @@ class KafkaReadbackRouter(Device):
     def _start_topic_subscriber(self, topic):
         subscriber = KafkaSubscriber(self.brokers)
         subscriber.subscribe(
-            [topic], messages_callback=partial(self._messages_callback, topic)
+            [topic],
+            messages_callback=partial(self._messages_callback, topic),
+            error_callback=partial(self._error_callback, topic),
         )
         self._kafka_subscribers[topic] = subscriber
 
     def _messages_callback(self, topic, messages):
         for _timestamp, raw in messages:
             self._handle_kafka_payload(topic, raw)
+
+    def _error_callback(self, topic, err):
+        category, message = self._categorize_kafka_error(err)
+        timestamp_ns = int(currenttime() * 1_000_000_000)
+        notifications = []
+        with self._lock:
+            for key in list(self._callbacks):
+                if key[0] != topic:
+                    continue
+                state = self._latest.setdefault(key, KafkaReadbackState())
+                state.kafka_error = category
+                state.kafka_error_message = message
+                state.kafka_error_timestamp_ns = timestamp_ns
+                notifications.append(
+                    (key, state.snapshot(), list(self._callbacks.get(key, ())))
+                )
+        for (topic_, source_name), snapshot, callbacks in notifications:
+            self._notify_callbacks(topic_, source_name, snapshot, callbacks)
+
+    @staticmethod
+    def _categorize_kafka_error(err):
+        try:
+            name = str(err.name() or "")
+        except Exception:
+            name = ""
+        try:
+            detail = err.str()
+        except Exception:
+            detail = repr(err)
+        if KafkaConsumer.is_all_brokers_down(err):
+            return KafkaReadbackError.BROKERS_DOWN, detail or "All Kafka brokers down"
+        if KafkaConsumer.is_offset_out_of_range(err):
+            return (
+                KafkaReadbackError.OFFSET_OUT_OF_RANGE,
+                detail or "Kafka offset out of range",
+            )
+        if KafkaConsumer.is_unknown_topic_or_partition(err):
+            return (
+                KafkaReadbackError.UNKNOWN_TOPIC,
+                detail or "Kafka topic or partition missing",
+            )
+        return KafkaReadbackError.OTHER, detail or (name or "Kafka error")
 
     def _handle_kafka_payload(self, topic, raw):
         decoded_payload = self._decode_payload(raw)
@@ -172,6 +229,9 @@ class KafkaReadbackRouter(Device):
         with self._lock:
             state = self._latest.setdefault(key, KafkaReadbackState())
             apply_update(state, decoded)
+            state.kafka_error = None
+            state.kafka_error_message = ""
+            state.kafka_error_timestamp_ns = 0
             snapshot = state.snapshot()
             callbacks = list(self._callbacks.get(key, ()))
         return snapshot, callbacks
@@ -331,7 +391,11 @@ class KafkaReadable(Readable):
                 "status",
                 current_status,
                 self._cache_timestamp(
-                    max(snapshot.alarm_timestamp_ns, snapshot.connection_timestamp_ns)
+                    max(
+                        snapshot.alarm_timestamp_ns,
+                        snapshot.connection_timestamp_ns,
+                        snapshot.kafka_error_timestamp_ns,
+                    )
                 ),
             )
 
@@ -346,6 +410,14 @@ class KafkaReadable(Readable):
             parts.append(
                 self._connection_status(
                     snapshot.connection, snapshot.connection_service
+                )
+            )
+        if snapshot.kafka_error is not None:
+            parts.append(
+                (
+                    status.ERROR,
+                    snapshot.kafka_error_message
+                    or f"Kafka subscriber error: {snapshot.kafka_error.value}",
                 )
             )
         if not parts:
