@@ -1334,9 +1334,8 @@ class ControlDialog(QDialog):
     @pyqtSlot()
     def index_changed(self):
         selected_device_unit = self.rmove_selected_device_unit()
-        for child in self.rel_target.children():
-            if isinstance(child, QLabel):
-                child.setText(f"Step ({selected_device_unit})")
+        step_label = self.relMovFrame.layout().itemAtPosition(0, 2).widget()
+        step_label.setText(f"Step ({selected_device_unit})")
 
     def closeEvent(self, event):
         event.accept()
