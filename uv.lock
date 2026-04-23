@@ -600,6 +600,11 @@ dependencies = [
     { name = "numpy" },
 ]
 sdist = { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/83/6d/10607e80fa4682adafb39042ad53ed7587f528b76d55f02ac852ba37e248/gr-1.30.0.tar.gz", hash = "sha256:5bda9fd0a81ae719e0c0825e022e0010426e1d0f99015ecf709ed33debffd8a6" }
+wheels = [
+    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/gr/1.30.0/gr-1.30.0-cp312-cp312-linux_x86_64.whl", hash = "sha256:696e3fc9a12872f7a732142fffb2460b2a188c7f7e4c56a0dbb0645873f3ae27" },
+    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/gr/1.30.0/gr-1.30.0-cp313-cp313-linux_x86_64.whl", hash = "sha256:10f0224be592037606cba76734586857fad879f1546513c8c76473550270baeb" },
+    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/gr/1.30.0/gr-1.30.0-cp314-cp314-linux_x86_64.whl", hash = "sha256:339669181cc9ce764305175a56b444d7fce364596b7e0b11520aac0ea4702017" },
+]
 
 [[package]]
 name = "graphql-core"
@@ -1139,6 +1144,24 @@ gui = [
     { name = "toml" },
     { name = "urllib3" },
 ]
+gui-qt6 = [
+    { name = "gr" },
+    { name = "html2text" },
+    { name = "keyring" },
+    { name = "keyrings-alt" },
+    { name = "lttb" },
+    { name = "matplotlib" },
+    { name = "pycryptodomex" },
+    { name = "pyqt6" },
+    { name = "pyqt6-qscintilla" },
+    { name = "pyqt6-qt6" },
+    { name = "pyqt6-webengine" },
+    { name = "pyqt6-webengine-qt6" },
+    { name = "pyqtgraph" },
+    { name = "python-redmine" },
+    { name = "toml" },
+    { name = "urllib3" },
+]
 
 [package.dev-dependencies]
 dev = [
@@ -1156,6 +1179,9 @@ dev = [
     { name = "pyyaml" },
     { name = "ruff" },
 ]
+test = [
+    { name = "pytest-qt" },
+]
 
 [package.metadata]
 requires-dist = [
@@ -1163,19 +1189,25 @@ requires-dist = [
     { name = "ess-streaming-data-types", specifier = ">=0.27.0" },
     { name = "gitpython", specifier = ">=3.1.45" },
     { name = "gr", marker = "extra == 'gui'", specifier = ">=1.23.2" },
+    { name = "gr", marker = "extra == 'gui-qt6'", specifier = ">=1.23.2" },
     { name = "h5py", specifier = ">=2.6" },
     { name = "html2text", specifier = ">=3.200.3" },
     { name = "html2text", marker = "extra == 'gui'", specifier = ">=2025.4.15" },
+    { name = "html2text", marker = "extra == 'gui-qt6'", specifier = ">=2025.4.15" },
     { name = "importlib-metadata", marker = "python_full_version >= '3.6' and python_full_version < '3.10'", specifier = ">=4.6" },
     { name = "kafka-logging-handler", specifier = "<=0.2.4" },
     { name = "keyring", specifier = "==24.3.0" },
     { name = "keyring", marker = "extra == 'gui'", specifier = "==24.3.0" },
+    { name = "keyring", marker = "extra == 'gui-qt6'", specifier = "==24.3.0" },
     { name = "keyrings-alt", specifier = "==5.0.0" },
     { name = "keyrings-alt", marker = "extra == 'gui'", specifier = "==5.0.0" },
+    { name = "keyrings-alt", marker = "extra == 'gui-qt6'", specifier = "==5.0.0" },
     { name = "ldap3", specifier = ">=2.0.0" },
     { name = "lttb" },
     { name = "lttb", marker = "extra == 'gui'", specifier = ">=0.3.2" },
+    { name = "lttb", marker = "extra == 'gui-qt6'", specifier = ">=0.3.2" },
     { name = "matplotlib", marker = "extra == 'gui'", specifier = ">=3.9.4" },
+    { name = "matplotlib", marker = "extra == 'gui-qt6'", specifier = ">=3.9.4" },
     { name = "nicos-pyctl", specifier = ">=1.0" },
     { name = "nicos-resources", editable = "resources" },
     { name = "numpy", specifier = ">1.26.0" },
@@ -1184,18 +1216,26 @@ requires-dist = [
     { name = "psutil", specifier = ">=2.0" },
     { name = "pycryptodomex", specifier = ">=3.4.7" },
     { name = "pycryptodomex", marker = "extra == 'gui'", specifier = ">=3.4.7" },
+    { name = "pycryptodomex", marker = "extra == 'gui-qt6'", specifier = ">=3.4.7" },
     { name = "pyqt5", marker = "sys_platform == 'linux' and extra == 'gui'", specifier = ">=5.13.0" },
     { name = "pyqt5", marker = "sys_platform == 'win32' and extra == 'gui'", specifier = ">=5.15.6" },
     { name = "pyqt6", marker = "sys_platform == 'darwin' and extra == 'gui'", specifier = "==6.6.1" },
+    { name = "pyqt6", marker = "extra == 'gui-qt6'", specifier = ">=6.6.1" },
     { name = "pyqt6-qscintilla", marker = "sys_platform == 'darwin' and extra == 'gui'", specifier = ">=2.13" },
+    { name = "pyqt6-qscintilla", marker = "extra == 'gui-qt6'", specifier = ">=2.13" },
     { name = "pyqt6-qt6", marker = "sys_platform == 'darwin' and extra == 'gui'", specifier = "==6.6.2" },
+    { name = "pyqt6-qt6", marker = "extra == 'gui-qt6'", specifier = ">=6.6.2" },
     { name = "pyqt6-webengine", marker = "sys_platform == 'darwin' and extra == 'gui'", specifier = "==6.6.0" },
+    { name = "pyqt6-webengine", marker = "extra == 'gui-qt6'", specifier = ">=6.6.0" },
     { name = "pyqt6-webengine-qt6", marker = "sys_platform == 'darwin' and extra == 'gui'", specifier = "==6.6.0" },
+    { name = "pyqt6-webengine-qt6", marker = "extra == 'gui-qt6'", specifier = ">=6.6.0" },
     { name = "pyqtgraph", specifier = ">=0.12.4" },
     { name = "pyqtgraph", marker = "extra == 'gui'", specifier = ">=0.12.4" },
+    { name = "pyqtgraph", marker = "extra == 'gui-qt6'", specifier = ">=0.12.4" },
     { name = "pyqtwebengine", marker = "sys_platform == 'linux' and extra == 'gui'", specifier = ">=5.13.0" },
     { name = "pyqtwebengine", marker = "sys_platform == 'win32' and extra == 'gui'", specifier = ">=5.15.5" },
     { name = "python-redmine", marker = "extra == 'gui'", specifier = ">=2.0.0" },
+    { name = "python-redmine", marker = "extra == 'gui-qt6'", specifier = ">=2.0.0" },
     { name = "pyzmq", specifier = ">=13.1.0" },
     { name = "qscintilla", marker = "sys_platform == 'linux' and extra == 'gui'", specifier = "==2.13.4" },
     { name = "qscintilla", marker = "sys_platform == 'win32' and extra == 'gui'", specifier = ">=2.12" },
@@ -1204,10 +1244,12 @@ requires-dist = [
     { name = "scipy", specifier = ">=0.9.0" },
     { name = "toml", specifier = ">=0.10" },
     { name = "toml", marker = "extra == 'gui'", specifier = ">=0.10.2" },
+    { name = "toml", marker = "extra == 'gui-qt6'", specifier = ">=0.10.2" },
     { name = "urllib3", specifier = "==1.26.20" },
     { name = "urllib3", marker = "extra == 'gui'", specifier = "==1.26.20" },
+    { name = "urllib3", marker = "extra == 'gui-qt6'", specifier = "==1.26.20" },
 ]
-provides-extras = ["gui"]
+provides-extras = ["gui", "gui-qt6"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -1225,6 +1267,7 @@ dev = [
     { name = "pyyaml", specifier = ">=3.0" },
     { name = "ruff", specifier = "==0.9.2" },
 ]
+test = [{ name = "pytest-qt", specifier = ">=4.5,<4.6" }]
 
 [[package]]
 name = "nicos-pyctl"
@@ -1273,6 +1316,8 @@ wheels = [
     { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/76/8c/2ba3902e1a0fc1c74962ea9bb33a534bb05984ad7ff9515bf8d07527cadd/numpy-1.26.4-cp312-cp312-musllinux_1_1_x86_64.whl", hash = "sha256:1dda2e7b4ec9dd512f84935c5f126c8bd8b9f2fc001e9f54af255e8c5f16b0e0" },
     { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/28/4a/46d9e65106879492374999e76eb85f87b15328e06bd1550668f79f7b18c6/numpy-1.26.4-cp312-cp312-win32.whl", hash = "sha256:50193e430acfc1346175fcbdaa28ffec49947a06918b7b92130744e81e640110" },
     { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/16/2e/86f24451c2d530c88daf997cb8d6ac622c1d40d19f5a031ed68a4b73a374/numpy-1.26.4-cp312-cp312-win_amd64.whl", hash = "sha256:08beddf13648eb95f8d867350f6a018a4be2e5ad54c8d8caed89ebca558b2818" },
+    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/numpy/1.26.4/numpy-1.26.4-cp313-cp313-linux_x86_64.whl", hash = "sha256:6772458acc26526a0226f823bcb480073716e45251ed0e5db24f58883034dd21" },
+    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/numpy/1.26.4/numpy-1.26.4-cp314-cp314-linux_x86_64.whl", hash = "sha256:bfff6db18ac42bf5d524a90cffe1e051b5b653634865110343b1d63bd69e5e5e" },
 ]
 
 [[package]]
@@ -1707,12 +1752,14 @@ name = "pyqt6"
 version = "6.6.1"
 source = { registry = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/simple" }
 dependencies = [
-    { name = "pyqt6-qt6", marker = "sys_platform != 'linux' and sys_platform != 'win32'" },
-    { name = "pyqt6-sip", marker = "sys_platform != 'linux' and sys_platform != 'win32'" },
+    { name = "pyqt6-qt6" },
+    { name = "pyqt6-sip" },
 ]
 sdist = { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/8c/2b/6fe0409501798abc780a70cab48c39599742ab5a8168e682107eaab78fca/PyQt6-6.6.1.tar.gz", hash = "sha256:9f158aa29d205142c56f0f35d07784b8df0be28378d20a97bcda8bd64ffd0379" }
 wheels = [
     { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/1b/b2/130408edb21b2bf889d175465711ffcc4aa2f0df152718505e458888646d/PyQt6-6.6.1-cp38-abi3-macosx_10_14_universal2.whl", hash = "sha256:6b43878d0bbbcf8b7de165d305ec0cb87113c8930c92de748a11c473a6db5085" },
+    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/0b/5a/51f4762b9f314b5577d17704bc1280532a725ba359d6cc177ab6de692035/PyQt6-6.6.1-cp38-abi3-manylinux_2_28_x86_64.whl", hash = "sha256:5aa0e833cb5a79b93813f8181d9f145517dd5a46f4374544bcd1e93a8beec537" },
+    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/6d/40/e91a88d5c716e2982eb2eef5d4c314add196951e7d430e90eb0fe8fb81a1/PyQt6-6.6.1-cp38-abi3-win_amd64.whl", hash = "sha256:03a656d5dc5ac31b6a9ad200f7f4f7ef49fa00ad7ce7a991b9bb691617141d12" },
 ]
 
 [[package]]
@@ -1720,12 +1767,16 @@ name = "pyqt6-qscintilla"
 version = "2.14.1"
 source = { registry = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/simple" }
 dependencies = [
-    { name = "pyqt6", marker = "sys_platform != 'linux' and sys_platform != 'win32'" },
-    { name = "pyqt6-sip", marker = "sys_platform != 'linux' and sys_platform != 'win32'" },
+    { name = "pyqt6" },
+    { name = "pyqt6-sip" },
 ]
 sdist = { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/e8/06/799c04a51f6cc2111f0cfb090ed4938fc044c5c12d1d9671280e235f2f2e/PyQt6_QScintilla-2.14.1.tar.gz", hash = "sha256:8849a4a9847bbf3698d0c1cf47e6d08552a49a66928543a73f10d6dcba617d10" }
 wheels = [
     { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/ff/1a/482b5370d1f198dc70f4cfc0057343b9043dc161078dc150b33e34f4b4c4/PyQt6_QScintilla-2.14.1-cp37-abi3-macosx_10_14_universal2.whl", hash = "sha256:a9b5939bd7160bbd095bc06312f2a1289a344b7c4f89633ea7657207212c7d56" },
+    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/25/89/3f5a0823b891d81a61d05a7b79d08e4c9dad0ae66c119564fe790ff6bb73/PyQt6_QScintilla-2.14.1-cp37-abi3-manylinux_2_28_x86_64.whl", hash = "sha256:2b16b3ca0c8f6cf4772a85a0a5b030d2a7ad8128e6f5a3fae6d8a641b04f7e41" },
+    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/5a/89/dc01e93261a520d25c8ee214b483cf3c9e34d6b9ada4530382eb1dc0d8f7/PyQt6_QScintilla-2.14.1-cp37-abi3-win_amd64.whl", hash = "sha256:b22e93cd70b35cb83dc4177d14c670a02d92d9ea51ee6759bb97d81679c39af2" },
+    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/f5/8f/1c9edcd3c4c94d976f3c8d85cfc5ff7b18b01e17a16def29e31524d2f69f/PyQt6_QScintilla-2.14.1-cp38-abi3-manylinux_2_39_aarch64.whl", hash = "sha256:1395515e1dd24264e3db324ad19a8367fa3e485c8616932a2b32517b51a4d2d2" },
+    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/5f/d2/85290c984b9b5eff836db12b729d1237ed2b2cb2f2d92608bb9dc9767124/PyQt6_QScintilla-2.14.1-cp39-abi3-win_arm64.whl", hash = "sha256:8ac7f3f61b76a73d60d7837aa1233f7147b5179fbc426e977a3ac21294a3dc48" },
 ]
 
 [[package]]
@@ -1735,6 +1786,8 @@ source = { registry = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-
 wheels = [
     { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/3f/3a/ce7fb7defd78499c00b3af7501d9a842a5c7cf89bb8847dd90f116850a0e/PyQt6_Qt6-6.6.2-py3-none-macosx_10_14_x86_64.whl", hash = "sha256:7ef446d3ffc678a8586ff6dc9f0d27caf4dff05dea02c353540d2f614386faf9" },
     { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/60/b4/fd4ba0ed6209642e12e90f830e77242ac5e4e7a11651e4c215bbc879eeea/PyQt6_Qt6-6.6.2-py3-none-macosx_11_0_arm64.whl", hash = "sha256:b8363d88623342a72ac17da9127dc12f259bb3148796ea029762aa2d499778d9" },
+    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/54/77/f00699bcecca636e90b22db6d5eef06a75f142ca0aaaacce87e35ffe05bf/PyQt6_Qt6-6.6.2-py3-none-manylinux_2_28_x86_64.whl", hash = "sha256:8d7f674a4ec43ca00191e14945ca4129acbe37a2172ed9d08214ad58b170bc11" },
+    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/77/a7/7dbc3df460fe342982bc5ac769129a030772752d4a063a50a722668825c4/PyQt6_Qt6-6.6.2-py3-none-win_amd64.whl", hash = "sha256:5a41fe9d53b9e29e9ec5c23f3c5949dba160f90ca313ee8b96b8ffe6a5059387" },
 ]
 
 [[package]]
@@ -1744,8 +1797,20 @@ source = { registry = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-
 sdist = { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/e3/7d/d2916048e2e3960f68cb4e93907639844f7b8ff95897dcc98553776ccdfc/pyqt6_sip-13.11.0.tar.gz", hash = "sha256:d463af37738bda1856c9ef513e5620a37b7a005e9d589c986c3304db4a8a14d3" }
 wheels = [
     { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/53/a6/0e4d8fa7d6deb750bd0fdf89024e39c71fb127efb5eeedfab6830ad6679a/pyqt6_sip-13.11.0-cp312-cp312-macosx_10_9_universal2.whl", hash = "sha256:6b3267cd93b7f4da6fdf9a6a26f3baed8faae06e5cdd76235f2acc2116c40a54" },
+    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/66/e6/25dc20a03c46000e8b93aaf79347227926b67959283e5aab797daa7f64d8/pyqt6_sip-13.11.0-cp312-cp312-manylinux1_x86_64.manylinux_2_5_x86_64.whl", hash = "sha256:c30248d9bbe54c46a78e5d549da50295ecd6584b965597f751e272f000fb8527" },
+    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/11/9f/e850cd350aade789660cafba38c00777e686040c06b8cd0b45339b80fcba/pyqt6_sip-13.11.0-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:9c367b53a91e575ef66c1375f899713bdaf0a8b2c64b95ac226e9644854a4984" },
+    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/77/26/5261d62108f7579407230f8c1d4dda43c18b5600ce70bf3becb2f997d5cc/pyqt6_sip-13.11.0-cp312-cp312-win_amd64.whl", hash = "sha256:077958105c2ea2f62be2f1a7611ff8bd44cb52fb5ea8fc8c59ea949144acb7b5" },
+    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/46/80/6c88b97eda309d6babb7292200bf51165dc06d0204d891b7bf1fb17a8ed0/pyqt6_sip-13.11.0-cp312-cp312-win_arm64.whl", hash = "sha256:52812471619d3d3750b940d7d124cd0954107656924921ac177e098ba36362fb" },
     { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/df/a0/46abcae4fce175a326185460a02c13ab81332bca7dd55c1e853ba6aee71e/pyqt6_sip-13.11.0-cp313-cp313-macosx_10_13_universal2.whl", hash = "sha256:929716eebde1a64ffdb6b1715db6a22aefd5634d6df84858c7deb5e85be84fdf" },
+    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/0e/38/27c3aa3f153fcd83a0765fedf8e44a1136f189a322bcc9c494c5b3793cd7/pyqt6_sip-13.11.0-cp313-cp313-manylinux1_x86_64.manylinux_2_5_x86_64.whl", hash = "sha256:a75144e8a0bcf9d1a9069011890401748af353749f1de1b6a314b880781edf9d" },
+    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/6f/ac/1053ffce45e4174f0a8174557b88537aa82bf96ba03c7dd208c59de36f69/pyqt6_sip-13.11.0-cp313-cp313-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:8082b5f57ffad5dddf5efcf0ef5eaf94841395aa4e7c374c79ef24cf49b0f0ce" },
+    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/40/d3/447b30d1f00cc50ad9e5c53b2e920068606b16857da83f8036b390c79fad/pyqt6_sip-13.11.0-cp313-cp313-win_amd64.whl", hash = "sha256:8d49b5bf3d8d36cd7db93ddc54cd09dbba96a3fd926e445ef75499b41e47b5a3" },
+    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/92/67/77e6fafcabd01c0a11166ab7464509896f137929f82c4f2e03aea1bf41b3/pyqt6_sip-13.11.0-cp313-cp313-win_arm64.whl", hash = "sha256:293eac1b53c66c54b03266cc30015ec77454af679043a4f188b9bb80a9656996" },
     { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/ff/28/a5178c8e005bafbf9c0fd507f45a3eef619ab582811414a0a461ee75994f/pyqt6_sip-13.11.0-cp314-cp314-macosx_10_15_universal2.whl", hash = "sha256:4dc9c4df24af0571423c3e85b5c008bad42ed48558eef80fbc3e5d30274c5abb" },
+    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/13/3c/02770b02b5a05779e26bd02c202c2fd32aa38e225d01f14c06908e33738c/pyqt6_sip-13.11.0-cp314-cp314-manylinux1_x86_64.manylinux_2_5_x86_64.whl", hash = "sha256:c974d5a193f32e55e746e9b63138503163ac63500dbb1fd67233d8a8d71369bd" },
+    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/40/47/5af493a698cc520581ca1000b4ab09b8182992053ffe2478062dde5e4671/pyqt6_sip-13.11.0-cp314-cp314-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:4284540ffccd8349763ddce3518264dde62f20556720d4061b9c895e09011ca0" },
+    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/b7/2d/64b26e21183a7ff180105871dd5983a8da539d8768921728268dc6d0a73d/pyqt6_sip-13.11.0-cp314-cp314-win_amd64.whl", hash = "sha256:9bd81cb351640abc803ea2fe7262b5adea28615c9b96fd103d1b6f3459937211" },
+    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/7e/36/23f699fa8b1c3fcc312ecd12661a1df6057d92e16d4def2399b59cf7bf22/pyqt6_sip-13.11.0-cp314-cp314-win_arm64.whl", hash = "sha256:cd95ec98f8edb15bcea832b8657809f69d758bc4151cc6fd7790c0181949e45f" },
 ]
 
 [[package]]
@@ -1753,13 +1818,15 @@ name = "pyqt6-webengine"
 version = "6.6.0"
 source = { registry = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/simple" }
 dependencies = [
-    { name = "pyqt6", marker = "sys_platform != 'linux' and sys_platform != 'win32'" },
-    { name = "pyqt6-sip", marker = "sys_platform != 'linux' and sys_platform != 'win32'" },
-    { name = "pyqt6-webengine-qt6", marker = "sys_platform != 'linux' and sys_platform != 'win32'" },
+    { name = "pyqt6" },
+    { name = "pyqt6-sip" },
+    { name = "pyqt6-webengine-qt6" },
 ]
 sdist = { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/49/9a/69db3a2ab1ba43f762144a66f0375540e195e107a1049d7263ab48ebc9cc/PyQt6_WebEngine-6.6.0.tar.gz", hash = "sha256:d50b984c3f85e409e692b156132721522d4e8cf9b6c25e0cf927eea2dfb39487" }
 wheels = [
     { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/34/5d/9902206734550a9d7efcf0a20c22666c3fd2643b1202d12082ddae7b2ba9/PyQt6_WebEngine-6.6.0-cp37-abi3-macosx_10_14_universal2.whl", hash = "sha256:cb7793f06525ca054fcc6039afd93e23b82228b880d0b1301ce635f7f3ed2edf" },
+    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/36/91/50982f28730c893a8c68b0e92debc761e8a475cf1df686dee22a4c255316/PyQt6_WebEngine-6.6.0-cp37-abi3-manylinux_2_28_x86_64.whl", hash = "sha256:fded35fba636c4916fec84aa7c6840ad2e75d211462feb3e966f9545a59d56e6" },
+    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/5b/6a/50a2c81f88ebe41ef9f27fc20ed74ea9d1394a60f09917d9d6d18e8d70b3/PyQt6_WebEngine-6.6.0-cp37-abi3-win_amd64.whl", hash = "sha256:9d542738ed6e11c1978ce59035c07627def7c63eef0f59581d327f01209141bc" },
 ]
 
 [[package]]
@@ -1769,6 +1836,8 @@ source = { registry = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-
 wheels = [
     { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/2c/48/aaed2f3ff54885273a7b13b9c36589c1b7fffdf7c65fd05aa259ec1588a2/PyQt6_WebEngine_Qt6-6.6.0-py3-none-macosx_10_14_x86_64.whl", hash = "sha256:a78ecb6ba4a0aa92ba4c845067580fd214ea52eed00a92230a877e4bcd1e1ad6" },
     { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/a5/d2/cef86e7a2971b1b20cb0a316d53effbe4d59800fc9111acf49b9c274dcfc/PyQt6_WebEngine_Qt6-6.6.0-py3-none-macosx_11_0_arm64.whl", hash = "sha256:d608aef74088433112c212d49455a8fd71708e9ec05aecd22212566657554e30" },
+    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/2e/a3/c45a05651d5f4d0ad6819d7c590d0286966522170904f904e65afd4165a3/PyQt6_WebEngine_Qt6-6.6.0-py3-none-manylinux_2_28_x86_64.whl", hash = "sha256:4d0eeb8d69eff6776b840c4c2fa13cb6d6aaf84806b01d1f3ee7e994049c9b4e" },
+    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/5f/65/97bc8222af2989311c60ae5fb430954986b48c9d4cc8f8c65bd442a71b8d/PyQt6_WebEngine_Qt6-6.6.0-py3-none-win_amd64.whl", hash = "sha256:8be7c3c5b1694d563f90311cf32c5d919991a5f35f6435bdd0bd10be582eb2a2" },
 ]
 
 [[package]]
@@ -1835,6 +1904,20 @@ dependencies = [
 sdist = { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/5e/f7/c933acc76f5208b3b00089573cf6a2bc26dc80a8aece8f52bb7d6b1855ca/pytest_cov-7.0.0.tar.gz", hash = "sha256:33c97eda2e049a0c5298e91f519302a1334c26ac65c1a483d6206fd458361af1" }
 wheels = [
     { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/ee/49/1377b49de7d0c1ce41292161ea0f721913fa8722c19fb9c1e3aa0367eecb/pytest_cov-7.0.0-py3-none-any.whl", hash = "sha256:3b8e9558b16cc1479da72058bdecf8073661c7f57f7d3c5f22a1c23507f2d861" },
+]
+
+[[package]]
+name = "pytest-qt"
+version = "4.5.0"
+source = { registry = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/simple" }
+dependencies = [
+    { name = "pluggy" },
+    { name = "pytest" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/d3/61/8bdec02663c18bf5016709b909411dce04a868710477dc9b9844ffcf8dd2/pytest_qt-4.5.0.tar.gz", hash = "sha256:51620e01c488f065d2036425cbc1cbcf8a6972295105fd285321eb47e66a319f" }
+wheels = [
+    { url = "https://artifactory.esss.lu.se/artifactory/api/pypi/ecdc-pypi/packages/packages/cc/d0/8339b888ad64a3d4e508fed8245a402b503846e1972c10ad60955883dcbb/pytest_qt-4.5.0-py3-none-any.whl", hash = "sha256:ed21ea9b861247f7d18090a26bfbda8fb51d7a8a7b6f776157426ff2ccf26eff" },
 ]
 
 [[package]]

@@ -1140,7 +1140,7 @@ class ControlDialog(QDialog):
         fmtstr = self.devinfo.fmtstr
         dlg.limitMin.setText(fmtstr % userlimits[0])
         dlg.limitMax.setText(fmtstr % userlimits[1])
-
+        
         abslimits = self.client.getDeviceParam(self.devname, "abslimits")
         offset = self.client.getDeviceParam(self.devname, "offset")
         if offset is not None:
