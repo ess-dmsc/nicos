@@ -20,7 +20,7 @@ from nicos.protocols.daemon import ClientTransport as BaseClientTransport, STATU
 from nicos.protocols.daemon.classic import PROTO_VERSION
 
 from test.nicos_ess.gui.doubles import DeviceSpec, FakeClientTransport
-from test.nicos_ess.gui.helpers import _minimal_guiconfig
+from test.nicos_ess.gui.doubles.fake_transport import _DIRECT_DEVICE_EXPR
 
 
 class RecordingClient(NicosClient):
@@ -178,6 +178,14 @@ def test_fake_daemon_satisfies_the_gui_device_query_contract(
         _disconnect_client(client)
 
 
+def test_fake_daemon_uses_a_numeric_run_number_sentinel(monkeypatch, fake_daemon):
+    client = _connect_client(monkeypatch, fake_daemon)
+    try:
+        assert client.eval("session.experiment.get_current_run_number()", None) == 0
+    finally:
+        _disconnect_client(client)
+
+
 def test_fake_daemon_filters_device_lists_using_the_real_client_query(
     monkeypatch, fake_daemon
 ):
@@ -227,8 +235,14 @@ def test_fake_daemon_returns_updated_loaded_setups_after_pushes(
 
     client = _connect_client(monkeypatch, fake_daemon, eventmask=("setup",))
     try:
+        assert client.ask("getstatus")["setups"] == ([], ["beamline", "instrument"])
+        assert client.eval("session.loaded_setups", set()) == set()
+
         fake_daemon.push_setup(["beamline"])
-        _wait_until(lambda: _event_payloads(client, "setup") == [(["beamline"], ["beamline", "instrument"])])
+        _wait_until(
+            lambda: _event_payloads(client, "setup")
+            == [(["beamline"], ["beamline", "instrument"])]
+        )
 
         assert client.eval("session.loaded_setups", set()) == {"beamline"}
     finally:
@@ -240,19 +254,11 @@ def test_fake_daemon_rejects_push_setup_for_unknown_setups(fake_daemon):
         fake_daemon.push_setup(["missing"])
 
 
-def test_fake_daemon_preserves_case_distinct_session_devices(
-    monkeypatch, fake_daemon
-):
+def test_fake_daemon_rejects_case_colliding_device_names(fake_daemon):
     fake_daemon.add_device(DeviceSpec(name="sam", valuetype=float))
-    fake_daemon.add_device(DeviceSpec(name="SAM", valuetype=float))
 
-    client = _connect_client(monkeypatch, fake_daemon)
-    try:
-        devices = client.eval("session.devices", {})
-    finally:
-        _disconnect_client(client)
-
-    assert sorted(devices) == ["SAM", "sam"]
+    with pytest.raises(ValueError, match="collide after lowercasing"):
+        fake_daemon.add_device(DeviceSpec(name="SAM", valuetype=float))
 
 
 def test_fake_daemon_supports_console_backlog_and_completion_queries(
@@ -354,7 +360,6 @@ def test_fake_daemon_records_unknown_eval_expressions_for_the_fixture_guard(
         _disconnect_client(client)
 
     assert fake_daemon.unknown_evals == ["session.getDevice('motor').does_not_exist()"]
-    fake_daemon.unknown_evals.clear()
 
 
 def test_fake_daemon_records_unknown_commands_for_the_fixture_guard(
@@ -367,7 +372,6 @@ def test_fake_daemon_records_unknown_commands_for_the_fixture_guard(
         _disconnect_client(client)
 
     assert fake_daemon.unknown_commands == ["does-not-exist"]
-    fake_daemon.unknown_commands.clear()
 
 
 def test_fake_daemon_can_drive_real_client_authentication_failure(
@@ -398,41 +402,16 @@ def test_fake_daemon_can_drive_real_client_broken_connection(
 
 
 @pytest.mark.parametrize(
-    ("panel_class", "expected_exprs"),
+    ("expr", "matches"),
     [
-        pytest.param(
-            "nicos_ess.gui.panels.exp_panel.ExpPanel",
-            [
-                "session.experiment.proposal, "
-                "session.experiment.title, "
-                "session.experiment.users, "
-                "session.experiment.localcontact, "
-                "session.experiment.errorbehavior",
-                'session.experiment.propinfo["notif_emails"]',
-                "session.experiment.get_samples()",
-            ],
-            id="exp-panel-bootstrap",
-        ),
-        pytest.param(
-            "nicos_ess.gui.panels.setups.SetupsPanel",
-            [
-                "session.readSetupInfo()",
-                "session.loaded_setups",
-                '{d.name: d.alias for d in session.devices.values() if "alias" in d.parameters}',
-            ],
-            id="setups-panel-bootstrap",
-        ),
+        pytest.param("motor.status", True, id="attr"),
+        pytest.param("motor.read()", True, id="zero-arg-call"),
+        pytest.param("sam_1.get_current_run_number()", True, id="underscores-and-digits"),
+        pytest.param("motor.status(1)", False, id="arg-call"),
+        pytest.param("motor.axis.position", False, id="nested-attr"),
+        pytest.param("motor['status']", False, id="subscription"),
+        pytest.param("1motor.status", False, id="invalid-device-name"),
     ],
 )
-def test_fake_daemon_matches_eval_strings_emitted_during_panel_bootstrap(
-    gui_window_factory,
-    fake_daemon,
-    panel_class,
-    expected_exprs,
-):
-    gui_window_factory(guiconfig=_minimal_guiconfig(panel_class))
-
-    eval_exprs = [args[0] for cmd, args in fake_daemon.command_log if cmd == "eval"]
-
-    for expr in expected_exprs:
-        assert expr in eval_exprs
+def test_direct_device_expr_regex_locks_its_match_scope(expr, matches):
+    assert (_DIRECT_DEVICE_EXPR.match(expr) is not None) is matches

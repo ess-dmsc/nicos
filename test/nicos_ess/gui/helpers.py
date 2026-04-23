@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 import logging
+from dataclasses import dataclass
+from typing import Any, Callable
+
 import pytest
 
 from nicos.guisupport.qt import QApplication
@@ -10,7 +13,55 @@ from nicos.protocols.daemon import STATUS_IDLE, STATUS_RUNNING
 from nicos.utils import importString
 
 
+ESS_TEST_FACILITY = "ess"
+SeedDaemon = Callable[[Any], None]
+
+
+@dataclass(frozen=True)
+class GuiConfigSpec:
+    name: str | None = None
+    text: str | None = None
+
+    def __post_init__(self):
+        if (self.name is None) == (self.text is None):
+            raise ValueError(
+                "GuiConfigSpec requires exactly one of 'name' or 'text'"
+            )
+
+
+@dataclass(frozen=True)
+class StartupCase:
+    case_id: str
+    panel_class: str | type
+    guiconfig: GuiConfigSpec
+    seed_daemon: SeedDaemon | None = None
+
+
+def _validate_guiconfig_value(value: Any) -> None:
+    if value is None or isinstance(value, (str, int, float, bool)):
+        return
+    if isinstance(value, (list, tuple)):
+        for item in value:
+            _validate_guiconfig_value(item)
+        return
+    if isinstance(value, dict):
+        for key, item in value.items():
+            if not isinstance(key, str):
+                raise TypeError(
+                    "GUI test guiconfig kwargs only support string dict keys, "
+                    f"got {type(key).__name__}"
+                )
+            _validate_guiconfig_value(item)
+        return
+    raise TypeError(
+        "GUI test guiconfig kwargs only support literal-safe values, "
+        f"got {type(value).__name__}"
+    )
+
+
 def _minimal_guiconfig(panel_cls, **panel_kwargs):
+    for value in panel_kwargs.values():
+        _validate_guiconfig_value(value)
     panel_args = [repr(panel_cls)]
     panel_args.extend(f"{name}={value!r}" for name, value in panel_kwargs.items())
     if len(panel_args) == 1:
@@ -23,7 +74,7 @@ def _minimal_guiconfig(panel_cls, **panel_kwargs):
         "windows = []\n"
         "tools = []\n"
         'options = {\n'
-        '    "facility": "ess",\n'
+        f'    "facility": "{ESS_TEST_FACILITY}",\n'
         '    "mainwindow_class": "nicos_ess.gui.mainwindow.MainWindow",\n'
         "}\n"
     )
@@ -38,14 +89,17 @@ def panel_case(
     marks=(),
     **panel_kwargs,
 ):
-    guiconfig_text = None
     if guiconfig_name is None:
-        guiconfig_text = _minimal_guiconfig(panel_class, **panel_kwargs)
+        guiconfig = GuiConfigSpec(text=_minimal_guiconfig(panel_class, **panel_kwargs))
+    else:
+        guiconfig = GuiConfigSpec(name=guiconfig_name)
     return pytest.param(
-        guiconfig_name,
-        guiconfig_text,
-        panel_class,
-        seed_daemon,
+        StartupCase(
+            case_id=case_id,
+            panel_class=panel_class,
+            guiconfig=guiconfig,
+            seed_daemon=seed_daemon,
+        ),
         id=case_id,
         marks=marks,
     )
@@ -53,6 +107,8 @@ def panel_case(
 
 def get_panel_by_class(window, panel_class):
     panel_cls = importString(panel_class) if isinstance(panel_class, str) else panel_class
+    # Startup tests are meant to instantiate the requested panel class, not an
+    # arbitrary subclass that happens to satisfy the same interface.
     matches = [panel for panel in window.panels if type(panel) is panel_cls]
     assert len(matches) == 1, (
         f"expected one {panel_cls.__module__}.{panel_cls.__name__} panel, "
@@ -73,7 +129,7 @@ def _assert_no_errors(caplog):
     errors = [record for record in relevant_records if record.levelno >= logging.ERROR]
     assert errors == [], "unexpected GUI log records:\n" + "\n".join(
         f"{record.levelname} {record.name}: {record.getMessage()}"
-        for record in relevant_records
+        for record in errors
     )
 
 
@@ -83,82 +139,39 @@ def _assert_panel_is_alive(window, panel):
     assert window.client.isconnected is True
 
 
-def _build_panel(
-    *,
-    gui_window_factory,
-    gui_window_from_name,
-    fake_daemon,
-    caplog,
-    qtbot,
-    guiconfig_name,
-    guiconfig_text,
-    panel_class,
-    seed_daemon=None,
-):
-    if seed_daemon is not None:
-        seed_daemon(fake_daemon)
-
+def _build_panel(gui_window_from_spec, startup_case, fake_daemon, caplog):
+    if startup_case.seed_daemon is not None:
+        startup_case.seed_daemon(fake_daemon)
     caplog.clear()
-    caplog.set_level(logging.INFO)
-
-    if guiconfig_text is not None:
-        window = gui_window_factory(guiconfig=guiconfig_text)
-    else:
-        window = gui_window_from_name(guiconfig_name)
+    caplog.set_level(logging.ERROR)
+    window = gui_window_from_spec(startup_case.guiconfig)
     QApplication.processEvents()
+    return window, get_panel_by_class(window, startup_case.panel_class)
 
-    return window, get_panel_by_class(window, panel_class)
 
-
-def assert_panel_starts_clean(
-    *,
-    gui_window_factory,
-    gui_window_from_name,
-    fake_daemon,
-    caplog,
-    qtbot,
-    guiconfig_name,
-    guiconfig_text,
-    panel_class,
-    seed_daemon=None,
-):
+def assert_panel_starts_clean(gui_window_from_spec, startup_case, fake_daemon, caplog):
     _, panel = _build_panel(
-        gui_window_factory=gui_window_factory,
-        gui_window_from_name=gui_window_from_name,
+        gui_window_from_spec=gui_window_from_spec,
+        startup_case=startup_case,
         fake_daemon=fake_daemon,
         caplog=caplog,
-        qtbot=qtbot,
-        guiconfig_name=guiconfig_name,
-        guiconfig_text=guiconfig_text,
-        panel_class=panel_class,
-        seed_daemon=seed_daemon,
     )
     _assert_no_errors(caplog)
     return panel
 
 
-def assert_panel_survives_lifecycle_events_cleanly(
-    *,
-    gui_window_factory,
-    gui_window_from_name,
+def assert_panel_survives_minimal_status_transitions(
+    gui_window_from_spec,
+    startup_case,
     fake_daemon,
     caplog,
     qtbot,
-    guiconfig_name,
-    guiconfig_text,
-    panel_class,
-    seed_daemon=None,
 ):
     window, panel = _build_panel(
-        gui_window_factory=gui_window_factory,
-        gui_window_from_name=gui_window_from_name,
+        gui_window_from_spec=gui_window_from_spec,
+        startup_case=startup_case,
         fake_daemon=fake_daemon,
         caplog=caplog,
-        qtbot=qtbot,
-        guiconfig_name=guiconfig_name,
-        guiconfig_text=guiconfig_text,
-        panel_class=panel_class,
-        seed_daemon=seed_daemon,
     )
     _assert_no_errors(caplog)
 

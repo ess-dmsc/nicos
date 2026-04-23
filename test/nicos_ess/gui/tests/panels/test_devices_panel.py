@@ -41,6 +41,7 @@ def test_device_appears_after_connect(gui_window_factory, fake_daemon, qtbot):
             },
         ),
         setup="instrument",
+        load_setup=True,
     )
 
     window = gui_window_factory(guiconfig=guiconfig_text)
@@ -68,6 +69,7 @@ def test_cache_event_updates_panel(gui_window_factory, fake_daemon, qtbot):
             },
         ),
         setup="instrument",
+        load_setup=True,
     )
 
     window = gui_window_factory(guiconfig=guiconfig_text)

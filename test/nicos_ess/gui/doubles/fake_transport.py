@@ -3,6 +3,9 @@
 The real :class:`nicos.clients.gui.client.NicosGuiClient` runs unmodified; only
 the :class:`nicos.clients.base.ClientTransport` it constructs is swapped for
 :class:`FakeClientTransport`, which talks to an in-memory :class:`FakeDaemon`.
+Daemon-side pushes are queued so the real client event thread still emits the
+Qt signals; tests therefore rely on normal Qt event processing rather than a
+fully synchronous shortcut path.
 """
 
 from __future__ import annotations
@@ -23,16 +26,12 @@ from nicos.protocols.daemon.classic import PROTO_VERSION
 _EVENT_SENTINEL = object()
 _NO_REPLY = object()
 _UNKNOWN_EVAL = object()
+_TEST_DIR = Path(__file__).resolve().parents[3]
 
+if not (_TEST_DIR / "runtime_resources.py").is_file():
+    raise RuntimeError(f"could not locate repository test/ directory from {_TEST_DIR}")
 
-def _find_test_dir() -> Path:
-    for parent in Path(__file__).resolve().parents:
-        if parent.name == "test":
-            return parent
-    raise RuntimeError("could not locate repository test/ directory")
-
-
-_GUI_TEST_ROOT = _find_test_dir() / "root"
+_GUI_TEST_ROOT = _TEST_DIR / "root"
 _DIRECT_DEVICE_EXPR = re.compile(
     r"^(?P<dev>[A-Za-z_][A-Za-z0-9_]*)\.(?P<attr>[_A-Za-z0-9]+)(?P<call>\(\))?$"
 )
@@ -41,7 +40,7 @@ _DEFAULT_EVALS = {
     "session.experiment.name": "exp",
     "session.experiment.title": "",
     "session.experiment.proposal": "",
-    "session.experiment.get_current_run_number()": "",
+    "session.experiment.get_current_run_number()": 0,
     "session.experiment.run_title": "",
     "session.experiment.detectors": [],
     "session.experiment.scriptpath": "",
@@ -170,18 +169,29 @@ class FakeDaemon:
     # ------------------------------------------------------------------
     # state setup
 
-    def add_device(self, device: DeviceSpec, *, setup: str | None = None) -> DeviceSpec:
+    def add_device(
+        self,
+        device: DeviceSpec,
+        *,
+        setup: str | None = None,
+        load_setup: bool = False,
+    ) -> DeviceSpec:
+        for existing_name in self.devices:
+            if existing_name != device.name and existing_name.lower() == device.key:
+                raise ValueError(
+                    "add_device() rejects names that collide after lowercasing: "
+                    f"{existing_name!r} vs {device.name!r}"
+                )
         self.devices[device.name] = device
         if setup is not None:
-            self.add_setup(setup)
+            self.add_setup(setup, loaded=load_setup)
             if device.name not in self.setups[setup].devices:
                 self.setups[setup].devices.append(device.name)
-            self.loaded_setups.add(setup)
         for param, value in device.params.items():
             self.cache[f"{device.key}/{param}"] = value
         return device
 
-    def add_setup(self, setup: str | SetupSpec, **kwargs) -> SetupSpec:
+    def add_setup(self, setup: str | SetupSpec, *, loaded: bool = False, **kwargs) -> SetupSpec:
         if isinstance(setup, SetupSpec):
             spec = setup
         else:
@@ -190,7 +200,8 @@ class FakeDaemon:
         if stored is None:
             self.setups[spec.name] = spec
             stored = spec
-        self.loaded_setups.add(stored.name)
+        if loaded:
+            self.loaded_setups.add(stored.name)
         return stored
 
     def set_cache(self, key: str, value: Any) -> None:

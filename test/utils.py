@@ -437,14 +437,14 @@ class TestController(IsController, Moveable):
             if other < adevtarget:
                 return (
                     False,
-                    "dev1 can only move to values smaller than %r" % other,
+                    "dev1 can only move to values smaller" " than %r" % other,
                 )
         if adev == self._attached_dev2:
             other = self._attached_dev1.read()
             if other > adevtarget:
                 return (
                     False,
-                    "dev2 can only move to values greater than %r" % other,
+                    "dev2 can only move to values greater" " than %r" % other,
                 )
         return (True, "Allowed")
 
@@ -453,7 +453,7 @@ class TestController(IsController, Moveable):
 
     def doIsAllowed(self, target):
         if target[0] > target[1]:
-            return (False, "dev1 can only move to values greater than dev2")
+            return (False, "dev1 can only move to values greater" " than dev2")
         return (True, "Allowed")
 
     def doStart(self, target):
@@ -651,7 +651,8 @@ def startElog(wait=2):
             raise Exception(
                 "elog failed to start within %s sec\n"
                 "----- tail of cacheserver.log -----\n%s\n"
-                "----- tail of elog.log -----\n%s" % (wait, cache_tail, elog_tail)
+                "----- tail of elog.log -----\n%s"
+                % (wait, cache_tail, elog_tail)
             )
 
     return startSubprocess("elog", wait_cb=elog_wait_cb)

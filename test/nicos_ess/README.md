@@ -290,18 +290,18 @@ interfaces change.
 
 ## Running Tests
 
-Run from your active Python environment:
+From the workspace, prefer the package-scoped uv command:
 
 ```bash
-pytest -q test/nicos_ess
+uv run --package nicos_ess pytest -q test/nicos_ess
 ```
 
 Targeted runs:
 
 ```bash
-uv run pytest -q test/nicos_ess/gui
-pytest -q test/nicos_ess/test_devices/epics_devices/
-pytest -q test/nicos_ess/test_devices/test_forwarder.py
+uv run --package nicos_ess pytest -q test/nicos_ess/gui
+uv run --package nicos_ess pytest -q test/nicos_ess/test_devices/epics_devices/
+uv run --package nicos_ess pytest -q test/nicos_ess/test_devices/test_forwarder.py
 ```
 
 Use `--confcutdir=test/nicos_ess/` option make pytest ignore conftest files outside of nicos_ess.

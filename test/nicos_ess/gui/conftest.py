@@ -32,13 +32,13 @@ _IGNORED_QT_MESSAGE_PATTERNS = (
     r"QPlatformNativeInterface::systemTrayWindowChanged\(QScreen\*\)$",
     r"^This plugin does not support propagateSizeHints\(\)$",
 )
-_ORIGINAL_QT_QPA_PLATFORM = None
 
 
 @pytest.hookimpl(tryfirst=True)
 def pytest_configure(config):
-    global _ORIGINAL_QT_QPA_PLATFORM
-    _ORIGINAL_QT_QPA_PLATFORM = os.environ.get("QT_QPA_PLATFORM")
+    # This must happen before pytest-qt creates the QApplication. The mutation
+    # is process-local to the pytest run, so best-effort restoration is enough.
+    config._nicos_original_qt_qpa_platform = os.environ.get("QT_QPA_PLATFORM")
     os.environ["QT_QPA_PLATFORM"] = "offscreen"
 
     for pattern in _IGNORED_QT_MESSAGE_PATTERNS:
@@ -46,11 +46,13 @@ def pytest_configure(config):
 
 
 def pytest_unconfigure(config):
-    del config
-    if _ORIGINAL_QT_QPA_PLATFORM is None:
+    original_qt_qpa_platform = getattr(
+        config, "_nicos_original_qt_qpa_platform", None
+    )
+    if original_qt_qpa_platform is None:
         os.environ.pop("QT_QPA_PLATFORM", None)
     else:
-        os.environ["QT_QPA_PLATFORM"] = _ORIGINAL_QT_QPA_PLATFORM
+        os.environ["QT_QPA_PLATFORM"] = original_qt_qpa_platform
 
 
 def _resolve_guiconfig_path(guiconfig_name: str) -> Path:
@@ -83,6 +85,25 @@ def _event_thread_stopped(thread) -> bool:
     return not thread.is_alive()
 
 
+def _raise_teardown_errors(teardown_errors):
+    primary_error = teardown_errors[0]
+    current_error = primary_error
+    for extra_error in teardown_errors[1:]:
+        current_error.__context__ = extra_error
+        current_error = extra_error
+    raise RuntimeError(
+        f"GUI window teardown failed with {len(teardown_errors)} error(s)"
+    ) from primary_error
+
+
+def _stop_active_timers(widget) -> None:
+    from nicos.guisupport.qt import QTimer
+
+    for timer in widget.findChildren(QTimer):
+        if timer.isActive():
+            timer.stop()
+
+
 @pytest.fixture
 def fake_daemon():
     return FakeDaemon()
@@ -93,8 +114,8 @@ def gui_runtime_resources():
     ensure_runtime_resources(RESOURCES_DIR, TEST_ROOT / "resources")
 
 
-@pytest.fixture(autouse=True)
-def assert_fake_daemon_contract(fake_daemon):
+@pytest.fixture
+def strict_fake_daemon(fake_daemon):
     yield
     assert fake_daemon.unknown_evals == []
     assert fake_daemon.unknown_commands == []
@@ -147,9 +168,11 @@ def gui_window_factory(monkeypatch, qtbot, fake_daemon):
 
         mainwindow_cls = importString(config.options["mainwindow_class"])
         mainwindow_log = NicosLogger("mainwindow")
-        # Route the NICOS GUI logger tree into Python's root logger so pytest's
-        # caplog can observe warnings and errors emitted by panels and the client.
+        # MainWindow uses NICOS logger helpers such as error(..., exc=...), so
+        # this must stay a NicosLogger. Parent it into the stdlib logging tree
+        # so pytest's caplog can still observe GUI warnings and errors.
         mainwindow_log.parent = logging.getLogger()
+        mainwindow_log.propagate = True
         window = mainwindow_cls(mainwindow_log, config)
         window.autoconnect = False
         window.confirmexit = False
@@ -180,6 +203,7 @@ def gui_window_factory(monkeypatch, qtbot, fake_daemon):
             teardown_errors.append(err)
         finally:
             try:
+                _stop_active_timers(window)
                 # The real MainWindow.closeEvent() quits the shared QApplication,
                 # which breaks subsequent pytest-qt tests in the same session.
                 window.hide()
@@ -189,7 +213,29 @@ def gui_window_factory(monkeypatch, qtbot, fake_daemon):
 
     QApplication.processEvents()
     if teardown_errors:
-        raise ExceptionGroup("GUI window teardown failed", teardown_errors)
+        _raise_teardown_errors(teardown_errors)
+
+
+@pytest.fixture(autouse=True)
+def suppress_modal_message_boxes(monkeypatch):
+    from nicos.guisupport.qt import QMessageBox
+
+    monkeypatch.setattr(
+        "nicos.guisupport.qt.QMessageBox.warning",
+        lambda *args, **kwargs: QMessageBox.StandardButton.Ok,
+    )
+    monkeypatch.setattr(
+        "nicos.guisupport.qt.QMessageBox.critical",
+        lambda *args, **kwargs: QMessageBox.StandardButton.Ok,
+    )
+    monkeypatch.setattr(
+        "nicos.guisupport.qt.QMessageBox.information",
+        lambda *args, **kwargs: QMessageBox.StandardButton.Ok,
+    )
+    monkeypatch.setattr(
+        "nicos.guisupport.qt.QMessageBox.question",
+        lambda *args, **kwargs: QMessageBox.StandardButton.Yes,
+    )
 
 
 @pytest.fixture
@@ -208,6 +254,16 @@ def gui_window(gui_window_factory, request):
 def gui_window_from_name(gui_window_factory):
     def _build(guiconfig_name):
         return gui_window_factory(guiconfig_path=_resolve_guiconfig_path(guiconfig_name))
+
+    return _build
+
+
+@pytest.fixture
+def gui_window_from_spec(gui_window_factory):
+    def _build(guiconfig):
+        if guiconfig.text is not None:
+            return gui_window_factory(guiconfig=guiconfig.text)
+        return gui_window_factory(guiconfig_path=_resolve_guiconfig_path(guiconfig.name))
 
     return _build
 
