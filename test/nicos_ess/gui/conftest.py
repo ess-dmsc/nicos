@@ -160,6 +160,14 @@ def gui_window(gui_window_factory, guiconfig_path):
 
 
 @pytest.fixture
+def gui_window_from_name(gui_window_factory):
+    def _build(guiconfig_name):
+        return gui_window_factory(guiconfig_path=_resolve_guiconfig_path(guiconfig_name))
+
+    return _build
+
+
+@pytest.fixture
 def gui_panel(gui_window, panel_name, guiconfig_name):
     if panel_name is None:
         raise ValueError(

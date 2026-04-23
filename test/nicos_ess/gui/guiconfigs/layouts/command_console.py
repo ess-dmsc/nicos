@@ -1,4 +1,4 @@
-"""Small multi-panel layout used to smoke-test shared panel wiring."""
+"""Small multi-panel layout used to exercise shared panel wiring."""
 
 main_window = vbox(
     panel("nicos_ess.gui.panels.cmdbuilder.CommandPanel"),

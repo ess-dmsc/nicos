@@ -1,4 +1,4 @@
-"""Layout smoke tests for shared ESS GUI panel wiring."""
+"""Layout startup tests for shared ESS GUI panel wiring."""
 
 from __future__ import annotations
 

@@ -9,7 +9,9 @@ from __future__ import annotations
 
 import ast
 import queue
+import re
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
 from nicos.core import MASTER
@@ -21,12 +23,32 @@ from nicos.protocols.daemon.classic import PROTO_VERSION
 _EVENT_SENTINEL = object()
 _NO_REPLY = object()
 _UNKNOWN_EVAL = object()
+_GUI_TEST_ROOT = Path(__file__).resolve().parents[4] / "test" / "root"
+_DIRECT_DEVICE_EXPR = re.compile(
+    r"^(?P<dev>[A-Za-z_][A-Za-z0-9_]*)\.(?P<attr>[_A-Za-z0-9]+)(?P<call>\(\))?$"
+)
 _DEFAULT_EVALS = {
     "session.instrument": "",
+    "session.experiment.name": "exp",
     "session.experiment.title": "",
     "session.experiment.proposal": "",
     "session.experiment.get_current_run_number()": "",
     "session.experiment.run_title": "",
+    "session.experiment.detectors": [],
+    "session.experiment.scriptpath": "",
+    "session.experiment._canQueryProposals()": False,
+    'session.experiment.propinfo["notif_emails"]': [],
+    "session.experiment.get_samples()": [],
+    "session.experiment.proposal, "
+    "session.experiment.title, "
+    "session.experiment.users, "
+    "session.experiment.localcontact, "
+    "session.experiment.errorbehavior": ("", "", [], [], "abort"),
+    "session.loaded_setups": set(),
+    "session.spMode": False,
+    "session.alias_config": {},
+    "config.nicos_root": str(_GUI_TEST_ROOT),
+    "config.logging_path": "log",
 }
 
 
@@ -47,6 +69,7 @@ class SetupSpec:
     name: str
     description: str = ""
     display_order: int = 50
+    group: str = "optional"
     devices: list[str] = field(default_factory=list)
     extended: dict[str, Any] = field(default_factory=dict)
 
@@ -56,6 +79,15 @@ class SetupSpec:
             "devices": list(self.devices),
             "display_order": self.display_order,
             "extended": dict(self.extended),
+        }
+
+    def as_read_setup_info(self) -> dict[str, Any]:
+        return {
+            "description": self.description,
+            "devices": list(self.devices),
+            "display_order": self.display_order,
+            "extended": dict(self.extended),
+            "group": self.group,
         }
 
 
@@ -204,7 +236,7 @@ class FakeDaemon:
 
         if cmd == "authenticate":
             return True, {"user_level": self.user_level}
-        if cmd in {"eventmask", "keepalive", "quit"}:
+        if cmd in {"eventmask", "eventunmask", "keepalive", "quit"}:
             return True, None
         if cmd == "getstatus":
             return True, self._status()
@@ -229,6 +261,7 @@ class FakeDaemon:
             "devices": [spec.name for spec in self.devices.values()],
             "devicefailures": {},
             "setups": (sorted(self.loaded_setups), sorted(self.setups)),
+            "script": "",
             "status": self.status,
             "mode": self.mode,
             "requests": [],
@@ -267,12 +300,30 @@ class FakeDaemon:
             return value() if callable(value) else value
         if expr in _DEFAULT_EVALS:
             return _DEFAULT_EVALS[expr]
+        if expr == "session.devices":
+            return {spec.name: spec for spec in self.devices.values()}
         if expr == "session.getSetupInfo()":
             return {name: spec.as_setup_info() for name, spec in self.setups.items()}
+        if expr == "session.readSetupInfo()":
+            return {
+                name: spec.as_read_setup_info() for name, spec in self.setups.items()
+            }
+        if (
+            expr
+            == '{d.name: d.alias for d in session.devices.values() if "alias" in d.parameters}'
+        ):
+            return {
+                spec.name: spec.params["alias"]
+                for spec in self.devices.values()
+                if "alias" in spec.params
+            }
         if ".pollParams(" in expr and expr.endswith(")"):
             return None
 
         value = self._eval_param_info(expr)
+        if value is not _UNKNOWN_EVAL:
+            return value
+        value = self._eval_device_list_expr(expr)
         if value is not _UNKNOWN_EVAL:
             return value
         value = self._eval_device_expr(expr)
@@ -293,6 +344,25 @@ class FakeDaemon:
             return {}
         return dict(device.param_info)
 
+    def _eval_device_list_expr(self, expr: str) -> list[str] | object:
+        prefix = "list(dn for (dn, d) in session.devices.items() if "
+        if not expr.startswith(prefix) or not expr.endswith(")"):
+            return _UNKNOWN_EVAL
+
+        conditions = expr[len(prefix) : -1]
+        required_classes = re.findall(r"'([^']+)' in d\\.classes", conditions)
+        excluded_classes = re.findall(r"'([^']+)' not in d\\.classes", conditions)
+
+        result = []
+        for spec in self.devices.values():
+            classes = set(spec.params.get("classes", []))
+            if any(req not in classes for req in required_classes):
+                continue
+            if any(exc in classes for exc in excluded_classes):
+                continue
+            result.append(spec.name)
+        return result
+
     def _eval_device_expr(self, expr: str) -> Any:
         lookups = {
             ").classes": lambda device: list(device.params.get("classes", [])),
@@ -304,6 +374,30 @@ class FakeDaemon:
             device = self._device_from_expr(expr, "session.getDevice(", suffix)
             if device is not None:
                 return lookup(device)
+        direct_value = self._eval_direct_device_expr(expr)
+        if direct_value is not _UNKNOWN_EVAL:
+            return direct_value
+        return _UNKNOWN_EVAL
+
+    def _eval_direct_device_expr(self, expr: str) -> Any:
+        match = _DIRECT_DEVICE_EXPR.match(expr)
+        if match is None:
+            return _UNKNOWN_EVAL
+
+        device = self.devices.get(match.group("dev").lower())
+        if device is None:
+            return _UNKNOWN_EVAL
+
+        attr = match.group("attr")
+        if match.group("call"):
+            if attr == "read":
+                return device.params.get("value")
+            if attr == "poll":
+                return None
+            if f"{attr}()" in device.params:
+                return device.params[f"{attr}()"]
+        if attr in device.params:
+            return device.params[attr]
         return _UNKNOWN_EVAL
 
     def _device_from_expr(
