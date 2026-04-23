@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import logging
 import os
-import shutil
 from pathlib import Path
 
 import pytest
@@ -21,6 +20,8 @@ from nicos.utils import importString
 from nicos.utils.loggers import NicosLogger
 
 from test.nicos_ess.gui.doubles import FakeClientTransport, FakeDaemon
+from test.nicos_ess.gui.helpers import get_panel_by_class
+from test.runtime_resources import ensure_runtime_resources
 
 
 GUICONFIGS_DIR = Path(__file__).with_name("guiconfigs").resolve()
@@ -56,14 +57,30 @@ def _resolve_guiconfig_path(guiconfig_name: str) -> Path:
     if not isinstance(guiconfig_name, str) or not guiconfig_name:
         raise ValueError(
             "GUI test guiconfig_name must be a non-empty relative path, "
-            "for example 'panels/devices.py'"
+            "for example 'layouts/command_console.py'"
         )
     guiconfig_path = (GUICONFIGS_DIR / guiconfig_name).resolve()
+    try:
+        guiconfig_path.relative_to(GUICONFIGS_DIR)
+    except ValueError as err:
+        raise ValueError(
+            f"GUI test guiconfig_name must stay inside {GUICONFIGS_DIR}: "
+            f"{guiconfig_name!r}"
+        ) from err
     if not guiconfig_path.is_file():
         raise FileNotFoundError(
             f"GUI test guiconfig not found: {guiconfig_name!r} -> {guiconfig_path}"
         )
     return guiconfig_path
+
+
+def _event_thread_stopped(thread) -> bool:
+    from nicos.guisupport.qt import QApplication
+
+    # FakeClientTransport.disconnect() interrupts recv_event(), but the thread
+    # may still be finishing a queued Qt signal delivery from an earlier event.
+    QApplication.processEvents()
+    return not thread.is_alive()
 
 
 @pytest.fixture
@@ -73,19 +90,14 @@ def fake_daemon():
 
 @pytest.fixture(scope="session", autouse=True)
 def gui_runtime_resources():
-    dst = TEST_ROOT / "resources"
-    if dst.exists() or dst.is_symlink():
-        return
-    try:
-        dst.symlink_to(RESOURCES_DIR, target_is_directory=True)
-    except OSError:
-        shutil.copytree(RESOURCES_DIR, dst)
+    ensure_runtime_resources(RESOURCES_DIR, TEST_ROOT / "resources")
 
 
 @pytest.fixture(autouse=True)
 def assert_fake_daemon_contract(fake_daemon):
     yield
     assert fake_daemon.unknown_evals == []
+    assert fake_daemon.unknown_commands == []
 
 
 @pytest.fixture
@@ -99,6 +111,11 @@ def panel_name(request):
 
 
 @pytest.fixture
+def panel_class(request):
+    return getattr(request.module, "panel_class", None)
+
+
+@pytest.fixture
 def guiconfig_path(guiconfig_name):
     return _resolve_guiconfig_path(guiconfig_name)
 
@@ -109,16 +126,21 @@ def gui_window_factory(monkeypatch, qtbot, fake_daemon):
 
     windows = []
 
-    def _build(*, guiconfig_path):
-        if guiconfig_path is None:
-            raise ValueError("pass guiconfig_path to gui_window_factory()")
+    def _build(*, guiconfig_path=None, guiconfig=None):
+        if (guiconfig_path is None) == (guiconfig is None):
+            raise ValueError(
+                "pass exactly one of guiconfig_path or guiconfig to "
+                "gui_window_factory()"
+            )
 
         monkeypatch.setattr(
             "nicos.clients.base.ClientTransport",
             lambda: FakeClientTransport(fake_daemon),
         )
 
-        config_source = Path(guiconfig_path).read_text()
+        config_source = guiconfig
+        if guiconfig_path is not None:
+            config_source = Path(guiconfig_path).read_text()
         config = processGuiConfig(config_source.strip())
         # Keep GUI tests independent from optional stylesheet/resource lookup.
         config.stylefile = ""
@@ -143,25 +165,43 @@ def gui_window_factory(monkeypatch, qtbot, fake_daemon):
 
     yield _build
 
+    teardown_errors = []
     for window in windows:
-        if window.client.isconnected:
-            window.client.disconnect()
-            qtbot.waitUntil(lambda w=window: not w.client.isconnected, timeout=2000)
         thread = getattr(window.client, "event_thread", None)
-        if thread is not None:
-            thread.join(timeout=1.0)
-            assert not thread.is_alive()
-        # The real MainWindow.closeEvent() quits the shared QApplication,
-        # which breaks subsequent pytest-qt tests in the same session.
-        window.hide()
-        window.deleteLater()
+        try:
+            if window.client.isconnected:
+                window.client.disconnect()
+                qtbot.waitUntil(lambda w=window: not w.client.isconnected, timeout=2000)
+            if thread is not None:
+                qtbot.waitUntil(
+                    lambda t=thread: _event_thread_stopped(t), timeout=2000
+                )
+        except Exception as err:
+            teardown_errors.append(err)
+        finally:
+            try:
+                # The real MainWindow.closeEvent() quits the shared QApplication,
+                # which breaks subsequent pytest-qt tests in the same session.
+                window.hide()
+                window.deleteLater()
+            except Exception as err:
+                teardown_errors.append(err)
 
     QApplication.processEvents()
+    if teardown_errors:
+        raise ExceptionGroup("GUI window teardown failed", teardown_errors)
 
 
 @pytest.fixture
-def gui_window(gui_window_factory, guiconfig_path):
-    return gui_window_factory(guiconfig_path=guiconfig_path)
+def gui_window(gui_window_factory, request):
+    guiconfig = getattr(request.module, "guiconfig_text", None)
+    if guiconfig is not None:
+        return gui_window_factory(guiconfig=guiconfig)
+    return gui_window_factory(
+        guiconfig_path=_resolve_guiconfig_path(
+            getattr(request.module, "guiconfig_name", "base.py")
+        )
+    )
 
 
 @pytest.fixture
@@ -173,10 +213,12 @@ def gui_window_from_name(gui_window_factory):
 
 
 @pytest.fixture
-def gui_panel(gui_window, panel_name, guiconfig_name):
+def gui_panel(gui_window, panel_name, panel_class, guiconfig_name):
+    if panel_class is not None:
+        return get_panel_by_class(gui_window, panel_class)
     if panel_name is None:
         raise ValueError(
-            "gui_panel requires module-level panel_name, "
+            "gui_panel requires module-level panel_class or panel_name, "
             f"for example in tests using {guiconfig_name!r}"
         )
     panel = gui_window.getPanel(panel_name)

@@ -23,7 +23,16 @@ from nicos.protocols.daemon.classic import PROTO_VERSION
 _EVENT_SENTINEL = object()
 _NO_REPLY = object()
 _UNKNOWN_EVAL = object()
-_GUI_TEST_ROOT = Path(__file__).resolve().parents[4] / "test" / "root"
+
+
+def _find_test_dir() -> Path:
+    for parent in Path(__file__).resolve().parents:
+        if parent.name == "test":
+            return parent
+    raise RuntimeError("could not locate repository test/ directory")
+
+
+_GUI_TEST_ROOT = _find_test_dir() / "root"
 _DIRECT_DEVICE_EXPR = re.compile(
     r"^(?P<dev>[A-Za-z_][A-Za-z0-9_]*)\.(?P<attr>[_A-Za-z0-9]+)(?P<call>\(\))?$"
 )
@@ -44,7 +53,6 @@ _DEFAULT_EVALS = {
     "session.experiment.users, "
     "session.experiment.localcontact, "
     "session.experiment.errorbehavior": ("", "", [], [], "abort"),
-    "session.loaded_setups": set(),
     "session.spMode": False,
     "session.alias_config": {},
     "config.nicos_root": str(_GUI_TEST_ROOT),
@@ -71,6 +79,12 @@ class SetupSpec:
     display_order: int = 50
     group: str = "optional"
     devices: list[str] = field(default_factory=list)
+    includes: list[str] = field(default_factory=list)
+    excludes: list[str] = field(default_factory=list)
+    modules: list[str] = field(default_factory=list)
+    alias_config: dict[str, dict[str, Any]] = field(default_factory=dict)
+    startupcode: str = ""
+    sysconfig: dict[str, Any] = field(default_factory=dict)
     extended: dict[str, Any] = field(default_factory=dict)
 
     def as_setup_info(self) -> dict[str, Any]:
@@ -81,11 +95,24 @@ class SetupSpec:
             "extended": dict(self.extended),
         }
 
-    def as_read_setup_info(self) -> dict[str, Any]:
+    def as_read_setup_info(self, devices: dict[str, DeviceSpec]) -> dict[str, Any]:
+        read_devices = {}
+        for devname in self.devices:
+            device = devices.get(devname)
+            visibility = ("devlist",)
+            if device is not None:
+                visibility = device.params.get("visibility", visibility)
+            read_devices[devname] = ("", {"visibility": visibility})
         return {
             "description": self.description,
-            "devices": list(self.devices),
+            "devices": read_devices,
             "display_order": self.display_order,
+            "includes": list(self.includes),
+            "excludes": list(self.excludes),
+            "modules": list(self.modules),
+            "alias_config": dict(self.alias_config),
+            "startupcode": self.startupcode,
+            "sysconfig": dict(self.sysconfig),
             "extended": dict(self.extended),
             "group": self.group,
         }
@@ -108,14 +135,18 @@ class FakeDaemon:
         self.setups: dict[str, SetupSpec] = {}
         self.loaded_setups: set[str] = set()
         self.cache: dict[str, Any] = {}
+        self.datasets: list[Any] = []
         self.status: tuple = (STATUS_IDLE, -1)
         self.mode = MASTER
         self.eval_table: dict[str, Any] = {}
         self.messages: list[tuple] = []
         self.completions: dict[tuple[str, str], list[str]] = {}
         self.command_log: list[tuple[str, tuple]] = []
-        self.command_failures: dict[str, tuple[bool, Any] | BaseException] = {}
+        self.command_replies: dict[str, tuple[bool, Any]] = {}
+        self.command_exceptions: dict[str, BaseException] = {}
         self.unknown_evals: list[str] = []
+        self.unknown_commands: list[str] = []
+        # Request ids are local to one fake daemon instance.
         self._next_request_id = 1
         self._transports: list["FakeClientTransport"] = []
 
@@ -140,7 +171,7 @@ class FakeDaemon:
     # state setup
 
     def add_device(self, device: DeviceSpec, *, setup: str | None = None) -> DeviceSpec:
-        self.devices[device.key] = device
+        self.devices[device.name] = device
         if setup is not None:
             self.add_setup(setup)
             if device.name not in self.setups[setup].devices:
@@ -167,7 +198,7 @@ class FakeDaemon:
         self.cache[key] = value
         if "/" in key:
             devkey, param = key.split("/", 1)
-            dev = self.devices.get(devkey)
+            dev = self._get_device(devkey)
             if dev is not None:
                 dev.params[param] = value
 
@@ -177,6 +208,14 @@ class FakeDaemon:
 
     def set_completion(self, fullstring: str, lastword: str, replies: list[str]) -> None:
         self.completions[(fullstring, lastword)] = list(replies)
+
+    def fail_with(self, cmd: str, reply: tuple[bool, Any]) -> None:
+        self.command_replies[cmd] = reply
+        self.command_exceptions.pop(cmd, None)
+
+    def raise_on(self, cmd: str, exc: BaseException) -> None:
+        self.command_exceptions[cmd] = exc
+        self.command_replies.pop(cmd, None)
 
     # ------------------------------------------------------------------
     # event push helpers (tests drive these)
@@ -194,6 +233,12 @@ class FakeDaemon:
 
     def push_setup(self, loaded: list[str] | None = None) -> None:
         if loaded is not None:
+            unknown_setups = sorted(set(loaded) - set(self.setups))
+            if unknown_setups:
+                raise ValueError(
+                    "push_setup() references unknown setups: "
+                    + ", ".join(repr(name) for name in unknown_setups)
+                )
             self.loaded_setups = set(loaded)
         lists = (sorted(self.loaded_setups), sorted(self.setups.keys()))
         self._push_event("setup", lists)
@@ -228,11 +273,13 @@ class FakeDaemon:
     def handle(self, cmd: str, args: tuple) -> tuple[bool, Any]:
         self.command_log.append((cmd, args))
 
-        failure = self.command_failures.get(cmd)
+        failure = self.command_replies.get(cmd)
         if failure is not None:
-            if isinstance(failure, BaseException):
-                raise failure
             return failure
+
+        exception = self.command_exceptions.get(cmd)
+        if exception is not None:
+            raise exception
 
         if cmd == "authenticate":
             return True, {"user_level": self.user_level}
@@ -242,6 +289,8 @@ class FakeDaemon:
             return True, self._status()
         if cmd == "getcachekeys":
             return True, self._cache_keys(args[0])
+        if cmd == "getdataset":
+            return True, self._dataset(args[0])
         if cmd == "getmessages":
             return True, self._messages(args[0])
         if cmd == "complete":
@@ -254,6 +303,7 @@ class FakeDaemon:
             return True, value
         if cmd in {"queue", "start"}:
             return True, self._next_request()
+        self.unknown_commands.append(cmd)
         return False, f"unknown command: {cmd}"
 
     def _status(self) -> dict[str, Any]:
@@ -291,6 +341,14 @@ class FakeDaemon:
             return []
         return list(self.messages[-count:])
 
+    def _dataset(self, index: str | int) -> list[Any] | Any | None:
+        if index == "*":
+            return list(self.datasets)
+        try:
+            return self.datasets[int(index)]
+        except (TypeError, ValueError, IndexError):
+            return None
+
     def _complete(self, fullstring: str, lastword: str) -> list[str]:
         return list(self.completions.get((fullstring, lastword), []))
 
@@ -298,15 +356,18 @@ class FakeDaemon:
         if expr in self.eval_table:
             value = self.eval_table[expr]
             return value() if callable(value) else value
+        if expr == "session.loaded_setups":
+            return set(self.loaded_setups)
         if expr in _DEFAULT_EVALS:
             return _DEFAULT_EVALS[expr]
         if expr == "session.devices":
-            return {spec.name: spec for spec in self.devices.values()}
+            return dict(self.devices)
         if expr == "session.getSetupInfo()":
             return {name: spec.as_setup_info() for name, spec in self.setups.items()}
         if expr == "session.readSetupInfo()":
             return {
-                name: spec.as_read_setup_info() for name, spec in self.setups.items()
+                name: spec.as_read_setup_info(self.devices)
+                for name, spec in self.setups.items()
             }
         if (
             expr
@@ -339,7 +400,7 @@ class FakeDaemon:
         devname = self._expr_arg(expr, prefix, suffix)
         if devname is _UNKNOWN_EVAL:
             return _UNKNOWN_EVAL
-        device = self.devices.get(devname.lower())
+        device = self._get_device(devname)
         if device is None:
             return {}
         return dict(device.param_info)
@@ -350,17 +411,17 @@ class FakeDaemon:
             return _UNKNOWN_EVAL
 
         conditions = expr[len(prefix) : -1]
-        required_classes = re.findall(r"'([^']+)' in d\\.classes", conditions)
-        excluded_classes = re.findall(r"'([^']+)' not in d\\.classes", conditions)
+        required_classes = re.findall(r"'([^']+)' in d\.classes", conditions)
+        excluded_classes = re.findall(r"'([^']+)' not in d\.classes", conditions)
 
         result = []
-        for spec in self.devices.values():
+        for devname, spec in self.devices.items():
             classes = set(spec.params.get("classes", []))
             if any(req not in classes for req in required_classes):
                 continue
             if any(exc in classes for exc in excluded_classes):
                 continue
-            result.append(spec.name)
+            result.append(devname)
         return result
 
     def _eval_device_expr(self, expr: str) -> Any:
@@ -384,7 +445,7 @@ class FakeDaemon:
         if match is None:
             return _UNKNOWN_EVAL
 
-        device = self.devices.get(match.group("dev").lower())
+        device = self._get_device(match.group("dev"))
         if device is None:
             return _UNKNOWN_EVAL
 
@@ -406,7 +467,18 @@ class FakeDaemon:
         devname = self._expr_arg(expr, prefix, suffix)
         if devname is _UNKNOWN_EVAL:
             return None
-        return self.devices.get(devname.lower())
+        return self._get_device(devname)
+
+    def _get_device(self, devname: str) -> DeviceSpec | None:
+        device = self.devices.get(devname)
+        if device is not None:
+            return device
+        matches = [
+            spec for name, spec in self.devices.items() if name.lower() == devname.lower()
+        ]
+        if len(matches) == 1:
+            return matches[0]
+        return None
 
     def _expr_arg(self, expr: str, prefix: str, suffix: str) -> str | object:
         if not expr.startswith(prefix) or not expr.endswith(suffix):

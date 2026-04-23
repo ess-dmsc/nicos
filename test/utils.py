@@ -58,6 +58,7 @@ from nicos.devices.notifiers import Mailer
 from nicos.services.cache.database import FlatfileCacheDatabase
 from nicos.utils import closeSocket, createSubprocess, tcpSocket
 from nicos.utils.loggers import ACTION, NicosLogger
+from test.runtime_resources import ensure_runtime_resources
 
 # The NICOS checkout directory, where to find modules.
 module_root = path.normpath(path.join(path.dirname(__file__), ".."))
@@ -80,16 +81,6 @@ config.group = None
 config.nicos_root = runtime_root
 config.pid_path = path.join(runtime_root, "pid")
 config.logging_path = path.join(runtime_root, "log")
-
-
-def _setup_runtime_resources():
-    src = path.join(module_root, "resources")
-    dst = path.join(runtime_root, "resources")
-    try:
-        os.symlink(src, dst, target_is_directory=True)
-    except (AttributeError, NotImplementedError, OSError):
-        shutil.copytree(src, dst)
-
 
 def raises(exc, *args, **kwds):
     pytest.raises(exc, *args, **kwds)
@@ -541,7 +532,10 @@ def cleanup():
     os.mkdir(path.join(runtime_root, "cache"))
     os.mkdir(path.join(runtime_root, "pid"))
     os.mkdir(path.join(runtime_root, "bin"))
-    _setup_runtime_resources()
+    ensure_runtime_resources(
+        path.join(module_root, "resources"),
+        path.join(runtime_root, "resources"),
+    )
     shutil.copy(
         path.join(module_root, "test", "bin", "simulate"),
         path.join(runtime_root, "bin", "nicos-simulate"),

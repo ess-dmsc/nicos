@@ -20,6 +20,7 @@ from nicos.protocols.daemon import ClientTransport as BaseClientTransport, STATU
 from nicos.protocols.daemon.classic import PROTO_VERSION
 
 from test.nicos_ess.gui.doubles import DeviceSpec, FakeClientTransport
+from test.nicos_ess.gui.helpers import _minimal_guiconfig
 
 
 class RecordingClient(NicosClient):
@@ -177,6 +178,83 @@ def test_fake_daemon_satisfies_the_gui_device_query_contract(
         _disconnect_client(client)
 
 
+def test_fake_daemon_filters_device_lists_using_the_real_client_query(
+    monkeypatch, fake_daemon
+):
+    fake_daemon.add_device(
+        DeviceSpec(
+            name="motor",
+            valuetype=float,
+            params={"classes": ["nicos.core.device.Moveable"]},
+        )
+    )
+    fake_daemon.add_device(
+        DeviceSpec(
+            name="axis",
+            valuetype=float,
+            params={
+                "classes": [
+                    "nicos.core.device.Moveable",
+                    "nicos.core.device.HiddenDevice",
+                ]
+            },
+        )
+    )
+    fake_daemon.add_device(
+        DeviceSpec(
+            name="sample",
+            valuetype=str,
+            params={"classes": ["nicos.core.device.Readable"]},
+        )
+    )
+
+    client = _connect_client(monkeypatch, fake_daemon)
+    try:
+        assert client.getDeviceList(
+            "nicos.core.device.Moveable",
+            only_explicit=False,
+            exclude_class="nicos.core.device.HiddenDevice",
+        ) == ["motor"]
+    finally:
+        _disconnect_client(client)
+
+
+def test_fake_daemon_returns_updated_loaded_setups_after_pushes(
+    monkeypatch, fake_daemon
+):
+    fake_daemon.add_setup("instrument")
+    fake_daemon.add_setup("beamline")
+
+    client = _connect_client(monkeypatch, fake_daemon, eventmask=("setup",))
+    try:
+        fake_daemon.push_setup(["beamline"])
+        _wait_until(lambda: _event_payloads(client, "setup") == [(["beamline"], ["beamline", "instrument"])])
+
+        assert client.eval("session.loaded_setups", set()) == {"beamline"}
+    finally:
+        _disconnect_client(client)
+
+
+def test_fake_daemon_rejects_push_setup_for_unknown_setups(fake_daemon):
+    with pytest.raises(ValueError, match="unknown setups"):
+        fake_daemon.push_setup(["missing"])
+
+
+def test_fake_daemon_preserves_case_distinct_session_devices(
+    monkeypatch, fake_daemon
+):
+    fake_daemon.add_device(DeviceSpec(name="sam", valuetype=float))
+    fake_daemon.add_device(DeviceSpec(name="SAM", valuetype=float))
+
+    client = _connect_client(monkeypatch, fake_daemon)
+    try:
+        devices = client.eval("session.devices", {})
+    finally:
+        _disconnect_client(client)
+
+    assert sorted(devices) == ["SAM", "sam"]
+
+
 def test_fake_daemon_supports_console_backlog_and_completion_queries(
     monkeypatch, fake_daemon
 ):
@@ -188,6 +266,7 @@ def test_fake_daemon_supports_console_backlog_and_completion_queries(
     client = _connect_client(monkeypatch, fake_daemon)
     try:
         assert client.ask("getstatus")["mode"] == MAINTENANCE
+        assert client.ask("getdataset", "*") == []
         assert client.ask("getmessages", "10000") == [backlog]
         assert client.ask("complete", "move sam", "sam") == ["sample"]
     finally:
@@ -278,10 +357,23 @@ def test_fake_daemon_records_unknown_eval_expressions_for_the_fixture_guard(
     fake_daemon.unknown_evals.clear()
 
 
+def test_fake_daemon_records_unknown_commands_for_the_fixture_guard(
+    monkeypatch, fake_daemon
+):
+    client = _connect_client(monkeypatch, fake_daemon)
+    try:
+        assert client.ask("does-not-exist", default="fallback") == "fallback"
+    finally:
+        _disconnect_client(client)
+
+    assert fake_daemon.unknown_commands == ["does-not-exist"]
+    fake_daemon.unknown_commands.clear()
+
+
 def test_fake_daemon_can_drive_real_client_authentication_failure(
     monkeypatch, fake_daemon
 ):
-    fake_daemon.command_failures["authenticate"] = (False, "denied")
+    fake_daemon.fail_with("authenticate", (False, "denied"))
 
     client = _connect_client(monkeypatch, fake_daemon)
 
@@ -295,7 +387,7 @@ def test_fake_daemon_can_drive_real_client_broken_connection(
 ):
     client = _connect_client(monkeypatch, fake_daemon)
     try:
-        fake_daemon.command_failures["getstatus"] = OSError(0, "socket closed")
+        fake_daemon.raise_on("getstatus", OSError(0, "socket closed"))
         assert client.ask("getstatus") is None
     finally:
         _disconnect_client(client)
@@ -303,3 +395,44 @@ def test_fake_daemon_can_drive_real_client_broken_connection(
     assert client.isconnected is False
     assert ("broken", ("Server connection broken: socket closed.",)) in client.events
     assert ("disconnected", ()) in client.events
+
+
+@pytest.mark.parametrize(
+    ("panel_class", "expected_exprs"),
+    [
+        pytest.param(
+            "nicos_ess.gui.panels.exp_panel.ExpPanel",
+            [
+                "session.experiment.proposal, "
+                "session.experiment.title, "
+                "session.experiment.users, "
+                "session.experiment.localcontact, "
+                "session.experiment.errorbehavior",
+                'session.experiment.propinfo["notif_emails"]',
+                "session.experiment.get_samples()",
+            ],
+            id="exp-panel-bootstrap",
+        ),
+        pytest.param(
+            "nicos_ess.gui.panels.setups.SetupsPanel",
+            [
+                "session.readSetupInfo()",
+                "session.loaded_setups",
+                '{d.name: d.alias for d in session.devices.values() if "alias" in d.parameters}',
+            ],
+            id="setups-panel-bootstrap",
+        ),
+    ],
+)
+def test_fake_daemon_matches_eval_strings_emitted_during_panel_bootstrap(
+    gui_window_factory,
+    fake_daemon,
+    panel_class,
+    expected_exprs,
+):
+    gui_window_factory(guiconfig=_minimal_guiconfig(panel_class))
+
+    eval_exprs = [args[0] for cmd, args in fake_daemon.command_log if cmd == "eval"]
+
+    for expr in expected_exprs:
+        assert expr in eval_exprs

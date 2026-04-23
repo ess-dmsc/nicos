@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 from test.nicos_ess.gui.doubles import DeviceSpec
+from test.nicos_ess.gui.helpers import _minimal_guiconfig, get_panel_by_class
 
 
-guiconfig_name = "panels/devices.py"
-panel_name = "Devices"
+guiconfig_text = _minimal_guiconfig("nicos_ess.gui.panels.devices.DevicesPanel")
+panel_class = "nicos_ess.gui.panels.devices.DevicesPanel"
 
 
 def _setup_item(panel, name):
@@ -27,9 +28,7 @@ def _device_item(panel, name):
     raise AssertionError(f"device item {name!r} not found")
 
 
-def test_device_appears_after_connect(
-    gui_window_factory, fake_daemon, guiconfig_path, qtbot
-):
+def test_device_appears_after_connect(gui_window_factory, fake_daemon, qtbot):
     """A device registered before connect shows up in the visible tree."""
     fake_daemon.add_device(
         DeviceSpec(
@@ -44,8 +43,8 @@ def test_device_appears_after_connect(
         setup="instrument",
     )
 
-    window = gui_window_factory(guiconfig_path=guiconfig_path)
-    panel = window.getPanel("Devices")
+    window = gui_window_factory(guiconfig=guiconfig_text)
+    panel = get_panel_by_class(window, panel_class)
 
     qtbot.waitUntil(lambda p=panel: p.tree.topLevelItemCount() == 1, timeout=2000)
 
@@ -54,9 +53,7 @@ def test_device_appears_after_connect(
     assert setup_item.child(0).text(panel.col_index["NAME"]) == "tas"
 
 
-def test_cache_event_updates_panel(
-    gui_window_factory, fake_daemon, guiconfig_path, qtbot
-):
+def test_cache_event_updates_panel(gui_window_factory, fake_daemon, qtbot):
     """Cache events flow through the real event thread into the visible tree."""
     fake_daemon.add_device(
         DeviceSpec(
@@ -73,8 +70,8 @@ def test_cache_event_updates_panel(
         setup="instrument",
     )
 
-    window = gui_window_factory(guiconfig_path=guiconfig_path)
-    panel = window.getPanel("Devices")
+    window = gui_window_factory(guiconfig=guiconfig_text)
+    panel = get_panel_by_class(window, panel_class)
     item = _device_item(panel, "tas")
 
     qtbot.waitUntil(
