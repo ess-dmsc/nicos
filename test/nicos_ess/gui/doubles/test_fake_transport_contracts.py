@@ -7,13 +7,14 @@ The fake is allowed to be small, but it must stay compatible with the real
 from __future__ import annotations
 
 import inspect
+from logging import INFO
 from time import monotonic, sleep
 
 import pytest
 
 from nicos.clients.base import ConnectionData, NicosClient
 from nicos.clients.proto.classic import ClientTransport as ClassicClientTransport
-from nicos.core import params
+from nicos.core import MAINTENANCE, MASTER, params
 from nicos.protocols.cache import OP_TELL, cache_dump
 from nicos.protocols.daemon import ClientTransport as BaseClientTransport, STATUS_IDLE
 from nicos.protocols.daemon.classic import PROTO_VERSION
@@ -176,6 +177,23 @@ def test_fake_daemon_satisfies_the_gui_device_query_contract(
         _disconnect_client(client)
 
 
+def test_fake_daemon_supports_console_backlog_and_completion_queries(
+    monkeypatch, fake_daemon
+):
+    backlog = ("nicos", 1.0, INFO, "Backlog line\n", None, 1)
+    fake_daemon.add_message(backlog)
+    fake_daemon.mode = MAINTENANCE
+    fake_daemon.set_completion("move sam", "sam", ["sample"])
+
+    client = _connect_client(monkeypatch, fake_daemon)
+    try:
+        assert client.ask("getstatus")["mode"] == MAINTENANCE
+        assert client.ask("getmessages", "10000") == [backlog]
+        assert client.ask("complete", "move sam", "sam") == ["sample"]
+    finally:
+        _disconnect_client(client)
+
+
 @pytest.mark.parametrize(
     ("event_name", "push_event", "expected_payload"),
     [
@@ -208,6 +226,26 @@ def test_fake_daemon_satisfies_the_gui_device_query_contract(
             lambda daemon: daemon.push_status((STATUS_IDLE, -1)),
             (STATUS_IDLE, -1),
             id="status",
+        ),
+        pytest.param(
+            "mode",
+            lambda daemon: daemon.push_mode(MASTER),
+            MASTER,
+            id="mode",
+        ),
+        pytest.param(
+            "experiment",
+            lambda daemon: daemon.push_experiment(("proposal", "user")),
+            ("proposal", "user"),
+            id="experiment",
+        ),
+        pytest.param(
+            "simmessage",
+            lambda daemon: daemon.push_simmessage(
+                ("nicos", 0.0, INFO, "sim line\n", None, "0")
+            ),
+            ("nicos", 0.0, INFO, "sim line\n", None, "0"),
+            id="simmessage",
         ),
     ],
 )

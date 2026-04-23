@@ -7,11 +7,8 @@ from nicos.clients.gui.client import NicosGuiClient
 from test.nicos_ess.gui.doubles import FakeClientTransport
 
 
-guiconfig_name = "devices.py"
-
-
 def test_real_client_connect_handshake(gui_window, fake_daemon):
-    """The real connect flow runs against the in-process fake transport."""
+    """The real connect flow runs against the empty-shell base guiconfig."""
     client = gui_window.client
     assert type(client) is NicosGuiClient, (
         "expected the unmodified NicosGuiClient, not a subclass"

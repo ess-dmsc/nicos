@@ -12,6 +12,7 @@ import queue
 from dataclasses import dataclass, field
 from typing import Any
 
+from nicos.core import MASTER
 from nicos.protocols.cache import OP_TELL, cache_dump
 from nicos.protocols.daemon import DAEMON_EVENTS, STATUS_IDLE
 from nicos.protocols.daemon.classic import PROTO_VERSION
@@ -76,7 +77,10 @@ class FakeDaemon:
         self.loaded_setups: set[str] = set()
         self.cache: dict[str, Any] = {}
         self.status: tuple = (STATUS_IDLE, -1)
+        self.mode = MASTER
         self.eval_table: dict[str, Any] = {}
+        self.messages: list[tuple] = []
+        self.completions: dict[tuple[str, str], list[str]] = {}
         self.command_log: list[tuple[str, tuple]] = []
         self.command_failures: dict[str, tuple[bool, Any] | BaseException] = {}
         self.unknown_evals: list[str] = []
@@ -135,6 +139,13 @@ class FakeDaemon:
             if dev is not None:
                 dev.params[param] = value
 
+    def add_message(self, message: tuple) -> tuple:
+        self.messages.append(message)
+        return message
+
+    def set_completion(self, fullstring: str, lastword: str, replies: list[str]) -> None:
+        self.completions[(fullstring, lastword)] = list(replies)
+
     # ------------------------------------------------------------------
     # event push helpers (tests drive these)
 
@@ -156,11 +167,22 @@ class FakeDaemon:
         self._push_event("setup", lists)
 
     def push_message(self, message: tuple) -> None:
+        self.add_message(message)
         self._push_event("message", message)
 
     def push_status(self, status: tuple) -> None:
         self.status = status
         self._push_event("status", status)
+
+    def push_mode(self, mode: int) -> None:
+        self.mode = mode
+        self._push_event("mode", mode)
+
+    def push_experiment(self, data: tuple) -> None:
+        self._push_event("experiment", data)
+
+    def push_simmessage(self, message: tuple) -> None:
+        self._push_event("simmessage", message)
 
     def _push_event(self, name: str, data: Any) -> None:
         if name not in DAEMON_EVENTS:
@@ -188,6 +210,10 @@ class FakeDaemon:
             return True, self._status()
         if cmd == "getcachekeys":
             return True, self._cache_keys(args[0])
+        if cmd == "getmessages":
+            return True, self._messages(args[0])
+        if cmd == "complete":
+            return True, self._complete(args[0], args[1])
         if cmd == "eval":
             expr, stringify = args
             value = self._eval(expr)
@@ -204,7 +230,7 @@ class FakeDaemon:
             "devicefailures": {},
             "setups": (sorted(self.loaded_setups), sorted(self.setups)),
             "status": self.status,
-            "mode": "master",
+            "mode": self.mode,
             "requests": [],
             "current_script": [""],
             "watch": {},
@@ -222,6 +248,18 @@ class FakeDaemon:
         if query in self.cache:
             return [(query, self.cache[query])]
         return []
+
+    def _messages(self, limit: str | int | None) -> list[tuple]:
+        try:
+            count = int(limit) if limit is not None else len(self.messages)
+        except (TypeError, ValueError):
+            count = len(self.messages)
+        if count <= 0:
+            return []
+        return list(self.messages[-count:])
+
+    def _complete(self, fullstring: str, lastword: str) -> list[str]:
+        return list(self.completions.get((fullstring, lastword), []))
 
     def _eval(self, expr: str) -> Any:
         if expr in self.eval_table:

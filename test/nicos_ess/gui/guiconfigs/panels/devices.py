@@ -1,4 +1,4 @@
-"""Minimal NICOS guiconfig for the ESS DevicesPanel test harness."""
+"""Dedicated ESS DevicesPanel guiconfig for panel-focused tests."""
 
 main_window = panel("nicos_ess.gui.panels.devices.DevicesPanel")
 windows = []

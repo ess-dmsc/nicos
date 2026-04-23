@@ -1,8 +1,9 @@
 """Shared fixtures for ESS GUI tests running against an in-process fake daemon.
 
 Only the transport is faked: ``NicosGuiClient``, ``MainWindow``, and all panels
-remain the unmodified production classes. Tests must provide their GUI config
-explicitly so missing or ambiguous configuration fails immediately.
+remain the unmodified production classes. Tests use file-based guiconfigs under
+``test/nicos_ess/gui/guiconfigs`` and default to ``base.py`` unless a module
+selects a more specific panel or layout config.
 """
 
 from __future__ import annotations
@@ -52,7 +53,10 @@ def pytest_unconfigure(config):
 
 def _resolve_guiconfig_path(guiconfig_name: str) -> Path:
     if not isinstance(guiconfig_name, str) or not guiconfig_name:
-        raise ValueError("set module-level guiconfig_name = 'devices.py' for GUI tests")
+        raise ValueError(
+            "GUI test guiconfig_name must be a non-empty relative path, "
+            "for example 'panels/devices.py'"
+        )
     guiconfig_path = (GUICONFIGS_DIR / guiconfig_name).resolve()
     if not guiconfig_path.is_file():
         raise FileNotFoundError(
@@ -85,12 +89,12 @@ def assert_fake_daemon_contract(fake_daemon):
 
 @pytest.fixture
 def guiconfig_name(request):
-    name = getattr(request.module, "guiconfig_name", None)
-    if name is None:
-        raise ValueError(
-            f"{request.module.__name__} must define module-level guiconfig_name"
-        )
-    return name
+    return getattr(request.module, "guiconfig_name", "base.py")
+
+
+@pytest.fixture
+def panel_name(request):
+    return getattr(request.module, "panel_name", None)
 
 
 @pytest.fixture
@@ -104,20 +108,16 @@ def gui_window_factory(monkeypatch, qtbot, fake_daemon):
 
     windows = []
 
-    def _build(*, config_text=None, guiconfig_path=None):
-        if (config_text is None) == (guiconfig_path is None):
-            raise ValueError(
-                "pass exactly one of config_text or guiconfig_path to gui_window_factory()"
-            )
+    def _build(*, guiconfig_path):
+        if guiconfig_path is None:
+            raise ValueError("pass guiconfig_path to gui_window_factory()")
 
         monkeypatch.setattr(
             "nicos.clients.base.ClientTransport",
             lambda: FakeClientTransport(fake_daemon),
         )
 
-        config_source = config_text
-        if config_source is None:
-            config_source = Path(guiconfig_path).read_text()
+        config_source = Path(guiconfig_path).read_text()
         config = processGuiConfig(config_source.strip())
         # Keep GUI tests independent from optional stylesheet/resource lookup.
         config.stylefile = ""
@@ -160,5 +160,15 @@ def gui_window(gui_window_factory, guiconfig_path):
 
 
 @pytest.fixture
-def devices_panel(gui_window):
-    return gui_window.getPanel("Devices")
+def gui_panel(gui_window, panel_name, guiconfig_name):
+    if panel_name is None:
+        raise ValueError(
+            "gui_panel requires module-level panel_name, "
+            f"for example in tests using {guiconfig_name!r}"
+        )
+    panel = gui_window.getPanel(panel_name)
+    if panel is None:
+        raise LookupError(
+            f"panel {panel_name!r} not found in GUI test config {guiconfig_name!r}"
+        )
+    return panel

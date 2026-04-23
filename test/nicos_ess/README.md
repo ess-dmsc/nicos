@@ -226,6 +226,25 @@ The harness API (`test/nicos_ess/device_harness.py`) exposes:
   module, returning a controllable fake backend with `emit_update`,
   `emit_connection`, and inspectable `values`, `alarms`, `put_calls`, etc.
 
+## GUI Harness Tests
+
+ESS GUI harness tests live under `test/nicos_ess/gui` and run the real ESS
+`MainWindow`, `NicosGuiClient`, and panels against an in-process fake daemon.
+
+Use the file-based guiconfigs under `test/nicos_ess/gui/guiconfigs`:
+
+- `base.py` for generic window/client smoke tests
+- `panels/<panel>.py` for single-panel tests
+- `layouts/<name>.py` for deliberate multi-panel dependencies
+
+GUI test modules can declare:
+
+- `guiconfig_name = "panels/devices.py"` to select a file-based layout
+- `panel_name = "Devices"` when using the shared `gui_panel` fixture
+
+Keep widget-search helpers local to the panel test module unless at least two
+panel suites need the same helper.
+
 ## Full Fixture/Setup Guidance
 
 Use session fixture style for setup-level behavior, not as first choice for all
@@ -277,6 +296,7 @@ pytest -q test/nicos_ess
 Targeted runs:
 
 ```bash
+uv run pytest -q test/nicos_ess/gui
 pytest -q test/nicos_ess/test_devices/epics_devices/
 pytest -q test/nicos_ess/test_devices/test_forwarder.py
 ```

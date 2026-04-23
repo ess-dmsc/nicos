@@ -5,7 +5,8 @@ from __future__ import annotations
 from test.nicos_ess.gui.doubles import DeviceSpec
 
 
-guiconfig_name = "devices.py"
+guiconfig_name = "panels/devices.py"
+panel_name = "Devices"
 
 
 def _setup_item(panel, name):
