@@ -61,8 +61,8 @@ class KafkaReadbackSchemaSpec:
     apply_update: Callable[[KafkaReadbackState, Any], None]
 
 
-class KafkaReadbackConsumer(Device):
-    """Shared Kafka input device for scalar NICOS readbacks.
+class KafkaReadbackRouter(Device):
+    """Shared Kafka router device for scalar NICOS readbacks.
 
     The device owns Kafka I/O and keeps the latest decoded state in memory. It
     deliberately does not publish readback values or statuses; those belong to
@@ -230,27 +230,27 @@ class KafkaReadbackConsumer(Device):
             subscriber.close()
 
 
-KafkaReadbackConsumer._schema_specs = {
+KafkaReadbackRouter._schema_specs = {
     "f144": KafkaReadbackSchemaSpec(
-        get_source_name=KafkaReadbackConsumer._source_name_from_source_name,
-        apply_update=KafkaReadbackConsumer._apply_f144,
+        get_source_name=KafkaReadbackRouter._source_name_from_source_name,
+        apply_update=KafkaReadbackRouter._apply_f144,
     ),
     "al00": KafkaReadbackSchemaSpec(
-        get_source_name=KafkaReadbackConsumer._source_name_from_source,
-        apply_update=KafkaReadbackConsumer._apply_al00,
+        get_source_name=KafkaReadbackRouter._source_name_from_source,
+        apply_update=KafkaReadbackRouter._apply_al00,
     ),
     "ep01": KafkaReadbackSchemaSpec(
-        get_source_name=KafkaReadbackConsumer._source_name_from_source_name,
-        apply_update=KafkaReadbackConsumer._apply_ep01,
+        get_source_name=KafkaReadbackRouter._source_name_from_source_name,
+        apply_update=KafkaReadbackRouter._apply_ep01,
     ),
 }
 
 
 class KafkaReadable(Readable):
-    """NICOS readback backed by a shared ``KafkaReadbackConsumer``."""
+    """NICOS readback backed by a shared ``KafkaReadbackRouter``."""
 
     attached_devices = {
-        "kafka": Attach("Shared Kafka readback consumer", KafkaReadbackConsumer),
+        "kafka": Attach("Shared Kafka readback router", KafkaReadbackRouter),
     }
 
     parameters = {

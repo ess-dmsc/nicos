@@ -39,9 +39,9 @@ def connection_message(timestamp_ns, connection, service=READBACK_SERVICE):
     return serialise_ep01(timestamp_ns, connection, READBACK_SOURCE, service)
 
 
-def create_consumer_pair(harness, name="KafkaReadbacks", topics=None):
+def create_router_pair(harness, name="KafkaReadbacks", topics=None):
     return harness.create_pair(
-        readback.KafkaReadbackConsumer,
+        readback.KafkaReadbackRouter,
         name=name,
         shared={
             "brokers": ["localhost:9092"],
@@ -76,10 +76,10 @@ def emit_readback_messages(
 
 
 class TestKafkaReadbackHarness:
-    def test_shared_consumer_fans_out_by_topic_and_source(
+    def test_shared_router_fans_out_by_topic_and_source(
         self, device_harness, kafka_readback_stubs
     ):
-        create_consumer_pair(device_harness)
+        create_router_pair(device_harness)
         first, _poller_first = create_readable_pair(
             device_harness, "first", "src:first"
         )
@@ -101,7 +101,7 @@ class TestKafkaReadbackHarness:
         assert second.read() == pytest.approx(2.5)
 
     def test_register_gets_latest_snapshot(self, device_harness, kafka_readback_stubs):
-        create_consumer_pair(device_harness)
+        create_router_pair(device_harness)
         emit_readback_messages(
             device_harness,
             kafka_readback_stubs,
@@ -153,7 +153,7 @@ class TestKafkaReadbackHarness:
     def test_al00_and_ep01_drive_readable_status_matrix(
         self, device_harness, kafka_readback_stubs, messages, expected
     ):
-        create_consumer_pair(device_harness)
+        create_router_pair(device_harness)
         readable, poller_readable = create_readable_pair(
             device_harness, "first", "src:first"
         )
@@ -164,10 +164,10 @@ class TestKafkaReadbackHarness:
         assert readable.status() == expected
         assert poller_readable.status() == expected
 
-    def test_shared_consumer_starts_one_subscriber_per_topic(
+    def test_shared_router_starts_one_subscriber_per_topic(
         self, device_harness, kafka_readback_stubs
     ):
-        create_consumer_pair(
+        create_router_pair(
             device_harness,
             topics=["readbacks", "other_readbacks"],
         )
@@ -178,10 +178,10 @@ class TestKafkaReadbackHarness:
             [["other_readbacks"]],
         ]
 
-    def test_readable_rejects_topic_not_owned_by_shared_consumer(
+    def test_readable_rejects_topic_not_owned_by_shared_router(
         self, device_harness, kafka_readback_stubs
     ):
-        create_consumer_pair(device_harness)
+        create_router_pair(device_harness)
 
         with pytest.raises(ConfigurationError):
             create_readable_pair(
@@ -191,10 +191,10 @@ class TestKafkaReadbackHarness:
                 topic="other_topic",
             )
 
-    def test_poller_readable_uses_cache_and_does_not_create_kafka_consumer(
+    def test_poller_readable_uses_cache_and_poller_router_does_not_subscribe(
         self, device_harness, kafka_readback_stubs
     ):
-        _daemon_consumer, _poller_consumer = create_consumer_pair(device_harness)
+        _daemon_router, _poller_router = create_router_pair(device_harness)
         daemon_readable, poller_readable = create_readable_pair(
             device_harness, "first", "src:first"
         )
@@ -215,7 +215,7 @@ class TestKafkaReadbackHarness:
         self, device_harness, kafka_readback_stubs
     ):
         """doRead raises CommunicationError when no Kafka messages have arrived yet."""
-        create_consumer_pair(device_harness)
+        create_router_pair(device_harness)
         readable, _poller = create_readable_pair(
             device_harness, "first", "src:first"
         )
@@ -227,7 +227,7 @@ class TestKafkaReadbackHarness:
         self, device_harness, kafka_readback_stubs
     ):
         """doStatus returns UNKNOWN when no Kafka messages have arrived yet."""
-        create_consumer_pair(device_harness)
+        create_router_pair(device_harness)
         readable, _poller = create_readable_pair(
             device_harness, "first", "src:first"
         )
@@ -238,7 +238,7 @@ class TestKafkaReadbackHarness:
         self, device_harness, kafka_readback_stubs
     ):
         """An alarm-only message does not produce a readable value."""
-        create_consumer_pair(device_harness)
+        create_router_pair(device_harness)
         readable, _poller = create_readable_pair(
             device_harness, "first", "src:first"
         )
@@ -256,7 +256,7 @@ class TestKafkaReadbackHarness:
         self, device_harness, kafka_readback_stubs
     ):
         """A connection-only message does not produce a readable value."""
-        create_consumer_pair(device_harness)
+        create_router_pair(device_harness)
         readable, _poller = create_readable_pair(
             device_harness, "first", "src:first"
         )
@@ -274,7 +274,7 @@ class TestKafkaReadbackHarness:
         self, device_harness, kafka_readback_stubs
     ):
         """f144 alone carries no alarm/connection info → status stays UNKNOWN."""
-        create_consumer_pair(device_harness)
+        create_router_pair(device_harness)
         readable, _poller = create_readable_pair(
             device_harness, "first", "src:first"
         )
@@ -291,7 +291,7 @@ class TestKafkaReadbackHarness:
         self, device_harness, kafka_readback_stubs
     ):
         """Value remains readable after a subsequent alarm-only message."""
-        create_consumer_pair(device_harness)
+        create_router_pair(device_harness)
         readable, _poller = create_readable_pair(
             device_harness, "first", "src:first"
         )
@@ -323,7 +323,7 @@ class TestKafkaReadbackHarness:
         self, device_harness, kafka_readback_stubs,
         severity, expected_status, message,
     ):
-        create_consumer_pair(device_harness)
+        create_router_pair(device_harness)
         readable, _poller = create_readable_pair(
             device_harness, "first", "src:first"
         )
@@ -384,7 +384,7 @@ class TestKafkaReadbackHarness:
         self, device_harness, kafka_readback_stubs,
         connection, expected_status, expected_message,
     ):
-        create_consumer_pair(device_harness)
+        create_router_pair(device_harness)
         readable, _poller = create_readable_pair(
             device_harness, "first", "src:first"
         )
@@ -422,7 +422,7 @@ class TestKafkaReadbackHarness:
         severity, expected_status, expected_default,
     ):
         """Non-OK alarms with no message text fall back to a severity label."""
-        create_consumer_pair(device_harness)
+        create_router_pair(device_harness)
         readable, _poller = create_readable_pair(
             device_harness, "first", "src:first"
         )
@@ -438,7 +438,7 @@ class TestKafkaReadbackHarness:
     def test_connection_status_omits_service_when_empty(
         self, device_harness, kafka_readback_stubs
     ):
-        create_consumer_pair(device_harness)
+        create_router_pair(device_harness)
         readable, _poller = create_readable_pair(
             device_harness, "first", "src:first"
         )
@@ -459,7 +459,7 @@ class TestKafkaReadbackHarness:
     def test_latest_value_overwrites_previous(
         self, device_harness, kafka_readback_stubs
     ):
-        create_consumer_pair(device_harness)
+        create_router_pair(device_harness)
         readable, _poller = create_readable_pair(
             device_harness, "first", "src:first"
         )
@@ -490,7 +490,7 @@ class TestKafkaReadbackHarness:
     def test_doread_handles_various_value_types(
         self, device_harness, kafka_readback_stubs, value, expected
     ):
-        create_consumer_pair(device_harness)
+        create_router_pair(device_harness)
         readable, _poller = create_readable_pair(
             device_harness, "first", "src:first"
         )
@@ -503,11 +503,11 @@ class TestKafkaReadbackHarness:
 
         assert readable.read() == expected
 
-    def test_corrupt_kafka_payload_does_not_crash_consumer(
+    def test_corrupt_kafka_payload_does_not_crash_router(
         self, device_harness, kafka_readback_stubs
     ):
-        """Consumer silently skips garbage payloads it cannot decode."""
-        create_consumer_pair(device_harness)
+        """Router silently skips garbage payloads it cannot decode."""
+        create_router_pair(device_harness)
         readable, _poller = create_readable_pair(
             device_harness, "first", "src:first"
         )
@@ -526,7 +526,7 @@ class TestKafkaReadbackHarness:
         self, device_harness, kafka_readback_stubs
     ):
         """A corrupt payload does not discard previously received values."""
-        create_consumer_pair(device_harness)
+        create_router_pair(device_harness)
         readable, _poller = create_readable_pair(
             device_harness, "first", "src:first"
         )
@@ -547,7 +547,7 @@ class TestKafkaReadbackHarness:
     def test_messages_for_unknown_source_do_not_affect_registered_readable(
         self, device_harness, kafka_readback_stubs
     ):
-        create_consumer_pair(device_harness)
+        create_router_pair(device_harness)
         readable, _poller = create_readable_pair(
             device_harness, "first", "src:first"
         )
@@ -564,7 +564,7 @@ class TestKafkaReadbackHarness:
     def test_multiple_readables_on_same_source_get_same_value(
         self, device_harness, kafka_readback_stubs
     ):
-        create_consumer_pair(device_harness)
+        create_router_pair(device_harness)
         first, _poller_first = create_readable_pair(
             device_harness, "first", "src:first"
         )
@@ -585,7 +585,7 @@ class TestKafkaReadbackHarness:
         self, device_harness, kafka_readback_stubs
     ):
         """Verify that an alarm can transition from MAJOR → OK."""
-        create_consumer_pair(device_harness)
+        create_router_pair(device_harness)
         readable, _poller = create_readable_pair(
             device_harness, "first", "src:first"
         )
@@ -608,7 +608,7 @@ class TestKafkaReadbackHarness:
         self, device_harness, kafka_readback_stubs
     ):
         """Verify that a connection can transition from DISCONNECTED → CONNECTED."""
-        create_consumer_pair(device_harness)
+        create_router_pair(device_harness)
         readable, _poller = create_readable_pair(
             device_harness, "first", "src:first"
         )
@@ -627,14 +627,14 @@ class TestKafkaReadbackHarness:
         )
         assert readable.status() == (status.OK, "")
 
-    def test_consumer_shutdown_closes_all_subscribers(
+    def test_router_shutdown_closes_all_subscribers(
         self, device_harness, kafka_readback_stubs
     ):
-        daemon_consumer, _poller_consumer = create_consumer_pair(
+        daemon_router, _poller_router = create_router_pair(
             device_harness,
             topics=["topic_a", "topic_b"],
         )
 
-        device_harness.run_daemon(daemon_consumer.shutdown)
+        device_harness.run_daemon(daemon_router.shutdown)
 
         assert all(sub.closed for sub in kafka_readback_stubs)

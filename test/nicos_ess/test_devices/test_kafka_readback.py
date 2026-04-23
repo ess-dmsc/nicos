@@ -61,7 +61,7 @@ class TestKafkaReadbackSmoke(TestCase):
         yield
         self.session.unloadSetup()
 
-    def test_loading_readables_auto_loads_shared_consumer_and_fans_out_updates(
+    def test_loading_readables_auto_loads_shared_router_and_fans_out_updates(
         self,
     ):
         self.session.loadSetup(FIRST_SETUP, {})
@@ -73,10 +73,10 @@ class TestKafkaReadbackSmoke(TestCase):
 
         first_topic_1 = self.session.getDevice("FirstTopic1Readable")
         first_topic_2 = self.session.getDevice("FirstTopic2Readable")
-        consumer = self.session.getDevice("KafkaReadbacks")
+        router = self.session.getDevice("KafkaReadbacks")
 
-        assert first_topic_1._attached_kafka is consumer
-        assert first_topic_2._attached_kafka is consumer
+        assert first_topic_1._attached_kafka is router
+        assert first_topic_2._attached_kafka is router
         assert len(self.kafka_readback_stubs) == 3
         assert all(
             subscriber.brokers == ["localhost:9092"]
@@ -98,8 +98,8 @@ class TestKafkaReadbackSmoke(TestCase):
         second_topic_1 = self.session.getDevice("SecondTopic1Readable")
         second_topic_3 = self.session.getDevice("SecondTopic3Readable")
 
-        assert second_topic_1._attached_kafka is consumer
-        assert second_topic_3._attached_kafka is consumer
+        assert second_topic_1._attached_kafka is router
+        assert second_topic_3._attached_kafka is router
         assert len(self.kafka_readback_stubs) == 3
 
         emit_readback_messages(
