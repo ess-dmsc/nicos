@@ -43,7 +43,7 @@ devices = dict(
         abslimits=(0, 360),
         unit="deg",
     ),
-    mock_estia_hexapod=device(
+    estia_hexapod=device(
         "nicos_ess.devices.virtual.hexapod.TableHexapod",
         description="Hexapod Device",
         tx="mock_tx",
