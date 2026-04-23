@@ -40,7 +40,6 @@ devices = dict(
         "nicos_ess.devices.epics.manual_switch.ManualSwitch",
         description="Sample holder",
         writepv=f"{pv_root}holder-s",
-        readpv=f"{pv_root}holder-s",
         states=["Hold", "Release"],
         mapping={"Hold": 0, "Release": 1},
     ),
