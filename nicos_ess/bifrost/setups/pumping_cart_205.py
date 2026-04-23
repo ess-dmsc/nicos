@@ -148,7 +148,6 @@ devices = dict(
     pc205_ln2f_fill_switch=device(
         "nicos_ess.devices.epics.manual_switch.ManualSwitch",
         description="Start/stop LN2 fill",
-        readpv=f"{pv_root}LN2F-Fill-s",
         writepv=f"{pv_root}LN2F-Fill-s",
         states=["False", "True"],
         mapping={"False": 0, "True": 1},
@@ -156,7 +155,6 @@ devices = dict(
     pc205_ln2f_auto_switch=device(
         "nicos_ess.devices.epics.manual_switch.ManualSwitch",
         description="LN2 auto-fill on/off",
-        readpv=f"{pv_root}LN2F-Auto-s",
         writepv=f"{pv_root}LN2F-Auto-s",
         states=["False", "True"],
         mapping={"False": 0, "True": 1},
@@ -199,7 +197,6 @@ devices = dict(
     pc205_flush_switch=device(
         "nicos_ess.devices.epics.manual_switch.ManualSwitch",
         description="Start/stop the Flush cycle",
-        readpv=f"{pv_root}Flush-s",
         writepv=f"{pv_root}Flush-s",
         states=["False", "True"],
         mapping={"False": 0, "True": 1},
