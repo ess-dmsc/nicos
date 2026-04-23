@@ -28,7 +28,7 @@ The doubles are intentionally tiny:
 
 - producers only record what was sent
 - consumers return queued records or records synthesised by a hook
-- subscribers are no-ops because tests drive callbacks directly
+- subscribers record subscriptions and can be driven explicitly by tests
 
 That keeps the tests explicit about when data appears, instead of hiding a
 background Kafka simulation inside the fixtures.
@@ -36,19 +36,50 @@ background Kafka simulation inside the fixtures.
 
 
 class StubKafkaSubscriber:
-    """No-op subscriber used when a test triggers callbacks directly."""
+    """Subscriber stub that records subscriptions and exposes callbacks."""
 
-    def __init__(self, *args, **kwargs):
-        del args, kwargs
+    def __init__(self, brokers=None, consumer=None, **kwargs):
+        self.brokers = brokers
+        self.consumer = consumer
+        self.options = kwargs
+        self.subscribed = []
+        self.messages_callback = None
+        self.no_messages_callback = None
+        self.error_callback = None
+        self.closed = False
+        self.stop_called = False
 
-    def subscribe(self, *args, **kwargs):
-        del args, kwargs
+    def subscribe(
+        self,
+        topics,
+        messages_callback=None,
+        no_messages_callback=None,
+        error_callback=None,
+    ):
+        self.subscribed.append(list(topics))
+        self.messages_callback = messages_callback
+        self.no_messages_callback = no_messages_callback
+        self.error_callback = error_callback
+
+    def emit_messages(self, messages):
+        if self.messages_callback:
+            self.messages_callback(messages)
+
+    def emit_idle(self):
+        if self.no_messages_callback:
+            self.no_messages_callback()
+
+    def emit_error(self, err):
+        if self.error_callback:
+            self.error_callback(err)
 
     def stop_consuming(self):
-        pass
+        self.stop_called = True
 
     def close(self):
-        pass
+        self.closed = True
+        if self.consumer is not None:
+            self.consumer.close()
 
 
 class StubKafkaConsumer:
@@ -59,16 +90,13 @@ class StubKafkaConsumer:
     command.
     """
 
-    def __init__(self, records=None, poll_hook=None):
+    def __init__(self, brokers=None, options=None, records=None, poll_hook=None):
+        self.brokers = list(brokers) if brokers is not None else None
+        self.options = dict(options or {})
         self.records = [self._coerce_record(record) for record in records or ()]
         self.poll_hook = poll_hook
         self.subscriptions = []
         self.closed = False
-
-    @staticmethod
-    def create(*args, **kwargs):
-        del args, kwargs
-        return StubKafkaConsumer()
 
     def subscribe(self, *args, **kwargs):
         self.subscriptions.append((args, kwargs))
@@ -92,7 +120,7 @@ class StubKafkaConsumer:
     def _coerce_record(self, record):
         if hasattr(record, "value"):
             return record
-        return _StubKafkaRecord(record)
+        return StubKafkaMessage(record)
 
     def close(self):
         self.closed = True
@@ -108,14 +136,75 @@ class _DeliveredMessage:
         return 0
 
 
-class _StubKafkaRecord:
-    """Small wrapper exposing the `value()` method used by the code under test."""
+class StubKafkaMessage:
+    """Small Kafka message object for tests that need topic/error metadata."""
 
-    def __init__(self, payload):
+    def __init__(
+        self,
+        payload,
+        *,
+        topic="",
+        key=None,
+        error=None,
+        timestamp=(0, 0),
+        partition=0,
+        offset=0,
+    ):
         self._payload = payload
+        self._topic = topic
+        self._key = key
+        self._error = error
+        self._timestamp = timestamp
+        self._partition = partition
+        self._offset = offset
 
     def value(self):
         return self._payload
+
+    def topic(self):
+        return self._topic
+
+    def key(self):
+        return self._key
+
+    def error(self):
+        return self._error
+
+    def timestamp(self):
+        return self._timestamp
+
+    def partition(self):
+        return self._partition
+
+    def offset(self):
+        return self._offset
+
+
+class FakeKafkaError:
+    """Minimal ``confluent_kafka.KafkaError`` stand-in for driving error paths."""
+
+    def __init__(self, code, name="FAKE", message="fake error",
+                 fatal=False, retriable=True):
+        self._code = code
+        self._name = name
+        self._message = message
+        self._fatal = fatal
+        self._retriable = retriable
+
+    def code(self):
+        return self._code
+
+    def name(self):
+        return self._name
+
+    def str(self):
+        return self._message
+
+    def fatal(self):
+        return self._fatal
+
+    def retriable(self):
+        return self._retriable
 
 
 class StubKafkaProducer:
