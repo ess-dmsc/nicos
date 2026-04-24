@@ -4,6 +4,10 @@ This directory contains the smoke integration path for NICOS-owned behavior:
 daemon startup, setup/session commands, EPICS PVA device interaction, scans,
 Kafka filewriter control, and local NICOS side effects.
 
+The `integration_test` package is shipped with `nicos-fork`, so the supported
+entry point works from both a checkout and an installed wheel:
+`python -m integration_test.smoke.run_smoke_stack`.
+
 It does not run the real downstream ESS stack. The real `kafka-to-nexus`
 filewriter is replaced by a minimal Kafka filewriter double that speaks the
 same control/status message types needed by NICOS. The double does not create
@@ -38,13 +42,20 @@ is used.
 - `smoke/docker-compose.yml`: Kafka plus the CI-only test container.
 - `smoke/Dockerfile`: Python 3.13 `uv` image used by the CI-only container.
 - `smoke/pva_server.py`: in-process PVA server for smoke PVs.
-- `smoke/setups/`: smoke-owned NICOS setups copied into the runtime package.
-- `smoke/nexus/smoke_nexus.json`: minimal smoke-owned NeXus structure.
+- `smoke/setups/`: smoke-owned NICOS setups copied into the generated runtime
+  setup package.
+- `smoke/nexus/smoke_nexus.json`: minimal smoke-owned NeXus structure, copied
+  into the generated runtime setup package.
 - `doubles/filewriter.py`: standalone Kafka filewriter double.
 
 There is no checked-in `smoke/nicos.conf`. The runner generates one under the
 runtime root for each run and fails fast if a repo-root `nicos.conf` exists,
 because that would override the smoke configuration.
+
+The runner adds only the generated runtime root to `PYTHONPATH`. This is
+intentional: NICOS must import the generated `nicos_smoke_runtime` setup
+package before it can read that package's generated `nicos.conf`. The checkout
+root is not added to `PYTHONPATH`.
 
 ## Filewriter Double
 
@@ -86,8 +97,9 @@ From the repository root:
 uv sync --all-packages
 ```
 
-Docker is required when the runner manages Kafka. CI uses Docker-in-Docker and
-the same compose file as local runs.
+Docker is required when the runner manages Kafka. CI uses the runner-provided
+Docker socket with the same compose file as local runs; it does not require a
+privileged Docker-in-Docker service.
 
 ## Run Locally
 
@@ -127,8 +139,10 @@ runtime root. Logs, counters, keystore files, copied setups, and the generated
 `nicos.conf` live there.
 
 Set `NICOS_SMOKE_ARTIFACT_ROOT=/path/to/artifacts` to copy runtime diagnostics
-after teardown. CI uses this to publish `smoke-junit.xml`, service logs, Docker
-build logs, compose logs, and compose state.
+after teardown. CI sets this inside the test container to
+`/workspace/smoke-artifacts`, then stages the copied diagnostics plus Docker
+build logs, compose logs, compose state, and `smoke-junit.xml` in the repo-root
+`smoke-artifacts/` directory.
 
 ## Configuration
 
@@ -156,3 +170,6 @@ The Python runner owns NICOS process orchestration and readiness checks. Compose
 owns Kafka for local runs and provides the CI-only test container. Local Kafka
 uses a per-run compose project and a dynamically allocated host port so separate
 checkouts and repeated runs do not share the same Kafka container or port.
+This hybrid model is intentional because the CI runner can use a Docker socket
+but should not rely on privileged Docker-in-Docker from inside the test
+container.

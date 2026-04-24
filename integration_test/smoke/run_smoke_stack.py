@@ -354,11 +354,19 @@ def _prepare_runtime_package(runtime_root: Path) -> None:
     package_root = runtime_root / SMOKE_SETUP_PACKAGE
     smoke_root = package_root / "smoke"
     setups_target = smoke_root / "setups"
+    nexus_target = smoke_root / "nexus"
     if setups_target.exists():
         shutil.rmtree(setups_target)
+    if nexus_target.exists():
+        shutil.rmtree(nexus_target)
     shutil.copytree(
         SMOKE_ROOT / "setups",
         setups_target,
+        ignore=shutil.ignore_patterns("__pycache__"),
+    )
+    shutil.copytree(
+        SMOKE_ROOT / "nexus",
+        nexus_target,
         ignore=shutil.ignore_patterns("__pycache__"),
     )
     smoke_root.mkdir(parents=True, exist_ok=True)
@@ -388,6 +396,10 @@ KAFKA_USER = ""
 """.lstrip(),
         encoding="utf-8",
     )
+
+
+def _runtime_nexus_config_path() -> Path:
+    return Path(SMOKE_SETUP_PACKAGE) / "smoke" / "nexus" / "smoke_nexus.json"
 
 
 def _ensure_runtime_dirs(runtime_root: Path, clean: bool) -> None:
@@ -481,6 +493,26 @@ def _run(
             f"stderr:\n{result.stderr or ''}"
         )
     return result
+
+
+def _nicos_script_cmd(script_name: str) -> list[str]:
+    installed = shutil.which(script_name)
+    checkout_script = REPO_ROOT / "bin" / script_name
+
+    if installed:
+        installed_path = Path(installed).resolve()
+        if not checkout_script.exists() or installed_path != checkout_script.resolve():
+            return [str(installed_path)]
+
+    if checkout_script.exists():
+        return [sys.executable, str(checkout_script)]
+
+    if installed:
+        return [installed]
+
+    raise RuntimeError(
+        f"{script_name} was not found on PATH and {checkout_script} does not exist"
+    )
 
 
 def _compose(
@@ -676,13 +708,18 @@ def _tail(path: Path, lines: int = 80) -> str:
 
 
 def _start_service(
-    name: str, args: list[str], env: dict[str, str], log_root: Path
+    name: str,
+    args: list[str],
+    env: dict[str, str],
+    log_root: Path,
+    *,
+    cwd: Path = REPO_ROOT,
 ) -> ManagedProcess:
     log_path = log_root / f"{name}.log"
     handle = open(log_path, "w", encoding="utf-8")
     process = subprocess.Popen(
         args,
-        cwd=REPO_ROOT,
+        cwd=cwd,
         env=env,
         stdout=handle,
         stderr=subprocess.STDOUT,
@@ -823,10 +860,11 @@ def smoke_client_session(
     base_env["NICOS_SMOKE_FILEWRITER_INSTRUMENT_TOPIC"] = (
         SMOKE_FILEWRITER_INSTRUMENT_TOPIC
     )
+    base_env["NICOS_SMOKE_NEXUS_CONFIG_PATH"] = str(_runtime_nexus_config_path())
     base_env["PYTHONPATH"] = (
-        f"{runtime.root}:{REPO_ROOT}:{base_env['PYTHONPATH']}"
+        f"{runtime.root}{os.pathsep}{base_env['PYTHONPATH']}"
         if base_env.get("PYTHONPATH")
-        else f"{runtime.root}:{REPO_ROOT}"
+        else str(runtime.root)
     )
 
     client = SmokeClient()
@@ -891,9 +929,10 @@ def smoke_client_session(
         print("[smoke] starting nicos-cache", flush=True)
         cache = _start_service(
             "nicos-cache",
-            [sys.executable, "bin/nicos-cache", "-S", "cache"],
+            _nicos_script_cmd("nicos-cache") + ["-S", "cache"],
             base_env,
             runtime.log_root,
+            cwd=runtime.root,
         )
         managed.append(cache)
         _wait_for_process_port(
@@ -903,9 +942,10 @@ def smoke_client_session(
         print("[smoke] starting nicos-poller", flush=True)
         poller = _start_service(
             "nicos-poller",
-            [sys.executable, "bin/nicos-poller", "-S", "poller"],
+            _nicos_script_cmd("nicos-poller") + ["-S", "poller"],
             base_env,
             runtime.log_root,
+            cwd=runtime.root,
         )
         managed.append(poller)
         time.sleep(0.5)
@@ -914,9 +954,10 @@ def smoke_client_session(
         print("[smoke] starting nicos-collector", flush=True)
         collector = _start_service(
             "nicos-collector",
-            [sys.executable, "bin/nicos-collector", "-S", "collector"],
+            _nicos_script_cmd("nicos-collector") + ["-S", "collector"],
             base_env,
             runtime.log_root,
+            cwd=runtime.root,
         )
         managed.append(collector)
         time.sleep(0.5)
@@ -925,9 +966,10 @@ def smoke_client_session(
         print("[smoke] starting nicos-daemon", flush=True)
         daemon = _start_service(
             "nicos-daemon",
-            [sys.executable, "bin/nicos-daemon", "-S", "daemon"],
+            _nicos_script_cmd("nicos-daemon") + ["-S", "daemon"],
             base_env,
             runtime.log_root,
+            cwd=runtime.root,
         )
         managed.append(daemon)
         _wait_for_process_port(
