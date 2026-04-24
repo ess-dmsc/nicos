@@ -41,6 +41,11 @@ def pytest_configure(config):
     config._nicos_original_qt_qpa_platform = os.environ.get("QT_QPA_PLATFORM")
     os.environ["QT_QPA_PLATFORM"] = "offscreen"
 
+    # Some CI invocations disable entry-point plugin autoloading. These tests
+    # require pytest-qt for both qtbot and qt_log_ignore.
+    if not config.pluginmanager.hasplugin("pytest-qt"):
+        config.pluginmanager.import_plugin("pytestqt.plugin")
+
     for pattern in _IGNORED_QT_MESSAGE_PATTERNS:
         config.addinivalue_line("qt_log_ignore", pattern)
 
