@@ -1,99 +1,78 @@
 # NICOS Integration Smoke Stack
 
-This folder contains an end-to-end smoke setup that starts a full NICOS stack:
+This smoke path validates NICOS-owned behavior with smoke-owned fixtures:
+daemon startup, setup/session commands, EPICS PVA device interaction, scans,
+and local NICOS side effects. It does not deploy or validate the downstream
+ESS stack.
 
+The runner starts:
+
+- Kafka, via Docker Compose unless an external broker is requested
+- a local in-process PVA server
 - `nicos-cache`
 - `nicos-poller`
 - `nicos-collector`
 - `nicos-daemon`
-- Kafka (docker compose)
-- local PVA server
-
-The smoke setup includes ESS EPICS devices from
-`nicos_ess/devices/epics/pva/epics_devices.py` plus Kafka/filewriter devices
-(`KafkaForwarder`, `FileWriterStatus`, `FileWriterControl`, `SciChat`).
-
-All Kafka topics are prefixed with `test_smoke_`.
 
 ## Files
 
-- `smoke/nicos.conf`: instrument config for `integration_test.smoke`
-- `smoke/setups/special/*.py`: service setups (`cache`, `poller`, `collector`, `daemon`)
-- `smoke/setups/system.py`: loaded by daemon during smoke checks
-- `smoke/pva_server.py`: in-process PVA server for EPICS PVs
-- `smoke/docker-compose.kafka.yml`: single-node KRaft Kafka for smoke runs
-- `smoke/docker-compose.ci.yml`: CI compose stack (`kafka` + `nicos-integration`)
-- `smoke/Dockerfile`: image used by CI smoke tests
-- `smoke/run_smoke_stack.py`: orchestrator script
+- `smoke/docker-compose.yml`: Kafka plus the CI-only smoke test container
+- `smoke/Dockerfile`: Python 3.13 `uv` image used by CI
+- `smoke/run_smoke_stack.py`: local NICOS process orchestrator
+- `smoke/pva_server.py`: in-process PVA server for smoke PVs
+- `smoke/setups/`: smoke-owned NICOS setups
+- `smoke/nexus/smoke_nexus.json`: minimal smoke-owned NeXus structure
 
-In CI, image sources are overridable via environment variables:
+## Prerequisites
 
-- `NICOS_SMOKE_KAFKA_IMAGE` (defaults to `confluentinc/cp-kafka:7.6.1`)
-- `NICOS_SMOKE_PYTHON_BASE_IMAGE` (defaults to `python:3.8-slim-bullseye`)
-
-## Startup Order
-
-The runner enforces this order:
-
-1. Start Kafka and wait for broker readiness
-2. Create required Kafka topics
-3. Start local PVA server
-4. Start `nicos-cache` and wait until cache port is bound
-5. Start `nicos-poller`
-6. Start `nicos-collector`
-7. Start `nicos-daemon`
-8. Connect to daemon and run smoke assertions
-
-## Run
-
-From repository root:
+From the repository root:
 
 ```bash
-python integration_test/smoke/run_smoke_stack.py
+uv sync --all-packages
 ```
 
-Useful options:
+Docker is required when the runner manages Kafka. CI uses Docker-in-Docker and
+the same compose file as local runs.
+
+## Run Locally
+
+Use module execution so the smoke package is imported normally:
 
 ```bash
-# keep Kafka container running after smoke
-python integration_test/smoke/run_smoke_stack.py --keep-kafka
-
-# keep previous runtime logs/data in integration_test/runtime/
-python integration_test/smoke/run_smoke_stack.py --no-clean-runtime
+NICOS_RUN_SMOKE_INTEGRATION=1 \
+uv run python -m integration_test.smoke.run_smoke_stack
 ```
 
-## Pytest Smoke Fixture
-
-Smoke tests can use a fixture that yields a connected daemon client and tears
-down the full stack automatically after `yield`:
-
-- fixture: `smoke_client` (module scope)
-- location: `integration_test/smoke/conftest.py`
-- native command-style calls via client methods:
-  - `smoke_client.NewSetup(...)`
-  - `smoke_client.maw(...)`
-  - `smoke_client.count(...)`
-  - `smoke_client.read(...)` and `smoke_client.status(...)`
-  - `smoke_client.dev("DeviceName")` for script-style device references
-
-Run the EPICS basic smoke tests with:
+Run the pytest smoke test directly:
 
 ```bash
-NICOS_RUN_SMOKE_INTEGRATION=1 pytest -q integration_test/smoke/test_smoke.py
+NICOS_RUN_SMOKE_INTEGRATION=1 \
+uv run pytest -q integration_test/smoke/test_smoke.py
 ```
 
-Run against an externally managed Kafka broker (no local docker compose inside
-the smoke runner):
+Run against an externally managed Kafka broker:
 
 ```bash
 NICOS_RUN_SMOKE_INTEGRATION=1 \
 NICOS_SMOKE_MANAGE_KAFKA=0 \
 NICOS_SMOKE_KAFKA_BOOTSTRAP=kafka:9092 \
-pytest -q integration_test/smoke/test_smoke.py
+uv run pytest -q integration_test/smoke/test_smoke.py
 ```
 
-## Notes
+## Runtime State
 
-- The runner disables SASL env settings so local plain-text Kafka works even if
-  your shell has production Kafka vars configured.
-- Runtime logs are written to `integration_test/runtime/log/`.
+Each run creates a per-run runtime directory under the system temp directory by
+default. Set `NICOS_SMOKE_RUNTIME_ROOT=/path/to/runtime` to choose a specific
+runtime root. Logs, counters, keystore files, and the generated smoke
+`nicos.conf` live there.
+
+Set `NICOS_SMOKE_ARTIFACT_ROOT=/path/to/artifacts` to copy runtime diagnostics
+after teardown. CI uses this to publish `smoke-junit.xml`, service logs, Docker
+build logs, compose logs, and compose state.
+
+## Orchestration Model
+
+The Python runner owns NICOS process orchestration. Compose owns Kafka for local
+runs and provides the CI test container for Docker-in-Docker. Local Kafka uses a
+per-run compose project and a dynamically allocated host port so separate
+checkouts and repeated runs do not share the same Kafka container or port.

@@ -65,6 +65,8 @@ class SmokePvaServer:
         self._readable_pv = _make_float_pv(1.23, units="A", low=-1e3, high=1e3)
         self._move_read_pv = _make_float_pv(0.0, units="Hz", low=0.0, high=100.0)
         self._move_write_pv = _make_float_pv(0.0, units="Hz", low=0.0, high=100.0)
+        self._move_lock = threading.Lock()
+        self._move_generation = 0
 
         @self._move_write_pv.put
         def _on_move_put(pv_obj, op):
@@ -76,10 +78,16 @@ class SmokePvaServer:
 
             # Write target immediately, then update readback asynchronously.
             pv_obj.post(target, timestamp=time.time())
+            with self._move_lock:
+                self._move_generation += 1
+                generation = self._move_generation
 
             def _finish_motion():
                 time.sleep(self.move_delay_s)
-                self._move_read_pv.post(target, timestamp=time.time())
+                with self._move_lock:
+                    if generation != self._move_generation:
+                        return
+                    self._move_read_pv.post(target, timestamp=time.time())
 
             threading.Thread(target=_finish_motion, daemon=True).start()
             op.done()

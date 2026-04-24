@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run a full NICOS smoke stack for EPICS+Kafka integration validation.
+"""Run the NICOS-owned smoke stack.
 
 Stack components:
 - Kafka (docker compose)
@@ -13,12 +13,14 @@ Stack components:
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import shutil
 import signal
 import socket
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 from contextlib import contextmanager
@@ -30,10 +32,6 @@ from confluent_kafka import KafkaException
 from confluent_kafka.admin import AdminClient, NewTopic
 from p4p.client.thread import Context as PvaContext
 
-# Allow running as a plain script: `python integration_test/smoke/run_smoke_stack.py`
-if __package__ in (None, ""):
-    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-
 from integration_test.smoke.pva_server import SmokePvaServer
 from nicos.clients.base import ConnectionData, NicosClient
 from nicos.protocols.daemon import STATUS_IDLE, STATUS_IDLEEXC
@@ -41,15 +39,11 @@ from nicos.utils import parseConnectionString
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SMOKE_ROOT = Path(__file__).resolve().parent
-COMPOSE_FILE = SMOKE_ROOT / "docker-compose.kafka.yml"
-RUNTIME_ROOT = REPO_ROOT / "integration_test" / "runtime"
-LOG_ROOT = RUNTIME_ROOT / "log"
+COMPOSE_FILE = SMOKE_ROOT / "docker-compose.yml"
 ROOT_NICOS_CONF = REPO_ROOT / "nicos.conf"
 
-CACHE_HOST = "localhost"
-CACHE_PORT = 24869
-DAEMON_HOST = "localhost"
-DAEMON_PORT = 21301
+SMOKE_SETUP_PACKAGE = "nicos_smoke_runtime"
+SMOKE_INSTRUMENT = f"{SMOKE_SETUP_PACKAGE}.smoke"
 DEFAULT_KAFKA_BOOTSTRAP = "localhost:19092"
 
 SMOKE_TOPICS = [
@@ -72,6 +66,17 @@ class ManagedProcess:
 
 
 @dataclass(frozen=True)
+class SmokeRuntime:
+    root: Path
+    log_root: Path
+    cache_host: str
+    cache_port: int
+    daemon_host: str
+    daemon_port: int
+    artifact_root: Path | None
+
+
+@dataclass(frozen=True)
 class SmokeDevice:
     """Reference to a device variable in daemon script namespace."""
 
@@ -85,18 +90,31 @@ class SmokeClient(NicosClient):
         self._disconnecting = False
         self._done_results = {}
         self._done_lock = threading.Lock()
+        self._async_errors = []
+        self._async_error_lock = threading.Lock()
         super().__init__(print)
 
     def signal(self, name, data=None, data2=None):
         if name == "error":
-            raise RuntimeError(f"daemon client error: {data} ({data2})")
-        if name == "broken":
-            raise RuntimeError(f"daemon connection broken: {data}")
-        if name == "disconnected" and not self._disconnecting:
-            raise RuntimeError("daemon disconnected unexpectedly")
-        if name == "done" and isinstance(data, dict) and "reqid" in data:
+            self._record_async_error(f"daemon client error: {data} ({data2})")
+        elif name == "broken":
+            self._record_async_error(f"daemon connection broken: {data}")
+        elif name == "disconnected" and not self._disconnecting:
+            self._record_async_error("daemon disconnected unexpectedly")
+        elif name == "done" and isinstance(data, dict) and "reqid" in data:
             with self._done_lock:
                 self._done_results[data["reqid"]] = bool(data.get("success", False))
+
+    def _record_async_error(self, message: str) -> None:
+        with self._async_error_lock:
+            self._async_errors.append(message)
+
+    def _raise_async_error(self) -> None:
+        with self._async_error_lock:
+            errors = self._async_errors[:]
+            self._async_errors.clear()
+        if errors:
+            raise RuntimeError("\n".join(errors))
 
     def dev(self, name: str) -> SmokeDevice:
         """Return a device reference for command calls (e.g. maw(dev('m'), 5))."""
@@ -178,6 +196,7 @@ class SmokeClient(NicosClient):
     def wait_idle(self, timeout: float = 60.0) -> None:
         deadline = time.monotonic() + timeout
         while time.monotonic() < deadline:
+            self._raise_async_error()
             reply = self.ask("getstatus", quiet=True, default=None)
             if reply and reply["status"][0] in (STATUS_IDLE, STATUS_IDLEEXC):
                 if reply["status"][0] == STATUS_IDLEEXC:
@@ -207,6 +226,7 @@ class SmokeClient(NicosClient):
         deadline = time.monotonic() + timeout
         saw_activity = False
         while time.monotonic() < deadline:
+            self._raise_async_error()
             done_result = self._consume_done_result(reqid)
             if done_result is True:
                 return reqid
@@ -241,20 +261,22 @@ class SmokeClient(NicosClient):
 SmokeAssertion = Callable[[SmokeClient], None]
 
 
-def _assert_root_nicos_conf_not_symlink() -> None:
-    """Fail fast when repo-root nicos.conf is a symlink.
+def _assert_no_root_nicos_conf() -> None:
+    """Fail fast when repo-root nicos.conf could override smoke config.
 
-    The smoke stack must use the smoke instrument config. A root-level symlinked
-    nicos.conf can override that and make the run use an unrelated config.
+    NICOS merges a repo-root nicos.conf over the instrument config. Any
+    repo-root nicos.conf, symlink or regular file, invalidates this smoke run.
     """
-    if not ROOT_NICOS_CONF.is_symlink():
+    if not ROOT_NICOS_CONF.exists() and not ROOT_NICOS_CONF.is_symlink():
         return
-    target = os.readlink(ROOT_NICOS_CONF)
+    detail = ""
+    if ROOT_NICOS_CONF.is_symlink():
+        detail = f" ({ROOT_NICOS_CONF} -> {os.readlink(ROOT_NICOS_CONF)})"
     raise RuntimeError(
         "Smoke integration tests cannot run: "
-        f"repo-root nicos.conf is a symlink ({ROOT_NICOS_CONF} -> {target}). "
-        "This overrides the smoke configuration and leads to invalid test runs. "
-        "Remove the symlinked nicos.conf from the repository root and rerun."
+        f"repo-root nicos.conf exists{detail}. "
+        "It overrides the smoke configuration and leads to invalid test runs. "
+        "Remove the repo-root nicos.conf and rerun."
     )
 
 
@@ -265,11 +287,11 @@ def _env_flag(name: str, *, default: bool) -> bool:
     return raw_value.strip().lower() not in {"0", "false", "no", "off"}
 
 
-def _kafka_bootstrap() -> str:
-    value = os.environ.get("NICOS_SMOKE_KAFKA_BOOTSTRAP", DEFAULT_KAFKA_BOOTSTRAP)
+def _kafka_bootstrap(default: str = DEFAULT_KAFKA_BOOTSTRAP) -> str:
+    value = os.environ.get("NICOS_SMOKE_KAFKA_BOOTSTRAP", default)
     endpoints = [entry.strip() for entry in value.split(",") if entry.strip()]
     if not endpoints:
-        return DEFAULT_KAFKA_BOOTSTRAP
+        return default
     return ",".join(endpoints)
 
 
@@ -277,6 +299,143 @@ def _first_bootstrap_endpoint(bootstrap_servers: str) -> tuple[str, int]:
     endpoint = bootstrap_servers.split(",", 1)[0].strip()
     host, port_str = endpoint.rsplit(":", 1)
     return host.strip(), int(port_str)
+
+
+def _endpoint(host: str, port: int) -> str:
+    return f"{host}:{port}"
+
+
+def _split_endpoint(endpoint: str) -> tuple[str, int]:
+    host, port_str = endpoint.rsplit(":", 1)
+    return host.strip(), int(port_str)
+
+
+def _free_tcp_port(host: str = "127.0.0.1") -> int:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.bind((host, 0))
+        return int(sock.getsockname()[1])
+
+
+def _runtime_root() -> Path:
+    configured = os.environ.get("NICOS_SMOKE_RUNTIME_ROOT")
+    if configured:
+        return Path(configured).expanduser().resolve()
+    return Path(tempfile.mkdtemp(prefix="nicos-smoke-")).resolve()
+
+
+def _artifact_root() -> Path | None:
+    configured = os.environ.get("NICOS_SMOKE_ARTIFACT_ROOT")
+    if not configured:
+        return None
+    return Path(configured).expanduser().resolve()
+
+
+def _safe_clean_runtime_root(runtime_root: Path) -> None:
+    marker = runtime_root / ".nicos-smoke-runtime"
+    if not runtime_root.exists():
+        return
+    if marker.exists() or runtime_root.name.startswith("nicos-smoke-"):
+        shutil.rmtree(runtime_root)
+        return
+    raise RuntimeError(
+        "refusing to clean unmarked smoke runtime root: "
+        f"{runtime_root}. Remove it manually or choose a nicos-smoke-* path."
+    )
+
+
+def _write_runtime_nicos_conf(runtime_root: Path) -> None:
+    smoke_dir = runtime_root / SMOKE_SETUP_PACKAGE / "smoke"
+    smoke_dir.mkdir(parents=True, exist_ok=True)
+    nicos_conf = f"""
+[nicos]
+setup_package = {json.dumps(SMOKE_SETUP_PACKAGE)}
+instrument = "smoke"
+setup_subdirs = ["smoke"]
+services = ["cache", "poller", "collector", "daemon"]
+pid_path = {json.dumps(str(runtime_root / "pid"))}
+logging_path = {json.dumps(str(runtime_root / "log"))}
+keystorepaths = [{json.dumps(str(runtime_root / "keystore"))}]
+
+[environment]
+DEFAULT_EPICS_PROTOCOL = "pva"
+EPICS_CA_AUTO_ADDR_LIST = "NO"
+EPICS_CA_ADDR_LIST = "127.0.0.1"
+EPICS_PVA_AUTO_ADDR_LIST = "NO"
+EPICS_PVA_ADDR_LIST = "127.0.0.1"
+KAFKA_SSL_PROTOCOL = ""
+KAFKA_SSL_MECHANISM = ""
+KAFKA_CERT_PATH = ""
+KAFKA_USER = ""
+""".lstrip()
+    (smoke_dir / "nicos.conf").write_text(nicos_conf, encoding="utf-8")
+    (runtime_root / SMOKE_SETUP_PACKAGE / "__init__.py").write_text(
+        "", encoding="utf-8"
+    )
+    (smoke_dir / "__init__.py").write_text("", encoding="utf-8")
+
+
+def _prepare_runtime_package(runtime_root: Path) -> None:
+    package_smoke_root = runtime_root / SMOKE_SETUP_PACKAGE / "smoke"
+    setups_target = package_smoke_root / "setups"
+    if setups_target.exists():
+        shutil.rmtree(setups_target)
+    shutil.copytree(
+        SMOKE_ROOT / "setups",
+        setups_target,
+        ignore=shutil.ignore_patterns("__pycache__"),
+    )
+    _write_runtime_nicos_conf(runtime_root)
+
+
+def _ensure_runtime_dirs(runtime_root: Path, clean: bool) -> None:
+    if clean:
+        _safe_clean_runtime_root(runtime_root)
+
+    for directory in (
+        runtime_root,
+        runtime_root / "pid",
+        runtime_root / "log",
+        runtime_root / "data",
+        runtime_root / "keystore",
+    ):
+        directory.mkdir(parents=True, exist_ok=True)
+    (runtime_root / ".nicos-smoke-runtime").write_text("", encoding="utf-8")
+
+
+def _ensure_runtime_files(runtime_root: Path, clean: bool) -> None:
+    cached_proposals = runtime_root / "cached_proposals.json"
+    if clean or not cached_proposals.exists():
+        cached_proposals.write_text("{}", encoding="utf-8")
+
+    counters_file = runtime_root / "data" / "counters"
+    if clean or not counters_file.exists():
+        counters_file.write_text("scan 0\nfile 0", encoding="utf-8")
+
+
+def _prepare_runtime(clean: bool) -> SmokeRuntime:
+    runtime_root = _runtime_root()
+    _ensure_runtime_dirs(runtime_root, clean)
+    _ensure_runtime_files(runtime_root, clean)
+    _prepare_runtime_package(runtime_root)
+
+    cache_endpoint = os.environ.get(
+        "NICOS_SMOKE_CACHE_HOST", _endpoint("127.0.0.1", _free_tcp_port())
+    )
+    daemon_endpoint = os.environ.get(
+        "NICOS_SMOKE_DAEMON_HOST", _endpoint("127.0.0.1", _free_tcp_port())
+    )
+    cache_host, cache_port = _split_endpoint(cache_endpoint)
+    daemon_host, daemon_port = _split_endpoint(daemon_endpoint)
+
+    return SmokeRuntime(
+        root=runtime_root,
+        log_root=runtime_root / "log",
+        cache_host=cache_host,
+        cache_port=cache_port,
+        daemon_host=daemon_host,
+        daemon_port=daemon_port,
+        artifact_root=_artifact_root(),
+    )
 
 
 def _compose_base_cmd() -> list[str]:
@@ -322,42 +481,17 @@ def _run(
 
 
 def _compose(
-    compose_base: list[str], *args: str, check: bool = True
+    compose_base: list[str],
+    *args: str,
+    check: bool = True,
+    env: dict[str, str] | None = None,
 ) -> subprocess.CompletedProcess:
     return _run(
         compose_base + ["-f", str(COMPOSE_FILE)] + list(args),
         check=check,
         capture=True,
+        env=env,
     )
-
-
-def _ensure_runtime_dirs(clean: bool) -> None:
-    if clean and RUNTIME_ROOT.exists():
-        shutil.rmtree(RUNTIME_ROOT)
-
-    for directory in (
-        RUNTIME_ROOT,
-        RUNTIME_ROOT / "pid",
-        RUNTIME_ROOT / "log",
-        RUNTIME_ROOT / "data",
-        RUNTIME_ROOT / "keystore",
-    ):
-        directory.mkdir(parents=True, exist_ok=True)
-
-
-def _ensure_runtime_files(clean: bool) -> None:
-    """
-    Ensure any files expected by the smoke stack exist, creating or cleaning as needed.
-        - cached_proposals.json: Used by the experiment device, should be a valid JSON object.
-        - counters: Used by the file writer pool device, should be a text file with lines of the form `counter_name number`.
-    """
-    cached_proposals = RUNTIME_ROOT / "cached_proposals.json"
-    if clean or not cached_proposals.exists():
-        cached_proposals.write_text("{}", encoding="utf-8")
-
-    counters_file = RUNTIME_ROOT / "data" / "counters"
-    if clean or not counters_file.exists():
-        counters_file.write_text("scan 0\nfile 0", encoding="utf-8")
 
 
 def _wait_for_port(host: str, port: int, timeout: float) -> None:
@@ -371,9 +505,9 @@ def _wait_for_port(host: str, port: int, timeout: float) -> None:
     raise TimeoutError(f"timed out waiting for {host}:{port}")
 
 
-def _compose_diagnostics(compose_base: list[str]) -> str:
-    ps = _compose(compose_base, "ps", "-a", check=False)
-    logs = _compose(compose_base, "logs", "--no-color", "kafka", check=False)
+def _compose_diagnostics(compose_base: list[str], env: dict[str, str]) -> str:
+    ps = _compose(compose_base, "ps", "-a", check=False, env=env)
+    logs = _compose(compose_base, "logs", "--no-color", "kafka", check=False, env=env)
     return (
         "docker compose diagnostics\n"
         f"ps:\n{ps.stdout or ps.stderr or '<no output>'}\n"
@@ -386,6 +520,7 @@ def _wait_for_kafka_ready(
     *,
     timeout: float = 120.0,
     compose_base: list[str] | None = None,
+    compose_env: dict[str, str] | None = None,
 ) -> None:
     host, port = _first_bootstrap_endpoint(bootstrap_servers)
     _wait_for_port(host, port, timeout=timeout)
@@ -403,7 +538,9 @@ def _wait_for_kafka_ready(
             last_error = str(exc)
         time.sleep(1.0)
     diagnostics = (
-        _compose_diagnostics(compose_base) if compose_base is not None else "<none>"
+        _compose_diagnostics(compose_base, compose_env or os.environ.copy())
+        if compose_base is not None
+        else "<none>"
     )
     raise TimeoutError(
         "timed out waiting for Kafka broker readiness\n"
@@ -412,7 +549,10 @@ def _wait_for_kafka_ready(
 
 
 def _ensure_topics(
-    bootstrap_servers: str, topics: list[str], compose_base: list[str] | None = None
+    bootstrap_servers: str,
+    topics: list[str],
+    compose_base: list[str] | None = None,
+    compose_env: dict[str, str] | None = None,
 ) -> None:
     admin = AdminClient({"bootstrap.servers": bootstrap_servers})
     futures = admin.create_topics(
@@ -428,7 +568,9 @@ def _ensure_topics(
                 topic_failures.append(f"{topic}: {exc}")
     if topic_failures:
         diagnostics = (
-            _compose_diagnostics(compose_base) if compose_base is not None else "<none>"
+            _compose_diagnostics(compose_base, compose_env or os.environ.copy())
+            if compose_base is not None
+            else "<none>"
         )
         failures = "\n".join(topic_failures)
         raise RuntimeError(
@@ -448,22 +590,13 @@ def _wait_for_pva_ready(pva_server: SmokePvaServer, timeout: float = 15.0) -> No
     ctx = PvaContext("pva", nt=False)
     deadline = time.monotonic() + timeout
     last_error = ""
-    probe_target = 0.25
     try:
         while time.monotonic() < deadline:
             try:
                 _pva_to_float(ctx.get(names.readable, timeout=1.0))
                 _pva_to_float(ctx.get(names.move_read, timeout=1.0))
                 _pva_to_float(ctx.get(names.move_write, timeout=1.0))
-
-                ctx.put(names.move_write, probe_target, wait=True, timeout=1.0)
-                rbv_deadline = time.monotonic() + 3.0
-                while time.monotonic() < rbv_deadline:
-                    rbv = _pva_to_float(ctx.get(names.move_read, timeout=0.5))
-                    if abs(rbv - probe_target) <= 1e-6:
-                        return
-                    time.sleep(0.05)
-                last_error = "write acknowledged but readback did not update"
+                return
             except Exception as err:
                 last_error = str(err)
             time.sleep(0.1)
@@ -483,8 +616,10 @@ def _tail(path: Path, lines: int = 80) -> str:
     return "\n".join(content[-lines:])
 
 
-def _start_service(name: str, args: list[str], env: dict[str, str]) -> ManagedProcess:
-    log_path = LOG_ROOT / f"{name}.log"
+def _start_service(
+    name: str, args: list[str], env: dict[str, str], log_root: Path
+) -> ManagedProcess:
+    log_path = log_root / f"{name}.log"
     handle = open(log_path, "w", encoding="utf-8")
     process = subprocess.Popen(
         args,
@@ -496,6 +631,33 @@ def _start_service(name: str, args: list[str], env: dict[str, str]) -> ManagedPr
         text=True,
     )
     return ManagedProcess(name, process, handle, log_path)
+
+
+def _assert_process_running(proc: ManagedProcess) -> None:
+    exit_code = proc.process.poll()
+    if exit_code is None:
+        return
+    raise RuntimeError(
+        f"{proc.name} exited during startup with code {exit_code}\n"
+        f"{_tail(proc.logfile_path)}"
+    )
+
+
+def _wait_for_process_port(
+    proc: ManagedProcess, host: str, port: int, timeout: float
+) -> None:
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        _assert_process_running(proc)
+        try:
+            with socket.create_connection((host, port), timeout=0.5):
+                return
+        except OSError:
+            time.sleep(0.1)
+    raise TimeoutError(
+        f"timed out waiting for {proc.name} on {host}:{port}\n"
+        f"{_tail(proc.logfile_path)}"
+    )
 
 
 def _stop_process(proc: ManagedProcess, timeout: float = 8.0) -> None:
@@ -517,6 +679,19 @@ def _stop_process(proc: ManagedProcess, timeout: float = 8.0) -> None:
                     pass
     finally:
         proc.logfile_handle.close()
+
+
+def _copy_runtime_artifacts(runtime: SmokeRuntime) -> None:
+    if runtime.artifact_root is None:
+        return
+    runtime.artifact_root.mkdir(parents=True, exist_ok=True)
+    for name in ("log", "data", "cached_proposals.json"):
+        source = runtime.root / name
+        target = runtime.artifact_root / name
+        if source.is_dir():
+            shutil.copytree(source, target, dirs_exist_ok=True)
+        elif source.exists():
+            shutil.copy2(source, target)
 
 
 def _smoke_assertions(client: SmokeClient) -> None:
@@ -541,6 +716,25 @@ def _smoke_assertions(client: SmokeClient) -> None:
     client.eval("session.getDevice('KafkaForwarder').status(0)")
 
 
+def _compose_project_name(runtime_root: Path) -> str:
+    suffix = "".join(
+        char if char.isalnum() else "-" for char in runtime_root.name.lower()
+    ).strip("-")
+    return f"nicos-smoke-{suffix or 'run'}"
+
+
+def _compose_env(runtime_root: Path, kafka_bootstrap: str) -> dict[str, str]:
+    host, port = _first_bootstrap_endpoint(kafka_bootstrap)
+    bind_host = "127.0.0.1" if host == "localhost" else host
+    env = os.environ.copy()
+    env["COMPOSE_PROJECT_NAME"] = _compose_project_name(runtime_root)
+    env["NICOS_SMOKE_KAFKA_BIND"] = bind_host
+    env["NICOS_SMOKE_KAFKA_HOST_PORT"] = str(port)
+    env["NICOS_SMOKE_KAFKA_ADVERTISED_HOST"] = host
+    env["NICOS_SMOKE_KAFKA_ADVERTISED_PORT"] = str(port)
+    return env
+
+
 @contextmanager
 def smoke_client_session(
     *,
@@ -548,28 +742,40 @@ def smoke_client_session(
     clean_runtime: bool = True,
 ) -> Iterator[SmokeClient]:
     """Start the full smoke stack and yield a connected daemon client."""
-    _assert_root_nicos_conf_not_symlink()
+    _assert_no_root_nicos_conf()
     manage_kafka = _env_flag("NICOS_SMOKE_MANAGE_KAFKA", default=True)
-    kafka_bootstrap = _kafka_bootstrap()
+    kafka_default = (
+        _endpoint("127.0.0.1", _free_tcp_port())
+        if manage_kafka
+        else DEFAULT_KAFKA_BOOTSTRAP
+    )
+    kafka_bootstrap = _kafka_bootstrap(kafka_default)
     compose_base = _compose_base_cmd() if manage_kafka else None
-    _ensure_runtime_dirs(clean_runtime)
-    _ensure_runtime_files(clean_runtime)
+    runtime = _prepare_runtime(clean_runtime)
+    compose_env = _compose_env(runtime.root, kafka_bootstrap) if manage_kafka else None
 
     pva_server = None
     managed: list[ManagedProcess] = []
 
     base_env = os.environ.copy()
-    base_env["INSTRUMENT"] = "integration_test.smoke"
+    base_env["INSTRUMENT"] = SMOKE_INSTRUMENT
     base_env["PYTHONUNBUFFERED"] = "1"
     base_env["EPICS_CA_AUTO_ADDR_LIST"] = "NO"
     base_env["EPICS_CA_ADDR_LIST"] = "127.0.0.1"
     base_env["EPICS_PVA_AUTO_ADDR_LIST"] = "NO"
     base_env["EPICS_PVA_ADDR_LIST"] = "127.0.0.1"
+    base_env["NICOS_SMOKE_RUNTIME_ROOT"] = str(runtime.root)
+    base_env["NICOS_SMOKE_CACHE_HOST"] = _endpoint(
+        runtime.cache_host, runtime.cache_port
+    )
+    base_env["NICOS_SMOKE_DAEMON_HOST"] = _endpoint(
+        runtime.daemon_host, runtime.daemon_port
+    )
     base_env["NICOS_SMOKE_KAFKA_BOOTSTRAP"] = kafka_bootstrap
     base_env["PYTHONPATH"] = (
-        f"{REPO_ROOT}:{base_env['PYTHONPATH']}"
+        f"{runtime.root}:{REPO_ROOT}:{base_env['PYTHONPATH']}"
         if base_env.get("PYTHONPATH")
-        else str(REPO_ROOT)
+        else f"{runtime.root}:{REPO_ROOT}"
     )
 
     # Explicitly disable SASL options for local plain-text smoke Kafka.
@@ -582,13 +788,20 @@ def smoke_client_session(
         base_env.pop(key, None)
 
     client = SmokeClient()
+    client.runtime_root = runtime.root
 
     try:
+        print(f"[smoke] runtime root: {runtime.root}", flush=True)
         if manage_kafka:
             assert compose_base is not None
             print("[smoke] starting Kafka (docker compose)", flush=True)
-            _compose(compose_base, "up", "-d", "kafka", check=True)
-            _wait_for_kafka_ready(kafka_bootstrap, compose_base=compose_base)
+            assert compose_env is not None
+            _compose(compose_base, "up", "-d", "kafka", check=True, env=compose_env)
+            _wait_for_kafka_ready(
+                kafka_bootstrap,
+                compose_base=compose_base,
+                compose_env=compose_env,
+            )
         else:
             print(
                 f"[smoke] using externally managed Kafka at {kafka_bootstrap}",
@@ -597,7 +810,12 @@ def smoke_client_session(
             _wait_for_kafka_ready(kafka_bootstrap)
 
         print("[smoke] creating Kafka topics", flush=True)
-        _ensure_topics(kafka_bootstrap, SMOKE_TOPICS, compose_base=compose_base)
+        _ensure_topics(
+            kafka_bootstrap,
+            SMOKE_TOPICS,
+            compose_base=compose_base,
+            compose_env=compose_env,
+        )
 
         print("[smoke] starting local PVA server", flush=True)
         pva_server = SmokePvaServer()
@@ -609,36 +827,50 @@ def smoke_client_session(
             "nicos-cache",
             [sys.executable, "bin/nicos-cache", "-S", "cache"],
             base_env,
+            runtime.log_root,
         )
         managed.append(cache)
-        _wait_for_port(CACHE_HOST, CACHE_PORT, timeout=30.0)
+        _wait_for_process_port(
+            cache, runtime.cache_host, runtime.cache_port, timeout=30.0
+        )
 
         print("[smoke] starting nicos-poller", flush=True)
         poller = _start_service(
             "nicos-poller",
             [sys.executable, "bin/nicos-poller", "-S", "poller"],
             base_env,
+            runtime.log_root,
         )
         managed.append(poller)
+        time.sleep(0.5)
+        _assert_process_running(poller)
 
         print("[smoke] starting nicos-collector", flush=True)
         collector = _start_service(
             "nicos-collector",
             [sys.executable, "bin/nicos-collector", "-S", "collector"],
             base_env,
+            runtime.log_root,
         )
         managed.append(collector)
+        time.sleep(0.5)
+        _assert_process_running(collector)
 
         print("[smoke] starting nicos-daemon", flush=True)
         daemon = _start_service(
             "nicos-daemon",
             [sys.executable, "bin/nicos-daemon", "-S", "daemon"],
             base_env,
+            runtime.log_root,
         )
         managed.append(daemon)
-        _wait_for_port(DAEMON_HOST, DAEMON_PORT, timeout=40.0)
+        _wait_for_process_port(
+            daemon, runtime.daemon_host, runtime.daemon_port, timeout=40.0
+        )
 
-        conn = parseConnectionString(f"user:user@{DAEMON_HOST}:{DAEMON_PORT}", 0)
+        conn = parseConnectionString(
+            f"user:user@{runtime.daemon_host}:{runtime.daemon_port}", 0
+        )
         client.connect(ConnectionData(**conn))
         if not client.isconnected:
             raise RuntimeError("failed to establish daemon client connection")
@@ -662,9 +894,12 @@ def smoke_client_session(
         if pva_server is not None:
             pva_server.stop()
 
+        _copy_runtime_artifacts(runtime)
+
         if manage_kafka and not keep_kafka:
             assert compose_base is not None
-            _compose(compose_base, "down", "-v", check=False)
+            assert compose_env is not None
+            _compose(compose_base, "down", "-v", check=False, env=compose_env)
 
 
 def run_smoke(

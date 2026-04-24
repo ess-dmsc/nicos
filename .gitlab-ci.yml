@@ -56,7 +56,13 @@ tests_py3xx:
 integration-smoke:
   stage: integration
   image: docker:28-cli
+  services:
+    - name: docker:28-dind
+      alias: docker
   variables:
+    DOCKER_DRIVER: overlay2
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_TLS_CERTDIR: ""
     HTTP_PROXY: $ESS_HTTP_PROXY
     HTTPS_PROXY: $ESS_HTTP_PROXY
     http_proxy: $ESS_HTTP_PROXY
@@ -65,14 +71,21 @@ integration-smoke:
     no_proxy: "localhost,127.0.0.1,docker,kafka"
   before_script: []
   script:
+    - rm -rf integration_test/runtime
     - mkdir -p integration_test/runtime
     - docker info
     - set +e
-    - docker compose -f integration_test/smoke/docker-compose.ci.yml up --build --abort-on-container-exit --exit-code-from nicos-integration
+    - docker compose -f integration_test/smoke/docker-compose.yml --profile ci build --progress plain nicos-integration > integration_test/runtime/docker-build.log 2>&1
+    - build_exit=$?
+    - cat integration_test/runtime/docker-build.log
+    - if [ "$build_exit" -ne 0 ]; then exit "$build_exit"; fi
+    - docker compose -f integration_test/smoke/docker-compose.yml --profile ci up --abort-on-container-exit --exit-code-from nicos-integration > integration_test/runtime/docker-compose-up.log 2>&1
     - test_exit=$?
-    - docker compose -f integration_test/smoke/docker-compose.ci.yml cp nicos-integration:/workspace/integration_test/runtime/smoke-junit.xml integration_test/runtime/smoke-junit.xml || true
-    - docker compose -f integration_test/smoke/docker-compose.ci.yml cp nicos-integration:/workspace/integration_test/runtime/log integration_test/runtime/log || true
-    - docker compose -f integration_test/smoke/docker-compose.ci.yml down -v --remove-orphans || true
+    - cat integration_test/runtime/docker-compose-up.log
+    - docker compose -f integration_test/smoke/docker-compose.yml ps -a > integration_test/runtime/docker-compose-ps.txt 2>&1 || true
+    - docker compose -f integration_test/smoke/docker-compose.yml logs --no-color > integration_test/runtime/docker-compose.log 2>&1 || true
+    - docker compose -f integration_test/smoke/docker-compose.yml cp nicos-integration:/workspace/smoke-artifacts/. integration_test/runtime/ || true
+    - docker compose -f integration_test/smoke/docker-compose.yml down -v --remove-orphans || true
     - if [ ! -f integration_test/runtime/smoke-junit.xml ]; then echo "smoke-junit.xml was not produced"; if [ "$test_exit" -eq 0 ]; then test_exit=1; fi; fi
     - exit "$test_exit"
   artifacts:
@@ -80,6 +93,10 @@ integration-smoke:
     paths:
       - integration_test/runtime/smoke-junit.xml
       - integration_test/runtime/log/
+      - integration_test/runtime/docker-build.log
+      - integration_test/runtime/docker-compose-up.log
+      - integration_test/runtime/docker-compose-ps.txt
+      - integration_test/runtime/docker-compose.log
     reports:
       junit: integration_test/runtime/smoke-junit.xml
 
