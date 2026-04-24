@@ -39,4 +39,3 @@ log/
 nicos.conf
 nicos_mlz/
 test/
-integration_test/runtime/

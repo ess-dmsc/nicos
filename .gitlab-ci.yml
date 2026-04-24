@@ -66,40 +66,40 @@ integration-smoke:
     no_proxy: "localhost,127.0.0.1,kafka"
   before_script: []
   script:
-    - rm -rf integration_test/runtime
-    - mkdir -p integration_test/runtime
+    - rm -rf smoke-artifacts
+    - mkdir -p smoke-artifacts
     # The shared Docker daemon needs per-job compose names to avoid collisions.
     - export COMPOSE_PROJECT_NAME="nicos-smoke-${CI_JOB_ID:-local}"
-    - docker info > integration_test/runtime/docker-info.log 2>&1
+    - docker info > smoke-artifacts/docker-info.log 2>&1
     - docker_exit=$?
-    - cat integration_test/runtime/docker-info.log
+    - cat smoke-artifacts/docker-info.log
     - if [ "$docker_exit" -ne 0 ]; then exit "$docker_exit"; fi
     - set +e
-    - docker compose -f integration_test/smoke/docker-compose.yml --profile ci build --progress plain nicos-integration > integration_test/runtime/docker-build.log 2>&1
+    - docker compose -f integration_test/smoke/docker-compose.yml --profile ci build --progress plain nicos-integration > smoke-artifacts/docker-build.log 2>&1
     - build_exit=$?
-    - cat integration_test/runtime/docker-build.log
+    - cat smoke-artifacts/docker-build.log
     - if [ "$build_exit" -ne 0 ]; then exit "$build_exit"; fi
-    - docker compose -f integration_test/smoke/docker-compose.yml --profile ci up --abort-on-container-exit --exit-code-from nicos-integration > integration_test/runtime/docker-compose-up.log 2>&1
+    - docker compose -f integration_test/smoke/docker-compose.yml --profile ci up --abort-on-container-exit --exit-code-from nicos-integration > smoke-artifacts/docker-compose-up.log 2>&1
     - test_exit=$?
-    - cat integration_test/runtime/docker-compose-up.log
-    - docker compose -f integration_test/smoke/docker-compose.yml ps -a > integration_test/runtime/docker-compose-ps.txt 2>&1 || true
-    - docker compose -f integration_test/smoke/docker-compose.yml logs --no-color > integration_test/runtime/docker-compose.log 2>&1 || true
-    - docker compose -f integration_test/smoke/docker-compose.yml cp nicos-integration:/workspace/smoke-artifacts/. integration_test/runtime/ || true
+    - cat smoke-artifacts/docker-compose-up.log
+    - docker compose -f integration_test/smoke/docker-compose.yml ps -a > smoke-artifacts/docker-compose-ps.txt 2>&1 || true
+    - docker compose -f integration_test/smoke/docker-compose.yml logs --no-color > smoke-artifacts/docker-compose.log 2>&1 || true
+    - docker compose -f integration_test/smoke/docker-compose.yml cp nicos-integration:/workspace/smoke-artifacts/. smoke-artifacts/ || true
     - docker compose -f integration_test/smoke/docker-compose.yml down -v --remove-orphans || true
-    - if [ ! -f integration_test/runtime/smoke-junit.xml ]; then echo "smoke-junit.xml was not produced"; if [ "$test_exit" -eq 0 ]; then test_exit=1; fi; fi
+    - if [ ! -f smoke-artifacts/smoke-junit.xml ]; then echo "smoke-junit.xml was not produced"; if [ "$test_exit" -eq 0 ]; then test_exit=1; fi; fi
     - exit "$test_exit"
   artifacts:
     when: always
     paths:
-      - integration_test/runtime/smoke-junit.xml
-      - integration_test/runtime/log/
-      - integration_test/runtime/docker-build.log
-      - integration_test/runtime/docker-compose-up.log
-      - integration_test/runtime/docker-compose-ps.txt
-      - integration_test/runtime/docker-compose.log
-      - integration_test/runtime/docker-info.log
+      - smoke-artifacts/smoke-junit.xml
+      - smoke-artifacts/log/
+      - smoke-artifacts/docker-build.log
+      - smoke-artifacts/docker-compose-up.log
+      - smoke-artifacts/docker-compose-ps.txt
+      - smoke-artifacts/docker-compose.log
+      - smoke-artifacts/docker-info.log
     reports:
-      junit: integration_test/runtime/smoke-junit.xml
+      junit: smoke-artifacts/smoke-junit.xml
 
 publish:
   stage: publish

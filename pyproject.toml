@@ -42,12 +42,21 @@ source = "uv-dynamic-versioning"
 [tool.uv-dynamic-versioning]
 pattern = "default-unprefixed"
 
+[tool.hatch.build]
+exclude = [
+    "/integration_test/runtime",
+    "/integration_test/runtime/**",
+    "**/__pycache__",
+    "**/__pycache__/**",
+    "**/*.py[cod]",
+]
+
 [tool.hatch.build.targets.sdist]
-only-include = ["nicos"]
+only-include = ["nicos", "integration_test"]
 
 # Configure wheel options. See https://hatch.pypa.io/latest/plugins/builder/wheel/#options
 [tool.hatch.build.targets.wheel]
-packages = ["nicos"]
+packages = ["nicos", "integration_test"]
 
 # to install into the top level of the venv:
 # could be used to load via `sys.prefix` + path
