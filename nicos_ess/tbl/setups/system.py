@@ -71,6 +71,5 @@ devices = dict(
         instrument_topic="tbl_filewriter",
         status="FileWriterStatus",
         nexus="NexusStructure",
-        use_instrument_directory=True,
     ),
 )

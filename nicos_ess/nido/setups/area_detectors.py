@@ -27,7 +27,6 @@ devices = dict(
         description="The light tomography Orca camera.",
         pv_root=f"{camera_system_pv_root}{camera_device_pv_root}",
         image_pv=f"{camera_system_pv_root}{camera_ndplugin_pv_root}ArrayData",
-        ad_kafka_plugin="orca_kafka_plugin",
         topicpv=f"{camera_system_pv_root}{camera_kafkaplugin_pv_root}KafkaTopic_RBV",
         sourcepv=f"{camera_system_pv_root}{camera_kafkaplugin_pv_root}SourceName_RBV",
         unit="images",

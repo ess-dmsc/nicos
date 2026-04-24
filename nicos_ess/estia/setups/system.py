@@ -78,7 +78,6 @@ devices = dict(
         instrument_topic="estia_filewriter",
         status="FileWriterStatus",
         nexus="NexusStructure",
-        use_instrument_directory=True,
     ),
     SciChat=device(
         "nicos_ess.devices.scichat.ScichatBot",

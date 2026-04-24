@@ -50,7 +50,6 @@ devices = dict(
         slit="slit",
         rot="vs_slit_rotation",
         opmode="centered",
-        offsets=(0.0, 0.0, 0.0, 0.0, 0.0),
     ),
     # Temperature Readouts
     right_horizontal_temp=device(

@@ -1,3 +1,5 @@
+description = "Adjustable collimator"
+
 collimator_map = {
     "L,N,N": (144.14, 65, 80),
     "L,N,1": (144.14, 65, 35),

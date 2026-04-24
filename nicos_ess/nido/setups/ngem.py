@@ -20,19 +20,19 @@ devices = dict(
         "nicos_ess.devices.epics.pva.EpicsReadable",
         description="nGEM unidentified event counter",
         readpv="TBL-Det1:cam1:BadEventIDs-R",
-        visiblitity=(),
+        visibility=(),
     ),
     ngem_failed_transfers=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
         description="nGEM failed transfer counter",
         readpv="TBL-Det1:cam1:FailedTransfers-R",
-        visiblitity=(),
+        visibility=(),
     ),
     ngem_failed_pushes=device(
         "nicos_ess.devices.epics.pva.EpicsReadable",
         description="nGEM failed push counter",
         readpv="TBL-Det1:cam1:FailedPushes-R",
-        visiblitity=(),
+        visibility=(),
     ),
     area_detector_collector=device(
         "nicos_ess.devices.epics.area_detector.AreaDetectorCollector",
