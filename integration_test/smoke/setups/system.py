@@ -1,8 +1,11 @@
 # ruff: noqa: F821
+import os
 
-description = "system setup for full-stack smoke integration"
+description = "system setup for NICOS smoke integration"
 
 group = "lowlevel"
+
+_runtime_root = os.environ.get("NICOS_SMOKE_RUNTIME_ROOT", "/tmp/nicos-smoke-manual")
 
 sysconfig = dict(
     cache=configdata("config.CACHE_HOST"),
@@ -27,9 +30,9 @@ devices = dict(
     Exp=device(
         "nicos_ess.devices.experiment.EssExperiment",
         description="experiment object",
-        dataroot="integration_test/runtime/data",
+        dataroot=os.path.join(_runtime_root, "data"),
         sample="Sample",
-        cache_filepath="integration_test/runtime/cached_proposals.json",
+        cache_filepath=os.path.join(_runtime_root, "cached_proposals.json"),
     ),
     conssink=device(
         "nicos_ess.devices.datasinks.console_scan_sink.ConsoleScanSink",
@@ -50,8 +53,8 @@ devices = dict(
     NexusStructure_Basic=device(
         "nicos_ess.devices.datasinks.nexus_structure.NexusStructureJsonFile",
         description="Provides the NeXus structure",
-        nexus_config_path="nicos_ess/ymir/nexus/ymir_nexus.json",
-        instrument_name="ymir",
+        nexus_config_path="integration_test/smoke/nexus/smoke_nexus.json",
+        instrument_name="",
         visibility=(),
     ),
     NexusStructure=device(

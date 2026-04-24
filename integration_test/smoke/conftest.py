@@ -41,9 +41,7 @@ def _docker_available() -> bool:
 def smoke_client():
     """Yield a connected daemon client with full smoke stack running."""
     if os.environ.get("NICOS_RUN_SMOKE_INTEGRATION") != "1":
-        pytest.skip(
-            "set NICOS_RUN_SMOKE_INTEGRATION=1 to run docker-based smoke integration tests"
-        )
+        pytest.skip("set NICOS_RUN_SMOKE_INTEGRATION=1 to run smoke integration tests")
     if _manage_kafka() and not _docker_available():
         pytest.skip("docker daemon is not available for integration smoke run")
 

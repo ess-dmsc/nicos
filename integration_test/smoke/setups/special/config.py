@@ -4,8 +4,8 @@ description = "High-level configuration settings for smoke integration tests"
 
 group = "configdata"
 
-CACHE_HOST = "localhost:24869"
-DAEMON_HOST = "localhost:21301"
+CACHE_HOST = os.environ.get("NICOS_SMOKE_CACHE_HOST", "localhost:24869")
+DAEMON_HOST = os.environ.get("NICOS_SMOKE_DAEMON_HOST", "localhost:21301")
 
 
 def _kafka_brokers():

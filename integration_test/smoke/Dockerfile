@@ -1,35 +1,36 @@
-ARG PYTHON_BASE_IMAGE=python:3.8-slim-bullseye
+ARG UV_IMAGE=ghcr.io/astral-sh/uv:0.9.18
+ARG PYTHON_BASE_IMAGE=python:3.13-slim-bookworm
+
+FROM ${UV_IMAGE} AS uv
 FROM ${PYTHON_BASE_IMAGE}
 
-ENV PYTHONDONTWRITEBYTECODE=1 \
+ARG HTTP_PROXY
+ARG HTTPS_PROXY
+ARG NO_PROXY
+ARG http_proxy
+ARG https_proxy
+ARG no_proxy
+
+ENV PATH="/workspace/.venv/bin:$PATH" \
+    PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1
+    UV_DYNAMIC_VERSIONING_BYPASS=0.0.0 \
+    UV_LINK_MODE=copy \
+    UV_PYTHON=3.13
 
 WORKDIR /workspace
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-        build-essential \
-        ca-certificates \
-        git \
+    && apt-get install -y --no-install-recommends ca-certificates git \
     && rm -rf /var/lib/apt/lists/* \
     && useradd --create-home --shell /bin/bash nicos
 
-COPY requirements.txt ./requirements.txt
-
-RUN python -m pip install --upgrade pip \
-    && python -m pip install --no-cache-dir -r requirements.txt \
-    && python -m pip install --no-cache-dir \
-        "requests<2.30.0" \
-        Pillow \
-        lxml \
-        mock \
-        pytest \
-        pytest-timeout
-
+COPY --from=uv /uv /uvx /usr/local/bin/
 COPY --chown=nicos:nicos . .
-RUN chown nicos:nicos /workspace
+
+RUN uv sync --all-packages --locked --group dev \
+    && chown -R nicos:nicos /workspace
 
 USER nicos
 
-CMD ["pytest", "-q", "integration_test/smoke/test_smoke.py", "--junitxml=integration_test/runtime/smoke-junit.xml"]
+CMD ["uv", "run", "pytest", "-q", "integration_test/smoke/test_smoke.py"]
