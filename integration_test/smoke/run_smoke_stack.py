@@ -3,6 +3,7 @@
 
 Stack components:
 - Kafka (docker compose)
+- Filewriter Kafka double
 - Local in-process PVA server
 - nicos-cache
 - nicos-poller
@@ -28,9 +29,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Iterator, TextIO
 
-from confluent_kafka import KafkaException
+from confluent_kafka import OFFSET_END, Consumer, KafkaException, TopicPartition
 from confluent_kafka.admin import AdminClient, NewTopic
 from p4p.client.thread import Context as PvaContext
+from streaming_data_types import deserialise_x5f2
 
 from integration_test.smoke.pva_server import SmokePvaServer
 from nicos.clients.base import ConnectionData, NicosClient
@@ -46,12 +48,16 @@ SMOKE_SETUP_PACKAGE = "nicos_smoke_runtime"
 SMOKE_INSTRUMENT = f"{SMOKE_SETUP_PACKAGE}.smoke"
 DEFAULT_KAFKA_BOOTSTRAP = "localhost:19092"
 
+SMOKE_FILEWRITER_INSTRUMENT_TOPIC = "test_smoke_filewriter"
+SMOKE_FILEWRITER_STATUS_TOPIC = "test_smoke_filewriter_status"
+SMOKE_FILEWRITER_POOL_TOPIC = "test_smoke_filewriter_pool"
+
 SMOKE_TOPICS = [
     "test_smoke_forwarder_dynamic_status",
     "test_smoke_forwarder_dynamic_config",
-    "test_smoke_filewriter",
-    "test_smoke_filewriter_status",
-    "test_smoke_filewriter_pool",
+    SMOKE_FILEWRITER_INSTRUMENT_TOPIC,
+    SMOKE_FILEWRITER_STATUS_TOPIC,
+    SMOKE_FILEWRITER_POOL_TOPIC,
     "test_smoke_scichat",
     "test_smoke_nicos_devices",
 ]
@@ -210,7 +216,7 @@ class SmokeClient(NicosClient):
             time.sleep(0.1)
         raise TimeoutError("timed out waiting for daemon idle status")
 
-    def execute(self, code: str, *, timeout: float = 60.0) -> int:
+    def execute(self, code: str, *, timeout: float = 60.0) -> str:
         """Execute command/script text and wait for this request to complete.
 
         Behavior matches CLI usage:
@@ -344,11 +350,22 @@ def _safe_clean_runtime_root(runtime_root: Path) -> None:
     )
 
 
-def _write_runtime_nicos_conf(runtime_root: Path) -> None:
-    """Generate temp NICOS config without changing production config parsing."""
-    smoke_dir = runtime_root / SMOKE_SETUP_PACKAGE / "smoke"
-    smoke_dir.mkdir(parents=True, exist_ok=True)
-    nicos_conf = f"""
+def _prepare_runtime_package(runtime_root: Path) -> None:
+    package_root = runtime_root / SMOKE_SETUP_PACKAGE
+    smoke_root = package_root / "smoke"
+    setups_target = smoke_root / "setups"
+    if setups_target.exists():
+        shutil.rmtree(setups_target)
+    shutil.copytree(
+        SMOKE_ROOT / "setups",
+        setups_target,
+        ignore=shutil.ignore_patterns("__pycache__"),
+    )
+    smoke_root.mkdir(parents=True, exist_ok=True)
+    (package_root / "__init__.py").write_text("", encoding="utf-8")
+    (smoke_root / "__init__.py").write_text("", encoding="utf-8")
+    (smoke_root / "nicos.conf").write_text(
+        f"""
 [nicos]
 setup_package = {json.dumps(SMOKE_SETUP_PACKAGE)}
 instrument = "smoke"
@@ -368,25 +385,9 @@ KAFKA_SSL_PROTOCOL = ""
 KAFKA_SSL_MECHANISM = ""
 KAFKA_CERT_PATH = ""
 KAFKA_USER = ""
-""".lstrip()
-    (smoke_dir / "nicos.conf").write_text(nicos_conf, encoding="utf-8")
-    (runtime_root / SMOKE_SETUP_PACKAGE / "__init__.py").write_text(
-        "", encoding="utf-8"
+""".lstrip(),
+        encoding="utf-8",
     )
-    (smoke_dir / "__init__.py").write_text("", encoding="utf-8")
-
-
-def _prepare_runtime_package(runtime_root: Path) -> None:
-    package_smoke_root = runtime_root / SMOKE_SETUP_PACKAGE / "smoke"
-    setups_target = package_smoke_root / "setups"
-    if setups_target.exists():
-        shutil.rmtree(setups_target)
-    shutil.copytree(
-        SMOKE_ROOT / "setups",
-        setups_target,
-        ignore=shutil.ignore_patterns("__pycache__"),
-    )
-    _write_runtime_nicos_conf(runtime_root)
 
 
 def _ensure_runtime_dirs(runtime_root: Path, clean: bool) -> None:
@@ -580,6 +581,61 @@ def _ensure_topics(
         )
 
 
+def _wait_for_filewriter_double_ready(
+    proc: ManagedProcess,
+    bootstrap_servers: str,
+    status_topic: str,
+    timeout: float = 20.0,
+) -> None:
+    consumer = Consumer(
+        {
+            "bootstrap.servers": bootstrap_servers,
+            "group.id": (
+                f"nicos-smoke-filewriter-ready-{os.getpid()}-{int(time.time() * 1000)}"
+            ),
+            "auto.offset.reset": "latest",
+            "enable.auto.commit": False,
+            "allow.auto.create.topics": False,
+        }
+    )
+    try:
+        metadata = consumer.list_topics(status_topic, timeout=5)
+        topic = metadata.topics.get(status_topic)
+        if topic is None:
+            raise RuntimeError(f"Kafka topic does not exist: {status_topic}")
+        partitions = [
+            TopicPartition(status_topic, partition_id, OFFSET_END)
+            for partition_id in topic.partitions
+        ]
+        consumer.assign(partitions)
+
+        deadline = time.monotonic() + timeout
+        last_error = ""
+        while time.monotonic() < deadline:
+            _assert_process_running(proc)
+            msg = consumer.poll(0.5)
+            if msg is None:
+                continue
+            if msg.error():
+                last_error = str(msg.error())
+                continue
+            value = msg.value()
+            if len(value) < 8 or value[4:8] != b"x5f2":
+                continue
+            status_info = json.loads(deserialise_x5f2(value).status_json)
+            if status_info.get("state") == "idle":
+                return
+            last_error = f"last filewriter state was {status_info!r}"
+    finally:
+        consumer.close()
+
+    raise TimeoutError(
+        "timed out waiting for filewriter double idle status "
+        f"on {status_topic}: {last_error or '<no status>'}\n"
+        f"{_tail(proc.logfile_path)}"
+    )
+
+
 def _pva_to_float(value) -> float:
     try:
         return float(value["value"])
@@ -698,25 +754,11 @@ def _copy_runtime_artifacts(runtime: SmokeRuntime) -> None:
 
 
 def _smoke_assertions(client: SmokeClient) -> None:
-    client.wait_idle(timeout=90)
+    from integration_test.smoke.test_smoke import (
+        test_full_experiment_workflow_with_filewriter_scan,
+    )
 
-    # Load device setup under the running daemon.
-    client.eval("session.loadSetup('system')")
-    client.wait_idle(timeout=60)
-
-    expected = {
-        "FileWriterStatus",
-        "FileWriterControl",
-        "KafkaForwarder",
-    }
-    explicit_devices = set(client.eval("sorted(session.explicit_devices)"))
-    missing = sorted(expected - explicit_devices)
-    if missing:
-        raise AssertionError(f"missing expected devices after setup load: {missing}")
-
-    # Verify Kafka-backed status devices are reachable.
-    client.eval("session.getDevice('FileWriterStatus').status(0)")
-    client.eval("session.getDevice('KafkaForwarder').status(0)")
+    test_full_experiment_workflow_with_filewriter_scan(client)
 
 
 def _compose_project_name(runtime_root: Path) -> str:
@@ -776,20 +818,16 @@ def smoke_client_session(
         runtime.daemon_host, runtime.daemon_port
     )
     base_env["NICOS_SMOKE_KAFKA_BOOTSTRAP"] = kafka_bootstrap
+    base_env["NICOS_SMOKE_FILEWRITER_POOL_TOPIC"] = SMOKE_FILEWRITER_POOL_TOPIC
+    base_env["NICOS_SMOKE_FILEWRITER_STATUS_TOPIC"] = SMOKE_FILEWRITER_STATUS_TOPIC
+    base_env["NICOS_SMOKE_FILEWRITER_INSTRUMENT_TOPIC"] = (
+        SMOKE_FILEWRITER_INSTRUMENT_TOPIC
+    )
     base_env["PYTHONPATH"] = (
         f"{runtime.root}:{REPO_ROOT}:{base_env['PYTHONPATH']}"
         if base_env.get("PYTHONPATH")
         else f"{runtime.root}:{REPO_ROOT}"
     )
-
-    # Explicitly disable SASL options for local plain-text smoke Kafka.
-    for key in (
-        "KAFKA_SSL_PROTOCOL",
-        "KAFKA_SSL_MECHANISM",
-        "KAFKA_CERT_PATH",
-        "KAFKA_USER",
-    ):
-        base_env.pop(key, None)
 
     client = SmokeClient()
     client.runtime_root = runtime.root
@@ -819,6 +857,30 @@ def smoke_client_session(
             SMOKE_TOPICS,
             compose_base=compose_base,
             compose_env=compose_env,
+        )
+
+        print("[smoke] starting filewriter double", flush=True)
+        filewriter = _start_service(
+            "filewriter-double",
+            [
+                sys.executable,
+                "-m",
+                "integration_test.doubles.filewriter",
+                "--bootstrap",
+                kafka_bootstrap,
+                "--pool-topic",
+                SMOKE_FILEWRITER_POOL_TOPIC,
+                "--status-topic",
+                SMOKE_FILEWRITER_STATUS_TOPIC,
+            ],
+            base_env,
+            runtime.log_root,
+        )
+        managed.append(filewriter)
+        _wait_for_filewriter_double_ready(
+            filewriter,
+            kafka_bootstrap,
+            SMOKE_FILEWRITER_STATUS_TOPIC,
         )
 
         print("[smoke] starting local PVA server", flush=True)

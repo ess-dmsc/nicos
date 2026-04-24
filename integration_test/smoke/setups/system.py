@@ -5,8 +5,7 @@ description = "system setup for NICOS smoke integration"
 
 group = "lowlevel"
 
-# The runner injects a temp root; the fallback keeps manual imports out of git.
-_runtime_root = os.environ.get("NICOS_SMOKE_RUNTIME_ROOT", "/tmp/nicos-smoke-manual")
+_runtime_root = os.environ["NICOS_SMOKE_RUNTIME_ROOT"]
 
 sysconfig = dict(
     cache=configdata("config.CACHE_HOST"),
@@ -54,7 +53,6 @@ devices = dict(
     NexusStructure_Basic=device(
         "nicos_ess.devices.datasinks.nexus_structure.NexusStructureJsonFile",
         description="Provides the NeXus structure",
-        # Keep smoke independent of site/instrument NeXus configs.
         nexus_config_path="integration_test/smoke/nexus/smoke_nexus.json",
         instrument_name="",
         visibility=(),
