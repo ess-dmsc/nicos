@@ -8,11 +8,6 @@ devices = dict(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Rotator for approach",
         motorpv=pv_approach,
-        powerautopv=f"{pv_approach}-PwrAuto",
-        errormsgpv=f"{pv_approach}-MsgTxt",
-        errorbitpv=f"{pv_approach}-Err",
-        reseterrorpv=f"{pv_approach}-ErrRst",
-        temppv=f"{pv_approach}-Temp",
     ),
     meas_cart_approach_controller_2=device(
         "nicos_ess.devices.mapped_controller.MappedControllerEngageDisengage",
@@ -27,11 +22,6 @@ devices = dict(
         "nicos_ess.devices.epics.pva.motor.EpicsMotor",
         description="Cart positioning",
         motorpv=pv_position,
-        powerautopv=f"{pv_position}-PwrAuto",
-        errormsgpv=f"{pv_position}-MsgTxt",
-        errorbitpv=f"{pv_position}-Err",
-        reseterrorpv=f"{pv_position}-ErrRst",
-        temppv=f"{pv_position}-Temp",
     ),
     mcart2=device(
         "nicos.devices.generic.sequence.LockedDevice",

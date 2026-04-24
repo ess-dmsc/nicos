@@ -85,20 +85,24 @@ devices = dict(
         statuspv="estia-selpt100-001:AnalogStatus_12",
         unit="C",
     ),
-    julabo=device(
-        "nicos_ess.estia.devices.julabo.TemperatureController",
-        description="The Julabo",
-        pvprefix="ESTIA-JUL25HL-001",
-        readpv="ESTIA-JUL25HL-001:TEMP",
-        writepv="ESTIA-JUL25HL-001:TEMP:SP1",
-        targetpv="ESTIA-JUL25HL-001:TEMP:SP1:RBV",
-        statuscodepv="ESTIA-JUL25HL-001:STATUS",
-        statusmsgpv="ESTIA-JUL25HL-001:STATUSc",
-        switchpvs={
-            "read": "ESTIA-JUL25HL-001:MODE:SP",
-            "write": "ESTIA-JUL25HL-001:MODE:SP",
-        },
-        switchstates={"enable": 1, "disable": 0},
-        precision=0.5,
-    ),
+    # FIXME: the TemperatureController cannot be instantiated: "Cannot create a
+    # consistent method resolution order (MRO) for bases DeviceMixinBase,
+    # HasPrecision, EpicsAnalogMoveable"
+    #
+    #     julabo=device(
+    #         "nicos_ess.estia.devices.julabo.TemperatureController",
+    #         description="The Julabo",
+    #         pvprefix="ESTIA-JUL25HL-001",
+    #         readpv="ESTIA-JUL25HL-001:TEMP",
+    #         writepv="ESTIA-JUL25HL-001:TEMP:SP1",
+    #         targetpv="ESTIA-JUL25HL-001:TEMP:SP1:RBV",
+    #         statuscodepv="ESTIA-JUL25HL-001:STATUS",
+    #         statusmsgpv="ESTIA-JUL25HL-001:STATUSc",
+    #         switchpvs={
+    #             "read": "ESTIA-JUL25HL-001:MODE:SP",
+    #             "write": "ESTIA-JUL25HL-001:MODE:SP",
+    #         },
+    #         switchstates={"enable": 1, "disable": 0},
+    #         precision=0.5,
+    #     ),
 )

@@ -6,7 +6,6 @@ devices = dict(
     ch_0=device(
         "nicos_ess.devices.epics.manual_switch.ManualSwitch",
         description="Large box shutter",
-        readpv="{}AO0".format(pv_root),
         writepv="{}AO0Set".format(pv_root),
         pollinterval=0.5,
         monitor=True,

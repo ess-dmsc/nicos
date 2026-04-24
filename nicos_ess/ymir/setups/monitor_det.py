@@ -22,6 +22,5 @@ devices = dict(
         unit="",
         images=["mfh_1"],
         timers=["timer_1"],
-        hist_schema="hs01",
     ),
 )

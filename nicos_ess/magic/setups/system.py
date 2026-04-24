@@ -72,7 +72,6 @@ devices = dict(
         instrument_topic="magic_filewriter",
         status="FileWriterStatus",
         nexus="NexusStructure",
-        use_instrument_directory=True,
     ),
     SciChat=device(
         "nicos_ess.devices.scichat.ScichatBot",

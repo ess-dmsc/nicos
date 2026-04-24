@@ -80,6 +80,5 @@ devices = dict(
         instrument_topic="nido_filewriter",
         status="FileWriterStatus",
         nexus="NexusStructure",
-        use_instrument_directory=True,
     ),
 )

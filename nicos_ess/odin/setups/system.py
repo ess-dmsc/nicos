@@ -72,6 +72,5 @@ devices = dict(
         instrument_topic="odin_filewriter",
         status="FileWriterStatus",
         nexus="NexusStructure",
-        use_instrument_directory=True,
     ),
 )
