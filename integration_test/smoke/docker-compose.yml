@@ -18,6 +18,7 @@ services:
       - KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS=0
       - KAFKA_LOG_DIRS=/tmp/kraft-combined-logs
     ports:
+      # Local runs override this; avoid depending on one global Kafka port.
       - "${NICOS_SMOKE_KAFKA_BIND:-127.0.0.1}:${NICOS_SMOKE_KAFKA_HOST_PORT:-19092}:9092"
     healthcheck:
       test:
@@ -30,6 +31,7 @@ services:
       retries: 20
 
   nicos-integration:
+    # CI-only container. Local runs use the Python runner for NICOS processes.
     profiles: ["ci"]
     build:
       context: ../..

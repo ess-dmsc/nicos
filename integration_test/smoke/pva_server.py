@@ -65,6 +65,7 @@ class SmokePvaServer:
         self._readable_pv = _make_float_pv(1.23, units="A", low=-1e3, high=1e3)
         self._move_read_pv = _make_float_pv(0.0, units="Hz", low=0.0, high=100.0)
         self._move_write_pv = _make_float_pv(0.0, units="Hz", low=0.0, high=100.0)
+        # Newer targets must cancel stale delayed readback updates.
         self._move_lock = threading.Lock()
         self._move_generation = 0
 

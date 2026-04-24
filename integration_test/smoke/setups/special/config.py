@@ -4,6 +4,7 @@ description = "High-level configuration settings for smoke integration tests"
 
 group = "configdata"
 
+# The runner injects isolated host ports; defaults keep this importable by hand.
 CACHE_HOST = os.environ.get("NICOS_SMOKE_CACHE_HOST", "localhost:24869")
 DAEMON_HOST = os.environ.get("NICOS_SMOKE_DAEMON_HOST", "localhost:21301")
 
