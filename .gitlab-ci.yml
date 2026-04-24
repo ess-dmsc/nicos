@@ -52,6 +52,24 @@ tests_py3xx:
   variables:
     UV_PYTHON: $PYTHON_VERSION
 
+tests_gui_qt6_py313:
+  stage: test
+  image: registry.esss.lu.se/ecdc/ess-dmsc/docker-almalinux9-conan:1.6.0
+  before_script:
+    - git config --global --add safe.directory "$CI_PROJECT_DIR"
+    - uv sync --extra gui-qt6 --all-packages
+  script:
+    - uv run --extra gui-qt6 pytest test/nicos_ess/gui --junitxml=test-output-gui-qt6.xml
+  artifacts:
+    paths:
+      - test-output-gui-qt6.xml
+    reports:
+      junit: test-output-gui-qt6.xml
+  variables:
+    UV_PYTHON: 3.13
+    NICOS_QT: "6"
+    PYTEST_QT_API: pyqt6
+
 publish:
   stage: publish
   image: registry.esss.lu.se/ecdc/ess-dmsc/docker-almalinux9-conan:1.6.0

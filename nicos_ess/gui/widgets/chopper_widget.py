@@ -246,7 +246,7 @@ class ChopperWidget(QWidget):
             painter.drawRect(margin, y_pos, icon, icon)
 
             painter.setPen(QPen(Colors.BLACK.value, 0))
-            painter.setBrush(Qt.NoBrush)
+            painter.setBrush(Qt.BrushStyle.NoBrush)
             painter.drawText(margin + icon + gap_x, text_baseline(y_pos), label)
             return y_pos + icon + gap_y
 
@@ -264,7 +264,7 @@ class ChopperWidget(QWidget):
         painter.drawRect(margin, stripe_y, gray_w, stripe_h)
 
         painter.setPen(QPen(Colors.BLACK.value, 0))
-        painter.setBrush(Qt.NoBrush)
+        painter.setBrush(Qt.BrushStyle.NoBrush)
         painter.drawText(margin + gray_w + gap_x, text_baseline(y), "Coated blade")
 
         y += icon + gap_y
@@ -274,7 +274,7 @@ class ChopperWidget(QWidget):
         painter.drawLine(line_x, y, line_x, y + icon)
 
         painter.setPen(QPen(Colors.BLACK.value, 0))
-        painter.setBrush(Qt.NoBrush)
+        painter.setBrush(Qt.BrushStyle.NoBrush)
         painter.drawText(margin + icon + gap_x, text_baseline(y), "Beam guide")
 
         y += gray_h + gap_y
