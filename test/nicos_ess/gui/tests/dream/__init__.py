@@ -1,1 +1,0 @@
-"""DREAM GUI test package."""

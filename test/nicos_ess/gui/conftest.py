@@ -59,7 +59,7 @@ def _resolve_guiconfig_path(guiconfig_name: str) -> Path:
     if not isinstance(guiconfig_name, str) or not guiconfig_name:
         raise ValueError(
             "GUI test guiconfig_name must be a non-empty relative path, "
-            "for example 'layouts/command_console.py'"
+            "for example 'command_console.py'"
         )
     guiconfig_path = (GUICONFIGS_DIR / guiconfig_name).resolve()
     try:

@@ -85,7 +85,7 @@ STARTUP_CASE_GROUPS = [
             panel_case(
                 "selene",
                 "nicos_ess.estia.gui.panels.selene.SelenePanel",
-                guiconfig_name="estia/panels/selene.py",
+                guiconfig_name="estia/selene.py",
             ),
         ],
     ),

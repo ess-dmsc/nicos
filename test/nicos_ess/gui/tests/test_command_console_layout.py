@@ -5,7 +5,7 @@ from __future__ import annotations
 from test.nicos_ess.gui.helpers import get_panel_by_class
 
 
-guiconfig_name = "layouts/command_console.py"
+guiconfig_name = "command_console.py"
 panel_class = "nicos_ess.gui.panels.cmdbuilder.CommandPanel"
 
 

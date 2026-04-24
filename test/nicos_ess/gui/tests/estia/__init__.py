@@ -1,1 +1,0 @@
-"""ESTIA GUI test package."""

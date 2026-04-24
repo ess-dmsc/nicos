@@ -1,1 +1,0 @@
-"""LoKI GUI test package."""
