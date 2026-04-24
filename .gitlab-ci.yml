@@ -20,9 +20,9 @@ tests_py312_cov:
   image: registry.esss.lu.se/ecdc/ess-dmsc/docker-almalinux9-conan:1.6.0
   before_script:
     - git config --global --add safe.directory "$CI_PROJECT_DIR"
-    - uv sync --extra gui --group test --all-packages
+    - uv sync --extra gui --all-packages
   script:
-    - uv run --group test pytest test/ --cov=nicos --cov=nicos_ess --cov-report term --cov-report xml:coverage.xml --junitxml=test-output.xml
+    - uv run pytest test/ --cov=nicos --cov=nicos_ess --cov-report term --cov-report xml:coverage.xml --junitxml=test-output.xml
   coverage: /TOTAL.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/
   artifacts:
     paths:
@@ -38,9 +38,9 @@ tests_py3xx:
   image: registry.esss.lu.se/ecdc/ess-dmsc/docker-almalinux9-conan:1.6.0
   before_script:
     - git config --global --add safe.directory "$CI_PROJECT_DIR"
-    - uv sync --extra gui --group test --all-packages
+    - uv sync --extra gui --all-packages
   script:
-    - uv run --group test pytest test/ --junitxml=test-output.xml
+    - uv run pytest test/ --junitxml=test-output.xml
   parallel:
     matrix:
       - PYTHON_VERSION: ["3.13", "3.14"]
