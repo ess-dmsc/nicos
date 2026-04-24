@@ -19,6 +19,7 @@ for i in range(1, 5):
                 "source_name": f"{pv_root}thermo_{i}-R",
                 "schema": "f144",
                 "topic": "ymir_motion",
+                "dataset_type": "nx_log",
                 "protocol": "pva",
                 "periodic": 1,
             },

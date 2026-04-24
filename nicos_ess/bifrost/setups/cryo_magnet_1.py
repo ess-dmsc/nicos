@@ -63,6 +63,7 @@ devices = dict(
                 "source_name": f"{pv_root}VTI:Temp-R",
                 "schema": "f144",
                 "topic": "bifrost_sample_env",
+                "dataset_type": "nx_log",
                 "protocol": "pva",
                 "periodic": 1,
             },

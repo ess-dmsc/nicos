@@ -18,6 +18,7 @@ devices = dict(
                 "source_name": f"{pnp_pv_root}:PNPHeartBeatCnt-S",
                 "schema": "f144",
                 "topic": "bifrost_motion",
+                "dataset_type": "nx_log",
                 "protocol": "pva",
                 "periodic": 1,
             },
