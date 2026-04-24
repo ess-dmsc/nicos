@@ -11,14 +11,7 @@ import pytest
 pytest.importorskip("confluent_kafka")
 pytest.importorskip("p4p")
 
-from integration_test.smoke.run_smoke_stack import smoke_client_session
-
-
-def _manage_kafka() -> bool:
-    raw_value = os.environ.get("NICOS_SMOKE_MANAGE_KAFKA")
-    if raw_value is None:
-        return True
-    return raw_value.strip().lower() not in {"0", "false", "no", "off"}
+from integration_test.smoke.run_smoke_stack import _env_flag, smoke_client_session
 
 
 def _docker_available() -> bool:
@@ -42,7 +35,7 @@ def smoke_client():
     """Yield a connected daemon client with full smoke stack running."""
     if os.environ.get("NICOS_RUN_SMOKE_INTEGRATION") != "1":
         pytest.skip("set NICOS_RUN_SMOKE_INTEGRATION=1 to run smoke integration tests")
-    if _manage_kafka() and not _docker_available():
+    if _env_flag("NICOS_SMOKE_MANAGE_KAFKA", default=True) and not _docker_available():
         pytest.skip("docker daemon is not available for integration smoke run")
 
     with smoke_client_session(clean_runtime=True, keep_kafka=False) as client:

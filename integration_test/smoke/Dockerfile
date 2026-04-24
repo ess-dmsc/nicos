@@ -29,7 +29,6 @@ RUN apt-get update \
 COPY --from=uv /uv /uvx /usr/local/bin/
 COPY --chown=nicos:nicos . .
 
-# Use workspace packaging, not a hand-maintained requirements.txt subset.
 RUN uv sync --all-packages --locked --group dev \
     && chown -R nicos:nicos /workspace
 
