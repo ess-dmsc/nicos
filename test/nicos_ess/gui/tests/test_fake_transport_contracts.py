@@ -6,8 +6,10 @@ The fake is allowed to be small, but it must stay compatible with the real
 
 from __future__ import annotations
 
+import ast
 import inspect
 from logging import INFO
+from pathlib import Path
 from time import monotonic, sleep
 
 import pytest
@@ -19,8 +21,14 @@ from nicos.protocols.cache import OP_TELL, cache_dump
 from nicos.protocols.daemon import ClientTransport as BaseClientTransport, STATUS_IDLE
 from nicos.protocols.daemon.classic import PROTO_VERSION
 
-from test.nicos_ess.gui.doubles import DeviceSpec, FakeClientTransport
+from test.nicos_ess.gui.doubles import DeviceSpec, FakeClientTransport, FakeDaemon
 from test.nicos_ess.gui.doubles.fake_transport import _DIRECT_DEVICE_EXPR
+
+
+_ALLOWED_LITERAL_CLIENT_EVALS = {
+    # User-triggered side effect, not part of startup or panel state hydration.
+    'session.showHelp("index")',
+}
 
 
 class RecordingClient(NicosClient):
@@ -65,6 +73,30 @@ def _wait_until(predicate, timeout=2.0):
 
 def _event_payloads(client, name):
     return [args[0] for event_name, args in client.events if event_name == name]
+
+
+def _is_client_eval_call(node):
+    if not isinstance(node.func, ast.Attribute) or node.func.attr != "eval":
+        return False
+    receiver = node.func.value
+    if isinstance(receiver, ast.Name):
+        return receiver.id == "client"
+    if isinstance(receiver, ast.Attribute):
+        return receiver.attr == "client"
+    return False
+
+
+def _literal_client_eval_expressions():
+    ess_root = Path(__file__).resolve().parents[4] / "nicos_ess"
+    for path in sorted(ess_root.rglob("*.py")):
+        tree = ast.parse(path.read_text(), filename=str(path))
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call) or not _is_client_eval_call(node):
+                continue
+            if node.args and isinstance(node.args[0], ast.Constant):
+                expr = node.args[0].value
+                if isinstance(expr, str):
+                    yield path, node.lineno, expr
 
 
 def _motor_spec():
@@ -155,9 +187,10 @@ def test_fake_daemon_satisfies_the_gui_device_query_contract(
         assert client.getDeviceParamInfo("motor") == motor.param_info
         assert client.getDeviceValuetype("motor") is float
         assert client.getDeviceValue("motor") == 1.5
-        assert client.eval("session.getDevice('motor').classes", []) == [
-            "nicos.core.device.Moveable"
-        ]
+        motor_classes = client.eval("session.getDevice('motor').classes", [])
+        assert "nicos.core.device.Moveable" in motor_classes
+        assert "nicos.core.device.Readable" in motor_classes
+        assert "nicos.core.device.Device" in motor_classes
         assert client.eval("session.getDevice('motor').valueInfo()", "fallback") is None
         assert (
             client.eval(
@@ -187,7 +220,7 @@ def test_fake_daemon_uses_a_numeric_run_number_sentinel(monkeypatch, fake_daemon
 
 
 def test_fake_daemon_filters_device_lists_using_the_real_client_query(
-    monkeypatch, fake_daemon
+    monkeypatch, fake_daemon, allow_unknown_fake_daemon_calls
 ):
     fake_daemon.add_device(
         DeviceSpec(
@@ -215,14 +248,74 @@ def test_fake_daemon_filters_device_lists_using_the_real_client_query(
             params={"classes": ["nicos.core.device.Readable"]},
         )
     )
+    fake_daemon.add_device(DeviceSpec(name="implicit", valuetype=float), explicit=False)
 
     client = _connect_client(monkeypatch, fake_daemon)
     try:
+        assert client.getDeviceList() == ["axis", "motor", "sample"]
+        assert client.getDeviceList(only_explicit=False) == [
+            "axis",
+            "implicit",
+            "motor",
+            "sample",
+        ]
         assert client.getDeviceList(
             "nicos.core.device.Moveable",
             only_explicit=False,
             exclude_class="nicos.core.device.HiddenDevice",
         ) == ["motor"]
+        assert (
+            client.getDeviceList(
+                only_explicit=False,
+                special_clause="dn.startswith('m')",
+            )
+            == []
+        )
+    finally:
+        _disconnect_client(client)
+
+    assert fake_daemon.unknown_evals == [
+        "list(dn for (dn, d) in session.devices.items() "
+        "if 'nicos.core.device.Device' in d.classes "
+        "and dn.startswith('m'))"
+    ]
+
+
+def test_fake_daemon_applies_event_masks_per_transport(monkeypatch, fake_daemon):
+    client = _connect_client(monkeypatch, fake_daemon, eventmask=("cache",))
+    try:
+        cache_count = len(_event_payloads(client, "cache"))
+        status_count = len(_event_payloads(client, "status"))
+
+        fake_daemon.push_cache("motor/value", 7.5)
+        fake_daemon.push_status((STATUS_IDLE, -1))
+
+        _wait_until(lambda: len(_event_payloads(client, "status")) > status_count)
+        assert len(_event_payloads(client, "cache")) == cache_count
+
+        client.tell("eventunmask", ["cache"])
+        fake_daemon.push_cache("motor/value", 8.5)
+
+        _wait_until(lambda: len(_event_payloads(client, "cache")) > cache_count)
+    finally:
+        _disconnect_client(client)
+
+
+def test_fake_daemon_keeps_samples_eval_list_and_cache_mapping(
+    monkeypatch, fake_daemon
+):
+    client = _connect_client(monkeypatch, fake_daemon)
+    try:
+        assert client.eval("session.experiment.get_samples()", None) == []
+        assert client.ask("getcachekeys", "sample/samples") == [
+            ("sample/samples", {})
+        ]
+        fake_daemon.push_cache("sample/samples", {0: {"name": "sample"}})
+        _wait_until(lambda: _event_payloads(client, "cache"))
+        assert client.getCacheKey("sample/samples") == (
+            "sample/samples",
+            {0: {"name": "sample"}},
+        )
     finally:
         _disconnect_client(client)
 
@@ -233,7 +326,7 @@ def test_fake_daemon_returns_updated_loaded_setups_after_pushes(
     fake_daemon.add_setup("instrument")
     fake_daemon.add_setup("beamline")
 
-    client = _connect_client(monkeypatch, fake_daemon, eventmask=("setup",))
+    client = _connect_client(monkeypatch, fake_daemon)
     try:
         assert client.ask("getstatus")["setups"] == ([], ["beamline", "instrument"])
         assert client.eval("session.loaded_setups", set()) == set()
@@ -351,7 +444,7 @@ def test_fake_daemon_pushes_real_daemon_event_payload_shapes(
 
 
 def test_fake_daemon_records_unknown_eval_expressions_for_the_fixture_guard(
-    monkeypatch, fake_daemon
+    monkeypatch, fake_daemon, allow_unknown_fake_daemon_calls
 ):
     client = _connect_client(monkeypatch, fake_daemon)
     try:
@@ -363,7 +456,7 @@ def test_fake_daemon_records_unknown_eval_expressions_for_the_fixture_guard(
 
 
 def test_fake_daemon_records_unknown_commands_for_the_fixture_guard(
-    monkeypatch, fake_daemon
+    monkeypatch, fake_daemon, allow_unknown_fake_daemon_calls
 ):
     client = _connect_client(monkeypatch, fake_daemon)
     try:
@@ -406,7 +499,9 @@ def test_fake_daemon_can_drive_real_client_broken_connection(
     [
         pytest.param("motor.status", True, id="attr"),
         pytest.param("motor.read()", True, id="zero-arg-call"),
-        pytest.param("sam_1.get_current_run_number()", True, id="underscores-and-digits"),
+        pytest.param(
+            "sam_1.get_current_run_number()", True, id="underscores-and-digits"
+        ),
         pytest.param("motor.status(1)", False, id="arg-call"),
         pytest.param("motor.axis.position", False, id="nested-attr"),
         pytest.param("motor['status']", False, id="subscription"),
@@ -415,3 +510,17 @@ def test_fake_daemon_can_drive_real_client_broken_connection(
 )
 def test_direct_device_expr_regex_locks_its_match_scope(expr, matches):
     assert (_DIRECT_DEVICE_EXPR.match(expr) is not None) is matches
+
+
+def test_literal_ess_client_eval_expressions_are_handled_by_the_fake():
+    fake_daemon = FakeDaemon()
+    unknown = []
+    for path, line_number, expr in _literal_client_eval_expressions():
+        if expr in _ALLOWED_LITERAL_CLIENT_EVALS:
+            continue
+        fake_daemon.unknown_evals.clear()
+        fake_daemon._eval(expr)
+        if fake_daemon.unknown_evals:
+            unknown.append(f"{path}:{line_number}: {expr!r}")
+
+    assert unknown == []

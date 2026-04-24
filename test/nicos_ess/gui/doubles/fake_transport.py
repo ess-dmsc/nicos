@@ -35,6 +35,37 @@ _GUI_TEST_ROOT = _TEST_DIR / "root"
 _DIRECT_DEVICE_EXPR = re.compile(
     r"^(?P<dev>[A-Za-z_][A-Za-z0-9_]*)\.(?P<attr>[_A-Za-z0-9]+)(?P<call>\(\))?$"
 )
+_DEVICE_CLASS = "nicos.core.device.Device"
+_OBJECT_CLASS = "builtins.object"
+_CLASS_MRO = {
+    "nicos.core.device.DeviceAlias": [_DEVICE_CLASS, _OBJECT_CLASS],
+    "nicos.core.device.Moveable": [
+        "nicos.core.device.Waitable",
+        "nicos.core.device.Readable",
+        _DEVICE_CLASS,
+        _OBJECT_CLASS,
+    ],
+    "nicos.core.device.Measurable": [
+        "nicos.core.device.Waitable",
+        "nicos.core.device.Readable",
+        _DEVICE_CLASS,
+        _OBJECT_CLASS,
+    ],
+    "nicos.core.device.SubscanMeasurable": [
+        "nicos.core.device.Measurable",
+        "nicos.core.device.Waitable",
+        "nicos.core.device.Readable",
+        _DEVICE_CLASS,
+        _OBJECT_CLASS,
+    ],
+    "nicos.core.device.Waitable": [
+        "nicos.core.device.Readable",
+        _DEVICE_CLASS,
+        _OBJECT_CLASS,
+    ],
+    "nicos.core.device.Readable": [_DEVICE_CLASS, _OBJECT_CLASS],
+    _DEVICE_CLASS: [_OBJECT_CLASS],
+}
 _DEFAULT_EVALS = {
     "session.instrument": "",
     "session.experiment.name": "exp",
@@ -59,6 +90,27 @@ _DEFAULT_EVALS = {
 }
 
 
+def _class_name(cls: Any) -> str:
+    if isinstance(cls, str):
+        return cls
+    return f"{cls.__module__}.{cls.__qualname__}"
+
+
+def _expanded_classes(classes: list[Any] | tuple[Any, ...]) -> list[str]:
+    expanded = []
+
+    def add(class_name: str) -> None:
+        if class_name not in expanded:
+            expanded.append(class_name)
+        for base_name in _CLASS_MRO.get(class_name, ()):
+            add(base_name)
+
+    for cls in classes:
+        add(_class_name(cls))
+    add(_DEVICE_CLASS)
+    return expanded
+
+
 @dataclass
 class DeviceSpec:
     name: str
@@ -69,6 +121,10 @@ class DeviceSpec:
     @property
     def key(self) -> str:
         return self.name.lower()
+
+    @property
+    def classes(self) -> list[str]:
+        return _expanded_classes(self.params.get("classes", []))
 
 
 @dataclass
@@ -131,9 +187,10 @@ class FakeDaemon:
         self.daemon_version = daemon_version
         self.protocol_version = protocol_version
         self.devices: dict[str, DeviceSpec] = {}
+        self.explicit_devices: set[str] = set()
         self.setups: dict[str, SetupSpec] = {}
         self.loaded_setups: set[str] = set()
-        self.cache: dict[str, Any] = {}
+        self.cache: dict[str, Any] = {"sample/samples": {}}
         self.datasets: list[Any] = []
         self.status: tuple = (STATUS_IDLE, -1)
         self.mode = MASTER
@@ -175,6 +232,7 @@ class FakeDaemon:
         *,
         setup: str | None = None,
         load_setup: bool = False,
+        explicit: bool = True,
     ) -> DeviceSpec:
         for existing_name in self.devices:
             if existing_name != device.name and existing_name.lower() == device.key:
@@ -182,7 +240,12 @@ class FakeDaemon:
                     "add_device() rejects names that collide after lowercasing: "
                     f"{existing_name!r} vs {device.name!r}"
                 )
+        device.params["classes"] = device.classes
         self.devices[device.name] = device
+        if explicit:
+            self.explicit_devices.add(device.name)
+        else:
+            self.explicit_devices.discard(device.name)
         if setup is not None:
             self.add_setup(setup, loaded=load_setup)
             if device.name not in self.setups[setup].devices:
@@ -191,7 +254,9 @@ class FakeDaemon:
             self.cache[f"{device.key}/{param}"] = value
         return device
 
-    def add_setup(self, setup: str | SetupSpec, *, loaded: bool = False, **kwargs) -> SetupSpec:
+    def add_setup(
+        self, setup: str | SetupSpec, *, loaded: bool = False, **kwargs
+    ) -> SetupSpec:
         if isinstance(setup, SetupSpec):
             spec = setup
         else:
@@ -217,7 +282,9 @@ class FakeDaemon:
         self.messages.append(message)
         return message
 
-    def set_completion(self, fullstring: str, lastword: str, replies: list[str]) -> None:
+    def set_completion(
+        self, fullstring: str, lastword: str, replies: list[str]
+    ) -> None:
         self.completions[(fullstring, lastword)] = list(replies)
 
     def fail_with(self, cmd: str, reply: tuple[bool, Any]) -> None:
@@ -380,10 +447,11 @@ class FakeDaemon:
                 name: spec.as_read_setup_info(self.devices)
                 for name, spec in self.setups.items()
             }
-        if (
-            expr
-            == '{d.name: d.alias for d in session.devices.values() if "alias" in d.parameters}'
-        ):
+        alias_expr = (
+            '{d.name: d.alias for d in session.devices.values() '
+            'if "alias" in d.parameters}'
+        )
+        if expr == alias_expr:
             return {
                 spec.name: spec.params["alias"]
                 for spec in self.devices.values()
@@ -422,12 +490,28 @@ class FakeDaemon:
             return _UNKNOWN_EVAL
 
         conditions = expr[len(prefix) : -1]
-        required_classes = re.findall(r"'([^']+)' in d\.classes", conditions)
-        excluded_classes = re.findall(r"'([^']+)' not in d\.classes", conditions)
+        required_classes = []
+        excluded_classes = []
+        only_explicit = False
+        for condition in conditions.split(" and "):
+            required_match = re.fullmatch(r"'([^']+)' in d\.classes", condition)
+            if required_match is not None:
+                required_classes.append(required_match.group(1))
+                continue
+            excluded_match = re.fullmatch(r"'([^']+)' not in d\.classes", condition)
+            if excluded_match is not None:
+                excluded_classes.append(excluded_match.group(1))
+                continue
+            if condition == "dn in session.explicit_devices":
+                only_explicit = True
+                continue
+            return _UNKNOWN_EVAL
 
         result = []
         for devname, spec in self.devices.items():
-            classes = set(spec.params.get("classes", []))
+            if only_explicit and devname not in self.explicit_devices:
+                continue
+            classes = set(spec.classes)
             if any(req not in classes for req in required_classes):
                 continue
             if any(exc in classes for exc in excluded_classes):
@@ -437,7 +521,7 @@ class FakeDaemon:
 
     def _eval_device_expr(self, expr: str) -> Any:
         lookups = {
-            ").classes": lambda device: list(device.params.get("classes", [])),
+            ").classes": lambda device: device.classes,
             ").read()": lambda device: device.params.get("value"),
             ").valueInfo()": lambda device: None,
             ").valuetype": lambda device: device.valuetype,
@@ -485,7 +569,9 @@ class FakeDaemon:
         if device is not None:
             return device
         matches = [
-            spec for name, spec in self.devices.items() if name.lower() == devname.lower()
+            spec
+            for name, spec in self.devices.items()
+            if name.lower() == devname.lower()
         ]
         if len(matches) == 1:
             return matches[0]
@@ -508,6 +594,7 @@ class FakeClientTransport:
     def __init__(self, daemon: FakeDaemon):
         self.daemon = daemon
         self.serializer = None
+        self._event_mask: set[str] = set()
         self._events: queue.Queue = queue.Queue()
         self._pending_reply: tuple[bool, Any] | object = _NO_REPLY
 
@@ -528,6 +615,10 @@ class FakeClientTransport:
         self._events.put(_EVENT_SENTINEL)
 
     def send_command(self, cmdname, args):
+        if cmdname == "eventmask" and args:
+            self._event_mask.update(args[0])
+        elif cmdname == "eventunmask" and args:
+            self._event_mask.difference_update(args[0])
         self._pending_reply = self.daemon.handle(cmdname, args)
 
     def recv_reply(self):
@@ -546,4 +637,6 @@ class FakeClientTransport:
     # -- daemon-side helper --------------------------------------------------
 
     def deliver_event(self, name, data, blobs):
+        if name in self._event_mask:
+            return
         self._events.put((name, data, blobs))

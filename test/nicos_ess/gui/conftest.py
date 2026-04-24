@@ -8,6 +8,7 @@ selects a more specific panel or layout config.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 import logging
 import os
 from pathlib import Path
@@ -127,6 +128,12 @@ def strict_fake_daemon(fake_daemon):
 
 
 @pytest.fixture
+def allow_critical_message_boxes():
+    """Opt-in for tests that intentionally exercise critical dialogs."""
+    return None
+
+
+@pytest.fixture
 def guiconfig_name(request):
     return getattr(request.module, "guiconfig_name", "base.py")
 
@@ -221,26 +228,58 @@ def gui_window_factory(monkeypatch, qtbot, fake_daemon):
         _raise_teardown_errors(teardown_errors)
 
 
+@dataclass(frozen=True)
+class RecordedMessageBox:
+    kind: str
+    args: tuple
+    kwargs: dict
+
+
 @pytest.fixture(autouse=True)
-def suppress_modal_message_boxes(monkeypatch):
+def record_modal_message_boxes(monkeypatch, request):
     from nicos.guisupport.qt import QMessageBox
+
+    calls = []
+
+    def _record(kind, answer):
+        def _message_box(*args, **kwargs):
+            calls.append(RecordedMessageBox(kind, args, dict(kwargs)))
+            return answer
+
+        return _message_box
 
     monkeypatch.setattr(
         "nicos.guisupport.qt.QMessageBox.warning",
-        lambda *args, **kwargs: QMessageBox.StandardButton.Ok,
+        _record("warning", QMessageBox.StandardButton.Ok),
     )
     monkeypatch.setattr(
         "nicos.guisupport.qt.QMessageBox.critical",
-        lambda *args, **kwargs: QMessageBox.StandardButton.Ok,
+        _record("critical", QMessageBox.StandardButton.Ok),
     )
     monkeypatch.setattr(
         "nicos.guisupport.qt.QMessageBox.information",
-        lambda *args, **kwargs: QMessageBox.StandardButton.Ok,
+        _record("information", QMessageBox.StandardButton.Ok),
     )
     monkeypatch.setattr(
         "nicos.guisupport.qt.QMessageBox.question",
-        lambda *args, **kwargs: QMessageBox.StandardButton.Yes,
+        _record("question", QMessageBox.StandardButton.Yes),
     )
+
+    yield calls
+
+    if "allow_critical_message_boxes" in request.fixturenames:
+        return
+    critical_calls = [call for call in calls if call.kind == "critical"]
+    message = "unexpected critical QMessageBox call(s):\n" + "\n".join(
+        _format_message_box_call(call) for call in critical_calls
+    )
+    assert critical_calls == [], message
+
+
+def _format_message_box_call(call: RecordedMessageBox) -> str:
+    title = call.args[1] if len(call.args) > 1 else ""
+    text = call.args[2] if len(call.args) > 2 else ""
+    return f"{call.kind}: {title!r} {text!r}"
 
 
 @pytest.fixture
@@ -258,7 +297,9 @@ def gui_window(gui_window_factory, request):
 @pytest.fixture
 def gui_window_from_name(gui_window_factory):
     def _build(guiconfig_name):
-        return gui_window_factory(guiconfig_path=_resolve_guiconfig_path(guiconfig_name))
+        return gui_window_factory(
+            guiconfig_path=_resolve_guiconfig_path(guiconfig_name)
+        )
 
     return _build
 
@@ -268,7 +309,9 @@ def gui_window_from_spec(gui_window_factory):
     def _build(guiconfig):
         if guiconfig.text is not None:
             return gui_window_factory(guiconfig=guiconfig.text)
-        return gui_window_factory(guiconfig_path=_resolve_guiconfig_path(guiconfig.name))
+        return gui_window_factory(
+            guiconfig_path=_resolve_guiconfig_path(guiconfig.name)
+        )
 
     return _build
 

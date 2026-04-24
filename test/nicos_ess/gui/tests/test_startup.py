@@ -12,9 +12,6 @@ from test.nicos_ess.gui.helpers import (
 )
 
 
-pytestmark = pytest.mark.usefixtures("strict_fake_daemon")
-
-
 def seed_spectrometer_devices(fake_daemon):
     for name in ("hr4", "qepro"):
         fake_daemon.add_device(
@@ -53,9 +50,17 @@ STARTUP_CASE_GROUPS = [
             panel_case("exp-panel", "nicos_ess.gui.panels.exp_panel.ExpPanel"),
             panel_case("hexapod", "nicos_ess.gui.panels.hexapod.HexapodPanel"),
             panel_case("history", "nicos_ess.gui.panels.history.HistoryPanel"),
-            panel_case("history-pyqt", "nicos_ess.gui.panels.history_pyqt.HistoryPanel"),
-            # ESS guiconfigs use the multi-panel wrapper, not the standalone base panel.
-            panel_case("live-gr-multi", "nicos_ess.gui.panels.live_gr.MultiLiveDataPanel"),
+            panel_case(
+                "history-pyqt",
+                "nicos_ess.gui.panels.history_pyqt.HistoryPanel",
+            ),
+            # Standalone live_gr.LiveDataPanel is a base implementation for
+            # instrument-specific/multi-panel live views, not a supported ESS
+            # guiconfig entry point.
+            panel_case(
+                "live-gr-multi",
+                "nicos_ess.gui.panels.live_gr.MultiLiveDataPanel",
+            ),
             panel_case("live-pyqt", "nicos_ess.gui.panels.live_pyqt.LiveDataPanel"),
             panel_case(
                 "live-pyqt-multi",

@@ -62,7 +62,12 @@ def _validate_guiconfig_value(value: Any) -> None:
 def _minimal_guiconfig(panel_cls, **panel_kwargs):
     for value in panel_kwargs.values():
         _validate_guiconfig_value(value)
-    panel_args = [repr(panel_cls)]
+    panel_path = (
+        panel_cls
+        if isinstance(panel_cls, str)
+        else f"{panel_cls.__module__}.{panel_cls.__qualname__}"
+    )
+    panel_args = [repr(panel_path)]
     panel_args.extend(f"{name}={value!r}" for name, value in panel_kwargs.items())
     if len(panel_args) == 1:
         main_window = f"main_window = panel({panel_args[0]})"
@@ -106,7 +111,9 @@ def panel_case(
 
 
 def get_panel_by_class(window, panel_class):
-    panel_cls = importString(panel_class) if isinstance(panel_class, str) else panel_class
+    panel_cls = (
+        importString(panel_class) if isinstance(panel_class, str) else panel_class
+    )
     # Startup tests are meant to instantiate the requested panel class, not an
     # arbitrary subclass that happens to satisfy the same interface.
     matches = [panel for panel in window.panels if type(panel) is panel_cls]
@@ -122,14 +129,16 @@ def _is_relevant_gui_record(record):
     return "/nicos/" in pathname or "/nicos_ess/" in pathname
 
 
-def _assert_no_errors(caplog):
+def _assert_no_warnings_or_errors(caplog):
     relevant_records = [
         record for record in caplog.records if _is_relevant_gui_record(record)
     ]
-    errors = [record for record in relevant_records if record.levelno >= logging.ERROR]
-    assert errors == [], "unexpected GUI log records:\n" + "\n".join(
+    warnings_or_errors = [
+        record for record in relevant_records if record.levelno >= logging.WARNING
+    ]
+    assert warnings_or_errors == [], "unexpected GUI log records:\n" + "\n".join(
         f"{record.levelname} {record.name}: {record.getMessage()}"
-        for record in errors
+        for record in warnings_or_errors
     )
 
 
@@ -143,7 +152,7 @@ def _build_panel(gui_window_from_spec, startup_case, fake_daemon, caplog):
     if startup_case.seed_daemon is not None:
         startup_case.seed_daemon(fake_daemon)
     caplog.clear()
-    caplog.set_level(logging.ERROR)
+    caplog.set_level(logging.WARNING)
     window = gui_window_from_spec(startup_case.guiconfig)
     QApplication.processEvents()
     return window, get_panel_by_class(window, startup_case.panel_class)
@@ -156,7 +165,7 @@ def assert_panel_starts_clean(gui_window_from_spec, startup_case, fake_daemon, c
         fake_daemon=fake_daemon,
         caplog=caplog,
     )
-    _assert_no_errors(caplog)
+    _assert_no_warnings_or_errors(caplog)
     return panel
 
 
@@ -173,7 +182,7 @@ def assert_panel_survives_minimal_status_transitions(
         fake_daemon=fake_daemon,
         caplog=caplog,
     )
-    _assert_no_errors(caplog)
+    _assert_no_warnings_or_errors(caplog)
 
     caplog.clear()
 
@@ -203,5 +212,5 @@ def assert_panel_survives_minimal_status_transitions(
         qtbot.waitUntil(lambda t=thread: not t.is_alive(), timeout=2000)
     QApplication.processEvents()
 
-    _assert_no_errors(caplog)
+    _assert_no_warnings_or_errors(caplog)
     return panel

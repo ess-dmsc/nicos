@@ -235,14 +235,14 @@ Use the file-based guiconfigs under `test/nicos_ess/gui/guiconfigs` only when a
 test needs a real multi-panel layout or panel-specific options:
 
 - `base.py` for generic window/client smoke tests
-- `estia/panels/selene.py` for the ESTIA Selene panel's custom options
-- `layouts/<name>.py` for deliberate multi-panel dependencies
+- `estia/selene.py` for the ESTIA Selene panel's custom options
+- `command_console.py` for deliberate multi-panel command/console wiring
 
 GUI test modules can declare:
 
 - `guiconfig_text = _minimal_guiconfig("pkg.Panel", option=value)` for the
   common single-panel path
-- `guiconfig_name = "layouts/command_console.py"` to select a file-based layout
+- `guiconfig_name = "command_console.py"` to select a file-based layout
 - `panel_class = "pkg.Panel"` when using the shared `gui_panel` fixture
 
 Keep widget-search helpers local to the panel test module unless at least two
