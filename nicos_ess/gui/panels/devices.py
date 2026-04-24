@@ -1129,9 +1129,10 @@ class ControlDialog(QDialog):
                 self.relMovFrame.layout().takeAt(0).widget().deleteLater()
                 self.relMovFrame.layout().addWidget(self.rel_target, 1, 2)
 
-                self.relMovFrame.layout().addWidget(
-                    QLabel(f"Step ({self.rmove_selected_device_unit()})", self), 0, 2
+                self.step_label = QLabel(
+                    f"Step ({self.rmove_selected_device_unit()})", self
                 )
+                self.relMovFrame.layout().addWidget(self.step_label, 0, 2)
 
                 plus_button = self.relMovFrame.layout().itemAtPosition(0, 3).widget()
                 self.relMovFrame.layout().addWidget(plus_button, 1, 3)
@@ -1334,8 +1335,7 @@ class ControlDialog(QDialog):
     @pyqtSlot()
     def index_changed(self):
         selected_device_unit = self.rmove_selected_device_unit()
-        step_label = self.relMovFrame.layout().itemAtPosition(0, 2).widget()
-        step_label.setText(f"Step ({selected_device_unit})")
+        self.step_label.setText(f"Step ({selected_device_unit})")
 
     def closeEvent(self, event):
         event.accept()
