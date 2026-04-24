@@ -1,3 +1,4 @@
+# Deny by default so local logs/runtime files never enter the smoke image.
 *
 
 !AUTHORS

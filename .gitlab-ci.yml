@@ -56,6 +56,7 @@ tests_py3xx:
 integration-smoke:
   stage: integration
   image: docker:28-cli
+  # This runner exposes a Docker socket; docker:dind needs privileged mode here.
   variables:
     HTTP_PROXY: $ESS_HTTP_PROXY
     HTTPS_PROXY: $ESS_HTTP_PROXY
@@ -67,6 +68,7 @@ integration-smoke:
   script:
     - rm -rf integration_test/runtime
     - mkdir -p integration_test/runtime
+    # The shared Docker daemon needs per-job compose names to avoid collisions.
     - export COMPOSE_PROJECT_NAME="nicos-smoke-${CI_JOB_ID:-local}"
     - docker info > integration_test/runtime/docker-info.log 2>&1
     - docker_exit=$?

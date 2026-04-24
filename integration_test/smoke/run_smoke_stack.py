@@ -331,6 +331,7 @@ def _artifact_root() -> Path | None:
 
 
 def _safe_clean_runtime_root(runtime_root: Path) -> None:
+    """Only delete directories that this smoke runner clearly owns."""
     marker = runtime_root / ".nicos-smoke-runtime"
     if not runtime_root.exists():
         return
@@ -344,6 +345,7 @@ def _safe_clean_runtime_root(runtime_root: Path) -> None:
 
 
 def _write_runtime_nicos_conf(runtime_root: Path) -> None:
+    """Generate temp NICOS config without changing production config parsing."""
     smoke_dir = runtime_root / SMOKE_SETUP_PACKAGE / "smoke"
     smoke_dir.mkdir(parents=True, exist_ok=True)
     nicos_conf = f"""
@@ -586,6 +588,7 @@ def _pva_to_float(value) -> float:
 
 
 def _wait_for_pva_ready(pva_server: SmokePvaServer, timeout: float = 15.0) -> None:
+    """Read PVs only; readiness must not move the simulated device."""
     names = pva_server.names
     ctx = PvaContext("pva", nt=False)
     deadline = time.monotonic() + timeout
@@ -727,6 +730,7 @@ def _compose_env(runtime_root: Path, kafka_bootstrap: str) -> dict[str, str]:
     host, port = _first_bootstrap_endpoint(kafka_bootstrap)
     bind_host = "127.0.0.1" if host == "localhost" else host
     env = os.environ.copy()
+    # Isolate compose resources so parallel smoke runs do not share containers.
     env["COMPOSE_PROJECT_NAME"] = _compose_project_name(runtime_root)
     env["NICOS_SMOKE_KAFKA_BIND"] = bind_host
     env["NICOS_SMOKE_KAFKA_HOST_PORT"] = str(port)
