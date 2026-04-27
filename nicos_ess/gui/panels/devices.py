@@ -1099,43 +1099,52 @@ class ControlDialog(QDialog):
                 self.valueinfo = self.client.eval(
                     "session.getDevice(%r).valueInfo()" % self.devname, None
                 )
-                self.valueinfo_names = tuple([value.name for value in self.valueinfo])
+                if self.valueinfo:
+                    self.valueinfo_names = tuple(
+                        [value.name for value in self.valueinfo]
+                    )
 
-                self.selectDevice = QComboBox(self)
-                for name_index, valueinfo_name in enumerate(self.valueinfo_names):
-                    self.selectDevice.insertItem(name_index, valueinfo_name)
-                if len(self.valueinfo) < 2:
-                    self.selectDevice.setVisible(False)
-                self.selectDevice.currentIndexChanged.connect(self.index_changed)
-                select_device_hint = self.selectDevice.sizeHint()
-                if select_device_hint.isValid():
-                    self.selectDevice.setMinimumSize(select_device_hint)
+                    self.selectDevice = QComboBox(self)
+                    for name_index, valueinfo_name in enumerate(self.valueinfo_names):
+                        self.selectDevice.insertItem(name_index, valueinfo_name)
+                    if len(self.valueinfo) < 2:
+                        self.selectDevice.setVisible(False)
+                    self.selectDevice.currentIndexChanged.connect(self.index_changed)
+                    select_device_hint = self.selectDevice.sizeHint()
+                    if select_device_hint.isValid():
+                        self.selectDevice.setMinimumSize(select_device_hint)
 
-                self.rel_target = EditWidget(
-                    self.devname,
-                    typ=float,
-                    curvalue=0,
-                )
-                rel_target_hint = self.rel_target.sizeHint()
-                if rel_target_hint.isValid():
-                    self.rel_target.setMinimumSize(rel_target_hint)
+                    self.rel_target = EditWidget(
+                        self.devname,
+                        typ=float,
+                        curvalue=0,
+                    )
+                    rel_target_hint = self.rel_target.sizeHint()
+                    if rel_target_hint.isValid():
+                        self.rel_target.setMinimumSize(rel_target_hint)
 
-                self.relMovFrame.layout().takeAt(0).widget().deleteLater()
-                self.relMovFrame.layout().addWidget(self.selectDevice, 1, 0)
+                    self.relMovFrame.layout().takeAt(0).widget().deleteLater()
+                    self.relMovFrame.layout().addWidget(self.selectDevice, 1, 0)
 
-                minus_button = self.relMovFrame.layout().itemAtPosition(0, 1).widget()
-                self.relMovFrame.layout().addWidget(minus_button, 1, 1)
+                    minus_button = (
+                        self.relMovFrame.layout().itemAtPosition(0, 1).widget()
+                    )
+                    self.relMovFrame.layout().addWidget(minus_button, 1, 1)
 
-                self.relMovFrame.layout().takeAt(0).widget().deleteLater()
-                self.relMovFrame.layout().addWidget(self.rel_target, 1, 2)
+                    self.relMovFrame.layout().takeAt(0).widget().deleteLater()
+                    self.relMovFrame.layout().addWidget(self.rel_target, 1, 2)
 
-                self.step_label = QLabel(
-                    f"Step ({self.rmove_selected_device_unit()})", self
-                )
-                self.relMovFrame.layout().addWidget(self.step_label, 0, 2)
+                    self.step_label = QLabel(
+                        f"Step ({self.rmove_selected_device_unit()})", self
+                    )
+                    self.relMovFrame.layout().addWidget(self.step_label, 0, 2)
 
-                plus_button = self.relMovFrame.layout().itemAtPosition(0, 3).widget()
-                self.relMovFrame.layout().addWidget(plus_button, 1, 3)
+                    plus_button = (
+                        self.relMovFrame.layout().itemAtPosition(0, 3).widget()
+                    )
+                    self.relMovFrame.layout().addWidget(plus_button, 1, 3)
+                else:
+                    self.relMoveGroup.setVisible(False)
 
             def move(checked):
                 try:
