@@ -136,6 +136,62 @@ class TestEpicsMappedReadable:
 
         assert device_harness.run("poller", device._cache.get, device, "value") == 99
 
+    def test_daemon_mapped_readable_direct_read_applies_mapping_to_raw_numeric_value(
+        self, device_harness, fake_backend
+    ):
+        readpv = "SIM:MAP.RBV"
+        fake_backend.value_choices[readpv] = ["OFF", "ON", "TWO", "THREE"]
+        fake_backend.values[readpv] = 3
+
+        device = device_harness.create(
+            "daemon",
+            EpicsMappedReadable,
+            name="mapped_readable",
+            readpv=readpv,
+            monitor=False,
+        )
+
+        assert device_harness.run("daemon", lambda: device._inverse_mapping) == {
+            0: "OFF",
+            1: "ON",
+            2: "TWO",
+            3: "THREE",
+        }
+        assert device_harness.run("daemon", device.read, 0) == "THREE"
+
+    def test_mapped_readable_first_read_before_monitor_callback_returns_mapped_value(
+        self, device_harness, fake_backend
+    ):
+        readpv = "SIM:MAP.RBV"
+        fake_backend.value_choices[readpv] = ["OFF", "ON", "TWO", "THREE"]
+        fake_backend.values[readpv] = 3
+
+        daemon_device, _poller_device = device_harness.create_pair(
+            EpicsMappedReadable,
+            name="mapped_readable",
+            shared={"readpv": readpv},
+        )
+
+        assert device_harness.run("daemon", daemon_device.read) == "THREE"
+
+    def test_mapped_readable_callback_maps_string_typed_raw_when_inverse_uses_int_keys(
+        self, device_harness, fake_backend
+    ):
+        readpv = "SIM:MAP.RBV"
+        fake_backend.value_choices[readpv] = ["OFF", "ON"]
+        fake_backend.values[readpv] = 0
+
+        device = device_harness.create(
+            "poller",
+            EpicsMappedReadable,
+            name="mapped_readable",
+            readpv=readpv,
+        )
+
+        fake_backend.emit_update(readpv, value="1", units="")
+
+        assert device_harness.run("poller", device._cache.get, device, "value") == "ON"
+
 
 # ---------------------------------------------------------------------------
 # MappedMoveable
@@ -306,6 +362,81 @@ class TestEpicsMappedMoveable:
         observed_target = device_harness.run("daemon", lambda: daemon_device.target)
 
         assert observed_target == "ON"
+
+    def test_daemon_mapped_moveable_direct_read_applies_mapping_to_raw_numeric_value(
+        self, device_harness, fake_backend
+    ):
+        config = mapped_config()
+        config["mapping"] = {"OFF": 0, "ON": 1, "TWO": 2, "THREE": 3}
+        fake_backend.value_choices[config["readpv"]] = [
+            "OFF",
+            "ON",
+            "TWO",
+            "THREE",
+        ]
+        fake_backend.values[config["readpv"]] = 3
+        fake_backend.values[config["writepv"]] = 0
+
+        device = device_harness.create(
+            "daemon",
+            EpicsMappedMoveable,
+            name="mapped_moveable",
+            readpv=config["readpv"],
+            writepv=config["writepv"],
+            mapping=config["mapping"],
+            monitor=False,
+        )
+
+        assert device_harness.run("daemon", lambda: device._inverse_mapping) == {
+            0: "OFF",
+            1: "ON",
+            2: "TWO",
+            3: "THREE",
+        }
+        assert device_harness.run("daemon", device.read, 0) == "THREE"
+
+    def test_mapped_moveable_first_read_before_monitor_callback_returns_mapped_value(
+        self, device_harness, fake_backend
+    ):
+        config = mapped_config()
+        config["mapping"] = {"OFF": 0, "ON": 1, "TWO": 2, "THREE": 3}
+        fake_backend.value_choices[config["readpv"]] = [
+            "OFF",
+            "ON",
+            "TWO",
+            "THREE",
+        ]
+        fake_backend.values[config["readpv"]] = 3
+        fake_backend.values[config["writepv"]] = 0
+
+        daemon_device, _poller_device = device_harness.create_pair(
+            EpicsMappedMoveable,
+            name="mapped_moveable",
+            shared=config,
+        )
+
+        assert device_harness.run("daemon", daemon_device.read) == "THREE"
+
+    def test_mapped_moveable_callback_maps_string_typed_raw_when_inverse_uses_int_keys(
+        self, device_harness, fake_backend
+    ):
+        config = mapped_config()
+        fake_backend.value_choices[config["readpv"]] = ["OFF", "ON"]
+        fake_backend.values[config["readpv"]] = 0
+        fake_backend.values[config["writepv"]] = 0
+
+        device = device_harness.create(
+            "poller",
+            EpicsMappedMoveable,
+            name="mapped_moveable",
+            readpv=config["readpv"],
+            writepv=config["writepv"],
+            mapping=config["mapping"],
+        )
+
+        fake_backend.emit_update(config["readpv"], value="1", units="")
+
+        assert device_harness.run("poller", device._cache.get, device, "value") == "ON"
 
     def test_mapped_moveable_finish_warns_if_target_not_reached(
         self, device_harness, fake_backend

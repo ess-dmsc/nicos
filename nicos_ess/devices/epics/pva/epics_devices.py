@@ -587,16 +587,29 @@ class EpicsMappedReadable(EpicsReadable, MappedReadable):
     def doInit(self, mode):
         EpicsReadable.doInit(self, mode)
 
-        if mode != SIMULATION and session.sessiontype != POLLER and not self.monitor:
+        if mode != SIMULATION and session.sessiontype != POLLER and not self.mapping:
             _update_mapped_choices(self)
         MappedReadable.doInit(self, mode)
 
     def doRead(self, maxage=0):
-        return get_from_cache_or(
-            self,
-            self._record_fields["readpv"].cache_key,
-            lambda: self._epics_wrapper.get_pv_value(self.readpv, as_string=True),
+        return self._mapReadValue(
+            get_from_cache_or(
+                self,
+                self._record_fields["readpv"].cache_key,
+                lambda: self._epics_wrapper.get_pv_value(self.readpv, as_string=True),
+            )
         )
+
+    def _mapReadValue(self, value):
+        if value in self._inverse_mapping:
+            return self._inverse_mapping[value]
+        try:
+            return self._inverse_mapping[int(value)]
+        except (KeyError, TypeError, ValueError):
+            self.log.warning(
+                "Received unmapped value '%s' from PV '%s'", value, self.readpv
+            )
+            return value
 
     def _value_change_callback(
         self, name, param, value, units, limits, severity, message, **kwargs
@@ -610,7 +623,7 @@ class EpicsMappedReadable(EpicsReadable, MappedReadable):
         self._cache.put(
             self._name,
             param,
-            self._inverse_mapping.get(value, value),
+            self._mapReadValue(value),
             time_stamp,
         )
 
@@ -700,16 +713,29 @@ class EpicsMappedMoveable(EpicsParameters, MappedMoveable):
                     )
                 )
 
-        if mode != SIMULATION and session.sessiontype != POLLER and not self.monitor:
+        if mode != SIMULATION and session.sessiontype != POLLER and not self.mapping:
             _update_mapped_choices(self)
         MappedMoveable.doInit(self, mode)
 
     def doRead(self, maxage=0):
-        return get_from_cache_or(
-            self,
-            self._record_fields["readpv"].cache_key,
-            lambda: self._epics_wrapper.get_pv_value(self.readpv, as_string=True),
+        return self._mapReadValue(
+            get_from_cache_or(
+                self,
+                self._record_fields["readpv"].cache_key,
+                lambda: self._epics_wrapper.get_pv_value(self.readpv, as_string=True),
+            )
         )
+
+    def _mapReadValue(self, value):
+        if value in self._inverse_mapping:
+            return self._inverse_mapping[value]
+        try:
+            return self._inverse_mapping[int(value)]
+        except (KeyError, TypeError, ValueError):
+            self.log.warning(
+                "Received unmapped value '%s' from PV '%s'", value, self.readpv
+            )
+            return value
 
     def doStatus(self, maxage=0):
         def _func():
@@ -736,7 +762,7 @@ class EpicsMappedMoveable(EpicsParameters, MappedMoveable):
             self._cache.put(
                 self._name,
                 param,
-                self._inverse_mapping.get(value, value),
+                self._mapReadValue(value),
                 time_stamp,
             )
             self._cache.put(self._name, "unit", units, time_stamp)
