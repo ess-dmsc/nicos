@@ -36,11 +36,13 @@ from nicos import session
 from nicos.core import (
     POLLER,
     SIMULATION,
+    ConfigurationError,
     HasLimits,
     HasPrecision,
     Moveable,
     Override,
     Param,
+    PositionError,
     Readable,
     anytype,
     floatrange,
@@ -564,6 +566,10 @@ def _update_mapped_choices(mapped_device, pv=PvReadOrWrite.readpv):
     else:
         selected_pv = mapped_device.readpv
     choices = mapped_device._epics_wrapper.get_value_choices(selected_pv)
+    if not choices:
+        raise ConfigurationError(
+            mapped_device, "PV %s has no value choices" % selected_pv
+        )
 
     new_mapping = {}
     for i, choice in enumerate(choices):
@@ -587,29 +593,25 @@ class EpicsMappedReadable(EpicsReadable, MappedReadable):
     def doInit(self, mode):
         EpicsReadable.doInit(self, mode)
 
-        if mode != SIMULATION and session.sessiontype != POLLER and not self.mapping:
+        if mode != SIMULATION:
             _update_mapped_choices(self)
         MappedReadable.doInit(self, mode)
 
     def doRead(self, maxage=0):
-        return self._mapReadValue(
-            get_from_cache_or(
-                self,
-                self._record_fields["readpv"].cache_key,
-                lambda: self._epics_wrapper.get_pv_value(self.readpv, as_string=True),
-            )
+        return get_from_cache_or(
+            self,
+            self._record_fields["readpv"].cache_key,
+            lambda: self._mapReadValue(self._epics_wrapper.get_pv_value(self.readpv)),
         )
 
     def _mapReadValue(self, value):
-        if value in self._inverse_mapping:
-            return self._inverse_mapping[value]
-        try:
-            return self._inverse_mapping[int(value)]
-        except (KeyError, TypeError, ValueError):
-            self.log.warning(
-                "Received unmapped value '%s' from PV '%s'", value, self.readpv
-            )
-            return value
+        mapped_value = self._inverse_mapping.get(value)
+        if mapped_value is None:
+            _update_mapped_choices(self)
+            mapped_value = self._inverse_mapping.get(value)
+        if mapped_value is None:
+            raise PositionError(self, "unknown unmapped position %r" % value)
+        return mapped_value
 
     def _value_change_callback(
         self, name, param, value, units, limits, severity, message, **kwargs
@@ -617,8 +619,6 @@ class EpicsMappedReadable(EpicsReadable, MappedReadable):
         if name != self.readpv:
             # Unexpected updates ignored
             return
-        if not self.mapping:
-            _update_mapped_choices(self)
         time_stamp = time.time()
         self._cache.put(
             self._name,
@@ -713,29 +713,25 @@ class EpicsMappedMoveable(EpicsParameters, MappedMoveable):
                     )
                 )
 
-        if mode != SIMULATION and session.sessiontype != POLLER and not self.mapping:
+        if mode != SIMULATION:
             _update_mapped_choices(self)
         MappedMoveable.doInit(self, mode)
 
     def doRead(self, maxage=0):
-        return self._mapReadValue(
-            get_from_cache_or(
-                self,
-                self._record_fields["readpv"].cache_key,
-                lambda: self._epics_wrapper.get_pv_value(self.readpv, as_string=True),
-            )
+        return get_from_cache_or(
+            self,
+            self._record_fields["readpv"].cache_key,
+            lambda: self._mapReadValue(self._epics_wrapper.get_pv_value(self.readpv)),
         )
 
     def _mapReadValue(self, value):
-        if value in self._inverse_mapping:
-            return self._inverse_mapping[value]
-        try:
-            return self._inverse_mapping[int(value)]
-        except (KeyError, TypeError, ValueError):
-            self.log.warning(
-                "Received unmapped value '%s' from PV '%s'", value, self.readpv
-            )
-            return value
+        mapped_value = self._inverse_mapping.get(value)
+        if mapped_value is None:
+            _update_mapped_choices(self)
+            mapped_value = self._inverse_mapping.get(value)
+        if mapped_value is None:
+            raise PositionError(self, "unknown unmapped position %r" % value)
+        return mapped_value
 
     def doStatus(self, maxage=0):
         def _func():
@@ -757,8 +753,6 @@ class EpicsMappedMoveable(EpicsParameters, MappedMoveable):
             return
         time_stamp = time.time()
         if name == self.readpv and param == self._record_fields["readpv"].cache_key:
-            if not self.mapping:
-                _update_mapped_choices(self)
             self._cache.put(
                 self._name,
                 param,
@@ -767,9 +761,9 @@ class EpicsMappedMoveable(EpicsParameters, MappedMoveable):
             )
             self._cache.put(self._name, "unit", units, time_stamp)
         elif name == self.writepv and not self.target:
-            self._cache.put(self._name, param, value, time_stamp)
+            self._cache.put(self._name, param, self._mapReadValue(value), time_stamp)
         elif name == self.targetpv:
-            self._cache.put(self._name, param, value, time_stamp)
+            self._cache.put(self._name, param, self._mapReadValue(value), time_stamp)
 
     def _status_change_callback(
         self, name, param, value, units, limits, severity, message, **kwargs

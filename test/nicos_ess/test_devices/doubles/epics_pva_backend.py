@@ -63,10 +63,17 @@ class FakeEpicsBackend:
     def connect_pv(self, pvname):
         self.connect_calls.append(pvname)
 
+    def _get_value(self, pvname, as_string=False):
+        value = self.values[pvname]
+        choices = self.value_choices.get(pvname)
+        if as_string and choices and isinstance(value, int):
+            return choices[value]
+        return value
+
     @_requires_connected_backend
     def get_pv_value(self, pvname, as_string=False):
         self.get_calls.append(("get_pv_value", pvname, as_string))
-        return self.values[pvname]
+        return self._get_value(pvname, as_string)
 
     @_requires_connected_backend
     def get_units(self, pvname, default=""):
@@ -102,7 +109,7 @@ class FakeEpicsBackend:
         self._emit_all_connections(True)
 
     def _emit_all_connections(self, is_connected):
-        for sub_pv, pvparam, _, connection_callback in list(self.subscriptions):
+        for sub_pv, pvparam, _, connection_callback, _ in list(self.subscriptions):
             if connection_callback:
                 connection_callback(sub_pv, pvparam, is_connected)
 
@@ -114,8 +121,7 @@ class FakeEpicsBackend:
         connection_callback=None,
         as_string=False,
     ):
-        del as_string
-        token = (pvname, pvparam, change_callback, connection_callback)
+        token = (pvname, pvparam, change_callback, connection_callback, as_string)
         self.subscriptions.append(token)
         return token
 
@@ -131,13 +137,12 @@ class FakeEpicsBackend:
     ):
         if value is not None:
             self.values[pv] = value
-        current_value = self.values[pv]
-        for sub_pv, pvparam, change_callback, _ in list(self.subscriptions):
+        for sub_pv, pvparam, change_callback, _, as_string in list(self.subscriptions):
             if sub_pv == pv:
                 change_callback(
                     pv,
                     pvparam,
-                    current_value,
+                    self._get_value(pv, as_string),
                     units,
                     limits,
                     severity,
@@ -145,7 +150,7 @@ class FakeEpicsBackend:
                 )
 
     def emit_connection(self, pv, is_connected):
-        for sub_pv, pvparam, _, connection_callback in list(self.subscriptions):
+        for sub_pv, pvparam, _, connection_callback, _ in list(self.subscriptions):
             if sub_pv == pv:
                 if connection_callback:
                     connection_callback(pv, pvparam, is_connected)
