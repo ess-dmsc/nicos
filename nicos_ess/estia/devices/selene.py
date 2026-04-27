@@ -84,15 +84,29 @@ class SeleneRobot(Moveable):
             userparam=True,
             unit="mm",
         ),
-        "engaged": Param(
-            "Screwdriver engaged position",
+        "engaged1": Param(
+            "Screwdriver 1 engaged position",
             type=float,
             mandatory=True,
             userparam=False,
             unit="mm",
         ),
-        "retracted": Param(
-            "Screwdriver retracted position",
+        "engaged2": Param(
+            "Screwdriver 2 engaged position",
+            type=float,
+            mandatory=True,
+            userparam=False,
+            unit="mm",
+        ),
+        "retracted1": Param(
+            "Screwdriver 1 retracted position",
+            type=float,
+            mandatory=True,
+            userparam=False,
+            unit="mm",
+        ),
+        "retracted2": Param(
+            "Screwdriver 2 retracted position",
             type=float,
             mandatory=True,
             userparam=False,
@@ -298,17 +312,35 @@ class SeleneRobot(Moveable):
         else:
             raise ValueError("No valid screw driver selected")
 
+    @property
+    def _retracted(self):
+        if self.driver == 1:
+            return self.retracted1
+        elif self.driver == 2:
+            return self.retracted2
+        else:
+            raise ValueError("No valid screw driver selected")
+
+    @property
+    def _engaged(self):
+        if self.driver == 1:
+            return self.engaged1
+        elif self.driver == 2:
+            return self.engaged2
+        else:
+            raise ValueError("No valid screw driver selected")
+
     def _engage(self):
         self.log.debug("Engaing driver")
         self._select_driver()
         self._adjust.wait()  # make sure the driver is not rotating while moving stage
-        self._approach.maw(self.engaged)
+        self._approach.maw(self._engaged)
 
     def _disengage(self):
         self.log.debug("Retracting driver")
         self._adjust.wait()  # make sure the driver is not rotating while moving stage
-        self._attached_approach1.move(self.retracted)
-        self._attached_approach2.maw(self.retracted)
+        self._attached_approach1.move(self.retracted1)
+        self._attached_approach2.maw(self.retracted2)
         self._attached_approach1.wait()
 
     def engage(self):
@@ -558,14 +590,14 @@ class SeleneRobot(Moveable):
     def _engage_retry(self, retry=2):
         for i in range(retry + 1):
             try:
-                self._approach.maw(self.engaged)
+                self._approach.maw(self._engaged)
             except Exception as e:
                 if i == retry:
                     self.log.error("Error in approach: %s, giving up" % e)
                 else:
                     self.log.warning("Error in approach: %s, retry" % e)
-                    self._approach.maw(self.retracted)
-                    self._approach.maw(self.engaged)
+                    self._approach.maw(self._retracted)
+                    self._approach.maw(self._engaged)
             else:
                 return
 
@@ -582,7 +614,7 @@ class SeleneRobot(Moveable):
         else:
             angle = 0.0
 
-        self._approach.maw(self.retracted)
+        self._approach.maw(self._retracted)
         self._adjust.move(angle)
 
         x_start = self._attached_move_x()
@@ -615,7 +647,7 @@ class SeleneRobot(Moveable):
                     break
 
                 self._adjust.move(angle)
-                self._approach.maw(self.retracted)
+                self._approach.maw(self._retracted)
 
         if found_screw and auto_refine:
             self.log.info(
@@ -642,7 +674,7 @@ class SeleneRobot(Moveable):
 
         self.log.info("Refining screw location around %.2f, %.2f" % (x_start, z_start))
 
-        self._approach.maw(self.retracted)
+        self._approach.maw(self._retracted)
 
         for i in range(sstep):
             self._move_x(x_start + srange * (i - sstep / 2) / (sstep - 1))
@@ -650,7 +682,7 @@ class SeleneRobot(Moveable):
             pos_out.append(
                 [self._attached_move_x(), self._hex_state() == "HexScrewInserted"]
             )
-            self._approach.maw(self.retracted)
+            self._approach.maw(self._retracted)
 
         pos_out = np.array(pos_out)
         x_insertions = pos_out[pos_out[:, 1] == 1, 0]
@@ -661,11 +693,11 @@ class SeleneRobot(Moveable):
 
         for j in range(sstep):
             self._move_z(z_start + srange * (j - sstep / 2) / (sstep - 1))
-            self._approach.maw(self.engaged)
+            self._approach.maw(self._engaged)
             vert_out.append(
                 [self._attached_move_z(), self._hex_state() == "HexScrewInserted"]
             )
-            self._approach.maw(self.retracted)
+            self._approach.maw(self._retracted)
 
         vert_out = np.array(vert_out)
         self.log.info("  Insertions in z-scan: %s" % (vert_out[vert_out[:, 1] == 1, 0]))

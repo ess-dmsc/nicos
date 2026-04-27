@@ -28,8 +28,8 @@ devices = dict(
         description="Engage/disengage approach",
         controlled_device="sg2_screwdriver_approach_1",
         mapping={
-            "Disengage": 0.0,
-            "Engage": -29.0,
+            "Disengage": -29.0,
+            "Engage": 0.0,
         },
     ),
     sg2_screwdriver_hex_state_1=device(
@@ -52,8 +52,8 @@ devices = dict(
         description="Engage/disengage approach",
         controlled_device="sg2_screwdriver_approach_2",
         mapping={
-            "Disengage": 0.0,
-            "Engage": -28.0,
+            "Disengage": -28.0,
+            "Engage": 0.0,
         },
     ),
     sg2_screwdriver_hex_state_2=device(
