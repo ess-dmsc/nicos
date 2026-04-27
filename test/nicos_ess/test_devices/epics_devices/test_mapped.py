@@ -191,6 +191,44 @@ class TestEpicsMappedReadable:
         fake_backend.emit_update(readpv, value="1", units="")
 
         assert device_harness.run("poller", device._cache.get, device, "value") == "ON"
+    
+    def test_mapped_readable_same_read_write_pv_poller_caches_mapped_readback(
+        self, device_harness, fake_backend
+    ):
+        pv = "SIM:MAP"
+        fake_backend.value_choices[pv] = ["Start", "Stop"]
+        fake_backend.values[pv] = 1
+
+        _daemon_device, poller_device = device_harness.create_pair(
+            EpicsMappedReadable,
+            name="mapped_readable",
+            shared={"readpv": pv},
+        )
+
+        fake_backend.emit_update(pv, value=1, units="")
+
+        cached_value = device_harness.run(
+            "poller", poller_device._cache.get, poller_device, "value"
+        )
+
+        assert cached_value == "Stop"
+
+    def test_mapped_readable_same_read_write_pv_initial_daemon_read_is_mapped(
+        self, device_harness, fake_backend
+    ):
+        pv = "SIM:MAP"
+        fake_backend.value_choices[pv] = ["Start", "Stop"]
+        fake_backend.values[pv] = 1
+
+        daemon_device, _poller_device = device_harness.create_pair(
+            EpicsMappedReadable,
+            name="mapped_readable",
+            shared={"readpv": pv},
+        )
+
+        fake_backend.emit_update(pv, value=1, units="")
+
+        assert device_harness.run("daemon", daemon_device.read) == "Stop"
 
 
 # ---------------------------------------------------------------------------
@@ -275,6 +313,44 @@ class TestEpicsMappedMoveable:
 
         assert device_harness.run("daemon", daemon_device.read) == "ON"
         assert len(fake_backend.get_calls) == get_calls_before
+
+    def test_mapped_moveable_same_read_write_pv_poller_caches_mapped_readback(
+        self, device_harness, fake_backend
+    ):
+        pv = "SIM:MAP:EXECUTE"
+        fake_backend.value_choices[pv] = ["Start", "Stop"]
+        fake_backend.values[pv] = 1
+
+        _daemon_device, poller_device = device_harness.create_pair(
+            EpicsMappedMoveable,
+            name="mapped_moveable",
+            shared={"readpv": pv, "writepv": pv},
+        )
+
+        fake_backend.emit_update(pv, value=1, units="")
+
+        cached_value = device_harness.run(
+            "poller", poller_device._cache.get, poller_device, "value"
+        )
+
+        assert cached_value == "Stop"
+
+    def test_mapped_moveable_same_read_write_pv_initial_daemon_read_is_mapped(
+        self, device_harness, fake_backend
+    ):
+        pv = "SIM:MAP:EXECUTE"
+        fake_backend.value_choices[pv] = ["Start", "Stop"]
+        fake_backend.values[pv] = 1
+
+        daemon_device, _poller_device = device_harness.create_pair(
+            EpicsMappedMoveable,
+            name="mapped_moveable",
+            shared={"readpv": pv, "writepv": pv},
+        )
+
+        fake_backend.emit_update(pv, value=1, units="")
+
+        assert device_harness.run("daemon", daemon_device.read) == "Stop"
 
     def test_mapped_moveable_second_start_wins_when_old_callbacks_arrive_late(
         self, device_harness, fake_backend

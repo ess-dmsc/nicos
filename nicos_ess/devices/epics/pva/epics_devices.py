@@ -756,7 +756,7 @@ class EpicsMappedMoveable(EpicsParameters, MappedMoveable):
             # Unexpected updates ignored
             return
         time_stamp = time.time()
-        if name == self.readpv:
+        if name == self.readpv and param == self._record_fields["readpv"].cache_key:
             if not self.mapping:
                 _update_mapped_choices(self)
             self._cache.put(
@@ -766,9 +766,9 @@ class EpicsMappedMoveable(EpicsParameters, MappedMoveable):
                 time_stamp,
             )
             self._cache.put(self._name, "unit", units, time_stamp)
-        if name == self.writepv and not self.target:
+        elif name == self.writepv and not self.target:
             self._cache.put(self._name, param, value, time_stamp)
-        if name == self.targetpv:
+        elif name == self.targetpv:
             self._cache.put(self._name, param, value, time_stamp)
 
     def _status_change_callback(
